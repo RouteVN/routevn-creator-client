@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 import { createFontInfoExtractor } from "../../deps/fontInfoExtractor.js";
-import { getFileType } from "../../utils/fileTypeUtils";
-import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
+import { getFileType } from "../../internal/fileTypes.js";
+import { recursivelyCheckResource } from "../../internal/projectResources.js";
 import { createMediaPageHandlers } from "../../deps/features/resourcePages/media/createMediaPageHandlers.js";
 import { resolveResourceParentId } from "../../deps/features/resourcePages/media/mediaPageShared.js";
 

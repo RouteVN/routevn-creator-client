@@ -1,11 +1,12 @@
-import { createWebSocketTransport } from "../../../collab/index.js";
-import { RESOURCE_TYPES } from "../../../domain/constants.js";
-import { recursivelyCheckResource } from "../../../utils/resourceUsageChecker.js";
+import { createWebSocketTransport } from "../web/collab/createWebSocketTransport.js";
+import { RESOURCE_TYPES } from "../../../internal/project/commands.js";
+import { recursivelyCheckResource } from "../../../internal/projectResources.js";
 import { createCommandApi } from "./commandApi.js";
 
 export const createProjectCollabCore = ({
   router,
   idGenerator,
+  now,
   collabLog,
   getCurrentRepository,
   getCachedRepository,
@@ -240,6 +241,7 @@ export const createProjectCollabCore = ({
 
   const commandApi = createCommandApi({
     idGenerator,
+    now,
     getCurrentProjectId,
     getCurrentRepository,
     getCachedRepository,

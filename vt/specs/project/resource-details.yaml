@@ -108,12 +108,14 @@ steps:
     selector: "rvn-typography"
     state: attached
     timeoutMs: 10000
+  - action: wait
+    ms: 800
   - action: waitFor
-    selector: "#groupview #itemRef0x0"
+    selector: "#typographyView #itemRef0x0"
     state: visible
-    timeoutMs: 10000
+    timeoutMs: 20000
   - action: select
-    selector: "#groupview #itemRef0x0"
+    selector: "#typographyView #itemRef0x0"
     steps:
       - action: click
   - action: waitFor

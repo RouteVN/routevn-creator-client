@@ -3,11 +3,9 @@ import {
   createInsiemeWebStoreAdapter,
   initializeProject as initializeWebProject,
 } from "../../infra/web/webRepositoryAdapter.js";
-import {
-  createProjectCollabService,
-  createWebSocketTransport,
-} from "../../../collab/index.js";
-import { projectRepositoryStateToDomainState } from "../../../domain/stateProjection.js";
+import { createProjectCollabService } from "../shared/collab/createProjectCollabService.js";
+import { createWebSocketTransport } from "./collab/createWebSocketTransport.js";
+import { projectRepositoryStateToDomainState } from "../../../internal/project/projection.js";
 import { createPersistedInMemoryClientStore } from "./collabClientStore.js";
 import {
   clearCommittedCursor,
@@ -26,7 +24,7 @@ import {
   applyCommandToRepository,
   assertSupportedProjectState,
 } from "../shared/projectRepository.js";
-import { createBundle } from "../../../utils/bundleUtils.js";
+import { createBundle } from "../../../internal/projectBundle.js";
 
 const countImageEntries = (imagesData) =>
   Object.values(imagesData?.items || {}).filter(

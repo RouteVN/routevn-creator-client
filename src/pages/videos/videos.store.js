@@ -1,4 +1,4 @@
-import { formatFileSize } from "../../utils/index.js";
+import { formatFileSize } from "../../internal/files.js";
 import { createMediaPageStore } from "../../deps/features/resourcePages/media/createMediaPageStore.js";
 
 const formatDimensions = (item) => {

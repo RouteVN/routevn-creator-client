@@ -1,4 +1,4 @@
-import { createBundle } from "../../../utils/bundleUtils.js";
+import { createBundle } from "../../../internal/projectBundle.js";
 
 const getBundleStaticFiles = async () => {
   let indexHtml;

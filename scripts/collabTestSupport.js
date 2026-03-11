@@ -3,10 +3,10 @@ import { createInMemorySyncStore, createSyncServer } from "insieme/server";
 import {
   committedEventToCommand,
   createProjectCollabService,
-} from "../src/collab/index.js";
-import { processCommand } from "../src/domain/engine.js";
-import { createEmptyProjectState } from "../src/domain/model.js";
-import { validateCommand } from "../src/domain/validateCommand.js";
+} from "../src/deps/services/shared/collab/index.js";
+import { processCommand } from "../src/internal/project/state.js";
+import { createEmptyProjectState } from "../src/internal/project/state.js";
+import { validateCommand } from "../src/internal/project/commands.js";
 
 export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 

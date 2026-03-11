@@ -1,5 +1,5 @@
-import { toFlatGroups, toFlatItems } from "../../domain/treeHelpers.js";
-import { getSectionPresentation } from "../../utils/sectionPresentation.js";
+import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
+import { getSectionPresentation } from "../../internal/projectStory.js";
 
 const CONTEXT_MENU_ITEMS = [
   { label: "Open", type: "item", value: "open-item" },

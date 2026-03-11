@@ -1,11 +1,11 @@
 import { nanoid } from "nanoid";
-import { toFlatItems } from "../../domain/treeHelpers.js";
+import { toFlatItems } from "../../internal/project/tree.js";
 import {
   getTypographyCount,
   getTypographyRemovalCount,
 } from "../../constants/typography.js";
-import { getFileType } from "../../utils/fileTypeUtils";
-import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
+import { getFileType } from "../../internal/fileTypes.js";
+import { recursivelyCheckResource } from "../../internal/projectResources.js";
 import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 import { createProjectStateStream } from "../../deps/features/projectStateStream.js";
 import { tap } from "rxjs";

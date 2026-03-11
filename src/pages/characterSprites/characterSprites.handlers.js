@@ -4,8 +4,8 @@ import {
   deleteTreeItem,
   insertTreeItem,
   updateTreeItem,
-} from "../../domain/treeMutations.js";
-import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
+} from "../../internal/project/tree.js";
+import { recursivelyCheckResource } from "../../internal/projectResources.js";
 import { createCharacterSpritesFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 import { createProjectStateStream } from "../../deps/features/projectStateStream.js";
 import { tap } from "rxjs";

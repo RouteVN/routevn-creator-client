@@ -1,4 +1,4 @@
-import { formatDate } from "../../utils/dateUtils";
+import { formatDate } from "../../internal/dates.js";
 
 export const createInitialState = () => ({
   versions: [],

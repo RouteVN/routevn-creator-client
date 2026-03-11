@@ -29,6 +29,7 @@ export const createProjectService = ({
     db,
     filePicker,
     idGenerator: nanoid,
+    now: () => Date.now(),
     collabLog,
     storageAdapter,
     fileAdapter,

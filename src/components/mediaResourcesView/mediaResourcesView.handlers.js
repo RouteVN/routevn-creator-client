@@ -1,7 +1,7 @@
 import {
   getAcceptAttribute,
   isFileTypeAccepted,
-} from "../../utils/fileTypeUtils.js";
+} from "../../internal/fileTypes.js";
 
 const getDataAttribute = (event, name) => {
   return event?.currentTarget?.getAttribute?.(name) ?? undefined;

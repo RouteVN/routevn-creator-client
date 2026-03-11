@@ -28,7 +28,10 @@ import {
   reconcileSceneEditorSelection,
   selectSceneEditorSection,
 } from "../../deps/features/sceneEditing/sectionOperations.js";
-import { debugLog, previewDebugText } from "../../utils/debugLog.js";
+import {
+  debugLog,
+  previewDebugText,
+} from "../../deps/services/shared/debugLog.js";
 
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another scene.";

@@ -4,7 +4,7 @@ import {
   extractWaveformData,
   extractVideoThumbnail,
   detectFileType,
-} from "../../../utils/fileProcessors.js";
+} from "../../infra/web/fileProcessors.js";
 import { loadFont } from "./fontLoader.js";
 
 const storeMetadata = async ({ data, storeFile, idGenerator }) => {

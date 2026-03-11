@@ -1,4 +1,7 @@
-import { toFlatGroups, toFlatItems } from "../../../../domain/treeHelpers.js";
+import {
+  toFlatGroups,
+  toFlatItems,
+} from "../../../../internal/project/tree.js";
 
 const EMPTY_TREE = { tree: [], items: {} };
 

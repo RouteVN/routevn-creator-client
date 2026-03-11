@@ -2,7 +2,7 @@ import {
   committedSyncEventToCommand,
   commandToSyncEvent as mapCommandToSyncEvent,
 } from "insieme/client";
-import { COMMAND_EVENT_MODEL } from "../domain/commandCatalog.js";
+import { COMMAND_EVENT_MODEL } from "../../../../internal/project/commands.js";
 
 export const commandToSyncEvent = (command) => mapCommandToSyncEvent(command);
 

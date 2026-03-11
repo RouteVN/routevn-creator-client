@@ -3,7 +3,7 @@ import {
   assertRepositoryCommandEvent,
   repositoryEventToCommand,
 } from "../shared/projectRepository.js";
-import { COMMAND_TYPES } from "../../../domain/commandCatalog.js";
+import { COMMAND_TYPES } from "../../../internal/project/commands.js";
 
 const normalizeCommittedCursor = (value) => {
   const parsed = Number(value);

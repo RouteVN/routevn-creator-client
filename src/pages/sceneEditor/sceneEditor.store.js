@@ -1,8 +1,8 @@
-import { toHierarchyStructure } from "../../domain/treeHelpers.js";
+import { buildLayoutRenderElements } from "../../internal/project/layout.js";
+import { toHierarchyStructure } from "../../internal/project/tree.js";
 import { buildSceneEditorLineViewModels } from "../../deps/features/sceneEditing/lineViewModels.js";
-import { layoutHierarchyStructureToRenderState } from "../../utils/index.js";
-import { constructProjectData } from "../../utils/projectDataConstructor.js";
-import { getSectionPresentation } from "../../utils/sectionPresentation.js";
+import { constructProjectData } from "../../internal/projectData.js";
+import { getSectionPresentation } from "../../internal/projectStory.js";
 
 const appendMissingIds = (orderedIds, allIds) => {
   const seen = new Set();
@@ -203,7 +203,7 @@ export const selectLayouts = ({ state }) => {
         id: layoutId,
         name: layout.name,
         layoutType: layout.layoutType,
-        elements: layoutHierarchyStructureToRenderState(
+        elements: buildLayoutRenderElements(
           toHierarchyStructure(layout.elements),
           images,
           typography,

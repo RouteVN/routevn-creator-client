@@ -1,4 +1,4 @@
-import { COMMAND_TYPES } from "../../../../domain/commandCatalog.js";
+import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
 
 export const createSettingsCommandApi = (shared) => ({
   async updateProjectFields({ patch }) {

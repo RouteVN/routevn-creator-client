@@ -6,12 +6,10 @@ import { createInsiemeTauriStoreAdapter } from "../../infra/tauri/tauriRepositor
 import {
   loadTemplate,
   getTemplateFiles,
-} from "../../../utils/templateLoader.js";
-import {
-  createProjectCollabService,
-  createWebSocketTransport,
-} from "../../../collab/index.js";
-import { projectRepositoryStateToDomainState } from "../../../domain/stateProjection.js";
+} from "../../infra/web/templateLoader.js";
+import { createProjectCollabService } from "../shared/collab/createProjectCollabService.js";
+import { createWebSocketTransport } from "../web/collab/createWebSocketTransport.js";
+import { projectRepositoryStateToDomainState } from "../../../internal/project/projection.js";
 import {
   applyCommandToRepository,
   assertSupportedProjectState,

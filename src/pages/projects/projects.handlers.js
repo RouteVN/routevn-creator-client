@@ -69,8 +69,7 @@ export const handleAfterMount = async (deps) => {
           apiService,
           store,
           authToken: cloudSession.authToken,
-        }).catch((error) => {
-          console.error("Failed to load cloud projects:", error);
+        }).catch(() => {
           appService.showToast(
             "Failed to load cloud projects. Please try again later.",
           );
@@ -85,11 +84,6 @@ export const handleAfterMount = async (deps) => {
 
 const getProjectIdFromEvent = (event) => {
   return event?.currentTarget?.dataset?.projectId ?? "";
-};
-
-const buildProjectPageUrl = (projectId) => {
-  const query = new URLSearchParams({ p: projectId }).toString();
-  return `/project?${query}`;
 };
 
 export const handleCreateButtonClick = async (deps) => {
@@ -161,11 +155,8 @@ export const handleCloudCreateFormAction = async (deps, payload) => {
     store.addCloudProject({ project });
     store.closeCloudCreateDialog();
     render();
-  } catch (error) {
-    console.error("Failed to create cloud project:", error);
-    appService.showToast(
-      error?.message || "Failed to create cloud project. Please try again.",
-    );
+  } catch {
+    appService.showToast("Failed to create cloud project. Please try again.");
   }
 };
 
@@ -192,9 +183,10 @@ export const handleOpenButtonClick = async (deps) => {
     appService.showToast(
       `Project "${importedProject.name}" has been successfully imported.`,
     );
-  } catch (error) {
-    console.error("Error importing project:", error);
-    appService.showToast(`Failed to import project: ${error.message || error}`);
+  } catch {
+    appService.showToast(
+      "Failed to import project. Please select a valid project folder.",
+    );
   }
 };
 
@@ -356,11 +348,12 @@ export const handleCloseDialogue = (deps) => {
 };
 
 export const handleProjectsClick = async (deps, payload) => {
+  const { appService } = deps;
   const id = getProjectIdFromEvent(payload._event);
   if (!id) {
     return;
   }
-  window.location.assign(buildProjectPageUrl(id));
+  appService.navigate("/project", { p: id });
 };
 
 export const handleBrowseFolder = async (deps) => {
@@ -378,9 +371,8 @@ export const handleBrowseFolder = async (deps) => {
       store.setProjectPath({ path: selected });
       render();
     }
-  } catch (error) {
-    console.error("Error selecting folder:", error);
-    appService.showToast(`Error selecting folder: ${error.message || error}`);
+  } catch {
+    appService.showToast("Failed to select project location.");
   }
 };
 
@@ -430,9 +422,10 @@ export const handleFormSubmit = async (deps, payload) => {
     store.addProject({ project: newProject });
     store.closeDialog();
     render();
-  } catch (error) {
-    console.error("Error creating project:", error);
-    appService.showToast(`Failed to create project: ${error.message}`);
+  } catch {
+    appService.showToast(
+      "Failed to create project. Please check the selected folder and try again.",
+    );
   }
 };
 
@@ -586,9 +579,8 @@ export const handleAddMemberFormAction = async (deps, payload) => {
     });
     store.closeAddMemberDialog();
     render();
-  } catch (error) {
-    console.error("Failed to add member:", error);
-    appService.showToast(error?.message || "Failed to add member.");
+  } catch {
+    appService.showToast("Failed to add member. Please try again.");
   }
 };
 
@@ -604,9 +596,8 @@ export const handleDeleteDialogConfirm = async (deps) => {
   try {
     await appService.removeProjectEntry(projectId);
     store.removeProject({ projectId });
-  } catch (error) {
-    console.error("Error deleting project:", error);
-    appService.showToast(`Failed to delete project: ${error.message || error}`);
+  } catch {
+    appService.showToast("Failed to delete project. Please try again.");
   } finally {
     store.closeDeleteDialog();
     render();
@@ -652,7 +643,6 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   }
 
   if (!projectId) {
-    console.warn("No projectId found for deletion");
     store.closeDropdownMenu();
     render();
     return;
@@ -662,7 +652,6 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   const project = projects.find((p) => p.id === projectId);
 
   if (!project) {
-    console.warn("Project not found for deletion:", projectId);
     store.closeDropdownMenu();
     render();
     return;

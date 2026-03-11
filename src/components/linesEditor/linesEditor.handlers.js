@@ -1,4 +1,7 @@
-import { debugLog, previewDebugText } from "../../utils/debugLog.js";
+import {
+  debugLog,
+  previewDebugText,
+} from "../../deps/services/shared/debugLog.js";
 
 const getLineContent = (element) => {
   if (!element || typeof element.getContent !== "function") {

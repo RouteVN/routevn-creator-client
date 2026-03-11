@@ -1,6 +1,6 @@
 import { filter, tap } from "rxjs";
-import { COLLAB_REMOTE_EVENT_ACTION } from "../../collab/remoteEvents.js";
-import { COMMAND_TYPES } from "../../domain/commandCatalog.js";
+import { COLLAB_REMOTE_EVENT_ACTION } from "../services/shared/collab/remoteEvents.js";
+import { COMMAND_TYPES } from "../../internal/project/commands.js";
 
 const normalizeTargets = (targets) => {
   if (Array.isArray(targets)) {

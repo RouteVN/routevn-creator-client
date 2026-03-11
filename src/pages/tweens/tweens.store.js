@@ -1,4 +1,4 @@
-import { toFlatItems } from "../../domain/treeHelpers.js";
+import { toFlatItems } from "../../internal/project/tree.js";
 import { createCatalogPageStore } from "../../deps/features/resourcePages/catalog/createCatalogPageStore.js";
 import { resetState } from "./tweens.constants";
 

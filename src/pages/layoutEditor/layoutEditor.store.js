@@ -1,4 +1,4 @@
-import { toFlatItems, toFlatGroups } from "../../domain/treeHelpers.js";
+import { toFlatItems, toFlatGroups } from "../../internal/project/tree.js";
 import { parseAndRender } from "jempl";
 
 const contextMenuItems = [
@@ -753,6 +753,20 @@ export const selectSelectedItem = ({ state }) => {
       x: item.anchorX,
       y: item.anchorY,
     },
+  };
+};
+
+export const selectSelectedItemData = ({ state }) => {
+  if (!state.selectedItemId) return undefined;
+  const item = state.layoutData?.items?.[state.selectedItemId];
+
+  if (!item) {
+    return undefined;
+  }
+
+  return {
+    id: state.selectedItemId,
+    ...item,
   };
 };
 

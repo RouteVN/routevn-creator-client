@@ -3,12 +3,14 @@ import {
   createCollabRemoteRefreshStream,
   matchesRemoteTargets,
 } from "../../deps/features/collabRefresh.js";
-import { toHierarchyStructure } from "../../domain/treeHelpers.js";
 import {
-  extractFileIdsFromRenderState,
-  layoutHierarchyStructureToRenderState,
-} from "../../utils/index.js";
-import { parseAndRender } from "jempl";
+  createLayoutPreviewData,
+  createSelectedLayoutOverlay,
+  resolveLayoutPreviewElements,
+} from "./layoutPreview.js";
+import { buildLayoutRenderElements } from "../../internal/project/layout.js";
+import { toHierarchyStructure } from "../../internal/project/tree.js";
+import { extractFileIdsFromRenderState } from "../../internal/projectPreview.js";
 import { createLayoutElementsFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 
 const mountSubscriptions = (deps) => {
@@ -74,7 +76,7 @@ const scheduleKeyboardSave = (deps, itemId, layoutId) => {
     renderLayoutPreview(deps, { skipAssetLoading: true });
 
     // Save final position to repository
-    const finalItem = store.selectSelectedItem();
+    const finalItem = store.selectSelectedItemData();
     if (finalItem) {
       subject.dispatch("layoutEditor.updateElement", {
         layoutId,
@@ -177,6 +179,7 @@ const getRenderState = async (deps) => {
     typography: typographyData,
     colors: colorsData,
     fonts: fontsData,
+    variables: variablesData,
   } = repository.getState();
   const typographyItems = typographyData?.items || {};
   const colorsItems = colorsData?.items || {};
@@ -186,7 +189,7 @@ const getRenderState = async (deps) => {
   const storeElements = store.selectItems();
   const layoutElements = storeElements || layouts.items[layoutId]?.elements;
   const layoutHierarchyStructure = toHierarchyStructure(layoutElements);
-  const renderStateElements = layoutHierarchyStructureToRenderState(
+  const renderStateElements = buildLayoutRenderElements(
     layoutHierarchyStructure,
     imageItems,
     { items: typographyItems },
@@ -200,53 +203,20 @@ const getRenderState = async (deps) => {
     imageItems,
     typographyItems,
     colorsItems,
+    variablesData,
   };
-};
-
-// Calculate absolute position by traversing the hierarchy
-const calculateAbsolutePosition = (
-  elements,
-  targetId,
-  parentX = 0,
-  parentY = 0,
-) => {
-  for (const element of elements) {
-    if (element.id === targetId || element.id === `${targetId}-0`) {
-      // Simple absolute position: parent position + element relative position
-      const x = parentX + element.x;
-      const y = parentY + element.y;
-
-      return {
-        x,
-        y,
-        width: element.width,
-        height: element.height,
-        originX: element.originX,
-        originY: element.originY,
-      };
-    }
-
-    if (element.children && element.children.length > 0) {
-      // Container's absolute position for its children
-      const x = parentX + element.x;
-      const y = parentY + element.y;
-
-      const found = calculateAbsolutePosition(element.children, targetId, x, y);
-      if (found) return found;
-    }
-  }
-  return null;
 };
 
 const renderLayoutPreview = async (deps) => {
   try {
-    const { store, graphicsService, projectService } = deps;
+    const { store, graphicsService } = deps;
 
-    const { renderStateElements, fontsItems } = await getRenderState(deps);
+    const { renderStateElements, fontsItems, variablesData } =
+      await getRenderState(deps);
 
     const choicesData = store.selectChoicesData();
 
-    const selectedItem = store.selectSelectedItem();
+    const selectedItem = store.selectSelectedItemData();
 
     const fileReferences = extractFileIdsFromRenderState(renderStateElements);
     let assets = await loadAssets(deps, fileReferences, fontsItems);
@@ -259,120 +229,41 @@ const renderLayoutPreview = async (deps) => {
       await graphicsService.loadAssets(assets);
     }
 
-    let elementsToRender = renderStateElements;
-
-    // Get variables from repository and extract default values
-    const repository = await projectService.getRepository();
-    const { variables: variablesData } = repository.getState();
-    const variableItems = variablesData?.items || {};
-    const variables = {};
-    const TYPE_DEFAULTS = { number: 0, boolean: false, string: "", object: {} };
-    Object.entries(variableItems).forEach(([id, config]) => {
-      if (config.type !== "folder") {
-        variables[id] =
-          config.default !== undefined
-            ? config.default
-            : TYPE_DEFAULTS[config.type];
-      }
+    const finalElements = resolveLayoutPreviewElements({
+      elements: renderStateElements,
+      previewData: createLayoutPreviewData({
+        variablesData,
+        dialogueDefaultValues: store.selectDialogueDefaultValues(),
+        choicesData,
+      }),
     });
-
-    const dialogueDefaultValues = store.selectDialogueDefaultValues();
-    const characterName = dialogueDefaultValues["dialogue-character-name"];
-    const dialogueContent = dialogueDefaultValues["dialogue-content"];
-    const data = {
-      variables,
-      dialogue: {
-        content: [{ text: dialogueContent }],
-        character: { name: characterName },
-        lines: [
-          {
-            content: [{ text: dialogueContent }],
-            characterName,
-          },
-          {
-            content: [{ text: "Narration line sample for NVL layouts." }],
-            characterName: "",
-          },
-        ],
-      },
-      choice: choicesData,
-    };
-
-    const finalElements = parseAndRender(elementsToRender, data);
 
     const parsedState = graphicsService.parse({
       elements: finalElements,
     });
+    const overlayElements = createSelectedLayoutOverlay({
+      parsedElements: parsedState.elements,
+      selectedItemId: selectedItem?.id,
+    });
 
-    if (!selectedItem) {
-      graphicsService.render({
-        elements: finalElements,
-        animations: [],
-      });
-      return;
-    }
-
-    const result = calculateAbsolutePosition(
-      parsedState.elements,
-      selectedItem.id,
-    );
-
-    if (result) {
-      const redDot = {
-        id: "selected-anchor",
-        type: "rect",
-        x: result.x + result.originX - 6,
-        y: result.y + result.originY - 6,
-        radius: 6,
-        width: 12,
-        height: 12,
-        fill: "white",
-      };
-
-      const border = {
-        id: "selected-border",
-        type: "rect",
-        x: result.x,
-        y: result.y,
-        fill: "transparent",
-        width: result.width ?? 0,
-        height: result.height ?? 0,
-        border: {
-          color: "white",
-          width: 2,
-          alpha: 1,
-        },
-        hover: {
-          cursor: "all-scroll",
-        },
-        drag: {
-          move: {},
-          start: {},
-          end: {},
-        },
-      };
-      graphicsService.render({
-        elements: [...finalElements, border, redDot],
-        animations: [],
-      });
-    }
+    graphicsService.render({
+      elements: [...finalElements, ...overlayElements],
+      animations: [],
+    });
   } catch (error) {
     console.error("[layoutEditor] Failed to render preview", error);
   }
 };
 
-export const handleAfterMount = async (deps) => {
-  const { appService, store, projectService, render, refs, graphicsService } =
-    deps;
-  const payload = appService.getPayload() || {};
-  const { layoutId } = payload;
-  const repository = await projectService.getRepository();
+const syncLayoutEditorState = (deps, repositoryState, layoutId) => {
+  const { store } = deps;
   const { layouts, images, typography, colors, fonts, variables } =
-    repository.getState();
+    repositoryState;
   const layout = layoutId ? layouts.items?.[layoutId] : undefined;
+
   store.setLayout({ id: layoutId, layout });
   store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
-  store.setImages({ images: images });
+  store.setImages({ images: images || { items: {}, tree: [] } });
   store.setTypographyData({
     typographyData: typography || { items: {}, tree: [] },
   });
@@ -381,6 +272,14 @@ export const handleAfterMount = async (deps) => {
   store.setVariablesData({
     variablesData: variables || { items: {}, tree: [] },
   });
+};
+
+export const handleAfterMount = async (deps) => {
+  const { appService, projectService, render, refs, graphicsService } = deps;
+  const payload = appService.getPayload() || {};
+  const { layoutId } = payload;
+  const repository = await projectService.getRepository();
+  syncLayoutEditorState(deps, repository.getState(), layoutId);
 
   const { canvas } = refs;
   await graphicsService.init({ canvas: canvas });
@@ -413,13 +312,11 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
 
 export const handleAddLayoutClick = handleRenderOnly;
 
-const refreshLayoutElementsData = async (deps) => {
-  const { appService, store, projectService, render } = deps;
+const refreshLayoutEditorData = async (deps) => {
+  const { appService, projectService, render } = deps;
   const { layoutId } = appService.getPayload();
   const repository = await projectService.getRepository();
-  const { layouts } = repository.getState();
-  const layout = layouts.items[layoutId];
-  store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
+  syncLayoutEditorState(deps, repository.getState(), layoutId);
   render();
   await renderLayoutPreview(deps);
 };
@@ -427,12 +324,12 @@ const refreshLayoutElementsData = async (deps) => {
 const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
   createLayoutElementsFileExplorerHandlers({
     getLayoutId: (deps) => deps.store.selectLayoutId(),
-    refresh: refreshLayoutElementsData,
+    refresh: refreshLayoutEditorData,
   });
 
 export { handleFileExplorerAction, handleFileExplorerTargetChanged };
 
-export const handleDataChanged = refreshLayoutElementsData;
+export const handleDataChanged = refreshLayoutEditorData;
 
 const unflattenKey = (key, value) => {
   // Support both "." and "_" as separators
@@ -503,7 +400,7 @@ export const handleArrowKeyDown = async (deps, payload) => {
   const { store, render } = deps;
   const { _event: e } = payload;
 
-  const currentItem = store.selectSelectedItem();
+  const currentItem = store.selectSelectedItemData();
   if (!currentItem) {
     return;
   }
@@ -568,7 +465,7 @@ export const handleArrowKeyDown = async (deps, payload) => {
  * @param {boolean} skipUIUpdate - Skip UI updates for drag operations
  */
 async function handleDebouncedUpdate(deps, payload) {
-  const { projectService, store } = deps;
+  const { appService, projectService } = deps;
   const { layoutId, selectedItemId, updatedItem, replace } = payload;
 
   // Save to repository
@@ -580,11 +477,11 @@ async function handleDebouncedUpdate(deps, payload) {
   });
 
   // For form/keyboard updates, sync store with repository
-  const { layouts, images } = projectService.getState();
-  const layout = layouts.items[layoutId];
-
-  store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
-  store.setImages({ images: images });
+  syncLayoutEditorState(
+    deps,
+    projectService.getState(),
+    appService.getPayload().layoutId || layoutId,
+  );
 }
 
 const subscriptions = (deps) => {
@@ -601,7 +498,7 @@ const subscriptions = (deps) => {
         "fonts",
         "variables",
       ]),
-      refresh: refreshLayoutElementsData,
+      refresh: refreshLayoutEditorData,
     }),
     fromEvent(window, "keydown").pipe(
       filter((e) => {
@@ -658,15 +555,14 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     detail.value &&
     typeof detail.value === "object"
   ) {
-    const currentItem = store.selectSelectedItem();
+    const currentItem = store.selectSelectedItemData();
     updatedItem = deepMerge(currentItem, {
       anchorX: detail.value.x,
       anchorY: detail.value.y,
     });
   } else if (detail.name.includes(".")) {
     // For nested paths, directly set the value instead of merging
-    const currentItem = store.selectSelectedItem();
-    updatedItem = structuredClone(currentItem);
+    updatedItem = structuredClone(store.selectSelectedItemData());
     const parts = detail.name.split(".");
     let current = updatedItem;
     for (let i = 0; i < parts.length - 1; i++) {
@@ -677,7 +573,7 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     }
     current[parts[parts.length - 1]] = detail.value;
   } else {
-    const currentItem = store.selectSelectedItem();
+    const currentItem = store.selectSelectedItemData();
     const unflattenedUpdate = unflattenKey(detail.name, detail.value);
     updatedItem = deepMerge(currentItem, unflattenedUpdate);
     updatedItem[detail.name] = detail.value;
@@ -799,7 +695,7 @@ export const handleCanvasMouseMove = (deps, payload) => {
 
   const drag = store.selectDragging();
 
-  const item = store.selectSelectedItem();
+  const item = store.selectSelectedItemData();
   if (!item) {
     return;
   }
@@ -832,7 +728,7 @@ export const handleCanvasMouseMove = (deps, payload) => {
 
 export const handlePointerUp = (deps) => {
   const { store, render } = deps;
-  const currentItem = store.selectSelectedItem();
+  const currentItem = store.selectSelectedItemData();
   if (!currentItem) {
     return;
   }
@@ -842,7 +738,7 @@ export const handlePointerUp = (deps) => {
 
 export const handlePointerDown = (deps) => {
   const { store, render } = deps;
-  const currentItem = store.selectSelectedItem();
+  const currentItem = store.selectSelectedItemData();
   if (!currentItem) {
     return;
   }
