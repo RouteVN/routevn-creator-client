@@ -1,7 +1,4 @@
-import {
-  loadTemplate,
-  getTemplateFiles,
-} from "./templateLoader.js";
+import { loadTemplate, getTemplateFiles } from "./templateLoader.js";
 import { projectRepositoryStateToDomainState } from "../../../internal/project/projection.js";
 import { createProjectCreatedRepositoryEvent } from "../../services/shared/projectRepository.js";
 

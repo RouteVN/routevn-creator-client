@@ -112,7 +112,12 @@ const collectMatchingPaths = (
     }
 
     if (Array.isArray(element.children) && element.children.length > 0) {
-      collectMatchingPaths(element.children, selectedItemId, path, matchingPaths);
+      collectMatchingPaths(
+        element.children,
+        selectedItemId,
+        path,
+        matchingPaths,
+      );
     }
   });
 
@@ -232,7 +237,9 @@ export const resolveLayoutPreviewElements = ({
   elements,
   previewData,
 } = {}) => {
-  return toElementList(parseAndRender(toElementList(elements), previewData ?? {}));
+  return toElementList(
+    parseAndRender(toElementList(elements), previewData ?? {}),
+  );
 };
 
 export const createSelectedLayoutOverlay = ({
@@ -243,16 +250,19 @@ export const createSelectedLayoutOverlay = ({
     return [];
   }
 
-  const matchingPaths = collectMatchingPaths(parsedElements, selectedItemId)
-    .filter((path) => hasRenderableBounds(path[path.length - 1]));
+  const matchingPaths = collectMatchingPaths(
+    parsedElements,
+    selectedItemId,
+  ).filter((path) => hasRenderableBounds(path[path.length - 1]));
 
   if (matchingPaths.length === 0) {
     return [];
   }
 
   const primaryPath =
-    matchingPaths.find((path) => path[path.length - 1]?.id === selectedItemId) ??
-    matchingPaths[0];
+    matchingPaths.find(
+      (path) => path[path.length - 1]?.id === selectedItemId,
+    ) ?? matchingPaths[0];
   const secondaryPaths = matchingPaths.filter((path) => path !== primaryPath);
   const secondaryOverlays = secondaryPaths
     .map((path, index) => {
