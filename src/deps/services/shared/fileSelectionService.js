@@ -1,4 +1,4 @@
-import { validateIconDimensions } from "../../../utils/fileProcessors.js";
+import { validateIconDimensions } from "../../infra/web/fileProcessors.js";
 
 const FILE_VALIDATION_ERROR_TITLE = "Error";
 

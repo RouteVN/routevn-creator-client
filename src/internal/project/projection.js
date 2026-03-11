@@ -1,8 +1,10 @@
-import { createEmptyProjectState } from "./model.js";
-import { RESOURCE_TYPES } from "./constants.js";
+import { createEmptyProjectState } from "../../internal/project/state.js";
+import { RESOURCE_TYPES } from "./commands.js";
+
+const DEFAULT_TIMESTAMP = 0;
 
 const toFiniteTimestamp = (value, fallback) =>
-  Number.isFinite(value) ? value : fallback;
+  Number.isFinite(Number(value)) ? Number(value) : fallback;
 
 const cloneOr = (value, fallback) => {
   if (value === undefined) return fallback;
@@ -134,7 +136,7 @@ const projectRepositoryResources = ({ repositoryState }) => {
       const parentId = parentById.has(resourceId)
         ? parentById.get(resourceId)
         : (item?.parentId ?? null);
-      const createdAt = toFiniteTimestamp(item?.createdAt, Date.now());
+      const createdAt = toFiniteTimestamp(item?.createdAt, DEFAULT_TIMESTAMP);
       const updatedAt = toFiniteTimestamp(item?.updatedAt, createdAt);
 
       if (resourceType === "layouts") {
@@ -221,11 +223,14 @@ export const projectRepositoryStateToDomainState = ({
   repositoryState,
   projectId = "unknown-project",
 }) => {
-  const now = Date.now();
   const state = createEmptyProjectState({
     projectId,
     name: repositoryState?.project?.name || "",
     description: repositoryState?.project?.description || "",
+    timestamp: toFiniteTimestamp(
+      repositoryState?.project?.createdAt,
+      DEFAULT_TIMESTAMP,
+    ),
   });
 
   if (!repositoryState || typeof repositoryState !== "object") {
@@ -253,10 +258,10 @@ export const projectRepositoryStateToDomainState = ({
         initialSectionId: null,
         parentId,
         position: cloneOr(scene.position, { x: 200, y: 200 }),
-        createdAt: toFiniteTimestamp(scene.createdAt, now),
+        createdAt: toFiniteTimestamp(scene.createdAt, DEFAULT_TIMESTAMP),
         updatedAt: toFiniteTimestamp(
           scene.updatedAt,
-          toFiniteTimestamp(scene.createdAt, now),
+          toFiniteTimestamp(scene.createdAt, DEFAULT_TIMESTAMP),
         ),
       };
       continue;
@@ -289,10 +294,10 @@ export const projectRepositoryStateToDomainState = ({
       initialSectionId,
       parentId,
       position: cloneOr(scene.position, { x: 200, y: 200 }),
-      createdAt: toFiniteTimestamp(scene.createdAt, now),
+      createdAt: toFiniteTimestamp(scene.createdAt, DEFAULT_TIMESTAMP),
       updatedAt: toFiniteTimestamp(
         scene.updatedAt,
-        toFiniteTimestamp(scene.createdAt, now),
+        toFiniteTimestamp(scene.createdAt, DEFAULT_TIMESTAMP),
       ),
     };
 
@@ -318,10 +323,10 @@ export const projectRepositoryStateToDomainState = ({
         name: section.name || `Section ${sectionId}`,
         lineIds,
         initialLineId,
-        createdAt: toFiniteTimestamp(section.createdAt, now),
+        createdAt: toFiniteTimestamp(section.createdAt, DEFAULT_TIMESTAMP),
         updatedAt: toFiniteTimestamp(
           section.updatedAt,
-          toFiniteTimestamp(section.createdAt, now),
+          toFiniteTimestamp(section.createdAt, DEFAULT_TIMESTAMP),
         ),
       };
 
@@ -330,10 +335,10 @@ export const projectRepositoryStateToDomainState = ({
           id: lineId,
           sectionId,
           actions: cloneOr(line?.actions, {}),
-          createdAt: toFiniteTimestamp(line?.createdAt, now),
+          createdAt: toFiniteTimestamp(line?.createdAt, DEFAULT_TIMESTAMP),
           updatedAt: toFiniteTimestamp(
             line?.updatedAt,
-            toFiniteTimestamp(line?.createdAt, now),
+            toFiniteTimestamp(line?.createdAt, DEFAULT_TIMESTAMP),
           ),
         };
       }
@@ -360,7 +365,7 @@ export const projectRepositoryStateToDomainState = ({
   state.resources = projectRepositoryResources({ repositoryState });
   state.project.createdAt = toFiniteTimestamp(
     repositoryState?.project?.createdAt,
-    now,
+    DEFAULT_TIMESTAMP,
   );
   state.project.updatedAt = toFiniteTimestamp(
     repositoryState?.project?.updatedAt,

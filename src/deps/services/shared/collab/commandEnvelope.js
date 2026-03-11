@@ -1,13 +1,23 @@
-import { COMMAND_EVENT_MODEL } from "../domain/commandCatalog.js";
+import { COMMAND_EVENT_MODEL } from "../../../../internal/project/commands.js";
 import { buildScopePartition } from "insieme/client";
-
-const defaultUuid = () =>
-  typeof crypto?.randomUUID === "function"
-    ? crypto.randomUUID()
-    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 
 const toNonEmptyString = (value) =>
   typeof value === "string" && value.length > 0 ? value : null;
+
+const toFiniteTimestamp = (value, fallback = 0) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : fallback;
+};
+
+const defaultUuid = () => {
+  if (typeof crypto?.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  throw new Error(
+    "Command id is required when crypto.randomUUID is unavailable.",
+  );
+};
 
 export const partitionFor = ({ projectId, scope }) => {
   const normalizedProjectId = toNonEmptyString(projectId);
@@ -40,7 +50,7 @@ const toUniquePartitions = ({ basePartition, partitions = [] }) => {
 };
 
 export const createCommandEnvelope = ({
-  id = defaultUuid(),
+  id,
   projectId,
   scope,
   partition,
@@ -48,15 +58,16 @@ export const createCommandEnvelope = ({
   type,
   payload,
   actor,
-  clientTs = Date.now(),
+  clientTs = 0,
   commandVersion = COMMAND_EVENT_MODEL.commandVersion,
   meta,
 }) => {
   const basePartition =
     toNonEmptyString(partition) || partitionFor({ projectId, scope });
+  const resolvedId = toNonEmptyString(id) || defaultUuid();
 
   return {
-    id,
+    id: resolvedId,
     projectId,
     partition: basePartition,
     partitions: toUniquePartitions({
@@ -66,7 +77,7 @@ export const createCommandEnvelope = ({
     type,
     payload,
     actor,
-    clientTs,
+    clientTs: toFiniteTimestamp(clientTs, 0),
     commandVersion,
     ...(meta !== undefined ? { meta: structuredClone(meta) } : {}),
   };

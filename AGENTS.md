@@ -176,7 +176,7 @@ Prefer extending an existing coarse facade over adding a random helper file.
 
 ### Add a domain rule
 
-Put it in `src/domain/`.
+Put it in `src/internal/project/`.
 
 ### Add platform-specific behavior
 
@@ -189,4 +189,5 @@ Put it in:
 
 ### Add collaboration behavior
 
-Put sync/session/transport behavior in `src/collab/` or in the runtime-specific collab service composition layer.
+Put shared sync/session behavior in `src/deps/services/shared/collab/`.
+Put web transport/runtime wiring in `src/deps/services/web/collab/`.

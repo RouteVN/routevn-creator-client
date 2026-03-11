@@ -2,7 +2,7 @@ import {
   createTreeCollection,
   normalizeParentId,
 } from "../projectRepository.js";
-import { COMMAND_TYPES } from "../../../../domain/commandCatalog.js";
+import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
 
 export const createLayoutCommandApi = (shared) => ({
   async createLayoutItem({

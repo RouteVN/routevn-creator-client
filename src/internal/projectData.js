@@ -1,5 +1,5 @@
-import { toHierarchyStructure } from "../domain/treeHelpers.js";
-import { layoutHierarchyStructureToRenderState } from "./index.js";
+import { buildLayoutRenderElements } from "./project/layout.js";
+import { toHierarchyStructure } from "./project/tree.js";
 
 export function constructProjectData(state, options = {}) {
   // Helper functions
@@ -103,7 +103,7 @@ export function constructProjectData(state, options = {}) {
           id: layoutId,
           name: layout.name,
           layoutType: layout.layoutType,
-          elements: layoutHierarchyStructureToRenderState(
+          elements: buildLayoutRenderElements(
             toHierarchyStructure(layout.elements),
             images,
             typography,

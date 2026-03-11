@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createCommandEnvelope } from "../src/collab/index.js";
+import { createCommandEnvelope } from "../src/deps/services/shared/collab/commandEnvelope.js";
 import {
   createProjectedSyncHarness,
   normalizeStateForCompare,

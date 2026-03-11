@@ -1,4 +1,4 @@
-import { toFlatGroups, toFlatItems } from "../../domain/treeHelpers.js";
+import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 
 const folderContextMenuItems = [
   { label: "New Folder", type: "item", value: "new-child-folder" },

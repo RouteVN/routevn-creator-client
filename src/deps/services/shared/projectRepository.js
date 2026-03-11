@@ -1,11 +1,11 @@
-import { processCommand } from "../../../domain/engine.js";
-import { projectRepositoryStateToDomainState } from "../../../domain/stateProjection.js";
+import { processCommand } from "../../../internal/project/state.js";
+import { projectRepositoryStateToDomainState } from "../../../internal/project/projection.js";
 import { createProjectRepositoryRuntime } from "./projectRepositoryRuntime.js";
 import {
   COMMAND_EVENT_MODEL,
   COMMAND_TYPES,
   isSupportedCommandType,
-} from "../../../domain/commandCatalog.js";
+} from "../../../internal/project/commands.js";
 import {
   commandToSyncEvent,
   committedSyncEventToCommand,
@@ -158,13 +158,13 @@ export const findLineLocation = (state, lineId) => {
   return null;
 };
 
-const generateCommandId = () =>
-  typeof crypto?.randomUUID === "function"
-    ? crypto.randomUUID()
-    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-
 const isNonEmptyString = (value) =>
   typeof value === "string" && value.length > 0;
+
+const toFiniteTimestamp = (value, fallback = 0) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : fallback;
+};
 
 const defaultInitializationActor = (projectId) => ({
   userId: "system",
@@ -211,7 +211,7 @@ export const createProjectCreatedCommand = ({
     id:
       typeof commandId === "string" && commandId.length > 0
         ? commandId
-        : generateCommandId(),
+        : `project-created:${resolvedProjectId}`,
     projectId: resolvedProjectId,
     partition: basePartition,
     partitions: resolvedPartitions,
@@ -222,7 +222,7 @@ export const createProjectCreatedCommand = ({
     actor: structuredClone(
       actor || defaultInitializationActor(resolvedProjectId),
     ),
-    clientTs: Number.isFinite(Number(clientTs)) ? Number(clientTs) : Date.now(),
+    clientTs: toFiniteTimestamp(clientTs, state?.project?.createdAt ?? 0),
     commandVersion: COMMAND_EVENT_MODEL.commandVersion,
     ...(meta !== undefined ? { meta: structuredClone(meta) } : {}),
   };

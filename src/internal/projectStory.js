@@ -1,4 +1,4 @@
-import { toFlatItems } from "../domain/treeHelpers.js";
+import { toFlatItems } from "./project/tree.js";
 
 const createTransitionKey = (transition) => {
   if (!transition) {

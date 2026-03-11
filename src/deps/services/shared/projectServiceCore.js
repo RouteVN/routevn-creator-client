@@ -2,13 +2,14 @@ import { createProjectAssetService } from "./projectAssetService.js";
 import { createProjectCollabCore } from "./projectCollabCore.js";
 import { createProjectExportService } from "./projectExportService.js";
 import { createProjectRepositoryService } from "./projectRepositoryService.js";
-import { projectRepositoryStateToDomainState } from "../../../domain/stateProjection.js";
+import { projectRepositoryStateToDomainState } from "../../../internal/project/projection.js";
 
 export const createProjectServiceCore = ({
   router,
   db,
   filePicker,
   idGenerator,
+  now = () => Date.now(),
   collabLog,
   storageAdapter,
   fileAdapter,
@@ -32,6 +33,7 @@ export const createProjectServiceCore = ({
   const collabService = createProjectCollabCore({
     router,
     idGenerator,
+    now,
     collabLog,
     getCurrentRepository: repositoryService.getCurrentRepository,
     getCachedRepository: repositoryService.getCachedRepository,

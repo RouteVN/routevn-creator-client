@@ -1,4 +1,4 @@
-import { debugLog, previewDebugText } from "../../utils/debugLog.js";
+import { debugLog, previewDebugText } from "./shared/debugLog.js";
 
 /**
  * Creates a pending queue service for managing debounced updates.

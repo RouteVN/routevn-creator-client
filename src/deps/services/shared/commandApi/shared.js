@@ -1,5 +1,5 @@
-import { createCommandEnvelope } from "../../../../collab/index.js";
-import { projectRepositoryStateToDomainState } from "../../../../domain/stateProjection.js";
+import { createCommandEnvelope } from "../collab/commandEnvelope.js";
+import { projectRepositoryStateToDomainState } from "../../../../internal/project/projection.js";
 import {
   applyCommandToRepository,
   assertSupportedProjectState,
@@ -10,6 +10,7 @@ import {
 
 export const createCommandApiShared = ({
   idGenerator,
+  now = () => 0,
   getCurrentProjectId,
   getCurrentRepository,
   getCachedRepository,
@@ -26,7 +27,17 @@ export const createCommandApiShared = ({
         return id;
       }
     }
-    return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    if (typeof crypto?.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+    throw new Error(
+      "Command id generator is required when crypto.randomUUID is unavailable.",
+    );
+  };
+
+  const getCommandTimestamp = () => {
+    const value = Number(now());
+    return Number.isFinite(value) ? value : 0;
   };
 
   const ensureCommandContext = async () => {
@@ -66,6 +77,7 @@ export const createCommandApiShared = ({
     const resolvedBasePartition =
       basePartition || `project:${context.projectId}:${scope}`;
     const command = createCommandEnvelope({
+      id: createId(),
       projectId: context.projectId,
       scope,
       partition: resolvedBasePartition,
@@ -73,6 +85,7 @@ export const createCommandApiShared = ({
       type,
       payload,
       actor: context.actor,
+      clientTs: getCommandTimestamp(),
     });
 
     await context.session.submitCommand(command);

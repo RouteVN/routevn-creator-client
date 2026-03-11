@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
+import { recursivelyCheckResource } from "../../internal/projectResources.js";
 import { createCatalogPageHandlers } from "../../deps/features/resourcePages/catalog/createCatalogPageHandlers.js";
 import { resetState } from "./tweens.constants";
 

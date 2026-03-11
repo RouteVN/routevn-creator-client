@@ -6,9 +6,9 @@ import {
   createCommandEnvelope,
   committedEventToCommand,
   createProjectCollabService,
-} from "../src/collab/index.js";
-import { COMMAND_TYPES } from "../src/domain/commandCatalog.js";
-import { validateCommand } from "../src/domain/validateCommand.js";
+} from "../src/deps/services/shared/collab/index.js";
+import { COMMAND_TYPES } from "../src/internal/project/commands.js";
+import { validateCommand } from "../src/internal/project/commands.js";
 import {
   createInMemoryServerTransport,
   parseToken,

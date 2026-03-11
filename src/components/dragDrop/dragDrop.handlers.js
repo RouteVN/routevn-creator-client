@@ -1,7 +1,7 @@
 import {
   getAcceptAttribute,
   isFileTypeAccepted,
-} from "../../utils/fileTypeUtils.js";
+} from "../../internal/fileTypes.js";
 
 export const handleClick = (deps) => {
   const { dispatchEvent, props } = deps;

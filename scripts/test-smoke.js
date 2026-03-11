@@ -1,17 +1,22 @@
 import assert from "node:assert/strict";
-import { createProjectCollabService } from "../src/collab/createProjectCollabService.js";
+import { createProjectCollabService } from "../src/deps/services/shared/collab/createProjectCollabService.js";
 import {
   applyCommandToRepository,
   createProjectCreatedRepositoryEvent,
   createProjectRepository,
   initialProjectData,
 } from "../src/deps/services/shared/projectRepository.js";
-import { COMMAND_VERSION } from "../src/domain/constants.js";
-import { processCommand } from "../src/domain/engine.js";
-import { DomainPreconditionError } from "../src/domain/errors.js";
-import { assertDomainInvariants } from "../src/domain/invariants.js";
-import { createEmptyProjectState } from "../src/domain/model.js";
-import { projectRepositoryStateToDomainState } from "../src/domain/stateProjection.js";
+import {
+  COMMAND_VERSION,
+  DomainPreconditionError,
+} from "../src/internal/project/commands.js";
+import { processCommand } from "../src/internal/project/state.js";
+import { assertDomainInvariants } from "../src/internal/project/state.js";
+import { buildLayoutRenderElements } from "../src/internal/project/layout.js";
+import { createEmptyProjectState } from "../src/internal/project/state.js";
+import { projectRepositoryStateToDomainState } from "../src/internal/project/projection.js";
+import { toHierarchyStructure } from "../src/internal/project/tree.js";
+import { extractFileIdsFromRenderState } from "../src/internal/projectPreview.js";
 
 const projectId = "proj-test-001";
 const actor = { userId: "user-1", clientId: "client-1" };
@@ -523,5 +528,86 @@ await applyCommandToRepository({
 });
 
 assertLayoutsNestedUnderDefault(projectionRepository.getState());
+
+const renderedChoiceLayout = buildLayoutRenderElements(
+  toHierarchyStructure({
+    items: {
+      "choice-item": {
+        id: "choice-item",
+        type: "container-ref-choice-item",
+        name: "Choice Item",
+        x: 0,
+        y: 0,
+      },
+      "choice-label": {
+        id: "choice-label",
+        parentId: "choice-item",
+        type: "text-ref-choice-item-content",
+        name: "Choice Label",
+        text: "Choice",
+        x: 20,
+        y: 10,
+        typographyId: "body",
+      },
+    },
+    tree: [
+      {
+        id: "choice-item",
+        children: [{ id: "choice-label" }],
+      },
+    ],
+  }),
+  {},
+  {
+    items: {
+      body: {
+        id: "body",
+        fontId: "font-body",
+        colorId: "color-body",
+        fontSize: 20,
+        lineHeight: 1.4,
+      },
+    },
+    tree: [],
+  },
+  {
+    items: {
+      "color-body": {
+        id: "color-body",
+        hex: "#ffffff",
+      },
+    },
+    tree: [],
+  },
+  {
+    items: {
+      "font-body": {
+        id: "font-body",
+        fontFamily: "Smoke Sans",
+      },
+    },
+    tree: [],
+  },
+);
+
+assert.equal(renderedChoiceLayout[0].type, "container");
+assert.equal(renderedChoiceLayout[0].$each, "item, i in choice.items");
+assert.equal(renderedChoiceLayout[0].id, "choice-item-${i}");
+assert.equal(renderedChoiceLayout[0].children[0].id, "choice-label-${i}");
+assert.equal(renderedChoiceLayout[0].children[0].content, "${item.content}");
+assert.equal(
+  renderedChoiceLayout[0].children[0].textStyle.fontFamily,
+  "Smoke Sans",
+);
+
+const dedupedFileReferences = extractFileIdsFromRenderState({
+  elements: [
+    { id: "sprite-a", type: "sprite", src: "file-1" },
+    { id: "sprite-b", type: "sprite", src: "file-1" },
+    { id: "sprite-c", type: "sprite", src: "file:file-1" },
+  ],
+});
+
+assert.deepEqual(dedupedFileReferences, [{ url: "file-1", type: "image/png" }]);
 
 console.log("Smoke tests: PASS");

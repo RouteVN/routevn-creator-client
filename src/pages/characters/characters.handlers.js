@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { recursivelyCheckResource } from "../../utils/resourceUsageChecker.js";
+import { recursivelyCheckResource } from "../../internal/projectResources.js";
 import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
 import { createProjectStateStream } from "../../deps/features/projectStateStream.js";
 import { tap } from "rxjs";

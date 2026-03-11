@@ -1,4 +1,4 @@
-import { drawArrowBetweenScenes } from "../../utils/arrowUtils";
+import { drawArrowBetweenScenes } from "../../internal/whiteboard/arrowUtils.js";
 
 // Natural zoom levels
 const ZOOM_LEVELS = [0.2, 0.3, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0];

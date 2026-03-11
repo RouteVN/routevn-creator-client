@@ -1,6 +1,91 @@
-import { COMMAND_VERSION, RESOURCE_TYPES } from "./constants.js";
-import { DomainPreconditionError } from "./errors.js";
-import { assertFiniteNumber, assertNonEmptyString } from "./utils.js";
+export const MODEL_VERSION = 2;
+export const PROTOCOL_VERSION = "1.0";
+export const COMMAND_VERSION = 1;
+
+export const PARTITIONS = {
+  STORY: "story",
+  RESOURCES: "resources",
+  LAYOUTS: "layouts",
+  SETTINGS: "settings",
+};
+
+export const RESOURCE_TYPES = [
+  "images",
+  "tweens",
+  "videos",
+  "sounds",
+  "characters",
+  "fonts",
+  "transforms",
+  "colors",
+  "typography",
+  "variables",
+  "layouts",
+  "components",
+];
+
+export class DomainValidationError extends Error {
+  constructor(message, details = {}) {
+    super(message);
+    this.name = "DomainValidationError";
+    this.code = "validation_failed";
+    this.details = details;
+  }
+}
+
+export class DomainInvariantError extends Error {
+  constructor(message, details = {}) {
+    super(message);
+    this.name = "DomainInvariantError";
+    this.code = "validation_failed";
+    this.details = details;
+  }
+}
+
+export class DomainPreconditionError extends Error {
+  constructor(message, details = {}) {
+    super(message);
+    this.name = "DomainPreconditionError";
+    this.code = "validation_failed";
+    this.details = details;
+  }
+}
+
+export const deepClone = (value) => structuredClone(value);
+
+export const assertFiniteNumber = (value) =>
+  typeof value === "number" && Number.isFinite(value);
+
+export const assertNonEmptyString = (value) =>
+  typeof value === "string" && value.trim().length > 0;
+
+export const insertAtIndex = (array, value, index) => {
+  if (!Array.isArray(array)) throw new Error("insertAtIndex expects array");
+  if (index === undefined || index === null || index >= array.length) {
+    array.push(value);
+    return;
+  }
+  if (index <= 0) {
+    array.unshift(value);
+    return;
+  }
+  array.splice(index, 0, value);
+};
+
+export const removeFromArray = (array, value) => {
+  const idx = array.indexOf(value);
+  if (idx >= 0) array.splice(idx, 1);
+};
+
+export const upsertNoDuplicate = (array, value, index) => {
+  removeFromArray(array, value);
+  insertAtIndex(array, value, index);
+};
+
+export const normalizeIndex = (index) => {
+  if (!Number.isInteger(index)) return undefined;
+  return Math.max(0, index);
+};
 
 const isPlainObject = (value) => {
   return (
@@ -774,3 +859,28 @@ export const assertCommandPreconditions = (state, command) => {
   const definition = getCommandDefinition(command?.type);
   definition?.assertPreconditions?.(state, command);
 };
+
+export const validateCommand = (command) => {
+  const errors = [];
+
+  validateCommandEnvelope(command, errors);
+  if (!command || !command.payload || typeof command.payload !== "object") {
+    throw new DomainValidationError("Invalid command envelope", { errors });
+  }
+
+  validateCommandPayload(command, errors);
+
+  if (errors.length > 0) {
+    throw new DomainValidationError("Command validation failed", { errors });
+  }
+
+  return true;
+};
+
+export const commandToEvent = (command) => ({
+  type: command.type,
+  payload: structuredClone(command.payload),
+  meta: {
+    ts: command.clientTs,
+  },
+});

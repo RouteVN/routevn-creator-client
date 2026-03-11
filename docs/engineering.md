@@ -46,10 +46,8 @@ RouteVN is organized in layers:
 3. Handler-facing and runtime services
    - `src/deps/services/`
    - `src/deps/infra/`
-4. Domain model and state rules
-   - `src/domain/`
-5. Collaboration runtime
-   - `src/collab/`
+4. Internal project rules and shared app-owned helpers
+   - `src/internal/`
 
 The intended direction is:
 
@@ -58,7 +56,7 @@ pages/components/primitives
 -> deps/features
 -> appService / projectService
 -> deps/services / deps/infra
--> domain / collab
+-> internal/project
 ```
 
 High-level rules:
@@ -66,7 +64,7 @@ High-level rules:
 - views stay declarative
 - stores hold UI-local state and derived display data
 - handlers orchestrate
-- domain owns project meaning and invariants
+- internal/project owns project meaning and invariants
 - setup entry points create dependencies
 
 ## Runtime Entry Points
@@ -155,7 +153,7 @@ editableText primitive
 -> linesEditor component
 -> sceneEditing feature helpers
 -> sceneEditor page
--> projectService / domain
+-> projectService / internal/project
 ```
 
 This keeps low-level caret and contenteditable behavior separate from
@@ -191,15 +189,16 @@ scene-specific workflows.
   Low-level platform integrations such as router, DB, pickers, updater, and
   storage adapters.
 
-- `src/domain/`
-  Domain model, command semantics, state projection, invariants, and tree
-  rules.
+- `src/internal/`
+  App-owned shared logic that does not belong in pages/components or behind a
+  public service facade. `src/internal/project/` owns project model,
+  command/state rules, projection, tree behavior, and layout semantics.
 
-- `src/collab/`
-  Collaboration/session/transport runtime.
+- `src/deps/services/shared/collab/`
+  Shared collaboration/session logic.
 
-- `src/utils/`
-  Narrow residual utilities that do not belong elsewhere.
+- `src/deps/services/web/collab/`
+  Web transport/runtime-specific collaboration wiring.
 
 Detailed “when adding X, put it here” contribution rules belong in `AGENTS.md`.
 This document should explain the shape of the architecture, not act as a
@@ -294,16 +293,16 @@ Allowed exceptions:
 - local DOM behavior inside a component that owns that DOM editing/interaction
   surface
 
-### Domain Ownership
+### Project Rule Ownership
 
-`src/domain/` owns:
+`src/internal/project/` owns:
 
 - project meaning
 - command semantics
 - invariants
 - state projection
 
-If a rule changes what a project means, it belongs in `src/domain/`, not in
+If a rule changes what a project means, it belongs in `src/internal/project/`, not in
 stores or handlers.
 
 ### Domain Command Family Direction
@@ -403,7 +402,7 @@ They must not absorb:
 - page-specific overlays and dialogs
 - file picking and uploads
 - repository mutations
-- domain rules that belong in services or `src/domain/`
+- project rules that belong in services or `src/internal/project/`
 
 Resource center components must stay presentational.
 

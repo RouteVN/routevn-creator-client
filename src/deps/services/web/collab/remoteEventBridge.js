@@ -1,9 +1,9 @@
-import { COLLAB_REMOTE_EVENT_ACTION } from "../../../../collab/remoteEvents.js";
+import { COLLAB_REMOTE_EVENT_ACTION } from "../../shared/collab/remoteEvents.js";
 import {
   getCommandDefinition,
   isLayoutCommandType,
   isStoryCommandType,
-} from "../../../../domain/commandCatalog.js";
+} from "../../../../internal/project/commands.js";
 
 const resolveRemoteTarget = ({ command, event } = {}) => {
   const eventTarget = event?.payload?.target;

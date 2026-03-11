@@ -1,4 +1,4 @@
-import { toFlatItems } from "../../domain/treeHelpers.js";
+import { toFlatItems } from "../../internal/project/tree.js";
 
 const getFileIdFromProps = (attrs, projectService) => {
   // Validate that both fileId and imageId are not passed

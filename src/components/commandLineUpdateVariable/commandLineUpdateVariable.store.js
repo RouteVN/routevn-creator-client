@@ -1,4 +1,4 @@
-import { getVariableOptions } from "../../utils/index.js";
+import { getVariableOptions } from "../../internal/projectVariables.js";
 
 // Operations available per variable type
 const OPERATIONS_BY_TYPE = {

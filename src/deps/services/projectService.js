@@ -21,6 +21,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
     db,
     filePicker,
     idGenerator: nanoid,
+    now: () => Date.now(),
     collabLog,
     storageAdapter,
     fileAdapter,
