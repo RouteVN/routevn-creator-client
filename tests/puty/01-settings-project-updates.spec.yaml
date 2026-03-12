@@ -33,24 +33,6 @@ in:
         payload:
           patch:
             description: A late-night route through memory
-      - id: cmd-settings-icon
-        partition: project:project-puty-settings-001:settings
-        partitions:
-          - project:project-puty-settings-001:settings
-        type: project.update
-        clientTs: 203
-        payload:
-          patch:
-            iconFileId: icon-file-1
-      - id: cmd-settings-tagline
-        partition: project:project-puty-settings-001:settings
-        partitions:
-          - project:project-puty-settings-001:settings
-        type: project.update
-        clientTs: 204
-        payload:
-          patch:
-            tagline: Choose the right platform
 out:
   storedEvents:
     - committedId: 1
@@ -79,29 +61,23 @@ out:
       meta:
         clientId: client-puty-settings
         clientTs: 202
-    - committedId: 3
-      id: cmd-settings-icon
-      projectId: project-puty-settings-001
+---
+case: rejects unknown project patch fields like tagline
+in:
+  - projectId: project-puty-settings-002
+    actor:
       userId: user-puty-settings
-      partitions:
-        - project:project-puty-settings-001:settings
-      type: project.update
-      payload:
-        patch:
-          iconFileId: icon-file-1
-      meta:
-        clientId: client-puty-settings
-        clientTs: 203
-    - committedId: 4
-      id: cmd-settings-tagline
-      projectId: project-puty-settings-001
-      userId: user-puty-settings
-      partitions:
-        - project:project-puty-settings-001:settings
-      type: project.update
-      payload:
-        patch:
-          tagline: Choose the right platform
-      meta:
-        clientId: client-puty-settings
+      clientId: client-puty-settings
+    sessionPartitions:
+      - project:project-puty-settings-002:settings
+    commands:
+      - id: cmd-settings-tagline
+        partition: project:project-puty-settings-002:settings
+        partitions:
+          - project:project-puty-settings-002:settings
+        type: project.update
         clientTs: 204
+        payload:
+          patch:
+            tagline: Choose the right platform
+throws: payload.patch.tagline is not allowed
