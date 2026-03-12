@@ -12,8 +12,18 @@ export const scrollSceneEditorSectionTabIntoView = (deps, sectionId) => {
   const { refs } = deps;
 
   requestAnimationFrame(() => {
-    const refIds = refs?.();
-    const refElements = Object.values(refIds || {});
+    const refElements = Object.values(refs || {}).flatMap((entry) => {
+      if (!entry) {
+        return [];
+      }
+      if (Array.isArray(entry)) {
+        return entry;
+      }
+      if (typeof entry === "object") {
+        return [entry, ...Object.values(entry)];
+      }
+      return [entry];
+    });
     const tabRef = refElements.find(
       (element) => element?.dataset?.sectionId === sectionId,
     );

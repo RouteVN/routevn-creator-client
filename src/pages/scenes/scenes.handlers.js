@@ -294,6 +294,11 @@ const setSelectedScene = ({ store, appService, sceneId } = {}) => {
   persistSelectedSceneId({ appService, sceneId });
 };
 
+const dismissMapAddHint = ({ store, appService } = {}) => {
+  store.hideMapAddHint();
+  appService.setUserConfig("scenesMap.hideAddSceneHint", true);
+};
+
 const getSceneItemById = ({ store, sceneId } = {}) => {
   if (!sceneId) {
     return undefined;
@@ -602,7 +607,7 @@ export const handleSceneFormClose = (deps) => {
 };
 
 export const handleSceneFormAction = async (deps, payload) => {
-  const { store, render, projectService } = deps;
+  const { store, render, projectService, appService } = deps;
   const actionId = payload._event.detail.actionId;
 
   if (actionId === "cancel") {
@@ -704,6 +709,7 @@ export const handleSceneFormAction = async (deps, payload) => {
         y: sceneWhiteboardPosition.y,
       },
     });
+    dismissMapAddHint({ store, appService });
 
     // Update store with new scenes data
     const { scenes: updatedScenes } = projectService.getState();
@@ -763,8 +769,7 @@ export const handleDropdownMenuClose = (deps) => {
 
 export const handleMapAddHintClose = (deps) => {
   const { store, render, appService } = deps;
-  store.hideMapAddHint();
-  appService.setUserConfig("scenesMap.hideAddSceneHint", true);
+  dismissMapAddHint({ store, appService });
   render();
 };
 
