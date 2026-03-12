@@ -195,9 +195,7 @@ export const createGraphicsService = async ({ subject }) => {
       engine = createRouteEngine({ handlePendingEffects });
       engine.init({
         initialState: {
-          global: {
-            currentLocalizationPackageId: "abcd",
-          },
+          global: {},
           projectData,
         },
       });

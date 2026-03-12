@@ -583,7 +583,7 @@ const renderedChoiceLayout = buildLayoutRenderElements(
     items: {
       "font-body": {
         id: "font-body",
-        fontFamily: "Smoke Sans",
+        fileId: "font-body-file",
       },
     },
     tree: [],
@@ -597,7 +597,7 @@ assert.equal(renderedChoiceLayout[0].children[0].id, "choice-label-${i}");
 assert.equal(renderedChoiceLayout[0].children[0].content, "${item.content}");
 assert.equal(
   renderedChoiceLayout[0].children[0].textStyle.fontFamily,
-  "Smoke Sans",
+  "font-body-file",
 );
 
 const dedupedFileReferences = extractFileIdsFromRenderState({

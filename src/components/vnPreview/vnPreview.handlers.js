@@ -61,10 +61,10 @@ async function loadAssetsForSceneIds(
   const fileReferences = extractFileIdsForScenes(projectData, uniqueSceneIds);
   const missingFileReferences = fileReferences.filter((fileReference) => {
     const fileId = fileReference?.url;
-    return fileId && !store.hasLoadedAssetFileId({ fileId });
+    return fileId && !store.selectHasLoadedAssetFileId({ fileId });
   });
   const isAnySceneUntracked = uniqueSceneIds.some(
-    (sceneId) => !store.hasLoadedAssetSceneId({ sceneId }),
+    (sceneId) => !store.selectHasLoadedAssetSceneId({ sceneId }),
   );
 
   if (missingFileReferences.length === 0 && !isAnySceneUntracked) {
@@ -134,7 +134,7 @@ const preloadLayoutAssetsByIds = async (deps, projectData, layoutIds) => {
   const fileReferences = extractFileIdsForLayouts(projectData, uniqueLayoutIds);
   const missingFileReferences = fileReferences.filter((fileReference) => {
     const fileId = fileReference?.url;
-    return fileId && !store.hasLoadedAssetFileId({ fileId });
+    return fileId && !store.selectHasLoadedAssetFileId({ fileId });
   });
 
   if (missingFileReferences.length === 0) {
