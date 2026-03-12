@@ -31,6 +31,27 @@ Notes:
 - Do not run `bun run build:web` after each change. The user is expected to be running a watch-mode session during active development.
 - Before pushing, run lint/format checks (the push hook also enforces this).
 
+Run tests:
+
+```bash
+bun run test:smoke
+bun run test:integration
+bun run test:convergence
+bun run test:command-only
+bun run test:collab-adapters
+bun run test:puty
+```
+
+Notes:
+
+- `bun run test:puty` runs the YAML-based Puty storage suite in `tests/puty/`.
+- Run a single Puty scenario with `bunx vitest run tests/puty/<file>.spec.yaml`.
+- The Puty suite is the preferred place for SQLite-backed storage assertions:
+  input commands live in YAML `in`, expected committed rows live in YAML `out`.
+- The shared Puty helper for storage scenarios is `tests/puty/insiemeStorageScenario.js`.
+- The `scripts/test-*.js` files remain the home for non-Puty runtime,
+  integration, convergence, and command-contract coverage.
+
 ## Architecture
 
 This project uses a custom frontend framework based on 3 component files: view, store, handlers:
