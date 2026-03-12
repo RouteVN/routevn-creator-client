@@ -7,6 +7,7 @@ import {
   committedEventToCommand,
   createProjectCollabService,
 } from "../src/deps/services/shared/collab/index.js";
+import { createStoryCommandApi } from "../src/deps/services/shared/commandApi/story.js";
 import { COMMAND_TYPES } from "../src/internal/project/commands.js";
 import { validateCommand } from "../src/internal/project/commands.js";
 import {
@@ -58,6 +59,78 @@ assert.equal(
     hardcodedCommandTypeScan.stdout || ""
   ).trim()}`,
 );
+
+const capturedLineActionSubmits = [];
+const storyCommandApi = createStoryCommandApi({
+  async ensureCommandContext() {
+    return {
+      projectId,
+      state: {
+        scenes: {
+          items: {
+            "scene-1": {
+              sections: {
+                items: {
+                  "section-1": {
+                    lines: {
+                      items: {
+                        "line-1": {
+                          actions: {
+                            dialogue: {
+                              content: [{ text: "hello" }],
+                              characterId: "char-1",
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+  },
+  storyBasePartitionFor(currentProjectId) {
+    return `project:${currentProjectId}:story`;
+  },
+  storyScenePartitionFor(currentProjectId, sceneId) {
+    return `project:${currentProjectId}:story:${sceneId}`;
+  },
+  async submitCommandWithContext(payload) {
+    capturedLineActionSubmits.push(payload);
+  },
+});
+
+await storyCommandApi.updateLineDialogueAction({
+  lineId: "line-1",
+  dialogue: {
+    content: [{ text: "updated" }],
+    mode: "adv",
+  },
+});
+
+assert.equal(capturedLineActionSubmits.length, 1);
+assert.equal(
+  capturedLineActionSubmits[0].type,
+  COMMAND_TYPES.LINE_UPDATE_ACTIONS,
+);
+assert.deepEqual(capturedLineActionSubmits[0].payload, {
+  lineId: "line-1",
+  patch: {
+    dialogue: {
+      content: [{ text: "updated" }],
+      mode: "adv",
+    },
+  },
+  replace: false,
+});
+assert.deepEqual(capturedLineActionSubmits[0].partitions, [
+  `project:${projectId}:story`,
+  `project:${projectId}:story:scene-1`,
+]);
 
 const observedSchemas = [];
 const store = createInMemorySyncStore();
