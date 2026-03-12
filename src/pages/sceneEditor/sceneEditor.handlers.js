@@ -248,11 +248,10 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
   let submissionData = payload._event.detail;
 
-  // If this is a dialogue submission, preserve the existing content
+  // Dialogue updates replace the full dialogue action, so keep content here.
   if (submissionData.dialogue) {
     const line = store.selectSelectedLine();
     if (line && line.actions?.dialogue?.content) {
-      // Preserve existing text while updating dialogue metadata fields.
       submissionData = {
         ...submissionData,
         dialogue: {
@@ -275,11 +274,22 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     return;
   }
 
-  await projectService.updateLineActions({
-    lineId,
-    patch: submissionData,
-    replace: false,
-  });
+  const { dialogue, ...otherActions } = submissionData;
+
+  if (dialogue) {
+    await projectService.updateLineDialogueAction({
+      lineId,
+      dialogue,
+    });
+  }
+
+  if (Object.keys(otherActions).length > 0) {
+    await projectService.updateLineActions({
+      lineId,
+      patch: otherActions,
+      replace: false,
+    });
+  }
 
   syncStoreProjectState(store, projectService);
   render();
@@ -408,12 +418,9 @@ export const handleDialogueCharacterShortcut = async (deps, payload) => {
     updatedDialogue.characterId = characterId;
   }
 
-  await projectService.updateLineActions({
+  await projectService.updateLineDialogueAction({
     lineId,
-    patch: {
-      dialogue: updatedDialogue,
-    },
-    replace: false,
+    dialogue: updatedDialogue,
   });
 
   syncStoreProjectState(store, projectService);
@@ -718,12 +725,9 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
             content: currentActions.dialogue.content,
           };
 
-          await projectService.updateLineActions({
+          await projectService.updateLineDialogueAction({
             lineId: selectedLineId,
-            patch: {
-              dialogue: updatedDialogue,
-            },
-            replace: false,
+            dialogue: updatedDialogue,
           });
         }
       } else {

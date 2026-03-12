@@ -129,16 +129,13 @@ export const writeDialogueContent = async (
     ),
   });
 
-  await projectService.updateLineActions({
+  await projectService.updateLineDialogueAction({
     lineId,
-    patch: {
-      dialogue: {
-        ...existingDialogue,
-        ...(shouldInheritNvlMode ? { mode: "nvl" } : {}),
-        content,
-      },
+    dialogue: {
+      ...existingDialogue,
+      ...(shouldInheritNvlMode ? { mode: "nvl" } : {}),
+      content,
     },
-    replace: false,
   });
 };
 
@@ -231,15 +228,12 @@ export const handleSplitLineOperation = async (deps, payload) => {
       ? [{ text: leftContent }]
       : [{ text: "" }];
 
-    await projectService.updateLineActions({
+    await projectService.updateLineDialogueAction({
       lineId,
-      patch: {
-        dialogue: {
-          ...existingDialogue,
-          content: leftContentArray,
-        },
+      dialogue: {
+        ...existingDialogue,
+        content: leftContentArray,
       },
-      replace: false,
     });
 
     const rightContentArray = rightContent
@@ -335,15 +329,12 @@ export const handlePasteLinesOperation = async (deps, payload) => {
 
   const firstLineContent = leftContent + lines[0];
   const firstContentArray = [{ text: firstLineContent }];
-  await projectService.updateLineActions({
+  await projectService.updateLineDialogueAction({
     lineId,
-    patch: {
-      dialogue: {
-        ...existingDialogue,
-        content: firstContentArray,
-      },
+    dialogue: {
+      ...existingDialogue,
+      content: firstContentArray,
     },
-    replace: false,
   });
 
   let lastCreatedLineId = lineId;
@@ -374,15 +365,12 @@ export const handlePasteLinesOperation = async (deps, payload) => {
 
   if (lines.length === 1) {
     const combinedContentArray = [{ text: firstLineContent + rightContent }];
-    await projectService.updateLineActions({
+    await projectService.updateLineDialogueAction({
       lineId,
-      patch: {
-        dialogue: {
-          ...existingDialogue,
-          content: combinedContentArray,
-        },
+      dialogue: {
+        ...existingDialogue,
+        content: combinedContentArray,
       },
-      replace: false,
     });
     lastCreatedLineId = lineId;
   }
@@ -591,15 +579,12 @@ export const handleMergeLinesOperation = async (deps, payload) => {
     const prevContentLength = prevContentText.length;
     const existingDialogue = prevLine.actions?.dialogue || {};
 
-    await projectService.updateLineActions({
+    await projectService.updateLineDialogueAction({
       lineId: prevLineId,
-      patch: {
-        dialogue: {
-          ...existingDialogue,
-          content: [{ text: prevContentText + currentContentText }],
-        },
+      dialogue: {
+        ...existingDialogue,
+        content: [{ text: prevContentText + currentContentText }],
       },
-      replace: false,
     });
 
     if (!projectService.getDomainState()?.lines?.[currentLineId]) {
