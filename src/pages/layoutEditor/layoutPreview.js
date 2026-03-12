@@ -3,7 +3,7 @@ import { parseAndRender } from "jempl";
 const DEFAULT_DIALOGUE_CHARACTER_NAME = "Character";
 const DEFAULT_DIALOGUE_CONTENT = "This is a sample dialogue content.";
 const OVERLAY_BORDER = {
-  color: "#3b82f6",
+  color: "#ffffff",
   width: 2,
   alpha: 1,
 };

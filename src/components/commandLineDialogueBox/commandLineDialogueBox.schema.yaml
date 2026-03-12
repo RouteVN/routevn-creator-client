@@ -29,6 +29,11 @@ propsSchema:
           type: boolean
         clear:
           type: boolean
+        ui:
+          type: object
+          properties:
+            resourceId:
+              type: string
         gui:
           type: object
           properties:

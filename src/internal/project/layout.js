@@ -1,4 +1,6 @@
+import { resolveLayoutReferences } from "route-engine-js";
 import { getFirstTypographyId } from "../../constants/typography.js";
+import { normalizeEngineActions } from "./engineActions.js";
 
 const TEXT_NODE_TYPES = new Set([
   "text",
@@ -40,11 +42,10 @@ const REPEATING_CONTAINER_CONFIG = {
   },
 };
 
-const DEFAULT_TEXT_STYLE = {
+const DEFAULT_TEXT_STYLE_RESOURCE = {
   fontSize: 24,
-  fontFamily: "sans-serif",
   fontWeight: "normal",
-  fill: "white",
+  fontStyle: "normal",
   lineHeight: 1.2,
   breakWords: true,
 };
@@ -59,31 +60,135 @@ const toWordWrapWidth = (value) => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
-const resolveTypographyForNode = (nodeTypographyId, typographyData = {}) => {
+const toFiniteNumber = (value, fallback) => {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const resolveTypographyId = (nodeTypographyId, typographyData = {}) => {
   const typographyItems = typographyData.items || {};
 
   if (nodeTypographyId && typographyItems[nodeTypographyId]) {
-    return typographyItems[nodeTypographyId];
+    return nodeTypographyId;
   }
 
-  const firstTypographyId = getFirstTypographyId(typographyData);
-  return firstTypographyId ? typographyItems[firstTypographyId] : undefined;
+  return getFirstTypographyId(typographyData);
+};
+
+const normalizeTextStyleResource = (typography) => {
+  if (!typography?.fontId || !typography?.colorId) {
+    return undefined;
+  }
+
+  const textStyle = {
+    fontId: typography.fontId,
+    colorId: typography.colorId,
+    fontSize: toFiniteNumber(
+      typography.fontSize,
+      DEFAULT_TEXT_STYLE_RESOURCE.fontSize,
+    ),
+    fontWeight: typography.fontWeight ?? DEFAULT_TEXT_STYLE_RESOURCE.fontWeight,
+    fontStyle: typography.fontStyle ?? DEFAULT_TEXT_STYLE_RESOURCE.fontStyle,
+    lineHeight: toFiniteNumber(
+      typography.lineHeight,
+      DEFAULT_TEXT_STYLE_RESOURCE.lineHeight,
+    ),
+    breakWords: typography.breakWords ?? DEFAULT_TEXT_STYLE_RESOURCE.breakWords,
+  };
+
+  if (typeof typography.align === "string" && typography.align.length > 0) {
+    textStyle.align = typography.align;
+  }
+
+  const wordWrapWidth = toWordWrapWidth(typography.wordWrapWidth);
+  if (wordWrapWidth !== undefined) {
+    textStyle.wordWrap = typography.wordWrap ?? true;
+    textStyle.wordWrapWidth = wordWrapWidth;
+  } else if (typeof typography.wordWrap === "boolean") {
+    textStyle.wordWrap = typography.wordWrap;
+  }
+
+  if (typography.strokeColorId) {
+    textStyle.strokeColorId = typography.strokeColorId;
+  }
+  if (typography.strokeAlpha !== undefined) {
+    textStyle.strokeAlpha = typography.strokeAlpha;
+  }
+  if (typography.strokeWidth !== undefined) {
+    textStyle.strokeWidth = typography.strokeWidth;
+  }
+
+  return textStyle;
+};
+
+const buildNodeTextStyleOverrides = (node) => {
+  const overrides = {};
+
+  if (typeof node.style?.align === "string" && node.style.align.length > 0) {
+    overrides.align = node.style.align;
+  }
+
+  const wordWrapWidth = toWordWrapWidth(node.style?.wordWrapWidth);
+  if (wordWrapWidth !== undefined) {
+    overrides.wordWrap = true;
+    overrides.wordWrapWidth = wordWrapWidth;
+    overrides.breakWords = true;
+  }
+
+  return Object.keys(overrides).length > 0 ? overrides : undefined;
+};
+
+const ensureNodeTextStyleId = ({
+  textStyles,
+  typographyData,
+  layoutId,
+  node,
+  typographyId,
+  variant,
+}) => {
+  const resolvedTypographyId = resolveTypographyId(
+    typographyId,
+    typographyData,
+  );
+  if (!resolvedTypographyId) {
+    return undefined;
+  }
+
+  const overrides = buildNodeTextStyleOverrides(node);
+  if (!overrides) {
+    return resolvedTypographyId;
+  }
+
+  const derivedId = `__layout:${layoutId}:${node.id}:${variant}`;
+  if (!textStyles[derivedId]) {
+    const baseTextStyle = textStyles[resolvedTypographyId];
+    if (!baseTextStyle) {
+      return resolvedTypographyId;
+    }
+
+    textStyles[derivedId] = {
+      ...baseTextStyle,
+      ...overrides,
+    };
+  }
+
+  return derivedId;
 };
 
 const normalizeSliderChange = (change, sliderId) => {
   const updateVariable = change?.actionPayload?.actions?.updateVariable;
   if (!updateVariable) {
-    return change;
+    return normalizeEngineActions(change);
   }
 
   const fallbackId = toAlphanumericId(`slider${sliderId}update`);
   const sanitizedId = toAlphanumericId(updateVariable.id, fallbackId);
 
   if (sanitizedId === updateVariable.id) {
-    return change;
+    return normalizeEngineActions(change);
   }
 
-  return {
+  return normalizeEngineActions({
     ...change,
     actionPayload: {
       ...change.actionPayload,
@@ -95,7 +200,7 @@ const normalizeSliderChange = (change, sliderId) => {
         },
       },
     },
-  };
+  });
 };
 
 const updateChildrenIds = (children, indexVar) => {
@@ -126,6 +231,13 @@ const isNvlLinesContainer = (node) => {
   );
 };
 
+const getImageFileId = (imageItems, imageId) => {
+  const fileId = imageItems?.[imageId]?.fileId;
+  return typeof fileId === "string" && fileId.length > 0
+    ? `${fileId}`
+    : undefined;
+};
+
 const buildBaseElement = (node) => {
   const element = {
     id: node.id,
@@ -139,7 +251,7 @@ const buildBaseElement = (node) => {
     scaleX: node.scaleX ?? 1,
     scaleY: node.scaleY ?? 1,
     rotation: node.rotation ?? 0,
-    click: node.click,
+    click: normalizeEngineActions(node.click),
   };
 
   if (node["$when"]) {
@@ -153,104 +265,62 @@ const buildBaseElement = (node) => {
   return element;
 };
 
-const buildTextStyle = ({
-  node,
-  typography,
-  colorsData,
-  fontsData,
-  fallbackStyle = DEFAULT_TEXT_STYLE,
-}) => {
-  const colorItem = colorsData.items?.[typography?.colorId];
-  const fontItem = fontsData.items?.[typography?.fontId];
-  const fontSize =
-    Number.parseFloat(typography?.fontSize ?? fallbackStyle.fontSize ?? 24) ||
-    24;
-  const lineHeightRatio =
-    Number.parseFloat(
-      typography?.lineHeight ?? fallbackStyle.lineHeight ?? 1.2,
-    ) || 1.2;
-  const wordWrapWidth = toWordWrapWidth(node.style?.wordWrapWidth);
-
-  return {
-    fontSize,
-    fontFamily:
-      fontItem?.fontFamily || fallbackStyle.fontFamily || "sans-serif",
-    fontWeight: typography?.fontWeight || fallbackStyle.fontWeight || "normal",
-    fill: colorItem?.hex || fallbackStyle.fill || "white",
-    lineHeight:
-      fallbackStyle === DEFAULT_TEXT_STYLE
-        ? (typography?.lineHeight ?? fallbackStyle.lineHeight ?? 1.2)
-        : Math.round(fontSize * lineHeightRatio),
-    align: node.style?.align,
-    breakWords: true,
-    ...(wordWrapWidth !== undefined ? { wordWrapWidth } : {}),
-  };
-};
-
-const applyTextNode = ({
-  element,
-  node,
-  typographyData,
-  colorsData,
-  fontsData,
-}) => {
+const applyTextNode = ({ element, node, context }) => {
   if (!TEXT_NODE_TYPES.has(node.type)) {
     return element;
   }
-
-  const typography = resolveTypographyForNode(
-    node.typographyId,
-    typographyData,
-  );
-  const wordWrapWidth = toWordWrapWidth(node.style?.wordWrapWidth);
-  const baseTextStyle = typography
-    ? buildTextStyle({
-        node,
-        typography,
-        colorsData,
-        fontsData,
-      })
-    : {
-        ...DEFAULT_TEXT_STYLE,
-        align: node.style?.align,
-        ...(wordWrapWidth !== undefined ? { wordWrapWidth } : {}),
-      };
 
   const nextElement = {
     ...element,
     type: TEXT_RENDER_TYPE_BY_TYPE[node.type] || element.type,
     text: node.text,
     content: TEXT_CONTENT_BY_TYPE[node.type] || node.text,
-    textStyle: baseTextStyle,
   };
 
+  const textStyleId = ensureNodeTextStyleId({
+    textStyles: context.textStyles,
+    typographyData: context.typographyData,
+    layoutId: context.layoutId,
+    node,
+    typographyId: node.typographyId,
+    variant: "base",
+  });
+  if (textStyleId) {
+    nextElement.textStyleId = textStyleId;
+  }
+
   if (node.hoverTypographyId) {
-    const hoverTypography = typographyData.items?.[node.hoverTypographyId];
-    if (hoverTypography) {
+    const hoverTextStyleId = ensureNodeTextStyleId({
+      textStyles: context.textStyles,
+      typographyData: context.typographyData,
+      layoutId: context.layoutId,
+      node,
+      typographyId: node.hoverTypographyId,
+      variant: "hover",
+    });
+
+    if (hoverTextStyleId) {
       nextElement.hover = {
-        textStyle: buildTextStyle({
-          node,
-          typography: hoverTypography,
-          colorsData,
-          fontsData,
-          fallbackStyle: baseTextStyle,
-        }),
+        ...nextElement.hover,
+        textStyleId: hoverTextStyleId,
       };
     }
   }
 
   if (node.clickedTypographyId) {
-    const clickedTypography = typographyData.items?.[node.clickedTypographyId];
-    if (clickedTypography) {
+    const clickTextStyleId = ensureNodeTextStyleId({
+      textStyles: context.textStyles,
+      typographyData: context.typographyData,
+      layoutId: context.layoutId,
+      node,
+      typographyId: node.clickedTypographyId,
+      variant: "click",
+    });
+
+    if (clickTextStyleId) {
       nextElement.click = {
         ...nextElement.click,
-        textStyle: buildTextStyle({
-          node,
-          typography: clickedTypography,
-          colorsData,
-          fontsData,
-          fallbackStyle: baseTextStyle,
-        }),
+        textStyleId: clickTextStyleId,
       };
     }
   }
@@ -258,35 +328,17 @@ const applyTextNode = ({
   return nextElement;
 };
 
-const applySpriteNode = ({ element, node, imageItems }) => {
+const applySpriteNode = ({ element, node }) => {
   if (node.type !== "sprite") {
     return element;
   }
 
-  const nextElement = { ...element };
-
-  const image = imageItems?.[node.imageId];
-  if (image?.fileId) {
-    nextElement.src = `${image.fileId}`;
-  }
-
-  const hoverImage = imageItems?.[node.hoverImageId];
-  if (hoverImage?.fileId) {
-    nextElement.hover = {
-      ...nextElement.hover,
-      src: `${hoverImage.fileId}`,
-    };
-  }
-
-  const clickImage = imageItems?.[node.clickImageId];
-  if (clickImage?.fileId) {
-    nextElement.click = {
-      ...nextElement.click,
-      src: `${clickImage.fileId}`,
-    };
-  }
-
-  return nextElement;
+  return {
+    ...element,
+    ...(node.imageId ? { imageId: node.imageId } : {}),
+    ...(node.hoverImageId ? { hoverImageId: node.hoverImageId } : {}),
+    ...(node.clickImageId ? { clickImageId: node.clickImageId } : {}),
+  };
 };
 
 const applySliderNode = ({ element, node, imageItems }) => {
@@ -303,29 +355,42 @@ const applySliderNode = ({ element, node, imageItems }) => {
     initialValue: node.initialValue ?? 0,
   };
 
-  const thumbImage = imageItems?.[node.thumbImageId];
-  if (thumbImage?.fileId) {
-    nextElement.thumbSrc = `${thumbImage.fileId}`;
+  if (node.thumbImageId) {
+    nextElement.thumbImageId = node.thumbImageId;
+  }
+  if (node.barImageId) {
+    nextElement.barImageId = node.barImageId;
+  }
+  if (node.hoverThumbImageId) {
+    nextElement.hoverThumbImageId = node.hoverThumbImageId;
+  }
+  if (node.hoverBarImageId) {
+    nextElement.hoverBarImageId = node.hoverBarImageId;
   }
 
-  const barImage = imageItems?.[node.barImageId];
-  if (barImage?.fileId) {
-    nextElement.barSrc = `${barImage.fileId}`;
+  const thumbSrc = getImageFileId(imageItems, node.thumbImageId);
+  if (thumbSrc) {
+    nextElement.thumbSrc = thumbSrc;
   }
 
-  const hoverThumbImage = imageItems?.[node.hoverThumbImageId];
-  const hoverBarImage = imageItems?.[node.hoverBarImageId];
-  if (hoverThumbImage?.fileId || hoverBarImage?.fileId) {
+  const barSrc = getImageFileId(imageItems, node.barImageId);
+  if (barSrc) {
+    nextElement.barSrc = barSrc;
+  }
+
+  const hoverThumbSrc = getImageFileId(imageItems, node.hoverThumbImageId);
+  const hoverBarSrc = getImageFileId(imageItems, node.hoverBarImageId);
+  if (hoverThumbSrc || hoverBarSrc) {
     nextElement.hover = {
       ...nextElement.hover,
     };
 
-    if (hoverThumbImage?.fileId) {
-      nextElement.hover.thumbSrc = `${hoverThumbImage.fileId}`;
+    if (hoverThumbSrc) {
+      nextElement.hover.thumbSrc = hoverThumbSrc;
     }
 
-    if (hoverBarImage?.fileId) {
-      nextElement.hover.barSrc = `${hoverBarImage.fileId}`;
+    if (hoverBarSrc) {
+      nextElement.hover.barSrc = hoverBarSrc;
     }
   }
 
@@ -370,30 +435,22 @@ const applyContainerNode = ({ element, node }) => {
       ? {
           click: {
             ...nextElement.click,
-            ...repeatingConfig.click,
+            ...normalizeEngineActions(repeatingConfig.click),
           },
         }
       : {}),
   };
 };
 
-const mapLayoutNode = ({
-  node,
-  imageItems,
-  typographyData,
-  colorsData,
-  fontsData,
-}) => {
+const mapLayoutNode = ({ node, imageItems, context }) => {
   let element = buildBaseElement(node);
 
   element = applyTextNode({
     element,
     node,
-    typographyData,
-    colorsData,
-    fontsData,
+    context,
   });
-  element = applySpriteNode({ element, node, imageItems });
+  element = applySpriteNode({ element, node });
   element = applySliderNode({ element, node, imageItems });
   element = applyContainerNode({ element, node });
 
@@ -402,9 +459,7 @@ const mapLayoutNode = ({
       mapLayoutNode({
         node: child,
         imageItems,
-        typographyData,
-        colorsData,
-        fontsData,
+        context,
       }),
     );
 
@@ -416,20 +471,168 @@ const mapLayoutNode = ({
   return element;
 };
 
+const createImageResources = (imageItems = {}) => {
+  const images = {};
+
+  Object.entries(imageItems).forEach(([imageId, item]) => {
+    if (!item?.fileId) {
+      return;
+    }
+
+    if (item.type && item.type !== "image") {
+      return;
+    }
+
+    const image = {
+      fileId: `${item.fileId}`,
+    };
+
+    if (item.fileType) {
+      image.fileType = item.fileType;
+    }
+    if (item.width !== undefined) {
+      image.width = item.width;
+    }
+    if (item.height !== undefined) {
+      image.height = item.height;
+    }
+
+    images[imageId] = image;
+  });
+
+  return images;
+};
+
+const createColorResources = (colorsData = {}) => {
+  return Object.entries(colorsData.items || {}).reduce(
+    (result, [colorId, item]) => {
+      if (item?.type && item.type !== "color") {
+        return result;
+      }
+      if (!item?.hex) {
+        return result;
+      }
+
+      result[colorId] = {
+        hex: item.hex,
+      };
+      return result;
+    },
+    {},
+  );
+};
+
+const createFontResources = (fontsData = {}) => {
+  return Object.entries(fontsData.items || {}).reduce(
+    (result, [fontId, item]) => {
+      if (item?.type && item.type !== "font") {
+        return result;
+      }
+      if (!item?.fileId) {
+        return result;
+      }
+
+      result[fontId] = {
+        fileId: `${item.fileId}`,
+        ...(item.fileType ? { fileType: item.fileType } : {}),
+      };
+      return result;
+    },
+    {},
+  );
+};
+
+const createTextStyleResources = (typographyData = {}) => {
+  return Object.entries(typographyData.items || {}).reduce(
+    (result, [typographyId, item]) => {
+      if (item?.type && item.type !== "typography") {
+        return result;
+      }
+
+      const textStyle = normalizeTextStyleResource(item);
+      if (!textStyle) {
+        return result;
+      }
+
+      result[typographyId] = textStyle;
+      return result;
+    },
+    {},
+  );
+};
+
+export const createLayoutReferenceResources = (
+  imageItems,
+  typographyData,
+  colorsData,
+  fontsData,
+) => {
+  return {
+    images: createImageResources(imageItems),
+    colors: createColorResources(colorsData),
+    fonts: createFontResources(fontsData),
+    textStyles: createTextStyleResources(typographyData),
+  };
+};
+
+export const buildLayoutElements = (
+  layout,
+  imageItems,
+  typographyData,
+  colorsData,
+  fontsData,
+  options = {},
+) => {
+  const resources = createLayoutReferenceResources(
+    imageItems,
+    typographyData,
+    colorsData,
+    fontsData,
+  );
+  const textStyles = {
+    ...resources.textStyles,
+  };
+  const context = {
+    layoutId: options.layoutId ?? "preview",
+    typographyData,
+    textStyles,
+  };
+
+  const elements = (layout || []).map((node) =>
+    mapLayoutNode({
+      node,
+      imageItems,
+      context,
+    }),
+  );
+
+  return {
+    elements,
+    resources: {
+      ...resources,
+      textStyles,
+    },
+  };
+};
+
 export const buildLayoutRenderElements = (
   layout,
   imageItems,
   typographyData,
   colorsData,
   fontsData,
+  options = {},
 ) => {
-  return layout.map((node) =>
-    mapLayoutNode({
-      node,
-      imageItems,
-      typographyData,
-      colorsData,
-      fontsData,
-    }),
+  const { elements, resources } = buildLayoutElements(
+    layout,
+    imageItems,
+    typographyData,
+    colorsData,
+    fontsData,
+    options,
   );
+
+  return resolveLayoutReferences(elements, {
+    resources,
+  });
 };

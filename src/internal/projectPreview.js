@@ -69,8 +69,11 @@ const RESOURCE_REFERENCE_KEYS = new Set([
   "layoutId",
   "characterId",
   "transformId",
+  "textStyleId",
   "fontId",
   "fontFileId",
+  "colorId",
+  "strokeColorId",
   "imageId",
   "hoverImageId",
   "clickImageId",
@@ -85,6 +88,8 @@ const createResourceSelection = () => ({
   videos: new Set(),
   sounds: new Set(),
   fonts: new Set(),
+  colors: new Set(),
+  textStyles: new Set(),
   layouts: new Set(),
   characters: new Set(),
   transforms: new Set(),
@@ -107,6 +112,12 @@ const addResourceIdToSelection = (selection, resources, resourceId) => {
   }
   if (resources.fonts?.[resourceId]) {
     selection.fonts.add(resourceId);
+  }
+  if (resources.colors?.[resourceId]) {
+    selection.colors.add(resourceId);
+  }
+  if (resources.textStyles?.[resourceId]) {
+    selection.textStyles.add(resourceId);
   }
   if (resources.layouts?.[resourceId]) {
     selection.layouts.add(resourceId);
@@ -153,59 +164,13 @@ const pickByIds = (items = {}, idSet) => {
   }, {});
 };
 
-const pickFontsByFamily = (fonts = {}, fontFamilySet) => {
-  if (!fontFamilySet || fontFamilySet.size === 0) {
-    return {};
-  }
-
-  return Object.entries(fonts).reduce((result, [fontId, font]) => {
-    if (
-      typeof font?.fontFamily === "string" &&
-      fontFamilySet.has(font.fontFamily)
-    ) {
-      result[fontId] = font;
-    }
-    return result;
-  }, {});
-};
-
-const collectFontFamilies = (value, fontFamilies = new Set()) => {
-  if (!value || typeof value !== "object") {
-    return fontFamilies;
-  }
-
-  if (Array.isArray(value)) {
-    value.forEach((entry) => {
-      collectFontFamilies(entry, fontFamilies);
-    });
-    return fontFamilies;
-  }
-
-  Object.entries(value).forEach(([key, entry]) => {
-    if (key === "fontFamily" && typeof entry === "string" && entry.length > 0) {
-      fontFamilies.add(entry);
-      return;
-    }
-    collectFontFamilies(entry, fontFamilies);
-  });
-
-  return fontFamilies;
-};
-
-const mergeObjects = (...objects) => {
-  return objects.reduce((result, object) => {
-    return {
-      ...result,
-      ...object,
-    };
-  }, {});
-};
-
 const collectResourceSelectionFromValue = (projectData, value) => {
   const resources = projectData?.resources || {};
   const selection = createResourceSelection();
   const pendingLayoutIds = [];
   const queuedLayoutIds = new Set();
+  const pendingTextStyleIds = [];
+  const queuedTextStyleIds = new Set();
 
   const scanValue = (node) => {
     traverseScene(node, (key, entry) => {
@@ -214,6 +179,7 @@ const collectResourceSelectionFromValue = (projectData, value) => {
       }
 
       const hadLayout = selection.layouts.has(entry);
+      const hadTextStyle = selection.textStyles.has(entry);
       addResourceIdToSelection(selection, resources, entry);
 
       if (
@@ -223,6 +189,15 @@ const collectResourceSelectionFromValue = (projectData, value) => {
       ) {
         queuedLayoutIds.add(entry);
         pendingLayoutIds.push(entry);
+      }
+
+      if (
+        !hadTextStyle &&
+        selection.textStyles.has(entry) &&
+        !queuedTextStyleIds.has(entry)
+      ) {
+        queuedTextStyleIds.add(entry);
+        pendingTextStyleIds.push(entry);
       }
     });
   };
@@ -236,6 +211,15 @@ const collectResourceSelectionFromValue = (projectData, value) => {
       continue;
     }
     scanValue(layout);
+  }
+
+  while (pendingTextStyleIds.length > 0) {
+    const textStyleId = pendingTextStyleIds.shift();
+    const textStyle = resources.textStyles?.[textStyleId];
+    if (!textStyle) {
+      continue;
+    }
+    scanValue(textStyle);
   }
 
   return selection;
@@ -419,17 +403,14 @@ export const extractFileIdsForScene = (projectData, sceneId) => {
   const selection = collectResourceSelectionFromValue(projectData, scene);
 
   const scopedLayouts = pickByIds(resources.layouts, selection.layouts);
-  const scopedFontsById = pickByIds(resources.fonts, selection.fonts);
-  const scopedFontsByFamily = pickFontsByFamily(
-    resources.fonts,
-    collectFontFamilies(scopedLayouts),
-  );
 
   const scopedResources = {
     images: pickByIds(resources.images, selection.images),
     videos: pickByIds(resources.videos, selection.videos),
     sounds: pickByIds(resources.sounds, selection.sounds),
-    fonts: mergeObjects(scopedFontsByFamily, scopedFontsById),
+    fonts: pickByIds(resources.fonts, selection.fonts),
+    colors: pickByIds(resources.colors, selection.colors),
+    textStyles: pickByIds(resources.textStyles, selection.textStyles),
     layouts: scopedLayouts,
     characters: pickByIds(resources.characters, selection.characters),
     transforms: pickByIds(resources.transforms, selection.transforms),
@@ -454,13 +435,18 @@ export const extractFileIdsForLayouts = (projectData, layoutIds = []) => {
     return [];
   }
 
-  const scopedFontsByFamily = pickFontsByFamily(
-    resources.fonts,
-    collectFontFamilies(scopedLayouts),
+  const selection = collectResourceSelectionFromValue(
+    projectData,
+    scopedLayouts,
   );
   const scopedResources = {
+    images: pickByIds(resources.images, selection.images),
+    videos: pickByIds(resources.videos, selection.videos),
+    sounds: pickByIds(resources.sounds, selection.sounds),
     layouts: scopedLayouts,
-    fonts: scopedFontsByFamily,
+    fonts: pickByIds(resources.fonts, selection.fonts),
+    colors: pickByIds(resources.colors, selection.colors),
+    textStyles: pickByIds(resources.textStyles, selection.textStyles),
   };
 
   return dedupeFileReferences(extractFileIdsFromRenderState(scopedResources));

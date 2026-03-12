@@ -326,7 +326,11 @@ export const handleSubmitClick = (deps) => {
   }
 
   // Only add animations object if there's a valid tween selected
-  if (selectedTweenId && selectedTweenId !== "none") {
+  if (
+    selectedResource?.resourceId &&
+    selectedTweenId &&
+    selectedTweenId !== "none"
+  ) {
     backgroundData.animations = {
       in: {
         resourceId: selectedTweenId,

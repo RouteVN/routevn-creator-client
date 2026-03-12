@@ -1,9 +1,43 @@
+const createEmptyAssetLoadCache = () => ({
+  sceneIds: [],
+  fileIds: [],
+});
+
+const readAssetLoadCache = (state) => {
+  if (!state || typeof state !== "object") {
+    return createEmptyAssetLoadCache();
+  }
+
+  if (
+    !state.assetLoadCache ||
+    !Array.isArray(state.assetLoadCache.sceneIds) ||
+    !Array.isArray(state.assetLoadCache.fileIds)
+  ) {
+    return createEmptyAssetLoadCache();
+  }
+
+  return state.assetLoadCache;
+};
+
+const ensureAssetLoadCache = (state) => {
+  if (!state || typeof state !== "object") {
+    return createEmptyAssetLoadCache();
+  }
+
+  if (
+    !state.assetLoadCache ||
+    !Array.isArray(state.assetLoadCache.sceneIds) ||
+    !Array.isArray(state.assetLoadCache.fileIds)
+  ) {
+    state.assetLoadCache = createEmptyAssetLoadCache();
+  }
+
+  return state.assetLoadCache;
+};
+
 export const createInitialState = () => ({
   isAssetLoading: false,
-  assetLoadCache: {
-    sceneIds: [],
-    fileIds: [],
-  },
+  assetLoadCache: createEmptyAssetLoadCache(),
 });
 
 export const setAssetLoading = ({ state }, { isLoading } = {}) => {
@@ -11,37 +45,38 @@ export const setAssetLoading = ({ state }, { isLoading } = {}) => {
 };
 
 export const resetAssetLoadCache = ({ state }, _payload = {}) => {
-  state.assetLoadCache = {
-    sceneIds: [],
-    fileIds: [],
-  };
+  state.assetLoadCache = createEmptyAssetLoadCache();
 };
 
-export const selectAssetLoadCache = ({ state }) => state.assetLoadCache;
+export const selectAssetLoadCache = ({ state }) => readAssetLoadCache(state);
 
-export const hasLoadedAssetFileId = ({ state }, { fileId } = {}) => {
-  return !!fileId && state.assetLoadCache.fileIds.includes(fileId);
+export const selectHasLoadedAssetFileId = ({ state }, { fileId } = {}) => {
+  return !!fileId && readAssetLoadCache(state).fileIds.includes(fileId);
 };
 
-export const hasLoadedAssetSceneId = ({ state }, { sceneId } = {}) => {
-  return !!sceneId && state.assetLoadCache.sceneIds.includes(sceneId);
+export const selectHasLoadedAssetSceneId = ({ state }, { sceneId } = {}) => {
+  return !!sceneId && readAssetLoadCache(state).sceneIds.includes(sceneId);
 };
 
 export const markAssetFileIdsLoaded = ({ state }, { fileIds } = {}) => {
+  const assetLoadCache = ensureAssetLoadCache(state);
+
   for (const fileId of fileIds ?? []) {
-    if (!fileId || state.assetLoadCache.fileIds.includes(fileId)) {
+    if (!fileId || assetLoadCache.fileIds.includes(fileId)) {
       continue;
     }
-    state.assetLoadCache.fileIds.push(fileId);
+    assetLoadCache.fileIds.push(fileId);
   }
 };
 
 export const markAssetSceneIdsLoaded = ({ state }, { sceneIds } = {}) => {
+  const assetLoadCache = ensureAssetLoadCache(state);
+
   for (const sceneId of sceneIds ?? []) {
-    if (!sceneId || state.assetLoadCache.sceneIds.includes(sceneId)) {
+    if (!sceneId || assetLoadCache.sceneIds.includes(sceneId)) {
       continue;
     }
-    state.assetLoadCache.sceneIds.push(sceneId);
+    assetLoadCache.sceneIds.push(sceneId);
   }
 };
 

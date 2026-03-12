@@ -24,11 +24,6 @@ export const assetItems = [
     name: "Transforms",
     path: "/project/resources/transforms",
   },
-  {
-    id: "tweens",
-    name: "Tweens",
-    path: "/project/resources/tweens",
-  },
 ];
 
 export const userInterfaceItems = [
