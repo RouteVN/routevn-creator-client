@@ -652,7 +652,7 @@ export const handleSceneFormAction = async (deps, payload) => {
     const actions = {
       dialogue: dialogueLayoutId
         ? {
-            gui: {
+            ui: {
               resourceId: dialogueLayoutId,
             },
             mode: "adv",

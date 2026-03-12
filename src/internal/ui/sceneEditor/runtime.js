@@ -385,18 +385,7 @@ export const initializeSceneEditorPage = async (deps) => {
     sectionId: payloadSectionId,
     lineId: payloadLineId,
   } = appService.getPayload();
-  const state = syncProjectState(store, projectService);
-
-  if (state.fonts?.items) {
-    for (const font of Object.values(state.fonts.items)) {
-      if (font.type === "font" && font.fileId && font.fontFamily) {
-        await projectService.loadFontFile({
-          fontName: font.fontFamily,
-          fileId: font.fileId,
-        });
-      }
-    }
-  }
+  syncProjectState(store, projectService);
 
   store.setSceneId({ sceneId });
 

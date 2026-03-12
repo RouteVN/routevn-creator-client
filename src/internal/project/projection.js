@@ -1,6 +1,10 @@
 import { createEmptyProjectState } from "./state.js";
-import { buildLayoutRenderElements } from "./layout.js";
+import {
+  buildLayoutElements,
+  createLayoutReferenceResources,
+} from "./layout.js";
 import { RESOURCE_TYPES } from "./commands.js";
+import { normalizeEngineActions } from "./engineActions.js";
 import { toFlatItems, toHierarchyStructure } from "./tree.js";
 
 const DEFAULT_TIMESTAMP = 0;
@@ -377,253 +381,311 @@ export const projectRepositoryStateToDomainState = ({
   return state;
 };
 
-export function constructProjectData(state, options = {}) {
-  const constructImages = (repositoryImages = {}) => {
-    const processedImages = {};
-    Object.entries(repositoryImages).forEach(([id, item]) => {
-      if (item.type === "image") {
-        processedImages[id] = item;
-      }
-    });
-    return processedImages;
-  };
+const pickResourceFields = (item, fields) => {
+  return fields.reduce((result, fieldName) => {
+    if (item?.[fieldName] !== undefined) {
+      result[fieldName] = item[fieldName];
+    }
+    return result;
+  }, {});
+};
 
-  const constructVideos = (repositoryVideos = {}) => {
-    const processedVideos = {};
-    Object.entries(repositoryVideos).forEach(([id, item]) => {
-      if (item.type === "video") {
-        processedVideos[id] = item;
-      }
-    });
-    return processedVideos;
-  };
-
-  const constructSounds = (repositorySound = {}) => {
-    const processedSounds = {};
-    Object.entries(repositorySound).forEach(([id, item]) => {
-      if (item.type === "sound") {
-        processedSounds[id] = item;
-      }
-    });
-    return processedSounds;
-  };
-
-  const constructFonts = (repositoryFonts = {}) => {
-    const processedFonts = {};
-    Object.entries(repositoryFonts).forEach(([id, item]) => {
-      if (item.type === "font") {
-        processedFonts[id] = item;
-      }
-    });
-    return processedFonts;
-  };
-
-  const constructTweens = (repositoryTweens = {}) => {
-    const items = {};
-    Object.entries(repositoryTweens).forEach(([id, item]) => {
-      if (item.type === "tween") {
-        items[id] = {
-          id,
-          properties: item.properties,
-        };
-      }
-    });
-    return items;
-  };
-
-  const constructCharacters = (repositoryCharacters = {}) => {
-    const processedCharacters = {};
-
-    Object.keys(repositoryCharacters).forEach((characterId) => {
-      const character = repositoryCharacters[characterId];
-      if (character.type === "character") {
-        processedCharacters[characterId] = {
-          name: character.name,
-          variables: {
-            name: character.name || "Unnamed Character",
-          },
-        };
-      }
-    });
-
-    return processedCharacters;
-  };
-
-  const constructTransforms = (repositoryTransforms = {}) => {
-    const processedTransforms = {};
-
-    Object.keys(repositoryTransforms).forEach((transformId) => {
-      const transform = repositoryTransforms[transformId];
-      if (transform.type === "transform") {
-        processedTransforms[transformId] = transform;
-      }
-    });
-
-    return processedTransforms;
-  };
-
-  const constructLayouts = (
-    repositoryLayouts = {},
-    images = {},
-    typography = { items: {}, tree: [] },
-    colors = { items: {}, tree: [] },
-    fonts = { items: {}, tree: [] },
-  ) => {
-    const processedLayouts = {};
-
-    Object.keys(repositoryLayouts).forEach((layoutId) => {
-      const layout = repositoryLayouts[layoutId];
-      if (layout.type === "layout") {
-        processedLayouts[layoutId] = {
-          id: layoutId,
-          name: layout.name,
-          layoutType: layout.layoutType,
-          elements: buildLayoutRenderElements(
-            toHierarchyStructure(layout.elements),
-            images,
-            typography,
-            colors,
-            fonts,
-          ),
-        };
-      }
-    });
-
-    return processedLayouts;
-  };
-
-  const extractCharacterImages = (repositoryCharacters = {}) => {
-    const characterImages = {};
-    Object.entries(repositoryCharacters).forEach(([, character]) => {
-      if (character.type === "character" && character.sprites?.items) {
-        Object.entries(character.sprites.items).forEach(
-          ([spriteId, sprite]) => {
-            if (sprite.fileId) {
-              characterImages[spriteId] = {
-                fileId: sprite.fileId,
-                width: sprite.width,
-                height: sprite.height,
-              };
-            }
-          },
-        );
-      }
-    });
-    return characterImages;
-  };
-
-  const constructResources = (repositoryState) => {
-    const images = repositoryState.images?.items || {};
-    const videos = repositoryState.videos?.items || {};
-    const sounds = repositoryState.sounds?.items || {};
-    const tweens = repositoryState.tweens?.items || {};
-    const characters = repositoryState.characters?.items || {};
-    const transforms = repositoryState.transforms?.items || {};
-    const layouts = repositoryState.layouts?.items || {};
-    const typography = repositoryState.typography || { items: {}, tree: [] };
-    const colors = repositoryState.colors || { items: {}, tree: [] };
-    const fonts = repositoryState.fonts || { items: {}, tree: [] };
-    const variables = Object.fromEntries(
-      Object.entries(repositoryState.variables?.items || {}).filter(
-        ([, item]) => item.type !== "folder",
-      ),
-    );
-
-    const processedCharacters = constructCharacters(characters);
-    const characterImages = extractCharacterImages(characters);
-
-    return {
-      images: { ...constructImages(images), ...characterImages },
-      videos: constructVideos(videos),
-      transforms: constructTransforms(transforms),
-      characters: processedCharacters,
-      sounds: constructSounds(sounds),
-      fonts: constructFonts(fonts.items || {}),
-      layouts: constructLayouts(layouts, images, typography, colors, fonts),
-      tweens: constructTweens(tweens),
-      variables,
-    };
-  };
-
-  const constructStory = (scenes) => {
-    const transformedScenes = {};
-
-    if (!scenes?.items) {
-      return transformedScenes;
+const constructImageResources = (repositoryImages = {}) => {
+  return Object.entries(repositoryImages).reduce((result, [imageId, item]) => {
+    if (item?.type && item.type !== "image") {
+      return result;
+    }
+    if (!item?.fileId) {
+      return result;
     }
 
-    Object.entries(scenes.items).forEach(([sceneId, scene]) => {
-      if (scene.type !== "scene") {
-        return;
+    result[imageId] = pickResourceFields(item, [
+      "fileId",
+      "fileType",
+      "width",
+      "height",
+    ]);
+    return result;
+  }, {});
+};
+
+const constructVideoResources = (repositoryVideos = {}) => {
+  return Object.entries(repositoryVideos).reduce((result, [videoId, item]) => {
+    if (item?.type !== "video" || !item.fileId) {
+      return result;
+    }
+
+    result[videoId] = pickResourceFields(item, [
+      "fileId",
+      "fileType",
+      "width",
+      "height",
+    ]);
+    return result;
+  }, {});
+};
+
+const constructSoundResources = (repositorySounds = {}) => {
+  return Object.entries(repositorySounds).reduce((result, [soundId, item]) => {
+    if (item?.type !== "sound" || !item.fileId) {
+      return result;
+    }
+
+    result[soundId] = pickResourceFields(item, ["fileId", "fileType"]);
+    return result;
+  }, {});
+};
+
+const constructTweenResources = (repositoryTweens = {}) => {
+  return Object.entries(repositoryTweens).reduce((result, [tweenId, item]) => {
+    if (item?.type !== "tween") {
+      return result;
+    }
+
+    result[tweenId] = {
+      properties: item.properties,
+    };
+    return result;
+  }, {});
+};
+
+const constructCharacterResources = (repositoryCharacters = {}) => {
+  return Object.entries(repositoryCharacters).reduce(
+    (result, [characterId, character]) => {
+      if (character?.type !== "character") {
+        return result;
       }
 
-      let firstSectionId;
-      if (scene.sections?.tree && scene.sections.tree.length > 0) {
-        const firstSection = scene.sections.tree[0];
-        firstSectionId =
-          typeof firstSection === "string" ? firstSection : firstSection.id;
-      }
-
-      const transformedScene = {
-        name: scene.name,
-        initialSectionId: firstSectionId,
-        sections: {},
+      result[characterId] = {
+        name: character.name,
+        variables: {
+          name: character.name || "Unnamed Character",
+        },
       };
+      return result;
+    },
+    {},
+  );
+};
 
-      if (scene.sections?.items) {
-        Object.entries(scene.sections.items).forEach(([sectionId, section]) => {
-          const transformedSection = {
-            name: section.name || "Unnamed Section",
-            lines: [],
-          };
-
-          if (section.lines?.tree && section.lines?.items) {
-            section.lines.tree.forEach((lineNode) => {
-              const lineId =
-                typeof lineNode === "string" ? lineNode : lineNode.id;
-              const line = section.lines.items[lineId];
-              if (line) {
-                transformedSection.lines.push({
-                  id: lineId,
-                  actions: line.actions || {},
-                });
-              }
-            });
-          }
-
-          transformedScene.sections[sectionId] = transformedSection;
-        });
+const constructTransformResources = (repositoryTransforms = {}) => {
+  return Object.entries(repositoryTransforms).reduce(
+    (result, [transformId, transform]) => {
+      if (transform?.type !== "transform") {
+        return result;
       }
 
-      transformedScenes[sceneId] = transformedScene;
-    });
+      result[transformId] = pickResourceFields(transform, [
+        "x",
+        "y",
+        "anchorX",
+        "anchorY",
+        "scaleX",
+        "scaleY",
+        "rotation",
+      ]);
+      return result;
+    },
+    {},
+  );
+};
 
+const extractCharacterImages = (repositoryCharacters = {}) => {
+  return Object.entries(repositoryCharacters).reduce(
+    (result, [, character]) => {
+      if (character?.type !== "character" || !character.sprites?.items) {
+        return result;
+      }
+
+      Object.entries(character.sprites.items).forEach(([spriteId, sprite]) => {
+        if (!sprite?.fileId) {
+          return;
+        }
+
+        result[spriteId] = pickResourceFields(sprite, [
+          "fileId",
+          "fileType",
+          "width",
+          "height",
+        ]);
+      });
+
+      return result;
+    },
+    {},
+  );
+};
+
+const constructLayoutResources = (
+  repositoryLayouts = {},
+  imageItems = {},
+  typography = { items: {}, tree: [] },
+  colors = { items: {}, tree: [] },
+  fonts = { items: {}, tree: [] },
+) => {
+  const baseLayoutResources = createLayoutReferenceResources(
+    imageItems,
+    typography,
+    colors,
+    fonts,
+  );
+  const textStyles = {
+    ...baseLayoutResources.textStyles,
+  };
+  const layouts = {};
+
+  Object.entries(repositoryLayouts).forEach(([layoutId, layout]) => {
+    if (layout?.type !== "layout") {
+      return;
+    }
+
+    const { elements, resources } = buildLayoutElements(
+      toHierarchyStructure(layout.elements),
+      imageItems,
+      typography,
+      colors,
+      fonts,
+      { layoutId },
+    );
+
+    Object.assign(textStyles, resources.textStyles);
+
+    layouts[layoutId] = {
+      id: layoutId,
+      name: layout.name,
+      layoutType: layout.layoutType,
+      elements,
+      ...(Array.isArray(layout.transitions)
+        ? { transitions: structuredClone(layout.transitions) }
+        : {}),
+    };
+  });
+
+  return {
+    resources: {
+      images: baseLayoutResources.images,
+      colors: baseLayoutResources.colors,
+      fonts: baseLayoutResources.fonts,
+      textStyles,
+    },
+    layouts,
+  };
+};
+
+const constructProjectResources = (repositoryState = {}) => {
+  const repositoryImages = repositoryState.images?.items || {};
+  const repositoryVideos = repositoryState.videos?.items || {};
+  const repositorySounds = repositoryState.sounds?.items || {};
+  const repositoryTweens = repositoryState.tweens?.items || {};
+  const repositoryCharacters = repositoryState.characters?.items || {};
+  const repositoryTransforms = repositoryState.transforms?.items || {};
+  const repositoryLayouts = repositoryState.layouts?.items || {};
+  const typography = repositoryState.typography || { items: {}, tree: [] };
+  const colors = repositoryState.colors || { items: {}, tree: [] };
+  const fonts = repositoryState.fonts || { items: {}, tree: [] };
+  const variables = Object.fromEntries(
+    Object.entries(repositoryState.variables?.items || {}).filter(
+      ([, item]) => item.type !== "folder",
+    ),
+  );
+
+  const characterImages = extractCharacterImages(repositoryCharacters);
+  const imageItems = {
+    ...constructImageResources(repositoryImages),
+    ...characterImages,
+  };
+  const { resources: layoutResources, layouts } = constructLayoutResources(
+    repositoryLayouts,
+    imageItems,
+    typography,
+    colors,
+    fonts,
+  );
+
+  return {
+    images: layoutResources.images,
+    videos: constructVideoResources(repositoryVideos),
+    sounds: constructSoundResources(repositorySounds),
+    fonts: layoutResources.fonts,
+    colors: layoutResources.colors,
+    textStyles: layoutResources.textStyles,
+    transforms: constructTransformResources(repositoryTransforms),
+    characters: constructCharacterResources(repositoryCharacters),
+    layouts,
+    tweens: constructTweenResources(repositoryTweens),
+    variables,
+  };
+};
+
+const constructStory = (scenes) => {
+  const transformedScenes = {};
+
+  if (!scenes?.items) {
     return transformedScenes;
-  };
+  }
 
-  const getInitialSceneId = (story) => {
-    return options.initialSceneId || story?.initialSceneId;
-  };
+  Object.entries(scenes.items).forEach(([sceneId, scene]) => {
+    if (scene.type !== "scene") {
+      return;
+    }
 
+    let firstSectionId;
+    if (scene.sections?.tree && scene.sections.tree.length > 0) {
+      const firstSection = scene.sections.tree[0];
+      firstSectionId =
+        typeof firstSection === "string" ? firstSection : firstSection.id;
+    }
+
+    const transformedScene = {
+      name: scene.name,
+      initialSectionId: firstSectionId,
+      sections: {},
+    };
+
+    if (scene.sections?.items) {
+      Object.entries(scene.sections.items).forEach(([sectionId, section]) => {
+        const transformedSection = {
+          name: section.name || "Unnamed Section",
+          lines: [],
+        };
+
+        if (section.lines?.tree && section.lines?.items) {
+          section.lines.tree.forEach((lineNode) => {
+            const lineId =
+              typeof lineNode === "string" ? lineNode : lineNode.id;
+            const line = section.lines.items[lineId];
+            if (!line) {
+              return;
+            }
+
+            transformedSection.lines.push({
+              id: lineId,
+              actions: normalizeEngineActions(line.actions || {}),
+            });
+          });
+        }
+
+        transformedScene.sections[sectionId] = transformedSection;
+      });
+    }
+
+    transformedScenes[sceneId] = transformedScene;
+  });
+
+  return transformedScenes;
+};
+
+export function constructProjectData(state, options = {}) {
   return {
     screen: {
       width: 1920,
       height: 1080,
       backgroundColor: "#000000",
     },
-    resources: constructResources(state),
+    resources: constructProjectResources(state),
     story: {
-      initialSceneId: getInitialSceneId(state.story),
+      initialSceneId: options.initialSceneId || state.story?.initialSceneId,
       scenes: constructStory(state.scenes),
-    },
-    l10n: {
-      packages: {
-        abcd: {
-          label: "English",
-          lang: "en",
-          keys: {},
-        },
-      },
     },
   };
 }

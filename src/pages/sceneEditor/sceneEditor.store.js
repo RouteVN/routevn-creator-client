@@ -1,4 +1,4 @@
-import { buildLayoutRenderElements } from "../../internal/project/layout.js";
+import { buildLayoutElements } from "../../internal/project/layout.js";
 import { toHierarchyStructure } from "../../internal/project/tree.js";
 import { buildSceneEditorLineViewModels } from "../../internal/ui/sceneEditor/lineViewModels.js";
 import {
@@ -205,13 +205,14 @@ export const selectLayouts = ({ state }) => {
         id: layoutId,
         name: layout.name,
         layoutType: layout.layoutType,
-        elements: buildLayoutRenderElements(
+        elements: buildLayoutElements(
           toHierarchyStructure(layout.elements),
           images,
           typography,
           colors,
           fonts,
-        ),
+          { layoutId },
+        ).elements,
       };
     }
   });

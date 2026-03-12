@@ -148,8 +148,7 @@ const loadAssets = async (deps, fileReferences, fontsItems) => {
       else if (fileName.endsWith(".otf")) type = "font/otf";
       else type = "font/ttf"; // default font type
 
-      // For fonts, use fontFamily as the key instead of fileId
-      assets[fontItem.fontFamily] = {
+      assets[`${fileId}`] = {
         url: url,
         type: type,
       };
@@ -195,6 +194,7 @@ const getRenderState = async (deps) => {
     { items: typographyItems },
     { items: colorsItems },
     { items: fontsItems },
+    { layoutId },
   );
   return {
     renderStateElements,

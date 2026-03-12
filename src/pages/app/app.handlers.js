@@ -175,7 +175,6 @@ const targetPathByKey = {
   v: "/project/resources/videos",
   b: "/project/resources/variables",
   t: "/project/resources/transforms",
-  w: "/project/resources/tweens",
   s: "/project/resources/sounds",
   n: "/project/scenes",
   r: "/project/releases",

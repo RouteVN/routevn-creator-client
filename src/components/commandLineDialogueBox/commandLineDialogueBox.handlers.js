@@ -10,7 +10,8 @@ export const handleBeforeMount = (deps) => {
   const { store, props } = deps;
   const selectedMode = props?.dialogue?.mode || "adv";
   const selectedLayoutType = getLayoutTypeByMode(selectedMode);
-  const selectedResourceId = props?.dialogue?.gui?.resourceId || "";
+  const selectedResourceId =
+    props?.dialogue?.ui?.resourceId || props?.dialogue?.gui?.resourceId || "";
   const selectedLayout = (props?.layouts || []).find(
     (layout) => layout.id === selectedResourceId,
   );
@@ -87,7 +88,7 @@ export const handleSubmitClick = (deps) => {
   };
 
   if (effectiveResourceId) {
-    dialogue.gui = {
+    dialogue.ui = {
       resourceId: effectiveResourceId,
     };
   }

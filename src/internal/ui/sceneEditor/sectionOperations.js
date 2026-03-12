@@ -124,7 +124,7 @@ export const createSceneEditorSectionWithName = async (
   const actions = {
     dialogue: dialogueLayoutId
       ? {
-          gui: {
+          ui: {
             resourceId: dialogueLayoutId,
           },
           mode: "adv",

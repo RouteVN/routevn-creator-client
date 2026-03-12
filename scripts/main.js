@@ -207,7 +207,6 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
     engine.init({
       initialState: {
         global: {
-          currentLocalizationPackageId: "eklekfjwalefj",
           saveSlots,
           variables: { ...globalDeviceVariables, ...globalAccountVariables },
         },

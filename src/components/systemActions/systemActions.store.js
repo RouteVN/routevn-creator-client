@@ -255,8 +255,10 @@ export const selectActionsData = ({ props, state }) => {
     } else {
       preview.dialogue = {
         name:
-          layoutsItems[presentationState.dialogue.gui?.resourceId]?.name ||
-          "No layout",
+          layoutsItems[
+            presentationState.dialogue.ui?.resourceId ??
+              presentationState.dialogue.gui?.resourceId
+          ]?.name || "No layout",
       };
     }
   }

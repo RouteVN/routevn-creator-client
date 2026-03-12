@@ -222,18 +222,6 @@ export const selectViewData = ({ state }) => {
   const selectedResource = selectSelectedResource({ state });
   const breadcrumb = selectBreadcrumb({ state });
 
-  // Create tween options from repository tweens using the same pattern as layouts
-  const flatTweens = toFlatItems(state.tweenItems || []).filter(
-    (item) => item.type === "tween",
-  );
-  const tweenOptions = flatTweens.map((tween) => ({
-    value: tween.id,
-    label: tween.name || tween.id,
-  }));
-
-  // Add a "None" option at the beginning
-  tweenOptions.unshift({ value: "none", label: "None" });
-
   const formFields = [
     {
       type: "slot",
@@ -254,20 +242,12 @@ export const selectViewData = ({ state }) => {
     });
   }
 
-  formFields.push({
-    name: "tween",
-    label: "Tween Animation",
-    type: "select",
-    options: tweenOptions,
-  });
-
   const form = {
     fields: formFields,
   };
 
   const defaultValues = {
     background: selectedResource?.fileId || "",
-    tween: state.selectedTweenId,
     loop: state.backgroundLoop ?? false,
   };
 
