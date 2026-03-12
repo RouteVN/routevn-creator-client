@@ -1,4 +1,4 @@
-import { constructProjectData } from "../../internal/projectData.js";
+import { constructProjectData } from "../../internal/project/projection.js";
 import {
   extractFileIdsForLayouts,
   extractSceneIdsFromValue,
@@ -8,7 +8,7 @@ import {
   resolveEventBindings,
   extractTransitionTargetSceneIds,
   extractTransitionTargetSceneIdsFromActions,
-} from "../../internal/projectPreview.js";
+} from "../../internal/project/layout.js";
 
 /**
  * Load assets (images and fonts) for rendering

@@ -2,7 +2,7 @@ import JSZip from "jszip";
 import {
   createInsiemeWebStoreAdapter,
   initializeProject as initializeWebProject,
-} from "../../infra/web/webRepositoryAdapter.js";
+} from "../../clients/web/webRepositoryAdapter.js";
 import { createProjectCollabService } from "../shared/collab/createProjectCollabService.js";
 import { createWebSocketTransport } from "./collab/createWebSocketTransport.js";
 import { projectRepositoryStateToDomainState } from "../../../internal/project/projection.js";
@@ -24,7 +24,7 @@ import {
   applyCommandToRepository,
   assertSupportedProjectState,
 } from "../shared/projectRepository.js";
-import { createBundle } from "../../../internal/projectBundle.js";
+import { createBundle } from "../shared/projectExportService.js";
 
 const countImageEntries = (imagesData) =>
   Object.values(imagesData?.items || {}).filter(

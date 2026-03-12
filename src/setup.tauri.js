@@ -4,10 +4,10 @@ import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
 // Infra - Tauri
-import { createDb } from "./deps/infra/tauri/db";
-import { createTauriFilePicker } from "./deps/infra/tauri/filePicker";
-import createUpdater from "./deps/infra/tauri/updater";
-import { setupCloseListener } from "./deps/infra/tauri/windowClose";
+import { createDb } from "./deps/clients/tauri/db";
+import { createTauriFilePicker } from "./deps/clients/tauri/filePicker";
+import createUpdater from "./deps/clients/tauri/updater";
+import { setupCloseListener } from "./deps/clients/tauri/windowClose";
 
 // Services
 import { createAppService } from "./deps/services/appService";
@@ -17,7 +17,7 @@ import { createPendingQueueService } from "./deps/services/pendingQueueService";
 import { createApiService } from "./deps/services/apiService";
 
 import Subject from "./deps/subject";
-import Router from "./deps/infra/router";
+import Router from "./deps/clients/router";
 import { createGraphicsService } from "./deps/services/graphicsService";
 import { registerPrimitives } from "./primitives/registerPrimitives";
 

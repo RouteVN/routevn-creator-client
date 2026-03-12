@@ -2,11 +2,11 @@ import { mkdir, writeFile, exists } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import JSZip from "jszip";
-import { createInsiemeTauriStoreAdapter } from "../../infra/tauri/tauriRepositoryAdapter.js";
+import { createInsiemeTauriStoreAdapter } from "../../clients/tauri/tauriRepositoryAdapter.js";
 import {
   loadTemplate,
   getTemplateFiles,
-} from "../../infra/web/templateLoader.js";
+} from "../../clients/web/templateLoader.js";
 import { createProjectCollabService } from "../shared/collab/createProjectCollabService.js";
 import { createWebSocketTransport } from "../web/collab/createWebSocketTransport.js";
 import { projectRepositoryStateToDomainState } from "../../../internal/project/projection.js";

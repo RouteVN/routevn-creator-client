@@ -61,8 +61,12 @@ If you need deeper or broader Rettangoli framework reference material, use
 - Route-level async setup/loading should be handled in app-level orchestration, not repeated in page handlers.
 - Prefer single-purpose store actions (`setCurrentProject`, etc.) over multiple related setter calls.
 - Do not call browser globals like `document` or `window` directly from page handlers for cross-cutting side effects.
-- If a handler needs browser-side behavior such as blurring the active element, global focus changes, history changes, or global listeners, route that through `deps/services` or `deps/infra`.
+- If a handler needs browser-side behavior such as blurring the active element, global focus changes, history changes, or global listeners, route that through `deps/services` or `deps/clients`.
 - Keep low-level DOM-heavy behavior in `src/primitives/` or in components that own that DOM surface directly.
+- `src/internal/ui/` is the shared home for app-owned page/store/handler orchestration.
+- `src/internal/project/` is reserved for pure project semantics only.
+- Small pure app-owned helpers that are neither project semantics nor UI orchestration belong in `src/internal/`.
+- `src/deps/features/` and `src/deps/infra/` are legacy folders. Do not add new code there.
 
 ## Detail Panel Pattern
 
@@ -161,9 +165,13 @@ If it is not truly reusable, keep it close to the page instead of forcing an abs
 
 Put it in `src/primitives/` when the code owns low-level DOM behavior or a browser-native custom element.
 
-### Add shared feature orchestration
+### Add shared page/store/handler orchestration
 
-Put it in `src/deps/features/*` when the code is shared across pages, sits above domain rules, and is not part of the public `appService` / `projectService` facade.
+Put it in `src/internal/ui/*` when the code is shared across pages, may touch stores/refs/render/RxJS/services, and is not a visual component or primitive.
+
+### Add a small pure app-owned helper
+
+Put it in `src/internal/*` when the code is pure, shared, app-owned, and is neither project semantics nor UI orchestration.
 
 ### Add a handler-facing service behavior
 
@@ -174,18 +182,32 @@ Put it behind:
 
 Prefer extending an existing coarse facade over adding a random helper file.
 
+If code needs store selectors/setters, refs, `render()`, or page event payloads, it is not service code and belongs in `src/internal/ui/*` or a page instead.
+
 ### Add a domain rule
 
 Put it in `src/internal/project/`.
+
+`src/internal/project/` is intentionally kept merged into these canonical files:
+
+- `commands.js`
+- `state.js`
+- `projection.js`
+- `tree.js`
+- `layout.js`
+
+Do not create sparse new `src/internal/project/*` files unless explicitly approved.
 
 ### Add platform-specific behavior
 
 Put it in:
 
-- `src/deps/infra/*` for low-level platform primitives
+- `src/deps/clients/*` for low-level platform and external adapters
 - `src/deps/services/web/*` or `src/deps/services/tauri/*` for service adapters
 - `src-tauri/` for native desktop-shell behavior such as Tauri commands,
   plugin setup, packaging, updater wiring, and Rust-side integration
+
+If the code wraps router, DB, file picker, updater, browser storage, or similar external/platform APIs directly, it belongs in `src/deps/clients/*`.
 
 ### Add collaboration behavior
 

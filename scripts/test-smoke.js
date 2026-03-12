@@ -16,7 +16,7 @@ import { buildLayoutRenderElements } from "../src/internal/project/layout.js";
 import { createEmptyProjectState } from "../src/internal/project/state.js";
 import { projectRepositoryStateToDomainState } from "../src/internal/project/projection.js";
 import { toHierarchyStructure } from "../src/internal/project/tree.js";
-import { extractFileIdsFromRenderState } from "../src/internal/projectPreview.js";
+import { extractFileIdsFromRenderState } from "../src/internal/project/layout.js";
 
 const projectId = "proj-test-001";
 const actor = { userId: "user-1", clientId: "client-1" };

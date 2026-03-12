@@ -1,8 +1,8 @@
 import { createGlobalUI } from "@rettangoli/ui";
 
 // Infra - Web
-import { createDb } from "./deps/infra/web/db.js";
-import { createWebFilePicker } from "./deps/infra/web/filePicker.js";
+import { createDb } from "./deps/clients/web/db.js";
+import { createWebFilePicker } from "./deps/clients/web/filePicker.js";
 
 // Services - Web
 import { createAppService } from "./deps/services/web/appService.js";
@@ -13,7 +13,7 @@ import { createApiService } from "./deps/services/apiService.js";
 // Shared Services & Dependencies
 import { createAudioService } from "./deps/services/audioService.js";
 import Subject from "./deps/subject.js";
-import Router from "./deps/infra/router.js";
+import Router from "./deps/clients/router.js";
 import { createGraphicsService } from "./deps/services/graphicsService.js";
 import { registerPrimitives } from "./primitives/registerPrimitives.js";
 

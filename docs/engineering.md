@@ -35,36 +35,54 @@ Local-first collaboration:
 
 ## Architecture Overview
 
-RouteVN is organized in layers:
+RouteVN is organized into four ownership zones:
 
 1. UI surfaces
    - `src/pages/`
    - `src/components/`
    - `src/primitives/`
-2. Shared feature orchestration
-   - `src/deps/features/`
-3. Handler-facing and runtime services
+2. App-owned shared code
+   - `src/internal/project/`
+   - `src/internal/ui/`
+   - small pure helpers in `src/internal/`
+3. Services
    - `src/deps/services/`
-   - `src/deps/infra/`
-4. Internal project rules and shared app-owned helpers
-   - `src/internal/`
+4. Clients
+   - `src/deps/clients/`
 
-The intended direction is:
+The intended dependency direction is:
 
 ```text
 pages/components/primitives
--> deps/features
+-> internal/ui
 -> appService / projectService
--> deps/services / deps/infra
--> internal/project
+-> deps/services
+-> deps/clients
+
+internal/ui -> internal/project
+deps/services -> internal/project
 ```
+
+Not every path needs every layer. The important rule is ownership:
+
+- UI-facing shared glue goes in `src/internal/ui/`
+- pure project meaning goes in `src/internal/project/`
+- handler-facing facades and service adapters go in `src/deps/services/`
+- low-level platform/external adapters go in `src/deps/clients/`
 
 High-level rules:
 
 - views stay declarative
 - stores hold UI-local state and derived display data
 - handlers orchestrate
-- internal/project owns project meaning and invariants
+- `src/internal/ui/` owns shared page/store/handler orchestration
+- `src/internal/project/` owns project meaning and invariants
+- `src/internal/project/` stays intentionally merged into a small number of
+  files, not many sparse helpers
+- small pure app-owned helpers that are neither project semantics nor UI
+  orchestration stay in `src/internal/`
+- `src/deps/services/` owns service behavior and service adapters
+- `src/deps/clients/` owns low-level platform/external clients
 - setup entry points create dependencies
 
 ## Runtime Entry Points
@@ -74,7 +92,7 @@ High-level rules:
 
 These entry points are responsible for:
 
-1. creating infrastructure dependencies
+1. creating client dependencies
 2. creating services
 3. exposing dependencies through `deps`
 4. registering browser primitives
@@ -151,7 +169,7 @@ Preferred structure:
 ```text
 editableText primitive
 -> linesEditor component
--> sceneEditing feature helpers
+-> internal/ui scene editor helpers
 -> sceneEditor page
 -> projectService / internal/project
 ```
@@ -172,9 +190,17 @@ scene-specific workflows.
 - `src/primitives/`
   Browser-native custom elements and low-level DOM wrappers.
 
-- `src/deps/features/`
-  Shared feature-level orchestration helpers that are not components, not
-  domain rules, and not public service facades.
+- `src/internal/`
+  App-owned shared logic.
+  `src/internal/project/` is reserved for pure project semantics and should
+  stay intentionally small and flat:
+  - `commands.js`
+  - `state.js`
+  - `projection.js`
+  - `tree.js`
+  - `layout.js`
+  `src/internal/ui/` is the only shared home for page/store/handler
+  orchestration that does not belong inside one page folder.
 
 - `src/deps/services/shared/`
   Shared handler-facing and internal service logic.
@@ -185,14 +211,9 @@ scene-specific workflows.
 - `src/deps/services/tauri/`
   Desktop-specific service adapters.
 
-- `src/deps/infra/`
-  Low-level platform integrations such as router, DB, pickers, updater, and
-  storage adapters.
-
-- `src/internal/`
-  App-owned shared logic that does not belong in pages/components or behind a
-  public service facade. `src/internal/project/` owns project model,
-  command/state rules, projection, tree behavior, and layout semantics.
+- `src/deps/clients/`
+  Low-level platform and external adapters such as router, DB, pickers,
+  updater, file processing, and template loading.
 
 - `src/deps/services/shared/collab/`
   Shared collaboration/session logic.
@@ -203,6 +224,13 @@ scene-specific workflows.
 Detailed “when adding X, put it here” contribution rules belong in `AGENTS.md`.
 This document should explain the shape of the architecture, not act as a
 contribution checklist.
+
+Deprecated folders:
+
+- `src/deps/features/` is a legacy location. Do not add new code there. Shared
+  page/store/handler orchestration belongs in `src/internal/ui/`.
+- `src/deps/infra/` is a legacy location. Do not add new code there. Low-level
+  platform/external adapters belong in `src/deps/clients/`.
 
 ### Public Service Facades
 
@@ -235,6 +263,37 @@ Handler-facing facade for:
 
 Handlers should not orchestrate multiple internal services directly when those
 concerns belong behind one of these facades.
+
+Service boundary test:
+
+- if code needs store setters/selectors, refs, `render()`, or page event
+  payloads, it is not service code; it belongs in `src/internal/ui/` or a page
+- if code wraps router, DB, file picker, updater, browser storage, or similar
+  external/platform APIs, it is client code; it belongs in `src/deps/clients/`
+
+### Placement Decision Order
+
+When deciding where new code goes, apply these rules in order:
+
+1. If it owns one route or screen, put it in `src/pages/`.
+2. If it is reusable visual UI, put it in `src/components/`.
+3. If it owns low-level DOM or browser-native behavior, put it in
+   `src/primitives/`.
+4. If it is shared UI/page/store/handler glue and may touch refs, render,
+   stores, RxJS, `appService`, `projectService`, or event subjects, put it in
+   `src/internal/ui/`.
+5. If it changes project meaning, command semantics, state semantics,
+   projection, tree behavior, or layout semantics, put it in
+   `src/internal/project/`.
+6. If it is a small pure app-owned helper that is not project-specific and not
+   UI orchestration, put it in `src/internal/`.
+7. If it is a handler-facing service or a service adapter, put it in
+   `src/deps/services/`.
+8. If it is a low-level platform/external adapter, put it in
+   `src/deps/clients/`.
+
+If something does not fit cleanly, do not invent a new top-level bucket. Refine
+one of these existing boundaries instead.
 
 ## Stable Boundaries
 
@@ -284,7 +343,7 @@ cross-cutting side effects such as:
 Put those behind:
 
 - `src/deps/services/shared/*`
-- `src/deps/infra/*`
+- `src/deps/clients/*`
 - `src/primitives/*`
 
 Allowed exceptions:
@@ -301,6 +360,19 @@ Allowed exceptions:
 - command semantics
 - invariants
 - state projection
+- tree behavior
+- layout semantics
+
+It is intentionally constrained to five canonical files:
+
+- `commands.js`
+- `state.js`
+- `projection.js`
+- `tree.js`
+- `layout.js`
+
+Prefer merging related project helpers into those files over creating sparse
+new `src/internal/project/*` modules.
 
 If a rule changes what a project means, it belongs in `src/internal/project/`, not in
 stores or handlers.
@@ -342,7 +414,7 @@ The intended model is:
 
 Platform-specific differences belong in:
 
-- `src/deps/infra/*`
+- `src/deps/clients/*`
 - `src/deps/services/web/*`
 - `src/deps/services/tauri/*`
 
@@ -376,14 +448,14 @@ Preferred structure:
 - page YAML stays in `src/pages/<page>/`
 - reusable center-pane UI lives in `src/components/`
 - shared page-family orchestration lives in
-  `src/deps/features/resourcePages/`
+  `src/internal/ui/resourcePages/`
 
 Current resource page families:
 
 - `src/components/mediaResourcesView/`
-- `src/deps/features/resourcePages/media/`
+- `src/internal/ui/resourcePages/media/`
 - `src/components/catalogResourcesView/`
-- `src/deps/features/resourcePages/catalog/`
+- `src/internal/ui/resourcePages/catalog/`
 
 Current custom resource center components:
 
@@ -414,7 +486,7 @@ Current scene-editing pattern:
   low-level contenteditable/caret behavior
 - `src/components/linesEditor/`
   UI-only editing surface
-- `src/deps/features/sceneEditing/`
+- `src/internal/ui/sceneEditor/`
   scene-editing workflows and line view-model shaping
 - `src/pages/sceneEditor/`
   page orchestration, preview/canvas, dialogs, and asset loading

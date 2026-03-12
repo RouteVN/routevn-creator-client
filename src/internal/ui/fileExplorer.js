@@ -10,8 +10,8 @@ import {
   insertTreeItem,
   moveTreeItem,
   updateTreeItem,
-} from "../../internal/project/tree.js";
-import { recursivelyCheckResource } from "../../internal/projectResources.js";
+} from "../project/tree.js";
+import { recursivelyCheckResource } from "../project/projection.js";
 
 const findNodeLocation = (nodes = [], targetId, parentId = "_root") => {
   for (const node of nodes) {

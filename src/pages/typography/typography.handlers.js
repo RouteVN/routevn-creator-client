@@ -5,9 +5,9 @@ import {
   getTypographyRemovalCount,
 } from "../../constants/typography.js";
 import { getFileType } from "../../internal/fileTypes.js";
-import { recursivelyCheckResource } from "../../internal/projectResources.js";
-import { createResourceFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
-import { createProjectStateStream } from "../../deps/features/projectStateStream.js";
+import { recursivelyCheckResource } from "../../internal/project/projection.js";
+import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { tap } from "rxjs";
 
 // Helper function to sync repository state to store

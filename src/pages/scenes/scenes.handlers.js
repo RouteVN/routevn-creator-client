@@ -2,8 +2,8 @@ import { nanoid } from "nanoid";
 import {
   createCollabRemoteRefreshStream,
   matchesRemoteTargets,
-} from "../../deps/features/collabRefresh.js";
-import { createScenesFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
+} from "../../internal/ui/collabRefresh.js";
+import { createScenesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another scene.";

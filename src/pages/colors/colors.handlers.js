@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid";
-import { recursivelyCheckResource } from "../../internal/projectResources.js";
-import { createCatalogPageHandlers } from "../../deps/features/resourcePages/catalog/createCatalogPageHandlers.js";
+import { recursivelyCheckResource } from "../../internal/project/projection.js";
+import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
 
 const syncEditFormValues = ({ deps, values } = {}) => {
   const { editForm } = deps.refs;

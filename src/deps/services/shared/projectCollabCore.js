@@ -1,6 +1,6 @@
 import { createWebSocketTransport } from "../web/collab/createWebSocketTransport.js";
 import { RESOURCE_TYPES } from "../../../internal/project/commands.js";
-import { recursivelyCheckResource } from "../../../internal/projectResources.js";
+import { recursivelyCheckResource } from "../../../internal/project/projection.js";
 import { createCommandApi } from "./commandApi.js";
 
 export const createProjectCollabCore = ({

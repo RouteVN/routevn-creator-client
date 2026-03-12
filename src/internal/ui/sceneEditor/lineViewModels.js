@@ -1,4 +1,4 @@
-import { toFlatItems } from "../../../internal/project/tree.js";
+import { toFlatItems } from "../../project/tree.js";
 
 const getLineChanges = (sectionLineChanges, lineId) => {
   const changesLines = sectionLineChanges?.lines || [];

@@ -5,9 +5,9 @@ import {
   insertTreeItem,
   updateTreeItem,
 } from "../../internal/project/tree.js";
-import { recursivelyCheckResource } from "../../internal/projectResources.js";
-import { createCharacterSpritesFileExplorerHandlers } from "../../deps/features/fileExplorerHandlers.js";
-import { createProjectStateStream } from "../../deps/features/projectStateStream.js";
+import { recursivelyCheckResource } from "../../internal/project/projection.js";
+import { createCharacterSpritesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { tap } from "rxjs";
 
 const EMPTY_TREE = { items: {}, tree: [] };

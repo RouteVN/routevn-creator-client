@@ -8,7 +8,7 @@ import {
   extractTransitionTargetSceneIds,
   extractTransitionTargetSceneIdsFromActions,
   resolveEventBindings,
-} from "../../../internal/projectPreview.js";
+} from "../../project/layout.js";
 import { writeDialogueContent } from "./lineOperations.js";
 
 const createAssetLoadCache = () => ({
