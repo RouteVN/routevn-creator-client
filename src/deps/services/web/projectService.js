@@ -2,6 +2,8 @@ import { nanoid } from "nanoid";
 import { createProjectServiceCore } from "../shared/projectServiceCore.js";
 import { createWebProjectServiceAdapters } from "./projectServiceAdapters.js";
 
+const ENABLE_VERBOSE_COLLAB_LOGS = false;
+
 export const createProjectService = ({
   router,
   filePicker,
@@ -9,6 +11,10 @@ export const createProjectService = ({
   db,
 }) => {
   const collabLog = (level, message, meta = {}) => {
+    if (!ENABLE_VERBOSE_COLLAB_LOGS && level !== "warn" && level !== "error") {
+      return;
+    }
+
     const fn =
       level === "error"
         ? console.error.bind(console)

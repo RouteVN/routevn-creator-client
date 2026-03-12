@@ -294,6 +294,11 @@ const setSelectedScene = ({ store, appService, sceneId } = {}) => {
   persistSelectedSceneId({ appService, sceneId });
 };
 
+const dismissMapAddHint = ({ store, appService } = {}) => {
+  store.hideMapAddHint();
+  appService.setUserConfig("scenesMap.hideAddSceneHint", true);
+};
+
 const getSceneItemById = ({ store, sceneId } = {}) => {
   if (!sceneId) {
     return undefined;
@@ -602,7 +607,7 @@ export const handleSceneFormClose = (deps) => {
 };
 
 export const handleSceneFormAction = async (deps, payload) => {
-  const { store, render, projectService } = deps;
+  const { store, render, projectService, appService } = deps;
   const actionId = payload._event.detail.actionId;
 
   if (actionId === "cancel") {
@@ -624,9 +629,6 @@ export const handleSceneFormAction = async (deps, payload) => {
 
     const sectionId = nanoid();
     const stepId = nanoid();
-
-    // Generate 31 additional line IDs
-    const additionalLineIds = Array.from({ length: 31 }, () => nanoid());
 
     // Get layouts from repository to find first dialogue and base layouts
     const { layouts } = projectService.getState();
@@ -671,20 +673,6 @@ export const handleSceneFormAction = async (deps, payload) => {
       };
     }
 
-    // Create items object with first line having actions, rest with empty actions
-    const lineItems = {
-      [stepId]: {
-        actions: actions,
-      },
-    };
-
-    // Add 31 lines with empty actions
-    additionalLineIds.forEach((lineId) => {
-      lineItems[lineId] = {
-        actions: {},
-      };
-    });
-
     await projectService.createSceneItem({
       sceneId: newSceneId,
       name: formData.name || `Scene ${new Date().toLocaleTimeString()}`,
@@ -703,18 +691,14 @@ export const handleSceneFormAction = async (deps, payload) => {
       name: "Section New",
       position: "last",
     });
-
-    const allLineIds = [stepId, ...additionalLineIds];
-    let previousLineId = null;
-    for (const currentLineId of allLineIds) {
-      await projectService.createLineItem({
-        sectionId,
-        lineId: currentLineId,
-        line: lineItems[currentLineId] || { actions: {} },
-        afterLineId: previousLineId,
-      });
-      previousLineId = currentLineId;
-    }
+    await projectService.createLineItem({
+      sectionId,
+      lineId: stepId,
+      line: {
+        actions,
+      },
+      position: "last",
+    });
 
     // Add to whiteboard items for visual display
     store.addWhiteboardItem({
@@ -725,6 +709,7 @@ export const handleSceneFormAction = async (deps, payload) => {
         y: sceneWhiteboardPosition.y,
       },
     });
+    dismissMapAddHint({ store, appService });
 
     // Update store with new scenes data
     const { scenes: updatedScenes } = projectService.getState();
@@ -784,8 +769,7 @@ export const handleDropdownMenuClose = (deps) => {
 
 export const handleMapAddHintClose = (deps) => {
   const { store, render, appService } = deps;
-  store.hideMapAddHint();
-  appService.setUserConfig("scenesMap.hideAddSceneHint", true);
+  dismissMapAddHint({ store, appService });
   render();
 };
 
