@@ -625,9 +625,6 @@ export const handleSceneFormAction = async (deps, payload) => {
     const sectionId = nanoid();
     const stepId = nanoid();
 
-    // Generate 31 additional line IDs
-    const additionalLineIds = Array.from({ length: 31 }, () => nanoid());
-
     // Get layouts from repository to find first dialogue and base layouts
     const { layouts } = projectService.getState();
     let dialogueLayoutId = null;
@@ -671,20 +668,6 @@ export const handleSceneFormAction = async (deps, payload) => {
       };
     }
 
-    // Create items object with first line having actions, rest with empty actions
-    const lineItems = {
-      [stepId]: {
-        actions: actions,
-      },
-    };
-
-    // Add 31 lines with empty actions
-    additionalLineIds.forEach((lineId) => {
-      lineItems[lineId] = {
-        actions: {},
-      };
-    });
-
     await projectService.createSceneItem({
       sceneId: newSceneId,
       name: formData.name || `Scene ${new Date().toLocaleTimeString()}`,
@@ -703,18 +686,14 @@ export const handleSceneFormAction = async (deps, payload) => {
       name: "Section New",
       position: "last",
     });
-
-    const allLineIds = [stepId, ...additionalLineIds];
-    let previousLineId = null;
-    for (const currentLineId of allLineIds) {
-      await projectService.createLineItem({
-        sectionId,
-        lineId: currentLineId,
-        line: lineItems[currentLineId] || { actions: {} },
-        afterLineId: previousLineId,
-      });
-      previousLineId = currentLineId;
-    }
+    await projectService.createLineItem({
+      sectionId,
+      lineId: stepId,
+      line: {
+        actions,
+      },
+      position: "last",
+    });
 
     // Add to whiteboard items for visual display
     store.addWhiteboardItem({
