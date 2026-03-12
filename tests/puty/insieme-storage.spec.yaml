@@ -1,0 +1,264 @@
+file: "./insiemeStorageScenario.js"
+group: insieme storage
+suites:
+  - runInsiemeStorageScenario
+---
+suite: runInsiemeStorageScenario
+exportName: runInsiemeStorageScenario
+---
+case: persists a mixed RouteVN command stream to sqlite storage
+in:
+  - projectId: project-puty-storage-001
+    actor:
+      userId: user-puty-1
+      clientId: client-puty-1
+    sessionPartitions:
+      - project:project-puty-storage-001:settings
+      - project:project-puty-storage-001:resources
+      - project:project-puty-storage-001:story
+      - project:project-puty-storage-001:layouts
+    commands:
+      - id: cmd-project-update
+        partition: project:project-puty-storage-001:settings
+        partitions:
+          - project:project-puty-storage-001:settings
+        type: project.update
+        clientTs: 101
+        payload:
+          patch:
+            name: Command Project
+            description: Only commands should sync
+      - id: cmd-image-create
+        partition: project:project-puty-storage-001:resources:images
+        partitions:
+          - project:project-puty-storage-001:resources:images
+        type: resource.create
+        clientTs: 102
+        payload:
+          resourceType: images
+          resourceId: image-1
+          data:
+            name: Image 1
+            type: image
+            src: image-1.png
+      - id: cmd-scene-create
+        partition: project:project-puty-storage-001:story
+        partitions:
+          - project:project-puty-storage-001:story
+          - project:project-puty-storage-001:story:scene:scene-1
+        type: scene.create
+        clientTs: 103
+        payload:
+          sceneId: scene-1
+          name: Scene 1
+      - id: cmd-section-create
+        partition: project:project-puty-storage-001:story
+        partitions:
+          - project:project-puty-storage-001:story
+          - project:project-puty-storage-001:story:scene:scene-1
+        type: section.create
+        clientTs: 104
+        payload:
+          sceneId: scene-1
+          sectionId: section-1
+          name: Section 1
+      - id: cmd-line-insert
+        partition: project:project-puty-storage-001:story
+        partitions:
+          - project:project-puty-storage-001:story
+          - project:project-puty-storage-001:story:scene:scene-1
+        type: line.insert_after
+        clientTs: 105
+        payload:
+          sectionId: section-1
+          lineId: line-1
+          line:
+            actions:
+              dialogue:
+                content:
+                  - text: Hello
+                mode: adv
+      - id: cmd-line-dialogue-update
+        partition: project:project-puty-storage-001:story
+        partitions:
+          - project:project-puty-storage-001:story
+          - project:project-puty-storage-001:story:scene:scene-1
+        type: line.update_actions
+        clientTs: 106
+        payload:
+          lineId: line-1
+          patch:
+            dialogue:
+              content:
+                - text: Hello
+              mode: nvl
+              ui:
+                resourceId: layout-1
+          replace: false
+      - id: cmd-layout-resource-create
+        partition: project:project-puty-storage-001:resources:layouts
+        partitions:
+          - project:project-puty-storage-001:resources:layouts
+        type: resource.create
+        clientTs: 107
+        payload:
+          resourceType: layouts
+          resourceId: layout-1
+          data:
+            name: Layout 1
+            layoutType: normal
+            elements:
+              items: {}
+              tree: []
+      - id: cmd-layout-element-create
+        partition: project:project-puty-storage-001:layouts
+        partitions:
+          - project:project-puty-storage-001:layouts
+        type: layout.element.create
+        clientTs: 108
+        payload:
+          layoutId: layout-1
+          elementId: el-1
+          element:
+            type: text
+            x: 10
+            y: 20
+out:
+  storedEvents:
+    - committedId: 1
+      id: cmd-project-update
+      projectId: project-puty-storage-001
+      userId: user-puty-1
+      partitions:
+        - project:project-puty-storage-001:settings
+      type: project.update
+      payload:
+        patch:
+          name: Command Project
+          description: Only commands should sync
+      meta:
+        clientId: client-puty-1
+        clientTs: 101
+    - committedId: 2
+      id: cmd-image-create
+      projectId: project-puty-storage-001
+      userId: user-puty-1
+      partitions:
+        - project:project-puty-storage-001:resources:images
+      type: resource.create
+      payload:
+        resourceType: images
+        resourceId: image-1
+        data:
+          name: Image 1
+          type: image
+          src: image-1.png
+      meta:
+        clientId: client-puty-1
+        clientTs: 102
+    - committedId: 3
+      id: cmd-scene-create
+      projectId: project-puty-storage-001
+      userId: user-puty-1
+      partitions:
+        - project:project-puty-storage-001:story
+        - project:project-puty-storage-001:story:scene:scene-1
+      type: scene.create
+      payload:
+        sceneId: scene-1
+        name: Scene 1
+      meta:
+        clientId: client-puty-1
+        clientTs: 103
+    - committedId: 4
+      id: cmd-section-create
+      projectId: project-puty-storage-001
+      userId: user-puty-1
+      partitions:
+        - project:project-puty-storage-001:story
+        - project:project-puty-storage-001:story:scene:scene-1
+      type: section.create
+      payload:
+        sceneId: scene-1
+        sectionId: section-1
+        name: Section 1
+      meta:
+        clientId: client-puty-1
+        clientTs: 104
+    - committedId: 5
+      id: cmd-line-insert
+      projectId: project-puty-storage-001
+      userId: user-puty-1
+      partitions:
+        - project:project-puty-storage-001:story
+        - project:project-puty-storage-001:story:scene:scene-1
+      type: line.insert_after
+      payload:
+        sectionId: section-1
+        lineId: line-1
+        line:
+          actions:
+            dialogue:
+              content:
+                - text: Hello
+              mode: adv
+      meta:
+        clientId: client-puty-1
+        clientTs: 105
+    - committedId: 6
+      id: cmd-line-dialogue-update
+      projectId: project-puty-storage-001
+      userId: user-puty-1
+      partitions:
+        - project:project-puty-storage-001:story
+        - project:project-puty-storage-001:story:scene:scene-1
+      type: line.update_actions
+      payload:
+        lineId: line-1
+        patch:
+          dialogue:
+            content:
+              - text: Hello
+            mode: nvl
+            ui:
+              resourceId: layout-1
+        replace: false
+      meta:
+        clientId: client-puty-1
+        clientTs: 106
+    - committedId: 7
+      id: cmd-layout-resource-create
+      projectId: project-puty-storage-001
+      userId: user-puty-1
+      partitions:
+        - project:project-puty-storage-001:resources:layouts
+      type: resource.create
+      payload:
+        resourceType: layouts
+        resourceId: layout-1
+        data:
+          name: Layout 1
+          layoutType: normal
+          elements:
+            items: {}
+            tree: []
+      meta:
+        clientId: client-puty-1
+        clientTs: 107
+    - committedId: 8
+      id: cmd-layout-element-create
+      projectId: project-puty-storage-001
+      userId: user-puty-1
+      partitions:
+        - project:project-puty-storage-001:layouts
+      type: layout.element.create
+      payload:
+        layoutId: layout-1
+        elementId: el-1
+        element:
+          type: text
+          x: 10
+          y: 20
+      meta:
+        clientId: client-puty-1
+        clientTs: 108

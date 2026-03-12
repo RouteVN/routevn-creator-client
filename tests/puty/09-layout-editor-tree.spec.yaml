@@ -1,0 +1,180 @@
+file: "./insiemeStorageScenario.js"
+group: insieme storage layout editor tree
+suites:
+  - runInsiemeStorageScenario
+---
+suite: runInsiemeStorageScenario
+exportName: runInsiemeStorageScenario
+---
+case: persists layout editor element tree creation and movement
+in:
+  - projectId: project-puty-layout-tree-001
+    actor:
+      userId: user-puty-layout-tree
+      clientId: client-puty-layout-tree
+    sessionPartitions:
+      - project:project-puty-layout-tree-001:resources
+      - project:project-puty-layout-tree-001:layouts
+    commands:
+      - id: cmd-layout-tree-resource-create
+        partition: project:project-puty-layout-tree-001:resources:layouts
+        partitions:
+          - project:project-puty-layout-tree-001:resources:layouts
+        type: resource.create
+        clientTs: 1001
+        payload:
+          resourceType: layouts
+          resourceId: layout-hud
+          data:
+            name: HUD Layout
+            layoutType: overlay
+            elements:
+              items: {}
+              tree: []
+      - id: cmd-layout-tree-panel-create
+        partition: project:project-puty-layout-tree-001:layouts
+        partitions:
+          - project:project-puty-layout-tree-001:layouts
+        type: layout.element.create
+        clientTs: 1002
+        payload:
+          layoutId: layout-hud
+          elementId: el-panel
+          element:
+            type: group
+            x: 0
+            y: 0
+            width: 320
+            height: 120
+      - id: cmd-layout-tree-title-create
+        partition: project:project-puty-layout-tree-001:layouts
+        partitions:
+          - project:project-puty-layout-tree-001:layouts
+        type: layout.element.create
+        clientTs: 1003
+        payload:
+          layoutId: layout-hud
+          elementId: el-title
+          parentId: el-panel
+          element:
+            type: text
+            x: 12
+            y: 10
+            text: Status
+      - id: cmd-layout-tree-button-create
+        partition: project:project-puty-layout-tree-001:layouts
+        partitions:
+          - project:project-puty-layout-tree-001:layouts
+        type: layout.element.create
+        clientTs: 1004
+        payload:
+          layoutId: layout-hud
+          elementId: el-button
+          element:
+            type: sprite
+            x: 20
+            y: 60
+            imageId: img-button
+      - id: cmd-layout-tree-button-move
+        partition: project:project-puty-layout-tree-001:layouts
+        partitions:
+          - project:project-puty-layout-tree-001:layouts
+        type: layout.element.move
+        clientTs: 1005
+        payload:
+          layoutId: layout-hud
+          elementId: el-button
+          parentId: el-panel
+          index: 1
+out:
+  storedEvents:
+    - committedId: 1
+      id: cmd-layout-tree-resource-create
+      projectId: project-puty-layout-tree-001
+      userId: user-puty-layout-tree
+      partitions:
+        - project:project-puty-layout-tree-001:resources:layouts
+      type: resource.create
+      payload:
+        resourceType: layouts
+        resourceId: layout-hud
+        data:
+          name: HUD Layout
+          layoutType: overlay
+          elements:
+            items: {}
+            tree: []
+      meta:
+        clientId: client-puty-layout-tree
+        clientTs: 1001
+    - committedId: 2
+      id: cmd-layout-tree-panel-create
+      projectId: project-puty-layout-tree-001
+      userId: user-puty-layout-tree
+      partitions:
+        - project:project-puty-layout-tree-001:layouts
+      type: layout.element.create
+      payload:
+        layoutId: layout-hud
+        elementId: el-panel
+        element:
+          type: group
+          x: 0
+          y: 0
+          width: 320
+          height: 120
+      meta:
+        clientId: client-puty-layout-tree
+        clientTs: 1002
+    - committedId: 3
+      id: cmd-layout-tree-title-create
+      projectId: project-puty-layout-tree-001
+      userId: user-puty-layout-tree
+      partitions:
+        - project:project-puty-layout-tree-001:layouts
+      type: layout.element.create
+      payload:
+        layoutId: layout-hud
+        elementId: el-title
+        parentId: el-panel
+        element:
+          type: text
+          x: 12
+          y: 10
+          text: Status
+      meta:
+        clientId: client-puty-layout-tree
+        clientTs: 1003
+    - committedId: 4
+      id: cmd-layout-tree-button-create
+      projectId: project-puty-layout-tree-001
+      userId: user-puty-layout-tree
+      partitions:
+        - project:project-puty-layout-tree-001:layouts
+      type: layout.element.create
+      payload:
+        layoutId: layout-hud
+        elementId: el-button
+        element:
+          type: sprite
+          x: 20
+          y: 60
+          imageId: img-button
+      meta:
+        clientId: client-puty-layout-tree
+        clientTs: 1004
+    - committedId: 5
+      id: cmd-layout-tree-button-move
+      projectId: project-puty-layout-tree-001
+      userId: user-puty-layout-tree
+      partitions:
+        - project:project-puty-layout-tree-001:layouts
+      type: layout.element.move
+      payload:
+        layoutId: layout-hud
+        elementId: el-button
+        parentId: el-panel
+        index: 1
+      meta:
+        clientId: client-puty-layout-tree
+        clientTs: 1005

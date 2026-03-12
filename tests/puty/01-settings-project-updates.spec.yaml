@@ -1,0 +1,107 @@
+file: "./insiemeStorageScenario.js"
+group: insieme storage settings
+suites:
+  - runInsiemeStorageScenario
+---
+suite: runInsiemeStorageScenario
+exportName: runInsiemeStorageScenario
+---
+case: persists sequential project metadata updates
+in:
+  - projectId: project-puty-settings-001
+    actor:
+      userId: user-puty-settings
+      clientId: client-puty-settings
+    sessionPartitions:
+      - project:project-puty-settings-001:settings
+    commands:
+      - id: cmd-settings-name
+        partition: project:project-puty-settings-001:settings
+        partitions:
+          - project:project-puty-settings-001:settings
+        type: project.update
+        clientTs: 201
+        payload:
+          patch:
+            name: Midnight Train
+      - id: cmd-settings-description
+        partition: project:project-puty-settings-001:settings
+        partitions:
+          - project:project-puty-settings-001:settings
+        type: project.update
+        clientTs: 202
+        payload:
+          patch:
+            description: A late-night route through memory
+      - id: cmd-settings-icon
+        partition: project:project-puty-settings-001:settings
+        partitions:
+          - project:project-puty-settings-001:settings
+        type: project.update
+        clientTs: 203
+        payload:
+          patch:
+            iconFileId: icon-file-1
+      - id: cmd-settings-tagline
+        partition: project:project-puty-settings-001:settings
+        partitions:
+          - project:project-puty-settings-001:settings
+        type: project.update
+        clientTs: 204
+        payload:
+          patch:
+            tagline: Choose the right platform
+out:
+  storedEvents:
+    - committedId: 1
+      id: cmd-settings-name
+      projectId: project-puty-settings-001
+      userId: user-puty-settings
+      partitions:
+        - project:project-puty-settings-001:settings
+      type: project.update
+      payload:
+        patch:
+          name: Midnight Train
+      meta:
+        clientId: client-puty-settings
+        clientTs: 201
+    - committedId: 2
+      id: cmd-settings-description
+      projectId: project-puty-settings-001
+      userId: user-puty-settings
+      partitions:
+        - project:project-puty-settings-001:settings
+      type: project.update
+      payload:
+        patch:
+          description: A late-night route through memory
+      meta:
+        clientId: client-puty-settings
+        clientTs: 202
+    - committedId: 3
+      id: cmd-settings-icon
+      projectId: project-puty-settings-001
+      userId: user-puty-settings
+      partitions:
+        - project:project-puty-settings-001:settings
+      type: project.update
+      payload:
+        patch:
+          iconFileId: icon-file-1
+      meta:
+        clientId: client-puty-settings
+        clientTs: 203
+    - committedId: 4
+      id: cmd-settings-tagline
+      projectId: project-puty-settings-001
+      userId: user-puty-settings
+      partitions:
+        - project:project-puty-settings-001:settings
+      type: project.update
+      payload:
+        patch:
+          tagline: Choose the right platform
+      meta:
+        clientId: client-puty-settings
+        clientTs: 204

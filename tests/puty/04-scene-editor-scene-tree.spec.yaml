@@ -1,0 +1,197 @@
+file: "./insiemeStorageScenario.js"
+group: insieme storage scene editor scene tree
+suites:
+  - runInsiemeStorageScenario
+---
+suite: runInsiemeStorageScenario
+exportName: runInsiemeStorageScenario
+---
+case: persists scene tree creation rename move update and initial-scene changes
+in:
+  - projectId: project-puty-scene-tree-001
+    actor:
+      userId: user-puty-scene-tree
+      clientId: client-puty-scene-tree
+    sessionPartitions:
+      - project:project-puty-scene-tree-001:story
+    commands:
+      - id: cmd-scene-folder-create
+        partition: project:project-puty-scene-tree-001:story
+        partitions:
+          - project:project-puty-scene-tree-001:story
+          - project:project-puty-scene-tree-001:story:scene:folder-prologue
+        type: scene.create
+        clientTs: 501
+        payload:
+          sceneId: folder-prologue
+          name: Prologue
+          data:
+            type: folder
+      - id: cmd-scene-intro-create
+        partition: project:project-puty-scene-tree-001:story
+        partitions:
+          - project:project-puty-scene-tree-001:story
+          - project:project-puty-scene-tree-001:story:scene:scene-intro
+        type: scene.create
+        clientTs: 502
+        payload:
+          sceneId: scene-intro
+          name: Train Station
+          parentId: folder-prologue
+      - id: cmd-scene-wakeup-create
+        partition: project:project-puty-scene-tree-001:story
+        partitions:
+          - project:project-puty-scene-tree-001:story
+          - project:project-puty-scene-tree-001:story:scene:scene-wakeup
+        type: scene.create
+        clientTs: 503
+        payload:
+          sceneId: scene-wakeup
+          name: Morning Room
+          parentId: folder-prologue
+      - id: cmd-scene-intro-update
+        partition: project:project-puty-scene-tree-001:story
+        partitions:
+          - project:project-puty-scene-tree-001:story
+          - project:project-puty-scene-tree-001:story:scene:scene-intro
+        type: scene.update
+        clientTs: 504
+        payload:
+          sceneId: scene-intro
+          patch:
+            notes: Opening sequence
+            cameraPreset: wide
+      - id: cmd-scene-wakeup-rename
+        partition: project:project-puty-scene-tree-001:story
+        partitions:
+          - project:project-puty-scene-tree-001:story
+          - project:project-puty-scene-tree-001:story:scene:scene-wakeup
+        type: scene.rename
+        clientTs: 505
+        payload:
+          sceneId: scene-wakeup
+          name: Wake Up
+      - id: cmd-scene-wakeup-move
+        partition: project:project-puty-scene-tree-001:story
+        partitions:
+          - project:project-puty-scene-tree-001:story
+          - project:project-puty-scene-tree-001:story:scene:scene-wakeup
+        type: scene.move
+        clientTs: 506
+        payload:
+          sceneId: scene-wakeup
+          index: 0
+      - id: cmd-scene-set-initial
+        partition: project:project-puty-scene-tree-001:story
+        partitions:
+          - project:project-puty-scene-tree-001:story
+          - project:project-puty-scene-tree-001:story:scene:scene-intro
+        type: scene.set_initial
+        clientTs: 507
+        payload:
+          sceneId: scene-intro
+out:
+  storedEvents:
+    - committedId: 1
+      id: cmd-scene-folder-create
+      projectId: project-puty-scene-tree-001
+      userId: user-puty-scene-tree
+      partitions:
+        - project:project-puty-scene-tree-001:story
+        - project:project-puty-scene-tree-001:story:scene:folder-prologue
+      type: scene.create
+      payload:
+        sceneId: folder-prologue
+        name: Prologue
+        data:
+          type: folder
+      meta:
+        clientId: client-puty-scene-tree
+        clientTs: 501
+    - committedId: 2
+      id: cmd-scene-intro-create
+      projectId: project-puty-scene-tree-001
+      userId: user-puty-scene-tree
+      partitions:
+        - project:project-puty-scene-tree-001:story
+        - project:project-puty-scene-tree-001:story:scene:scene-intro
+      type: scene.create
+      payload:
+        sceneId: scene-intro
+        name: Train Station
+        parentId: folder-prologue
+      meta:
+        clientId: client-puty-scene-tree
+        clientTs: 502
+    - committedId: 3
+      id: cmd-scene-wakeup-create
+      projectId: project-puty-scene-tree-001
+      userId: user-puty-scene-tree
+      partitions:
+        - project:project-puty-scene-tree-001:story
+        - project:project-puty-scene-tree-001:story:scene:scene-wakeup
+      type: scene.create
+      payload:
+        sceneId: scene-wakeup
+        name: Morning Room
+        parentId: folder-prologue
+      meta:
+        clientId: client-puty-scene-tree
+        clientTs: 503
+    - committedId: 4
+      id: cmd-scene-intro-update
+      projectId: project-puty-scene-tree-001
+      userId: user-puty-scene-tree
+      partitions:
+        - project:project-puty-scene-tree-001:story
+        - project:project-puty-scene-tree-001:story:scene:scene-intro
+      type: scene.update
+      payload:
+        sceneId: scene-intro
+        patch:
+          notes: Opening sequence
+          cameraPreset: wide
+      meta:
+        clientId: client-puty-scene-tree
+        clientTs: 504
+    - committedId: 5
+      id: cmd-scene-wakeup-rename
+      projectId: project-puty-scene-tree-001
+      userId: user-puty-scene-tree
+      partitions:
+        - project:project-puty-scene-tree-001:story
+        - project:project-puty-scene-tree-001:story:scene:scene-wakeup
+      type: scene.rename
+      payload:
+        sceneId: scene-wakeup
+        name: Wake Up
+      meta:
+        clientId: client-puty-scene-tree
+        clientTs: 505
+    - committedId: 6
+      id: cmd-scene-wakeup-move
+      projectId: project-puty-scene-tree-001
+      userId: user-puty-scene-tree
+      partitions:
+        - project:project-puty-scene-tree-001:story
+        - project:project-puty-scene-tree-001:story:scene:scene-wakeup
+      type: scene.move
+      payload:
+        sceneId: scene-wakeup
+        index: 0
+      meta:
+        clientId: client-puty-scene-tree
+        clientTs: 506
+    - committedId: 7
+      id: cmd-scene-set-initial
+      projectId: project-puty-scene-tree-001
+      userId: user-puty-scene-tree
+      partitions:
+        - project:project-puty-scene-tree-001:story
+        - project:project-puty-scene-tree-001:story:scene:scene-intro
+      type: scene.set_initial
+      payload:
+        sceneId: scene-intro
+      meta:
+        clientId: client-puty-scene-tree
+        clientTs: 507

@@ -1,0 +1,187 @@
+file: "./insiemeStorageScenario.js"
+group: insieme storage resources image library
+suites:
+  - runInsiemeStorageScenario
+---
+suite: runInsiemeStorageScenario
+exportName: runInsiemeStorageScenario
+---
+case: persists image library create rename move and update commands
+in:
+  - projectId: project-puty-res-images-001
+    actor:
+      userId: user-puty-res-images
+      clientId: client-puty-res-images
+    sessionPartitions:
+      - project:project-puty-res-images-001:resources
+    commands:
+      - id: cmd-image-folder-create
+        partition: project:project-puty-res-images-001:resources:images
+        partitions:
+          - project:project-puty-res-images-001:resources:images
+        type: resource.create
+        clientTs: 301
+        payload:
+          resourceType: images
+          resourceId: img-folder-cgs
+          data:
+            name: CGs
+            type: folder
+      - id: cmd-image-hero-create
+        partition: project:project-puty-res-images-001:resources:images
+        partitions:
+          - project:project-puty-res-images-001:resources:images
+        type: resource.create
+        clientTs: 302
+        payload:
+          resourceType: images
+          resourceId: img-hero-idle
+          parentId: img-folder-cgs
+          data:
+            name: Hero Idle
+            type: image
+            src: hero-idle.png
+      - id: cmd-image-bg-create
+        partition: project:project-puty-res-images-001:resources:images
+        partitions:
+          - project:project-puty-res-images-001:resources:images
+        type: resource.create
+        clientTs: 303
+        payload:
+          resourceType: images
+          resourceId: img-bg-school
+          data:
+            name: School Rooftop
+            type: image
+            src: school-rooftop.png
+      - id: cmd-image-bg-move
+        partition: project:project-puty-res-images-001:resources:images
+        partitions:
+          - project:project-puty-res-images-001:resources:images
+        type: resource.move
+        clientTs: 304
+        payload:
+          resourceType: images
+          resourceId: img-bg-school
+          parentId: img-folder-cgs
+          index: 1
+      - id: cmd-image-hero-rename
+        partition: project:project-puty-res-images-001:resources:images
+        partitions:
+          - project:project-puty-res-images-001:resources:images
+        type: resource.rename
+        clientTs: 305
+        payload:
+          resourceType: images
+          resourceId: img-hero-idle
+          name: Hero Idle Updated
+      - id: cmd-image-hero-update
+        partition: project:project-puty-res-images-001:resources:images
+        partitions:
+          - project:project-puty-res-images-001:resources:images
+        type: resource.update
+        clientTs: 306
+        payload:
+          resourceType: images
+          resourceId: img-hero-idle
+          patch:
+            src: hero-idle-v2.png
+            thumbnailSrc: hero-idle-thumb.png
+out:
+  storedEvents:
+    - committedId: 1
+      id: cmd-image-folder-create
+      projectId: project-puty-res-images-001
+      userId: user-puty-res-images
+      partitions:
+        - project:project-puty-res-images-001:resources:images
+      type: resource.create
+      payload:
+        resourceType: images
+        resourceId: img-folder-cgs
+        data:
+          name: CGs
+          type: folder
+      meta:
+        clientId: client-puty-res-images
+        clientTs: 301
+    - committedId: 2
+      id: cmd-image-hero-create
+      projectId: project-puty-res-images-001
+      userId: user-puty-res-images
+      partitions:
+        - project:project-puty-res-images-001:resources:images
+      type: resource.create
+      payload:
+        resourceType: images
+        resourceId: img-hero-idle
+        parentId: img-folder-cgs
+        data:
+          name: Hero Idle
+          type: image
+          src: hero-idle.png
+      meta:
+        clientId: client-puty-res-images
+        clientTs: 302
+    - committedId: 3
+      id: cmd-image-bg-create
+      projectId: project-puty-res-images-001
+      userId: user-puty-res-images
+      partitions:
+        - project:project-puty-res-images-001:resources:images
+      type: resource.create
+      payload:
+        resourceType: images
+        resourceId: img-bg-school
+        data:
+          name: School Rooftop
+          type: image
+          src: school-rooftop.png
+      meta:
+        clientId: client-puty-res-images
+        clientTs: 303
+    - committedId: 4
+      id: cmd-image-bg-move
+      projectId: project-puty-res-images-001
+      userId: user-puty-res-images
+      partitions:
+        - project:project-puty-res-images-001:resources:images
+      type: resource.move
+      payload:
+        resourceType: images
+        resourceId: img-bg-school
+        parentId: img-folder-cgs
+        index: 1
+      meta:
+        clientId: client-puty-res-images
+        clientTs: 304
+    - committedId: 5
+      id: cmd-image-hero-rename
+      projectId: project-puty-res-images-001
+      userId: user-puty-res-images
+      partitions:
+        - project:project-puty-res-images-001:resources:images
+      type: resource.rename
+      payload:
+        resourceType: images
+        resourceId: img-hero-idle
+        name: Hero Idle Updated
+      meta:
+        clientId: client-puty-res-images
+        clientTs: 305
+    - committedId: 6
+      id: cmd-image-hero-update
+      projectId: project-puty-res-images-001
+      userId: user-puty-res-images
+      partitions:
+        - project:project-puty-res-images-001:resources:images
+      type: resource.update
+      payload:
+        resourceType: images
+        resourceId: img-hero-idle
+        patch:
+          src: hero-idle-v2.png
+          thumbnailSrc: hero-idle-thumb.png
+      meta:
+        clientId: client-puty-res-images
+        clientTs: 306

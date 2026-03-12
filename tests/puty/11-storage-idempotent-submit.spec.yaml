@@ -1,0 +1,74 @@
+file: "./insiemeStorageScenario.js"
+group: insieme storage idempotent submit
+suites:
+  - runInsiemeStorageScenario
+---
+suite: runInsiemeStorageScenario
+exportName: runInsiemeStorageScenario
+---
+case: stores one row for a duplicate command id with identical payload
+in:
+  - projectId: project-puty-idempotent-001
+    actor:
+      userId: user-puty-idempotent
+      clientId: client-puty-idempotent
+    sessionPartitions:
+      - project:project-puty-idempotent-001:settings
+    batches:
+      - commands:
+          - id: cmd-project-name-dedup
+            partition: project:project-puty-idempotent-001:settings
+            partitions:
+              - project:project-puty-idempotent-001:settings
+            type: project.update
+            clientTs: 1201
+            payload:
+              patch:
+                name: Deduped Project
+      - commands:
+          - id: cmd-project-name-dedup
+            partition: project:project-puty-idempotent-001:settings
+            partitions:
+              - project:project-puty-idempotent-001:settings
+            type: project.update
+            clientTs: 1201
+            payload:
+              patch:
+                name: Deduped Project
+          - id: cmd-project-description-unique
+            partition: project:project-puty-idempotent-001:settings
+            partitions:
+              - project:project-puty-idempotent-001:settings
+            type: project.update
+            clientTs: 1202
+            payload:
+              patch:
+                description: Second command should still commit
+out:
+  storedEvents:
+    - committedId: 1
+      id: cmd-project-name-dedup
+      projectId: project-puty-idempotent-001
+      userId: user-puty-idempotent
+      partitions:
+        - project:project-puty-idempotent-001:settings
+      type: project.update
+      payload:
+        patch:
+          name: Deduped Project
+      meta:
+        clientId: client-puty-idempotent
+        clientTs: 1201
+    - committedId: 2
+      id: cmd-project-description-unique
+      projectId: project-puty-idempotent-001
+      userId: user-puty-idempotent
+      partitions:
+        - project:project-puty-idempotent-001:settings
+      type: project.update
+      payload:
+        patch:
+          description: Second command should still commit
+      meta:
+        clientId: client-puty-idempotent
+        clientTs: 1202
