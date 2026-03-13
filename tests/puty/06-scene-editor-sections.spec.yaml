@@ -1,4 +1,5 @@
-file: "./insiemeStorageScenario.js"
+---
+file: ./insiemeStorageScenario.js
 group: insieme storage scene editor sections
 suites:
   - runInsiemeStorageScenario
@@ -16,7 +17,6 @@ in:
       - project:project-puty-sections-001:story
     commands:
       - id: cmd-sections-scene-create
-        partition: project:project-puty-sections-001:story
         partitions:
           - project:project-puty-sections-001:story
           - project:project-puty-sections-001:story:scene:scene-main
@@ -26,7 +26,6 @@ in:
           sceneId: scene-main
           name: Main Scene
       - id: cmd-sections-create-a
-        partition: project:project-puty-sections-001:story
         partitions:
           - project:project-puty-sections-001:story
           - project:project-puty-sections-001:story:scene:scene-main
@@ -37,7 +36,6 @@ in:
           sectionId: section-a
           name: Arrival
       - id: cmd-sections-create-b
-        partition: project:project-puty-sections-001:story
         partitions:
           - project:project-puty-sections-001:story
           - project:project-puty-sections-001:story:scene:scene-main
@@ -48,7 +46,6 @@ in:
           sectionId: section-b
           name: Choice
       - id: cmd-sections-create-c
-        partition: project:project-puty-sections-001:story
         partitions:
           - project:project-puty-sections-001:story
           - project:project-puty-sections-001:story:scene:scene-main
@@ -60,7 +57,6 @@ in:
           name: Aftermath
           index: 1
       - id: cmd-sections-rename-b
-        partition: project:project-puty-sections-001:story
         partitions:
           - project:project-puty-sections-001:story
           - project:project-puty-sections-001:story:scene:scene-main
@@ -70,7 +66,6 @@ in:
           sectionId: section-b
           name: Decision
       - id: cmd-sections-reorder-c
-        partition: project:project-puty-sections-001:story
         partitions:
           - project:project-puty-sections-001:story
           - project:project-puty-sections-001:story:scene:scene-main
@@ -80,7 +75,6 @@ in:
           sectionId: section-c
           index: 0
       - id: cmd-sections-delete-a
-        partition: project:project-puty-sections-001:story
         partitions:
           - project:project-puty-sections-001:story
           - project:project-puty-sections-001:story:scene:scene-main
@@ -191,3 +185,347 @@ out:
       meta:
         clientId: client-puty-sections
         clientTs: 707
+  stateAfterEachEvent:
+    - committedId: 1
+      eventId: cmd-sections-scene-create
+      eventType: scene.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-sections-001
+          name: ''
+          updatedAt: 701
+        story:
+          initialSceneId: scene-main
+          sceneOrder:
+            - scene-main
+        scenes:
+          scene-main:
+            createdAt: 701
+            id: scene-main
+            initialSectionId: null
+            name: Main Scene
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: scene
+            updatedAt: 701
+        sections: {}
+        lines: {}
+        resources: {}
+    - committedId: 2
+      eventId: cmd-sections-create-a
+      eventType: section.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-sections-001
+          name: ''
+          updatedAt: 702
+        story:
+          initialSceneId: scene-main
+          sceneOrder:
+            - scene-main
+        scenes:
+          scene-main:
+            createdAt: 701
+            id: scene-main
+            initialSectionId: section-a
+            name: Main Scene
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-a
+            type: scene
+            updatedAt: 701
+        sections:
+          section-a:
+            createdAt: 702
+            id: section-a
+            initialLineId: null
+            lineIds: []
+            name: Arrival
+            sceneId: scene-main
+            updatedAt: 702
+        lines: {}
+        resources: {}
+    - committedId: 3
+      eventId: cmd-sections-create-b
+      eventType: section.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-sections-001
+          name: ''
+          updatedAt: 703
+        story:
+          initialSceneId: scene-main
+          sceneOrder:
+            - scene-main
+        scenes:
+          scene-main:
+            createdAt: 701
+            id: scene-main
+            initialSectionId: section-a
+            name: Main Scene
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-a
+              - section-b
+            type: scene
+            updatedAt: 701
+        sections:
+          section-a:
+            createdAt: 702
+            id: section-a
+            initialLineId: null
+            lineIds: []
+            name: Arrival
+            sceneId: scene-main
+            updatedAt: 702
+          section-b:
+            createdAt: 703
+            id: section-b
+            initialLineId: null
+            lineIds: []
+            name: Choice
+            sceneId: scene-main
+            updatedAt: 703
+        lines: {}
+        resources: {}
+    - committedId: 4
+      eventId: cmd-sections-create-c
+      eventType: section.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-sections-001
+          name: ''
+          updatedAt: 704
+        story:
+          initialSceneId: scene-main
+          sceneOrder:
+            - scene-main
+        scenes:
+          scene-main:
+            createdAt: 701
+            id: scene-main
+            initialSectionId: section-a
+            name: Main Scene
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-a
+              - section-c
+              - section-b
+            type: scene
+            updatedAt: 701
+        sections:
+          section-a:
+            createdAt: 702
+            id: section-a
+            initialLineId: null
+            lineIds: []
+            name: Arrival
+            sceneId: scene-main
+            updatedAt: 702
+          section-b:
+            createdAt: 703
+            id: section-b
+            initialLineId: null
+            lineIds: []
+            name: Choice
+            sceneId: scene-main
+            updatedAt: 703
+          section-c:
+            createdAt: 704
+            id: section-c
+            initialLineId: null
+            lineIds: []
+            name: Aftermath
+            sceneId: scene-main
+            updatedAt: 704
+        lines: {}
+        resources: {}
+    - committedId: 5
+      eventId: cmd-sections-rename-b
+      eventType: section.rename
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-sections-001
+          name: ''
+          updatedAt: 705
+        story:
+          initialSceneId: scene-main
+          sceneOrder:
+            - scene-main
+        scenes:
+          scene-main:
+            createdAt: 701
+            id: scene-main
+            initialSectionId: section-a
+            name: Main Scene
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-a
+              - section-c
+              - section-b
+            type: scene
+            updatedAt: 701
+        sections:
+          section-a:
+            createdAt: 702
+            id: section-a
+            initialLineId: null
+            lineIds: []
+            name: Arrival
+            sceneId: scene-main
+            updatedAt: 702
+          section-b:
+            createdAt: 703
+            id: section-b
+            initialLineId: null
+            lineIds: []
+            name: Decision
+            sceneId: scene-main
+            updatedAt: 705
+          section-c:
+            createdAt: 704
+            id: section-c
+            initialLineId: null
+            lineIds: []
+            name: Aftermath
+            sceneId: scene-main
+            updatedAt: 704
+        lines: {}
+        resources: {}
+    - committedId: 6
+      eventId: cmd-sections-reorder-c
+      eventType: section.reorder
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-sections-001
+          name: ''
+          updatedAt: 706
+        story:
+          initialSceneId: scene-main
+          sceneOrder:
+            - scene-main
+        scenes:
+          scene-main:
+            createdAt: 701
+            id: scene-main
+            initialSectionId: section-a
+            name: Main Scene
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-c
+              - section-a
+              - section-b
+            type: scene
+            updatedAt: 701
+        sections:
+          section-a:
+            createdAt: 702
+            id: section-a
+            initialLineId: null
+            lineIds: []
+            name: Arrival
+            sceneId: scene-main
+            updatedAt: 702
+          section-b:
+            createdAt: 703
+            id: section-b
+            initialLineId: null
+            lineIds: []
+            name: Decision
+            sceneId: scene-main
+            updatedAt: 705
+          section-c:
+            createdAt: 704
+            id: section-c
+            initialLineId: null
+            lineIds: []
+            name: Aftermath
+            sceneId: scene-main
+            updatedAt: 704
+        lines: {}
+        resources: {}
+    - committedId: 7
+      eventId: cmd-sections-delete-a
+      eventType: section.delete
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-sections-001
+          name: ''
+          updatedAt: 707
+        story:
+          initialSceneId: scene-main
+          sceneOrder:
+            - scene-main
+        scenes:
+          scene-main:
+            createdAt: 701
+            id: scene-main
+            initialSectionId: section-c
+            name: Main Scene
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-c
+              - section-b
+            type: scene
+            updatedAt: 701
+        sections:
+          section-b:
+            createdAt: 703
+            id: section-b
+            initialLineId: null
+            lineIds: []
+            name: Decision
+            sceneId: scene-main
+            updatedAt: 705
+          section-c:
+            createdAt: 704
+            id: section-c
+            initialLineId: null
+            lineIds: []
+            name: Aftermath
+            sceneId: scene-main
+            updatedAt: 704
+        lines: {}
+        resources: {}

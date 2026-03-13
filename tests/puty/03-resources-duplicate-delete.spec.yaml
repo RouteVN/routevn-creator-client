@@ -1,4 +1,5 @@
-file: "./insiemeStorageScenario.js"
+---
+file: ./insiemeStorageScenario.js
 group: insieme storage resources duplicate delete
 suites:
   - runInsiemeStorageScenario
@@ -16,7 +17,6 @@ in:
       - project:project-puty-res-characters-001:resources
     commands:
       - id: cmd-character-folder-create
-        partition: project:project-puty-res-characters-001:resources:characters
         partitions:
           - project:project-puty-res-characters-001:resources:characters
         type: resource.create
@@ -28,7 +28,6 @@ in:
             name: Main Cast
             type: folder
       - id: cmd-character-create
-        partition: project:project-puty-res-characters-001:resources:characters
         partitions:
           - project:project-puty-res-characters-001:resources:characters
         type: resource.create
@@ -43,7 +42,6 @@ in:
             portraits:
               - idle
       - id: cmd-character-duplicate
-        partition: project:project-puty-res-characters-001:resources:characters
         partitions:
           - project:project-puty-res-characters-001:resources:characters
         type: resource.duplicate
@@ -55,7 +53,6 @@ in:
           name: Hero Copy
           index: 1
       - id: cmd-character-folder-delete
-        partition: project:project-puty-res-characters-001:resources:characters
         partitions:
           - project:project-puty-res-characters-001:resources:characters
         type: resource.delete
@@ -129,3 +126,141 @@ out:
       meta:
         clientId: client-puty-res-characters
         clientTs: 404
+  stateAfterEachEvent:
+    - committedId: 1
+      eventId: cmd-character-folder-create
+      eventType: resource.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-res-characters-001
+          name: ''
+          updatedAt: 401
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources:
+          characters:
+            items:
+              char-folder-main:
+                createdAt: 401
+                id: char-folder-main
+                name: Main Cast
+                parentId: null
+                type: folder
+                updatedAt: 401
+            tree:
+              - id: char-folder-main
+    - committedId: 2
+      eventId: cmd-character-create
+      eventType: resource.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-res-characters-001
+          name: ''
+          updatedAt: 402
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources:
+          characters:
+            items:
+              char-folder-main:
+                createdAt: 401
+                id: char-folder-main
+                name: Main Cast
+                parentId: null
+                type: folder
+                updatedAt: 401
+              char-hero:
+                createdAt: 402
+                id: char-hero
+                name: Hero
+                parentId: char-folder-main
+                portraits:
+                  - idle
+                type: character
+                updatedAt: 402
+            tree:
+              - id: char-folder-main
+                children:
+                  - id: char-hero
+    - committedId: 3
+      eventId: cmd-character-duplicate
+      eventType: resource.duplicate
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-res-characters-001
+          name: ''
+          updatedAt: 403
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources:
+          characters:
+            items:
+              char-folder-main:
+                createdAt: 401
+                id: char-folder-main
+                name: Main Cast
+                parentId: null
+                type: folder
+                updatedAt: 401
+              char-hero:
+                createdAt: 402
+                id: char-hero
+                name: Hero
+                parentId: char-folder-main
+                portraits:
+                  - idle
+                type: character
+                updatedAt: 402
+              char-hero-copy:
+                createdAt: 403
+                id: char-hero-copy
+                name: Hero Copy
+                parentId: char-folder-main
+                portraits:
+                  - idle
+                type: character
+                updatedAt: 403
+            tree:
+              - id: char-folder-main
+                children:
+                  - id: char-hero
+                  - id: char-hero-copy
+    - committedId: 4
+      eventId: cmd-character-folder-delete
+      eventType: resource.delete
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-res-characters-001
+          name: ''
+          updatedAt: 404
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources: {}

@@ -1,4 +1,5 @@
-file: "./insiemeStorageScenario.js"
+---
+file: ./insiemeStorageScenario.js
 group: insieme storage settings
 suites:
   - runInsiemeStorageScenario
@@ -16,7 +17,6 @@ in:
       - project:project-puty-settings-001:settings
     commands:
       - id: cmd-settings-name
-        partition: project:project-puty-settings-001:settings
         partitions:
           - project:project-puty-settings-001:settings
         type: project.update
@@ -25,7 +25,6 @@ in:
           patch:
             name: Midnight Train
       - id: cmd-settings-description
-        partition: project:project-puty-settings-001:settings
         partitions:
           - project:project-puty-settings-001:settings
         type: project.update
@@ -61,6 +60,43 @@ out:
       meta:
         clientId: client-puty-settings
         clientTs: 202
+  stateAfterEachEvent:
+    - committedId: 1
+      eventId: cmd-settings-name
+      eventType: project.update
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-settings-001
+          name: Midnight Train
+          updatedAt: 201
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources: {}
+    - committedId: 2
+      eventId: cmd-settings-description
+      eventType: project.update
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: A late-night route through memory
+          id: project-puty-settings-001
+          name: Midnight Train
+          updatedAt: 202
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources: {}
 ---
 case: rejects unknown project patch fields like tagline
 in:
@@ -72,7 +108,6 @@ in:
       - project:project-puty-settings-002:settings
     commands:
       - id: cmd-settings-tagline
-        partition: project:project-puty-settings-002:settings
         partitions:
           - project:project-puty-settings-002:settings
         type: project.update

@@ -1,9 +1,9 @@
-import { commandToSyncEvent } from "insieme/client";
 import {
   assertRepositoryCommandEvent,
   repositoryEventToCommand,
 } from "../shared/projectRepository.js";
 import { COMMAND_TYPES } from "../../../internal/project/commands.js";
+import { commandToSyncEvent } from "../shared/collab/mappers.js";
 
 const normalizeCommittedCursor = (value) => {
   const parsed = Number(value);
@@ -71,7 +71,10 @@ export const summarizeRepositoryEventsForSync = (events = []) => {
     firstCommandType: firstCommand?.type || null,
     firstCommandId: firstCommand?.id || null,
     firstCommandProjectId: firstCommand?.projectId || null,
-    firstCommandPartition: firstCommand?.partition || null,
+    firstCommandPartition:
+      firstCommand?.partitions?.find(
+        (partition) => typeof partition === "string" && partition.length > 0,
+      ) || null,
   };
 };
 

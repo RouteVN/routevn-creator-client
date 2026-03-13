@@ -74,6 +74,10 @@ export const createInsiemeTauriStoreAdapter = async (projectPath) => {
       );
     },
 
+    async clearEvents() {
+      await db.execute(`DELETE FROM ${REPOSITORY_EVENTS_TABLE}`);
+    },
+
     async loadMaterializedViewCheckpoint({ viewName, partition }) {
       const rows = await db.select(
         `SELECT view_version, last_committed_id, value, updated_at
@@ -120,6 +124,10 @@ export const createInsiemeTauriStoreAdapter = async (projectPath) => {
          WHERE view_name = $1 AND partition = $2`,
         [viewName, partition],
       );
+    },
+
+    async clearMaterializedViewCheckpoints() {
+      await db.execute(`DELETE FROM ${MATERIALIZED_VIEW_TABLE}`);
     },
 
     // App key-value methods used by project services

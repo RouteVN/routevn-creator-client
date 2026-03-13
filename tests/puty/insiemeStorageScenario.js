@@ -9,7 +9,9 @@ import {
   createCommandEnvelope,
   createProjectCollabService,
 } from "../../src/deps/services/shared/collab/index.js";
+import { projectRepositoryStateToDomainState } from "../../src/internal/project/projection.js";
 import { validateCommand } from "../../src/internal/project/commands.js";
+import { createProjectRepository } from "../../src/deps/services/shared/projectRepository.js";
 import {
   createInMemoryServerTransport,
   parseToken,
@@ -39,7 +41,10 @@ const createClock = ({ start = 1000, step = 1 } = {}) => {
   };
 };
 
-const readStoredEvents = (database, { includeCreated = false } = {}) => {
+const readStoredEvents = (
+  database,
+  { includeCreated = false, includeCommandVersionMeta = false } = {},
+) => {
   const rows = database
     .prepare(
       `
@@ -71,11 +76,133 @@ const readStoredEvents = (database, { includeCreated = false } = {}) => {
       meta: JSON.parse(row.meta),
     };
 
+    if (!includeCommandVersionMeta && event.meta?.commandVersion === 1) {
+      delete event.meta.commandVersion;
+    }
+
     if (includeCreated) {
       event.created = row.created;
     }
 
     return event;
+  });
+};
+
+const createInMemoryRepositoryEventStore = () => {
+  const events = [];
+
+  return {
+    async appendEvent(event) {
+      events.push(structuredClone(event));
+    },
+    async getEvents() {
+      return events.map((event) => structuredClone(event));
+    },
+  };
+};
+
+const sortEntries = (entries = []) => {
+  return [...entries].sort(([left], [right]) =>
+    left < right ? -1 : left > right ? 1 : 0,
+  );
+};
+
+const normalizeTree = (nodes = []) => {
+  return nodes.map((node) => {
+    if (!Array.isArray(node?.children) || node.children.length === 0) {
+      return { id: node.id };
+    }
+
+    return {
+      id: node.id,
+      children: normalizeTree(node.children),
+    };
+  });
+};
+
+const normalizeValue = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeValue(item));
+  }
+
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  return Object.fromEntries(
+    sortEntries(
+      Object.entries(value)
+        .filter(([, nestedValue]) => nestedValue !== undefined)
+        .map(([key, nestedValue]) => [key, normalizeValue(nestedValue)]),
+    ),
+  );
+};
+
+const normalizeIdMap = (items = {}) => {
+  return Object.fromEntries(
+    sortEntries(
+      Object.entries(items).map(([id, value]) => [id, normalizeValue(value)]),
+    ),
+  );
+};
+
+const normalizeResourceCollection = (collection = {}) => {
+  const items = normalizeIdMap(collection.items || {});
+  const tree = normalizeTree(collection.tree || []);
+
+  if (Object.keys(items).length === 0 && tree.length === 0) {
+    return undefined;
+  }
+
+  return {
+    items,
+    tree,
+  };
+};
+
+const normalizeProjectState = (state = {}) => {
+  const resources = Object.fromEntries(
+    sortEntries(
+      Object.entries(state.resources || {})
+        .map(([resourceType, collection]) => [
+          resourceType,
+          normalizeResourceCollection(collection),
+        ])
+        .filter(([, collection]) => collection !== undefined),
+    ),
+  );
+
+  return {
+    model_version: state.model_version,
+    project: normalizeValue(state.project || {}),
+    story: normalizeValue(state.story || {}),
+    scenes: normalizeIdMap(state.scenes || {}),
+    sections: normalizeIdMap(state.sections || {}),
+    lines: normalizeIdMap(state.lines || {}),
+    resources,
+  };
+};
+
+const buildStateAfterEachEvent = async ({ projectId, committedEvents }) => {
+  const repository = await createProjectRepository({
+    projectId,
+    store: createInMemoryRepositoryEventStore(),
+    events: committedEvents,
+  });
+
+  return committedEvents.map((committedEvent, index) => {
+    const repositoryState = repository.getState(index + 1);
+    const domainState = projectRepositoryStateToDomainState({
+      repositoryState,
+      projectId,
+    });
+
+    return {
+      committedId: committedEvent.committedId,
+      eventId: committedEvent.id,
+      eventType: committedEvent.type,
+      state: normalizeProjectState(domainState),
+    };
   });
 };
 
@@ -133,12 +260,7 @@ const buildSessionPartitions = (scenario, commands) => {
     return uniqueStrings(scenario.sessionPartitions);
   }
 
-  return uniqueStrings(
-    commands.flatMap((command) => [
-      command.partition,
-      ...(command.partitions || []),
-    ]),
-  );
+  return uniqueStrings(commands.flatMap((command) => command.partitions || []));
 };
 
 const buildScenario = (input) => {
@@ -171,6 +293,7 @@ const buildScenario = (input) => {
     timeoutMs: Number.isFinite(input.timeoutMs) ? input.timeoutMs : 1000,
     settleMs: Number.isFinite(input.settleMs) ? input.settleMs : 30,
     includeCreated: input.includeCreated === true,
+    includeCommandVersionMeta: input.includeCommandVersionMeta === true,
     sessionPartitions: buildSessionPartitions(input, commands),
     clock: createClock(input.clock),
   };
@@ -250,9 +373,16 @@ export const runInsiemeStorageScenario = async (input) => {
       await sleep(scenario.settleMs);
     }
 
+    const storedEvents = readStoredEvents(sqlite, {
+      includeCreated: scenario.includeCreated,
+      includeCommandVersionMeta: scenario.includeCommandVersionMeta,
+    });
+
     return {
-      storedEvents: readStoredEvents(sqlite, {
-        includeCreated: scenario.includeCreated,
+      storedEvents,
+      stateAfterEachEvent: await buildStateAfterEachEvent({
+        projectId: scenario.projectId,
+        committedEvents: storedEvents,
       }),
     };
   } finally {

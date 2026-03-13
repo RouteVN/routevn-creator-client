@@ -26,25 +26,23 @@ const createRepositoryEvent = ({
       name: "Updated",
     },
   },
-  partition = `project:${projectId}:resources`,
   partitions = [
-    partition,
+    `project:${projectId}:resources`,
     `project:${projectId}:resources:images:image-1`,
   ],
-}) =>
-  ({
-    id,
-    partitions,
-    projectId,
-    userId: actor.userId,
-    type,
-    payload,
-    meta: {
-      clientId: actor.clientId,
-      clientTs,
-      ...(meta ? structuredClone(meta) : {}),
-    },
-  });
+}) => ({
+  id,
+  partitions,
+  projectId,
+  userId: actor.userId,
+  type,
+  payload,
+  meta: {
+    clientId: actor.clientId,
+    clientTs,
+    ...(meta ? structuredClone(meta) : {}),
+  },
+});
 
 {
   const repositoryEvent = createRepositoryEvent({
@@ -81,7 +79,6 @@ const createRepositoryEvent = ({
     createRepositoryEvent({
       id: "command-1",
       type: "scene.create",
-      partition: `project:${projectId}:story`,
       partitions: [`project:${projectId}:story`],
       payload: {
         sceneId: "scene-1",
@@ -91,7 +88,6 @@ const createRepositoryEvent = ({
     createRepositoryEvent({
       id: "command-2",
       type: "section.create",
-      partition: `project:${projectId}:story`,
       partitions: [`project:${projectId}:story`],
       payload: {
         sceneId: "scene-1",
@@ -102,7 +98,6 @@ const createRepositoryEvent = ({
     createRepositoryEvent({
       id: "command-3",
       type: "line.insert_after",
-      partition: `project:${projectId}:story`,
       partitions: [`project:${projectId}:story`],
       payload: {
         lineId: "line-1",

@@ -1,4 +1,5 @@
-file: "./insiemeStorageScenario.js"
+---
+file: ./insiemeStorageScenario.js
 group: insieme storage scene editor line structure
 suites:
   - runInsiemeStorageScenario
@@ -16,7 +17,6 @@ in:
       - project:project-puty-lines-001:story
     commands:
       - id: cmd-lines-scene-create
-        partition: project:project-puty-lines-001:story
         partitions:
           - project:project-puty-lines-001:story
           - project:project-puty-lines-001:story:scene:scene-lines
@@ -26,7 +26,6 @@ in:
           sceneId: scene-lines
           name: Line Flow
       - id: cmd-lines-section-a
-        partition: project:project-puty-lines-001:story
         partitions:
           - project:project-puty-lines-001:story
           - project:project-puty-lines-001:story:scene:scene-lines
@@ -37,7 +36,6 @@ in:
           sectionId: section-a
           name: First
       - id: cmd-lines-section-b
-        partition: project:project-puty-lines-001:story
         partitions:
           - project:project-puty-lines-001:story
           - project:project-puty-lines-001:story:scene:scene-lines
@@ -48,7 +46,6 @@ in:
           sectionId: section-b
           name: Second
       - id: cmd-lines-insert-1
-        partition: project:project-puty-lines-001:story
         partitions:
           - project:project-puty-lines-001:story
           - project:project-puty-lines-001:story:scene:scene-lines
@@ -64,7 +61,6 @@ in:
                   - text: First line
                 mode: adv
       - id: cmd-lines-insert-2
-        partition: project:project-puty-lines-001:story
         partitions:
           - project:project-puty-lines-001:story
           - project:project-puty-lines-001:story:scene:scene-lines
@@ -81,7 +77,6 @@ in:
                   - text: Second line
                 mode: adv
       - id: cmd-lines-insert-3
-        partition: project:project-puty-lines-001:story
         partitions:
           - project:project-puty-lines-001:story
           - project:project-puty-lines-001:story:scene:scene-lines
@@ -98,7 +93,6 @@ in:
                   - text: Third line
                 mode: adv
       - id: cmd-lines-move-2
-        partition: project:project-puty-lines-001:story
         partitions:
           - project:project-puty-lines-001:story
           - project:project-puty-lines-001:story:scene:scene-lines
@@ -109,7 +103,6 @@ in:
           toSectionId: section-b
           index: 0
       - id: cmd-lines-delete-1
-        partition: project:project-puty-lines-001:story
         partitions:
           - project:project-puty-lines-001:story
           - project:project-puty-lines-001:story:scene:scene-lines
@@ -253,3 +246,490 @@ out:
       meta:
         clientId: client-puty-lines
         clientTs: 808
+  stateAfterEachEvent:
+    - committedId: 1
+      eventId: cmd-lines-scene-create
+      eventType: scene.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-lines-001
+          name: ''
+          updatedAt: 801
+        story:
+          initialSceneId: scene-lines
+          sceneOrder:
+            - scene-lines
+        scenes:
+          scene-lines:
+            createdAt: 801
+            id: scene-lines
+            initialSectionId: null
+            name: Line Flow
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: scene
+            updatedAt: 801
+        sections: {}
+        lines: {}
+        resources: {}
+    - committedId: 2
+      eventId: cmd-lines-section-a
+      eventType: section.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-lines-001
+          name: ''
+          updatedAt: 802
+        story:
+          initialSceneId: scene-lines
+          sceneOrder:
+            - scene-lines
+        scenes:
+          scene-lines:
+            createdAt: 801
+            id: scene-lines
+            initialSectionId: section-a
+            name: Line Flow
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-a
+            type: scene
+            updatedAt: 801
+        sections:
+          section-a:
+            createdAt: 802
+            id: section-a
+            initialLineId: null
+            lineIds: []
+            name: First
+            sceneId: scene-lines
+            updatedAt: 802
+        lines: {}
+        resources: {}
+    - committedId: 3
+      eventId: cmd-lines-section-b
+      eventType: section.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-lines-001
+          name: ''
+          updatedAt: 803
+        story:
+          initialSceneId: scene-lines
+          sceneOrder:
+            - scene-lines
+        scenes:
+          scene-lines:
+            createdAt: 801
+            id: scene-lines
+            initialSectionId: section-a
+            name: Line Flow
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-a
+              - section-b
+            type: scene
+            updatedAt: 801
+        sections:
+          section-a:
+            createdAt: 802
+            id: section-a
+            initialLineId: null
+            lineIds: []
+            name: First
+            sceneId: scene-lines
+            updatedAt: 802
+          section-b:
+            createdAt: 803
+            id: section-b
+            initialLineId: null
+            lineIds: []
+            name: Second
+            sceneId: scene-lines
+            updatedAt: 803
+        lines: {}
+        resources: {}
+    - committedId: 4
+      eventId: cmd-lines-insert-1
+      eventType: line.insert_after
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-lines-001
+          name: ''
+          updatedAt: 804
+        story:
+          initialSceneId: scene-lines
+          sceneOrder:
+            - scene-lines
+        scenes:
+          scene-lines:
+            createdAt: 801
+            id: scene-lines
+            initialSectionId: section-a
+            name: Line Flow
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-a
+              - section-b
+            type: scene
+            updatedAt: 801
+        sections:
+          section-a:
+            createdAt: 802
+            id: section-a
+            initialLineId: line-1
+            lineIds:
+              - line-1
+            name: First
+            sceneId: scene-lines
+            updatedAt: 802
+          section-b:
+            createdAt: 803
+            id: section-b
+            initialLineId: null
+            lineIds: []
+            name: Second
+            sceneId: scene-lines
+            updatedAt: 803
+        lines:
+          line-1:
+            actions:
+              dialogue:
+                content:
+                  - text: First line
+                mode: adv
+            createdAt: 804
+            id: line-1
+            sectionId: section-a
+            updatedAt: 804
+        resources: {}
+    - committedId: 5
+      eventId: cmd-lines-insert-2
+      eventType: line.insert_after
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-lines-001
+          name: ''
+          updatedAt: 805
+        story:
+          initialSceneId: scene-lines
+          sceneOrder:
+            - scene-lines
+        scenes:
+          scene-lines:
+            createdAt: 801
+            id: scene-lines
+            initialSectionId: section-a
+            name: Line Flow
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-a
+              - section-b
+            type: scene
+            updatedAt: 801
+        sections:
+          section-a:
+            createdAt: 802
+            id: section-a
+            initialLineId: line-1
+            lineIds:
+              - line-1
+              - line-2
+            name: First
+            sceneId: scene-lines
+            updatedAt: 802
+          section-b:
+            createdAt: 803
+            id: section-b
+            initialLineId: null
+            lineIds: []
+            name: Second
+            sceneId: scene-lines
+            updatedAt: 803
+        lines:
+          line-1:
+            actions:
+              dialogue:
+                content:
+                  - text: First line
+                mode: adv
+            createdAt: 804
+            id: line-1
+            sectionId: section-a
+            updatedAt: 804
+          line-2:
+            actions:
+              dialogue:
+                content:
+                  - text: Second line
+                mode: adv
+            createdAt: 805
+            id: line-2
+            sectionId: section-a
+            updatedAt: 805
+        resources: {}
+    - committedId: 6
+      eventId: cmd-lines-insert-3
+      eventType: line.insert_after
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-lines-001
+          name: ''
+          updatedAt: 806
+        story:
+          initialSceneId: scene-lines
+          sceneOrder:
+            - scene-lines
+        scenes:
+          scene-lines:
+            createdAt: 801
+            id: scene-lines
+            initialSectionId: section-a
+            name: Line Flow
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-a
+              - section-b
+            type: scene
+            updatedAt: 801
+        sections:
+          section-a:
+            createdAt: 802
+            id: section-a
+            initialLineId: line-1
+            lineIds:
+              - line-1
+              - line-2
+              - line-3
+            name: First
+            sceneId: scene-lines
+            updatedAt: 802
+          section-b:
+            createdAt: 803
+            id: section-b
+            initialLineId: null
+            lineIds: []
+            name: Second
+            sceneId: scene-lines
+            updatedAt: 803
+        lines:
+          line-1:
+            actions:
+              dialogue:
+                content:
+                  - text: First line
+                mode: adv
+            createdAt: 804
+            id: line-1
+            sectionId: section-a
+            updatedAt: 804
+          line-2:
+            actions:
+              dialogue:
+                content:
+                  - text: Second line
+                mode: adv
+            createdAt: 805
+            id: line-2
+            sectionId: section-a
+            updatedAt: 805
+          line-3:
+            actions:
+              dialogue:
+                content:
+                  - text: Third line
+                mode: adv
+            createdAt: 806
+            id: line-3
+            sectionId: section-a
+            updatedAt: 806
+        resources: {}
+    - committedId: 7
+      eventId: cmd-lines-move-2
+      eventType: line.move
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-lines-001
+          name: ''
+          updatedAt: 807
+        story:
+          initialSceneId: scene-lines
+          sceneOrder:
+            - scene-lines
+        scenes:
+          scene-lines:
+            createdAt: 801
+            id: scene-lines
+            initialSectionId: section-a
+            name: Line Flow
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-a
+              - section-b
+            type: scene
+            updatedAt: 801
+        sections:
+          section-a:
+            createdAt: 802
+            id: section-a
+            initialLineId: line-1
+            lineIds:
+              - line-1
+              - line-3
+            name: First
+            sceneId: scene-lines
+            updatedAt: 802
+          section-b:
+            createdAt: 803
+            id: section-b
+            initialLineId: line-2
+            lineIds:
+              - line-2
+            name: Second
+            sceneId: scene-lines
+            updatedAt: 803
+        lines:
+          line-1:
+            actions:
+              dialogue:
+                content:
+                  - text: First line
+                mode: adv
+            createdAt: 804
+            id: line-1
+            sectionId: section-a
+            updatedAt: 804
+          line-2:
+            actions:
+              dialogue:
+                content:
+                  - text: Second line
+                mode: adv
+            createdAt: 805
+            id: line-2
+            sectionId: section-b
+            updatedAt: 805
+          line-3:
+            actions:
+              dialogue:
+                content:
+                  - text: Third line
+                mode: adv
+            createdAt: 806
+            id: line-3
+            sectionId: section-a
+            updatedAt: 806
+        resources: {}
+    - committedId: 8
+      eventId: cmd-lines-delete-1
+      eventType: line.delete
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-lines-001
+          name: ''
+          updatedAt: 808
+        story:
+          initialSceneId: scene-lines
+          sceneOrder:
+            - scene-lines
+        scenes:
+          scene-lines:
+            createdAt: 801
+            id: scene-lines
+            initialSectionId: section-a
+            name: Line Flow
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-a
+              - section-b
+            type: scene
+            updatedAt: 801
+        sections:
+          section-a:
+            createdAt: 802
+            id: section-a
+            initialLineId: line-3
+            lineIds:
+              - line-3
+            name: First
+            sceneId: scene-lines
+            updatedAt: 802
+          section-b:
+            createdAt: 803
+            id: section-b
+            initialLineId: line-2
+            lineIds:
+              - line-2
+            name: Second
+            sceneId: scene-lines
+            updatedAt: 803
+        lines:
+          line-2:
+            actions:
+              dialogue:
+                content:
+                  - text: Second line
+                mode: adv
+            createdAt: 805
+            id: line-2
+            sectionId: section-b
+            updatedAt: 805
+          line-3:
+            actions:
+              dialogue:
+                content:
+                  - text: Third line
+                mode: adv
+            createdAt: 806
+            id: line-3
+            sectionId: section-a
+            updatedAt: 806
+        resources: {}

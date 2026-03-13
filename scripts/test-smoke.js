@@ -24,12 +24,12 @@ const actor = { userId: "user-1", clientId: "client-1" };
 const makeCommand = ({
   type,
   payload,
-  partition = `project:${projectId}:story`,
+  partitions = [`project:${projectId}:story`],
   ts,
 }) => ({
   id: `${type}-${ts}-${Math.random().toString(36).slice(2, 7)}`,
   projectId,
-  partition,
+  partitions: [...partitions],
   type,
   commandVersion: COMMAND_VERSION,
   actor,
@@ -204,7 +204,7 @@ apply(
   makeCommand({
     type: "resource.create",
     ts: 1600,
-    partition: `project:${projectId}:resources:layouts`,
+    partitions: [`project:${projectId}:resources:layouts`],
     payload: {
       resourceType: "layouts",
       resourceId: "layout-1",
@@ -216,7 +216,7 @@ apply(
   makeCommand({
     type: "layout.element.create",
     ts: 1700,
-    partition: `project:${projectId}:layouts`,
+    partitions: [`project:${projectId}:layouts`],
     payload: {
       layoutId: "layout-1",
       elementId: "A",
@@ -228,7 +228,7 @@ apply(
   makeCommand({
     type: "layout.element.create",
     ts: 1800,
-    partition: `project:${projectId}:layouts`,
+    partitions: [`project:${projectId}:layouts`],
     payload: {
       layoutId: "layout-1",
       elementId: "B",
@@ -242,7 +242,7 @@ apply(
   makeCommand({
     type: "layout.element.update",
     ts: 1850,
-    partition: `project:${projectId}:layouts`,
+    partitions: [`project:${projectId}:layouts`],
     payload: {
       layoutId: "layout-1",
       elementId: "B",
@@ -263,7 +263,7 @@ apply(
   makeCommand({
     type: "layout.element.update",
     ts: 1860,
-    partition: `project:${projectId}:layouts`,
+    partitions: [`project:${projectId}:layouts`],
     payload: {
       layoutId: "layout-1",
       elementId: "B",
@@ -297,7 +297,7 @@ apply(
   makeCommand({
     type: "layout.element.update",
     ts: 1870,
-    partition: `project:${projectId}:layouts`,
+    partitions: [`project:${projectId}:layouts`],
     payload: {
       layoutId: "layout-1",
       elementId: "B",
@@ -331,7 +331,7 @@ try {
     makeCommand({
       type: "layout.element.move",
       ts: 1900,
-      partition: `project:${projectId}:layouts`,
+      partitions: [`project:${projectId}:layouts`],
       payload: {
         layoutId: "layout-1",
         elementId: "A",
@@ -349,7 +349,7 @@ apply(
   makeCommand({
     type: "resource.create",
     ts: 2000,
-    partition: `project:${projectId}:resources:variables`,
+    partitions: [`project:${projectId}:resources:variables`],
     payload: {
       resourceType: "variables",
       resourceId: "var-a",
@@ -369,7 +369,7 @@ apply(
   makeCommand({
     type: "resource.create",
     ts: 2100,
-    partition: `project:${projectId}:resources:variables`,
+    partitions: [`project:${projectId}:resources:variables`],
     payload: {
       resourceType: "variables",
       resourceId: "var-b",
@@ -389,7 +389,7 @@ apply(
   makeCommand({
     type: "resource.create",
     ts: 2200,
-    partition: `project:${projectId}:resources:variables`,
+    partitions: [`project:${projectId}:resources:variables`],
     payload: {
       resourceType: "variables",
       resourceId: "var-c",
@@ -415,7 +415,7 @@ apply(
   makeCommand({
     type: "resource.update",
     ts: 2250,
-    partition: `project:${projectId}:resources:variables`,
+    partitions: [`project:${projectId}:resources:variables`],
     payload: {
       resourceType: "variables",
       resourceId: "var-a",
@@ -435,7 +435,7 @@ try {
     makeCommand({
       type: "resource.update",
       ts: 2260,
-      partition: `project:${projectId}:resources:variables`,
+      partitions: [`project:${projectId}:resources:variables`],
       payload: {
         resourceType: "variables",
         resourceId: "var-a",
@@ -456,7 +456,7 @@ try {
     makeCommand({
       type: "resource.update",
       ts: 2270,
-      partition: `project:${projectId}:resources:variables`,
+      partitions: [`project:${projectId}:resources:variables`],
       payload: {
         resourceType: "variables",
         resourceId: "var-a",
@@ -476,7 +476,7 @@ apply(
   makeCommand({
     type: "resource.create",
     ts: 2300,
-    partition: `project:${projectId}:resources:layouts`,
+    partitions: [`project:${projectId}:resources:layouts`],
     payload: {
       resourceType: "layouts",
       resourceId: "layout-folder",
@@ -492,7 +492,7 @@ apply(
   makeCommand({
     type: "resource.create",
     ts: 2350,
-    partition: `project:${projectId}:resources:layouts`,
+    partitions: [`project:${projectId}:resources:layouts`],
     payload: {
       resourceType: "layouts",
       resourceId: "layout-2",
@@ -644,7 +644,6 @@ await applyCommandToRepository({
   command: {
     id: "project-update-layout-projection",
     projectId: projectionProjectId,
-    partition: `project:${projectionProjectId}:settings`,
     partitions: [`project:${projectionProjectId}:settings`],
     type: "project.update",
     commandVersion: COMMAND_VERSION,

@@ -1,4 +1,5 @@
-file: "./insiemeStorageScenario.js"
+---
+file: ./insiemeStorageScenario.js
 group: insieme storage
 suites:
   - runInsiemeStorageScenario
@@ -19,7 +20,6 @@ in:
       - project:project-puty-storage-001:layouts
     commands:
       - id: cmd-project-update
-        partition: project:project-puty-storage-001:settings
         partitions:
           - project:project-puty-storage-001:settings
         type: project.update
@@ -29,7 +29,6 @@ in:
             name: Command Project
             description: Only commands should sync
       - id: cmd-image-create
-        partition: project:project-puty-storage-001:resources:images
         partitions:
           - project:project-puty-storage-001:resources:images
         type: resource.create
@@ -42,7 +41,6 @@ in:
             type: image
             src: image-1.png
       - id: cmd-scene-create
-        partition: project:project-puty-storage-001:story
         partitions:
           - project:project-puty-storage-001:story
           - project:project-puty-storage-001:story:scene:scene-1
@@ -52,7 +50,6 @@ in:
           sceneId: scene-1
           name: Scene 1
       - id: cmd-section-create
-        partition: project:project-puty-storage-001:story
         partitions:
           - project:project-puty-storage-001:story
           - project:project-puty-storage-001:story:scene:scene-1
@@ -63,7 +60,6 @@ in:
           sectionId: section-1
           name: Section 1
       - id: cmd-line-insert
-        partition: project:project-puty-storage-001:story
         partitions:
           - project:project-puty-storage-001:story
           - project:project-puty-storage-001:story:scene:scene-1
@@ -79,7 +75,6 @@ in:
                   - text: Hello
                 mode: adv
       - id: cmd-line-dialogue-update
-        partition: project:project-puty-storage-001:story
         partitions:
           - project:project-puty-storage-001:story
           - project:project-puty-storage-001:story:scene:scene-1
@@ -96,7 +91,6 @@ in:
                 resourceId: layout-1
           replace: false
       - id: cmd-layout-resource-create
-        partition: project:project-puty-storage-001:resources:layouts
         partitions:
           - project:project-puty-storage-001:resources:layouts
         type: resource.create
@@ -111,7 +105,6 @@ in:
               items: {}
               tree: []
       - id: cmd-layout-element-create
-        partition: project:project-puty-storage-001:layouts
         partitions:
           - project:project-puty-storage-001:layouts
         type: layout.element.create
@@ -122,7 +115,7 @@ in:
           element:
             type: text
             x: 10
-            y: 20
+            'y': 20
 out:
   storedEvents:
     - committedId: 1
@@ -258,7 +251,445 @@ out:
         element:
           type: text
           x: 10
-          y: 20
+          'y': 20
       meta:
         clientId: client-puty-1
         clientTs: 108
+  stateAfterEachEvent:
+    - committedId: 1
+      eventId: cmd-project-update
+      eventType: project.update
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: Only commands should sync
+          id: project-puty-storage-001
+          name: Command Project
+          updatedAt: 101
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources: {}
+    - committedId: 2
+      eventId: cmd-image-create
+      eventType: resource.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: Only commands should sync
+          id: project-puty-storage-001
+          name: Command Project
+          updatedAt: 102
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources:
+          images:
+            items:
+              image-1:
+                createdAt: 102
+                id: image-1
+                name: Image 1
+                parentId: null
+                src: image-1.png
+                type: image
+                updatedAt: 102
+            tree:
+              - id: image-1
+    - committedId: 3
+      eventId: cmd-scene-create
+      eventType: scene.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: Only commands should sync
+          id: project-puty-storage-001
+          name: Command Project
+          updatedAt: 103
+        story:
+          initialSceneId: scene-1
+          sceneOrder:
+            - scene-1
+        scenes:
+          scene-1:
+            createdAt: 103
+            id: scene-1
+            initialSectionId: null
+            name: Scene 1
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: scene
+            updatedAt: 103
+        sections: {}
+        lines: {}
+        resources:
+          images:
+            items:
+              image-1:
+                createdAt: 102
+                id: image-1
+                name: Image 1
+                parentId: null
+                src: image-1.png
+                type: image
+                updatedAt: 102
+            tree:
+              - id: image-1
+    - committedId: 4
+      eventId: cmd-section-create
+      eventType: section.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: Only commands should sync
+          id: project-puty-storage-001
+          name: Command Project
+          updatedAt: 104
+        story:
+          initialSceneId: scene-1
+          sceneOrder:
+            - scene-1
+        scenes:
+          scene-1:
+            createdAt: 103
+            id: scene-1
+            initialSectionId: section-1
+            name: Scene 1
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-1
+            type: scene
+            updatedAt: 103
+        sections:
+          section-1:
+            createdAt: 104
+            id: section-1
+            initialLineId: null
+            lineIds: []
+            name: Section 1
+            sceneId: scene-1
+            updatedAt: 104
+        lines: {}
+        resources:
+          images:
+            items:
+              image-1:
+                createdAt: 102
+                id: image-1
+                name: Image 1
+                parentId: null
+                src: image-1.png
+                type: image
+                updatedAt: 102
+            tree:
+              - id: image-1
+    - committedId: 5
+      eventId: cmd-line-insert
+      eventType: line.insert_after
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: Only commands should sync
+          id: project-puty-storage-001
+          name: Command Project
+          updatedAt: 105
+        story:
+          initialSceneId: scene-1
+          sceneOrder:
+            - scene-1
+        scenes:
+          scene-1:
+            createdAt: 103
+            id: scene-1
+            initialSectionId: section-1
+            name: Scene 1
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-1
+            type: scene
+            updatedAt: 103
+        sections:
+          section-1:
+            createdAt: 104
+            id: section-1
+            initialLineId: line-1
+            lineIds:
+              - line-1
+            name: Section 1
+            sceneId: scene-1
+            updatedAt: 104
+        lines:
+          line-1:
+            actions:
+              dialogue:
+                content:
+                  - text: Hello
+                mode: adv
+            createdAt: 105
+            id: line-1
+            sectionId: section-1
+            updatedAt: 105
+        resources:
+          images:
+            items:
+              image-1:
+                createdAt: 102
+                id: image-1
+                name: Image 1
+                parentId: null
+                src: image-1.png
+                type: image
+                updatedAt: 102
+            tree:
+              - id: image-1
+    - committedId: 6
+      eventId: cmd-line-dialogue-update
+      eventType: line.update_actions
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: Only commands should sync
+          id: project-puty-storage-001
+          name: Command Project
+          updatedAt: 106
+        story:
+          initialSceneId: scene-1
+          sceneOrder:
+            - scene-1
+        scenes:
+          scene-1:
+            createdAt: 103
+            id: scene-1
+            initialSectionId: section-1
+            name: Scene 1
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-1
+            type: scene
+            updatedAt: 103
+        sections:
+          section-1:
+            createdAt: 104
+            id: section-1
+            initialLineId: line-1
+            lineIds:
+              - line-1
+            name: Section 1
+            sceneId: scene-1
+            updatedAt: 104
+        lines:
+          line-1:
+            actions:
+              dialogue:
+                content:
+                  - text: Hello
+                mode: nvl
+                ui:
+                  resourceId: layout-1
+            createdAt: 105
+            id: line-1
+            sectionId: section-1
+            updatedAt: 106
+        resources:
+          images:
+            items:
+              image-1:
+                createdAt: 102
+                id: image-1
+                name: Image 1
+                parentId: null
+                src: image-1.png
+                type: image
+                updatedAt: 102
+            tree:
+              - id: image-1
+    - committedId: 7
+      eventId: cmd-layout-resource-create
+      eventType: resource.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: Only commands should sync
+          id: project-puty-storage-001
+          name: Command Project
+          updatedAt: 107
+        story:
+          initialSceneId: scene-1
+          sceneOrder:
+            - scene-1
+        scenes:
+          scene-1:
+            createdAt: 103
+            id: scene-1
+            initialSectionId: section-1
+            name: Scene 1
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-1
+            type: scene
+            updatedAt: 103
+        sections:
+          section-1:
+            createdAt: 104
+            id: section-1
+            initialLineId: line-1
+            lineIds:
+              - line-1
+            name: Section 1
+            sceneId: scene-1
+            updatedAt: 104
+        lines:
+          line-1:
+            actions:
+              dialogue:
+                content:
+                  - text: Hello
+                mode: nvl
+                ui:
+                  resourceId: layout-1
+            createdAt: 105
+            id: line-1
+            sectionId: section-1
+            updatedAt: 106
+        resources:
+          images:
+            items:
+              image-1:
+                createdAt: 102
+                id: image-1
+                name: Image 1
+                parentId: null
+                src: image-1.png
+                type: image
+                updatedAt: 102
+            tree:
+              - id: image-1
+          layouts:
+            items:
+              layout-1:
+                createdAt: 107
+                elements: {}
+                id: layout-1
+                layoutType: normal
+                name: Layout 1
+                parentId: null
+                rootElementOrder: []
+                type: layout
+                updatedAt: 107
+            tree:
+              - id: layout-1
+    - committedId: 8
+      eventId: cmd-layout-element-create
+      eventType: layout.element.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: Only commands should sync
+          id: project-puty-storage-001
+          name: Command Project
+          updatedAt: 108
+        story:
+          initialSceneId: scene-1
+          sceneOrder:
+            - scene-1
+        scenes:
+          scene-1:
+            createdAt: 103
+            id: scene-1
+            initialSectionId: section-1
+            name: Scene 1
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-1
+            type: scene
+            updatedAt: 103
+        sections:
+          section-1:
+            createdAt: 104
+            id: section-1
+            initialLineId: line-1
+            lineIds:
+              - line-1
+            name: Section 1
+            sceneId: scene-1
+            updatedAt: 104
+        lines:
+          line-1:
+            actions:
+              dialogue:
+                content:
+                  - text: Hello
+                mode: nvl
+                ui:
+                  resourceId: layout-1
+            createdAt: 105
+            id: line-1
+            sectionId: section-1
+            updatedAt: 106
+        resources:
+          images:
+            items:
+              image-1:
+                createdAt: 102
+                id: image-1
+                name: Image 1
+                parentId: null
+                src: image-1.png
+                type: image
+                updatedAt: 102
+            tree:
+              - id: image-1
+          layouts:
+            items:
+              layout-1:
+                createdAt: 107
+                elements:
+                  el-1:
+                    children: []
+                    id: el-1
+                    parentId: null
+                    type: text
+                    x: 10
+                    'y': 20
+                id: layout-1
+                layoutType: normal
+                name: Layout 1
+                parentId: null
+                rootElementOrder:
+                  - el-1
+                type: layout
+                updatedAt: 108
+            tree:
+              - id: layout-1

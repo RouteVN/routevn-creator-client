@@ -6,11 +6,11 @@ import {
   COMMAND_TYPES,
   isSupportedCommandType,
 } from "../../../internal/project/commands.js";
+import { validateCommandSubmitItem } from "insieme/client";
 import {
   commandToSyncEvent,
-  committedSyncEventToCommand,
-  validateCommandSubmitItem,
-} from "insieme/client";
+  committedEventToCommand,
+} from "./collab/mappers.js";
 
 export const createTreeCollection = () => {
   return {
@@ -180,7 +180,6 @@ export const createProjectCreatedCommand = ({
   actor,
   commandId,
   clientTs,
-  partition,
   partitions,
   meta,
 }) => {
@@ -196,9 +195,11 @@ export const createProjectCreatedCommand = ({
   }
 
   const basePartition =
-    typeof partition === "string" && partition.length > 0
-      ? partition
-      : defaultInitializationPartition(resolvedProjectId);
+    (Array.isArray(partitions)
+      ? partitions.find(
+          (value) => typeof value === "string" && value.length > 0,
+        )
+      : null) || defaultInitializationPartition(resolvedProjectId);
   const resolvedPartitions = Array.from(
     new Set(
       [basePartition]
@@ -213,7 +214,6 @@ export const createProjectCreatedCommand = ({
         ? commandId
         : `project-created:${resolvedProjectId}`,
     projectId: resolvedProjectId,
-    partition: basePartition,
     partitions: resolvedPartitions,
     type: COMMAND_TYPES.PROJECT_CREATED,
     payload: {
@@ -238,7 +238,6 @@ const resolveCommandPartitions = (command) => {
     partitions.push(value);
   };
 
-  push(command?.partition);
   for (const partition of Array.isArray(command?.partitions)
     ? command.partitions
     : []) {
@@ -283,9 +282,7 @@ export const createRepositoryCommandEvent = ({ command }) => {
 
 export const repositoryEventToCommand = (repositoryEvent) => {
   assertRepositoryCommandEvent(repositoryEvent);
-  const command = committedSyncEventToCommand(repositoryEvent, {
-    defaultCommandVersion: COMMAND_EVENT_MODEL.commandVersion,
-  });
+  const command = committedEventToCommand(repositoryEvent);
   if (!command) {
     throw new Error("Failed to convert repository event to command");
   }
@@ -298,7 +295,6 @@ export const createProjectCreatedRepositoryEvent = ({
   actor,
   commandId,
   clientTs,
-  partition,
   partitions,
   meta,
 }) =>
@@ -309,7 +305,6 @@ export const createProjectCreatedRepositoryEvent = ({
       actor,
       commandId,
       clientTs,
-      partition,
       partitions,
       meta,
     }),

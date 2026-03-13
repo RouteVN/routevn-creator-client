@@ -1,11 +1,18 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createInMemorySyncStore, createSyncServer } from "insieme/server";
-import { validateCommandSubmitItem } from "insieme/client";
 import {
+  createInMemoryClientStore,
+  validateCommandSubmitItem,
+} from "insieme/client";
+import {
+  buildRepositoryProjectionFromCommittedEvents,
   createCommandEnvelope,
   committedEventToCommand,
   createProjectCollabService,
+  commandToSyncEvent,
+  ensureRepositoryProjectionCache,
+  PROJECTOR_CACHE_VERSION,
 } from "../src/deps/services/shared/collab/index.js";
 import { createStoryCommandApi } from "../src/deps/services/shared/commandApi/story.js";
 import { COMMAND_TYPES } from "../src/internal/project/commands.js";
@@ -14,6 +21,7 @@ import {
   createInMemoryServerTransport,
   parseToken,
   sleep,
+  waitFor,
 } from "./collabTestSupport.js";
 
 const commandFromItem = (item) => {
@@ -30,6 +38,63 @@ const normalizePartitions = (partitions) => {
     left < right ? -1 : left > right ? 1 : 0,
   );
 };
+
+const createRepositoryStoreStub = (initialEvents = []) => {
+  let events = initialEvents.map((event) => structuredClone(event));
+  let clearMaterializedViewCheckpointsCount = 0;
+  const appState = new Map();
+
+  return {
+    async getEvents() {
+      return events.map((event) => structuredClone(event));
+    },
+    async appendEvent(event) {
+      events.push(structuredClone(event));
+    },
+    async clearEvents() {
+      events = [];
+    },
+    async clearMaterializedViewCheckpoints() {
+      clearMaterializedViewCheckpointsCount += 1;
+    },
+    app: {
+      async get(key) {
+        return structuredClone(appState.get(key));
+      },
+      async set(key, value) {
+        appState.set(key, structuredClone(value));
+      },
+      async remove(key) {
+        appState.delete(key);
+      },
+    },
+    _debug: {
+      getEvents() {
+        return events.map((event) => structuredClone(event));
+      },
+      getAppValue(key) {
+        return structuredClone(appState.get(key));
+      },
+      getClearMaterializedViewCheckpointsCount() {
+        return clearMaterializedViewCheckpointsCount;
+      },
+    },
+  };
+};
+
+const createCommittedEventFromCommand = (command, committedId, created) => ({
+  committedId,
+  id: command.id,
+  partitions: [...(command.partitions || [])],
+  ...commandToSyncEvent(command),
+  created,
+});
+
+const createSubmitItemFromCommand = (command) => ({
+  id: command.id,
+  partitions: [...(command.partitions || [])],
+  ...commandToSyncEvent(command),
+});
 
 const projectId = "project-command-only-001";
 const actor = { userId: "user-1", clientId: "client-1" };
@@ -215,7 +280,6 @@ try {
     createCommandEnvelope({
       projectId,
       scope: "settings",
-      partition: settingsPartition,
       partitions: [settingsPartition],
       type: COMMAND_TYPES.PROJECT_UPDATE,
       payload: {
@@ -229,7 +293,6 @@ try {
     createCommandEnvelope({
       projectId,
       scope: "resources",
-      partition: imagesPartition,
       partitions: [imagesPartition],
       type: COMMAND_TYPES.RESOURCE_CREATE,
       payload: {
@@ -246,7 +309,6 @@ try {
     createCommandEnvelope({
       projectId,
       scope: "story",
-      partition: storyBasePartition,
       partitions: [storyBasePartition, scenePartition],
       type: COMMAND_TYPES.SCENE_CREATE,
       payload: {
@@ -258,7 +320,6 @@ try {
     createCommandEnvelope({
       projectId,
       scope: "story",
-      partition: storyBasePartition,
       partitions: [storyBasePartition, scenePartition],
       type: COMMAND_TYPES.SECTION_CREATE,
       payload: {
@@ -271,7 +332,6 @@ try {
     createCommandEnvelope({
       projectId,
       scope: "story",
-      partition: storyBasePartition,
       partitions: [storyBasePartition, scenePartition],
       type: COMMAND_TYPES.LINE_INSERT_AFTER,
       payload: {
@@ -291,7 +351,6 @@ try {
     createCommandEnvelope({
       projectId,
       scope: "story",
-      partition: storyBasePartition,
       partitions: [storyBasePartition, scenePartition],
       type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
       payload: {
@@ -312,7 +371,6 @@ try {
     createCommandEnvelope({
       projectId,
       scope: "resources",
-      partition: layoutsResourcePartition,
       partitions: [layoutsResourcePartition],
       type: COMMAND_TYPES.RESOURCE_CREATE,
       payload: {
@@ -332,7 +390,6 @@ try {
     createCommandEnvelope({
       projectId,
       scope: "layouts",
-      partition: layoutsPartition,
       partitions: [layoutsPartition],
       type: COMMAND_TYPES.LAYOUT_ELEMENT_CREATE,
       payload: {
@@ -390,7 +447,7 @@ try {
     assert.deepEqual(event.payload, command.payload);
     assert.deepEqual(
       normalizePartitions(event.partitions),
-      normalizePartitions(command.partitions || [command.partition]),
+      normalizePartitions(command.partitions),
     );
     assert.equal(typeof event.created, "number");
   }
@@ -432,6 +489,231 @@ try {
 } finally {
   await collab.stop();
   await server.shutdown();
+}
+
+{
+  const futureProjectId = "project-command-only-future";
+  const storyPartition = `project:${futureProjectId}:story`;
+  const currentSceneCommand = createCommandEnvelope({
+    id: "future-scene-1",
+    projectId: futureProjectId,
+    scope: "story",
+    partitions: [storyPartition],
+    type: COMMAND_TYPES.SCENE_CREATE,
+    payload: {
+      sceneId: "scene-1",
+      name: "Scene 1",
+    },
+    actor,
+    clientTs: 4001,
+    commandVersion: 1,
+  });
+  const futureSectionCommand = createCommandEnvelope({
+    id: "future-section-1",
+    projectId: futureProjectId,
+    scope: "story",
+    partitions: [storyPartition],
+    type: COMMAND_TYPES.SECTION_CREATE,
+    payload: {
+      sceneId: "scene-1",
+      sectionId: "section-1",
+      name: "Section 1",
+    },
+    actor,
+    clientTs: 4002,
+    commandVersion: 2,
+  });
+
+  const futureItem = createCommittedEventFromCommand(
+    futureSectionCommand,
+    2,
+    4002,
+  );
+  const futureCommand = commandFromItem(futureItem);
+  assert.equal(futureCommand.commandVersion, 2);
+
+  const committedEvents = [
+    createCommittedEventFromCommand(currentSceneCommand, 1, 4001),
+    futureItem,
+  ];
+  const oldProjection = buildRepositoryProjectionFromCommittedEvents({
+    committedEvents,
+  });
+  assert.equal(oldProjection.repositoryEvents.length, 1);
+  assert.equal(
+    oldProjection.projectionGap?.commandType,
+    COMMAND_TYPES.SECTION_CREATE,
+  );
+  assert.equal(oldProjection.projectionGap?.remoteCommandVersion, 2);
+
+  const upgradedProjection = buildRepositoryProjectionFromCommittedEvents({
+    committedEvents,
+    supportedCommandVersion: 2,
+  });
+  assert.equal(upgradedProjection.repositoryEvents.length, 2);
+  assert.equal(upgradedProjection.projectionGap, undefined);
+
+  const rawClientStore = createInMemoryClientStore();
+  const repositoryStore = createRepositoryStoreStub([
+    oldProjection.repositoryEvents[0],
+  ]);
+  const cacheResult = await ensureRepositoryProjectionCache({
+    repositoryStore,
+    rawClientStore,
+  });
+  assert.equal(cacheResult.rebuilt, true);
+  assert.equal(rawClientStore._debug.getCommitted().length, 1);
+  assert.equal(repositoryStore._debug.getEvents().length, 1);
+  assert.equal(
+    repositoryStore._debug.getAppValue("projector.cacheVersion"),
+    PROJECTOR_CACHE_VERSION,
+  );
+  assert.equal(
+    repositoryStore._debug.getClearMaterializedViewCheckpointsCount(),
+    1,
+  );
+}
+
+{
+  const futureProjectId = "project-command-only-live-future";
+  const storyPartition = `project:${futureProjectId}:story`;
+  const oldClientStore = createInMemoryClientStore();
+  const futureStore = createInMemorySyncStore();
+  const futureServer = createSyncServer({
+    auth: {
+      verifyToken: async (token) => {
+        const identity = parseToken(token);
+        return {
+          clientId: identity.clientId,
+          claims: { userId: identity.userId },
+        };
+      },
+    },
+    authz: {
+      authorizePartitions: async (_identity, partitions) => {
+        if (!Array.isArray(partitions) || partitions.length === 0) return false;
+        return partitions.every((partition) =>
+          partition.startsWith(`project:${futureProjectId}:`),
+        );
+      },
+    },
+    validation: {
+      validate: async (item) => {
+        validateCommandSubmitItem(item);
+      },
+    },
+    store: futureStore,
+    clock: {
+      now: () => Date.now(),
+    },
+  });
+
+  const oldClient = createProjectCollabService({
+    projectId: futureProjectId,
+    projectName: "Future Compatibility",
+    projectDescription: "old client should keep running",
+    token: "user:user-1:client:old-client",
+    actor: {
+      userId: "user-1",
+      clientId: "old-client",
+    },
+    partitions: [storyPartition],
+    clientStore: oldClientStore,
+    transport: createInMemoryServerTransport({
+      server: futureServer,
+      connectionId: "future-old-client",
+    }),
+  });
+
+  const futureWriter = createProjectCollabService({
+    projectId: futureProjectId,
+    projectName: "Future Compatibility",
+    projectDescription: "writer",
+    token: "user:user-2:client:future-writer",
+    actor: {
+      userId: "user-2",
+      clientId: "future-writer",
+    },
+    partitions: [storyPartition],
+    transport: createInMemoryServerTransport({
+      server: futureServer,
+      connectionId: "future-writer-client",
+    }),
+  });
+
+  try {
+    await oldClient.start();
+    await futureWriter.start();
+
+    await futureWriter.submitEvent(
+      createSubmitItemFromCommand(
+        createCommandEnvelope({
+          id: "live-scene-1",
+          projectId: futureProjectId,
+          scope: "story",
+          partitions: [storyPartition],
+          type: COMMAND_TYPES.SCENE_CREATE,
+          payload: {
+            sceneId: "scene-1",
+            name: "Scene 1",
+          },
+          actor: {
+            userId: "user-2",
+            clientId: "future-writer",
+          },
+          clientTs: 5001,
+          commandVersion: 1,
+        }),
+      ),
+    );
+
+    await waitFor(() => Boolean(oldClient.getState().scenes["scene-1"]), {
+      label: "old client applies compatible scene.create",
+    });
+
+    await futureWriter.submitEvent(
+      createSubmitItemFromCommand(
+        createCommandEnvelope({
+          id: "live-section-1",
+          projectId: futureProjectId,
+          scope: "story",
+          partitions: [storyPartition],
+          type: COMMAND_TYPES.SECTION_CREATE,
+          payload: {
+            sceneId: "scene-1",
+            sectionId: "section-1",
+            name: "Section 1",
+          },
+          actor: {
+            userId: "user-2",
+            clientId: "future-writer",
+          },
+          clientTs: 5002,
+          commandVersion: 2,
+        }),
+      ),
+    );
+
+    await waitFor(() => Boolean(oldClient.getProjectionGap()), {
+      label: "old client records projection gap",
+    });
+
+    assert.equal(oldClient.getState().sections["section-1"], undefined);
+    assert.equal(
+      oldClient.getProjectionGap()?.commandType,
+      COMMAND_TYPES.SECTION_CREATE,
+    );
+    assert.equal(oldClient.getProjectionGap()?.remoteCommandVersion, 2);
+    assert.equal(oldClientStore._debug.getCommitted().length, 2);
+    assert.equal(
+      oldClientStore._debug.getCommitted()[1].meta.commandVersion,
+      2,
+    );
+  } finally {
+    await oldClient.stop();
+    await futureWriter.stop();
+    await futureServer.shutdown();
+  }
 }
 
 console.log("Command-only tests: PASS");

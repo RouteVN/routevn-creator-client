@@ -21,6 +21,11 @@ import {
   toUncommittedSyncSubmissionEvents,
 } from "./projectServiceCollabRuntime.js";
 import {
+  clearProjectionGap,
+  ensureRepositoryProjectionCache,
+  saveProjectionGap,
+} from "../shared/collab/projectorCache.js";
+import {
   applyCommandToRepository,
   assertSupportedProjectState,
 } from "../shared/projectRepository.js";
@@ -38,8 +43,25 @@ export const createWebProjectServiceAdapters = ({
   collabLog,
 }) => {
   const collabApplyQueueByProject = new Map();
+  const collabClientStoresByProject = new Map();
   const collabLastCommittedIdByProject = new Map();
   const collabAppliedCommittedIdsByProject = new Map();
+
+  const getCollabClientStore = async (projectId) => {
+    const existing = collabClientStoresByProject.get(projectId);
+    if (existing) return existing;
+
+    const store = await createPersistedInMemoryClientStore({
+      projectId,
+      logger: (entry) => {
+        if (entry?.level === "warn") {
+          collabLog("warn", "client store warning", entry);
+        }
+      },
+    });
+    collabClientStoresByProject.set(projectId, store);
+    return store;
+  };
 
   const ensureCommittedIdLoaded = async (projectId, getStoreByProject) => {
     return ensureCachedCommittedCursor({
@@ -249,8 +271,22 @@ export const createWebProjectServiceAdapters = ({
           localEventCount: events.length,
         });
       }
+      const rawClientStore = await getCollabClientStore(projectId);
+      const projectionCacheResult = await ensureRepositoryProjectionCache({
+        repositoryStore: store,
+        rawClientStore,
+      });
 
-      return events;
+      collabLog("debug", "repository projection cache ready", {
+        projectId,
+        rebuilt: projectionCacheResult.rebuilt,
+        bootstrapped: projectionCacheResult.bootstrapped,
+        repositoryEventCount: projectionCacheResult.repositoryEventCount,
+        committedEventCount: projectionCacheResult.committedEventCount,
+        projectionGap: projectionCacheResult.projectionGap || null,
+      });
+
+      return store.getEvents();
     },
 
     createTransport: ({ endpointUrl }) =>
@@ -310,15 +346,7 @@ export const createWebProjectServiceAdapters = ({
         partitions,
       );
       const projectMetadata = await getProjectMetadataFromEntries(projectId);
-      const clientStore = await createPersistedInMemoryClientStore({
-        projectId,
-        adapter,
-        logger: (entry) => {
-          if (entry?.level === "warn") {
-            collabLog("warn", "client store warning", entry);
-          }
-        },
-      });
+      const clientStore = await getCollabClientStore(projectId);
       await ensureCommittedIdLoaded(projectId, getStoreByProject);
       const collabSession = createProjectCollabService({
         projectId: resolvedProjectId,
@@ -352,6 +380,9 @@ export const createWebProjectServiceAdapters = ({
           committedEvent,
           sourceType,
           isFromCurrentActor,
+          compatibility,
+          projectionStatus,
+          projectionGap,
         }) =>
           queueCollabApply(projectId, async () => {
             const applyCommittedEventToRepository = async ({
@@ -359,6 +390,9 @@ export const createWebProjectServiceAdapters = ({
               committedEvent,
               sourceType,
               isFromCurrentActor,
+              compatibility,
+              projectionStatus,
+              projectionGap,
             }) => {
               if (isFromCurrentActor) {
                 collabLog("debug", "command skipped (current actor source)", {
@@ -366,6 +400,27 @@ export const createWebProjectServiceAdapters = ({
                   sourceType,
                   commandId: command?.id || null,
                   commandType: command?.type || null,
+                  committedId: Number.isFinite(
+                    Number(committedEvent?.committedId),
+                  )
+                    ? Number(committedEvent.committedId)
+                    : null,
+                });
+                return;
+              }
+
+              if (projectionGap) {
+                await saveProjectionGap(adapter, projectionGap);
+              }
+
+              if (projectionStatus !== "applied") {
+                collabLog("info", "remote command projection skipped", {
+                  projectId,
+                  sourceType,
+                  commandType: command?.type || null,
+                  commandId: command?.id || null,
+                  projectionStatus,
+                  compatibilityStatus: compatibility?.status || null,
                   committedId: Number.isFinite(
                     Number(committedEvent?.committedId),
                   )
@@ -449,15 +504,19 @@ export const createWebProjectServiceAdapters = ({
               committedEvent,
               sourceType,
               isFromCurrentActor,
+              compatibility,
+              projectionStatus,
+              projectionGap,
             });
 
-            if (hasCommittedId) {
+            if (hasCommittedId && !projectionGap) {
               const nextWatermark = Math.max(lastCommittedId, committedId);
               await persistCommittedCursor(
                 projectId,
                 nextWatermark,
                 getStoreByProject,
               );
+              await clearProjectionGap(adapter);
             }
           }),
       });

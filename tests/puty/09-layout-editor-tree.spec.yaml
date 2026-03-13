@@ -1,4 +1,5 @@
-file: "./insiemeStorageScenario.js"
+---
+file: ./insiemeStorageScenario.js
 group: insieme storage layout editor tree
 suites:
   - runInsiemeStorageScenario
@@ -17,7 +18,6 @@ in:
       - project:project-puty-layout-tree-001:layouts
     commands:
       - id: cmd-layout-tree-resource-create
-        partition: project:project-puty-layout-tree-001:resources:layouts
         partitions:
           - project:project-puty-layout-tree-001:resources:layouts
         type: resource.create
@@ -32,7 +32,6 @@ in:
               items: {}
               tree: []
       - id: cmd-layout-tree-panel-create
-        partition: project:project-puty-layout-tree-001:layouts
         partitions:
           - project:project-puty-layout-tree-001:layouts
         type: layout.element.create
@@ -43,11 +42,10 @@ in:
           element:
             type: group
             x: 0
-            y: 0
+            'y': 0
             width: 320
             height: 120
       - id: cmd-layout-tree-title-create
-        partition: project:project-puty-layout-tree-001:layouts
         partitions:
           - project:project-puty-layout-tree-001:layouts
         type: layout.element.create
@@ -59,10 +57,9 @@ in:
           element:
             type: text
             x: 12
-            y: 10
+            'y': 10
             text: Status
       - id: cmd-layout-tree-button-create
-        partition: project:project-puty-layout-tree-001:layouts
         partitions:
           - project:project-puty-layout-tree-001:layouts
         type: layout.element.create
@@ -73,10 +70,9 @@ in:
           element:
             type: sprite
             x: 20
-            y: 60
+            'y': 60
             imageId: img-button
       - id: cmd-layout-tree-button-move
-        partition: project:project-puty-layout-tree-001:layouts
         partitions:
           - project:project-puty-layout-tree-001:layouts
         type: layout.element.move
@@ -120,7 +116,7 @@ out:
         element:
           type: group
           x: 0
-          y: 0
+          'y': 0
           width: 320
           height: 120
       meta:
@@ -140,7 +136,7 @@ out:
         element:
           type: text
           x: 12
-          y: 10
+          'y': 10
           text: Status
       meta:
         clientId: client-puty-layout-tree
@@ -158,7 +154,7 @@ out:
         element:
           type: sprite
           x: 20
-          y: 60
+          'y': 60
           imageId: img-button
       meta:
         clientId: client-puty-layout-tree
@@ -178,3 +174,249 @@ out:
       meta:
         clientId: client-puty-layout-tree
         clientTs: 1005
+  stateAfterEachEvent:
+    - committedId: 1
+      eventId: cmd-layout-tree-resource-create
+      eventType: resource.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-layout-tree-001
+          name: ''
+          updatedAt: 1001
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources:
+          layouts:
+            items:
+              layout-hud:
+                createdAt: 1001
+                elements: {}
+                id: layout-hud
+                layoutType: overlay
+                name: HUD Layout
+                parentId: null
+                rootElementOrder: []
+                type: layout
+                updatedAt: 1001
+            tree:
+              - id: layout-hud
+    - committedId: 2
+      eventId: cmd-layout-tree-panel-create
+      eventType: layout.element.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-layout-tree-001
+          name: ''
+          updatedAt: 1002
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources:
+          layouts:
+            items:
+              layout-hud:
+                createdAt: 1001
+                elements:
+                  el-panel:
+                    children: []
+                    height: 120
+                    id: el-panel
+                    parentId: null
+                    type: group
+                    width: 320
+                    x: 0
+                    'y': 0
+                id: layout-hud
+                layoutType: overlay
+                name: HUD Layout
+                parentId: null
+                rootElementOrder:
+                  - el-panel
+                type: layout
+                updatedAt: 1002
+            tree:
+              - id: layout-hud
+    - committedId: 3
+      eventId: cmd-layout-tree-title-create
+      eventType: layout.element.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-layout-tree-001
+          name: ''
+          updatedAt: 1003
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources:
+          layouts:
+            items:
+              layout-hud:
+                createdAt: 1001
+                elements:
+                  el-panel:
+                    children:
+                      - el-title
+                    height: 120
+                    id: el-panel
+                    parentId: null
+                    type: group
+                    width: 320
+                    x: 0
+                    'y': 0
+                  el-title:
+                    children: []
+                    id: el-title
+                    parentId: el-panel
+                    text: Status
+                    type: text
+                    x: 12
+                    'y': 10
+                id: layout-hud
+                layoutType: overlay
+                name: HUD Layout
+                parentId: null
+                rootElementOrder:
+                  - el-panel
+                type: layout
+                updatedAt: 1003
+            tree:
+              - id: layout-hud
+    - committedId: 4
+      eventId: cmd-layout-tree-button-create
+      eventType: layout.element.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-layout-tree-001
+          name: ''
+          updatedAt: 1004
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources:
+          layouts:
+            items:
+              layout-hud:
+                createdAt: 1001
+                elements:
+                  el-button:
+                    children: []
+                    id: el-button
+                    imageId: img-button
+                    parentId: null
+                    type: sprite
+                    x: 20
+                    'y': 60
+                  el-panel:
+                    children:
+                      - el-title
+                    height: 120
+                    id: el-panel
+                    parentId: null
+                    type: group
+                    width: 320
+                    x: 0
+                    'y': 0
+                  el-title:
+                    children: []
+                    id: el-title
+                    parentId: el-panel
+                    text: Status
+                    type: text
+                    x: 12
+                    'y': 10
+                id: layout-hud
+                layoutType: overlay
+                name: HUD Layout
+                parentId: null
+                rootElementOrder:
+                  - el-panel
+                  - el-button
+                type: layout
+                updatedAt: 1004
+            tree:
+              - id: layout-hud
+    - committedId: 5
+      eventId: cmd-layout-tree-button-move
+      eventType: layout.element.move
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-layout-tree-001
+          name: ''
+          updatedAt: 1005
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources:
+          layouts:
+            items:
+              layout-hud:
+                createdAt: 1001
+                elements:
+                  el-button:
+                    children: []
+                    id: el-button
+                    imageId: img-button
+                    parentId: el-panel
+                    type: sprite
+                    x: 20
+                    'y': 60
+                  el-panel:
+                    children:
+                      - el-title
+                      - el-button
+                    height: 120
+                    id: el-panel
+                    parentId: null
+                    type: group
+                    width: 320
+                    x: 0
+                    'y': 0
+                  el-title:
+                    children: []
+                    id: el-title
+                    parentId: el-panel
+                    text: Status
+                    type: text
+                    x: 12
+                    'y': 10
+                id: layout-hud
+                layoutType: overlay
+                name: HUD Layout
+                parentId: null
+                rootElementOrder:
+                  - el-panel
+                type: layout
+                updatedAt: 1005
+            tree:
+              - id: layout-hud

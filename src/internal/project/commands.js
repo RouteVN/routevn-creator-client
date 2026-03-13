@@ -736,14 +736,14 @@ export const COMMAND_EVENT_MODEL = Object.freeze({
   requiredEnvelopeFields: Object.freeze([
     "id",
     "projectId",
-    "partition",
+    "partitions",
     "type",
     "payload",
     "actor",
     "clientTs",
     "commandVersion",
   ]),
-  optionalEnvelopeFields: Object.freeze(["partitions", "meta"]),
+  optionalEnvelopeFields: Object.freeze(["meta"]),
 });
 
 export const getCommandDefinition = (type) => {
@@ -778,17 +778,13 @@ export const validateCommandEnvelope = (command, errors) => {
   if (!assertNonEmptyString(command.id)) errors.push("id is required");
   if (!assertNonEmptyString(command.projectId))
     errors.push("projectId is required");
-  if (!assertNonEmptyString(command.partition))
-    errors.push("partition is required");
-  if (command.partitions !== undefined) {
-    if (!Array.isArray(command.partitions) || command.partitions.length === 0) {
-      errors.push("partitions must be a non-empty array when provided");
-    } else {
-      for (const partition of command.partitions) {
-        if (!assertNonEmptyString(partition)) {
-          errors.push("partitions entries must be non-empty strings");
-          break;
-        }
+  if (!Array.isArray(command.partitions) || command.partitions.length === 0) {
+    errors.push("partitions must be a non-empty array");
+  } else {
+    for (const partition of command.partitions) {
+      if (!assertNonEmptyString(partition)) {
+        errors.push("partitions entries must be non-empty strings");
+        break;
       }
     }
   }

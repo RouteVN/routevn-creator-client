@@ -1,4 +1,5 @@
-file: "./insiemeStorageScenario.js"
+---
+file: ./insiemeStorageScenario.js
 group: insieme storage idempotent submit
 suites:
   - runInsiemeStorageScenario
@@ -17,7 +18,6 @@ in:
     batches:
       - commands:
           - id: cmd-project-name-dedup
-            partition: project:project-puty-idempotent-001:settings
             partitions:
               - project:project-puty-idempotent-001:settings
             type: project.update
@@ -27,7 +27,6 @@ in:
                 name: Deduped Project
       - commands:
           - id: cmd-project-name-dedup
-            partition: project:project-puty-idempotent-001:settings
             partitions:
               - project:project-puty-idempotent-001:settings
             type: project.update
@@ -36,7 +35,6 @@ in:
               patch:
                 name: Deduped Project
           - id: cmd-project-description-unique
-            partition: project:project-puty-idempotent-001:settings
             partitions:
               - project:project-puty-idempotent-001:settings
             type: project.update
@@ -72,3 +70,40 @@ out:
       meta:
         clientId: client-puty-idempotent
         clientTs: 1202
+  stateAfterEachEvent:
+    - committedId: 1
+      eventId: cmd-project-name-dedup
+      eventType: project.update
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-idempotent-001
+          name: Deduped Project
+          updatedAt: 1201
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources: {}
+    - committedId: 2
+      eventId: cmd-project-description-unique
+      eventType: project.update
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: Second command should still commit
+          id: project-puty-idempotent-001
+          name: Deduped Project
+          updatedAt: 1202
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources: {}

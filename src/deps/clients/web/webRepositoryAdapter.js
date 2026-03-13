@@ -157,6 +157,16 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
       });
     },
 
+    async clearEvents() {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction("events", "readwrite");
+        const store = transaction.objectStore("events");
+        const request = store.clear();
+        request.onsuccess = () => resolve();
+        request.onerror = (event) => reject(event.target.error);
+      });
+    },
+
     async loadMaterializedViewCheckpoint({ viewName, partition }) {
       return new Promise((resolve, reject) => {
         const transaction = db.transaction(MATERIALIZED_VIEW_STORE, "readonly");
@@ -214,6 +224,19 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
         );
         const store = transaction.objectStore(MATERIALIZED_VIEW_STORE);
         const request = store.delete([viewName, partition]);
+        request.onsuccess = () => resolve();
+        request.onerror = (event) => reject(event.target.error);
+      });
+    },
+
+    async clearMaterializedViewCheckpoints() {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(
+          MATERIALIZED_VIEW_STORE,
+          "readwrite",
+        );
+        const store = transaction.objectStore(MATERIALIZED_VIEW_STORE);
+        const request = store.clear();
         request.onsuccess = () => resolve();
         request.onerror = (event) => reject(event.target.error);
       });

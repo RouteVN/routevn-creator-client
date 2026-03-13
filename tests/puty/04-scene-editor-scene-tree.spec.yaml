@@ -1,4 +1,5 @@
-file: "./insiemeStorageScenario.js"
+---
+file: ./insiemeStorageScenario.js
 group: insieme storage scene editor scene tree
 suites:
   - runInsiemeStorageScenario
@@ -16,7 +17,6 @@ in:
       - project:project-puty-scene-tree-001:story
     commands:
       - id: cmd-scene-folder-create
-        partition: project:project-puty-scene-tree-001:story
         partitions:
           - project:project-puty-scene-tree-001:story
           - project:project-puty-scene-tree-001:story:scene:folder-prologue
@@ -28,7 +28,6 @@ in:
           data:
             type: folder
       - id: cmd-scene-intro-create
-        partition: project:project-puty-scene-tree-001:story
         partitions:
           - project:project-puty-scene-tree-001:story
           - project:project-puty-scene-tree-001:story:scene:scene-intro
@@ -39,7 +38,6 @@ in:
           name: Train Station
           parentId: folder-prologue
       - id: cmd-scene-wakeup-create
-        partition: project:project-puty-scene-tree-001:story
         partitions:
           - project:project-puty-scene-tree-001:story
           - project:project-puty-scene-tree-001:story:scene:scene-wakeup
@@ -50,7 +48,6 @@ in:
           name: Morning Room
           parentId: folder-prologue
       - id: cmd-scene-intro-update
-        partition: project:project-puty-scene-tree-001:story
         partitions:
           - project:project-puty-scene-tree-001:story
           - project:project-puty-scene-tree-001:story:scene:scene-intro
@@ -62,7 +59,6 @@ in:
             notes: Opening sequence
             cameraPreset: wide
       - id: cmd-scene-wakeup-rename
-        partition: project:project-puty-scene-tree-001:story
         partitions:
           - project:project-puty-scene-tree-001:story
           - project:project-puty-scene-tree-001:story:scene:scene-wakeup
@@ -72,7 +68,6 @@ in:
           sceneId: scene-wakeup
           name: Wake Up
       - id: cmd-scene-wakeup-move
-        partition: project:project-puty-scene-tree-001:story
         partitions:
           - project:project-puty-scene-tree-001:story
           - project:project-puty-scene-tree-001:story:scene:scene-wakeup
@@ -82,7 +77,6 @@ in:
           sceneId: scene-wakeup
           index: 0
       - id: cmd-scene-set-initial
-        partition: project:project-puty-scene-tree-001:story
         partitions:
           - project:project-puty-scene-tree-001:story
           - project:project-puty-scene-tree-001:story:scene:scene-intro
@@ -195,3 +189,364 @@ out:
       meta:
         clientId: client-puty-scene-tree
         clientTs: 507
+  stateAfterEachEvent:
+    - committedId: 1
+      eventId: cmd-scene-folder-create
+      eventType: scene.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-scene-tree-001
+          name: ''
+          updatedAt: 501
+        story:
+          initialSceneId: null
+          sceneOrder:
+            - folder-prologue
+        scenes:
+          folder-prologue:
+            createdAt: 501
+            id: folder-prologue
+            initialSectionId: null
+            name: Prologue
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: folder
+            updatedAt: 501
+        sections: {}
+        lines: {}
+        resources: {}
+    - committedId: 2
+      eventId: cmd-scene-intro-create
+      eventType: scene.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-scene-tree-001
+          name: ''
+          updatedAt: 502
+        story:
+          initialSceneId: scene-intro
+          sceneOrder:
+            - folder-prologue
+            - scene-intro
+        scenes:
+          folder-prologue:
+            createdAt: 501
+            id: folder-prologue
+            initialSectionId: null
+            name: Prologue
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: folder
+            updatedAt: 501
+          scene-intro:
+            createdAt: 502
+            id: scene-intro
+            initialSectionId: null
+            name: Train Station
+            parentId: folder-prologue
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: scene
+            updatedAt: 502
+        sections: {}
+        lines: {}
+        resources: {}
+    - committedId: 3
+      eventId: cmd-scene-wakeup-create
+      eventType: scene.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-scene-tree-001
+          name: ''
+          updatedAt: 503
+        story:
+          initialSceneId: scene-intro
+          sceneOrder:
+            - folder-prologue
+            - scene-intro
+            - scene-wakeup
+        scenes:
+          folder-prologue:
+            createdAt: 501
+            id: folder-prologue
+            initialSectionId: null
+            name: Prologue
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: folder
+            updatedAt: 501
+          scene-intro:
+            createdAt: 502
+            id: scene-intro
+            initialSectionId: null
+            name: Train Station
+            parentId: folder-prologue
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: scene
+            updatedAt: 502
+          scene-wakeup:
+            createdAt: 503
+            id: scene-wakeup
+            initialSectionId: null
+            name: Morning Room
+            parentId: folder-prologue
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: scene
+            updatedAt: 503
+        sections: {}
+        lines: {}
+        resources: {}
+    - committedId: 4
+      eventId: cmd-scene-intro-update
+      eventType: scene.update
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-scene-tree-001
+          name: ''
+          updatedAt: 504
+        story:
+          initialSceneId: scene-intro
+          sceneOrder:
+            - folder-prologue
+            - scene-intro
+            - scene-wakeup
+        scenes:
+          folder-prologue:
+            createdAt: 501
+            id: folder-prologue
+            initialSectionId: null
+            name: Prologue
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: folder
+            updatedAt: 501
+          scene-intro:
+            createdAt: 502
+            id: scene-intro
+            initialSectionId: null
+            name: Train Station
+            parentId: folder-prologue
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: scene
+            updatedAt: 504
+          scene-wakeup:
+            createdAt: 503
+            id: scene-wakeup
+            initialSectionId: null
+            name: Morning Room
+            parentId: folder-prologue
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: scene
+            updatedAt: 503
+        sections: {}
+        lines: {}
+        resources: {}
+    - committedId: 5
+      eventId: cmd-scene-wakeup-rename
+      eventType: scene.rename
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-scene-tree-001
+          name: ''
+          updatedAt: 505
+        story:
+          initialSceneId: scene-intro
+          sceneOrder:
+            - folder-prologue
+            - scene-intro
+            - scene-wakeup
+        scenes:
+          folder-prologue:
+            createdAt: 501
+            id: folder-prologue
+            initialSectionId: null
+            name: Prologue
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: folder
+            updatedAt: 501
+          scene-intro:
+            createdAt: 502
+            id: scene-intro
+            initialSectionId: null
+            name: Train Station
+            parentId: folder-prologue
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: scene
+            updatedAt: 504
+          scene-wakeup:
+            createdAt: 503
+            id: scene-wakeup
+            initialSectionId: null
+            name: Wake Up
+            parentId: folder-prologue
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: scene
+            updatedAt: 505
+        sections: {}
+        lines: {}
+        resources: {}
+    - committedId: 6
+      eventId: cmd-scene-wakeup-move
+      eventType: scene.move
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-scene-tree-001
+          name: ''
+          updatedAt: 506
+        story:
+          initialSceneId: scene-intro
+          sceneOrder:
+            - folder-prologue
+            - scene-intro
+            - scene-wakeup
+        scenes:
+          folder-prologue:
+            createdAt: 501
+            id: folder-prologue
+            initialSectionId: null
+            name: Prologue
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: folder
+            updatedAt: 501
+          scene-intro:
+            createdAt: 502
+            id: scene-intro
+            initialSectionId: null
+            name: Train Station
+            parentId: folder-prologue
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: scene
+            updatedAt: 504
+          scene-wakeup:
+            createdAt: 503
+            id: scene-wakeup
+            initialSectionId: null
+            name: Wake Up
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: scene
+            updatedAt: 505
+        sections: {}
+        lines: {}
+        resources: {}
+    - committedId: 7
+      eventId: cmd-scene-set-initial
+      eventType: scene.set_initial
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-scene-tree-001
+          name: ''
+          updatedAt: 507
+        story:
+          initialSceneId: scene-intro
+          sceneOrder:
+            - folder-prologue
+            - scene-intro
+            - scene-wakeup
+        scenes:
+          folder-prologue:
+            createdAt: 501
+            id: folder-prologue
+            initialSectionId: null
+            name: Prologue
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: folder
+            updatedAt: 501
+          scene-intro:
+            createdAt: 502
+            id: scene-intro
+            initialSectionId: null
+            name: Train Station
+            parentId: folder-prologue
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: scene
+            updatedAt: 504
+          scene-wakeup:
+            createdAt: 503
+            id: scene-wakeup
+            initialSectionId: null
+            name: Wake Up
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: scene
+            updatedAt: 505
+        sections: {}
+        lines: {}
+        resources: {}

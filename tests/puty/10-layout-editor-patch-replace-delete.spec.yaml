@@ -1,4 +1,5 @@
-file: "./insiemeStorageScenario.js"
+---
+file: ./insiemeStorageScenario.js
 group: insieme storage layout editor patch replace delete
 suites:
   - runInsiemeStorageScenario
@@ -17,7 +18,6 @@ in:
       - project:project-puty-layout-patch-001:layouts
     commands:
       - id: cmd-layout-patch-resource-create
-        partition: project:project-puty-layout-patch-001:resources:layouts
         partitions:
           - project:project-puty-layout-patch-001:resources:layouts
         type: resource.create
@@ -32,7 +32,6 @@ in:
               items: {}
               tree: []
       - id: cmd-layout-patch-element-create
-        partition: project:project-puty-layout-patch-001:layouts
         partitions:
           - project:project-puty-layout-patch-001:layouts
         type: layout.element.create
@@ -43,12 +42,11 @@ in:
           element:
             type: sprite
             x: 0
-            y: 400
+            'y': 400
             width: 1280
             height: 320
             imageId: frame-a
       - id: cmd-layout-patch-update-1
-        partition: project:project-puty-layout-patch-001:layouts
         partitions:
           - project:project-puty-layout-patch-001:layouts
         type: layout.element.update
@@ -60,10 +58,9 @@ in:
             x: 10
             style:
               opacity: 0.9
-              tint: "#ffffff"
+              tint: '#ffffff'
           replace: false
       - id: cmd-layout-patch-update-2
-        partition: project:project-puty-layout-patch-001:layouts
         partitions:
           - project:project-puty-layout-patch-001:layouts
         type: layout.element.update
@@ -77,7 +74,6 @@ in:
               blendMode: screen
           replace: false
       - id: cmd-layout-patch-replace
-        partition: project:project-puty-layout-patch-001:layouts
         partitions:
           - project:project-puty-layout-patch-001:layouts
         type: layout.element.update
@@ -88,11 +84,10 @@ in:
           patch:
             type: sprite
             x: 0
-            y: 420
+            'y': 420
             imageId: frame-b
           replace: true
       - id: cmd-layout-patch-delete
-        partition: project:project-puty-layout-patch-001:layouts
         partitions:
           - project:project-puty-layout-patch-001:layouts
         type: layout.element.delete
@@ -134,7 +129,7 @@ out:
         element:
           type: sprite
           x: 0
-          y: 400
+          'y': 400
           width: 1280
           height: 320
           imageId: frame-a
@@ -155,7 +150,7 @@ out:
           x: 10
           style:
             opacity: 0.9
-            tint: "#ffffff"
+            tint: '#ffffff'
         replace: false
       meta:
         clientId: client-puty-layout-patch
@@ -191,7 +186,7 @@ out:
         patch:
           type: sprite
           x: 0
-          y: 420
+          'y': 420
           imageId: frame-b
         replace: true
       meta:
@@ -210,3 +205,251 @@ out:
       meta:
         clientId: client-puty-layout-patch
         clientTs: 1106
+  stateAfterEachEvent:
+    - committedId: 1
+      eventId: cmd-layout-patch-resource-create
+      eventType: resource.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-layout-patch-001
+          name: ''
+          updatedAt: 1101
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources:
+          layouts:
+            items:
+              layout-dialogue:
+                createdAt: 1101
+                elements: {}
+                id: layout-dialogue
+                layoutType: normal
+                name: Dialogue Layout
+                parentId: null
+                rootElementOrder: []
+                type: layout
+                updatedAt: 1101
+            tree:
+              - id: layout-dialogue
+    - committedId: 2
+      eventId: cmd-layout-patch-element-create
+      eventType: layout.element.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-layout-patch-001
+          name: ''
+          updatedAt: 1102
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources:
+          layouts:
+            items:
+              layout-dialogue:
+                createdAt: 1101
+                elements:
+                  el-frame:
+                    children: []
+                    height: 320
+                    id: el-frame
+                    imageId: frame-a
+                    parentId: null
+                    type: sprite
+                    width: 1280
+                    x: 0
+                    'y': 400
+                id: layout-dialogue
+                layoutType: normal
+                name: Dialogue Layout
+                parentId: null
+                rootElementOrder:
+                  - el-frame
+                type: layout
+                updatedAt: 1102
+            tree:
+              - id: layout-dialogue
+    - committedId: 3
+      eventId: cmd-layout-patch-update-1
+      eventType: layout.element.update
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-layout-patch-001
+          name: ''
+          updatedAt: 1103
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources:
+          layouts:
+            items:
+              layout-dialogue:
+                createdAt: 1101
+                elements:
+                  el-frame:
+                    children: []
+                    height: 320
+                    id: el-frame
+                    imageId: frame-a
+                    parentId: null
+                    style:
+                      opacity: 0.9
+                      tint: '#ffffff'
+                    type: sprite
+                    width: 1280
+                    x: 10
+                    'y': 400
+                id: layout-dialogue
+                layoutType: normal
+                name: Dialogue Layout
+                parentId: null
+                rootElementOrder:
+                  - el-frame
+                type: layout
+                updatedAt: 1103
+            tree:
+              - id: layout-dialogue
+    - committedId: 4
+      eventId: cmd-layout-patch-update-2
+      eventType: layout.element.update
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-layout-patch-001
+          name: ''
+          updatedAt: 1104
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources:
+          layouts:
+            items:
+              layout-dialogue:
+                createdAt: 1101
+                elements:
+                  el-frame:
+                    children: []
+                    height: 320
+                    id: el-frame
+                    imageId: frame-a
+                    parentId: null
+                    style:
+                      blendMode: screen
+                      opacity: 1
+                      tint: '#ffffff'
+                    type: sprite
+                    width: 1280
+                    x: 10
+                    'y': 400
+                id: layout-dialogue
+                layoutType: normal
+                name: Dialogue Layout
+                parentId: null
+                rootElementOrder:
+                  - el-frame
+                type: layout
+                updatedAt: 1104
+            tree:
+              - id: layout-dialogue
+    - committedId: 5
+      eventId: cmd-layout-patch-replace
+      eventType: layout.element.update
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-layout-patch-001
+          name: ''
+          updatedAt: 1105
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources:
+          layouts:
+            items:
+              layout-dialogue:
+                createdAt: 1101
+                elements:
+                  el-frame:
+                    children: []
+                    height: 320
+                    id: el-frame
+                    imageId: frame-b
+                    parentId: null
+                    style:
+                      blendMode: screen
+                      opacity: 1
+                      tint: '#ffffff'
+                    type: sprite
+                    width: 1280
+                    x: 0
+                    'y': 420
+                id: layout-dialogue
+                layoutType: normal
+                name: Dialogue Layout
+                parentId: null
+                rootElementOrder:
+                  - el-frame
+                type: layout
+                updatedAt: 1105
+            tree:
+              - id: layout-dialogue
+    - committedId: 6
+      eventId: cmd-layout-patch-delete
+      eventType: layout.element.delete
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-layout-patch-001
+          name: ''
+          updatedAt: 1106
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources:
+          layouts:
+            items:
+              layout-dialogue:
+                createdAt: 1101
+                elements: {}
+                id: layout-dialogue
+                layoutType: normal
+                name: Dialogue Layout
+                parentId: null
+                rootElementOrder: []
+                type: layout
+                updatedAt: 1106
+            tree:
+              - id: layout-dialogue

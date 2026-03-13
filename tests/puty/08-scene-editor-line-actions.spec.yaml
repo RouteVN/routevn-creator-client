@@ -1,4 +1,5 @@
-file: "./insiemeStorageScenario.js"
+---
+file: ./insiemeStorageScenario.js
 group: insieme storage scene editor line actions
 suites:
   - runInsiemeStorageScenario
@@ -16,7 +17,6 @@ in:
       - project:project-puty-line-actions-001:story
     commands:
       - id: cmd-line-actions-scene-create
-        partition: project:project-puty-line-actions-001:story
         partitions:
           - project:project-puty-line-actions-001:story
           - project:project-puty-line-actions-001:story:scene:scene-actions
@@ -26,7 +26,6 @@ in:
           sceneId: scene-actions
           name: Action Editing
       - id: cmd-line-actions-section-create
-        partition: project:project-puty-line-actions-001:story
         partitions:
           - project:project-puty-line-actions-001:story
           - project:project-puty-line-actions-001:story:scene:scene-actions
@@ -37,7 +36,6 @@ in:
           sectionId: section-main
           name: Main
       - id: cmd-line-actions-line-create
-        partition: project:project-puty-line-actions-001:story
         partitions:
           - project:project-puty-line-actions-001:story
           - project:project-puty-line-actions-001:story:scene:scene-actions
@@ -53,7 +51,6 @@ in:
                   - text: Original line
                 mode: adv
       - id: cmd-line-actions-dialogue
-        partition: project:project-puty-line-actions-001:story
         partitions:
           - project:project-puty-line-actions-001:story
           - project:project-puty-line-actions-001:story:scene:scene-actions
@@ -70,7 +67,6 @@ in:
                 resourceId: layout-dialogue
           replace: false
       - id: cmd-line-actions-background
-        partition: project:project-puty-line-actions-001:story
         partitions:
           - project:project-puty-line-actions-001:story
           - project:project-puty-line-actions-001:story:scene:scene-actions
@@ -86,7 +82,6 @@ in:
                 enter: fade
           replace: false
       - id: cmd-line-actions-character
-        partition: project:project-puty-line-actions-001:story
         partitions:
           - project:project-puty-line-actions-001:story
           - project:project-puty-line-actions-001:story:scene:scene-actions
@@ -102,7 +97,6 @@ in:
                   position: center
           replace: false
       - id: cmd-line-actions-replace
-        partition: project:project-puty-line-actions-001:story
         partitions:
           - project:project-puty-line-actions-001:story
           - project:project-puty-line-actions-001:story:scene:scene-actions
@@ -247,3 +241,351 @@ out:
       meta:
         clientId: client-puty-line-actions
         clientTs: 907
+  stateAfterEachEvent:
+    - committedId: 1
+      eventId: cmd-line-actions-scene-create
+      eventType: scene.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-line-actions-001
+          name: ''
+          updatedAt: 901
+        story:
+          initialSceneId: scene-actions
+          sceneOrder:
+            - scene-actions
+        scenes:
+          scene-actions:
+            createdAt: 901
+            id: scene-actions
+            initialSectionId: null
+            name: Action Editing
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: scene
+            updatedAt: 901
+        sections: {}
+        lines: {}
+        resources: {}
+    - committedId: 2
+      eventId: cmd-line-actions-section-create
+      eventType: section.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-line-actions-001
+          name: ''
+          updatedAt: 902
+        story:
+          initialSceneId: scene-actions
+          sceneOrder:
+            - scene-actions
+        scenes:
+          scene-actions:
+            createdAt: 901
+            id: scene-actions
+            initialSectionId: section-main
+            name: Action Editing
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-main
+            type: scene
+            updatedAt: 901
+        sections:
+          section-main:
+            createdAt: 902
+            id: section-main
+            initialLineId: null
+            lineIds: []
+            name: Main
+            sceneId: scene-actions
+            updatedAt: 902
+        lines: {}
+        resources: {}
+    - committedId: 3
+      eventId: cmd-line-actions-line-create
+      eventType: line.insert_after
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-line-actions-001
+          name: ''
+          updatedAt: 903
+        story:
+          initialSceneId: scene-actions
+          sceneOrder:
+            - scene-actions
+        scenes:
+          scene-actions:
+            createdAt: 901
+            id: scene-actions
+            initialSectionId: section-main
+            name: Action Editing
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-main
+            type: scene
+            updatedAt: 901
+        sections:
+          section-main:
+            createdAt: 902
+            id: section-main
+            initialLineId: line-main
+            lineIds:
+              - line-main
+            name: Main
+            sceneId: scene-actions
+            updatedAt: 902
+        lines:
+          line-main:
+            actions:
+              dialogue:
+                content:
+                  - text: Original line
+                mode: adv
+            createdAt: 903
+            id: line-main
+            sectionId: section-main
+            updatedAt: 903
+        resources: {}
+    - committedId: 4
+      eventId: cmd-line-actions-dialogue
+      eventType: line.update_actions
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-line-actions-001
+          name: ''
+          updatedAt: 904
+        story:
+          initialSceneId: scene-actions
+          sceneOrder:
+            - scene-actions
+        scenes:
+          scene-actions:
+            createdAt: 901
+            id: scene-actions
+            initialSectionId: section-main
+            name: Action Editing
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-main
+            type: scene
+            updatedAt: 901
+        sections:
+          section-main:
+            createdAt: 902
+            id: section-main
+            initialLineId: line-main
+            lineIds:
+              - line-main
+            name: Main
+            sceneId: scene-actions
+            updatedAt: 902
+        lines:
+          line-main:
+            actions:
+              dialogue:
+                content:
+                  - text: Updated dialogue
+                mode: nvl
+                ui:
+                  resourceId: layout-dialogue
+            createdAt: 903
+            id: line-main
+            sectionId: section-main
+            updatedAt: 904
+        resources: {}
+    - committedId: 5
+      eventId: cmd-line-actions-background
+      eventType: line.update_actions
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-line-actions-001
+          name: ''
+          updatedAt: 905
+        story:
+          initialSceneId: scene-actions
+          sceneOrder:
+            - scene-actions
+        scenes:
+          scene-actions:
+            createdAt: 901
+            id: scene-actions
+            initialSectionId: section-main
+            name: Action Editing
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-main
+            type: scene
+            updatedAt: 901
+        sections:
+          section-main:
+            createdAt: 902
+            id: section-main
+            initialLineId: line-main
+            lineIds:
+              - line-main
+            name: Main
+            sceneId: scene-actions
+            updatedAt: 902
+        lines:
+          line-main:
+            actions:
+              background:
+                animations:
+                  enter: fade
+                mode: cover
+                resourceId: bg-night
+              dialogue:
+                content:
+                  - text: Updated dialogue
+                mode: nvl
+                ui:
+                  resourceId: layout-dialogue
+            createdAt: 903
+            id: line-main
+            sectionId: section-main
+            updatedAt: 905
+        resources: {}
+    - committedId: 6
+      eventId: cmd-line-actions-character
+      eventType: line.update_actions
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-line-actions-001
+          name: ''
+          updatedAt: 906
+        story:
+          initialSceneId: scene-actions
+          sceneOrder:
+            - scene-actions
+        scenes:
+          scene-actions:
+            createdAt: 901
+            id: scene-actions
+            initialSectionId: section-main
+            name: Action Editing
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-main
+            type: scene
+            updatedAt: 901
+        sections:
+          section-main:
+            createdAt: 902
+            id: section-main
+            initialLineId: line-main
+            lineIds:
+              - line-main
+            name: Main
+            sceneId: scene-actions
+            updatedAt: 902
+        lines:
+          line-main:
+            actions:
+              background:
+                animations:
+                  enter: fade
+                mode: cover
+                resourceId: bg-night
+              character:
+                entries:
+                  - characterId: hero
+                    poseId: idle
+                    position: center
+              dialogue:
+                content:
+                  - text: Updated dialogue
+                mode: nvl
+                ui:
+                  resourceId: layout-dialogue
+            createdAt: 903
+            id: line-main
+            sectionId: section-main
+            updatedAt: 906
+        resources: {}
+    - committedId: 7
+      eventId: cmd-line-actions-replace
+      eventType: line.update_actions
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-line-actions-001
+          name: ''
+          updatedAt: 907
+        story:
+          initialSceneId: scene-actions
+          sceneOrder:
+            - scene-actions
+        scenes:
+          scene-actions:
+            createdAt: 901
+            id: scene-actions
+            initialSectionId: section-main
+            name: Action Editing
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-main
+            type: scene
+            updatedAt: 901
+        sections:
+          section-main:
+            createdAt: 902
+            id: section-main
+            initialLineId: line-main
+            lineIds:
+              - line-main
+            name: Main
+            sceneId: scene-actions
+            updatedAt: 902
+        lines:
+          line-main:
+            actions:
+              dialogue:
+                content:
+                  - text: Reset to dialogue only
+                mode: adv
+            createdAt: 903
+            id: line-main
+            sectionId: section-main
+            updatedAt: 907
+        resources: {}
