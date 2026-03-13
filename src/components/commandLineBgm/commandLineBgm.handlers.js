@@ -85,11 +85,7 @@ export const handleFormChange = (deps, payload) => {
 
 export const handleResourceItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const target = payload._event.currentTarget;
-  const resourceId =
-    target?.dataset?.resourceId ||
-    target?.id?.replace("resourceItem", "") ||
-    "";
+  const resourceId = payload._event.currentTarget.dataset.resourceId;
 
   store.setTempSelectedResource({
     resourceId,
