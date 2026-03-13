@@ -67,6 +67,7 @@ export const createInitialState = () => ({
         ],
       },
       {
+        $when: 'values.mode == "nvl"',
         name: "clear",
         type: "select",
         label: "Clear Dialogue",

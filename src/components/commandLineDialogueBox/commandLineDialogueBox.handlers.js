@@ -98,7 +98,7 @@ export const handleSubmitClick = (deps) => {
   if (selectedMode === "nvl" && toBoolean(clearPage)) {
     dialogue.clearPage = true;
   }
-  if (toBoolean(clear)) {
+  if (selectedMode === "nvl" && toBoolean(clear)) {
     dialogue.clear = true;
   }
 
