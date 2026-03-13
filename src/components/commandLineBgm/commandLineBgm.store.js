@@ -1,5 +1,12 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 
+const normalizeBgm = (bgm = {}) => ({
+  resourceId: bgm?.resourceId,
+  loop: bgm?.loop ?? true,
+  volume: bgm?.volume ?? 500,
+  delay: bgm?.delay,
+});
+
 const form = {
   fields: [
     {
@@ -32,19 +39,18 @@ export const createInitialState = () => ({
   items: { items: {}, tree: [] },
   selectedResourceId: undefined,
   tempSelectedResourceId: undefined,
-  bgm: {
-    resourceId: undefined,
-    loop: true,
-    volume: 500,
-  },
+  bgm: normalizeBgm(),
 });
 
 export const setBgmAudio = ({ state }, { resourceId } = {}) => {
-  state.bgm.resourceId = resourceId;
+  state.bgm = {
+    ...normalizeBgm(state.bgm),
+    resourceId,
+  };
 };
 
 export const setBgm = ({ state }, { bgm } = {}) => {
-  state.bgm = bgm;
+  state.bgm = normalizeBgm(bgm);
 };
 
 export const setMode = ({ state }, { mode } = {}) => {

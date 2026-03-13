@@ -73,6 +73,14 @@ const createAddFontForm = (fontFolderOptions) => ({
   },
 });
 
+const getPreviewTextValue = ({ previewText, name } = {}) => {
+  if (typeof previewText === "string" && previewText.trim().length > 0) {
+    return previewText;
+  }
+
+  return name ?? "";
+};
+
 export const createInitialState = () => ({
   typographyData: { tree: [], items: {} },
   colorsData: { tree: [], items: {} },
@@ -364,7 +372,7 @@ export const selectViewData = ({ state }) => {
         fontStyle: fontData.fontFamily,
         fontFileId: fontData.fileId,
         color: getColorHex(item.colorId),
-        previewText: item.previewText ?? "",
+        previewText: getPreviewTextValue(item),
         selectedStyle:
           item.id === state.selectedItemId
             ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
@@ -629,7 +637,7 @@ export const selectViewData = ({ state }) => {
     selectedItemId: state.selectedItemId,
     selectedItemName: selectedItem?.name ?? "",
     detailFields,
-    detailPreviewText: selectedItem?.previewText ?? "",
+    detailPreviewText: getPreviewTextValue(selectedItem),
     detailPreviewFontSize: selectedItem?.fontSize ?? 16,
     detailPreviewLineHeight: selectedItem?.lineHeight ?? 1.5,
     detailPreviewFontWeight: selectedItem?.fontWeight ?? "400",
@@ -666,7 +674,7 @@ export const selectViewData = ({ state }) => {
     fontFileTypes: [".ttf", ".otf", ".woff", ".woff2"],
 
     // Preview values for dialog
-    previewText: state.currentFormValues.previewText ?? "",
+    previewText: getPreviewTextValue(state.currentFormValues),
     previewFontSize: state.currentFormValues.fontSize,
     previewLineHeight: state.currentFormValues.lineHeight,
     previewFontWeight: state.currentFormValues.fontWeight,
