@@ -36,6 +36,86 @@ const toAlphanumericId = (value, fallback = "sliderUpdate") => {
 
 const isBlobUrl = (url) => typeof url === "string" && url.startsWith("blob:");
 
+const isPlainObject = (value) => {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+};
+
+const areValuesEqual = (left, right) => {
+  if (left === right) {
+    return true;
+  }
+
+  if (Array.isArray(left) && Array.isArray(right)) {
+    return (
+      left.length === right.length &&
+      left.every((value, index) => areValuesEqual(value, right[index]))
+    );
+  }
+
+  if (isPlainObject(left) && isPlainObject(right)) {
+    const leftKeys = Object.keys(left);
+    const rightKeys = Object.keys(right);
+    return (
+      leftKeys.length === rightKeys.length &&
+      leftKeys.every(
+        (key) =>
+          Object.hasOwn(right, key) && areValuesEqual(left[key], right[key]),
+      )
+    );
+  }
+
+  return false;
+};
+
+const createObjectPatch = (previousValue, nextValue) => {
+  const previousObject = isPlainObject(previousValue) ? previousValue : {};
+  const nextObject = isPlainObject(nextValue) ? nextValue : {};
+  const patch = {};
+  let hasChanges = false;
+  let requiresReplace = false;
+
+  for (const key of Object.keys(previousObject)) {
+    if (!Object.hasOwn(nextObject, key)) {
+      requiresReplace = true;
+      break;
+    }
+  }
+
+  for (const [key, value] of Object.entries(nextObject)) {
+    if (!Object.hasOwn(previousObject, key)) {
+      patch[key] = structuredClone(value);
+      hasChanges = true;
+      continue;
+    }
+
+    const previousEntry = previousObject[key];
+
+    if (areValuesEqual(previousEntry, value)) {
+      continue;
+    }
+
+    if (isPlainObject(previousEntry) && isPlainObject(value)) {
+      const nestedResult = createObjectPatch(previousEntry, value);
+      if (nestedResult.requiresReplace) {
+        requiresReplace = true;
+      } else if (nestedResult.hasChanges) {
+        patch[key] = nestedResult.patch;
+        hasChanges = true;
+      }
+      continue;
+    }
+
+    patch[key] = structuredClone(value);
+    hasChanges = true;
+  }
+
+  return {
+    patch,
+    hasChanges,
+    requiresReplace,
+  };
+};
+
 export const handleBeforeMount = (deps) => {
   const cleanupSubscriptions = mountSubscriptions(deps);
   return () => {
@@ -82,7 +162,6 @@ const scheduleKeyboardSave = (deps, itemId, layoutId) => {
         layoutId,
         selectedItemId: itemId,
         updatedItem: finalItem,
-        replace: true,
       });
     }
 
@@ -467,13 +546,33 @@ export const handleArrowKeyDown = async (deps, payload) => {
 async function handleDebouncedUpdate(deps, payload) {
   const { appService, projectService } = deps;
   const { layoutId, selectedItemId, updatedItem, replace } = payload;
+  const currentItem =
+    projectService.getState()?.layouts?.items?.[layoutId]?.elements?.items?.[
+      selectedItemId
+    ];
+
+  if (!currentItem || !updatedItem) {
+    return;
+  }
+
+  const previousItem = {
+    id: selectedItemId,
+    ...currentItem,
+  };
+  const diff = createObjectPatch(previousItem, updatedItem);
+
+  if (!diff.hasChanges && !diff.requiresReplace) {
+    return;
+  }
+
+  const shouldReplace = replace === true || diff.requiresReplace;
 
   // Save to repository
   await projectService.updateLayoutElement({
     layoutId,
     elementId: selectedItemId,
-    patch: updatedItem,
-    replace: replace === true,
+    patch: shouldReplace ? updatedItem : diff.patch,
+    replace: shouldReplace,
   });
 
   // For form/keyboard updates, sync store with repository
@@ -677,7 +776,6 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     layoutId,
     selectedItemId,
     updatedItem,
-    replace: true,
   });
   await renderLayoutPreview(deps, { skipAssetLoading: false });
 };
@@ -722,7 +820,6 @@ export const handleCanvasMouseMove = (deps, payload) => {
     layoutId: store.selectLayoutId(),
     selectedItemId: item.id,
     updatedItem,
-    replace: true,
   });
 };
 

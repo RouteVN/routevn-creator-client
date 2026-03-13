@@ -1,0 +1,456 @@
+---
+file: ./insiemeStorageScenario.js
+group: insieme storage scene editor scene delete
+suites:
+  - runInsiemeStorageScenario
+---
+suite: runInsiemeStorageScenario
+exportName: runInsiemeStorageScenario
+---
+case: persists scene delete after nested sections and lines were created
+in:
+  - projectId: project-puty-scene-delete-001
+    actor:
+      userId: user-puty-scene-delete
+      clientId: client-puty-scene-delete
+    sessionPartitions:
+      - project:project-puty-scene-delete-001:story
+    commands:
+      - id: cmd-scene-delete-target-create
+        partitions:
+          - project:project-puty-scene-delete-001:story
+          - project:project-puty-scene-delete-001:story:scene:scene-delete-target
+        type: scene.create
+        clientTs: 601
+        payload:
+          sceneId: scene-delete-target
+          name: Disposable Scene
+      - id: cmd-scene-delete-section-a
+        partitions:
+          - project:project-puty-scene-delete-001:story
+          - project:project-puty-scene-delete-001:story:scene:scene-delete-target
+        type: section.create
+        clientTs: 602
+        payload:
+          sceneId: scene-delete-target
+          sectionId: section-a
+          name: Start
+      - id: cmd-scene-delete-line-a
+        partitions:
+          - project:project-puty-scene-delete-001:story
+          - project:project-puty-scene-delete-001:story:scene:scene-delete-target
+        type: line.insert_after
+        clientTs: 603
+        payload:
+          sectionId: section-a
+          lineId: line-a
+          line:
+            actions:
+              dialogue:
+                content:
+                  - text: This scene will be removed
+                mode: adv
+      - id: cmd-scene-delete-section-b
+        partitions:
+          - project:project-puty-scene-delete-001:story
+          - project:project-puty-scene-delete-001:story:scene:scene-delete-target
+        type: section.create
+        clientTs: 604
+        payload:
+          sceneId: scene-delete-target
+          sectionId: section-b
+          name: Branch
+      - id: cmd-scene-delete-line-b
+        partitions:
+          - project:project-puty-scene-delete-001:story
+          - project:project-puty-scene-delete-001:story:scene:scene-delete-target
+        type: line.insert_after
+        clientTs: 605
+        payload:
+          sectionId: section-b
+          lineId: line-b
+          line:
+            actions:
+              dialogue:
+                content:
+                  - text: Alternate path
+                mode: adv
+      - id: cmd-scene-delete-target
+        partitions:
+          - project:project-puty-scene-delete-001:story
+          - project:project-puty-scene-delete-001:story:scene:scene-delete-target
+        type: scene.delete
+        clientTs: 606
+        payload:
+          sceneId: scene-delete-target
+out:
+  storedEvents:
+    - committedId: 1
+      id: cmd-scene-delete-target-create
+      projectId: project-puty-scene-delete-001
+      userId: user-puty-scene-delete
+      partitions:
+        - project:project-puty-scene-delete-001:story
+        - project:project-puty-scene-delete-001:story:scene:scene-delete-target
+      type: scene.create
+      payload:
+        sceneId: scene-delete-target
+        name: Disposable Scene
+      meta:
+        clientId: client-puty-scene-delete
+        clientTs: 601
+    - committedId: 2
+      id: cmd-scene-delete-section-a
+      projectId: project-puty-scene-delete-001
+      userId: user-puty-scene-delete
+      partitions:
+        - project:project-puty-scene-delete-001:story
+        - project:project-puty-scene-delete-001:story:scene:scene-delete-target
+      type: section.create
+      payload:
+        sceneId: scene-delete-target
+        sectionId: section-a
+        name: Start
+      meta:
+        clientId: client-puty-scene-delete
+        clientTs: 602
+    - committedId: 3
+      id: cmd-scene-delete-line-a
+      projectId: project-puty-scene-delete-001
+      userId: user-puty-scene-delete
+      partitions:
+        - project:project-puty-scene-delete-001:story
+        - project:project-puty-scene-delete-001:story:scene:scene-delete-target
+      type: line.insert_after
+      payload:
+        sectionId: section-a
+        lineId: line-a
+        line:
+          actions:
+            dialogue:
+              content:
+                - text: This scene will be removed
+              mode: adv
+      meta:
+        clientId: client-puty-scene-delete
+        clientTs: 603
+    - committedId: 4
+      id: cmd-scene-delete-section-b
+      projectId: project-puty-scene-delete-001
+      userId: user-puty-scene-delete
+      partitions:
+        - project:project-puty-scene-delete-001:story
+        - project:project-puty-scene-delete-001:story:scene:scene-delete-target
+      type: section.create
+      payload:
+        sceneId: scene-delete-target
+        sectionId: section-b
+        name: Branch
+      meta:
+        clientId: client-puty-scene-delete
+        clientTs: 604
+    - committedId: 5
+      id: cmd-scene-delete-line-b
+      projectId: project-puty-scene-delete-001
+      userId: user-puty-scene-delete
+      partitions:
+        - project:project-puty-scene-delete-001:story
+        - project:project-puty-scene-delete-001:story:scene:scene-delete-target
+      type: line.insert_after
+      payload:
+        sectionId: section-b
+        lineId: line-b
+        line:
+          actions:
+            dialogue:
+              content:
+                - text: Alternate path
+              mode: adv
+      meta:
+        clientId: client-puty-scene-delete
+        clientTs: 605
+    - committedId: 6
+      id: cmd-scene-delete-target
+      projectId: project-puty-scene-delete-001
+      userId: user-puty-scene-delete
+      partitions:
+        - project:project-puty-scene-delete-001:story
+        - project:project-puty-scene-delete-001:story:scene:scene-delete-target
+      type: scene.delete
+      payload:
+        sceneId: scene-delete-target
+      meta:
+        clientId: client-puty-scene-delete
+        clientTs: 606
+  stateAfterEachEvent:
+    - committedId: 1
+      eventId: cmd-scene-delete-target-create
+      eventType: scene.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-scene-delete-001
+          name: ''
+          updatedAt: 601
+        story:
+          initialSceneId: scene-delete-target
+          sceneOrder:
+            - scene-delete-target
+        scenes:
+          scene-delete-target:
+            createdAt: 601
+            id: scene-delete-target
+            initialSectionId: null
+            name: Disposable Scene
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: scene
+            updatedAt: 601
+        sections: {}
+        lines: {}
+        resources: {}
+    - committedId: 2
+      eventId: cmd-scene-delete-section-a
+      eventType: section.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-scene-delete-001
+          name: ''
+          updatedAt: 602
+        story:
+          initialSceneId: scene-delete-target
+          sceneOrder:
+            - scene-delete-target
+        scenes:
+          scene-delete-target:
+            createdAt: 601
+            id: scene-delete-target
+            initialSectionId: section-a
+            name: Disposable Scene
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-a
+            type: scene
+            updatedAt: 601
+        sections:
+          section-a:
+            createdAt: 602
+            id: section-a
+            initialLineId: null
+            lineIds: []
+            name: Start
+            sceneId: scene-delete-target
+            updatedAt: 602
+        lines: {}
+        resources: {}
+    - committedId: 3
+      eventId: cmd-scene-delete-line-a
+      eventType: line.insert_after
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-scene-delete-001
+          name: ''
+          updatedAt: 603
+        story:
+          initialSceneId: scene-delete-target
+          sceneOrder:
+            - scene-delete-target
+        scenes:
+          scene-delete-target:
+            createdAt: 601
+            id: scene-delete-target
+            initialSectionId: section-a
+            name: Disposable Scene
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-a
+            type: scene
+            updatedAt: 601
+        sections:
+          section-a:
+            createdAt: 602
+            id: section-a
+            initialLineId: line-a
+            lineIds:
+              - line-a
+            name: Start
+            sceneId: scene-delete-target
+            updatedAt: 602
+        lines:
+          line-a:
+            actions:
+              dialogue:
+                content:
+                  - text: This scene will be removed
+                mode: adv
+            createdAt: 603
+            id: line-a
+            sectionId: section-a
+            updatedAt: 603
+        resources: {}
+    - committedId: 4
+      eventId: cmd-scene-delete-section-b
+      eventType: section.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-scene-delete-001
+          name: ''
+          updatedAt: 604
+        story:
+          initialSceneId: scene-delete-target
+          sceneOrder:
+            - scene-delete-target
+        scenes:
+          scene-delete-target:
+            createdAt: 601
+            id: scene-delete-target
+            initialSectionId: section-a
+            name: Disposable Scene
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-a
+              - section-b
+            type: scene
+            updatedAt: 601
+        sections:
+          section-a:
+            createdAt: 602
+            id: section-a
+            initialLineId: line-a
+            lineIds:
+              - line-a
+            name: Start
+            sceneId: scene-delete-target
+            updatedAt: 602
+          section-b:
+            createdAt: 604
+            id: section-b
+            initialLineId: null
+            lineIds: []
+            name: Branch
+            sceneId: scene-delete-target
+            updatedAt: 604
+        lines:
+          line-a:
+            actions:
+              dialogue:
+                content:
+                  - text: This scene will be removed
+                mode: adv
+            createdAt: 603
+            id: line-a
+            sectionId: section-a
+            updatedAt: 603
+        resources: {}
+    - committedId: 5
+      eventId: cmd-scene-delete-line-b
+      eventType: line.insert_after
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-scene-delete-001
+          name: ''
+          updatedAt: 605
+        story:
+          initialSceneId: scene-delete-target
+          sceneOrder:
+            - scene-delete-target
+        scenes:
+          scene-delete-target:
+            createdAt: 601
+            id: scene-delete-target
+            initialSectionId: section-a
+            name: Disposable Scene
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds:
+              - section-a
+              - section-b
+            type: scene
+            updatedAt: 601
+        sections:
+          section-a:
+            createdAt: 602
+            id: section-a
+            initialLineId: line-a
+            lineIds:
+              - line-a
+            name: Start
+            sceneId: scene-delete-target
+            updatedAt: 602
+          section-b:
+            createdAt: 604
+            id: section-b
+            initialLineId: line-b
+            lineIds:
+              - line-b
+            name: Branch
+            sceneId: scene-delete-target
+            updatedAt: 604
+        lines:
+          line-a:
+            actions:
+              dialogue:
+                content:
+                  - text: This scene will be removed
+                mode: adv
+            createdAt: 603
+            id: line-a
+            sectionId: section-a
+            updatedAt: 603
+          line-b:
+            actions:
+              dialogue:
+                content:
+                  - text: Alternate path
+                mode: adv
+            createdAt: 605
+            id: line-b
+            sectionId: section-b
+            updatedAt: 605
+        resources: {}
+    - committedId: 6
+      eventId: cmd-scene-delete-target
+      eventType: scene.delete
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-scene-delete-001
+          name: ''
+          updatedAt: 606
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources: {}

@@ -24,12 +24,12 @@ const actor = { userId: "user-1", clientId: "client-1" };
 const makeCommand = ({
   type,
   payload,
-  partition = `project:${projectId}:story`,
+  partitions = [`project:${projectId}:story`],
   ts,
 }) => ({
   id: `${type}-${ts}-${Math.random().toString(36).slice(2, 7)}`,
   projectId,
-  partition,
+  partitions: [...partitions],
   type,
   commandVersion: COMMAND_VERSION,
   actor,
@@ -131,6 +131,50 @@ assert.deepEqual(state.sections["section-1"].lineIds, ["line-1", "line-2"]);
 
 apply(
   makeCommand({
+    type: "line.update_actions",
+    ts: 1350,
+    payload: {
+      lineId: "line-1",
+      patch: {
+        dialogue: {
+          content: [{ text: "Hello" }],
+          ui: { resourceId: "layout-1" },
+          characterId: "char-1",
+        },
+      },
+      replace: false,
+    },
+  }),
+);
+assert.deepEqual(state.lines["line-1"].actions.dialogue, {
+  content: [{ text: "Hello" }],
+  ui: { resourceId: "layout-1" },
+  characterId: "char-1",
+});
+assert.equal(state.lines["line-1"].actions.narration, "hello");
+
+apply(
+  makeCommand({
+    type: "line.update_actions",
+    ts: 1360,
+    payload: {
+      lineId: "line-1",
+      patch: {
+        dialogue: {
+          mode: "nvl",
+        },
+      },
+      replace: false,
+    },
+  }),
+);
+assert.deepEqual(state.lines["line-1"].actions.dialogue, {
+  mode: "nvl",
+});
+assert.equal(state.lines["line-1"].actions.narration, "hello");
+
+apply(
+  makeCommand({
     type: "section.create",
     ts: 1400,
     payload: { sceneId: "scene-1", sectionId: "section-2", name: "Section 2" },
@@ -160,7 +204,7 @@ apply(
   makeCommand({
     type: "resource.create",
     ts: 1600,
-    partition: `project:${projectId}:resources:layouts`,
+    partitions: [`project:${projectId}:resources:layouts`],
     payload: {
       resourceType: "layouts",
       resourceId: "layout-1",
@@ -172,7 +216,7 @@ apply(
   makeCommand({
     type: "layout.element.create",
     ts: 1700,
-    partition: `project:${projectId}:layouts`,
+    partitions: [`project:${projectId}:layouts`],
     payload: {
       layoutId: "layout-1",
       elementId: "A",
@@ -184,7 +228,7 @@ apply(
   makeCommand({
     type: "layout.element.create",
     ts: 1800,
-    partition: `project:${projectId}:layouts`,
+    partitions: [`project:${projectId}:layouts`],
     payload: {
       layoutId: "layout-1",
       elementId: "B",
@@ -194,13 +238,100 @@ apply(
   }),
 );
 
+apply(
+  makeCommand({
+    type: "layout.element.update",
+    ts: 1850,
+    partitions: [`project:${projectId}:layouts`],
+    payload: {
+      layoutId: "layout-1",
+      elementId: "B",
+      patch: {
+        textStyle: {
+          color: "#ffffff",
+          shadow: {
+            blur: 4,
+          },
+        },
+        opacity: 0.5,
+      },
+      replace: false,
+    },
+  }),
+);
+apply(
+  makeCommand({
+    type: "layout.element.update",
+    ts: 1860,
+    partitions: [`project:${projectId}:layouts`],
+    payload: {
+      layoutId: "layout-1",
+      elementId: "B",
+      patch: {
+        textStyle: {
+          shadow: {
+            offsetX: 2,
+          },
+        },
+      },
+      replace: false,
+    },
+  }),
+);
+assert.deepEqual(state.resources.layouts.items["layout-1"].elements["B"], {
+  id: "B",
+  type: "text",
+  parentId: "A",
+  children: [],
+  textStyle: {
+    color: "#ffffff",
+    shadow: {
+      blur: 4,
+      offsetX: 2,
+    },
+  },
+  opacity: 0.5,
+});
+
+apply(
+  makeCommand({
+    type: "layout.element.update",
+    ts: 1870,
+    partitions: [`project:${projectId}:layouts`],
+    payload: {
+      layoutId: "layout-1",
+      elementId: "B",
+      patch: {
+        type: "text",
+        textStyle: {
+          shadow: {
+            offsetX: 1,
+          },
+        },
+      },
+      replace: true,
+    },
+  }),
+);
+assert.deepEqual(state.resources.layouts.items["layout-1"].elements["B"], {
+  id: "B",
+  type: "text",
+  parentId: "A",
+  children: [],
+  textStyle: {
+    shadow: {
+      offsetX: 1,
+    },
+  },
+});
+
 let invariantFailed = false;
 try {
   apply(
     makeCommand({
       type: "layout.element.move",
       ts: 1900,
-      partition: `project:${projectId}:layouts`,
+      partitions: [`project:${projectId}:layouts`],
       payload: {
         layoutId: "layout-1",
         elementId: "A",
@@ -218,7 +349,7 @@ apply(
   makeCommand({
     type: "resource.create",
     ts: 2000,
-    partition: `project:${projectId}:resources:variables`,
+    partitions: [`project:${projectId}:resources:variables`],
     payload: {
       resourceType: "variables",
       resourceId: "var-a",
@@ -238,7 +369,7 @@ apply(
   makeCommand({
     type: "resource.create",
     ts: 2100,
-    partition: `project:${projectId}:resources:variables`,
+    partitions: [`project:${projectId}:resources:variables`],
     payload: {
       resourceType: "variables",
       resourceId: "var-b",
@@ -258,7 +389,7 @@ apply(
   makeCommand({
     type: "resource.create",
     ts: 2200,
-    partition: `project:${projectId}:resources:variables`,
+    partitions: [`project:${projectId}:resources:variables`],
     payload: {
       resourceType: "variables",
       resourceId: "var-c",
@@ -284,7 +415,7 @@ apply(
   makeCommand({
     type: "resource.update",
     ts: 2250,
-    partition: `project:${projectId}:resources:variables`,
+    partitions: [`project:${projectId}:resources:variables`],
     payload: {
       resourceType: "variables",
       resourceId: "var-a",
@@ -304,7 +435,7 @@ try {
     makeCommand({
       type: "resource.update",
       ts: 2260,
-      partition: `project:${projectId}:resources:variables`,
+      partitions: [`project:${projectId}:resources:variables`],
       payload: {
         resourceType: "variables",
         resourceId: "var-a",
@@ -325,7 +456,7 @@ try {
     makeCommand({
       type: "resource.update",
       ts: 2270,
-      partition: `project:${projectId}:resources:variables`,
+      partitions: [`project:${projectId}:resources:variables`],
       payload: {
         resourceType: "variables",
         resourceId: "var-a",
@@ -345,7 +476,7 @@ apply(
   makeCommand({
     type: "resource.create",
     ts: 2300,
-    partition: `project:${projectId}:resources:layouts`,
+    partitions: [`project:${projectId}:resources:layouts`],
     payload: {
       resourceType: "layouts",
       resourceId: "layout-folder",
@@ -361,7 +492,7 @@ apply(
   makeCommand({
     type: "resource.create",
     ts: 2350,
-    partition: `project:${projectId}:resources:layouts`,
+    partitions: [`project:${projectId}:resources:layouts`],
     payload: {
       resourceType: "layouts",
       resourceId: "layout-2",
@@ -513,7 +644,6 @@ await applyCommandToRepository({
   command: {
     id: "project-update-layout-projection",
     projectId: projectionProjectId,
-    partition: `project:${projectionProjectId}:settings`,
     partitions: [`project:${projectionProjectId}:settings`],
     type: "project.update",
     commandVersion: COMMAND_VERSION,

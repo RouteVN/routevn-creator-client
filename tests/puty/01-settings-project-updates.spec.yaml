@@ -1,0 +1,118 @@
+---
+file: ./insiemeStorageScenario.js
+group: insieme storage settings
+suites:
+  - runInsiemeStorageScenario
+---
+suite: runInsiemeStorageScenario
+exportName: runInsiemeStorageScenario
+---
+case: persists sequential project metadata updates
+in:
+  - projectId: project-puty-settings-001
+    actor:
+      userId: user-puty-settings
+      clientId: client-puty-settings
+    sessionPartitions:
+      - project:project-puty-settings-001:settings
+    commands:
+      - id: cmd-settings-name
+        partitions:
+          - project:project-puty-settings-001:settings
+        type: project.update
+        clientTs: 201
+        payload:
+          patch:
+            name: Midnight Train
+      - id: cmd-settings-description
+        partitions:
+          - project:project-puty-settings-001:settings
+        type: project.update
+        clientTs: 202
+        payload:
+          patch:
+            description: A late-night route through memory
+out:
+  storedEvents:
+    - committedId: 1
+      id: cmd-settings-name
+      projectId: project-puty-settings-001
+      userId: user-puty-settings
+      partitions:
+        - project:project-puty-settings-001:settings
+      type: project.update
+      payload:
+        patch:
+          name: Midnight Train
+      meta:
+        clientId: client-puty-settings
+        clientTs: 201
+    - committedId: 2
+      id: cmd-settings-description
+      projectId: project-puty-settings-001
+      userId: user-puty-settings
+      partitions:
+        - project:project-puty-settings-001:settings
+      type: project.update
+      payload:
+        patch:
+          description: A late-night route through memory
+      meta:
+        clientId: client-puty-settings
+        clientTs: 202
+  stateAfterEachEvent:
+    - committedId: 1
+      eventId: cmd-settings-name
+      eventType: project.update
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-settings-001
+          name: Midnight Train
+          updatedAt: 201
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources: {}
+    - committedId: 2
+      eventId: cmd-settings-description
+      eventType: project.update
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: A late-night route through memory
+          id: project-puty-settings-001
+          name: Midnight Train
+          updatedAt: 202
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources: {}
+---
+case: rejects unknown project patch fields like tagline
+in:
+  - projectId: project-puty-settings-002
+    actor:
+      userId: user-puty-settings
+      clientId: client-puty-settings
+    sessionPartitions:
+      - project:project-puty-settings-002:settings
+    commands:
+      - id: cmd-settings-tagline
+        partitions:
+          - project:project-puty-settings-002:settings
+        type: project.update
+        clientTs: 204
+        payload:
+          patch:
+            tagline: Choose the right platform
+throws: payload.patch.tagline is not allowed

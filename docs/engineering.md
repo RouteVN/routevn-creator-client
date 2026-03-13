@@ -33,6 +33,74 @@ Local-first collaboration:
 
 - `insieme`
 
+## Testing
+
+This repo currently uses two main test styles:
+
+- script-driven Node tests in `scripts/test-*.js`
+- YAML-driven Puty tests in `tests/puty/`
+
+Common commands:
+
+```bash
+bun run test:smoke
+bun run test:integration
+bun run test:convergence
+bun run test:command-only
+bun run test:collab-adapters
+bun run test:puty
+```
+
+Run one Puty scenario directly:
+
+```bash
+bunx vitest run tests/puty/<file>.spec.yaml
+```
+
+### Test Organization
+
+- `scripts/test-smoke.js`
+  broad project-state and reducer smoke coverage
+
+- `scripts/test-integration.js`
+  collaboration/session integration flows
+
+- `scripts/test-convergence.js`
+  multi-client convergence behavior
+
+- `scripts/test-command-only.js`
+  command-envelope and command-path coverage
+
+- `scripts/test-collab-adapters.js`
+  collab adapter coverage
+
+- `tests/puty/*.spec.yaml`
+  SQLite-backed Insieme storage scenarios expressed declaratively in YAML
+
+- `tests/puty/insiemeStorageScenario.js`
+  shared Puty helper that runs a real RouteVN collab session against the
+  SQLite sync store and returns committed rows for YAML assertions
+
+### Puty Storage Pattern
+
+Use Puty for storage assertions when the goal is:
+
+- define a full command sequence in YAML
+- submit it through the real collab/session path
+- assert the committed events that land in SQLite
+
+Keep the test contract declarative:
+
+- `in`: the commands to submit, or batches of commands to submit
+- `out`: the normalized committed rows expected in storage
+
+Current Puty coverage is intentionally strongest around:
+
+- scene editor story flows
+- layout editor element flows
+- resource tree/storage flows
+- storage idempotency across submit batches
+
 ## Architecture Overview
 
 RouteVN is organized into four ownership zones:
@@ -199,8 +267,8 @@ scene-specific workflows.
   - `projection.js`
   - `tree.js`
   - `layout.js`
-  `src/internal/ui/` is the only shared home for page/store/handler
-  orchestration that does not belong inside one page folder.
+    `src/internal/ui/` is the only shared home for page/store/handler
+    orchestration that does not belong inside one page folder.
 
 - `src/deps/services/shared/`
   Shared handler-facing and internal service logic.

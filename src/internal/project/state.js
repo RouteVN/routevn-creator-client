@@ -74,6 +74,53 @@ const ensureCollectionTree = (collection) => {
   return collection.tree;
 };
 
+const isPlainObject = (value) => {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+};
+
+const mergePlainObjectPatch = (target, patch) => {
+  if (!isPlainObject(patch)) {
+    return structuredClone(patch);
+  }
+
+  const result = isPlainObject(target) ? structuredClone(target) : {};
+
+  for (const [key, value] of Object.entries(patch)) {
+    if (isPlainObject(value) && isPlainObject(result[key])) {
+      result[key] = mergePlainObjectPatch(result[key], value);
+      continue;
+    }
+
+    result[key] = structuredClone(value);
+  }
+
+  return result;
+};
+
+const mergeLayoutElementPatch = (element, patch, elementId) => {
+  const nextElement = mergePlainObjectPatch(element, patch);
+  nextElement.id = nextElement.id || elementId;
+  if (nextElement.parentId === undefined) {
+    nextElement.parentId = element?.parentId ?? null;
+  }
+  if (!Array.isArray(nextElement.children)) {
+    nextElement.children = structuredClone(element?.children || []);
+  }
+  return nextElement;
+};
+
+const replaceLayoutElement = (element, patch, elementId) => {
+  const nextElement = structuredClone(patch || {});
+  nextElement.id = nextElement.id || elementId;
+  if (nextElement.parentId === undefined) {
+    nextElement.parentId = element?.parentId ?? null;
+  }
+  if (!Array.isArray(nextElement.children)) {
+    nextElement.children = structuredClone(element?.children || []);
+  }
+  return nextElement;
+};
+
 const walkHierarchy = (nodes, parentId, visitor) => {
   if (!Array.isArray(nodes)) return;
   for (const node of nodes) {
@@ -726,8 +773,19 @@ const reducers = {
   [COMMAND_TYPES.LAYOUT_ELEMENT_UPDATE]: ({ state, payload, now }) => {
     const layout = state.resources.layouts.items[payload.layoutId];
     const element = layout.elements[payload.elementId];
-    const patch = structuredClone(payload.patch);
-    layout.elements[payload.elementId] = { ...element, ...patch };
+    if (payload.replace === true) {
+      layout.elements[payload.elementId] = replaceLayoutElement(
+        element,
+        payload.patch,
+        payload.elementId,
+      );
+    } else {
+      layout.elements[payload.elementId] = mergeLayoutElementPatch(
+        element,
+        payload.patch,
+        payload.elementId,
+      );
+    }
     layout.updatedAt = now;
   },
 

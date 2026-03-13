@@ -24,6 +24,8 @@ export const RESOURCE_TYPES = [
   "components",
 ];
 
+const PROJECT_UPDATE_PATCH_FIELDS = Object.freeze(["name", "description"]);
+
 export class DomainValidationError extends Error {
   constructor(message, details = {}) {
     super(message);
@@ -167,6 +169,38 @@ const validateOptionalPlainObjectField = (payload, field, errors) => {
 const validateOptionalBooleanField = (payload, field, errors) => {
   if (payload?.[field] !== undefined && typeof payload[field] !== "boolean") {
     errors.push(`payload.${field} must be a boolean when provided`);
+  }
+};
+
+const validateProjectUpdatePatch = (payload, errors) => {
+  const patch = payload?.patch;
+  if (!isPlainObject(patch)) {
+    return;
+  }
+
+  const keys = Object.keys(patch);
+  if (keys.length === 0) {
+    errors.push(
+      "payload.patch must include at least one of: name, description",
+    );
+    return;
+  }
+
+  for (const key of keys) {
+    if (!PROJECT_UPDATE_PATCH_FIELDS.includes(key)) {
+      errors.push(`payload.patch.${key} is not allowed`);
+    }
+  }
+
+  if (patch.name !== undefined && !assertNonEmptyString(patch.name)) {
+    errors.push("payload.patch.name must be a non-empty string when provided");
+  }
+
+  if (
+    patch.description !== undefined &&
+    typeof patch.description !== "string"
+  ) {
+    errors.push("payload.patch.description must be a string when provided");
   }
 };
 
@@ -702,14 +736,14 @@ export const COMMAND_EVENT_MODEL = Object.freeze({
   requiredEnvelopeFields: Object.freeze([
     "id",
     "projectId",
-    "partition",
+    "partitions",
     "type",
     "payload",
     "actor",
     "clientTs",
     "commandVersion",
   ]),
-  optionalEnvelopeFields: Object.freeze(["partitions", "meta"]),
+  optionalEnvelopeFields: Object.freeze(["meta"]),
 });
 
 export const getCommandDefinition = (type) => {
@@ -744,17 +778,13 @@ export const validateCommandEnvelope = (command, errors) => {
   if (!assertNonEmptyString(command.id)) errors.push("id is required");
   if (!assertNonEmptyString(command.projectId))
     errors.push("projectId is required");
-  if (!assertNonEmptyString(command.partition))
-    errors.push("partition is required");
-  if (command.partitions !== undefined) {
-    if (!Array.isArray(command.partitions) || command.partitions.length === 0) {
-      errors.push("partitions must be a non-empty array when provided");
-    } else {
-      for (const partition of command.partitions) {
-        if (!assertNonEmptyString(partition)) {
-          errors.push("partitions entries must be non-empty strings");
-          break;
-        }
+  if (!Array.isArray(command.partitions) || command.partitions.length === 0) {
+    errors.push("partitions must be a non-empty array");
+  } else {
+    for (const partition of command.partitions) {
+      if (!assertNonEmptyString(partition)) {
+        errors.push("partitions entries must be non-empty strings");
+        break;
       }
     }
   }
@@ -842,6 +872,10 @@ export const validateCommandPayload = (command, errors) => {
   if (spec.allowPosition) {
     validatePositionField(payload, errors);
   }
+
+  if (command?.type === COMMAND_TYPES.PROJECT_UPDATE) {
+    validateProjectUpdatePatch(payload, errors);
+  }
 };
 
 export const assertCommandPreconditions = (state, command) => {
@@ -871,7 +905,10 @@ export const validateCommand = (command) => {
   validateCommandPayload(command, errors);
 
   if (errors.length > 0) {
-    throw new DomainValidationError("Command validation failed", { errors });
+    throw new DomainValidationError(
+      `Command validation failed: ${errors.join("; ")}`,
+      { errors },
+    );
   }
 
   return true;

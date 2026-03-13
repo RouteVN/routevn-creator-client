@@ -19,6 +19,12 @@ const defaultUuid = () => {
   );
 };
 
+const firstPartition = (partitions = []) => {
+  return Array.isArray(partitions)
+    ? partitions.find((value) => toNonEmptyString(value))
+    : null;
+};
+
 export const partitionFor = ({ projectId, scope }) => {
   const normalizedProjectId = toNonEmptyString(projectId);
   const normalizedScope = toNonEmptyString(scope);
@@ -53,7 +59,6 @@ export const createCommandEnvelope = ({
   id,
   projectId,
   scope,
-  partition,
   partitions,
   type,
   payload,
@@ -63,13 +68,16 @@ export const createCommandEnvelope = ({
   meta,
 }) => {
   const basePartition =
-    toNonEmptyString(partition) || partitionFor({ projectId, scope });
+    firstPartition(partitions) ||
+    (toNonEmptyString(scope) ? partitionFor({ projectId, scope }) : null);
+  if (!basePartition) {
+    throw new Error("Command partitions are required");
+  }
   const resolvedId = toNonEmptyString(id) || defaultUuid();
 
   return {
     id: resolvedId,
     projectId,
-    partition: basePartition,
     partitions: toUniquePartitions({
       basePartition,
       partitions,

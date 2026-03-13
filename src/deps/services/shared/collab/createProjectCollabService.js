@@ -3,6 +3,12 @@ import { processCommand } from "../../../../internal/project/state.js";
 import { assertDomainInvariants } from "../../../../internal/project/state.js";
 import { createEmptyProjectState } from "../../../../internal/project/state.js";
 import { validateCommand } from "../../../../internal/project/commands.js";
+import {
+  createProjectionGap,
+  evaluateRemoteCommandCompatibility,
+  REMOTE_COMMAND_COMPATIBILITY,
+} from "./compatibility.js";
+import { commandToSyncEvent, committedEventToCommand } from "./mappers.js";
 
 const isTransportDisconnectedError = (error) => {
   const code = error?.code;
@@ -30,6 +36,7 @@ export const createProjectCollabService = ({
   let lastError = null;
   let session = null;
   let serverErrorStopInFlight = false;
+  let projectionGap;
 
   let projectedState =
     initialState && typeof initialState === "object"
@@ -47,6 +54,8 @@ export const createProjectCollabService = ({
     transport: transport || undefined,
     store: clientStore || undefined,
     logger,
+    mapCommandToSyncEvent: commandToSyncEvent,
+    mapCommittedToCommand: committedEventToCommand,
     reconnect: {
       enabled: true,
       initialDelayMs: 200,
@@ -62,10 +71,35 @@ export const createProjectCollabService = ({
       sourceType,
       isFromCurrentActor,
     }) => {
+      let compatibility = {
+        status: REMOTE_COMMAND_COMPATIBILITY.COMPATIBLE,
+        reason: "ok",
+      };
+      let projectionStatus = "applied";
+
       if (!isFromCurrentActor) {
-        const result = processCommand({ state: projectedState, command });
-        projectedState = result.state;
-        assertDomainInvariants(projectedState);
+        compatibility = evaluateRemoteCommandCompatibility(command);
+
+        if (projectionGap) {
+          projectionStatus = "skipped_due_to_gap";
+        } else if (
+          compatibility.status === REMOTE_COMMAND_COMPATIBILITY.COMPATIBLE
+        ) {
+          const result = processCommand({ state: projectedState, command });
+          projectedState = result.state;
+          assertDomainInvariants(projectedState);
+        } else {
+          projectionGap = createProjectionGap({
+            command,
+            committedEvent,
+            compatibility,
+            sourceType,
+          });
+          projectionStatus =
+            compatibility.status === REMOTE_COMMAND_COMPATIBILITY.FUTURE
+              ? "skipped_future"
+              : "skipped_invalid";
+        }
       }
 
       if (typeof onCommittedCommand === "function") {
@@ -74,6 +108,11 @@ export const createProjectCollabService = ({
           committedEvent: structuredClone(committedEvent),
           sourceType,
           isFromCurrentActor,
+          compatibility: structuredClone(compatibility),
+          projectionStatus,
+          projectionGap: projectionGap
+            ? structuredClone(projectionGap)
+            : undefined,
         });
       }
     },
@@ -160,6 +199,10 @@ export const createProjectCollabService = ({
     getLastError() {
       if (lastError) return structuredClone(lastError);
       return session.getLastError();
+    },
+
+    getProjectionGap() {
+      return projectionGap ? structuredClone(projectionGap) : undefined;
     },
 
     clearLastError() {

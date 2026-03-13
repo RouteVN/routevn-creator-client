@@ -7,7 +7,13 @@ import {
   loadTemplate,
   getTemplateFiles,
 } from "../../clients/web/templateLoader.js";
+import { createPersistedTauriCollabClientStore } from "./collabClientStore.js";
 import { createProjectCollabService } from "../shared/collab/createProjectCollabService.js";
+import {
+  clearProjectionGap,
+  ensureRepositoryProjectionCache,
+  saveProjectionGap,
+} from "../shared/collab/projectorCache.js";
 import { createWebSocketTransport } from "../web/collab/createWebSocketTransport.js";
 import { projectRepositoryStateToDomainState } from "../../../internal/project/projection.js";
 import {
@@ -40,6 +46,19 @@ async function copyTemplateFiles(templateId, targetPath) {
 }
 
 export const createTauriProjectServiceAdapters = ({ collabLog }) => {
+  const collabClientStoresByProjectPath = new Map();
+
+  const getCollabClientStore = async (projectPath) => {
+    const existing = collabClientStoresByProjectPath.get(projectPath);
+    if (existing) return existing;
+
+    const store = await createPersistedTauriCollabClientStore({
+      projectPath,
+    });
+    collabClientStoresByProjectPath.set(projectPath, store);
+    return store;
+  };
+
   const storageAdapter = {
     resolveProjectReferenceByProjectId: async ({ db, projectId }) => {
       const projects = (await db.get("projectEntries")) || [];
@@ -252,6 +271,26 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
   };
 
   const collabAdapter = {
+    beforeCreateRepository: async ({ reference, store }) => {
+      const rawClientStore = await getCollabClientStore(reference.projectPath);
+      const projectionCacheResult = await ensureRepositoryProjectionCache({
+        repositoryStore: store,
+        rawClientStore,
+      });
+
+      collabLog("debug", "repository projection cache ready", {
+        projectId: reference.projectId,
+        projectPath: reference.projectPath,
+        rebuilt: projectionCacheResult.rebuilt,
+        bootstrapped: projectionCacheResult.bootstrapped,
+        repositoryEventCount: projectionCacheResult.repositoryEventCount,
+        committedEventCount: projectionCacheResult.committedEventCount,
+        projectionGap: projectionCacheResult.projectionGap || null,
+      });
+
+      return store.getEvents();
+    },
+
     createTransport: ({ endpointUrl }) =>
       createWebSocketTransport({
         url: endpointUrl,
@@ -268,6 +307,7 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
       mode,
       partitioning,
       getRepositoryByProject,
+      getStoreByProject,
       getProjectMetadataFromEntries,
     }) => {
       collabLog("info", "create session requested", {
@@ -289,6 +329,8 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
         partitions,
       );
       const projectMetadata = await getProjectMetadataFromEntries(projectId);
+      const clientStore = await getCollabClientStore(resolvedProjectId);
+      const repositoryStore = await getStoreByProject(projectId);
       const collabSession = createProjectCollabService({
         projectId: resolvedProjectId,
         projectName: projectMetadata.name,
@@ -303,16 +345,27 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
           clientId,
         },
         partitions: resolvedPartitions,
+        clientStore,
         logger: (entry) => {
           collabLog("debug", "sync-client", entry);
         },
-        onCommittedCommand: async ({ command, isFromCurrentActor }) => {
+        onCommittedCommand: async ({
+          command,
+          isFromCurrentActor,
+          projectionStatus,
+          projectionGap,
+        }) => {
+          if (projectionGap) {
+            await saveProjectionGap(repositoryStore, projectionGap);
+          }
           if (isFromCurrentActor) return;
+          if (projectionStatus !== "applied") return;
           await applyCommandToRepository({
             repository,
             command,
             projectId: resolvedProjectId,
           });
+          await clearProjectionGap(repositoryStore);
         },
       });
 

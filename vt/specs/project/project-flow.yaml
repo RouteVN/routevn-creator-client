@@ -185,17 +185,6 @@ steps:
     ms: 500
   - action: screenshot
   - action: select
-    selector: "rvn-resource-types [data-item-id='tweens']"
-    steps:
-      - action: click
-  - action: waitFor
-    selector: "rvn-tweens"
-    state: attached
-    timeoutMs: 10000
-  - action: wait
-    ms: 500
-  - action: screenshot
-  - action: select
     selector: "#sidebar [data-item-id='/project/resources/colors']"
     steps:
       - action: click

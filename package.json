@@ -53,6 +53,7 @@
     "test:integration": "node scripts/test-integration.js",
     "test:command-only": "node scripts/test-command-only.js",
     "test:collab-adapters": "node scripts/test-collab-adapters.js",
+    "test:puty": "vitest run tests/puty",
     "check:contracts": "rtgl check --dir src/components --dir src/pages",
     "vt:generate": "bun run build:web && bash ./scripts/run-vt-docker.sh vt screenshot",
     "vt:docker": "bun run vt:generate",
@@ -71,10 +72,13 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.8.3",
+    "better-sqlite3": "^12.6.2",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.2",
     "oxlint": "^1.19.0",
-    "prettier": "3.6.2"
+    "prettier": "3.6.2",
+    "puty": "0.1.2",
+    "vitest": "^3.2.1"
   },
   "lint-staged": {
     "src/**/*.{js}": [

@@ -80,7 +80,6 @@ export const createCommandApiShared = ({
       id: createId(),
       projectId: context.projectId,
       scope,
-      partition: resolvedBasePartition,
       partitions: uniquePartitions(resolvedBasePartition, ...partitions),
       type,
       payload,
