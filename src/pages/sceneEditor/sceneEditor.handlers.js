@@ -541,7 +541,7 @@ export const handleLineNavigation = (deps, payload) => {
       // First line - show animation effects
       graphicsService.render({
         elements: [],
-        transitions: [],
+        animations: [],
       });
       subject.dispatch("sceneEditor.renderCanvas", {});
       return;
@@ -604,7 +604,7 @@ export const handleLineNavigation = (deps, payload) => {
     // First line - show animation effects
     graphicsService.render({
       elements: [],
-      transitions: [],
+      animations: [],
     });
     render();
     subject.dispatch("sceneEditor.renderCanvas", {});
