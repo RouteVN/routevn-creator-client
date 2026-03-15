@@ -571,7 +571,7 @@ async function handleDebouncedUpdate(deps, payload) {
   await projectService.updateLayoutElement({
     layoutId,
     elementId: selectedItemId,
-    patch: shouldReplace ? updatedItem : diff.patch,
+    data: shouldReplace ? updatedItem : diff.patch,
     replace: shouldReplace,
   });
 

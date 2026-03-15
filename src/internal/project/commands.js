@@ -24,8 +24,6 @@ export const RESOURCE_TYPES = [
   "components",
 ];
 
-const PROJECT_UPDATE_PATCH_FIELDS = Object.freeze(["name", "description"]);
-
 export class DomainValidationError extends Error {
   constructor(message, details = {}) {
     super(message);
@@ -172,36 +170,133 @@ const validateOptionalBooleanField = (payload, field, errors) => {
   }
 };
 
-const validateProjectUpdatePatch = (payload, errors) => {
-  const patch = payload?.patch;
-  if (!isPlainObject(patch)) {
-    return;
+const hasOwn = (value, field) =>
+  Object.prototype.hasOwnProperty.call(value || {}, field);
+
+const validateRequiredNestedStringField = (payload, path, errors) => {
+  let current = payload;
+  for (const segment of path) {
+    current = current?.[segment];
   }
 
-  const keys = Object.keys(patch);
-  if (keys.length === 0) {
-    errors.push(
-      "payload.patch must include at least one of: name, description",
-    );
-    return;
+  if (!assertNonEmptyString(current)) {
+    errors.push(`payload.${path.join(".")} must be a non-empty string`);
+  }
+};
+
+const normalizePayloadDataField = (
+  payload,
+  { legacyFields = [], rootFields = [] } = {},
+) => {
+  if (!isPlainObject(payload)) {
+    return payload;
   }
 
-  for (const key of keys) {
-    if (!PROJECT_UPDATE_PATCH_FIELDS.includes(key)) {
-      errors.push(`payload.patch.${key} is not allowed`);
+  const nextPayload = structuredClone(payload);
+  let data = nextPayload.data;
+
+  if (data === undefined) {
+    for (const field of legacyFields) {
+      if (hasOwn(nextPayload, field)) {
+        data = structuredClone(nextPayload[field]);
+        break;
+      }
     }
   }
 
-  if (patch.name !== undefined && !assertNonEmptyString(patch.name)) {
-    errors.push("payload.patch.name must be a non-empty string when provided");
+  if (
+    data === undefined &&
+    rootFields.some((field) => hasOwn(nextPayload, field))
+  ) {
+    data = {};
   }
 
-  if (
-    patch.description !== undefined &&
-    typeof patch.description !== "string"
-  ) {
-    errors.push("payload.patch.description must be a string when provided");
+  if (isPlainObject(data)) {
+    for (const field of rootFields) {
+      if (!hasOwn(data, field) && hasOwn(nextPayload, field)) {
+        data[field] = structuredClone(nextPayload[field]);
+      }
+    }
   }
+
+  if (data !== undefined) {
+    nextPayload.data = data;
+  }
+
+  for (const field of legacyFields) {
+    delete nextPayload[field];
+  }
+
+  for (const field of rootFields) {
+    delete nextPayload[field];
+  }
+
+  return nextPayload;
+};
+
+const normalizeCommandType = (type) => {
+  if (type === "resource.rename") {
+    return "resource.update";
+  }
+
+  return type;
+};
+
+const normalizeCommandPayload = (type, payload) => {
+  if (!isPlainObject(payload)) {
+    return payload;
+  }
+
+  if (type === "scene.create") {
+    return normalizePayloadDataField(payload, {
+      rootFields: ["name"],
+    });
+  }
+
+  if (type === "scene.update") {
+    return normalizePayloadDataField(payload, {
+      legacyFields: ["patch"],
+    });
+  }
+
+  if (type === "section.create") {
+    return normalizePayloadDataField(payload, {
+      rootFields: ["name"],
+    });
+  }
+
+  if (type === "line.insert_after") {
+    return normalizePayloadDataField(payload, {
+      legacyFields: ["line"],
+    });
+  }
+
+  if (type === "line.update_actions") {
+    return normalizePayloadDataField(payload, {
+      legacyFields: ["patch"],
+    });
+  }
+
+  if (type === "resource.update") {
+    return normalizePayloadDataField(payload, {
+      legacyFields: ["patch"],
+      rootFields: ["name"],
+    });
+  }
+
+  if (type === "layout.element.create") {
+    return normalizePayloadDataField(payload, {
+      legacyFields: ["element"],
+    });
+  }
+
+  if (type === "layout.element.update") {
+    return normalizePayloadDataField(payload, {
+      legacyFields: ["patch"],
+    });
+  }
+
+  return structuredClone(payload);
 };
 
 const assertSceneExists = (state, sceneId, details = {}) => {
@@ -278,7 +373,7 @@ const assertLayoutElementExists = (state, layoutId, elementId) => {
 
 const COMMAND_DEFINITIONS = [
   {
-    type: "project.created",
+    type: "project.create",
     scope: "settings",
     payload: {
       requiredFields: ["state"],
@@ -286,23 +381,18 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    type: "project.update",
-    scope: "settings",
-    payload: {
-      requiredFields: ["patch"],
-      objectFields: ["patch"],
-    },
-  },
-  {
     type: "scene.create",
     scope: "story",
     payload: {
-      requiredFields: ["sceneId", "name"],
-      requiredStringFields: ["sceneId", "name"],
+      requiredFields: ["sceneId", "data"],
+      requiredStringFields: ["sceneId"],
+      objectFields: ["data"],
       optionalNullableStringFields: ["parentId"],
-      optionalObjectFields: ["data"],
       allowIndex: true,
       allowPosition: true,
+    },
+    validatePayload: (payload, errors) => {
+      validateRequiredNestedStringField(payload, ["data", "name"], errors);
     },
     assertPreconditions: (state, command) => {
       const { sceneId, parentId } = command.payload;
@@ -318,20 +408,9 @@ const COMMAND_DEFINITIONS = [
     type: "scene.update",
     scope: "story",
     payload: {
-      requiredFields: ["sceneId", "patch"],
+      requiredFields: ["sceneId", "data"],
       requiredStringFields: ["sceneId"],
-      objectFields: ["patch"],
-    },
-    assertPreconditions: (state, command) => {
-      assertSceneExists(state, command.payload.sceneId);
-    },
-  },
-  {
-    type: "scene.rename",
-    scope: "story",
-    payload: {
-      requiredFields: ["sceneId", "name"],
-      requiredStringFields: ["sceneId", "name"],
+      objectFields: ["data"],
     },
     assertPreconditions: (state, command) => {
       assertSceneExists(state, command.payload.sceneId);
@@ -387,12 +466,15 @@ const COMMAND_DEFINITIONS = [
     type: "section.create",
     scope: "story",
     payload: {
-      requiredFields: ["sectionId", "sceneId", "name"],
-      requiredStringFields: ["sectionId", "sceneId", "name"],
+      requiredFields: ["sectionId", "sceneId", "data"],
+      requiredStringFields: ["sectionId", "sceneId"],
+      objectFields: ["data"],
       optionalNullableStringFields: ["parentId"],
-      optionalObjectFields: ["data"],
       allowIndex: true,
       allowPosition: true,
+    },
+    validatePayload: (payload, errors) => {
+      validateRequiredNestedStringField(payload, ["data", "name"], errors);
     },
     assertPreconditions: (state, command) => {
       const { sceneId, sectionId } = command.payload;
@@ -451,9 +533,9 @@ const COMMAND_DEFINITIONS = [
     type: "line.insert_after",
     scope: "story",
     payload: {
-      requiredFields: ["lineId", "sectionId", "line"],
+      requiredFields: ["lineId", "sectionId", "data"],
       requiredStringFields: ["lineId", "sectionId"],
-      objectFields: ["line"],
+      objectFields: ["data"],
       optionalNullableStringFields: ["afterLineId", "parentId"],
       allowIndex: true,
       allowPosition: true,
@@ -482,9 +564,9 @@ const COMMAND_DEFINITIONS = [
     type: "line.update_actions",
     scope: "story",
     payload: {
-      requiredFields: ["lineId", "patch"],
+      requiredFields: ["lineId", "data"],
       requiredStringFields: ["lineId"],
-      objectFields: ["patch"],
+      objectFields: ["data"],
       optionalBooleanFields: ["replace"],
     },
     assertPreconditions: (state, command) => {
@@ -543,18 +625,18 @@ const COMMAND_DEFINITIONS = [
     type: "resource.update",
     scope: "resources",
     payload: {
-      requiredFields: ["resourceType", "resourceId", "patch"],
+      requiredFields: ["resourceType", "resourceId", "data"],
       requiredStringFields: ["resourceType", "resourceId"],
-      objectFields: ["patch"],
+      objectFields: ["data"],
       validateResourceType: true,
     },
     assertPreconditions: (state, command) => {
-      const { resourceType, resourceId, patch } = command.payload;
+      const { resourceType, resourceId, data } = command.payload;
       assertResourceExists(state, resourceType, resourceId);
       const currentItem = state.resources?.[resourceType]?.items?.[resourceId];
       if (resourceType === "variables" && currentItem?.type !== "folder") {
-        const nextType = patch?.type;
-        const nextVariableType = patch?.variableType;
+        const nextType = data?.type;
+        const nextVariableType = data?.variableType;
 
         if (
           nextType !== undefined &&
@@ -582,19 +664,6 @@ const COMMAND_DEFINITIONS = [
           });
         }
       }
-    },
-  },
-  {
-    type: "resource.rename",
-    scope: "resources",
-    payload: {
-      requiredFields: ["resourceType", "resourceId", "name"],
-      requiredStringFields: ["resourceType", "resourceId", "name"],
-      validateResourceType: true,
-    },
-    assertPreconditions: (state, command) => {
-      const { resourceType, resourceId } = command.payload;
-      assertResourceExists(state, resourceType, resourceId);
     },
   },
   {
@@ -652,9 +721,9 @@ const COMMAND_DEFINITIONS = [
     type: "layout.element.create",
     scope: "layouts",
     payload: {
-      requiredFields: ["layoutId", "elementId", "element"],
+      requiredFields: ["layoutId", "elementId", "data"],
       requiredStringFields: ["layoutId", "elementId"],
-      objectFields: ["element"],
+      objectFields: ["data"],
       optionalNullableStringFields: ["parentId"],
       allowIndex: true,
       allowPosition: true,
@@ -673,9 +742,9 @@ const COMMAND_DEFINITIONS = [
     type: "layout.element.update",
     scope: "layouts",
     payload: {
-      requiredFields: ["layoutId", "elementId", "patch"],
+      requiredFields: ["layoutId", "elementId", "data"],
       requiredStringFields: ["layoutId", "elementId"],
-      objectFields: ["patch"],
+      objectFields: ["data"],
       optionalBooleanFields: ["replace"],
     },
     assertPreconditions: (state, command) => {
@@ -753,6 +822,20 @@ export const getCommandDefinition = (type) => {
   return COMMAND_CATALOG[type];
 };
 
+export const normalizeCommand = (command) => {
+  if (!command || typeof command !== "object" || Array.isArray(command)) {
+    return command;
+  }
+
+  const normalizedCommand = structuredClone(command);
+  normalizedCommand.type = normalizeCommandType(normalizedCommand.type);
+  normalizedCommand.payload = normalizeCommandPayload(
+    normalizedCommand.type,
+    normalizedCommand.payload,
+  );
+  return normalizedCommand;
+};
+
 export const isSupportedCommandType = (type) =>
   getCommandDefinition(type) !== undefined;
 
@@ -816,12 +899,13 @@ export const validateCommandEnvelope = (command, errors) => {
 };
 
 export const validateCommandPayload = (command, errors) => {
-  const definition = getCommandDefinition(command?.type);
+  const normalizedCommand = normalizeCommand(command);
+  const definition = getCommandDefinition(normalizedCommand?.type);
   if (!definition) {
     return;
   }
 
-  const payload = command.payload;
+  const payload = normalizedCommand.payload;
   const spec = definition.payload || {};
 
   for (const field of spec.requiredFields || []) {
@@ -873,36 +957,40 @@ export const validateCommandPayload = (command, errors) => {
     validatePositionField(payload, errors);
   }
 
-  if (command?.type === COMMAND_TYPES.PROJECT_UPDATE) {
-    validateProjectUpdatePatch(payload, errors);
-  }
+  definition.validatePayload?.(payload, errors);
 };
 
 export const assertCommandPreconditions = (state, command) => {
+  const normalizedCommand = normalizeCommand(command);
   if (state?.project?.id) {
     assertPrecondition(
-      state.project.id === command.projectId,
+      state.project.id === normalizedCommand.projectId,
       "projectId mismatch",
       {
         expected: state.project.id,
-        got: command.projectId,
+        got: normalizedCommand.projectId,
       },
     );
   }
 
-  const definition = getCommandDefinition(command?.type);
-  definition?.assertPreconditions?.(state, command);
+  const definition = getCommandDefinition(normalizedCommand?.type);
+  definition?.assertPreconditions?.(state, normalizedCommand);
 };
 
 export const validateCommand = (command) => {
+  const normalizedCommand = normalizeCommand(command);
   const errors = [];
 
-  validateCommandEnvelope(command, errors);
-  if (!command || !command.payload || typeof command.payload !== "object") {
+  validateCommandEnvelope(normalizedCommand, errors);
+  if (
+    !normalizedCommand ||
+    !normalizedCommand.payload ||
+    typeof normalizedCommand.payload !== "object"
+  ) {
     throw new DomainValidationError("Invalid command envelope", { errors });
   }
 
-  validateCommandPayload(command, errors);
+  validateCommandPayload(normalizedCommand, errors);
 
   if (errors.length > 0) {
     throw new DomainValidationError(
@@ -914,10 +1002,13 @@ export const validateCommand = (command) => {
   return true;
 };
 
-export const commandToEvent = (command) => ({
-  type: command.type,
-  payload: structuredClone(command.payload),
-  meta: {
-    ts: command.clientTs,
-  },
-});
+export const commandToEvent = (command) => {
+  const normalizedCommand = normalizeCommand(command);
+  return {
+    type: normalizedCommand.type,
+    payload: structuredClone(normalizedCommand.payload),
+    meta: {
+      ts: normalizedCommand.clientTs,
+    },
+  };
+};

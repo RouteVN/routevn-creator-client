@@ -20,6 +20,7 @@ Date baseline: February 24, 2026.
 
 1. `01-domain-model.md`
 2. `02-command-and-event-model.md`
+3. `03-command-catalog.md`
 4. `04-sync-protocol.md`
 5. `05-storage.md`
 6. `09-partitioning-and-write-contract.md`

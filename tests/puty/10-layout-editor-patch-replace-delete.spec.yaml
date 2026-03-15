@@ -39,7 +39,7 @@ in:
         payload:
           layoutId: layout-dialogue
           elementId: el-frame
-          element:
+          data:
             type: sprite
             x: 0
             'y': 400
@@ -54,7 +54,7 @@ in:
         payload:
           layoutId: layout-dialogue
           elementId: el-frame
-          patch:
+          data:
             x: 10
             style:
               opacity: 0.9
@@ -68,7 +68,7 @@ in:
         payload:
           layoutId: layout-dialogue
           elementId: el-frame
-          patch:
+          data:
             style:
               opacity: 1
               blendMode: screen
@@ -81,7 +81,7 @@ in:
         payload:
           layoutId: layout-dialogue
           elementId: el-frame
-          patch:
+          data:
             type: sprite
             x: 0
             'y': 420
@@ -126,7 +126,7 @@ out:
       payload:
         layoutId: layout-dialogue
         elementId: el-frame
-        element:
+        data:
           type: sprite
           x: 0
           'y': 400
@@ -146,7 +146,7 @@ out:
       payload:
         layoutId: layout-dialogue
         elementId: el-frame
-        patch:
+        data:
           x: 10
           style:
             opacity: 0.9
@@ -165,7 +165,7 @@ out:
       payload:
         layoutId: layout-dialogue
         elementId: el-frame
-        patch:
+        data:
           style:
             opacity: 1
             blendMode: screen
@@ -183,7 +183,7 @@ out:
       payload:
         layoutId: layout-dialogue
         elementId: el-frame
-        patch:
+        data:
           type: sprite
           x: 0
           'y': 420

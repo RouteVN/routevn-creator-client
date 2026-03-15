@@ -100,7 +100,7 @@ export const handleEditFormAction = async (deps, payload) => {
   await projectService.updateResourceItem({
     resourceType: "colors",
     resourceId: editItemId,
-    patch: {
+    data: {
       name,
       hex: values?.hex ?? "#ffffff",
     },

@@ -18,7 +18,7 @@ export const matchesRemoteTargets = (targets) => {
   const normalizedTargets = normalizeTargets(targets);
 
   return (payload = {}) => {
-    if (payload.eventType === COMMAND_TYPES.PROJECT_CREATED) {
+    if (payload.eventType === COMMAND_TYPES.PROJECT_CREATE) {
       return true;
     }
 

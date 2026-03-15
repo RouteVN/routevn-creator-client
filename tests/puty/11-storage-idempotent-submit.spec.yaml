@@ -14,96 +14,181 @@ in:
       userId: user-puty-idempotent
       clientId: client-puty-idempotent
     sessionPartitions:
-      - project:project-puty-idempotent-001:settings
+      - project:project-puty-idempotent-001:story
     batches:
       - commands:
-          - id: cmd-project-name-dedup
+          - id: cmd-scene-create
             partitions:
-              - project:project-puty-idempotent-001:settings
-            type: project.update
+              - project:project-puty-idempotent-001:story
+            type: scene.create
             clientTs: 1201
             payload:
-              patch:
-                name: Deduped Project
-      - commands:
-          - id: cmd-project-name-dedup
+              sceneId: scene-1
+              data:
+                name: Original Scene
+          - id: cmd-scene-update-dedup
             partitions:
-              - project:project-puty-idempotent-001:settings
-            type: project.update
-            clientTs: 1201
-            payload:
-              patch:
-                name: Deduped Project
-          - id: cmd-project-description-unique
-            partitions:
-              - project:project-puty-idempotent-001:settings
-            type: project.update
+              - project:project-puty-idempotent-001:story
+            type: scene.update
             clientTs: 1202
             payload:
-              patch:
-                description: Second command should still commit
+              sceneId: scene-1
+              data:
+                name: Deduped Scene
+      - commands:
+          - id: cmd-scene-update-dedup
+            partitions:
+              - project:project-puty-idempotent-001:story
+            type: scene.update
+            clientTs: 1202
+            payload:
+              sceneId: scene-1
+              data:
+                name: Deduped Scene
+          - id: cmd-scene-update-unique
+            partitions:
+              - project:project-puty-idempotent-001:story
+            type: scene.update
+            clientTs: 1203
+            payload:
+              sceneId: scene-1
+              data:
+                name: Final Scene
 out:
   storedEvents:
     - committedId: 1
-      id: cmd-project-name-dedup
+      id: cmd-scene-create
       projectId: project-puty-idempotent-001
       userId: user-puty-idempotent
       partitions:
-        - project:project-puty-idempotent-001:settings
-      type: project.update
+        - project:project-puty-idempotent-001:story
+      type: scene.create
       payload:
-        patch:
-          name: Deduped Project
+        sceneId: scene-1
+        data:
+          name: Original Scene
       meta:
         clientId: client-puty-idempotent
         clientTs: 1201
     - committedId: 2
-      id: cmd-project-description-unique
+      id: cmd-scene-update-dedup
       projectId: project-puty-idempotent-001
       userId: user-puty-idempotent
       partitions:
-        - project:project-puty-idempotent-001:settings
-      type: project.update
+        - project:project-puty-idempotent-001:story
+      type: scene.update
       payload:
-        patch:
-          description: Second command should still commit
+        sceneId: scene-1
+        data:
+          name: Deduped Scene
       meta:
         clientId: client-puty-idempotent
         clientTs: 1202
+    - committedId: 3
+      id: cmd-scene-update-unique
+      projectId: project-puty-idempotent-001
+      userId: user-puty-idempotent
+      partitions:
+        - project:project-puty-idempotent-001:story
+      type: scene.update
+      payload:
+        sceneId: scene-1
+        data:
+          name: Final Scene
+      meta:
+        clientId: client-puty-idempotent
+        clientTs: 1203
   stateAfterEachEvent:
     - committedId: 1
-      eventId: cmd-project-name-dedup
-      eventType: project.update
+      eventId: cmd-scene-create
+      eventType: scene.create
       state:
         model_version: 2
         project:
           createdAt: 0
           description: ''
           id: project-puty-idempotent-001
-          name: Deduped Project
+          name: ''
           updatedAt: 1201
         story:
-          initialSceneId: null
-          sceneOrder: []
-        scenes: {}
+          initialSceneId: scene-1
+          sceneOrder:
+            - scene-1
+        scenes:
+          scene-1:
+            createdAt: 1201
+            id: scene-1
+            initialSectionId: null
+            name: Original Scene
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: scene
+            updatedAt: 1201
         sections: {}
         lines: {}
         resources: {}
     - committedId: 2
-      eventId: cmd-project-description-unique
-      eventType: project.update
+      eventId: cmd-scene-update-dedup
+      eventType: scene.update
       state:
         model_version: 2
         project:
           createdAt: 0
-          description: Second command should still commit
+          description: ''
           id: project-puty-idempotent-001
-          name: Deduped Project
+          name: ''
           updatedAt: 1202
         story:
-          initialSceneId: null
-          sceneOrder: []
-        scenes: {}
+          initialSceneId: scene-1
+          sceneOrder:
+            - scene-1
+        scenes:
+          scene-1:
+            createdAt: 1201
+            id: scene-1
+            initialSectionId: null
+            name: Deduped Scene
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: scene
+            updatedAt: 1202
+        sections: {}
+        lines: {}
+        resources: {}
+    - committedId: 3
+      eventId: cmd-scene-update-unique
+      eventType: scene.update
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-idempotent-001
+          name: ''
+          updatedAt: 1203
+        story:
+          initialSceneId: scene-1
+          sceneOrder:
+            - scene-1
+        scenes:
+          scene-1:
+            createdAt: 1201
+            id: scene-1
+            initialSectionId: null
+            name: Final Scene
+            parentId: null
+            position:
+              x: 200
+              'y': 200
+            sectionIds: []
+            type: scene
+            updatedAt: 1203
         sections: {}
         lines: {}
         resources: {}

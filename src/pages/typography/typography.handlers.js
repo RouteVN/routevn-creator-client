@@ -128,7 +128,7 @@ const handleTypographyUpdated = async (deps, payload) => {
   await projectService.updateResourceItem({
     resourceType: "typography",
     resourceId: itemId,
-    patch: {
+    data: {
       name: name,
       fontSize: fontSize,
       lineHeight: lineHeight,

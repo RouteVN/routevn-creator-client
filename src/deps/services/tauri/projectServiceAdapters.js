@@ -19,7 +19,7 @@ import { projectRepositoryStateToDomainState } from "../../../internal/project/p
 import {
   applyCommandToRepository,
   assertSupportedProjectState,
-  createProjectCreatedRepositoryEvent,
+  createProjectCreateRepositoryEvent,
   initialProjectData,
 } from "../shared/projectRepository.js";
 
@@ -109,7 +109,7 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
 
       const store = await createInsiemeTauriStoreAdapter(projectPath);
       await store.appendEvent(
-        createProjectCreatedRepositoryEvent({
+        createProjectCreateRepositoryEvent({
           projectId: projectPath,
           state: bootstrapDomainState,
         }),

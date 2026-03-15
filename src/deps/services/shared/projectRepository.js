@@ -174,7 +174,7 @@ const defaultInitializationActor = (projectId) => ({
 const defaultInitializationPartition = (projectId) =>
   `project:${projectId}:settings`;
 
-export const createProjectCreatedCommand = ({
+export const createProjectCreateCommand = ({
   projectId,
   state,
   actor,
@@ -188,10 +188,10 @@ export const createProjectCreatedCommand = ({
       ? projectId
       : state?.project?.id;
   if (!resolvedProjectId) {
-    throw new Error("projectId is required for project.created command");
+    throw new Error("projectId is required for project.create command");
   }
   if (!state || typeof state !== "object" || Array.isArray(state)) {
-    throw new Error("state is required for project.created command");
+    throw new Error("state is required for project.create command");
   }
 
   const basePartition =
@@ -212,10 +212,10 @@ export const createProjectCreatedCommand = ({
     id:
       typeof commandId === "string" && commandId.length > 0
         ? commandId
-        : `project-created:${resolvedProjectId}`,
+        : `project-create:${resolvedProjectId}`,
     projectId: resolvedProjectId,
     partitions: resolvedPartitions,
-    type: COMMAND_TYPES.PROJECT_CREATED,
+    type: COMMAND_TYPES.PROJECT_CREATE,
     payload: {
       state: structuredClone(state),
     },
@@ -289,7 +289,7 @@ export const repositoryEventToCommand = (repositoryEvent) => {
   return command;
 };
 
-export const createProjectCreatedRepositoryEvent = ({
+export const createProjectCreateRepositoryEvent = ({
   projectId,
   state,
   actor,
@@ -299,7 +299,7 @@ export const createProjectCreatedRepositoryEvent = ({
   meta,
 }) =>
   createRepositoryCommandEvent({
-    command: createProjectCreatedCommand({
+    command: createProjectCreateCommand({
       projectId,
       state,
       actor,

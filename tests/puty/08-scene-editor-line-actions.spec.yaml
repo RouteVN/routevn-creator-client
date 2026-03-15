@@ -24,7 +24,8 @@ in:
         clientTs: 901
         payload:
           sceneId: scene-actions
-          name: Action Editing
+          data:
+            name: Action Editing
       - id: cmd-line-actions-section-create
         partitions:
           - project:project-puty-line-actions-001:story
@@ -34,7 +35,8 @@ in:
         payload:
           sceneId: scene-actions
           sectionId: section-main
-          name: Main
+          data:
+            name: Main
       - id: cmd-line-actions-line-create
         partitions:
           - project:project-puty-line-actions-001:story
@@ -44,7 +46,7 @@ in:
         payload:
           sectionId: section-main
           lineId: line-main
-          line:
+          data:
             actions:
               dialogue:
                 content:
@@ -58,7 +60,7 @@ in:
         clientTs: 904
         payload:
           lineId: line-main
-          patch:
+          data:
             dialogue:
               content:
                 - text: Updated dialogue
@@ -74,7 +76,7 @@ in:
         clientTs: 905
         payload:
           lineId: line-main
-          patch:
+          data:
             background:
               resourceId: bg-night
               mode: cover
@@ -89,7 +91,7 @@ in:
         clientTs: 906
         payload:
           lineId: line-main
-          patch:
+          data:
             character:
               entries:
                 - characterId: hero
@@ -104,7 +106,7 @@ in:
         clientTs: 907
         payload:
           lineId: line-main
-          patch:
+          data:
             dialogue:
               content:
                 - text: Reset to dialogue only
@@ -122,7 +124,8 @@ out:
       type: scene.create
       payload:
         sceneId: scene-actions
-        name: Action Editing
+        data:
+          name: Action Editing
       meta:
         clientId: client-puty-line-actions
         clientTs: 901
@@ -137,7 +140,8 @@ out:
       payload:
         sceneId: scene-actions
         sectionId: section-main
-        name: Main
+        data:
+          name: Main
       meta:
         clientId: client-puty-line-actions
         clientTs: 902
@@ -152,7 +156,7 @@ out:
       payload:
         sectionId: section-main
         lineId: line-main
-        line:
+        data:
           actions:
             dialogue:
               content:
@@ -171,7 +175,7 @@ out:
       type: line.update_actions
       payload:
         lineId: line-main
-        patch:
+        data:
           dialogue:
             content:
               - text: Updated dialogue
@@ -192,7 +196,7 @@ out:
       type: line.update_actions
       payload:
         lineId: line-main
-        patch:
+        data:
           background:
             resourceId: bg-night
             mode: cover
@@ -212,7 +216,7 @@ out:
       type: line.update_actions
       payload:
         lineId: line-main
-        patch:
+        data:
           character:
             entries:
               - characterId: hero
@@ -232,7 +236,7 @@ out:
       type: line.update_actions
       payload:
         lineId: line-main
-        patch:
+        data:
           dialogue:
             content:
               - text: Reset to dialogue only

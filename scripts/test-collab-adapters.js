@@ -22,7 +22,7 @@ const createRepositoryEvent = ({
   payload = {
     resourceType: "images",
     resourceId: "image-1",
-    patch: {
+    data: {
       name: "Updated",
     },
   },
@@ -82,7 +82,7 @@ const createRepositoryEvent = ({
       partitions: [`project:${projectId}:story`],
       payload: {
         sceneId: "scene-1",
-        name: "Scene 1",
+        data: { name: "Scene 1" },
       },
     }),
     createRepositoryEvent({
@@ -92,7 +92,7 @@ const createRepositoryEvent = ({
       payload: {
         sceneId: "scene-1",
         sectionId: "section-1",
-        name: "Section 1",
+        data: { name: "Section 1" },
       },
     }),
     createRepositoryEvent({
@@ -102,7 +102,7 @@ const createRepositoryEvent = ({
       payload: {
         lineId: "line-1",
         sectionId: "section-1",
-        line: { actions: { narration: "hello" } },
+        data: { actions: { narration: "hello" } },
       },
     }),
   ];

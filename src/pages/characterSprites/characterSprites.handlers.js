@@ -30,7 +30,7 @@ const applyCharacterSpritesPatch = async ({
   await projectService.updateResourceItem({
     resourceType: "characters",
     resourceId: characterId,
-    patch: {
+    data: {
       sprites: nextSprites,
     },
   });

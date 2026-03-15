@@ -190,7 +190,7 @@ export const handleFormExtraEvent = async (deps) => {
   await projectService.updateResourceItem({
     resourceType: "videos",
     resourceId: selectedItem.id,
-    patch: {
+    data: {
       fileId: uploadResult.fileId,
       thumbnailFileId: uploadResult.thumbnailFileId,
       name: uploadResult.displayName,
@@ -275,7 +275,7 @@ export const handleEditFormAction = async (deps, payload) => {
   await projectService.updateResourceItem({
     resourceType: "videos",
     resourceId: editItemId,
-    patch: {
+    data: {
       name,
       description: values?.description ?? "",
       ...videoPatch,

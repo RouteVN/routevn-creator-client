@@ -156,7 +156,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
     await projectService.updateLineActions({
       lineId,
-      patch: safeDetail,
+      data: safeDetail,
       replace: false,
     });
 
@@ -192,7 +192,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
     await projectService.updateLineActions({
       lineId,
-      patch: safeDetail,
+      data: safeDetail,
       replace: false,
     });
 
@@ -228,7 +228,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
     await projectService.updateLineActions({
       lineId,
-      patch: safeDetail,
+      data: safeDetail,
       replace: false,
     });
 
@@ -286,7 +286,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
   if (Object.keys(otherActions).length > 0) {
     await projectService.updateLineActions({
       lineId,
-      patch: otherActions,
+      data: otherActions,
       replace: false,
     });
   }
@@ -741,7 +741,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 
         await projectService.updateLineActions({
           lineId: selectedLineId,
-          patch: nextActions,
+          data: nextActions,
           replace: true,
         });
       }
@@ -938,7 +938,7 @@ export const handleLineDeleteActionItem = async (deps, payload) => {
   }
   await projectService.updateLineActions({
     lineId: selectedLine.id,
-    patch: newActions,
+    data: newActions,
     replace: true,
   });
   // Update store with new repository state
@@ -990,7 +990,7 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
   }
   await projectService.updateLineActions({
     lineId: selectedLine.id,
-    patch: newActions,
+    data: newActions,
     replace: true,
   });
   // Update store with new repository state

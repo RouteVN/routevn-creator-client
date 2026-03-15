@@ -14,20 +14,10 @@ in:
       userId: user-puty-1
       clientId: client-puty-1
     sessionPartitions:
-      - project:project-puty-storage-001:settings
       - project:project-puty-storage-001:resources
       - project:project-puty-storage-001:story
       - project:project-puty-storage-001:layouts
     commands:
-      - id: cmd-project-update
-        partitions:
-          - project:project-puty-storage-001:settings
-        type: project.update
-        clientTs: 101
-        payload:
-          patch:
-            name: Command Project
-            description: Only commands should sync
       - id: cmd-image-create
         partitions:
           - project:project-puty-storage-001:resources:images
@@ -48,7 +38,8 @@ in:
         clientTs: 103
         payload:
           sceneId: scene-1
-          name: Scene 1
+          data:
+            name: Scene 1
       - id: cmd-section-create
         partitions:
           - project:project-puty-storage-001:story
@@ -58,7 +49,8 @@ in:
         payload:
           sceneId: scene-1
           sectionId: section-1
-          name: Section 1
+          data:
+            name: Section 1
       - id: cmd-line-insert
         partitions:
           - project:project-puty-storage-001:story
@@ -68,7 +60,7 @@ in:
         payload:
           sectionId: section-1
           lineId: line-1
-          line:
+          data:
             actions:
               dialogue:
                 content:
@@ -82,7 +74,7 @@ in:
         clientTs: 106
         payload:
           lineId: line-1
-          patch:
+          data:
             dialogue:
               content:
                 - text: Hello
@@ -112,27 +104,13 @@ in:
         payload:
           layoutId: layout-1
           elementId: el-1
-          element:
+          data:
             type: text
             x: 10
             'y': 20
 out:
   storedEvents:
     - committedId: 1
-      id: cmd-project-update
-      projectId: project-puty-storage-001
-      userId: user-puty-1
-      partitions:
-        - project:project-puty-storage-001:settings
-      type: project.update
-      payload:
-        patch:
-          name: Command Project
-          description: Only commands should sync
-      meta:
-        clientId: client-puty-1
-        clientTs: 101
-    - committedId: 2
       id: cmd-image-create
       projectId: project-puty-storage-001
       userId: user-puty-1
@@ -149,7 +127,7 @@ out:
       meta:
         clientId: client-puty-1
         clientTs: 102
-    - committedId: 3
+    - committedId: 2
       id: cmd-scene-create
       projectId: project-puty-storage-001
       userId: user-puty-1
@@ -159,11 +137,12 @@ out:
       type: scene.create
       payload:
         sceneId: scene-1
-        name: Scene 1
+        data:
+          name: Scene 1
       meta:
         clientId: client-puty-1
         clientTs: 103
-    - committedId: 4
+    - committedId: 3
       id: cmd-section-create
       projectId: project-puty-storage-001
       userId: user-puty-1
@@ -174,11 +153,12 @@ out:
       payload:
         sceneId: scene-1
         sectionId: section-1
-        name: Section 1
+        data:
+          name: Section 1
       meta:
         clientId: client-puty-1
         clientTs: 104
-    - committedId: 5
+    - committedId: 4
       id: cmd-line-insert
       projectId: project-puty-storage-001
       userId: user-puty-1
@@ -189,7 +169,7 @@ out:
       payload:
         sectionId: section-1
         lineId: line-1
-        line:
+        data:
           actions:
             dialogue:
               content:
@@ -198,7 +178,7 @@ out:
       meta:
         clientId: client-puty-1
         clientTs: 105
-    - committedId: 6
+    - committedId: 5
       id: cmd-line-dialogue-update
       projectId: project-puty-storage-001
       userId: user-puty-1
@@ -208,7 +188,7 @@ out:
       type: line.update_actions
       payload:
         lineId: line-1
-        patch:
+        data:
           dialogue:
             content:
               - text: Hello
@@ -219,7 +199,7 @@ out:
       meta:
         clientId: client-puty-1
         clientTs: 106
-    - committedId: 7
+    - committedId: 6
       id: cmd-layout-resource-create
       projectId: project-puty-storage-001
       userId: user-puty-1
@@ -238,7 +218,7 @@ out:
       meta:
         clientId: client-puty-1
         clientTs: 107
-    - committedId: 8
+    - committedId: 7
       id: cmd-layout-element-create
       projectId: project-puty-storage-001
       userId: user-puty-1
@@ -248,7 +228,7 @@ out:
       payload:
         layoutId: layout-1
         elementId: el-1
-        element:
+        data:
           type: text
           x: 10
           'y': 20
@@ -257,33 +237,15 @@ out:
         clientTs: 108
   stateAfterEachEvent:
     - committedId: 1
-      eventId: cmd-project-update
-      eventType: project.update
-      state:
-        model_version: 2
-        project:
-          createdAt: 0
-          description: Only commands should sync
-          id: project-puty-storage-001
-          name: Command Project
-          updatedAt: 101
-        story:
-          initialSceneId: null
-          sceneOrder: []
-        scenes: {}
-        sections: {}
-        lines: {}
-        resources: {}
-    - committedId: 2
       eventId: cmd-image-create
       eventType: resource.create
       state:
         model_version: 2
         project:
           createdAt: 0
-          description: Only commands should sync
+          description: ''
           id: project-puty-storage-001
-          name: Command Project
+          name: ''
           updatedAt: 102
         story:
           initialSceneId: null
@@ -304,16 +266,16 @@ out:
                 updatedAt: 102
             tree:
               - id: image-1
-    - committedId: 3
+    - committedId: 2
       eventId: cmd-scene-create
       eventType: scene.create
       state:
         model_version: 2
         project:
           createdAt: 0
-          description: Only commands should sync
+          description: ''
           id: project-puty-storage-001
-          name: Command Project
+          name: ''
           updatedAt: 103
         story:
           initialSceneId: scene-1
@@ -347,16 +309,16 @@ out:
                 updatedAt: 102
             tree:
               - id: image-1
-    - committedId: 4
+    - committedId: 3
       eventId: cmd-section-create
       eventType: section.create
       state:
         model_version: 2
         project:
           createdAt: 0
-          description: Only commands should sync
+          description: ''
           id: project-puty-storage-001
-          name: Command Project
+          name: ''
           updatedAt: 104
         story:
           initialSceneId: scene-1
@@ -399,16 +361,16 @@ out:
                 updatedAt: 102
             tree:
               - id: image-1
-    - committedId: 5
+    - committedId: 4
       eventId: cmd-line-insert
       eventType: line.insert_after
       state:
         model_version: 2
         project:
           createdAt: 0
-          description: Only commands should sync
+          description: ''
           id: project-puty-storage-001
-          name: Command Project
+          name: ''
           updatedAt: 105
         story:
           initialSceneId: scene-1
@@ -462,16 +424,16 @@ out:
                 updatedAt: 102
             tree:
               - id: image-1
-    - committedId: 6
+    - committedId: 5
       eventId: cmd-line-dialogue-update
       eventType: line.update_actions
       state:
         model_version: 2
         project:
           createdAt: 0
-          description: Only commands should sync
+          description: ''
           id: project-puty-storage-001
-          name: Command Project
+          name: ''
           updatedAt: 106
         story:
           initialSceneId: scene-1
@@ -527,16 +489,16 @@ out:
                 updatedAt: 102
             tree:
               - id: image-1
-    - committedId: 7
+    - committedId: 6
       eventId: cmd-layout-resource-create
       eventType: resource.create
       state:
         model_version: 2
         project:
           createdAt: 0
-          description: Only commands should sync
+          description: ''
           id: project-puty-storage-001
-          name: Command Project
+          name: ''
           updatedAt: 107
         story:
           initialSceneId: scene-1
@@ -606,16 +568,16 @@ out:
                 updatedAt: 107
             tree:
               - id: layout-1
-    - committedId: 8
+    - committedId: 7
       eventId: cmd-layout-element-create
       eventType: layout.element.create
       state:
         model_version: 2
         project:
           createdAt: 0
-          description: Only commands should sync
+          description: ''
           id: project-puty-storage-001
-          name: Command Project
+          name: ''
           updatedAt: 108
         story:
           initialSceneId: scene-1

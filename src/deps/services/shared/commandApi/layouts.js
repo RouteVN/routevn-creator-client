@@ -62,11 +62,13 @@ export const createLayoutCommandApi = (shared) => ({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: COMMAND_TYPES.RESOURCE_RENAME,
+      type: COMMAND_TYPES.RESOURCE_UPDATE,
       payload: {
         resourceType: "layouts",
         resourceId: layoutId,
-        name,
+        data: {
+          name,
+        },
       },
       partitions: [],
     });
@@ -128,7 +130,13 @@ export const createLayoutCommandApi = (shared) => ({
     });
   },
 
-  async updateLayoutElement({ layoutId, elementId, patch, replace = true }) {
+  async updateLayoutElement({
+    layoutId,
+    elementId,
+    data,
+    patch,
+    replace = true,
+  }) {
     const context = await shared.ensureCommandContext();
 
     await shared.submitCommandWithContext({
@@ -138,7 +146,7 @@ export const createLayoutCommandApi = (shared) => ({
       payload: {
         layoutId,
         elementId,
-        patch: structuredClone(patch || {}),
+        data: structuredClone(data ?? patch ?? {}),
         replace: replace === true,
       },
       partitions: [],
@@ -148,6 +156,7 @@ export const createLayoutCommandApi = (shared) => ({
   async createLayoutElement({
     layoutId,
     elementId,
+    data,
     element,
     parentId = null,
     position = "last",
@@ -170,7 +179,7 @@ export const createLayoutCommandApi = (shared) => ({
       payload: {
         layoutId,
         elementId: nextElementId,
-        element: structuredClone(element || {}),
+        data: structuredClone(data ?? element ?? {}),
         parentId: normalizeParentId(parentId),
         index: resolvedIndex,
         position,
