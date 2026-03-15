@@ -37,6 +37,67 @@ export const createProjectCollabService = ({
   let session = null;
   let serverErrorStopInFlight = false;
   let projectionGap;
+  let activeSubmission = null;
+  const queuedSubmissions = [];
+  const idleWaiters = new Set();
+
+  const resolveIdleWaiters = () => {
+    if (activeSubmission || queuedSubmissions.length > 0) {
+      return;
+    }
+
+    for (const resolve of idleWaiters) {
+      resolve();
+    }
+    idleWaiters.clear();
+  };
+
+  const settleActiveSubmission = (submissionId, error) => {
+    if (!activeSubmission || activeSubmission.command.id !== submissionId) {
+      return;
+    }
+
+    const completedSubmission = activeSubmission;
+    activeSubmission = null;
+
+    if (error) {
+      completedSubmission.reject(error);
+    } else {
+      completedSubmission.resolve(completedSubmission.command.id);
+    }
+
+    processNextSubmission();
+  };
+
+  const processNextSubmission = () => {
+    if (activeSubmission || queuedSubmissions.length === 0) {
+      resolveIdleWaiters();
+      return;
+    }
+
+    const nextSubmission = queuedSubmissions.shift();
+    activeSubmission = nextSubmission;
+
+    void (async () => {
+      try {
+        await session.submitCommand(nextSubmission.command);
+      } catch (error) {
+        activeSubmission = null;
+        nextSubmission.reject(error);
+        processNextSubmission();
+      }
+    })();
+  };
+
+  const waitForIdle = () => {
+    if (!activeSubmission && queuedSubmissions.length === 0) {
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+      idleWaiters.add(resolve);
+    });
+  };
 
   let projectedState =
     initialState && typeof initialState === "object"
@@ -134,13 +195,21 @@ export const createProjectCollabService = ({
             serverErrorStopInFlight = false;
           });
         }
+      } else if (type === "committed") {
+        settleActiveSubmission(payload?.id);
       } else if (type === "rejected") {
         lastError = {
           code: payload?.reason || "validation_failed",
           message: "Server rejected command",
           payload,
         };
+        settleActiveSubmission(
+          payload?.id,
+          new Error(payload?.reason || "Server rejected command"),
+        );
       }
+
+      resolveIdleWaiters();
     },
   });
 
@@ -160,18 +229,27 @@ export const createProjectCollabService = ({
       projectedState = optimistic.state;
       assertDomainInvariants(projectedState);
 
-      try {
-        await session.submitCommand(command);
-      } catch (error) {
-        if (!isTransportDisconnectedError(error)) {
-          throw error;
-        }
-        // Keep optimistic state and rely on draft persistence for retry.
-        lastError = {
-          code: "transport_disconnected",
-          message: error?.message || "websocket is not connected",
-        };
-      }
+      const terminalSubmission = new Promise((resolve, reject) => {
+        queuedSubmissions.push({
+          command,
+          resolve,
+          reject: (error) => {
+            if (!isTransportDisconnectedError(error)) {
+              reject(error);
+              return;
+            }
+
+            // Keep optimistic state and rely on draft persistence for retry.
+            lastError = {
+              code: "transport_disconnected",
+              message: error?.message || "websocket is not connected",
+            };
+          },
+        });
+      });
+
+      void terminalSubmission.catch(() => {});
+      processNextSubmission();
 
       return command.id;
     },
@@ -181,10 +259,12 @@ export const createProjectCollabService = ({
     },
 
     async syncNow(options = {}) {
+      await waitForIdle();
       await session.syncNow(options);
     },
 
     async flushDrafts() {
+      await waitForIdle();
       await session.flushDrafts();
     },
 

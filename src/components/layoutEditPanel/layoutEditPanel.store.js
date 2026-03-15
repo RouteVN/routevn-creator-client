@@ -2,6 +2,7 @@ import { parseAndRender } from "jempl";
 import { toFlatGroups } from "../../internal/project/tree.js";
 import { getFirstTypographyId } from "../../constants/typography.js";
 import { getVariableOptions } from "../../internal/project/projection.js";
+import { getInteractionActions } from "../../internal/project/interactionPayload.js";
 
 const config = {
   sections: [
@@ -713,13 +714,13 @@ export const selectViewData = ({ state, props: attrs }) => {
       typographyId: state.values?.typographyId || firstTypographyId || "",
       hoverTypographyId: state.values?.hoverTypographyId ?? "",
       clickedTypographyId: state.values?.clickedTypographyId ?? "",
-      actions: Object.entries(
-        state.values?.click?.actionPayload?.actions || {},
-      ).map(([key, _value]) => ({
-        id: key,
-        label: actionsLabelMap[key],
-        svg: `action-${key}`,
-      })),
+      actions: Object.entries(getInteractionActions(state.values?.click)).map(
+        ([key, _value]) => ({
+          id: key,
+          label: actionsLabelMap[key],
+          svg: `action-${key}`,
+        }),
+      ),
     },
   };
 
@@ -728,7 +729,7 @@ export const selectViewData = ({ state, props: attrs }) => {
   return {
     actionsDialogOpen: state.actionsDialogOpen,
     values: state.values,
-    actionsData: state.values?.click?.actionPayload?.actions || {},
+    actionsData: getInteractionActions(state.values?.click),
     config: finalConfig,
     popover: state.popover,
     imageSelectorDialog: state.imageSelectorDialog,

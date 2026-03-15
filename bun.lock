@@ -22,8 +22,8 @@
         "jsdom": "^26.1.0",
         "jszip": "^3.10.1",
         "nanoid": "^5.1.5",
-        "route-engine-js": "0.1.37",
-        "route-graphics": "0.0.34",
+        "route-engine-js": "0.2.2",
+        "route-graphics": "1.0.0",
         "rxjs": "^7.8.2",
         "snabbdom": "^3.6.2",
         "snabbdom-to-html": "^7.1.0",
@@ -680,9 +680,9 @@
 
     "rollup": ["rollup@4.55.1", "", { "dependencies": { "@types/estree": "1.0.8" }, "optionalDependencies": { "@rollup/rollup-android-arm-eabi": "4.55.1", "@rollup/rollup-android-arm64": "4.55.1", "@rollup/rollup-darwin-arm64": "4.55.1", "@rollup/rollup-darwin-x64": "4.55.1", "@rollup/rollup-freebsd-arm64": "4.55.1", "@rollup/rollup-freebsd-x64": "4.55.1", "@rollup/rollup-linux-arm-gnueabihf": "4.55.1", "@rollup/rollup-linux-arm-musleabihf": "4.55.1", "@rollup/rollup-linux-arm64-gnu": "4.55.1", "@rollup/rollup-linux-arm64-musl": "4.55.1", "@rollup/rollup-linux-loong64-gnu": "4.55.1", "@rollup/rollup-linux-loong64-musl": "4.55.1", "@rollup/rollup-linux-ppc64-gnu": "4.55.1", "@rollup/rollup-linux-ppc64-musl": "4.55.1", "@rollup/rollup-linux-riscv64-gnu": "4.55.1", "@rollup/rollup-linux-riscv64-musl": "4.55.1", "@rollup/rollup-linux-s390x-gnu": "4.55.1", "@rollup/rollup-linux-x64-gnu": "4.55.1", "@rollup/rollup-linux-x64-musl": "4.55.1", "@rollup/rollup-openbsd-x64": "4.55.1", "@rollup/rollup-openharmony-arm64": "4.55.1", "@rollup/rollup-win32-arm64-msvc": "4.55.1", "@rollup/rollup-win32-ia32-msvc": "4.55.1", "@rollup/rollup-win32-x64-gnu": "4.55.1", "@rollup/rollup-win32-x64-msvc": "4.55.1", "fsevents": "~2.3.2" }, "bin": { "rollup": "dist/bin/rollup" } }, "sha512-wDv/Ht1BNHB4upNbK74s9usvl7hObDnvVzknxqY/E/O3X6rW1U1rV1aENEfJ54eFZDTNo7zv1f5N4edCluH7+A=="],
 
-    "route-engine-js": ["route-engine-js@0.1.37", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.0.0", "js-yaml": "^4.1.0", "puty": "^0.1.1" } }, "sha512-i2Nm7uSRuF87LP+NVCRN24I+MWATx2Cz+vN+gzsY/ZSKcDe0cgSv+zCCrf5MeHoHjq+BasoGCa248S0d5fZKng=="],
+    "route-engine-js": ["route-engine-js@0.2.2", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.0.0", "js-yaml": "^4.1.0", "puty": "^0.1.1" } }, "sha512-y+XddQGJdSGq7A9xpkm13BU76fUeEDF5yWkbSRGjPU7Rch21foTSqmua4agDgGtraBIUQi/7UwiKfKkD78Be3A=="],
 
-    "route-graphics": ["route-graphics@0.0.34", "", { "dependencies": { "@pixi/unsafe-eval": "^7.4.3", "hotkeys-js": "^4.0.0-beta.7", "pixi.js": "^8.7.1" } }, "sha512-MNOmlzrEIj4Jp7ArJLFGaKlrLz/RmYTpyKw9CMxZ/WCSZqFHoPAo6wnWoIH2iL6VtDIEhWoD44fHE6qmroF0gA=="],
+    "route-graphics": ["route-graphics@1.0.0", "", { "dependencies": { "@pixi/unsafe-eval": "^7.4.3", "hotkeys-js": "^4.0.0-beta.7", "pixi.js": "^8.7.1" } }, "sha512-0tGXJGAEEVVakbfHSuCQ9koIq3NHKeGIPwx1TZ/lu5DYmY5AjRTuSnljMhaWXekoUhgHaeov22JKKpR1ieA0Vg=="],
 
     "rrweb-cssom": ["rrweb-cssom@0.8.0", "", {}, "sha512-guoltQEx+9aMf2gDZ0s62EcV8lsXR+0w8915TC3ITdn2YueuNjdAYh/levpU9nFaoChh9RUS5ZdQMrKfVEN9tw=="],
 
@@ -861,8 +861,6 @@
     "playwright/fsevents": ["fsevents@2.3.2", "", { "os": "darwin" }, "sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA=="],
 
     "postcss/nanoid": ["nanoid@3.3.11", "", { "bin": { "nanoid": "bin/nanoid.cjs" } }, "sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w=="],
-
-    "route-engine-js/puty": ["puty@0.1.1", "", { "dependencies": { "js-yaml": "~4.1.0" }, "peerDependencies": { "vitest": ">=1.0.0" } }, "sha512-B5GQiWDIsnbolNVXGRFX/2tmH9uavszQ/uWlsLEgo0mYh4/+YgB20u5QIxpk7TYa3geOkLohvRFtPm3qku372A=="],
 
     "tar-stream/readable-stream": ["readable-stream@3.6.2", "", { "dependencies": { "inherits": "^2.0.3", "string_decoder": "^1.1.1", "util-deprecate": "^1.0.1" } }, "sha512-9u/sniCrY3D5WdsERHzHE4G2YCXqoG5FTHUiCC4SIbr6XcLZBY05ya9EKjYek9O5xOAwjGq+1JdGBAS7Q9ScoA=="],
 

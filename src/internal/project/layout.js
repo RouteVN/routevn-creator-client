@@ -1,6 +1,10 @@
 import { resolveLayoutReferences } from "route-engine-js";
 import { getFirstTypographyId } from "../../constants/typography.js";
 import { normalizeEngineActions } from "./engineActions.js";
+import {
+  getInteractionPayload,
+  withInteractionPayload,
+} from "./interactionPayload.js";
 
 const TEXT_NODE_TYPES = new Set([
   "text",
@@ -32,7 +36,7 @@ const REPEATING_CONTAINER_CONFIG = {
   "container-ref-choice-item": {
     each: "item, i in choice.items",
     click: {
-      actionPayload: {
+      payload: {
         actions: "${item.events.click.actions}",
       },
     },
@@ -176,7 +180,8 @@ const ensureNodeTextStyleId = ({
 };
 
 const normalizeSliderChange = (change, sliderId) => {
-  const updateVariable = change?.actionPayload?.actions?.updateVariable;
+  const interactionPayload = getInteractionPayload(change);
+  const updateVariable = interactionPayload?.actions?.updateVariable;
   if (!updateVariable) {
     return normalizeEngineActions(change);
   }
@@ -188,19 +193,18 @@ const normalizeSliderChange = (change, sliderId) => {
     return normalizeEngineActions(change);
   }
 
-  return normalizeEngineActions({
-    ...change,
-    actionPayload: {
-      ...change.actionPayload,
+  return normalizeEngineActions(
+    withInteractionPayload(change, {
+      ...interactionPayload,
       actions: {
-        ...change.actionPayload.actions,
+        ...interactionPayload.actions,
         updateVariable: {
           ...updateVariable,
           id: sanitizedId,
         },
       },
-    },
-  });
+    }),
+  );
 };
 
 const updateChildrenIds = (children, indexVar) => {

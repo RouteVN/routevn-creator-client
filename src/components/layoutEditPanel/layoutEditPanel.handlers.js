@@ -1,3 +1,8 @@
+import {
+  getInteractionActions,
+  getInteractionPayload,
+} from "../../internal/project/interactionPayload.js";
+
 export const handleBeforeMount = (deps) => {
   const { props, store } = deps;
   const values = props.values || {};
@@ -152,16 +157,19 @@ export const handleFormActions = (deps, payload) => {
 export const handleActionsChange = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
 
-  const currentActions =
-    store.selectValues().click?.actionPayload?.actions || {};
+  const currentActions = getInteractionActions(store.selectValues().click);
   const newActions = {
     ...currentActions,
     ...payload._event.detail,
   };
+  const currentPayload = getInteractionPayload(store.selectValues().click);
 
   store.updateValueProperty({
-    name: "click.actionPayload.actions",
-    value: newActions,
+    name: "click.payload",
+    value: {
+      ...currentPayload,
+      actions: newActions,
+    },
   });
 
   render();
@@ -171,7 +179,7 @@ export const handleActionsChange = (deps, payload) => {
     new CustomEvent("update", {
       detail: {
         formValues,
-        name: "click.actionPayload.actions",
+        name: "click.payload.actions",
         value: newActions,
       },
     }),
@@ -288,13 +296,16 @@ export const handleListItemRightClick = async (deps, payload) => {
   }
   const { item } = result;
   if (item.key === "remove") {
-    const currentActions =
-      store.selectValues().click?.actionPayload?.actions || {};
+    const currentActions = getInteractionActions(store.selectValues().click);
     const actions = structuredClone(currentActions);
+    const currentPayload = getInteractionPayload(store.selectValues().click);
     delete actions[id];
     store.updateValueProperty({
-      name: "click.actionPayload.actions",
-      value: actions,
+      name: "click.payload",
+      value: {
+        ...currentPayload,
+        actions,
+      },
     });
     const formValues = store.selectValues();
     dispatchEvent(
@@ -302,7 +313,7 @@ export const handleListItemRightClick = async (deps, payload) => {
         bubbles: true,
         detail: {
           formValues,
-          name: "click.actionPayload.actions",
+          name: "click.payload.actions",
           value: actions,
         },
       }),
