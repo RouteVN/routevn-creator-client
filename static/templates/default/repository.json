@@ -778,7 +778,7 @@
               "anchorX": 0,
               "anchorY": 0,
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "nextLine": {}
                   }
@@ -949,7 +949,7 @@
                 "fill": "#ffffff"
               },
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "sectionTransition": {
                       "sceneId": "eXLwPZNpFqDjmXjORfonq",
@@ -980,7 +980,7 @@
                 "fill": "#ffffff"
               },
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "pushLayeredView": {
                       "resourceId": "LoadPageDefaultLayout"
@@ -1010,7 +1010,7 @@
                 "fill": "#ffffff"
               },
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "pushLayeredView": {
                       "resourceId": "OptionsPageDefaultLayout"
@@ -1222,7 +1222,7 @@
                 "fill": "#ffffff"
               },
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "popLayeredView": {}
                   }
@@ -1368,7 +1368,7 @@
               "scaleY": 1,
               "rotation": 0,
               "change": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "updateVariable": {
                       "id": "optionsBgmSlider",
@@ -1447,7 +1447,7 @@
               "scaleY": 1,
               "rotation": 0,
               "change": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "updateVariable": {
                       "id": "optionsSfxSlider",
@@ -1523,7 +1523,7 @@
                 "fill": "#ffffff"
               },
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "updateVariable": {
                       "id": "optionsMuteToggle",
@@ -1603,7 +1603,7 @@
               "scaleY": 1,
               "rotation": 0,
               "change": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "updateVariable": {
                       "id": "optionsSpeedSlider",
@@ -1682,7 +1682,7 @@
               "scaleY": 1,
               "rotation": 0,
               "change": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "updateVariable": {
                       "id": "optionsAutoSlider",
@@ -1779,7 +1779,7 @@
                 "fill": "#ffffff"
               },
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "updateVariable": {
                       "id": "optionsSkipUnseen",
@@ -1835,7 +1835,7 @@
                 "fill": "#ffffff"
               },
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "updateVariable": {
                       "id": "optionsSkipTransitions",
@@ -1871,7 +1871,7 @@
                 "fill": "#ffffff"
               },
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "popLayeredView": {}
                   }

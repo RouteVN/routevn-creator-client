@@ -71,4 +71,9 @@ while IFS='=' read -r key _; do
   env_args+=("-e" "$key")
 done < <(env | grep '^RTGL_VT_' || true)
 
-exec docker run --rm --pull=never --user "$(id -u):$(id -g)" "${env_args[@]}" -v "$PWD:/app" -w /app "$IMAGE" rtgl "$@"
+docker_args=(--rm --pull=never --user "$(id -u):$(id -g)" -v "$PWD:/app" -w /app)
+if [ "${#env_args[@]}" -gt 0 ]; then
+  docker_args+=("${env_args[@]}")
+fi
+
+exec docker run "${docker_args[@]}" "$IMAGE" rtgl "$@"
