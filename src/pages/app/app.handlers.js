@@ -221,7 +221,7 @@ export const handleUpdateTransform = async (deps, payload) => {
   await projectService.updateResourceItem({
     resourceType: "transforms",
     resourceId: itemId,
-    patch: updates,
+    data: updates,
   });
 };
 
@@ -232,7 +232,7 @@ export const handleUpdateColor = async (deps, payload) => {
   await projectService.updateResourceItem({
     resourceType: "colors",
     resourceId: itemId,
-    patch: updates,
+    data: updates,
   });
 };
 

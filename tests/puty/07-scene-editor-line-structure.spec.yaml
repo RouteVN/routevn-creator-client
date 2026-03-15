@@ -24,7 +24,8 @@ in:
         clientTs: 801
         payload:
           sceneId: scene-lines
-          name: Line Flow
+          data:
+            name: Line Flow
       - id: cmd-lines-section-a
         partitions:
           - project:project-puty-lines-001:story
@@ -34,7 +35,8 @@ in:
         payload:
           sceneId: scene-lines
           sectionId: section-a
-          name: First
+          data:
+            name: First
       - id: cmd-lines-section-b
         partitions:
           - project:project-puty-lines-001:story
@@ -44,7 +46,8 @@ in:
         payload:
           sceneId: scene-lines
           sectionId: section-b
-          name: Second
+          data:
+            name: Second
       - id: cmd-lines-insert-1
         partitions:
           - project:project-puty-lines-001:story
@@ -54,7 +57,7 @@ in:
         payload:
           sectionId: section-a
           lineId: line-1
-          line:
+          data:
             actions:
               dialogue:
                 content:
@@ -70,7 +73,7 @@ in:
           sectionId: section-a
           afterLineId: line-1
           lineId: line-2
-          line:
+          data:
             actions:
               dialogue:
                 content:
@@ -86,7 +89,7 @@ in:
           sectionId: section-a
           afterLineId: line-2
           lineId: line-3
-          line:
+          data:
             actions:
               dialogue:
                 content:
@@ -122,7 +125,8 @@ out:
       type: scene.create
       payload:
         sceneId: scene-lines
-        name: Line Flow
+        data:
+          name: Line Flow
       meta:
         clientId: client-puty-lines
         clientTs: 801
@@ -137,7 +141,8 @@ out:
       payload:
         sceneId: scene-lines
         sectionId: section-a
-        name: First
+        data:
+          name: First
       meta:
         clientId: client-puty-lines
         clientTs: 802
@@ -152,7 +157,8 @@ out:
       payload:
         sceneId: scene-lines
         sectionId: section-b
-        name: Second
+        data:
+          name: Second
       meta:
         clientId: client-puty-lines
         clientTs: 803
@@ -167,7 +173,7 @@ out:
       payload:
         sectionId: section-a
         lineId: line-1
-        line:
+        data:
           actions:
             dialogue:
               content:
@@ -188,7 +194,7 @@ out:
         sectionId: section-a
         afterLineId: line-1
         lineId: line-2
-        line:
+        data:
           actions:
             dialogue:
               content:
@@ -209,7 +215,7 @@ out:
         sectionId: section-a
         afterLineId: line-2
         lineId: line-3
-        line:
+        data:
           actions:
             dialogue:
               content:

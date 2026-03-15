@@ -228,7 +228,7 @@ export const handleDetailPanelAvatarClick = async (deps) => {
       await projectService.updateResourceItem({
         resourceType: "characters",
         resourceId: selectedItem.id,
-        patch: updateData,
+        data: updateData,
       });
 
       // Update the store with the new repository state and get new file URL
@@ -414,7 +414,7 @@ export const handleEditFormAction = async (deps, payload) => {
     await projectService.updateResourceItem({
       resourceType: "characters",
       resourceId: editItemId,
-      patch: updateData,
+      data: updateData,
     });
 
     await refreshCharactersData(deps);

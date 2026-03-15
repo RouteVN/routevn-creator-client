@@ -98,6 +98,76 @@ const createSubmitItemFromCommand = (command) => ({
 
 const projectId = "project-command-only-001";
 const actor = { userId: "user-1", clientId: "client-1" };
+const storyPartition = `project:${projectId}:story`;
+
+const legacySceneCreateCommand = createCommandEnvelope({
+  id: "legacy-scene-create",
+  projectId,
+  scope: "story",
+  partitions: [storyPartition],
+  type: COMMAND_TYPES.SCENE_CREATE,
+  payload: {
+    sceneId: "scene-legacy",
+    name: "Legacy Scene",
+  },
+  actor,
+  clientTs: 42,
+});
+
+validateCommand(legacySceneCreateCommand);
+assert.deepEqual(commandToSyncEvent(legacySceneCreateCommand).payload, {
+  sceneId: "scene-legacy",
+  data: {
+    name: "Legacy Scene",
+  },
+});
+assert.deepEqual(
+  commandFromItem(
+    createCommittedEventFromCommand(legacySceneCreateCommand, 1, 42),
+  ).payload,
+  {
+    sceneId: "scene-legacy",
+    data: {
+      name: "Legacy Scene",
+    },
+  },
+);
+
+const legacyResourceRenameCommand = createCommandEnvelope({
+  id: "legacy-resource-rename",
+  projectId,
+  scope: "resources",
+  partitions: [`project:${projectId}:resources:images`],
+  type: "resource.rename",
+  payload: {
+    resourceType: "images",
+    resourceId: "image-legacy",
+    name: "Legacy Image",
+  },
+  actor,
+  clientTs: 43,
+});
+
+validateCommand(legacyResourceRenameCommand);
+assert.equal(commandToSyncEvent(legacyResourceRenameCommand).type, "resource.update");
+assert.deepEqual(commandToSyncEvent(legacyResourceRenameCommand).payload, {
+  resourceType: "images",
+  resourceId: "image-legacy",
+  data: {
+    name: "Legacy Image",
+  },
+});
+const normalizedLegacyResourceRename = commandFromItem(
+  createCommittedEventFromCommand(legacyResourceRenameCommand, 2, 43),
+);
+assert.equal(normalizedLegacyResourceRename.type, "resource.update");
+assert.deepEqual(normalizedLegacyResourceRename.payload, {
+  resourceType: "images",
+  resourceId: "image-legacy",
+  data: {
+    name: "Legacy Image",
+  },
+});
 
 const bypassScan = spawnSync(
   "rg",
@@ -190,7 +260,7 @@ assert.equal(
 );
 assert.deepEqual(capturedLineActionSubmits[0].payload, {
   lineId: "line-1",
-  patch: {
+  data: {
     dialogue: {
       content: [{ text: "updated" }],
       mode: "adv",
@@ -271,25 +341,11 @@ try {
 
   const storyBasePartition = `project:${projectId}:story`;
   const scenePartition = `project:${projectId}:story:scene:scene-1`;
-  const settingsPartition = `project:${projectId}:settings`;
   const imagesPartition = `project:${projectId}:resources:images`;
   const layoutsResourcePartition = `project:${projectId}:resources:layouts`;
   const layoutsPartition = `project:${projectId}:layouts`;
 
   const commands = [
-    createCommandEnvelope({
-      projectId,
-      scope: "settings",
-      partitions: [settingsPartition],
-      type: COMMAND_TYPES.PROJECT_UPDATE,
-      payload: {
-        patch: {
-          name: "Command Project",
-          description: "Only commands should sync",
-        },
-      },
-      actor,
-    }),
     createCommandEnvelope({
       projectId,
       scope: "resources",
@@ -313,7 +369,7 @@ try {
       type: COMMAND_TYPES.SCENE_CREATE,
       payload: {
         sceneId: "scene-1",
-        name: "Scene 1",
+        data: { name: "Scene 1" },
       },
       actor,
     }),
@@ -325,7 +381,7 @@ try {
       payload: {
         sceneId: "scene-1",
         sectionId: "section-1",
-        name: "Section 1",
+        data: { name: "Section 1" },
       },
       actor,
     }),
@@ -337,7 +393,7 @@ try {
       payload: {
         sectionId: "section-1",
         lineId: "line-1",
-        line: {
+        data: {
           actions: {
             dialogue: {
               content: [{ text: "Hello" }],
@@ -355,7 +411,7 @@ try {
       type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
       payload: {
         lineId: "line-1",
-        patch: {
+        data: {
           dialogue: {
             content: [{ text: "Hello" }],
             mode: "nvl",
@@ -395,7 +451,7 @@ try {
       payload: {
         layoutId: "layout-1",
         elementId: "el-1",
-        element: {
+        data: {
           type: "text",
           x: 10,
           y: 20,
@@ -414,7 +470,6 @@ try {
   await sleep(30);
 
   const observedSet = new Set(observedSchemas);
-  assert.ok(observedSet.has(COMMAND_TYPES.PROJECT_UPDATE));
   assert.ok(observedSet.has(COMMAND_TYPES.RESOURCE_CREATE));
   assert.ok(observedSet.has(COMMAND_TYPES.SCENE_CREATE));
   assert.ok(observedSet.has(COMMAND_TYPES.LINE_UPDATE_ACTIONS));

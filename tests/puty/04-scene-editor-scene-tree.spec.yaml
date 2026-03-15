@@ -7,7 +7,7 @@ suites:
 suite: runInsiemeStorageScenario
 exportName: runInsiemeStorageScenario
 ---
-case: persists scene tree creation rename move update and initial-scene changes
+case: persists scene tree creation name-update move update and initial-scene changes
 in:
   - projectId: project-puty-scene-tree-001
     actor:
@@ -24,8 +24,8 @@ in:
         clientTs: 501
         payload:
           sceneId: folder-prologue
-          name: Prologue
           data:
+            name: Prologue
             type: folder
       - id: cmd-scene-intro-create
         partitions:
@@ -35,8 +35,9 @@ in:
         clientTs: 502
         payload:
           sceneId: scene-intro
-          name: Train Station
           parentId: folder-prologue
+          data:
+            name: Train Station
       - id: cmd-scene-wakeup-create
         partitions:
           - project:project-puty-scene-tree-001:story
@@ -45,8 +46,9 @@ in:
         clientTs: 503
         payload:
           sceneId: scene-wakeup
-          name: Morning Room
           parentId: folder-prologue
+          data:
+            name: Morning Room
       - id: cmd-scene-intro-update
         partitions:
           - project:project-puty-scene-tree-001:story
@@ -55,18 +57,20 @@ in:
         clientTs: 504
         payload:
           sceneId: scene-intro
-          patch:
-            notes: Opening sequence
-            cameraPreset: wide
+          data:
+            position:
+              x: 520
+              'y': 240
       - id: cmd-scene-wakeup-rename
         partitions:
           - project:project-puty-scene-tree-001:story
           - project:project-puty-scene-tree-001:story:scene:scene-wakeup
-        type: scene.rename
+        type: scene.update
         clientTs: 505
         payload:
           sceneId: scene-wakeup
-          name: Wake Up
+          data:
+            name: Wake Up
       - id: cmd-scene-wakeup-move
         partitions:
           - project:project-puty-scene-tree-001:story
@@ -96,8 +100,8 @@ out:
       type: scene.create
       payload:
         sceneId: folder-prologue
-        name: Prologue
         data:
+          name: Prologue
           type: folder
       meta:
         clientId: client-puty-scene-tree
@@ -112,8 +116,9 @@ out:
       type: scene.create
       payload:
         sceneId: scene-intro
-        name: Train Station
         parentId: folder-prologue
+        data:
+          name: Train Station
       meta:
         clientId: client-puty-scene-tree
         clientTs: 502
@@ -127,8 +132,9 @@ out:
       type: scene.create
       payload:
         sceneId: scene-wakeup
-        name: Morning Room
         parentId: folder-prologue
+        data:
+          name: Morning Room
       meta:
         clientId: client-puty-scene-tree
         clientTs: 503
@@ -142,9 +148,10 @@ out:
       type: scene.update
       payload:
         sceneId: scene-intro
-        patch:
-          notes: Opening sequence
-          cameraPreset: wide
+        data:
+          position:
+            x: 520
+            'y': 240
       meta:
         clientId: client-puty-scene-tree
         clientTs: 504
@@ -155,10 +162,11 @@ out:
       partitions:
         - project:project-puty-scene-tree-001:story
         - project:project-puty-scene-tree-001:story:scene:scene-wakeup
-      type: scene.rename
+      type: scene.update
       payload:
         sceneId: scene-wakeup
-        name: Wake Up
+        data:
+          name: Wake Up
       meta:
         clientId: client-puty-scene-tree
         clientTs: 505
@@ -359,8 +367,8 @@ out:
             name: Train Station
             parentId: folder-prologue
             position:
-              x: 200
-              'y': 200
+              x: 520
+              'y': 240
             sectionIds: []
             type: scene
             updatedAt: 504
@@ -381,7 +389,7 @@ out:
         resources: {}
     - committedId: 5
       eventId: cmd-scene-wakeup-rename
-      eventType: scene.rename
+      eventType: scene.update
       state:
         model_version: 2
         project:
@@ -416,8 +424,8 @@ out:
             name: Train Station
             parentId: folder-prologue
             position:
-              x: 200
-              'y': 200
+              x: 520
+              'y': 240
             sectionIds: []
             type: scene
             updatedAt: 504
@@ -473,8 +481,8 @@ out:
             name: Train Station
             parentId: folder-prologue
             position:
-              x: 200
-              'y': 200
+              x: 520
+              'y': 240
             sectionIds: []
             type: scene
             updatedAt: 504
@@ -530,8 +538,8 @@ out:
             name: Train Station
             parentId: folder-prologue
             position:
-              x: 200
-              'y': 200
+              x: 520
+              'y': 240
             sectionIds: []
             type: scene
             updatedAt: 504

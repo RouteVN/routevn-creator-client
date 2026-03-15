@@ -2,7 +2,10 @@ import {
   committedSyncEventToCommand,
   commandToSyncEvent as mapCommandToSyncEvent,
 } from "insieme/client";
-import { COMMAND_EVENT_MODEL } from "../../../../internal/project/commands.js";
+import {
+  COMMAND_EVENT_MODEL,
+  normalizeCommand,
+} from "../../../../internal/project/commands.js";
 
 const normalizeCommandVersion = (value) => {
   const parsed = Number(value);
@@ -31,9 +34,10 @@ const normalizeCommandEnvelope = (command) => {
 };
 
 export const commandToSyncEvent = (command) => {
-  const event = mapCommandToSyncEvent(command);
+  const normalizedCommand = normalizeCommand(command);
+  const event = mapCommandToSyncEvent(normalizedCommand);
   const commandVersion =
-    normalizeCommandVersion(command?.commandVersion) ??
+    normalizeCommandVersion(normalizedCommand?.commandVersion) ??
     COMMAND_EVENT_MODEL.commandVersion;
 
   return {
@@ -52,8 +56,8 @@ export const committedEventToCommand = (committedEvent) => {
   });
   if (!command) return null;
 
-  return {
+  return normalizeCommand({
     ...normalizeCommandEnvelope(command),
     commandVersion,
-  };
+  });
 };

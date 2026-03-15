@@ -269,7 +269,7 @@ export const handleSplitLineOperation = async (deps, payload) => {
     await projectService.createLineItem({
       sectionId,
       lineId: newLineId,
-      line: {
+      data: {
         actions: newLineActions,
       },
       afterLineId: lineId,
@@ -348,7 +348,7 @@ export const handlePasteLinesOperation = async (deps, payload) => {
     await projectService.createLineItem({
       sectionId,
       lineId: newLineId,
-      line: {
+      data: {
         actions: {
           dialogue: {
             mode: shouldInheritNvl ? "nvl" : "adv",
@@ -458,7 +458,7 @@ export const handleNewLineOperation = async (deps, payload) => {
   const createLinePayload = {
     sectionId,
     lineId: newLineId,
-    line: {
+    data: {
       actions: shouldInheritNvl
         ? {
             dialogue: {

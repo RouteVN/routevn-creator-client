@@ -508,7 +508,7 @@ export const handleWhiteboardItemPositionChanged = async (deps, payload) => {
 
   await projectService.updateSceneItem({
     sceneId: itemId,
-    patch: {
+    data: {
       position: { x: nextX, y: nextY },
     },
   });
@@ -675,10 +675,10 @@ export const handleSceneFormAction = async (deps, payload) => {
 
     await projectService.createSceneItem({
       sceneId: newSceneId,
-      name: formData.name || `Scene ${new Date().toLocaleTimeString()}`,
       parentId: formData.folderId || null,
       position: "last",
       data: {
+        name: formData.name || `Scene ${new Date().toLocaleTimeString()}`,
         position: {
           x: sceneWhiteboardPosition.x,
           y: sceneWhiteboardPosition.y,
@@ -688,13 +688,15 @@ export const handleSceneFormAction = async (deps, payload) => {
     await projectService.createSectionItem({
       sceneId: newSceneId,
       sectionId,
-      name: "Section New",
       position: "last",
+      data: {
+        name: "Section New",
+      },
     });
     await projectService.createLineItem({
       sectionId,
       lineId: stepId,
-      line: {
+      data: {
         actions,
       },
       position: "last",
@@ -880,7 +882,7 @@ export const handleEditFormAction = async (deps, payload) => {
 
   await projectService.updateSceneItem({
     sceneId: editItemId,
-    patch: {
+    data: {
       name,
       description: values?.description ?? "",
     },

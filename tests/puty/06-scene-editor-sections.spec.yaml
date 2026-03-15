@@ -24,7 +24,8 @@ in:
         clientTs: 701
         payload:
           sceneId: scene-main
-          name: Main Scene
+          data:
+            name: Main Scene
       - id: cmd-sections-create-a
         partitions:
           - project:project-puty-sections-001:story
@@ -34,7 +35,8 @@ in:
         payload:
           sceneId: scene-main
           sectionId: section-a
-          name: Arrival
+          data:
+            name: Arrival
       - id: cmd-sections-create-b
         partitions:
           - project:project-puty-sections-001:story
@@ -44,7 +46,8 @@ in:
         payload:
           sceneId: scene-main
           sectionId: section-b
-          name: Choice
+          data:
+            name: Choice
       - id: cmd-sections-create-c
         partitions:
           - project:project-puty-sections-001:story
@@ -54,7 +57,8 @@ in:
         payload:
           sceneId: scene-main
           sectionId: section-c
-          name: Aftermath
+          data:
+            name: Aftermath
           index: 1
       - id: cmd-sections-rename-b
         partitions:
@@ -94,7 +98,8 @@ out:
       type: scene.create
       payload:
         sceneId: scene-main
-        name: Main Scene
+        data:
+          name: Main Scene
       meta:
         clientId: client-puty-sections
         clientTs: 701
@@ -109,7 +114,8 @@ out:
       payload:
         sceneId: scene-main
         sectionId: section-a
-        name: Arrival
+        data:
+          name: Arrival
       meta:
         clientId: client-puty-sections
         clientTs: 702
@@ -124,7 +130,8 @@ out:
       payload:
         sceneId: scene-main
         sectionId: section-b
-        name: Choice
+        data:
+          name: Choice
       meta:
         clientId: client-puty-sections
         clientTs: 703
@@ -139,7 +146,8 @@ out:
       payload:
         sceneId: scene-main
         sectionId: section-c
-        name: Aftermath
+        data:
+          name: Aftermath
         index: 1
       meta:
         clientId: client-puty-sections

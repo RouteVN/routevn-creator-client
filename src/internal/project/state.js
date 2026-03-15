@@ -7,6 +7,7 @@ import {
   DomainInvariantError,
   insertAtIndex,
   MODEL_VERSION,
+  normalizeCommand,
   normalizeIndex,
   removeFromArray,
   RESOURCE_TYPES,
@@ -468,7 +469,7 @@ const toDomainLayoutResource = ({
 };
 
 const reducers = {
-  [COMMAND_TYPES.PROJECT_CREATED]: ({ state, payload }) => {
+  [COMMAND_TYPES.PROJECT_CREATE]: ({ state, payload }) => {
     const nextState = structuredClone(payload?.state || {});
     for (const key of Object.keys(state)) {
       delete state[key];
@@ -476,20 +477,12 @@ const reducers = {
     Object.assign(state, nextState);
   },
 
-  [COMMAND_TYPES.PROJECT_UPDATE]: ({ state, payload }) => {
-    const patch = structuredClone(payload.patch || {});
-    delete patch.id;
-    delete patch.createdAt;
-    delete patch.updatedAt;
-    state.project = { ...state.project, ...patch };
-  },
-
   [COMMAND_TYPES.SCENE_CREATE]: ({ state, payload, now }) => {
     const sceneData = structuredClone(payload.data || {});
     const sceneType = sceneData.type === "folder" ? "folder" : "scene";
     state.scenes[payload.sceneId] = {
       id: payload.sceneId,
-      name: payload.name,
+      name: sceneData.name,
       type: sceneType,
       sectionIds: [],
       parentId: typeof payload.parentId === "string" ? payload.parentId : null,
@@ -511,20 +504,15 @@ const reducers = {
 
   [COMMAND_TYPES.SCENE_UPDATE]: ({ state, payload, now }) => {
     const current = state.scenes[payload.sceneId];
-    const patch = structuredClone(payload.patch || {});
-    delete patch.id;
-    delete patch.sectionIds;
-    delete patch.type;
+    const data = structuredClone(payload.data || {});
+    delete data.id;
+    delete data.sectionIds;
+    delete data.type;
     state.scenes[payload.sceneId] = {
       ...current,
-      ...patch,
+      ...data,
       updatedAt: now,
     };
-  },
-
-  [COMMAND_TYPES.SCENE_RENAME]: ({ state, payload, now }) => {
-    state.scenes[payload.sceneId].name = payload.name;
-    state.scenes[payload.sceneId].updatedAt = now;
   },
 
   [COMMAND_TYPES.SCENE_DELETE]: ({ state, payload }) => {
@@ -546,10 +534,11 @@ const reducers = {
   },
 
   [COMMAND_TYPES.SECTION_CREATE]: ({ state, payload, now }) => {
+    const sectionData = structuredClone(payload.data || {});
     state.sections[payload.sectionId] = {
       id: payload.sectionId,
       sceneId: payload.sceneId,
-      name: payload.name,
+      name: sectionData.name,
       lineIds: [],
       createdAt: now,
       updatedAt: now,
@@ -591,10 +580,11 @@ const reducers = {
 
   [COMMAND_TYPES.LINE_INSERT_AFTER]: ({ state, payload, now }) => {
     const section = state.sections[payload.sectionId];
+    const lineData = structuredClone(payload.data || {});
     state.lines[payload.lineId] = {
       id: payload.lineId,
       sectionId: payload.sectionId,
-      actions: payload.line.actions || {},
+      actions: lineData.actions || {},
       createdAt: now,
       updatedAt: now,
     };
@@ -616,9 +606,9 @@ const reducers = {
   [COMMAND_TYPES.LINE_UPDATE_ACTIONS]: ({ state, payload, now }) => {
     const line = state.lines[payload.lineId];
     if (payload.replace === true) {
-      line.actions = structuredClone(payload.patch);
+      line.actions = structuredClone(payload.data);
     } else {
-      line.actions = { ...line.actions, ...structuredClone(payload.patch) };
+      line.actions = { ...line.actions, ...structuredClone(payload.data) };
     }
     line.updatedAt = now;
   },
@@ -678,24 +668,17 @@ const reducers = {
   [COMMAND_TYPES.RESOURCE_UPDATE]: ({ state, payload, now }) => {
     const collection = state.resources[payload.resourceType];
     const current = collection.items[payload.resourceId];
-    const patch = structuredClone(payload.patch || {});
-    delete patch.parentId;
+    const data = structuredClone(payload.data || {});
+    delete data.parentId;
     collection.items[payload.resourceId] = {
       ...current,
-      ...patch,
+      ...data,
     };
     collection.items[payload.resourceId].updatedAt = now;
     collection.tree = buildCanonicalCollectionTree({
       items: collection.items || {},
       tree: ensureCollectionTree(collection),
     });
-  },
-
-  [COMMAND_TYPES.RESOURCE_RENAME]: ({ state, payload, now }) => {
-    const item =
-      state.resources[payload.resourceType].items[payload.resourceId];
-    item.name = payload.name;
-    item.updatedAt = now;
   },
 
   [COMMAND_TYPES.RESOURCE_MOVE]: ({ state, payload, now }) => {
@@ -754,7 +737,7 @@ const reducers = {
     const layout = state.resources.layouts.items[payload.layoutId];
     layout.elements[payload.elementId] = {
       id: payload.elementId,
-      ...structuredClone(payload.element),
+      ...structuredClone(payload.data),
       parentId: payload.parentId || null,
       children: [],
     };
@@ -776,13 +759,13 @@ const reducers = {
     if (payload.replace === true) {
       layout.elements[payload.elementId] = replaceLayoutElement(
         element,
-        payload.patch,
+        payload.data,
         payload.elementId,
       );
     } else {
       layout.elements[payload.elementId] = mergeLayoutElementPatch(
         element,
-        payload.patch,
+        payload.data,
         payload.elementId,
       );
     }
@@ -1294,11 +1277,12 @@ export const assertDomainInvariants = (state) => {
 };
 
 export const processCommand = ({ state, command }) => {
-  validateCommand(command);
-  assertCommandPreconditions(state, command);
+  const normalizedCommand = normalizeCommand(command);
+  validateCommand(normalizedCommand);
+  assertCommandPreconditions(state, normalizedCommand);
 
   const workingState = deepClone(state);
-  const event = commandToEvent(command);
+  const event = commandToEvent(normalizedCommand);
 
   applyDomainEvent(workingState, event);
   assertDomainInvariants(workingState);

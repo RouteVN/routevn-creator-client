@@ -6,7 +6,7 @@ import {
 import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
 
 export const createStoryCommandApi = (shared) => {
-  const submitLineActionsPatch = async ({ lineId, patch, replace = false }) => {
+  const submitLineActionsData = async ({ lineId, data, replace = false }) => {
     const context = await shared.ensureCommandContext();
     const basePartition = shared.storyBasePartitionFor(context.projectId);
     const lineLocation = findLineLocation(context.state, lineId);
@@ -20,7 +20,7 @@ export const createStoryCommandApi = (shared) => {
       type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
       payload: {
         lineId,
-        patch: structuredClone(patch || {}),
+        data: structuredClone(data || {}),
         replace: replace === true,
       },
       partitions: scenePartition
@@ -30,10 +30,10 @@ export const createStoryCommandApi = (shared) => {
   };
 
   return {
-    async updateLineActions({ lineId, patch, replace = false }) {
-      await submitLineActionsPatch({
+    async updateLineActions({ lineId, data, patch, replace = false }) {
+      await submitLineActionsData({
         lineId,
-        patch,
+        data: data ?? patch,
         replace,
       });
     },
@@ -43,9 +43,9 @@ export const createStoryCommandApi = (shared) => {
         throw new Error("actionType is required");
       }
 
-      await submitLineActionsPatch({
+      await submitLineActionsData({
         lineId,
-        patch: {
+        data: {
           [actionType]: structuredClone(action || {}),
         },
         replace: false,
@@ -53,9 +53,9 @@ export const createStoryCommandApi = (shared) => {
     },
 
     async updateLineDialogueAction({ lineId, dialogue }) {
-      await submitLineActionsPatch({
+      await submitLineActionsData({
         lineId,
-        patch: {
+        data: {
           dialogue: structuredClone(dialogue || {}),
         },
         replace: false,
@@ -64,11 +64,11 @@ export const createStoryCommandApi = (shared) => {
 
     async createSceneItem({
       sceneId,
-      name,
       parentId = null,
       position = "last",
       index,
       data = {},
+      name,
     }) {
       const context = await shared.ensureCommandContext();
       const finalSceneId = sceneId || shared.createId();
@@ -90,18 +90,20 @@ export const createStoryCommandApi = (shared) => {
         type: COMMAND_TYPES.SCENE_CREATE,
         payload: {
           sceneId: finalSceneId,
-          name,
           parentId: normalizeParentId(parentId),
           index: resolvedIndex,
           position,
-          data: structuredClone(data || {}),
+          data: {
+            ...structuredClone(data || {}),
+            ...(name !== undefined ? { name } : {}),
+          },
         },
         partitions: [basePartition, scenePartition],
       });
       return finalSceneId;
     },
 
-    async updateSceneItem({ sceneId, patch }) {
+    async updateSceneItem({ sceneId, data, patch }) {
       const context = await shared.ensureCommandContext();
       const basePartition = shared.storyBasePartitionFor(context.projectId);
       const scenePartition = shared.storyScenePartitionFor(
@@ -115,27 +117,7 @@ export const createStoryCommandApi = (shared) => {
         type: COMMAND_TYPES.SCENE_UPDATE,
         payload: {
           sceneId,
-          patch: structuredClone(patch || {}),
-        },
-        partitions: [basePartition, scenePartition],
-      });
-    },
-
-    async renameSceneItem({ sceneId, name }) {
-      const context = await shared.ensureCommandContext();
-      const basePartition = shared.storyBasePartitionFor(context.projectId);
-      const scenePartition = shared.storyScenePartitionFor(
-        context.projectId,
-        sceneId,
-      );
-
-      await shared.submitCommandWithContext({
-        context,
-        scope: "story",
-        type: COMMAND_TYPES.SCENE_RENAME,
-        payload: {
-          sceneId,
-          name,
+          data: structuredClone(data ?? patch ?? {}),
         },
         partitions: [basePartition, scenePartition],
       });
@@ -216,11 +198,11 @@ export const createStoryCommandApi = (shared) => {
     async createSectionItem({
       sceneId,
       sectionId,
-      name,
       parentId = null,
       position = "last",
       index,
       data = {},
+      name,
     }) {
       const context = await shared.ensureCommandContext();
       const nextSectionId = sectionId || shared.createId();
@@ -244,11 +226,13 @@ export const createStoryCommandApi = (shared) => {
         payload: {
           sceneId,
           sectionId: nextSectionId,
-          name,
           parentId: normalizeParentId(parentId),
           index: resolvedIndex,
           position,
-          data: structuredClone(data || {}),
+          data: {
+            ...structuredClone(data || {}),
+            ...(name !== undefined ? { name } : {}),
+          },
         },
         partitions: [basePartition, scenePartition],
       });
@@ -343,7 +327,8 @@ export const createStoryCommandApi = (shared) => {
     async createLineItem({
       sectionId,
       lineId,
-      line = {},
+      data = {},
+      line,
       afterLineId,
       parentId = null,
       position,
@@ -375,7 +360,7 @@ export const createStoryCommandApi = (shared) => {
         payload: {
           sectionId,
           lineId: nextLineId,
-          line: structuredClone(line || {}),
+          data: structuredClone(data ?? line ?? {}),
           afterLineId: afterLineId || null,
           parentId: normalizeParentId(parentId),
           index: resolvedIndex,

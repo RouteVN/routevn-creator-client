@@ -39,7 +39,7 @@ in:
         payload:
           layoutId: layout-hud
           elementId: el-panel
-          element:
+          data:
             type: group
             x: 0
             'y': 0
@@ -54,7 +54,7 @@ in:
           layoutId: layout-hud
           elementId: el-title
           parentId: el-panel
-          element:
+          data:
             type: text
             x: 12
             'y': 10
@@ -67,7 +67,7 @@ in:
         payload:
           layoutId: layout-hud
           elementId: el-button
-          element:
+          data:
             type: sprite
             x: 20
             'y': 60
@@ -113,7 +113,7 @@ out:
       payload:
         layoutId: layout-hud
         elementId: el-panel
-        element:
+        data:
           type: group
           x: 0
           'y': 0
@@ -133,7 +133,7 @@ out:
         layoutId: layout-hud
         elementId: el-title
         parentId: el-panel
-        element:
+        data:
           type: text
           x: 12
           'y': 10
@@ -151,7 +151,7 @@ out:
       payload:
         layoutId: layout-hud
         elementId: el-button
-        element:
+        data:
           type: sprite
           x: 20
           'y': 60

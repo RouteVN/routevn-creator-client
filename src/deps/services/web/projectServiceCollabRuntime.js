@@ -59,14 +59,14 @@ export const summarizeRepositoryEventsForSync = (events = []) => {
   const commandTypes = commands
     .slice(0, 8)
     .map((command) => command?.type || "unknown");
-  const hasProjectCreated = commands.some(
-    (command) => command?.type === COMMAND_TYPES.PROJECT_CREATED,
+  const hasProjectCreate = commands.some(
+    (command) => command?.type === COMMAND_TYPES.PROJECT_CREATE,
   );
 
   return {
     repositoryEventCount: normalizedEvents.length,
     commandEventCount: commands.length,
-    hasProjectCreated,
+    hasProjectCreate,
     commandTypesSample: commandTypes,
     firstCommandType: firstCommand?.type || null,
     firstCommandId: firstCommand?.id || null,

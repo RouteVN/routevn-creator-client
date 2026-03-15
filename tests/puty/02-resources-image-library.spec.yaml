@@ -7,7 +7,7 @@ suites:
 suite: runInsiemeStorageScenario
 exportName: runInsiemeStorageScenario
 ---
-case: persists image library create rename move and update commands
+case: persists image library create move and update commands
 in:
   - projectId: project-puty-res-images-001
     actor:
@@ -65,12 +65,13 @@ in:
       - id: cmd-image-hero-rename
         partitions:
           - project:project-puty-res-images-001:resources:images
-        type: resource.rename
+        type: resource.update
         clientTs: 305
         payload:
           resourceType: images
           resourceId: img-hero-idle
-          name: Hero Idle Updated
+          data:
+            name: Hero Idle Updated
       - id: cmd-image-hero-update
         partitions:
           - project:project-puty-res-images-001:resources:images
@@ -79,7 +80,7 @@ in:
         payload:
           resourceType: images
           resourceId: img-hero-idle
-          patch:
+          data:
             src: hero-idle-v2.png
             thumbnailSrc: hero-idle-thumb.png
 out:
@@ -156,11 +157,12 @@ out:
       userId: user-puty-res-images
       partitions:
         - project:project-puty-res-images-001:resources:images
-      type: resource.rename
+      type: resource.update
       payload:
         resourceType: images
         resourceId: img-hero-idle
-        name: Hero Idle Updated
+        data:
+          name: Hero Idle Updated
       meta:
         clientId: client-puty-res-images
         clientTs: 305
@@ -174,7 +176,7 @@ out:
       payload:
         resourceType: images
         resourceId: img-hero-idle
-        patch:
+        data:
           src: hero-idle-v2.png
           thumbnailSrc: hero-idle-thumb.png
       meta:
@@ -347,7 +349,7 @@ out:
                   - id: img-bg-school
     - committedId: 5
       eventId: cmd-image-hero-rename
-      eventType: resource.rename
+      eventType: resource.update
       state:
         model_version: 2
         project:

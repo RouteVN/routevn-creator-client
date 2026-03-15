@@ -156,13 +156,15 @@ export const createSceneEditorSectionWithName = async (
   await projectService.createSectionItem({
     sceneId,
     sectionId: newSectionId,
-    name: sectionName,
     position: "last",
+    data: {
+      name: sectionName,
+    },
   });
   await projectService.createLineItem({
     sectionId: newSectionId,
     lineId: newLineId,
-    line: {
+    data: {
       actions,
     },
     position: "last",

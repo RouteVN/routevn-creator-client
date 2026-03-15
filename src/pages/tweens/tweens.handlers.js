@@ -130,7 +130,7 @@ export const handleFormActionClick = async (deps, payload) => {
     await projectService.updateResourceItem({
       resourceType: "tweens",
       resourceId: editItemId,
-      patch: {
+      data: {
         name,
         properties,
       },

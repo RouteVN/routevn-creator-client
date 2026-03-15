@@ -137,7 +137,7 @@ export const handleFormExtraEvent = async (deps) => {
   await projectService.updateResourceItem({
     resourceType: "images",
     resourceId: selectedItem.id,
-    patch: {
+    data: {
       fileId: uploadResult.fileId,
       name: uploadResult.displayName,
       fileType: uploadResult.file.type,
@@ -228,7 +228,7 @@ export const handleEditFormAction = async (deps, payload) => {
   await projectService.updateResourceItem({
     resourceType: "images",
     resourceId: editItemId,
-    patch: {
+    data: {
       name,
       description: values?.description ?? "",
       ...imagePatch,

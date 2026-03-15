@@ -24,7 +24,8 @@ in:
         clientTs: 601
         payload:
           sceneId: scene-delete-target
-          name: Disposable Scene
+          data:
+            name: Disposable Scene
       - id: cmd-scene-delete-section-a
         partitions:
           - project:project-puty-scene-delete-001:story
@@ -34,7 +35,8 @@ in:
         payload:
           sceneId: scene-delete-target
           sectionId: section-a
-          name: Start
+          data:
+            name: Start
       - id: cmd-scene-delete-line-a
         partitions:
           - project:project-puty-scene-delete-001:story
@@ -44,7 +46,7 @@ in:
         payload:
           sectionId: section-a
           lineId: line-a
-          line:
+          data:
             actions:
               dialogue:
                 content:
@@ -59,7 +61,8 @@ in:
         payload:
           sceneId: scene-delete-target
           sectionId: section-b
-          name: Branch
+          data:
+            name: Branch
       - id: cmd-scene-delete-line-b
         partitions:
           - project:project-puty-scene-delete-001:story
@@ -69,7 +72,7 @@ in:
         payload:
           sectionId: section-b
           lineId: line-b
-          line:
+          data:
             actions:
               dialogue:
                 content:
@@ -95,7 +98,8 @@ out:
       type: scene.create
       payload:
         sceneId: scene-delete-target
-        name: Disposable Scene
+        data:
+          name: Disposable Scene
       meta:
         clientId: client-puty-scene-delete
         clientTs: 601
@@ -110,7 +114,8 @@ out:
       payload:
         sceneId: scene-delete-target
         sectionId: section-a
-        name: Start
+        data:
+          name: Start
       meta:
         clientId: client-puty-scene-delete
         clientTs: 602
@@ -125,7 +130,7 @@ out:
       payload:
         sectionId: section-a
         lineId: line-a
-        line:
+        data:
           actions:
             dialogue:
               content:
@@ -145,7 +150,8 @@ out:
       payload:
         sceneId: scene-delete-target
         sectionId: section-b
-        name: Branch
+        data:
+          name: Branch
       meta:
         clientId: client-puty-scene-delete
         clientTs: 604
@@ -160,7 +166,7 @@ out:
       payload:
         sectionId: section-b
         lineId: line-b
-        line:
+        data:
           actions:
             dialogue:
               content:

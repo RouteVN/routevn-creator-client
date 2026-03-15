@@ -209,7 +209,7 @@ export const handleTransformFormActionClick = async (deps, payload) => {
     await projectService.updateResourceItem({
       resourceType: "transforms",
       resourceId: editItemId,
-      patch: transformData,
+      data: transformData,
     });
   } else {
     await projectService.createResourceItem({

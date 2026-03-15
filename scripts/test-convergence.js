@@ -51,7 +51,7 @@ try {
       projectId,
       scope: "story",
       type: "scene.create",
-      payload: { sceneId: "scene-1", name: "Scene 1" },
+      payload: { sceneId: "scene-1", data: { name: "Scene 1" } },
       actor: actorA,
       clientTs: 1000,
     }),
@@ -69,7 +69,7 @@ try {
       payload: {
         sceneId: "scene-1",
         sectionId: "section-1",
-        name: "Section 1",
+        data: { name: "Section 1" },
       },
       actor: actorB,
       clientTs: 1100,
@@ -88,7 +88,7 @@ try {
       payload: {
         lineId: "line-1",
         sectionId: "section-1",
-        line: { actions: { narration: "hello world" } },
+        data: { actions: { narration: "hello world" } },
       },
       actor: actorA,
       clientTs: 1200,
@@ -149,7 +149,7 @@ try {
       payload: {
         layoutId: "layout-1",
         elementId: "el-1",
-        element: { type: "text", x: 100, y: 100, opacity: 1 },
+        data: { type: "text", x: 100, y: 100, opacity: 1 },
       },
       actor: actorB,
       clientTs: 1500,

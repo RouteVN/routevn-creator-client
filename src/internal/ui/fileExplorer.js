@@ -131,7 +131,7 @@ const applyCharacterSpritesPatch = async ({
   await projectService.updateResourceItem({
     resourceType: "characters",
     resourceId: characterId,
-    patch: {
+    data: {
       sprites: nextSprites,
     },
   });
@@ -248,7 +248,7 @@ export const createResourceFileExplorerHandlers = ({
         await projectService.updateResourceItem({
           resourceType,
           resourceId: itemId,
-          patch: {
+          data: {
             name: detail.newName,
           },
         });
@@ -494,7 +494,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
         await projectService.updateLayoutElement({
           layoutId,
           elementId: itemId,
-          patch: {
+          data: {
             name: detail.newName,
           },
           replace: false,
@@ -512,7 +512,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
         await projectService.createLayoutElement({
           layoutId,
           elementId: nanoid(),
-          element: {
+          data: {
             type: "folder",
             name: "New Folder",
           },
@@ -527,7 +527,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
         await projectService.createLayoutElement({
           layoutId,
           elementId: nanoid(),
-          element: {
+          data: {
             type: "folder",
             name: "New Folder",
           },
@@ -555,7 +555,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
         await projectService.createLayoutElement({
           layoutId,
           elementId: nextValue.id,
-          element: nextValue,
+          data: nextValue,
           parentId: itemId || null,
           position: "last",
         });
@@ -576,7 +576,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
         await projectService.createLayoutElement({
           layoutId,
           elementId: duplicateId,
-          element: duplicateValue,
+          data: duplicateValue,
           parentId: location?.parentId || null,
           position: { after: itemId },
         });
@@ -626,10 +626,10 @@ export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
       if (action === "new-item") {
         await projectService.createSceneItem({
           sceneId: nanoid(),
-          name: "New Folder",
           parentId: null,
           position: "last",
           data: {
+            name: "New Folder",
             type: "folder",
           },
         });
@@ -640,10 +640,10 @@ export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
 
         await projectService.createSceneItem({
           sceneId: nanoid(),
-          name: "New Folder",
           parentId: itemId,
           position: "last",
           data: {
+            name: "New Folder",
             type: "folder",
           },
         });
@@ -652,9 +652,11 @@ export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
           return;
         }
 
-        await projectService.renameSceneItem({
+        await projectService.updateSceneItem({
           sceneId: itemId,
-          name: detail.newName,
+          data: {
+            name: detail.newName,
+          },
         });
       } else if (action === "delete-item") {
         if (!itemId) {

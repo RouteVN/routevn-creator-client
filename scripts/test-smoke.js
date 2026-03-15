@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createProjectCollabService } from "../src/deps/services/shared/collab/createProjectCollabService.js";
 import {
   applyCommandToRepository,
-  createProjectCreatedRepositoryEvent,
+  createProjectCreateRepositoryEvent,
   createProjectRepository,
   initialProjectData,
 } from "../src/deps/services/shared/projectRepository.js";
@@ -88,7 +88,7 @@ apply(
   makeCommand({
     type: "scene.create",
     ts: 1000,
-    payload: { sceneId: "scene-1", name: "Scene 1" },
+    payload: { sceneId: "scene-1", data: { name: "Scene 1" } },
   }),
 );
 assert.equal(state.scenes["scene-1"].createdAt, 1000);
@@ -97,7 +97,11 @@ apply(
   makeCommand({
     type: "section.create",
     ts: 1100,
-    payload: { sceneId: "scene-1", sectionId: "section-1", name: "Section 1" },
+    payload: {
+      sceneId: "scene-1",
+      sectionId: "section-1",
+      data: { name: "Section 1" },
+    },
   }),
 );
 assert.equal(state.sections["section-1"].createdAt, 1100);
@@ -109,7 +113,7 @@ apply(
     payload: {
       lineId: "line-1",
       sectionId: "section-1",
-      line: { actions: { narration: "hello" } },
+      data: { actions: { narration: "hello" } },
     },
   }),
 );
@@ -123,7 +127,7 @@ apply(
       lineId: "line-2",
       sectionId: "section-1",
       afterLineId: "line-1",
-      line: { actions: { narration: "world" } },
+      data: { actions: { narration: "world" } },
     },
   }),
 );
@@ -135,7 +139,7 @@ apply(
     ts: 1350,
     payload: {
       lineId: "line-1",
-      patch: {
+      data: {
         dialogue: {
           content: [{ text: "Hello" }],
           ui: { resourceId: "layout-1" },
@@ -159,7 +163,7 @@ apply(
     ts: 1360,
     payload: {
       lineId: "line-1",
-      patch: {
+      data: {
         dialogue: {
           mode: "nvl",
         },
@@ -177,7 +181,11 @@ apply(
   makeCommand({
     type: "section.create",
     ts: 1400,
-    payload: { sceneId: "scene-1", sectionId: "section-2", name: "Section 2" },
+    payload: {
+      sceneId: "scene-1",
+      sectionId: "section-2",
+      data: { name: "Section 2" },
+    },
   }),
 );
 
@@ -191,7 +199,7 @@ try {
         lineId: "line-3",
         sectionId: "section-2",
         afterLineId: "line-1",
-        line: { actions: {} },
+        data: { actions: {} },
       },
     }),
   );
@@ -220,7 +228,7 @@ apply(
     payload: {
       layoutId: "layout-1",
       elementId: "A",
-      element: { type: "container" },
+      data: { type: "container" },
     },
   }),
 );
@@ -233,7 +241,7 @@ apply(
       layoutId: "layout-1",
       elementId: "B",
       parentId: "A",
-      element: { type: "text" },
+      data: { type: "text" },
     },
   }),
 );
@@ -246,7 +254,7 @@ apply(
     payload: {
       layoutId: "layout-1",
       elementId: "B",
-      patch: {
+      data: {
         textStyle: {
           color: "#ffffff",
           shadow: {
@@ -267,7 +275,7 @@ apply(
     payload: {
       layoutId: "layout-1",
       elementId: "B",
-      patch: {
+      data: {
         textStyle: {
           shadow: {
             offsetX: 2,
@@ -301,7 +309,7 @@ apply(
     payload: {
       layoutId: "layout-1",
       elementId: "B",
-      patch: {
+      data: {
         type: "text",
         textStyle: {
           shadow: {
@@ -419,7 +427,7 @@ apply(
     payload: {
       resourceType: "variables",
       resourceId: "var-a",
-      patch: {
+      data: {
         name: "A Renamed",
         type: "string",
       },
@@ -439,7 +447,7 @@ try {
       payload: {
         resourceType: "variables",
         resourceId: "var-a",
-        patch: {
+        data: {
           type: "number",
         },
       },
@@ -460,7 +468,7 @@ try {
       payload: {
         resourceType: "variables",
         resourceId: "var-a",
-        patch: {
+        data: {
           variableType: "boolean",
         },
       },
@@ -613,7 +621,7 @@ const projectionRepository = await createProjectRepository({
   projectId: projectionProjectId,
   store: projectionStore,
   events: [
-    createProjectCreatedRepositoryEvent({
+    createProjectCreateRepositoryEvent({
       projectId: projectionProjectId,
       state: projectedDomainState,
       actor,
@@ -642,16 +650,17 @@ await applyCommandToRepository({
   repository: projectionRepository,
   projectId: projectionProjectId,
   command: {
-    id: "project-update-layout-projection",
+    id: "scene-create-layout-projection",
     projectId: projectionProjectId,
-    partitions: [`project:${projectionProjectId}:settings`],
-    type: "project.update",
+    partitions: [`project:${projectionProjectId}:story`],
+    type: "scene.create",
     commandVersion: COMMAND_VERSION,
     actor,
     clientTs: 2400,
     payload: {
-      patch: {
-        description: "projection round-trip",
+      sceneId: "layout-projection-scene",
+      data: {
+        name: "Layout Projection Scene",
       },
     },
   },

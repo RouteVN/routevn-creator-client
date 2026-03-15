@@ -42,7 +42,7 @@ export const createResourceCommandApi = (shared) => ({
     return nextResourceId;
   },
 
-  async updateResourceItem({ resourceType, resourceId, patch }) {
+  async updateResourceItem({ resourceType, resourceId, data, patch }) {
     const context = await shared.ensureCommandContext();
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
@@ -57,7 +57,7 @@ export const createResourceCommandApi = (shared) => ({
       payload: {
         resourceType,
         resourceId,
-        patch: structuredClone(patch),
+        data: structuredClone(data ?? patch ?? {}),
       },
       partitions: [],
     });

@@ -161,7 +161,7 @@ export const handleVariableUpdated = async (deps, payload) => {
   await projectService.updateResourceItem({
     resourceType: "variables",
     resourceId: itemId,
-    patch: {
+    data: {
       name,
       scope,
       default: defaultValue,

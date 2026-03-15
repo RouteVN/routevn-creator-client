@@ -170,7 +170,7 @@ export const handleFormExtraEvent = async (deps) => {
   await projectService.updateResourceItem({
     resourceType: "fonts",
     resourceId: selectedItem.id,
-    patch: {
+    data: {
       fileId: uploadResult.fileId,
       name: uploadResult.file.name,
       fontFamily: uploadResult.fontName,
