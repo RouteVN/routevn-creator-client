@@ -270,7 +270,7 @@ export const createProjectCollabCore = ({
 
     await commandApi.deleteResourceItem({
       resourceType,
-      resourceId,
+      resourceIds: [resourceId],
     });
 
     return { deleted: true, usage };

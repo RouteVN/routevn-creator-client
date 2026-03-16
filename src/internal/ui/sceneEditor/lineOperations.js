@@ -576,7 +576,7 @@ export const handleMergeLinesOperation = async (deps, payload) => {
     }
 
     try {
-      await projectService.deleteLineItem({ lineId: currentLineId });
+      await projectService.deleteLineItem({ lineIds: [currentLineId] });
     } catch (error) {
       if (isMissingLinePreconditionError(error, currentLineId)) {
         return;

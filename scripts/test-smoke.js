@@ -377,6 +377,192 @@ assert.equal(invariantFailed, true);
 
 apply(
   makeCommand({
+    type: "scene.create",
+    ts: 1910,
+    payload: { sceneId: "scene-2", data: { name: "Scene 2" } },
+  }),
+);
+apply(
+  makeCommand({
+    type: "scene.create",
+    ts: 1920,
+    payload: { sceneId: "scene-3", data: { name: "Scene 3" } },
+  }),
+);
+apply(
+  makeCommand({
+    type: "scene.delete",
+    ts: 1930,
+    payload: {
+      sceneIds: ["scene-2", "scene-3"],
+    },
+  }),
+);
+assert.equal(state.scenes["scene-2"], undefined);
+assert.equal(state.scenes["scene-3"], undefined);
+assert.deepEqual(state.story.sceneOrder, ["scene-1"]);
+
+apply(
+  makeCommand({
+    type: "section.create",
+    ts: 1940,
+    payload: {
+      sceneId: "scene-1",
+      sectionId: "section-3",
+      data: { name: "Section 3" },
+    },
+  }),
+);
+apply(
+  makeCommand({
+    type: "section.create",
+    ts: 1950,
+    payload: {
+      sceneId: "scene-1",
+      sectionId: "section-4",
+      data: { name: "Section 4" },
+    },
+  }),
+);
+apply(
+  makeCommand({
+    type: "section.delete",
+    ts: 1960,
+    payload: {
+      sectionIds: ["section-3", "section-4"],
+    },
+  }),
+);
+assert.equal(state.sections["section-3"], undefined);
+assert.equal(state.sections["section-4"], undefined);
+assert.deepEqual(state.scenes["scene-1"].sectionIds, [
+  "section-1",
+  "section-2",
+]);
+
+apply(
+  makeCommand({
+    type: "line.create",
+    ts: 1970,
+    payload: {
+      sectionId: "section-2",
+      lines: [
+        {
+          lineId: "line-4",
+          data: { actions: { narration: "delete me 1" } },
+        },
+        {
+          lineId: "line-5",
+          data: { actions: { narration: "delete me 2" } },
+        },
+      ],
+    },
+  }),
+);
+apply(
+  makeCommand({
+    type: "line.delete",
+    ts: 1980,
+    payload: {
+      lineIds: ["line-4", "line-5"],
+    },
+  }),
+);
+assert.equal(state.lines["line-4"], undefined);
+assert.equal(state.lines["line-5"], undefined);
+assert.deepEqual(state.sections["section-2"].lineIds, []);
+
+apply(
+  makeCommand({
+    type: "resource.create",
+    ts: 1990,
+    partitions: [`project:${projectId}:resources:images`],
+    payload: {
+      resourceType: "images",
+      resourceId: "img-del-1",
+      data: {
+        name: "Delete 1",
+        type: "image",
+        src: "delete-1.png",
+      },
+    },
+  }),
+);
+apply(
+  makeCommand({
+    type: "resource.create",
+    ts: 1995,
+    partitions: [`project:${projectId}:resources:images`],
+    payload: {
+      resourceType: "images",
+      resourceId: "img-del-2",
+      data: {
+        name: "Delete 2",
+        type: "image",
+        src: "delete-2.png",
+      },
+    },
+  }),
+);
+apply(
+  makeCommand({
+    type: "resource.delete",
+    ts: 1997,
+    partitions: [`project:${projectId}:resources:images`],
+    payload: {
+      resourceType: "images",
+      resourceIds: ["img-del-1", "img-del-2"],
+    },
+  }),
+);
+assert.equal(state.resources.images.items["img-del-1"], undefined);
+assert.equal(state.resources.images.items["img-del-2"], undefined);
+
+apply(
+  makeCommand({
+    type: "layout.element.create",
+    ts: 1998,
+    partitions: [`project:${projectId}:layouts`],
+    payload: {
+      layoutId: "layout-1",
+      elementId: "C",
+      data: { type: "container" },
+    },
+  }),
+);
+apply(
+  makeCommand({
+    type: "layout.element.create",
+    ts: 1999,
+    partitions: [`project:${projectId}:layouts`],
+    payload: {
+      layoutId: "layout-1",
+      elementId: "D",
+      parentId: "C",
+      data: { type: "text" },
+    },
+  }),
+);
+apply(
+  makeCommand({
+    type: "layout.element.delete",
+    ts: 1999.5,
+    partitions: [`project:${projectId}:layouts`],
+    payload: {
+      layoutId: "layout-1",
+      elementIds: ["B", "C"],
+    },
+  }),
+);
+assert.equal(state.resources.layouts.items["layout-1"].elements.B, undefined);
+assert.equal(state.resources.layouts.items["layout-1"].elements.C, undefined);
+assert.equal(state.resources.layouts.items["layout-1"].elements.D, undefined);
+assert.deepEqual(state.resources.layouts.items["layout-1"].rootElementOrder, [
+  "A",
+]);
+
+apply(
+  makeCommand({
     type: "resource.create",
     ts: 2000,
     partitions: [`project:${projectId}:resources:variables`],

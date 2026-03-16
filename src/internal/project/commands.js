@@ -189,6 +189,29 @@ const validateOptionalBooleanField = (payload, field, errors) => {
   }
 };
 
+const validateRequiredStringArrayField = (payload, field, errors) => {
+  const value = payload?.[field];
+  if (!Array.isArray(value) || value.length === 0) {
+    errors.push(`payload.${field} must be a non-empty array`);
+    return;
+  }
+
+  const seen = new Set();
+  value.forEach((entry, index) => {
+    if (!assertNonEmptyString(entry)) {
+      errors.push(`payload.${field}[${index}] must be a non-empty string`);
+      return;
+    }
+
+    if (seen.has(entry)) {
+      errors.push(`payload.${field}[${index}] must be unique`);
+      return;
+    }
+
+    seen.add(entry);
+  });
+};
+
 const hasOwn = (value, field) =>
   Object.prototype.hasOwnProperty.call(value || {}, field);
 
@@ -567,11 +590,13 @@ const COMMAND_DEFINITIONS = [
     type: "scene.delete",
     scope: "story",
     payload: {
-      requiredFields: ["sceneId"],
-      requiredStringFields: ["sceneId"],
+      requiredFields: ["sceneIds"],
+      requiredStringArrayFields: ["sceneIds"],
     },
     assertPreconditions: (state, command) => {
-      assertSceneExists(state, command.payload.sceneId);
+      for (const sceneId of command.payload.sceneIds || []) {
+        assertSceneExists(state, sceneId);
+      }
     },
   },
   {
@@ -656,11 +681,13 @@ const COMMAND_DEFINITIONS = [
     type: "section.delete",
     scope: "story",
     payload: {
-      requiredFields: ["sectionId"],
-      requiredStringFields: ["sectionId"],
+      requiredFields: ["sectionIds"],
+      requiredStringArrayFields: ["sectionIds"],
     },
     assertPreconditions: (state, command) => {
-      assertSectionExists(state, command.payload.sectionId);
+      for (const sectionId of command.payload.sectionIds || []) {
+        assertSectionExists(state, sectionId);
+      }
     },
   },
   {
@@ -749,11 +776,13 @@ const COMMAND_DEFINITIONS = [
     type: "line.delete",
     scope: "story",
     payload: {
-      requiredFields: ["lineId"],
-      requiredStringFields: ["lineId"],
+      requiredFields: ["lineIds"],
+      requiredStringArrayFields: ["lineIds"],
     },
     assertPreconditions: (state, command) => {
-      assertLineExists(state, command.payload.lineId);
+      for (const lineId of command.payload.lineIds || []) {
+        assertLineExists(state, lineId);
+      }
     },
   },
   {
@@ -858,13 +887,16 @@ const COMMAND_DEFINITIONS = [
     type: "resource.delete",
     scope: "resources",
     payload: {
-      requiredFields: ["resourceType", "resourceId"],
-      requiredStringFields: ["resourceType", "resourceId"],
+      requiredFields: ["resourceType", "resourceIds"],
+      requiredStringFields: ["resourceType"],
+      requiredStringArrayFields: ["resourceIds"],
       validateResourceType: true,
     },
     assertPreconditions: (state, command) => {
-      const { resourceType, resourceId } = command.payload;
-      assertResourceExists(state, resourceType, resourceId);
+      const { resourceType, resourceIds } = command.payload;
+      for (const resourceId of resourceIds || []) {
+        assertResourceExists(state, resourceType, resourceId);
+      }
     },
   },
   {
@@ -943,12 +975,15 @@ const COMMAND_DEFINITIONS = [
     type: "layout.element.delete",
     scope: "layouts",
     payload: {
-      requiredFields: ["layoutId", "elementId"],
-      requiredStringFields: ["layoutId", "elementId"],
+      requiredFields: ["layoutId", "elementIds"],
+      requiredStringFields: ["layoutId"],
+      requiredStringArrayFields: ["elementIds"],
     },
     assertPreconditions: (state, command) => {
-      const { layoutId, elementId } = command.payload;
-      assertLayoutElementExists(state, layoutId, elementId);
+      const { layoutId, elementIds } = command.payload;
+      for (const elementId of elementIds || []) {
+        assertLayoutElementExists(state, layoutId, elementId);
+      }
     },
   },
 ];
@@ -1090,6 +1125,10 @@ export const validateCommandPayload = (command, errors) => {
     if (!assertNonEmptyString(payload?.[field])) {
       errors.push(`payload.${field} must be a non-empty string`);
     }
+  }
+
+  for (const field of spec.requiredStringArrayFields || []) {
+    validateRequiredStringArrayField(payload, field, errors);
   }
 
   for (const field of spec.optionalStringFields || []) {

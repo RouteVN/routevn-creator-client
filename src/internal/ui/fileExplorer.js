@@ -272,7 +272,7 @@ export const createResourceFileExplorerHandlers = ({
 
         await projectService.deleteResourceItem({
           resourceType,
-          resourceId: itemId,
+          resourceIds: [itemId],
         });
       } else if (action === "duplicate-item") {
         if (!currentItem) {
@@ -408,7 +408,7 @@ export const createLayoutsFileExplorerHandlers = ({
         }
 
         await projectService.deleteLayoutItem({
-          layoutId: itemId,
+          layoutIds: [itemId],
         });
       } else if (action === "duplicate-item") {
         if (!currentItem || currentItem.type !== "layout") {
@@ -512,7 +512,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
 
         await projectService.deleteLayoutElement({
           layoutId,
-          elementId: itemId,
+          elementIds: [itemId],
         });
       } else if (action === "new-item") {
         await projectService.createLayoutElement({
@@ -672,7 +672,7 @@ export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
         }
 
         await projectService.deleteSceneItem({
-          sceneId: itemId,
+          sceneIds: [itemId],
         });
       } else {
         return;

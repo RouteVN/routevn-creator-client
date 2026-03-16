@@ -94,7 +94,8 @@ in:
         clientTs: 1106
         payload:
           layoutId: layout-dialogue
-          elementId: el-frame
+          elementIds:
+            - el-frame
 out:
   storedEvents:
     - committedId: 1
@@ -201,7 +202,8 @@ out:
       type: layout.element.delete
       payload:
         layoutId: layout-dialogue
-        elementId: el-frame
+        elementIds:
+          - el-frame
       meta:
         clientId: client-puty-layout-patch
         clientTs: 1106

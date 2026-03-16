@@ -106,7 +106,8 @@ in:
         type: line.delete
         clientTs: 807
         payload:
-          lineId: line-1
+          lineIds:
+            - line-1
 out:
   storedEvents:
     - committedId: 1
@@ -231,7 +232,8 @@ out:
         - project:project-puty-lines-001:story:scene:scene-lines
       type: line.delete
       payload:
-        lineId: line-1
+        lineIds:
+          - line-1
       meta:
         clientId: client-puty-lines
         clientTs: 807

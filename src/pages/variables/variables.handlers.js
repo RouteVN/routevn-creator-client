@@ -180,7 +180,7 @@ export const handleVariableDelete = async (deps, payload) => {
 
   await projectService.deleteResourceItem({
     resourceType: "variables",
-    resourceId: itemId,
+    resourceIds: [itemId],
   });
 
   if (store.selectSelectedItemId() === itemId) {

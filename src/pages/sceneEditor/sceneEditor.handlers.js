@@ -685,7 +685,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   if (action === "delete-section") {
     await projectService.deleteSectionItem({
       sceneId,
-      sectionId,
+      sectionIds: [sectionId],
     });
 
     // Update store with new repository state
@@ -908,7 +908,7 @@ export const handleDeleteLineShortcut = async (deps, payload) => {
     lines[currentIndex + 1]?.id || lines[currentIndex - 1]?.id;
 
   await flushDialogueQueue(deps);
-  await projectService.deleteLineItem({ lineId });
+  await projectService.deleteLineItem({ lineIds: [lineId] });
 
   syncStoreProjectState(store, projectService);
   store.setSelectedLineId({ selectedLineId: nextSelectedLineId });

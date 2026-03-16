@@ -728,7 +728,7 @@ export const handleWhiteboardItemDelete = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
   const { itemId } = payload._event.detail;
 
-  await projectService.deleteSceneItem({ sceneId: itemId });
+  await projectService.deleteSceneItem({ sceneIds: [itemId] });
 
   // Update store with new scenes data
   const { scenes: updatedScenes } = projectService.getState();
@@ -825,7 +825,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 
   // Handle delete action
   if (item.value === "delete-item" && itemId) {
-    await projectService.deleteSceneItem({ sceneId: itemId });
+    await projectService.deleteSceneItem({ sceneIds: [itemId] });
 
     // Update store with new scenes data
     const { scenes: updatedScenes } = projectService.getState();

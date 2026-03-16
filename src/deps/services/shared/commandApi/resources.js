@@ -106,7 +106,7 @@ export const createResourceCommandApi = (shared) => ({
     });
   },
 
-  async deleteResourceItem({ resourceType, resourceId }) {
+  async deleteResourceItem({ resourceType, resourceIds }) {
     const context = await shared.ensureCommandContext();
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
@@ -120,7 +120,7 @@ export const createResourceCommandApi = (shared) => ({
       type: COMMAND_TYPES.RESOURCE_DELETE,
       payload: {
         resourceType,
-        resourceId,
+        resourceIds: structuredClone(resourceIds || []),
       },
       partitions: [],
     });

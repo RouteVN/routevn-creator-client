@@ -14,6 +14,8 @@ import {
   ensureRepositoryProjectionCache,
   PROJECTOR_CACHE_VERSION,
 } from "../src/deps/services/shared/collab/index.js";
+import { createLayoutCommandApi } from "../src/deps/services/shared/commandApi/layouts.js";
+import { createResourceCommandApi } from "../src/deps/services/shared/commandApi/resources.js";
 import { createStoryCommandApi } from "../src/deps/services/shared/commandApi/story.js";
 import { COMMAND_TYPES } from "../src/internal/project/commands.js";
 import { validateCommand } from "../src/internal/project/commands.js";
@@ -309,6 +311,83 @@ assert.deepEqual(normalizedLegacyLineInsertAfter.payload, {
   positionTargetId: "line-anchor",
 });
 
+const expectDeleteValidationFailure = ({
+  id,
+  scope,
+  partitions,
+  type,
+  payload,
+  pattern,
+}) => {
+  assert.throws(
+    () =>
+      validateCommand(
+        createCommandEnvelope({
+          id,
+          projectId,
+          scope,
+          partitions,
+          type,
+          payload,
+          actor,
+          clientTs: 47,
+        }),
+      ),
+    pattern,
+  );
+};
+
+expectDeleteValidationFailure({
+  id: "invalid-scene-delete-shape",
+  scope: "story",
+  partitions: [storyPartition],
+  type: COMMAND_TYPES.SCENE_DELETE,
+  payload: { sceneId: "scene-legacy" },
+  pattern: /payload\.sceneIds is required/,
+});
+
+expectDeleteValidationFailure({
+  id: "invalid-section-delete-shape",
+  scope: "story",
+  partitions: [storyPartition],
+  type: COMMAND_TYPES.SECTION_DELETE,
+  payload: { sectionId: "section-legacy" },
+  pattern: /payload\.sectionIds is required/,
+});
+
+expectDeleteValidationFailure({
+  id: "invalid-line-delete-shape",
+  scope: "story",
+  partitions: [storyPartition],
+  type: COMMAND_TYPES.LINE_DELETE,
+  payload: { lineId: "line-legacy" },
+  pattern: /payload\.lineIds is required/,
+});
+
+expectDeleteValidationFailure({
+  id: "invalid-resource-delete-shape",
+  scope: "resources",
+  partitions: [`project:${projectId}:resources:images`],
+  type: COMMAND_TYPES.RESOURCE_DELETE,
+  payload: {
+    resourceType: "images",
+    resourceId: "image-legacy",
+  },
+  pattern: /payload\.resourceIds is required/,
+});
+
+expectDeleteValidationFailure({
+  id: "invalid-layout-element-delete-shape",
+  scope: "layouts",
+  partitions: [`project:${projectId}:layouts`],
+  type: COMMAND_TYPES.LAYOUT_ELEMENT_DELETE,
+  payload: {
+    layoutId: "layout-legacy",
+    elementId: "element-legacy",
+  },
+  pattern: /payload\.elementIds is required/,
+});
+
 const bypassScan = spawnSync(
   "rg",
   ["-n", "repository\\.addEvent\\(", "src/pages", "src/components"],
@@ -360,6 +439,26 @@ const storyCommandApi = createStoryCommandApi({
                             dialogue: {
                               content: [{ text: "hello" }],
                               characterId: "char-1",
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            "scene-2": {
+              sections: {
+                items: {
+                  "section-2": {
+                    lines: {
+                      items: {
+                        "line-4": {
+                          actions: {
+                            dialogue: {
+                              content: [{ text: "secondary" }],
+                              characterId: "char-2",
                             },
                           },
                         },
@@ -488,6 +587,145 @@ assert.deepEqual(capturedLineActionSubmits[0].partitions, [
   `project:${projectId}:story`,
   `project:${projectId}:story:scene-1`,
 ]);
+
+capturedLineActionSubmits.length = 0;
+await storyCommandApi.deleteSceneItem({
+  sceneIds: ["scene-1", "scene-2"],
+});
+
+assert.equal(capturedLineActionSubmits.length, 1);
+assert.equal(capturedLineActionSubmits[0].type, COMMAND_TYPES.SCENE_DELETE);
+assert.deepEqual(capturedLineActionSubmits[0].payload, {
+  sceneIds: ["scene-1", "scene-2"],
+});
+assert.deepEqual(
+  normalizePartitions(capturedLineActionSubmits[0].partitions),
+  normalizePartitions([
+    `project:${projectId}:story`,
+    `project:${projectId}:story:scene-1`,
+    `project:${projectId}:story:scene-2`,
+  ]),
+);
+
+capturedLineActionSubmits.length = 0;
+await storyCommandApi.deleteSectionItem({
+  sectionIds: ["section-1", "section-2"],
+});
+
+assert.equal(capturedLineActionSubmits.length, 1);
+assert.equal(capturedLineActionSubmits[0].type, COMMAND_TYPES.SECTION_DELETE);
+assert.deepEqual(capturedLineActionSubmits[0].payload, {
+  sectionIds: ["section-1", "section-2"],
+});
+assert.deepEqual(
+  normalizePartitions(capturedLineActionSubmits[0].partitions),
+  normalizePartitions([
+    `project:${projectId}:story`,
+    `project:${projectId}:story:scene-1`,
+    `project:${projectId}:story:scene-2`,
+  ]),
+);
+
+capturedLineActionSubmits.length = 0;
+await storyCommandApi.deleteLineItem({
+  lineIds: ["line-1", "line-4"],
+});
+
+assert.equal(capturedLineActionSubmits.length, 1);
+assert.equal(capturedLineActionSubmits[0].type, COMMAND_TYPES.LINE_DELETE);
+assert.deepEqual(capturedLineActionSubmits[0].payload, {
+  lineIds: ["line-1", "line-4"],
+});
+assert.deepEqual(
+  normalizePartitions(capturedLineActionSubmits[0].partitions),
+  normalizePartitions([
+    `project:${projectId}:story`,
+    `project:${projectId}:story:scene-1`,
+    `project:${projectId}:story:scene-2`,
+  ]),
+);
+
+const capturedResourceSubmits = [];
+const resourceCommandApi = createResourceCommandApi({
+  async ensureCommandContext() {
+    return {
+      projectId,
+      state: {},
+    };
+  },
+  resourceTypePartitionFor(currentProjectId, resourceType) {
+    return `project:${currentProjectId}:resources:${resourceType}`;
+  },
+  async submitCommandWithContext(payload) {
+    capturedResourceSubmits.push(payload);
+  },
+});
+
+await resourceCommandApi.deleteResourceItem({
+  resourceType: "images",
+  resourceIds: ["image-1", "image-2"],
+});
+
+assert.equal(capturedResourceSubmits.length, 1);
+assert.equal(capturedResourceSubmits[0].type, COMMAND_TYPES.RESOURCE_DELETE);
+assert.deepEqual(capturedResourceSubmits[0].payload, {
+  resourceType: "images",
+  resourceIds: ["image-1", "image-2"],
+});
+
+const capturedLayoutSubmits = [];
+const layoutCommandApi = createLayoutCommandApi({
+  async ensureCommandContext() {
+    return {
+      projectId,
+      state: {
+        layouts: {
+          items: {
+            "layout-1": {
+              elements: {
+                A: { id: "A", children: [], parentId: null },
+                B: { id: "B", children: [], parentId: null },
+              },
+            },
+          },
+        },
+      },
+    };
+  },
+  resourceTypePartitionFor(currentProjectId, resourceType) {
+    return `project:${currentProjectId}:resources:${resourceType}`;
+  },
+  async submitCommandWithContext(payload) {
+    capturedLayoutSubmits.push(payload);
+  },
+});
+
+await layoutCommandApi.deleteLayoutItem({
+  layoutIds: ["layout-1", "layout-2"],
+});
+
+assert.equal(capturedLayoutSubmits.length, 1);
+assert.equal(capturedLayoutSubmits[0].type, COMMAND_TYPES.RESOURCE_DELETE);
+assert.deepEqual(capturedLayoutSubmits[0].payload, {
+  resourceType: "layouts",
+  resourceIds: ["layout-1", "layout-2"],
+});
+
+capturedLayoutSubmits.length = 0;
+await layoutCommandApi.deleteLayoutElement({
+  layoutId: "layout-1",
+  elementIds: ["A", "B"],
+});
+
+assert.equal(capturedLayoutSubmits.length, 1);
+assert.equal(
+  capturedLayoutSubmits[0].type,
+  COMMAND_TYPES.LAYOUT_ELEMENT_DELETE,
+);
+assert.deepEqual(capturedLayoutSubmits[0].payload, {
+  layoutId: "layout-1",
+  elementIds: ["A", "B"],
+});
 
 const observedSchemas = [];
 const store = createInMemorySyncStore();

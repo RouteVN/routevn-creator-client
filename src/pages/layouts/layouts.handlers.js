@@ -400,6 +400,6 @@ export const handleItemDelete = async (deps, payload) => {
     return;
   }
 
-  await projectService.deleteLayoutItem({ layoutId: itemId });
+  await projectService.deleteLayoutItem({ layoutIds: [itemId] });
   await handleDataChanged(deps);
 };

@@ -258,7 +258,7 @@ export const handleItemDelete = async (deps, payload) => {
 
   await projectService.deleteResourceItem({
     resourceType: "transforms",
-    resourceId: itemId,
+    resourceIds: [itemId],
   });
 
   await handleDataChanged(deps);

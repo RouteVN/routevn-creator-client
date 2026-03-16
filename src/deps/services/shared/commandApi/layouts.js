@@ -77,7 +77,7 @@ export const createLayoutCommandApi = (shared) => ({
     });
   },
 
-  async deleteLayoutItem({ layoutId }) {
+  async deleteLayoutItem({ layoutIds }) {
     const context = await shared.ensureCommandContext();
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
@@ -91,7 +91,7 @@ export const createLayoutCommandApi = (shared) => ({
       type: COMMAND_TYPES.RESOURCE_DELETE,
       payload: {
         resourceType: "layouts",
-        resourceId: layoutId,
+        resourceIds: structuredClone(layoutIds || []),
       },
       partitions: [],
     });
@@ -234,7 +234,7 @@ export const createLayoutCommandApi = (shared) => ({
     });
   },
 
-  async deleteLayoutElement({ layoutId, elementId }) {
+  async deleteLayoutElement({ layoutId, elementIds }) {
     const context = await shared.ensureCommandContext();
 
     await shared.submitCommandWithContext({
@@ -243,7 +243,7 @@ export const createLayoutCommandApi = (shared) => ({
       type: COMMAND_TYPES.LAYOUT_ELEMENT_DELETE,
       payload: {
         layoutId,
-        elementId,
+        elementIds: structuredClone(elementIds || []),
       },
       partitions: [],
     });

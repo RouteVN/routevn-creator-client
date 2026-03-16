@@ -353,7 +353,7 @@ export const handleItemDelete = async (deps, payload) => {
   // Perform the delete operation
   await projectService.deleteResourceItem({
     resourceType: "characters",
-    resourceId: itemId,
+    resourceIds: [itemId],
   });
 
   await refreshCharactersData(deps);

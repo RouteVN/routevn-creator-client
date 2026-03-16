@@ -126,12 +126,11 @@ export const createStoryCommandApi = (shared) => {
       });
     },
 
-    async deleteSceneItem({ sceneId }) {
+    async deleteSceneItem({ sceneIds }) {
       const context = await shared.ensureCommandContext();
       const basePartition = shared.storyBasePartitionFor(context.projectId);
-      const scenePartition = shared.storyScenePartitionFor(
-        context.projectId,
-        sceneId,
+      const scenePartitions = (sceneIds || []).map((id) =>
+        shared.storyScenePartitionFor(context.projectId, id),
       );
 
       await shared.submitCommandWithContext({
@@ -139,9 +138,9 @@ export const createStoryCommandApi = (shared) => {
         scope: "story",
         type: COMMAND_TYPES.SCENE_DELETE,
         payload: {
-          sceneId,
+          sceneIds: structuredClone(sceneIds || []),
         },
-        partitions: [basePartition, scenePartition],
+        partitions: [basePartition, ...scenePartitions],
       });
     },
 
@@ -274,25 +273,37 @@ export const createStoryCommandApi = (shared) => {
       });
     },
 
-    async deleteSectionItem({ sceneId, sectionId }) {
+    async deleteSectionItem({ sceneId, sectionIds }) {
       const context = await shared.ensureCommandContext();
       const basePartition = shared.storyBasePartitionFor(context.projectId);
-      const sectionLocation = findSectionLocation(context.state, sectionId);
-      const sceneIdForPartition = sceneId || sectionLocation?.sceneId;
-      const scenePartition = sceneIdForPartition
-        ? shared.storyScenePartitionFor(context.projectId, sceneIdForPartition)
-        : null;
+      const sceneIdsForPartitions = new Set();
+
+      if (typeof sceneId === "string" && sceneId.length > 0) {
+        sceneIdsForPartitions.add(sceneId);
+      }
+
+      for (const id of sectionIds || []) {
+        const sectionLocation = findSectionLocation(context.state, id);
+        if (sectionLocation?.sceneId) {
+          sceneIdsForPartitions.add(sectionLocation.sceneId);
+        }
+      }
+
+      const scenePartitions = [...sceneIdsForPartitions].map((id) =>
+        shared.storyScenePartitionFor(context.projectId, id),
+      );
 
       await shared.submitCommandWithContext({
         context,
         scope: "story",
         type: COMMAND_TYPES.SECTION_DELETE,
         payload: {
-          sectionId,
+          sectionIds: structuredClone(sectionIds || []),
         },
-        partitions: scenePartition
-          ? [basePartition, scenePartition]
-          : [basePartition],
+        partitions:
+          scenePartitions.length > 0
+            ? [basePartition, ...scenePartitions]
+            : [basePartition],
       });
     },
 
@@ -415,24 +426,33 @@ export const createStoryCommandApi = (shared) => {
       return normalizedLines.map((item) => item.lineId);
     },
 
-    async deleteLineItem({ lineId }) {
+    async deleteLineItem({ lineIds }) {
       const context = await shared.ensureCommandContext();
       const basePartition = shared.storyBasePartitionFor(context.projectId);
-      const lineLocation = findLineLocation(context.state, lineId);
-      const scenePartition = lineLocation?.sceneId
-        ? shared.storyScenePartitionFor(context.projectId, lineLocation.sceneId)
-        : null;
+      const sceneIdsForPartitions = new Set();
+
+      for (const id of lineIds || []) {
+        const lineLocation = findLineLocation(context.state, id);
+        if (lineLocation?.sceneId) {
+          sceneIdsForPartitions.add(lineLocation.sceneId);
+        }
+      }
+
+      const scenePartitions = [...sceneIdsForPartitions].map((id) =>
+        shared.storyScenePartitionFor(context.projectId, id),
+      );
 
       await shared.submitCommandWithContext({
         context,
         scope: "story",
         type: COMMAND_TYPES.LINE_DELETE,
         payload: {
-          lineId,
+          lineIds: structuredClone(lineIds || []),
         },
-        partitions: scenePartition
-          ? [basePartition, scenePartition]
-          : [basePartition],
+        partitions:
+          scenePartitions.length > 0
+            ? [basePartition, ...scenePartitions]
+            : [basePartition],
       });
     },
 

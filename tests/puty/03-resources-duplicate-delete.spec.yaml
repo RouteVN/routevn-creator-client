@@ -59,7 +59,8 @@ in:
         clientTs: 404
         payload:
           resourceType: characters
-          resourceId: char-folder-main
+          resourceIds:
+            - char-folder-main
 out:
   storedEvents:
     - committedId: 1
@@ -122,7 +123,8 @@ out:
       type: resource.delete
       payload:
         resourceType: characters
-        resourceId: char-folder-main
+        resourceIds:
+          - char-folder-main
       meta:
         clientId: client-puty-res-characters
         clientTs: 404

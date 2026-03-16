@@ -87,7 +87,8 @@ in:
         type: scene.delete
         clientTs: 606
         payload:
-          sceneId: scene-delete-target
+          sceneIds:
+            - scene-delete-target
 out:
   storedEvents:
     - committedId: 1
@@ -188,7 +189,8 @@ out:
         - project:project-puty-scene-delete-001:story:scene:scene-delete-target
       type: scene.delete
       payload:
-        sceneId: scene-delete-target
+        sceneIds:
+          - scene-delete-target
       meta:
         clientId: client-puty-scene-delete
         clientTs: 606

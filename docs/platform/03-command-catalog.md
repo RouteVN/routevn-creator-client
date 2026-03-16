@@ -170,8 +170,13 @@ Notes:
 Payload (YAML):
 
 ```yaml
-sceneId: "<string>"
+sceneIds:
+  - "<string>"
 ```
+
+Notes:
+
+- `sceneIds` must be a non-empty array, even when deleting one scene.
 
 #### `scene.set_initial`
 
@@ -230,8 +235,13 @@ Notes:
 Payload (YAML):
 
 ```yaml
-sectionId: "<string>"
+sectionIds:
+  - "<string>"
 ```
+
+Notes:
+
+- `sectionIds` must be a non-empty array, even when deleting one section.
 
 #### `section.move`
 
@@ -302,8 +312,13 @@ replace: false # optional
 Payload (YAML):
 
 ```yaml
-lineId: "<string>"
+lineIds:
+  - "<string>"
 ```
+
+Notes:
+
+- `lineIds` must be a non-empty array, even when deleting one line.
 
 #### `line.move`
 
@@ -371,8 +386,13 @@ Payload (YAML):
 
 ```yaml
 resourceType: "<resourceType>"
-resourceId: "<string>"
+resourceIds:
+  - "<string>"
 ```
+
+Notes:
+
+- `resourceIds` must be a non-empty array, even when deleting one resource.
 
 ### `resource.duplicate`
 
@@ -435,5 +455,10 @@ Payload (YAML):
 
 ```yaml
 layoutId: "<string>"
-elementId: "<string>"
+elementIds:
+  - "<string>"
 ```
+
+Notes:
+
+- `elementIds` must be a non-empty array, even when deleting one element.

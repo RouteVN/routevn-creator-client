@@ -86,7 +86,8 @@ in:
         type: section.delete
         clientTs: 707
         payload:
-          sectionId: section-a
+          sectionIds:
+            - section-a
 out:
   storedEvents:
     - committedId: 1
@@ -191,7 +192,8 @@ out:
         - project:project-puty-sections-001:story:scene:scene-main
       type: section.delete
       payload:
-        sectionId: section-a
+        sectionIds:
+          - section-a
       meta:
         clientId: client-puty-sections
         clientTs: 707

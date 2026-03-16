@@ -465,7 +465,7 @@ export const handleItemDelete = async (deps, payload) => {
   // Perform the delete operation
   await projectService.deleteResourceItem({
     resourceType: "typography",
-    resourceId: itemId,
+    resourceIds: [itemId],
   });
 
   await refreshTypographyData(deps);

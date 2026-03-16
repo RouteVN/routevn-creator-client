@@ -105,6 +105,24 @@ const cascadeDeleteScene = (state, sceneId) => {
   }
 };
 
+const collectLayoutElementDescendantIds = (layout, rootId) => {
+  const ids = new Set();
+  const stack = [rootId];
+
+  while (stack.length > 0) {
+    const id = stack.pop();
+    if (ids.has(id)) continue;
+    const node = layout?.elements?.[id];
+    if (!node) continue;
+    ids.add(id);
+    for (const childId of node.children || []) {
+      stack.push(childId);
+    }
+  }
+
+  return ids;
+};
+
 const ensureCollectionTree = (collection) => {
   if (!collection || typeof collection !== "object") {
     return [];
@@ -556,7 +574,9 @@ const reducers = {
   },
 
   [COMMAND_TYPES.SCENE_DELETE]: ({ state, payload }) => {
-    cascadeDeleteScene(state, payload.sceneId);
+    for (const sceneId of payload.sceneIds || []) {
+      cascadeDeleteScene(state, sceneId);
+    }
   },
 
   [COMMAND_TYPES.SCENE_SET_INITIAL]: ({ state, payload }) => {
@@ -605,16 +625,15 @@ const reducers = {
   },
 
   [COMMAND_TYPES.SECTION_DELETE]: ({ state, payload }) => {
-    const section = state.sections[payload.sectionId];
-    if (!section) return;
-    for (const lineId of section.lineIds || []) {
-      delete state.lines[lineId];
+    for (const sectionId of payload.sectionIds || []) {
+      const section = state.sections[sectionId];
+      if (!section) continue;
+      for (const lineId of section.lineIds || []) {
+        delete state.lines[lineId];
+      }
+      removeFromArray(state.scenes[section.sceneId].sectionIds, sectionId);
+      delete state.sections[sectionId];
     }
-    removeFromArray(
-      state.scenes[section.sceneId].sectionIds,
-      payload.sectionId,
-    );
-    delete state.sections[payload.sectionId];
   },
 
   [COMMAND_TYPES.SECTION_MOVE]: ({ state, payload }) => {
@@ -668,10 +687,12 @@ const reducers = {
   },
 
   [COMMAND_TYPES.LINE_DELETE]: ({ state, payload }) => {
-    const line = state.lines[payload.lineId];
-    if (!line) return;
-    removeFromArray(state.sections[line.sectionId].lineIds, payload.lineId);
-    delete state.lines[payload.lineId];
+    for (const lineId of payload.lineIds || []) {
+      const line = state.lines[lineId];
+      if (!line) continue;
+      removeFromArray(state.sections[line.sectionId].lineIds, lineId);
+      delete state.lines[lineId];
+    }
   },
 
   [COMMAND_TYPES.LINE_MOVE]: ({ state, payload }) => {
@@ -756,11 +777,19 @@ const reducers = {
   [COMMAND_TYPES.RESOURCE_DELETE]: ({ state, payload }) => {
     const collection = state.resources[payload.resourceType];
     ensureCollectionTree(collection);
-    const idsToDelete = collectCollectionDescendantIds({
-      collection,
-      rootId: payload.resourceId,
-      includeRoot: true,
-    });
+
+    const idsToDelete = new Set();
+    for (const resourceId of payload.resourceIds || []) {
+      const descendantIds = collectCollectionDescendantIds({
+        collection,
+        rootId: resourceId,
+        includeRoot: true,
+      });
+      for (const id of descendantIds) {
+        idsToDelete.add(id);
+      }
+    }
+
     for (const id of idsToDelete) {
       delete collection.items[id];
     }
@@ -851,13 +880,19 @@ const reducers = {
 
   [COMMAND_TYPES.LAYOUT_ELEMENT_DELETE]: ({ state, payload, now }) => {
     const layout = state.resources.layouts.items[payload.layoutId];
-    const stack = [payload.elementId];
 
-    while (stack.length > 0) {
-      const id = stack.pop();
-      const node = layout.elements[id];
-      if (!node) continue;
-      for (const childId of node.children || []) stack.push(childId);
+    const idsToDelete = new Set();
+    for (const elementId of payload.elementIds || []) {
+      const descendantIds = collectLayoutElementDescendantIds(
+        layout,
+        elementId,
+      );
+      for (const id of descendantIds) {
+        idsToDelete.add(id);
+      }
+    }
+
+    for (const id of idsToDelete) {
       delete layout.elements[id];
     }
 

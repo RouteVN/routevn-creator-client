@@ -230,7 +230,7 @@ export const handleItemDelete = async (deps, payload) => {
 
   await projectService.deleteResourceItem({
     resourceType: "fonts",
-    resourceId: itemId,
+    resourceIds: [itemId],
   });
 
   await handleDataChanged(deps);
