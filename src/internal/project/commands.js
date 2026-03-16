@@ -235,6 +235,14 @@ const normalizePayloadDataField = (
 };
 
 const normalizeCommandType = (type) => {
+  if (type === "section.reorder") {
+    return "section.move";
+  }
+
+  if (type === "section.rename") {
+    return "section.update";
+  }
+
   if (type === "resource.rename") {
     return "resource.update";
   }
@@ -261,6 +269,13 @@ const normalizeCommandPayload = (type, payload) => {
 
   if (type === "section.create") {
     return normalizePayloadDataField(payload, {
+      rootFields: ["name"],
+    });
+  }
+
+  if (type === "section.update") {
+    return normalizePayloadDataField(payload, {
+      legacyFields: ["patch"],
       rootFields: ["name"],
     });
   }
@@ -494,11 +509,12 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    type: "section.rename",
+    type: "section.update",
     scope: "story",
     payload: {
-      requiredFields: ["sectionId", "name"],
-      requiredStringFields: ["sectionId", "name"],
+      requiredFields: ["sectionId", "data"],
+      requiredStringFields: ["sectionId"],
+      objectFields: ["data"],
     },
     assertPreconditions: (state, command) => {
       assertSectionExists(state, command.payload.sectionId);
@@ -516,7 +532,7 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    type: "section.reorder",
+    type: "section.move",
     scope: "story",
     payload: {
       requiredFields: ["sectionId", "index"],

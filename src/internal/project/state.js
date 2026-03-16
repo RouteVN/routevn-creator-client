@@ -551,9 +551,17 @@ const reducers = {
     });
   },
 
-  [COMMAND_TYPES.SECTION_RENAME]: ({ state, payload, now }) => {
-    state.sections[payload.sectionId].name = payload.name;
-    state.sections[payload.sectionId].updatedAt = now;
+  [COMMAND_TYPES.SECTION_UPDATE]: ({ state, payload, now }) => {
+    const current = state.sections[payload.sectionId];
+    const data = structuredClone(payload.data || {});
+    delete data.id;
+    delete data.sceneId;
+    delete data.lineIds;
+    state.sections[payload.sectionId] = {
+      ...current,
+      ...data,
+      updatedAt: now,
+    };
   },
 
   [COMMAND_TYPES.SECTION_DELETE]: ({ state, payload }) => {
@@ -569,7 +577,7 @@ const reducers = {
     delete state.sections[payload.sectionId];
   },
 
-  [COMMAND_TYPES.SECTION_REORDER]: ({ state, payload }) => {
+  [COMMAND_TYPES.SECTION_MOVE]: ({ state, payload }) => {
     const section = state.sections[payload.sectionId];
     upsertNoDuplicate(
       state.scenes[section.sceneId].sectionIds,

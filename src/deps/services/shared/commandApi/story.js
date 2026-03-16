@@ -252,10 +252,12 @@ export const createStoryCommandApi = (shared) => {
       await shared.submitCommandWithContext({
         context,
         scope: "story",
-        type: COMMAND_TYPES.SECTION_RENAME,
+        type: COMMAND_TYPES.SECTION_UPDATE,
         payload: {
           sectionId,
-          name,
+          data: {
+            name,
+          },
         },
         partitions: scenePartition
           ? [basePartition, scenePartition]
@@ -311,7 +313,7 @@ export const createStoryCommandApi = (shared) => {
       await shared.submitCommandWithContext({
         context,
         scope: "story",
-        type: COMMAND_TYPES.SECTION_REORDER,
+        type: COMMAND_TYPES.SECTION_MOVE,
         payload: {
           sectionId,
           parentId: normalizeParentId(parentId),

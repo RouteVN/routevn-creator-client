@@ -7,7 +7,7 @@ suites:
 suite: runInsiemeStorageScenario
 exportName: runInsiemeStorageScenario
 ---
-case: persists section creation rename reorder and delete commands
+case: persists section creation update move and delete commands
 in:
   - projectId: project-puty-sections-001
     actor:
@@ -60,20 +60,21 @@ in:
           data:
             name: Aftermath
           index: 1
-      - id: cmd-sections-rename-b
+      - id: cmd-sections-update-b
         partitions:
           - project:project-puty-sections-001:story
           - project:project-puty-sections-001:story:scene:scene-main
-        type: section.rename
+        type: section.update
         clientTs: 705
         payload:
           sectionId: section-b
-          name: Decision
-      - id: cmd-sections-reorder-c
+          data:
+            name: Decision
+      - id: cmd-sections-move-c
         partitions:
           - project:project-puty-sections-001:story
           - project:project-puty-sections-001:story:scene:scene-main
-        type: section.reorder
+        type: section.move
         clientTs: 706
         payload:
           sectionId: section-c
@@ -153,27 +154,28 @@ out:
         clientId: client-puty-sections
         clientTs: 704
     - committedId: 5
-      id: cmd-sections-rename-b
+      id: cmd-sections-update-b
       projectId: project-puty-sections-001
       userId: user-puty-sections
       partitions:
         - project:project-puty-sections-001:story
         - project:project-puty-sections-001:story:scene:scene-main
-      type: section.rename
+      type: section.update
       payload:
         sectionId: section-b
-        name: Decision
+        data:
+          name: Decision
       meta:
         clientId: client-puty-sections
         clientTs: 705
     - committedId: 6
-      id: cmd-sections-reorder-c
+      id: cmd-sections-move-c
       projectId: project-puty-sections-001
       userId: user-puty-sections
       partitions:
         - project:project-puty-sections-001:story
         - project:project-puty-sections-001:story:scene:scene-main
-      type: section.reorder
+      type: section.move
       payload:
         sectionId: section-c
         index: 0
@@ -373,8 +375,8 @@ out:
         lines: {}
         resources: {}
     - committedId: 5
-      eventId: cmd-sections-rename-b
-      eventType: section.rename
+      eventId: cmd-sections-update-b
+      eventType: section.update
       state:
         model_version: 2
         project:
@@ -431,8 +433,8 @@ out:
         lines: {}
         resources: {}
     - committedId: 6
-      eventId: cmd-sections-reorder-c
-      eventType: section.reorder
+      eventId: cmd-sections-move-c
+      eventType: section.move
       state:
         model_version: 2
         project:

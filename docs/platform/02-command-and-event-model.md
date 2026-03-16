@@ -111,7 +111,7 @@ Detailed command definitions, accepted payload fields, and preconditions live in
   - `duplicate`
 - Use a more specific verb only when generic CRUD is not precise enough:
   - `scene.set_initial`
-  - `section.reorder`
+  - `section.move`
   - `line.insert_after`
   - `line.update_actions`
 - Do not create separate naming schemes for “command types” versus “event types”.

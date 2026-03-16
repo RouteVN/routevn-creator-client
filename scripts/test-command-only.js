@@ -169,6 +169,68 @@ assert.deepEqual(normalizedLegacyResourceRename.payload, {
   },
 });
 
+const legacySectionRenameCommand = createCommandEnvelope({
+  id: "legacy-section-rename",
+  projectId,
+  scope: "story",
+  partitions: [storyPartition, `project:${projectId}:story:scene:scene-legacy`],
+  type: "section.rename",
+  payload: {
+    sectionId: "section-legacy",
+    name: "Legacy Section",
+  },
+  actor,
+  clientTs: 44,
+});
+
+validateCommand(legacySectionRenameCommand);
+assert.equal(commandToSyncEvent(legacySectionRenameCommand).type, "section.update");
+assert.deepEqual(commandToSyncEvent(legacySectionRenameCommand).payload, {
+  sectionId: "section-legacy",
+  data: {
+    name: "Legacy Section",
+  },
+});
+const normalizedLegacySectionRename = commandFromItem(
+  createCommittedEventFromCommand(legacySectionRenameCommand, 3, 44),
+);
+assert.equal(normalizedLegacySectionRename.type, "section.update");
+assert.deepEqual(normalizedLegacySectionRename.payload, {
+  sectionId: "section-legacy",
+  data: {
+    name: "Legacy Section",
+  },
+});
+
+const legacySectionReorderCommand = createCommandEnvelope({
+  id: "legacy-section-reorder",
+  projectId,
+  scope: "story",
+  partitions: [storyPartition, `project:${projectId}:story:scene:scene-legacy`],
+  type: "section.reorder",
+  payload: {
+    sectionId: "section-legacy",
+    index: 0,
+  },
+  actor,
+  clientTs: 45,
+});
+
+validateCommand(legacySectionReorderCommand);
+assert.equal(commandToSyncEvent(legacySectionReorderCommand).type, "section.move");
+assert.deepEqual(commandToSyncEvent(legacySectionReorderCommand).payload, {
+  sectionId: "section-legacy",
+  index: 0,
+});
+const normalizedLegacySectionReorder = commandFromItem(
+  createCommittedEventFromCommand(legacySectionReorderCommand, 4, 45),
+);
+assert.equal(normalizedLegacySectionReorder.type, "section.move");
+assert.deepEqual(normalizedLegacySectionReorder.payload, {
+  sectionId: "section-legacy",
+  index: 0,
+});
+
 const bypassScan = spawnSync(
   "rg",
   ["-n", "repository\\.addEvent\\(", "src/pages", "src/components"],

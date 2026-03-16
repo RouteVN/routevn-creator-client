@@ -20,9 +20,9 @@ Authoritative source: `src/internal/project/commands.js`.
 - `scene.set_initial`
 - `scene.move`
 - `section.create`
-- `section.rename`
+- `section.update`
 - `section.delete`
-- `section.reorder`
+- `section.move`
 - `line.insert_after`
 - `line.update_actions`
 - `line.delete`
@@ -204,14 +204,20 @@ index: 0 # optional
 position: "last" # optional; also "first", { before: "<id>" }, { after: "<id>" }
 ```
 
-#### `section.rename`
+#### `section.update`
 
 Payload (YAML):
 
 ```yaml
 sectionId: "<string>"
-name: "<string>"
+data:
+  name: "<string>"
 ```
+
+Notes:
+
+- Use `data.name` for section renames; there is no separate `section.rename`
+  command.
 
 #### `section.delete`
 
@@ -221,7 +227,7 @@ Payload (YAML):
 sectionId: "<string>"
 ```
 
-#### `section.reorder`
+#### `section.move`
 
 Payload (YAML):
 
