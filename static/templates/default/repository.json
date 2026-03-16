@@ -179,21 +179,22 @@
         "name": "Default"
       },
       "fade-in": {
-        "type": "tween",
+        "type": "animation",
         "name": "Fade In",
-        "duration": "1s",
-        "keyframes": 1,
-        "properties": {
-          "alpha": {
-            "initialValue": 0,
-            "keyframes": [
-              {
-                "duration": 1000,
-                "value": 1,
-                "easing": "linear",
-                "relative": false
-              }
-            ]
+        "animation": {
+          "type": "live",
+          "tween": {
+            "alpha": {
+              "initialValue": 0,
+              "keyframes": [
+                {
+                  "duration": 1000,
+                  "value": 1,
+                  "easing": "linear",
+                  "relative": false
+                }
+              ]
+            }
           }
         }
       }
@@ -398,7 +399,7 @@
         "name": "Default"
       },
       "default-typography": {
-        "type": "typography",
+        "type": "textStyle",
         "name": "Default",
         "fontSize": 24,
         "lineHeight": 1.2,
@@ -408,7 +409,7 @@
         "previewText": "Default"
       },
       "aEFgSimQUspdxkvXUSyRd": {
-        "type": "typography",
+        "type": "textStyle",
         "name": "Character Name",
         "fontSize": 48,
         "lineHeight": 1.5,
@@ -418,7 +419,7 @@
         "previewText": "Character Name"
       },
       "jiWyxqqEgEdAVTPAxbGFp": {
-        "type": "typography",
+        "type": "textStyle",
         "name": "Text View",
         "fontSize": 36,
         "lineHeight": 1.5,
@@ -428,7 +429,7 @@
         "previewText": "Text View"
       },
       "default-hover-yellow-typography": {
-        "type": "typography",
+        "type": "textStyle",
         "name": "Default Hover Yellow",
         "fontSize": 24,
         "lineHeight": 1.2,
@@ -2276,21 +2277,22 @@
         "name": "Default"
       },
       "fade-in": {
-        "type": "tween",
+        "type": "animation",
         "name": "Fade In",
-        "duration": "1s",
-        "keyframes": 1,
-        "properties": {
-          "alpha": {
-            "initialValue": 0,
-            "keyframes": [
-              {
-                "duration": 1000,
-                "value": 1,
-                "easing": "linear",
-                "relative": false
-              }
-            ]
+        "animation": {
+          "type": "live",
+          "tween": {
+            "alpha": {
+              "initialValue": 0,
+              "keyframes": [
+                {
+                  "duration": 1000,
+                  "value": 1,
+                  "easing": "linear",
+                  "relative": false
+                }
+              ]
+            }
           }
         }
       }
@@ -2322,7 +2324,7 @@
         "name": "Default"
       },
       "default-typography": {
-        "type": "typography",
+        "type": "textStyle",
         "name": "Default",
         "fontSize": 24,
         "lineHeight": 1.2,
@@ -2332,7 +2334,7 @@
         "previewText": "Default"
       },
       "aEFgSimQUspdxkvXUSyRd": {
-        "type": "typography",
+        "type": "textStyle",
         "name": "Character Name",
         "fontSize": 48,
         "lineHeight": 1.5,
@@ -2342,7 +2344,7 @@
         "previewText": "Character Name"
       },
       "jiWyxqqEgEdAVTPAxbGFp": {
-        "type": "typography",
+        "type": "textStyle",
         "name": "Text View",
         "fontSize": 36,
         "lineHeight": 1.5,
@@ -2352,7 +2354,7 @@
         "previewText": "Text View"
       },
       "default-hover-yellow-typography": {
-        "type": "typography",
+        "type": "textStyle",
         "name": "Default Hover Yellow",
         "fontSize": 24,
         "lineHeight": 1.2,
