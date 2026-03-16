@@ -9,8 +9,6 @@ import {
   createCommandEnvelope,
   createProjectCollabService,
 } from "../../src/deps/services/shared/collab/index.js";
-import { projectRepositoryStateToDomainState } from "../../src/internal/project/projection.js";
-import { createProjectRepository } from "../../src/deps/services/shared/projectRepository.js";
 import { applyCommandToRepositoryState } from "../../src/deps/services/shared/projectRepository.js";
 import {
   createInMemoryServerTransport,
@@ -85,136 +83,6 @@ const readStoredEvents = (
     }
 
     return event;
-  });
-};
-
-const createInMemoryRepositoryEventStore = () => {
-  const events = [];
-
-  return {
-    async appendEvent(event) {
-      events.push(structuredClone(event));
-    },
-    async getEvents() {
-      return events.map((event) => structuredClone(event));
-    },
-  };
-};
-
-const sortEntries = (entries = []) => {
-  return [...entries].sort(([left], [right]) =>
-    left < right ? -1 : left > right ? 1 : 0,
-  );
-};
-
-const normalizeTree = (nodes = []) => {
-  return nodes.map((node) => {
-    if (!Array.isArray(node?.children) || node.children.length === 0) {
-      return { id: node.id };
-    }
-
-    return {
-      id: node.id,
-      children: normalizeTree(node.children),
-    };
-  });
-};
-
-const normalizeValue = (value) => {
-  if (Array.isArray(value)) {
-    return value.map((item) => normalizeValue(item));
-  }
-
-  if (!value || typeof value !== "object") {
-    return value;
-  }
-
-  return Object.fromEntries(
-    sortEntries(
-      Object.entries(value)
-        .filter(([, nestedValue]) => nestedValue !== undefined)
-        .map(([key, nestedValue]) => [key, normalizeValue(nestedValue)]),
-    ),
-  );
-};
-
-const normalizeIdMap = (items = {}) => {
-  return Object.fromEntries(
-    sortEntries(
-      Object.entries(items).map(([id, value]) => [id, normalizeValue(value)]),
-    ),
-  );
-};
-
-const normalizeResourceCollection = (collection = {}) => {
-  const items = normalizeIdMap(collection.items || {});
-  const tree = normalizeTree(collection.tree || []);
-
-  if (Object.keys(items).length === 0 && tree.length === 0) {
-    return undefined;
-  }
-
-  return {
-    items,
-    tree,
-  };
-};
-
-const normalizeProjectState = (state = {}) => {
-  const resources = Object.fromEntries(
-    sortEntries(
-      Object.entries(state.resources || {})
-        .map(([resourceType, collection]) => [
-          resourceType,
-          normalizeResourceCollection(collection),
-        ])
-        .filter(([, collection]) => collection !== undefined),
-    ),
-  );
-
-  const characterItems = resources.characters?.items || {};
-  for (const item of Object.values(characterItems)) {
-    if (
-      item?.sprites?.items &&
-      Object.keys(item.sprites.items).length === 0 &&
-      Array.isArray(item.sprites.tree) &&
-      item.sprites.tree.length === 0
-    ) {
-      delete item.sprites;
-    }
-  }
-
-  return {
-    model_version: state.model_version,
-    project: normalizeValue(state.project || {}),
-    story: normalizeValue(state.story || {}),
-    scenes: normalizeIdMap(state.scenes || {}),
-    sections: normalizeIdMap(state.sections || {}),
-    lines: normalizeIdMap(state.lines || {}),
-    resources,
-  };
-};
-
-const buildStateAfterEachEvent = async ({ projectId, committedEvents }) => {
-  const repository = await createProjectRepository({
-    projectId,
-    store: createInMemoryRepositoryEventStore(),
-    events: committedEvents,
-  });
-
-  return committedEvents.map((committedEvent, index) => {
-    const repositoryState = repository.getState(index + 1);
-    const domainState = projectRepositoryStateToDomainState({
-      repositoryState,
-      projectId,
-    });
-
-    return {
-      committedId: committedEvent.committedId,
-      eventId: committedEvent.id,
-      eventType: committedEvent.type,
-      state: normalizeProjectState(domainState),
-    };
   });
 };
 
@@ -429,10 +297,6 @@ export const runInsiemeStorageScenario = async (input) => {
 
     return {
       storedEvents,
-      stateAfterEachEvent: await buildStateAfterEachEvent({
-        projectId: scenario.projectId,
-        committedEvents: storedEvents,
-      }),
     };
   } finally {
     try {

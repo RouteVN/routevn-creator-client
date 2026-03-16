@@ -1,8 +1,9 @@
+import { validatePayload as validateCreatorModelPayload } from "@routevn/creator-model";
 import {
   COMMAND_EVENT_MODEL,
   isSupportedCommandType,
-  validateCommand,
 } from "../../../../internal/project/commands.js";
+import { commandToCreatorModelCommand } from "../../../../internal/creatorModelAdapter.js";
 
 export const REMOTE_COMMAND_COMPATIBILITY = Object.freeze({
   COMPATIBLE: "compatible",
@@ -53,10 +54,23 @@ export const evaluateRemoteCommandCompatibility = (
   }
 
   try {
-    validateCommand({
-      ...structuredClone(command),
-      commandVersion: COMMAND_EVENT_MODEL.commandVersion,
+    const creatorModelCommand = commandToCreatorModelCommand({
+      command: {
+        ...structuredClone(command),
+        commandVersion: COMMAND_EVENT_MODEL.commandVersion,
+      },
     });
+    const payloadResult = validateCreatorModelPayload(creatorModelCommand);
+    if (payloadResult?.valid === false) {
+      return {
+        status: REMOTE_COMMAND_COMPATIBILITY.INVALID,
+        reason: "validation_failed",
+        supportedCommandVersion,
+        remoteCommandVersion,
+        message: payloadResult.error?.message || "validation failed",
+      };
+    }
+
     return {
       status: REMOTE_COMMAND_COMPATIBILITY.COMPATIBLE,
       reason: "ok",

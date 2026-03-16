@@ -37,7 +37,6 @@ Run tests:
 bun run test:smoke
 bun run test:integration
 bun run test:convergence
-bun run test:command-only
 bun run test:collab-adapters
 bun run test:puty
 ```
@@ -74,6 +73,7 @@ If you need deeper or broader Rettangoli framework reference material, use
 - Prefer `undefined` over `null`.
 - Avoid explicit `= null` initialization; use `let value;` when a later assignment is expected.
 - If state already guarantees a value, use it directly instead of re-normalizing with fallback checks.
+- Do not build objects with conditional object-spread patterns such as `...(condition ? { field } : {})` or nested spread-based payload builders. Build a local object and assign fields explicitly.
 
 ## Layering
 

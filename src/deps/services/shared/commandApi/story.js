@@ -6,20 +6,29 @@ import {
 import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
 
 export const createStoryCommandApi = (shared) => {
-  const buildPlacementPayload = ({
+  const createPlacementPayload = ({
     parentId = null,
     index,
     position = "last",
     positionTargetId,
-  } = {}) => ({
-    parentId: normalizeParentId(parentId),
-    ...(index !== undefined
-      ? { index }
-      : {
-          position,
-          ...(positionTargetId !== undefined ? { positionTargetId } : {}),
-        }),
-  });
+  } = {}) => {
+    const payload = {
+      parentId: normalizeParentId(parentId),
+    };
+
+    if (index !== undefined) {
+      payload.index = index;
+      return payload;
+    }
+
+    payload.position = position;
+
+    if (positionTargetId !== undefined) {
+      payload.positionTargetId = positionTargetId;
+    }
+
+    return payload;
+  };
 
   const submitLineActionsData = async ({ lineId, data, replace = false }) => {
     const context = await shared.ensureCommandContext();
@@ -100,6 +109,10 @@ export const createStoryCommandApi = (shared) => {
         context.projectId,
         finalSceneId,
       );
+      const nextData = structuredClone(data || {});
+      if (name !== undefined) {
+        nextData.name = name;
+      }
 
       const submitResult = await shared.submitCommandWithContext({
         context,
@@ -107,16 +120,13 @@ export const createStoryCommandApi = (shared) => {
         type: COMMAND_TYPES.SCENE_CREATE,
         payload: {
           sceneId: finalSceneId,
-          ...buildPlacementPayload({
+          ...createPlacementPayload({
             parentId,
             index: resolvedIndex,
             position,
             positionTargetId,
           }),
-          data: {
-            ...structuredClone(data || {}),
-            ...(name !== undefined ? { name } : {}),
-          },
+          data: nextData,
         },
         partitions: [basePartition, scenePartition],
       });
@@ -215,7 +225,7 @@ export const createStoryCommandApi = (shared) => {
         type: COMMAND_TYPES.SCENE_MOVE,
         payload: {
           sceneId,
-          ...buildPlacementPayload({
+          ...createPlacementPayload({
             parentId,
             index: resolvedIndex,
             position,
@@ -251,6 +261,10 @@ export const createStoryCommandApi = (shared) => {
         context.projectId,
         sceneId,
       );
+      const nextData = structuredClone(data || {});
+      if (name !== undefined) {
+        nextData.name = name;
+      }
 
       const submitResult = await shared.submitCommandWithContext({
         context,
@@ -259,16 +273,13 @@ export const createStoryCommandApi = (shared) => {
         payload: {
           sceneId,
           sectionId: nextSectionId,
-          ...buildPlacementPayload({
+          ...createPlacementPayload({
             parentId,
             index: resolvedIndex,
             position,
             positionTargetId,
           }),
-          data: {
-            ...structuredClone(data || {}),
-            ...(name !== undefined ? { name } : {}),
-          },
+          data: nextData,
         },
         partitions: [basePartition, scenePartition],
       });
@@ -370,7 +381,7 @@ export const createStoryCommandApi = (shared) => {
         type: COMMAND_TYPES.SECTION_MOVE,
         payload: {
           sectionId,
-          ...buildPlacementPayload({
+          ...createPlacementPayload({
             parentId,
             index: resolvedIndex,
             position,
@@ -443,7 +454,7 @@ export const createStoryCommandApi = (shared) => {
         payload: {
           sectionId,
           lines: normalizedLines,
-          ...buildPlacementPayload({
+          ...createPlacementPayload({
             parentId,
             index: resolvedIndex,
             position: resolvedPosition || "last",
@@ -533,7 +544,7 @@ export const createStoryCommandApi = (shared) => {
         payload: {
           lineId,
           toSectionId,
-          ...buildPlacementPayload({
+          ...createPlacementPayload({
             parentId,
             index: resolvedIndex,
             position,

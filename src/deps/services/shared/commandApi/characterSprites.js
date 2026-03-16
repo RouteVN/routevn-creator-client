@@ -1,20 +1,29 @@
 import { normalizeParentId } from "../projectRepository.js";
 import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
 
-const buildPlacementPayload = ({
+const createPlacementPayload = ({
   parentId = null,
   index,
   position = "last",
   positionTargetId,
-} = {}) => ({
-  parentId: normalizeParentId(parentId),
-  ...(index !== undefined
-    ? { index }
-    : {
-        position,
-        ...(positionTargetId !== undefined ? { positionTargetId } : {}),
-      }),
-});
+} = {}) => {
+  const payload = {
+    parentId: normalizeParentId(parentId),
+  };
+
+  if (index !== undefined) {
+    payload.index = index;
+    return payload;
+  }
+
+  payload.position = position;
+
+  if (positionTargetId !== undefined) {
+    payload.positionTargetId = positionTargetId;
+  }
+
+  return payload;
+};
 
 export const createCharacterSpriteCommandApi = (shared) => ({
   async createCharacterSpriteItem({
@@ -50,7 +59,7 @@ export const createCharacterSpriteCommandApi = (shared) => ({
         characterId,
         spriteId: nextSpriteId,
         data: structuredClone(data || {}),
-        ...buildPlacementPayload({
+        ...createPlacementPayload({
           parentId,
           index: resolvedIndex,
           position,
@@ -119,7 +128,7 @@ export const createCharacterSpriteCommandApi = (shared) => ({
       payload: {
         characterId,
         spriteId,
-        ...buildPlacementPayload({
+        ...createPlacementPayload({
           parentId,
           index: resolvedIndex,
           position,

@@ -54,20 +54,29 @@ const resolveCommandFamily = (resourceType) => {
   throw new Error(`Unsupported resourceType: ${resourceType}`);
 };
 
-const buildPlacementPayload = ({
+const createPlacementPayload = ({
   parentId = null,
   index,
   position = "last",
   positionTargetId,
-} = {}) => ({
-  parentId: normalizeParentId(parentId),
-  ...(index !== undefined
-    ? { index }
-    : {
-        position,
-        ...(positionTargetId !== undefined ? { positionTargetId } : {}),
-      }),
-});
+} = {}) => {
+  const payload = {
+    parentId: normalizeParentId(parentId),
+  };
+
+  if (index !== undefined) {
+    payload.index = index;
+    return payload;
+  }
+
+  payload.position = position;
+
+  if (positionTargetId !== undefined) {
+    payload.positionTargetId = positionTargetId;
+  }
+
+  return payload;
+};
 
 export const createResourceCommandApi = (shared) => ({
   async createResourceItem({
@@ -104,7 +113,7 @@ export const createResourceCommandApi = (shared) => ({
       payload: {
         [idField]: nextResourceId,
         data: structuredClone(data),
-        ...buildPlacementPayload({
+        ...createPlacementPayload({
           parentId,
           index: resolvedIndex,
           position,
@@ -175,7 +184,7 @@ export const createResourceCommandApi = (shared) => ({
       type: COMMAND_TYPES[`${family.toUpperCase()}_MOVE`],
       payload: {
         [idField]: resourceId,
-        ...buildPlacementPayload({
+        ...createPlacementPayload({
           parentId,
           index: resolvedIndex,
           position,

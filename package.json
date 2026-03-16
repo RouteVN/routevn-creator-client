@@ -52,7 +52,6 @@
     "test:smoke": "node scripts/test-smoke.js",
     "test:convergence": "node scripts/test-convergence.js",
     "test:integration": "node scripts/test-integration.js",
-    "test:command-only": "node scripts/test-command-only.js",
     "test:collab-adapters": "node scripts/test-collab-adapters.js",
     "test:puty": "vitest run tests/puty",
     "check:contracts": "rtgl check --dir src/components --dir src/pages",

@@ -1,9 +1,12 @@
-import {
-  processCommand as processCreatorModelCommand,
-  validateAgainstState as validateCreatorModelAgainstState,
-  validatePayload as validateCreatorModelPayload,
-} from "@routevn/creator-model";
-import { DomainValidationError, normalizeCommand } from "./project/commands.js";
+import { processCommand as processCreatorModelCommand } from "@routevn/creator-model";
+
+class CreatorModelAdapterError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "CreatorModelAdapterError";
+    this.code = "validation_failed";
+  }
+}
 
 const MODEL_COLLECTION_KEYS = [
   "scenes",
@@ -102,11 +105,10 @@ const captureCreatorModelResult = (callback) => {
   try {
     return toCreatorModelResult(callback());
   } catch (error) {
-    if (error instanceof DomainValidationError) {
+    if (error instanceof CreatorModelAdapterError) {
       return toCreatorModelInvalidResult({
         code: error.code,
         message: error.message,
-        details: error.details,
       });
     }
 
@@ -625,7 +627,7 @@ const stampStoryRepositoryMetadataForCommand = ({
   repositoryState,
   command,
 } = {}) => {
-  const normalizedCommand = normalizeCommand(command);
+  const normalizedCommand = structuredClone(command);
   const payload = normalizedCommand?.payload || {};
   const timestamp = toFiniteTimestamp(
     normalizedCommand?.clientTs,
@@ -1382,7 +1384,7 @@ const buildRepositorySectionsForScene = ({ creatorModelState, sceneId }) => {
   };
 };
 
-export const creatorModelStateToRepositoryState = ({
+const creatorModelStateToRepositoryState = ({
   creatorModelState = {},
   repositoryState = {},
   projectId,
@@ -1657,7 +1659,9 @@ const toModelResourceCreateData = ({ resourceType, data = {} }) => {
     return toModelLayoutData(data);
   }
 
-  throw new DomainValidationError(`Unsupported resourceType: ${resourceType}`);
+  throw new CreatorModelAdapterError(
+    `Unsupported resourceType: ${resourceType}`,
+  );
 };
 
 const toModelResourceUpdateData = ({ resourceType, data = {} }) => {
@@ -1721,7 +1725,9 @@ const toModelResourceUpdateData = ({ resourceType, data = {} }) => {
     return nextData;
   }
 
-  throw new DomainValidationError(`Unsupported resourceType: ${resourceType}`);
+  throw new CreatorModelAdapterError(
+    `Unsupported resourceType: ${resourceType}`,
+  );
 };
 
 const toNormalizedNativeResourceCommand = ({ type, payload = {} }) => {
@@ -1731,7 +1737,7 @@ const toNormalizedNativeResourceCommand = ({ type, payload = {} }) => {
   const deleteField = MODEL_FAMILY_TO_DELETE_FIELD[family];
 
   if (!resourceType || !idField || !deleteField) {
-    throw new DomainValidationError(`Unsupported command type: ${type}`);
+    throw new CreatorModelAdapterError(`Unsupported command type: ${type}`);
   }
 
   if (operation === "create") {
@@ -1786,7 +1792,7 @@ const toNormalizedNativeResourceCommand = ({ type, payload = {} }) => {
     };
   }
 
-  throw new DomainValidationError(`Unsupported command type: ${type}`);
+  throw new CreatorModelAdapterError(`Unsupported command type: ${type}`);
 };
 
 const toModelProjectCreateState = ({ state }) => {
@@ -1803,10 +1809,10 @@ export const commandToCreatorModelCommand = ({
   command,
   repositoryState,
 } = {}) => {
-  const normalizedCommand = normalizeCommand(command);
+  const normalizedCommand = structuredClone(command);
 
   if (!isPlainObject(normalizedCommand)) {
-    throw new DomainValidationError("command must be an object");
+    throw new CreatorModelAdapterError("command must be an object");
   }
 
   const payload = normalizedCommand.payload || {};
@@ -1964,49 +1970,9 @@ export const commandToCreatorModelCommand = ({
     };
   }
 
-  throw new DomainValidationError(
+  throw new CreatorModelAdapterError(
     `Unsupported command type for creator model adapter: ${normalizedCommand.type}`,
   );
-};
-
-export const shouldUseCreatorModelForCommand = () => true;
-
-export const validateCommandWithCreatorModelAgainstRepositoryState = ({
-  repositoryState,
-  command,
-} = {}) => {
-  return captureCreatorModelResult(() => {
-    const creatorModelCommand = commandToCreatorModelCommand({
-      command,
-      repositoryState,
-    });
-    const creatorModelState = repositoryStateToCreatorModelState({
-      repositoryState,
-    });
-
-    const payloadResult = toCreatorModelResult(
-      validateCreatorModelPayload(creatorModelCommand),
-    );
-    if (!payloadResult.valid) {
-      return payloadResult;
-    }
-
-    const stateResult = toCreatorModelResult(
-      validateCreatorModelAgainstState({
-        state: creatorModelState,
-        command: creatorModelCommand,
-      }),
-    );
-    if (!stateResult.valid) {
-      return stateResult;
-    }
-
-    return {
-      valid: true,
-      creatorModelCommand,
-      creatorModelState,
-    };
-  });
 };
 
 export const applyCommandToRepositoryStateWithCreatorModel = ({

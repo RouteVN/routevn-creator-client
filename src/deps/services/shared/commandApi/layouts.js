@@ -4,20 +4,29 @@ import {
 } from "../projectRepository.js";
 import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
 
-const buildPlacementPayload = ({
+const createPlacementPayload = ({
   parentId = null,
   index,
   position = "last",
   positionTargetId,
-} = {}) => ({
-  parentId: normalizeParentId(parentId),
-  ...(index !== undefined
-    ? { index }
-    : {
-        position,
-        ...(positionTargetId !== undefined ? { positionTargetId } : {}),
-      }),
-});
+} = {}) => {
+  const payload = {
+    parentId: normalizeParentId(parentId),
+  };
+
+  if (index !== undefined) {
+    payload.index = index;
+    return payload;
+  }
+
+  payload.position = position;
+
+  if (positionTargetId !== undefined) {
+    payload.positionTargetId = positionTargetId;
+  }
+
+  return payload;
+};
 
 export const createLayoutCommandApi = (shared) => ({
   async createLayoutItem({
@@ -57,7 +66,7 @@ export const createLayoutCommandApi = (shared) => ({
           layoutType,
           elements: structuredClone(elements || createTreeCollection()),
         },
-        ...buildPlacementPayload({
+        ...createPlacementPayload({
           parentId,
           index: resolvedIndex,
           position,
@@ -144,7 +153,7 @@ export const createLayoutCommandApi = (shared) => ({
       type: COMMAND_TYPES.LAYOUT_MOVE,
       payload: {
         layoutId,
-        ...buildPlacementPayload({
+        ...createPlacementPayload({
           parentId,
           index: resolvedIndex,
           position,
@@ -207,7 +216,7 @@ export const createLayoutCommandApi = (shared) => ({
         layoutId,
         elementId: nextElementId,
         data: structuredClone(data ?? element ?? {}),
-        ...buildPlacementPayload({
+        ...createPlacementPayload({
           parentId,
           index: resolvedIndex,
           position,
@@ -250,7 +259,7 @@ export const createLayoutCommandApi = (shared) => ({
       payload: {
         layoutId,
         elementId,
-        ...buildPlacementPayload({
+        ...createPlacementPayload({
           parentId,
           index: resolvedIndex,
           position,
