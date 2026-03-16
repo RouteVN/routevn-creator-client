@@ -9,7 +9,6 @@ import { projectRepositoryStateToDomainState } from "../../../../internal/projec
 import {
   applyCommandToRepositoryState,
   initialProjectData,
-  projectDomainStateToRepositoryState,
 } from "../projectRepository.js";
 
 const isTransportDisconnectedError = (error) => {
@@ -27,7 +26,6 @@ export const createProjectCollabService = ({
   projectName = "",
   projectDescription = "",
   initialRepositoryState,
-  initialState,
   token,
   actor,
   transport,
@@ -58,21 +56,6 @@ export const createProjectCollabService = ({
       initialRepositoryState.scenes?.items
     ) {
       return structuredClone(initialRepositoryState);
-    }
-
-    if (
-      initialState &&
-      typeof initialState === "object" &&
-      initialState.scenes?.items
-    ) {
-      return structuredClone(initialState);
-    }
-
-    if (initialState && typeof initialState === "object") {
-      return projectDomainStateToRepositoryState({
-        domainState: initialState,
-        repositoryState: createInitialRepositoryState(),
-      });
     }
 
     return createInitialRepositoryState();

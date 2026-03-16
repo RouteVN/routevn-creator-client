@@ -15,6 +15,52 @@ export const RESOURCE_TYPES = [
   "components",
 ];
 
+const NATIVE_RESOURCE_COMMAND_FAMILIES = new Set([
+  "image",
+  "sound",
+  "video",
+  "animation",
+  "character",
+  "font",
+  "transform",
+  "color",
+  "textStyle",
+  "variable",
+  "layout",
+]);
+
+const NATIVE_RESOURCE_COMMAND_OPERATIONS = new Set([
+  "create",
+  "update",
+  "move",
+  "delete",
+]);
+
+const NATIVE_RESOURCE_COMMAND_TYPES = Array.from(
+  NATIVE_RESOURCE_COMMAND_FAMILIES,
+).flatMap((family) =>
+  Array.from(
+    NATIVE_RESOURCE_COMMAND_OPERATIONS,
+    (operation) => `${family}.${operation}`,
+  ),
+);
+
+const isNativeResourceCommandType = (type) => {
+  if (!assertNonEmptyString(type)) {
+    return false;
+  }
+
+  const [family, operation, extra] = type.split(".");
+  if (extra !== undefined) {
+    return false;
+  }
+
+  return (
+    NATIVE_RESOURCE_COMMAND_FAMILIES.has(family) &&
+    NATIVE_RESOURCE_COMMAND_OPERATIONS.has(operation)
+  );
+};
+
 export class DomainValidationError extends Error {
   constructor(message, details = {}) {
     super(message);
@@ -1351,10 +1397,10 @@ const COMMAND_DEFINITIONS = [
 
 export const COMMAND_TYPES = Object.freeze(
   Object.fromEntries(
-    COMMAND_DEFINITIONS.map((definition) => [
-      definition.type.replaceAll(".", "_").toUpperCase(),
-      definition.type,
-    ]),
+    [
+      ...COMMAND_DEFINITIONS.map((definition) => definition.type),
+      ...NATIVE_RESOURCE_COMMAND_TYPES,
+    ].map((type) => [type.replaceAll(".", "_").toUpperCase(), type]),
   ),
 );
 
@@ -1363,6 +1409,10 @@ const COMMAND_CATALOG = Object.freeze(
     COMMAND_DEFINITIONS.map((definition) => [definition.type, definition]),
   ),
 );
+
+const NATIVE_RESOURCE_COMMAND_DEFINITION = Object.freeze({
+  scope: "resources",
+});
 
 export const COMMAND_EVENT_MODEL = Object.freeze({
   commandVersion: COMMAND_VERSION,
@@ -1383,7 +1433,12 @@ export const getCommandDefinition = (type) => {
   if (typeof type !== "string" || type.length === 0) {
     return undefined;
   }
-  return COMMAND_CATALOG[type];
+  return (
+    COMMAND_CATALOG[type] ??
+    (isNativeResourceCommandType(type)
+      ? NATIVE_RESOURCE_COMMAND_DEFINITION
+      : undefined)
+  );
 };
 
 export const normalizeCommand = (command) => {
@@ -1458,12 +1513,16 @@ const validateCommandEnvelope = (command, errors) => {
 
 const validateCommandPayload = (command, errors) => {
   const normalizedCommand = normalizeCommand(command);
-  const definition = getCommandDefinition(normalizedCommand?.type);
-  if (!definition) {
+  const definition = COMMAND_CATALOG[normalizedCommand?.type];
+  if (!definition && !isNativeResourceCommandType(normalizedCommand?.type)) {
     return;
   }
 
   const payload = normalizedCommand.payload;
+  if (!definition) {
+    return;
+  }
+
   const spec = definition.payload || {};
 
   for (const field of spec.requiredFields || []) {

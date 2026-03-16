@@ -1,6 +1,59 @@
 import { normalizeParentId } from "../projectRepository.js";
 import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
 
+const RESOURCE_TYPE_TO_COMMAND_FAMILY = Object.freeze({
+  images: "image",
+  sounds: "sound",
+  videos: "video",
+  tweens: "animation",
+  animations: "animation",
+  characters: "character",
+  fonts: "font",
+  transforms: "transform",
+  colors: "color",
+  typography: "textStyle",
+  textStyles: "textStyle",
+  variables: "variable",
+  layouts: "layout",
+});
+
+const COMMAND_FAMILY_TO_ID_FIELD = Object.freeze({
+  image: "imageId",
+  sound: "soundId",
+  video: "videoId",
+  animation: "animationId",
+  character: "characterId",
+  font: "fontId",
+  transform: "transformId",
+  color: "colorId",
+  textStyle: "textStyleId",
+  variable: "variableId",
+  layout: "layoutId",
+});
+
+const COMMAND_FAMILY_TO_DELETE_FIELD = Object.freeze({
+  image: "imageIds",
+  sound: "soundIds",
+  video: "videoIds",
+  animation: "animationIds",
+  character: "characterIds",
+  font: "fontIds",
+  transform: "transformIds",
+  color: "colorIds",
+  textStyle: "textStyleIds",
+  variable: "variableIds",
+  layout: "layoutIds",
+});
+
+const resolveCommandFamily = (resourceType) => {
+  const family = RESOURCE_TYPE_TO_COMMAND_FAMILY[resourceType];
+  if (family) {
+    return family;
+  }
+
+  throw new Error(`Unsupported resourceType: ${resourceType}`);
+};
+
 const buildPlacementPayload = ({
   parentId = null,
   index,
@@ -28,6 +81,8 @@ export const createResourceCommandApi = (shared) => ({
   }) {
     const context = await shared.ensureCommandContext();
     const nextResourceId = resourceId || shared.createId();
+    const family = resolveCommandFamily(resourceType);
+    const idField = COMMAND_FAMILY_TO_ID_FIELD[family];
     const resolvedIndex = shared.resolveResourceIndex({
       state: context.state,
       resourceType,
@@ -45,10 +100,9 @@ export const createResourceCommandApi = (shared) => ({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: COMMAND_TYPES.RESOURCE_CREATE,
+      type: COMMAND_TYPES[`${family.toUpperCase()}_CREATE`],
       payload: {
-        resourceType,
-        resourceId: nextResourceId,
+        [idField]: nextResourceId,
         data: structuredClone(data),
         ...buildPlacementPayload({
           parentId,
@@ -69,6 +123,8 @@ export const createResourceCommandApi = (shared) => ({
 
   async updateResourceItem({ resourceType, resourceId, data, patch }) {
     const context = await shared.ensureCommandContext();
+    const family = resolveCommandFamily(resourceType);
+    const idField = COMMAND_FAMILY_TO_ID_FIELD[family];
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
       resourceType,
@@ -78,10 +134,9 @@ export const createResourceCommandApi = (shared) => ({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: COMMAND_TYPES.RESOURCE_UPDATE,
+      type: COMMAND_TYPES[`${family.toUpperCase()}_UPDATE`],
       payload: {
-        resourceType,
-        resourceId,
+        [idField]: resourceId,
         data: structuredClone(data ?? patch ?? {}),
       },
       partitions: [],
@@ -97,6 +152,8 @@ export const createResourceCommandApi = (shared) => ({
     index,
   }) {
     const context = await shared.ensureCommandContext();
+    const family = resolveCommandFamily(resourceType);
+    const idField = COMMAND_FAMILY_TO_ID_FIELD[family];
     const resolvedIndex = shared.resolveResourceIndex({
       state: context.state,
       resourceType,
@@ -115,10 +172,9 @@ export const createResourceCommandApi = (shared) => ({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: COMMAND_TYPES.RESOURCE_MOVE,
+      type: COMMAND_TYPES[`${family.toUpperCase()}_MOVE`],
       payload: {
-        resourceType,
-        resourceId,
+        [idField]: resourceId,
         ...buildPlacementPayload({
           parentId,
           index: resolvedIndex,
@@ -132,6 +188,8 @@ export const createResourceCommandApi = (shared) => ({
 
   async deleteResourceItem({ resourceType, resourceIds }) {
     const context = await shared.ensureCommandContext();
+    const family = resolveCommandFamily(resourceType);
+    const deleteField = COMMAND_FAMILY_TO_DELETE_FIELD[family];
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
       resourceType,
@@ -141,10 +199,9 @@ export const createResourceCommandApi = (shared) => ({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: COMMAND_TYPES.RESOURCE_DELETE,
+      type: COMMAND_TYPES[`${family.toUpperCase()}_DELETE`],
       payload: {
-        resourceType,
-        resourceIds: structuredClone(resourceIds || []),
+        [deleteField]: structuredClone(resourceIds || []),
       },
       partitions: [],
     });

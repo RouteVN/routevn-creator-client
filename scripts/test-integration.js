@@ -213,10 +213,9 @@ await runScenario("partition-isolation", async () => {
       createCommandEnvelope({
         projectId,
         scope: "resources",
-        type: "resource.create",
+        type: "image.create",
         payload: {
-          resourceType: "images",
-          resourceId: "img-1",
+          imageId: "img-1",
           data: { name: "bg", fileId: "file-1" },
         },
         actor: full.actor,

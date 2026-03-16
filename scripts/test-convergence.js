@@ -107,10 +107,9 @@ try {
     createCommandEnvelope({
       projectId,
       scope: "resources",
-      type: "resource.create",
+      type: "image.create",
       payload: {
-        resourceType: "images",
-        resourceId: "img-1",
+        imageId: "img-1",
         data: { name: "bg-1", fileId: "file-1" },
       },
       actor: actorB,
@@ -127,10 +126,9 @@ try {
     createCommandEnvelope({
       projectId,
       scope: "resources",
-      type: "resource.create",
+      type: "layout.create",
       payload: {
-        resourceType: "layouts",
-        resourceId: "layout-1",
+        layoutId: "layout-1",
         data: { name: "Layout 1", layoutType: "scene", elements: { items: {}, tree: [] } },
       },
       actor: actorA,

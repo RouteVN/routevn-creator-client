@@ -684,10 +684,9 @@ await resourceCommandApi.deleteResourceItem({
 });
 
 assert.equal(capturedResourceSubmits.length, 1);
-assert.equal(capturedResourceSubmits[0].type, COMMAND_TYPES.RESOURCE_DELETE);
+assert.equal(capturedResourceSubmits[0].type, COMMAND_TYPES.IMAGE_DELETE);
 assert.deepEqual(capturedResourceSubmits[0].payload, {
-  resourceType: "images",
-  resourceIds: ["image-1", "image-2"],
+  imageIds: ["image-1", "image-2"],
 });
 
 const capturedCharacterSpriteSubmits = [];
@@ -817,10 +816,9 @@ await layoutCommandApi.deleteLayoutItem({
 });
 
 assert.equal(capturedLayoutSubmits.length, 1);
-assert.equal(capturedLayoutSubmits[0].type, COMMAND_TYPES.RESOURCE_DELETE);
+assert.equal(capturedLayoutSubmits[0].type, COMMAND_TYPES.LAYOUT_DELETE);
 assert.deepEqual(capturedLayoutSubmits[0].payload, {
-  resourceType: "layouts",
-  resourceIds: ["layout-1", "layout-2"],
+  layoutIds: ["layout-1", "layout-2"],
 });
 
 capturedLayoutSubmits.length = 0;
@@ -941,10 +939,9 @@ try {
       projectId,
       scope: "resources",
       partitions: [charactersPartition],
-      type: COMMAND_TYPES.RESOURCE_CREATE,
+      type: COMMAND_TYPES.CHARACTER_CREATE,
       payload: {
-        resourceType: "characters",
-        resourceId: "character-1",
+        characterId: "character-1",
         data: {
           name: "Character 1",
           type: "character",
@@ -977,10 +974,9 @@ try {
       projectId,
       scope: "resources",
       partitions: [imagesPartition],
-      type: COMMAND_TYPES.RESOURCE_CREATE,
+      type: COMMAND_TYPES.IMAGE_CREATE,
       payload: {
-        resourceType: "images",
-        resourceId: "image-1",
+        imageId: "image-1",
         data: {
           name: "Image 1",
           type: "image",
@@ -1059,10 +1055,9 @@ try {
       projectId,
       scope: "resources",
       partitions: [layoutsResourcePartition],
-      type: COMMAND_TYPES.RESOURCE_CREATE,
+      type: COMMAND_TYPES.LAYOUT_CREATE,
       payload: {
-        resourceType: "layouts",
-        resourceId: "layout-1",
+        layoutId: "layout-1",
         data: {
           name: "Layout 1",
           layoutType: "normal",
@@ -1101,7 +1096,9 @@ try {
   await sleep(30);
 
   const observedSet = new Set(observedSchemas);
-  assert.ok(observedSet.has(COMMAND_TYPES.RESOURCE_CREATE));
+  assert.ok(observedSet.has(COMMAND_TYPES.CHARACTER_CREATE));
+  assert.ok(observedSet.has(COMMAND_TYPES.IMAGE_CREATE));
+  assert.ok(observedSet.has(COMMAND_TYPES.LAYOUT_CREATE));
   assert.ok(observedSet.has(COMMAND_TYPES.CHARACTER_SPRITE_CREATE));
   assert.ok(observedSet.has(COMMAND_TYPES.SCENE_CREATE));
   assert.ok(observedSet.has(COMMAND_TYPES.LINE_CREATE));
@@ -1170,7 +1167,7 @@ try {
   });
   assert.deepEqual(
     layoutResourcePage.events.map((event) => event.type),
-    [COMMAND_TYPES.RESOURCE_CREATE],
+    [COMMAND_TYPES.LAYOUT_CREATE],
   );
 
   const charactersPage = await store.listCommittedSince({
@@ -1180,7 +1177,7 @@ try {
   });
   assert.deepEqual(
     charactersPage.events.map((event) => event.type),
-    [COMMAND_TYPES.RESOURCE_CREATE, COMMAND_TYPES.CHARACTER_SPRITE_CREATE],
+    [COMMAND_TYPES.CHARACTER_CREATE, COMMAND_TYPES.CHARACTER_SPRITE_CREATE],
   );
 } finally {
   await collab.stop();

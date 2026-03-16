@@ -48,10 +48,9 @@ export const createLayoutCommandApi = (shared) => ({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: COMMAND_TYPES.RESOURCE_CREATE,
+      type: COMMAND_TYPES.LAYOUT_CREATE,
       payload: {
-        resourceType: "layouts",
-        resourceId: nextLayoutId,
+        layoutId: nextLayoutId,
         data: {
           ...structuredClone(data || {}),
           name,
@@ -86,10 +85,9 @@ export const createLayoutCommandApi = (shared) => ({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: COMMAND_TYPES.RESOURCE_UPDATE,
+      type: COMMAND_TYPES.LAYOUT_UPDATE,
       payload: {
-        resourceType: "layouts",
-        resourceId: layoutId,
+        layoutId,
         data: {
           name,
         },
@@ -109,10 +107,9 @@ export const createLayoutCommandApi = (shared) => ({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: COMMAND_TYPES.RESOURCE_DELETE,
+      type: COMMAND_TYPES.LAYOUT_DELETE,
       payload: {
-        resourceType: "layouts",
-        resourceIds: structuredClone(layoutIds || []),
+        layoutIds: structuredClone(layoutIds || []),
       },
       partitions: [],
     });
@@ -144,10 +141,9 @@ export const createLayoutCommandApi = (shared) => ({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: COMMAND_TYPES.RESOURCE_MOVE,
+      type: COMMAND_TYPES.LAYOUT_MOVE,
       payload: {
-        resourceType: "layouts",
-        resourceId: layoutId,
+        layoutId,
         ...buildPlacementPayload({
           parentId,
           index: resolvedIndex,

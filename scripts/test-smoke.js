@@ -173,10 +173,9 @@ await applyCommandToRepository({
     scope: "resources",
     partitions: [`project:${projectId}:resources:images`],
     clientTs: 1050,
-    type: "resource.create",
+    type: "image.create",
     payload: {
-      resourceType: "images",
-      resourceId: "image-hero",
+      imageId: "image-hero",
       data: {
         name: "Hero",
         fileId: "hero.png",
@@ -194,10 +193,9 @@ await applyCommandToRepository({
     scope: "resources",
     partitions: [`project:${projectId}:resources:layouts`],
     clientTs: 1060,
-    type: "resource.create",
+    type: "layout.create",
     payload: {
-      resourceType: "layouts",
-      resourceId: "layout-main",
+      layoutId: "layout-main",
       data: {
         name: "Main Layout",
         layoutType: "normal",
@@ -237,10 +235,9 @@ await applyCommandToRepository({
     scope: "resources",
     partitions: [`project:${projectId}:resources:characters`],
     clientTs: 1080,
-    type: "resource.create",
+    type: "character.create",
     payload: {
-      resourceType: "characters",
-      resourceId: "character-hero",
+      characterId: "character-hero",
       data: {
         type: "character",
         name: "Hero",

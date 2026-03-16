@@ -66,6 +66,20 @@ const RESOURCE_TYPE_TO_MODEL_FAMILY = Object.freeze({
   layouts: "layout",
 });
 
+const MODEL_FAMILY_TO_RESOURCE_TYPE = Object.freeze({
+  image: "images",
+  sound: "sounds",
+  video: "videos",
+  animation: "tweens",
+  character: "characters",
+  font: "fonts",
+  transform: "transforms",
+  color: "colors",
+  textStyle: "typography",
+  variable: "variables",
+  layout: "layouts",
+});
+
 const MODEL_FAMILY_TO_ID_FIELD = Object.freeze({
   image: "imageId",
   sound: "soundId",
@@ -145,6 +159,15 @@ const MODEL_FAMILY_TO_DELETE_FIELD = Object.freeze({
   variable: "variableIds",
   layout: "layoutIds",
 });
+
+const MODEL_NATIVE_COMMAND_TYPES = new Set(
+  Object.keys(MODEL_FAMILY_TO_ID_FIELD).flatMap((family) => [
+    `${family}.create`,
+    `${family}.update`,
+    `${family}.move`,
+    `${family}.delete`,
+  ]),
+);
 
 const TEXT_STYLE_FIELDS = [
   "name",
@@ -287,53 +310,6 @@ const uniqueIdsInOrder = (orderedIds = [], existingIds = []) => {
   }
 
   return output;
-};
-
-const buildTreeFromParentLookup = ({
-  orderedIds = [],
-  allIds = [],
-  getParentId,
-}) => {
-  const ids = uniqueIdsInOrder(orderedIds, allIds);
-  const validIds = new Set(ids);
-  const childrenByParent = new Map([[null, []]]);
-
-  for (const id of ids) {
-    const rawParentId = getParentId(id);
-    const parentId =
-      typeof rawParentId === "string" &&
-      rawParentId.length > 0 &&
-      rawParentId !== id &&
-      validIds.has(rawParentId)
-        ? rawParentId
-        : null;
-
-    if (!childrenByParent.has(parentId)) {
-      childrenByParent.set(parentId, []);
-    }
-    childrenByParent.get(parentId).push(id);
-  }
-
-  const visited = new Set();
-  const buildNodes = (parentId) => {
-    const nodes = [];
-    for (const id of childrenByParent.get(parentId) || []) {
-      if (visited.has(id)) continue;
-      visited.add(id);
-      const children = buildNodes(id);
-      nodes.push(children.length > 0 ? { id, children } : { id });
-    }
-    return nodes;
-  };
-
-  const tree = buildNodes(null);
-  for (const id of ids) {
-    if (visited.has(id)) continue;
-    visited.add(id);
-    tree.push({ id });
-  }
-
-  return tree;
 };
 
 const pickDefined = (source, fields) => {
@@ -1250,225 +1226,12 @@ const creatorModelCollectionToRepositoryCollection = ({
   };
 };
 
-const legacyLayoutElementsToCreatorModelCollection = (layout = {}) => {
-  const elements = layout?.elements || {};
-  const items = {};
-
-  for (const [elementId, element] of Object.entries(elements)) {
-    items[elementId] = {
-      id: elementId,
-      ...normalizeLayoutElementData({
-        data: element,
-        elementId,
-        replace: true,
-      }),
-    };
-  }
-
-  const orderedIds = uniqueIdsInOrder(
-    Array.isArray(layout?.rootElementOrder) ? layout.rootElementOrder : [],
-    Object.keys(items),
-  );
-
-  const tree = buildTreeFromParentLookup({
-    orderedIds,
-    allIds: Object.keys(items),
-    getParentId: (elementId) => elements[elementId]?.parentId ?? null,
-  });
-
-  return {
-    items,
-    tree,
-  };
-};
-
-const legacyDomainResourceCollectionToCreatorModelCollection = ({
-  resourceType,
-  collection,
-}) => {
-  const collectionKey = RESOURCE_TYPE_TO_MODEL_COLLECTION[resourceType];
-  if (!collectionKey) {
-    return createEmptyCollection();
-  }
-
-  if (collectionKey === "layouts") {
-    const items = {};
-    for (const [layoutId, item] of Object.entries(collection?.items || {})) {
-      if (item?.type === "folder") {
-        items[layoutId] = {
-          id: layoutId,
-          type: "folder",
-          name: item.name ?? `Folder ${layoutId}`,
-        };
-        continue;
-      }
-
-      items[layoutId] = {
-        id: layoutId,
-        type: "layout",
-        ...normalizeLayoutData(item),
-        elements: legacyLayoutElementsToCreatorModelCollection(item),
-      };
-    }
-
-    return {
-      items,
-      tree: normalizeTreeNodes(collection?.tree || []),
-    };
-  }
-
-  return repositoryCollectionToCreatorModelCollection({
-    repositoryCollection: collection,
-    collectionKey,
-  });
-};
-
-const legacyDomainStateToCreatorModelState = (legacyState = {}) => {
-  const scenesById = legacyState?.scenes || {};
-  const orderedSceneIds = uniqueIdsInOrder(
-    legacyState?.story?.sceneOrder || [],
-    Object.keys(scenesById),
-  );
-
-  const scenesItems = {};
-  for (const [sceneId, scene] of Object.entries(scenesById)) {
-    const sectionIds = uniqueIdsInOrder(
-      scene?.sectionIds || [],
-      Object.keys(legacyState?.sections || {}).filter(
-        (sectionId) => legacyState?.sections?.[sectionId]?.sceneId === sceneId,
-      ),
-    );
-    const sectionItems = {};
-
-    for (const sectionId of sectionIds) {
-      const section = legacyState?.sections?.[sectionId];
-      if (!section) {
-        continue;
-      }
-
-      const lineIds = uniqueIdsInOrder(
-        section?.lineIds || [],
-        Object.keys(legacyState?.lines || {}).filter(
-          (lineId) => legacyState?.lines?.[lineId]?.sectionId === sectionId,
-        ),
-      );
-      const lineItems = {};
-
-      for (const lineId of lineIds) {
-        const line = legacyState?.lines?.[lineId];
-        if (!line) {
-          continue;
-        }
-
-        lineItems[lineId] = {
-          id: lineId,
-          actions: structuredClone(line.actions || {}),
-        };
-      }
-
-      sectionItems[sectionId] = {
-        id: sectionId,
-        name: section.name ?? `Section ${sectionId}`,
-        lines: {
-          items: lineItems,
-          tree: lineIds.map((lineId) => ({ id: lineId })),
-        },
-      };
-    }
-
-    scenesItems[sceneId] = {
-      id: sceneId,
-      type: scene?.type === "folder" ? "folder" : "scene",
-      name: scene?.name ?? `Scene ${sceneId}`,
-      ...pickDefined(scene, ["position"]),
-      ...(scene?.type === "folder"
-        ? {}
-        : {
-            sections: {
-              items: sectionItems,
-              tree: sectionIds.map((sectionId) => ({ id: sectionId })),
-            },
-          }),
-    };
-  }
-
-  const resources = legacyState?.resources || {};
-
-  return {
-    project: legacyState?.project?.resolution
-      ? {
-          resolution: structuredClone(legacyState.project.resolution),
-        }
-      : {},
-    story: {
-      initialSceneId: legacyState?.story?.initialSceneId || null,
-    },
-    scenes: {
-      items: scenesItems,
-      tree: buildTreeFromParentLookup({
-        orderedIds: orderedSceneIds,
-        allIds: Object.keys(scenesItems),
-        getParentId: (sceneId) => scenesById[sceneId]?.parentId ?? null,
-      }),
-    },
-    images: legacyDomainResourceCollectionToCreatorModelCollection({
-      resourceType: "images",
-      collection: resources.images,
-    }),
-    sounds: legacyDomainResourceCollectionToCreatorModelCollection({
-      resourceType: "sounds",
-      collection: resources.sounds,
-    }),
-    videos: legacyDomainResourceCollectionToCreatorModelCollection({
-      resourceType: "videos",
-      collection: resources.videos,
-    }),
-    animations: legacyDomainResourceCollectionToCreatorModelCollection({
-      resourceType: "tweens",
-      collection: resources.tweens,
-    }),
-    characters: legacyDomainResourceCollectionToCreatorModelCollection({
-      resourceType: "characters",
-      collection: resources.characters,
-    }),
-    fonts: legacyDomainResourceCollectionToCreatorModelCollection({
-      resourceType: "fonts",
-      collection: resources.fonts,
-    }),
-    transforms: legacyDomainResourceCollectionToCreatorModelCollection({
-      resourceType: "transforms",
-      collection: resources.transforms,
-    }),
-    colors: legacyDomainResourceCollectionToCreatorModelCollection({
-      resourceType: "colors",
-      collection: resources.colors,
-    }),
-    textStyles: legacyDomainResourceCollectionToCreatorModelCollection({
-      resourceType: "typography",
-      collection: resources.typography,
-    }),
-    variables: legacyDomainResourceCollectionToCreatorModelCollection({
-      resourceType: "variables",
-      collection: resources.variables,
-    }),
-    layouts: legacyDomainResourceCollectionToCreatorModelCollection({
-      resourceType: "layouts",
-      collection: resources.layouts,
-    }),
-  };
-};
-
 const looksLikeCreatorModelState = (state) => {
   if (!isPlainObject(state)) return false;
   if (!isPlainObject(state.scenes)) {
     return false;
   }
   return MODEL_COLLECTION_KEYS.every((key) => isPlainObject(state[key]));
-};
-
-const looksLikeLegacyDomainState = (state) => {
-  if (!isPlainObject(state)) return false;
-  return isPlainObject(state.resources) || state.model_version === 2;
 };
 
 const normalizeExistingCreatorModelState = (state = {}) => {
@@ -2001,13 +1764,74 @@ const getRepositoryItemByResourceType = ({
   return repositoryState?.[resourceType]?.items?.[resourceId];
 };
 
+const toNormalizedNativeResourceCommand = ({ type, payload = {} }) => {
+  const [family, operation] = type.split(".");
+  const resourceType = MODEL_FAMILY_TO_RESOURCE_TYPE[family];
+  const idField = MODEL_FAMILY_TO_ID_FIELD[family];
+  const deleteField = MODEL_FAMILY_TO_DELETE_FIELD[family];
+
+  if (!resourceType || !idField || !deleteField) {
+    throw new DomainValidationError(`Unsupported command type: ${type}`);
+  }
+
+  if (operation === "create") {
+    return {
+      type,
+      payload: {
+        [idField]: payload[idField],
+        parentId: payload.parentId,
+        index: payload.index,
+        position: payload.position,
+        positionTargetId: payload.positionTargetId,
+        data: toModelResourceCreateData({
+          resourceType,
+          data: payload.data,
+        }),
+      },
+    };
+  }
+
+  if (operation === "update") {
+    return {
+      type,
+      payload: {
+        [idField]: payload[idField],
+        data: toModelResourceUpdateData({
+          resourceType,
+          data: payload.data,
+        }),
+      },
+    };
+  }
+
+  if (operation === "move") {
+    return {
+      type,
+      payload: {
+        [idField]: payload[idField],
+        parentId: payload.parentId,
+        index: payload.index,
+        position: payload.position,
+        positionTargetId: payload.positionTargetId,
+      },
+    };
+  }
+
+  if (operation === "delete") {
+    return {
+      type,
+      payload: {
+        [deleteField]: structuredClone(payload[deleteField] || []),
+      },
+    };
+  }
+
+  throw new DomainValidationError(`Unsupported command type: ${type}`);
+};
+
 const toModelProjectCreateState = ({ state }) => {
   if (looksLikeCreatorModelState(state)) {
     return normalizeExistingCreatorModelState(state);
-  }
-
-  if (looksLikeLegacyDomainState(state)) {
-    return legacyDomainStateToCreatorModelState(state);
   }
 
   return repositoryStateToCreatorModelState({
@@ -2036,6 +1860,13 @@ export const commandToCreatorModelCommand = ({
         }),
       },
     };
+  }
+
+  if (MODEL_NATIVE_COMMAND_TYPES.has(normalizedCommand.type)) {
+    return toNormalizedNativeResourceCommand({
+      type: normalizedCommand.type,
+      payload,
+    });
   }
 
   if (
