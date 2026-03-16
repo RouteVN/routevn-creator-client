@@ -1,13 +1,4 @@
-export const MODEL_VERSION = 2;
-export const PROTOCOL_VERSION = "1.0";
-export const COMMAND_VERSION = 1;
-
-export const PARTITIONS = {
-  STORY: "story",
-  RESOURCES: "resources",
-  LAYOUTS: "layouts",
-  SETTINGS: "settings",
-};
+const COMMAND_VERSION = 1;
 
 export const RESOURCE_TYPES = [
   "images",
@@ -33,16 +24,7 @@ export class DomainValidationError extends Error {
   }
 }
 
-export class DomainInvariantError extends Error {
-  constructor(message, details = {}) {
-    super(message);
-    this.name = "DomainInvariantError";
-    this.code = "validation_failed";
-    this.details = details;
-  }
-}
-
-export class DomainPreconditionError extends Error {
+class DomainPreconditionError extends Error {
   constructor(message, details = {}) {
     super(message);
     this.name = "DomainPreconditionError";
@@ -51,41 +33,11 @@ export class DomainPreconditionError extends Error {
   }
 }
 
-export const deepClone = (value) => structuredClone(value);
-
-export const assertFiniteNumber = (value) =>
+const assertFiniteNumber = (value) =>
   typeof value === "number" && Number.isFinite(value);
 
-export const assertNonEmptyString = (value) =>
+const assertNonEmptyString = (value) =>
   typeof value === "string" && value.trim().length > 0;
-
-export const insertAtIndex = (array, value, index) => {
-  if (!Array.isArray(array)) throw new Error("insertAtIndex expects array");
-  if (index === undefined || index === null || index >= array.length) {
-    array.push(value);
-    return;
-  }
-  if (index <= 0) {
-    array.unshift(value);
-    return;
-  }
-  array.splice(index, 0, value);
-};
-
-export const removeFromArray = (array, value) => {
-  const idx = array.indexOf(value);
-  if (idx >= 0) array.splice(idx, 1);
-};
-
-export const upsertNoDuplicate = (array, value, index) => {
-  removeFromArray(array, value);
-  insertAtIndex(array, value, index);
-};
-
-export const normalizeIndex = (index) => {
-  if (!Number.isInteger(index)) return undefined;
-  return Math.max(0, index);
-};
 
 const isPlainObject = (value) => {
   return (
@@ -1406,14 +1358,10 @@ export const COMMAND_TYPES = Object.freeze(
   ),
 );
 
-export const COMMAND_CATALOG = Object.freeze(
+const COMMAND_CATALOG = Object.freeze(
   Object.fromEntries(
     COMMAND_DEFINITIONS.map((definition) => [definition.type, definition]),
   ),
-);
-
-export const ALL_COMMAND_TYPES = Object.freeze(
-  COMMAND_DEFINITIONS.map((definition) => definition.type),
 );
 
 export const COMMAND_EVENT_MODEL = Object.freeze({
@@ -1455,20 +1403,14 @@ export const normalizeCommand = (command) => {
 export const isSupportedCommandType = (type) =>
   getCommandDefinition(type) !== undefined;
 
-export const isCommandInScope = (type, scope) =>
+const isCommandInScope = (type, scope) =>
   getCommandDefinition(type)?.scope === scope;
 
 export const isStoryCommandType = (type) => isCommandInScope(type, "story");
 
 export const isLayoutCommandType = (type) => isCommandInScope(type, "layouts");
 
-export const isResourceCommandType = (type) =>
-  isCommandInScope(type, "resources");
-
-export const isSettingsCommandType = (type) =>
-  isCommandInScope(type, "settings");
-
-export const validateCommandEnvelope = (command, errors) => {
+const validateCommandEnvelope = (command, errors) => {
   if (!command || typeof command !== "object") {
     errors.push("command must be an object");
     return;
@@ -1514,7 +1456,7 @@ export const validateCommandEnvelope = (command, errors) => {
   }
 };
 
-export const validateCommandPayload = (command, errors) => {
+const validateCommandPayload = (command, errors) => {
   const normalizedCommand = normalizeCommand(command);
   const definition = getCommandDefinition(normalizedCommand?.type);
   if (!definition) {
@@ -1580,23 +1522,6 @@ export const validateCommandPayload = (command, errors) => {
   definition.validatePayload?.(payload, errors);
 };
 
-export const assertCommandPreconditions = (state, command) => {
-  const normalizedCommand = normalizeCommand(command);
-  if (state?.project?.id) {
-    assertPrecondition(
-      state.project.id === normalizedCommand.projectId,
-      "projectId mismatch",
-      {
-        expected: state.project.id,
-        got: normalizedCommand.projectId,
-      },
-    );
-  }
-
-  const definition = getCommandDefinition(normalizedCommand?.type);
-  definition?.assertPreconditions?.(state, normalizedCommand);
-};
-
 export const validateCommand = (command) => {
   const normalizedCommand = normalizeCommand(command);
   const errors = [];
@@ -1620,15 +1545,4 @@ export const validateCommand = (command) => {
   }
 
   return true;
-};
-
-export const commandToEvent = (command) => {
-  const normalizedCommand = normalizeCommand(command);
-  return {
-    type: normalizedCommand.type,
-    payload: structuredClone(normalizedCommand.payload),
-    meta: {
-      ts: normalizedCommand.clientTs,
-    },
-  };
 };

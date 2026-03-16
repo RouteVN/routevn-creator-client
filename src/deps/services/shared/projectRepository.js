@@ -4,12 +4,7 @@ import {
   COMMAND_TYPES,
   isSupportedCommandType,
 } from "../../../internal/project/commands.js";
-import { processCommand as processLegacyProjectCommand } from "../../../internal/project/state.js";
-import { projectRepositoryStateToDomainState } from "../../../internal/project/projection.js";
-import {
-  applyCommandToRepositoryStateWithCreatorModel,
-  shouldUseCreatorModelForCommand,
-} from "../../../internal/creatorModelAdapter.js";
+import { applyCommandToRepositoryStateWithCreatorModel } from "../../../internal/creatorModelAdapter.js";
 import { validateCommandSubmitItem } from "insieme/client";
 import {
   commandToSyncEvent,
@@ -713,30 +708,11 @@ export const applyCommandToRepositoryState = ({
   command,
   projectId,
 }) => {
-  if (shouldUseCreatorModelForCommand({ command })) {
-    return applyCommandToRepositoryStateWithCreatorModel({
-      repositoryState,
-      command,
-      projectId,
-    });
-  }
-
-  const domainState = projectRepositoryStateToDomainState({
+  return applyCommandToRepositoryStateWithCreatorModel({
     repositoryState,
+    command,
     projectId,
   });
-  const { state: nextDomainState } = processLegacyProjectCommand({
-    state: domainState,
-    command,
-  });
-
-  return {
-    valid: true,
-    repositoryState: projectDomainStateToRepositoryState({
-      domainState: nextDomainState,
-      repositoryState,
-    }),
-  };
 };
 
 const applyRepositoryEventToRepositoryState = ({

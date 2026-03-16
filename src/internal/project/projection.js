@@ -1,4 +1,3 @@
-import { createEmptyProjectState } from "./state.js";
 import {
   buildLayoutElements,
   createLayoutReferenceResources,
@@ -8,6 +7,10 @@ import { normalizeEngineActions } from "./engineActions.js";
 import { toFlatItems, toHierarchyStructure } from "./tree.js";
 
 const DEFAULT_TIMESTAMP = 0;
+const createResourceCollection = () => ({
+  items: {},
+  tree: [],
+});
 
 const toFiniteTimestamp = (value, fallback) =>
   Number.isFinite(Number(value)) ? Number(value) : fallback;
@@ -56,6 +59,37 @@ const appendMissingIds = (orderedIds, allIds) => {
   }
 
   return result;
+};
+
+const createEmptyProjectState = ({
+  projectId,
+  name = "",
+  description = "",
+  timestamp = 0,
+}) => {
+  const resources = Object.fromEntries(
+    RESOURCE_TYPES.map((type) => [type, createResourceCollection()]),
+  );
+  const createdAt = toFiniteTimestamp(timestamp, DEFAULT_TIMESTAMP);
+
+  return {
+    model_version: 2,
+    project: {
+      id: projectId,
+      name,
+      description,
+      createdAt,
+      updatedAt: createdAt,
+    },
+    story: {
+      initialSceneId: null,
+      sceneOrder: [],
+    },
+    scenes: {},
+    sections: {},
+    lines: {},
+    resources,
+  };
 };
 
 const buildTreeFromParentMap = ({
