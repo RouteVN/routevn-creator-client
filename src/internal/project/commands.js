@@ -647,13 +647,9 @@ const COMMAND_DEFINITIONS = [
       assertSectionExists(state, sectionId);
 
       for (const item of command.payload.lines || []) {
-        assertPrecondition(
-          !state.lines?.[item.lineId],
-          "line already exists",
-          {
-            lineId: item.lineId,
-          },
-        );
+        assertPrecondition(!state.lines?.[item.lineId], "line already exists", {
+          lineId: item.lineId,
+        });
       }
 
       let positionLineId;
