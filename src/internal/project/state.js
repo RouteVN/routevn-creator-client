@@ -41,6 +41,32 @@ const insertStableByCreatedAt = ({ order, id, index, items }) => {
   sortIdsByCreatedAt(order, items);
 };
 
+const resolveInsertIndexFromPosition = ({ order, position }) => {
+  if (position === "first") {
+    return 0;
+  }
+
+  if (position === "last") {
+    return order.length;
+  }
+
+  if (!isPlainObject(position)) {
+    return undefined;
+  }
+
+  if (typeof position.before === "string") {
+    const beforeIndex = order.indexOf(position.before);
+    return beforeIndex >= 0 ? beforeIndex : order.length;
+  }
+
+  if (typeof position.after === "string") {
+    const afterIndex = order.indexOf(position.after);
+    return afterIndex >= 0 ? afterIndex + 1 : order.length;
+  }
+
+  return undefined;
+};
+
 const cascadeDeleteScene = (state, sceneId) => {
   const scene = state.scenes[sceneId];
   if (!scene) return;
@@ -586,7 +612,7 @@ const reducers = {
     );
   },
 
-  [COMMAND_TYPES.LINE_INSERT_AFTER]: ({ state, payload, now }) => {
+  [COMMAND_TYPES.LINE_CREATE]: ({ state, payload, now }) => {
     const section = state.sections[payload.sectionId];
     const lineData = structuredClone(payload.data || {});
     state.lines[payload.lineId] = {
@@ -597,10 +623,14 @@ const reducers = {
       updatedAt: now,
     };
 
-    if (payload.afterLineId !== undefined && payload.afterLineId !== null) {
-      const afterIndex = section.lineIds.indexOf(payload.afterLineId);
-      const insertIndex =
-        afterIndex >= 0 ? afterIndex + 1 : section.lineIds.length;
+    const insertIndex =
+      normalizeIndex(payload.index) ??
+      resolveInsertIndexFromPosition({
+        order: section.lineIds,
+        position: payload.position,
+      });
+
+    if (insertIndex !== undefined) {
       insertAtIndex(section.lineIds, payload.lineId, insertIndex);
     } else {
       insertStableByCreatedAt({

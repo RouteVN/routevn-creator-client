@@ -437,22 +437,11 @@ export const handleNewLineOperation = async (deps, payload) => {
       existingDialogue,
     });
 
-  const scene = store.selectScene();
-  const selectedSection = scene?.sections?.find(
-    (section) => section?.id === sectionId,
-  );
-  const orderedLineIds = Array.isArray(selectedSection?.lines)
-    ? selectedSection.lines
-        .map((line) => line?.id)
-        .filter((itemId) => typeof itemId === "string" && itemId)
-    : [];
-  const baseLineIndex = baseLineId ? orderedLineIds.indexOf(baseLineId) : -1;
-
-  let afterLineId = null;
-  if (requestedPosition === "after" && baseLineId) {
-    afterLineId = baseLineId;
-  } else if (requestedPosition === "before" && baseLineId) {
-    afterLineId = baseLineIndex > 0 ? orderedLineIds[baseLineIndex - 1] : null;
+  let createPosition = "last";
+  if (requestedPosition === "before") {
+    createPosition = { before: baseLineId };
+  } else if (requestedPosition === "after") {
+    createPosition = { after: baseLineId };
   }
 
   const createLinePayload = {
@@ -469,21 +458,9 @@ export const handleNewLineOperation = async (deps, payload) => {
     },
   };
 
-  if (afterLineId) {
-    createLinePayload.afterLineId = afterLineId;
-  } else if (!requestedPosition) {
-    createLinePayload.position = "last";
-  }
+  createLinePayload.position = createPosition;
 
   await projectService.createLineItem(createLinePayload);
-
-  if (requestedPosition === "before" && baseLineIndex === 0) {
-    await projectService.moveLineItem({
-      lineId: newLineId,
-      toSectionId: sectionId,
-      index: 0,
-    });
-  }
 
   syncSceneEditorProjectState(store, projectService);
   store.setSelectedLineId({ selectedLineId: newLineId });

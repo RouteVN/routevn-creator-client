@@ -23,7 +23,7 @@ Authoritative source: `src/internal/project/commands.js`.
 - `section.update`
 - `section.delete`
 - `section.move`
-- `line.insert_after`
+- `line.create`
 - `line.update_actions`
 - `line.delete`
 - `line.move`
@@ -240,7 +240,7 @@ position: "last" # optional; also "first", { before: "<id>" }, { after: "<id>" }
 
 ### Lines
 
-#### `line.insert_after`
+#### `line.create`
 
 Payload (YAML):
 
@@ -248,11 +248,17 @@ Payload (YAML):
 lineId: "<string>"
 sectionId: "<string>"
 data: {}
-afterLineId: "<string|null>" # optional
 parentId: "<string|null>" # optional
 index: 0 # optional
 position: "last" # optional; also "first", { before: "<id>" }, { after: "<id>" }
 ```
+
+Notes:
+
+- Use `position: { before: "<id>" }` or `position: { after: "<id>" }` to
+  place the new line relative to an existing line.
+- There is no separate canonical `line.insert_before` or `line.insert_after`
+  command; older `line.insert_after` payloads still normalize to `line.create`.
 
 #### `line.update_actions`
 

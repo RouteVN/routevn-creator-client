@@ -108,7 +108,7 @@ assert.equal(state.sections["section-1"].createdAt, 1100);
 
 apply(
   makeCommand({
-    type: "line.insert_after",
+    type: "line.create",
     ts: 1200,
     payload: {
       lineId: "line-1",
@@ -121,12 +121,12 @@ assert.deepEqual(state.sections["section-1"].lineIds, ["line-1"]);
 
 apply(
   makeCommand({
-    type: "line.insert_after",
+    type: "line.create",
     ts: 1300,
     payload: {
       lineId: "line-2",
       sectionId: "section-1",
-      afterLineId: "line-1",
+      position: { after: "line-1" },
       data: { actions: { narration: "world" } },
     },
   }),
@@ -193,12 +193,12 @@ let preconditionFailed = false;
 try {
   apply(
     makeCommand({
-      type: "line.insert_after",
+      type: "line.create",
       ts: 1500,
       payload: {
         lineId: "line-3",
         sectionId: "section-2",
-        afterLineId: "line-1",
+        position: { after: "line-1" },
         data: { actions: {} },
       },
     }),

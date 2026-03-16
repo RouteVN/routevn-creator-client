@@ -60,7 +60,7 @@ await runScenario("late-join-catchup", async () => {
       createCommandEnvelope({
         projectId,
         scope: "story",
-        type: "line.insert_after",
+        type: "line.create",
         payload: {
           lineId: "line-1",
           sectionId: "section-1",

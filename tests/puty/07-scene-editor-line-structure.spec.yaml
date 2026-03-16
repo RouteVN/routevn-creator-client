@@ -7,7 +7,7 @@ suites:
 suite: runInsiemeStorageScenario
 exportName: runInsiemeStorageScenario
 ---
-case: persists line insertion movement and deletion commands
+case: persists line creation movement and deletion commands
 in:
   - projectId: project-puty-lines-001
     actor:
@@ -48,11 +48,11 @@ in:
           sectionId: section-b
           data:
             name: Second
-      - id: cmd-lines-insert-1
+      - id: cmd-lines-create-1
         partitions:
           - project:project-puty-lines-001:story
           - project:project-puty-lines-001:story:scene:scene-lines
-        type: line.insert_after
+        type: line.create
         clientTs: 804
         payload:
           sectionId: section-a
@@ -63,32 +63,34 @@ in:
                 content:
                   - text: First line
                 mode: adv
-      - id: cmd-lines-insert-2
+      - id: cmd-lines-create-2
         partitions:
           - project:project-puty-lines-001:story
           - project:project-puty-lines-001:story:scene:scene-lines
-        type: line.insert_after
+        type: line.create
         clientTs: 805
         payload:
           sectionId: section-a
-          afterLineId: line-1
           lineId: line-2
+          position:
+            after: line-1
           data:
             actions:
               dialogue:
                 content:
                   - text: Second line
                 mode: adv
-      - id: cmd-lines-insert-3
+      - id: cmd-lines-create-3
         partitions:
           - project:project-puty-lines-001:story
           - project:project-puty-lines-001:story:scene:scene-lines
-        type: line.insert_after
+        type: line.create
         clientTs: 806
         payload:
           sectionId: section-a
-          afterLineId: line-2
           lineId: line-3
+          position:
+            after: line-2
           data:
             actions:
               dialogue:
@@ -163,13 +165,13 @@ out:
         clientId: client-puty-lines
         clientTs: 803
     - committedId: 4
-      id: cmd-lines-insert-1
+      id: cmd-lines-create-1
       projectId: project-puty-lines-001
       userId: user-puty-lines
       partitions:
         - project:project-puty-lines-001:story
         - project:project-puty-lines-001:story:scene:scene-lines
-      type: line.insert_after
+      type: line.create
       payload:
         sectionId: section-a
         lineId: line-1
@@ -183,17 +185,18 @@ out:
         clientId: client-puty-lines
         clientTs: 804
     - committedId: 5
-      id: cmd-lines-insert-2
+      id: cmd-lines-create-2
       projectId: project-puty-lines-001
       userId: user-puty-lines
       partitions:
         - project:project-puty-lines-001:story
         - project:project-puty-lines-001:story:scene:scene-lines
-      type: line.insert_after
+      type: line.create
       payload:
         sectionId: section-a
-        afterLineId: line-1
         lineId: line-2
+        position:
+          after: line-1
         data:
           actions:
             dialogue:
@@ -204,17 +207,18 @@ out:
         clientId: client-puty-lines
         clientTs: 805
     - committedId: 6
-      id: cmd-lines-insert-3
+      id: cmd-lines-create-3
       projectId: project-puty-lines-001
       userId: user-puty-lines
       partitions:
         - project:project-puty-lines-001:story
         - project:project-puty-lines-001:story:scene:scene-lines
-      type: line.insert_after
+      type: line.create
       payload:
         sectionId: section-a
-        afterLineId: line-2
         lineId: line-3
+        position:
+          after: line-2
         data:
           actions:
             dialogue:
@@ -374,8 +378,8 @@ out:
         lines: {}
         resources: {}
     - committedId: 4
-      eventId: cmd-lines-insert-1
-      eventType: line.insert_after
+      eventId: cmd-lines-create-1
+      eventType: line.create
       state:
         model_version: 2
         project:
@@ -434,8 +438,8 @@ out:
             updatedAt: 804
         resources: {}
     - committedId: 5
-      eventId: cmd-lines-insert-2
-      eventType: line.insert_after
+      eventId: cmd-lines-create-2
+      eventType: line.create
       state:
         model_version: 2
         project:
@@ -505,8 +509,8 @@ out:
             updatedAt: 805
         resources: {}
     - committedId: 6
-      eventId: cmd-lines-insert-3
-      eventType: line.insert_after
+      eventId: cmd-lines-create-3
+      eventType: line.create
       state:
         model_version: 2
         project:

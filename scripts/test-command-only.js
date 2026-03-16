@@ -231,6 +231,66 @@ assert.deepEqual(normalizedLegacySectionReorder.payload, {
   index: 0,
 });
 
+const legacyLineInsertAfterCommand = createCommandEnvelope({
+  id: "legacy-line-insert-after",
+  projectId,
+  scope: "story",
+  partitions: [storyPartition, `project:${projectId}:story:scene:scene-legacy`],
+  type: "line.insert_after",
+  payload: {
+    sectionId: "section-legacy",
+    lineId: "line-legacy",
+    afterLineId: "line-anchor",
+    line: {
+      actions: {
+        dialogue: {
+          content: [{ text: "Legacy line" }],
+          mode: "adv",
+        },
+      },
+    },
+  },
+  actor,
+  clientTs: 46,
+});
+
+validateCommand(legacyLineInsertAfterCommand);
+assert.equal(commandToSyncEvent(legacyLineInsertAfterCommand).type, "line.create");
+assert.deepEqual(commandToSyncEvent(legacyLineInsertAfterCommand).payload, {
+  sectionId: "section-legacy",
+  lineId: "line-legacy",
+  data: {
+    actions: {
+      dialogue: {
+        content: [{ text: "Legacy line" }],
+        mode: "adv",
+      },
+    },
+  },
+  position: {
+    after: "line-anchor",
+  },
+});
+const normalizedLegacyLineInsertAfter = commandFromItem(
+  createCommittedEventFromCommand(legacyLineInsertAfterCommand, 5, 46),
+);
+assert.equal(normalizedLegacyLineInsertAfter.type, "line.create");
+assert.deepEqual(normalizedLegacyLineInsertAfter.payload, {
+  sectionId: "section-legacy",
+  lineId: "line-legacy",
+  data: {
+    actions: {
+      dialogue: {
+        content: [{ text: "Legacy line" }],
+        mode: "adv",
+      },
+    },
+  },
+  position: {
+    after: "line-anchor",
+  },
+});
+
 const bypassScan = spawnSync(
   "rg",
   ["-n", "repository\\.addEvent\\(", "src/pages", "src/components"],
@@ -451,7 +511,7 @@ try {
       projectId,
       scope: "story",
       partitions: [storyBasePartition, scenePartition],
-      type: COMMAND_TYPES.LINE_INSERT_AFTER,
+      type: COMMAND_TYPES.LINE_CREATE,
       payload: {
         sectionId: "section-1",
         lineId: "line-1",
@@ -579,7 +639,7 @@ try {
     [
       COMMAND_TYPES.SCENE_CREATE,
       COMMAND_TYPES.SECTION_CREATE,
-      COMMAND_TYPES.LINE_INSERT_AFTER,
+      COMMAND_TYPES.LINE_CREATE,
       COMMAND_TYPES.LINE_UPDATE_ACTIONS,
     ],
   );

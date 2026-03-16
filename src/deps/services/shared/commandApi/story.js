@@ -332,6 +332,7 @@ export const createStoryCommandApi = (shared) => {
       data = {},
       line,
       afterLineId,
+      beforeLineId,
       parentId = null,
       position,
       index,
@@ -339,8 +340,12 @@ export const createStoryCommandApi = (shared) => {
       const context = await shared.ensureCommandContext();
       const nextLineId = lineId || shared.createId();
       const sectionLocation = findSectionLocation(context.state, sectionId);
-      const resolvedPosition =
-        position || (afterLineId ? { after: afterLineId } : undefined);
+      let resolvedPosition = position;
+      if (resolvedPosition === undefined && beforeLineId) {
+        resolvedPosition = { before: beforeLineId };
+      } else if (resolvedPosition === undefined && afterLineId) {
+        resolvedPosition = { after: afterLineId };
+      }
       const resolvedIndex = shared.resolveLineIndex({
         section: sectionLocation?.section,
         parentId,
@@ -358,12 +363,11 @@ export const createStoryCommandApi = (shared) => {
       await shared.submitCommandWithContext({
         context,
         scope: "story",
-        type: COMMAND_TYPES.LINE_INSERT_AFTER,
+        type: COMMAND_TYPES.LINE_CREATE,
         payload: {
           sectionId,
           lineId: nextLineId,
           data: structuredClone(data ?? line ?? {}),
-          afterLineId: afterLineId || null,
           parentId: normalizeParentId(parentId),
           index: resolvedIndex,
           position: resolvedPosition || "last",

@@ -84,7 +84,7 @@ try {
     createCommandEnvelope({
       projectId,
       scope: "story",
-      type: "line.insert_after",
+      type: "line.create",
       payload: {
         lineId: "line-1",
         sectionId: "section-1",

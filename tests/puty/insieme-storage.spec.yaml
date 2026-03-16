@@ -55,7 +55,7 @@ in:
         partitions:
           - project:project-puty-storage-001:story
           - project:project-puty-storage-001:story:scene:scene-1
-        type: line.insert_after
+        type: line.create
         clientTs: 105
         payload:
           sectionId: section-1
@@ -165,7 +165,7 @@ out:
       partitions:
         - project:project-puty-storage-001:story
         - project:project-puty-storage-001:story:scene:scene-1
-      type: line.insert_after
+      type: line.create
       payload:
         sectionId: section-1
         lineId: line-1
@@ -363,7 +363,7 @@ out:
               - id: image-1
     - committedId: 4
       eventId: cmd-line-insert
-      eventType: line.insert_after
+      eventType: line.create
       state:
         model_version: 2
         project:

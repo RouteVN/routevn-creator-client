@@ -41,7 +41,7 @@ in:
         partitions:
           - project:project-puty-scene-delete-001:story
           - project:project-puty-scene-delete-001:story:scene:scene-delete-target
-        type: line.insert_after
+        type: line.create
         clientTs: 603
         payload:
           sectionId: section-a
@@ -67,7 +67,7 @@ in:
         partitions:
           - project:project-puty-scene-delete-001:story
           - project:project-puty-scene-delete-001:story:scene:scene-delete-target
-        type: line.insert_after
+        type: line.create
         clientTs: 605
         payload:
           sectionId: section-b
@@ -126,7 +126,7 @@ out:
       partitions:
         - project:project-puty-scene-delete-001:story
         - project:project-puty-scene-delete-001:story:scene:scene-delete-target
-      type: line.insert_after
+      type: line.create
       payload:
         sectionId: section-a
         lineId: line-a
@@ -162,7 +162,7 @@ out:
       partitions:
         - project:project-puty-scene-delete-001:story
         - project:project-puty-scene-delete-001:story:scene:scene-delete-target
-      type: line.insert_after
+      type: line.create
       payload:
         sectionId: section-b
         lineId: line-b
@@ -262,7 +262,7 @@ out:
         resources: {}
     - committedId: 3
       eventId: cmd-scene-delete-line-a
-      eventType: line.insert_after
+      eventType: line.create
       state:
         model_version: 2
         project:
@@ -373,7 +373,7 @@ out:
         resources: {}
     - committedId: 5
       eventId: cmd-scene-delete-line-b
-      eventType: line.insert_after
+      eventType: line.create
       state:
         model_version: 2
         project:

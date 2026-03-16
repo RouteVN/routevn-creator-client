@@ -97,7 +97,7 @@ const createRepositoryEvent = ({
     }),
     createRepositoryEvent({
       id: "command-3",
-      type: "line.insert_after",
+      type: "line.create",
       partitions: [`project:${projectId}:story`],
       payload: {
         lineId: "line-1",

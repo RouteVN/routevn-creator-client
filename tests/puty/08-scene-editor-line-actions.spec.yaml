@@ -41,7 +41,7 @@ in:
         partitions:
           - project:project-puty-line-actions-001:story
           - project:project-puty-line-actions-001:story:scene:scene-actions
-        type: line.insert_after
+        type: line.create
         clientTs: 903
         payload:
           sectionId: section-main
@@ -152,7 +152,7 @@ out:
       partitions:
         - project:project-puty-line-actions-001:story
         - project:project-puty-line-actions-001:story:scene:scene-actions
-      type: line.insert_after
+      type: line.create
       payload:
         sectionId: section-main
         lineId: line-main
@@ -319,7 +319,7 @@ out:
         resources: {}
     - committedId: 3
       eventId: cmd-line-actions-line-create
-      eventType: line.insert_after
+      eventType: line.create
       state:
         model_version: 2
         project:

@@ -112,7 +112,7 @@ Detailed command definitions, accepted payload fields, and preconditions live in
 - Use a more specific verb only when generic CRUD is not precise enough:
   - `scene.set_initial`
   - `section.move`
-  - `line.insert_after`
+  - `line.create`
   - `line.update_actions`
 - Do not create separate naming schemes for “command types” versus “event types”.
   The canonical type string is shared by both.
@@ -144,7 +144,8 @@ Important examples of semantic preconditions:
 
 - `scene.set_initial` cannot target a folder
 - `scene.move` parent must be a folder when provided
-- `line.insert_after.afterLineId` must belong to the target section
+- `line.create.position.before` / `line.create.position.after` must target a
+  line in the target section
 - `resource.update` for `variables` cannot change `type` / `variableType`
 - `layout.element.*` requires an existing layout and existing parent/element
   where applicable

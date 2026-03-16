@@ -235,6 +235,10 @@ const normalizePayloadDataField = (
 };
 
 const normalizeCommandType = (type) => {
+  if (type === "line.insert_after") {
+    return "line.create";
+  }
+
   if (type === "section.reorder") {
     return "section.move";
   }
@@ -280,10 +284,28 @@ const normalizeCommandPayload = (type, payload) => {
     });
   }
 
-  if (type === "line.insert_after") {
-    return normalizePayloadDataField(payload, {
+  if (type === "line.create") {
+    const normalizedPayload = normalizePayloadDataField(payload, {
       legacyFields: ["line"],
     });
+
+    if (!isPlainObject(normalizedPayload)) {
+      return normalizedPayload;
+    }
+
+    const nextPayload = structuredClone(normalizedPayload);
+    if (nextPayload.position === undefined) {
+      if (assertNonEmptyString(nextPayload.beforeLineId)) {
+        nextPayload.position = { before: nextPayload.beforeLineId };
+      } else if (assertNonEmptyString(nextPayload.afterLineId)) {
+        nextPayload.position = { after: nextPayload.afterLineId };
+      }
+    }
+
+    delete nextPayload.beforeLineId;
+    delete nextPayload.afterLineId;
+
+    return nextPayload;
   }
 
   if (type === "line.update_actions") {
@@ -546,31 +568,42 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    type: "line.insert_after",
+    type: "line.create",
     scope: "story",
     payload: {
       requiredFields: ["lineId", "sectionId", "data"],
       requiredStringFields: ["lineId", "sectionId"],
       objectFields: ["data"],
-      optionalNullableStringFields: ["afterLineId", "parentId"],
+      optionalNullableStringFields: ["parentId"],
       allowIndex: true,
       allowPosition: true,
     },
     assertPreconditions: (state, command) => {
-      const { lineId, sectionId, afterLineId } = command.payload;
+      const { lineId, sectionId, position } = command.payload;
       assertSectionExists(state, sectionId);
       assertPrecondition(!state.lines?.[lineId], "line already exists", {
         lineId,
       });
-      if (afterLineId !== undefined && afterLineId !== null) {
-        assertLineExists(state, afterLineId, { afterLineId });
+
+      let positionLineId;
+      if (isPlainObject(position) && assertNonEmptyString(position.before)) {
+        positionLineId = position.before;
+      } else if (
+        isPlainObject(position) &&
+        assertNonEmptyString(position.after)
+      ) {
+        positionLineId = position.after;
+      }
+
+      if (positionLineId !== undefined) {
+        assertLineExists(state, positionLineId, { positionLineId });
         assertPrecondition(
-          state.lines[afterLineId].sectionId === sectionId,
-          "afterLineId must belong to target section",
+          state.lines[positionLineId].sectionId === sectionId,
+          "position target must belong to target section",
           {
-            afterLineId,
+            positionLineId,
             sectionId,
-            actualSectionId: state.lines[afterLineId].sectionId,
+            actualSectionId: state.lines[positionLineId].sectionId,
           },
         );
       }
