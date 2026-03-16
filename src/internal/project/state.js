@@ -41,13 +41,27 @@ const insertStableByCreatedAt = ({ order, id, index, items }) => {
   sortIdsByCreatedAt(order, items);
 };
 
-const resolveInsertIndexFromPosition = ({ order, position }) => {
+const resolveInsertIndexFromPosition = ({
+  order,
+  position,
+  positionTargetId,
+}) => {
   if (position === "first") {
     return 0;
   }
 
   if (position === "last") {
     return order.length;
+  }
+
+  if (position === "before" && typeof positionTargetId === "string") {
+    const beforeIndex = order.indexOf(positionTargetId);
+    return beforeIndex >= 0 ? beforeIndex : order.length;
+  }
+
+  if (position === "after" && typeof positionTargetId === "string") {
+    const afterIndex = order.indexOf(positionTargetId);
+    return afterIndex >= 0 ? afterIndex + 1 : order.length;
   }
 
   if (!isPlainObject(position)) {
@@ -621,6 +635,7 @@ const reducers = {
       resolveInsertIndexFromPosition({
         order: section.lineIds,
         position: payload.position,
+        positionTargetId: payload.positionTargetId,
       });
 
     lineItems.forEach((item, offset) => {

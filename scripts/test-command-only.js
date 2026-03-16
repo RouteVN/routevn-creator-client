@@ -149,7 +149,10 @@ const legacyResourceRenameCommand = createCommandEnvelope({
 });
 
 validateCommand(legacyResourceRenameCommand);
-assert.equal(commandToSyncEvent(legacyResourceRenameCommand).type, "resource.update");
+assert.equal(
+  commandToSyncEvent(legacyResourceRenameCommand).type,
+  "resource.update",
+);
 assert.deepEqual(commandToSyncEvent(legacyResourceRenameCommand).payload, {
   resourceType: "images",
   resourceId: "image-legacy",
@@ -184,7 +187,10 @@ const legacySectionRenameCommand = createCommandEnvelope({
 });
 
 validateCommand(legacySectionRenameCommand);
-assert.equal(commandToSyncEvent(legacySectionRenameCommand).type, "section.update");
+assert.equal(
+  commandToSyncEvent(legacySectionRenameCommand).type,
+  "section.update",
+);
 assert.deepEqual(commandToSyncEvent(legacySectionRenameCommand).payload, {
   sectionId: "section-legacy",
   data: {
@@ -217,7 +223,10 @@ const legacySectionReorderCommand = createCommandEnvelope({
 });
 
 validateCommand(legacySectionReorderCommand);
-assert.equal(commandToSyncEvent(legacySectionReorderCommand).type, "section.move");
+assert.equal(
+  commandToSyncEvent(legacySectionReorderCommand).type,
+  "section.move",
+);
 assert.deepEqual(commandToSyncEvent(legacySectionReorderCommand).payload, {
   sectionId: "section-legacy",
   index: 0,
@@ -255,7 +264,10 @@ const legacyLineInsertAfterCommand = createCommandEnvelope({
 });
 
 validateCommand(legacyLineInsertAfterCommand);
-assert.equal(commandToSyncEvent(legacyLineInsertAfterCommand).type, "line.create");
+assert.equal(
+  commandToSyncEvent(legacyLineInsertAfterCommand).type,
+  "line.create",
+);
 assert.deepEqual(commandToSyncEvent(legacyLineInsertAfterCommand).payload, {
   sectionId: "section-legacy",
   lines: [
@@ -271,9 +283,8 @@ assert.deepEqual(commandToSyncEvent(legacyLineInsertAfterCommand).payload, {
       },
     },
   ],
-  position: {
-    after: "line-anchor",
-  },
+  position: "after",
+  positionTargetId: "line-anchor",
 });
 const normalizedLegacyLineInsertAfter = commandFromItem(
   createCommittedEventFromCommand(legacyLineInsertAfterCommand, 5, 46),
@@ -294,9 +305,8 @@ assert.deepEqual(normalizedLegacyLineInsertAfter.payload, {
       },
     },
   ],
-  position: {
-    after: "line-anchor",
-  },
+  position: "after",
+  positionTargetId: "line-anchor",
 });
 
 const bypassScan = spawnSync(
@@ -370,19 +380,19 @@ const storyCommandApi = createStoryCommandApi({
   storyScenePartitionFor(currentProjectId, sceneId) {
     return `project:${currentProjectId}:story:${sceneId}`;
   },
-  resolveLineIndex({ section, position, index }) {
+  resolveLineIndex({ section, position, positionTargetId, index }) {
     if (Number.isInteger(index)) {
       return index;
     }
 
     const orderedLineIds = Object.keys(section?.lines?.items || {});
-    if (position?.before) {
-      const beforeIndex = orderedLineIds.indexOf(position.before);
+    if (position === "before" && typeof positionTargetId === "string") {
+      const beforeIndex = orderedLineIds.indexOf(positionTargetId);
       return beforeIndex >= 0 ? beforeIndex : 0;
     }
 
-    if (position?.after) {
-      const afterIndex = orderedLineIds.indexOf(position.after);
+    if (position === "after" && typeof positionTargetId === "string") {
+      const afterIndex = orderedLineIds.indexOf(positionTargetId);
       return afterIndex >= 0 ? afterIndex + 1 : orderedLineIds.length;
     }
 
@@ -424,7 +434,8 @@ assert.deepEqual(capturedLineActionSubmits[0].partitions, [
 capturedLineActionSubmits.length = 0;
 const createdLineIds = await storyCommandApi.createLineItem({
   sectionId: "section-1",
-  position: { after: "line-1" },
+  position: "after",
+  positionTargetId: "line-1",
   lines: [
     {
       lineId: "line-2",
@@ -470,7 +481,8 @@ assert.deepEqual(capturedLineActionSubmits[0].payload, {
   ],
   parentId: null,
   index: 1,
-  position: { after: "line-1" },
+  position: "after",
+  positionTargetId: "line-1",
 });
 assert.deepEqual(capturedLineActionSubmits[0].partitions, [
   `project:${projectId}:story`,

@@ -8,6 +8,7 @@ export const createResourceCommandApi = (shared) => ({
     data,
     parentId = null,
     position = "last",
+    positionTargetId,
     index,
   }) {
     const context = await shared.ensureCommandContext();
@@ -17,6 +18,7 @@ export const createResourceCommandApi = (shared) => ({
       resourceType,
       parentId,
       position,
+      positionTargetId,
       index,
     });
     const resourcePartition = shared.resourceTypePartitionFor(
@@ -36,6 +38,7 @@ export const createResourceCommandApi = (shared) => ({
         parentId: normalizeParentId(parentId),
         index: resolvedIndex,
         position,
+        positionTargetId,
       },
       partitions: [],
     });
@@ -68,6 +71,7 @@ export const createResourceCommandApi = (shared) => ({
     resourceId,
     parentId = null,
     position = "last",
+    positionTargetId,
     index,
   }) {
     const context = await shared.ensureCommandContext();
@@ -76,6 +80,7 @@ export const createResourceCommandApi = (shared) => ({
       resourceType,
       parentId,
       position,
+      positionTargetId,
       index,
       movingId: resourceId,
     });
@@ -95,6 +100,7 @@ export const createResourceCommandApi = (shared) => ({
         parentId: normalizeParentId(parentId),
         index: resolvedIndex,
         position,
+        positionTargetId,
       },
       partitions: [],
     });
@@ -126,6 +132,7 @@ export const createResourceCommandApi = (shared) => ({
     newId,
     parentId,
     position,
+    positionTargetId,
     index,
     name,
   }) {
@@ -135,12 +142,14 @@ export const createResourceCommandApi = (shared) => ({
     const resolvedParentId = normalizeParentId(
       parentId ?? sourceItem?.parentId ?? null,
     );
-    const resolvedPosition = position || { after: sourceId };
+    const resolvedPosition = position || "after";
+    const resolvedPositionTargetId = positionTargetId || sourceId;
     const resolvedIndex = shared.resolveResourceIndex({
       state: context.state,
       resourceType,
       parentId: resolvedParentId,
       position: resolvedPosition,
+      positionTargetId: resolvedPositionTargetId,
       index,
     });
     const resourcePartition = shared.resourceTypePartitionFor(
@@ -160,6 +169,7 @@ export const createResourceCommandApi = (shared) => ({
         parentId: resolvedParentId,
         index: resolvedIndex,
         position: resolvedPosition,
+        positionTargetId: resolvedPositionTargetId,
         name: typeof name === "string" && name.length > 0 ? name : undefined,
       },
       partitions: [],

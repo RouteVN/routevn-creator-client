@@ -107,6 +107,7 @@ export const createCommandApiShared = ({
     resourceType,
     parentId,
     position,
+    positionTargetId,
     index,
     movingId = null,
   }) => {
@@ -116,6 +117,7 @@ export const createCommandApiShared = ({
     return resolveIndexFromPosition({
       siblings,
       position,
+      positionTargetId,
       movingId,
     });
   };
@@ -124,6 +126,7 @@ export const createCommandApiShared = ({
     state,
     parentId,
     position,
+    positionTargetId,
     index,
     movingId,
   }) => {
@@ -132,6 +135,7 @@ export const createCommandApiShared = ({
     return resolveIndexFromPosition({
       siblings,
       position,
+      positionTargetId,
       movingId,
     });
   };
@@ -140,6 +144,7 @@ export const createCommandApiShared = ({
     state,
     parentId,
     position,
+    positionTargetId,
     index,
     movingId,
   }) => {
@@ -148,6 +153,7 @@ export const createCommandApiShared = ({
     return resolveIndexFromPosition({
       siblings,
       position,
+      positionTargetId,
       movingId,
     });
   };
@@ -156,6 +162,7 @@ export const createCommandApiShared = ({
     scene,
     parentId,
     position,
+    positionTargetId,
     index,
     movingId,
   }) => {
@@ -164,6 +171,7 @@ export const createCommandApiShared = ({
     return resolveIndexFromPosition({
       siblings,
       position,
+      positionTargetId,
       movingId,
     });
   };
@@ -172,6 +180,7 @@ export const createCommandApiShared = ({
     section,
     parentId,
     position,
+    positionTargetId,
     index,
     movingId,
   }) => {
@@ -180,6 +189,7 @@ export const createCommandApiShared = ({
     return resolveIndexFromPosition({
       siblings,
       position,
+      positionTargetId,
       movingId,
     });
   };
@@ -188,6 +198,7 @@ export const createCommandApiShared = ({
     layout,
     parentId,
     position,
+    positionTargetId,
     index,
     movingId,
   }) => {
@@ -196,6 +207,7 @@ export const createCommandApiShared = ({
     return resolveIndexFromPosition({
       siblings,
       position,
+      positionTargetId,
       movingId,
     });
   };

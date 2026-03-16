@@ -319,8 +319,14 @@ const normalizeTreeNodes = (nodes) => {
     });
 };
 
-const normalizePosition = (position, fallback = "first") => {
+const normalizePosition = (position, positionTargetId, fallback = "first") => {
   if (position === "first" || position === "last") return position;
+  if (position === "before" && typeof positionTargetId === "string") {
+    return { before: positionTargetId };
+  }
+  if (position === "after" && typeof positionTargetId === "string") {
+    return { after: positionTargetId };
+  }
   if (
     position &&
     typeof position === "object" &&
@@ -331,9 +337,18 @@ const normalizePosition = (position, fallback = "first") => {
   return fallback;
 };
 
-const insertNodeAtPosition = (nodes, node, position = "first") => {
+const insertNodeAtPosition = (
+  nodes,
+  node,
+  position = "first",
+  positionTargetId = undefined,
+) => {
   const list = Array.isArray(nodes) ? nodes : [];
-  const resolvedPosition = normalizePosition(position, "first");
+  const resolvedPosition = normalizePosition(
+    position,
+    positionTargetId,
+    "first",
+  );
 
   if (resolvedPosition === "first") {
     list.unshift(node);
@@ -376,11 +391,17 @@ const withChildren = (node, children) =>
     ? { id: node.id, children }
     : { id: node.id };
 
-const insertNodeIntoTree = ({ treeNodes, parentId, node, position }) => {
+const insertNodeIntoTree = ({
+  treeNodes,
+  parentId,
+  node,
+  position,
+  positionTargetId,
+}) => {
   const normalizedNodes = normalizeTreeNodes(treeNodes);
   if (parentId === ROOT_TREE_PARENT_ID) {
     const nextRoot = [...normalizedNodes];
-    insertNodeAtPosition(nextRoot, node, position);
+    insertNodeAtPosition(nextRoot, node, position, positionTargetId);
     return { treeNodes: nextRoot, inserted: true };
   }
 
@@ -388,7 +409,7 @@ const insertNodeIntoTree = ({ treeNodes, parentId, node, position }) => {
   const nextNodes = normalizedNodes.map((entry) => {
     if (entry.id === parentId) {
       const children = [...normalizeTreeNodes(entry.children)];
-      insertNodeAtPosition(children, node, position);
+      insertNodeAtPosition(children, node, position, positionTargetId);
       inserted = true;
       return withChildren(entry, children);
     }
@@ -399,6 +420,7 @@ const insertNodeIntoTree = ({ treeNodes, parentId, node, position }) => {
         parentId,
         node,
         position,
+        positionTargetId,
       });
       if (nested.inserted) {
         inserted = true;
@@ -460,6 +482,7 @@ export const insertTreeItem = ({
   value,
   parentId = ROOT_TREE_PARENT_ID,
   position = "first",
+  positionTargetId,
 }) => {
   const nextCollection = structuredClone(treeCollection || {});
   nextCollection.items = nextCollection.items || {};
@@ -475,7 +498,8 @@ export const insertTreeItem = ({
     treeNodes: nextCollection.tree,
     parentId,
     node: newNode,
-    position: normalizePosition(position, "first"),
+    position,
+    positionTargetId,
   });
   nextCollection.tree = inserted.treeNodes;
   return nextCollection;
@@ -529,6 +553,7 @@ export const moveTreeItem = ({
   id,
   parentId = ROOT_TREE_PARENT_ID,
   position = "first",
+  positionTargetId,
 }) => {
   const nextCollection = structuredClone(treeCollection || {});
   nextCollection.items = nextCollection.items || {};
@@ -545,7 +570,8 @@ export const moveTreeItem = ({
     treeNodes: nextCollection.tree,
     parentId,
     node: removed.removedNode,
-    position: normalizePosition(position, "first"),
+    position,
+    positionTargetId,
   });
   nextCollection.tree = inserted.treeNodes;
   return nextCollection;

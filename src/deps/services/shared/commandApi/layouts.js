@@ -12,6 +12,7 @@ export const createLayoutCommandApi = (shared) => ({
     elements = createTreeCollection(),
     parentId = null,
     position = "last",
+    positionTargetId,
     data = {},
   }) {
     const context = await shared.ensureCommandContext();
@@ -21,6 +22,7 @@ export const createLayoutCommandApi = (shared) => ({
       resourceType: "layouts",
       parentId,
       position,
+      positionTargetId,
     });
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
@@ -44,6 +46,7 @@ export const createLayoutCommandApi = (shared) => ({
         parentId: normalizeParentId(parentId),
         index: resolvedIndex,
         position,
+        positionTargetId,
       },
       partitions: [],
     });
@@ -98,6 +101,7 @@ export const createLayoutCommandApi = (shared) => ({
     layoutId,
     parentId = null,
     position = "last",
+    positionTargetId,
     index,
   }) {
     const context = await shared.ensureCommandContext();
@@ -106,6 +110,7 @@ export const createLayoutCommandApi = (shared) => ({
       resourceType: "layouts",
       parentId,
       position,
+      positionTargetId,
       index,
       movingId: layoutId,
     });
@@ -125,6 +130,7 @@ export const createLayoutCommandApi = (shared) => ({
         parentId: normalizeParentId(parentId),
         index: resolvedIndex,
         position,
+        positionTargetId,
       },
       partitions: [],
     });
@@ -160,6 +166,7 @@ export const createLayoutCommandApi = (shared) => ({
     element,
     parentId = null,
     position = "last",
+    positionTargetId,
     index,
   }) {
     const context = await shared.ensureCommandContext();
@@ -169,6 +176,7 @@ export const createLayoutCommandApi = (shared) => ({
       layout,
       parentId,
       position,
+      positionTargetId,
       index,
     });
 
@@ -183,6 +191,7 @@ export const createLayoutCommandApi = (shared) => ({
         parentId: normalizeParentId(parentId),
         index: resolvedIndex,
         position,
+        positionTargetId,
       },
       partitions: [],
     });
@@ -195,6 +204,7 @@ export const createLayoutCommandApi = (shared) => ({
     elementId,
     parentId = null,
     position = "last",
+    positionTargetId,
     index,
   }) {
     const context = await shared.ensureCommandContext();
@@ -203,6 +213,7 @@ export const createLayoutCommandApi = (shared) => ({
       layout,
       parentId,
       position,
+      positionTargetId,
       index,
       movingId: elementId,
     });
@@ -217,6 +228,7 @@ export const createLayoutCommandApi = (shared) => ({
         parentId: normalizeParentId(parentId),
         index: resolvedIndex,
         position,
+        positionTargetId,
       },
       partitions: [],
     });

@@ -72,8 +72,8 @@ in:
         clientTs: 805
         payload:
           sectionId: section-a
-          position:
-            after: line-1
+          position: after
+          positionTargetId: line-1
           lines:
             - lineId: line-2
               data:
@@ -187,8 +187,8 @@ out:
       type: line.create
       payload:
         sectionId: section-a
-        position:
-          after: line-1
+        position: after
+        positionTargetId: line-1
         lines:
           - lineId: line-2
             data:

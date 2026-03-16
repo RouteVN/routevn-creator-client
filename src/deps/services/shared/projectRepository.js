@@ -84,6 +84,7 @@ export const getSiblingOrderNodes = (collection, parentId) => {
 export const resolveIndexFromPosition = ({
   siblings = [],
   position,
+  positionTargetId,
   movingId = null,
 }) => {
   const filtered = Array.isArray(siblings)
@@ -93,6 +94,20 @@ export const resolveIndexFromPosition = ({
   if (position === "first") return 0;
   if (position === "last" || position === undefined || position === null) {
     return filtered.length;
+  }
+
+  if (position === "before" && typeof positionTargetId === "string") {
+    const beforeIndex = filtered.findIndex(
+      (node) => node.id === positionTargetId,
+    );
+    return beforeIndex >= 0 ? beforeIndex : filtered.length;
+  }
+
+  if (position === "after" && typeof positionTargetId === "string") {
+    const afterIndex = filtered.findIndex(
+      (node) => node.id === positionTargetId,
+    );
+    return afterIndex >= 0 ? afterIndex + 1 : filtered.length;
   }
 
   if (position && typeof position === "object") {

@@ -144,8 +144,8 @@ Important examples of semantic preconditions:
 
 - `scene.set_initial` cannot target a folder
 - `scene.move` parent must be a folder when provided
-- `line.create.position.before` / `line.create.position.after` must target a
-  line in the target section
+- `line.create.positionTargetId` must target a line in the target section when
+  `position` is `before` or `after`
 - `line.create.lines` must be a non-empty array and line ids must be unique
 - `resource.update` for `variables` cannot change `type` / `variableType`
 - `layout.element.*` requires an existing layout and existing parent/element

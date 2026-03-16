@@ -74,7 +74,8 @@ const resolveExplorerMove = (detail = {}) => {
     return {
       itemId: source.id,
       parentId: target.parentId ?? null,
-      repositoryPosition: { before: target.id },
+      repositoryPosition: "before",
+      repositoryPositionTargetId: target.id,
     };
   }
 
@@ -86,7 +87,8 @@ const resolveExplorerMove = (detail = {}) => {
     return {
       itemId: source.id,
       parentId: target.parentId ?? null,
-      repositoryPosition: { after: target.id },
+      repositoryPosition: "after",
+      repositoryPositionTargetId: target.id,
     };
   }
 
@@ -289,7 +291,8 @@ export const createResourceFileExplorerHandlers = ({
           sourceId: itemId,
           newId: duplicateId,
           parentId: location?.parentId || null,
-          position: { after: itemId },
+          position: "after",
+          positionTargetId: itemId,
           name: duplicateName,
         });
       } else if (
@@ -330,6 +333,7 @@ export const createResourceFileExplorerHandlers = ({
         resourceId: move.itemId,
         parentId: move.parentId,
         position: move.repositoryPosition,
+        positionTargetId: move.repositoryPositionTargetId,
       });
 
       await refresh(deps);
@@ -435,7 +439,8 @@ export const createLayoutsFileExplorerHandlers = ({
           layoutType: layoutType || "normal",
           elements: elements || { items: {}, tree: [] },
           parentId: location?.parentId || null,
-          position: { after: itemId },
+          position: "after",
+          positionTargetId: itemId,
           data: layoutData,
         });
       } else {
@@ -457,6 +462,7 @@ export const createLayoutsFileExplorerHandlers = ({
         layoutId: move.itemId,
         parentId: move.parentId,
         position: move.repositoryPosition,
+        positionTargetId: move.repositoryPositionTargetId,
       });
 
       await refresh(deps);
@@ -578,7 +584,8 @@ export const createLayoutElementsFileExplorerHandlers = ({
           elementId: duplicateId,
           data: duplicateValue,
           parentId: location?.parentId || null,
-          position: { after: itemId },
+          position: "after",
+          positionTargetId: itemId,
         });
       } else {
         return;
@@ -606,6 +613,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
         elementId: move.itemId,
         parentId: move.parentId,
         position: move.repositoryPosition,
+        positionTargetId: move.repositoryPositionTargetId,
       });
 
       await refresh(deps);
@@ -828,7 +836,8 @@ export const createCharacterSpritesFileExplorerHandlers = ({
                 name: duplicateName,
               },
               parentId: location?.parentId || ROOT_TREE_PARENT_ID,
-              position: { after: itemId },
+              position: "after",
+              positionTargetId: itemId,
             }),
         });
       } else if (
@@ -883,6 +892,7 @@ export const createCharacterSpritesFileExplorerHandlers = ({
             id: move.itemId,
             parentId: move.parentId || ROOT_TREE_PARENT_ID,
             position: move.repositoryPosition,
+            positionTargetId: move.repositoryPositionTargetId,
           }),
       });
 

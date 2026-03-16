@@ -272,7 +272,8 @@ export const handleSplitLineOperation = async (deps, payload) => {
       data: {
         actions: newLineActions,
       },
-      afterLineId: lineId,
+      position: "after",
+      positionTargetId: lineId,
     });
     debugLog("lines", "scene.split.created-line", {
       lineId,
@@ -341,7 +342,8 @@ export const handlePasteLinesOperation = async (deps, payload) => {
   if (lines.length > 1) {
     const createdLineIds = await projectService.createLineItem({
       sectionId,
-      position: { after: lineId },
+      position: "after",
+      positionTargetId: lineId,
       lines: lines.slice(1).map((content, index) => {
         const isLastLine = index === lines.length - 2;
         const lineContent = isLastLine ? content + rightContent : content;
@@ -439,10 +441,13 @@ export const handleNewLineOperation = async (deps, payload) => {
     });
 
   let createPosition = "last";
+  let createPositionId;
   if (requestedPosition === "before") {
-    createPosition = { before: baseLineId };
+    createPosition = "before";
+    createPositionId = baseLineId;
   } else if (requestedPosition === "after") {
-    createPosition = { after: baseLineId };
+    createPosition = "after";
+    createPositionId = baseLineId;
   }
 
   const createLinePayload = {
@@ -460,6 +465,7 @@ export const handleNewLineOperation = async (deps, payload) => {
   };
 
   createLinePayload.position = createPosition;
+  createLinePayload.positionTargetId = createPositionId;
 
   await projectService.createLineItem(createLinePayload);
 

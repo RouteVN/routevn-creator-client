@@ -129,7 +129,8 @@ apply(
     ts: 1300,
     payload: {
       sectionId: "section-1",
-      position: { after: "line-1" },
+      position: "after",
+      positionTargetId: "line-1",
       lines: [
         {
           lineId: "line-2",
@@ -213,7 +214,8 @@ try {
       ts: 1500,
       payload: {
         sectionId: "section-2",
-        position: { after: "line-1" },
+        position: "after",
+        positionTargetId: "line-1",
         lines: [
           {
             lineId: "line-4",

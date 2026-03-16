@@ -138,7 +138,8 @@ parentId: "<string|null>" # optional
 data:
   name: "<string>"
 index: 0 # optional
-position: "last" # optional; also "first", { before: "<id>" }, { after: "<id>" }
+position: "last" # optional; also "first", "before", "after"
+positionTargetId: "<string>" # optional; required when position is "before" or "after"
 ```
 
 #### `scene.update`
@@ -151,7 +152,7 @@ data:
   name: Train Station
   position:
     x: 520
-    'y': 240
+    "y": 240
 ```
 
 Notes:
@@ -188,7 +189,8 @@ Payload (YAML):
 sceneId: "<string>"
 index: 0
 parentId: "<string|null>" # optional
-position: "last" # optional; also "first", { before: "<id>" }, { after: "<id>" }
+position: "last" # optional; also "first", "before", "after"
+positionTargetId: "<string>" # optional; required when position is "before" or "after"
 ```
 
 ### Sections
@@ -204,7 +206,8 @@ parentId: "<string|null>" # optional
 data:
   name: "<string>"
 index: 0 # optional
-position: "last" # optional; also "first", { before: "<id>" }, { after: "<id>" }
+position: "last" # optional; also "first", "before", "after"
+positionTargetId: "<string>" # optional; required when position is "before" or "after"
 ```
 
 #### `section.update`
@@ -238,7 +241,8 @@ Payload (YAML):
 sectionId: "<string>"
 index: 0
 parentId: "<string|null>" # optional
-position: "last" # optional; also "first", { before: "<id>" }, { after: "<id>" }
+position: "last" # optional; also "first", "before", "after"
+positionTargetId: "<string>" # optional; required when position is "before" or "after"
 ```
 
 ### Lines
@@ -264,15 +268,15 @@ lines:
           content:
             - text: Third line
           mode: adv
-position:
-  after: "line-1"
+position: "after"
+positionTargetId: "line-1"
 ```
 
 Notes:
 
 - `lines` must be a non-empty array.
 - The lines are created sequentially in array order.
-- Use `position: { before: "<id>" }` or `position: { after: "<id>" }` to
+- Use `position: "before"` / `position: "after"` with `positionTargetId` to
   place the first new line relative to an existing line.
 - `index` is still supported and applies to the first created line when you
   want explicit numeric placement.
@@ -310,7 +314,8 @@ lineId: "<string>"
 toSectionId: "<string>"
 index: 0
 parentId: "<string|null>" # optional
-position: "last" # optional; also "first", { before: "<id>" }, { after: "<id>" }
+position: "last" # optional; also "first", "before", "after"
+positionTargetId: "<string>" # optional; required when position is "before" or "after"
 ```
 
 ## Resource Commands
@@ -325,7 +330,8 @@ resourceId: "<string>"
 data: {}
 parentId: "<string|null>" # optional
 index: 0 # optional
-position: "last" # optional; also "first", { before: "<id>" }, { after: "<id>" }
+position: "last" # optional; also "first", "before", "after"
+positionTargetId: "<string>" # optional; required when position is "before" or "after"
 ```
 
 ### `resource.update`
@@ -355,7 +361,8 @@ resourceType: "<resourceType>"
 resourceId: "<string>"
 index: 0
 parentId: "<string|null>" # optional
-position: "last" # optional; also "first", { before: "<id>" }, { after: "<id>" }
+position: "last" # optional; also "first", "before", "after"
+positionTargetId: "<string>" # optional; required when position is "before" or "after"
 ```
 
 ### `resource.delete`
@@ -378,7 +385,8 @@ newId: "<string>"
 parentId: "<string|null>" # optional
 name: "<string>" # optional
 index: 0 # optional
-position: "last" # optional; also "first", { before: "<id>" }, { after: "<id>" }
+position: "last" # optional; also "first", "before", "after"
+positionTargetId: "<string>" # optional; required when position is "before" or "after"
 ```
 
 ## Layout Element Commands
@@ -393,7 +401,8 @@ elementId: "<string>"
 data: {}
 parentId: "<string|null>" # optional
 index: 0 # optional
-position: "last" # optional; also "first", { before: "<id>" }, { after: "<id>" }
+position: "last" # optional; also "first", "before", "after"
+positionTargetId: "<string>" # optional; required when position is "before" or "after"
 ```
 
 ### `layout.element.update`
@@ -416,7 +425,8 @@ layoutId: "<string>"
 elementId: "<string>"
 index: 0
 parentId: "<string|null>" # optional
-position: "last" # optional; also "first", { before: "<id>" }, { after: "<id>" }
+position: "last" # optional; also "first", "before", "after"
+positionTargetId: "<string>" # optional; required when position is "before" or "after"
 ```
 
 ### `layout.element.delete`

@@ -104,17 +104,36 @@ const assertPrecondition = (condition, message, details = {}) => {
 
 const validatePositionField = (payload, errors) => {
   const position = payload?.position;
+  const positionTargetId = payload?.positionTargetId;
+
   if (position === undefined || position === null) {
+    if (positionTargetId !== undefined && positionTargetId !== null) {
+      errors.push("payload.positionTargetId requires payload.position");
+    }
     return;
   }
 
   if (position === "first" || position === "last") {
+    if (positionTargetId !== undefined && positionTargetId !== null) {
+      errors.push(
+        "payload.positionTargetId is allowed only when payload.position is 'before' or 'after'",
+      );
+    }
+    return;
+  }
+
+  if (position === "before" || position === "after") {
+    if (!assertNonEmptyString(positionTargetId)) {
+      errors.push(
+        "payload.positionTargetId must be a non-empty string when payload.position is 'before' or 'after'",
+      );
+    }
     return;
   }
 
   if (!isPlainObject(position)) {
     errors.push(
-      "payload.position must be 'first', 'last', or an object with before/after",
+      "payload.position must be 'first', 'last', 'before', 'after', or a legacy object with before/after",
     );
     return;
   }
@@ -234,6 +253,27 @@ const normalizePayloadDataField = (
   return nextPayload;
 };
 
+const normalizeRootPositionFields = (payload) => {
+  if (!isPlainObject(payload)) {
+    return payload;
+  }
+
+  const nextPayload = structuredClone(payload);
+  const position = nextPayload.position;
+
+  if (isPlainObject(position) && nextPayload.positionTargetId === undefined) {
+    if (assertNonEmptyString(position.before)) {
+      nextPayload.position = "before";
+      nextPayload.positionTargetId = position.before;
+    } else if (assertNonEmptyString(position.after)) {
+      nextPayload.position = "after";
+      nextPayload.positionTargetId = position.after;
+    }
+  }
+
+  return nextPayload;
+};
+
 const normalizeLineCreateItem = (item) => {
   if (!isPlainObject(item)) {
     return item;
@@ -270,9 +310,11 @@ const normalizeLineCreatePayload = (payload) => {
 
   if (nextPayload.position === undefined) {
     if (assertNonEmptyString(nextPayload.beforeLineId)) {
-      nextPayload.position = { before: nextPayload.beforeLineId };
+      nextPayload.position = "before";
+      nextPayload.positionTargetId = nextPayload.beforeLineId;
     } else if (assertNonEmptyString(nextPayload.afterLineId)) {
-      nextPayload.position = { after: nextPayload.afterLineId };
+      nextPayload.position = "after";
+      nextPayload.positionTargetId = nextPayload.afterLineId;
     }
   }
 
@@ -342,9 +384,11 @@ const normalizeCommandPayload = (type, payload) => {
   }
 
   if (type === "scene.create") {
-    return normalizePayloadDataField(payload, {
-      rootFields: ["name"],
-    });
+    return normalizeRootPositionFields(
+      normalizePayloadDataField(payload, {
+        rootFields: ["name"],
+      }),
+    );
   }
 
   if (type === "scene.update") {
@@ -354,9 +398,11 @@ const normalizeCommandPayload = (type, payload) => {
   }
 
   if (type === "section.create") {
-    return normalizePayloadDataField(payload, {
-      rootFields: ["name"],
-    });
+    return normalizeRootPositionFields(
+      normalizePayloadDataField(payload, {
+        rootFields: ["name"],
+      }),
+    );
   }
 
   if (type === "section.update") {
@@ -367,7 +413,7 @@ const normalizeCommandPayload = (type, payload) => {
   }
 
   if (type === "line.create") {
-    return normalizeLineCreatePayload(payload);
+    return normalizeRootPositionFields(normalizeLineCreatePayload(payload));
   }
 
   if (type === "line.update_actions") {
@@ -384,9 +430,11 @@ const normalizeCommandPayload = (type, payload) => {
   }
 
   if (type === "layout.element.create") {
-    return normalizePayloadDataField(payload, {
-      legacyFields: ["element"],
-    });
+    return normalizeRootPositionFields(
+      normalizePayloadDataField(payload, {
+        legacyFields: ["element"],
+      }),
+    );
   }
 
   if (type === "layout.element.update") {
@@ -395,7 +443,7 @@ const normalizeCommandPayload = (type, payload) => {
     });
   }
 
-  return structuredClone(payload);
+  return normalizeRootPositionFields(structuredClone(payload));
 };
 
 const assertSceneExists = (state, sceneId, details = {}) => {
@@ -643,7 +691,7 @@ const COMMAND_DEFINITIONS = [
       validateLineCreatePayload(payload, errors);
     },
     assertPreconditions: (state, command) => {
-      const { sectionId, position } = command.payload;
+      const { sectionId, position, positionTargetId } = command.payload;
       assertSectionExists(state, sectionId);
 
       for (const item of command.payload.lines || []) {
@@ -653,7 +701,15 @@ const COMMAND_DEFINITIONS = [
       }
 
       let positionLineId;
-      if (isPlainObject(position) && assertNonEmptyString(position.before)) {
+      if (
+        (position === "before" || position === "after") &&
+        assertNonEmptyString(positionTargetId)
+      ) {
+        positionLineId = positionTargetId;
+      } else if (
+        isPlainObject(position) &&
+        assertNonEmptyString(position.before)
+      ) {
         positionLineId = position.before;
       } else if (
         isPlainObject(position) &&

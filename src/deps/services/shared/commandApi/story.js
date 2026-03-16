@@ -66,6 +66,7 @@ export const createStoryCommandApi = (shared) => {
       sceneId,
       parentId = null,
       position = "last",
+      positionTargetId,
       index,
       data = {},
       name,
@@ -76,6 +77,7 @@ export const createStoryCommandApi = (shared) => {
         state: context.state,
         parentId,
         position,
+        positionTargetId,
         index,
       });
       const basePartition = shared.storyBasePartitionFor(context.projectId);
@@ -93,6 +95,7 @@ export const createStoryCommandApi = (shared) => {
           parentId: normalizeParentId(parentId),
           index: resolvedIndex,
           position,
+          positionTargetId,
           data: {
             ...structuredClone(data || {}),
             ...(name !== undefined ? { name } : {}),
@@ -165,6 +168,7 @@ export const createStoryCommandApi = (shared) => {
       sceneId,
       parentId = null,
       position = "last",
+      positionTargetId,
       index,
     }) {
       const context = await shared.ensureCommandContext();
@@ -172,6 +176,7 @@ export const createStoryCommandApi = (shared) => {
         state: context.state,
         parentId,
         position,
+        positionTargetId,
         index,
         movingId: sceneId,
       });
@@ -190,6 +195,7 @@ export const createStoryCommandApi = (shared) => {
           parentId: normalizeParentId(parentId),
           index: resolvedIndex,
           position,
+          positionTargetId,
         },
         partitions: [basePartition, scenePartition],
       });
@@ -200,6 +206,7 @@ export const createStoryCommandApi = (shared) => {
       sectionId,
       parentId = null,
       position = "last",
+      positionTargetId,
       index,
       data = {},
       name,
@@ -211,6 +218,7 @@ export const createStoryCommandApi = (shared) => {
         scene,
         parentId,
         position,
+        positionTargetId,
         index,
       });
       const basePartition = shared.storyBasePartitionFor(context.projectId);
@@ -229,6 +237,7 @@ export const createStoryCommandApi = (shared) => {
           parentId: normalizeParentId(parentId),
           index: resolvedIndex,
           position,
+          positionTargetId,
           data: {
             ...structuredClone(data || {}),
             ...(name !== undefined ? { name } : {}),
@@ -291,6 +300,7 @@ export const createStoryCommandApi = (shared) => {
       sectionId,
       parentId = null,
       position = "last",
+      positionTargetId,
       index,
     }) {
       const context = await shared.ensureCommandContext();
@@ -299,6 +309,7 @@ export const createStoryCommandApi = (shared) => {
         scene: sectionLocation?.scene,
         parentId,
         position,
+        positionTargetId,
         index,
         movingId: sectionId,
       });
@@ -319,6 +330,7 @@ export const createStoryCommandApi = (shared) => {
           parentId: normalizeParentId(parentId),
           index: resolvedIndex,
           position,
+          positionTargetId,
         },
         partitions: scenePartition
           ? [basePartition, scenePartition]
@@ -336,6 +348,7 @@ export const createStoryCommandApi = (shared) => {
       beforeLineId,
       parentId = null,
       position,
+      positionTargetId,
       index,
     }) {
       const context = await shared.ensureCommandContext();
@@ -355,15 +368,19 @@ export const createStoryCommandApi = (shared) => {
       }
       const sectionLocation = findSectionLocation(context.state, sectionId);
       let resolvedPosition = position;
+      let resolvedPositionTargetId = positionTargetId;
       if (resolvedPosition === undefined && beforeLineId) {
-        resolvedPosition = { before: beforeLineId };
+        resolvedPosition = "before";
+        resolvedPositionTargetId = beforeLineId;
       } else if (resolvedPosition === undefined && afterLineId) {
-        resolvedPosition = { after: afterLineId };
+        resolvedPosition = "after";
+        resolvedPositionTargetId = afterLineId;
       }
       const resolvedIndex = shared.resolveLineIndex({
         section: sectionLocation?.section,
         parentId,
         position: resolvedPosition || "last",
+        positionTargetId: resolvedPositionTargetId,
         index,
       });
       const basePartition = shared.storyBasePartitionFor(context.projectId);
@@ -384,6 +401,7 @@ export const createStoryCommandApi = (shared) => {
           parentId: normalizeParentId(parentId),
           index: resolvedIndex,
           position: resolvedPosition || "last",
+          positionTargetId: resolvedPositionTargetId,
         },
         partitions: scenePartition
           ? [basePartition, scenePartition]
@@ -423,6 +441,7 @@ export const createStoryCommandApi = (shared) => {
       toSectionId,
       parentId = null,
       position = "last",
+      positionTargetId,
       index,
     }) {
       const context = await shared.ensureCommandContext();
@@ -431,6 +450,7 @@ export const createStoryCommandApi = (shared) => {
         section: targetSection?.section,
         parentId,
         position,
+        positionTargetId,
         index,
         movingId: lineId,
       });
@@ -456,6 +476,7 @@ export const createStoryCommandApi = (shared) => {
           parentId: normalizeParentId(parentId),
           index: resolvedIndex,
           position,
+          positionTargetId,
         },
         partitions: [basePartition, sourceScenePartition, targetScenePartition],
       });
