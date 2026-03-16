@@ -15,7 +15,7 @@ import {
   saveProjectionGap,
 } from "../shared/collab/projectorCache.js";
 import { createWebSocketTransport } from "../web/collab/createWebSocketTransport.js";
-import { projectRepositoryStateToDomainState } from "../../../internal/project/projection.js";
+import { repositoryStateToCreatorModelState } from "../../../internal/creatorModelAdapter.js";
 import {
   applyCommandToRepository,
   assertSupportedProjectState,
@@ -102,16 +102,15 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
         project: { id: projectPath },
       };
 
-      const bootstrapDomainState = projectRepositoryStateToDomainState({
+      const bootstrapModelState = repositoryStateToCreatorModelState({
         repositoryState: initData,
-        projectId: projectPath,
       });
 
       const store = await createInsiemeTauriStoreAdapter(projectPath);
       await store.appendEvent(
         createProjectCreateRepositoryEvent({
           projectId: projectPath,
-          state: bootstrapDomainState,
+          state: bootstrapModelState,
         }),
       );
 
@@ -335,10 +334,7 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
         projectId: resolvedProjectId,
         projectName: projectMetadata.name,
         projectDescription: projectMetadata.description,
-        initialState: projectRepositoryStateToDomainState({
-          repositoryState: state,
-          projectId: resolvedProjectId,
-        }),
+        initialRepositoryState: state,
         token,
         actor: {
           userId,

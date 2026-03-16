@@ -1,5 +1,5 @@
 import { loadTemplate, getTemplateFiles } from "./templateLoader.js";
-import { projectRepositoryStateToDomainState } from "../../../internal/project/projection.js";
+import { repositoryStateToCreatorModelState } from "../../../internal/creatorModelAdapter.js";
 import { createProjectCreateRepositoryEvent } from "../../services/shared/projectRepository.js";
 
 // Insieme-compatible Web IndexedDB Store Adapter
@@ -62,15 +62,14 @@ export const initializeProject = async ({ projectId, template }) => {
     },
   };
 
-  const domainState = projectRepositoryStateToDomainState({
+  const modelState = repositoryStateToCreatorModelState({
     repositoryState: initData,
-    projectId,
   });
 
   await adapter.appendEvent(
     createProjectCreateRepositoryEvent({
       projectId,
-      state: domainState,
+      state: modelState,
     }),
   );
 

@@ -21,6 +21,7 @@ export const createProjectEntriesService = ({
   platformAdapter,
 }) => {
   let currentProjectEntry = createEmptyProjectEntry();
+  let projectEntriesCache = [];
   const iconCleanupByProjectId = new Map();
 
   const setProjectIcon = ({ project, iconResult }) => {
@@ -96,7 +97,9 @@ export const createProjectEntriesService = ({
   };
 
   const getProjectEntries = async () => {
-    return (await db.get("projectEntries")) || [];
+    const entries = (await db.get("projectEntries")) || [];
+    projectEntriesCache = Array.isArray(entries) ? structuredClone(entries) : [];
+    return entries;
   };
 
   const addProjectEntry = async (entry) => {
@@ -111,6 +114,7 @@ export const createProjectEntriesService = ({
 
     entries.push(entry);
     await db.set("projectEntries", entries);
+    projectEntriesCache = structuredClone(entries);
     if (entry?.id === getCurrentProjectId()) {
       currentProjectEntry = normalizeLocalProjectEntry(entry);
     }
@@ -121,6 +125,7 @@ export const createProjectEntriesService = ({
     const entries = await getProjectEntries();
     const filtered = entries.filter((entry) => entry.id !== projectId);
     await db.set("projectEntries", filtered);
+    projectEntriesCache = structuredClone(filtered);
     if (currentProjectEntry.id === projectId) {
       const routeProjectId = getCurrentProjectId();
       currentProjectEntry = routeProjectId
@@ -140,6 +145,7 @@ export const createProjectEntriesService = ({
     if (index !== -1) {
       entries[index] = { ...entries[index], ...updates };
       await db.set("projectEntries", entries);
+      projectEntriesCache = structuredClone(entries);
       if (
         currentProjectEntry.id === projectId &&
         currentProjectEntry.source === "local"
@@ -191,6 +197,20 @@ export const createProjectEntriesService = ({
 
       pruneIconCleanup(projectsWithFullData);
       return projectsWithFullData;
+    },
+
+    setCurrentProjectEntry(entry) {
+      if (!entry?.id) {
+        currentProjectEntry = createEmptyProjectEntry();
+        return currentProjectEntry;
+      }
+
+      const cachedEntry = projectEntriesCache.find(
+        (projectEntry) => projectEntry?.id === entry.id,
+      );
+
+      currentProjectEntry = normalizeLocalProjectEntry(cachedEntry || entry);
+      return currentProjectEntry;
     },
 
     async validateProjectFolder(folderPath) {

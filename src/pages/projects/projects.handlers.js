@@ -348,11 +348,20 @@ export const handleCloseDialogue = (deps) => {
 };
 
 export const handleProjectsClick = async (deps, payload) => {
-  const { appService } = deps;
+  const { appService, store } = deps;
   const id = getProjectIdFromEvent(payload._event);
   if (!id) {
     return;
   }
+
+  const project = store
+    .getState()
+    .projects.find((entry) => entry?.id === id);
+
+  if (project) {
+    appService.setCurrentProjectEntry(project);
+  }
+
   appService.navigate("/project", { p: id });
 };
 

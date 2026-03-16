@@ -215,6 +215,13 @@ const projectRepositoryResources = ({ repositoryState }) => {
       resources[resourceType].items[resourceId] = {
         id: resourceId,
         ...cloneOr(item, {}),
+        ...(resourceType === "characters" && item?.type === "character"
+          ? {
+              sprites: projectRepositoryNestedCollectionToDomainCollection(
+                item?.sprites,
+              ),
+            }
+          : {}),
         parentId,
         createdAt,
         updatedAt,
@@ -223,6 +230,46 @@ const projectRepositoryResources = ({ repositoryState }) => {
   }
 
   return resources;
+};
+
+const projectRepositoryNestedCollectionToDomainCollection = (
+  repositoryCollection = {},
+) => {
+  const repositoryItems = repositoryCollection.items || {};
+  const { parentById, orderedIds } = buildHierarchyParentMap(
+    getHierarchyNodes(repositoryCollection),
+  );
+  const allIds = Object.keys(repositoryItems);
+  const fallbackParentById = new Map(
+    Object.entries(repositoryItems).map(([itemId, item]) => [
+      itemId,
+      item?.parentId ?? null,
+    ]),
+  );
+
+  const tree = buildTreeFromParentMap({
+    orderedIds,
+    allIds,
+    parentById,
+    fallbackParentById,
+  });
+
+  const items = {};
+  for (const [itemId, item] of Object.entries(repositoryItems)) {
+    const parentId = parentById.has(itemId)
+      ? parentById.get(itemId)
+      : (item?.parentId ?? null);
+    items[itemId] = {
+      id: itemId,
+      ...cloneOr(item, {}),
+      parentId,
+    };
+  }
+
+  return {
+    items,
+    tree,
+  };
 };
 
 export const projectRepositoryStateToDomainState = ({

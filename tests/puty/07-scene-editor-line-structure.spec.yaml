@@ -245,9 +245,9 @@ out:
         model_version: 2
         project:
           createdAt: 0
-          description: ''
+          description: ""
           id: project-puty-lines-001
-          name: ''
+          name: ""
           updatedAt: 801
         story:
           initialSceneId: scene-lines
@@ -262,7 +262,7 @@ out:
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds: []
             type: scene
             updatedAt: 801
@@ -276,9 +276,9 @@ out:
         model_version: 2
         project:
           createdAt: 0
-          description: ''
+          description: ""
           id: project-puty-lines-001
-          name: ''
+          name: ""
           updatedAt: 802
         story:
           initialSceneId: scene-lines
@@ -293,7 +293,7 @@ out:
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds:
               - section-a
             type: scene
@@ -316,9 +316,9 @@ out:
         model_version: 2
         project:
           createdAt: 0
-          description: ''
+          description: ""
           id: project-puty-lines-001
-          name: ''
+          name: ""
           updatedAt: 803
         story:
           initialSceneId: scene-lines
@@ -333,7 +333,7 @@ out:
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds:
               - section-a
               - section-b
@@ -365,9 +365,9 @@ out:
         model_version: 2
         project:
           createdAt: 0
-          description: ''
+          description: ""
           id: project-puty-lines-001
-          name: ''
+          name: ""
           updatedAt: 804
         story:
           initialSceneId: scene-lines
@@ -382,7 +382,7 @@ out:
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds:
               - section-a
               - section-b
@@ -425,9 +425,9 @@ out:
         model_version: 2
         project:
           createdAt: 0
-          description: ''
+          description: ""
           id: project-puty-lines-001
-          name: ''
+          name: ""
           updatedAt: 805
         story:
           initialSceneId: scene-lines
@@ -442,7 +442,7 @@ out:
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds:
               - section-a
               - section-b
@@ -507,9 +507,9 @@ out:
         model_version: 2
         project:
           createdAt: 0
-          description: ''
+          description: ""
           id: project-puty-lines-001
-          name: ''
+          name: ""
           updatedAt: 806
         story:
           initialSceneId: scene-lines
@@ -524,7 +524,7 @@ out:
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds:
               - section-a
               - section-b
@@ -570,7 +570,7 @@ out:
             createdAt: 805
             id: line-2
             sectionId: section-b
-            updatedAt: 805
+            updatedAt: 806
           line-3:
             actions:
               dialogue:
@@ -589,9 +589,9 @@ out:
         model_version: 2
         project:
           createdAt: 0
-          description: ''
+          description: ""
           id: project-puty-lines-001
-          name: ''
+          name: ""
           updatedAt: 807
         story:
           initialSceneId: scene-lines
@@ -606,7 +606,7 @@ out:
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds:
               - section-a
               - section-b
@@ -641,7 +641,7 @@ out:
             createdAt: 805
             id: line-2
             sectionId: section-b
-            updatedAt: 805
+            updatedAt: 806
           line-3:
             actions:
               dialogue:

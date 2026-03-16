@@ -371,7 +371,7 @@ export const handleBackClick = (deps) => {
   const { appService } = deps;
 
   const { p } = appService.getPayload();
-  appService.navigate("/project/resources/layouts", { p });
+  appService.navigate("/project/layouts", { p });
 };
 
 // Simple render handler for events that only need to trigger a re-render

@@ -470,11 +470,14 @@ collection item lifecycle. Current examples:
 - `scene.*`
 - `section.*`
 - `line.*`
+- `character.sprite.*`
 - `layout.element.*`
 
 The intended model is:
 
 - `variables` belong under the generic resource family
+- `characters` use `resource.*` for character lifecycle
+- `character.sprite.*` remains separate for internal character sprite tree editing
 - `layouts` should also use `resource.*` for collection lifecycle
 - `layout.element.*` remains separate for internal layout document editing
 

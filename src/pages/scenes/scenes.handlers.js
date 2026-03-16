@@ -244,8 +244,9 @@ const navigateToSceneEditor = ({ appService, sceneId, sectionId }) => {
   const currentPayload = appService.getPayload();
   const nextPayload = {
     ...currentPayload,
-    sceneId,
+    s: sceneId,
   };
+  delete nextPayload.sceneId;
   if (sectionId) {
     nextPayload.sectionId = sectionId;
   }

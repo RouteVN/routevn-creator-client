@@ -95,9 +95,11 @@ Detailed command definitions, accepted payload fields, and preconditions live in
 - Type names are part of the canonical command/event contract.
 - Submitted commands and committed events use the exact same type name.
 - Use lowercase dot-separated names.
-- Use singular entity paths:
+- Use singular entity paths for command families:
   - `project.create`
   - `scene.create`
+  - `image.create`
+  - `textStyle.update`
   - `layout.element.update`
 - Use present-tense action verbs, not past-tense event names:
   - use `project.create`
@@ -105,32 +107,66 @@ Detailed command definitions, accepted payload fields, and preconditions live in
 - Prefer short stable verbs when semantics are standard:
   - `create`
   - `update`
-  - `rename`
   - `move`
   - `delete`
-  - `duplicate`
 - Use a more specific verb only when generic CRUD is not precise enough:
-  - `scene.set_initial`
+  - `line.update_actions`
+  - `character.sprite.move`
   - `section.move`
   - `line.create`
-  - `line.update_actions`
 - Do not create separate naming schemes for “command types” versus “event types”.
   The canonical type string is shared by both.
+
+## State Naming Rules
+
+- Collection roots use plural names:
+  - `scenes`
+  - `images`
+  - `animations`
+  - `textStyles`
+- Command families use singular names:
+  - `scene.*`
+  - `image.*`
+  - `animation.*`
+  - `textStyle.*`
+- Nested document-internal families stay singular by path:
+  - `character.sprite.*`
+  - `layout.element.*`
+- Single-item payload ids use singular `...Id` fields.
+- Batch payload ids use plural `...Ids` fields.
+- There is no generic state wrapper like `resources.*` in the target model.
+- Each collection owns its own `items + tree`.
+- Do not duplicate collection ordering in separate root-level `...Order` arrays.
+- Singleton roots such as `story` keep only singleton settings, not collection
+  storage.
 
 ## Partition Map
 
 - `project:{id}:story`
 - `project:{id}:story:scene:{sceneId}` as a secondary scene partition when a
   scene is known
-- `project:{id}:resources:{resourceType}`
+- `project:{id}:resources:{collection}`
+- `project:{id}:resources:characters` also for `character.sprite.*`
 - `project:{id}:layouts` for `layout.element.*`
 - `project:{id}:settings`
 
 ## Command Families
 
 - Project: `project.*`
-- Story: `scene.*`, `section.*`, `line.*`
-- Resources: `resource.*`
+- Story: `story.*`, `scene.*`, `section.*`, `line.*`
+- Assets and systems:
+  - `image.*`
+  - `sound.*`
+  - `video.*`
+  - `animation.*`
+  - `character.*`
+  - `character.sprite.*`
+  - `font.*`
+  - `transform.*`
+  - `color.*`
+  - `textStyle.*`
+  - `variable.*`
+  - `layout.*`
 - Layout internals: `layout.element.*`
 
 ## Validation And Preconditions
@@ -142,12 +178,14 @@ Detailed command definitions, accepted payload fields, and preconditions live in
 
 Important examples of semantic preconditions:
 
-- `scene.set_initial` cannot target a folder
+- `story.update.data.initialSceneId` cannot target a folder
 - `scene.move` parent must be a folder when provided
 - `line.create.positionTargetId` must target a line in the target section when
   `position` is `before` or `after`
+- `character.sprite.*` requires an existing character and existing sprite/folder
+  targets where applicable
 - `line.create.lines` must be a non-empty array and line ids must be unique
-- `resource.update` for `variables` cannot change `type` / `variableType`
+- `variable.update` cannot change `type` / `variableType`
 - `layout.element.*` requires an existing layout and existing parent/element
   where applicable
 

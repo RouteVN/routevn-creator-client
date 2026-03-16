@@ -381,10 +381,11 @@ export const initializeSceneEditorPage = async (deps) => {
   await projectService.ensureRepository();
 
   const {
-    sceneId,
+    s,
     sectionId: payloadSectionId,
     lineId: payloadLineId,
   } = appService.getPayload();
+  const sceneId = s;
   syncProjectState(store, projectService);
 
   store.setSceneId({ sceneId });

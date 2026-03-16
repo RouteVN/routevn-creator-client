@@ -1,0 +1,312 @@
+---
+file: ./insiemeStorageScenario.js
+group: insieme storage character sprites
+suites:
+  - runInsiemeStorageScenario
+---
+suite: runInsiemeStorageScenario
+exportName: runInsiemeStorageScenario
+---
+case: persists character sprite create update and delete commands
+in:
+  - projectId: project-puty-character-sprites-001
+    actor:
+      userId: user-puty-character-sprites
+      clientId: client-puty-character-sprites
+    sessionPartitions:
+      - project:project-puty-character-sprites-001:resources
+    commands:
+      - id: cmd-character-create
+        partitions:
+          - project:project-puty-character-sprites-001:resources:characters
+        type: resource.create
+        clientTs: 401
+        payload:
+          resourceType: characters
+          resourceId: char-hero
+          data:
+            name: Hero
+            type: character
+            sprites:
+              items:
+                sprite-folder-default:
+                  name: Default Sprites
+                  type: folder
+              tree:
+                - id: sprite-folder-default
+      - id: cmd-character-sprite-create
+        partitions:
+          - project:project-puty-character-sprites-001:resources:characters
+        type: character.sprite.create
+        clientTs: 402
+        payload:
+          characterId: char-hero
+          spriteId: sprite-idle
+          parentId: sprite-folder-default
+          index: 0
+          data:
+            type: image
+            name: Idle
+            fileId: sprite-idle.png
+      - id: cmd-character-sprite-update
+        partitions:
+          - project:project-puty-character-sprites-001:resources:characters
+        type: character.sprite.update
+        clientTs: 403
+        payload:
+          characterId: char-hero
+          spriteId: sprite-idle
+          data:
+            description: Idle pose
+      - id: cmd-character-sprite-delete
+        partitions:
+          - project:project-puty-character-sprites-001:resources:characters
+        type: character.sprite.delete
+        clientTs: 404
+        payload:
+          characterId: char-hero
+          spriteIds:
+            - sprite-idle
+out:
+  storedEvents:
+    - committedId: 1
+      id: cmd-character-create
+      projectId: project-puty-character-sprites-001
+      userId: user-puty-character-sprites
+      partitions:
+        - project:project-puty-character-sprites-001:resources:characters
+      type: resource.create
+      payload:
+        resourceType: characters
+        resourceId: char-hero
+        data:
+          name: Hero
+          type: character
+          sprites:
+            items:
+              sprite-folder-default:
+                name: Default Sprites
+                type: folder
+            tree:
+              - id: sprite-folder-default
+      meta:
+        clientId: client-puty-character-sprites
+        clientTs: 401
+    - committedId: 2
+      id: cmd-character-sprite-create
+      projectId: project-puty-character-sprites-001
+      userId: user-puty-character-sprites
+      partitions:
+        - project:project-puty-character-sprites-001:resources:characters
+      type: character.sprite.create
+      payload:
+        characterId: char-hero
+        spriteId: sprite-idle
+        parentId: sprite-folder-default
+        index: 0
+        data:
+          type: image
+          name: Idle
+          fileId: sprite-idle.png
+      meta:
+        clientId: client-puty-character-sprites
+        clientTs: 402
+    - committedId: 3
+      id: cmd-character-sprite-update
+      projectId: project-puty-character-sprites-001
+      userId: user-puty-character-sprites
+      partitions:
+        - project:project-puty-character-sprites-001:resources:characters
+      type: character.sprite.update
+      payload:
+        characterId: char-hero
+        spriteId: sprite-idle
+        data:
+          description: Idle pose
+      meta:
+        clientId: client-puty-character-sprites
+        clientTs: 403
+    - committedId: 4
+      id: cmd-character-sprite-delete
+      projectId: project-puty-character-sprites-001
+      userId: user-puty-character-sprites
+      partitions:
+        - project:project-puty-character-sprites-001:resources:characters
+      type: character.sprite.delete
+      payload:
+        characterId: char-hero
+        spriteIds:
+          - sprite-idle
+      meta:
+        clientId: client-puty-character-sprites
+        clientTs: 404
+  stateAfterEachEvent:
+    - committedId: 1
+      eventId: cmd-character-create
+      eventType: resource.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-character-sprites-001
+          name: ''
+          updatedAt: 401
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources:
+          characters:
+            items:
+              char-hero:
+                createdAt: 401
+                id: char-hero
+                name: Hero
+                parentId: null
+                sprites:
+                  items:
+                    sprite-folder-default:
+                      id: sprite-folder-default
+                      name: Default Sprites
+                      parentId: null
+                      type: folder
+                  tree:
+                    - id: sprite-folder-default
+                type: character
+                updatedAt: 401
+            tree:
+              - id: char-hero
+    - committedId: 2
+      eventId: cmd-character-sprite-create
+      eventType: character.sprite.create
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-character-sprites-001
+          name: ''
+          updatedAt: 402
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources:
+          characters:
+            items:
+              char-hero:
+                createdAt: 401
+                id: char-hero
+                name: Hero
+                parentId: null
+                sprites:
+                  items:
+                    sprite-folder-default:
+                      id: sprite-folder-default
+                      name: Default Sprites
+                      parentId: null
+                      type: folder
+                    sprite-idle:
+                      fileId: sprite-idle.png
+                      id: sprite-idle
+                      name: Idle
+                      parentId: sprite-folder-default
+                      type: image
+                  tree:
+                    - children:
+                        - id: sprite-idle
+                      id: sprite-folder-default
+                type: character
+                updatedAt: 402
+            tree:
+              - id: char-hero
+    - committedId: 3
+      eventId: cmd-character-sprite-update
+      eventType: character.sprite.update
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-character-sprites-001
+          name: ''
+          updatedAt: 403
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources:
+          characters:
+            items:
+              char-hero:
+                createdAt: 401
+                id: char-hero
+                name: Hero
+                parentId: null
+                sprites:
+                  items:
+                    sprite-folder-default:
+                      id: sprite-folder-default
+                      name: Default Sprites
+                      parentId: null
+                      type: folder
+                    sprite-idle:
+                      description: Idle pose
+                      fileId: sprite-idle.png
+                      id: sprite-idle
+                      name: Idle
+                      parentId: sprite-folder-default
+                      type: image
+                  tree:
+                    - children:
+                        - id: sprite-idle
+                      id: sprite-folder-default
+                type: character
+                updatedAt: 403
+            tree:
+              - id: char-hero
+    - committedId: 4
+      eventId: cmd-character-sprite-delete
+      eventType: character.sprite.delete
+      state:
+        model_version: 2
+        project:
+          createdAt: 0
+          description: ''
+          id: project-puty-character-sprites-001
+          name: ''
+          updatedAt: 404
+        story:
+          initialSceneId: null
+          sceneOrder: []
+        scenes: {}
+        sections: {}
+        lines: {}
+        resources:
+          characters:
+            items:
+              char-hero:
+                createdAt: 401
+                id: char-hero
+                name: Hero
+                parentId: null
+                sprites:
+                  items:
+                    sprite-folder-default:
+                      id: sprite-folder-default
+                      name: Default Sprites
+                      parentId: null
+                      type: folder
+                  tree:
+                    - id: sprite-folder-default
+                type: character
+                updatedAt: 404
+            tree:
+              - id: char-hero

@@ -14,6 +14,7 @@ import {
   ensureRepositoryProjectionCache,
   PROJECTOR_CACHE_VERSION,
 } from "../src/deps/services/shared/collab/index.js";
+import { createCharacterSpriteCommandApi } from "../src/deps/services/shared/commandApi/characterSprites.js";
 import { createLayoutCommandApi } from "../src/deps/services/shared/commandApi/layouts.js";
 import { createResourceCommandApi } from "../src/deps/services/shared/commandApi/resources.js";
 import { createStoryCommandApi } from "../src/deps/services/shared/commandApi/story.js";
@@ -477,7 +478,7 @@ const storyCommandApi = createStoryCommandApi({
     return `project:${currentProjectId}:story`;
   },
   storyScenePartitionFor(currentProjectId, sceneId) {
-    return `project:${currentProjectId}:story:${sceneId}`;
+    return `project:${currentProjectId}:story:scene:${sceneId}`;
   },
   resolveLineIndex({ section, position, positionTargetId, index }) {
     if (Number.isInteger(index)) {
@@ -527,7 +528,25 @@ assert.deepEqual(capturedLineActionSubmits[0].payload, {
 });
 assert.deepEqual(capturedLineActionSubmits[0].partitions, [
   `project:${projectId}:story`,
-  `project:${projectId}:story:scene-1`,
+  `project:${projectId}:story:scene:scene-1`,
+]);
+
+capturedLineActionSubmits.length = 0;
+await storyCommandApi.setInitialScene({
+  sceneId: "scene-1",
+});
+
+assert.equal(capturedLineActionSubmits.length, 1);
+assert.equal(capturedLineActionSubmits[0].scope, "story");
+assert.equal(capturedLineActionSubmits[0].type, COMMAND_TYPES.STORY_UPDATE);
+assert.deepEqual(capturedLineActionSubmits[0].payload, {
+  data: {
+    initialSceneId: "scene-1",
+  },
+});
+assert.deepEqual(capturedLineActionSubmits[0].partitions, [
+  `project:${projectId}:story`,
+  `project:${projectId}:story:scene:scene-1`,
 ]);
 
 capturedLineActionSubmits.length = 0;
@@ -580,12 +599,10 @@ assert.deepEqual(capturedLineActionSubmits[0].payload, {
   ],
   parentId: null,
   index: 1,
-  position: "after",
-  positionTargetId: "line-1",
 });
 assert.deepEqual(capturedLineActionSubmits[0].partitions, [
   `project:${projectId}:story`,
-  `project:${projectId}:story:scene-1`,
+  `project:${projectId}:story:scene:scene-1`,
 ]);
 
 capturedLineActionSubmits.length = 0;
@@ -602,8 +619,8 @@ assert.deepEqual(
   normalizePartitions(capturedLineActionSubmits[0].partitions),
   normalizePartitions([
     `project:${projectId}:story`,
-    `project:${projectId}:story:scene-1`,
-    `project:${projectId}:story:scene-2`,
+    `project:${projectId}:story:scene:scene-1`,
+    `project:${projectId}:story:scene:scene-2`,
   ]),
 );
 
@@ -621,8 +638,8 @@ assert.deepEqual(
   normalizePartitions(capturedLineActionSubmits[0].partitions),
   normalizePartitions([
     `project:${projectId}:story`,
-    `project:${projectId}:story:scene-1`,
-    `project:${projectId}:story:scene-2`,
+    `project:${projectId}:story:scene:scene-1`,
+    `project:${projectId}:story:scene:scene-2`,
   ]),
 );
 
@@ -640,8 +657,8 @@ assert.deepEqual(
   normalizePartitions(capturedLineActionSubmits[0].partitions),
   normalizePartitions([
     `project:${projectId}:story`,
-    `project:${projectId}:story:scene-1`,
-    `project:${projectId}:story:scene-2`,
+    `project:${projectId}:story:scene:scene-1`,
+    `project:${projectId}:story:scene:scene-2`,
   ]),
 );
 
@@ -671,6 +688,101 @@ assert.equal(capturedResourceSubmits[0].type, COMMAND_TYPES.RESOURCE_DELETE);
 assert.deepEqual(capturedResourceSubmits[0].payload, {
   resourceType: "images",
   resourceIds: ["image-1", "image-2"],
+});
+
+const capturedCharacterSpriteSubmits = [];
+const characterSpriteCommandApi = createCharacterSpriteCommandApi({
+  createId() {
+    return "generated-sprite-id";
+  },
+  async ensureCommandContext() {
+    return {
+      projectId,
+      state: {
+        characters: {
+          items: {
+            "character-1": {
+              sprites: {
+                items: {
+                  "sprite-folder": {
+                    type: "folder",
+                    name: "Folder",
+                    parentId: null,
+                  },
+                  "sprite-1": {
+                    type: "image",
+                    name: "Sprite 1",
+                    fileId: "file-1",
+                    parentId: "sprite-folder",
+                  },
+                },
+                tree: [
+                  {
+                    id: "sprite-folder",
+                    children: [{ id: "sprite-1" }],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    };
+  },
+  resolveCharacterSpriteIndex({ index }) {
+    return index;
+  },
+  resourceTypePartitionFor(currentProjectId, resourceType) {
+    return `project:${currentProjectId}:resources:${resourceType}`;
+  },
+  async submitCommandWithContext(payload) {
+    capturedCharacterSpriteSubmits.push(payload);
+  },
+});
+
+await characterSpriteCommandApi.createCharacterSpriteItem({
+  characterId: "character-1",
+  spriteId: "sprite-2",
+  parentId: "sprite-folder",
+  index: 1,
+  data: {
+    type: "image",
+    name: "Sprite 2",
+    fileId: "file-2",
+  },
+});
+
+assert.equal(capturedCharacterSpriteSubmits.length, 1);
+assert.equal(
+  capturedCharacterSpriteSubmits[0].type,
+  COMMAND_TYPES.CHARACTER_SPRITE_CREATE,
+);
+assert.deepEqual(capturedCharacterSpriteSubmits[0].payload, {
+  characterId: "character-1",
+  spriteId: "sprite-2",
+  parentId: "sprite-folder",
+  index: 1,
+  data: {
+    type: "image",
+    name: "Sprite 2",
+    fileId: "file-2",
+  },
+});
+
+capturedCharacterSpriteSubmits.length = 0;
+await characterSpriteCommandApi.deleteCharacterSpriteItem({
+  characterId: "character-1",
+  spriteIds: ["sprite-1", "sprite-2"],
+});
+
+assert.equal(capturedCharacterSpriteSubmits.length, 1);
+assert.equal(
+  capturedCharacterSpriteSubmits[0].type,
+  COMMAND_TYPES.CHARACTER_SPRITE_DELETE,
+);
+assert.deepEqual(capturedCharacterSpriteSubmits[0].payload, {
+  characterId: "character-1",
+  spriteIds: ["sprite-1", "sprite-2"],
 });
 
 const capturedLayoutSubmits = [];
@@ -793,13 +905,74 @@ try {
     `legacy method leakage detected: ${methodNames.join(", ")}`,
   );
 
+  const invalidLocalResult = await collab.submitCommand(
+    createCommandEnvelope({
+      projectId,
+      scope: "story",
+      partitions: [
+        `project:${projectId}:story`,
+        `project:${projectId}:story:scene:scene-missing`,
+      ],
+      type: COMMAND_TYPES.STORY_UPDATE,
+      payload: {
+        data: {
+          initialSceneId: "scene-missing",
+        },
+      },
+      actor,
+      clientTs: 41,
+    }),
+  );
+  assert.equal(invalidLocalResult.valid, false);
+  assert.equal(
+    invalidLocalResult.error.message,
+    "payload.data.initialSceneId must reference an existing scene",
+  );
+
   const storyBasePartition = `project:${projectId}:story`;
   const scenePartition = `project:${projectId}:story:scene:scene-1`;
+  const charactersPartition = `project:${projectId}:resources:characters`;
   const imagesPartition = `project:${projectId}:resources:images`;
   const layoutsResourcePartition = `project:${projectId}:resources:layouts`;
   const layoutsPartition = `project:${projectId}:layouts`;
 
   const commands = [
+    createCommandEnvelope({
+      projectId,
+      scope: "resources",
+      partitions: [charactersPartition],
+      type: COMMAND_TYPES.RESOURCE_CREATE,
+      payload: {
+        resourceType: "characters",
+        resourceId: "character-1",
+        data: {
+          name: "Character 1",
+          type: "character",
+          sprites: {
+            items: {},
+            tree: [],
+          },
+        },
+      },
+      actor,
+    }),
+    createCommandEnvelope({
+      projectId,
+      scope: "resources",
+      partitions: [charactersPartition],
+      type: COMMAND_TYPES.CHARACTER_SPRITE_CREATE,
+      payload: {
+        characterId: "character-1",
+        spriteId: "sprite-1",
+        index: 0,
+        data: {
+          type: "image",
+          name: "Sprite 1",
+          fileId: "sprite-1.png",
+        },
+      },
+      actor,
+    }),
     createCommandEnvelope({
       projectId,
       scope: "resources",
@@ -929,6 +1102,7 @@ try {
 
   const observedSet = new Set(observedSchemas);
   assert.ok(observedSet.has(COMMAND_TYPES.RESOURCE_CREATE));
+  assert.ok(observedSet.has(COMMAND_TYPES.CHARACTER_SPRITE_CREATE));
   assert.ok(observedSet.has(COMMAND_TYPES.SCENE_CREATE));
   assert.ok(observedSet.has(COMMAND_TYPES.LINE_CREATE));
   assert.ok(observedSet.has(COMMAND_TYPES.LINE_UPDATE_ACTIONS));
@@ -941,21 +1115,19 @@ try {
   const committed = store._debug.getCommitted();
   assert.equal(committed.length, commands.length);
   assert.deepEqual(
-    committed.map((event) => event.id),
-    commands.map((command) => command.id),
-  );
-  assert.deepEqual(
-    committed.map((event) => event.type),
-    commands.map((command) => command.type),
-  );
-  assert.deepEqual(
     committed.map((event) => event.committedId),
     commands.map((_command, index) => index + 1),
   );
 
-  for (let index = 0; index < commands.length; index += 1) {
-    const event = committed[index];
-    const command = commands[index];
+  const committedById = new Map(committed.map((event) => [event.id, event]));
+  for (const command of commands) {
+    const committedEvent = committedById.get(command.id);
+    assert.ok(committedEvent, `missing committed event for ${command.id}`);
+    assert.equal(committedEvent.type, command.type);
+  }
+
+  for (const command of commands) {
+    const event = committedById.get(command.id);
     assert.equal(event.projectId, projectId);
     assert.equal(event.userId, actor.userId);
     assert.deepEqual(event.payload, command.payload);
@@ -999,6 +1171,16 @@ try {
   assert.deepEqual(
     layoutResourcePage.events.map((event) => event.type),
     [COMMAND_TYPES.RESOURCE_CREATE],
+  );
+
+  const charactersPage = await store.listCommittedSince({
+    partitions: [charactersPartition],
+    sinceCommittedId: 0,
+    limit: 100,
+  });
+  assert.deepEqual(
+    charactersPage.events.map((event) => event.type),
+    [COMMAND_TYPES.RESOURCE_CREATE, COMMAND_TYPES.CHARACTER_SPRITE_CREATE],
   );
 } finally {
   await collab.stop();

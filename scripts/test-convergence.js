@@ -131,7 +131,7 @@ try {
       payload: {
         resourceType: "layouts",
         resourceId: "layout-1",
-        data: { name: "Layout 1", layoutType: "scene" },
+        data: { name: "Layout 1", layoutType: "scene", elements: { items: {}, tree: [] } },
       },
       actor: actorA,
       clientTs: 1400,

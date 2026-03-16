@@ -1,11 +1,15 @@
-import { processCommand } from "../../../internal/project/state.js";
-import { projectRepositoryStateToDomainState } from "../../../internal/project/projection.js";
 import { createProjectRepositoryRuntime } from "./projectRepositoryRuntime.js";
 import {
   COMMAND_EVENT_MODEL,
   COMMAND_TYPES,
   isSupportedCommandType,
 } from "../../../internal/project/commands.js";
+import { processCommand as processLegacyProjectCommand } from "../../../internal/project/state.js";
+import { projectRepositoryStateToDomainState } from "../../../internal/project/projection.js";
+import {
+  applyCommandToRepositoryStateWithCreatorModel,
+  shouldUseCreatorModelForCommand,
+} from "../../../internal/creatorModelAdapter.js";
 import { validateCommandSubmitItem } from "insieme/client";
 import {
   commandToSyncEvent,
@@ -670,7 +674,7 @@ const projectDomainStoryToRepository = ({ domainState, repositoryState }) => {
   };
 };
 
-const projectDomainStateToRepositoryState = ({
+export const projectDomainStateToRepositoryState = ({
   domainState,
   repositoryState,
 }) => {
@@ -704,6 +708,37 @@ const projectDomainStateToRepositoryState = ({
   return nextState;
 };
 
+export const applyCommandToRepositoryState = ({
+  repositoryState,
+  command,
+  projectId,
+}) => {
+  if (shouldUseCreatorModelForCommand({ command })) {
+    return applyCommandToRepositoryStateWithCreatorModel({
+      repositoryState,
+      command,
+      projectId,
+    });
+  }
+
+  const domainState = projectRepositoryStateToDomainState({
+    repositoryState,
+    projectId,
+  });
+  const { state: nextDomainState } = processLegacyProjectCommand({
+    state: domainState,
+    command,
+  });
+
+  return {
+    valid: true,
+    repositoryState: projectDomainStateToRepositoryState({
+      domainState: nextDomainState,
+      repositoryState,
+    }),
+  };
+};
+
 const applyRepositoryEventToRepositoryState = ({
   repositoryState,
   event,
@@ -716,23 +751,22 @@ const applyRepositoryEventToRepositoryState = ({
     );
   }
 
-  const resolvedProjectId =
-    command.projectId ||
-    projectId ||
-    repositoryState?.project?.id ||
-    "unknown-project";
-  const domainStateBefore = projectRepositoryStateToDomainState({
+  const applyResult = applyCommandToRepositoryState({
     repositoryState,
-    projectId: resolvedProjectId,
-  });
-  const { state: domainStateAfter } = processCommand({
-    state: domainStateBefore,
     command,
+    projectId,
   });
-  return projectDomainStateToRepositoryState({
-    domainState: domainStateAfter,
-    repositoryState,
-  });
+
+  if (!applyResult.valid) {
+    const error = new Error(
+      applyResult.error?.message || "Failed to apply repository event",
+    );
+    error.code = applyResult.error?.code || "validation_failed";
+    error.details = applyResult.error?.details ?? {};
+    throw error;
+  }
+
+  return applyResult.repositoryState;
 };
 
 const createInitialRepositoryStateForProject = (projectId) => ({

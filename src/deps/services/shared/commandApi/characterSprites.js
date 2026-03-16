@@ -16,10 +16,10 @@ const buildPlacementPayload = ({
       }),
 });
 
-export const createResourceCommandApi = (shared) => ({
-  async createResourceItem({
-    resourceType,
-    resourceId,
+export const createCharacterSpriteCommandApi = (shared) => ({
+  async createCharacterSpriteItem({
+    characterId,
+    spriteId,
     data,
     parentId = null,
     position = "last",
@@ -27,10 +27,10 @@ export const createResourceCommandApi = (shared) => ({
     index,
   }) {
     const context = await shared.ensureCommandContext();
-    const nextResourceId = resourceId || shared.createId();
-    const resolvedIndex = shared.resolveResourceIndex({
-      state: context.state,
-      resourceType,
+    const nextSpriteId = spriteId || shared.createId();
+    const character = context.state?.characters?.items?.[characterId];
+    const resolvedIndex = shared.resolveCharacterSpriteIndex({
+      character,
       parentId,
       position,
       positionTargetId,
@@ -38,18 +38,18 @@ export const createResourceCommandApi = (shared) => ({
     });
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
-      resourceType,
+      "characters",
     );
 
     const submitResult = await shared.submitCommandWithContext({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: COMMAND_TYPES.RESOURCE_CREATE,
+      type: COMMAND_TYPES.CHARACTER_SPRITE_CREATE,
       payload: {
-        resourceType,
-        resourceId: nextResourceId,
-        data: structuredClone(data),
+        characterId,
+        spriteId: nextSpriteId,
+        data: structuredClone(data || {}),
         ...buildPlacementPayload({
           parentId,
           index: resolvedIndex,
@@ -64,61 +64,61 @@ export const createResourceCommandApi = (shared) => ({
       return submitResult;
     }
 
-    return nextResourceId;
+    return nextSpriteId;
   },
 
-  async updateResourceItem({ resourceType, resourceId, data, patch }) {
+  async updateCharacterSpriteItem({ characterId, spriteId, data, patch }) {
     const context = await shared.ensureCommandContext();
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
-      resourceType,
+      "characters",
     );
 
     return shared.submitCommandWithContext({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: COMMAND_TYPES.RESOURCE_UPDATE,
+      type: COMMAND_TYPES.CHARACTER_SPRITE_UPDATE,
       payload: {
-        resourceType,
-        resourceId,
+        characterId,
+        spriteId,
         data: structuredClone(data ?? patch ?? {}),
       },
       partitions: [],
     });
   },
 
-  async moveResourceItem({
-    resourceType,
-    resourceId,
+  async moveCharacterSpriteItem({
+    characterId,
+    spriteId,
     parentId = null,
     position = "last",
     positionTargetId,
     index,
   }) {
     const context = await shared.ensureCommandContext();
-    const resolvedIndex = shared.resolveResourceIndex({
-      state: context.state,
-      resourceType,
+    const character = context.state?.characters?.items?.[characterId];
+    const resolvedIndex = shared.resolveCharacterSpriteIndex({
+      character,
       parentId,
       position,
       positionTargetId,
       index,
-      movingId: resourceId,
+      movingId: spriteId,
     });
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
-      resourceType,
+      "characters",
     );
 
     return shared.submitCommandWithContext({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: COMMAND_TYPES.RESOURCE_MOVE,
+      type: COMMAND_TYPES.CHARACTER_SPRITE_MOVE,
       payload: {
-        resourceType,
-        resourceId,
+        characterId,
+        spriteId,
         ...buildPlacementPayload({
           parentId,
           index: resolvedIndex,
@@ -130,28 +130,28 @@ export const createResourceCommandApi = (shared) => ({
     });
   },
 
-  async deleteResourceItem({ resourceType, resourceIds }) {
+  async deleteCharacterSpriteItem({ characterId, spriteIds }) {
     const context = await shared.ensureCommandContext();
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
-      resourceType,
+      "characters",
     );
 
     return shared.submitCommandWithContext({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: COMMAND_TYPES.RESOURCE_DELETE,
+      type: COMMAND_TYPES.CHARACTER_SPRITE_DELETE,
       payload: {
-        resourceType,
-        resourceIds: structuredClone(resourceIds || []),
+        characterId,
+        spriteIds: structuredClone(spriteIds || []),
       },
       partitions: [],
     });
   },
 
-  async duplicateResourceItem({
-    resourceType,
+  async duplicateCharacterSpriteItem({
+    characterId,
     sourceId,
     newId,
     parentId,
@@ -161,16 +161,16 @@ export const createResourceCommandApi = (shared) => ({
     name,
   }) {
     const context = await shared.ensureCommandContext();
-    const collection = context.state?.[resourceType];
-    const sourceItem = collection?.items?.[sourceId];
+    const character = context.state?.characters?.items?.[characterId];
+    const sprites = character?.sprites?.items || {};
+    const sourceItem = sprites[sourceId];
     const resolvedParentId = normalizeParentId(
       parentId ?? sourceItem?.parentId ?? null,
     );
     const resolvedPosition = position || "after";
     const resolvedPositionTargetId = positionTargetId || sourceId;
-    const resolvedIndex = shared.resolveResourceIndex({
-      state: context.state,
-      resourceType,
+    const resolvedIndex = shared.resolveCharacterSpriteIndex({
+      character,
       parentId: resolvedParentId,
       position: resolvedPosition,
       positionTargetId: resolvedPositionTargetId,
@@ -178,16 +178,16 @@ export const createResourceCommandApi = (shared) => ({
     });
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
-      resourceType,
+      "characters",
     );
 
     return shared.submitCommandWithContext({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: COMMAND_TYPES.RESOURCE_DUPLICATE,
+      type: COMMAND_TYPES.CHARACTER_SPRITE_DUPLICATE,
       payload: {
-        resourceType,
+        characterId,
         sourceId,
         newId,
         ...buildPlacementPayload({

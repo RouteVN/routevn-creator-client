@@ -5,7 +5,6 @@ import {
 } from "../../clients/web/webRepositoryAdapter.js";
 import { createProjectCollabService } from "../shared/collab/createProjectCollabService.js";
 import { createWebSocketTransport } from "./collab/createWebSocketTransport.js";
-import { projectRepositoryStateToDomainState } from "../../../internal/project/projection.js";
 import { createPersistedInMemoryClientStore } from "./collabClientStore.js";
 import {
   clearCommittedCursor,
@@ -352,10 +351,7 @@ export const createWebProjectServiceAdapters = ({
         projectId: resolvedProjectId,
         projectName: projectMetadata.name,
         projectDescription: projectMetadata.description,
-        initialState: projectRepositoryStateToDomainState({
-          repositoryState: state,
-          projectId: resolvedProjectId,
-        }),
+        initialRepositoryState: state,
         token,
         actor: {
           userId,

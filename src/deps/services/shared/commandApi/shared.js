@@ -87,7 +87,10 @@ export const createCommandApiShared = ({
       clientTs: getCommandTimestamp(),
     });
 
-    await context.session.submitCommand(command);
+    const submitResult = await context.session.submitCommand(command);
+    if (submitResult?.valid === false) {
+      return submitResult;
+    }
 
     const applyResult = await applyCommandToRepository({
       repository: context.repository,
@@ -96,6 +99,7 @@ export const createCommandApiShared = ({
     });
 
     return {
+      valid: true,
       commandId: command.id,
       eventCount: applyResult.events.length,
       applyMode: applyResult.mode,
@@ -212,6 +216,24 @@ export const createCommandApiShared = ({
     });
   };
 
+  const resolveCharacterSpriteIndex = ({
+    character,
+    parentId,
+    position,
+    positionTargetId,
+    index,
+    movingId,
+  }) => {
+    if (Number.isInteger(index)) return index;
+    const siblings = getSiblingOrderNodes(character?.sprites, parentId);
+    return resolveIndexFromPosition({
+      siblings,
+      position,
+      positionTargetId,
+      movingId,
+    });
+  };
+
   const getStateImpl = () => {
     const repository = getCachedRepository();
     const state = repository.getState();
@@ -247,6 +269,7 @@ export const createCommandApiShared = ({
     resolveSectionIndex,
     resolveLineIndex,
     resolveLayoutElementIndex,
+    resolveCharacterSpriteIndex,
     storyBasePartitionFor,
     storyScenePartitionFor,
     resourceTypePartitionFor,

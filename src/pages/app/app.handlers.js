@@ -166,19 +166,19 @@ const createRouteTransitionRunner = (deps) => {
 
 const targetPathByKey = {
   p: "/project",
-  i: "/project/resources/images",
-  c: "/project/resources/characters",
-  o: "/project/resources/colors",
-  f: "/project/resources/fonts",
-  y: "/project/resources/typography",
-  l: "/project/resources/layouts",
-  v: "/project/resources/videos",
-  b: "/project/resources/variables",
-  t: "/project/resources/transforms",
-  s: "/project/resources/sounds",
+  i: "/project/images",
+  c: "/project/characters",
+  o: "/project/colors",
+  f: "/project/fonts",
+  y: "/project/typography",
+  l: "/project/layouts",
+  v: "/project/videos",
+  b: "/project/variables",
+  t: "/project/transforms",
+  s: "/project/sounds",
   n: "/project/scenes",
   r: "/project/releases",
-  a: "/project/settings/about",
+  a: "/project/about",
 };
 
 export const handleBeforeMount = (deps) => {

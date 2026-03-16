@@ -4,9 +4,10 @@ import {
   committedEventToCommand,
   createProjectCollabService,
 } from "../src/deps/services/shared/collab/index.js";
-import { processCommand } from "../src/internal/project/state.js";
-import { createEmptyProjectState } from "../src/internal/project/state.js";
-import { validateCommand } from "../src/internal/project/commands.js";
+import {
+  applyCommandToRepositoryState,
+  initialProjectData,
+} from "../src/deps/services/shared/projectRepository.js";
 
 export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -108,12 +109,15 @@ export const createProjectedSyncHarness = ({
   projectDescription = "integration",
   authorizePartitions = async (_identity, partitions) =>
     Array.isArray(partitions) && partitions.length > 0,
-  createInitialProjectState = ({ projectId }) =>
-    createEmptyProjectState({
-      projectId,
+  createInitialProjectState = ({ projectId }) => ({
+    ...structuredClone(initialProjectData),
+    project: {
+      ...structuredClone(initialProjectData.project || {}),
+      id: projectId,
       name: projectName,
       description: projectDescription,
-    }),
+    },
+  }),
 } = {}) => {
   const projectStates = new Map();
 
@@ -153,13 +157,21 @@ export const createProjectedSyncHarness = ({
           throw error;
         }
 
-        validateCommand(command);
         const currentState = ensureProjectState(command.projectId);
-        const { state: nextState } = processCommand({
-          state: currentState,
+        const applyResult = applyCommandToRepositoryState({
+          repositoryState: currentState,
           command,
+          projectId: command.projectId,
         });
-        projectStates.set(command.projectId, nextState);
+        if (!applyResult.valid) {
+          const error = new Error(
+            applyResult.error?.message || "command validation failed",
+          );
+          error.code = applyResult.error?.code || "validation_failed";
+          error.details = applyResult.error?.details ?? {};
+          throw error;
+        }
+        projectStates.set(command.projectId, applyResult.repositoryState);
       },
     },
     store,

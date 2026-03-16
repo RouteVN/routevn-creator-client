@@ -1,3 +1,4 @@
+import { createCharacterSpriteCommandApi } from "./commandApi/characterSprites.js";
 import { createLayoutCommandApi } from "./commandApi/layouts.js";
 import { createResourceCommandApi } from "./commandApi/resources.js";
 import { createCommandApiShared } from "./commandApi/shared.js";
@@ -10,6 +11,7 @@ export const createCommandApi = (options) => {
   return {
     ...createStoryCommandApi(shared),
     ...createResourceCommandApi(shared),
+    ...createCharacterSpriteCommandApi(shared),
     ...createLayoutCommandApi(shared),
     ...createStateCommandApi(shared),
   };

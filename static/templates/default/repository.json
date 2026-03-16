@@ -1,8 +1,5 @@
 {
-  "project": {
-    "name": "Template Project",
-    "description": "Template project description"
-  },
+  "project": {},
   "images": {
     "items": {
       "zZO4u50ZEEt1WIugqEiW4": {
@@ -502,20 +499,30 @@
       {
         "id": "system-variables-folder",
         "children": [
-          { "id": "_textSpeed" },
-          { "id": "_autoForwardTime" },
-          { "id": "_musicVolume" },
-          { "id": "_soundVolume" },
-          { "id": "_muteAll" },
-          { "id": "_skipUnseenText" },
-          { "id": "_skipTransitionsAndAnimations" }
+          {
+            "id": "_textSpeed"
+          },
+          {
+            "id": "_autoForwardTime"
+          },
+          {
+            "id": "_musicVolume"
+          },
+          {
+            "id": "_soundVolume"
+          },
+          {
+            "id": "_muteAll"
+          },
+          {
+            "id": "_skipUnseenText"
+          },
+          {
+            "id": "_skipTransitionsAndAnimations"
+          }
         ]
       }
     ]
-  },
-  "components": {
-    "items": {},
-    "tree": []
   },
   "layouts": {
     "tree": [
@@ -1983,7 +1990,6 @@
       "TitleSceneDefaultId": {
         "type": "scene",
         "name": "Title",
-        "createdAt": "2024-01-01T00:00:00.000Z",
         "position": {
           "x": 200,
           "y": 200
@@ -2025,7 +2031,6 @@
       "eXLwPZNpFqDjmXjORfonq": {
         "type": "scene",
         "name": "Prologue",
-        "createdAt": "2024-01-01T00:00:00.000Z",
         "position": {
           "x": 350,
           "y": 200
@@ -2251,6 +2256,110 @@
             }
           ]
         }
+      }
+    }
+  },
+  "animations": {
+    "tree": [
+      {
+        "id": "default-tweens-group",
+        "children": [
+          {
+            "id": "fade-in"
+          }
+        ]
+      }
+    ],
+    "items": {
+      "default-tweens-group": {
+        "type": "folder",
+        "name": "Default"
+      },
+      "fade-in": {
+        "type": "tween",
+        "name": "Fade In",
+        "duration": "1s",
+        "keyframes": 1,
+        "properties": {
+          "alpha": {
+            "initialValue": 0,
+            "keyframes": [
+              {
+                "duration": 1000,
+                "value": 1,
+                "easing": "linear",
+                "relative": false
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "textStyles": {
+    "tree": [
+      {
+        "id": "InLYeatJKoWWQOJaLlxZK",
+        "children": [
+          {
+            "id": "default-typography"
+          },
+          {
+            "id": "default-hover-yellow-typography"
+          },
+          {
+            "id": "aEFgSimQUspdxkvXUSyRd"
+          },
+          {
+            "id": "jiWyxqqEgEdAVTPAxbGFp"
+          }
+        ]
+      }
+    ],
+    "items": {
+      "InLYeatJKoWWQOJaLlxZK": {
+        "type": "folder",
+        "name": "Default"
+      },
+      "default-typography": {
+        "type": "typography",
+        "name": "Default",
+        "fontSize": 24,
+        "lineHeight": 1.2,
+        "colorId": "color-white",
+        "fontId": "-hpZD817Q_lRDt-vjl4UN",
+        "fontWeight": "400",
+        "previewText": "Default"
+      },
+      "aEFgSimQUspdxkvXUSyRd": {
+        "type": "typography",
+        "name": "Character Name",
+        "fontSize": 48,
+        "lineHeight": 1.5,
+        "colorId": "color-white",
+        "fontId": "-hpZD817Q_lRDt-vjl4UN",
+        "fontWeight": "400",
+        "previewText": "Character Name"
+      },
+      "jiWyxqqEgEdAVTPAxbGFp": {
+        "type": "typography",
+        "name": "Text View",
+        "fontSize": 36,
+        "lineHeight": 1.5,
+        "colorId": "color-white",
+        "fontId": "-hpZD817Q_lRDt-vjl4UN",
+        "fontWeight": "400",
+        "previewText": "Text View"
+      },
+      "default-hover-yellow-typography": {
+        "type": "typography",
+        "name": "Default Hover Yellow",
+        "fontSize": 24,
+        "lineHeight": 1.2,
+        "colorId": "color-yellow",
+        "fontId": "-hpZD817Q_lRDt-vjl4UN",
+        "fontWeight": "400",
+        "previewText": "Default Hover"
       }
     }
   }

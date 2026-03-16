@@ -2,22 +2,27 @@
 
 Date baseline: March 14, 2026.
 
-This document lists all canonical RouteVN command/event types and their payload
-shapes.
+This document lists RouteVN command/event types and their payload shapes.
 
 Client commands and committed events use the same canonical `type` names and
 the same domain payload shape. In other words, this document is the payload
 reference for both submitted commands and stored/replicated committed events.
 
-Authoritative source: `src/internal/project/commands.js`.
+Runtime authoritative source: `src/internal/project/commands.js`.
+
+This catalog is currently being used to review the target post-denormalization
+event surface before implementation lands. The event-type list below reflects
+that intended target. Detailed per-resource payload sections further down still
+describe the current `resource.*` runtime and will be rewritten during the
+implementation pass.
 
 ## All Event Types
 
 - `project.create`
+- `story.update`
 - `scene.create`
 - `scene.update`
 - `scene.delete`
-- `scene.set_initial`
 - `scene.move`
 - `section.create`
 - `section.update`
@@ -27,11 +32,54 @@ Authoritative source: `src/internal/project/commands.js`.
 - `line.update_actions`
 - `line.delete`
 - `line.move`
-- `resource.create`
-- `resource.update`
-- `resource.move`
-- `resource.delete`
-- `resource.duplicate`
+- `image.create`
+- `image.update`
+- `image.move`
+- `image.delete`
+- `sound.create`
+- `sound.update`
+- `sound.move`
+- `sound.delete`
+- `video.create`
+- `video.update`
+- `video.move`
+- `video.delete`
+- `animation.create`
+- `animation.update`
+- `animation.move`
+- `animation.delete`
+- `character.create`
+- `character.update`
+- `character.move`
+- `character.delete`
+- `character.sprite.create`
+- `character.sprite.update`
+- `character.sprite.move`
+- `character.sprite.delete`
+- `font.create`
+- `font.update`
+- `font.move`
+- `font.delete`
+- `transform.create`
+- `transform.update`
+- `transform.move`
+- `transform.delete`
+- `color.create`
+- `color.update`
+- `color.move`
+- `color.delete`
+- `textStyle.create`
+- `textStyle.update`
+- `textStyle.move`
+- `textStyle.delete`
+- `variable.create`
+- `variable.update`
+- `variable.move`
+- `variable.delete`
+- `layout.create`
+- `layout.update`
+- `layout.move`
+- `layout.delete`
 - `layout.element.create`
 - `layout.element.update`
 - `layout.element.move`
@@ -59,19 +107,31 @@ Authoritative source: `src/internal/project/commands.js`.
 - `parentId` fields listed as `string | null` are optional and may be omitted or
   set to `null`.
 - `replace` fields listed as `boolean` are optional and may be omitted.
-- `resourceType` must be one of:
+
+## Target Naming And State Shape Rules
+
+- Collection roots are top-level plural fields:
+  - `scenes`
   - `images`
-  - `tweens`
-  - `videos`
-  - `sounds`
-  - `characters`
-  - `fonts`
-  - `transforms`
-  - `colors`
-  - `typography`
-  - `variables`
-  - `layouts`
-  - `components`
+  - `animations`
+  - `textStyles`
+- Command families use singular names:
+  - `scene.*`
+  - `image.*`
+  - `animation.*`
+  - `textStyle.*`
+- Nested document-internal families stay singular by path:
+  - `character.sprite.*`
+  - `layout.element.*`
+- Single-item payload ids use singular `...Id` fields.
+- Batch payload ids use plural `...Ids` fields.
+- Do not wrap general collections under `resources.*` in the target model.
+- Each collection owns its own `items + tree`.
+- Do not duplicate collection ordering in separate root-level `...Order`
+  arrays.
+- Singleton roots such as `story` keep only singleton settings.
+- The current generic `resource.*` sections below are runtime-only and will be
+  replaced during implementation.
 
 ## Settings Commands
 
@@ -90,23 +150,20 @@ state:
     updatedAt: 0
   story:
     initialSceneId: "<string|null>"
-    sceneOrder: []
-  scenes: {}
-  sections: {}
-  lines: {}
-  resources:
-    images: { items: {}, tree: [] }
-    tweens: { items: {}, tree: [] }
-    videos: { items: {}, tree: [] }
-    sounds: { items: {}, tree: [] }
-    characters: { items: {}, tree: [] }
-    fonts: { items: {}, tree: [] }
-    transforms: { items: {}, tree: [] }
-    colors: { items: {}, tree: [] }
-    typography: { items: {}, tree: [] }
-    variables: { items: {}, tree: [] }
-    layouts: { items: {}, tree: [] }
-    components: { items: {}, tree: [] }
+  scenes: { items: {}, tree: [] }
+  sections: { items: {}, tree: [] }
+  lines: { items: {}, tree: [] }
+  images: { items: {}, tree: [] }
+  sounds: { items: {}, tree: [] }
+  videos: { items: {}, tree: [] }
+  animations: { items: {}, tree: [] }
+  characters: { items: {}, tree: [] }
+  fonts: { items: {}, tree: [] }
+  transforms: { items: {}, tree: [] }
+  colors: { items: {}, tree: [] }
+  textStyles: { items: {}, tree: [] }
+  variables: { items: {}, tree: [] }
+  layouts: { items: {}, tree: [] }
 ```
 
 Notes:
@@ -120,11 +177,28 @@ Notes:
   - `project.id` must exist and match the command `projectId`
   - all required top-level collections must exist
   - references and ordering structures must be internally consistent
+- In the target model, collection ordering belongs to each collection’s own
+  `tree`, not separate root-level order arrays.
 - Treat `src/internal/project/state.js` (`createEmptyProjectState`) and
   `src/internal/project/projection.js` as the current structural reference for
   this state payload.
 
 ## Story Commands
+
+### `story.update`
+
+Payload (YAML):
+
+```yaml
+data:
+  initialSceneId: "<string>"
+```
+
+Notes:
+
+- `story.update` mutates story-root fields stored inside `state.story`.
+- Current canonical usage is updating `story.initialSceneId`.
+- `data.initialSceneId` must point to an existing non-folder scene.
 
 ### Scenes
 
@@ -177,14 +251,6 @@ sceneIds:
 Notes:
 
 - `sceneIds` must be a non-empty array, even when deleting one scene.
-
-#### `scene.set_initial`
-
-Payload (YAML):
-
-```yaml
-sceneId: "<string>"
-```
 
 #### `scene.move`
 
@@ -364,6 +430,8 @@ Notes:
 - `resourceType` must be one of the supported resource types listed above.
 - Use `data.name` for resource renames; there is no separate `resource.rename`
   command.
+- Character sprite tree edits do not go through `resource.update`; use
+  `character.sprite.*` for nested sprite changes under characters.
 - For non-folder `variables`, `data.type` and `data.variableType` cannot
   change the existing variable type.
 
@@ -394,20 +462,78 @@ Notes:
 
 - `resourceIds` must be a non-empty array, even when deleting one resource.
 
-### `resource.duplicate`
+## Character Sprite Commands
+
+### `character.sprite.create`
 
 Payload (YAML):
 
 ```yaml
-resourceType: "<resourceType>"
-sourceId: "<string>"
-newId: "<string>"
+characterId: "<string>"
+spriteId: "<string>"
+data:
+  type: "folder" # or "image"
+  name: "<string>"
+  fileId: "<string>" # required for image sprites
 parentId: "<string|null>" # optional
-name: "<string>" # optional
 index: 0 # optional
 position: "last" # optional; also "first", "before", "after"
 positionTargetId: "<string>" # optional; required when position is "before" or "after"
 ```
+
+Notes:
+
+- `characterId` targets the owning character resource.
+- Sprite items remain nested under `character.sprites` in materialized state.
+- Parents and relative position targets must reference sprites owned by the same
+  character.
+- When `data.type` is `folder`, only folder-style fields such as `name` and
+  `description` are valid.
+
+### `character.sprite.update`
+
+Payload (YAML):
+
+```yaml
+characterId: "char-hero"
+spriteId: "sprite-idle"
+data:
+  name: "Idle"
+  description: "Default pose"
+```
+
+Notes:
+
+- `character.sprite.update` is for non-structural sprite field changes.
+- Folder sprites cannot update image-only fields such as `fileId`, `width`, or
+  `height`.
+
+### `character.sprite.move`
+
+Payload (YAML):
+
+```yaml
+characterId: "<string>"
+spriteId: "<string>"
+index: 0
+parentId: "<string|null>" # optional
+position: "last" # optional; also "first", "before", "after"
+positionTargetId: "<string>" # optional; required when position is "before" or "after"
+```
+
+### `character.sprite.delete`
+
+Payload (YAML):
+
+```yaml
+characterId: "<string>"
+spriteIds:
+  - "<string>"
+```
+
+Notes:
+
+- `spriteIds` must be a non-empty array, even when deleting one sprite.
 
 ## Layout Element Commands
 

@@ -387,6 +387,72 @@ const collectCollectionDescendantIds = ({
   return ids;
 };
 
+const normalizeNestedCollectionFromTree = (collection) => {
+  if (!collection || typeof collection !== "object") {
+    return {
+      items: {},
+      tree: [],
+    };
+  }
+
+  collection.items =
+    collection.items && typeof collection.items === "object"
+      ? collection.items
+      : {};
+  collection.tree = Array.isArray(collection.tree) ? collection.tree : [];
+
+  const parentById = new Map();
+  walkHierarchy(collection.tree, null, (node, parentId) => {
+    parentById.set(node.id, parentId);
+  });
+
+  for (const [id, item] of Object.entries(collection.items)) {
+    if (!item || typeof item !== "object") {
+      collection.items[id] = {};
+    }
+
+    if (parentById.has(id)) {
+      collection.items[id].parentId = parentById.get(id) ?? null;
+      continue;
+    }
+
+    collection.items[id].parentId = resolveCollectionParentId({
+      items: collection.items,
+      itemId: id,
+      parentId: collection.items[id]?.parentId,
+    });
+  }
+
+  collection.tree = buildCanonicalCollectionTree({
+    items: collection.items,
+    tree: collection.tree,
+  });
+  return collection;
+};
+
+const getCharacterSpriteCollection = (state, characterId) => {
+  const character = state.resources?.characters?.items?.[characterId];
+  if (!character) {
+    return {
+      items: {},
+      tree: [],
+    };
+  }
+
+  character.sprites = normalizeNestedCollectionFromTree(character.sprites);
+  return character.sprites;
+};
+
+const normalizeCharacterSpriteCollections = (state) => {
+  const characterItems = state.resources?.characters?.items || {};
+  for (const character of Object.values(characterItems)) {
+    if (!character || character.type !== "character") {
+      continue;
+    }
+    character.sprites = normalizeNestedCollectionFromTree(character.sprites);
+  }
+};
+
 const normalizeLayoutParentId = (parentId, elementId) => {
   if (typeof parentId !== "string" || parentId.length === 0) return null;
   if (parentId === elementId) return null;
@@ -533,6 +599,14 @@ const reducers = {
       delete state[key];
     }
     Object.assign(state, nextState);
+    normalizeCharacterSpriteCollections(state);
+  },
+
+  [COMMAND_TYPES.STORY_UPDATE]: ({ state, payload }) => {
+    const data = structuredClone(payload.data || {});
+    if (data.initialSceneId !== undefined) {
+      state.story.initialSceneId = data.initialSceneId;
+    }
   },
 
   [COMMAND_TYPES.SCENE_CREATE]: ({ state, payload, now }) => {
@@ -577,10 +651,6 @@ const reducers = {
     for (const sceneId of payload.sceneIds || []) {
       cascadeDeleteScene(state, sceneId);
     }
-  },
-
-  [COMMAND_TYPES.SCENE_SET_INITIAL]: ({ state, payload }) => {
-    state.story.initialSceneId = payload.sceneId;
   },
 
   [COMMAND_TYPES.SCENE_MOVE]: ({ state, payload }) => {
@@ -709,6 +779,15 @@ const reducers = {
   [COMMAND_TYPES.RESOURCE_CREATE]: ({ state, payload, now }) => {
     const collection = state.resources[payload.resourceType];
     ensureCollectionTree(collection);
+    const resourceData = structuredClone(payload.data || {});
+    if (
+      payload.resourceType === "characters" &&
+      resourceData.type === "character"
+    ) {
+      resourceData.sprites = normalizeNestedCollectionFromTree(
+        resourceData.sprites,
+      );
+    }
     const parentId =
       payload.resourceType === "layouts"
         ? resolveLayoutParentId({
@@ -721,13 +800,13 @@ const reducers = {
       payload.resourceType === "layouts"
         ? toDomainLayoutResource({
             resourceId: payload.resourceId,
-            resourceData: payload.data,
+            resourceData,
             now,
             parentId,
           })
         : {
             id: payload.resourceId,
-            ...structuredClone(payload.data),
+            ...resourceData,
             parentId: null,
             createdAt: now,
             updatedAt: now,
@@ -814,6 +893,87 @@ const reducers = {
       parentId: clone.parentId,
       index: payload.index,
     });
+  },
+
+  [COMMAND_TYPES.CHARACTER_SPRITE_CREATE]: ({ state, payload, now }) => {
+    const collection = getCharacterSpriteCollection(state, payload.characterId);
+    collection.items[payload.spriteId] = {
+      ...structuredClone(payload.data || {}),
+      parentId: typeof payload.parentId === "string" ? payload.parentId : null,
+    };
+    placeCollectionNode({
+      collection,
+      itemId: payload.spriteId,
+      parentId: payload.parentId,
+      index: payload.index,
+    });
+    state.resources.characters.items[payload.characterId].updatedAt = now;
+  },
+
+  [COMMAND_TYPES.CHARACTER_SPRITE_UPDATE]: ({ state, payload, now }) => {
+    const collection = getCharacterSpriteCollection(state, payload.characterId);
+    const current = collection.items[payload.spriteId];
+    const data = structuredClone(payload.data || {});
+    delete data.id;
+    delete data.type;
+    delete data.parentId;
+    collection.items[payload.spriteId] = {
+      ...current,
+      ...data,
+    };
+    state.resources.characters.items[payload.characterId].updatedAt = now;
+  },
+
+  [COMMAND_TYPES.CHARACTER_SPRITE_MOVE]: ({ state, payload, now }) => {
+    const collection = getCharacterSpriteCollection(state, payload.characterId);
+    placeCollectionNode({
+      collection,
+      itemId: payload.spriteId,
+      parentId: payload.parentId,
+      index: payload.index,
+    });
+    state.resources.characters.items[payload.characterId].updatedAt = now;
+  },
+
+  [COMMAND_TYPES.CHARACTER_SPRITE_DELETE]: ({ state, payload, now }) => {
+    const collection = getCharacterSpriteCollection(state, payload.characterId);
+    const idsToDelete = new Set();
+
+    for (const spriteId of payload.spriteIds || []) {
+      const descendantIds = collectCollectionDescendantIds({
+        collection,
+        rootId: spriteId,
+        includeRoot: true,
+      });
+      for (const id of descendantIds) {
+        idsToDelete.add(id);
+      }
+    }
+
+    for (const id of idsToDelete) {
+      delete collection.items[id];
+    }
+    collection.tree = buildCanonicalCollectionTree({
+      items: collection.items || {},
+      tree: ensureCollectionTree(collection),
+    });
+    state.resources.characters.items[payload.characterId].updatedAt = now;
+  },
+
+  [COMMAND_TYPES.CHARACTER_SPRITE_DUPLICATE]: ({ state, payload, now }) => {
+    const collection = getCharacterSpriteCollection(state, payload.characterId);
+    const source = collection.items[payload.sourceId];
+    const clone = structuredClone(source);
+    clone.name = payload.name || `${source.name || "Sprite"} Copy`;
+    clone.parentId = undefined;
+    collection.items[payload.newId] = clone;
+    placeCollectionNode({
+      collection,
+      itemId: payload.newId,
+      parentId: payload.parentId,
+      index: payload.index,
+    });
+    state.resources.characters.items[payload.characterId].updatedAt = now;
   },
 
   [COMMAND_TYPES.LAYOUT_ELEMENT_CREATE]: ({ state, payload, now }) => {
@@ -1356,6 +1516,20 @@ export const assertDomainInvariants = (state) => {
       collection,
       collectionLabel: `resources.${resourceType}`,
       itemLabel: "resource",
+    });
+  }
+
+  for (const character of Object.values(
+    state.resources?.characters?.items || {},
+  )) {
+    if (!character || character.type !== "character") {
+      continue;
+    }
+
+    validateHierarchicalCollection({
+      collection: character.sprites || { items: {}, tree: [] },
+      collectionLabel: `character(${character.id}).sprites`,
+      itemLabel: "sprite",
     });
   }
 

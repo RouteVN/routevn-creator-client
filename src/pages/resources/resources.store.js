@@ -3,51 +3,51 @@ export const createInitialState = () => ({
     {
       id: "images",
       label: "Images",
-      route: "/project/resources/images",
+      route: "/project/images",
     },
     {
       id: "character",
       label: "Character",
-      route: "/project/resources/characters",
+      route: "/project/characters",
     },
     {
       id: "sounds",
       label: "Sounds",
-      route: "/project/resources/sounds",
+      route: "/project/sounds",
     },
     {
       id: "transforms",
       label: "Transforms",
-      route: "/project/resources/transforms",
+      route: "/project/transforms",
     },
     {
       id: "videos",
       label: "Videos",
-      route: "/project/resources/videos",
+      route: "/project/videos",
     },
   ],
   ui: [
     {
       id: "colors",
       label: "Colors",
-      route: "/project/resources/colors",
+      route: "/project/colors",
     },
     {
       id: "Fonts",
       label: "fonts",
-      route: "/project/resources/fonts",
+      route: "/project/fonts",
     },
     {
       id: "typography",
       label: "Typography",
-      route: "/project/resources/typography",
+      route: "/project/typography",
     },
   ],
   system: [
     {
       id: "variables",
       label: "Variables",
-      route: "/project/resources/variables",
+      route: "/project/variables",
     },
   ],
 });

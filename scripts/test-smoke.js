@@ -391,6 +391,22 @@ apply(
 );
 apply(
   makeCommand({
+    type: "story.update",
+    ts: 1925,
+    partitions: [
+      `project:${projectId}:story`,
+      `project:${projectId}:story:scene:scene-3`,
+    ],
+    payload: {
+      data: {
+        initialSceneId: "scene-3",
+      },
+    },
+  }),
+);
+assert.equal(state.story.initialSceneId, "scene-3");
+apply(
+  makeCommand({
     type: "scene.delete",
     ts: 1930,
     payload: {
@@ -400,6 +416,7 @@ apply(
 );
 assert.equal(state.scenes["scene-2"], undefined);
 assert.equal(state.scenes["scene-3"], undefined);
+assert.equal(state.story.initialSceneId, "scene-1");
 assert.deepEqual(state.story.sceneOrder, ["scene-1"]);
 
 apply(
@@ -691,7 +708,179 @@ assert.equal(state.resources.variables.items["var-a"].type, "string");
 apply(
   makeCommand({
     type: "resource.create",
-    ts: 2300,
+    ts: 2280,
+    partitions: [`project:${projectId}:resources:characters`],
+    payload: {
+      resourceType: "characters",
+      resourceId: "character-1",
+      data: {
+        name: "Hero",
+        type: "character",
+        sprites: {
+          items: {
+            "sprite-folder": {
+              type: "folder",
+              name: "Default Sprites",
+            },
+          },
+          tree: [{ id: "sprite-folder" }],
+        },
+      },
+    },
+  }),
+);
+apply(
+  makeCommand({
+    type: "character.sprite.create",
+    ts: 2285,
+    partitions: [`project:${projectId}:resources:characters`],
+    payload: {
+      characterId: "character-1",
+      spriteId: "sprite-1",
+      parentId: "sprite-folder",
+      index: 0,
+      data: {
+        type: "image",
+        name: "Idle",
+        fileId: "idle.png",
+      },
+    },
+  }),
+);
+assert.equal(
+  state.resources.characters.items["character-1"].sprites.items["sprite-1"]
+    .parentId,
+  "sprite-folder",
+);
+apply(
+  makeCommand({
+    type: "character.sprite.update",
+    ts: 2290,
+    partitions: [`project:${projectId}:resources:characters`],
+    payload: {
+      characterId: "character-1",
+      spriteId: "sprite-1",
+      data: {
+        description: "Idle pose",
+      },
+    },
+  }),
+);
+assert.equal(
+  state.resources.characters.items["character-1"].sprites.items["sprite-1"]
+    .description,
+  "Idle pose",
+);
+apply(
+  makeCommand({
+    type: "character.sprite.create",
+    ts: 2295,
+    partitions: [`project:${projectId}:resources:characters`],
+    payload: {
+      characterId: "character-1",
+      spriteId: "sprite-folder-2",
+      index: 1,
+      data: {
+        type: "folder",
+        name: "Variants",
+      },
+    },
+  }),
+);
+apply(
+  makeCommand({
+    type: "character.sprite.move",
+    ts: 2297,
+    partitions: [`project:${projectId}:resources:characters`],
+    payload: {
+      characterId: "character-1",
+      spriteId: "sprite-1",
+      parentId: "sprite-folder-2",
+      index: 0,
+    },
+  }),
+);
+assert.equal(
+  state.resources.characters.items["character-1"].sprites.items["sprite-1"]
+    .parentId,
+  "sprite-folder-2",
+);
+apply(
+  makeCommand({
+    type: "character.sprite.duplicate",
+    ts: 2298,
+    partitions: [`project:${projectId}:resources:characters`],
+    payload: {
+      characterId: "character-1",
+      sourceId: "sprite-1",
+      newId: "sprite-2",
+      parentId: "sprite-folder-2",
+      index: 1,
+      name: "Idle Copy",
+    },
+  }),
+);
+assert.equal(
+  state.resources.characters.items["character-1"].sprites.items["sprite-2"]
+    .name,
+  "Idle Copy",
+);
+assert.deepEqual(
+  flattenTreeIds(state.resources.characters.items["character-1"].sprites.tree),
+  ["sprite-folder", "sprite-folder-2", "sprite-1", "sprite-2"],
+);
+apply(
+  makeCommand({
+    type: "character.sprite.delete",
+    ts: 2299,
+    partitions: [`project:${projectId}:resources:characters`],
+    payload: {
+      characterId: "character-1",
+      spriteIds: ["sprite-1", "sprite-2"],
+    },
+  }),
+);
+assert.equal(
+  state.resources.characters.items["character-1"].sprites.items["sprite-1"],
+  undefined,
+);
+assert.equal(
+  state.resources.characters.items["character-1"].sprites.items["sprite-2"],
+  undefined,
+);
+assert.deepEqual(
+  flattenTreeIds(state.resources.characters.items["character-1"].sprites.tree),
+  ["sprite-folder", "sprite-folder-2"],
+);
+
+let characterSpriteBlobUpdateBlocked = false;
+try {
+  apply(
+    makeCommand({
+      type: "resource.update",
+      ts: 2300,
+      partitions: [`project:${projectId}:resources:characters`],
+      payload: {
+        resourceType: "characters",
+        resourceId: "character-1",
+        data: {
+          sprites: {
+            items: {},
+            tree: [],
+          },
+        },
+      },
+    }),
+  );
+} catch (error) {
+  characterSpriteBlobUpdateBlocked = error instanceof DomainPreconditionError;
+}
+assert.equal(characterSpriteBlobUpdateBlocked, true);
+
+apply(
+  makeCommand({
+    type: "resource.create",
+    ts: 2310,
     partitions: [`project:${projectId}:resources:layouts`],
     payload: {
       resourceType: "layouts",

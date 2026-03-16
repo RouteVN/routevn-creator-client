@@ -144,6 +144,7 @@ export const handleCharacterCreated = async (deps, payload) => {
           [defaultSpritesFolderId]: {
             type: "folder",
             name: "Default Sprites",
+            parentId: null,
           },
         },
       },
@@ -178,7 +179,7 @@ export const handleSpritesButtonClick = (deps, payload) => {
   const { p } = appService.getPayload();
 
   // Navigate to character sprites page
-  appService.navigate("/project/resources/character-sprites", {
+  appService.navigate("/project/character-sprites", {
     characterId: itemId,
     p: p,
   });

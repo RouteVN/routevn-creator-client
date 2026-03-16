@@ -37,7 +37,7 @@ export const handleItemDoubleClick = (deps, payload) => {
   }
 
   const currentPayload = appService.getPayload();
-  appService.navigate("/project/resources/layout-editor", {
+  appService.navigate("/project/layout-editor", {
     ...currentPayload,
     layoutId: itemId,
   });

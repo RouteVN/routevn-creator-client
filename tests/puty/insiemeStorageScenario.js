@@ -10,8 +10,8 @@ import {
   createProjectCollabService,
 } from "../../src/deps/services/shared/collab/index.js";
 import { projectRepositoryStateToDomainState } from "../../src/internal/project/projection.js";
-import { validateCommand } from "../../src/internal/project/commands.js";
 import { createProjectRepository } from "../../src/deps/services/shared/projectRepository.js";
+import { applyCommandToRepositoryState } from "../../src/deps/services/shared/projectRepository.js";
 import {
   createInMemoryServerTransport,
   parseToken,
@@ -172,6 +172,18 @@ const normalizeProjectState = (state = {}) => {
     ),
   );
 
+  const characterItems = resources.characters?.items || {};
+  for (const item of Object.values(characterItems)) {
+    if (
+      item?.sprites?.items &&
+      Object.keys(item.sprites.items).length === 0 &&
+      Array.isArray(item.sprites.tree) &&
+      item.sprites.tree.length === 0
+    ) {
+      delete item.sprites;
+    }
+  }
+
   return {
     model_version: state.model_version,
     project: normalizeValue(state.project || {}),
@@ -299,8 +311,29 @@ const buildScenario = (input) => {
   };
 };
 
-const createServer = ({ projectId, store, clock }) =>
-  createSyncServer({
+const createServer = ({ projectId, store, clock }) => {
+  const projectStates = new Map();
+
+  const createInitialRepositoryState = (nextProjectId) => ({
+    project: { id: nextProjectId, name: "", description: "" },
+    story: { initialSceneId: "" },
+    scenes: { items: {}, tree: [] },
+    images: { items: {}, tree: [] },
+    tweens: { items: {}, tree: [] },
+    sounds: { items: {}, tree: [] },
+    videos: { items: {}, tree: [] },
+    characters: { items: {}, tree: [] },
+    fonts: { items: {}, tree: [] },
+    transforms: { items: {}, tree: [] },
+    colors: { items: {}, tree: [] },
+    typography: { items: {}, tree: [] },
+    variables: { items: {}, tree: [] },
+    components: { items: {}, tree: [] },
+    layouts: { items: {}, tree: [] },
+    model_version: 2,
+  });
+
+  return createSyncServer({
     auth: {
       verifyToken: async (token) => {
         const identity = parseToken(token);
@@ -327,12 +360,29 @@ const createServer = ({ projectId, store, clock }) =>
             "failed to convert normalized submit item to command",
           );
         }
-        validateCommand(command);
+        const currentState =
+          projectStates.get(command.projectId) ||
+          createInitialRepositoryState(command.projectId);
+        const applyResult = applyCommandToRepositoryState({
+          repositoryState: currentState,
+          command,
+          projectId: command.projectId,
+        });
+        if (!applyResult.valid) {
+          const error = new Error(
+            applyResult.error?.message || "command validation failed",
+          );
+          error.code = applyResult.error?.code || "validation_failed";
+          error.details = applyResult.error?.details ?? {};
+          throw error;
+        }
+        projectStates.set(command.projectId, applyResult.repositoryState);
       },
     },
     store,
     clock,
   });
+};
 
 export const runInsiemeStorageScenario = async (input) => {
   const scenario = buildScenario(input);
@@ -366,11 +416,10 @@ export const runInsiemeStorageScenario = async (input) => {
     for (const batch of scenario.commandBatches) {
       for (const command of batch) {
         await collab.submitCommand(command);
+        await collab.flushDrafts();
+        await collab.syncNow({ timeoutMs: scenario.timeoutMs });
+        await sleep(scenario.settleMs);
       }
-
-      await collab.flushDrafts();
-      await collab.syncNow({ timeoutMs: scenario.timeoutMs });
-      await sleep(scenario.settleMs);
     }
 
     const storedEvents = readStoredEvents(sqlite, {

@@ -205,9 +205,9 @@ out:
         model_version: 2
         project:
           createdAt: 0
-          description: ''
+          description: ""
           id: project-puty-sections-001
-          name: ''
+          name: ""
           updatedAt: 701
         story:
           initialSceneId: scene-main
@@ -222,7 +222,7 @@ out:
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds: []
             type: scene
             updatedAt: 701
@@ -236,9 +236,9 @@ out:
         model_version: 2
         project:
           createdAt: 0
-          description: ''
+          description: ""
           id: project-puty-sections-001
-          name: ''
+          name: ""
           updatedAt: 702
         story:
           initialSceneId: scene-main
@@ -253,7 +253,7 @@ out:
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds:
               - section-a
             type: scene
@@ -276,9 +276,9 @@ out:
         model_version: 2
         project:
           createdAt: 0
-          description: ''
+          description: ""
           id: project-puty-sections-001
-          name: ''
+          name: ""
           updatedAt: 703
         story:
           initialSceneId: scene-main
@@ -293,7 +293,7 @@ out:
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds:
               - section-a
               - section-b
@@ -325,9 +325,9 @@ out:
         model_version: 2
         project:
           createdAt: 0
-          description: ''
+          description: ""
           id: project-puty-sections-001
-          name: ''
+          name: ""
           updatedAt: 704
         story:
           initialSceneId: scene-main
@@ -342,11 +342,11 @@ out:
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds:
               - section-a
-              - section-c
               - section-b
+              - section-c
             type: scene
             updatedAt: 701
         sections:
@@ -383,9 +383,9 @@ out:
         model_version: 2
         project:
           createdAt: 0
-          description: ''
+          description: ""
           id: project-puty-sections-001
-          name: ''
+          name: ""
           updatedAt: 705
         story:
           initialSceneId: scene-main
@@ -400,11 +400,11 @@ out:
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds:
               - section-a
-              - section-c
               - section-b
+              - section-c
             type: scene
             updatedAt: 701
         sections:
@@ -441,9 +441,9 @@ out:
         model_version: 2
         project:
           createdAt: 0
-          description: ''
+          description: ""
           id: project-puty-sections-001
-          name: ''
+          name: ""
           updatedAt: 706
         story:
           initialSceneId: scene-main
@@ -453,12 +453,12 @@ out:
           scene-main:
             createdAt: 701
             id: scene-main
-            initialSectionId: section-a
+            initialSectionId: section-c
             name: Main Scene
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds:
               - section-c
               - section-a
@@ -489,7 +489,7 @@ out:
             lineIds: []
             name: Aftermath
             sceneId: scene-main
-            updatedAt: 704
+            updatedAt: 706
         lines: {}
         resources: {}
     - committedId: 7
@@ -499,9 +499,9 @@ out:
         model_version: 2
         project:
           createdAt: 0
-          description: ''
+          description: ""
           id: project-puty-sections-001
-          name: ''
+          name: ""
           updatedAt: 707
         story:
           initialSceneId: scene-main
@@ -516,7 +516,7 @@ out:
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds:
               - section-c
               - section-b
@@ -538,6 +538,6 @@ out:
             lineIds: []
             name: Aftermath
             sceneId: scene-main
-            updatedAt: 704
+            updatedAt: 706
         lines: {}
         resources: {}

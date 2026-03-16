@@ -60,7 +60,7 @@ in:
           data:
             position:
               x: 520
-              'y': 240
+              y: 240
       - id: cmd-scene-wakeup-rename
         partitions:
           - project:project-puty-scene-tree-001:story
@@ -84,10 +84,11 @@ in:
         partitions:
           - project:project-puty-scene-tree-001:story
           - project:project-puty-scene-tree-001:story:scene:scene-intro
-        type: scene.set_initial
+        type: story.update
         clientTs: 507
         payload:
-          sceneId: scene-intro
+          data:
+            initialSceneId: scene-intro
 out:
   storedEvents:
     - committedId: 1
@@ -151,7 +152,7 @@ out:
         data:
           position:
             x: 520
-            'y': 240
+            y: 240
       meta:
         clientId: client-puty-scene-tree
         clientTs: 504
@@ -191,9 +192,10 @@ out:
       partitions:
         - project:project-puty-scene-tree-001:story
         - project:project-puty-scene-tree-001:story:scene:scene-intro
-      type: scene.set_initial
+      type: story.update
       payload:
-        sceneId: scene-intro
+        data:
+          initialSceneId: scene-intro
       meta:
         clientId: client-puty-scene-tree
         clientTs: 507
@@ -205,9 +207,9 @@ out:
         model_version: 2
         project:
           createdAt: 0
-          description: ''
+          description: ""
           id: project-puty-scene-tree-001
-          name: ''
+          name: ""
           updatedAt: 501
         story:
           initialSceneId: null
@@ -222,7 +224,7 @@ out:
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds: []
             type: folder
             updatedAt: 501
@@ -236,9 +238,9 @@ out:
         model_version: 2
         project:
           createdAt: 0
-          description: ''
+          description: ""
           id: project-puty-scene-tree-001
-          name: ''
+          name: ""
           updatedAt: 502
         story:
           initialSceneId: scene-intro
@@ -254,7 +256,7 @@ out:
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds: []
             type: folder
             updatedAt: 501
@@ -266,7 +268,7 @@ out:
             parentId: folder-prologue
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds: []
             type: scene
             updatedAt: 502
@@ -280,9 +282,9 @@ out:
         model_version: 2
         project:
           createdAt: 0
-          description: ''
+          description: ""
           id: project-puty-scene-tree-001
-          name: ''
+          name: ""
           updatedAt: 503
         story:
           initialSceneId: scene-intro
@@ -299,7 +301,7 @@ out:
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds: []
             type: folder
             updatedAt: 501
@@ -311,7 +313,7 @@ out:
             parentId: folder-prologue
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds: []
             type: scene
             updatedAt: 502
@@ -323,7 +325,7 @@ out:
             parentId: folder-prologue
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds: []
             type: scene
             updatedAt: 503
@@ -337,9 +339,9 @@ out:
         model_version: 2
         project:
           createdAt: 0
-          description: ''
+          description: ""
           id: project-puty-scene-tree-001
-          name: ''
+          name: ""
           updatedAt: 504
         story:
           initialSceneId: scene-intro
@@ -356,7 +358,7 @@ out:
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds: []
             type: folder
             updatedAt: 501
@@ -368,7 +370,7 @@ out:
             parentId: folder-prologue
             position:
               x: 520
-              'y': 240
+              y: 240
             sectionIds: []
             type: scene
             updatedAt: 504
@@ -380,7 +382,7 @@ out:
             parentId: folder-prologue
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds: []
             type: scene
             updatedAt: 503
@@ -394,9 +396,9 @@ out:
         model_version: 2
         project:
           createdAt: 0
-          description: ''
+          description: ""
           id: project-puty-scene-tree-001
-          name: ''
+          name: ""
           updatedAt: 505
         story:
           initialSceneId: scene-intro
@@ -413,7 +415,7 @@ out:
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds: []
             type: folder
             updatedAt: 501
@@ -425,7 +427,7 @@ out:
             parentId: folder-prologue
             position:
               x: 520
-              'y': 240
+              y: 240
             sectionIds: []
             type: scene
             updatedAt: 504
@@ -437,7 +439,7 @@ out:
             parentId: folder-prologue
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds: []
             type: scene
             updatedAt: 505
@@ -451,16 +453,16 @@ out:
         model_version: 2
         project:
           createdAt: 0
-          description: ''
+          description: ""
           id: project-puty-scene-tree-001
-          name: ''
+          name: ""
           updatedAt: 506
         story:
-          initialSceneId: scene-intro
+          initialSceneId: scene-wakeup
           sceneOrder:
+            - scene-wakeup
             - folder-prologue
             - scene-intro
-            - scene-wakeup
         scenes:
           folder-prologue:
             createdAt: 501
@@ -470,7 +472,7 @@ out:
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds: []
             type: folder
             updatedAt: 501
@@ -482,7 +484,7 @@ out:
             parentId: folder-prologue
             position:
               x: 520
-              'y': 240
+              y: 240
             sectionIds: []
             type: scene
             updatedAt: 504
@@ -494,30 +496,30 @@ out:
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds: []
             type: scene
-            updatedAt: 505
+            updatedAt: 506
         sections: {}
         lines: {}
         resources: {}
     - committedId: 7
       eventId: cmd-scene-set-initial
-      eventType: scene.set_initial
+      eventType: story.update
       state:
         model_version: 2
         project:
           createdAt: 0
-          description: ''
+          description: ""
           id: project-puty-scene-tree-001
-          name: ''
+          name: ""
           updatedAt: 507
         story:
           initialSceneId: scene-intro
           sceneOrder:
+            - scene-wakeup
             - folder-prologue
             - scene-intro
-            - scene-wakeup
         scenes:
           folder-prologue:
             createdAt: 501
@@ -527,7 +529,7 @@ out:
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds: []
             type: folder
             updatedAt: 501
@@ -539,7 +541,7 @@ out:
             parentId: folder-prologue
             position:
               x: 520
-              'y': 240
+              y: 240
             sectionIds: []
             type: scene
             updatedAt: 504
@@ -551,10 +553,10 @@ out:
             parentId: null
             position:
               x: 200
-              'y': 200
+              y: 200
             sectionIds: []
             type: scene
-            updatedAt: 505
+            updatedAt: 506
         sections: {}
         lines: {}
         resources: {}

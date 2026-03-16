@@ -1,9 +1,10 @@
 import { createSyncServer, createSqliteSyncStore } from "insieme/server";
 import { validateCommandSubmitItem } from "insieme/client";
 import { committedEventToCommand } from "../../src/deps/services/shared/collab/mappers.js";
-import { processCommand } from "../../src/internal/project/state.js";
-import { createEmptyProjectState } from "../../src/internal/project/state.js";
-import { validateCommand } from "../../src/internal/project/commands.js";
+import {
+  applyCommandToRepositoryState,
+  initialProjectData,
+} from "../../src/deps/services/shared/projectRepository.js";
 
 let Database;
 try {
@@ -40,9 +41,13 @@ const ensureProjectState = (projectId) => {
   if (!projectStates.has(projectId)) {
     projectStates.set(
       projectId,
-      createEmptyProjectState({
-        projectId,
-      }),
+      {
+        ...structuredClone(initialProjectData),
+        project: {
+          ...structuredClone(initialProjectData.project || {}),
+          id: projectId,
+        },
+      },
     );
   }
   return projectStates.get(projectId);
@@ -90,13 +95,21 @@ const server = createSyncServer({
         throw error;
       }
 
-      validateCommand(command);
       const currentState = ensureProjectState(command.projectId);
-      const { state: nextState } = processCommand({
-        state: currentState,
+      const applyResult = applyCommandToRepositoryState({
+        repositoryState: currentState,
         command,
+        projectId: command.projectId,
       });
-      projectStates.set(command.projectId, nextState);
+      if (!applyResult.valid) {
+        const error = new Error(
+          applyResult.error?.message || "command validation failed",
+        );
+        error.code = applyResult.error?.code || "validation_failed";
+        error.details = applyResult.error?.details ?? {};
+        throw error;
+      }
+      projectStates.set(command.projectId, applyResult.repositoryState);
     },
   },
   store,

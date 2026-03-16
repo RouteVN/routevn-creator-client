@@ -189,6 +189,34 @@ const validateOptionalBooleanField = (payload, field, errors) => {
   }
 };
 
+const validateAllowedObjectKeys = (payload, field, allowedKeys, errors) => {
+  const value = payload?.[field];
+  if (!isPlainObject(value)) {
+    return;
+  }
+
+  for (const key of Object.keys(value)) {
+    if (!allowedKeys.includes(key)) {
+      errors.push(`payload.${field}.${key} is not allowed`);
+    }
+  }
+};
+
+const validateOptionalNestedFiniteNumberField = (payload, path, errors) => {
+  let current = payload;
+  for (const segment of path) {
+    current = current?.[segment];
+  }
+
+  if (current === undefined) {
+    return;
+  }
+
+  if (!assertFiniteNumber(current)) {
+    errors.push(`payload.${path.join(".")} must be a finite number`);
+  }
+};
+
 const validateRequiredStringArrayField = (payload, field, errors) => {
   const value = payload?.[field];
   if (!Array.isArray(value) || value.length === 0) {
@@ -381,6 +409,139 @@ const validateLineCreatePayload = (payload, errors) => {
   });
 };
 
+const CHARACTER_SPRITE_FOLDER_FIELDS = ["type", "name", "description"];
+const CHARACTER_SPRITE_IMAGE_FIELDS = [
+  "type",
+  "name",
+  "description",
+  "fileId",
+  "fileType",
+  "fileSize",
+  "width",
+  "height",
+];
+const CHARACTER_SPRITE_UPDATE_FIELDS = [
+  "name",
+  "description",
+  "fileId",
+  "fileType",
+  "fileSize",
+  "width",
+  "height",
+];
+
+const validateCharacterSpriteCreatePayload = (payload, errors) => {
+  const data = payload?.data;
+  if (!isPlainObject(data)) {
+    return;
+  }
+
+  if (data.type !== "folder" && data.type !== "image") {
+    errors.push("payload.data.type must be 'folder' or 'image'");
+    return;
+  }
+
+  validateAllowedObjectKeys(
+    payload,
+    "data",
+    data.type === "folder"
+      ? CHARACTER_SPRITE_FOLDER_FIELDS
+      : CHARACTER_SPRITE_IMAGE_FIELDS,
+    errors,
+  );
+  validateRequiredNestedStringField(payload, ["data", "name"], errors);
+
+  if (
+    data.description !== undefined &&
+    !assertNonEmptyString(data.description)
+  ) {
+    errors.push(
+      "payload.data.description must be a non-empty string when provided",
+    );
+  }
+
+  if (data.type === "image") {
+    validateRequiredNestedStringField(payload, ["data", "fileId"], errors);
+    if (data.fileType !== undefined && !assertNonEmptyString(data.fileType)) {
+      errors.push(
+        "payload.data.fileType must be a non-empty string when provided",
+      );
+    }
+    validateOptionalNestedFiniteNumberField(
+      payload,
+      ["data", "fileSize"],
+      errors,
+    );
+    validateOptionalNestedFiniteNumberField(payload, ["data", "width"], errors);
+    validateOptionalNestedFiniteNumberField(
+      payload,
+      ["data", "height"],
+      errors,
+    );
+  }
+};
+
+const validateCharacterSpriteUpdatePayload = (payload, errors) => {
+  const data = payload?.data;
+  if (!isPlainObject(data)) {
+    return;
+  }
+
+  validateAllowedObjectKeys(
+    payload,
+    "data",
+    CHARACTER_SPRITE_UPDATE_FIELDS,
+    errors,
+  );
+
+  if (data.name !== undefined && !assertNonEmptyString(data.name)) {
+    errors.push("payload.data.name must be a non-empty string when provided");
+  }
+  if (
+    data.description !== undefined &&
+    !assertNonEmptyString(data.description)
+  ) {
+    errors.push(
+      "payload.data.description must be a non-empty string when provided",
+    );
+  }
+  if (data.fileId !== undefined && !assertNonEmptyString(data.fileId)) {
+    errors.push("payload.data.fileId must be a non-empty string when provided");
+  }
+  if (data.fileType !== undefined && !assertNonEmptyString(data.fileType)) {
+    errors.push(
+      "payload.data.fileType must be a non-empty string when provided",
+    );
+  }
+  validateOptionalNestedFiniteNumberField(
+    payload,
+    ["data", "fileSize"],
+    errors,
+  );
+  validateOptionalNestedFiniteNumberField(payload, ["data", "width"], errors);
+  validateOptionalNestedFiniteNumberField(payload, ["data", "height"], errors);
+};
+
+const getPositionTargetIdFromPayload = (payload) => {
+  const position = payload?.position;
+  if (
+    (position === "before" || position === "after") &&
+    assertNonEmptyString(payload?.positionTargetId)
+  ) {
+    return payload.positionTargetId;
+  }
+
+  if (isPlainObject(position) && assertNonEmptyString(position.before)) {
+    return position.before;
+  }
+
+  if (isPlainObject(position) && assertNonEmptyString(position.after)) {
+    return position.after;
+  }
+
+  return undefined;
+};
+
 const normalizeCommandType = (type) => {
   if (type === "line.insert_after") {
     return "line.create";
@@ -524,6 +685,73 @@ const assertResourceExists = (
   );
 };
 
+const assertCharacterExists = (state, characterId, details = {}) => {
+  assertResourceExists(state, "characters", characterId, details);
+  const character = state.resources?.characters?.items?.[characterId];
+  assertPrecondition(character?.type === "character", "character not found", {
+    characterId,
+    actualType: character?.type,
+    ...details,
+  });
+};
+
+const getCharacterSpritesCollection = (state, characterId) => {
+  return (
+    state.resources?.characters?.items?.[characterId]?.sprites || {
+      items: {},
+      tree: [],
+    }
+  );
+};
+
+const assertCharacterSpriteExists = (
+  state,
+  characterId,
+  spriteId,
+  details = {},
+) => {
+  assertCharacterExists(state, characterId, details);
+  const sprites = getCharacterSpritesCollection(state, characterId);
+  assertPrecondition(
+    !!sprites.items?.[spriteId],
+    "character sprite not found",
+    {
+      characterId,
+      spriteId,
+      ...details,
+    },
+  );
+};
+
+const assertCharacterSpriteFolderParent = (
+  state,
+  characterId,
+  spriteId,
+  parentId,
+) => {
+  assertPrecondition(
+    parentId !== spriteId,
+    "character sprite cannot parent itself",
+    {
+      characterId,
+      spriteId,
+      parentId,
+    },
+  );
+  assertCharacterSpriteExists(state, characterId, parentId, { parentId });
+  const sprites = getCharacterSpritesCollection(state, characterId);
+  assertPrecondition(
+    sprites.items[parentId]?.type === "folder",
+    "character sprite parent must be folder",
+    {
+      characterId,
+      spriteId,
+      parentId,
+      parentType: sprites.items[parentId]?.type,
+    },
+  );
+};
+
 const assertLayoutExists = (state, layoutId) => {
   assertPrecondition(
     !!state.resources?.layouts?.items?.[layoutId],
@@ -575,6 +803,30 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
+    type: "story.update",
+    scope: "story",
+    payload: {
+      requiredFields: ["data"],
+      objectFields: ["data"],
+    },
+    validatePayload: (payload, errors) => {
+      validateRequiredNestedStringField(
+        payload,
+        ["data", "initialSceneId"],
+        errors,
+      );
+    },
+    assertPreconditions: (state, command) => {
+      const sceneId = command.payload.data.initialSceneId;
+      assertSceneExists(state, sceneId, { sceneId });
+      assertPrecondition(
+        state.scenes[sceneId].type !== "folder",
+        "initial scene cannot be a folder",
+        { sceneId },
+      );
+    },
+  },
+  {
     type: "scene.update",
     scope: "story",
     payload: {
@@ -597,23 +849,6 @@ const COMMAND_DEFINITIONS = [
       for (const sceneId of command.payload.sceneIds || []) {
         assertSceneExists(state, sceneId);
       }
-    },
-  },
-  {
-    type: "scene.set_initial",
-    scope: "story",
-    payload: {
-      requiredFields: ["sceneId"],
-      requiredStringFields: ["sceneId"],
-    },
-    assertPreconditions: (state, command) => {
-      const { sceneId } = command.payload;
-      assertSceneExists(state, sceneId);
-      assertPrecondition(
-        state.scenes[sceneId].type !== "folder",
-        "initial scene cannot be a folder",
-        { sceneId },
-      );
     },
   },
   {
@@ -835,6 +1070,16 @@ const COMMAND_DEFINITIONS = [
       const { resourceType, resourceId, data } = command.payload;
       assertResourceExists(state, resourceType, resourceId);
       const currentItem = state.resources?.[resourceType]?.items?.[resourceId];
+      if (resourceType === "characters" && data?.sprites !== undefined) {
+        assertPrecondition(
+          false,
+          "character sprites must be updated through character.sprite commands",
+          {
+            resourceType,
+            resourceId,
+          },
+        );
+      }
       if (resourceType === "variables" && currentItem?.type !== "folder") {
         const nextType = data?.type;
         const nextVariableType = data?.variableType;
@@ -919,6 +1164,170 @@ const COMMAND_DEFINITIONS = [
         "duplicate target id exists",
         { resourceType, newId },
       );
+    },
+  },
+  {
+    type: "character.sprite.create",
+    scope: "resources",
+    payload: {
+      requiredFields: ["characterId", "spriteId", "data"],
+      requiredStringFields: ["characterId", "spriteId"],
+      objectFields: ["data"],
+      optionalNullableStringFields: ["parentId"],
+      allowIndex: true,
+      allowPosition: true,
+    },
+    validatePayload: (payload, errors) => {
+      validateCharacterSpriteCreatePayload(payload, errors);
+    },
+    assertPreconditions: (state, command) => {
+      const { characterId, spriteId, parentId } = command.payload;
+      assertCharacterExists(state, characterId);
+      const sprites = getCharacterSpritesCollection(state, characterId);
+      assertPrecondition(
+        !sprites.items?.[spriteId],
+        "character sprite already exists",
+        {
+          characterId,
+          spriteId,
+        },
+      );
+      if (parentId !== undefined && parentId !== null) {
+        assertCharacterSpriteFolderParent(
+          state,
+          characterId,
+          spriteId,
+          parentId,
+        );
+      }
+
+      const positionTargetId = getPositionTargetIdFromPayload(command.payload);
+      if (positionTargetId !== undefined) {
+        assertCharacterSpriteExists(state, characterId, positionTargetId, {
+          positionTargetId,
+        });
+      }
+    },
+  },
+  {
+    type: "character.sprite.update",
+    scope: "resources",
+    payload: {
+      requiredFields: ["characterId", "spriteId", "data"],
+      requiredStringFields: ["characterId", "spriteId"],
+      objectFields: ["data"],
+    },
+    validatePayload: (payload, errors) => {
+      validateCharacterSpriteUpdatePayload(payload, errors);
+    },
+    assertPreconditions: (state, command) => {
+      const { characterId, spriteId, data } = command.payload;
+      assertCharacterSpriteExists(state, characterId, spriteId);
+      const sprite =
+        getCharacterSpritesCollection(state, characterId).items?.[spriteId] ||
+        {};
+
+      if (sprite.type === "folder") {
+        const forbiddenFolderFields = [
+          "fileId",
+          "fileType",
+          "fileSize",
+          "width",
+          "height",
+        ];
+
+        for (const field of forbiddenFolderFields) {
+          assertPrecondition(
+            data?.[field] === undefined,
+            "folder sprite cannot update image fields",
+            {
+              characterId,
+              spriteId,
+              field,
+            },
+          );
+        }
+      }
+    },
+  },
+  {
+    type: "character.sprite.move",
+    scope: "resources",
+    payload: {
+      requiredFields: ["characterId", "spriteId", "index"],
+      requiredStringFields: ["characterId", "spriteId"],
+      optionalNullableStringFields: ["parentId"],
+      allowIndex: true,
+      allowPosition: true,
+    },
+    assertPreconditions: (state, command) => {
+      const { characterId, spriteId, parentId } = command.payload;
+      assertCharacterSpriteExists(state, characterId, spriteId);
+      if (parentId !== undefined && parentId !== null) {
+        assertCharacterSpriteFolderParent(
+          state,
+          characterId,
+          spriteId,
+          parentId,
+        );
+      }
+
+      const positionTargetId = getPositionTargetIdFromPayload(command.payload);
+      if (positionTargetId !== undefined) {
+        assertCharacterSpriteExists(state, characterId, positionTargetId, {
+          positionTargetId,
+        });
+      }
+    },
+  },
+  {
+    type: "character.sprite.delete",
+    scope: "resources",
+    payload: {
+      requiredFields: ["characterId", "spriteIds"],
+      requiredStringFields: ["characterId"],
+      requiredStringArrayFields: ["spriteIds"],
+    },
+    assertPreconditions: (state, command) => {
+      const { characterId, spriteIds } = command.payload;
+      for (const spriteId of spriteIds || []) {
+        assertCharacterSpriteExists(state, characterId, spriteId);
+      }
+    },
+  },
+  {
+    type: "character.sprite.duplicate",
+    scope: "resources",
+    payload: {
+      requiredFields: ["characterId", "sourceId", "newId", "index"],
+      requiredStringFields: ["characterId", "sourceId", "newId"],
+      optionalNullableStringFields: ["parentId"],
+      optionalStringFields: ["name"],
+      allowIndex: true,
+      allowPosition: true,
+    },
+    assertPreconditions: (state, command) => {
+      const { characterId, sourceId, newId, parentId } = command.payload;
+      assertCharacterSpriteExists(state, characterId, sourceId, { sourceId });
+      const sprites = getCharacterSpritesCollection(state, characterId);
+      assertPrecondition(
+        !sprites.items?.[newId],
+        "duplicate target id exists",
+        {
+          characterId,
+          newId,
+        },
+      );
+      if (parentId !== undefined && parentId !== null) {
+        assertCharacterSpriteFolderParent(state, characterId, newId, parentId);
+      }
+
+      const positionTargetId = getPositionTargetIdFromPayload(command.payload);
+      if (positionTargetId !== undefined) {
+        assertCharacterSpriteExists(state, characterId, positionTargetId, {
+          positionTargetId,
+        });
+      }
     },
   },
   {

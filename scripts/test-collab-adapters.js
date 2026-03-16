@@ -1,5 +1,15 @@
 import assert from "node:assert/strict";
-import { repositoryEventToCommand } from "../src/deps/services/shared/projectRepository.js";
+import fs from "node:fs";
+import {
+  initialProjectData,
+  repositoryEventToCommand,
+} from "../src/deps/services/shared/projectRepository.js";
+import {
+  applyCommandToRepositoryStateWithCreatorModel,
+  commandToCreatorModelCommand,
+  repositoryStateToCreatorModelState,
+  shouldUseCreatorModelForCommand,
+} from "../src/internal/creatorModelAdapter.js";
 import {
   enqueueSerialTask,
   ensureCachedCommittedCursor,
@@ -195,6 +205,265 @@ const createRepositoryEvent = ({
   assert.equal(warnings.length, 2);
   assert.equal(warnings[0].key, "project-error");
   assert.equal(warnings[1].key, "project-error");
+}
+
+{
+  const creatorModelState = repositoryStateToCreatorModelState({
+    repositoryState: {
+      project: {},
+      story: {
+        initialSceneId: "scene-title",
+      },
+      scenes: {
+        items: {
+          "scene-title": {
+            type: "scene",
+            name: "Title",
+            sections: {
+              items: {
+                "section-main": {
+                  name: "Main",
+                  lines: {
+                    items: {
+                      "title-line-1": {
+                        actions: {
+                          narration: "hello",
+                        },
+                      },
+                    },
+                    tree: [{ id: "title-line-1" }],
+                  },
+                },
+              },
+              tree: [{ id: "section-main" }],
+            },
+          },
+        },
+        tree: [{ id: "scene-title" }],
+      },
+    },
+  });
+
+  assert.equal(
+    creatorModelState.scenes.items["scene-title"].sections.items["section-main"]
+      .lines.tree[0].id,
+    "title-line-1",
+  );
+  assert.equal(
+    creatorModelState.scenes.items["scene-title"].sections.items["section-main"]
+      .lines.items["title-line-1"].actions.narration,
+    "hello",
+  );
+}
+
+{
+  const creatorModelCommand = commandToCreatorModelCommand({
+    command: {
+      type: "project.create",
+      payload: {
+        state: {
+          project: {},
+          story: {
+            initialSceneId: undefined,
+          },
+          scenes: {
+            items: {},
+            tree: [],
+          },
+          images: {
+            items: {},
+            tree: [],
+          },
+          sounds: {
+            items: {},
+            tree: [],
+          },
+          videos: {
+            items: {},
+            tree: [],
+          },
+          animations: {
+            items: {},
+            tree: [],
+          },
+          characters: {
+            items: {},
+            tree: [],
+          },
+          fonts: {
+            items: {},
+            tree: [],
+          },
+          transforms: {
+            items: {},
+            tree: [],
+          },
+          colors: {
+            items: {},
+            tree: [],
+          },
+          textStyles: {
+            items: {},
+            tree: [],
+          },
+          variables: {
+            items: {
+              _textSpeed: {
+                id: "_textSpeed",
+                type: "number",
+                name: "_textSpeed",
+                scope: "global-device",
+                default: 50,
+              },
+            },
+            tree: [{ id: "_textSpeed" }],
+          },
+          layouts: {
+            items: {},
+            tree: [],
+          },
+        },
+      },
+    },
+  });
+
+  assert.equal(
+    creatorModelCommand.payload.state.variables.items._textSpeed.value,
+    50,
+  );
+}
+
+{
+  const repositoryState = JSON.parse(
+    fs.readFileSync("static/templates/default/repository.json", "utf8"),
+  );
+  const creatorModelState = repositoryStateToCreatorModelState({
+    repositoryState,
+  });
+
+  assert.equal(
+    Object.keys(creatorModelState.images.items).length > 0,
+    true,
+  );
+  assert.equal(
+    creatorModelState.images.tree.some((node) => node.id === "zZO4u50ZEEt1WIugqEiW4"),
+    true,
+  );
+  assert.equal(
+    creatorModelState.images.items.options_black_bg_image.name,
+    repositoryState.images.items.options_black_bg_image.name,
+  );
+  assert.equal(
+    Object.keys(creatorModelState.characters.items).length > 0,
+    true,
+  );
+  assert.equal(
+    Object.keys(creatorModelState.layouts.items).length > 0,
+    true,
+  );
+  assert.equal(
+    Object.values(creatorModelState.characters.items).some(
+      (item) => item.type === "folder",
+    ),
+    true,
+  );
+  assert.equal(
+    Object.values(creatorModelState.layouts.items)
+      .filter((item) => item.type !== "folder")
+      .every((item) => item.elements && Array.isArray(item.elements.tree)),
+    true,
+  );
+  assert.equal(
+    Object.values(creatorModelState.layouts.items).some(
+      (item) => item.type !== "folder",
+    ),
+    true,
+  );
+  assert.equal(
+    creatorModelState.layouts.items.TitlePageDefaultLayout.elements.items[
+      "title-text"
+    ].textStyleId,
+    repositoryState.layouts.items.TitlePageDefaultLayout.elements.items[
+      "title-text"
+    ].typographyId,
+  );
+  assert.equal(
+    creatorModelState.layouts.items.TitlePageDefaultLayout.elements.items[
+      "title-text"
+    ].style,
+    undefined,
+  );
+}
+
+{
+  assert.equal(
+    shouldUseCreatorModelForCommand({
+      command: {
+        type: "resource.create",
+        payload: {
+          resourceType: "characters",
+        },
+      },
+    }),
+    true,
+  );
+  assert.equal(
+    shouldUseCreatorModelForCommand({
+      command: {
+        type: "resource.create",
+        payload: {
+          resourceType: "layouts",
+        },
+      },
+    }),
+    true,
+  );
+  assert.equal(
+    shouldUseCreatorModelForCommand({
+      command: {
+        type: "character.sprite.create",
+        payload: {},
+      },
+    }),
+    true,
+  );
+  assert.equal(
+    shouldUseCreatorModelForCommand({
+      command: {
+        type: "layout.element.create",
+        payload: {},
+      },
+    }),
+    true,
+  );
+}
+
+{
+  const invalidApplyResult = applyCommandToRepositoryStateWithCreatorModel({
+    repositoryState: {
+      ...structuredClone(initialProjectData),
+      project: {
+        ...structuredClone(initialProjectData.project || {}),
+        id: projectId,
+      },
+    },
+    command: {
+      type: "scene.update",
+      payload: {
+        sceneId: "scene-missing",
+        data: {
+          name: "Missing",
+        },
+      },
+    },
+    projectId,
+  });
+
+  assert.equal(invalidApplyResult.valid, false);
+  assert.equal(
+    invalidApplyResult.error.message,
+    "payload.sceneId must reference an existing scene",
+  );
 }
 
 {
