@@ -45,13 +45,14 @@ in:
         clientTs: 603
         payload:
           sectionId: section-a
-          lineId: line-a
-          data:
-            actions:
-              dialogue:
-                content:
-                  - text: This scene will be removed
-                mode: adv
+          lines:
+            - lineId: line-a
+              data:
+                actions:
+                  dialogue:
+                    content:
+                      - text: This scene will be removed
+                    mode: adv
       - id: cmd-scene-delete-section-b
         partitions:
           - project:project-puty-scene-delete-001:story
@@ -71,13 +72,14 @@ in:
         clientTs: 605
         payload:
           sectionId: section-b
-          lineId: line-b
-          data:
-            actions:
-              dialogue:
-                content:
-                  - text: Alternate path
-                mode: adv
+          lines:
+            - lineId: line-b
+              data:
+                actions:
+                  dialogue:
+                    content:
+                      - text: Alternate path
+                    mode: adv
       - id: cmd-scene-delete-target
         partitions:
           - project:project-puty-scene-delete-001:story
@@ -129,13 +131,14 @@ out:
       type: line.create
       payload:
         sectionId: section-a
-        lineId: line-a
-        data:
-          actions:
-            dialogue:
-              content:
-                - text: This scene will be removed
-              mode: adv
+        lines:
+          - lineId: line-a
+            data:
+              actions:
+                dialogue:
+                  content:
+                    - text: This scene will be removed
+                  mode: adv
       meta:
         clientId: client-puty-scene-delete
         clientTs: 603
@@ -165,13 +168,14 @@ out:
       type: line.create
       payload:
         sectionId: section-b
-        lineId: line-b
-        data:
-          actions:
-            dialogue:
-              content:
-                - text: Alternate path
-              mode: adv
+        lines:
+          - lineId: line-b
+            data:
+              actions:
+                dialogue:
+                  content:
+                    - text: Alternate path
+                  mode: adv
       meta:
         clientId: client-puty-scene-delete
         clientTs: 605

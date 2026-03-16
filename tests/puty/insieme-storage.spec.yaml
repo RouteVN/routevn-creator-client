@@ -59,13 +59,14 @@ in:
         clientTs: 105
         payload:
           sectionId: section-1
-          lineId: line-1
-          data:
-            actions:
-              dialogue:
-                content:
-                  - text: Hello
-                mode: adv
+          lines:
+            - lineId: line-1
+              data:
+                actions:
+                  dialogue:
+                    content:
+                      - text: Hello
+                    mode: adv
       - id: cmd-line-dialogue-update
         partitions:
           - project:project-puty-storage-001:story
@@ -168,13 +169,14 @@ out:
       type: line.create
       payload:
         sectionId: section-1
-        lineId: line-1
-        data:
-          actions:
-            dialogue:
-              content:
-                - text: Hello
-              mode: adv
+        lines:
+          - lineId: line-1
+            data:
+              actions:
+                dialogue:
+                  content:
+                    - text: Hello
+                  mode: adv
       meta:
         clientId: client-puty-1
         clientTs: 105

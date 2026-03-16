@@ -234,6 +234,88 @@ const normalizePayloadDataField = (
   return nextPayload;
 };
 
+const normalizeLineCreateItem = (item) => {
+  if (!isPlainObject(item)) {
+    return item;
+  }
+
+  return normalizePayloadDataField(item, {
+    legacyFields: ["line"],
+  });
+};
+
+const normalizeLineCreatePayload = (payload) => {
+  if (!isPlainObject(payload)) {
+    return payload;
+  }
+
+  const nextPayload = structuredClone(payload);
+  let lines = Array.isArray(nextPayload.lines)
+    ? nextPayload.lines.map((item) => normalizeLineCreateItem(item))
+    : undefined;
+
+  if (lines === undefined && hasOwn(nextPayload, "lineId")) {
+    lines = [
+      normalizeLineCreateItem({
+        lineId: nextPayload.lineId,
+        data: nextPayload.data,
+        line: nextPayload.line,
+      }),
+    ];
+  }
+
+  if (lines !== undefined) {
+    nextPayload.lines = lines;
+  }
+
+  if (nextPayload.position === undefined) {
+    if (assertNonEmptyString(nextPayload.beforeLineId)) {
+      nextPayload.position = { before: nextPayload.beforeLineId };
+    } else if (assertNonEmptyString(nextPayload.afterLineId)) {
+      nextPayload.position = { after: nextPayload.afterLineId };
+    }
+  }
+
+  delete nextPayload.lineId;
+  delete nextPayload.data;
+  delete nextPayload.line;
+  delete nextPayload.beforeLineId;
+  delete nextPayload.afterLineId;
+
+  return nextPayload;
+};
+
+const validateLineCreatePayload = (payload, errors) => {
+  if (!Array.isArray(payload?.lines) || payload.lines.length === 0) {
+    errors.push("payload.lines must be a non-empty array");
+    return;
+  }
+
+  const seenLineIds = new Set();
+
+  payload.lines.forEach((item, index) => {
+    if (!isPlainObject(item)) {
+      errors.push(`payload.lines[${index}] must be an object`);
+      return;
+    }
+
+    if (!assertNonEmptyString(item.lineId)) {
+      errors.push(`payload.lines[${index}].lineId must be a non-empty string`);
+    }
+
+    if (!isPlainObject(item.data)) {
+      errors.push(`payload.lines[${index}].data must be an object`);
+    }
+
+    if (assertNonEmptyString(item.lineId)) {
+      if (seenLineIds.has(item.lineId)) {
+        errors.push(`payload.lines[${index}].lineId must be unique`);
+      }
+      seenLineIds.add(item.lineId);
+    }
+  });
+};
+
 const normalizeCommandType = (type) => {
   if (type === "line.insert_after") {
     return "line.create";
@@ -285,27 +367,7 @@ const normalizeCommandPayload = (type, payload) => {
   }
 
   if (type === "line.create") {
-    const normalizedPayload = normalizePayloadDataField(payload, {
-      legacyFields: ["line"],
-    });
-
-    if (!isPlainObject(normalizedPayload)) {
-      return normalizedPayload;
-    }
-
-    const nextPayload = structuredClone(normalizedPayload);
-    if (nextPayload.position === undefined) {
-      if (assertNonEmptyString(nextPayload.beforeLineId)) {
-        nextPayload.position = { before: nextPayload.beforeLineId };
-      } else if (assertNonEmptyString(nextPayload.afterLineId)) {
-        nextPayload.position = { after: nextPayload.afterLineId };
-      }
-    }
-
-    delete nextPayload.beforeLineId;
-    delete nextPayload.afterLineId;
-
-    return nextPayload;
+    return normalizeLineCreatePayload(payload);
   }
 
   if (type === "line.update_actions") {
@@ -571,19 +633,28 @@ const COMMAND_DEFINITIONS = [
     type: "line.create",
     scope: "story",
     payload: {
-      requiredFields: ["lineId", "sectionId", "data"],
-      requiredStringFields: ["lineId", "sectionId"],
-      objectFields: ["data"],
+      requiredFields: ["sectionId", "lines"],
+      requiredStringFields: ["sectionId"],
       optionalNullableStringFields: ["parentId"],
       allowIndex: true,
       allowPosition: true,
     },
+    validatePayload: (payload, errors) => {
+      validateLineCreatePayload(payload, errors);
+    },
     assertPreconditions: (state, command) => {
-      const { lineId, sectionId, position } = command.payload;
+      const { sectionId, position } = command.payload;
       assertSectionExists(state, sectionId);
-      assertPrecondition(!state.lines?.[lineId], "line already exists", {
-        lineId,
-      });
+
+      for (const item of command.payload.lines || []) {
+        assertPrecondition(
+          !state.lines?.[item.lineId],
+          "line already exists",
+          {
+            lineId: item.lineId,
+          },
+        );
+      }
 
       let positionLineId;
       if (isPlainObject(position) && assertNonEmptyString(position.before)) {

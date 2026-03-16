@@ -45,13 +45,14 @@ in:
         clientTs: 903
         payload:
           sectionId: section-main
-          lineId: line-main
-          data:
-            actions:
-              dialogue:
-                content:
-                  - text: Original line
-                mode: adv
+          lines:
+            - lineId: line-main
+              data:
+                actions:
+                  dialogue:
+                    content:
+                      - text: Original line
+                    mode: adv
       - id: cmd-line-actions-dialogue
         partitions:
           - project:project-puty-line-actions-001:story
@@ -155,13 +156,14 @@ out:
       type: line.create
       payload:
         sectionId: section-main
-        lineId: line-main
-        data:
-          actions:
-            dialogue:
-              content:
-                - text: Original line
-              mode: adv
+        lines:
+          - lineId: line-main
+            data:
+              actions:
+                dialogue:
+                  content:
+                    - text: Original line
+                  mode: adv
       meta:
         clientId: client-puty-line-actions
         clientTs: 903

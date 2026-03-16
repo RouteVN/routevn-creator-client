@@ -111,9 +111,13 @@ apply(
     type: "line.create",
     ts: 1200,
     payload: {
-      lineId: "line-1",
       sectionId: "section-1",
-      data: { actions: { narration: "hello" } },
+      lines: [
+        {
+          lineId: "line-1",
+          data: { actions: { narration: "hello" } },
+        },
+      ],
     },
   }),
 );
@@ -124,14 +128,26 @@ apply(
     type: "line.create",
     ts: 1300,
     payload: {
-      lineId: "line-2",
       sectionId: "section-1",
       position: { after: "line-1" },
-      data: { actions: { narration: "world" } },
+      lines: [
+        {
+          lineId: "line-2",
+          data: { actions: { narration: "world" } },
+        },
+        {
+          lineId: "line-3",
+          data: { actions: { narration: "again" } },
+        },
+      ],
     },
   }),
 );
-assert.deepEqual(state.sections["section-1"].lineIds, ["line-1", "line-2"]);
+assert.deepEqual(state.sections["section-1"].lineIds, [
+  "line-1",
+  "line-2",
+  "line-3",
+]);
 
 apply(
   makeCommand({
@@ -196,10 +212,14 @@ try {
       type: "line.create",
       ts: 1500,
       payload: {
-        lineId: "line-3",
         sectionId: "section-2",
         position: { after: "line-1" },
-        data: { actions: {} },
+        lines: [
+          {
+            lineId: "line-4",
+            data: { actions: {} },
+          },
+        ],
       },
     }),
   );

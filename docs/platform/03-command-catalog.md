@@ -43,6 +43,9 @@ Authoritative source: `src/internal/project/commands.js`.
   operation flags. Mutable domain content goes under `data`.
 - `project.create.state` is the main exception: it bootstraps a full domain
   state snapshot instead of a small mutation body.
+- `line.create` is the other notable special case: it can create one or many
+  lines, so the command body is `lines[]`, and each created item uses its own
+  `data`.
 - The runtime still accepts older payload aliases (`patch`, `line`, `element`,
   and root `name` on some create commands) when replaying older events, but
   `data` is the canonical shape going forward.
@@ -245,20 +248,40 @@ position: "last" # optional; also "first", { before: "<id>" }, { after: "<id>" }
 Payload (YAML):
 
 ```yaml
-lineId: "<string>"
-sectionId: "<string>"
-data: {}
-parentId: "<string|null>" # optional
-index: 0 # optional
-position: "last" # optional; also "first", { before: "<id>" }, { after: "<id>" }
+sectionId: "section-main"
+lines:
+  - lineId: "line-2"
+    data:
+      actions:
+        dialogue:
+          content:
+            - text: Second line
+          mode: adv
+  - lineId: "line-3"
+    data:
+      actions:
+        dialogue:
+          content:
+            - text: Third line
+          mode: adv
+position:
+  after: "line-1"
 ```
 
 Notes:
 
+- `lines` must be a non-empty array.
+- The lines are created sequentially in array order.
 - Use `position: { before: "<id>" }` or `position: { after: "<id>" }` to
-  place the new line relative to an existing line.
+  place the first new line relative to an existing line.
+- `index` is still supported and applies to the first created line when you
+  want explicit numeric placement.
+- `parentId` is still optional for parity with the shared story placement
+  contract, but current line ordering is flat within a section.
 - There is no separate canonical `line.insert_before` or `line.insert_after`
-  command; older `line.insert_after` payloads still normalize to `line.create`.
+  command.
+- Older single-line payloads (`lineId` + `data`) and older
+  `line.insert_after` payloads still normalize to `line.create`.
 
 #### `line.update_actions`
 

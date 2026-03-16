@@ -100,9 +100,13 @@ const createRepositoryEvent = ({
       type: "line.create",
       partitions: [`project:${projectId}:story`],
       payload: {
-        lineId: "line-1",
         sectionId: "section-1",
-        data: { actions: { narration: "hello" } },
+        lines: [
+          {
+            lineId: "line-1",
+            data: { actions: { narration: "hello" } },
+          },
+        ],
       },
     }),
   ];

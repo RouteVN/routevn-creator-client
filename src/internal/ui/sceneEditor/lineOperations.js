@@ -338,29 +338,30 @@ export const handlePasteLinesOperation = async (deps, payload) => {
   });
 
   let lastCreatedLineId = lineId;
-  let afterLineId = lineId;
-
-  for (let index = 1; index < lines.length; index++) {
-    const newLineId = nanoid();
-    const isLastLine = index === lines.length - 1;
-    const lineContent = isLastLine ? lines[index] + rightContent : lines[index];
-
-    await projectService.createLineItem({
+  if (lines.length > 1) {
+    const createdLineIds = await projectService.createLineItem({
       sectionId,
-      lineId: newLineId,
-      data: {
-        actions: {
-          dialogue: {
-            mode: shouldInheritNvl ? "nvl" : "adv",
-            content: [{ text: lineContent }],
+      position: { after: lineId },
+      lines: lines.slice(1).map((content, index) => {
+        const isLastLine = index === lines.length - 2;
+        const lineContent = isLastLine ? content + rightContent : content;
+        return {
+          lineId: nanoid(),
+          data: {
+            actions: {
+              dialogue: {
+                mode: shouldInheritNvl ? "nvl" : "adv",
+                content: [{ text: lineContent }],
+              },
+            },
           },
-        },
-      },
-      afterLineId,
+        };
+      }),
     });
 
-    afterLineId = newLineId;
-    lastCreatedLineId = newLineId;
+    if (Array.isArray(createdLineIds) && createdLineIds.length > 0) {
+      lastCreatedLineId = createdLineIds[createdLineIds.length - 1];
+    }
   }
 
   if (lines.length === 1) {

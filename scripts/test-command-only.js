@@ -258,15 +258,19 @@ validateCommand(legacyLineInsertAfterCommand);
 assert.equal(commandToSyncEvent(legacyLineInsertAfterCommand).type, "line.create");
 assert.deepEqual(commandToSyncEvent(legacyLineInsertAfterCommand).payload, {
   sectionId: "section-legacy",
-  lineId: "line-legacy",
-  data: {
-    actions: {
-      dialogue: {
-        content: [{ text: "Legacy line" }],
-        mode: "adv",
+  lines: [
+    {
+      lineId: "line-legacy",
+      data: {
+        actions: {
+          dialogue: {
+            content: [{ text: "Legacy line" }],
+            mode: "adv",
+          },
+        },
       },
     },
-  },
+  ],
   position: {
     after: "line-anchor",
   },
@@ -277,15 +281,19 @@ const normalizedLegacyLineInsertAfter = commandFromItem(
 assert.equal(normalizedLegacyLineInsertAfter.type, "line.create");
 assert.deepEqual(normalizedLegacyLineInsertAfter.payload, {
   sectionId: "section-legacy",
-  lineId: "line-legacy",
-  data: {
-    actions: {
-      dialogue: {
-        content: [{ text: "Legacy line" }],
-        mode: "adv",
+  lines: [
+    {
+      lineId: "line-legacy",
+      data: {
+        actions: {
+          dialogue: {
+            content: [{ text: "Legacy line" }],
+            mode: "adv",
+          },
+        },
       },
     },
-  },
+  ],
   position: {
     after: "line-anchor",
   },
@@ -362,6 +370,24 @@ const storyCommandApi = createStoryCommandApi({
   storyScenePartitionFor(currentProjectId, sceneId) {
     return `project:${currentProjectId}:story:${sceneId}`;
   },
+  resolveLineIndex({ section, position, index }) {
+    if (Number.isInteger(index)) {
+      return index;
+    }
+
+    const orderedLineIds = Object.keys(section?.lines?.items || {});
+    if (position?.before) {
+      const beforeIndex = orderedLineIds.indexOf(position.before);
+      return beforeIndex >= 0 ? beforeIndex : 0;
+    }
+
+    if (position?.after) {
+      const afterIndex = orderedLineIds.indexOf(position.after);
+      return afterIndex >= 0 ? afterIndex + 1 : orderedLineIds.length;
+    }
+
+    return orderedLineIds.length;
+  },
   async submitCommandWithContext(payload) {
     capturedLineActionSubmits.push(payload);
   },
@@ -389,6 +415,62 @@ assert.deepEqual(capturedLineActionSubmits[0].payload, {
     },
   },
   replace: false,
+});
+assert.deepEqual(capturedLineActionSubmits[0].partitions, [
+  `project:${projectId}:story`,
+  `project:${projectId}:story:scene-1`,
+]);
+
+capturedLineActionSubmits.length = 0;
+const createdLineIds = await storyCommandApi.createLineItem({
+  sectionId: "section-1",
+  position: { after: "line-1" },
+  lines: [
+    {
+      lineId: "line-2",
+      data: {
+        actions: {
+          narration: "second",
+        },
+      },
+    },
+    {
+      lineId: "line-3",
+      data: {
+        actions: {
+          narration: "third",
+        },
+      },
+    },
+  ],
+});
+
+assert.deepEqual(createdLineIds, ["line-2", "line-3"]);
+assert.equal(capturedLineActionSubmits.length, 1);
+assert.equal(capturedLineActionSubmits[0].type, COMMAND_TYPES.LINE_CREATE);
+assert.deepEqual(capturedLineActionSubmits[0].payload, {
+  sectionId: "section-1",
+  lines: [
+    {
+      lineId: "line-2",
+      data: {
+        actions: {
+          narration: "second",
+        },
+      },
+    },
+    {
+      lineId: "line-3",
+      data: {
+        actions: {
+          narration: "third",
+        },
+      },
+    },
+  ],
+  parentId: null,
+  index: 1,
+  position: { after: "line-1" },
 });
 assert.deepEqual(capturedLineActionSubmits[0].partitions, [
   `project:${projectId}:story`,
@@ -514,15 +596,19 @@ try {
       type: COMMAND_TYPES.LINE_CREATE,
       payload: {
         sectionId: "section-1",
-        lineId: "line-1",
-        data: {
-          actions: {
-            dialogue: {
-              content: [{ text: "Hello" }],
-              mode: "adv",
+        lines: [
+          {
+            lineId: "line-1",
+            data: {
+              actions: {
+                dialogue: {
+                  content: [{ text: "Hello" }],
+                  mode: "adv",
+                },
+              },
             },
           },
-        },
+        ],
       },
       actor,
     }),
@@ -594,6 +680,7 @@ try {
   const observedSet = new Set(observedSchemas);
   assert.ok(observedSet.has(COMMAND_TYPES.RESOURCE_CREATE));
   assert.ok(observedSet.has(COMMAND_TYPES.SCENE_CREATE));
+  assert.ok(observedSet.has(COMMAND_TYPES.LINE_CREATE));
   assert.ok(observedSet.has(COMMAND_TYPES.LINE_UPDATE_ACTIONS));
   assert.ok(observedSet.has(COMMAND_TYPES.LAYOUT_ELEMENT_CREATE));
   assert.ok(

@@ -328,6 +328,7 @@ export const createStoryCommandApi = (shared) => {
 
     async createLineItem({
       sectionId,
+      lines,
       lineId,
       data = {},
       line,
@@ -338,7 +339,20 @@ export const createStoryCommandApi = (shared) => {
       index,
     }) {
       const context = await shared.ensureCommandContext();
-      const nextLineId = lineId || shared.createId();
+      let normalizedLines;
+      if (Array.isArray(lines) && lines.length > 0) {
+        normalizedLines = lines.map((item) => ({
+          lineId: item?.lineId || shared.createId(),
+          data: structuredClone(item?.data ?? item?.line ?? {}),
+        }));
+      } else {
+        normalizedLines = [
+          {
+            lineId: lineId || shared.createId(),
+            data: structuredClone(data ?? line ?? {}),
+          },
+        ];
+      }
       const sectionLocation = findSectionLocation(context.state, sectionId);
       let resolvedPosition = position;
       if (resolvedPosition === undefined && beforeLineId) {
@@ -366,8 +380,7 @@ export const createStoryCommandApi = (shared) => {
         type: COMMAND_TYPES.LINE_CREATE,
         payload: {
           sectionId,
-          lineId: nextLineId,
-          data: structuredClone(data ?? line ?? {}),
+          lines: normalizedLines,
           parentId: normalizeParentId(parentId),
           index: resolvedIndex,
           position: resolvedPosition || "last",
@@ -377,7 +390,11 @@ export const createStoryCommandApi = (shared) => {
           : [basePartition],
       });
 
-      return nextLineId;
+      if (normalizedLines.length === 1) {
+        return normalizedLines[0].lineId;
+      }
+
+      return normalizedLines.map((item) => item.lineId);
     },
 
     async deleteLineItem({ lineId }) {

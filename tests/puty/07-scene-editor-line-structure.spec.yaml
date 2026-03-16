@@ -7,7 +7,7 @@ suites:
 suite: runInsiemeStorageScenario
 exportName: runInsiemeStorageScenario
 ---
-case: persists line creation movement and deletion commands
+case: persists single and batch line creation movement and deletion commands
 in:
   - projectId: project-puty-lines-001
     actor:
@@ -56,13 +56,14 @@ in:
         clientTs: 804
         payload:
           sectionId: section-a
-          lineId: line-1
-          data:
-            actions:
-              dialogue:
-                content:
-                  - text: First line
-                mode: adv
+          lines:
+            - lineId: line-1
+              data:
+                actions:
+                  dialogue:
+                    content:
+                      - text: First line
+                    mode: adv
       - id: cmd-lines-create-2
         partitions:
           - project:project-puty-lines-001:story
@@ -71,38 +72,29 @@ in:
         clientTs: 805
         payload:
           sectionId: section-a
-          lineId: line-2
           position:
             after: line-1
-          data:
-            actions:
-              dialogue:
-                content:
-                  - text: Second line
-                mode: adv
-      - id: cmd-lines-create-3
-        partitions:
-          - project:project-puty-lines-001:story
-          - project:project-puty-lines-001:story:scene:scene-lines
-        type: line.create
-        clientTs: 806
-        payload:
-          sectionId: section-a
-          lineId: line-3
-          position:
-            after: line-2
-          data:
-            actions:
-              dialogue:
-                content:
-                  - text: Third line
-                mode: adv
+          lines:
+            - lineId: line-2
+              data:
+                actions:
+                  dialogue:
+                    content:
+                      - text: Second line
+                    mode: adv
+            - lineId: line-3
+              data:
+                actions:
+                  dialogue:
+                    content:
+                      - text: Third line
+                    mode: adv
       - id: cmd-lines-move-2
         partitions:
           - project:project-puty-lines-001:story
           - project:project-puty-lines-001:story:scene:scene-lines
         type: line.move
-        clientTs: 807
+        clientTs: 806
         payload:
           lineId: line-2
           toSectionId: section-b
@@ -112,7 +104,7 @@ in:
           - project:project-puty-lines-001:story
           - project:project-puty-lines-001:story:scene:scene-lines
         type: line.delete
-        clientTs: 808
+        clientTs: 807
         payload:
           lineId: line-1
 out:
@@ -174,13 +166,14 @@ out:
       type: line.create
       payload:
         sectionId: section-a
-        lineId: line-1
-        data:
-          actions:
-            dialogue:
-              content:
-                - text: First line
-              mode: adv
+        lines:
+          - lineId: line-1
+            data:
+              actions:
+                dialogue:
+                  content:
+                    - text: First line
+                  mode: adv
       meta:
         clientId: client-puty-lines
         clientTs: 804
@@ -194,41 +187,27 @@ out:
       type: line.create
       payload:
         sectionId: section-a
-        lineId: line-2
         position:
           after: line-1
-        data:
-          actions:
-            dialogue:
-              content:
-                - text: Second line
-              mode: adv
+        lines:
+          - lineId: line-2
+            data:
+              actions:
+                dialogue:
+                  content:
+                    - text: Second line
+                  mode: adv
+          - lineId: line-3
+            data:
+              actions:
+                dialogue:
+                  content:
+                    - text: Third line
+                  mode: adv
       meta:
         clientId: client-puty-lines
         clientTs: 805
     - committedId: 6
-      id: cmd-lines-create-3
-      projectId: project-puty-lines-001
-      userId: user-puty-lines
-      partitions:
-        - project:project-puty-lines-001:story
-        - project:project-puty-lines-001:story:scene:scene-lines
-      type: line.create
-      payload:
-        sectionId: section-a
-        lineId: line-3
-        position:
-          after: line-2
-        data:
-          actions:
-            dialogue:
-              content:
-                - text: Third line
-              mode: adv
-      meta:
-        clientId: client-puty-lines
-        clientTs: 806
-    - committedId: 7
       id: cmd-lines-move-2
       projectId: project-puty-lines-001
       userId: user-puty-lines
@@ -242,8 +221,8 @@ out:
         index: 0
       meta:
         clientId: client-puty-lines
-        clientTs: 807
-    - committedId: 8
+        clientTs: 806
+    - committedId: 7
       id: cmd-lines-delete-1
       projectId: project-puty-lines-001
       userId: user-puty-lines
@@ -255,7 +234,7 @@ out:
         lineId: line-1
       meta:
         clientId: client-puty-lines
-        clientTs: 808
+        clientTs: 807
   stateAfterEachEvent:
     - committedId: 1
       eventId: cmd-lines-scene-create
@@ -475,77 +454,6 @@ out:
             lineIds:
               - line-1
               - line-2
-            name: First
-            sceneId: scene-lines
-            updatedAt: 802
-          section-b:
-            createdAt: 803
-            id: section-b
-            initialLineId: null
-            lineIds: []
-            name: Second
-            sceneId: scene-lines
-            updatedAt: 803
-        lines:
-          line-1:
-            actions:
-              dialogue:
-                content:
-                  - text: First line
-                mode: adv
-            createdAt: 804
-            id: line-1
-            sectionId: section-a
-            updatedAt: 804
-          line-2:
-            actions:
-              dialogue:
-                content:
-                  - text: Second line
-                mode: adv
-            createdAt: 805
-            id: line-2
-            sectionId: section-a
-            updatedAt: 805
-        resources: {}
-    - committedId: 6
-      eventId: cmd-lines-create-3
-      eventType: line.create
-      state:
-        model_version: 2
-        project:
-          createdAt: 0
-          description: ''
-          id: project-puty-lines-001
-          name: ''
-          updatedAt: 806
-        story:
-          initialSceneId: scene-lines
-          sceneOrder:
-            - scene-lines
-        scenes:
-          scene-lines:
-            createdAt: 801
-            id: scene-lines
-            initialSectionId: section-a
-            name: Line Flow
-            parentId: null
-            position:
-              x: 200
-              'y': 200
-            sectionIds:
-              - section-a
-              - section-b
-            type: scene
-            updatedAt: 801
-        sections:
-          section-a:
-            createdAt: 802
-            id: section-a
-            initialLineId: line-1
-            lineIds:
-              - line-1
-              - line-2
               - line-3
             name: First
             sceneId: scene-lines
@@ -585,12 +493,12 @@ out:
                 content:
                   - text: Third line
                 mode: adv
-            createdAt: 806
+            createdAt: 805
             id: line-3
             sectionId: section-a
-            updatedAt: 806
+            updatedAt: 805
         resources: {}
-    - committedId: 7
+    - committedId: 6
       eventId: cmd-lines-move-2
       eventType: line.move
       state:
@@ -600,7 +508,7 @@ out:
           description: ''
           id: project-puty-lines-001
           name: ''
-          updatedAt: 807
+          updatedAt: 806
         story:
           initialSceneId: scene-lines
           sceneOrder:
@@ -667,12 +575,12 @@ out:
                 content:
                   - text: Third line
                 mode: adv
-            createdAt: 806
+            createdAt: 805
             id: line-3
             sectionId: section-a
-            updatedAt: 806
+            updatedAt: 805
         resources: {}
-    - committedId: 8
+    - committedId: 7
       eventId: cmd-lines-delete-1
       eventType: line.delete
       state:
@@ -682,7 +590,7 @@ out:
           description: ''
           id: project-puty-lines-001
           name: ''
-          updatedAt: 808
+          updatedAt: 807
         story:
           initialSceneId: scene-lines
           sceneOrder:
@@ -738,8 +646,8 @@ out:
                 content:
                   - text: Third line
                 mode: adv
-            createdAt: 806
+            createdAt: 805
             id: line-3
             sectionId: section-a
-            updatedAt: 806
+            updatedAt: 805
         resources: {}

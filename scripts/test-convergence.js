@@ -86,9 +86,13 @@ try {
       scope: "story",
       type: "line.create",
       payload: {
-        lineId: "line-1",
         sectionId: "section-1",
-        data: { actions: { narration: "hello world" } },
+        lines: [
+          {
+            lineId: "line-1",
+            data: { actions: { narration: "hello world" } },
+          },
+        ],
       },
       actor: actorA,
       clientTs: 1200,

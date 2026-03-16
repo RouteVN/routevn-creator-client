@@ -614,14 +614,7 @@ const reducers = {
 
   [COMMAND_TYPES.LINE_CREATE]: ({ state, payload, now }) => {
     const section = state.sections[payload.sectionId];
-    const lineData = structuredClone(payload.data || {});
-    state.lines[payload.lineId] = {
-      id: payload.lineId,
-      sectionId: payload.sectionId,
-      actions: lineData.actions || {},
-      createdAt: now,
-      updatedAt: now,
-    };
+    const lineItems = Array.isArray(payload.lines) ? payload.lines : [];
 
     const insertIndex =
       normalizeIndex(payload.index) ??
@@ -630,15 +623,23 @@ const reducers = {
         position: payload.position,
       });
 
-    if (insertIndex !== undefined) {
-      insertAtIndex(section.lineIds, payload.lineId, insertIndex);
-    } else {
-      insertStableByCreatedAt({
-        order: section.lineIds,
-        id: payload.lineId,
-        items: state.lines,
-      });
-    }
+    lineItems.forEach((item, offset) => {
+      const lineData = structuredClone(item.data || {});
+      state.lines[item.lineId] = {
+        id: item.lineId,
+        sectionId: payload.sectionId,
+        actions: lineData.actions || {},
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      if (insertIndex !== undefined) {
+        insertAtIndex(section.lineIds, item.lineId, insertIndex + offset);
+        return;
+      }
+
+      section.lineIds.push(item.lineId);
+    });
   },
 
   [COMMAND_TYPES.LINE_UPDATE_ACTIONS]: ({ state, payload, now }) => {
