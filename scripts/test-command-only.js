@@ -136,45 +136,6 @@ assert.deepEqual(
   },
 );
 
-const legacyResourceRenameCommand = createCommandEnvelope({
-  id: "legacy-resource-rename",
-  projectId,
-  scope: "resources",
-  partitions: [`project:${projectId}:resources:images`],
-  type: "resource.rename",
-  payload: {
-    resourceType: "images",
-    resourceId: "image-legacy",
-    name: "Legacy Image",
-  },
-  actor,
-  clientTs: 43,
-});
-
-validateCommand(legacyResourceRenameCommand);
-assert.equal(
-  commandToSyncEvent(legacyResourceRenameCommand).type,
-  "resource.update",
-);
-assert.deepEqual(commandToSyncEvent(legacyResourceRenameCommand).payload, {
-  resourceType: "images",
-  resourceId: "image-legacy",
-  data: {
-    name: "Legacy Image",
-  },
-});
-const normalizedLegacyResourceRename = commandFromItem(
-  createCommittedEventFromCommand(legacyResourceRenameCommand, 2, 43),
-);
-assert.equal(normalizedLegacyResourceRename.type, "resource.update");
-assert.deepEqual(normalizedLegacyResourceRename.payload, {
-  resourceType: "images",
-  resourceId: "image-legacy",
-  data: {
-    name: "Legacy Image",
-  },
-});
-
 const legacySectionRenameCommand = createCommandEnvelope({
   id: "legacy-section-rename",
   projectId,
@@ -363,18 +324,6 @@ expectDeleteValidationFailure({
   type: COMMAND_TYPES.LINE_DELETE,
   payload: { lineId: "line-legacy" },
   pattern: /payload\.lineIds is required/,
-});
-
-expectDeleteValidationFailure({
-  id: "invalid-resource-delete-shape",
-  scope: "resources",
-  partitions: [`project:${projectId}:resources:images`],
-  type: COMMAND_TYPES.RESOURCE_DELETE,
-  payload: {
-    resourceType: "images",
-    resourceId: "image-legacy",
-  },
-  pattern: /payload\.resourceIds is required/,
 });
 
 expectDeleteValidationFailure({

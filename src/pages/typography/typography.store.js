@@ -134,7 +134,6 @@ export const createInitialState = () => ({
   // Context menu items
   contextMenuItems: [
     { label: "New Folder", type: "item", value: "new-item" },
-    { label: "Duplicate", type: "item", value: "duplicate-item" },
     { label: "Rename", type: "item", value: "rename-item" },
     { label: "Delete", type: "item", value: "delete-item" },
   ],

@@ -553,10 +553,6 @@ const normalizeCommandType = (type) => {
     return "section.update";
   }
 
-  if (type === "resource.rename") {
-    return "resource.update";
-  }
-
   return type;
 };
 
@@ -601,13 +597,6 @@ const normalizeCommandPayload = (type, payload) => {
   if (type === "line.update_actions") {
     return normalizePayloadDataField(payload, {
       legacyFields: ["patch"],
-    });
-  }
-
-  if (type === "resource.update") {
-    return normalizePayloadDataField(payload, {
-      legacyFields: ["patch"],
-      rootFields: ["name"],
     });
   }
 
@@ -1035,136 +1024,6 @@ const COMMAND_DEFINITIONS = [
     },
   },
   {
-    type: "resource.create",
-    scope: "resources",
-    payload: {
-      requiredFields: ["resourceType", "resourceId", "data"],
-      requiredStringFields: ["resourceType", "resourceId"],
-      objectFields: ["data"],
-      optionalNullableStringFields: ["parentId"],
-      validateResourceType: true,
-      allowIndex: true,
-      allowPosition: true,
-    },
-    assertPreconditions: (state, command) => {
-      const { resourceType, resourceId } = command.payload;
-      assertPrecondition(
-        !state.resources?.[resourceType]?.items?.[resourceId],
-        "resource already exists",
-        { resourceType, resourceId },
-      );
-    },
-  },
-  {
-    type: "resource.update",
-    scope: "resources",
-    payload: {
-      requiredFields: ["resourceType", "resourceId", "data"],
-      requiredStringFields: ["resourceType", "resourceId"],
-      objectFields: ["data"],
-      validateResourceType: true,
-    },
-    assertPreconditions: (state, command) => {
-      const { resourceType, resourceId, data } = command.payload;
-      assertResourceExists(state, resourceType, resourceId);
-      const currentItem = state.resources?.[resourceType]?.items?.[resourceId];
-      if (resourceType === "characters" && data?.sprites !== undefined) {
-        assertPrecondition(
-          false,
-          "character sprites must be updated through character.sprite commands",
-          {
-            resourceType,
-            resourceId,
-          },
-        );
-      }
-      if (resourceType === "variables" && currentItem?.type !== "folder") {
-        const nextType = data?.type;
-        const nextVariableType = data?.variableType;
-
-        if (
-          nextType !== undefined &&
-          currentItem.type !== undefined &&
-          nextType !== currentItem.type
-        ) {
-          assertPrecondition(false, "variable type cannot be changed", {
-            resourceType,
-            resourceId,
-            currentType: currentItem.type,
-            nextType,
-          });
-        }
-
-        if (
-          nextVariableType !== undefined &&
-          currentItem.variableType !== undefined &&
-          nextVariableType !== currentItem.variableType
-        ) {
-          assertPrecondition(false, "variable type cannot be changed", {
-            resourceType,
-            resourceId,
-            currentVariableType: currentItem.variableType,
-            nextVariableType,
-          });
-        }
-      }
-    },
-  },
-  {
-    type: "resource.move",
-    scope: "resources",
-    payload: {
-      requiredFields: ["resourceType", "resourceId", "index"],
-      requiredStringFields: ["resourceType", "resourceId"],
-      optionalNullableStringFields: ["parentId"],
-      validateResourceType: true,
-      allowIndex: true,
-      allowPosition: true,
-    },
-    assertPreconditions: (state, command) => {
-      const { resourceType, resourceId } = command.payload;
-      assertResourceExists(state, resourceType, resourceId);
-    },
-  },
-  {
-    type: "resource.delete",
-    scope: "resources",
-    payload: {
-      requiredFields: ["resourceType", "resourceIds"],
-      requiredStringFields: ["resourceType"],
-      requiredStringArrayFields: ["resourceIds"],
-      validateResourceType: true,
-    },
-    assertPreconditions: (state, command) => {
-      const { resourceType, resourceIds } = command.payload;
-      for (const resourceId of resourceIds || []) {
-        assertResourceExists(state, resourceType, resourceId);
-      }
-    },
-  },
-  {
-    type: "resource.duplicate",
-    scope: "resources",
-    payload: {
-      requiredFields: ["resourceType", "sourceId", "newId"],
-      requiredStringFields: ["resourceType", "sourceId", "newId"],
-      optionalNullableStringFields: ["parentId"],
-      optionalStringFields: ["name"],
-      validateResourceType: true,
-      allowIndex: true,
-      allowPosition: true,
-    },
-    assertPreconditions: (state, command) => {
-      const { resourceType, sourceId, newId } = command.payload;
-      assertResourceExists(state, resourceType, sourceId, { sourceId });
-      assertPrecondition(
-        !state.resources?.[resourceType]?.items?.[newId],
-        "duplicate target id exists",
-        { resourceType, newId },
-      );
-    },
-  },
-  {
     type: "character.sprite.create",
     scope: "resources",
     payload: {
@@ -1290,41 +1149,6 @@ const COMMAND_DEFINITIONS = [
       const { characterId, spriteIds } = command.payload;
       for (const spriteId of spriteIds || []) {
         assertCharacterSpriteExists(state, characterId, spriteId);
-      }
-    },
-  },
-  {
-    type: "character.sprite.duplicate",
-    scope: "resources",
-    payload: {
-      requiredFields: ["characterId", "sourceId", "newId", "index"],
-      requiredStringFields: ["characterId", "sourceId", "newId"],
-      optionalNullableStringFields: ["parentId"],
-      optionalStringFields: ["name"],
-      allowIndex: true,
-      allowPosition: true,
-    },
-    assertPreconditions: (state, command) => {
-      const { characterId, sourceId, newId, parentId } = command.payload;
-      assertCharacterSpriteExists(state, characterId, sourceId, { sourceId });
-      const sprites = getCharacterSpritesCollection(state, characterId);
-      assertPrecondition(
-        !sprites.items?.[newId],
-        "duplicate target id exists",
-        {
-          characterId,
-          newId,
-        },
-      );
-      if (parentId !== undefined && parentId !== null) {
-        assertCharacterSpriteFolderParent(state, characterId, newId, parentId);
-      }
-
-      const positionTargetId = getPositionTargetIdFromPayload(command.payload);
-      if (positionTargetId !== undefined) {
-        assertCharacterSpriteExists(state, characterId, positionTargetId, {
-          positionTargetId,
-        });
       }
     },
   },

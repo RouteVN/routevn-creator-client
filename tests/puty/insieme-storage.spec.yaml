@@ -21,15 +21,14 @@ in:
       - id: cmd-image-create
         partitions:
           - project:project-puty-storage-001:resources:images
-        type: resource.create
+        type: image.create
         clientTs: 102
         payload:
-          resourceType: images
-          resourceId: image-1
+          imageId: image-1
           data:
             name: Image 1
             type: image
-            src: image-1.png
+            fileId: image-1.png
       - id: cmd-scene-create
         partitions:
           - project:project-puty-storage-001:story
@@ -86,12 +85,12 @@ in:
       - id: cmd-layout-resource-create
         partitions:
           - project:project-puty-storage-001:resources:layouts
-        type: resource.create
+        type: layout.create
         clientTs: 107
         payload:
-          resourceType: layouts
-          resourceId: layout-1
+          layoutId: layout-1
           data:
+            type: layout
             name: Layout 1
             layoutType: normal
             elements:
@@ -117,14 +116,13 @@ out:
       userId: user-puty-1
       partitions:
         - project:project-puty-storage-001:resources:images
-      type: resource.create
+      type: image.create
       payload:
-        resourceType: images
-        resourceId: image-1
+        imageId: image-1
         data:
           name: Image 1
           type: image
-          src: image-1.png
+          fileId: image-1.png
       meta:
         clientId: client-puty-1
         clientTs: 102
@@ -207,11 +205,11 @@ out:
       userId: user-puty-1
       partitions:
         - project:project-puty-storage-001:resources:layouts
-      type: resource.create
+      type: layout.create
       payload:
-        resourceType: layouts
-        resourceId: layout-1
+        layoutId: layout-1
         data:
+          type: layout
           name: Layout 1
           layoutType: normal
           elements:
@@ -240,7 +238,7 @@ out:
   stateAfterEachEvent:
     - committedId: 1
       eventId: cmd-image-create
-      eventType: resource.create
+      eventType: image.create
       state:
         model_version: 2
         project:
@@ -259,13 +257,13 @@ out:
           images:
             items:
               image-1:
-                createdAt: 102
+                createdAt: 0
                 id: image-1
                 name: Image 1
                 parentId: null
-                src: image-1.png
+                fileId: image-1.png
                 type: image
-                updatedAt: 102
+                updatedAt: 0
             tree:
               - id: image-1
     - committedId: 2
@@ -302,13 +300,13 @@ out:
           images:
             items:
               image-1:
-                createdAt: 102
+                createdAt: 0
                 id: image-1
                 name: Image 1
                 parentId: null
-                src: image-1.png
+                fileId: image-1.png
                 type: image
-                updatedAt: 102
+                updatedAt: 0
             tree:
               - id: image-1
     - committedId: 3
@@ -354,13 +352,13 @@ out:
           images:
             items:
               image-1:
-                createdAt: 102
+                createdAt: 0
                 id: image-1
                 name: Image 1
                 parentId: null
-                src: image-1.png
+                fileId: image-1.png
                 type: image
-                updatedAt: 102
+                updatedAt: 0
             tree:
               - id: image-1
     - committedId: 4
@@ -417,13 +415,13 @@ out:
           images:
             items:
               image-1:
-                createdAt: 102
+                createdAt: 0
                 id: image-1
                 name: Image 1
                 parentId: null
-                src: image-1.png
+                fileId: image-1.png
                 type: image
-                updatedAt: 102
+                updatedAt: 0
             tree:
               - id: image-1
     - committedId: 5
@@ -482,18 +480,18 @@ out:
           images:
             items:
               image-1:
-                createdAt: 102
+                createdAt: 0
                 id: image-1
                 name: Image 1
                 parentId: null
-                src: image-1.png
+                fileId: image-1.png
                 type: image
-                updatedAt: 102
+                updatedAt: 0
             tree:
               - id: image-1
     - committedId: 6
       eventId: cmd-layout-resource-create
-      eventType: resource.create
+      eventType: layout.create
       state:
         model_version: 2
         project:
@@ -547,19 +545,19 @@ out:
           images:
             items:
               image-1:
-                createdAt: 102
+                createdAt: 0
                 id: image-1
                 name: Image 1
                 parentId: null
-                src: image-1.png
+                fileId: image-1.png
                 type: image
-                updatedAt: 102
+                updatedAt: 0
             tree:
               - id: image-1
           layouts:
             items:
               layout-1:
-                createdAt: 107
+                createdAt: 0
                 elements: {}
                 id: layout-1
                 layoutType: normal
@@ -567,7 +565,7 @@ out:
                 parentId: null
                 rootElementOrder: []
                 type: layout
-                updatedAt: 107
+                updatedAt: 0
             tree:
               - id: layout-1
     - committedId: 7
@@ -626,23 +624,24 @@ out:
           images:
             items:
               image-1:
-                createdAt: 102
+                createdAt: 0
                 id: image-1
                 name: Image 1
                 parentId: null
-                src: image-1.png
+                fileId: image-1.png
                 type: image
-                updatedAt: 102
+                updatedAt: 0
             tree:
               - id: image-1
           layouts:
             items:
               layout-1:
-                createdAt: 107
+                createdAt: 0
                 elements:
                   el-1:
                     children: []
                     id: el-1
+                    name: text el-1
                     parentId: null
                     type: text
                     x: 10
@@ -654,6 +653,6 @@ out:
                 rootElementOrder:
                   - el-1
                 type: layout
-                updatedAt: 108
+                updatedAt: 0
             tree:
               - id: layout-1

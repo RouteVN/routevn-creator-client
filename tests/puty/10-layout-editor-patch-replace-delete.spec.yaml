@@ -20,12 +20,12 @@ in:
       - id: cmd-layout-patch-resource-create
         partitions:
           - project:project-puty-layout-patch-001:resources:layouts
-        type: resource.create
+        type: layout.create
         clientTs: 1101
         payload:
-          resourceType: layouts
-          resourceId: layout-dialogue
+          layoutId: layout-dialogue
           data:
+            type: layout
             name: Dialogue Layout
             layoutType: normal
             elements:
@@ -40,12 +40,13 @@ in:
           layoutId: layout-dialogue
           elementId: el-frame
           data:
-            type: sprite
+            type: text
+            name: Dialogue Line
             x: 0
             'y': 400
             width: 1280
             height: 320
-            imageId: frame-a
+            text: Hello
       - id: cmd-layout-patch-update-1
         partitions:
           - project:project-puty-layout-patch-001:layouts
@@ -56,22 +57,7 @@ in:
           elementId: el-frame
           data:
             x: 10
-            style:
-              opacity: 0.9
-              tint: '#ffffff'
-          replace: false
-      - id: cmd-layout-patch-update-2
-        partitions:
-          - project:project-puty-layout-patch-001:layouts
-        type: layout.element.update
-        clientTs: 1104
-        payload:
-          layoutId: layout-dialogue
-          elementId: el-frame
-          data:
-            style:
-              opacity: 1
-              blendMode: screen
+            text: Hello world
           replace: false
       - id: cmd-layout-patch-replace
         partitions:
@@ -82,10 +68,11 @@ in:
           layoutId: layout-dialogue
           elementId: el-frame
           data:
-            type: sprite
+            type: text
+            name: Dialogue Line
             x: 0
             'y': 420
-            imageId: frame-b
+            text: Replaced
           replace: true
       - id: cmd-layout-patch-delete
         partitions:
@@ -104,11 +91,11 @@ out:
       userId: user-puty-layout-patch
       partitions:
         - project:project-puty-layout-patch-001:resources:layouts
-      type: resource.create
+      type: layout.create
       payload:
-        resourceType: layouts
-        resourceId: layout-dialogue
+        layoutId: layout-dialogue
         data:
+          type: layout
           name: Dialogue Layout
           layoutType: normal
           elements:
@@ -128,12 +115,13 @@ out:
         layoutId: layout-dialogue
         elementId: el-frame
         data:
-          type: sprite
+          type: text
+          name: Dialogue Line
           x: 0
           'y': 400
           width: 1280
           height: 320
-          imageId: frame-a
+          text: Hello
       meta:
         clientId: client-puty-layout-patch
         clientTs: 1102
@@ -149,32 +137,12 @@ out:
         elementId: el-frame
         data:
           x: 10
-          style:
-            opacity: 0.9
-            tint: '#ffffff'
+          text: Hello world
         replace: false
       meta:
         clientId: client-puty-layout-patch
         clientTs: 1103
     - committedId: 4
-      id: cmd-layout-patch-update-2
-      projectId: project-puty-layout-patch-001
-      userId: user-puty-layout-patch
-      partitions:
-        - project:project-puty-layout-patch-001:layouts
-      type: layout.element.update
-      payload:
-        layoutId: layout-dialogue
-        elementId: el-frame
-        data:
-          style:
-            opacity: 1
-            blendMode: screen
-        replace: false
-      meta:
-        clientId: client-puty-layout-patch
-        clientTs: 1104
-    - committedId: 5
       id: cmd-layout-patch-replace
       projectId: project-puty-layout-patch-001
       userId: user-puty-layout-patch
@@ -185,15 +153,16 @@ out:
         layoutId: layout-dialogue
         elementId: el-frame
         data:
-          type: sprite
+          type: text
+          name: Dialogue Line
           x: 0
           'y': 420
-          imageId: frame-b
+          text: Replaced
         replace: true
       meta:
         clientId: client-puty-layout-patch
         clientTs: 1105
-    - committedId: 6
+    - committedId: 5
       id: cmd-layout-patch-delete
       projectId: project-puty-layout-patch-001
       userId: user-puty-layout-patch
@@ -210,7 +179,7 @@ out:
   stateAfterEachEvent:
     - committedId: 1
       eventId: cmd-layout-patch-resource-create
-      eventType: resource.create
+      eventType: layout.create
       state:
         model_version: 2
         project:
@@ -229,7 +198,7 @@ out:
           layouts:
             items:
               layout-dialogue:
-                createdAt: 1101
+                createdAt: 0
                 elements: {}
                 id: layout-dialogue
                 layoutType: normal
@@ -237,7 +206,7 @@ out:
                 parentId: null
                 rootElementOrder: []
                 type: layout
-                updatedAt: 1101
+                updatedAt: 0
             tree:
               - id: layout-dialogue
     - committedId: 2
@@ -261,15 +230,16 @@ out:
           layouts:
             items:
               layout-dialogue:
-                createdAt: 1101
+                createdAt: 0
                 elements:
                   el-frame:
                     children: []
                     height: 320
                     id: el-frame
-                    imageId: frame-a
+                    name: Dialogue Line
                     parentId: null
-                    type: sprite
+                    text: Hello
+                    type: text
                     width: 1280
                     x: 0
                     'y': 400
@@ -280,7 +250,7 @@ out:
                 rootElementOrder:
                   - el-frame
                 type: layout
-                updatedAt: 1102
+                updatedAt: 0
             tree:
               - id: layout-dialogue
     - committedId: 3
@@ -304,18 +274,16 @@ out:
           layouts:
             items:
               layout-dialogue:
-                createdAt: 1101
+                createdAt: 0
                 elements:
                   el-frame:
                     children: []
                     height: 320
                     id: el-frame
-                    imageId: frame-a
+                    name: Dialogue Line
                     parentId: null
-                    style:
-                      opacity: 0.9
-                      tint: '#ffffff'
-                    type: sprite
+                    text: Hello world
+                    type: text
                     width: 1280
                     x: 10
                     'y': 400
@@ -326,57 +294,10 @@ out:
                 rootElementOrder:
                   - el-frame
                 type: layout
-                updatedAt: 1103
+                updatedAt: 0
             tree:
               - id: layout-dialogue
     - committedId: 4
-      eventId: cmd-layout-patch-update-2
-      eventType: layout.element.update
-      state:
-        model_version: 2
-        project:
-          createdAt: 0
-          description: ''
-          id: project-puty-layout-patch-001
-          name: ''
-          updatedAt: 1104
-        story:
-          initialSceneId: null
-          sceneOrder: []
-        scenes: {}
-        sections: {}
-        lines: {}
-        resources:
-          layouts:
-            items:
-              layout-dialogue:
-                createdAt: 1101
-                elements:
-                  el-frame:
-                    children: []
-                    height: 320
-                    id: el-frame
-                    imageId: frame-a
-                    parentId: null
-                    style:
-                      blendMode: screen
-                      opacity: 1
-                      tint: '#ffffff'
-                    type: sprite
-                    width: 1280
-                    x: 10
-                    'y': 400
-                id: layout-dialogue
-                layoutType: normal
-                name: Dialogue Layout
-                parentId: null
-                rootElementOrder:
-                  - el-frame
-                type: layout
-                updatedAt: 1104
-            tree:
-              - id: layout-dialogue
-    - committedId: 5
       eventId: cmd-layout-patch-replace
       eventType: layout.element.update
       state:
@@ -397,20 +318,15 @@ out:
           layouts:
             items:
               layout-dialogue:
-                createdAt: 1101
+                createdAt: 0
                 elements:
                   el-frame:
                     children: []
-                    height: 320
                     id: el-frame
-                    imageId: frame-b
+                    name: Dialogue Line
                     parentId: null
-                    style:
-                      blendMode: screen
-                      opacity: 1
-                      tint: '#ffffff'
-                    type: sprite
-                    width: 1280
+                    text: Replaced
+                    type: text
                     x: 0
                     'y': 420
                 id: layout-dialogue
@@ -420,10 +336,10 @@ out:
                 rootElementOrder:
                   - el-frame
                 type: layout
-                updatedAt: 1105
+                updatedAt: 0
             tree:
               - id: layout-dialogue
-    - committedId: 6
+    - committedId: 5
       eventId: cmd-layout-patch-delete
       eventType: layout.element.delete
       state:
@@ -444,7 +360,7 @@ out:
           layouts:
             items:
               layout-dialogue:
-                createdAt: 1101
+                createdAt: 0
                 elements: {}
                 id: layout-dialogue
                 layoutType: normal
@@ -452,6 +368,6 @@ out:
                 parentId: null
                 rootElementOrder: []
                 type: layout
-                updatedAt: 1106
+                updatedAt: 0
             tree:
               - id: layout-dialogue

@@ -1,13 +1,13 @@
 ---
 file: ./insiemeStorageScenario.js
-group: insieme storage resources duplicate delete
+group: insieme storage resources character delete
 suites:
   - runInsiemeStorageScenario
 ---
 suite: runInsiemeStorageScenario
 exportName: runInsiemeStorageScenario
 ---
-case: persists duplicate and delete operations in character resources
+case: persists create and delete operations in character resources
 in:
   - projectId: project-puty-res-characters-001
     actor:
@@ -19,47 +19,31 @@ in:
       - id: cmd-character-folder-create
         partitions:
           - project:project-puty-res-characters-001:resources:characters
-        type: resource.create
+        type: character.create
         clientTs: 401
         payload:
-          resourceType: characters
-          resourceId: char-folder-main
+          characterId: char-folder-main
           data:
             name: Main Cast
             type: folder
       - id: cmd-character-create
         partitions:
           - project:project-puty-res-characters-001:resources:characters
-        type: resource.create
+        type: character.create
         clientTs: 402
         payload:
-          resourceType: characters
-          resourceId: char-hero
+          characterId: char-hero
           parentId: char-folder-main
           data:
             name: Hero
             type: character
-            portraits:
-              - idle
-      - id: cmd-character-duplicate
-        partitions:
-          - project:project-puty-res-characters-001:resources:characters
-        type: resource.duplicate
-        clientTs: 403
-        payload:
-          resourceType: characters
-          sourceId: char-hero
-          newId: char-hero-copy
-          name: Hero Copy
-          index: 1
       - id: cmd-character-folder-delete
         partitions:
           - project:project-puty-res-characters-001:resources:characters
-        type: resource.delete
-        clientTs: 404
+        type: character.delete
+        clientTs: 403
         payload:
-          resourceType: characters
-          resourceIds:
+          characterIds:
             - char-folder-main
 out:
   storedEvents:
@@ -69,10 +53,9 @@ out:
       userId: user-puty-res-characters
       partitions:
         - project:project-puty-res-characters-001:resources:characters
-      type: resource.create
+      type: character.create
       payload:
-        resourceType: characters
-        resourceId: char-folder-main
+        characterId: char-folder-main
         data:
           name: Main Cast
           type: folder
@@ -85,53 +68,33 @@ out:
       userId: user-puty-res-characters
       partitions:
         - project:project-puty-res-characters-001:resources:characters
-      type: resource.create
+      type: character.create
       payload:
-        resourceType: characters
-        resourceId: char-hero
+        characterId: char-hero
         parentId: char-folder-main
         data:
           name: Hero
           type: character
-          portraits:
-            - idle
       meta:
         clientId: client-puty-res-characters
         clientTs: 402
     - committedId: 3
-      id: cmd-character-duplicate
-      projectId: project-puty-res-characters-001
-      userId: user-puty-res-characters
-      partitions:
-        - project:project-puty-res-characters-001:resources:characters
-      type: resource.duplicate
-      payload:
-        resourceType: characters
-        sourceId: char-hero
-        newId: char-hero-copy
-        name: Hero Copy
-        index: 1
-      meta:
-        clientId: client-puty-res-characters
-        clientTs: 403
-    - committedId: 4
       id: cmd-character-folder-delete
       projectId: project-puty-res-characters-001
       userId: user-puty-res-characters
       partitions:
         - project:project-puty-res-characters-001:resources:characters
-      type: resource.delete
+      type: character.delete
       payload:
-        resourceType: characters
-        resourceIds:
+        characterIds:
           - char-folder-main
       meta:
         clientId: client-puty-res-characters
-        clientTs: 404
+        clientTs: 403
   stateAfterEachEvent:
     - committedId: 1
       eventId: cmd-character-folder-create
-      eventType: resource.create
+      eventType: character.create
       state:
         model_version: 2
         project:
@@ -150,17 +113,17 @@ out:
           characters:
             items:
               char-folder-main:
-                createdAt: 401
+                createdAt: 0
                 id: char-folder-main
                 name: Main Cast
                 parentId: null
                 type: folder
-                updatedAt: 401
+                updatedAt: 0
             tree:
               - id: char-folder-main
     - committedId: 2
       eventId: cmd-character-create
-      eventType: resource.create
+      eventType: character.create
       state:
         model_version: 2
         project:
@@ -179,28 +142,26 @@ out:
           characters:
             items:
               char-folder-main:
-                createdAt: 401
+                createdAt: 0
                 id: char-folder-main
                 name: Main Cast
                 parentId: null
                 type: folder
-                updatedAt: 401
+                updatedAt: 0
               char-hero:
-                createdAt: 402
+                createdAt: 0
                 id: char-hero
                 name: Hero
                 parentId: char-folder-main
-                portraits:
-                  - idle
                 type: character
-                updatedAt: 402
+                updatedAt: 0
             tree:
               - id: char-folder-main
                 children:
                   - id: char-hero
     - committedId: 3
-      eventId: cmd-character-duplicate
-      eventType: resource.duplicate
+      eventId: cmd-character-folder-delete
+      eventType: character.delete
       state:
         model_version: 2
         project:
@@ -209,56 +170,6 @@ out:
           id: project-puty-res-characters-001
           name: ''
           updatedAt: 403
-        story:
-          initialSceneId: null
-          sceneOrder: []
-        scenes: {}
-        sections: {}
-        lines: {}
-        resources:
-          characters:
-            items:
-              char-folder-main:
-                createdAt: 401
-                id: char-folder-main
-                name: Main Cast
-                parentId: null
-                type: folder
-                updatedAt: 401
-              char-hero:
-                createdAt: 402
-                id: char-hero
-                name: Hero
-                parentId: char-folder-main
-                portraits:
-                  - idle
-                type: character
-                updatedAt: 402
-              char-hero-copy:
-                createdAt: 403
-                id: char-hero-copy
-                name: Hero Copy
-                parentId: char-folder-main
-                portraits:
-                  - idle
-                type: character
-                updatedAt: 403
-            tree:
-              - id: char-folder-main
-                children:
-                  - id: char-hero
-                  - id: char-hero-copy
-    - committedId: 4
-      eventId: cmd-character-folder-delete
-      eventType: resource.delete
-      state:
-        model_version: 2
-        project:
-          createdAt: 0
-          description: ''
-          id: project-puty-res-characters-001
-          name: ''
-          updatedAt: 404
         story:
           initialSceneId: null
           sceneOrder: []

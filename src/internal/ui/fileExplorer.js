@@ -6,29 +6,6 @@ import {
 } from "../../constants/typography.js";
 import { recursivelyCheckResource } from "../project/projection.js";
 
-const findNodeLocation = (nodes = [], targetId, parentId = "_root") => {
-  for (const node of nodes) {
-    if (!node || typeof node.id !== "string") {
-      continue;
-    }
-
-    if (node.id === targetId) {
-      return { parentId };
-    }
-
-    const childResult = findNodeLocation(
-      node.children || [],
-      targetId,
-      node.id,
-    );
-    if (childResult) {
-      return childResult;
-    }
-  }
-
-  return null;
-};
-
 const isTextElementType = (type) =>
   [
     "text",
@@ -242,27 +219,6 @@ export const createResourceFileExplorerHandlers = ({
           resourceType,
           resourceIds: [itemId],
         });
-      } else if (action === "duplicate-item") {
-        if (!currentItem) {
-          return;
-        }
-
-        const duplicateId = nanoid();
-        const location = findNodeLocation(collection?.tree || [], itemId);
-        const duplicateName =
-          typeof currentItem.name === "string" && currentItem.name.length > 0
-            ? `${currentItem.name} Copy`
-            : "Copied Item";
-
-        await projectService.duplicateResourceItem({
-          resourceType,
-          sourceId: itemId,
-          newId: duplicateId,
-          parentId: location?.parentId || null,
-          position: "after",
-          positionTargetId: itemId,
-          name: duplicateName,
-        });
       } else if (
         action &&
         typeof action === "object" &&
@@ -378,39 +334,6 @@ export const createLayoutsFileExplorerHandlers = ({
         await projectService.deleteLayoutItem({
           layoutIds: [itemId],
         });
-      } else if (action === "duplicate-item") {
-        if (!currentItem || currentItem.type !== "layout") {
-          return;
-        }
-
-        const duplicateId = nanoid();
-        const location = findNodeLocation(collection?.tree || [], itemId);
-        const duplicateName =
-          typeof currentItem.name === "string" && currentItem.name.length > 0
-            ? `${currentItem.name} Copy`
-            : "Copied Layout";
-
-        const layoutValue = structuredClone(currentItem);
-        const {
-          id: _layoutId,
-          type: _layoutNodeType,
-          name: _layoutName,
-          layoutType,
-          elements,
-          parentId: _layoutParentId,
-          ...layoutData
-        } = layoutValue;
-
-        await projectService.createLayoutItem({
-          layoutId: duplicateId,
-          name: duplicateName,
-          layoutType: layoutType || "normal",
-          elements: elements || { items: {}, tree: [] },
-          parentId: location?.parentId || null,
-          position: "after",
-          positionTargetId: itemId,
-          data: layoutData,
-        });
       } else {
         return;
       }
@@ -453,13 +376,9 @@ export const createLayoutElementsFileExplorerHandlers = ({
         return;
       }
 
-      const state = projectService.getState();
-      const layout = state?.layouts?.items?.[layoutId];
       const menuItem = resolveMenuItem(detail);
       const action = menuItem?.value;
       const itemId = detail.itemId;
-      const currentItem = layout?.elements?.items?.[itemId];
-
       if (action === "rename-item-confirmed") {
         if (!itemId || !detail.newName) {
           return;
@@ -532,28 +451,6 @@ export const createLayoutElementsFileExplorerHandlers = ({
           data: nextValue,
           parentId: itemId || null,
           position: "last",
-        });
-      } else if (action === "duplicate-item") {
-        if (!currentItem) {
-          return;
-        }
-
-        const duplicateId = nanoid();
-        const location = findNodeLocation(layout?.elements?.tree || [], itemId);
-        const duplicateValue = structuredClone(currentItem);
-        delete duplicateValue.id;
-        duplicateValue.name =
-          typeof currentItem.name === "string" && currentItem.name.length > 0
-            ? `${currentItem.name} Copy`
-            : "Copied Item";
-
-        await projectService.createLayoutElement({
-          layoutId,
-          elementId: duplicateId,
-          data: duplicateValue,
-          parentId: location?.parentId || null,
-          position: "after",
-          positionTargetId: itemId,
         });
       } else {
         return;
@@ -692,14 +589,9 @@ export const createCharacterSpritesFileExplorerHandlers = ({
         return;
       }
 
-      const state = projectService.getState();
-      const character = state?.characters?.items?.[characterId];
-      const sprites = character?.sprites || { items: {}, tree: [] };
       const menuItem = resolveMenuItem(detail);
       const action = menuItem?.value;
       const itemId = detail.itemId;
-      const currentItem = sprites.items?.[itemId];
-
       if (action === "new-item") {
         await projectService.createCharacterSpriteItem({
           characterId,
@@ -757,27 +649,6 @@ export const createCharacterSpritesFileExplorerHandlers = ({
         await projectService.deleteCharacterSpriteItem({
           characterId,
           spriteIds: [itemId],
-        });
-      } else if (action === "duplicate-item") {
-        if (!currentItem) {
-          return;
-        }
-
-        const duplicateId = nanoid();
-        const location = findNodeLocation(sprites.tree || [], itemId);
-        const duplicateName =
-          typeof currentItem.name === "string" && currentItem.name.length > 0
-            ? `${currentItem.name} Copy`
-            : "Copied Item";
-
-        await projectService.duplicateCharacterSpriteItem({
-          characterId,
-          sourceId: itemId,
-          newId: duplicateId,
-          parentId: location?.parentId ?? null,
-          position: "after",
-          positionTargetId: itemId,
-          name: duplicateName,
         });
       } else if (
         action &&

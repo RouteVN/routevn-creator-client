@@ -20,14 +20,14 @@ in:
       - id: cmd-layout-tree-resource-create
         partitions:
           - project:project-puty-layout-tree-001:resources:layouts
-        type: resource.create
+        type: layout.create
         clientTs: 1001
         payload:
-          resourceType: layouts
-          resourceId: layout-hud
+          layoutId: layout-hud
           data:
+            type: layout
             name: HUD Layout
-            layoutType: overlay
+            layoutType: normal
             elements:
               items: {}
               tree: []
@@ -40,7 +40,8 @@ in:
           layoutId: layout-hud
           elementId: el-panel
           data:
-            type: group
+            type: container
+            name: Panel
             x: 0
             'y': 0
             width: 320
@@ -56,30 +57,32 @@ in:
           parentId: el-panel
           data:
             type: text
+            name: Title
             x: 12
             'y': 10
             text: Status
-      - id: cmd-layout-tree-button-create
+      - id: cmd-layout-tree-label-create
         partitions:
           - project:project-puty-layout-tree-001:layouts
         type: layout.element.create
         clientTs: 1004
         payload:
           layoutId: layout-hud
-          elementId: el-button
+          elementId: el-label
           data:
-            type: sprite
+            type: text
+            name: Action Label
             x: 20
             'y': 60
-            imageId: img-button
-      - id: cmd-layout-tree-button-move
+            text: Ready
+      - id: cmd-layout-tree-label-move
         partitions:
           - project:project-puty-layout-tree-001:layouts
         type: layout.element.move
         clientTs: 1005
         payload:
           layoutId: layout-hud
-          elementId: el-button
+          elementId: el-label
           parentId: el-panel
           index: 1
 out:
@@ -90,13 +93,13 @@ out:
       userId: user-puty-layout-tree
       partitions:
         - project:project-puty-layout-tree-001:resources:layouts
-      type: resource.create
+      type: layout.create
       payload:
-        resourceType: layouts
-        resourceId: layout-hud
+        layoutId: layout-hud
         data:
+          type: layout
           name: HUD Layout
-          layoutType: overlay
+          layoutType: normal
           elements:
             items: {}
             tree: []
@@ -114,7 +117,8 @@ out:
         layoutId: layout-hud
         elementId: el-panel
         data:
-          type: group
+          type: container
+          name: Panel
           x: 0
           'y': 0
           width: 320
@@ -135,6 +139,7 @@ out:
         parentId: el-panel
         data:
           type: text
+          name: Title
           x: 12
           'y': 10
           text: Status
@@ -142,7 +147,7 @@ out:
         clientId: client-puty-layout-tree
         clientTs: 1003
     - committedId: 4
-      id: cmd-layout-tree-button-create
+      id: cmd-layout-tree-label-create
       projectId: project-puty-layout-tree-001
       userId: user-puty-layout-tree
       partitions:
@@ -150,17 +155,18 @@ out:
       type: layout.element.create
       payload:
         layoutId: layout-hud
-        elementId: el-button
+        elementId: el-label
         data:
-          type: sprite
+          type: text
+          name: Action Label
           x: 20
           'y': 60
-          imageId: img-button
+          text: Ready
       meta:
         clientId: client-puty-layout-tree
         clientTs: 1004
     - committedId: 5
-      id: cmd-layout-tree-button-move
+      id: cmd-layout-tree-label-move
       projectId: project-puty-layout-tree-001
       userId: user-puty-layout-tree
       partitions:
@@ -168,7 +174,7 @@ out:
       type: layout.element.move
       payload:
         layoutId: layout-hud
-        elementId: el-button
+        elementId: el-label
         parentId: el-panel
         index: 1
       meta:
@@ -177,7 +183,7 @@ out:
   stateAfterEachEvent:
     - committedId: 1
       eventId: cmd-layout-tree-resource-create
-      eventType: resource.create
+      eventType: layout.create
       state:
         model_version: 2
         project:
@@ -196,15 +202,15 @@ out:
           layouts:
             items:
               layout-hud:
-                createdAt: 1001
+                createdAt: 0
                 elements: {}
                 id: layout-hud
-                layoutType: overlay
+                layoutType: normal
                 name: HUD Layout
                 parentId: null
                 rootElementOrder: []
                 type: layout
-                updatedAt: 1001
+                updatedAt: 0
             tree:
               - id: layout-hud
     - committedId: 2
@@ -228,25 +234,26 @@ out:
           layouts:
             items:
               layout-hud:
-                createdAt: 1001
+                createdAt: 0
                 elements:
                   el-panel:
                     children: []
                     height: 120
                     id: el-panel
+                    name: Panel
                     parentId: null
-                    type: group
+                    type: container
                     width: 320
                     x: 0
                     'y': 0
                 id: layout-hud
-                layoutType: overlay
+                layoutType: normal
                 name: HUD Layout
                 parentId: null
                 rootElementOrder:
                   - el-panel
                 type: layout
-                updatedAt: 1002
+                updatedAt: 0
             tree:
               - id: layout-hud
     - committedId: 3
@@ -270,38 +277,40 @@ out:
           layouts:
             items:
               layout-hud:
-                createdAt: 1001
+                createdAt: 0
                 elements:
                   el-panel:
                     children:
                       - el-title
                     height: 120
                     id: el-panel
+                    name: Panel
                     parentId: null
-                    type: group
+                    type: container
                     width: 320
                     x: 0
                     'y': 0
                   el-title:
                     children: []
                     id: el-title
+                    name: Title
                     parentId: el-panel
                     text: Status
                     type: text
                     x: 12
                     'y': 10
                 id: layout-hud
-                layoutType: overlay
+                layoutType: normal
                 name: HUD Layout
                 parentId: null
                 rootElementOrder:
                   - el-panel
                 type: layout
-                updatedAt: 1003
+                updatedAt: 0
             tree:
               - id: layout-hud
     - committedId: 4
-      eventId: cmd-layout-tree-button-create
+      eventId: cmd-layout-tree-label-create
       eventType: layout.element.create
       state:
         model_version: 2
@@ -321,14 +330,15 @@ out:
           layouts:
             items:
               layout-hud:
-                createdAt: 1001
+                createdAt: 0
                 elements:
-                  el-button:
+                  el-label:
                     children: []
-                    id: el-button
-                    imageId: img-button
+                    id: el-label
+                    name: Action Label
                     parentId: null
-                    type: sprite
+                    text: Ready
+                    type: text
                     x: 20
                     'y': 60
                   el-panel:
@@ -336,32 +346,34 @@ out:
                       - el-title
                     height: 120
                     id: el-panel
+                    name: Panel
                     parentId: null
-                    type: group
+                    type: container
                     width: 320
                     x: 0
                     'y': 0
                   el-title:
                     children: []
                     id: el-title
+                    name: Title
                     parentId: el-panel
                     text: Status
                     type: text
                     x: 12
                     'y': 10
                 id: layout-hud
-                layoutType: overlay
+                layoutType: normal
                 name: HUD Layout
                 parentId: null
                 rootElementOrder:
                   - el-panel
-                  - el-button
+                  - el-label
                 type: layout
-                updatedAt: 1004
+                updatedAt: 0
             tree:
               - id: layout-hud
     - committedId: 5
-      eventId: cmd-layout-tree-button-move
+      eventId: cmd-layout-tree-label-move
       eventType: layout.element.move
       state:
         model_version: 2
@@ -381,42 +393,45 @@ out:
           layouts:
             items:
               layout-hud:
-                createdAt: 1001
+                createdAt: 0
                 elements:
-                  el-button:
+                  el-label:
                     children: []
-                    id: el-button
-                    imageId: img-button
+                    id: el-label
+                    name: Action Label
                     parentId: el-panel
-                    type: sprite
+                    text: Ready
+                    type: text
                     x: 20
                     'y': 60
                   el-panel:
                     children:
                       - el-title
-                      - el-button
+                      - el-label
                     height: 120
                     id: el-panel
+                    name: Panel
                     parentId: null
-                    type: group
+                    type: container
                     width: 320
                     x: 0
                     'y': 0
                   el-title:
                     children: []
                     id: el-title
+                    name: Title
                     parentId: el-panel
                     text: Status
                     type: text
                     x: 12
                     'y': 10
                 id: layout-hud
-                layoutType: overlay
+                layoutType: normal
                 name: HUD Layout
                 parentId: null
                 rootElementOrder:
                   - el-panel
                 type: layout
-                updatedAt: 1005
+                updatedAt: 0
             tree:
               - id: layout-hud

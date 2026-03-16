@@ -28,10 +28,9 @@ const createRepositoryEvent = ({
   },
   clientTs = 1000,
   meta,
-  type = "resource.update",
+  type = "image.update",
   payload = {
-    resourceType: "images",
-    resourceId: "image-1",
+    imageId: "image-1",
     data: {
       name: "Updated",
     },
@@ -399,10 +398,8 @@ const createRepositoryEvent = ({
   assert.equal(
     shouldUseCreatorModelForCommand({
       command: {
-        type: "resource.create",
-        payload: {
-          resourceType: "characters",
-        },
+        type: "character.create",
+        payload: {},
       },
     }),
     true,
@@ -410,10 +407,8 @@ const createRepositoryEvent = ({
   assert.equal(
     shouldUseCreatorModelForCommand({
       command: {
-        type: "resource.create",
-        payload: {
-          resourceType: "layouts",
-        },
+        type: "layout.create",
+        payload: {},
       },
     }),
     true,

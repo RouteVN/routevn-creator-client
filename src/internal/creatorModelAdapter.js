@@ -20,22 +20,6 @@ const MODEL_COLLECTION_KEYS = [
   "layouts",
 ];
 
-const RESOURCE_TYPE_TO_MODEL_COLLECTION = Object.freeze({
-  images: "images",
-  sounds: "sounds",
-  videos: "videos",
-  animations: "animations",
-  tweens: "animations",
-  characters: "characters",
-  fonts: "fonts",
-  transforms: "transforms",
-  colors: "colors",
-  textStyles: "textStyles",
-  typography: "textStyles",
-  variables: "variables",
-  layouts: "layouts",
-});
-
 const MODEL_COLLECTION_TO_RESOURCE_TYPE = Object.freeze({
   images: "images",
   sounds: "sounds",
@@ -48,22 +32,6 @@ const MODEL_COLLECTION_TO_RESOURCE_TYPE = Object.freeze({
   textStyles: "textStyles",
   variables: "variables",
   layouts: "layouts",
-});
-
-const RESOURCE_TYPE_TO_MODEL_FAMILY = Object.freeze({
-  images: "image",
-  sounds: "sound",
-  videos: "video",
-  animations: "animation",
-  tweens: "animation",
-  characters: "character",
-  fonts: "font",
-  transforms: "transform",
-  colors: "color",
-  textStyles: "textStyle",
-  typography: "textStyle",
-  variables: "variable",
-  layouts: "layout",
 });
 
 const MODEL_FAMILY_TO_RESOURCE_TYPE = Object.freeze({
@@ -1756,14 +1724,6 @@ const toModelResourceUpdateData = ({ resourceType, data = {} }) => {
   throw new DomainValidationError(`Unsupported resourceType: ${resourceType}`);
 };
 
-const getRepositoryItemByResourceType = ({
-  repositoryState,
-  resourceType,
-  resourceId,
-}) => {
-  return repositoryState?.[resourceType]?.items?.[resourceId];
-};
-
 const toNormalizedNativeResourceCommand = ({ type, payload = {} }) => {
   const [family, operation] = type.split(".");
   const resourceType = MODEL_FAMILY_TO_RESOURCE_TYPE[family];
@@ -2000,177 +1960,6 @@ export const commandToCreatorModelCommand = ({
           existingData: existingElement,
           replace: payload.replace === true,
         }),
-      },
-    };
-  }
-
-  if (normalizedCommand.type === "resource.create") {
-    const family = RESOURCE_TYPE_TO_MODEL_FAMILY[payload.resourceType];
-    const idField = MODEL_FAMILY_TO_ID_FIELD[family];
-    if (!family || !idField) {
-      throw new DomainValidationError(
-        `Unsupported resourceType: ${payload.resourceType}`,
-      );
-    }
-
-    return {
-      type: `${family}.create`,
-      payload: {
-        [idField]: payload.resourceId,
-        parentId: payload.parentId,
-        index: payload.index,
-        position: payload.position,
-        positionTargetId: payload.positionTargetId,
-        data: toModelResourceCreateData({
-          resourceType: payload.resourceType,
-          data: payload.data,
-        }),
-      },
-    };
-  }
-
-  if (normalizedCommand.type === "resource.update") {
-    const family = RESOURCE_TYPE_TO_MODEL_FAMILY[payload.resourceType];
-    const idField = MODEL_FAMILY_TO_ID_FIELD[family];
-    if (!family || !idField) {
-      throw new DomainValidationError(
-        `Unsupported resourceType: ${payload.resourceType}`,
-      );
-    }
-
-    return {
-      type: `${family}.update`,
-      payload: {
-        [idField]: payload.resourceId,
-        data: toModelResourceUpdateData({
-          resourceType: payload.resourceType,
-          data: payload.data,
-        }),
-      },
-    };
-  }
-
-  if (normalizedCommand.type === "resource.move") {
-    const family = RESOURCE_TYPE_TO_MODEL_FAMILY[payload.resourceType];
-    const idField = MODEL_FAMILY_TO_ID_FIELD[family];
-    if (!family || !idField) {
-      throw new DomainValidationError(
-        `Unsupported resourceType: ${payload.resourceType}`,
-      );
-    }
-
-    return {
-      type: `${family}.move`,
-      payload: {
-        [idField]: payload.resourceId,
-        parentId: payload.parentId,
-        index: payload.index,
-        position: payload.position,
-        positionTargetId: payload.positionTargetId,
-      },
-    };
-  }
-
-  if (normalizedCommand.type === "resource.delete") {
-    const family = RESOURCE_TYPE_TO_MODEL_FAMILY[payload.resourceType];
-    const deleteField = MODEL_FAMILY_TO_DELETE_FIELD[family];
-    if (!family || !deleteField) {
-      throw new DomainValidationError(
-        `Unsupported resourceType: ${payload.resourceType}`,
-      );
-    }
-
-    return {
-      type: `${family}.delete`,
-      payload: {
-        [deleteField]: structuredClone(payload.resourceIds || []),
-      },
-    };
-  }
-
-  if (normalizedCommand.type === "resource.duplicate") {
-    const family = RESOURCE_TYPE_TO_MODEL_FAMILY[payload.resourceType];
-    const idField = MODEL_FAMILY_TO_ID_FIELD[family];
-    if (!family || !idField) {
-      throw new DomainValidationError(
-        `Unsupported resourceType: ${payload.resourceType}`,
-      );
-    }
-
-    const sourceItem = getRepositoryItemByResourceType({
-      repositoryState,
-      resourceType: payload.resourceType,
-      resourceId: payload.sourceId,
-    });
-
-    if (!sourceItem) {
-      throw new DomainValidationError("duplicate source item not found");
-    }
-
-    const modelSource = toModelCollectionItem({
-      collectionKey: RESOURCE_TYPE_TO_MODEL_COLLECTION[payload.resourceType],
-      item: sourceItem,
-      itemId: payload.sourceId,
-    });
-
-    const data = structuredClone(modelSource);
-    delete data.id;
-    if (payload.name !== undefined) {
-      data.name = payload.name;
-    }
-
-    return {
-      type: `${family}.create`,
-      payload: {
-        [idField]: payload.newId,
-        parentId: payload.parentId,
-        index: payload.index,
-        position: payload.position,
-        positionTargetId: payload.positionTargetId,
-        data,
-      },
-    };
-  }
-
-  if (normalizedCommand.type === "character.sprite.duplicate") {
-    const sourceItem =
-      repositoryState?.characters?.items?.[payload.characterId]?.sprites
-        ?.items?.[payload.sourceId];
-
-    if (!sourceItem) {
-      throw new DomainValidationError("duplicate source sprite not found");
-    }
-
-    const modelSource =
-      sourceItem?.type === "folder"
-        ? {
-            id: payload.sourceId,
-            type: "folder",
-            name: sourceItem.name,
-            ...pickDefined(sourceItem, ["description"]),
-          }
-        : {
-            id: payload.sourceId,
-            type: "image",
-            ...normalizeCharacterSpriteData(sourceItem),
-          };
-
-    const data = structuredClone(modelSource);
-    delete data.id;
-    if (payload.name !== undefined) {
-      data.name = payload.name;
-    }
-
-    return {
-      type: "character.sprite.create",
-      payload: {
-        characterId: payload.characterId,
-        spriteId: payload.newId,
-        parentId: payload.parentId,
-        index: payload.index,
-        position: payload.position,
-        positionTargetId: payload.positionTargetId,
-        data,
       },
     };
   }

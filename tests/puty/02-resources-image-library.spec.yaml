@@ -19,70 +19,54 @@ in:
       - id: cmd-image-folder-create
         partitions:
           - project:project-puty-res-images-001:resources:images
-        type: resource.create
+        type: image.create
         clientTs: 301
         payload:
-          resourceType: images
-          resourceId: img-folder-cgs
+          imageId: img-folder-cgs
           data:
             name: CGs
             type: folder
       - id: cmd-image-hero-create
         partitions:
           - project:project-puty-res-images-001:resources:images
-        type: resource.create
+        type: image.create
         clientTs: 302
         payload:
-          resourceType: images
-          resourceId: img-hero-idle
+          imageId: img-hero-idle
           parentId: img-folder-cgs
           data:
             name: Hero Idle
             type: image
-            src: hero-idle.png
+            fileId: hero-idle.png
       - id: cmd-image-bg-create
         partitions:
           - project:project-puty-res-images-001:resources:images
-        type: resource.create
+        type: image.create
         clientTs: 303
         payload:
-          resourceType: images
-          resourceId: img-bg-school
+          imageId: img-bg-school
           data:
             name: School Rooftop
             type: image
-            src: school-rooftop.png
+            fileId: school-rooftop.png
       - id: cmd-image-bg-move
         partitions:
           - project:project-puty-res-images-001:resources:images
-        type: resource.move
+        type: image.move
         clientTs: 304
         payload:
-          resourceType: images
-          resourceId: img-bg-school
+          imageId: img-bg-school
           parentId: img-folder-cgs
           index: 1
       - id: cmd-image-hero-rename
         partitions:
           - project:project-puty-res-images-001:resources:images
-        type: resource.update
+        type: image.update
         clientTs: 305
         payload:
-          resourceType: images
-          resourceId: img-hero-idle
+          imageId: img-hero-idle
           data:
             name: Hero Idle Updated
-      - id: cmd-image-hero-update
-        partitions:
-          - project:project-puty-res-images-001:resources:images
-        type: resource.update
-        clientTs: 306
-        payload:
-          resourceType: images
-          resourceId: img-hero-idle
-          data:
-            src: hero-idle-v2.png
-            thumbnailSrc: hero-idle-thumb.png
 out:
   storedEvents:
     - committedId: 1
@@ -91,10 +75,9 @@ out:
       userId: user-puty-res-images
       partitions:
         - project:project-puty-res-images-001:resources:images
-      type: resource.create
+      type: image.create
       payload:
-        resourceType: images
-        resourceId: img-folder-cgs
+        imageId: img-folder-cgs
         data:
           name: CGs
           type: folder
@@ -107,15 +90,14 @@ out:
       userId: user-puty-res-images
       partitions:
         - project:project-puty-res-images-001:resources:images
-      type: resource.create
+      type: image.create
       payload:
-        resourceType: images
-        resourceId: img-hero-idle
+        imageId: img-hero-idle
         parentId: img-folder-cgs
         data:
           name: Hero Idle
           type: image
-          src: hero-idle.png
+          fileId: hero-idle.png
       meta:
         clientId: client-puty-res-images
         clientTs: 302
@@ -125,14 +107,13 @@ out:
       userId: user-puty-res-images
       partitions:
         - project:project-puty-res-images-001:resources:images
-      type: resource.create
+      type: image.create
       payload:
-        resourceType: images
-        resourceId: img-bg-school
+        imageId: img-bg-school
         data:
           name: School Rooftop
           type: image
-          src: school-rooftop.png
+          fileId: school-rooftop.png
       meta:
         clientId: client-puty-res-images
         clientTs: 303
@@ -142,10 +123,9 @@ out:
       userId: user-puty-res-images
       partitions:
         - project:project-puty-res-images-001:resources:images
-      type: resource.move
+      type: image.move
       payload:
-        resourceType: images
-        resourceId: img-bg-school
+        imageId: img-bg-school
         parentId: img-folder-cgs
         index: 1
       meta:
@@ -157,35 +137,18 @@ out:
       userId: user-puty-res-images
       partitions:
         - project:project-puty-res-images-001:resources:images
-      type: resource.update
+      type: image.update
       payload:
-        resourceType: images
-        resourceId: img-hero-idle
+        imageId: img-hero-idle
         data:
           name: Hero Idle Updated
       meta:
         clientId: client-puty-res-images
         clientTs: 305
-    - committedId: 6
-      id: cmd-image-hero-update
-      projectId: project-puty-res-images-001
-      userId: user-puty-res-images
-      partitions:
-        - project:project-puty-res-images-001:resources:images
-      type: resource.update
-      payload:
-        resourceType: images
-        resourceId: img-hero-idle
-        data:
-          src: hero-idle-v2.png
-          thumbnailSrc: hero-idle-thumb.png
-      meta:
-        clientId: client-puty-res-images
-        clientTs: 306
   stateAfterEachEvent:
     - committedId: 1
       eventId: cmd-image-folder-create
-      eventType: resource.create
+      eventType: image.create
       state:
         model_version: 2
         project:
@@ -204,17 +167,17 @@ out:
           images:
             items:
               img-folder-cgs:
-                createdAt: 301
+                createdAt: 0
                 id: img-folder-cgs
                 name: CGs
                 parentId: null
                 type: folder
-                updatedAt: 301
+                updatedAt: 0
             tree:
               - id: img-folder-cgs
     - committedId: 2
       eventId: cmd-image-hero-create
-      eventType: resource.create
+      eventType: image.create
       state:
         model_version: 2
         project:
@@ -233,27 +196,27 @@ out:
           images:
             items:
               img-folder-cgs:
-                createdAt: 301
+                createdAt: 0
                 id: img-folder-cgs
                 name: CGs
                 parentId: null
                 type: folder
-                updatedAt: 301
+                updatedAt: 0
               img-hero-idle:
-                createdAt: 302
+                createdAt: 0
+                fileId: hero-idle.png
                 id: img-hero-idle
                 name: Hero Idle
                 parentId: img-folder-cgs
-                src: hero-idle.png
                 type: image
-                updatedAt: 302
+                updatedAt: 0
             tree:
               - id: img-folder-cgs
                 children:
                   - id: img-hero-idle
     - committedId: 3
       eventId: cmd-image-bg-create
-      eventType: resource.create
+      eventType: image.create
       state:
         model_version: 2
         project:
@@ -272,28 +235,28 @@ out:
           images:
             items:
               img-bg-school:
-                createdAt: 303
+                createdAt: 0
+                fileId: school-rooftop.png
                 id: img-bg-school
                 name: School Rooftop
                 parentId: null
-                src: school-rooftop.png
                 type: image
-                updatedAt: 303
+                updatedAt: 0
               img-folder-cgs:
-                createdAt: 301
+                createdAt: 0
                 id: img-folder-cgs
                 name: CGs
                 parentId: null
                 type: folder
-                updatedAt: 301
+                updatedAt: 0
               img-hero-idle:
-                createdAt: 302
+                createdAt: 0
+                fileId: hero-idle.png
                 id: img-hero-idle
                 name: Hero Idle
                 parentId: img-folder-cgs
-                src: hero-idle.png
                 type: image
-                updatedAt: 302
+                updatedAt: 0
             tree:
               - id: img-folder-cgs
                 children:
@@ -301,7 +264,7 @@ out:
               - id: img-bg-school
     - committedId: 4
       eventId: cmd-image-bg-move
-      eventType: resource.move
+      eventType: image.move
       state:
         model_version: 2
         project:
@@ -320,28 +283,28 @@ out:
           images:
             items:
               img-bg-school:
-                createdAt: 303
+                createdAt: 0
+                fileId: school-rooftop.png
                 id: img-bg-school
                 name: School Rooftop
                 parentId: img-folder-cgs
-                src: school-rooftop.png
                 type: image
-                updatedAt: 304
+                updatedAt: 0
               img-folder-cgs:
-                createdAt: 301
+                createdAt: 0
                 id: img-folder-cgs
                 name: CGs
                 parentId: null
                 type: folder
-                updatedAt: 301
+                updatedAt: 0
               img-hero-idle:
-                createdAt: 302
+                createdAt: 0
+                fileId: hero-idle.png
                 id: img-hero-idle
                 name: Hero Idle
                 parentId: img-folder-cgs
-                src: hero-idle.png
                 type: image
-                updatedAt: 302
+                updatedAt: 0
             tree:
               - id: img-folder-cgs
                 children:
@@ -349,7 +312,7 @@ out:
                   - id: img-bg-school
     - committedId: 5
       eventId: cmd-image-hero-rename
-      eventType: resource.update
+      eventType: image.update
       state:
         model_version: 2
         project:
@@ -368,77 +331,28 @@ out:
           images:
             items:
               img-bg-school:
-                createdAt: 303
+                createdAt: 0
+                fileId: school-rooftop.png
                 id: img-bg-school
                 name: School Rooftop
                 parentId: img-folder-cgs
-                src: school-rooftop.png
                 type: image
-                updatedAt: 304
+                updatedAt: 0
               img-folder-cgs:
-                createdAt: 301
+                createdAt: 0
                 id: img-folder-cgs
                 name: CGs
                 parentId: null
                 type: folder
-                updatedAt: 301
+                updatedAt: 0
               img-hero-idle:
-                createdAt: 302
+                createdAt: 0
+                fileId: hero-idle.png
                 id: img-hero-idle
                 name: Hero Idle Updated
                 parentId: img-folder-cgs
-                src: hero-idle.png
                 type: image
-                updatedAt: 305
-            tree:
-              - id: img-folder-cgs
-                children:
-                  - id: img-hero-idle
-                  - id: img-bg-school
-    - committedId: 6
-      eventId: cmd-image-hero-update
-      eventType: resource.update
-      state:
-        model_version: 2
-        project:
-          createdAt: 0
-          description: ''
-          id: project-puty-res-images-001
-          name: ''
-          updatedAt: 306
-        story:
-          initialSceneId: null
-          sceneOrder: []
-        scenes: {}
-        sections: {}
-        lines: {}
-        resources:
-          images:
-            items:
-              img-bg-school:
-                createdAt: 303
-                id: img-bg-school
-                name: School Rooftop
-                parentId: img-folder-cgs
-                src: school-rooftop.png
-                type: image
-                updatedAt: 304
-              img-folder-cgs:
-                createdAt: 301
-                id: img-folder-cgs
-                name: CGs
-                parentId: null
-                type: folder
-                updatedAt: 301
-              img-hero-idle:
-                createdAt: 302
-                id: img-hero-idle
-                name: Hero Idle Updated
-                parentId: img-folder-cgs
-                src: hero-idle-v2.png
-                thumbnailSrc: hero-idle-thumb.png
-                type: image
-                updatedAt: 306
+                updatedAt: 0
             tree:
               - id: img-folder-cgs
                 children:
