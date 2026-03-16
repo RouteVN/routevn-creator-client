@@ -2,11 +2,13 @@
 
 All project mutations use one canonical command/event contract.
 
-Authoritative source: `src/internal/project/commands.js`.
+Authoritative source for command/domain definitions:
+`https://github.com/RouteVN/routevn-creator-model`
 
 This document is intentionally high-level. It explains how commands and
 committed events relate, while the detailed command registry, payload rules,
-and preconditions live in code and in `03-command-catalog.md`.
+and preconditions live in the shared model repo and in the client command
+envelope/compatibility code.
 
 ## Client Command Envelope
 
@@ -88,7 +90,8 @@ Notes:
   - `id`
 
 Detailed command definitions, accepted payload fields, and preconditions live in
-`docs/platform/03-command-catalog.md` and `src/internal/project/commands.js`.
+the shared model repo:
+`https://github.com/RouteVN/routevn-creator-model`
 
 ## Type Naming Rules
 

@@ -416,7 +416,7 @@ const hardcodedCommandTypeScan = spawnSync(
 assert.equal(
   hardcodedCommandTypeScan.status,
   1,
-  `Found hardcoded command types outside command catalog:\n${(
+  `Found hardcoded command types outside shared command metadata:\n${(
     hardcodedCommandTypeScan.stdout || ""
   ).trim()}`,
 );
