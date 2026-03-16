@@ -98,7 +98,9 @@ export const createProjectEntriesService = ({
 
   const getProjectEntries = async () => {
     const entries = (await db.get("projectEntries")) || [];
-    projectEntriesCache = Array.isArray(entries) ? structuredClone(entries) : [];
+    projectEntriesCache = Array.isArray(entries)
+      ? structuredClone(entries)
+      : [];
     return entries;
   };
 

@@ -354,9 +354,7 @@ export const handleProjectsClick = async (deps, payload) => {
     return;
   }
 
-  const project = store
-    .getState()
-    .projects.find((entry) => entry?.id === id);
+  const project = store.getState().projects.find((entry) => entry?.id === id);
 
   if (project) {
     appService.setCurrentProjectEntry(project);

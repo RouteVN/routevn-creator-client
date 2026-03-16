@@ -4,13 +4,6 @@ import {
   getTypographyCount,
   getTypographyRemovalCount,
 } from "../../constants/typography.js";
-import {
-  ROOT_TREE_PARENT_ID,
-  deleteTreeItem,
-  insertTreeItem,
-  moveTreeItem,
-  updateTreeItem,
-} from "../project/tree.js";
 import { recursivelyCheckResource } from "../project/projection.js";
 
 const findNodeLocation = (nodes = [], targetId, parentId = "_root") => {
