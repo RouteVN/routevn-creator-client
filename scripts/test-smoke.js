@@ -244,6 +244,21 @@ await applyCommandToRepository({
         type: "character",
         name: "Hero",
         description: "Lead character",
+        sprites: {
+          tree: [
+            {
+              id: "default-sprites",
+              children: [],
+            },
+          ],
+          items: {
+            "default-sprites": {
+              id: "default-sprites",
+              type: "folder",
+              name: "Default Sprites",
+            },
+          },
+        },
       },
     },
   }),
@@ -347,10 +362,21 @@ assert.deepEqual(
 const spriteHierarchy = toHierarchyStructure(
   repositoryState.characters.items["character-hero"].sprites,
 );
-assert.deepEqual(spriteHierarchy[0].id, "expressions");
 assert.deepEqual(
-  spriteHierarchy[0].children.map((node) => node.id),
-  ["sprite-smile"],
+  spriteHierarchy.map((node) => ({
+    id: node.id,
+    children: (node.children ?? []).map((child) => child.id),
+  })),
+  [
+    {
+      id: "default-sprites",
+      children: [],
+    },
+    {
+      id: "expressions",
+      children: ["sprite-smile"],
+    },
+  ],
 );
 
 const renderState = buildLayoutRenderElements(

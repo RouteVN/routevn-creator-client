@@ -79,8 +79,26 @@ export const handleTextStyleItemClick = (deps, payload) => {
   render();
 };
 
+const buildTextStyleData = ({
+  name,
+  fontSize,
+  lineHeight,
+  fontColor,
+  fontStyle,
+  fontWeight,
+  previewText,
+} = {}) => ({
+  name,
+  fontSize: Number(fontSize ?? 16),
+  lineHeight: Number(lineHeight ?? 1.5),
+  colorId: fontColor,
+  fontId: fontStyle,
+  fontWeight: String(fontWeight ?? "400"),
+  previewText: previewText ?? "",
+});
+
 const handleTextStyleCreated = async (deps, payload) => {
-  const { projectService } = deps;
+  const { appService, projectService } = deps;
   const {
     groupId,
     name,
@@ -92,27 +110,38 @@ const handleTextStyleCreated = async (deps, payload) => {
     previewText,
   } = payload._event.detail;
 
-  await projectService.createTextStyle({
+  const createResult = await projectService.createTextStyle({
     textStyleId: nanoid(),
     data: {
       type: "textStyle",
-      name: name,
-      fontSize: fontSize,
-      lineHeight: lineHeight,
-      colorId: fontColor,
-      fontId: fontStyle,
-      fontWeight: fontWeight,
-      previewText: previewText,
+      ...buildTextStyleData({
+        name,
+        fontSize,
+        lineHeight,
+        fontColor,
+        fontStyle,
+        fontWeight,
+        previewText,
+      }),
     },
     parentId: groupId,
     position: "last",
   });
 
+  if (createResult?.valid === false) {
+    console.error("Failed to create text style:", createResult.error);
+    appService.showToast("Failed to create text style.", {
+      title: "Error",
+    });
+    return createResult;
+  }
+
   await refreshTextStylesData(deps);
+  return createResult;
 };
 
 const handleTextStyleUpdated = async (deps, payload) => {
-  const { projectService } = deps;
+  const { appService, projectService } = deps;
   const {
     itemId,
     name,
@@ -124,20 +153,29 @@ const handleTextStyleUpdated = async (deps, payload) => {
     previewText,
   } = payload._event.detail;
 
-  await projectService.updateTextStyle({
+  const updateResult = await projectService.updateTextStyle({
     textStyleId: itemId,
-    data: {
-      name: name,
-      fontSize: fontSize,
-      lineHeight: lineHeight,
-      colorId: fontColor,
-      fontId: fontStyle,
-      fontWeight: fontWeight,
-      previewText: previewText,
-    },
+    data: buildTextStyleData({
+      name,
+      fontSize,
+      lineHeight,
+      fontColor,
+      fontStyle,
+      fontWeight,
+      previewText,
+    }),
   });
 
+  if (updateResult?.valid === false) {
+    console.error("Failed to update text style:", updateResult.error);
+    appService.showToast("Failed to update text style.", {
+      title: "Error",
+    });
+    return updateResult;
+  }
+
   await refreshTextStylesData(deps);
+  return updateResult;
 };
 
 export const handleFormExtraEvent = (deps) => {
@@ -207,7 +245,7 @@ export const handleCloseDialog = (deps) => {
   render();
 };
 
-export const handleFormActionClick = (deps, payload) => {
+export const handleFormActionClick = async (deps, payload) => {
   const { store, render, appService } = deps;
 
   // Check which button was clicked
@@ -265,9 +303,11 @@ export const handleFormActionClick = (deps, payload) => {
       return;
     }
 
+    let submitResult;
+
     if (editMode && editingItemId) {
       // Handle text style update
-      handleTextStyleUpdated(deps, {
+      submitResult = await handleTextStyleUpdated(deps, {
         _event: {
           detail: {
             itemId: editingItemId,
@@ -283,7 +323,7 @@ export const handleFormActionClick = (deps, payload) => {
       });
     } else {
       // Handle text style creation
-      handleTextStyleCreated(deps, {
+      submitResult = await handleTextStyleCreated(deps, {
         _event: {
           detail: {
             groupId: targetGroupId,
@@ -297,6 +337,10 @@ export const handleFormActionClick = (deps, payload) => {
           },
         },
       });
+    }
+
+    if (submitResult?.valid === false) {
+      return;
     }
 
     // Reset form values, clear edit mode, and close dialog

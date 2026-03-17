@@ -238,7 +238,7 @@ export const createCatalogResourceCommandApi = (shared) => ({
     submitCreateResourceCommand({
       shared,
       resourceType: "textStyles",
-      type: COMMAND_TYPES.TEXT_STYLE_CREATE,
+      type: COMMAND_TYPES.TEXTSTYLE_CREATE,
       idField: "textStyleId",
       idValue: textStyleId,
       data,
@@ -251,7 +251,7 @@ export const createCatalogResourceCommandApi = (shared) => ({
     submitUpdateResourceCommand({
       shared,
       resourceType: "textStyles",
-      type: COMMAND_TYPES.TEXT_STYLE_UPDATE,
+      type: COMMAND_TYPES.TEXTSTYLE_UPDATE,
       idField: "textStyleId",
       idValue: textStyleId,
       data,
@@ -266,7 +266,7 @@ export const createCatalogResourceCommandApi = (shared) => ({
     submitMoveResourceCommand({
       shared,
       resourceType: "textStyles",
-      type: COMMAND_TYPES.TEXT_STYLE_MOVE,
+      type: COMMAND_TYPES.TEXTSTYLE_MOVE,
       idField: "textStyleId",
       idValue: textStyleId,
       parentId,
@@ -278,7 +278,7 @@ export const createCatalogResourceCommandApi = (shared) => ({
     submitDeleteResourceCommand({
       shared,
       resourceType: "textStyles",
-      type: COMMAND_TYPES.TEXT_STYLE_DELETE,
+      type: COMMAND_TYPES.TEXTSTYLE_DELETE,
       deleteField: "textStyleIds",
       ids: textStyleIds,
     }),

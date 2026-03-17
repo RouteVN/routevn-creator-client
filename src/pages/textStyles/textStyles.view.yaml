@@ -8,15 +8,15 @@ refs:
       item-click:
         handler: handleFileExplorerSelectionChanged
       dblclick-item:
-        handler: handleTypographyItemDoubleClick
+        handler: handleTextStyleItemDoubleClick
   typographyView:
     eventListeners:
       item-click:
-        handler: handleTypographyItemClick
+        handler: handleTextStyleItemClick
       item-dblclick:
-        handler: handleTypographyItemDoubleClick
+        handler: handleTextStyleItemDoubleClick
       add-click:
-        handler: handleAddTypographyClick
+        handler: handleAddTextStyleClick
       search-input:
         handler: handleSearchInput
       item-delete:

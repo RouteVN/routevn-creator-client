@@ -95,7 +95,7 @@ const isMissingLinePreconditionError = (error, lineId) => {
 };
 
 export const syncSceneEditorProjectState = (store, projectService) => {
-  const repositoryState = projectService.getState();
+  const repositoryState = projectService.getRepositoryState();
   store.setRepositoryState({ repository: repositoryState });
   store.setDomainState({
     domainState: projectService.getDomainState(),

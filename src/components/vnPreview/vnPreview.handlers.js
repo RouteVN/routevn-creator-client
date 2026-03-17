@@ -206,7 +206,7 @@ export const handleBeforeMount = (deps) => {
 export const handleAfterMount = async (deps) => {
   const { projectService, graphicsService, refs, props: attrs, store } = deps;
   await projectService.ensureRepository();
-  const state = projectService.getState();
+  const state = projectService.getRepositoryState();
   const { canvas } = refs;
 
   const sceneId = attrs.sceneId;

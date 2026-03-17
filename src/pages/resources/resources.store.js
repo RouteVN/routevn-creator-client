@@ -21,11 +21,6 @@ export const createInitialState = () => ({
       route: "/project/transforms",
     },
     {
-      id: "animations",
-      label: "Animations",
-      route: "/project/animations",
-    },
-    {
       id: "videos",
       label: "Videos",
       route: "/project/videos",

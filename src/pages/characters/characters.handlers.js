@@ -119,7 +119,7 @@ export const handleCharacterItemDoubleClick = async (deps, payload) => {
 };
 
 export const handleCharacterCreated = async (deps, payload) => {
-  const { projectService } = deps;
+  const { appService, projectService } = deps;
   const { groupId, name, description, shortcut, avatarFileId } =
     payload._event.detail;
   const characterId = nanoid();
@@ -138,9 +138,9 @@ export const handleCharacterCreated = async (deps, payload) => {
       ],
       items: {
         [defaultSpritesFolderId]: {
+          id: defaultSpritesFolderId,
           type: "folder",
           name: "Default Sprites",
-          parentId: null,
         },
       },
     },
@@ -150,14 +150,22 @@ export const handleCharacterCreated = async (deps, payload) => {
     characterData.fileId = avatarFileId;
   }
 
-  await projectService.createCharacter({
+  const createResult = await projectService.createCharacter({
     characterId,
     data: characterData,
     parentId: groupId,
     position: "last",
   });
 
+  if (createResult?.valid === false) {
+    appService.showToast("Failed to create character.", {
+      title: "Error",
+    });
+    return createResult;
+  }
+
   await refreshCharactersData(deps);
+  return createResult;
 };
 
 export const handleSpritesButtonClick = (deps, payload) => {
@@ -250,12 +258,20 @@ export const handleCloseDialog = (deps) => {
   render();
 };
 
-export const handleDialogFormActionClick = (deps, payload) => {
-  const { store, render } = deps;
+export const handleDialogFormActionClick = async (deps, payload) => {
+  const { appService, store, render } = deps;
   const actionId = payload._event.detail.actionId;
 
   if (actionId === "submit") {
     const formData = payload._event.detail.values;
+    const name = formData.name?.trim();
+    if (!name) {
+      appService.showToast("Character name is required.", {
+        title: "Warning",
+      });
+      return;
+    }
+
     const targetGroupId = store.selectTargetGroupId();
     const avatarFileId = store.selectAvatarFileId();
 
@@ -264,7 +280,7 @@ export const handleDialogFormActionClick = (deps, payload) => {
       _event: {
         detail: {
           groupId: targetGroupId,
-          name: formData.name,
+          name,
           description: formData.description,
           shortcut: formData.shortcut || "",
           avatarFileId: avatarFileId,
@@ -273,7 +289,13 @@ export const handleDialogFormActionClick = (deps, payload) => {
     };
 
     // Handle the character creation directly with correct payload
-    handleCharacterCreated(deps, characterCreatedPayload);
+    const createResult = await handleCharacterCreated(
+      deps,
+      characterCreatedPayload,
+    );
+    if (createResult?.valid === false) {
+      return;
+    }
 
     // Clear avatar state and close dialog
     store.clearAvatarState();

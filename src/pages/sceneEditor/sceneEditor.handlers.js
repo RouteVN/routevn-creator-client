@@ -386,7 +386,7 @@ export const handleDialogueCharacterShortcut = async (deps, payload) => {
 
   let characterId;
   if (!isClearShortcut) {
-    const repositoryState = projectService.getState();
+    const repositoryState = projectService.getRepositoryState();
     characterId = findCharacterIdByShortcut(repositoryState, shortcut);
     if (!characterId) {
       return;
@@ -713,7 +713,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     if (actionsType && selectedLineId && selectedSectionId) {
       // Special handling for dialogue - keep content, remove only layoutId and characterId
       if (actionsType === "dialogue") {
-        const stateBefore = projectService.getState();
+        const stateBefore = projectService.getRepositoryState();
         const currentActions =
           stateBefore.scenes?.items?.[sceneId]?.sections?.items?.[
             selectedSectionId
@@ -731,7 +731,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
           });
         }
       } else {
-        const stateBefore = projectService.getState();
+        const stateBefore = projectService.getRepositoryState();
         const currentActions =
           stateBefore.scenes?.items?.[sceneId]?.sections?.items?.[
             selectedSectionId

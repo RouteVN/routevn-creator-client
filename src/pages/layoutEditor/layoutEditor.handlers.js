@@ -257,7 +257,7 @@ const getRenderState = async (deps) => {
     colors: colorsData,
     fonts: fontsData,
     variables: variablesData,
-  } = projectService.getState();
+  } = projectService.getRepositoryState();
   const textStyleItems = textStylesData?.items || {};
   const colorsItems = colorsData?.items || {};
   const fontsItems = fontsData?.items || {};
@@ -357,7 +357,7 @@ export const handleAfterMount = async (deps) => {
   const payload = appService.getPayload() || {};
   const { layoutId } = payload;
   await projectService.ensureRepository();
-  syncLayoutEditorState(deps, projectService.getState(), layoutId);
+  syncLayoutEditorState(deps, projectService.getRepositoryState(), layoutId);
 
   const { canvas } = refs;
   await graphicsService.init({ canvas: canvas });
@@ -394,7 +394,7 @@ const refreshLayoutEditorData = async (deps) => {
   const { appService, projectService, render } = deps;
   const { layoutId } = appService.getPayload();
   await projectService.ensureRepository();
-  syncLayoutEditorState(deps, projectService.getState(), layoutId);
+  syncLayoutEditorState(deps, projectService.getRepositoryState(), layoutId);
   render();
   await renderLayoutPreview(deps);
 };
@@ -546,9 +546,8 @@ async function handleDebouncedUpdate(deps, payload) {
   const { appService, projectService } = deps;
   const { layoutId, selectedItemId, updatedItem, replace } = payload;
   const currentItem =
-    projectService.getState()?.layouts?.items?.[layoutId]?.elements?.items?.[
-      selectedItemId
-    ];
+    projectService.getRepositoryState()?.layouts?.items?.[layoutId]?.elements
+      ?.items?.[selectedItemId];
 
   if (!currentItem || !updatedItem) {
     return;
@@ -578,7 +577,7 @@ async function handleDebouncedUpdate(deps, payload) {
   // For form/keyboard updates, sync store with repository
   syncLayoutEditorState(
     deps,
-    projectService.getState(),
+    projectService.getRepositoryState(),
     appService.getPayload().layoutId || layoutId,
   );
 }

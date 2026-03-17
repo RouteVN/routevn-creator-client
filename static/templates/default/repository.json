@@ -533,44 +533,8 @@
     ]
   },
   "animations": {
-    "items": {
-      "default-animations-group": {
-        "id": "default-animations-group",
-        "type": "folder",
-        "name": "Default"
-      },
-      "fade-in": {
-        "id": "fade-in",
-        "type": "animation",
-        "name": "Fade In",
-        "animation": {
-          "type": "live",
-          "tween": {
-            "alpha": {
-              "initialValue": 0,
-              "keyframes": [
-                {
-                  "duration": 1000,
-                  "value": 1,
-                  "easing": "linear",
-                  "relative": false
-                }
-              ]
-            }
-          }
-        }
-      }
-    },
-    "tree": [
-      {
-        "id": "default-animations-group",
-        "children": [
-          {
-            "id": "fade-in"
-          }
-        ]
-      }
-    ]
+    "items": {},
+    "tree": []
   },
   "characters": {
     "items": {
