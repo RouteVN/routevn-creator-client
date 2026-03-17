@@ -1,29 +1,4 @@
-import { normalizeParentId } from "../projectRepository.js";
 import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
-
-const createPlacementPayload = ({
-  parentId = null,
-  index,
-  position = "last",
-  positionTargetId,
-} = {}) => {
-  const payload = {
-    parentId: normalizeParentId(parentId),
-  };
-
-  if (index !== undefined) {
-    payload.index = index;
-    return payload;
-  }
-
-  payload.position = position;
-
-  if (positionTargetId !== undefined) {
-    payload.positionTargetId = positionTargetId;
-  }
-
-  return payload;
-};
 
 export const createCharacterSpriteCommandApi = (shared) => ({
   async createCharacterSpriteItem({
@@ -59,7 +34,7 @@ export const createCharacterSpriteCommandApi = (shared) => ({
         characterId,
         spriteId: nextSpriteId,
         data: structuredClone(data || {}),
-        ...createPlacementPayload({
+        ...shared.buildPlacementPayload({
           parentId,
           index: resolvedIndex,
           position,
@@ -76,7 +51,7 @@ export const createCharacterSpriteCommandApi = (shared) => ({
     return nextSpriteId;
   },
 
-  async updateCharacterSpriteItem({ characterId, spriteId, data, patch }) {
+  async updateCharacterSpriteItem({ characterId, spriteId, data }) {
     const context = await shared.ensureCommandContext();
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
@@ -91,7 +66,7 @@ export const createCharacterSpriteCommandApi = (shared) => ({
       payload: {
         characterId,
         spriteId,
-        data: structuredClone(data ?? patch ?? {}),
+        data: structuredClone(data || {}),
       },
       partitions: [],
     });
@@ -128,7 +103,7 @@ export const createCharacterSpriteCommandApi = (shared) => ({
       payload: {
         characterId,
         spriteId,
-        ...createPlacementPayload({
+        ...shared.buildPlacementPayload({
           parentId,
           index: resolvedIndex,
           position,

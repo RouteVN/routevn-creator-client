@@ -1,32 +1,5 @@
-import {
-  createTreeCollection,
-  normalizeParentId,
-} from "../projectRepository.js";
+import { createTreeCollection } from "../projectRepository.js";
 import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
-
-const createPlacementPayload = ({
-  parentId = null,
-  index,
-  position = "last",
-  positionTargetId,
-} = {}) => {
-  const payload = {
-    parentId: normalizeParentId(parentId),
-  };
-
-  if (index !== undefined) {
-    payload.index = index;
-    return payload;
-  }
-
-  payload.position = position;
-
-  if (positionTargetId !== undefined) {
-    payload.positionTargetId = positionTargetId;
-  }
-
-  return payload;
-};
 
 export const createLayoutCommandApi = (shared) => ({
   async createLayoutItem({
@@ -66,7 +39,7 @@ export const createLayoutCommandApi = (shared) => ({
           layoutType,
           elements: structuredClone(elements || createTreeCollection()),
         },
-        ...createPlacementPayload({
+        ...shared.buildPlacementPayload({
           parentId,
           index: resolvedIndex,
           position,
@@ -153,7 +126,7 @@ export const createLayoutCommandApi = (shared) => ({
       type: COMMAND_TYPES.LAYOUT_MOVE,
       payload: {
         layoutId,
-        ...createPlacementPayload({
+        ...shared.buildPlacementPayload({
           parentId,
           index: resolvedIndex,
           position,
@@ -164,13 +137,7 @@ export const createLayoutCommandApi = (shared) => ({
     });
   },
 
-  async updateLayoutElement({
-    layoutId,
-    elementId,
-    data,
-    patch,
-    replace = true,
-  }) {
+  async updateLayoutElement({ layoutId, elementId, data, replace = true }) {
     const context = await shared.ensureCommandContext();
 
     return shared.submitCommandWithContext({
@@ -180,7 +147,7 @@ export const createLayoutCommandApi = (shared) => ({
       payload: {
         layoutId,
         elementId,
-        data: structuredClone(data ?? patch ?? {}),
+        data: structuredClone(data || {}),
         replace: replace === true,
       },
       partitions: [],
@@ -191,7 +158,6 @@ export const createLayoutCommandApi = (shared) => ({
     layoutId,
     elementId,
     data,
-    element,
     parentId = null,
     position = "last",
     positionTargetId,
@@ -215,8 +181,8 @@ export const createLayoutCommandApi = (shared) => ({
       payload: {
         layoutId,
         elementId: nextElementId,
-        data: structuredClone(data ?? element ?? {}),
-        ...createPlacementPayload({
+        data: structuredClone(data || {}),
+        ...shared.buildPlacementPayload({
           parentId,
           index: resolvedIndex,
           position,
@@ -259,7 +225,7 @@ export const createLayoutCommandApi = (shared) => ({
       payload: {
         layoutId,
         elementId,
-        ...createPlacementPayload({
+        ...shared.buildPlacementPayload({
           parentId,
           index: resolvedIndex,
           position,

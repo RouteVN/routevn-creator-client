@@ -1,81 +1,80 @@
-import { normalizeParentId } from "../projectRepository.js";
 import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
 
-const RESOURCE_TYPE_TO_COMMAND_FAMILY = Object.freeze({
-  images: "image",
-  sounds: "sound",
-  videos: "video",
-  tweens: "animation",
-  animations: "animation",
-  characters: "character",
-  fonts: "font",
-  transforms: "transform",
-  colors: "color",
-  typography: "textStyle",
-  textStyles: "textStyle",
-  variables: "variable",
-  layouts: "layout",
+const RESOURCE_COMMAND_CONFIG = Object.freeze({
+  images: {
+    family: "image",
+    idField: "imageId",
+    deleteField: "imageIds",
+  },
+  sounds: {
+    family: "sound",
+    idField: "soundId",
+    deleteField: "soundIds",
+  },
+  videos: {
+    family: "video",
+    idField: "videoId",
+    deleteField: "videoIds",
+  },
+  tweens: {
+    family: "animation",
+    idField: "animationId",
+    deleteField: "animationIds",
+  },
+  animations: {
+    family: "animation",
+    idField: "animationId",
+    deleteField: "animationIds",
+  },
+  characters: {
+    family: "character",
+    idField: "characterId",
+    deleteField: "characterIds",
+  },
+  fonts: {
+    family: "font",
+    idField: "fontId",
+    deleteField: "fontIds",
+  },
+  transforms: {
+    family: "transform",
+    idField: "transformId",
+    deleteField: "transformIds",
+  },
+  colors: {
+    family: "color",
+    idField: "colorId",
+    deleteField: "colorIds",
+  },
+  typography: {
+    family: "textStyle",
+    idField: "textStyleId",
+    deleteField: "textStyleIds",
+  },
+  textStyles: {
+    family: "textStyle",
+    idField: "textStyleId",
+    deleteField: "textStyleIds",
+  },
+  variables: {
+    family: "variable",
+    idField: "variableId",
+    deleteField: "variableIds",
+  },
+  layouts: {
+    family: "layout",
+    idField: "layoutId",
+    deleteField: "layoutIds",
+  },
 });
 
-const COMMAND_FAMILY_TO_ID_FIELD = Object.freeze({
-  image: "imageId",
-  sound: "soundId",
-  video: "videoId",
-  animation: "animationId",
-  character: "characterId",
-  font: "fontId",
-  transform: "transformId",
-  color: "colorId",
-  textStyle: "textStyleId",
-  variable: "variableId",
-  layout: "layoutId",
-});
-
-const COMMAND_FAMILY_TO_DELETE_FIELD = Object.freeze({
-  image: "imageIds",
-  sound: "soundIds",
-  video: "videoIds",
-  animation: "animationIds",
-  character: "characterIds",
-  font: "fontIds",
-  transform: "transformIds",
-  color: "colorIds",
-  textStyle: "textStyleIds",
-  variable: "variableIds",
-  layout: "layoutIds",
-});
-
-const resolveCommandFamily = (resourceType) => {
-  const family = RESOURCE_TYPE_TO_COMMAND_FAMILY[resourceType];
-  if (family) {
-    return family;
+const getResourceCommandConfig = (resourceType) => {
+  const config = RESOURCE_COMMAND_CONFIG[resourceType];
+  if (config) {
+    return config;
   }
 
   throw new Error(`Unsupported resourceType: ${resourceType}`);
-};
-
-const createPlacementPayload = ({
-  parentId = null,
-  index,
-  position = "last",
-  positionTargetId,
-} = {}) => {
-  const payload = {
-    parentId: normalizeParentId(parentId),
-  };
-
-  if (index !== undefined) {
-    payload.index = index;
-    return payload;
-  }
-
-  payload.position = position;
-
-  if (positionTargetId !== undefined) {
-    payload.positionTargetId = positionTargetId;
-  }
-
-  return payload;
 };
 
 export const createResourceCommandApi = (shared) => ({
@@ -90,8 +89,7 @@ export const createResourceCommandApi = (shared) => ({
   }) {
     const context = await shared.ensureCommandContext();
     const nextResourceId = resourceId || shared.createId();
-    const family = resolveCommandFamily(resourceType);
-    const idField = COMMAND_FAMILY_TO_ID_FIELD[family];
+    const { family, idField } = getResourceCommandConfig(resourceType);
     const resolvedIndex = shared.resolveResourceIndex({
       state: context.state,
       resourceType,
@@ -113,7 +111,7 @@ export const createResourceCommandApi = (shared) => ({
       payload: {
         [idField]: nextResourceId,
         data: structuredClone(data),
-        ...createPlacementPayload({
+        ...shared.buildPlacementPayload({
           parentId,
           index: resolvedIndex,
           position,
@@ -130,10 +128,9 @@ export const createResourceCommandApi = (shared) => ({
     return nextResourceId;
   },
 
-  async updateResourceItem({ resourceType, resourceId, data, patch }) {
+  async updateResourceItem({ resourceType, resourceId, data }) {
     const context = await shared.ensureCommandContext();
-    const family = resolveCommandFamily(resourceType);
-    const idField = COMMAND_FAMILY_TO_ID_FIELD[family];
+    const { family, idField } = getResourceCommandConfig(resourceType);
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
       resourceType,
@@ -146,7 +143,7 @@ export const createResourceCommandApi = (shared) => ({
       type: COMMAND_TYPES[`${family.toUpperCase()}_UPDATE`],
       payload: {
         [idField]: resourceId,
-        data: structuredClone(data ?? patch ?? {}),
+        data: structuredClone(data || {}),
       },
       partitions: [],
     });
@@ -161,8 +158,7 @@ export const createResourceCommandApi = (shared) => ({
     index,
   }) {
     const context = await shared.ensureCommandContext();
-    const family = resolveCommandFamily(resourceType);
-    const idField = COMMAND_FAMILY_TO_ID_FIELD[family];
+    const { family, idField } = getResourceCommandConfig(resourceType);
     const resolvedIndex = shared.resolveResourceIndex({
       state: context.state,
       resourceType,
@@ -184,7 +180,7 @@ export const createResourceCommandApi = (shared) => ({
       type: COMMAND_TYPES[`${family.toUpperCase()}_MOVE`],
       payload: {
         [idField]: resourceId,
-        ...createPlacementPayload({
+        ...shared.buildPlacementPayload({
           parentId,
           index: resolvedIndex,
           position,
@@ -197,8 +193,7 @@ export const createResourceCommandApi = (shared) => ({
 
   async deleteResourceItem({ resourceType, resourceIds }) {
     const context = await shared.ensureCommandContext();
-    const family = resolveCommandFamily(resourceType);
-    const deleteField = COMMAND_FAMILY_TO_DELETE_FIELD[family];
+    const { family, deleteField } = getResourceCommandConfig(resourceType);
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
       resourceType,

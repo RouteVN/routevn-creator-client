@@ -1,35 +1,7 @@
-import {
-  findLineLocation,
-  findSectionLocation,
-  normalizeParentId,
-} from "../projectRepository.js";
+import { findLineLocation, findSectionLocation } from "../projectRepository.js";
 import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
 
 export const createStoryCommandApi = (shared) => {
-  const createPlacementPayload = ({
-    parentId = null,
-    index,
-    position = "last",
-    positionTargetId,
-  } = {}) => {
-    const payload = {
-      parentId: normalizeParentId(parentId),
-    };
-
-    if (index !== undefined) {
-      payload.index = index;
-      return payload;
-    }
-
-    payload.position = position;
-
-    if (positionTargetId !== undefined) {
-      payload.positionTargetId = positionTargetId;
-    }
-
-    return payload;
-  };
-
   const submitLineActionsData = async ({ lineId, data, replace = false }) => {
     const context = await shared.ensureCommandContext();
     const basePartition = shared.storyBasePartitionFor(context.projectId);
@@ -54,10 +26,10 @@ export const createStoryCommandApi = (shared) => {
   };
 
   return {
-    async updateLineActions({ lineId, data, patch, replace = false }) {
+    async updateLineActions({ lineId, data, replace = false }) {
       return submitLineActionsData({
         lineId,
-        data: data ?? patch,
+        data,
         replace,
       });
     },
@@ -120,7 +92,7 @@ export const createStoryCommandApi = (shared) => {
         type: COMMAND_TYPES.SCENE_CREATE,
         payload: {
           sceneId: finalSceneId,
-          ...createPlacementPayload({
+          ...shared.buildPlacementPayload({
             parentId,
             index: resolvedIndex,
             position,
@@ -138,7 +110,7 @@ export const createStoryCommandApi = (shared) => {
       return finalSceneId;
     },
 
-    async updateSceneItem({ sceneId, data, patch }) {
+    async updateSceneItem({ sceneId, data }) {
       const context = await shared.ensureCommandContext();
       const basePartition = shared.storyBasePartitionFor(context.projectId);
       const scenePartition = shared.storyScenePartitionFor(
@@ -152,7 +124,7 @@ export const createStoryCommandApi = (shared) => {
         type: COMMAND_TYPES.SCENE_UPDATE,
         payload: {
           sceneId,
-          data: structuredClone(data ?? patch ?? {}),
+          data: structuredClone(data || {}),
         },
         partitions: [basePartition, scenePartition],
       });
@@ -225,7 +197,7 @@ export const createStoryCommandApi = (shared) => {
         type: COMMAND_TYPES.SCENE_MOVE,
         payload: {
           sceneId,
-          ...createPlacementPayload({
+          ...shared.buildPlacementPayload({
             parentId,
             index: resolvedIndex,
             position,
@@ -273,7 +245,7 @@ export const createStoryCommandApi = (shared) => {
         payload: {
           sceneId,
           sectionId: nextSectionId,
-          ...createPlacementPayload({
+          ...shared.buildPlacementPayload({
             parentId,
             index: resolvedIndex,
             position,
@@ -381,7 +353,7 @@ export const createStoryCommandApi = (shared) => {
         type: COMMAND_TYPES.SECTION_MOVE,
         payload: {
           sectionId,
-          ...createPlacementPayload({
+          ...shared.buildPlacementPayload({
             parentId,
             index: resolvedIndex,
             position,
@@ -399,9 +371,6 @@ export const createStoryCommandApi = (shared) => {
       lines,
       lineId,
       data = {},
-      line,
-      afterLineId,
-      beforeLineId,
       parentId = null,
       position,
       positionTargetId,
@@ -418,25 +387,16 @@ export const createStoryCommandApi = (shared) => {
         normalizedLines = [
           {
             lineId: lineId || shared.createId(),
-            data: structuredClone(data ?? line ?? {}),
+            data: structuredClone(data || {}),
           },
         ];
       }
       const sectionLocation = findSectionLocation(context.state, sectionId);
-      let resolvedPosition = position;
-      let resolvedPositionTargetId = positionTargetId;
-      if (resolvedPosition === undefined && beforeLineId) {
-        resolvedPosition = "before";
-        resolvedPositionTargetId = beforeLineId;
-      } else if (resolvedPosition === undefined && afterLineId) {
-        resolvedPosition = "after";
-        resolvedPositionTargetId = afterLineId;
-      }
       const resolvedIndex = shared.resolveLineIndex({
         section: sectionLocation?.section,
         parentId,
-        position: resolvedPosition || "last",
-        positionTargetId: resolvedPositionTargetId,
+        position: position || "last",
+        positionTargetId,
         index,
       });
       const basePartition = shared.storyBasePartitionFor(context.projectId);
@@ -454,11 +414,11 @@ export const createStoryCommandApi = (shared) => {
         payload: {
           sectionId,
           lines: normalizedLines,
-          ...createPlacementPayload({
+          ...shared.buildPlacementPayload({
             parentId,
             index: resolvedIndex,
-            position: resolvedPosition || "last",
-            positionTargetId: resolvedPositionTargetId,
+            position: position || "last",
+            positionTargetId,
           }),
         },
         partitions: scenePartition
@@ -544,7 +504,7 @@ export const createStoryCommandApi = (shared) => {
         payload: {
           lineId,
           toSectionId,
-          ...createPlacementPayload({
+          ...shared.buildPlacementPayload({
             parentId,
             index: resolvedIndex,
             position,

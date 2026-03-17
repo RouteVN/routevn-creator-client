@@ -4,6 +4,7 @@ import {
   applyCommandToRepository,
   assertSupportedProjectState,
   getSiblingOrderNodes,
+  normalizeParentId,
   resolveIndexFromPosition,
   uniquePartitions,
 } from "../projectRepository.js";
@@ -106,6 +107,30 @@ export const createCommandApiShared = ({
     };
   };
 
+  const buildPlacementPayload = ({
+    parentId = null,
+    index,
+    position = "last",
+    positionTargetId,
+  } = {}) => {
+    const payload = {
+      parentId: normalizeParentId(parentId),
+    };
+
+    if (index !== undefined) {
+      payload.index = index;
+      return payload;
+    }
+
+    payload.position = position;
+
+    if (positionTargetId !== undefined) {
+      payload.positionTargetId = positionTargetId;
+    }
+
+    return payload;
+  };
+
   const resolveResourceIndex = ({
     state,
     resourceType,
@@ -136,24 +161,6 @@ export const createCommandApiShared = ({
   }) => {
     if (Number.isInteger(index)) return index;
     const siblings = getSiblingOrderNodes(state?.scenes, parentId);
-    return resolveIndexFromPosition({
-      siblings,
-      position,
-      positionTargetId,
-      movingId,
-    });
-  };
-
-  const resolveLayoutIndex = ({
-    state,
-    parentId,
-    position,
-    positionTargetId,
-    index,
-    movingId,
-  }) => {
-    if (Number.isInteger(index)) return index;
-    const siblings = getSiblingOrderNodes(state?.layouts, parentId);
     return resolveIndexFromPosition({
       siblings,
       position,
@@ -234,15 +241,15 @@ export const createCommandApiShared = ({
     });
   };
 
-  const getStateImpl = () => {
+  const getState = () => {
     const repository = getCachedRepository();
     const state = repository.getState();
     assertSupportedProjectState(state);
     return state;
   };
 
-  const getDomainStateImpl = () => {
-    const repositoryState = getStateImpl();
+  const getDomainState = () => {
+    const repositoryState = getState();
     const projectId =
       repositoryState?.project?.id ||
       getCurrentProjectId() ||
@@ -253,7 +260,7 @@ export const createCommandApiShared = ({
     });
   };
 
-  const getEventsImpl = async () => {
+  const getEvents = async () => {
     const repository = await getCurrentRepository();
     return repository.getEvents();
   };
@@ -263,9 +270,9 @@ export const createCommandApiShared = ({
     getCurrentProjectId,
     ensureCommandContext,
     submitCommandWithContext,
+    buildPlacementPayload,
     resolveResourceIndex,
     resolveSceneIndex,
-    resolveLayoutIndex,
     resolveSectionIndex,
     resolveLineIndex,
     resolveLayoutElementIndex,
@@ -273,8 +280,8 @@ export const createCommandApiShared = ({
     storyBasePartitionFor,
     storyScenePartitionFor,
     resourceTypePartitionFor,
-    getStateImpl,
-    getDomainStateImpl,
-    getEventsImpl,
+    getState,
+    getDomainState,
+    getEvents,
   };
 };
