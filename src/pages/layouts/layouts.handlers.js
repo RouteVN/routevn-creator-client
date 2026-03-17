@@ -37,7 +37,7 @@ export const handleItemDoubleClick = (deps, payload) => {
   }
 
   const currentPayload = appService.getPayload();
-  appService.navigate("/project/resources/layout-editor", {
+  appService.navigate("/project/layout-editor", {
     ...currentPayload,
     layoutId: itemId,
   });
@@ -400,6 +400,6 @@ export const handleItemDelete = async (deps, payload) => {
     return;
   }
 
-  await projectService.deleteLayoutItem({ layoutId: itemId });
+  await projectService.deleteLayoutItem({ layoutIds: [itemId] });
   await handleDataChanged(deps);
 };

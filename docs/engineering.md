@@ -46,7 +46,6 @@ Common commands:
 bun run test:smoke
 bun run test:integration
 bun run test:convergence
-bun run test:command-only
 bun run test:collab-adapters
 bun run test:puty
 ```
@@ -67,9 +66,6 @@ bunx vitest run tests/puty/<file>.spec.yaml
 
 - `scripts/test-convergence.js`
   multi-client convergence behavior
-
-- `scripts/test-command-only.js`
-  command-envelope and command-path coverage
 
 - `scripts/test-collab-adapters.js`
   collab adapter coverage
@@ -94,11 +90,10 @@ Keep the test contract declarative:
 - `in`: the commands to submit, or batches of commands to submit
 - `out`: the normalized committed rows expected in storage
 
-Current Puty coverage is intentionally strongest around:
+Current Puty coverage is intentionally limited to client-owned storage
+behavior:
 
-- scene editor story flows
-- layout editor element flows
-- resource tree/storage flows
+- mixed command persistence across partitions
 - storage idempotency across submit batches
 
 ## Architecture Overview
@@ -470,11 +465,14 @@ collection item lifecycle. Current examples:
 - `scene.*`
 - `section.*`
 - `line.*`
+- `character.sprite.*`
 - `layout.element.*`
 
 The intended model is:
 
 - `variables` belong under the generic resource family
+- `characters` use `resource.*` for character lifecycle
+- `character.sprite.*` remains separate for internal character sprite tree editing
 - `layouts` should also use `resource.*` for collection lifecycle
 - `layout.element.*` remains separate for internal layout document editing
 
@@ -528,7 +526,7 @@ Current resource page families:
 Current custom resource center components:
 
 - `src/components/charactersResourcesView/`
-- `src/components/typographyResourcesView/`
+- `src/components/textStyleResourcesView/`
 
 Shared page-family helpers may own:
 

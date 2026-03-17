@@ -37,7 +37,7 @@ await runScenario("late-join-catchup", async () => {
         projectId,
         scope: "story",
         type: "scene.create",
-        payload: { sceneId: "scene-1", name: "Scene 1" },
+        payload: { sceneId: "scene-1", data: { name: "Scene 1" } },
         actor: a.actor,
         clientTs: 1000,
       }),
@@ -50,7 +50,7 @@ await runScenario("late-join-catchup", async () => {
         payload: {
           sceneId: "scene-1",
           sectionId: "section-1",
-          name: "Section 1",
+          data: { name: "Section 1" },
         },
         actor: a.actor,
         clientTs: 1100,
@@ -60,11 +60,15 @@ await runScenario("late-join-catchup", async () => {
       createCommandEnvelope({
         projectId,
         scope: "story",
-        type: "line.insert_after",
+        type: "line.create",
         payload: {
-          lineId: "line-1",
           sectionId: "section-1",
-          line: { actions: { narration: "hello" } },
+          lines: [
+            {
+              lineId: "line-1",
+              data: { actions: { narration: "hello" } },
+            },
+          ],
         },
         actor: a.actor,
         clientTs: 1200,
@@ -117,7 +121,7 @@ await runScenario("concurrent-two-client-writes", async () => {
         projectId,
         scope: "story",
         type: "scene.create",
-        payload: { sceneId: "scene-1", name: "Scene 1" },
+        payload: { sceneId: "scene-1", data: { name: "Scene 1" } },
         actor: a.actor,
         clientTs: 2000,
       }),
@@ -135,7 +139,7 @@ await runScenario("concurrent-two-client-writes", async () => {
           payload: {
             sceneId: "scene-1",
             sectionId: "section-a",
-            name: "A",
+            data: { name: "A" },
           },
           actor: a.actor,
           clientTs: 2100,
@@ -149,7 +153,7 @@ await runScenario("concurrent-two-client-writes", async () => {
           payload: {
             sceneId: "scene-1",
             sectionId: "section-b",
-            name: "B",
+            data: { name: "B" },
           },
           actor: b.actor,
           clientTs: 2200,
@@ -209,24 +213,26 @@ await runScenario("partition-isolation", async () => {
       createCommandEnvelope({
         projectId,
         scope: "resources",
-        type: "resource.create",
+        type: "image.create",
         payload: {
-          resourceType: "images",
-          resourceId: "img-1",
-          data: { name: "bg", fileId: "file-1" },
+          imageId: "img-1",
+          data: {
+            type: "image",
+            name: "bg",
+            fileId: "file-1",
+          },
         },
         actor: full.actor,
         clientTs: 3000,
       }),
     );
 
-    await waitFor(
-      () => Boolean(full.client.getState().resources.images.items["img-1"]),
-      { label: "full client sees image resource" },
-    );
+    await waitFor(() => Boolean(full.client.getState().images.items["img-1"]), {
+      label: "full client sees image resource",
+    });
     await sleep(150);
     assert.equal(
-      storyOnly.client.getState().resources.images.items["img-1"],
+      storyOnly.client.getState().images.items["img-1"],
       undefined,
     );
 
@@ -235,7 +241,7 @@ await runScenario("partition-isolation", async () => {
         projectId,
         scope: "story",
         type: "scene.create",
-        payload: { sceneId: "scene-1", name: "Scene 1" },
+        payload: { sceneId: "scene-1", data: { name: "Scene 1" } },
         actor: full.actor,
         clientTs: 3100,
       }),

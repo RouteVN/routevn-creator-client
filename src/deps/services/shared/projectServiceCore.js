@@ -61,6 +61,23 @@ export const createProjectServiceCore = ({
     getFileContent: assetService.getFileContent,
   });
 
+  const getCurrentProjectId = () =>
+    repositoryService.getEnsuredProjectId() || router.getPayload()?.p;
+
+  const getRepositoryState = () => {
+    const repository = repositoryService.getCachedRepository();
+    return repository.getState();
+  };
+
+  const getDomainState = () => {
+    const repositoryState = getRepositoryState();
+    const projectId = getCurrentProjectId() || "unknown-project";
+    return projectRepositoryStateToDomainState({
+      repositoryState,
+      projectId,
+    });
+  };
+
   return {
     getRepository: repositoryService.getRepository,
     getRepositoryById: repositoryService.getRepositoryById,
@@ -68,8 +85,9 @@ export const createProjectServiceCore = ({
     getEnsuredProjectId: repositoryService.getEnsuredProjectId,
     ensureRepository: repositoryService.ensureRepository,
     subscribeProjectState(listener, options) {
+      const targetProjectId = options?.projectId || getCurrentProjectId();
       return repositoryService.subscribeProjectState((repositoryState) => {
-        const projectId = repositoryState.project.id;
+        const projectId = targetProjectId || getCurrentProjectId();
         const domainState = projectRepositoryStateToDomainState({
           repositoryState,
           projectId,
@@ -88,9 +106,14 @@ export const createProjectServiceCore = ({
         }
       : {}),
     ...collabService.commandApi,
+    getState: getDomainState,
+    getDomainState,
+    getRepositoryState,
     addVersionToProject: collabService.addVersionToProject,
     deleteVersionFromProject: collabService.deleteVersionFromProject,
-    deleteResourceItemIfUnused: collabService.deleteResourceItemIfUnused,
+    deleteImageIfUnused: collabService.deleteImageIfUnused,
+    deleteSoundIfUnused: collabService.deleteSoundIfUnused,
+    deleteVideoIfUnused: collabService.deleteVideoIfUnused,
     async initializeProject(payload) {
       return storageAdapter.initializeProject(payload);
     },

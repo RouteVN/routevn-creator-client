@@ -113,13 +113,13 @@ Assets:
 - characters
 - character sprites
 - transforms
-- tweens
+- animations
 
 UI:
 
 - colors
 - fonts
-- typography
+- text styles
 - layouts
 - layout editor: a full design tool for building UI layouts.
 

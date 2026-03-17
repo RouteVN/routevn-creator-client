@@ -2,27 +2,27 @@ export const assetItems = [
   {
     id: "images",
     name: "Images",
-    path: "/project/resources/images",
+    path: "/project/images",
   },
   {
     id: "sounds",
     name: "Sounds",
-    path: "/project/resources/sounds",
+    path: "/project/sounds",
   },
   {
     id: "videos",
     name: "Videos",
-    path: "/project/resources/videos",
+    path: "/project/videos",
   },
   {
     id: "characters",
     name: "Characters",
-    path: "/project/resources/characters",
+    path: "/project/characters",
   },
   {
     id: "transforms",
     name: "Transforms",
-    path: "/project/resources/transforms",
+    path: "/project/transforms",
   },
 ];
 
@@ -30,22 +30,22 @@ export const userInterfaceItems = [
   {
     id: "colors",
     name: "Colors",
-    path: "/project/resources/colors",
+    path: "/project/colors",
   },
   {
     id: "fonts",
     name: "Fonts",
-    path: "/project/resources/fonts",
+    path: "/project/fonts",
   },
   {
-    id: "typography",
-    name: "Typography",
-    path: "/project/resources/typography",
+    id: "textStyles",
+    name: "Text Styles",
+    path: "/project/text-styles",
   },
   {
     id: "layouts",
     name: "Layouts",
-    path: "/project/resources/layouts",
+    path: "/project/layouts",
   },
 ];
 
@@ -53,7 +53,7 @@ export const systemConfigItems = [
   {
     id: "variables",
     name: "Variables",
-    path: "/project/resources/variables",
+    path: "/project/variables",
   },
 ];
 
@@ -61,12 +61,12 @@ const settingsItems = [
   {
     id: "about",
     name: "About",
-    path: "/project/settings/about",
+    path: "/project/about",
   },
   // {
   //   id: "user",
   //   name: "User",
-  //   path: "/project/settings/user",
+  //   path: "/project/user",
   // },
 ];
 

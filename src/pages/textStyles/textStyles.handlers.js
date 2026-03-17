@@ -1,9 +1,9 @@
 import { nanoid } from "nanoid";
 import { toFlatItems } from "../../internal/project/tree.js";
 import {
-  getTypographyCount,
-  getTypographyRemovalCount,
-} from "../../constants/typography.js";
+  getTextStyleCount,
+  getTextStyleRemovalCount,
+} from "../../constants/textStyles.js";
 import { getFileType } from "../../internal/fileTypes.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
@@ -17,7 +17,7 @@ const syncRepositoryToStore = ({
   projectService,
 } = {}) => {
   const state = repositoryState ?? projectService?.getState?.();
-  store.setItems({ typographyData: state?.typography });
+  store.setItems({ textStylesData: state?.textStyles });
   store.setColorsData({ colorsData: state?.colors });
   store.setFontsData({ fontsData: state?.fonts });
 };
@@ -38,7 +38,7 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
-const refreshTypographyData = async (deps) => {
+const refreshTextStylesData = async (deps) => {
   const { store, render, projectService } = deps;
   syncRepositoryToStore({ store, projectService });
   render();
@@ -46,13 +46,13 @@ const refreshTypographyData = async (deps) => {
 
 const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
   createResourceFileExplorerHandlers({
-    resourceType: "typography",
-    refresh: refreshTypographyData,
+    resourceType: "textStyles",
+    refresh: refreshTextStylesData,
   });
 
 export { handleFileExplorerAction, handleFileExplorerTargetChanged };
 
-export const handleDataChanged = refreshTypographyData;
+export const handleDataChanged = refreshTextStylesData;
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;
@@ -68,7 +68,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   render();
 };
 
-export const handleTypographyItemClick = (deps, payload) => {
+export const handleTextStyleItemClick = (deps, payload) => {
   const { store, render, refs } = deps;
   const { itemId } = payload._event.detail;
   store.setSelectedItemId({ itemId: itemId });
@@ -79,8 +79,26 @@ export const handleTypographyItemClick = (deps, payload) => {
   render();
 };
 
-const handleTypographyCreated = async (deps, payload) => {
-  const { projectService } = deps;
+const buildTextStyleData = ({
+  name,
+  fontSize,
+  lineHeight,
+  fontColor,
+  fontStyle,
+  fontWeight,
+  previewText,
+} = {}) => ({
+  name,
+  fontSize: Number(fontSize ?? 16),
+  lineHeight: Number(lineHeight ?? 1.5),
+  colorId: fontColor,
+  fontId: fontStyle,
+  fontWeight: String(fontWeight ?? "400"),
+  previewText: previewText ?? "",
+});
+
+const handleTextStyleCreated = async (deps, payload) => {
+  const { appService, projectService } = deps;
   const {
     groupId,
     name,
@@ -92,28 +110,38 @@ const handleTypographyCreated = async (deps, payload) => {
     previewText,
   } = payload._event.detail;
 
-  await projectService.createResourceItem({
-    resourceType: "typography",
-    resourceId: nanoid(),
+  const createResult = await projectService.createTextStyle({
+    textStyleId: nanoid(),
     data: {
-      type: "typography",
-      name: name,
-      fontSize: fontSize,
-      lineHeight: lineHeight,
-      colorId: fontColor,
-      fontId: fontStyle,
-      fontWeight: fontWeight,
-      previewText: previewText,
+      type: "textStyle",
+      ...buildTextStyleData({
+        name,
+        fontSize,
+        lineHeight,
+        fontColor,
+        fontStyle,
+        fontWeight,
+        previewText,
+      }),
     },
     parentId: groupId,
     position: "last",
   });
 
-  await refreshTypographyData(deps);
+  if (createResult?.valid === false) {
+    console.error("Failed to create text style:", createResult.error);
+    appService.showToast("Failed to create text style.", {
+      title: "Error",
+    });
+    return createResult;
+  }
+
+  await refreshTextStylesData(deps);
+  return createResult;
 };
 
-const handleTypographyUpdated = async (deps, payload) => {
-  const { projectService } = deps;
+const handleTextStyleUpdated = async (deps, payload) => {
+  const { appService, projectService } = deps;
   const {
     itemId,
     name,
@@ -125,30 +153,38 @@ const handleTypographyUpdated = async (deps, payload) => {
     previewText,
   } = payload._event.detail;
 
-  await projectService.updateResourceItem({
-    resourceType: "typography",
-    resourceId: itemId,
-    patch: {
-      name: name,
-      fontSize: fontSize,
-      lineHeight: lineHeight,
-      colorId: fontColor,
-      fontId: fontStyle,
-      fontWeight: fontWeight,
-      previewText: previewText,
-    },
+  const updateResult = await projectService.updateTextStyle({
+    textStyleId: itemId,
+    data: buildTextStyleData({
+      name,
+      fontSize,
+      lineHeight,
+      fontColor,
+      fontStyle,
+      fontWeight,
+      previewText,
+    }),
   });
 
-  await refreshTypographyData(deps);
+  if (updateResult?.valid === false) {
+    console.error("Failed to update text style:", updateResult.error);
+    appService.showToast("Failed to update text style.", {
+      title: "Error",
+    });
+    return updateResult;
+  }
+
+  await refreshTextStylesData(deps);
+  return updateResult;
 };
 
 export const handleFormExtraEvent = (deps) => {
   const { store, render } = deps;
 
-  // Handle typography preview click
+  // Handle text style preview click
   const selectedItemId = store.selectSelectedItemId();
-  const typographyData = store.selectTypographyData();
-  const flatItems = toFlatItems(typographyData);
+  const textStylesData = store.selectTextStylesData();
+  const flatItems = toFlatItems(textStylesData);
   const selectedItem = flatItems.find((item) => item.id === selectedItemId);
 
   if (selectedItem) {
@@ -161,18 +197,18 @@ export const handleFormExtraEvent = (deps) => {
 };
 
 // Dialog handlers
-export const handleAddTypographyClick = (deps, payload) => {
+export const handleAddTextStyleClick = (deps, payload) => {
   const { store, render } = deps;
   const { groupId } = payload._event.detail;
 
   store.setTargetGroupId({ groupId: groupId });
   store.clearEditMode();
-  store.resetFormValues(); // Reset form values for new typography
+  store.resetFormValues(); // Reset form values for a new text style
   store.toggleDialog();
   render();
 };
 
-export const handleTypographyItemDoubleClick = (deps, payload) => {
+export const handleTextStyleItemDoubleClick = (deps, payload) => {
   const { store, render } = deps;
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder) return;
@@ -209,7 +245,7 @@ export const handleCloseDialog = (deps) => {
   render();
 };
 
-export const handleFormActionClick = (deps, payload) => {
+export const handleFormActionClick = async (deps, payload) => {
   const { store, render, appService } = deps;
 
   // Check which button was clicked
@@ -267,9 +303,11 @@ export const handleFormActionClick = (deps, payload) => {
       return;
     }
 
+    let submitResult;
+
     if (editMode && editingItemId) {
-      // Handle typography update
-      handleTypographyUpdated(deps, {
+      // Handle text style update
+      submitResult = await handleTextStyleUpdated(deps, {
         _event: {
           detail: {
             itemId: editingItemId,
@@ -284,8 +322,8 @@ export const handleFormActionClick = (deps, payload) => {
         },
       });
     } else {
-      // Handle typography creation
-      handleTypographyCreated(deps, {
+      // Handle text style creation
+      submitResult = await handleTextStyleCreated(deps, {
         _event: {
           detail: {
             groupId: targetGroupId,
@@ -299,6 +337,10 @@ export const handleFormActionClick = (deps, payload) => {
           },
         },
       });
+    }
+
+    if (submitResult?.valid === false) {
+      return;
     }
 
     // Reset form values, clear edit mode, and close dialog
@@ -324,9 +366,8 @@ export const handleAddColorFormAction = async (deps, payload) => {
     const newColorId = nanoid();
 
     // Create the color in the repository
-    await projectService.createResourceItem({
-      resourceType: "colors",
-      resourceId: newColorId,
+    await projectService.createColor({
+      colorId: newColorId,
       data: {
         type: "color",
         name: formData.name,
@@ -404,15 +445,13 @@ export const handleAddFontFormAction = async (deps, payload) => {
     const newFontId = nanoid();
 
     // Create the font in the repository using the already uploaded file
-    await projectService.createResourceItem({
-      resourceType: "fonts",
-      resourceId: newFontId,
+    await projectService.createFont({
+      fontId: newFontId,
       data: {
         type: "font",
         name: fontName,
         fontFamily: fontName,
         fileId: fontData.uploadResult.fileId,
-        fileName: fontData.file.name,
         fileType: getFileType(fontData.uploadResult),
         fileSize: fontData.file.size,
       },
@@ -442,10 +481,10 @@ export const handleItemDelete = async (deps, payload) => {
 
   const state = projectService.getState();
 
-  const typographyCount = getTypographyCount(state.typography);
-  const removalCount = getTypographyRemovalCount(state.typography, itemId);
-  if (typographyCount - removalCount < 1) {
-    appService.showToast("At least one typography must remain.");
+  const textStyleCount = getTextStyleCount(state.textStyles);
+  const removalCount = getTextStyleRemovalCount(state.textStyles, itemId);
+  if (textStyleCount - removalCount < 1) {
+    appService.showToast("At least one text style must remain.");
     render();
     return;
   }
@@ -463,10 +502,9 @@ export const handleItemDelete = async (deps, payload) => {
   }
 
   // Perform the delete operation
-  await projectService.deleteResourceItem({
-    resourceType: "typography",
-    resourceId: itemId,
+  await projectService.deleteTextStyles({
+    textStyleIds: [itemId],
   });
 
-  await refreshTypographyData(deps);
+  await refreshTextStylesData(deps);
 };

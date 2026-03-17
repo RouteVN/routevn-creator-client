@@ -1,6 +1,8 @@
 import { loadTemplate, getTemplateFiles } from "./templateLoader.js";
-import { projectRepositoryStateToDomainState } from "../../../internal/project/projection.js";
-import { createProjectCreatedRepositoryEvent } from "../../services/shared/projectRepository.js";
+import {
+  assertSupportedProjectState,
+  createProjectCreateRepositoryEvent,
+} from "../../services/shared/projectRepository.js";
 
 // Insieme-compatible Web IndexedDB Store Adapter
 
@@ -54,23 +56,12 @@ export const initializeProject = async ({ projectId, template }) => {
   await copyTemplateFiles(template, adapter);
 
   // Add project info to template data
-  const initData = {
-    ...templateData,
-    model_version: 2,
-    project: {
-      id: projectId,
-    },
-  };
-
-  const domainState = projectRepositoryStateToDomainState({
-    repositoryState: initData,
-    projectId,
-  });
+  assertSupportedProjectState(templateData);
 
   await adapter.appendEvent(
-    createProjectCreatedRepositoryEvent({
+    createProjectCreateRepositoryEvent({
       projectId,
-      state: domainState,
+      state: templateData,
     }),
   );
 

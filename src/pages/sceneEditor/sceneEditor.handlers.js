@@ -68,13 +68,13 @@ export const handleBeforeMount = (deps) => {
       "images",
       "colors",
       "fonts",
-      "typography",
+      "textStyles",
       "characters",
       "variables",
       "sounds",
       "videos",
       "transforms",
-      "tweens",
+      "animations",
     ]),
     refresh: handleDataChanged,
   }).subscribe();
@@ -156,7 +156,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
     await projectService.updateLineActions({
       lineId,
-      patch: safeDetail,
+      data: safeDetail,
       replace: false,
     });
 
@@ -192,7 +192,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
     await projectService.updateLineActions({
       lineId,
-      patch: safeDetail,
+      data: safeDetail,
       replace: false,
     });
 
@@ -228,7 +228,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
     await projectService.updateLineActions({
       lineId,
-      patch: safeDetail,
+      data: safeDetail,
       replace: false,
     });
 
@@ -286,7 +286,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
   if (Object.keys(otherActions).length > 0) {
     await projectService.updateLineActions({
       lineId,
-      patch: otherActions,
+      data: otherActions,
       replace: false,
     });
   }
@@ -386,7 +386,7 @@ export const handleDialogueCharacterShortcut = async (deps, payload) => {
 
   let characterId;
   if (!isClearShortcut) {
-    const repositoryState = projectService.getState();
+    const repositoryState = projectService.getRepositoryState();
     characterId = findCharacterIdByShortcut(repositoryState, shortcut);
     if (!characterId) {
       return;
@@ -685,7 +685,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   if (action === "delete-section") {
     await projectService.deleteSectionItem({
       sceneId,
-      sectionId,
+      sectionIds: [sectionId],
     });
 
     // Update store with new repository state
@@ -713,7 +713,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     if (actionsType && selectedLineId && selectedSectionId) {
       // Special handling for dialogue - keep content, remove only layoutId and characterId
       if (actionsType === "dialogue") {
-        const stateBefore = projectService.getState();
+        const stateBefore = projectService.getRepositoryState();
         const currentActions =
           stateBefore.scenes?.items?.[sceneId]?.sections?.items?.[
             selectedSectionId
@@ -731,7 +731,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
           });
         }
       } else {
-        const stateBefore = projectService.getState();
+        const stateBefore = projectService.getRepositoryState();
         const currentActions =
           stateBefore.scenes?.items?.[sceneId]?.sections?.items?.[
             selectedSectionId
@@ -741,7 +741,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 
         await projectService.updateLineActions({
           lineId: selectedLineId,
-          patch: nextActions,
+          data: nextActions,
           replace: true,
         });
       }
@@ -908,7 +908,7 @@ export const handleDeleteLineShortcut = async (deps, payload) => {
     lines[currentIndex + 1]?.id || lines[currentIndex - 1]?.id;
 
   await flushDialogueQueue(deps);
-  await projectService.deleteLineItem({ lineId });
+  await projectService.deleteLineItem({ lineIds: [lineId] });
 
   syncStoreProjectState(store, projectService);
   store.setSelectedLineId({ selectedLineId: nextSelectedLineId });
@@ -938,7 +938,7 @@ export const handleLineDeleteActionItem = async (deps, payload) => {
   }
   await projectService.updateLineActions({
     lineId: selectedLine.id,
-    patch: newActions,
+    data: newActions,
     replace: true,
   });
   // Update store with new repository state
@@ -990,7 +990,7 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
   }
   await projectService.updateLineActions({
     lineId: selectedLine.id,
-    patch: newActions,
+    data: newActions,
     replace: true,
   });
   // Update store with new repository state

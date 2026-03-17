@@ -4,6 +4,7 @@ import {
   applyCommandToRepository,
   assertSupportedProjectState,
   getSiblingOrderNodes,
+  normalizeParentId,
   resolveIndexFromPosition,
   uniquePartitions,
 } from "../projectRepository.js";
@@ -49,7 +50,7 @@ export const createCommandApiShared = ({
     const state = repository.getState();
     assertSupportedProjectState(state);
 
-    const projectId = state.project?.id || currentProjectId;
+    const projectId = currentProjectId;
     const session = await ensureCommandSessionForProject(currentProjectId);
     const actor =
       typeof session.getActor === "function"
@@ -87,7 +88,10 @@ export const createCommandApiShared = ({
       clientTs: getCommandTimestamp(),
     });
 
-    await context.session.submitCommand(command);
+    const submitResult = await context.session.submitCommand(command);
+    if (submitResult?.valid === false) {
+      return submitResult;
+    }
 
     const applyResult = await applyCommandToRepository({
       repository: context.repository,
@@ -96,10 +100,35 @@ export const createCommandApiShared = ({
     });
 
     return {
+      valid: true,
       commandId: command.id,
       eventCount: applyResult.events.length,
       applyMode: applyResult.mode,
     };
+  };
+
+  const buildPlacementPayload = ({
+    parentId = null,
+    index,
+    position = "last",
+    positionTargetId,
+  } = {}) => {
+    const payload = {
+      parentId: normalizeParentId(parentId),
+    };
+
+    if (index !== undefined) {
+      payload.index = index;
+      return payload;
+    }
+
+    payload.position = position;
+
+    if (positionTargetId !== undefined) {
+      payload.positionTargetId = positionTargetId;
+    }
+
+    return payload;
   };
 
   const resolveResourceIndex = ({
@@ -107,6 +136,7 @@ export const createCommandApiShared = ({
     resourceType,
     parentId,
     position,
+    positionTargetId,
     index,
     movingId = null,
   }) => {
@@ -116,6 +146,7 @@ export const createCommandApiShared = ({
     return resolveIndexFromPosition({
       siblings,
       position,
+      positionTargetId,
       movingId,
     });
   };
@@ -124,6 +155,7 @@ export const createCommandApiShared = ({
     state,
     parentId,
     position,
+    positionTargetId,
     index,
     movingId,
   }) => {
@@ -132,22 +164,7 @@ export const createCommandApiShared = ({
     return resolveIndexFromPosition({
       siblings,
       position,
-      movingId,
-    });
-  };
-
-  const resolveLayoutIndex = ({
-    state,
-    parentId,
-    position,
-    index,
-    movingId,
-  }) => {
-    if (Number.isInteger(index)) return index;
-    const siblings = getSiblingOrderNodes(state?.layouts, parentId);
-    return resolveIndexFromPosition({
-      siblings,
-      position,
+      positionTargetId,
       movingId,
     });
   };
@@ -156,6 +173,7 @@ export const createCommandApiShared = ({
     scene,
     parentId,
     position,
+    positionTargetId,
     index,
     movingId,
   }) => {
@@ -164,6 +182,7 @@ export const createCommandApiShared = ({
     return resolveIndexFromPosition({
       siblings,
       position,
+      positionTargetId,
       movingId,
     });
   };
@@ -172,6 +191,7 @@ export const createCommandApiShared = ({
     section,
     parentId,
     position,
+    positionTargetId,
     index,
     movingId,
   }) => {
@@ -180,6 +200,7 @@ export const createCommandApiShared = ({
     return resolveIndexFromPosition({
       siblings,
       position,
+      positionTargetId,
       movingId,
     });
   };
@@ -188,6 +209,7 @@ export const createCommandApiShared = ({
     layout,
     parentId,
     position,
+    positionTargetId,
     index,
     movingId,
   }) => {
@@ -196,30 +218,46 @@ export const createCommandApiShared = ({
     return resolveIndexFromPosition({
       siblings,
       position,
+      positionTargetId,
       movingId,
     });
   };
 
-  const getStateImpl = () => {
+  const resolveCharacterSpriteIndex = ({
+    character,
+    parentId,
+    position,
+    positionTargetId,
+    index,
+    movingId,
+  }) => {
+    if (Number.isInteger(index)) return index;
+    const siblings = getSiblingOrderNodes(character?.sprites, parentId);
+    return resolveIndexFromPosition({
+      siblings,
+      position,
+      positionTargetId,
+      movingId,
+    });
+  };
+
+  const getState = () => {
     const repository = getCachedRepository();
     const state = repository.getState();
     assertSupportedProjectState(state);
     return state;
   };
 
-  const getDomainStateImpl = () => {
-    const repositoryState = getStateImpl();
-    const projectId =
-      repositoryState?.project?.id ||
-      getCurrentProjectId() ||
-      "unknown-project";
+  const getDomainState = () => {
+    const repositoryState = getState();
+    const projectId = getCurrentProjectId() || "unknown-project";
     return projectRepositoryStateToDomainState({
       repositoryState,
       projectId,
     });
   };
 
-  const getEventsImpl = async () => {
+  const getEvents = async () => {
     const repository = await getCurrentRepository();
     return repository.getEvents();
   };
@@ -229,17 +267,18 @@ export const createCommandApiShared = ({
     getCurrentProjectId,
     ensureCommandContext,
     submitCommandWithContext,
+    buildPlacementPayload,
     resolveResourceIndex,
     resolveSceneIndex,
-    resolveLayoutIndex,
     resolveSectionIndex,
     resolveLineIndex,
     resolveLayoutElementIndex,
+    resolveCharacterSpriteIndex,
     storyBasePartitionFor,
     storyScenePartitionFor,
     resourceTypePartitionFor,
-    getStateImpl,
-    getDomainStateImpl,
-    getEventsImpl,
+    getState,
+    getDomainState,
+    getEvents,
   };
 };

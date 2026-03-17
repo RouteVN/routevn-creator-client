@@ -1,10 +1,4 @@
 import { nanoid } from "nanoid";
-import {
-  ROOT_TREE_PARENT_ID,
-  deleteTreeItem,
-  insertTreeItem,
-  updateTreeItem,
-} from "../../internal/project/tree.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createCharacterSpritesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
@@ -12,29 +6,6 @@ import { tap } from "rxjs";
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const ACCEPTED_FILE_TYPES = ".jpg,.jpeg,.png,.webp";
-
-const applyCharacterSpritesPatch = async ({
-  projectService,
-  characterId,
-  patchFactory,
-}) => {
-  const { characters } = projectService.getState();
-  const character = characters.items?.[characterId];
-  if (!character) {
-    return;
-  }
-
-  const spritesState = structuredClone(character.sprites ?? EMPTY_TREE);
-  const nextSprites = patchFactory(spritesState);
-
-  await projectService.updateResourceItem({
-    resourceType: "characters",
-    resourceId: characterId,
-    patch: {
-      sprites: nextSprites,
-    },
-  });
-};
 
 const getCharacterIdFromPayload = ({ appService }) => {
   return appService.getPayload().characterId;
@@ -251,7 +222,7 @@ const selectSprite = async ({ deps, itemId, syncExplorer = false } = {}) => {
 const createSpritesFromFiles = async ({
   deps,
   files,
-  parentId = ROOT_TREE_PARENT_ID,
+  parentId = null,
 } = {}) => {
   const { appService, projectService, store } = deps;
   let successfulUploads;
@@ -274,33 +245,23 @@ const createSpritesFromFiles = async ({
     return;
   }
 
-  await applyCharacterSpritesPatch({
-    projectService,
-    characterId,
-    patchFactory: (spritesState) => {
-      let nextSprites = spritesState;
-
-      for (const result of successfulUploads) {
-        nextSprites = insertTreeItem({
-          treeCollection: nextSprites,
-          value: {
-            id: nanoid(),
-            type: "image",
-            fileId: result.fileId,
-            name: result.displayName,
-            fileType: result.file.type,
-            fileSize: result.file.size,
-            width: result.dimensions.width,
-            height: result.dimensions.height,
-          },
-          parentId,
-          position: "last",
-        });
-      }
-
-      return nextSprites;
-    },
-  });
+  for (const result of successfulUploads) {
+    await projectService.createCharacterSpriteItem({
+      characterId,
+      spriteId: nanoid(),
+      parentId,
+      position: "last",
+      data: {
+        type: "image",
+        fileId: result.fileId,
+        name: result.displayName,
+        fileType: result.file.type,
+        fileSize: result.file.size,
+        width: result.dimensions.width,
+        height: result.dimensions.height,
+      },
+    });
+  }
 
   await refreshCharacterSpritesData(deps);
 };
@@ -413,7 +374,7 @@ export const handleUploadClick = async (deps, payload) => {
   await createSpritesFromFiles({
     deps,
     files,
-    parentId: groupId ?? ROOT_TREE_PARENT_ID,
+    parentId: groupId,
   });
 };
 
@@ -423,7 +384,7 @@ export const handleFilesDropped = async (deps, payload) => {
   await createSpritesFromFiles({
     deps,
     files,
-    parentId: targetGroupId ?? ROOT_TREE_PARENT_ID,
+    parentId: targetGroupId,
   });
 };
 
@@ -436,18 +397,12 @@ export const handleFormChange = async (deps, payload) => {
     return;
   }
 
-  await applyCharacterSpritesPatch({
-    projectService,
+  await projectService.updateCharacterSpriteItem({
     characterId,
-    patchFactory: (spritesState) =>
-      updateTreeItem({
-        treeCollection: spritesState,
-        id: selectedItemId,
-        value: {
-          [payload._event.detail.name]: payload._event.detail.value,
-        },
-        replace: false,
-      }),
+    spriteId: selectedItemId,
+    data: {
+      [payload._event.detail.name]: payload._event.detail.value,
+    },
   });
 
   const character = getCharacter({
@@ -498,23 +453,17 @@ export const handleFormExtraEvent = async (deps) => {
     return;
   }
 
-  await applyCharacterSpritesPatch({
-    projectService,
+  await projectService.updateCharacterSpriteItem({
     characterId,
-    patchFactory: (spritesState) =>
-      updateTreeItem({
-        treeCollection: spritesState,
-        id: selectedItem.id,
-        value: {
-          fileId: uploadResult.fileId,
-          name: uploadResult.displayName,
-          fileType: uploadResult.file.type,
-          fileSize: uploadResult.file.size,
-          width: uploadResult.dimensions.width,
-          height: uploadResult.dimensions.height,
-        },
-        replace: false,
-      }),
+    spriteId: selectedItem.id,
+    data: {
+      fileId: uploadResult.fileId,
+      name: uploadResult.displayName,
+      fileType: uploadResult.file.type,
+      fileSize: uploadResult.file.size,
+      width: uploadResult.dimensions.width,
+      height: uploadResult.dimensions.height,
+    },
   });
 
   await refreshCharacterSpritesData(deps);
@@ -546,14 +495,9 @@ export const handleItemDelete = async (deps, payload) => {
     return;
   }
 
-  await applyCharacterSpritesPatch({
-    projectService,
+  await projectService.deleteCharacterSpriteItem({
     characterId,
-    patchFactory: (spritesState) =>
-      deleteTreeItem({
-        treeCollection: spritesState,
-        id: itemId,
-      }),
+    spriteIds: [itemId],
   });
 
   await refreshCharacterSpritesData(deps);
@@ -561,5 +505,5 @@ export const handleItemDelete = async (deps, payload) => {
 
 export const handleBackClick = (deps) => {
   const { appService } = deps;
-  appService.navigate("/project/resources/characters", appService.getPayload());
+  appService.navigate("/project/characters", appService.getPayload());
 };

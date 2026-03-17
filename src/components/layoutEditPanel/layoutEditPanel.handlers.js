@@ -17,11 +17,10 @@ export const handleBeforeMount = (deps) => {
 export const handleAfterMount = async (deps) => {
   const { projectService, store, render } = deps;
   await projectService.ensureRepository();
-  const { typography } = projectService.getState();
+  const { textStyles } = projectService.getState();
 
-  // Store raw typography data
-  store.setTypographyData({
-    typographyData: typography || { items: {}, tree: [] },
+  store.setTextStylesData({
+    textStylesData: textStyles || { items: {}, tree: [] },
   });
   render();
 };

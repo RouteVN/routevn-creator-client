@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
-import { repositoryEventToCommand } from "../src/deps/services/shared/projectRepository.js";
+import {
+  repositoryEventToCommand,
+} from "../src/deps/services/shared/projectRepository.js";
 import {
   enqueueSerialTask,
   ensureCachedCommittedCursor,
@@ -18,11 +20,10 @@ const createRepositoryEvent = ({
   },
   clientTs = 1000,
   meta,
-  type = "resource.update",
+  type = "image.update",
   payload = {
-    resourceType: "images",
-    resourceId: "image-1",
-    patch: {
+    imageId: "image-1",
+    data: {
       name: "Updated",
     },
   },
@@ -82,7 +83,7 @@ const createRepositoryEvent = ({
       partitions: [`project:${projectId}:story`],
       payload: {
         sceneId: "scene-1",
-        name: "Scene 1",
+        data: { name: "Scene 1" },
       },
     }),
     createRepositoryEvent({
@@ -92,17 +93,21 @@ const createRepositoryEvent = ({
       payload: {
         sceneId: "scene-1",
         sectionId: "section-1",
-        name: "Section 1",
+        data: { name: "Section 1" },
       },
     }),
     createRepositoryEvent({
       id: "command-3",
-      type: "line.insert_after",
+      type: "line.create",
       partitions: [`project:${projectId}:story`],
       payload: {
-        lineId: "line-1",
         sectionId: "section-1",
-        line: { actions: { narration: "hello" } },
+        lines: [
+          {
+            lineId: "line-1",
+            data: { actions: { narration: "hello" } },
+          },
+        ],
       },
     }),
   ];

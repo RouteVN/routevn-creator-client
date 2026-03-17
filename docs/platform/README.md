@@ -9,20 +9,22 @@ Date baseline: February 24, 2026.
 - The current platform is the only supported project and protocol format.
 - Older projects are not opened by the current runtime.
 - All write operations must go through authoritative collaboration server validation.
+- The domain model and command schemas are owned by the model repo:
+  `https://github.com/RouteVN/routevn-creator-model`
 
 ## Version Contract
 
 - `model_version = 2`
 - `protocol_version = "1.0"`
 - `command_version = 1`
+- entity ids are base58 strings
 
 ## Spec Index
 
-1. `01-domain-model.md`
-2. `02-command-and-event-model.md`
-4. `04-sync-protocol.md`
-5. `05-storage.md`
-6. `09-partitioning-and-write-contract.md`
+1. model repo: `https://github.com/RouteVN/routevn-creator-model`
+2. `04-sync-protocol.md`
+3. `05-storage.md`
+4. `09-partitioning-and-write-contract.md`
 
 ## Implementation Mapping
 

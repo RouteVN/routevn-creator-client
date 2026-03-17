@@ -190,7 +190,7 @@ export const selectCharacters = ({ state }) => {
 export const selectLayouts = ({ state }) => {
   const layouts = state.repositoryState.layouts?.items || {};
   const images = state.repositoryState.images?.items || {};
-  const typography = state.repositoryState.typography || {
+  const textStylesData = state.repositoryState.textStyles || {
     items: {},
     tree: [],
   };
@@ -208,7 +208,7 @@ export const selectLayouts = ({ state }) => {
         elements: buildLayoutElements(
           toHierarchyStructure(layout.elements),
           images,
-          typography,
+          textStylesData,
           colors,
           fonts,
           { layoutId },

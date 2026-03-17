@@ -245,8 +245,9 @@ const navigateToSceneEditor = ({ appService, sceneId, sectionId }) => {
   const currentPayload = appService.getPayload();
   const nextPayload = {
     ...currentPayload,
-    sceneId,
+    s: sceneId,
   };
+  delete nextPayload.sceneId;
   if (sectionId) {
     nextPayload.sectionId = sectionId;
   }
@@ -314,7 +315,7 @@ const getSceneItemById = ({ store, sceneId } = {}) => {
 };
 
 const syncScenesState = ({ store, projectService } = {}) => {
-  const repositoryState = projectService.getState();
+  const repositoryState = projectService.getRepositoryState();
   const domainState = projectService.getDomainState();
   const sceneData = repositoryState?.scenes ?? { tree: [], items: {} };
   const layoutsData = repositoryState?.layouts ?? { tree: [], items: {} };
@@ -373,7 +374,7 @@ export const handleBeforeMount = (deps) => {
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, refs, appService } = deps;
   await projectService.ensureRepository();
-  const repositoryState = projectService.getState();
+  const repositoryState = projectService.getRepositoryState();
   const domainState = projectService.getDomainState();
   const { scenes, layouts } = repositoryState;
   const scenesData = scenes || { tree: [], items: {} };
@@ -509,7 +510,7 @@ export const handleWhiteboardItemPositionChanged = async (deps, payload) => {
 
   await projectService.updateSceneItem({
     sceneId: itemId,
-    patch: {
+    data: {
       position: { x: nextX, y: nextY },
     },
   });
@@ -620,7 +621,7 @@ export const handleSceneFormAction = async (deps, payload) => {
       y: 0,
     };
 
-    // Get form values from the event detail (same pattern as typography)
+    // Get form values from the event detail (same pattern as text styles)
     const formData = payload._event.detail.values;
 
     // Use a simple ID generator instead of nanoid
@@ -632,7 +633,7 @@ export const handleSceneFormAction = async (deps, payload) => {
     const stepId = nanoid();
 
     // Get layouts from repository to find first dialogue and base layouts
-    const { layouts } = projectService.getState();
+    const { layouts } = projectService.getRepositoryState();
     let dialogueLayoutId = null;
     let baseLayoutId = null;
 
@@ -676,10 +677,10 @@ export const handleSceneFormAction = async (deps, payload) => {
 
     await projectService.createSceneItem({
       sceneId: newSceneId,
-      name: formData.name || `Scene ${new Date().toLocaleTimeString()}`,
       parentId: formData.folderId || null,
       position: "last",
       data: {
+        name: formData.name || `Scene ${new Date().toLocaleTimeString()}`,
         position: {
           x: sceneWhiteboardPosition.x,
           y: sceneWhiteboardPosition.y,
@@ -689,13 +690,15 @@ export const handleSceneFormAction = async (deps, payload) => {
     await projectService.createSectionItem({
       sceneId: newSceneId,
       sectionId,
-      name: "Section New",
       position: "last",
+      data: {
+        name: "Section New",
+      },
     });
     await projectService.createLineItem({
       sectionId,
       lineId: stepId,
-      line: {
+      data: {
         actions,
       },
       position: "last",
@@ -713,7 +716,7 @@ export const handleSceneFormAction = async (deps, payload) => {
     dismissMapAddHint({ store, appService });
 
     // Update store with new scenes data
-    const { scenes: updatedScenes } = projectService.getState();
+    const { scenes: updatedScenes } = projectService.getRepositoryState();
     store.setItems({ scenesData: updatedScenes });
 
     // Reset form
@@ -727,10 +730,10 @@ export const handleWhiteboardItemDelete = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
   const { itemId } = payload._event.detail;
 
-  await projectService.deleteSceneItem({ sceneId: itemId });
+  await projectService.deleteSceneItem({ sceneIds: [itemId] });
 
   // Update store with new scenes data
-  const { scenes: updatedScenes } = projectService.getState();
+  const { scenes: updatedScenes } = projectService.getRepositoryState();
   store.setItems({ scenesData: updatedScenes });
 
   // Remove from whiteboard items
@@ -807,7 +810,8 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     await projectService.setInitialScene({ sceneId: itemId });
 
     // Get updated scenes data
-    const { scenes: updatedScenes, story } = projectService.getState();
+    const { scenes: updatedScenes, story } =
+      projectService.getRepositoryState();
     store.setItems({ scenesData: updatedScenes });
 
     // Update whiteboard items with new colors
@@ -824,10 +828,10 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 
   // Handle delete action
   if (item.value === "delete-item" && itemId) {
-    await projectService.deleteSceneItem({ sceneId: itemId });
+    await projectService.deleteSceneItem({ sceneIds: [itemId] });
 
     // Update store with new scenes data
-    const { scenes: updatedScenes } = projectService.getState();
+    const { scenes: updatedScenes } = projectService.getRepositoryState();
     store.setItems({ scenesData: updatedScenes });
 
     // Remove from whiteboard items
@@ -881,7 +885,7 @@ export const handleEditFormAction = async (deps, payload) => {
 
   await projectService.updateSceneItem({
     sceneId: editItemId,
-    patch: {
+    data: {
       name,
       description: values?.description ?? "",
     },

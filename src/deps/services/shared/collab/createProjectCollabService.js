@@ -1,14 +1,15 @@
 import { createCommandSyncSession } from "insieme/browser";
-import { processCommand } from "../../../../internal/project/state.js";
-import { assertDomainInvariants } from "../../../../internal/project/state.js";
-import { createEmptyProjectState } from "../../../../internal/project/state.js";
-import { validateCommand } from "../../../../internal/project/commands.js";
 import {
   createProjectionGap,
   evaluateRemoteCommandCompatibility,
   REMOTE_COMMAND_COMPATIBILITY,
 } from "./compatibility.js";
 import { commandToSyncEvent, committedEventToCommand } from "./mappers.js";
+import { projectRepositoryStateToDomainState } from "../../../../internal/project/projection.js";
+import {
+  applyCommandToRepositoryState,
+  initialProjectData,
+} from "../projectRepository.js";
 
 const isTransportDisconnectedError = (error) => {
   const code = error?.code;
@@ -22,9 +23,7 @@ const isTransportDisconnectedError = (error) => {
 
 export const createProjectCollabService = ({
   projectId,
-  projectName = "",
-  projectDescription = "",
-  initialState,
+  initialRepositoryState,
   token,
   actor,
   transport,
@@ -99,14 +98,22 @@ export const createProjectCollabService = ({
     });
   };
 
-  let projectedState =
-    initialState && typeof initialState === "object"
-      ? structuredClone(initialState)
-      : createEmptyProjectState({
-          projectId,
-          name: projectName,
-          description: projectDescription,
-        });
+  const createInitialRepositoryState = () =>
+    structuredClone(initialProjectData);
+
+  const coerceInitialRepositoryState = () => {
+    if (
+      initialRepositoryState &&
+      typeof initialRepositoryState === "object" &&
+      initialRepositoryState.scenes?.items
+    ) {
+      return structuredClone(initialRepositoryState);
+    }
+
+    return createInitialRepositoryState();
+  };
+
+  let projectedRepositoryState = coerceInitialRepositoryState();
 
   session = createCommandSyncSession({
     token,
@@ -146,9 +153,28 @@ export const createProjectCollabService = ({
         } else if (
           compatibility.status === REMOTE_COMMAND_COMPATIBILITY.COMPATIBLE
         ) {
-          const result = processCommand({ state: projectedState, command });
-          projectedState = result.state;
-          assertDomainInvariants(projectedState);
+          const result = applyCommandToRepositoryState({
+            repositoryState: projectedRepositoryState,
+            command,
+            projectId,
+          });
+
+          if (result.valid) {
+            projectedRepositoryState = result.repositoryState;
+          } else {
+            compatibility = {
+              status: REMOTE_COMMAND_COMPATIBILITY.INVALID,
+              reason: "creator_model_projection_failed",
+              message: result.error?.message || "projection failed",
+            };
+            projectionGap = createProjectionGap({
+              command,
+              committedEvent,
+              compatibility,
+              sourceType,
+            });
+            projectionStatus = "skipped_invalid";
+          }
         } else {
           projectionGap = createProjectionGap({
             command,
@@ -223,11 +249,22 @@ export const createProjectCollabService = ({
     },
 
     async submitCommand(command) {
-      validateCommand(command);
+      const optimistic = applyCommandToRepositoryState({
+        repositoryState: projectedRepositoryState,
+        command,
+        projectId,
+      });
 
-      const optimistic = processCommand({ state: projectedState, command });
-      projectedState = optimistic.state;
-      assertDomainInvariants(projectedState);
+      if (!optimistic.valid) {
+        lastError = {
+          code: optimistic.error?.code || "validation_failed",
+          message: optimistic.error?.message || "command validation failed",
+          payload: optimistic.error,
+        };
+        return optimistic;
+      }
+
+      projectedRepositoryState = optimistic.repositoryState;
 
       const terminalSubmission = new Promise((resolve, reject) => {
         queuedSubmissions.push({
@@ -251,7 +288,10 @@ export const createProjectCollabService = ({
       void terminalSubmission.catch(() => {});
       processNextSubmission();
 
-      return command.id;
+      return {
+        valid: true,
+        commandId: command.id,
+      };
     },
 
     async submitEvent(input) {
@@ -273,7 +313,10 @@ export const createProjectCollabService = ({
     },
 
     getState() {
-      return structuredClone(projectedState);
+      return projectRepositoryStateToDomainState({
+        repositoryState: projectedRepositoryState,
+        projectId,
+      });
     },
 
     getLastError() {

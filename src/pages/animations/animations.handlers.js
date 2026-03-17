@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
-import { resetState } from "./tweens.constants";
+import { resetState } from "./animations.constants";
 
 const defaultInitialValues = {
   x: 960,
@@ -12,7 +12,7 @@ const defaultInitialValues = {
   rotation: 0,
 };
 
-const openTweenDialog = async ({
+const openAnimationDialog = async ({
   deps,
   editMode = false,
   itemId,
@@ -56,7 +56,7 @@ const {
   handleItemClick: handleAnimationItemClick,
   handleSearchInput,
 } = createCatalogPageHandlers({
-  resourceType: "tweens",
+  resourceType: "animations",
 });
 
 export {
@@ -72,7 +72,7 @@ export {
 export const handleAddAnimationClick = async (deps, payload) => {
   const { groupId } = payload._event.detail;
 
-  await openTweenDialog({
+  await openAnimationDialog({
     deps,
     targetGroupId: groupId,
   });
@@ -84,12 +84,12 @@ export const handleAnimationItemDoubleClick = async (deps, payload) => {
     return;
   }
 
-  const itemData = deps.store.selectTweenDisplayItemById({ itemId });
+  const itemData = deps.store.selectAnimationDisplayItemById({ itemId });
   if (!itemData) {
     return;
   }
 
-  await openTweenDialog({
+  await openAnimationDialog({
     deps,
     editMode: true,
     itemId,
@@ -118,7 +118,7 @@ export const handleFormActionClick = async (deps, payload) => {
 
   const name = values?.name?.trim();
   if (!name) {
-    appService.showToast("Tween name is required.", { title: "Warning" });
+    appService.showToast("Animation name is required.", { title: "Warning" });
     return;
   }
 
@@ -127,24 +127,26 @@ export const handleFormActionClick = async (deps, payload) => {
   const editItemId = store.selectEditItemId();
 
   if (editMode && editItemId) {
-    await projectService.updateResourceItem({
-      resourceType: "tweens",
-      resourceId: editItemId,
-      patch: {
+    await projectService.updateAnimation({
+      animationId: editItemId,
+      data: {
         name,
-        properties,
+        animation: {
+          type: "live",
+          tween: properties,
+        },
       },
     });
   } else {
-    await projectService.createResourceItem({
-      resourceType: "tweens",
-      resourceId: nanoid(),
+    await projectService.createAnimation({
+      animationId: nanoid(),
       data: {
-        type: "tween",
+        type: "animation",
         name,
-        duration: "4s",
-        keyframes: 3,
-        properties,
+        animation: {
+          type: "live",
+          tween: properties,
+        },
       },
       parentId: store.selectTargetGroupId(),
       position: "last",
@@ -410,9 +412,8 @@ export const handleItemDelete = async (deps, payload) => {
     return;
   }
 
-  await projectService.deleteResourceItem({
-    resourceType: "tweens",
-    resourceId: itemId,
+  await projectService.deleteAnimations({
+    animationIds: [itemId],
   });
 
   await handleDataChanged(deps);

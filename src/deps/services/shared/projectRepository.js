@@ -1,11 +1,11 @@
-import { processCommand } from "../../../internal/project/state.js";
-import { projectRepositoryStateToDomainState } from "../../../internal/project/projection.js";
 import { createProjectRepositoryRuntime } from "./projectRepositoryRuntime.js";
+import { validateState as validateCreatorModelState } from "@routevn/creator-model";
 import {
   COMMAND_EVENT_MODEL,
   COMMAND_TYPES,
   isSupportedCommandType,
 } from "../../../internal/project/commands.js";
+import { applyCommandToRepositoryStateWithCreatorModel } from "../../../internal/creatorModelAdapter.js";
 import { validateCommandSubmitItem } from "insieme/client";
 import {
   commandToSyncEvent,
@@ -20,33 +20,29 @@ export const createTreeCollection = () => {
 };
 
 export const initialProjectData = {
-  model_version: 2,
-  project: {
-    name: "",
-    description: "",
-  },
+  project: {},
   story: {
-    initialSceneId: "",
+    initialSceneId: null,
   },
   images: createTreeCollection(),
-  tweens: createTreeCollection(),
   sounds: createTreeCollection(),
   videos: createTreeCollection(),
+  animations: createTreeCollection(),
   characters: createTreeCollection(),
   fonts: createTreeCollection(),
   transforms: createTreeCollection(),
   colors: createTreeCollection(),
-  typography: createTreeCollection(),
+  textStyles: createTreeCollection(),
   variables: createTreeCollection(),
-  components: createTreeCollection(),
   layouts: createTreeCollection(),
   scenes: createTreeCollection(),
 };
 
 export const assertSupportedProjectState = (state) => {
-  if (!state || state.model_version !== 2) {
+  const result = validateCreatorModelState({ state });
+  if (!result.valid) {
     throw new Error(
-      "Unsupported project model version. RouteVN only supports model_version=2 projects.",
+      result.error?.message || "Unsupported project repository state",
     );
   }
 };
@@ -84,6 +80,7 @@ export const getSiblingOrderNodes = (collection, parentId) => {
 export const resolveIndexFromPosition = ({
   siblings = [],
   position,
+  positionTargetId,
   movingId = null,
 }) => {
   const filtered = Array.isArray(siblings)
@@ -93,6 +90,20 @@ export const resolveIndexFromPosition = ({
   if (position === "first") return 0;
   if (position === "last" || position === undefined || position === null) {
     return filtered.length;
+  }
+
+  if (position === "before" && typeof positionTargetId === "string") {
+    const beforeIndex = filtered.findIndex(
+      (node) => node.id === positionTargetId,
+    );
+    return beforeIndex >= 0 ? beforeIndex : filtered.length;
+  }
+
+  if (position === "after" && typeof positionTargetId === "string") {
+    const afterIndex = filtered.findIndex(
+      (node) => node.id === positionTargetId,
+    );
+    return afterIndex >= 0 ? afterIndex + 1 : filtered.length;
   }
 
   if (position && typeof position === "object") {
@@ -174,7 +185,7 @@ const defaultInitializationActor = (projectId) => ({
 const defaultInitializationPartition = (projectId) =>
   `project:${projectId}:settings`;
 
-export const createProjectCreatedCommand = ({
+export const createProjectCreateCommand = ({
   projectId,
   state,
   actor,
@@ -184,14 +195,12 @@ export const createProjectCreatedCommand = ({
   meta,
 }) => {
   const resolvedProjectId =
-    typeof projectId === "string" && projectId.length > 0
-      ? projectId
-      : state?.project?.id;
+    typeof projectId === "string" && projectId.length > 0 ? projectId : "";
   if (!resolvedProjectId) {
-    throw new Error("projectId is required for project.created command");
+    throw new Error("projectId is required for project.create command");
   }
   if (!state || typeof state !== "object" || Array.isArray(state)) {
-    throw new Error("state is required for project.created command");
+    throw new Error("state is required for project.create command");
   }
 
   const basePartition =
@@ -212,17 +221,17 @@ export const createProjectCreatedCommand = ({
     id:
       typeof commandId === "string" && commandId.length > 0
         ? commandId
-        : `project-created:${resolvedProjectId}`,
+        : `project-create:${resolvedProjectId}`,
     projectId: resolvedProjectId,
     partitions: resolvedPartitions,
-    type: COMMAND_TYPES.PROJECT_CREATED,
+    type: COMMAND_TYPES.PROJECT_CREATE,
     payload: {
       state: structuredClone(state),
     },
     actor: structuredClone(
       actor || defaultInitializationActor(resolvedProjectId),
     ),
-    clientTs: toFiniteTimestamp(clientTs, state?.project?.createdAt ?? 0),
+    clientTs: toFiniteTimestamp(clientTs, 0),
     commandVersion: COMMAND_EVENT_MODEL.commandVersion,
     ...(meta !== undefined ? { meta: structuredClone(meta) } : {}),
   };
@@ -289,7 +298,7 @@ export const repositoryEventToCommand = (repositoryEvent) => {
   return command;
 };
 
-export const createProjectCreatedRepositoryEvent = ({
+export const createProjectCreateRepositoryEvent = ({
   projectId,
   state,
   actor,
@@ -299,7 +308,7 @@ export const createProjectCreatedRepositoryEvent = ({
   meta,
 }) =>
   createRepositoryCommandEvent({
-    command: createProjectCreatedCommand({
+    command: createProjectCreateCommand({
       projectId,
       state,
       actor,
@@ -313,380 +322,16 @@ export const createProjectCreatedRepositoryEvent = ({
 export const isDirectDomainProjectionCommand = (command) =>
   isSupportedCommandType(command?.type);
 
-const flattenTreeIds = (nodes, output = []) => {
-  if (!Array.isArray(nodes)) return output;
-  for (const node of nodes) {
-    if (!node || typeof node.id !== "string") continue;
-    output.push(node.id);
-    flattenTreeIds(node.children || [], output);
-  }
-  return output;
-};
-
-const uniqueIdsInOrder = (orderIds, existingIds) => {
-  const existingSet = new Set(existingIds);
-  const seen = new Set();
-  const output = [];
-
-  for (const id of Array.isArray(orderIds) ? orderIds : []) {
-    if (typeof id !== "string" || id.length === 0) continue;
-    if (!existingSet.has(id)) continue;
-    if (seen.has(id)) continue;
-    seen.add(id);
-    output.push(id);
-  }
-
-  for (const id of existingIds) {
-    if (seen.has(id)) continue;
-    seen.add(id);
-    output.push(id);
-  }
-
-  return output;
-};
-
-const buildHierarchyOrderFromFlatCollection = (collection) => {
-  const items = collection?.items || {};
-  const ids = Object.keys(items);
-  const orderedIds = uniqueIdsInOrder(flattenTreeIds(collection?.tree), ids);
-  const idSet = new Set(ids);
-  const ROOT = "__root__";
-  const childrenByParent = new Map();
-  childrenByParent.set(ROOT, []);
-
-  for (const id of orderedIds) {
-    const item = items[id];
-    const rawParentId = item?.parentId;
-    const parentId =
-      typeof rawParentId === "string" &&
-      rawParentId.length > 0 &&
-      rawParentId !== id &&
-      idSet.has(rawParentId)
-        ? rawParentId
-        : null;
-    const key = parentId || ROOT;
-    if (!childrenByParent.has(key)) {
-      childrenByParent.set(key, []);
-    }
-    childrenByParent.get(key).push(id);
-  }
-
-  const visited = new Set();
-  const buildNodes = (parentKey) => {
-    const idsForParent = childrenByParent.get(parentKey) || [];
-    const nodes = [];
-    for (const id of idsForParent) {
-      if (visited.has(id)) continue;
-      visited.add(id);
-      const children = buildNodes(id);
-      if (children.length > 0) {
-        nodes.push({
-          id,
-          children,
-        });
-      } else {
-        nodes.push({ id });
-      }
-    }
-    return nodes;
-  };
-
-  const rootNodes = buildNodes(ROOT);
-  for (const id of orderedIds) {
-    if (visited.has(id)) continue;
-    visited.add(id);
-    rootNodes.push({ id });
-  }
-  return rootNodes;
-};
-
-const projectDomainResourceCollectionToRepository = (domainCollection) => {
-  const items = domainCollection?.items || {};
-  const projectedItems = {};
-  for (const [resourceId, resource] of Object.entries(items)) {
-    projectedItems[resourceId] = {
-      id: resourceId,
-      ...structuredClone(resource || {}),
-    };
-  }
-
-  const tree = buildHierarchyOrderFromFlatCollection({
-    items,
-    tree: domainCollection?.tree || [],
-  });
-  return {
-    items: projectedItems,
-    tree,
-  };
-};
-
-const projectDomainLayoutsResourceCollectionToRepository = ({
-  domainCollection,
-  repositoryLayouts,
-}) => {
-  const items = domainCollection?.items || {};
-  const projectedItems = {};
-
-  for (const [layoutId, layout] of Object.entries(items)) {
-    const existingLayout = repositoryLayouts?.items?.[layoutId] || {};
-    const layoutClone = structuredClone(layout || {});
-    const entryType = layoutClone.type || existingLayout.type || "layout";
-    delete layoutClone.elements;
-    delete layoutClone.rootElementOrder;
-
-    const projectedLayout = {
-      ...structuredClone(existingLayout),
-      ...layoutClone,
-      id: layoutId,
-      type: entryType,
-    };
-
-    if (entryType === "folder") {
-      delete projectedLayout.layoutType;
-      delete projectedLayout.elements;
-      delete projectedLayout.rootElementOrder;
-    } else {
-      projectedLayout.elements = projectDomainLayoutElementsToRepository({
-        layout,
-        existingRepositoryElements: existingLayout?.elements,
-      });
-    }
-
-    projectedItems[layoutId] = projectedLayout;
-  }
-
-  const tree = buildHierarchyOrderFromFlatCollection({
-    items,
-    tree: domainCollection?.tree || [],
-  });
-  return {
-    items: projectedItems,
-    tree,
-  };
-};
-
-const projectDomainLayoutElementsToRepository = ({
-  layout,
-  existingRepositoryElements = {},
-}) => {
-  const existingItems = existingRepositoryElements?.items || {};
-  const projectedItems = {};
-
-  for (const [elementId, element] of Object.entries(layout?.elements || {})) {
-    const existingElement = existingItems?.[elementId] || {};
-    const elementClone = structuredClone(element || {});
-    delete elementClone.children;
-    delete elementClone.parentId;
-    projectedItems[elementId] = {
-      ...structuredClone(existingElement),
-      ...elementClone,
-      id: elementId,
-    };
-  }
-
-  const visited = new Set();
-  const makeNode = (elementId) => {
-    if (visited.has(elementId)) return null;
-    const element = layout?.elements?.[elementId];
-    if (!element) return null;
-    visited.add(elementId);
-
-    const children = [];
-    for (const childId of element.children || []) {
-      if (layout?.elements?.[childId]?.parentId !== elementId) continue;
-      const childNode = makeNode(childId);
-      if (childNode) children.push(childNode);
-    }
-
-    if (children.length > 0) {
-      return {
-        id: elementId,
-        children,
-      };
-    }
-
-    return { id: elementId };
-  };
-
-  const order = [];
-  for (const rootId of layout?.rootElementOrder || []) {
-    const node = makeNode(rootId);
-    if (node) order.push(node);
-  }
-
-  for (const elementId of Object.keys(layout?.elements || {})) {
-    if (visited.has(elementId)) continue;
-    const node = makeNode(elementId);
-    if (node) order.push(node);
-  }
-
-  return {
-    items: projectedItems,
-    tree: order,
-  };
-};
-
-const buildTreeNodesFromOrderedIds = (orderedIds) =>
-  orderedIds.map((id) => ({
-    id,
-  }));
-
-const resolveStorySceneOrder = (domainState) => {
-  const sceneIds = Object.keys(domainState?.scenes || {});
-  return uniqueIdsInOrder(domainState?.story?.sceneOrder || [], sceneIds);
-};
-
-const resolveSceneSectionOrder = (domainState, sceneId) => {
-  const scene = domainState?.scenes?.[sceneId] || {};
-  const sectionIds = Object.keys(domainState?.sections || {}).filter(
-    (id) => domainState.sections[id]?.sceneId === sceneId,
-  );
-  return uniqueIdsInOrder(scene.sectionIds || [], sectionIds);
-};
-
-const resolveSectionLineOrder = (domainState, sectionId) => {
-  const section = domainState?.sections?.[sectionId] || {};
-  const lineIds = Object.keys(domainState?.lines || {}).filter(
-    (id) => domainState.lines[id]?.sectionId === sectionId,
-  );
-  return uniqueIdsInOrder(section.lineIds || [], lineIds);
-};
-
-const projectDomainStoryToRepository = ({ domainState, repositoryState }) => {
-  const repositoryScenesItems = repositoryState?.scenes?.items || {};
-  const repositoryScenesTree = repositoryState?.scenes?.tree || [];
-  const sceneOrder = resolveStorySceneOrder(domainState);
-  const scenesItems = {};
-
-  for (const sceneId of sceneOrder) {
-    const scene = domainState?.scenes?.[sceneId];
-    if (!scene) continue;
-    const existingScene = repositoryScenesItems?.[sceneId] || {};
-    const sceneType = scene.type === "folder" ? "folder" : "scene";
-
-    if (sceneType === "folder") {
-      scenesItems[sceneId] = {
-        ...structuredClone(existingScene),
-        ...structuredClone(scene),
-        id: sceneId,
-        type: "folder",
-        name: scene.name || `Folder ${sceneId}`,
-        parentId: typeof scene.parentId === "string" ? scene.parentId : null,
-        sections: {
-          items: {},
-          tree: [],
-        },
-      };
-      continue;
-    }
-
-    const existingSections = existingScene?.sections || {};
-    const existingSectionItems = existingSections?.items || {};
-    const sectionOrder = resolveSceneSectionOrder(domainState, sceneId);
-    const sectionItems = {};
-
-    for (const sectionId of sectionOrder) {
-      const section = domainState?.sections?.[sectionId];
-      if (!section) continue;
-      const existingSection = existingSectionItems?.[sectionId] || {};
-      const existingLines = existingSection?.lines || {};
-      const existingLineItems = existingLines?.items || {};
-      const lineOrder = resolveSectionLineOrder(domainState, sectionId);
-      const lineItems = {};
-
-      for (const lineId of lineOrder) {
-        const line = domainState?.lines?.[lineId];
-        if (!line) continue;
-        const existingLine = existingLineItems?.[lineId] || {};
-        lineItems[lineId] = {
-          ...structuredClone(existingLine),
-          ...structuredClone(line),
-          id: lineId,
-        };
-      }
-
-      sectionItems[sectionId] = {
-        ...structuredClone(existingSection),
-        ...structuredClone(section),
-        id: sectionId,
-        type: "section",
-        lines: {
-          items: lineItems,
-          tree: buildTreeNodesFromOrderedIds(lineOrder),
-        },
-      };
-    }
-
-    scenesItems[sceneId] = {
-      ...structuredClone(existingScene),
-      ...structuredClone(scene),
-      id: sceneId,
-      type: "scene",
-      parentId: typeof scene.parentId === "string" ? scene.parentId : null,
-      sections: {
-        items: sectionItems,
-        tree: buildTreeNodesFromOrderedIds(sectionOrder),
-      },
-    };
-  }
-
-  const sceneTree = buildHierarchyOrderFromFlatCollection({
-    items: scenesItems,
-    tree: repositoryScenesTree,
-  });
-  const initialSceneId = domainState?.story?.initialSceneId;
-  const firstPlayableSceneId = sceneOrder.find(
-    (sceneId) => scenesItems[sceneId]?.type !== "folder",
-  );
-  const resolvedInitialSceneId =
-    initialSceneId && scenesItems[initialSceneId]?.type !== "folder"
-      ? initialSceneId
-      : firstPlayableSceneId || null;
-
-  return {
-    story: {
-      ...repositoryState?.story,
-      initialSceneId: resolvedInitialSceneId,
-    },
-    scenes: {
-      items: scenesItems,
-      tree: sceneTree,
-    },
-  };
-};
-
-const projectDomainStateToRepositoryState = ({
-  domainState,
+export const applyCommandToRepositoryState = ({
   repositoryState,
+  command,
+  projectId,
 }) => {
-  const nextState = structuredClone(repositoryState || {});
-  nextState.model_version = 2;
-  nextState.project = {
-    ...repositoryState?.project,
-    ...structuredClone(domainState?.project || {}),
-  };
-
-  for (const [resourceType, domainCollection] of Object.entries(
-    domainState?.resources || {},
-  )) {
-    nextState[resourceType] =
-      resourceType === "layouts"
-        ? projectDomainLayoutsResourceCollectionToRepository({
-            domainCollection,
-            repositoryLayouts:
-              repositoryState?.layouts || createTreeCollection(),
-          })
-        : projectDomainResourceCollectionToRepository(domainCollection);
-  }
-
-  const projectedStory = projectDomainStoryToRepository({
-    domainState,
+  return applyCommandToRepositoryStateWithCreatorModel({
     repositoryState,
+    command,
+    projectId,
   });
-  nextState.story = projectedStory.story;
-  nextState.scenes = projectedStory.scenes;
-
-  return nextState;
 };
 
 const applyRepositoryEventToRepositoryState = ({
@@ -701,32 +346,26 @@ const applyRepositoryEventToRepositoryState = ({
     );
   }
 
-  const resolvedProjectId =
-    command.projectId ||
-    projectId ||
-    repositoryState?.project?.id ||
-    "unknown-project";
-  const domainStateBefore = projectRepositoryStateToDomainState({
+  const applyResult = applyCommandToRepositoryState({
     repositoryState,
-    projectId: resolvedProjectId,
-  });
-  const { state: domainStateAfter } = processCommand({
-    state: domainStateBefore,
     command,
+    projectId,
   });
-  return projectDomainStateToRepositoryState({
-    domainState: domainStateAfter,
-    repositoryState,
-  });
+
+  if (!applyResult.valid) {
+    const error = new Error(
+      applyResult.error?.message || "Failed to apply repository event",
+    );
+    error.code = applyResult.error?.code || "validation_failed";
+    error.details = applyResult.error?.details ?? {};
+    throw error;
+  }
+
+  return applyResult.repositoryState;
 };
 
-const createInitialRepositoryStateForProject = (projectId) => ({
-  ...structuredClone(initialProjectData),
-  project: {
-    ...structuredClone(initialProjectData.project || {}),
-    id: projectId,
-  },
-});
+const createInitialRepositoryStateForProject = () =>
+  structuredClone(initialProjectData);
 
 export const createProjectRepository = async ({
   projectId,
@@ -737,7 +376,7 @@ export const createProjectRepository = async ({
     projectId,
     store,
     events: sourceEvents,
-    createInitialState: () => createInitialRepositoryStateForProject(projectId),
+    createInitialState: () => createInitialRepositoryStateForProject(),
     reduceEventToState: ({ repositoryState, event }) =>
       applyRepositoryEventToRepositoryState({
         repositoryState,

@@ -95,7 +95,7 @@ const isMissingLinePreconditionError = (error, lineId) => {
 };
 
 export const syncSceneEditorProjectState = (store, projectService) => {
-  const repositoryState = projectService.getState();
+  const repositoryState = projectService.getRepositoryState();
   store.setRepositoryState({ repository: repositoryState });
   store.setDomainState({
     domainState: projectService.getDomainState(),
@@ -269,10 +269,11 @@ export const handleSplitLineOperation = async (deps, payload) => {
     await projectService.createLineItem({
       sectionId,
       lineId: newLineId,
-      line: {
+      data: {
         actions: newLineActions,
       },
-      afterLineId: lineId,
+      position: "after",
+      positionTargetId: lineId,
     });
     debugLog("lines", "scene.split.created-line", {
       lineId,
@@ -338,29 +339,31 @@ export const handlePasteLinesOperation = async (deps, payload) => {
   });
 
   let lastCreatedLineId = lineId;
-  let afterLineId = lineId;
-
-  for (let index = 1; index < lines.length; index++) {
-    const newLineId = nanoid();
-    const isLastLine = index === lines.length - 1;
-    const lineContent = isLastLine ? lines[index] + rightContent : lines[index];
-
-    await projectService.createLineItem({
+  if (lines.length > 1) {
+    const createdLineIds = await projectService.createLineItem({
       sectionId,
-      lineId: newLineId,
-      line: {
-        actions: {
-          dialogue: {
-            mode: shouldInheritNvl ? "nvl" : "adv",
-            content: [{ text: lineContent }],
+      position: "after",
+      positionTargetId: lineId,
+      lines: lines.slice(1).map((content, index) => {
+        const isLastLine = index === lines.length - 2;
+        const lineContent = isLastLine ? content + rightContent : content;
+        return {
+          lineId: nanoid(),
+          data: {
+            actions: {
+              dialogue: {
+                mode: shouldInheritNvl ? "nvl" : "adv",
+                content: [{ text: lineContent }],
+              },
+            },
           },
-        },
-      },
-      afterLineId,
+        };
+      }),
     });
 
-    afterLineId = newLineId;
-    lastCreatedLineId = newLineId;
+    if (Array.isArray(createdLineIds) && createdLineIds.length > 0) {
+      lastCreatedLineId = createdLineIds[createdLineIds.length - 1];
+    }
   }
 
   if (lines.length === 1) {
@@ -437,28 +440,20 @@ export const handleNewLineOperation = async (deps, payload) => {
       existingDialogue,
     });
 
-  const scene = store.selectScene();
-  const selectedSection = scene?.sections?.find(
-    (section) => section?.id === sectionId,
-  );
-  const orderedLineIds = Array.isArray(selectedSection?.lines)
-    ? selectedSection.lines
-        .map((line) => line?.id)
-        .filter((itemId) => typeof itemId === "string" && itemId)
-    : [];
-  const baseLineIndex = baseLineId ? orderedLineIds.indexOf(baseLineId) : -1;
-
-  let afterLineId = null;
-  if (requestedPosition === "after" && baseLineId) {
-    afterLineId = baseLineId;
-  } else if (requestedPosition === "before" && baseLineId) {
-    afterLineId = baseLineIndex > 0 ? orderedLineIds[baseLineIndex - 1] : null;
+  let createPosition = "last";
+  let createPositionId;
+  if (requestedPosition === "before") {
+    createPosition = "before";
+    createPositionId = baseLineId;
+  } else if (requestedPosition === "after") {
+    createPosition = "after";
+    createPositionId = baseLineId;
   }
 
   const createLinePayload = {
     sectionId,
     lineId: newLineId,
-    line: {
+    data: {
       actions: shouldInheritNvl
         ? {
             dialogue: {
@@ -469,21 +464,10 @@ export const handleNewLineOperation = async (deps, payload) => {
     },
   };
 
-  if (afterLineId) {
-    createLinePayload.afterLineId = afterLineId;
-  } else if (!requestedPosition) {
-    createLinePayload.position = "last";
-  }
+  createLinePayload.position = createPosition;
+  createLinePayload.positionTargetId = createPositionId;
 
   await projectService.createLineItem(createLinePayload);
-
-  if (requestedPosition === "before" && baseLineIndex === 0) {
-    await projectService.moveLineItem({
-      lineId: newLineId,
-      toSectionId: sectionId,
-      index: 0,
-    });
-  }
 
   syncSceneEditorProjectState(store, projectService);
   store.setSelectedLineId({ selectedLineId: newLineId });
@@ -592,7 +576,7 @@ export const handleMergeLinesOperation = async (deps, payload) => {
     }
 
     try {
-      await projectService.deleteLineItem({ lineId: currentLineId });
+      await projectService.deleteLineItem({ lineIds: [currentLineId] });
     } catch (error) {
       if (isMissingLinePreconditionError(error, currentLineId)) {
         return;

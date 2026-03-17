@@ -1,18 +1,19 @@
+import { createCharacterSpriteCommandApi } from "./commandApi/characterSprites.js";
 import { createLayoutCommandApi } from "./commandApi/layouts.js";
-import { createResourceCommandApi } from "./commandApi/resources.js";
-import { createSettingsCommandApi } from "./commandApi/settings.js";
+import { createResourceCommandApi } from "./commandApi/resources/index.js";
 import { createCommandApiShared } from "./commandApi/shared.js";
-import { createStateCommandApi } from "./commandApi/state.js";
 import { createStoryCommandApi } from "./commandApi/story.js";
 
 export const createCommandApi = (options) => {
   const shared = createCommandApiShared(options);
 
   return {
-    ...createSettingsCommandApi(shared),
+    getState: shared.getState,
+    getDomainState: shared.getDomainState,
+    getEvents: shared.getEvents,
     ...createStoryCommandApi(shared),
     ...createResourceCommandApi(shared),
+    ...createCharacterSpriteCommandApi(shared),
     ...createLayoutCommandApi(shared),
-    ...createStateCommandApi(shared),
   };
 };

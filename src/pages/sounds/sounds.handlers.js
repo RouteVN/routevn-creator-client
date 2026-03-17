@@ -63,9 +63,8 @@ const createSoundsFromFiles = async ({ deps, files, parentId } = {}) => {
   }
 
   for (const result of successfulUploads) {
-    await projectService.createResourceItem({
-      resourceType: "sounds",
-      resourceId: nanoid(),
+    await projectService.createSound({
+      soundId: nanoid(),
       data: {
         type: "sound",
         fileId: result.fileId,
@@ -239,10 +238,9 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   const { uploadResult } = result;
-  await projectService.updateResourceItem({
-    resourceType: "sounds",
-    resourceId: selectedItem.id,
-    patch: {
+  await projectService.updateSound({
+    soundId: selectedItem.id,
+    data: {
       fileId: uploadResult.fileId,
       fileType: uploadResult.file.type,
       fileSize: uploadResult.file.size,
@@ -320,10 +318,9 @@ export const handleEditFormAction = async (deps, payload) => {
       }
     : {};
 
-  await projectService.updateResourceItem({
-    resourceType: "sounds",
-    resourceId: editItemId,
-    patch: {
+  await projectService.updateSound({
+    soundId: editItemId,
+    data: {
       name,
       description: values?.description ?? "",
       ...soundPatch,
@@ -344,9 +341,8 @@ export const handleItemDelete = async (deps, payload) => {
   const { projectService, appService, render } = deps;
   const { itemId } = payload._event.detail;
 
-  const result = await projectService.deleteResourceItemIfUnused({
-    resourceType: "sounds",
-    resourceId: itemId,
+  const result = await projectService.deleteSoundIfUnused({
+    soundId: itemId,
     checkTargets: ["scenes", "layouts"],
   });
 

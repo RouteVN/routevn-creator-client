@@ -2,13 +2,11 @@ import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 
 const folderContextMenuItems = [
   { label: "New Folder", type: "item", value: "new-child-folder" },
-  { label: "Duplicate", type: "item", value: "duplicate-item" },
   { label: "Rename", type: "item", value: "rename-item" },
   { label: "Delete", type: "item", value: "delete-item" },
 ];
 
 const itemContextMenuItems = [
-  { label: "Duplicate", type: "item", value: "duplicate-item" },
   { label: "Rename", type: "item", value: "rename-item" },
   { label: "Delete", type: "item", value: "delete-item" },
 ];

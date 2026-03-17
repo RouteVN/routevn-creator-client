@@ -119,57 +119,53 @@ export const handleCharacterItemDoubleClick = async (deps, payload) => {
 };
 
 export const handleCharacterCreated = async (deps, payload) => {
-  const { projectService } = deps;
+  const { appService, projectService } = deps;
   const { groupId, name, description, shortcut, avatarFileId } =
     payload._event.detail;
-
-  try {
-    // Create default sprites folder with proper structure
-    const defaultSpritesFolderId = nanoid();
-
-    let characterData = {
-      id: nanoid(),
-      type: "character",
-      name: name,
-      description: description,
-      shortcut: shortcut || "",
-      sprites: {
-        tree: [
-          {
-            id: defaultSpritesFolderId,
-            children: [],
-          },
-        ],
-        items: {
-          [defaultSpritesFolderId]: {
-            type: "folder",
-            name: "Default Sprites",
-          },
+  const characterId = nanoid();
+  const defaultSpritesFolderId = nanoid();
+  const characterData = {
+    type: "character",
+    name,
+    description,
+    shortcut: shortcut || "",
+    sprites: {
+      tree: [
+        {
+          id: defaultSpritesFolderId,
+          children: [],
+        },
+      ],
+      items: {
+        [defaultSpritesFolderId]: {
+          id: defaultSpritesFolderId,
+          type: "folder",
+          name: "Default Sprites",
         },
       },
-    };
+    },
+  };
 
-    // If avatar fileId is provided, add it to character data
-    if (avatarFileId) {
-      characterData.fileId = avatarFileId;
-    }
-
-    // Add character to repository
-    await projectService.createResourceItem({
-      resourceType: "characters",
-      resourceId: characterData.id,
-      data: characterData,
-      parentId: groupId,
-      position: "last",
-    });
-
-    // Update store with new data
-    await refreshCharactersData(deps);
-  } catch (error) {
-    console.error("Failed to create character:", error);
-
-    throw error;
+  if (avatarFileId) {
+    characterData.fileId = avatarFileId;
   }
+
+  const createResult = await projectService.createCharacter({
+    characterId,
+    data: characterData,
+    parentId: groupId,
+    position: "last",
+  });
+
+  if (createResult?.valid === false) {
+    appService.showToast("Failed to create character.", {
+      title: "Error",
+    });
+    return createResult;
+  }
+
+  await refreshCharactersData(deps);
+  return createResult;
 };
 
 export const handleSpritesButtonClick = (deps, payload) => {
@@ -178,7 +174,7 @@ export const handleSpritesButtonClick = (deps, payload) => {
   const { p } = appService.getPayload();
 
   // Navigate to character sprites page
-  appService.navigate("/project/resources/character-sprites", {
+  appService.navigate("/project/character-sprites", {
     characterId: itemId,
     p: p,
   });
@@ -225,10 +221,9 @@ export const handleDetailPanelAvatarClick = async (deps) => {
       };
 
       // Update the selected character in the repository with the new avatar
-      await projectService.updateResourceItem({
-        resourceType: "characters",
-        resourceId: selectedItem.id,
-        patch: updateData,
+      await projectService.updateCharacter({
+        characterId: selectedItem.id,
+        data: updateData,
       });
 
       // Update the store with the new repository state and get new file URL
@@ -263,12 +258,20 @@ export const handleCloseDialog = (deps) => {
   render();
 };
 
-export const handleDialogFormActionClick = (deps, payload) => {
-  const { store, render } = deps;
+export const handleDialogFormActionClick = async (deps, payload) => {
+  const { appService, store, render } = deps;
   const actionId = payload._event.detail.actionId;
 
   if (actionId === "submit") {
     const formData = payload._event.detail.values;
+    const name = formData.name?.trim();
+    if (!name) {
+      appService.showToast("Character name is required.", {
+        title: "Warning",
+      });
+      return;
+    }
+
     const targetGroupId = store.selectTargetGroupId();
     const avatarFileId = store.selectAvatarFileId();
 
@@ -277,7 +280,7 @@ export const handleDialogFormActionClick = (deps, payload) => {
       _event: {
         detail: {
           groupId: targetGroupId,
-          name: formData.name,
+          name,
           description: formData.description,
           shortcut: formData.shortcut || "",
           avatarFileId: avatarFileId,
@@ -286,7 +289,13 @@ export const handleDialogFormActionClick = (deps, payload) => {
     };
 
     // Handle the character creation directly with correct payload
-    handleCharacterCreated(deps, characterCreatedPayload);
+    const createResult = await handleCharacterCreated(
+      deps,
+      characterCreatedPayload,
+    );
+    if (createResult?.valid === false) {
+      return;
+    }
 
     // Clear avatar state and close dialog
     store.clearAvatarState();
@@ -351,9 +360,8 @@ export const handleItemDelete = async (deps, payload) => {
   }
 
   // Perform the delete operation
-  await projectService.deleteResourceItem({
-    resourceType: "characters",
-    resourceId: itemId,
+  await projectService.deleteCharacters({
+    characterIds: [itemId],
   });
 
   await refreshCharactersData(deps);
@@ -411,10 +419,9 @@ export const handleEditFormAction = async (deps, payload) => {
       updateData.fileId = editAvatarFileId;
     }
 
-    await projectService.updateResourceItem({
-      resourceType: "characters",
-      resourceId: editItemId,
-      patch: updateData,
+    await projectService.updateCharacter({
+      characterId: editItemId,
+      data: updateData,
     });
 
     await refreshCharactersData(deps);

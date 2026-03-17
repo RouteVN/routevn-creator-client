@@ -1,4 +1,4 @@
-componentName: rvn-tweens
+componentName: rvn-text-styles
 propsSchema:
   type: object
   properties: {}

@@ -1,40 +1,10 @@
 import { nanoid } from "nanoid";
 import {
-  getFirstTypographyId,
-  getTypographyCount,
-  getTypographyRemovalCount,
-} from "../../constants/typography.js";
-import {
-  ROOT_TREE_PARENT_ID,
-  deleteTreeItem,
-  insertTreeItem,
-  moveTreeItem,
-  updateTreeItem,
-} from "../project/tree.js";
+  getFirstTextStyleId,
+  getTextStyleCount,
+  getTextStyleRemovalCount,
+} from "../../constants/textStyles.js";
 import { recursivelyCheckResource } from "../project/projection.js";
-
-const findNodeLocation = (nodes = [], targetId, parentId = "_root") => {
-  for (const node of nodes) {
-    if (!node || typeof node.id !== "string") {
-      continue;
-    }
-
-    if (node.id === targetId) {
-      return { parentId };
-    }
-
-    const childResult = findNodeLocation(
-      node.children || [],
-      targetId,
-      node.id,
-    );
-    if (childResult) {
-      return childResult;
-    }
-  }
-
-  return null;
-};
 
 const isTextElementType = (type) =>
   [
@@ -74,7 +44,8 @@ const resolveExplorerMove = (detail = {}) => {
     return {
       itemId: source.id,
       parentId: target.parentId ?? null,
-      repositoryPosition: { before: target.id },
+      repositoryPosition: "before",
+      repositoryPositionTargetId: target.id,
     };
   }
 
@@ -86,7 +57,8 @@ const resolveExplorerMove = (detail = {}) => {
     return {
       itemId: source.id,
       parentId: target.parentId ?? null,
-      repositoryPosition: { after: target.id },
+      repositoryPosition: "after",
+      repositoryPositionTargetId: target.id,
     };
   }
 
@@ -112,30 +84,88 @@ const createActionHandlers = ({ handleAction, handleMove }) => {
 
 const noopRefresh = async () => {};
 
-const applyCharacterSpritesPatch = async ({
-  projectService,
-  characterId,
-  patchFactory,
-}) => {
-  const { characters } = projectService.getState();
-  const character = characters?.items?.[characterId];
-  if (!character) {
-    throw new Error(`Character '${characterId}' not found`);
-  }
-
-  const spritesState = structuredClone(
-    character.sprites || { items: {}, tree: [] },
-  );
-  const nextSprites = patchFactory(spritesState);
-
-  await projectService.updateResourceItem({
-    resourceType: "characters",
-    resourceId: characterId,
-    patch: {
-      sprites: nextSprites,
-    },
-  });
-};
+const RESOURCE_FILE_EXPLORER_API = Object.freeze({
+  images: {
+    createMethod: "createImage",
+    updateMethod: "updateImage",
+    moveMethod: "moveImage",
+    deleteMethod: "deleteImages",
+    idField: "imageId",
+    deleteField: "imageIds",
+  },
+  sounds: {
+    createMethod: "createSound",
+    updateMethod: "updateSound",
+    moveMethod: "moveSound",
+    deleteMethod: "deleteSounds",
+    idField: "soundId",
+    deleteField: "soundIds",
+  },
+  videos: {
+    createMethod: "createVideo",
+    updateMethod: "updateVideo",
+    moveMethod: "moveVideo",
+    deleteMethod: "deleteVideos",
+    idField: "videoId",
+    deleteField: "videoIds",
+  },
+  animations: {
+    createMethod: "createAnimation",
+    updateMethod: "updateAnimation",
+    moveMethod: "moveAnimation",
+    deleteMethod: "deleteAnimations",
+    idField: "animationId",
+    deleteField: "animationIds",
+  },
+  characters: {
+    createMethod: "createCharacter",
+    updateMethod: "updateCharacter",
+    moveMethod: "moveCharacter",
+    deleteMethod: "deleteCharacters",
+    idField: "characterId",
+    deleteField: "characterIds",
+  },
+  fonts: {
+    createMethod: "createFont",
+    updateMethod: "updateFont",
+    moveMethod: "moveFont",
+    deleteMethod: "deleteFonts",
+    idField: "fontId",
+    deleteField: "fontIds",
+  },
+  transforms: {
+    createMethod: "createTransform",
+    updateMethod: "updateTransform",
+    moveMethod: "moveTransform",
+    deleteMethod: "deleteTransforms",
+    idField: "transformId",
+    deleteField: "transformIds",
+  },
+  colors: {
+    createMethod: "createColor",
+    updateMethod: "updateColor",
+    moveMethod: "moveColor",
+    deleteMethod: "deleteColors",
+    idField: "colorId",
+    deleteField: "colorIds",
+  },
+  textStyles: {
+    createMethod: "createTextStyle",
+    updateMethod: "updateTextStyle",
+    moveMethod: "moveTextStyle",
+    deleteMethod: "deleteTextStyles",
+    idField: "textStyleId",
+    deleteField: "textStyleIds",
+  },
+  variables: {
+    createMethod: "createVariable",
+    updateMethod: "updateVariable",
+    moveMethod: "moveVariable",
+    deleteMethod: "deleteVariables",
+    idField: "variableId",
+    deleteField: "variableIds",
+  },
+});
 
 const validateResourceDeletion = async ({
   appService,
@@ -166,20 +196,20 @@ const validateResourceDeletion = async ({
     }
   }
 
-  if (currentItemType === "typography") {
-    const typographyCount = getTypographyCount(state.typography);
-    const removalCount = getTypographyRemovalCount(state.typography, itemId);
-    if (typographyCount - removalCount < 1) {
-      appService.showToast("At least one typography must remain.");
+  if (currentItemType === "textStyle") {
+    const textStyleCount = getTextStyleCount(state.textStyles);
+    const removalCount = getTextStyleRemovalCount(state.textStyles, itemId);
+    if (textStyleCount - removalCount < 1) {
+      appService.showToast("At least one text style must remain.");
       return false;
     }
   }
 
   let checkTargets = ["scenes", "layouts"];
-  if (currentItemType === "typography") {
+  if (currentItemType === "textStyle") {
     checkTargets = ["layouts"];
   } else if (currentItemType === "color" || currentItemType === "font") {
-    checkTargets = ["typography"];
+    checkTargets = ["textStyles"];
   } else if (resourceType === "characters") {
     checkTargets = ["scenes", "layouts"];
   }
@@ -202,6 +232,8 @@ export const createResourceFileExplorerHandlers = ({
   resourceType,
   refresh = noopRefresh,
 }) => {
+  const resourceApi = RESOURCE_FILE_EXPLORER_API[resourceType];
+
   return createActionHandlers({
     handleAction: async ({ deps, detail }) => {
       const { appService, projectService } = deps;
@@ -215,9 +247,8 @@ export const createResourceFileExplorerHandlers = ({
       const currentItem = collection?.items?.[itemId];
 
       if (action === "new-item") {
-        await projectService.createResourceItem({
-          resourceType,
-          resourceId: nanoid(),
+        await projectService[resourceApi.createMethod]({
+          [resourceApi.idField]: nanoid(),
           data: {
             type: "folder",
             name: "New Folder",
@@ -230,9 +261,8 @@ export const createResourceFileExplorerHandlers = ({
           return;
         }
 
-        await projectService.createResourceItem({
-          resourceType,
-          resourceId: nanoid(),
+        await projectService[resourceApi.createMethod]({
+          [resourceApi.idField]: nanoid(),
           data: {
             type: "folder",
             name: "New Folder",
@@ -245,10 +275,9 @@ export const createResourceFileExplorerHandlers = ({
           return;
         }
 
-        await projectService.updateResourceItem({
-          resourceType,
-          resourceId: itemId,
-          patch: {
+        await projectService[resourceApi.updateMethod]({
+          [resourceApi.idField]: itemId,
+          data: {
             name: detail.newName,
           },
         });
@@ -268,29 +297,8 @@ export const createResourceFileExplorerHandlers = ({
           return;
         }
 
-        await projectService.deleteResourceItem({
-          resourceType,
-          resourceId: itemId,
-        });
-      } else if (action === "duplicate-item") {
-        if (!currentItem) {
-          return;
-        }
-
-        const duplicateId = nanoid();
-        const location = findNodeLocation(collection?.tree || [], itemId);
-        const duplicateName =
-          typeof currentItem.name === "string" && currentItem.name.length > 0
-            ? `${currentItem.name} Copy`
-            : "Copied Item";
-
-        await projectService.duplicateResourceItem({
-          resourceType,
-          sourceId: itemId,
-          newId: duplicateId,
-          parentId: location?.parentId || null,
-          position: { after: itemId },
-          name: duplicateName,
+        await projectService[resourceApi.deleteMethod]({
+          [resourceApi.deleteField]: [itemId],
         });
       } else if (
         action &&
@@ -303,9 +311,8 @@ export const createResourceFileExplorerHandlers = ({
         };
         delete nextValue.action;
 
-        await projectService.createResourceItem({
-          resourceType,
-          resourceId: nextValue.id,
+        await projectService[resourceApi.createMethod]({
+          [resourceApi.idField]: nextValue.id,
           data: nextValue,
           parentId: itemId || null,
           position: "last",
@@ -325,11 +332,11 @@ export const createResourceFileExplorerHandlers = ({
         return;
       }
 
-      await projectService.moveResourceItem({
-        resourceType,
-        resourceId: move.itemId,
+      await projectService[resourceApi.moveMethod]({
+        [resourceApi.idField]: move.itemId,
         parentId: move.parentId,
         position: move.repositoryPosition,
+        positionTargetId: move.repositoryPositionTargetId,
       });
 
       await refresh(deps);
@@ -404,39 +411,7 @@ export const createLayoutsFileExplorerHandlers = ({
         }
 
         await projectService.deleteLayoutItem({
-          layoutId: itemId,
-        });
-      } else if (action === "duplicate-item") {
-        if (!currentItem || currentItem.type !== "layout") {
-          return;
-        }
-
-        const duplicateId = nanoid();
-        const location = findNodeLocation(collection?.tree || [], itemId);
-        const duplicateName =
-          typeof currentItem.name === "string" && currentItem.name.length > 0
-            ? `${currentItem.name} Copy`
-            : "Copied Layout";
-
-        const layoutValue = structuredClone(currentItem);
-        const {
-          id: _layoutId,
-          type: _layoutNodeType,
-          name: _layoutName,
-          layoutType,
-          elements,
-          parentId: _layoutParentId,
-          ...layoutData
-        } = layoutValue;
-
-        await projectService.createLayoutItem({
-          layoutId: duplicateId,
-          name: duplicateName,
-          layoutType: layoutType || "normal",
-          elements: elements || { items: {}, tree: [] },
-          parentId: location?.parentId || null,
-          position: { after: itemId },
-          data: layoutData,
+          layoutIds: [itemId],
         });
       } else {
         return;
@@ -457,6 +432,7 @@ export const createLayoutsFileExplorerHandlers = ({
         layoutId: move.itemId,
         parentId: move.parentId,
         position: move.repositoryPosition,
+        positionTargetId: move.repositoryPositionTargetId,
       });
 
       await refresh(deps);
@@ -479,13 +455,9 @@ export const createLayoutElementsFileExplorerHandlers = ({
         return;
       }
 
-      const state = projectService.getState();
-      const layout = state?.layouts?.items?.[layoutId];
       const menuItem = resolveMenuItem(detail);
       const action = menuItem?.value;
       const itemId = detail.itemId;
-      const currentItem = layout?.elements?.items?.[itemId];
-
       if (action === "rename-item-confirmed") {
         if (!itemId || !detail.newName) {
           return;
@@ -494,7 +466,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
         await projectService.updateLayoutElement({
           layoutId,
           elementId: itemId,
-          patch: {
+          data: {
             name: detail.newName,
           },
           replace: false,
@@ -506,13 +478,13 @@ export const createLayoutElementsFileExplorerHandlers = ({
 
         await projectService.deleteLayoutElement({
           layoutId,
-          elementId: itemId,
+          elementIds: [itemId],
         });
       } else if (action === "new-item") {
         await projectService.createLayoutElement({
           layoutId,
           elementId: nanoid(),
-          element: {
+          data: {
             type: "folder",
             name: "New Folder",
           },
@@ -527,7 +499,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
         await projectService.createLayoutElement({
           layoutId,
           elementId: nanoid(),
-          element: {
+          data: {
             type: "folder",
             name: "New Folder",
           },
@@ -544,41 +516,21 @@ export const createLayoutElementsFileExplorerHandlers = ({
           id: nanoid(),
         };
         delete nextValue.action;
+        const { id: nextElementId, ...nextElementData } = nextValue;
 
         if (isTextElementType(nextValue.type)) {
-          const firstTypographyId = getFirstTypographyId(state.typography);
-          if (firstTypographyId) {
-            nextValue.typographyId = firstTypographyId;
+          const firstTextStyleId = getFirstTextStyleId(state.textStyles);
+          if (firstTextStyleId) {
+            nextElementData.textStyleId = firstTextStyleId;
           }
         }
 
         await projectService.createLayoutElement({
           layoutId,
-          elementId: nextValue.id,
-          element: nextValue,
+          elementId: nextElementId,
+          data: nextElementData,
           parentId: itemId || null,
           position: "last",
-        });
-      } else if (action === "duplicate-item") {
-        if (!currentItem) {
-          return;
-        }
-
-        const duplicateId = nanoid();
-        const location = findNodeLocation(layout?.elements?.tree || [], itemId);
-        const duplicateValue = structuredClone(currentItem);
-        delete duplicateValue.id;
-        duplicateValue.name =
-          typeof currentItem.name === "string" && currentItem.name.length > 0
-            ? `${currentItem.name} Copy`
-            : "Copied Item";
-
-        await projectService.createLayoutElement({
-          layoutId,
-          elementId: duplicateId,
-          element: duplicateValue,
-          parentId: location?.parentId || null,
-          position: { after: itemId },
         });
       } else {
         return;
@@ -606,6 +558,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
         elementId: move.itemId,
         parentId: move.parentId,
         position: move.repositoryPosition,
+        positionTargetId: move.repositoryPositionTargetId,
       });
 
       await refresh(deps);
@@ -626,10 +579,10 @@ export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
       if (action === "new-item") {
         await projectService.createSceneItem({
           sceneId: nanoid(),
-          name: "New Folder",
           parentId: null,
           position: "last",
           data: {
+            name: "New Folder",
             type: "folder",
           },
         });
@@ -640,10 +593,10 @@ export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
 
         await projectService.createSceneItem({
           sceneId: nanoid(),
-          name: "New Folder",
           parentId: itemId,
           position: "last",
           data: {
+            name: "New Folder",
             type: "folder",
           },
         });
@@ -652,9 +605,11 @@ export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
           return;
         }
 
-        await projectService.renameSceneItem({
+        await projectService.updateSceneItem({
           sceneId: itemId,
-          name: detail.newName,
+          data: {
+            name: detail.newName,
+          },
         });
       } else if (action === "delete-item") {
         if (!itemId) {
@@ -662,7 +617,7 @@ export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
         }
 
         await projectService.deleteSceneItem({
-          sceneId: itemId,
+          sceneIds: [itemId],
         });
       } else {
         return;
@@ -714,67 +669,45 @@ export const createCharacterSpritesFileExplorerHandlers = ({
         return;
       }
 
-      const state = projectService.getState();
-      const character = state?.characters?.items?.[characterId];
-      const sprites = character?.sprites || { items: {}, tree: [] };
       const menuItem = resolveMenuItem(detail);
       const action = menuItem?.value;
       const itemId = detail.itemId;
-      const currentItem = sprites.items?.[itemId];
-
       if (action === "new-item") {
-        await applyCharacterSpritesPatch({
-          projectService,
+        await projectService.createCharacterSpriteItem({
           characterId,
-          patchFactory: (spritesState) =>
-            insertTreeItem({
-              treeCollection: spritesState,
-              value: {
-                id: nanoid(),
-                type: "folder",
-                name: "New Folder",
-              },
-              parentId: ROOT_TREE_PARENT_ID,
-              position: "last",
-            }),
+          spriteId: nanoid(),
+          position: "last",
+          data: {
+            type: "folder",
+            name: "New Folder",
+          },
         });
       } else if (action === "new-child-folder") {
         if (!itemId) {
           return;
         }
 
-        await applyCharacterSpritesPatch({
-          projectService,
+        await projectService.createCharacterSpriteItem({
           characterId,
-          patchFactory: (spritesState) =>
-            insertTreeItem({
-              treeCollection: spritesState,
-              value: {
-                id: nanoid(),
-                type: "folder",
-                name: "New Folder",
-              },
-              parentId: itemId,
-              position: "last",
-            }),
+          spriteId: nanoid(),
+          parentId: itemId,
+          position: "last",
+          data: {
+            type: "folder",
+            name: "New Folder",
+          },
         });
       } else if (action === "rename-item-confirmed") {
         if (!itemId || !detail.newName) {
           return;
         }
 
-        await applyCharacterSpritesPatch({
-          projectService,
+        await projectService.updateCharacterSpriteItem({
           characterId,
-          patchFactory: (spritesState) =>
-            updateTreeItem({
-              treeCollection: spritesState,
-              id: itemId,
-              value: {
-                name: detail.newName,
-              },
-              replace: false,
-            }),
+          spriteId: itemId,
+          data: {
+            name: detail.newName,
+          },
         });
       } else if (action === "delete-item") {
         if (!itemId) {
@@ -793,41 +726,9 @@ export const createCharacterSpritesFileExplorerHandlers = ({
           return;
         }
 
-        await applyCharacterSpritesPatch({
-          projectService,
+        await projectService.deleteCharacterSpriteItem({
           characterId,
-          patchFactory: (spritesState) =>
-            deleteTreeItem({
-              treeCollection: spritesState,
-              id: itemId,
-            }),
-        });
-      } else if (action === "duplicate-item") {
-        if (!currentItem) {
-          return;
-        }
-
-        const duplicateId = nanoid();
-        const location = findNodeLocation(sprites.tree || [], itemId);
-        const duplicateName =
-          typeof currentItem.name === "string" && currentItem.name.length > 0
-            ? `${currentItem.name} Copy`
-            : "Copied Item";
-
-        await applyCharacterSpritesPatch({
-          projectService,
-          characterId,
-          patchFactory: (spritesState) =>
-            insertTreeItem({
-              treeCollection: spritesState,
-              value: {
-                ...structuredClone(currentItem),
-                id: duplicateId,
-                name: duplicateName,
-              },
-              parentId: location?.parentId || ROOT_TREE_PARENT_ID,
-              position: { after: itemId },
-            }),
+          spriteIds: [itemId],
         });
       } else if (
         action &&
@@ -839,17 +740,14 @@ export const createCharacterSpritesFileExplorerHandlers = ({
           id: nanoid(),
         };
         delete nextValue.action;
+        const { id: nextSpriteId, ...nextSpriteData } = nextValue;
 
-        await applyCharacterSpritesPatch({
-          projectService,
+        await projectService.createCharacterSpriteItem({
           characterId,
-          patchFactory: (spritesState) =>
-            insertTreeItem({
-              treeCollection: spritesState,
-              value: nextValue,
-              parentId: itemId || ROOT_TREE_PARENT_ID,
-              position: "last",
-            }),
+          spriteId: nextSpriteId,
+          parentId: itemId ?? null,
+          position: "last",
+          data: nextSpriteData,
         });
       } else {
         return;
@@ -872,16 +770,12 @@ export const createCharacterSpritesFileExplorerHandlers = ({
         return;
       }
 
-      await applyCharacterSpritesPatch({
-        projectService,
+      await projectService.moveCharacterSpriteItem({
         characterId,
-        patchFactory: (spritesState) =>
-          moveTreeItem({
-            treeCollection: spritesState,
-            id: move.itemId,
-            parentId: move.parentId || ROOT_TREE_PARENT_ID,
-            position: move.repositoryPosition,
-          }),
+        spriteId: move.itemId,
+        parentId: move.parentId ?? null,
+        position: move.repositoryPosition,
+        positionTargetId: move.repositoryPositionTargetId,
       });
 
       await refresh(deps);

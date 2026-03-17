@@ -47,9 +47,8 @@ const createFontsFromFiles = async ({ deps, files, parentId } = {}) => {
   }
 
   for (const result of successfulUploads) {
-    await projectService.createResourceItem({
-      resourceType: "fonts",
-      resourceId: nanoid(),
+    await projectService.createFont({
+      fontId: nanoid(),
       data: {
         type: "font",
         fileId: result.fileId,
@@ -167,10 +166,9 @@ export const handleFormExtraEvent = async (deps) => {
     return;
   }
 
-  await projectService.updateResourceItem({
-    resourceType: "fonts",
-    resourceId: selectedItem.id,
-    patch: {
+  await projectService.updateFont({
+    fontId: selectedItem.id,
+    data: {
       fileId: uploadResult.fileId,
       name: uploadResult.file.name,
       fontFamily: uploadResult.fontName,
@@ -219,7 +217,7 @@ export const handleItemDelete = async (deps, payload) => {
   const usage = recursivelyCheckResource({
     state: projectService.getState(),
     itemId,
-    checkTargets: ["typography"],
+    checkTargets: ["textStyles"],
   });
 
   if (usage.isUsed) {
@@ -228,9 +226,8 @@ export const handleItemDelete = async (deps, payload) => {
     return;
   }
 
-  await projectService.deleteResourceItem({
-    resourceType: "fonts",
-    resourceId: itemId,
+  await projectService.deleteFonts({
+    fontIds: [itemId],
   });
 
   await handleDataChanged(deps);

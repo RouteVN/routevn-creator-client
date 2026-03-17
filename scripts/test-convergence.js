@@ -1,7 +1,5 @@
 import assert from "node:assert/strict";
-import {
-  createCommandEnvelope,
-} from "../src/deps/services/shared/collab/commandEnvelope.js";
+import { createCommandEnvelope } from "../src/deps/services/shared/collab/commandEnvelope.js";
 import {
   createProjectedSyncHarness,
   normalizeStateForCompare,
@@ -51,7 +49,7 @@ try {
       projectId,
       scope: "story",
       type: "scene.create",
-      payload: { sceneId: "scene-1", name: "Scene 1" },
+      payload: { sceneId: "scene-1", data: { name: "Scene 1" } },
       actor: actorA,
       clientTs: 1000,
     }),
@@ -69,7 +67,7 @@ try {
       payload: {
         sceneId: "scene-1",
         sectionId: "section-1",
-        name: "Section 1",
+        data: { name: "Section 1" },
       },
       actor: actorB,
       clientTs: 1100,
@@ -84,11 +82,15 @@ try {
     createCommandEnvelope({
       projectId,
       scope: "story",
-      type: "line.insert_after",
+      type: "line.create",
       payload: {
-        lineId: "line-1",
         sectionId: "section-1",
-        line: { actions: { narration: "hello world" } },
+        lines: [
+          {
+            lineId: "line-1",
+            data: { actions: { narration: "hello world" } },
+          },
+        ],
       },
       actor: actorA,
       clientTs: 1200,
@@ -103,11 +105,14 @@ try {
     createCommandEnvelope({
       projectId,
       scope: "resources",
-      type: "resource.create",
+      type: "image.create",
       payload: {
-        resourceType: "images",
-        resourceId: "img-1",
-        data: { name: "bg-1", fileId: "file-1" },
+        imageId: "img-1",
+        data: {
+          type: "image",
+          name: "bg-1",
+          fileId: "file-1",
+        },
       },
       actor: actorB,
       clientTs: 1300,
@@ -115,7 +120,7 @@ try {
   );
 
   await waitFor(
-    () => Boolean(clientA.getState().resources.images.items["img-1"]),
+    () => Boolean(clientA.getState().images.items["img-1"]),
     { label: "clientA.images.img-1" },
   );
 
@@ -123,11 +128,15 @@ try {
     createCommandEnvelope({
       projectId,
       scope: "resources",
-      type: "resource.create",
+      type: "layout.create",
       payload: {
-        resourceType: "layouts",
-        resourceId: "layout-1",
-        data: { name: "Layout 1", layoutType: "scene" },
+        layoutId: "layout-1",
+        data: {
+          type: "layout",
+          name: "Layout 1",
+          layoutType: "normal",
+          elements: { items: {}, tree: [] },
+        },
       },
       actor: actorA,
       clientTs: 1400,
@@ -135,9 +144,9 @@ try {
   );
 
   await waitFor(
-    () => Boolean(clientB.getState().resources.layouts.items["layout-1"]),
+    () => Boolean(clientB.getState().layouts.items["layout-1"]),
     {
-      label: "clientB.resources.layouts.layout-1",
+      label: "clientB.layouts.layout-1",
     },
   );
 
@@ -149,7 +158,13 @@ try {
       payload: {
         layoutId: "layout-1",
         elementId: "el-1",
-        element: { type: "text", x: 100, y: 100, opacity: 1 },
+        data: {
+          type: "text",
+          name: "Text Element",
+          x: 100,
+          y: 100,
+          opacity: 1,
+        },
       },
       actor: actorB,
       clientTs: 1500,
@@ -159,11 +174,11 @@ try {
   await waitFor(
     () =>
       Boolean(
-        clientA.getState().resources.layouts.items["layout-1"]?.elements?.[
+        clientA.getState().layouts.items["layout-1"]?.elements?.[
           "el-1"
         ],
       ),
-    { label: "clientA.resources.layouts.layout-1.el-1" },
+    { label: "clientA.layouts.layout-1.el-1" },
   );
 
   await clientA.syncNow();

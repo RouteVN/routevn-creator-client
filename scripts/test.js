@@ -1,7 +1,6 @@
 import { spawn } from "node:child_process";
 
 const scripts = [
-  "scripts/test-command-only.js",
   "scripts/test-collab-adapters.js",
   "scripts/test-integration.js",
   "scripts/test-convergence.js",

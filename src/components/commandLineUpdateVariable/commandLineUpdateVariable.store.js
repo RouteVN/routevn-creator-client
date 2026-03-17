@@ -133,14 +133,14 @@ export const selectViewData = ({ state }) => {
 
   // Get selected variable type for filtering operations
   const selectedVariable = variableItems[state.tempOperation.variableId];
-  const variableType = (selectedVariable?.type || "string").toLowerCase();
+  const selectedType = (selectedVariable?.type || "string").toLowerCase();
   const operationOptions =
-    OPERATIONS_BY_TYPE[variableType] || OPERATIONS_BY_TYPE.string;
+    OPERATIONS_BY_TYPE[selectedType] || OPERATIONS_BY_TYPE.string;
 
   // Determine input type based on variable type and operation
   const showValueField =
     state.tempOperation.op !== "toggle" && state.tempOperation.op !== "";
-  const valueInputType = variableType; // already lowercase: "number", "boolean", or "string"
+  const valueInputType = selectedType;
 
   // Boolean options for boolean variables
   const booleanOptions = [
@@ -166,7 +166,7 @@ export const selectViewData = ({ state }) => {
     return {
       ...op,
       variableName: variable?.name || "Unknown",
-      variableType: varType,
+      type: varType,
       opLabel: opDef?.label || op.op,
       displayValue,
     };

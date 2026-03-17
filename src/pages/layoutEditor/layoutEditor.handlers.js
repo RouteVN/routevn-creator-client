@@ -250,16 +250,15 @@ const loadAssets = async (deps, fileReferences, fontsItems) => {
  */
 const getRenderState = async (deps) => {
   const { store, projectService } = deps;
-  const repository = await projectService.getRepository();
   const {
     layouts,
     images: { items: imageItems },
-    typography: typographyData,
+    textStyles: textStylesData,
     colors: colorsData,
     fonts: fontsData,
     variables: variablesData,
-  } = repository.getState();
-  const typographyItems = typographyData?.items || {};
+  } = projectService.getRepositoryState();
+  const textStyleItems = textStylesData?.items || {};
   const colorsItems = colorsData?.items || {};
   const fontsItems = fontsData?.items || {};
 
@@ -270,7 +269,7 @@ const getRenderState = async (deps) => {
   const renderStateElements = buildLayoutRenderElements(
     layoutHierarchyStructure,
     imageItems,
-    { items: typographyItems },
+    { items: textStyleItems },
     { items: colorsItems },
     { items: fontsItems },
     { layoutId },
@@ -280,7 +279,7 @@ const getRenderState = async (deps) => {
     layoutHierarchyStructure,
     fontsItems,
     imageItems,
-    typographyItems,
+    textStyleItems,
     colorsItems,
     variablesData,
   };
@@ -336,15 +335,15 @@ const renderLayoutPreview = async (deps) => {
 
 const syncLayoutEditorState = (deps, repositoryState, layoutId) => {
   const { store } = deps;
-  const { layouts, images, typography, colors, fonts, variables } =
+  const { layouts, images, textStyles, colors, fonts, variables } =
     repositoryState;
   const layout = layoutId ? layouts.items?.[layoutId] : undefined;
 
   store.setLayout({ id: layoutId, layout });
   store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
   store.setImages({ images: images || { items: {}, tree: [] } });
-  store.setTypographyData({
-    typographyData: typography || { items: {}, tree: [] },
+  store.setTextStylesData({
+    textStylesData: textStyles || { items: {}, tree: [] },
   });
   store.setColorsData({ colorsData: colors || { items: {}, tree: [] } });
   store.setFontsData({ fontsData: fonts || { items: {}, tree: [] } });
@@ -357,8 +356,8 @@ export const handleAfterMount = async (deps) => {
   const { appService, projectService, render, refs, graphicsService } = deps;
   const payload = appService.getPayload() || {};
   const { layoutId } = payload;
-  const repository = await projectService.getRepository();
-  syncLayoutEditorState(deps, repository.getState(), layoutId);
+  await projectService.ensureRepository();
+  syncLayoutEditorState(deps, projectService.getRepositoryState(), layoutId);
 
   const { canvas } = refs;
   await graphicsService.init({ canvas: canvas });
@@ -371,7 +370,7 @@ export const handleBackClick = (deps) => {
   const { appService } = deps;
 
   const { p } = appService.getPayload();
-  appService.navigate("/project/resources/layouts", { p });
+  appService.navigate("/project/layouts", { p });
 };
 
 // Simple render handler for events that only need to trigger a re-render
@@ -394,8 +393,8 @@ export const handleAddLayoutClick = handleRenderOnly;
 const refreshLayoutEditorData = async (deps) => {
   const { appService, projectService, render } = deps;
   const { layoutId } = appService.getPayload();
-  const repository = await projectService.getRepository();
-  syncLayoutEditorState(deps, repository.getState(), layoutId);
+  await projectService.ensureRepository();
+  syncLayoutEditorState(deps, projectService.getRepositoryState(), layoutId);
   render();
   await renderLayoutPreview(deps);
 };
@@ -547,9 +546,8 @@ async function handleDebouncedUpdate(deps, payload) {
   const { appService, projectService } = deps;
   const { layoutId, selectedItemId, updatedItem, replace } = payload;
   const currentItem =
-    projectService.getState()?.layouts?.items?.[layoutId]?.elements?.items?.[
-      selectedItemId
-    ];
+    projectService.getRepositoryState()?.layouts?.items?.[layoutId]?.elements
+      ?.items?.[selectedItemId];
 
   if (!currentItem || !updatedItem) {
     return;
@@ -566,19 +564,20 @@ async function handleDebouncedUpdate(deps, payload) {
   }
 
   const shouldReplace = replace === true || diff.requiresReplace;
+  const { id: _ignoredItemId, ...nextReplaceData } = updatedItem;
 
   // Save to repository
   await projectService.updateLayoutElement({
     layoutId,
     elementId: selectedItemId,
-    patch: shouldReplace ? updatedItem : diff.patch,
+    data: shouldReplace ? nextReplaceData : diff.patch,
     replace: shouldReplace,
   });
 
   // For form/keyboard updates, sync store with repository
   syncLayoutEditorState(
     deps,
-    projectService.getState(),
+    projectService.getRepositoryState(),
     appService.getPayload().layoutId || layoutId,
   );
 }
@@ -592,7 +591,7 @@ const subscriptions = (deps) => {
       matches: matchesRemoteTargets([
         "layouts",
         "images",
-        "typography",
+        "textStyles",
         "colors",
         "fonts",
         "variables",

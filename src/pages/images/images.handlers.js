@@ -49,9 +49,8 @@ const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
   }
 
   for (const result of successfulUploads) {
-    await projectService.createResourceItem({
-      resourceType: "images",
-      resourceId: nanoid(),
+    await projectService.createImage({
+      imageId: nanoid(),
       data: {
         type: "image",
         fileId: result.fileId,
@@ -134,10 +133,9 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   const uploadResult = file.uploadResult;
-  await projectService.updateResourceItem({
-    resourceType: "images",
-    resourceId: selectedItem.id,
-    patch: {
+  await projectService.updateImage({
+    imageId: selectedItem.id,
+    data: {
       fileId: uploadResult.fileId,
       name: uploadResult.displayName,
       fileType: uploadResult.file.type,
@@ -225,10 +223,9 @@ export const handleEditFormAction = async (deps, payload) => {
       }
     : {};
 
-  await projectService.updateResourceItem({
-    resourceType: "images",
-    resourceId: editItemId,
-    patch: {
+  await projectService.updateImage({
+    imageId: editItemId,
+    data: {
       name,
       description: values?.description ?? "",
       ...imagePatch,
@@ -242,9 +239,8 @@ export const handleEditFormAction = async (deps, payload) => {
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, appService, render } = deps;
   const { itemId } = payload._event.detail;
-  const result = await projectService.deleteResourceItemIfUnused({
-    resourceType: "images",
-    resourceId: itemId,
+  const result = await projectService.deleteImageIfUnused({
+    imageId: itemId,
     checkTargets: ["scenes", "layouts"],
   });
 

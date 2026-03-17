@@ -555,7 +555,7 @@ export const createInitialState = () => ({
   selectedItemId: undefined,
   layout: undefined,
   images: { tree: [], items: {} },
-  typographyData: { tree: [], items: {} },
+  textStylesData: { tree: [], items: {} },
   colorsData: { tree: [], items: {} },
   fontsData: { tree: [], items: {} },
   variablesData: { tree: [], items: {} },
@@ -602,8 +602,8 @@ export const setImages = ({ state }, { images } = {}) => {
   state.images = images;
 };
 
-export const setTypographyData = ({ state }, { typographyData } = {}) => {
-  state.typographyData = typographyData;
+export const setTextStylesData = ({ state }, { textStylesData } = {}) => {
+  state.textStylesData = textStylesData;
 };
 
 export const startDragging = ({ state }, _payload = {}) => {
@@ -790,8 +790,8 @@ export const selectItems = ({ state }) => {
   return state.layoutData;
 };
 
-export const selectTypographyData = ({ state }) => {
-  return state.typographyData;
+export const selectTextStylesData = ({ state }) => {
+  return state.textStylesData;
 };
 
 export const selectFontsData = ({ state }) => {

@@ -206,15 +206,13 @@ export const handleTransformFormActionClick = async (deps, payload) => {
   const targetGroupId = store.selectTargetGroupId();
 
   if (editMode && editItemId) {
-    await projectService.updateResourceItem({
-      resourceType: "transforms",
-      resourceId: editItemId,
-      patch: transformData,
+    await projectService.updateTransform({
+      transformId: editItemId,
+      data: transformData,
     });
   } else {
-    await projectService.createResourceItem({
-      resourceType: "transforms",
-      resourceId: nanoid(),
+    await projectService.createTransform({
+      transformId: nanoid(),
       data: {
         type: "transform",
         ...transformData,
@@ -256,9 +254,8 @@ export const handleItemDelete = async (deps, payload) => {
     return;
   }
 
-  await projectService.deleteResourceItem({
-    resourceType: "transforms",
-    resourceId: itemId,
+  await projectService.deleteTransforms({
+    transformIds: [itemId],
   });
 
   await handleDataChanged(deps);

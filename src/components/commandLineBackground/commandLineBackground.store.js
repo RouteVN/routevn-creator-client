@@ -34,15 +34,15 @@ const normalizeResourceCollection = (collection) => {
 
 export const createInitialState = () => ({
   mode: "current",
-  tab: "image", // "image", "layout", or "video"
+  tab: "image",
   imageItems: createEmptyCollection(),
   layoutItems: createEmptyCollection(),
   videoItems: createEmptyCollection(),
-  tweenItems: createEmptyCollection(),
+  animationItems: createEmptyCollection(),
   selectedResourceId: undefined,
   selectedResourceType: undefined,
   tempSelectedResourceId: undefined,
-  selectedTweenId: undefined,
+  selectedAnimationId: undefined,
   backgroundLoop: false,
   pendingResourceId: undefined,
 });
@@ -57,12 +57,12 @@ export const setMode = ({ state }, { mode } = {}) => {
 
 export const setRepositoryState = (
   { state },
-  { images, layouts, videos, tweens } = {},
+  { images, layouts, videos, animations } = {},
 ) => {
   state.imageItems = normalizeResourceCollection(images);
   state.layoutItems = normalizeResourceCollection(layouts);
   state.videoItems = normalizeResourceCollection(videos);
-  state.tweenItems = normalizeResourceCollection(tweens);
+  state.animationItems = normalizeResourceCollection(animations);
 };
 
 export const setTab = ({ state }, { tab } = {}) => {
@@ -98,12 +98,12 @@ export const clearPendingResourceId = ({ state }, _payload = {}) => {
   state.pendingResourceId = undefined;
 };
 
-export const setSelectedTween = ({ state }, { tweenId } = {}) => {
-  state.selectedTweenId = tweenId;
+export const setSelectedAnimation = ({ state }, { animationId } = {}) => {
+  state.selectedAnimationId = animationId;
 };
 
-export const selectSelectedTween = ({ state }) => {
-  return state.selectedTweenId;
+export const selectSelectedAnimation = ({ state }) => {
+  return state.selectedAnimationId;
 };
 
 export const setBackgroundLoop = ({ state }, { loop } = {}) => {

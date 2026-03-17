@@ -3,7 +3,7 @@ import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 // Helper function to create add color form
 const createAddColorForm = (colorFolderOptions) => ({
   title: "Add New Color",
-  description: "Create a new color for typography",
+  description: "Create a new color for text styles",
   fields: [
     {
       name: "name",
@@ -43,7 +43,7 @@ const createAddColorForm = (colorFolderOptions) => ({
 // Helper function to create add font form
 const createAddFontForm = (fontFolderOptions) => ({
   title: "Add New Font",
-  description: "Upload a new font for typography",
+  description: "Upload a new font for text styles",
   fields: [
     {
       name: "folderId",
@@ -82,7 +82,7 @@ const getPreviewTextValue = ({ previewText, name } = {}) => {
 };
 
 export const createInitialState = () => ({
-  typographyData: { tree: [], items: {} },
+  textStylesData: { tree: [], items: {} },
   colorsData: { tree: [], items: {} },
   fontsData: { tree: [], items: {} },
   selectedItemId: undefined,
@@ -134,7 +134,6 @@ export const createInitialState = () => ({
   // Context menu items
   contextMenuItems: [
     { label: "New Folder", type: "item", value: "new-item" },
-    { label: "Duplicate", type: "item", value: "duplicate-item" },
     { label: "Rename", type: "item", value: "rename-item" },
     { label: "Delete", type: "item", value: "delete-item" },
   ],
@@ -143,8 +142,8 @@ export const createInitialState = () => ({
   ],
 });
 
-export const setItems = ({ state }, { typographyData } = {}) => {
-  state.typographyData = typographyData;
+export const setItems = ({ state }, { textStylesData } = {}) => {
+  state.textStylesData = textStylesData;
 };
 
 export const setColorsData = ({ state }, { colorsData } = {}) => {
@@ -273,14 +272,14 @@ export const clearSelectedFontFile = ({ state }, _payload = {}) => {
 
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return undefined;
-  const flatItems = toFlatItems(state.typographyData);
+  const flatItems = toFlatItems(state.textStylesData);
   return flatItems.find((item) => item.id === state.selectedItemId);
 };
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
 export const selectItemById = ({ state }, itemId) => {
-  const flatItems = toFlatItems(state.typographyData);
+  const flatItems = toFlatItems(state.textStylesData);
   return flatItems.find((item) => item.id === itemId);
 };
 
@@ -288,7 +287,7 @@ export const selectColorsData = ({ state }) => state.colorsData;
 
 export const selectFontsData = ({ state }) => state.fontsData;
 
-export const selectTypographyData = ({ state }) => state.typographyData;
+export const selectTypographyData = ({ state }) => state.textStylesData;
 
 export const selectDialogState = ({ state }) => ({
   targetGroupId: state.targetGroupId,
@@ -305,8 +304,8 @@ export const selectSelectedFontData = ({ state }) => ({
 });
 
 export const selectViewData = ({ state }) => {
-  const flatItems = toFlatItems(state.typographyData);
-  const rawFlatGroups = toFlatGroups(state.typographyData);
+  const flatItems = toFlatItems(state.textStylesData);
+  const rawFlatGroups = toFlatGroups(state.textStylesData);
 
   // Get selected item details
   const selectedItem = state.selectedItemId
@@ -362,7 +361,7 @@ export const selectViewData = ({ state }) => {
       : { fontFamily: fontId, fileId: undefined };
   };
 
-  // Add typography-specific preview data. Collapse state is owned by the center view.
+  // Add text style preview data. Collapse state is owned by the center view.
   const flatGroups = filteredGroups.map((group) => ({
     ...group,
     children: (group.children ?? []).map((item) => {
@@ -411,7 +410,7 @@ export const selectViewData = ({ state }) => {
     ? [
         {
           type: "slot",
-          slot: "typography-preview",
+          slot: "text-style-preview",
           label: "",
         },
         {
@@ -501,8 +500,8 @@ export const selectViewData = ({ state }) => {
   const dialogForm = {
     title: state.editMode ? "Edit Typography" : "Add Typography",
     description: state.editMode
-      ? "Update typography style"
-      : "Create a new typography style",
+      ? "Update text style"
+      : "Create a new text style",
     fields: [
       {
         name: "name",
@@ -633,7 +632,7 @@ export const selectViewData = ({ state }) => {
     flatItems,
     flatGroups,
     resourceCategory: "userInterface",
-    selectedResourceId: "typography",
+    selectedResourceId: "textStyles",
     selectedItemId: state.selectedItemId,
     selectedItemName: selectedItem?.name ?? "",
     detailFields,
@@ -682,6 +681,6 @@ export const selectViewData = ({ state }) => {
     previewFontFamily: previewFontData.fontFamily,
     previewFontFileId: previewFontData.fileId,
     searchQuery: state.searchQuery,
-    resourceType: "typography",
+    resourceType: "textStyles",
   };
 };

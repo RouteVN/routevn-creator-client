@@ -8,20 +8,20 @@ refs:
       item-click:
         handler: handleFileExplorerSelectionChanged
       dblclick-item:
-        handler: handleTypographyItemDoubleClick
+        handler: handleTextStyleItemDoubleClick
   typographyView:
     eventListeners:
       item-click:
-        handler: handleTypographyItemClick
+        handler: handleTextStyleItemClick
       item-dblclick:
-        handler: handleTypographyItemDoubleClick
+        handler: handleTextStyleItemDoubleClick
       add-click:
-        handler: handleAddTypographyClick
+        handler: handleAddTextStyleClick
       search-input:
         handler: handleSearchInput
       item-delete:
         handler: handleItemDelete
-  detailTypographyPreview:
+  detailTextStylePreview:
     eventListeners:
       click:
         handler: handleFormExtraEvent
@@ -29,7 +29,7 @@ refs:
     eventListeners:
       close:
         handler: handleCloseDialog
-  typographyForm:
+  textStyleForm:
     eventListeners:
       form-action:
         handler: handleFormActionClick
@@ -63,7 +63,7 @@ template:
                   - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
                   - rvn-base-file-explorer#fileExplorer :items=flatItems shrinkable dropdown-menu allowDrag :contextMenuItems=contextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
           - rtgl-view w=1fg h=f:
-              - rvn-typography-resources-view#typographyView :navTitle=title :groups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery: null
+              - rvn-text-style-resources-view#typographyView :navTitle=title :groups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
@@ -71,7 +71,7 @@ template:
                           - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
                               - rtgl-text c=mu-fg: ${selectedItemName}
                           - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=detailFields:
-                              - rtgl-view#detailTypographyPreview slot="typography-preview" p=md bw=xs bc=bo br=md cur=pointer:
+                              - rtgl-view#detailTextStylePreview slot="text-style-preview" p=md bw=xs bc=bo br=md cur=pointer:
                                   - rvn-font-preview fontFamily=${detailPreviewFontFamily} previewText="${detailPreviewText}" fileId=${detailPreviewFontFileId} fontSize=${detailPreviewFontSize} lineHeight=${detailPreviewLineHeight} color=${detailPreviewColor} fontWeight=${detailPreviewFontWeight} width=220 showBorder=false: null
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
@@ -80,7 +80,7 @@ template:
       - $if isDialogOpen:
           - rtgl-view slot=content d=h g=md w=800:
               - rtgl-view w=1fg:
-                  - rtgl-form#typographyForm key=${formKey} :defaultValues=dialogDefaultValues :form=dialogForm w=f: null
+                  - rtgl-form#textStyleForm key=${formKey} :defaultValues=dialogDefaultValues :form=dialogForm w=f: null
               - rtgl-view w=1fg p=md bwl=xs d=v:
                   - rtgl-text s=lg fw=b mb=md: Preview
                   - rvn-font-preview h=1fg fontFamily=${previewFontFamily} previewText="${previewText}" fileId=${previewFontFileId} fontSize=${previewFontSize} lineHeight=${previewLineHeight} color=${previewColor} fontWeight=${previewFontWeight} width=350 showBorder=true: null

@@ -87,12 +87,10 @@ const normalizeLayoutCollection = (layoutsValue) => {
 };
 
 const getResourceCollectionsFromDomainState = (domainState) => ({
-  images: domainState?.resources?.images || createEmptyCollection(),
-  layouts: normalizeLayoutCollection(
-    domainState?.layouts || domainState?.resources?.layouts,
-  ),
-  videos: domainState?.resources?.videos || createEmptyCollection(),
-  tweens: domainState?.resources?.tweens || createEmptyCollection(),
+  images: domainState?.images || createEmptyCollection(),
+  layouts: normalizeLayoutCollection(domainState?.layouts),
+  videos: domainState?.videos || createEmptyCollection(),
+  animations: domainState?.animations || createEmptyCollection(),
 });
 
 const getDomainStateFromProjectService = (projectService) => {
@@ -126,7 +124,6 @@ export const handleBeforeMount = (deps) => {
     return;
   }
 
-  // Store resourceId temporarily - resourceType will be determined in handleAfterMount
   store.setPendingResourceId({ resourceId: resourceId });
 
   if (backgroundLoop !== undefined) {
@@ -135,10 +132,9 @@ export const handleBeforeMount = (deps) => {
     });
   }
 
-  // Set the selected tween if it exists
   if (backgroundAnimations?.in) {
-    store.setSelectedTween({
-      tweenId: backgroundAnimations.in?.resourceId,
+    store.setSelectedAnimation({
+      animationId: backgroundAnimations.in?.resourceId,
     });
   }
 };
@@ -148,17 +144,16 @@ export const handleAfterMount = async (deps) => {
 
   await projectService.ensureRepository();
   const domainState = getDomainStateFromProjectService(projectService);
-  const { images, layouts, videos, tweens } =
+  const { images, layouts, videos, animations } =
     getResourceCollectionsFromDomainState(domainState);
 
   store.setRepositoryState({
     images,
     layouts,
     videos,
-    tweens,
+    animations,
   });
 
-  // Determine resourceType from pending resourceId
   const pendingResourceId = store.selectPendingResourceId();
   if (pendingResourceId) {
     const flatImages = toFlatItems(images);
@@ -269,9 +264,9 @@ export const handleFormInputChange = (deps, payload) => {
   const { store, render } = deps;
   const { name, value: fieldValue } = payload._event.detail;
 
-  if (name === "tween") {
-    store.setSelectedTween({
-      tweenId: fieldValue,
+  if (name === "animation") {
+    store.setSelectedAnimation({
+      animationId: fieldValue,
     });
     render();
     return;
@@ -314,7 +309,7 @@ export const handleTabClick = (deps, payload) => {
 export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store } = deps;
   const selectedResource = store.selectSelectedResource();
-  const selectedTweenId = store.selectSelectedTween();
+  const selectedAnimationId = store.selectSelectedAnimation();
   const backgroundLoop = store.selectBackgroundLoop();
 
   const backgroundData = {
@@ -325,15 +320,14 @@ export const handleSubmitClick = (deps) => {
     backgroundData.loop = backgroundLoop ?? false;
   }
 
-  // Only add animations object if there's a valid tween selected
   if (
     selectedResource?.resourceId &&
-    selectedTweenId &&
-    selectedTweenId !== "none"
+    selectedAnimationId &&
+    selectedAnimationId !== "none"
   ) {
     backgroundData.animations = {
       in: {
-        resourceId: selectedTweenId,
+        resourceId: selectedAnimationId,
       },
     };
   }

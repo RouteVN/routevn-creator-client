@@ -15,12 +15,10 @@ import {
   saveProjectionGap,
 } from "../shared/collab/projectorCache.js";
 import { createWebSocketTransport } from "../web/collab/createWebSocketTransport.js";
-import { projectRepositoryStateToDomainState } from "../../../internal/project/projection.js";
 import {
   applyCommandToRepository,
   assertSupportedProjectState,
-  createProjectCreatedRepositoryEvent,
-  initialProjectData,
+  createProjectCreateRepositoryEvent,
 } from "../shared/projectRepository.js";
 
 async function copyTemplateFiles(templateId, targetPath) {
@@ -95,23 +93,13 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
       const templateData = await loadTemplate(template);
       await copyTemplateFiles(template, filesPath);
 
-      const initData = {
-        ...initialProjectData,
-        ...templateData,
-        model_version: 2,
-        project: { id: projectPath },
-      };
-
-      const bootstrapDomainState = projectRepositoryStateToDomainState({
-        repositoryState: initData,
-        projectId: projectPath,
-      });
+      assertSupportedProjectState(templateData);
 
       const store = await createInsiemeTauriStoreAdapter(projectPath);
       await store.appendEvent(
-        createProjectCreatedRepositoryEvent({
+        createProjectCreateRepositoryEvent({
           projectId: projectPath,
-          state: bootstrapDomainState,
+          state: templateData,
         }),
       );
 
@@ -323,7 +311,7 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
       const state = repository.getState();
       assertSupportedProjectState(state);
 
-      const resolvedProjectId = state.project?.id || projectId;
+      const resolvedProjectId = projectId;
       const resolvedPartitions = partitioning.getBasePartitions(
         resolvedProjectId,
         partitions,
@@ -335,10 +323,7 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
         projectId: resolvedProjectId,
         projectName: projectMetadata.name,
         projectDescription: projectMetadata.description,
-        initialState: projectRepositoryStateToDomainState({
-          repositoryState: state,
-          projectId: resolvedProjectId,
-        }),
+        initialRepositoryState: state,
         token,
         actor: {
           userId,
