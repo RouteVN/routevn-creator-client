@@ -1090,7 +1090,7 @@
               "scaleY": 1,
               "rotation": 0,
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "nextLine": {}
                   }
@@ -1245,7 +1245,7 @@
               "rotation": 0,
               "text": "START",
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "sectionTransition": {
                       "sceneId": "eXLwPZNpFqDjmXjORfonq",
@@ -1271,7 +1271,7 @@
               "rotation": 0,
               "text": "LOAD",
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "pushLayeredView": {
                       "resourceId": "LoadPageDefaultLayout"
@@ -1296,7 +1296,7 @@
               "rotation": 0,
               "text": "OPTIONS",
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "pushLayeredView": {
                       "resourceId": "OptionsPageDefaultLayout"
@@ -1475,7 +1475,7 @@
               "rotation": 0,
               "text": "BACK",
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "popLayeredView": {}
                   }
@@ -1609,7 +1609,7 @@
               "initialValue": "${variables._musicVolume}",
               "variableId": "_musicVolume",
               "change": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "updateVariable": {
                       "id": "optionsBgmSlider",
@@ -1681,7 +1681,7 @@
               "initialValue": "${variables._soundVolume}",
               "variableId": "_soundVolume",
               "change": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "updateVariable": {
                       "id": "optionsSfxSlider",
@@ -1744,7 +1744,7 @@
               "rotation": 0,
               "text": "${variables._muteAll}",
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "updateVariable": {
                       "id": "optionsMuteToggle",
@@ -1816,7 +1816,7 @@
               "initialValue": "${variables._textSpeed}",
               "variableId": "_textSpeed",
               "change": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "updateVariable": {
                       "id": "optionsSpeedSlider",
@@ -1888,7 +1888,7 @@
               "initialValue": "${variables._autoForwardTime}",
               "variableId": "_autoForwardTime",
               "change": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "updateVariable": {
                       "id": "optionsAutoSlider",
@@ -1967,7 +1967,7 @@
               "rotation": 0,
               "text": "${variables._skipUnseenText}",
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "updateVariable": {
                       "id": "optionsSkipUnseen",
@@ -2014,7 +2014,7 @@
               "rotation": 0,
               "text": "${variables._skipTransitionsAndAnimations}",
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "updateVariable": {
                       "id": "optionsSkipTransitions",
@@ -2045,7 +2045,7 @@
               "rotation": 0,
               "text": "BACK",
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "popLayeredView": {}
                   }

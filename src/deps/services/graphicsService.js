@@ -14,6 +14,7 @@ import createRouteEngine, { createEffectsHandler } from "route-engine-js";
 import { Ticker } from "pixi.js";
 
 export const createGraphicsService = async ({ subject }) => {
+  const RIGHT_CLICK_EVENT_NAMES = new Set(["rightclick", "rightClick"]);
   let routeGraphics;
   let engine;
   let assetBufferManager;
@@ -199,7 +200,7 @@ export const createGraphicsService = async ({ subject }) => {
               : undefined;
             const interactionId = eventContext?._event?.id ?? "__unknown__";
 
-            if (eventName === "rightClick") {
+            if (RIGHT_CLICK_EVENT_NAMES.has(eventName)) {
               clearPendingClickInteraction(interactionId);
               enqueueInteractionActions(payload.actions, eventContext);
               return;

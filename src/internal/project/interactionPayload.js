@@ -3,7 +3,7 @@ export const getInteractionPayload = (interaction = {}) => {
     return {};
   }
 
-  return interaction.payload ?? interaction.actionPayload ?? {};
+  return interaction.payload ?? {};
 };
 
 export const getInteractionActions = (interaction = {}) => {
