@@ -1,6 +1,8 @@
 import {
   buildLayoutElements,
   createLayoutReferenceResources,
+  getLayoutKeyboardResourceId,
+  toRouteEngineKeyboardResource,
 } from "./layout.js";
 import { RESOURCE_TYPES } from "./commands.js";
 import { normalizeEngineActions } from "./engineActions.js";
@@ -622,6 +624,7 @@ const constructLayoutResources = (
   const textStyles = {
     ...baseLayoutResources.textStyles,
   };
+  const keyboards = {};
   const layouts = {};
 
   Object.entries(repositoryLayouts).forEach(([layoutId, layout]) => {
@@ -639,17 +642,14 @@ const constructLayoutResources = (
     );
 
     Object.assign(textStyles, resources.textStyles);
+    keyboards[getLayoutKeyboardResourceId(layoutId)] =
+      toRouteEngineKeyboardResource(layout.keyboard);
 
     layouts[layoutId] = {
       id: layoutId,
       name: layout.name,
       layoutType: layout.layoutType,
       elements,
-      ...(layout.keyboard &&
-      typeof layout.keyboard === "object" &&
-      !Array.isArray(layout.keyboard)
-        ? { keyboard: structuredClone(layout.keyboard) }
-        : {}),
       ...(Array.isArray(layout.transitions)
         ? { transitions: structuredClone(layout.transitions) }
         : {}),
@@ -662,6 +662,7 @@ const constructLayoutResources = (
       colors: baseLayoutResources.colors,
       fonts: baseLayoutResources.fonts,
       textStyles,
+      keyboards,
     },
     layouts,
   };
@@ -704,6 +705,7 @@ const constructProjectResources = (repositoryState = {}) => {
     fonts: layoutResources.fonts,
     colors: layoutResources.colors,
     textStyles: layoutResources.textStyles,
+    keyboards: layoutResources.keyboards,
     transforms: constructTransformResources(repositoryTransforms),
     characters: constructCharacterResources(repositoryCharacters),
     layouts,
@@ -711,6 +713,22 @@ const constructProjectResources = (repositoryState = {}) => {
     variables,
   };
 };
+
+function addBaseLayoutKeyboardAction(actions) {
+  const baseLayoutId = actions?.base?.resourceId;
+  if (!baseLayoutId || actions.keyboard) {
+    return actions;
+  }
+
+  return {
+    ...actions,
+    // Base-layout keyboard bindings need to become engine-owned presentation
+    // state so preview/export follow the same route-engine path.
+    keyboard: {
+      resourceId: getLayoutKeyboardResourceId(baseLayoutId),
+    },
+  };
+}
 
 const constructStory = (scenes) => {
   const transformedScenes = {};
@@ -755,7 +773,9 @@ const constructStory = (scenes) => {
 
             transformedSection.lines.push({
               id: lineId,
-              actions: normalizeEngineActions(line.actions || {}),
+              actions: addBaseLayoutKeyboardAction(
+                normalizeEngineActions(line.actions || {}),
+              ),
             });
           });
         }

@@ -16,7 +16,7 @@ import createRouteGraphics, {
   particlesPlugin,
   animatedSpritePlugin,
 } from "route-graphics";
-import { mergeBaseLayoutKeyboardIntoRenderState } from "../src/internal/project/layout.js";
+import { prepareRenderStateKeyboardForGraphics } from "../src/internal/project/layout.js";
 
 async function parseVNBundle(arrayBuffer) {
   const dataView = new DataView(arrayBuffer);
@@ -156,22 +156,12 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
 
   const routeGraphics = createRouteGraphics();
   let engine;
-  let currentProjectData = jsonData;
 
   const renderEngineState = (renderState) => {
-    const nextRenderState = mergeBaseLayoutKeyboardIntoRenderState({
+    const nextRenderState = prepareRenderStateKeyboardForGraphics({
       renderState,
-      projectData: currentProjectData,
-      presentationState: engine?.selectPresentationState?.(),
     });
     routeGraphics.render(nextRenderState);
-  };
-
-  const syncProjectDataFromActions = (actions) => {
-    const nextProjectData = actions?.updateProjectData?.projectData;
-    if (nextProjectData) {
-      currentProjectData = nextProjectData;
-    }
   };
 
   await routeGraphics.init({
@@ -187,7 +177,6 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
       }
 
       if (payload.actions) {
-        syncProjectDataFromActions(payload.actions);
         const eventContext = payload._event
           ? { _event: payload._event }
           : undefined;

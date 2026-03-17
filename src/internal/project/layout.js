@@ -2,6 +2,7 @@ import { resolveLayoutReferences } from "route-engine-js";
 import { getFirstTextStyleId } from "../../constants/textStyles.js";
 import { normalizeEngineActions } from "./engineActions.js";
 import {
+  getInteractionActions,
   getInteractionPayload,
   withInteractionPayload,
 } from "./interactionPayload.js";
@@ -1145,25 +1146,35 @@ const KEYBOARD_KEY_CANONICAL_MAP = {
   arrowdown: "arrowdown",
 };
 
-const normalizeKeyboardBindingsForGraphics = (keyboardMap) => {
-  const input = asKeyboardMap(keyboardMap);
-  if (!input) {
-    return undefined;
-  }
-
-  const normalized = {};
-  Object.entries(input).forEach(([key, interaction]) => {
-    const canonicalKey = KEYBOARD_KEY_CANONICAL_MAP[key] ?? key;
-    normalized[canonicalKey] = structuredClone(interaction);
-  });
-
-  return normalized;
+const normalizeKeyboardKeyForGraphics = (key) => {
+  return KEYBOARD_KEY_CANONICAL_MAP[key] ?? key;
 };
 
-export const mergeBaseLayoutKeyboardIntoRenderState = ({
+export const getLayoutKeyboardResourceId = (layoutId) => {
+  return `layout-keyboard:${layoutId}`;
+};
+
+export const toRouteEngineKeyboardResource = (keyboardMap) => {
+  const input = asKeyboardMap(keyboardMap);
+  if (!input) {
+    return {};
+  }
+
+  const resource = {};
+  Object.entries(input).forEach(([key, interaction]) => {
+    const actions = getInteractionActions(interaction);
+    resource[normalizeKeyboardKeyForGraphics(key)] = {
+      actionPayload: {
+        actions: structuredClone(actions),
+      },
+    };
+  });
+
+  return resource;
+};
+
+export const prepareRenderStateKeyboardForGraphics = ({
   renderState,
-  projectData,
-  presentationState,
   enableGlobalKeyboardBindings = true,
 }) => {
   const existingGlobal =
@@ -1186,26 +1197,24 @@ export const mergeBaseLayoutKeyboardIntoRenderState = ({
     };
   }
 
-  const baseLayoutId = presentationState?.base?.resourceId;
-  const baseLayoutKeyboard = asKeyboardMap(
-    projectData?.resources?.layouts?.[baseLayoutId]?.keyboard,
-  );
-
-  if (!baseLayoutKeyboard) {
+  if (!existingKeyboard) {
     return renderState;
   }
+
+  const normalizedKeyboard = {};
+  Object.entries(existingKeyboard).forEach(([key, value]) => {
+    // route-engine still emits keyboard bindings as actionPayload while
+    // route-graphics consumes payload for public interaction events.
+    normalizedKeyboard[normalizeKeyboardKeyForGraphics(key)] = {
+      payload: structuredClone(value?.payload ?? value?.actionPayload ?? {}),
+    };
+  });
 
   return {
     ...renderState,
     global: {
       ...existingGlobal,
-      // Explicit engine keyboard bindings should still win over base-layout defaults.
-      keyboard: {
-        ...normalizeKeyboardBindingsForGraphics(baseLayoutKeyboard),
-        ...(existingKeyboard
-          ? normalizeKeyboardBindingsForGraphics(existingKeyboard)
-          : {}),
-      },
+      keyboard: normalizedKeyboard,
     },
   };
 };

@@ -12,14 +12,13 @@ import createRouteGraphics, {
 } from "route-graphics";
 import createRouteEngine, { createEffectsHandler } from "route-engine-js";
 import { Ticker } from "pixi.js";
-import { mergeBaseLayoutKeyboardIntoRenderState } from "../../internal/project/layout.js";
+import { prepareRenderStateKeyboardForGraphics } from "../../internal/project/layout.js";
 
 export const createGraphicsService = async ({ subject }) => {
   const RIGHT_CLICK_EVENT_NAMES = new Set(["rightclick", "rightClick"]);
   let routeGraphics;
   let engine;
   let assetBufferManager;
-  let currentProjectData;
   let enableGlobalKeyboardBindings = true;
   // Create dedicated ticker for auto mode
   let ticker;
@@ -91,23 +90,12 @@ export const createGraphicsService = async ({ subject }) => {
       return;
     }
 
-    syncProjectDataFromActions(actions);
-
     engine.handleActions(actions, eventContext);
   };
 
-  const syncProjectDataFromActions = (actions) => {
-    const nextProjectData = actions?.updateProjectData?.projectData;
-    if (nextProjectData) {
-      currentProjectData = nextProjectData;
-    }
-  };
-
   const renderEngineState = (renderState) => {
-    const nextRenderState = mergeBaseLayoutKeyboardIntoRenderState({
+    const nextRenderState = prepareRenderStateKeyboardForGraphics({
       renderState,
-      projectData: currentProjectData,
-      presentationState: engine?.selectPresentationState?.(),
       enableGlobalKeyboardBindings,
     });
     routeGraphics.render(nextRenderState);
@@ -256,7 +244,6 @@ export const createGraphicsService = async ({ subject }) => {
     },
     initRouteEngine: (projectData, options = {}) => {
       ticker.start();
-      currentProjectData = projectData;
       enableGlobalKeyboardBindings =
         options.enableGlobalKeyboardBindings ?? true;
 
@@ -302,7 +289,6 @@ export const createGraphicsService = async ({ subject }) => {
     },
 
     engineHandleActions: (actions, eventContext) => {
-      syncProjectDataFromActions(actions);
       engine.handleActions(actions, eventContext);
     },
 
@@ -316,7 +302,6 @@ export const createGraphicsService = async ({ subject }) => {
       if (engine) {
         engine = undefined;
       }
-      currentProjectData = undefined;
       enableGlobalKeyboardBindings = true;
       beforeHandleActions = undefined;
       actionQueue = Promise.resolve();
