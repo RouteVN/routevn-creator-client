@@ -548,7 +548,7 @@ export const handleKeyboardItemClick = (deps, payload) => {
 };
 
 export const handleKeyboardItemRightClick = async (deps, payload) => {
-  const { appService, render } = deps;
+  const { appService } = deps;
   const event = payload._event;
   event.preventDefault();
 
