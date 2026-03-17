@@ -30,11 +30,11 @@ refs:
 template:
   - $if showSelected:
       - rtgl-view g=md w=f:
-          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.dialogue || preview.choice || preview.base || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.toggleDialogueUI || preview.setNextLineConfig || preview.pushLayeredView || preview.popLayeredView || preview.updateVariable:
-              - $if preview.base:
-                  - rtgl-view#actionItemBase data-mode=base g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
-                      - rtgl-svg svg=screen wh=24: null
-                      - rtgl-text s=sm: ${preview.base.name}
+          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.dialogue || preview.choice || preview.control || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.toggleDialogueUI || preview.setNextLineConfig || preview.pushLayeredView || preview.popLayeredView || preview.updateVariable:
+              - $if preview.control:
+                  - rtgl-view#actionItemControl data-mode=control g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg=control wh=24: null
+                      - rtgl-text s=sm: ${preview.control.name}
               - $if preview.background:
                   - rtgl-view#actionItemBackground data-mode=background g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=pointer:
                       - $if preview.background.type == 'image':
@@ -134,8 +134,8 @@ template:
               - rvn-command-line-characters#commandLineCharacters :character=actions.character :presentationState=presentationState: null
             $elif mode == "sectionTransition":
               - rvn-command-line-section-transition#commandLineSectionTransition :sectionTransition=actions.sectionTransition :currentSceneId=currentSceneId: null
-            $elif mode == "base":
-              - rvn-command-line-base#commandLineBase :layouts=baseLayouts :base=actions.base: null
+            $elif mode == "control":
+              - rvn-command-line-control#commandLineControl :controls=controlLayouts :control=actions.control: null
             $elif mode == "nextLine":
               - rvn-command-line-next-line#commandLineNextLine :nextLine=selectedLine.actions.nextLine: null
             $elif mode == "toggleAutoMode":
@@ -154,6 +154,4 @@ template:
               - rvn-command-line-set-next-line-config#commandLineSetNextLineConfig :setNextLineConfig=actions.setNextLineConfig: null
             $elif mode == "updateVariable":
               - rvn-command-line-update-variable#commandLineUpdateVariable :updateVariable=actions.updateVariable: null
-            $elif mode == "controls":
-              - rvn-command-line-controls#commandLineControls :controls=selectedLine.controls: null
   - rtgl-dropdown-menu#dropdownMenu :items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

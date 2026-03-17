@@ -1,5 +1,6 @@
 import { resolveLayoutReferences } from "route-engine-js";
 import { getFirstTextStyleId } from "../../constants/textStyles.js";
+import { filterTreeCollection } from "./tree.js";
 import { normalizeEngineActions } from "./engineActions.js";
 import {
   getInteractionActions,
@@ -68,6 +69,35 @@ export const BASE_LAYOUT_KEYBOARD_OPTIONS = [
 export const BASE_LAYOUT_KEYBOARD_LABELS = Object.fromEntries(
   BASE_LAYOUT_KEYBOARD_OPTIONS.map((item) => [item.value, item.label]),
 );
+
+const isLayoutResource = (item) => item?.type === "layout";
+
+export const filterLayoutsByType = (layoutsData, layoutTypes = []) => {
+  const allowedLayoutTypes = new Set(layoutTypes);
+
+  return filterTreeCollection(layoutsData, (item) => {
+    if (!isLayoutResource(item)) {
+      return false;
+    }
+
+    return allowedLayoutTypes.has(item.layoutType);
+  });
+};
+
+export const filterLayoutsExcludingTypes = (
+  layoutsData,
+  excludedLayoutTypes = [],
+) => {
+  const blockedLayoutTypes = new Set(excludedLayoutTypes);
+
+  return filterTreeCollection(layoutsData, (item) => {
+    if (!isLayoutResource(item)) {
+      return false;
+    }
+
+    return !blockedLayoutTypes.has(item.layoutType);
+  });
+};
 
 const toAlphanumericId = (value, fallback = "sliderUpdate") => {
   const sanitized = String(value || "").replace(/[^a-zA-Z0-9]/g, "");
@@ -1034,7 +1064,9 @@ export const extractLayoutIdsFromValue = (value, projectData) => {
     if (
       typeof node.resourceId === "string" &&
       allLayouts[node.resourceId] &&
-      (typeof node.resourceType !== "string" || node.resourceType === "layout")
+      (typeof node.resourceType !== "string" ||
+        node.resourceType === "layout" ||
+        node.resourceType === "control")
     ) {
       layoutIds.add(node.resourceId);
     }
@@ -1164,9 +1196,7 @@ export const toRouteEngineKeyboardResource = (keyboardMap) => {
   Object.entries(input).forEach(([key, interaction]) => {
     const actions = getInteractionActions(interaction);
     resource[normalizeKeyboardKeyForGraphics(key)] = {
-      actionPayload: {
-        actions: structuredClone(actions),
-      },
+      actions: structuredClone(actions),
     };
   });
 
@@ -1203,10 +1233,8 @@ export const prepareRenderStateKeyboardForGraphics = ({
 
   const normalizedKeyboard = {};
   Object.entries(existingKeyboard).forEach(([key, value]) => {
-    // route-engine still emits keyboard bindings as actionPayload while
-    // route-graphics consumes payload for public interaction events.
     normalizedKeyboard[normalizeKeyboardKeyForGraphics(key)] = {
-      payload: structuredClone(value?.payload ?? value?.actionPayload ?? {}),
+      payload: structuredClone(value?.payload ?? {}),
     };
   });
 

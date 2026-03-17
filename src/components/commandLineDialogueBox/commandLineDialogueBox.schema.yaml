@@ -27,8 +27,6 @@ propsSchema:
           type: string
         clearPage:
           type: boolean
-        clear:
-          type: boolean
         ui:
           type: object
           properties:

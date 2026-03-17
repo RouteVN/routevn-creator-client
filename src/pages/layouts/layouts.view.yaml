@@ -29,22 +29,6 @@ refs:
     eventListeners:
       form-action:
         handler: handleLayoutFormActionClick
-  keyboardAddButton:
-    eventListeners:
-      click:
-        handler: handleKeyboardAddClick
-  keyboardItem*:
-    eventListeners:
-      click:
-        handler: handleKeyboardItemClick
-      contextmenu:
-        handler: handleKeyboardItemRightClick
-  keyboardSystemActions:
-    eventListeners:
-      actions-change:
-        handler: handleKeyboardActionsChange
-      close:
-        handler: handleKeyboardActionsClose
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
@@ -60,25 +44,9 @@ template:
                       - rtgl-view d=v w=f h=f:
                           - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
                               - rtgl-text c=mu-fg: ${selectedItemName}
-                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=detailFields:
-                              - $if isBaseLayoutSelected:
-                                  - 'rtgl-view slot="keyboard-slot" d=v w=f g=md style="min-height: 0;"':
-                                      - rtgl-view d=h w=f av=c:
-                                          - rtgl-text s=sm: Keyboard
-                                          - rtgl-view w=1fg: null
-                                          - rtgl-button#keyboardAddButton pre=plus sq s=sm v=gh: null
-                                      - $if keyboardItems.length > 0:
-                                          - $for item, i in keyboardItems:
-                                              - rtgl-view#keyboardItem${i} data-key=${item.key} d=h w=f av=c g=md p=md bw=xs br=md h-bgc=mu cur=pointer:
-                                                  - rtgl-view d=v g=xs w=1fg:
-                                                      - rtgl-text s=sm: ${item.keyLabel}
-                                                      - rtgl-text s=xs c=mu-fg: ${item.actionLabel}
-                                      - $if keyboardItems.length == 0:
-                                          - rtgl-view w=f p=md bgc=mu br=md:
-                                              - rtgl-text s=xs c=mu-fg: ${keyboardEmptyMessage}
+                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=detailFields: null
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
-  - rvn-system-actions#keyboardSystemActions :actions=keyboardEditorActions actionType=system: null
   - rtgl-dialog#addLayoutDialog ?open=${isAddDialogOpen} s=md:
       - rtgl-form#layoutForm slot=content :defaultValues=layoutFormDefaults :form=layoutForm w=f: null

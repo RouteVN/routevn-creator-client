@@ -26,10 +26,13 @@ export const normalizeInteractionValue = (interaction = {}) => {
   }
 
   const payload = getInteractionPayload(interaction);
-  const nextValue = {
-    ...interaction,
-    payload,
-  };
+  const nextValue = {};
+  Object.entries(interaction).forEach(([key, value]) => {
+    if (key !== "payload") {
+      nextValue[key] = value;
+    }
+  });
+  nextValue.payload = payload;
 
   return nextValue;
 };

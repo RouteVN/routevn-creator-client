@@ -1,8 +1,4 @@
 import { nanoid } from "nanoid";
-import {
-  debugLog,
-  previewDebugText,
-} from "../../../deps/services/shared/debugLog.js";
 
 const getLinesEditorRef = (refs) => {
   return refs?.linesEditor;
@@ -94,11 +90,58 @@ const isMissingLinePreconditionError = (error, lineId) => {
   );
 };
 
+const cloneControlAction = (action) => {
+  if (!action || typeof action !== "object") {
+    return undefined;
+  }
+
+  return structuredClone(action);
+};
+
+const findFirstControlAction = (repositoryState) => {
+  const controls = repositoryState?.controls?.items || {};
+
+  for (const [controlId, control] of Object.entries(controls)) {
+    if (control?.type === "control") {
+      return {
+        resourceId: controlId,
+        resourceType: "control",
+      };
+    }
+  }
+
+  return undefined;
+};
+
+const resolveLineControlAction = ({
+  projectService,
+  domainState,
+  lineId,
+  fallbackLineId,
+}) => {
+  const primaryAction = cloneControlAction(
+    domainState?.lines?.[lineId]?.actions?.control,
+  );
+  if (primaryAction) {
+    return primaryAction;
+  }
+
+  const fallbackAction = cloneControlAction(
+    domainState?.lines?.[fallbackLineId]?.actions?.control,
+  );
+  if (fallbackAction) {
+    return fallbackAction;
+  }
+
+  return findFirstControlAction(projectService.getRepositoryState());
+};
+
 export const syncSceneEditorProjectState = (store, projectService) => {
   const repositoryState = projectService.getRepositoryState();
+  const domainState = projectService.getDomainState();
   store.setRepositoryState({ repository: repositoryState });
   store.setDomainState({
-    domainState: projectService.getDomainState(),
+    domainState,
   });
   return repositoryState;
 };
@@ -119,16 +162,6 @@ export const writeDialogueContent = async (
     existingDialogue,
   });
 
-  debugLog("lines", "scene.write-dialogue", {
-    lineId,
-    sectionId,
-    contentLength: (content || []).map((item) => item?.text ?? "").join("")
-      .length,
-    content: previewDebugText(
-      (content || []).map((item) => item?.text ?? "").join(""),
-    ),
-  });
-
   await projectService.updateLineDialogueAction({
     lineId,
     dialogue: {
@@ -142,16 +175,8 @@ export const writeDialogueContent = async (
 export const flushDialogueQueue = async (deps) => {
   const { dialogueQueueService } = deps;
 
-  debugLog("lines", "scene.flush-dialogue-queue:start", {
-    pendingSize: dialogueQueueService.size(),
-  });
-
   await dialogueQueueService.flush(async (lineId, data) => {
     await writeDialogueContent(deps, lineId, data);
-  });
-
-  debugLog("lines", "scene.flush-dialogue-queue:end", {
-    pendingSize: dialogueQueueService.size(),
   });
 };
 
@@ -212,18 +237,6 @@ export const handleSplitLineOperation = async (deps, payload) => {
     const existingDialogue =
       domainState?.lines?.[lineId]?.actions?.dialogue || {};
 
-    debugLog("lines", "scene.split.after-flush", {
-      lineId,
-      newLineId,
-      domainContent: previewDebugText(
-        (domainState?.lines?.[lineId]?.actions?.dialogue?.content || [])
-          .map((item) => item?.text ?? "")
-          .join(""),
-      ),
-      leftContent: previewDebugText(leftContent),
-      rightContent: previewDebugText(rightContent),
-    });
-
     const leftContentArray = leftContent
       ? [{ text: leftContent }]
       : [{ text: "" }];
@@ -248,6 +261,11 @@ export const handleSplitLineOperation = async (deps, payload) => {
         existingDialogue,
       });
     const shouldCreateDialogueAction = shouldInheritNvl || !!rightContent;
+    const controlAction = resolveLineControlAction({
+      projectService,
+      domainState,
+      lineId,
+    });
     const newLineActions = shouldCreateDialogueAction
       ? {
           dialogue: {
@@ -256,15 +274,11 @@ export const handleSplitLineOperation = async (deps, payload) => {
           },
         }
       : {};
+    if (controlAction) {
+      newLineActions.control = controlAction;
+    }
 
     const linesEditorRef = getLinesEditorRef(refs);
-    debugLog("lines", "scene.split.start", {
-      lineId,
-      sectionId,
-      newLineId,
-      leftContent: previewDebugText(leftContent),
-      rightContent: previewDebugText(rightContent),
-    });
 
     await projectService.createLineItem({
       sectionId,
@@ -274,12 +288,6 @@ export const handleSplitLineOperation = async (deps, payload) => {
       },
       position: "after",
       positionTargetId: lineId,
-    });
-    debugLog("lines", "scene.split.created-line", {
-      lineId,
-      newLineId,
-      leftContent: previewDebugText(leftContent),
-      rightContent: previewDebugText(rightContent),
     });
 
     syncSceneEditorProjectState(store, projectService);
@@ -319,6 +327,11 @@ export const handlePasteLinesOperation = async (deps, payload) => {
   const domainState = projectService.getDomainState();
   const existingDialogue =
     domainState?.lines?.[lineId]?.actions?.dialogue || {};
+  const controlAction = resolveLineControlAction({
+    projectService,
+    domainState,
+    lineId,
+  });
   const shouldInheritNvl =
     existingDialogue?.mode === "nvl" ||
     shouldInheritNvlModeFromPreviousLine({
@@ -350,12 +363,20 @@ export const handlePasteLinesOperation = async (deps, payload) => {
         return {
           lineId: nanoid(),
           data: {
-            actions: {
-              dialogue: {
-                mode: shouldInheritNvl ? "nvl" : "adv",
-                content: [{ text: lineContent }],
-              },
-            },
+            actions: (() => {
+              const nextActions = {
+                dialogue: {
+                  mode: shouldInheritNvl ? "nvl" : "adv",
+                  content: [{ text: lineContent }],
+                },
+              };
+
+              if (controlAction) {
+                nextActions.control = structuredClone(controlAction);
+              }
+
+              return nextActions;
+            })(),
           },
         };
       }),
@@ -454,13 +475,25 @@ export const handleNewLineOperation = async (deps, payload) => {
     sectionId,
     lineId: newLineId,
     data: {
-      actions: shouldInheritNvl
-        ? {
-            dialogue: {
-              mode: "nvl",
-            },
-          }
-        : {},
+      actions: (() => {
+        const nextActions = shouldInheritNvl
+          ? {
+              dialogue: {
+                mode: "nvl",
+              },
+            }
+          : {};
+        const controlAction = resolveLineControlAction({
+          projectService,
+          domainState,
+          lineId: baseLineId,
+          fallbackLineId: selectedLine?.id,
+        });
+        if (controlAction) {
+          nextActions.control = controlAction;
+        }
+        return nextActions;
+      })(),
     },
   };
 

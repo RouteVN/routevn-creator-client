@@ -183,9 +183,10 @@ export const handleOpenButtonClick = async (deps) => {
     appService.showToast(
       `Project "${importedProject.name}" has been successfully imported.`,
     );
-  } catch {
+  } catch (error) {
     appService.showToast(
-      "Failed to import project. Please select a valid project folder.",
+      error?.message ||
+        "Failed to import project. Please select a valid project folder.",
     );
   }
 };
@@ -348,9 +349,16 @@ export const handleCloseDialogue = (deps) => {
 };
 
 export const handleProjectsClick = async (deps, payload) => {
-  const { appService, store } = deps;
+  const { appService, projectService, store } = deps;
   const id = getProjectIdFromEvent(payload._event);
   if (!id) {
+    return;
+  }
+
+  try {
+    await projectService.ensureProjectCompatibleById(id);
+  } catch (error) {
+    appService.showToast(error?.message || "Failed to open project.");
     return;
   }
 

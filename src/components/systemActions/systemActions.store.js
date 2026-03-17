@@ -33,12 +33,12 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       layoutType: layout.layoutType,
     }));
 
-  const baseLayouts = Object.entries(repositoryState.layouts?.items || {})
-    .filter(([_, layout]) => layout.layoutType === "base")
-    .map(([id, layout]) => ({
+  const controlLayouts = Object.entries(repositoryState.controls?.items || {})
+    .filter(([_, control]) => control.type === "control")
+    .map(([id, control]) => ({
       id,
-      name: layout.name,
-      layoutType: layout.layoutType,
+      name: control.name,
+      type: control.type,
     }));
 
   const dialogueLayouts = Object.entries(repositoryState.layouts?.items || {})
@@ -76,7 +76,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     selectedLineId: props.selectedLineId,
     layouts: choiceLayouts, // Default to choice layouts for backward compatibility
     choiceLayouts,
-    baseLayouts,
+    controlLayouts,
     dialogueLayouts,
     allCharacters: filteredCharacters,
     selectedLine: props.selectedLine,
@@ -146,6 +146,7 @@ export const selectActionsData = ({ props, state }) => {
   // Layouts: need full tree structure for toFlatItems() to search through nested folders
   const layoutsHierarchy = repositoryStateData.layouts || {};
   const layoutsItems = layoutsHierarchy.items || {};
+  const controlsItems = repositoryStateData.controls?.items || {};
   const sceneItems = scenes.items || {};
 
   const actionsObject = {};
@@ -268,9 +269,9 @@ export const selectActionsData = ({ props, state }) => {
     };
   }
 
-  if (presentationState.base) {
-    actionsObject.base = presentationState.base;
-    preview.base = layoutsItems[presentationState.base.resourceId];
+  if (presentationState.control) {
+    actionsObject.control = presentationState.control;
+    preview.control = controlsItems[presentationState.control.resourceId];
   }
 
   // Next Line

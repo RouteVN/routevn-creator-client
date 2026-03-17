@@ -4,6 +4,10 @@ import {
   matchesRemoteTargets,
 } from "../../internal/ui/collabRefresh.js";
 import {
+  getLayoutEditorBackPath,
+  resolveLayoutEditorPayload,
+} from "../../internal/layoutEditorRoute.js";
+import {
   createLayoutPreviewData,
   createSelectedLayoutOverlay,
   resolveLayoutPreviewElements,
@@ -36,6 +40,19 @@ const toAlphanumericId = (value, fallback = "sliderUpdate") => {
 };
 
 const isBlobUrl = (url) => typeof url === "string" && url.startsWith("blob:");
+
+const getEditorPayload = (appService) =>
+  resolveLayoutEditorPayload(appService.getPayload() || {});
+
+const getRepositoryResourceCollection = (repositoryState, resourceType) => {
+  return resourceType === "controls"
+    ? repositoryState.controls || { items: {}, tree: [] }
+    : repositoryState.layouts || { items: {}, tree: [] };
+};
+
+const getEditorElementOwnerKey = (resourceType) => {
+  return resourceType === "controls" ? "controlId" : "layoutId";
+};
 
 const isPlainObject = (value) => {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -177,6 +194,7 @@ const scheduleKeyboardSave = (deps, itemId, layoutId) => {
     if (finalItem) {
       subject.dispatch("layoutEditor.updateElement", {
         layoutId,
+        resourceType: store.selectLayoutResourceType(),
         selectedItemId: itemId,
         updatedItem: finalItem,
       });
@@ -269,6 +287,7 @@ const getRenderState = async (deps) => {
   const { store, projectService } = deps;
   const {
     layouts,
+    controls,
     images: { items: imageItems },
     textStyles: textStylesData,
     colors: colorsData,
@@ -280,8 +299,11 @@ const getRenderState = async (deps) => {
   const fontsItems = fontsData?.items || {};
 
   const layoutId = store.selectLayoutId();
+  const resourceType = store.selectLayoutResourceType();
   const storeElements = store.selectItems();
-  const layoutElements = storeElements || layouts.items[layoutId]?.elements;
+  const resourceCollection = resourceType === "controls" ? controls : layouts;
+  const layoutElements =
+    storeElements || resourceCollection?.items?.[layoutId]?.elements;
   const layoutHierarchyStructure = toHierarchyStructure(layoutElements);
   const renderStateElements = buildLayoutRenderElements(
     layoutHierarchyStructure,
@@ -350,13 +372,21 @@ const renderLayoutPreview = async (deps) => {
   }
 };
 
-const syncLayoutEditorState = (deps, repositoryState, layoutId) => {
+const syncLayoutEditorState = (
+  deps,
+  repositoryState,
+  layoutId,
+  resourceType = "layouts",
+) => {
   const { store } = deps;
-  const { layouts, images, textStyles, colors, fonts, variables } =
-    repositoryState;
-  const layout = layoutId ? layouts.items?.[layoutId] : undefined;
+  const { images, textStyles, colors, fonts, variables } = repositoryState;
+  const resourceCollection = getRepositoryResourceCollection(
+    repositoryState,
+    resourceType,
+  );
+  const layout = layoutId ? resourceCollection.items?.[layoutId] : undefined;
 
-  store.setLayout({ id: layoutId, layout });
+  store.setLayout({ id: layoutId, layout, resourceType });
   store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
   store.setImages({ images: images || { items: {}, tree: [] } });
   store.setTextStylesData({
@@ -371,10 +401,15 @@ const syncLayoutEditorState = (deps, repositoryState, layoutId) => {
 
 export const handleAfterMount = async (deps) => {
   const { appService, projectService, render, refs, graphicsService } = deps;
-  const payload = appService.getPayload() || {};
-  const { layoutId } = payload;
+  const payload = getEditorPayload(appService);
+  const { layoutId, resourceType } = payload;
   await projectService.ensureRepository();
-  syncLayoutEditorState(deps, projectService.getRepositoryState(), layoutId);
+  syncLayoutEditorState(
+    deps,
+    projectService.getRepositoryState(),
+    layoutId,
+    resourceType,
+  );
 
   const { canvas } = refs;
   await graphicsService.init({ canvas: canvas });
@@ -385,9 +420,9 @@ export const handleAfterMount = async (deps) => {
 
 export const handleBackClick = (deps) => {
   const { appService } = deps;
-
-  const { p } = appService.getPayload();
-  appService.navigate("/project/layouts", { p });
+  const currentPayload = appService.getPayload() || {};
+  const nextPath = getLayoutEditorBackPath(currentPayload);
+  appService.navigate(nextPath, { p: currentPayload.p });
 };
 
 // Simple render handler for events that only need to trigger a re-render
@@ -409,9 +444,14 @@ export const handleAddLayoutClick = handleRenderOnly;
 
 const refreshLayoutEditorData = async (deps) => {
   const { appService, projectService, render } = deps;
-  const { layoutId } = appService.getPayload();
+  const { layoutId, resourceType } = getEditorPayload(appService);
   await projectService.ensureRepository();
-  syncLayoutEditorState(deps, projectService.getRepositoryState(), layoutId);
+  syncLayoutEditorState(
+    deps,
+    projectService.getRepositoryState(),
+    layoutId,
+    resourceType,
+  );
   render();
   await renderLayoutPreview(deps);
 };
@@ -419,6 +459,7 @@ const refreshLayoutEditorData = async (deps) => {
 const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
   createLayoutElementsFileExplorerHandlers({
     getLayoutId: (deps) => deps.store.selectLayoutId(),
+    getResourceType: (deps) => deps.store.selectLayoutResourceType(),
     refresh: refreshLayoutEditorData,
   });
 
@@ -576,10 +617,14 @@ export const handleArrowKeyDown = async (deps, payload) => {
  */
 async function handleDebouncedUpdate(deps, payload) {
   const { appService, projectService } = deps;
-  const { layoutId, selectedItemId, updatedItem, replace } = payload;
+  const { layoutId, resourceType, selectedItemId, updatedItem, replace } =
+    payload;
+  const ownerCollection = getRepositoryResourceCollection(
+    projectService.getRepositoryState(),
+    resourceType,
+  );
   const currentItem =
-    projectService.getRepositoryState()?.layouts?.items?.[layoutId]?.elements
-      ?.items?.[selectedItemId];
+    ownerCollection?.items?.[layoutId]?.elements?.items?.[selectedItemId];
 
   if (!currentItem || !updatedItem) {
     return;
@@ -599,19 +644,26 @@ async function handleDebouncedUpdate(deps, payload) {
   const shouldReplace = replace === true || diff.requiresReplace;
   const { id: _ignoredItemId, ...nextReplaceData } = normalizedUpdatedItem;
 
-  // Save to repository
-  await projectService.updateLayoutElement({
-    layoutId,
+  const ownerPayloadKey = getEditorElementOwnerKey(resourceType);
+  const updateElement =
+    resourceType === "controls"
+      ? projectService.updateControlElement.bind(projectService)
+      : projectService.updateLayoutElement.bind(projectService);
+
+  await updateElement({
+    [ownerPayloadKey]: layoutId,
     elementId: selectedItemId,
     data: shouldReplace ? nextReplaceData : diff.patch,
     replace: shouldReplace,
   });
 
   // For form/keyboard updates, sync store with repository
+  const currentPayload = getEditorPayload(appService);
   syncLayoutEditorState(
     deps,
     projectService.getRepositoryState(),
-    appService.getPayload().layoutId || layoutId,
+    currentPayload.layoutId || layoutId,
+    currentPayload.resourceType || resourceType,
   );
 }
 
@@ -623,6 +675,7 @@ const subscriptions = (deps) => {
       deps,
       matches: matchesRemoteTargets([
         "layouts",
+        "controls",
         "images",
         "textStyles",
         "colors",
@@ -676,6 +729,7 @@ const subscriptions = (deps) => {
 export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
   const { store, render } = deps;
   const layoutId = store.selectLayoutId();
+  const resourceType = store.selectLayoutResourceType();
   const selectedItemId = store.selectSelectedItemId();
   const detail = payload._event.detail;
 
@@ -806,6 +860,7 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
   if (shouldSaveLayoutEditImmediately(detail.name)) {
     await handleDebouncedUpdate(deps, {
       layoutId,
+      resourceType,
       selectedItemId,
       updatedItem,
     });
@@ -813,6 +868,7 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     const { subject } = deps;
     subject.dispatch("layoutEditor.updateElement", {
       layoutId,
+      resourceType,
       selectedItemId,
       updatedItem,
     });
@@ -859,6 +915,7 @@ export const handleCanvasMouseMove = (deps, payload) => {
 
   subject.dispatch("layoutEditor.updateElement", {
     layoutId: store.selectLayoutId(),
+    resourceType: store.selectLayoutResourceType(),
     selectedItemId: item.id,
     updatedItem,
   });

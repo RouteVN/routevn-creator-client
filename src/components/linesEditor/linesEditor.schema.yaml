@@ -9,6 +9,8 @@ propsSchema:
         properties: null
     selectedLineId:
       type: string
+    keyboardHandlingDisabled:
+      type: boolean
 methods:
   type: object
   properties:

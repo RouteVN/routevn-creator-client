@@ -12,6 +12,7 @@ export const RESOURCE_TYPES = Object.freeze([
   "textStyles",
   "variables",
   "layouts",
+  "controls",
 ]);
 
 export const COLLAB_RESOURCE_TYPES = Object.freeze([
@@ -37,6 +38,7 @@ const RESOURCE_COMMAND_FAMILIES = Object.freeze([
   "textStyle",
   "variable",
   "layout",
+  "control",
 ]);
 
 const RESOURCE_COMMAND_OPERATIONS = Object.freeze([
@@ -69,6 +71,13 @@ const LAYOUT_COMMAND_TYPES = Object.freeze([
   "layout.element.delete",
 ]);
 
+const CONTROL_COMMAND_TYPES = Object.freeze([
+  "control.element.create",
+  "control.element.update",
+  "control.element.move",
+  "control.element.delete",
+]);
+
 const RESOURCE_COMMAND_TYPES = Object.freeze([
   ...FILE_COMMAND_TYPES,
   ...RESOURCE_COMMAND_FAMILIES.flatMap((family) =>
@@ -84,6 +93,7 @@ const COMMAND_SCOPE_ENTRIES = Object.freeze([
   ["project.create", "settings"],
   ...STORY_COMMAND_TYPES.map((type) => [type, "story"]),
   ...LAYOUT_COMMAND_TYPES.map((type) => [type, "layouts"]),
+  ...CONTROL_COMMAND_TYPES.map((type) => [type, "controls"]),
   ...RESOURCE_COMMAND_TYPES.map((type) => [type, "resources"]),
 ]);
 
@@ -137,3 +147,6 @@ const isCommandInScope = (type, scope) =>
 export const isStoryCommandType = (type) => isCommandInScope(type, "story");
 
 export const isLayoutCommandType = (type) => isCommandInScope(type, "layouts");
+
+export const isControlCommandType = (type) =>
+  isCommandInScope(type, "controls");

@@ -46,3 +46,18 @@ export const debugLog = (scope, event, data = {}) => {
     ...data,
   });
 };
+
+export const forceDebugLog = (scope, event, data = {}) => {
+  debugSequence += 1;
+  const timestamp =
+    typeof performance !== "undefined" && typeof performance.now === "function"
+      ? Number(performance.now().toFixed(2))
+      : Date.now();
+
+  console.log(`[rvn.debug.${scope}]`, {
+    seq: debugSequence,
+    event,
+    ts: timestamp,
+    ...data,
+  });
+};

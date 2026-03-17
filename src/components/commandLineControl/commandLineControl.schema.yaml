@@ -1,8 +1,8 @@
-componentName: rvn-command-line-base
+componentName: rvn-command-line-control
 propsSchema:
   type: object
   properties:
-    layouts:
+    controls:
       type: array
       items:
         type: object
@@ -11,7 +11,7 @@ propsSchema:
             type: string
           name:
             type: string
-    base:
+    control:
       type: object
       properties:
         resourceId:

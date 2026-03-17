@@ -258,6 +258,7 @@ export const selectViewData = ({ state }, payload) => {
   }
 
   const layouts = state.layoutsData;
+  const controls = repositoryState?.controls || { items: {} };
   const flatItems = toFlatItems(state.scenesData);
   const flatGroups = toFlatGroups(state.scenesData);
 
@@ -285,6 +286,7 @@ export const selectViewData = ({ state }, payload) => {
         section,
         initialSectionId: selectedSceneInitialSectionId,
         layouts,
+        controls,
         menuSceneId,
       });
 

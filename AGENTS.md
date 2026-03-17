@@ -158,8 +158,9 @@ If you need deeper or broader Rettangoli framework reference material, use
 
 ## Project Data Ownership
 
-- Project `name`, `description`, and `iconFileId` are owned by local project DB entries (app-level project entries), not repository/insieme state.
-- Prefer synchronous project context reads via app service cache (`getCurrentProjectEntry`, current project id helpers) in page handlers.
+- Project `name`, `description`, and `iconFileId` are owned by the project-specific DB `app` store as `projectInfo`, not repository/insieme state.
+- Global app-level `projectEntries` keep duplicated cached values for project listing and discovery, not source-of-truth ownership.
+- For an opened project, read and write those fields through `projectService` (`getCurrentProjectInfo`, `updateCurrentProjectInfo`), not `appService.getCurrentProjectEntry()`.
 
 ## Where New Code Goes
 

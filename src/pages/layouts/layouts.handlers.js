@@ -1,12 +1,8 @@
 import { nanoid } from "nanoid";
+import { createLayoutEditorPayload } from "../../internal/layoutEditorRoute.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
 import { createLayoutsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
-import {
-  getInteractionActions,
-  withInteractionPayload,
-} from "../../internal/project/interactionPayload.js";
-import { BASE_LAYOUT_KEYBOARD_OPTIONS } from "../../internal/project/layout.js";
 
 const {
   handleBeforeMount,
@@ -34,76 +30,6 @@ export {
   handleSearchInput,
 };
 
-// Base layouts can attach keyboard shortcuts from the detail panel.
-const getSelectedBaseLayout = (store) => {
-  const selectedItem = store.selectSelectedItem();
-  if (selectedItem?.layoutType !== "base") {
-    return undefined;
-  }
-
-  return selectedItem;
-};
-
-const getKeyboardEntryActions = (layout, key) => {
-  return getInteractionActions(layout?.keyboard?.[key]);
-};
-
-const getKeyboardEditorMode = (actions = {}) => {
-  const actionIds = Object.keys(actions);
-  if (actionIds.length !== 1) {
-    return "actions";
-  }
-
-  return actionIds[0];
-};
-
-const updateLayoutKeyboard = async ({
-  appService,
-  projectService,
-  store,
-  key,
-  interaction,
-}) => {
-  const layout = getSelectedBaseLayout(store);
-  if (!layout?.id || !key) {
-    return false;
-  }
-
-  const currentKeyboard =
-    layout.keyboard && typeof layout.keyboard === "object"
-      ? layout.keyboard
-      : {};
-  const nextKeyboard = {};
-
-  Object.entries(currentKeyboard).forEach(([entryKey, entryValue]) => {
-    if (entryKey !== key) {
-      nextKeyboard[entryKey] = structuredClone(entryValue);
-    }
-  });
-
-  if (interaction !== undefined) {
-    nextKeyboard[key] = interaction;
-  }
-
-  const data = {};
-  data.keyboard =
-    Object.keys(nextKeyboard).length > 0 ? nextKeyboard : undefined;
-
-  const result = await projectService.updateLayoutItem({
-    layoutId: layout.id,
-    data,
-  });
-
-  if (result?.valid === false) {
-    appService.showToast("Failed to update keyboard action", {
-      title: "Error",
-    });
-    return false;
-  }
-
-  return true;
-};
-
 export const handleItemDoubleClick = (deps, payload) => {
   const { appService } = deps;
   const { itemId, isFolder } = payload._event.detail;
@@ -113,8 +39,11 @@ export const handleItemDoubleClick = (deps, payload) => {
 
   const currentPayload = appService.getPayload();
   appService.navigate("/project/layout-editor", {
-    ...currentPayload,
-    layoutId: itemId,
+    ...createLayoutEditorPayload({
+      payload: currentPayload,
+      layoutId: itemId,
+      resourceType: "layouts",
+    }),
   });
 };
 
@@ -388,39 +317,6 @@ const createLayoutTemplate = (layoutType) => {
     };
   }
 
-  if (layoutType === "base") {
-    const spriteId = nanoid();
-
-    return {
-      items: {
-        [spriteId]: {
-          type: "sprite",
-          anchorX: 0,
-          anchorY: 0,
-          click: {
-            payload: {
-              actions: {
-                nextLine: {},
-              },
-            },
-          },
-          height: 1080,
-          rotation: 0,
-          scaleX: 1,
-          scaleY: 1,
-          width: 1920,
-          x: 0,
-          y: 0,
-        },
-      },
-      tree: [
-        {
-          id: spriteId,
-        },
-      ],
-    };
-  }
-
   return {
     items: {},
     tree: [],
@@ -477,139 +373,4 @@ export const handleItemDelete = async (deps, payload) => {
 
   await projectService.deleteLayoutItem({ layoutIds: [itemId] });
   await handleDataChanged(deps);
-};
-
-export const handleKeyboardAddClick = async (deps, payload) => {
-  const { appService, refs, render, store } = deps;
-  const layout = getSelectedBaseLayout(store);
-  if (!layout) {
-    return;
-  }
-
-  const assignedKeys = new Set(Object.keys(layout.keyboard || {}));
-  const availableItems = BASE_LAYOUT_KEYBOARD_OPTIONS.filter(
-    (item) => !assignedKeys.has(item.value),
-  ).map((item) => ({
-    type: "item",
-    key: item.value,
-    label: item.label,
-  }));
-
-  if (availableItems.length === 0) {
-    appService.showToast("All available keyboard keys are already assigned", {
-      title: "Warning",
-    });
-    return;
-  }
-
-  const result = await appService.showDropdownMenu({
-    items: availableItems,
-    x: payload._event.clientX,
-    y: payload._event.clientY,
-    place: "bs",
-  });
-  if (!result?.item?.key) {
-    return;
-  }
-
-  store.openKeyboardEditor({
-    key: result.item.key,
-    actions: {},
-  });
-  render();
-
-  refs.keyboardSystemActions.transformedHandlers.open({
-    mode: "actions",
-  });
-};
-
-export const handleKeyboardItemClick = (deps, payload) => {
-  const { refs, render, store } = deps;
-  const layout = getSelectedBaseLayout(store);
-  if (!layout) {
-    return;
-  }
-
-  const key = payload._event.currentTarget.dataset.key;
-  if (!key) {
-    return;
-  }
-
-  const actions = getKeyboardEntryActions(layout, key);
-  store.openKeyboardEditor({
-    key,
-    actions,
-  });
-  render();
-
-  refs.keyboardSystemActions.transformedHandlers.open({
-    mode: getKeyboardEditorMode(actions),
-  });
-};
-
-export const handleKeyboardItemRightClick = async (deps, payload) => {
-  const { appService } = deps;
-  const event = payload._event;
-  event.preventDefault();
-
-  const key = event.currentTarget.dataset.key;
-  if (!key) {
-    return;
-  }
-
-  const result = await appService.showDropdownMenu({
-    items: [{ type: "item", key: "remove", label: "Delete" }],
-    x: event.clientX,
-    y: event.clientY,
-    place: "bs",
-  });
-  if (result?.item?.key !== "remove") {
-    return;
-  }
-
-  const updated = await updateLayoutKeyboard({
-    appService,
-    projectService: deps.projectService,
-    store: deps.store,
-    key,
-    interaction: undefined,
-  });
-  if (!updated) {
-    return;
-  }
-
-  await handleDataChanged(deps);
-};
-
-export const handleKeyboardActionsChange = async (deps, payload) => {
-  const { appService, render, store } = deps;
-  const key = store.selectKeyboardEditorKey();
-  if (!key) {
-    return;
-  }
-
-  const actions = payload._event.detail || {};
-  const interaction = withInteractionPayload({}, { actions });
-  const updated = await updateLayoutKeyboard({
-    appService,
-    projectService: deps.projectService,
-    store,
-    key,
-    interaction,
-  });
-
-  store.closeKeyboardEditor();
-  render();
-
-  if (!updated) {
-    return;
-  }
-
-  await handleDataChanged(deps);
-};
-
-export const handleKeyboardActionsClose = (deps) => {
-  const { render, store } = deps;
-  store.closeKeyboardEditor();
-  render();
 };

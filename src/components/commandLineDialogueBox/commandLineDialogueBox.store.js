@@ -13,14 +13,12 @@ export const createInitialState = () => ({
   selectedCharacterId: "",
   selectedMode: "adv",
   clearPage: false,
-  clear: false,
 
   defaultValues: {
     mode: "adv",
     resourceId: "",
     characterId: "",
     clearPage: false,
-    clear: false,
   },
 
   form: {
@@ -66,18 +64,6 @@ export const createInitialState = () => ({
           { value: true, label: "Yes" },
         ],
       },
-      {
-        $when: 'values.mode == "nvl"',
-        name: "clear",
-        type: "select",
-        label: "Clear Dialogue",
-        description: "",
-        required: false,
-        options: [
-          { value: false, label: "No" },
-          { value: true, label: "Yes" },
-        ],
-      },
     ],
     actions: {
       layout: "",
@@ -110,12 +96,6 @@ export const setClearPage = ({ state }, { clearPage } = {}) => {
   const clearPageValue = toBoolean(clearPage);
   state.clearPage = clearPageValue;
   state.defaultValues.clearPage = clearPageValue;
-};
-
-export const setClear = ({ state }, { clear } = {}) => {
-  const clearValue = toBoolean(clear);
-  state.clear = clearValue;
-  state.defaultValues.clear = clearValue;
 };
 
 export const selectViewData = ({ state, props }) => {
@@ -186,12 +166,6 @@ export const selectViewData = ({ state, props }) => {
           value: state.clearPage,
         };
       }
-      if (field.name === "clear") {
-        return {
-          ...field,
-          value: state.clear,
-        };
-      }
       return field;
     }),
   };
@@ -202,7 +176,6 @@ export const selectViewData = ({ state, props }) => {
     resourceId: selectedResourceId,
     characterId: state.selectedCharacterId,
     clearPage: state.clearPage,
-    clear: state.clear,
   };
 
   const context = {
@@ -216,7 +189,6 @@ export const selectViewData = ({ state, props }) => {
     selectedCharacterId: state.selectedCharacterId,
     selectedMode,
     clearPage: state.clearPage,
-    clear: state.clear,
     submitDisabled: false,
     breadcrumb,
     form,

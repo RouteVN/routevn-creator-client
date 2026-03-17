@@ -1,6 +1,6 @@
 export const createInitialState = () => ({
-  layouts: [],
-  selectedLayoutId: "",
+  controls: [],
+  selectedControlId: "",
 
   defaultValues: {
     resourceId: "",
@@ -11,10 +11,10 @@ export const createInitialState = () => ({
       {
         name: "resourceId",
         type: "select",
-        label: "Base Layout",
+        label: "Control",
         description: "",
         required: false,
-        placeholder: "Choose a layout...",
+        placeholder: "Choose a control...",
         options: [],
       },
     ],
@@ -25,24 +25,18 @@ export const createInitialState = () => ({
   },
 });
 
-export const setLayouts = ({ state }, { layouts } = {}) => {
-  state.layouts = layouts;
-};
-
 export const setSelectedResourceId = ({ state }, { resourceId } = {}) => {
-  state.selectedLayoutId = resourceId;
+  state.selectedControlId = resourceId;
   state.defaultValues.resourceId = resourceId;
 };
 
 export const selectViewData = ({ state, props }) => {
-  const layouts = props.layouts || [];
+  const controls = props.controls || [];
 
-  const layoutOptions = layouts
-    .filter((layout) => layout.layoutType === "base")
-    .map((layout) => ({
-      value: layout.id,
-      label: layout.name,
-    }));
+  const controlOptions = controls.map((control) => ({
+    value: control.id,
+    label: control.name,
+  }));
 
   let breadcrumb = [
     {
@@ -51,7 +45,7 @@ export const selectViewData = ({ state, props }) => {
       click: true,
     },
     {
-      label: "Base",
+      label: "Control",
     },
   ];
 
@@ -62,8 +56,8 @@ export const selectViewData = ({ state, props }) => {
       if (field.name === "resourceId") {
         return {
           ...field,
-          options: layoutOptions,
-          value: state.selectedLayoutId,
+          options: controlOptions,
+          value: state.selectedControlId,
         };
       }
       return field;
@@ -72,12 +66,12 @@ export const selectViewData = ({ state, props }) => {
 
   // Update default values with current selections
   const defaultValues = {
-    resourceId: state.selectedLayoutId,
+    resourceId: state.selectedControlId,
   };
 
   return {
-    layouts: layoutOptions,
-    selectedLayoutId: state.selectedLayoutId,
+    controls: controlOptions,
+    selectedControlId: state.selectedControlId,
     submitDisabled: false,
     breadcrumb,
     form,

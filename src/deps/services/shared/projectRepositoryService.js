@@ -10,6 +10,9 @@ export const createProjectRepositoryService = ({
   storageAdapter,
   collabAdapter,
 }) => {
+  const CURRENT_CREATOR_MAJOR_VERSION = 1;
+  const CREATOR_VERSION_KEY = "creatorVersion";
+  const PROJECT_INFO_KEY = "projectInfo";
   const repositoriesByCacheKey = new Map();
   const storesByCacheKey = new Map();
   const storesByProject = new Map();
@@ -22,6 +25,56 @@ export const createProjectRepositoryService = ({
   let currentStore;
   let currentReference;
 
+  const createEmptyProjectInfo = () => ({
+    name: "",
+    description: "",
+    iconFileId: null,
+  });
+
+  const createIncompatibleProjectVersionError = (projectVersion) => {
+    const displayedProjectVersion =
+      Number.isFinite(projectVersion) && projectVersion > 0
+        ? String(projectVersion)
+        : "0";
+
+    return new Error(
+      `You're trying to open an incompatible project with version ${displayedProjectVersion} using RouteVN Creator ${CURRENT_CREATOR_MAJOR_VERSION}. For assistance, please reach out to RouteVN staff for support.`,
+    );
+  };
+
+  const normalizeProjectInfo = (projectInfo) => ({
+    name: projectInfo?.name ?? "",
+    description: projectInfo?.description ?? "",
+    iconFileId:
+      typeof projectInfo?.iconFileId === "string" &&
+      projectInfo.iconFileId.length > 0
+        ? projectInfo.iconFileId
+        : null,
+  });
+
+  const mergeProjectInfo = (currentProjectInfo, patch = {}) => {
+    const nextProjectInfo = {
+      ...currentProjectInfo,
+    };
+
+    if (Object.hasOwn(patch, "name")) {
+      nextProjectInfo.name = patch.name ?? "";
+    }
+
+    if (Object.hasOwn(patch, "description")) {
+      nextProjectInfo.description = patch.description ?? "";
+    }
+
+    if (Object.hasOwn(patch, "iconFileId")) {
+      nextProjectInfo.iconFileId =
+        typeof patch.iconFileId === "string" && patch.iconFileId.length > 0
+          ? patch.iconFileId
+          : null;
+    }
+
+    return normalizeProjectInfo(nextProjectInfo);
+  };
+
   const getCurrentProjectId = () => {
     return router.getPayload()?.p;
   };
@@ -30,23 +83,28 @@ export const createProjectRepositoryService = ({
     return currentProjectId;
   };
 
-  const getProjectMetadataFromEntries = async (projectId) => {
-    if (!db || typeof db.get !== "function") {
-      return {
-        name: "",
-        description: "",
-      };
+  const syncProjectEntryProjectInfo = async (projectId, projectInfo) => {
+    if (!db || typeof db.get !== "function" || typeof db.set !== "function") {
+      return;
     }
 
     const entries = (await db.get("projectEntries")) || [];
-    const entry = Array.isArray(entries)
-      ? entries.find((item) => item?.id === projectId)
-      : undefined;
+    if (!Array.isArray(entries)) {
+      return;
+    }
 
-    return {
-      name: entry?.name || "",
-      description: entry?.description || "",
+    const entryIndex = entries.findIndex((entry) => entry?.id === projectId);
+    if (entryIndex < 0) {
+      return;
+    }
+
+    entries[entryIndex] = {
+      ...entries[entryIndex],
+      name: projectInfo.name,
+      description: projectInfo.description,
+      iconFileId: projectInfo.iconFileId,
     };
+    await db.set("projectEntries", entries);
   };
 
   const normalizeReference = (reference, projectId) => {
@@ -106,6 +164,107 @@ export const createProjectRepositoryService = ({
     return store;
   };
 
+  const getStoreByPath =
+    typeof storageAdapter.resolveProjectReferenceByPath === "function"
+      ? async (projectPath) => {
+          const reference = normalizeReference(
+            await storageAdapter.resolveProjectReferenceByPath({
+              projectPath,
+            }),
+            projectPath,
+          );
+          return getStoreByReference(reference);
+        }
+      : undefined;
+
+  const readCreatorVersionFromStore = async (store) => {
+    if (!store?.app || typeof store.app.get !== "function") {
+      return undefined;
+    }
+
+    const storedCreatorVersion = await store.app.get(CREATOR_VERSION_KEY);
+    if (!Number.isFinite(storedCreatorVersion)) {
+      return undefined;
+    }
+
+    return storedCreatorVersion;
+  };
+
+  const ensureCompatibleCreatorVersion = async (store) => {
+    const creatorVersion = await readCreatorVersionFromStore(store);
+
+    if (creatorVersion !== CURRENT_CREATOR_MAJOR_VERSION) {
+      throw createIncompatibleProjectVersionError(creatorVersion);
+    }
+
+    return creatorVersion;
+  };
+
+  const readProjectInfoFromStore = async (store) => {
+    if (!store?.app || typeof store.app.get !== "function") {
+      return createEmptyProjectInfo();
+    }
+
+    const storedProjectInfo = await store.app.get(PROJECT_INFO_KEY);
+    return normalizeProjectInfo(storedProjectInfo);
+  };
+
+  const writeProjectInfoToStore = async ({ store, projectId, patch }) => {
+    const currentProjectInfo = await readProjectInfoFromStore(store);
+    const nextProjectInfo = mergeProjectInfo(currentProjectInfo, patch);
+
+    if (!store?.app || typeof store.app.set !== "function") {
+      throw new Error("Project store does not support app.set()");
+    }
+
+    await store.app.set(PROJECT_INFO_KEY, nextProjectInfo);
+
+    if (projectId) {
+      await syncProjectEntryProjectInfo(projectId, nextProjectInfo);
+    }
+
+    return nextProjectInfo;
+  };
+
+  const getProjectInfoByProjectId = async (projectId) => {
+    const store = await getStoreByProject(projectId);
+    await ensureCompatibleCreatorVersion(store);
+    return readProjectInfoFromStore(store);
+  };
+
+  const ensureProjectCompatibleByProjectId = async (projectId) => {
+    const store = await getStoreByProject(projectId);
+    await ensureCompatibleCreatorVersion(store);
+  };
+
+  const updateProjectInfoByProjectId = async (projectId, patch) => {
+    const store = await getStoreByProject(projectId);
+    await ensureCompatibleCreatorVersion(store);
+    return writeProjectInfoToStore({
+      store,
+      projectId,
+      patch,
+    });
+  };
+
+  const getCurrentProjectInfo = async () => {
+    const projectId = getCurrentProjectId();
+    if (!projectId) {
+      throw new Error("No project selected (missing ?p= in URL)");
+    }
+
+    return getProjectInfoByProjectId(projectId);
+  };
+
+  const updateCurrentProjectInfo = async (patch) => {
+    const projectId = getCurrentProjectId();
+    if (!projectId) {
+      throw new Error("No project selected (missing ?p= in URL)");
+    }
+
+    return updateProjectInfoByProjectId(projectId, patch);
+  };
+
   const getRepositoryByReference = async (reference) => {
     return getOrCreateLocked({
       cache: repositoriesByCacheKey,
@@ -132,6 +291,7 @@ export const createProjectRepositoryService = ({
           store,
           events,
         });
+        await ensureCompatibleCreatorVersion(store);
         assertSupportedProjectState(repository.getState());
 
         if (reference.projectId) {
@@ -186,6 +346,8 @@ export const createProjectRepositoryService = ({
     currentRepository = repository;
     currentStore = store;
     currentReference = reference;
+    const projectInfo = await readProjectInfoFromStore(store);
+    await syncProjectEntryProjectInfo(projectId, projectInfo);
 
     return repository;
   };
@@ -251,7 +413,10 @@ export const createProjectRepositoryService = ({
   return {
     getCurrentProjectId,
     getEnsuredProjectId,
-    getProjectMetadataFromEntries,
+    ensureProjectCompatibleByProjectId,
+    getProjectInfoByProjectId,
+    getCurrentProjectInfo,
+    updateCurrentProjectInfo,
     resolveProjectReferenceByProjectId,
     getStoreByProject,
     getStoreByProjectSync(projectId) {
@@ -281,6 +446,27 @@ export const createProjectRepositoryService = ({
       ? {
           async getRepositoryByPath(projectPath) {
             return getRepositoryByPath(projectPath);
+          },
+        }
+      : {}),
+    ...(typeof getStoreByPath === "function"
+      ? {
+          async ensureProjectCompatibleByPath(projectPath) {
+            const store = await getStoreByPath(projectPath);
+            await ensureCompatibleCreatorVersion(store);
+          },
+          async getProjectInfoByPath(projectPath) {
+            const store = await getStoreByPath(projectPath);
+            await ensureCompatibleCreatorVersion(store);
+            return readProjectInfoFromStore(store);
+          },
+          async updateProjectInfoByPath(projectPath, patch) {
+            const store = await getStoreByPath(projectPath);
+            await ensureCompatibleCreatorVersion(store);
+            return writeProjectInfoToStore({
+              store,
+              patch,
+            });
           },
         }
       : {}),

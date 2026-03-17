@@ -36,6 +36,7 @@ export const initialProjectData = {
   textStyles: createTreeCollection(),
   variables: createTreeCollection(),
   layouts: createTreeCollection(),
+  controls: createTreeCollection(),
   scenes: createTreeCollection(),
 };
 

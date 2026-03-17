@@ -3,7 +3,7 @@ refs:
     eventListeners:
       item-click:
         handler: handleBreadcumbClick
-  baseForm:
+  controlForm:
     eventListeners:
       form-change:
         handler: handleFormChange
@@ -14,7 +14,7 @@ refs:
 template:
   - rtgl-view w=f h=f p=lg:
       - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
-      - rtgl-form#baseForm :defaultValues=defaultValues :form=form w=f: null
+      - rtgl-form#controlForm :defaultValues=defaultValues :form=form w=f: null
       - rtgl-view h=1fg: null
       - rtgl-view d=h av=c ah=e w=f g=lg:
           - rtgl-button#submitButton: Submit

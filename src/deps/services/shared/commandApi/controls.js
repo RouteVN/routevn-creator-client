@@ -1,11 +1,10 @@
 import { createTreeCollection } from "../projectRepository.js";
 import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
 
-export const createLayoutCommandApi = (shared) => ({
-  async createLayoutItem({
-    layoutId,
+export const createControlCommandApi = (shared) => ({
+  async createControlItem({
+    controlId,
     name,
-    layoutType = "normal",
     elements = createTreeCollection(),
     parentId = null,
     position = "last",
@@ -13,31 +12,30 @@ export const createLayoutCommandApi = (shared) => ({
     data = {},
   }) {
     const context = await shared.ensureCommandContext();
-    const nextLayoutId = layoutId || shared.createId();
+    const nextControlId = controlId || shared.createId();
     const resolvedIndex = shared.resolveResourceIndex({
       state: context.state,
-      resourceType: "layouts",
+      resourceType: "controls",
       parentId,
       position,
       positionTargetId,
     });
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
-      "layouts",
+      "controls",
     );
 
     const submitResult = await shared.submitCommandWithContext({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: COMMAND_TYPES.LAYOUT_CREATE,
+      type: COMMAND_TYPES.CONTROL_CREATE,
       payload: {
-        layoutId: nextLayoutId,
+        controlId: nextControlId,
         data: {
           ...structuredClone(data || {}),
-          type: data?.type || "layout",
+          type: data?.type || "control",
           name,
-          layoutType,
           elements: structuredClone(elements || createTreeCollection()),
         },
         ...shared.buildPlacementPayload({
@@ -54,23 +52,23 @@ export const createLayoutCommandApi = (shared) => ({
       return submitResult;
     }
 
-    return nextLayoutId;
+    return nextControlId;
   },
 
-  async renameLayoutItem({ layoutId, name }) {
+  async renameControlItem({ controlId, name }) {
     const context = await shared.ensureCommandContext();
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
-      "layouts",
+      "controls",
     );
 
     return shared.submitCommandWithContext({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: COMMAND_TYPES.LAYOUT_UPDATE,
+      type: COMMAND_TYPES.CONTROL_UPDATE,
       payload: {
-        layoutId,
+        controlId,
         data: {
           name,
         },
@@ -79,47 +77,47 @@ export const createLayoutCommandApi = (shared) => ({
     });
   },
 
-  async updateLayoutItem({ layoutId, data }) {
+  async updateControlItem({ controlId, data }) {
     const context = await shared.ensureCommandContext();
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
-      "layouts",
+      "controls",
     );
 
     return shared.submitCommandWithContext({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: COMMAND_TYPES.LAYOUT_UPDATE,
+      type: COMMAND_TYPES.CONTROL_UPDATE,
       payload: {
-        layoutId,
+        controlId,
         data: structuredClone(data || {}),
       },
       partitions: [],
     });
   },
 
-  async deleteLayoutItem({ layoutIds }) {
+  async deleteControlItem({ controlIds }) {
     const context = await shared.ensureCommandContext();
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
-      "layouts",
+      "controls",
     );
 
     return shared.submitCommandWithContext({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: COMMAND_TYPES.LAYOUT_DELETE,
+      type: COMMAND_TYPES.CONTROL_DELETE,
       payload: {
-        layoutIds: structuredClone(layoutIds || []),
+        controlIds: structuredClone(controlIds || []),
       },
       partitions: [],
     });
   },
 
-  async reorderLayoutItem({
-    layoutId,
+  async reorderControlItem({
+    controlId,
     parentId = null,
     position = "last",
     positionTargetId,
@@ -128,25 +126,25 @@ export const createLayoutCommandApi = (shared) => ({
     const context = await shared.ensureCommandContext();
     const resolvedIndex = shared.resolveResourceIndex({
       state: context.state,
-      resourceType: "layouts",
+      resourceType: "controls",
       parentId,
       position,
       positionTargetId,
       index,
-      movingId: layoutId,
+      movingId: controlId,
     });
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
-      "layouts",
+      "controls",
     );
 
     return shared.submitCommandWithContext({
       context,
       scope: "resources",
       basePartition: resourcePartition,
-      type: COMMAND_TYPES.LAYOUT_MOVE,
+      type: COMMAND_TYPES.CONTROL_MOVE,
       payload: {
-        layoutId,
+        controlId,
         ...shared.buildPlacementPayload({
           parentId,
           index: resolvedIndex,
@@ -158,15 +156,15 @@ export const createLayoutCommandApi = (shared) => ({
     });
   },
 
-  async updateLayoutElement({ layoutId, elementId, data, replace = true }) {
+  async updateControlElement({ controlId, elementId, data, replace = true }) {
     const context = await shared.ensureCommandContext();
 
     return shared.submitCommandWithContext({
       context,
-      scope: "layouts",
-      type: COMMAND_TYPES.LAYOUT_ELEMENT_UPDATE,
+      scope: "controls",
+      type: COMMAND_TYPES.CONTROL_ELEMENT_UPDATE,
       payload: {
-        layoutId,
+        controlId,
         elementId,
         data: structuredClone(data || {}),
         replace: replace === true,
@@ -175,8 +173,8 @@ export const createLayoutCommandApi = (shared) => ({
     });
   },
 
-  async createLayoutElement({
-    layoutId,
+  async createControlElement({
+    controlId,
     elementId,
     data,
     parentId = null,
@@ -186,9 +184,9 @@ export const createLayoutCommandApi = (shared) => ({
   }) {
     const context = await shared.ensureCommandContext();
     const nextElementId = elementId || shared.createId();
-    const layout = context.state?.layouts?.items?.[layoutId];
+    const control = context.state?.controls?.items?.[controlId];
     const resolvedIndex = shared.resolveLayoutElementIndex({
-      layout,
+      layout: control,
       parentId,
       position,
       positionTargetId,
@@ -197,10 +195,10 @@ export const createLayoutCommandApi = (shared) => ({
 
     const submitResult = await shared.submitCommandWithContext({
       context,
-      scope: "layouts",
-      type: COMMAND_TYPES.LAYOUT_ELEMENT_CREATE,
+      scope: "controls",
+      type: COMMAND_TYPES.CONTROL_ELEMENT_CREATE,
       payload: {
-        layoutId,
+        controlId,
         elementId: nextElementId,
         data: structuredClone(data || {}),
         ...shared.buildPlacementPayload({
@@ -220,8 +218,8 @@ export const createLayoutCommandApi = (shared) => ({
     return nextElementId;
   },
 
-  async moveLayoutElement({
-    layoutId,
+  async moveControlElement({
+    controlId,
     elementId,
     parentId = null,
     position = "last",
@@ -229,9 +227,9 @@ export const createLayoutCommandApi = (shared) => ({
     index,
   }) {
     const context = await shared.ensureCommandContext();
-    const layout = context.state?.layouts?.items?.[layoutId];
+    const control = context.state?.controls?.items?.[controlId];
     const resolvedIndex = shared.resolveLayoutElementIndex({
-      layout,
+      layout: control,
       parentId,
       position,
       positionTargetId,
@@ -241,10 +239,10 @@ export const createLayoutCommandApi = (shared) => ({
 
     return shared.submitCommandWithContext({
       context,
-      scope: "layouts",
-      type: COMMAND_TYPES.LAYOUT_ELEMENT_MOVE,
+      scope: "controls",
+      type: COMMAND_TYPES.CONTROL_ELEMENT_MOVE,
       payload: {
-        layoutId,
+        controlId,
         elementId,
         ...shared.buildPlacementPayload({
           parentId,
@@ -257,15 +255,15 @@ export const createLayoutCommandApi = (shared) => ({
     });
   },
 
-  async deleteLayoutElement({ layoutId, elementIds }) {
+  async deleteControlElement({ controlId, elementIds }) {
     const context = await shared.ensureCommandContext();
 
     return shared.submitCommandWithContext({
       context,
-      scope: "layouts",
-      type: COMMAND_TYPES.LAYOUT_ELEMENT_DELETE,
+      scope: "controls",
+      type: COMMAND_TYPES.CONTROL_ELEMENT_DELETE,
       payload: {
-        layoutId,
+        controlId,
         elementIds: structuredClone(elementIds || []),
       },
       partitions: [],

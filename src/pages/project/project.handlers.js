@@ -1,7 +1,23 @@
 export const handleBeforeMount = (deps) => {
   const { appService, store } = deps;
-  const project = appService.getCurrentProjectEntry();
-  store.setCurrentProject({ project });
+  store.setCurrentProject({
+    project: {
+      source: appService.getCurrentProjectEntry()?.source,
+    },
+  });
+};
+
+export const handleAfterMount = async (deps) => {
+  const { appService, projectService, store, render } = deps;
+  await projectService.ensureRepository();
+  const projectInfo = await projectService.getCurrentProjectInfo();
+  store.setCurrentProject({
+    project: {
+      ...projectInfo,
+      source: appService.getCurrentProjectEntry()?.source,
+    },
+  });
+  render();
 };
 
 export const handleEditButtonClick = (deps) => {
@@ -22,7 +38,7 @@ export const handleEditDialogClose = (deps) => {
 };
 
 export const handleEditFormAction = async (deps, payload) => {
-  const { appService, store, render, subject } = deps;
+  const { appService, projectService, store, render, subject } = deps;
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -49,12 +65,12 @@ export const handleEditFormAction = async (deps, payload) => {
     iconFileId: store.getState().editIconFileId,
   };
 
-  await appService.updateProjectEntry(currentProject.id, patch);
+  const nextProjectInfo = await projectService.updateCurrentProjectInfo(patch);
 
   store.setCurrentProject({
     project: {
-      ...currentProject,
-      ...patch,
+      ...store.getState().project,
+      ...nextProjectInfo,
     },
   });
   store.closeEditDialog();

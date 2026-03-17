@@ -31,10 +31,6 @@
                       "background": {
                         "resourceId": "TitlePageDefaultLayout",
                         "resourceType": "layout"
-                      },
-                      "base": {
-                        "resourceId": "TitlePageDefaultLayout",
-                        "resourceType": "layout"
                       }
                     }
                   }
@@ -78,9 +74,9 @@
                         },
                         "mode": "adv"
                       },
-                      "base": {
+                      "control": {
                         "resourceId": "HEJttDFczRPSwsBusaLZs",
-                        "resourceType": "layout"
+                        "resourceType": "control"
                       }
                     }
                   },
@@ -1186,42 +1182,6 @@
           ]
         }
       },
-      "HEJttDFczRPSwsBusaLZs": {
-        "id": "HEJttDFczRPSwsBusaLZs",
-        "type": "layout",
-        "name": "Default Base",
-        "layoutType": "base",
-        "elements": {
-          "items": {
-            "jkfeklaf": {
-              "id": "jkfeklaf",
-              "type": "sprite",
-              "x": 0,
-              "y": 0,
-              "width": 1920,
-              "height": 1080,
-              "anchorX": 0,
-              "anchorY": 0,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "click": {
-                "payload": {
-                  "actions": {
-                    "nextLine": {}
-                  }
-                }
-              },
-              "name": "sprite jkfeklaf"
-            }
-          },
-          "tree": [
-            {
-              "id": "jkfeklaf"
-            }
-          ]
-        }
-      },
       "dLJSpAASxJCYyMkSonOLY": {
         "id": "dLJSpAASxJCYyMkSonOLY",
         "type": "layout",
@@ -2258,9 +2218,6 @@
             "id": "NvlDefaultLayout"
           },
           {
-            "id": "HEJttDFczRPSwsBusaLZs"
-          },
-          {
             "id": "dLJSpAASxJCYyMkSonOLY"
           },
           {
@@ -2271,6 +2228,83 @@
           },
           {
             "id": "OptionsPageDefaultLayout"
+          }
+        ]
+      }
+    ]
+  },
+  "controls": {
+    "items": {
+      "nD7o5rqj8KOxT2gM5nYwF": {
+        "id": "nD7o5rqj8KOxT2gM5nYwF",
+        "type": "folder",
+        "name": "Default"
+      },
+      "HEJttDFczRPSwsBusaLZs": {
+        "id": "HEJttDFczRPSwsBusaLZs",
+        "type": "control",
+        "name": "Default Control",
+        "keyboard": {
+          "space": {
+            "payload": {
+              "actions": {
+                "toggleDialogueUI": {}
+              }
+            }
+          },
+          "enter": {
+            "payload": {
+              "actions": {
+                "nextLine": {}
+              }
+            }
+          }
+        },
+        "elements": {
+          "items": {
+            "jkfeklaf": {
+              "id": "jkfeklaf",
+              "type": "sprite",
+              "x": 0,
+              "y": 0,
+              "width": 1920,
+              "height": 1080,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "click": {
+                "payload": {
+                  "actions": {
+                    "nextLine": {}
+                  }
+                }
+              },
+              "rightClick": {
+                "payload": {
+                  "actions": {
+                    "toggleDialogueUI": {}
+                  }
+                }
+              },
+              "name": "main"
+            }
+          },
+          "tree": [
+            {
+              "id": "jkfeklaf"
+            }
+          ]
+        }
+      }
+    },
+    "tree": [
+      {
+        "id": "nD7o5rqj8KOxT2gM5nYwF",
+        "children": [
+          {
+            "id": "HEJttDFczRPSwsBusaLZs"
           }
         ]
       }

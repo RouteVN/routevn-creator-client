@@ -350,8 +350,9 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     },
   });
 
+  const presentationState = graphicsService.engineSelectPresentationState();
   store.setPresentationState({
-    presentationState: graphicsService.engineSelectPresentationState(),
+    presentationState,
   });
 };
 
@@ -430,9 +431,7 @@ export const initializeSceneEditorPage = async (deps) => {
     showLoading: true,
   });
   void preloadDirectTransitionScenes(deps, projectData, initialSceneIds);
-  graphicsService.initRouteEngine(initialProjectData, {
-    enableGlobalKeyboardBindings: false,
-  });
+  graphicsService.initRouteEngine(initialProjectData);
 
   render();
   setTimeout(() => {
@@ -469,9 +468,7 @@ export const restoreSceneEditorFromPreview = async (deps) => {
     showLoading: false,
   });
   void preloadDirectTransitionScenes(deps, projectData, initialSceneIds);
-  graphicsService.initRouteEngine(initialProjectData, {
-    enableGlobalKeyboardBindings: false,
-  });
+  graphicsService.initRouteEngine(initialProjectData);
 
   await renderSceneEditorState(deps);
 };

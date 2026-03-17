@@ -28,10 +28,6 @@ import {
   reconcileSceneEditorSelection,
   selectSceneEditorSection,
 } from "../../internal/ui/sceneEditor/sectionOperations.js";
-import {
-  debugLog,
-  previewDebugText,
-} from "../../deps/services/shared/debugLog.js";
 
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another scene.";
@@ -99,9 +95,6 @@ export const handleDataChanged = async (deps) => {
   await projectService.ensureRepository();
 
   if (store.selectLockingLineId()) {
-    debugLog("lines", "scene.data-changed-skipped-while-locked", {
-      lockingLineId: store.selectLockingLineId(),
-    });
     return;
   }
 
@@ -315,23 +308,10 @@ export const handleEditorDataChanged = async (deps, payload) => {
   // Ignore late input events from a line that is no longer selected or is in
   // the middle of a structural split/merge operation.
   if (lineId !== selectedLineId || lineId === lockingLineId) {
-    debugLog("lines", "scene.editor-data-ignored", {
-      lineId,
-      selectedLineId,
-      lockingLineId,
-      content: previewDebugText(payload._event.detail.content),
-    });
     return;
   }
 
   const content = [{ text: payload._event.detail.content }];
-  debugLog("lines", "scene.editor-data-accepted", {
-    lineId,
-    selectedLineId,
-    lockingLineId,
-    contentLength: payload._event.detail.content.length,
-    content: previewDebugText(payload._event.detail.content),
-  });
 
   // Update local store immediately for UI responsiveness
   store.setLineTextContent({ lineId, content });
@@ -341,11 +321,6 @@ export const handleEditorDataChanged = async (deps, payload) => {
     store.selectDomainState()?.lines?.[lineId]?.sectionId ??
     store.selectSelectedSectionId();
   try {
-    debugLog("lines", "scene.editor-data-queued", {
-      lineId,
-      sectionId,
-      content: previewDebugText(payload._event.detail.content),
-    });
     dialogueQueueService.setAndSchedule(lineId, { sectionId, content });
   } catch (error) {
     console.error("[sceneEditor] Failed to queue dialogue update:", error);
@@ -850,12 +825,17 @@ export const handleToggleSectionsGraphView = (deps) => {
 };
 
 export const handlePreviewClick = (deps) => {
-  const { store, render } = deps;
+  const { store, render, appService } = deps;
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
+  appService.blurActiveElement();
   store.showPreviewSceneId({ sceneId, sectionId, lineId });
   render();
+};
+
+export const handlePreviewShortcut = (deps) => {
+  handlePreviewClick(deps);
 };
 
 export const handleDeleteLineShortcut = async (deps, payload) => {
@@ -981,9 +961,8 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
   } else if (actionType === "background") {
     // Clear background by setting without resourceId
     newActions.background = {};
-  } else if (actionType === "base") {
-    // Clear base by setting without resourceId
-    newActions.base = {};
+  } else if (actionType === "control") {
+    newActions.control = {};
   } else {
     // For non-inherited actions, delete as before
     delete newActions[actionType];

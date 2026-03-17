@@ -210,8 +210,8 @@ export const buildSceneEditorLineViewModels = ({
       setNextLineConfigChangeType: changes.setNextLineConfig?.changeType,
       hasDialogueLayout: !!changes.dialogue,
       dialogueChangeType: changes.dialogue?.changeType,
-      hasBase: !!changes.base,
-      baseChangeType: changes.base?.changeType,
+      hasControl: !!changes.control,
+      controlChangeType: changes.control?.changeType,
     };
   });
 };

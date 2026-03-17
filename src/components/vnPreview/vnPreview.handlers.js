@@ -1,4 +1,5 @@
 import { constructProjectData } from "../../internal/project/projection.js";
+import { forceDebugLog } from "../../deps/services/shared/debugLog.js";
 import {
   extractFileIdsForLayouts,
   extractSceneIdsFromValue,
@@ -217,6 +218,31 @@ export const handleAfterMount = async (deps) => {
     initialSceneId: sceneId,
   });
 
+  const repositoryLineAction =
+    state?.scenes?.items?.[sceneId]?.sections?.items?.[sectionId]?.lines
+      ?.items?.[lineId]?.actions?.control;
+  const projectedScene = projectData?.story?.scenes?.[sceneId];
+  const projectedLine =
+    projectedScene?.sections?.[sectionId]?.lines?.find(
+      (item) => item.id === lineId,
+    ) || projectedScene?.sections?.[sectionId]?.lines?.[0];
+
+  forceDebugLog("scene-control", "vn-preview.project-data", {
+    sceneId,
+    sectionId,
+    lineId,
+    repositoryLineControl: repositoryLineAction,
+    projectedLineControl: projectedLine?.actions?.control,
+    projectedControlResourceIds: Object.keys(
+      projectData?.resources?.controls || {},
+    ),
+    projectedControlResource: projectedLine?.actions?.control?.resourceId
+      ? projectData?.resources?.controls?.[
+          projectedLine.actions.control.resourceId
+        ]
+      : undefined,
+  });
+
   const projectDataWithInitial = structuredClone(projectData);
   const scene = projectDataWithInitial.story.scenes[sceneId];
 
@@ -253,5 +279,21 @@ export const handleAfterMount = async (deps) => {
   );
   await graphicsService.initRouteEngine(projectDataWithInitial, {
     handleEffects: true,
+  });
+
+  forceDebugLog("scene-control", "vn-preview.engine-init", {
+    sceneId,
+    sectionId,
+    lineId,
+    initialPresentationControl:
+      graphicsService.engineSelectPresentationState?.()?.control,
+  });
+
+  const initialRenderState = graphicsService.engineSelectRenderState?.();
+  forceDebugLog("scene-control", "vn-preview.render-state", {
+    sceneId,
+    sectionId,
+    lineId,
+    renderKeyboard: initialRenderState?.global?.keyboard,
   });
 };

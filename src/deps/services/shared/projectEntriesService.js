@@ -179,6 +179,8 @@ export const createProjectEntriesService = ({
       const projectEntries = await getProjectEntries();
       const projectsWithFullData = await Promise.all(
         projectEntries.map(async (entry) => {
+          // projectEntries cache the current projectInfo snapshot for fast
+          // listing without opening every project DB.
           const project = {
             id: entry.id,
             name: entry.name || "Untitled Project",

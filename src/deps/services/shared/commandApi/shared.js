@@ -136,8 +136,6 @@ export const createCommandApiShared = ({
       }
 
       if (
-        typeof fileRecord.type !== "string" ||
-        fileRecord.type.length === 0 ||
         typeof fileRecord.mimeType !== "string" ||
         fileRecord.mimeType.length === 0 ||
         !Number.isFinite(fileRecord.size) ||
@@ -157,7 +155,6 @@ export const createCommandApiShared = ({
         payload: {
           fileId: fileRecord.id,
           data: {
-            type: fileRecord.type,
             mimeType: fileRecord.mimeType,
             size: fileRecord.size,
             sha256: fileRecord.sha256,

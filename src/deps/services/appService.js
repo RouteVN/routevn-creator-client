@@ -69,13 +69,11 @@ export const createAppService = (params) => {
       }
     },
 
-    importProject: async (projectPath) => {
-      return {
-        name: deriveProjectNameFromPath(projectPath),
-        description: "",
-        iconFileId: null,
-      };
-    },
+    importProject: async (projectPath) => ({
+      name: deriveProjectNameFromPath(projectPath),
+      description: "",
+      iconFileId: null,
+    }),
 
     openExistingProject: async ({
       folderPath,
@@ -89,7 +87,8 @@ export const createAppService = (params) => {
         throw new Error(validation.error);
       }
 
-      const projectData = await platformAdapter.importProject(folderPath);
+      const projectData = await projectService.getProjectInfoByPath(folderPath);
+
       const projectEntry = {
         id: nanoid(),
         projectPath: folderPath,
@@ -144,6 +143,11 @@ export const createAppService = (params) => {
       await projectService.initializeProject({
         projectPath,
         template,
+        projectInfo: {
+          name,
+          description,
+          iconFileId: null,
+        },
       });
 
       await addProjectEntry(projectEntry);

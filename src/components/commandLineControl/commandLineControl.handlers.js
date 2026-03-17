@@ -1,9 +1,10 @@
+import { forceDebugLog } from "../../deps/services/shared/debugLog.js";
+
 export const handleBeforeMount = (deps) => {
   const { store, props } = deps;
-  // Initialize with existing base data if available
-  if (props?.base?.resourceId) {
+  if (props?.control?.resourceId) {
     store.setSelectedResourceId({
-      resourceId: props.base.resourceId,
+      resourceId: props.control.resourceId,
     });
   }
 };
@@ -18,6 +19,9 @@ export const handleFormChange = (deps, payload) => {
 
   if (formValues.resourceId !== undefined) {
     store.setSelectedResourceId({ resourceId: formValues.resourceId });
+    forceDebugLog("scene-control", "command-line-control.form-change", {
+      resourceId: formValues.resourceId,
+    });
   }
 
   render();
@@ -25,20 +29,24 @@ export const handleFormChange = (deps, payload) => {
 
 export const handleSubmitClick = (deps) => {
   const { store, dispatchEvent } = deps;
-  const { selectedLayoutId } = store.getState();
+  const { selectedControlId } = store.getState();
 
-  // Create base object with only non-empty values
-  const base = {
-    resourceType: "layout",
+  const control = {
+    resourceType: "control",
   };
-  if (selectedLayoutId && selectedLayoutId !== "") {
-    base.resourceId = selectedLayoutId;
+  if (selectedControlId && selectedControlId !== "") {
+    control.resourceId = selectedControlId;
   }
+
+  forceDebugLog("scene-control", "command-line-control.submit", {
+    selectedControlId,
+    control,
+  });
 
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
-        base,
+        control,
       },
     }),
   );

@@ -369,6 +369,10 @@ const dispatchBlockModeSwapLine = (dispatchEvent, lineId, direction) => {
   );
 };
 
+const isKeyboardHandlingDisabled = (props) => {
+  return props.keyboardHandlingDisabled === true;
+};
+
 export const handleAfterMount = (deps) => {
   const { refs } = deps;
 
@@ -423,6 +427,10 @@ export const handlePreviewRightClick = async (deps, payload) => {
 export const handleContainerKeyDown = (deps, payload) => {
   const { store, props, dispatchEvent, refs } = deps;
   const mode = store.selectMode();
+
+  if (isKeyboardHandlingDisabled(props)) {
+    return;
+  }
 
   // Only handle container keydown if the target is the container itself
   // If focus is already inside an editable line primitive, let the line handler own it.
@@ -485,6 +493,13 @@ export const handleContainerKeyDown = (deps, payload) => {
           },
         }),
       );
+      return;
+    }
+
+    if (navKey === "p" || navKey === "P") {
+      payload._event.preventDefault();
+      payload._event.stopPropagation();
+      dispatchEvent(new CustomEvent("preview-shortcut"));
       return;
     }
 
@@ -696,6 +711,10 @@ export const handleLineKeyDown = (deps, payload) => {
   const id = getLineIdFromElement(payload._event.currentTarget);
   const mode = store.selectMode();
 
+  if (isKeyboardHandlingDisabled(props)) {
+    return;
+  }
+
   if (mode === "block") {
     const handledShortcut = handleBlockModeCharacterShortcut(deps, payload, {
       lineId: id,
@@ -851,6 +870,14 @@ export const handleLineKeyDown = (deps, payload) => {
             }),
           );
         });
+      }
+      break;
+    case "p":
+    case "P":
+      if (mode === "block") {
+        payload._event.preventDefault();
+        payload._event.stopPropagation();
+        dispatchEvent(new CustomEvent("preview-shortcut"));
       }
       break;
     case "Shift+I":

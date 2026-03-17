@@ -1,7 +1,6 @@
 import {
   buildLayoutElements,
   createLayoutReferenceResources,
-  getLayoutKeyboardResourceId,
   toRouteEngineKeyboardResource,
 } from "./layout.js";
 import { RESOURCE_TYPES } from "./commands.js";
@@ -186,9 +185,10 @@ const projectRepositoryResources = ({ repositoryState }) => {
       const createdAt = toFiniteTimestamp(item?.createdAt, DEFAULT_TIMESTAMP);
       const updatedAt = toFiniteTimestamp(item?.updatedAt, createdAt);
 
-      if (resourceType === "layouts") {
+      if (resourceType === "layouts" || resourceType === "controls") {
         const clonedLayout = cloneOr(item, {});
-        const entryType = clonedLayout.type || "layout";
+        const defaultType = resourceType === "controls" ? "control" : "layout";
+        const entryType = clonedLayout.type || defaultType;
 
         if (entryType === "folder") {
           resources[resourceType].items[resourceId] = {
@@ -242,8 +242,12 @@ const projectRepositoryResources = ({ repositoryState }) => {
           id: resourceId,
           ...clonedLayout,
           type: entryType,
-          name: item?.name || `Layout ${resourceId}`,
-          layoutType: item?.layoutType || "base",
+          name:
+            item?.name ||
+            `${resourceType === "controls" ? "Control" : "Layout"} ${resourceId}`,
+          ...(resourceType === "layouts"
+            ? { layoutType: item?.layoutType || "normal" }
+            : {}),
           parentId,
           elements,
           rootElementOrder,
@@ -610,6 +614,7 @@ const extractCharacterImages = (repositoryCharacters = {}) => {
 
 const constructLayoutResources = (
   repositoryLayouts = {},
+  repositoryControls = {},
   imageItems = {},
   textStylesData = { items: {}, tree: [] },
   colors = { items: {}, tree: [] },
@@ -624,7 +629,7 @@ const constructLayoutResources = (
   const textStyles = {
     ...baseLayoutResources.textStyles,
   };
-  const keyboards = {};
+  const controls = {};
   const layouts = {};
 
   Object.entries(repositoryLayouts).forEach(([layoutId, layout]) => {
@@ -642,9 +647,6 @@ const constructLayoutResources = (
     );
 
     Object.assign(textStyles, resources.textStyles);
-    keyboards[getLayoutKeyboardResourceId(layoutId)] =
-      toRouteEngineKeyboardResource(layout.keyboard);
-
     layouts[layoutId] = {
       id: layoutId,
       name: layout.name,
@@ -656,13 +658,36 @@ const constructLayoutResources = (
     };
   });
 
+  Object.entries(repositoryControls).forEach(([controlId, control]) => {
+    if (control?.type !== "control") {
+      return;
+    }
+
+    const { elements, resources } = buildLayoutElements(
+      toHierarchyStructure(control.elements),
+      imageItems,
+      textStylesData,
+      colors,
+      fonts,
+      { layoutId: controlId },
+    );
+
+    Object.assign(textStyles, resources.textStyles);
+    controls[controlId] = {
+      id: controlId,
+      name: control.name,
+      keyboard: toRouteEngineKeyboardResource(control.keyboard),
+      elements,
+    };
+  });
+
   return {
     resources: {
       images: baseLayoutResources.images,
       colors: baseLayoutResources.colors,
       fonts: baseLayoutResources.fonts,
       textStyles,
-      keyboards,
+      controls,
     },
     layouts,
   };
@@ -676,6 +701,7 @@ const constructProjectResources = (repositoryState = {}) => {
   const repositoryCharacters = repositoryState.characters?.items || {};
   const repositoryTransforms = repositoryState.transforms?.items || {};
   const repositoryLayouts = repositoryState.layouts?.items || {};
+  const repositoryControls = repositoryState.controls?.items || {};
   const textStylesData = repositoryState.textStyles || { items: {}, tree: [] };
   const colors = repositoryState.colors || { items: {}, tree: [] };
   const fonts = repositoryState.fonts || { items: {}, tree: [] };
@@ -692,6 +718,7 @@ const constructProjectResources = (repositoryState = {}) => {
   };
   const { resources: layoutResources, layouts } = constructLayoutResources(
     repositoryLayouts,
+    repositoryControls,
     imageItems,
     textStylesData,
     colors,
@@ -705,7 +732,7 @@ const constructProjectResources = (repositoryState = {}) => {
     fonts: layoutResources.fonts,
     colors: layoutResources.colors,
     textStyles: layoutResources.textStyles,
-    keyboards: layoutResources.keyboards,
+    controls: layoutResources.controls,
     transforms: constructTransformResources(repositoryTransforms),
     characters: constructCharacterResources(repositoryCharacters),
     layouts,
@@ -713,22 +740,6 @@ const constructProjectResources = (repositoryState = {}) => {
     variables,
   };
 };
-
-function addBaseLayoutKeyboardAction(actions) {
-  const baseLayoutId = actions?.base?.resourceId;
-  if (!baseLayoutId || actions.keyboard) {
-    return actions;
-  }
-
-  return {
-    ...actions,
-    // Base-layout keyboard bindings need to become engine-owned presentation
-    // state so preview/export follow the same route-engine path.
-    keyboard: {
-      resourceId: getLayoutKeyboardResourceId(baseLayoutId),
-    },
-  };
-}
 
 const constructStory = (scenes) => {
   const transformedScenes = {};
@@ -773,9 +784,7 @@ const constructStory = (scenes) => {
 
             transformedSection.lines.push({
               id: lineId,
-              actions: addBaseLayoutKeyboardAction(
-                normalizeEngineActions(line.actions || {}),
-              ),
+              actions: normalizeEngineActions(line.actions || {}),
             });
           });
         }
@@ -849,6 +858,7 @@ export const getSectionPresentation = ({
   section,
   initialSectionId,
   layouts,
+  controls,
   menuSceneId,
 }) => {
   const lines = toSectionLines(section);
@@ -896,13 +906,21 @@ export const getSectionPresentation = ({
 
     const layoutRefs = [
       line.actions?.background,
-      line.actions?.base,
+      line.actions?.control,
       line.actions?.actions?.background,
-      line.actions?.actions?.base,
-    ].filter((ref) => ref?.resourceType === "layout" && ref?.resourceId);
+      line.actions?.actions?.control,
+    ].filter((ref) => {
+      return (
+        ref?.resourceId &&
+        (ref.resourceType === "layout" || ref.resourceType === "control")
+      );
+    });
 
     layoutRefs.forEach((layoutRef) => {
-      const layout = layouts?.items?.[layoutRef.resourceId];
+      const layout =
+        layoutRef.resourceType === "control"
+          ? controls?.items?.[layoutRef.resourceId]
+          : layouts?.items?.[layoutRef.resourceId];
       const layoutTransitions = getTransitionsFromLayout(layout);
 
       layoutTransitions.forEach((layoutTransition) => {
@@ -996,6 +1014,7 @@ const EXPORT_RESOURCE_KEYS = new Set([
 
 const RESOURCE_KEY_TO_TYPES = {
   resourceId: [
+    "controls",
     "layouts",
     "images",
     "videos",
@@ -1042,6 +1061,7 @@ const COLLECTION_DEFS = {
   colors: { collection: "colors", itemType: "color" },
   textStyles: { collection: "textStyles", itemType: "textStyle" },
   layouts: { collection: "layouts", itemType: "layout" },
+  controls: { collection: "controls", itemType: "control" },
   variables: { collection: "variables", itemType: null },
   sprites: { collection: null, itemType: "sprite" },
 };
@@ -1049,6 +1069,7 @@ const COLLECTION_DEFS = {
 const RESOURCE_KEYS_MAP = {
   scenes: SCENE_RESOURCE_KEYS,
   layouts: LAYOUT_RESOURCE_KEYS,
+  controls: LAYOUT_RESOURCE_KEYS,
   textStyles: TEXT_STYLE_RESOURCE_KEYS,
 };
 
@@ -1212,9 +1233,11 @@ export const collectUsedResourcesForExport = (state) => {
   const usage = createUsageBuckets();
   const index = createResourceIndex(state);
   const layoutQueue = [];
+  const controlQueue = [];
   const textStyleQueue = [];
   const characterQueue = [];
   const scannedLayouts = new Set();
+  const scannedControls = new Set();
   const scannedTextStyles = new Set();
   const scannedCharacters = new Set();
 
@@ -1225,6 +1248,8 @@ export const collectUsedResourcesForExport = (state) => {
 
     if (type === "layouts") {
       layoutQueue.push(id);
+    } else if (type === "controls") {
+      controlQueue.push(id);
     } else if (type === "textStyles") {
       textStyleQueue.push(id);
     } else if (type === "characters") {
@@ -1268,6 +1293,15 @@ export const collectUsedResourcesForExport = (state) => {
     const layout = getCollectionItems(state, "layouts")[layoutId];
     if (!layout || layout.type !== "layout") continue;
     scanNodeForResourceReferences(layout, markReference);
+  }
+
+  while (controlQueue.length > 0) {
+    const controlId = controlQueue.shift();
+    if (scannedControls.has(controlId)) continue;
+    scannedControls.add(controlId);
+    const control = getCollectionItems(state, "controls")[controlId];
+    if (!control || control.type !== "control") continue;
+    scanNodeForResourceReferences(control, markReference);
   }
 
   while (textStyleQueue.length > 0) {
@@ -1363,6 +1397,10 @@ export const buildFilteredStateForExport = (
       usedIds.textStyles || [],
     ),
     layouts: filterCollectionItemsByIds(state.layouts, usedIds.layouts || []),
+    controls: filterCollectionItemsByIds(
+      state.controls,
+      usedIds.controls || [],
+    ),
     variables: keepAllVariables
       ? state.variables
       : filterCollectionItemsByIds(state.variables, usedIds.variables || []),
