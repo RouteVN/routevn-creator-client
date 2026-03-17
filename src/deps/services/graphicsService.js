@@ -12,12 +12,15 @@ import createRouteGraphics, {
 } from "route-graphics";
 import createRouteEngine, { createEffectsHandler } from "route-engine-js";
 import { Ticker } from "pixi.js";
+import { mergeBaseLayoutKeyboardIntoRenderState } from "../../internal/project/layout.js";
 
 export const createGraphicsService = async ({ subject }) => {
   const RIGHT_CLICK_EVENT_NAMES = new Set(["rightclick", "rightClick"]);
   let routeGraphics;
   let engine;
   let assetBufferManager;
+  let currentProjectData;
+  let enableGlobalKeyboardBindings = true;
   // Create dedicated ticker for auto mode
   let ticker;
   let beforeHandleActions;
@@ -88,7 +91,26 @@ export const createGraphicsService = async ({ subject }) => {
       return;
     }
 
+    syncProjectDataFromActions(actions);
+
     engine.handleActions(actions, eventContext);
+  };
+
+  const syncProjectDataFromActions = (actions) => {
+    const nextProjectData = actions?.updateProjectData?.projectData;
+    if (nextProjectData) {
+      currentProjectData = nextProjectData;
+    }
+  };
+
+  const renderEngineState = (renderState) => {
+    const nextRenderState = mergeBaseLayoutKeyboardIntoRenderState({
+      renderState,
+      projectData: currentProjectData,
+      presentationState: engine?.selectPresentationState?.(),
+      enableGlobalKeyboardBindings,
+    });
+    routeGraphics.render(nextRenderState);
   };
 
   const enqueueInteractionActions = (actions, eventContext) => {
@@ -232,12 +254,18 @@ export const createGraphicsService = async ({ subject }) => {
       assetLoadQueue = queuedLoad.catch(() => {});
       return queuedLoad;
     },
-    initRouteEngine: (projectData) => {
+    initRouteEngine: (projectData, options = {}) => {
       ticker.start();
+      currentProjectData = projectData;
+      enableGlobalKeyboardBindings =
+        options.enableGlobalKeyboardBindings ?? true;
 
       const handlePendingEffects = createEffectsHandler({
         getEngine: () => engine,
-        routeGraphics,
+        routeGraphics: {
+          ...routeGraphics,
+          render: renderEngineState,
+        },
         ticker,
       });
       engine = createRouteEngine({ handlePendingEffects });
@@ -270,10 +298,11 @@ export const createGraphicsService = async ({ subject }) => {
       if (skipAnimations) {
         renderState = { ...renderState, animations: [] };
       }
-      routeGraphics.render(renderState);
+      renderEngineState(renderState);
     },
 
     engineHandleActions: (actions, eventContext) => {
+      syncProjectDataFromActions(actions);
       engine.handleActions(actions, eventContext);
     },
 
@@ -287,6 +316,8 @@ export const createGraphicsService = async ({ subject }) => {
       if (engine) {
         engine = undefined;
       }
+      currentProjectData = undefined;
+      enableGlobalKeyboardBindings = true;
       beforeHandleActions = undefined;
       actionQueue = Promise.resolve();
       assetLoadQueue = Promise.resolve();

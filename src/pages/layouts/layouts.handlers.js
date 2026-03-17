@@ -6,6 +6,7 @@ import {
   getInteractionActions,
   withInteractionPayload,
 } from "../../internal/project/interactionPayload.js";
+import { BASE_LAYOUT_KEYBOARD_OPTIONS } from "../../internal/project/layout.js";
 
 const {
   handleBeforeMount,
@@ -33,16 +34,7 @@ export {
   handleSearchInput,
 };
 
-const KEYBOARD_KEY_OPTIONS = [
-  { value: "enter", label: "Enter" },
-  { value: "space", label: "Space" },
-  { value: "esc", label: "Escape" },
-  { value: "left", label: "Left Arrow" },
-  { value: "right", label: "Right Arrow" },
-  { value: "up", label: "Up Arrow" },
-  { value: "down", label: "Down Arrow" },
-];
-
+// Base layouts can attach keyboard shortcuts from the detail panel.
 const getSelectedBaseLayout = (store) => {
   const selectedItem = store.selectSelectedItem();
   if (selectedItem?.layoutType !== "base") {
@@ -495,7 +487,7 @@ export const handleKeyboardAddClick = async (deps, payload) => {
   }
 
   const assignedKeys = new Set(Object.keys(layout.keyboard || {}));
-  const availableItems = KEYBOARD_KEY_OPTIONS.filter(
+  const availableItems = BASE_LAYOUT_KEYBOARD_OPTIONS.filter(
     (item) => !assignedKeys.has(item.value),
   ).map((item) => ({
     type: "item",
@@ -586,7 +578,7 @@ export const handleKeyboardItemRightClick = async (deps, payload) => {
     return;
   }
 
-  render();
+  await handleDataChanged(deps);
 };
 
 export const handleKeyboardActionsChange = async (deps, payload) => {
@@ -612,6 +604,8 @@ export const handleKeyboardActionsChange = async (deps, payload) => {
   if (!updated) {
     return;
   }
+
+  await handleDataChanged(deps);
 };
 
 export const handleKeyboardActionsClose = (deps) => {

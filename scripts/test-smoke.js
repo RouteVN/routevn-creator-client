@@ -12,6 +12,7 @@ import {
   constructProjectData,
   projectRepositoryStateToDomainState,
 } from "../src/internal/project/projection.js";
+import { mergeBaseLayoutKeyboardIntoRenderState } from "../src/internal/project/layout.js";
 import { toHierarchyStructure } from "../src/internal/project/tree.js";
 
 const projectId = "proj-smoke-001";
@@ -510,6 +511,90 @@ assert.deepEqual(projectData.resources.layouts["layout-main"].keyboard, {
     },
   },
 });
+
+const baseKeyboardRenderState = mergeBaseLayoutKeyboardIntoRenderState({
+  renderState: {
+    elements: [],
+    animations: [],
+    audio: [],
+    global: {
+      keyboard: {
+        esc: {
+          payload: {
+            actions: {
+              toggleDialogueUI: {},
+            },
+          },
+        },
+        space: {
+          payload: {
+            actions: {
+              toggleAutoMode: {},
+            },
+          },
+        },
+      },
+    },
+  },
+  projectData,
+  presentationState: {
+    base: {
+      resourceId: "layout-main",
+    },
+  },
+});
+
+assert.deepEqual(baseKeyboardRenderState.global.keyboard, {
+  enter: {
+    payload: {
+      actions: {
+        nextLine: {},
+      },
+    },
+  },
+  escape: {
+    payload: {
+      actions: {
+        toggleDialogueUI: {},
+      },
+    },
+  },
+  space: {
+    payload: {
+      actions: {
+        toggleAutoMode: {},
+      },
+    },
+  },
+});
+
+const disabledKeyboardRenderState = mergeBaseLayoutKeyboardIntoRenderState({
+  renderState: {
+    elements: [],
+    animations: [],
+    audio: [],
+    global: {
+      keyboard: {
+        enter: {
+          payload: {
+            actions: {
+              nextLine: {},
+            },
+          },
+        },
+      },
+    },
+  },
+  projectData,
+  presentationState: {
+    base: {
+      resourceId: "layout-main",
+    },
+  },
+  enableGlobalKeyboardBindings: false,
+});
+
+assert.equal(disabledKeyboardRenderState.global.keyboard, undefined);
 
 assert.equal(store._debug.getEvents().length, 14);
 

@@ -1,5 +1,9 @@
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
 import { getInteractionActions } from "../../internal/project/interactionPayload.js";
+import {
+  BASE_LAYOUT_KEYBOARD_LABELS,
+  BASE_LAYOUT_KEYBOARD_OPTIONS,
+} from "../../internal/project/layout.js";
 
 const layoutForm = {
   title: "Add Layout",
@@ -48,20 +52,6 @@ const layoutTypeLabels = {
   base: "Base",
 };
 
-const KEYBOARD_KEY_OPTIONS = [
-  { value: "enter", label: "Enter" },
-  { value: "space", label: "Space" },
-  { value: "esc", label: "Escape" },
-  { value: "left", label: "Left Arrow" },
-  { value: "right", label: "Right Arrow" },
-  { value: "up", label: "Up Arrow" },
-  { value: "down", label: "Down Arrow" },
-];
-
-const KEYBOARD_KEY_LABELS = Object.fromEntries(
-  KEYBOARD_KEY_OPTIONS.map((item) => [item.value, item.label]),
-);
-
 const SYSTEM_ACTION_LABELS = {
   nextLine: "Next Line",
   sectionTransition: "Transition",
@@ -88,15 +78,15 @@ const toKeyboardItems = (keyboardValue = {}) => {
 
       return {
         key,
-        keyLabel: KEYBOARD_KEY_LABELS[key] ?? key,
+        keyLabel: BASE_LAYOUT_KEYBOARD_LABELS[key] ?? key,
         actionLabel,
       };
     })
     .sort((left, right) => {
-      const leftIndex = KEYBOARD_KEY_OPTIONS.findIndex(
+      const leftIndex = BASE_LAYOUT_KEYBOARD_OPTIONS.findIndex(
         (item) => item.value === left.key,
       );
-      const rightIndex = KEYBOARD_KEY_OPTIONS.findIndex(
+      const rightIndex = BASE_LAYOUT_KEYBOARD_OPTIONS.findIndex(
         (item) => item.value === right.key,
       );
 
@@ -118,13 +108,22 @@ const buildDetailFields = (item) => {
     return [];
   }
 
-  return [
+  const fields = [
     {
       type: "text",
       label: "Layout Type",
       value: layoutTypeLabels[item.layoutType] ?? item.layoutType ?? "",
     },
   ];
+
+  if (item.layoutType === "base") {
+    fields.push({
+      type: "slot",
+      slot: "keyboard-slot",
+    });
+  }
+
+  return fields;
 };
 
 const buildCatalogItem = (item) => ({

@@ -16,6 +16,7 @@ import createRouteGraphics, {
   particlesPlugin,
   animatedSpritePlugin,
 } from "route-graphics";
+import { mergeBaseLayoutKeyboardIntoRenderState } from "../src/internal/project/layout.js";
 
 async function parseVNBundle(arrayBuffer) {
   const dataView = new DataView(arrayBuffer);
@@ -155,6 +156,23 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
 
   const routeGraphics = createRouteGraphics();
   let engine;
+  let currentProjectData = jsonData;
+
+  const renderEngineState = (renderState) => {
+    const nextRenderState = mergeBaseLayoutKeyboardIntoRenderState({
+      renderState,
+      projectData: currentProjectData,
+      presentationState: engine?.selectPresentationState?.(),
+    });
+    routeGraphics.render(nextRenderState);
+  };
+
+  const syncProjectDataFromActions = (actions) => {
+    const nextProjectData = actions?.updateProjectData?.projectData;
+    if (nextProjectData) {
+      currentProjectData = nextProjectData;
+    }
+  };
 
   await routeGraphics.init({
     width: 1920,
@@ -169,6 +187,10 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
       }
 
       if (payload.actions) {
+        syncProjectDataFromActions(payload.actions);
+        const eventContext = payload._event
+          ? { _event: payload._event }
+          : undefined;
         if (payload.actions.saveSaveSlot) {
           const url = await routeGraphics.extractBase64("story");
           const assets = {
@@ -180,7 +202,7 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
           await routeGraphics.loadAssets(assets);
           payload.actions.saveSaveSlot.thumbnailImage = url;
         }
-        engine.handleActions(payload.actions);
+        engine.handleActions(payload.actions, eventContext);
       }
     },
   });
@@ -193,7 +215,10 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
 
   const effectsHandler = createEffectsHandler({
     getEngine: () => engine,
-    routeGraphics,
+    routeGraphics: {
+      ...routeGraphics,
+      render: renderEngineState,
+    },
     ticker,
   });
   engine = createRouteEngine({ handlePendingEffects: effectsHandler });

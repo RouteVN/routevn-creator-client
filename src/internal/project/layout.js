@@ -54,6 +54,20 @@ const DEFAULT_TEXT_STYLE_RESOURCE = {
   breakWords: true,
 };
 
+export const BASE_LAYOUT_KEYBOARD_OPTIONS = [
+  { value: "enter", label: "Enter" },
+  { value: "space", label: "Space" },
+  { value: "esc", label: "Escape" },
+  { value: "left", label: "Left Arrow" },
+  { value: "right", label: "Right Arrow" },
+  { value: "up", label: "Up Arrow" },
+  { value: "down", label: "Down Arrow" },
+];
+
+export const BASE_LAYOUT_KEYBOARD_LABELS = Object.fromEntries(
+  BASE_LAYOUT_KEYBOARD_OPTIONS.map((item) => [item.value, item.label]),
+);
+
 const toAlphanumericId = (value, fallback = "sliderUpdate") => {
   const sanitized = String(value || "").replace(/[^a-zA-Z0-9]/g, "");
   return sanitized || fallback;
@@ -1106,6 +1120,94 @@ export const extractInitialHybridSceneIds = (projectData, sceneId) => {
     ...extractTransitionTargetSceneIds(projectData, sceneId),
   ];
   return Array.from(new Set(relatedSceneIds));
+};
+
+const asKeyboardMap = (value) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  return value;
+};
+
+const KEYBOARD_KEY_CANONICAL_MAP = {
+  enter: "enter",
+  space: "space",
+  esc: "escape",
+  escape: "escape",
+  left: "arrowleft",
+  arrowleft: "arrowleft",
+  right: "arrowright",
+  arrowright: "arrowright",
+  up: "arrowup",
+  arrowup: "arrowup",
+  down: "arrowdown",
+  arrowdown: "arrowdown",
+};
+
+const normalizeKeyboardBindingsForGraphics = (keyboardMap) => {
+  const input = asKeyboardMap(keyboardMap);
+  if (!input) {
+    return undefined;
+  }
+
+  const normalized = {};
+  Object.entries(input).forEach(([key, interaction]) => {
+    const canonicalKey = KEYBOARD_KEY_CANONICAL_MAP[key] ?? key;
+    normalized[canonicalKey] = structuredClone(interaction);
+  });
+
+  return normalized;
+};
+
+export const mergeBaseLayoutKeyboardIntoRenderState = ({
+  renderState,
+  projectData,
+  presentationState,
+  enableGlobalKeyboardBindings = true,
+}) => {
+  const existingGlobal =
+    renderState?.global && typeof renderState.global === "object"
+      ? renderState.global
+      : {};
+  const existingKeyboard = asKeyboardMap(existingGlobal.keyboard);
+
+  if (!enableGlobalKeyboardBindings) {
+    if (!existingKeyboard) {
+      return renderState;
+    }
+
+    return {
+      ...renderState,
+      global: {
+        ...existingGlobal,
+        keyboard: undefined,
+      },
+    };
+  }
+
+  const baseLayoutId = presentationState?.base?.resourceId;
+  const baseLayoutKeyboard = asKeyboardMap(
+    projectData?.resources?.layouts?.[baseLayoutId]?.keyboard,
+  );
+
+  if (!baseLayoutKeyboard) {
+    return renderState;
+  }
+
+  return {
+    ...renderState,
+    global: {
+      ...existingGlobal,
+      // Explicit engine keyboard bindings should still win over base-layout defaults.
+      keyboard: {
+        ...normalizeKeyboardBindingsForGraphics(baseLayoutKeyboard),
+        ...(existingKeyboard
+          ? normalizeKeyboardBindingsForGraphics(existingKeyboard)
+          : {}),
+      },
+    },
+  };
 };
 
 export const layoutHierarchyStructureToRenderState = (

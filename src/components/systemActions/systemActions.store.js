@@ -109,10 +109,7 @@ export const selectAction = ({ state }) => {
 
 export const updateActions = ({ state }, payload = {}) => {
   const nextPayload = payload || {};
-  state.actions = {
-    ...state.actions,
-    ...nextPayload,
-  };
+  state.actions = { ...nextPayload };
 };
 
 export const showActionsDialog = ({ state }, _payload = {}) => {
