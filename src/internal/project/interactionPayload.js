@@ -14,14 +14,10 @@ export const withInteractionPayload = (interaction = {}, payload = {}) => {
   const nextInteraction =
     interaction && typeof interaction === "object" ? { ...interaction } : {};
 
-  const nextValue = {
+  return {
     ...nextInteraction,
     payload,
   };
-
-  delete nextValue.actionPayload;
-
-  return nextValue;
 };
 
 export const normalizeInteractionValue = (interaction = {}) => {
@@ -34,8 +30,6 @@ export const normalizeInteractionValue = (interaction = {}) => {
     ...interaction,
     payload,
   };
-
-  delete nextValue.actionPayload;
 
   return nextValue;
 };

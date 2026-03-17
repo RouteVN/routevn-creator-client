@@ -185,17 +185,17 @@ const normalizeSliderChange = (change, sliderId) => {
   const interactionPayload = getInteractionPayload(change);
   const updateVariable = interactionPayload?.actions?.updateVariable;
   if (!updateVariable) {
-    return toRouteGraphicsInteraction(change);
+    return normalizeEngineActions(change);
   }
 
   const fallbackId = toAlphanumericId(`slider${sliderId}update`);
   const sanitizedId = toAlphanumericId(updateVariable.id, fallbackId);
 
   if (sanitizedId === updateVariable.id) {
-    return toRouteGraphicsInteraction(change);
+    return normalizeEngineActions(change);
   }
 
-  return toRouteGraphicsInteraction(
+  return normalizeEngineActions(
     withInteractionPayload(change, {
       ...interactionPayload,
       actions: {
@@ -244,22 +244,6 @@ const getImageFileId = (imageItems, imageId) => {
     : undefined;
 };
 
-const toRouteGraphicsInteraction = (interaction) => {
-  if (!interaction || typeof interaction !== "object") {
-    return interaction;
-  }
-
-  const payload = getInteractionPayload(interaction);
-  const nextInteraction = {
-    ...interaction,
-    actionPayload: payload,
-  };
-
-  delete nextInteraction.payload;
-
-  return normalizeEngineActions(nextInteraction);
-};
-
 const buildBaseElement = (node) => {
   const element = {
     id: node.id,
@@ -273,8 +257,8 @@ const buildBaseElement = (node) => {
     scaleX: node.scaleX ?? 1,
     scaleY: node.scaleY ?? 1,
     rotation: node.rotation ?? 0,
-    click: toRouteGraphicsInteraction(node.click),
-    rightClick: toRouteGraphicsInteraction(node.rightClick),
+    click: normalizeEngineActions(node.click),
+    rightClick: normalizeEngineActions(node.rightClick),
   };
 
   if (node["$when"]) {
@@ -458,7 +442,7 @@ const applyContainerNode = ({ element, node }) => {
       ? {
           click: {
             ...nextElement.click,
-            ...toRouteGraphicsInteraction(repeatingConfig.click),
+            ...normalizeEngineActions(repeatingConfig.click),
           },
         }
       : {}),
