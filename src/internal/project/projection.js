@@ -645,6 +645,11 @@ const constructLayoutResources = (
       name: layout.name,
       layoutType: layout.layoutType,
       elements,
+      ...(layout.keyboard &&
+      typeof layout.keyboard === "object" &&
+      !Array.isArray(layout.keyboard)
+        ? { keyboard: structuredClone(layout.keyboard) }
+        : {}),
       ...(Array.isArray(layout.transitions)
         ? { transitions: structuredClone(layout.transitions) }
         : {}),

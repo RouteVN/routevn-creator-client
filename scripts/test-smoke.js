@@ -8,7 +8,10 @@ import {
 } from "../src/deps/services/shared/projectRepository.js";
 import { buildLayoutRenderElements } from "../src/internal/project/layout.js";
 import { extractFileIdsFromRenderState } from "../src/internal/project/layout.js";
-import { projectRepositoryStateToDomainState } from "../src/internal/project/projection.js";
+import {
+  constructProjectData,
+  projectRepositoryStateToDomainState,
+} from "../src/internal/project/projection.js";
 import { toHierarchyStructure } from "../src/internal/project/tree.js";
 
 const projectId = "proj-smoke-001";
@@ -255,6 +258,31 @@ await applyCommandToRepository({
   projectId,
   command: makeEnvelope({
     scope: "resources",
+    partitions: [`project:${projectId}:resources:layouts`],
+    clientTs: 1075,
+    type: "layout.update",
+    payload: {
+      layoutId: "layout-main",
+      data: {
+        keyboard: {
+          enter: {
+            payload: {
+              actions: {
+                nextLine: {},
+              },
+            },
+          },
+        },
+      },
+    },
+  }),
+});
+
+await applyCommandToRepository({
+  repository,
+  projectId,
+  command: makeEnvelope({
+    scope: "resources",
     partitions: [`project:${projectId}:resources:characters`],
     clientTs: 1080,
     type: "character.create",
@@ -390,6 +418,15 @@ assert.equal(
   "payload.positionTargetId must reference a line in the target section",
 );
 assert.deepEqual(repository.getState(), beforeInvalidApply);
+assert.deepEqual(repositoryState.layouts.items["layout-main"].keyboard, {
+  enter: {
+    payload: {
+      actions: {
+        nextLine: {},
+      },
+    },
+  },
+});
 
 const layoutHierarchy = toHierarchyStructure(
   repositoryState.layouts.items["layout-main"].elements,
@@ -438,6 +475,9 @@ const domainState = projectRepositoryStateToDomainState({
   repositoryState,
   projectId,
 });
+const projectData = constructProjectData(repositoryState, {
+  initialSceneId: "scene-1",
+});
 assert.equal(domainState.story.initialSceneId, "scene-1");
 assert.deepEqual(domainState.scenes["scene-1"].sectionIds, [
   "section-1",
@@ -452,7 +492,25 @@ assert.equal(
     .fileId,
   "hero-smile.png",
 );
+assert.deepEqual(domainState.layouts.items["layout-main"].keyboard, {
+  enter: {
+    payload: {
+      actions: {
+        nextLine: {},
+      },
+    },
+  },
+});
+assert.deepEqual(projectData.resources.layouts["layout-main"].keyboard, {
+  enter: {
+    payload: {
+      actions: {
+        nextLine: {},
+      },
+    },
+  },
+});
 
-assert.equal(store._debug.getEvents().length, 13);
+assert.equal(store._debug.getEvents().length, 14);
 
 console.log("Smoke tests: PASS");

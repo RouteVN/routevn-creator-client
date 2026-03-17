@@ -78,6 +78,26 @@ export const createLayoutCommandApi = (shared) => ({
     });
   },
 
+  async updateLayoutItem({ layoutId, data }) {
+    const context = await shared.ensureCommandContext();
+    const resourcePartition = shared.resourceTypePartitionFor(
+      context.projectId,
+      "layouts",
+    );
+
+    return shared.submitCommandWithContext({
+      context,
+      scope: "resources",
+      basePartition: resourcePartition,
+      type: COMMAND_TYPES.LAYOUT_UPDATE,
+      payload: {
+        layoutId,
+        data: structuredClone(data || {}),
+      },
+      partitions: [],
+    });
+  },
+
   async deleteLayoutItem({ layoutIds }) {
     const context = await shared.ensureCommandContext();
     const resourcePartition = shared.resourceTypePartitionFor(
