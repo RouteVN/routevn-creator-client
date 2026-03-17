@@ -12,6 +12,7 @@ import { buildLayoutRenderElements } from "../../internal/project/layout.js";
 import { toHierarchyStructure } from "../../internal/project/tree.js";
 import { extractFileIdsFromRenderState } from "../../internal/project/layout.js";
 import { createLayoutElementsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { normalizeInteractionValue } from "../../internal/project/interactionPayload.js";
 
 const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
@@ -114,6 +115,22 @@ const createObjectPatch = (previousValue, nextValue) => {
     hasChanges,
     requiresReplace,
   };
+};
+
+const normalizeLayoutElementInteractions = (item = {}) => {
+  if (!item || typeof item !== "object") {
+    return item;
+  }
+
+  const nextItem = structuredClone(item);
+
+  for (const key of ["click", "rightClick", "change"]) {
+    if (nextItem[key] !== undefined) {
+      nextItem[key] = normalizeInteractionValue(nextItem[key]);
+    }
+  }
+
+  return nextItem;
 };
 
 export const handleBeforeMount = (deps) => {
@@ -454,6 +471,21 @@ const deepMerge = (target, source) => {
   return result;
 };
 
+const shouldSaveLayoutEditImmediately = (name) => {
+  if (typeof name !== "string" || name.length === 0) {
+    return false;
+  }
+
+  return (
+    name === "click" ||
+    name.startsWith("click.") ||
+    name === "rightClick" ||
+    name.startsWith("rightClick.") ||
+    name === "change" ||
+    name.startsWith("change.")
+  );
+};
+
 export const handleDialogueFormChange = async (deps, payload) => {
   const { store, render } = deps;
   const { name, value: fieldValue } = payload._event.detail;
@@ -553,18 +585,19 @@ async function handleDebouncedUpdate(deps, payload) {
     return;
   }
 
-  const previousItem = {
+  const previousItem = normalizeLayoutElementInteractions({
     id: selectedItemId,
     ...currentItem,
-  };
-  const diff = createObjectPatch(previousItem, updatedItem);
+  });
+  const normalizedUpdatedItem = normalizeLayoutElementInteractions(updatedItem);
+  const diff = createObjectPatch(previousItem, normalizedUpdatedItem);
 
   if (!diff.hasChanges && !diff.requiresReplace) {
     return;
   }
 
   const shouldReplace = replace === true || diff.requiresReplace;
-  const { id: _ignoredItemId, ...nextReplaceData } = updatedItem;
+  const { id: _ignoredItemId, ...nextReplaceData } = normalizedUpdatedItem;
 
   // Save to repository
   await projectService.updateLayoutElement({
@@ -770,12 +803,21 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
   store.updateSelectedItem({ updatedItem: updatedItem });
   render();
 
-  const { subject } = deps;
-  subject.dispatch("layoutEditor.updateElement", {
-    layoutId,
-    selectedItemId,
-    updatedItem,
-  });
+  if (shouldSaveLayoutEditImmediately(detail.name)) {
+    await handleDebouncedUpdate(deps, {
+      layoutId,
+      selectedItemId,
+      updatedItem,
+    });
+  } else {
+    const { subject } = deps;
+    subject.dispatch("layoutEditor.updateElement", {
+      layoutId,
+      selectedItemId,
+      updatedItem,
+    });
+  }
+
   await renderLayoutPreview(deps, { skipAssetLoading: false });
 };
 

@@ -4,6 +4,41 @@ import { getFirstTextStyleId } from "../../constants/textStyles.js";
 import { getVariableOptions } from "../../internal/project/projection.js";
 import { getInteractionActions } from "../../internal/project/interactionPayload.js";
 
+const ACTION_INTERACTION_LABELS = {
+  click: "Click",
+  rightClick: "Right Click",
+};
+
+const ACTION_LABELS = {
+  nextLine: "Next Line",
+  sectionTransition: "Section Transition",
+  toggleAutoMode: "Toggle Auto Mode",
+  toggleSkipMode: "Toggle Skip Mode",
+  toggleDialogueUI: "Toggle Dialogue Box",
+  pushLayeredView: "Push Layered View",
+  popLayeredView: "Pop Layered View",
+  updateVariable: "Update Variable",
+};
+
+const ACTION_INTERACTION_TYPES = ["click", "rightClick"];
+
+const getLayoutInteractionActions = (values, interactionType) => {
+  return getInteractionActions(values?.[interactionType]);
+};
+
+const toLayoutActionItems = (values) => {
+  return ACTION_INTERACTION_TYPES.flatMap((interactionType) =>
+    Object.entries(getLayoutInteractionActions(values, interactionType)).map(
+      ([key]) => ({
+        id: key,
+        interactionType,
+        label: `${ACTION_INTERACTION_LABELS[interactionType]}: ${ACTION_LABELS[key] ?? key}`,
+        svg: `action-${key}`,
+      }),
+    ),
+  );
+};
+
 const config = {
   sections: [
     {
@@ -533,6 +568,7 @@ export const createInitialState = () => {
       gap: 0,
       actions: {},
     },
+    activeInteractionType: "click",
   };
 };
 
@@ -645,6 +681,21 @@ export const setValues = ({ state }, { values } = {}) => {
   state.values = values ?? {};
 };
 
+export const setActiveInteractionType = (
+  { state },
+  { interactionType } = {},
+) => {
+  if (!ACTION_INTERACTION_TYPES.includes(interactionType)) {
+    return;
+  }
+
+  state.activeInteractionType = interactionType;
+};
+
+export const selectActiveInteractionType = ({ state }) => {
+  return state.activeInteractionType ?? "click";
+};
+
 export const setTextStylesData = ({ state }, { textStylesData } = {}) => {
   state.textStylesData = textStylesData;
 };
@@ -693,16 +744,6 @@ export const selectViewData = ({ state, props: attrs }) => {
     ...variableOptions,
   ];
 
-  const actionsLabelMap = {
-    nextLine: "Next Line",
-    sectionTransition: "Section Transition",
-    toggleAutoMode: "Toggle Auto Mode",
-    toggleSkipMode: "Toggle Skip Mode",
-    pushLayeredView: "Push Layered View",
-    popLayeredView: "Pop Layered View",
-    updateVariable: "Update Variable",
-  };
-
   const context = {
     itemType: attrs.itemType,
     layoutType: attrs.layoutType,
@@ -714,13 +755,7 @@ export const selectViewData = ({ state, props: attrs }) => {
       textStyleId: state.values?.textStyleId || firstTextStyleId || "",
       hoverTextStyleId: state.values?.hoverTextStyleId ?? "",
       clickTextStyleId: state.values?.clickTextStyleId ?? "",
-      actions: Object.entries(getInteractionActions(state.values?.click)).map(
-        ([key, _value]) => ({
-          id: key,
-          label: actionsLabelMap[key],
-          svg: `action-${key}`,
-        }),
-      ),
+      actions: toLayoutActionItems(state.values),
     },
   };
 
@@ -729,7 +764,10 @@ export const selectViewData = ({ state, props: attrs }) => {
   return {
     actionsDialogOpen: state.actionsDialogOpen,
     values: state.values,
-    actionsData: getInteractionActions(state.values?.click),
+    actionsData: getLayoutInteractionActions(
+      state.values,
+      state.activeInteractionType,
+    ),
     config: finalConfig,
     popover: state.popover,
     imageSelectorDialog: state.imageSelectorDialog,

@@ -19,3 +19,17 @@ export const withInteractionPayload = (interaction = {}, payload = {}) => {
     payload,
   };
 };
+
+export const normalizeInteractionValue = (interaction = {}) => {
+  if (!interaction || typeof interaction !== "object") {
+    return interaction;
+  }
+
+  const payload = getInteractionPayload(interaction);
+  const nextValue = {
+    ...interaction,
+    payload,
+  };
+
+  return nextValue;
+};

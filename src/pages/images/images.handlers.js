@@ -51,6 +51,7 @@ const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
   for (const result of successfulUploads) {
     const createResult = await projectService.createImage({
       imageId: nanoid(),
+      fileRecords: result.fileRecords,
       data: {
         type: "image",
         fileId: result.fileId,
@@ -142,6 +143,7 @@ export const handleFormExtraEvent = async (deps) => {
   const uploadResult = file.uploadResult;
   const updateResult = await projectService.updateImage({
     imageId: selectedItem.id,
+    fileRecords: uploadResult.fileRecords,
     data: {
       fileId: uploadResult.fileId,
       thumbnailFileId: uploadResult.thumbnailFileId,
@@ -241,6 +243,7 @@ export const handleEditFormAction = async (deps, payload) => {
 
   const updateResult = await projectService.updateImage({
     imageId: editItemId,
+    fileRecords: editUploadResult?.fileRecords,
     data: {
       name,
       description: values?.description ?? "",

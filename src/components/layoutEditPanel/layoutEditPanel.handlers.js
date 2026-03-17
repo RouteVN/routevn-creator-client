@@ -3,6 +3,14 @@ import {
   getInteractionPayload,
 } from "../../internal/project/interactionPayload.js";
 
+const ACTION_INTERACTION_TYPES = ["click", "rightClick"];
+
+const getInteractionPropertyName = (interactionType) => {
+  return ACTION_INTERACTION_TYPES.includes(interactionType)
+    ? interactionType
+    : "click";
+};
+
 export const handleBeforeMount = (deps) => {
   const { props, store } = deps;
   const values = props.values || {};
@@ -93,6 +101,24 @@ export const handleSectionActionClick = async (deps, payload) => {
   const id = _event.currentTarget.dataset.id;
 
   if (id === "actions") {
+    const result = await appService.showDropdownMenu({
+      items: [
+        { type: "item", label: "Click", key: "click" },
+        { type: "item", label: "Right Click", key: "rightClick" },
+      ],
+      x: _event.clientX,
+      y: _event.clientY,
+      place: "bs",
+    });
+    if (!result) {
+      return;
+    }
+
+    const { item } = result;
+    const interactionType = getInteractionPropertyName(item.key);
+    store.setActiveInteractionType({
+      interactionType,
+    });
     const systemActions = refs["systemActions"];
     systemActions.transformedHandlers.open({
       mode: "actions",
@@ -155,16 +181,22 @@ export const handleFormActions = (deps, payload) => {
 
 export const handleActionsChange = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
+  const interactionType = store.selectActiveInteractionType();
+  const interactionKey = getInteractionPropertyName(interactionType);
 
-  const currentActions = getInteractionActions(store.selectValues().click);
+  const currentActions = getInteractionActions(
+    store.selectValues()[interactionKey],
+  );
   const newActions = {
     ...currentActions,
     ...payload._event.detail,
   };
-  const currentPayload = getInteractionPayload(store.selectValues().click);
+  const currentPayload = getInteractionPayload(
+    store.selectValues()[interactionKey],
+  );
 
   store.updateValueProperty({
-    name: "click.payload",
+    name: `${interactionKey}.payload`,
     value: {
       ...currentPayload,
       actions: newActions,
@@ -178,7 +210,7 @@ export const handleActionsChange = (deps, payload) => {
     new CustomEvent("update", {
       detail: {
         formValues,
-        name: "click.payload.actions",
+        name: `${interactionKey}.payload.actions`,
         value: newActions,
       },
     }),
@@ -269,10 +301,13 @@ export const handleListBarItemRightClick = async (deps, payload) => {
 
 // --- List Item ---
 export const handleListItemClick = async (deps, payload) => {
-  const { render, refs } = deps;
+  const { render, refs, store } = deps;
   const { _event: event } = payload;
   const systemActions = refs["systemActions"];
-  const { id } = event.currentTarget.dataset;
+  const { id, interaction } = event.currentTarget.dataset;
+  store.setActiveInteractionType({
+    interactionType: getInteractionPropertyName(interaction),
+  });
   systemActions.transformedHandlers.open({
     mode: id,
   });
@@ -283,7 +318,8 @@ export const handleListItemRightClick = async (deps, payload) => {
   const { render, store, appService, dispatchEvent } = deps;
   const { _event: event } = payload;
   event.preventDefault();
-  const id = event.currentTarget.dataset.id;
+  const { id, interaction } = event.currentTarget.dataset;
+  const interactionKey = getInteractionPropertyName(interaction);
   const result = await appService.showDropdownMenu({
     items: [{ type: "item", label: "Remove", key: "remove" }],
     x: event.clientX,
@@ -295,12 +331,16 @@ export const handleListItemRightClick = async (deps, payload) => {
   }
   const { item } = result;
   if (item.key === "remove") {
-    const currentActions = getInteractionActions(store.selectValues().click);
+    const currentActions = getInteractionActions(
+      store.selectValues()[interactionKey],
+    );
     const actions = structuredClone(currentActions);
-    const currentPayload = getInteractionPayload(store.selectValues().click);
+    const currentPayload = getInteractionPayload(
+      store.selectValues()[interactionKey],
+    );
     delete actions[id];
     store.updateValueProperty({
-      name: "click.payload",
+      name: `${interactionKey}.payload`,
       value: {
         ...currentPayload,
         actions,
@@ -312,7 +352,7 @@ export const handleListItemRightClick = async (deps, payload) => {
         bubbles: true,
         detail: {
           formValues,
-          name: "click.payload.actions",
+          name: `${interactionKey}.payload.actions`,
           value: actions,
         },
       }),

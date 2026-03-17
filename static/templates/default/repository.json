@@ -332,6 +332,122 @@
       }
     ]
   },
+  "files": {
+    "items": {
+      "options_black_bg": {
+        "id": "options_black_bg",
+        "type": "image",
+        "mimeType": "image/png",
+        "size": 8556,
+        "sha256": "b369e13fe70ff2090cac8bf14990cae1fe6c93a18a9c0d25e250d84e7bdcab14"
+      },
+      "iXuoDMU56sb6F4x6xrNqa": {
+        "id": "iXuoDMU56sb6F4x6xrNqa",
+        "type": "image",
+        "mimeType": "image/png",
+        "size": 4468,
+        "sha256": "2fb58f5c2cb8b182c3fd1e92428d4c0d586d552905cdaa0ba7a1710baa643117"
+      },
+      "dFVjRAgExl3smbbTHf2Yf": {
+        "id": "dFVjRAgExl3smbbTHf2Yf",
+        "type": "image",
+        "mimeType": "image/png",
+        "size": 2120,
+        "sha256": "3154b024d256dd6eebafd15ca7c10b514a7ba838ed111f9bdcec4f1d7040e4a4"
+      },
+      "pmR6Jl5Tk3FthCYe7QEQ5": {
+        "id": "pmR6Jl5Tk3FthCYe7QEQ5",
+        "type": "image",
+        "mimeType": "image/png",
+        "size": 862,
+        "sha256": "667234f3d2665bf079d0d986f6c17e75ea351aa1cdedbfc3a65343630159830c"
+      },
+      "Vv45YQP6fUdmuI51iI7SW": {
+        "id": "Vv45YQP6fUdmuI51iI7SW",
+        "type": "image",
+        "mimeType": "image/png",
+        "size": 531,
+        "sha256": "5b3ad5225caf9cf6e8b9ac0c8b715a2a9579ec9f2d675dfb784a7c1765e6d502"
+      },
+      "MSRaaZrrAls6RYTk8dZl7": {
+        "id": "MSRaaZrrAls6RYTk8dZl7",
+        "type": "image",
+        "mimeType": "image/png",
+        "size": 579,
+        "sha256": "dda13266be391fe99b5c0beb57228548f9d04934c941254d7e7dd1e35ad91ced"
+      },
+      "QVDFwFnI0tjTy7qfbyiGV": {
+        "id": "QVDFwFnI0tjTy7qfbyiGV",
+        "type": "image",
+        "mimeType": "image/png",
+        "size": 555,
+        "sha256": "899dfc462486118be0f91439b9ddb0baf1eb10d691320abc8fba68aa087e13c4"
+      },
+      "-WGqH4Nj2GKnx8DFc9t2D": {
+        "id": "-WGqH4Nj2GKnx8DFc9t2D",
+        "type": "image",
+        "mimeType": "image/png",
+        "size": 591,
+        "sha256": "c067757447047dfc271309d0ace9937b91d4cab84921cb1084ea750d78533dc8"
+      },
+      "L5Vmww9xcMh6v3_cl2rNg": {
+        "id": "L5Vmww9xcMh6v3_cl2rNg",
+        "type": "image",
+        "mimeType": "image/png",
+        "size": 558,
+        "sha256": "1e079393b0c88181f2f1cef939df2c84e5fc3fe1c75299f115662c301af185ac"
+      },
+      "kC9Z1-lmclgU4bNtaf7PS": {
+        "id": "kC9Z1-lmclgU4bNtaf7PS",
+        "type": "image",
+        "mimeType": "image/png",
+        "size": 578,
+        "sha256": "f32c167a5403b7ccd25b910c7bf4bfc08147a17aeaa6a63b49593c49921bfa33"
+      },
+      "0CuKeuNPATcuH0EDcsoJd": {
+        "id": "0CuKeuNPATcuH0EDcsoJd",
+        "type": "font",
+        "mimeType": "font/sample_font",
+        "size": 857712,
+        "sha256": "0090683b3ad4b60f59d5699504c4a5aa7b93f6925a376cf18755b5c9a37e4db6"
+      }
+    },
+    "tree": [
+      {
+        "id": "options_black_bg"
+      },
+      {
+        "id": "iXuoDMU56sb6F4x6xrNqa"
+      },
+      {
+        "id": "dFVjRAgExl3smbbTHf2Yf"
+      },
+      {
+        "id": "pmR6Jl5Tk3FthCYe7QEQ5"
+      },
+      {
+        "id": "Vv45YQP6fUdmuI51iI7SW"
+      },
+      {
+        "id": "MSRaaZrrAls6RYTk8dZl7"
+      },
+      {
+        "id": "QVDFwFnI0tjTy7qfbyiGV"
+      },
+      {
+        "id": "-WGqH4Nj2GKnx8DFc9t2D"
+      },
+      {
+        "id": "L5Vmww9xcMh6v3_cl2rNg"
+      },
+      {
+        "id": "kC9Z1-lmclgU4bNtaf7PS"
+      },
+      {
+        "id": "0CuKeuNPATcuH0EDcsoJd"
+      }
+    ]
+  },
   "images": {
     "items": {
       "zZO4u50ZEEt1WIugqEiW4": {
@@ -1090,7 +1206,7 @@
               "scaleY": 1,
               "rotation": 0,
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "nextLine": {}
                   }
@@ -1245,7 +1361,7 @@
               "rotation": 0,
               "text": "START",
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "sectionTransition": {
                       "sceneId": "eXLwPZNpFqDjmXjORfonq",
@@ -1271,7 +1387,7 @@
               "rotation": 0,
               "text": "LOAD",
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "pushLayeredView": {
                       "resourceId": "LoadPageDefaultLayout"
@@ -1296,7 +1412,7 @@
               "rotation": 0,
               "text": "OPTIONS",
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "pushLayeredView": {
                       "resourceId": "OptionsPageDefaultLayout"
@@ -1475,7 +1591,7 @@
               "rotation": 0,
               "text": "BACK",
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "popLayeredView": {}
                   }
@@ -1609,7 +1725,7 @@
               "initialValue": "${variables._musicVolume}",
               "variableId": "_musicVolume",
               "change": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "updateVariable": {
                       "id": "optionsBgmSlider",
@@ -1681,7 +1797,7 @@
               "initialValue": "${variables._soundVolume}",
               "variableId": "_soundVolume",
               "change": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "updateVariable": {
                       "id": "optionsSfxSlider",
@@ -1744,7 +1860,7 @@
               "rotation": 0,
               "text": "${variables._muteAll}",
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "updateVariable": {
                       "id": "optionsMuteToggle",
@@ -1816,7 +1932,7 @@
               "initialValue": "${variables._textSpeed}",
               "variableId": "_textSpeed",
               "change": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "updateVariable": {
                       "id": "optionsSpeedSlider",
@@ -1888,7 +2004,7 @@
               "initialValue": "${variables._autoForwardTime}",
               "variableId": "_autoForwardTime",
               "change": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "updateVariable": {
                       "id": "optionsAutoSlider",
@@ -1967,7 +2083,7 @@
               "rotation": 0,
               "text": "${variables._skipUnseenText}",
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "updateVariable": {
                       "id": "optionsSkipUnseen",
@@ -2014,7 +2130,7 @@
               "rotation": 0,
               "text": "${variables._skipTransitionsAndAnimations}",
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "updateVariable": {
                       "id": "optionsSkipTransitions",
@@ -2045,7 +2161,7 @@
               "rotation": 0,
               "text": "BACK",
               "click": {
-                "actionPayload": {
+                "payload": {
                   "actions": {
                     "popLayeredView": {}
                   }

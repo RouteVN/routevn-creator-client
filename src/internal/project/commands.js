@@ -14,6 +14,17 @@ export const RESOURCE_TYPES = Object.freeze([
   "layouts",
 ]);
 
+export const COLLAB_RESOURCE_TYPES = Object.freeze([
+  ...RESOURCE_TYPES,
+  "files",
+]);
+
+const FILE_COMMAND_TYPES = Object.freeze([
+  "file.create",
+  "file.delete",
+  "file.move",
+]);
+
 const RESOURCE_COMMAND_FAMILIES = Object.freeze([
   "image",
   "sound",
@@ -59,6 +70,7 @@ const LAYOUT_COMMAND_TYPES = Object.freeze([
 ]);
 
 const RESOURCE_COMMAND_TYPES = Object.freeze([
+  ...FILE_COMMAND_TYPES,
   ...RESOURCE_COMMAND_FAMILIES.flatMap((family) =>
     RESOURCE_COMMAND_OPERATIONS.map((operation) => `${family}.${operation}`),
   ),

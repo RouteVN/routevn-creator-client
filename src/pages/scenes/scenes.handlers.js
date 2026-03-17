@@ -10,7 +10,7 @@ const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another scene.";
 
 /**
- * Extract transitions from layout element click actions
+ * Extract transitions from layout element click and right-click actions
  * @param {Object} layout - Layout object with elements
  * @returns {Array} Array of sceneIds found in click actions
  */
@@ -19,10 +19,15 @@ const getTransitionsFromLayout = (layout) => {
   if (!layout?.elements?.items) return transitions;
 
   for (const element of Object.values(layout.elements.items)) {
-    const sceneId = getInteractionActions(element.click).sectionTransition
-      ?.sceneId;
-    if (sceneId && !transitions.includes(sceneId)) {
-      transitions.push(sceneId);
+    const sceneIds = [
+      getInteractionActions(element.click).sectionTransition?.sceneId,
+      getInteractionActions(element.rightClick).sectionTransition?.sceneId,
+    ];
+
+    for (const sceneId of sceneIds) {
+      if (sceneId && !transitions.includes(sceneId)) {
+        transitions.push(sceneId);
+      }
     }
   }
   return transitions;

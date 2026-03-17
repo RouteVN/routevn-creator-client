@@ -65,6 +65,7 @@ export const createCatalogResourceCommandApi = (shared) => ({
   createCharacter: async ({
     characterId,
     data,
+    fileRecords,
     parentId,
     position = "last",
     positionTargetId,
@@ -77,12 +78,13 @@ export const createCatalogResourceCommandApi = (shared) => ({
       idField: "characterId",
       idValue: characterId,
       data,
+      fileRecords,
       parentId,
       position,
       positionTargetId,
       index,
     }),
-  updateCharacter: async ({ characterId, data }) =>
+  updateCharacter: async ({ characterId, data, fileRecords }) =>
     submitUpdateResourceCommand({
       shared,
       resourceType: "characters",
@@ -90,6 +92,7 @@ export const createCatalogResourceCommandApi = (shared) => ({
       idField: "characterId",
       idValue: characterId,
       data,
+      fileRecords,
     }),
   moveCharacter: async ({
     characterId,

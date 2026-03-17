@@ -25,6 +25,12 @@ const SYSTEM_ACTIONS = [
     mode: "toggleSkipMode",
   },
   {
+    id: "18",
+    label: "Toggle Dialogue Box",
+    icon: "dialogue",
+    mode: "toggleDialogueUI",
+  },
+  {
     id: "15",
     label: "Push Layered View",
     icon: "layers",

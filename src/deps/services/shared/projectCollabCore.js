@@ -1,5 +1,5 @@
 import { createWebSocketTransport } from "../web/collab/createWebSocketTransport.js";
-import { RESOURCE_TYPES } from "../../../internal/project/commands.js";
+import { COLLAB_RESOURCE_TYPES } from "../../../internal/project/commands.js";
 import { recursivelyCheckResource } from "../../../internal/project/projection.js";
 import { createCommandApi } from "./commandApi.js";
 
@@ -36,7 +36,7 @@ export const createProjectCollabCore = ({
   const getBasePartitions = (projectId, partitions) =>
     partitions || [
       storyBasePartitionFor(projectId),
-      ...RESOURCE_TYPES.map((resourceType) =>
+      ...COLLAB_RESOURCE_TYPES.map((resourceType) =>
         resourceTypePartitionFor(projectId, resourceType),
       ),
       `project:${projectId}:layouts`,

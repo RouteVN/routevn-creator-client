@@ -1,7 +1,7 @@
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
-  const { scenes } = projectService.getState();
+  const { scenes } = projectService.getRepositoryState();
 
   // Safe access to nested properties
   const sectionTransition = props?.sectionTransition;

@@ -65,6 +65,7 @@ const createSoundsFromFiles = async ({ deps, files, parentId } = {}) => {
   for (const result of successfulUploads) {
     await projectService.createSound({
       soundId: nanoid(),
+      fileRecords: result.fileRecords,
       data: {
         type: "sound",
         fileId: result.fileId,
@@ -240,6 +241,7 @@ export const handleFormExtraEvent = async (deps) => {
   const { uploadResult } = result;
   await projectService.updateSound({
     soundId: selectedItem.id,
+    fileRecords: uploadResult.fileRecords,
     data: {
       fileId: uploadResult.fileId,
       fileType: uploadResult.file.type,
@@ -320,6 +322,7 @@ export const handleEditFormAction = async (deps, payload) => {
 
   await projectService.updateSound({
     soundId: editItemId,
+    fileRecords: editUploadResult?.fileRecords,
     data: {
       name,
       description: values?.description ?? "",

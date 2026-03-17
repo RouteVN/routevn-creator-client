@@ -13,8 +13,17 @@ export const submitCreateResourceCommand = async ({
   position = "last",
   positionTargetId,
   index,
+  fileRecords = [],
 }) => {
   const context = await shared.ensureCommandContext();
+  const ensureFilesResult = await shared.ensureFilesExist({
+    context,
+    fileRecords,
+  });
+  if (ensureFilesResult?.valid === false) {
+    return ensureFilesResult;
+  }
+
   const nextResourceId = idValue ?? shared.createId();
   const resolvedIndex = shared.resolveResourceIndex({
     state: context.state,
@@ -61,8 +70,16 @@ export const submitUpdateResourceCommand = async ({
   idField,
   idValue,
   data,
+  fileRecords = [],
 }) => {
   const context = await shared.ensureCommandContext();
+  const ensureFilesResult = await shared.ensureFilesExist({
+    context,
+    fileRecords,
+  });
+  if (ensureFilesResult?.valid === false) {
+    return ensureFilesResult;
+  }
 
   return shared.submitCommandWithContext({
     context,

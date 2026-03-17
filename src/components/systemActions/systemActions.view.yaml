@@ -30,7 +30,7 @@ refs:
 template:
   - $if showSelected:
       - rtgl-view g=md w=f:
-          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.dialogue || preview.choice || preview.base || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.setNextLineConfig || preview.pushLayeredView || preview.popLayeredView || preview.updateVariable:
+          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.dialogue || preview.choice || preview.base || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.toggleDialogueUI || preview.setNextLineConfig || preview.pushLayeredView || preview.popLayeredView || preview.updateVariable:
               - $if preview.base:
                   - rtgl-view#actionItemBase data-mode=base g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=screen wh=24: null
@@ -93,6 +93,10 @@ template:
                   - rtgl-view#actionItemToggleSkipMode data-mode=toggleSkipMode g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="next-line" wh=24: null
                       - rtgl-text s=sm: Toggle Skip Mode
+              - $if preview.toggleDialogueUI:
+                  - rtgl-view#actionItemToggleDialogueUI data-mode=toggleDialogueUI g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg="dialogue" wh=24: null
+                      - rtgl-text s=sm: Toggle Dialogue Box
               - $if preview.pushLayeredView:
                   - rtgl-view#actionItemPushLayeredView data-mode=pushLayeredView g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="layers" wh=24: null
@@ -138,6 +142,8 @@ template:
               - rvn-command-line-toggle-auto-mode#commandLineToggleAutoMode :toggleAutoMode=actions.toggleAutoMode: null
             $elif mode == "toggleSkipMode":
               - rvn-command-line-toggle-skip-mode#commandLineToggleSkipMode :toggleSkipMode=actions.toggleSkipMode: null
+            $elif mode == "toggleDialogueUI":
+              - rvn-command-line-toggle-dialogue-ui#commandLineToggleDialogueUI :toggleDialogueUI=actions.toggleDialogueUI: null
             $elif mode == "pushLayeredView":
               - rvn-command-line-push-layered-view#commandLinePushLayeredView :pushLayeredView=actions.pushLayeredView: null
             $elif mode == "popLayeredView":

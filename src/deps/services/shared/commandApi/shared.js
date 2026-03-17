@@ -1,5 +1,6 @@
 import { createCommandEnvelope } from "../collab/commandEnvelope.js";
 import { projectRepositoryStateToDomainState } from "../../../../internal/project/projection.js";
+import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
 import {
   applyCommandToRepository,
   assertSupportedProjectState,
@@ -40,6 +41,9 @@ export const createCommandApiShared = ({
     const value = Number(now());
     return Number.isFinite(value) ? value : 0;
   };
+
+  const filePartitionFor = (projectId) =>
+    resourceTypePartitionFor(projectId, "files");
 
   const ensureCommandContext = async () => {
     const repository = await getCurrentRepository();
@@ -105,6 +109,70 @@ export const createCommandApiShared = ({
       eventCount: applyResult.events.length,
       applyMode: applyResult.mode,
     };
+  };
+
+  const ensureFilesExist = async ({ context, fileRecords = [] } = {}) => {
+    const normalizedFileRecords = Array.isArray(fileRecords) ? fileRecords : [];
+    if (normalizedFileRecords.length === 0) {
+      return { valid: true, createdCount: 0 };
+    }
+
+    const knownFileIds = new Set(
+      Object.keys(context.state?.files?.items || {}),
+    );
+    let createdCount = 0;
+
+    for (const fileRecord of normalizedFileRecords) {
+      if (
+        !fileRecord ||
+        typeof fileRecord.id !== "string" ||
+        fileRecord.id.length === 0
+      ) {
+        throw new Error("fileRecords must include a non-empty id");
+      }
+
+      if (knownFileIds.has(fileRecord.id)) {
+        continue;
+      }
+
+      if (
+        typeof fileRecord.type !== "string" ||
+        fileRecord.type.length === 0 ||
+        typeof fileRecord.mimeType !== "string" ||
+        fileRecord.mimeType.length === 0 ||
+        !Number.isFinite(fileRecord.size) ||
+        typeof fileRecord.sha256 !== "string" ||
+        fileRecord.sha256.length === 0
+      ) {
+        throw new Error(
+          `fileRecord ${fileRecord.id} is missing required metadata`,
+        );
+      }
+
+      const submitResult = await submitCommandWithContext({
+        context,
+        scope: "resources",
+        basePartition: filePartitionFor(context.projectId),
+        type: COMMAND_TYPES.FILE_CREATE,
+        payload: {
+          fileId: fileRecord.id,
+          data: {
+            type: fileRecord.type,
+            mimeType: fileRecord.mimeType,
+            size: fileRecord.size,
+            sha256: fileRecord.sha256,
+          },
+        },
+      });
+      if (submitResult?.valid === false) {
+        return submitResult;
+      }
+
+      knownFileIds.add(fileRecord.id);
+      createdCount += 1;
+    }
+
+    return { valid: true, createdCount };
   };
 
   const buildPlacementPayload = ({
@@ -266,6 +334,7 @@ export const createCommandApiShared = ({
     createId,
     getCurrentProjectId,
     ensureCommandContext,
+    ensureFilesExist,
     submitCommandWithContext,
     buildPlacementPayload,
     resolveResourceIndex,
@@ -274,6 +343,7 @@ export const createCommandApiShared = ({
     resolveLineIndex,
     resolveLayoutElementIndex,
     resolveCharacterSpriteIndex,
+    filePartitionFor,
     storyBasePartitionFor,
     storyScenePartitionFor,
     resourceTypePartitionFor,

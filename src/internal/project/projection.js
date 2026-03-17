@@ -645,6 +645,11 @@ const constructLayoutResources = (
       name: layout.name,
       layoutType: layout.layoutType,
       elements,
+      ...(layout.keyboard &&
+      typeof layout.keyboard === "object" &&
+      !Array.isArray(layout.keyboard)
+        ? { keyboard: structuredClone(layout.keyboard) }
+        : {}),
       ...(Array.isArray(layout.transitions)
         ? { transitions: structuredClone(layout.transitions) }
         : {}),
@@ -801,9 +806,10 @@ const getTransitionsFromLayout = (layout) => {
   }
 
   return Object.values(layout.elements.items)
-    .map((element) => {
-      return getInteractionActions(element?.click).sectionTransition;
-    })
+    .flatMap((element) => [
+      getInteractionActions(element?.click).sectionTransition,
+      getInteractionActions(element?.rightClick).sectionTransition,
+    ])
     .filter(Boolean);
 };
 

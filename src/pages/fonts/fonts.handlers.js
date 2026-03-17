@@ -49,6 +49,7 @@ const createFontsFromFiles = async ({ deps, files, parentId } = {}) => {
   for (const result of successfulUploads) {
     await projectService.createFont({
       fontId: nanoid(),
+      fileRecords: result.fileRecords,
       data: {
         type: "font",
         fileId: result.fileId,
@@ -168,6 +169,7 @@ export const handleFormExtraEvent = async (deps) => {
 
   await projectService.updateFont({
     fontId: selectedItem.id,
+    fileRecords: uploadResult.fileRecords,
     data: {
       fileId: uploadResult.fileId,
       name: uploadResult.file.name,
