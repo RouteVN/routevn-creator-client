@@ -35,6 +35,7 @@ export const createInitialState = () => ({
   isDialogOpen: false,
   targetGroupId: null,
   avatarFileId: null,
+  avatarUploadResult: null,
   dialogDefaultValues: {
     name: "",
     description: "",
@@ -83,6 +84,7 @@ export const createInitialState = () => ({
   isEditDialogOpen: false,
   editItemId: null,
   editAvatarFileId: null,
+  editAvatarUploadResult: null,
 });
 
 export const setItems = ({ state }, { charactersData } = {}) => {
@@ -105,12 +107,14 @@ export const toggleDialog = ({ state }, _payload = {}) => {
   state.isDialogOpen = !state.isDialogOpen;
 };
 
-export const setAvatarFileId = ({ state }, { fileId } = {}) => {
-  state.avatarFileId = fileId;
+export const setAvatarFileId = ({ state }, { fileId, uploadResult } = {}) => {
+  state.avatarFileId = fileId ?? uploadResult?.fileId ?? null;
+  state.avatarUploadResult = uploadResult ?? null;
 };
 
 export const clearAvatarState = ({ state }, _payload = {}) => {
   state.avatarFileId = null;
+  state.avatarUploadResult = null;
 };
 
 export const openEditDialog = ({ state }, { itemId } = {}) => {
@@ -121,16 +125,22 @@ export const openEditDialog = ({ state }, { itemId } = {}) => {
   const flatItems = toFlatItems(state.charactersData);
   const editItem = flatItems.find((item) => item.id === itemId);
   state.editAvatarFileId = editItem?.fileId || null;
+  state.editAvatarUploadResult = null;
 };
 
 export const closeEditDialog = ({ state }, _payload = {}) => {
   state.isEditDialogOpen = false;
   state.editItemId = null;
   state.editAvatarFileId = null;
+  state.editAvatarUploadResult = null;
 };
 
-export const setEditAvatarFileId = ({ state }, { fileId } = {}) => {
-  state.editAvatarFileId = fileId;
+export const setEditAvatarFileId = (
+  { state },
+  { fileId, uploadResult } = {},
+) => {
+  state.editAvatarFileId = fileId ?? uploadResult?.fileId ?? null;
+  state.editAvatarUploadResult = uploadResult ?? null;
 };
 
 export const selectTargetGroupId = ({ state }) => state.targetGroupId;

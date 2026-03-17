@@ -10,6 +10,7 @@ export const createMediaResourceCommandApi = (shared) => ({
   createImage: async ({
     imageId,
     data,
+    fileRecords,
     parentId,
     position = "last",
     positionTargetId,
@@ -22,12 +23,13 @@ export const createMediaResourceCommandApi = (shared) => ({
       idField: "imageId",
       idValue: imageId,
       data,
+      fileRecords,
       parentId,
       position,
       positionTargetId,
       index,
     }),
-  updateImage: async ({ imageId, data }) =>
+  updateImage: async ({ imageId, data, fileRecords }) =>
     submitUpdateResourceCommand({
       shared,
       resourceType: "images",
@@ -35,6 +37,7 @@ export const createMediaResourceCommandApi = (shared) => ({
       idField: "imageId",
       idValue: imageId,
       data,
+      fileRecords,
     }),
   moveImage: async ({
     imageId,
@@ -65,6 +68,7 @@ export const createMediaResourceCommandApi = (shared) => ({
   createSound: async ({
     soundId,
     data,
+    fileRecords,
     parentId,
     position = "last",
     positionTargetId,
@@ -77,12 +81,13 @@ export const createMediaResourceCommandApi = (shared) => ({
       idField: "soundId",
       idValue: soundId,
       data,
+      fileRecords,
       parentId,
       position,
       positionTargetId,
       index,
     }),
-  updateSound: async ({ soundId, data }) =>
+  updateSound: async ({ soundId, data, fileRecords }) =>
     submitUpdateResourceCommand({
       shared,
       resourceType: "sounds",
@@ -90,6 +95,7 @@ export const createMediaResourceCommandApi = (shared) => ({
       idField: "soundId",
       idValue: soundId,
       data,
+      fileRecords,
     }),
   moveSound: async ({
     soundId,
@@ -120,6 +126,7 @@ export const createMediaResourceCommandApi = (shared) => ({
   createVideo: async ({
     videoId,
     data,
+    fileRecords,
     parentId,
     position = "last",
     positionTargetId,
@@ -132,12 +139,13 @@ export const createMediaResourceCommandApi = (shared) => ({
       idField: "videoId",
       idValue: videoId,
       data,
+      fileRecords,
       parentId,
       position,
       positionTargetId,
       index,
     }),
-  updateVideo: async ({ videoId, data }) =>
+  updateVideo: async ({ videoId, data, fileRecords }) =>
     submitUpdateResourceCommand({
       shared,
       resourceType: "videos",
@@ -145,6 +153,7 @@ export const createMediaResourceCommandApi = (shared) => ({
       idField: "videoId",
       idValue: videoId,
       data,
+      fileRecords,
     }),
   moveVideo: async ({
     videoId,
@@ -175,6 +184,7 @@ export const createMediaResourceCommandApi = (shared) => ({
   createFont: async ({
     fontId,
     data,
+    fileRecords,
     parentId,
     position = "last",
     positionTargetId,
@@ -187,12 +197,13 @@ export const createMediaResourceCommandApi = (shared) => ({
       idField: "fontId",
       idValue: fontId,
       data,
+      fileRecords,
       parentId,
       position,
       positionTargetId,
       index,
     }),
-  updateFont: async ({ fontId, data }) =>
+  updateFont: async ({ fontId, data, fileRecords }) =>
     submitUpdateResourceCommand({
       shared,
       resourceType: "fonts",
@@ -200,6 +211,7 @@ export const createMediaResourceCommandApi = (shared) => ({
       idField: "fontId",
       idValue: fontId,
       data,
+      fileRecords,
     }),
   moveFont: async ({
     fontId,

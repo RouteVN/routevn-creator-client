@@ -447,6 +447,7 @@ export const handleAddFontFormAction = async (deps, payload) => {
     // Create the font in the repository using the already uploaded file
     await projectService.createFont({
       fontId: newFontId,
+      fileRecords: fontData.uploadResult.fileRecords,
       data: {
         type: "font",
         name: fontName,

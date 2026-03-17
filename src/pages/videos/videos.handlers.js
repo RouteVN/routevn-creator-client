@@ -52,6 +52,7 @@ const createVideosFromFiles = async ({ deps, files, parentId } = {}) => {
   for (const result of successfulUploads) {
     await projectService.createVideo({
       videoId: nanoid(),
+      fileRecords: result.fileRecords,
       data: {
         type: "video",
         fileId: result.fileId,
@@ -188,6 +189,7 @@ export const handleFormExtraEvent = async (deps) => {
   const { uploadResult } = result;
   await projectService.updateVideo({
     videoId: selectedItem.id,
+    fileRecords: uploadResult.fileRecords,
     data: {
       fileId: uploadResult.fileId,
       thumbnailFileId: uploadResult.thumbnailFileId,
@@ -272,6 +274,7 @@ export const handleEditFormAction = async (deps, payload) => {
 
   await projectService.updateVideo({
     videoId: editItemId,
+    fileRecords: editUploadResult?.fileRecords,
     data: {
       name,
       description: values?.description ?? "",

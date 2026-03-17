@@ -11,6 +11,37 @@ import { loadFont } from "./fontLoader.js";
 const IMAGE_THUMBNAIL_MAX_WIDTH = 320;
 const IMAGE_THUMBNAIL_MAX_HEIGHT = 320;
 const IMAGE_THUMBNAIL_MIN_FILE_SIZE_BYTES = 32 * 1024;
+const FILE_RECORD_DEFAULT_MIME_TYPES = Object.freeze({
+  image: "image/png",
+  "image-thumbnail": "image/webp",
+  audio: "audio/mpeg",
+  "audio-waveform": "application/json",
+  video: "video/mp4",
+  "video-thumbnail": "image/jpeg",
+  font: "font/ttf",
+});
+
+const bufferToHex = (buffer) =>
+  Array.from(new Uint8Array(buffer), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+
+const getFileRecordMimeType = ({ file, type }) =>
+  file.type ||
+  FILE_RECORD_DEFAULT_MIME_TYPES[type] ||
+  "application/octet-stream";
+
+const computeSha256 = async (file) => {
+  if (!crypto?.subtle?.digest) {
+    throw new Error("SHA-256 hashing is unavailable in this runtime.");
+  }
+
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    await file.arrayBuffer(),
+  );
+  return bufferToHex(digest);
+};
 
 const storeMetadata = async ({ data, storeFile, idGenerator }) => {
   const jsonString = JSON.stringify(data, null, 2);
@@ -40,6 +71,24 @@ export const createProjectAssetService = ({
     });
   };
 
+  const storeFileWithRecord = async ({ file, type }) => {
+    const [stored, sha256] = await Promise.all([
+      storeFile(file),
+      computeSha256(file),
+    ]);
+
+    return {
+      ...stored,
+      fileRecord: {
+        id: stored.fileId,
+        type,
+        mimeType: getFileRecordMimeType({ file, type }),
+        size: file.size,
+        sha256,
+      },
+    };
+  };
+
   const getFileContent = async (fileId) => {
     return fileAdapter.getFileContent({
       fileId,
@@ -55,7 +104,7 @@ export const createProjectAssetService = ({
     if (fileType === "image") {
       const [dimensions, stored] = await Promise.all([
         getImageDimensions(file),
-        storeFile(file),
+        storeFileWithRecord({ file, type: "image" }),
       ]);
 
       const shouldReuseOriginalAsThumbnail =
@@ -70,6 +119,7 @@ export const createProjectAssetService = ({
           thumbnailFileId: stored.fileId,
           dimensions,
           type: "image",
+          fileRecords: [stored.fileRecord],
         };
       }
 
@@ -79,13 +129,17 @@ export const createProjectAssetService = ({
         preferredFormat: "image/webp",
         quality: 0.85,
       });
-      const thumbnailResult = await storeFile(thumbnailData.blob);
+      const thumbnailResult = await storeFileWithRecord({
+        file: thumbnailData.blob,
+        type: "image-thumbnail",
+      });
       return {
         ...stored,
         thumbnailFileId: thumbnailResult.fileId,
         thumbnailData,
         dimensions,
         type: "image",
+        fileRecords: [stored.fileRecord, thumbnailResult.fileRecord],
       };
     }
 
@@ -99,9 +153,13 @@ export const createProjectAssetService = ({
       });
 
       const waveformData = await extractWaveformData(fileForWaveform);
-      const stored = await storeFile(fileForStorage);
+      const stored = await storeFileWithRecord({
+        file: fileForStorage,
+        type: "audio",
+      });
 
       let waveformDataFileId = null;
+      let waveformResult = null;
       if (waveformData) {
         const compressedWaveformData = {
           ...waveformData,
@@ -109,9 +167,13 @@ export const createProjectAssetService = ({
             Math.round(value * 255),
           ),
         };
-        const waveformResult = await storeMetadata({
+        waveformResult = await storeMetadata({
           data: compressedWaveformData,
-          storeFile,
+          storeFile: (metadataFile) =>
+            storeFileWithRecord({
+              file: metadataFile,
+              type: "audio-waveform",
+            }),
           idGenerator,
         });
         waveformDataFileId = waveformResult.fileId;
@@ -123,6 +185,10 @@ export const createProjectAssetService = ({
         waveformData,
         duration: waveformData?.duration,
         type: "audio",
+        fileRecords: [
+          stored.fileRecord,
+          ...(waveformResult ? [waveformResult.fileRecord] : []),
+        ],
       };
     }
 
@@ -138,8 +204,11 @@ export const createProjectAssetService = ({
         }),
       ]);
       const [videoResult, thumbnailResult] = await Promise.all([
-        storeFile(file),
-        storeFile(thumbnailData.blob),
+        storeFileWithRecord({ file, type: "video" }),
+        storeFileWithRecord({
+          file: thumbnailData.blob,
+          type: "video-thumbnail",
+        }),
       ]);
       return {
         ...videoResult,
@@ -147,6 +216,7 @@ export const createProjectAssetService = ({
         thumbnailData,
         dimensions,
         type: "video",
+        fileRecords: [videoResult.fileRecord, thumbnailResult.fileRecord],
       };
     }
 
@@ -161,12 +231,16 @@ export const createProjectAssetService = ({
         throw new Error(`Invalid font file: ${loadError.message}`);
       }
 
-      const stored = await storeFile(file);
+      const stored = await storeFileWithRecord({
+        file,
+        type: "font",
+      });
       return {
         ...stored,
         fontName,
         fontUrl,
         type: "font",
+        fileRecords: [stored.fileRecord],
       };
     }
 
@@ -174,6 +248,7 @@ export const createProjectAssetService = ({
     return {
       ...stored,
       type: "generic",
+      fileRecords: [],
     };
   };
 

@@ -120,8 +120,14 @@ export const handleCharacterItemDoubleClick = async (deps, payload) => {
 
 export const handleCharacterCreated = async (deps, payload) => {
   const { appService, projectService } = deps;
-  const { groupId, name, description, shortcut, avatarFileId } =
-    payload._event.detail;
+  const {
+    groupId,
+    name,
+    description,
+    shortcut,
+    avatarFileId,
+    avatarUploadResult,
+  } = payload._event.detail;
   const characterId = nanoid();
   const defaultSpritesFolderId = nanoid();
   const characterData = {
@@ -152,6 +158,7 @@ export const handleCharacterCreated = async (deps, payload) => {
 
   const createResult = await projectService.createCharacter({
     characterId,
+    fileRecords: avatarUploadResult?.fileRecords,
     data: characterData,
     parentId: groupId,
     position: "last",
@@ -223,6 +230,7 @@ export const handleDetailPanelAvatarClick = async (deps) => {
       // Update the selected character in the repository with the new avatar
       await projectService.updateCharacter({
         characterId: selectedItem.id,
+        fileRecords: uploadedFile.fileRecords,
         data: updateData,
       });
 
@@ -274,6 +282,7 @@ export const handleDialogFormActionClick = async (deps, payload) => {
 
     const targetGroupId = store.selectTargetGroupId();
     const avatarFileId = store.selectAvatarFileId();
+    const avatarUploadResult = store.getState().avatarUploadResult;
 
     // Create a synthetic event payload with the correct structure
     const characterCreatedPayload = {
@@ -284,6 +293,7 @@ export const handleDialogFormActionClick = async (deps, payload) => {
           description: formData.description,
           shortcut: formData.shortcut || "",
           avatarFileId: avatarFileId,
+          avatarUploadResult,
         },
       },
     };
@@ -322,7 +332,10 @@ export const handleDialogAvatarClick = async (deps) => {
       }
 
       const result = uploadResults[0];
-      store.setAvatarFileId({ fileId: result.fileId });
+      store.setAvatarFileId({
+        fileId: result.fileId,
+        uploadResult: result,
+      });
       render();
     }
   } catch (error) {
@@ -391,7 +404,10 @@ export const handleEditDialogAvatarClick = async (deps) => {
       }
 
       const result = uploadResults[0];
-      store.setEditAvatarFileId({ fileId: result.fileId });
+      store.setEditAvatarFileId({
+        fileId: result.fileId,
+        uploadResult: result,
+      });
       render();
     }
   } catch (error) {
@@ -405,7 +421,7 @@ export const handleEditFormAction = async (deps, payload) => {
   if (payload._event.detail.actionId === "submit") {
     const formData = payload._event.detail.values;
     const editItemId = store.getState().editItemId;
-    const editAvatarFileId = store.getState().editAvatarFileId;
+    const { editAvatarFileId, editAvatarUploadResult } = store.getState();
 
     // Update the character in the repository
     const updateData = {
@@ -421,6 +437,7 @@ export const handleEditFormAction = async (deps, payload) => {
 
     await projectService.updateCharacter({
       characterId: editItemId,
+      fileRecords: editAvatarUploadResult?.fileRecords,
       data: updateData,
     });
 

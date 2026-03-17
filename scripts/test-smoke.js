@@ -171,6 +171,26 @@ await applyCommandToRepository({
   projectId,
   command: makeEnvelope({
     scope: "resources",
+    partitions: [`project:${projectId}:resources:files`],
+    clientTs: 1045,
+    type: "file.create",
+    payload: {
+      fileId: "hero.png",
+      data: {
+        type: "image",
+        mimeType: "image/png",
+        size: 1024,
+        sha256: "sha256-hero",
+      },
+    },
+  }),
+});
+
+await applyCommandToRepository({
+  repository,
+  projectId,
+  command: makeEnvelope({
+    scope: "resources",
     partitions: [`project:${projectId}:resources:images`],
     clientTs: 1050,
     type: "image.create",
@@ -278,6 +298,26 @@ await applyCommandToRepository({
       data: {
         type: "folder",
         name: "Expressions",
+      },
+    },
+  }),
+});
+
+await applyCommandToRepository({
+  repository,
+  projectId,
+  command: makeEnvelope({
+    scope: "resources",
+    partitions: [`project:${projectId}:resources:files`],
+    clientTs: 1095,
+    type: "file.create",
+    payload: {
+      fileId: "hero-smile.png",
+      data: {
+        type: "image",
+        mimeType: "image/png",
+        size: 2048,
+        sha256: "sha256-hero-smile",
       },
     },
   }),
@@ -413,6 +453,6 @@ assert.equal(
   "hero-smile.png",
 );
 
-assert.equal(store._debug.getEvents().length, 11);
+assert.equal(store._debug.getEvents().length, 13);
 
 console.log("Smoke tests: PASS");

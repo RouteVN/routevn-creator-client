@@ -24,6 +24,7 @@ export const initialProjectData = {
   story: {
     initialSceneId: null,
   },
+  files: createTreeCollection(),
   images: createTreeCollection(),
   sounds: createTreeCollection(),
   videos: createTreeCollection(),

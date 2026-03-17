@@ -249,6 +249,7 @@ const createSpritesFromFiles = async ({
     await projectService.createCharacterSpriteItem({
       characterId,
       spriteId: nanoid(),
+      fileRecords: result.fileRecords,
       parentId,
       position: "last",
       data: {
@@ -456,6 +457,7 @@ export const handleFormExtraEvent = async (deps) => {
   await projectService.updateCharacterSpriteItem({
     characterId,
     spriteId: selectedItem.id,
+    fileRecords: uploadResult.fileRecords,
     data: {
       fileId: uploadResult.fileId,
       name: uploadResult.displayName,

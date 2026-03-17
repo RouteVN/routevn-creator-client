@@ -5,12 +5,21 @@ export const createCharacterSpriteCommandApi = (shared) => ({
     characterId,
     spriteId,
     data,
+    fileRecords = [],
     parentId = null,
     position = "last",
     positionTargetId,
     index,
   }) {
     const context = await shared.ensureCommandContext();
+    const ensureFilesResult = await shared.ensureFilesExist({
+      context,
+      fileRecords,
+    });
+    if (ensureFilesResult?.valid === false) {
+      return ensureFilesResult;
+    }
+
     const nextSpriteId = spriteId || shared.createId();
     const character = context.state?.characters?.items?.[characterId];
     const resolvedIndex = shared.resolveCharacterSpriteIndex({
@@ -51,8 +60,21 @@ export const createCharacterSpriteCommandApi = (shared) => ({
     return nextSpriteId;
   },
 
-  async updateCharacterSpriteItem({ characterId, spriteId, data }) {
+  async updateCharacterSpriteItem({
+    characterId,
+    spriteId,
+    data,
+    fileRecords = [],
+  }) {
     const context = await shared.ensureCommandContext();
+    const ensureFilesResult = await shared.ensureFilesExist({
+      context,
+      fileRecords,
+    });
+    if (ensureFilesResult?.valid === false) {
+      return ensureFilesResult;
+    }
+
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
       "characters",
