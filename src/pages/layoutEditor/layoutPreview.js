@@ -167,13 +167,13 @@ const buildOverlayRect = ({ element, overlayId, draggable }) => {
   if (draggable) {
     overlayRect.drag = {
       start: {
-        actionPayload: {},
+        payload: {},
       },
       move: {
-        actionPayload: {},
+        payload: {},
       },
       end: {
-        actionPayload: {},
+        payload: {},
       },
     };
   }

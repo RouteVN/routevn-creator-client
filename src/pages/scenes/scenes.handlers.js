@@ -4,6 +4,7 @@ import {
   matchesRemoteTargets,
 } from "../../internal/ui/collabRefresh.js";
 import { createScenesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { getInteractionActions } from "../../internal/project/interactionPayload.js";
 
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another scene.";
@@ -18,8 +19,8 @@ const getTransitionsFromLayout = (layout) => {
   if (!layout?.elements?.items) return transitions;
 
   for (const element of Object.values(layout.elements.items)) {
-    const sceneId =
-      element.click?.actionPayload?.actions?.sectionTransition?.sceneId;
+    const sceneId = getInteractionActions(element.click).sectionTransition
+      ?.sceneId;
     if (sceneId && !transitions.includes(sceneId)) {
       transitions.push(sceneId);
     }

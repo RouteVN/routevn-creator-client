@@ -323,7 +323,7 @@ const createLayoutTemplate = (layoutType) => {
           anchorX: 0,
           anchorY: 0,
           click: {
-            actionPayload: {
+            payload: {
               actions: {
                 nextLine: {},
               },

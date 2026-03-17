@@ -730,9 +730,9 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
         const updateVariableId = toAlphanumericId(
           `slider${currentItem.id}update`,
         );
-        // Set up change.actionPayload for variable binding
+        // Set up change.payload for variable binding
         updatedItem.change = {
-          actionPayload: {
+          payload: {
             actions: {
               updateVariable: {
                 id: updateVariableId,

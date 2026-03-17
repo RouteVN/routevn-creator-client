@@ -4,6 +4,7 @@ import {
 } from "./layout.js";
 import { RESOURCE_TYPES } from "./commands.js";
 import { normalizeEngineActions } from "./engineActions.js";
+import { getInteractionActions } from "./interactionPayload.js";
 import { toFlatItems, toHierarchyStructure } from "./tree.js";
 
 const DEFAULT_TIMESTAMP = 0;
@@ -800,7 +801,7 @@ const getTransitionsFromLayout = (layout) => {
 
   return Object.values(layout.elements.items)
     .map((element) => {
-      return element?.click?.actionPayload?.actions?.sectionTransition;
+      return getInteractionActions(element?.click).sectionTransition;
     })
     .filter(Boolean);
 };
