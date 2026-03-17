@@ -82,7 +82,7 @@ template:
                           - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=#{item.value} :options=#{item.options}: null
                 $elif item.type == 'list-item':
                   - $for listItem, k in item.items:
-                      - rtgl-view#listItem${i}x${j}x${k} data-id=${listItem.id} d=h w=f g=md av=c p=md br=md bw=xs h-bgc=mu cur=pointer:
+                      - rtgl-view#listItem${i}x${j}x${k} data-id=${listItem.id} data-interaction=${listItem.interactionType} d=h w=f g=md av=c p=md br=md bw=xs h-bgc=mu cur=pointer:
                           - rtgl-svg svg=${listItem.svg} wh=16: null
                           - rtgl-text s=xs: ${listItem.label}
                 $elif item.type == 'list-bar':

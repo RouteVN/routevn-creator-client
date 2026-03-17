@@ -294,6 +294,11 @@ export const selectActionsData = ({ props, state }) => {
     preview.toggleSkipMode = actions.toggleSkipMode;
   }
 
+  if (actions.toggleDialogueUI !== undefined) {
+    actionsObject.toggleDialogueUI = actions.toggleDialogueUI;
+    preview.toggleDialogueUI = actions.toggleDialogueUI;
+  }
+
   // Visual
   if (presentationState.visual?.items) {
     actionsObject.visual = presentationState.visual;

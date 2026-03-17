@@ -801,9 +801,10 @@ const getTransitionsFromLayout = (layout) => {
   }
 
   return Object.values(layout.elements.items)
-    .map((element) => {
-      return getInteractionActions(element?.click).sectionTransition;
-    })
+    .flatMap((element) => [
+      getInteractionActions(element?.click).sectionTransition,
+      getInteractionActions(element?.rightClick).sectionTransition,
+    ])
     .filter(Boolean);
 };
 

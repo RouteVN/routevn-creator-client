@@ -1,0 +1,6 @@
+componentName: rvn-command-line-toggle-dialogue-ui
+propsSchema:
+  type: object
+  properties:
+    toggleDialogueUI:
+      type: object

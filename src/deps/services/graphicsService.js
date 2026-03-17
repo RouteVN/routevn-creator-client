@@ -22,6 +22,7 @@ export const createGraphicsService = async ({ subject }) => {
   let beforeHandleActions;
   let actionQueue = Promise.resolve();
   let assetLoadQueue = Promise.resolve();
+  let pendingClickInteractionTimeouts = new Map();
 
   const isBlobUrl = (url) => typeof url === "string" && url.startsWith("blob:");
 
@@ -99,6 +100,38 @@ export const createGraphicsService = async ({ subject }) => {
       });
   };
 
+  const clearPendingClickInteraction = (interactionId) => {
+    const timeoutId = pendingClickInteractionTimeouts.get(interactionId);
+    if (timeoutId === undefined) {
+      return;
+    }
+
+    clearTimeout(timeoutId);
+    pendingClickInteractionTimeouts.delete(interactionId);
+  };
+
+  const clearAllPendingClickInteractions = () => {
+    for (const timeoutId of pendingClickInteractionTimeouts.values()) {
+      clearTimeout(timeoutId);
+    }
+    pendingClickInteractionTimeouts = new Map();
+  };
+
+  const scheduleClickInteraction = (actions, eventContext) => {
+    const interactionId = eventContext?._event?.id ?? "__unknown__";
+    clearPendingClickInteraction(interactionId);
+
+    // Route Graphics currently emits the generic click path on right mouse
+    // release for some element plugins. Delay left-click processing one task
+    // so a same-element rightClick can cancel it.
+    const timeoutId = setTimeout(() => {
+      pendingClickInteractionTimeouts.delete(interactionId);
+      enqueueInteractionActions(actions, eventContext);
+    }, 0);
+
+    pendingClickInteractionTimeouts.set(interactionId, timeoutId);
+  };
+
   return {
     init: async (options = {}) => {
       if (routeGraphics) {
@@ -112,6 +145,7 @@ export const createGraphicsService = async ({ subject }) => {
       beforeHandleActions = onBeforeHandleActions;
       actionQueue = Promise.resolve();
       assetLoadQueue = Promise.resolve();
+      clearAllPendingClickInteractions();
       assetBufferManager = createAssetBufferManager();
       routeGraphics = createRouteGraphics();
 
@@ -160,10 +194,23 @@ export const createGraphicsService = async ({ subject }) => {
           }
 
           if (payload.actions && engine) {
-            enqueueInteractionActions(
-              payload.actions,
-              payload._event ? { _event: payload._event } : undefined,
-            );
+            const eventContext = payload._event
+              ? { _event: payload._event }
+              : undefined;
+            const interactionId = eventContext?._event?.id ?? "__unknown__";
+
+            if (eventName === "rightClick") {
+              clearPendingClickInteraction(interactionId);
+              enqueueInteractionActions(payload.actions, eventContext);
+              return;
+            }
+
+            if (eventName === "click") {
+              scheduleClickInteraction(payload.actions, eventContext);
+              return;
+            }
+
+            enqueueInteractionActions(payload.actions, eventContext);
           }
         },
       });
@@ -242,6 +289,7 @@ export const createGraphicsService = async ({ subject }) => {
       beforeHandleActions = undefined;
       actionQueue = Promise.resolve();
       assetLoadQueue = Promise.resolve();
+      clearAllPendingClickInteractions();
       ticker.stop();
     },
   };

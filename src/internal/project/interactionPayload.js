@@ -3,7 +3,7 @@ export const getInteractionPayload = (interaction = {}) => {
     return {};
   }
 
-  return interaction.payload ?? {};
+  return interaction.payload ?? interaction.actionPayload ?? {};
 };
 
 export const getInteractionActions = (interaction = {}) => {
@@ -14,8 +14,28 @@ export const withInteractionPayload = (interaction = {}, payload = {}) => {
   const nextInteraction =
     interaction && typeof interaction === "object" ? { ...interaction } : {};
 
-  return {
+  const nextValue = {
     ...nextInteraction,
     payload,
   };
+
+  delete nextValue.actionPayload;
+
+  return nextValue;
+};
+
+export const normalizeInteractionValue = (interaction = {}) => {
+  if (!interaction || typeof interaction !== "object") {
+    return interaction;
+  }
+
+  const payload = getInteractionPayload(interaction);
+  const nextValue = {
+    ...interaction,
+    payload,
+  };
+
+  delete nextValue.actionPayload;
+
+  return nextValue;
 };

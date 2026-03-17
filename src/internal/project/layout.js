@@ -258,6 +258,7 @@ const buildBaseElement = (node) => {
     scaleY: node.scaleY ?? 1,
     rotation: node.rotation ?? 0,
     click: normalizeEngineActions(node.click),
+    rightClick: normalizeEngineActions(node.rightClick),
   };
 
   if (node["$when"]) {
