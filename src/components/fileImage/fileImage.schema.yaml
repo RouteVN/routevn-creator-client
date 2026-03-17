@@ -6,6 +6,8 @@ propsSchema:
       type: string
     imageId:
       type: string
+    source:
+      type: string
     br:
       type: string
     wh:

@@ -20,6 +20,97 @@ export const getImageDimensions = (file) => {
   });
 };
 
+const loadImageElement = (file) => {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const url = URL.createObjectURL(file);
+
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(image);
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Unable to load image"));
+    };
+
+    image.src = url;
+  });
+};
+
+const canvasToBlob = (canvas, type, quality) => {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error(`Failed to create ${type} thumbnail blob`));
+          return;
+        }
+
+        resolve(blob);
+      },
+      type,
+      quality,
+    );
+  });
+};
+
+export const extractImageThumbnail = async (imageFile, options = {}) => {
+  const {
+    maxWidth = 320,
+    maxHeight = 320,
+    preferredFormat = "image/webp",
+    quality = 0.85,
+  } = options;
+
+  const image = await loadImageElement(imageFile);
+  const sourceWidth = image.naturalWidth;
+  const sourceHeight = image.naturalHeight;
+
+  if (!(sourceWidth > 0) || !(sourceHeight > 0)) {
+    throw new Error("Unable to read image dimensions");
+  }
+
+  const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight, 1);
+  const width = Math.max(1, Math.round(sourceWidth * scale));
+  const height = Math.max(1, Math.round(sourceHeight * scale));
+
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Unable to create thumbnail canvas context");
+  }
+
+  canvas.width = width;
+  canvas.height = height;
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+  context.clearRect(0, 0, width, height);
+  context.drawImage(image, 0, 0, width, height);
+
+  let blob;
+  let format = preferredFormat;
+
+  try {
+    blob = await canvasToBlob(canvas, preferredFormat, quality);
+  } catch {
+    format = "image/png";
+    blob = await canvasToBlob(canvas, format);
+  }
+
+  const dataUrl = canvas.toDataURL(format, quality);
+  canvas.remove();
+
+  return {
+    blob,
+    dataUrl,
+    width,
+    height,
+    format,
+  };
+};
+
 export const getVideoDimensions = (file) => {
   return new Promise((resolve) => {
     const video = document.createElement("video");

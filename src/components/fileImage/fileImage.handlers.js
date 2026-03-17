@@ -1,30 +1,25 @@
-import { toFlatItems } from "../../internal/project/tree.js";
-
 const getFileIdFromProps = (attrs, projectService) => {
-  // Validate that both fileId and imageId are not passed
   if (attrs.fileId && attrs.imageId) {
     return;
   }
 
-  // If fileId is provided, use it directly
   if (attrs.fileId) {
     return attrs.fileId;
   }
 
-  // If imageId is provided, convert it to fileId
   if (attrs.imageId) {
-    const state = projectService.getState();
-    const { images } = state;
-    const flatImageItems = toFlatItems(images);
-    const existingImage = flatImageItems.find(
-      (item) => item.id === attrs.imageId,
-    );
-
-    if (existingImage) {
-      return existingImage.fileId;
+    const repositoryState = projectService.getRepositoryState();
+    const imageItem = repositoryState?.images?.items?.[attrs.imageId];
+    if (!imageItem) {
+      throw new Error(`Image with imageId "${attrs.imageId}" not found`);
     }
 
-    throw new Error(`Image with imageId "${attrs.imageId}" not found`);
+    const source = attrs.source ?? "original";
+    if (source === "thumbnail") {
+      return imageItem.thumbnailFileId ?? imageItem.fileId;
+    }
+
+    return imageItem.fileId;
   }
 
   return;

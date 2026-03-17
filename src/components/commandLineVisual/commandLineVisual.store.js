@@ -159,7 +159,7 @@ export const selectVisualsWithRepositoryData = ({ state }) => {
       resource: resourceData,
       resourceType,
       displayName: resourceData?.name || "Unknown Resource",
-      fileId: resourceData?.fileId || resourceData?.thumbnailFileId,
+      fileId: resourceData?.thumbnailFileId || resourceData?.fileId,
     };
   });
 };
@@ -172,7 +172,7 @@ export const selectViewData = ({ state }) => {
     children: group.children.map((child) => ({
       ...child,
       resourceType: "image",
-      previewFileId: child.fileId || child.thumbnailFileId,
+      previewFileId: child.thumbnailFileId || child.fileId,
       bw: child.id === state.tempSelectedResourceId ? "md" : "",
     })),
   }));
@@ -199,7 +199,7 @@ export const selectViewData = ({ state }) => {
         .map((child) => ({
           ...child,
           resourceType: "layout",
-          previewFileId: child.fileId || child.thumbnailFileId,
+          previewFileId: child.thumbnailFileId || child.fileId,
           bw: child.id === state.tempSelectedResourceId ? "md" : "",
         })),
     }))

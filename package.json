@@ -26,7 +26,7 @@
     "@tauri-apps/plugin-process": "^2.3.0",
     "@tauri-apps/plugin-sql": "~2",
     "@tauri-apps/plugin-updater": "^2.9.0",
-    "@routevn/creator-model": "1.0.0",
+    "@routevn/creator-model": "git+https://github.com/RouteVN/routevn-creator-model.git#68ef67e0f81b3d80fce48cd05daebaadae5d4cef",
     "file-type": "^21.0.0",
     "immer": "^10.1.1",
     "insieme": "1.3.0",

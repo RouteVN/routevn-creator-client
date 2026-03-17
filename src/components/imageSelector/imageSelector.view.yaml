@@ -11,4 +11,4 @@ template:
           - rtgl-view d=h w=f wrap g=lg:
               - $for item, j in group.children:
                   - rtgl-view#imageItemRef${i}x${j} data-item-id=${item.id} w=200 h=150 bw=${item.bw} bc=${item.bc} br=sm cur=pointer style="${item.selectedStyle}" key=${item.id}:
-                      - rvn-file-image w=200 h=150 fileId=${item.fileId}: null
+                      - rvn-file-image w=200 h=150 imageId=${item.id} source="thumbnail": null

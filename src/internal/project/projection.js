@@ -487,6 +487,7 @@ const constructImageResources = (repositoryImages = {}) => {
 
     result[imageId] = pickResourceFields(item, [
       "fileId",
+      "thumbnailFileId",
       "fileType",
       "width",
       "height",
