@@ -16,7 +16,7 @@ const {
 } = createMediaPageHandlers({
   resourceType: "images",
   selectItemById: (store, { itemId }) => store.selectImageItemById({ itemId }),
-  getEditPreviewFileId: (item) => item?.fileId,
+  getEditPreviewFileId: (item) => item?.thumbnailFileId ?? item?.fileId,
 });
 
 export {
@@ -49,11 +49,12 @@ const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
   }
 
   for (const result of successfulUploads) {
-    await projectService.createImage({
+    const createResult = await projectService.createImage({
       imageId: nanoid(),
       data: {
         type: "image",
         fileId: result.fileId,
+        thumbnailFileId: result.thumbnailFileId,
         name: result.displayName,
         fileType: result.file.type,
         fileSize: result.file.size,
@@ -63,6 +64,12 @@ const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
       parentId,
       position: "last",
     });
+
+    if (createResult?.valid === false) {
+      console.error("Failed to create image:", createResult);
+      appService.showToast("Failed to create image.", { title: "Error" });
+      return;
+    }
   }
 
   await handleDataChanged(deps);
@@ -133,10 +140,11 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   const uploadResult = file.uploadResult;
-  await projectService.updateImage({
+  const updateResult = await projectService.updateImage({
     imageId: selectedItem.id,
     data: {
       fileId: uploadResult.fileId,
+      thumbnailFileId: uploadResult.thumbnailFileId,
       name: uploadResult.displayName,
       fileType: uploadResult.file.type,
       fileSize: uploadResult.file.size,
@@ -144,6 +152,12 @@ export const handleFormExtraEvent = async (deps) => {
       height: uploadResult.dimensions.height,
     },
   });
+
+  if (updateResult?.valid === false) {
+    console.error("Failed to update image:", updateResult);
+    appService.showToast("Failed to update image.", { title: "Error" });
+    return;
+  }
 
   await handleDataChanged(deps);
 };
@@ -187,7 +201,8 @@ export const handleEditDialogImageClick = async (deps) => {
 
   store.setEditUpload({
     uploadResult: file.uploadResult,
-    previewFileId: file.uploadResult.fileId,
+    previewFileId:
+      file.uploadResult.thumbnailFileId ?? file.uploadResult.fileId,
   });
   render();
 };
@@ -216,6 +231,7 @@ export const handleEditFormAction = async (deps, payload) => {
   const imagePatch = editUploadResult
     ? {
         fileId: editUploadResult.fileId,
+        thumbnailFileId: editUploadResult.thumbnailFileId,
         fileType: editUploadResult.file.type,
         fileSize: editUploadResult.file.size,
         width: editUploadResult.dimensions.width,
@@ -223,7 +239,7 @@ export const handleEditFormAction = async (deps, payload) => {
       }
     : {};
 
-  await projectService.updateImage({
+  const updateResult = await projectService.updateImage({
     imageId: editItemId,
     data: {
       name,
@@ -231,6 +247,12 @@ export const handleEditFormAction = async (deps, payload) => {
       ...imagePatch,
     },
   });
+
+  if (updateResult?.valid === false) {
+    console.error("Failed to update image:", updateResult);
+    appService.showToast("Failed to update image.", { title: "Error" });
+    return;
+  }
 
   store.closeEditDialog();
   await handleDataChanged(deps);

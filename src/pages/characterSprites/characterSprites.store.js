@@ -159,7 +159,7 @@ export const selectViewData = ({ state }) => {
         children: children.map((item) => ({
           ...item,
           cardKind: "image",
-          imageFileId: item.fileId,
+          previewFileId: item.fileId,
         })),
         hasChildren: children.length > 0,
         shouldDisplay,

@@ -173,7 +173,7 @@ export const selectSelectedResource = ({ state }) => {
   return {
     resourceId: state.selectedResourceId,
     resourceType: state.selectedResourceType,
-    fileId: item.fileId || item.thumbnailFileId,
+    fileId: item.thumbnailFileId || item.fileId,
     name: item.name,
     layoutType: item.layoutType,
     layoutTypeDisplay: item.layoutType

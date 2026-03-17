@@ -103,7 +103,7 @@ template:
                                       - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md:
                                           - $if item.cardKind == 'image':
                                               - 'rtgl-view p=md g=md br=md w=${maxWidth} pos=rel style="max-width: 100%;"':
-                                                  - rvn-file-image br=md w=f h=${imageHeight} fileId=${item.imageFileId} key=${item.imageFileId}-${imageHeight}x${maxWidth}: null
+                                                  - rvn-file-image br=md w=f h=${imageHeight} fileId=${item.previewFileId} key=${item.previewFileId}-${imageHeight}x${maxWidth}: null
                                                   - $if item.showPreviewIcon:
                                                       - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} bw=xs bc=ac bgc=bg br=f w=24 h=24 ah=c av=c pos=abs cur=pointer style="top: 8px; right: 8px; z-index: 2;"':
                                                           - rtgl-svg svg=zoomIn wh=12 c=ac: null

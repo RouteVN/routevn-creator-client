@@ -38,7 +38,7 @@ const buildMediaItem = (item) => ({
   id: item.id,
   name: item.name,
   cardKind: "image",
-  imageFileId: item.fileId,
+  previewFileId: item.thumbnailFileId ?? item.fileId,
   canPreview: true,
 });
 
@@ -98,7 +98,7 @@ const {
   buildDetailFields,
   buildMediaItem,
   createEditForm,
-  getSelectedPreviewFileId: (item) => item?.fileId,
+  getSelectedPreviewFileId: (item) => item?.thumbnailFileId ?? item?.fileId,
   extendViewData: ({ state, baseViewData }) => ({
     ...baseViewData,
     fullImagePreviewVisible: state.fullImagePreviewVisible,

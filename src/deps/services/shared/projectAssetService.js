@@ -1,11 +1,16 @@
 import {
   getImageDimensions,
+  extractImageThumbnail,
   getVideoDimensions,
   extractWaveformData,
   extractVideoThumbnail,
   detectFileType,
 } from "../../clients/web/fileProcessors.js";
 import { loadFont } from "./fontLoader.js";
+
+const IMAGE_THUMBNAIL_MAX_WIDTH = 320;
+const IMAGE_THUMBNAIL_MAX_HEIGHT = 320;
+const IMAGE_THUMBNAIL_MIN_FILE_SIZE_BYTES = 32 * 1024;
 
 const storeMetadata = async ({ data, storeFile, idGenerator }) => {
   const jsonString = JSON.stringify(data, null, 2);
@@ -48,9 +53,40 @@ export const createProjectAssetService = ({
     const fileType = detectFileType(file);
 
     if (fileType === "image") {
-      const dimensions = await getImageDimensions(file);
-      const stored = await storeFile(file);
-      return { ...stored, dimensions, type: "image" };
+      const [dimensions, stored] = await Promise.all([
+        getImageDimensions(file),
+        storeFile(file),
+      ]);
+
+      const shouldReuseOriginalAsThumbnail =
+        (dimensions &&
+          dimensions.width <= IMAGE_THUMBNAIL_MAX_WIDTH &&
+          dimensions.height <= IMAGE_THUMBNAIL_MAX_HEIGHT) ||
+        file.size <= IMAGE_THUMBNAIL_MIN_FILE_SIZE_BYTES;
+
+      if (shouldReuseOriginalAsThumbnail) {
+        return {
+          ...stored,
+          thumbnailFileId: stored.fileId,
+          dimensions,
+          type: "image",
+        };
+      }
+
+      const thumbnailData = await extractImageThumbnail(file, {
+        maxWidth: IMAGE_THUMBNAIL_MAX_WIDTH,
+        maxHeight: IMAGE_THUMBNAIL_MAX_HEIGHT,
+        preferredFormat: "image/webp",
+        quality: 0.85,
+      });
+      const thumbnailResult = await storeFile(thumbnailData.blob);
+      return {
+        ...stored,
+        thumbnailFileId: thumbnailResult.fileId,
+        thumbnailData,
+        dimensions,
+        type: "image",
+      };
     }
 
     if (fileType === "audio") {
