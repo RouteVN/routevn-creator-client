@@ -620,7 +620,7 @@ export const handleSceneFormAction = async (deps, payload) => {
       y: 0,
     };
 
-    // Get form values from the event detail (same pattern as typography)
+    // Get form values from the event detail (same pattern as text styles)
     const formData = payload._event.detail.values;
 
     // Use a simple ID generator instead of nanoid

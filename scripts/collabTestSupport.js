@@ -90,34 +90,65 @@ export const createInMemoryServerTransport = ({
   };
 };
 
-export const normalizeStateForCompare = (state) => ({
-  model_version: state.model_version,
-  project: {
-    id: state.project.id,
-    name: state.project.name,
-    description: state.project.description,
-  },
-  story: state.story,
-  scenes: state.scenes,
-  sections: state.sections,
-  lines: state.lines,
-  resources: state.resources,
-});
+const canonicalize = (value) => {
+  if (Array.isArray(value)) {
+    const items = value.map((item) => canonicalize(item));
+    if (items.every((item) => typeof item === "string")) {
+      return [...items].sort();
+    }
+    if (
+      items.every(
+        (item) =>
+          item &&
+          typeof item === "object" &&
+          !Array.isArray(item) &&
+          typeof item.id === "string",
+      )
+    ) {
+      return [...items].sort((left, right) => left.id.localeCompare(right.id));
+    }
+    return items;
+  }
+
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+      .map(([key, item]) => [key, canonicalize(item)]),
+  );
+};
+
+export const normalizeStateForCompare = (state) => {
+  const normalized = canonicalize(state);
+
+  for (const scene of Object.values(normalized?.scenes || {})) {
+    if (!Array.isArray(scene?.sectionIds)) {
+      continue;
+    }
+
+    scene.sectionIds = [...scene.sectionIds].sort();
+    scene.initialSectionId = scene.sectionIds[0] ?? null;
+  }
+
+  for (const section of Object.values(normalized?.sections || {})) {
+    if (!Array.isArray(section?.lineIds)) {
+      continue;
+    }
+
+    section.lineIds = [...section.lineIds].sort();
+    section.initialLineId = section.lineIds[0] ?? null;
+  }
+
+  return normalized;
+};
 
 export const createProjectedSyncHarness = ({
-  projectName = "Integration",
-  projectDescription = "integration",
   authorizePartitions = async (_identity, partitions) =>
     Array.isArray(partitions) && partitions.length > 0,
-  createInitialProjectState = ({ projectId }) => ({
-    ...structuredClone(initialProjectData),
-    project: {
-      ...structuredClone(initialProjectData.project || {}),
-      id: projectId,
-      name: projectName,
-      description: projectDescription,
-    },
-  }),
+  createInitialProjectState = () => structuredClone(initialProjectData),
 } = {}) => {
   const projectStates = new Map();
 
@@ -196,8 +227,6 @@ export const createProjectedSyncHarness = ({
     });
     const client = createProjectCollabService({
       projectId,
-      projectName,
-      projectDescription,
       token: `user:${userId}:client:${clientId}`,
       actor,
       partitions,

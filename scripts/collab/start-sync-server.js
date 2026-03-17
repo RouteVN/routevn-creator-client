@@ -39,16 +39,7 @@ const projectStates = new Map();
 
 const ensureProjectState = (projectId) => {
   if (!projectStates.has(projectId)) {
-    projectStates.set(
-      projectId,
-      {
-        ...structuredClone(initialProjectData),
-        project: {
-          ...structuredClone(initialProjectData.project || {}),
-          id: projectId,
-        },
-      },
-    );
+    projectStates.set(projectId, structuredClone(initialProjectData));
   }
   return projectStates.get(projectId);
 };

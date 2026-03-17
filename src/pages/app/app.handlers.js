@@ -170,7 +170,7 @@ const targetPathByKey = {
   c: "/project/characters",
   o: "/project/colors",
   f: "/project/fonts",
-  y: "/project/typography",
+  y: "/project/text-styles",
   l: "/project/layouts",
   v: "/project/videos",
   b: "/project/variables",
@@ -218,9 +218,8 @@ export const handleUpdateTransform = async (deps, payload) => {
   const { projectService } = deps;
   const { itemId, updates } = payload;
 
-  await projectService.updateResourceItem({
-    resourceType: "transforms",
-    resourceId: itemId,
+  await projectService.updateTransform({
+    transformId: itemId,
     data: updates,
   });
 };
@@ -229,9 +228,8 @@ export const handleUpdateColor = async (deps, payload) => {
   const { projectService } = deps;
   const { itemId, updates } = payload;
 
-  await projectService.updateResourceItem({
-    resourceType: "colors",
-    resourceId: itemId,
+  await projectService.updateColor({
+    colorId: itemId,
     data: updates,
   });
 };

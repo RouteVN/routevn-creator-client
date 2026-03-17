@@ -23,8 +23,6 @@ const isTransportDisconnectedError = (error) => {
 
 export const createProjectCollabService = ({
   projectId,
-  projectName = "",
-  projectDescription = "",
   initialRepositoryState,
   token,
   actor,
@@ -39,15 +37,8 @@ export const createProjectCollabService = ({
   let serverErrorStopInFlight = false;
   let projectionGap;
 
-  const createInitialRepositoryState = () => ({
-    ...structuredClone(initialProjectData),
-    project: {
-      ...structuredClone(initialProjectData.project || {}),
-      id: projectId,
-      name: projectName,
-      description: projectDescription,
-    },
-  });
+  const createInitialRepositoryState = () =>
+    structuredClone(initialProjectData);
 
   const coerceInitialRepositoryState = () => {
     if (

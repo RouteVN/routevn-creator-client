@@ -23,6 +23,9 @@ const cloneOr = (value, fallback) => {
 const getHierarchyNodes = (collection) =>
   Array.isArray(collection?.tree) ? collection.tree : [];
 
+const getRepositoryCollection = (repositoryState, resourceType) =>
+  repositoryState?.[resourceType];
+
 const walkHierarchy = (nodes, parentId, callback) => {
   if (!Array.isArray(nodes)) return;
   for (const node of nodes) {
@@ -67,7 +70,7 @@ const createEmptyProjectState = ({
   description = "",
   timestamp = 0,
 }) => {
-  const resources = Object.fromEntries(
+  const resourceCollections = Object.fromEntries(
     RESOURCE_TYPES.map((type) => [type, createResourceCollection()]),
   );
   const createdAt = toFiniteTimestamp(timestamp, DEFAULT_TIMESTAMP);
@@ -88,7 +91,7 @@ const createEmptyProjectState = ({
     scenes: {},
     sections: {},
     lines: {},
-    resources,
+    ...resourceCollections,
   };
 };
 
@@ -152,7 +155,8 @@ const projectRepositoryResources = ({ repositoryState }) => {
   );
 
   for (const resourceType of RESOURCE_TYPES) {
-    const repositoryCollection = repositoryState?.[resourceType] || {};
+    const repositoryCollection =
+      getRepositoryCollection(repositoryState, resourceType) || {};
     const repositoryItems = repositoryCollection.items || {};
     const { parentById, orderedIds } = buildHierarchyParentMap(
       getHierarchyNodes(repositoryCollection),
@@ -449,7 +453,7 @@ export const projectRepositoryStateToDomainState = ({
     firstPlayableSceneId ||
     null;
 
-  state.resources = projectRepositoryResources({ repositoryState });
+  Object.assign(state, projectRepositoryResources({ repositoryState }));
   state.project.createdAt = toFiniteTimestamp(
     repositoryState?.project?.createdAt,
     DEFAULT_TIMESTAMP,
@@ -517,17 +521,20 @@ const constructSoundResources = (repositorySounds = {}) => {
   }, {});
 };
 
-const constructTweenResources = (repositoryTweens = {}) => {
-  return Object.entries(repositoryTweens).reduce((result, [tweenId, item]) => {
-    if (item?.type !== "tween") {
-      return result;
-    }
+const constructAnimationResources = (repositoryAnimations = {}) => {
+  return Object.entries(repositoryAnimations).reduce(
+    (result, [animationId, item]) => {
+      if (item?.type !== "animation" || !item.animation) {
+        return result;
+      }
 
-    result[tweenId] = {
-      properties: item.properties,
-    };
-    return result;
-  }, {});
+      result[animationId] = {
+        animation: structuredClone(item.animation),
+      };
+      return result;
+    },
+    {},
+  );
 };
 
 const constructCharacterResources = (repositoryCharacters = {}) => {
@@ -600,13 +607,13 @@ const extractCharacterImages = (repositoryCharacters = {}) => {
 const constructLayoutResources = (
   repositoryLayouts = {},
   imageItems = {},
-  typography = { items: {}, tree: [] },
+  textStylesData = { items: {}, tree: [] },
   colors = { items: {}, tree: [] },
   fonts = { items: {}, tree: [] },
 ) => {
   const baseLayoutResources = createLayoutReferenceResources(
     imageItems,
-    typography,
+    textStylesData,
     colors,
     fonts,
   );
@@ -623,7 +630,7 @@ const constructLayoutResources = (
     const { elements, resources } = buildLayoutElements(
       toHierarchyStructure(layout.elements),
       imageItems,
-      typography,
+      textStylesData,
       colors,
       fonts,
       { layoutId },
@@ -657,11 +664,11 @@ const constructProjectResources = (repositoryState = {}) => {
   const repositoryImages = repositoryState.images?.items || {};
   const repositoryVideos = repositoryState.videos?.items || {};
   const repositorySounds = repositoryState.sounds?.items || {};
-  const repositoryTweens = repositoryState.tweens?.items || {};
+  const repositoryAnimations = repositoryState.animations?.items || {};
   const repositoryCharacters = repositoryState.characters?.items || {};
   const repositoryTransforms = repositoryState.transforms?.items || {};
   const repositoryLayouts = repositoryState.layouts?.items || {};
-  const typography = repositoryState.typography || { items: {}, tree: [] };
+  const textStylesData = repositoryState.textStyles || { items: {}, tree: [] };
   const colors = repositoryState.colors || { items: {}, tree: [] };
   const fonts = repositoryState.fonts || { items: {}, tree: [] };
   const variables = Object.fromEntries(
@@ -678,7 +685,7 @@ const constructProjectResources = (repositoryState = {}) => {
   const { resources: layoutResources, layouts } = constructLayoutResources(
     repositoryLayouts,
     imageItems,
-    typography,
+    textStylesData,
     colors,
     fonts,
   );
@@ -693,7 +700,7 @@ const constructProjectResources = (repositoryState = {}) => {
     transforms: constructTransformResources(repositoryTransforms),
     characters: constructCharacterResources(repositoryCharacters),
     layouts,
-    tweens: constructTweenResources(repositoryTweens),
+    animations: constructAnimationResources(repositoryAnimations),
     variables,
   };
 };
@@ -901,7 +908,7 @@ export const getVariableOptions = (variablesData, options = {}) => {
 
   return Object.entries(variablesItems)
     .filter(([_, item]) => {
-      if (item.type === "folder" || item.itemType === "folder") {
+      if (item.type === "folder") {
         return false;
       }
       if (type && item.type !== type) {
@@ -945,18 +952,18 @@ const LAYOUT_RESOURCE_KEYS = [
   "barImageId",
   "hoverThumbImageId",
   "hoverBarImageId",
-  "typographyId",
-  "hoverTypographyId",
-  "clickedTypographyId",
+  "textStyleId",
+  "hoverTextStyleId",
+  "clickTextStyleId",
   "fontFileId",
 ];
 
-const TYPOGRAPHY_RESOURCE_KEYS = ["colorId", "fontId"];
+const TEXT_STYLE_RESOURCE_KEYS = ["colorId", "fontId"];
 
 const EXPORT_RESOURCE_KEYS = new Set([
   ...SCENE_RESOURCE_KEYS,
   ...LAYOUT_RESOURCE_KEYS,
-  ...TYPOGRAPHY_RESOURCE_KEYS,
+  ...TEXT_STYLE_RESOURCE_KEYS,
 ]);
 
 const RESOURCE_KEY_TO_TYPES = {
@@ -965,10 +972,10 @@ const RESOURCE_KEY_TO_TYPES = {
     "images",
     "videos",
     "sounds",
-    "tweens",
+    "animations",
     "transforms",
     "characters",
-    "typography",
+    "textStyles",
     "colors",
     "fonts",
     "variables",
@@ -976,7 +983,7 @@ const RESOURCE_KEY_TO_TYPES = {
   ],
   transformId: ["transforms"],
   characterId: ["characters"],
-  animation: ["tweens"],
+  animation: ["animations"],
   layoutId: ["layouts"],
   bgmId: ["sounds"],
   sfxId: ["sounds"],
@@ -988,9 +995,9 @@ const RESOURCE_KEY_TO_TYPES = {
   barImageId: ["images"],
   hoverThumbImageId: ["images"],
   hoverBarImageId: ["images"],
-  typographyId: ["typography"],
-  hoverTypographyId: ["typography"],
-  clickedTypographyId: ["typography"],
+  textStyleId: ["textStyles"],
+  hoverTextStyleId: ["textStyles"],
+  clickTextStyleId: ["textStyles"],
   colorId: ["colors"],
   fontId: ["fonts"],
   fontFileId: ["fonts"],
@@ -1000,12 +1007,12 @@ const COLLECTION_DEFS = {
   images: { collection: "images", itemType: "image" },
   videos: { collection: "videos", itemType: "video" },
   sounds: { collection: "sounds", itemType: "sound" },
-  tweens: { collection: "tweens", itemType: "tween" },
+  animations: { collection: "animations", itemType: "animation" },
   transforms: { collection: "transforms", itemType: "transform" },
   characters: { collection: "characters", itemType: "character" },
   fonts: { collection: "fonts", itemType: "font" },
   colors: { collection: "colors", itemType: "color" },
-  typography: { collection: "typography", itemType: "typography" },
+  textStyles: { collection: "textStyles", itemType: "textStyle" },
   layouts: { collection: "layouts", itemType: "layout" },
   variables: { collection: "variables", itemType: null },
   sprites: { collection: null, itemType: "sprite" },
@@ -1014,7 +1021,7 @@ const COLLECTION_DEFS = {
 const RESOURCE_KEYS_MAP = {
   scenes: SCENE_RESOURCE_KEYS,
   layouts: LAYOUT_RESOURCE_KEYS,
-  typography: TYPOGRAPHY_RESOURCE_KEYS,
+  textStyles: TEXT_STYLE_RESOURCE_KEYS,
 };
 
 const createUsageBuckets = () =>
@@ -1177,10 +1184,10 @@ export const collectUsedResourcesForExport = (state) => {
   const usage = createUsageBuckets();
   const index = createResourceIndex(state);
   const layoutQueue = [];
-  const typographyQueue = [];
+  const textStyleQueue = [];
   const characterQueue = [];
   const scannedLayouts = new Set();
-  const scannedTypography = new Set();
+  const scannedTextStyles = new Set();
   const scannedCharacters = new Set();
 
   const addUsed = (type, id) => {
@@ -1190,8 +1197,8 @@ export const collectUsedResourcesForExport = (state) => {
 
     if (type === "layouts") {
       layoutQueue.push(id);
-    } else if (type === "typography") {
-      typographyQueue.push(id);
+    } else if (type === "textStyles") {
+      textStyleQueue.push(id);
     } else if (type === "characters") {
       characterQueue.push(id);
     } else if (type === "sprites") {
@@ -1235,13 +1242,13 @@ export const collectUsedResourcesForExport = (state) => {
     scanNodeForResourceReferences(layout, markReference);
   }
 
-  while (typographyQueue.length > 0) {
-    const typographyId = typographyQueue.shift();
-    if (scannedTypography.has(typographyId)) continue;
-    scannedTypography.add(typographyId);
-    const typography = getCollectionItems(state, "typography")[typographyId];
-    if (!typography || typography.type !== "typography") continue;
-    scanNodeForResourceReferences(typography, markReference);
+  while (textStyleQueue.length > 0) {
+    const textStyleId = textStyleQueue.shift();
+    if (scannedTextStyles.has(textStyleId)) continue;
+    scannedTextStyles.add(textStyleId);
+    const textStyle = getCollectionItems(state, "textStyles")[textStyleId];
+    if (!textStyle || textStyle.type !== "textStyle") continue;
+    scanNodeForResourceReferences(textStyle, markReference);
   }
 
   while (characterQueue.length > 0) {
@@ -1309,7 +1316,10 @@ export const buildFilteredStateForExport = (
     images: filterCollectionItemsByIds(state.images, usedIds.images || []),
     videos: filterCollectionItemsByIds(state.videos, usedIds.videos || []),
     sounds: filterCollectionItemsByIds(state.sounds, usedIds.sounds || []),
-    tweens: filterCollectionItemsByIds(state.tweens, usedIds.tweens || []),
+    animations: filterCollectionItemsByIds(
+      state.animations,
+      usedIds.animations || [],
+    ),
     transforms: filterCollectionItemsByIds(
       state.transforms,
       usedIds.transforms || [],
@@ -1320,19 +1330,13 @@ export const buildFilteredStateForExport = (
     ),
     fonts: filterCollectionItemsByIds(state.fonts, usedIds.fonts || []),
     colors: filterCollectionItemsByIds(state.colors, usedIds.colors || []),
-    typography: filterCollectionItemsByIds(
-      state.typography,
-      usedIds.typography || [],
+    textStyles: filterCollectionItemsByIds(
+      state.textStyles,
+      usedIds.textStyles || [],
     ),
-    layouts: filterCollectionItemsByIds(
-      state.resources?.layouts,
-      usedIds.layouts || [],
-    ),
+    layouts: filterCollectionItemsByIds(state.layouts, usedIds.layouts || []),
     variables: keepAllVariables
-      ? state.resources?.variables
-      : filterCollectionItemsByIds(
-          state.resources?.variables,
-          usedIds.variables || [],
-        ),
+      ? state.variables
+      : filterCollectionItemsByIds(state.variables, usedIds.variables || []),
   };
 };

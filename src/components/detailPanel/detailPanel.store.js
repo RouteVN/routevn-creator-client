@@ -72,8 +72,8 @@ export const createInitialState = () => ({
       },
     },
   },
-  // Typography dialog state
-  typographyDialog: {
+  // Text style dialog state
+  textStyleDialog: {
     isOpen: false,
     fieldIndex: -1,
     defaultValues: {
@@ -84,8 +84,8 @@ export const createInitialState = () => ({
       previewText: "",
     },
     form: {
-      title: "Edit Typography",
-      description: "Edit the typography style",
+      title: "Edit Text Style",
+      description: "Edit the text style",
       fields: [
         {
           name: "fontColor",
@@ -123,7 +123,7 @@ export const createInitialState = () => ({
           name: "previewText",
           type: "input-text",
           label: "Preview Text",
-          description: "Text to display in the typography preview",
+          description: "Text to display in the text style preview",
           required: false,
         },
       ],
@@ -133,7 +133,7 @@ export const createInitialState = () => ({
           {
             id: "submit",
             variant: "pr",
-            label: "Update Typography",
+            label: "Update Text Style",
           },
         ],
       },
@@ -192,15 +192,15 @@ export const hideColorDialog = ({ state }, _payload = {}) => {
   };
 };
 
-export const showTypographyDialog = (
+export const showTextStyleDialog = (
   { state },
   { fieldIndex, itemData, colorOptions, fontOptions } = {},
 ) => {
-  state.typographyDialog.isOpen = true;
-  state.typographyDialog.fieldIndex = fieldIndex;
+  state.textStyleDialog.isOpen = true;
+  state.textStyleDialog.fieldIndex = fieldIndex;
 
   // Update default values with current item data
-  state.typographyDialog.defaultValues = {
+  state.textStyleDialog.defaultValues = {
     fontSize: itemData.fontSize || "16",
     fontColor: itemData.fontColor || "",
     fontStyle: itemData.fontStyle || "",
@@ -210,23 +210,23 @@ export const showTypographyDialog = (
 
   // Update dropdown options dynamically
   if (colorOptions) {
-    state.typographyDialog.form.fields.find(
+    state.textStyleDialog.form.fields.find(
       (field) => field.name === "fontColor",
     ).options = colorOptions;
   }
   if (fontOptions) {
-    state.typographyDialog.form.fields.find(
+    state.textStyleDialog.form.fields.find(
       (field) => field.name === "fontStyle",
     ).options = fontOptions;
   }
 };
 
-export const hideTypographyDialog = ({ state }, _payload = {}) => {
-  state.typographyDialog.isOpen = false;
-  state.typographyDialog.fieldIndex = -1;
+export const hideTextStyleDialog = ({ state }, _payload = {}) => {
+  state.textStyleDialog.isOpen = false;
+  state.textStyleDialog.fieldIndex = -1;
 
   // Reset default values
-  state.typographyDialog.defaultValues = {
+  state.textStyleDialog.defaultValues = {
     fontSize: "16",
     fontColor: "",
     fontStyle: "",
@@ -302,10 +302,10 @@ export const selectViewData = ({ state, props }) => {
       defaultValues: state.colorDialog.defaultValues,
       form: state.colorDialog.form,
     },
-    typographyDialog: {
-      isOpen: state.typographyDialog.isOpen,
-      defaultValues: state.typographyDialog.defaultValues,
-      form: state.typographyDialog.form,
+    textStyleDialog: {
+      isOpen: state.textStyleDialog.isOpen,
+      defaultValues: state.textStyleDialog.defaultValues,
+      form: state.textStyleDialog.form,
     },
     imageSelectorDialog: {
       isOpen: state.imageSelectorDialog.isOpen,

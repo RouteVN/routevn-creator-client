@@ -21,6 +21,11 @@ export const createInitialState = () => ({
       route: "/project/transforms",
     },
     {
+      id: "animations",
+      label: "Animations",
+      route: "/project/animations",
+    },
+    {
       id: "videos",
       label: "Videos",
       route: "/project/videos",
@@ -33,14 +38,14 @@ export const createInitialState = () => ({
       route: "/project/colors",
     },
     {
-      id: "Fonts",
-      label: "fonts",
+      id: "fonts",
+      label: "Fonts",
       route: "/project/fonts",
     },
     {
-      id: "typography",
-      label: "Typography",
-      route: "/project/typography",
+      id: "textStyles",
+      label: "Text Styles",
+      route: "/project/text-styles",
     },
   ],
   system: [

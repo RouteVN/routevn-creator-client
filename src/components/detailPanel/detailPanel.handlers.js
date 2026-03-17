@@ -258,19 +258,19 @@ export const handleFontFieldClick = (deps, payload) => {
   }
 };
 
-export const handleTypographySelectChange = (deps, payload) => {
+export const handleTextStyleSelectChange = (deps, payload) => {
   const { props } = deps;
 
   // Extract the field index from the element ID
   const fieldIndex = parseInt(
-    payload._event.currentTarget.id.replace("typographySelect", ""),
+    payload._event.currentTarget.id.replace("textStyleSelect", ""),
   );
   const field = props.fields[fieldIndex];
   const selectedValue = payload._event.detail.value;
 
   if (
     field &&
-    field.type === "typography" &&
+    field.type === "textStyle" &&
     field.editable &&
     props.onFieldChange
   ) {
@@ -327,13 +327,13 @@ export const handleEditableTextClick = (deps, payload) => {
   render();
 };
 
-export const handleCloseTypographyDialog = (deps) => {
+export const handleCloseTextStyleDialog = (deps) => {
   const { store, render } = deps;
-  store.hideTypographyDialog();
+  store.hideTextStyleDialog();
   render();
 };
 
-export const handleTypographyFormActionClick = (deps, payload) => {
+export const handleTextStyleFormActionClick = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
   const detail = payload._event.detail;
 
@@ -342,15 +342,15 @@ export const handleTypographyFormActionClick = (deps, payload) => {
 
   // Get current dialog state
   const state = store.getState ? store.getState() : store._state || store.state;
-  const fieldIndex = state.typographyDialog.fieldIndex;
+  const fieldIndex = state.textStyleDialog.fieldIndex;
 
   // Hide dialog
-  store.hideTypographyDialog();
+  store.hideTextStyleDialog();
   render();
 
-  // Emit typography-updated event for editing existing typography
+  // Emit text-style-updated event for editing an existing text style
   dispatchEvent(
-    new CustomEvent("typography-updated", {
+    new CustomEvent("text-style-updated", {
       detail: {
         fieldIndex,
         fontSize: values.fontSize,

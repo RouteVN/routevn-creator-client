@@ -252,10 +252,10 @@ export const createProjectCollabCore = ({
     resourceTypePartitionFor,
   });
 
-  const deleteResourceItemIfUnused = async ({
-    resourceType,
+  const deleteItemIfUnused = async ({
     resourceId,
     checkTargets = [],
+    deleteItem,
   }) => {
     const state = commandApi.getState();
     const usage = recursivelyCheckResource({
@@ -268,13 +268,40 @@ export const createProjectCollabCore = ({
       return { deleted: false, usage };
     }
 
-    await commandApi.deleteResourceItem({
-      resourceType,
-      resourceIds: [resourceId],
-    });
+    await deleteItem(resourceId);
 
     return { deleted: true, usage };
   };
+
+  const deleteImageIfUnused = async ({ imageId, checkTargets = [] }) =>
+    deleteItemIfUnused({
+      resourceId: imageId,
+      checkTargets,
+      deleteItem: (resourceId) =>
+        commandApi.deleteImages({
+          imageIds: [resourceId],
+        }),
+    });
+
+  const deleteSoundIfUnused = async ({ soundId, checkTargets = [] }) =>
+    deleteItemIfUnused({
+      resourceId: soundId,
+      checkTargets,
+      deleteItem: (resourceId) =>
+        commandApi.deleteSounds({
+          soundIds: [resourceId],
+        }),
+    });
+
+  const deleteVideoIfUnused = async ({ videoId, checkTargets = [] }) =>
+    deleteItemIfUnused({
+      resourceId: videoId,
+      checkTargets,
+      deleteItem: (resourceId) =>
+        commandApi.deleteVideos({
+          videoIds: [resourceId],
+        }),
+    });
 
   return {
     getCurrentProjectId,
@@ -292,6 +319,8 @@ export const createProjectCollabCore = ({
     submitCommand,
     addVersionToProject,
     deleteVersionFromProject,
-    deleteResourceItemIfUnused,
+    deleteImageIfUnused,
+    deleteSoundIfUnused,
+    deleteVideoIfUnused,
   };
 };

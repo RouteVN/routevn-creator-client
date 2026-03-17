@@ -97,9 +97,8 @@ export const handleEditFormAction = async (deps, payload) => {
     return;
   }
 
-  await projectService.updateResourceItem({
-    resourceType: "colors",
-    resourceId: editItemId,
+  await projectService.updateColor({
+    colorId: editItemId,
     data: {
       name,
       hex: values?.hex ?? "#ffffff",
@@ -134,9 +133,8 @@ export const handleAddFormAction = async (deps, payload) => {
     return;
   }
 
-  await projectService.createResourceItem({
-    resourceType: "colors",
-    resourceId: nanoid(),
+  await projectService.createColor({
+    colorId: nanoid(),
     data: {
       type: "color",
       name,
@@ -157,7 +155,7 @@ export const handleItemDelete = async (deps, payload) => {
   const usage = recursivelyCheckResource({
     state: projectService.getState(),
     itemId,
-    checkTargets: ["typography"],
+    checkTargets: ["textStyles"],
   });
 
   if (usage.isUsed) {
@@ -166,9 +164,8 @@ export const handleItemDelete = async (deps, payload) => {
     return;
   }
 
-  await projectService.deleteResourceItem({
-    resourceType: "colors",
-    resourceIds: [itemId],
+  await projectService.deleteColors({
+    colorIds: [itemId],
   });
 
   await handleDataChanged(deps);

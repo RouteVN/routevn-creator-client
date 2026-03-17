@@ -1,6 +1,6 @@
 import { toFlatItems } from "../../internal/project/tree.js";
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
-import { resetState } from "./tweens.constants";
+import { resetState } from "./animations.constants";
 
 const createAddKeyframeForm = (property) => {
   if (!property) {
@@ -160,7 +160,7 @@ const propertyOptions = [
 
 const createAddPropertyForm = (availableProperties) => {
   return {
-    title: "Add tween property",
+    title: "Add animation property",
     fields: [
       {
         name: "property",
@@ -281,8 +281,8 @@ const propertyNameDropdownItems = [
   },
 ];
 
-const addTweenForm = {
-  title: "Add Tween Animation",
+const addAnimationForm = {
+  title: "Add Animation",
   fields: [
     {
       name: "name",
@@ -303,14 +303,14 @@ const addTweenForm = {
       {
         id: "submit",
         variant: "pr",
-        label: "Add Tween Animation",
+        label: "Add Animation",
       },
     ],
   },
 };
 
-const editTweenForm = {
-  title: "Edit Tween Animation",
+const editAnimationForm = {
+  title: "Edit Animation",
   fields: [
     {
       name: "name",
@@ -331,7 +331,7 @@ const editTweenForm = {
       {
         id: "submit",
         variant: "pr",
-        label: "Update Tween Animation",
+        label: "Update Animation",
       },
     ],
   },
@@ -348,7 +348,7 @@ const defaultInitialValuesByProperty = {
 
 const buildCatalogItem = (item) => ({
   ...item,
-  cardKind: "tween",
+  cardKind: "animation",
   itemWidth: "f",
 });
 
@@ -372,16 +372,16 @@ const {
   setSearchQuery,
   selectViewData: selectCatalogViewData,
 } = createCatalogPageStore({
-  itemType: "tween",
-  resourceType: "tweens",
-  title: "Tweens",
-  selectedResourceId: "tweens",
+  itemType: "animation",
+  resourceType: "animations",
+  title: "Animations",
+  selectedResourceId: "animations",
   resourceCategory: "assets",
-  addText: "Add Tween Animation",
+  addText: "Add Animation",
   buildCatalogItem,
   matchesSearch,
   extendViewData: ({ state, selectedItem, baseViewData }) => {
-    const selectedTweenPropertyCount = Object.keys(
+    const selectedAnimationPropertyCount = Object.keys(
       selectedItem?.properties ?? {},
     ).length;
 
@@ -454,7 +454,7 @@ const {
     return {
       ...baseViewData,
       selectedItemDuration: String(selectedItem?.duration ?? ""),
-      selectedTweenPropertyCount,
+      selectedAnimationPropertyCount,
       isDialogOpen: state.isDialogOpen,
       dialogDefaultValues: state.dialogDefaultValues,
       dialogForm: state.dialogForm,
@@ -499,7 +499,7 @@ export const createInitialState = () => ({
   dialogDefaultValues: {
     name: "",
   },
-  dialogForm: addTweenForm,
+  dialogForm: addAnimationForm,
   editMode: false,
   editItemId: undefined,
   popover: {
@@ -519,11 +519,11 @@ export {
   setSearchQuery,
 };
 
-export const selectTweenItemById = selectItemById;
+export const selectAnimationItemById = selectItemById;
 
-export const selectTweenDisplayItemById = ({ state }, { itemId } = {}) => {
+export const selectAnimationDisplayItemById = ({ state }, { itemId } = {}) => {
   return toFlatItems(state.data).find(
-    (item) => item.id === itemId && item.type === "tween",
+    (item) => item.id === itemId && item.type === "animation",
   );
 };
 
@@ -537,7 +537,7 @@ export const openDialog = (
 
   if (editMode && itemData) {
     state.targetGroupId = itemData.parentId ?? undefined;
-    state.dialogForm = editTweenForm;
+    state.dialogForm = editAnimationForm;
     state.dialogDefaultValues = {
       name: itemData.name ?? "",
     };
@@ -549,7 +549,7 @@ export const openDialog = (
     targetGroupId === "_root"
       ? undefined
       : (targetGroupId ?? itemData?.parentId ?? undefined);
-  state.dialogForm = addTweenForm;
+  state.dialogForm = addAnimationForm;
   state.dialogDefaultValues = {
     name: "",
   };
@@ -564,7 +564,7 @@ export const closeDialog = ({ state }, _payload = {}) => {
   state.dialogDefaultValues = {
     name: "",
   };
-  state.dialogForm = addTweenForm;
+  state.dialogForm = addAnimationForm;
   state.properties = {};
 };
 
@@ -655,7 +655,7 @@ const createAnimationRenderState = (properties, includeAnimations = true) => {
       animations.push({
         id: `animation-${property}`,
         targetId: "preview-element",
-        type: "tween",
+        type: "animation",
         properties: animationProperties,
       });
     }

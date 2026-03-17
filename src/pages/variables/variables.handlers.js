@@ -7,15 +7,13 @@ const EMPTY_TREE = { tree: [], items: {} };
 
 const createVariableResourceData = ({
   name,
-  scope = "global",
+  scope = "global-device",
   type = "string",
   defaultValue = "",
 } = {}) => ({
-  itemType: "variable",
   name,
   scope,
   type,
-  variableType: type,
   default: defaultValue,
   value: defaultValue,
 });
@@ -134,9 +132,8 @@ export const handleVariableCreated = async (deps, payload) => {
     default: defaultValue,
   } = payload._event.detail;
 
-  await projectService.createResourceItem({
-    resourceType: "variables",
-    resourceId: nanoid(),
+  await projectService.createVariable({
+    variableId: nanoid(),
     data: createVariableResourceData({
       name,
       scope,
@@ -158,9 +155,8 @@ export const handleVariableUpdated = async (deps, payload) => {
     return;
   }
 
-  await projectService.updateResourceItem({
-    resourceType: "variables",
-    resourceId: itemId,
+  await projectService.updateVariable({
+    variableId: itemId,
     data: {
       name,
       scope,
@@ -178,9 +174,8 @@ export const handleVariableDelete = async (deps, payload) => {
   const { store, projectService } = deps;
   const { itemId } = payload._event.detail;
 
-  await projectService.deleteResourceItem({
-    resourceType: "variables",
-    resourceIds: [itemId],
+  await projectService.deleteVariables({
+    variableIds: [itemId],
   });
 
   if (store.selectSelectedItemId() === itemId) {

@@ -250,16 +250,15 @@ const loadAssets = async (deps, fileReferences, fontsItems) => {
  */
 const getRenderState = async (deps) => {
   const { store, projectService } = deps;
-  const repository = await projectService.getRepository();
   const {
     layouts,
     images: { items: imageItems },
-    typography: typographyData,
+    textStyles: textStylesData,
     colors: colorsData,
     fonts: fontsData,
     variables: variablesData,
-  } = repository.getState();
-  const typographyItems = typographyData?.items || {};
+  } = projectService.getState();
+  const textStyleItems = textStylesData?.items || {};
   const colorsItems = colorsData?.items || {};
   const fontsItems = fontsData?.items || {};
 
@@ -270,7 +269,7 @@ const getRenderState = async (deps) => {
   const renderStateElements = buildLayoutRenderElements(
     layoutHierarchyStructure,
     imageItems,
-    { items: typographyItems },
+    { items: textStyleItems },
     { items: colorsItems },
     { items: fontsItems },
     { layoutId },
@@ -280,7 +279,7 @@ const getRenderState = async (deps) => {
     layoutHierarchyStructure,
     fontsItems,
     imageItems,
-    typographyItems,
+    textStyleItems,
     colorsItems,
     variablesData,
   };
@@ -336,15 +335,15 @@ const renderLayoutPreview = async (deps) => {
 
 const syncLayoutEditorState = (deps, repositoryState, layoutId) => {
   const { store } = deps;
-  const { layouts, images, typography, colors, fonts, variables } =
+  const { layouts, images, textStyles, colors, fonts, variables } =
     repositoryState;
   const layout = layoutId ? layouts.items?.[layoutId] : undefined;
 
   store.setLayout({ id: layoutId, layout });
   store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
   store.setImages({ images: images || { items: {}, tree: [] } });
-  store.setTypographyData({
-    typographyData: typography || { items: {}, tree: [] },
+  store.setTextStylesData({
+    textStylesData: textStyles || { items: {}, tree: [] },
   });
   store.setColorsData({ colorsData: colors || { items: {}, tree: [] } });
   store.setFontsData({ fontsData: fonts || { items: {}, tree: [] } });
@@ -357,8 +356,8 @@ export const handleAfterMount = async (deps) => {
   const { appService, projectService, render, refs, graphicsService } = deps;
   const payload = appService.getPayload() || {};
   const { layoutId } = payload;
-  const repository = await projectService.getRepository();
-  syncLayoutEditorState(deps, repository.getState(), layoutId);
+  await projectService.ensureRepository();
+  syncLayoutEditorState(deps, projectService.getState(), layoutId);
 
   const { canvas } = refs;
   await graphicsService.init({ canvas: canvas });
@@ -394,8 +393,8 @@ export const handleAddLayoutClick = handleRenderOnly;
 const refreshLayoutEditorData = async (deps) => {
   const { appService, projectService, render } = deps;
   const { layoutId } = appService.getPayload();
-  const repository = await projectService.getRepository();
-  syncLayoutEditorState(deps, repository.getState(), layoutId);
+  await projectService.ensureRepository();
+  syncLayoutEditorState(deps, projectService.getState(), layoutId);
   render();
   await renderLayoutPreview(deps);
 };
@@ -566,12 +565,13 @@ async function handleDebouncedUpdate(deps, payload) {
   }
 
   const shouldReplace = replace === true || diff.requiresReplace;
+  const { id: _ignoredItemId, ...nextReplaceData } = updatedItem;
 
   // Save to repository
   await projectService.updateLayoutElement({
     layoutId,
     elementId: selectedItemId,
-    data: shouldReplace ? updatedItem : diff.patch,
+    data: shouldReplace ? nextReplaceData : diff.patch,
     replace: shouldReplace,
   });
 
@@ -592,7 +592,7 @@ const subscriptions = (deps) => {
       matches: matchesRemoteTargets([
         "layouts",
         "images",
-        "typography",
+        "textStyles",
         "colors",
         "fonts",
         "variables",

@@ -24,6 +24,11 @@ export const assetItems = [
     name: "Transforms",
     path: "/project/transforms",
   },
+  {
+    id: "animations",
+    name: "Animations",
+    path: "/project/animations",
+  },
 ];
 
 export const userInterfaceItems = [
@@ -38,9 +43,9 @@ export const userInterfaceItems = [
     path: "/project/fonts",
   },
   {
-    id: "typography",
-    name: "Typography",
-    path: "/project/typography",
+    id: "textStyles",
+    name: "Text Styles",
+    path: "/project/text-styles",
   },
   {
     id: "layouts",

@@ -9,7 +9,10 @@ import {
   createCommandEnvelope,
   createProjectCollabService,
 } from "../../src/deps/services/shared/collab/index.js";
-import { applyCommandToRepositoryState } from "../../src/deps/services/shared/projectRepository.js";
+import {
+  applyCommandToRepositoryState,
+  initialProjectData,
+} from "../../src/deps/services/shared/projectRepository.js";
 import {
   createInMemoryServerTransport,
   parseToken,
@@ -182,25 +185,6 @@ const buildScenario = (input) => {
 const createServer = ({ projectId, store, clock }) => {
   const projectStates = new Map();
 
-  const createInitialRepositoryState = (nextProjectId) => ({
-    project: { id: nextProjectId, name: "", description: "" },
-    story: { initialSceneId: "" },
-    scenes: { items: {}, tree: [] },
-    images: { items: {}, tree: [] },
-    tweens: { items: {}, tree: [] },
-    sounds: { items: {}, tree: [] },
-    videos: { items: {}, tree: [] },
-    characters: { items: {}, tree: [] },
-    fonts: { items: {}, tree: [] },
-    transforms: { items: {}, tree: [] },
-    colors: { items: {}, tree: [] },
-    typography: { items: {}, tree: [] },
-    variables: { items: {}, tree: [] },
-    components: { items: {}, tree: [] },
-    layouts: { items: {}, tree: [] },
-    model_version: 2,
-  });
-
   return createSyncServer({
     auth: {
       verifyToken: async (token) => {
@@ -230,7 +214,7 @@ const createServer = ({ projectId, store, clock }) => {
         }
         const currentState =
           projectStates.get(command.projectId) ||
-          createInitialRepositoryState(command.projectId);
+          structuredClone(initialProjectData);
         const applyResult = applyCommandToRepositoryState({
           repositoryState: currentState,
           command,

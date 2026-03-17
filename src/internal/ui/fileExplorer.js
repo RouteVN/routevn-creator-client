@@ -1,9 +1,9 @@
 import { nanoid } from "nanoid";
 import {
-  getFirstTypographyId,
-  getTypographyCount,
-  getTypographyRemovalCount,
-} from "../../constants/typography.js";
+  getFirstTextStyleId,
+  getTextStyleCount,
+  getTextStyleRemovalCount,
+} from "../../constants/textStyles.js";
 import { recursivelyCheckResource } from "../project/projection.js";
 
 const isTextElementType = (type) =>
@@ -84,6 +84,89 @@ const createActionHandlers = ({ handleAction, handleMove }) => {
 
 const noopRefresh = async () => {};
 
+const RESOURCE_FILE_EXPLORER_API = Object.freeze({
+  images: {
+    createMethod: "createImage",
+    updateMethod: "updateImage",
+    moveMethod: "moveImage",
+    deleteMethod: "deleteImages",
+    idField: "imageId",
+    deleteField: "imageIds",
+  },
+  sounds: {
+    createMethod: "createSound",
+    updateMethod: "updateSound",
+    moveMethod: "moveSound",
+    deleteMethod: "deleteSounds",
+    idField: "soundId",
+    deleteField: "soundIds",
+  },
+  videos: {
+    createMethod: "createVideo",
+    updateMethod: "updateVideo",
+    moveMethod: "moveVideo",
+    deleteMethod: "deleteVideos",
+    idField: "videoId",
+    deleteField: "videoIds",
+  },
+  animations: {
+    createMethod: "createAnimation",
+    updateMethod: "updateAnimation",
+    moveMethod: "moveAnimation",
+    deleteMethod: "deleteAnimations",
+    idField: "animationId",
+    deleteField: "animationIds",
+  },
+  characters: {
+    createMethod: "createCharacter",
+    updateMethod: "updateCharacter",
+    moveMethod: "moveCharacter",
+    deleteMethod: "deleteCharacters",
+    idField: "characterId",
+    deleteField: "characterIds",
+  },
+  fonts: {
+    createMethod: "createFont",
+    updateMethod: "updateFont",
+    moveMethod: "moveFont",
+    deleteMethod: "deleteFonts",
+    idField: "fontId",
+    deleteField: "fontIds",
+  },
+  transforms: {
+    createMethod: "createTransform",
+    updateMethod: "updateTransform",
+    moveMethod: "moveTransform",
+    deleteMethod: "deleteTransforms",
+    idField: "transformId",
+    deleteField: "transformIds",
+  },
+  colors: {
+    createMethod: "createColor",
+    updateMethod: "updateColor",
+    moveMethod: "moveColor",
+    deleteMethod: "deleteColors",
+    idField: "colorId",
+    deleteField: "colorIds",
+  },
+  textStyles: {
+    createMethod: "createTextStyle",
+    updateMethod: "updateTextStyle",
+    moveMethod: "moveTextStyle",
+    deleteMethod: "deleteTextStyles",
+    idField: "textStyleId",
+    deleteField: "textStyleIds",
+  },
+  variables: {
+    createMethod: "createVariable",
+    updateMethod: "updateVariable",
+    moveMethod: "moveVariable",
+    deleteMethod: "deleteVariables",
+    idField: "variableId",
+    deleteField: "variableIds",
+  },
+});
+
 const validateResourceDeletion = async ({
   appService,
   projectService,
@@ -113,20 +196,20 @@ const validateResourceDeletion = async ({
     }
   }
 
-  if (currentItemType === "typography") {
-    const typographyCount = getTypographyCount(state.typography);
-    const removalCount = getTypographyRemovalCount(state.typography, itemId);
-    if (typographyCount - removalCount < 1) {
-      appService.showToast("At least one typography must remain.");
+  if (currentItemType === "textStyle") {
+    const textStyleCount = getTextStyleCount(state.textStyles);
+    const removalCount = getTextStyleRemovalCount(state.textStyles, itemId);
+    if (textStyleCount - removalCount < 1) {
+      appService.showToast("At least one text style must remain.");
       return false;
     }
   }
 
   let checkTargets = ["scenes", "layouts"];
-  if (currentItemType === "typography") {
+  if (currentItemType === "textStyle") {
     checkTargets = ["layouts"];
   } else if (currentItemType === "color" || currentItemType === "font") {
-    checkTargets = ["typography"];
+    checkTargets = ["textStyles"];
   } else if (resourceType === "characters") {
     checkTargets = ["scenes", "layouts"];
   }
@@ -149,6 +232,8 @@ export const createResourceFileExplorerHandlers = ({
   resourceType,
   refresh = noopRefresh,
 }) => {
+  const resourceApi = RESOURCE_FILE_EXPLORER_API[resourceType];
+
   return createActionHandlers({
     handleAction: async ({ deps, detail }) => {
       const { appService, projectService } = deps;
@@ -162,9 +247,8 @@ export const createResourceFileExplorerHandlers = ({
       const currentItem = collection?.items?.[itemId];
 
       if (action === "new-item") {
-        await projectService.createResourceItem({
-          resourceType,
-          resourceId: nanoid(),
+        await projectService[resourceApi.createMethod]({
+          [resourceApi.idField]: nanoid(),
           data: {
             type: "folder",
             name: "New Folder",
@@ -177,9 +261,8 @@ export const createResourceFileExplorerHandlers = ({
           return;
         }
 
-        await projectService.createResourceItem({
-          resourceType,
-          resourceId: nanoid(),
+        await projectService[resourceApi.createMethod]({
+          [resourceApi.idField]: nanoid(),
           data: {
             type: "folder",
             name: "New Folder",
@@ -192,9 +275,8 @@ export const createResourceFileExplorerHandlers = ({
           return;
         }
 
-        await projectService.updateResourceItem({
-          resourceType,
-          resourceId: itemId,
+        await projectService[resourceApi.updateMethod]({
+          [resourceApi.idField]: itemId,
           data: {
             name: detail.newName,
           },
@@ -215,9 +297,8 @@ export const createResourceFileExplorerHandlers = ({
           return;
         }
 
-        await projectService.deleteResourceItem({
-          resourceType,
-          resourceIds: [itemId],
+        await projectService[resourceApi.deleteMethod]({
+          [resourceApi.deleteField]: [itemId],
         });
       } else if (
         action &&
@@ -230,9 +311,8 @@ export const createResourceFileExplorerHandlers = ({
         };
         delete nextValue.action;
 
-        await projectService.createResourceItem({
-          resourceType,
-          resourceId: nextValue.id,
+        await projectService[resourceApi.createMethod]({
+          [resourceApi.idField]: nextValue.id,
           data: nextValue,
           parentId: itemId || null,
           position: "last",
@@ -252,9 +332,8 @@ export const createResourceFileExplorerHandlers = ({
         return;
       }
 
-      await projectService.moveResourceItem({
-        resourceType,
-        resourceId: move.itemId,
+      await projectService[resourceApi.moveMethod]({
+        [resourceApi.idField]: move.itemId,
         parentId: move.parentId,
         position: move.repositoryPosition,
         positionTargetId: move.repositoryPositionTargetId,
@@ -437,18 +516,19 @@ export const createLayoutElementsFileExplorerHandlers = ({
           id: nanoid(),
         };
         delete nextValue.action;
+        const { id: nextElementId, ...nextElementData } = nextValue;
 
         if (isTextElementType(nextValue.type)) {
-          const firstTypographyId = getFirstTypographyId(state.typography);
-          if (firstTypographyId) {
-            nextValue.typographyId = firstTypographyId;
+          const firstTextStyleId = getFirstTextStyleId(state.textStyles);
+          if (firstTextStyleId) {
+            nextElementData.textStyleId = firstTextStyleId;
           }
         }
 
         await projectService.createLayoutElement({
           layoutId,
-          elementId: nextValue.id,
-          data: nextValue,
+          elementId: nextElementId,
+          data: nextElementData,
           parentId: itemId || null,
           position: "last",
         });
@@ -660,13 +740,14 @@ export const createCharacterSpritesFileExplorerHandlers = ({
           id: nanoid(),
         };
         delete nextValue.action;
+        const { id: nextSpriteId, ...nextSpriteData } = nextValue;
 
         await projectService.createCharacterSpriteItem({
           characterId,
-          spriteId: nextValue.id,
+          spriteId: nextSpriteId,
           parentId: itemId ?? null,
           position: "last",
-          data: nextValue,
+          data: nextSpriteData,
         });
       } else {
         return;

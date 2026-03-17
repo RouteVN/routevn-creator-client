@@ -526,7 +526,7 @@ Current resource page families:
 Current custom resource center components:
 
 - `src/components/charactersResourcesView/`
-- `src/components/typographyResourcesView/`
+- `src/components/textStyleResourcesView/`
 
 Shared page-family helpers may own:
 

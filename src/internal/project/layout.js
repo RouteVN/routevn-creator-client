@@ -1,5 +1,5 @@
 import { resolveLayoutReferences } from "route-engine-js";
-import { getFirstTypographyId } from "../../constants/typography.js";
+import { getFirstTextStyleId } from "../../constants/textStyles.js";
 import { normalizeEngineActions } from "./engineActions.js";
 
 const TEXT_NODE_TYPES = new Set([
@@ -65,57 +65,62 @@ const toFiniteNumber = (value, fallback) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-const resolveTypographyId = (nodeTypographyId, typographyData = {}) => {
-  const typographyItems = typographyData.items || {};
+const resolveTextStyleId = (nodeTextStyleId, textStylesData = {}) => {
+  const textStyleItems = textStylesData.items || {};
 
-  if (nodeTypographyId && typographyItems[nodeTypographyId]) {
-    return nodeTypographyId;
+  if (nodeTextStyleId && textStyleItems[nodeTextStyleId]) {
+    return nodeTextStyleId;
   }
 
-  return getFirstTypographyId(typographyData);
+  return getFirstTextStyleId(textStylesData);
 };
 
-const normalizeTextStyleResource = (typography) => {
-  if (!typography?.fontId || !typography?.colorId) {
+const normalizeTextStyleResource = (textStyleData) => {
+  if (!textStyleData?.fontId || !textStyleData?.colorId) {
     return undefined;
   }
 
   const textStyle = {
-    fontId: typography.fontId,
-    colorId: typography.colorId,
+    fontId: textStyleData.fontId,
+    colorId: textStyleData.colorId,
     fontSize: toFiniteNumber(
-      typography.fontSize,
+      textStyleData.fontSize,
       DEFAULT_TEXT_STYLE_RESOURCE.fontSize,
     ),
-    fontWeight: typography.fontWeight ?? DEFAULT_TEXT_STYLE_RESOURCE.fontWeight,
-    fontStyle: typography.fontStyle ?? DEFAULT_TEXT_STYLE_RESOURCE.fontStyle,
+    fontWeight:
+      textStyleData.fontWeight ?? DEFAULT_TEXT_STYLE_RESOURCE.fontWeight,
+    fontStyle: textStyleData.fontStyle ?? DEFAULT_TEXT_STYLE_RESOURCE.fontStyle,
     lineHeight: toFiniteNumber(
-      typography.lineHeight,
+      textStyleData.lineHeight,
       DEFAULT_TEXT_STYLE_RESOURCE.lineHeight,
     ),
-    breakWords: typography.breakWords ?? DEFAULT_TEXT_STYLE_RESOURCE.breakWords,
+    breakWords:
+      textStyleData.breakWords ?? DEFAULT_TEXT_STYLE_RESOURCE.breakWords,
   };
 
-  if (typeof typography.align === "string" && typography.align.length > 0) {
-    textStyle.align = typography.align;
+  if (
+    typeof textStyleData.align === "string" &&
+    textStyleData.align.length > 0
+  ) {
+    textStyle.align = textStyleData.align;
   }
 
-  const wordWrapWidth = toWordWrapWidth(typography.wordWrapWidth);
+  const wordWrapWidth = toWordWrapWidth(textStyleData.wordWrapWidth);
   if (wordWrapWidth !== undefined) {
-    textStyle.wordWrap = typography.wordWrap ?? true;
+    textStyle.wordWrap = textStyleData.wordWrap ?? true;
     textStyle.wordWrapWidth = wordWrapWidth;
-  } else if (typeof typography.wordWrap === "boolean") {
-    textStyle.wordWrap = typography.wordWrap;
+  } else if (typeof textStyleData.wordWrap === "boolean") {
+    textStyle.wordWrap = textStyleData.wordWrap;
   }
 
-  if (typography.strokeColorId) {
-    textStyle.strokeColorId = typography.strokeColorId;
+  if (textStyleData.strokeColorId) {
+    textStyle.strokeColorId = textStyleData.strokeColorId;
   }
-  if (typography.strokeAlpha !== undefined) {
-    textStyle.strokeAlpha = typography.strokeAlpha;
+  if (textStyleData.strokeAlpha !== undefined) {
+    textStyle.strokeAlpha = textStyleData.strokeAlpha;
   }
-  if (typography.strokeWidth !== undefined) {
-    textStyle.strokeWidth = typography.strokeWidth;
+  if (textStyleData.strokeWidth !== undefined) {
+    textStyle.strokeWidth = textStyleData.strokeWidth;
   }
 
   return textStyle;
@@ -140,30 +145,27 @@ const buildNodeTextStyleOverrides = (node) => {
 
 const ensureNodeTextStyleId = ({
   textStyles,
-  typographyData,
+  textStylesData,
   layoutId,
   node,
-  typographyId,
+  textStyleId,
   variant,
 }) => {
-  const resolvedTypographyId = resolveTypographyId(
-    typographyId,
-    typographyData,
-  );
-  if (!resolvedTypographyId) {
+  const resolvedTextStyleId = resolveTextStyleId(textStyleId, textStylesData);
+  if (!resolvedTextStyleId) {
     return undefined;
   }
 
   const overrides = buildNodeTextStyleOverrides(node);
   if (!overrides) {
-    return resolvedTypographyId;
+    return resolvedTextStyleId;
   }
 
   const derivedId = `__layout:${layoutId}:${node.id}:${variant}`;
   if (!textStyles[derivedId]) {
-    const baseTextStyle = textStyles[resolvedTypographyId];
+    const baseTextStyle = textStyles[resolvedTextStyleId];
     if (!baseTextStyle) {
-      return resolvedTypographyId;
+      return resolvedTextStyleId;
     }
 
     textStyles[derivedId] = {
@@ -279,23 +281,23 @@ const applyTextNode = ({ element, node, context }) => {
 
   const textStyleId = ensureNodeTextStyleId({
     textStyles: context.textStyles,
-    typographyData: context.typographyData,
+    textStylesData: context.textStylesData,
     layoutId: context.layoutId,
     node,
-    typographyId: node.typographyId,
+    textStyleId: node.textStyleId,
     variant: "base",
   });
   if (textStyleId) {
     nextElement.textStyleId = textStyleId;
   }
 
-  if (node.hoverTypographyId) {
+  if (node.hoverTextStyleId) {
     const hoverTextStyleId = ensureNodeTextStyleId({
       textStyles: context.textStyles,
-      typographyData: context.typographyData,
+      textStylesData: context.textStylesData,
       layoutId: context.layoutId,
       node,
-      typographyId: node.hoverTypographyId,
+      textStyleId: node.hoverTextStyleId,
       variant: "hover",
     });
 
@@ -307,13 +309,13 @@ const applyTextNode = ({ element, node, context }) => {
     }
   }
 
-  if (node.clickedTypographyId) {
+  if (node.clickTextStyleId) {
     const clickTextStyleId = ensureNodeTextStyleId({
       textStyles: context.textStyles,
-      typographyData: context.typographyData,
+      textStylesData: context.textStylesData,
       layoutId: context.layoutId,
       node,
-      typographyId: node.clickedTypographyId,
+      textStyleId: node.clickTextStyleId,
       variant: "click",
     });
 
@@ -542,10 +544,10 @@ const createFontResources = (fontsData = {}) => {
   );
 };
 
-const createTextStyleResources = (typographyData = {}) => {
-  return Object.entries(typographyData.items || {}).reduce(
-    (result, [typographyId, item]) => {
-      if (item?.type && item.type !== "typography") {
+const createTextStyleResources = (textStylesData = {}) => {
+  return Object.entries(textStylesData.items || {}).reduce(
+    (result, [textStyleId, item]) => {
+      if (item?.type && item.type !== "textStyle") {
         return result;
       }
 
@@ -554,7 +556,7 @@ const createTextStyleResources = (typographyData = {}) => {
         return result;
       }
 
-      result[typographyId] = textStyle;
+      result[textStyleId] = textStyle;
       return result;
     },
     {},
@@ -563,7 +565,7 @@ const createTextStyleResources = (typographyData = {}) => {
 
 export const createLayoutReferenceResources = (
   imageItems,
-  typographyData,
+  textStylesData,
   colorsData,
   fontsData,
 ) => {
@@ -571,21 +573,21 @@ export const createLayoutReferenceResources = (
     images: createImageResources(imageItems),
     colors: createColorResources(colorsData),
     fonts: createFontResources(fontsData),
-    textStyles: createTextStyleResources(typographyData),
+    textStyles: createTextStyleResources(textStylesData),
   };
 };
 
 export const buildLayoutElements = (
   layout,
   imageItems,
-  typographyData,
+  textStylesData,
   colorsData,
   fontsData,
   options = {},
 ) => {
   const resources = createLayoutReferenceResources(
     imageItems,
-    typographyData,
+    textStylesData,
     colorsData,
     fontsData,
   );
@@ -594,7 +596,7 @@ export const buildLayoutElements = (
   };
   const context = {
     layoutId: options.layoutId ?? "preview",
-    typographyData,
+    textStylesData,
     textStyles,
   };
 
@@ -618,7 +620,7 @@ export const buildLayoutElements = (
 export const buildLayoutRenderElements = (
   layout,
   imageItems,
-  typographyData,
+  textStylesData,
   colorsData,
   fontsData,
   options = {},
@@ -626,7 +628,7 @@ export const buildLayoutRenderElements = (
   const { elements, resources } = buildLayoutElements(
     layout,
     imageItems,
-    typographyData,
+    textStylesData,
     colorsData,
     fontsData,
     options,
@@ -730,7 +732,7 @@ const createResourceSelection = () => ({
   layouts: new Set(),
   characters: new Set(),
   transforms: new Set(),
-  tweens: new Set(),
+  animations: new Set(),
 });
 
 const addResourceIdToSelection = (selection, resources, resourceId) => {
@@ -765,8 +767,8 @@ const addResourceIdToSelection = (selection, resources, resourceId) => {
   if (resources.transforms?.[resourceId]) {
     selection.transforms.add(resourceId);
   }
-  if (resources.tweens?.[resourceId]) {
-    selection.tweens.add(resourceId);
+  if (resources.animations?.[resourceId]) {
+    selection.animations.add(resourceId);
   }
 };
 
@@ -1045,7 +1047,7 @@ export const extractFileIdsForScene = (projectData, sceneId) => {
     layouts: scopedLayouts,
     characters: pickByIds(resources.characters, selection.characters),
     transforms: pickByIds(resources.transforms, selection.transforms),
-    tweens: pickByIds(resources.tweens, selection.tweens),
+    animations: pickByIds(resources.animations, selection.animations),
   };
 
   return dedupeFileReferences(extractFileIdsFromRenderState(scopedResources));
@@ -1104,14 +1106,14 @@ export const extractInitialHybridSceneIds = (projectData, sceneId) => {
 export const layoutHierarchyStructureToRenderState = (
   layout,
   imageItems,
-  typographyData,
+  textStylesData,
   colorsData,
   fontsData,
 ) => {
   return buildLayoutRenderElements(
     layout,
     imageItems,
-    typographyData,
+    textStylesData,
     colorsData,
     fontsData,
   );

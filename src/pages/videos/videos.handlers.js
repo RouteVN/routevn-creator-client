@@ -50,9 +50,8 @@ const createVideosFromFiles = async ({ deps, files, parentId } = {}) => {
   }
 
   for (const result of successfulUploads) {
-    await projectService.createResourceItem({
-      resourceType: "videos",
-      resourceId: nanoid(),
+    await projectService.createVideo({
+      videoId: nanoid(),
       data: {
         type: "video",
         fileId: result.fileId,
@@ -187,9 +186,8 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   const { uploadResult } = result;
-  await projectService.updateResourceItem({
-    resourceType: "videos",
-    resourceId: selectedItem.id,
+  await projectService.updateVideo({
+    videoId: selectedItem.id,
     data: {
       fileId: uploadResult.fileId,
       thumbnailFileId: uploadResult.thumbnailFileId,
@@ -272,9 +270,8 @@ export const handleEditFormAction = async (deps, payload) => {
       }
     : {};
 
-  await projectService.updateResourceItem({
-    resourceType: "videos",
-    resourceId: editItemId,
+  await projectService.updateVideo({
+    videoId: editItemId,
     data: {
       name,
       description: values?.description ?? "",
@@ -290,9 +287,8 @@ export const handleItemDelete = async (deps, payload) => {
   const { projectService, appService, render } = deps;
   const { itemId } = payload._event.detail;
 
-  const result = await projectService.deleteResourceItemIfUnused({
-    resourceType: "videos",
-    resourceId: itemId,
+  const result = await projectService.deleteVideoIfUnused({
+    videoId: itemId,
     checkTargets: ["scenes", "layouts"],
   });
 

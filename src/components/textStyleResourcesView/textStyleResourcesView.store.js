@@ -67,8 +67,8 @@ export const selectViewData = ({ state, props }) => {
     searchPlaceholder: props.searchPlaceholder ?? "Search...",
     emptyMessage:
       props.emptyMessage ??
-      `No typography found matching "${props.searchQuery ?? ""}"`,
-    addText: props.addText ?? "Add Typography",
+      `No text styles found matching "${props.searchQuery ?? ""}"`,
+    addText: props.addText ?? "Add Text Style",
     dropdownMenu: state.dropdownMenu,
     previewWidth: 328,
   };

@@ -339,7 +339,7 @@ export const createWebProjectServiceAdapters = ({
       assertSupportedProjectState(state);
       const adapter = await getStoreByProject(projectId);
 
-      const resolvedProjectId = state.project?.id || projectId;
+      const resolvedProjectId = projectId;
       const resolvedPartitions = partitioning.getBasePartitions(
         resolvedProjectId,
         partitions,

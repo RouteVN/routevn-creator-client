@@ -1,4 +1,5 @@
 import { createProjectRepositoryRuntime } from "./projectRepositoryRuntime.js";
+import { validateState as validateCreatorModelState } from "@routevn/creator-model";
 import {
   COMMAND_EVENT_MODEL,
   COMMAND_TYPES,
@@ -19,33 +20,29 @@ export const createTreeCollection = () => {
 };
 
 export const initialProjectData = {
-  model_version: 2,
-  project: {
-    name: "",
-    description: "",
-  },
+  project: {},
   story: {
-    initialSceneId: "",
+    initialSceneId: null,
   },
   images: createTreeCollection(),
-  tweens: createTreeCollection(),
   sounds: createTreeCollection(),
   videos: createTreeCollection(),
+  animations: createTreeCollection(),
   characters: createTreeCollection(),
   fonts: createTreeCollection(),
   transforms: createTreeCollection(),
   colors: createTreeCollection(),
-  typography: createTreeCollection(),
+  textStyles: createTreeCollection(),
   variables: createTreeCollection(),
-  components: createTreeCollection(),
   layouts: createTreeCollection(),
   scenes: createTreeCollection(),
 };
 
 export const assertSupportedProjectState = (state) => {
-  if (!state || state.model_version !== 2) {
+  const result = validateCreatorModelState({ state });
+  if (!result.valid) {
     throw new Error(
-      "Unsupported project model version. RouteVN only supports model_version=2 projects.",
+      result.error?.message || "Unsupported project repository state",
     );
   }
 };
@@ -198,9 +195,7 @@ export const createProjectCreateCommand = ({
   meta,
 }) => {
   const resolvedProjectId =
-    typeof projectId === "string" && projectId.length > 0
-      ? projectId
-      : state?.project?.id;
+    typeof projectId === "string" && projectId.length > 0 ? projectId : "";
   if (!resolvedProjectId) {
     throw new Error("projectId is required for project.create command");
   }
@@ -236,7 +231,7 @@ export const createProjectCreateCommand = ({
     actor: structuredClone(
       actor || defaultInitializationActor(resolvedProjectId),
     ),
-    clientTs: toFiniteTimestamp(clientTs, state?.project?.createdAt ?? 0),
+    clientTs: toFiniteTimestamp(clientTs, 0),
     commandVersion: COMMAND_EVENT_MODEL.commandVersion,
     ...(meta !== undefined ? { meta: structuredClone(meta) } : {}),
   };
@@ -369,13 +364,8 @@ const applyRepositoryEventToRepositoryState = ({
   return applyResult.repositoryState;
 };
 
-const createInitialRepositoryStateForProject = (projectId) => ({
-  ...structuredClone(initialProjectData),
-  project: {
-    ...structuredClone(initialProjectData.project || {}),
-    id: projectId,
-  },
-});
+const createInitialRepositoryStateForProject = () =>
+  structuredClone(initialProjectData);
 
 export const createProjectRepository = async ({
   projectId,
@@ -386,7 +376,7 @@ export const createProjectRepository = async ({
     projectId,
     store,
     events: sourceEvents,
-    createInitialState: () => createInitialRepositoryStateForProject(projectId),
+    createInitialState: () => createInitialRepositoryStateForProject(),
     reduceEventToState: ({ repositoryState, event }) =>
       applyRepositoryEventToRepositoryState({
         repositoryState,

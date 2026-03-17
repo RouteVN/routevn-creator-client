@@ -122,55 +122,42 @@ export const handleCharacterCreated = async (deps, payload) => {
   const { projectService } = deps;
   const { groupId, name, description, shortcut, avatarFileId } =
     payload._event.detail;
-
-  try {
-    // Create default sprites folder with proper structure
-    const defaultSpritesFolderId = nanoid();
-
-    let characterData = {
-      id: nanoid(),
-      type: "character",
-      name: name,
-      description: description,
-      shortcut: shortcut || "",
-      sprites: {
-        tree: [
-          {
-            id: defaultSpritesFolderId,
-            children: [],
-          },
-        ],
-        items: {
-          [defaultSpritesFolderId]: {
-            type: "folder",
-            name: "Default Sprites",
-            parentId: null,
-          },
+  const characterId = nanoid();
+  const defaultSpritesFolderId = nanoid();
+  const characterData = {
+    type: "character",
+    name,
+    description,
+    shortcut: shortcut || "",
+    sprites: {
+      tree: [
+        {
+          id: defaultSpritesFolderId,
+          children: [],
+        },
+      ],
+      items: {
+        [defaultSpritesFolderId]: {
+          type: "folder",
+          name: "Default Sprites",
+          parentId: null,
         },
       },
-    };
+    },
+  };
 
-    // If avatar fileId is provided, add it to character data
-    if (avatarFileId) {
-      characterData.fileId = avatarFileId;
-    }
-
-    // Add character to repository
-    await projectService.createResourceItem({
-      resourceType: "characters",
-      resourceId: characterData.id,
-      data: characterData,
-      parentId: groupId,
-      position: "last",
-    });
-
-    // Update store with new data
-    await refreshCharactersData(deps);
-  } catch (error) {
-    console.error("Failed to create character:", error);
-
-    throw error;
+  if (avatarFileId) {
+    characterData.fileId = avatarFileId;
   }
+
+  await projectService.createCharacter({
+    characterId,
+    data: characterData,
+    parentId: groupId,
+    position: "last",
+  });
+
+  await refreshCharactersData(deps);
 };
 
 export const handleSpritesButtonClick = (deps, payload) => {
@@ -226,9 +213,8 @@ export const handleDetailPanelAvatarClick = async (deps) => {
       };
 
       // Update the selected character in the repository with the new avatar
-      await projectService.updateResourceItem({
-        resourceType: "characters",
-        resourceId: selectedItem.id,
+      await projectService.updateCharacter({
+        characterId: selectedItem.id,
         data: updateData,
       });
 
@@ -352,9 +338,8 @@ export const handleItemDelete = async (deps, payload) => {
   }
 
   // Perform the delete operation
-  await projectService.deleteResourceItem({
-    resourceType: "characters",
-    resourceIds: [itemId],
+  await projectService.deleteCharacters({
+    characterIds: [itemId],
   });
 
   await refreshCharactersData(deps);
@@ -412,9 +397,8 @@ export const handleEditFormAction = async (deps, payload) => {
       updateData.fileId = editAvatarFileId;
     }
 
-    await projectService.updateResourceItem({
-      resourceType: "characters",
-      resourceId: editItemId,
+    await projectService.updateCharacter({
+      characterId: editItemId,
       data: updateData,
     });
 

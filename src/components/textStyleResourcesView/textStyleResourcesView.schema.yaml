@@ -1,4 +1,4 @@
-componentName: rvn-typography-resources-view
+componentName: rvn-text-style-resources-view
 propsSchema:
   type: object
   properties:
@@ -7,10 +7,10 @@ propsSchema:
       description: Optional title to display in the header
     groups:
       type: array
-      description: Array of typography groups to display
+      description: Array of text style groups to display
     selectedItemId:
       type: string
-      description: ID of the currently selected typography item
+      description: ID of the currently selected text style item
     searchQuery:
       type: string
       description: Current search query

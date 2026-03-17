@@ -1,4 +1,4 @@
-componentName: rvn-typography
+componentName: rvn-animations
 propsSchema:
   type: object
   properties: {}

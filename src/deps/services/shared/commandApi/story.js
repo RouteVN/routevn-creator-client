@@ -414,12 +414,12 @@ export const createStoryCommandApi = (shared) => {
         payload: {
           sectionId,
           lines: normalizedLines,
-          ...shared.buildPlacementPayload({
-            parentId,
-            index: resolvedIndex,
-            position: position || "last",
-            positionTargetId,
-          }),
+          ...(resolvedIndex !== undefined
+            ? { index: resolvedIndex }
+            : {
+                position: position || "last",
+                ...(positionTargetId !== undefined ? { positionTargetId } : {}),
+              }),
         },
         partitions: scenePartition
           ? [basePartition, scenePartition]
@@ -504,12 +504,12 @@ export const createStoryCommandApi = (shared) => {
         payload: {
           lineId,
           toSectionId,
-          ...shared.buildPlacementPayload({
-            parentId,
-            index: resolvedIndex,
-            position,
-            positionTargetId,
-          }),
+          ...(resolvedIndex !== undefined
+            ? { index: resolvedIndex }
+            : {
+                position,
+                ...(positionTargetId !== undefined ? { positionTargetId } : {}),
+              }),
         },
         partitions: [basePartition, sourceScenePartition, targetScenePartition],
       });

@@ -1,7 +1,5 @@
 import assert from "node:assert/strict";
-import {
-  createCommandEnvelope,
-} from "../src/deps/services/shared/collab/commandEnvelope.js";
+import { createCommandEnvelope } from "../src/deps/services/shared/collab/commandEnvelope.js";
 import {
   createProjectedSyncHarness,
   normalizeStateForCompare,
@@ -110,7 +108,11 @@ try {
       type: "image.create",
       payload: {
         imageId: "img-1",
-        data: { name: "bg-1", fileId: "file-1" },
+        data: {
+          type: "image",
+          name: "bg-1",
+          fileId: "file-1",
+        },
       },
       actor: actorB,
       clientTs: 1300,
@@ -118,7 +120,7 @@ try {
   );
 
   await waitFor(
-    () => Boolean(clientA.getState().resources.images.items["img-1"]),
+    () => Boolean(clientA.getState().images.items["img-1"]),
     { label: "clientA.images.img-1" },
   );
 
@@ -129,7 +131,12 @@ try {
       type: "layout.create",
       payload: {
         layoutId: "layout-1",
-        data: { name: "Layout 1", layoutType: "scene", elements: { items: {}, tree: [] } },
+        data: {
+          type: "layout",
+          name: "Layout 1",
+          layoutType: "normal",
+          elements: { items: {}, tree: [] },
+        },
       },
       actor: actorA,
       clientTs: 1400,
@@ -137,9 +144,9 @@ try {
   );
 
   await waitFor(
-    () => Boolean(clientB.getState().resources.layouts.items["layout-1"]),
+    () => Boolean(clientB.getState().layouts.items["layout-1"]),
     {
-      label: "clientB.resources.layouts.layout-1",
+      label: "clientB.layouts.layout-1",
     },
   );
 
@@ -151,7 +158,13 @@ try {
       payload: {
         layoutId: "layout-1",
         elementId: "el-1",
-        data: { type: "text", x: 100, y: 100, opacity: 1 },
+        data: {
+          type: "text",
+          name: "Text Element",
+          x: 100,
+          y: 100,
+          opacity: 1,
+        },
       },
       actor: actorB,
       clientTs: 1500,
@@ -161,11 +174,11 @@ try {
   await waitFor(
     () =>
       Boolean(
-        clientA.getState().resources.layouts.items["layout-1"]?.elements?.[
+        clientA.getState().layouts.items["layout-1"]?.elements?.[
           "el-1"
         ],
       ),
-    { label: "clientA.resources.layouts.layout-1.el-1" },
+    { label: "clientA.layouts.layout-1.el-1" },
   );
 
   await clientA.syncNow();

@@ -216,20 +216,23 @@ await runScenario("partition-isolation", async () => {
         type: "image.create",
         payload: {
           imageId: "img-1",
-          data: { name: "bg", fileId: "file-1" },
+          data: {
+            type: "image",
+            name: "bg",
+            fileId: "file-1",
+          },
         },
         actor: full.actor,
         clientTs: 3000,
       }),
     );
 
-    await waitFor(
-      () => Boolean(full.client.getState().resources.images.items["img-1"]),
-      { label: "full client sees image resource" },
-    );
+    await waitFor(() => Boolean(full.client.getState().images.items["img-1"]), {
+      label: "full client sees image resource",
+    });
     await sleep(150);
     assert.equal(
-      storyOnly.client.getState().resources.images.items["img-1"],
+      storyOnly.client.getState().images.items["img-1"],
       undefined,
     );
 

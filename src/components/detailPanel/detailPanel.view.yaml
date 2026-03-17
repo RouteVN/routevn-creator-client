@@ -23,10 +23,10 @@ refs:
     eventListeners:
       click:
         handler: handleFontFieldClick
-  typographySelect*:
+  textStyleSelect*:
     eventListeners:
       value-change:
-        handler: handleTypographySelectChange
+        handler: handleTextStyleSelectChange
   popover:
     eventListeners:
       close:
@@ -43,14 +43,14 @@ refs:
     eventListeners:
       form-action:
         handler: handleColorFormActionClick
-  typographyDialog:
+  textStyleDialog:
     eventListeners:
       close:
-        handler: handleCloseTypographyDialog
-  typographyForm:
+        handler: handleCloseTextStyleDialog
+  textStyleForm:
     eventListeners:
       form-action:
-        handler: handleTypographyFormActionClick
+        handler: handleTextStyleFormActionClick
   editableText*:
     eventListeners:
       click:
@@ -132,11 +132,11 @@ template:
                             $else:
                               - rtgl-view w=200 h=150 av=c ah=c bgc=bg bc=bo bw=xs br=md:
                                   - 'rtgl-text style="font-family: ${field.fontFamily}, sans-serif; font-size: 60px; text-align: center;"': ${field.previewText}
-                    $elif field.type == 'typography':
+                    $elif field.type == 'textStyle':
                       - rtgl-view:
                           - rtgl-text c=mu-fg: ${field.label}
                           - $if field.editable:
-                              - rtgl-select#typographySelect${i} av=c :selectedValue=field.value :options=field.options: null
+                              - rtgl-select#textStyleSelect${i} av=c :selectedValue=field.value :options=field.options: null
                             $else:
                               - rtgl-text: ${field.name}
                     $elif field.type == 'image-selector':
@@ -183,9 +183,9 @@ template:
   - rtgl-dialog#colorDialog ?open=${colorDialog.isOpen}:
       - rtgl-view slot=content g=md:
           - rtgl-form#colorForm :defaultValues=colorDialog.defaultValues :form=colorDialog.form w=f: null
-  - rtgl-dialog#typographyDialog ?open=${typographyDialog.isOpen}:
+  - rtgl-dialog#textStyleDialog ?open=${textStyleDialog.isOpen}:
       - rtgl-view slot=content g=md:
-          - rtgl-form#typographyForm :defaultValues=typographyDialog.defaultValues :form=typographyDialog.form w=f: null
+          - rtgl-form#textStyleForm :defaultValues=textStyleDialog.defaultValues :form=textStyleDialog.form w=f: null
   - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.isOpen}:
       - rtgl-view slot=content g=md:
           - rvn-image-selector#imageSelector: null

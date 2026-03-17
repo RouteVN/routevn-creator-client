@@ -45,13 +45,7 @@ const createRepositoryStoreStub = () => {
   };
 };
 
-const makeEnvelope = ({
-  type,
-  payload,
-  scope,
-  partitions,
-  clientTs,
-}) => {
+const makeEnvelope = ({ type, payload, scope, partitions, clientTs }) => {
   return createCommandEnvelope({
     id: `${type}-${clientTs}`,
     projectId,
@@ -63,6 +57,12 @@ const makeEnvelope = ({
     clientTs,
   });
 };
+
+const stripEmptyChildren = (nodes = []) =>
+  nodes.map((node) => {
+    const children = stripEmptyChildren(node.children || []);
+    return children.length > 0 ? { id: node.id, children } : { id: node.id };
+  });
 
 const store = createRepositoryStoreStub();
 const repository = await createProjectRepository({
@@ -177,6 +177,7 @@ await applyCommandToRepository({
     payload: {
       imageId: "image-hero",
       data: {
+        type: "image",
         name: "Hero",
         fileId: "hero.png",
         width: 1280,
@@ -197,6 +198,7 @@ await applyCommandToRepository({
     payload: {
       layoutId: "layout-main",
       data: {
+        type: "layout",
         name: "Main Layout",
         layoutType: "normal",
         elements: {
@@ -290,13 +292,18 @@ await applyCommandToRepository({
 const repositoryState = repository.getState();
 
 assert.equal(repositoryState.story.initialSceneId, "scene-1");
-assert.deepEqual(repositoryState.scenes.tree, [{ id: "scene-1" }]);
+assert.deepEqual(stripEmptyChildren(repositoryState.scenes.tree), [
+  { id: "scene-1" },
+]);
 assert.deepEqual(
-  repositoryState.scenes.items["scene-1"].sections.tree,
+  stripEmptyChildren(repositoryState.scenes.items["scene-1"].sections.tree),
   [{ id: "section-1" }, { id: "section-2" }],
 );
 assert.deepEqual(
-  repositoryState.scenes.items["scene-1"].sections.items["section-1"].lines.tree,
+  stripEmptyChildren(
+    repositoryState.scenes.items["scene-1"].sections.items["section-1"].lines
+      .tree,
+  ),
   [{ id: "line-1" }, { id: "line-2" }],
 );
 
@@ -341,14 +348,15 @@ const spriteHierarchy = toHierarchyStructure(
   repositoryState.characters.items["character-hero"].sprites,
 );
 assert.deepEqual(spriteHierarchy[0].id, "expressions");
-assert.deepEqual(spriteHierarchy[0].children.map((node) => node.id), [
-  "sprite-smile",
-]);
+assert.deepEqual(
+  spriteHierarchy[0].children.map((node) => node.id),
+  ["sprite-smile"],
+);
 
 const renderState = buildLayoutRenderElements(
   layoutHierarchy,
   repositoryState.images.items,
-  repositoryState.typography,
+  repositoryState.textStyles,
   repositoryState.colors,
   repositoryState.fonts,
 );
@@ -374,9 +382,8 @@ assert.deepEqual(domainState.sections["section-1"].lineIds, [
   "line-2",
 ]);
 assert.equal(
-  domainState.resources.characters.items["character-hero"].sprites.items[
-    "sprite-smile"
-  ].fileId,
+  domainState.characters.items["character-hero"].sprites.items["sprite-smile"]
+    .fileId,
   "hero-smile.png",
 );
 

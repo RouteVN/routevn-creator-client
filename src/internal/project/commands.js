@@ -2,14 +2,14 @@ const COMMAND_VERSION = 1;
 
 export const RESOURCE_TYPES = Object.freeze([
   "images",
-  "tweens",
+  "animations",
   "videos",
   "sounds",
   "characters",
   "fonts",
   "transforms",
   "colors",
-  "typography",
+  "textStyles",
   "variables",
   "layouts",
 ]);

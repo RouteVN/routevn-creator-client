@@ -1,6 +1,6 @@
 import { parseAndRender } from "jempl";
 import { toFlatGroups } from "../../internal/project/tree.js";
-import { getFirstTypographyId } from "../../constants/typography.js";
+import { getFirstTextStyleId } from "../../constants/textStyles.js";
 import { getVariableOptions } from "../../internal/project/projection.js";
 
 const config = {
@@ -422,28 +422,28 @@ const config = {
     {
       $when:
         'itemType == "text" || itemType == "text-ref-character-name" || itemType == "text-revealing-ref-dialogue-content" || itemType == "text-ref-choice-item-content" || itemType == "text-ref-dialogue-line-character-name" || itemType == "text-ref-dialogue-line-content"',
-      label: "Typography",
+      label: "Text Styles",
       items: [
         {
           type: "select",
           label: "Default",
-          name: "typographyId",
-          value: "${values.typographyId}",
-          options: "${typographyItems}",
+          name: "textStyleId",
+          value: "${values.textStyleId}",
+          options: "${textStyleItems}",
         },
         {
           type: "select",
           label: "Hover",
-          name: "hoverTypographyId",
-          value: "${values.hoverTypographyId}",
-          options: "${typographyItemsWithNone}",
+          name: "hoverTextStyleId",
+          value: "${values.hoverTextStyleId}",
+          options: "${textStyleItemsWithNone}",
         },
         {
           type: "select",
           label: "Clicked",
-          name: "clickedTypographyId",
-          value: "${values.clickedTypographyId}",
-          options: "${typographyItemsWithNone}",
+          name: "clickTextStyleId",
+          value: "${values.clickTextStyleId}",
+          options: "${textStyleItemsWithNone}",
         },
       ],
     },
@@ -516,7 +516,7 @@ export const createInitialState = () => {
       form: undefined,
       context: {},
     },
-    typographyData: { tree: [], items: {} },
+    textStylesData: { tree: [], items: {} },
     variablesData: { tree: [], items: {} },
     values: {
       x: 0,
@@ -644,8 +644,8 @@ export const setValues = ({ state }, { values } = {}) => {
   state.values = values ?? {};
 };
 
-export const setTypographyData = ({ state }, { typographyData } = {}) => {
-  state.typographyData = typographyData;
+export const setTextStylesData = ({ state }, { textStylesData } = {}) => {
+  state.textStylesData = textStylesData;
 };
 
 export const setVariablesData = ({ state }, { variablesData } = {}) => {
@@ -669,18 +669,18 @@ export const selectTempSelectedImageId = ({ state }) => {
 };
 
 export const selectViewData = ({ state, props: attrs }) => {
-  // Transform typography data to options format
-  const typographyGroups = toFlatGroups(state.typographyData);
-  const typographyItems = typographyGroups.flatMap((group) =>
+  // Transform text style data to options format
+  const textStyleGroups = toFlatGroups(state.textStylesData);
+  const textStyleItems = textStyleGroups.flatMap((group) =>
     group.children.map((item) => ({
       label: item.name,
       value: item.id,
     })),
   );
-  const firstTypographyId = getFirstTypographyId(state.typographyData);
-  const typographyItemsWithNone = [
+  const firstTextStyleId = getFirstTextStyleId(state.textStylesData);
+  const textStyleItemsWithNone = [
     { label: "None", value: "" },
-    ...typographyItems,
+    ...textStyleItems,
   ];
 
   // Transform variables data to options format (number type only for sliders)
@@ -705,14 +705,14 @@ export const selectViewData = ({ state, props: attrs }) => {
   const context = {
     itemType: attrs.itemType,
     layoutType: attrs.layoutType,
-    typographyItems: typographyItems,
-    typographyItemsWithNone: typographyItemsWithNone,
+    textStyleItems: textStyleItems,
+    textStyleItemsWithNone: textStyleItemsWithNone,
     variableOptionsWithNone: variableOptionsWithNone,
     values: {
       ...state.values,
-      typographyId: state.values?.typographyId || firstTypographyId || "",
-      hoverTypographyId: state.values?.hoverTypographyId ?? "",
-      clickedTypographyId: state.values?.clickedTypographyId ?? "",
+      textStyleId: state.values?.textStyleId || firstTextStyleId || "",
+      hoverTextStyleId: state.values?.hoverTextStyleId ?? "",
+      clickTextStyleId: state.values?.clickTextStyleId ?? "",
       actions: Object.entries(
         state.values?.click?.actionPayload?.actions || {},
       ).map(([key, _value]) => ({

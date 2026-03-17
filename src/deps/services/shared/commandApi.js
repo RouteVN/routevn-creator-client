@@ -1,6 +1,6 @@
 import { createCharacterSpriteCommandApi } from "./commandApi/characterSprites.js";
 import { createLayoutCommandApi } from "./commandApi/layouts.js";
-import { createResourceCommandApi } from "./commandApi/resources.js";
+import { createResourceCommandApi } from "./commandApi/resources/index.js";
 import { createCommandApiShared } from "./commandApi/shared.js";
 import { createStoryCommandApi } from "./commandApi/story.js";
 

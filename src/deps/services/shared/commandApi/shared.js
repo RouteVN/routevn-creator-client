@@ -50,7 +50,7 @@ export const createCommandApiShared = ({
     const state = repository.getState();
     assertSupportedProjectState(state);
 
-    const projectId = state.project?.id || currentProjectId;
+    const projectId = currentProjectId;
     const session = await ensureCommandSessionForProject(currentProjectId);
     const actor =
       typeof session.getActor === "function"
@@ -250,10 +250,7 @@ export const createCommandApiShared = ({
 
   const getDomainState = () => {
     const repositoryState = getState();
-    const projectId =
-      repositoryState?.project?.id ||
-      getCurrentProjectId() ||
-      "unknown-project";
+    const projectId = getCurrentProjectId() || "unknown-project";
     return projectRepositoryStateToDomainState({
       repositoryState,
       projectId,

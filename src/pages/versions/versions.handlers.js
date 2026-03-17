@@ -3,6 +3,7 @@ import {
   buildFilteredStateForExport,
   collectUsedResourcesForExport,
   constructProjectData,
+  projectRepositoryStateToDomainState,
 } from "../../internal/project/projection.js";
 
 export const handleAfterMount = async (deps) => {
@@ -119,7 +120,11 @@ export const handleDownloadZipClick = async (deps, payload) => {
   const repository = await projectService.getRepository();
 
   // Get state at specific action
-  const projectData = repository.getState(version.actionIndex);
+  const repositoryState = repository.getState(version.actionIndex);
+  const projectData = projectRepositoryStateToDomainState({
+    repositoryState,
+    projectId,
+  });
 
   const usage = collectUsedResourcesForExport(projectData);
   const filteredState = buildFilteredStateForExport(projectData, usage);

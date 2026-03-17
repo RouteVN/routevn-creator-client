@@ -25,14 +25,14 @@ template:
                   - rvn-character-sprites: []
                 $elif currentRoutePattern == "/project/sounds":
                   - rvn-sounds: []
-                $elif currentRoutePattern == "/project/tweens":
-                  - rvn-tweens: []
+                $elif currentRoutePattern == "/project/animations":
+                  - rvn-animations: []
                 $elif currentRoutePattern == "/project/transforms":
                   - rvn-transforms: []
                 $elif currentRoutePattern == "/project/videos":
                   - rvn-videos: []
-                $elif currentRoutePattern == "/project/typography":
-                  - rvn-typography: []
+                $elif currentRoutePattern == "/project/text-styles":
+                  - rvn-text-styles: []
                 $elif currentRoutePattern == "/project/variables":
                   - rvn-variables: []
                 $elif currentRoutePattern == "/project/scenes":

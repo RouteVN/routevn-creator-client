@@ -15,12 +15,10 @@ import {
   saveProjectionGap,
 } from "../shared/collab/projectorCache.js";
 import { createWebSocketTransport } from "../web/collab/createWebSocketTransport.js";
-import { repositoryStateToCreatorModelState } from "../../../internal/creatorModelAdapter.js";
 import {
   applyCommandToRepository,
   assertSupportedProjectState,
   createProjectCreateRepositoryEvent,
-  initialProjectData,
 } from "../shared/projectRepository.js";
 
 async function copyTemplateFiles(templateId, targetPath) {
@@ -95,22 +93,13 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
       const templateData = await loadTemplate(template);
       await copyTemplateFiles(template, filesPath);
 
-      const initData = {
-        ...initialProjectData,
-        ...templateData,
-        model_version: 2,
-        project: { id: projectPath },
-      };
-
-      const bootstrapModelState = repositoryStateToCreatorModelState({
-        repositoryState: initData,
-      });
+      assertSupportedProjectState(templateData);
 
       const store = await createInsiemeTauriStoreAdapter(projectPath);
       await store.appendEvent(
         createProjectCreateRepositoryEvent({
           projectId: projectPath,
-          state: bootstrapModelState,
+          state: templateData,
         }),
       );
 
@@ -322,7 +311,7 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
       const state = repository.getState();
       assertSupportedProjectState(state);
 
-      const resolvedProjectId = state.project?.id || projectId;
+      const resolvedProjectId = projectId;
       const resolvedPartitions = partitioning.getBasePartitions(
         resolvedProjectId,
         partitions,

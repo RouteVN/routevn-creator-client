@@ -51,45 +51,45 @@ const findSubhierarchyIds = (nodes, targetId) => {
   return [];
 };
 
-export const getFirstTypographyId = (typography = {}) => {
-  const items = typography.items || {};
+export const getFirstTextStyleId = (textStylesData = {}) => {
+  const items = textStylesData.items || {};
   const orderedSubhierarchyIds = [];
 
-  for (const node of typography.tree || []) {
+  for (const node of textStylesData.tree || []) {
     collectSubhierarchyIds(node, orderedSubhierarchyIds);
   }
 
   const firstIdFromHierarchy = orderedSubhierarchyIds.find(
-    (id) => items[id]?.type === "typography",
+    (id) => items[id]?.type === "textStyle",
   );
   if (firstIdFromHierarchy) {
     return firstIdFromHierarchy;
   }
 
   const firstFallback = Object.entries(items).find(
-    ([, item]) => item?.type === "typography",
+    ([, item]) => item?.type === "textStyle",
   );
   return firstFallback?.[0];
 };
 
-export const getTypographyCount = (typography = {}) => {
-  const items = typography.items || {};
-  return Object.values(items).filter((item) => item?.type === "typography")
+export const getTextStyleCount = (textStylesData = {}) => {
+  const items = textStylesData.items || {};
+  return Object.values(items).filter((item) => item?.type === "textStyle")
     .length;
 };
 
-export const getTypographyRemovalCount = (typography = {}, itemId) => {
+export const getTextStyleRemovalCount = (textStylesData = {}, itemId) => {
   if (!itemId) {
     return 0;
   }
 
-  const items = typography.items || {};
+  const items = textStylesData.items || {};
   const targetItem = items[itemId];
   if (!targetItem) {
     return 0;
   }
 
-  if (targetItem.type === "typography") {
+  if (targetItem.type === "textStyle") {
     return 1;
   }
 
@@ -97,11 +97,13 @@ export const getTypographyRemovalCount = (typography = {}, itemId) => {
     return 0;
   }
 
-  const subhierarchyIds = findSubhierarchyIds(typography.tree || [], itemId);
+  const subhierarchyIds = findSubhierarchyIds(
+    textStylesData.tree || [],
+    itemId,
+  );
   if (subhierarchyIds.length === 0) {
     return 0;
   }
 
-  return subhierarchyIds.filter((id) => items[id]?.type === "typography")
-    .length;
+  return subhierarchyIds.filter((id) => items[id]?.type === "textStyle").length;
 };
