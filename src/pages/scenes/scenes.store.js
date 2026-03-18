@@ -146,6 +146,16 @@ export const updateItemPosition = ({ state }, { itemId, x, y } = {}) => {
   }
 };
 
+export const updatePersistedScenePosition = (
+  { state },
+  { itemId, x, y } = {},
+) => {
+  const scene = state.scenesData?.items?.[itemId];
+  if (scene) {
+    scene.position = { x, y };
+  }
+};
+
 export const addWhiteboardItem = ({ state }, { newItem } = {}) => {
   state.whiteboardItems.push(newItem);
 };

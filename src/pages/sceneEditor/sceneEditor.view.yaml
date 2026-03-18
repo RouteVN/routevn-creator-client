@@ -87,8 +87,6 @@ refs:
         handler: handleActionsDialogClose
   systemActions:
     eventListeners:
-      submit:
-        handler: handleCommandLineSubmit
       action-delete:
         handler: handleSystemActionsActionDelete
       actions-change:
