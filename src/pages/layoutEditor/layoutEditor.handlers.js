@@ -442,8 +442,8 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
 
 export const handleAddLayoutClick = handleRenderOnly;
 
-const refreshLayoutEditorData = async (deps) => {
-  const { appService, projectService, render } = deps;
+const refreshLayoutEditorData = async (deps, payload = {}) => {
+  const { appService, projectService, render, store, refs } = deps;
   const { layoutId, resourceType } = getEditorPayload(appService);
   await projectService.ensureRepository();
   syncLayoutEditorState(
@@ -452,6 +452,10 @@ const refreshLayoutEditorData = async (deps) => {
     layoutId,
     resourceType,
   );
+  if (payload.selectedItemId) {
+    store.setSelectedItemId({ itemId: payload.selectedItemId });
+    refs.fileExplorer.selectItem({ itemId: payload.selectedItemId });
+  }
   render();
   await renderLayoutPreview(deps);
 };

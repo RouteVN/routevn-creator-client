@@ -587,6 +587,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
       const menuItem = resolveMenuItem(detail);
       const action = menuItem?.value;
       const itemId = detail.itemId;
+      let createdItemId;
       if (action === "rename-item-confirmed") {
         if (!itemId || !detail.newName) {
           return;
@@ -610,9 +611,10 @@ export const createLayoutElementsFileExplorerHandlers = ({
           elementIds: [itemId],
         });
       } else if (action === "new-item") {
+        createdItemId = nanoid();
         await createElement({
           [ownerPayloadKey]: layoutId,
-          elementId: nanoid(),
+          elementId: createdItemId,
           data: {
             type: "folder",
             name: "New Folder",
@@ -625,9 +627,10 @@ export const createLayoutElementsFileExplorerHandlers = ({
           return;
         }
 
+        createdItemId = nanoid();
         await createElement({
           [ownerPayloadKey]: layoutId,
-          elementId: nanoid(),
+          elementId: createdItemId,
           data: {
             type: "folder",
             name: "New Folder",
@@ -677,11 +680,13 @@ export const createLayoutElementsFileExplorerHandlers = ({
           });
           return;
         }
+
+        createdItemId = nextElementId;
       } else {
         return;
       }
 
-      await refresh(deps);
+      await refresh(deps, { selectedItemId: createdItemId });
     },
     handleMove: async ({ deps, detail }) => {
       const { appService, projectService } = deps;
