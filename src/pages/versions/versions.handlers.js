@@ -3,7 +3,6 @@ import {
   buildFilteredStateForExport,
   collectUsedResourcesForExport,
   constructProjectData,
-  projectRepositoryStateToDomainState,
 } from "../../internal/project/projection.js";
 
 export const handleAfterMount = async (deps) => {
@@ -95,6 +94,8 @@ export const handleDropdownMenuClose = (deps) => {
 
 export const handleDownloadZipClick = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
+  const currentPayload = appService.getPayload();
+  const projectId = currentPayload.p ?? "";
 
   // Create bundle with transformed data
   appService.showToast("Please wait while the bundle is being created...", {
@@ -121,13 +122,8 @@ export const handleDownloadZipClick = async (deps, payload) => {
 
   // Get state at specific action
   const repositoryState = repository.getState(version.actionIndex);
-  const projectData = projectRepositoryStateToDomainState({
-    repositoryState,
-    projectId,
-  });
-
-  const usage = collectUsedResourcesForExport(projectData);
-  const filteredState = buildFilteredStateForExport(projectData, usage);
+  const usage = collectUsedResourcesForExport(repositoryState);
+  const filteredState = buildFilteredStateForExport(repositoryState, usage);
 
   // Transform filtered project data to the required format
   const constructedProjectData = constructProjectData(filteredState);
@@ -135,9 +131,6 @@ export const handleDownloadZipClick = async (deps, payload) => {
     projectData: constructedProjectData,
   };
   const fileIds = usage.fileIds;
-  const currentPayload = appService.getPayload?.() || {};
-  const projectId =
-    typeof currentPayload?.p === "string" ? currentPayload.p : "";
   let projectName = "project";
   if (projectId && typeof appService.getProjectEntries === "function") {
     const entries = await appService.getProjectEntries();
