@@ -540,6 +540,14 @@ export const handleWhiteboardItemPositionChanged = async (deps, payload) => {
     return;
   }
 
+  const currentScene = store.selectScenesData()?.items?.[itemId];
+  const currentX = Number(currentScene?.position?.x);
+  const currentY = Number(currentScene?.position?.y);
+
+  if (currentX === nextX && currentY === nextY) {
+    return;
+  }
+
   await projectService.updateSceneItem({
     sceneId: itemId,
     data: {
@@ -547,7 +555,8 @@ export const handleWhiteboardItemPositionChanged = async (deps, payload) => {
     },
   });
 
-  // Update local whiteboard state (already updated by position-updating, but keeping for consistency)
+  // Keep local UI and the last persisted scene snapshot aligned.
+  store.updatePersistedScenePosition({ itemId, x: nextX, y: nextY });
   store.updateItemPosition({ itemId, x: nextX, y: nextY });
   render();
 };

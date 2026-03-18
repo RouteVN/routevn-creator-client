@@ -18,6 +18,8 @@ static/bundle/main.js
 .env
 /.rettangoli/
 /project.db
+/project.db-shm
+/project.db-wal
 
 # Generated setup file
 src/setup.js
