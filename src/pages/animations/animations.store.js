@@ -281,9 +281,26 @@ const propertyNameDropdownItems = [
   },
 ];
 
+const createTypeMenuItems = [
+  {
+    label: "Live",
+    type: "item",
+    value: "live",
+  },
+  {
+    label: "Replace",
+    type: "item",
+    value: "replace",
+  },
+];
+
 const addAnimationForm = {
   title: "Add Animation",
   fields: [
+    {
+      type: "read-only-text",
+      content: "Type: Live",
+    },
     {
       name: "name",
       type: "input-text",
@@ -312,6 +329,10 @@ const addAnimationForm = {
 const editAnimationForm = {
   title: "Edit Animation",
   fields: [
+    {
+      type: "read-only-text",
+      content: "Type: Live",
+    },
     {
       name: "name",
       type: "input-text",
@@ -346,11 +367,44 @@ const defaultInitialValuesByProperty = {
   rotation: 0,
 };
 
-const buildCatalogItem = (item) => ({
-  ...item,
-  cardKind: "animation",
-  itemWidth: "f",
-});
+const getAnimationTween = (item = {}) => {
+  if (
+    item?.animation?.type === "live" &&
+    item.animation.tween &&
+    typeof item.animation.tween === "object"
+  ) {
+    return item.animation.tween;
+  }
+
+  return {};
+};
+
+const getAnimationDuration = (tween = {}) => {
+  return Object.values(tween).reduce((maxDuration, propertyConfig) => {
+    const totalDuration = (propertyConfig?.keyframes ?? []).reduce(
+      (sum, keyframe) => {
+        return sum + (Number(keyframe?.duration) || 0);
+      },
+      0,
+    );
+
+    return Math.max(maxDuration, totalDuration);
+  }, 0);
+};
+
+const toAnimationDisplayItem = (item) => {
+  const properties = structuredClone(getAnimationTween(item));
+
+  return {
+    ...item,
+    properties,
+    duration: getAnimationDuration(properties),
+    cardKind: "animation",
+    itemWidth: "f",
+  };
+};
+
+const buildCatalogItem = (item) => toAnimationDisplayItem(item);
 
 const matchesSearch = (item, searchQuery) => {
   if (!searchQuery) {
@@ -381,8 +435,11 @@ const {
   buildCatalogItem,
   matchesSearch,
   extendViewData: ({ state, selectedItem, baseViewData }) => {
+    const selectedAnimationItem = selectedItem
+      ? toAnimationDisplayItem(selectedItem)
+      : undefined;
     const selectedAnimationPropertyCount = Object.keys(
-      selectedItem?.properties ?? {},
+      selectedAnimationItem?.properties ?? {},
     ).length;
 
     const availableProperties = propertyOptions.filter(
@@ -453,8 +510,9 @@ const {
 
     return {
       ...baseViewData,
-      selectedItemDuration: String(selectedItem?.duration ?? ""),
+      selectedItemDuration: String(selectedAnimationItem?.duration ?? ""),
       selectedAnimationPropertyCount,
+      createTypeMenu: state.createTypeMenu,
       isDialogOpen: state.isDialogOpen,
       dialogDefaultValues: state.dialogDefaultValues,
       dialogForm: state.dialogForm,
@@ -502,6 +560,13 @@ export const createInitialState = () => ({
   dialogForm: addAnimationForm,
   editMode: false,
   editItemId: undefined,
+  createTypeMenu: {
+    isOpen: false,
+    x: 0,
+    y: 0,
+    targetGroupId: undefined,
+    items: createTypeMenuItems,
+  },
   popover: {
     mode: "none",
     x: undefined,
@@ -522,9 +587,10 @@ export {
 export const selectAnimationItemById = selectItemById;
 
 export const selectAnimationDisplayItemById = ({ state }, { itemId } = {}) => {
-  return toFlatItems(state.data).find(
+  const rawItem = toFlatItems(state.data).find(
     (item) => item.id === itemId && item.type === "animation",
   );
+  return rawItem ? toAnimationDisplayItem(rawItem) : undefined;
 };
 
 export const openDialog = (
@@ -566,6 +632,25 @@ export const closeDialog = ({ state }, _payload = {}) => {
   };
   state.dialogForm = addAnimationForm;
   state.properties = {};
+};
+
+export const openCreateTypeMenu = ({ state }, { x, y, targetGroupId } = {}) => {
+  state.createTypeMenu.isOpen = true;
+  state.createTypeMenu.x = x ?? 0;
+  state.createTypeMenu.y = y ?? 0;
+  state.createTypeMenu.targetGroupId =
+    targetGroupId === "_root" ? undefined : targetGroupId;
+};
+
+export const closeCreateTypeMenu = ({ state }) => {
+  state.createTypeMenu.isOpen = false;
+  state.createTypeMenu.x = 0;
+  state.createTypeMenu.y = 0;
+  state.createTypeMenu.targetGroupId = undefined;
+};
+
+export const selectCreateTypeMenuTargetGroupId = ({ state }) => {
+  return state.createTypeMenu.targetGroupId;
 };
 
 export const setTargetGroupId = ({ state }, { groupId } = {}) => {
@@ -620,43 +705,37 @@ const createAnimationRenderState = (properties, includeAnimations = true) => {
         continue;
       }
 
-      let propName = property;
       const defaultValue = defaultInitialValuesByProperty[property] ?? 0;
       const initialValue =
         config.initialValue !== undefined && config.initialValue !== ""
           ? parseFloat(config.initialValue)
           : defaultValue;
 
-      let processedInitialValue = Number.isNaN(initialValue)
+      const processedInitialValue = Number.isNaN(initialValue)
         ? defaultValue
         : initialValue;
-      if (property === "rotation") {
-        processedInitialValue = (processedInitialValue * Math.PI) / 180;
-      }
 
-      const animationProperties = {};
-      animationProperties[propName] = {
-        initialValue: processedInitialValue,
-        keyframes: config.keyframes.map((keyframe) => {
-          let value = parseFloat(keyframe.value) ?? 0;
-          if (property === "rotation") {
-            value = (value * Math.PI) / 180;
-          }
+      const tween = {
+        [property]: {
+          initialValue: processedInitialValue,
+          keyframes: config.keyframes.map((keyframe) => {
+            let value = parseFloat(keyframe.value) ?? 0;
 
-          return {
-            duration: keyframe.duration,
-            value,
-            easing: keyframe.easing ?? "linear",
-            relative: keyframe.relative ?? false,
-          };
-        }),
+            return {
+              duration: keyframe.duration,
+              value,
+              easing: keyframe.easing ?? "linear",
+              relative: keyframe.relative ?? false,
+            };
+          }),
+        },
       };
 
       animations.push({
         id: `animation-${property}`,
         targetId: "preview-element",
-        type: "animation",
-        properties: animationProperties,
+        type: "live",
+        tween,
       });
     }
   }

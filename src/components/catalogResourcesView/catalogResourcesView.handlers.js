@@ -66,6 +66,8 @@ export const handleAddButtonClick = (deps, payload) => {
     new CustomEvent("add-click", {
       detail: {
         groupId: getDataAttribute(payload._event, "data-group-id"),
+        x: payload._event.clientX,
+        y: payload._event.clientY,
       },
       bubbles: true,
       composed: true,
