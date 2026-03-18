@@ -561,6 +561,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
     handleAction: async ({ deps, detail }) => {
       const { appService, projectService } = deps;
       await projectService.ensureRepository();
+      const state = projectService.getState();
 
       const layoutId = getLayoutId(deps);
       const resourceType = getResourceType(deps);
