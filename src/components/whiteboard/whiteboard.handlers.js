@@ -4,6 +4,47 @@ import {
   SCENE_BOX_WIDTH,
 } from "../../internal/whiteboard/constants.js";
 
+const syncContainerSize = ({ store, refs } = {}) => {
+  const container = refs?.container;
+  if (!container) {
+    return false;
+  }
+
+  const rect = container.getBoundingClientRect();
+  const width = Math.round(rect.width);
+  const height = Math.round(rect.height);
+  const currentSize = store.selectContainerSize();
+
+  if (currentSize.width === width && currentSize.height === height) {
+    return false;
+  }
+
+  store.setContainerSize({ width, height });
+  return true;
+};
+
+const dispatchPanChanged = ({ store, dispatchEvent } = {}) => {
+  const pan = store.selectPan();
+
+  dispatchEvent(
+    new CustomEvent("pan-changed", {
+      detail: { panX: pan.x, panY: pan.y },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+const dispatchZoomChanged = ({ store, dispatchEvent } = {}) => {
+  dispatchEvent(
+    new CustomEvent("zoom-changed", {
+      detail: { zoomLevel: store.selectZoomLevel() },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
   const active = streams.map((stream) => stream.subscribe());
@@ -12,6 +53,15 @@ const mountSubscriptions = (deps) => {
 
 export const handleBeforeMount = (deps) => {
   return mountSubscriptions(deps);
+};
+
+export const handleAfterMount = (deps) => {
+  const { render } = deps;
+  const didUpdateSize = syncContainerSize(deps);
+
+  if (didUpdateSize) {
+    render();
+  }
 };
 
 export const handleContainerContextMenu = (deps, payload) => {
@@ -105,16 +155,11 @@ export const handleContainerWheel = (deps, payload) => {
 
   event.preventDefault();
   store.zoomAt({ mouseX, mouseY, scaleFactor });
+  syncContainerSize(deps);
   render();
 
-  // Dispatch zoom change event to parent
-  dispatchEvent(
-    new CustomEvent("zoom-changed", {
-      detail: { zoomLevel: store.selectZoomLevel() },
-      bubbles: true,
-      composed: true,
-    }),
-  );
+  dispatchZoomChanged({ store, dispatchEvent });
+  dispatchPanChanged({ store, dispatchEvent });
 };
 
 export const handleZoomInClick = (deps) => {
@@ -129,16 +174,11 @@ export const handleZoomInClick = (deps) => {
     containerHeight: rect.height,
   });
 
+  syncContainerSize(deps);
   render();
 
-  // Dispatch zoom change event to parent
-  dispatchEvent(
-    new CustomEvent("zoom-changed", {
-      detail: { zoomLevel: store.selectZoomLevel() },
-      bubbles: true,
-      composed: true,
-    }),
-  );
+  dispatchZoomChanged({ store, dispatchEvent });
+  dispatchPanChanged({ store, dispatchEvent });
 };
 
 export const handleZoomOutClick = (deps) => {
@@ -153,16 +193,11 @@ export const handleZoomOutClick = (deps) => {
     containerHeight: rect.height,
   });
 
+  syncContainerSize(deps);
   render();
 
-  // Dispatch zoom change event to parent
-  dispatchEvent(
-    new CustomEvent("zoom-changed", {
-      detail: { zoomLevel: store.selectZoomLevel() },
-      bubbles: true,
-      composed: true,
-    }),
-  );
+  dispatchZoomChanged({ store, dispatchEvent });
+  dispatchPanChanged({ store, dispatchEvent });
 };
 
 export const handleItemMouseDown = (deps, payload) => {
@@ -288,6 +323,7 @@ export const handleItemMouseLeave = (deps) => {
 
 export const handleWindowMouseMove = (deps, payload) => {
   const { store, refs, render, dispatchEvent } = deps;
+  const didUpdateSize = syncContainerSize(deps);
 
   if (store.selectIsPanning()) {
     // Handle panning
@@ -297,14 +333,7 @@ export const handleWindowMouseMove = (deps, payload) => {
     });
 
     // Dispatch pan changed event
-    const pan = store.selectPan();
-    dispatchEvent(
-      new CustomEvent("pan-changed", {
-        detail: { panX: pan.x, panY: pan.y },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    dispatchPanChanged({ store, dispatchEvent });
 
     render();
   } else if (store.selectIsDragging()) {
@@ -366,6 +395,8 @@ export const handleWindowMouseMove = (deps, payload) => {
         },
       }),
     );
+  } else if (didUpdateSize) {
+    render();
   }
 };
 
@@ -444,6 +475,9 @@ export const handleWindowKeyUp = (deps, payload) => {
 
 const subscriptions = (deps) => {
   return [
+    fromEvent(window, "resize").pipe(
+      tap((event) => deps.handlers.handleWindowResize(deps, { _event: event })),
+    ),
     fromEvent(window, "mousemove").pipe(
       tap((event) =>
         deps.handlers.handleWindowMouseMove(deps, { _event: event }),
@@ -470,4 +504,13 @@ export const handleInitialZoomAndPanSetup = (deps, payload) => {
   const { zoomLevel, panX, panY } = payload;
 
   store.setInitialZoomAndPan({ zoomLevel, panX, panY });
+  syncContainerSize(deps);
+};
+
+export const handleWindowResize = (deps) => {
+  const { render } = deps;
+
+  if (syncContainerSize(deps)) {
+    render();
+  }
 };

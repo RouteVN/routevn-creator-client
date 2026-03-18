@@ -59,6 +59,10 @@ export const createInitialState = () => ({
   panStartMouseY: 0,
   // Zoom state
   zoomLevel: 1,
+  containerSize: {
+    width: 0,
+    height: 0,
+  },
 });
 
 export const startDragging = ({ state }, { itemId } = {}) => {
@@ -185,6 +189,15 @@ export const selectPan = ({ state }) => ({
 });
 export const selectZoomLevel = ({ state }) => state.zoomLevel;
 
+export const setContainerSize = ({ state }, { width, height } = {}) => {
+  state.containerSize = {
+    width: width ?? 0,
+    height: height ?? 0,
+  };
+};
+
+export const selectContainerSize = ({ state }) => state.containerSize;
+
 export const setInitialZoomAndPan = (
   { state },
   { zoomLevel, panX, panY } = {},
@@ -194,7 +207,9 @@ export const setInitialZoomAndPan = (
   state.panY = panY;
 };
 
-const generateMinimapData = (items, pan) => {
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const generateMinimapData = (items, pan, zoomLevel, containerSize) => {
   if (!items || items.length === 0) {
     return {
       items: [],
@@ -241,6 +256,25 @@ const generateMinimapData = (items, pan) => {
 
   const scaledPanX = pan.x * scale;
   const scaledPanY = pan.y * scale;
+  const worldLeft = x_tl - padding;
+  const worldTop = y_tl - padding;
+  const viewportLeft = -pan.x / zoomLevel;
+  const viewportTop = -pan.y / zoomLevel;
+  const viewportRight = viewportLeft + containerSize.width / zoomLevel;
+  const viewportBottom = viewportTop + containerSize.height / zoomLevel;
+  const rawViewportLeft = (viewportLeft - worldLeft) * scale + offsetX;
+  const rawViewportTop = (viewportTop - worldTop) * scale + offsetY;
+  const rawViewportRight = (viewportRight - worldLeft) * scale + offsetX;
+  const rawViewportBottom = (viewportBottom - worldTop) * scale + offsetY;
+  const clippedViewportLeft = clamp(rawViewportLeft, 0, minimapWidth);
+  const clippedViewportTop = clamp(rawViewportTop, 0, minimapHeight);
+  const clippedViewportRight = clamp(rawViewportRight, 0, minimapWidth);
+  const clippedViewportBottom = clamp(rawViewportBottom, 0, minimapHeight);
+  const viewportWidth = Math.max(0, clippedViewportRight - clippedViewportLeft);
+  const viewportHeight = Math.max(
+    0,
+    clippedViewportBottom - clippedViewportTop,
+  );
 
   return {
     items: minimapItems,
@@ -250,6 +284,17 @@ const generateMinimapData = (items, pan) => {
     scaledItem: { width: scaledItemWidth, height: scaledItemHeight },
     offset: { x: offsetX, y: offsetY },
     scaledPan: { x: scaledPanX, y: scaledPanY },
+    viewport: {
+      x: clippedViewportLeft,
+      y: clippedViewportTop,
+      width: viewportWidth,
+      height: viewportHeight,
+      visible:
+        containerSize.width > 0 &&
+        containerSize.height > 0 &&
+        viewportWidth > 0 &&
+        viewportHeight > 0,
+    },
   };
 };
 
@@ -275,21 +320,15 @@ export const selectViewData = ({ state, props }) => {
 
   // Calculate adaptive grid size for container background
   const getAdaptiveGridSize = (zoomLevel) => {
-    // Fixed canvas grid size
     const canvasGridSize = 20;
     const visualGridSize = canvasGridSize * zoomLevel;
+    const minVisualGridSize = 28;
+    const gridMultiplier = Math.max(
+      1,
+      Math.ceil(minVisualGridSize / visualGridSize),
+    );
 
-    // This prevents dots from becoming too dense while maintaining grid alignment
-    if (visualGridSize < 8) {
-      // At very low zoom, merge 4x4 grid cells into one (multiply by 4)
-      return canvasGridSize * 4 * zoomLevel;
-    } else if (visualGridSize < 12) {
-      // At low zoom, merge 2x2 grid cells into one (multiply by 2)
-      return canvasGridSize * 2 * zoomLevel;
-    }
-
-    // Normal case: no merging needed
-    return visualGridSize;
+    return canvasGridSize * gridMultiplier * zoomLevel;
   };
 
   const arrowsList = [];
@@ -322,7 +361,12 @@ export const selectViewData = ({ state, props }) => {
   return {
     items,
     showMinimap: items.length > 1,
-    minimapData: generateMinimapData(items, { x: state.panX, y: state.panY }),
+    minimapData: generateMinimapData(
+      items,
+      { x: state.panX, y: state.panY },
+      state.zoomLevel,
+      state.containerSize,
+    ),
     arrowsList,
     selectedItemId: props.selectedItemId,
     isPanMode: state.isPanMode,
