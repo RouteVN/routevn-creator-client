@@ -178,7 +178,10 @@ export const closeEditDialog = ({ state }, _payload = {}) => {
   state.editUploadResult = undefined;
 };
 
-export const setEditUpload = ({ state }, { uploadResult, previewFileId } = {}) => {
+export const setEditUpload = (
+  { state },
+  { uploadResult, previewFileId } = {},
+) => {
   state.editUploadResult = uploadResult;
   state.editPreviewFileId = previewFileId;
 };

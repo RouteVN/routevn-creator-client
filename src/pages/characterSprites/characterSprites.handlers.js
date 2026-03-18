@@ -20,10 +20,6 @@ const getCharacterIdFromPayload = ({ appService }) => {
   return appService.getPayload().characterId;
 };
 
-const getCharacter = ({ projectService, characterId }) => {
-  return projectService.getState().characters.items?.[characterId];
-};
-
 const syncCharacterSpritesData = ({ deps, repositoryState } = {}) => {
   const { appService, projectService, store } = deps;
   const characterId =
@@ -79,7 +75,11 @@ const selectSprite = ({ deps, itemId, syncExplorer = false } = {}) => {
   render();
 };
 
-const openEditDialogForSprite = ({ deps, itemId, syncExplorer = false } = {}) => {
+const openEditDialogForSprite = ({
+  deps,
+  itemId,
+  syncExplorer = false,
+} = {}) => {
   const { refs, render, store } = deps;
   const item = store.selectSpriteItemById({ itemId });
 
