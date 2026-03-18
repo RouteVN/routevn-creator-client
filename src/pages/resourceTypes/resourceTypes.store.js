@@ -24,6 +24,11 @@ export const assetItems = [
     name: "Transforms",
     path: "/project/transforms",
   },
+  {
+    id: "animations",
+    name: "Animations",
+    path: "/project/animations",
+  },
 ];
 
 export const userInterfaceItems = [

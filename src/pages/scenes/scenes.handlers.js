@@ -12,7 +12,7 @@ import {
 } from "../../internal/whiteboard/constants.js";
 
 const DEAD_END_TOOLTIP_CONTENT =
-  "This section has no transition to another scene.";
+  "This section has no transition to another section.";
 
 const getProjectErrorMessage = (result, fallbackMessage) => {
   return (
