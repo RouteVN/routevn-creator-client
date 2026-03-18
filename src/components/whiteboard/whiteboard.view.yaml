@@ -56,6 +56,8 @@ template:
               - $for item in minimapData.items:
                   - 'rtgl-view d=h pos=abs style="left: ${item.x}px; top: ${item.y}px; z-index: 10; user-select: none;"':
                       - rtgl-view w=${minimapData.scaledItem.width} h=${minimapData.scaledItem.height} bgc=ac: null
+              - $if minimapData.viewport.visible:
+                  - 'rtgl-view pos=abs bw=xs bc=fg style="left: ${minimapData.viewport.x}px; top: ${minimapData.viewport.y}px; width: ${minimapData.viewport.width}px; height: ${minimapData.viewport.height}px; z-index: 20; pointer-events: none; box-sizing: border-box;"': null
       - 'rtgl-view pos=abs z=100 ah=c p=md bgc=mu br=md style="right: 20px; bottom: 20px;"':
           - rtgl-view d=h av=c gap=sm:
               - rtgl-button#panBtn sq pre=hand v=${panModeV}: null
