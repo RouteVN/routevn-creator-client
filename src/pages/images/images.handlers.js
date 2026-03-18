@@ -74,8 +74,6 @@ const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
       width: result.dimensions.width,
       height: result.dimensions.height,
     };
-    console.log("[images] create image payload", imageData);
-
     const createResult = await projectService.createImage({
       imageId: nanoid(),
       fileRecords: result.fileRecords,

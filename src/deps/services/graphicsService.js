@@ -13,7 +13,6 @@ import createRouteGraphics, {
 import createRouteEngine, { createEffectsHandler } from "route-engine-js";
 import { Ticker } from "pixi.js";
 import { prepareRenderStateKeyboardForGraphics } from "../../internal/project/layout.js";
-import { forceDebugLog } from "./shared/debugLog.js";
 
 export const createGraphicsService = async ({ subject }) => {
   const RIGHT_CLICK_EVENT_NAMES = new Set(["rightclick", "rightClick"]);
@@ -195,14 +194,6 @@ export const createGraphicsService = async ({ subject }) => {
         height: 1080,
         plugins,
         eventHandler: (eventName, payload) => {
-          if (eventName === "keydown") {
-            forceDebugLog("scene-control", "graphics.event.keydown", {
-              eventName,
-              payloadActions: payload?.actions,
-              event: payload?._event,
-            });
-          }
-
           if (eventName === "dragMove") {
             if (payload._event.id === "selected-border")
               subject.dispatch("border-drag-move", {
@@ -229,17 +220,6 @@ export const createGraphicsService = async ({ subject }) => {
           }
 
           const actions = getEventActions(payload);
-
-          if (eventName === "click" || RIGHT_CLICK_EVENT_NAMES.has(eventName)) {
-            console.log("[graphicsService] interaction event", {
-              eventName,
-              eventId: payload?._event?.id,
-              payloadActions: payload?.actions,
-              nestedPayloadActions: payload?.payload?.actions,
-              resolvedActions: actions,
-              rawPayload: payload,
-            });
-          }
 
           if (actions && engine) {
             const eventContext = payload._event

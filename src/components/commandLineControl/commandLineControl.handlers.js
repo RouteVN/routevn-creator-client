@@ -1,5 +1,3 @@
-import { forceDebugLog } from "../../deps/services/shared/debugLog.js";
-
 export const handleBeforeMount = (deps) => {
   const { store, props } = deps;
   if (props?.control?.resourceId) {
@@ -19,9 +17,6 @@ export const handleFormChange = (deps, payload) => {
 
   if (formValues.resourceId !== undefined) {
     store.setSelectedResourceId({ resourceId: formValues.resourceId });
-    forceDebugLog("scene-control", "command-line-control.form-change", {
-      resourceId: formValues.resourceId,
-    });
   }
 
   render();
@@ -37,11 +32,6 @@ export const handleSubmitClick = (deps) => {
   if (selectedControlId && selectedControlId !== "") {
     control.resourceId = selectedControlId;
   }
-
-  forceDebugLog("scene-control", "command-line-control.submit", {
-    selectedControlId,
-    control,
-  });
 
   dispatchEvent(
     new CustomEvent("submit", {
