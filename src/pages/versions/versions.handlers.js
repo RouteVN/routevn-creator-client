@@ -4,6 +4,7 @@ import {
   collectUsedResourcesForExport,
   constructProjectData,
 } from "../../internal/project/projection.js";
+import { createBundleInstructions } from "../../deps/services/shared/projectExportService.js";
 
 export const handleAfterMount = async (deps) => {
   const { store, render, projectService, appService } = deps;
@@ -127,9 +128,12 @@ export const handleDownloadZipClick = async (deps, payload) => {
 
   // Transform filtered project data to the required format
   const constructedProjectData = constructProjectData(filteredState);
-  const transformedData = {
+  const transformedData = createBundleInstructions({
     projectData: constructedProjectData,
-  };
+    bundler: {
+      appVersion: appService.getAppVersion(),
+    },
+  });
   const fileIds = usage.fileIds;
   let projectName = "project";
   if (projectId && typeof appService.getProjectEntries === "function") {

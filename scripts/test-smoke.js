@@ -17,7 +17,12 @@ import {
   constructProjectData,
   projectRepositoryStateToDomainState,
 } from "../src/internal/project/projection.js";
-import { createBundle } from "../src/deps/services/shared/projectExportService.js";
+import {
+  BUNDLE_APP_NAME,
+  BUNDLE_FORMAT_VERSION,
+  createBundle,
+  createBundleInstructions,
+} from "../src/deps/services/shared/projectExportService.js";
 import { toHierarchyStructure } from "../src/internal/project/tree.js";
 
 const projectId = "proj-smoke-001";
@@ -80,7 +85,7 @@ const parseBundleInstructions = (bundle) => {
   );
   const dataView = new DataView(arrayBuffer);
   const version = dataView.getUint8(0);
-  assert.equal(version, 1);
+  assert.equal(version, BUNDLE_FORMAT_VERSION);
 
   const indexLength = dataView.getUint32(1, false);
   const headerSize = 16;
@@ -533,7 +538,13 @@ const projectData = constructProjectData(repositoryState, {
   initialSceneId: "scene-1",
 });
 const exportProjectData = constructProjectData(filteredExportState);
-const bundle = await createBundle({ projectData: exportProjectData });
+const bundlePayload = createBundleInstructions({
+  projectData: exportProjectData,
+  bundler: {
+    appVersion: "1.0.0-rc2",
+  },
+});
+const bundle = await createBundle(bundlePayload);
 const bundleInstructions = parseBundleInstructions(bundle);
 assert.equal(domainState.story.initialSceneId, "scene-1");
 assert.deepEqual(domainState.scenes["scene-1"].sectionIds, [
@@ -578,6 +589,11 @@ assert.equal(bundleInstructions.projectData.story.initialSceneId, "scene-1");
 assert.equal(
   bundleInstructions.projectData.story.scenes["scene-1"].initialSectionId,
   "section-1",
+);
+assert.equal(bundleInstructions.bundleMetadata.bundler.appName, BUNDLE_APP_NAME);
+assert.equal(
+  bundleInstructions.bundleMetadata.bundler.appVersion,
+  "1.0.0-rc2",
 );
 assert.deepEqual(
   bundleInstructions.projectData.story.scenes["scene-1"].sections[

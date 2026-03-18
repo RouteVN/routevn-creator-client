@@ -17,13 +17,16 @@ import createRouteGraphics, {
   animatedSpritePlugin,
 } from "route-graphics";
 import { prepareRenderStateKeyboardForGraphics } from "../src/internal/project/layout.js";
+import {
+  BUNDLE_FORMAT_VERSION,
+} from "../src/deps/services/shared/projectExportService.js";
 
 async function parseVNBundle(arrayBuffer) {
   const dataView = new DataView(arrayBuffer);
 
   // Read version (byte 0)
   const version = dataView.getUint8(0);
-  if (version !== 1) {
+  if (version !== BUNDLE_FORMAT_VERSION) {
     throw new Error(`Unsupported bundle version: ${version}`);
   }
 
