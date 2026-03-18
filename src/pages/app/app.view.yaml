@@ -27,6 +27,8 @@ template:
                   - rvn-sounds: []
                 $elif currentRoutePattern == "/project/transforms":
                   - rvn-transforms: []
+                $elif currentRoutePattern == "/project/animations":
+                  - rvn-animations: []
                 $elif currentRoutePattern == "/project/videos":
                   - rvn-videos: []
                 $elif currentRoutePattern == "/project/text-styles":
