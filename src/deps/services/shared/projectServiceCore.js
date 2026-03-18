@@ -45,6 +45,8 @@ export const createProjectServiceCore = ({
         getRepositoryByProject: repositoryService.getRepositoryByProject,
         getStoreByProject: repositoryService.getStoreByProject,
         getProjectInfoByProjectId: repositoryService.getProjectInfoByProjectId,
+        resolveProjectReferenceByProjectId:
+          repositoryService.resolveProjectReferenceByProjectId,
         collabLog,
       }),
     createTransport: collabAdapter.createTransport,

@@ -31,10 +31,13 @@ const normalizeCommandEnvelope = (command) => {
 };
 
 export const commandToSyncEvent = (command) => {
-  const event = mapCommandToSyncEvent(command);
   const commandVersion =
     normalizeCommandVersion(command?.commandVersion) ??
     COMMAND_EVENT_MODEL.commandVersion;
+  const event = mapCommandToSyncEvent(command, {
+    defaultSchemaVersion:
+      normalizeCommandVersion(command?.schemaVersion) ?? commandVersion,
+  });
 
   return {
     ...event,

@@ -136,11 +136,9 @@ export const createCommandApiShared = ({
       }
 
       if (
-        typeof fileRecord.mimeType !== "string" ||
-        fileRecord.mimeType.length === 0 ||
+        !fileRecord.mimeType ||
         !Number.isFinite(fileRecord.size) ||
-        typeof fileRecord.sha256 !== "string" ||
-        fileRecord.sha256.length === 0
+        !fileRecord.sha256
       ) {
         throw new Error(
           `fileRecord ${fileRecord.id} is missing required metadata`,

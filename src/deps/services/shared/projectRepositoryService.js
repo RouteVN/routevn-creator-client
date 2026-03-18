@@ -45,11 +45,7 @@ export const createProjectRepositoryService = ({
   const normalizeProjectInfo = (projectInfo) => ({
     name: projectInfo?.name ?? "",
     description: projectInfo?.description ?? "",
-    iconFileId:
-      typeof projectInfo?.iconFileId === "string" &&
-      projectInfo.iconFileId.length > 0
-        ? projectInfo.iconFileId
-        : null,
+    iconFileId: projectInfo?.iconFileId ?? null,
   });
 
   const mergeProjectInfo = (currentProjectInfo, patch = {}) => {
@@ -66,10 +62,7 @@ export const createProjectRepositoryService = ({
     }
 
     if (Object.hasOwn(patch, "iconFileId")) {
-      nextProjectInfo.iconFileId =
-        typeof patch.iconFileId === "string" && patch.iconFileId.length > 0
-          ? patch.iconFileId
-          : null;
+      nextProjectInfo.iconFileId = patch.iconFileId ?? null;
     }
 
     return normalizeProjectInfo(nextProjectInfo);

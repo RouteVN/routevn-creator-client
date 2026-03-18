@@ -173,7 +173,7 @@ const targetPathByKey = {
   y: "/project/text-styles",
   l: "/project/layouts",
   v: "/project/videos",
-  b: "/project/controls",
+  b: "/project/variables",
   t: "/project/transforms",
   s: "/project/sounds",
   n: "/project/scenes",

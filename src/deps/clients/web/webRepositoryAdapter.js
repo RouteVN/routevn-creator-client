@@ -13,11 +13,7 @@ const PROJECT_INFO_KEY = "projectInfo";
 const normalizeProjectInfo = (projectInfo = {}) => ({
   name: projectInfo.name ?? "",
   description: projectInfo.description ?? "",
-  iconFileId:
-    typeof projectInfo.iconFileId === "string" &&
-    projectInfo.iconFileId.length > 0
-      ? projectInfo.iconFileId
-      : null,
+  iconFileId: projectInfo.iconFileId ?? null,
 });
 
 const openIDB = (name, version, upgradeCallback) => {

@@ -35,7 +35,7 @@ export const createLayoutCommandApi = (shared) => ({
         layoutId: nextLayoutId,
         data: {
           ...structuredClone(data || {}),
-          type: data?.type || "layout",
+          type: "layout",
           name,
           layoutType,
           elements: structuredClone(elements || createTreeCollection()),

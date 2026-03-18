@@ -33,6 +33,14 @@ Local-first collaboration:
 
 - `insieme`
 
+## Code Style
+
+- Prefer direct values and `??` defaults over verbose string guards like
+  `typeof value === "string" && value.length > 0 ? value : null` when the
+  data contract is already stable.
+- Use simple normalization such as `value ?? null` unless real runtime type
+  narrowing is required.
+
 ## Testing
 
 This repo currently uses two main test styles:

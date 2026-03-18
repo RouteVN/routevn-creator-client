@@ -320,13 +320,21 @@ const createProjectDataWithSelectedEntryPoint = (projectData, selection) => {
 export const renderSceneEditorState = async (deps, payload = {}) => {
   const { store, graphicsService } = deps;
   const { skipAnimations = false } = payload;
-  const projectData = store.selectProjectData();
+  const sceneId = store.selectSceneId();
+  const sectionId = store.selectSelectedSectionId();
+  const lineId = store.selectSelectedLineId();
+  const projectData = createProjectDataWithSelectedEntryPoint(
+    store.selectProjectData(),
+    {
+      sceneId,
+      sectionId,
+      lineId,
+    },
+  );
   const safeProjectData = cloneWithDiagnostics(
     projectData,
     "projectData passed to updateProjectData",
   );
-  const sectionId = store.selectSelectedSectionId();
-  const lineId = store.selectSelectedLineId();
   const isMuted = store.selectIsMuted();
 
   graphicsService.engineHandleActions({
@@ -350,9 +358,8 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     },
   });
 
-  const presentationState = graphicsService.engineSelectPresentationState();
   store.setPresentationState({
-    presentationState,
+    presentationState: graphicsService.engineSelectPresentationState(),
   });
 };
 
@@ -431,7 +438,9 @@ export const initializeSceneEditorPage = async (deps) => {
     showLoading: true,
   });
   void preloadDirectTransitionScenes(deps, projectData, initialSceneIds);
-  graphicsService.initRouteEngine(initialProjectData);
+  graphicsService.initRouteEngine(initialProjectData, {
+    enableGlobalKeyboardBindings: false,
+  });
 
   render();
   setTimeout(() => {
@@ -468,15 +477,26 @@ export const restoreSceneEditorFromPreview = async (deps) => {
     showLoading: false,
   });
   void preloadDirectTransitionScenes(deps, projectData, initialSceneIds);
-  graphicsService.initRouteEngine(initialProjectData);
+  graphicsService.initRouteEngine(initialProjectData, {
+    enableGlobalKeyboardBindings: false,
+  });
 
   await renderSceneEditorState(deps);
 };
 
 export const renderSceneEditorCanvas = async (deps, payload) => {
   const { store, render } = deps;
-  const projectData = store.selectProjectData();
   const sceneId = store.selectSceneId();
+  const sectionId = store.selectSelectedSectionId();
+  const lineId = store.selectSelectedLineId();
+  const projectData = createProjectDataWithSelectedEntryPoint(
+    store.selectProjectData(),
+    {
+      sceneId,
+      sectionId,
+      lineId,
+    },
+  );
   const sceneIdsToLoad = extractInitialHybridSceneIds(projectData, sceneId);
 
   await loadAssetsForSceneIds(deps, projectData, sceneIdsToLoad, {

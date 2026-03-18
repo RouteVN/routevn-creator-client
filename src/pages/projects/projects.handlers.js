@@ -437,9 +437,11 @@ export const handleFormSubmit = async (deps, payload) => {
     store.addProject({ project: newProject });
     store.closeDialog();
     render();
-  } catch {
+  } catch (error) {
+    console.error("Failed to create project:", error);
     appService.showToast(
-      "Failed to create project. Please check the selected folder and try again.",
+      error?.message ||
+        "Failed to create project. Please check the selected folder and try again.",
     );
   }
 };

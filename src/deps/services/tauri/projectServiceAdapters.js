@@ -26,11 +26,7 @@ const PROJECT_INFO_KEY = "projectInfo";
 const normalizeProjectInfo = (projectInfo = {}) => ({
   name: projectInfo.name ?? "",
   description: projectInfo.description ?? "",
-  iconFileId:
-    typeof projectInfo.iconFileId === "string" &&
-    projectInfo.iconFileId.length > 0
-      ? projectInfo.iconFileId
-      : null,
+  iconFileId: projectInfo.iconFileId ?? null,
 });
 
 async function copyTemplateFiles(templateId, targetPath) {
@@ -310,6 +306,7 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
       getRepositoryByProject,
       getStoreByProject,
       getProjectInfoByProjectId,
+      resolveProjectReferenceByProjectId,
     }) => {
       collabLog("info", "create session requested", {
         projectId,
@@ -329,8 +326,9 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
         resolvedProjectId,
         partitions,
       );
+      const reference = await resolveProjectReferenceByProjectId(projectId);
       const projectInfo = await getProjectInfoByProjectId(projectId);
-      const clientStore = await getCollabClientStore(resolvedProjectId);
+      const clientStore = await getCollabClientStore(reference.projectPath);
       const repositoryStore = await getStoreByProject(projectId);
       const collabSession = createProjectCollabService({
         projectId: resolvedProjectId,

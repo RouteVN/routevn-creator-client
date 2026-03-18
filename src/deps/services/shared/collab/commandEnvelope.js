@@ -64,6 +64,7 @@ export const createCommandEnvelope = ({
   payload,
   actor,
   clientTs = 0,
+  schemaVersion = COMMAND_EVENT_MODEL.commandVersion,
   commandVersion = COMMAND_EVENT_MODEL.commandVersion,
   meta,
 }) => {
@@ -86,6 +87,7 @@ export const createCommandEnvelope = ({
     payload,
     actor,
     clientTs: toFiniteTimestamp(clientTs, 0),
+    schemaVersion,
     commandVersion,
     ...(meta !== undefined ? { meta: structuredClone(meta) } : {}),
   };

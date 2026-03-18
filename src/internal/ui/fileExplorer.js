@@ -556,33 +556,24 @@ export const createLayoutElementsFileExplorerHandlers = ({
 
       const layoutId = getLayoutId(deps);
       const resourceType = getResourceType(deps);
+      const isControls = resourceType === "controls";
       if (!layoutId) {
         appService.showToast(
-          resourceType === "controls"
-            ? "Control is missing."
-            : "Layout is missing.",
+          isControls ? "Control is missing." : "Layout is missing.",
         );
         return;
       }
 
-      const createElement =
-        resourceType === "controls"
-          ? projectService.createControlElement.bind(projectService)
-          : projectService.createLayoutElement.bind(projectService);
-      const updateElement =
-        resourceType === "controls"
-          ? projectService.updateControlElement.bind(projectService)
-          : projectService.updateLayoutElement.bind(projectService);
-      const deleteElement =
-        resourceType === "controls"
-          ? projectService.deleteControlElement.bind(projectService)
-          : projectService.deleteLayoutElement.bind(projectService);
-      const moveElement =
-        resourceType === "controls"
-          ? projectService.moveControlElement.bind(projectService)
-          : projectService.moveLayoutElement.bind(projectService);
-      const ownerPayloadKey =
-        resourceType === "controls" ? "controlId" : "layoutId";
+      const createElement = isControls
+        ? projectService.createControlElement.bind(projectService)
+        : projectService.createLayoutElement.bind(projectService);
+      const updateElement = isControls
+        ? projectService.updateControlElement.bind(projectService)
+        : projectService.updateLayoutElement.bind(projectService);
+      const deleteElement = isControls
+        ? projectService.deleteControlElement.bind(projectService)
+        : projectService.deleteLayoutElement.bind(projectService);
+      const ownerPayloadKey = isControls ? "controlId" : "layoutId";
 
       const menuItem = resolveMenuItem(detail);
       const action = menuItem?.value;
@@ -673,21 +664,18 @@ export const createLayoutElementsFileExplorerHandlers = ({
 
       const layoutId = getLayoutId(deps);
       const resourceType = getResourceType(deps);
+      const isControls = resourceType === "controls";
       if (!layoutId) {
         appService.showToast(
-          resourceType === "controls"
-            ? "Control is missing."
-            : "Layout is missing.",
+          isControls ? "Control is missing." : "Layout is missing.",
         );
         return;
       }
 
-      const moveElement =
-        resourceType === "controls"
-          ? projectService.moveControlElement.bind(projectService)
-          : projectService.moveLayoutElement.bind(projectService);
-      const ownerPayloadKey =
-        resourceType === "controls" ? "controlId" : "layoutId";
+      const moveElement = isControls
+        ? projectService.moveControlElement.bind(projectService)
+        : projectService.moveLayoutElement.bind(projectService);
+      const ownerPayloadKey = isControls ? "controlId" : "layoutId";
 
       const move = resolveExplorerMove(detail);
       if (!move) {
