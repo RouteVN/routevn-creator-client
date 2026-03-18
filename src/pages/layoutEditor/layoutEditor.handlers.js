@@ -7,14 +7,8 @@ import {
   getLayoutEditorBackPath,
   resolveLayoutEditorPayload,
 } from "../../internal/layoutEditorRoute.js";
-import {
-  createLayoutPreviewData,
-  createSelectedLayoutOverlay,
-  resolveLayoutPreviewElements,
-} from "./layoutPreview.js";
-import { buildLayoutRenderElements } from "../../internal/project/layout.js";
-import { toHierarchyStructure } from "../../internal/project/tree.js";
-import { extractFileIdsFromRenderState } from "../../internal/project/layout.js";
+import { renderLayoutEditorPreview } from "../../internal/layoutEditorPreview.js";
+import { applyLayoutItemFieldChange } from "../../internal/layoutEditorMutations.js";
 import { createLayoutElementsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { normalizeInteractionValue } from "../../internal/project/interactionPayload.js";
 
@@ -33,13 +27,6 @@ const KEYBOARD_UNITS = {
   NORMAL: 1,
   FAST: 10, // With shift key
 };
-
-const toAlphanumericId = (value, fallback = "sliderUpdate") => {
-  const sanitized = String(value || "").replace(/[^a-zA-Z0-9]/g, "");
-  return sanitized || fallback;
-};
-
-const isBlobUrl = (url) => typeof url === "string" && url.startsWith("blob:");
 
 const getEditorPayload = (appService) =>
   resolveLayoutEditorPayload(appService.getPayload() || {});
@@ -187,7 +174,7 @@ const scheduleKeyboardSave = (deps, itemId, layoutId) => {
     }
 
     // Final render to ensure bounds are properly updated
-    renderLayoutPreview(deps, { skipAssetLoading: true });
+    renderLayoutEditorPreview(deps);
 
     // Save final position to repository
     const finalItem = store.selectSelectedItemData();
@@ -204,172 +191,6 @@ const scheduleKeyboardSave = (deps, itemId, layoutId) => {
   }, DEBOUNCE_DELAYS.KEYBOARD);
 
   store.setKeyboardNavigationTimeoutId({ timeoutId });
-};
-
-/**
- * Load assets (images and fonts) for rendering
- * @param {Object} deps - Component dependencies
- * @param {Array} fileReferences - File references with url and type to load
- * @param {Object} fontsItems - Font items from repository
- * @returns {Promise<Object>} Loaded assets
- */
-const loadAssets = async (deps, fileReferences, fontsItems) => {
-  const { projectService, store } = deps;
-  const assets = {};
-
-  for (const fileObj of fileReferences) {
-    const { url: fileId, type: fileType } = fileObj;
-
-    // Check cache first
-    let url;
-    const cacheKey = fileId;
-
-    const cachedUrl = store.selectCachedFileContent({ fileId: cacheKey });
-
-    if (cachedUrl) {
-      if (!isBlobUrl(cachedUrl)) {
-        url = cachedUrl;
-      } else {
-        // Blob URLs are short-lived and can be revoked by consumers.
-        store.clearCachedFileContent({ fileId: cacheKey });
-      }
-    }
-
-    if (!url) {
-      // Fetch from API if not in cache
-      const result = await projectService.getFileContent(fileId);
-      url = result.url;
-      // Cache only stable URLs. Blob URLs can become invalid after revoke.
-      if (!isBlobUrl(url)) {
-        store.cacheFileContent({ fileId: cacheKey, url });
-      }
-    }
-
-    // Use type from fileObj, default to image/png
-    let type = fileType || "image/png";
-
-    // Check if this is a font file by looking in fonts data
-    const fontItem = Object.values(fontsItems).find(
-      (font) => font.fileId === fileId,
-    );
-
-    if (fontItem) {
-      // This is a font file, determine MIME type
-      const fileName = fontItem.name || "";
-      if (fileName.endsWith(".woff2")) type = "font/woff2";
-      else if (fileName.endsWith(".woff")) type = "font/woff";
-      else if (fileName.endsWith(".ttf")) type = "font/ttf";
-      else if (fileName.endsWith(".otf")) type = "font/otf";
-      else type = "font/ttf"; // default font type
-
-      assets[`${fileId}`] = {
-        url: url,
-        type: type,
-      };
-    } else {
-      // For non-fonts (like images), use the file reference
-      assets[`${fileId}`] = {
-        url: url,
-        type: type,
-      };
-    }
-  }
-
-  return assets;
-};
-
-/**
- * Get render state from repository and store data
- * @param {Object} deps - Component dependencies
- * @returns {Object} Render state data
- */
-const getRenderState = async (deps) => {
-  const { store, projectService } = deps;
-  const {
-    layouts,
-    controls,
-    images: { items: imageItems },
-    textStyles: textStylesData,
-    colors: colorsData,
-    fonts: fontsData,
-    variables: variablesData,
-  } = projectService.getRepositoryState();
-  const textStyleItems = textStylesData?.items || {};
-  const colorsItems = colorsData?.items || {};
-  const fontsItems = fontsData?.items || {};
-
-  const layoutId = store.selectLayoutId();
-  const resourceType = store.selectLayoutResourceType();
-  const storeElements = store.selectItems();
-  const resourceCollection = resourceType === "controls" ? controls : layouts;
-  const layoutElements =
-    storeElements || resourceCollection?.items?.[layoutId]?.elements;
-  const layoutHierarchyStructure = toHierarchyStructure(layoutElements);
-  const renderStateElements = buildLayoutRenderElements(
-    layoutHierarchyStructure,
-    imageItems,
-    { items: textStyleItems },
-    { items: colorsItems },
-    { items: fontsItems },
-    { layoutId },
-  );
-  return {
-    renderStateElements,
-    layoutHierarchyStructure,
-    fontsItems,
-    imageItems,
-    textStyleItems,
-    colorsItems,
-    variablesData,
-  };
-};
-
-const renderLayoutPreview = async (deps) => {
-  try {
-    const { store, graphicsService } = deps;
-
-    const { renderStateElements, fontsItems, variablesData } =
-      await getRenderState(deps);
-
-    const choicesData = store.selectChoicesData();
-
-    const selectedItem = store.selectSelectedItemData();
-
-    const fileReferences = extractFileIdsFromRenderState(renderStateElements);
-    let assets = await loadAssets(deps, fileReferences, fontsItems);
-    try {
-      await graphicsService.loadAssets(assets);
-    } catch {
-      // Recover from stale URL cache (especially revoked blob URLs).
-      deps.store.clearFileContentCache();
-      assets = await loadAssets(deps, fileReferences, fontsItems);
-      await graphicsService.loadAssets(assets);
-    }
-
-    const finalElements = resolveLayoutPreviewElements({
-      elements: renderStateElements,
-      previewData: createLayoutPreviewData({
-        variablesData,
-        dialogueDefaultValues: store.selectDialogueDefaultValues(),
-        choicesData,
-      }),
-    });
-
-    const parsedState = graphicsService.parse({
-      elements: finalElements,
-    });
-    const overlayElements = createSelectedLayoutOverlay({
-      parsedElements: parsedState.elements,
-      selectedItemId: selectedItem?.id,
-    });
-
-    graphicsService.render({
-      elements: [...finalElements, ...overlayElements],
-      animations: [],
-    });
-  } catch (error) {
-    console.error("[layoutEditor] Failed to render preview", error);
-  }
 };
 
 const syncLayoutEditorState = (
@@ -414,7 +235,7 @@ export const handleAfterMount = async (deps) => {
   const { canvas } = refs;
   await graphicsService.init({ canvas: canvas });
 
-  await renderLayoutPreview(deps);
+  await renderLayoutEditorPreview(deps);
   render();
 };
 
@@ -437,7 +258,7 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
   }
   store.setSelectedItemId({ itemId: itemId });
   render();
-  await renderLayoutPreview(deps);
+  await renderLayoutEditorPreview(deps);
 };
 
 export const handleAddLayoutClick = handleRenderOnly;
@@ -457,7 +278,7 @@ const refreshLayoutEditorData = async (deps, payload = {}) => {
     refs.fileExplorer.selectItem({ itemId: payload.selectedItemId });
   }
   render();
-  await renderLayoutPreview(deps);
+  await renderLayoutEditorPreview(deps);
 };
 
 const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
@@ -470,51 +291,6 @@ const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
 export { handleFileExplorerAction, handleFileExplorerTargetChanged };
 
 export const handleDataChanged = refreshLayoutEditorData;
-
-const unflattenKey = (key, value) => {
-  // Support both "." and "_" as separators
-  const separator = key.includes(".") ? "." : "_";
-  const parts = key.split(separator);
-  if (parts.length === 1) {
-    return { [key]: value };
-  }
-
-  const result = {};
-  let current = result;
-
-  for (let i = 0; i < parts.length - 1; i++) {
-    current[parts[i]] = {};
-    current = current[parts[i]];
-  }
-
-  current[parts[parts.length - 1]] = value;
-  return result;
-};
-
-const deepMerge = (target, source) => {
-  const result = { ...target };
-
-  Object.keys(source).forEach((key) => {
-    if (
-      source[key] &&
-      typeof source[key] === "object" &&
-      !Array.isArray(source[key])
-    ) {
-      // If source is empty object, replace instead of merge
-      if (Object.keys(source[key]).length === 0) {
-        result[key] = source[key];
-      } else if (result[key] && typeof result[key] === "object") {
-        result[key] = deepMerge(result[key], source[key]);
-      } else {
-        result[key] = source[key];
-      }
-    } else {
-      result[key] = source[key];
-    }
-  });
-
-  return result;
-};
 
 const shouldSaveLayoutEditImmediately = (name) => {
   if (typeof name !== "string" || name.length === 0) {
@@ -538,7 +314,7 @@ export const handleDialogueFormChange = async (deps, payload) => {
   store.setDialogueDefaultValue({ name, fieldValue });
   render();
 
-  await renderLayoutPreview(deps);
+  await renderLayoutEditorPreview(deps);
 };
 
 export const handleChoiceFormChange = async (deps, payload) => {
@@ -548,7 +324,7 @@ export const handleChoiceFormChange = async (deps, payload) => {
   store.setChoiceDefaultValue({ name, fieldValue });
   render();
 
-  await renderLayoutPreview(deps);
+  await renderLayoutEditorPreview(deps);
 };
 
 export const handleArrowKeyDown = async (deps, payload) => {
@@ -609,7 +385,7 @@ export const handleArrowKeyDown = async (deps, payload) => {
   const updatedItem = { ...currentItem, ...change };
   store.updateSelectedItem({ updatedItem: updatedItem });
   render();
-  await renderLayoutPreview(deps);
+  await renderLayoutEditorPreview(deps);
   scheduleKeyboardSave(deps, currentItem.id, layoutId);
 };
 
@@ -736,127 +512,16 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
   const resourceType = store.selectLayoutResourceType();
   const selectedItemId = store.selectSelectedItemId();
   const detail = payload._event.detail;
-
-  let updatedItem;
-
-  if (
-    detail.name === "anchor" &&
-    detail.value &&
-    typeof detail.value === "object"
-  ) {
-    const currentItem = store.selectSelectedItemData();
-    updatedItem = deepMerge(currentItem, {
-      anchorX: detail.value.x,
-      anchorY: detail.value.y,
-    });
-  } else if (detail.name.includes(".")) {
-    // For nested paths, directly set the value instead of merging
-    updatedItem = structuredClone(store.selectSelectedItemData());
-    const parts = detail.name.split(".");
-    let current = updatedItem;
-    for (let i = 0; i < parts.length - 1; i++) {
-      if (!current[parts[i]]) {
-        current[parts[i]] = {};
-      }
-      current = current[parts[i]];
-    }
-    current[parts[parts.length - 1]] = detail.value;
-  } else {
-    const currentItem = store.selectSelectedItemData();
-    const unflattenedUpdate = unflattenKey(detail.name, detail.value);
-    updatedItem = deepMerge(currentItem, unflattenedUpdate);
-    updatedItem[detail.name] = detail.value;
-
-    // Auto-switch slider settings when direction changes (remembers per-direction)
-    if (detail.name === "direction" && currentItem.type === "slider") {
-      const oldDirection = currentItem.direction || "horizontal";
-      const newDirection = detail.value;
-
-      // Save current settings to old direction
-      const savedKey = `_saved${oldDirection.charAt(0).toUpperCase() + oldDirection.slice(1)}`;
-      updatedItem[savedKey] = {
-        barImageId: currentItem.barImageId,
-        hoverBarImageId: currentItem.hoverBarImageId,
-        thumbImageId: currentItem.thumbImageId,
-        hoverThumbImageId: currentItem.hoverThumbImageId,
-        width: currentItem.width,
-        height: currentItem.height,
-      };
-
-      // Check for saved settings for new direction
-      const restoreKey = `_saved${newDirection.charAt(0).toUpperCase() + newDirection.slice(1)}`;
-      const saved = currentItem[restoreKey];
-
-      if (saved) {
-        // Restore saved settings
-        updatedItem.barImageId = saved.barImageId;
-        updatedItem.hoverBarImageId = saved.hoverBarImageId;
-        updatedItem.thumbImageId = saved.thumbImageId;
-        updatedItem.hoverThumbImageId = saved.hoverThumbImageId;
-        updatedItem.width = saved.width;
-        updatedItem.height = saved.height;
-      } else {
-        // First time - use defaults and swap dimensions
-        if (newDirection === "vertical") {
-          updatedItem.barImageId = "slider_bar_vertical";
-          updatedItem.hoverBarImageId = "slider_bar_vertical_hover";
-        } else {
-          updatedItem.barImageId = "slider_bar_default";
-          updatedItem.hoverBarImageId = "slider_bar_hover";
-        }
-        // Reset thumb to defaults (same for both directions)
-        updatedItem.thumbImageId = "slider_thumb_default";
-        updatedItem.hoverThumbImageId = "slider_thumb_hover";
-
-        updatedItem.width = currentItem.height;
-        updatedItem.height = currentItem.width;
-      }
-    }
-
-    // Handle slider variable binding
-    if (detail.name === "variableId" && currentItem.type === "slider") {
-      const variableId = detail.value;
-
-      if (variableId) {
-        const updateVariableId = toAlphanumericId(
-          `slider${currentItem.id}update`,
-        );
-        // Set up change.payload for variable binding
-        updatedItem.change = {
-          payload: {
-            actions: {
-              updateVariable: {
-                id: updateVariableId,
-                operations: [
-                  {
-                    variableId: variableId,
-                    op: "set",
-                    value: "_event.value",
-                  },
-                ],
-              },
-            },
-          },
-        };
-        // Bind initialValue to the variable
-        updatedItem.initialValue = `\${variables.${variableId}}`;
-      } else {
-        // Remove change binding when no variable selected
-        delete updatedItem.change;
-        // Reset initialValue to a static numeric value
-        const parsedMin = Number(updatedItem.min);
-        updatedItem.initialValue = Number.isFinite(parsedMin) ? parsedMin : 0;
-      }
-    }
+  const currentItem = store.selectSelectedItemData();
+  if (!currentItem) {
+    return;
   }
-  if (
-    updatedItem.type === "sprite" &&
-    (updatedItem.width === 0 || updatedItem.height === 0)
-  ) {
-    const preloadedImages = store.selectImages();
-    updatedItem.width = preloadedImages.items[updatedItem.imageId].width;
-    updatedItem.height = preloadedImages.items[updatedItem.imageId].height;
-  }
+  const updatedItem = applyLayoutItemFieldChange({
+    item: currentItem,
+    name: detail.name,
+    value: detail.value,
+    imagesData: store.selectImages(),
+  });
 
   store.updateSelectedItem({ updatedItem: updatedItem });
   render();
@@ -878,7 +543,7 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     });
   }
 
-  await renderLayoutPreview(deps, { skipAssetLoading: false });
+  await renderLayoutEditorPreview(deps);
 };
 
 export const handleCanvasMouseMove = (deps, payload) => {
@@ -915,7 +580,7 @@ export const handleCanvasMouseMove = (deps, payload) => {
   };
 
   store.updateSelectedItem({ updatedItem: updatedItem });
-  renderLayoutPreview(deps);
+  renderLayoutEditorPreview(deps);
 
   subject.dispatch("layoutEditor.updateElement", {
     layoutId: store.selectLayoutId(),

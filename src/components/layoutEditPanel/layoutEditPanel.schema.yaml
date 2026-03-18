@@ -4,6 +4,8 @@ propsSchema:
   properties:
     values:
       type: object
+    textStylesData:
+      type: object
     variablesData:
       type: object
     itemType:

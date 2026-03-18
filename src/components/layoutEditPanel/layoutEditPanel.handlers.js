@@ -17,35 +17,36 @@ export const handleBeforeMount = (deps) => {
   store.setValues({
     values,
   });
+  store.setTextStylesData({
+    textStylesData: props.textStylesData || { items: {}, tree: [] },
+  });
   store.setVariablesData({
     variablesData: props.variablesData || { items: {}, tree: [] },
   });
 };
 
-export const handleAfterMount = async (deps) => {
-  const { projectService, store, render } = deps;
-  await projectService.ensureRepository();
-  const { textStyles } = projectService.getState();
-
-  store.setTextStylesData({
-    textStylesData: textStyles || { items: {}, tree: [] },
-  });
-  render();
-};
-
 export const handleOnUpdate = (deps, payload) => {
   const { oldProps, newProps } = payload;
   const { store, render } = deps;
-  if (oldProps?.key !== newProps?.key) {
-    const values = newProps.values || {};
-    store.setValues({
-      values,
-    });
-    store.setVariablesData({
-      variablesData: newProps.variablesData || { items: {}, tree: [] },
-    });
-    render();
+  if (
+    oldProps?.key === newProps?.key &&
+    oldProps?.values === newProps?.values &&
+    oldProps?.variablesData === newProps?.variablesData &&
+    oldProps?.textStylesData === newProps?.textStylesData
+  ) {
+    return;
   }
+
+  store.setValues({
+    values: newProps.values || {},
+  });
+  store.setTextStylesData({
+    textStylesData: newProps.textStylesData || { items: {}, tree: [] },
+  });
+  store.setVariablesData({
+    variablesData: newProps.variablesData || { items: {}, tree: [] },
+  });
+  render();
 };
 
 export const handleGroupItemClick = (deps, payload) => {

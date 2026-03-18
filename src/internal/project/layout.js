@@ -1,5 +1,6 @@
 import { resolveLayoutReferences } from "route-engine-js";
 import { getFirstTextStyleId } from "../../constants/textStyles.js";
+import { toAlphanumericId } from "../layoutEditorTypes.js";
 import { filterTreeCollection } from "./tree.js";
 import { normalizeEngineActions } from "./engineActions.js";
 import {
@@ -97,11 +98,6 @@ export const filterLayoutsExcludingTypes = (
 
     return !blockedLayoutTypes.has(item.layoutType);
   });
-};
-
-const toAlphanumericId = (value, fallback = "sliderUpdate") => {
-  const sanitized = String(value || "").replace(/[^a-zA-Z0-9]/g, "");
-  return sanitized || fallback;
 };
 
 const toWordWrapWidth = (value) => {

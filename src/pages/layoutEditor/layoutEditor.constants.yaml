@@ -1,0 +1,139 @@
+contextMenuItems:
+  - label: Container
+    type: item
+    createType: container
+  - label: Sprite
+    type: item
+    createType: sprite
+  - label: Text
+    type: item
+    createType: text
+  - label: Slider (Horizontal)
+    type: item
+    createType: slider-horizontal
+  - label: Slider (Vertical)
+    type: item
+    createType: slider-vertical
+  - "$when": 'layoutType == "dialogue"'
+    label: Text (Dialogue Content)
+    type: item
+    createType: text-dialogue-content
+  - "$when": 'layoutType == "dialogue"'
+    label: Text (Character Name)
+    type: item
+    createType: text-character-name
+  - "$when": 'layoutType == "nvl"'
+    label: Container (Dialogue Line)
+    type: item
+    createType: container-dialogue-line
+  - "$when": 'layoutType == "nvl"'
+    label: Text (Line Character Name)
+    type: item
+    createType: text-dialogue-line-character-name
+  - "$when": 'layoutType == "nvl"'
+    label: Text (Line Content)
+    type: item
+    createType: text-dialogue-line-content
+  - "$when": 'layoutType == "choice"'
+    label: Container (Choice Item)
+    type: item
+    createType: container-choice-item
+  - "$when": 'layoutType == "choice"'
+    label: Text (Choice Item)
+    type: item
+    createType: text-choice-item-content
+  - label: Rename
+    type: item
+    value: rename-item
+  - label: Delete
+    type: item
+    value: delete-item
+
+emptyContextMenuItems:
+  - label: Container
+    type: item
+    createType: container
+  - label: Sprite
+    type: item
+    createType: sprite
+  - label: Text
+    type: item
+    createType: text
+  - label: Slider (Horizontal)
+    type: item
+    createType: slider-horizontal
+  - label: Slider (Vertical)
+    type: item
+    createType: slider-vertical
+  - "$when": 'layoutType == "dialogue"'
+    label: Text (Dialogue Content)
+    type: item
+    createType: text-dialogue-content
+  - "$when": 'layoutType == "dialogue"'
+    label: Text (Character Name)
+    type: item
+    createType: text-character-name
+  - "$when": 'layoutType == "nvl"'
+    label: Container (Dialogue Line)
+    type: item
+    createType: container-dialogue-line
+  - "$when": 'layoutType == "nvl"'
+    label: Text (Line Character Name)
+    type: item
+    createType: text-dialogue-line-character-name
+  - "$when": 'layoutType == "nvl"'
+    label: Text (Line Content)
+    type: item
+    createType: text-dialogue-line-content
+
+controlContextMenuItems:
+  - label: Rename
+    type: item
+    value: rename-item
+  - label: Delete
+    type: item
+    value: delete-item
+
+controlEmptyContextMenuItems:
+  - label: Rect
+    type: item
+    createType: rect
+
+dialogueForm:
+  title: Preview
+  description: Edit to see how the layout will look like with different data
+  fields:
+    - name: dialogue-character-name
+      description: Character Name
+      type: input-text
+    - name: dialogue-content
+      description: Dialogue Content
+      type: input-text
+
+choiceForm:
+  title: Preview
+  description: Edit to see how the layout will look like with different data
+  fields:
+    - name: choicesNum
+      type: select
+      description: Number of Choices
+      options:
+        - label: "1"
+          value: 1
+        - label: "2"
+          value: 2
+        - label: "3"
+          value: 3
+        - label: "4"
+          value: 4
+        - label: "5"
+          value: 5
+        - label: "6"
+          value: 6
+      placeholder: Select number of choices
+      required: true
+    - "$each": 'choice, i in choices'
+      name: 'choices[${i}]'
+      type: input-text
+      description: Choice content text
+      placeholder: Enter choice text

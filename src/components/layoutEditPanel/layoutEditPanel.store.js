@@ -128,7 +128,7 @@ const config = {
             },
             {
               $when:
-                'itemType != "text" || itemType != "text-ref-character-name" || itemType != "text-revealing-ref-dialogue-content" || itemType != "text-ref-choice-item-content" || itemType != "text-ref-dialogue-line-character-name" || itemType != "text-ref-dialogue-line-content"',
+                'itemType != "text" && itemType != "text-ref-character-name" && itemType != "text-revealing-ref-dialogue-content" && itemType != "text-ref-choice-item-content" && itemType != "text-ref-dialogue-line-character-name" && itemType != "text-ref-dialogue-line-content"',
               type: "clickable-value",
               svg: "h",
               name: "height",
