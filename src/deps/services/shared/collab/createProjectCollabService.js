@@ -51,23 +51,6 @@ export const createProjectCollabService = ({
     idleWaiters.clear();
   };
 
-  const settleActiveSubmission = (submissionId, error) => {
-    if (!activeSubmission || activeSubmission.command.id !== submissionId) {
-      return;
-    }
-
-    const completedSubmission = activeSubmission;
-    activeSubmission = null;
-
-    if (error) {
-      completedSubmission.reject(error);
-    } else {
-      completedSubmission.resolve(completedSubmission.command.id);
-    }
-
-    processNextSubmission();
-  };
-
   const processNextSubmission = () => {
     if (activeSubmission || queuedSubmissions.length === 0) {
       resolveIdleWaiters();
@@ -79,7 +62,10 @@ export const createProjectCollabService = ({
 
     void (async () => {
       try {
-        await session.submitCommand(nextSubmission.command);
+        await session.submitCommands([nextSubmission.command]);
+        nextSubmission.resolve(nextSubmission.command.id);
+        activeSubmission = null;
+        processNextSubmission();
       } catch (error) {
         activeSubmission = null;
         nextSubmission.reject(error);
@@ -221,18 +207,12 @@ export const createProjectCollabService = ({
             serverErrorStopInFlight = false;
           });
         }
-      } else if (type === "committed") {
-        settleActiveSubmission(payload?.id);
       } else if (type === "rejected") {
         lastError = {
           code: payload?.reason || "validation_failed",
           message: "Server rejected command",
           payload,
         };
-        settleActiveSubmission(
-          payload?.id,
-          new Error(payload?.reason || "Server rejected command"),
-        );
       }
 
       resolveIdleWaiters();
@@ -266,7 +246,7 @@ export const createProjectCollabService = ({
 
       projectedRepositoryState = optimistic.repositoryState;
 
-      const terminalSubmission = new Promise((resolve, reject) => {
+      const storedSubmission = new Promise((resolve, reject) => {
         queuedSubmissions.push({
           command,
           resolve,
@@ -285,8 +265,9 @@ export const createProjectCollabService = ({
         });
       });
 
-      void terminalSubmission.catch(() => {});
+      void storedSubmission.catch(() => {});
       processNextSubmission();
+      await storedSubmission;
 
       return {
         valid: true,

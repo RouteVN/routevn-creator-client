@@ -6,7 +6,7 @@ import { join } from "@tauri-apps/api/path";
  * Create a database instance
  * @param {Object} params
  * @param {string} [params.path] - Direct database path (e.g., "sqlite:app.db")
- * @param {string} [params.projectPath] - Project directory path (will create repository.db inside)
+ * @param {string} [params.projectPath] - Project directory path (will create project.db inside)
  * @param {boolean} [params.withEvents=false] - Include events table for insieme
  * @returns {{init: Function, get: Function, set: Function, remove: Function, getEvents?: Function, appendEvent?: Function}}
  */
@@ -22,7 +22,7 @@ export const createDb = ({ path, projectPath, withEvents = false }) => {
     async init() {
       let dbPath = path;
       if (projectPath) {
-        const fullPath = await join(projectPath, "repository.db");
+        const fullPath = await join(projectPath, "project.db");
         dbPath = `sqlite:${fullPath}`;
       }
 

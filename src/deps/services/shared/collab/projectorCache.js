@@ -8,8 +8,8 @@ import { committedEventToCommand } from "./mappers.js";
 
 export const PROJECTOR_CACHE_VERSION = "1";
 
-const PROJECTOR_CACHE_VERSION_KEY = "projector.cacheVersion";
-const PROJECTOR_GAP_KEY = "projector.gap";
+const PROJECTOR_CACHE_VERSION_KEY = "projectorCacheVersion";
+const PROJECTOR_GAP_KEY = "projectorGap";
 
 const readAppValue = async (store, key) => {
   if (!store?.app || typeof store.app.get !== "function") return undefined;

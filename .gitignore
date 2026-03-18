@@ -17,6 +17,7 @@ static/bundle/main.js
 /src-tauri/*.bak
 .env
 /.rettangoli/
+/project.db
 
 # Generated setup file
 src/setup.js

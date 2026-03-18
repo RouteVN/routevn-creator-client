@@ -2,16 +2,14 @@ import { mkdir, writeFile, exists } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import JSZip from "jszip";
-import { createInsiemeTauriStoreAdapter } from "../../clients/tauri/tauriRepositoryAdapter.js";
 import {
   loadTemplate,
   getTemplateFiles,
 } from "../../clients/web/templateLoader.js";
-import { createPersistedTauriCollabClientStore } from "./collabClientStore.js";
+import { createPersistedTauriProjectStore } from "./collabClientStore.js";
 import { createProjectCollabService } from "../shared/collab/createProjectCollabService.js";
 import {
   clearProjectionGap,
-  ensureRepositoryProjectionCache,
   saveProjectionGap,
 } from "../shared/collab/projectorCache.js";
 import { createWebSocketTransport } from "../web/collab/createWebSocketTransport.js";
@@ -22,6 +20,7 @@ import {
 } from "../shared/projectRepository.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
+const CREATOR_VERSION_KEY = "creatorVersion";
 
 const normalizeProjectInfo = (projectInfo = {}) => ({
   name: projectInfo.name ?? "",
@@ -52,19 +51,6 @@ async function copyTemplateFiles(templateId, targetPath) {
 }
 
 export const createTauriProjectServiceAdapters = ({ collabLog }) => {
-  const collabClientStoresByProjectPath = new Map();
-
-  const getCollabClientStore = async (projectPath) => {
-    const existing = collabClientStoresByProjectPath.get(projectPath);
-    if (existing) return existing;
-
-    const store = await createPersistedTauriCollabClientStore({
-      projectPath,
-    });
-    collabClientStoresByProjectPath.set(projectPath, store);
-    return store;
-  };
-
   const storageAdapter = {
     resolveProjectReferenceByProjectId: async ({ db, projectId }) => {
       const projects = (await db.get("projectEntries")) || [];
@@ -76,7 +62,7 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
       return {
         projectPath: project.projectPath,
         cacheKey: project.projectPath,
-        repositoryProjectId: project.projectPath,
+        repositoryProjectId: projectId,
       };
     },
 
@@ -87,10 +73,23 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
     }),
 
     createStore: async ({ reference }) => {
-      return createInsiemeTauriStoreAdapter(reference.projectPath);
+      return createPersistedTauriProjectStore({
+        projectPath: reference.projectPath,
+      });
     },
 
-    initializeProject: async ({ projectPath, template, projectInfo }) => {
+    initializeProject: async ({
+      projectId,
+      projectPath,
+      template,
+      projectInfo,
+    }) => {
+      if (!projectId) {
+        throw new Error(
+          "projectId is required for Tauri project initialization",
+        );
+      }
+
       if (!template) {
         throw new Error("Template is required for project initialization");
       }
@@ -103,15 +102,27 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
 
       assertSupportedProjectState(templateData);
 
-      const store = await createInsiemeTauriStoreAdapter(projectPath);
-      await store.appendEvent(
-        createProjectCreateRepositoryEvent({
-          projectId: projectPath,
-          state: templateData,
-        }),
-      );
+      const store = await createPersistedTauriProjectStore({
+        projectPath,
+      });
+      const initialEvent = createProjectCreateRepositoryEvent({
+        projectId,
+        state: templateData,
+      });
 
-      await store.app.set("creatorVersion", 1);
+      await store.insertDraft({
+        id: initialEvent.id,
+        partitions: initialEvent.partitions,
+        projectId: initialEvent.projectId,
+        userId: initialEvent.userId,
+        type: initialEvent.type,
+        schemaVersion: initialEvent.schemaVersion,
+        payload: structuredClone(initialEvent.payload),
+        meta: structuredClone(initialEvent.meta),
+        createdAt: Number(initialEvent.meta?.clientTs) || 0,
+      });
+
+      await store.app.set(CREATOR_VERSION_KEY, 1);
       await store.app.set(PROJECT_INFO_KEY, normalizeProjectInfo(projectInfo));
     },
   };
@@ -268,26 +279,6 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
   };
 
   const collabAdapter = {
-    beforeCreateRepository: async ({ reference, store }) => {
-      const rawClientStore = await getCollabClientStore(reference.projectPath);
-      const projectionCacheResult = await ensureRepositoryProjectionCache({
-        repositoryStore: store,
-        rawClientStore,
-      });
-
-      collabLog("debug", "repository projection cache ready", {
-        projectId: reference.projectId,
-        projectPath: reference.projectPath,
-        rebuilt: projectionCacheResult.rebuilt,
-        bootstrapped: projectionCacheResult.bootstrapped,
-        repositoryEventCount: projectionCacheResult.repositoryEventCount,
-        committedEventCount: projectionCacheResult.committedEventCount,
-        projectionGap: projectionCacheResult.projectionGap || null,
-      });
-
-      return store.getEvents();
-    },
-
     createTransport: ({ endpointUrl }) =>
       createWebSocketTransport({
         url: endpointUrl,
@@ -306,7 +297,6 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
       getRepositoryByProject,
       getStoreByProject,
       getProjectInfoByProjectId,
-      resolveProjectReferenceByProjectId,
     }) => {
       collabLog("info", "create session requested", {
         projectId,
@@ -326,9 +316,7 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
         resolvedProjectId,
         partitions,
       );
-      const reference = await resolveProjectReferenceByProjectId(projectId);
       const projectInfo = await getProjectInfoByProjectId(projectId);
-      const clientStore = await getCollabClientStore(reference.projectPath);
       const repositoryStore = await getStoreByProject(projectId);
       const collabSession = createProjectCollabService({
         projectId: resolvedProjectId,
@@ -341,7 +329,7 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
           clientId,
         },
         partitions: resolvedPartitions,
-        clientStore,
+        clientStore: repositoryStore,
         logger: (entry) => {
           collabLog("debug", "sync-client", entry);
         },
