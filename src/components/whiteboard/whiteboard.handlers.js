@@ -23,6 +23,39 @@ const syncContainerSize = ({ store, refs } = {}) => {
   return true;
 };
 
+const syncCursorStyles = ({ store, refs, props } = {}) => {
+  const container = refs?.container;
+  if (!container) {
+    return;
+  }
+
+  const isPanMode = store.selectIsPanMode();
+  const isPanning = store.selectIsPanning();
+  const panCursor = isPanning ? "grabbing" : isPanMode ? "grab" : undefined;
+  const overrideCursor = props?.cursor;
+  const containerCursor = panCursor || overrideCursor || "default";
+  const itemCursor = panCursor || overrideCursor || "move";
+
+  container.style.cursor = containerCursor;
+
+  Object.values(refs || {}).forEach((ref) => {
+    if (!ref?.dataset?.itemId) {
+      return;
+    }
+
+    ref.style.cursor = itemCursor;
+    const firstChild = ref.firstElementChild;
+    if (firstChild instanceof HTMLElement) {
+      firstChild.style.cursor = itemCursor;
+    }
+  });
+};
+
+const renderWithCursorSync = (deps) => {
+  deps.render();
+  syncCursorStyles(deps);
+};
+
 const dispatchPanChanged = ({ store, dispatchEvent } = {}) => {
   const pan = store.selectPan();
 
@@ -56,12 +89,13 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = (deps) => {
-  const { render } = deps;
   const didUpdateSize = syncContainerSize(deps);
 
   if (didUpdateSize) {
-    render();
+    deps.render();
   }
+
+  syncCursorStyles(deps);
 };
 
 export const handleContainerContextMenu = (deps, payload) => {
@@ -95,10 +129,10 @@ export const handleContainerContextMenu = (deps, payload) => {
 };
 
 export const handlePanButtonClick = (deps) => {
-  const { store, render } = deps;
+  const { store } = deps;
   const isPanMode = store.selectIsPanMode();
   store.togglePanMode({ isPanMode: !isPanMode });
-  render();
+  renderWithCursorSync(deps);
 };
 
 export const handleContainerMouseDown = (deps, payload) => {
@@ -110,6 +144,7 @@ export const handleContainerMouseDown = (deps, payload) => {
       mouseX: payload._event.clientX,
       mouseY: payload._event.clientY,
     });
+    syncCursorStyles(deps);
   } else {
     // Calculate click position in canvas coordinates using container coordinates
     const container = refs.container;
@@ -141,7 +176,7 @@ export const handleContainerMouseDown = (deps, payload) => {
 
 export const handleContainerWheel = (deps, payload) => {
   const { _event: event } = payload;
-  const { store, refs, render, dispatchEvent } = deps;
+  const { store, refs, dispatchEvent } = deps;
 
   // Calculate mouse position relative to container
   const container = refs.container;
@@ -156,14 +191,14 @@ export const handleContainerWheel = (deps, payload) => {
   event.preventDefault();
   store.zoomAt({ mouseX, mouseY, scaleFactor });
   syncContainerSize(deps);
-  render();
+  renderWithCursorSync(deps);
 
   dispatchZoomChanged({ store, dispatchEvent });
   dispatchPanChanged({ store, dispatchEvent });
 };
 
 export const handleZoomInClick = (deps) => {
-  const { store, refs, render, dispatchEvent } = deps;
+  const { store, refs, dispatchEvent } = deps;
 
   const container = refs.container;
   const rect = container.getBoundingClientRect();
@@ -175,14 +210,14 @@ export const handleZoomInClick = (deps) => {
   });
 
   syncContainerSize(deps);
-  render();
+  renderWithCursorSync(deps);
 
   dispatchZoomChanged({ store, dispatchEvent });
   dispatchPanChanged({ store, dispatchEvent });
 };
 
 export const handleZoomOutClick = (deps) => {
-  const { store, refs, render, dispatchEvent } = deps;
+  const { store, refs, dispatchEvent } = deps;
 
   const container = refs.container;
   const rect = container.getBoundingClientRect();
@@ -194,20 +229,21 @@ export const handleZoomOutClick = (deps) => {
   });
 
   syncContainerSize(deps);
-  render();
+  renderWithCursorSync(deps);
 
   dispatchZoomChanged({ store, dispatchEvent });
   dispatchPanChanged({ store, dispatchEvent });
 };
 
 export const handleItemMouseDown = (deps, payload) => {
-  payload._event.stopPropagation();
   const { store, refs } = deps;
 
   if (store.selectIsPanMode()) {
-    // Don't drag items in pan mode
+    // Let the event bubble to the container so Space-pan can start viewport drag.
     return;
   }
+
+  payload._event.stopPropagation();
 
   const itemId =
     payload._event.currentTarget?.dataset?.itemId ||
@@ -302,7 +338,7 @@ export const handleItemContextMenu = (deps, payload) => {
 };
 
 export const handleItemMouseEnter = (deps, payload) => {
-  const { store, render } = deps;
+  const { store } = deps;
   const itemId =
     payload._event.currentTarget?.dataset?.itemId ||
     payload._event.currentTarget?.id?.replace("item", "") ||
@@ -312,17 +348,17 @@ export const handleItemMouseEnter = (deps, payload) => {
   }
 
   store.setHoveredItemId({ itemId });
-  render();
+  renderWithCursorSync(deps);
 };
 
 export const handleItemMouseLeave = (deps) => {
-  const { store, render } = deps;
+  const { store } = deps;
   store.setHoveredItemId({ itemId: undefined });
-  render();
+  renderWithCursorSync(deps);
 };
 
 export const handleWindowMouseMove = (deps, payload) => {
-  const { store, refs, render, dispatchEvent } = deps;
+  const { store, refs, dispatchEvent } = deps;
   const didUpdateSize = syncContainerSize(deps);
 
   if (store.selectIsPanning()) {
@@ -335,7 +371,7 @@ export const handleWindowMouseMove = (deps, payload) => {
     // Dispatch pan changed event
     dispatchPanChanged({ store, dispatchEvent });
 
-    render();
+    renderWithCursorSync(deps);
   } else if (store.selectIsDragging()) {
     // Handle item dragging
     const canvas = refs.canvas;
@@ -396,7 +432,7 @@ export const handleWindowMouseMove = (deps, payload) => {
       }),
     );
   } else if (didUpdateSize) {
-    render();
+    renderWithCursorSync(deps);
   }
 };
 
@@ -442,11 +478,13 @@ export const handleWindowMouseUp = (deps) => {
     store.stopDragging();
     store.clearLastDraggedPosition();
   }
+
+  syncCursorStyles(deps);
 };
 
 // Keyboard event handlers
 export const handleWindowKeyDown = (deps, payload) => {
-  const { store, render, appService } = deps;
+  const { store, appService } = deps;
 
   if (appService.isInputFocused()) {
     return;
@@ -455,12 +493,12 @@ export const handleWindowKeyDown = (deps, payload) => {
   if (payload._event.code === "Space" && !store.selectIsPanMode()) {
     payload._event.preventDefault();
     store.togglePanMode({ isPanMode: true });
-    render();
+    renderWithCursorSync(deps);
   }
 };
 
 export const handleWindowKeyUp = (deps, payload) => {
-  const { store, render, appService } = deps;
+  const { store, appService } = deps;
 
   if (appService.isInputFocused()) {
     return;
@@ -469,7 +507,7 @@ export const handleWindowKeyUp = (deps, payload) => {
   if (payload._event.code === "Space" && store.selectIsPanMode()) {
     payload._event.preventDefault();
     store.togglePanMode({ isPanMode: false });
-    render();
+    renderWithCursorSync(deps);
   }
 };
 
@@ -508,9 +546,7 @@ export const handleInitialZoomAndPanSetup = (deps, payload) => {
 };
 
 export const handleWindowResize = (deps) => {
-  const { render } = deps;
-
   if (syncContainerSize(deps)) {
-    render();
+    renderWithCursorSync(deps);
   }
 };

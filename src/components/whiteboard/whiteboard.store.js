@@ -313,10 +313,8 @@ export const selectViewData = ({ state, props }) => {
           : "sm",
   }));
 
-  // Use framework cursor values: grab, grabbing, or undefined (for default)
-  const containerCursor =
-    props.cursor ||
-    (state.isPanning ? "grabbing" : state.isPanMode ? "grab" : undefined);
+  const containerCursor = props.cursor;
+  const itemCursor = props.cursor || "move";
 
   // Calculate adaptive grid size for container background
   const getAdaptiveGridSize = (zoomLevel) => {
@@ -376,7 +374,7 @@ export const selectViewData = ({ state, props }) => {
     zoomLevel: state.zoomLevel,
     zoomLevelPercent: Math.round(state.zoomLevel * 100),
     containerCursor,
-    itemCursor: state.isPanMode ? undefined : "m", // Use "m" for move cursor
+    itemCursor,
     gridSize: getAdaptiveGridSize(state.zoomLevel),
     sceneBoxWidth: SCENE_BOX_WIDTH,
     sceneBoxHeight: SCENE_BOX_HEIGHT,
