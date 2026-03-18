@@ -165,6 +165,9 @@ const buildOverlayRect = ({ element, overlayId, draggable }) => {
   }
 
   if (draggable) {
+    overlayRect.hover = {
+      cursor: "all-scroll",
+    };
     overlayRect.drag = {
       start: {
         payload: {},
