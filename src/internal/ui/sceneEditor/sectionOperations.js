@@ -113,19 +113,27 @@ export const createSceneEditorSectionWithName = async (
   const newSectionId = nanoid();
   const newLineId = nanoid();
 
-  const { layouts } = projectService.getState();
+  const repositoryState = projectService.getState();
+  const layouts = repositoryState.layouts;
+  const controls = repositoryState.controls;
   let dialogueLayoutId;
-  let baseLayoutId;
+  let controlId;
 
   if (layouts?.items) {
     for (const [layoutId, layout] of Object.entries(layouts.items)) {
       if (!dialogueLayoutId && layout.layoutType === "dialogue") {
         dialogueLayoutId = layoutId;
       }
-      if (!baseLayoutId && layout.layoutType === "base") {
-        baseLayoutId = layoutId;
+      if (dialogueLayoutId) {
+        break;
       }
-      if (dialogueLayoutId && baseLayoutId) {
+    }
+  }
+
+  if (controls?.items) {
+    for (const [itemId, control] of Object.entries(controls.items)) {
+      if (control?.type === "control") {
+        controlId = itemId;
         break;
       }
     }
@@ -146,10 +154,10 @@ export const createSceneEditorSectionWithName = async (
         },
   };
 
-  if (baseLayoutId) {
-    actions.base = {
-      resourceId: baseLayoutId,
-      resourceType: "layout",
+  if (controlId) {
+    actions.control = {
+      resourceId: controlId,
+      resourceType: "control",
     };
   }
 

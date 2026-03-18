@@ -12,12 +12,14 @@ import createRouteGraphics, {
 } from "route-graphics";
 import createRouteEngine, { createEffectsHandler } from "route-engine-js";
 import { Ticker } from "pixi.js";
+import { prepareRenderStateKeyboardForGraphics } from "../../internal/project/layout.js";
 
 export const createGraphicsService = async ({ subject }) => {
   const RIGHT_CLICK_EVENT_NAMES = new Set(["rightclick", "rightClick"]);
   let routeGraphics;
   let engine;
   let assetBufferManager;
+  let enableGlobalKeyboardBindings = true;
   // Create dedicated ticker for auto mode
   let ticker;
   let beforeHandleActions;
@@ -89,6 +91,29 @@ export const createGraphicsService = async ({ subject }) => {
     }
 
     engine.handleActions(actions, eventContext);
+  };
+
+  const getEventActions = (payload) => {
+    if (payload?.actions && typeof payload.actions === "object") {
+      return payload.actions;
+    }
+
+    if (
+      payload?.payload?.actions &&
+      typeof payload.payload.actions === "object"
+    ) {
+      return payload.payload.actions;
+    }
+
+    return undefined;
+  };
+
+  const renderEngineState = (renderState) => {
+    const nextRenderState = prepareRenderStateKeyboardForGraphics({
+      renderState,
+      enableGlobalKeyboardBindings,
+    });
+    routeGraphics.render(nextRenderState);
   };
 
   const enqueueInteractionActions = (actions, eventContext) => {
@@ -194,7 +219,9 @@ export const createGraphicsService = async ({ subject }) => {
             return;
           }
 
-          if (payload.actions && engine) {
+          const actions = getEventActions(payload);
+
+          if (actions && engine) {
             const eventContext = payload._event
               ? { _event: payload._event }
               : undefined;
@@ -202,16 +229,16 @@ export const createGraphicsService = async ({ subject }) => {
 
             if (RIGHT_CLICK_EVENT_NAMES.has(eventName)) {
               clearPendingClickInteraction(interactionId);
-              enqueueInteractionActions(payload.actions, eventContext);
+              enqueueInteractionActions(actions, eventContext);
               return;
             }
 
             if (eventName === "click") {
-              scheduleClickInteraction(payload.actions, eventContext);
+              scheduleClickInteraction(actions, eventContext);
               return;
             }
 
-            enqueueInteractionActions(payload.actions, eventContext);
+            enqueueInteractionActions(actions, eventContext);
           }
         },
       });
@@ -232,12 +259,17 @@ export const createGraphicsService = async ({ subject }) => {
       assetLoadQueue = queuedLoad.catch(() => {});
       return queuedLoad;
     },
-    initRouteEngine: (projectData) => {
+    initRouteEngine: (projectData, options = {}) => {
       ticker.start();
+      enableGlobalKeyboardBindings =
+        options.enableGlobalKeyboardBindings ?? true;
 
       const handlePendingEffects = createEffectsHandler({
         getEngine: () => engine,
-        routeGraphics,
+        routeGraphics: {
+          ...routeGraphics,
+          render: renderEngineState,
+        },
         ticker,
       });
       engine = createRouteEngine({ handlePendingEffects });
@@ -251,6 +283,10 @@ export const createGraphicsService = async ({ subject }) => {
 
     engineSelectPresentationState: () => {
       return engine.selectPresentationState();
+    },
+
+    engineSelectRenderState: () => {
+      return engine.selectRenderState();
     },
 
     engineSelectSectionLineChanges: (payload) => {
@@ -270,7 +306,7 @@ export const createGraphicsService = async ({ subject }) => {
       if (skipAnimations) {
         renderState = { ...renderState, animations: [] };
       }
-      routeGraphics.render(renderState);
+      renderEngineState(renderState);
     },
 
     engineHandleActions: (actions, eventContext) => {
@@ -287,6 +323,7 @@ export const createGraphicsService = async ({ subject }) => {
       if (engine) {
         engine = undefined;
       }
+      enableGlobalKeyboardBindings = true;
       beforeHandleActions = undefined;
       actionQueue = Promise.resolve();
       assetLoadQueue = Promise.resolve();

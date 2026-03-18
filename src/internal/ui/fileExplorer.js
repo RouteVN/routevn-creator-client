@@ -165,6 +165,14 @@ const RESOURCE_FILE_EXPLORER_API = Object.freeze({
     idField: "variableId",
     deleteField: "variableIds",
   },
+  controls: {
+    createMethod: "createControlItem",
+    updateMethod: "updateControlItem",
+    moveMethod: "reorderControlItem",
+    deleteMethod: "deleteControlItem",
+    idField: "controlId",
+    deleteField: "controlIds",
+  },
 });
 
 const validateResourceDeletion = async ({
@@ -183,7 +191,7 @@ const validateResourceDeletion = async ({
         const usage = recursivelyCheckResource({
           state,
           itemId: spriteId,
-          checkTargets: ["scenes", "layouts"],
+          checkTargets: ["scenes", "layouts", "controls"],
         });
 
         if (usage.isUsed) {
@@ -205,13 +213,13 @@ const validateResourceDeletion = async ({
     }
   }
 
-  let checkTargets = ["scenes", "layouts"];
+  let checkTargets = ["scenes", "layouts", "controls"];
   if (currentItemType === "textStyle") {
-    checkTargets = ["layouts"];
+    checkTargets = ["layouts", "controls"];
   } else if (currentItemType === "color" || currentItemType === "font") {
     checkTargets = ["textStyles"];
   } else if (resourceType === "characters") {
-    checkTargets = ["scenes", "layouts"];
+    checkTargets = ["scenes", "layouts", "controls"];
   }
 
   const usage = recursivelyCheckResource({
@@ -440,8 +448,105 @@ export const createLayoutsFileExplorerHandlers = ({
   });
 };
 
+export const createControlsFileExplorerHandlers = ({
+  refresh = noopRefresh,
+}) => {
+  return createActionHandlers({
+    handleAction: async ({ deps, detail }) => {
+      const { appService, projectService } = deps;
+      await projectService.ensureRepository();
+
+      const state = projectService.getState();
+      const menuItem = resolveMenuItem(detail);
+      const action = menuItem?.value;
+      const itemId = detail.itemId;
+      const collection = state?.controls;
+      const currentItem = collection?.items?.[itemId];
+
+      if (action === "new-item") {
+        await projectService.createControlItem({
+          controlId: nanoid(),
+          name: "New Folder",
+          parentId: null,
+          position: "last",
+          data: {
+            type: "folder",
+          },
+        });
+      } else if (action === "new-child-folder") {
+        if (!itemId) {
+          return;
+        }
+
+        await projectService.createControlItem({
+          controlId: nanoid(),
+          name: "New Folder",
+          parentId: itemId,
+          position: "last",
+          data: {
+            type: "folder",
+          },
+        });
+      } else if (action === "rename-item-confirmed") {
+        if (!itemId || !detail.newName) {
+          return;
+        }
+
+        await projectService.renameControlItem({
+          controlId: itemId,
+          name: detail.newName,
+        });
+      } else if (action === "delete-item") {
+        if (!currentItem) {
+          return;
+        }
+
+        const usage = recursivelyCheckResource({
+          state,
+          itemId,
+          checkTargets: ["scenes"],
+        });
+
+        if (usage.isUsed) {
+          appService.showToast(
+            "Cannot delete resource, it is currently in use.",
+          );
+          return;
+        }
+
+        await projectService.deleteControlItem({
+          controlIds: [itemId],
+        });
+      } else {
+        return;
+      }
+
+      await refresh(deps);
+    },
+    handleMove: async ({ deps, detail }) => {
+      const { projectService } = deps;
+      await projectService.ensureRepository();
+
+      const move = resolveExplorerMove(detail);
+      if (!move) {
+        return;
+      }
+
+      await projectService.reorderControlItem({
+        controlId: move.itemId,
+        parentId: move.parentId,
+        position: move.repositoryPosition,
+        positionTargetId: move.repositoryPositionTargetId,
+      });
+
+      await refresh(deps);
+    },
+  });
+};
+
 export const createLayoutElementsFileExplorerHandlers = ({
   getLayoutId,
+  getResourceType = () => "layouts",
   refresh = noopRefresh,
 }) => {
   return createActionHandlers({
@@ -450,10 +555,25 @@ export const createLayoutElementsFileExplorerHandlers = ({
       await projectService.ensureRepository();
 
       const layoutId = getLayoutId(deps);
+      const resourceType = getResourceType(deps);
+      const isControls = resourceType === "controls";
       if (!layoutId) {
-        appService.showToast("Layout is missing.");
+        appService.showToast(
+          isControls ? "Control is missing." : "Layout is missing.",
+        );
         return;
       }
+
+      const createElement = isControls
+        ? projectService.createControlElement.bind(projectService)
+        : projectService.createLayoutElement.bind(projectService);
+      const updateElement = isControls
+        ? projectService.updateControlElement.bind(projectService)
+        : projectService.updateLayoutElement.bind(projectService);
+      const deleteElement = isControls
+        ? projectService.deleteControlElement.bind(projectService)
+        : projectService.deleteLayoutElement.bind(projectService);
+      const ownerPayloadKey = isControls ? "controlId" : "layoutId";
 
       const menuItem = resolveMenuItem(detail);
       const action = menuItem?.value;
@@ -463,8 +583,8 @@ export const createLayoutElementsFileExplorerHandlers = ({
           return;
         }
 
-        await projectService.updateLayoutElement({
-          layoutId,
+        await updateElement({
+          [ownerPayloadKey]: layoutId,
           elementId: itemId,
           data: {
             name: detail.newName,
@@ -476,13 +596,13 @@ export const createLayoutElementsFileExplorerHandlers = ({
           return;
         }
 
-        await projectService.deleteLayoutElement({
-          layoutId,
+        await deleteElement({
+          [ownerPayloadKey]: layoutId,
           elementIds: [itemId],
         });
       } else if (action === "new-item") {
-        await projectService.createLayoutElement({
-          layoutId,
+        await createElement({
+          [ownerPayloadKey]: layoutId,
           elementId: nanoid(),
           data: {
             type: "folder",
@@ -496,8 +616,8 @@ export const createLayoutElementsFileExplorerHandlers = ({
           return;
         }
 
-        await projectService.createLayoutElement({
-          layoutId,
+        await createElement({
+          [ownerPayloadKey]: layoutId,
           elementId: nanoid(),
           data: {
             type: "folder",
@@ -525,8 +645,8 @@ export const createLayoutElementsFileExplorerHandlers = ({
           }
         }
 
-        await projectService.createLayoutElement({
-          layoutId,
+        await createElement({
+          [ownerPayloadKey]: layoutId,
           elementId: nextElementId,
           data: nextElementData,
           parentId: itemId || null,
@@ -543,18 +663,27 @@ export const createLayoutElementsFileExplorerHandlers = ({
       await projectService.ensureRepository();
 
       const layoutId = getLayoutId(deps);
+      const resourceType = getResourceType(deps);
+      const isControls = resourceType === "controls";
       if (!layoutId) {
-        appService.showToast("Layout is missing.");
+        appService.showToast(
+          isControls ? "Control is missing." : "Layout is missing.",
+        );
         return;
       }
+
+      const moveElement = isControls
+        ? projectService.moveControlElement.bind(projectService)
+        : projectService.moveLayoutElement.bind(projectService);
+      const ownerPayloadKey = isControls ? "controlId" : "layoutId";
 
       const move = resolveExplorerMove(detail);
       if (!move) {
         return;
       }
 
-      await projectService.moveLayoutElement({
-        layoutId,
+      await moveElement({
+        [ownerPayloadKey]: layoutId,
         elementId: move.itemId,
         parentId: move.parentId,
         position: move.repositoryPosition,

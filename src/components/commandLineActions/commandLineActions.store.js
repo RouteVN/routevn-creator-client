@@ -107,9 +107,9 @@ const PRESENTATION_ACTIONS = [
   },
   {
     id: "11",
-    label: "Base",
-    icon: "screen",
-    mode: "base",
+    label: "Control",
+    icon: "control",
+    mode: "control",
   },
 ];
 

@@ -88,10 +88,10 @@ template:
                                   - $if line.dialogueChangeType == "delete":
                                       - rtgl-view pos=abs cor=full bgc=danger av=c ah=c:
                                           - rtgl-svg svg=x wh=16 c=white: null
-                          - $if line.hasBase:
-                              - rtgl-view#previewBase data-type="base" data-id="${line.id}" pos=rel mr=sm w=36 h=24 av=c ah=c:
-                                  - rtgl-svg svg="screen" wh=24: null
-                                  - $if line.baseChangeType == "delete":
+                          - $if line.hasControl:
+                              - rtgl-view#previewControl data-type="control" data-id="${line.id}" pos=rel mr=sm w=36 h=24 av=c ah=c:
+                                  - rtgl-svg svg="control" wh=24: null
+                                  - $if line.controlChangeType == "delete":
                                       - rtgl-view pos=abs cor=full bgc=danger av=c ah=c:
                                           - rtgl-svg svg=x wh=16 c=white: null
                           - $if line.bgm:

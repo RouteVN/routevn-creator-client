@@ -32,9 +32,6 @@ export const handleBeforeMount = (deps) => {
   store.setClearPage({
     clearPage: props?.dialogue?.clearPage === true,
   });
-  store.setClear({
-    clear: props?.dialogue?.clear === true,
-  });
 };
 
 export const handleFormChange = (deps, payload) => {
@@ -61,20 +58,14 @@ export const handleFormChange = (deps, payload) => {
   });
   store.setSelectedCharacterId({ characterId: formValues.characterId || "" });
   store.setClearPage({ clearPage: formValues.clearPage });
-  store.setClear({ clear: formValues.clear });
 
   render();
 };
 
 export const handleSubmitClick = (deps) => {
   const { store, dispatchEvent, props } = deps;
-  const {
-    selectedMode,
-    selectedResourceId,
-    selectedCharacterId,
-    clearPage,
-    clear,
-  } = store.getState();
+  const { selectedMode, selectedResourceId, selectedCharacterId, clearPage } =
+    store.getState();
   const selectedLayoutType = getLayoutTypeByMode(selectedMode);
   const availableLayouts = (props?.layouts || []).filter(
     (layout) => layout.layoutType === selectedLayoutType,
@@ -97,9 +88,6 @@ export const handleSubmitClick = (deps) => {
   }
   if (selectedMode === "nvl" && toBoolean(clearPage)) {
     dialogue.clearPage = true;
-  }
-  if (selectedMode === "nvl" && toBoolean(clear)) {
-    dialogue.clear = true;
   }
 
   dispatchEvent(

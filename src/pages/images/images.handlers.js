@@ -32,43 +32,62 @@ export {
   handleImageItemEdit,
 };
 
+const getProjectErrorMessage = (result, fallbackMessage) => {
+  return (
+    result?.error?.message ||
+    result?.error?.creatorModelError?.message ||
+    result?.message ||
+    fallbackMessage
+  );
+};
+
 const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
   const { appService, projectService } = deps;
   let successfulUploads;
 
   try {
     successfulUploads = await projectService.uploadFiles(files);
-  } catch {
-    appService.showToast("Failed to upload images.", { title: "Error" });
+  } catch (error) {
+    console.error("Failed to upload images:", error);
+    appService.showToast(error?.message || "Failed to upload images.", {
+      title: "Error",
+    });
     return;
   }
 
   if (!successfulUploads.length) {
+    console.error("Failed to upload images: no successful uploads", {
+      fileCount: Array.isArray(files) ? files.length : 0,
+    });
     appService.showToast("Failed to upload images.", { title: "Error" });
     return;
   }
 
   for (const result of successfulUploads) {
+    const imageData = {
+      type: "image",
+      fileId: result.fileId,
+      thumbnailFileId: result.thumbnailFileId,
+      name: result.displayName,
+      fileType: result.file.type,
+      fileSize: result.file.size,
+      width: result.dimensions.width,
+      height: result.dimensions.height,
+    };
     const createResult = await projectService.createImage({
       imageId: nanoid(),
       fileRecords: result.fileRecords,
-      data: {
-        type: "image",
-        fileId: result.fileId,
-        thumbnailFileId: result.thumbnailFileId,
-        name: result.displayName,
-        fileType: result.file.type,
-        fileSize: result.file.size,
-        width: result.dimensions.width,
-        height: result.dimensions.height,
-      },
+      data: imageData,
       parentId,
       position: "last",
     });
 
     if (createResult?.valid === false) {
       console.error("Failed to create image:", createResult);
-      appService.showToast("Failed to create image.", { title: "Error" });
+      appService.showToast(
+        getProjectErrorMessage(createResult, "Failed to create image."),
+        { title: "Error" },
+      );
       return;
     }
   }
@@ -126,8 +145,11 @@ export const handleFormExtraEvent = async (deps) => {
       multiple: false,
       upload: true,
     });
-  } catch {
-    appService.showToast("Failed to select file.", { title: "Error" });
+  } catch (error) {
+    console.error("Failed to select image file:", error);
+    appService.showToast(error?.message || "Failed to select file.", {
+      title: "Error",
+    });
     return;
   }
 
@@ -136,6 +158,7 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   if (!(file.uploadSucessful && file.uploadResult)) {
+    console.error("Failed to upload image:", file);
     appService.showToast("Failed to upload image.", { title: "Error" });
     return;
   }
@@ -157,7 +180,10 @@ export const handleFormExtraEvent = async (deps) => {
 
   if (updateResult?.valid === false) {
     console.error("Failed to update image:", updateResult);
-    appService.showToast("Failed to update image.", { title: "Error" });
+    appService.showToast(
+      getProjectErrorMessage(updateResult, "Failed to update image."),
+      { title: "Error" },
+    );
     return;
   }
 
@@ -187,8 +213,11 @@ export const handleEditDialogImageClick = async (deps) => {
       multiple: false,
       upload: true,
     });
-  } catch {
-    appService.showToast("Failed to select file.", { title: "Error" });
+  } catch (error) {
+    console.error("Failed to select image file:", error);
+    appService.showToast(error?.message || "Failed to select file.", {
+      title: "Error",
+    });
     return;
   }
 
@@ -197,6 +226,7 @@ export const handleEditDialogImageClick = async (deps) => {
   }
 
   if (!(file.uploadSucessful && file.uploadResult)) {
+    console.error("Failed to upload image:", file);
     appService.showToast("Failed to upload image.", { title: "Error" });
     return;
   }
@@ -253,7 +283,10 @@ export const handleEditFormAction = async (deps, payload) => {
 
   if (updateResult?.valid === false) {
     console.error("Failed to update image:", updateResult);
-    appService.showToast("Failed to update image.", { title: "Error" });
+    appService.showToast(
+      getProjectErrorMessage(updateResult, "Failed to update image."),
+      { title: "Error" },
+    );
     return;
   }
 

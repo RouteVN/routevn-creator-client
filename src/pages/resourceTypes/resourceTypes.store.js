@@ -51,9 +51,15 @@ export const userInterfaceItems = [
 
 export const systemConfigItems = [
   {
+    id: "controls",
+    name: "Controls",
+    path: "/project/controls",
+  },
+  {
     id: "variables",
     name: "Variables",
     path: "/project/variables",
+    hidden: true,
   },
 ];
 
@@ -94,7 +100,7 @@ const resourceCategoryNames = {
     resources: userInterfaceItems,
   },
   systemConfig: {
-    label: "System Config",
+    label: "System",
     resources: systemConfigItems,
   },
   settings: {
@@ -131,7 +137,9 @@ export const selectViewData = ({ props }) => {
   const actualSelectedId =
     resourceParentMapping[selectedResourceId] || selectedResourceId;
 
-  const resourceItems = categoryConfig.resources;
+  const resourceItems = categoryConfig.resources.filter(
+    (item) => !item.hidden || item.id === actualSelectedId,
+  );
 
   const items = resourceItems.map((item) => {
     const isSelected = actualSelectedId === item.id;

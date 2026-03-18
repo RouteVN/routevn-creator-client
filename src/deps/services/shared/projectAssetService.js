@@ -10,26 +10,14 @@ import { loadFont } from "./fontLoader.js";
 
 const IMAGE_THUMBNAIL_MAX_WIDTH = 320;
 const IMAGE_THUMBNAIL_MAX_HEIGHT = 320;
-const IMAGE_THUMBNAIL_MIN_FILE_SIZE_BYTES = 32 * 1024;
-const FILE_RECORD_DEFAULT_MIME_TYPES = Object.freeze({
-  image: "image/png",
-  "image-thumbnail": "image/webp",
-  audio: "audio/mpeg",
-  "audio-waveform": "application/json",
-  video: "video/mp4",
-  "video-thumbnail": "image/jpeg",
-  font: "font/ttf",
-});
 
 const bufferToHex = (buffer) =>
   Array.from(new Uint8Array(buffer), (byte) =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
 
-const getFileRecordMimeType = ({ file, type }) =>
-  file.type ||
-  FILE_RECORD_DEFAULT_MIME_TYPES[type] ||
-  "application/octet-stream";
+const getFileRecordMimeType = ({ file }) =>
+  file.type || "application/octet-stream";
 
 const computeSha256 = async (file) => {
   if (!crypto?.subtle?.digest) {
@@ -71,7 +59,7 @@ export const createProjectAssetService = ({
     });
   };
 
-  const storeFileWithRecord = async ({ file, type }) => {
+  const storeFileWithRecord = async ({ file }) => {
     const [stored, sha256] = await Promise.all([
       storeFile(file),
       computeSha256(file),
@@ -81,8 +69,7 @@ export const createProjectAssetService = ({
       ...stored,
       fileRecord: {
         id: stored.fileId,
-        type,
-        mimeType: getFileRecordMimeType({ file, type }),
+        mimeType: getFileRecordMimeType({ file }),
         size: file.size,
         sha256,
       },
@@ -104,24 +91,8 @@ export const createProjectAssetService = ({
     if (fileType === "image") {
       const [dimensions, stored] = await Promise.all([
         getImageDimensions(file),
-        storeFileWithRecord({ file, type: "image" }),
+        storeFileWithRecord({ file }),
       ]);
-
-      const shouldReuseOriginalAsThumbnail =
-        (dimensions &&
-          dimensions.width <= IMAGE_THUMBNAIL_MAX_WIDTH &&
-          dimensions.height <= IMAGE_THUMBNAIL_MAX_HEIGHT) ||
-        file.size <= IMAGE_THUMBNAIL_MIN_FILE_SIZE_BYTES;
-
-      if (shouldReuseOriginalAsThumbnail) {
-        return {
-          ...stored,
-          thumbnailFileId: stored.fileId,
-          dimensions,
-          type: "image",
-          fileRecords: [stored.fileRecord],
-        };
-      }
 
       const thumbnailData = await extractImageThumbnail(file, {
         maxWidth: IMAGE_THUMBNAIL_MAX_WIDTH,
@@ -131,7 +102,6 @@ export const createProjectAssetService = ({
       });
       const thumbnailResult = await storeFileWithRecord({
         file: thumbnailData.blob,
-        type: "image-thumbnail",
       });
       return {
         ...stored,
@@ -155,7 +125,6 @@ export const createProjectAssetService = ({
       const waveformData = await extractWaveformData(fileForWaveform);
       const stored = await storeFileWithRecord({
         file: fileForStorage,
-        type: "audio",
       });
 
       let waveformDataFileId = null;
@@ -172,7 +141,6 @@ export const createProjectAssetService = ({
           storeFile: (metadataFile) =>
             storeFileWithRecord({
               file: metadataFile,
-              type: "audio-waveform",
             }),
           idGenerator,
         });
@@ -204,10 +172,9 @@ export const createProjectAssetService = ({
         }),
       ]);
       const [videoResult, thumbnailResult] = await Promise.all([
-        storeFileWithRecord({ file, type: "video" }),
+        storeFileWithRecord({ file }),
         storeFileWithRecord({
           file: thumbnailData.blob,
-          type: "video-thumbnail",
         }),
       ]);
       return {
@@ -233,7 +200,6 @@ export const createProjectAssetService = ({
 
       const stored = await storeFileWithRecord({
         file,
-        type: "font",
       });
       return {
         ...stored,

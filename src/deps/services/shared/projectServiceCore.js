@@ -44,8 +44,9 @@ export const createProjectServiceCore = ({
         ...payload,
         getRepositoryByProject: repositoryService.getRepositoryByProject,
         getStoreByProject: repositoryService.getStoreByProject,
-        getProjectMetadataFromEntries:
-          repositoryService.getProjectMetadataFromEntries,
+        getProjectInfoByProjectId: repositoryService.getProjectInfoByProjectId,
+        resolveProjectReferenceByProjectId:
+          repositoryService.resolveProjectReferenceByProjectId,
         collabLog,
       }),
     createTransport: collabAdapter.createTransport,
@@ -84,6 +85,8 @@ export const createProjectServiceCore = ({
     getAdapterById: repositoryService.getAdapterById,
     getEnsuredProjectId: repositoryService.getEnsuredProjectId,
     ensureRepository: repositoryService.ensureRepository,
+    ensureProjectCompatibleById:
+      repositoryService.ensureProjectCompatibleByProjectId,
     subscribeProjectState(listener, options) {
       const targetProjectId = options?.projectId || getCurrentProjectId();
       return repositoryService.subscribeProjectState((repositoryState) => {
@@ -109,6 +112,8 @@ export const createProjectServiceCore = ({
     getState: getDomainState,
     getDomainState,
     getRepositoryState,
+    getCurrentProjectInfo: repositoryService.getCurrentProjectInfo,
+    updateCurrentProjectInfo: repositoryService.updateCurrentProjectInfo,
     addVersionToProject: collabService.addVersionToProject,
     deleteVersionFromProject: collabService.deleteVersionFromProject,
     deleteImageIfUnused: collabService.deleteImageIfUnused,
@@ -130,6 +135,14 @@ export const createProjectServiceCore = ({
     ...("getFileByProjectId" in assetService
       ? {
           getFileByProjectId: assetService.getFileByProjectId,
+        }
+      : {}),
+    ...("getProjectInfoByPath" in repositoryService
+      ? {
+          ensureProjectCompatibleByPath:
+            repositoryService.ensureProjectCompatibleByPath,
+          getProjectInfoByPath: repositoryService.getProjectInfoByPath,
+          updateProjectInfoByPath: repositoryService.updateProjectInfoByPath,
         }
       : {}),
     createBundle: exportService.createBundle,

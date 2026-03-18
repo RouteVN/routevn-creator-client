@@ -1,5 +1,6 @@
 import {
   assetItems,
+  systemConfigItems,
   userInterfaceItems,
 } from "../resourceTypes/resourceTypes.store.js";
 
@@ -24,6 +25,11 @@ export const createInitialState = () => ({
       title: "User Interface",
       path: "/project/colors",
       icon: "color",
+    },
+    {
+      title: "System Config",
+      path: "/project/controls",
+      icon: "settings",
     },
     {
       title: "Scenes",
@@ -68,6 +74,11 @@ export const selectViewData = ({ state }) => {
       {
         items: userInterfaceItems,
         sidebarPath: state.items.find((item) => item.title === "User Interface")
+          ?.path,
+      },
+      {
+        items: systemConfigItems,
+        sidebarPath: state.items.find((item) => item.title === "System Config")
           ?.path,
       },
     ];

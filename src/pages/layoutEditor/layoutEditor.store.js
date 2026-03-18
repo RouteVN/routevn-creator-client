@@ -574,7 +574,7 @@ export const setItems = ({ state }, { layoutData } = {}) => {
 };
 
 export const setLayout = ({ state }, payload = {}) => {
-  const { id, layout } = payload || {};
+  const { id, layout, resourceType } = payload || {};
 
   if (!layout && !id) {
     state.layout = undefined;
@@ -584,6 +584,7 @@ export const setLayout = ({ state }, payload = {}) => {
   state.layout = {
     ...layout,
     id: id || layout?.id || undefined,
+    resourceType: resourceType || layout?.resourceType || "layouts",
   };
 };
 
@@ -724,6 +725,10 @@ export const selectLayoutId = ({ state }) => {
   return state.layout?.id;
 };
 
+export const selectLayoutResourceType = ({ state }) => {
+  return state.layout?.resourceType || "layouts";
+};
+
 export const selectCurrentLayoutType = ({ state }) => {
   return state.layout?.layoutType;
 };
@@ -806,6 +811,7 @@ export const selectViewData = ({ state }) => {
   const item = selectSelectedItem({ state });
   const flatItems = toFlatItems(state.layoutData);
   const flatGroups = toFlatGroups(state.layoutData);
+  const isControlResource = state.layout?.resourceType === "controls";
 
   const choicesContext = {
     ...state.choiceDefaultValues,
@@ -818,8 +824,8 @@ export const selectViewData = ({ state }) => {
     flatItems,
     flatGroups,
     selectedItemId: state.selectedItemId,
-    resourceCategory: "userInterface",
-    selectedResourceId: "layout-editor",
+    resourceCategory: isControlResource ? "systemConfig" : "userInterface",
+    selectedResourceId: isControlResource ? "controls" : "layout-editor",
     contextMenuItems: parseAndRender(contextMenuItems, {
       layoutType: state.layout?.layoutType,
     }),

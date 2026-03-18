@@ -143,10 +143,11 @@ export const createWebProjectServiceAdapters = ({
       return createInsiemeWebStoreAdapter(reference.projectId);
     },
 
-    initializeProject: async ({ projectId, template }) => {
+    initializeProject: async ({ projectId, template, projectInfo }) => {
       return initializeWebProject({
         projectId,
         template,
+        projectInfo,
       });
     },
   };
@@ -323,7 +324,7 @@ export const createWebProjectServiceAdapters = ({
       partitioning,
       getRepositoryByProject,
       getStoreByProject,
-      getProjectMetadataFromEntries,
+      getProjectInfoByProjectId,
     }) => {
       collabLog("info", "create session requested", {
         projectId,
@@ -344,13 +345,13 @@ export const createWebProjectServiceAdapters = ({
         resolvedProjectId,
         partitions,
       );
-      const projectMetadata = await getProjectMetadataFromEntries(projectId);
+      const projectInfo = await getProjectInfoByProjectId(projectId);
       const clientStore = await getCollabClientStore(projectId);
       await ensureCommittedIdLoaded(projectId, getStoreByProject);
       const collabSession = createProjectCollabService({
         projectId: resolvedProjectId,
-        projectName: projectMetadata.name,
-        projectDescription: projectMetadata.description,
+        projectName: projectInfo.name,
+        projectDescription: projectInfo.description,
         initialRepositoryState: state,
         token,
         actor: {

@@ -21,6 +21,14 @@ import {
   createProjectCreateRepositoryEvent,
 } from "../shared/projectRepository.js";
 
+const PROJECT_INFO_KEY = "projectInfo";
+
+const normalizeProjectInfo = (projectInfo = {}) => ({
+  name: projectInfo.name ?? "",
+  description: projectInfo.description ?? "",
+  iconFileId: projectInfo.iconFileId ?? null,
+});
+
 async function copyTemplateFiles(templateId, targetPath) {
   const templateFilesPath = `/templates/${templateId}/files/`;
   const filesToCopy = await getTemplateFiles(templateId);
@@ -82,7 +90,7 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
       return createInsiemeTauriStoreAdapter(reference.projectPath);
     },
 
-    initializeProject: async ({ projectPath, template }) => {
+    initializeProject: async ({ projectPath, template, projectInfo }) => {
       if (!template) {
         throw new Error("Template is required for project initialization");
       }
@@ -103,7 +111,8 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
         }),
       );
 
-      await store.app.set("creator_version", "2");
+      await store.app.set("creatorVersion", 1);
+      await store.app.set(PROJECT_INFO_KEY, normalizeProjectInfo(projectInfo));
     },
   };
 
@@ -296,7 +305,8 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
       partitioning,
       getRepositoryByProject,
       getStoreByProject,
-      getProjectMetadataFromEntries,
+      getProjectInfoByProjectId,
+      resolveProjectReferenceByProjectId,
     }) => {
       collabLog("info", "create session requested", {
         projectId,
@@ -316,13 +326,14 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
         resolvedProjectId,
         partitions,
       );
-      const projectMetadata = await getProjectMetadataFromEntries(projectId);
-      const clientStore = await getCollabClientStore(resolvedProjectId);
+      const reference = await resolveProjectReferenceByProjectId(projectId);
+      const projectInfo = await getProjectInfoByProjectId(projectId);
+      const clientStore = await getCollabClientStore(reference.projectPath);
       const repositoryStore = await getStoreByProject(projectId);
       const collabSession = createProjectCollabService({
         projectId: resolvedProjectId,
-        projectName: projectMetadata.name,
-        projectDescription: projectMetadata.description,
+        projectName: projectInfo.name,
+        projectDescription: projectInfo.description,
         initialRepositoryState: state,
         token,
         actor: {

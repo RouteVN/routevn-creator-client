@@ -6,6 +6,8 @@ const EMPTY_TREE = { tree: [], items: {} };
 
 export const createCatalogPageHandlers = ({
   resourceType,
+  selectData = (repositoryState) =>
+    repositoryState?.[resourceType] ?? EMPTY_TREE,
   createExplorerHandlers = ({ refresh }) =>
     createResourceFileExplorerHandlers({
       resourceType,
@@ -14,7 +16,7 @@ export const createCatalogPageHandlers = ({
 }) => {
   const refreshData = async (deps) => {
     const { store, render, projectService } = deps;
-    const data = projectService.getState()[resourceType] ?? EMPTY_TREE;
+    const data = selectData(projectService.getRepositoryState());
     store.setItems({ data });
     render();
   };
@@ -24,7 +26,7 @@ export const createCatalogPageHandlers = ({
     const subscription = createProjectStateStream({ projectService })
       .pipe(
         tap(({ repositoryState }) => {
-          const data = repositoryState?.[resourceType] ?? EMPTY_TREE;
+          const data = selectData(repositoryState);
           store.setItems({ data });
           render();
         }),

@@ -45,9 +45,9 @@ export const createInitialState = () => ({
   ],
   system: [
     {
-      id: "variables",
-      label: "Variables",
-      route: "/project/variables",
+      id: "controls",
+      label: "Controls",
+      route: "/project/controls",
     },
   ],
 });

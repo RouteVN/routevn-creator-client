@@ -17,6 +17,8 @@ refs:
         handler: handleLineDeleteActionItem
       pasteLines:
         handler: handlePasteLines
+      preview-shortcut:
+        handler: handlePreviewShortcut
       dialogue-character-shortcut:
         handler: handleDialogueCharacterShortcut
       delete-line-shortcut:
@@ -138,7 +140,7 @@ template:
                           - rtgl-text s=sm: ...
                       - rtgl-view w=1fg: null
                   - rtgl-view w=f p=md sv h=1fg:
-                      - rvn-lines-editor#linesEditor :lines=currentLines :selectedLineId=selectedLineId: null
+                      - rvn-lines-editor#linesEditor :lines=currentLines :selectedLineId=selectedLineId :keyboardHandlingDisabled=previewVisible: null
                       - rtgl-view h=30vh: null
           - rtgl-view w=1 h=f bgc=mu: null
           - rtgl-view w=f:

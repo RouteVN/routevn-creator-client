@@ -307,6 +307,48 @@ export const toHierarchyStructure = (data) => {
   return order.map((node) => traverse(node)).filter(Boolean);
 };
 
+export const filterTreeCollection = (data, predicate = () => true) => {
+  const items = data?.items || {};
+  const order = normalizeOrder(data);
+  const filteredItems = {};
+
+  const filterNodes = (nodes) => {
+    const nextNodes = [];
+
+    for (const node of nodes) {
+      if (!node || typeof node.id !== "string") {
+        continue;
+      }
+
+      const item = items[node.id];
+      if (!item) {
+        continue;
+      }
+
+      const children = filterNodes(
+        Array.isArray(node.children) ? node.children : [],
+      );
+      const shouldKeep = item.type === "folder" || predicate(item);
+
+      if (!shouldKeep) {
+        continue;
+      }
+
+      filteredItems[node.id] = item;
+      nextNodes.push(
+        children.length > 0 ? { id: node.id, children } : { id: node.id },
+      );
+    }
+
+    return nextNodes;
+  };
+
+  return {
+    items: filteredItems,
+    tree: filterNodes(order),
+  };
+};
+
 export const ROOT_TREE_PARENT_ID = "_root";
 
 const normalizeTreeNodes = (nodes) => {

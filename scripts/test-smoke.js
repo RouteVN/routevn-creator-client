@@ -6,8 +6,11 @@ import {
   applyCommandToRepositoryState,
   createProjectRepository,
 } from "../src/deps/services/shared/projectRepository.js";
-import { buildLayoutRenderElements } from "../src/internal/project/layout.js";
-import { extractFileIdsFromRenderState } from "../src/internal/project/layout.js";
+import {
+  buildLayoutRenderElements,
+  extractFileIdsFromRenderState,
+  prepareRenderStateKeyboardForGraphics,
+} from "../src/internal/project/layout.js";
 import {
   constructProjectData,
   projectRepositoryStateToDomainState,
@@ -173,6 +176,27 @@ await applyCommandToRepository({
   repository,
   projectId,
   command: makeEnvelope({
+    scope: "story",
+    clientTs: 1077,
+    type: "line.update_actions",
+    payload: {
+      lineId: "line-1",
+      data: {
+        narration: "hello",
+        control: {
+          resourceId: "layout-main",
+          resourceType: "control",
+        },
+      },
+      replace: false,
+    },
+  }),
+});
+
+await applyCommandToRepository({
+  repository,
+  projectId,
+  command: makeEnvelope({
     scope: "resources",
     partitions: [`project:${projectId}:resources:files`],
     clientTs: 1045,
@@ -215,15 +239,14 @@ await applyCommandToRepository({
   projectId,
   command: makeEnvelope({
     scope: "resources",
-    partitions: [`project:${projectId}:resources:layouts`],
+    partitions: [`project:${projectId}:resources:controls`],
     clientTs: 1060,
-    type: "layout.create",
+    type: "control.create",
     payload: {
-      layoutId: "layout-main",
+      controlId: "layout-main",
       data: {
-        type: "layout",
-        name: "Main Layout",
-        layoutType: "normal",
+        type: "control",
+        name: "Main Control",
         elements: {
           items: {},
           tree: [],
@@ -237,12 +260,12 @@ await applyCommandToRepository({
   repository,
   projectId,
   command: makeEnvelope({
-    scope: "layouts",
-    partitions: [`project:${projectId}:layouts`],
+    scope: "controls",
+    partitions: [`project:${projectId}:controls`],
     clientTs: 1070,
-    type: "layout.element.create",
+    type: "control.element.create",
     payload: {
-      layoutId: "layout-main",
+      controlId: "layout-main",
       elementId: "sprite-root",
       data: {
         type: "sprite",
@@ -258,11 +281,11 @@ await applyCommandToRepository({
   projectId,
   command: makeEnvelope({
     scope: "resources",
-    partitions: [`project:${projectId}:resources:layouts`],
+    partitions: [`project:${projectId}:resources:controls`],
     clientTs: 1075,
-    type: "layout.update",
+    type: "control.update",
     payload: {
-      layoutId: "layout-main",
+      controlId: "layout-main",
       data: {
         keyboard: {
           enter: {
@@ -418,7 +441,7 @@ assert.equal(
   "payload.positionTargetId must reference a line in the target section",
 );
 assert.deepEqual(repository.getState(), beforeInvalidApply);
-assert.deepEqual(repositoryState.layouts.items["layout-main"].keyboard, {
+assert.deepEqual(repositoryState.controls.items["layout-main"].keyboard, {
   enter: {
     payload: {
       actions: {
@@ -429,7 +452,7 @@ assert.deepEqual(repositoryState.layouts.items["layout-main"].keyboard, {
 });
 
 const layoutHierarchy = toHierarchyStructure(
-  repositoryState.layouts.items["layout-main"].elements,
+  repositoryState.controls.items["layout-main"].elements,
 );
 assert.deepEqual(
   layoutHierarchy.map((node) => node.id),
@@ -492,7 +515,7 @@ assert.equal(
     .fileId,
   "hero-smile.png",
 );
-assert.deepEqual(domainState.layouts.items["layout-main"].keyboard, {
+assert.deepEqual(domainState.controls.items["layout-main"].keyboard, {
   enter: {
     payload: {
       actions: {
@@ -501,7 +524,47 @@ assert.deepEqual(domainState.layouts.items["layout-main"].keyboard, {
     },
   },
 });
-assert.deepEqual(projectData.resources.layouts["layout-main"].keyboard, {
+assert.equal(projectData.resources.controls["layout-main"].id, "layout-main");
+assert.equal(
+  projectData.resources.controls["layout-main"].name,
+  "Main Control",
+);
+assert.deepEqual(projectData.resources.controls["layout-main"].keyboard, {
+  enter: {
+    actions: {
+      nextLine: {},
+    },
+  },
+});
+assert.deepEqual(
+  projectData.story.scenes["scene-1"].sections["section-1"].lines[0].actions
+    .control,
+  {
+    resourceId: "layout-main",
+    resourceType: "control",
+  },
+);
+
+const graphicsKeyboardRenderState = prepareRenderStateKeyboardForGraphics({
+  renderState: {
+    elements: [],
+    animations: [],
+    audio: [],
+    global: {
+      keyboard: {
+        enter: {
+          payload: {
+            actions: {
+              nextLine: {},
+            },
+          },
+        },
+      },
+    },
+  },
+});
+
+assert.deepEqual(graphicsKeyboardRenderState.global.keyboard, {
   enter: {
     payload: {
       actions: {
@@ -511,6 +574,85 @@ assert.deepEqual(projectData.resources.layouts["layout-main"].keyboard, {
   },
 });
 
-assert.equal(store._debug.getEvents().length, 14);
+const extraKeyboardRenderState = prepareRenderStateKeyboardForGraphics({
+  renderState: {
+    elements: [],
+    animations: [],
+    audio: [],
+    global: {
+      keyboard: {
+        enter: {
+          payload: {
+            actions: {
+              nextLine: {},
+            },
+          },
+        },
+        esc: {
+          payload: {
+            actions: {
+              toggleDialogueUI: {},
+            },
+          },
+        },
+        space: {
+          payload: {
+            actions: {
+              toggleAutoMode: {},
+            },
+          },
+        },
+      },
+    },
+  },
+});
+
+assert.deepEqual(extraKeyboardRenderState.global.keyboard, {
+  enter: {
+    payload: {
+      actions: {
+        nextLine: {},
+      },
+    },
+  },
+  escape: {
+    payload: {
+      actions: {
+        toggleDialogueUI: {},
+      },
+    },
+  },
+  space: {
+    payload: {
+      actions: {
+        toggleAutoMode: {},
+      },
+    },
+  },
+});
+
+const disabledKeyboardRenderState = prepareRenderStateKeyboardForGraphics({
+  renderState: {
+    elements: [],
+    animations: [],
+    audio: [],
+    global: {
+      keyboard: {
+        enter: {
+          payload: {
+            actions: {
+              nextLine: {},
+            },
+          },
+        },
+      },
+    },
+  },
+  enableGlobalKeyboardBindings: false,
+});
+
+assert.equal(disabledKeyboardRenderState.global.keyboard, undefined);
+
+assert.equal(store._debug.getEvents().length, 15);
 
 console.log("Smoke tests: PASS");

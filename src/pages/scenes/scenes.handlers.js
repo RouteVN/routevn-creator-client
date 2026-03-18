@@ -37,6 +37,7 @@ const getTransitionsFromLayout = (layout) => {
  *
  * @param {Object} sections
  * @param {Object} layouts - Layouts data from repository
+ * @param {Object} controls - Controls data from repository
  * @returns {Array} Array of transition objects with sceneId
  * @example
  * // should return: ["scene-1760679405214-0ueot8rb4"]
@@ -63,7 +64,7 @@ const getTransitionsFromLayout = (layout) => {
  * }
  *
  */
-const getTransitionsForScene = (sections, layouts) => {
+const getTransitionsForScene = (sections, layouts, controls) => {
   if (!sections || !sections.items) {
     return [];
   }
@@ -103,16 +104,24 @@ const getTransitionsForScene = (sections, layouts) => {
           }
         }
 
-        // Check for transitions within layouts referenced by background or base
+        // Check for transitions within layouts referenced by background or control
         const layoutRefs = [
           line.actions?.background,
-          line.actions?.base,
+          line.actions?.control,
           line.actions?.actions?.background,
-          line.actions?.actions?.base,
-        ].filter((ref) => ref?.resourceType === "layout" && ref?.resourceId);
+          line.actions?.actions?.control,
+        ].filter((ref) => {
+          return (
+            ref?.resourceId &&
+            (ref.resourceType === "layout" || ref.resourceType === "control")
+          );
+        });
 
         for (const ref of layoutRefs) {
-          const layout = layouts?.items?.[ref.resourceId];
+          const layout =
+            ref.resourceType === "control"
+              ? controls?.items?.[ref.resourceId]
+              : layouts?.items?.[ref.resourceId];
           if (layout) {
             const layoutTransitions = getTransitionsFromLayout(layout);
             for (const sceneId of layoutTransitions) {
@@ -237,7 +246,11 @@ const buildSceneWhiteboardItems = ({
         ),
       ),
       isInit: sceneId === initialSceneId,
-      transitions: getTransitionsForScene(repositoryScene?.sections, layouts),
+      transitions: getTransitionsForScene(
+        repositoryScene?.sections,
+        layouts,
+        repositoryState.controls,
+      ),
     };
   });
 };
@@ -637,27 +650,33 @@ export const handleSceneFormAction = async (deps, payload) => {
     const sectionId = nanoid();
     const stepId = nanoid();
 
-    // Get layouts from repository to find first dialogue and base layouts
-    const { layouts } = projectService.getRepositoryState();
+    // Get repository resources to find first dialogue layout and control
+    const { layouts, controls } = projectService.getRepositoryState();
     let dialogueLayoutId = null;
-    let baseLayoutId = null;
+    let controlId = null;
 
     if (layouts && layouts.items) {
-      // Find first layout with layoutType: "dialogue" and "base"
+      // Find first dialogue layout
       for (const [layoutId, layout] of Object.entries(layouts.items)) {
         if (!dialogueLayoutId && layout.layoutType === "dialogue") {
           dialogueLayoutId = layoutId;
         }
-        if (!baseLayoutId && layout.layoutType === "base") {
-          baseLayoutId = layoutId;
-        }
-        if (dialogueLayoutId && baseLayoutId) {
+        if (dialogueLayoutId) {
           break;
         }
       }
     }
 
-    // Create actions object with dialogue and base layouts if found
+    if (controls && controls.items) {
+      for (const [itemId, control] of Object.entries(controls.items)) {
+        if (control.type === "control") {
+          controlId = itemId;
+          break;
+        }
+      }
+    }
+
+    // Create actions object with dialogue and control layouts if found
     const actions = {
       dialogue: dialogueLayoutId
         ? {
@@ -673,10 +692,10 @@ export const handleSceneFormAction = async (deps, payload) => {
           },
     };
 
-    if (baseLayoutId) {
-      actions.base = {
-        resourceId: baseLayoutId,
-        resourceType: "layout",
+    if (controlId) {
+      actions.control = {
+        resourceId: controlId,
+        resourceType: "control",
       };
     }
 

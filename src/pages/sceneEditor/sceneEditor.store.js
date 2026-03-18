@@ -43,6 +43,89 @@ const toPlainObject = (value) => {
     : {};
 };
 
+const toFlatTree = (ids = []) => {
+  return ids.map((id) => ({ id }));
+};
+
+const buildProjectDataSourceState = (state) => {
+  const repositoryState = state.repositoryState || {};
+  const domainState = state.domainState || {};
+  const domainScenes = domainState.scenes || {};
+  const domainSections = domainState.sections || {};
+  const domainLines = domainState.lines || {};
+
+  if (Object.keys(domainScenes).length === 0) {
+    return repositoryState;
+  }
+
+  const sceneIds = Object.keys(domainScenes);
+  const sceneItems = {};
+
+  for (const sceneId of sceneIds) {
+    const scene = domainScenes[sceneId];
+    const sectionIds = Array.isArray(scene?.sectionIds) ? scene.sectionIds : [];
+    const sectionItems = {};
+
+    for (const sectionId of sectionIds) {
+      const section = domainSections[sectionId];
+      if (!section) {
+        continue;
+      }
+
+      const lineIds = Array.isArray(section.lineIds) ? section.lineIds : [];
+      const lineItems = {};
+
+      for (const lineId of lineIds) {
+        const line = domainLines[lineId];
+        if (!line) {
+          continue;
+        }
+
+        lineItems[lineId] = {
+          id: lineId,
+          actions: structuredClone(line.actions || {}),
+        };
+      }
+
+      sectionItems[sectionId] = {
+        id: sectionId,
+        name: section.name || `Section ${sectionId}`,
+        initialLineId: section.initialLineId,
+        lines: {
+          items: lineItems,
+          tree: toFlatTree(Object.keys(lineItems)),
+        },
+      };
+    }
+
+    sceneItems[sceneId] = {
+      id: sceneId,
+      type: scene?.type || "scene",
+      name: scene?.name || `Scene ${sceneId}`,
+      initialSectionId: scene?.initialSectionId,
+      sections: {
+        items: sectionItems,
+        tree: toFlatTree(Object.keys(sectionItems)),
+      },
+    };
+  }
+
+  return {
+    ...repositoryState,
+    story: {
+      ...repositoryState.story,
+      initialSceneId:
+        domainState.story?.initialSceneId ||
+        repositoryState.story?.initialSceneId,
+    },
+    scenes: {
+      ...repositoryState.scenes,
+      items: sceneItems,
+      tree: toFlatTree(sceneIds),
+    },
+  };
+};
+
 export const createInitialState = () => ({
   sceneId: undefined,
   selectedLineId: undefined,
@@ -545,7 +628,7 @@ export const splitLineOptimistically = (
 };
 
 export const selectProjectData = ({ state }) => {
-  return constructProjectData(state.repositoryState);
+  return constructProjectData(buildProjectDataSourceState(state));
 };
 
 export const selectViewData = ({ state }) => {
@@ -578,6 +661,7 @@ export const selectViewData = ({ state }) => {
 
   const repositoryState = selectRepositoryState({ state });
   const layouts = repositoryState.layouts || { items: {} };
+  const controls = repositoryState.controls || { items: {} };
   const selectedSceneFirstSectionId = scene.sections?.[0]?.id;
   const selectedSceneInitialSectionId =
     scene.initialSectionId || selectedSceneFirstSectionId;
@@ -590,6 +674,7 @@ export const selectViewData = ({ state }) => {
         section,
         initialSectionId: selectedSceneInitialSectionId,
         layouts,
+        controls,
         menuSceneId,
       }),
     ]),

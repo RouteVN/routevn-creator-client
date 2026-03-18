@@ -8,6 +8,13 @@ import {
 
 const REPOSITORY_DB_VERSION = 2;
 const MATERIALIZED_VIEW_STORE = "materialized_view_state";
+const PROJECT_INFO_KEY = "projectInfo";
+
+const normalizeProjectInfo = (projectInfo = {}) => ({
+  name: projectInfo.name ?? "",
+  description: projectInfo.description ?? "",
+  iconFileId: projectInfo.iconFileId ?? null,
+});
 
 const openIDB = (name, version, upgradeCallback) => {
   return new Promise((resolve, reject) => {
@@ -41,7 +48,11 @@ async function copyTemplateFiles(templateId, adapter) {
 /**
  * Initialize a new project with IndexedDB.
  */
-export const initializeProject = async ({ projectId, template }) => {
+export const initializeProject = async ({
+  projectId,
+  template,
+  projectInfo,
+}) => {
   if (!template) {
     throw new Error("Template is required for project initialization");
   }
@@ -55,7 +66,6 @@ export const initializeProject = async ({ projectId, template }) => {
   // Copy template files to project's IndexedDB
   await copyTemplateFiles(template, adapter);
 
-  // Add project info to template data
   assertSupportedProjectState(templateData);
 
   await adapter.appendEvent(
@@ -65,8 +75,8 @@ export const initializeProject = async ({ projectId, template }) => {
     }),
   );
 
-  // Set creator_version to 2 in app table
-  await adapter.app.set("creator_version", "2");
+  await adapter.app.set("creatorVersion", 1);
+  await adapter.app.set(PROJECT_INFO_KEY, normalizeProjectInfo(projectInfo));
 };
 
 /**
@@ -233,7 +243,7 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
       });
     },
 
-    // App-specific key-value store for project metadata
+    // App-specific key-value store for project info
     app: {
       get: async (key) => {
         return new Promise((resolve, reject) => {

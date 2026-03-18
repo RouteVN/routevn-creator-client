@@ -1,7 +1,9 @@
 import { resolveLayoutReferences } from "route-engine-js";
 import { getFirstTextStyleId } from "../../constants/textStyles.js";
+import { filterTreeCollection } from "./tree.js";
 import { normalizeEngineActions } from "./engineActions.js";
 import {
+  getInteractionActions,
   getInteractionPayload,
   withInteractionPayload,
 } from "./interactionPayload.js";
@@ -52,6 +54,49 @@ const DEFAULT_TEXT_STYLE_RESOURCE = {
   fontStyle: "normal",
   lineHeight: 1.2,
   breakWords: true,
+};
+
+export const BASE_LAYOUT_KEYBOARD_OPTIONS = [
+  { value: "enter", label: "Enter" },
+  { value: "space", label: "Space" },
+  { value: "esc", label: "Escape" },
+  { value: "left", label: "Left Arrow" },
+  { value: "right", label: "Right Arrow" },
+  { value: "up", label: "Up Arrow" },
+  { value: "down", label: "Down Arrow" },
+];
+
+export const BASE_LAYOUT_KEYBOARD_LABELS = Object.fromEntries(
+  BASE_LAYOUT_KEYBOARD_OPTIONS.map((item) => [item.value, item.label]),
+);
+
+const isLayoutResource = (item) => item?.type === "layout";
+
+export const filterLayoutsByType = (layoutsData, layoutTypes = []) => {
+  const allowedLayoutTypes = new Set(layoutTypes);
+
+  return filterTreeCollection(layoutsData, (item) => {
+    if (!isLayoutResource(item)) {
+      return false;
+    }
+
+    return allowedLayoutTypes.has(item.layoutType);
+  });
+};
+
+export const filterLayoutsExcludingTypes = (
+  layoutsData,
+  excludedLayoutTypes = [],
+) => {
+  const blockedLayoutTypes = new Set(excludedLayoutTypes);
+
+  return filterTreeCollection(layoutsData, (item) => {
+    if (!isLayoutResource(item)) {
+      return false;
+    }
+
+    return !blockedLayoutTypes.has(item.layoutType);
+  });
 };
 
 const toAlphanumericId = (value, fallback = "sliderUpdate") => {
@@ -1019,7 +1064,9 @@ export const extractLayoutIdsFromValue = (value, projectData) => {
     if (
       typeof node.resourceId === "string" &&
       allLayouts[node.resourceId] &&
-      (typeof node.resourceType !== "string" || node.resourceType === "layout")
+      (typeof node.resourceType !== "string" ||
+        node.resourceType === "layout" ||
+        node.resourceType === "control")
     ) {
       layoutIds.add(node.resourceId);
     }
@@ -1106,6 +1153,98 @@ export const extractInitialHybridSceneIds = (projectData, sceneId) => {
     ...extractTransitionTargetSceneIds(projectData, sceneId),
   ];
   return Array.from(new Set(relatedSceneIds));
+};
+
+const asKeyboardMap = (value) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  return value;
+};
+
+const KEYBOARD_KEY_CANONICAL_MAP = {
+  enter: "enter",
+  space: "space",
+  esc: "escape",
+  escape: "escape",
+  left: "arrowleft",
+  arrowleft: "arrowleft",
+  right: "arrowright",
+  arrowright: "arrowright",
+  up: "arrowup",
+  arrowup: "arrowup",
+  down: "arrowdown",
+  arrowdown: "arrowdown",
+};
+
+const normalizeKeyboardKeyForGraphics = (key) => {
+  return KEYBOARD_KEY_CANONICAL_MAP[key] ?? key;
+};
+
+export const getLayoutKeyboardResourceId = (layoutId) => {
+  return `layout-keyboard:${layoutId}`;
+};
+
+export const toRouteEngineKeyboardResource = (keyboardMap) => {
+  const input = asKeyboardMap(keyboardMap);
+  if (!input) {
+    return {};
+  }
+
+  const resource = {};
+  Object.entries(input).forEach(([key, interaction]) => {
+    const actions = getInteractionActions(interaction);
+    resource[normalizeKeyboardKeyForGraphics(key)] = {
+      actions: structuredClone(actions),
+    };
+  });
+
+  return resource;
+};
+
+export const prepareRenderStateKeyboardForGraphics = ({
+  renderState,
+  enableGlobalKeyboardBindings = true,
+}) => {
+  const existingGlobal =
+    renderState?.global && typeof renderState.global === "object"
+      ? renderState.global
+      : {};
+  const existingKeyboard = asKeyboardMap(existingGlobal.keyboard);
+
+  if (!enableGlobalKeyboardBindings) {
+    if (!existingKeyboard) {
+      return renderState;
+    }
+
+    return {
+      ...renderState,
+      global: {
+        ...existingGlobal,
+        keyboard: undefined,
+      },
+    };
+  }
+
+  if (!existingKeyboard) {
+    return renderState;
+  }
+
+  const normalizedKeyboard = {};
+  Object.entries(existingKeyboard).forEach(([key, value]) => {
+    normalizedKeyboard[normalizeKeyboardKeyForGraphics(key)] = {
+      payload: structuredClone(value?.payload ?? {}),
+    };
+  });
+
+  return {
+    ...renderState,
+    global: {
+      ...existingGlobal,
+      keyboard: normalizedKeyboard,
+    },
+  };
 };
 
 export const layoutHierarchyStructureToRenderState = (

@@ -33,6 +33,14 @@ Local-first collaboration:
 
 - `insieme`
 
+## Code Style
+
+- Prefer direct values and `??` defaults over verbose string guards like
+  `typeof value === "string" && value.length > 0 ? value : null` when the
+  data contract is already stable.
+- Use simple normalization such as `value ?? null` unless real runtime type
+  narrowing is required.
+
 ## Testing
 
 This repo currently uses two main test styles:
@@ -147,6 +155,32 @@ High-level rules:
 - `src/deps/services/` owns service behavior and service adapters
 - `src/deps/clients/` owns low-level platform/external clients
 - setup entry points create dependencies
+
+## Repository Schema Alignment
+
+Repository-facing product concepts must be modeled directly in the repository
+schema and creator-model commands.
+
+Do not solve schema gaps with UI-only reinterpretation such as:
+
+- storing one product resource type inside another resource collection
+- renaming a concept only in the UI while keeping a different underlying
+  repository type
+- adding projection/export-time translation layers to compensate for missing
+  repository support
+
+Projection is allowed to adapt repository data to downstream runtime contracts,
+but it must not be used to hide missing first-class repository concepts.
+
+If RouteVN Creator introduces a user-visible resource such as `controls`, the
+expected implementation path is:
+
+1. add the resource to `routevn-creator-model`
+2. add the corresponding repository commands and validation
+3. update client pages to use that repository resource directly
+4. keep projection as a runtime adapter only
+
+If this architectural boundary changes, update this document in the same PR.
 
 ## Runtime Entry Points
 
@@ -488,13 +522,15 @@ Do not scatter platform conditionals through page handlers or domain code.
 
 ### Project Data Ownership
 
-Project `name`, `description`, and `iconFileId` are owned by app-level project
-entries, not repository state.
+Project `name`, `description`, and `iconFileId` are owned by the
+project-specific DB `app` store as `projectInfo`, not repository state.
 
 That means:
 
-- use `appService` / project entry helpers for those fields
-- do not treat repository state as the source of truth for project metadata
+- use `projectService` project-info helpers for those fields when a project is
+  open
+- keep app-level `projectEntries` as duplicated cached listing data only
+- do not treat repository state as the source of truth for project info
 
 ## Current Canonical Patterns
 
