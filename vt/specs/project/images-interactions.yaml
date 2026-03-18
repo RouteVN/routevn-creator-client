@@ -62,10 +62,15 @@ steps:
     selector: "rvn-images"
     state: attached
     timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/images
+  - action: wait
+    ms: 500
   - action: waitFor
     selector: "rvn-media-resources-view#groupview #itemRef0x0"
     state: visible
-    timeoutMs: 10000
+    timeoutMs: 20000
   - action: select
     selector: "rvn-media-resources-view#groupview #itemRef0x0"
     steps:
@@ -85,6 +90,7 @@ steps:
     selector: "rvn-media-resources-view#groupview #previewActionRef0x0"
     state: visible
     timeoutMs: 5000
+  - action: screenshot
   - action: select
     selector: "rvn-media-resources-view#groupview #previewActionRef0x0"
     steps:
@@ -93,6 +99,9 @@ steps:
     selector: "#previewOverlay"
     state: visible
     timeoutMs: 10000
+  - action: assert
+    type: visible
+    selector: "#previewOverlay"
   - action: wait
     ms: 600
   - action: screenshot
@@ -104,6 +113,9 @@ steps:
     selector: "#previewOverlay"
     state: hidden
     timeoutMs: 10000
+  - action: assert
+    type: hidden
+    selector: "#previewOverlay"
   - action: select
     selector: "rvn-media-resources-view#groupview #itemRef0x0"
     steps:
@@ -112,6 +124,9 @@ steps:
     selector: "#editDialog"
     state: visible
     timeoutMs: 10000
+  - action: assert
+    type: visible
+    selector: "#editDialog"
   - action: wait
     ms: 400
   - action: screenshot
@@ -121,6 +136,9 @@ steps:
     selector: "#editDialog"
     state: hidden
     timeoutMs: 10000
+  - action: assert
+    type: hidden
+    selector: "#editDialog"
   - action: select
     selector: "rvn-base-file-explorer#fileExplorer [data-item-id='D6iPajVpkZpS89SyqxqGd']"
     steps:
