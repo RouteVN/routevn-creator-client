@@ -12,6 +12,27 @@ const defaultInitialValues = {
   rotation: 0,
 };
 
+const normalizeLiveTween = (properties = {}) => {
+  return Object.fromEntries(
+    Object.entries(properties).map(([property, config]) => {
+      const normalizedConfig = {
+        keyframes: (config?.keyframes ?? []).map((keyframe) => ({
+          duration: Number(keyframe.duration) || 0,
+          value: Number(keyframe.value) || 0,
+          easing: keyframe.easing ?? "linear",
+          relative: keyframe.relative ?? false,
+        })),
+      };
+
+      if (config?.initialValue !== undefined && config.initialValue !== "") {
+        normalizedConfig.initialValue = Number(config.initialValue) || 0;
+      }
+
+      return [property, normalizedConfig];
+    }),
+  );
+};
+
 const openAnimationDialog = async ({
   deps,
   editMode = false,
@@ -70,12 +91,15 @@ export {
 };
 
 export const handleAddAnimationClick = async (deps, payload) => {
-  const { groupId } = payload._event.detail;
+  const { render, store } = deps;
+  const { groupId, x, y } = payload._event.detail;
 
-  await openAnimationDialog({
-    deps,
+  store.openCreateTypeMenu({
+    x,
+    y,
     targetGroupId: groupId,
   });
+  render();
 };
 
 export const handleAnimationItemDoubleClick = async (deps, payload) => {
@@ -103,6 +127,35 @@ export const handleCloseDialog = (deps) => {
   render();
 };
 
+export const handleCloseCreateTypeMenu = (deps) => {
+  const { render, store } = deps;
+  store.closeCreateTypeMenu();
+  render();
+};
+
+export const handleCreateTypeMenuItemClick = async (deps, payload) => {
+  const { appService, render, store } = deps;
+  const type = payload._event.detail.item?.value;
+  const targetGroupId = store.selectCreateTypeMenuTargetGroupId();
+
+  store.closeCreateTypeMenu();
+  render();
+
+  if (type !== "live") {
+    await appService.showDialog({
+      title: "Coming Soon",
+      message: "Not implemented yet. Coming soon.",
+      confirmText: "OK",
+    });
+    return;
+  }
+
+  await openAnimationDialog({
+    deps,
+    targetGroupId,
+  });
+};
+
 export const handleClosePopover = (deps) => {
   const { render, store } = deps;
   store.closePopover();
@@ -122,7 +175,7 @@ export const handleFormActionClick = async (deps, payload) => {
     return;
   }
 
-  const properties = structuredClone(store.selectProperties());
+  const tween = normalizeLiveTween(store.selectProperties());
   const editMode = store.selectEditMode();
   const editItemId = store.selectEditItemId();
 
@@ -133,7 +186,7 @@ export const handleFormActionClick = async (deps, payload) => {
         name,
         animation: {
           type: "live",
-          tween: properties,
+          tween,
         },
       },
     });
@@ -145,7 +198,7 @@ export const handleFormActionClick = async (deps, payload) => {
         name,
         animation: {
           type: "live",
-          tween: properties,
+          tween,
         },
       },
       parentId: store.selectTargetGroupId(),

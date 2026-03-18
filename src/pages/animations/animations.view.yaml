@@ -25,6 +25,12 @@ refs:
     eventListeners:
       close:
         handler: handleCloseDialog
+  createTypeMenu:
+    eventListeners:
+      close:
+        handler: handleCloseCreateTypeMenu
+      item-click:
+        handler: handleCreateTypeMenuItemClick
   animationForm:
     eventListeners:
       form-action:
@@ -107,6 +113,7 @@ template:
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
+  - rtgl-dropdown-menu#createTypeMenu :items=createTypeMenu.items ?open=${createTypeMenu.isOpen} x=${createTypeMenu.x} y=${createTypeMenu.y}: null
   - rtgl-dialog#addAnimationDialog ?open=${isDialogOpen} s=lg:
       - rtgl-view slot=content d=h lg-d=v g=md:
           - rtgl-view w=4fg lg-w=f:

@@ -58,6 +58,9 @@ steps:
     selector: "rvn-project"
     state: attached
     timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project
   - action: wait
     ms: 500
   - action: screenshot
@@ -86,6 +89,9 @@ steps:
     selector: "rvn-about"
     state: attached
     timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/about
   - action: wait
     ms: 400
   - action: screenshot
@@ -97,6 +103,9 @@ steps:
     selector: "rvn-versions"
     state: attached
     timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/releases/versions
   - action: wait
     ms: 400
   - action: screenshot
@@ -108,6 +117,9 @@ steps:
     selector: "rvn-scenes"
     state: attached
     timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/scenes
   - action: wait
     ms: 800
   - action: screenshot
@@ -126,6 +138,9 @@ steps:
     selector: "rvn-scene-editor"
     state: attached
     timeoutMs: 20000
+  - action: assert
+    type: url
+    value: /project/scene-editor
   - action: wait
     ms: 1800
   - action: screenshot
@@ -137,6 +152,9 @@ steps:
     selector: "rvn-images"
     state: attached
     timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/images
   - action: wait
     ms: 500
   - action: screenshot
@@ -148,6 +166,9 @@ steps:
     selector: "rvn-characters"
     state: attached
     timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/characters
   - action: wait
     ms: 500
   - action: screenshot
@@ -159,6 +180,9 @@ steps:
     selector: "rvn-sounds"
     state: attached
     timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/sounds
   - action: wait
     ms: 500
   - action: screenshot
@@ -170,6 +194,9 @@ steps:
     selector: "rvn-videos"
     state: attached
     timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/videos
   - action: wait
     ms: 500
   - action: screenshot
@@ -181,6 +208,9 @@ steps:
     selector: "rvn-transforms"
     state: attached
     timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/transforms
   - action: wait
     ms: 500
   - action: screenshot
@@ -192,6 +222,9 @@ steps:
     selector: "rvn-colors"
     state: attached
     timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/colors
   - action: wait
     ms: 500
   - action: screenshot
@@ -203,6 +236,9 @@ steps:
     selector: "rvn-fonts"
     state: attached
     timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/fonts
   - action: wait
     ms: 500
   - action: screenshot
@@ -214,6 +250,9 @@ steps:
     selector: "rvn-text-styles"
     state: attached
     timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/text-styles
   - action: wait
     ms: 500
   - action: screenshot
@@ -225,6 +264,9 @@ steps:
     selector: "rvn-layouts"
     state: attached
     timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/layouts
   - action: wait
     ms: 800
   - action: screenshot
@@ -236,6 +278,9 @@ steps:
     selector: "rvn-layout-editor"
     state: attached
     timeoutMs: 20000
+  - action: assert
+    type: url
+    value: /project/layout-editor
   - action: wait
     ms: 900
   - action: screenshot
