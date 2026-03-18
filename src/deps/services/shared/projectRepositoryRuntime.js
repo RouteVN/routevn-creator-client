@@ -1,7 +1,7 @@
 import { createMaterializedViewRuntime } from "insieme/client";
 
 const PROJECT_STATE_VIEW_NAME = "project_repository_state";
-const PROJECT_STATE_VIEW_VERSION = "1";
+const PROJECT_STATE_VIEW_VERSION = "2";
 const PROJECT_STATE_CHECKPOINT = {
   mode: "debounce",
   debounceMs: 1000,
@@ -177,7 +177,9 @@ export const createProjectRepositoryRuntime = async ({
     },
 
     async addEvent(event) {
-      await store.appendEvent(event);
+      if (typeof store.appendEvent === "function") {
+        await store.appendEvent(event);
+      }
       events.push(structuredClone(event));
       const committedId = events.length;
 

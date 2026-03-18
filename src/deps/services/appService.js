@@ -43,15 +43,15 @@ export const createAppService = (params) => {
 
     validateProjectFolder: async (folderPath) => {
       try {
-        const dbPath = await join(folderPath, "repository.db");
-        const dbExists = await exists(dbPath);
+        const projectDbPath = await join(folderPath, "project.db");
+        const projectDbExists = await exists(projectDbPath);
 
         const filesPath = await join(folderPath, "files");
         const filesExists = await exists(filesPath);
 
-        if (!dbExists || !filesExists) {
+        if (!projectDbExists || !filesExists) {
           const missing = [];
-          if (!dbExists) missing.push("repository.db");
+          if (!projectDbExists) missing.push("project.db");
           if (!filesExists) missing.push("files folder");
 
           return {
@@ -141,6 +141,7 @@ export const createAppService = (params) => {
       };
 
       await projectService.initializeProject({
+        projectId: projectEntry.id,
         projectPath,
         template,
         projectInfo: {
