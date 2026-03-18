@@ -15,6 +15,10 @@ refs:
         handler: handleSpriteItemClick
       item-dblclick:
         handler: handleSpriteItemDoubleClick
+      item-preview:
+        handler: handleSpriteItemPreview
+      item-edit:
+        handler: handleSpriteItemEdit
       files-dropped:
         handler: handleFilesDropped
       upload-click:
@@ -29,30 +33,60 @@ refs:
     eventListeners:
       click:
         action: hideFullImagePreview
-  detailForm:
+  editDialog:
     eventListeners:
-      form-field-event:
+      close:
+        handler: handleEditDialogClose
+  editForm:
+    eventListeners:
+      form-action:
+        handler: handleEditFormAction
+  editDialogImage:
+    eventListeners:
+      click:
+        handler: handleEditDialogImageClick
+  editDialogImagePlaceholder:
+    eventListeners:
+      click:
+        handler: handleEditDialogImageClick
+  detailImage:
+    eventListeners:
+      click:
         handler: handleFormExtraEvent
-      form-change:
-        handler: handleFormChange
 template:
-  - rtgl-view d=h w=f h=f:
-      - rtgl-view d=h h=f w=f:
+  - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
+      - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
           - rvn-resizable-panel#fileExplorerPanel w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
-                  - rvn-resource-types :resourceCategory=resourceCategory  :selectedResourceId=selectedResourceId: null
+                  - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
                   - rvn-base-file-explorer#fileExplorer :items=flatItems shrinkable dropdown-menu allowDrag :folderContextMenuItems=folderContextMenuItems :itemContextMenuItems=itemContextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
-          - rtgl-view w=1fg h=f:
+          - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
               - rvn-media-resources-view#groupview w=f h=f show-back-button show-zoom-controls :navTitle=title :groups=mediaGroups :selectedItemId=selectedItemId :searchQuery=searchQuery :uploadText=uploadText :acceptedFileTypes=acceptedFileTypes :itemContextMenuItems=centerItemContextMenuItems: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
-                      - rtgl-form#detailForm key=${selectedItemId} w=f h=f :form=form :context=context :defaultValues=defaultValues: null
+                      - rtgl-view d=v w=f h=f:
+                          - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
+                              - rtgl-text c=mu-fg: ${selectedItemName}
+                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=detailFields:
+                              - $if selectedPreviewFileId:
+                                  - rvn-file-image#detailImage slot="image-file-id" fileId=${selectedPreviewFileId} h=160 bw=xs bc=bo br=md cur=pointer: null
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
-      - $when: fullImagePreviewVisible
-        rtgl-view#previewOverlay pos=fix cor=full ah=c av=c z=3000 cur=pointer:
-          - rtgl-view w=f h=f pos=fix cor=full ah=c av=c bgc=bg op="0.5": null
-          - $if fullImagePreviewFileId:
-              - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% z=3001: null
+  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
+      - rtgl-view slot=content g=md:
+          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=editDefaultValues :form=editForm w=f:
+              - $if editPreviewFileId:
+                  - rtgl-view slot=image-slot av=c ah=c:
+                      - rvn-file-image#editDialogImage fileId=${editPreviewFileId} h=120 bw=xs bc=bo br=md cur=pointer key=${editPreviewFileId}: null
+                $else:
+                  - rtgl-view slot=image-slot av=c ah=c:
+                      - rtgl-view#editDialogImagePlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                          - rtgl-text c=mu-fg s=sm: Click to Upload
+  - $when: fullImagePreviewVisible
+    rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
+      - 'rtgl-view w=f h=f pos=fix edge=f style="background-color: #000;"': null
+      - $if fullImagePreviewFileId:
+          - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+              - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=ac bw=xs br=md: null

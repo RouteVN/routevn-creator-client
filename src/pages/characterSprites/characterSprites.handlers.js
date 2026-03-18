@@ -7,82 +7,34 @@ import { tap } from "rxjs";
 const EMPTY_TREE = { items: {}, tree: [] };
 const ACCEPTED_FILE_TYPES = ".jpg,.jpeg,.png,.webp";
 
+const getProjectErrorMessage = (result, fallbackMessage) => {
+  return (
+    result?.error?.message ||
+    result?.error?.creatorModelError?.message ||
+    result?.message ||
+    fallbackMessage
+  );
+};
+
 const getCharacterIdFromPayload = ({ appService }) => {
   return appService.getPayload().characterId;
 };
 
-const getCharacter = ({ projectService, characterId }) => {
-  return projectService.getState().characters.items?.[characterId];
-};
-
-const createDetailFormValues = (item, imageSrc) => ({
-  fileId: imageSrc,
-  name: item?.name ?? "",
-  description: item?.description ?? "",
-});
-
-const syncDetailForm = ({ refs, values } = {}) => {
-  const { detailForm } = refs;
-  if (!detailForm) {
-    return;
-  }
-
-  detailForm.reset();
-  detailForm.setValues({ values });
-};
-
-const getPreviewImageSrc = async ({ projectService, item } = {}) => {
-  if (!item?.fileId) {
-    return undefined;
-  }
-
-  const { url } = await projectService.getFileContent(item.fileId);
-  return url;
-};
-
-const resolveSelectedPreviewImageSrc = async ({
-  projectService,
-  store,
-  previousSelectedItem,
-  selectedItem,
-} = {}) => {
-  if (!selectedItem?.fileId) {
-    return undefined;
-  }
-
-  const currentPreviewImageSrc = store.selectPreviewImageSrc();
-  if (
-    currentPreviewImageSrc &&
-    previousSelectedItem?.id === selectedItem.id &&
-    previousSelectedItem?.fileId === selectedItem.fileId
-  ) {
-    return currentPreviewImageSrc;
-  }
-
-  return getPreviewImageSrc({
-    projectService,
-    item: selectedItem,
-  });
-};
-
-const syncCharacterSpritesData = async (deps) => {
+const syncCharacterSpritesData = ({ deps, repositoryState } = {}) => {
   const { appService, projectService, store } = deps;
   const characterId =
     store.selectCharacterId() ?? getCharacterIdFromPayload(deps);
+  const state = repositoryState ?? projectService.getState();
 
   if (!characterId) {
     appService.showToast("Character is missing.", { title: "Error" });
-    return {};
+    return false;
   }
 
-  const character = getCharacter({
-    projectService,
-    characterId,
-  });
-
+  const character = state?.characters?.items?.[characterId];
   if (!character) {
     appService.showToast("Character not found.", { title: "Error" });
-    return {};
+    return false;
   }
 
   store.setCharacterId({ characterId });
@@ -93,100 +45,21 @@ const syncCharacterSpritesData = async (deps) => {
     store.setSelectedItemId({ itemId: undefined });
   }
 
-  const selectedItem = store.selectSelectedItem();
-  const imageSrc = await getPreviewImageSrc({
-    projectService,
-    item: selectedItem,
-  });
-
-  store.setContext({
-    context: {
-      fileId: {
-        src: imageSrc,
-      },
-    },
-  });
-
-  return {
-    characterId,
-    selectedItem,
-    imageSrc,
-  };
+  return true;
 };
 
 const refreshCharacterSpritesData = async (deps) => {
-  const { render, refs } = deps;
-  const { selectedItem, imageSrc } = await syncCharacterSpritesData(deps);
-  render();
-
-  if (selectedItem) {
-    syncDetailForm({
-      refs,
-      values: createDetailFormValues(selectedItem, imageSrc),
-    });
-  }
-};
-
-const syncCharacterSpritesRepositoryState = async ({
-  deps,
-  repositoryState,
-} = {}) => {
-  const { appService, projectService, store, render, refs } = deps;
-  const characterId =
-    store.selectCharacterId() ?? getCharacterIdFromPayload(deps);
-  const character = repositoryState?.characters?.items?.[characterId];
-
-  if (!characterId) {
-    appService.showToast("Character is missing.", { title: "Error" });
-    store.clearCharacterSpritesView();
-    render();
+  const { render } = deps;
+  const synced = syncCharacterSpritesData({ deps });
+  if (!synced) {
     return;
   }
 
-  if (!character) {
-    appService.showToast("Character not found.", { title: "Error" });
-    store.clearCharacterSpritesView();
-    render();
-    return;
-  }
-
-  const previousSelectedItem = store.selectSelectedItem();
-  store.setCharacterId({ characterId });
-  store.setCharacterName({ characterName: character.name });
-  store.setItems({ spritesData: character.sprites ?? EMPTY_TREE });
-
-  if (store.selectSelectedItemId() && !store.selectSelectedItem()) {
-    store.setSelectedItemId({ itemId: undefined });
-  }
-
-  const selectedItem = store.selectSelectedItem();
-  const imageSrc = await resolveSelectedPreviewImageSrc({
-    projectService,
-    store,
-    previousSelectedItem,
-    selectedItem,
-  });
-
-  store.setContext({
-    context: {
-      fileId: {
-        src: imageSrc,
-      },
-    },
-  });
-
   render();
-
-  if (selectedItem) {
-    syncDetailForm({
-      refs,
-      values: createDetailFormValues(selectedItem, imageSrc),
-    });
-  }
 };
 
-const selectSprite = async ({ deps, itemId, syncExplorer = false } = {}) => {
-  const { projectService, refs, render, store } = deps;
+const selectSprite = ({ deps, itemId, syncExplorer = false } = {}) => {
+  const { refs, render, store } = deps;
   const item = store.selectSpriteItemById({ itemId });
 
   if (!itemId || !item) {
@@ -199,24 +72,35 @@ const selectSprite = async ({ deps, itemId, syncExplorer = false } = {}) => {
     refs.fileExplorer.selectItem({ itemId });
   }
 
-  const imageSrc = await getPreviewImageSrc({
-    projectService,
-    item,
-  });
-
-  store.setContext({
-    context: {
-      fileId: {
-        src: imageSrc,
-      },
-    },
-  });
-
   render();
-  syncDetailForm({
-    refs,
-    values: createDetailFormValues(item, imageSrc),
+};
+
+const openEditDialogForSprite = ({
+  deps,
+  itemId,
+  syncExplorer = false,
+} = {}) => {
+  const { refs, render, store } = deps;
+  const item = store.selectSpriteItemById({ itemId });
+
+  if (!itemId || !item) {
+    return;
+  }
+
+  store.setSelectedItemId({ itemId });
+  if (syncExplorer) {
+    refs.fileExplorer.selectItem({ itemId });
+  }
+
+  store.openEditDialog({
+    itemId,
+    defaultValues: {
+      name: item.name ?? "",
+      description: item.description ?? "",
+    },
+    previewFileId: item.fileId,
   });
+  render();
 };
 
 const createSpritesFromFiles = async ({
@@ -246,7 +130,7 @@ const createSpritesFromFiles = async ({
   }
 
   for (const result of successfulUploads) {
-    await projectService.createCharacterSpriteItem({
+    const createResult = await projectService.createCharacterSpriteItem({
       characterId,
       spriteId: nanoid(),
       fileRecords: result.fileRecords,
@@ -262,6 +146,14 @@ const createSpritesFromFiles = async ({
         height: result.dimensions.height,
       },
     });
+
+    if (createResult?.valid === false) {
+      appService.showToast(
+        getProjectErrorMessage(createResult, "Failed to create sprite."),
+        { title: "Error" },
+      );
+      return;
+    }
   }
 
   await refreshCharacterSpritesData(deps);
@@ -272,10 +164,12 @@ export const handleBeforeMount = (deps) => {
   const subscription = createProjectStateStream({ projectService })
     .pipe(
       tap(({ repositoryState }) => {
-        void syncCharacterSpritesRepositoryState({
-          deps,
-          repositoryState,
-        });
+        const { store, render } = deps;
+        const synced = syncCharacterSpritesData({ deps, repositoryState });
+        if (!synced) {
+          store.clearCharacterSpritesView();
+        }
+        render();
       }),
     )
     .subscribe();
@@ -302,18 +196,11 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
 
   if (isFolder) {
     store.setSelectedItemId({ itemId: undefined });
-    store.setContext({
-      context: {
-        fileId: {
-          src: undefined,
-        },
-      },
-    });
     render();
     return;
   }
 
-  await selectSprite({
+  selectSprite({
     deps,
     itemId,
   });
@@ -334,7 +221,7 @@ export const handleFileExplorerDoubleClick = (deps, payload) => {
 export const handleSpriteItemClick = async (deps, payload) => {
   const { itemId } = payload._event.detail;
 
-  await selectSprite({
+  selectSprite({
     deps,
     itemId,
     syncExplorer: true,
@@ -351,6 +238,28 @@ export const handleSpriteItemDoubleClick = (deps, payload) => {
 
   store.showFullImagePreview({ itemId });
   render();
+};
+
+export const handleSpriteItemPreview = (deps, payload) => {
+  const { render, store } = deps;
+  const { itemId } = payload._event.detail;
+
+  if (!itemId) {
+    return;
+  }
+
+  store.showFullImagePreview({ itemId });
+  render();
+};
+
+export const handleSpriteItemEdit = (deps, payload) => {
+  const { itemId } = payload._event.detail;
+
+  openEditDialogForSprite({
+    deps,
+    itemId,
+    syncExplorer: true,
+  });
 };
 
 export const handleUploadClick = async (deps, payload) => {
@@ -387,34 +296,6 @@ export const handleFilesDropped = async (deps, payload) => {
     files,
     parentId: targetGroupId,
   });
-};
-
-export const handleFormChange = async (deps, payload) => {
-  const { projectService, render, store } = deps;
-  const characterId = store.selectCharacterId();
-  const selectedItemId = store.selectSelectedItemId();
-
-  if (!characterId || !selectedItemId) {
-    return;
-  }
-
-  await projectService.updateCharacterSpriteItem({
-    characterId,
-    spriteId: selectedItemId,
-    data: {
-      [payload._event.detail.name]: payload._event.detail.value,
-    },
-  });
-
-  const character = getCharacter({
-    projectService,
-    characterId,
-  });
-
-  store.setItems({
-    spritesData: character?.sprites ?? EMPTY_TREE,
-  });
-  render();
 };
 
 export const handleFormExtraEvent = async (deps) => {
@@ -454,7 +335,7 @@ export const handleFormExtraEvent = async (deps) => {
     return;
   }
 
-  await projectService.updateCharacterSpriteItem({
+  const updateResult = await projectService.updateCharacterSpriteItem({
     characterId,
     spriteId: selectedItem.id,
     fileRecords: uploadResult.fileRecords,
@@ -468,6 +349,104 @@ export const handleFormExtraEvent = async (deps) => {
     },
   });
 
+  if (updateResult?.valid === false) {
+    appService.showToast(
+      getProjectErrorMessage(updateResult, "Failed to update sprite."),
+      { title: "Error" },
+    );
+    return;
+  }
+
+  await refreshCharacterSpritesData(deps);
+};
+
+export const handleEditDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.closeEditDialog();
+  render();
+};
+
+export const handleEditDialogImageClick = async (deps) => {
+  const { appService, store, render } = deps;
+  let file;
+
+  try {
+    file = await appService.pickFiles({
+      accept: ACCEPTED_FILE_TYPES,
+      multiple: false,
+      upload: true,
+    });
+  } catch {
+    appService.showToast("Failed to select file.", { title: "Error" });
+    return;
+  }
+
+  if (!file) {
+    return;
+  }
+
+  if (!(file.uploadSucessful && file.uploadResult)) {
+    appService.showToast("Failed to upload sprite.", { title: "Error" });
+    return;
+  }
+
+  store.setEditUpload({
+    uploadResult: file.uploadResult,
+    previewFileId: file.uploadResult.fileId,
+  });
+  render();
+};
+
+export const handleEditFormAction = async (deps, payload) => {
+  const { appService, projectService, store, render } = deps;
+  const { actionId, values } = payload._event.detail;
+
+  if (actionId !== "submit") {
+    return;
+  }
+
+  const name = values?.name?.trim();
+  if (!name) {
+    appService.showToast("Sprite name is required.", { title: "Warning" });
+    return;
+  }
+
+  const { editItemId, editUploadResult } = store.getState();
+  if (!editItemId) {
+    store.closeEditDialog();
+    render();
+    return;
+  }
+
+  const data = {
+    name,
+    description: values?.description ?? "",
+  };
+
+  if (editUploadResult) {
+    data.fileId = editUploadResult.fileId;
+    data.fileType = editUploadResult.file.type;
+    data.fileSize = editUploadResult.file.size;
+    data.width = editUploadResult.dimensions.width;
+    data.height = editUploadResult.dimensions.height;
+  }
+
+  const updateResult = await projectService.updateCharacterSpriteItem({
+    characterId: store.selectCharacterId(),
+    spriteId: editItemId,
+    fileRecords: editUploadResult?.fileRecords,
+    data,
+  });
+
+  if (updateResult?.valid === false) {
+    appService.showToast(
+      getProjectErrorMessage(updateResult, "Failed to update sprite."),
+      { title: "Error" },
+    );
+    return;
+  }
+
+  store.closeEditDialog();
   await refreshCharacterSpritesData(deps);
 };
 
@@ -497,10 +476,18 @@ export const handleItemDelete = async (deps, payload) => {
     return;
   }
 
-  await projectService.deleteCharacterSpriteItem({
+  const deleteResult = await projectService.deleteCharacterSpriteItem({
     characterId,
     spriteIds: [itemId],
   });
+
+  if (deleteResult?.valid === false) {
+    appService.showToast(
+      getProjectErrorMessage(deleteResult, "Failed to delete sprite."),
+      { title: "Error" },
+    );
+    return;
+  }
 
   await refreshCharacterSpritesData(deps);
 };

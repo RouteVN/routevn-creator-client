@@ -57,7 +57,7 @@ template:
                           - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
                               - rtgl-text c=mu-fg: ${selectedItemName}
                           - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=detailFields:
-                              - 'rtgl-view#detailColorPreview slot="color-preview" h=130 br=md bw=xs bc=bo cur=pointer style="background-color: ${selectedColorHex};"': null
+                              - 'rtgl-view#detailColorPreview slot="color-preview" w=f h=130 br=md bw=xs bc=bo cur=pointer style="background-color: ${selectedColorHex};"': null
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
