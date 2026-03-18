@@ -113,13 +113,13 @@ const buildProjectDataSourceState = (state) => {
   return {
     ...repositoryState,
     story: {
-      ...(repositoryState.story || {}),
+      ...repositoryState.story,
       initialSceneId:
         domainState.story?.initialSceneId ||
         repositoryState.story?.initialSceneId,
     },
     scenes: {
-      ...(repositoryState.scenes || {}),
+      ...repositoryState.scenes,
       items: sceneItems,
       tree: toFlatTree(sceneIds),
     },
