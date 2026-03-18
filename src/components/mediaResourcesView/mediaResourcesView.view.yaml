@@ -105,8 +105,8 @@ template:
                                               - 'rtgl-view p=md g=md br=md w=${maxWidth} pos=rel style="max-width: 100%;"':
                                                   - rvn-file-image br=md w=f h=${imageHeight} fileId=${item.previewFileId} key=${item.previewFileId}-${imageHeight}x${maxWidth}: null
                                                   - $if item.showPreviewIcon:
-                                                      - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} bw=xs bc=ac bgc=bg br=f w=24 h=24 ah=c av=c pos=abs cur=pointer style="top: 8px; right: 8px; z-index: 2;"':
-                                                          - rtgl-svg svg=zoomIn wh=12 c=ac: null
+                                                      - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; right: 6px; background-color: #000;"':
+                                                          - rtgl-svg svg=zoomIn wh=24 c=white: null
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                             $elif item.cardKind == 'video':
                                               - 'rtgl-view p=md g=md br=md pos=rel':
@@ -116,8 +116,8 @@ template:
                                                       - rtgl-view w=${mediaWidth} h=${mediaHeight} br=md bw=xs bc=bo av=c ah=c:
                                                           - rtgl-text s=xs c=mu-fg: No thumbnail
                                                   - $if item.showPreviewIcon:
-                                                      - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} bw=xs bc=ac bgc=bg br=f w=24 h=24 ah=c av=c pos=abs cur=pointer style="top: 8px; right: 8px; z-index: 2;"':
-                                                          - rtgl-svg svg=play wh=12 c=ac: null
+                                                      - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; right: 6px; background-color: #000;"':
+                                                          - rtgl-svg svg=play wh=24 c=white: null
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
                                             $elif item.cardKind == 'sound':
                                               - 'rtgl-view p=md g=md br=md pos=rel':
@@ -129,8 +129,8 @@ template:
                                                       - rtgl-view w=${mediaWidth} h=${mediaHeight} br=md bw=xs bc=bo av=c ah=c:
                                                           - rtgl-text s=xs c=mu-fg: No waveform
                                                   - $if item.showPreviewIcon:
-                                                      - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} bw=xs bc=ac bgc=bg br=f w=24 h=24 ah=c av=c pos=abs cur=pointer style="top: 8px; right: 8px; z-index: 2;"':
-                                                          - rtgl-svg svg=play wh=12 c=ac: null
+                                                      - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; right: 6px; background-color: #000;"':
+                                                          - rtgl-svg svg=play wh=24 c=white: null
                                             $elif item.cardKind == 'font':
                                               - rtgl-view p=md g=md w=${mediaWidth} d=v br=md:
                                                   - rvn-font-preview fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=60 width=${mediaWidth} height=${mediaHeight} av=c ah=c: null
