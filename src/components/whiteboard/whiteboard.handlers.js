@@ -1,4 +1,8 @@
 import { fromEvent, tap } from "rxjs";
+import {
+  SCENE_BOX_HEIGHT,
+  SCENE_BOX_WIDTH,
+} from "../../internal/whiteboard/constants.js";
 
 const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
@@ -334,8 +338,8 @@ export const handleWindowMouseMove = (deps, payload) => {
     const viewportBottom = viewportTop + containerRect.height / zoomLevel;
 
     // Item dimensions
-    const itemWidth = 120;
-    const itemHeight = 60;
+    const itemWidth = SCENE_BOX_WIDTH;
+    const itemHeight = SCENE_BOX_HEIGHT;
 
     // Keep item fully within viewport bounds (no edge overlap)
     const maxX = viewportRight - itemWidth;

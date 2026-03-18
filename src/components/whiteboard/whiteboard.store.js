@@ -1,4 +1,8 @@
 import { drawArrowBetweenScenes } from "../../internal/whiteboard/arrowUtils.js";
+import {
+  SCENE_BOX_HEIGHT,
+  SCENE_BOX_WIDTH,
+} from "../../internal/whiteboard/constants.js";
 
 // Natural zoom levels
 const ZOOM_LEVELS = [0.2, 0.3, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
@@ -211,8 +215,8 @@ const generateMinimapData = (items, pan) => {
 
   const minimapWidth = 200;
   const minimapHeight = 150;
-  const itemWidth = 120;
-  const itemHeight = 60;
+  const itemWidth = SCENE_BOX_WIDTH;
+  const itemHeight = SCENE_BOX_HEIGHT;
   const padding = 30;
   const standardWidth = x_br - x_tl + itemWidth + 60;
   const standardHeight = y_br - y_tl + itemHeight + 60;
@@ -223,8 +227,8 @@ const generateMinimapData = (items, pan) => {
   );
   const scaledWidth = standardWidth * scale;
   const scaledHeight = standardHeight * scale;
-  const scaledItemWidth = 120 * scale;
-  const scaledItemHeight = 60 * scale;
+  const scaledItemWidth = SCENE_BOX_WIDTH * scale;
+  const scaledItemHeight = SCENE_BOX_HEIGHT * scale;
 
   const offsetX = (minimapWidth - scaledWidth) / 2;
   const offsetY = (minimapHeight - scaledHeight) / 2;
@@ -289,6 +293,9 @@ export const selectViewData = ({ state, props }) => {
   };
 
   const arrowsList = [];
+  const startBadgeSize = Math.round(SCENE_BOX_HEIGHT * (5 / 9));
+  const startLineWidth = Math.round(SCENE_BOX_WIDTH / 6);
+  const startLineHeight = Math.max(2, Math.round(SCENE_BOX_HEIGHT / 45));
 
   // Generate arrows for each scene's transitions
   items.forEach((sourceItem) => {
@@ -324,8 +331,15 @@ export const selectViewData = ({ state, props }) => {
     panY: state.panY,
     zoomLevel: state.zoomLevel,
     zoomLevelPercent: Math.round(state.zoomLevel * 100),
-    containerCursor: containerCursor,
+    containerCursor,
     itemCursor: state.isPanMode ? undefined : "m", // Use "m" for move cursor
     gridSize: getAdaptiveGridSize(state.zoomLevel),
+    sceneBoxWidth: SCENE_BOX_WIDTH,
+    sceneBoxHeight: SCENE_BOX_HEIGHT,
+    startBadgeSize,
+    startLineWidth,
+    startLineHeight,
+    startBadgeOffsetX: startBadgeSize + startLineWidth,
+    startBadgeOffsetY: (SCENE_BOX_HEIGHT - startBadgeSize) / 2,
   };
 };

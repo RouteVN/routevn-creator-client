@@ -1,15 +1,22 @@
 import { getSmoothStepPath } from "./smoothstepedge";
-
-const sceneWidth = 120;
-const sceneHeight = 60;
+import { SCENE_BOX_HEIGHT, SCENE_BOX_WIDTH } from "./constants.js";
 
 const getSceneAnchorPoint = (scene) => {
   return {
-    top: { x: scene.x + sceneWidth / 2, y: scene.y },
-    bottom: { x: scene.x + sceneWidth / 2, y: scene.y + sceneHeight },
-    left: { x: scene.x, y: scene.y + sceneHeight / 2 },
-    right: { x: scene.x + sceneWidth, y: scene.y + sceneHeight / 2 },
-    center: { x: scene.x + sceneWidth / 2, y: scene.y + sceneHeight / 2 },
+    top: { x: scene.x + SCENE_BOX_WIDTH / 2, y: scene.y },
+    bottom: {
+      x: scene.x + SCENE_BOX_WIDTH / 2,
+      y: scene.y + SCENE_BOX_HEIGHT,
+    },
+    left: { x: scene.x, y: scene.y + SCENE_BOX_HEIGHT / 2 },
+    right: {
+      x: scene.x + SCENE_BOX_WIDTH,
+      y: scene.y + SCENE_BOX_HEIGHT / 2,
+    },
+    center: {
+      x: scene.x + SCENE_BOX_WIDTH / 2,
+      y: scene.y + SCENE_BOX_HEIGHT / 2,
+    },
   };
 };
 

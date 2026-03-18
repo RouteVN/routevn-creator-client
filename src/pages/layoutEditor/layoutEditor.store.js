@@ -499,6 +499,27 @@ const emptyContextMenuItems = [
   },
 ];
 
+const controlContextMenuItems = [
+  { label: "Rename", type: "item", value: "rename-item" },
+  { label: "Delete", type: "item", value: "delete-item" },
+];
+
+const controlEmptyContextMenuItems = [
+  {
+    label: "Rect",
+    type: "item",
+    value: {
+      action: "new-child-item",
+      type: "rect",
+      name: "Rect",
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+    },
+  },
+];
+
 const dialogueForm = {
   title: "Preview",
   description: "Edit to see how the layout will look like with different data",
@@ -826,12 +847,18 @@ export const selectViewData = ({ state }) => {
     selectedItemId: state.selectedItemId,
     resourceCategory: isControlResource ? "systemConfig" : "userInterface",
     selectedResourceId: isControlResource ? "controls" : "layout-editor",
-    contextMenuItems: parseAndRender(contextMenuItems, {
-      layoutType: state.layout?.layoutType,
-    }),
-    emptyContextMenuItems: parseAndRender(emptyContextMenuItems, {
-      layoutType: state.layout?.layoutType,
-    }),
+    contextMenuItems: parseAndRender(
+      isControlResource ? controlContextMenuItems : contextMenuItems,
+      {
+        layoutType: state.layout?.layoutType,
+      },
+    ),
+    emptyContextMenuItems: parseAndRender(
+      isControlResource ? controlEmptyContextMenuItems : emptyContextMenuItems,
+      {
+        layoutType: state.layout?.layoutType,
+      },
+    ),
     dialogueForm,
     dialogueDefaultValues: state.dialogueDefaultValues,
     choiceForm,

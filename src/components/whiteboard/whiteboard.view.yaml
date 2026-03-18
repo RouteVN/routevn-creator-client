@@ -38,12 +38,12 @@ template:
       - 'rtgl-view#canvas w=f h=f pos=rel style="transform: translate(${panX}px, ${panY}px) scale(${zoomLevel}); transform-origin: 0 0; min-width: 100%; min-height: 100%;"':
           - $for item, itemIndex in items:
               - $if item.isInit == true:
-                  - 'rtgl-view d=h av=c pos=abs style="left: calc(${item.x}px - 80px); top: calc(${item.y}px + 5px); z-index: 10; user-select: none;"':
-                      - rtgl-view w=50 h=50 ah=c av=c p=md bgc=ac br=f bw=sm:
+                  - 'rtgl-view d=h av=c pos=abs style="left: calc(${item.x}px - ${startBadgeOffsetX}px); top: calc(${item.y}px + ${startBadgeOffsetY}px); z-index: 10; user-select: none;"':
+                      - rtgl-view w=${startBadgeSize} h=${startBadgeSize} ah=c av=c p=md bgc=ac br=f bw=sm:
                           - rtgl-text s=sm: Start
-                      - rtgl-view w=30 h=2 bgc=ac: null
-              - 'rtgl-view#itemRef${itemIndex} data-item-id=${item.id} w=120 h=60 d=h ah=e av=c pos=abs style="left: ${item.x}px; top: ${item.y}px; z-index: 10; user-select: none;"':
-                  - rtgl-view cur=${itemCursor} w=120 h=f av=c ah=c p=md bgc=mu bw=${item.borderWidth} bc=${item.borderColor} br=md:
+                      - rtgl-view w=${startLineWidth} h=${startLineHeight} bgc=ac: null
+              - 'rtgl-view#itemRef${itemIndex} data-item-id=${item.id} w=${sceneBoxWidth} h=${sceneBoxHeight} d=h ah=e av=c pos=abs style="left: ${item.x}px; top: ${item.y}px; z-index: 10; user-select: none;"':
+                  - rtgl-view cur=${itemCursor} w=${sceneBoxWidth} h=f av=c ah=c p=md bgc=mu bw=${item.borderWidth} bc=${item.borderColor} br=md:
                       - rtgl-text s=sm: ${item.name}
           - $for arrow in arrowsList:
               - svg data-arrow-id="${arrow.id}" style="${arrow.style}" width="${arrow.svgWidth}" height="${arrow.svgHeight}":

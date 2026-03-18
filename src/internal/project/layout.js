@@ -393,6 +393,18 @@ const applySpriteNode = ({ element, node }) => {
   };
 };
 
+const applyRectNode = ({ element, node }) => {
+  if (node.type !== "rect") {
+    return element;
+  }
+
+  return {
+    ...element,
+    ...(node.fill && node.fill !== "transparent" ? { fill: node.fill } : {}),
+    ...(node.border ? { border: structuredClone(node.border) } : {}),
+  };
+};
+
 const applySliderNode = ({ element, node, imageItems }) => {
   if (node.type !== "slider") {
     return element;
@@ -503,6 +515,7 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
     context,
   });
   element = applySpriteNode({ element, node });
+  element = applyRectNode({ element, node });
   element = applySliderNode({ element, node, imageItems });
   element = applyContainerNode({ element, node });
 
