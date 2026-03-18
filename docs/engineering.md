@@ -361,6 +361,36 @@ Handler-facing facade for:
 Handlers should not orchestrate multiple internal services directly when those
 concerns belong behind one of these facades.
 
+### Bundle Contract
+
+Exported `package.bin` files have two distinct version concepts:
+
+- binary format version
+  - stored in byte `0` of the bundle header
+  - currently `2`
+  - used by the bundled player to decide whether it can parse the bundle at all
+
+- bundler metadata
+  - stored inside the JSON `instructions` payload as `bundleMetadata.bundler`
+  - currently includes:
+    - `appName`
+    - `appVersion`
+  - used for provenance, debugging, and support
+
+Do not collapse these into one field.
+
+- format version answers: "Can this runtime parse the bundle structure?"
+- bundler metadata answers: "Which app/version produced this artifact?"
+
+The canonical implementation points are:
+
+- writer: `src/deps/services/shared/projectExportService.js`
+- bundle-page export path: `src/pages/versions/versions.handlers.js`
+- reader: `scripts/main.js`
+
+If the bundle contract changes, update the smoke test in
+`scripts/test-smoke.js` in the same PR.
+
 Service boundary test:
 
 - if code needs store setters/selectors, refs, `render()`, or page event
