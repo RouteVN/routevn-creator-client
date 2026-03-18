@@ -1,6 +1,6 @@
 ---
 title: Project Resource Details
-description: Creates a project and captures seeded resource detail panels for colors, fonts, typography, and variables.
+description: Creates a project and captures seeded resource detail panels for colors, fonts, and text styles.
 url: /projects
 skipInitialScreenshot: true
 viewport:
@@ -55,7 +55,7 @@ steps:
   - action: wait
     ms: 500
   - action: select
-    selector: "#sidebar [data-item-id='/project/resources/colors']"
+    selector: "#sidebar [data-item-id='/project/colors']"
     steps:
       - action: click
   - action: waitFor
@@ -101,11 +101,11 @@ steps:
     ms: 300
   - action: screenshot
   - action: select
-    selector: "rvn-resource-types [data-item-id='typography']"
+    selector: "rvn-resource-types [data-item-id='textStyles']"
     steps:
       - action: click
   - action: waitFor
-    selector: "rvn-typography"
+    selector: "rvn-text-styles"
     state: attached
     timeoutMs: 10000
   - action: wait
@@ -116,29 +116,6 @@ steps:
     timeoutMs: 20000
   - action: select
     selector: "#typographyView #itemRef0x0"
-    steps:
-      - action: click
-  - action: waitFor
-    selector: "#detailView"
-    state: attached
-    timeoutMs: 5000
-  - action: wait
-    ms: 300
-  - action: screenshot
-  - action: select
-    selector: "#sidebar [data-item-id='/project/resources/variables']"
-    steps:
-      - action: click
-  - action: waitFor
-    selector: "rvn-variables"
-    state: attached
-    timeoutMs: 10000
-  - action: waitFor
-    selector: "#groupview #rowRef0x0"
-    state: visible
-    timeoutMs: 10000
-  - action: select
-    selector: "#groupview #rowRef0x0"
     steps:
       - action: click
   - action: waitFor

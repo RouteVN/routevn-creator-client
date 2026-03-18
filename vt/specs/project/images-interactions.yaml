@@ -55,7 +55,7 @@ steps:
   - action: wait
     ms: 500
   - action: select
-    selector: "#sidebar [data-item-id='/project/resources/images']"
+    selector: "#sidebar [data-item-id='/project/images']"
     steps:
       - action: click
   - action: waitFor
@@ -122,14 +122,14 @@ steps:
     state: hidden
     timeoutMs: 10000
   - action: select
-    selector: "rvn-base-file-explorer#fileExplorer [data-item-id='options_black_bg_image']"
+    selector: "rvn-base-file-explorer#fileExplorer [data-item-id='D6iPajVpkZpS89SyqxqGd']"
     steps:
       - action: hover
   - action: mouseDown
   - action: wait
     ms: 200
   - action: select
-    selector: "rvn-base-file-explorer#fileExplorer [data-item-id='shxSevkwvVFxpzkMgDEgI']"
+    selector: "rvn-base-file-explorer#fileExplorer [data-item-id='vfKppfJKkVdT9jCvR15mV']"
     steps:
       - action: hover
   - action: wait

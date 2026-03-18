@@ -79,7 +79,7 @@ steps:
     state: hidden
     timeoutMs: 5000
   - action: select
-    selector: "#sidebar [data-item-id='/project/settings/about']"
+    selector: "#sidebar [data-item-id='/project/about']"
     steps:
       - action: click
   - action: waitFor
@@ -130,7 +130,7 @@ steps:
     ms: 1800
   - action: screenshot
   - action: select
-    selector: "#sidebar [data-item-id='/project/resources/images']"
+    selector: "#sidebar [data-item-id='/project/images']"
     steps:
       - action: click
   - action: waitFor
@@ -185,7 +185,7 @@ steps:
     ms: 500
   - action: screenshot
   - action: select
-    selector: "#sidebar [data-item-id='/project/resources/colors']"
+    selector: "#sidebar [data-item-id='/project/colors']"
     steps:
       - action: click
   - action: waitFor
@@ -207,11 +207,11 @@ steps:
     ms: 500
   - action: screenshot
   - action: select
-    selector: "rvn-resource-types [data-item-id='typography']"
+    selector: "rvn-resource-types [data-item-id='textStyles']"
     steps:
       - action: click
   - action: waitFor
-    selector: "rvn-typography"
+    selector: "rvn-text-styles"
     state: attached
     timeoutMs: 10000
   - action: wait
@@ -238,16 +238,5 @@ steps:
     timeoutMs: 20000
   - action: wait
     ms: 900
-  - action: screenshot
-  - action: select
-    selector: "#sidebar [data-item-id='/project/resources/variables']"
-    steps:
-      - action: click
-  - action: waitFor
-    selector: "rvn-variables"
-    state: attached
-    timeoutMs: 10000
-  - action: wait
-    ms: 500
   - action: screenshot
 ---
