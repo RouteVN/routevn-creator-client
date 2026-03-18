@@ -12,9 +12,17 @@ import {
   prepareRenderStateKeyboardForGraphics,
 } from "../src/internal/project/layout.js";
 import {
+  buildFilteredStateForExport,
+  collectUsedResourcesForExport,
   constructProjectData,
   projectRepositoryStateToDomainState,
 } from "../src/internal/project/projection.js";
+import {
+  BUNDLE_APP_NAME,
+  BUNDLE_FORMAT_VERSION,
+  createBundle,
+  createBundleInstructions,
+} from "../src/deps/services/shared/projectExportService.js";
 import { toHierarchyStructure } from "../src/internal/project/tree.js";
 
 const projectId = "proj-smoke-001";
@@ -69,6 +77,29 @@ const stripEmptyChildren = (nodes = []) =>
     const children = stripEmptyChildren(node.children || []);
     return children.length > 0 ? { id: node.id, children } : { id: node.id };
   });
+
+const parseBundleInstructions = (bundle) => {
+  const arrayBuffer = bundle.buffer.slice(
+    bundle.byteOffset,
+    bundle.byteOffset + bundle.byteLength,
+  );
+  const dataView = new DataView(arrayBuffer);
+  const version = dataView.getUint8(0);
+  assert.equal(version, BUNDLE_FORMAT_VERSION);
+
+  const indexLength = dataView.getUint32(1, false);
+  const headerSize = 16;
+  const indexBuffer = new Uint8Array(arrayBuffer, headerSize, indexLength);
+  const index = JSON.parse(new TextDecoder().decode(indexBuffer));
+  const instructionsMeta = index.instructions;
+  assert.ok(instructionsMeta);
+
+  const dataBlockOffset = headerSize + indexLength;
+  const contentStart = instructionsMeta.start + dataBlockOffset;
+  const contentEnd = instructionsMeta.end + dataBlockOffset + 1;
+  const content = new Uint8Array(arrayBuffer, contentStart, contentEnd - contentStart);
+  return JSON.parse(new TextDecoder().decode(content));
+};
 
 const store = createRepositoryStoreStub();
 const repository = await createProjectRepository({
@@ -498,9 +529,23 @@ const domainState = projectRepositoryStateToDomainState({
   repositoryState,
   projectId,
 });
+const exportUsage = collectUsedResourcesForExport(repositoryState);
+const filteredExportState = buildFilteredStateForExport(
+  repositoryState,
+  exportUsage,
+);
 const projectData = constructProjectData(repositoryState, {
   initialSceneId: "scene-1",
 });
+const exportProjectData = constructProjectData(filteredExportState);
+const bundlePayload = createBundleInstructions({
+  projectData: exportProjectData,
+  bundler: {
+    appVersion: "1.0.0-rc2",
+  },
+});
+const bundle = await createBundle(bundlePayload);
+const bundleInstructions = parseBundleInstructions(bundle);
 assert.equal(domainState.story.initialSceneId, "scene-1");
 assert.deepEqual(domainState.scenes["scene-1"].sectionIds, [
   "section-1",
@@ -528,6 +573,33 @@ assert.equal(projectData.resources.controls["layout-main"].id, "layout-main");
 assert.equal(
   projectData.resources.controls["layout-main"].name,
   "Main Control",
+);
+assert.equal(exportProjectData.story.initialSceneId, "scene-1");
+assert.equal(
+  exportProjectData.story.scenes["scene-1"].initialSectionId,
+  "section-1",
+);
+assert.deepEqual(
+  exportProjectData.story.scenes["scene-1"].sections["section-1"].lines.map(
+    (line) => line.id,
+  ),
+  ["line-1", "line-2"],
+);
+assert.equal(bundleInstructions.projectData.story.initialSceneId, "scene-1");
+assert.equal(
+  bundleInstructions.projectData.story.scenes["scene-1"].initialSectionId,
+  "section-1",
+);
+assert.equal(bundleInstructions.bundleMetadata.bundler.appName, BUNDLE_APP_NAME);
+assert.equal(
+  bundleInstructions.bundleMetadata.bundler.appVersion,
+  "1.0.0-rc2",
+);
+assert.deepEqual(
+  bundleInstructions.projectData.story.scenes["scene-1"].sections[
+    "section-1"
+  ].lines.map((line) => line.id),
+  ["line-1", "line-2"],
 );
 assert.deepEqual(projectData.resources.controls["layout-main"].keyboard, {
   enter: {

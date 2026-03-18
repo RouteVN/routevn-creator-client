@@ -2,6 +2,21 @@
  * Bundle format:
  * [version(1)] [indexLength(4)] [reserved(11)] [index(JSON)] [assets...] [instructions(JSON)]
  */
+export const BUNDLE_FORMAT_VERSION = 2;
+export const BUNDLE_APP_NAME = "routevn-creator-client";
+
+export const createBundleInstructions = ({ projectData, bundler }) => {
+  return {
+    projectData,
+    bundleMetadata: {
+      bundler: {
+        appName: bundler?.appName ?? BUNDLE_APP_NAME,
+        appVersion: bundler?.appVersion ?? "",
+      },
+    },
+  };
+};
+
 export const createBundle = async (projectData, assets = {}) => {
   const arrayBuffers = [];
   let currentOffset = 0;
@@ -46,7 +61,7 @@ export const createBundle = async (projectData, assets = {}) => {
 
   const indexFileBytes = new TextEncoder().encode(JSON.stringify(indexFile));
   const headerBuffer = new Uint8Array(16);
-  headerBuffer[0] = 1;
+  headerBuffer[0] = BUNDLE_FORMAT_VERSION;
 
   const lengthView = new DataView(headerBuffer.buffer);
   lengthView.setUint32(1, indexFileBytes.length, false);
