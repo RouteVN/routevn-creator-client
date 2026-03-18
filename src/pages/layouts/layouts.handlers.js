@@ -60,6 +60,11 @@ export const handleAddDialogClose = (deps) => {
   render();
 };
 
+const createLayoutElement = (id, data) => ({
+  id,
+  ...data,
+});
+
 const createLayoutTemplate = (layoutType) => {
   if (layoutType === "dialogue") {
     const containerId = nanoid();
@@ -68,7 +73,7 @@ const createLayoutTemplate = (layoutType) => {
 
     return {
       items: {
-        [containerId]: {
+        [containerId]: createLayoutElement(containerId, {
           type: "container",
           name: "Dialogue Container",
           x: 35,
@@ -81,8 +86,8 @@ const createLayoutTemplate = (layoutType) => {
           scaleX: 1,
           scaleY: 1,
           rotation: 0,
-        },
-        [nameTextId]: {
+        }),
+        [nameTextId]: createLayoutElement(nameTextId, {
           type: "text",
           name: "Character Name",
           x: 40,
@@ -98,8 +103,8 @@ const createLayoutTemplate = (layoutType) => {
           style: {
             align: "left",
           },
-        },
-        [contentTextId]: {
+        }),
+        [contentTextId]: createLayoutElement(contentTextId, {
           type: "text",
           name: "Dialogue Content",
           x: 40,
@@ -116,7 +121,7 @@ const createLayoutTemplate = (layoutType) => {
           style: {
             align: "left",
           },
-        },
+        }),
       },
       tree: [
         {
@@ -144,7 +149,7 @@ const createLayoutTemplate = (layoutType) => {
 
     return {
       items: {
-        [nvlContainerId]: {
+        [nvlContainerId]: createLayoutElement(nvlContainerId, {
           type: "container",
           name: "NVL Container",
           x: 100,
@@ -156,8 +161,8 @@ const createLayoutTemplate = (layoutType) => {
           scaleX: 1,
           scaleY: 1,
           rotation: 0,
-        },
-        [nvlBackgroundId]: {
+        }),
+        [nvlBackgroundId]: createLayoutElement(nvlBackgroundId, {
           type: "sprite",
           name: "NVL Background",
           x: 0,
@@ -169,9 +174,8 @@ const createLayoutTemplate = (layoutType) => {
           scaleX: 1,
           scaleY: 1,
           rotation: 0,
-          imageId: "iN20__bg4TaS80gh7-XcL",
-        },
-        [nvlLinesId]: {
+        }),
+        [nvlLinesId]: createLayoutElement(nvlLinesId, {
           type: "container",
           name: "NVL Lines",
           x: 40,
@@ -186,8 +190,8 @@ const createLayoutTemplate = (layoutType) => {
           scaleX: 1,
           scaleY: 1,
           rotation: 0,
-        },
-        [lineContainerId]: {
+        }),
+        [lineContainerId]: createLayoutElement(lineContainerId, {
           type: "container-ref-dialogue-line",
           name: "Container (Dialogue Line)",
           x: 0,
@@ -199,8 +203,8 @@ const createLayoutTemplate = (layoutType) => {
           scaleX: 1,
           scaleY: 1,
           rotation: 0,
-        },
-        [lineNameTextId]: {
+        }),
+        [lineNameTextId]: createLayoutElement(lineNameTextId, {
           type: "text-ref-dialogue-line-character-name",
           name: "Text (Line Character Name)",
           $when: "line.characterName",
@@ -217,8 +221,8 @@ const createLayoutTemplate = (layoutType) => {
           style: {
             align: "left",
           },
-        },
-        [lineContentTextId]: {
+        }),
+        [lineContentTextId]: createLayoutElement(lineContentTextId, {
           type: "text-ref-dialogue-line-content",
           name: "Text (Line Content)",
           x: 0,
@@ -234,7 +238,7 @@ const createLayoutTemplate = (layoutType) => {
           style: {
             align: "left",
           },
-        },
+        }),
       },
       tree: [
         {
@@ -271,7 +275,7 @@ const createLayoutTemplate = (layoutType) => {
 
     return {
       items: {
-        [rootId]: {
+        [rootId]: createLayoutElement(rootId, {
           type: "container",
           name: "Root",
           x: 0,
@@ -284,8 +288,8 @@ const createLayoutTemplate = (layoutType) => {
           scaleX: 1,
           scaleY: 1,
           rotation: 0,
-        },
-        [textId]: {
+        }),
+        [textId]: createLayoutElement(textId, {
           type: "text",
           name: "Placeholder Text",
           x: 960,
@@ -300,9 +304,8 @@ const createLayoutTemplate = (layoutType) => {
           text: "The most flexible layout, you can put anything here.",
           style: {
             align: "center",
-            fontSize: 32,
           },
-        },
+        }),
       },
       tree: [
         {
@@ -342,7 +345,7 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
     return;
   }
 
-  await projectService.createLayoutItem({
+  const createResult = await projectService.createLayoutItem({
     layoutId: nanoid(),
     name,
     layoutType,
@@ -350,6 +353,13 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
     parentId: store.getState().targetGroupId,
     position: "last",
   });
+
+  if (createResult?.valid === false) {
+    appService.showToast("Failed to create layout", {
+      title: "Error",
+    });
+    return;
+  }
 
   store.closeAddDialog();
   await handleDataChanged(deps);
