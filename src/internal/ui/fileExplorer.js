@@ -16,6 +16,14 @@ const isTextElementType = (type) =>
     "text-ref-dialogue-line-content",
   ].includes(type);
 
+const getResultErrorMessage = (result, fallbackMessage) => {
+  return (
+    result?.error?.message ||
+    result?.error?.creatorModelError?.message ||
+    fallbackMessage
+  );
+};
+
 const resolveMenuItem = (detail = {}) => detail.item || detail;
 
 const resolveExplorerMove = (detail = {}) => {
@@ -645,13 +653,29 @@ export const createLayoutElementsFileExplorerHandlers = ({
           }
         }
 
-        await createElement({
+        const createResult = await createElement({
           [ownerPayloadKey]: layoutId,
           elementId: nextElementId,
           data: nextElementData,
           parentId: itemId || null,
           position: "last",
         });
+        if (createResult?.valid === false) {
+          appService.showToast(
+            getResultErrorMessage(createResult, "Failed to create element."),
+            {
+              title: "Error",
+            },
+          );
+          console.error("Failed to create layout editor element:", {
+            resourceType,
+            layoutId,
+            itemId,
+            data: nextElementData,
+            createResult,
+          });
+          return;
+        }
       } else {
         return;
       }

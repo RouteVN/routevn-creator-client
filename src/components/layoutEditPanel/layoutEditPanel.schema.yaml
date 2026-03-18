@@ -10,3 +10,5 @@ propsSchema:
       type: string
     layoutType:
       type: string
+    resourceType:
+      type: string

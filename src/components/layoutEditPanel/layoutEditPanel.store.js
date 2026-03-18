@@ -516,6 +516,91 @@ const config = {
   ],
 };
 
+const controlConfig = {
+  sections: [
+    {
+      label: "Position",
+      items: [
+        {
+          type: "group",
+          fields: [
+            {
+              type: "clickable-value",
+              svg: "x",
+              name: "x",
+              value: "${values.x}",
+              popoverForm: {
+                fields: [{ name: "value", type: "input-number" }],
+                actions: {
+                  buttons: [{ id: "submit", variant: "pr", label: "Submit" }],
+                },
+              },
+            },
+            {
+              type: "clickable-value",
+              svg: "y",
+              name: "y",
+              value: "${values.y}",
+              popoverForm: {
+                fields: [{ name: "value", type: "input-number" }],
+                actions: {
+                  buttons: [{ id: "submit", variant: "pr", label: "Submit" }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      label: "Layout",
+      items: [
+        {
+          type: "group",
+          fields: [
+            {
+              type: "clickable-value",
+              svg: "w",
+              name: "width",
+              value: "${values.width}",
+              popoverForm: {
+                fields: [{ name: "value", type: "input-number" }],
+                actions: {
+                  buttons: [{ id: "submit", variant: "pr", label: "Submit" }],
+                },
+              },
+            },
+            {
+              type: "clickable-value",
+              svg: "h",
+              name: "height",
+              value: "${values.height}",
+              popoverForm: {
+                fields: [{ name: "value", type: "input-number" }],
+                actions: {
+                  buttons: [{ id: "submit", variant: "pr", label: "Submit" }],
+                },
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      $when: 'itemType == "rect"',
+      id: "actions",
+      label: "Actions",
+      labelAction: "plus",
+      items: [
+        {
+          type: "list-item",
+          items: "${values.actions}",
+        },
+      ],
+    },
+  ],
+};
+
 const selectFieldPopoverFormFromConfig = (fieldName) => {
   for (const section of config.sections || []) {
     for (const item of section.items || []) {
@@ -747,6 +832,7 @@ export const selectViewData = ({ state, props: attrs }) => {
   const context = {
     itemType: attrs.itemType,
     layoutType: attrs.layoutType,
+    resourceType: attrs.resourceType,
     textStyleItems: textStyleItems,
     textStyleItemsWithNone: textStyleItemsWithNone,
     variableOptionsWithNone: variableOptionsWithNone,
@@ -759,7 +845,8 @@ export const selectViewData = ({ state, props: attrs }) => {
     },
   };
 
-  const finalConfig = parseAndRender(config, context);
+  const baseConfig = attrs.resourceType === "controls" ? controlConfig : config;
+  const finalConfig = parseAndRender(baseConfig, context);
 
   return {
     actionsDialogOpen: state.actionsDialogOpen,

@@ -5,9 +5,23 @@ import {
 } from "../../internal/ui/collabRefresh.js";
 import { createScenesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { getInteractionActions } from "../../internal/project/interactionPayload.js";
+import {
+  SCENE_BOX_HEIGHT,
+  SCENE_BOX_VIEWPORT_PADDING,
+  SCENE_BOX_WIDTH,
+} from "../../internal/whiteboard/constants.js";
 
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another scene.";
+
+const getProjectErrorMessage = (result, fallbackMessage) => {
+  return (
+    result?.error?.message ||
+    result?.error?.creatorModelError?.message ||
+    result?.message ||
+    fallbackMessage
+  );
+};
 
 /**
  * Extract transitions from layout element click and right-click actions
@@ -154,8 +168,8 @@ const isViewportLikelyOffscreen = ({ items, zoomLevel, panX, panY }) => {
 
   const viewportWidth = Number(window?.innerWidth) || 1200;
   const viewportHeight = Number(window?.innerHeight) || 800;
-  const itemWidth = 140;
-  const itemHeight = 80;
+  const itemWidth = SCENE_BOX_WIDTH + SCENE_BOX_VIEWPORT_PADDING;
+  const itemHeight = SCENE_BOX_HEIGHT + SCENE_BOX_VIEWPORT_PADDING;
 
   return items.every((item) => {
     const screenX = item.x * zoomLevel + panX;
@@ -907,7 +921,7 @@ export const handleEditFormAction = async (deps, payload) => {
     return;
   }
 
-  await projectService.updateSceneItem({
+  const updateResult = await projectService.updateSceneItem({
     sceneId: editItemId,
     data: {
       name,
@@ -915,9 +929,16 @@ export const handleEditFormAction = async (deps, payload) => {
     },
   });
 
-  syncScenesState({ store, projectService });
+  if (updateResult?.valid === false) {
+    appService.showToast(
+      getProjectErrorMessage(updateResult, "Failed to update scene."),
+      { title: "Error" },
+    );
+    return;
+  }
+
   store.closeEditDialog();
-  render();
+  await refreshScenesData(deps);
 };
 
 export const handleSectionsListToggle = (deps) => {

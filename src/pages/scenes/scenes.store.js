@@ -303,6 +303,10 @@ export const selectViewData = ({ state }, payload) => {
         value: selectedSceneName,
       },
       {
+        type: "description",
+        value: selectedItem.description ?? "",
+      },
+      {
         type: "slot",
         slot: "open-action",
         label: "",
@@ -374,7 +378,7 @@ export const selectViewData = ({ state }, payload) => {
       },
       {
         name: "description",
-        type: "textarea",
+        type: "input-textarea",
         label: "Description",
       },
     ],

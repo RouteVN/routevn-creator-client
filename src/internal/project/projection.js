@@ -388,6 +388,7 @@ export const projectRepositoryStateToDomainState = ({
       id: sceneId,
       type: "scene",
       name: scene.name || `Scene ${sceneId}`,
+      description: scene.description ?? "",
       sectionIds,
       initialSectionId,
       parentId,
