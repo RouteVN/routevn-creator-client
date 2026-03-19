@@ -1,14 +1,80 @@
-import { findLineLocation, findSectionLocation } from "../projectRepository.js";
+import {
+  findLineLocation,
+  findSectionLocation,
+  getSiblingOrderNodes,
+} from "../projectRepository.js";
 import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
 
 export const createStoryCommandApi = (shared) => {
+  const nowMs = () => {
+    if (
+      typeof performance !== "undefined" &&
+      typeof performance.now === "function"
+    ) {
+      return performance.now();
+    }
+
+    return Date.now();
+  };
+
+  const appendMissingIds = (orderedIds, allIds) => {
+    const seen = new Set();
+    const result = [];
+
+    for (const id of orderedIds || []) {
+      if (!allIds.includes(id) || seen.has(id)) {
+        continue;
+      }
+
+      seen.add(id);
+      result.push(id);
+    }
+
+    for (const id of allIds || []) {
+      if (seen.has(id)) {
+        continue;
+      }
+
+      seen.add(id);
+      result.push(id);
+    }
+
+    return result;
+  };
+
+  const getOrderedLineIds = (section) => {
+    const lineItems = section?.lines?.items || {};
+    const fallbackIds = Object.keys(lineItems);
+    const orderedFromTree = getSiblingOrderNodes(section?.lines, null)
+      .map((node) => node?.id)
+      .filter(Boolean);
+
+    return appendMissingIds(orderedFromTree, fallbackIds);
+  };
+
+  const getStoryLinePartitions = (context, lineIds) => {
+    const basePartition = shared.storyBasePartitionFor(context.projectId);
+    const partitions = [basePartition];
+    const seenSceneIds = new Set();
+
+    for (const lineId of lineIds || []) {
+      const lineLocation = findLineLocation(context.state, lineId);
+      if (!lineLocation?.sceneId || seenSceneIds.has(lineLocation.sceneId)) {
+        continue;
+      }
+
+      seenSceneIds.add(lineLocation.sceneId);
+      partitions.push(
+        shared.storyScenePartitionFor(context.projectId, lineLocation.sceneId),
+      );
+    }
+
+    return partitions;
+  };
+
   const submitLineActionsData = async ({ lineId, data, replace = false }) => {
     const context = await shared.ensureCommandContext();
-    const basePartition = shared.storyBasePartitionFor(context.projectId);
-    const lineLocation = findLineLocation(context.state, lineId);
-    const scenePartition = lineLocation?.sceneId
-      ? shared.storyScenePartitionFor(context.projectId, lineLocation.sceneId)
-      : null;
+    const partitions = getStoryLinePartitions(context, [lineId]);
 
     return shared.submitCommandWithContext({
       context,
@@ -19,9 +85,7 @@ export const createStoryCommandApi = (shared) => {
         data: structuredClone(data || {}),
         replace: replace === true,
       },
-      partitions: scenePartition
-        ? [basePartition, scenePartition]
-        : [basePartition],
+      partitions,
     });
   };
 
@@ -56,6 +120,312 @@ export const createStoryCommandApi = (shared) => {
         },
         replace: false,
       });
+    },
+
+    async updateLineDialogueActionsBatch({ updates }) {
+      const normalizedUpdates = Array.isArray(updates) ? updates : [];
+      if (normalizedUpdates.length === 0) {
+        return {
+          valid: true,
+          commandIds: [],
+          eventCount: 0,
+        };
+      }
+
+      const context = await shared.ensureCommandContext();
+      return shared.submitCommandsWithContext({
+        context,
+        commands: normalizedUpdates.map(({ lineId, dialogue }) => ({
+          scope: "story",
+          type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
+          payload: {
+            lineId,
+            data: {
+              dialogue: structuredClone(dialogue || {}),
+            },
+            replace: false,
+          },
+          partitions: getStoryLinePartitions(context, [lineId]),
+        })),
+      });
+    },
+
+    async splitLineItem({
+      lineId,
+      sectionId,
+      newLineId,
+      leftDialogue,
+      newLineData = {},
+      position = "after",
+      positionTargetId,
+    }) {
+      const context = await shared.ensureCommandContext();
+      const partitions = getStoryLinePartitions(context, [lineId]);
+
+      return shared.submitCommandsWithContext({
+        context,
+        commands: [
+          {
+            scope: "story",
+            type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
+            payload: {
+              lineId,
+              data: {
+                dialogue: structuredClone(leftDialogue || {}),
+              },
+              replace: false,
+            },
+            partitions,
+          },
+          {
+            scope: "story",
+            type: COMMAND_TYPES.LINE_CREATE,
+            payload: {
+              sectionId,
+              lines: [
+                {
+                  lineId: newLineId || shared.createId(),
+                  data: structuredClone(newLineData || {}),
+                },
+              ],
+              position,
+              positionTargetId,
+            },
+            partitions,
+          },
+        ],
+      });
+    },
+
+    async mergeLineItem({ previousLineId, currentLineId, mergedDialogue }) {
+      const context = await shared.ensureCommandContext();
+      const partitions = getStoryLinePartitions(context, [
+        previousLineId,
+        currentLineId,
+      ]);
+
+      return shared.submitCommandsWithContext({
+        context,
+        commands: [
+          {
+            scope: "story",
+            type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
+            payload: {
+              lineId: previousLineId,
+              data: {
+                dialogue: structuredClone(mergedDialogue || {}),
+              },
+              replace: false,
+            },
+            partitions,
+          },
+          {
+            scope: "story",
+            type: COMMAND_TYPES.LINE_DELETE,
+            payload: {
+              lineIds: [currentLineId],
+            },
+            partitions,
+          },
+        ],
+      });
+    },
+
+    async syncSectionLinesSnapshot({ sectionId, lines = [] }) {
+      const startedAt = nowMs();
+      const context = await shared.ensureCommandContext();
+      const ensuredContextAt = nowMs();
+      const sectionLocation = findSectionLocation(context.state, sectionId);
+      if (!sectionLocation?.section) {
+        throw new Error("section not found");
+      }
+
+      const basePartition = shared.storyBasePartitionFor(context.projectId);
+      const scenePartition = sectionLocation.sceneId
+        ? shared.storyScenePartitionFor(
+            context.projectId,
+            sectionLocation.sceneId,
+          )
+        : null;
+      const partitions = scenePartition
+        ? [basePartition, scenePartition]
+        : [basePartition];
+
+      const desiredLines = Array.isArray(lines)
+        ? lines.filter((line) => typeof line?.id === "string" && line.id)
+        : [];
+      const desiredLineIds = desiredLines.map((line) => line.id);
+      const desiredLineIdsSet = new Set(desiredLineIds);
+      const desiredLineById = new Map(
+        desiredLines.map((line) => [line.id, structuredClone(line)]),
+      );
+
+      const currentSection = sectionLocation.section;
+      const currentLineIds = getOrderedLineIds(currentSection);
+      const currentLineIdsSet = new Set(currentLineIds);
+      const currentLineItems = currentSection?.lines?.items || {};
+      const commands = [];
+
+      const deletedLineIds = currentLineIds.filter(
+        (lineId) => !desiredLineIdsSet.has(lineId),
+      );
+      if (deletedLineIds.length > 0) {
+        commands.push({
+          scope: "story",
+          type: COMMAND_TYPES.LINE_DELETE,
+          payload: {
+            lineIds: deletedLineIds,
+          },
+          partitions,
+        });
+      }
+
+      const workingOrder = currentLineIds.filter((lineId) =>
+        desiredLineIdsSet.has(lineId),
+      );
+
+      for (let index = 0; index < desiredLineIds.length; index += 1) {
+        const desiredLineId = desiredLineIds[index];
+
+        if (!currentLineIdsSet.has(desiredLineId)) {
+          const newLines = [];
+          let scanIndex = index;
+
+          while (scanIndex < desiredLineIds.length) {
+            const nextLineId = desiredLineIds[scanIndex];
+            if (currentLineIdsSet.has(nextLineId)) {
+              break;
+            }
+
+            const nextLine = desiredLineById.get(nextLineId);
+            if (nextLine) {
+              newLines.push({
+                lineId: nextLine.id,
+                data: {
+                  actions: structuredClone(nextLine.actions || {}),
+                },
+              });
+            }
+            scanIndex += 1;
+          }
+
+          if (newLines.length > 0) {
+            commands.push({
+              scope: "story",
+              type: COMMAND_TYPES.LINE_CREATE,
+              payload: {
+                sectionId,
+                lines: newLines,
+                index,
+              },
+              partitions,
+            });
+            workingOrder.splice(
+              index,
+              0,
+              ...newLines.map((line) => line.lineId),
+            );
+          }
+
+          index = scanIndex - 1;
+          continue;
+        }
+
+        const currentIndex = workingOrder.indexOf(desiredLineId);
+        if (currentIndex >= 0 && currentIndex !== index) {
+          commands.push({
+            scope: "story",
+            type: COMMAND_TYPES.LINE_MOVE,
+            payload: {
+              lineId: desiredLineId,
+              toSectionId: sectionId,
+              index,
+            },
+            partitions,
+          });
+
+          workingOrder.splice(currentIndex, 1);
+          workingOrder.splice(index, 0, desiredLineId);
+        }
+      }
+
+      for (const lineId of desiredLineIds) {
+        if (!currentLineIdsSet.has(lineId)) {
+          continue;
+        }
+
+        const desiredLine = desiredLineById.get(lineId);
+        const currentLine = currentLineItems[lineId];
+        const desiredDialogue = desiredLine?.actions?.dialogue || {};
+        const currentDialogue = currentLine?.actions?.dialogue || {};
+
+        if (
+          JSON.stringify(currentDialogue) === JSON.stringify(desiredDialogue)
+        ) {
+          continue;
+        }
+
+        commands.push({
+          scope: "story",
+          type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
+          payload: {
+            lineId,
+            data: {
+              dialogue: structuredClone(desiredDialogue),
+            },
+            replace: false,
+          },
+          partitions,
+        });
+      }
+
+      if (commands.length === 0) {
+        console.info("[sceneEditor][perf] sync-section-lines-snapshot", {
+          sectionId,
+          ensureContextMs: Number((ensuredContextAt - startedAt).toFixed(1)),
+          diffMs: Number((nowMs() - ensuredContextAt).toFixed(1)),
+          totalMs: Number((nowMs() - startedAt).toFixed(1)),
+          lineCount: desiredLines.length,
+          commandCount: 0,
+        });
+        return {
+          valid: true,
+          commandIds: [],
+          eventCount: 0,
+        };
+      }
+
+      const diffCompletedAt = nowMs();
+      const commandCounts = commands.reduce((acc, command) => {
+        const commandType = command?.type || "unknown";
+        acc[commandType] = (acc[commandType] || 0) + 1;
+        return acc;
+      }, {});
+
+      const result = await shared.submitCommandsWithContext({
+        context,
+        commands,
+        perfLabel: "scene-editor-sync-section-lines-snapshot",
+        perfMeta: {
+          sectionId,
+          lineCount: desiredLines.length,
+          commandCount: commands.length,
+          commandCounts,
+        },
+      });
+
+      console.info("[sceneEditor][perf] sync-section-lines-snapshot", {
+        sectionId,
+        lineCount: desiredLines.length,
+        commandCount: commands.length,
+        commandCounts,
+        ensureContextMs: Number((ensuredContextAt - startedAt).toFixed(1)),
+        diffMs: Number((diffCompletedAt - ensuredContextAt).toFixed(1)),
+        submitMs: Number((nowMs() - diffCompletedAt).toFixed(1)),
+        totalMs: Number((nowMs() - startedAt).toFixed(1)),
+      });
+
+      return result;
     },
 
     async createSceneItem({

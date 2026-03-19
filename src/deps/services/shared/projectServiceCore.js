@@ -70,6 +70,11 @@ export const createProjectServiceCore = ({
     return repository.getState();
   };
 
+  const getRepositoryRevision = () => {
+    const repository = repositoryService.getCachedRepository();
+    return repository.getRevision();
+  };
+
   const getDomainState = () => {
     const repositoryState = getRepositoryState();
     const projectId = getCurrentProjectId() || "unknown-project";
@@ -89,19 +94,23 @@ export const createProjectServiceCore = ({
       repositoryService.ensureProjectCompatibleByProjectId,
     subscribeProjectState(listener, options) {
       const targetProjectId = options?.projectId || getCurrentProjectId();
-      return repositoryService.subscribeProjectState((repositoryState) => {
-        const projectId = targetProjectId || getCurrentProjectId();
-        const domainState = projectRepositoryStateToDomainState({
-          repositoryState,
-          projectId,
-        });
+      return repositoryService.subscribeProjectState(
+        ({ repositoryState, revision }) => {
+          const projectId = targetProjectId || getCurrentProjectId();
+          const domainState = projectRepositoryStateToDomainState({
+            repositoryState,
+            projectId,
+          });
 
-        listener({
-          projectId,
-          repositoryState,
-          domainState,
-        });
-      }, options);
+          listener({
+            projectId,
+            repositoryState,
+            domainState,
+            revision,
+          });
+        },
+        options,
+      );
     },
     ...("getRepositoryByPath" in repositoryService
       ? {
@@ -112,6 +121,7 @@ export const createProjectServiceCore = ({
     getState: getDomainState,
     getDomainState,
     getRepositoryState,
+    getRepositoryRevision,
     getCurrentProjectInfo: repositoryService.getCurrentProjectInfo,
     updateCurrentProjectInfo: repositoryService.updateCurrentProjectInfo,
     addVersionToProject: collabService.addVersionToProject,
@@ -123,6 +133,8 @@ export const createProjectServiceCore = ({
       return storageAdapter.initializeProject(payload);
     },
     createCollabSession: collabService.createCollabSession,
+    ensureCommandSessionForProject:
+      collabService.ensureCommandSessionForProject,
     getCollabSession: collabService.getCollabSession,
     getCollabSessionMode: collabService.getCollabSessionMode,
     stopCollabSession: collabService.stopCollabSession,

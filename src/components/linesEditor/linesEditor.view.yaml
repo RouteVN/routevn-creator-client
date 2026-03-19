@@ -9,6 +9,12 @@ refs:
         handler: handleOnFocus
       blur:
         handler: handleLineBlur
+      beforeinput:
+        handler: handleLineBeforeInput
+      compositionstart:
+        handler: handleLineCompositionStart
+      compositionend:
+        handler: handleLineCompositionEnd
       input:
         handler: handleOnInput
       mouseup:
@@ -46,6 +52,8 @@ template:
                   - rtgl-view d=h w=f:
                       - rtgl-view w=f:
                           - 'rvn-editable-text#line${i} data-line-id="${line.id}" style="width: 100%; padding-bottom: 4px;"': ${line.actions.dialogue.content[0].text}
+                          - $if line.hasDraftConflict:
+                              - rtgl-text s=xs c=danger: Conflict
                           - $if line.sectionTransition:
                               - rtgl-view#previewSectionTransition data-type="sectionTransition" data-id="${line.id}" d=h:
                                   - rtgl-svg svg="transition" wh=16: null

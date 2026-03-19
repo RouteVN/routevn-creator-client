@@ -9,7 +9,6 @@ import {
   extractTransitionTargetSceneIdsFromActions,
   resolveEventBindings,
 } from "../../project/layout.js";
-import { writeDialogueContent } from "./lineOperations.js";
 
 const createAssetLoadCache = () => ({
   sceneIds: new Set(),
@@ -17,6 +16,17 @@ const createAssetLoadCache = () => ({
 });
 
 let assetLoadCache = createAssetLoadCache();
+
+const nowMs = () => {
+  if (
+    typeof performance !== "undefined" &&
+    typeof performance.now === "function"
+  ) {
+    return performance.now();
+  }
+
+  return Date.now();
+};
 
 const resetAssetLoadCache = () => {
   assetLoadCache = createAssetLoadCache();
@@ -387,6 +397,18 @@ export const initializeSceneEditorPage = async (deps) => {
   } = deps;
 
   await projectService.ensureRepository();
+  const ensuredProjectId =
+    typeof projectService.getEnsuredProjectId === "function"
+      ? projectService.getEnsuredProjectId()
+      : undefined;
+  if (
+    ensuredProjectId &&
+    typeof projectService.ensureCommandSessionForProject === "function"
+  ) {
+    void projectService
+      .ensureCommandSessionForProject(ensuredProjectId)
+      .catch(() => {});
+  }
 
   const {
     s,
@@ -486,6 +508,18 @@ export const restoreSceneEditorFromPreview = async (deps) => {
 
 export const renderSceneEditorCanvas = async (deps, payload) => {
   const { store, render } = deps;
+  const renderStartedAt = nowMs();
+  if (payload?.perfReason) {
+    console.info("[sceneEditor][perf] canvas-render-start", {
+      reason: payload.perfReason,
+      opId: payload.perfOpId,
+      dispatchToStartMs: Number(
+        (renderStartedAt - (payload.perfDispatchTs || renderStartedAt)).toFixed(
+          1,
+        ),
+      ),
+    });
+  }
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
@@ -510,14 +544,18 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
   if (!payload?.skipRender) {
     render();
   }
+
+  if (payload?.perfReason) {
+    console.info("[sceneEditor][perf] canvas-render-end", {
+      reason: payload.perfReason,
+      opId: payload.perfOpId,
+      totalMs: Number((nowMs() - renderStartedAt).toFixed(1)),
+    });
+  }
 };
 
 export const mountSceneEditorSubscriptions = (deps) => {
-  const { subject, dialogueQueueService } = deps;
-
-  dialogueQueueService.onWrite(async (lineId, data) => {
-    await writeDialogueContent(deps, lineId, data);
-  });
+  const { subject } = deps;
 
   const streams = [
     subject.pipe(

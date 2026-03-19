@@ -20,7 +20,11 @@ const focusLineInternally = (element, payload = {}) => {
   } = payload;
 
   if (!lineId) {
-    return;
+    return false;
+  }
+
+  if (!getLineElement(element, lineId)) {
+    return false;
   }
 
   element.store.setIsNavigating({ isNavigating: true });
@@ -48,6 +52,8 @@ const focusLineInternally = (element, payload = {}) => {
       element.scrollLineIntoView({ lineId });
     });
   }
+
+  return true;
 };
 
 export function syncContentLine(payload = {}) {
@@ -59,7 +65,7 @@ export function syncAllContentLines() {
 }
 
 export function focusLine(payload = {}) {
-  focusLineInternally(this, payload);
+  return focusLineInternally(this, payload);
 }
 
 export function focusContainer() {

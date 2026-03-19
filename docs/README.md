@@ -4,6 +4,7 @@
 
 1. [Product](./product.md)
 2. [Engineering](./engineering.md)
+3. [Scene Editor Text Sync Redesign](./scene-editor-text-sync-redesign.md)
 
 ## Runbooks
 
