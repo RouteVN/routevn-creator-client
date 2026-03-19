@@ -53,12 +53,12 @@ export const selectViewData = ({ state, constants }) => {
     },
     {
       type: "slot",
-      slot: "project-description",
+      slot: "project-icon",
       label: "",
     },
     {
       type: "slot",
-      slot: "project-icon",
+      slot: "project-description",
       label: "",
     },
   ];

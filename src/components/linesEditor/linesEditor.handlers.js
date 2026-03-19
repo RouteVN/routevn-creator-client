@@ -90,6 +90,67 @@ const getLineElementById = (refs, lineId) => {
   );
 };
 
+const getSelectionRange = (element) => {
+  const root = element?.getRootNode();
+  const isShadowRoot = root instanceof ShadowRoot;
+
+  let selection = window.getSelection();
+
+  if (isShadowRoot && typeof root.getSelection === "function") {
+    const shadowSelection = root.getSelection();
+    if (shadowSelection && shadowSelection.rangeCount > 0) {
+      const range = shadowSelection.getRangeAt(0);
+      if (element.contains(range.startContainer)) {
+        return range;
+      }
+    }
+  }
+
+  if (!selection || selection.rangeCount === 0) {
+    return null;
+  }
+
+  if (isShadowRoot && typeof selection.getComposedRanges === "function") {
+    try {
+      const ranges = selection.getComposedRanges(root);
+      if (ranges.length > 0) {
+        const staticRange = ranges[0];
+        if (element.contains(staticRange.startContainer)) {
+          const range = document.createRange();
+          range.setStart(staticRange.startContainer, staticRange.startOffset);
+          range.setEnd(staticRange.endContainer, staticRange.endOffset);
+          return range;
+        }
+      }
+    } catch {
+      // Fall back to the standard selection path.
+    }
+  }
+
+  const range = selection.getRangeAt(0);
+  if (element.contains(range.startContainer)) {
+    return range;
+  }
+
+  return null;
+};
+
+const setSelectionFromRange = (element, range) => {
+  const root = element?.getRootNode();
+  let selection = window.getSelection();
+
+  if (root instanceof ShadowRoot && typeof root.getSelection === "function") {
+    selection = root.getSelection() || selection;
+  }
+
+  if (!selection) {
+    return;
+  }
+
+  selection.removeAllRanges();
+  selection.addRange(range);
+};
+
 const syncStoredCursorState = (
   store,
   element,
@@ -208,6 +269,31 @@ const renderPreservingLiveLineContent = (deps, element) => {
   const liveContent = getLineContent(element);
   deps.render();
   restoreRenderedLineContent(deps.refs, lineId, liveContent);
+};
+
+const deleteContentFromCaretToEnd = (element) => {
+  if (!element) {
+    return;
+  }
+
+  const selectionRange = getSelectionRange(element);
+  if (!selectionRange) {
+    return;
+  }
+
+  const deleteRange = selectionRange.cloneRange();
+  deleteRange.collapse(true);
+
+  const terminalRange = document.createRange();
+  terminalRange.selectNodeContents(element);
+  terminalRange.collapse(false);
+
+  deleteRange.setEnd(terminalRange.endContainer, terminalRange.endOffset);
+  deleteRange.deleteContents();
+
+  const collapsedRange = deleteRange.cloneRange();
+  collapsedRange.collapse(true);
+  setSelectionFromRange(element, collapsedRange);
 };
 
 const syncRenderedLineContent = (refs, lines, lineId, { skipLineIds } = {}) => {
@@ -474,9 +560,12 @@ const isKeyboardHandlingDisabled = (props) => {
 };
 
 export const handleAfterMount = (deps) => {
-  const { refs } = deps;
+  const { refs, props } = deps;
 
   focusContainerAfterPaint(refs);
+  requestAnimationFrame(() => {
+    syncAllRenderedLineContent(refs, props.lines);
+  });
 };
 
 export const handleBeforeMount = (deps) => {
@@ -1224,6 +1313,7 @@ export const handleLineBeforeInput = (deps, payload) => {
         },
       }),
     );
+    deleteContentFromCaretToEnd(currentElement);
     suppressElementInput(currentElement);
     suppressElementContentSyncUntilBlur(currentElement);
     return;
@@ -1394,8 +1484,6 @@ export const handleOnUpdate = (deps, payload) => {
   const { refs } = deps;
   const oldLines = payload?.oldProps?.lines;
   const newLines = payload?.newProps?.lines;
-  const oldSelectedLineId = payload?.oldProps?.selectedLineId;
-  const newSelectedLineId = payload?.newProps?.selectedLineId;
   const actualActiveElement =
     refs?.container?.shadowRoot?.activeElement ||
     getActualActiveElement(refs?.container);
@@ -1404,13 +1492,9 @@ export const handleOnUpdate = (deps, payload) => {
     : undefined;
   const skipLineIds = new Set();
 
-  if (
-    activeLineId &&
-    oldSelectedLineId &&
-    newSelectedLineId &&
-    oldSelectedLineId !== newSelectedLineId &&
-    activeLineId === oldSelectedLineId
-  ) {
+  // Never rewrite the currently focused editable line during component updates.
+  // Replacing its DOM content can collapse the browser selection back to the start.
+  if (activeLineId) {
     skipLineIds.add(activeLineId);
   }
 

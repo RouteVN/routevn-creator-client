@@ -40,34 +40,32 @@ styles:
     user-select: none
     '-webkit-user-drag': none
 template:
-  - $if ready:
-      - 'rtgl-view#container w=f tabindex=0 style="outline: none;"':
-          - $for line, i in lines:
-              - 'rtgl-view d=h w=f style="background-color: ${line.backgroundColor};"':
-                  - rtgl-view h=f w=32 ah=e mr=md pt=sm:
-                      - rtgl-text s=sm c=${line.lineColor}: ${line.lineNumber}
-                  - rtgl-view wh=24 br=f mr=md:
-                      - $if line.characterFileId:
-                          - rvn-file-image fileId=${line.characterFileId} w=24 h=24 br=f: null
-                  - rtgl-view d=h w=f:
-                      - rtgl-view w=f:
-                          - 'rvn-editable-text#line${i} data-line-id="${line.id}" style="width: 100%; padding-bottom: 4px;"': ${line.actions.dialogue.content[0].text}
-                          - $if line.hasDraftConflict:
-                              - rtgl-text s=xs c=danger: Conflict
-                          - $if line.sectionTransition:
-                              - rtgl-view#previewSectionTransition data-type="sectionTransition" data-id="${line.id}" d=h:
-                                  - rtgl-svg svg="transition" wh=16: null
-                                  - rtgl-svg svg="section" wh=16: null
-                                  - rtgl-text s=sm: 'Transition to section: ${line.transitionTarget}'
-                          - $if line.hasChoices:
-                              - rtgl-view#previewChoice data-type="choice" data-id="${line.id}" d=v:
-                                  - rtgl-view d=h:
-                                      - rtgl-svg svg="choices" wh=16: null
-                                      - rtgl-text s=sm: 'Choices:'
-                                  - $for choice in line.choices:
-                                      - rtgl-view d=h ml=sm:
-                                          - rtgl-text s=sm: • ${choice.content}
-                      - rtgl-view d=h:
+      - $if ready:
+          - 'rtgl-view#container w=f tabindex=0 style="outline: none;"':
+              - $for line, i in lines:
+                  - 'rtgl-view d=h w=f style="background-color: ${line.backgroundColor};"':
+                      - rtgl-view h=f w=32 ah=e mr=md pt=sm:
+                          - rtgl-text s=sm c=${line.lineColor}: ${line.lineNumber}
+                      - rtgl-view wh=24 br=f mr=md:
+                          - $if line.characterFileId:
+                              - rvn-file-image fileId=${line.characterFileId} w=24 h=24 br=f: null
+                      - rtgl-view d=h w=f:
+                          - rtgl-view w=f:
+                              - 'rvn-editable-text#line${i} data-line-id="${line.id}" style="width: 100%; padding-bottom: 4px;"': null
+                              - $if line.sectionTransition:
+                                  - rtgl-view#previewSectionTransition data-type="sectionTransition" data-id="${line.id}" d=h:
+                                      - rtgl-svg svg="transition" wh=16: null
+                                      - rtgl-svg svg="section" wh=16: null
+                                      - rtgl-text s=sm: 'Transition to section: ${line.transitionTarget}'
+                              - $if line.hasChoices:
+                                  - rtgl-view#previewChoice data-type="choice" data-id="${line.id}" d=v:
+                                      - rtgl-view d=h:
+                                          - rtgl-svg svg="choices" wh=16: null
+                                          - rtgl-text s=sm: 'Choices:'
+                                      - $for choice in line.choices:
+                                          - rtgl-view d=h ml=sm:
+                                              - rtgl-text s=sm: • ${choice.content}
+                          - rtgl-view d=h:
                           - $if line.background:
                               - rtgl-view#previewBackground data-type="background" data-id="${line.id}" pos=rel mr=sm:
                                   - $if line.background.fileId:

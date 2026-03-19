@@ -45,8 +45,6 @@ const focusLineInternally = (element, payload = {}) => {
     element.transformedHandlers.forceSyncContentLine({ lineId: syncLineId });
   }
 
-  element.render();
-
   if (scrollIntoView) {
     requestAnimationFrame(() => {
       element.scrollLineIntoView({ lineId });

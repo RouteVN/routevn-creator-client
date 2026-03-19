@@ -34,10 +34,10 @@ template:
           - $if projectSource == 'cloud':
               - rtgl-text s=xs c=mu-fg: Cloud Project
   - rtgl-view w=f h=f ph=lg pt=md:
-      - rtgl-view w=320 h=f d=v:
+      - rtgl-view w=f h=f d=v:
           - rvn-detail-view#detailView w=f h=1fg :fields=detailFields:
               - rtgl-view#projectTitle slot=project-title cur=pointer:
-                  - rtgl-text s=md: ${projectName}
+                  - rtgl-text s=h3: ${projectName}
               - rtgl-view#projectDescription slot=project-description cur=pointer:
                   - rtgl-text c=mu-fg: ${projectDescription}
               - rvn-file-image#projectImage slot=project-icon fileId=${projectIconFileId} h=128 bw=xs bc=bo br=md cur=pointer: null

@@ -1,5 +1,5 @@
 export const createInitialState = () => ({
-  localTitle: "Local Projects",
+  localTitle: "Projects",
   cloudTitle: "Cloud Projects",
   showCloudProjects: false,
   loginButtonText: "Login",
@@ -344,7 +344,7 @@ export const openDropdownMenu = (
   state.dropdownMenu.targetProjectId = projectId;
   state.dropdownMenu.items = Array.isArray(items)
     ? items
-    : [{ label: "Delete", type: "item", value: "delete" }];
+    : [{ label: "Remove", type: "item", value: "delete" }];
 };
 
 export const closeDropdownMenu = ({ state }, _payload = {}) => {
@@ -573,8 +573,9 @@ export const selectViewData = ({ state }) => {
     context: {
       platform: state.platform,
     },
-    deleteDialogTitle: "Delete Project",
-    deleteDialogMessage: `Are you sure you want to delete ${deleteDialogProjectName}? This action cannot be undone.`,
+    deleteDialogTitle: "Remove Project",
+    deleteDialogMessage: `Are you sure you want to remove ${deleteDialogProjectName} from the list? The project folder will still remain on disk. Delete the folder yourself if you want to permanently remove the project files.`,
+    deleteDialogConfirmLabel: "Remove",
     hasLocalProjects,
     localEmptyMessage: hasLocalProjects ? "" : "No local projects yet",
     localEmptySubMessage: hasLocalProjects

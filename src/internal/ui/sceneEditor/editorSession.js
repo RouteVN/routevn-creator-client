@@ -191,6 +191,20 @@ const adoptRepositorySectionIntoSession = (
   return nextSession;
 };
 
+const rebaseDirtyEntryOntoRepositoryText = (entry, repositoryText) => {
+  const rebasedEntry = structuredClone(entry);
+  const draftText = getSceneEditorLineText(rebasedEntry.line);
+
+  rebasedEntry.baseText = repositoryText;
+  rebasedEntry.dirty = draftText !== repositoryText;
+  rebasedEntry.conflict = false;
+  rebasedEntry.saveState = rebasedEntry.dirty
+    ? rebasedEntry.saveState || "scheduled"
+    : "idle";
+
+  return rebasedEntry;
+};
+
 export const createSceneEditorSession = ({
   sceneId,
   sectionId,
@@ -411,8 +425,16 @@ export const reconcileSceneEditorSession = ({
       }
 
       if (repositoryText !== entry.baseText) {
-        entry.conflict = true;
-        entry.saveState = "conflict";
+        nextSession.linesById[lineId] = rebaseDirtyEntryOntoRepositoryText(
+          entry,
+          repositoryText,
+        );
+        console.warn("[sceneEditor] Rebased dirty draft onto repository text", {
+          lineId,
+          repositoryText,
+          draftText,
+          baseText: entry.baseText,
+        });
       }
     }
 
@@ -454,10 +476,16 @@ export const reconcileSceneEditorSession = ({
       continue;
     }
 
-    const conflictedEntry = structuredClone(currentEntry);
-    conflictedEntry.conflict = true;
-    conflictedEntry.saveState = "conflict";
-    nextLinesById[lineId] = conflictedEntry;
+    nextLinesById[lineId] = rebaseDirtyEntryOntoRepositoryText(
+      currentEntry,
+      repositoryText,
+    );
+    console.warn("[sceneEditor] Rebased dirty draft onto repository text", {
+      lineId,
+      repositoryText,
+      draftText,
+      baseText: currentEntry.baseText,
+    });
   }
 
   nextSession.linesById = nextLinesById;
