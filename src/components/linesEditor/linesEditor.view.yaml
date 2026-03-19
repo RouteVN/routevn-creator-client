@@ -91,11 +91,13 @@ template:
                                       - rtgl-view pos=abs cor=full bgc=danger av=c ah=c:
                                           - rtgl-svg svg=x wh=16 c=white: null
                           - $if line.hasDialogueLayout:
-                              - rtgl-view#previewDialogue data-type="dialogue" data-id="${line.id}" pos=rel mr=sm w=36 h=24 av=c ah=c:
-                                  - rtgl-svg svg="dialogue" wh=24: null
-                                  - $if line.dialogueChangeType == "delete":
-                                      - rtgl-view pos=abs cor=full bgc=danger av=c ah=c:
-                                          - rtgl-svg svg=x wh=16 c=white: null
+                              - rtgl-view#previewDialogue data-type="dialogue" data-id="${line.id}" d=h av=c g=xs mr=sm:
+                                  - rtgl-view pos=rel w=24 h=24 av=c ah=c:
+                                      - rtgl-svg svg="dialogue" wh=24: null
+                                      - $if line.dialogueChangeType == "delete":
+                                          - rtgl-view pos=abs cor=full bgc=danger av=c ah=c:
+                                              - rtgl-svg svg=x wh=16 c=white: null
+                                  - rtgl-text s=xs c=mu-fg: ${line.dialogueModeLabel}
                           - $if line.hasControl:
                               - rtgl-view#previewControl data-type="control" data-id="${line.id}" pos=rel mr=sm w=36 h=24 av=c ah=c:
                                   - rtgl-svg svg="control" wh=24: null

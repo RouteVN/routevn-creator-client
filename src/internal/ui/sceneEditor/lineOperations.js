@@ -36,23 +36,53 @@ const findFirstControlAction = (repositoryState) => {
   return undefined;
 };
 
-const shouldInheritNvlModeFromPreviousLine = ({
+const getDialogueLayoutType = ({ repositoryState, dialogue } = {}) => {
+  const resourceId = dialogue?.ui?.resourceId ?? dialogue?.gui?.resourceId;
+  if (!resourceId) {
+    return undefined;
+  }
+
+  return repositoryState?.layouts?.items?.[resourceId]?.layoutType;
+};
+
+const resolveEffectiveDialogueMode = ({ repositoryState, dialogue } = {}) => {
+  if (dialogue?.mode === "nvl") {
+    return "nvl";
+  }
+
+  if (getDialogueLayoutType({ repositoryState, dialogue }) === "nvl") {
+    return "nvl";
+  }
+
+  return "adv";
+};
+
+const resolveLineDialogueMode = ({
+  repositoryState,
   lines,
   lineId,
   existingDialogue,
 }) => {
-  if (existingDialogue?.mode === "nvl") {
-    return false;
+  if (
+    resolveEffectiveDialogueMode({
+      repositoryState,
+      dialogue: existingDialogue,
+    }) === "nvl"
+  ) {
+    return "nvl";
   }
 
   const lineOrder = (lines || []).map((line) => line.id);
   const currentIndex = lineOrder.indexOf(lineId);
   if (currentIndex <= 0) {
-    return false;
+    return "adv";
   }
 
   const previousLine = lines[currentIndex - 1];
-  return previousLine?.actions?.dialogue?.mode === "nvl";
+  return resolveEffectiveDialogueMode({
+    repositoryState,
+    dialogue: previousLine?.actions?.dialogue,
+  });
 };
 
 const resolveLineControlAction = ({ repositoryState, line, fallbackLine }) => {
@@ -169,6 +199,7 @@ export const writeDialogueContent = async (
 const createDialogueContentUpdates = (deps, updates = []) => {
   const { store } = deps;
   const currentSectionLines = getCurrentSectionLines(store);
+  const repositoryState = store.selectRepositoryState();
 
   return updates.map(({ lineId, content }) => {
     const existingLine =
@@ -176,7 +207,8 @@ const createDialogueContentUpdates = (deps, updates = []) => {
         ? store.selectSelectedLine()
         : getLineById(currentSectionLines, lineId);
     const existingDialogue = existingLine?.actions?.dialogue || {};
-    const shouldInheritNvlMode = shouldInheritNvlModeFromPreviousLine({
+    const resolvedMode = resolveLineDialogueMode({
+      repositoryState,
       lines: currentSectionLines,
       lineId,
       existingDialogue,
@@ -186,7 +218,7 @@ const createDialogueContentUpdates = (deps, updates = []) => {
       lineId,
       dialogue: {
         ...existingDialogue,
-        ...(shouldInheritNvlMode ? { mode: "nvl" } : {}),
+        mode: resolvedMode,
         content,
       },
     };
@@ -241,44 +273,22 @@ export const handleSplitLineOperation = async (deps, payload) => {
   }
 
   store.setLockingLineId({ lineId });
-  const existingDialogue = currentLine.actions?.dialogue || {};
-  const shouldInheritNvl =
-    existingDialogue?.mode === "nvl" ||
-    shouldInheritNvlModeFromPreviousLine({
-      lines: currentLines,
-      lineId,
-      existingDialogue,
-    });
   const controlAction = resolveLineControlAction({
     repositoryState: projectService.getRepositoryState(),
     line: currentLine,
   });
   const newLineId = nanoid();
-  const shouldCreateDialogueAction = shouldInheritNvl || Boolean(rightContent);
-  const persistedNewLineActions = shouldCreateDialogueAction
-    ? {
-        dialogue: {
-          mode: shouldInheritNvl ? "nvl" : "adv",
-          ...(rightContent
-            ? {
-                content: createDialogueContent(rightContent),
-              }
-            : {}),
-        },
-      }
-    : {};
+  const persistedNewLineActions = {
+    dialogue: {
+      content: createDialogueContent(rightContent ?? ""),
+    },
+  };
 
   if (controlAction) {
     persistedNewLineActions.control = controlAction;
   }
 
-  const sessionNewLineActions = {
-    ...structuredClone(persistedNewLineActions),
-    dialogue: {
-      mode: shouldInheritNvl ? "nvl" : "adv",
-      content: createDialogueContent(rightContent ?? ""),
-    },
-  };
+  const sessionNewLineActions = structuredClone(persistedNewLineActions);
 
   const nextSession = splitSceneEditorSessionLine(store.selectEditorSession(), {
     lineId,
@@ -312,14 +322,6 @@ export const handlePasteLinesOperation = async (deps, payload) => {
     return;
   }
 
-  const existingDialogue = currentLine.actions?.dialogue || {};
-  const shouldInheritNvl =
-    existingDialogue?.mode === "nvl" ||
-    shouldInheritNvlModeFromPreviousLine({
-      lines: currentLines,
-      lineId,
-      existingDialogue,
-    });
   const controlAction = resolveLineControlAction({
     repositoryState: projectService.getRepositoryState(),
     line: currentLine,
@@ -330,7 +332,6 @@ export const handlePasteLinesOperation = async (deps, payload) => {
     data: {
       actions: {
         dialogue: {
-          mode: shouldInheritNvl ? "nvl" : "adv",
           content: createDialogueContent(content),
         },
         ...(controlAction ? { control: structuredClone(controlAction) } : {}),
@@ -377,14 +378,6 @@ export const handleNewLineOperation = async (deps, payload) => {
   const baseLine = baseLineId
     ? getLineById(currentLines, baseLineId)
     : selectedLine;
-  const existingDialogue = baseLine?.actions?.dialogue || {};
-  const shouldInheritNvl =
-    existingDialogue?.mode === "nvl" ||
-    shouldInheritNvlModeFromPreviousLine({
-      lines: currentLines,
-      lineId: baseLineId,
-      existingDialogue,
-    });
   const controlAction = resolveLineControlAction({
     repositoryState: projectService.getRepositoryState(),
     line: baseLine,
@@ -392,24 +385,16 @@ export const handleNewLineOperation = async (deps, payload) => {
   });
 
   const newLineId = nanoid();
-  const persistedActions = shouldInheritNvl
-    ? {
-        dialogue: {
-          mode: "nvl",
-        },
-      }
-    : {};
+  const persistedActions = {
+    dialogue: {
+      content: createDialogueContent(""),
+    },
+  };
   if (controlAction) {
     persistedActions.control = controlAction;
   }
 
-  const sessionActions = {
-    ...structuredClone(persistedActions),
-    dialogue: {
-      mode: shouldInheritNvl ? "nvl" : "adv",
-      content: createDialogueContent(""),
-    },
-  };
+  const sessionActions = structuredClone(persistedActions);
 
   const nextSession = insertSceneEditorSessionLine(
     store.selectEditorSession(),

@@ -6,6 +6,19 @@ const getLayoutTypeByMode = (mode) => {
   return mode === "nvl" ? "nvl" : "dialogue";
 };
 
+const resolveDialogueMode = ({ layouts, dialogue } = {}) => {
+  const resourceId = dialogue?.ui?.resourceId ?? dialogue?.gui?.resourceId;
+  const layoutType = (layouts ?? []).find(
+    (layout) => layout.id === resourceId,
+  )?.layoutType;
+
+  if (dialogue?.mode === "nvl" || layoutType === "nvl") {
+    return "nvl";
+  }
+
+  return "adv";
+};
+
 const resolveSelectedResourceId = ({ layouts, mode, resourceId } = {}) => {
   const selectedLayoutType = getLayoutTypeByMode(mode);
   const availableLayouts = (layouts ?? []).filter(
@@ -20,6 +33,34 @@ const resolveSelectedResourceId = ({ layouts, mode, resourceId } = {}) => {
   }
 
   return availableLayouts[0]?.id ?? "";
+};
+
+const syncDialogueStateFromProps = (deps, dialogue = {}) => {
+  const { store, props } = deps;
+  const selectedMode = resolveDialogueMode({
+    layouts: props?.layouts,
+    dialogue,
+  });
+  const selectedResourceId =
+    dialogue?.ui?.resourceId || dialogue?.gui?.resourceId || "";
+
+  store.setSelectedMode({
+    mode: selectedMode,
+  });
+  store.setSelectedResource({
+    resourceId: resolveSelectedResourceId({
+      layouts: props?.layouts,
+      mode: selectedMode,
+      resourceId: selectedResourceId,
+    }),
+  });
+  store.setSelectedCharacterId({
+    characterId: dialogue?.characterId || "",
+  });
+
+  store.setClearPage({
+    clearPage: dialogue?.clearPage === true,
+  });
 };
 
 const syncDialogueFormValues = (deps) => {
@@ -39,31 +80,15 @@ const syncDialogueFormValues = (deps) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { store, props } = deps;
-  const selectedMode = props?.dialogue?.mode || "adv";
-  const selectedResourceId =
-    props?.dialogue?.ui?.resourceId || props?.dialogue?.gui?.resourceId || "";
-
-  store.setSelectedMode({
-    mode: selectedMode,
-  });
-  store.setSelectedResource({
-    resourceId: resolveSelectedResourceId({
-      layouts: props?.layouts,
-      mode: selectedMode,
-      resourceId: selectedResourceId,
-    }),
-  });
-  store.setSelectedCharacterId({
-    characterId: props?.dialogue?.characterId || "",
-  });
-
-  store.setClearPage({
-    clearPage: props?.dialogue?.clearPage === true,
-  });
+  syncDialogueStateFromProps(deps, deps.props?.dialogue);
 };
 
 export const handleAfterMount = (deps) => {
+  syncDialogueFormValues(deps);
+};
+
+export const handleOnUpdate = (deps, changes) => {
+  syncDialogueStateFromProps(deps, changes?.newProps?.dialogue);
   syncDialogueFormValues(deps);
 };
 
@@ -100,9 +125,18 @@ export const handleSubmitClick = (deps) => {
   const { store, dispatchEvent, props } = deps;
   const { selectedMode, selectedResourceId, selectedCharacterId, clearPage } =
     store.getState();
+  const effectiveMode = resolveDialogueMode({
+    layouts: props?.layouts,
+    dialogue: {
+      mode: selectedMode,
+      ui: {
+        resourceId: selectedResourceId,
+      },
+    },
+  });
   const effectiveResourceId = resolveSelectedResourceId({
     layouts: props?.layouts,
-    mode: selectedMode,
+    mode: effectiveMode,
     resourceId: selectedResourceId,
   });
 
@@ -112,7 +146,7 @@ export const handleSubmitClick = (deps) => {
 
   // Create dialogue object with only non-empty values
   const dialogue = {
-    mode: selectedMode,
+    mode: effectiveMode,
   };
 
   if (effectiveResourceId) {
@@ -123,7 +157,7 @@ export const handleSubmitClick = (deps) => {
   if (selectedCharacterId) {
     dialogue.characterId = selectedCharacterId;
   }
-  if (selectedMode === "nvl" && toBoolean(clearPage)) {
+  if (effectiveMode === "nvl" && toBoolean(clearPage)) {
     dialogue.clearPage = true;
   }
 

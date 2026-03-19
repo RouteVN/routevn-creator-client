@@ -357,8 +357,9 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     },
   });
 
+  const presentationState = graphicsService.engineSelectPresentationState();
   store.setPresentationState({
-    presentationState: graphicsService.engineSelectPresentationState(),
+    presentationState,
   });
 };
 
