@@ -1,6 +1,10 @@
 import { nanoid } from "nanoid";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import {
+  runResourcePageMutation,
+  showResourcePageError,
+} from "../../internal/ui/resourcePages/resourcePageErrors.js";
 
 const {
   refreshData: handleDataChanged,
@@ -32,15 +36,6 @@ export {
   handleImageItemEdit,
 };
 
-const getProjectErrorMessage = (result, fallbackMessage) => {
-  return (
-    result?.error?.message ||
-    result?.error?.creatorModelError?.message ||
-    result?.message ||
-    fallbackMessage
-  );
-};
-
 const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
   const { appService, projectService } = deps;
   let successfulUploads;
@@ -48,9 +43,10 @@ const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
   try {
     successfulUploads = await projectService.uploadFiles(files);
   } catch (error) {
-    console.error("Failed to upload images:", error);
-    appService.showToast(error?.message || "Failed to upload images.", {
-      title: "Error",
+    showResourcePageError({
+      appService,
+      errorOrResult: error,
+      fallbackMessage: "Failed to upload images.",
     });
     return;
   }
@@ -74,20 +70,19 @@ const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
       width: result.dimensions.width,
       height: result.dimensions.height,
     };
-    const createResult = await projectService.createImage({
-      imageId: nanoid(),
-      fileRecords: result.fileRecords,
-      data: imageData,
-      parentId,
-      position: "last",
+    const createAttempt = await runResourcePageMutation({
+      appService,
+      fallbackMessage: "Failed to create image.",
+      action: () =>
+        projectService.createImage({
+          imageId: nanoid(),
+          fileRecords: result.fileRecords,
+          data: imageData,
+          parentId,
+          position: "last",
+        }),
     });
-
-    if (createResult?.valid === false) {
-      console.error("Failed to create image:", createResult);
-      appService.showToast(
-        getProjectErrorMessage(createResult, "Failed to create image."),
-        { title: "Error" },
-      );
+    if (!createAttempt.ok) {
       return;
     }
   }
@@ -105,8 +100,12 @@ export const handleUploadClick = async (deps, payload) => {
       accept: ".jpg,.jpeg,.png,.webp",
       multiple: true,
     });
-  } catch {
-    appService.showToast("Failed to select files.", { title: "Error" });
+  } catch (error) {
+    showResourcePageError({
+      appService,
+      errorOrResult: error,
+      fallbackMessage: "Failed to select files.",
+    });
     return;
   }
 
@@ -146,9 +145,10 @@ export const handleFormExtraEvent = async (deps) => {
       upload: true,
     });
   } catch (error) {
-    console.error("Failed to select image file:", error);
-    appService.showToast(error?.message || "Failed to select file.", {
-      title: "Error",
+    showResourcePageError({
+      appService,
+      errorOrResult: error,
+      fallbackMessage: "Failed to select file.",
     });
     return;
   }
@@ -164,26 +164,25 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   const uploadResult = file.uploadResult;
-  const updateResult = await projectService.updateImage({
-    imageId: selectedItem.id,
-    fileRecords: uploadResult.fileRecords,
-    data: {
-      fileId: uploadResult.fileId,
-      thumbnailFileId: uploadResult.thumbnailFileId,
-      name: uploadResult.displayName,
-      fileType: uploadResult.file.type,
-      fileSize: uploadResult.file.size,
-      width: uploadResult.dimensions.width,
-      height: uploadResult.dimensions.height,
-    },
+  const updateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to update image.",
+    action: () =>
+      projectService.updateImage({
+        imageId: selectedItem.id,
+        fileRecords: uploadResult.fileRecords,
+        data: {
+          fileId: uploadResult.fileId,
+          thumbnailFileId: uploadResult.thumbnailFileId,
+          name: uploadResult.displayName,
+          fileType: uploadResult.file.type,
+          fileSize: uploadResult.file.size,
+          width: uploadResult.dimensions.width,
+          height: uploadResult.dimensions.height,
+        },
+      }),
   });
-
-  if (updateResult?.valid === false) {
-    console.error("Failed to update image:", updateResult);
-    appService.showToast(
-      getProjectErrorMessage(updateResult, "Failed to update image."),
-      { title: "Error" },
-    );
+  if (!updateAttempt.ok) {
     return;
   }
 
@@ -214,9 +213,10 @@ export const handleEditDialogImageClick = async (deps) => {
       upload: true,
     });
   } catch (error) {
-    console.error("Failed to select image file:", error);
-    appService.showToast(error?.message || "Failed to select file.", {
-      title: "Error",
+    showResourcePageError({
+      appService,
+      errorOrResult: error,
+      fallbackMessage: "Failed to select file.",
     });
     return;
   }
@@ -271,22 +271,22 @@ export const handleEditFormAction = async (deps, payload) => {
       }
     : {};
 
-  const updateResult = await projectService.updateImage({
-    imageId: editItemId,
-    fileRecords: editUploadResult?.fileRecords,
-    data: {
-      name,
-      description: values?.description ?? "",
-      ...imagePatch,
-    },
+  const updateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to update image.",
+    action: () =>
+      projectService.updateImage({
+        imageId: editItemId,
+        fileRecords: editUploadResult?.fileRecords,
+        data: {
+          name,
+          description: values?.description ?? "",
+          ...imagePatch,
+        },
+      }),
   });
 
-  if (updateResult?.valid === false) {
-    console.error("Failed to update image:", updateResult);
-    appService.showToast(
-      getProjectErrorMessage(updateResult, "Failed to update image."),
-      { title: "Error" },
-    );
+  if (!updateAttempt.ok) {
     return;
   }
 

@@ -3,6 +3,7 @@ import { createLayoutEditorPayload } from "../../internal/layoutEditorRoute.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
 import { createControlsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import {
   getInteractionActions,
   withInteractionPayload,
@@ -89,15 +90,17 @@ const updateControlKeyboard = async ({
   data.keyboard =
     Object.keys(nextKeyboard).length > 0 ? nextKeyboard : undefined;
 
-  const result = await projectService.updateControlItem({
-    controlId: control.id,
-    data,
+  const updateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to update keyboard action.",
+    action: () =>
+      projectService.updateControlItem({
+        controlId: control.id,
+        data,
+      }),
   });
 
-  if (result?.valid === false) {
-    appService.showToast("Failed to update keyboard action", {
-      title: "Error",
-    });
+  if (!updateAttempt.ok) {
     return false;
   }
 
@@ -180,13 +183,22 @@ export const handleControlFormActionClick = async (deps, payload) => {
     return;
   }
 
-  await projectService.createControlItem({
-    controlId: nanoid(),
-    name,
-    elements: createControlTemplate(),
-    parentId: store.getState().targetGroupId,
-    position: "last",
+  const createAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to create control.",
+    action: () =>
+      projectService.createControlItem({
+        controlId: nanoid(),
+        name,
+        elements: createControlTemplate(),
+        parentId: store.getState().targetGroupId,
+        position: "last",
+      }),
   });
+
+  if (!createAttempt.ok) {
+    return;
+  }
 
   store.closeAddDialog();
   await handleDataChanged(deps);

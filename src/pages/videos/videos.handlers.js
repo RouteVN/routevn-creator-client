@@ -1,6 +1,10 @@
 import { nanoid } from "nanoid";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import {
+  runResourcePageMutation,
+  showResourcePageError,
+} from "../../internal/ui/resourcePages/resourcePageErrors.js";
 
 const pickAndUploadVideo = async ({ appService, projectService } = {}) => {
   let file;
@@ -10,8 +14,8 @@ const pickAndUploadVideo = async ({ appService, projectService } = {}) => {
       accept: ".mp4",
       multiple: false,
     });
-  } catch {
-    return { error: "pick-failed" };
+  } catch (error) {
+    return { error, errorType: "pick-failed" };
   }
 
   if (!file) {
@@ -21,8 +25,8 @@ const pickAndUploadVideo = async ({ appService, projectService } = {}) => {
   let uploadedFiles;
   try {
     uploadedFiles = await projectService.uploadFiles([file]);
-  } catch {
-    return { error: "upload-failed" };
+  } catch (error) {
+    return { error, errorType: "upload-failed" };
   }
 
   const uploadResult = uploadedFiles?.[0];
@@ -39,8 +43,12 @@ const createVideosFromFiles = async ({ deps, files, parentId } = {}) => {
 
   try {
     successfulUploads = await projectService.uploadFiles(files);
-  } catch {
-    appService.showToast("Failed to upload video.", { title: "Error" });
+  } catch (error) {
+    showResourcePageError({
+      appService,
+      errorOrResult: error,
+      fallbackMessage: "Failed to upload video.",
+    });
     return;
   }
 
@@ -50,23 +58,32 @@ const createVideosFromFiles = async ({ deps, files, parentId } = {}) => {
   }
 
   for (const result of successfulUploads) {
-    await projectService.createVideo({
-      videoId: nanoid(),
-      fileRecords: result.fileRecords,
-      data: {
-        type: "video",
-        fileId: result.fileId,
-        thumbnailFileId: result.thumbnailFileId,
-        name: result.displayName,
-        description: "",
-        fileType: result.file.type,
-        fileSize: result.file.size,
-        width: result.dimensions?.width,
-        height: result.dimensions?.height,
-      },
-      parentId,
-      position: "last",
+    const createAttempt = await runResourcePageMutation({
+      appService,
+      fallbackMessage: "Failed to create video.",
+      action: () =>
+        projectService.createVideo({
+          videoId: nanoid(),
+          fileRecords: result.fileRecords,
+          data: {
+            type: "video",
+            fileId: result.fileId,
+            thumbnailFileId: result.thumbnailFileId,
+            name: result.displayName,
+            description: "",
+            fileType: result.file.type,
+            fileSize: result.file.size,
+            width: result.dimensions?.width,
+            height: result.dimensions?.height,
+          },
+          parentId,
+          position: "last",
+        }),
     });
+
+    if (!createAttempt.ok) {
+      return;
+    }
   }
 
   await handleDataChanged(deps);
@@ -138,8 +155,12 @@ export const handleUploadClick = async (deps, payload) => {
       accept: ".mp4",
       multiple: true,
     });
-  } catch {
-    appService.showToast("Failed to select files.", { title: "Error" });
+  } catch (error) {
+    showResourcePageError({
+      appService,
+      errorOrResult: error,
+      fallbackMessage: "Failed to select files.",
+    });
     return;
   }
 
@@ -176,30 +197,47 @@ export const handleFormExtraEvent = async (deps) => {
     return;
   }
 
-  if (result.error === "pick-failed") {
-    appService.showToast("Failed to select file.", { title: "Error" });
+  if (result.errorType === "pick-failed") {
+    showResourcePageError({
+      appService,
+      errorOrResult: result.error,
+      fallbackMessage: "Failed to select file.",
+    });
     return;
   }
 
-  if (result.error) {
-    appService.showToast("Failed to upload video.", { title: "Error" });
+  if (result.errorType === "upload-failed") {
+    showResourcePageError({
+      appService,
+      errorOrResult: result.error,
+      fallbackMessage: "Failed to upload video.",
+    });
     return;
   }
 
   const { uploadResult } = result;
-  await projectService.updateVideo({
-    videoId: selectedItem.id,
-    fileRecords: uploadResult.fileRecords,
-    data: {
-      fileId: uploadResult.fileId,
-      thumbnailFileId: uploadResult.thumbnailFileId,
-      name: uploadResult.displayName,
-      fileType: uploadResult.file.type,
-      fileSize: uploadResult.file.size,
-      width: uploadResult.dimensions?.width,
-      height: uploadResult.dimensions?.height,
-    },
+  const updateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to update video.",
+    action: () =>
+      projectService.updateVideo({
+        videoId: selectedItem.id,
+        fileRecords: uploadResult.fileRecords,
+        data: {
+          fileId: uploadResult.fileId,
+          thumbnailFileId: uploadResult.thumbnailFileId,
+          name: uploadResult.displayName,
+          fileType: uploadResult.file.type,
+          fileSize: uploadResult.file.size,
+          width: uploadResult.dimensions?.width,
+          height: uploadResult.dimensions?.height,
+        },
+      }),
   });
+
+  if (!updateAttempt.ok) {
+    return;
+  }
 
   await handleDataChanged(deps);
 };
@@ -224,13 +262,21 @@ export const handleEditDialogVideoClick = async (deps) => {
     return;
   }
 
-  if (result.error === "pick-failed") {
-    appService.showToast("Failed to select file.", { title: "Error" });
+  if (result.errorType === "pick-failed") {
+    showResourcePageError({
+      appService,
+      errorOrResult: result.error,
+      fallbackMessage: "Failed to select file.",
+    });
     return;
   }
 
-  if (result.error) {
-    appService.showToast("Failed to upload video.", { title: "Error" });
+  if (result.errorType === "upload-failed") {
+    showResourcePageError({
+      appService,
+      errorOrResult: result.error,
+      fallbackMessage: "Failed to upload video.",
+    });
     return;
   }
 
@@ -272,15 +318,24 @@ export const handleEditFormAction = async (deps, payload) => {
       }
     : {};
 
-  await projectService.updateVideo({
-    videoId: editItemId,
-    fileRecords: editUploadResult?.fileRecords,
-    data: {
-      name,
-      description: values?.description ?? "",
-      ...videoPatch,
-    },
+  const updateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to update video.",
+    action: () =>
+      projectService.updateVideo({
+        videoId: editItemId,
+        fileRecords: editUploadResult?.fileRecords,
+        data: {
+          name,
+          description: values?.description ?? "",
+          ...videoPatch,
+        },
+      }),
   });
+
+  if (!updateAttempt.ok) {
+    return;
+  }
 
   store.closeEditDialog();
   await handleDataChanged(deps);

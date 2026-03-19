@@ -1,3 +1,104 @@
+const FONT_EXTENSION_TO_MIME = {
+  ttf: "font/ttf",
+  otf: "font/otf",
+  woff: "font/woff",
+  woff2: "font/woff2",
+  ttc: "font/ttc",
+  eot: "font/eot",
+};
+
+const FONT_MIME_ALIASES = {
+  "application/font-woff": "font/woff",
+  "application/x-font-woff": "font/woff",
+  "application/font-sfnt": "font/ttf",
+  "application/x-font-truetype": "font/ttf",
+  "application/x-truetype-font": "font/ttf",
+  "application/vnd.ms-fontobject": "font/eot",
+  "application/x-font-eot": "font/eot",
+  "font/sfnt": "font/ttf",
+};
+
+const getFontMimeTypeFromExtension = (fileName = "") => {
+  const extension = fileName.split(".").pop()?.toLowerCase();
+  if (!extension) {
+    return "";
+  }
+
+  return FONT_EXTENSION_TO_MIME[extension] ?? "";
+};
+
+const detectFontMimeTypeFromBytes = (result) => {
+  if (!(result.arrayBuffer || result.buffer)) {
+    return "";
+  }
+
+  const bytes = new Uint8Array(result.arrayBuffer || result.buffer);
+  if (bytes.length < 4) {
+    return "";
+  }
+
+  const magic =
+    (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
+
+  if (magic === 0x00010000 || magic === 0x74727565) {
+    return "font/ttf";
+  }
+
+  if (magic === 0x4f54544f) {
+    return "font/otf";
+  }
+
+  if (magic === 0x774f4646) {
+    return "font/woff";
+  }
+
+  if (magic === 0x774f4632) {
+    return "font/woff2";
+  }
+
+  if (magic === 0x74746366) {
+    return "font/ttc";
+  }
+
+  if (
+    magic === 0x02000100 ||
+    magic === 0x01000200 ||
+    (bytes[0] === 0x00 &&
+      bytes[1] === 0x01 &&
+      bytes[2] === 0x00 &&
+      bytes[3] === 0x02)
+  ) {
+    return "font/eot";
+  }
+
+  return "";
+};
+
+export const normalizeFontFileType = ({ fileType, fileName } = {}) => {
+  const normalizedType = fileType?.trim().toLowerCase() ?? "";
+  if (
+    normalizedType &&
+    Object.values(FONT_EXTENSION_TO_MIME).includes(normalizedType)
+  ) {
+    return normalizedType;
+  }
+
+  if (normalizedType && FONT_MIME_ALIASES[normalizedType]) {
+    return FONT_MIME_ALIASES[normalizedType];
+  }
+
+  return getFontMimeTypeFromExtension(fileName);
+};
+
+export const formatFontFileTypeLabel = ({ fileType, fileName } = {}) => {
+  const normalizedType = normalizeFontFileType({ fileType, fileName });
+  if (!normalizedType) {
+    return "Unknown";
+  }
+
+  return normalizedType.replace("font/", "").toUpperCase();
+};
+
 /**
  * Determines the MIME type of a font file by checking magic numbers or file extension
  * @param {Object} result - The file upload result object
@@ -8,61 +109,20 @@
  * @returns {string} The MIME type of the file
  */
 export const getFileType = (result) => {
-  if (result.file.type) return result.file.type;
-
-  // Check magic numbers from bytes for font formats
-  if (result.arrayBuffer || result.buffer) {
-    const bytes = new Uint8Array(result.arrayBuffer || result.buffer);
-
-    // TTF: starts with 0x00010000 or "true" (0x74727565)
-    if (bytes.length >= 4) {
-      const magic =
-        (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
-
-      // TTF signatures
-      if (magic === 0x00010000 || magic === 0x74727565) {
-        return "font/ttf";
-      }
-
-      // OTF: starts with "OTTO" (0x4F54544F)
-      if (magic === 0x4f54544f) {
-        return "font/otf";
-      }
-
-      // WOFF: starts with "wOFF" (0x774F4646)
-      if (magic === 0x774f4646) {
-        return "font/woff";
-      }
-
-      // WOFF2: starts with "wOF2" (0x774F4632)
-      if (magic === 0x774f4632) {
-        return "font/woff2";
-      }
-
-      // TTC: starts with "ttcf" (0x74746366)
-      if (magic === 0x74746366) {
-        return "font/ttc";
-      }
-
-      // EOT: starts with 0x02000100 or 0x01000200 (little endian)
-      if (
-        magic === 0x02000100 ||
-        magic === 0x01000200 ||
-        (bytes[0] === 0x00 &&
-          bytes[1] === 0x01 &&
-          bytes[2] === 0x00 &&
-          bytes[3] === 0x02)
-      ) {
-        return "font/eot";
-      }
-    }
+  const fileName = result.file?.name ?? result.displayName ?? "";
+  const detectedMimeType = detectFontMimeTypeFromBytes(result);
+  if (detectedMimeType) {
+    return detectedMimeType;
   }
 
-  // Fallback to extension-based detection
-  const ext = result.displayName.split(".").pop()?.toLowerCase();
-  if (result.type === "font" && ext) {
-    return `font/${ext}`;
+  const normalizedMimeType = normalizeFontFileType({
+    fileType: result.file?.type,
+    fileName,
+  });
+  if (normalizedMimeType) {
+    return normalizedMimeType;
   }
+
   throw new Error("Unknown file type");
 };
 

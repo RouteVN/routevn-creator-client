@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
+import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { resetState } from "./animations.constants";
 
 const defaultInitialValues = {
@@ -180,30 +181,48 @@ export const handleFormActionClick = async (deps, payload) => {
   const editItemId = store.selectEditItemId();
 
   if (editMode && editItemId) {
-    await projectService.updateAnimation({
-      animationId: editItemId,
-      data: {
-        name,
-        animation: {
-          type: "live",
-          tween,
-        },
-      },
+    const updateAttempt = await runResourcePageMutation({
+      appService,
+      fallbackMessage: "Failed to update animation.",
+      action: () =>
+        projectService.updateAnimation({
+          animationId: editItemId,
+          data: {
+            name,
+            animation: {
+              type: "live",
+              tween,
+            },
+          },
+        }),
     });
+
+    if (!updateAttempt.ok) {
+      return;
+    }
   } else {
-    await projectService.createAnimation({
-      animationId: nanoid(),
-      data: {
-        type: "animation",
-        name,
-        animation: {
-          type: "live",
-          tween,
-        },
-      },
-      parentId: store.selectTargetGroupId(),
-      position: "last",
+    const createAttempt = await runResourcePageMutation({
+      appService,
+      fallbackMessage: "Failed to create animation.",
+      action: () =>
+        projectService.createAnimation({
+          animationId: nanoid(),
+          data: {
+            type: "animation",
+            name,
+            animation: {
+              type: "live",
+              tween,
+            },
+          },
+          parentId: store.selectTargetGroupId(),
+          position: "last",
+        }),
     });
+
+    if (!createAttempt.ok) {
+      return;
+    }
   }
 
   store.closeDialog();
