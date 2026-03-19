@@ -73,7 +73,9 @@ template:
               - $if preview.dialogue:
                   - rtgl-view#actionItemDialogue data-mode=dialogue g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=dialogue wh=24: null
-                      - rtgl-text s=sm: ${preview.dialogue.name}
+                      - rtgl-view d=h av=c g=xs:
+                          - rtgl-text s=sm: ${preview.dialogue.name}
+                          - rtgl-text s=xs c=mu-fg: ${preview.dialogue.modeLabel}
               - $if preview.choice && preview.choice.items:
                   - rtgl-view#actionItemChoices data-mode=choice g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer pv=md:
                       - rtgl-svg svg=choices wh=24: null

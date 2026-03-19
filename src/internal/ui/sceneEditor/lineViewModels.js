@@ -171,6 +171,30 @@ const buildDialogueSpeakerPreview = (line, characterLookups) => {
   return characterLookups.flatCharacterById.get(characterId)?.fileId;
 };
 
+const resolveDialogueModeLabel = (repositoryState, line) => {
+  const lineActions = normalizeLineActions(line.actions || {});
+  const dialogue = lineActions?.dialogue;
+  if (!dialogue) {
+    return undefined;
+  }
+
+  if (dialogue.mode === "nvl") {
+    return "NVL";
+  }
+
+  if (dialogue.mode === "adv") {
+    return "ADV";
+  }
+
+  const layoutId = dialogue.ui?.resourceId ?? dialogue.gui?.resourceId;
+  const layoutType = repositoryState?.layouts?.items?.[layoutId]?.layoutType;
+  if (layoutType === "nvl") {
+    return "NVL";
+  }
+
+  return "ADV";
+};
+
 export const buildSceneEditorLineViewModels = ({
   lines,
   repositoryState,
@@ -211,6 +235,7 @@ export const buildSceneEditorLineViewModels = ({
         !!changes.setNextLineConfig || !!lineActions?.setNextLineConfig,
       setNextLineConfigChangeType: changes.setNextLineConfig?.changeType,
       hasDialogueLayout: !!changes.dialogue,
+      dialogueModeLabel: resolveDialogueModeLabel(repositoryState, line),
       dialogueChangeType: changes.dialogue?.changeType,
       hasControl: !!changes.control,
       controlChangeType: changes.control?.changeType,

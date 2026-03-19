@@ -129,6 +129,24 @@ export const setMode = ({ state }, payload = {}) => {
   state.mode = mode;
 };
 
+const resolveDialogueModeLabel = (dialogue, layoutsItems) => {
+  if (dialogue?.mode === "nvl") {
+    return "NVL";
+  }
+
+  if (dialogue?.mode === "adv") {
+    return "ADV";
+  }
+
+  const layoutId = dialogue?.ui?.resourceId ?? dialogue?.gui?.resourceId;
+  const layoutType = layoutsItems?.[layoutId]?.layoutType;
+  if (layoutType === "nvl") {
+    return "NVL";
+  }
+
+  return "ADV";
+};
+
 // Moved from sceneEditor.store.js - now returns object instead of array
 export const selectActionsData = ({ props, state }) => {
   const actions = props.actions || {};
@@ -246,9 +264,14 @@ export const selectActionsData = ({ props, state }) => {
 
   if (presentationState.dialogue) {
     actionsObject.dialogue = presentationState.dialogue;
+    const dialogueModeLabel = resolveDialogueModeLabel(
+      presentationState.dialogue,
+      layoutsItems,
+    );
     if (presentationState.dialogue.clear === true) {
       preview.dialogue = {
         name: "Dialogue: Clear",
+        modeLabel: dialogueModeLabel,
       };
     } else {
       preview.dialogue = {
@@ -257,6 +280,7 @@ export const selectActionsData = ({ props, state }) => {
             presentationState.dialogue.ui?.resourceId ??
               presentationState.dialogue.gui?.resourceId
           ]?.name || "No layout",
+        modeLabel: dialogueModeLabel,
       };
     }
   }
