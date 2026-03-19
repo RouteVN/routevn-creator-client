@@ -32,7 +32,6 @@ const getLatestTaskState = (owner, key) => {
       running: false,
       pending: false,
       task: undefined,
-      meta: undefined,
       promise: Promise.resolve(),
       waiters: [],
     };
@@ -57,7 +56,6 @@ export const enqueueLatestSceneEditorPersistence = async ({
   const { ownerState, taskState } = getLatestTaskState(owner, key);
   taskState.pending = true;
   taskState.task = task;
-  taskState.meta = meta;
 
   const completion = new Promise((resolve, reject) => {
     taskState.waiters.push({ resolve, reject });

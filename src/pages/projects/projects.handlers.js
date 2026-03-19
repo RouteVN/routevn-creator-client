@@ -614,7 +614,7 @@ export const handleDeleteDialogConfirm = async (deps) => {
     await appService.removeProjectEntry(projectId);
     store.removeProject({ projectId });
   } catch {
-    appService.showToast("Failed to delete project. Please try again.");
+    appService.showToast("Failed to remove project. Please try again.");
   } finally {
     store.closeDeleteDialog();
     render();
