@@ -11,17 +11,6 @@ const PROJECT_STATE_CHECKPOINT = {
 export const projectRepositoryStatePartitionFor = (projectId) =>
   `project:${projectId}:repository_state`;
 
-const nowMs = () => {
-  if (
-    typeof performance !== "undefined" &&
-    typeof performance.now === "function"
-  ) {
-    return performance.now();
-  }
-
-  return Date.now();
-};
-
 const toCommittedProjectStateEvent = ({ event, committedId, projectId }) => ({
   ...structuredClone(event),
   committedId,
@@ -232,8 +221,7 @@ export const createProjectRepositoryRuntime = async ({
       notifyStateListeners();
     },
 
-    async addEvents(sourceEvents = [], { perfLabel, perfMeta = {} } = {}) {
-      const startedAt = nowMs();
+    async addEvents(sourceEvents = []) {
       const nextEvents = Array.isArray(sourceEvents)
         ? sourceEvents.filter(Boolean)
         : [];
@@ -248,7 +236,6 @@ export const createProjectRepositoryRuntime = async ({
           await store.appendEvent(event);
         }
       }
-      const appendedAt = nowMs();
 
       for (const event of nextEvents) {
         events.push(structuredClone(event));
@@ -263,29 +250,13 @@ export const createProjectRepositoryRuntime = async ({
           }),
         );
       }
-      const reducedAt = nowMs();
 
       currentState = await projectStateRuntime.loadMaterializedView({
         viewName: PROJECT_STATE_VIEW_NAME,
         partition: projectPartition,
       });
       assertState(currentState);
-      const loadedAt = nowMs();
       notifyStateListeners();
-      const notifiedAt = nowMs();
-
-      if (perfLabel) {
-        console.info("[sceneEditor][perf] repository-add-events", {
-          perfLabel,
-          eventCount: nextEvents.length,
-          appendMs: Number((appendedAt - startedAt).toFixed(1)),
-          reduceMs: Number((reducedAt - appendedAt).toFixed(1)),
-          loadViewMs: Number((loadedAt - reducedAt).toFixed(1)),
-          notifyMs: Number((notifiedAt - loadedAt).toFixed(1)),
-          totalMs: Number((notifiedAt - startedAt).toFixed(1)),
-          ...perfMeta,
-        });
-      }
     },
   };
 };

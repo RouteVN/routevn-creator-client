@@ -23,17 +23,6 @@ export const createCommandApiShared = ({
   storyScenePartitionFor,
   resourceTypePartitionFor,
 }) => {
-  const nowMs = () => {
-    if (
-      typeof performance !== "undefined" &&
-      typeof performance.now === "function"
-    ) {
-      return performance.now();
-    }
-
-    return Date.now();
-  };
-
   const createId = () => {
     if (typeof idGenerator === "function") {
       const id = idGenerator();
@@ -147,13 +136,7 @@ export const createCommandApiShared = ({
     };
   };
 
-  const submitCommandsWithContext = async ({
-    context,
-    commands = [],
-    perfLabel,
-    perfMeta = {},
-  } = {}) => {
-    const startedAt = nowMs();
+  const submitCommandsWithContext = async ({ context, commands = [] } = {}) => {
     const normalizedCommands = (commands || []).map((entry) =>
       createCommandWithContext({
         context,
@@ -164,7 +147,6 @@ export const createCommandApiShared = ({
         basePartition: entry.basePartition,
       }),
     );
-    const envelopeBuiltAt = nowMs();
     if (normalizedCommands.length === 0) {
       return {
         valid: true,
@@ -175,7 +157,6 @@ export const createCommandApiShared = ({
 
     const submitResult =
       await context.session.submitCommands(normalizedCommands);
-    const sessionSubmittedAt = nowMs();
     if (submitResult?.valid === false) {
       return submitResult;
     }
@@ -184,24 +165,7 @@ export const createCommandApiShared = ({
       repository: context.repository,
       commands: normalizedCommands,
       projectId: context.projectId,
-      perfLabel,
-      perfMeta,
     });
-    const appliedAt = nowMs();
-
-    if (perfLabel) {
-      console.info("[sceneEditor][perf] submit-commands-with-context", {
-        perfLabel,
-        commandCount: normalizedCommands.length,
-        envelopeMs: Number((envelopeBuiltAt - startedAt).toFixed(1)),
-        sessionSubmitMs: Number(
-          (sessionSubmittedAt - envelopeBuiltAt).toFixed(1),
-        ),
-        localApplyMs: Number((appliedAt - sessionSubmittedAt).toFixed(1)),
-        totalMs: Number((appliedAt - startedAt).toFixed(1)),
-        ...perfMeta,
-      });
-    }
 
     return {
       valid: true,

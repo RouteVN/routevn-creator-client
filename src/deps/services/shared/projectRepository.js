@@ -369,17 +369,6 @@ const applyRepositoryEventToRepositoryState = ({
 const createInitialRepositoryStateForProject = () =>
   structuredClone(initialProjectData);
 
-const nowMs = () => {
-  if (
-    typeof performance !== "undefined" &&
-    typeof performance.now === "function"
-  ) {
-    return performance.now();
-  }
-
-  return Date.now();
-};
-
 export const createProjectRepository = async ({
   projectId,
   store,
@@ -436,10 +425,7 @@ export const applyCommandsToRepository = async ({
   repository,
   commands = [],
   projectId,
-  perfLabel,
-  perfMeta = {},
 }) => {
-  const startedAt = nowMs();
   const normalizedCommands = Array.isArray(commands)
     ? commands.filter(Boolean)
     : [];
@@ -467,30 +453,13 @@ export const applyCommandsToRepository = async ({
       command,
     }),
   );
-  const builtEventsAt = nowMs();
 
   if (typeof repository.addEvents === "function") {
-    await repository.addEvents(repositoryEvents, {
-      perfLabel,
-      perfMeta,
-    });
+    await repository.addEvents(repositoryEvents);
   } else {
     for (const event of repositoryEvents) {
       await repository.addEvent(event);
     }
-  }
-  const appliedAt = nowMs();
-
-  if (perfLabel) {
-    console.info("[sceneEditor][perf] apply-commands-to-repository", {
-      perfLabel,
-      commandCount: repositoryCommands.length,
-      eventCount: repositoryEvents.length,
-      buildEventsMs: Number((builtEventsAt - startedAt).toFixed(1)),
-      addEventsMs: Number((appliedAt - builtEventsAt).toFixed(1)),
-      totalMs: Number((appliedAt - startedAt).toFixed(1)),
-      ...perfMeta,
-    });
   }
 
   return {
