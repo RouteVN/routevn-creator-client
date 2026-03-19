@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
+import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 
 const MARKER_SIZE = 30;
 const CANVAS_WIDTH = 1920;
@@ -206,20 +207,38 @@ export const handleTransformFormActionClick = async (deps, payload) => {
   const targetGroupId = store.selectTargetGroupId();
 
   if (editMode && editItemId) {
-    await projectService.updateTransform({
-      transformId: editItemId,
-      data: transformData,
+    const updateAttempt = await runResourcePageMutation({
+      appService,
+      fallbackMessage: "Failed to update transform.",
+      action: () =>
+        projectService.updateTransform({
+          transformId: editItemId,
+          data: transformData,
+        }),
     });
+
+    if (!updateAttempt.ok) {
+      return;
+    }
   } else {
-    await projectService.createTransform({
-      transformId: nanoid(),
-      data: {
-        type: "transform",
-        ...transformData,
-      },
-      parentId: targetGroupId,
-      position: "last",
+    const createAttempt = await runResourcePageMutation({
+      appService,
+      fallbackMessage: "Failed to create transform.",
+      action: () =>
+        projectService.createTransform({
+          transformId: nanoid(),
+          data: {
+            type: "transform",
+            ...transformData,
+          },
+          parentId: targetGroupId,
+          position: "last",
+        }),
     });
+
+    if (!createAttempt.ok) {
+      return;
+    }
   }
 
   store.closeTransformFormDialog();

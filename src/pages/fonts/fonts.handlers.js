@@ -4,6 +4,10 @@ import { getFileType } from "../../internal/fileTypes.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import {
+  runResourcePageMutation,
+  showResourcePageError,
+} from "../../internal/ui/resourcePages/resourcePageErrors.js";
 
 const FONT_FILE_PATTERN = /\.(ttf|otf|woff|woff2|ttc|eot)$/i;
 
@@ -36,8 +40,12 @@ const createFontsFromFiles = async ({ deps, files, parentId } = {}) => {
   let successfulUploads;
   try {
     successfulUploads = await projectService.uploadFiles(files);
-  } catch {
-    appService.showToast("Failed to upload font.", { title: "Error" });
+  } catch (error) {
+    showResourcePageError({
+      appService,
+      errorOrResult: error,
+      fallbackMessage: "Failed to upload font.",
+    });
     return;
   }
 
@@ -47,20 +55,28 @@ const createFontsFromFiles = async ({ deps, files, parentId } = {}) => {
   }
 
   for (const result of successfulUploads) {
-    await projectService.createFont({
-      fontId: nanoid(),
-      fileRecords: result.fileRecords,
-      data: {
-        type: "font",
-        fileId: result.fileId,
-        name: result.displayName,
-        fontFamily: result.fontName,
-        fileType: getFileType(result),
-        fileSize: result.file.size,
-      },
-      parentId,
-      position: "last",
+    const createAttempt = await runResourcePageMutation({
+      appService,
+      fallbackMessage: "Failed to create font.",
+      action: () =>
+        projectService.createFont({
+          fontId: nanoid(),
+          fileRecords: result.fileRecords,
+          data: {
+            type: "font",
+            fileId: result.fileId,
+            name: result.displayName,
+            fontFamily: result.fontName,
+            fileType: getFileType(result),
+            fileSize: result.file.size,
+          },
+          parentId,
+          position: "last",
+        }),
     });
+    if (!createAttempt.ok) {
+      return;
+    }
   }
 
   await handleDataChanged(deps);
@@ -99,8 +115,12 @@ export const handleUploadClick = async (deps, payload) => {
       accept: ".ttf,.otf,.woff,.woff2,.ttc,.eot",
       multiple: true,
     });
-  } catch {
-    appService.showToast("Failed to select files.", { title: "Error" });
+  } catch (error) {
+    showResourcePageError({
+      appService,
+      errorOrResult: error,
+      fallbackMessage: "Failed to select files.",
+    });
     return;
   }
 
@@ -139,8 +159,12 @@ export const handleFormExtraEvent = async (deps) => {
       accept: ".ttf,.otf,.woff,.woff2,.ttc,.eot",
       multiple: false,
     });
-  } catch {
-    appService.showToast("Failed to select file.", { title: "Error" });
+  } catch (error) {
+    showResourcePageError({
+      appService,
+      errorOrResult: error,
+      fallbackMessage: "Failed to select file.",
+    });
     return;
   }
 
@@ -155,8 +179,12 @@ export const handleFormExtraEvent = async (deps) => {
   let uploadedFiles;
   try {
     uploadedFiles = await projectService.uploadFiles([file]);
-  } catch {
-    appService.showToast("Failed to upload font.", { title: "Error" });
+  } catch (error) {
+    showResourcePageError({
+      appService,
+      errorOrResult: error,
+      fallbackMessage: "Failed to upload font.",
+    });
     return;
   }
 
@@ -167,17 +195,25 @@ export const handleFormExtraEvent = async (deps) => {
     return;
   }
 
-  await projectService.updateFont({
-    fontId: selectedItem.id,
-    fileRecords: uploadResult.fileRecords,
-    data: {
-      fileId: uploadResult.fileId,
-      name: uploadResult.file.name,
-      fontFamily: uploadResult.fontName,
-      fileType: getFileType(uploadResult),
-      fileSize: uploadResult.file.size,
-    },
+  const updateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to update font.",
+    action: () =>
+      projectService.updateFont({
+        fontId: selectedItem.id,
+        fileRecords: uploadResult.fileRecords,
+        data: {
+          fileId: uploadResult.fileId,
+          name: uploadResult.file.name,
+          fontFamily: uploadResult.fontName,
+          fileType: getFileType(uploadResult),
+          fileSize: uploadResult.file.size,
+        },
+      }),
   });
+  if (!updateAttempt.ok) {
+    return;
+  }
 
   await handleDataChanged(deps);
 };

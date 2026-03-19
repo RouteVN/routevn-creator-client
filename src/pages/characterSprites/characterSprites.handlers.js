@@ -1,20 +1,16 @@
 import { nanoid } from "nanoid";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createCharacterSpritesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import {
+  getResourcePageErrorMessage,
+  runResourcePageMutation,
+  showResourcePageError,
+} from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { tap } from "rxjs";
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const ACCEPTED_FILE_TYPES = ".jpg,.jpeg,.png,.webp";
-
-const getProjectErrorMessage = (result, fallbackMessage) => {
-  return (
-    result?.error?.message ||
-    result?.error?.creatorModelError?.message ||
-    result?.message ||
-    fallbackMessage
-  );
-};
 
 const getCharacterIdFromPayload = ({ appService }) => {
   return appService.getPayload().characterId;
@@ -113,8 +109,12 @@ const createSpritesFromFiles = async ({
 
   try {
     successfulUploads = await projectService.uploadFiles(files);
-  } catch {
-    appService.showToast("Failed to upload sprites.", { title: "Error" });
+  } catch (error) {
+    showResourcePageError({
+      appService,
+      errorOrResult: error,
+      fallbackMessage: "Failed to upload sprites.",
+    });
     return;
   }
 
@@ -130,28 +130,29 @@ const createSpritesFromFiles = async ({
   }
 
   for (const result of successfulUploads) {
-    const createResult = await projectService.createCharacterSpriteItem({
-      characterId,
-      spriteId: nanoid(),
-      fileRecords: result.fileRecords,
-      parentId,
-      position: "last",
-      data: {
-        type: "image",
-        fileId: result.fileId,
-        name: result.displayName,
-        fileType: result.file.type,
-        fileSize: result.file.size,
-        width: result.dimensions.width,
-        height: result.dimensions.height,
-      },
+    const createAttempt = await runResourcePageMutation({
+      appService,
+      fallbackMessage: "Failed to create sprite.",
+      action: () =>
+        projectService.createCharacterSpriteItem({
+          characterId,
+          spriteId: nanoid(),
+          fileRecords: result.fileRecords,
+          parentId,
+          position: "last",
+          data: {
+            type: "image",
+            fileId: result.fileId,
+            name: result.displayName,
+            fileType: result.file.type,
+            fileSize: result.file.size,
+            width: result.dimensions.width,
+            height: result.dimensions.height,
+          },
+        }),
     });
 
-    if (createResult?.valid === false) {
-      appService.showToast(
-        getProjectErrorMessage(createResult, "Failed to create sprite."),
-        { title: "Error" },
-      );
+    if (!createAttempt.ok) {
       return;
     }
   }
@@ -272,8 +273,12 @@ export const handleUploadClick = async (deps, payload) => {
       accept: ACCEPTED_FILE_TYPES,
       multiple: true,
     });
-  } catch {
-    appService.showToast("Failed to select files.", { title: "Error" });
+  } catch (error) {
+    showResourcePageError({
+      appService,
+      errorOrResult: error,
+      fallbackMessage: "Failed to select files.",
+    });
     return;
   }
 
@@ -314,8 +319,12 @@ export const handleFormExtraEvent = async (deps) => {
       multiple: false,
       upload: true,
     });
-  } catch {
-    appService.showToast("Failed to select file.", { title: "Error" });
+  } catch (error) {
+    showResourcePageError({
+      appService,
+      errorOrResult: error,
+      fallbackMessage: "Failed to select file.",
+    });
     return;
   }
 
@@ -335,25 +344,26 @@ export const handleFormExtraEvent = async (deps) => {
     return;
   }
 
-  const updateResult = await projectService.updateCharacterSpriteItem({
-    characterId,
-    spriteId: selectedItem.id,
-    fileRecords: uploadResult.fileRecords,
-    data: {
-      fileId: uploadResult.fileId,
-      name: uploadResult.displayName,
-      fileType: uploadResult.file.type,
-      fileSize: uploadResult.file.size,
-      width: uploadResult.dimensions.width,
-      height: uploadResult.dimensions.height,
-    },
+  const updateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to update sprite.",
+    action: () =>
+      projectService.updateCharacterSpriteItem({
+        characterId,
+        spriteId: selectedItem.id,
+        fileRecords: uploadResult.fileRecords,
+        data: {
+          fileId: uploadResult.fileId,
+          name: uploadResult.displayName,
+          fileType: uploadResult.file.type,
+          fileSize: uploadResult.file.size,
+          width: uploadResult.dimensions.width,
+          height: uploadResult.dimensions.height,
+        },
+      }),
   });
 
-  if (updateResult?.valid === false) {
-    appService.showToast(
-      getProjectErrorMessage(updateResult, "Failed to update sprite."),
-      { title: "Error" },
-    );
+  if (!updateAttempt.ok) {
     return;
   }
 
@@ -376,8 +386,12 @@ export const handleEditDialogImageClick = async (deps) => {
       multiple: false,
       upload: true,
     });
-  } catch {
-    appService.showToast("Failed to select file.", { title: "Error" });
+  } catch (error) {
+    showResourcePageError({
+      appService,
+      errorOrResult: error,
+      fallbackMessage: "Failed to select file.",
+    });
     return;
   }
 
@@ -431,18 +445,19 @@ export const handleEditFormAction = async (deps, payload) => {
     data.height = editUploadResult.dimensions.height;
   }
 
-  const updateResult = await projectService.updateCharacterSpriteItem({
-    characterId: store.selectCharacterId(),
-    spriteId: editItemId,
-    fileRecords: editUploadResult?.fileRecords,
-    data,
+  const updateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to update sprite.",
+    action: () =>
+      projectService.updateCharacterSpriteItem({
+        characterId: store.selectCharacterId(),
+        spriteId: editItemId,
+        fileRecords: editUploadResult?.fileRecords,
+        data,
+      }),
   });
 
-  if (updateResult?.valid === false) {
-    appService.showToast(
-      getProjectErrorMessage(updateResult, "Failed to update sprite."),
-      { title: "Error" },
-    );
+  if (!updateAttempt.ok) {
     return;
   }
 
@@ -483,7 +498,7 @@ export const handleItemDelete = async (deps, payload) => {
 
   if (deleteResult?.valid === false) {
     appService.showToast(
-      getProjectErrorMessage(deleteResult, "Failed to delete sprite."),
+      getResourcePageErrorMessage(deleteResult, "Failed to delete sprite."),
       { title: "Error" },
     );
     return;

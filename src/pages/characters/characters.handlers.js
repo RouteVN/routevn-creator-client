@@ -1,6 +1,10 @@
 import { nanoid } from "nanoid";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import {
+  runResourcePageMutation,
+  showResourcePageError,
+} from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { tap } from "rxjs";
 
@@ -156,23 +160,25 @@ export const handleCharacterCreated = async (deps, payload) => {
     characterData.fileId = avatarFileId;
   }
 
-  const createResult = await projectService.createCharacter({
-    characterId,
-    fileRecords: avatarUploadResult?.fileRecords,
-    data: characterData,
-    parentId: groupId,
-    position: "last",
+  const createAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to create character.",
+    action: () =>
+      projectService.createCharacter({
+        characterId,
+        fileRecords: avatarUploadResult?.fileRecords,
+        data: characterData,
+        parentId: groupId,
+        position: "last",
+      }),
   });
 
-  if (createResult?.valid === false) {
-    appService.showToast("Failed to create character.", {
-      title: "Error",
-    });
-    return createResult;
+  if (!createAttempt.ok) {
+    return createAttempt.result ?? { valid: false };
   }
 
   await refreshCharactersData(deps);
-  return createResult;
+  return createAttempt.result;
 };
 
 export const handleSpritesButtonClick = (deps, payload) => {
@@ -199,11 +205,21 @@ export const handleDetailPanelAvatarClick = async (deps) => {
     return;
   }
 
-  const file = await appService.pickFiles({
-    accept: "image/*",
-    multiple: false,
-    validations: [{ type: "square" }],
-  });
+  let file;
+  try {
+    file = await appService.pickFiles({
+      accept: "image/*",
+      multiple: false,
+      validations: [{ type: "square" }],
+    });
+  } catch (error) {
+    showResourcePageError({
+      appService,
+      errorOrResult: error,
+      fallbackMessage: "Failed to select avatar image.",
+    });
+    return;
+  }
 
   if (!file) {
     return; // User cancelled
@@ -213,34 +229,47 @@ export const handleDetailPanelAvatarClick = async (deps) => {
     // Upload the new avatar file using projectService
     const uploadedFiles = await projectService.uploadFiles([file]);
 
-    if (uploadedFiles && uploadedFiles.length > 0) {
-      const uploadedFile = uploadedFiles[0];
-
-      const updateData = {
-        fileId: uploadedFile.fileId,
-        fileType: file.type,
-        fileSize: file.size,
-        // Update name only if character doesn't have one or if it's the generic filename
-        ...((!selectedItem.name ||
-          selectedItem.name === "Untitled Character") && {
-          name: file.name.replace(/\.[^/.]+$/, ""),
-        }),
-      };
-
-      // Update the selected character in the repository with the new avatar
-      await projectService.updateCharacter({
-        characterId: selectedItem.id,
-        fileRecords: uploadedFile.fileRecords,
-        data: updateData,
+    const uploadedFile = uploadedFiles?.[0];
+    if (!uploadedFile) {
+      showResourcePageError({
+        appService,
+        errorOrResult: "Failed to upload avatar image.",
+        fallbackMessage: "Failed to upload avatar image.",
       });
-
-      // Update the store with the new repository state and get new file URL
-      await refreshCharactersData(deps);
-    } else {
-      console.error("Avatar upload failed:", file.name);
+      return;
     }
+
+    const updateData = {
+      fileId: uploadedFile.fileId,
+      fileType: file.type,
+      fileSize: file.size,
+    };
+    if (!selectedItem.name || selectedItem.name === "Untitled Character") {
+      updateData.name = file.name.replace(/\.[^/.]+$/, "");
+    }
+
+    const updateAttempt = await runResourcePageMutation({
+      appService,
+      fallbackMessage: "Failed to update character avatar.",
+      action: () =>
+        projectService.updateCharacter({
+          characterId: selectedItem.id,
+          fileRecords: uploadedFile.fileRecords,
+          data: updateData,
+        }),
+    });
+
+    if (!updateAttempt.ok) {
+      return;
+    }
+
+    await refreshCharactersData(deps);
   } catch (error) {
-    console.error("Avatar upload error:", file.name, error);
+    showResourcePageError({
+      appService,
+      errorOrResult: error,
+      fallbackMessage: "Failed to upload avatar image.",
+    });
   }
 };
 
@@ -328,7 +357,12 @@ export const handleDialogAvatarClick = async (deps) => {
       const uploadResults = await projectService.uploadFiles([file]);
 
       if (!uploadResults || uploadResults.length === 0) {
-        throw new Error("Failed to upload avatar image");
+        showResourcePageError({
+          appService,
+          errorOrResult: "Failed to upload avatar image.",
+          fallbackMessage: "Failed to upload avatar image.",
+        });
+        return;
       }
 
       const result = uploadResults[0];
@@ -339,7 +373,11 @@ export const handleDialogAvatarClick = async (deps) => {
       render();
     }
   } catch (error) {
-    console.error("Error uploading avatar:", error);
+    showResourcePageError({
+      appService,
+      errorOrResult: error,
+      fallbackMessage: "Failed to upload avatar image.",
+    });
   }
 };
 
@@ -400,7 +438,12 @@ export const handleEditDialogAvatarClick = async (deps) => {
       const uploadResults = await projectService.uploadFiles([file]);
 
       if (!uploadResults || uploadResults.length === 0) {
-        throw new Error("Failed to upload avatar image");
+        showResourcePageError({
+          appService,
+          errorOrResult: "Failed to upload avatar image.",
+          fallbackMessage: "Failed to upload avatar image.",
+        });
+        return;
       }
 
       const result = uploadResults[0];
@@ -411,12 +454,16 @@ export const handleEditDialogAvatarClick = async (deps) => {
       render();
     }
   } catch (error) {
-    console.error("Error uploading avatar:", error);
+    showResourcePageError({
+      appService,
+      errorOrResult: error,
+      fallbackMessage: "Failed to upload avatar image.",
+    });
   }
 };
 
 export const handleEditFormAction = async (deps, payload) => {
-  const { store, render, projectService } = deps;
+  const { appService, store, render, projectService } = deps;
 
   if (payload._event.detail.actionId === "submit") {
     const formData = payload._event.detail.values;
@@ -435,11 +482,20 @@ export const handleEditFormAction = async (deps, payload) => {
       updateData.fileId = editAvatarFileId;
     }
 
-    await projectService.updateCharacter({
-      characterId: editItemId,
-      fileRecords: editAvatarUploadResult?.fileRecords,
-      data: updateData,
+    const updateAttempt = await runResourcePageMutation({
+      appService,
+      fallbackMessage: "Failed to update character.",
+      action: () =>
+        projectService.updateCharacter({
+          characterId: editItemId,
+          fileRecords: editAvatarUploadResult?.fileRecords,
+          data: updateData,
+        }),
     });
+
+    if (!updateAttempt.ok) {
+      return;
+    }
 
     await refreshCharactersData(deps);
     store.closeEditDialog();

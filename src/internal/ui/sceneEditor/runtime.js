@@ -17,17 +17,6 @@ const createAssetLoadCache = () => ({
 
 let assetLoadCache = createAssetLoadCache();
 
-const nowMs = () => {
-  if (
-    typeof performance !== "undefined" &&
-    typeof performance.now === "function"
-  ) {
-    return performance.now();
-  }
-
-  return Date.now();
-};
-
 const resetAssetLoadCache = () => {
   assetLoadCache = createAssetLoadCache();
 };
@@ -508,18 +497,6 @@ export const restoreSceneEditorFromPreview = async (deps) => {
 
 export const renderSceneEditorCanvas = async (deps, payload) => {
   const { store, render } = deps;
-  const renderStartedAt = nowMs();
-  if (payload?.perfReason) {
-    console.info("[sceneEditor][perf] canvas-render-start", {
-      reason: payload.perfReason,
-      opId: payload.perfOpId,
-      dispatchToStartMs: Number(
-        (renderStartedAt - (payload.perfDispatchTs || renderStartedAt)).toFixed(
-          1,
-        ),
-      ),
-    });
-  }
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
@@ -543,14 +520,6 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
 
   if (!payload?.skipRender) {
     render();
-  }
-
-  if (payload?.perfReason) {
-    console.info("[sceneEditor][perf] canvas-render-end", {
-      reason: payload.perfReason,
-      opId: payload.perfOpId,
-      totalMs: Number((nowMs() - renderStartedAt).toFixed(1)),
-    });
   }
 };
 

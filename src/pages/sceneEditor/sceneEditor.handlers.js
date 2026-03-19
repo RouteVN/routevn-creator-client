@@ -231,15 +231,6 @@ const flushSceneEditorDrafts = async (deps) => {
   return enqueueLatestSceneEditorPersistence({
     owner: deps.projectService,
     key: "draft-flush",
-    label: "draft-flush",
-    meta: () => {
-      const currentSession = store.selectEditorSession();
-      return {
-        sceneId: currentSession?.sceneId,
-        sectionId: currentSession?.sectionId,
-        dirtyCount: getSceneEditorSessionDirtyLines(currentSession).length,
-      };
-    },
     task: async () => {
       const session = store.selectEditorSession();
       const dirtyLines = getSceneEditorSessionDirtyLines(session);
@@ -256,24 +247,11 @@ const flushSceneEditorDrafts = async (deps) => {
         timestamp: flushStartedAt,
       });
       store.setDraftSavePendingSinceAt({ timestamp: 0 });
-      console.info("[sceneEditor][perf] draft-flush-start", {
-        sceneId: session?.sceneId,
-        sectionId: session?.sectionId,
-        dirtyLineIds: dirtyLines.map(({ lineId }) => lineId),
-        lineCount: snapshotLines.length,
-      });
 
       try {
         await deps.projectService.syncSectionLinesSnapshot({
           sectionId: session?.sectionId,
           lines: snapshotLines,
-        });
-
-        console.info("[sceneEditor][perf] draft-flush-end", {
-          sceneId: session?.sceneId,
-          sectionId: session?.sectionId,
-          totalMs: Number((nowMs() - flushStartedAt).toFixed(1)),
-          dirtyLineIds: dirtyLines.map(({ lineId }) => lineId),
         });
       } catch (error) {
         console.error("[sceneEditor] Failed to save scene changes", {
@@ -1281,14 +1259,6 @@ export const handleDeleteLineShortcut = async (deps, payload) => {
     return;
   }
 
-  const opStartedAt = nowMs();
-  const opId = `delete-line:${lineId}:${Math.round(opStartedAt)}`;
-  console.info("[sceneEditor][perf] delete-line-start", {
-    opId,
-    lineId,
-    sectionId,
-  });
-
   const scene = store.selectScene();
   const section = scene?.sections?.find((item) => item.id === sectionId);
   const lines = Array.isArray(section?.lines) ? section.lines : [];
@@ -1316,17 +1286,7 @@ export const handleDeleteLineShortcut = async (deps, payload) => {
   store.setEditorSession({ editorSession: sessionForStore });
   store.setSelectedLineId({ selectedLineId: nextSelectedLineId });
   render();
-  subject.dispatch("sceneEditor.renderCanvas", {
-    perfReason: "delete-line-shortcut",
-    perfOpId: opId,
-    perfDispatchTs: nowMs(),
-  });
-  console.info("[sceneEditor][perf] delete-line-optimistic", {
-    opId,
-    lineId,
-    nextSelectedLineId,
-    optimisticMs: Number((nowMs() - opStartedAt).toFixed(1)),
-  });
+  subject.dispatch("sceneEditor.renderCanvas", {});
 
   if (nextSelectedLineId) {
     focusLinesEditorContainer(deps.refs);
@@ -1339,13 +1299,6 @@ export const handleDeleteLineShortcut = async (deps, payload) => {
   }
   scheduleSceneEditorDraftFlush(deps, {
     reason: "structure",
-  });
-  console.info("[sceneEditor][perf] delete-line-end", {
-    opId,
-    lineId,
-    nextSelectedLineId,
-    totalMs: Number((nowMs() - opStartedAt).toFixed(1)),
-    persisted: false,
   });
 };
 

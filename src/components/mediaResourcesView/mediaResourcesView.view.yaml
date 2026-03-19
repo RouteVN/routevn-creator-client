@@ -106,7 +106,7 @@ template:
                                                   - rvn-file-image br=md w=f h=${imageHeight} fileId=${item.previewFileId} key=${item.previewFileId}-${imageHeight}x${maxWidth}: null
                                                   - $if item.showPreviewIcon:
                                                       - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; right: 6px; background-color: #000;"':
-                                                          - rtgl-svg svg=zoomIn wh=24 c=white: null
+                                                          - rtgl-svg svg=zoomIn wh=22 c=white: null
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                             $elif item.cardKind == 'video':
                                               - 'rtgl-view p=md g=md br=md pos=rel':

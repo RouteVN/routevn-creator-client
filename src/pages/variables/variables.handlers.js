@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 import { createVariablesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
+import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { tap } from "rxjs";
 
 const EMPTY_TREE = { tree: [], items: {} };
@@ -123,7 +124,7 @@ export const handleVariableItemClick = (deps, payload) => {
 };
 
 export const handleVariableCreated = async (deps, payload) => {
-  const { projectService } = deps;
+  const { appService, projectService } = deps;
   const {
     groupId,
     name,
@@ -132,38 +133,56 @@ export const handleVariableCreated = async (deps, payload) => {
     default: defaultValue,
   } = payload._event.detail;
 
-  await projectService.createVariable({
-    variableId: nanoid(),
-    data: createVariableResourceData({
-      name,
-      scope,
-      type,
-      defaultValue,
-    }),
-    parentId: groupId,
-    position: "last",
+  const createAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to create variable.",
+    action: () =>
+      projectService.createVariable({
+        variableId: nanoid(),
+        data: createVariableResourceData({
+          name,
+          scope,
+          type,
+          defaultValue,
+        }),
+        parentId: groupId,
+        position: "last",
+      }),
   });
+
+  if (!createAttempt.ok) {
+    return;
+  }
 
   await refreshVariablesData(deps);
 };
 
 export const handleVariableUpdated = async (deps, payload) => {
-  const { store, projectService } = deps;
+  const { appService, store, projectService } = deps;
   const { itemId, name, scope, default: defaultValue } = payload._event.detail;
 
   if (!itemId) {
     return;
   }
 
-  await projectService.updateVariable({
-    variableId: itemId,
-    data: {
-      name,
-      scope,
-      default: defaultValue,
-      value: defaultValue,
-    },
+  const updateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to update variable.",
+    action: () =>
+      projectService.updateVariable({
+        variableId: itemId,
+        data: {
+          name,
+          scope,
+          default: defaultValue,
+          value: defaultValue,
+        },
+      }),
   });
+
+  if (!updateAttempt.ok) {
+    return;
+  }
 
   store.setSelectedItemId({ itemId });
 

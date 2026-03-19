@@ -7,6 +7,10 @@ import {
 import { getFileType } from "../../internal/fileTypes.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import {
+  runResourcePageMutation,
+  showResourcePageError,
+} from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { tap } from "rxjs";
 
@@ -110,34 +114,35 @@ const handleTextStyleCreated = async (deps, payload) => {
     previewText,
   } = payload._event.detail;
 
-  const createResult = await projectService.createTextStyle({
-    textStyleId: nanoid(),
-    data: {
-      type: "textStyle",
-      ...buildTextStyleData({
-        name,
-        fontSize,
-        lineHeight,
-        fontColor,
-        fontStyle,
-        fontWeight,
-        previewText,
+  const createAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to create text style.",
+    action: () =>
+      projectService.createTextStyle({
+        textStyleId: nanoid(),
+        data: {
+          type: "textStyle",
+          ...buildTextStyleData({
+            name,
+            fontSize,
+            lineHeight,
+            fontColor,
+            fontStyle,
+            fontWeight,
+            previewText,
+          }),
+        },
+        parentId: groupId,
+        position: "last",
       }),
-    },
-    parentId: groupId,
-    position: "last",
   });
 
-  if (createResult?.valid === false) {
-    console.error("Failed to create text style:", createResult.error);
-    appService.showToast("Failed to create text style.", {
-      title: "Error",
-    });
-    return createResult;
+  if (!createAttempt.ok) {
+    return createAttempt.result ?? { valid: false };
   }
 
   await refreshTextStylesData(deps);
-  return createResult;
+  return createAttempt.result;
 };
 
 const handleTextStyleUpdated = async (deps, payload) => {
@@ -153,29 +158,30 @@ const handleTextStyleUpdated = async (deps, payload) => {
     previewText,
   } = payload._event.detail;
 
-  const updateResult = await projectService.updateTextStyle({
-    textStyleId: itemId,
-    data: buildTextStyleData({
-      name,
-      fontSize,
-      lineHeight,
-      fontColor,
-      fontStyle,
-      fontWeight,
-      previewText,
-    }),
+  const updateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to update text style.",
+    action: () =>
+      projectService.updateTextStyle({
+        textStyleId: itemId,
+        data: buildTextStyleData({
+          name,
+          fontSize,
+          lineHeight,
+          fontColor,
+          fontStyle,
+          fontWeight,
+          previewText,
+        }),
+      }),
   });
 
-  if (updateResult?.valid === false) {
-    console.error("Failed to update text style:", updateResult.error);
-    appService.showToast("Failed to update text style.", {
-      title: "Error",
-    });
-    return updateResult;
+  if (!updateAttempt.ok) {
+    return updateAttempt.result ?? { valid: false };
   }
 
   await refreshTextStylesData(deps);
-  return updateResult;
+  return updateAttempt.result;
 };
 
 export const handleFormExtraEvent = (deps) => {
@@ -359,23 +365,32 @@ export const handleAddColorDialogClose = (deps) => {
 };
 
 export const handleAddColorFormAction = async (deps, payload) => {
-  const { store, render, projectService } = deps;
+  const { appService, store, render, projectService } = deps;
 
   if (payload._event.detail.actionId === "submit") {
     const formData = payload._event.detail.values;
     const newColorId = nanoid();
 
     // Create the color in the repository
-    await projectService.createColor({
-      colorId: newColorId,
-      data: {
-        type: "color",
-        name: formData.name,
-        hex: formData.hex,
-      },
-      parentId: formData.folderId || null,
-      position: "last",
+    const createAttempt = await runResourcePageMutation({
+      appService,
+      fallbackMessage: "Failed to create color.",
+      action: () =>
+        projectService.createColor({
+          colorId: newColorId,
+          data: {
+            type: "color",
+            name: formData.name,
+            hex: formData.hex,
+          },
+          parentId: formData.folderId || null,
+          position: "last",
+        }),
     });
+
+    if (!createAttempt.ok) {
+      return;
+    }
 
     // Sync repository to store to ensure all data is updated
     syncRepositoryToStore({ store, projectService });
@@ -410,7 +425,11 @@ export const handleFontFileSelected = async (deps, payload) => {
       const uploadResults = await projectService.uploadFiles([file]);
 
       if (uploadResults.length === 0) {
-        appService.showToast("Failed to upload font file", { title: "Error" });
+        showResourcePageError({
+          appService,
+          errorOrResult: "Failed to upload font file.",
+          fallbackMessage: "Failed to upload font file.",
+        });
         return;
       }
 
@@ -422,8 +441,11 @@ export const handleFontFileSelected = async (deps, payload) => {
       });
       render();
     } catch (error) {
-      console.error("Failed to upload font file:", error);
-      appService.showToast("Failed to upload font file", { title: "Error" });
+      showResourcePageError({
+        appService,
+        errorOrResult: error,
+        fallbackMessage: "Failed to upload font file.",
+      });
     }
   }
 };
@@ -445,20 +467,29 @@ export const handleAddFontFormAction = async (deps, payload) => {
     const newFontId = nanoid();
 
     // Create the font in the repository using the already uploaded file
-    await projectService.createFont({
-      fontId: newFontId,
-      fileRecords: fontData.uploadResult.fileRecords,
-      data: {
-        type: "font",
-        name: fontName,
-        fontFamily: fontName,
-        fileId: fontData.uploadResult.fileId,
-        fileType: getFileType(fontData.uploadResult),
-        fileSize: fontData.file.size,
-      },
-      parentId: formData.folderId || null,
-      position: "last",
+    const createAttempt = await runResourcePageMutation({
+      appService,
+      fallbackMessage: "Failed to create font.",
+      action: () =>
+        projectService.createFont({
+          fontId: newFontId,
+          fileRecords: fontData.uploadResult.fileRecords,
+          data: {
+            type: "font",
+            name: fontName,
+            fontFamily: fontName,
+            fileId: fontData.uploadResult.fileId,
+            fileType: getFileType(fontData.uploadResult),
+            fileSize: fontData.file.size,
+          },
+          parentId: formData.folderId || null,
+          position: "last",
+        }),
     });
+
+    if (!createAttempt.ok) {
+      return;
+    }
 
     // Sync repository to store to ensure all data is updated
     syncRepositoryToStore({ store, projectService });

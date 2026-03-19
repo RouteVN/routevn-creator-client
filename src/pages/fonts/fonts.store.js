@@ -1,3 +1,4 @@
+import { formatFontFileTypeLabel } from "../../internal/fileTypes.js";
 import { formatFileSize } from "../../internal/files.js";
 import { createMediaPageStore } from "../../internal/ui/resourcePages/media/createMediaPageStore.js";
 
@@ -64,24 +65,6 @@ const getGlyphList = () => {
   return glyphs;
 };
 
-const getFileTypeFromName = (fileName) => {
-  if (!fileName) {
-    return "";
-  }
-
-  const extension = fileName.toLowerCase().split(".").pop();
-  const extensionMap = {
-    ttf: "font/ttf",
-    otf: "font/otf",
-    woff: "font/woff",
-    woff2: "font/woff2",
-    ttc: "font/ttc",
-    eot: "font/eot",
-  };
-
-  return extensionMap[extension] ?? `font/${extension}`;
-};
-
 const buildDetailFields = (item) => {
   if (!item) {
     return [];
@@ -101,7 +84,10 @@ const buildDetailFields = (item) => {
     {
       type: "text",
       label: "File Type",
-      value: item.fileType ?? getFileTypeFromName(item.name ?? ""),
+      value: formatFontFileTypeLabel({
+        fileType: item.fileType,
+        fileName: item.name ?? "",
+      }),
     },
     {
       type: "text",

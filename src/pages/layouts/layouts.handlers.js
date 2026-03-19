@@ -2,6 +2,7 @@ import { nanoid } from "nanoid";
 import { createLayoutEditorPayload } from "../../internal/layoutEditorRoute.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
+import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { createLayoutsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 
 const {
@@ -345,19 +346,21 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
     return;
   }
 
-  const createResult = await projectService.createLayoutItem({
-    layoutId: nanoid(),
-    name,
-    layoutType,
-    elements: createLayoutTemplate(layoutType),
-    parentId: store.getState().targetGroupId,
-    position: "last",
+  const createAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to create layout.",
+    action: () =>
+      projectService.createLayoutItem({
+        layoutId: nanoid(),
+        name,
+        layoutType,
+        elements: createLayoutTemplate(layoutType),
+        parentId: store.getState().targetGroupId,
+        position: "last",
+      }),
   });
 
-  if (createResult?.valid === false) {
-    appService.showToast("Failed to create layout", {
-      title: "Error",
-    });
+  if (!createAttempt.ok) {
     return;
   }
 

@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
+import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 
 const syncEditFormValues = ({ deps, values } = {}) => {
   const { editForm } = deps.refs;
@@ -97,13 +98,21 @@ export const handleEditFormAction = async (deps, payload) => {
     return;
   }
 
-  await projectService.updateColor({
-    colorId: editItemId,
-    data: {
-      name,
-      hex: values?.hex ?? "#ffffff",
-    },
+  const updateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to update color.",
+    action: () =>
+      projectService.updateColor({
+        colorId: editItemId,
+        data: {
+          name,
+          hex: values?.hex ?? "#ffffff",
+        },
+      }),
   });
+  if (!updateAttempt.ok) {
+    return;
+  }
 
   store.closeEditDialog();
   await handleDataChanged(deps);
@@ -133,16 +142,24 @@ export const handleAddFormAction = async (deps, payload) => {
     return;
   }
 
-  await projectService.createColor({
-    colorId: nanoid(),
-    data: {
-      type: "color",
-      name,
-      hex: values?.hex ?? "#ffffff",
-    },
-    parentId: store.getState().targetGroupId,
-    position: "last",
+  const createAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to create color.",
+    action: () =>
+      projectService.createColor({
+        colorId: nanoid(),
+        data: {
+          type: "color",
+          name,
+          hex: values?.hex ?? "#ffffff",
+        },
+        parentId: store.getState().targetGroupId,
+        position: "last",
+      }),
   });
+  if (!createAttempt.ok) {
+    return;
+  }
 
   store.closeAddDialog();
   await handleDataChanged(deps);

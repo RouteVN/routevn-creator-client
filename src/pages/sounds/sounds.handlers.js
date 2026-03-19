@@ -2,15 +2,23 @@ import { nanoid } from "nanoid";
 import { filter, tap } from "rxjs";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import {
+  getResourcePageErrorMessage,
+  runResourcePageMutation,
+  showResourcePageError,
+} from "../../internal/ui/resourcePages/resourcePageErrors.js";
 
 const UNSUPPORTED_FORMAT_TITLE = "Unsupported Format";
 const UNSUPPORTED_FORMAT_MESSAGE =
   "The audio file format is not supported. Please use MP3, WAV, or OGG (Windows only) files.";
 
-const showUnsupportedFormatDialog = async (appService) => {
+const showUnsupportedFormatDialog = async (
+  appService,
+  message = UNSUPPORTED_FORMAT_MESSAGE,
+) => {
   await appService.showDialog({
     title: UNSUPPORTED_FORMAT_TITLE,
-    message: UNSUPPORTED_FORMAT_MESSAGE,
+    message,
     confirmText: "OK",
   });
 };
@@ -23,8 +31,8 @@ const pickAndUploadSound = async ({ appService, projectService } = {}) => {
       accept: ".mp3,.wav,.ogg",
       multiple: false,
     });
-  } catch {
-    return { error: "pick-failed" };
+  } catch (error) {
+    return { error, errorType: "pick-failed" };
   }
 
   if (!file) {
@@ -34,8 +42,8 @@ const pickAndUploadSound = async ({ appService, projectService } = {}) => {
   let uploadedFiles;
   try {
     uploadedFiles = await projectService.uploadFiles([file]);
-  } catch {
-    return { error: "unsupported-format" };
+  } catch (error) {
+    return { error, errorType: "upload-failed" };
   }
 
   const uploadResult = uploadedFiles?.[0];
@@ -52,8 +60,11 @@ const createSoundsFromFiles = async ({ deps, files, parentId } = {}) => {
 
   try {
     successfulUploads = await projectService.uploadFiles(files);
-  } catch {
-    await showUnsupportedFormatDialog(appService);
+  } catch (error) {
+    await showUnsupportedFormatDialog(
+      appService,
+      getResourcePageErrorMessage(error, UNSUPPORTED_FORMAT_MESSAGE),
+    );
     return;
   }
 
@@ -63,22 +74,31 @@ const createSoundsFromFiles = async ({ deps, files, parentId } = {}) => {
   }
 
   for (const result of successfulUploads) {
-    await projectService.createSound({
-      soundId: nanoid(),
-      fileRecords: result.fileRecords,
-      data: {
-        type: "sound",
-        fileId: result.fileId,
-        name: result.displayName,
-        description: "",
-        fileType: result.file.type,
-        fileSize: result.file.size,
-        waveformDataFileId: result.waveformDataFileId,
-        duration: result.duration,
-      },
-      parentId,
-      position: "last",
+    const createAttempt = await runResourcePageMutation({
+      appService,
+      fallbackMessage: "Failed to create sound.",
+      action: () =>
+        projectService.createSound({
+          soundId: nanoid(),
+          fileRecords: result.fileRecords,
+          data: {
+            type: "sound",
+            fileId: result.fileId,
+            name: result.displayName,
+            description: "",
+            fileType: result.file.type,
+            fileSize: result.file.size,
+            waveformDataFileId: result.waveformDataFileId,
+            duration: result.duration,
+          },
+          parentId,
+          position: "last",
+        }),
     });
+
+    if (!createAttempt.ok) {
+      return;
+    }
   }
 
   await handleDataChanged(deps);
@@ -185,8 +205,12 @@ export const handleUploadClick = async (deps, payload) => {
       accept: ".mp3,.wav,.ogg",
       multiple: true,
     });
-  } catch {
-    appService.showToast("Failed to select files.", { title: "Error" });
+  } catch (error) {
+    showResourcePageError({
+      appService,
+      errorOrResult: error,
+      fallbackMessage: "Failed to select files.",
+    });
     return;
   }
 
@@ -223,33 +247,44 @@ export const handleFormExtraEvent = async (deps) => {
     return;
   }
 
-  if (result.error === "pick-failed") {
-    appService.showToast("Failed to select file.", { title: "Error" });
+  if (result.errorType === "pick-failed") {
+    showResourcePageError({
+      appService,
+      errorOrResult: result.error,
+      fallbackMessage: "Failed to select file.",
+    });
     return;
   }
 
-  if (result.error === "unsupported-format") {
-    await showUnsupportedFormatDialog(appService);
-    return;
-  }
-
-  if (result.error) {
-    appService.showToast("Failed to upload sound.", { title: "Error" });
+  if (result.errorType === "upload-failed") {
+    await showUnsupportedFormatDialog(
+      appService,
+      getResourcePageErrorMessage(result.error, UNSUPPORTED_FORMAT_MESSAGE),
+    );
     return;
   }
 
   const { uploadResult } = result;
-  await projectService.updateSound({
-    soundId: selectedItem.id,
-    fileRecords: uploadResult.fileRecords,
-    data: {
-      fileId: uploadResult.fileId,
-      fileType: uploadResult.file.type,
-      fileSize: uploadResult.file.size,
-      waveformDataFileId: uploadResult.waveformDataFileId,
-      duration: uploadResult.duration,
-    },
+  const updateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to update sound.",
+    action: () =>
+      projectService.updateSound({
+        soundId: selectedItem.id,
+        fileRecords: uploadResult.fileRecords,
+        data: {
+          fileId: uploadResult.fileId,
+          fileType: uploadResult.file.type,
+          fileSize: uploadResult.file.size,
+          waveformDataFileId: uploadResult.waveformDataFileId,
+          duration: uploadResult.duration,
+        },
+      }),
   });
+
+  if (!updateAttempt.ok) {
+    return;
+  }
 
   await handleDataChanged(deps);
 };
@@ -268,18 +303,20 @@ export const handleEditDialogSoundClick = async (deps) => {
     return;
   }
 
-  if (result.error === "pick-failed") {
-    appService.showToast("Failed to select file.", { title: "Error" });
+  if (result.errorType === "pick-failed") {
+    showResourcePageError({
+      appService,
+      errorOrResult: result.error,
+      fallbackMessage: "Failed to select file.",
+    });
     return;
   }
 
-  if (result.error === "unsupported-format") {
-    await showUnsupportedFormatDialog(appService);
-    return;
-  }
-
-  if (result.error) {
-    appService.showToast("Failed to upload sound.", { title: "Error" });
+  if (result.errorType === "upload-failed") {
+    await showUnsupportedFormatDialog(
+      appService,
+      getResourcePageErrorMessage(result.error, UNSUPPORTED_FORMAT_MESSAGE),
+    );
     return;
   }
 
@@ -320,15 +357,24 @@ export const handleEditFormAction = async (deps, payload) => {
       }
     : {};
 
-  await projectService.updateSound({
-    soundId: editItemId,
-    fileRecords: editUploadResult?.fileRecords,
-    data: {
-      name,
-      description: values?.description ?? "",
-      ...soundPatch,
-    },
+  const updateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to update sound.",
+    action: () =>
+      projectService.updateSound({
+        soundId: editItemId,
+        fileRecords: editUploadResult?.fileRecords,
+        data: {
+          name,
+          description: values?.description ?? "",
+          ...soundPatch,
+        },
+      }),
   });
+
+  if (!updateAttempt.ok) {
+    return;
+  }
 
   store.closeEditDialog();
   await handleDataChanged(deps);

@@ -382,7 +382,6 @@ const handleBlockModeDeleteShortcut = (deps, payload, { lineId } = {}) => {
   const isAwaitingDeleteShortcut = store.selectAwaitingDeleteShortcut();
 
   if (isAwaitingDeleteShortcut) {
-    const startedAt = store.selectDeleteShortcutStartedAt();
     clearDeleteShortcutState(store);
 
     if (!isDeleteShortcutKey) {
@@ -396,11 +395,6 @@ const handleBlockModeDeleteShortcut = (deps, payload, { lineId } = {}) => {
     if (!targetLineId) {
       return true;
     }
-
-    console.info("[sceneEditor][perf] delete-shortcut-fired", {
-      lineId: targetLineId,
-      elapsedMs: Number((nowMs() - startedAt).toFixed(1)),
-    });
 
     dispatchEvent(
       new CustomEvent("delete-line-shortcut", {
@@ -420,9 +414,6 @@ const handleBlockModeDeleteShortcut = (deps, payload, { lineId } = {}) => {
     awaitingDeleteShortcut: true,
   });
   armDeleteShortcutState(store);
-  console.info("[sceneEditor][perf] delete-shortcut-armed", {
-    lineId: lineId || props.selectedLineId,
-  });
   event.preventDefault();
   event.stopPropagation();
   return true;

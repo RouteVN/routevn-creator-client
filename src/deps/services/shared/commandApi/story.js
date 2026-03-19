@@ -6,17 +6,6 @@ import {
 import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
 
 export const createStoryCommandApi = (shared) => {
-  const nowMs = () => {
-    if (
-      typeof performance !== "undefined" &&
-      typeof performance.now === "function"
-    ) {
-      return performance.now();
-    }
-
-    return Date.now();
-  };
-
   const appendMissingIds = (orderedIds, allIds) => {
     const seen = new Set();
     const result = [];
@@ -232,9 +221,7 @@ export const createStoryCommandApi = (shared) => {
     },
 
     async syncSectionLinesSnapshot({ sectionId, lines = [] }) {
-      const startedAt = nowMs();
       const context = await shared.ensureCommandContext();
-      const ensuredContextAt = nowMs();
       const sectionLocation = findSectionLocation(context.state, sectionId);
       if (!sectionLocation?.section) {
         throw new Error("section not found");
@@ -380,14 +367,6 @@ export const createStoryCommandApi = (shared) => {
       }
 
       if (commands.length === 0) {
-        console.info("[sceneEditor][perf] sync-section-lines-snapshot", {
-          sectionId,
-          ensureContextMs: Number((ensuredContextAt - startedAt).toFixed(1)),
-          diffMs: Number((nowMs() - ensuredContextAt).toFixed(1)),
-          totalMs: Number((nowMs() - startedAt).toFixed(1)),
-          lineCount: desiredLines.length,
-          commandCount: 0,
-        });
         return {
           valid: true,
           commandIds: [],
@@ -395,37 +374,10 @@ export const createStoryCommandApi = (shared) => {
         };
       }
 
-      const diffCompletedAt = nowMs();
-      const commandCounts = commands.reduce((acc, command) => {
-        const commandType = command?.type || "unknown";
-        acc[commandType] = (acc[commandType] || 0) + 1;
-        return acc;
-      }, {});
-
-      const result = await shared.submitCommandsWithContext({
+      return shared.submitCommandsWithContext({
         context,
         commands,
-        perfLabel: "scene-editor-sync-section-lines-snapshot",
-        perfMeta: {
-          sectionId,
-          lineCount: desiredLines.length,
-          commandCount: commands.length,
-          commandCounts,
-        },
       });
-
-      console.info("[sceneEditor][perf] sync-section-lines-snapshot", {
-        sectionId,
-        lineCount: desiredLines.length,
-        commandCount: commands.length,
-        commandCounts,
-        ensureContextMs: Number((ensuredContextAt - startedAt).toFixed(1)),
-        diffMs: Number((diffCompletedAt - ensuredContextAt).toFixed(1)),
-        submitMs: Number((nowMs() - diffCompletedAt).toFixed(1)),
-        totalMs: Number((nowMs() - startedAt).toFixed(1)),
-      });
-
-      return result;
     },
 
     async createSceneItem({
