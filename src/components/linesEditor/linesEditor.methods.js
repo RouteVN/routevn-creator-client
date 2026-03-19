@@ -39,6 +39,10 @@ const focusLineInternally = (element, payload = {}) => {
   }
 
   element.store.setNavigationDirection({ direction });
+
+  // New lines are seeded imperatively, so make sure the target line has
+  // its latest text before focus/caret placement runs.
+  element.transformedHandlers.forceSyncContentLine({ lineId });
   element.transformedHandlers.updateSelectedLine({ currentLineId: lineId });
 
   if (syncLineId) {

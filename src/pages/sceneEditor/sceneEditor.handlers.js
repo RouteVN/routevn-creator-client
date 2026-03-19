@@ -1,4 +1,4 @@
-import { concatMap, filter, from, throttleTime } from "rxjs";
+import { concatMap, filter, from } from "rxjs";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import {
   applySceneEditorSessionTextChange,
@@ -43,8 +43,6 @@ const TEXT_DRAFT_SAVE_DEBOUNCE_MS = 300;
 const STRUCTURE_DRAFT_SAVE_DEBOUNCE_MS = 900;
 const DRAFT_SAVE_MIN_INTERVAL_MS = 1000;
 const DRAFT_SAVE_MAX_INTERVAL_MS = 3000;
-const STRUCTURE_SHORTCUT_THROTTLE_MS = 50;
-
 const nowMs = () => {
   if (
     typeof performance !== "undefined" &&
@@ -195,20 +193,12 @@ const mountSceneEditorShortcutSubscriptions = (deps) => {
   const streams = [
     subject.pipe(
       filter(({ action }) => action === "sceneEditor.requestSplitLine"),
-      throttleTime(STRUCTURE_SHORTCUT_THROTTLE_MS, undefined, {
-        leading: true,
-        trailing: true,
-      }),
       concatMap(({ payload }) =>
         from(processSplitLineRequest(deps, payload).catch(() => {})),
       ),
     ),
     subject.pipe(
       filter(({ action }) => action === "sceneEditor.requestMergeLines"),
-      throttleTime(STRUCTURE_SHORTCUT_THROTTLE_MS, undefined, {
-        leading: true,
-        trailing: true,
-      }),
       concatMap(({ payload }) =>
         from(processMergeLinesRequest(deps, payload).catch(() => {})),
       ),
