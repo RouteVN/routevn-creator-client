@@ -195,6 +195,16 @@ const resolveDialogueModeLabel = (repositoryState, line) => {
   return "ADV";
 };
 
+const toStableDomRefSuffix = (value = "") => {
+  return Array.from(String(value)).reduce((result, char) => {
+    if (/^[a-zA-Z0-9]$/.test(char)) {
+      return `${result}${char}`;
+    }
+
+    return `${result}Z${char.codePointAt(0).toString(16)}`;
+  }, "");
+};
+
 export const buildSceneEditorLineViewModels = ({
   lines,
   repositoryState,
@@ -211,6 +221,7 @@ export const buildSceneEditorLineViewModels = ({
 
     return {
       ...line,
+      domRefSuffix: toStableDomRefSuffix(line.id),
       lineNumber: index + 1,
       background: buildBackgroundPreview(repositoryState, changes),
       bgm: changes.bgm
