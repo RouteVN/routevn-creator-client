@@ -283,10 +283,54 @@ const TYPE_FAMILIES = {
   rect: "rect",
 };
 
+const DEFAULT_CAPABILITIES = {
+  supportsHeight: true,
+  supportsAnchor: false,
+  supportsDirection: false,
+  supportsTextEditing: false,
+  supportsTextStyles: false,
+  supportsTextAlignment: false,
+  supportsActions: false,
+  supportsSpriteImages: false,
+  supportsSliderImages: false,
+  supportsSliderValues: false,
+};
+
+const FAMILY_CAPABILITIES = {
+  container: {
+    supportsAnchor: true,
+    supportsDirection: true,
+  },
+  sprite: {
+    supportsSpriteImages: true,
+    supportsActions: true,
+  },
+  text: {
+    supportsHeight: false,
+    supportsAnchor: true,
+    supportsTextStyles: true,
+    supportsTextAlignment: true,
+  },
+  slider: {
+    supportsSliderImages: true,
+    supportsSliderValues: true,
+  },
+  rect: {
+    supportsActions: true,
+  },
+};
+
+const ITEM_TYPE_CAPABILITY_OVERRIDES = {
+  text: {
+    supportsTextEditing: true,
+    supportsActions: true,
+  },
+};
+
 const TYPE_RULES = {
   container: {
     normalizeFieldValue: ({ name, value }) => {
-      if (name === "direction" && value === null) {
+      if (name === "direction" && (value === null || value === "")) {
         return undefined;
       }
 
@@ -304,7 +348,7 @@ const TYPE_RULES = {
   text: {},
   slider: {
     normalizeFieldValue: ({ name, value }) => {
-      if (name === "direction" && value === null) {
+      if (name === "direction" && (value === null || value === "")) {
         return undefined;
       }
 
@@ -352,6 +396,16 @@ export const isLayoutEditorContainerItemType = (itemType) => {
 export const createLayoutEditorItemTemplate = (createType) => {
   const templateFactory = CREATE_TEMPLATES[createType];
   return templateFactory ? templateFactory() : {};
+};
+
+export const getLayoutEditorItemCapabilities = (itemType) => {
+  const family = TYPE_FAMILIES[itemType];
+
+  return {
+    ...DEFAULT_CAPABILITIES,
+    ...FAMILY_CAPABILITIES[family],
+    ...ITEM_TYPE_CAPABILITY_OVERRIDES[itemType],
+  };
 };
 
 export const getLayoutEditorTypeRules = (itemType) => {

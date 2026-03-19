@@ -8,9 +8,17 @@ import {
   resolveLayoutEditorPayload,
 } from "../../internal/layoutEditorRoute.js";
 import { renderLayoutEditorPreview } from "../../internal/layoutEditorPreview.js";
-import { applyLayoutItemFieldChange } from "../../internal/layoutEditorMutations.js";
+import {
+  applyLayoutItemDragChange,
+  applyLayoutItemFieldChange,
+  applyLayoutItemKeyboardChange,
+} from "../../internal/layoutEditorMutations.js";
+import {
+  persistLayoutEditorElementUpdate,
+  shouldPersistLayoutEditorFieldImmediately,
+  syncLayoutEditorRepositoryState,
+} from "../../internal/layoutEditorPersistence.js";
 import { createLayoutElementsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
-import { normalizeInteractionValue } from "../../internal/project/interactionPayload.js";
 
 const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
@@ -31,110 +39,15 @@ const KEYBOARD_UNITS = {
 const getEditorPayload = (appService) =>
   resolveLayoutEditorPayload(appService.getPayload() || {});
 
-const getRepositoryResourceCollection = (repositoryState, resourceType) => {
-  return resourceType === "controls"
-    ? repositoryState.controls || { items: {}, tree: [] }
-    : repositoryState.layouts || { items: {}, tree: [] };
-};
-
-const getEditorElementOwnerKey = (resourceType) => {
-  return resourceType === "controls" ? "controlId" : "layoutId";
-};
-
-const isPlainObject = (value) => {
-  return !!value && typeof value === "object" && !Array.isArray(value);
-};
-
-const areValuesEqual = (left, right) => {
-  if (left === right) {
-    return true;
+const rerenderLayoutEditorSurface = async (
+  deps,
+  { renderPage = true } = {},
+) => {
+  if (renderPage) {
+    deps.render();
   }
 
-  if (Array.isArray(left) && Array.isArray(right)) {
-    return (
-      left.length === right.length &&
-      left.every((value, index) => areValuesEqual(value, right[index]))
-    );
-  }
-
-  if (isPlainObject(left) && isPlainObject(right)) {
-    const leftKeys = Object.keys(left);
-    const rightKeys = Object.keys(right);
-    return (
-      leftKeys.length === rightKeys.length &&
-      leftKeys.every(
-        (key) =>
-          Object.hasOwn(right, key) && areValuesEqual(left[key], right[key]),
-      )
-    );
-  }
-
-  return false;
-};
-
-const createObjectPatch = (previousValue, nextValue) => {
-  const previousObject = isPlainObject(previousValue) ? previousValue : {};
-  const nextObject = isPlainObject(nextValue) ? nextValue : {};
-  const patch = {};
-  let hasChanges = false;
-  let requiresReplace = false;
-
-  for (const key of Object.keys(previousObject)) {
-    if (!Object.hasOwn(nextObject, key)) {
-      requiresReplace = true;
-      break;
-    }
-  }
-
-  for (const [key, value] of Object.entries(nextObject)) {
-    if (!Object.hasOwn(previousObject, key)) {
-      patch[key] = structuredClone(value);
-      hasChanges = true;
-      continue;
-    }
-
-    const previousEntry = previousObject[key];
-
-    if (areValuesEqual(previousEntry, value)) {
-      continue;
-    }
-
-    if (isPlainObject(previousEntry) && isPlainObject(value)) {
-      const nestedResult = createObjectPatch(previousEntry, value);
-      if (nestedResult.requiresReplace) {
-        requiresReplace = true;
-      } else if (nestedResult.hasChanges) {
-        patch[key] = nestedResult.patch;
-        hasChanges = true;
-      }
-      continue;
-    }
-
-    patch[key] = structuredClone(value);
-    hasChanges = true;
-  }
-
-  return {
-    patch,
-    hasChanges,
-    requiresReplace,
-  };
-};
-
-const normalizeLayoutElementInteractions = (item = {}) => {
-  if (!item || typeof item !== "object") {
-    return item;
-  }
-
-  const nextItem = structuredClone(item);
-
-  for (const key of ["click", "rightClick", "change"]) {
-    if (nextItem[key] !== undefined) {
-      nextItem[key] = normalizeInteractionValue(nextItem[key]);
-    }
-  }
-
-  return nextItem;
+  await renderLayoutEditorPreview(deps);
 };
 
 export const handleBeforeMount = (deps) => {
@@ -193,50 +106,22 @@ const scheduleKeyboardSave = (deps, itemId, layoutId) => {
   store.setKeyboardNavigationTimeoutId({ timeoutId });
 };
 
-const syncLayoutEditorState = (
-  deps,
-  repositoryState,
-  layoutId,
-  resourceType = "layouts",
-) => {
-  const { store } = deps;
-  const { images, textStyles, colors, fonts, variables } = repositoryState;
-  const resourceCollection = getRepositoryResourceCollection(
-    repositoryState,
-    resourceType,
-  );
-  const layout = layoutId ? resourceCollection.items?.[layoutId] : undefined;
-
-  store.setLayout({ id: layoutId, layout, resourceType });
-  store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
-  store.setImages({ images: images || { items: {}, tree: [] } });
-  store.setTextStylesData({
-    textStylesData: textStyles || { items: {}, tree: [] },
-  });
-  store.setColorsData({ colorsData: colors || { items: {}, tree: [] } });
-  store.setFontsData({ fontsData: fonts || { items: {}, tree: [] } });
-  store.setVariablesData({
-    variablesData: variables || { items: {}, tree: [] },
-  });
-};
-
 export const handleAfterMount = async (deps) => {
-  const { appService, projectService, render, refs, graphicsService } = deps;
+  const { appService, projectService, refs, graphicsService } = deps;
   const payload = getEditorPayload(appService);
   const { layoutId, resourceType } = payload;
   await projectService.ensureRepository();
-  syncLayoutEditorState(
-    deps,
-    projectService.getRepositoryState(),
+  syncLayoutEditorRepositoryState({
+    store: deps.store,
+    repositoryState: projectService.getRepositoryState(),
     layoutId,
     resourceType,
-  );
+  });
 
   const { canvas } = refs;
   await graphicsService.init({ canvas: canvas });
 
-  await renderLayoutEditorPreview(deps);
-  render();
+  await rerenderLayoutEditorSurface(deps);
 };
 
 export const handleBackClick = (deps) => {
@@ -250,35 +135,33 @@ export const handleBackClick = (deps) => {
 export const handleRenderOnly = (deps) => deps.render();
 
 export const handleFileExplorerItemClick = async (deps, payload) => {
-  const { store, render } = deps;
+  const { store } = deps;
   const detail = payload._event.detail || {};
   const itemId = detail.id || detail.itemId || detail.item?.id;
   if (!itemId) {
     return;
   }
   store.setSelectedItemId({ itemId: itemId });
-  render();
-  await renderLayoutEditorPreview(deps);
+  await rerenderLayoutEditorSurface(deps);
 };
 
 export const handleAddLayoutClick = handleRenderOnly;
 
 const refreshLayoutEditorData = async (deps, payload = {}) => {
-  const { appService, projectService, render, store, refs } = deps;
+  const { appService, projectService, store, refs } = deps;
   const { layoutId, resourceType } = getEditorPayload(appService);
   await projectService.ensureRepository();
-  syncLayoutEditorState(
-    deps,
-    projectService.getRepositoryState(),
+  syncLayoutEditorRepositoryState({
+    store,
+    repositoryState: projectService.getRepositoryState(),
     layoutId,
     resourceType,
-  );
+  });
   if (payload.selectedItemId) {
     store.setSelectedItemId({ itemId: payload.selectedItemId });
     refs.fileExplorer.selectItem({ itemId: payload.selectedItemId });
   }
-  render();
-  await renderLayoutEditorPreview(deps);
+  await rerenderLayoutEditorSurface(deps);
 };
 
 const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
@@ -292,43 +175,24 @@ export { handleFileExplorerAction, handleFileExplorerTargetChanged };
 
 export const handleDataChanged = refreshLayoutEditorData;
 
-const shouldSaveLayoutEditImmediately = (name) => {
-  if (typeof name !== "string" || name.length === 0) {
-    return false;
-  }
-
-  return (
-    name === "click" ||
-    name.startsWith("click.") ||
-    name === "rightClick" ||
-    name.startsWith("rightClick.") ||
-    name === "change" ||
-    name.startsWith("change.")
-  );
-};
-
 export const handleDialogueFormChange = async (deps, payload) => {
-  const { store, render } = deps;
+  const { store } = deps;
   const { name, value: fieldValue } = payload._event.detail;
 
   store.setDialogueDefaultValue({ name, fieldValue });
-  render();
-
-  await renderLayoutEditorPreview(deps);
+  await rerenderLayoutEditorSurface(deps);
 };
 
 export const handleChoiceFormChange = async (deps, payload) => {
-  const { store, render } = deps;
+  const { store } = deps;
   const { name, value: fieldValue } = payload._event.detail;
 
   store.setChoiceDefaultValue({ name, fieldValue });
-  render();
-
-  await renderLayoutEditorPreview(deps);
+  await rerenderLayoutEditorSurface(deps);
 };
 
 export const handleArrowKeyDown = async (deps, payload) => {
-  const { store, render } = deps;
+  const { store } = deps;
   const { _event: e } = payload;
 
   const currentItem = store.selectSelectedItemData();
@@ -337,55 +201,15 @@ export const handleArrowKeyDown = async (deps, payload) => {
   }
 
   const unit = e.shiftKey ? KEYBOARD_UNITS.FAST : KEYBOARD_UNITS.NORMAL;
-  let change = {};
   const layoutId = store.selectLayoutId();
-
-  if (payload._event.key === "ArrowUp") {
-    if (e.metaKey) {
-      change = {
-        height: Math.round(currentItem.height - unit),
-      };
-    } else {
-      change = {
-        y: Math.round(currentItem.y - unit),
-      };
-    }
-  } else if (payload._event.key === "ArrowDown") {
-    if (e.metaKey) {
-      change = {
-        height: Math.round(currentItem.height + unit),
-      };
-    } else {
-      change = {
-        y: Math.round(currentItem.y + unit),
-      };
-    }
-  } else if (payload._event.key === "ArrowLeft") {
-    if (e.metaKey) {
-      change = {
-        width: Math.round(currentItem.width - unit),
-      };
-    } else {
-      change = {
-        x: Math.round(currentItem.x - unit),
-      };
-    }
-  } else if (payload._event.key === "ArrowRight") {
-    if (e.metaKey) {
-      change = {
-        width: Math.round(currentItem.width + unit),
-      };
-    } else {
-      change = {
-        x: Math.round(currentItem.x + unit),
-      };
-    }
-  }
-
-  const updatedItem = { ...currentItem, ...change };
+  const updatedItem = applyLayoutItemKeyboardChange({
+    item: currentItem,
+    key: payload._event.key,
+    unit,
+    resize: e.metaKey,
+  });
   store.updateSelectedItem({ updatedItem: updatedItem });
-  render();
-  await renderLayoutEditorPreview(deps);
+  await rerenderLayoutEditorSurface(deps);
   scheduleKeyboardSave(deps, currentItem.id, layoutId);
 };
 
@@ -399,52 +223,25 @@ async function handleDebouncedUpdate(deps, payload) {
   const { appService, projectService } = deps;
   const { layoutId, resourceType, selectedItemId, updatedItem, replace } =
     payload;
-  const ownerCollection = getRepositoryResourceCollection(
-    projectService.getRepositoryState(),
+  const persistResult = await persistLayoutEditorElementUpdate({
+    projectService,
+    layoutId,
     resourceType,
-  );
-  const currentItem =
-    ownerCollection?.items?.[layoutId]?.elements?.items?.[selectedItemId];
-
-  if (!currentItem || !updatedItem) {
+    selectedItemId,
+    updatedItem,
+    replace,
+  });
+  if (!persistResult.didPersist) {
     return;
   }
 
-  const previousItem = normalizeLayoutElementInteractions({
-    id: selectedItemId,
-    ...currentItem,
-  });
-  const normalizedUpdatedItem = normalizeLayoutElementInteractions(updatedItem);
-  const diff = createObjectPatch(previousItem, normalizedUpdatedItem);
-
-  if (!diff.hasChanges && !diff.requiresReplace) {
-    return;
-  }
-
-  const shouldReplace = replace === true || diff.requiresReplace;
-  const { id: _ignoredItemId, ...nextReplaceData } = normalizedUpdatedItem;
-
-  const ownerPayloadKey = getEditorElementOwnerKey(resourceType);
-  const updateElement =
-    resourceType === "controls"
-      ? projectService.updateControlElement.bind(projectService)
-      : projectService.updateLayoutElement.bind(projectService);
-
-  await updateElement({
-    [ownerPayloadKey]: layoutId,
-    elementId: selectedItemId,
-    data: shouldReplace ? nextReplaceData : diff.patch,
-    replace: shouldReplace,
-  });
-
-  // For form/keyboard updates, sync store with repository
   const currentPayload = getEditorPayload(appService);
-  syncLayoutEditorState(
-    deps,
-    projectService.getRepositoryState(),
-    currentPayload.layoutId || layoutId,
-    currentPayload.resourceType || resourceType,
-  );
+  syncLayoutEditorRepositoryState({
+    store: deps.store,
+    repositoryState: projectService.getRepositoryState(),
+    layoutId: currentPayload.layoutId || layoutId,
+    resourceType: currentPayload.resourceType || resourceType,
+  });
 }
 
 const subscriptions = (deps) => {
@@ -507,7 +304,7 @@ const subscriptions = (deps) => {
 };
 
 export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
-  const { store, render } = deps;
+  const { store } = deps;
   const layoutId = store.selectLayoutId();
   const resourceType = store.selectLayoutResourceType();
   const selectedItemId = store.selectSelectedItemId();
@@ -524,9 +321,8 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
   });
 
   store.updateSelectedItem({ updatedItem: updatedItem });
-  render();
 
-  if (shouldSaveLayoutEditImmediately(detail.name)) {
+  if (shouldPersistLayoutEditorFieldImmediately(detail.name)) {
     await handleDebouncedUpdate(deps, {
       layoutId,
       resourceType,
@@ -543,7 +339,7 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     });
   }
 
-  await renderLayoutEditorPreview(deps);
+  await rerenderLayoutEditorSurface(deps);
 };
 
 export const handleCanvasMouseMove = (deps, payload) => {
@@ -573,11 +369,12 @@ export const handleCanvasMouseMove = (deps, payload) => {
     return;
   }
 
-  const updatedItem = {
-    ...item,
-    x: drag.dragStartPosition.itemStartX + x - drag.dragStartPosition.x,
-    y: drag.dragStartPosition.itemStartY + y - drag.dragStartPosition.y,
-  };
+  const updatedItem = applyLayoutItemDragChange({
+    item,
+    dragStartPosition: drag.dragStartPosition,
+    x,
+    y,
+  });
 
   store.updateSelectedItem({ updatedItem: updatedItem });
   renderLayoutEditorPreview(deps);

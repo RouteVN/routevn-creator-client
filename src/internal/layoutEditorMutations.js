@@ -92,3 +92,63 @@ export const applyLayoutItemFieldChange = ({
     }) ?? nextAfterTypeChange
   );
 };
+
+export const applyLayoutItemKeyboardChange = ({
+  item,
+  key,
+  unit = 1,
+  resize = false,
+} = {}) => {
+  if (!item || typeof key !== "string") {
+    return item;
+  }
+
+  let change;
+
+  if (key === "ArrowUp") {
+    change = resize
+      ? { height: Math.round(item.height - unit) }
+      : { y: Math.round(item.y - unit) };
+  } else if (key === "ArrowDown") {
+    change = resize
+      ? { height: Math.round(item.height + unit) }
+      : { y: Math.round(item.y + unit) };
+  } else if (key === "ArrowLeft") {
+    change = resize
+      ? { width: Math.round(item.width - unit) }
+      : { x: Math.round(item.x - unit) };
+  } else if (key === "ArrowRight") {
+    change = resize
+      ? { width: Math.round(item.width + unit) }
+      : { x: Math.round(item.x + unit) };
+  } else {
+    return item;
+  }
+
+  return {
+    ...item,
+    ...change,
+  };
+};
+
+export const applyLayoutItemDragChange = ({
+  item,
+  dragStartPosition,
+  x,
+  y,
+} = {}) => {
+  if (
+    !item ||
+    !dragStartPosition ||
+    typeof x !== "number" ||
+    typeof y !== "number"
+  ) {
+    return item;
+  }
+
+  return {
+    ...item,
+    x: dragStartPosition.itemStartX + x - dragStartPosition.x,
+    y: dragStartPosition.itemStartY + y - dragStartPosition.y,
+  };
+};

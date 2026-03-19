@@ -224,7 +224,7 @@ const buildOverlayTree = ({ path, overlayId, draggable }) => {
   return overlayTree;
 };
 
-const createLayoutPreviewData = ({
+export const createLayoutEditorPreviewData = ({
   variablesData,
   dialogueDefaultValues,
   choicesData,
@@ -259,7 +259,7 @@ const resolveLayoutPreviewElements = ({ elements, previewData } = {}) => {
   );
 };
 
-const createSelectedLayoutOverlay = ({
+export const createLayoutEditorSelectionOverlay = ({
   parsedElements,
   selectedItemId,
 } = {}) => {
@@ -414,7 +414,7 @@ export const renderLayoutEditorPreview = async (deps) => {
 
     const finalElements = resolveLayoutPreviewElements({
       elements: renderStateElements,
-      previewData: createLayoutPreviewData({
+      previewData: createLayoutEditorPreviewData({
         variablesData,
         dialogueDefaultValues: store.selectDialogueDefaultValues(),
         choicesData: store.selectChoicesData(),
@@ -424,7 +424,7 @@ export const renderLayoutEditorPreview = async (deps) => {
     const parsedState = graphicsService.parse({
       elements: finalElements,
     });
-    const overlayElements = createSelectedLayoutOverlay({
+    const overlayElements = createLayoutEditorSelectionOverlay({
       parsedElements: parsedState.elements,
       selectedItemId: selectedItem?.id,
     });

@@ -3,6 +3,7 @@ import { toFlatGroups } from "../../internal/project/tree.js";
 import { getFirstTextStyleId } from "../../constants/textStyles.js";
 import { getVariableOptions } from "../../internal/project/projection.js";
 import { getInteractionActions } from "../../internal/project/interactionPayload.js";
+import { getLayoutEditorItemCapabilities } from "../../internal/layoutEditorTypes.js";
 
 const ACTION_INTERACTION_LABELS = {
   click: "Click",
@@ -39,585 +40,65 @@ const toLayoutActionItems = (values) => {
   );
 };
 
-const config = {
-  sections: [
-    {
-      label: "Position",
-      items: [
-        {
-          type: "group",
-          fields: [
-            {
-              type: "clickable-value",
-              svg: "x",
-              name: "x",
-              value: "${values.x}",
-              popoverForm: {
-                fields: [
-                  {
-                    name: "value",
-                    type: "input-number",
-                  },
-                ],
-                actions: {
-                  buttons: [
-                    {
-                      id: "submit",
-                      variant: "pr",
-                      label: "Submit",
-                    },
-                  ],
-                },
-              },
-            },
-            {
-              type: "clickable-value",
-              svg: "y",
-              name: "y",
-              value: "${values.y}",
-              popoverForm: {
-                fields: [
-                  {
-                    name: "value",
-                    type: "input-number",
-                  },
-                ],
-                actions: {
-                  buttons: [
-                    {
-                      id: "submit",
-                      variant: "pr",
-                      label: "Submit",
-                    },
-                  ],
-                },
-              },
-            },
-          ],
-        },
-      ],
-    },
-    {
-      label: "Layout",
-      items: [
-        {
-          type: "group",
-          fields: [
-            {
-              type: "clickable-value",
-              svg: "w",
-              name: "width",
-              value: "${values.width}",
-              popoverForm: {
-                fields: [
-                  {
-                    name: "value",
-                    type: "input-number",
-                  },
-                ],
-                actions: {
-                  buttons: [
-                    {
-                      id: "submit",
-                      variant: "pr",
-                      label: "Submit",
-                    },
-                  ],
-                },
-              },
-            },
-            {
-              $when:
-                'itemType != "text" && itemType != "text-ref-character-name" && itemType != "text-revealing-ref-dialogue-content" && itemType != "text-ref-choice-item-content" && itemType != "text-ref-dialogue-line-character-name" && itemType != "text-ref-dialogue-line-content"',
-              type: "clickable-value",
-              svg: "h",
-              name: "height",
-              value: "${values.height}",
-              popoverForm: {
-                fields: [
-                  {
-                    name: "value",
-                    type: "input-number",
-                  },
-                ],
-                actions: {
-                  buttons: [
-                    {
-                      id: "submit",
-                      variant: "pr",
-                      label: "Submit",
-                    },
-                  ],
-                },
-              },
-            },
-          ],
-        },
-        {
-          $when:
-            "itemType == 'container' || itemType == 'container-ref-choice-item' || itemType == 'container-ref-dialogue-line' || itemType == 'text' || itemType == 'text-ref-choice-item-content' || itemType == 'text-ref-character-name' || itemType == 'text-revealing-ref-dialogue-content' || itemType == 'text-ref-dialogue-line-character-name' || itemType == 'text-ref-dialogue-line-content'",
-          type: "select",
-          label: "Anchor",
-          name: "anchor",
-          value: "${values.anchor}",
-          options: [
-            { label: "Top Left", value: { x: 0, y: 0 } },
-            { label: "Top Center", value: { x: 0.5, y: 0 } },
-            { label: "Top Right", value: { x: 1, y: 0 } },
-            { label: "Center Left", value: { x: 0, y: 0.5 } },
-            { label: "Center", value: { x: 0.5, y: 0.5 } },
-            { label: "Center Right", value: { x: 1, y: 0.5 } },
-            { label: "Bottom Left", value: { x: 0, y: 1 } },
-            { label: "Bottom Center", value: { x: 0.5, y: 1 } },
-            { label: "Bottom Right", value: { x: 1, y: 1 } },
-          ],
-        },
-      ],
-    },
-    {
-      $when:
-        'itemType == "container" || itemType == "container-ref-choice-item" || itemType == "container-ref-dialogue-line"',
-      label: "Direction",
-      items: [
-        {
-          type: "select",
-          label: "Direction",
-          name: "direction",
-          value: "${values.direction}",
-          options: [
-            { label: "Absolute", value: undefined },
-            { label: "Horizontal", value: "horizontal" },
-            { label: "Vertical", value: "vertical" },
-          ],
-        },
-        {
-          $when:
-            '(itemType == "container" || itemType == "container-ref-choice-item" || itemType == "container-ref-dialogue-line") && (values.direction == "vertical" || values.direction == "horizontal") ',
-          type: "group",
-          fields: [
-            {
-              type: "clickable-value",
-              label: "Gap",
-              name: "gap",
-              value: "${values.gap}",
-              popoverForm: {
-                fields: [
-                  {
-                    name: "value",
-                    type: "input-number",
-                  },
-                ],
-                actions: {
-                  buttons: [
-                    {
-                      id: "submit",
-                      variant: "pr",
-                      label: "Submit",
-                    },
-                  ],
-                },
-              },
-            },
-          ],
-        },
-      ],
-    },
-    {
-      $when: 'itemType == "sprite"',
-      id: "images",
-      label: "Image",
-      "$if !values.imageId || !values.hoverImageId || !values.clickImageId": {
-        labelAction: "plus",
-      },
-      items: [
-        {
-          type: "list-bar",
-          items: [
-            {
-              $when: "values.imageId",
-              name: "imageId",
-              label: "Default",
-              imageId: "${values.imageId}",
-            },
-            {
-              $when: "values.hoverImageId",
-              name: "hoverImageId",
-              label: "Hover",
-              imageId: "${values.hoverImageId}",
-            },
-            {
-              name: "clickImageId",
-              $when: "values.clickImageId",
-              label: "Click",
-              imageId: "${values.clickImageId}",
-            },
-          ],
-        },
-      ],
-    },
-    {
-      $when: 'itemType == "slider"',
-      id: "slider-images",
-      label: "Slider Bar",
-      items: [
-        {
-          type: "list-bar",
-          items: [
-            {
-              name: "barImageId",
-              label: "Default",
-              imageId: "${values.barImageId}",
-            },
-            {
-              name: "hoverBarImageId",
-              label: "Hover",
-              imageId: "${values.hoverBarImageId}",
-            },
-          ],
-        },
-      ],
-    },
-    {
-      $when: 'itemType == "slider"',
-      id: "slider-thumb",
-      label: "Slider Thumb",
-      items: [
-        {
-          type: "list-bar",
-          items: [
-            {
-              name: "thumbImageId",
-              label: "Default",
-              imageId: "${values.thumbImageId}",
-            },
-            {
-              name: "hoverThumbImageId",
-              label: "Hover",
-              imageId: "${values.hoverThumbImageId}",
-            },
-          ],
-        },
-      ],
-    },
-    {
-      $when: 'itemType == "slider"',
-      label: "Slider Values",
-      items: [
-        {
-          type: "group",
-          fields: [
-            {
-              type: "clickable-value",
-              label: "Min",
-              name: "min",
-              value: "${values.min}",
-              popoverForm: {
-                fields: [
-                  {
-                    name: "value",
-                    type: "input-number",
-                  },
-                ],
-                actions: {
-                  buttons: [
-                    {
-                      id: "submit",
-                      variant: "pr",
-                      label: "Submit",
-                    },
-                  ],
-                },
-              },
-            },
-            {
-              type: "clickable-value",
-              label: "Max",
-              name: "max",
-              value: "${values.max}",
-              popoverForm: {
-                fields: [
-                  {
-                    name: "value",
-                    type: "input-number",
-                  },
-                ],
-                actions: {
-                  buttons: [
-                    {
-                      id: "submit",
-                      variant: "pr",
-                      label: "Submit",
-                    },
-                  ],
-                },
-              },
-            },
-          ],
-        },
-        {
-          type: "group",
-          fields: [
-            {
-              type: "clickable-value",
-              label: "Step",
-              name: "step",
-              value: "${values.step}",
-              popoverForm: {
-                fields: [
-                  {
-                    name: "value",
-                    type: "input-number",
-                  },
-                ],
-                actions: {
-                  buttons: [
-                    {
-                      id: "submit",
-                      variant: "pr",
-                      label: "Submit",
-                    },
-                  ],
-                },
-              },
-            },
-          ],
-        },
-        {
-          type: "select",
-          label: "Update Variable",
-          name: "variableId",
-          value: "${values.variableId}",
-          options: "${variableOptionsWithNone}",
-        },
-      ],
-    },
-    {
-      $when: 'itemType == "text"',
-      label: "Text",
-      items: [
-        {
-          type: "group",
-          fields: [
-            {
-              type: "clickable-value",
-              name: "text",
-              value: "${values.text}",
-              popoverForm: {
-                fields: [
-                  // {
-                  //   name: "contentType",
-                  //   description: "Content Type",
-                  //   type: "select",
-                  //   options: [
-                  //     { label: "Variable", value: "variable" },
-                  //     { label: "Plain Text", value: "plain" },
-                  //   ],
-                  // },
-                  // {
-                  //   $when: 'popoverFormValues.contentType == "variable"',
-                  //   name: "value",
-                  //   description: "Variable",
-                  //   type: "select",
-                  //   options: [
-                  //     {
-                  //       label: "Dialogue Character Name",
-                  //       value: "\\${dialogue.character.name}",
-                  //     },
-                  //     {
-                  //       label: "Dialogue Content",
-                  //       value: "\\${dialogue.content[0].text}",
-                  //     },
-                  //     {
-                  //       $when: 'layoutType === "choices"',
-                  //       label: "Choice content",
-                  //       value: "\\${item.content}",
-                  //     },
-                  //   ],
-                  // },
-                  {
-                    // $when: 'popoverFormValues.contentType == "plain"',
-                    name: "value",
-                    type: "input-text",
-                  },
-                ],
-                actions: {
-                  buttons: [
-                    {
-                      id: "submit",
-                      variant: "pr",
-                      label: "Submit",
-                    },
-                  ],
-                },
-              },
-            },
-          ],
-        },
-      ],
-    },
-    {
-      $when:
-        'itemType == "text" || itemType == "text-ref-character-name" || itemType == "text-revealing-ref-dialogue-content" || itemType == "text-ref-choice-item-content" || itemType == "text-ref-dialogue-line-character-name" || itemType == "text-ref-dialogue-line-content"',
-      label: "Text Styles",
-      items: [
-        {
-          type: "select",
-          label: "Default",
-          name: "textStyleId",
-          value: "${values.textStyleId}",
-          options: "${textStyleItems}",
-        },
-        {
-          type: "select",
-          label: "Hover",
-          name: "hoverTextStyleId",
-          value: "${values.hoverTextStyleId}",
-          options: "${textStyleItemsWithNone}",
-        },
-        {
-          type: "select",
-          label: "Clicked",
-          name: "clickTextStyleId",
-          value: "${values.clickTextStyleId}",
-          options: "${textStyleItemsWithNone}",
-        },
-      ],
-    },
-    {
-      $when:
-        'itemType == "text" || itemType == "text-ref-character-name" || itemType == "text-revealing-ref-dialogue-content" || itemType == "text-ref-choice-item-content" || itemType == "text-ref-dialogue-line-character-name" || itemType == "text-ref-dialogue-line-content"',
-      label: "Text Alignment",
-      items: [
-        {
-          type: "select",
-          label: "Alignment",
-          name: "style.align",
-          value: "${values.style.align}",
-          options: [
-            { label: "Left", value: "left" },
-            { label: "Center", value: "center" },
-            { label: "Right", value: "right" },
-          ],
-        },
-      ],
-    },
-    {
-      $when: 'itemType == "text" || itemType == "sprite" || itemType == "rect"',
-      id: "actions",
-      label: "Actions",
-      labelAction: "plus",
-      items: [
-        {
-          type: "list-item",
-          items: "${values.actions}",
-        },
-      ],
-    },
-  ],
+const getLayoutEditPanelSections = ({ constants, resourceType }) => {
+  return resourceType === "controls"
+    ? constants.controlSections || []
+    : constants.layoutSections || [];
 };
 
-const controlConfig = {
-  sections: [
-    {
-      label: "Position",
-      items: [
-        {
-          type: "group",
-          fields: [
-            {
-              type: "clickable-value",
-              svg: "x",
-              name: "x",
-              value: "${values.x}",
-              popoverForm: {
-                fields: [{ name: "value", type: "input-number" }],
-                actions: {
-                  buttons: [{ id: "submit", variant: "pr", label: "Submit" }],
-                },
-              },
-            },
-            {
-              type: "clickable-value",
-              svg: "y",
-              name: "y",
-              value: "${values.y}",
-              popoverForm: {
-                fields: [{ name: "value", type: "input-number" }],
-                actions: {
-                  buttons: [{ id: "submit", variant: "pr", label: "Submit" }],
-                },
-              },
-            },
-          ],
-        },
-      ],
-    },
-    {
-      label: "Layout",
-      items: [
-        {
-          type: "group",
-          fields: [
-            {
-              type: "clickable-value",
-              svg: "w",
-              name: "width",
-              value: "${values.width}",
-              popoverForm: {
-                fields: [{ name: "value", type: "input-number" }],
-                actions: {
-                  buttons: [{ id: "submit", variant: "pr", label: "Submit" }],
-                },
-              },
-            },
-            {
-              type: "clickable-value",
-              svg: "h",
-              name: "height",
-              value: "${values.height}",
-              popoverForm: {
-                fields: [{ name: "value", type: "input-number" }],
-                actions: {
-                  buttons: [{ id: "submit", variant: "pr", label: "Submit" }],
-                },
-              },
-            },
-          ],
-        },
-      ],
-    },
-    {
-      $when: 'itemType == "rect"',
-      id: "actions",
-      label: "Actions",
-      labelAction: "plus",
-      items: [
-        {
-          type: "list-item",
-          items: "${values.actions}",
-        },
-      ],
-    },
-  ],
-};
-
-const selectFieldPopoverFormFromConfig = (fieldName) => {
-  for (const section of config.sections || []) {
+const findFieldPopoverFormInSections = (sections, fieldName) => {
+  for (const section of sections || []) {
     for (const item of section.items || []) {
       if (item.type !== "group") {
         continue;
       }
 
-      const match = (item.fields || []).find(
-        (field) => field.name === fieldName,
+      const field = (item.fields || []).find(
+        (entry) => entry.name === fieldName,
       );
-      if (match) {
-        return match.popoverForm;
+      if (field?.popoverForm) {
+        return field.popoverForm;
       }
     }
   }
 
   return undefined;
+};
+
+const createDefaultValues = () => ({
+  x: 0,
+  y: 0,
+  width: 100,
+  height: 100,
+  rotation: 0,
+  anchor: {
+    x: 0,
+    y: 0,
+  },
+  direction: undefined,
+  gap: 0,
+  actions: {},
+});
+
+const toTextStyleOptions = (textStylesData = {}) => {
+  const textStyleGroups = toFlatGroups(textStylesData);
+  return textStyleGroups.flatMap((group) =>
+    group.children.map((item) => ({
+      label: item.name,
+      value: item.id,
+    })),
+  );
+};
+
+const toInspectorValues = ({ values, firstTextStyleId }) => {
+  return {
+    ...values,
+    direction: values?.direction ?? "",
+    textStyleId: values?.textStyleId || firstTextStyleId || "",
+    hoverTextStyleId: values?.hoverTextStyleId ?? "",
+    clickTextStyleId: values?.clickTextStyleId ?? "",
+    actions: toLayoutActionItems(values),
+  };
 };
 
 export const createInitialState = () => {
@@ -639,20 +120,7 @@ export const createInitialState = () => {
     },
     textStylesData: { tree: [], items: {} },
     variablesData: { tree: [], items: {} },
-    values: {
-      x: 0,
-      y: 0,
-      width: 100,
-      height: 100,
-      rotation: 0,
-      anchor: {
-        x: 0,
-        y: 0,
-      },
-      direction: undefined,
-      gap: 0,
-      actions: {},
-    },
+    values: createDefaultValues(),
     activeInteractionType: "click",
   };
 };
@@ -661,6 +129,7 @@ export const updateValueProperty = ({ state }, { value, name } = {}) => {
   if (!name) {
     return;
   }
+
   const keys = name.split(".");
 
   if (keys.length === 1) {
@@ -672,13 +141,13 @@ export const updateValueProperty = ({ state }, { value, name } = {}) => {
     return;
   }
 
-  // Handle nested path
   let current = state.values;
-  for (let i = 0; i < keys.length - 1; i++) {
-    if (!current[keys[i]]) {
-      current[keys[i]] = {};
+  for (let index = 0; index < keys.length - 1; index += 1) {
+    const key = keys[index];
+    if (!current[key] || typeof current[key] !== "object") {
+      current[key] = {};
     }
-    current = current[keys[i]];
+    current = current[key];
   }
 
   const lastKey = keys[keys.length - 1];
@@ -693,8 +162,8 @@ export const openPopoverForm = ({ state }, { x, y, name, form } = {}) => {
   if (!name) {
     return;
   }
-  const value = state.values[name];
 
+  const value = state.values[name];
   const popoverFormValues = {
     value,
   };
@@ -739,8 +208,17 @@ export const closePopoverForm = ({ state }, _payload = {}) => {
   };
 };
 
-export const selectFieldPopoverForm = (_deps, name) => {
-  return selectFieldPopoverFormFromConfig(name);
+export const selectFieldPopoverForm = ({ constants, props }, { name } = {}) => {
+  if (!name) {
+    return undefined;
+  }
+
+  const sections = getLayoutEditPanelSections({
+    constants,
+    resourceType: props.resourceType,
+  });
+
+  return findFieldPopoverFormInSections(sections, name);
 };
 
 export const selectPopoverForm = ({ state }) => {
@@ -805,22 +283,13 @@ export const selectTempSelectedImageId = ({ state }) => {
   return state.tempSelectedImageId;
 };
 
-export const selectViewData = ({ state, props: attrs }) => {
-  // Transform text style data to options format
-  const textStyleGroups = toFlatGroups(state.textStylesData);
-  const textStyleItems = textStyleGroups.flatMap((group) =>
-    group.children.map((item) => ({
-      label: item.name,
-      value: item.id,
-    })),
-  );
+export const selectViewData = ({ state, props, constants }) => {
+  const textStyleItems = toTextStyleOptions(state.textStylesData);
   const firstTextStyleId = getFirstTextStyleId(state.textStylesData);
   const textStyleItemsWithNone = [
     { label: "None", value: "" },
     ...textStyleItems,
   ];
-
-  // Transform variables data to options format (number type only for sliders)
   const variableOptions = getVariableOptions(state.variablesData, {
     type: "number",
   });
@@ -828,34 +297,42 @@ export const selectViewData = ({ state, props: attrs }) => {
     { label: "None", value: "" },
     ...variableOptions,
   ];
-
-  const context = {
-    itemType: attrs.itemType,
-    layoutType: attrs.layoutType,
-    resourceType: attrs.resourceType,
-    textStyleItems: textStyleItems,
-    textStyleItemsWithNone: textStyleItemsWithNone,
-    variableOptionsWithNone: variableOptionsWithNone,
-    values: {
-      ...state.values,
-      textStyleId: state.values?.textStyleId || firstTextStyleId || "",
-      hoverTextStyleId: state.values?.hoverTextStyleId ?? "",
-      clickTextStyleId: state.values?.clickTextStyleId ?? "",
-      actions: toLayoutActionItems(state.values),
+  const values = toInspectorValues({
+    values: state.values,
+    firstTextStyleId,
+  });
+  const capabilities = getLayoutEditorItemCapabilities(props.itemType);
+  const sections = parseAndRender(
+    getLayoutEditPanelSections({
+      constants,
+      resourceType: props.resourceType,
+    }),
+    {
+      itemType: props.itemType,
+      layoutType: props.layoutType,
+      resourceType: props.resourceType,
+      textStyleItems,
+      textStyleItemsWithNone,
+      variableOptionsWithNone,
+      values,
+      canAddSpriteImageVariant:
+        !values.imageId || !values.hoverImageId || !values.clickImageId,
+      showsGapField:
+        capabilities.supportsDirection &&
+        (values.direction === "vertical" || values.direction === "horizontal"),
+      ...capabilities,
     },
-  };
-
-  const baseConfig = attrs.resourceType === "controls" ? controlConfig : config;
-  const finalConfig = parseAndRender(baseConfig, context);
+  );
 
   return {
-    actionsDialogOpen: state.actionsDialogOpen,
     values: state.values,
     actionsData: getLayoutInteractionActions(
       state.values,
       state.activeInteractionType,
     ),
-    config: finalConfig,
+    config: {
+      sections,
+    },
     popover: state.popover,
     imageSelectorDialog: state.imageSelectorDialog,
     tempSelectedImageId: state.tempSelectedImageId,
