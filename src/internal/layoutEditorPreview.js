@@ -1,4 +1,9 @@
 import { parseAndRender } from "jempl";
+import {
+  buildLayoutRenderElements,
+  extractFileIdsFromRenderState,
+} from "./project/layout.js";
+import { toHierarchyStructure } from "./project/tree.js";
 
 const DEFAULT_DIALOGUE_CHARACTER_NAME = "Character";
 const DEFAULT_DIALOGUE_CONTENT = "This is a sample dialogue content.";
@@ -11,6 +16,8 @@ const OVERLAY_FILL = {
   color: "#ffffff",
   alpha: 0.001,
 };
+
+const isBlobUrl = (url) => typeof url === "string" && url.startsWith("blob:");
 
 const toPreviewVariableValue = (variable = {}) => {
   const value = variable.value ?? variable.default;
@@ -217,7 +224,7 @@ const buildOverlayTree = ({ path, overlayId, draggable }) => {
   return overlayTree;
 };
 
-export const createLayoutPreviewData = ({
+export const createLayoutEditorPreviewData = ({
   variablesData,
   dialogueDefaultValues,
   choicesData,
@@ -227,7 +234,6 @@ export const createLayoutPreviewData = ({
     DEFAULT_DIALOGUE_CHARACTER_NAME;
   const dialogueContent =
     dialogueDefaultValues?.["dialogue-content"] ?? DEFAULT_DIALOGUE_CONTENT;
-  const choiceItems = createChoiceItems(choicesData);
 
   return {
     variables: createPreviewVariables(variablesData),
@@ -242,21 +248,18 @@ export const createLayoutPreviewData = ({
       }),
     },
     choice: {
-      items: choiceItems,
+      items: createChoiceItems(choicesData),
     },
   };
 };
 
-export const resolveLayoutPreviewElements = ({
-  elements,
-  previewData,
-} = {}) => {
+const resolveLayoutPreviewElements = ({ elements, previewData } = {}) => {
   return toElementList(
     parseAndRender(toElementList(elements), previewData ?? {}),
   );
 };
 
-export const createSelectedLayoutOverlay = ({
+export const createLayoutEditorSelectionOverlay = ({
   parsedElements,
   selectedItemId,
 } = {}) => {
@@ -298,4 +301,139 @@ export const createSelectedLayoutOverlay = ({
   }
 
   return [...secondaryOverlays, primaryOverlay];
+};
+
+const loadLayoutEditorAssets = async (deps, fileReferences, fontsItems) => {
+  const { projectService, store } = deps;
+  const assets = {};
+
+  for (const fileReference of fileReferences) {
+    const { url: fileId, type: fileType } = fileReference;
+    const cacheKey = fileId;
+    let url;
+
+    const cachedUrl = store.selectCachedFileContent({ fileId: cacheKey });
+    if (cachedUrl) {
+      if (!isBlobUrl(cachedUrl)) {
+        url = cachedUrl;
+      } else {
+        store.clearCachedFileContent({ fileId: cacheKey });
+      }
+    }
+
+    if (!url) {
+      const result = await projectService.getFileContent(fileId);
+      url = result.url;
+      if (!isBlobUrl(url)) {
+        store.cacheFileContent({ fileId: cacheKey, url });
+      }
+    }
+
+    let type = fileType || "image/png";
+    const fontItem = Object.values(fontsItems).find(
+      (font) => font.fileId === fileId,
+    );
+    if (fontItem) {
+      const fileName = fontItem.name || "";
+      if (fileName.endsWith(".woff2")) {
+        type = "font/woff2";
+      } else if (fileName.endsWith(".woff")) {
+        type = "font/woff";
+      } else if (fileName.endsWith(".ttf")) {
+        type = "font/ttf";
+      } else if (fileName.endsWith(".otf")) {
+        type = "font/otf";
+      } else {
+        type = "font/ttf";
+      }
+    }
+
+    assets[`${fileId}`] = {
+      url,
+      type,
+    };
+  }
+
+  return assets;
+};
+
+export const createLayoutEditorRenderState = (deps) => {
+  const { store, projectService } = deps;
+  const repositoryState = projectService.getRepositoryState();
+  const {
+    layouts,
+    controls,
+    images: { items: imageItems },
+    textStyles: textStylesData,
+    colors: colorsData,
+    fonts: fontsData,
+    variables: variablesData,
+  } = repositoryState;
+  const textStyleItems = textStylesData?.items || {};
+  const colorsItems = colorsData?.items || {};
+  const fontsItems = fontsData?.items || {};
+  const layoutId = store.selectLayoutId();
+  const resourceType = store.selectLayoutResourceType();
+  const storeElements = store.selectItems();
+  const resourceCollection = resourceType === "controls" ? controls : layouts;
+  const layoutElements =
+    storeElements || resourceCollection?.items?.[layoutId]?.elements;
+  const layoutHierarchyStructure = toHierarchyStructure(layoutElements);
+  const renderStateElements = buildLayoutRenderElements(
+    layoutHierarchyStructure,
+    imageItems,
+    { items: textStyleItems },
+    { items: colorsItems },
+    { items: fontsItems },
+    { layoutId },
+  );
+
+  return {
+    renderStateElements,
+    fontsItems,
+    variablesData,
+  };
+};
+
+export const renderLayoutEditorPreview = async (deps) => {
+  try {
+    const { store, graphicsService } = deps;
+    const { renderStateElements, fontsItems, variablesData } =
+      createLayoutEditorRenderState(deps);
+    const selectedItem = store.selectSelectedItemData();
+    const fileReferences = extractFileIdsFromRenderState(renderStateElements);
+
+    let assets = await loadLayoutEditorAssets(deps, fileReferences, fontsItems);
+    try {
+      await graphicsService.loadAssets(assets);
+    } catch {
+      deps.store.clearFileContentCache();
+      assets = await loadLayoutEditorAssets(deps, fileReferences, fontsItems);
+      await graphicsService.loadAssets(assets);
+    }
+
+    const finalElements = resolveLayoutPreviewElements({
+      elements: renderStateElements,
+      previewData: createLayoutEditorPreviewData({
+        variablesData,
+        dialogueDefaultValues: store.selectDialogueDefaultValues(),
+        choicesData: store.selectChoicesData(),
+      }),
+    });
+
+    const parsedState = graphicsService.parse({
+      elements: finalElements,
+    });
+    const overlayElements = createLayoutEditorSelectionOverlay({
+      parsedElements: parsedState.elements,
+      selectedItemId: selectedItem?.id,
+    });
+
+    graphicsService.render({
+      elements: [...finalElements, ...overlayElements],
+      animations: [],
+    });
+  } catch (error) {
+    console.error("[layoutEditor] Failed to render preview", error);
+  }
 };

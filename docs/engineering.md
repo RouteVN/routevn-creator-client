@@ -404,6 +404,8 @@ When deciding where new code goes, apply these rules in order:
 
 1. If it owns one route or screen, put it in `src/pages/`.
 2. If it is reusable visual UI, put it in `src/components/`.
+   `src/components/<name>/` is limited to Rettangoli FE component files only.
+   Do not add ad hoc sibling helper modules there.
 3. If it owns low-level DOM or browser-native behavior, put it in
    `src/primitives/`.
 4. If it is shared UI/page/store/handler glue and may touch refs, render,
@@ -431,6 +433,26 @@ Most pages and many components use Rettangoli’s fixed file pattern:
 - `*.view.yaml`
 - `*.store.js`
 - `*.handlers.js`
+
+Allowed component-folder files are Rettangoli FE files only, for example:
+
+- `*.view.yaml`
+- `*.store.js`
+- `*.handlers.js`
+- optional FE companion files such as `*.schema.yaml`,
+  `*.constants.yaml`, or `*.methods.js`
+
+Do not place ad hoc helper modules, editor-specific orchestration files, or
+other non-FE support files inside `src/components/<name>/`.
+
+If code is shared or specific but is not itself one of the component FE files,
+put it somewhere else based on ownership:
+
+- `src/internal/ui/` for shared UI/store/handler orchestration
+- `src/internal/project/` for project semantics
+- `src/internal/` for small pure app-owned helpers
+- `src/deps/services/` or `src/deps/clients/` for service/client-owned code
+- the owning page folder when the code is page-specific
 
 The intended split is:
 

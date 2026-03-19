@@ -4,11 +4,51 @@ import {
 } from "../../internal/project/interactionPayload.js";
 
 const ACTION_INTERACTION_TYPES = ["click", "rightClick"];
+const EMPTY_TREE = { items: {}, tree: [] };
 
 const getInteractionPropertyName = (interactionType) => {
   return ACTION_INTERACTION_TYPES.includes(interactionType)
     ? interactionType
     : "click";
+};
+
+const emitPanelUpdate = (
+  { dispatchEvent, store },
+  { name, value, bubbles = false } = {},
+) => {
+  dispatchEvent(
+    new CustomEvent("update", {
+      bubbles,
+      detail: {
+        formValues: store.selectValues(),
+        name,
+        value,
+      },
+    }),
+  );
+};
+
+const applyPanelValueUpdate = (
+  deps,
+  { name, value, closePopover = false, closeImageSelector = false } = {},
+) => {
+  const { store, render } = deps;
+
+  store.updateValueProperty({
+    name,
+    value,
+  });
+
+  if (closePopover) {
+    store.closePopoverForm();
+  }
+
+  if (closeImageSelector) {
+    store.closeImageSelectorDialog();
+  }
+
+  render();
+  emitPanelUpdate(deps, { name, value });
 };
 
 export const handleBeforeMount = (deps) => {
@@ -17,42 +57,43 @@ export const handleBeforeMount = (deps) => {
   store.setValues({
     values,
   });
-  store.setVariablesData({
-    variablesData: props.variablesData || { items: {}, tree: [] },
-  });
-};
-
-export const handleAfterMount = async (deps) => {
-  const { projectService, store, render } = deps;
-  await projectService.ensureRepository();
-  const { textStyles } = projectService.getState();
-
   store.setTextStylesData({
-    textStylesData: textStyles || { items: {}, tree: [] },
+    textStylesData: props.textStylesData || EMPTY_TREE,
   });
-  render();
+  store.setVariablesData({
+    variablesData: props.variablesData || EMPTY_TREE,
+  });
 };
 
 export const handleOnUpdate = (deps, payload) => {
   const { oldProps, newProps } = payload;
   const { store, render } = deps;
-  if (oldProps?.key !== newProps?.key) {
-    const values = newProps.values || {};
-    store.setValues({
-      values,
-    });
-    store.setVariablesData({
-      variablesData: newProps.variablesData || { items: {}, tree: [] },
-    });
-    render();
+  if (
+    oldProps?.key === newProps?.key &&
+    oldProps?.values === newProps?.values &&
+    oldProps?.variablesData === newProps?.variablesData &&
+    oldProps?.textStylesData === newProps?.textStylesData
+  ) {
+    return;
   }
+
+  store.setValues({
+    values: newProps.values || {},
+  });
+  store.setTextStylesData({
+    textStylesData: newProps.textStylesData || EMPTY_TREE,
+  });
+  store.setVariablesData({
+    variablesData: newProps.variablesData || EMPTY_TREE,
+  });
+  render();
 };
 
 export const handleGroupItemClick = (deps, payload) => {
   const { render, store } = deps;
   const { _event } = payload;
   const name = _event.currentTarget.dataset.name;
-  const popoverForm = store.selectFieldPopoverForm(name);
+  const popoverForm = store.selectFieldPopoverForm({ name });
   store.openPopoverForm({
     x: _event.clientX,
     y: _event.clientY,
@@ -70,29 +111,14 @@ export const handlePopverFormClose = (deps) => {
 };
 
 export const handleOptionSelected = (deps, payload) => {
-  const { store, render, dispatchEvent } = deps;
   const { _event } = payload;
   const name = _event.currentTarget.dataset.name;
 
-  store.updateValueProperty({
-    name: name,
+  applyPanelValueUpdate(deps, {
+    name,
     value: _event.detail.value,
+    closePopover: true,
   });
-
-  store.closePopoverForm();
-
-  const formValues = store.selectValues();
-  render();
-
-  dispatchEvent(
-    new CustomEvent("update", {
-      detail: {
-        formValues,
-        name,
-        value: _event.detail.value,
-      },
-    }),
-  );
 };
 
 export const handleSectionActionClick = async (deps, payload) => {
@@ -156,31 +182,18 @@ export const handleSectionActionClick = async (deps, payload) => {
 };
 
 export const handleFormActions = (deps, payload) => {
-  const { store, render, dispatchEvent } = deps;
+  const { store } = deps;
   const { _event } = payload;
   const { name } = store.selectPopoverForm();
-  store.updateValueProperty({
+  applyPanelValueUpdate(deps, {
     name,
     value: _event.detail.values.value,
+    closePopover: true,
   });
-
-  store.closePopoverForm();
-  render();
-
-  const formValues = store.selectValues();
-  dispatchEvent(
-    new CustomEvent("update", {
-      detail: {
-        formValues,
-        name,
-        value: _event.detail.values.value,
-      },
-    }),
-  );
 };
 
 export const handleActionsChange = (deps, payload) => {
-  const { store, render, dispatchEvent } = deps;
+  const { store, render } = deps;
   const interactionType = store.selectActiveInteractionType();
   const interactionKey = getInteractionPropertyName(interactionType);
 
@@ -204,17 +217,10 @@ export const handleActionsChange = (deps, payload) => {
   });
 
   render();
-
-  const formValues = store.selectValues();
-  dispatchEvent(
-    new CustomEvent("update", {
-      detail: {
-        formValues,
-        name: `${interactionKey}.payload.actions`,
-        value: newActions,
-      },
-    }),
-  );
+  emitPanelUpdate(deps, {
+    name: `${interactionKey}.payload.actions`,
+    value: newActions,
+  });
 };
 
 export const handleListBarItemClick = async (deps, payload) => {
@@ -238,7 +244,7 @@ export const handlePopoverFormChange = async (deps, payload) => {
 };
 
 export const handleListBarItemRightClick = async (deps, payload) => {
-  const { render, store, appService, dispatchEvent } = deps;
+  const { render, store, appService } = deps;
   const { _event: event } = payload;
   event.preventDefault();
   const { name } = event.currentTarget.dataset;
@@ -286,17 +292,10 @@ export const handleListBarItemRightClick = async (deps, payload) => {
     }
   }
   render();
-
-  const formValues = store.selectValues();
-  dispatchEvent(
-    new CustomEvent("update", {
-      detail: {
-        formValues,
-        name,
-        value: undefined,
-      },
-    }),
-  );
+  emitPanelUpdate(deps, {
+    name,
+    value: undefined,
+  });
 };
 
 // --- List Item ---
@@ -315,7 +314,7 @@ export const handleListItemClick = async (deps, payload) => {
 };
 
 export const handleListItemRightClick = async (deps, payload) => {
-  const { render, store, appService, dispatchEvent } = deps;
+  const { render, store, appService } = deps;
   const { _event: event } = payload;
   event.preventDefault();
   const { id, interaction } = event.currentTarget.dataset;
@@ -346,17 +345,11 @@ export const handleListItemRightClick = async (deps, payload) => {
         actions,
       },
     });
-    const formValues = store.selectValues();
-    dispatchEvent(
-      new CustomEvent("update", {
-        bubbles: true,
-        detail: {
-          formValues,
-          name: `${interactionKey}.payload.actions`,
-          value: actions,
-        },
-      }),
-    );
+    emitPanelUpdate(deps, {
+      name: `${interactionKey}.payload.actions`,
+      value: actions,
+      bubbles: true,
+    });
   }
   render();
 };
@@ -377,25 +370,12 @@ export const handleImageSelectorCancel = (deps) => {
 };
 
 export const handleImageSelectorSubmit = (deps) => {
-  const { store, render, dispatchEvent } = deps;
+  const { store } = deps;
   const imageId = store.selectTempSelectedImageId();
   const { name } = store.selectImageSelectorDialog();
-
-  store.updateValueProperty({
-    name: name,
+  applyPanelValueUpdate(deps, {
+    name,
     value: imageId,
+    closeImageSelector: true,
   });
-  store.closeImageSelectorDialog();
-  render();
-
-  const formValues = store.selectValues();
-  dispatchEvent(
-    new CustomEvent("update", {
-      detail: {
-        formValues,
-        name: name,
-        value: imageId,
-      },
-    }),
-  );
 };

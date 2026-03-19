@@ -1,0 +1,270 @@
+numberPopoverForm: &numberPopoverForm
+  fields:
+    - name: value
+      type: input-number
+  actions:
+    buttons:
+      - id: submit
+        variant: pr
+        label: Submit
+
+textPopoverForm: &textPopoverForm
+  fields:
+    - name: value
+      type: input-text
+  actions:
+    buttons:
+      - id: submit
+        variant: pr
+        label: Submit
+
+layoutSections:
+  - label: Position
+    items:
+      - type: group
+        fields:
+          - type: clickable-value
+            svg: x
+            name: x
+            value: "${values.x}"
+            popoverForm: *numberPopoverForm
+          - type: clickable-value
+            svg: y
+            name: y
+            value: "${values.y}"
+            popoverForm: *numberPopoverForm
+  - label: Layout
+    items:
+      - type: group
+        fields:
+          - type: clickable-value
+            svg: w
+            name: width
+            value: "${values.width}"
+            popoverForm: *numberPopoverForm
+          - "$when": "supportsHeight"
+            type: clickable-value
+            svg: h
+            name: height
+            value: "${values.height}"
+            popoverForm: *numberPopoverForm
+      - "$when": "supportsAnchor"
+        type: select
+        label: Anchor
+        name: anchor
+        value: "${values.anchor}"
+        options:
+          - label: Top Left
+            value:
+              x: 0
+              y: 0
+          - label: Top Center
+            value:
+              x: 0.5
+              y: 0
+          - label: Top Right
+            value:
+              x: 1
+              y: 0
+          - label: Center Left
+            value:
+              x: 0
+              y: 0.5
+          - label: Center
+            value:
+              x: 0.5
+              y: 0.5
+          - label: Center Right
+            value:
+              x: 1
+              y: 0.5
+          - label: Bottom Left
+            value:
+              x: 0
+              y: 1
+          - label: Bottom Center
+            value:
+              x: 0.5
+              y: 1
+          - label: Bottom Right
+            value:
+              x: 1
+              y: 1
+  - "$when": "supportsDirection"
+    label: Direction
+    items:
+      - type: select
+        label: Direction
+        name: direction
+        value: "${values.direction}"
+        options:
+          - label: Absolute
+            value: ""
+          - label: Horizontal
+            value: horizontal
+          - label: Vertical
+            value: vertical
+      - "$when": "showsGapField"
+        type: group
+        fields:
+          - type: clickable-value
+            label: Gap
+            name: gap
+            value: "${values.gap}"
+            popoverForm: *numberPopoverForm
+  - "$when": "supportsSpriteImages"
+    id: images
+    label: Image
+    "$if canAddSpriteImageVariant":
+      labelAction: plus
+    items:
+      - type: list-bar
+        items:
+          - "$when": "values.imageId"
+            name: imageId
+            label: Default
+            imageId: "${values.imageId}"
+          - "$when": "values.hoverImageId"
+            name: hoverImageId
+            label: Hover
+            imageId: "${values.hoverImageId}"
+          - "$when": "values.clickImageId"
+            name: clickImageId
+            label: Click
+            imageId: "${values.clickImageId}"
+  - "$when": "supportsSliderImages"
+    id: slider-images
+    label: Slider Bar
+    items:
+      - type: list-bar
+        items:
+          - name: barImageId
+            label: Default
+            imageId: "${values.barImageId}"
+          - name: hoverBarImageId
+            label: Hover
+            imageId: "${values.hoverBarImageId}"
+  - "$when": "supportsSliderImages"
+    id: slider-thumb
+    label: Slider Thumb
+    items:
+      - type: list-bar
+        items:
+          - name: thumbImageId
+            label: Default
+            imageId: "${values.thumbImageId}"
+          - name: hoverThumbImageId
+            label: Hover
+            imageId: "${values.hoverThumbImageId}"
+  - "$when": "supportsSliderValues"
+    label: Slider Values
+    items:
+      - type: group
+        fields:
+          - type: clickable-value
+            label: Min
+            name: min
+            value: "${values.min}"
+            popoverForm: *numberPopoverForm
+          - type: clickable-value
+            label: Max
+            name: max
+            value: "${values.max}"
+            popoverForm: *numberPopoverForm
+      - type: group
+        fields:
+          - type: clickable-value
+            label: Step
+            name: step
+            value: "${values.step}"
+            popoverForm: *numberPopoverForm
+      - type: select
+        label: Update Variable
+        name: variableId
+        value: "${values.variableId}"
+        options: "${variableOptionsWithNone}"
+  - "$when": "supportsTextEditing"
+    label: Text
+    items:
+      - type: group
+        fields:
+          - type: clickable-value
+            name: text
+            value: "${values.text}"
+            popoverForm: *textPopoverForm
+  - "$when": "supportsTextStyles"
+    label: Text Styles
+    items:
+      - type: select
+        label: Default
+        name: textStyleId
+        value: "${values.textStyleId}"
+        options: "${textStyleItems}"
+      - type: select
+        label: Hover
+        name: hoverTextStyleId
+        value: "${values.hoverTextStyleId}"
+        options: "${textStyleItemsWithNone}"
+      - type: select
+        label: Clicked
+        name: clickTextStyleId
+        value: "${values.clickTextStyleId}"
+        options: "${textStyleItemsWithNone}"
+  - "$when": "supportsTextAlignment"
+    label: Text Alignment
+    items:
+      - type: select
+        label: Alignment
+        name: style.align
+        value: "${values.style.align}"
+        options:
+          - label: Left
+            value: left
+          - label: Center
+            value: center
+          - label: Right
+            value: right
+  - "$when": "supportsActions"
+    id: actions
+    label: Actions
+    labelAction: plus
+    items:
+      - type: list-item
+        items: "${values.actions}"
+
+controlSections:
+  - label: Position
+    items:
+      - type: group
+        fields:
+          - type: clickable-value
+            svg: x
+            name: x
+            value: "${values.x}"
+            popoverForm: *numberPopoverForm
+          - type: clickable-value
+            svg: y
+            name: y
+            value: "${values.y}"
+            popoverForm: *numberPopoverForm
+  - label: Layout
+    items:
+      - type: group
+        fields:
+          - type: clickable-value
+            svg: w
+            name: width
+            value: "${values.width}"
+            popoverForm: *numberPopoverForm
+          - type: clickable-value
+            svg: h
+            name: height
+            value: "${values.height}"
+            popoverForm: *numberPopoverForm
+  - "$when": "supportsActions"
+    id: actions
+    label: Actions
+    labelAction: plus
+    items:
+      - type: list-item
+        items: "${values.actions}"
