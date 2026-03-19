@@ -1,6 +1,7 @@
 import { buildLayoutElements } from "../../internal/project/layout.js";
 import { toHierarchyStructure } from "../../internal/project/tree.js";
 import { buildSceneEditorLineViewModels } from "../../internal/ui/sceneEditor/lineViewModels.js";
+import { overlaySceneWithEditorSession } from "../../internal/ui/sceneEditor/editorSession.js";
 import {
   constructProjectData,
   getSectionPresentation,
@@ -47,6 +48,25 @@ const toFlatTree = (ids = []) => {
   return ids.map((id) => ({ id }));
 };
 
+const getEditorSessionForSection = (state, sceneId, sectionId) => {
+  const session = state.editorSession;
+  if (!session) {
+    return undefined;
+  }
+
+  if (session.sceneId !== sceneId || session.sectionId !== sectionId) {
+    return undefined;
+  }
+
+  return session;
+};
+
+const getEditorSessionLines = (session) => {
+  return (session?.lineOrder || [])
+    .map((lineId) => session?.linesById?.[lineId]?.line)
+    .filter(Boolean);
+};
+
 const buildProjectDataSourceState = (state) => {
   const repositoryState = state.repositoryState || {};
   const domainState = state.domainState || {};
@@ -72,11 +92,23 @@ const buildProjectDataSourceState = (state) => {
         continue;
       }
 
-      const lineIds = Array.isArray(section.lineIds) ? section.lineIds : [];
+      const editorSession = getEditorSessionForSection(
+        state,
+        sceneId,
+        sectionId,
+      );
+      const sessionLines = getEditorSessionLines(editorSession);
+      const lineIds = editorSession
+        ? sessionLines.map((line) => line.id)
+        : Array.isArray(section.lineIds)
+          ? section.lineIds
+          : [];
       const lineItems = {};
 
       for (const lineId of lineIds) {
-        const line = domainLines[lineId];
+        const line =
+          sessionLines.find((sessionLine) => sessionLine.id === lineId) ||
+          domainLines[lineId];
         if (!line) {
           continue;
         }
@@ -90,7 +122,9 @@ const buildProjectDataSourceState = (state) => {
       sectionItems[sectionId] = {
         id: sectionId,
         name: section.name || `Section ${sectionId}`,
-        initialLineId: section.initialLineId,
+        initialLineId: editorSession
+          ? sessionLines[0]?.id
+          : section.initialLineId,
         lines: {
           items: lineItems,
           tree: toFlatTree(Object.keys(lineItems)),
@@ -156,7 +190,12 @@ export const createInitialState = () => ({
     },
   },
   repositoryState: {},
+  repositoryRevision: 0,
   domainState: {},
+  editorSession: undefined,
+  draftSaveTimerId: undefined,
+  lastDraftFlushStartedAt: 0,
+  draftSavePendingSinceAt: 0,
   previewVisible: false,
   previewSceneId: undefined,
   previewSectionId: undefined,
@@ -182,8 +221,36 @@ export const setRepositoryState = ({ state }, { repository } = {}) => {
   state.repositoryState = repository;
 };
 
+export const setRepositoryRevision = ({ state }, { revision } = {}) => {
+  state.repositoryRevision = Number.isFinite(revision) ? revision : 0;
+};
+
 export const setDomainState = ({ state }, { domainState } = {}) => {
   state.domainState = domainState || {};
+};
+
+export const setEditorSession = ({ state }, { editorSession } = {}) => {
+  state.editorSession = editorSession;
+};
+
+export const clearEditorSession = ({ state }, _payload = {}) => {
+  state.editorSession = undefined;
+};
+
+export const setDraftSaveTimerId = ({ state }, { timerId } = {}) => {
+  state.draftSaveTimerId = timerId;
+};
+
+export const clearDraftSaveTimer = ({ state }, _payload = {}) => {
+  state.draftSaveTimerId = undefined;
+};
+
+export const setLastDraftFlushStartedAt = ({ state }, { timestamp } = {}) => {
+  state.lastDraftFlushStartedAt = Number.isFinite(timestamp) ? timestamp : 0;
+};
+
+export const setDraftSavePendingSinceAt = ({ state }, { timestamp } = {}) => {
+  state.draftSavePendingSinceAt = Number.isFinite(timestamp) ? timestamp : 0;
 };
 
 export const showPreviewSceneId = (
@@ -234,8 +301,28 @@ export const selectRepositoryState = ({ state }) => {
   return state.repositoryState;
 };
 
+export const selectRepositoryRevision = ({ state }) => {
+  return state.repositoryRevision;
+};
+
 export const selectDomainState = ({ state }) => {
   return state.domainState;
+};
+
+export const selectEditorSession = ({ state }) => {
+  return state.editorSession;
+};
+
+export const selectDraftSaveTimerId = ({ state }) => {
+  return state.draftSaveTimerId;
+};
+
+export const selectLastDraftFlushStartedAt = ({ state }) => {
+  return state.lastDraftFlushStartedAt;
+};
+
+export const selectDraftSavePendingSinceAt = ({ state }) => {
+  return state.draftSavePendingSinceAt;
 };
 
 export const selectCharacters = ({ state }) => {
@@ -385,13 +472,18 @@ const buildSceneFromRepositoryState = ({ state }) => {
   };
 };
 
-export const selectScene = ({ state }) => {
+export const selectCommittedScene = ({ state }) => {
   const domainScene = buildSceneFromDomainState({ state });
   if (domainScene) {
     return domainScene;
   }
 
   return buildSceneFromRepositoryState({ state });
+};
+
+export const selectScene = ({ state }) => {
+  const baseScene = selectCommittedScene({ state });
+  return overlaySceneWithEditorSession(baseScene, state.editorSession);
 };
 
 export const selectSceneId = ({ state }) => {
@@ -545,86 +637,6 @@ export const hideSectionCreateDialog = ({ state }, _payload = {}) => {
     ...state.sectionCreateDialog,
     isOpen: false,
   };
-};
-
-export const setLineTextContent = ({ state }, { lineId, content } = {}) => {
-  const sceneId = state.sceneId;
-  const sectionId = state.selectedSectionId;
-  if (!sceneId || !sectionId || !lineId) {
-    return;
-  }
-
-  const domainLine = state.domainState?.lines?.[lineId];
-  if (
-    domainLine &&
-    state.domainState?.sections?.[domainLine.sectionId]?.sceneId === sceneId &&
-    domainLine.sectionId === sectionId
-  ) {
-    if (!domainLine.actions) {
-      domainLine.actions = {};
-    }
-    if (!domainLine.actions.dialogue) {
-      domainLine.actions.dialogue = {};
-    }
-    domainLine.actions.dialogue.content = content;
-  }
-
-  const repositoryLine =
-    state.repositoryState?.scenes?.items?.[sceneId]?.sections?.items?.[
-      sectionId
-    ]?.lines?.items?.[lineId];
-  if (repositoryLine) {
-    if (!repositoryLine.actions) {
-      repositoryLine.actions = {};
-    }
-    if (!repositoryLine.actions.dialogue) {
-      repositoryLine.actions.dialogue = {};
-    }
-    repositoryLine.actions.dialogue.content = content;
-  }
-};
-
-export const splitLineOptimistically = (
-  { state },
-  { sectionId, lineId, newLineId, leftContent, newLineActions } = {},
-) => {
-  if (!sectionId || !lineId || !newLineId) {
-    return;
-  }
-
-  const section = state.domainState?.sections?.[sectionId];
-  const currentLine = state.domainState?.lines?.[lineId];
-  if (!section || !currentLine) {
-    return;
-  }
-
-  if (!currentLine.actions) {
-    currentLine.actions = {};
-  }
-
-  const existingDialogue = currentLine.actions.dialogue || {};
-  currentLine.actions.dialogue = {
-    ...existingDialogue,
-    content: leftContent || [{ text: "" }],
-  };
-  currentLine.updatedAt = Date.now();
-
-  if (!state.domainState.lines) {
-    state.domainState.lines = {};
-  }
-
-  state.domainState.lines[newLineId] = {
-    id: newLineId,
-    sectionId,
-    actions: structuredClone(newLineActions || {}),
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  };
-
-  const currentIndex = section.lineIds.indexOf(lineId);
-  const insertIndex =
-    currentIndex >= 0 ? currentIndex + 1 : section.lineIds.length;
-  section.lineIds.splice(insertIndex, 0, newLineId);
 };
 
 export const selectProjectData = ({ state }) => {

@@ -331,6 +331,15 @@ export const createProjectRepositoryService = ({
       throw new Error("No project selected (missing ?p= in URL)");
     }
 
+    if (
+      currentProjectId === projectId &&
+      currentRepository &&
+      currentStore &&
+      currentReference
+    ) {
+      return currentRepository;
+    }
+
     const reference = await resolveProjectReferenceByProjectId(projectId);
     const repository = await getRepositoryByReference(reference);
     const store = await getStoreByReference(reference);

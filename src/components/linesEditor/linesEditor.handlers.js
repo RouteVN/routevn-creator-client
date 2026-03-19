@@ -11,6 +11,17 @@ const getLineContent = (element) => {
   return element.getContent();
 };
 
+const nowMs = () => {
+  if (
+    typeof performance !== "undefined" &&
+    typeof performance.now === "function"
+  ) {
+    return performance.now();
+  }
+
+  return Date.now();
+};
+
 const getCursorPosition = (element) => {
   if (!element || typeof element.getCaretPosition !== "function") {
     return 0;
@@ -35,7 +46,7 @@ const shouldIgnoreElementInput = (element) => {
   return element?.__rvnIgnoreInputUntilFocus === true;
 };
 
-const suppressElementInputUntilFocus = (element) => {
+const suppressElementInput = (element) => {
   if (element) {
     element.__rvnIgnoreInputUntilFocus = true;
   }
@@ -47,24 +58,27 @@ const clearElementInputSuppression = (element) => {
   }
 };
 
-const dispatchEditorDataChanged = (dispatchEvent, element) => {
-  const lineId = getLineIdFromElement(element);
-  if (!lineId) {
-    return;
+const shouldIgnoreElementContentSync = (element) => {
+  return element?.__rvnIgnoreContentSyncUntilBlur === true;
+};
+
+const suppressElementContentSyncUntilBlur = (element) => {
+  if (element) {
+    element.__rvnIgnoreContentSyncUntilBlur = true;
   }
+};
 
-  const content = getLineContent(element);
-  debugLog("lines", "editor.dispatch-data-changed", {
-    lineId,
-    contentLength: content.length,
-    content: previewDebugText(content),
-  });
+const clearElementContentSyncSuppression = (element) => {
+  if (element) {
+    element.__rvnIgnoreContentSyncUntilBlur = false;
+  }
+};
 
+const dispatchCompositionStateChanged = (dispatchEvent, isComposing) => {
   dispatchEvent(
-    new CustomEvent("editor-data-changed", {
+    new CustomEvent("composition-state-changed", {
       detail: {
-        lineId,
-        content,
+        isComposing: isComposing === true,
       },
     }),
   );
@@ -127,13 +141,90 @@ const getLineText = (line) => {
   return line?.actions?.dialogue?.content?.[0]?.text ?? "";
 };
 
-const syncRenderedLineContent = (refs, lines, lineId) => {
+const getLineById = (lines, lineId) => {
+  return (lines || []).find((item) => item.id === lineId);
+};
+
+const shouldPreserveLiveElementContent = (element, lines) => {
+  const lineId = getLineIdFromElement(element);
   if (!lineId) {
+    return false;
+  }
+
+  const line = getLineById(lines, lineId);
+  if (!line) {
+    return false;
+  }
+
+  return getLineContent(element) !== getLineText(line);
+};
+
+const dispatchEditorDataChanged = (dispatchEvent, element) => {
+  const lineId = getLineIdFromElement(element);
+  if (!lineId) {
+    return;
+  }
+
+  dispatchEvent(
+    new CustomEvent("editor-data-changed", {
+      detail: {
+        lineId,
+        content: getLineContent(element),
+      },
+    }),
+  );
+};
+
+const restoreRenderedLineContent = (
+  refs,
+  lineId,
+  content,
+  remainingFrames = 2,
+) => {
+  const lineRef = getLineElementById(refs, lineId);
+  if (!lineRef) {
+    if (remainingFrames > 0) {
+      requestAnimationFrame(() => {
+        restoreRenderedLineContent(refs, lineId, content, remainingFrames - 1);
+      });
+    }
+    return;
+  }
+
+  if (typeof lineRef.updateContent !== "function") {
+    return;
+  }
+
+  lineRef.updateContent(content);
+};
+
+const renderPreservingLiveLineContent = (deps, element) => {
+  const lineId = getLineIdFromElement(element);
+  if (!lineId) {
+    deps.render();
+    return;
+  }
+
+  const liveContent = getLineContent(element);
+  deps.render();
+  restoreRenderedLineContent(deps.refs, lineId, liveContent);
+};
+
+const syncRenderedLineContent = (refs, lines, lineId, { skipLineIds } = {}) => {
+  if (!lineId) {
+    return;
+  }
+
+  if (skipLineIds?.has(lineId)) {
     return;
   }
 
   const lineRef = getLineElementById(refs, lineId);
   if (!lineRef || typeof lineRef.updateContent !== "function") {
+    return;
+  }
+
+  if (shouldIgnoreElementContentSync(lineRef)) {
     return;
   }
 
@@ -145,9 +236,9 @@ const syncRenderedLineContent = (refs, lines, lineId) => {
   lineRef.updateContent(getLineText(line));
 };
 
-const syncAllRenderedLineContent = (refs, lines) => {
+const syncAllRenderedLineContent = (refs, lines, options = {}) => {
   for (const line of lines || []) {
-    syncRenderedLineContent(refs, lines, line.id);
+    syncRenderedLineContent(refs, lines, line.id, options);
   }
 };
 
@@ -165,14 +256,19 @@ const didLineStructureChange = (oldLines, newLines) => {
   return false;
 };
 
-const syncChangedRenderedLineContent = (refs, oldLines, newLines) => {
+const syncChangedRenderedLineContent = (
+  refs,
+  oldLines,
+  newLines,
+  options = {},
+) => {
   if (!oldLines || oldLines.length === 0) {
-    syncAllRenderedLineContent(refs, newLines);
+    syncAllRenderedLineContent(refs, newLines, options);
     return;
   }
 
   if (didLineStructureChange(oldLines, newLines)) {
-    syncAllRenderedLineContent(refs, newLines);
+    syncAllRenderedLineContent(refs, newLines, options);
     return;
   }
 
@@ -183,7 +279,7 @@ const syncChangedRenderedLineContent = (refs, oldLines, newLines) => {
   for (const line of newLines || []) {
     const nextContent = getLineText(line);
     if (oldLineContentById.get(line.id) !== nextContent) {
-      syncRenderedLineContent(refs, newLines, line.id);
+      syncRenderedLineContent(refs, newLines, line.id, options);
     }
   }
 };
@@ -250,6 +346,7 @@ const clearDeleteShortcutState = (store) => {
   store.setAwaitingDeleteShortcut({
     awaitingDeleteShortcut: false,
   });
+  store.setDeleteShortcutStartedAt({ startedAt: 0 });
   const timerId = store.selectDeleteShortcutTimerId();
   if (timerId !== undefined) {
     clearTimeout(timerId);
@@ -258,6 +355,7 @@ const clearDeleteShortcutState = (store) => {
 };
 
 const armDeleteShortcutState = (store) => {
+  const startedAt = nowMs();
   const timerId = store.selectDeleteShortcutTimerId();
   if (timerId !== undefined) {
     clearTimeout(timerId);
@@ -267,6 +365,8 @@ const armDeleteShortcutState = (store) => {
     clearDeleteShortcutState(store);
   }, DELETE_SHORTCUT_TIMEOUT_MS);
   store.setDeleteShortcutTimerId({ timerId: nextTimerId });
+  store.setDeleteShortcutStartedAt({ startedAt });
+  return startedAt;
 };
 
 const handleBlockModeDeleteShortcut = (deps, payload, { lineId } = {}) => {
@@ -282,6 +382,7 @@ const handleBlockModeDeleteShortcut = (deps, payload, { lineId } = {}) => {
   const isAwaitingDeleteShortcut = store.selectAwaitingDeleteShortcut();
 
   if (isAwaitingDeleteShortcut) {
+    const startedAt = store.selectDeleteShortcutStartedAt();
     clearDeleteShortcutState(store);
 
     if (!isDeleteShortcutKey) {
@@ -295,6 +396,11 @@ const handleBlockModeDeleteShortcut = (deps, payload, { lineId } = {}) => {
     if (!targetLineId) {
       return true;
     }
+
+    console.info("[sceneEditor][perf] delete-shortcut-fired", {
+      lineId: targetLineId,
+      elapsedMs: Number((nowMs() - startedAt).toFixed(1)),
+    });
 
     dispatchEvent(
       new CustomEvent("delete-line-shortcut", {
@@ -314,6 +420,9 @@ const handleBlockModeDeleteShortcut = (deps, payload, { lineId } = {}) => {
     awaitingDeleteShortcut: true,
   });
   armDeleteShortcutState(store);
+  console.info("[sceneEditor][perf] delete-shortcut-armed", {
+    lineId: lineId || props.selectedLineId,
+  });
   event.preventDefault();
   event.stopPropagation();
   return true;
@@ -784,92 +893,23 @@ export const handleLineKeyDown = (deps, payload) => {
   }
 
   switch (navKey) {
-    case "Backspace":
-      if (mode === "text-editor") {
-        // Check if cursor is at position 0
-        const currentElement = payload._event.currentTarget;
-        const currentPos = getCursorPosition(currentElement);
-        const currentLineId = getLineIdFromElement(currentElement);
-
-        if (currentPos === 0) {
-          payload._event.preventDefault();
-          payload._event.stopPropagation();
-
-          // Find the previous line
-          const currentIndex = props.lines.findIndex(
-            (line) => line.id === currentLineId,
-          );
-
-          if (currentIndex > 0) {
-            dispatchEditorDataChanged(dispatchEvent, currentElement);
-            suppressElementInputUntilFocus(currentElement);
-            debugLog("lines", "editor.merge-request", {
-              lineId: currentLineId,
-              cursorPos: currentPos,
-            });
-
-            // Dispatch event to merge lines
-            dispatchEvent(
-              new CustomEvent("mergeLines", {
-                detail: {
-                  currentLineId: currentLineId,
-                },
-              }),
-            );
-          }
-        }
-      }
-      break;
     case "Escape":
       payload._event.preventDefault();
+      dispatchEditorDataChanged(dispatchEvent, payload._event.currentTarget);
       // Switch to block mode and blur the current element
       store.setMode({ mode: "block" });
+      renderPreservingLiveLineContent(
+        {
+          ...deps,
+          render,
+        },
+        payload._event.currentTarget,
+      );
       payload._event.currentTarget.blur();
       // Focus the container to enable block mode navigation
       const container = deps.refs["container"];
       if (container) {
         container.focus();
-      }
-      render();
-      break;
-    case "Enter":
-      if (mode === "text-editor") {
-        payload._event.preventDefault();
-        const currentElement = payload._event.currentTarget;
-
-        debugLog("lines", "editor.enter-keydown", {
-          lineId: id,
-          textLength: getLineContent(currentElement).length,
-          cursorPos: getCursorPosition(currentElement),
-        });
-        requestAnimationFrame(() => {
-          const cursorPos = getCursorPosition(currentElement);
-          const fullText = getLineContent(currentElement);
-          suppressElementInputUntilFocus(currentElement);
-
-          // Split the content at cursor position after the latest DOM/input work
-          // has settled, then let the parent structural handler own the writes.
-          const leftContent = fullText.substring(0, cursorPos);
-          const rightContent = fullText.substring(cursorPos);
-          debugLog("lines", "editor.enter-snapshot", {
-            lineId: id,
-            cursorPos,
-            fullTextLength: fullText.length,
-            fullText: previewDebugText(fullText),
-            leftContent: previewDebugText(leftContent),
-            rightContent: previewDebugText(rightContent),
-          });
-
-          dispatchEvent(
-            new CustomEvent("splitLine", {
-              detail: {
-                lineId: id,
-                leftContent: leftContent,
-                rightContent: rightContent,
-              },
-            }),
-          );
-        });
       }
       break;
     case "p":
@@ -1136,6 +1176,130 @@ export const handleLineKeyDown = (deps, payload) => {
   }
 };
 
+export const handleLineBeforeInput = (deps, payload) => {
+  const { dispatchEvent, props, store } = deps;
+  const event = payload._event;
+
+  if (
+    isKeyboardHandlingDisabled(props) ||
+    store.selectMode() !== "text-editor"
+  ) {
+    return;
+  }
+
+  if (event.isComposing) {
+    return;
+  }
+
+  const currentElement = event.currentTarget;
+  if (shouldIgnoreElementInput(currentElement)) {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+
+  const lineId = getLineIdFromElement(currentElement);
+  if (!lineId) {
+    return;
+  }
+
+  if (
+    event.inputType === "insertParagraph" ||
+    event.inputType === "insertLineBreak"
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const cursorPos = getCursorPosition(currentElement);
+    const fullText = getLineContent(currentElement);
+    const leftContent = fullText.substring(0, cursorPos);
+    const rightContent = fullText.substring(cursorPos);
+
+    debugLog("lines", "editor.beforeinput-split", {
+      lineId,
+      cursorPos,
+      fullTextLength: fullText.length,
+      fullText: previewDebugText(fullText),
+      leftContent: previewDebugText(leftContent),
+      rightContent: previewDebugText(rightContent),
+    });
+
+    dispatchEvent(
+      new CustomEvent("splitLine", {
+        detail: {
+          lineId,
+          leftContent,
+          rightContent,
+        },
+      }),
+    );
+    suppressElementInput(currentElement);
+    suppressElementContentSyncUntilBlur(currentElement);
+    return;
+  }
+
+  if (event.inputType === "deleteContentBackward") {
+    const cursorPos = getCursorPosition(currentElement);
+    const currentIndex = (props.lines || []).findIndex(
+      (line) => line.id === lineId,
+    );
+
+    if (cursorPos === 0 && currentIndex > 0) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      debugLog("lines", "editor.beforeinput-merge", {
+        lineId,
+        cursorPos,
+      });
+
+      dispatchEvent(
+        new CustomEvent("mergeLines", {
+          detail: {
+            currentLineId: lineId,
+          },
+        }),
+      );
+      suppressElementInput(currentElement);
+      suppressElementContentSyncUntilBlur(currentElement);
+    }
+    return;
+  }
+
+  if (event.inputType === "insertFromPaste") {
+    const pastedText = event.dataTransfer?.getData("text/plain") || "";
+    if (!pastedText.includes("\n")) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const lines = pastedText
+      .split(/\r?\n/)
+      .filter((line) => line.trim().length > 0);
+    if (lines.length === 0) {
+      return;
+    }
+
+    const cursorPos = getCursorPosition(currentElement);
+    const currentContent = getLineContent(currentElement);
+
+    dispatchEvent(
+      new CustomEvent("pasteLines", {
+        detail: {
+          lineId,
+          leftContent: currentContent.substring(0, cursorPos),
+          rightContent: currentContent.substring(cursorPos),
+          lines,
+        },
+      }),
+    );
+    suppressElementInput(currentElement);
+    suppressElementContentSyncUntilBlur(currentElement);
+  }
+};
+
 export const handleLineMouseUp = (deps, payload) => {
   const { store } = deps;
 
@@ -1167,16 +1331,7 @@ export const handleOnInput = (deps, payload) => {
     content: previewDebugText(content),
   });
 
-  const detail = {
-    lineId,
-    content,
-  };
-
-  dispatchEvent(
-    new CustomEvent("editor-data-changed", {
-      detail,
-    }),
-  );
+  dispatchEditorDataChanged(dispatchEvent, currentElement);
 };
 
 export const handleLinePaste = (deps, payload) => {
@@ -1226,6 +1381,14 @@ export const handleLinePaste = (deps, payload) => {
   );
 };
 
+export const handleLineCompositionStart = (deps) => {
+  dispatchCompositionStateChanged(deps.dispatchEvent, true);
+};
+
+export const handleLineCompositionEnd = (deps) => {
+  dispatchCompositionStateChanged(deps.dispatchEvent, false);
+};
+
 export const forceSyncContentLine = (deps, payload) => {
   const { refs, props } = deps;
   syncRenderedLineContent(refs, props.lines, payload?.lineId);
@@ -1240,7 +1403,29 @@ export const handleOnUpdate = (deps, payload) => {
   const { refs } = deps;
   const oldLines = payload?.oldProps?.lines;
   const newLines = payload?.newProps?.lines;
-  syncChangedRenderedLineContent(refs, oldLines, newLines);
+  const oldSelectedLineId = payload?.oldProps?.selectedLineId;
+  const newSelectedLineId = payload?.newProps?.selectedLineId;
+  const actualActiveElement =
+    refs?.container?.shadowRoot?.activeElement ||
+    getActualActiveElement(refs?.container);
+  const activeLineId = isLineElement(actualActiveElement)
+    ? getLineIdFromElement(actualActiveElement)
+    : undefined;
+  const skipLineIds = new Set();
+
+  if (
+    activeLineId &&
+    oldSelectedLineId &&
+    newSelectedLineId &&
+    oldSelectedLineId !== newSelectedLineId &&
+    activeLineId === oldSelectedLineId
+  ) {
+    skipLineIds.add(activeLineId);
+  }
+
+  syncChangedRenderedLineContent(refs, oldLines, newLines, {
+    skipLineIds,
+  });
 };
 
 export const updateSelectedLine = (deps, payload) => {
@@ -1326,26 +1511,49 @@ export const handleOnFocus = (deps, payload) => {
 };
 
 export const handleLineBlur = (deps, payload) => {
-  const { store, render, refs } = deps;
+  const { store, render, refs, dispatchEvent } = deps;
 
   // Capture element references before focus settles on the next paint.
   const blurredElement = payload._event.currentTarget;
   const shadowRoot = blurredElement.getRootNode();
+  const shouldPreserveLiveContent = shouldPreserveLiveElementContent(
+    blurredElement,
+    deps.props.lines,
+  );
 
   // Check if we're navigating between lines - if so, don't switch to block mode
   if (store.selectIsNavigating()) {
     return;
   }
 
-  // Wait one paint so the next focused element is observable.
-  requestAnimationFrame(() => {
+  const settleBlur = (remainingTransferFrames = 3) => {
     const actualActiveElement =
       (shadowRoot && shadowRoot.activeElement) ||
       getActualActiveElement(blurredElement);
 
     // Check if focus moved to another line within the editor
     if (isLineElement(actualActiveElement)) {
+      clearElementInputSuppression(blurredElement);
+      clearElementContentSyncSuppression(blurredElement);
+      if (!shouldPreserveLiveContent) {
+        syncRenderedLineContent(
+          refs,
+          deps.props.lines,
+          getLineIdFromElement(blurredElement),
+        );
+      }
+
       // Focus moved to another line, stay in text-editor mode
+      return;
+    }
+
+    if (
+      shouldIgnoreElementContentSync(blurredElement) &&
+      remainingTransferFrames > 0
+    ) {
+      requestAnimationFrame(() => {
+        settleBlur(remainingTransferFrames - 1);
+      });
       return;
     }
 
@@ -1364,7 +1572,24 @@ export const handleLineBlur = (deps, payload) => {
         container.focus();
       }
 
-      render();
+      clearElementInputSuppression(blurredElement);
+      clearElementContentSyncSuppression(blurredElement);
+      if (!shouldPreserveLiveContent) {
+        syncRenderedLineContent(
+          refs,
+          deps.props.lines,
+          getLineIdFromElement(blurredElement),
+        );
+        render();
+      } else {
+        renderPreservingLiveLineContent(deps, blurredElement);
+      }
+      dispatchEvent(new CustomEvent("editor-blur"));
     }
+  };
+
+  // Wait one paint so the next focused element is observable.
+  requestAnimationFrame(() => {
+    settleBlur();
   });
 };

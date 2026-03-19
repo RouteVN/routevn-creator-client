@@ -3,6 +3,10 @@ refs:
     eventListeners:
       editor-data-changed:
         handler: handleEditorDataChanged
+      composition-state-changed:
+        handler: handleEditorCompositionStateChanged
+      editor-blur:
+        handler: handleEditorBlur
       newLine:
         handler: handleNewLine
       splitLine:

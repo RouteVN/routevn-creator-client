@@ -1,11 +1,15 @@
+import { concatMap, filter, from, throttleTime } from "rxjs";
+import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import {
-  createCollabRemoteRefreshStream,
-  matchesRemoteTargets,
-} from "../../internal/ui/collabRefresh.js";
+  applySceneEditorSessionTextChange,
+  deleteSceneEditorSessionLine,
+  getSceneEditorSessionDirtyLines,
+  hasSceneEditorSessionPendingChanges,
+  reconcileSceneEditorSession,
+  setSceneEditorSessionCompositionState,
+} from "../../internal/ui/sceneEditor/editorSession.js";
 import {
-  applyPendingDialogueQueueToStore,
   findCharacterIdByShortcut,
-  flushDialogueQueue,
   handleMergeLinesOperation,
   handleNewLineOperation,
   handlePasteLinesOperation,
@@ -28,9 +32,29 @@ import {
   reconcileSceneEditorSelection,
   selectSceneEditorSection,
 } from "../../internal/ui/sceneEditor/sectionOperations.js";
+import {
+  enqueueLatestSceneEditorPersistence,
+  enqueueSceneEditorPersistence,
+} from "../../internal/ui/sceneEditor/persistenceQueue.js";
 
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another section.";
+const TEXT_DRAFT_SAVE_DEBOUNCE_MS = 300;
+const STRUCTURE_DRAFT_SAVE_DEBOUNCE_MS = 900;
+const DRAFT_SAVE_MIN_INTERVAL_MS = 1000;
+const DRAFT_SAVE_MAX_INTERVAL_MS = 3000;
+const STRUCTURE_SHORTCUT_THROTTLE_MS = 50;
+
+const nowMs = () => {
+  if (
+    typeof performance !== "undefined" &&
+    typeof performance.now === "function"
+  ) {
+    return performance.now();
+  }
+
+  return Date.now();
+};
 
 const getLinesEditorRef = (refs) => {
   return refs?.linesEditor;
@@ -54,31 +78,301 @@ const scrollLinesEditorLineIntoView = (refs, lineId) => {
   linesEditorRef.scrollLineIntoView({ lineId });
 };
 
+const focusLinesEditorContainer = (refs) => {
+  const linesEditorRef = getLinesEditorRef(refs);
+  if (!linesEditorRef?.focusContainer) {
+    return;
+  }
+
+  linesEditorRef.focusContainer();
+  requestAnimationFrame(() => {
+    linesEditorRef.focusContainer();
+  });
+};
+
+const clearScheduledDraftFlush = (store) => {
+  const timerId = store.selectDraftSaveTimerId();
+  if (timerId !== undefined) {
+    clearTimeout(timerId);
+    store.clearDraftSaveTimer();
+  }
+};
+
+const cancelSceneEditorDraftFlush = (deps) => {
+  clearScheduledDraftFlush(deps.store);
+};
+
+const getDraftSaveDelayMs = (store, { reason = "text" } = {}) => {
+  const debounceMs =
+    reason === "structure"
+      ? STRUCTURE_DRAFT_SAVE_DEBOUNCE_MS
+      : TEXT_DRAFT_SAVE_DEBOUNCE_MS;
+  const lastFlushStartedAt = store.selectLastDraftFlushStartedAt();
+  const pendingSinceAt = store.selectDraftSavePendingSinceAt();
+  const remainingThrottleMs =
+    lastFlushStartedAt > 0
+      ? Math.max(0, DRAFT_SAVE_MIN_INTERVAL_MS - (nowMs() - lastFlushStartedAt))
+      : 0;
+  const remainingMaxWaitMs =
+    pendingSinceAt > 0
+      ? Math.max(0, DRAFT_SAVE_MAX_INTERVAL_MS - (nowMs() - pendingSinceAt))
+      : Number.POSITIVE_INFINITY;
+
+  return Math.min(
+    Math.max(debounceMs, remainingThrottleMs),
+    remainingMaxWaitMs,
+  );
+};
+
+const runSceneEditorPersistence = (deps, task, options = {}) => {
+  return enqueueSceneEditorPersistence({
+    owner: deps.projectService,
+    task,
+    ...options,
+  });
+};
+
+const reconcileCurrentEditorSession = (deps) => {
+  const { store } = deps;
+  const sceneId = store.selectSceneId();
+  const selectedSectionId = store.selectSelectedSectionId();
+
+  if (!sceneId || !selectedSectionId) {
+    store.clearEditorSession();
+    return undefined;
+  }
+
+  const committedScene = store.selectCommittedScene();
+  const committedSection = committedScene?.sections?.find(
+    (section) => section.id === selectedSectionId,
+  );
+  const nextSession = reconcileSceneEditorSession({
+    session: store.selectEditorSession(),
+    sceneId,
+    sectionId: selectedSectionId,
+    section: committedSection,
+    revision: store.selectRepositoryRevision(),
+  });
+  store.setEditorSession({ editorSession: nextSession });
+  return nextSession;
+};
+
+const processSplitLineRequest = async (deps, detail = {}) => {
+  if (isSectionsOverviewOpen(deps.store)) {
+    return;
+  }
+
+  cancelSceneEditorDraftFlush(deps);
+  await handleSplitLineOperation(deps, {
+    _event: {
+      detail,
+    },
+  });
+  scheduleSceneEditorDraftFlush(deps, {
+    reason: "structure",
+  });
+};
+
+const processMergeLinesRequest = async (deps, detail = {}) => {
+  if (isSectionsOverviewOpen(deps.store)) {
+    return;
+  }
+
+  cancelSceneEditorDraftFlush(deps);
+  await handleMergeLinesOperation(deps, {
+    _event: {
+      detail,
+    },
+  });
+  scheduleSceneEditorDraftFlush(deps, {
+    reason: "structure",
+  });
+};
+
+const mountSceneEditorShortcutSubscriptions = (deps) => {
+  const { subject } = deps;
+
+  const streams = [
+    subject.pipe(
+      filter(({ action }) => action === "sceneEditor.requestSplitLine"),
+      throttleTime(STRUCTURE_SHORTCUT_THROTTLE_MS, undefined, {
+        leading: true,
+        trailing: true,
+      }),
+      concatMap(({ payload }) =>
+        from(processSplitLineRequest(deps, payload).catch(() => {})),
+      ),
+    ),
+    subject.pipe(
+      filter(({ action }) => action === "sceneEditor.requestMergeLines"),
+      throttleTime(STRUCTURE_SHORTCUT_THROTTLE_MS, undefined, {
+        leading: true,
+        trailing: true,
+      }),
+      concatMap(({ payload }) =>
+        from(processMergeLinesRequest(deps, payload).catch(() => {})),
+      ),
+    ),
+  ];
+
+  const active = streams.map((stream) => stream.subscribe());
+  return () => active.forEach((subscription) => subscription?.unsubscribe?.());
+};
+
+const flushSceneEditorDrafts = async (deps) => {
+  const { store } = deps;
+  clearScheduledDraftFlush(store);
+
+  if (!hasSceneEditorSessionPendingChanges(store.selectEditorSession())) {
+    store.setDraftSavePendingSinceAt({ timestamp: 0 });
+    return;
+  }
+
+  return enqueueLatestSceneEditorPersistence({
+    owner: deps.projectService,
+    key: "draft-flush",
+    label: "draft-flush",
+    meta: () => {
+      const currentSession = store.selectEditorSession();
+      return {
+        sceneId: currentSession?.sceneId,
+        sectionId: currentSession?.sectionId,
+        dirtyCount: getSceneEditorSessionDirtyLines(currentSession).length,
+      };
+    },
+    task: async () => {
+      const session = store.selectEditorSession();
+      const dirtyLines = getSceneEditorSessionDirtyLines(session);
+      const snapshotLines = (session?.lineOrder || [])
+        .map((lineId) => session?.linesById?.[lineId]?.line)
+        .filter(Boolean)
+        .map((line) => structuredClone(line));
+      if (snapshotLines.length === 0 && dirtyLines.length === 0) {
+        return;
+      }
+
+      const flushStartedAt = nowMs();
+      store.setLastDraftFlushStartedAt({
+        timestamp: flushStartedAt,
+      });
+      store.setDraftSavePendingSinceAt({ timestamp: 0 });
+      console.info("[sceneEditor][perf] draft-flush-start", {
+        sceneId: session?.sceneId,
+        sectionId: session?.sectionId,
+        dirtyLineIds: dirtyLines.map(({ lineId }) => lineId),
+        lineCount: snapshotLines.length,
+      });
+
+      try {
+        await deps.projectService.syncSectionLinesSnapshot({
+          sectionId: session?.sectionId,
+          lines: snapshotLines,
+        });
+
+        console.info("[sceneEditor][perf] draft-flush-end", {
+          sceneId: session?.sceneId,
+          sectionId: session?.sectionId,
+          totalMs: Number((nowMs() - flushStartedAt).toFixed(1)),
+          dirtyLineIds: dirtyLines.map(({ lineId }) => lineId),
+        });
+      } catch (error) {
+        console.error("[sceneEditor] Failed to save scene changes", {
+          error,
+          sceneId: session?.sceneId,
+          sectionId: session?.sectionId,
+          revision: store.selectRepositoryRevision(),
+          dirtyLineIds: dirtyLines.map(({ lineId }) => lineId),
+        });
+        deps.appService?.showToast("Failed to save scene changes", {
+          title: "Error",
+        });
+        throw error;
+      }
+    },
+  });
+};
+
+const scheduleSceneEditorDraftFlush = (
+  deps,
+  { immediate = false, reason = "text" } = {},
+) => {
+  const { store } = deps;
+  clearScheduledDraftFlush(store);
+
+  const session = store.selectEditorSession();
+  if (!hasSceneEditorSessionPendingChanges(session)) {
+    store.setDraftSavePendingSinceAt({ timestamp: 0 });
+    return;
+  }
+
+  if (store.selectDraftSavePendingSinceAt() <= 0) {
+    store.setDraftSavePendingSinceAt({
+      timestamp: nowMs(),
+    });
+  }
+
+  if (immediate) {
+    return flushSceneEditorDrafts(deps);
+  }
+
+  const delayMs = getDraftSaveDelayMs(store, { reason });
+  const timerId = setTimeout(() => {
+    void flushSceneEditorDrafts(deps).catch(() => {});
+  }, delayMs);
+  store.setDraftSaveTimerId({ timerId });
+};
+
+const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
+  const { store, render, subject } = deps;
+  const hadPendingSessionChanges = hasSceneEditorSessionPendingChanges(
+    store.selectEditorSession(),
+  );
+  const { repositoryState, domainState, revision } = payload;
+
+  store.setRepositoryState({ repository: repositoryState });
+  store.setDomainState({ domainState });
+  store.setRepositoryRevision({ revision });
+
+  if (!store.selectSceneId()) {
+    return;
+  }
+
+  reconcileCurrentEditorSession(deps);
+  reconcileSceneEditorSelection(store);
+  await updateSceneEditorSectionChanges(deps);
+
+  if (hadPendingSessionChanges) {
+    subject.dispatch("sceneEditor.renderCanvas", {
+      skipRender: true,
+      skipAnimations: true,
+    });
+    return;
+  }
+
+  render();
+  subject.dispatch("sceneEditor.renderCanvas", {
+    skipAnimations: true,
+  });
+};
+
 export const handleBeforeMount = (deps) => {
-  const cleanupSubscriptions = mountSceneEditorSubscriptions(deps);
-  const collabRefreshSubscription = createCollabRemoteRefreshStream({
-    deps,
-    matches: matchesRemoteTargets([
-      "story",
-      "layouts",
-      "images",
-      "colors",
-      "fonts",
-      "textStyles",
-      "characters",
-      "variables",
-      "sounds",
-      "videos",
-      "transforms",
-      "animations",
-    ]),
-    refresh: handleDataChanged,
-  }).subscribe();
+  const { projectService } = deps;
+  const cleanupRuntimeSubscriptions = mountSceneEditorSubscriptions(deps);
+  const cleanupShortcutSubscriptions =
+    mountSceneEditorShortcutSubscriptions(deps);
+  const projectSubscription = createProjectStateStream({
+    projectService,
+  }).subscribe({
+    next: (payload) => {
+      void syncSceneEditorProjectPayload(deps, payload);
+    },
+  });
 
   return async () => {
-    collabRefreshSubscription.unsubscribe();
-    cleanupSubscriptions();
-    await flushDialogueQueue(deps);
+    projectSubscription.unsubscribe();
+    cleanupRuntimeSubscriptions();
+    cleanupShortcutSubscriptions();
+    await flushSceneEditorDrafts(deps);
     resetSceneEditorRuntime(deps);
   };
 };
@@ -88,25 +382,17 @@ export const handleAfterMount = async (deps) => {
     ...deps,
     syncProjectState: syncStoreProjectState,
   });
+  reconcileCurrentEditorSession(deps);
+  deps.render();
 };
 
 export const handleDataChanged = async (deps) => {
-  const { store, projectService, render, subject, dialogueQueueService } = deps;
+  const { projectService } = deps;
   await projectService.ensureRepository();
-
-  if (store.selectLockingLineId()) {
-    return;
-  }
-
-  syncStoreProjectState(store, projectService);
-  applyPendingDialogueQueueToStore(store, dialogueQueueService);
-
-  reconcileSceneEditorSelection(store);
-
-  await updateSceneEditorSectionChanges(deps);
-  render();
-  subject.dispatch("sceneEditor.renderCanvas", {
-    skipAnimations: true,
+  await syncSceneEditorProjectPayload(deps, {
+    repositoryState: projectService.getRepositoryState(),
+    domainState: projectService.getDomainState(),
+    revision: projectService.getRepositoryRevision(),
   });
 };
 
@@ -120,7 +406,10 @@ export const handleSectionTabClick = async (deps, payload) => {
     payload._event.currentTarget?.dataset?.sectionId ||
     payload._event.currentTarget?.id?.replace("sectionTab", "") ||
     "";
+  await flushSceneEditorDrafts(deps);
   await selectSceneEditorSection(deps, sectionId);
+  reconcileCurrentEditorSession(deps);
+  deps.render();
 };
 
 export const handleCommandLineSubmit = async (deps, payload) => {
@@ -147,13 +436,25 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       return;
     }
 
-    await projectService.updateLineActions({
-      lineId,
-      data: safeDetail,
-      replace: false,
-    });
+    await runSceneEditorPersistence(
+      deps,
+      async () => {
+        await projectService.updateLineActions({
+          lineId,
+          data: safeDetail,
+          replace: false,
+        });
+      },
+      {
+        label: "section-transition",
+        meta: {
+          lineId,
+        },
+      },
+    );
 
     syncStoreProjectState(store, projectService);
+    reconcileCurrentEditorSession(deps);
     render();
 
     // Render the canvas with the latest data
@@ -183,13 +484,25 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       return;
     }
 
-    await projectService.updateLineActions({
-      lineId,
-      data: safeDetail,
-      replace: false,
-    });
+    await runSceneEditorPersistence(
+      deps,
+      async () => {
+        await projectService.updateLineActions({
+          lineId,
+          data: safeDetail,
+          replace: false,
+        });
+      },
+      {
+        label: "push-layered-view",
+        meta: {
+          lineId,
+        },
+      },
+    );
 
     syncStoreProjectState(store, projectService);
+    reconcileCurrentEditorSession(deps);
     render();
 
     // Render the canvas with the latest data
@@ -219,13 +532,25 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       return;
     }
 
-    await projectService.updateLineActions({
-      lineId,
-      data: safeDetail,
-      replace: false,
-    });
+    await runSceneEditorPersistence(
+      deps,
+      async () => {
+        await projectService.updateLineActions({
+          lineId,
+          data: safeDetail,
+          replace: false,
+        });
+      },
+      {
+        label: "pop-layered-view",
+        meta: {
+          lineId,
+        },
+      },
+    );
 
     syncStoreProjectState(store, projectService);
+    reconcileCurrentEditorSession(deps);
     render();
 
     // Render the canvas with the latest data
@@ -269,22 +594,36 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
   const { dialogue, ...otherActions } = submissionData;
 
-  if (dialogue) {
-    await projectService.updateLineDialogueAction({
-      lineId,
-      dialogue,
-    });
-  }
+  await runSceneEditorPersistence(
+    deps,
+    async () => {
+      if (dialogue) {
+        await projectService.updateLineDialogueAction({
+          lineId,
+          dialogue,
+        });
+      }
 
-  if (Object.keys(otherActions).length > 0) {
-    await projectService.updateLineActions({
-      lineId,
-      data: otherActions,
-      replace: false,
-    });
-  }
+      if (Object.keys(otherActions).length > 0) {
+        await projectService.updateLineActions({
+          lineId,
+          data: otherActions,
+          replace: false,
+        });
+      }
+    },
+    {
+      label: "command-line-submit",
+      meta: {
+        lineId,
+        hasDialogue: Boolean(dialogue),
+        otherActionCount: Object.keys(otherActions).length,
+      },
+    },
+  );
 
   syncStoreProjectState(store, projectService);
+  reconcileCurrentEditorSession(deps);
   render();
 
   // Trigger debounced canvas render
@@ -292,47 +631,55 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 };
 
 export const handleEditorDataChanged = async (deps, payload) => {
-  const { subject, store, dialogueQueueService } = deps;
+  const { subject, store } = deps;
   if (isSectionsOverviewOpen(store)) {
     return;
   }
 
   const lineId = payload._event.detail.lineId;
-  const selectedLineId = store.selectSelectedLineId();
-  const lockingLineId = store.selectLockingLineId();
 
   if (!lineId) {
     return;
   }
 
-  // Ignore late input events from a line that is no longer selected or is in
-  // the middle of a structural split/merge operation.
-  if (lineId !== selectedLineId || lineId === lockingLineId) {
+  const currentSession =
+    store.selectEditorSession() || reconcileCurrentEditorSession(deps);
+  if (!currentSession?.linesById?.[lineId]) {
     return;
   }
 
-  const content = [{ text: payload._event.detail.content }];
+  const nextSession = applySceneEditorSessionTextChange(currentSession, {
+    lineId,
+    content: payload._event.detail.content,
+  });
+  store.setEditorSession({ editorSession: nextSession });
+  scheduleSceneEditorDraftFlush(deps, {
+    reason: "text",
+  });
 
-  // Update local store immediately for UI responsiveness
-  store.setLineTextContent({ lineId, content });
-
-  // Queue the pending update and schedule debounced write
-  const sectionId =
-    store.selectDomainState()?.lines?.[lineId]?.sectionId ??
-    store.selectSelectedSectionId();
-  try {
-    dialogueQueueService.setAndSchedule(lineId, { sectionId, content });
-  } catch (error) {
-    console.error("[sceneEditor] Failed to queue dialogue update:", error);
-  }
-
-  // Trigger debounced canvas render with skipRender flag.
-  // skipRender prevents full UI re-render which would reset cursor position while typing.
-  // Typing only updates dialogue content, not presentationState, so State panel doesn't need to update.
   subject.dispatch("sceneEditor.renderCanvas", {
     skipRender: true,
     skipAnimations: true,
   });
+};
+
+export const handleEditorCompositionStateChanged = (deps, payload) => {
+  const { store } = deps;
+  const currentSession = store.selectEditorSession();
+  if (!currentSession) {
+    return;
+  }
+
+  const nextSession = setSceneEditorSessionCompositionState(currentSession, {
+    isComposing: payload?._event?.detail?.isComposing === true,
+  });
+  store.setEditorSession({ editorSession: nextSession });
+};
+
+export const handleEditorBlur = async (deps) => {
+  try {
+    await scheduleSceneEditorDraftFlush(deps, { immediate: true });
+  } catch {}
 };
 
 export const handleDialogueCharacterShortcut = async (deps, payload) => {
@@ -348,11 +695,15 @@ export const handleDialogueCharacterShortcut = async (deps, payload) => {
     return;
   }
 
-  await flushDialogueQueue(deps);
-
-  const domainState = projectService.getDomainState();
-  const existingDialogue =
-    domainState?.lines?.[lineId]?.actions?.dialogue || {};
+  const currentSection = store
+    .selectScene()
+    ?.sections?.find(
+      (section) => section.id === store.selectSelectedSectionId(),
+    );
+  const currentLine =
+    currentSection?.lines?.find((line) => line.id === lineId) ||
+    store.selectSelectedLine();
+  const existingDialogue = currentLine?.actions?.dialogue || {};
 
   const isClearShortcut = String(shortcut) === "0";
   if (isClearShortcut && !existingDialogue.characterId) {
@@ -372,19 +723,8 @@ export const handleDialogueCharacterShortcut = async (deps, payload) => {
     return;
   }
 
-  const selectedLine = store.selectSelectedLine();
-  const selectedLineContent =
-    selectedLine?.id === lineId
-      ? selectedLine?.actions?.dialogue?.content
-      : undefined;
-
   const updatedDialogue = {
     ...existingDialogue,
-    ...(existingDialogue.content
-      ? {}
-      : selectedLineContent
-        ? { content: selectedLineContent }
-        : {}),
   };
 
   if (isClearShortcut) {
@@ -393,12 +733,25 @@ export const handleDialogueCharacterShortcut = async (deps, payload) => {
     updatedDialogue.characterId = characterId;
   }
 
-  await projectService.updateLineDialogueAction({
-    lineId,
-    dialogue: updatedDialogue,
-  });
+  await runSceneEditorPersistence(
+    deps,
+    async () => {
+      await projectService.updateLineDialogueAction({
+        lineId,
+        dialogue: updatedDialogue,
+      });
+    },
+    {
+      label: "dialogue-character-shortcut",
+      meta: {
+        lineId,
+        shortcut,
+      },
+    },
+  );
 
   syncStoreProjectState(store, projectService);
+  reconcileCurrentEditorSession(deps);
   render();
   subject.dispatch("sceneEditor.renderCanvas", {});
 };
@@ -474,28 +827,39 @@ export const handleSectionsOverviewRowClick = async (deps, payload) => {
   }
 
   store.closeSectionsOverviewPanel();
+  await flushSceneEditorDrafts(deps);
   await selectSceneEditorSection(deps, sectionId);
+  reconcileCurrentEditorSession(deps);
+  deps.render();
 };
 
 export const handleSplitLine = async (deps, payload) => {
-  if (isSectionsOverviewOpen(deps.store)) {
-    return;
-  }
-  await handleSplitLineOperation(deps, payload);
+  deps.subject.dispatch(
+    "sceneEditor.requestSplitLine",
+    payload?._event?.detail || {},
+  );
 };
 
 export const handlePasteLines = async (deps, payload) => {
   if (isSectionsOverviewOpen(deps.store)) {
     return;
   }
+  cancelSceneEditorDraftFlush(deps);
   await handlePasteLinesOperation(deps, payload);
+  scheduleSceneEditorDraftFlush(deps, {
+    reason: "structure",
+  });
 };
 
 export const handleNewLine = async (deps, payload) => {
   if (isSectionsOverviewOpen(deps.store)) {
     return;
   }
+  cancelSceneEditorDraftFlush(deps);
   await handleNewLineOperation(deps, payload);
+  scheduleSceneEditorDraftFlush(deps, {
+    reason: "structure",
+  });
 };
 
 export const handleLineNavigation = (deps, payload) => {
@@ -590,14 +954,18 @@ export const handleSwapLine = async (deps, payload) => {
   if (isSectionsOverviewOpen(deps.store)) {
     return;
   }
+  cancelSceneEditorDraftFlush(deps);
   await handleSwapLineOperation(deps, payload);
+  scheduleSceneEditorDraftFlush(deps, {
+    reason: "structure",
+  });
 };
 
 export const handleMergeLines = async (deps, payload) => {
-  if (isSectionsOverviewOpen(deps.store)) {
-    return;
-  }
-  await handleMergeLinesOperation(deps, payload);
+  deps.subject.dispatch(
+    "sceneEditor.requestMergeLines",
+    payload?._event?.detail || {},
+  );
 };
 
 export const handleSectionTabRightClick = (deps, payload) => {
@@ -652,19 +1020,36 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   if (typeof action === "string" && action.startsWith("go-to-section:")) {
     const nextSectionId = action.replace("go-to-section:", "");
     if (nextSectionId) {
+      await flushSceneEditorDrafts(deps);
       await selectSceneEditorSection(deps, nextSectionId);
+      reconcileCurrentEditorSession(deps);
+      render();
       return;
     }
   }
 
   if (action === "delete-section") {
-    await projectService.deleteSectionItem({
-      sceneId,
-      sectionIds: [sectionId],
-    });
+    await flushSceneEditorDrafts(deps);
+    await runSceneEditorPersistence(
+      deps,
+      async () => {
+        await projectService.deleteSectionItem({
+          sceneId,
+          sectionIds: [sectionId],
+        });
+      },
+      {
+        label: "delete-section",
+        meta: {
+          sceneId,
+          sectionId,
+        },
+      },
+    );
 
     // Update store with new repository state
     syncStoreProjectState(store, projectService);
+    reconcileCurrentEditorSession(deps);
 
     // Update scene data and select first remaining section
     const newScene = store.selectScene();
@@ -673,6 +1058,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
         selectedSectionId: newScene.sections[0].id,
       });
     }
+    reconcileCurrentEditorSession(deps);
   } else if (action === "rename-section") {
     // Show rename popover using the stored position
     store.showPopover({
@@ -684,44 +1070,60 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   } else if (action === "delete-actions") {
     const selectedLineId = store.selectSelectedLineId();
     const selectedSectionId = store.selectSelectedSectionId();
+    const selectedLine = store.selectSelectedLine();
 
     if (actionsType && selectedLineId && selectedSectionId) {
       // Special handling for dialogue - keep content, remove only layoutId and characterId
       if (actionsType === "dialogue") {
-        const stateBefore = projectService.getRepositoryState();
-        const currentActions =
-          stateBefore.scenes?.items?.[sceneId]?.sections?.items?.[
-            selectedSectionId
-          ]?.lines?.items?.[selectedLineId]?.actions;
-
-        if (currentActions?.dialogue) {
+        const currentDialogue = selectedLine?.actions?.dialogue;
+        if (currentDialogue) {
           // Keep content if it exists, remove layoutId and characterId
           const updatedDialogue = {
-            content: currentActions.dialogue.content,
+            content: currentDialogue.content,
           };
 
-          await projectService.updateLineDialogueAction({
-            lineId: selectedLineId,
-            dialogue: updatedDialogue,
-          });
+          await runSceneEditorPersistence(
+            deps,
+            async () => {
+              await projectService.updateLineDialogueAction({
+                lineId: selectedLineId,
+                dialogue: updatedDialogue,
+              });
+            },
+            {
+              label: "delete-dialogue-action",
+              meta: {
+                lineId: selectedLineId,
+              },
+            },
+          );
         }
       } else {
-        const stateBefore = projectService.getRepositoryState();
-        const currentActions =
-          stateBefore.scenes?.items?.[sceneId]?.sections?.items?.[
-            selectedSectionId
-          ]?.lines?.items?.[selectedLineId]?.actions || {};
+        const currentActions = selectedLine?.actions || {};
         const nextActions = structuredClone(currentActions);
         delete nextActions[actionsType];
 
-        await projectService.updateLineActions({
-          lineId: selectedLineId,
-          data: nextActions,
-          replace: true,
-        });
+        await runSceneEditorPersistence(
+          deps,
+          async () => {
+            await projectService.updateLineActions({
+              lineId: selectedLineId,
+              data: nextActions,
+              replace: true,
+            });
+          },
+          {
+            label: "delete-line-action",
+            meta: {
+              lineId: selectedLineId,
+              actionType: actionsType,
+            },
+          },
+        );
       }
 
       syncStoreProjectState(store, projectService);
+      reconcileCurrentEditorSession(deps);
 
       // Trigger re-render to update the view
       subject.dispatch("sceneEditor.renderCanvas", {});
@@ -764,6 +1166,8 @@ export const handleSectionCreateFormActionClick = async (deps, payload) => {
         nextSectionName,
         syncStoreProjectState,
       );
+      reconcileCurrentEditorSession(deps);
+      render();
       return;
     }
   }
@@ -800,18 +1204,33 @@ export const handleFormActionClick = async (deps, payload) => {
         nextSectionName,
         syncStoreProjectState,
       );
+      reconcileCurrentEditorSession(deps);
+      render();
       return;
     }
 
     if (sectionId && nextSectionName && sceneId) {
-      await projectService.renameSectionItem({
-        sceneId,
-        sectionId,
-        name: nextSectionName,
-      });
+      await runSceneEditorPersistence(
+        deps,
+        async () => {
+          await projectService.renameSectionItem({
+            sceneId,
+            sectionId,
+            name: nextSectionName,
+          });
+        },
+        {
+          label: "rename-section",
+          meta: {
+            sceneId,
+            sectionId,
+          },
+        },
+      );
 
       // Update store with new repository state
       syncStoreProjectState(store, projectService);
+      reconcileCurrentEditorSession(deps);
     }
 
     render();
@@ -825,13 +1244,18 @@ export const handleToggleSectionsGraphView = (deps) => {
 };
 
 export const handlePreviewClick = (deps) => {
-  const { store, render, appService } = deps;
-  const sceneId = store.selectSceneId();
-  const sectionId = store.selectSelectedSectionId();
-  const lineId = store.selectSelectedLineId();
-  appService.blurActiveElement();
-  store.showPreviewSceneId({ sceneId, sectionId, lineId });
-  render();
+  const openPreview = async () => {
+    const { store, render, appService } = deps;
+    const sceneId = store.selectSceneId();
+    const sectionId = store.selectSelectedSectionId();
+    const lineId = store.selectSelectedLineId();
+    await flushSceneEditorDrafts(deps);
+    appService.blurActiveElement();
+    store.showPreviewSceneId({ sceneId, sectionId, lineId });
+    render();
+  };
+
+  void openPreview();
 };
 
 export const handlePreviewShortcut = (deps) => {
@@ -839,10 +1263,12 @@ export const handlePreviewShortcut = (deps) => {
 };
 
 export const handleDeleteLineShortcut = async (deps, payload) => {
-  const { store, subject, render, projectService, globalUI, appService } = deps;
+  const { store, render } = deps;
+  const { subject } = deps;
   if (isSectionsOverviewOpen(store)) {
     return;
   }
+  cancelSceneEditorDraftFlush(deps);
 
   const detail = payload?._event?.detail || {};
   const lineId =
@@ -855,6 +1281,14 @@ export const handleDeleteLineShortcut = async (deps, payload) => {
     return;
   }
 
+  const opStartedAt = nowMs();
+  const opId = `delete-line:${lineId}:${Math.round(opStartedAt)}`;
+  console.info("[sceneEditor][perf] delete-line-start", {
+    opId,
+    lineId,
+    sectionId,
+  });
+
   const scene = store.selectScene();
   const section = scene?.sections?.find((item) => item.id === sectionId);
   const lines = Array.isArray(section?.lines) ? section.lines : [];
@@ -863,38 +1297,56 @@ export const handleDeleteLineShortcut = async (deps, payload) => {
     return;
   }
 
-  const dialogOptions = {
-    title: "Delete Line",
-    message: "Are you sure you want to delete this line?",
-    confirmText: "Delete",
-  };
-
-  let confirmationResult = false;
-  if (typeof globalUI?.showConfirm === "function") {
-    confirmationResult = await globalUI.showConfirm(dialogOptions);
-  } else if (typeof appService?.showDialog === "function") {
-    confirmationResult = await appService.showDialog(dialogOptions);
-  }
-
-  const confirmed =
-    typeof confirmationResult === "boolean"
-      ? confirmationResult
-      : !!(confirmationResult?.confirmed ?? confirmationResult?.value);
-  if (!confirmed) {
-    return;
-  }
-
   const nextSelectedLineId =
     lines[currentIndex + 1]?.id || lines[currentIndex - 1]?.id;
 
-  await flushDialogueQueue(deps);
-  await projectService.deleteLineItem({ lineIds: [lineId] });
-
-  syncStoreProjectState(store, projectService);
+  const nextSession = deleteSceneEditorSessionLine(
+    store.selectEditorSession(),
+    {
+      lineId,
+      nextSelectedLineId,
+    },
+  );
+  const sessionForStore = nextSession
+    ? {
+        ...nextSession,
+        selectionTarget: undefined,
+      }
+    : nextSession;
+  store.setEditorSession({ editorSession: sessionForStore });
   store.setSelectedLineId({ selectedLineId: nextSelectedLineId });
-
   render();
-  subject.dispatch("sceneEditor.renderCanvas", {});
+  subject.dispatch("sceneEditor.renderCanvas", {
+    perfReason: "delete-line-shortcut",
+    perfOpId: opId,
+    perfDispatchTs: nowMs(),
+  });
+  console.info("[sceneEditor][perf] delete-line-optimistic", {
+    opId,
+    lineId,
+    nextSelectedLineId,
+    optimisticMs: Number((nowMs() - opStartedAt).toFixed(1)),
+  });
+
+  if (nextSelectedLineId) {
+    focusLinesEditorContainer(deps.refs);
+    requestAnimationFrame(() => {
+      scrollLinesEditorLineIntoView(deps.refs, nextSelectedLineId);
+      focusLinesEditorContainer(deps.refs);
+    });
+  } else {
+    focusLinesEditorContainer(deps.refs);
+  }
+  scheduleSceneEditorDraftFlush(deps, {
+    reason: "structure",
+  });
+  console.info("[sceneEditor][perf] delete-line-end", {
+    opId,
+    lineId,
+    nextSelectedLineId,
+    totalMs: Number((nowMs() - opStartedAt).toFixed(1)),
+    persisted: false,
+  });
 };
 
 export const handleLineDeleteActionItem = async (deps, payload) => {
@@ -916,13 +1368,26 @@ export const handleLineDeleteActionItem = async (deps, payload) => {
       delete newActions[actionType];
     }
   }
-  await projectService.updateLineActions({
-    lineId: selectedLine.id,
-    data: newActions,
-    replace: true,
-  });
+  await runSceneEditorPersistence(
+    deps,
+    async () => {
+      await projectService.updateLineActions({
+        lineId: selectedLine.id,
+        data: newActions,
+        replace: true,
+      });
+    },
+    {
+      label: "line-delete-action-item",
+      meta: {
+        lineId: selectedLine.id,
+        actionType,
+      },
+    },
+  );
   // Update store with new repository state
   syncStoreProjectState(store, projectService);
+  reconcileCurrentEditorSession(deps);
   // Trigger re-render
   render();
   subject.dispatch("sceneEditor.renderCanvas", {});
@@ -932,8 +1397,9 @@ export const handleHidePreviewScene = async (deps) => {
   await restoreSceneEditorFromPreview(deps);
 };
 
-export const handleBackClick = (deps) => {
+export const handleBackClick = async (deps) => {
   const { appService } = deps;
+  await flushSceneEditorDrafts(deps);
   const { p } = appService.getPayload();
   appService.navigate("/project/scenes", { p });
 };
@@ -967,13 +1433,26 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
     // For non-inherited actions, delete as before
     delete newActions[actionType];
   }
-  await projectService.updateLineActions({
-    lineId: selectedLine.id,
-    data: newActions,
-    replace: true,
-  });
+  await runSceneEditorPersistence(
+    deps,
+    async () => {
+      await projectService.updateLineActions({
+        lineId: selectedLine.id,
+        data: newActions,
+        replace: true,
+      });
+    },
+    {
+      label: "system-action-delete",
+      meta: {
+        lineId: selectedLine.id,
+        actionType,
+      },
+    },
+  );
   // Update store with new repository state
   syncStoreProjectState(store, projectService);
+  reconcileCurrentEditorSession(deps);
   // Trigger re-render
   render();
 

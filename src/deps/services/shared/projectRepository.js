@@ -369,6 +369,17 @@ const applyRepositoryEventToRepositoryState = ({
 const createInitialRepositoryStateForProject = () =>
   structuredClone(initialProjectData);
 
+const nowMs = () => {
+  if (
+    typeof performance !== "undefined" &&
+    typeof performance.now === "function"
+  ) {
+    return performance.now();
+  }
+
+  return Date.now();
+};
+
 export const createProjectRepository = async ({
   projectId,
   store,
@@ -418,5 +429,75 @@ export const applyCommandToRepository = async ({
         payload: structuredClone(repositoryCommand.payload || {}),
       },
     ],
+  };
+};
+
+export const applyCommandsToRepository = async ({
+  repository,
+  commands = [],
+  projectId,
+  perfLabel,
+  perfMeta = {},
+}) => {
+  const startedAt = nowMs();
+  const normalizedCommands = Array.isArray(commands)
+    ? commands.filter(Boolean)
+    : [];
+  if (normalizedCommands.length === 0) {
+    return {
+      mode: "command_event",
+      events: [],
+    };
+  }
+
+  for (const command of normalizedCommands) {
+    if (!isDirectDomainProjectionCommand(command)) {
+      throw new Error(
+        `No command projection handler for command type '${command?.type || "unknown"}'`,
+      );
+    }
+  }
+
+  const repositoryCommands = normalizedCommands.map((command) => ({
+    ...structuredClone(command),
+    projectId: command?.projectId || projectId,
+  }));
+  const repositoryEvents = repositoryCommands.map((command) =>
+    createRepositoryCommandEvent({
+      command,
+    }),
+  );
+  const builtEventsAt = nowMs();
+
+  if (typeof repository.addEvents === "function") {
+    await repository.addEvents(repositoryEvents, {
+      perfLabel,
+      perfMeta,
+    });
+  } else {
+    for (const event of repositoryEvents) {
+      await repository.addEvent(event);
+    }
+  }
+  const appliedAt = nowMs();
+
+  if (perfLabel) {
+    console.info("[sceneEditor][perf] apply-commands-to-repository", {
+      perfLabel,
+      commandCount: repositoryCommands.length,
+      eventCount: repositoryEvents.length,
+      buildEventsMs: Number((builtEventsAt - startedAt).toFixed(1)),
+      addEventsMs: Number((appliedAt - builtEventsAt).toFixed(1)),
+      totalMs: Number((appliedAt - startedAt).toFixed(1)),
+      ...perfMeta,
+    });
+  }
+
+  return {
+    mode: "command_event",
+    events: repositoryCommands.map((repositoryCommand) => ({
+      type: repositoryCommand.type,
+      payload: structuredClone(repositoryCommand.payload || {}),
+    })),
   };
 };

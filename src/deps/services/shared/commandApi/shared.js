@@ -3,6 +3,7 @@ import { projectRepositoryStateToDomainState } from "../../../../internal/projec
 import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
 import {
   applyCommandToRepository,
+  applyCommandsToRepository,
   assertSupportedProjectState,
   getSiblingOrderNodes,
   normalizeParentId,
@@ -22,6 +23,17 @@ export const createCommandApiShared = ({
   storyScenePartitionFor,
   resourceTypePartitionFor,
 }) => {
+  const nowMs = () => {
+    if (
+      typeof performance !== "undefined" &&
+      typeof performance.now === "function"
+    ) {
+      return performance.now();
+    }
+
+    return Date.now();
+  };
+
   const createId = () => {
     if (typeof idGenerator === "function") {
       const id = idGenerator();
@@ -46,7 +58,12 @@ export const createCommandApiShared = ({
     resourceTypePartitionFor(projectId, "files");
 
   const ensureCommandContext = async () => {
-    const repository = await getCurrentRepository();
+    let repository;
+    try {
+      repository = getCachedRepository();
+    } catch {
+      repository = await getCurrentRepository();
+    }
     const currentProjectId = getCurrentProjectId();
     if (!currentProjectId) {
       throw new Error("No project selected (missing ?p= in URL)");
@@ -71,7 +88,7 @@ export const createCommandApiShared = ({
     };
   };
 
-  const submitCommandWithContext = async ({
+  const createCommandWithContext = ({
     context,
     scope,
     type,
@@ -81,7 +98,8 @@ export const createCommandApiShared = ({
   }) => {
     const resolvedBasePartition =
       basePartition || `project:${context.projectId}:${scope}`;
-    const command = createCommandEnvelope({
+
+    return createCommandEnvelope({
       id: createId(),
       projectId: context.projectId,
       scope,
@@ -90,6 +108,24 @@ export const createCommandApiShared = ({
       payload,
       actor: context.actor,
       clientTs: getCommandTimestamp(),
+    });
+  };
+
+  const submitCommandWithContext = async ({
+    context,
+    scope,
+    type,
+    payload,
+    partitions = [],
+    basePartition,
+  }) => {
+    const command = createCommandWithContext({
+      context,
+      scope,
+      type,
+      payload,
+      partitions,
+      basePartition,
     });
 
     const submitResult = await context.session.submitCommand(command);
@@ -106,6 +142,70 @@ export const createCommandApiShared = ({
     return {
       valid: true,
       commandId: command.id,
+      eventCount: applyResult.events.length,
+      applyMode: applyResult.mode,
+    };
+  };
+
+  const submitCommandsWithContext = async ({
+    context,
+    commands = [],
+    perfLabel,
+    perfMeta = {},
+  } = {}) => {
+    const startedAt = nowMs();
+    const normalizedCommands = (commands || []).map((entry) =>
+      createCommandWithContext({
+        context,
+        scope: entry.scope,
+        type: entry.type,
+        payload: entry.payload,
+        partitions: entry.partitions,
+        basePartition: entry.basePartition,
+      }),
+    );
+    const envelopeBuiltAt = nowMs();
+    if (normalizedCommands.length === 0) {
+      return {
+        valid: true,
+        commandIds: [],
+        eventCount: 0,
+      };
+    }
+
+    const submitResult =
+      await context.session.submitCommands(normalizedCommands);
+    const sessionSubmittedAt = nowMs();
+    if (submitResult?.valid === false) {
+      return submitResult;
+    }
+
+    const applyResult = await applyCommandsToRepository({
+      repository: context.repository,
+      commands: normalizedCommands,
+      projectId: context.projectId,
+      perfLabel,
+      perfMeta,
+    });
+    const appliedAt = nowMs();
+
+    if (perfLabel) {
+      console.info("[sceneEditor][perf] submit-commands-with-context", {
+        perfLabel,
+        commandCount: normalizedCommands.length,
+        envelopeMs: Number((envelopeBuiltAt - startedAt).toFixed(1)),
+        sessionSubmitMs: Number(
+          (sessionSubmittedAt - envelopeBuiltAt).toFixed(1),
+        ),
+        localApplyMs: Number((appliedAt - sessionSubmittedAt).toFixed(1)),
+        totalMs: Number((appliedAt - startedAt).toFixed(1)),
+        ...perfMeta,
+      });
+    }
+
+    return {
+      valid: true,
+      commandIds: normalizedCommands.map((command) => command.id),
       eventCount: applyResult.events.length,
       applyMode: applyResult.mode,
     };
@@ -330,7 +430,9 @@ export const createCommandApiShared = ({
     getCurrentProjectId,
     ensureCommandContext,
     ensureFilesExist,
+    createCommandWithContext,
     submitCommandWithContext,
+    submitCommandsWithContext,
     buildPlacementPayload,
     resolveResourceIndex,
     resolveSceneIndex,

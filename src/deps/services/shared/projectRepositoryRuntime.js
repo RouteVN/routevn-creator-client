@@ -11,6 +11,17 @@ const PROJECT_STATE_CHECKPOINT = {
 export const projectRepositoryStatePartitionFor = (projectId) =>
   `project:${projectId}:repository_state`;
 
+const nowMs = () => {
+  if (
+    typeof performance !== "undefined" &&
+    typeof performance.now === "function"
+  ) {
+    return performance.now();
+  }
+
+  return Date.now();
+};
+
 const toCommittedProjectStateEvent = ({ event, committedId, projectId }) => ({
   ...structuredClone(event),
   committedId,
@@ -134,11 +145,16 @@ export const createProjectRepositoryRuntime = async ({
     currentState = createInitialState();
   }
   assertState(currentState);
+  let currentRevision = events.length;
 
   const notifyStateListeners = () => {
-    const snapshot = structuredClone(currentState);
+    const repositoryState = structuredClone(currentState);
+    const revision = currentRevision;
     listeners.forEach((listener) => {
-      listener(snapshot);
+      listener({
+        repositoryState,
+        revision,
+      });
     });
   };
 
@@ -157,6 +173,19 @@ export const createProjectRepositoryRuntime = async ({
       return structuredClone(replayedState);
     },
 
+    getRevision(untilEventIndex) {
+      if (untilEventIndex === undefined || untilEventIndex === null) {
+        return currentRevision;
+      }
+
+      const parsedIndex = Number(untilEventIndex);
+      if (!Number.isFinite(parsedIndex)) {
+        return currentRevision;
+      }
+
+      return Math.max(0, Math.min(Math.floor(parsedIndex), events.length));
+    },
+
     getEvents() {
       return events.map((event) => structuredClone(event));
     },
@@ -168,7 +197,10 @@ export const createProjectRepositoryRuntime = async ({
 
       listeners.add(listener);
       if (emitCurrent) {
-        listener(structuredClone(currentState));
+        listener({
+          repositoryState: structuredClone(currentState),
+          revision: currentRevision,
+        });
       }
 
       return () => {
@@ -182,6 +214,7 @@ export const createProjectRepositoryRuntime = async ({
       }
       events.push(structuredClone(event));
       const committedId = events.length;
+      currentRevision = committedId;
 
       await projectStateRuntime.onCommittedEvent(
         toCommittedProjectStateEvent({
@@ -197,6 +230,62 @@ export const createProjectRepositoryRuntime = async ({
       });
       assertState(currentState);
       notifyStateListeners();
+    },
+
+    async addEvents(sourceEvents = [], { perfLabel, perfMeta = {} } = {}) {
+      const startedAt = nowMs();
+      const nextEvents = Array.isArray(sourceEvents)
+        ? sourceEvents.filter(Boolean)
+        : [];
+      if (nextEvents.length === 0) {
+        return;
+      }
+
+      if (typeof store.appendEvents === "function") {
+        await store.appendEvents(nextEvents);
+      } else if (typeof store.appendEvent === "function") {
+        for (const event of nextEvents) {
+          await store.appendEvent(event);
+        }
+      }
+      const appendedAt = nowMs();
+
+      for (const event of nextEvents) {
+        events.push(structuredClone(event));
+        const committedId = events.length;
+        currentRevision = committedId;
+
+        await projectStateRuntime.onCommittedEvent(
+          toCommittedProjectStateEvent({
+            event,
+            committedId,
+            projectId,
+          }),
+        );
+      }
+      const reducedAt = nowMs();
+
+      currentState = await projectStateRuntime.loadMaterializedView({
+        viewName: PROJECT_STATE_VIEW_NAME,
+        partition: projectPartition,
+      });
+      assertState(currentState);
+      const loadedAt = nowMs();
+      notifyStateListeners();
+      const notifiedAt = nowMs();
+
+      if (perfLabel) {
+        console.info("[sceneEditor][perf] repository-add-events", {
+          perfLabel,
+          eventCount: nextEvents.length,
+          appendMs: Number((appendedAt - startedAt).toFixed(1)),
+          reduceMs: Number((reducedAt - appendedAt).toFixed(1)),
+          loadViewMs: Number((loadedAt - reducedAt).toFixed(1)),
+          notifyMs: Number((notifiedAt - loadedAt).toFixed(1)),
+          totalMs: Number((notifiedAt - startedAt).toFixed(1)),
+          ...perfMeta,
+        });
+      }
     },
   };
 };
