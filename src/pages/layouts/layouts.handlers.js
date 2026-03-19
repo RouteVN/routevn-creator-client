@@ -327,6 +327,28 @@ const createLayoutTemplate = (layoutType) => {
   };
 };
 
+const protectedLayoutTypeLabels = {
+  dialogue: "Dialogue",
+  nvl: "NVL",
+  choice: "Choice",
+};
+
+const canDeleteLayoutItem = (layouts, itemId) => {
+  const items = Object.values(layouts?.items || {});
+  const item = layouts?.items?.[itemId];
+  const layoutType = item?.layoutType;
+
+  if (!protectedLayoutTypeLabels[layoutType]) {
+    return true;
+  }
+
+  const matchingCount = items.filter(
+    (layout) => layout?.layoutType === layoutType,
+  ).length;
+
+  return matchingCount > 1;
+};
+
 export const handleLayoutFormActionClick = async (deps, payload) => {
   const { store, projectService, appService } = deps;
   const { actionId, values } = payload._event.detail;
@@ -371,15 +393,25 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, appService, render } = deps;
   const { itemId } = payload._event.detail;
+  const state = projectService.getState();
+  const layoutType = state.layouts?.items?.[itemId]?.layoutType;
 
   const usage = recursivelyCheckResource({
-    state: projectService.getState(),
+    state,
     itemId,
     checkTargets: ["scenes"],
   });
 
   if (usage.isUsed) {
     appService.showToast("Cannot delete resource, it is currently in use.");
+    render();
+    return;
+  }
+
+  if (!canDeleteLayoutItem(state.layouts, itemId)) {
+    appService.showToast(
+      `Cannot delete the last ${protectedLayoutTypeLabels[layoutType]} layout. At least one ${protectedLayoutTypeLabels[layoutType]} layout must remain.`,
+    );
     render();
     return;
   }

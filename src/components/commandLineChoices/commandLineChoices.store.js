@@ -37,6 +37,30 @@ const CHOICE_FORM_TEMPLATE = Object.freeze({
   ],
 });
 
+const getChoiceLayoutOptions = (layouts = []) => {
+  return layouts
+    .filter((layout) => layout.layoutType === "choice")
+    .map((layout) => ({
+      value: layout?.id || "",
+      label: layout?.name || "",
+    }));
+};
+
+const resolveSelectedResourceId = ({ layouts, resourceId } = {}) => {
+  const resourceOptions = getChoiceLayoutOptions(layouts);
+
+  if (
+    resourceId &&
+    resourceOptions.some(
+      (resourceOption) => resourceOption.value === resourceId,
+    )
+  ) {
+    return resourceId;
+  }
+
+  return resourceOptions[0]?.value ?? "";
+};
+
 export const createInitialState = () => ({
   mode: "list", // "list" or "editChoice"
   items: [
@@ -203,6 +227,7 @@ const form = {
       type: "select",
       label: "Choices Layout",
       required: false,
+      clearable: false,
       options: "${resourceOptions}",
     },
     {
@@ -239,12 +264,11 @@ export const selectViewData = ({ state, props }) => {
     });
   }
 
-  const resourceOptions = layouts
-    .filter((layout) => layout.layoutType === "choice")
-    .map((layout) => ({
-      value: layout?.id || "",
-      label: layout?.name || "",
-    }));
+  const resourceOptions = getChoiceLayoutOptions(layouts);
+  const selectedResourceId = resolveSelectedResourceId({
+    layouts,
+    resourceId: state.selectedResourceId,
+  });
 
   const actionTypeOptions = [
     { value: "continue", label: "Continue (Do Nothing)" },
@@ -302,7 +326,7 @@ export const selectViewData = ({ state, props }) => {
 
   // Create defaultValues with items data
   const defaultValues = {
-    resourceId: state?.selectedResourceId,
+    resourceId: selectedResourceId,
     items: processedItems,
     content: state?.editForm?.content || "",
     actionType: state?.editForm?.actionType,
@@ -314,7 +338,7 @@ export const selectViewData = ({ state, props }) => {
     mode: state?.mode || "list",
     items: processedItems,
     layouts: resourceOptions,
-    selectedResourceId: state?.selectedResourceId || "",
+    selectedResourceId,
     editingIndex: state?.editingIndex ?? -1,
     editForm: state?.editForm,
     editFormContext,

@@ -1,4 +1,4 @@
-import { fromEvent, tap } from "rxjs";
+import { fromEvent, merge, tap } from "rxjs";
 import {
   SCENE_BOX_HEIGHT,
   SCENE_BOX_WIDTH,
@@ -23,6 +23,18 @@ const syncContainerSize = ({ store, refs } = {}) => {
   return true;
 };
 
+const normalizeCursorValue = (cursor) => {
+  if (!cursor) {
+    return undefined;
+  }
+
+  if (typeof CSS === "undefined" || typeof CSS.supports !== "function") {
+    return cursor;
+  }
+
+  return CSS.supports("cursor", cursor) ? cursor : undefined;
+};
+
 const syncCursorStyles = ({ store, refs, props } = {}) => {
   const container = refs?.container;
   if (!container) {
@@ -32,7 +44,7 @@ const syncCursorStyles = ({ store, refs, props } = {}) => {
   const isPanMode = store.selectIsPanMode();
   const isPanning = store.selectIsPanning();
   const panCursor = isPanning ? "grabbing" : isPanMode ? "grab" : undefined;
-  const overrideCursor = props?.cursor;
+  const overrideCursor = normalizeCursorValue(props?.cursor);
   const containerCursor = panCursor || overrideCursor || "default";
   const itemCursor = panCursor || overrideCursor || "move";
 
@@ -54,6 +66,34 @@ const syncCursorStyles = ({ store, refs, props } = {}) => {
 const renderWithCursorSync = (deps) => {
   deps.render();
   syncCursorStyles(deps);
+};
+
+const getActiveElement = (root = document) => {
+  let active = root?.activeElement;
+  while (active?.shadowRoot?.activeElement) {
+    active = active.shadowRoot.activeElement;
+  }
+  return active;
+};
+
+const isTextEntryFocused = () => {
+  const active = getActiveElement(document);
+  if (!active) {
+    return false;
+  }
+
+  if (active instanceof HTMLElement && active.isContentEditable) {
+    return true;
+  }
+
+  const tagName = active.tagName;
+  return ["INPUT", "TEXTAREA", "SELECT"].includes(tagName);
+};
+
+const isSpaceKey = (event) => {
+  const key = String(event?.key || "");
+  const code = String(event?.code || "");
+  return code === "Space" || key === " " || key === "Spacebar";
 };
 
 const dispatchPanChanged = ({ store, dispatchEvent } = {}) => {
@@ -130,8 +170,8 @@ export const handleContainerContextMenu = (deps, payload) => {
 
 export const handlePanButtonClick = (deps) => {
   const { store } = deps;
-  const isPanMode = store.selectIsPanMode();
-  store.togglePanMode({ isPanMode: !isPanMode });
+  const isPanMode = store.selectIsPinnedPanMode();
+  store.setPinnedPanMode({ isPanMode: !isPanMode });
   renderWithCursorSync(deps);
 };
 
@@ -484,34 +524,67 @@ export const handleWindowMouseUp = (deps) => {
 
 // Keyboard event handlers
 export const handleWindowKeyDown = (deps, payload) => {
-  const { store, appService } = deps;
+  const { store } = deps;
+  const isTextFocused = isTextEntryFocused();
 
-  if (appService.isInputFocused()) {
+  if (isTextFocused) {
     return;
   }
 
-  if (payload._event.code === "Space" && !store.selectIsPanMode()) {
+  if (isSpaceKey(payload._event) && !store.selectIsKeyboardPanMode()) {
     payload._event.preventDefault();
-    store.togglePanMode({ isPanMode: true });
+    store.setKeyboardPanMode({ isPanMode: true });
     renderWithCursorSync(deps);
   }
 };
 
 export const handleWindowKeyUp = (deps, payload) => {
-  const { store, appService } = deps;
+  const { store } = deps;
+  const isTextFocused = isTextEntryFocused();
 
-  if (appService.isInputFocused()) {
+  if (isTextFocused && !store.selectIsKeyboardPanMode()) {
     return;
   }
 
-  if (payload._event.code === "Space" && store.selectIsPanMode()) {
+  if (isSpaceKey(payload._event) && store.selectIsKeyboardPanMode()) {
     payload._event.preventDefault();
-    store.togglePanMode({ isPanMode: false });
+    store.setKeyboardPanMode({ isPanMode: false });
+    if (store.selectIsPanning()) {
+      store.stopPanning();
+    }
+    renderWithCursorSync(deps);
+  }
+};
+
+export const handleWindowBlur = (deps) => {
+  const { store } = deps;
+  let didChange = false;
+
+  if (store.selectIsKeyboardPanMode()) {
+    store.setKeyboardPanMode({ isPanMode: false });
+    didChange = true;
+  }
+
+  if (store.selectIsPanning()) {
+    store.stopPanning();
+    didChange = true;
+  }
+
+  if (didChange) {
     renderWithCursorSync(deps);
   }
 };
 
 const subscriptions = (deps) => {
+  const windowKeyDown$ = fromEvent(window, "keydown");
+  const documentKeyDown$ = fromEvent(document, "keydown", {
+    capture: true,
+  });
+  const windowKeyUp$ = fromEvent(window, "keyup");
+  const documentKeyUp$ = fromEvent(document, "keyup", {
+    capture: true,
+  });
+
   return [
     fromEvent(window, "resize").pipe(
       tap((event) => deps.handlers.handleWindowResize(deps, { _event: event })),
@@ -526,13 +599,16 @@ const subscriptions = (deps) => {
         deps.handlers.handleWindowMouseUp(deps, { _event: event }),
       ),
     ),
-    fromEvent(window, "keydown").pipe(
+    merge(windowKeyDown$, documentKeyDown$).pipe(
       tap((event) =>
         deps.handlers.handleWindowKeyDown(deps, { _event: event }),
       ),
     ),
-    fromEvent(window, "keyup").pipe(
+    merge(windowKeyUp$, documentKeyUp$).pipe(
       tap((event) => deps.handlers.handleWindowKeyUp(deps, { _event: event })),
+    ),
+    fromEvent(window, "blur").pipe(
+      tap((event) => deps.handlers.handleWindowBlur(deps, { _event: event })),
     ),
   ];
 };
