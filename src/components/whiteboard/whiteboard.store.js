@@ -49,7 +49,8 @@ export const createInitialState = () => ({
   lastDraggedPosition: undefined,
   hoveredItemId: undefined,
   // Pan state
-  isPanMode: false,
+  isPinnedPanMode: false,
+  isKeyboardPanMode: false,
   isPanning: false,
   panX: 0,
   panY: 0,
@@ -97,8 +98,12 @@ export const selectLastDraggedPosition = ({ state }) => {
 };
 
 // Pan functions
-export const togglePanMode = ({ state }, { isPanMode } = {}) => {
-  state.isPanMode = isPanMode;
+export const setPinnedPanMode = ({ state }, { isPanMode } = {}) => {
+  state.isPinnedPanMode = isPanMode;
+};
+
+export const setKeyboardPanMode = ({ state }, { isPanMode } = {}) => {
+  state.isKeyboardPanMode = isPanMode;
 };
 
 export const startPanning = ({ state }, { mouseX, mouseY } = {}) => {
@@ -181,7 +186,10 @@ export const setHoveredItemId = ({ state }, { itemId } = {}) => {
   state.hoveredItemId = itemId;
 };
 
-export const selectIsPanMode = ({ state }) => state.isPanMode;
+export const selectIsPanMode = ({ state }) =>
+  state.isPinnedPanMode || state.isKeyboardPanMode;
+export const selectIsPinnedPanMode = ({ state }) => state.isPinnedPanMode;
+export const selectIsKeyboardPanMode = ({ state }) => state.isKeyboardPanMode;
 export const selectIsPanning = ({ state }) => state.isPanning;
 export const selectPan = ({ state }) => ({
   x: state.panX,
@@ -208,6 +216,18 @@ export const setInitialZoomAndPan = (
 };
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const normalizeCursorValue = (cursor) => {
+  if (!cursor) {
+    return undefined;
+  }
+
+  if (typeof CSS === "undefined" || typeof CSS.supports !== "function") {
+    return cursor;
+  }
+
+  return CSS.supports("cursor", cursor) ? cursor : undefined;
+};
 
 const generateMinimapData = (items, pan, zoomLevel, containerSize) => {
   if (!items || items.length === 0) {
@@ -313,8 +333,8 @@ export const selectViewData = ({ state, props }) => {
           : "sm",
   }));
 
-  const containerCursor = props.cursor;
-  const itemCursor = props.cursor || "move";
+  const containerCursor = normalizeCursorValue(props.cursor);
+  const itemCursor = normalizeCursorValue(props.cursor) || "move";
 
   // Calculate adaptive grid size for container background
   const getAdaptiveGridSize = (zoomLevel) => {
@@ -367,8 +387,8 @@ export const selectViewData = ({ state, props }) => {
     ),
     arrowsList,
     selectedItemId: props.selectedItemId,
-    isPanMode: state.isPanMode,
-    panModeV: state.isPanMode ? "pr" : "gh",
+    isPanMode: state.isPinnedPanMode || state.isKeyboardPanMode,
+    panModeV: state.isPinnedPanMode || state.isKeyboardPanMode ? "pr" : "gh",
     panX: state.panX,
     panY: state.panY,
     zoomLevel: state.zoomLevel,

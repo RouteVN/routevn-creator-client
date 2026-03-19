@@ -2,6 +2,27 @@ const getLayoutTypeByMode = (mode) => {
   return mode === "nvl" ? "nvl" : "dialogue";
 };
 
+const getLayoutOptions = ({ layouts, mode } = {}) => {
+  const layoutType = getLayoutTypeByMode(mode);
+  return (layouts ?? [])
+    .filter((layout) => layout.layoutType === layoutType)
+    .map((layout) => ({
+      value: layout.id,
+      label: layout.name,
+    }));
+};
+
+const resolveSelectedResourceId = ({ layoutOptions, resourceId } = {}) => {
+  if (
+    resourceId &&
+    layoutOptions.some((layoutOption) => layoutOption.value === resourceId)
+  ) {
+    return resourceId;
+  }
+
+  return layoutOptions[0]?.value ?? "";
+};
+
 const toBoolean = (value) => {
   return value === true || value === "true";
 };
@@ -28,7 +49,8 @@ export const createInitialState = () => ({
         type: "select",
         label: "Dialogue Mode",
         description: "",
-        required: false,
+        required: true,
+        clearable: false,
         options: [
           { value: "adv", label: "ADV" },
           { value: "nvl", label: "NVL" },
@@ -39,7 +61,8 @@ export const createInitialState = () => ({
         type: "select",
         label: "Dialogue Layout",
         description: "",
-        required: false,
+        required: true,
+        clearable: false,
         placeholder: "Choose a layout...",
         options: [],
       },
@@ -58,7 +81,8 @@ export const createInitialState = () => ({
         type: "select",
         label: "Clear Page",
         description: "",
-        required: false,
+        required: true,
+        clearable: false,
         options: [
           { value: false, label: "No" },
           { value: true, label: "Yes" },
@@ -102,20 +126,14 @@ export const selectViewData = ({ state, props }) => {
   const layouts = props.layouts || [];
   const characters = props.characters || [];
   const selectedMode = state.selectedMode || "adv";
-  const layoutType = getLayoutTypeByMode(selectedMode);
-
-  const layoutOptions = layouts
-    .filter((layout) => layout.layoutType === layoutType)
-    .map((layout) => ({
-      value: layout.id,
-      label: layout.name,
-    }));
-
-  const selectedResourceId = layoutOptions.some(
-    (layoutOption) => layoutOption.value === state.selectedResourceId,
-  )
-    ? state.selectedResourceId
-    : "";
+  const layoutOptions = getLayoutOptions({
+    layouts,
+    mode: selectedMode,
+  });
+  const selectedResourceId = resolveSelectedResourceId({
+    layoutOptions,
+    resourceId: state.selectedResourceId,
+  });
 
   const characterOptions = characters
     .filter((character) => character.type === "character")
@@ -189,7 +207,7 @@ export const selectViewData = ({ state, props }) => {
     selectedCharacterId: state.selectedCharacterId,
     selectedMode,
     clearPage: state.clearPage,
-    submitDisabled: false,
+    submitDisabled: !selectedResourceId,
     breadcrumb,
     form,
     defaultValues,

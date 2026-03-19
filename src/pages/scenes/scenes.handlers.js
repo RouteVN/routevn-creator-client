@@ -4,6 +4,7 @@ import {
   matchesRemoteTargets,
 } from "../../internal/ui/collabRefresh.js";
 import { createScenesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { normalizeLineActions } from "../../internal/project/engineActions.js";
 import { getInteractionActions } from "../../internal/project/interactionPayload.js";
 import {
   SCENE_BOX_HEIGHT,
@@ -45,6 +46,22 @@ const getTransitionsFromLayout = (layout) => {
     }
   }
   return transitions;
+};
+
+const resolveLayoutReference = ({ ref, layouts, controls }) => {
+  if (!ref?.resourceId) {
+    return undefined;
+  }
+
+  if (ref.resourceType === "control") {
+    return controls?.items?.[ref.resourceId];
+  }
+
+  if (ref.resourceType === "layout") {
+    return layouts?.items?.[ref.resourceId];
+  }
+
+  return layouts?.items?.[ref.resourceId] || controls?.items?.[ref.resourceId];
 };
 
 /**
@@ -90,10 +107,9 @@ const getTransitionsForScene = (sections, layouts, controls) => {
     if (section.lines && section.lines.items) {
       // Iterate through all lines in this section
       for (const line of Object.values(section.lines.items)) {
+        const lineActions = normalizeLineActions(line.actions || {});
         // Check for sectionTransition in actions
-        const sectionTransition =
-          line.actions?.sectionTransition ||
-          line.actions?.actions?.sectionTransition;
+        const sectionTransition = lineActions?.sectionTransition;
         if (
           sectionTransition &&
           sectionTransition.sceneId &&
@@ -103,7 +119,7 @@ const getTransitionsForScene = (sections, layouts, controls) => {
         }
 
         // Check for transitions within choices
-        const choice = line.actions?.choice || line.actions?.actions?.choice;
+        const choice = lineActions?.choice;
         if (choice && choice.items && Array.isArray(choice.items)) {
           for (const choiceItem of choice.items) {
             const choiceTransition =
@@ -120,22 +136,16 @@ const getTransitionsForScene = (sections, layouts, controls) => {
 
         // Check for transitions within layouts referenced by background or control
         const layoutRefs = [
-          line.actions?.background,
-          line.actions?.control,
-          line.actions?.actions?.background,
-          line.actions?.actions?.control,
-        ].filter((ref) => {
-          return (
-            ref?.resourceId &&
-            (ref.resourceType === "layout" || ref.resourceType === "control")
-          );
-        });
+          lineActions?.background,
+          lineActions?.control,
+        ].filter((ref) => ref?.resourceId);
 
         for (const ref of layoutRefs) {
-          const layout =
-            ref.resourceType === "control"
-              ? controls?.items?.[ref.resourceId]
-              : layouts?.items?.[ref.resourceId];
+          const layout = resolveLayoutReference({
+            ref,
+            layouts,
+            controls,
+          });
           if (layout) {
             const layoutTransitions = getTransitionsFromLayout(layout);
             for (const sceneId of layoutTransitions) {

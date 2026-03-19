@@ -4,7 +4,7 @@ import {
   toRouteEngineKeyboardResource,
 } from "./layout.js";
 import { RESOURCE_TYPES } from "./commands.js";
-import { normalizeEngineActions } from "./engineActions.js";
+import { normalizeLineActions } from "./engineActions.js";
 import { getInteractionActions } from "./interactionPayload.js";
 import { toFlatItems, toHierarchyStructure } from "./tree.js";
 
@@ -433,7 +433,7 @@ export const projectRepositoryStateToDomainState = ({
         state.lines[lineId] = {
           id: lineId,
           sectionId,
-          actions: cloneOr(line?.actions, {}),
+          actions: normalizeLineActions(line?.actions || {}),
           createdAt: toFiniteTimestamp(line?.createdAt, DEFAULT_TIMESTAMP),
           updatedAt: toFiniteTimestamp(
             line?.updatedAt,
@@ -785,7 +785,7 @@ const constructStory = (scenes) => {
 
             transformedSection.lines.push({
               id: lineId,
-              actions: normalizeEngineActions(line.actions || {}),
+              actions: normalizeLineActions(line.actions || {}),
             });
           });
         }
@@ -843,6 +843,22 @@ const getTransitionsFromLayout = (layout) => {
     .filter(Boolean);
 };
 
+const resolveLayoutReference = ({ ref, layouts, controls }) => {
+  if (!ref?.resourceId) {
+    return undefined;
+  }
+
+  if (ref.resourceType === "control") {
+    return controls?.items?.[ref.resourceId];
+  }
+
+  if (ref.resourceType === "layout") {
+    return layouts?.items?.[ref.resourceId];
+  }
+
+  return layouts?.items?.[ref.resourceId] || controls?.items?.[ref.resourceId];
+};
+
 const toSectionLines = (section) => {
   if (Array.isArray(section?.lines)) {
     return section.lines;
@@ -870,17 +886,14 @@ export const getSectionPresentation = ({
   let returnsToMenuScene = false;
 
   lines.forEach((line) => {
-    const pushLayeredView =
-      line.actions?.pushLayeredView || line.actions?.actions?.pushLayeredView;
-    const popLayeredView =
-      line.actions?.popLayeredView || line.actions?.actions?.popLayeredView;
+    const lineActions = normalizeLineActions(line.actions || {});
+    const pushLayeredView = lineActions?.pushLayeredView;
+    const popLayeredView = lineActions?.popLayeredView;
     if (pushLayeredView || popLayeredView) {
       hasMenuReturnAction = true;
     }
 
-    const sectionTransition =
-      line.actions?.sectionTransition ||
-      line.actions?.actions?.sectionTransition;
+    const sectionTransition = lineActions?.sectionTransition;
     if (menuSceneId && sectionTransition?.sceneId === menuSceneId) {
       returnsToMenuScene = true;
     }
@@ -889,7 +902,7 @@ export const getSectionPresentation = ({
       transitions.add(sectionTransitionKey);
     }
 
-    const choice = line.actions?.choice || line.actions?.actions?.choice;
+    const choice = lineActions?.choice;
     const choiceItems = Array.isArray(choice?.items) ? choice.items : [];
     choiceCount += choiceItems.length;
 
@@ -905,23 +918,16 @@ export const getSectionPresentation = ({
       }
     });
 
-    const layoutRefs = [
-      line.actions?.background,
-      line.actions?.control,
-      line.actions?.actions?.background,
-      line.actions?.actions?.control,
-    ].filter((ref) => {
-      return (
-        ref?.resourceId &&
-        (ref.resourceType === "layout" || ref.resourceType === "control")
-      );
-    });
+    const layoutRefs = [lineActions?.background, lineActions?.control].filter(
+      (ref) => ref?.resourceId,
+    );
 
     layoutRefs.forEach((layoutRef) => {
-      const layout =
-        layoutRef.resourceType === "control"
-          ? controls?.items?.[layoutRef.resourceId]
-          : layouts?.items?.[layoutRef.resourceId];
+      const layout = resolveLayoutReference({
+        ref: layoutRef,
+        layouts,
+        controls,
+      });
       const layoutTransitions = getTransitionsFromLayout(layout);
 
       layoutTransitions.forEach((layoutTransition) => {
@@ -1207,14 +1213,23 @@ export const recursivelyCheckResource = ({ state, itemId, checkTargets }) => {
     const keys = RESOURCE_KEYS_MAP[targetName];
     if (!keys) continue;
 
-    const data = state[targetName];
-    if (!data) continue;
+    const targetData =
+      targetName === "scenes"
+        ? [
+            ["scenes", state.scenes],
+            ["sections", state.sections],
+            ["lines", state.lines],
+          ]
+        : [[targetName, state[targetName]]];
 
-    const usages = [];
-    checkNode(data, itemId, keys, usages);
+    for (const [usageTargetName, data] of targetData) {
+      if (!data) continue;
+      const usages = [];
+      checkNode(data, itemId, keys, usages);
 
-    if (usages.length > 0) {
-      inProps[targetName] = usages;
+      if (usages.length > 0) {
+        inProps[usageTargetName] = usages;
+      }
     }
   }
 

@@ -1,4 +1,5 @@
 import { toFlatItems } from "../../project/tree.js";
+import { normalizeLineActions } from "../../project/engineActions.js";
 
 const getLineChanges = (sectionLineChanges, lineId) => {
   const changesLines = sectionLineChanges?.lines || [];
@@ -111,8 +112,8 @@ const buildCharacterSpritePreview = (
 };
 
 const buildSectionTransitionPreview = (line, sceneLookups) => {
-  const transitionData =
-    line.actions?.sectionTransition || line.actions?.actions?.sectionTransition;
+  const lineActions = normalizeLineActions(line.actions || {});
+  const transitionData = lineActions?.sectionTransition;
   if (!transitionData) {
     return {
       sectionTransition: false,
@@ -145,7 +146,8 @@ const buildSectionTransitionPreview = (line, sceneLookups) => {
 };
 
 const buildChoicesPreview = (line) => {
-  const choicesData = line.actions?.choice || line.actions?.actions?.choice;
+  const lineActions = normalizeLineActions(line.actions || {});
+  const choicesData = lineActions?.choice;
   if (!choicesData?.items?.length) {
     return {
       hasChoices: false,
@@ -160,7 +162,8 @@ const buildChoicesPreview = (line) => {
 };
 
 const buildDialogueSpeakerPreview = (line, characterLookups) => {
-  const characterId = line.actions?.dialogue?.characterId;
+  const lineActions = normalizeLineActions(line.actions || {});
+  const characterId = lineActions?.dialogue?.characterId;
   if (!characterId) {
     return undefined;
   }
@@ -177,6 +180,7 @@ export const buildSceneEditorLineViewModels = ({
   const sceneLookups = buildSceneLookups(repositoryState);
 
   return (lines || []).map((line, index) => {
+    const lineActions = normalizeLineActions(line.actions || {});
     const changes = getLineChanges(sectionLineChanges, line.id);
     const transitionPreview = buildSectionTransitionPreview(line, sceneLookups);
     const choicesPreview = buildChoicesPreview(line);
@@ -204,9 +208,7 @@ export const buildSceneEditorLineViewModels = ({
       hasSfx: !!changes.sfx,
       sfxChangeType: changes.sfx?.changeType,
       hasSetNextLineConfig:
-        !!changes.setNextLineConfig ||
-        !!line.actions?.setNextLineConfig ||
-        !!line.actions?.actions?.setNextLineConfig,
+        !!changes.setNextLineConfig || !!lineActions?.setNextLineConfig,
       setNextLineConfigChangeType: changes.setNextLineConfig?.changeType,
       hasDialogueLayout: !!changes.dialogue,
       dialogueChangeType: changes.dialogue?.changeType,

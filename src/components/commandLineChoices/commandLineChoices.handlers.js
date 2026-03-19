@@ -1,8 +1,26 @@
+const resolveSelectedResourceId = ({ layouts, resourceId } = {}) => {
+  const availableLayouts = (layouts ?? []).filter(
+    (layout) => layout.layoutType === "choice",
+  );
+
+  if (
+    resourceId &&
+    availableLayouts.some((layout) => layout.id === resourceId)
+  ) {
+    return resourceId;
+  }
+
+  return availableLayouts[0]?.id ?? "";
+};
+
 export const handleBeforeMount = (deps) => {
   const { store, props } = deps;
   store.setItems({ items: props.choice?.items || [] });
   store.setSelectedResourceId({
-    resourceId: props.choice?.resourceId,
+    resourceId: resolveSelectedResourceId({
+      layouts: props.layouts,
+      resourceId: props.choice?.resourceId,
+    }),
   });
 };
 
@@ -134,9 +152,12 @@ export const handleChoiceItemClick = (deps) => {
 };
 
 export const handleSubmitClick = (deps) => {
-  const { dispatchEvent, store, appService } = deps;
+  const { dispatchEvent, store, appService, props } = deps;
   const items = store.selectItems();
-  const selectedResourceId = store.selectSelectedResourceId();
+  const selectedResourceId = resolveSelectedResourceId({
+    layouts: props.layouts,
+    resourceId: store.selectSelectedResourceId(),
+  });
 
   if (!selectedResourceId) {
     appService.showToast("Please select a choice layout", {
