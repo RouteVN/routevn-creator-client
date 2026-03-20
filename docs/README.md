@@ -9,6 +9,7 @@
 ## Runbooks
 
 1. [Collab Server Bootstrap](./runbooks/collab-server-bootstrap.md)
+2. [macOS Signing And Notarization](./runbooks/macos-signing-and-notarization.md)
 
 ## Platform Spec
 
