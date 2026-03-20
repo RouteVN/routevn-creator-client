@@ -65,10 +65,11 @@
     "lint:fix": "oxlint && bun prettier --check --write src",
     "prepare": "husky",
     "tauri": "tauri",
+    "tauri:dev:mac": "tauri dev --target aarch64-apple-darwin",
     "tauri:dev:win": "tauri dev --target x86_64-pc-windows-gnu",
     "tauri:build": "bun run build:tauri && tauri build --config src-tauri/tauri.prod.conf.json",
     "tauri:build:win": "bun run build:tauri && tauri build --config src-tauri/tauri.prod.conf.json --runner cargo-xwin --target x86_64-pc-windows-msvc",
-    "tauri:build:mac": "bun run build:tauri && tauri build --config src-tauri/tauri.prod.conf.json --bundles dmg"
+    "tauri:build:mac": "bun run build:tauri && tauri build --config src-tauri/tauri.prod.conf.json --target universal-apple-darwin --bundles dmg"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.8.3",
