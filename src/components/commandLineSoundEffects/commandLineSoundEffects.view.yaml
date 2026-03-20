@@ -3,7 +3,7 @@ refs:
     eventListeners:
       click:
         handler: handleAddNewClick
-  sfx*:
+  soundEffectCard*:
     eventListeners:
       click:
         handler: handleSfxClick
@@ -40,10 +40,10 @@ template:
       - rtgl-view d=h g=md: null
       - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
       - $if mode == 'current':
-          - rtgl-view#sfxContainer g=md:
+          - rtgl-view#soundEffectsContainer g=md:
               - $for sfx, i in defaultValues.sfx:
                   - rtgl-view d=h g=md av=t:
-                      - rtgl-view#sfx${i} data-sfx-id=${sfx.id} cur=pointer:
+                      - rtgl-view#soundEffectCard${i} data-sfx-id=${sfx.id} cur=pointer:
                           - rvn-waveform-visualizer waveformDataFileId=${sfx.waveformDataFileId} width=355 height=150: null
                       - rtgl-view w=1fg g=sm:
                           - rtgl-text ellipsis=true s=sm c=mu-fg: ${sfx.name}
