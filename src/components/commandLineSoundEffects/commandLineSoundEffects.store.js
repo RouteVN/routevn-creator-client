@@ -5,7 +5,7 @@ const normalizeSfx = (sfx = {}) => ({
   resourceId: sfx?.resourceId,
   name: sfx?.name ?? "New Sound Effect",
   volume: sfx?.volume ?? 500,
-  loop: sfx?.loop ?? true,
+  loop: sfx?.loop ?? false,
 });
 
 export const createInitialState = () => ({
