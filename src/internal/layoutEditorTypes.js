@@ -145,10 +145,13 @@ const CREATE_TEMPLATES = {
     type: "text-ref-choice-item-content",
     name: "Text (Choice Item Content)",
     ...BASE_TRANSFORM,
+    x: 960,
+    y: 24,
+    anchorX: 0.5,
     text: "text",
     style: {
       wordWrapWidth: 300,
-      align: "left",
+      align: "center",
     },
   }),
   rect: () => ({

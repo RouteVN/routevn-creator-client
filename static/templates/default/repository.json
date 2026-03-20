@@ -927,6 +927,9 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
+              "style": {
+                "align": "left"
+              },
               "textStyleId": "qdM8QXbdBoqiPDUHZWheh"
             },
             "TAVMU5bUWTruxHBWZZuAu": {
@@ -943,6 +946,9 @@
               "scaleY": 1,
               "rotation": 0,
               "displaySpeed": 100,
+              "style": {
+                "align": "left"
+              },
               "textStyleId": "1TqapkiPUErN434i6YCFW"
             }
           },
@@ -1046,6 +1052,9 @@
               "rotation": 0,
               "text": "text",
               "$when": "line.characterName",
+              "style": {
+                "align": "left"
+              },
               "textStyleId": "qdM8QXbdBoqiPDUHZWheh"
             },
             "b67TQxCVxczMbfvMZQjen": {
@@ -1062,6 +1071,9 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "text",
+              "style": {
+                "align": "left"
+              },
               "textStyleId": "1TqapkiPUErN434i6YCFW"
             }
           },
@@ -1132,14 +1144,17 @@
               "id": "ghg9bBCPKm8MhCAwzH2Vw",
               "type": "text-ref-choice-item-content",
               "name": "Text (Choice Item Content)",
-              "x": 840,
-              "y": 10,
+              "x": 960,
+              "y": 24,
               "anchorX": 0.5,
               "anchorY": 0,
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
               "text": "text",
+              "style": {
+                "align": "center"
+              },
               "textStyleId": "AZb6o5taVeKePPowGTqqr"
             },
             "qdi6CH34ouMomkrGRfbDw": {
@@ -1215,6 +1230,9 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "MY VISUAL NOVEL",
+              "style": {
+                "align": "center"
+              },
               "textStyleId": "AZb6o5taVeKePPowGTqqr"
             },
             "f6x1Sm7SCSprtVfidYD42": {
@@ -1231,62 +1249,15 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "START",
+              "style": {
+                "align": "center"
+              },
               "click": {
                 "payload": {
                   "actions": {
                     "sectionTransition": {
                       "sceneId": "QHgsNK9mETkRZ8F5JZwrV",
                       "sectionId": "h6mKZ9qEAZW2jpUXbjyUv"
-                    }
-                  }
-                }
-              },
-              "textStyleId": "AZb6o5taVeKePPowGTqqr"
-            },
-            "DtYULYJYyUFhhPBdmvZzx": {
-              "id": "DtYULYJYyUFhhPBdmvZzx",
-              "type": "text",
-              "name": "Load Button",
-              "x": 960,
-              "y": 650,
-              "width": 200,
-              "height": 60,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "text": "LOAD",
-              "click": {
-                "payload": {
-                  "actions": {
-                    "pushLayeredView": {
-                      "resourceId": "AQj4EftskHLoWE7JEti6n"
-                    }
-                  }
-                }
-              },
-              "textStyleId": "AZb6o5taVeKePPowGTqqr"
-            },
-            "vnkYfbSDVMypbdh31UJSG": {
-              "id": "vnkYfbSDVMypbdh31UJSG",
-              "type": "text",
-              "name": "Options Button",
-              "x": 960,
-              "y": 750,
-              "width": 200,
-              "height": 60,
-              "anchorX": 0.5,
-              "anchorY": 0.5,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "text": "OPTIONS",
-              "click": {
-                "payload": {
-                  "actions": {
-                    "pushLayeredView": {
-                      "resourceId": "Go2f48KUxJuDTCpSpQJ4E"
                     }
                   }
                 }
@@ -1303,12 +1274,6 @@
             },
             {
               "id": "f6x1Sm7SCSprtVfidYD42"
-            },
-            {
-              "id": "DtYULYJYyUFhhPBdmvZzx"
-            },
-            {
-              "id": "vnkYfbSDVMypbdh31UJSG"
             }
           ]
         }
