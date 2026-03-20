@@ -8,6 +8,11 @@ const normalizeSfx = (sfx = {}) => ({
   loop: sfx?.loop ?? false,
 });
 
+const LOOP_OPTIONS = [
+  { value: true, label: "Loop" },
+  { value: false, label: "Don't Loop" },
+];
+
 export const createInitialState = () => ({
   mode: "current",
   items: { items: {}, tree: [] },
@@ -33,38 +38,6 @@ export const createInitialState = () => ({
 
 export const setMode = ({ state }, { mode } = {}) => {
   state.mode = mode;
-};
-
-const form = {
-  fields: [
-    {
-      type: "slot",
-      slot: "sfx",
-      description: "Sound Effects",
-    },
-  ],
-};
-
-const sfxItemForm = {
-  fields: [
-    {
-      name: "loop",
-      description: "Loop",
-      type: "select",
-      options: [
-        { value: true, label: "Loop" },
-        { value: false, label: "Don't Loop" },
-      ],
-    },
-    {
-      name: "volume",
-      description: "Volume",
-      type: "slider-with-input",
-      min: 0,
-      max: 1000,
-      step: 1,
-    },
-  ],
 };
 
 export const setRepositoryState = ({ state }, { sounds } = {}) => {
@@ -227,8 +200,7 @@ export const selectViewData = ({ state }) => {
     sfx: sfxWithSoundData,
     tempSelectedResourceId: state.tempSelectedResourceId,
     breadcrumb,
-    form,
-    sfxItemForm,
+    loopOptions: LOOP_OPTIONS,
     defaultValues,
     dropdownMenu: state.dropdownMenu,
   };
