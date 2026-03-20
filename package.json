@@ -65,6 +65,7 @@
     "lint:fix": "oxlint && bun prettier --check --write src",
     "prepare": "husky",
     "tauri": "tauri",
+    "tauri:dev:linux": "tauri dev",
     "tauri:dev:mac": "tauri dev --target aarch64-apple-darwin",
     "tauri:dev:win": "tauri dev --target x86_64-pc-windows-gnu",
     "tauri:build": "bun run build:tauri && tauri build --config src-tauri/tauri.prod.conf.json",
