@@ -163,7 +163,6 @@ bun run tauri:dev:win
 
 For production we build installer using NSIS: https://v2.tauri.app/distribute/windows-installer/
 
-
 Build the desktop application:
 ```shell
 bun run tauri:build
@@ -173,6 +172,13 @@ Cross-compile for Windows:
 ```shell
 bun run tauri:build:win
 ```
+
+Build and notarize the macOS DMG:
+```shell
+bun run tauri:build:mac
+```
+
+For the Apple signing and notarization setup, see [docs/runbooks/macos-signing-and-notarization.md](docs/runbooks/macos-signing-and-notarization.md).
 
 The built application will be available in `src-tauri/target/release/` with platform-specific installers in `src-tauri/target/release/bundle/`.
 
