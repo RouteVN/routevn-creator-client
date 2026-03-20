@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use zip::write::FileOptions;
 use zip::{CompressionMethod, ZipWriter};
 
-const BUNDLE_VERSION: u8 = 1;
+const BUNDLE_VERSION: u8 = 2;
 const BUNDLE_HEADER_SIZE: usize = 16;
 const COPY_BUFFER_SIZE: usize = 1024 * 1024;
 
