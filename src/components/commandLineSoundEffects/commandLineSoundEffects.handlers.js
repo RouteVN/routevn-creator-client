@@ -50,6 +50,64 @@ export const handleFormChange = () => {
   // No longer needed since we removed trigger functionality
 };
 
+const resolveSfxByIndex = (store, index) => {
+  if (!Number.isInteger(index)) {
+    return undefined;
+  }
+
+  return store.selectSfxs()[index];
+};
+
+export const handleSfxLoopChange = (deps, payload) => {
+  const { store, render } = deps;
+  const index = Number.parseInt(
+    payload._event.currentTarget?.dataset?.index ?? "",
+    10,
+  );
+  const soundEffect = resolveSfxByIndex(store, index);
+  if (!soundEffect?.id) {
+    return;
+  }
+
+  const loop =
+    payload._event.detail?.value ??
+    payload._event.currentTarget?.value ??
+    payload._event.target?.value;
+
+  store.updateSfx({
+    id: soundEffect.id,
+    loop,
+  });
+  render();
+};
+
+export const handleSfxVolumeInput = (deps, payload) => {
+  const { store, render } = deps;
+  const index = Number.parseInt(
+    payload._event.currentTarget?.dataset?.index ?? "",
+    10,
+  );
+  const soundEffect = resolveSfxByIndex(store, index);
+  if (!soundEffect?.id) {
+    return;
+  }
+
+  const rawValue =
+    payload._event.detail?.value ??
+    payload._event.currentTarget?.value ??
+    payload._event.target?.value;
+  const volume = Number.parseInt(rawValue, 10);
+  if (!Number.isFinite(volume)) {
+    return;
+  }
+
+  store.updateSfx({
+    id: soundEffect.id,
+    volume,
+  });
+  render();
+};
+
 export const handleAddNewClick = (deps, payload) => {
   payload._event.stopPropagation();
   const { store, render } = deps;
@@ -130,6 +188,7 @@ export const handleSubmitClick = (deps, payload) => {
             id: sfx.id,
             resourceId: sfx.resourceId,
             volume: sfx.volume,
+            loop: sfx.loop,
           })),
         },
       },

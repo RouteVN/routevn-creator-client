@@ -3,7 +3,7 @@ refs:
     eventListeners:
       click:
         handler: handleAddNewClick
-  sfx*:
+  soundEffectCard*:
     eventListeners:
       click:
         handler: handleSfxClick
@@ -25,12 +25,14 @@ refs:
     eventListeners:
       click:
         handler: handleButtonSelectClick
-  form:
+  loopSelect*:
     eventListeners:
-      form-field-event:
-        handler: handleFormExtra
-      form-change:
-        handler: handleFormChange
+      value-change:
+        handler: handleSfxLoopChange
+  volumeInput*:
+    eventListeners:
+      value-input:
+        handler: handleSfxVolumeInput
   dropdownMenu:
     eventListeners:
       close:
@@ -42,14 +44,18 @@ template:
       - rtgl-view d=h g=md: null
       - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
       - $if mode == 'current':
-          - rtgl-form#form :form=form :defaultValues=defaultValues:
-              - rtgl-view#sfxContainer slot=sfx g=md:
-                  - $for sfx, i in defaultValues.sfx:
-                      - rtgl-view g=sm:
-                          - rtgl-view#sfx${i} data-sfx-id=${sfx.id} cur=pointer:
-                              - rvn-waveform-visualizer waveformDataFileId=${sfx.waveformDataFileId} width=355 height=150: null
-                          - rtgl-text w=355 ellipsis=true s=sm c=mu-fg: ${sfx.name}
-                  - rtgl-button#addNewButton v=ol w=f mt=md: + Add New Sound Effect
+          - rtgl-view#soundEffectsContainer g=md:
+              - $for sfx, i in defaultValues.sfx:
+                  - rtgl-view d=h g=md av=t:
+                      - rtgl-view#soundEffectCard${i} data-sfx-id=${sfx.id} cur=pointer:
+                          - rvn-waveform-visualizer waveformDataFileId=${sfx.waveformDataFileId} width=355 height=150: null
+                      - rtgl-view w=1fg g=sm:
+                          - rtgl-text ellipsis=true s=sm c=mu-fg: ${sfx.name}
+                          - rtgl-text s=sm c=mu-fg: Loop
+                          - rtgl-select#loopSelect${i} data-index=${i} w=f no-clear :selectedValue=#{sfx.loop} :options=loopOptions: null
+                          - rtgl-text s=sm c=mu-fg: Volume
+                          - rtgl-input#volumeInput${i} data-index=${i} type=number min=0 max=1000 step=1 w=f value=${sfx.volume}: null
+              - rtgl-button#addNewButton v=ol w=f mt=md: + Add New Sound Effect
           - rtgl-view h=1fg: null
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#submitButton: Submit

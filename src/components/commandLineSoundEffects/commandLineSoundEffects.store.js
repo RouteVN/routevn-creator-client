@@ -1,5 +1,18 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 
+const normalizeSfx = (sfx = {}) => ({
+  id: sfx?.id,
+  resourceId: sfx?.resourceId,
+  name: sfx?.name ?? "New Sound Effect",
+  volume: sfx?.volume ?? 500,
+  loop: sfx?.loop ?? false,
+});
+
+const LOOP_OPTIONS = [
+  { value: true, label: "Loop" },
+  { value: false, label: "Don't Loop" },
+];
+
 export const createInitialState = () => ({
   mode: "current",
   items: { items: {}, tree: [] },
@@ -27,16 +40,6 @@ export const setMode = ({ state }, { mode } = {}) => {
   state.mode = mode;
 };
 
-const form = {
-  fields: [
-    {
-      type: "slot",
-      slot: "sfx",
-      description: "Sound Effects",
-    },
-  ],
-};
-
 export const setRepositoryState = ({ state }, { sounds } = {}) => {
   state.items = sounds;
 };
@@ -46,27 +49,25 @@ export const setTempSelectedResourceId = ({ state }, { resourceId } = {}) => {
 };
 
 export const addSfx = ({ state }, { id } = {}) => {
-  const newSfx = {
+  const newSfx = normalizeSfx({
     id,
     resourceId: null,
-    name: "New Sound Effect",
-    volume: 500,
-  };
+  });
   state.sfx.push(newSfx);
   state.currentEditingId = newSfx.id;
 };
 
 export const setExistingSfxs = ({ state }, { sfx = [] } = {}) => {
-  state.sfx = sfx.map((item) => ({
-    volume: 500,
-    ...item,
-  }));
+  state.sfx = sfx.map((item) => normalizeSfx(item));
 };
 
 export const updateSfx = ({ state }, updates = {}) => {
   const index = state.sfx.findIndex((se) => se.id === updates.id);
   if (index !== -1) {
-    state.sfx[index] = { ...state.sfx[index], ...updates };
+    state.sfx[index] = normalizeSfx({
+      ...state.sfx[index],
+      ...updates,
+    });
   }
 };
 
@@ -199,7 +200,7 @@ export const selectViewData = ({ state }) => {
     sfx: sfxWithSoundData,
     tempSelectedResourceId: state.tempSelectedResourceId,
     breadcrumb,
-    form,
+    loopOptions: LOOP_OPTIONS,
     defaultValues,
     dropdownMenu: state.dropdownMenu,
   };

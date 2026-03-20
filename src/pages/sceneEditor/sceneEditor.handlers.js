@@ -1370,6 +1370,9 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
   } else if (actionType === "background") {
     // Clear background by setting without resourceId
     newActions.background = {};
+  } else if (actionType === "bgm") {
+    // Clear inherited BGM by writing an explicit empty action
+    newActions.bgm = {};
   } else if (actionType === "control") {
     newActions.control = {};
   } else {

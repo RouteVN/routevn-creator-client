@@ -14,3 +14,7 @@ propsSchema:
                 type: string
               resourceId:
                 type: string
+              volume:
+                type: number
+              loop:
+                type: boolean
