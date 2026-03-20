@@ -31,6 +31,10 @@ refs:
         handler: handleFormExtra
       form-change:
         handler: handleFormChange
+  sfxOptionsForm*:
+    eventListeners:
+      form-change:
+        handler: handleSfxOptionsFormChange
   dropdownMenu:
     eventListeners:
       close:
@@ -49,6 +53,7 @@ template:
                           - rtgl-view#sfx${i} data-sfx-id=${sfx.id} cur=pointer:
                               - rvn-waveform-visualizer waveformDataFileId=${sfx.waveformDataFileId} width=355 height=150: null
                           - rtgl-text w=355 ellipsis=true s=sm c=mu-fg: ${sfx.name}
+                          - rtgl-form#sfxOptionsForm${i} data-index=${i} :form=sfxItemForm :defaultValues=sfx w=355: null
                   - rtgl-button#addNewButton v=ol w=f mt=md: + Add New Sound Effect
           - rtgl-view h=1fg: null
           - rtgl-view d=h av=c ah=e w=f g=lg:

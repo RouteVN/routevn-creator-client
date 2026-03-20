@@ -50,6 +50,34 @@ export const handleFormChange = () => {
   // No longer needed since we removed trigger functionality
 };
 
+export const handleSfxOptionsFormChange = (deps, payload) => {
+  const { store, render } = deps;
+  const index = Number.parseInt(
+    payload._event.currentTarget?.dataset?.index ?? "",
+    10,
+  );
+
+  if (!Number.isInteger(index)) {
+    return;
+  }
+
+  const soundEffect = store.selectSfxs()[index];
+  if (!soundEffect?.id) {
+    return;
+  }
+
+  const { name, value: fieldValue } = payload._event.detail;
+  if (!name) {
+    return;
+  }
+
+  store.updateSfx({
+    id: soundEffect.id,
+    [name]: fieldValue,
+  });
+  render();
+};
+
 export const handleAddNewClick = (deps, payload) => {
   payload._event.stopPropagation();
   const { store, render } = deps;
@@ -130,6 +158,7 @@ export const handleSubmitClick = (deps, payload) => {
             id: sfx.id,
             resourceId: sfx.resourceId,
             volume: sfx.volume,
+            loop: sfx.loop,
           })),
         },
       },
