@@ -30,6 +30,19 @@ const getCursorPosition = (element) => {
   return element.getCaretPosition();
 };
 
+const isMacOs = () => {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+
+  const userAgentPlatform = navigator.userAgentData?.platform;
+  if (typeof userAgentPlatform === "string") {
+    return userAgentPlatform === "macOS";
+  }
+
+  return /Mac/.test(navigator.platform || "");
+};
+
 const hasSelectionRange = (element) => {
   if (!element || typeof element.hasSelectionRange !== "function") {
     return true;
@@ -897,7 +910,9 @@ export const handleContainerKeyDown = (deps, payload) => {
 
 export const handleLineKeyDown = (deps, payload) => {
   const { dispatchEvent, store, render, props } = deps;
-  const id = getLineIdFromElement(payload._event.currentTarget);
+  const event = payload._event;
+  const currentElement = event.currentTarget;
+  const id = getLineIdFromElement(currentElement);
   const mode = store.selectMode();
 
   if (isKeyboardHandlingDisabled(props)) {
@@ -949,21 +964,51 @@ export const handleLineKeyDown = (deps, payload) => {
 
   // Capture cursor position immediately before any key handling
   if (mode === "text-editor") {
-    const cursorPos = getCursorPosition(payload._event.currentTarget);
+    const cursorPos = getCursorPosition(currentElement);
     store.setCursorPosition({ position: cursorPos });
+
+    const selectionRange = getSelectionRange(currentElement);
+    const isCollapsedSelection = selectionRange?.collapsed !== false;
+    const isMacBackspaceMerge =
+      isMacOs() &&
+      event.key === "Backspace" &&
+      cursorPos === 0 &&
+      isCollapsedSelection &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey &&
+      !event.shiftKey &&
+      !event.isComposing;
+
+    if (isMacBackspaceMerge) {
+      const currentIndex = (props.lines || []).findIndex(
+        (line) => line.id === id,
+      );
+      if (currentIndex > 0) {
+        event.preventDefault();
+        event.stopPropagation();
+        dispatchEvent(
+          new CustomEvent("mergeLines", {
+            detail: {
+              currentLineId: id,
+            },
+          }),
+        );
+        suppressElementInput(currentElement);
+        suppressElementContentSyncUntilBlur(currentElement);
+        return;
+      }
+    }
 
     // Update goal column for horizontal movement or when setting new vertical position
     if (
-      payload._event.key === "ArrowLeft" ||
-      payload._event.key === "ArrowRight" ||
-      payload._event.key === "Home" ||
-      payload._event.key === "End"
+      event.key === "ArrowLeft" ||
+      event.key === "ArrowRight" ||
+      event.key === "Home" ||
+      event.key === "End"
     ) {
       store.setGoalColumn({ goalColumn: cursorPos });
-    } else if (
-      payload._event.key === "ArrowUp" ||
-      payload._event.key === "ArrowDown"
-    ) {
+    } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
       // For vertical movement, ensure we have the current position as goal column if not set
       const currentGoalColumn = store.selectGoalColumn();
       if (currentGoalColumn === 0) {
