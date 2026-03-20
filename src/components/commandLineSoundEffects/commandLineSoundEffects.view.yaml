@@ -52,7 +52,7 @@ template:
                       - rtgl-view w=1fg g=sm:
                           - rtgl-text ellipsis=true s=sm c=mu-fg: ${sfx.name}
                           - rtgl-text s=sm c=mu-fg: Loop
-                          - rtgl-select#loopSelect${i} data-index=${i} w=f no-clear :selectedValue=${sfx.loop} :options=${loopOptions}: null
+                          - rtgl-select#loopSelect${i} data-index=${i} w=f no-clear :selectedValue=sfx.loop :options=loopOptions: null
                           - rtgl-text s=sm c=mu-fg: Volume
                           - rtgl-input#volumeInput${i} data-index=${i} type=number min=0 max=1000 step=1 w=f value=${sfx.volume}: null
               - rtgl-button#addNewButton v=ol w=f mt=md: + Add New Sound Effect
