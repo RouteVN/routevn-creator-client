@@ -47,7 +47,7 @@ template:
                           - rvn-waveform-visualizer waveformDataFileId=${sfx.waveformDataFileId} width=355 height=150: null
                       - rtgl-view w=1fg g=sm:
                           - rtgl-text ellipsis=true s=sm c=mu-fg: ${sfx.name}
-                          - rtgl-form#sfxOptionsForm${i} data-index=${i} :form=sfxItemForm :defaultValues=sfx w=f: null
+                          - rtgl-form#sfxOptionsForm${i} key=${sfx.id} data-index=${i} :form=sfxItemForm :defaultValues=sfx w=f: null
               - rtgl-button#addNewButton v=ol w=f mt=md: + Add New Sound Effect
           - rtgl-view h=1fg: null
           - rtgl-view d=h av=c ah=e w=f g=lg:
