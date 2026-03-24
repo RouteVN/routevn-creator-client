@@ -215,8 +215,8 @@ layoutSections:
     items:
       - type: select
         label: Alignment
-        name: style.align
-        value: "${values.style.align}"
+        name: textStyle.align
+        value: "${values.textStyle.align}"
         options:
           - label: Left
             value: left

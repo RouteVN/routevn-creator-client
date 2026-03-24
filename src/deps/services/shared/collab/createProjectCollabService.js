@@ -27,7 +27,6 @@ export const createProjectCollabService = ({
   token,
   actor,
   transport,
-  partitions,
   clientStore,
   logger = () => {},
   onCommittedCommand,
@@ -143,18 +142,27 @@ export const createProjectCollabService = ({
 
   let projectedRepositoryState = coerceInitialRepositoryState();
 
-  const getCommandPartitions = (command) => {
-    const commandPartitions = Array.isArray(command?.partitions)
-      ? command.partitions.filter(
-          (partition) => typeof partition === "string" && partition.length > 0,
-        )
-      : [];
+  const syncProjectedRepositoryState = (nextRepositoryState) => {
+    if (
+      nextRepositoryState &&
+      typeof nextRepositoryState === "object" &&
+      nextRepositoryState.scenes?.items
+    ) {
+      projectedRepositoryState = structuredClone(nextRepositoryState);
+    }
+  };
 
-    if (commandPartitions.length === 0) {
-      throw new Error("Command must include at least one partition");
+  const getCommandPartition = (command) => {
+    const partition =
+      typeof command?.partition === "string" && command.partition.length > 0
+        ? command.partition
+        : null;
+
+    if (!partition) {
+      throw new Error("Command must include a partition");
     }
 
-    return commandPartitions;
+    return partition;
   };
 
   const insertDraftCommandsLocally = async (commands) => {
@@ -170,7 +178,7 @@ export const createProjectCollabService = ({
     await clientStore.insertDrafts(
       commands.map((command) => ({
         id: command.id,
-        partitions: getCommandPartitions(command),
+        partition: getCommandPartition(command),
         ...commandToSyncEvent(command),
         createdAt: Date.now(),
       })),
@@ -244,7 +252,7 @@ export const createProjectCollabService = ({
   session = createCommandSyncSession({
     token,
     actor,
-    partitions,
+    projectId,
     transport: transport || undefined,
     store: clientStore || undefined,
     logger,
@@ -413,6 +421,10 @@ export const createProjectCollabService = ({
         repositoryState: projectedRepositoryState,
         projectId,
       });
+    },
+
+    syncProjectedRepositoryState(nextRepositoryState) {
+      syncProjectedRepositoryState(nextRepositoryState);
     },
 
     getLastError() {

@@ -45,7 +45,7 @@ export const listCommittedEvents = async (rawClientStore) => {
 const toBootstrappedCommittedEvent = (repositoryEvent, index) => ({
   ...structuredClone(repositoryEvent),
   committedId: index + 1,
-  created: Number.isFinite(Number(repositoryEvent?.meta?.clientTs))
+  serverTs: Number.isFinite(Number(repositoryEvent?.meta?.clientTs))
     ? Number(repositoryEvent.meta.clientTs)
     : index + 1,
 });
@@ -114,7 +114,7 @@ export const ensureRawCommittedLogBootstrapped = async ({
 
 export const buildRepositoryProjectionFromCommittedEvents = ({
   committedEvents,
-  supportedCommandVersion,
+  supportedSchemaVersion,
 }) => {
   const repositoryEvents = [];
   let projectionGap;
@@ -138,7 +138,7 @@ export const buildRepositoryProjectionFromCommittedEvents = ({
     }
 
     const compatibility = evaluateRemoteCommandCompatibility(command, {
-      supportedCommandVersion,
+      supportedSchemaVersion,
     });
     if (compatibility.status !== REMOTE_COMMAND_COMPATIBILITY.COMPATIBLE) {
       projectionGap = createProjectionGap({

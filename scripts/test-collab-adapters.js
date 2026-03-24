@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import {
+  createRepositoryCommandEvent,
   repositoryEventToCommand,
 } from "../src/deps/services/shared/projectRepository.js";
+import {
+  mainScenePartitionFor,
+  scenePartitionFor,
+} from "../src/deps/services/shared/collab/partitions.js";
 import {
   enqueueSerialTask,
   ensureCachedCommittedCursor,
@@ -11,6 +16,8 @@ import {
 } from "../src/deps/services/web/projectServiceCollabRuntime.js";
 
 const projectId = "project-adapter-test-001";
+const scene1MainPartition = mainScenePartitionFor("scene-1");
+const scene1Partition = scenePartitionFor("scene-1");
 
 const createRepositoryEvent = ({
   id,
@@ -21,22 +28,21 @@ const createRepositoryEvent = ({
   clientTs = 1000,
   meta,
   type = "image.update",
+  schemaVersion = 1,
   payload = {
     imageId: "image-1",
     data: {
       name: "Updated",
     },
   },
-  partitions = [
-    `project:${projectId}:resources`,
-    `project:${projectId}:resources:images:image-1`,
-  ],
+  partition = "m",
 }) => ({
   id,
-  partitions,
+  partition,
   projectId,
   userId: actor.userId,
   type,
+  schemaVersion,
   payload,
   meta: {
     clientId: actor.clientId,
@@ -65,7 +71,7 @@ const createRepositoryEvent = ({
   const replayedCommand = repositoryEventToCommand(replayed);
 
   assert.equal(replayed.id, "command-1");
-  assert.deepEqual(replayed.partitions, repositoryEvent.partitions);
+  assert.equal(replayed.partition, repositoryEvent.partition);
   assert.equal(replayedCommand.id, "command-1");
   assert.equal(replayedCommand.projectId, projectId);
   assert.equal(replayedCommand.actor.userId, "remote-user");
@@ -80,7 +86,7 @@ const createRepositoryEvent = ({
     createRepositoryEvent({
       id: "command-1",
       type: "scene.create",
-      partitions: [`project:${projectId}:story`],
+      partition: scene1MainPartition,
       payload: {
         sceneId: "scene-1",
         data: { name: "Scene 1" },
@@ -89,7 +95,7 @@ const createRepositoryEvent = ({
     createRepositoryEvent({
       id: "command-2",
       type: "section.create",
-      partitions: [`project:${projectId}:story`],
+      partition: scene1MainPartition,
       payload: {
         sceneId: "scene-1",
         sectionId: "section-1",
@@ -99,7 +105,7 @@ const createRepositoryEvent = ({
     createRepositoryEvent({
       id: "command-3",
       type: "line.create",
-      partitions: [`project:${projectId}:story`],
+      partition: scene1Partition,
       payload: {
         sectionId: "section-1",
         lines: [
@@ -120,6 +126,84 @@ const createRepositoryEvent = ({
     uncommitted.map((event) => event.id),
     ["command-3"],
   );
+}
+
+{
+  const repositoryEvent = {
+    id: "command-no-client-id",
+    partition: scene1Partition,
+    projectId,
+    userId: "user-1",
+    type: "line.create",
+    schemaVersion: 1,
+    payload: {
+      sectionId: "section-1",
+      lines: [
+        {
+          lineId: "line-1",
+          data: { actions: { narration: "hello" } },
+        },
+      ],
+    },
+    meta: {
+      clientTs: 4321,
+    },
+  };
+
+  const command = repositoryEventToCommand(repositoryEvent);
+
+  assert.equal(command.id, repositoryEvent.id);
+  assert.equal(command.actor.userId, "user-1");
+  assert.equal(command.actor.clientId, undefined);
+  assert.equal(command.clientTs, 4321);
+
+  const roundTrippedRepositoryEvent = createRepositoryCommandEvent({
+    command,
+  });
+
+  assert.equal(roundTrippedRepositoryEvent.id, repositoryEvent.id);
+  assert.equal(
+    roundTrippedRepositoryEvent.partition,
+    repositoryEvent.partition,
+  );
+  assert.equal(
+    roundTrippedRepositoryEvent.projectId,
+    repositoryEvent.projectId,
+  );
+  assert.deepEqual(roundTrippedRepositoryEvent.meta, { clientTs: 4321 });
+}
+
+{
+  const repositoryEvent = createRepositoryEvent({
+    id: "materialized-view-wrapper",
+    clientTs: 5678,
+    partition: scene1Partition,
+    type: "line.create",
+    payload: {
+      sectionId: "section-1",
+      lines: [
+        {
+          lineId: "line-2",
+          data: { actions: { narration: "wrapped" } },
+        },
+      ],
+    },
+  });
+
+  const wrappedReducerEvent = {
+    ...structuredClone(repositoryEvent),
+    event: {
+      type: repositoryEvent.type,
+      payload: structuredClone(repositoryEvent.payload),
+    },
+  };
+
+  const command = repositoryEventToCommand(wrappedReducerEvent);
+
+  assert.equal(command.id, repositoryEvent.id);
+  assert.equal(command.projectId, repositoryEvent.projectId);
+  assert.equal(command.partition, repositoryEvent.partition);
+  assert.equal(command.type, repositoryEvent.type);
 }
 
 {

@@ -50,7 +50,6 @@ export const createCharacterSpriteCommandApi = (shared) => ({
           positionTargetId,
         }),
       },
-      partitions: [],
     });
 
     if (submitResult?.valid === false) {
@@ -90,7 +89,6 @@ export const createCharacterSpriteCommandApi = (shared) => ({
         spriteId,
         data: structuredClone(data || {}),
       },
-      partitions: [],
     });
   },
 
@@ -132,7 +130,6 @@ export const createCharacterSpriteCommandApi = (shared) => ({
           positionTargetId,
         }),
       },
-      partitions: [],
     });
   },
 
@@ -152,7 +149,6 @@ export const createCharacterSpriteCommandApi = (shared) => ({
         characterId,
         spriteIds: structuredClone(spriteIds || []),
       },
-      partitions: [],
     });
   },
 });

@@ -44,7 +44,7 @@ const CREATE_TEMPLATES = {
     name: "Text",
     ...BASE_TRANSFORM,
     text: "text",
-    style: {
+    textStyle: {
       align: "left",
     },
   }),
@@ -87,7 +87,7 @@ const CREATE_TEMPLATES = {
     name: "Text (Dialogue Content)",
     ...BASE_TRANSFORM,
     text: "text",
-    style: {
+    textStyle: {
       wordWrapWidth: 300,
       align: "left",
     },
@@ -97,7 +97,7 @@ const CREATE_TEMPLATES = {
     name: "Text (Character Name)",
     ...BASE_TRANSFORM,
     text: "text",
-    style: {
+    textStyle: {
       wordWrapWidth: 300,
       align: "left",
     },
@@ -117,7 +117,7 @@ const CREATE_TEMPLATES = {
     width: 280,
     height: 40,
     text: "text",
-    style: {
+    textStyle: {
       wordWrapWidth: 300,
       align: "left",
     },
@@ -131,7 +131,7 @@ const CREATE_TEMPLATES = {
     width: 1640,
     height: 72,
     text: "text",
-    style: {
+    textStyle: {
       wordWrapWidth: 300,
       align: "left",
     },
@@ -149,7 +149,7 @@ const CREATE_TEMPLATES = {
     y: 24,
     anchorX: 0.5,
     text: "text",
-    style: {
+    textStyle: {
       wordWrapWidth: 300,
       align: "center",
     },

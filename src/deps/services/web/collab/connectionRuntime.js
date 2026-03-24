@@ -179,7 +179,6 @@ export const createCollabConnectionRuntime = ({
     userId = collabRuntime.userId || "web-debug-user",
     clientId,
     token,
-    partitions,
   } = {}) => {
     const projectId = getCollabProjectId();
     const resolvedClientId =
@@ -207,7 +206,6 @@ export const createCollabConnectionRuntime = ({
           token: resolvedToken,
           userId,
           clientId: resolvedClientId,
-          partitions,
         });
         collabRuntime.endpointUrl = candidateEndpointUrl;
         collabRuntime.userId = userId;

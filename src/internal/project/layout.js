@@ -174,11 +174,14 @@ const normalizeTextStyleResource = (textStyleData) => {
 const buildNodeTextStyleOverrides = (node) => {
   const overrides = {};
 
-  if (typeof node.style?.align === "string" && node.style.align.length > 0) {
-    overrides.align = node.style.align;
+  if (
+    typeof node.textStyle?.align === "string" &&
+    node.textStyle.align.length > 0
+  ) {
+    overrides.align = node.textStyle.align;
   }
 
-  const wordWrapWidth = toWordWrapWidth(node.style?.wordWrapWidth);
+  const wordWrapWidth = toWordWrapWidth(node.textStyle?.wordWrapWidth);
   if (wordWrapWidth !== undefined) {
     overrides.wordWrap = true;
     overrides.wordWrapWidth = wordWrapWidth;

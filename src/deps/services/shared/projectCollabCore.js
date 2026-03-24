@@ -1,7 +1,11 @@
 import { createWebSocketTransport } from "../web/collab/createWebSocketTransport.js";
-import { COLLAB_RESOURCE_TYPES } from "../../../internal/project/commands.js";
 import { recursivelyCheckResource } from "../../../internal/project/projection.js";
 import { createCommandApi } from "./commandApi.js";
+import {
+  mainPartitionFor,
+  mainScenePartitionFor,
+  scenePartitionFor,
+} from "./collab/partitions.js";
 
 export const createProjectCollabCore = ({
   router,
@@ -27,21 +31,12 @@ export const createProjectCollabCore = ({
     return p;
   };
 
-  const storyBasePartitionFor = (projectId) => `project:${projectId}:story`;
-  const storyScenePartitionFor = (projectId, sceneId) =>
-    `project:${projectId}:story:scene:${sceneId}`;
-  const resourceTypePartitionFor = (projectId, resourceType) =>
-    `project:${projectId}:resources:${resourceType}`;
-
-  const getBasePartitions = (projectId, partitions) =>
-    partitions || [
-      storyBasePartitionFor(projectId),
-      ...COLLAB_RESOURCE_TYPES.map((resourceType) =>
-        resourceTypePartitionFor(projectId, resourceType),
-      ),
-      `project:${projectId}:layouts`,
-      `project:${projectId}:settings`,
-    ];
+  const storyBasePartitionFor = () => mainPartitionFor();
+  const storyScenePartitionFor = (_projectId, sceneId) =>
+    mainScenePartitionFor(sceneId);
+  const directScenePartitionFor = (_projectId, sceneId) =>
+    scenePartitionFor(sceneId);
+  const resourceTypePartitionFor = () => mainPartitionFor();
 
   const getOrCreateLocalActor = (projectId) => {
     const existing = localCollabActorsByProject.get(projectId);
@@ -74,7 +69,6 @@ export const createProjectCollabCore = ({
     userId,
     clientId,
     endpointUrl,
-    partitions,
     mode,
   }) => {
     const session = await createSessionForProject({
@@ -83,34 +77,42 @@ export const createProjectCollabCore = ({
       userId,
       clientId,
       endpointUrl,
-      partitions,
       mode,
-      partitioning: {
-        getBasePartitions,
-        storyBasePartitionFor,
-        storyScenePartitionFor,
-        resourceTypePartitionFor,
-      },
     });
     return rememberSession({ projectId, mode, session });
   };
 
+  const syncSessionProjectedState = async ({ projectId, session }) => {
+    if (typeof session?.syncProjectedRepositoryState !== "function") {
+      return;
+    }
+
+    const repository = await getRepositoryByProject(projectId);
+    const repositoryState = repository?.getState?.();
+    session.syncProjectedRepositoryState(repositoryState);
+  };
+
   const ensureCommandSessionForProject = async (projectId) => {
     const existing = collabSessionsByProject.get(projectId);
-    if (existing) return existing;
+    if (existing) {
+      await syncSessionProjectedState({ projectId, session: existing });
+      return existing;
+    }
 
     const actor = getOrCreateLocalActor(projectId);
     if (typeof onEnsureLocalSession === "function") {
       onEnsureLocalSession({ projectId, actor });
     }
 
-    return createAndRememberSession({
+    const session = await createAndRememberSession({
       projectId,
       token: `user:${actor.userId}:client:${actor.clientId}`,
       userId: actor.userId,
       clientId: actor.clientId,
       mode: "local",
     });
+    await syncSessionProjectedState({ projectId, session });
+    return session;
   };
 
   const resolveTransport = ({ endpointUrl }) => {
@@ -125,7 +127,6 @@ export const createProjectCollabCore = ({
     userId,
     clientId = idGenerator(),
     endpointUrl,
-    partitions,
   }) => {
     const currentProjectId = getCurrentProjectId();
     if (!currentProjectId) {
@@ -178,7 +179,6 @@ export const createProjectCollabCore = ({
       userId,
       clientId,
       endpointUrl,
-      partitions,
       mode: "explicit",
     });
   };
@@ -249,6 +249,7 @@ export const createProjectCollabCore = ({
     getOrCreateLocalActor,
     storyBasePartitionFor,
     storyScenePartitionFor,
+    scenePartitionFor: directScenePartitionFor,
     resourceTypePartitionFor,
   });
 
@@ -305,9 +306,9 @@ export const createProjectCollabCore = ({
 
   return {
     getCurrentProjectId,
-    getBasePartitions,
     storyBasePartitionFor,
     storyScenePartitionFor,
+    scenePartitionFor: directScenePartitionFor,
     resourceTypePartitionFor,
     getOrCreateLocalActor,
     commandApi,

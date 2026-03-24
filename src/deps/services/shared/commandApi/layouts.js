@@ -47,7 +47,6 @@ export const createLayoutCommandApi = (shared) => ({
           positionTargetId,
         }),
       },
-      partitions: [],
     });
 
     if (submitResult?.valid === false) {
@@ -75,7 +74,6 @@ export const createLayoutCommandApi = (shared) => ({
           name,
         },
       },
-      partitions: [],
     });
   },
 
@@ -95,7 +93,6 @@ export const createLayoutCommandApi = (shared) => ({
         layoutId,
         data: structuredClone(data || {}),
       },
-      partitions: [],
     });
   },
 
@@ -114,7 +111,6 @@ export const createLayoutCommandApi = (shared) => ({
       payload: {
         layoutIds: structuredClone(layoutIds || []),
       },
-      partitions: [],
     });
   },
 
@@ -154,7 +150,6 @@ export const createLayoutCommandApi = (shared) => ({
           positionTargetId,
         }),
       },
-      partitions: [],
     });
   },
 
@@ -171,7 +166,6 @@ export const createLayoutCommandApi = (shared) => ({
         data: structuredClone(data || {}),
         replace: replace === true,
       },
-      partitions: [],
     });
   },
 
@@ -210,7 +204,6 @@ export const createLayoutCommandApi = (shared) => ({
           positionTargetId,
         }),
       },
-      partitions: [],
     });
 
     if (submitResult?.valid === false) {
@@ -253,7 +246,6 @@ export const createLayoutCommandApi = (shared) => ({
           positionTargetId,
         }),
       },
-      partitions: [],
     });
   },
 
@@ -268,7 +260,6 @@ export const createLayoutCommandApi = (shared) => ({
         layoutId,
         elementIds: structuredClone(elementIds || []),
       },
-      partitions: [],
     });
   },
 });

@@ -75,6 +75,22 @@ export const createProjectServiceCore = ({
     return repository.getRevision();
   };
 
+  const loadSceneOverviews = async ({ sceneIds = [] } = {}) => {
+    const repository = await repositoryService.ensureRepository();
+    if (typeof repository.loadSceneOverviews !== "function") {
+      return {};
+    }
+    return repository.loadSceneOverviews({ sceneIds });
+  };
+
+  const getSceneOverview = async (sceneId) => {
+    const repository = await repositoryService.ensureRepository();
+    if (typeof repository.getSceneOverview !== "function") {
+      return undefined;
+    }
+    return repository.getSceneOverview(sceneId);
+  };
+
   const getDomainState = () => {
     const repositoryState = getRepositoryState();
     const projectId = getCurrentProjectId() || "unknown-project";
@@ -122,6 +138,8 @@ export const createProjectServiceCore = ({
     getDomainState,
     getRepositoryState,
     getRepositoryRevision,
+    loadSceneOverviews,
+    getSceneOverview,
     getCurrentProjectInfo: repositoryService.getCurrentProjectInfo,
     updateCurrentProjectInfo: repositoryService.updateCurrentProjectInfo,
     addVersionToProject: collabService.addVersionToProject,

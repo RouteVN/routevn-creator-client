@@ -75,6 +75,7 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
     createStore: async ({ reference }) => {
       return createPersistedTauriProjectStore({
         projectPath: reference.projectPath,
+        projectId: reference.repositoryProjectId,
       });
     },
 
@@ -104,6 +105,7 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
 
       const store = await createPersistedTauriProjectStore({
         projectPath,
+        projectId,
       });
       const initialEvent = createProjectCreateRepositoryEvent({
         projectId,
@@ -112,7 +114,7 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
 
       await store.insertDraft({
         id: initialEvent.id,
-        partitions: initialEvent.partitions,
+        partition: initialEvent.partition,
         projectId: initialEvent.projectId,
         userId: initialEvent.userId,
         type: initialEvent.type,
@@ -291,9 +293,7 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
       userId,
       clientId,
       endpointUrl,
-      partitions,
       mode,
-      partitioning,
       getRepositoryByProject,
       getStoreByProject,
       getProjectInfoByProjectId,
@@ -312,10 +312,6 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
       assertSupportedProjectState(state);
 
       const resolvedProjectId = projectId;
-      const resolvedPartitions = partitioning.getBasePartitions(
-        resolvedProjectId,
-        partitions,
-      );
       const projectInfo = await getProjectInfoByProjectId(projectId);
       const repositoryStore = await getStoreByProject(projectId);
       const collabSession = createProjectCollabService({
@@ -328,7 +324,6 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
           userId,
           clientId,
         },
-        partitions: resolvedPartitions,
         clientStore: repositoryStore,
         logger: (entry) => {
           collabLog("debug", "sync-client", entry);
@@ -357,7 +352,6 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
       collabLog("info", "session started", {
         projectId: resolvedProjectId,
         mode,
-        partitions: resolvedPartitions,
         online: Boolean(endpointUrl),
       });
       if (endpointUrl) {

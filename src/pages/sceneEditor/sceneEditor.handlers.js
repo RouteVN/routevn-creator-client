@@ -130,6 +130,25 @@ const runSceneEditorPersistence = (deps, task, options = {}) => {
   });
 };
 
+const assertSceneEditorCommandResult = (
+  result,
+  { appService, fallbackMessage = "Failed to save scene changes" } = {},
+) => {
+  if (result?.valid !== false) {
+    return result;
+  }
+
+  const message = result?.error?.message || fallbackMessage;
+  appService?.showToast(message, {
+    title: "Error",
+  });
+
+  const error = new Error(message);
+  error.code = result?.error?.code || "validation_failed";
+  error.details = result?.error?.details;
+  throw error;
+};
+
 const reconcileCurrentEditorSession = (deps) => {
   const { store } = deps;
   const sceneId = store.selectSceneId();
@@ -330,6 +349,7 @@ export const handleBeforeMount = (deps) => {
     mountSceneEditorShortcutSubscriptions(deps);
   const projectSubscription = createProjectStateStream({
     projectService,
+    emitCurrent: false,
   }).subscribe({
     next: (payload) => {
       void syncSceneEditorProjectPayload(deps, payload);
@@ -341,6 +361,8 @@ export const handleBeforeMount = (deps) => {
     cleanupRuntimeSubscriptions();
     cleanupShortcutSubscriptions();
     await flushSceneEditorDrafts(deps);
+    const repository = await projectService.getRepository().catch(() => null);
+    await repository?.clearActiveSceneId?.();
     resetSceneEditorRuntime(deps);
   };
 };
@@ -383,6 +405,10 @@ export const handleSectionTabClick = async (deps, payload) => {
 export const handleCommandLineSubmit = async (deps, payload) => {
   const { store, render, projectService, subject, appService } = deps;
   const lineId = store.selectSelectedLineId();
+  console.info("[sceneEditor] command-line submit received", {
+    lineId,
+    detail: payload?._event?.detail,
+  });
 
   // Handle section/scene transitions
   if (payload._event.detail.sectionTransition) {
@@ -407,11 +433,17 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     await runSceneEditorPersistence(
       deps,
       async () => {
-        await projectService.updateLineActions({
-          lineId,
-          data: safeDetail,
-          replace: false,
-        });
+        assertSceneEditorCommandResult(
+          await projectService.updateLineActions({
+            lineId,
+            data: safeDetail,
+            replace: false,
+          }),
+          {
+            appService,
+            fallbackMessage: "Failed to save section transition",
+          },
+        );
       },
       {
         label: "section-transition",
@@ -561,23 +593,44 @@ export const handleCommandLineSubmit = async (deps, payload) => {
   }
 
   const { dialogue, ...otherActions } = submissionData;
+  console.info("[sceneEditor] command-line submit normalized", {
+    lineId,
+    dialogue,
+    otherActions,
+  });
 
   await runSceneEditorPersistence(
     deps,
     async () => {
       if (dialogue) {
-        await projectService.updateLineDialogueAction({
-          lineId,
-          dialogue,
-        });
+        assertSceneEditorCommandResult(
+          await projectService.updateLineDialogueAction({
+            lineId,
+            dialogue,
+          }),
+          {
+            appService,
+            fallbackMessage: "Failed to save dialogue action",
+          },
+        );
       }
 
       if (Object.keys(otherActions).length > 0) {
-        await projectService.updateLineActions({
+        console.info("[sceneEditor] updateLineActions", {
           lineId,
-          data: otherActions,
-          replace: false,
+          otherActions,
         });
+        assertSceneEditorCommandResult(
+          await projectService.updateLineActions({
+            lineId,
+            data: otherActions,
+            replace: false,
+          }),
+          {
+            appService,
+            fallbackMessage: "Failed to save line actions",
+          },
+        );
       }
     },
     {

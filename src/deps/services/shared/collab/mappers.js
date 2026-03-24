@@ -4,17 +4,10 @@ import {
 } from "insieme/client";
 import { COMMAND_EVENT_MODEL } from "../../../../internal/project/commands.js";
 
-const normalizeCommandVersion = (value) => {
+const normalizeSchemaVersion = (value) => {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed <= 0) return undefined;
   return parsed;
-};
-
-export const getCommittedEventCommandVersion = (committedEvent) => {
-  return (
-    normalizeCommandVersion(committedEvent?.meta?.commandVersion) ??
-    COMMAND_EVENT_MODEL.commandVersion
-  );
 };
 
 const COMMAND_ENVELOPE_FIELDS = new Set([
@@ -31,32 +24,16 @@ const normalizeCommandEnvelope = (command) => {
 };
 
 export const commandToSyncEvent = (command) => {
-  const commandVersion =
-    normalizeCommandVersion(command?.commandVersion) ??
-    COMMAND_EVENT_MODEL.commandVersion;
-  const event = mapCommandToSyncEvent(command, {
+  return mapCommandToSyncEvent(command, {
     defaultSchemaVersion:
-      normalizeCommandVersion(command?.schemaVersion) ?? commandVersion,
+      normalizeSchemaVersion(command?.schemaVersion) ??
+      COMMAND_EVENT_MODEL.schemaVersion,
   });
-
-  return {
-    ...event,
-    meta: {
-      ...(event?.meta ? structuredClone(event.meta) : {}),
-      commandVersion,
-    },
-  };
 };
 
 export const committedEventToCommand = (committedEvent) => {
-  const commandVersion = getCommittedEventCommandVersion(committedEvent);
-  const command = committedSyncEventToCommand(committedEvent, {
-    defaultCommandVersion: commandVersion,
-  });
+  const command = committedSyncEventToCommand(committedEvent);
   if (!command) return null;
 
-  return {
-    ...normalizeCommandEnvelope(command),
-    commandVersion,
-  };
+  return normalizeCommandEnvelope(command);
 };

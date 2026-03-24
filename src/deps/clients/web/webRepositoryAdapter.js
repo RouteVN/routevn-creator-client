@@ -6,7 +6,7 @@ import {
 
 // Insieme-compatible Web IndexedDB Store Adapter
 
-const REPOSITORY_DB_VERSION = 2;
+const REPOSITORY_DB_VERSION = 3;
 const MATERIALIZED_VIEW_STORE = "materialized_view_state";
 const PROJECT_INFO_KEY = "projectInfo";
 
@@ -68,6 +68,9 @@ export const initializeProject = async ({
 
   assertSupportedProjectState(templateData);
 
+  await adapter.clearEvents();
+  await adapter.clearMaterializedViewCheckpoints();
+
   await adapter.appendEvent(
     createProjectCreateRepositoryEvent({
       projectId,
@@ -92,6 +95,17 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
 
   const db = await openIDB(projectId, REPOSITORY_DB_VERSION, (event) => {
     const idb = event.target.result;
+    const previousVersion = Number(event.oldVersion) || 0;
+
+    if (previousVersion > 0 && previousVersion < REPOSITORY_DB_VERSION) {
+      if (idb.objectStoreNames.contains("events")) {
+        idb.deleteObjectStore("events");
+      }
+      if (idb.objectStoreNames.contains(MATERIALIZED_VIEW_STORE)) {
+        idb.deleteObjectStore(MATERIALIZED_VIEW_STORE);
+      }
+    }
+
     if (!idb.objectStoreNames.contains("events")) {
       idb.createObjectStore("events", { keyPath: "id", autoIncrement: true });
     }
@@ -187,6 +201,45 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
           });
         };
         request.onerror = (event) => reject(event.target.error);
+      });
+    },
+
+    async loadMaterializedViewCheckpoints({ viewName, partitions = [] }) {
+      const normalizedPartitions = (partitions || []).filter(
+        (partition) => typeof partition === "string" && partition.length > 0,
+      );
+      if (normalizedPartitions.length === 0) {
+        return [];
+      }
+
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(MATERIALIZED_VIEW_STORE, "readonly");
+        const store = transaction.objectStore(MATERIALIZED_VIEW_STORE);
+        const requests = normalizedPartitions.map(
+          (partition) =>
+            new Promise((innerResolve, innerReject) => {
+              const request = store.get([viewName, partition]);
+              request.onsuccess = (event) => {
+                const row = event.target.result;
+                if (!row) {
+                  innerResolve(undefined);
+                  return;
+                }
+                innerResolve({
+                  partition,
+                  viewVersion: row.viewVersion,
+                  lastCommittedId: Number(row.lastCommittedId) || 0,
+                  value: structuredClone(row.value),
+                  updatedAt: Number(row.updatedAt) || 0,
+                });
+              };
+              request.onerror = (event) => innerReject(event.target.error);
+            }),
+        );
+
+        Promise.all(requests)
+          .then((rows) => resolve(rows.filter(Boolean)))
+          .catch(reject);
       });
     },
 

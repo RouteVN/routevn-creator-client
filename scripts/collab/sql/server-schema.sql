@@ -7,9 +7,12 @@ CREATE TABLE IF NOT EXISTS committed_events (
   id TEXT NOT NULL UNIQUE,
   project_id TEXT NOT NULL,
   user_id TEXT,
-  partitions TEXT NOT NULL,
+  partition TEXT NOT NULL,
   type TEXT NOT NULL,
+  schema_version INTEGER NOT NULL,
   payload TEXT NOT NULL,
-  meta TEXT NOT NULL,
-  created INTEGER NOT NULL
+  payload_compression TEXT DEFAULT NULL,
+  client_ts INTEGER NOT NULL,
+  server_ts INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
 );

@@ -11,35 +11,35 @@ export const REMOTE_COMMAND_COMPATIBILITY = Object.freeze({
   INVALID: "invalid",
 });
 
-const normalizeCommandVersion = (value) => {
+const normalizeSchemaVersion = (value) => {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed <= 0) return undefined;
   return parsed;
 };
 
-export const getSupportedCommandVersion = () =>
-  COMMAND_EVENT_MODEL.commandVersion;
+export const getSupportedSchemaVersion = () =>
+  COMMAND_EVENT_MODEL.schemaVersion;
 
-export const getCommandVersion = (command) => {
+export const getCommandSchemaVersion = (command) => {
   return (
-    normalizeCommandVersion(command?.commandVersion) ??
-    COMMAND_EVENT_MODEL.commandVersion
+    normalizeSchemaVersion(command?.schemaVersion) ??
+    COMMAND_EVENT_MODEL.schemaVersion
   );
 };
 
 export const evaluateRemoteCommandCompatibility = (
   command,
-  { supportedCommandVersion = getSupportedCommandVersion() } = {},
+  { supportedSchemaVersion = getSupportedSchemaVersion() } = {},
 ) => {
-  const remoteCommandVersion = getCommandVersion(command);
+  const remoteSchemaVersion = getCommandSchemaVersion(command);
 
-  if (remoteCommandVersion > supportedCommandVersion) {
+  if (remoteSchemaVersion > supportedSchemaVersion) {
     return {
       status: REMOTE_COMMAND_COMPATIBILITY.FUTURE,
-      reason: "command_version_future",
-      supportedCommandVersion,
-      remoteCommandVersion,
-      message: `commandVersion ${remoteCommandVersion} is newer than supported ${supportedCommandVersion}`,
+      reason: "schema_version_future",
+      supportedSchemaVersion,
+      remoteSchemaVersion,
+      message: `schemaVersion ${remoteSchemaVersion} is newer than supported ${supportedSchemaVersion}`,
     };
   }
 
@@ -47,8 +47,8 @@ export const evaluateRemoteCommandCompatibility = (
     return {
       status: REMOTE_COMMAND_COMPATIBILITY.INVALID,
       reason: "unsupported_command_type",
-      supportedCommandVersion,
-      remoteCommandVersion,
+      supportedSchemaVersion,
+      remoteSchemaVersion,
       message: `Unsupported command type: ${command?.type || "unknown"}`,
     };
   }
@@ -57,7 +57,7 @@ export const evaluateRemoteCommandCompatibility = (
     const creatorModelCommand = commandToCreatorModelCommand({
       command: {
         ...structuredClone(command),
-        commandVersion: COMMAND_EVENT_MODEL.commandVersion,
+        schemaVersion: COMMAND_EVENT_MODEL.schemaVersion,
       },
     });
     const payloadResult = validateCreatorModelPayload(creatorModelCommand);
@@ -65,8 +65,8 @@ export const evaluateRemoteCommandCompatibility = (
       return {
         status: REMOTE_COMMAND_COMPATIBILITY.INVALID,
         reason: "validation_failed",
-        supportedCommandVersion,
-        remoteCommandVersion,
+        supportedSchemaVersion,
+        remoteSchemaVersion,
         message: payloadResult.error?.message || "validation failed",
       };
     }
@@ -74,16 +74,16 @@ export const evaluateRemoteCommandCompatibility = (
     return {
       status: REMOTE_COMMAND_COMPATIBILITY.COMPATIBLE,
       reason: "ok",
-      supportedCommandVersion,
-      remoteCommandVersion,
+      supportedSchemaVersion,
+      remoteSchemaVersion,
       message: "ok",
     };
   } catch (error) {
     return {
       status: REMOTE_COMMAND_COMPATIBILITY.INVALID,
       reason: "validation_failed",
-      supportedCommandVersion,
-      remoteCommandVersion,
+      supportedSchemaVersion,
+      remoteSchemaVersion,
       message: error?.message || "validation failed",
     };
   }
@@ -101,10 +101,10 @@ export const createProjectionGap = ({
   eventId: committedEvent?.id || command?.id || undefined,
   commandId: command?.id || undefined,
   commandType: command?.type || undefined,
-  remoteCommandVersion:
-    compatibility?.remoteCommandVersion ?? getCommandVersion(command),
-  supportedCommandVersion:
-    compatibility?.supportedCommandVersion ?? getSupportedCommandVersion(),
+  remoteSchemaVersion:
+    compatibility?.remoteSchemaVersion ?? getCommandSchemaVersion(command),
+  supportedSchemaVersion:
+    compatibility?.supportedSchemaVersion ?? getSupportedSchemaVersion(),
   sourceType:
     typeof sourceType === "string" && sourceType.length > 0
       ? sourceType

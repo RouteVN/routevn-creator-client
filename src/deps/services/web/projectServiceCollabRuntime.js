@@ -43,9 +43,7 @@ export const toReplaySubmissionEvent = ({ repositoryEvent, actor }) => {
 
   return {
     id: replayCommand.id,
-    partitions: Array.isArray(repositoryEvent?.partitions)
-      ? [...repositoryEvent.partitions]
-      : [],
+    partition: repositoryEvent?.partition,
     ...commandToSyncEvent(replayCommand),
   };
 };
@@ -71,10 +69,7 @@ export const summarizeRepositoryEventsForSync = (events = []) => {
     firstCommandType: firstCommand?.type || null,
     firstCommandId: firstCommand?.id || null,
     firstCommandProjectId: firstCommand?.projectId || null,
-    firstCommandPartition:
-      firstCommand?.partitions?.find(
-        (partition) => typeof partition === "string" && partition.length > 0,
-      ) || null,
+    firstCommandPartition: firstCommand?.partition || null,
   };
 };
 

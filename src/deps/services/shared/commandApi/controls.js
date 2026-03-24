@@ -45,7 +45,6 @@ export const createControlCommandApi = (shared) => ({
           positionTargetId,
         }),
       },
-      partitions: [],
     });
 
     if (submitResult?.valid === false) {
@@ -73,7 +72,6 @@ export const createControlCommandApi = (shared) => ({
           name,
         },
       },
-      partitions: [],
     });
   },
 
@@ -93,7 +91,6 @@ export const createControlCommandApi = (shared) => ({
         controlId,
         data: structuredClone(data || {}),
       },
-      partitions: [],
     });
   },
 
@@ -112,7 +109,6 @@ export const createControlCommandApi = (shared) => ({
       payload: {
         controlIds: structuredClone(controlIds || []),
       },
-      partitions: [],
     });
   },
 
@@ -152,7 +148,6 @@ export const createControlCommandApi = (shared) => ({
           positionTargetId,
         }),
       },
-      partitions: [],
     });
   },
 
@@ -169,7 +164,6 @@ export const createControlCommandApi = (shared) => ({
         data: structuredClone(data || {}),
         replace: replace === true,
       },
-      partitions: [],
     });
   },
 
@@ -208,7 +202,6 @@ export const createControlCommandApi = (shared) => ({
           positionTargetId,
         }),
       },
-      partitions: [],
     });
 
     if (submitResult?.valid === false) {
@@ -251,7 +244,6 @@ export const createControlCommandApi = (shared) => ({
           positionTargetId,
         }),
       },
-      partitions: [],
     });
   },
 
@@ -266,7 +258,6 @@ export const createControlCommandApi = (shared) => ({
         controlId,
         elementIds: structuredClone(elementIds || []),
       },
-      partitions: [],
     });
   },
 });

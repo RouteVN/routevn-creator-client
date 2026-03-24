@@ -19,14 +19,14 @@ describe("layoutEditorPersistence", () => {
       currentItem: {
         id: "text-1",
         type: "text",
-        style: {
+        textStyle: {
           align: "left",
         },
       },
       updatedItem: {
         id: "text-1",
         type: "text",
-        style: {
+        textStyle: {
           align: "center",
         },
       },
@@ -36,7 +36,7 @@ describe("layoutEditorPersistence", () => {
       hasChanges: true,
       replace: false,
       data: {
-        style: {
+        textStyle: {
           align: "center",
         },
       },

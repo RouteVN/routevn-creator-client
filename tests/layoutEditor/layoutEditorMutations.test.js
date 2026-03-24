@@ -11,7 +11,7 @@ describe("layoutEditorMutations", () => {
       id: "text-1",
       type: "text",
       text: "Hello",
-      style: {
+      textStyle: {
         align: "left",
         wordWrapWidth: 300,
       },
@@ -19,11 +19,11 @@ describe("layoutEditorMutations", () => {
 
     const updatedItem = applyLayoutItemFieldChange({
       item,
-      name: "style.align",
+      name: "textStyle.align",
       value: "center",
     });
 
-    expect(updatedItem.style).toEqual({
+    expect(updatedItem.textStyle).toEqual({
       align: "center",
       wordWrapWidth: 300,
     });

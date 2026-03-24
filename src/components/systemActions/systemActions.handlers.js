@@ -4,6 +4,14 @@ const toPlainObject = (value) => {
     : {};
 };
 
+const syncRepositoryState = async (deps) => {
+  const { store, projectService } = deps;
+  await projectService.ensureRepository();
+  store.setRepositoryState({
+    repositoryState: projectService.getRepositoryState(),
+  });
+};
+
 export const open = (deps, payload) => {
   const { store, render } = deps;
   const { mode } = payload;
@@ -13,12 +21,8 @@ export const open = (deps, payload) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { store, projectService, render } = deps;
-
-  await projectService.ensureRepository();
-  const repositoryState = projectService.getState();
-
-  store.setRepositoryState({ repositoryState: repositoryState });
+  const { render } = deps;
+  await syncRepositoryState(deps);
   render();
 };
 
@@ -28,10 +32,11 @@ export const handleBeforeMount = (deps) => {
   render();
 };
 
-export const handleOnUpdate = (deps, changes) => {
+export const handleOnUpdate = async (deps, changes) => {
   const { render, store } = deps;
   const { newProps } = changes;
   store.updateActions(toPlainObject(newProps.actions));
+  await syncRepositoryState(deps);
   render();
 };
 
@@ -53,6 +58,10 @@ export const handleActionClicked = (deps, payload) => {
 
 export const handleCommandLineSubmit = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
+  console.info("[systemActions] command-line submit", {
+    mode: store.getState().mode,
+    detail: payload?._event?.detail,
+  });
   dispatchEvent(
     new CustomEvent("actions-change", {
       detail: payload._event.detail,

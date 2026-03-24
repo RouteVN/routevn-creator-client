@@ -13,13 +13,10 @@ in:
     actor:
       userId: user-puty-idempotent
       clientId: client-puty-idempotent
-    sessionPartitions:
-      - project:project-puty-idempotent-001:story
     batches:
       - commands:
           - id: cmd-scene-create
-            partitions:
-              - project:project-puty-idempotent-001:story
+            partition: m:s:5anJPz
             type: scene.create
             clientTs: 1201
             payload:
@@ -27,8 +24,7 @@ in:
               data:
                 name: Original Scene
           - id: cmd-scene-update-dedup
-            partitions:
-              - project:project-puty-idempotent-001:story
+            partition: m:s:5anJPz
             type: scene.update
             clientTs: 1202
             payload:
@@ -37,8 +33,7 @@ in:
                 name: Deduped Scene
       - commands:
           - id: cmd-scene-update-dedup
-            partitions:
-              - project:project-puty-idempotent-001:story
+            partition: m:s:5anJPz
             type: scene.update
             clientTs: 1202
             payload:
@@ -46,8 +41,7 @@ in:
               data:
                 name: Deduped Scene
           - id: cmd-scene-update-unique
-            partitions:
-              - project:project-puty-idempotent-001:story
+            partition: m:s:5anJPz
             type: scene.update
             clientTs: 1203
             payload:
@@ -60,41 +54,38 @@ out:
       id: cmd-scene-create
       projectId: project-puty-idempotent-001
       userId: user-puty-idempotent
-      partitions:
-        - project:project-puty-idempotent-001:story
+      partition: m:s:5anJPz
+      schemaVersion: 1
       type: scene.create
       payload:
         sceneId: scene-1
         data:
           name: Original Scene
       meta:
-        clientId: client-puty-idempotent
         clientTs: 1201
     - committedId: 2
       id: cmd-scene-update-dedup
       projectId: project-puty-idempotent-001
       userId: user-puty-idempotent
-      partitions:
-        - project:project-puty-idempotent-001:story
+      partition: m:s:5anJPz
+      schemaVersion: 1
       type: scene.update
       payload:
         sceneId: scene-1
         data:
           name: Deduped Scene
       meta:
-        clientId: client-puty-idempotent
         clientTs: 1202
     - committedId: 3
       id: cmd-scene-update-unique
       projectId: project-puty-idempotent-001
       userId: user-puty-idempotent
-      partitions:
-        - project:project-puty-idempotent-001:story
+      partition: m:s:5anJPz
+      schemaVersion: 1
       type: scene.update
       payload:
         sceneId: scene-1
         data:
           name: Final Scene
       meta:
-        clientId: client-puty-idempotent
         clientTs: 1203

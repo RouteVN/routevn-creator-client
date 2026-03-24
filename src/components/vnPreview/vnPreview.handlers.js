@@ -205,13 +205,24 @@ export const handleBeforeMount = (deps) => {
 
 export const handleAfterMount = async (deps) => {
   const { projectService, graphicsService, refs, props: attrs, store } = deps;
-  await projectService.ensureRepository();
-  const state = projectService.getRepositoryState();
+  const repository = await projectService.ensureRepository();
   const { canvas } = refs;
 
   const sceneId = attrs.sceneId;
   const sectionId = attrs.sectionId;
   const lineId = attrs.lineId;
+
+  if (
+    typeof repository?.ensureScenesLoaded === "function" &&
+    typeof sceneId === "string" &&
+    sceneId.length > 0
+  ) {
+    await repository.ensureScenesLoaded({
+      sceneIds: [sceneId],
+    });
+  }
+
+  const state = projectService.getRepositoryState();
 
   const projectData = constructProjectData(state, {
     initialSceneId: sceneId,

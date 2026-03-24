@@ -1,11 +1,17 @@
 import assert from "node:assert/strict";
 import { createCommandEnvelope } from "../src/deps/services/shared/collab/commandEnvelope.js";
 import {
+  mainScenePartitionFor,
+  scenePartitionFor,
+} from "../src/deps/services/shared/collab/partitions.js";
+import {
   createProjectedSyncHarness,
   normalizeStateForCompare,
-  sleep,
   waitFor,
 } from "./collabTestSupport.js";
+
+const scene1MainPartition = mainScenePartitionFor("scene-1");
+const scene1Partition = scenePartitionFor("scene-1");
 
 const runScenario = async (name, fn) => {
   await fn();
@@ -19,14 +25,12 @@ await runScenario("late-join-catchup", async () => {
     projectId,
     userId: "u1",
     clientId: "a",
-    partitions: [`project:${projectId}:story`],
     connectionId: "latejoin-a",
   });
   const b = harness.createClient({
     projectId,
     userId: "u2",
     clientId: "b",
-    partitions: [`project:${projectId}:story`],
     connectionId: "latejoin-b",
   });
 
@@ -35,7 +39,7 @@ await runScenario("late-join-catchup", async () => {
     await a.client.submitCommand(
       createCommandEnvelope({
         projectId,
-        scope: "story",
+        partition: scene1MainPartition,
         type: "scene.create",
         payload: { sceneId: "scene-1", data: { name: "Scene 1" } },
         actor: a.actor,
@@ -45,7 +49,7 @@ await runScenario("late-join-catchup", async () => {
     await a.client.submitCommand(
       createCommandEnvelope({
         projectId,
-        scope: "story",
+        partition: scene1MainPartition,
         type: "section.create",
         payload: {
           sceneId: "scene-1",
@@ -59,7 +63,7 @@ await runScenario("late-join-catchup", async () => {
     await a.client.submitCommand(
       createCommandEnvelope({
         projectId,
-        scope: "story",
+        partition: scene1Partition,
         type: "line.create",
         payload: {
           sectionId: "section-1",
@@ -101,14 +105,12 @@ await runScenario("concurrent-two-client-writes", async () => {
     projectId,
     userId: "u1",
     clientId: "a",
-    partitions: [`project:${projectId}:story`],
     connectionId: "concurrent-a",
   });
   const b = harness.createClient({
     projectId,
     userId: "u2",
     clientId: "b",
-    partitions: [`project:${projectId}:story`],
     connectionId: "concurrent-b",
   });
 
@@ -119,7 +121,7 @@ await runScenario("concurrent-two-client-writes", async () => {
     await a.client.submitCommand(
       createCommandEnvelope({
         projectId,
-        scope: "story",
+        partition: scene1MainPartition,
         type: "scene.create",
         payload: { sceneId: "scene-1", data: { name: "Scene 1" } },
         actor: a.actor,
@@ -134,7 +136,7 @@ await runScenario("concurrent-two-client-writes", async () => {
       a.client.submitCommand(
         createCommandEnvelope({
           projectId,
-          scope: "story",
+          partition: scene1MainPartition,
           type: "section.create",
           payload: {
             sceneId: "scene-1",
@@ -148,7 +150,7 @@ await runScenario("concurrent-two-client-writes", async () => {
       b.client.submitCommand(
         createCommandEnvelope({
           projectId,
-          scope: "story",
+          partition: scene1MainPartition,
           type: "section.create",
           payload: {
             sceneId: "scene-1",
@@ -184,24 +186,19 @@ await runScenario("concurrent-two-client-writes", async () => {
   }
 });
 
-await runScenario("partition-isolation", async () => {
-  const projectId = "project-int-partitions";
+await runScenario("project-wide-sync", async () => {
+  const projectId = "project-int-project-sync";
   const harness = createProjectedSyncHarness();
   const full = harness.createClient({
     projectId,
     userId: "u1",
     clientId: "full",
-    partitions: [
-      `project:${projectId}:story`,
-      `project:${projectId}:resources`,
-    ],
     connectionId: "partition-full",
   });
   const storyOnly = harness.createClient({
     projectId,
     userId: "u2",
     clientId: "story",
-    partitions: [`project:${projectId}:story`],
     connectionId: "partition-story",
   });
 
@@ -212,7 +209,26 @@ await runScenario("partition-isolation", async () => {
     await full.client.submitCommand(
       createCommandEnvelope({
         projectId,
-        scope: "resources",
+        partition: "m",
+        type: "file.create",
+        payload: {
+          fileId: "file-1",
+          data: {
+            type: "image",
+            mimeType: "image/png",
+            size: 1024,
+            sha256: "sha256-file-1",
+          },
+        },
+        actor: full.actor,
+        clientTs: 2950,
+      }),
+    );
+
+    await full.client.submitCommand(
+      createCommandEnvelope({
+        projectId,
+        partition: "m",
         type: "image.create",
         payload: {
           imageId: "img-1",
@@ -230,16 +246,17 @@ await runScenario("partition-isolation", async () => {
     await waitFor(() => Boolean(full.client.getState().images.items["img-1"]), {
       label: "full client sees image resource",
     });
-    await sleep(150);
-    assert.equal(
-      storyOnly.client.getState().images.items["img-1"],
-      undefined,
+    await waitFor(
+      () => Boolean(storyOnly.client.getState().images.items["img-1"]),
+      {
+        label: "peer client also sees project resource",
+      },
     );
 
     await full.client.submitCommand(
       createCommandEnvelope({
         projectId,
-        scope: "story",
+        partition: scene1MainPartition,
         type: "scene.create",
         payload: { sceneId: "scene-1", data: { name: "Scene 1" } },
         actor: full.actor,
