@@ -1,4 +1,4 @@
-import { createIndexedDBClientStore } from "insieme/client";
+import { createIndexedDbClientStore } from "insieme/client";
 
 const CLIENT_STORE_VERSION = "2";
 
@@ -11,7 +11,7 @@ export const createPersistedInMemoryClientStore = async ({
   materializedViews = [],
   logger = () => {},
 }) => {
-  const store = createIndexedDBClientStore({
+  const store = createIndexedDbClientStore({
     dbName: buildClientStoreDbName(projectId),
     materializedViews,
   });

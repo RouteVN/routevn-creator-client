@@ -1,4 +1,4 @@
-import { createCommandSyncSession } from "./insiemeCompat.js";
+import { createCommandSyncSession } from "insieme/client";
 import {
   createProjectionGap,
   evaluateRemoteCommandCompatibility,

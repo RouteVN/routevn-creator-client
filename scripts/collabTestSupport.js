@@ -1,4 +1,4 @@
-import { validateCommandSubmitItem } from "../src/deps/services/shared/collab/insiemeCompat.js";
+import { validateCommandSubmitItem } from "insieme/client";
 import { createInMemorySyncStore, createSyncServer } from "insieme/server";
 import {
   committedEventToCommand,
