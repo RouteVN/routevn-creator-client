@@ -171,6 +171,11 @@ const toRepositoryEvent = (item, { created, projectId } = {}) => {
     type: item.type,
     schemaVersion: item.schemaVersion,
     payload: structuredClone(item.payload),
+    clientTs: Number.isFinite(Number(item?.clientTs))
+      ? Number(item.clientTs)
+      : Number.isFinite(Number(item?.meta?.clientTs))
+        ? Number(item.meta.clientTs)
+        : undefined,
     meta: item.meta ? structuredClone(item.meta) : {},
     ...(created !== undefined ? { serverTs: created } : {}),
   };
@@ -260,9 +265,16 @@ const loadRepositoryEvents = async ({ store, projectId }) => {
 export const toBootstrappedCommittedEvent = (repositoryEvent, index) => ({
   ...structuredClone(repositoryEvent),
   committedId: index + 1,
-  serverTs: Number.isFinite(Number(repositoryEvent?.meta?.clientTs))
-    ? Number(repositoryEvent.meta.clientTs)
-    : index + 1,
+  clientTs: Number.isFinite(Number(repositoryEvent?.clientTs))
+    ? Number(repositoryEvent.clientTs)
+    : Number.isFinite(Number(repositoryEvent?.meta?.clientTs))
+      ? Number(repositoryEvent.meta.clientTs)
+      : index + 1,
+  serverTs: Number.isFinite(Number(repositoryEvent?.clientTs))
+    ? Number(repositoryEvent.clientTs)
+    : Number.isFinite(Number(repositoryEvent?.meta?.clientTs))
+      ? Number(repositoryEvent.meta.clientTs)
+      : index + 1,
 });
 
 export const createPersistedTauriProjectStore = async ({

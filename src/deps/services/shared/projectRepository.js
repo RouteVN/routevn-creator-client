@@ -359,6 +359,20 @@ const normalizeRepositoryEventMeta = (meta, { defaultClientTs } = {}) => {
   return normalized;
 };
 
+const normalizeRepositoryEventClientTs = (repositoryEvent) => {
+  const clientTs =
+    toFiniteNumberOrNull(repositoryEvent?.clientTs) ??
+    toFiniteNumberOrNull(repositoryEvent?.meta?.clientTs);
+
+  if (clientTs === null) {
+    failRepositoryEventValidation(
+      "repository event clientTs must be a finite number",
+    );
+  }
+
+  return clientTs;
+};
+
 const validateRepositoryCommandEvent = (repositoryEvent) => {
   const normalizedRepositoryEvent =
     normalizeRepositoryEventCandidate(repositoryEvent);
@@ -404,10 +418,22 @@ const validateRepositoryCommandEvent = (repositoryEvent) => {
     );
   }
 
-  return {
+  const clientTs = normalizeRepositoryEventClientTs(normalizedRepositoryEvent);
+  const meta = normalizeRepositoryEventMeta(normalizedRepositoryEvent.meta, {
+    defaultClientTs: clientTs,
+  });
+  const nextRepositoryEvent = {
     ...normalizedRepositoryEvent,
-    meta: normalizeRepositoryEventMeta(normalizedRepositoryEvent.meta),
+    clientTs,
   };
+
+  if (Object.keys(meta).length > 0) {
+    nextRepositoryEvent.meta = meta;
+  } else {
+    delete nextRepositoryEvent.meta;
+  }
+
+  return nextRepositoryEvent;
 };
 
 export const isRepositoryCommandEvent = (repositoryEvent) => {

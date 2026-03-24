@@ -115,12 +115,10 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
       await store.insertDraft({
         id: initialEvent.id,
         partition: initialEvent.partition,
-        projectId: initialEvent.projectId,
-        userId: initialEvent.userId,
         type: initialEvent.type,
         schemaVersion: initialEvent.schemaVersion,
         payload: structuredClone(initialEvent.payload),
-        meta: structuredClone(initialEvent.meta),
+        clientTs: Number(initialEvent.meta?.clientTs) || 0,
         createdAt: Number(initialEvent.meta?.clientTs) || 0,
       });
 

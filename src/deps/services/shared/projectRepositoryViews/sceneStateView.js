@@ -5,6 +5,7 @@ import {
   cloneState,
   createEmptyLinesCollection,
   createSceneProjectionState,
+  getLatestSceneProjectionRevision,
   isNonEmptyString,
 } from "./shared.js";
 
@@ -43,26 +44,58 @@ const mergeProjectedSceneOntoMainScene = ({ mainScene, projectedScene }) => {
   return mergedScene;
 };
 
-export const composeRepositoryState = ({ mainState, sceneStatesBySceneId }) => {
-  const composed = structuredClone(mainState);
+const applyProjectedSceneToComposedState = ({
+  composed,
+  sceneId,
+  sceneState,
+}) => {
   const sceneItems = composed?.scenes?.items || {};
-
-  for (const [sceneId, sceneState] of sceneStatesBySceneId.entries()) {
-    const projectedScene = sceneState?.scenes?.items?.[sceneId];
-    const mainScene = sceneItems?.[sceneId];
-    if (!projectedScene || !mainScene) {
-      continue;
-    }
-
-    const mergedScene = mergeProjectedSceneOntoMainScene({
-      mainScene,
-      projectedScene,
-    });
-    if (mergedScene) {
-      sceneItems[sceneId] = mergedScene;
-    }
+  const projectedScene = sceneState?.scenes?.items?.[sceneId];
+  const mainScene = sceneItems?.[sceneId];
+  if (!projectedScene || !mainScene) {
+    return;
   }
 
+  const mergedScene = mergeProjectedSceneOntoMainScene({
+    mainScene,
+    projectedScene,
+  });
+  if (mergedScene) {
+    sceneItems[sceneId] = mergedScene;
+  }
+};
+
+export const composeRepositoryState = ({
+  mainState,
+  activeSceneId,
+  activeSceneState,
+}) => {
+  const composed = structuredClone(mainState);
+  if (!isNonEmptyString(activeSceneId) || !activeSceneState) {
+    return composed;
+  }
+
+  applyProjectedSceneToComposedState({
+    composed,
+    sceneId: activeSceneId,
+    sceneState: activeSceneState,
+  });
+
+  return composed;
+};
+
+export const composeRepositoryStateWithScenes = ({
+  mainState,
+  sceneStatesBySceneId,
+}) => {
+  const composed = structuredClone(mainState);
+  for (const [sceneId, sceneState] of sceneStatesBySceneId.entries()) {
+    applyProjectedSceneToComposedState({
+      composed,
+      sceneId,
+      sceneState,
+    });
+  }
   return composed;
 };
 
@@ -169,11 +202,14 @@ export const loadSceneProjectionState = async ({
   createInitialState,
   reduceEventToState,
   sceneId,
-  latestRelevantRevision = 0,
   now = () => Date.now(),
 }) => {
   const scenePartition = getScenePartition(sceneId);
   const sceneExists = Boolean(mainState?.scenes?.items?.[sceneId]);
+  const latestRelevantRevision = getLatestSceneProjectionRevision({
+    events,
+    sceneId,
+  });
   const emptyProjection = createSceneProjectionState(
     {
       scenes: {
@@ -208,25 +244,12 @@ export const loadSceneProjectionState = async ({
     );
   }
 
-  const usableCheckpoint = isSceneProjectionCheckpointShapeValid({
-    value: checkpoint?.value,
-    sceneId,
-  })
-    ? checkpoint
-    : null;
-
-  if (checkpoint && !usableCheckpoint) {
-    await deleteSceneProjectionCheckpoint({ store, sceneId });
-  }
-
   let bootstrapProjection;
-  let bootstrapCommittedId = 0;
   if (typeof createInitialState === "function") {
     let bootstrapState = createInitialState();
     const committedEvents = Array.isArray(events) ? events : [];
     for (let index = 0; index < committedEvents.length; index += 1) {
       const event = committedEvents[index];
-      const committedId = index + 1;
       if (!event) {
         continue;
       }
@@ -241,7 +264,6 @@ export const loadSceneProjectionState = async ({
       });
       if (nextState !== undefined) {
         bootstrapState = nextState;
-        bootstrapCommittedId = committedId;
       }
 
       break;
@@ -255,26 +277,13 @@ export const loadSceneProjectionState = async ({
 
   let workingState = composeRepositoryState({
     mainState,
-    sceneStatesBySceneId:
-      usableCheckpoint?.value && usableCheckpoint?.partition === scenePartition
-        ? new Map([[sceneId, usableCheckpoint.value]])
-        : bootstrapProjection
-          ? new Map([[sceneId, bootstrapProjection]])
-          : new Map(),
+    activeSceneId: sceneId,
+    activeSceneState: bootstrapProjection || null,
   });
-
-  const sinceCommittedId = Number(
-    usableCheckpoint?.lastCommittedId || bootstrapCommittedId || 0,
-  );
   const committedEvents = Array.isArray(events) ? events : [];
   for (let index = 0; index < committedEvents.length; index += 1) {
     const event = committedEvents[index];
-    const committedId = index + 1;
     if (!event || event.partition !== scenePartition) {
-      continue;
-    }
-
-    if (committedId <= sinceCommittedId) {
       continue;
     }
 
@@ -300,6 +309,46 @@ export const loadSceneProjectionState = async ({
   });
 
   return nextProjection;
+};
+
+export const applySceneEventsToLoadedProjection = ({
+  mainState,
+  sceneState,
+  sceneId,
+  sourceEvents = [],
+  reduceEventToState,
+}) => {
+  if (!isNonEmptyString(sceneId)) {
+    return {
+      scenes: {
+        items: {},
+      },
+    };
+  }
+
+  const scenePartition = getScenePartition(sceneId);
+  let workingState = composeRepositoryState({
+    mainState,
+    activeSceneId: sceneId,
+    activeSceneState: sceneState,
+  });
+
+  const committedEvents = Array.isArray(sourceEvents) ? sourceEvents : [];
+  for (const event of committedEvents) {
+    if (!event || event.partition !== scenePartition) {
+      continue;
+    }
+
+    const nextState = reduceEventToState({
+      repositoryState: workingState,
+      event,
+    });
+    if (nextState !== undefined) {
+      workingState = nextState;
+    }
+  }
+
+  return createSceneProjectionState(workingState, scenePartition);
 };
 
 export const isValidSceneId = (sceneId) => isNonEmptyString(sceneId);

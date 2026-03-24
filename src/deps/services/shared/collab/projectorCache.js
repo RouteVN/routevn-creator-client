@@ -45,9 +45,16 @@ export const listCommittedEvents = async (rawClientStore) => {
 const toBootstrappedCommittedEvent = (repositoryEvent, index) => ({
   ...structuredClone(repositoryEvent),
   committedId: index + 1,
-  serverTs: Number.isFinite(Number(repositoryEvent?.meta?.clientTs))
-    ? Number(repositoryEvent.meta.clientTs)
-    : index + 1,
+  clientTs: Number.isFinite(Number(repositoryEvent?.clientTs))
+    ? Number(repositoryEvent.clientTs)
+    : Number.isFinite(Number(repositoryEvent?.meta?.clientTs))
+      ? Number(repositoryEvent.meta.clientTs)
+      : index + 1,
+  serverTs: Number.isFinite(Number(repositoryEvent?.clientTs))
+    ? Number(repositoryEvent.clientTs)
+    : Number.isFinite(Number(repositoryEvent?.meta?.clientTs))
+      ? Number(repositoryEvent.meta.clientTs)
+      : index + 1,
 });
 
 export const loadProjectorCacheVersion = async (repositoryStore) => {

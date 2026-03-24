@@ -1,5 +1,7 @@
 import {
+  mainScenePartitionFor,
   mainPartitionFor,
+  scenePartitionFor,
   scenePartitionTokenFor,
 } from "../collab/partitions.js";
 
@@ -109,6 +111,46 @@ export const resolveSceneIdForToken = (state, token) => {
 export const resolveSceneIdForPartition = (state, partition) =>
   resolveSceneIdForToken(state, extractSceneToken(partition));
 
+export const getLatestSceneProjectionRevision = ({ events = [], sceneId }) => {
+  if (!isNonEmptyString(sceneId)) {
+    return 0;
+  }
+
+  const scenePartition = scenePartitionFor(sceneId);
+  let latestRevision = 0;
+
+  for (let index = 0; index < events.length; index += 1) {
+    if (events[index]?.partition === scenePartition) {
+      latestRevision = index + 1;
+    }
+  }
+
+  return latestRevision;
+};
+
+export const getLatestSceneOverviewRevision = ({ events = [], sceneId }) => {
+  if (!isNonEmptyString(sceneId)) {
+    return 0;
+  }
+
+  const scenePartition = scenePartitionFor(sceneId);
+  const mainScenePartition = mainScenePartitionFor(sceneId);
+  let latestRevision = 0;
+
+  for (let index = 0; index < events.length; index += 1) {
+    const partition = events[index]?.partition;
+    if (
+      partition === MAIN_PARTITION ||
+      partition === scenePartition ||
+      partition === mainScenePartition
+    ) {
+      latestRevision = index + 1;
+    }
+  }
+
+  return latestRevision;
+};
+
 export const createMainProjectionState = (state) =>
   stripSceneLinesFromState(state);
 
@@ -142,15 +184,24 @@ export const toCommittedProjectEvent = ({ event, committedId, projectId }) => ({
     ? event.partition
     : MAIN_PARTITION,
   projectId: event?.projectId || projectId,
-  meta: {
-    ...(event?.meta ? structuredClone(event.meta) : {}),
-    clientTs: Number.isFinite(Number(event?.meta?.clientTs))
+  clientTs: Number.isFinite(Number(event?.clientTs))
+    ? Number(event.clientTs)
+    : Number.isFinite(Number(event?.meta?.clientTs))
       ? Number(event.meta.clientTs)
       : committedId,
+  meta: {
+    ...(event?.meta ? structuredClone(event.meta) : {}),
+    clientTs: Number.isFinite(Number(event?.clientTs))
+      ? Number(event.clientTs)
+      : Number.isFinite(Number(event?.meta?.clientTs))
+        ? Number(event.meta.clientTs)
+        : committedId,
   },
   serverTs: Number.isFinite(Number(event?.serverTs))
     ? Number(event.serverTs)
-    : Number.isFinite(Number(event?.meta?.clientTs))
-      ? Number(event.meta.clientTs)
-      : Date.now(),
+    : Number.isFinite(Number(event?.clientTs))
+      ? Number(event.clientTs)
+      : Number.isFinite(Number(event?.meta?.clientTs))
+        ? Number(event.meta.clientTs)
+        : Date.now(),
 });

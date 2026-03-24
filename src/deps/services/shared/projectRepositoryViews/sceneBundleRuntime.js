@@ -1,349 +1,149 @@
 import { buildSceneOverview } from "../../../../internal/project/sceneOverview.js";
 import {
-  mainScenePartitionFor,
-  scenePartitionFor,
-  scenePartitionTokenFor,
-} from "../collab/partitions.js";
-import {
-  OVERVIEW_CHECKPOINT_DEBOUNCE_MS,
+  getLatestSceneOverviewRevision,
   isMainPartition,
   isNonEmptyString,
+  resolveSceneIdForPartition,
 } from "./shared.js";
+import { composeRepositoryState } from "./sceneStateView.js";
 import {
   deleteSceneOverviewCheckpoint,
+  deleteSceneOverviewCheckpointByPartition,
   isSceneOverviewCheckpointFresh,
   loadSceneOverviewCheckpoint,
   loadSceneOverviewCheckpoints,
   saveSceneOverviewCheckpoint,
 } from "./sceneOverviewStore.js";
-import { composeRepositoryState } from "./sceneStateView.js";
-
-const createOverviewEntry = ({
-  value,
-  lastCommittedId = 0,
-  persistedLastCommittedId = 0,
-  updatedAt = 0,
-}) => ({
-  value,
-  lastCommittedId,
-  persistedLastCommittedId,
-  updatedAt,
-  flushTimer: undefined,
-});
-
-const isDirty = (entry) =>
-  entry.lastCommittedId > entry.persistedLastCommittedId;
-
-const clearFlushTimer = (entry) => {
-  if (!entry?.flushTimer) {
-    return;
-  }
-  clearTimeout(entry.flushTimer);
-  entry.flushTimer = undefined;
-};
-
-const cloneEntryValue = (entry) =>
-  entry?.value ? structuredClone(entry.value) : undefined;
 
 export const createSceneBundleRuntime = ({
   store,
   events,
   now = () => Date.now(),
-  getCurrentRevision,
   getCurrentMainState,
-  getLoadedSceneStates,
+  getActiveSceneId,
+  getActiveSceneState,
   loadSceneProjection,
-  evictSceneProjection,
 }) => {
-  const sceneOverviewEntries = new Map();
-  const latestSceneOverviewRevisionByToken = new Map();
-  let globalSceneOverviewRevision = 0;
-
-  const recordOverviewRevision = ({ partition, revision }) => {
-    if (
-      !isNonEmptyString(partition) ||
-      !Number.isInteger(revision) ||
-      revision <= 0
-    ) {
-      return;
+  const getSceneStateForOverview = async (sceneId) => {
+    const activeSceneId = getActiveSceneId();
+    const activeSceneState = getActiveSceneState();
+    if (sceneId === activeSceneId && activeSceneState) {
+      return activeSceneState;
     }
 
-    if (isMainPartition(partition)) {
-      globalSceneOverviewRevision = Math.max(
-        globalSceneOverviewRevision,
-        revision,
-      );
-      return;
-    }
-
-    if (!partition.startsWith("m:s:") && !partition.startsWith("s:")) {
-      return;
-    }
-
-    const token = partition.startsWith("m:s:")
-      ? partition.slice(4)
-      : partition.slice(2);
-    if (!token) {
-      return;
-    }
-
-    latestSceneOverviewRevisionByToken.set(
-      token,
-      Math.max(latestSceneOverviewRevisionByToken.get(token) || 0, revision),
-    );
+    return loadSceneProjection(sceneId);
   };
 
-  for (let index = 0; index < events.length; index += 1) {
-    recordOverviewRevision({
-      partition: events[index]?.partition,
-      revision: index + 1,
-    });
-  }
-
-  const getLatestRelevantRevisionForScene = (sceneId) => {
-    const token = scenePartitionTokenFor(sceneId);
-    return Math.max(
-      globalSceneOverviewRevision,
-      latestSceneOverviewRevisionByToken.get(token) || 0,
-    );
-  };
-
-  const persistEntry = async (sceneId, entry) => {
-    if (!isDirty(entry)) {
-      return;
+  const buildAndStoreSceneOverview = async ({ sceneId, checkpoint = null }) => {
+    if (!isNonEmptyString(sceneId)) {
+      return undefined;
     }
 
-    await saveSceneOverviewCheckpoint({
-      store,
-      sceneId,
-      value: entry.value,
-      lastCommittedId: entry.lastCommittedId,
-      updatedAt: entry.updatedAt || now(),
-    });
-    entry.persistedLastCommittedId = entry.lastCommittedId;
-  };
-
-  const scheduleFlush = (sceneId, entry) => {
-    if (!isDirty(entry)) {
-      return;
+    const currentMainState = getCurrentMainState();
+    const sceneExists = Boolean(currentMainState?.scenes?.items?.[sceneId]);
+    if (!sceneExists) {
+      if (checkpoint) {
+        await deleteSceneOverviewCheckpoint({ store, sceneId });
+      }
+      return undefined;
     }
 
-    clearFlushTimer(entry);
-    entry.flushTimer = setTimeout(() => {
-      entry.flushTimer = undefined;
-      void persistEntry(sceneId, entry);
-    }, OVERVIEW_CHECKPOINT_DEBOUNCE_MS);
-  };
-
-  const setSceneOverviewEntry = ({
-    sceneId,
-    value,
-    lastCommittedId,
-    persistedLastCommittedId = lastCommittedId,
-    updatedAt = now(),
-  }) => {
-    const entry =
-      sceneOverviewEntries.get(sceneId) ||
-      createOverviewEntry({
-        value: structuredClone(value),
-        lastCommittedId,
-        persistedLastCommittedId,
-        updatedAt,
-      });
-
-    entry.value = structuredClone(value);
-    entry.lastCommittedId = lastCommittedId;
-    entry.persistedLastCommittedId = persistedLastCommittedId;
-    entry.updatedAt = updatedAt;
-    sceneOverviewEntries.set(sceneId, entry);
-    return entry;
-  };
-
-  const removeSceneOverview = async (sceneId) => {
-    const entry = sceneOverviewEntries.get(sceneId);
-    if (entry) {
-      clearFlushTimer(entry);
-      sceneOverviewEntries.delete(sceneId);
-    }
-    await deleteSceneOverviewCheckpoint({ store, sceneId });
-  };
-
-  const buildAndStoreSceneOverview = async ({
-    sceneId,
-    keepSceneLoaded = false,
-  }) => {
-    const loadedSceneStates = getLoadedSceneStates();
-    const hadLoadedScene = loadedSceneStates.has(sceneId);
-    let sceneState = loadedSceneStates.get(sceneId);
-
-    if (!sceneState) {
-      sceneState = await loadSceneProjection(sceneId);
-      loadedSceneStates.set(sceneId, sceneState);
-    }
+    const sceneState = await getSceneStateForOverview(sceneId);
 
     const overview = buildSceneOverview({
       repositoryState: composeRepositoryState({
-        mainState: getCurrentMainState(),
-        sceneStatesBySceneId: new Map([[sceneId, sceneState]]),
+        mainState: currentMainState,
+        activeSceneId: sceneId,
+        activeSceneState: sceneState,
       }),
       sceneId,
     });
 
     if (!overview) {
-      if (!hadLoadedScene && !keepSceneLoaded) {
-        await evictSceneProjection(sceneId);
-      }
-      await removeSceneOverview(sceneId);
+      await deleteSceneOverviewCheckpoint({ store, sceneId });
       return undefined;
     }
 
-    const entry = setSceneOverviewEntry({
+    await saveSceneOverviewCheckpoint({
+      store,
       sceneId,
       value: overview,
-      lastCommittedId: getLatestRelevantRevisionForScene(sceneId),
-      persistedLastCommittedId: 0,
+      lastCommittedId: getLatestSceneOverviewRevision({
+        events,
+        sceneId,
+      }),
       updatedAt: now(),
     });
 
-    if (!hadLoadedScene && !keepSceneLoaded) {
-      await persistEntry(sceneId, entry);
-      await evictSceneProjection(sceneId);
-    } else {
-      scheduleFlush(sceneId, entry);
-    }
-
-    return cloneEntryValue(entry);
-  };
-
-  const ensureSceneOverview = async ({ sceneId, keepSceneLoaded = false }) => {
-    if (!isNonEmptyString(sceneId)) {
-      return undefined;
-    }
-
-    const sceneExists = Boolean(
-      getCurrentMainState()?.scenes?.items?.[sceneId],
-    );
-    if (!sceneExists) {
-      await removeSceneOverview(sceneId);
-      return undefined;
-    }
-
-    const latestRelevantRevision = getLatestRelevantRevisionForScene(sceneId);
-    const hotEntry = sceneOverviewEntries.get(sceneId);
-    if (hotEntry && hotEntry.lastCommittedId === latestRelevantRevision) {
-      return cloneEntryValue(hotEntry);
-    }
-
-    const checkpoint = await loadSceneOverviewCheckpoint({ store, sceneId });
-    if (
-      isSceneOverviewCheckpointFresh({
-        checkpoint,
-        latestRelevantRevision,
-      })
-    ) {
-      setSceneOverviewEntry({
-        sceneId,
-        value: checkpoint.value,
-        lastCommittedId: latestRelevantRevision,
-        persistedLastCommittedId: latestRelevantRevision,
-        updatedAt: checkpoint.updatedAt || now(),
-      });
-      return structuredClone(checkpoint.value);
-    }
-
-    return buildAndStoreSceneOverview({
-      sceneId,
-      keepSceneLoaded,
-    });
+    return structuredClone(overview);
   };
 
   const ensureSceneOverviewWithCheckpoint = async ({
     sceneId,
-    keepSceneLoaded = false,
-    checkpoint,
+    checkpoint = null,
   }) => {
     if (!isNonEmptyString(sceneId)) {
       return undefined;
     }
 
-    const sceneExists = Boolean(
-      getCurrentMainState()?.scenes?.items?.[sceneId],
-    );
+    const currentMainState = getCurrentMainState();
+    const sceneExists = Boolean(currentMainState?.scenes?.items?.[sceneId]);
     if (!sceneExists) {
-      await removeSceneOverview(sceneId);
+      if (checkpoint) {
+        await deleteSceneOverviewCheckpoint({ store, sceneId });
+      }
       return undefined;
     }
 
-    const latestRelevantRevision = getLatestRelevantRevisionForScene(sceneId);
-    const hotEntry = sceneOverviewEntries.get(sceneId);
-    if (hotEntry && hotEntry.lastCommittedId === latestRelevantRevision) {
-      return cloneEntryValue(hotEntry);
+    if (sceneId === getActiveSceneId() && getActiveSceneState()) {
+      return buildAndStoreSceneOverview({
+        sceneId,
+        checkpoint,
+      });
     }
 
+    const latestRelevantRevision = getLatestSceneOverviewRevision({
+      events,
+      sceneId,
+    });
     if (
       isSceneOverviewCheckpointFresh({
         checkpoint,
         latestRelevantRevision,
       })
     ) {
-      setSceneOverviewEntry({
-        sceneId,
-        value: checkpoint.value,
-        lastCommittedId: latestRelevantRevision,
-        persistedLastCommittedId: latestRelevantRevision,
-        updatedAt: checkpoint.updatedAt || now(),
-      });
       return structuredClone(checkpoint.value);
     }
 
     return buildAndStoreSceneOverview({
       sceneId,
-      keepSceneLoaded,
+      checkpoint,
     });
   };
 
-  const refreshLoadedSceneOverviews = async ({ partitions = [] } = {}) => {
-    const loadedSceneStates = getLoadedSceneStates();
-    if (loadedSceneStates.size === 0) {
-      return;
-    }
+  const invalidateInactiveSceneOverviews = async () => {
+    const activeSceneId = getActiveSceneId();
+    const currentSceneIds = Object.keys(
+      getCurrentMainState()?.scenes?.items || {},
+    );
 
-    const affectedSceneIds = new Set();
-    for (const partition of partitions) {
-      if (isMainPartition(partition)) {
-        for (const sceneId of loadedSceneStates.keys()) {
-          affectedSceneIds.add(sceneId);
-        }
+    for (const sceneId of currentSceneIds) {
+      if (sceneId === activeSceneId) {
         continue;
       }
-
-      for (const sceneId of loadedSceneStates.keys()) {
-        if (
-          partition === scenePartitionFor(sceneId) ||
-          partition === mainScenePartitionFor(sceneId)
-        ) {
-          affectedSceneIds.add(sceneId);
-        }
-      }
-    }
-
-    for (const sceneId of affectedSceneIds) {
-      await buildAndStoreSceneOverview({
-        sceneId,
-        keepSceneLoaded: true,
-      });
+      await deleteSceneOverviewCheckpoint({ store, sceneId });
     }
   };
 
   return {
-    getSceneOverview(sceneId) {
-      return cloneEntryValue(sceneOverviewEntries.get(sceneId));
+    getSceneOverview(_sceneId) {
+      return undefined;
     },
 
-    async ensureSceneBundle(sceneId, { keepSceneLoaded = false } = {}) {
-      return ensureSceneOverview({
+    async ensureSceneBundle(sceneId) {
+      return ensureSceneOverviewWithCheckpoint({
         sceneId,
-        keepSceneLoaded,
+        checkpoint: await loadSceneOverviewCheckpoint({ store, sceneId }),
       });
     },
 
@@ -375,33 +175,68 @@ export const createSceneBundleRuntime = ({
         return;
       }
 
-      committedEvents.forEach((event) => {
-        recordOverviewRevision({
-          partition: event.partition,
-          revision: event.committedId || getCurrentRevision(),
+      const activeSceneId = getActiveSceneId();
+      const scenesToRebuild = new Set();
+      const inactivePartitionsToDelete = new Set();
+      let sawMainEvent = false;
+
+      for (const event of committedEvents) {
+        const partition = event?.partition;
+        if (!isNonEmptyString(partition)) {
+          continue;
+        }
+
+        if (isMainPartition(partition)) {
+          sawMainEvent = true;
+          if (activeSceneId) {
+            scenesToRebuild.add(activeSceneId);
+          }
+          continue;
+        }
+
+        const sceneId = resolveSceneIdForPartition(
+          getCurrentMainState(),
+          partition,
+        );
+        if (sceneId && sceneId === activeSceneId) {
+          scenesToRebuild.add(sceneId);
+          continue;
+        }
+
+        if (partition.startsWith("m:s:") || partition.startsWith("s:")) {
+          inactivePartitionsToDelete.add(partition);
+        }
+      }
+
+      if (sawMainEvent) {
+        await invalidateInactiveSceneOverviews();
+      }
+
+      for (const partition of inactivePartitionsToDelete) {
+        await deleteSceneOverviewCheckpointByPartition({
+          store,
+          partition,
         });
-      });
+      }
 
-      await refreshLoadedSceneOverviews({
-        partitions: committedEvents.map((event) => event.partition),
-      });
-    },
-
-    async flushSceneOverviews() {
-      const entries = [...sceneOverviewEntries.entries()];
-      for (const [sceneId, entry] of entries) {
-        clearFlushTimer(entry);
-        await persistEntry(sceneId, entry);
+      for (const sceneId of scenesToRebuild) {
+        await buildAndStoreSceneOverview({
+          sceneId,
+        });
       }
     },
 
+    async flushSceneOverviews() {},
+
     async clearSceneOverview(sceneId) {
-      await removeSceneOverview(sceneId);
+      await deleteSceneOverviewCheckpoint({ store, sceneId });
     },
 
     async clearAllSceneOverviews() {
-      for (const sceneId of sceneOverviewEntries.keys()) {
-        await removeSceneOverview(sceneId);
+      for (const sceneId of Object.keys(
+        getCurrentMainState()?.scenes?.items || {},
+      )) {
+        await deleteSceneOverviewCheckpoint({ store, sceneId });
       }
     },
   };

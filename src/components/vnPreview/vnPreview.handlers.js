@@ -212,17 +212,14 @@ export const handleAfterMount = async (deps) => {
   const sectionId = attrs.sectionId;
   const lineId = attrs.lineId;
 
-  if (
-    typeof repository?.ensureScenesLoaded === "function" &&
+  const state =
+    typeof repository?.getContextState === "function" &&
     typeof sceneId === "string" &&
     sceneId.length > 0
-  ) {
-    await repository.ensureScenesLoaded({
-      sceneIds: [sceneId],
-    });
-  }
-
-  const state = projectService.getRepositoryState();
+      ? await repository.getContextState({
+          sceneIds: [sceneId],
+        })
+      : projectService.getRepositoryState();
 
   const projectData = constructProjectData(state, {
     initialSceneId: sceneId,

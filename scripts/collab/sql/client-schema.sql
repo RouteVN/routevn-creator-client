@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS local_drafts (
   partition TEXT NOT NULL,
   type TEXT NOT NULL,
   schema_version INTEGER NOT NULL,
-  payload TEXT NOT NULL,
+  payload BLOB NOT NULL,
   payload_compression TEXT DEFAULT NULL,
   client_ts INTEGER NOT NULL,
   created_at INTEGER NOT NULL
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS committed_events (
   partition TEXT NOT NULL,
   type TEXT NOT NULL,
   schema_version INTEGER NOT NULL,
-  payload TEXT NOT NULL,
+  payload BLOB NOT NULL,
   payload_compression TEXT DEFAULT NULL,
   client_ts INTEGER NOT NULL,
   server_ts INTEGER NOT NULL,

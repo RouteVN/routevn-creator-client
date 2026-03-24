@@ -6,6 +6,24 @@ import {
 
 const getSceneOverviewPartition = (sceneId) => scenePartitionFor(sceneId);
 
+const normalizeSceneOverviewPartition = (partitionOrSceneId) => {
+  if (
+    typeof partitionOrSceneId === "string" &&
+    partitionOrSceneId.startsWith("s:")
+  ) {
+    return partitionOrSceneId;
+  }
+
+  if (
+    typeof partitionOrSceneId === "string" &&
+    partitionOrSceneId.startsWith("m:s:")
+  ) {
+    return `s:${partitionOrSceneId.slice(4)}`;
+  }
+
+  return getSceneOverviewPartition(partitionOrSceneId);
+};
+
 const toCheckpointMap = ({ sceneIds = [], checkpoints = [] }) => {
   const checkpointByPartition = new Map(
     (Array.isArray(checkpoints) ? checkpoints : [])
@@ -84,6 +102,16 @@ export const deleteSceneOverviewCheckpoint = async ({ store, sceneId }) => {
   await store.deleteMaterializedViewCheckpoint?.({
     viewName: SCENE_OVERVIEW_VIEW_NAME,
     partition: getSceneOverviewPartition(sceneId),
+  });
+};
+
+export const deleteSceneOverviewCheckpointByPartition = async ({
+  store,
+  partition,
+}) => {
+  await store.deleteMaterializedViewCheckpoint?.({
+    viewName: SCENE_OVERVIEW_VIEW_NAME,
+    partition: normalizeSceneOverviewPartition(partition),
   });
 };
 

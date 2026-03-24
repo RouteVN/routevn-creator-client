@@ -59,7 +59,19 @@ export const createCommandApiShared = ({
       repository = await getCurrentRepository();
     }
 
-    if (typeof repository?.ensureScenesLoaded === "function") {
+    const contextState =
+      typeof repository?.getContextState === "function"
+        ? await repository.getContextState({
+            sceneIds,
+            sectionIds,
+            lineIds,
+          })
+        : repository.getState();
+
+    if (
+      typeof repository?.ensureScenesLoaded === "function" &&
+      typeof repository?.getContextState !== "function"
+    ) {
       await repository.ensureScenesLoaded({
         sceneIds,
         sectionIds,
@@ -71,7 +83,10 @@ export const createCommandApiShared = ({
     if (!currentProjectId) {
       throw new Error("No project selected (missing ?p= in URL)");
     }
-    const state = repository.getState();
+    const state =
+      typeof repository?.getContextState === "function"
+        ? contextState
+        : repository.getState();
     assertSupportedProjectState(state);
 
     const projectId = currentProjectId;
@@ -130,10 +145,11 @@ export const createCommandApiShared = ({
   }) => {
     if (
       typeof context.session?.syncProjectedRepositoryState === "function" &&
-      typeof context.repository?.getState === "function"
+      (typeof context.state === "object" ||
+        typeof context.repository?.getState === "function")
     ) {
       context.session.syncProjectedRepositoryState(
-        context.repository.getState(),
+        context.state || context.repository.getState(),
       );
     }
 
@@ -169,10 +185,11 @@ export const createCommandApiShared = ({
   const submitCommandsWithContext = async ({ context, commands = [] } = {}) => {
     if (
       typeof context.session?.syncProjectedRepositoryState === "function" &&
-      typeof context.repository?.getState === "function"
+      (typeof context.state === "object" ||
+        typeof context.repository?.getState === "function")
     ) {
       context.session.syncProjectedRepositoryState(
-        context.repository.getState(),
+        context.state || context.repository.getState(),
       );
     }
 
