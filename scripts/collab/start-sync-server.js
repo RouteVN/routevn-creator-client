@@ -1,5 +1,5 @@
 import { createSyncServer, createSqliteSyncStore } from "insieme/server";
-import { validateCommandSubmitItem } from "insieme/client";
+import { validateCommandSubmitItem } from "../../src/deps/services/shared/collab/insiemeCompat.js";
 import { committedEventToCommand } from "../../src/deps/services/shared/collab/mappers.js";
 import {
   applyCommandToRepositoryState,

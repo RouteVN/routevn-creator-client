@@ -1,7 +1,7 @@
 import {
   committedSyncEventToCommand,
   commandToSyncEvent as mapCommandToSyncEvent,
-} from "insieme/client";
+} from "./insiemeCompat.js";
 import { COMMAND_EVENT_MODEL } from "../../../../internal/project/commands.js";
 
 const normalizeSchemaVersion = (value) => {
