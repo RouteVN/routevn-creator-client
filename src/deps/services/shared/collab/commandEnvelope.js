@@ -1,5 +1,4 @@
 import { COMMAND_EVENT_MODEL } from "../../../../internal/project/commands.js";
-import { buildScopePartition } from "insieme/client";
 
 const toNonEmptyString = (value) =>
   typeof value === "string" && value.length > 0 ? value : null;
@@ -19,76 +18,33 @@ const defaultUuid = () => {
   );
 };
 
-const firstPartition = (partitions = []) => {
-  return Array.isArray(partitions)
-    ? partitions.find((value) => toNonEmptyString(value))
-    : null;
-};
-
-export const partitionFor = ({ projectId, scope }) => {
-  const normalizedProjectId = toNonEmptyString(projectId);
-  const normalizedScope = toNonEmptyString(scope);
-  if (!normalizedProjectId || !normalizedScope) {
-    return `project:${projectId}:${scope}`;
-  }
-  return buildScopePartition({
-    scope: "project",
-    scopeId: normalizedProjectId,
-    path: [normalizedScope],
-  });
-};
-
-const toUniquePartitions = ({ basePartition, partitions = [] }) => {
-  const seen = new Set();
-  const output = [];
-
-  const push = (value) => {
-    const normalized = toNonEmptyString(value);
-    if (!normalized || seen.has(normalized)) return;
-    seen.add(normalized);
-    output.push(normalized);
-  };
-
-  push(basePartition);
-  for (const partition of partitions) push(partition);
-
-  return output;
-};
-
 export const createCommandEnvelope = ({
   id,
   projectId,
-  scope,
-  partitions,
+  partition,
   type,
   payload,
   actor,
   clientTs = 0,
-  schemaVersion = COMMAND_EVENT_MODEL.commandVersion,
-  commandVersion = COMMAND_EVENT_MODEL.commandVersion,
+  schemaVersion = COMMAND_EVENT_MODEL.schemaVersion,
   meta,
 }) => {
-  const basePartition =
-    firstPartition(partitions) ||
-    (toNonEmptyString(scope) ? partitionFor({ projectId, scope }) : null);
-  if (!basePartition) {
-    throw new Error("Command partitions are required");
+  const resolvedPartition = toNonEmptyString(partition);
+  if (!resolvedPartition) {
+    throw new Error("Command partition is required");
   }
+
   const resolvedId = toNonEmptyString(id) || defaultUuid();
 
   return {
     id: resolvedId,
     projectId,
-    partitions: toUniquePartitions({
-      basePartition,
-      partitions,
-    }),
+    partition: resolvedPartition,
     type,
     payload,
     actor,
     clientTs: toFiniteTimestamp(clientTs, 0),
     schemaVersion,
-    commandVersion,
     ...(meta !== undefined ? { meta: structuredClone(meta) } : {}),
   };
 };

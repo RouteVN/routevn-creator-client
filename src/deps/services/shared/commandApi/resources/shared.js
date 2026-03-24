@@ -53,7 +53,6 @@ export const submitCreateResourceCommand = async ({
         positionTargetId,
       }),
     },
-    partitions: [],
   });
 
   if (submitResult?.valid === false) {
@@ -94,7 +93,6 @@ export const submitUpdateResourceCommand = async ({
       [idField]: idValue,
       data: structuredClone(data),
     },
-    partitions: [],
   });
 };
 
@@ -138,7 +136,6 @@ export const submitMoveResourceCommand = async ({
         positionTargetId,
       }),
     },
-    partitions: [],
   });
 };
 
@@ -163,6 +160,5 @@ export const submitDeleteResourceCommand = async ({
     payload: {
       [deleteField]: structuredClone(ids ?? []),
     },
-    partitions: [],
   });
 };

@@ -101,7 +101,7 @@ const createLayoutTemplate = (layoutType) => {
           scaleY: 1,
           rotation: 0,
           text: "${dialogue.character.name}",
-          style: {
+          textStyle: {
             align: "left",
           },
         }),
@@ -119,7 +119,7 @@ const createLayoutTemplate = (layoutType) => {
           rotation: 0,
           text: "${dialogue.content[0].text}",
           displaySpeed: 100,
-          style: {
+          textStyle: {
             align: "left",
           },
         }),
@@ -219,7 +219,7 @@ const createLayoutTemplate = (layoutType) => {
           scaleY: 1,
           rotation: 0,
           text: "text",
-          style: {
+          textStyle: {
             align: "left",
           },
         }),
@@ -236,7 +236,7 @@ const createLayoutTemplate = (layoutType) => {
           scaleY: 1,
           rotation: 0,
           text: "text",
-          style: {
+          textStyle: {
             align: "left",
           },
         }),
@@ -303,7 +303,7 @@ const createLayoutTemplate = (layoutType) => {
           scaleY: 1,
           rotation: 0,
           text: "The most flexible layout, you can put anything here.",
-          style: {
+          textStyle: {
             align: "center",
           },
         }),

@@ -13,14 +13,20 @@ in:
     actor:
       userId: user-puty-1
       clientId: client-puty-1
-    sessionPartitions:
-      - project:project-puty-storage-001:resources
-      - project:project-puty-storage-001:story
-      - project:project-puty-storage-001:layouts
     commands:
+      - id: cmd-file-create
+        partition: m
+        type: file.create
+        clientTs: 101
+        payload:
+          fileId: image-1.png
+          data:
+            type: image
+            mimeType: image/png
+            size: 1024
+            sha256: sha256-image-1
       - id: cmd-image-create
-        partitions:
-          - project:project-puty-storage-001:resources:images
+        partition: m
         type: image.create
         clientTs: 102
         payload:
@@ -30,9 +36,7 @@ in:
             type: image
             fileId: image-1.png
       - id: cmd-scene-create
-        partitions:
-          - project:project-puty-storage-001:story
-          - project:project-puty-storage-001:story:scene:scene-1
+        partition: m:s:5anJPz
         type: scene.create
         clientTs: 103
         payload:
@@ -40,9 +44,7 @@ in:
           data:
             name: Scene 1
       - id: cmd-section-create
-        partitions:
-          - project:project-puty-storage-001:story
-          - project:project-puty-storage-001:story:scene:scene-1
+        partition: m:s:5anJPz
         type: section.create
         clientTs: 104
         payload:
@@ -51,9 +53,7 @@ in:
           data:
             name: Section 1
       - id: cmd-line-insert
-        partitions:
-          - project:project-puty-storage-001:story
-          - project:project-puty-storage-001:story:scene:scene-1
+        partition: s:5anJPz
         type: line.create
         clientTs: 105
         payload:
@@ -64,12 +64,10 @@ in:
                 actions:
                   dialogue:
                     content:
-                      - text: Hello
+                    - text: Hello
                     mode: adv
       - id: cmd-line-dialogue-update
-        partitions:
-          - project:project-puty-storage-001:story
-          - project:project-puty-storage-001:story:scene:scene-1
+        partition: s:5anJPz
         type: line.update_actions
         clientTs: 106
         payload:
@@ -80,11 +78,10 @@ in:
                 - text: Hello
               mode: nvl
               ui:
-                resourceId: layout-1
+              resourceId: layout-1
           replace: false
       - id: cmd-layout-resource-create
-        partitions:
-          - project:project-puty-storage-001:resources:layouts
+        partition: m
         type: layout.create
         clientTs: 107
         payload:
@@ -97,8 +94,7 @@ in:
               items: {}
               tree: []
       - id: cmd-layout-element-create
-        partitions:
-          - project:project-puty-storage-001:layouts
+        partition: m
         type: layout.element.create
         clientTs: 108
         payload:
@@ -112,11 +108,27 @@ in:
 out:
   storedEvents:
     - committedId: 1
+      id: cmd-file-create
+      projectId: project-puty-storage-001
+      userId: user-puty-1
+      partition: m
+      schemaVersion: 1
+      type: file.create
+      payload:
+        fileId: image-1.png
+        data:
+          type: image
+          mimeType: image/png
+          size: 1024
+          sha256: sha256-image-1
+      meta:
+        clientTs: 101
+    - committedId: 2
       id: cmd-image-create
       projectId: project-puty-storage-001
       userId: user-puty-1
-      partitions:
-        - project:project-puty-storage-001:resources:images
+      partition: m
+      schemaVersion: 1
       type: image.create
       payload:
         imageId: image-1
@@ -125,30 +137,26 @@ out:
           type: image
           fileId: image-1.png
       meta:
-        clientId: client-puty-1
         clientTs: 102
-    - committedId: 2
+    - committedId: 3
       id: cmd-scene-create
       projectId: project-puty-storage-001
       userId: user-puty-1
-      partitions:
-        - project:project-puty-storage-001:story
-        - project:project-puty-storage-001:story:scene:scene-1
+      partition: m:s:5anJPz
+      schemaVersion: 1
       type: scene.create
       payload:
         sceneId: scene-1
         data:
           name: Scene 1
       meta:
-        clientId: client-puty-1
         clientTs: 103
-    - committedId: 3
+    - committedId: 4
       id: cmd-section-create
       projectId: project-puty-storage-001
       userId: user-puty-1
-      partitions:
-        - project:project-puty-storage-001:story
-        - project:project-puty-storage-001:story:scene:scene-1
+      partition: m:s:5anJPz
+      schemaVersion: 1
       type: section.create
       payload:
         sceneId: scene-1
@@ -156,15 +164,13 @@ out:
         data:
           name: Section 1
       meta:
-        clientId: client-puty-1
         clientTs: 104
-    - committedId: 4
+    - committedId: 5
       id: cmd-line-insert
       projectId: project-puty-storage-001
       userId: user-puty-1
-      partitions:
-        - project:project-puty-storage-001:story
-        - project:project-puty-storage-001:story:scene:scene-1
+      partition: s:5anJPz
+      schemaVersion: 1
       type: line.create
       payload:
         sectionId: section-1
@@ -177,15 +183,13 @@ out:
                     - text: Hello
                   mode: adv
       meta:
-        clientId: client-puty-1
         clientTs: 105
-    - committedId: 5
+    - committedId: 6
       id: cmd-line-dialogue-update
       projectId: project-puty-storage-001
       userId: user-puty-1
-      partitions:
-        - project:project-puty-storage-001:story
-        - project:project-puty-storage-001:story:scene:scene-1
+      partition: s:5anJPz
+      schemaVersion: 1
       type: line.update_actions
       payload:
         lineId: line-1
@@ -194,18 +198,17 @@ out:
             content:
               - text: Hello
             mode: nvl
-            ui:
-              resourceId: layout-1
+            resourceId: layout-1
+            ui: null
         replace: false
       meta:
-        clientId: client-puty-1
         clientTs: 106
-    - committedId: 6
+    - committedId: 7
       id: cmd-layout-resource-create
       projectId: project-puty-storage-001
       userId: user-puty-1
-      partitions:
-        - project:project-puty-storage-001:resources:layouts
+      partition: m
+      schemaVersion: 1
       type: layout.create
       payload:
         layoutId: layout-1
@@ -217,14 +220,13 @@ out:
             items: {}
             tree: []
       meta:
-        clientId: client-puty-1
         clientTs: 107
-    - committedId: 7
+    - committedId: 8
       id: cmd-layout-element-create
       projectId: project-puty-storage-001
       userId: user-puty-1
-      partitions:
-        - project:project-puty-storage-001:layouts
+      partition: m
+      schemaVersion: 1
       type: layout.element.create
       payload:
         layoutId: layout-1
@@ -235,5 +237,4 @@ out:
           x: 10
           'y': 20
       meta:
-        clientId: client-puty-1
         clientTs: 108

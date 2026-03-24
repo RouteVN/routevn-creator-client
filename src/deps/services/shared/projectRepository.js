@@ -6,11 +6,14 @@ import {
   isSupportedCommandType,
 } from "../../../internal/project/commands.js";
 import { applyCommandToRepositoryStateWithCreatorModel } from "../../../internal/creatorModelAdapter.js";
-import { validateCommandSubmitItem } from "insieme/client";
 import {
   commandToSyncEvent,
   committedEventToCommand,
 } from "./collab/mappers.js";
+import {
+  collapsePartitionsToSingle,
+  mainPartitionFor,
+} from "./collab/partitions.js";
 
 export const createTreeCollection = () => {
   return {
@@ -126,18 +129,6 @@ export const resolveIndexFromPosition = ({
   return filtered.length;
 };
 
-export const uniquePartitions = (...partitions) => {
-  const seen = new Set();
-  const output = [];
-  for (const partition of partitions) {
-    if (typeof partition !== "string" || partition.length === 0) continue;
-    if (seen.has(partition)) continue;
-    seen.add(partition);
-    output.push(partition);
-  }
-  return output;
-};
-
 export const findSectionLocation = (state, sectionId) => {
   const sceneItems = state?.scenes?.items || {};
   for (const [sceneId, scene] of Object.entries(sceneItems)) {
@@ -171,9 +162,6 @@ export const findLineLocation = (state, lineId) => {
   return null;
 };
 
-const isNonEmptyString = (value) =>
-  typeof value === "string" && value.length > 0;
-
 const toFiniteTimestamp = (value, fallback = 0) => {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? numericValue : fallback;
@@ -185,7 +173,7 @@ const defaultInitializationActor = (projectId) => ({
 });
 
 const defaultInitializationPartition = (projectId) =>
-  `project:${projectId}:settings`;
+  mainPartitionFor(projectId);
 
 export const createProjectCreateCommand = ({
   projectId,
@@ -193,7 +181,7 @@ export const createProjectCreateCommand = ({
   actor,
   commandId,
   clientTs,
-  partitions,
+  partition,
   meta,
 }) => {
   const resolvedProjectId =
@@ -205,18 +193,9 @@ export const createProjectCreateCommand = ({
     throw new Error("state is required for project.create command");
   }
 
-  const basePartition =
-    (Array.isArray(partitions)
-      ? partitions.find(
-          (value) => typeof value === "string" && value.length > 0,
-        )
-      : null) || defaultInitializationPartition(resolvedProjectId);
-  const resolvedPartitions = Array.from(
-    new Set(
-      [basePartition]
-        .concat(Array.isArray(partitions) ? partitions : [])
-        .filter((value) => typeof value === "string" && value.length > 0),
-    ),
+  const resolvedPartition = collapsePartitionsToSingle(
+    partition,
+    defaultInitializationPartition(resolvedProjectId),
   );
 
   return {
@@ -225,7 +204,7 @@ export const createProjectCreateCommand = ({
         ? commandId
         : `project-create:${resolvedProjectId}`,
     projectId: resolvedProjectId,
-    partitions: resolvedPartitions,
+    partition: resolvedPartition,
     type: COMMAND_TYPES.PROJECT_CREATE,
     payload: {
       state: structuredClone(state),
@@ -234,33 +213,232 @@ export const createProjectCreateCommand = ({
       actor || defaultInitializationActor(resolvedProjectId),
     ),
     clientTs: toFiniteTimestamp(clientTs, 0),
-    commandVersion: COMMAND_EVENT_MODEL.commandVersion,
+    schemaVersion: COMMAND_EVENT_MODEL.schemaVersion,
     ...(meta !== undefined ? { meta: structuredClone(meta) } : {}),
   };
 };
 
-const resolveCommandPartitions = (command) => {
-  const partitions = [];
-  const seen = new Set();
+const resolveCommandPartition = (command) => {
+  return collapsePartitionsToSingle(command?.partition);
+};
 
-  const push = (value) => {
-    if (!isNonEmptyString(value) || seen.has(value)) return;
-    seen.add(value);
-    partitions.push(value);
-  };
+const isPlainObject = (value) =>
+  !!value && typeof value === "object" && !Array.isArray(value);
 
-  for (const partition of Array.isArray(command?.partitions)
-    ? command.partitions
-    : []) {
-    push(partition);
+const isNonEmptyString = (value) =>
+  typeof value === "string" && value.length > 0;
+
+const toPositiveIntegerOrNull = (value) =>
+  typeof value === "number" && Number.isInteger(value) && value > 0
+    ? value
+    : null;
+
+const toFiniteNumberOrNull = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const decodeJsonLikeValue = (value) => {
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return null;
+    }
   }
 
-  return partitions;
+  if (value instanceof ArrayBuffer) {
+    try {
+      return JSON.parse(new TextDecoder().decode(new Uint8Array(value)));
+    } catch {
+      return null;
+    }
+  }
+
+  if (ArrayBuffer.isView(value)) {
+    try {
+      return JSON.parse(
+        new TextDecoder().decode(
+          new Uint8Array(value.buffer, value.byteOffset, value.byteLength),
+        ),
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  if (
+    Array.isArray(value) &&
+    value.every(
+      (item) =>
+        typeof item === "number" &&
+        Number.isInteger(item) &&
+        item >= 0 &&
+        item <= 255,
+    )
+  ) {
+    try {
+      return JSON.parse(new TextDecoder().decode(Uint8Array.from(value)));
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+};
+
+const normalizeRepositoryEventCandidate = (repositoryEvent) => {
+  if (!isPlainObject(repositoryEvent)) {
+    return repositoryEvent;
+  }
+
+  if (isPlainObject(repositoryEvent.event)) {
+    const looksLikeEventEnvelope =
+      isNonEmptyString(repositoryEvent.partition) ||
+      isNonEmptyString(repositoryEvent.id) ||
+      isNonEmptyString(repositoryEvent.projectId) ||
+      isNonEmptyString(repositoryEvent.type) ||
+      toPositiveIntegerOrNull(repositoryEvent.schemaVersion) !== null;
+
+    if (looksLikeEventEnvelope) {
+      return repositoryEvent;
+    }
+
+    return normalizeRepositoryEventCandidate(repositoryEvent.event);
+  }
+
+  if (isPlainObject(repositoryEvent.payload)) {
+    return repositoryEvent;
+  }
+
+  const decoded = decodeJsonLikeValue(repositoryEvent.payload);
+  if (!isPlainObject(decoded)) {
+    return repositoryEvent;
+  }
+
+  const looksLikeEventEnvelope =
+    isNonEmptyString(repositoryEvent.partition) ||
+    isNonEmptyString(repositoryEvent.type) ||
+    toPositiveIntegerOrNull(repositoryEvent.schemaVersion) !== null;
+
+  if (looksLikeEventEnvelope) {
+    return {
+      ...repositoryEvent,
+      payload: decoded,
+    };
+  }
+
+  return decoded;
+};
+
+const failRepositoryEventValidation = (message, details = {}) => {
+  const error = new Error(message);
+  error.code = "validation_failed";
+  error.details = details;
+  throw error;
+};
+
+const normalizeRepositoryEventMeta = (meta, { defaultClientTs } = {}) => {
+  const normalized = isPlainObject(meta) ? structuredClone(meta) : {};
+  const clientTs =
+    toFiniteNumberOrNull(normalized.clientTs) ??
+    toFiniteNumberOrNull(defaultClientTs);
+
+  if (clientTs === null) {
+    failRepositoryEventValidation(
+      "repository event meta.clientTs must be a finite number",
+    );
+  }
+
+  normalized.clientTs = clientTs;
+
+  if (!isNonEmptyString(normalized.clientId)) {
+    delete normalized.clientId;
+  }
+
+  return normalized;
+};
+
+const normalizeRepositoryEventClientTs = (repositoryEvent) => {
+  const clientTs =
+    toFiniteNumberOrNull(repositoryEvent?.clientTs) ??
+    toFiniteNumberOrNull(repositoryEvent?.meta?.clientTs);
+
+  if (clientTs === null) {
+    failRepositoryEventValidation(
+      "repository event clientTs must be a finite number",
+    );
+  }
+
+  return clientTs;
+};
+
+const validateRepositoryCommandEvent = (repositoryEvent) => {
+  const normalizedRepositoryEvent =
+    normalizeRepositoryEventCandidate(repositoryEvent);
+
+  if (!isPlainObject(normalizedRepositoryEvent)) {
+    failRepositoryEventValidation("repository event is required");
+  }
+
+  if (!isNonEmptyString(normalizedRepositoryEvent.partition)) {
+    failRepositoryEventValidation("repository event partition is required");
+  }
+
+  if (!isNonEmptyString(normalizedRepositoryEvent.id)) {
+    failRepositoryEventValidation("repository event id is required");
+  }
+
+  if (!isNonEmptyString(normalizedRepositoryEvent.type)) {
+    failRepositoryEventValidation("repository event type is required");
+  }
+
+  if (
+    toPositiveIntegerOrNull(normalizedRepositoryEvent.schemaVersion) === null
+  ) {
+    failRepositoryEventValidation(
+      "repository event schemaVersion must be a positive integer",
+    );
+  }
+
+  if (!isPlainObject(normalizedRepositoryEvent.payload)) {
+    failRepositoryEventValidation("repository event payload is required");
+  }
+
+  if (!isNonEmptyString(normalizedRepositoryEvent.projectId)) {
+    failRepositoryEventValidation("repository event projectId is required");
+  }
+
+  if (
+    normalizedRepositoryEvent.userId !== undefined &&
+    !isNonEmptyString(normalizedRepositoryEvent.userId)
+  ) {
+    failRepositoryEventValidation(
+      "repository event userId must be a non-empty string when provided",
+    );
+  }
+
+  const clientTs = normalizeRepositoryEventClientTs(normalizedRepositoryEvent);
+  const meta = normalizeRepositoryEventMeta(normalizedRepositoryEvent.meta, {
+    defaultClientTs: clientTs,
+  });
+  const nextRepositoryEvent = {
+    ...normalizedRepositoryEvent,
+    clientTs,
+  };
+
+  if (Object.keys(meta).length > 0) {
+    nextRepositoryEvent.meta = meta;
+  } else {
+    delete nextRepositoryEvent.meta;
+  }
+
+  return nextRepositoryEvent;
 };
 
 export const isRepositoryCommandEvent = (repositoryEvent) => {
   try {
-    validateCommandSubmitItem(repositoryEvent);
+    validateRepositoryCommandEvent(repositoryEvent);
     return true;
   } catch {
     return false;
@@ -268,8 +446,7 @@ export const isRepositoryCommandEvent = (repositoryEvent) => {
 };
 
 export const assertRepositoryCommandEvent = (repositoryEvent) => {
-  validateCommandSubmitItem(repositoryEvent);
-  return repositoryEvent;
+  return validateRepositoryCommandEvent(repositoryEvent);
 };
 
 export const createRepositoryCommandEvent = ({ command }) => {
@@ -277,23 +454,20 @@ export const createRepositoryCommandEvent = ({ command }) => {
     throw new Error("command is required to create a repository event");
   }
 
-  const partitions = resolveCommandPartitions(command);
-  if (partitions.length === 0) {
-    throw new Error("command partitions are required");
-  }
+  const partition = resolveCommandPartition(command);
 
   const repositoryEvent = {
     id: command.id,
-    partitions,
+    partition,
     ...commandToSyncEvent(command),
   };
-  assertRepositoryCommandEvent(repositoryEvent);
-  return repositoryEvent;
+  return assertRepositoryCommandEvent(repositoryEvent);
 };
 
 export const repositoryEventToCommand = (repositoryEvent) => {
-  assertRepositoryCommandEvent(repositoryEvent);
-  const command = committedEventToCommand(repositoryEvent);
+  const normalizedRepositoryEvent =
+    assertRepositoryCommandEvent(repositoryEvent);
+  const command = committedEventToCommand(normalizedRepositoryEvent);
   if (!command) {
     throw new Error("Failed to convert repository event to command");
   }
@@ -306,7 +480,7 @@ export const createProjectCreateRepositoryEvent = ({
   actor,
   commandId,
   clientTs,
-  partitions,
+  partition,
   meta,
 }) =>
   createRepositoryCommandEvent({
@@ -316,7 +490,7 @@ export const createProjectCreateRepositoryEvent = ({
       actor,
       commandId,
       clientTs,
-      partitions,
+      partition,
       meta,
     }),
   });

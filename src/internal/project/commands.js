@@ -1,4 +1,4 @@
-const COMMAND_VERSION = 1;
+const COMMAND_SCHEMA_VERSION = 1;
 
 export const RESOURCE_TYPES = Object.freeze([
   "images",
@@ -111,16 +111,16 @@ export const COMMAND_TYPES = Object.freeze(
 );
 
 export const COMMAND_EVENT_MODEL = Object.freeze({
-  commandVersion: COMMAND_VERSION,
+  schemaVersion: COMMAND_SCHEMA_VERSION,
   requiredEnvelopeFields: Object.freeze([
     "id",
     "projectId",
-    "partitions",
+    "partition",
     "type",
     "payload",
     "actor",
     "clientTs",
-    "commandVersion",
+    "schemaVersion",
   ]),
   optionalEnvelopeFields: Object.freeze(["meta"]),
 });

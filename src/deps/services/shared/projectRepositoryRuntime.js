@@ -1,34 +1,30 @@
 import { createMaterializedViewRuntime } from "insieme/client";
-
-const PROJECT_STATE_VIEW_NAME = "project_repository_state";
-const PROJECT_STATE_VIEW_VERSION = "2";
-const PROJECT_STATE_CHECKPOINT = {
-  mode: "debounce",
-  debounceMs: 1000,
-  maxDirtyEvents: 100,
-};
-
-export const projectRepositoryStatePartitionFor = (projectId) =>
-  `project:${projectId}:repository_state`;
-
-const toCommittedProjectStateEvent = ({ event, committedId, projectId }) => ({
-  ...structuredClone(event),
-  committedId,
-  id:
-    typeof event?.id === "string" && event.id.length > 0
-      ? event.id
-      : `repository-${projectId}-${committedId}`,
-  partitions: [projectRepositoryStatePartitionFor(projectId)],
-  projectId: event?.projectId || projectId,
-  meta: {
-    ...(event?.meta ? structuredClone(event.meta) : {}),
-    clientId: event?.meta?.clientId || "repository",
-    clientTs: Number.isFinite(Number(event?.meta?.clientTs))
-      ? Number(event.meta.clientTs)
-      : committedId,
-  },
-  created: committedId,
-});
+import {
+  mainScenePartitionFor,
+  scenePartitionFor,
+} from "./collab/partitions.js";
+import { createMainStateViewDefinition } from "./projectRepositoryViews/mainStateView.js";
+import { createSceneBundleRuntime } from "./projectRepositoryViews/sceneBundleRuntime.js";
+import {
+  applySceneEventsToLoadedProjection,
+  composeRepositoryState,
+  composeRepositoryStateWithScenes,
+  deleteSceneProjectionCheckpoint,
+  findLineLocationInState,
+  findSectionLocationInState,
+  loadSceneProjectionState,
+  saveSceneProjectionCheckpoint,
+} from "./projectRepositoryViews/sceneStateView.js";
+import {
+  MAIN_PARTITION,
+  MAIN_VIEW_NAME,
+  cloneState,
+  createMainProjectionState,
+  getLatestSceneProjectionRevision,
+  isNonEmptyString,
+  resolveSceneIdForPartition,
+  toCommittedProjectEvent,
+} from "./projectRepositoryViews/shared.js";
 
 const replayEventsToRepositoryState = ({
   events,
@@ -55,6 +51,14 @@ const replayEventsToRepositoryState = ({
   return state;
 };
 
+export const projectRepositoryMainPartition = () => MAIN_PARTITION;
+
+export const projectRepositoryScenePartitionFor = (sceneId) =>
+  scenePartitionFor(sceneId);
+
+export const projectRepositoryMainScenePartitionFor = (sceneId) =>
+  mainScenePartitionFor(sceneId);
+
 export const createProjectRepositoryRuntime = async ({
   projectId,
   store,
@@ -67,29 +71,17 @@ export const createProjectRepositoryRuntime = async ({
     ? sourceEvents.map((event) => structuredClone(event))
     : [];
   const listeners = new Set();
+  let activeSceneId = null;
+  let activeSceneState = null;
+  let hasExplicitActiveScene = false;
+  let currentRevision = events.length;
 
-  const projectPartition = projectRepositoryStatePartitionFor(projectId);
-
-  const projectStateRuntime = createMaterializedViewRuntime({
+  const materializedViewRuntime = createMaterializedViewRuntime({
     materializedViews: [
-      {
-        name: PROJECT_STATE_VIEW_NAME,
-        version: PROJECT_STATE_VIEW_VERSION,
-        checkpoint: PROJECT_STATE_CHECKPOINT,
-        initialState: () => createInitialState(),
-        reduce: ({ state, event, partition }) => {
-          if (partition !== projectPartition) return state;
-          if (!event || typeof event !== "object" || Array.isArray(event)) {
-            return state;
-          }
-
-          const nextState = reduceEventToState({
-            repositoryState: state,
-            event,
-          });
-          return nextState === undefined ? state : nextState;
-        },
-      },
+      createMainStateViewDefinition({
+        createInitialState,
+        reduceEventToState,
+      }),
     ],
     getLatestCommittedId: async () => events.length,
     listCommittedAfter: async ({ sinceCommittedId, limit }) => {
@@ -105,7 +97,7 @@ export const createProjectRepositoryRuntime = async ({
       return events
         .slice(startIndex, startIndex + safeLimit)
         .map((event, index) =>
-          toCommittedProjectStateEvent({
+          toCommittedProjectEvent({
             event,
             committedId: startIndex + index + 1,
             projectId,
@@ -126,18 +118,54 @@ export const createProjectRepositoryRuntime = async ({
       }),
   });
 
-  let currentState = await projectStateRuntime.loadMaterializedView({
-    viewName: PROJECT_STATE_VIEW_NAME,
-    partition: projectPartition,
+  let currentMainState = cloneState(
+    await materializedViewRuntime.loadMaterializedView({
+      viewName: MAIN_VIEW_NAME,
+      partition: MAIN_PARTITION,
+    }),
+    createMainProjectionState(createInitialState()),
+  );
+  assertState(currentMainState);
+
+  const refreshMainState = async () => {
+    currentMainState = cloneState(
+      await materializedViewRuntime.loadMaterializedView({
+        viewName: MAIN_VIEW_NAME,
+        partition: MAIN_PARTITION,
+      }),
+      createMainProjectionState(createInitialState()),
+    );
+    assertState(currentMainState);
+  };
+
+  const loadSceneProjection = async (sceneId) =>
+    loadSceneProjectionState({
+      store,
+      mainState: currentMainState,
+      events,
+      createInitialState,
+      reduceEventToState,
+      sceneId,
+    });
+
+  const sceneBundleRuntime = createSceneBundleRuntime({
+    store,
+    events,
+    getCurrentMainState: () => currentMainState,
+    getActiveSceneId: () => activeSceneId,
+    getActiveSceneState: () => activeSceneState,
+    loadSceneProjection,
   });
-  if (!currentState || typeof currentState !== "object") {
-    currentState = createInitialState();
-  }
-  assertState(currentState);
-  let currentRevision = events.length;
+
+  const getCurrentComposedState = () =>
+    composeRepositoryState({
+      mainState: currentMainState,
+      activeSceneId,
+      activeSceneState,
+    });
 
   const notifyStateListeners = () => {
-    const repositoryState = structuredClone(currentState);
+    const repositoryState = structuredClone(getCurrentComposedState());
     const revision = currentRevision;
     listeners.forEach((listener) => {
       listener({
@@ -147,19 +175,215 @@ export const createProjectRepositoryRuntime = async ({
     });
   };
 
+  const setActiveSceneProjection = ({
+    sceneId,
+    sceneState,
+    explicit = false,
+  }) => {
+    activeSceneId = isNonEmptyString(sceneId) ? sceneId : null;
+    activeSceneState = activeSceneId ? sceneState || null : null;
+    if (explicit) {
+      hasExplicitActiveScene = activeSceneId !== null;
+    }
+  };
+
+  const clearActiveSceneProjection = ({ explicit = false } = {}) => {
+    activeSceneId = null;
+    activeSceneState = null;
+    if (explicit) {
+      hasExplicitActiveScene = false;
+    }
+  };
+
+  const ensureActiveSceneProjectionLoaded = async (
+    sceneId,
+    { explicit = false } = {},
+  ) => {
+    if (!isNonEmptyString(sceneId)) {
+      clearActiveSceneProjection({ explicit });
+      return;
+    }
+
+    setActiveSceneProjection({
+      sceneId,
+      sceneState: await loadSceneProjection(sceneId),
+      explicit,
+    });
+  };
+
+  const pruneRemovedActiveScene = async () => {
+    if (!activeSceneId) {
+      return;
+    }
+
+    const sceneExists = Boolean(
+      currentMainState?.scenes?.items?.[activeSceneId],
+    );
+    if (sceneExists) {
+      return;
+    }
+
+    const removedSceneId = activeSceneId;
+    clearActiveSceneProjection();
+    await deleteSceneProjectionCheckpoint({ store, sceneId: removedSceneId });
+    await sceneBundleRuntime.clearSceneOverview(removedSceneId);
+  };
+
+  const updateActiveSceneProjection = async (committedEvents = []) => {
+    if (!activeSceneId || !activeSceneState) {
+      return;
+    }
+
+    const scopedEvents = [];
+    for (const committedEvent of committedEvents) {
+      const partition = committedEvent?.partition;
+      if (!isNonEmptyString(partition) || !partition.startsWith("s:")) {
+        continue;
+      }
+
+      const sceneId = resolveSceneIdForPartition(currentMainState, partition);
+      if (sceneId !== activeSceneId) {
+        continue;
+      }
+
+      scopedEvents.push(committedEvent);
+    }
+
+    if (scopedEvents.length === 0) {
+      return;
+    }
+
+    activeSceneState = applySceneEventsToLoadedProjection({
+      mainState: currentMainState,
+      sceneState: activeSceneState,
+      sceneId: activeSceneId,
+      sourceEvents: scopedEvents,
+      reduceEventToState,
+    });
+
+    await saveSceneProjectionCheckpoint({
+      store,
+      sceneId: activeSceneId,
+      value: activeSceneState,
+      lastCommittedId: getLatestSceneProjectionRevision({
+        events,
+        sceneId: activeSceneId,
+      }),
+      updatedAt: Date.now(),
+    });
+  };
+
+  const autoAdoptSceneProjection = async (committedEvents = []) => {
+    if (hasExplicitActiveScene || activeSceneId) {
+      return false;
+    }
+
+    for (const committedEvent of committedEvents) {
+      const partition = committedEvent?.partition;
+      if (!isNonEmptyString(partition) || !partition.startsWith("s:")) {
+        continue;
+      }
+
+      const sceneId = resolveSceneIdForPartition(currentMainState, partition);
+      if (!sceneId) {
+        continue;
+      }
+
+      await ensureActiveSceneProjectionLoaded(sceneId);
+      return true;
+    }
+
+    return false;
+  };
+
+  const getContextState = async ({
+    sceneIds = [],
+    sectionIds = [],
+    lineIds = [],
+  } = {}) => {
+    const nextSceneIds = new Set();
+
+    for (const sceneId of sceneIds || []) {
+      if (isNonEmptyString(sceneId)) {
+        nextSceneIds.add(sceneId);
+      }
+    }
+
+    const sceneStatesBySceneId = new Map();
+    if (activeSceneId && activeSceneState) {
+      sceneStatesBySceneId.set(activeSceneId, activeSceneState);
+    }
+
+    for (const sectionId of sectionIds || []) {
+      const location = findSectionLocationInState(
+        getCurrentComposedState(),
+        sectionId,
+      );
+      if (location?.sceneId) {
+        nextSceneIds.add(location.sceneId);
+      }
+    }
+
+    for (const lineId of lineIds || []) {
+      const loadedLocation = findLineLocationInState(
+        composeRepositoryStateWithScenes({
+          mainState: currentMainState,
+          sceneStatesBySceneId,
+        }),
+        lineId,
+      );
+      if (loadedLocation?.sceneId) {
+        nextSceneIds.add(loadedLocation.sceneId);
+        continue;
+      }
+
+      const knownSceneIds = Object.keys(currentMainState?.scenes?.items || {});
+      for (const sceneId of knownSceneIds) {
+        const sceneProjection =
+          sceneStatesBySceneId.get(sceneId) ||
+          (await loadSceneProjection(sceneId));
+        sceneStatesBySceneId.set(sceneId, sceneProjection);
+        const sceneLocation = findLineLocationInState(sceneProjection, lineId);
+        if (sceneLocation?.sceneId) {
+          nextSceneIds.add(sceneId);
+          break;
+        }
+      }
+    }
+
+    for (const sceneId of nextSceneIds) {
+      if (sceneStatesBySceneId.has(sceneId)) {
+        continue;
+      }
+
+      if (sceneId === activeSceneId && activeSceneState) {
+        sceneStatesBySceneId.set(sceneId, activeSceneState);
+        continue;
+      }
+
+      sceneStatesBySceneId.set(sceneId, await loadSceneProjection(sceneId));
+    }
+
+    return composeRepositoryStateWithScenes({
+      mainState: currentMainState,
+      sceneStatesBySceneId,
+    });
+  };
+
   return {
     getState(untilEventIndex) {
       if (untilEventIndex === undefined || untilEventIndex === null) {
-        return structuredClone(currentState);
+        return structuredClone(getCurrentComposedState());
       }
 
-      const replayedState = replayEventsToRepositoryState({
-        events,
-        untilEventIndex,
-        createInitialState,
-        reduceEventToState,
-      });
-      return structuredClone(replayedState);
+      return structuredClone(
+        replayEventsToRepositoryState({
+          events,
+          untilEventIndex,
+          createInitialState,
+          reduceEventToState,
+        }),
+      );
     },
 
     getRevision(untilEventIndex) {
@@ -187,7 +411,7 @@ export const createProjectRepositoryRuntime = async ({
       listeners.add(listener);
       if (emitCurrent) {
         listener({
-          repositoryState: structuredClone(currentState),
+          repositoryState: structuredClone(getCurrentComposedState()),
           revision: currentRevision,
         });
       }
@@ -197,27 +421,66 @@ export const createProjectRepositoryRuntime = async ({
       };
     },
 
+    async setActiveSceneId(sceneId) {
+      const nextSceneId = isNonEmptyString(sceneId) ? sceneId : null;
+      if (activeSceneId === nextSceneId && (!nextSceneId || activeSceneState)) {
+        hasExplicitActiveScene = nextSceneId !== null;
+        return;
+      }
+
+      if (nextSceneId) {
+        await ensureActiveSceneProjectionLoaded(nextSceneId, {
+          explicit: true,
+        });
+        await sceneBundleRuntime.ensureSceneBundle(nextSceneId);
+      } else {
+        clearActiveSceneProjection({ explicit: true });
+      }
+
+      notifyStateListeners();
+    },
+
+    async clearActiveSceneId() {
+      clearActiveSceneProjection({ explicit: true });
+      notifyStateListeners();
+    },
+
+    async getContextState(payload = {}) {
+      return structuredClone(await getContextState(payload));
+    },
+
+    async getSceneOverview(sceneId) {
+      return sceneBundleRuntime.ensureSceneBundle(sceneId);
+    },
+
+    async loadSceneOverviews({ sceneIds = [] } = {}) {
+      return sceneBundleRuntime.loadSceneOverviews({ sceneIds });
+    },
+
     async addEvent(event) {
       if (typeof store.appendEvent === "function") {
         await store.appendEvent(event);
       }
+
       events.push(structuredClone(event));
-      const committedId = events.length;
-      currentRevision = committedId;
+      currentRevision = events.length;
 
-      await projectStateRuntime.onCommittedEvent(
-        toCommittedProjectStateEvent({
-          event,
-          committedId,
-          projectId,
-        }),
-      );
-
-      currentState = await projectStateRuntime.loadMaterializedView({
-        viewName: PROJECT_STATE_VIEW_NAME,
-        partition: projectPartition,
+      const committedEvent = toCommittedProjectEvent({
+        event,
+        committedId: currentRevision,
+        projectId,
       });
-      assertState(currentState);
+
+      await materializedViewRuntime.onCommittedEvent(committedEvent);
+      await refreshMainState();
+      const adoptedActiveScene = await autoAdoptSceneProjection([
+        committedEvent,
+      ]);
+      if (!adoptedActiveScene) {
+        await updateActiveSceneProjection([committedEvent]);
+      }
+      await pruneRemovedActiveScene();
+      await sceneBundleRuntime.handleCommittedEvents([committedEvent]);
       notifyStateListeners();
     },
 
@@ -237,26 +500,33 @@ export const createProjectRepositoryRuntime = async ({
         }
       }
 
+      const committedEvents = [];
       for (const event of nextEvents) {
         events.push(structuredClone(event));
-        const committedId = events.length;
-        currentRevision = committedId;
-
-        await projectStateRuntime.onCommittedEvent(
-          toCommittedProjectStateEvent({
-            event,
-            committedId,
-            projectId,
-          }),
-        );
+        currentRevision = events.length;
+        const committedEvent = toCommittedProjectEvent({
+          event,
+          committedId: currentRevision,
+          projectId,
+        });
+        committedEvents.push(committedEvent);
+        await materializedViewRuntime.onCommittedEvent(committedEvent);
       }
 
-      currentState = await projectStateRuntime.loadMaterializedView({
-        viewName: PROJECT_STATE_VIEW_NAME,
-        partition: projectPartition,
-      });
-      assertState(currentState);
+      await refreshMainState();
+      const adoptedActiveScene =
+        await autoAdoptSceneProjection(committedEvents);
+      if (!adoptedActiveScene) {
+        await updateActiveSceneProjection(committedEvents);
+      }
+      await pruneRemovedActiveScene();
+      await sceneBundleRuntime.handleCommittedEvents(committedEvents);
       notifyStateListeners();
+    },
+
+    async flushMaterializedViews() {
+      await materializedViewRuntime.flushMaterializedViews();
+      await sceneBundleRuntime.flushSceneOverviews();
     },
   };
 };

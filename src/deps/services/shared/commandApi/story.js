@@ -41,40 +41,89 @@ export const createStoryCommandApi = (shared) => {
     return appendMissingIds(orderedFromTree, fallbackIds);
   };
 
-  const getStoryLinePartitions = (context, lineIds) => {
-    const basePartition = shared.storyBasePartitionFor(context.projectId);
-    const partitions = [basePartition];
-    const seenSceneIds = new Set();
+  const getUniqueSceneIds = (sceneIds = []) => {
+    const uniqueSceneIds = [];
+    const seen = new Set();
+    for (const sceneId of sceneIds) {
+      if (typeof sceneId !== "string" || sceneId.length === 0) {
+        continue;
+      }
+      if (seen.has(sceneId)) {
+        continue;
+      }
+      seen.add(sceneId);
+      uniqueSceneIds.push(sceneId);
+    }
+    return uniqueSceneIds;
+  };
+
+  const getSingleSceneId = (sceneIds = []) => {
+    const uniqueSceneIds = getUniqueSceneIds(sceneIds);
+    return uniqueSceneIds.length === 1 ? uniqueSceneIds[0] : null;
+  };
+
+  const getMainScenePartition = (context, sceneIds = []) => {
+    const sceneId = getSingleSceneId(sceneIds);
+    if (!sceneId) {
+      return shared.storyBasePartitionFor(context.projectId);
+    }
+    return shared.storyScenePartitionFor(context.projectId, sceneId);
+  };
+
+  const getSceneOnlyPartition = (context, sceneIds = []) => {
+    const sceneId = getSingleSceneId(sceneIds);
+    if (!sceneId) {
+      return shared.storyBasePartitionFor(context.projectId);
+    }
+    return shared.scenePartitionFor(context.projectId, sceneId);
+  };
+
+  const getStoryLinePartition = (context, lineIds) => {
+    for (const lineId of lineIds || []) {
+      const lineLocation = findLineLocation(context.state, lineId);
+      if (lineLocation?.sceneId) {
+        return shared.scenePartitionFor(
+          context.projectId,
+          lineLocation.sceneId,
+        );
+      }
+    }
+
+    throw new Error("Could not resolve scene partition for line command");
+  };
+
+  const groupLineIdsByScene = (context, lineIds = []) => {
+    const grouped = new Map();
 
     for (const lineId of lineIds || []) {
       const lineLocation = findLineLocation(context.state, lineId);
-      if (!lineLocation?.sceneId || seenSceneIds.has(lineLocation.sceneId)) {
+      if (!lineLocation?.sceneId) {
         continue;
       }
 
-      seenSceneIds.add(lineLocation.sceneId);
-      partitions.push(
-        shared.storyScenePartitionFor(context.projectId, lineLocation.sceneId),
-      );
+      const existing = grouped.get(lineLocation.sceneId) || [];
+      existing.push(lineId);
+      grouped.set(lineLocation.sceneId, existing);
     }
 
-    return partitions;
+    return grouped;
   };
 
   const submitLineActionsData = async ({ lineId, data, replace = false }) => {
-    const context = await shared.ensureCommandContext();
-    const partitions = getStoryLinePartitions(context, [lineId]);
+    const context = await shared.ensureCommandContext({
+      lineIds: [lineId],
+    });
 
     return shared.submitCommandWithContext({
       context,
       scope: "story",
+      partition: getStoryLinePartition(context, [lineId]),
       type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
       payload: {
         lineId,
         data: structuredClone(data || {}),
         replace: replace === true,
       },
-      partitions,
     });
   };
 
@@ -121,7 +170,9 @@ export const createStoryCommandApi = (shared) => {
         };
       }
 
-      const context = await shared.ensureCommandContext();
+      const context = await shared.ensureCommandContext({
+        lineIds: normalizedUpdates.map(({ lineId }) => lineId),
+      });
       return shared.submitCommandsWithContext({
         context,
         commands: normalizedUpdates.map(({ lineId, dialogue }) => ({
@@ -134,7 +185,7 @@ export const createStoryCommandApi = (shared) => {
             },
             replace: false,
           },
-          partitions: getStoryLinePartitions(context, [lineId]),
+          partition: getStoryLinePartition(context, [lineId]),
         })),
       });
     },
@@ -148,8 +199,10 @@ export const createStoryCommandApi = (shared) => {
       position = "after",
       positionTargetId,
     }) {
-      const context = await shared.ensureCommandContext();
-      const partitions = getStoryLinePartitions(context, [lineId]);
+      const context = await shared.ensureCommandContext({
+        lineIds: [lineId],
+      });
+      const partition = getStoryLinePartition(context, [lineId]);
 
       return shared.submitCommandsWithContext({
         context,
@@ -164,7 +217,7 @@ export const createStoryCommandApi = (shared) => {
               },
               replace: false,
             },
-            partitions,
+            partition,
           },
           {
             scope: "story",
@@ -180,15 +233,17 @@ export const createStoryCommandApi = (shared) => {
               position,
               positionTargetId,
             },
-            partitions,
+            partition,
           },
         ],
       });
     },
 
     async mergeLineItem({ previousLineId, currentLineId, mergedDialogue }) {
-      const context = await shared.ensureCommandContext();
-      const partitions = getStoryLinePartitions(context, [
+      const context = await shared.ensureCommandContext({
+        lineIds: [previousLineId, currentLineId],
+      });
+      const partition = getStoryLinePartition(context, [
         previousLineId,
         currentLineId,
       ]);
@@ -206,7 +261,7 @@ export const createStoryCommandApi = (shared) => {
               },
               replace: false,
             },
-            partitions,
+            partition,
           },
           {
             scope: "story",
@@ -214,29 +269,24 @@ export const createStoryCommandApi = (shared) => {
             payload: {
               lineIds: [currentLineId],
             },
-            partitions,
+            partition,
           },
         ],
       });
     },
 
     async syncSectionLinesSnapshot({ sectionId, lines = [] }) {
-      const context = await shared.ensureCommandContext();
+      const context = await shared.ensureCommandContext({
+        sectionIds: [sectionId],
+      });
       const sectionLocation = findSectionLocation(context.state, sectionId);
       if (!sectionLocation?.section) {
         throw new Error("section not found");
       }
 
-      const basePartition = shared.storyBasePartitionFor(context.projectId);
-      const scenePartition = sectionLocation.sceneId
-        ? shared.storyScenePartitionFor(
-            context.projectId,
-            sectionLocation.sceneId,
-          )
-        : null;
-      const partitions = scenePartition
-        ? [basePartition, scenePartition]
-        : [basePartition];
+      const partition = getSceneOnlyPartition(context, [
+        sectionLocation.sceneId,
+      ]);
 
       const desiredLines = Array.isArray(lines)
         ? lines.filter((line) => typeof line?.id === "string" && line.id)
@@ -263,7 +313,7 @@ export const createStoryCommandApi = (shared) => {
           payload: {
             lineIds: deletedLineIds,
           },
-          partitions,
+          partition,
         });
       }
 
@@ -305,7 +355,7 @@ export const createStoryCommandApi = (shared) => {
                 lines: newLines,
                 index,
               },
-              partitions,
+              partition,
             });
             workingOrder.splice(
               index,
@@ -328,7 +378,7 @@ export const createStoryCommandApi = (shared) => {
               toSectionId: sectionId,
               index,
             },
-            partitions,
+            partition,
           });
 
           workingOrder.splice(currentIndex, 1);
@@ -362,7 +412,7 @@ export const createStoryCommandApi = (shared) => {
             },
             replace: false,
           },
-          partitions,
+          partition,
         });
       }
 
@@ -398,11 +448,6 @@ export const createStoryCommandApi = (shared) => {
         positionTargetId,
         index,
       });
-      const basePartition = shared.storyBasePartitionFor(context.projectId);
-      const scenePartition = shared.storyScenePartitionFor(
-        context.projectId,
-        finalSceneId,
-      );
       const nextData = structuredClone(data || {});
       if (name !== undefined) {
         nextData.name = name;
@@ -411,6 +456,7 @@ export const createStoryCommandApi = (shared) => {
       const submitResult = await shared.submitCommandWithContext({
         context,
         scope: "story",
+        partition: getMainScenePartition(context, [finalSceneId]),
         type: COMMAND_TYPES.SCENE_CREATE,
         payload: {
           sceneId: finalSceneId,
@@ -422,7 +468,6 @@ export const createStoryCommandApi = (shared) => {
           }),
           data: nextData,
         },
-        partitions: [basePartition, scenePartition],
       });
 
       if (submitResult?.valid === false) {
@@ -433,61 +478,51 @@ export const createStoryCommandApi = (shared) => {
     },
 
     async updateSceneItem({ sceneId, data }) {
-      const context = await shared.ensureCommandContext();
-      const basePartition = shared.storyBasePartitionFor(context.projectId);
-      const scenePartition = shared.storyScenePartitionFor(
-        context.projectId,
-        sceneId,
-      );
+      const context = await shared.ensureCommandContext({
+        sceneIds: [sceneId],
+      });
 
       return shared.submitCommandWithContext({
         context,
         scope: "story",
+        partition: getMainScenePartition(context, [sceneId]),
         type: COMMAND_TYPES.SCENE_UPDATE,
         payload: {
           sceneId,
           data: structuredClone(data || {}),
         },
-        partitions: [basePartition, scenePartition],
       });
     },
 
     async deleteSceneItem({ sceneIds }) {
-      const context = await shared.ensureCommandContext();
-      const basePartition = shared.storyBasePartitionFor(context.projectId);
-      const scenePartitions = (sceneIds || []).map((id) =>
-        shared.storyScenePartitionFor(context.projectId, id),
-      );
+      const context = await shared.ensureCommandContext({
+        sceneIds: structuredClone(sceneIds || []),
+      });
 
       return shared.submitCommandWithContext({
         context,
         scope: "story",
+        partition: getMainScenePartition(context, sceneIds),
         type: COMMAND_TYPES.SCENE_DELETE,
         payload: {
           sceneIds: structuredClone(sceneIds || []),
         },
-        partitions: [basePartition, ...scenePartitions],
       });
     },
 
     async setInitialScene({ sceneId }) {
       const context = await shared.ensureCommandContext();
-      const basePartition = shared.storyBasePartitionFor(context.projectId);
-      const scenePartition = shared.storyScenePartitionFor(
-        context.projectId,
-        sceneId,
-      );
 
       return shared.submitCommandWithContext({
         context,
         scope: "story",
+        partition: shared.storyBasePartitionFor(context.projectId),
         type: COMMAND_TYPES.STORY_UPDATE,
         payload: {
           data: {
             initialSceneId: sceneId,
           },
         },
-        partitions: [basePartition, scenePartition],
       });
     },
 
@@ -507,15 +542,10 @@ export const createStoryCommandApi = (shared) => {
         index,
         movingId: sceneId,
       });
-      const basePartition = shared.storyBasePartitionFor(context.projectId);
-      const scenePartition = shared.storyScenePartitionFor(
-        context.projectId,
-        sceneId,
-      );
-
       return shared.submitCommandWithContext({
         context,
         scope: "story",
+        partition: getMainScenePartition(context, [sceneId]),
         type: COMMAND_TYPES.SCENE_MOVE,
         payload: {
           sceneId,
@@ -526,7 +556,6 @@ export const createStoryCommandApi = (shared) => {
             positionTargetId,
           }),
         },
-        partitions: [basePartition, scenePartition],
       });
     },
 
@@ -550,11 +579,6 @@ export const createStoryCommandApi = (shared) => {
         positionTargetId,
         index,
       });
-      const basePartition = shared.storyBasePartitionFor(context.projectId);
-      const scenePartition = shared.storyScenePartitionFor(
-        context.projectId,
-        sceneId,
-      );
       const nextData = structuredClone(data || {});
       if (name !== undefined) {
         nextData.name = name;
@@ -563,6 +587,7 @@ export const createStoryCommandApi = (shared) => {
       const submitResult = await shared.submitCommandWithContext({
         context,
         scope: "story",
+        partition: getMainScenePartition(context, [sceneId]),
         type: COMMAND_TYPES.SECTION_CREATE,
         payload: {
           sceneId,
@@ -575,7 +600,6 @@ export const createStoryCommandApi = (shared) => {
           }),
           data: nextData,
         },
-        partitions: [basePartition, scenePartition],
       });
 
       if (submitResult?.valid === false) {
@@ -587,16 +611,13 @@ export const createStoryCommandApi = (shared) => {
 
     async renameSectionItem({ sceneId, sectionId, name }) {
       const context = await shared.ensureCommandContext();
-      const basePartition = shared.storyBasePartitionFor(context.projectId);
       const sectionLocation = findSectionLocation(context.state, sectionId);
       const sceneIdForPartition = sceneId || sectionLocation?.sceneId;
-      const scenePartition = sceneIdForPartition
-        ? shared.storyScenePartitionFor(context.projectId, sceneIdForPartition)
-        : null;
 
       return shared.submitCommandWithContext({
         context,
         scope: "story",
+        partition: getMainScenePartition(context, [sceneIdForPartition]),
         type: COMMAND_TYPES.SECTION_UPDATE,
         payload: {
           sectionId,
@@ -604,15 +625,11 @@ export const createStoryCommandApi = (shared) => {
             name,
           },
         },
-        partitions: scenePartition
-          ? [basePartition, scenePartition]
-          : [basePartition],
       });
     },
 
     async deleteSectionItem({ sceneId, sectionIds }) {
       const context = await shared.ensureCommandContext();
-      const basePartition = shared.storyBasePartitionFor(context.projectId);
       const sceneIdsForPartitions = new Set();
 
       if (typeof sceneId === "string" && sceneId.length > 0) {
@@ -626,21 +643,14 @@ export const createStoryCommandApi = (shared) => {
         }
       }
 
-      const scenePartitions = [...sceneIdsForPartitions].map((id) =>
-        shared.storyScenePartitionFor(context.projectId, id),
-      );
-
       return shared.submitCommandWithContext({
         context,
         scope: "story",
+        partition: getMainScenePartition(context, [...sceneIdsForPartitions]),
         type: COMMAND_TYPES.SECTION_DELETE,
         payload: {
           sectionIds: structuredClone(sectionIds || []),
         },
-        partitions:
-          scenePartitions.length > 0
-            ? [basePartition, ...scenePartitions]
-            : [basePartition],
       });
     },
 
@@ -661,17 +671,10 @@ export const createStoryCommandApi = (shared) => {
         index,
         movingId: sectionId,
       });
-      const basePartition = shared.storyBasePartitionFor(context.projectId);
-      const scenePartition = sectionLocation?.sceneId
-        ? shared.storyScenePartitionFor(
-            context.projectId,
-            sectionLocation.sceneId,
-          )
-        : null;
-
       return shared.submitCommandWithContext({
         context,
         scope: "story",
+        partition: getMainScenePartition(context, [sectionLocation?.sceneId]),
         type: COMMAND_TYPES.SECTION_MOVE,
         payload: {
           sectionId,
@@ -682,9 +685,6 @@ export const createStoryCommandApi = (shared) => {
             positionTargetId,
           }),
         },
-        partitions: scenePartition
-          ? [basePartition, scenePartition]
-          : [basePartition],
       });
     },
 
@@ -721,17 +721,10 @@ export const createStoryCommandApi = (shared) => {
         positionTargetId,
         index,
       });
-      const basePartition = shared.storyBasePartitionFor(context.projectId);
-      const scenePartition = sectionLocation?.sceneId
-        ? shared.storyScenePartitionFor(
-            context.projectId,
-            sectionLocation.sceneId,
-          )
-        : null;
-
       const submitResult = await shared.submitCommandWithContext({
         context,
         scope: "story",
+        partition: getSceneOnlyPartition(context, [sectionLocation?.sceneId]),
         type: COMMAND_TYPES.LINE_CREATE,
         payload: {
           sectionId,
@@ -743,9 +736,6 @@ export const createStoryCommandApi = (shared) => {
                 ...(positionTargetId !== undefined ? { positionTargetId } : {}),
               }),
         },
-        partitions: scenePartition
-          ? [basePartition, scenePartition]
-          : [basePartition],
       });
 
       if (submitResult?.valid === false) {
@@ -760,32 +750,32 @@ export const createStoryCommandApi = (shared) => {
     },
 
     async deleteLineItem({ lineIds }) {
-      const context = await shared.ensureCommandContext();
-      const basePartition = shared.storyBasePartitionFor(context.projectId);
-      const sceneIdsForPartitions = new Set();
+      const normalizedLineIds = structuredClone(lineIds || []);
+      const context = await shared.ensureCommandContext({
+        lineIds: normalizedLineIds,
+      });
+      const lineIdsByScene = groupLineIdsByScene(context, normalizedLineIds);
 
-      for (const id of lineIds || []) {
-        const lineLocation = findLineLocation(context.state, id);
-        if (lineLocation?.sceneId) {
-          sceneIdsForPartitions.add(lineLocation.sceneId);
-        }
+      if (lineIdsByScene.size === 0) {
+        return {
+          valid: true,
+          commandIds: [],
+          eventCount: 0,
+        };
       }
 
-      const scenePartitions = [...sceneIdsForPartitions].map((id) =>
-        shared.storyScenePartitionFor(context.projectId, id),
-      );
-
-      return shared.submitCommandWithContext({
+      return shared.submitCommandsWithContext({
         context,
-        scope: "story",
-        type: COMMAND_TYPES.LINE_DELETE,
-        payload: {
-          lineIds: structuredClone(lineIds || []),
-        },
-        partitions:
-          scenePartitions.length > 0
-            ? [basePartition, ...scenePartitions]
-            : [basePartition],
+        commands: [...lineIdsByScene.entries()].map(
+          ([sceneId, scopedLineIds]) => ({
+            scope: "story",
+            partition: shared.scenePartitionFor(context.projectId, sceneId),
+            type: COMMAND_TYPES.LINE_DELETE,
+            payload: {
+              lineIds: scopedLineIds,
+            },
+          }),
+        ),
       });
     },
 
@@ -797,7 +787,10 @@ export const createStoryCommandApi = (shared) => {
       positionTargetId,
       index,
     }) {
-      const context = await shared.ensureCommandContext();
+      const context = await shared.ensureCommandContext({
+        lineIds: [lineId],
+        sectionIds: [toSectionId],
+      });
       const targetSection = findSectionLocation(context.state, toSectionId);
       const resolvedIndex = shared.resolveLineIndex({
         section: targetSection?.section,
@@ -807,21 +800,68 @@ export const createStoryCommandApi = (shared) => {
         index,
         movingId: lineId,
       });
-      const basePartition = shared.storyBasePartitionFor(context.projectId);
       const sourceLine = findLineLocation(context.state, lineId);
-      const sourceScenePartition = sourceLine?.sceneId
-        ? shared.storyScenePartitionFor(context.projectId, sourceLine.sceneId)
-        : null;
-      const targetScenePartition = targetSection?.sceneId
-        ? shared.storyScenePartitionFor(
-            context.projectId,
-            targetSection.sceneId,
-          )
-        : null;
+      const sourceSceneId = sourceLine?.sceneId;
+      const targetSceneId = targetSection?.sceneId;
+
+      if (!sourceSceneId) {
+        throw new Error("line.move source line not found");
+      }
+
+      if (!targetSceneId) {
+        throw new Error("line.move target section not found");
+      }
+
+      if (sourceSceneId !== targetSceneId) {
+        return shared.submitCommandsWithContext({
+          context,
+          commands: [
+            {
+              scope: "story",
+              partition: shared.scenePartitionFor(
+                context.projectId,
+                sourceSceneId,
+              ),
+              type: COMMAND_TYPES.LINE_DELETE,
+              payload: {
+                lineIds: [lineId],
+              },
+            },
+            {
+              scope: "story",
+              partition: shared.scenePartitionFor(
+                context.projectId,
+                targetSceneId,
+              ),
+              type: COMMAND_TYPES.LINE_CREATE,
+              payload: {
+                sectionId: toSectionId,
+                lines: [
+                  {
+                    lineId,
+                    data: {
+                      actions: structuredClone(sourceLine?.line?.actions || {}),
+                    },
+                  },
+                ],
+                ...(resolvedIndex !== undefined
+                  ? { index: resolvedIndex }
+                  : {
+                      position,
+                      ...(positionTargetId !== undefined
+                        ? { positionTargetId }
+                        : {}),
+                    }),
+              },
+            },
+          ],
+        });
+      }
 
       return shared.submitCommandWithContext({
         context,
         scope: "story",
+        partition: shared.scenePartitionFor(context.projectId, sourceSceneId),
         type: COMMAND_TYPES.LINE_MOVE,
         payload: {
           lineId,
@@ -833,7 +873,6 @@ export const createStoryCommandApi = (shared) => {
                 ...(positionTargetId !== undefined ? { positionTargetId } : {}),
               }),
         },
-        partitions: [basePartition, sourceScenePartition, targetScenePartition],
       });
     },
   };

@@ -28,13 +28,6 @@ const store = createSqliteSyncStore(db, {
 
 await store.init();
 
-const parseProjectIdFromPartitions = (partitions = []) => {
-  const first = partitions[0] || "";
-  // Expected partition format: project:{projectId}:{scope}
-  const parts = first.split(":");
-  return parts.length >= 3 ? parts[1] : null;
-};
-
 const projectStates = new Map();
 
 const ensureProjectState = (projectId) => {
@@ -71,9 +64,8 @@ const server = createSyncServer({
     },
   },
   authz: {
-    authorizePartitions: async (identity, partitions) => {
+    authorizeProject: async (identity, projectId) => {
       // Replace with project membership ACL check.
-      const projectId = parseProjectIdFromPartitions(partitions);
       return Boolean(identity?.claims?.userId && projectId);
     },
   },

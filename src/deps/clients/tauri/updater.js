@@ -1,6 +1,19 @@
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 
+const isMacOs = () => {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+
+  const userAgentPlatform = navigator.userAgentData?.platform;
+  if (typeof userAgentPlatform === "string") {
+    return userAgentPlatform === "macOS";
+  }
+
+  return /Mac/.test(navigator.platform || "");
+};
+
 const createUpdater = ({ globalUI, keyValueStore }) => {
   let updateAvailable = false;
   let updateInfo = null;
@@ -8,7 +21,13 @@ const createUpdater = ({ globalUI, keyValueStore }) => {
 
   const checkForUpdates = async (silent = false) => {
     try {
-      const update = await check();
+      const update = await check(
+        isMacOs()
+          ? {
+              target: "macos-universal",
+            }
+          : undefined,
+      );
 
       if (!update) {
         if (!silent && globalUI) {

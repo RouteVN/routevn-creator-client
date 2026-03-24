@@ -191,18 +191,22 @@ const adoptRepositorySectionIntoSession = (
   return nextSession;
 };
 
-const rebaseDirtyEntryOntoRepositoryText = (entry, repositoryText) => {
-  const rebasedEntry = structuredClone(entry);
-  const draftText = getSceneEditorLineText(rebasedEntry.line);
+const rebaseDirtyEntryOntoRepositoryLine = (entry, repositoryLine) => {
+  const repositoryText = getSceneEditorLineText(repositoryLine);
+  const draftText = getSceneEditorLineText(entry.line);
+  const rebasedLine = cloneLine(repositoryLine);
 
-  rebasedEntry.baseText = repositoryText;
-  rebasedEntry.dirty = draftText !== repositoryText;
-  rebasedEntry.conflict = false;
-  rebasedEntry.saveState = rebasedEntry.dirty
-    ? rebasedEntry.saveState || "scheduled"
-    : "idle";
+  setSceneEditorLineText(rebasedLine, draftText);
 
-  return rebasedEntry;
+  return {
+    ...structuredClone(entry),
+    line: rebasedLine,
+    baseText: repositoryText,
+    dirty: draftText !== repositoryText,
+    conflict: false,
+    saveState:
+      draftText !== repositoryText ? entry.saveState || "scheduled" : "idle",
+  };
 };
 
 export const createSceneEditorSession = ({
@@ -425,9 +429,9 @@ export const reconcileSceneEditorSession = ({
       }
 
       if (repositoryText !== entry.baseText) {
-        nextSession.linesById[lineId] = rebaseDirtyEntryOntoRepositoryText(
+        nextSession.linesById[lineId] = rebaseDirtyEntryOntoRepositoryLine(
           entry,
-          repositoryText,
+          repositoryLine,
         );
         console.warn("[sceneEditor] Rebased dirty draft onto repository text", {
           lineId,
@@ -472,13 +476,16 @@ export const reconcileSceneEditorSession = ({
     }
 
     if (repositoryText === currentEntry.baseText) {
-      nextLinesById[lineId] = structuredClone(currentEntry);
+      nextLinesById[lineId] = rebaseDirtyEntryOntoRepositoryLine(
+        currentEntry,
+        repositoryLine,
+      );
       continue;
     }
 
-    nextLinesById[lineId] = rebaseDirtyEntryOntoRepositoryText(
+    nextLinesById[lineId] = rebaseDirtyEntryOntoRepositoryLine(
       currentEntry,
-      repositoryText,
+      repositoryLine,
     );
     console.warn("[sceneEditor] Rebased dirty draft onto repository text", {
       lineId,

@@ -1,7 +1,9 @@
 import { createIndexedDBClientStore } from "insieme/client";
 
+const CLIENT_STORE_VERSION = "2";
+
 const buildClientStoreDbName = (projectId) => {
-  return `routevn-collab-client:${projectId}`;
+  return `routevn-collab-client:${CLIENT_STORE_VERSION}:${projectId}`;
 };
 
 export const createPersistedInMemoryClientStore = async ({

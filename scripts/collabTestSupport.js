@@ -146,8 +146,8 @@ export const normalizeStateForCompare = (state) => {
 };
 
 export const createProjectedSyncHarness = ({
-  authorizePartitions = async (_identity, partitions) =>
-    Array.isArray(partitions) && partitions.length > 0,
+  authorizeProject = async (_identity, projectId) =>
+    typeof projectId === "string" && projectId.length > 0,
   createInitialProjectState = () => structuredClone(initialProjectData),
 } = {}) => {
   const projectStates = new Map();
@@ -176,7 +176,7 @@ export const createProjectedSyncHarness = ({
       },
     },
     authz: {
-      authorizePartitions,
+      authorizeProject,
     },
     validation: {
       validate: async (item) => {
@@ -215,7 +215,6 @@ export const createProjectedSyncHarness = ({
     projectId,
     userId,
     clientId,
-    partitions,
     connectionId,
     latencyMs = 5,
   }) => {
@@ -229,7 +228,6 @@ export const createProjectedSyncHarness = ({
       projectId,
       token: `user:${userId}:client:${clientId}`,
       actor,
-      partitions,
       transport,
     });
     return {

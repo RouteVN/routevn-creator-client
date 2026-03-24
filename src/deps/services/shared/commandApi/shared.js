@@ -8,8 +8,8 @@ import {
   getSiblingOrderNodes,
   normalizeParentId,
   resolveIndexFromPosition,
-  uniquePartitions,
 } from "../projectRepository.js";
+import { collapsePartitionsToSingle } from "../collab/partitions.js";
 
 export const createCommandApiShared = ({
   idGenerator,
@@ -21,6 +21,7 @@ export const createCommandApiShared = ({
   getOrCreateLocalActor,
   storyBasePartitionFor,
   storyScenePartitionFor,
+  scenePartitionFor,
   resourceTypePartitionFor,
 }) => {
   const createId = () => {
@@ -46,18 +47,46 @@ export const createCommandApiShared = ({
   const filePartitionFor = (projectId) =>
     resourceTypePartitionFor(projectId, "files");
 
-  const ensureCommandContext = async () => {
+  const ensureCommandContext = async ({
+    sceneIds = [],
+    sectionIds = [],
+    lineIds = [],
+  } = {}) => {
     let repository;
     try {
       repository = getCachedRepository();
     } catch {
       repository = await getCurrentRepository();
     }
+
+    const contextState =
+      typeof repository?.getContextState === "function"
+        ? await repository.getContextState({
+            sceneIds,
+            sectionIds,
+            lineIds,
+          })
+        : repository.getState();
+
+    if (
+      typeof repository?.ensureScenesLoaded === "function" &&
+      typeof repository?.getContextState !== "function"
+    ) {
+      await repository.ensureScenesLoaded({
+        sceneIds,
+        sectionIds,
+        lineIds,
+      });
+    }
+
     const currentProjectId = getCurrentProjectId();
     if (!currentProjectId) {
       throw new Error("No project selected (missing ?p= in URL)");
     }
-    const state = repository.getState();
+    const state =
+      typeof repository?.getContextState === "function"
+        ? contextState
+        : repository.getState();
     assertSupportedProjectState(state);
 
     const projectId = currentProjectId;
@@ -79,20 +108,25 @@ export const createCommandApiShared = ({
 
   const createCommandWithContext = ({
     context,
-    scope,
+    scope: _scope,
     type,
     payload,
+    partition,
     partitions = [],
     basePartition,
   }) => {
-    const resolvedBasePartition =
-      basePartition || `project:${context.projectId}:${scope}`;
+    const resolvedPartition =
+      typeof partition === "string" && partition.length > 0
+        ? partition
+        : collapsePartitionsToSingle(
+            basePartition || storyBasePartitionFor(),
+            partitions,
+          );
 
     return createCommandEnvelope({
       id: createId(),
       projectId: context.projectId,
-      scope,
-      partitions: uniquePartitions(resolvedBasePartition, ...partitions),
+      partition: resolvedPartition,
       type,
       payload,
       actor: context.actor,
@@ -105,14 +139,26 @@ export const createCommandApiShared = ({
     scope,
     type,
     payload,
+    partition,
     partitions = [],
     basePartition,
   }) => {
+    if (
+      typeof context.session?.syncProjectedRepositoryState === "function" &&
+      (typeof context.state === "object" ||
+        typeof context.repository?.getState === "function")
+    ) {
+      context.session.syncProjectedRepositoryState(
+        context.state || context.repository.getState(),
+      );
+    }
+
     const command = createCommandWithContext({
       context,
       scope,
       type,
       payload,
+      partition,
       partitions,
       basePartition,
     });
@@ -137,12 +183,23 @@ export const createCommandApiShared = ({
   };
 
   const submitCommandsWithContext = async ({ context, commands = [] } = {}) => {
+    if (
+      typeof context.session?.syncProjectedRepositoryState === "function" &&
+      (typeof context.state === "object" ||
+        typeof context.repository?.getState === "function")
+    ) {
+      context.session.syncProjectedRepositoryState(
+        context.state || context.repository.getState(),
+      );
+    }
+
     const normalizedCommands = (commands || []).map((entry) =>
       createCommandWithContext({
         context,
         scope: entry.scope,
         type: entry.type,
         payload: entry.payload,
+        partition: entry.partition,
         partitions: entry.partitions,
         basePartition: entry.basePartition,
       }),
@@ -407,6 +464,7 @@ export const createCommandApiShared = ({
     filePartitionFor,
     storyBasePartitionFor,
     storyScenePartitionFor,
+    scenePartitionFor,
     resourceTypePartitionFor,
     getState,
     getDomainState,

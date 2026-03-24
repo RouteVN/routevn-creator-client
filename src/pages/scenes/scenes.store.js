@@ -1,5 +1,4 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
-import { getSectionPresentation } from "../../internal/project/projection.js";
 
 const CONTEXT_MENU_ITEMS = [
   { label: "Open", type: "item", value: "open-item" },
@@ -29,6 +28,7 @@ const toFiniteNumberOr = (value, fallback) =>
 export const createInitialState = () => ({
   scenesData: { tree: [], items: {} },
   layoutsData: { tree: [], items: {} },
+  sceneOverviewsById: {},
   selectedItemId: null,
   whiteboardItems: [],
   isWaitingForTransform: false,
@@ -67,6 +67,13 @@ export const setItems = ({ state }, { scenesData } = {}) => {
 
 export const setLayouts = ({ state }, { layoutsData } = {}) => {
   state.layoutsData = layoutsData || { tree: [], items: {} };
+};
+
+export const setSceneOverviews = ({ state }, { sceneOverviewsById } = {}) => {
+  state.sceneOverviewsById =
+    sceneOverviewsById && typeof sceneOverviewsById === "object"
+      ? sceneOverviewsById
+      : {};
 };
 
 export const showPreviewSceneId = ({ state }, { sceneId } = {}) => {
@@ -267,8 +274,6 @@ export const selectViewData = ({ state }, payload) => {
     }
   }
 
-  const layouts = state.layoutsData;
-  const controls = repositoryState?.controls || { items: {} };
   const flatItems = toFlatItems(state.scenesData);
   const flatGroups = toFlatGroups(state.scenesData);
 
@@ -276,36 +281,29 @@ export const selectViewData = ({ state }, payload) => {
   const selectedItem = state.selectedItemId
     ? flatItems.find((item) => item.id === state.selectedItemId)
     : null;
-  const selectedSceneFirstSectionId = selectedItem?.sections?.tree?.[0]?.id;
-  const selectedSceneInitialSectionId =
-    selectedItem?.initialSectionId || selectedSceneFirstSectionId;
-  const menuSceneId = repositoryState?.story?.initialSceneId;
 
   let selectedSceneName = "";
   let detailFields = [];
   let selectedSceneSections = [];
   if (selectedItem?.type === "scene") {
+    const selectedSceneOverview = state.sceneOverviewsById?.[selectedItem.id];
     selectedSceneName = selectedItem.name ?? "";
-    selectedSceneSections = toFlatItems(
-      selectedItem.sections || {
-        tree: [],
-        items: {},
-      },
-    ).map((section, index) => {
-      const { isDeadEnd } = getSectionPresentation({
-        section,
-        initialSectionId: selectedSceneInitialSectionId,
-        layouts,
-        controls,
-        menuSceneId,
-      });
-
-      return {
-        id: section.id,
-        name: section.name || `Section ${index + 1}`,
-        isDeadEnd,
-      };
-    });
+    selectedSceneSections = Array.isArray(selectedSceneOverview?.sections)
+      ? selectedSceneOverview.sections.map((section, index) => ({
+          id: section.sectionId || section.id,
+          name: section.name || `Section ${index + 1}`,
+          isDeadEnd: section.isDeadEnd === true,
+        }))
+      : toFlatItems(
+          selectedItem.sections || {
+            tree: [],
+            items: {},
+          },
+        ).map((section, index) => ({
+          id: section.id,
+          name: section.name || `Section ${index + 1}`,
+          isDeadEnd: false,
+        }));
     detailFields = [
       {
         type: "text",

@@ -25,12 +25,6 @@ const DEFAULT_PROJECT_DESCRIPTION = "Puty sqlite sync store scenario";
 const asNonEmptyString = (value) =>
   typeof value === "string" && value.length > 0 ? value : undefined;
 
-const uniqueStrings = (values = []) => [
-  ...new Set(
-    values.filter((value) => typeof value === "string" && value.length > 0),
-  ),
-];
-
 const createClock = ({ start = 1000, step = 1 } = {}) => {
   let current = start;
   return {
@@ -44,7 +38,7 @@ const createClock = ({ start = 1000, step = 1 } = {}) => {
 
 const readStoredEvents = (
   database,
-  { includeCreated = false, includeCommandVersionMeta = false } = {},
+  { includeCreated = false } = {},
 ) => {
   const rows = database
     .prepare(
@@ -54,11 +48,13 @@ const readStoredEvents = (
           id,
           project_id,
           user_id,
-          partitions,
+          partition,
+          schema_version,
           type,
           payload,
-          meta,
-          created
+          client_ts,
+          server_ts,
+          created_at
         FROM committed_events
         ORDER BY committed_id ASC
       `,
@@ -71,18 +67,17 @@ const readStoredEvents = (
       id: row.id,
       projectId: row.project_id || undefined,
       userId: row.user_id || undefined,
-      partitions: JSON.parse(row.partitions),
+      partition: row.partition,
+      schemaVersion: row.schema_version,
       type: row.type,
       payload: JSON.parse(row.payload),
-      meta: JSON.parse(row.meta),
+      meta: {
+        clientTs: row.client_ts,
+      },
     };
 
-    if (!includeCommandVersionMeta && event.meta?.commandVersion === 1) {
-      delete event.meta.commandVersion;
-    }
-
     if (includeCreated) {
-      event.created = row.created;
+      event.createdAt = row.created_at;
     }
 
     return event;
@@ -100,7 +95,6 @@ const buildCommands = (scenario, commands = []) => {
       projectId: command.projectId ?? scenario.projectId,
       actor: command.actor ?? actor,
       clientTs: command.clientTs ?? baseClientTs + index,
-      commandVersion: command.commandVersion ?? 1,
       ...command,
     }),
   );
@@ -135,17 +129,6 @@ const buildCommandBatches = (input, actor) => {
 
 const flattenCommandBatches = (commandBatches) => commandBatches.flat();
 
-const buildSessionPartitions = (scenario, commands) => {
-  if (
-    Array.isArray(scenario.sessionPartitions) &&
-    scenario.sessionPartitions.length > 0
-  ) {
-    return uniqueStrings(scenario.sessionPartitions);
-  }
-
-  return uniqueStrings(commands.flatMap((command) => command.partitions || []));
-};
-
 const buildScenario = (input) => {
   const actor = input?.actor;
   if (!actor?.userId || !actor?.clientId) {
@@ -176,8 +159,6 @@ const buildScenario = (input) => {
     timeoutMs: Number.isFinite(input.timeoutMs) ? input.timeoutMs : 1000,
     settleMs: Number.isFinite(input.settleMs) ? input.settleMs : 30,
     includeCreated: input.includeCreated === true,
-    includeCommandVersionMeta: input.includeCommandVersionMeta === true,
-    sessionPartitions: buildSessionPartitions(input, commands),
     clock: createClock(input.clock),
   };
 };
@@ -196,12 +177,8 @@ const createServer = ({ projectId, store, clock }) => {
       },
     },
     authz: {
-      authorizePartitions: async (_identity, partitions) => {
-        if (!Array.isArray(partitions) || partitions.length === 0) return false;
-        return partitions.every((partition) =>
-          partition.startsWith(`project:${projectId}:`),
-        );
-      },
+      authorizeProject: async (_identity, requestedProjectId) =>
+        requestedProjectId === projectId,
     },
     validation: {
       validate: async (item) => {
@@ -255,7 +232,6 @@ export const runInsiemeStorageScenario = async (input) => {
     projectDescription: scenario.projectDescription,
     token: scenario.token,
     actor: scenario.actor,
-    partitions: scenario.sessionPartitions,
     transport: createInMemoryServerTransport({
       server,
       connectionId: scenario.connectionId,
@@ -276,7 +252,6 @@ export const runInsiemeStorageScenario = async (input) => {
 
     const storedEvents = readStoredEvents(sqlite, {
       includeCreated: scenario.includeCreated,
-      includeCommandVersionMeta: scenario.includeCommandVersionMeta,
     });
 
     return {

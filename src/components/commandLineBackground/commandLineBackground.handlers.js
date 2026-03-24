@@ -306,7 +306,8 @@ export const handleTabClick = (deps, payload) => {
   render();
 };
 
-export const handleSubmitClick = (deps) => {
+export const handleSubmitClick = (deps, payload) => {
+  payload?._event?.stopPropagation?.();
   const { dispatchEvent, store } = deps;
   const selectedResource = store.selectSelectedResource();
   const selectedAnimationId = store.selectSelectedAnimation();
@@ -314,6 +315,9 @@ export const handleSubmitClick = (deps) => {
 
   const backgroundData = {
     resourceId: selectedResource?.resourceId,
+    ...(selectedResource?.resourceType
+      ? { resourceType: selectedResource.resourceType }
+      : {}),
   };
 
   if (selectedResource?.resourceType === "video") {
@@ -332,11 +336,20 @@ export const handleSubmitClick = (deps) => {
     };
   }
 
+  console.info("[commandLineBackground] submit click", {
+    selectedResource,
+    selectedAnimationId,
+    backgroundLoop,
+    backgroundData,
+  });
+
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
         background: backgroundData,
       },
+      bubbles: true,
+      composed: true,
     }),
   );
 };
@@ -401,6 +414,10 @@ export const handleButtonSelectClick = async (deps) => {
   const tempSelectedResourceType = store.selectTab();
 
   if (!tempSelectedResourceId || !tempSelectedResourceType) {
+    console.info("[commandLineBackground] select ignored", {
+      tempSelectedResourceId,
+      tempSelectedResourceType,
+    });
     return;
   }
 
@@ -426,6 +443,12 @@ export const handleButtonSelectClick = async (deps) => {
     resourceId: tempSelectedResourceId,
     resourceType: tempSelectedResourceType,
     fileId: fileId,
+  });
+
+  console.info("[commandLineBackground] resource selected", {
+    tempSelectedResourceId,
+    tempSelectedResourceType,
+    fileId,
   });
 
   store.setMode({

@@ -4,8 +4,6 @@ import {
   matchesRemoteTargets,
 } from "../../internal/ui/collabRefresh.js";
 import { createScenesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
-import { normalizeLineActions } from "../../internal/project/engineActions.js";
-import { getInteractionActions } from "../../internal/project/interactionPayload.js";
 import {
   SCENE_BOX_HEIGHT,
   SCENE_BOX_VIEWPORT_PADDING,
@@ -22,144 +20,6 @@ const getProjectErrorMessage = (result, fallbackMessage) => {
     result?.message ||
     fallbackMessage
   );
-};
-
-/**
- * Extract transitions from layout element click and right-click actions
- * @param {Object} layout - Layout object with elements
- * @returns {Array} Array of sceneIds found in click actions
- */
-const getTransitionsFromLayout = (layout) => {
-  const transitions = [];
-  if (!layout?.elements?.items) return transitions;
-
-  for (const element of Object.values(layout.elements.items)) {
-    const sceneIds = [
-      getInteractionActions(element.click).sectionTransition?.sceneId,
-      getInteractionActions(element.rightClick).sectionTransition?.sceneId,
-    ];
-
-    for (const sceneId of sceneIds) {
-      if (sceneId && !transitions.includes(sceneId)) {
-        transitions.push(sceneId);
-      }
-    }
-  }
-  return transitions;
-};
-
-const resolveLayoutReference = ({ ref, layouts, controls }) => {
-  if (!ref?.resourceId) {
-    return undefined;
-  }
-
-  if (ref.resourceType === "control") {
-    return controls?.items?.[ref.resourceId];
-  }
-
-  if (ref.resourceType === "layout") {
-    return layouts?.items?.[ref.resourceId];
-  }
-
-  return layouts?.items?.[ref.resourceId] || controls?.items?.[ref.resourceId];
-};
-
-/**
- *
- * @param {Object} sections
- * @param {Object} layouts - Layouts data from repository
- * @param {Object} controls - Controls data from repository
- * @returns {Array} Array of transition objects with sceneId
- * @example
- * // should return: ["scene-1760679405214-0ueot8rb4"]
- * const sections = {
- *   "items": {
- *     "section-main": {
- *       "name": "Section New",
- *       "lines": {
- *         "items": {
- *           "line-2": {
- *             "actions": {
- *               "sectionTransition": {
- *                 "sceneId": "scene-1760679405214-0ueot8rb4",
- *                 "sectionId": "myCeTAvUhyCRHnyMx8Ua8",
- *                 "animation": "fade"
- *               }
- *             }
- *           },
- *         },
- *         "tree": []
- *       }
- *     }
- *   }
- * }
- *
- */
-const getTransitionsForScene = (sections, layouts, controls) => {
-  if (!sections || !sections.items) {
-    return [];
-  }
-
-  const transitions = [];
-
-  // Iterate through all sections
-  for (const section of Object.values(sections.items)) {
-    if (section.lines && section.lines.items) {
-      // Iterate through all lines in this section
-      for (const line of Object.values(section.lines.items)) {
-        const lineActions = normalizeLineActions(line.actions || {});
-        // Check for sectionTransition in actions
-        const sectionTransition = lineActions?.sectionTransition;
-        if (
-          sectionTransition &&
-          sectionTransition.sceneId &&
-          !transitions.includes(sectionTransition.sceneId)
-        ) {
-          transitions.push(sectionTransition.sceneId);
-        }
-
-        // Check for transitions within choices
-        const choice = lineActions?.choice;
-        if (choice && choice.items && Array.isArray(choice.items)) {
-          for (const choiceItem of choice.items) {
-            const choiceTransition =
-              choiceItem.events?.click?.actions?.sectionTransition;
-            if (
-              choiceTransition &&
-              choiceTransition.sceneId &&
-              !transitions.includes(choiceTransition.sceneId)
-            ) {
-              transitions.push(choiceTransition.sceneId);
-            }
-          }
-        }
-
-        // Check for transitions within layouts referenced by background or control
-        const layoutRefs = [
-          lineActions?.background,
-          lineActions?.control,
-        ].filter((ref) => ref?.resourceId);
-
-        for (const ref of layoutRefs) {
-          const layout = resolveLayoutReference({
-            ref,
-            layouts,
-            controls,
-          });
-          if (layout) {
-            const layoutTransitions = getTransitionsFromLayout(layout);
-            for (const sceneId of layoutTransitions) {
-              if (!transitions.includes(sceneId)) {
-                transitions.push(sceneId);
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  return transitions;
 };
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -235,6 +95,7 @@ const getOrderedSceneIds = (domainState) => {
 const buildSceneWhiteboardItems = ({
   domainState,
   repositoryState,
+  sceneOverviewsById = {},
   currentWhiteboardItems = [],
 }) => {
   const domainScenes = domainState?.scenes || {};
@@ -243,11 +104,11 @@ const buildSceneWhiteboardItems = ({
   const orderedSceneIds = getOrderedSceneIds(domainState).filter(
     (sceneId) => domainScenes[sceneId]?.type !== "folder",
   );
-  const layouts = repositoryState?.layouts;
 
   return orderedSceneIds.map((sceneId) => {
     const scene = domainScenes[sceneId] || {};
     const repositoryScene = repositoryScenesById[sceneId];
+    const overview = sceneOverviewsById?.[sceneId];
     const existingWhiteboardItem = currentWhiteboardItems.find(
       (wb) => wb.id === sceneId,
     );
@@ -270,11 +131,9 @@ const buildSceneWhiteboardItems = ({
         ),
       ),
       isInit: sceneId === initialSceneId,
-      transitions: getTransitionsForScene(
-        repositoryScene?.sections,
-        layouts,
-        repositoryState.controls,
-      ),
+      transitions: Array.isArray(overview?.outgoingSceneIds)
+        ? [...overview.outgoingSceneIds]
+        : [],
     };
   });
 };
@@ -356,20 +215,28 @@ const getSceneItemById = ({ store, sceneId } = {}) => {
   return sceneItem;
 };
 
-const syncScenesState = ({ store, projectService } = {}) => {
+const syncScenesState = async ({ store, projectService } = {}) => {
   const repositoryState = projectService.getRepositoryState();
   const domainState = projectService.getDomainState();
   const sceneData = repositoryState?.scenes ?? { tree: [], items: {} };
   const layoutsData = repositoryState?.layouts ?? { tree: [], items: {} };
   const currentWhiteboardItems = store.selectWhiteboardItems() ?? [];
+  const orderedSceneIds = getOrderedSceneIds(domainState).filter(
+    (sceneId) => domainState?.scenes?.[sceneId]?.type !== "folder",
+  );
+  const sceneOverviewsById = await projectService.loadSceneOverviews({
+    sceneIds: orderedSceneIds,
+  });
   const sceneItems = buildSceneWhiteboardItems({
     domainState,
     repositoryState,
+    sceneOverviewsById,
     currentWhiteboardItems,
   });
 
   store.setItems({ scenesData: sceneData });
   store.setLayouts({ layoutsData });
+  store.setSceneOverviews({ sceneOverviewsById });
   store.setWhiteboardItems({ items: sceneItems });
 };
 
@@ -416,22 +283,8 @@ export const handleBeforeMount = (deps) => {
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, refs, appService } = deps;
   await projectService.ensureRepository();
-  const repositoryState = projectService.getRepositoryState();
-  const domainState = projectService.getDomainState();
-  const { scenes, layouts } = repositoryState;
-  const scenesData = scenes || { tree: [], items: {} };
-
-  // Set the scenes data
-  store.setItems({ scenesData: scenesData });
-  store.setLayouts({ layoutsData: layouts });
-
-  const sceneItems = buildSceneWhiteboardItems({
-    domainState,
-    repositoryState,
-  });
-
-  // Initialize whiteboard with scene items only
-  store.setWhiteboardItems({ items: sceneItems });
+  await syncScenesState({ store, projectService });
+  const sceneItems = store.selectWhiteboardItems() ?? [];
 
   const shouldHideMapAddHint =
     appService.getUserConfig("scenesMap.hideAddSceneHint") === true;
@@ -482,7 +335,7 @@ export const handleSetInitialScene = async (sceneId, deps) => {
 
 const refreshScenesData = async (deps) => {
   const { store, render, projectService } = deps;
-  syncScenesState({ store, projectService });
+  await syncScenesState({ store, projectService });
   render();
 };
 
@@ -772,41 +625,24 @@ export const handleSceneFormAction = async (deps, payload) => {
     });
     dismissMapAddHint({ store, appService });
 
-    // Update store with new scenes data
-    const { scenes: updatedScenes } = projectService.getRepositoryState();
-    store.setItems({ scenesData: updatedScenes });
-
     // Reset form
     store.resetSceneForm();
-
-    render();
+    await refreshScenesData(deps);
   }
 };
 
 export const handleWhiteboardItemDelete = async (deps, payload) => {
-  const { store, render, projectService, appService } = deps;
+  const { store, projectService, appService } = deps;
   const { itemId } = payload._event.detail;
 
   await projectService.deleteSceneItem({ sceneIds: [itemId] });
-
-  // Update store with new scenes data
-  const { scenes: updatedScenes } = projectService.getRepositoryState();
-  store.setItems({ scenesData: updatedScenes });
-
-  // Remove from whiteboard items
-  const currentWhiteboardItems = store.selectWhiteboardItems();
-  const updatedWhiteboardItems = currentWhiteboardItems.filter(
-    (item) => item.id !== itemId,
-  );
-  store.setWhiteboardItems({ items: updatedWhiteboardItems });
 
   // Clear selection if the deleted item was selected
   const selectedItemId = store.selectSelectedItemId();
   if (selectedItemId === itemId) {
     setSelectedScene({ store, appService, sceneId: undefined });
   }
-
-  render();
+  await refreshScenesData(deps);
 };
 
 export const handleWhiteboardItemContextMenu = (deps, payload) => {
@@ -865,46 +701,19 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   // Handle set initial scene action
   if (item.value === "set-initial" && itemId) {
     await projectService.setInitialScene({ sceneId: itemId });
-
-    // Get updated scenes data
-    const { scenes: updatedScenes, story } =
-      projectService.getRepositoryState();
-    store.setItems({ scenesData: updatedScenes });
-
-    // Update whiteboard items with new colors
-    const currentWhiteboardItems = store.selectWhiteboardItems();
-    const initialSceneId = story?.initialSceneId;
-    const updatedWhiteboardItems = currentWhiteboardItems.map((item) => ({
-      ...item,
-      isInit: item.id === initialSceneId,
-    }));
-    store.setWhiteboardItems({ items: updatedWhiteboardItems });
-
-    render();
+    await refreshScenesData(deps);
   }
 
   // Handle delete action
   if (item.value === "delete-item" && itemId) {
     await projectService.deleteSceneItem({ sceneIds: [itemId] });
 
-    // Update store with new scenes data
-    const { scenes: updatedScenes } = projectService.getRepositoryState();
-    store.setItems({ scenesData: updatedScenes });
-
-    // Remove from whiteboard items
-    const currentWhiteboardItems = store.selectWhiteboardItems();
-    const updatedWhiteboardItems = currentWhiteboardItems.filter(
-      (item) => item.id !== itemId,
-    );
-    store.setWhiteboardItems({ items: updatedWhiteboardItems });
-
     // Clear selection if the deleted item was selected
     const selectedItemId = store.selectSelectedItemId();
     if (selectedItemId === itemId) {
       setSelectedScene({ store, appService, sceneId: undefined });
     }
-
-    render();
+    await refreshScenesData(deps);
   }
 };
 

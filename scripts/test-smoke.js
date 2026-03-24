@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 
 import { createCommandEnvelope } from "../src/deps/services/shared/collab/commandEnvelope.js";
 import {
+  mainScenePartitionFor,
+  scenePartitionFor,
+} from "../src/deps/services/shared/collab/partitions.js";
+import {
   applyCommandToRepository,
   applyCommandToRepositoryState,
   createProjectRepository,
@@ -30,6 +34,8 @@ const actor = {
   userId: "user-1",
   clientId: "client-1",
 };
+const scene1MainPartition = mainScenePartitionFor("scene-1");
+const scene1Partition = scenePartitionFor("scene-1");
 
 const createRepositoryStoreStub = () => {
   const events = [];
@@ -59,12 +65,11 @@ const createRepositoryStoreStub = () => {
   };
 };
 
-const makeEnvelope = ({ type, payload, scope, partitions, clientTs }) => {
+const makeEnvelope = ({ type, payload, partition = "m", clientTs }) => {
   return createCommandEnvelope({
     id: `${type}-${clientTs}`,
     projectId,
-    scope,
-    partitions,
+    partition,
     type,
     payload,
     actor,
@@ -97,7 +102,11 @@ const parseBundleInstructions = (bundle) => {
   const dataBlockOffset = headerSize + indexLength;
   const contentStart = instructionsMeta.start + dataBlockOffset;
   const contentEnd = instructionsMeta.end + dataBlockOffset + 1;
-  const content = new Uint8Array(arrayBuffer, contentStart, contentEnd - contentStart);
+  const content = new Uint8Array(
+    arrayBuffer,
+    contentStart,
+    contentEnd - contentStart,
+  );
   return JSON.parse(new TextDecoder().decode(content));
 };
 
@@ -111,7 +120,7 @@ await applyCommandToRepository({
   repository,
   projectId,
   command: makeEnvelope({
-    scope: "story",
+    partition: scene1MainPartition,
     clientTs: 1000,
     type: "scene.create",
     payload: {
@@ -127,7 +136,7 @@ await applyCommandToRepository({
   repository,
   projectId,
   command: makeEnvelope({
-    scope: "story",
+    partition: "m",
     clientTs: 1010,
     type: "story.update",
     payload: {
@@ -142,7 +151,7 @@ await applyCommandToRepository({
   repository,
   projectId,
   command: makeEnvelope({
-    scope: "story",
+    partition: scene1MainPartition,
     clientTs: 1020,
     type: "section.create",
     payload: {
@@ -159,7 +168,7 @@ await applyCommandToRepository({
   repository,
   projectId,
   command: makeEnvelope({
-    scope: "story",
+    partition: scene1Partition,
     clientTs: 1030,
     type: "line.create",
     payload: {
@@ -190,7 +199,7 @@ await applyCommandToRepository({
   repository,
   projectId,
   command: makeEnvelope({
-    scope: "story",
+    partition: scene1MainPartition,
     clientTs: 1040,
     type: "section.create",
     payload: {
@@ -207,7 +216,7 @@ await applyCommandToRepository({
   repository,
   projectId,
   command: makeEnvelope({
-    scope: "story",
+    partition: scene1Partition,
     clientTs: 1077,
     type: "line.update_actions",
     payload: {
@@ -228,8 +237,7 @@ await applyCommandToRepository({
   repository,
   projectId,
   command: makeEnvelope({
-    scope: "resources",
-    partitions: [`project:${projectId}:resources:files`],
+    partition: "m",
     clientTs: 1045,
     type: "file.create",
     payload: {
@@ -248,8 +256,7 @@ await applyCommandToRepository({
   repository,
   projectId,
   command: makeEnvelope({
-    scope: "resources",
-    partitions: [`project:${projectId}:resources:images`],
+    partition: "m",
     clientTs: 1050,
     type: "image.create",
     payload: {
@@ -269,8 +276,7 @@ await applyCommandToRepository({
   repository,
   projectId,
   command: makeEnvelope({
-    scope: "resources",
-    partitions: [`project:${projectId}:resources:controls`],
+    partition: "m",
     clientTs: 1060,
     type: "control.create",
     payload: {
@@ -291,8 +297,7 @@ await applyCommandToRepository({
   repository,
   projectId,
   command: makeEnvelope({
-    scope: "controls",
-    partitions: [`project:${projectId}:controls`],
+    partition: "m",
     clientTs: 1070,
     type: "control.element.create",
     payload: {
@@ -311,8 +316,7 @@ await applyCommandToRepository({
   repository,
   projectId,
   command: makeEnvelope({
-    scope: "resources",
-    partitions: [`project:${projectId}:resources:controls`],
+    partition: "m",
     clientTs: 1075,
     type: "control.update",
     payload: {
@@ -336,8 +340,7 @@ await applyCommandToRepository({
   repository,
   projectId,
   command: makeEnvelope({
-    scope: "resources",
-    partitions: [`project:${projectId}:resources:characters`],
+    partition: "m",
     clientTs: 1080,
     type: "character.create",
     payload: {
@@ -370,8 +373,7 @@ await applyCommandToRepository({
   repository,
   projectId,
   command: makeEnvelope({
-    scope: "resources",
-    partitions: [`project:${projectId}:resources:characters`],
+    partition: "m",
     clientTs: 1090,
     type: "character.sprite.create",
     payload: {
@@ -389,8 +391,7 @@ await applyCommandToRepository({
   repository,
   projectId,
   command: makeEnvelope({
-    scope: "resources",
-    partitions: [`project:${projectId}:resources:files`],
+    partition: "m",
     clientTs: 1095,
     type: "file.create",
     payload: {
@@ -409,8 +410,7 @@ await applyCommandToRepository({
   repository,
   projectId,
   command: makeEnvelope({
-    scope: "resources",
-    partitions: [`project:${projectId}:resources:characters`],
+    partition: "m",
     clientTs: 1100,
     type: "character.sprite.create",
     payload: {
@@ -426,7 +426,35 @@ await applyCommandToRepository({
   }),
 });
 
+const sceneOverviews = await repository.loadSceneOverviews({
+  sceneIds: ["scene-1"],
+});
 const repositoryState = repository.getState();
+const scene1Overview = sceneOverviews["scene-1"];
+
+assert.deepEqual(scene1Overview, {
+  sceneId: "scene-1",
+  name: "Opening",
+  position: {
+    x: 0,
+    y: 0,
+  },
+  outgoingSceneIds: [],
+  sections: [
+    {
+      sectionId: "section-1",
+      name: "Main",
+      outgoingSceneIds: [],
+      isDeadEnd: true,
+    },
+    {
+      sectionId: "section-2",
+      name: "Branch",
+      outgoingSceneIds: [],
+      isDeadEnd: true,
+    },
+  ],
+});
 
 assert.equal(repositoryState.story.initialSceneId, "scene-1");
 assert.deepEqual(stripEmptyChildren(repositoryState.scenes.tree), [
@@ -590,11 +618,11 @@ assert.equal(
   bundleInstructions.projectData.story.scenes["scene-1"].initialSectionId,
   "section-1",
 );
-assert.equal(bundleInstructions.bundleMetadata.bundler.appName, BUNDLE_APP_NAME);
 assert.equal(
-  bundleInstructions.bundleMetadata.bundler.appVersion,
-  "1.0.0-rc2",
+  bundleInstructions.bundleMetadata.bundler.appName,
+  BUNDLE_APP_NAME,
 );
+assert.equal(bundleInstructions.bundleMetadata.bundler.appVersion, "1.0.0-rc2");
 assert.deepEqual(
   bundleInstructions.projectData.story.scenes["scene-1"].sections[
     "section-1"

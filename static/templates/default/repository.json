@@ -927,7 +927,7 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "style": {
+              "textStyle": {
                 "align": "left"
               },
               "textStyleId": "qdM8QXbdBoqiPDUHZWheh"
@@ -946,7 +946,7 @@
               "scaleY": 1,
               "rotation": 0,
               "displaySpeed": 100,
-              "style": {
+              "textStyle": {
                 "align": "left"
               },
               "textStyleId": "1TqapkiPUErN434i6YCFW"
@@ -1052,7 +1052,7 @@
               "rotation": 0,
               "text": "text",
               "$when": "line.characterName",
-              "style": {
+              "textStyle": {
                 "align": "left"
               },
               "textStyleId": "qdM8QXbdBoqiPDUHZWheh"
@@ -1071,7 +1071,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "text",
-              "style": {
+              "textStyle": {
                 "align": "left"
               },
               "textStyleId": "1TqapkiPUErN434i6YCFW"
@@ -1152,7 +1152,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "text",
-              "style": {
+              "textStyle": {
                 "align": "center"
               },
               "textStyleId": "AZb6o5taVeKePPowGTqqr"
@@ -1230,7 +1230,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "MY VISUAL NOVEL",
-              "style": {
+              "textStyle": {
                 "align": "center"
               },
               "textStyleId": "AZb6o5taVeKePPowGTqqr"
@@ -1249,7 +1249,7 @@
               "scaleY": 1,
               "rotation": 0,
               "text": "START",
-              "style": {
+              "textStyle": {
                 "align": "center"
               },
               "click": {

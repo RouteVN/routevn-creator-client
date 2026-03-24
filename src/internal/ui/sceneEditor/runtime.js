@@ -9,6 +9,10 @@ import {
   extractTransitionTargetSceneIdsFromActions,
   resolveEventBindings,
 } from "../../project/layout.js";
+import {
+  sanitizeProjectDataForRouteEngine,
+  summarizeProjectDataForRouteEngine,
+} from "../../project/routeEngineProjectData.js";
 
 const createAssetLoadCache = () => ({
   sceneIds: new Set(),
@@ -294,12 +298,43 @@ const createBeforeHandleActionsHook = (deps) => {
   };
 };
 
+const stripSelectedLinePreviewNavigation = (
+  projectData,
+  { sceneId, sectionId, lineId },
+) => {
+  if (!sceneId || !sectionId || !lineId) {
+    return projectData;
+  }
+
+  const selectedScene = projectData?.story?.scenes?.[sceneId];
+  const selectedSection = selectedScene?.sections?.[sectionId];
+  const selectedLine = selectedSection?.lines?.find(
+    (line) => line?.id === lineId,
+  );
+
+  if (!selectedLine?.actions?.sectionTransition) {
+    return projectData;
+  }
+
+  delete selectedLine.actions.sectionTransition;
+  return projectData;
+};
+
 const createProjectDataWithSelectedEntryPoint = (projectData, selection) => {
   const { sceneId, sectionId, lineId } = selection;
   const projectDataWithSelection = structuredClone(projectData);
 
   if (!sceneId || !projectDataWithSelection?.story?.scenes?.[sceneId]) {
-    return projectDataWithSelection;
+    const sanitized = sanitizeProjectDataForRouteEngine(
+      projectDataWithSelection,
+    );
+    if (sanitized.didSanitize) {
+      console.warn(
+        "[sceneEditor] Sanitized RouteEngine projectData",
+        sanitized.changes,
+      );
+    }
+    return sanitized.projectData;
   }
 
   projectDataWithSelection.story.initialSceneId = sceneId;
@@ -313,7 +348,32 @@ const createProjectDataWithSelectedEntryPoint = (projectData, selection) => {
     }
   }
 
-  return projectDataWithSelection;
+  const sanitized = sanitizeProjectDataForRouteEngine(
+    stripSelectedLinePreviewNavigation(projectDataWithSelection, selection),
+  );
+  if (sanitized.didSanitize) {
+    console.warn(
+      "[sceneEditor] Sanitized RouteEngine projectData",
+      sanitized.changes,
+    );
+  }
+  return sanitized.projectData;
+};
+
+const initRouteEngineWithDiagnostics = (
+  graphicsService,
+  projectData,
+  options = {},
+) => {
+  try {
+    graphicsService.initRouteEngine(projectData, options);
+  } catch (error) {
+    console.error(
+      "[sceneEditor] RouteEngine init failed",
+      summarizeProjectDataForRouteEngine(projectData),
+    );
+    throw error;
+  }
 };
 
 export const renderSceneEditorState = async (deps, payload = {}) => {
@@ -336,15 +396,20 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
   );
   const isMuted = store.selectIsMuted();
 
-  graphicsService.engineHandleActions({
+  const nextActions = {
     updateProjectData: {
       projectData: safeProjectData,
     },
-    jumpToLine: {
+  };
+
+  if (sectionId && lineId) {
+    nextActions.jumpToLine = {
       sectionId,
       lineId,
-    },
-  });
+    };
+  }
+
+  graphicsService.engineHandleActions(nextActions);
   graphicsService.engineRenderCurrentState({
     skipAudio: isMuted,
     skipAnimations,
@@ -386,7 +451,7 @@ export const initializeSceneEditorPage = async (deps) => {
     syncProjectState,
   } = deps;
 
-  await projectService.ensureRepository();
+  const repository = await projectService.ensureRepository();
   const ensuredProjectId =
     typeof projectService.getEnsuredProjectId === "function"
       ? projectService.getEnsuredProjectId()
@@ -406,6 +471,11 @@ export const initializeSceneEditorPage = async (deps) => {
     lineId: payloadLineId,
   } = appService.getPayload();
   const sceneId = s;
+
+  if (typeof repository?.setActiveSceneId === "function") {
+    await repository.setActiveSceneId(sceneId);
+  }
+
   syncProjectState(store, projectService);
 
   store.setSceneId({ sceneId });
@@ -450,7 +520,7 @@ export const initializeSceneEditorPage = async (deps) => {
     showLoading: true,
   });
   void preloadDirectTransitionScenes(deps, projectData, initialSceneIds);
-  graphicsService.initRouteEngine(initialProjectData, {
+  initRouteEngineWithDiagnostics(graphicsService, initialProjectData, {
     enableGlobalKeyboardBindings: false,
   });
 
@@ -489,7 +559,7 @@ export const restoreSceneEditorFromPreview = async (deps) => {
     showLoading: false,
   });
   void preloadDirectTransitionScenes(deps, projectData, initialSceneIds);
-  graphicsService.initRouteEngine(initialProjectData, {
+  initRouteEngineWithDiagnostics(graphicsService, initialProjectData, {
     enableGlobalKeyboardBindings: false,
   });
 

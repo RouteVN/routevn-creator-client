@@ -319,9 +319,7 @@ export const createWebProjectServiceAdapters = ({
       userId,
       clientId,
       endpointUrl,
-      partitions,
       mode,
-      partitioning,
       getRepositoryByProject,
       getStoreByProject,
       getProjectInfoByProjectId,
@@ -341,10 +339,6 @@ export const createWebProjectServiceAdapters = ({
       const adapter = await getStoreByProject(projectId);
 
       const resolvedProjectId = projectId;
-      const resolvedPartitions = partitioning.getBasePartitions(
-        resolvedProjectId,
-        partitions,
-      );
       const projectInfo = await getProjectInfoByProjectId(projectId);
       const clientStore = await getCollabClientStore(projectId);
       await ensureCommittedIdLoaded(projectId, getStoreByProject);
@@ -358,15 +352,16 @@ export const createWebProjectServiceAdapters = ({
           userId,
           clientId,
         },
-        partitions: resolvedPartitions,
         clientStore,
         logger: (entry) => {
           if (entry?.event === "connected") {
-            const globalLastCommittedId = Number(entry?.globalLastCommittedId);
-            if (Number.isFinite(globalLastCommittedId)) {
+            const projectLastCommittedId = Number(
+              entry?.projectLastCommittedId,
+            );
+            if (Number.isFinite(projectLastCommittedId)) {
               collabLog("debug", "connected cursor", {
                 projectId: resolvedProjectId,
-                globalLastCommittedId,
+                projectLastCommittedId,
               });
             }
           }
@@ -522,7 +517,6 @@ export const createWebProjectServiceAdapters = ({
       collabLog("info", "session started", {
         projectId: resolvedProjectId,
         mode,
-        partitions: resolvedPartitions,
         online: Boolean(endpointUrl),
       });
       if (endpointUrl) {

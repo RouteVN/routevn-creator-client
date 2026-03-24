@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { createCommandEnvelope } from "../src/deps/services/shared/collab/commandEnvelope.js";
 import {
+  mainScenePartitionFor,
+  scenePartitionFor,
+} from "../src/deps/services/shared/collab/partitions.js";
+import {
   createProjectedSyncHarness,
   normalizeStateForCompare,
   waitFor,
@@ -15,11 +19,6 @@ const clientAEntry = harness.createClient({
   projectId,
   userId: "user-1",
   clientId: "client-a",
-  partitions: [
-    `project:${projectId}:story`,
-    `project:${projectId}:resources`,
-    `project:${projectId}:layouts`,
-  ],
   connectionId: "conn-a",
   latencyMs: 5,
 });
@@ -27,11 +26,6 @@ const clientBEntry = harness.createClient({
   projectId,
   userId: "user-2",
   clientId: "client-b",
-  partitions: [
-    `project:${projectId}:story`,
-    `project:${projectId}:resources`,
-    `project:${projectId}:layouts`,
-  ],
   connectionId: "conn-b",
   latencyMs: 5,
 });
@@ -39,6 +33,8 @@ const clientA = clientAEntry.client;
 const clientB = clientBEntry.client;
 const actorA = clientAEntry.actor;
 const actorB = clientBEntry.actor;
+const scene1MainPartition = mainScenePartitionFor("scene-1");
+const scene1Partition = scenePartitionFor("scene-1");
 
 try {
   await clientA.start();
@@ -47,7 +43,7 @@ try {
   await clientA.submitCommand(
     createCommandEnvelope({
       projectId,
-      scope: "story",
+      partition: scene1MainPartition,
       type: "scene.create",
       payload: { sceneId: "scene-1", data: { name: "Scene 1" } },
       actor: actorA,
@@ -62,7 +58,7 @@ try {
   await clientB.submitCommand(
     createCommandEnvelope({
       projectId,
-      scope: "story",
+      partition: scene1MainPartition,
       type: "section.create",
       payload: {
         sceneId: "scene-1",
@@ -81,7 +77,7 @@ try {
   await clientA.submitCommand(
     createCommandEnvelope({
       projectId,
-      scope: "story",
+      partition: scene1Partition,
       type: "line.create",
       payload: {
         sectionId: "section-1",
@@ -101,10 +97,29 @@ try {
     label: "clientB.line-1",
   });
 
+  await clientA.submitCommand(
+    createCommandEnvelope({
+      projectId,
+      partition: "m",
+      type: "file.create",
+      payload: {
+        fileId: "file-1",
+        data: {
+          type: "image",
+          mimeType: "image/png",
+          size: 1024,
+          sha256: "sha256-file-1",
+        },
+      },
+      actor: actorA,
+      clientTs: 1250,
+    }),
+  );
+
   await clientB.submitCommand(
     createCommandEnvelope({
       projectId,
-      scope: "resources",
+      partition: "m",
       type: "image.create",
       payload: {
         imageId: "img-1",
@@ -119,15 +134,14 @@ try {
     }),
   );
 
-  await waitFor(
-    () => Boolean(clientA.getState().images.items["img-1"]),
-    { label: "clientA.images.img-1" },
-  );
+  await waitFor(() => Boolean(clientA.getState().images.items["img-1"]), {
+    label: "clientA.images.img-1",
+  });
 
   await clientA.submitCommand(
     createCommandEnvelope({
       projectId,
-      scope: "resources",
+      partition: "m",
       type: "layout.create",
       payload: {
         layoutId: "layout-1",
@@ -143,17 +157,14 @@ try {
     }),
   );
 
-  await waitFor(
-    () => Boolean(clientB.getState().layouts.items["layout-1"]),
-    {
-      label: "clientB.layouts.layout-1",
-    },
-  );
+  await waitFor(() => Boolean(clientB.getState().layouts.items["layout-1"]), {
+    label: "clientB.layouts.layout-1",
+  });
 
   await clientB.submitCommand(
     createCommandEnvelope({
       projectId,
-      scope: "layouts",
+      partition: "m",
       type: "layout.element.create",
       payload: {
         layoutId: "layout-1",
@@ -173,11 +184,7 @@ try {
 
   await waitFor(
     () =>
-      Boolean(
-        clientA.getState().layouts.items["layout-1"]?.elements?.[
-          "el-1"
-        ],
-      ),
+      Boolean(clientA.getState().layouts.items["layout-1"]?.elements?.["el-1"]),
     { label: "clientA.layouts.layout-1.el-1" },
   );
 

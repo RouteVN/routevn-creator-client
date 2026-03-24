@@ -170,12 +170,16 @@ export const selectActionsData = ({ props, state }) => {
   const actionsObject = {};
   const preview = {};
 
-  if (presentationState.background) {
-    const backgroundImage = images[presentationState.background.resourceId];
-    const backgroundVideo = videos[presentationState.background.resourceId];
-    const backgroundLayout =
-      layoutsItems[presentationState.background.resourceId];
-    actionsObject.background = presentationState.background;
+  const backgroundAction =
+    actions.background && typeof actions.background === "object"
+      ? actions.background
+      : presentationState.background;
+
+  if (backgroundAction?.resourceId) {
+    const backgroundImage = images[backgroundAction.resourceId];
+    const backgroundVideo = videos[backgroundAction.resourceId];
+    const backgroundLayout = layoutsItems[backgroundAction.resourceId];
+    actionsObject.background = backgroundAction;
     if (backgroundImage) {
       preview.background = { ...backgroundImage, type: "image" };
     } else if (backgroundVideo) {
