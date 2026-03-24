@@ -3,6 +3,7 @@ import { projectRepositoryStateToDomainState } from "../../../../internal/projec
 import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
 import {
   applyCommandToRepository,
+  applyCommandToRepositoryState,
   applyCommandsToRepository,
   assertSupportedProjectState,
   getSiblingOrderNodes,
@@ -134,6 +135,64 @@ export const createCommandApiShared = ({
     });
   };
 
+  const getContextRepositoryState = (context) => {
+    if (context?.state && typeof context.state === "object") {
+      return context.state;
+    }
+    if (typeof context?.repository?.getState === "function") {
+      return context.repository.getState();
+    }
+    return null;
+  };
+
+  const syncSessionProjectedRepositoryState = (context) => {
+    if (typeof context?.session?.syncProjectedRepositoryState !== "function") {
+      return;
+    }
+    const repositoryState = getContextRepositoryState(context);
+    if (!repositoryState) {
+      return;
+    }
+    context.session.syncProjectedRepositoryState(repositoryState);
+  };
+
+  const advanceContextStateWithCommands = ({ context, commands = [] }) => {
+    const normalizedCommands = Array.isArray(commands)
+      ? commands.filter(Boolean)
+      : [];
+    if (!context || normalizedCommands.length === 0) {
+      return;
+    }
+
+    const baseState = getContextRepositoryState(context);
+    if (!baseState) {
+      return;
+    }
+
+    let nextState = baseState;
+    try {
+      for (const command of normalizedCommands) {
+        const applyResult = applyCommandToRepositoryState({
+          repositoryState: nextState,
+          command,
+          projectId: context.projectId,
+        });
+        if (applyResult?.valid === false || !applyResult?.repositoryState) {
+          throw new Error(
+            applyResult?.error?.message ||
+              `Failed to advance context for '${command?.type || "unknown"}'`,
+          );
+        }
+        nextState = applyResult.repositoryState;
+      }
+      context.state = nextState;
+    } catch {
+      if (typeof context.repository?.getState === "function") {
+        context.state = context.repository.getState();
+      }
+    }
+  };
+
   const submitCommandWithContext = async ({
     context,
     scope,
@@ -143,15 +202,7 @@ export const createCommandApiShared = ({
     partitions = [],
     basePartition,
   }) => {
-    if (
-      typeof context.session?.syncProjectedRepositoryState === "function" &&
-      (typeof context.state === "object" ||
-        typeof context.repository?.getState === "function")
-    ) {
-      context.session.syncProjectedRepositoryState(
-        context.state || context.repository.getState(),
-      );
-    }
+    syncSessionProjectedRepositoryState(context);
 
     const command = createCommandWithContext({
       context,
@@ -174,6 +225,11 @@ export const createCommandApiShared = ({
       projectId: context.projectId,
     });
 
+    advanceContextStateWithCommands({
+      context,
+      commands: [command],
+    });
+
     return {
       valid: true,
       commandId: command.id,
@@ -183,15 +239,7 @@ export const createCommandApiShared = ({
   };
 
   const submitCommandsWithContext = async ({ context, commands = [] } = {}) => {
-    if (
-      typeof context.session?.syncProjectedRepositoryState === "function" &&
-      (typeof context.state === "object" ||
-        typeof context.repository?.getState === "function")
-    ) {
-      context.session.syncProjectedRepositoryState(
-        context.state || context.repository.getState(),
-      );
-    }
+    syncSessionProjectedRepositoryState(context);
 
     const normalizedCommands = (commands || []).map((entry) =>
       createCommandWithContext({
@@ -222,6 +270,11 @@ export const createCommandApiShared = ({
       repository: context.repository,
       commands: normalizedCommands,
       projectId: context.projectId,
+    });
+
+    advanceContextStateWithCommands({
+      context,
+      commands: normalizedCommands,
     });
 
     return {
