@@ -1,4 +1,4 @@
-import { createMaterializedViewRuntime } from "insieme/client";
+import { createMaterializedViewRuntime } from "./collab/insiemeCompat.js";
 import {
   mainScenePartitionFor,
   scenePartitionFor,

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
-import { validateCommandSubmitItem } from "insieme/client";
+import { validateCommandSubmitItem } from "../../src/deps/services/shared/collab/insiemeCompat.js";
 import { createSqliteSyncStore, createSyncServer } from "insieme/server";
 import {
   committedEventToCommand,
