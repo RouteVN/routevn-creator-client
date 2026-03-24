@@ -283,14 +283,14 @@ const propertyNameDropdownItems = [
 
 const createTypeMenuItems = [
   {
-    label: "Live",
+    label: "Update",
     type: "item",
-    value: "live",
+    value: "update",
   },
   {
-    label: "Replace",
+    label: "Transition",
     type: "item",
-    value: "replace",
+    value: "transition",
   },
 ];
 
@@ -299,7 +299,7 @@ const addAnimationForm = {
   fields: [
     {
       type: "read-only-text",
-      content: "Type: Live",
+      content: "Type: Update",
     },
     {
       name: "name",
@@ -331,7 +331,7 @@ const editAnimationForm = {
   fields: [
     {
       type: "read-only-text",
-      content: "Type: Live",
+      content: "Type: Update",
     },
     {
       name: "name",
@@ -369,7 +369,7 @@ const defaultInitialValuesByProperty = {
 
 const getAnimationTween = (item = {}) => {
   if (
-    item?.animation?.type === "live" &&
+    item?.animation?.type === "update" &&
     item.animation.tween &&
     typeof item.animation.tween === "object"
   ) {
@@ -734,7 +734,7 @@ const createAnimationRenderState = (properties, includeAnimations = true) => {
       animations.push({
         id: `animation-${property}`,
         targetId: "preview-element",
-        type: "live",
+        type: "update",
         tween,
       });
     }

@@ -13,7 +13,7 @@ const defaultInitialValues = {
   rotation: 0,
 };
 
-const normalizeLiveTween = (properties = {}) => {
+const normalizeUpdateTween = (properties = {}) => {
   return Object.fromEntries(
     Object.entries(properties).map(([property, config]) => {
       const normalizedConfig = {
@@ -142,7 +142,7 @@ export const handleCreateTypeMenuItemClick = async (deps, payload) => {
   store.closeCreateTypeMenu();
   render();
 
-  if (type !== "live") {
+  if (type !== "update") {
     await appService.showDialog({
       title: "Coming Soon",
       message: "Not implemented yet. Coming soon.",
@@ -176,7 +176,7 @@ export const handleFormActionClick = async (deps, payload) => {
     return;
   }
 
-  const tween = normalizeLiveTween(store.selectProperties());
+  const tween = normalizeUpdateTween(store.selectProperties());
   const editMode = store.selectEditMode();
   const editItemId = store.selectEditItemId();
 
@@ -190,7 +190,7 @@ export const handleFormActionClick = async (deps, payload) => {
           data: {
             name,
             animation: {
-              type: "live",
+              type: "update",
               tween,
             },
           },
@@ -211,7 +211,7 @@ export const handleFormActionClick = async (deps, payload) => {
             type: "animation",
             name,
             animation: {
-              type: "live",
+              type: "update",
               tween,
             },
           },
