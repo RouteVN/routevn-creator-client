@@ -2168,7 +2168,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.6.1",
+ "socket2 0.5.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -3799,7 +3799,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash",
  "rustls",
- "socket2 0.6.1",
+ "socket2 0.5.10",
  "thiserror 2.0.17",
  "tokio",
  "tracing",
@@ -3836,7 +3836,7 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
- "socket2 0.6.1",
+ "socket2 0.5.10",
  "tracing",
  "windows-sys 0.60.2",
 ]
@@ -5415,7 +5415,8 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-sql"
-version = "2.3.1-rc1"
+version = "2.3.2-patched.1"
+source = "git+https://github.com/han4wluc/plugins-workspace.git?rev=4f9cdc691a68655688caf8d82f6c510cea793ce2#4f9cdc691a68655688caf8d82f6c510cea793ce2"
 dependencies = [
  "futures-core",
  "indexmap 2.12.0",
@@ -5425,6 +5426,7 @@ dependencies = [
  "sqlx",
  "tauri",
  "tauri-plugin",
+ "tauri-plugin-fs",
  "thiserror 2.0.17",
  "time",
  "tokio",
