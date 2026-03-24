@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
 import {
+  applyCommandToRepositoryState,
+  initialProjectData,
   createRepositoryCommandEvent,
   repositoryEventToCommand,
 } from "../src/deps/services/shared/projectRepository.js";
+import { createCommandApiShared } from "../src/deps/services/shared/commandApi/shared.js";
+import { createMediaResourceCommandApi } from "../src/deps/services/shared/commandApi/resources/media.js";
 import {
   mainScenePartitionFor,
   scenePartitionFor,
@@ -171,6 +175,101 @@ const createRepositoryEvent = ({
     repositoryEvent.projectId,
   );
   assert.deepEqual(roundTrippedRepositoryEvent.meta, { clientTs: 4321 });
+}
+
+{
+  const uploadProjectId = "project-image-upload-001";
+  let repositoryState = structuredClone(initialProjectData);
+
+  const repository = {
+    getState: () => structuredClone(repositoryState),
+    async addEvent(repositoryEvent) {
+      const command = repositoryEventToCommand(repositoryEvent);
+      const applyResult = applyCommandToRepositoryState({
+        repositoryState,
+        command,
+        projectId: uploadProjectId,
+      });
+      if (applyResult.valid === false) {
+        throw new Error(applyResult.error?.message || "Failed to add event");
+      }
+      repositoryState = applyResult.repositoryState;
+    },
+  };
+
+  let projectedState = structuredClone(repositoryState);
+  const actor = {
+    userId: `local-${uploadProjectId}`,
+    clientId: "local-client",
+  };
+
+  const session = {
+    getActor: () => actor,
+    syncProjectedRepositoryState(nextState) {
+      projectedState = structuredClone(nextState);
+    },
+    async submitCommand(command) {
+      const applyResult = applyCommandToRepositoryState({
+        repositoryState: projectedState,
+        command,
+        projectId: uploadProjectId,
+      });
+      if (applyResult.valid === false) {
+        return applyResult;
+      }
+      projectedState = applyResult.repositoryState;
+      return { valid: true };
+    },
+  };
+
+  const shared = createCommandApiShared({
+    idGenerator: (() => {
+      let counter = 0;
+      return () => `cmd-${++counter}`;
+    })(),
+    now: (() => {
+      let timestamp = 1000;
+      return () => ++timestamp;
+    })(),
+    getCurrentProjectId: () => uploadProjectId,
+    getCurrentRepository: async () => repository,
+    getCachedRepository: () => repository,
+    ensureCommandSessionForProject: async () => session,
+    getOrCreateLocalActor: () => actor,
+    storyBasePartitionFor: () => "m",
+    storyScenePartitionFor: () => "m",
+    scenePartitionFor: () => "m",
+    resourceTypePartitionFor: () => "m",
+  });
+
+  const mediaApi = createMediaResourceCommandApi(shared);
+  const createdImageId = await mediaApi.createImage({
+    imageId: "image-1",
+    fileRecords: [
+      {
+        id: "file-1",
+        mimeType: "image/png",
+        size: 123,
+        sha256: "sha256-1",
+      },
+    ],
+    data: {
+      type: "image",
+      fileId: "file-1",
+      thumbnailFileId: "file-1",
+      name: "Uploaded Image",
+      fileType: "image/png",
+      fileSize: 123,
+      width: 64,
+      height: 64,
+    },
+    parentId: null,
+    position: "last",
+  });
+
+  assert.equal(createdImageId, "image-1");
+  assert.ok(repositoryState.files.items["file-1"]);
+  assert.ok(repositoryState.images.items["image-1"]);
 }
 
 {
