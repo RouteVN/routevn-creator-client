@@ -328,12 +328,6 @@ const createProjectDataWithSelectedEntryPoint = (projectData, selection) => {
     const sanitized = sanitizeProjectDataForRouteEngine(
       projectDataWithSelection,
     );
-    if (sanitized.didSanitize) {
-      console.warn(
-        "[sceneEditor] Sanitized RouteEngine projectData",
-        sanitized.changes,
-      );
-    }
     return sanitized.projectData;
   }
 
@@ -351,12 +345,6 @@ const createProjectDataWithSelectedEntryPoint = (projectData, selection) => {
   const sanitized = sanitizeProjectDataForRouteEngine(
     stripSelectedLinePreviewNavigation(projectDataWithSelection, selection),
   );
-  if (sanitized.didSanitize) {
-    console.warn(
-      "[sceneEditor] Sanitized RouteEngine projectData",
-      sanitized.changes,
-    );
-  }
   return sanitized.projectData;
 };
 

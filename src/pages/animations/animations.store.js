@@ -369,7 +369,7 @@ const defaultInitialValuesByProperty = {
 
 const getAnimationTween = (item = {}) => {
   if (
-    item?.animation?.type === "update" &&
+    (item?.animation?.type === "live" || item?.animation?.type === "update") &&
     item.animation.tween &&
     typeof item.animation.tween === "object"
   ) {
@@ -734,7 +734,7 @@ const createAnimationRenderState = (properties, includeAnimations = true) => {
       animations.push({
         id: `animation-${property}`,
         targetId: "preview-element",
-        type: "update",
+        type: "live",
         tween,
       });
     }

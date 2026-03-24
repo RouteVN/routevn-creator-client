@@ -537,8 +537,16 @@ const constructAnimationResources = (repositoryAnimations = {}) => {
         return result;
       }
 
+      const animation =
+        item.animation.type === "update"
+          ? {
+              ...structuredClone(item.animation),
+              type: "live",
+            }
+          : structuredClone(item.animation);
+
       result[animationId] = {
-        animation: structuredClone(item.animation),
+        animation,
       };
       return result;
     },
