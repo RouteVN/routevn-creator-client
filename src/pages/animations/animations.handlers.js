@@ -190,7 +190,7 @@ export const handleFormActionClick = async (deps, payload) => {
           data: {
             name,
             animation: {
-              type: "update",
+              type: "live",
               tween,
             },
           },
@@ -211,7 +211,7 @@ export const handleFormActionClick = async (deps, payload) => {
             type: "animation",
             name,
             animation: {
-              type: "update",
+              type: "live",
               tween,
             },
           },

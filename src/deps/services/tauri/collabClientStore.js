@@ -1,6 +1,7 @@
 import { join } from "@tauri-apps/api/path";
 import Database from "@tauri-apps/plugin-sql";
 import { createLibsqlClientStore } from "insieme/client";
+import { Subject, asyncScheduler, throttleTime } from "rxjs";
 
 export const PROJECT_DB_NAME = "project.db";
 
@@ -10,6 +11,7 @@ const storePromisesByDbPath = new Map();
 const SQL_BYTES_TYPE_KEY = "__routevn_sql_type";
 const SQL_BYTES_TYPE_VALUE = "bytes";
 const SQL_BYTES_DATA_KEY = "data";
+const WAL_CHECKPOINT_THROTTLE_MS = 20000;
 
 const isReadQuery = (sql) => {
   const normalized = String(sql ?? "")
@@ -301,6 +303,51 @@ export const createPersistedTauriProjectStore = async ({
       db.select(sql, Array.isArray(args) ? args : []);
     const runExecute = (sql, args = []) =>
       db.execute(sql, Array.isArray(args) ? args : []);
+    let walDirty = false;
+    let storeClosed = false;
+    const walCheckpointRequests = new Subject();
+
+    const checkpointWal = async (mode = "PASSIVE") => {
+      const checkpointMode = mode === "TRUNCATE" ? "TRUNCATE" : "PASSIVE";
+      await runSelect(`PRAGMA wal_checkpoint(${checkpointMode})`);
+      walDirty = false;
+    };
+
+    const schedulePassiveWalCheckpoint = () => {
+      if (storeClosed) {
+        return;
+      }
+      walDirty = true;
+      walCheckpointRequests.next();
+    };
+
+    const queueWriteOperation = async (operation) =>
+      queueStoreOperation(async () => {
+        const result = await operation();
+        schedulePassiveWalCheckpoint();
+        return result;
+      });
+
+    const walCheckpointSubscription = walCheckpointRequests
+      .pipe(
+        throttleTime(WAL_CHECKPOINT_THROTTLE_MS, asyncScheduler, {
+          leading: false,
+          trailing: true,
+        }),
+      )
+      .subscribe(() => {
+        if (storeClosed) {
+          return;
+        }
+        void queueStoreOperation(async () => {
+          if (storeClosed || !walDirty) {
+            return;
+          }
+          await checkpointWal("PASSIVE");
+        }).catch((error) => {
+          console.warn("Failed to checkpoint SQLite WAL:", error);
+        });
+      });
 
     const store = createLibsqlClientStore(
       createLibsqlLikeClient({
@@ -309,6 +356,10 @@ export const createPersistedTauriProjectStore = async ({
       }),
       {
         materializedViews,
+        applyPragmas: true,
+        journalMode: "WAL",
+        synchronous: "FULL",
+        busyTimeoutMs: 5000,
       },
     );
 
@@ -326,11 +377,11 @@ export const createPersistedTauriProjectStore = async ({
       },
 
       async insertDraft(payload) {
-        return queueStoreOperation(() => store.insertDraft(payload));
+        return queueWriteOperation(() => store.insertDraft(payload));
       },
 
       async insertDrafts(items) {
-        return queueStoreOperation(() => store.insertDrafts(items));
+        return queueWriteOperation(() => store.insertDrafts(items));
       },
 
       async loadDraftsOrdered() {
@@ -338,11 +389,11 @@ export const createPersistedTauriProjectStore = async ({
       },
 
       async applySubmitResult(payload) {
-        return queueStoreOperation(() => store.applySubmitResult(payload));
+        return queueWriteOperation(() => store.applySubmitResult(payload));
       },
 
       async applyCommittedBatch(payload) {
-        return queueStoreOperation(() => store.applyCommittedBatch(payload));
+        return queueWriteOperation(() => store.applyCommittedBatch(payload));
       },
 
       async loadMaterializedView(payload) {
@@ -360,7 +411,13 @@ export const createPersistedTauriProjectStore = async ({
       },
 
       async flushMaterializedViews() {
-        return queueStoreOperation(() => store.flushMaterializedViews());
+        return queueStoreOperation(async () => {
+          const result = await store.flushMaterializedViews();
+          if (walDirty) {
+            await checkpointWal("PASSIVE");
+          }
+          return result;
+        });
       },
 
       async getEvents(payload = {}) {
@@ -380,7 +437,7 @@ export const createPersistedTauriProjectStore = async ({
       async appendEvent() {},
 
       async clearEvents() {
-        await queueStoreOperation(async () => {
+        await queueWriteOperation(async () => {
           await runExecute("DELETE FROM committed_events");
           await runExecute("DELETE FROM local_drafts");
         });
@@ -437,7 +494,7 @@ export const createPersistedTauriProjectStore = async ({
         value,
         updatedAt,
       }) {
-        await queueStoreOperation(() =>
+        await queueWriteOperation(() =>
           runExecute(
             `INSERT OR REPLACE INTO ${MATERIALIZED_VIEW_TABLE}
            (view_name, partition, view_version, last_committed_id, value, updated_at)
@@ -455,7 +512,7 @@ export const createPersistedTauriProjectStore = async ({
       },
 
       async deleteMaterializedViewCheckpoint({ viewName, partition }) {
-        await queueStoreOperation(() =>
+        await queueWriteOperation(() =>
           runExecute(
             `DELETE FROM ${MATERIALIZED_VIEW_TABLE}
            WHERE view_name = $1 AND partition = $2`,
@@ -465,7 +522,7 @@ export const createPersistedTauriProjectStore = async ({
       },
 
       async clearMaterializedViewCheckpoints() {
-        await queueStoreOperation(() =>
+        await queueWriteOperation(() =>
           runExecute(`DELETE FROM ${MATERIALIZED_VIEW_TABLE}`),
         );
       },
@@ -483,7 +540,7 @@ export const createPersistedTauriProjectStore = async ({
         },
 
         set: async (key, value) => {
-          await queueStoreOperation(() =>
+          await queueWriteOperation(() =>
             runExecute(
               `INSERT OR REPLACE INTO ${APP_STATE_TABLE} (key, value) VALUES ($1, $2)`,
               [key, JSON.stringify(value)],
@@ -492,7 +549,7 @@ export const createPersistedTauriProjectStore = async ({
         },
 
         remove: async (key) => {
-          await queueStoreOperation(() =>
+          await queueWriteOperation(() =>
             runExecute(`DELETE FROM ${APP_STATE_TABLE} WHERE key = $1`, [key]),
           );
         },
@@ -509,6 +566,13 @@ export const createPersistedTauriProjectStore = async ({
 
       async close() {
         storePromisesByDbPath.delete(dbPath);
+        storeClosed = true;
+        walCheckpointSubscription.unsubscribe();
+        walCheckpointRequests.complete();
+        await queueStoreOperation(async () => {
+          await store.flushMaterializedViews();
+          await checkpointWal("TRUNCATE");
+        });
         await db.close();
       },
     };
