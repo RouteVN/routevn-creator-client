@@ -9,6 +9,43 @@ use tauri::{
 };
 
 const PROJECT_FILE_REQUEST_BASE: &str = "http://project-file.localhost";
+const MEDIA_MIME_BY_EXTENSION: &[(&str, &str)] = &[
+    (".apng", "image/apng"),
+    (".png", "image/png"),
+    (".jpg", "image/jpeg"),
+    (".jpeg", "image/jpeg"),
+    (".jpe", "image/jpeg"),
+    (".webp", "image/webp"),
+    (".avif", "image/avif"),
+    (".gif", "image/gif"),
+    (".bmp", "image/bmp"),
+    (".ico", "image/x-icon"),
+    (".cur", "image/x-icon"),
+    (".svg", "image/svg+xml"),
+    (".tif", "image/tiff"),
+    (".tiff", "image/tiff"),
+    (".heic", "image/heic"),
+    (".heif", "image/heif"),
+    (".jxl", "image/jxl"),
+    (".mp4", "video/mp4"),
+    (".m4v", "video/x-m4v"),
+    (".webm", "video/webm"),
+    (".ogv", "video/ogg"),
+    (".ogg", "video/ogg"),
+    (".mov", "video/quicktime"),
+    (".qt", "video/quicktime"),
+    (".avi", "video/x-msvideo"),
+    (".wmv", "video/x-ms-wmv"),
+    (".mpg", "video/mpeg"),
+    (".mpeg", "video/mpeg"),
+    (".m2v", "video/mpeg"),
+    (".ts", "video/mp2t"),
+    (".mts", "video/mp2t"),
+    (".m2ts", "video/mp2t"),
+    (".3gp", "video/3gpp"),
+    (".3g2", "video/3gpp2"),
+    (".mkv", "video/x-matroska"),
+];
 
 fn build_error_response(status: StatusCode, message: &str) -> Response<Vec<u8>> {
     Response::builder()
@@ -22,39 +59,11 @@ fn build_error_response(status: StatusCode, message: &str) -> Response<Vec<u8>> 
 }
 
 fn get_media_mime_from_request_path(path: &str) -> Option<&'static str> {
-    if path.ends_with(".png") {
-        return Some("image/png");
-    }
+    let normalized_path = path.to_ascii_lowercase();
 
-    if path.ends_with(".jpg") || path.ends_with(".jpeg") {
-        return Some("image/jpeg");
-    }
-
-    if path.ends_with(".webp") {
-        return Some("image/webp");
-    }
-
-    if path.ends_with(".avif") {
-        return Some("image/avif");
-    }
-
-    if path.ends_with(".mp4") {
-        return Some("video/mp4");
-    }
-
-    if path.ends_with(".webm") {
-        return Some("video/webm");
-    }
-
-    if path.ends_with(".ogv") || path.ends_with(".ogg") {
-        return Some("video/ogg");
-    }
-
-    if path.ends_with(".mov") {
-        return Some("video/quicktime");
-    }
-
-    None
+    MEDIA_MIME_BY_EXTENSION
+        .iter()
+        .find_map(|(extension, mime)| normalized_path.ends_with(extension).then_some(*mime))
 }
 
 fn is_allowed_project_file_path(path: &str) -> bool {
