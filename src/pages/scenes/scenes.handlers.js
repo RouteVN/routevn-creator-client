@@ -4,6 +4,7 @@ import {
   matchesRemoteTargets,
 } from "../../internal/ui/collabRefresh.js";
 import { createScenesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { toFlatItems } from "../../internal/project/tree.js";
 import {
   SCENE_BOX_HEIGHT,
   SCENE_BOX_VIEWPORT_PADDING,
@@ -213,6 +214,43 @@ const getSceneItemById = ({ store, sceneId } = {}) => {
     return undefined;
   }
   return sceneItem;
+};
+
+const resolveSceneFormDefaultValues = ({ store } = {}) => {
+  const scenesData = store.selectScenesData() ?? { tree: [], items: {} };
+  const defaultFolderId = toFlatItems(scenesData).find(
+    (item) => item.type === "folder",
+  )?.id;
+
+  return {
+    name: "",
+    folderId: defaultFolderId,
+  };
+};
+
+const openSceneForm = ({
+  deps,
+  formPosition,
+  whiteboardPosition,
+  isWaitingForTransform = false,
+} = {}) => {
+  const { store, render, refs } = deps;
+  const sceneFormValues = resolveSceneFormDefaultValues({ store });
+
+  store.setSceneFormData({ data: sceneFormValues });
+  store.setSceneFormPosition({
+    position: formPosition,
+  });
+  store.setSceneWhiteboardPosition({
+    position: whiteboardPosition,
+  });
+  store.setWaitingForTransform({ isWaiting: isWaitingForTransform });
+  store.setShowSceneForm({ show: true });
+  render();
+
+  const { sceneForm } = refs;
+  sceneForm.reset();
+  sceneForm.setValues({ values: sceneFormValues });
 };
 
 const syncScenesState = async ({ store, projectService } = {}) => {
@@ -465,45 +503,28 @@ export const handleAddSceneClick = (deps) => {
 };
 
 export const handleWhiteboardClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { store } = deps;
   const isWaitingForTransform = store.selectIsWaitingForTransform();
 
   if (isWaitingForTransform) {
     // Get click position relative to whiteboard
     const { formX, formY, whiteboardX, whiteboardY } = payload._event.detail;
-
-    // Reset form data
-    store.setSceneFormData({ data: { name: "", folderId: "_root" } });
-
-    // Show the form at the clicked position
-    store.setSceneFormPosition({
-      position: { x: formX, y: formY },
+    openSceneForm({
+      deps,
+      formPosition: { x: formX, y: formY },
+      whiteboardPosition: { x: whiteboardX, y: whiteboardY },
+      isWaitingForTransform: false,
     });
-    store.setSceneWhiteboardPosition({
-      position: { x: whiteboardX, y: whiteboardY },
-    });
-    store.setWaitingForTransform({ isWaiting: false });
-    store.setShowSceneForm({ show: true });
-    render();
   }
 };
 
 export const handleWhiteboardCanvasContextMenu = (deps, payload) => {
-  const { store, render } = deps;
   const { formX, formY, whiteboardX, whiteboardY } = payload._event.detail;
-
-  // Reset form data
-  store.setSceneFormData({ data: { name: "", folderId: "_root" } });
-
-  // Show the form at the right-clicked position
-  store.setSceneFormPosition({
-    position: { x: formX, y: formY },
+  openSceneForm({
+    deps,
+    formPosition: { x: formX, y: formY },
+    whiteboardPosition: { x: whiteboardX, y: whiteboardY },
   });
-  store.setSceneWhiteboardPosition({
-    position: { x: whiteboardX, y: whiteboardY },
-  });
-  store.setShowSceneForm({ show: true });
-  render();
 };
 
 export const handleSceneFormClose = (deps) => {
@@ -520,6 +541,10 @@ export const handleSceneFormAction = async (deps, payload) => {
     store.resetSceneForm();
     render();
   } else if (actionId === "submit") {
+    if (!store.getState().showSceneForm) {
+      return;
+    }
+
     const sceneWhiteboardPosition = store.selectSceneWhiteboardPosition() || {
       x: 0,
       y: 0,
@@ -527,6 +552,9 @@ export const handleSceneFormAction = async (deps, payload) => {
 
     // Get form values from the event detail (same pattern as text styles)
     const formData = payload._event.detail.values;
+
+    store.resetSceneForm();
+    render();
 
     // Use a simple ID generator instead of nanoid
     const newSceneId = `scene-${Date.now()}-${Math.random()
@@ -585,49 +613,56 @@ export const handleSceneFormAction = async (deps, payload) => {
       };
     }
 
-    await projectService.createSceneItem({
-      sceneId: newSceneId,
-      parentId: formData.folderId || null,
-      position: "last",
-      data: {
-        name: formData.name || `Scene ${new Date().toLocaleTimeString()}`,
-        position: {
+    try {
+      await projectService.createSceneItem({
+        sceneId: newSceneId,
+        parentId: formData.folderId || null,
+        position: "last",
+        data: {
+          name: formData.name || `Scene ${new Date().toLocaleTimeString()}`,
+          position: {
+            x: sceneWhiteboardPosition.x,
+            y: sceneWhiteboardPosition.y,
+          },
+        },
+      });
+      await projectService.createSectionItem({
+        sceneId: newSceneId,
+        sectionId,
+        position: "last",
+        data: {
+          name: "Section New",
+        },
+      });
+      await projectService.createLineItem({
+        sectionId,
+        lineId: stepId,
+        data: {
+          actions,
+        },
+        position: "last",
+      });
+
+      // Add to whiteboard items for visual display
+      store.addWhiteboardItem({
+        newItem: {
+          id: newSceneId,
+          name: formData.name,
           x: sceneWhiteboardPosition.x,
           y: sceneWhiteboardPosition.y,
         },
-      },
-    });
-    await projectService.createSectionItem({
-      sceneId: newSceneId,
-      sectionId,
-      position: "last",
-      data: {
-        name: "Section New",
-      },
-    });
-    await projectService.createLineItem({
-      sectionId,
-      lineId: stepId,
-      data: {
-        actions,
-      },
-      position: "last",
-    });
+      });
+      dismissMapAddHint({ store, appService });
 
-    // Add to whiteboard items for visual display
-    store.addWhiteboardItem({
-      newItem: {
-        id: newSceneId,
-        name: formData.name,
-        x: sceneWhiteboardPosition.x,
-        y: sceneWhiteboardPosition.y,
-      },
-    });
-    dismissMapAddHint({ store, appService });
-
-    // Reset form
-    store.resetSceneForm();
-    await refreshScenesData(deps);
+      await refreshScenesData(deps);
+      render();
+    } catch (error) {
+      appService.showToast(
+        getProjectErrorMessage(error, "Failed to create scene."),
+      );
+      await refreshScenesData(deps);
+      render();
+    }
   }
 };
 

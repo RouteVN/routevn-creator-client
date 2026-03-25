@@ -183,8 +183,21 @@ const RESOURCE_FILE_EXPLORER_API = Object.freeze({
   },
 });
 
+const getDeletionBlockedMessage = ({ itemType, reason } = {}) => {
+  if (reason === "minimum-text-style") {
+    return "At least one text style must remain.";
+  }
+
+  if (reason === "in-use") {
+    return itemType === "folder"
+      ? "Cannot delete folder. There are items in use."
+      : "Cannot delete resource, it is currently in use.";
+  }
+
+  return "Failed to delete resource.";
+};
+
 const validateResourceDeletion = async ({
-  appService,
   projectService,
   resourceType,
   currentItem,
@@ -192,6 +205,46 @@ const validateResourceDeletion = async ({
 }) => {
   const state = projectService.getState();
   const currentItemType = currentItem?.type;
+  const collection = state?.[resourceType];
+
+  if (currentItemType === "folder") {
+    const descendantIds = [];
+    const pendingParentIds = [itemId];
+
+    while (pendingParentIds.length > 0) {
+      const parentId = pendingParentIds.shift();
+
+      for (const [childId, childItem] of Object.entries(
+        collection?.items ?? {},
+      )) {
+        if (childItem?.parentId !== parentId) {
+          continue;
+        }
+
+        descendantIds.push(childId);
+        pendingParentIds.push(childId);
+      }
+    }
+
+    for (const descendantId of descendantIds) {
+      const descendantItem = collection?.items?.[descendantId];
+      if (!descendantItem || descendantItem.type === "folder") {
+        continue;
+      }
+
+      const descendantDeletion = await validateResourceDeletion({
+        projectService,
+        resourceType,
+        currentItem: descendantItem,
+        itemId: descendantId,
+      });
+      if (!descendantDeletion.canDelete) {
+        return descendantDeletion;
+      }
+    }
+
+    return { canDelete: true };
+  }
 
   if (currentItemType === "character") {
     if (currentItem?.sprites?.items) {
@@ -203,10 +256,7 @@ const validateResourceDeletion = async ({
         });
 
         if (usage.isUsed) {
-          appService.showToast(
-            "Cannot delete resource, it is currently in use.",
-          );
-          return false;
+          return { canDelete: false, reason: "in-use" };
         }
       }
     }
@@ -216,8 +266,7 @@ const validateResourceDeletion = async ({
     const textStyleCount = getTextStyleCount(state.textStyles);
     const removalCount = getTextStyleRemovalCount(state.textStyles, itemId);
     if (textStyleCount - removalCount < 1) {
-      appService.showToast("At least one text style must remain.");
-      return false;
+      return { canDelete: false, reason: "minimum-text-style" };
     }
   }
 
@@ -237,11 +286,10 @@ const validateResourceDeletion = async ({
   });
 
   if (usage.isUsed) {
-    appService.showToast("Cannot delete resource, it is currently in use.");
-    return false;
+    return { canDelete: false, reason: "in-use" };
   }
 
-  return true;
+  return { canDelete: true };
 };
 
 export const createResourceFileExplorerHandlers = ({
@@ -302,20 +350,29 @@ export const createResourceFileExplorerHandlers = ({
           return;
         }
 
-        const canDelete = await validateResourceDeletion({
-          appService,
+        const deleteValidation = await validateResourceDeletion({
           projectService,
           resourceType,
           currentItem,
           itemId,
         });
-        if (!canDelete) {
+        if (!deleteValidation.canDelete) {
+          appService.showToast(
+            getDeletionBlockedMessage({
+              itemType: currentItem?.type,
+              reason: deleteValidation.reason,
+            }),
+          );
           return;
         }
 
-        await projectService[resourceApi.deleteMethod]({
+        const deleteResult = await projectService[resourceApi.deleteMethod]({
           [resourceApi.deleteField]: [itemId],
         });
+        if (deleteResult?.valid === false) {
+          appService.showToast("Failed to delete resource.");
+          return;
+        }
       } else if (
         action &&
         typeof action === "object" &&

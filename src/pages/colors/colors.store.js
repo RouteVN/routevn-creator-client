@@ -29,7 +29,7 @@ const editForm = {
     {
       name: "hex",
       type: "color-picker",
-      label: "Hex Value",
+      label: "Color",
       required: true,
     },
   ],
@@ -57,7 +57,7 @@ const addForm = {
     {
       name: "hex",
       type: "color-picker",
-      label: "Hex Value",
+      label: "Color",
       required: true,
     },
   ],

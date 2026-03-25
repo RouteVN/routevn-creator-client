@@ -363,7 +363,7 @@ export const handleBeforeMount = (deps) => {
     await flushSceneEditorDrafts(deps);
     const repository = await projectService.getRepository().catch(() => null);
     await repository?.clearActiveSceneId?.();
-    resetSceneEditorRuntime(deps);
+    await resetSceneEditorRuntime(deps);
   };
 };
 

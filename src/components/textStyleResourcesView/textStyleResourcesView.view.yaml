@@ -53,7 +53,7 @@ template:
                                   - $for item, itemIndex in group.children:
                                       - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} w=360 cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md:
                                           - rtgl-view p=md g=md w=f br=md:
-                                              - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} lineHeight=${item.lineHeight} color=${item.color} fontWeight=${item.fontWeight} width=${previewWidth} height=96 showBorder=false: null
+                                              - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} lineHeight=${item.lineHeight} color=${item.color} strokeColor=${item.strokeColor} strokeWidth=${item.strokeWidth} fontWeight=${item.fontWeight} width=${previewWidth} height=96 showBorder=false: null
                                               - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                 $else:
                                   - rtgl-view#addBtnEmptyRef${gIndex} data-group-id=${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=pointer:

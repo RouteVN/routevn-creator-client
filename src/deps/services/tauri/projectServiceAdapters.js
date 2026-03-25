@@ -28,6 +28,21 @@ const normalizeProjectInfo = (projectInfo = {}) => ({
   iconFileId: projectInfo.iconFileId ?? null,
 });
 
+const getNow = () => {
+  if (
+    typeof performance !== "undefined" &&
+    typeof performance.now === "function"
+  ) {
+    return performance.now();
+  }
+
+  return Date.now();
+};
+
+const getDurationMs = (startedAt) => Number((getNow() - startedAt).toFixed(2));
+
+const isAudioUploadFile = (file) => file?.type?.startsWith("audio/");
+
 async function copyTemplateFiles(templateId, targetPath) {
   const templateFilesPath = `/templates/${templateId}/files/`;
   const filesToCopy = await getTemplateFiles(templateId);
@@ -130,20 +145,58 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
   const fileAdapter = {
     continueOnUploadError: false,
 
-    storeFile: async ({ file, idGenerator, getCurrentReference }) => {
+    storeFile: async ({ file, bytes, idGenerator, getCurrentReference }) => {
       const reference = getCurrentReference();
       const fileId = idGenerator();
-      const arrayBuffer = await file.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
+      const totalStartedAt = getNow();
+      let uint8ArrayDurationMs = 0;
+      let writeFileDurationMs = 0;
 
-      const filesPath = await join(reference.projectPath, "files");
-      const filePath = await join(filesPath, fileId);
-      await writeFile(filePath, uint8Array);
+      try {
+        const arrayBuffer = bytes ?? (await file.arrayBuffer());
 
-      return {
-        fileId,
-        downloadUrl: convertFileSrc(filePath),
-      };
+        const uint8ArrayStartedAt = getNow();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        uint8ArrayDurationMs = getDurationMs(uint8ArrayStartedAt);
+
+        const filesPath = await join(reference.projectPath, "files");
+        const filePath = await join(filesPath, fileId);
+
+        const writeFileStartedAt = getNow();
+        await writeFile(filePath, uint8Array);
+        writeFileDurationMs = getDurationMs(writeFileStartedAt);
+
+        if (isAudioUploadFile(file)) {
+          console.info("[audioUpload.store.tauri] complete", {
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+            usedPreloadedBytes: bytes !== undefined,
+            uint8ArrayDurationMs,
+            writeFileDurationMs,
+            totalDurationMs: getDurationMs(totalStartedAt),
+          });
+        }
+
+        return {
+          fileId,
+          downloadUrl: convertFileSrc(filePath),
+        };
+      } catch (error) {
+        if (isAudioUploadFile(file)) {
+          console.warn("[audioUpload.store.tauri] failed", {
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+            usedPreloadedBytes: bytes !== undefined,
+            uint8ArrayDurationMs,
+            writeFileDurationMs,
+            totalDurationMs: getDurationMs(totalStartedAt),
+            error: error?.message ?? "Unknown error",
+          });
+        }
+        throw error;
+      }
     },
 
     getFileContent: async ({ fileId, getCurrentReference }) => {

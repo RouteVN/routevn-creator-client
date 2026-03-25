@@ -121,7 +121,7 @@ template:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
       - rtgl-popover#sceneFormPopover ?open=${showSceneForm} x=${sceneFormPosition.x} y=${sceneFormPosition.y}:
-          - rtgl-form#sceneForm key=${showSceneForm} slot=content :form=sceneFormFields w=320: null
+          - rtgl-form#sceneForm key=${sceneFormKey} slot=content :defaultValues=sceneFormData :form=sceneFormFields w=320: null
       - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
           - rtgl-view slot=content g=md:
               - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=editDefaultValues :form=editForm w=f: null

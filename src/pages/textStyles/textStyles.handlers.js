@@ -91,15 +91,30 @@ const buildTextStyleData = ({
   fontStyle,
   fontWeight,
   previewText,
-} = {}) => ({
-  name,
-  fontSize: Number(fontSize ?? 16),
-  lineHeight: Number(lineHeight ?? 1.5),
-  colorId: fontColor,
-  fontId: fontStyle,
-  fontWeight: String(fontWeight ?? "400"),
-  previewText: previewText ?? "",
-});
+  strokeColor,
+  strokeWidth,
+  clearOutlineColor = false,
+} = {}) => {
+  const hasStrokeColor = Boolean(strokeColor);
+  const textStyleData = {
+    name,
+    fontSize: Number(fontSize ?? 16),
+    lineHeight: Number(lineHeight ?? 1.5),
+    colorId: fontColor,
+    fontId: fontStyle,
+    fontWeight: String(fontWeight ?? "400"),
+    previewText: previewText ?? "",
+    strokeWidth: hasStrokeColor ? Number(strokeWidth ?? 0) : 0,
+  };
+
+  if (hasStrokeColor) {
+    textStyleData.strokeColorId = strokeColor;
+  } else if (clearOutlineColor) {
+    textStyleData.strokeColorId = undefined;
+  }
+
+  return textStyleData;
+};
 
 const handleTextStyleCreated = async (deps, payload) => {
   const { appService, projectService } = deps;
@@ -112,6 +127,8 @@ const handleTextStyleCreated = async (deps, payload) => {
     fontStyle,
     fontWeight,
     previewText,
+    strokeColor,
+    strokeWidth,
   } = payload._event.detail;
 
   const createAttempt = await runResourcePageMutation({
@@ -130,6 +147,8 @@ const handleTextStyleCreated = async (deps, payload) => {
             fontStyle,
             fontWeight,
             previewText,
+            strokeColor,
+            strokeWidth,
           }),
         },
         parentId: groupId,
@@ -156,6 +175,8 @@ const handleTextStyleUpdated = async (deps, payload) => {
     fontStyle,
     fontWeight,
     previewText,
+    strokeColor,
+    strokeWidth,
   } = payload._event.detail;
 
   const updateAttempt = await runResourcePageMutation({
@@ -172,6 +193,9 @@ const handleTextStyleUpdated = async (deps, payload) => {
           fontStyle,
           fontWeight,
           previewText,
+          strokeColor,
+          strokeWidth,
+          clearOutlineColor: true,
         }),
       }),
   });
@@ -235,9 +259,18 @@ export const handleTextStyleItemDoubleClick = (deps, payload) => {
 
 export const handleDialogFormChange = (deps, payload) => {
   const { store, render } = deps;
+  const { name, value, values } = payload._event.detail;
+
+  const formData = {
+    ...values,
+  };
+
+  if (name) {
+    formData[name] = value ?? "";
+  }
 
   // Update form values for preview
-  store.updateFormValues({ formData: payload._event.detail.values });
+  store.updateFormValues({ formData });
   render();
 };
 
@@ -260,7 +293,8 @@ export const handleFormActionClick = async (deps, payload) => {
   // Handle add option for color selector
   if (
     actionId === "select-options-add" &&
-    payload._event.detail.name === "fontColor"
+    (payload._event.detail.name === "fontColor" ||
+      payload._event.detail.name === "strokeColor")
   ) {
     // Open the add color dialog
     store.openAddColorDialog();
@@ -309,6 +343,17 @@ export const handleFormActionClick = async (deps, payload) => {
       return;
     }
 
+    const strokeWidth = Number(formData.strokeWidth ?? 0);
+    if (Number.isNaN(strokeWidth) || strokeWidth < 0) {
+      appService.showToast(
+        "Please enter a valid outline thickness (0 or greater)",
+        {
+          title: "Warning",
+        },
+      );
+      return;
+    }
+
     let submitResult;
 
     if (editMode && editingItemId) {
@@ -324,6 +369,8 @@ export const handleFormActionClick = async (deps, payload) => {
             fontStyle: formData.fontStyle,
             fontWeight: formData.fontWeight,
             previewText: formData.previewText,
+            strokeColor: formData.strokeColor,
+            strokeWidth: formData.strokeWidth,
           },
         },
       });
@@ -340,6 +387,8 @@ export const handleFormActionClick = async (deps, payload) => {
             fontStyle: formData.fontStyle,
             fontWeight: formData.fontWeight,
             previewText: formData.previewText,
+            strokeColor: formData.strokeColor,
+            strokeWidth: formData.strokeWidth,
           },
         },
       });

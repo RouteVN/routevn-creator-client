@@ -163,18 +163,27 @@ export const validateIconDimensions = async (file) => {
 };
 
 // Audio waveform extraction and processing utilities
-export const extractWaveformData = async (audioFile, samples = 1000) => {
+export const extractWaveformDataFromArrayBuffer = async (
+  arrayBuffer,
+  samples = 1000,
+) => {
+  let audioContext;
+
   try {
-    const audioContext = new (window.AudioContext ||
-      window.webkitAudioContext)();
-    const arrayBuffer = await audioFile.arrayBuffer();
-    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const audioBuffer = await audioContext.decodeAudioData(
+      arrayBuffer.slice(0),
+    );
 
     const channelData = audioBuffer.getChannelData(0);
-    const blockSize = Math.floor(channelData.length / samples);
+    const sampleCount = Math.max(
+      1,
+      Math.min(samples, channelData.length || samples),
+    );
+    const blockSize = Math.max(1, Math.floor(channelData.length / sampleCount));
     const waveformData = [];
 
-    for (let i = 0; i < samples; i++) {
+    for (let i = 0; i < sampleCount; i++) {
       const start = i * blockSize;
       const end = start + blockSize;
       let sum = 0;
@@ -188,9 +197,10 @@ export const extractWaveformData = async (audioFile, samples = 1000) => {
     }
 
     const maxAmplitude = Math.max(...waveformData);
-    const normalizedData = waveformData.map((value) => value / maxAmplitude);
-
-    audioContext.close();
+    const normalizedData =
+      maxAmplitude > 0
+        ? waveformData.map((value) => value / maxAmplitude)
+        : waveformData.map(() => 0);
 
     // Return waveform data structure
     // amplitudes: normalized amplitude values (0-1) for visualization
@@ -205,7 +215,18 @@ export const extractWaveformData = async (audioFile, samples = 1000) => {
     throw new Error(
       `Failed to decode audio file: ${error.message || "Unsupported format"}`,
     );
+  } finally {
+    try {
+      await audioContext?.close();
+    } catch {
+      // Ignore close errors from partially initialized contexts.
+    }
   }
+};
+
+export const extractWaveformData = async (audioFile, samples = 1000) => {
+  const arrayBuffer = await audioFile.arrayBuffer();
+  return extractWaveformDataFromArrayBuffer(arrayBuffer, samples);
 };
 
 // Video thumbnail extraction

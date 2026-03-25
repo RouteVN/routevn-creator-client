@@ -44,6 +44,12 @@ export const selectViewData = ({ props: attrs }) => {
   const height = attrs.height ? parseInt(attrs.height) : null;
   const textColor = attrs.color || "currentColor";
   const providedBackground = attrs.backgroundColor;
+  const strokeColor =
+    attrs.strokeColor === "undefined"
+      ? "transparent"
+      : attrs.strokeColor || "transparent";
+  const strokeWidth = Number.parseFloat(attrs.strokeWidth);
+  const resolvedStrokeWidth = Number.isFinite(strokeWidth) ? strokeWidth : 0;
 
   // Only use dynamic background if no background is explicitly provided
   const backgroundColor =
@@ -59,6 +65,8 @@ export const selectViewData = ({ props: attrs }) => {
     lineHeight: attrs.lineHeight || "1.5",
     fontWeight: attrs.fontWeight || "normal",
     color: textColor,
+    strokeColor,
+    strokeWidth: resolvedStrokeWidth,
     width: parseInt(attrs.width) || 200,
     height: height || 150,
     heightStyle: height ? `height: ${height}px;` : "height: 100%;",

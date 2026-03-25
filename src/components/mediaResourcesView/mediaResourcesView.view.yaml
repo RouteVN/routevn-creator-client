@@ -100,17 +100,24 @@ template:
                           - 'rtgl-view w=f d=h ph=sm pt=md pb=sm mb=lg wrap g=md style="min-width: 0;"':
                               - $if group.hasChildren:
                                   - $for item, itemIndex in group.children:
-                                      - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md:
+                                      - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.domItemId} cur=${item.cursor} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md:
                                           - $if item.cardKind == 'image':
                                               - 'rtgl-view p=md g=md br=md w=${maxWidth} pos=rel style="max-width: 100%;"':
-                                                  - rvn-file-image br=md w=f h=${imageHeight} fileId=${item.previewFileId} key=${item.previewFileId}-${imageHeight}x${maxWidth}: null
+                                                  - $if item.isProcessing:
+                                                      - rtgl-view w=f h=${imageHeight} br=md bw=xs bc=bo av=c ah=c:
+                                                          - rtgl-text s=sm c=mu-fg: Processing...
+                                                    $else:
+                                                      - rvn-file-image br=md w=f h=${imageHeight} fileId=${item.previewFileId} key=${item.previewFileId}-${imageHeight}x${maxWidth}: null
                                                   - $if item.showPreviewIcon:
                                                       - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; right: 6px; background-color: #000;"':
                                                           - rtgl-svg svg=zoomIn wh=22 c=white: null
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                             $elif item.cardKind == 'video':
                                               - 'rtgl-view p=md g=md br=md pos=rel':
-                                                  - $if item.thumbnailFileId:
+                                                  - $if item.isProcessing:
+                                                      - rtgl-view w=${mediaWidth} h=${mediaHeight} br=md bw=xs bc=bo av=c ah=c:
+                                                          - rtgl-text s=sm c=mu-fg: Processing...
+                                                    $elif item.thumbnailFileId:
                                                       - rvn-file-image br=md w=${mediaWidth} h=${mediaHeight} fileId=${item.thumbnailFileId}: null
                                                     $else:
                                                       - rtgl-view w=${mediaWidth} h=${mediaHeight} br=md bw=xs bc=bo av=c ah=c:
@@ -121,7 +128,12 @@ template:
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
                                             $elif item.cardKind == 'sound':
                                               - 'rtgl-view p=md g=md br=md pos=rel':
-                                                  - $if item.waveformDataFileId:
+                                                  - $if item.isProcessing:
+                                                      - rtgl-view g=md:
+                                                          - rtgl-view w=${mediaWidth} h=${mediaHeight} br=md bw=xs bc=bo av=c ah=c:
+                                                              - rtgl-text s=sm c=mu-fg: Processing...
+                                                          - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
+                                                    $elif item.waveformDataFileId:
                                                       - rtgl-view g=md:
                                                           - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} w=${mediaWidth} h=${mediaHeight}: null
                                                           - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
@@ -133,7 +145,11 @@ template:
                                                           - rtgl-svg svg=play wh=24 c=white: null
                                             $elif item.cardKind == 'font':
                                               - rtgl-view p=md g=md w=${mediaWidth} d=v br=md:
-                                                  - rvn-font-preview fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=60 width=${mediaWidth} height=${mediaHeight} av=c ah=c: null
+                                                  - $if item.isProcessing:
+                                                      - rtgl-view w=${mediaWidth} h=${mediaHeight} br=md bw=xs bc=bo av=c ah=c:
+                                                          - rtgl-text s=sm c=mu-fg: Processing...
+                                                    $else:
+                                                      - rvn-font-preview fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=60 width=${mediaWidth} height=${mediaHeight} av=c ah=c: null
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
                                             $else:
                                               - rtgl-view p=md g=md w=${mediaWidth} d=v br=md:

@@ -36,7 +36,7 @@ export const createInitialState = () => ({
   showSceneForm: false,
   sceneFormPosition: { x: 0, y: 0 },
   sceneWhiteboardPosition: { x: 0, y: 0 },
-  sceneFormData: { name: "", folderId: "_root" },
+  sceneFormData: { name: "", folderId: undefined },
   // Dropdown menu state
   dropdownMenu: {
     isOpen: false,
@@ -200,7 +200,7 @@ export const resetSceneForm = ({ state }, _payload = {}) => {
   state.showSceneForm = false;
   state.isWaitingForTransform = false;
   state.sceneFormPosition = { x: 0, y: 0 };
-  state.sceneFormData = { name: "", folderId: "_root" };
+  state.sceneFormData = { name: "", folderId: undefined };
 };
 
 // Dropdown menu functions
@@ -336,38 +336,57 @@ export const selectViewData = ({ state }, payload) => {
   }
 
   // Get folder options for form
-  const folderOptions = [
-    { id: "_root", name: "Root Folder" },
-    ...flatItems
-      .filter((item) => item.type === "folder")
-      .map((folder) => ({ id: folder.id, name: folder.name || folder.id })),
-  ];
+  const folderOptions = flatItems
+    .filter((item) => item.type === "folder")
+    .map((folder) => ({ id: folder.id, name: folder.name || folder.id }));
+  const defaultSceneFolderId = folderOptions[0]?.id;
+  const hasSelectedSceneFolder = folderOptions.some(
+    (folder) => folder.id === state.sceneFormData.folderId,
+  );
+  const sceneFormDefaultValues = {
+    name: state.sceneFormData.name ?? "",
+    folderId: hasSelectedSceneFolder
+      ? state.sceneFormData.folderId
+      : defaultSceneFolderId,
+  };
+  const sceneFormKey = `${state.showSceneForm}-${sceneFormDefaultValues.folderId ?? "none"}-${folderOptions.length}`;
 
   // Define form fields
+  const sceneFormFieldsList = [
+    {
+      name: "name",
+      type: "input-text",
+      label: "Scene Name",
+      description: "Enter the scene name",
+      required: true,
+    },
+  ];
+
+  if (folderOptions.length > 0) {
+    sceneFormFieldsList.push({
+      name: "folderId",
+      type: "select",
+      label: "Folder",
+      clearable: false,
+      options: folderOptions.map((option) => ({
+        value: option.id,
+        label: option.name,
+      })),
+      required: true,
+    });
+  }
+
   const sceneFormFields = {
     title: "Create New Scene",
-    fields: [
-      {
-        name: "name",
-        type: "input-text",
-        label: "Scene Name",
-        description: "Enter the scene name",
-        required: true,
-      },
-      {
-        name: "folderId",
-        type: "select",
-        label: "Folder",
-        options: folderOptions.map((option) => ({
-          value: option.id,
-          label: option.name,
-        })),
-        required: true,
-      },
-    ],
+    fields: sceneFormFieldsList,
     actions: {
       layout: "",
       buttons: [
+        {
+          id: "cancel",
+          variant: "se",
+          label: "Cancel",
+        },
         {
           id: "submit",
           variant: "pr",
@@ -422,8 +441,9 @@ export const selectViewData = ({ state }, payload) => {
     selectedSceneName,
     isWaitingForTransform: state.isWaitingForTransform,
     showSceneForm: state.showSceneForm,
+    sceneFormKey,
     sceneFormPosition: state.sceneFormPosition,
-    sceneFormData: state.sceneFormData,
+    sceneFormData: sceneFormDefaultValues,
     sceneFormFields,
     isEditDialogOpen: state.isEditDialogOpen,
     editDefaultValues: state.editDefaultValues,

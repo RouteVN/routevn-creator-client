@@ -104,6 +104,13 @@ behavior:
 - mixed command persistence across partitions
 - storage idempotency across submit batches
 
+## Upload File Types
+
+File-type policy for uploads is documented in `docs/upload-file-types.md`.
+
+If an upload surface changes its accepted file types or validation behavior,
+update that document in the same PR.
+
 ## Architecture Overview
 
 RouteVN is organized into four ownership zones:
@@ -655,6 +662,35 @@ logic is really scene-editing orchestration.
 - project service orchestration
 - split/merge/create/delete persistence workflows
 - scene-specific badge/preview shaping
+
+### Scene Asset Loading
+
+Scene and preview asset loading has a performance-sensitive contract.
+
+- Keep image and video assets URL-backed when possible.
+- Do not regress to fetching large image/video files into JS `ArrayBuffer`
+  memory first and then wrapping them into `Blob` URLs unless there is a
+  strong technical reason.
+- The canonical normalization layer for this is
+  `createAssetBufferManager()` in the `route-graphics` package.
+- The canonical runtime loader behavior is `RouteGraphics.loadAssets()` in the
+  `route-graphics` package.
+
+Current expectation:
+
+- images and videos prefer direct source URLs
+- audio stays buffer-backed because it still needs decode/loading behavior
+- fonts stay buffer-backed because they are registered through `FontFace`
+
+Why this matters:
+
+- the old `URL -> ArrayBuffer -> Blob -> HTMLVideoElement` path caused large
+  JS-side duplication before WebView2/Pixi video decode even began
+- direct URL-backed image/video loading significantly reduced scene-editor
+  memory spikes
+
+If this asset-loading behavior changes, document the reason in the same PR and
+re-check scene-editor memory behavior before merging.
 
 ### Collaboration Runtime
 

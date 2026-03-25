@@ -107,9 +107,20 @@ const buildMediaItem = (item) => ({
   fontFileId: item.fileId,
 });
 
+const buildPendingMediaItem = (item) => ({
+  id: item.id,
+  name: item.name,
+  cardKind: "font",
+  isProcessing: true,
+  isInteractive: false,
+  canPreview: false,
+});
+
 const {
   createInitialState: createMediaInitialState,
   setItems,
+  addPendingUploads,
+  removePendingUploads,
   setSelectedItemId,
   selectSelectedItem,
   selectItemById,
@@ -129,6 +140,7 @@ const {
   ],
   buildDetailFields,
   buildMediaItem,
+  buildPendingMediaItem,
   getSelectedPreviewFileId: (item) => item?.fileId,
   extendViewData: ({ state, selectedItem, baseViewData }) => {
     const selectedFontInfo = state.selectedFontInfo;
@@ -165,6 +177,8 @@ export const createInitialState = () => ({
 
 export {
   setItems,
+  addPendingUploads,
+  removePendingUploads,
   setSelectedItemId,
   selectSelectedItem,
   selectSelectedItemId,

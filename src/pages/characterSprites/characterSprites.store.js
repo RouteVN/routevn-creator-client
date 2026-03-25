@@ -102,8 +102,25 @@ const matchesSearch = (item, searchQuery) => {
   return name.includes(searchQuery) || description.includes(searchQuery);
 };
 
+const buildMediaItem = (item) => ({
+  ...item,
+  cardKind: "image",
+  previewFileId: item.fileId,
+  canPreview: true,
+});
+
+const buildPendingMediaItem = (item) => ({
+  id: item.id,
+  name: item.name,
+  cardKind: "image",
+  isProcessing: true,
+  isInteractive: false,
+  canPreview: false,
+});
+
 export const createInitialState = () => ({
   spritesData: EMPTY_TREE,
+  pendingUploads: [],
   selectedItemId: undefined,
   characterId: undefined,
   characterName: undefined,
@@ -124,6 +141,25 @@ export const setItems = ({ state }, { spritesData } = {}) => {
   state.spritesData = spritesData ?? EMPTY_TREE;
 };
 
+export const addPendingUploads = ({ state }, { items } = {}) => {
+  if (!Array.isArray(items) || items.length === 0) {
+    return;
+  }
+
+  state.pendingUploads.push(...items);
+};
+
+export const removePendingUploads = ({ state }, { itemIds } = {}) => {
+  const idSet = new Set(Array.isArray(itemIds) ? itemIds : []);
+  if (idSet.size === 0) {
+    return;
+  }
+
+  state.pendingUploads = state.pendingUploads.filter(
+    (item) => !idSet.has(item.id),
+  );
+};
+
 export const setCharacterId = ({ state }, { characterId } = {}) => {
   state.characterId = characterId;
 };
@@ -135,6 +171,7 @@ export const setCharacterName = ({ state }, { characterName } = {}) => {
 export const clearCharacterSpritesView = ({ state }) => {
   state.characterName = undefined;
   state.spritesData = EMPTY_TREE;
+  state.pendingUploads = [];
   state.selectedItemId = undefined;
   state.isEditDialogOpen = false;
   state.editItemId = undefined;
@@ -225,23 +262,34 @@ export const selectViewData = ({ state }) => {
   );
   const rawFlatGroups = toFlatGroups(state.spritesData);
   const searchQuery = state.searchQuery.toLowerCase().trim();
+  const pendingByGroupId = new Map();
+
+  for (const pendingUpload of state.pendingUploads ?? []) {
+    const groupId = pendingUpload?.parentId;
+    if (!groupId) {
+      continue;
+    }
+
+    const existing = pendingByGroupId.get(groupId) ?? [];
+    existing.push(buildPendingMediaItem(pendingUpload));
+    pendingByGroupId.set(groupId, existing);
+  }
 
   const mediaGroups = rawFlatGroups
     .map((group) => {
-      const children = (group.children ?? []).filter((item) =>
-        matchesSearch(item, searchQuery),
+      const children = (group.children ?? [])
+        .filter((item) => matchesSearch(item, searchQuery))
+        .map(buildMediaItem);
+      const pendingChildren = (pendingByGroupId.get(group.id) ?? []).filter(
+        (item) => matchesSearch(item, searchQuery),
       );
-      const shouldDisplay = !searchQuery || children.length > 0;
+      const shouldDisplay =
+        !searchQuery || children.length > 0 || pendingChildren.length > 0;
 
       return {
         ...group,
-        children: children.map((item) => ({
-          ...item,
-          cardKind: "image",
-          previewFileId: item.fileId,
-          canPreview: true,
-        })),
-        hasChildren: children.length > 0,
+        children: [...children, ...pendingChildren],
+        hasChildren: children.length > 0 || pendingChildren.length > 0,
         shouldDisplay,
       };
     })
