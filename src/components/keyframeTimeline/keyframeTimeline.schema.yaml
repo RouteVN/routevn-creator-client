@@ -18,6 +18,18 @@ propsSchema:
     properties:
       type: object
       description: Animation properties object with initialValue and keyframes
+    defaultValues:
+      type: object
+      description: Property default values used to determine default-value display
+    timelineDuration:
+      type: number
+      description: Optional shared duration in milliseconds used for timeline sizing
+    showTotalDuration:
+      type: boolean
+      description: Whether the timeline should render its duration header
+    side:
+      type: string
+      description: Optional timeline context key included in emitted events
     tracks:
       type: array
       description: Array of animation tracks

@@ -39,7 +39,35 @@ refs:
     eventListeners:
       click:
         handler: handleAddPropertiesClick
-  dialogTimeline:
+  previousAddPropertiesButton:
+    eventListeners:
+      click:
+        handler: handleAddPropertiesClick
+  nextAddPropertiesButton:
+    eventListeners:
+      click:
+        handler: handleAddPropertiesClick
+  updateTimeline:
+    eventListeners:
+      add-keyframe:
+        handler: handleAddKeyframeInDialog
+      keyframe-right-click:
+        handler: handleKeyframeRightClick
+      property-name-right-click:
+        handler: handlePropertyNameRightClick
+      initial-value-click:
+        handler: handleInitialValueClick
+  previousTimeline:
+    eventListeners:
+      add-keyframe:
+        handler: handleAddKeyframeInDialog
+      keyframe-right-click:
+        handler: handleKeyframeRightClick
+      property-name-right-click:
+        handler: handlePropertyNameRightClick
+      initial-value-click:
+        handler: handleInitialValueClick
+  nextTimeline:
     eventListeners:
       add-keyframe:
         handler: handleAddKeyframeInDialog
@@ -117,20 +145,41 @@ template:
   - rtgl-dialog#addAnimationDialog ?open=${isDialogOpen} s=lg:
       - rtgl-view slot=content d=h lg-d=v g=md:
           - rtgl-view w=4fg lg-w=f:
-              - rtgl-form#animationForm key=${isDialogOpen} :defaultValues=dialogDefaultValues :form=dialogForm w=f:
-                  - rtgl-view slot=timeline w=f:
-                      - rvn-keyframe-timeline#dialogTimeline editable=true :properties=properties: null
-                      - rtgl-view d=h g=md av=c mb=md w=f mt=lg:
-                          - $if addPropertyButtonVisible:
-                              - rtgl-button#addPropertiesButton w=f v=se s=sm: + Add animation property
+              - rtgl-form#animationForm key=${dialogFormKey} :defaultValues=dialogDefaultValues :form=dialogForm w=f:
+                  - $if dialogType == 'update':
+                      - rtgl-view slot=timeline w=f:
+                          - rvn-keyframe-timeline#updateTimeline editable=true side=update :properties=updateProperties :defaultValues=updateTimelineDefaultValues: null
+                          - rtgl-view d=h g=md av=c mb=md w=f mt=lg:
+                              - $if updateAddPropertyButtonVisible:
+                                  - rtgl-button#addPropertiesButton data-side=update w=f v=se s=sm: + Add animation property
+                  - $if dialogType == 'transition':
+                      - rtgl-view slot=previousTimeline d=v w=f g=sm:
+                          - rtgl-view d=h w=f:
+                              - rtgl-view w=f ah=e:
+                                  - rtgl-text s=sm: 'Total duration: ${transitionTimelineDurationLabel}'
+                          - rvn-keyframe-timeline#previousTimeline editable=true side=prev ?showTotalDuration=false timelineDuration=${transitionTimelineDuration} :properties=previousProperties :defaultValues=transitionTimelineDefaultValues: null
+                          - rtgl-view d=h g=md av=c mb=md w=f mt=lg:
+                              - $if previousAddPropertyButtonVisible:
+                                  - rtgl-button#previousAddPropertiesButton data-side=prev w=f v=se s=sm: + Add animation property
+                      - rtgl-view slot=nextTimeline w=f:
+                          - rvn-keyframe-timeline#nextTimeline editable=true side=next ?showTotalDuration=false timelineDuration=${transitionTimelineDuration} :properties=nextProperties :defaultValues=transitionTimelineDefaultValues: null
+                          - rtgl-view d=h g=md av=c mb=md w=f mt=lg:
+                              - $if nextAddPropertyButtonVisible:
+                                  - rtgl-button#nextAddPropertiesButton data-side=next w=f v=se s=sm: + Add animation property
               - rtgl-view h=128: null
           - rtgl-view w=6fg lg-w=f:
-              - rtgl-view d=h av=c ah=sb mb=md:
-                  - rtgl-text: Preview
-                  - rtgl-button#replayButton s=sm ml=md: Play Animation
-              - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: 16/9;"':
-                  - rtgl-view pos=abs cor=full:
-                      - 'div#canvas style="width: 100%; height: 100%;display: flex;"': null
+              - $if dialogType == 'update':
+                  - rtgl-view d=h av=c ah=sb mb=md:
+                      - rtgl-text: Preview
+                      - rtgl-button#replayButton s=sm ml=md: Play Animation
+                  - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: 16/9;"':
+                      - rtgl-view pos=abs cor=full:
+                          - 'div#canvas style="width: 100%; height: 100%;display: flex;"': null
+                $else:
+                  - rtgl-view d=h av=c ah=sb mb=md:
+                      - rtgl-text: Preview
+                  - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: 16/9;"':
+                      - rtgl-view pos=abs cor=full: null
           - rtgl-popover#addPropertyPopover ?open=${popover.popoverIsOpen} x=${popover.x} y=${popover.y}:
               - $if popover.mode == 'addProperty':
                   - rtgl-form#addPropertyForm slot=content :form=addPropertyForm :context=addPropertyContext :defaultValues=addPropertyFormDefaultValues: null

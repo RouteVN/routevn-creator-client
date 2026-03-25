@@ -3,84 +3,216 @@ import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerD
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
 import { resetState } from "./animations.constants";
 
-const createAddKeyframeForm = (property) => {
-  if (!property) {
-    return {};
-  }
-
-  const sliderConfig = {
-    x: {
-      min: 0,
-      max: 1920,
-    },
-    y: {
-      min: 0,
-      max: 1920,
-    },
-    alpha: {
+const PROPERTY_FIELD_CONFIG = {
+  alpha: {
+    label: "Alpha",
+    defaultValue: 1,
+    slider: {
       min: 0,
       max: 1,
       step: 0.01,
     },
-    scaleX: {
+  },
+  x: {
+    label: "Position X",
+    defaultValue: 960,
+    slider: {
+      min: 0,
+      max: 1920,
+    },
+  },
+  y: {
+    label: "Position Y",
+    defaultValue: 540,
+    slider: {
+      min: 0,
+      max: 1080,
+    },
+  },
+  scaleX: {
+    label: "Scale X",
+    defaultValue: 1,
+    slider: {
       min: 0.1,
       max: 5,
       step: 0.1,
     },
-    scaleY: {
+  },
+  scaleY: {
+    label: "Scale Y",
+    defaultValue: 1,
+    slider: {
       min: 0.1,
       max: 5,
       step: 0.1,
     },
+  },
+  translateX: {
+    label: "Translate X",
+    defaultValue: 0,
+    slider: {
+      min: -2,
+      max: 2,
+      step: 0.05,
+    },
+    tooltip: {
+      content:
+        "Uses viewport-width units. 1 moves by one full screen width, -1 moves by one full screen width to the left.",
+    },
+  },
+  translateY: {
+    label: "Translate Y",
+    defaultValue: 0,
+    slider: {
+      min: -2,
+      max: 2,
+      step: 0.05,
+    },
+    tooltip: {
+      content:
+        "Uses viewport-height units. 1 moves by one full screen height, -1 moves by one full screen height upward.",
+    },
+  },
+};
+
+const UPDATE_PROPERTY_KEYS = ["alpha", "x", "y", "scaleX", "scaleY"];
+const TRANSITION_PROPERTY_KEYS = [
+  "translateX",
+  "translateY",
+  "alpha",
+  "scaleX",
+  "scaleY",
+];
+
+const buildPropertyOptions = (propertyKeys) => {
+  return propertyKeys.map((property) => ({
+    label: PROPERTY_FIELD_CONFIG[property]?.label ?? property,
+    value: property,
+  }));
+};
+
+const updatePropertyOptions = buildPropertyOptions(UPDATE_PROPERTY_KEYS);
+const transitionPropertyOptions = buildPropertyOptions(
+  TRANSITION_PROPERTY_KEYS,
+);
+
+const defaultInitialValuesByProperty = Object.fromEntries(
+  Object.entries(PROPERTY_FIELD_CONFIG).map(([property, config]) => [
+    property,
+    config.defaultValue,
+  ]),
+);
+
+const updateTimelineDefaultValues = Object.fromEntries(
+  UPDATE_PROPERTY_KEYS.map((property) => [
+    property,
+    defaultInitialValuesByProperty[property],
+  ]),
+);
+
+const transitionTimelineDefaultValues = Object.fromEntries(
+  TRANSITION_PROPERTY_KEYS.map((property) => [
+    property,
+    defaultInitialValuesByProperty[property],
+  ]),
+);
+
+const createSliderField = ({
+  property,
+  name,
+  label,
+  required = false,
+  fallbackLabel = "Value",
+} = {}) => {
+  const config = PROPERTY_FIELD_CONFIG[property];
+
+  if (!config) {
+    return {
+      name,
+      type: "input-text",
+      label: label ?? fallbackLabel,
+      required,
+    };
+  }
+
+  const field = {
+    name,
+    type: "slider-with-input",
+    label: label ?? fallbackLabel,
   };
+
+  Object.assign(field, config.slider);
+
+  if (required) {
+    field.required = true;
+  }
+
+  if (config.tooltip) {
+    field.tooltip = config.tooltip;
+  }
+
+  return field;
+};
+
+const createAddKeyframeForm = (property, { includeDuration = true } = {}) => {
+  if (!property) {
+    return {};
+  }
+
+  const fields = [];
+
+  if (includeDuration) {
+    fields.push({
+      name: "duration",
+      type: "input-text",
+      label: "Duration (ms)",
+      required: true,
+      placeholder: "Duration in milliseconds",
+      tooltip: {
+        content:
+          "The time it takes for the animation keyframe to move from previous value to next value",
+      },
+    });
+  }
+
+  fields.push(
+    {
+      ...createSliderField({
+        property,
+        name: "value",
+        label: "Value",
+        required: true,
+      }),
+      tooltip: {
+        content: "The final value of the property at the end of the animation",
+      },
+    },
+    {
+      name: "relative",
+      type: "select",
+      label: "Value type",
+      options: [
+        { label: "Absolute", value: false },
+        { label: "Relative", value: true },
+      ],
+      required: true,
+      tooltip: {
+        content:
+          "Relative will add the value to the previous value. Absolute will set the property value to exactly the specified value",
+      },
+    },
+    {
+      name: "easing",
+      type: "select",
+      label: "Easing",
+      options: [{ label: "Linear", value: "linear" }],
+      required: true,
+    },
+  );
 
   return {
     title: "Add Keyframe",
-    fields: [
-      {
-        name: "duration",
-        type: "input-text",
-        label: "Duration (ms)",
-        required: true,
-        placeholder: "Duration in milliseconds",
-        tooltip: {
-          content:
-            "The time it takes for the animation keyframe to move from previous value to next value",
-        },
-      },
-      {
-        name: "value",
-        type: "slider-with-input",
-        ...sliderConfig[property],
-        label: "Value",
-        required: true,
-        tooltip: {
-          content:
-            "The final value of the property at the end of the animation",
-        },
-      },
-      {
-        name: "relative",
-        type: "select",
-        label: "Value type",
-        options: [
-          { label: "Absolute", value: false },
-          { label: "Relative", value: true },
-        ],
-        required: true,
-        tooltip: {
-          content:
-            "Relative will add the value to the previous value. Absolute will set the property value to exactly the specified value",
-        },
-      },
-      {
-        name: "easing",
-        type: "select",
-        label: "Easing",
-        options: [{ label: "Linear", value: "linear" }],
-        required: true,
-      },
-    ],
+    fields,
     actions: {
       layout: "",
       buttons: [
@@ -101,9 +233,9 @@ const addKeyframeDefaultValues = {
   easing: "linear",
 };
 
-const createUpdateKeyframeForm = (property) => {
+const createUpdateKeyframeForm = (property, options = {}) => {
   return {
-    ...createAddKeyframeForm(property),
+    ...createAddKeyframeForm(property, options),
     title: "Edit Keyframe",
     actions: {
       layout: "",
@@ -151,15 +283,19 @@ const editInitialValueForm = {
   },
 };
 
-const propertyOptions = [
-  { label: "Alpha", value: "alpha" },
-  { label: "Position X", value: "x" },
-  { label: "Position Y", value: "y" },
-  { label: "Scale X", value: "scaleX" },
-  { label: "Scale Y", value: "scaleY" },
-];
-
 const createAddPropertyForm = (availableProperties) => {
+  const initialValueFields = Object.keys(PROPERTY_FIELD_CONFIG).map(
+    (property) => {
+      const field = createSliderField({
+        property,
+        name: "initialValue",
+        label: "Initial value",
+      });
+      field.$when = `property == "${property}"`;
+      return field;
+    },
+  );
+
   return {
     title: "Add animation property",
     fields: [
@@ -190,42 +326,7 @@ const createAddPropertyForm = (availableProperties) => {
         ],
       },
       {
-        "$if useInitialValue == true": [
-          {
-            $when: 'property == "x"',
-            name: "initialValue",
-            type: "slider-with-input",
-            min: 0,
-            max: 1920,
-            label: "Initial value",
-          },
-          {
-            $when: 'property == "y"',
-            name: "initialValue",
-            type: "slider-with-input",
-            min: 0,
-            max: 1080,
-            label: "Initial value",
-          },
-          {
-            $when: 'property == "alpha"',
-            name: "initialValue",
-            type: "slider-with-input",
-            step: 0.01,
-            min: 0,
-            max: 1,
-            label: "Initial value",
-          },
-          {
-            $when: 'property == "scaleX" || property == "scaleY"',
-            name: "initialValue",
-            type: "slider-with-input",
-            min: 0.1,
-            max: 5,
-            step: 0.1,
-            label: "Initial value",
-          },
-        ],
+        "$if useInitialValue == true": initialValueFields,
       },
     ],
     actions: {
@@ -295,86 +396,123 @@ const createTypeMenuItems = [
   },
 ];
 
-const addAnimationForm = {
+const createAnimationForm = ({
+  title,
+  buttonLabel,
+  typeLabel,
+  timelineFields,
+} = {}) => {
+  return {
+    title,
+    fields: [
+      {
+        type: "read-only-text",
+        content: `Type: ${typeLabel}`,
+      },
+      {
+        name: "name",
+        type: "input-text",
+        label: "Name",
+        required: true,
+      },
+      ...timelineFields,
+    ],
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          label: buttonLabel,
+        },
+      ],
+    },
+  };
+};
+
+const updateTimelineFields = [
+  {
+    name: "properties",
+    type: "slot",
+    slot: "timeline",
+    label: "Animation timeline",
+  },
+];
+
+const transitionTimelineFields = [
+  {
+    name: "previous",
+    type: "slot",
+    slot: "previousTimeline",
+    label: "Previous",
+  },
+  {
+    name: "next",
+    type: "slot",
+    slot: "nextTimeline",
+    label: "Next",
+  },
+];
+
+const addUpdateAnimationForm = createAnimationForm({
   title: "Add Animation",
-  fields: [
-    {
-      type: "read-only-text",
-      content: "Type: Update",
-    },
-    {
-      name: "name",
-      type: "input-text",
-      label: "Name",
-      required: true,
-    },
-    {
-      name: "properties",
-      type: "slot",
-      slot: "timeline",
-      label: "Animation timeline",
-    },
-  ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: "Add Animation",
-      },
-    ],
-  },
-};
+  buttonLabel: "Add Animation",
+  typeLabel: "Update",
+  timelineFields: updateTimelineFields,
+});
 
-const editAnimationForm = {
+const editUpdateAnimationForm = createAnimationForm({
   title: "Edit Animation",
-  fields: [
-    {
-      type: "read-only-text",
-      content: "Type: Update",
-    },
-    {
-      name: "name",
-      type: "input-text",
-      label: "Name",
-      required: true,
-    },
-    {
-      name: "properties",
-      type: "slot",
-      slot: "timeline",
-      label: "Animation timeline",
-    },
-  ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: "Update Animation",
-      },
-    ],
-  },
+  buttonLabel: "Update Animation",
+  typeLabel: "Update",
+  timelineFields: updateTimelineFields,
+});
+
+const addTransitionAnimationForm = createAnimationForm({
+  title: "Add Animation",
+  buttonLabel: "Add Animation",
+  typeLabel: "Transition",
+  timelineFields: transitionTimelineFields,
+});
+
+const editTransitionAnimationForm = createAnimationForm({
+  title: "Edit Animation",
+  buttonLabel: "Update Animation",
+  typeLabel: "Transition",
+  timelineFields: transitionTimelineFields,
+});
+
+const getDialogForm = (dialogType, editMode = false) => {
+  if (dialogType === "transition") {
+    return editMode ? editTransitionAnimationForm : addTransitionAnimationForm;
+  }
+
+  return editMode ? editUpdateAnimationForm : addUpdateAnimationForm;
 };
 
-const defaultInitialValuesByProperty = {
-  x: 960,
-  y: 540,
-  alpha: 1,
-  scaleX: 1,
-  scaleY: 1,
-  rotation: 0,
+const getDialogType = (animationType) => {
+  return animationType === "transition" ? "transition" : "update";
 };
 
-const getAnimationTween = (item = {}) => {
+const getUpdateAnimationTween = (item = {}) => {
   if (
     (item?.animation?.type === "live" || item?.animation?.type === "update") &&
     item.animation.tween &&
     typeof item.animation.tween === "object"
   ) {
     return item.animation.tween;
+  }
+
+  return {};
+};
+
+const getTransitionSideTween = (item = {}, side) => {
+  if (
+    item?.animation?.type === "transition" &&
+    item.animation?.[side]?.tween &&
+    typeof item.animation[side].tween === "object"
+  ) {
+    return item.animation[side].tween;
   }
 
   return {};
@@ -393,13 +531,65 @@ const getAnimationDuration = (tween = {}) => {
   }, 0);
 };
 
+const getAnimationDisplayProperties = (item = {}) => {
+  const dialogType = getDialogType(item?.animation?.type);
+
+  return dialogType === "transition"
+    ? {}
+    : structuredClone(getUpdateAnimationTween(item));
+};
+
+const getAnimationDisplayDuration = (item = {}) => {
+  const dialogType = getDialogType(item?.animation?.type);
+
+  if (dialogType === "transition") {
+    return Math.max(
+      getAnimationDuration(getTransitionSideTween(item, "prev")),
+      getAnimationDuration(getTransitionSideTween(item, "next")),
+    );
+  }
+
+  return getAnimationDuration(getUpdateAnimationTween(item));
+};
+
+const getTransitionTimelineDuration = ({
+  prevProperties = {},
+  nextProperties = {},
+} = {}) => {
+  return Math.max(
+    getAnimationDuration(prevProperties),
+    getAnimationDuration(nextProperties),
+  );
+};
+
 const toAnimationDisplayItem = (item) => {
-  const properties = structuredClone(getAnimationTween(item));
+  const animationType = getDialogType(item?.animation?.type);
+  const properties = getAnimationDisplayProperties(item);
+  const prevProperties = structuredClone(getTransitionSideTween(item, "prev"));
+  const nextProperties = structuredClone(getTransitionSideTween(item, "next"));
+  const updateProperties = structuredClone(getUpdateAnimationTween(item));
+  const propertyCount =
+    animationType === "transition"
+      ? Object.keys(prevProperties).length + Object.keys(nextProperties).length
+      : Object.keys(updateProperties).length;
+  const transitionTimelineDuration =
+    animationType === "transition"
+      ? getTransitionTimelineDuration({
+          prevProperties,
+          nextProperties,
+        })
+      : 0;
 
   return {
     ...item,
+    animationType,
     properties,
-    duration: getAnimationDuration(properties),
+    updateProperties,
+    prevProperties,
+    nextProperties,
+    transitionTimelineDuration,
+    propertyCount,
+    duration: getAnimationDisplayDuration(item),
     cardKind: "animation",
     itemWidth: "f",
   };
@@ -415,6 +605,28 @@ const matchesSearch = (item, searchQuery) => {
   const name = (item.name ?? "").toLowerCase();
   const description = (item.description ?? "").toLowerCase();
   return name.includes(searchQuery) || description.includes(searchQuery);
+};
+
+const createEmptyTweenBySection = () => ({
+  update: {},
+  prev: {},
+  next: {},
+});
+
+const getSectionProperties = (state, side) => {
+  return state.tweenBySection?.[side] ?? {};
+};
+
+const getPropertyOptionsForSide = (side) => {
+  return side === "update" ? updatePropertyOptions : transitionPropertyOptions;
+};
+
+const getAvailableProperties = (state, side) => {
+  const currentProperties = getSectionProperties(state, side);
+
+  return getPropertyOptionsForSide(side).filter((item) => {
+    return !Object.keys(currentProperties).includes(item.value);
+  });
 };
 
 const {
@@ -439,21 +651,29 @@ const {
     const selectedAnimationItem = selectedItem
       ? toAnimationDisplayItem(selectedItem)
       : undefined;
-    const selectedAnimationPropertyCount = Object.keys(
-      selectedAnimationItem?.properties ?? {},
-    ).length;
-
-    const availableProperties = propertyOptions.filter(
-      (item) => !Object.keys(state.properties).includes(item.value),
-    );
+    const selectedAnimationPropertyCount =
+      selectedAnimationItem?.propertyCount ?? 0;
+    const dialogType = state.dialogType;
+    const updateProperties = getSectionProperties(state, "update");
+    const previousProperties = getSectionProperties(state, "prev");
+    const nextProperties = getSectionProperties(state, "next");
+    const transitionTimelineDuration = getTransitionTimelineDuration({
+      prevProperties: previousProperties,
+      nextProperties,
+    });
+    const addPropertySide =
+      state.popover.payload?.side ??
+      (dialogType === "transition" ? "prev" : "update");
+    const addPropertyOptions = getAvailableProperties(state, addPropertySide);
 
     const keyframeDropdownItems = (() => {
       if (state.popover.mode !== "keyframeMenu") {
         return propertyNameDropdownItems;
       }
 
-      const { property, index } = state.popover.payload;
-      const keyframes = state.properties[property]?.keyframes ?? [];
+      const { side, property, index } = state.popover.payload;
+      const keyframes =
+        getSectionProperties(state, side)[property]?.keyframes ?? [];
       const currentIndex = Number(index);
       const isFirstKeyframe = currentIndex === 0;
       const isLastKeyframe = currentIndex === keyframes.length - 1;
@@ -479,8 +699,9 @@ const {
     }
 
     if (state.popover.mode === "editKeyframe") {
-      const { property, index } = state.popover.payload;
-      const currentKeyframe = state.properties[property]?.keyframes?.[index];
+      const { side, property, index } = state.popover.payload;
+      const currentKeyframe = getSectionProperties(state, side)[property]
+        ?.keyframes?.[index];
 
       if (currentKeyframe) {
         editKeyframeDefaultValues = {
@@ -493,8 +714,9 @@ const {
     }
 
     if (state.popover.mode === "editInitialValue") {
-      const { property } = state.popover.payload;
-      const currentInitialValue = state.properties[property]?.initialValue;
+      const { side, property } = state.popover.payload;
+      const currentInitialValue = getSectionProperties(state, side)[property]
+        ?.initialValue;
       const defaultValue = defaultInitialValuesByProperty[property] ?? 0;
       const isUsingDefault = currentInitialValue === defaultValue;
 
@@ -515,10 +737,18 @@ const {
       selectedAnimationPropertyCount,
       createTypeMenu: state.createTypeMenu,
       isDialogOpen: state.isDialogOpen,
+      dialogType,
       dialogDefaultValues: state.dialogDefaultValues,
       dialogForm: state.dialogForm,
-      properties: state.properties,
-      addPropertyForm: createAddPropertyForm(availableProperties),
+      dialogFormKey: `${dialogType}-${state.editMode ? "edit" : "add"}-${state.editItemId ?? "new"}-${state.isDialogOpen ? "open" : "closed"}`,
+      transitionTimelineDuration,
+      transitionTimelineDurationLabel: `${transitionTimelineDuration}ms`,
+      updateProperties,
+      previousProperties,
+      nextProperties,
+      updateTimelineDefaultValues,
+      transitionTimelineDefaultValues,
+      addPropertyForm: createAddPropertyForm(addPropertyOptions),
       addPropertyContext,
       addKeyframeForm: createAddKeyframeForm(state.popover.payload?.property),
       addKeyframeDefaultValues,
@@ -530,7 +760,12 @@ const {
       editKeyframeDefaultValues,
       editInitialValueDefaultValues,
       keyframeDropdownItems,
-      addPropertyButtonVisible: availableProperties.length > 0,
+      updateAddPropertyButtonVisible:
+        getAvailableProperties(state, "update").length > 0,
+      previousAddPropertyButtonVisible:
+        getAvailableProperties(state, "prev").length > 0,
+      nextAddPropertyButtonVisible:
+        getAvailableProperties(state, "next").length > 0,
       popover: {
         ...state.popover,
         popoverIsOpen: [
@@ -553,12 +788,13 @@ const {
 export const createInitialState = () => ({
   ...createCatalogInitialState(),
   isDialogOpen: false,
+  dialogType: "update",
   targetGroupId: undefined,
-  properties: {},
+  tweenBySection: createEmptyTweenBySection(),
   dialogDefaultValues: {
     name: "",
   },
-  dialogForm: addAnimationForm,
+  dialogForm: addUpdateAnimationForm,
   editMode: false,
   editItemId: undefined,
   createTypeMenu: {
@@ -594,21 +830,45 @@ export const selectAnimationDisplayItemById = ({ state }, { itemId } = {}) => {
   return rawItem ? toAnimationDisplayItem(rawItem) : undefined;
 };
 
+const cloneTweenBySectionFromItem = (itemData, dialogType) => {
+  const tweenBySection = createEmptyTweenBySection();
+
+  if (dialogType === "transition") {
+    tweenBySection.prev = structuredClone(
+      itemData?.animation?.prev?.tween ?? {},
+    );
+    tweenBySection.next = structuredClone(
+      itemData?.animation?.next?.tween ?? {},
+    );
+    return tweenBySection;
+  }
+
+  tweenBySection.update = structuredClone(getUpdateAnimationTween(itemData));
+  return tweenBySection;
+};
+
 export const openDialog = (
   { state },
-  { editMode, itemId, itemData, targetGroupId } = {},
+  { editMode, itemId, itemData, targetGroupId, dialogType } = {},
 ) => {
+  const resolvedDialogType =
+    dialogType ?? getDialogType(itemData?.animation?.type);
+
   state.isDialogOpen = true;
+  state.dialogType = resolvedDialogType;
   state.editMode = Boolean(editMode);
   state.editItemId = itemId;
 
   if (editMode && itemData) {
     state.targetGroupId = itemData.parentId ?? undefined;
-    state.dialogForm = editAnimationForm;
+    state.dialogForm = getDialogForm(resolvedDialogType, true);
     state.dialogDefaultValues = {
       name: itemData.name ?? "",
     };
-    state.properties = structuredClone(itemData.properties ?? {});
+    state.tweenBySection = cloneTweenBySectionFromItem(
+      itemData,
+      resolvedDialogType,
+    );
     return;
   }
 
@@ -616,23 +876,24 @@ export const openDialog = (
     targetGroupId === "_root"
       ? undefined
       : (targetGroupId ?? itemData?.parentId ?? undefined);
-  state.dialogForm = addAnimationForm;
+  state.dialogForm = getDialogForm(resolvedDialogType, false);
   state.dialogDefaultValues = {
     name: "",
   };
-  state.properties = {};
+  state.tweenBySection = createEmptyTweenBySection();
 };
 
 export const closeDialog = ({ state }, _payload = {}) => {
   state.isDialogOpen = false;
+  state.dialogType = "update";
   state.targetGroupId = undefined;
   state.editMode = false;
   state.editItemId = undefined;
   state.dialogDefaultValues = {
     name: "",
   };
-  state.dialogForm = addAnimationForm;
-  state.properties = {};
+  state.dialogForm = addUpdateAnimationForm;
+  state.tweenBySection = createEmptyTweenBySection();
 };
 
 export const openCreateTypeMenu = ({ state }, { x, y, targetGroupId } = {}) => {
@@ -670,8 +931,24 @@ export const selectEditItemId = ({ state }) => {
   return state.editItemId;
 };
 
-export const selectProperties = ({ state }) => {
-  return state.properties;
+export const selectDialogType = ({ state }) => {
+  return state.dialogType;
+};
+
+const resolveDialogSide = (state, side) => {
+  if (side) {
+    return side;
+  }
+
+  return state.dialogType === "transition" ? "prev" : "update";
+};
+
+const getMutableSectionProperties = (state, side) => {
+  return state.tweenBySection[resolveDialogSide(state, side)];
+};
+
+export const selectProperties = ({ state }, { side } = {}) => {
+  return getMutableSectionProperties(state, side) ?? {};
 };
 
 export const setPopover = ({ state }, { mode, x, y, payload } = {}) => {
@@ -748,19 +1025,24 @@ const createAnimationRenderState = (properties, includeAnimations = true) => {
 };
 
 export const selectAnimationRenderState = ({ state }) => {
-  return createAnimationRenderState(state.properties, false);
+  return createAnimationRenderState(state.tweenBySection.update, false);
 };
 
 export const selectAnimationRenderStateWithAnimations = ({ state }) => {
-  return createAnimationRenderState(state.properties, true);
+  return createAnimationRenderState(state.tweenBySection.update, true);
 };
 
-export const addProperty = ({ state }, { property, initialValue } = {}) => {
-  if (!property || state.properties[property]) {
+export const addProperty = (
+  { state },
+  { side, property, initialValue } = {},
+) => {
+  const properties = getMutableSectionProperties(state, side);
+
+  if (!property || !properties || properties[property]) {
     return;
   }
 
-  state.properties[property] = {
+  properties[property] = {
     initialValue,
     keyframes: [],
   };
@@ -771,7 +1053,8 @@ export const addKeyframe = ({ state }, keyframe = {}) => {
     return;
   }
 
-  const keyframes = state.properties[keyframe.property]?.keyframes;
+  const properties = getMutableSectionProperties(state, keyframe.side);
+  const keyframes = properties?.[keyframe.property]?.keyframes;
   if (!Array.isArray(keyframes)) {
     return;
   }
@@ -787,8 +1070,9 @@ export const addKeyframe = ({ state }, keyframe = {}) => {
   });
 };
 
-export const deleteKeyframe = ({ state }, { property, index } = {}) => {
-  const keyframes = state.properties[property]?.keyframes;
+export const deleteKeyframe = ({ state }, { side, property, index } = {}) => {
+  const properties = getMutableSectionProperties(state, side);
+  const keyframes = properties?.[property]?.keyframes;
   if (!Array.isArray(keyframes)) {
     return;
   }
@@ -796,17 +1080,23 @@ export const deleteKeyframe = ({ state }, { property, index } = {}) => {
   keyframes.splice(index, 1);
 };
 
-export const deleteProperty = ({ state }, { property } = {}) => {
-  if (!property) {
+export const deleteProperty = ({ state }, { side, property } = {}) => {
+  const properties = getMutableSectionProperties(state, side);
+
+  if (!property || !properties) {
     return;
   }
 
-  delete state.properties[property];
+  delete properties[property];
 };
 
-export const moveKeyframeRight = ({ state }, { property, index } = {}) => {
+export const moveKeyframeRight = (
+  { state },
+  { side, property, index } = {},
+) => {
   const numIndex = Number(index);
-  const keyframes = state.properties[property]?.keyframes;
+  const properties = getMutableSectionProperties(state, side);
+  const keyframes = properties?.[property]?.keyframes;
   if (!Array.isArray(keyframes) || numIndex >= keyframes.length - 1) {
     return;
   }
@@ -816,9 +1106,10 @@ export const moveKeyframeRight = ({ state }, { property, index } = {}) => {
   keyframes[numIndex + 1] = current;
 };
 
-export const moveKeyframeLeft = ({ state }, { property, index } = {}) => {
+export const moveKeyframeLeft = ({ state }, { side, property, index } = {}) => {
   const numIndex = Number(index);
-  const keyframes = state.properties[property]?.keyframes;
+  const properties = getMutableSectionProperties(state, side);
+  const keyframes = properties?.[property]?.keyframes;
   if (!Array.isArray(keyframes) || numIndex <= 0) {
     return;
   }
@@ -830,9 +1121,10 @@ export const moveKeyframeLeft = ({ state }, { property, index } = {}) => {
 
 export const updateKeyframe = (
   { state },
-  { property, index, keyframe } = {},
+  { side, property, index, keyframe } = {},
 ) => {
-  const keyframes = state.properties[property]?.keyframes;
+  const properties = getMutableSectionProperties(state, side);
+  const keyframes = properties?.[property]?.keyframes;
   if (!Array.isArray(keyframes) || !keyframe) {
     return;
   }
@@ -847,13 +1139,15 @@ export const updateKeyframe = (
 
 export const updateInitialValue = (
   { state },
-  { property, initialValue } = {},
+  { side, property, initialValue } = {},
 ) => {
-  if (!property || !state.properties[property]) {
+  const properties = getMutableSectionProperties(state, side);
+
+  if (!property || !properties?.[property]) {
     return;
   }
 
-  state.properties[property].initialValue = initialValue;
+  properties[property].initialValue = initialValue;
 };
 
 export const selectViewData = (context) => {
