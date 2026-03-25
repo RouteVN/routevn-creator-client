@@ -63,6 +63,7 @@ export const createMediaPageStore = ({
   matchesSearch = defaultMatchesSearch,
   buildDetailFields = () => [],
   buildMediaItem = (item) => item,
+  buildPendingMediaItem,
   createEditForm = () => undefined,
   getSelectedPreviewFileId = () => undefined,
   extendViewData,
@@ -78,6 +79,7 @@ export const createMediaPageStore = ({
 
   const createInitialState = () => ({
     data: EMPTY_TREE,
+    pendingUploads: [],
     selectedItemId: undefined,
     searchQuery: "",
     isEditDialogOpen: false,
@@ -92,6 +94,25 @@ export const createMediaPageStore = ({
 
   const setItems = ({ state }, { data } = {}) => {
     state.data = data ?? EMPTY_TREE;
+  };
+
+  const addPendingUploads = ({ state }, { items } = {}) => {
+    if (!Array.isArray(items) || items.length === 0) {
+      return;
+    }
+
+    state.pendingUploads.push(...items);
+  };
+
+  const removePendingUploads = ({ state }, { itemIds } = {}) => {
+    const idSet = new Set(Array.isArray(itemIds) ? itemIds : []);
+    if (idSet.size === 0) {
+      return;
+    }
+
+    state.pendingUploads = state.pendingUploads.filter(
+      (item) => !idSet.has(item.id),
+    );
   };
 
   const setSelectedItemId = ({ state }, { itemId } = {}) => {
@@ -146,18 +167,39 @@ export const createMediaPageStore = ({
     const flatItems = toFlatItems(state.data);
     const rawFlatGroups = toFlatGroups(state.data);
     const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
+    const pendingByGroupId = new Map();
+
+    if (typeof buildPendingMediaItem === "function") {
+      for (const pendingUpload of state.pendingUploads ?? []) {
+        const groupId = pendingUpload?.parentId;
+        if (!groupId) {
+          continue;
+        }
+
+        const existing = pendingByGroupId.get(groupId) ?? [];
+        existing.push(buildPendingMediaItem(pendingUpload));
+        pendingByGroupId.set(groupId, existing);
+      }
+    }
 
     const mediaGroups = rawFlatGroups
       .map((group) => {
-        const filteredChildren = (group.children ?? []).filter((item) =>
-          matchesSearch(item, searchQuery),
-        );
-        const shouldShowGroup = !searchQuery || filteredChildren.length > 0;
+        const filteredChildren = (group.children ?? [])
+          .filter((item) => matchesSearch(item, searchQuery))
+          .map(buildMediaItem);
+        const filteredPendingChildren = (
+          pendingByGroupId.get(group.id) ?? []
+        ).filter((item) => matchesSearch(item, searchQuery));
+        const shouldShowGroup =
+          !searchQuery ||
+          filteredChildren.length > 0 ||
+          filteredPendingChildren.length > 0;
 
         return {
           ...group,
-          children: filteredChildren.map(buildMediaItem),
-          hasChildren: filteredChildren.length > 0,
+          children: [...filteredChildren, ...filteredPendingChildren],
+          hasChildren:
+            filteredChildren.length > 0 || filteredPendingChildren.length > 0,
           shouldDisplay: shouldShowGroup,
         };
       })
@@ -210,6 +252,8 @@ export const createMediaPageStore = ({
   return {
     createInitialState,
     setItems,
+    addPendingUploads,
+    removePendingUploads,
     setSelectedItemId,
     openEditDialog,
     closeEditDialog,

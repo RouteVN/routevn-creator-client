@@ -27,6 +27,14 @@ propsSchema:
       type: string
       description: Text color
       default: currentColor
+    strokeColor:
+      type: string
+      description: Text outline color
+      default: transparent
+    strokeWidth:
+      type: string
+      description: Text outline width in pixels
+      default: '0'
     width:
       type: string
       description: Preview container width

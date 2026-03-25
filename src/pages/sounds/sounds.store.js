@@ -53,6 +53,15 @@ const buildMediaItem = (item) => ({
   canPreview: true,
 });
 
+const buildPendingMediaItem = (item) => ({
+  id: item.id,
+  name: item.name,
+  cardKind: "sound",
+  isProcessing: true,
+  isInteractive: false,
+  canPreview: false,
+});
+
 const createEditForm = () => ({
   title: "Edit Sound",
   fields: [
@@ -89,6 +98,8 @@ const createEditForm = () => ({
 const {
   createInitialState: createMediaInitialState,
   setItems,
+  addPendingUploads,
+  removePendingUploads,
   setSelectedItemId,
   openEditDialog,
   closeEditDialog,
@@ -108,6 +119,7 @@ const {
   previewMenuLabel: "Play",
   buildDetailFields,
   buildMediaItem,
+  buildPendingMediaItem,
   createEditForm,
   getSelectedPreviewFileId: (item) => item?.waveformDataFileId,
   extendViewData: ({ state, baseViewData }) => ({
@@ -132,6 +144,8 @@ export const createInitialState = () => ({
 
 export {
   setItems,
+  addPendingUploads,
+  removePendingUploads,
   setSelectedItemId,
   openEditDialog,
   closeEditDialog,

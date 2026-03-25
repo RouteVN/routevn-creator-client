@@ -1,18 +1,12 @@
-export const handleBeforeMount = () => {
-  // Initialize about page
-};
+export const handleBeforeMount = (deps) => {
+  const { appService, store } = deps;
 
-export const handleAfterMount = async (deps) => {
-  const { store, render, appService } = deps;
-
-  // Set app version from appService
   const appVersion = appService.getAppVersion();
   if (appVersion) {
     store.setAppVersion({ version: appVersion });
   }
-  const platform = appService.getPlatform();
-  store.setPlatform({ platform: platform });
-  render();
+
+  store.setPlatform({ platform: appService.getPlatform() });
 };
 
 export const handleDataChanged = () => {

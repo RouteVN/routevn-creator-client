@@ -117,18 +117,24 @@ export const createInitialState = () => ({
   currentFormValues: {
     name: "",
     fontColor: "",
+    strokeColor: "",
     fontStyle: "",
     fontSize: 16,
     lineHeight: 1.5,
     fontWeight: "400",
+    strokeWidth: 0,
     previewText: "",
   },
 
   defaultValues: {
     name: "",
+    fontColor: "",
+    strokeColor: "",
+    fontStyle: "",
     fontSize: 16,
     lineHeight: 1.5,
     fontWeight: "400",
+    strokeWidth: 0,
     previewText: "",
   },
 
@@ -194,10 +200,12 @@ export const resetFormValues = ({ state }, _payload = {}) => {
   state.currentFormValues = {
     name: "",
     fontColor: "",
+    strokeColor: "",
     fontStyle: "",
     fontSize: 16,
     lineHeight: 1.5,
     fontWeight: "400",
+    strokeWidth: 0,
     previewText: "",
   };
 };
@@ -209,10 +217,12 @@ export const setFormValuesFromItem = ({ state }, { item } = {}) => {
   state.currentFormValues = {
     name: item.name || "",
     fontColor: item.colorId || "",
+    strokeColor: item.strokeColorId || "",
     fontStyle: item.fontId || "",
     fontSize: item.fontSize,
     lineHeight: item.lineHeight,
     fontWeight: item.fontWeight,
+    strokeWidth: item.strokeWidth ?? 0,
     previewText: item.previewText || "",
   };
 };
@@ -374,6 +384,8 @@ export const selectViewData = ({ state }) => {
         fontStyle: fontData.fontFamily,
         fontFileId: fontData.fileId,
         color: getColorHex(item.colorId),
+        strokeColor: item.strokeColorId ? getColorHex(item.strokeColorId) : "",
+        strokeWidth: item.strokeColorId ? (item.strokeWidth ?? 0) : 0,
         previewText: getPreviewTextValue(item),
         selectedStyle:
           item.id === state.selectedItemId
@@ -433,6 +445,13 @@ export const selectViewData = ({ state }) => {
         },
         {
           type: "text",
+          label: "Outline Color",
+          value: selectedItem.strokeColorId
+            ? getColorName(selectedItem.strokeColorId)
+            : "",
+        },
+        {
+          type: "text",
           label: "Font",
           value: selectedItem.fontId ? getFontName(selectedItem.fontId) : "",
         },
@@ -440,6 +459,13 @@ export const selectViewData = ({ state }) => {
           type: "text",
           label: "Font Weight",
           value: String(selectedItem.fontWeight ?? ""),
+        },
+        {
+          type: "text",
+          label: "Outline Thickness",
+          value: String(
+            selectedItem.strokeColorId ? (selectedItem.strokeWidth ?? 0) : 0,
+          ),
         },
         {
           type: "text",
@@ -522,6 +548,25 @@ export const selectViewData = ({ state }) => {
         required: true,
       },
       {
+        name: "strokeColor",
+        type: "select",
+        label: "Outline Color",
+        placeholder: "Choose an outline color",
+        options: colorOptions,
+        addOption: { label: "Add new color" },
+        required: false,
+      },
+      {
+        name: "strokeWidth",
+        type: "slider-with-input",
+        label: "Outline Thickness",
+        min: 0,
+        max: 12,
+        step: 0.5,
+        unit: "px",
+        required: false,
+      },
+      {
         name: "fontStyle",
         type: "select",
         label: "Font Style",
@@ -592,10 +637,12 @@ export const selectViewData = ({ state }) => {
       ? {
           name: editingItem.name || "",
           fontColor: editingItem.colorId || "",
+          strokeColor: editingItem.strokeColorId || "",
           fontStyle: editingItem.fontId || "",
           fontSize: editingItem.fontSize,
           lineHeight: editingItem.lineHeight,
           fontWeight: editingItem.fontWeight,
+          strokeWidth: editingItem.strokeWidth ?? 0,
           previewText: editingItem.previewText ?? "",
         }
       : state.defaultValues;
@@ -646,6 +693,12 @@ export const selectViewData = ({ state }) => {
     detailPreviewColor: selectedItem?.colorId
       ? getColorHex(selectedItem.colorId)
       : undefined,
+    detailPreviewStrokeColor: selectedItem?.strokeColorId
+      ? getColorHex(selectedItem.strokeColorId)
+      : undefined,
+    detailPreviewStrokeWidth: selectedItem?.strokeColorId
+      ? (selectedItem?.strokeWidth ?? 0)
+      : 0,
     detailPreviewFontFamily: detailPreviewFontData.fontFamily,
     detailPreviewFontFileId: detailPreviewFontData.fileId,
     title: "Typography",
@@ -681,6 +734,12 @@ export const selectViewData = ({ state }) => {
     previewLineHeight: state.currentFormValues.lineHeight,
     previewFontWeight: state.currentFormValues.fontWeight,
     previewColor: getPreviewColor(),
+    previewStrokeColor: state.currentFormValues.strokeColor
+      ? getColorHex(state.currentFormValues.strokeColor)
+      : undefined,
+    previewStrokeWidth: state.currentFormValues.strokeColor
+      ? (state.currentFormValues.strokeWidth ?? 0)
+      : 0,
     previewFontFamily: previewFontData.fontFamily,
     previewFontFileId: previewFontData.fileId,
     searchQuery: state.searchQuery,

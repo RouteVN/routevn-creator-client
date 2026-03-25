@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
+import { processWithConcurrency } from "../../internal/processWithConcurrency.js";
 import { createCharacterSpritesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import {
   getResourcePageErrorMessage,
@@ -11,6 +12,27 @@ import { tap } from "rxjs";
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const ACCEPTED_FILE_TYPES = ".jpg,.jpeg,.png,.webp";
+const MAX_PARALLEL_UPLOADS = 1;
+const CREATE_SPRITE_ABORT_ERROR = "create-sprite-abort";
+
+const createPendingUploads = ({ files, parentId } = {}) => {
+  if (!parentId) {
+    return [];
+  }
+
+  return (Array.isArray(files) ? files : []).map((file) => ({
+    id: `pending-sprite-${nanoid()}`,
+    file,
+    parentId,
+    name: file.name.replace(/\.[^.]+$/, ""),
+  }));
+};
+
+const createSpriteAbortError = () => {
+  const error = new Error(CREATE_SPRITE_ABORT_ERROR);
+  error.code = CREATE_SPRITE_ABORT_ERROR;
+  return error;
+};
 
 const getCharacterIdFromPayload = ({ appService }) => {
   return appService.getPayload().characterId;
@@ -102,14 +124,109 @@ const openEditDialogForSprite = ({
 const createSpritesFromFiles = async ({
   deps,
   files,
-  parentId = null,
+  parentId = undefined,
 } = {}) => {
-  const { appService, projectService, store } = deps;
-  let successfulUploads;
+  const { appService, projectService, store, render } = deps;
+  const characterId = store.selectCharacterId();
+  if (!characterId) {
+    appService.showToast("Character is missing.", { title: "Error" });
+    return;
+  }
+
+  const pendingUploads = createPendingUploads({ files, parentId });
+  const remainingPendingUploadIds = new Set(
+    pendingUploads.map((item) => item.id),
+  );
+  const pendingUploadIdByFile = new Map(
+    pendingUploads.map((item) => [item.file, item.id]),
+  );
+  const removePendingUploads = (itemIds) => {
+    const normalizedItemIds = (itemIds ?? []).filter((itemId) =>
+      remainingPendingUploadIds.has(itemId),
+    );
+    if (normalizedItemIds.length === 0) {
+      return;
+    }
+
+    store.removePendingUploads({ itemIds: normalizedItemIds });
+    normalizedItemIds.forEach((itemId) =>
+      remainingPendingUploadIds.delete(itemId),
+    );
+    render();
+  };
+
+  if (pendingUploads.length > 0) {
+    store.addPendingUploads({
+      items: pendingUploads.map((item) => ({
+        id: item.id,
+        parentId: item.parentId,
+        name: item.name,
+      })),
+    });
+    render();
+  }
+
+  let successfulUploadCount = 0;
+  let createdCount = 0;
 
   try {
-    successfulUploads = await projectService.uploadFiles(files);
+    await processWithConcurrency(
+      Array.isArray(files) ? files : [],
+      async (file) => {
+        const pendingUploadId = pendingUploadIdByFile.get(file);
+        const uploadResults = await projectService.uploadFiles([file]);
+        const uploadResult = uploadResults?.[0];
+
+        if (!uploadResult) {
+          removePendingUploads([pendingUploadId]);
+          return { ok: false, reason: "upload-failed" };
+        }
+
+        successfulUploadCount += 1;
+
+        const createAttempt = await runResourcePageMutation({
+          appService,
+          fallbackMessage: "Failed to create sprite.",
+          action: () =>
+            projectService.createCharacterSpriteItem({
+              characterId,
+              spriteId: nanoid(),
+              fileRecords: uploadResult.fileRecords,
+              parentId,
+              position: "last",
+              data: {
+                type: "image",
+                fileId: uploadResult.fileId,
+                name: uploadResult.displayName,
+                fileType: uploadResult.file.type,
+                fileSize: uploadResult.file.size,
+                width: uploadResult.dimensions.width,
+                height: uploadResult.dimensions.height,
+              },
+            }),
+        });
+
+        removePendingUploads([pendingUploadId]);
+
+        if (!createAttempt.ok) {
+          throw createSpriteAbortError();
+        }
+
+        createdCount += 1;
+        await refreshCharacterSpritesData(deps);
+        return { ok: true };
+      },
+      {
+        concurrency: MAX_PARALLEL_UPLOADS,
+        stopOnError: true,
+      },
+    );
   } catch (error) {
+    removePendingUploads([...remainingPendingUploadIds]);
+    if (error?.code === CREATE_SPRITE_ABORT_ERROR) {
+      return;
+    }
+
     showResourcePageError({
       appService,
       errorOrResult: error,
@@ -118,46 +235,14 @@ const createSpritesFromFiles = async ({
     return;
   }
 
-  if (!successfulUploads.length) {
+  if (successfulUploadCount === 0) {
     appService.showToast("Failed to upload sprites.", { title: "Error" });
     return;
   }
 
-  const characterId = store.selectCharacterId();
-  if (!characterId) {
-    appService.showToast("Character is missing.", { title: "Error" });
-    return;
+  if (createdCount > 0) {
+    await refreshCharacterSpritesData(deps);
   }
-
-  for (const result of successfulUploads) {
-    const createAttempt = await runResourcePageMutation({
-      appService,
-      fallbackMessage: "Failed to create sprite.",
-      action: () =>
-        projectService.createCharacterSpriteItem({
-          characterId,
-          spriteId: nanoid(),
-          fileRecords: result.fileRecords,
-          parentId,
-          position: "last",
-          data: {
-            type: "image",
-            fileId: result.fileId,
-            name: result.displayName,
-            fileType: result.file.type,
-            fileSize: result.file.size,
-            width: result.dimensions.width,
-            height: result.dimensions.height,
-          },
-        }),
-    });
-
-    if (!createAttempt.ok) {
-      return;
-    }
-  }
-
-  await refreshCharacterSpritesData(deps);
 };
 
 export const handleBeforeMount = (deps) => {

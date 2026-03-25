@@ -81,9 +81,27 @@ export const handleDrop = (deps, payload) => {
   store.setDraggingGroupId({ groupId: undefined });
   render();
 
-  const files = Array.from(payload._event.dataTransfer?.files ?? []).filter(
-    (file) => isFileTypeAccepted(file, props.acceptedFileTypes),
+  const droppedFiles = Array.from(payload._event.dataTransfer?.files ?? []);
+  const files = droppedFiles.filter((file) =>
+    isFileTypeAccepted(file, props.acceptedFileTypes),
   );
+  const rejectedFiles = droppedFiles.filter(
+    (file) => !isFileTypeAccepted(file, props.acceptedFileTypes),
+  );
+
+  if (rejectedFiles.length > 0) {
+    dispatchEvent(
+      new CustomEvent("files-drop-rejected", {
+        detail: {
+          rejectedFiles,
+          targetGroupId,
+          accept: getAcceptAttribute(props.acceptedFileTypes),
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
 
   if (!files.length) {
     return;

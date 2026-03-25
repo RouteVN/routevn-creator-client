@@ -114,13 +114,20 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       children: children.map((item) => {
         const isSelected = item.id === props.selectedItemId;
         const defaultBorderColor = resolveDefaultBorderColor(item.cardKind);
+        const isInteractive = item.isInteractive !== false;
 
         return {
           ...item,
+          domItemId: isInteractive ? item.id : "",
+          cursor: isInteractive ? "pointer" : "default",
           itemBorderColor: isSelected ? "pr" : defaultBorderColor,
-          itemHoverBorderColor: isSelected ? "pr" : "ac",
+          itemHoverBorderColor: isSelected
+            ? "pr"
+            : !isInteractive
+              ? defaultBorderColor
+              : "ac",
           showPreviewIcon: Boolean(
-            item.canPreview && item.id === state.hoveredItemId,
+            isInteractive && item.canPreview && item.id === state.hoveredItemId,
           ),
         };
       }),

@@ -2,6 +2,7 @@ import { nanoid } from "nanoid";
 import { createFontInfoExtractor } from "../../deps/fontInfoExtractor.js";
 import { getFileType } from "../../internal/fileTypes.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
+import { processWithConcurrency } from "../../internal/processWithConcurrency.js";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 import {
@@ -10,6 +11,8 @@ import {
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 
 const FONT_FILE_PATTERN = /\.(ttf|otf|woff|woff2|ttc|eot)$/i;
+const MAX_PARALLEL_UPLOADS = 1;
+const CREATE_FONT_ABORT_ERROR = "create-font-abort";
 
 const showInvalidFormatToast = (appService) => {
   appService.showToast(
@@ -31,16 +34,123 @@ const validateFontFiles = ({ appService, files } = {}) => {
   return true;
 };
 
+const createPendingUploads = ({ files, parentId } = {}) => {
+  if (!parentId) {
+    return [];
+  }
+
+  return (Array.isArray(files) ? files : []).map((file) => ({
+    id: `pending-font-${nanoid()}`,
+    file,
+    parentId,
+    name: file.name.replace(/\.[^.]+$/, ""),
+  }));
+};
+
+const createFontAbortError = () => {
+  const error = new Error(CREATE_FONT_ABORT_ERROR);
+  error.code = CREATE_FONT_ABORT_ERROR;
+  return error;
+};
+
 const createFontsFromFiles = async ({ deps, files, parentId } = {}) => {
-  const { appService, projectService } = deps;
+  const { appService, projectService, store, render } = deps;
   if (!validateFontFiles({ appService, files })) {
     return;
   }
 
-  let successfulUploads;
+  const pendingUploads = createPendingUploads({ files, parentId });
+  const remainingPendingUploadIds = new Set(
+    pendingUploads.map((item) => item.id),
+  );
+  const pendingUploadIdByFile = new Map(
+    pendingUploads.map((item) => [item.file, item.id]),
+  );
+  const removePendingUploads = (itemIds) => {
+    const normalizedItemIds = (itemIds ?? []).filter((itemId) =>
+      remainingPendingUploadIds.has(itemId),
+    );
+    if (normalizedItemIds.length === 0) {
+      return;
+    }
+
+    store.removePendingUploads({ itemIds: normalizedItemIds });
+    normalizedItemIds.forEach((itemId) =>
+      remainingPendingUploadIds.delete(itemId),
+    );
+    render();
+  };
+
+  if (pendingUploads.length > 0) {
+    store.addPendingUploads({
+      items: pendingUploads.map((item) => ({
+        id: item.id,
+        parentId: item.parentId,
+        name: item.name,
+      })),
+    });
+    render();
+  }
+
+  let successfulUploadCount = 0;
+  let createdCount = 0;
+
   try {
-    successfulUploads = await projectService.uploadFiles(files);
+    await processWithConcurrency(
+      Array.isArray(files) ? files : [],
+      async (file) => {
+        const pendingUploadId = pendingUploadIdByFile.get(file);
+        const uploadResults = await projectService.uploadFiles([file]);
+        const uploadResult = uploadResults?.[0];
+
+        if (!uploadResult) {
+          removePendingUploads([pendingUploadId]);
+          return { ok: false, reason: "upload-failed" };
+        }
+
+        successfulUploadCount += 1;
+
+        const createAttempt = await runResourcePageMutation({
+          appService,
+          fallbackMessage: "Failed to create font.",
+          action: () =>
+            projectService.createFont({
+              fontId: nanoid(),
+              fileRecords: uploadResult.fileRecords,
+              data: {
+                type: "font",
+                fileId: uploadResult.fileId,
+                name: uploadResult.displayName,
+                fontFamily: uploadResult.fontName,
+                fileType: getFileType(uploadResult),
+                fileSize: uploadResult.file.size,
+              },
+              parentId,
+              position: "last",
+            }),
+        });
+
+        removePendingUploads([pendingUploadId]);
+
+        if (!createAttempt.ok) {
+          throw createFontAbortError();
+        }
+
+        createdCount += 1;
+        await handleDataChanged(deps);
+        return { ok: true };
+      },
+      {
+        concurrency: MAX_PARALLEL_UPLOADS,
+        stopOnError: true,
+      },
+    );
   } catch (error) {
+    removePendingUploads([...remainingPendingUploadIds]);
+    if (error?.code === CREATE_FONT_ABORT_ERROR) {
+      return;
+    }
+
     showResourcePageError({
       appService,
       errorOrResult: error,
@@ -49,37 +159,14 @@ const createFontsFromFiles = async ({ deps, files, parentId } = {}) => {
     return;
   }
 
-  if (!successfulUploads.length) {
+  if (successfulUploadCount === 0) {
     appService.showToast("Failed to upload font.", { title: "Error" });
     return;
   }
 
-  for (const result of successfulUploads) {
-    const createAttempt = await runResourcePageMutation({
-      appService,
-      fallbackMessage: "Failed to create font.",
-      action: () =>
-        projectService.createFont({
-          fontId: nanoid(),
-          fileRecords: result.fileRecords,
-          data: {
-            type: "font",
-            fileId: result.fileId,
-            name: result.displayName,
-            fontFamily: result.fontName,
-            fileType: getFileType(result),
-            fileSize: result.file.size,
-          },
-          parentId,
-          position: "last",
-        }),
-    });
-    if (!createAttempt.ok) {
-      return;
-    }
+  if (createdCount > 0) {
+    await handleDataChanged(deps);
   }
-
-  await handleDataChanged(deps);
 };
 
 const {

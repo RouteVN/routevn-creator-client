@@ -37,6 +37,21 @@ const countImageEntries = (imagesData) =>
 
 const INITIAL_REMOTE_SYNC_TIMEOUT_MS = 5_000;
 
+const getNow = () => {
+  if (
+    typeof performance !== "undefined" &&
+    typeof performance.now === "function"
+  ) {
+    return performance.now();
+  }
+
+  return Date.now();
+};
+
+const getDurationMs = (startedAt) => Number((getNow() - startedAt).toFixed(2));
+
+const isAudioUploadFile = (file) => file?.type?.startsWith("audio/");
+
 export const createWebProjectServiceAdapters = ({
   onRemoteEvent,
   collabLog,
@@ -155,14 +170,52 @@ export const createWebProjectServiceAdapters = ({
   const fileAdapter = {
     continueOnUploadError: true,
 
-    storeFile: async ({ file, idGenerator, getCurrentStore }) => {
+    storeFile: async ({ file, bytes, idGenerator, getCurrentStore }) => {
       const adapter = getCurrentStore();
       const fileId = idGenerator();
-      const fileBlob = new Blob([await file.arrayBuffer()], {
-        type: file.type,
-      });
-      await adapter.setFile(fileId, fileBlob);
-      return { fileId };
+      const totalStartedAt = getNow();
+      let blobBuildDurationMs = 0;
+      let adapterWriteDurationMs = 0;
+
+      try {
+        const blobBuildStartedAt = getNow();
+        const fileBlob = new Blob([bytes ?? (await file.arrayBuffer())], {
+          type: file.type,
+        });
+        blobBuildDurationMs = getDurationMs(blobBuildStartedAt);
+
+        const adapterWriteStartedAt = getNow();
+        await adapter.setFile(fileId, fileBlob);
+        adapterWriteDurationMs = getDurationMs(adapterWriteStartedAt);
+
+        if (isAudioUploadFile(file)) {
+          console.info("[audioUpload.store.web] complete", {
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+            usedPreloadedBytes: bytes !== undefined,
+            blobBuildDurationMs,
+            adapterWriteDurationMs,
+            totalDurationMs: getDurationMs(totalStartedAt),
+          });
+        }
+
+        return { fileId };
+      } catch (error) {
+        if (isAudioUploadFile(file)) {
+          console.warn("[audioUpload.store.web] failed", {
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+            usedPreloadedBytes: bytes !== undefined,
+            blobBuildDurationMs,
+            adapterWriteDurationMs,
+            totalDurationMs: getDurationMs(totalStartedAt),
+            error: error?.message ?? "Unknown error",
+          });
+        }
+        throw error;
+      }
     },
 
     getFileContent: async ({ fileId, getCurrentStore }) => {

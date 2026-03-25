@@ -2,14 +2,16 @@ import {
   getImageDimensions,
   extractImageThumbnail,
   getVideoDimensions,
-  extractWaveformData,
+  extractWaveformDataFromArrayBuffer,
   extractVideoThumbnail,
   detectFileType,
 } from "../../clients/web/fileProcessors.js";
+import { processWithConcurrency } from "../../../internal/processWithConcurrency.js";
 import { loadFont } from "./fontLoader.js";
 
 const IMAGE_THUMBNAIL_MAX_WIDTH = 320;
 const IMAGE_THUMBNAIL_MAX_HEIGHT = 320;
+const MAX_PARALLEL_UPLOADS = 1;
 
 const bufferToHex = (buffer) =>
   Array.from(new Uint8Array(buffer), (byte) =>
@@ -19,15 +21,25 @@ const bufferToHex = (buffer) =>
 const getFileRecordMimeType = ({ file }) =>
   file.type || "application/octet-stream";
 
-const computeSha256 = async (file) => {
+const getNow = () => {
+  if (
+    typeof performance !== "undefined" &&
+    typeof performance.now === "function"
+  ) {
+    return performance.now();
+  }
+
+  return Date.now();
+};
+
+const getDurationMs = (startedAt) => Number((getNow() - startedAt).toFixed(2));
+
+const computeSha256 = async (bytes) => {
   if (!crypto?.subtle?.digest) {
     throw new Error("SHA-256 hashing is unavailable in this runtime.");
   }
 
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    await file.arrayBuffer(),
-  );
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
   return bufferToHex(digest);
 };
 
@@ -49,9 +61,10 @@ export const createProjectAssetService = ({
   getCurrentReference,
   getStoreByProject,
 }) => {
-  const storeFile = async (file) => {
+  const storeFile = async ({ file, bytes } = {}) => {
     return fileAdapter.storeFile({
       file,
+      bytes,
       idGenerator,
       getCurrentStore,
       getCurrentReference,
@@ -59,10 +72,25 @@ export const createProjectAssetService = ({
     });
   };
 
-  const storeFileWithRecord = async ({ file }) => {
+  const storeFileWithRecord = async ({ file, bytes, timings } = {}) => {
+    const fileBytes = bytes ?? (await file.arrayBuffer());
     const [stored, sha256] = await Promise.all([
-      storeFile(file),
-      computeSha256(file),
+      (async () => {
+        const storeStartedAt = getNow();
+        const result = await storeFile({ file, bytes: fileBytes });
+        if (timings) {
+          timings.storeDurationMs = getDurationMs(storeStartedAt);
+        }
+        return result;
+      })(),
+      (async () => {
+        const hashStartedAt = getNow();
+        const result = await computeSha256(fileBytes);
+        if (timings) {
+          timings.hashDurationMs = getDurationMs(hashStartedAt);
+        }
+        return result;
+      })(),
     ]);
 
     return {
@@ -114,50 +142,106 @@ export const createProjectAssetService = ({
     }
 
     if (fileType === "audio") {
-      const arrayBuffer = await file.arrayBuffer();
-      const fileForWaveform = new File([arrayBuffer], file.name, {
-        type: file.type,
-      });
-      const fileForStorage = new File([arrayBuffer], file.name, {
-        type: file.type,
-      });
+      const totalStartedAt = getNow();
+      let readDurationMs = 0;
+      let waveformDurationMs = 0;
+      let storeAndHashDurationMs = 0;
+      let storeDurationMs = 0;
+      let hashDurationMs = 0;
+      let metadataDurationMs = 0;
 
-      const waveformData = await extractWaveformData(fileForWaveform);
-      const stored = await storeFileWithRecord({
-        file: fileForStorage,
-      });
+      try {
+        const readStartedAt = getNow();
+        const arrayBuffer = await file.arrayBuffer();
+        readDurationMs = getDurationMs(readStartedAt);
 
-      let waveformDataFileId = null;
-      let waveformResult = null;
-      if (waveformData) {
-        const compressedWaveformData = {
-          ...waveformData,
-          amplitudes: waveformData.amplitudes.map((value) =>
-            Math.round(value * 255),
-          ),
-        };
-        waveformResult = await storeMetadata({
-          data: compressedWaveformData,
-          storeFile: (metadataFile) =>
-            storeFileWithRecord({
-              file: metadataFile,
-            }),
-          idGenerator,
+        const [waveformData, stored] = await Promise.all([
+          (async () => {
+            const waveformStartedAt = getNow();
+            const result =
+              await extractWaveformDataFromArrayBuffer(arrayBuffer);
+            waveformDurationMs = getDurationMs(waveformStartedAt);
+            return result;
+          })(),
+          (async () => {
+            const storeStartedAt = getNow();
+            const storeAndHashTimings = {};
+            const result = await storeFileWithRecord({
+              file,
+              bytes: arrayBuffer,
+              timings: storeAndHashTimings,
+            });
+            storeAndHashDurationMs = getDurationMs(storeStartedAt);
+            storeDurationMs = storeAndHashTimings.storeDurationMs ?? 0;
+            hashDurationMs = storeAndHashTimings.hashDurationMs ?? 0;
+            return result;
+          })(),
+        ]);
+
+        let waveformDataFileId = null;
+        let waveformResult = null;
+        if (waveformData) {
+          const compressedWaveformData = {
+            ...waveformData,
+            amplitudes: waveformData.amplitudes.map((value) =>
+              Math.round(value * 255),
+            ),
+          };
+          const metadataStartedAt = getNow();
+          waveformResult = await storeMetadata({
+            data: compressedWaveformData,
+            storeFile: (metadataFile) =>
+              storeFileWithRecord({
+                file: metadataFile,
+              }),
+            idGenerator,
+          });
+          metadataDurationMs = getDurationMs(metadataStartedAt);
+          waveformDataFileId = waveformResult.fileId;
+        }
+
+        console.info("[audioUpload] process.complete", {
+          fileName: file.name,
+          fileSize: file.size,
+          fileType: file.type,
+          readDurationMs,
+          waveformDurationMs,
+          storeAndHashDurationMs,
+          storeDurationMs,
+          hashDurationMs,
+          metadataDurationMs,
+          totalDurationMs: getDurationMs(totalStartedAt),
+          decodedDurationSeconds: waveformData?.duration,
+          waveformSampleCount: waveformData?.amplitudes?.length ?? 0,
         });
-        waveformDataFileId = waveformResult.fileId;
-      }
 
-      return {
-        ...stored,
-        waveformDataFileId,
-        waveformData,
-        duration: waveformData?.duration,
-        type: "audio",
-        fileRecords: [
-          stored.fileRecord,
-          ...(waveformResult ? [waveformResult.fileRecord] : []),
-        ],
-      };
+        return {
+          ...stored,
+          waveformDataFileId,
+          waveformData,
+          duration: waveformData?.duration,
+          type: "audio",
+          fileRecords: [
+            stored.fileRecord,
+            ...(waveformResult ? [waveformResult.fileRecord] : []),
+          ],
+        };
+      } catch (error) {
+        console.warn("[audioUpload] process.failed", {
+          fileName: file.name,
+          fileSize: file.size,
+          fileType: file.type,
+          readDurationMs,
+          waveformDurationMs,
+          storeAndHashDurationMs,
+          storeDurationMs,
+          hashDurationMs,
+          metadataDurationMs,
+          totalDurationMs: getDurationMs(totalStartedAt),
+          error: error?.message ?? "Unknown error",
+        });
+        throw error;
+      }
     }
 
     if (fileType === "video") {
@@ -210,7 +294,7 @@ export const createProjectAssetService = ({
       };
     }
 
-    const stored = await storeFile(file);
+    const stored = await storeFile({ file });
     return {
       ...stored,
       type: "generic",
@@ -221,25 +305,30 @@ export const createProjectAssetService = ({
   return {
     async uploadFiles(files) {
       const fileArray = Array.isArray(files) ? files : Array.from(files);
-      const uploadPromises = fileArray.map(async (file) => {
-        try {
-          const result = await processFile(file);
-          return {
-            success: true,
-            file,
-            displayName: file.name.replace(/\.[^.]+$/, ""),
-            ...result,
-          };
-        } catch (error) {
-          if (fileAdapter.continueOnUploadError === false) {
-            throw error;
+      const results = await processWithConcurrency(
+        fileArray,
+        async (file) => {
+          try {
+            const result = await processFile(file);
+            return {
+              success: true,
+              file,
+              displayName: file.name.replace(/\.[^.]+$/, ""),
+              ...result,
+            };
+          } catch (error) {
+            if (fileAdapter.continueOnUploadError === false) {
+              throw error;
+            }
+            console.error(`Failed to upload ${file.name}:`, error);
+            return { success: false, file, error: error.message };
           }
-          console.error(`Failed to upload ${file.name}:`, error);
-          return { success: false, file, error: error.message };
-        }
-      });
-
-      const results = await Promise.all(uploadPromises);
+        },
+        {
+          concurrency: MAX_PARALLEL_UPLOADS,
+          stopOnError: fileAdapter.continueOnUploadError === false,
+        },
+      );
       return results.filter((result) => result.success);
     },
 

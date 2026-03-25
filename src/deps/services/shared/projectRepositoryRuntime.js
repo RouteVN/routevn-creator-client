@@ -376,14 +376,14 @@ export const createProjectRepositoryRuntime = async ({
         return structuredClone(getCurrentComposedState());
       }
 
-      return structuredClone(
-        replayEventsToRepositoryState({
-          events,
-          untilEventIndex,
-          createInitialState,
-          reduceEventToState,
-        }),
-      );
+      // Historical snapshots are replayed into a fresh state tree, so returning
+      // that replay result directly avoids one more full clone during export.
+      return replayEventsToRepositoryState({
+        events,
+        untilEventIndex,
+        createInitialState,
+        reduceEventToState,
+      });
     },
 
     getRevision(untilEventIndex) {

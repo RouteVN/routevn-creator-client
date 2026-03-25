@@ -1,10 +1,32 @@
 import { nanoid } from "nanoid";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import { processPendingUploads } from "../../internal/ui/resourcePages/media/processPendingUploads.js";
 import {
   runResourcePageMutation,
   showResourcePageError,
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
+
+const VIDEO_FILE_PATTERN = /\.(mp4)$/i;
+const INVALID_VIDEO_FORMAT_MESSAGE =
+  "Invalid file format. Please upload an MP4 video file.";
+
+const showInvalidFormatToast = (appService) => {
+  appService.showToast(INVALID_VIDEO_FORMAT_MESSAGE, { title: "Warning" });
+};
+
+const validateVideoFiles = ({ appService, files } = {}) => {
+  const invalidFiles = Array.from(files ?? []).filter(
+    (file) => !file.name.match(VIDEO_FILE_PATTERN),
+  );
+
+  if (invalidFiles.length > 0) {
+    showInvalidFormatToast(appService);
+    return false;
+  }
+
+  return true;
+};
 
 const pickAndUploadVideo = async ({ appService, projectService } = {}) => {
   let file;
@@ -20,6 +42,10 @@ const pickAndUploadVideo = async ({ appService, projectService } = {}) => {
 
   if (!file) {
     return { cancelled: true };
+  }
+
+  if (!validateVideoFiles({ appService, files: [file] })) {
+    return { errorType: "validation-failed" };
   }
 
   let uploadedFiles;
@@ -39,54 +65,54 @@ const pickAndUploadVideo = async ({ appService, projectService } = {}) => {
 
 const createVideosFromFiles = async ({ deps, files, parentId } = {}) => {
   const { appService, projectService } = deps;
-  let successfulUploads;
 
-  try {
-    successfulUploads = await projectService.uploadFiles(files);
-  } catch (error) {
-    showResourcePageError({
-      appService,
-      errorOrResult: error,
-      fallbackMessage: "Failed to upload video.",
-    });
+  if (!validateVideoFiles({ appService, files })) {
     return;
   }
 
-  if (!successfulUploads.length) {
-    appService.showToast("Failed to upload video.", { title: "Error" });
-    return;
-  }
+  await processPendingUploads({
+    deps,
+    files,
+    parentId,
+    pendingIdPrefix: "pending-video",
+    refresh: handleDataChanged,
+    createItem: async ({ uploadResult }) => {
+      const createAttempt = await runResourcePageMutation({
+        appService,
+        fallbackMessage: "Failed to create video.",
+        action: () =>
+          projectService.createVideo({
+            videoId: nanoid(),
+            fileRecords: uploadResult.fileRecords,
+            data: {
+              type: "video",
+              fileId: uploadResult.fileId,
+              thumbnailFileId: uploadResult.thumbnailFileId,
+              name: uploadResult.displayName,
+              description: "",
+              fileType: uploadResult.file.type,
+              fileSize: uploadResult.file.size,
+              width: uploadResult.dimensions?.width,
+              height: uploadResult.dimensions?.height,
+            },
+            parentId,
+            position: "last",
+          }),
+      });
 
-  for (const result of successfulUploads) {
-    const createAttempt = await runResourcePageMutation({
-      appService,
-      fallbackMessage: "Failed to create video.",
-      action: () =>
-        projectService.createVideo({
-          videoId: nanoid(),
-          fileRecords: result.fileRecords,
-          data: {
-            type: "video",
-            fileId: result.fileId,
-            thumbnailFileId: result.thumbnailFileId,
-            name: result.displayName,
-            description: "",
-            fileType: result.file.type,
-            fileSize: result.file.size,
-            width: result.dimensions?.width,
-            height: result.dimensions?.height,
-          },
-          parentId,
-          position: "last",
-        }),
-    });
-
-    if (!createAttempt.ok) {
-      return;
-    }
-  }
-
-  await handleDataChanged(deps);
+      return createAttempt.ok;
+    },
+    onUploadError: ({ error }) => {
+      showResourcePageError({
+        appService,
+        errorOrResult: error,
+        fallbackMessage: "Failed to upload video.",
+      });
+    },
+    onNoSuccessfulUploads: () => {
+      appService.showToast("Failed to upload video.", { title: "Error" });
+    },
+  });
 };
 
 const openVideoPreviewById = async ({ deps, itemId } = {}) => {
@@ -185,6 +211,17 @@ export const handleFilesDropped = async (deps, payload) => {
   });
 };
 
+export const handleFilesDropRejected = (deps, payload) => {
+  const { appService } = deps;
+  const rejectedFiles = payload._event.detail?.rejectedFiles ?? [];
+
+  if (rejectedFiles.length === 0) {
+    return;
+  }
+
+  showInvalidFormatToast(appService);
+};
+
 export const handleFormExtraEvent = async (deps) => {
   const { appService, projectService, store } = deps;
   const selectedItem = store.selectSelectedItem();
@@ -203,6 +240,10 @@ export const handleFormExtraEvent = async (deps) => {
       errorOrResult: result.error,
       fallbackMessage: "Failed to select file.",
     });
+    return;
+  }
+
+  if (result.errorType === "validation-failed") {
     return;
   }
 
@@ -268,6 +309,10 @@ export const handleEditDialogVideoClick = async (deps) => {
       errorOrResult: result.error,
       fallbackMessage: "Failed to select file.",
     });
+    return;
+  }
+
+  if (result.errorType === "validation-failed") {
     return;
   }
 

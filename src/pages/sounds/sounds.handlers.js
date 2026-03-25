@@ -2,6 +2,7 @@ import { nanoid } from "nanoid";
 import { filter, tap } from "rxjs";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import { processPendingUploads } from "../../internal/ui/resourcePages/media/processPendingUploads.js";
 import {
   getResourcePageErrorMessage,
   runResourcePageMutation,
@@ -56,52 +57,48 @@ const pickAndUploadSound = async ({ appService, projectService } = {}) => {
 
 const createSoundsFromFiles = async ({ deps, files, parentId } = {}) => {
   const { appService, projectService } = deps;
-  let successfulUploads;
 
-  try {
-    successfulUploads = await projectService.uploadFiles(files);
-  } catch (error) {
-    await showUnsupportedFormatDialog(
-      appService,
-      getResourcePageErrorMessage(error, UNSUPPORTED_FORMAT_MESSAGE),
-    );
-    return;
-  }
+  await processPendingUploads({
+    deps,
+    files,
+    parentId,
+    pendingIdPrefix: "pending-sound",
+    refresh: handleDataChanged,
+    createItem: async ({ uploadResult }) => {
+      const createAttempt = await runResourcePageMutation({
+        appService,
+        fallbackMessage: "Failed to create sound.",
+        action: () =>
+          projectService.createSound({
+            soundId: nanoid(),
+            fileRecords: uploadResult.fileRecords,
+            data: {
+              type: "sound",
+              fileId: uploadResult.fileId,
+              name: uploadResult.displayName,
+              description: "",
+              fileType: uploadResult.file.type,
+              fileSize: uploadResult.file.size,
+              waveformDataFileId: uploadResult.waveformDataFileId,
+              duration: uploadResult.duration,
+            },
+            parentId,
+            position: "last",
+          }),
+      });
 
-  if (!successfulUploads.length) {
-    appService.showToast("Failed to upload sound.", { title: "Error" });
-    return;
-  }
-
-  for (const result of successfulUploads) {
-    const createAttempt = await runResourcePageMutation({
-      appService,
-      fallbackMessage: "Failed to create sound.",
-      action: () =>
-        projectService.createSound({
-          soundId: nanoid(),
-          fileRecords: result.fileRecords,
-          data: {
-            type: "sound",
-            fileId: result.fileId,
-            name: result.displayName,
-            description: "",
-            fileType: result.file.type,
-            fileSize: result.file.size,
-            waveformDataFileId: result.waveformDataFileId,
-            duration: result.duration,
-          },
-          parentId,
-          position: "last",
-        }),
-    });
-
-    if (!createAttempt.ok) {
-      return;
-    }
-  }
-
-  await handleDataChanged(deps);
+      return createAttempt.ok;
+    },
+    onUploadError: async ({ error }) => {
+      await showUnsupportedFormatDialog(
+        appService,
+        getResourcePageErrorMessage(error, UNSUPPORTED_FORMAT_MESSAGE),
+      );
+    },
+    onNoSuccessfulUploads: () => {
+      appService.showToast("Failed to upload sound.", { title: "Error" });
+    },
+  });
 };
 
 const handlePanelResize = (deps, payload) => {
