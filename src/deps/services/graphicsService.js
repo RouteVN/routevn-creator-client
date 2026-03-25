@@ -1,4 +1,6 @@
 import createRouteGraphics, {
+  Assets,
+  AudioAsset,
   createAssetBufferManager,
   textPlugin,
   rectPlugin,
@@ -14,11 +16,173 @@ import createRouteEngine, { createEffectsHandler } from "route-engine-js";
 import { Ticker } from "pixi.js";
 import { prepareRenderStateKeyboardForGraphics } from "../../internal/project/layout.js";
 
+const cloneBufferForAudioDecode = (value) => {
+  if (value instanceof ArrayBuffer) {
+    return value.slice(0);
+  }
+
+  if (ArrayBuffer.isView(value)) {
+    return value.buffer.slice(
+      value.byteOffset,
+      value.byteOffset + value.byteLength,
+    );
+  }
+
+  return new ArrayBuffer(0);
+};
+
+const estimateAudioBufferBytes = (audioBuffer) => {
+  if (!audioBuffer) {
+    return 0;
+  }
+
+  return audioBuffer.length * audioBuffer.numberOfChannels * 4;
+};
+
+let managedAudioDecodeContext;
+let managedAudioCache = new Map();
+let managedAudioPendingLoads = new Map();
+let managedAudioResetToken = 0;
+
+const createManagedAudioDecodeContext = () => {
+  const AudioContextConstructor =
+    globalThis.AudioContext || globalThis.webkitAudioContext;
+
+  if (typeof AudioContextConstructor !== "function") {
+    return undefined;
+  }
+
+  return new AudioContextConstructor();
+};
+
+const getManagedAudioDecodeContext = () => {
+  if (
+    managedAudioDecodeContext &&
+    managedAudioDecodeContext.state !== "closed"
+  ) {
+    return managedAudioDecodeContext;
+  }
+
+  managedAudioDecodeContext = createManagedAudioDecodeContext();
+  return managedAudioDecodeContext;
+};
+
+const closeManagedAudioDecodeContext = async () => {
+  const currentContext = managedAudioDecodeContext;
+  managedAudioDecodeContext = undefined;
+
+  if (!currentContext || currentContext.state === "closed") {
+    return;
+  }
+
+  try {
+    await currentContext.close();
+  } catch (error) {
+    console.error(
+      "[graphicsService] Failed to close managed audio decode context",
+      error,
+    );
+  }
+};
+
+const installManagedAudioAsset = () => {
+  if (AudioAsset?.__rvnManaged === true) {
+    return;
+  }
+
+  const load = async (key, arrayBuffer) => {
+    if (managedAudioCache.has(key)) {
+      return managedAudioCache.get(key);
+    }
+
+    const pendingLoad = managedAudioPendingLoads.get(key);
+    if (pendingLoad) {
+      return await pendingLoad;
+    }
+
+    const decodeContext = getManagedAudioDecodeContext();
+    if (!decodeContext) {
+      return undefined;
+    }
+
+    const decodeSource = cloneBufferForAudioDecode(arrayBuffer);
+    if (decodeSource.byteLength === 0) {
+      return undefined;
+    }
+
+    const currentResetToken = managedAudioResetToken;
+    const nextPendingLoad = decodeContext
+      .decodeAudioData(decodeSource)
+      .then((audioBuffer) => {
+        if (managedAudioResetToken !== currentResetToken) {
+          return undefined;
+        }
+
+        managedAudioCache.set(key, audioBuffer);
+        return audioBuffer;
+      })
+      .catch((error) => {
+        console.error(`AudioAsset.load: Failed to decode ${key}:`, error);
+        return undefined;
+      })
+      .finally(() => {
+        managedAudioPendingLoads.delete(key);
+      });
+
+    managedAudioPendingLoads.set(key, nextPendingLoad);
+    return await nextPendingLoad;
+  };
+
+  const getAsset = (key) => {
+    return managedAudioCache.get(key);
+  };
+
+  const unload = async (key) => {
+    managedAudioCache.delete(key);
+    managedAudioPendingLoads.delete(key);
+
+    if (managedAudioCache.size === 0 && managedAudioPendingLoads.size === 0) {
+      await closeManagedAudioDecodeContext();
+    }
+  };
+
+  const clear = async () => {
+    managedAudioResetToken += 1;
+    managedAudioCache = new Map();
+    managedAudioPendingLoads = new Map();
+    await closeManagedAudioDecodeContext();
+  };
+
+  const getStats = () => {
+    return Array.from(managedAudioCache.entries()).map(
+      ([key, audioBuffer]) => ({
+        key,
+        duration: audioBuffer.duration,
+        channels: audioBuffer.numberOfChannels,
+        sampleRate: audioBuffer.sampleRate,
+        estimatedBytes: estimateAudioBufferBytes(audioBuffer),
+      }),
+    );
+  };
+
+  AudioAsset.load = load;
+  AudioAsset.getAsset = getAsset;
+  AudioAsset.unload = unload;
+  AudioAsset.remove = unload;
+  AudioAsset.clear = clear;
+  AudioAsset.reset = clear;
+  AudioAsset.getStats = getStats;
+  AudioAsset.__rvnManaged = true;
+};
+
+installManagedAudioAsset();
+
 export const createGraphicsService = async ({ subject }) => {
   const RIGHT_CLICK_EVENT_NAMES = new Set(["rightclick", "rightClick"]);
   let routeGraphics;
   let engine;
   let assetBufferManager;
+  let loadedAssetTypes = new Map();
   let enableGlobalKeyboardBindings = true;
   // Create dedicated ticker for auto mode
   let ticker;
@@ -26,8 +190,455 @@ export const createGraphicsService = async ({ subject }) => {
   let actionQueue = Promise.resolve();
   let assetLoadQueue = Promise.resolve();
   let pendingClickInteractionTimeouts = new Map();
+  let deferredAudioRenderToken = 0;
+  let deferredAudioRenderKeySignature = "";
 
   const isBlobUrl = (url) => typeof url === "string" && url.startsWith("blob:");
+
+  const classifyAsset = (mimeType) => {
+    if (!mimeType) {
+      return "texture";
+    }
+
+    if (mimeType.startsWith("audio/")) {
+      return "audio";
+    }
+
+    if (
+      mimeType.startsWith("font/") ||
+      [
+        "application/font-woff",
+        "application/font-woff2",
+        "application/x-font-ttf",
+        "application/x-font-otf",
+      ].includes(mimeType)
+    ) {
+      return "font";
+    }
+
+    if (mimeType.startsWith("video/")) {
+      return "video";
+    }
+
+    return "texture";
+  };
+
+  const normalizeFontFamily = (value) => {
+    return value?.replace(/^["']|["']$/g, "");
+  };
+
+  const ensureAudioAssetsLoaded = async (assetKeys = []) => {
+    const uniqueAudioKeys = Array.from(
+      new Set(assetKeys.filter((key) => typeof key === "string" && key)),
+    );
+
+    if (uniqueAudioKeys.length === 0) {
+      return;
+    }
+
+    const bufferMap = assetBufferManager?.getBufferMap?.() ?? {};
+    const keysToDecode = uniqueAudioKeys.filter((key) => {
+      if (!bufferMap[key]) {
+        return false;
+      }
+
+      if (managedAudioPendingLoads.has(key)) {
+        return false;
+      }
+
+      return !AudioAsset.getAsset?.(key);
+    });
+
+    if (keysToDecode.length === 0) {
+      return;
+    }
+
+    await Promise.all(
+      keysToDecode.map((key) => AudioAsset.load(key, bufferMap[key].buffer)),
+    );
+  };
+
+  const invalidateDeferredAudioRender = () => {
+    deferredAudioRenderToken += 1;
+    deferredAudioRenderKeySignature = "";
+  };
+
+  const getRenderStateAudioKeys = (renderState) => {
+    return Array.from(
+      new Set(
+        (renderState?.audio ?? [])
+          .map((audioElement) => audioElement?.src)
+          .filter((key) => typeof key === "string" && key),
+      ),
+    );
+  };
+
+  const getMissingDecodedAudioKeys = (assetKeys = []) => {
+    const uniqueAudioKeys = Array.from(
+      new Set(assetKeys.filter((key) => typeof key === "string" && key)),
+    );
+
+    return uniqueAudioKeys.filter((key) => !AudioAsset.getAsset?.(key));
+  };
+
+  const getDecodableAudioKeys = (assetKeys = []) => {
+    const bufferMap = assetBufferManager?.getBufferMap?.() ?? {};
+    return Array.from(
+      new Set(
+        assetKeys.filter(
+          (key) => typeof key === "string" && key && !!bufferMap[key],
+        ),
+      ),
+    );
+  };
+
+  const splitRenderableAudio = (audioElements = []) => {
+    const renderableAudio = [];
+    const missingAudioKeys = [];
+
+    audioElements.forEach((audioElement) => {
+      const key = audioElement?.src;
+      if (typeof key !== "string" || !key) {
+        renderableAudio.push(audioElement);
+        return;
+      }
+
+      if (AudioAsset.getAsset?.(key)) {
+        renderableAudio.push(audioElement);
+        return;
+      }
+
+      missingAudioKeys.push(key);
+    });
+
+    return {
+      renderableAudio,
+      missingAudioKeys: Array.from(new Set(missingAudioKeys)),
+    };
+  };
+
+  const pruneDecodedAudioCache = async (retainedAudioKeys = []) => {
+    const retainedAudioKeySet = new Set(
+      retainedAudioKeys.filter((key) => typeof key === "string" && key),
+    );
+    const keysToUnload = Array.from(managedAudioCache.keys()).filter(
+      (key) => !retainedAudioKeySet.has(key),
+    );
+
+    if (keysToUnload.length === 0) {
+      return;
+    }
+
+    await Promise.all(keysToUnload.map((key) => AudioAsset.unload?.(key)));
+  };
+
+  const scheduleDeferredAudioRender = (audioKeys = []) => {
+    const uniqueAudioKeys = getDecodableAudioKeys(audioKeys);
+    const nextSignature = uniqueAudioKeys.slice().sort().join("|");
+
+    if (uniqueAudioKeys.length === 0) {
+      return;
+    }
+
+    if (nextSignature === deferredAudioRenderKeySignature) {
+      return;
+    }
+
+    const scheduledToken = deferredAudioRenderToken + 1;
+    deferredAudioRenderToken = scheduledToken;
+    deferredAudioRenderKeySignature = nextSignature;
+
+    void ensureAudioAssetsLoaded(uniqueAudioKeys)
+      .then(() => {
+        if (
+          scheduledToken !== deferredAudioRenderToken ||
+          !engine ||
+          !routeGraphics
+        ) {
+          return;
+        }
+
+        const nextRenderState = engine.selectRenderState();
+        const remainingMissingAudioKeys = getDecodableAudioKeys(
+          getMissingDecodedAudioKeys(getRenderStateAudioKeys(nextRenderState)),
+        );
+
+        if (remainingMissingAudioKeys.length > 0) {
+          scheduleDeferredAudioRender(remainingMissingAudioKeys);
+          return;
+        }
+
+        if (scheduledToken === deferredAudioRenderToken) {
+          deferredAudioRenderKeySignature = "";
+        }
+        renderEngineState(nextRenderState, {
+          allowDeferredAudio: false,
+        });
+      })
+      .catch((error) => {
+        if (scheduledToken === deferredAudioRenderToken) {
+          deferredAudioRenderKeySignature = "";
+        }
+        console.error(
+          "[graphicsService] Failed to decode deferred audio render assets",
+          error,
+        );
+      });
+  };
+
+  const getCachedPixiAsset = (key) => {
+    if (!Assets.cache?.has?.(key)) {
+      return undefined;
+    }
+
+    return Assets.cache.get(key);
+  };
+
+  const getVideoResourceForKey = (key) => {
+    const asset = getCachedPixiAsset(key);
+    const resource =
+      asset?.source?.resource ??
+      asset?.baseTexture?.resource ??
+      asset?.resource ??
+      asset;
+
+    if (
+      typeof HTMLVideoElement !== "undefined" &&
+      resource instanceof HTMLVideoElement
+    ) {
+      return resource;
+    }
+
+    return undefined;
+  };
+
+  const getTrackedVideoEntries = () => {
+    const videoKeys = Array.from(loadedAssetTypes.entries())
+      .filter(([, type]) => type === "video")
+      .map(([key]) => key);
+
+    return videoKeys.map((key) => ({
+      key,
+      video: getVideoResourceForKey(key),
+    }));
+  };
+
+  const releaseVideoElementResource = (video) => {
+    if (!video) {
+      return;
+    }
+
+    try {
+      video.pause();
+    } catch {}
+
+    try {
+      video.currentTime = 0;
+    } catch {}
+
+    try {
+      video.muted = true;
+      video.loop = false;
+      video.preload = "none";
+      video.autoplay = false;
+    } catch {}
+
+    try {
+      video.srcObject = null;
+    } catch {}
+
+    try {
+      Array.from(video.querySelectorAll("source")).forEach((sourceElement) => {
+        sourceElement.removeAttribute("src");
+        sourceElement.remove();
+      });
+    } catch {}
+
+    try {
+      video.src = "";
+    } catch {}
+
+    try {
+      video.removeAttribute("src");
+    } catch {}
+
+    try {
+      video.removeAttribute("poster");
+    } catch {}
+
+    try {
+      video.load();
+    } catch {}
+  };
+
+  const releaseTrackedVideoResources = (entries = getTrackedVideoEntries()) => {
+    if (entries.length === 0) {
+      return;
+    }
+
+    entries.forEach(({ video }) => {
+      releaseVideoElementResource(video);
+    });
+  };
+
+  const clearLoadedFonts = () => {
+    if (typeof document === "undefined" || !document.fonts) {
+      return;
+    }
+
+    const fontKeys = new Set(
+      Array.from(loadedAssetTypes.entries())
+        .filter(([, type]) => type === "font")
+        .map(([key]) => key),
+    );
+
+    if (fontKeys.size === 0) {
+      return;
+    }
+
+    for (const fontFace of document.fonts) {
+      const family = normalizeFontFamily(fontFace.family);
+      if (family && fontKeys.has(family)) {
+        document.fonts.delete(fontFace);
+      }
+    }
+  };
+
+  const unloadTrackedPixiAssets = async () => {
+    const pixiAssetKeys = Array.from(loadedAssetTypes.entries())
+      .filter(([, type]) => type === "texture" || type === "video")
+      .map(([key]) => key);
+
+    if (pixiAssetKeys.length === 0) {
+      return;
+    }
+
+    const destroyCachedPixiAsset = (key) => {
+      const asset = getCachedPixiAsset(key);
+      if (!asset) {
+        return;
+      }
+
+      const texture =
+        typeof asset?.destroy === "function" ? asset : asset?.texture;
+      const source = texture?.source ?? texture?._source;
+      const resource = source?.resource;
+
+      if (
+        typeof HTMLVideoElement !== "undefined" &&
+        resource instanceof HTMLVideoElement
+      ) {
+        releaseVideoElementResource(resource);
+      }
+
+      if (
+        typeof ImageBitmap !== "undefined" &&
+        resource instanceof ImageBitmap &&
+        typeof resource.close === "function"
+      ) {
+        try {
+          resource.close();
+        } catch {}
+      }
+
+      if (
+        texture &&
+        typeof texture.destroy === "function" &&
+        texture.destroyed !== true
+      ) {
+        texture.destroy(true);
+      } else if (
+        source &&
+        typeof source.destroy === "function" &&
+        source.destroyed !== true
+      ) {
+        source.destroy();
+      }
+
+      if (Assets.cache?.has?.(key)) {
+        Assets.cache.remove(key);
+      }
+    };
+
+    await Promise.all(
+      pixiAssetKeys.map(async (key) => {
+        await Assets.unload(key).catch((error) => {
+          console.error(
+            `[graphicsService] Failed to unload asset ${key}`,
+            error,
+          );
+        });
+        destroyCachedPixiAsset(key);
+      }),
+    );
+  };
+
+  const unloadTrackedAudioAssets = async () => {
+    const audioKeys = Array.from(loadedAssetTypes.entries())
+      .filter(([, type]) => type === "audio")
+      .map(([key]) => key);
+
+    if (audioKeys.length === 0) {
+      return { count: 0, strategy: "none" };
+    }
+
+    if (typeof AudioAsset?.unload === "function") {
+      await Promise.all(audioKeys.map((key) => AudioAsset.unload(key)));
+      return { count: audioKeys.length, strategy: "unload" };
+    }
+
+    if (typeof AudioAsset?.remove === "function") {
+      audioKeys.forEach((key) => AudioAsset.remove(key));
+      return { count: audioKeys.length, strategy: "remove" };
+    }
+
+    if (typeof AudioAsset?.clear === "function") {
+      AudioAsset.clear();
+      return { count: audioKeys.length, strategy: "clear" };
+    }
+
+    if (typeof AudioAsset?.reset === "function") {
+      AudioAsset.reset();
+      return { count: audioKeys.length, strategy: "reset" };
+    }
+
+    return {
+      count: audioKeys.length,
+      strategy: "unsupported",
+      availableMethods: Object.keys(AudioAsset ?? {}),
+      keys: audioKeys,
+    };
+  };
+
+  const destroyRuntime = async () => {
+    const trackedVideoEntries = getTrackedVideoEntries();
+
+    releaseTrackedVideoResources(trackedVideoEntries);
+    await unloadTrackedPixiAssets();
+
+    if (routeGraphics) {
+      routeGraphics.destroy();
+      routeGraphics = undefined;
+    }
+
+    await unloadTrackedAudioAssets();
+    clearLoadedFonts();
+    loadedAssetTypes = new Map();
+    assetBufferManager?.clear();
+    assetBufferManager = undefined;
+
+    if (engine) {
+      engine = undefined;
+    }
+    enableGlobalKeyboardBindings = true;
+    beforeHandleActions = undefined;
+    actionQueue = Promise.resolve();
+    assetLoadQueue = Promise.resolve();
+    invalidateDeferredAudioRender();
+    clearAllPendingClickInteractions();
+    ticker?.stop();
+    ticker = undefined;
+  };
 
   const loadBuffersWithRetry = async (assets, retryCount = 1) => {
     let attempt = 0;
@@ -78,7 +689,18 @@ export const createGraphicsService = async ({ subject }) => {
       return;
     }
 
-    await routeGraphics.loadAssets(deltaBufferMap);
+    const renderAssetEntries = Object.entries(deltaBufferMap).filter(
+      ([, value]) => classifyAsset(value?.type) !== "audio",
+    );
+    const renderAssetBufferMap = Object.fromEntries(renderAssetEntries);
+
+    if (Object.keys(renderAssetBufferMap).length > 0) {
+      await routeGraphics.loadAssets(renderAssetBufferMap);
+    }
+
+    newAssetEntries.forEach(([key, asset]) => {
+      loadedAssetTypes.set(key, classifyAsset(asset?.type));
+    });
   };
 
   const runInteractionActions = async (actions, eventContext) => {
@@ -108,12 +730,32 @@ export const createGraphicsService = async ({ subject }) => {
     return undefined;
   };
 
-  const renderEngineState = (renderState) => {
-    const nextRenderState = prepareRenderStateKeyboardForGraphics({
+  const renderEngineState = (renderState, options = {}) => {
+    const { allowDeferredAudio = true } = options;
+    let nextRenderState = prepareRenderStateKeyboardForGraphics({
       renderState,
       enableGlobalKeyboardBindings,
     });
+    const requestedAudioKeys = getRenderStateAudioKeys(nextRenderState);
+    let retainedAudioKeys = requestedAudioKeys;
+
+    if (allowDeferredAudio) {
+      const { renderableAudio, missingAudioKeys } = splitRenderableAudio(
+        nextRenderState.audio,
+      );
+
+      if (missingAudioKeys.length > 0) {
+        nextRenderState = {
+          ...nextRenderState,
+          audio: renderableAudio,
+        };
+        retainedAudioKeys = getRenderStateAudioKeys(nextRenderState);
+        scheduleDeferredAudioRender(missingAudioKeys);
+      }
+    }
+
     routeGraphics.render(nextRenderState);
+    void pruneDecodedAudioCache(retainedAudioKeys);
   };
 
   const enqueueInteractionActions = (actions, eventContext) => {
@@ -161,8 +803,7 @@ export const createGraphicsService = async ({ subject }) => {
   return {
     init: async (options = {}) => {
       if (routeGraphics) {
-        routeGraphics.destroy();
-        routeGraphics = undefined;
+        await destroyRuntime();
       }
 
       ticker = new Ticker();
@@ -171,7 +812,9 @@ export const createGraphicsService = async ({ subject }) => {
       beforeHandleActions = onBeforeHandleActions;
       actionQueue = Promise.resolve();
       assetLoadQueue = Promise.resolve();
+      invalidateDeferredAudioRender();
       clearAllPendingClickInteractions();
+      loadedAssetTypes = new Map();
       assetBufferManager = createAssetBufferManager();
       routeGraphics = createRouteGraphics();
 
@@ -282,23 +925,43 @@ export const createGraphicsService = async ({ subject }) => {
     },
 
     engineSelectPresentationState: () => {
+      if (!engine) {
+        return undefined;
+      }
       return engine.selectPresentationState();
     },
 
     engineSelectRenderState: () => {
+      if (!engine) {
+        return undefined;
+      }
       return engine.selectRenderState();
     },
 
     engineSelectSectionLineChanges: (payload) => {
+      if (!engine) {
+        return [];
+      }
       return engine.selectSectionLineChanges(payload);
     },
 
     engineSelectPresentationChanges: () => {
+      if (!engine) {
+        return undefined;
+      }
       return engine.selectPresentationChanges();
     },
 
+    ensureAudioAssetsLoaded,
+
     engineRenderCurrentState: (options = {}) => {
+      if (!engine || !routeGraphics) {
+        return;
+      }
       const { skipAudio = false, skipAnimations = false } = options;
+      if (skipAudio) {
+        invalidateDeferredAudioRender();
+      }
       let renderState = engine.selectRenderState();
       if (skipAudio) {
         renderState = { ...renderState, audio: [] };
@@ -310,25 +973,14 @@ export const createGraphicsService = async ({ subject }) => {
     },
 
     engineHandleActions: (actions, eventContext) => {
+      if (!engine) {
+        return;
+      }
       engine.handleActions(actions, eventContext);
     },
 
     render: (payload) => routeGraphics.render(payload),
     parse: (payload) => routeGraphics.parse(payload),
-    destroy: () => {
-      if (routeGraphics) {
-        routeGraphics.destroy();
-        routeGraphics = undefined;
-      }
-      if (engine) {
-        engine = undefined;
-      }
-      enableGlobalKeyboardBindings = true;
-      beforeHandleActions = undefined;
-      actionQueue = Promise.resolve();
-      assetLoadQueue = Promise.resolve();
-      clearAllPendingClickInteractions();
-      ticker.stop();
-    },
+    destroy: destroyRuntime,
   };
 };

@@ -16,7 +16,9 @@ import {
 
 const createAssetLoadCache = () => ({
   sceneIds: new Set(),
+  pendingSceneIds: new Set(),
   fileIds: new Set(),
+  pendingFileLoads: new Map(),
 });
 
 let assetLoadCache = createAssetLoadCache();
@@ -158,42 +160,85 @@ async function loadAssetsForSceneIds(
   const fileReferences = extractFileIdsForScenes(projectData, uniqueSceneIds);
   const missingFileReferences = fileReferences.filter((fileReference) => {
     const fileId = fileReference?.url;
-    return fileId && !assetLoadCache.fileIds.has(fileId);
+    return (
+      fileId &&
+      !assetLoadCache.fileIds.has(fileId) &&
+      !assetLoadCache.pendingFileLoads.has(fileId)
+    );
   });
+  const pendingFileIds = fileReferences
+    .map((fileReference) => fileReference?.url)
+    .filter((fileId) => assetLoadCache.pendingFileLoads.has(fileId));
   const isAnySceneUntracked = uniqueSceneIds.some(
-    (sceneId) => !assetLoadCache.sceneIds.has(sceneId),
+    (sceneId) =>
+      !assetLoadCache.sceneIds.has(sceneId) &&
+      !assetLoadCache.pendingSceneIds.has(sceneId),
   );
 
-  if (missingFileReferences.length === 0 && !isAnySceneUntracked) {
+  if (
+    missingFileReferences.length === 0 &&
+    pendingFileIds.length === 0 &&
+    !isAnySceneUntracked
+  ) {
     return;
   }
 
   const shouldShowLoading = showLoading && missingFileReferences.length > 0;
+  let loadedAssetIds = [];
+  const pendingLoadPromises = pendingFileIds
+    .map((fileId) => assetLoadCache.pendingFileLoads.get(fileId))
+    .filter(Boolean);
+  const newFileIds = missingFileReferences
+    .map((fileReference) => fileReference?.url)
+    .filter(Boolean);
 
   try {
+    uniqueSceneIds.forEach((sceneId) => {
+      assetLoadCache.pendingSceneIds.add(sceneId);
+    });
+
     if (shouldShowLoading) {
       setSceneAssetLoading(deps, true);
     }
 
     if (missingFileReferences.length > 0) {
-      const assets = await createAssetsFromFileIds(
-        missingFileReferences,
-        projectService,
-        projectData.resources,
-      );
-      await graphicsService.loadAssets(assets);
+      const nextLoadPromise = (async () => {
+        const assets = await createAssetsFromFileIds(
+          missingFileReferences,
+          projectService,
+          projectData.resources,
+        );
+        await graphicsService.loadAssets(assets);
+        return Object.keys(assets);
+      })();
 
-      Object.keys(assets).forEach((fileId) => {
-        if (fileId) {
-          assetLoadCache.fileIds.add(fileId);
-        }
+      newFileIds.forEach((fileId) => {
+        assetLoadCache.pendingFileLoads.set(fileId, nextLoadPromise);
+      });
+
+      loadedAssetIds = await nextLoadPromise.finally(() => {
+        newFileIds.forEach((fileId) => {
+          assetLoadCache.pendingFileLoads.delete(fileId);
+        });
+      });
+
+      loadedAssetIds.forEach((fileId) => {
+        assetLoadCache.fileIds.add(fileId);
       });
     }
 
+    if (pendingLoadPromises.length > 0) {
+      await Promise.all(pendingLoadPromises);
+    }
+
     uniqueSceneIds.forEach((sceneId) => {
+      assetLoadCache.pendingSceneIds.delete(sceneId);
       assetLoadCache.sceneIds.add(sceneId);
     });
   } catch (error) {
+    uniqueSceneIds.forEach((sceneId) => {
+      assetLoadCache.pendingSceneIds.delete(sceneId);
+    });
     appService?.showToast("Failed to load some scene assets", {
       title: "Warning",
     });
@@ -235,26 +280,58 @@ async function preloadLayoutAssetsByIds(deps, projectData, layoutIds) {
   const fileReferences = extractFileIdsForLayouts(projectData, uniqueLayoutIds);
   const missingFileReferences = fileReferences.filter((fileReference) => {
     const fileId = fileReference?.url;
-    return fileId && !assetLoadCache.fileIds.has(fileId);
+    return (
+      fileId &&
+      !assetLoadCache.fileIds.has(fileId) &&
+      !assetLoadCache.pendingFileLoads.has(fileId)
+    );
   });
+  const pendingFileIds = fileReferences
+    .map((fileReference) => fileReference?.url)
+    .filter((fileId) => assetLoadCache.pendingFileLoads.has(fileId));
 
-  if (missingFileReferences.length === 0) {
+  if (missingFileReferences.length === 0 && pendingFileIds.length === 0) {
     return;
   }
 
   const { graphicsService, projectService } = deps;
-  const assets = await createAssetsFromFileIds(
-    missingFileReferences,
-    projectService,
-    projectData.resources,
-  );
-  await graphicsService.loadAssets(assets);
+  const pendingLoadPromises = pendingFileIds
+    .map((fileId) => assetLoadCache.pendingFileLoads.get(fileId))
+    .filter(Boolean);
+  const newFileIds = missingFileReferences
+    .map((fileReference) => fileReference?.url)
+    .filter(Boolean);
+  let loadedFileIds = [];
 
-  Object.keys(assets).forEach((fileId) => {
-    if (fileId) {
+  if (missingFileReferences.length > 0) {
+    const nextLoadPromise = (async () => {
+      const assets = await createAssetsFromFileIds(
+        missingFileReferences,
+        projectService,
+        projectData.resources,
+      );
+      await graphicsService.loadAssets(assets);
+      return Object.keys(assets);
+    })();
+
+    newFileIds.forEach((fileId) => {
+      assetLoadCache.pendingFileLoads.set(fileId, nextLoadPromise);
+    });
+
+    loadedFileIds = await nextLoadPromise.finally(() => {
+      newFileIds.forEach((fileId) => {
+        assetLoadCache.pendingFileLoads.delete(fileId);
+      });
+    });
+
+    loadedFileIds.forEach((fileId) => {
       assetLoadCache.fileIds.add(fileId);
-    }
-  });
+    });
+  }
+
+  if (pendingLoadPromises.length > 0) {
+    await Promise.all(pendingLoadPromises);
+  }
 }
 
 const createBeforeHandleActionsHook = (deps) => {
@@ -398,6 +475,18 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
   }
 
   graphicsService.engineHandleActions(nextActions);
+  const currentRenderState = graphicsService.engineSelectRenderState();
+  if (!currentRenderState) {
+    return;
+  }
+
+  const activeAudioFileIds =
+    payload?.skipAudio || isMuted
+      ? []
+      : (currentRenderState.audio || [])
+          .map((audioElement) => audioElement?.src)
+          .filter(Boolean);
+  await graphicsService.ensureAudioAssetsLoaded(activeAudioFileIds);
   graphicsService.engineRenderCurrentState({
     skipAudio: isMuted,
     skipAnimations,
@@ -485,7 +574,7 @@ export const initializeSceneEditorPage = async (deps) => {
     }
   }
 
-  resetAssetLoadCache();
+  resetAssetLoadCache("initialize scene editor");
   store.setSceneAssetLoading({ isLoading: false });
 
   await graphicsService.init({
@@ -520,11 +609,12 @@ export const initializeSceneEditorPage = async (deps) => {
 
 export const restoreSceneEditorFromPreview = async (deps) => {
   const { store, render, graphicsService, refs } = deps;
+  const sceneId = store.selectSceneId();
 
   store.hidePreviewScene();
   render();
 
-  resetAssetLoadCache();
+  resetAssetLoadCache("restore scene editor from preview");
   store.setSceneAssetLoading({ isLoading: false });
   await graphicsService.init({
     canvas: refs.canvas,
@@ -532,7 +622,6 @@ export const restoreSceneEditorFromPreview = async (deps) => {
   });
 
   const projectData = store.selectProjectData();
-  const sceneId = store.selectSceneId();
   const initialProjectData = createProjectDataWithSelectedEntryPoint(
     projectData,
     {
@@ -599,9 +688,9 @@ export const mountSceneEditorSubscriptions = (deps) => {
   return () => active.forEach((subscription) => subscription?.unsubscribe?.());
 };
 
-export const resetSceneEditorRuntime = (deps) => {
+export const resetSceneEditorRuntime = async (deps) => {
   const { graphicsService, store } = deps;
   store.setSceneAssetLoading({ isLoading: false });
-  resetAssetLoadCache();
-  graphicsService.destroy();
+  resetAssetLoadCache("scene editor unmount");
+  await graphicsService.destroy();
 };

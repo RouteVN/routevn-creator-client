@@ -24,7 +24,7 @@
         "jszip": "^3.10.1",
         "nanoid": "^5.1.5",
         "route-engine-js": "0.3.2",
-        "route-graphics": "1.0.3",
+        "route-graphics": "1.1.1",
         "rxjs": "^7.8.2",
         "snabbdom": "^3.6.2",
         "snabbdom-to-html": "^7.1.0",
@@ -689,7 +689,7 @@
 
     "route-engine-js": ["route-engine-js@0.3.2", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.0.0", "js-yaml": "^4.1.0", "puty": "^0.1.1" } }, "sha512-FrRK9Mc1Zhncm3pjt1D7M6JXvkf5JKL7Y+64zjS1UEsIAGAj/9IM61ohOwHZj28xddXxSY5fU0wH1S7yN8CldA=="],
 
-    "route-graphics": ["route-graphics@1.0.3", "", { "dependencies": { "@pixi/unsafe-eval": "^7.4.3", "hotkeys-js": "^4.0.0-beta.7", "pixi.js": "^8.7.1" } }, "sha512-XTvKr80Cic4KZKqywLKgpw8OetGVdSIYKKDCSIeu79pJoHP4gtgAn6AWMmxbqxzGaEpPo9jlfTxqSaH0xudyQw=="],
+    "route-graphics": ["route-graphics@1.1.1", "", { "dependencies": { "@pixi/unsafe-eval": "^7.4.3", "hotkeys-js": "^4.0.0-beta.7", "pixi.js": "^8.7.1" } }, "sha512-pBIKRufMpfUzP8Npia2jrm7vcOENOTlwlgLVr3nWDJILVNM7Ssfe3MWALU9S35iPC+6ensiMNC+yieaEwN3lVg=="],
 
     "rrweb-cssom": ["rrweb-cssom@0.8.0", "", {}, "sha512-guoltQEx+9aMf2gDZ0s62EcV8lsXR+0w8915TC3ITdn2YueuNjdAYh/levpU9nFaoChh9RUS5ZdQMrKfVEN9tw=="],
 
