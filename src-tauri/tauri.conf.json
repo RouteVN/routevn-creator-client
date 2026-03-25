@@ -33,7 +33,9 @@
           "blob:",
           "asset:",
           "asset://localhost",
-          "http://asset.localhost"
+          "http://asset.localhost",
+          "project-file:",
+          "http://project-file.localhost"
         ],
         "style-src": [
           "'self'",
@@ -43,6 +45,8 @@
           "'self'",
           "asset:",
           "http://asset.localhost",
+          "project-file:",
+          "http://project-file.localhost",
           "data:",
           "blob:"
         ],

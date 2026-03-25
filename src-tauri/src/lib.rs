@@ -2,6 +2,7 @@
 use tauri::Manager;
 
 mod export_zip;
+mod project_file_protocol;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -13,6 +14,7 @@ pub fn run() {
     }
 
     tauri::Builder::default()
+        .register_uri_scheme_protocol("project-file", project_file_protocol::handle)
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_sql::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
