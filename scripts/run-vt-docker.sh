@@ -3,8 +3,7 @@
 set -euo pipefail
 
 images=(
-  "han4wluc/rtgl:playwright-v1.57.0-rtgl-v1.0.5"
-  "han4wluc/rtgl:playwright-v1.57.0-rtgl-v1.0.0-rc13"
+  "docker.io/han4wluc/rtgl:playwright-v1.57.0-rtgl-v1.0.12"
 )
 
 find_local_image() {
@@ -76,4 +75,19 @@ if [ "${#env_args[@]}" -gt 0 ]; then
   docker_args+=("${env_args[@]}")
 fi
 
-exec docker run "${docker_args[@]}" "$IMAGE" rtgl "$@"
+rtgl_args=("$@")
+if [ "${1:-}" = "vt" ] && [ "${2:-}" = "screenshot" ]; then
+  has_isolation_flag=0
+  for arg in "${rtgl_args[@]}"; do
+    if [ "$arg" = "--isolation" ] || [[ "$arg" == --isolation=* ]]; then
+      has_isolation_flag=1
+      break
+    fi
+  done
+
+  if [ "$has_isolation_flag" -eq 0 ]; then
+    rtgl_args+=(--isolation strict)
+  fi
+fi
+
+exec docker run "${docker_args[@]}" "$IMAGE" rtgl "${rtgl_args[@]}"
