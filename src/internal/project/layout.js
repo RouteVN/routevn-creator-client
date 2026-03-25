@@ -703,20 +703,50 @@ export const buildLayoutRenderElements = (
 
 export const extractFileIdsFromRenderState = (obj) => {
   const fileReferencesByKey = new Map();
+  const defaultFileReferenceType = "image/png";
 
-  const addFileReference = (fileId, type = "image/png") => {
+  const resolvePreferredFileReferenceType = (currentType, nextType) => {
+    const normalizedCurrent =
+      typeof currentType === "string" && currentType.length > 0
+        ? currentType
+        : undefined;
+    const normalizedNext =
+      typeof nextType === "string" && nextType.length > 0
+        ? nextType
+        : defaultFileReferenceType;
+
+    if (!normalizedCurrent || normalizedCurrent === normalizedNext) {
+      return normalizedNext;
+    }
+
+    if (
+      normalizedCurrent === defaultFileReferenceType &&
+      normalizedNext !== defaultFileReferenceType
+    ) {
+      return normalizedNext;
+    }
+
+    return normalizedCurrent;
+  };
+
+  const addFileReference = (fileId, type = defaultFileReferenceType) => {
     if (typeof fileId !== "string" || fileId.length === 0) {
       return;
     }
 
-    const key = `${type}:${fileId}`;
-    if (fileReferencesByKey.has(key)) {
+    const existingReference = fileReferencesByKey.get(fileId);
+    const preferredType = resolvePreferredFileReferenceType(
+      existingReference?.type,
+      type,
+    );
+
+    if (existingReference?.type === preferredType) {
       return;
     }
 
-    fileReferencesByKey.set(key, {
+    fileReferencesByKey.set(fileId, {
       url: fileId,
-      type,
+      type: preferredType,
     });
   };
 
