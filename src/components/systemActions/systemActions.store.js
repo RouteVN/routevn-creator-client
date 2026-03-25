@@ -17,12 +17,21 @@ export const createInitialState = () => ({
   repositoryState: {}, // Add this - default to empty object
 });
 
+const getHiddenModes = (attrs = {}) => {
+  return Array.isArray(attrs.hiddenModes)
+    ? attrs.hiddenModes.filter(
+        (mode) => typeof mode === "string" && mode.length > 0,
+      )
+    : [];
+};
+
 export const selectViewData = ({ state, props, props: attrs }) => {
   const displayActions = selectDisplayActions({ state });
   const { actions: actionsObject, preview } = selectActionsData({
     props,
     state,
   });
+  const hiddenModes = getHiddenModes(attrs);
 
   const repositoryState = state.repositoryState;
   const choiceLayouts = Object.entries(repositoryState.layouts?.items || {})
@@ -82,6 +91,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     selectedLine: props.selectedLine,
     actionsType: attrs.actionType,
     showSelected: !!attrs.showSelected,
+    hiddenModes,
   };
 };
 

@@ -113,22 +113,34 @@ const PRESENTATION_ACTIONS = [
   },
 ];
 
-export const createInitialState = () => ({});
+const getHiddenModes = (attrs = {}) => {
+  return Array.isArray(attrs.hiddenModes)
+    ? attrs.hiddenModes.filter(
+        (mode) => typeof mode === "string" && mode.length > 0,
+      )
+    : [];
+};
 
-export const selectViewData = ({ props: attrs }) => {
+const getActionItems = (attrs = {}) => {
   const actionsType = attrs?.actionsType;
+  const hiddenModes = new Set(getHiddenModes(attrs));
   const items =
     {
       system: SYSTEM_ACTIONS,
       presentation: PRESENTATION_ACTIONS,
     }[actionsType] || PRESENTATION_ACTIONS;
 
+  return items.filter((item) => !hiddenModes.has(item.mode));
+};
+
+export const createInitialState = () => ({});
+
+export const selectViewData = ({ props: attrs }) => {
   return {
-    items,
+    items: getActionItems(attrs),
   };
 };
 
 export const selectItems = ({ props: attrs }) => {
-  const actionsType = attrs?.actionsType;
-  return actionsType === "system" ? SYSTEM_ACTIONS : PRESENTATION_ACTIONS;
+  return getActionItems(attrs);
 };

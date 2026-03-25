@@ -1,4 +1,5 @@
 import { formatFileSize } from "../../internal/files.js";
+import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { createMediaPageStore } from "../../internal/ui/resourcePages/media/createMediaPageStore.js";
 
 const buildDetailFields = (item) => {
@@ -141,5 +142,10 @@ export const hideFullImagePreview = ({ state }, _payload = {}) => {
 };
 
 export const selectViewData = (context) => {
-  return selectMediaViewData(context);
+  const viewData = selectMediaViewData(context);
+
+  return {
+    ...viewData,
+    flatItems: applyFolderRequiredRootDragOptions(viewData.flatItems),
+  };
 };

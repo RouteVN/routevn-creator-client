@@ -1,4 +1,5 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
+import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 
 const CONTEXT_MENU_ITEMS = [
   { label: "Open", type: "item", value: "open-item" },
@@ -274,7 +275,9 @@ export const selectViewData = ({ state }, payload) => {
     }
   }
 
-  const flatItems = toFlatItems(state.scenesData);
+  const flatItems = applyFolderRequiredRootDragOptions(
+    toFlatItems(state.scenesData),
+  );
   const flatGroups = toFlatGroups(state.scenesData);
 
   // Get selected item details

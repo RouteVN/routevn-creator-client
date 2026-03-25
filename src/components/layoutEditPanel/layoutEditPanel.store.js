@@ -10,6 +10,8 @@ const ACTION_INTERACTION_LABELS = {
   rightClick: "Right Click",
 };
 
+const HIDDEN_LAYOUT_ACTION_MODES = new Set(["updateVariable"]);
+
 const ACTION_LABELS = {
   nextLine: "Next Line",
   sectionTransition: "Section Transition",
@@ -29,14 +31,14 @@ const getLayoutInteractionActions = (values, interactionType) => {
 
 const toLayoutActionItems = (values) => {
   return ACTION_INTERACTION_TYPES.flatMap((interactionType) =>
-    Object.entries(getLayoutInteractionActions(values, interactionType)).map(
-      ([key]) => ({
+    Object.entries(getLayoutInteractionActions(values, interactionType))
+      .filter(([key]) => !HIDDEN_LAYOUT_ACTION_MODES.has(key))
+      .map(([key]) => ({
         id: key,
         interactionType,
         label: `${ACTION_INTERACTION_LABELS[interactionType]}: ${ACTION_LABELS[key] ?? key}`,
         svg: `action-${key}`,
-      }),
-    ),
+      })),
   );
 };
 
@@ -330,6 +332,7 @@ export const selectViewData = ({ state, props, constants }) => {
       state.values,
       state.activeInteractionType,
     ),
+    hiddenSystemActionModes: [...HIDDEN_LAYOUT_ACTION_MODES],
     config: {
       sections,
     },

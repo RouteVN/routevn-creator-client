@@ -17,5 +17,9 @@ propsSchema:
       enum:
         - presentation
         - system
+    hiddenModes:
+      type: array
+      items:
+        type: string
     showSelected:
       type: boolean

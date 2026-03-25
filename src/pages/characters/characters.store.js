@@ -1,4 +1,5 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
+import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 
 const folderContextMenuItems = [
   { label: "New Folder", type: "item", value: "new-child-folder" },
@@ -157,7 +158,9 @@ export const selectSelectedItemId = ({ state }) => {
 };
 
 export const selectViewData = ({ state }) => {
-  const flatItems = toFlatItems(state.charactersData);
+  const flatItems = applyFolderRequiredRootDragOptions(
+    toFlatItems(state.charactersData),
+  );
   const rawFlatGroups = toFlatGroups(state.charactersData);
 
   // Get selected item details

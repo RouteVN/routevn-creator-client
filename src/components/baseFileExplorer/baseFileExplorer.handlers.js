@@ -75,6 +75,95 @@ const resolveDropTargetItem = ({ visibleItems, targetIndex, dropPosition }) => {
   return visibleItems[targetIndex];
 };
 
+const canMoveItemToRoot = (item) => {
+  if (!item) {
+    return false;
+  }
+
+  if (item.type === "folder") {
+    return true;
+  }
+
+  return item.dragOptions?.canMoveToRoot !== false;
+};
+
+const resolveDropPlacement = ({ visibleItems, targetIndex, dropPosition }) => {
+  const targetItem = resolveDropTargetItem({
+    visibleItems,
+    targetIndex,
+    dropPosition,
+  });
+
+  if (dropPosition === "above" && targetIndex === -1) {
+    return {
+      targetItem,
+      parentId: null,
+    };
+  }
+
+  if (!targetItem) {
+    return {
+      targetItem: undefined,
+      parentId: undefined,
+    };
+  }
+
+  if (dropPosition === "inside") {
+    return {
+      targetItem,
+      parentId: targetItem.type === "folder" ? targetItem.id : undefined,
+    };
+  }
+
+  if (dropPosition === "above" || dropPosition === "below") {
+    return {
+      targetItem,
+      parentId: targetItem.parentId ?? null,
+    };
+  }
+
+  return {
+    targetItem,
+    parentId: undefined,
+  };
+};
+
+const isDropPlacementAllowed = ({
+  sourceItem,
+  visibleItems,
+  targetIndex,
+  dropPosition,
+  forbiddenIndices = [],
+} = {}) => {
+  if (!sourceItem) {
+    return false;
+  }
+
+  if (forbiddenIndices.includes(targetIndex)) {
+    return false;
+  }
+
+  if (targetIndex === -2 || dropPosition === "none") {
+    return false;
+  }
+
+  const placement = resolveDropPlacement({
+    visibleItems,
+    targetIndex,
+    dropPosition,
+  });
+
+  if (placement.parentId === undefined) {
+    return false;
+  }
+
+  if (placement.parentId === null && !canMoveItemToRoot(sourceItem)) {
+    return false;
+  }
+
+  return true;
+};
+
 const DRAG_ACTIVATION_DISTANCE = 4;
 
 /**
@@ -298,21 +387,25 @@ export const handleWindowMouseUp = (deps) => {
     render();
   };
 
-  if (forbiddenIndices.includes(targetIndex)) {
+  const isDropAllowed = isDropPlacementAllowed({
+    sourceItem,
+    visibleItems,
+    targetIndex,
+    dropPosition,
+    forbiddenIndices,
+  });
+
+  if (!isDropAllowed) {
     finishDragging();
     return;
   }
 
-  if (targetIndex === -2 || dropPosition === "none") {
-    finishDragging();
-    return;
-  }
-
-  const targetItem = resolveDropTargetItem({
+  const placement = resolveDropPlacement({
     visibleItems,
     targetIndex,
     dropPosition,
   });
+  const { targetItem } = placement;
 
   if (!sourceItem || !targetItem) {
     finishDragging();
@@ -391,6 +484,7 @@ export const handleWindowMouseMove = (deps, payload) => {
   const items = props.items || [];
   const visibleItems = getVisibleItems(items, store.selectCollapsedIds());
   const sourceId = store.selectSelectedItemId();
+  const sourceItem = items.find((item) => item.id === sourceId);
   const forbiddenIndices = store.selectForbiddenIndices();
 
   const result = getSelectedItemIndex(
@@ -400,9 +494,15 @@ export const handleWindowMouseMove = (deps, payload) => {
     items,
   );
 
-  const isForbiddenDrop = forbiddenIndices.includes(result.index);
+  const isDropAllowed = isDropPlacementAllowed({
+    sourceItem,
+    visibleItems,
+    targetIndex: result.index,
+    dropPosition: result.dropPosition,
+    forbiddenIndices,
+  });
 
-  if (isForbiddenDrop) {
+  if (!isDropAllowed) {
     store.setTargetDragIndex({ index: -2 });
     store.setTargetDragPosition({ position: 0 });
     store.setTargetDropPosition({ dropPosition: "none" });

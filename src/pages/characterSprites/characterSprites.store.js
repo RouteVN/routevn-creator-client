@@ -1,4 +1,5 @@
 import { formatFileSize } from "../../internal/files.js";
+import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 
 const EMPTY_TREE = { tree: [], items: {} };
@@ -219,7 +220,9 @@ export const hideFullImagePreview = ({ state }, _payload = {}) => {
 };
 
 export const selectViewData = ({ state }) => {
-  const flatItems = toFlatItems(state.spritesData);
+  const flatItems = applyFolderRequiredRootDragOptions(
+    toFlatItems(state.spritesData),
+  );
   const rawFlatGroups = toFlatGroups(state.spritesData);
   const searchQuery = state.searchQuery.toLowerCase().trim();
 
