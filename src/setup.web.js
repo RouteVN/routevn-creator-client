@@ -3,6 +3,7 @@ import { createGlobalUI } from "@rettangoli/ui";
 // Infra - Web
 import { createDb } from "./deps/clients/web/db.js";
 import { createWebFilePicker } from "./deps/clients/web/filePicker.js";
+import { resetWebAppStateForVisualTests } from "./deps/clients/web/vtAppStateReset.js";
 
 // Services - Web
 import { createAppService } from "./deps/services/web/appService.js";
@@ -18,6 +19,8 @@ import { createGraphicsService } from "./deps/services/graphicsService.js";
 import { registerPrimitives } from "./primitives/registerPrimitives.js";
 
 registerPrimitives();
+
+await resetWebAppStateForVisualTests();
 
 // Initialize app database using web adapter
 const appDb = createDb({ path: "app" });
