@@ -37,10 +37,7 @@
           "project-file:",
           "http://project-file.localhost"
         ],
-        "style-src": [
-          "'self'",
-          "'unsafe-inline'"
-        ],
+        "style-src": ["'self'", "'unsafe-inline'"],
         "img-src": [
           "'self'",
           "asset:",
@@ -54,27 +51,18 @@
           "'self'",
           "asset:",
           "http://asset.localhost",
+          "project-file:",
+          "http://project-file.localhost",
           "blob:"
         ],
-        "font-src": [
-          "'self'",
-          "asset:",
-          "http://asset.localhost",
-          "blob:"
-        ],
-        "script-src": [
-          "'self'",
-          "'unsafe-eval'",
-          "'wasm-unsafe-eval'"
-        ]
+        "font-src": ["'self'", "asset:", "http://asset.localhost", "blob:"],
+        "script-src": ["'self'", "'unsafe-eval'", "'wasm-unsafe-eval'"]
       },
       "dangerousDisableAssetCspModification": false,
       "devCsp": null,
       "assetProtocol": {
         "enable": true,
-        "scope": [
-          "**/*"
-        ]
+        "scope": ["**/*"]
       }
     }
   },

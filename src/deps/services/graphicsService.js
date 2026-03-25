@@ -22,7 +22,10 @@ const cloneBufferForAudioDecode = (value) => {
   }
 
   if (ArrayBuffer.isView(value)) {
-    return value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength);
+    return value.buffer.slice(
+      value.byteOffset,
+      value.byteOffset + value.byteLength,
+    );
   }
 
   return new ArrayBuffer(0);
@@ -33,11 +36,15 @@ const TAURI_ASSET_URL_PREFIXES = [
   "asset://localhost/",
 ];
 
-const IMAGE_EXTENSION_BY_MIME_TYPE = {
+const PIXI_EXTENSION_BY_MIME_TYPE = {
   "image/png": "png",
   "image/jpeg": "jpg",
   "image/webp": "webp",
   "image/avif": "avif",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+  "video/ogg": "ogv",
+  "video/quicktime": "mov",
 };
 
 const isTauriAssetUrl = (url) => {
@@ -59,9 +66,9 @@ const getProjectFileProtocolOrigin = (assetUrl) => {
   return undefined;
 };
 
-const normalizeImageAssetUrlForPixi = (asset) => {
+const normalizeMediaAssetUrlForPixi = (asset) => {
   const url = asset?.url;
-  const extension = IMAGE_EXTENSION_BY_MIME_TYPE[asset?.type];
+  const extension = PIXI_EXTENSION_BY_MIME_TYPE[asset?.type];
   const projectFileOrigin = getProjectFileProtocolOrigin(url);
   const assetPath = getTauriAssetFilePath(url);
 
@@ -69,7 +76,7 @@ const normalizeImageAssetUrlForPixi = (asset) => {
     return url;
   }
 
-  return `${projectFileOrigin}/pixi-image.${extension}?path=${encodeURIComponent(
+  return `${projectFileOrigin}/pixi-asset.${extension}?path=${encodeURIComponent(
     assetPath,
   )}`;
 };
@@ -100,13 +107,19 @@ const getTauriAssetFilePath = (assetUrl) => {
 };
 
 const normalizeGraphicsAssetForLoad = (asset = {}) => {
-  if (!asset.type?.startsWith("image/") || !isTauriAssetUrl(asset.url)) {
+  const assetType = asset?.type ?? "";
+  const isPixiUrlBackedMedia =
+    (assetType.startsWith("image/") || assetType.startsWith("video/")) &&
+    isTauriAssetUrl(asset.url) &&
+    Boolean(PIXI_EXTENSION_BY_MIME_TYPE[assetType]);
+
+  if (!isPixiUrlBackedMedia) {
     return asset;
   }
 
   return {
     ...asset,
-    url: normalizeImageAssetUrlForPixi(asset),
+    url: normalizeMediaAssetUrlForPixi(asset),
   };
 };
 
@@ -233,13 +246,15 @@ const installManagedAudioAsset = () => {
   };
 
   const getStats = () => {
-    return Array.from(managedAudioCache.entries()).map(([key, audioBuffer]) => ({
-      key,
-      duration: audioBuffer.duration,
-      channels: audioBuffer.numberOfChannels,
-      sampleRate: audioBuffer.sampleRate,
-      estimatedBytes: estimateAudioBufferBytes(audioBuffer),
-    }));
+    return Array.from(managedAudioCache.entries()).map(
+      ([key, audioBuffer]) => ({
+        key,
+        duration: audioBuffer.duration,
+        channels: audioBuffer.numberOfChannels,
+        sampleRate: audioBuffer.sampleRate,
+        estimatedBytes: estimateAudioBufferBytes(audioBuffer),
+      }),
+    );
   };
 
   AudioAsset.load = load;
@@ -363,8 +378,7 @@ export const createGraphicsService = async ({ subject }) => {
     return Array.from(
       new Set(
         assetKeys.filter(
-          (key) =>
-            typeof key === "string" && key && !!bufferMap[key],
+          (key) => typeof key === "string" && key && !!bufferMap[key],
         ),
       ),
     );
@@ -438,9 +452,7 @@ export const createGraphicsService = async ({ subject }) => {
 
         const nextRenderState = engine.selectRenderState();
         const remainingMissingAudioKeys = getDecodableAudioKeys(
-          getMissingDecodedAudioKeys(
-            getRenderStateAudioKeys(nextRenderState),
-          ),
+          getMissingDecodedAudioKeys(getRenderStateAudioKeys(nextRenderState)),
         );
 
         if (remainingMissingAudioKeys.length > 0) {
@@ -482,7 +494,10 @@ export const createGraphicsService = async ({ subject }) => {
       asset?.resource ??
       asset;
 
-    if (typeof HTMLVideoElement !== "undefined" && resource instanceof HTMLVideoElement) {
+    if (
+      typeof HTMLVideoElement !== "undefined" &&
+      resource instanceof HTMLVideoElement
+    ) {
       return resource;
     }
 
@@ -597,13 +612,14 @@ export const createGraphicsService = async ({ subject }) => {
       }
 
       const texture =
-        typeof asset?.destroy === "function"
-          ? asset
-          : asset?.texture;
+        typeof asset?.destroy === "function" ? asset : asset?.texture;
       const source = texture?.source ?? texture?._source;
       const resource = source?.resource;
 
-      if (typeof HTMLVideoElement !== "undefined" && resource instanceof HTMLVideoElement) {
+      if (
+        typeof HTMLVideoElement !== "undefined" &&
+        resource instanceof HTMLVideoElement
+      ) {
         releaseVideoElementResource(resource);
       }
 
@@ -617,9 +633,17 @@ export const createGraphicsService = async ({ subject }) => {
         } catch {}
       }
 
-      if (texture && typeof texture.destroy === "function" && texture.destroyed !== true) {
+      if (
+        texture &&
+        typeof texture.destroy === "function" &&
+        texture.destroyed !== true
+      ) {
         texture.destroy(true);
-      } else if (source && typeof source.destroy === "function" && source.destroyed !== true) {
+      } else if (
+        source &&
+        typeof source.destroy === "function" &&
+        source.destroyed !== true
+      ) {
         source.destroy();
       }
 
@@ -631,7 +655,10 @@ export const createGraphicsService = async ({ subject }) => {
     await Promise.all(
       pixiAssetKeys.map(async (key) => {
         await Assets.unload(key).catch((error) => {
-          console.error(`[graphicsService] Failed to unload asset ${key}`, error);
+          console.error(
+            `[graphicsService] Failed to unload asset ${key}`,
+            error,
+          );
         });
         destroyCachedPixiAsset(key);
       }),

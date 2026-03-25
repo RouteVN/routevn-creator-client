@@ -1,6 +1,8 @@
 use tauri::{
     http::{
-        header::{ACCESS_CONTROL_ALLOW_METHODS, ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_TYPE},
+        header::{
+            ACCESS_CONTROL_ALLOW_METHODS, ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_TYPE,
+        },
         Request, Response, StatusCode,
     },
     Runtime, UriSchemeContext, Url,
@@ -19,7 +21,7 @@ fn build_error_response(status: StatusCode, message: &str) -> Response<Vec<u8>> 
         .unwrap()
 }
 
-fn get_image_mime_from_request_path(path: &str) -> Option<&'static str> {
+fn get_media_mime_from_request_path(path: &str) -> Option<&'static str> {
     if path.ends_with(".png") {
         return Some("image/png");
     }
@@ -34,6 +36,22 @@ fn get_image_mime_from_request_path(path: &str) -> Option<&'static str> {
 
     if path.ends_with(".avif") {
         return Some("image/avif");
+    }
+
+    if path.ends_with(".mp4") {
+        return Some("video/mp4");
+    }
+
+    if path.ends_with(".webm") {
+        return Some("video/webm");
+    }
+
+    if path.ends_with(".ogv") || path.ends_with(".ogg") {
+        return Some("video/ogg");
+    }
+
+    if path.ends_with(".mov") {
+        return Some("video/quicktime");
     }
 
     None
@@ -57,16 +75,15 @@ pub fn handle<R: Runtime>(
             .unwrap();
     }
 
-    let request_url =
-        match Url::parse(&format!("{PROJECT_FILE_REQUEST_BASE}{}", request.uri())) {
-            Ok(url) => url,
-            Err(_) => {
-                return build_error_response(
-                    StatusCode::BAD_REQUEST,
-                    "Invalid project-file request URL",
-                )
-            }
-        };
+    let request_url = match Url::parse(&format!("{PROJECT_FILE_REQUEST_BASE}{}", request.uri())) {
+        Ok(url) => url,
+        Err(_) => {
+            return build_error_response(
+                StatusCode::BAD_REQUEST,
+                "Invalid project-file request URL",
+            )
+        }
+    };
 
     let file_path = request_url
         .query_pairs()
@@ -74,24 +91,15 @@ pub fn handle<R: Runtime>(
         .map(|(_, value)| value.into_owned());
 
     let Some(file_path) = file_path else {
-        return build_error_response(
-            StatusCode::BAD_REQUEST,
-            "Missing file path",
-        );
+        return build_error_response(StatusCode::BAD_REQUEST, "Missing file path");
     };
 
     if !is_allowed_project_file_path(&file_path) {
-        return build_error_response(
-            StatusCode::BAD_REQUEST,
-            "Unsupported file path",
-        );
+        return build_error_response(StatusCode::BAD_REQUEST, "Unsupported file path");
     }
 
-    let Some(content_type) = get_image_mime_from_request_path(request_url.path()) else {
-        return build_error_response(
-            StatusCode::BAD_REQUEST,
-            "Unsupported image extension",
-        );
+    let Some(content_type) = get_media_mime_from_request_path(request_url.path()) else {
+        return build_error_response(StatusCode::BAD_REQUEST, "Unsupported media extension");
     };
 
     let bytes = match std::fs::read(&file_path) {
