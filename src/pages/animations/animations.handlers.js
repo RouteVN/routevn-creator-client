@@ -10,27 +10,30 @@ const defaultInitialValues = {
   alpha: 1,
   scaleX: 1,
   scaleY: 1,
-  rotation: 0,
+  translateX: 0,
+  translateY: 0,
 };
 
-const normalizeUpdateTween = (properties = {}) => {
+const normalizeTween = (properties = {}) => {
   return Object.fromEntries(
-    Object.entries(properties).map(([property, config]) => {
-      const normalizedConfig = {
-        keyframes: (config?.keyframes ?? []).map((keyframe) => ({
-          duration: Number(keyframe.duration) || 0,
-          value: Number(keyframe.value) || 0,
-          easing: keyframe.easing ?? "linear",
-          relative: keyframe.relative ?? false,
-        })),
-      };
+    Object.entries(properties)
+      .filter(([, config]) => (config?.keyframes ?? []).length > 0)
+      .map(([property, config]) => {
+        const normalizedConfig = {
+          keyframes: (config?.keyframes ?? []).map((keyframe) => ({
+            duration: Number(keyframe.duration) || 0,
+            value: Number(keyframe.value) || 0,
+            easing: keyframe.easing ?? "linear",
+            relative: keyframe.relative ?? false,
+          })),
+        };
 
-      if (config?.initialValue !== undefined && config.initialValue !== "") {
-        normalizedConfig.initialValue = Number(config.initialValue) || 0;
-      }
+        if (config?.initialValue !== undefined && config.initialValue !== "") {
+          normalizedConfig.initialValue = Number(config.initialValue) || 0;
+        }
 
-      return [property, normalizedConfig];
-    }),
+        return [property, normalizedConfig];
+      }),
   );
 };
 
@@ -40,14 +43,19 @@ const openAnimationDialog = async ({
   itemId,
   itemData,
   targetGroupId,
+  dialogType,
 } = {}) => {
   const { graphicsService, refs, render, store } = deps;
+  const resolvedDialogType =
+    dialogType ??
+    (itemData?.animation?.type === "transition" ? "transition" : "update");
 
   store.openDialog({
     editMode,
     itemId,
     itemData,
     targetGroupId,
+    dialogType: resolvedDialogType,
   });
   render();
 
@@ -58,6 +66,10 @@ const openAnimationDialog = async ({
         name: itemData.name ?? "",
       },
     });
+  }
+
+  if (resolvedDialogType !== "update") {
+    return;
   }
 
   const { canvas } = refs;
@@ -135,25 +147,21 @@ export const handleCloseCreateTypeMenu = (deps) => {
 };
 
 export const handleCreateTypeMenuItemClick = async (deps, payload) => {
-  const { appService, render, store } = deps;
+  const { render, store } = deps;
   const type = payload._event.detail.item?.value;
   const targetGroupId = store.selectCreateTypeMenuTargetGroupId();
 
   store.closeCreateTypeMenu();
   render();
 
-  if (type !== "update") {
-    await appService.showDialog({
-      title: "Coming Soon",
-      message: "Not implemented yet. Coming soon.",
-      confirmText: "OK",
-    });
+  if (type !== "update" && type !== "transition") {
     return;
   }
 
   await openAnimationDialog({
     deps,
     targetGroupId,
+    dialogType: type,
   });
 };
 
@@ -176,9 +184,54 @@ export const handleFormActionClick = async (deps, payload) => {
     return;
   }
 
-  const tween = normalizeUpdateTween(store.selectProperties());
+  const dialogType = store.selectDialogType();
   const editMode = store.selectEditMode();
   const editItemId = store.selectEditItemId();
+  let animationData;
+
+  if (dialogType === "transition") {
+    const prevTween = normalizeTween(store.selectProperties({ side: "prev" }));
+    const nextTween = normalizeTween(store.selectProperties({ side: "next" }));
+    const hasPrev = Object.keys(prevTween).length > 0;
+    const hasNext = Object.keys(nextTween).length > 0;
+
+    if (!hasPrev && !hasNext) {
+      appService.showToast("Add at least one property to Previous or Next.", {
+        title: "Warning",
+      });
+      return;
+    }
+
+    animationData = {
+      type: "transition",
+    };
+
+    if (hasPrev) {
+      animationData.prev = {
+        tween: prevTween,
+      };
+    }
+
+    if (hasNext) {
+      animationData.next = {
+        tween: nextTween,
+      };
+    }
+  } else {
+    const tween = normalizeTween(store.selectProperties({ side: "update" }));
+
+    if (Object.keys(tween).length === 0) {
+      appService.showToast("Add at least one animation property.", {
+        title: "Warning",
+      });
+      return;
+    }
+
+    animationData = {
+      type: "update",
+      tween,
+    };
+  }
 
   if (editMode && editItemId) {
     const updateAttempt = await runResourcePageMutation({
@@ -189,10 +242,7 @@ export const handleFormActionClick = async (deps, payload) => {
           animationId: editItemId,
           data: {
             name,
-            animation: {
-              type: "update",
-              tween,
-            },
+            animation: animationData,
           },
         }),
     });
@@ -210,10 +260,7 @@ export const handleFormActionClick = async (deps, payload) => {
           data: {
             type: "animation",
             name,
-            animation: {
-              type: "update",
-              tween,
-            },
+            animation: animationData,
           },
           parentId: store.selectTargetGroupId(),
           position: "last",
@@ -231,17 +278,26 @@ export const handleFormActionClick = async (deps, payload) => {
 
 export const handleAddPropertiesClick = (deps, payload) => {
   const { render, store } = deps;
+  const side =
+    payload._event.currentTarget?.dataset?.side ??
+    (store.selectDialogType() === "transition" ? "prev" : "update");
 
   store.setPopover({
     mode: "addProperty",
     x: payload._event.clientX,
     y: payload._event.clientY,
+    payload: {
+      side,
+    },
   });
   render();
 };
 
 export const handleAddPropertyFormSubmit = (deps, payload) => {
   const { render, store } = deps;
+  const {
+    payload: { side },
+  } = store.selectPopover();
   const { property, initialValue, useInitialValue } =
     payload._event.detail.values;
 
@@ -251,19 +307,27 @@ export const handleAddPropertyFormSubmit = (deps, payload) => {
       : (defaultInitialValues[property] ?? 0)
     : (defaultInitialValues[property] ?? 0);
 
-  store.addProperty({ property, initialValue: finalInitialValue });
+  store.addProperty({
+    side,
+    property,
+    initialValue: finalInitialValue,
+  });
   store.closePopover();
   render();
 };
 
 export const handleAddKeyframeInDialog = (deps, payload) => {
   const { render, store } = deps;
+  const side =
+    payload._event.detail.side ??
+    (store.selectDialogType() === "transition" ? "prev" : "update");
 
   store.setPopover({
     mode: "addKeyframe",
     x: payload._event.detail.x,
     y: payload._event.detail.y,
     payload: {
+      side,
       property: payload._event.detail.property,
     },
   });
@@ -273,16 +337,20 @@ export const handleAddKeyframeInDialog = (deps, payload) => {
 export const handleAddKeyframeFormSubmit = (deps, payload) => {
   const { render, store } = deps;
   const {
-    payload: { property, index },
+    payload: { side, property, index },
   } = store.selectPopover();
 
-  const formValues = payload._event.detail.values;
+  const formValues = {
+    ...payload._event.detail.values,
+  };
+
   if (formValues.duration < 1) {
     formValues.duration = 1;
   }
 
   store.addKeyframe({
     ...formValues,
+    side,
     property,
     index,
   });
@@ -297,6 +365,7 @@ export const handleKeyframeRightClick = (deps, payload) => {
     x: payload._event.detail.x,
     y: payload._event.detail.y,
     payload: {
+      side: payload._event.detail.side,
       property: payload._event.detail.property,
       index: payload._event.detail.index,
     },
@@ -311,6 +380,7 @@ export const handlePropertyNameRightClick = (deps, payload) => {
     x: payload._event.detail.x,
     y: payload._event.detail.y,
     payload: {
+      side: payload._event.detail.side,
       property: payload._event.detail.property,
     },
   });
@@ -320,7 +390,7 @@ export const handlePropertyNameRightClick = (deps, payload) => {
 export const handleKeyframeDropdownItemClick = (deps, payload) => {
   const { render, store } = deps;
   const popover = store.selectPopover();
-  const { property, index } = popover.payload;
+  const { side, property, index } = popover.payload;
   const { x, y } = popover;
   const value = payload._event.detail.item.value;
 
@@ -330,15 +400,16 @@ export const handleKeyframeDropdownItemClick = (deps, payload) => {
       x,
       y,
       payload: {
+        side,
         property,
         index,
       },
     });
   } else if (value === "delete-property") {
-    store.deleteProperty({ property });
+    store.deleteProperty({ side, property });
     store.closePopover();
   } else if (value === "delete-keyframe") {
-    store.deleteKeyframe({ property, index });
+    store.deleteKeyframe({ side, property, index });
     store.closePopover();
   } else if (value === "add-right") {
     store.setPopover({
@@ -346,8 +417,9 @@ export const handleKeyframeDropdownItemClick = (deps, payload) => {
       x,
       y,
       payload: {
+        side,
         property,
-        index: index + 1,
+        index: Number(index) + 1,
       },
     });
   } else if (value === "add-left") {
@@ -356,15 +428,16 @@ export const handleKeyframeDropdownItemClick = (deps, payload) => {
       x,
       y,
       payload: {
+        side,
         property,
         index,
       },
     });
   } else if (value === "move-right") {
-    store.moveKeyframeRight({ property, index });
+    store.moveKeyframeRight({ side, property, index });
     store.closePopover();
   } else if (value === "move-left") {
-    store.moveKeyframeLeft({ property, index });
+    store.moveKeyframeLeft({ side, property, index });
     store.closePopover();
   }
 
@@ -374,16 +447,20 @@ export const handleKeyframeDropdownItemClick = (deps, payload) => {
 export const handleEditKeyframeFormSubmit = (deps, payload) => {
   const { render, store } = deps;
   const {
-    payload: { property, index },
+    payload: { side, property, index },
   } = store.selectPopover();
 
-  const formValues = payload._event.detail.values;
+  const formValues = {
+    ...payload._event.detail.values,
+  };
+
   if (formValues.duration < 1) {
     formValues.duration = 1;
   }
 
   store.updateKeyframe({
     keyframe: formValues,
+    side,
     index,
     property,
   });
@@ -398,6 +475,7 @@ export const handleInitialValueClick = (deps, payload) => {
     x: payload._event.detail.x,
     y: payload._event.detail.y,
     payload: {
+      side: payload._event.detail.side,
       property: payload._event.detail.property,
     },
   });
@@ -435,7 +513,7 @@ export const handleEditInitialValueFormChange = (deps, payload) => {
 
 export const handleReplayAnimation = async (deps) => {
   const { graphicsService, store } = deps;
-  if (!graphicsService) {
+  if (!graphicsService || store.selectDialogType() !== "update") {
     return;
   }
 
@@ -449,7 +527,7 @@ export const handleReplayAnimation = async (deps) => {
 export const handleEditInitialValueFormSubmit = (deps, payload) => {
   const { render, store } = deps;
   const {
-    payload: { property },
+    payload: { side, property },
   } = store.selectPopover();
 
   const { initialValue, valueSource } = payload._event.detail.values;
@@ -459,6 +537,7 @@ export const handleEditInitialValueFormSubmit = (deps, payload) => {
       : initialValue;
 
   store.updateInitialValue({
+    side,
     property,
     initialValue: finalInitialValue,
   });

@@ -23,9 +23,10 @@ refs:
         handler: handleInitialValueClick
 template:
   - rtgl-view#timelineContainer g=md w=f pos=rel:
-      - rtgl-view d=h w=f mb=sm:
-          - rtgl-view w=f ah=e:
-              - rtgl-text s=sm: 'Total duration: ${totalDuration}'
+      - $if showTotalDuration:
+          - rtgl-view d=h w=f mb=sm:
+              - rtgl-view w=f ah=e:
+                  - rtgl-text s=sm: 'Total duration: ${totalDuration}'
       - $if selectedProperties.length > 0:
           - $for property, pIndex in selectedProperties:
               - rtgl-view d=h w=f av=c:

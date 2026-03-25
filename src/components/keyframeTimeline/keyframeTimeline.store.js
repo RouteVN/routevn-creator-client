@@ -14,17 +14,18 @@ export const hideTimelineLine = ({ state }, _payload = {}) => {
 
 export const selectViewData = ({ state, props, props: attrs }) => {
   let selectedProperties = [];
+  const defaultValues = props.defaultValues ?? {
+    x: 0,
+    y: 0,
+    alpha: 1,
+    scaleX: 1,
+    scaleY: 1,
+    rotation: 0,
+    translateX: 0,
+    translateY: 0,
+  };
 
   if (props.properties) {
-    const defaultValues = {
-      x: 0,
-      y: 0,
-      alpha: 1,
-      scaleX: 1,
-      scaleY: 1,
-      rotation: 0,
-    };
-
     selectedProperties = Object.keys(props.properties).map((propertyName) => {
       const value = props.properties[propertyName].initialValue;
       const isDefault = value === defaultValues[propertyName];
@@ -49,10 +50,15 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       }
     });
   }
-  const totalDuration = maxDuration > 0 ? `${maxDuration}ms` : "0ms";
+  const resolvedTimelineDuration =
+    Number(props.timelineDuration) > 0
+      ? Number(props.timelineDuration)
+      : maxDuration;
+  const totalDuration =
+    resolvedTimelineDuration > 0 ? `${resolvedTimelineDuration}ms` : "0ms";
 
   // Parse duration to calculate time at mouse position
-  const durationValue = maxDuration / 1000;
+  const durationValue = resolvedTimelineDuration / 1000;
 
   // Calculate time based on mouse position (assuming timeline width is around 400px)
   const timelineWidth = 400; // approximate width
@@ -60,7 +66,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
   const timeDisplay = Math.round(timeAtMouse * 10) / 10; // round to 1 decimal
 
   // Process keyframes to add width percentages
-  if (selectedProperties.length > 0 && maxDuration > 0) {
+  if (selectedProperties.length > 0 && resolvedTimelineDuration > 0) {
     selectedProperties = selectedProperties.map((property) => {
       if (property.keyframes && property.keyframes.length > 0) {
         const propertyTotalDuration = property.keyframes.reduce(
@@ -70,12 +76,12 @@ export const selectViewData = ({ state, props, props: attrs }) => {
 
         // Calculate property's total width percentage relative to max duration
         const propertyWidthPercent =
-          (propertyTotalDuration / maxDuration) * 100;
+          (propertyTotalDuration / resolvedTimelineDuration) * 100;
 
         // Calculate width percentage for each keyframe based on max duration
         const keyframesWithWidth = property.keyframes.map((keyframe) => {
           const duration = parseFloat(keyframe.duration) || 1000;
-          const widthPercent = (duration / maxDuration) * 100;
+          const widthPercent = (duration / resolvedTimelineDuration) * 100;
           // Add prefix for relative values
           let displayValue = keyframe.value;
           if (keyframe.relative) {
@@ -112,6 +118,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     mouseX: state.mouseX,
     timeDisplay,
     showHoverLine: state.showHoverLine,
+    showTotalDuration: attrs.showTotalDuration !== false,
     editable: attrs.editable,
   };
 
