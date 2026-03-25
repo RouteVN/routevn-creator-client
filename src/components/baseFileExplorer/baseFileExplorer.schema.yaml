@@ -17,6 +17,11 @@ propsSchema:
             type: boolean
           parentId:
             type: string
+          dragOptions:
+            type: object
+            properties:
+              canMoveToRoot:
+                type: boolean
     contextMenuItems:
       type: array
       description: Menu items for right-clicking on an item

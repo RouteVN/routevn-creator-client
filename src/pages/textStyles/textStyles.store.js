@@ -1,4 +1,5 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
+import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 
 // Helper function to create add color form
 const createAddColorForm = (colorFolderOptions) => ({
@@ -304,7 +305,9 @@ export const selectSelectedFontData = ({ state }) => ({
 });
 
 export const selectViewData = ({ state }) => {
-  const flatItems = toFlatItems(state.textStylesData);
+  const flatItems = applyFolderRequiredRootDragOptions(
+    toFlatItems(state.textStylesData),
+  );
   const rawFlatGroups = toFlatGroups(state.textStylesData);
 
   // Get selected item details

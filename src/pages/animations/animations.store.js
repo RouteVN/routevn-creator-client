@@ -1,4 +1,5 @@
 import { toFlatItems } from "../../internal/project/tree.js";
+import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
 import { resetState } from "./animations.constants";
 
@@ -856,5 +857,10 @@ export const updateInitialValue = (
 };
 
 export const selectViewData = (context) => {
-  return selectCatalogViewData(context);
+  const viewData = selectCatalogViewData(context);
+
+  return {
+    ...viewData,
+    flatItems: applyFolderRequiredRootDragOptions(viewData.flatItems),
+  };
 };

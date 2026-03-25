@@ -1,4 +1,5 @@
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
+import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 
 const createTransformForm = ({ editMode = false } = {}) => ({
   title: editMode ? "Edit Transform" : "Add Transform",
@@ -251,5 +252,10 @@ export const selectEditItemId = ({ state }) => {
 };
 
 export const selectViewData = (context) => {
-  return selectCatalogViewData(context);
+  const viewData = selectCatalogViewData(context);
+
+  return {
+    ...viewData,
+    flatItems: applyFolderRequiredRootDragOptions(viewData.flatItems),
+  };
 };
