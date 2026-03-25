@@ -66,6 +66,8 @@ if [ -z "$IMAGE" ]; then
   exit 1
 fi
 
+export RTGL_VT_RESET_APP_STATE="${RTGL_VT_RESET_APP_STATE:-1}"
+
 env_args=()
 while IFS='=' read -r key _; do
   env_args+=("-e" "$key")
