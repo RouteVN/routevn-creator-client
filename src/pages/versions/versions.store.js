@@ -45,27 +45,28 @@ export const selectVersion = ({ state }, versionId) => {
 };
 
 export const selectViewData = ({ state }) => {
-  const versionFormFields = {
+  const versionForm = {
+    title: "Create Version",
     fields: [
       {
         name: "name",
         type: "input-text",
-        description: "Version Name",
+        label: "Name",
         required: true,
+      },
+      {
+        name: "notes",
+        type: "input-textarea",
+        label: "Notes",
       },
     ],
     actions: {
       layout: "",
       buttons: [
         {
-          id: "cancel",
-          variant: "se",
-          label: "Cancel",
-        },
-        {
           id: "submit",
           variant: "pr",
-          label: "Save",
+          label: "Create Version",
         },
       ],
     },
@@ -80,7 +81,8 @@ export const selectViewData = ({ state }) => {
   return {
     versions: formattedVersions,
     showVersionForm: state.showVersionForm || false,
-    versionFormFields,
+    versionForm,
+    versionFormData: state.versionFormData || {},
     resourceCategory: "releases",
     dropdownMenu: state.dropdownMenu,
     resourceType: "versions",
