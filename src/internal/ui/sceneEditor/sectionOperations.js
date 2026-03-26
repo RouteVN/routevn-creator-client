@@ -103,25 +103,15 @@ export const reconcileSceneEditorSelection = (store) => {
   };
 };
 
-const PRESENTATION_ACTION_KEYS = [
-  "background",
-  "bgm",
-  "character",
-  "control",
-  "dialogue",
-  "visual",
-];
-
 const createInheritedPresentationActions = (presentationState = {}) => {
   const actions = {};
 
-  for (const key of PRESENTATION_ACTION_KEYS) {
-    const value = presentationState?.[key];
-    if (!value || typeof value !== "object") {
+  for (const [key, value] of Object.entries(presentationState || {})) {
+    if (value === undefined) {
       continue;
     }
 
-    if (key === "dialogue") {
+    if (key === "dialogue" && value && typeof value === "object") {
       const dialogue = structuredClone(value);
       if (dialogue.clear !== true) {
         dialogue.content = [{ text: "" }];
