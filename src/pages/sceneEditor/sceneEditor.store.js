@@ -192,6 +192,7 @@ export const createInitialState = () => ({
     formKey: 0,
     defaultValues: {
       name: "",
+      inheritPresentationFromSelectedLine: true,
     },
   },
   repositoryState: {},
@@ -633,6 +634,7 @@ export const showSectionCreateDialog = ({ state }, { defaultName } = {}) => {
     formKey: (state.sectionCreateDialog?.formKey || 0) + 1,
     defaultValues: {
       name: defaultName || "",
+      inheritPresentationFromSelectedLine: true,
     },
   };
 };
@@ -786,6 +788,17 @@ export const selectViewData = ({ state }) => {
         type: "input-text",
         label: "Section Name",
         required: true,
+      },
+      {
+        name: "inheritPresentationFromSelectedLine",
+        type: "select",
+        label: "Inherit state from selected line",
+        required: true,
+        clearable: false,
+        options: [
+          { value: false, label: "False" },
+          { value: true, label: "True" },
+        ],
       },
     ],
     actions: {

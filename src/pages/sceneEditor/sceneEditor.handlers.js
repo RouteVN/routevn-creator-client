@@ -1170,6 +1170,9 @@ export const handleSectionCreateFormActionClick = async (deps, payload) => {
   const action = detail.actionId;
   const values = detail.values || {};
   const nextSectionName = String(values.name || "").trim();
+  const inheritPresentationFromSelectedLine =
+    values.inheritPresentationFromSelectedLine === true ||
+    values.inheritPresentationFromSelectedLine === "true";
 
   if (action === "cancel") {
     store.hideSectionCreateDialog();
@@ -1184,6 +1187,9 @@ export const handleSectionCreateFormActionClick = async (deps, payload) => {
         deps,
         nextSectionName,
         syncStoreProjectState,
+        {
+          inheritPresentationFromSelectedLine,
+        },
       );
       reconcileCurrentEditorSession(deps);
       render();

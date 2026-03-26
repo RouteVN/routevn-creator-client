@@ -91,7 +91,7 @@ const {
     layoutForm,
     layoutFormDefaults: {
       name: "",
-      layoutType: "dialogue",
+      layoutType: "normal",
     },
   }),
 });
