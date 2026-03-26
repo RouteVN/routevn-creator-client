@@ -14,7 +14,10 @@ import {
   collapsePartitionsToSingle,
   mainPartitionFor,
 } from "./collab/partitions.js";
-import { DEFAULT_PROJECT_RESOLUTION } from "../../../internal/projectResolution.js";
+import {
+  DEFAULT_PROJECT_RESOLUTION,
+  requireProjectResolution,
+} from "../../../internal/projectResolution.js";
 
 export const createTreeCollection = () => {
   return {
@@ -56,6 +59,11 @@ export const assertSupportedProjectState = (state) => {
       result.error?.message || "Unsupported project repository state",
     );
   }
+
+  requireProjectResolution(
+    state?.project?.resolution,
+    "Repository project resolution",
+  );
 };
 
 export const getHierarchyNodes = (collection) =>

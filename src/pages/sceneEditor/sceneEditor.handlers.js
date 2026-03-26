@@ -39,6 +39,8 @@ import {
 
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another section.";
+const MISSING_PROJECT_RESOLUTION_MESSAGE =
+  "Project is missing required resolution settings.";
 const TEXT_DRAFT_SAVE_DEBOUNCE_MS = 300;
 const STRUCTURE_DRAFT_SAVE_DEBOUNCE_MS = 900;
 const DRAFT_SAVE_MIN_INTERVAL_MS = 1000;
@@ -147,6 +149,15 @@ const assertSceneEditorCommandResult = (
   error.code = result?.error?.code || "validation_failed";
   error.details = result?.error?.details;
   throw error;
+};
+
+const isMissingProjectResolutionError = (error) => {
+  const message = String(error?.message || "").toLowerCase();
+  return (
+    message.includes("project resolution is required") &&
+    message.includes("width") &&
+    message.includes("height")
+  );
 };
 
 const reconcileCurrentEditorSession = (deps) => {
@@ -368,12 +379,23 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  await initializeSceneEditorPage({
-    ...deps,
-    syncProjectState: syncStoreProjectState,
-  });
-  reconcileCurrentEditorSession(deps);
-  deps.render();
+  try {
+    await initializeSceneEditorPage({
+      ...deps,
+      syncProjectState: syncStoreProjectState,
+    });
+    reconcileCurrentEditorSession(deps);
+    deps.render();
+  } catch (error) {
+    if (!isMissingProjectResolutionError(error)) {
+      throw error;
+    }
+
+    deps.appService?.showToast(MISSING_PROJECT_RESOLUTION_MESSAGE, {
+      title: "Error",
+    });
+    deps.appService?.navigate("/projects");
+  }
 };
 
 export const handleDataChanged = async (deps) => {
