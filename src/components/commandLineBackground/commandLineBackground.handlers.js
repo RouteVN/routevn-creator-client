@@ -107,6 +107,45 @@ const getDomainStateFromRepository = (repository) => {
   return repository.getState();
 };
 
+const getStoreState = (store) => {
+  if (typeof store?.getState === "function") {
+    return store.getState();
+  }
+  return store?._state || store?.state || {};
+};
+
+const findAnimationItemById = ({ store, animationId } = {}) => {
+  if (!animationId || animationId === "none") {
+    return undefined;
+  }
+
+  const animationItems =
+    getStoreState(store).animationItems || createEmptyCollection();
+  return toFlatItems(animationItems).find(
+    (item) => item.id === animationId && item.type === "animation",
+  );
+};
+
+const summarizeAnimationItem = (animationItem) => {
+  const animation = animationItem?.animation || {};
+  return {
+    id: animationItem?.id,
+    name: animationItem?.name,
+    type: animation?.type,
+    hasTween: Boolean(animation?.tween),
+    hasPrev: Boolean(animation?.prev),
+    hasNext: Boolean(animation?.next),
+    hasMask: Boolean(animation?.mask),
+    tweenProperties: Object.keys(animation?.tween || {}),
+    prevTweenProperties: Object.keys(animation?.prev?.tween || {}),
+    nextTweenProperties: Object.keys(animation?.next?.tween || {}),
+  };
+};
+
+const summarizeAnimationItemJson = (animationItem) => {
+  return JSON.stringify(summarizeAnimationItem(animationItem));
+};
+
 export const handleBeforeMount = (deps) => {
   const { store, props } = deps;
 
@@ -132,9 +171,14 @@ export const handleBeforeMount = (deps) => {
     });
   }
 
-  if (backgroundAnimations?.in) {
+  const animationResourceId = backgroundAnimations?.resourceId;
+  if (animationResourceId) {
     store.setSelectedAnimation({
-      animationId: backgroundAnimations.in?.resourceId,
+      animationId: animationResourceId,
+    });
+    console.info("[commandLineBackground] animation hydrated", {
+      backgroundAnimations,
+      animationResourceId,
     });
   }
 };
@@ -153,6 +197,19 @@ export const handleAfterMount = async (deps) => {
     videos,
     animations,
   });
+
+  const selectedAnimationId = store.selectSelectedAnimation();
+  if (selectedAnimationId) {
+    const selectedAnimation = findAnimationItemById({
+      store,
+      animationId: selectedAnimationId,
+    });
+    console.info("[commandLineBackground] animations loaded", {
+      selectedAnimationId,
+      selectedAnimation: summarizeAnimationItem(selectedAnimation),
+      selectedAnimationJson: summarizeAnimationItemJson(selectedAnimation),
+    });
+  }
 
   const pendingResourceId = store.selectPendingResourceId();
   if (pendingResourceId) {
@@ -268,6 +325,13 @@ export const handleFormInputChange = (deps, payload) => {
     store.setSelectedAnimation({
       animationId: fieldValue,
     });
+    console.info("[commandLineBackground] animation changed", {
+      animationId: fieldValue,
+      animation: findAnimationItemById({
+        store,
+        animationId: fieldValue,
+      }),
+    });
     render();
     return;
   }
@@ -315,9 +379,6 @@ export const handleSubmitClick = (deps, payload) => {
 
   const backgroundData = {
     resourceId: selectedResource?.resourceId,
-    ...(selectedResource?.resourceType
-      ? { resourceType: selectedResource.resourceType }
-      : {}),
   };
 
   if (selectedResource?.resourceType === "video") {
@@ -330,10 +391,23 @@ export const handleSubmitClick = (deps, payload) => {
     selectedAnimationId !== "none"
   ) {
     backgroundData.animations = {
-      in: {
-        resourceId: selectedAnimationId,
-      },
+      resourceId: selectedAnimationId,
     };
+    console.info("[commandLineBackground] animation attached", {
+      animationId: selectedAnimationId,
+      animation: summarizeAnimationItem(
+        findAnimationItemById({
+          store,
+          animationId: selectedAnimationId,
+        }),
+      ),
+      animationJson: summarizeAnimationItemJson(
+        findAnimationItemById({
+          store,
+          animationId: selectedAnimationId,
+        }),
+      ),
+    });
   }
 
   console.info("[commandLineBackground] submit click", {

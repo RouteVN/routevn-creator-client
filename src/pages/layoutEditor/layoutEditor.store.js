@@ -38,6 +38,7 @@ export const createInitialState = () => ({
     "dialogue-character-name": "Character",
     "dialogue-content": "This is a sample dialogue content.",
   },
+  previewRevealingSpeed: 50,
   choiceDefaultValues: {
     choicesNum: 2,
     choices: ["Choice 1", "Choice 2"],
@@ -174,6 +175,10 @@ export const setDialogueDefaultValue = (
   state.dialogueDefaultValues[name] = fieldValue;
 };
 
+export const setPreviewRevealingSpeed = ({ state }, { value } = {}) => {
+  state.previewRevealingSpeed = value;
+};
+
 export const setChoiceDefaultValue = ({ state }, { name, fieldValue } = {}) => {
   if (name.startsWith("choices[")) {
     const index = Number.parseInt(name.match(/\d+/)[0], 10);
@@ -221,6 +226,10 @@ export const selectDialogueDefaultValues = ({ state }) => {
 
 export const selectChoiceDefaultValues = ({ state }) => {
   return state.choiceDefaultValues;
+};
+
+export const selectPreviewRevealingSpeed = ({ state }) => {
+  return state.previewRevealingSpeed;
 };
 
 export const selectImages = ({ state }) => state.images;
@@ -330,6 +339,7 @@ export const selectViewData = ({ state, constants }) => {
     ),
     dialogueForm: constants.dialogueForm,
     dialogueDefaultValues: state.dialogueDefaultValues,
+    previewRevealingSpeed: state.previewRevealingSpeed,
     choiceForm: constants.choiceForm,
     choiceDefaultValues: state.choiceDefaultValues,
     choicesContext: {

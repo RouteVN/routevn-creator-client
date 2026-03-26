@@ -8,6 +8,9 @@ propsSchema:
     selectedItemId:
       type: string
       description: ID of currently selected item
+    readonly:
+      type: boolean
+      description: Whether the view should disable add/edit/delete affordances
 methods:
   type: object
   properties:

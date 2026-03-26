@@ -187,6 +187,7 @@ export const selectTargetItemId = ({ state }) => {
 };
 
 export const selectViewData = ({ state, props }) => {
+  const readonly = props.readonly === true;
   const searchQuery = state.searchQuery.toLowerCase();
 
   // Helper function to check if an item matches the search query
@@ -279,6 +280,7 @@ export const selectViewData = ({ state, props }) => {
   return {
     flatGroups,
     selectedItemId: props.selectedItemId,
+    readonly,
     searchQuery: state.searchQuery,
     isDialogOpen: state.isDialogOpen,
     defaultValues: defaultValues,

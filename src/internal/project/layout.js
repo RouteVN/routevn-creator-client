@@ -29,7 +29,7 @@ const TEXT_CONTENT_BY_TYPE = {
 
 const TEXT_RENDER_TYPE_BY_TYPE = {
   "text-ref-character-name": "text",
-  "text-revealing-ref-dialogue-content": "text",
+  "text-revealing-ref-dialogue-content": "text-revealing",
   "text-ref-choice-item-content": "text",
   "text-ref-dialogue-line-character-name": "text",
   "text-ref-dialogue-line-content": "text",
@@ -316,17 +316,40 @@ const buildBaseElement = (node) => {
   return element;
 };
 
+const getTextNodeContent = (node) => {
+  if (node.content !== undefined) {
+    return node.content;
+  }
+
+  return TEXT_CONTENT_BY_TYPE[node.type] ?? node.text ?? "";
+};
+
+const toTextRevealingSegments = (content) => {
+  if (Array.isArray(content)) {
+    return content;
+  }
+
+  return [{ text: String(content ?? "") }];
+};
+
 const applyTextNode = ({ element, node, context }) => {
   if (!TEXT_NODE_TYPES.has(node.type)) {
     return element;
   }
 
+  const renderType = TEXT_RENDER_TYPE_BY_TYPE[node.type] ?? element.type;
+  const content = getTextNodeContent(node);
   const nextElement = {
     ...element,
-    type: TEXT_RENDER_TYPE_BY_TYPE[node.type] || element.type,
+    type: renderType,
     text: node.text,
-    content: TEXT_CONTENT_BY_TYPE[node.type] || node.text,
   };
+
+  if (renderType === "text-revealing") {
+    nextElement.content = toTextRevealingSegments(content);
+  } else {
+    nextElement.content = content;
+  }
 
   const textStyleId = ensureNodeTextStyleId({
     textStyles: context.textStyles,
@@ -374,6 +397,14 @@ const applyTextNode = ({ element, node, context }) => {
         textStyleId: clickTextStyleId,
       };
     }
+  }
+
+  if (node.type === "text-revealing-ref-dialogue-content") {
+    nextElement.speed = "${variables._dialogueTextSpeed}";
+  }
+
+  if (renderType === "text-revealing" && node.revealEffect) {
+    nextElement.revealEffect = node.revealEffect;
   }
 
   return nextElement;

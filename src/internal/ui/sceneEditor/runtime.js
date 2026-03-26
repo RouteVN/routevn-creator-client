@@ -27,6 +27,24 @@ const resetAssetLoadCache = () => {
   assetLoadCache = createAssetLoadCache();
 };
 
+const hasCachedSceneAsset = (deps, fileId) => {
+  if (!fileId || !assetLoadCache.fileIds.has(fileId)) {
+    return false;
+  }
+
+  const hasLoadedAsset = deps.graphicsService?.hasLoadedAsset;
+  if (typeof hasLoadedAsset !== "function") {
+    return true;
+  }
+
+  const isStillLoaded = hasLoadedAsset(fileId);
+  if (!isStillLoaded) {
+    assetLoadCache.fileIds.delete(fileId);
+  }
+
+  return isStillLoaded;
+};
+
 const findNonCloneablePaths = (root, limit = 5) => {
   const paths = [];
   const queue = [{ value: root, path: "$" }];
@@ -151,7 +169,7 @@ async function loadAssetsForSceneIds(
     const fileId = fileReference?.url;
     return (
       fileId &&
-      !assetLoadCache.fileIds.has(fileId) &&
+      !hasCachedSceneAsset(deps, fileId) &&
       !assetLoadCache.pendingFileLoads.has(fileId)
     );
   });
@@ -271,7 +289,7 @@ async function preloadLayoutAssetsByIds(deps, projectData, layoutIds) {
     const fileId = fileReference?.url;
     return (
       fileId &&
-      !assetLoadCache.fileIds.has(fileId) &&
+      !hasCachedSceneAsset(deps, fileId) &&
       !assetLoadCache.pendingFileLoads.has(fileId)
     );
   });
@@ -430,6 +448,19 @@ const initRouteEngineWithDiagnostics = (
   }
 };
 
+const findProjectDataLineBySelection = (
+  projectData,
+  { sceneId, sectionId, lineId } = {},
+) => {
+  if (!sceneId || !sectionId || !lineId) {
+    return undefined;
+  }
+
+  return projectData?.story?.scenes?.[sceneId]?.sections?.[
+    sectionId
+  ]?.lines?.find((line) => line?.id === lineId);
+};
+
 export const renderSceneEditorState = async (deps, payload = {}) => {
   const { store, graphicsService } = deps;
   const { skipAnimations = false } = payload;
@@ -444,6 +475,19 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
       lineId,
     },
   );
+  const selectedLine = store.selectSelectedLine();
+  const projectDataLine = findProjectDataLineBySelection(projectData, {
+    sceneId,
+    sectionId,
+    lineId,
+  });
+  console.info("[sceneEditor] render current line", {
+    sceneId,
+    sectionId,
+    lineId,
+    selectedLineBackground: selectedLine?.actions?.background,
+    projectDataLineBackground: projectDataLine?.actions?.background,
+  });
   const safeProjectData = cloneWithDiagnostics(
     projectData,
     "projectData passed to updateProjectData",
@@ -463,8 +507,22 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     };
   }
 
-  graphicsService.engineHandleActions(nextActions);
+  graphicsService.engineHandleActions(nextActions, undefined, {
+    suppressRenderEffects: true,
+  });
   const currentRenderState = graphicsService.engineSelectRenderState();
+  const currentPresentationState =
+    graphicsService.engineSelectPresentationState();
+  const renderStoryChildren =
+    currentRenderState?.elements
+      ?.find((element) => element?.id === "story")
+      ?.children?.map((child) => child?.id) || [];
+  console.info("[sceneEditor] route-engine state after updateProjectData", {
+    lineId,
+    renderStoryChildren,
+    presentationBackground: currentPresentationState?.background,
+    renderAnimations: currentRenderState?.animations,
+  });
   if (!currentRenderState) {
     return;
   }
@@ -480,13 +538,19 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     skipAudio: isMuted,
     skipAnimations,
   });
-  graphicsService.engineHandleActions({
-    setNextLineConfig: {
-      auto: {
-        enabled: false,
+  graphicsService.engineHandleActions(
+    {
+      setNextLineConfig: {
+        auto: {
+          enabled: false,
+        },
       },
     },
-  });
+    undefined,
+    {
+      suppressRenderEffects: true,
+    },
+  );
 
   const presentationState = graphicsService.engineSelectPresentationState();
   store.setPresentationState({

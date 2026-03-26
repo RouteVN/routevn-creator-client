@@ -192,6 +192,13 @@ layoutSections:
             name: text
             value: "${values.text}"
             popoverForm: *textPopoverForm
+  - "$when": "supportsTextRevealEffect"
+    label: Revealing
+    items:
+      - type: reveal-effect-select
+        label: Effect
+        name: revealEffect
+        value: "${values.revealEffect}"
   - "$when": "supportsTextStyles"
     label: Text Styles
     items:

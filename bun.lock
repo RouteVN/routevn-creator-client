@@ -23,7 +23,7 @@
         "jsdom": "^26.1.0",
         "jszip": "^3.10.1",
         "nanoid": "^5.1.5",
-        "route-engine-js": "0.3.2",
+        "route-engine-js": "0.3.5",
         "route-graphics": "1.1.2",
         "rxjs": "^7.8.2",
         "snabbdom": "^3.6.2",
@@ -41,6 +41,9 @@
         "vitest": "^3.2.1",
       },
     },
+  },
+  "patchedDependencies": {
+    "@routevn/creator-model@1.1.2": "patches/@routevn__creator-model@1.1.2.patch",
   },
   "packages": {
     "@asamuzakjp/css-color": ["@asamuzakjp/css-color@3.2.0", "", { "dependencies": { "@csstools/css-calc": "^2.1.3", "@csstools/css-color-parser": "^3.0.9", "@csstools/css-parser-algorithms": "^3.0.4", "@csstools/css-tokenizer": "^3.0.3", "lru-cache": "^10.4.3" } }, "sha512-K1A6z8tS3XsmCMM86xoWdn7Fkdn9m6RSVtocUrJYIwZnFVkng/PvkEoWtOWmP+Scc6saYWHWZYbndEEXxl24jw=="],
@@ -687,7 +690,7 @@
 
     "rollup": ["rollup@4.55.1", "", { "dependencies": { "@types/estree": "1.0.8" }, "optionalDependencies": { "@rollup/rollup-android-arm-eabi": "4.55.1", "@rollup/rollup-android-arm64": "4.55.1", "@rollup/rollup-darwin-arm64": "4.55.1", "@rollup/rollup-darwin-x64": "4.55.1", "@rollup/rollup-freebsd-arm64": "4.55.1", "@rollup/rollup-freebsd-x64": "4.55.1", "@rollup/rollup-linux-arm-gnueabihf": "4.55.1", "@rollup/rollup-linux-arm-musleabihf": "4.55.1", "@rollup/rollup-linux-arm64-gnu": "4.55.1", "@rollup/rollup-linux-arm64-musl": "4.55.1", "@rollup/rollup-linux-loong64-gnu": "4.55.1", "@rollup/rollup-linux-loong64-musl": "4.55.1", "@rollup/rollup-linux-ppc64-gnu": "4.55.1", "@rollup/rollup-linux-ppc64-musl": "4.55.1", "@rollup/rollup-linux-riscv64-gnu": "4.55.1", "@rollup/rollup-linux-riscv64-musl": "4.55.1", "@rollup/rollup-linux-s390x-gnu": "4.55.1", "@rollup/rollup-linux-x64-gnu": "4.55.1", "@rollup/rollup-linux-x64-musl": "4.55.1", "@rollup/rollup-openbsd-x64": "4.55.1", "@rollup/rollup-openharmony-arm64": "4.55.1", "@rollup/rollup-win32-arm64-msvc": "4.55.1", "@rollup/rollup-win32-ia32-msvc": "4.55.1", "@rollup/rollup-win32-x64-gnu": "4.55.1", "@rollup/rollup-win32-x64-msvc": "4.55.1", "fsevents": "~2.3.2" }, "bin": { "rollup": "dist/bin/rollup" } }, "sha512-wDv/Ht1BNHB4upNbK74s9usvl7hObDnvVzknxqY/E/O3X6rW1U1rV1aENEfJ54eFZDTNo7zv1f5N4edCluH7+A=="],
 
-    "route-engine-js": ["route-engine-js@0.3.2", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.0.0", "js-yaml": "^4.1.0", "puty": "^0.1.1" } }, "sha512-FrRK9Mc1Zhncm3pjt1D7M6JXvkf5JKL7Y+64zjS1UEsIAGAj/9IM61ohOwHZj28xddXxSY5fU0wH1S7yN8CldA=="],
+    "route-engine-js": ["route-engine-js@0.3.5", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.0.0", "js-yaml": "^4.1.0", "puty": "^0.1.1" } }, "sha512-lwbrcsBAeCGI8Kdxz32XVFjCS62ld8moRHM7J6GCXV8lzYgGMqMmCE4+/vjkv02vgbJI9PpAVxd61Bkw6HQNsQ=="],
 
     "route-graphics": ["route-graphics@1.1.2", "", { "dependencies": { "@pixi/unsafe-eval": "^7.4.3", "hotkeys-js": "^4.0.0-beta.7", "pixi.js": "^8.7.1" } }, "sha512-d4Rc/7xIVPGxq4ptETVdaHZdqvaS3vDXFIYwjHQdoF0jTDa5BJ75DZjFDLRSqNj7a7aK8lMgaxPIUORt1+O/4Q=="],
 

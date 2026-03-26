@@ -1,0 +1,53 @@
+diff --git a/src/model.js b/src/model.js
+index b891e61..80c9b25 100644
+--- a/src/model.js
++++ b/src/model.js
+@@ -109,6 +109,7 @@ const VARIABLE_SCOPE_KEYS = ["context", "global-device", "global-account"];
+ const VARIABLE_TYPE_KEYS = ["string", "number", "boolean"];
+ const LAYOUT_TYPE_KEYS = ["normal", "dialogue", "nvl", "choice"];
+ const LAYOUT_ELEMENT_TEXT_STYLE_ALIGN_KEYS = ["left", "center", "right"];
++const LAYOUT_TEXT_REVEAL_EFFECT_KEYS = ["typewriter", "softWipe", "none"];
+ const LAYOUT_ELEMENT_BASE_TYPES = [
+   "folder",
+   "container",
+@@ -2202,6 +2203,7 @@ const validateLayoutElementData = ({
+     "text",
+     "textStyle",
+     "displaySpeed",
++    "revealEffect",
+     "imageId",
+     "hoverImageId",
+     "clickImageId",
+@@ -2314,6 +2316,7 @@ const validateLayoutElementData = ({
+     "clickTextStyleId",
+     "containerType",
+     "variableId",
++    "revealEffect",
+     "thumbImageId",
+     "barImageId",
+     "hoverThumbImageId",
+@@ -2335,6 +2338,16 @@ const validateLayoutElementData = ({
+     );
+   }
+ 
++  if (
++    data.revealEffect !== undefined &&
++    !LAYOUT_TEXT_REVEAL_EFFECT_KEYS.includes(data.revealEffect)
++  ) {
++    return invalidFromErrorFactory(
++      errorFactory,
++      `${path}.revealEffect must be one of ${LAYOUT_TEXT_REVEAL_EFFECT_KEYS.join(", ")} when provided`,
++    );
++  }
++
+   if (
+     data.direction !== undefined &&
+     data.direction !== "horizontal" &&
+@@ -2444,6 +2457,7 @@ const validateLayoutElementItems = ({ items, path, errorFactory }) => {
+           "text",
+           "textStyle",
+           "displaySpeed",
++          "revealEffect",
+           "imageId",
+           "hoverImageId",
+           "clickImageId",

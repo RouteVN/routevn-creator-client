@@ -26,6 +26,7 @@ describe("layoutEditorPreview", () => {
     expect(previewData.variables).toEqual({
       numberVar: 7,
       boolVar: true,
+      _dialogueTextSpeed: 50,
     });
     expect(previewData.dialogue.character.name).toBe("Aki");
     expect(previewData.dialogue.content[0].text).toBe("Hello there");

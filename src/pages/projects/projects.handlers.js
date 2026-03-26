@@ -4,6 +4,11 @@ import {
   getPersistedAuthenticatedUser,
   mapApiUserToAuthUser,
 } from "../../deps/services/shared/authSession.js";
+import {
+  createProjectResolutionFormValues,
+  CUSTOM_PROJECT_RESOLUTION_PRESET,
+  resolveProjectResolution,
+} from "../../internal/projectResolution.js";
 
 const mapCloudProject = (project) => {
   const projectId = project?.id;
@@ -391,6 +396,28 @@ export const handleBrowseFolder = async (deps) => {
   }
 };
 
+export const handleCreateFormChange = (deps, payload) => {
+  const { store, render } = deps;
+  const previousValues = store.selectDefaultValues();
+  const nextValues = {
+    ...payload?._event?.detail?.values,
+  };
+
+  if (
+    nextValues.resolution &&
+    nextValues.resolution !== CUSTOM_PROJECT_RESOLUTION_PRESET &&
+    nextValues.resolution !== previousValues.resolution
+  ) {
+    Object.assign(
+      nextValues,
+      createProjectResolutionFormValues(nextValues.resolution),
+    );
+  }
+
+  store.updateCreateFormValues(nextValues);
+  render();
+};
+
 export const handleFormSubmit = async (deps, payload) => {
   const { appService, store, render } = deps;
   const platform = appService.getPlatform();
@@ -404,6 +431,9 @@ export const handleFormSubmit = async (deps, payload) => {
       name,
       description,
       template = "default",
+      resolution,
+      resolutionWidth,
+      resolutionHeight,
     } = payload._event.detail.values;
 
     if (name === "_TEST_FILE_PERMISSIONS_") {
@@ -427,11 +457,40 @@ export const handleFormSubmit = async (deps, payload) => {
       return;
     }
 
+    const projectResolution = resolveProjectResolution({
+      preset: resolution,
+      width: resolutionWidth,
+      height: resolutionHeight,
+    });
+
+    if (!projectResolution) {
+      if (resolution === CUSTOM_PROJECT_RESOLUTION_PRESET) {
+        if (!resolutionWidth) {
+          appService.showToast("Resolution Width is required.");
+          return;
+        }
+
+        if (!resolutionHeight) {
+          appService.showToast("Resolution Height is required.");
+          return;
+        }
+
+        appService.showToast(
+          "Resolution Width and Height must be positive integers.",
+        );
+        return;
+      }
+
+      appService.showToast("Project Resolution is invalid.");
+      return;
+    }
+
     const newProject = await appService.createNewProject({
       name,
       description,
       projectPath,
       template,
+      projectResolution,
     });
 
     store.addProject({ project: newProject });

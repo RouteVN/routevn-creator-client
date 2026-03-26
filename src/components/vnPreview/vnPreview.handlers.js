@@ -240,9 +240,13 @@ export const handleAfterMount = async (deps) => {
     deps,
     projectDataWithInitial,
   );
+  const previewWidth = projectDataWithInitial?.screen?.width;
+  const previewHeight = projectDataWithInitial?.screen?.height;
   await graphicsService.init({
     canvas: canvas,
     beforeHandleActions,
+    width: previewWidth,
+    height: previewHeight,
   });
   resetAssetLoadCache(store);
   store.setAssetLoading({ isLoading: false });

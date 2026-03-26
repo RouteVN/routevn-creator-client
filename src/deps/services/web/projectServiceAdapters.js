@@ -158,11 +158,17 @@ export const createWebProjectServiceAdapters = ({
       return createInsiemeWebStoreAdapter(reference.projectId);
     },
 
-    initializeProject: async ({ projectId, template, projectInfo }) => {
+    initializeProject: async ({
+      projectId,
+      template,
+      projectInfo,
+      projectResolution,
+    }) => {
       return initializeWebProject({
         projectId,
         template,
         projectInfo,
+        projectResolution,
       });
     },
   };

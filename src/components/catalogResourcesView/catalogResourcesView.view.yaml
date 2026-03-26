@@ -69,6 +69,7 @@ template:
                                             $elif item.cardKind == 'animation':
                                               - rtgl-view w=f h=1fg bgc=bg br=md p=md:
                                                   - rtgl-text s=h4 mb=md: ${item.name}
+                                                  - rtgl-text s=xs c=mu-fg mb=md: 'Type: ${item.animationTypeLabel}'
                                                   - $if item.animationType == 'transition':
                                                       - rtgl-view d=v w=f g=md:
                                                           - rtgl-view d=h w=f:

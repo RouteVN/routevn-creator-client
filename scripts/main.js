@@ -17,9 +17,7 @@ import createRouteGraphics, {
   animatedSpritePlugin,
 } from "route-graphics";
 import { prepareRenderStateKeyboardForGraphics } from "../src/internal/project/layout.js";
-import {
-  BUNDLE_FORMAT_VERSION,
-} from "../src/deps/services/shared/projectExportService.js";
+import { BUNDLE_FORMAT_VERSION } from "../src/deps/services/shared/projectExportService.js";
 
 async function parseVNBundle(arrayBuffer) {
   const dataView = new DataView(arrayBuffer);
@@ -159,6 +157,8 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
 
   const routeGraphics = createRouteGraphics();
   let engine;
+  const screenWidth = Number(jsonData?.screen?.width) || 1920;
+  const screenHeight = Number(jsonData?.screen?.height) || 1080;
 
   const renderEngineState = (renderState) => {
     const nextRenderState = prepareRenderStateKeyboardForGraphics({
@@ -168,8 +168,8 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
   };
 
   await routeGraphics.init({
-    width: 1920,
-    height: 1080,
+    width: screenWidth,
+    height: screenHeight,
     plugins,
     eventHandler: async (eventName, payload) => {
       if (eventName === "renderComplete") {

@@ -25,6 +25,12 @@ const ACTION_LABELS = {
 
 const ACTION_INTERACTION_TYPES = ["click", "rightClick"];
 
+const REVEAL_EFFECT_OPTIONS = [
+  { label: "Typewriter", value: "typewriter" },
+  { label: "Soft Wipe", value: "softWipe" },
+  { label: "None", value: "none" },
+];
+
 const getLayoutInteractionActions = (values, interactionType) => {
   return getInteractionActions(values?.[interactionType]);
 };
@@ -93,8 +99,14 @@ const toTextStyleOptions = (textStylesData = {}) => {
 };
 
 const toInspectorValues = ({ values, firstTextStyleId }) => {
+  const revealEffect =
+    values?.type === "text-revealing-ref-dialogue-content"
+      ? (values?.revealEffect ?? "typewriter")
+      : values?.revealEffect;
+
   return {
     ...values,
+    revealEffect,
     direction: values?.direction ?? "",
     textStyleId: values?.textStyleId || firstTextStyleId || "",
     hoverTextStyleId: values?.hoverTextStyleId ?? "",
@@ -336,6 +348,8 @@ export const selectViewData = ({ state, props, constants }) => {
     config: {
       sections,
     },
+    revealEffectOptions: REVEAL_EFFECT_OPTIONS,
+    revealEffectValue: values.revealEffect,
     popover: state.popover,
     imageSelectorDialog: state.imageSelectorDialog,
     tempSelectedImageId: state.tempSelectedImageId,

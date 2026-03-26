@@ -291,6 +291,7 @@ const DEFAULT_CAPABILITIES = {
   supportsAnchor: false,
   supportsDirection: false,
   supportsTextEditing: false,
+  supportsTextRevealEffect: false,
   supportsTextStyles: false,
   supportsTextAlignment: false,
   supportsActions: false,
@@ -327,6 +328,9 @@ const ITEM_TYPE_CAPABILITY_OVERRIDES = {
   text: {
     supportsTextEditing: true,
     supportsActions: true,
+  },
+  "text-revealing-ref-dialogue-content": {
+    supportsTextRevealEffect: true,
   },
 };
 

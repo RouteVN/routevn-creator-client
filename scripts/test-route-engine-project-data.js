@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import createRouteEngine from "route-engine-js";
 
 import { sanitizeProjectDataForRouteEngine } from "../src/internal/project/routeEngineProjectData.js";
+import { constructProjectData } from "../src/internal/project/projection.js";
 import {
   initialProjectData,
   createProjectCreateCommand,
@@ -97,6 +98,81 @@ const createBaseProjectData = () => ({
     transforms: {},
   },
 });
+
+{
+  const projectData = constructProjectData(structuredClone(initialProjectData));
+  const skipUnseenText = projectData.resources.variables._skipUnseenText;
+  const dialogueTextSpeed = projectData.resources.variables._dialogueTextSpeed;
+
+  assert.deepEqual(projectData.screen, {
+    width: 1920,
+    height: 1080,
+    backgroundColor: "#000000",
+  });
+  assert.equal(typeof skipUnseenText, "object");
+  assert.equal(skipUnseenText.name, "Skip Unseen Text");
+  assert.equal(skipUnseenText.scope, "global-device");
+  assert.equal(skipUnseenText.type, "boolean");
+  assert.equal(skipUnseenText.default, false);
+
+  assert.equal(typeof dialogueTextSpeed, "object");
+  assert.equal(dialogueTextSpeed.name, "Dialogue Text Speed");
+  assert.equal(dialogueTextSpeed.scope, "global-device");
+  assert.equal(dialogueTextSpeed.type, "number");
+  assert.equal(dialogueTextSpeed.default, 50);
+}
+
+{
+  const repositoryState = structuredClone(initialProjectData);
+  repositoryState.project = {
+    resolution: {
+      width: 1280,
+      height: 720,
+    },
+  };
+
+  const projectData = constructProjectData(repositoryState);
+
+  assert.deepEqual(projectData.screen, {
+    width: 1280,
+    height: 720,
+    backgroundColor: "#000000",
+  });
+}
+
+{
+  const repositoryState = structuredClone(initialProjectData);
+  repositoryState.animations.items["bg-slide-in"] = {
+    id: "bg-slide-in",
+    type: "animation",
+    name: "Background Slide In",
+    animation: {
+      type: "transition",
+      next: {
+        tween: {
+          alpha: {
+            initialValue: 0,
+            keyframes: [
+              {
+                duration: 500,
+                value: 1,
+              },
+            ],
+          },
+        },
+      },
+    },
+  };
+  repositoryState.animations.tree = [{ id: "bg-slide-in" }];
+
+  const projectData = constructProjectData(repositoryState);
+  const backgroundAnimation = projectData.resources.animations["bg-slide-in"];
+
+  assert.equal(typeof backgroundAnimation, "object");
+  assert.equal(backgroundAnimation.type, "transition");
+  assert.equal(backgroundAnimation.animation, undefined);
+  assert.equal(backgroundAnimation.next.tween.alpha.keyframes[0].duration, 500);
+}
 
 {
   const projectData = createBaseProjectData();

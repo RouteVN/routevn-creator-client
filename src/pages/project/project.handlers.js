@@ -11,9 +11,11 @@ export const handleAfterMount = async (deps) => {
   const { appService, projectService, store, render } = deps;
   await projectService.ensureRepository();
   const projectInfo = await projectService.getCurrentProjectInfo();
+  const repositoryState = projectService.getRepositoryState();
   store.setCurrentProject({
     project: {
       ...projectInfo,
+      resolution: repositoryState?.project?.resolution,
       source: appService.getCurrentProjectEntry()?.source,
     },
   });

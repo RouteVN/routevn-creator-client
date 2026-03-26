@@ -41,13 +41,13 @@ const getEditorPayload = (appService) =>
 
 const rerenderLayoutEditorSurface = async (
   deps,
-  { renderPage = true } = {},
+  { renderPage = true, clearFirst = false } = {},
 ) => {
   if (renderPage) {
     deps.render();
   }
 
-  await renderLayoutEditorPreview(deps);
+  await renderLayoutEditorPreview(deps, { clearFirst });
 };
 
 export const handleBeforeMount = (deps) => {
@@ -189,6 +189,27 @@ export const handleChoiceFormChange = async (deps, payload) => {
 
   store.setChoiceDefaultValue({ name, fieldValue });
   await rerenderLayoutEditorSurface(deps);
+};
+
+export const handlePreviewRevealingSpeedInput = async (deps, payload) => {
+  const { store } = deps;
+  const rawValue =
+    payload._event.detail?.value ??
+    payload._event.currentTarget?.value ??
+    payload._event.target?.value;
+  const value = Number(rawValue);
+
+  store.setPreviewRevealingSpeed({
+    value: Number.isFinite(value) && value > 0 ? value : 50,
+  });
+  await rerenderLayoutEditorSurface(deps, { renderPage: false });
+};
+
+export const handlePlayPreviewClick = async (deps) => {
+  await rerenderLayoutEditorSurface(deps, {
+    renderPage: false,
+    clearFirst: true,
+  });
 };
 
 export const handleArrowKeyDown = async (deps, payload) => {

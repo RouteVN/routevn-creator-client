@@ -35,7 +35,7 @@
     "jsdom": "^26.1.0",
     "jszip": "^3.10.1",
     "nanoid": "^5.1.5",
-    "route-engine-js": "0.3.2",
+    "route-engine-js": "0.3.5",
     "route-graphics": "1.1.2",
     "rxjs": "^7.8.2",
     "snabbdom": "^3.6.2",
@@ -85,5 +85,8 @@
     "src/**/*.{js}": [
       "oxlint && bun prettier --write"
     ]
+  },
+  "patchedDependencies": {
+    "@routevn/creator-model@1.1.2": "patches/@routevn__creator-model@1.1.2.patch"
   }
 }

@@ -43,7 +43,7 @@ styles:
     '-ms-user-select': none
     user-select: none
 template:
-  - rtgl-view w=f h=f sv:
+  - 'rtgl-view w=f h=f sv style="min-width: 0; overflow-x: hidden;"':
       - rtgl-view w=f g=sm pos=rel:
           - rtgl-view w=f h=f:
               - $if items.length == 0 && !noEmptyMessage:
@@ -51,12 +51,12 @@ template:
                       - rtgl-text s=sm c=mu-fg ta=c: No items.
                 $else:
                   - $for item, i in items:
-                      - 'rtgl-view#itemRef${i} data-item-id=${item.id} h-bgc=${item.hBgc} bgc=${item.bgc} d=h g=xs style="padding-left: ${item.ml}px;" w=f pv=md pr=md h=32 cur=pointer av=c bc=${item.bc} bw=xs':
+                      - 'rtgl-view#itemRef${i} data-item-id=${item.id} h-bgc=${item.hBgc} bgc=${item.bgc} d=h g=xs style="padding-left: ${item.ml}px; min-width: 0; box-sizing: border-box;" w=f pv=md pr=md h=32 cur=pointer av=c bc=${item.bc} bw=xs':
                           - $if shrinkable && item.hasChildren:
                               - rtgl-svg#arrowRef${i} data-item-id=${item.id} svg=${item.arrowIcon} wh=16 cur=pointer: null
                             $else:
                               - rtgl-view wh=16: null
-                          - rtgl-view d=h g=md av=c w=f:
+                          - 'rtgl-view d=h g=md av=c w=f style="min-width: 0;"':
                               - rtgl-svg svg=${item.svg} wh=16: null
                               - 'rtgl-text s=sm ellipsis=true w=1fg mr=xl style="min-width: 0"': ${item.name}
           - $if targetDragIndex != -2 && targetDropPosition != 'inside':

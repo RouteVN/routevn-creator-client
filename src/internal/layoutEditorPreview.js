@@ -7,6 +7,7 @@ import { toHierarchyStructure } from "./project/tree.js";
 
 const DEFAULT_DIALOGUE_CHARACTER_NAME = "Character";
 const DEFAULT_DIALOGUE_CONTENT = "This is a sample dialogue content.";
+const DEFAULT_DIALOGUE_REVEALING_SPEED = 50;
 const OVERLAY_BORDER = {
   color: "#ffffff",
   width: 2,
@@ -227,6 +228,7 @@ const buildOverlayTree = ({ path, overlayId, draggable }) => {
 export const createLayoutEditorPreviewData = ({
   variablesData,
   dialogueDefaultValues,
+  previewRevealingSpeed,
   choicesData,
 } = {}) => {
   const characterName =
@@ -234,9 +236,18 @@ export const createLayoutEditorPreviewData = ({
     DEFAULT_DIALOGUE_CHARACTER_NAME;
   const dialogueContent =
     dialogueDefaultValues?.["dialogue-content"] ?? DEFAULT_DIALOGUE_CONTENT;
+  const parsedPreviewRevealingSpeed = Number(previewRevealingSpeed);
+  const dialogueRevealingSpeed =
+    Number.isFinite(parsedPreviewRevealingSpeed) &&
+    parsedPreviewRevealingSpeed > 0
+      ? parsedPreviewRevealingSpeed
+      : DEFAULT_DIALOGUE_REVEALING_SPEED;
 
   return {
-    variables: createPreviewVariables(variablesData),
+    variables: {
+      ...createPreviewVariables(variablesData),
+      _dialogueTextSpeed: dialogueRevealingSpeed,
+    },
     dialogue: {
       character: {
         name: characterName,
@@ -395,13 +406,24 @@ export const createLayoutEditorRenderState = (deps) => {
   };
 };
 
-export const renderLayoutEditorPreview = async (deps) => {
+export const renderLayoutEditorPreview = async (
+  deps,
+  { clearFirst = false } = {},
+) => {
   try {
     const { store, graphicsService } = deps;
     const { renderStateElements, fontsItems, variablesData } =
       createLayoutEditorRenderState(deps);
     const selectedItem = store.selectSelectedItemData();
     const fileReferences = extractFileIdsFromRenderState(renderStateElements);
+
+    if (clearFirst) {
+      graphicsService.render({
+        id: `layout-editor-preview-clear-${Date.now()}`,
+        elements: [],
+        animations: [],
+      });
+    }
 
     let assets = await loadLayoutEditorAssets(deps, fileReferences, fontsItems);
     try {
@@ -417,6 +439,7 @@ export const renderLayoutEditorPreview = async (deps) => {
       previewData: createLayoutEditorPreviewData({
         variablesData,
         dialogueDefaultValues: store.selectDialogueDefaultValues(),
+        previewRevealingSpeed: store.selectPreviewRevealingSpeed(),
         choicesData: store.selectChoicesData(),
       }),
     });

@@ -494,6 +494,12 @@ const getDialogType = (animationType) => {
   return animationType === "transition" ? "transition" : "update";
 };
 
+const getAnimationTypeLabel = (animationType) => {
+  return getDialogType(animationType) === "transition"
+    ? "Transition"
+    : "Update";
+};
+
 const getUpdateAnimationTween = (item = {}) => {
   if (
     (item?.animation?.type === "live" || item?.animation?.type === "update") &&
@@ -583,6 +589,7 @@ const toAnimationDisplayItem = (item) => {
   return {
     ...item,
     animationType,
+    animationTypeLabel: getAnimationTypeLabel(item?.animation?.type),
     properties,
     updateProperties,
     prevProperties,
@@ -733,6 +740,8 @@ const {
 
     return {
       ...baseViewData,
+      selectedAnimationTypeLabel:
+        selectedAnimationItem?.animationTypeLabel ?? "",
       selectedItemDuration: String(selectedAnimationItem?.duration ?? ""),
       selectedAnimationPropertyCount,
       createTypeMenu: state.createTypeMenu,

@@ -1,8 +1,14 @@
+import {
+  formatProjectResolution,
+  normalizeProjectResolution,
+} from "../../internal/projectResolution.js";
+
 export const createInitialState = () => ({
   project: {
     name: "",
     description: "",
     iconFileId: undefined,
+    resolution: normalizeProjectResolution(),
     source: "local",
   },
   isEditDialogOpen: false,
@@ -18,6 +24,7 @@ export const setCurrentProject = ({ state }, { project } = {}) => {
     name: project?.name ?? "",
     description: project?.description ?? "",
     iconFileId: project?.iconFileId ?? undefined,
+    resolution: normalizeProjectResolution(project?.resolution),
     source: project?.source === "cloud" ? "cloud" : "local",
   };
 };
@@ -60,6 +67,11 @@ export const selectViewData = ({ state, constants }) => {
       type: "slot",
       slot: "project-description",
       label: "",
+    },
+    {
+      type: "text",
+      label: "Resolution",
+      value: formatProjectResolution(state.project.resolution),
     },
   ];
 

@@ -18,6 +18,7 @@ import {
   assertSupportedProjectState,
   createProjectCreateRepositoryEvent,
 } from "../shared/projectRepository.js";
+import { normalizeProjectResolution } from "../../../internal/projectResolution.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
 const CREATOR_VERSION_KEY = "creatorVersion";
@@ -99,6 +100,7 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
       projectPath,
       template,
       projectInfo,
+      projectResolution,
     }) => {
       if (!projectId) {
         throw new Error(
@@ -114,6 +116,12 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
       await mkdir(filesPath, { recursive: true });
 
       const templateData = await loadTemplate(template);
+      templateData.project = {
+        ...templateData.project,
+        resolution: normalizeProjectResolution(
+          projectResolution ?? templateData.project?.resolution,
+        ),
+      };
       await copyTemplateFiles(template, filesPath);
 
       assertSupportedProjectState(templateData);

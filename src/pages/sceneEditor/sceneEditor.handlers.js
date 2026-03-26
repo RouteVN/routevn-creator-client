@@ -644,6 +644,12 @@ export const handleCommandLineSubmit = async (deps, payload) => {
   );
 
   syncStoreProjectState(store, projectService);
+  const syncedSelectedLine = store.selectSelectedLine();
+  console.info("[sceneEditor] selected line after sync", {
+    lineId,
+    actionKeys: Object.keys(syncedSelectedLine?.actions || {}),
+    background: syncedSelectedLine?.actions?.background,
+  });
   reconcileCurrentEditorSession(deps);
   render();
 
@@ -884,7 +890,7 @@ export const handleNewLine = async (deps, payload) => {
 };
 
 export const handleLineNavigation = (deps, payload) => {
-  const { store, refs, render, subject, graphicsService } = deps;
+  const { store, refs, render, subject } = deps;
   if (isSectionsOverviewOpen(store)) {
     return;
   }
@@ -898,11 +904,6 @@ export const handleLineNavigation = (deps, payload) => {
 
     // Check if we're trying to move up from the first line
     if (direction === "up" && currentLineId === targetLineId) {
-      // First line - show animation effects
-      graphicsService.render({
-        elements: [],
-        animations: [],
-      });
       subject.dispatch("sceneEditor.renderCanvas", {});
       return;
     }
@@ -961,12 +962,6 @@ export const handleLineNavigation = (deps, payload) => {
       subject.dispatch("sceneEditor.renderCanvas", {});
     });
   } else if (direction === "up" && currentLineId === targetLineId) {
-    // First line - show animation effects
-    graphicsService.render({
-      elements: [],
-      animations: [],
-    });
-    render();
     subject.dispatch("sceneEditor.renderCanvas", {});
   }
 };

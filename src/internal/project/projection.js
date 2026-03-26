@@ -7,6 +7,8 @@ import { RESOURCE_TYPES } from "./commands.js";
 import { normalizeLineActions } from "./engineActions.js";
 import { getInteractionActions } from "./interactionPayload.js";
 import { toFlatItems, toHierarchyStructure } from "./tree.js";
+import { normalizeProjectResolution } from "../projectResolution.js";
+import { getSystemVariableItems } from "../systemVariables.js";
 
 const DEFAULT_TIMESTAMP = 0;
 const createResourceCollection = () => ({
@@ -537,17 +539,15 @@ const constructAnimationResources = (repositoryAnimations = {}) => {
         return result;
       }
 
-      const animation =
-        item.animation.type === "update"
-          ? {
-              ...structuredClone(item.animation),
-              type: "live",
-            }
-          : structuredClone(item.animation);
+      const animation = structuredClone(item.animation);
 
-      result[animationId] = {
-        animation,
-      };
+      if (animation.type === "live") {
+        animation.type = "update";
+      } else if (animation.type === "replace") {
+        animation.type = "transition";
+      }
+
+      result[animationId] = animation;
       return result;
     },
     {},
@@ -714,11 +714,14 @@ const constructProjectResources = (repositoryState = {}) => {
   const textStylesData = repositoryState.textStyles || { items: {}, tree: [] };
   const colors = repositoryState.colors || { items: {}, tree: [] };
   const fonts = repositoryState.fonts || { items: {}, tree: [] };
-  const variables = Object.fromEntries(
-    Object.entries(repositoryState.variables?.items || {}).filter(
-      ([, item]) => item.type !== "folder",
+  const variables = {
+    ...Object.fromEntries(
+      Object.entries(repositoryState.variables?.items || {}).filter(
+        ([, item]) => item.type !== "folder",
+      ),
     ),
-  );
+    ...getSystemVariableItems(),
+  };
 
   const characterImages = extractCharacterImages(repositoryCharacters);
   const imageItems = {
@@ -809,10 +812,14 @@ const constructStory = (scenes) => {
 };
 
 export function constructProjectData(state, options = {}) {
+  const screenResolution = normalizeProjectResolution(
+    state?.project?.resolution,
+  );
+
   return {
     screen: {
-      width: 1920,
-      height: 1080,
+      width: screenResolution.width,
+      height: screenResolution.height,
       backgroundColor: "#000000",
     },
     resources: constructProjectResources(state),

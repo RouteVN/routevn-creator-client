@@ -945,7 +945,6 @@
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "displaySpeed": 100,
               "textStyle": {
                 "align": "left"
               },

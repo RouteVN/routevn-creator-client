@@ -106,7 +106,7 @@ const createLayoutTemplate = (layoutType) => {
           },
         }),
         [contentTextId]: createLayoutElement(contentTextId, {
-          type: "text",
+          type: "text-revealing-ref-dialogue-content",
           name: "Dialogue Content",
           x: 40,
           y: 110,
@@ -118,7 +118,6 @@ const createLayoutTemplate = (layoutType) => {
           scaleY: 1,
           rotation: 0,
           text: "${dialogue.content[0].text}",
-          displaySpeed: 100,
           textStyle: {
             align: "left",
           },

@@ -80,6 +80,11 @@ template:
                       - rtgl-text s=xs w=65: ${item.label}
                       - 'rtgl-view style="width: calc(100% - 65px);"':
                           - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=#{item.value} :options=#{item.options}: null
+                $elif item.type == 'reveal-effect-select':
+                  - rtgl-view d=h av=c w=f:
+                      - rtgl-text s=xs w=65: ${item.label}
+                      - 'rtgl-view style="width: calc(100% - 65px);"':
+                          - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=revealEffectValue :options=revealEffectOptions: null
                 $elif item.type == 'list-item':
                   - $for listItem, k in item.items:
                       - rtgl-view#listItem${i}x${j}x${k} data-id=${listItem.id} data-interaction=${listItem.interactionType} d=h w=f g=md av=c p=md br=md bw=xs h-bgc=mu cur=pointer:

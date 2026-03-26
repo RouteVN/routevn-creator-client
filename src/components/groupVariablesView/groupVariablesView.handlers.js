@@ -126,6 +126,10 @@ export const handleDialogFormChange = (deps, payload) => {
 };
 
 export const handleAddVariableClick = (deps, payload) => {
+  if (deps.props.readonly === true) {
+    return;
+  }
+
   const { store, render } = deps;
   payload._event.stopPropagation(); // Prevent group click
 
@@ -167,6 +171,10 @@ export const handleRowClick = (deps, payload) => {
 };
 
 export const handleRowDoubleClick = (deps, payload) => {
+  if (deps.props.readonly === true) {
+    return;
+  }
+
   const itemId = getDataId(payload._event, "data-item-id", "row");
   openEditDialogForItem({ deps, itemId });
 };
@@ -177,6 +185,10 @@ export const handleOpenEditDialog = (deps, payload) => {
 };
 
 export const handleRowContextMenu = (deps, payload) => {
+  if (deps.props.readonly === true) {
+    return;
+  }
+
   const { store, render } = deps;
   payload._event.preventDefault();
   payload._event.stopPropagation();
@@ -218,6 +230,10 @@ export const handleCloseContextMenu = (deps) => {
 };
 
 export const handleFormActionClick = (deps, payload) => {
+  if (deps.props.readonly === true) {
+    return;
+  }
+
   const { store, render, dispatchEvent, props, appService } = deps;
 
   // Check which button was clicked

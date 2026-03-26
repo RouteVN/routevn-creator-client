@@ -16,10 +16,18 @@ refs:
     eventListeners:
       form-change:
         handler: handleDialogueFormChange
+  revealingSpeedInput:
+    eventListeners:
+      value-input:
+        handler: handlePreviewRevealingSpeedInput
   choiceForm:
     eventListeners:
       form-change:
         handler: handleChoiceFormChange
+  playPreviewButton:
+    eventListeners:
+      click:
+        handler: handlePlayPreviewClick
   backButton:
     eventListeners:
       click:
@@ -46,9 +54,14 @@ template:
                   - rtgl-view pos=abs cor=full:
                       - 'div#canvas style="width: 100%; height: 100%;display: flex; cursor: ${canvasCursor}"': null
               - $if layout.layoutType == 'dialogue' || layout.layoutType == 'nvl':
-                  - rtgl-form#dialogueForm w=f h=f :form=dialogueForm :defaultValues=dialogueDefaultValues: null
+                  - rtgl-form#dialogueForm w=f :form=dialogueForm :defaultValues=dialogueDefaultValues: null
+              - $if layout.layoutType == 'dialogue':
+                  - rtgl-view d=h av=c g=sm w=f ph=md pb=md:
+                      - rtgl-text s=sm c=mu-fg: Revealing Speed
+                      - rtgl-input#revealingSpeedInput type=number min=1 step=1 w=120 value=${previewRevealingSpeed}: null
+                      - rtgl-button#playPreviewButton v=ol: Play
               - $if layout.layoutType == 'choice':
-                  - rtgl-form#choiceForm w=f h=f :form=choiceForm :defaultValues=choiceDefaultValues :context=choicesContext: null
+                  - rtgl-form#choiceForm w=f :form=choiceForm :defaultValues=choiceDefaultValues :context=choicesContext: null
       - rvn-resizable-panel#resizableDetailPanel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
           - rtgl-view wh=f slot="content":
               - $if selectedItemId:
