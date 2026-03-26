@@ -58,10 +58,6 @@ export const handleActionClicked = (deps, payload) => {
 
 export const handleCommandLineSubmit = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
-  console.info("[systemActions] command-line submit", {
-    mode: store.getState().mode,
-    detail: payload?._event?.detail,
-  });
   dispatchEvent(
     new CustomEvent("actions-change", {
       detail: payload._event.detail,
