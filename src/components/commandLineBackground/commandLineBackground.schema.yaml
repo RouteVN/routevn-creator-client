@@ -7,16 +7,10 @@ propsSchema:
       properties:
         resourceId:
           type: string
-        resourceType:
-          type: string
-          enum:
-            - image
-            - layout
-            - video
         animations:
           type: object
           properties:
-            in:
+            resourceId:
               type: string
         loop:
           type: boolean

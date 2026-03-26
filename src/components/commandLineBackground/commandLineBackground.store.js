@@ -221,12 +221,30 @@ export const selectViewData = ({ state }) => {
 
   const selectedResource = selectSelectedResource({ state });
   const breadcrumb = selectBreadcrumb({ state });
+  const animationOptions = [
+    { value: "none", label: "None" },
+    ...toFlatItems(state.animationItems)
+      .filter((item) => item.type === "animation")
+      .map((item) => {
+        const animationType = item.animation?.type;
+        return {
+          value: item.id,
+          label: animationType ? `${item.name} (${animationType})` : item.name,
+        };
+      }),
+  ];
 
   const formFields = [
     {
       type: "slot",
       slot: "background",
       description: "Background",
+    },
+    {
+      name: "animation",
+      label: "Animation",
+      type: "select",
+      options: animationOptions,
     },
   ];
 
@@ -248,6 +266,7 @@ export const selectViewData = ({ state }) => {
 
   const defaultValues = {
     background: selectedResource?.fileId || "",
+    animation: state.selectedAnimationId ?? "none",
     loop: state.backgroundLoop ?? false,
   };
 

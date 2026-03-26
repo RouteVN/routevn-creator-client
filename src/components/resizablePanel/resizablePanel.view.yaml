@@ -15,5 +15,5 @@ template:
       - rtgl-view h=f w=f:
           - slot name="content": null
       - $if resizeSide=="right":
-          - 'rtgl-view#resizeHandle pos=abs d=h ah=c h=f style="cursor: col-resize; background: transparent; top: 0; bottom: 0; right: calc(var(--spacing-md) * -2); width: calc(var(--spacing-md) * 2); z-index: 10;"':
+          - 'rtgl-view#resizeHandle pos=abs d=h h=f style="cursor: col-resize; background: transparent; top: 0; bottom: 0; right: calc(var(--spacing-md) * -2); width: calc(var(--spacing-md) * 2); z-index: 10;"':
               - rtgl-view w=1 h=f bgc=${dividerColor}: null

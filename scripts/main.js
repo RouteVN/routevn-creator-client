@@ -17,9 +17,7 @@ import createRouteGraphics, {
   animatedSpritePlugin,
 } from "route-graphics";
 import { prepareRenderStateKeyboardForGraphics } from "../src/internal/project/layout.js";
-import {
-  BUNDLE_FORMAT_VERSION,
-} from "../src/deps/services/shared/projectExportService.js";
+import { BUNDLE_FORMAT_VERSION } from "../src/deps/services/shared/projectExportService.js";
 
 async function parseVNBundle(arrayBuffer) {
   const dataView = new DataView(arrayBuffer);
@@ -159,6 +157,32 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
 
   const routeGraphics = createRouteGraphics();
   let engine;
+  const screenWidth = Number(jsonData?.screen?.width);
+  const screenHeight = Number(jsonData?.screen?.height);
+
+  if (!Number.isFinite(screenWidth) || screenWidth <= 0) {
+    throw new Error(
+      "Bundle projectData.screen.width is required and must be a positive number.",
+    );
+  }
+
+  if (!Number.isFinite(screenHeight) || screenHeight <= 0) {
+    throw new Error(
+      "Bundle projectData.screen.height is required and must be a positive number.",
+    );
+  }
+
+  const canvasContainer = document.getElementById("canvas");
+  if (canvasContainer) {
+    canvasContainer.style.setProperty(
+      "--project-screen-width",
+      String(screenWidth),
+    );
+    canvasContainer.style.setProperty(
+      "--project-screen-height",
+      String(screenHeight),
+    );
+  }
 
   const renderEngineState = (renderState) => {
     const nextRenderState = prepareRenderStateKeyboardForGraphics({
@@ -168,8 +192,8 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
   };
 
   await routeGraphics.init({
-    width: 1920,
-    height: 1080,
+    width: screenWidth,
+    height: screenHeight,
     plugins,
     eventHandler: async (eventName, payload) => {
       if (eventName === "renderComplete") {
@@ -200,8 +224,8 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
   });
   await routeGraphics.loadAssets(assetBufferMap);
 
-  document.getElementById("canvas").appendChild(routeGraphics.canvas);
-  document.getElementById("canvas").addEventListener("contextmenu", (e) => {
+  canvasContainer?.appendChild(routeGraphics.canvas);
+  canvasContainer?.addEventListener("contextmenu", (e) => {
     e.preventDefault();
   });
 

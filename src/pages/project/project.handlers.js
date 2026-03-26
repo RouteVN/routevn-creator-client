@@ -1,3 +1,5 @@
+import { requireProjectResolution } from "../../internal/projectResolution.js";
+
 export const handleBeforeMount = (deps) => {
   const { appService, store } = deps;
   store.setCurrentProject({
@@ -11,9 +13,15 @@ export const handleAfterMount = async (deps) => {
   const { appService, projectService, store, render } = deps;
   await projectService.ensureRepository();
   const projectInfo = await projectService.getCurrentProjectInfo();
+  const repositoryState = projectService.getRepositoryState();
+  const projectResolution = requireProjectResolution(
+    repositoryState?.project?.resolution,
+    "Project resolution",
+  );
   store.setCurrentProject({
     project: {
       ...projectInfo,
+      resolution: projectResolution,
       source: appService.getCurrentProjectEntry()?.source,
     },
   });

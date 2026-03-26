@@ -60,7 +60,8 @@ template:
                               - rtgl-view d=h av=c g=md:
                                   - rtgl-svg wh=16 svg=folder: null
                                   - rtgl-text: ${group.fullLabel}
-                          - rtgl-button#addVariableButtonRef${i} data-group-id=${group.id} s=sm w=1fg pre=plus: Add
+                          - $if !readonly:
+                              - rtgl-button#addVariableButtonRef${i} data-group-id=${group.id} s=sm w=1fg pre=plus: Add
                       - $if !group.isCollapsed:
                           - rtgl-view w=f mb=md p=sm:
                               - $if group.hasChildren:
@@ -96,9 +97,13 @@ template:
                                                   - rtgl-view w=1fg:
                                                       - rtgl-text s=sm: ${item.default}
                                 $else:
-                                  - rtgl-view#addVariableEmptyRef${i} data-group-id=${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=pointer:
-                                      - rtgl-svg svg=plus wh=24: null
-                                      - rtgl-text: Add Variable
+                                  - $if readonly:
+                                      - rtgl-view w=f h=150 av=c ah=c:
+                                          - rtgl-text c=mu-fg: No variables in this group
+                                    $else:
+                                      - rtgl-view#addVariableEmptyRef${i} data-group-id=${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=pointer:
+                                          - rtgl-svg svg=plus wh=24: null
+                                          - rtgl-text: Add Variable
             $elif searchQuery:
               - rtgl-view w=f h=400 av=c ah=c:
                   - rtgl-text s=lg c=mu-fg: No variables found matching "${searchQuery}"
@@ -108,7 +113,8 @@ template:
                   - rtgl-view h=64: null
           - $if flatGroups.length > 0:
               - rtgl-view h=33vh: null
-  - rtgl-dialog#addVariableDialog s=md ?open=${isDialogOpen}:
-      - rtgl-view slot=content g=md:
-          - rtgl-form#variableForm key=${dialogKey} :defaultValues=defaultValues :form=form w=f :context=context: null
-  - rtgl-dropdown-menu#contextMenu :items=dropdownMenu.items ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}: null
+  - $if !readonly:
+      - rtgl-dialog#addVariableDialog s=md ?open=${isDialogOpen}:
+          - rtgl-view slot=content g=md:
+              - rtgl-form#variableForm key=${dialogKey} :defaultValues=defaultValues :form=form w=f :context=context: null
+      - rtgl-dropdown-menu#contextMenu :items=dropdownMenu.items ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}: null

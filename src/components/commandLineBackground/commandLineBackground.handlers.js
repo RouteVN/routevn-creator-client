@@ -132,9 +132,10 @@ export const handleBeforeMount = (deps) => {
     });
   }
 
-  if (backgroundAnimations?.in) {
+  const animationResourceId = backgroundAnimations?.resourceId;
+  if (animationResourceId) {
     store.setSelectedAnimation({
-      animationId: backgroundAnimations.in?.resourceId,
+      animationId: animationResourceId,
     });
   }
 };
@@ -315,9 +316,6 @@ export const handleSubmitClick = (deps, payload) => {
 
   const backgroundData = {
     resourceId: selectedResource?.resourceId,
-    ...(selectedResource?.resourceType
-      ? { resourceType: selectedResource.resourceType }
-      : {}),
   };
 
   if (selectedResource?.resourceType === "video") {
@@ -330,18 +328,9 @@ export const handleSubmitClick = (deps, payload) => {
     selectedAnimationId !== "none"
   ) {
     backgroundData.animations = {
-      in: {
-        resourceId: selectedAnimationId,
-      },
+      resourceId: selectedAnimationId,
     };
   }
-
-  console.info("[commandLineBackground] submit click", {
-    selectedResource,
-    selectedAnimationId,
-    backgroundLoop,
-    backgroundData,
-  });
 
   dispatchEvent(
     new CustomEvent("submit", {
@@ -414,10 +403,6 @@ export const handleButtonSelectClick = async (deps) => {
   const tempSelectedResourceType = store.selectTab();
 
   if (!tempSelectedResourceId || !tempSelectedResourceType) {
-    console.info("[commandLineBackground] select ignored", {
-      tempSelectedResourceId,
-      tempSelectedResourceType,
-    });
     return;
   }
 
@@ -443,12 +428,6 @@ export const handleButtonSelectClick = async (deps) => {
     resourceId: tempSelectedResourceId,
     resourceType: tempSelectedResourceType,
     fileId: fileId,
-  });
-
-  console.info("[commandLineBackground] resource selected", {
-    tempSelectedResourceId,
-    tempSelectedResourceType,
-    fileId,
   });
 
   store.setMode({

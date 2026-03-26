@@ -337,6 +337,7 @@ export const createProjectRepositoryService = ({
       currentStore &&
       currentReference
     ) {
+      assertSupportedProjectState(currentRepository.getState());
       return currentRepository;
     }
 

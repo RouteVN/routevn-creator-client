@@ -147,7 +147,7 @@ template:
           - rtgl-view w=1 h=f bgc=mu: null
           - rtgl-view w=f:
               - rtgl-view:
-                  - rtgl-view w=700 h=400 bgc=fg pos=rel:
+                  - 'rtgl-view w=700 bgc=fg pos=rel style="aspect-ratio: ${canvasAspectRatio}; max-width: 100%;"':
                       - 'div#canvas id=canvas style="width: 100%; height: 100%;display: flex;"': null
                       - $if isSceneAssetLoading:
                           - rtgl-view pos=abs cor=full bgc=bg op=0.7 av=c ah=c:

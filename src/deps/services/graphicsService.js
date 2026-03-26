@@ -15,6 +15,7 @@ import createRouteGraphics, {
 import createRouteEngine, { createEffectsHandler } from "route-engine-js";
 import { Ticker } from "pixi.js";
 import { prepareRenderStateKeyboardForGraphics } from "../../internal/project/layout.js";
+import { requireProjectResolution } from "../../internal/projectResolution.js";
 
 const cloneBufferForAudioDecode = (value) => {
   if (value instanceof ArrayBuffer) {
@@ -305,6 +306,7 @@ export const createGraphicsService = async ({ subject }) => {
   let pendingClickInteractionTimeouts = new Map();
   let deferredAudioRenderToken = 0;
   let deferredAudioRenderKeySignature = "";
+  let suppressedEngineRenderEffects = 0;
 
   const isBlobUrl = (url) => typeof url === "string" && url.startsWith("blob:");
 
@@ -505,6 +507,63 @@ export const createGraphicsService = async ({ subject }) => {
     }
 
     return Assets.cache.get(key);
+  };
+
+  const isUsableCachedPixiAsset = (asset) => {
+    if (!asset) {
+      return false;
+    }
+
+    const texture =
+      typeof asset?.destroy === "function" ? asset : asset?.texture;
+    const source =
+      texture?.source ??
+      texture?._source ??
+      texture?.baseTexture ??
+      asset?.source ??
+      asset?.baseTexture;
+
+    if (texture?.destroyed === true || source?.destroyed === true) {
+      return false;
+    }
+
+    return true;
+  };
+
+  const hasLoadedFontFace = (key) => {
+    if (typeof document === "undefined" || !document.fonts) {
+      return false;
+    }
+
+    for (const fontFace of document.fonts) {
+      if (normalizeFontFamily(fontFace.family) === key) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  const hasLoadedAsset = (key) => {
+    const assetType = loadedAssetTypes.get(key);
+
+    if (!assetType) {
+      return false;
+    }
+
+    if (assetType === "texture" || assetType === "video") {
+      return isUsableCachedPixiAsset(getCachedPixiAsset(key));
+    }
+
+    if (assetType === "font") {
+      return hasLoadedFontFace(key);
+    }
+
+    if (assetType === "audio") {
+      return assetBufferManager?.has?.(key) === true;
+    }
+
+    return false;
   };
 
   const getVideoResourceForKey = (key) => {
@@ -771,7 +830,7 @@ export const createGraphicsService = async ({ subject }) => {
   const runAssetLoad = async (assets) => {
     const assetEntries = Object.entries(assets || {});
     const newAssetEntries = assetEntries.filter(
-      ([key]) => !assetBufferManager.has(key),
+      ([key]) => !assetBufferManager.has(key) || !hasLoadedAsset(key),
     );
 
     if (newAssetEntries.length === 0) {
@@ -872,8 +931,21 @@ export const createGraphicsService = async ({ subject }) => {
       }
     }
 
+    nextRenderState = {
+      ...nextRenderState,
+      animations: nextRenderState?.animations || [],
+    };
     routeGraphics.render(nextRenderState);
     void pruneDecodedAudioCache(retainedAudioKeys);
+  };
+
+  const runWithSuppressedEngineRenderEffects = (callback) => {
+    suppressedEngineRenderEffects += 1;
+    try {
+      return callback();
+    } finally {
+      suppressedEngineRenderEffects -= 1;
+    }
   };
 
   const enqueueInteractionActions = (actions, eventContext) => {
@@ -927,6 +999,14 @@ export const createGraphicsService = async ({ subject }) => {
       ticker = new Ticker();
       ticker.start();
       const { canvas, beforeHandleActions: onBeforeHandleActions } = options;
+      const { width: renderWidth, height: renderHeight } =
+        requireProjectResolution(
+          {
+            width: options.width,
+            height: options.height,
+          },
+          "Graphics runtime resolution",
+        );
       beforeHandleActions = onBeforeHandleActions;
       actionQueue = Promise.resolve();
       assetLoadQueue = Promise.resolve();
@@ -951,8 +1031,8 @@ export const createGraphicsService = async ({ subject }) => {
       };
 
       await routeGraphics.init({
-        width: 1920,
-        height: 1080,
+        width: renderWidth,
+        height: renderHeight,
         plugins,
         eventHandler: (eventName, payload) => {
           if (eventName === "dragMove") {
@@ -974,6 +1054,9 @@ export const createGraphicsService = async ({ subject }) => {
           }
 
           if (eventName === "renderComplete") {
+            if (payload?.aborted === true) {
+              return;
+            }
             engine.handleActions({
               markLineCompleted: {},
             });
@@ -1008,7 +1091,8 @@ export const createGraphicsService = async ({ subject }) => {
         if (canvas.children.length > 0) {
           canvas.removeChild(canvas.children[0]);
         }
-        // Keep Pixi's internal render resolution (1920x1080) but scale display to container.
+        // Keep Pixi's internal render resolution synced to the project screen,
+        // then scale the displayed canvas to the container.
         routeGraphics.canvas.style.width = "100%";
         routeGraphics.canvas.style.height = "100%";
         routeGraphics.canvas.style.display = "block";
@@ -1020,6 +1104,7 @@ export const createGraphicsService = async ({ subject }) => {
       assetLoadQueue = queuedLoad.catch(() => {});
       return queuedLoad;
     },
+    hasLoadedAsset,
     initRouteEngine: (projectData, options = {}) => {
       ticker.start();
       enableGlobalKeyboardBindings =
@@ -1029,7 +1114,12 @@ export const createGraphicsService = async ({ subject }) => {
         getEngine: () => engine,
         routeGraphics: {
           ...routeGraphics,
-          render: renderEngineState,
+          render: (renderState) => {
+            if (suppressedEngineRenderEffects > 0) {
+              return;
+            }
+            renderEngineState(renderState);
+          },
         },
         ticker,
       });
@@ -1090,9 +1180,14 @@ export const createGraphicsService = async ({ subject }) => {
       renderEngineState(renderState);
     },
 
-    engineHandleActions: (actions, eventContext) => {
+    engineHandleActions: (actions, eventContext, options = {}) => {
       if (!engine) {
         return;
+      }
+      if (options.suppressRenderEffects) {
+        return runWithSuppressedEngineRenderEffects(() => {
+          engine.handleActions(actions, eventContext);
+        });
       }
       engine.handleActions(actions, eventContext);
     },

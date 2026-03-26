@@ -31,6 +31,23 @@ const routeNeedsRepository = (path, projectId) => {
   return isProjectRoute(path) && !!projectId;
 };
 
+const isMissingProjectResolutionError = (error) => {
+  const message = String(error?.message || "").toLowerCase();
+  return (
+    message.includes("project resolution is required") &&
+    message.includes("width") &&
+    message.includes("height")
+  );
+};
+
+const getProjectLoadErrorMessage = (error) => {
+  if (isMissingProjectResolutionError(error)) {
+    return "Project is missing required resolution settings.";
+  }
+
+  return error?.message || "Failed to load project.";
+};
+
 const EDITABLE_TAGS = new Set([
   "input",
   "textarea",
@@ -129,7 +146,7 @@ const createRouteTransitionRunner = (deps) => {
     });
     render();
 
-    if (!needsRepository || isAlreadyEnsured) {
+    if (!needsRepository) {
       if (currentTransitionToken !== transitionToken) {
         return;
       }
@@ -156,7 +173,7 @@ const createRouteTransitionRunner = (deps) => {
       }
 
       store.setRepositoryLoading({ isLoading: false });
-      appService.showToast(error?.message || "Failed to load project.");
+      appService.showToast(getProjectLoadErrorMessage(error));
       appService.redirect("/projects");
       store.setCurrentRoute({ route: "/projects" });
       render();

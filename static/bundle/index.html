@@ -16,8 +16,15 @@
       }
 
       #canvas {
-        width: min(100vw, calc(100vh * 16 / 9));
-        aspect-ratio: 16 / 9;
+        --project-screen-width: 16;
+        --project-screen-height: 9;
+        width: min(
+          100vw,
+          calc(
+            100vh * var(--project-screen-width) / var(--project-screen-height)
+          )
+        );
+        aspect-ratio: var(--project-screen-width) / var(--project-screen-height);
         display: flex;
         align-items: center;
         justify-content: center;

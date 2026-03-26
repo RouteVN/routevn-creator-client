@@ -27,6 +27,24 @@ const resetAssetLoadCache = () => {
   assetLoadCache = createAssetLoadCache();
 };
 
+const hasCachedSceneAsset = (deps, fileId) => {
+  if (!fileId || !assetLoadCache.fileIds.has(fileId)) {
+    return false;
+  }
+
+  const hasLoadedAsset = deps.graphicsService?.hasLoadedAsset;
+  if (typeof hasLoadedAsset !== "function") {
+    return true;
+  }
+
+  const isStillLoaded = hasLoadedAsset(fileId);
+  if (!isStillLoaded) {
+    assetLoadCache.fileIds.delete(fileId);
+  }
+
+  return isStillLoaded;
+};
+
 const findNonCloneablePaths = (root, limit = 5) => {
   const paths = [];
   const queue = [{ value: root, path: "$" }];
@@ -151,7 +169,7 @@ async function loadAssetsForSceneIds(
     const fileId = fileReference?.url;
     return (
       fileId &&
-      !assetLoadCache.fileIds.has(fileId) &&
+      !hasCachedSceneAsset(deps, fileId) &&
       !assetLoadCache.pendingFileLoads.has(fileId)
     );
   });
@@ -271,7 +289,7 @@ async function preloadLayoutAssetsByIds(deps, projectData, layoutIds) {
     const fileId = fileReference?.url;
     return (
       fileId &&
-      !assetLoadCache.fileIds.has(fileId) &&
+      !hasCachedSceneAsset(deps, fileId) &&
       !assetLoadCache.pendingFileLoads.has(fileId)
     );
   });
@@ -463,7 +481,9 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     };
   }
 
-  graphicsService.engineHandleActions(nextActions);
+  graphicsService.engineHandleActions(nextActions, undefined, {
+    suppressRenderEffects: true,
+  });
   const currentRenderState = graphicsService.engineSelectRenderState();
   if (!currentRenderState) {
     return;
@@ -480,13 +500,19 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     skipAudio: isMuted,
     skipAnimations,
   });
-  graphicsService.engineHandleActions({
-    setNextLineConfig: {
-      auto: {
-        enabled: false,
+  graphicsService.engineHandleActions(
+    {
+      setNextLineConfig: {
+        auto: {
+          enabled: false,
+        },
       },
     },
-  });
+    undefined,
+    {
+      suppressRenderEffects: true,
+    },
+  );
 
   const presentationState = graphicsService.engineSelectPresentationState();
   store.setPresentationState({
@@ -566,12 +592,17 @@ export const initializeSceneEditorPage = async (deps) => {
   resetAssetLoadCache("initialize scene editor");
   store.setSceneAssetLoading({ isLoading: false });
 
+  const projectData = store.selectProjectData();
+  const previewWidth = projectData?.screen?.width;
+  const previewHeight = projectData?.screen?.height;
+
   await graphicsService.init({
     canvas: refs.canvas,
     beforeHandleActions: createBeforeHandleActionsHook(deps),
+    width: previewWidth,
+    height: previewHeight,
   });
 
-  const projectData = store.selectProjectData();
   const initialProjectData = createProjectDataWithSelectedEntryPoint(
     projectData,
     {
@@ -605,12 +636,17 @@ export const restoreSceneEditorFromPreview = async (deps) => {
 
   resetAssetLoadCache("restore scene editor from preview");
   store.setSceneAssetLoading({ isLoading: false });
+
+  const projectData = store.selectProjectData();
+  const previewWidth = projectData?.screen?.width;
+  const previewHeight = projectData?.screen?.height;
   await graphicsService.init({
     canvas: refs.canvas,
     beforeHandleActions: createBeforeHandleActionsHook(deps),
+    width: previewWidth,
+    height: previewHeight,
   });
 
-  const projectData = store.selectProjectData();
   const initialProjectData = createProjectDataWithSelectedEntryPoint(
     projectData,
     {

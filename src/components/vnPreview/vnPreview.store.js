@@ -1,3 +1,9 @@
+import {
+  DEFAULT_PROJECT_RESOLUTION,
+  formatProjectResolutionAspectRatio,
+  requireProjectResolution,
+} from "../../internal/projectResolution.js";
+
 const createEmptyAssetLoadCache = () => ({
   sceneIds: [],
   fileIds: [],
@@ -38,6 +44,7 @@ const ensureAssetLoadCache = (state) => {
 export const createInitialState = () => ({
   isAssetLoading: false,
   assetLoadCache: createEmptyAssetLoadCache(),
+  projectResolution: DEFAULT_PROJECT_RESOLUTION,
 });
 
 export const setAssetLoading = ({ state }, { isLoading } = {}) => {
@@ -46,6 +53,13 @@ export const setAssetLoading = ({ state }, { isLoading } = {}) => {
 
 export const resetAssetLoadCache = ({ state }, _payload = {}) => {
   state.assetLoadCache = createEmptyAssetLoadCache();
+};
+
+export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
+  state.projectResolution = requireProjectResolution(
+    projectResolution,
+    "Project resolution",
+  );
 };
 
 export const selectAssetLoadCache = ({ state }) => readAssetLoadCache(state);
@@ -86,5 +100,8 @@ export const selectViewData = ({ props: attrs, state }) => {
     sectionId: attrs.sectionId,
     lineId: attrs.lineId,
     isAssetLoading: state.isAssetLoading,
+    canvasAspectRatio: formatProjectResolutionAspectRatio(
+      state.projectResolution,
+    ),
   };
 };

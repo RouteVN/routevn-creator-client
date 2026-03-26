@@ -1,109 +1,124 @@
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
+import {
+  DEFAULT_PROJECT_RESOLUTION,
+  formatProjectResolutionAspectRatio,
+  requireProjectResolution,
+} from "../../internal/projectResolution.js";
 
-const createTransformForm = ({ editMode = false } = {}) => ({
-  title: editMode ? "Edit Transform" : "Add Transform",
-  fields: [
-    {
-      name: "name",
-      type: "input-text",
-      label: "Name",
-      required: true,
-    },
-    {
-      name: "x",
-      type: "slider-with-input",
-      min: 0,
-      max: 1920,
-      step: 1,
-      label: "Position X",
-      required: true,
-    },
-    {
-      name: "y",
-      type: "slider-with-input",
-      min: 0,
-      max: 1080,
-      step: 1,
-      label: "Position Y",
-      required: true,
-    },
-    {
-      name: "scaleX",
-      type: "slider-with-input",
-      min: 0.1,
-      max: 3,
-      step: 0.1,
-      label: "Scale X",
-      required: true,
-    },
-    {
-      name: "scaleY",
-      type: "slider-with-input",
-      min: 0.1,
-      max: 3,
-      step: 0.1,
-      label: "Scale Y",
-      required: true,
-    },
-    {
-      name: "anchor",
-      type: "select",
-      label: "Anchor",
-      placeholder: "Choose an anchor",
-      options: [
-        { id: "tl", label: "Top Left", value: { anchorX: 0, anchorY: 0 } },
-        {
-          id: "tc",
-          label: "Top Center",
-          value: { anchorX: 0.5, anchorY: 0 },
-        },
-        { id: "tr", label: "Top Right", value: { anchorX: 1, anchorY: 0 } },
-        {
-          id: "cl",
-          label: "Center Left",
-          value: { anchorX: 0, anchorY: 0.5 },
-        },
-        {
-          id: "cc",
-          label: "Center Center",
-          value: { anchorX: 0.5, anchorY: 0.5 },
-        },
-        {
-          id: "cr",
-          label: "Center Right",
-          value: { anchorX: 1, anchorY: 0.5 },
-        },
-        {
-          id: "bl",
-          label: "Bottom Left",
-          value: { anchorX: 0, anchorY: 1 },
-        },
-        {
-          id: "bc",
-          label: "Bottom Center",
-          value: { anchorX: 0.5, anchorY: 1 },
-        },
-        {
-          id: "br",
-          label: "Bottom Right",
-          value: { anchorX: 1, anchorY: 1 },
-        },
-      ],
-      required: true,
-    },
-  ],
-  actions: {
-    layout: "",
-    buttons: [
+const createTransformForm = ({
+  editMode = false,
+  projectResolution = DEFAULT_PROJECT_RESOLUTION,
+} = {}) => {
+  const resolvedProjectResolution = requireProjectResolution(
+    projectResolution,
+    "Project resolution",
+  );
+
+  return {
+    title: editMode ? "Edit Transform" : "Add Transform",
+    fields: [
       {
-        id: "submit",
-        variant: "pr",
-        label: editMode ? "Update Transform" : "Add Transform",
+        name: "name",
+        type: "input-text",
+        label: "Name",
+        required: true,
+      },
+      {
+        name: "x",
+        type: "slider-with-input",
+        min: 0,
+        max: resolvedProjectResolution.width,
+        step: 1,
+        label: "Position X",
+        required: true,
+      },
+      {
+        name: "y",
+        type: "slider-with-input",
+        min: 0,
+        max: resolvedProjectResolution.height,
+        step: 1,
+        label: "Position Y",
+        required: true,
+      },
+      {
+        name: "scaleX",
+        type: "slider-with-input",
+        min: 0.1,
+        max: 3,
+        step: 0.1,
+        label: "Scale X",
+        required: true,
+      },
+      {
+        name: "scaleY",
+        type: "slider-with-input",
+        min: 0.1,
+        max: 3,
+        step: 0.1,
+        label: "Scale Y",
+        required: true,
+      },
+      {
+        name: "anchor",
+        type: "select",
+        label: "Anchor",
+        placeholder: "Choose an anchor",
+        options: [
+          { id: "tl", label: "Top Left", value: { anchorX: 0, anchorY: 0 } },
+          {
+            id: "tc",
+            label: "Top Center",
+            value: { anchorX: 0.5, anchorY: 0 },
+          },
+          { id: "tr", label: "Top Right", value: { anchorX: 1, anchorY: 0 } },
+          {
+            id: "cl",
+            label: "Center Left",
+            value: { anchorX: 0, anchorY: 0.5 },
+          },
+          {
+            id: "cc",
+            label: "Center Center",
+            value: { anchorX: 0.5, anchorY: 0.5 },
+          },
+          {
+            id: "cr",
+            label: "Center Right",
+            value: { anchorX: 1, anchorY: 0.5 },
+          },
+          {
+            id: "bl",
+            label: "Bottom Left",
+            value: { anchorX: 0, anchorY: 1 },
+          },
+          {
+            id: "bc",
+            label: "Bottom Center",
+            value: { anchorX: 0.5, anchorY: 1 },
+          },
+          {
+            id: "br",
+            label: "Bottom Right",
+            value: { anchorX: 1, anchorY: 1 },
+          },
+        ],
+        required: true,
       },
     ],
-  },
-});
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          label: editMode ? "Update Transform" : "Add Transform",
+        },
+      ],
+    },
+  };
+};
 
 const createDialogDefaultValues = (item) => ({
   name: item?.name ?? "",
@@ -190,6 +205,10 @@ const {
     isDialogOpen: state.isDialogOpen,
     transformForm: state.transformForm,
     dialogDefaultValues: state.dialogDefaultValues,
+    canvasAspectRatio: formatProjectResolutionAspectRatio(
+      state.projectResolution,
+    ),
+    projectResolution: state.projectResolution,
     selectedItem,
   }),
 });
@@ -200,6 +219,7 @@ export const createInitialState = () => ({
   targetGroupId: undefined,
   editMode: false,
   editItemId: undefined,
+  projectResolution: DEFAULT_PROJECT_RESOLUTION,
   dialogDefaultValues: createDialogDefaultValues(),
   transformForm: createTransformForm(),
 });
@@ -214,6 +234,18 @@ export {
 
 export const selectTransformItemById = selectItemById;
 
+export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
+  state.projectResolution = requireProjectResolution(
+    projectResolution,
+    "Project resolution",
+  );
+
+  state.transformForm = createTransformForm({
+    editMode: state.editMode,
+    projectResolution: state.projectResolution,
+  });
+};
+
 export const openTransformFormDialog = ({ state }, options = {}) => {
   const {
     editMode = false,
@@ -227,7 +259,10 @@ export const openTransformFormDialog = ({ state }, options = {}) => {
   state.editItemId = itemId;
   state.targetGroupId = targetGroupId === "_root" ? undefined : targetGroupId;
   state.dialogDefaultValues = createDialogDefaultValues(itemData);
-  state.transformForm = createTransformForm({ editMode });
+  state.transformForm = createTransformForm({
+    editMode,
+    projectResolution: state.projectResolution,
+  });
 };
 
 export const closeTransformFormDialog = ({ state }, _payload = {}) => {
@@ -236,7 +271,9 @@ export const closeTransformFormDialog = ({ state }, _payload = {}) => {
   state.editMode = false;
   state.editItemId = undefined;
   state.dialogDefaultValues = createDialogDefaultValues();
-  state.transformForm = createTransformForm();
+  state.transformForm = createTransformForm({
+    projectResolution: state.projectResolution,
+  });
 };
 
 export const selectTargetGroupId = ({ state }) => {
@@ -249,6 +286,10 @@ export const selectEditMode = ({ state }) => {
 
 export const selectEditItemId = ({ state }) => {
   return state.editItemId;
+};
+
+export const selectProjectResolution = ({ state }) => {
+  return state.projectResolution;
 };
 
 export const selectViewData = (context) => {

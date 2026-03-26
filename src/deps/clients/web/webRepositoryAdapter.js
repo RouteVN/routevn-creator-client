@@ -3,6 +3,10 @@ import {
   assertSupportedProjectState,
   createProjectCreateRepositoryEvent,
 } from "../../services/shared/projectRepository.js";
+import {
+  resolveProjectResolutionForWrite,
+  scaleTemplateProjectStateForResolution,
+} from "../../../internal/projectResolution.js";
 
 // Insieme-compatible Web IndexedDB Store Adapter
 
@@ -52,6 +56,7 @@ export const initializeProject = async ({
   projectId,
   template,
   projectInfo,
+  projectResolution,
 }) => {
   if (!template) {
     throw new Error("Template is required for project initialization");
@@ -61,7 +66,15 @@ export const initializeProject = async ({
   const adapter = await createInsiemeWebStoreAdapter(projectId);
 
   // Load template data from static files
-  const templateData = await loadTemplate(template);
+  const loadedTemplateData = await loadTemplate(template);
+  const resolvedProjectResolution = resolveProjectResolutionForWrite({
+    projectResolution,
+    fallbackResolution: loadedTemplateData.project?.resolution,
+  });
+  const templateData = scaleTemplateProjectStateForResolution(
+    loadedTemplateData,
+    resolvedProjectResolution,
+  );
 
   // Copy template files to project's IndexedDB
   await copyTemplateFiles(template, adapter);

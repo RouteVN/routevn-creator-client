@@ -61,10 +61,14 @@ export const systemConfigItems = [
     path: "/project/controls",
   },
   {
+    id: "systemVariables",
+    name: "System Variables",
+    path: "/project/system-variables",
+  },
+  {
     id: "variables",
     name: "Variables",
     path: "/project/variables",
-    hidden: true,
   },
 ];
 

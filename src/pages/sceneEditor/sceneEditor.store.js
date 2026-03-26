@@ -6,6 +6,11 @@ import {
   constructProjectData,
   getSectionPresentation,
 } from "../../internal/project/projection.js";
+import {
+  DEFAULT_PROJECT_RESOLUTION,
+  formatProjectResolutionAspectRatio,
+  requireProjectResolution,
+} from "../../internal/projectResolution.js";
 
 const appendMissingIds = (orderedIds, allIds) => {
   const seen = new Set();
@@ -643,6 +648,17 @@ export const selectProjectData = ({ state }) => {
   return constructProjectData(buildProjectDataSourceState(state));
 };
 
+const selectCanvasAspectRatio = ({ state }) => {
+  const projectResolution = state.repositoryState?.project?.resolution
+    ? requireProjectResolution(
+        state.repositoryState.project.resolution,
+        "Project resolution",
+      )
+    : DEFAULT_PROJECT_RESOLUTION;
+
+  return formatProjectResolutionAspectRatio(projectResolution);
+};
+
 export const selectViewData = ({ state }) => {
   const scene = selectScene({ state });
   if (!scene) {
@@ -666,6 +682,7 @@ export const selectViewData = ({ state }) => {
         null,
         2,
       ),
+      canvasAspectRatio: selectCanvasAspectRatio({ state }),
       isSceneAssetLoading: state.isSceneAssetLoading,
       deadEndTooltip: state.deadEndTooltip,
     };
@@ -811,6 +828,7 @@ export const selectViewData = ({ state }) => {
     previewSceneId: state.previewSceneId,
     previewSectionId: state.previewSectionId,
     previewLineId: state.previewLineId,
+    canvasAspectRatio: selectCanvasAspectRatio({ state }),
     presentationState: state.presentationState,
     sectionLineChanges: state.sectionLineChanges,
     sectionCreateDialog: state.sectionCreateDialog,

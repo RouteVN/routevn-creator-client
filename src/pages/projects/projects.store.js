@@ -1,3 +1,22 @@
+import {
+  createProjectResolutionFormValues,
+  PROJECT_RESOLUTION_OPTIONS,
+} from "../../internal/projectResolution.js";
+
+const createCreateProjectDefaultValues = () => ({
+  name: "",
+  description: "",
+  projectPath: "",
+  template: "default",
+  ...createProjectResolutionFormValues(),
+});
+
+const resetCreateProjectDialogState = (state) => {
+  state.defaultValues = createCreateProjectDefaultValues();
+  state.projectPath = "";
+  state.projectPathDisplay = "No folder selected";
+};
+
 export const createInitialState = () => ({
   localTitle: "Projects",
   cloudTitle: "Cloud Projects",
@@ -78,12 +97,7 @@ export const createInitialState = () => ({
     },
   },
 
-  defaultValues: {
-    name: "",
-    description: "",
-    projectPath: "",
-    template: "default",
-  },
+  defaultValues: createCreateProjectDefaultValues(),
 
   form: {
     title: "Create Project",
@@ -124,6 +138,31 @@ export const createInitialState = () => ({
       //   options: [{ value: "default", label: "Default" }],
       // },
       {
+        name: "resolution",
+        type: "select",
+        label: "Resolution",
+        required: true,
+        options: PROJECT_RESOLUTION_OPTIONS,
+      },
+      {
+        $when: "values.resolution == 'custom'",
+        name: "resolutionWidth",
+        type: "input-number",
+        label: "Resolution Width",
+        required: true,
+        min: 1,
+        step: 1,
+      },
+      {
+        $when: "values.resolution == 'custom'",
+        name: "resolutionHeight",
+        type: "input-number",
+        label: "Resolution Height",
+        required: true,
+        min: 1,
+        step: 1,
+      },
+      {
         $when: "platform == 'tauri'",
         name: "projectPath",
         type: "slot",
@@ -155,25 +194,21 @@ export const createInitialState = () => ({
 
 export const toggleDialog = ({ state }, _payload = {}) => {
   state.isOpen = !state.isOpen;
-  // Reset form when closing
   if (!state.isOpen) {
-    state.defaultValues.name = "";
-    state.defaultValues.description = "";
-    state.defaultValues.projectPath = "";
-    state.defaultValues.template = "default";
-    state.projectPath = "";
-    state.projectPathDisplay = "No folder selected";
+    resetCreateProjectDialogState(state);
   }
 };
 
 export const closeDialog = ({ state }, _payload = {}) => {
   state.isOpen = false;
-  state.defaultValues.name = "";
-  state.defaultValues.description = "";
-  state.defaultValues.projectPath = "";
-  state.defaultValues.template = "default";
-  state.projectPath = "";
-  state.projectPathDisplay = "No folder selected";
+  resetCreateProjectDialogState(state);
+};
+
+export const updateCreateFormValues = ({ state }, values = {}) => {
+  state.defaultValues = {
+    ...state.defaultValues,
+    ...values,
+  };
 };
 
 export const selectIsCreateDialogOpen = ({ state }) => {
@@ -568,10 +603,12 @@ export const selectViewData = ({ state }) => {
 
   return {
     ...state,
+    createProjectFormKey: `${state.isOpen}-${state.defaultValues.resolution}`,
     profileDisplayName,
     avatarImageSrc,
     context: {
       platform: state.platform,
+      values: state.defaultValues,
     },
     deleteDialogTitle: "Remove Project",
     deleteDialogMessage: `Are you sure you want to remove ${deleteDialogProjectName} from the list? The project folder will still remain on disk. Delete the folder yourself if you want to permanently remove the project files.`,

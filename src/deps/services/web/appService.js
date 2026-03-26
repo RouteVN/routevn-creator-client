@@ -45,6 +45,7 @@ export const createAppService = (params) => {
       name,
       description,
       template,
+      projectResolution,
       addProjectEntry,
       projectService,
     }) => {
@@ -60,6 +61,7 @@ export const createAppService = (params) => {
       await projectService.initializeProject({
         projectId: projectEntry.id,
         template,
+        projectResolution,
         projectInfo: {
           name,
           description,

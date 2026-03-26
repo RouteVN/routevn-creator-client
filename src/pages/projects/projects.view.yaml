@@ -66,6 +66,8 @@ refs:
     eventListeners:
       form-action:
         handler: handleFormSubmit
+      form-change:
+        handler: handleCreateFormChange
   cloudCreateForm:
     eventListeners:
       form-action:
@@ -179,7 +181,7 @@ template:
                                   - rtgl-view h="33vh": null
   - rtgl-dialog#createProjectDialog ?open=${isOpen} s=md:
       - rtgl-view slot=content g=md:
-          - rtgl-form#form key=${isOpen} :defaultValues=defaultValues :form=form :context=context w=f:
+          - rtgl-form#form key=${createProjectFormKey} :defaultValues=defaultValues :form=form :context=context w=f:
               - rtgl-view w=f slot=project-path-selector d=h g=sm av=c:
                   - rtgl-input#pathInput w=f :value=projectPathDisplay disabled=true placeholder="No folder selected": null
                   - rtgl-button#browseButton variant=se: Browse

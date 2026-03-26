@@ -120,6 +120,7 @@ export const createAppService = (params) => {
       description,
       projectPath,
       template,
+      projectResolution,
       addProjectEntry,
       projectService,
     }) => {
@@ -144,6 +145,7 @@ export const createAppService = (params) => {
         projectId: projectEntry.id,
         projectPath,
         template,
+        projectResolution,
         projectInfo: {
           name,
           description,

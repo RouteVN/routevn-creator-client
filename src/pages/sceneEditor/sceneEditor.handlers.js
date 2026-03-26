@@ -39,6 +39,8 @@ import {
 
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another section.";
+const MISSING_PROJECT_RESOLUTION_MESSAGE =
+  "Project is missing required resolution settings.";
 const TEXT_DRAFT_SAVE_DEBOUNCE_MS = 300;
 const STRUCTURE_DRAFT_SAVE_DEBOUNCE_MS = 900;
 const DRAFT_SAVE_MIN_INTERVAL_MS = 1000;
@@ -147,6 +149,15 @@ const assertSceneEditorCommandResult = (
   error.code = result?.error?.code || "validation_failed";
   error.details = result?.error?.details;
   throw error;
+};
+
+const isMissingProjectResolutionError = (error) => {
+  const message = String(error?.message || "").toLowerCase();
+  return (
+    message.includes("project resolution is required") &&
+    message.includes("width") &&
+    message.includes("height")
+  );
 };
 
 const reconcileCurrentEditorSession = (deps) => {
@@ -368,12 +379,23 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  await initializeSceneEditorPage({
-    ...deps,
-    syncProjectState: syncStoreProjectState,
-  });
-  reconcileCurrentEditorSession(deps);
-  deps.render();
+  try {
+    await initializeSceneEditorPage({
+      ...deps,
+      syncProjectState: syncStoreProjectState,
+    });
+    reconcileCurrentEditorSession(deps);
+    deps.render();
+  } catch (error) {
+    if (!isMissingProjectResolutionError(error)) {
+      throw error;
+    }
+
+    deps.appService?.showToast(MISSING_PROJECT_RESOLUTION_MESSAGE, {
+      title: "Error",
+    });
+    deps.appService?.navigate("/projects");
+  }
 };
 
 export const handleDataChanged = async (deps) => {
@@ -405,10 +427,6 @@ export const handleSectionTabClick = async (deps, payload) => {
 export const handleCommandLineSubmit = async (deps, payload) => {
   const { store, render, projectService, subject, appService } = deps;
   const lineId = store.selectSelectedLineId();
-  console.info("[sceneEditor] command-line submit received", {
-    lineId,
-    detail: payload?._event?.detail,
-  });
 
   // Handle section/scene transitions
   if (payload._event.detail.sectionTransition) {
@@ -593,11 +611,6 @@ export const handleCommandLineSubmit = async (deps, payload) => {
   }
 
   const { dialogue, ...otherActions } = submissionData;
-  console.info("[sceneEditor] command-line submit normalized", {
-    lineId,
-    dialogue,
-    otherActions,
-  });
 
   await runSceneEditorPersistence(
     deps,
@@ -616,10 +629,6 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       }
 
       if (Object.keys(otherActions).length > 0) {
-        console.info("[sceneEditor] updateLineActions", {
-          lineId,
-          otherActions,
-        });
         assertSceneEditorCommandResult(
           await projectService.updateLineActions({
             lineId,
@@ -884,7 +893,7 @@ export const handleNewLine = async (deps, payload) => {
 };
 
 export const handleLineNavigation = (deps, payload) => {
-  const { store, refs, render, subject, graphicsService } = deps;
+  const { store, refs, render, subject } = deps;
   if (isSectionsOverviewOpen(store)) {
     return;
   }
@@ -898,11 +907,6 @@ export const handleLineNavigation = (deps, payload) => {
 
     // Check if we're trying to move up from the first line
     if (direction === "up" && currentLineId === targetLineId) {
-      // First line - show animation effects
-      graphicsService.render({
-        elements: [],
-        animations: [],
-      });
       subject.dispatch("sceneEditor.renderCanvas", {});
       return;
     }
@@ -961,12 +965,6 @@ export const handleLineNavigation = (deps, payload) => {
       subject.dispatch("sceneEditor.renderCanvas", {});
     });
   } else if (direction === "up" && currentLineId === targetLineId) {
-    // First line - show animation effects
-    graphicsService.render({
-      elements: [],
-      animations: [],
-    });
-    render();
     subject.dispatch("sceneEditor.renderCanvas", {});
   }
 };

@@ -2,7 +2,10 @@ import { parseAndRender } from "jempl";
 import { toFlatGroups } from "../../internal/project/tree.js";
 import { getFirstTextStyleId } from "../../constants/textStyles.js";
 import { getVariableOptions } from "../../internal/project/projection.js";
-import { getInteractionActions } from "../../internal/project/interactionPayload.js";
+import {
+  getInteractionActions,
+  getInteractionPayload,
+} from "../../internal/project/interactionPayload.js";
 import { getLayoutEditorItemCapabilities } from "../../internal/layoutEditorTypes.js";
 
 const ACTION_INTERACTION_LABELS = {
@@ -24,6 +27,12 @@ const ACTION_LABELS = {
 };
 
 const ACTION_INTERACTION_TYPES = ["click", "rightClick"];
+
+const REVEAL_EFFECT_OPTIONS = [
+  { label: "Typewriter", value: "typewriter" },
+  { label: "Soft Wipe", value: "softWipe" },
+  { label: "None", value: "none" },
+];
 
 const getLayoutInteractionActions = (values, interactionType) => {
   return getInteractionActions(values?.[interactionType]);
@@ -92,9 +101,35 @@ const toTextStyleOptions = (textStylesData = {}) => {
   );
 };
 
+const getSliderBoundVariableId = (values = {}) => {
+  if (values?.type !== "slider") {
+    return values?.variableId;
+  }
+
+  if (values?.variableId) {
+    return values.variableId;
+  }
+
+  const interactionPayload = getInteractionPayload(values.change);
+  const updateVariable = interactionPayload?.actions?.updateVariable;
+  const firstOperation = Array.isArray(updateVariable?.operations)
+    ? updateVariable.operations[0]
+    : undefined;
+
+  return firstOperation?.variableId;
+};
+
 const toInspectorValues = ({ values, firstTextStyleId }) => {
+  const revealEffect =
+    values?.type === "text-revealing-ref-dialogue-content"
+      ? (values?.revealEffect ?? "typewriter")
+      : values?.revealEffect;
+  const variableId = getSliderBoundVariableId(values);
+
   return {
     ...values,
+    revealEffect,
+    variableId,
     direction: values?.direction ?? "",
     textStyleId: values?.textStyleId || firstTextStyleId || "",
     hoverTextStyleId: values?.hoverTextStyleId ?? "",
@@ -294,6 +329,7 @@ export const selectViewData = ({ state, props, constants }) => {
   ];
   const variableOptions = getVariableOptions(state.variablesData, {
     type: "number",
+    includeSystem: true,
   });
   const variableOptionsWithNone = [
     { label: "None", value: "" },
@@ -336,6 +372,8 @@ export const selectViewData = ({ state, props, constants }) => {
     config: {
       sections,
     },
+    revealEffectOptions: REVEAL_EFFECT_OPTIONS,
+    revealEffectValue: values.revealEffect,
     popover: state.popover,
     imageSelectorDialog: state.imageSelectorDialog,
     tempSelectedImageId: state.tempSelectedImageId,

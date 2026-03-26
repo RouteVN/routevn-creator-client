@@ -64,11 +64,12 @@ template:
                                                       - rtgl-text s=sm c=mu-fg ellipsis w=f: ${item.subtitle}
                                             $elif item.cardKind == 'transform':
                                               - rtgl-view w=225 p=md g=md br=md:
-                                                  - rvn-transform-thumbnail :item=#{item} w=193 h=120: null
+                                                  - rvn-transform-thumbnail :item=#{item} canvas-aspect-ratio="16 / 9" w=193 h=120: null
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=193: ${item.name}
                                             $elif item.cardKind == 'animation':
                                               - rtgl-view w=f h=1fg bgc=bg br=md p=md:
                                                   - rtgl-text s=h4 mb=md: ${item.name}
+                                                  - rtgl-text s=xs c=mu-fg mb=md: 'Type: ${item.animationTypeLabel}'
                                                   - $if item.animationType == 'transition':
                                                       - rtgl-view d=v w=f g=md:
                                                           - rtgl-view d=h w=f:

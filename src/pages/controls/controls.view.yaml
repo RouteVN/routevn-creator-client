@@ -52,7 +52,7 @@ template:
               - rtgl-view slot="content" w=f h=f:
                   - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
                   - rvn-base-file-explorer#fileExplorer :items=flatItems shrinkable dropdown-menu allowDrag :folderContextMenuItems=folderContextMenuItems :itemContextMenuItems=itemContextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
-          - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
+          - 'rtgl-view w=1fg h=f pl=sm style="min-width: 0; min-height: 0;"':
               - rvn-catalog-resources-view#groupview w=f h=f :navTitle=title :groups=catalogGroups :selectedItemId=selectedItemId :searchQuery=searchQuery :addText=addText :itemContextMenuItems=centerItemContextMenuItems: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":

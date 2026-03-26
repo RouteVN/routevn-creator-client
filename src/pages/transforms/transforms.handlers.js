@@ -4,11 +4,10 @@ import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catal
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 
 const MARKER_SIZE = 30;
-const CANVAS_WIDTH = 1920;
-const CANVAS_HEIGHT = 1080;
 const BG_COLOR = "#4a4a4a";
 
 const createRenderState = ({
+  projectResolution,
   x,
   y,
   rotation,
@@ -17,6 +16,8 @@ const createRenderState = ({
   anchorX,
   anchorY,
 }) => {
+  const { width, height } = projectResolution;
+
   return {
     elements: [
       {
@@ -24,8 +25,8 @@ const createRenderState = ({
         type: "rect",
         x: 0,
         y: 0,
-        width: CANVAS_WIDTH,
-        height: CANVAS_HEIGHT,
+        width,
+        height,
         fill: BG_COLOR,
       },
       {
@@ -74,7 +75,11 @@ const createTransformPayload = (values = {}) => {
   };
 };
 
-const renderTransformPreview = ({ graphicsService, values } = {}) => {
+const renderTransformPreview = ({
+  graphicsService,
+  values,
+  projectResolution,
+} = {}) => {
   if (!graphicsService) {
     return;
   }
@@ -82,6 +87,7 @@ const renderTransformPreview = ({ graphicsService, values } = {}) => {
   const transformData = createTransformPayload(values);
   graphicsService.render(
     createRenderState({
+      projectResolution,
       x: transformData.x,
       y: transformData.y,
       rotation: transformData.rotation,
@@ -101,6 +107,7 @@ const openTransformDialog = async ({
   targetGroupId,
 } = {}) => {
   const { graphicsService, refs, render, store } = deps;
+  const projectResolution = store.selectProjectResolution();
 
   store.openTransformFormDialog({
     editMode,
@@ -117,10 +124,13 @@ const openTransformDialog = async ({
 
   await graphicsService.init({
     canvas,
+    width: projectResolution.width,
+    height: projectResolution.height,
   });
 
   renderTransformPreview({
     graphicsService,
+    projectResolution,
     values: createTransformPayload(
       itemData ?? {
         x: 0,
@@ -134,7 +144,7 @@ const openTransformDialog = async ({
 };
 
 const {
-  handleBeforeMount,
+  handleBeforeMount: handleBeforeMountBase,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
@@ -143,16 +153,24 @@ const {
   handleSearchInput,
 } = createCatalogPageHandlers({
   resourceType: "transforms",
+  onProjectStateChanged: ({ deps, repositoryState }) => {
+    deps.store.setProjectResolution({
+      projectResolution: repositoryState?.project?.resolution,
+    });
+  },
 });
 
 export {
-  handleBeforeMount,
   handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleTransformItemClick,
   handleSearchInput,
+};
+
+export const handleBeforeMount = (deps) => {
+  return handleBeforeMountBase(deps);
 };
 
 export const handleTransformItemDoubleClick = async (deps, payload) => {
@@ -246,10 +264,11 @@ export const handleTransformFormActionClick = async (deps, payload) => {
 };
 
 export const handleTransformFormChange = (deps, payload) => {
-  const { graphicsService, render } = deps;
+  const { graphicsService, render, store } = deps;
 
   renderTransformPreview({
     graphicsService,
+    projectResolution: store.selectProjectResolution(),
     values: createTransformPayload(payload._event.detail.values),
   });
   render();

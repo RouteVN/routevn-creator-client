@@ -7,6 +7,8 @@ import { RESOURCE_TYPES } from "./commands.js";
 import { normalizeLineActions } from "./engineActions.js";
 import { getInteractionActions } from "./interactionPayload.js";
 import { toFlatItems, toHierarchyStructure } from "./tree.js";
+import { requireProjectResolution } from "../projectResolution.js";
+import { getSystemVariableItems } from "../systemVariables.js";
 
 const DEFAULT_TIMESTAMP = 0;
 const createResourceCollection = () => ({
@@ -537,17 +539,7 @@ const constructAnimationResources = (repositoryAnimations = {}) => {
         return result;
       }
 
-      const animation =
-        item.animation.type === "update"
-          ? {
-              ...structuredClone(item.animation),
-              type: "live",
-            }
-          : structuredClone(item.animation);
-
-      result[animationId] = {
-        animation,
-      };
+      result[animationId] = structuredClone(item.animation);
       return result;
     },
     {},
@@ -714,11 +706,14 @@ const constructProjectResources = (repositoryState = {}) => {
   const textStylesData = repositoryState.textStyles || { items: {}, tree: [] };
   const colors = repositoryState.colors || { items: {}, tree: [] };
   const fonts = repositoryState.fonts || { items: {}, tree: [] };
-  const variables = Object.fromEntries(
-    Object.entries(repositoryState.variables?.items || {}).filter(
-      ([, item]) => item.type !== "folder",
+  const variables = {
+    ...Object.fromEntries(
+      Object.entries(repositoryState.variables?.items || {}).filter(
+        ([, item]) => item.type !== "folder",
+      ),
     ),
-  );
+    ...getSystemVariableItems(),
+  };
 
   const characterImages = extractCharacterImages(repositoryCharacters);
   const imageItems = {
@@ -809,10 +804,15 @@ const constructStory = (scenes) => {
 };
 
 export function constructProjectData(state, options = {}) {
+  const screenResolution = requireProjectResolution(
+    state?.project?.resolution,
+    "Repository project resolution",
+  );
+
   return {
     screen: {
-      width: 1920,
-      height: 1080,
+      width: screenResolution.width,
+      height: screenResolution.height,
       backgroundColor: "#000000",
     },
     resources: constructProjectResources(state),
@@ -964,10 +964,14 @@ export const getSectionPresentation = ({
 };
 
 export const getVariableOptions = (variablesData, options = {}) => {
-  const { type, showType = false } = options;
+  const { type, showType = false, includeSystem = false } = options;
   const variablesItems = variablesData?.items || {};
+  const variableEntries = Object.entries(variablesItems);
+  const systemVariableEntries = includeSystem
+    ? Object.entries(getSystemVariableItems())
+    : [];
 
-  return Object.entries(variablesItems)
+  return [...variableEntries, ...systemVariableEntries]
     .filter(([_, item]) => {
       if (item.type === "folder") {
         return false;
