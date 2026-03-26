@@ -3,7 +3,7 @@ import {
   assertSupportedProjectState,
   createProjectCreateRepositoryEvent,
 } from "../../services/shared/projectRepository.js";
-import { normalizeProjectResolution } from "../../../internal/projectResolution.js";
+import { resolveProjectResolutionForWrite } from "../../../internal/projectResolution.js";
 
 // Insieme-compatible Web IndexedDB Store Adapter
 
@@ -66,9 +66,10 @@ export const initializeProject = async ({
   const templateData = await loadTemplate(template);
   templateData.project = {
     ...templateData.project,
-    resolution: normalizeProjectResolution(
-      projectResolution ?? templateData.project?.resolution,
-    ),
+    resolution: resolveProjectResolutionForWrite({
+      projectResolution,
+      fallbackResolution: templateData.project?.resolution,
+    }),
   };
 
   // Copy template files to project's IndexedDB

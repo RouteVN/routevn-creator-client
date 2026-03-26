@@ -157,8 +157,20 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
 
   const routeGraphics = createRouteGraphics();
   let engine;
-  const screenWidth = Number(jsonData?.screen?.width) || 1920;
-  const screenHeight = Number(jsonData?.screen?.height) || 1080;
+  const screenWidth = Number(jsonData?.screen?.width);
+  const screenHeight = Number(jsonData?.screen?.height);
+
+  if (!Number.isFinite(screenWidth) || screenWidth <= 0) {
+    throw new Error(
+      "Bundle projectData.screen.width is required and must be a positive number.",
+    );
+  }
+
+  if (!Number.isFinite(screenHeight) || screenHeight <= 0) {
+    throw new Error(
+      "Bundle projectData.screen.height is required and must be a positive number.",
+    );
+  }
 
   const renderEngineState = (renderState) => {
     const nextRenderState = prepareRenderStateKeyboardForGraphics({

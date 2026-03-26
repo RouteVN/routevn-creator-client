@@ -124,6 +124,15 @@ const createBaseProjectData = () => ({
 
 {
   const repositoryState = structuredClone(initialProjectData);
+  repositoryState.project = {};
+
+  assert.throws(() => {
+    constructProjectData(repositoryState);
+  }, /Repository project resolution is required/);
+}
+
+{
+  const repositoryState = structuredClone(initialProjectData);
   repositoryState.project = {
     resolution: {
       width: 1280,

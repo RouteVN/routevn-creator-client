@@ -55,7 +55,7 @@ const PROJECT_RESOLUTION_BY_PRESET = new Map(
   ]),
 );
 
-const normalizeResolutionDimension = (value) => {
+const parseProjectResolutionDimension = (value) => {
   const numericValue = Number(value);
 
   if (
@@ -85,20 +85,6 @@ export const resolveProjectResolutionPreset = (preset) => {
       };
 };
 
-export const normalizeProjectResolution = (resolution = {}) => {
-  const width = normalizeResolutionDimension(resolution.width);
-  const height = normalizeResolutionDimension(resolution.height);
-
-  if (width === undefined || height === undefined) {
-    return {
-      width: DEFAULT_PROJECT_RESOLUTION.width,
-      height: DEFAULT_PROJECT_RESOLUTION.height,
-    };
-  }
-
-  return { width, height };
-};
-
 export const createProjectResolutionFormValues = (
   preset = DEFAULT_PROJECT_RESOLUTION_PRESET,
 ) => {
@@ -112,15 +98,52 @@ export const createProjectResolutionFormValues = (
 };
 
 export const formatProjectResolution = (resolution) => {
-  const normalizedResolution = normalizeProjectResolution(resolution);
+  const requiredResolution = requireProjectResolution(resolution);
 
-  return `${normalizedResolution.width} × ${normalizedResolution.height}`;
+  return `${requiredResolution.width} × ${requiredResolution.height}`;
+};
+
+export const requireProjectResolution = (
+  resolution,
+  subject = "Project resolution",
+) => {
+  const width = parseProjectResolutionDimension(resolution?.width);
+  const height = parseProjectResolutionDimension(resolution?.height);
+
+  if (width === undefined || height === undefined) {
+    throw new Error(
+      `${subject} is required and must include positive integer width and height values.`,
+    );
+  }
+
+  return { width, height };
+};
+
+export const resolveProjectResolutionForWrite = ({
+  projectResolution,
+  fallbackResolution,
+} = {}) => {
+  const width = parseProjectResolutionDimension(
+    projectResolution?.width ?? fallbackResolution?.width,
+  );
+  const height = parseProjectResolutionDimension(
+    projectResolution?.height ?? fallbackResolution?.height,
+  );
+
+  if (width !== undefined && height !== undefined) {
+    return { width, height };
+  }
+
+  return {
+    width: DEFAULT_PROJECT_RESOLUTION.width,
+    height: DEFAULT_PROJECT_RESOLUTION.height,
+  };
 };
 
 export const resolveProjectResolution = ({ preset, width, height } = {}) => {
   if (preset === CUSTOM_PROJECT_RESOLUTION_PRESET) {
-    const customWidth = normalizeResolutionDimension(width);
-    const customHeight = normalizeResolutionDimension(height);
+    const customWidth = parseProjectResolutionDimension(width);
+    const customHeight = parseProjectResolutionDimension(height);
 
     if (customWidth === undefined || customHeight === undefined) {
       return undefined;

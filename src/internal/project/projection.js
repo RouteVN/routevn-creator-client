@@ -7,7 +7,7 @@ import { RESOURCE_TYPES } from "./commands.js";
 import { normalizeLineActions } from "./engineActions.js";
 import { getInteractionActions } from "./interactionPayload.js";
 import { toFlatItems, toHierarchyStructure } from "./tree.js";
-import { normalizeProjectResolution } from "../projectResolution.js";
+import { requireProjectResolution } from "../projectResolution.js";
 import { getSystemVariableItems } from "../systemVariables.js";
 
 const DEFAULT_TIMESTAMP = 0;
@@ -539,15 +539,7 @@ const constructAnimationResources = (repositoryAnimations = {}) => {
         return result;
       }
 
-      const animation = structuredClone(item.animation);
-
-      if (animation.type === "live") {
-        animation.type = "update";
-      } else if (animation.type === "replace") {
-        animation.type = "transition";
-      }
-
-      result[animationId] = animation;
+      result[animationId] = structuredClone(item.animation);
       return result;
     },
     {},
@@ -812,8 +804,9 @@ const constructStory = (scenes) => {
 };
 
 export function constructProjectData(state, options = {}) {
-  const screenResolution = normalizeProjectResolution(
+  const screenResolution = requireProjectResolution(
     state?.project?.resolution,
+    "Repository project resolution",
   );
 
   return {

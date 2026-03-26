@@ -15,7 +15,7 @@ import createRouteGraphics, {
 import createRouteEngine, { createEffectsHandler } from "route-engine-js";
 import { Ticker } from "pixi.js";
 import { prepareRenderStateKeyboardForGraphics } from "../../internal/project/layout.js";
-import { normalizeProjectResolution } from "../../internal/projectResolution.js";
+import { DEFAULT_PROJECT_RESOLUTION } from "../../internal/projectResolution.js";
 
 const cloneBufferForAudioDecode = (value) => {
   if (value instanceof ArrayBuffer) {
@@ -1063,10 +1063,8 @@ export const createGraphicsService = async ({ subject }) => {
       ticker = new Ticker();
       ticker.start();
       const { canvas, beforeHandleActions: onBeforeHandleActions } = options;
-      const renderResolution = normalizeProjectResolution({
-        width: options.width,
-        height: options.height,
-      });
+      const renderWidth = options.width ?? DEFAULT_PROJECT_RESOLUTION.width;
+      const renderHeight = options.height ?? DEFAULT_PROJECT_RESOLUTION.height;
       beforeHandleActions = onBeforeHandleActions;
       actionQueue = Promise.resolve();
       assetLoadQueue = Promise.resolve();
@@ -1091,8 +1089,8 @@ export const createGraphicsService = async ({ subject }) => {
       };
 
       await routeGraphics.init({
-        width: renderResolution.width,
-        height: renderResolution.height,
+        width: renderWidth,
+        height: renderHeight,
         plugins,
         eventHandler: (eventName, payload) => {
           if (eventName === "dragMove") {

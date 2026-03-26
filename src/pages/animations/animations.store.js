@@ -502,7 +502,7 @@ const getAnimationTypeLabel = (animationType) => {
 
 const getUpdateAnimationTween = (item = {}) => {
   if (
-    (item?.animation?.type === "live" || item?.animation?.type === "update") &&
+    item?.animation?.type === "update" &&
     item.animation.tween &&
     typeof item.animation.tween === "object"
   ) {
@@ -1021,7 +1021,7 @@ const createAnimationRenderState = (properties, includeAnimations = true) => {
       animations.push({
         id: `animation-${property}`,
         targetId: "preview-element",
-        type: "live",
+        type: "update",
         tween,
       });
     }

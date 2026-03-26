@@ -1,6 +1,6 @@
 import {
+  DEFAULT_PROJECT_RESOLUTION,
   formatProjectResolution,
-  normalizeProjectResolution,
 } from "../../internal/projectResolution.js";
 
 export const createInitialState = () => ({
@@ -8,7 +8,7 @@ export const createInitialState = () => ({
     name: "",
     description: "",
     iconFileId: undefined,
-    resolution: normalizeProjectResolution(),
+    resolution: DEFAULT_PROJECT_RESOLUTION,
     source: "local",
   },
   isEditDialogOpen: false,
@@ -24,7 +24,7 @@ export const setCurrentProject = ({ state }, { project } = {}) => {
     name: project?.name ?? "",
     description: project?.description ?? "",
     iconFileId: project?.iconFileId ?? undefined,
-    resolution: normalizeProjectResolution(project?.resolution),
+    resolution: project?.resolution ?? DEFAULT_PROJECT_RESOLUTION,
     source: project?.source === "cloud" ? "cloud" : "local",
   };
 };

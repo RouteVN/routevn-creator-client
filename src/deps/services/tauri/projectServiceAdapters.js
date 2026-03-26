@@ -18,7 +18,7 @@ import {
   assertSupportedProjectState,
   createProjectCreateRepositoryEvent,
 } from "../shared/projectRepository.js";
-import { normalizeProjectResolution } from "../../../internal/projectResolution.js";
+import { resolveProjectResolutionForWrite } from "../../../internal/projectResolution.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
 const CREATOR_VERSION_KEY = "creatorVersion";
@@ -118,9 +118,10 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
       const templateData = await loadTemplate(template);
       templateData.project = {
         ...templateData.project,
-        resolution: normalizeProjectResolution(
-          projectResolution ?? templateData.project?.resolution,
-        ),
+        resolution: resolveProjectResolutionForWrite({
+          projectResolution,
+          fallbackResolution: templateData.project?.resolution,
+        }),
       };
       await copyTemplateFiles(template, filesPath);
 
