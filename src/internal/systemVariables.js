@@ -1,29 +1,4 @@
-const SYSTEM_VARIABLE_GROUPS = Object.freeze([
-  {
-    id: "routeEngine",
-    name: "Route Engine",
-    variables: [
-      {
-        id: "_skipUnseenText",
-        name: "Skip Unseen Text",
-        scope: "global-device",
-        type: "boolean",
-        default: false,
-        description:
-          "When enabled, skip mode can continue through lines the player has not viewed yet.",
-      },
-      {
-        id: "_dialogueTextSpeed",
-        name: "Dialogue Text Speed",
-        scope: "global-device",
-        type: "number",
-        default: 50,
-        description:
-          "Controls the default dialogue text speed stored for this device.",
-      },
-    ],
-  },
-]);
+import { SYSTEM_VARIABLE_GROUPS } from "@routevn/creator-model";
 
 const createSystemVariableItem = ({
   id,

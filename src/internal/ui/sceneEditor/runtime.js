@@ -448,19 +448,6 @@ const initRouteEngineWithDiagnostics = (
   }
 };
 
-const findProjectDataLineBySelection = (
-  projectData,
-  { sceneId, sectionId, lineId } = {},
-) => {
-  if (!sceneId || !sectionId || !lineId) {
-    return undefined;
-  }
-
-  return projectData?.story?.scenes?.[sceneId]?.sections?.[
-    sectionId
-  ]?.lines?.find((line) => line?.id === lineId);
-};
-
 export const renderSceneEditorState = async (deps, payload = {}) => {
   const { store, graphicsService } = deps;
   const { skipAnimations = false } = payload;
@@ -475,19 +462,6 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
       lineId,
     },
   );
-  const selectedLine = store.selectSelectedLine();
-  const projectDataLine = findProjectDataLineBySelection(projectData, {
-    sceneId,
-    sectionId,
-    lineId,
-  });
-  console.info("[sceneEditor] render current line", {
-    sceneId,
-    sectionId,
-    lineId,
-    selectedLineBackground: selectedLine?.actions?.background,
-    projectDataLineBackground: projectDataLine?.actions?.background,
-  });
   const safeProjectData = cloneWithDiagnostics(
     projectData,
     "projectData passed to updateProjectData",
@@ -511,18 +485,6 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     suppressRenderEffects: true,
   });
   const currentRenderState = graphicsService.engineSelectRenderState();
-  const currentPresentationState =
-    graphicsService.engineSelectPresentationState();
-  const renderStoryChildren =
-    currentRenderState?.elements
-      ?.find((element) => element?.id === "story")
-      ?.children?.map((child) => child?.id) || [];
-  console.info("[sceneEditor] route-engine state after updateProjectData", {
-    lineId,
-    renderStoryChildren,
-    presentationBackground: currentPresentationState?.background,
-    renderAnimations: currentRenderState?.animations,
-  });
   if (!currentRenderState) {
     return;
   }

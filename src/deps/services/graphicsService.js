@@ -907,55 +907,6 @@ export const createGraphicsService = async ({ subject }) => {
     return undefined;
   };
 
-  const summarizeRenderAnimations = (animations = []) => {
-    return animations.map((animation) => ({
-      id: animation?.id,
-      type: animation?.type,
-      targetId: animation?.targetId,
-      hasTween: Boolean(animation?.tween),
-      hasPrev: Boolean(animation?.prev),
-      hasNext: Boolean(animation?.next),
-      hasMask: Boolean(animation?.mask),
-      tweenProperties: Object.keys(animation?.tween || {}),
-      prevTweenProperties: Object.keys(animation?.prev?.tween || {}),
-      nextTweenProperties: Object.keys(animation?.next?.tween || {}),
-    }));
-  };
-
-  const summarizeRenderAnimationsJson = (animations = []) => {
-    return JSON.stringify(summarizeRenderAnimations(animations));
-  };
-
-  const normalizeLifecycleTransitionAnimation = (animation) => {
-    if (!animation || animation.type !== "transition") {
-      return animation;
-    }
-
-    if (typeof animation.id !== "string" || animation.id.length === 0) {
-      return animation;
-    }
-
-    if (animation.id.endsWith("-animation-in")) {
-      const normalized = structuredClone(animation);
-      delete normalized.prev;
-      return normalized;
-    }
-
-    if (animation.id.endsWith("-animation-out")) {
-      const normalized = structuredClone(animation);
-      delete normalized.next;
-      return normalized;
-    }
-
-    return animation;
-  };
-
-  const normalizeRenderAnimationsForGraphics = (animations = []) => {
-    return animations.map((animation) =>
-      normalizeLifecycleTransitionAnimation(animation),
-    );
-  };
-
   const renderEngineState = (renderState, options = {}) => {
     const { allowDeferredAudio = true } = options;
     let nextRenderState = prepareRenderStateKeyboardForGraphics({
@@ -982,23 +933,8 @@ export const createGraphicsService = async ({ subject }) => {
 
     nextRenderState = {
       ...nextRenderState,
-      animations: normalizeRenderAnimationsForGraphics(
-        nextRenderState?.animations || [],
-      ),
+      animations: nextRenderState?.animations || [],
     };
-
-    const storyChildIds =
-      nextRenderState?.elements
-        ?.find((element) => element?.id === "story")
-        ?.children?.map((child) => child?.id) || [];
-    console.info("[graphicsService] render route-graphics", {
-      renderId: nextRenderState?.id,
-      storyChildIds,
-      animations: summarizeRenderAnimations(nextRenderState?.animations || []),
-      animationsJson: summarizeRenderAnimationsJson(
-        nextRenderState?.animations || [],
-      ),
-    });
     routeGraphics.render(nextRenderState);
     void pruneDecodedAudioCache(retainedAudioKeys);
   };
@@ -1118,19 +1054,7 @@ export const createGraphicsService = async ({ subject }) => {
           }
 
           if (eventName === "renderComplete") {
-            const wasAborted = payload?.aborted === true;
-            console.info("[graphicsService] renderComplete", {
-              renderId: payload?.id,
-              aborted: wasAborted,
-              renderStateId: engine.selectRenderState()?.id,
-              animations: summarizeRenderAnimations(
-                engine.selectRenderState()?.animations || [],
-              ),
-              animationsJson: summarizeRenderAnimationsJson(
-                engine.selectRenderState()?.animations || [],
-              ),
-            });
-            if (wasAborted) {
+            if (payload?.aborted === true) {
               return;
             }
             engine.handleActions({

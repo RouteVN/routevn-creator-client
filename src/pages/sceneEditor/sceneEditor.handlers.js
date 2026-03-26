@@ -427,10 +427,6 @@ export const handleSectionTabClick = async (deps, payload) => {
 export const handleCommandLineSubmit = async (deps, payload) => {
   const { store, render, projectService, subject, appService } = deps;
   const lineId = store.selectSelectedLineId();
-  console.info("[sceneEditor] command-line submit received", {
-    lineId,
-    detail: payload?._event?.detail,
-  });
 
   // Handle section/scene transitions
   if (payload._event.detail.sectionTransition) {
@@ -615,11 +611,6 @@ export const handleCommandLineSubmit = async (deps, payload) => {
   }
 
   const { dialogue, ...otherActions } = submissionData;
-  console.info("[sceneEditor] command-line submit normalized", {
-    lineId,
-    dialogue,
-    otherActions,
-  });
 
   await runSceneEditorPersistence(
     deps,
@@ -638,10 +629,6 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       }
 
       if (Object.keys(otherActions).length > 0) {
-        console.info("[sceneEditor] updateLineActions", {
-          lineId,
-          otherActions,
-        });
         assertSceneEditorCommandResult(
           await projectService.updateLineActions({
             lineId,
@@ -666,12 +653,6 @@ export const handleCommandLineSubmit = async (deps, payload) => {
   );
 
   syncStoreProjectState(store, projectService);
-  const syncedSelectedLine = store.selectSelectedLine();
-  console.info("[sceneEditor] selected line after sync", {
-    lineId,
-    actionKeys: Object.keys(syncedSelectedLine?.actions || {}),
-    background: syncedSelectedLine?.actions?.background,
-  });
   reconcileCurrentEditorSession(deps);
   render();
 

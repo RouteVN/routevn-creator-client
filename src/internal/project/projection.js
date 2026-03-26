@@ -964,10 +964,14 @@ export const getSectionPresentation = ({
 };
 
 export const getVariableOptions = (variablesData, options = {}) => {
-  const { type, showType = false } = options;
+  const { type, showType = false, includeSystem = false } = options;
   const variablesItems = variablesData?.items || {};
+  const variableEntries = Object.entries(variablesItems);
+  const systemVariableEntries = includeSystem
+    ? Object.entries(getSystemVariableItems())
+    : [];
 
-  return Object.entries(variablesItems)
+  return [...variableEntries, ...systemVariableEntries]
     .filter(([_, item]) => {
       if (item.type === "folder") {
         return false;
