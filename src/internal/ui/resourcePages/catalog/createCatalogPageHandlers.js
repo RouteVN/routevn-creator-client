@@ -8,6 +8,7 @@ export const createCatalogPageHandlers = ({
   resourceType,
   selectData = (repositoryState) =>
     repositoryState?.[resourceType] ?? EMPTY_TREE,
+  onProjectStateChanged = () => {},
   createExplorerHandlers = ({ refresh }) =>
     createResourceFileExplorerHandlers({
       resourceType,
@@ -16,8 +17,10 @@ export const createCatalogPageHandlers = ({
 }) => {
   const refreshData = async (deps) => {
     const { store, render, projectService } = deps;
-    const data = selectData(projectService.getRepositoryState());
+    const repositoryState = projectService.getRepositoryState();
+    const data = selectData(repositoryState);
     store.setItems({ data });
+    onProjectStateChanged({ deps, repositoryState });
     render();
   };
 
@@ -28,6 +31,7 @@ export const createCatalogPageHandlers = ({
         tap(({ repositoryState }) => {
           const data = selectData(repositoryState);
           store.setItems({ data });
+          onProjectStateChanged({ deps, repositoryState });
           render();
         }),
       )

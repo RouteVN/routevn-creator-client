@@ -630,12 +630,17 @@ export const initializeSceneEditorPage = async (deps) => {
   resetAssetLoadCache("initialize scene editor");
   store.setSceneAssetLoading({ isLoading: false });
 
+  const projectData = store.selectProjectData();
+  const previewWidth = projectData?.screen?.width;
+  const previewHeight = projectData?.screen?.height;
+
   await graphicsService.init({
     canvas: refs.canvas,
     beforeHandleActions: createBeforeHandleActionsHook(deps),
+    width: previewWidth,
+    height: previewHeight,
   });
 
-  const projectData = store.selectProjectData();
   const initialProjectData = createProjectDataWithSelectedEntryPoint(
     projectData,
     {
@@ -669,12 +674,17 @@ export const restoreSceneEditorFromPreview = async (deps) => {
 
   resetAssetLoadCache("restore scene editor from preview");
   store.setSceneAssetLoading({ isLoading: false });
+
+  const projectData = store.selectProjectData();
+  const previewWidth = projectData?.screen?.width;
+  const previewHeight = projectData?.screen?.height;
   await graphicsService.init({
     canvas: refs.canvas,
     beforeHandleActions: createBeforeHandleActionsHook(deps),
+    width: previewWidth,
+    height: previewHeight,
   });
 
-  const projectData = store.selectProjectData();
   const initialProjectData = createProjectDataWithSelectedEntryPoint(
     projectData,
     {

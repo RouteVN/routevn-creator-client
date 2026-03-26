@@ -9,6 +9,10 @@ import {
   withInteractionPayload,
 } from "../../internal/project/interactionPayload.js";
 import { BASE_LAYOUT_KEYBOARD_OPTIONS } from "../../internal/project/layout.js";
+import {
+  requireProjectResolution,
+  scaleLayoutElementsForProjectResolution,
+} from "../../internal/projectResolution.js";
 
 const {
   handleBeforeMount,
@@ -137,37 +141,40 @@ export const handleAddDialogClose = (deps) => {
   render();
 };
 
-const createControlTemplate = () => {
+const createControlTemplate = (projectResolution) => {
   const spriteId = nanoid();
 
-  return {
-    items: {
-      [spriteId]: {
-        type: "sprite",
-        anchorX: 0,
-        anchorY: 0,
-        click: {
-          payload: {
-            actions: {
-              nextLine: {},
+  return scaleLayoutElementsForProjectResolution(
+    {
+      items: {
+        [spriteId]: {
+          type: "sprite",
+          anchorX: 0,
+          anchorY: 0,
+          click: {
+            payload: {
+              actions: {
+                nextLine: {},
+              },
             },
           },
+          height: 1080,
+          rotation: 0,
+          scaleX: 1,
+          scaleY: 1,
+          width: 1920,
+          x: 0,
+          y: 0,
         },
-        height: 1080,
-        rotation: 0,
-        scaleX: 1,
-        scaleY: 1,
-        width: 1920,
-        x: 0,
-        y: 0,
       },
+      tree: [
+        {
+          id: spriteId,
+        },
+      ],
     },
-    tree: [
-      {
-        id: spriteId,
-      },
-    ],
-  };
+    projectResolution,
+  );
 };
 
 export const handleControlFormActionClick = async (deps, payload) => {
@@ -183,6 +190,11 @@ export const handleControlFormActionClick = async (deps, payload) => {
     return;
   }
 
+  const projectResolution = requireProjectResolution(
+    projectService.getRepositoryState().project?.resolution,
+    "Project resolution",
+  );
+
   const createAttempt = await runResourcePageMutation({
     appService,
     fallbackMessage: "Failed to create control.",
@@ -190,7 +202,7 @@ export const handleControlFormActionClick = async (deps, payload) => {
       projectService.createControlItem({
         controlId: nanoid(),
         name,
-        elements: createControlTemplate(),
+        elements: createControlTemplate(projectResolution),
         parentId: store.getState().targetGroupId,
         position: "last",
       }),

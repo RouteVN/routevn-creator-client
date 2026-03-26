@@ -1,3 +1,4 @@
+import { nanoid } from "nanoid";
 import { filter, fromEvent, tap, debounceTime } from "rxjs";
 import {
   createCollabRemoteRefreshStream,
@@ -13,6 +14,7 @@ import {
   applyLayoutItemFieldChange,
   applyLayoutItemKeyboardChange,
 } from "../../internal/layoutEditorMutations.js";
+import { createLayoutEditorItemTemplate } from "../../internal/layoutEditorTypes.js";
 import {
   persistLayoutEditorElementUpdate,
   shouldPersistLayoutEditorFieldImmediately,
@@ -34,6 +36,40 @@ const DEBOUNCE_DELAYS = {
 const KEYBOARD_UNITS = {
   NORMAL: 1,
   FAST: 10, // With shift key
+};
+
+const getResultErrorMessage = (result, fallbackMessage) => {
+  return (
+    result?.error?.message ||
+    result?.error?.creatorModelError?.message ||
+    fallbackMessage
+  );
+};
+
+const resolveMenuItem = (detail = {}) => detail.item || detail;
+
+const resolveSliderCreateAction = (detail = {}) => {
+  const value = resolveMenuItem(detail)?.value;
+  if (
+    value &&
+    typeof value === "object" &&
+    value.action === "new-child-item" &&
+    value.type === "slider"
+  ) {
+    return value;
+  }
+
+  return undefined;
+};
+
+const getSliderCreateOwnerConfig = (resourceType, projectService) => {
+  const isControls = resourceType === "controls";
+  return {
+    ownerPayloadKey: isControls ? "controlId" : "layoutId",
+    createElement: isControls
+      ? projectService.createControlElement.bind(projectService)
+      : projectService.createLayoutElement.bind(projectService),
+  };
 };
 
 const getEditorPayload = (appService) =>
@@ -119,7 +155,12 @@ export const handleAfterMount = async (deps) => {
   });
 
   const { canvas } = refs;
-  await graphicsService.init({ canvas: canvas });
+  const projectResolution = deps.store.selectProjectResolution();
+  await graphicsService.init({
+    canvas,
+    width: projectResolution.width,
+    height: projectResolution.height,
+  });
 
   await rerenderLayoutEditorSurface(deps);
 };
@@ -164,14 +205,41 @@ const refreshLayoutEditorData = async (deps, payload = {}) => {
   await rerenderLayoutEditorSurface(deps);
 };
 
-const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
-  createLayoutElementsFileExplorerHandlers({
-    getLayoutId: (deps) => deps.store.selectLayoutId(),
-    getResourceType: (deps) => deps.store.selectLayoutResourceType(),
-    refresh: refreshLayoutEditorData,
-  });
+const {
+  handleFileExplorerAction: handleBaseFileExplorerAction,
+  handleFileExplorerTargetChanged,
+} = createLayoutElementsFileExplorerHandlers({
+  getLayoutId: (deps) => deps.store.selectLayoutId(),
+  getResourceType: (deps) => deps.store.selectLayoutResourceType(),
+  refresh: refreshLayoutEditorData,
+});
 
-export { handleFileExplorerAction, handleFileExplorerTargetChanged };
+export const handleFileExplorerAction = async (deps, payload) => {
+  const sliderAction = resolveSliderCreateAction(payload?._event?.detail);
+  if (!sliderAction) {
+    await handleBaseFileExplorerAction(deps, payload);
+    return;
+  }
+
+  const { store, render, refs } = deps;
+  store.openSliderCreateDialog({
+    parentId: payload?._event?.detail?.itemId,
+    direction: sliderAction.direction,
+    defaultValues: {
+      name: sliderAction.name ?? "Slider",
+    },
+  });
+  render();
+
+  const sliderCreateForm = refs.sliderCreateForm;
+  const { defaultValues } = store.selectSliderCreateDialog();
+  sliderCreateForm.reset();
+  sliderCreateForm.setValues({
+    values: defaultValues,
+  });
+};
+
+export { handleFileExplorerTargetChanged };
 
 export const handleDataChanged = refreshLayoutEditorData;
 
@@ -189,6 +257,164 @@ export const handleChoiceFormChange = async (deps, payload) => {
 
   store.setChoiceDefaultValue({ name, fieldValue });
   await rerenderLayoutEditorSurface(deps);
+};
+
+export const handleSliderCreateDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.closeSliderCreateDialog();
+  store.closeSliderCreateImageSelectorDialog();
+  render();
+};
+
+export const handleSliderCreateImageFieldClick = (deps, payload) => {
+  const { store, render } = deps;
+  const fieldName = payload._event.currentTarget?.dataset?.fieldName;
+  if (!fieldName) {
+    return;
+  }
+
+  store.openSliderCreateImageSelectorDialog({
+    fieldName,
+  });
+  render();
+};
+
+export const handleSliderCreateImageClearClick = (deps, payload) => {
+  const { store, render } = deps;
+  const fieldName = payload._event.currentTarget?.dataset?.fieldName;
+  if (!fieldName) {
+    return;
+  }
+
+  store.setSliderCreateImage({
+    fieldName,
+    imageId: undefined,
+  });
+  render();
+};
+
+export const handleSliderCreateImageSelected = (deps, payload) => {
+  const { store, render } = deps;
+  store.setSliderCreateImageSelectorSelectedImageId({
+    imageId: payload._event.detail?.imageId,
+  });
+  render();
+};
+
+export const handleSliderCreateImageSelectorCancel = (deps) => {
+  const { store, render } = deps;
+  store.closeSliderCreateImageSelectorDialog();
+  render();
+};
+
+export const handleSliderCreateImageSelectorSubmit = (deps) => {
+  const { store, render } = deps;
+  const imageSelectorDialog = store.selectSliderCreateImageSelectorDialog();
+  if (imageSelectorDialog.fieldName) {
+    store.setSliderCreateImage({
+      fieldName: imageSelectorDialog.fieldName,
+      imageId: imageSelectorDialog.selectedImageId,
+    });
+  }
+  store.closeSliderCreateImageSelectorDialog();
+  render();
+};
+
+export const handleSliderCreateFormAction = async (deps, payload) => {
+  const { appService, projectService, store } = deps;
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
+    return;
+  }
+
+  const name = values?.name?.trim();
+  if (!name) {
+    appService.showToast("Slider name is required.", {
+      title: "Warning",
+    });
+    return;
+  }
+
+  const sliderCreateDialog = store.selectSliderCreateDialog();
+  const { barImageId, thumbImageId, hoverBarImageId, hoverThumbImageId } =
+    sliderCreateDialog.images;
+
+  if (!barImageId) {
+    appService.showToast("Bar image is required.", {
+      title: "Warning",
+    });
+    return;
+  }
+
+  if (!thumbImageId) {
+    appService.showToast("Thumb image is required.", {
+      title: "Warning",
+    });
+    return;
+  }
+
+  const direction =
+    values?.direction === "vertical" ? "vertical" : "horizontal";
+
+  const layoutId = store.selectLayoutId();
+  const resourceType = store.selectLayoutResourceType();
+  if (!layoutId) {
+    appService.showToast(
+      resourceType === "controls"
+        ? "Control is missing."
+        : "Layout is missing.",
+      {
+        title: "Error",
+      },
+    );
+    return;
+  }
+
+  const createType =
+    direction === "vertical" ? "slider-vertical" : "slider-horizontal";
+  const baseItem = createLayoutEditorItemTemplate(createType, {
+    projectResolution: store.selectProjectResolution(),
+  });
+  const nextElementId = nanoid();
+  const nextElementData = {
+    ...baseItem,
+    name,
+    barImageId,
+    thumbImageId,
+  };
+  if (hoverBarImageId) {
+    nextElementData.hoverBarImageId = hoverBarImageId;
+  }
+  if (hoverThumbImageId) {
+    nextElementData.hoverThumbImageId = hoverThumbImageId;
+  }
+
+  await projectService.ensureRepository();
+  const { ownerPayloadKey, createElement } = getSliderCreateOwnerConfig(
+    resourceType,
+    projectService,
+  );
+  const createResult = await createElement({
+    [ownerPayloadKey]: layoutId,
+    elementId: nextElementId,
+    data: nextElementData,
+    parentId: sliderCreateDialog.parentId ?? null,
+    position: "last",
+  });
+
+  if (createResult?.valid === false) {
+    appService.showToast(
+      getResultErrorMessage(createResult, "Failed to create slider."),
+      {
+        title: "Error",
+      },
+    );
+    return;
+  }
+
+  store.closeSliderCreateDialog();
+  store.closeSliderCreateImageSelectorDialog();
+  await refreshLayoutEditorData(deps, { selectedItemId: nextElementId });
 };
 
 export const handlePreviewRevealingSpeedInput = async (deps, payload) => {

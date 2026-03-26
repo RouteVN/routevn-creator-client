@@ -1,8 +1,16 @@
 import { toFlatItems } from "../../internal/project/tree.js";
 import { parseAndRender } from "jempl";
 import { createLayoutEditorItemTemplate } from "../../internal/layoutEditorTypes.js";
+import {
+  DEFAULT_PROJECT_RESOLUTION,
+  formatProjectResolutionAspectRatio,
+  requireProjectResolution,
+} from "../../internal/projectResolution.js";
 
-const toLayoutEditorContextMenuItems = (items = []) => {
+const toLayoutEditorContextMenuItems = (
+  items = [],
+  projectResolution = DEFAULT_PROJECT_RESOLUTION,
+) => {
   return items.map((item) => {
     if (!item?.createType) {
       return item;
@@ -14,7 +22,9 @@ const toLayoutEditorContextMenuItems = (items = []) => {
       ...nextItem,
       value: {
         action: "new-child-item",
-        ...createLayoutEditorItemTemplate(createType),
+        ...createLayoutEditorItemTemplate(createType, {
+          projectResolution,
+        }),
       },
     };
   });
@@ -43,6 +53,26 @@ export const createInitialState = () => ({
     choicesNum: 2,
     choices: ["Choice 1", "Choice 2"],
   },
+  projectResolution: DEFAULT_PROJECT_RESOLUTION,
+  sliderCreateDialog: {
+    open: false,
+    parentId: undefined,
+    defaultValues: {
+      name: "Slider",
+      direction: "horizontal",
+    },
+    images: {
+      barImageId: undefined,
+      thumbImageId: undefined,
+      hoverBarImageId: undefined,
+      hoverThumbImageId: undefined,
+    },
+  },
+  sliderCreateImageSelectorDialog: {
+    open: false,
+    fieldName: undefined,
+    selectedImageId: undefined,
+  },
 });
 
 export const setItems = ({ state }, { layoutData } = {}) => {
@@ -62,6 +92,13 @@ export const setLayout = ({ state }, payload = {}) => {
     id: id || layout?.id || undefined,
     resourceType: resourceType || layout?.resourceType || "layouts",
   };
+};
+
+export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
+  state.projectResolution = requireProjectResolution(
+    projectResolution,
+    "Project resolution",
+  );
 };
 
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
@@ -179,6 +216,87 @@ export const setPreviewRevealingSpeed = ({ state }, { value } = {}) => {
   state.previewRevealingSpeed = value;
 };
 
+export const openSliderCreateDialog = (
+  { state },
+  { parentId, direction, defaultValues } = {},
+) => {
+  state.sliderCreateDialog = {
+    open: true,
+    parentId,
+    defaultValues: {
+      name: defaultValues?.name ?? "Slider",
+      direction: direction === "vertical" ? "vertical" : "horizontal",
+    },
+    images: {
+      barImageId: undefined,
+      thumbImageId: undefined,
+      hoverBarImageId: undefined,
+      hoverThumbImageId: undefined,
+    },
+  };
+};
+
+export const closeSliderCreateDialog = ({ state }, _payload = {}) => {
+  state.sliderCreateDialog = {
+    open: false,
+    parentId: undefined,
+    defaultValues: {
+      name: "Slider",
+      direction: "horizontal",
+    },
+    images: {
+      barImageId: undefined,
+      thumbImageId: undefined,
+      hoverBarImageId: undefined,
+      hoverThumbImageId: undefined,
+    },
+  };
+};
+
+export const setSliderCreateImage = (
+  { state },
+  { fieldName, imageId } = {},
+) => {
+  if (!fieldName) {
+    return;
+  }
+
+  state.sliderCreateDialog.images[fieldName] = imageId;
+};
+
+export const openSliderCreateImageSelectorDialog = (
+  { state },
+  { fieldName } = {},
+) => {
+  if (!fieldName) {
+    return;
+  }
+
+  state.sliderCreateImageSelectorDialog = {
+    open: true,
+    fieldName,
+    selectedImageId: state.sliderCreateDialog.images[fieldName],
+  };
+};
+
+export const closeSliderCreateImageSelectorDialog = (
+  { state },
+  _payload = {},
+) => {
+  state.sliderCreateImageSelectorDialog = {
+    open: false,
+    fieldName: undefined,
+    selectedImageId: undefined,
+  };
+};
+
+export const setSliderCreateImageSelectorSelectedImageId = (
+  { state },
+  { imageId } = {},
+) => {
+  state.sliderCreateImageSelectorDialog.selectedImageId = imageId;
+};
+
 export const setChoiceDefaultValue = ({ state }, { name, fieldValue } = {}) => {
   if (name.startsWith("choices[")) {
     const index = Number.parseInt(name.match(/\d+/)[0], 10);
@@ -230,6 +348,18 @@ export const selectChoiceDefaultValues = ({ state }) => {
 
 export const selectPreviewRevealingSpeed = ({ state }) => {
   return state.previewRevealingSpeed;
+};
+
+export const selectProjectResolution = ({ state }) => {
+  return state.projectResolution;
+};
+
+export const selectSliderCreateDialog = ({ state }) => {
+  return state.sliderCreateDialog;
+};
+
+export const selectSliderCreateImageSelectorDialog = ({ state }) => {
+  return state.sliderCreateImageSelectorDialog;
 };
 
 export const selectImages = ({ state }) => state.images;
@@ -333,9 +463,13 @@ export const selectViewData = ({ state, constants }) => {
     selectedItemId: state.selectedItemId,
     resourceCategory: isControlResource ? "systemConfig" : "userInterface",
     selectedResourceId: isControlResource ? "controls" : "layout-editor",
-    contextMenuItems: toLayoutEditorContextMenuItems(parsedContextMenuItems),
+    contextMenuItems: toLayoutEditorContextMenuItems(
+      parsedContextMenuItems,
+      state.projectResolution,
+    ),
     emptyContextMenuItems: toLayoutEditorContextMenuItems(
       parsedEmptyContextMenuItems,
+      state.projectResolution,
     ),
     dialogueForm: constants.dialogueForm,
     dialogueDefaultValues: state.dialogueDefaultValues,
@@ -345,8 +479,15 @@ export const selectViewData = ({ state, constants }) => {
     choicesContext: {
       ...state.choiceDefaultValues,
     },
+    sliderCreateForm: constants.sliderCreateForm,
+    sliderCreateDialog: state.sliderCreateDialog,
+    sliderCreateImageSelectorDialog: state.sliderCreateImageSelectorDialog,
+    canvasAspectRatio: formatProjectResolutionAspectRatio(
+      state.projectResolution,
+    ),
     layout: state.layout,
     textStylesData: state.textStylesData,
     variablesData: state.variablesData,
+    images: state.images,
   };
 };

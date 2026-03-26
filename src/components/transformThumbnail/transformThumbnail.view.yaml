@@ -4,5 +4,5 @@ refs:
   canvas:
     selector: canvas
 template:
-  - rtgl-view w=${w} h=${h}:
+  - 'rtgl-view w=${w} h=${h} style="aspect-ratio: ${canvasAspectRatio};"':
       - canvas#canvas style="width:100%; height:100%;": null

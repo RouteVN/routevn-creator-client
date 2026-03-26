@@ -49,7 +49,7 @@ template:
                               - rtgl-text c=mu-fg: ${selectedItemName}
                           - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=detailFields:
                               - $if selectedItem:
-                                  - rvn-transform-thumbnail slot="transform-preview" :item=selectedItem w=f h=180: null
+                                  - rvn-transform-thumbnail slot="transform-preview" :item=selectedItem :resolution=projectResolution canvas-aspect-ratio="${canvasAspectRatio}" w=f h=180: null
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
@@ -60,6 +60,6 @@ template:
                   - rtgl-form#transformForm :defaultValues=dialogDefaultValues :form=transformForm w=f: null
               - rtgl-view w=6fg lg-w=f d=v g=md:
                   - rtgl-text: Preview
-                  - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: 16/9;"':
+                  - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: ${canvasAspectRatio};"':
                       - rtgl-view pos=abs cor=full:
                           - 'div#canvas style="width: 100%; height: 100%;display: flex; background-color: var(--muted);"': null

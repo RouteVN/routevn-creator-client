@@ -172,6 +172,18 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
     );
   }
 
+  const canvasContainer = document.getElementById("canvas");
+  if (canvasContainer) {
+    canvasContainer.style.setProperty(
+      "--project-screen-width",
+      String(screenWidth),
+    );
+    canvasContainer.style.setProperty(
+      "--project-screen-height",
+      String(screenHeight),
+    );
+  }
+
   const renderEngineState = (renderState) => {
     const nextRenderState = prepareRenderStateKeyboardForGraphics({
       renderState,
@@ -212,8 +224,8 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
   });
   await routeGraphics.loadAssets(assetBufferMap);
 
-  document.getElementById("canvas").appendChild(routeGraphics.canvas);
-  document.getElementById("canvas").addEventListener("contextmenu", (e) => {
+  canvasContainer?.appendChild(routeGraphics.canvas);
+  canvasContainer?.addEventListener("contextmenu", (e) => {
     e.preventDefault();
   });
 

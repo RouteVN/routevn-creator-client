@@ -2,17 +2,6 @@ import { nanoid } from "nanoid";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
-import { resetState } from "./animations.constants";
-
-const defaultInitialValues = {
-  x: 960,
-  y: 540,
-  alpha: 1,
-  scaleX: 1,
-  scaleY: 1,
-  translateX: 0,
-  translateY: 0,
-};
 
 const normalizeTween = (properties = {}) => {
   return Object.fromEntries(
@@ -49,6 +38,7 @@ const openAnimationDialog = async ({
   const resolvedDialogType =
     dialogType ??
     (itemData?.animation?.type === "transition" ? "transition" : "update");
+  const projectResolution = store.selectProjectResolution();
 
   store.openDialog({
     editMode,
@@ -77,12 +67,16 @@ const openAnimationDialog = async ({
     return;
   }
 
-  await graphicsService.init({ canvas });
-  graphicsService.render(resetState);
+  await graphicsService.init({
+    canvas,
+    width: projectResolution.width,
+    height: projectResolution.height,
+  });
+  graphicsService.render(store.selectAnimationResetState());
 };
 
 const {
-  handleBeforeMount,
+  handleBeforeMount: handleBeforeMountBase,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
@@ -91,16 +85,24 @@ const {
   handleSearchInput,
 } = createCatalogPageHandlers({
   resourceType: "animations",
+  onProjectStateChanged: ({ deps, repositoryState }) => {
+    deps.store.setProjectResolution({
+      projectResolution: repositoryState?.project?.resolution,
+    });
+  },
 });
 
 export {
-  handleBeforeMount,
   handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleAnimationItemClick,
   handleSearchInput,
+};
+
+export const handleBeforeMount = (deps) => {
+  return handleBeforeMountBase(deps);
 };
 
 export const handleAddAnimationClick = async (deps, payload) => {
@@ -300,12 +302,13 @@ export const handleAddPropertyFormSubmit = (deps, payload) => {
   } = store.selectPopover();
   const { property, initialValue, useInitialValue } =
     payload._event.detail.values;
+  const defaultInitialValue = store.selectDefaultInitialValue({ property });
 
   const finalInitialValue = useInitialValue
     ? initialValue !== undefined
       ? initialValue
-      : (defaultInitialValues[property] ?? 0)
-    : (defaultInitialValues[property] ?? 0);
+      : defaultInitialValue
+    : defaultInitialValue;
 
   store.addProperty({
     side,
@@ -517,7 +520,7 @@ export const handleReplayAnimation = async (deps) => {
     return;
   }
 
-  await graphicsService.render(resetState);
+  await graphicsService.render(store.selectAnimationResetState());
 
   setTimeout(() => {
     graphicsService.render(store.selectAnimationRenderStateWithAnimations());
@@ -531,9 +534,10 @@ export const handleEditInitialValueFormSubmit = (deps, payload) => {
   } = store.selectPopover();
 
   const { initialValue, valueSource } = payload._event.detail.values;
+  const defaultInitialValue = store.selectDefaultInitialValue({ property });
   const finalInitialValue =
     valueSource === "default" || initialValue === undefined
-      ? (defaultInitialValues[property] ?? 0)
+      ? defaultInitialValue
       : initialValue;
 
   store.updateInitialValue({

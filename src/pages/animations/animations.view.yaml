@@ -175,13 +175,13 @@ template:
                   - rtgl-view d=h av=c ah=sb mb=md:
                       - rtgl-text: Preview
                       - rtgl-button#replayButton s=sm ml=md: Play Animation
-                  - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: 16/9;"':
+                  - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: ${canvasAspectRatio};"':
                       - rtgl-view pos=abs cor=full:
                           - 'div#canvas style="width: 100%; height: 100%;display: flex;"': null
                 $else:
                   - rtgl-view d=h av=c ah=sb mb=md:
                       - rtgl-text: Preview
-                  - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: 16/9;"':
+                  - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: ${canvasAspectRatio};"':
                       - rtgl-view pos=abs cor=full: null
           - rtgl-popover#addPropertyPopover ?open=${popover.popoverIsOpen} x=${popover.x} y=${popover.y}:
               - $if popover.mode == 'addProperty':

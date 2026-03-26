@@ -15,7 +15,7 @@ import createRouteGraphics, {
 import createRouteEngine, { createEffectsHandler } from "route-engine-js";
 import { Ticker } from "pixi.js";
 import { prepareRenderStateKeyboardForGraphics } from "../../internal/project/layout.js";
-import { DEFAULT_PROJECT_RESOLUTION } from "../../internal/projectResolution.js";
+import { requireProjectResolution } from "../../internal/projectResolution.js";
 
 const cloneBufferForAudioDecode = (value) => {
   if (value instanceof ArrayBuffer) {
@@ -1063,8 +1063,14 @@ export const createGraphicsService = async ({ subject }) => {
       ticker = new Ticker();
       ticker.start();
       const { canvas, beforeHandleActions: onBeforeHandleActions } = options;
-      const renderWidth = options.width ?? DEFAULT_PROJECT_RESOLUTION.width;
-      const renderHeight = options.height ?? DEFAULT_PROJECT_RESOLUTION.height;
+      const { width: renderWidth, height: renderHeight } =
+        requireProjectResolution(
+          {
+            width: options.width,
+            height: options.height,
+          },
+          "Graphics runtime resolution",
+        );
       beforeHandleActions = onBeforeHandleActions;
       actionQueue = Promise.resolve();
       assetLoadQueue = Promise.resolve();

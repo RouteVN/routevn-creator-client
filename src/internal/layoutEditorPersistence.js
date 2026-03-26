@@ -227,6 +227,9 @@ export const syncLayoutEditorRepositoryState = ({
   );
   const layout = layoutId ? resourceCollection.items?.[layoutId] : undefined;
 
+  store.setProjectResolution({
+    projectResolution: repositoryState?.project?.resolution,
+  });
   store.setLayout({ id: layoutId, layout, resourceType });
   store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
   store.setImages({ images: images || { items: {}, tree: [] } });

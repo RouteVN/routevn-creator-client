@@ -242,6 +242,13 @@ export const handleAfterMount = async (deps) => {
   );
   const previewWidth = projectDataWithInitial?.screen?.width;
   const previewHeight = projectDataWithInitial?.screen?.height;
+  store.setProjectResolution({
+    projectResolution: {
+      width: previewWidth,
+      height: previewHeight,
+    },
+  });
+  deps.render();
   await graphicsService.init({
     canvas: canvas,
     beforeHandleActions,

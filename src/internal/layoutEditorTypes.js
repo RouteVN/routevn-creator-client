@@ -1,3 +1,8 @@
+import {
+  DEFAULT_PROJECT_RESOLUTION,
+  scaleLayoutElementItemForProjectResolution,
+} from "./projectResolution.js";
+
 const BASE_TRANSFORM = {
   x: 0,
   y: 0,
@@ -48,6 +53,18 @@ const CREATE_TEMPLATES = {
       align: "left",
     },
   }),
+  slider: () => ({
+    type: "slider",
+    name: "Slider",
+    ...BASE_TRANSFORM,
+    width: 400,
+    height: 20,
+    direction: "horizontal",
+    min: 0,
+    max: 100,
+    step: 1,
+    initialValue: 0,
+  }),
   "slider-horizontal": () => ({
     type: "slider",
     name: "Slider",
@@ -55,15 +72,10 @@ const CREATE_TEMPLATES = {
     width: 400,
     height: 20,
     direction: "horizontal",
-    thumbImageId: "slider_thumb_default",
-    barImageId: "slider_bar_default",
-    hoverThumbImageId: "slider_thumb_hover",
-    hoverBarImageId: "slider_bar_hover",
     min: 0,
     max: 100,
     step: 1,
     initialValue: 0,
-    variableId: "",
   }),
   "slider-vertical": () => ({
     type: "slider",
@@ -72,15 +84,10 @@ const CREATE_TEMPLATES = {
     width: 20,
     height: 400,
     direction: "vertical",
-    thumbImageId: "slider_thumb_default",
-    barImageId: "slider_bar_vertical",
-    hoverThumbImageId: "slider_thumb_hover",
-    hoverBarImageId: "slider_bar_vertical_hover",
     min: 0,
     max: 100,
     step: 1,
     initialValue: 0,
-    variableId: "",
   }),
   "text-dialogue-content": () => ({
     type: "text-revealing-ref-dialogue-content",
@@ -102,58 +109,74 @@ const CREATE_TEMPLATES = {
       align: "left",
     },
   }),
-  "container-dialogue-line": () => ({
-    type: "container-ref-dialogue-line",
-    name: "Container (Dialogue Line)",
-    ...BASE_TRANSFORM,
-    width: 1640,
-    height: 120,
-  }),
-  "text-dialogue-line-character-name": () => ({
-    type: "text-ref-dialogue-line-character-name",
-    name: "Text (Line Character Name)",
-    $when: "line.characterName",
-    ...BASE_TRANSFORM,
-    width: 280,
-    height: 40,
-    text: "text",
-    textStyle: {
-      wordWrapWidth: 300,
-      align: "left",
-    },
-  }),
-  "text-dialogue-line-content": () => ({
-    type: "text-ref-dialogue-line-content",
-    name: "Text (Line Content)",
-    ...BASE_TRANSFORM,
-    x: 0,
-    y: 44,
-    width: 1640,
-    height: 72,
-    text: "text",
-    textStyle: {
-      wordWrapWidth: 300,
-      align: "left",
-    },
-  }),
+  "container-dialogue-line": (projectResolution) =>
+    scaleLayoutElementItemForProjectResolution(
+      {
+        type: "container-ref-dialogue-line",
+        name: "Container (Dialogue Line)",
+        ...BASE_TRANSFORM,
+        width: 1640,
+        height: 120,
+      },
+      projectResolution,
+    ),
+  "text-dialogue-line-character-name": (projectResolution) =>
+    scaleLayoutElementItemForProjectResolution(
+      {
+        type: "text-ref-dialogue-line-character-name",
+        name: "Text (Line Character Name)",
+        $when: "line.characterName",
+        ...BASE_TRANSFORM,
+        width: 280,
+        height: 40,
+        text: "text",
+        textStyle: {
+          wordWrapWidth: 300,
+          align: "left",
+        },
+      },
+      projectResolution,
+    ),
+  "text-dialogue-line-content": (projectResolution) =>
+    scaleLayoutElementItemForProjectResolution(
+      {
+        type: "text-ref-dialogue-line-content",
+        name: "Text (Line Content)",
+        ...BASE_TRANSFORM,
+        x: 0,
+        y: 44,
+        width: 1640,
+        height: 72,
+        text: "text",
+        textStyle: {
+          wordWrapWidth: 300,
+          align: "left",
+        },
+      },
+      projectResolution,
+    ),
   "container-choice-item": () => ({
     type: "container-ref-choice-item",
     name: "Container (Choice Item)",
     ...BASE_TRANSFORM,
   }),
-  "text-choice-item-content": () => ({
-    type: "text-ref-choice-item-content",
-    name: "Text (Choice Item Content)",
-    ...BASE_TRANSFORM,
-    x: 960,
-    y: 24,
-    anchorX: 0.5,
-    text: "text",
-    textStyle: {
-      wordWrapWidth: 300,
-      align: "center",
-    },
-  }),
+  "text-choice-item-content": (projectResolution) =>
+    scaleLayoutElementItemForProjectResolution(
+      {
+        type: "text-ref-choice-item-content",
+        name: "Text (Choice Item Content)",
+        ...BASE_TRANSFORM,
+        x: 960,
+        y: 24,
+        anchorX: 0.5,
+        text: "text",
+        textStyle: {
+          wordWrapWidth: 300,
+          align: "center",
+        },
+      },
+      projectResolution,
+    ),
   rect: () => ({
     type: "rect",
     name: "Rect",
@@ -173,7 +196,44 @@ const createSliderSavedStateKey = (direction) => {
   return `_saved${resolvedDirection.charAt(0).toUpperCase()}${resolvedDirection.slice(1)}`;
 };
 
-const applySliderDirectionChange = ({ currentItem, nextItem, value }) => {
+const findImageIdByName = (imagesData, imageName) => {
+  if (!imageName) {
+    return undefined;
+  }
+
+  for (const [imageId, image] of Object.entries(imagesData?.items ?? {})) {
+    if (image?.type === "image" && image?.name === imageName) {
+      return imageId;
+    }
+  }
+
+  return undefined;
+};
+
+const resolveSliderDefaultImageIds = ({ direction, imagesData } = {}) => {
+  const resolvedDirection = resolveSliderDirection(direction);
+  return {
+    barImageId: findImageIdByName(
+      imagesData,
+      resolvedDirection === "vertical" ? "slider_bar_vertical" : "slider_bar",
+    ),
+    hoverBarImageId: findImageIdByName(
+      imagesData,
+      resolvedDirection === "vertical"
+        ? "slider_bar_vertical_hover"
+        : "slider_bar_hover",
+    ),
+    thumbImageId: findImageIdByName(imagesData, "slider_thumb"),
+    hoverThumbImageId: findImageIdByName(imagesData, "slider_thumb_hover"),
+  };
+};
+
+const applySliderDirectionChange = ({
+  currentItem,
+  nextItem,
+  value,
+  imagesData,
+}) => {
   const oldDirection = resolveSliderDirection(currentItem.direction);
   const newDirection = resolveSliderDirection(value);
 
@@ -198,16 +258,17 @@ const applySliderDirectionChange = ({ currentItem, nextItem, value }) => {
     return nextItem;
   }
 
-  if (newDirection === "vertical") {
-    nextItem.barImageId = "slider_bar_vertical";
-    nextItem.hoverBarImageId = "slider_bar_vertical_hover";
-  } else {
-    nextItem.barImageId = "slider_bar_default";
-    nextItem.hoverBarImageId = "slider_bar_hover";
-  }
-
-  nextItem.thumbImageId = "slider_thumb_default";
-  nextItem.hoverThumbImageId = "slider_thumb_hover";
+  const defaultImageIds = resolveSliderDefaultImageIds({
+    direction: newDirection,
+    imagesData,
+  });
+  nextItem.barImageId = defaultImageIds.barImageId ?? currentItem.barImageId;
+  nextItem.hoverBarImageId =
+    defaultImageIds.hoverBarImageId ?? currentItem.hoverBarImageId;
+  nextItem.thumbImageId =
+    defaultImageIds.thumbImageId ?? currentItem.thumbImageId;
+  nextItem.hoverThumbImageId =
+    defaultImageIds.hoverThumbImageId ?? currentItem.hoverThumbImageId;
   nextItem.width = currentItem.height;
   nextItem.height = currentItem.width;
 
@@ -215,11 +276,10 @@ const applySliderDirectionChange = ({ currentItem, nextItem, value }) => {
 };
 
 const applySliderVariableBindingChange = ({ nextItem, value }) => {
-  const variableId = value ?? "";
-
-  nextItem.variableId = variableId;
+  const variableId = value ?? undefined;
 
   if (variableId) {
+    nextItem.variableId = variableId;
     const updateVariableId = toAlphanumericId(`slider${nextItem.id}update`);
     nextItem.change = {
       payload: {
@@ -241,6 +301,7 @@ const applySliderVariableBindingChange = ({ nextItem, value }) => {
     return nextItem;
   }
 
+  delete nextItem.variableId;
   delete nextItem.change;
   const parsedMin = Number(nextItem.min);
   nextItem.initialValue = Number.isFinite(parsedMin) ? parsedMin : 0;
@@ -359,18 +420,19 @@ const TYPE_RULES = {
         return undefined;
       }
 
-      if (name === "variableId" && value === null) {
-        return "";
+      if (name === "variableId" && (value === null || value === "")) {
+        return undefined;
       }
 
       return value;
     },
-    applyFieldChange: ({ currentItem, nextItem, name, value }) => {
+    applyFieldChange: ({ currentItem, nextItem, name, value, imagesData }) => {
       if (name === "direction") {
         return applySliderDirectionChange({
           currentItem,
           nextItem,
           value,
+          imagesData,
         });
       }
 
@@ -400,9 +462,12 @@ export const isLayoutEditorContainerItemType = (itemType) => {
   return CONTAINER_TYPE_SET.has(itemType);
 };
 
-export const createLayoutEditorItemTemplate = (createType) => {
+export const createLayoutEditorItemTemplate = (
+  createType,
+  { projectResolution = DEFAULT_PROJECT_RESOLUTION } = {},
+) => {
   const templateFactory = CREATE_TEMPLATES[createType];
-  return templateFactory ? templateFactory() : {};
+  return templateFactory ? templateFactory(projectResolution) : {};
 };
 
 export const getLayoutEditorItemCapabilities = (itemType) => {

@@ -1,3 +1,8 @@
+import {
+  DEFAULT_PROJECT_RESOLUTION,
+  requireProjectResolution,
+} from "../../internal/projectResolution.js";
+
 export const handleAfterMount = async (deps) => {
   const { props, render, refs } = deps;
   const { item } = props;
@@ -16,7 +21,7 @@ export const handleAfterMount = async (deps) => {
 
   const canvas = refs.canvas;
   if (canvas) {
-    renderTransform(config, canvas);
+    renderTransform(config, canvas, props.resolution);
   }
 
   render();
@@ -40,13 +45,13 @@ export const handleOnUpdate = (deps, changes) => {
 
   const canvas = refs.canvas;
   if (canvas) {
-    renderTransform(config, canvas);
+    renderTransform(config, canvas, changes.newProps.resolution);
   }
 
   render();
 };
 
-function renderTransform(config, canvas) {
+function renderTransform(config, canvas, resolution) {
   const ctx = canvas.getContext("2d");
 
   // Get the actual display size of the canvas
@@ -68,10 +73,11 @@ function renderTransform(config, canvas) {
   ctx.fillStyle = "#4A4A4A";
   ctx.fillRect(0, 0, width, height);
 
-  // Convert coordinates from 1920x1080 reference to canvas dimensions
-  // TODO: get it from acutal config.
-  const scaleX = width / 1920;
-  const scaleY = height / 1080;
+  const projectResolution = requireProjectResolution(
+    resolution ?? DEFAULT_PROJECT_RESOLUTION,
+  );
+  const scaleX = width / projectResolution.width;
+  const scaleY = height / projectResolution.height;
   const canvasX = config.x * scaleX;
   const canvasY = config.y * scaleY;
 

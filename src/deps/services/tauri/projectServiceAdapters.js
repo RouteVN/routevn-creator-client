@@ -18,7 +18,10 @@ import {
   assertSupportedProjectState,
   createProjectCreateRepositoryEvent,
 } from "../shared/projectRepository.js";
-import { resolveProjectResolutionForWrite } from "../../../internal/projectResolution.js";
+import {
+  resolveProjectResolutionForWrite,
+  scaleTemplateProjectStateForResolution,
+} from "../../../internal/projectResolution.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
 const CREATOR_VERSION_KEY = "creatorVersion";
@@ -115,14 +118,15 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
       const filesPath = await join(projectPath, "files");
       await mkdir(filesPath, { recursive: true });
 
-      const templateData = await loadTemplate(template);
-      templateData.project = {
-        ...templateData.project,
-        resolution: resolveProjectResolutionForWrite({
-          projectResolution,
-          fallbackResolution: templateData.project?.resolution,
-        }),
-      };
+      const loadedTemplateData = await loadTemplate(template);
+      const resolvedProjectResolution = resolveProjectResolutionForWrite({
+        projectResolution,
+        fallbackResolution: loadedTemplateData.project?.resolution,
+      });
+      const templateData = scaleTemplateProjectStateForResolution(
+        loadedTemplateData,
+        resolvedProjectResolution,
+      );
       await copyTemplateFiles(template, filesPath);
 
       assertSupportedProjectState(templateData);

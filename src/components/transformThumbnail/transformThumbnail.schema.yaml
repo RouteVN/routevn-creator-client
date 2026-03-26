@@ -34,6 +34,20 @@ propsSchema:
           type: string
           description: Anchor point Y coordinate
           default: 0
+    resolution:
+      type: object
+      description: Project resolution used for coordinate scaling
+      properties:
+        width:
+          type: number
+          default: 1920
+        height:
+          type: number
+          default: 1080
+    canvasAspectRatio:
+      type: string
+      description: CSS aspect-ratio value for the thumbnail surface
+      default: '16 / 9'
     w:
       type: string
       description: Width of the transform thumbnail
