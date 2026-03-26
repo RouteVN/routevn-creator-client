@@ -4,7 +4,7 @@
   "workspaces": {
     "": {
       "dependencies": {
-        "@rettangoli/fe": "1.0.3",
+        "@rettangoli/fe": "1.1.0",
         "@rettangoli/ui": "1.0.15",
         "@rettangoli/vt": "1.0.2",
         "@routevn/creator-model": "1.1.4",
@@ -203,7 +203,7 @@
 
     "@polka/url": ["@polka/url@1.0.0-next.29", "", {}, "sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww=="],
 
-    "@rettangoli/fe": ["@rettangoli/fe@1.0.3", "", { "dependencies": { "immer": "^10.1.1", "jempl": "0.3.2-rc2", "js-yaml": "^4.1.0", "rxjs": "^7.8.2", "snabbdom": "^3.6.2", "vite": "^6.3.5" } }, "sha512-rTUEYTe1xjf8M0bSaioB/C8E9L0x/X4gze4mgo2FHLQjE97iDAUfrSOqtzr95HdPZnp5OaSQ+vN0g2xzj0idKw=="],
+    "@rettangoli/fe": ["@rettangoli/fe@1.1.0", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.0.1", "js-yaml": "^4.1.0", "snabbdom": "^3.6.2", "vite": "^6.3.5" } }, "sha512-rvSEQXbHt7jl9ewATduAuOUXVMO0ES8fG7i7cVpPR3SLSveKhG0k0X4v+v/SsdBEB+w2G6pfokG/atxwYfU9yw=="],
 
     "@rettangoli/ui": ["@rettangoli/ui@1.0.15", "", { "dependencies": { "@rettangoli/fe": "1.0.4", "jempl": "1.0.1" } }, "sha512-1PcLoXMPlomu1f/6pezpgGA42Tu8IvNPK6/u2DOGpAse34R6aHBJ8RiU4WueY0YP8t95BlziX2ArjVw+mjT+JA=="],
 
@@ -855,7 +855,7 @@
 
     "@pixi/utils/eventemitter3": ["eventemitter3@4.0.7", "", {}, "sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw=="],
 
-    "@rettangoli/fe/jempl": ["jempl@0.3.2-rc2", "", {}, "sha512-8t6P7vO46Er0cpG00nYlmBIZw/5MhKCNnE0WBm+ZWMaGqi/MCexe1/Bl7SlbFQjgKsFXVC3cdT/K+4PD0XHUVg=="],
+    "@rettangoli/fe/jempl": ["jempl@1.0.1", "", {}, "sha512-aeOlPrZV1KVhwtMYidkH1vGLlLrCTZ8fk3LlDxLGyTFsZUMHDtvSuqmrCimJL0u2LZFg1rtoE4/1NzGjwmIoUw=="],
 
     "@rettangoli/ui/@rettangoli/fe": ["@rettangoli/fe@1.0.4", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.0.1", "js-yaml": "^4.1.0", "snabbdom": "^3.6.2", "vite": "^6.3.5" } }, "sha512-kZ+t2wN00upyn0tSekTj+BJDR/Pg1g126/btUfxr1NEtVl1SaFi5zvqcoEmBEatdULdgbFvo79h9xiVQ/Uk6+A=="],
 

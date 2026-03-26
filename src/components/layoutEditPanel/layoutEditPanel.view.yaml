@@ -79,12 +79,12 @@ template:
                   - rtgl-view d=h av=c w=f:
                       - rtgl-text s=xs w=65: ${item.label}
                       - 'rtgl-view style="width: calc(100% - 65px);"':
-                          - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=#{item.value} :options=#{item.options}: null
+                          - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=${item.value} :options=${item.options}: null
                 $elif item.type == 'reveal-effect-select':
                   - rtgl-view d=h av=c w=f:
                       - rtgl-text s=xs w=65: ${item.label}
                       - 'rtgl-view style="width: calc(100% - 65px);"':
-                          - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=revealEffectValue :options=revealEffectOptions: null
+                          - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=${revealEffectValue} :options=${revealEffectOptions}: null
                 $elif item.type == 'list-item':
                   - $for listItem, k in item.items:
                       - rtgl-view#listItem${i}x${j}x${k} data-id=${listItem.id} data-interaction=${listItem.interactionType} d=h w=f g=md av=c p=md br=md bw=xs h-bgc=mu cur=pointer:
@@ -104,10 +104,10 @@ template:
                   - rtgl-view#groupItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                       - rtgl-text s=sm: ${item.value}
   - rtgl-view h=1 w=f bgc=mu mv=lg: null
-  - rvn-system-actions#systemActions :actions=actionsData actionType=system :hiddenModes=hiddenSystemActionModes: null
+  - rvn-system-actions#systemActions :actions=${actionsData} actionType=system :hiddenModes=${hiddenSystemActionModes}: null
   - rtgl-popover#popoverForm ?open=${popover.open} place=b x=${popover.x} y=${popover.y}:
       - $if popover.open:
-          - rtgl-form#form autofocus key=${popover.key} slot=content :form=popover.form :defaultValues=popover.defaultValues :context=popover.context: null
+          - rtgl-form#form autofocus key=${popover.key} slot=content :form=${popover.form} :defaultValues=${popover.defaultValues} :context=${popover.context}: null
   - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open}:
       - rtgl-view slot=content g=md:
           - rvn-image-selector#imageSelector: null

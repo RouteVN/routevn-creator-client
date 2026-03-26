@@ -47,7 +47,7 @@ template:
   - rtgl-view w=f h=f p=lg:
       - $if mode == 'current' && initiated:
           - rtgl-view d=h g=md:
-              - rtgl-breadcrumb#breadcrumb :items=breadcrumb: null
+              - rtgl-breadcrumb#breadcrumb :items=${breadcrumb}: null
           - rtgl-view g=md mt=md w=f:
               - $for operation, i in operations:
                   - rtgl-view#operation${i} data-operation-id=${operation.id} cur=pointer d=h av=c ah=c g=md p=md bgc=mu h-bgc=ac br=md w=f:
@@ -61,23 +61,23 @@ template:
               - rtgl-button#submitButton ?disabled=${!hasOperations}: Submit
       - $if mode == 'edit' && initiated:
           - rtgl-view d=h g=md:
-              - rtgl-breadcrumb#breadcrumb :items=breadcrumb: null
+              - rtgl-breadcrumb#breadcrumb :items=${breadcrumb}: null
           - rtgl-view g=md mt=md w=f:
               - rtgl-text s=sm c=mu-fg mb=sm: Variable
-              - rtgl-select#variableSelect w=f :selectedValue=tempOperation.variableId :options=variableOptions placeholder="Choose a variable...": null
+              - rtgl-select#variableSelect w=f :selectedValue=${tempOperation.variableId} :options=${variableOptions} placeholder="Choose a variable...": null
               - $if tempOperation.variableId:
                   - rtgl-text s=sm c=mu-fg mt=lg mb=sm: Operation
-                  - rtgl-select#operationSelect w=f :selectedValue=tempOperation.op :options=operationOptions placeholder="Choose an operation...": null
+                  - rtgl-select#operationSelect w=f :selectedValue=${tempOperation.op} :options=${operationOptions} placeholder="Choose an operation...": null
               - $if showValueField && valueInputType == 'number':
                   - rtgl-text s=sm c=mu-fg mt=lg mb=sm: Value
                   - rtgl-input#valueInput type=number w=f placeholder="Enter number..." value=${tempOperation.value}: null
               - $if showValueField && valueInputType == 'boolean':
                   - rtgl-text s=sm c=mu-fg mt=lg mb=sm: Value
-                  - rtgl-select#booleanSelect w=f :selectedValue=tempOperation.booleanValue :options=booleanOptions: null
+                  - rtgl-select#booleanSelect w=f :selectedValue=${tempOperation.booleanValue} :options=${booleanOptions}: null
               - $if showValueField && valueInputType == 'string':
                   - rtgl-text s=sm c=mu-fg mt=lg mb=sm: Value
                   - rtgl-input#valueInput w=f placeholder="Enter text..." value=${tempOperation.value}: null
           - rtgl-view h=1fg: null
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#saveOperationButton ?disabled=${!canSaveOperation}: Save Operation
-  - rtgl-dropdown-menu#dropdownMenu :items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
+  - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

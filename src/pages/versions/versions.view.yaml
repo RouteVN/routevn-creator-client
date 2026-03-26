@@ -33,7 +33,7 @@ template:
   - rtgl-view d=h w=f h=f:
       - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
           - rtgl-view slot="content" w=f h=f:
-              - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
+              - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
       - rtgl-view w=1fg p=lg d=v g=lg:
           - rtgl-text s=h2: Versions
           - rtgl-button#saveVersionBtn v=pr s=md: Create new version
@@ -57,5 +57,5 @@ template:
                               - rtgl-button#versionMoreBtnRef${i} data-version-id="${item.id}" v=gh sq pre=ellipsis: null
   - rtgl-dialog#versionDialog ?open=${showVersionForm} s=md:
       - rtgl-view slot=content w=f:
-          - rtgl-form#versionForm key=${showVersionForm} :defaultValues=versionFormData :form=versionForm w=f: null
-  - rtgl-dropdown-menu#dropdownMenu ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y} :items=dropdownMenu.items: null
+          - rtgl-form#versionForm key=${showVersionForm} :defaultValues=${versionFormData} :form=${versionForm} w=f: null
+  - rtgl-dropdown-menu#dropdownMenu ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y} :items=${dropdownMenu.items}: null

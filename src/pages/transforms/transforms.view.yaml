@@ -37,19 +37,19 @@ template:
       - rtgl-view d=h h=f w=f:
           - rvn-resizable-panel#fileExplorerPanel w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
-                  - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
-                  - rvn-base-file-explorer#fileExplorer :items=flatItems shrinkable dropdown-menu allowDrag :folderContextMenuItems=folderContextMenuItems :itemContextMenuItems=itemContextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
+                  - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
+                  - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
           - rtgl-view w=1fg h=f pl=sm:
-              - rvn-catalog-resources-view#groupview w=f h=f :navTitle=title :groups=catalogGroups :selectedItemId=selectedItemId :searchQuery=searchQuery :emptyMessage=emptyMessage :addText=addText :itemContextMenuItems=centerItemContextMenuItems: null
+              - rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} :groups=${catalogGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :emptyMessage=${emptyMessage} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
                       - rtgl-view d=v w=f h=f:
                           - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
                               - rtgl-text c=mu-fg: ${selectedItemName}
-                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=detailFields:
+                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
                               - $if selectedItem:
-                                  - rvn-transform-thumbnail slot="transform-preview" :item=selectedItem :resolution=projectResolution canvas-aspect-ratio="${canvasAspectRatio}" w=f h=180: null
+                                  - rvn-transform-thumbnail slot="transform-preview" :item=${selectedItem} :resolution=${projectResolution} canvas-aspect-ratio="${canvasAspectRatio}" w=f h=180: null
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
@@ -57,7 +57,7 @@ template:
       - rtgl-view slot="content" d=h lg-d=v ah=c g=lg w=f:
           - $if isDialogOpen:
               - rtgl-view w=4fg lg-w=f:
-                  - rtgl-form#transformForm :defaultValues=dialogDefaultValues :form=transformForm w=f: null
+                  - rtgl-form#transformForm :defaultValues=${dialogDefaultValues} :form=${transformForm} w=f: null
               - rtgl-view w=6fg lg-w=f d=v g=md:
                   - rtgl-text: Preview
                   - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: ${canvasAspectRatio};"':

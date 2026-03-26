@@ -26,16 +26,16 @@ refs:
 template:
   - rtgl-view w=f h=f p=lg:
       - rtgl-view d=h g=md:
-          - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
+          - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
       - rtgl-text: Conditional Logic Configuration
       - rtgl-view g=md:
           - rtgl-text: Condition Type
-          - rtgl-select#conditionTypeSelect w=f :selectedValue=conditionType :options=conditionTypeOptions: null
+          - rtgl-select#conditionTypeSelect w=f :selectedValue=${conditionType} :options=${conditionTypeOptions}: null
           - $if conditionType == 'variable':
               - rtgl-text: Variable
-              - rtgl-select#variableSelect w=f :selectedValue=selectedVariable :options=variableOptions: null
+              - rtgl-select#variableSelect w=f :selectedValue=${selectedVariable} :options=${variableOptions}: null
               - rtgl-text: Operator
-              - rtgl-select#operatorSelect w=f :selectedValue=operator :options=operatorOptions: null
+              - rtgl-select#operatorSelect w=f :selectedValue=${operator} :options=${operatorOptions}: null
               - rtgl-text: Value
               - rtgl-input#valueInput w=f placeholder="Enter value..." value=${comparisonValue}: null
           - rtgl-text: Preview

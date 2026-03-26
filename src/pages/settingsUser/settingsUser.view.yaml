@@ -8,7 +8,7 @@ template:
       - rtgl-view d=h h=f:
           - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
-                  - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
+                  - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
           - rtgl-view w=1fg h=f:
               - rtgl-view w=f h=f p=lg:
                   - rtgl-text s=h2: User Settings

@@ -6,4 +6,4 @@ refs:
       header-click:
         handler: handleHeaderClick
 template:
-  - rtgl-sidebar#sidebar mode=shrunk-lg :header=header :items=items :selectedItemId=selectedItemId: []
+  - rtgl-sidebar#sidebar mode=shrunk-lg :header=${header} :items=${items} :selectedItemId=${selectedItemId}: []

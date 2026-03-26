@@ -24,8 +24,8 @@ template:
               - $if isOtpStep || isRegisterStep:
                   - rtgl-text s=sm c=mu-fg mb=sm: ${requestedEmail}
               - $if isRequestOtpStep:
-                  - rtgl-form#requestOtpForm :form=requestOtpForm :defaultValues=requestOtpDefaultValues w=f: null
+                  - rtgl-form#requestOtpForm :form=${requestOtpForm} :defaultValues=${requestOtpDefaultValues} w=f: null
                 $elif isOtpStep:
-                  - rtgl-form#verifyOtpForm :form=verifyOtpForm :defaultValues=verifyOtpDefaultValues w=f: null
+                  - rtgl-form#verifyOtpForm :form=${verifyOtpForm} :defaultValues=${verifyOtpDefaultValues} w=f: null
                 $elif isRegisterStep:
-                  - rtgl-form#registerForm :form=registerForm :defaultValues=registerDefaultValues w=f: null
+                  - rtgl-form#registerForm :form=${registerForm} :defaultValues=${registerDefaultValues} w=f: null

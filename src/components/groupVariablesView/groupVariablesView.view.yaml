@@ -116,5 +116,5 @@ template:
   - $if !readonly:
       - rtgl-dialog#addVariableDialog s=md ?open=${isDialogOpen}:
           - rtgl-view slot=content g=md:
-              - rtgl-form#variableForm key=${dialogKey} :defaultValues=defaultValues :form=form w=f :context=context: null
-      - rtgl-dropdown-menu#contextMenu :items=dropdownMenu.items ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}: null
+              - rtgl-form#variableForm key=${dialogKey} :defaultValues=${defaultValues} :form=${form} w=f :context=${context}: null
+      - rtgl-dropdown-menu#contextMenu :items=${dropdownMenu.items} ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}: null

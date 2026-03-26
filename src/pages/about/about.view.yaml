@@ -16,7 +16,7 @@ template:
       - rtgl-view d=h h=f:
           - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
-                  - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
+                  - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
           - rtgl-view w=1fg h=f p=lg d=v:
               - rtgl-text s=h2: About
               - rtgl-view g=xl mt=lg h=1fg:

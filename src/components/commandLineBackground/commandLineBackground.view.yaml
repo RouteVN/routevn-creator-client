@@ -42,9 +42,9 @@ refs:
 template:
   - rtgl-view w=f h=f p=lg:
       - rtgl-view d=h g=md: null
-      - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
+      - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
       - $if mode == 'current':
-          - rtgl-form#form :form=dialogueForm.form :defaultValues=dialogueForm.defaultValues:
+          - rtgl-form#form :form=${dialogueForm.form} :defaultValues=${dialogueForm.defaultValues}:
               - $if selectedResource:
                   - $if selectedResource.resourceType == 'image':
                       - rvn-file-image#backgroundImage fileId=${selectedResource.fileId} w=355 h=200 slot=background cur=pointer: null
@@ -68,10 +68,10 @@ template:
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#submitButton: Submit
       - $if mode == 'gallery':
-          - rtgl-tabs#tabs selected-tab=${tab} :items=tabs: null
+          - rtgl-tabs#tabs selected-tab=${tab} :items=${tabs}: null
           - 'rtgl-view d=h w=f g=lg mt=sm h=1fg style="min-height: 0;"':
               - rtgl-view h=f w=1fg sv:
-                  - rvn-base-file-explorer#baseFileExplorer :items=items: null
+                  - rvn-base-file-explorer#baseFileExplorer :items=${items}: null
               - rtgl-view h=f w=2fg sv g=lg:
                   - $if tab == 'image':
                       - rvn-image-selector#rvnImageSelector selectedImageId=${tempSelectedResourceId}: null

@@ -87,14 +87,14 @@ template:
           - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
                   - rtgl-text ml=lg s=sm c=mu-fg mv=md: Scenes
-                  - rvn-base-file-explorer#fileexplorer :items=flatItems shrinkable dropdown-menu allowDrag :folderContextMenuItems=folderContextMenuItems :itemContextMenuItems=itemContextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
+                  - rvn-base-file-explorer#fileexplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
           - rtgl-view w=1fg h=f:
-              - rvn-whiteboard#whiteboard :items=whiteboardItems :cursor=whiteboardCursor :selectedItemId=selectedItemId: null
+              - rvn-whiteboard#whiteboard :items=${whiteboardItems} :cursor=${whiteboardCursor} :selectedItemId=${selectedItemId}: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
                       - rtgl-view d=v w=f h=f:
-                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=detailFields:
+                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
                               - rtgl-button#openSceneButton slot="open-action" data-scene-id="${selectedItemId}": Open
                               - rtgl-button#previewButton slot="preview" data-scene-id="${selectedItemId}": Preview
                               - rtgl-view slot="sections-list" d=v w=f g=sm:
@@ -121,11 +121,11 @@ template:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
       - rtgl-popover#sceneFormPopover ?open=${showSceneForm} x=${sceneFormPosition.x} y=${sceneFormPosition.y}:
-          - rtgl-form#sceneForm key=${sceneFormKey} slot=content :defaultValues=sceneFormData :form=sceneFormFields w=320: null
+          - rtgl-form#sceneForm key=${sceneFormKey} slot=content :defaultValues=${sceneFormData} :form=${sceneFormFields} w=320: null
       - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
           - rtgl-view slot=content g=md:
-              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=editDefaultValues :form=editForm w=f: null
-      - rtgl-dropdown-menu#dropdownMenu :items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
+              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f: null
+      - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
       - rtgl-tooltip ?open=${deadEndTooltip.open} x=${deadEndTooltip.x} y=${deadEndTooltip.y} place="t" content="${deadEndTooltip.content}": null
       - $if showMapAddHint:
           - 'rtgl-view pos=abs z=150 style="left: 50%; bottom: 24px; transform: translateX(-50%);"':
