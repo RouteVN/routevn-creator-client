@@ -1184,6 +1184,10 @@ export const handleSectionCreateFormActionClick = async (deps, payload) => {
         deps,
         nextSectionName,
         syncStoreProjectState,
+        {
+          inheritPresentationFromSelectedLine:
+            values.inheritPresentationFromSelectedLine ?? true,
+        },
       );
       reconcileCurrentEditorSession(deps);
       render();

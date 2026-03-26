@@ -103,12 +103,37 @@ export const reconcileSceneEditorSelection = (store) => {
   };
 };
 
+const createInheritedPresentationActions = (presentationState = {}) => {
+  const actions = {};
+
+  for (const [key, value] of Object.entries(presentationState || {})) {
+    if (value === undefined) {
+      continue;
+    }
+
+    if (key === "dialogue" && value && typeof value === "object") {
+      const dialogue = structuredClone(value);
+      if (dialogue.clear !== true) {
+        dialogue.content = [{ text: "" }];
+      }
+      actions.dialogue = dialogue;
+      continue;
+    }
+
+    actions[key] = structuredClone(value);
+  }
+
+  return actions;
+};
+
 export const createSceneEditorSectionWithName = async (
   deps,
   sectionName,
   syncProjectState,
+  options = {},
 ) => {
   const { store, projectService, render } = deps;
+  const { inheritPresentationFromSelectedLine = true } = options;
   const sceneId = store.selectSceneId();
   const newSectionId = nanoid();
   const newLineId = nanoid();
@@ -139,7 +164,7 @@ export const createSceneEditorSectionWithName = async (
     }
   }
 
-  const actions = {
+  const defaultActions = {
     dialogue: dialogueLayoutId
       ? {
           ui: {
@@ -155,11 +180,19 @@ export const createSceneEditorSectionWithName = async (
   };
 
   if (controlId) {
-    actions.control = {
+    defaultActions.control = {
       resourceId: controlId,
       resourceType: "control",
     };
   }
+
+  const inheritedActions = inheritPresentationFromSelectedLine
+    ? createInheritedPresentationActions(store.getState()?.presentationState)
+    : {};
+  const actions =
+    Object.keys(inheritedActions).length > 0
+      ? inheritedActions
+      : defaultActions;
 
   await projectService.createSectionItem({
     sceneId,

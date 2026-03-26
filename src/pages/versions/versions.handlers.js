@@ -21,6 +21,12 @@ export const handleDataChanged = () => {};
 
 export const handleSaveVersionClick = (deps) => {
   const { store, render } = deps;
+  store.setVersionFormData({
+    data: {
+      name: "",
+      notes: "",
+    },
+  });
   store.setShowVersionForm({ show: true });
   render();
 };
@@ -51,6 +57,7 @@ export const handleVersionFormAction = async (deps, payload) => {
     const newVersion = {
       id: nanoid(),
       name: formData.name,
+      notes: formData.notes ?? "",
       actionIndex: currentActionIndex,
       createdAt: new Date().toISOString(),
     };

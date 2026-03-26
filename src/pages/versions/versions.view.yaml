@@ -11,7 +11,7 @@ refs:
     eventListeners:
       form-action:
         handler: handleVersionFormAction
-  versionFormPopover:
+  versionDialog:
     eventListeners:
       close:
         handler: handleVersionFormClose
@@ -48,11 +48,14 @@ template:
                       - rtgl-view h=auto w=f bw=xs pt=md pb=sm ph=lg d=h av=c:
                           - rtgl-view w=1fg d=v g=xs:
                               - rtgl-text s=lg: ${item.name}
+                              - $if item.notes:
+                                  - rtgl-text s=sm c=mu-fg: ${item.notes}
                               - rtgl-view d=h g=sm av=c:
                                   - rtgl-text s=xs c=mu-fg: Action ${item.actionIndex} • ${item.formattedCreatedAt}
                                   - rtgl-button#versionDownloadRef${i} data-version-id="${item.id}" v=gh s=sm pre=download: Download Zip
                           - rtgl-view d=v g=xs:
                               - rtgl-button#versionMoreBtnRef${i} data-version-id="${item.id}" v=gh sq pre=ellipsis: null
-      - rtgl-popover#versionFormPopover ?open=${showVersionForm} x=300 y=100:
-          - rtgl-form#versionForm key=${showVersionForm} slot=content :form=versionFormFields w=320: null
+  - rtgl-dialog#versionDialog ?open=${showVersionForm} s=md:
+      - rtgl-view slot=content w=f:
+          - rtgl-form#versionForm key=${showVersionForm} :defaultValues=versionFormData :form=versionForm w=f: null
   - rtgl-dropdown-menu#dropdownMenu ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y} :items=dropdownMenu.items: null
