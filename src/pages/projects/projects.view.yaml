@@ -181,9 +181,9 @@ template:
                                   - rtgl-view h="33vh": null
   - rtgl-dialog#createProjectDialog ?open=${isOpen} s=md:
       - rtgl-view slot=content g=md:
-          - rtgl-form#form key=${createProjectFormKey} :defaultValues=defaultValues :form=form :context=context w=f:
+          - rtgl-form#form key=${createProjectFormKey} :defaultValues=${defaultValues} :form=${form} :context=${context} w=f:
               - rtgl-view w=f slot=project-path-selector d=h g=sm av=c:
-                  - rtgl-input#pathInput w=f :value=projectPathDisplay disabled=true placeholder="No folder selected": null
+                  - rtgl-input#pathInput w=f :value=${projectPathDisplay} disabled=true placeholder="No folder selected": null
                   - rtgl-button#browseButton variant=se: Browse
   - rtgl-dialog#deleteProjectDialog ?open=${deleteDialog.isOpen} s=sm:
       - rtgl-view slot=content g=lg p=lg:
@@ -195,19 +195,19 @@ template:
               - rtgl-button#deleteConfirmButton v=pr: ${deleteDialogConfirmLabel}
   - rtgl-dialog#cloudCreateProjectDialog ?open=${cloudCreateDialog.isOpen} s=md:
       - rtgl-view slot=content w=f p=lg:
-          - rtgl-form#cloudCreateForm key=${cloudCreateDialog.formKey} :form=cloudCreateForm :defaultValues=cloudCreateDialog.defaultValues w=f: null
+          - rtgl-form#cloudCreateForm key=${cloudCreateDialog.formKey} :form=${cloudCreateForm} :defaultValues=${cloudCreateDialog.defaultValues} w=f: null
   - rtgl-dialog#addMemberDialog ?open=${addMemberDialog.isOpen} s=md:
       - rtgl-view slot=content w=f p=lg:
-          - rtgl-form#addMemberForm key=${addMemberDialog.formKey} :form=addMemberForm :defaultValues=addMemberDialog.defaultValues w=f: null
-  - rtgl-dropdown-menu#dropdownMenu ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y} :items=dropdownMenu.items: null
-  - rtgl-dropdown-menu#profileDropdownMenu ?open=${profileMenu.isOpen} x=${profileMenu.x} y=${profileMenu.y} :items=profileMenu.items: null
+          - rtgl-form#addMemberForm key=${addMemberDialog.formKey} :form=${addMemberForm} :defaultValues=${addMemberDialog.defaultValues} w=f: null
+  - rtgl-dropdown-menu#dropdownMenu ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y} :items=${dropdownMenu.items}: null
+  - rtgl-dropdown-menu#profileDropdownMenu ?open=${profileMenu.isOpen} x=${profileMenu.x} y=${profileMenu.y} :items=${profileMenu.items}: null
   - rtgl-dialog#editProfileDialog ?open=${profileDialog.isOpen} s=f:
       - rtgl-view slot=content w=f h=f p=xl:
           - rtgl-view w=f h=f ah=c av=s:
               - rtgl-view w=560 sm-w=f:
-                  - rtgl-form#profileForm key=${profileDialog.formKey} :form=profileDialogForm :defaultValues=profileDialog.defaultValues w=f: null
+                  - rtgl-form#profileForm key=${profileDialog.formKey} :form=${profileDialogForm} :defaultValues=${profileDialog.defaultValues} w=f: null
   - rtgl-dialog#settingsDialog ?open=${settingsDialog.isOpen} s=f:
       - rtgl-view slot=content w=f h=f p=xl:
           - rtgl-view w=f h=f ah=c av=s:
               - rtgl-view w=560 sm-w=f:
-                  - rtgl-form#settingsForm key=${settingsDialog.formKey} :form=settingsDialogForm :defaultValues=settingsDialog.defaultValues w=f: null
+                  - rtgl-form#settingsForm key=${settingsDialog.formKey} :form=${settingsDialogForm} :defaultValues=${settingsDialog.defaultValues} w=f: null

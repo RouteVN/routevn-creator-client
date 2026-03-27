@@ -142,7 +142,7 @@ template:
                           - rtgl-text s=sm: ...
                       - rtgl-view w=1fg: null
                   - rtgl-view w=f p=md sv h=1fg:
-                      - rvn-lines-editor#linesEditor :lines=currentLines :selectedLineId=selectedLineId :keyboardHandlingDisabled=previewVisible: null
+                      - rvn-lines-editor#linesEditor :lines=${currentLines} :selectedLineId=${selectedLineId} :keyboardHandlingDisabled=${previewVisible}: null
                       - rtgl-view h=30vh: null
           - rtgl-view w=1 h=f bgc=mu: null
           - rtgl-view w=f:
@@ -157,13 +157,13 @@ template:
                   - rtgl-view d=h av=c:
                       - rtgl-text s=sm c=mu-fg: State
                   - rtgl-view g=md w=f pv=md:
-                      - rvn-system-actions#systemActions :showSelected=true :actions=selectedLineActions :selectedLineId=selectedLineId :selectedLine=selectedLine :currentSceneId=scene.id actionType=presentation :presentationState=presentationState: null
-  - rtgl-dropdown-menu#dropdownMenu :items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
+                      - rvn-system-actions#systemActions :showSelected=${true} :actions=${selectedLineActions} :selectedLineId=${selectedLineId} :selectedLine=${selectedLine} :currentSceneId=${scene.id} actionType=presentation :presentationState=${presentationState}: null
+  - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
   - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
-      - rtgl-form#form slot=content :form=form: null
+      - rtgl-form#form slot=content :form=${form}: null
   - rtgl-dialog#sectionCreateDialog ?open=${sectionCreateDialog.isOpen} s=md:
       - rtgl-view slot=content g=md:
-          - rtgl-form#sectionCreateForm key=${sectionCreateDialog.formKey} :form=sectionCreateForm :defaultValues=sectionCreateDialog.defaultValues w=f: null
+          - rtgl-form#sectionCreateForm key=${sectionCreateDialog.formKey} :form=${sectionCreateForm} :defaultValues=${sectionCreateDialog.defaultValues} w=f: null
   - rtgl-dialog#sectionsOverviewDialog ?open=${sectionsOverviewOpen} s=md:
       - rtgl-view slot=content w=f p=lg br=md:
           - rtgl-text s=sm c=mu-fg: Sections

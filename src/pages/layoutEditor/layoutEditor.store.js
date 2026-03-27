@@ -1,6 +1,9 @@
 import { toFlatItems } from "../../internal/project/tree.js";
 import { parseAndRender } from "jempl";
-import { createLayoutEditorItemTemplate } from "../../internal/layoutEditorTypes.js";
+import {
+  createLayoutEditorItemTemplate,
+  isLayoutEditorContainerItemType,
+} from "../../internal/layoutEditorTypes.js";
 import {
   DEFAULT_PROJECT_RESOLUTION,
   formatProjectResolutionAspectRatio,
@@ -28,6 +31,16 @@ const toLayoutEditorContextMenuItems = (
       },
     };
   });
+};
+
+const toLayoutEditorExplorerItems = (items = []) => {
+  return (items ?? []).map((item) => ({
+    ...item,
+    dragOptions: {
+      ...item.dragOptions,
+      canReceiveChildren: isLayoutEditorContainerItemType(item.type),
+    },
+  }));
 };
 
 export const createInitialState = () => ({
@@ -369,7 +382,7 @@ export const selectSelectedItem = ({ state }) => {
     return undefined;
   }
 
-  const flatItems = toFlatItems(state.layoutData);
+  const flatItems = toLayoutEditorExplorerItems(toFlatItems(state.layoutData));
   const item = flatItems.find((entry) => entry.id === state.selectedItemId);
   if (!item) {
     return undefined;
@@ -438,7 +451,7 @@ export const selectVariablesData = ({ state }) => {
 
 export const selectViewData = ({ state, constants }) => {
   const item = selectSelectedItem({ state });
-  const flatItems = toFlatItems(state.layoutData);
+  const flatItems = toLayoutEditorExplorerItems(toFlatItems(state.layoutData));
   const isControlResource = state.layout?.resourceType === "controls";
   const layoutType = state.layout?.layoutType;
 

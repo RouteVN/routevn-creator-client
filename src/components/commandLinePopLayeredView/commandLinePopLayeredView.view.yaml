@@ -10,7 +10,7 @@ refs:
 template:
   - $if mode == 'current' && initiated:
       - rtgl-view g=md w=f:
-          - rtgl-breadcrumb#breadcrumb :items=breadcrumb: null
+          - rtgl-breadcrumb#breadcrumb :items=${breadcrumb}: null
           - rtgl-text s=sm: Pop the current layered view and return to the previous view.
           - rtgl-view d=h g=md w=f ah=e mt=lg:
               - rtgl-button#submitButton variant=pr: Submit

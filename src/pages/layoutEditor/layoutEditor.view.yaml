@@ -74,8 +74,8 @@ template:
       - rtgl-view d=h h=f:
           - rvn-resizable-panel w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
-                  - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
-                  - rvn-base-file-explorer#fileExplorer :items=flatItems shrinkable dropdown-menu allowDrag :contextMenuItems=contextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
+                  - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
+                  - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :contextMenuItems=${contextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
       - rtgl-view w=1fg h=f:
           - rtgl-view h=48 bwb=xs bc=bo d=h av=c w=f ph=md:
               - rtgl-button#backButton sq pre="chevronLeft" v="gh" mr=sm: null
@@ -86,27 +86,27 @@ template:
                   - rtgl-view pos=abs cor=full:
                       - 'div#canvas style="width: 100%; height: 100%;display: flex; cursor: ${canvasCursor}"': null
               - $if layout.layoutType == 'dialogue' || layout.layoutType == 'nvl':
-                  - rtgl-form#dialogueForm w=f :form=dialogueForm :defaultValues=dialogueDefaultValues: null
+                  - rtgl-form#dialogueForm w=f :form=${dialogueForm} :defaultValues=${dialogueDefaultValues}: null
               - $if layout.layoutType == 'dialogue':
                   - rtgl-view d=h av=c g=sm w=f ph=md pb=md:
                       - rtgl-text s=sm c=mu-fg: Revealing Speed
                       - rtgl-input#revealingSpeedInput type=number min=1 step=1 w=120 value=${previewRevealingSpeed}: null
                       - rtgl-button#playPreviewButton v=ol: Play
               - $if layout.layoutType == 'choice':
-                  - rtgl-form#choiceForm w=f :form=choiceForm :defaultValues=choiceDefaultValues :context=choicesContext: null
+                  - rtgl-form#choiceForm w=f :form=${choiceForm} :defaultValues=${choiceDefaultValues} :context=${choicesContext}: null
       - rvn-resizable-panel#resizableDetailPanel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
           - rtgl-view wh=f slot="content":
               - $if selectedItemId:
                   - rtgl-view h=48 w=f av=c ph=md:
                       - rtgl-text c=mu-fg: ${item.name} (${item.type})
                   - rtgl-view w=f h=1fg sv pv=md:
-                      - rvn-layout-edit-panel#layoutEditPanel key=${layoutEditPanelKey} layout-type=${layout.layoutType} resource-type=${layout.resourceType} item-type=${item.type} :values=item :textStylesData=textStylesData :variablesData=variablesData: null
+                      - rvn-layout-edit-panel#layoutEditPanel key=${layoutEditPanelKey} layout-type=${layout.layoutType} resource-type=${layout.resourceType} item-type=${item.type} :values=${item} :textStylesData=${textStylesData} :variablesData=${variablesData}: null
                 $else:
                   - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                       - rtgl-text s=md c=mu-fg: No selection
   - rtgl-dialog#sliderCreateDialog ?open=${sliderCreateDialog.open} s=md:
       - rtgl-view slot=content g=md:
-          - rtgl-form#sliderCreateForm :defaultValues=sliderCreateDialog.defaultValues :form=sliderCreateForm w=f:
+          - rtgl-form#sliderCreateForm :defaultValues=${sliderCreateDialog.defaultValues} :form=${sliderCreateForm} w=f:
               - rtgl-view slot=slider-bar-image d=h g=sm av=c:
                   - rtgl-view#sliderCreateImageFieldBar data-field-name=barImageId w=280 h=84 bw=xs bc=bo br=md cur=pointer av=c ah=c:
                       - $if sliderCreateDialog.images.barImageId:

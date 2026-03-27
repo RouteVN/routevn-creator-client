@@ -4,6 +4,7 @@ import {
   getTextStyleCount,
   getTextStyleRemovalCount,
 } from "../../constants/textStyles.js";
+import { canItemReceiveChildren } from "../fileExplorerDragOptions.js";
 import { recursivelyCheckResource } from "../project/projection.js";
 
 const isTextElementType = (type) =>
@@ -33,7 +34,7 @@ const resolveExplorerMove = (detail = {}) => {
   }
 
   if (position === "inside") {
-    if (target?.type !== "folder") {
+    if (!canItemReceiveChildren(target)) {
       return null;
     }
 

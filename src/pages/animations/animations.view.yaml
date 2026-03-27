@@ -121,10 +121,10 @@ template:
       - rtgl-view d=h h=f w=f:
           - rvn-resizable-panel#fileExplorerPanel w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
-                  - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
-                  - rvn-base-file-explorer#fileExplorer :items=flatItems shrinkable dropdown-menu allowDrag :folderContextMenuItems=folderContextMenuItems :itemContextMenuItems=itemContextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
+                  - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
+                  - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
           - rtgl-view w=1fg h=f pl=sm:
-              - rvn-catalog-resources-view#groupview w=f h=f :navTitle=title :groups=catalogGroups :selectedItemId=selectedItemId :searchQuery=searchQuery :addText=addText :itemContextMenuItems=centerItemContextMenuItems: null
+              - rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} :groups=${catalogGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
@@ -144,14 +144,14 @@ template:
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
-  - rtgl-dropdown-menu#createTypeMenu :items=createTypeMenu.items ?open=${createTypeMenu.isOpen} x=${createTypeMenu.x} y=${createTypeMenu.y}: null
+  - rtgl-dropdown-menu#createTypeMenu :items=${createTypeMenu.items} ?open=${createTypeMenu.isOpen} x=${createTypeMenu.x} y=${createTypeMenu.y}: null
   - rtgl-dialog#addAnimationDialog ?open=${isDialogOpen} s=lg:
       - rtgl-view slot=content d=h lg-d=v g=md:
           - rtgl-view w=4fg lg-w=f:
-              - rtgl-form#animationForm key=${dialogFormKey} :defaultValues=dialogDefaultValues :form=dialogForm w=f:
+              - rtgl-form#animationForm key=${dialogFormKey} :defaultValues=${dialogDefaultValues} :form=${dialogForm} w=f:
                   - $if dialogType == 'update':
                       - rtgl-view slot=timeline w=f:
-                          - rvn-keyframe-timeline#updateTimeline editable=true side=update :properties=updateProperties :defaultValues=updateTimelineDefaultValues: null
+                          - rvn-keyframe-timeline#updateTimeline editable=true side=update :properties=${updateProperties} :defaultValues=${updateTimelineDefaultValues}: null
                           - rtgl-view d=h g=md av=c mb=md w=f mt=lg:
                               - $if updateAddPropertyButtonVisible:
                                   - rtgl-button#addPropertiesButton data-side=update w=f v=se s=sm: + Add animation property
@@ -160,12 +160,12 @@ template:
                           - rtgl-view d=h w=f:
                               - rtgl-view w=f ah=e:
                                   - rtgl-text s=sm: 'Total duration: ${transitionTimelineDurationLabel}'
-                          - rvn-keyframe-timeline#previousTimeline editable=true side=prev ?showTotalDuration=false timelineDuration=${transitionTimelineDuration} :properties=previousProperties :defaultValues=transitionTimelineDefaultValues: null
+                          - rvn-keyframe-timeline#previousTimeline editable=true side=prev ?showTotalDuration=false timelineDuration=${transitionTimelineDuration} :properties=${previousProperties} :defaultValues=${transitionTimelineDefaultValues}: null
                           - rtgl-view d=h g=md av=c mb=md w=f mt=lg:
                               - $if previousAddPropertyButtonVisible:
                                   - rtgl-button#previousAddPropertiesButton data-side=prev w=f v=se s=sm: + Add animation property
                       - rtgl-view slot=nextTimeline w=f:
-                          - rvn-keyframe-timeline#nextTimeline editable=true side=next ?showTotalDuration=false timelineDuration=${transitionTimelineDuration} :properties=nextProperties :defaultValues=transitionTimelineDefaultValues: null
+                          - rvn-keyframe-timeline#nextTimeline editable=true side=next ?showTotalDuration=false timelineDuration=${transitionTimelineDuration} :properties=${nextProperties} :defaultValues=${transitionTimelineDefaultValues}: null
                           - rtgl-view d=h g=md av=c mb=md w=f mt=lg:
                               - $if nextAddPropertyButtonVisible:
                                   - rtgl-button#nextAddPropertiesButton data-side=next w=f v=se s=sm: + Add animation property
@@ -185,11 +185,11 @@ template:
                       - rtgl-view pos=abs cor=full: null
           - rtgl-popover#addPropertyPopover ?open=${popover.popoverIsOpen} x=${popover.x} y=${popover.y}:
               - $if popover.mode == 'addProperty':
-                  - rtgl-form#addPropertyForm slot=content :form=addPropertyForm :context=addPropertyContext :defaultValues=addPropertyFormDefaultValues: null
+                  - rtgl-form#addPropertyForm slot=content :form=${addPropertyForm} :context=${addPropertyContext} :defaultValues=${addPropertyFormDefaultValues}: null
               - $if popover.mode == 'addKeyframe':
-                  - rtgl-form#addKeyframeForm slot=content :form=addKeyframeForm :defaultValues=addKeyframeDefaultValues: null
+                  - rtgl-form#addKeyframeForm slot=content :form=${addKeyframeForm} :defaultValues=${addKeyframeDefaultValues}: null
               - $if popover.mode == 'editKeyframe':
-                  - rtgl-form#editKeyframeForm slot=content :form=updateKeyframeForm :defaultValues=editKeyframeDefaultValues: null
+                  - rtgl-form#editKeyframeForm slot=content :form=${updateKeyframeForm} :defaultValues=${editKeyframeDefaultValues}: null
               - $if popover.mode == 'editInitialValue':
-                  - rtgl-form#editInitialValueForm slot=content :form=editInitialValueForm :defaultValues=editInitialValueDefaultValues :context=editInitialValueContext: null
-          - rtgl-dropdown-menu#keyframeDropdownMenu :items=keyframeDropdownItems ?open=${popover.dropdownMenuIsOpen} x=${popover.x} y=${popover.y}: null
+                  - rtgl-form#editInitialValueForm slot=content :form=${editInitialValueForm} :defaultValues=${editInitialValueDefaultValues} :context=${editInitialValueContext}: null
+          - rtgl-dropdown-menu#keyframeDropdownMenu :items=${keyframeDropdownItems} ?open=${popover.dropdownMenuIsOpen} x=${popover.x} y=${popover.y}: null

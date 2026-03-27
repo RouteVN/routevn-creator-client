@@ -43,7 +43,7 @@ template:
   - rtgl-view w=f h=f p=lg:
       - $if mode == 'current':
           - rtgl-view d=h g=md:
-              - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
+              - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
           - rtgl-view h=1fg sv w=f:
               - rtgl-view g=md w=f:
                   - $for visual, i in defaultValues.visuals:
@@ -59,13 +59,13 @@ template:
                                   - rtgl-text s=xs c=mu-fg ah=c: (${visual.resourceType})
                           - rtgl-view w=1fg g=sm:
                               - rtgl-text s=sm c=mu-fg: Transform
-                              - rtgl-select#transform${i} :options=defaultValues.transformOptions :selectedValue=defaultValues.visuals[${i}].transformId w=f: null
+                              - rtgl-select#transform${i} :options=${defaultValues.transformOptions} :selectedValue=${defaultValues.visuals[i].transformId} w=f: null
                   - rtgl-button#addVisualButton v=ol w=f mt=md: + Add Visual
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#submitButton: Submit
       - $if mode == 'resource-select':
           - rtgl-view d=h g=md:
-              - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
+              - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
           - 'rtgl-view d=h w=f g=lg h=1fg style="min-height: 0;"':
               - rtgl-view h=f w=1fg sv g=lg:
                   - $for group, i in resourceGroups:
@@ -82,4 +82,4 @@ template:
                                       - rtgl-text s=sm ah=c ellipsis=true: ${item.name}
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#buttonSelect: Select
-  - rtgl-dropdown-menu#dropdownMenu :items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
+  - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

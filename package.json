@@ -16,8 +16,8 @@
   ],
   "type": "module",
   "dependencies": {
-    "@rettangoli/fe": "1.0.3",
-    "@rettangoli/ui": "1.0.15",
+    "@rettangoli/fe": "1.1.0",
+    "@rettangoli/ui": "1.0.16",
     "@rettangoli/vt": "1.0.2",
     "@routevn/creator-model": "1.1.4",
     "@tauri-apps/api": "^2.8.0",

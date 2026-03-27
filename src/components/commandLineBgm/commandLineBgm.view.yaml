@@ -34,9 +34,9 @@ refs:
 template:
   - rtgl-view w=f h=f p=lg:
       - rtgl-view d=h g=md: null
-      - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
+      - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
       - $if mode == 'current':
-          - rtgl-form#form key=${audio.id} :form=form :defaultValues=defaultValues:
+          - rtgl-form#form key=${audio.id} :form=${form} :defaultValues=${defaultValues}:
               - $if defaultValues.audioWaveformDataFileId:
                   - rtgl-view slot=audio:
                       - rvn-waveform-visualizer#audioWaveform waveformDataFileId=${defaultValues.audioWaveformDataFileId} width=355 height=200 cur=pointer: null
@@ -50,7 +50,7 @@ template:
       - $if mode == 'gallery':
           - 'rtgl-view d=h w=f g=lg mt=sm h=1fg style="min-height: 0;"':
               - rtgl-view h=f w=1fg sv:
-                  - rvn-base-file-explorer#baseFileExplorer :items=items no-empty-message: null
+                  - rvn-base-file-explorer#baseFileExplorer :items=${items} no-empty-message: null
               - rtgl-view h=f w=2fg sv g=lg:
                   - $for group, i in groups:
                       - rtgl-view g=md:

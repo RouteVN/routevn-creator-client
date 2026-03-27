@@ -14,4 +14,4 @@ template:
               - rtgl-button#backButton variant=se: Back
           - rtgl-view w=f bw=xs bc=bo br=md p=lg bgc=bg:
               - rtgl-text s=sm c=mu-fg mb=sm: ${email}
-              - rtgl-form#form :form=registerForm :defaultValues=registerDefaultValues w=f: null
+              - rtgl-form#form :form=${registerForm} :defaultValues=${registerDefaultValues} w=f: null

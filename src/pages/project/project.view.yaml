@@ -35,7 +35,7 @@ template:
               - rtgl-text s=xs c=mu-fg: Cloud Project
   - rtgl-view w=f h=f ph=lg pt=md:
       - rtgl-view w=f h=f d=v:
-          - rvn-detail-view#detailView w=f h=1fg :fields=detailFields:
+          - rvn-detail-view#detailView w=f h=1fg :fields=${detailFields}:
               - rtgl-view#projectTitle slot=project-title cur=pointer:
                   - rtgl-text s=h3: ${projectName}
               - rtgl-view#projectDescription slot=project-description cur=pointer:
@@ -43,7 +43,7 @@ template:
               - rvn-file-image#projectImage slot=project-icon fileId=${projectIconFileId} h=128 bw=xs bc=bo br=md cur=pointer: null
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
       - rtgl-view slot=content:
-          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=editDefaultValues :form=editForm w=f:
+          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:
               - $if editIconFileId:
                   - rvn-file-image#editDialogIcon fileId=${editIconFileId} h=120 slot=project-icon-edit bw=xs bc=bo br=md cur=pointer: null
                 $else:

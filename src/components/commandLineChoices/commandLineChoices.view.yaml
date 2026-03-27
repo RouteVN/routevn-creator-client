@@ -52,9 +52,9 @@ template:
       - $if mode == "list":
           - rtgl-view wh=f:
               - rtgl-view d=h g=md:
-                  - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
+                  - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
               - rtgl-view h=1fg sv w=f:
-                  - rtgl-form#form :form=form :defaultValues=defaultValues :context=context:
+                  - rtgl-form#form :form=${form} :defaultValues=${defaultValues} :context=${context}:
                       - rtgl-view#choicesContainer slot=choices g=md w=f:
                           - $for item, index in defaultValues.items:
                               - rtgl-view#choice${index} data-index=${index} d=h av=c w=f g=md p=sm bgc=mu br=sm cur=pointer:
@@ -66,10 +66,10 @@ template:
         $elif mode == "editChoice":
           - rtgl-view wh=f:
               - rtgl-view d=h g=md:
-                  - rtgl-breadcrumb#breadcumb :items=breadcrumb: null
-              - rtgl-form#choiceForm :form=choiceFormTemplate :context=editFormContext :defaultValues=editForm: null
+                  - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
+              - rtgl-form#choiceForm :form=${choiceFormTemplate} :context=${editFormContext} :defaultValues=${editForm}: null
               - rtgl-view h=1fg: null
               - rtgl-view d=h av=c ah=e w=f g=lg:
                   - rtgl-button#cancelEditButton v=ol: Cancel
                   - rtgl-button#saveChoiceButton: Save Choice
-  - rtgl-dropdown-menu#dropdownMenu :items=dropdownMenu.items x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
+  - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

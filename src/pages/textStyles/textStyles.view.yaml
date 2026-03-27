@@ -60,17 +60,17 @@ template:
       - rtgl-view d=h h=f w=f:
           - rvn-resizable-panel#fileExplorerPanel w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
-                  - rvn-resource-types :resourceCategory=resourceCategory :selectedResourceId=selectedResourceId: null
-                  - rvn-base-file-explorer#fileExplorer :items=flatItems shrinkable dropdown-menu allowDrag :contextMenuItems=contextMenuItems :emptyContextMenuItems=emptyContextMenuItems: null
+                  - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
+                  - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :contextMenuItems=${contextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
           - rtgl-view w=1fg h=f pl=sm:
-              - rvn-text-style-resources-view#typographyView :navTitle=title :groups=flatGroups :selectedItemId=selectedItemId :searchQuery=searchQuery: null
+              - rvn-text-style-resources-view#typographyView :navTitle=${title} :groups=${flatGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery}: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
                       - rtgl-view d=v w=f h=f:
                           - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
                               - rtgl-text c=mu-fg: ${selectedItemName}
-                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=detailFields:
+                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
                               - rtgl-view#detailTextStylePreview slot="text-style-preview" p=md bw=xs bc=bo br=md cur=pointer:
                                   - rvn-font-preview fontFamily=${detailPreviewFontFamily} previewText="${detailPreviewText}" fileId=${detailPreviewFontFileId} fontSize=${detailPreviewFontSize} lineHeight=${detailPreviewLineHeight} color=${detailPreviewColor} strokeColor=${detailPreviewStrokeColor} strokeWidth=${detailPreviewStrokeWidth} fontWeight=${detailPreviewFontWeight} width=220 showBorder=false: null
                     $else:
@@ -80,18 +80,18 @@ template:
       - $if isDialogOpen:
           - rtgl-view slot=content d=h g=md w=800:
               - rtgl-view w=1fg:
-                  - rtgl-form#textStyleForm key=${formKey} :defaultValues=dialogDefaultValues :form=dialogForm w=f: null
+                  - rtgl-form#textStyleForm key=${formKey} :defaultValues=${dialogDefaultValues} :form=${dialogForm} w=f: null
               - rtgl-view w=1fg p=md bwl=xs d=v:
                   - rtgl-text s=lg fw=b mb=md: Preview
                   - rvn-font-preview h=1fg fontFamily=${previewFontFamily} previewText="${previewText}" fileId=${previewFontFileId} fontSize=${previewFontSize} lineHeight=${previewLineHeight} color=${previewColor} strokeColor=${previewStrokeColor} strokeWidth=${previewStrokeWidth} fontWeight=${previewFontWeight} width=350 showBorder=true: null
   - rtgl-dialog#addColorDialog ?open=${isAddColorDialogOpen} s=sm:
       - $if isAddColorDialogOpen:
-          - rtgl-form#addColorForm slot=content :defaultValues=addColorDefaultValues :form=addColorForm w=f: null
+          - rtgl-form#addColorForm slot=content :defaultValues=${addColorDefaultValues} :form=${addColorForm} w=f: null
   - rtgl-dialog#addFontDialog ?open=${isAddFontDialogOpen}:
       - $if isAddFontDialogOpen:
-          - rtgl-form#addFontForm slot=content :defaultValues=addFontDefaultValues :form=addFontForm w=f:
+          - rtgl-form#addFontForm slot=content :defaultValues=${addFontDefaultValues} :form=${addFontForm} w=f:
               - rtgl-view slot=font-upload d=v g=sm:
-                  - rvn-drag-drop#fontDragDrop uploadText="${dragDropText}" :acceptedFileTypes=fontFileTypes: null
+                  - rvn-drag-drop#fontDragDrop uploadText="${dragDropText}" :acceptedFileTypes=${fontFileTypes}: null
                   - $if hasSelectedFont:
                       - rtgl-view d=h g=sm av=c mt=sm:
                           - rtgl-text s=sm c=success: 'Font selected: ${selectedFontFileName}'
