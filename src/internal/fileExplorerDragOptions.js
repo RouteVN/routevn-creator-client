@@ -1,5 +1,7 @@
 export const canItemReceiveChildren = (item) => {
-  return item?.type === "folder" || item?.dragOptions?.canReceiveChildren === true;
+  return (
+    item?.type === "folder" || item?.dragOptions?.canReceiveChildren === true
+  );
 };
 
 export const applyFolderRequiredRootDragOptions = (items = []) => {
