@@ -2,18 +2,20 @@ import { parseAndRender } from "jempl";
 import { toFlatGroups } from "../../internal/project/tree.js";
 import { getFirstTextStyleId } from "../../constants/textStyles.js";
 import { getVariableOptions } from "../../internal/project/projection.js";
+import { getSystemVariableItems } from "../../internal/systemVariables.js";
 import {
   getInteractionActions,
   getInteractionPayload,
 } from "../../internal/project/interactionPayload.js";
 import { getLayoutEditorItemCapabilities } from "../../internal/layoutEditorTypes.js";
+import { splitVisibilityConditionFromWhen } from "../../internal/layoutVisibilityCondition.js";
 
 const ACTION_INTERACTION_LABELS = {
   click: "Click",
   rightClick: "Right Click",
 };
 
-const HIDDEN_LAYOUT_ACTION_MODES = new Set(["updateVariable"]);
+const HIDDEN_LAYOUT_ACTION_MODES = new Set();
 
 const ACTION_LABELS = {
   nextLine: "Next Line",
@@ -33,6 +35,19 @@ const REVEAL_EFFECT_OPTIONS = [
   { label: "Soft Wipe", value: "softWipe" },
   { label: "None", value: "none" },
 ];
+
+const VISIBILITY_CONDITION_OP_OPTIONS = [{ label: "Equals", value: "eq" }];
+
+const VISIBILITY_BOOLEAN_OPTIONS = [
+  { label: "True", value: true },
+  { label: "False", value: false },
+];
+
+const SUPPORTED_VISIBILITY_VARIABLE_TYPES = new Set([
+  "boolean",
+  "number",
+  "string",
+]);
 
 const getLayoutInteractionActions = (values, interactionType) => {
   return getInteractionActions(values?.[interactionType]);
@@ -90,6 +105,153 @@ const createDefaultValues = () => ({
   gap: 0,
   actions: {},
 });
+
+const getScalarVariableItems = (variablesData = {}) => {
+  const projectVariables = Object.entries(variablesData?.items || {}).filter(
+    ([, item]) =>
+      item?.type !== "folder" &&
+      SUPPORTED_VISIBILITY_VARIABLE_TYPES.has(
+        String(item?.type || "string").toLowerCase(),
+      ),
+  );
+  const systemVariables = Object.entries(getSystemVariableItems()).filter(
+    ([, item]) =>
+      SUPPORTED_VISIBILITY_VARIABLE_TYPES.has(
+        String(item?.type || "string").toLowerCase(),
+      ),
+  );
+
+  return Object.fromEntries([...projectVariables, ...systemVariables]);
+};
+
+const toVisibilityConditionVariableOptions = (variablesData = {}) => {
+  return Object.entries(getScalarVariableItems(variablesData)).map(
+    ([id, variable]) => ({
+      label: `${variable.name} (${String(variable.type || "string").toLowerCase()})`,
+      value: id,
+    }),
+  );
+};
+
+const toVisibilityConditionVariableTypeById = (variablesData = {}) => {
+  return Object.fromEntries(
+    Object.entries(getScalarVariableItems(variablesData)).map(
+      ([id, variable]) => [id, String(variable.type || "string").toLowerCase()],
+    ),
+  );
+};
+
+const getVisibilityConditionSummary = (
+  visibilityCondition,
+  variablesData = {},
+) => {
+  if (!visibilityCondition?.variableId || visibilityCondition?.op !== "eq") {
+    return "Always visible";
+  }
+
+  const variable =
+    getScalarVariableItems(variablesData)[visibilityCondition.variableId];
+  const variableName = variable?.name ?? visibilityCondition.variableId;
+  const value =
+    typeof visibilityCondition.value === "string"
+      ? `"${visibilityCondition.value}"`
+      : String(visibilityCondition.value);
+
+  return `${variableName} == ${value}`;
+};
+
+const createVisibilityConditionDialogDefaults = (
+  visibilityCondition,
+  variableTypeById,
+) => {
+  const variableId = visibilityCondition?.variableId ?? "";
+  const selectedVariableType = variableId
+    ? (variableTypeById[variableId] ?? "string")
+    : undefined;
+  const rawValue = visibilityCondition?.value;
+  const parsedNumberValue = Number(rawValue);
+
+  return {
+    variableId,
+    op: visibilityCondition?.op ?? "eq",
+    booleanValue: rawValue === true,
+    numberValue: Number.isFinite(parsedNumberValue) ? parsedNumberValue : 0,
+    stringValue: typeof rawValue === "string" ? rawValue : "",
+    selectedVariableType,
+  };
+};
+
+const createVisibilityConditionForm = ({
+  hasCondition,
+  variableOptions,
+} = {}) => {
+  return {
+    title: "Visibility Condition",
+    fields: [
+      {
+        name: "variableId",
+        type: "select",
+        label: "Variable",
+        required: false,
+        options: variableOptions,
+      },
+      {
+        $when: "variableId",
+        name: "op",
+        type: "select",
+        label: "Operation",
+        required: true,
+        clearable: false,
+        options: VISIBILITY_CONDITION_OP_OPTIONS,
+      },
+      {
+        $when: "variableId && selectedVariableType == 'boolean'",
+        name: "booleanValue",
+        type: "select",
+        label: "Value",
+        required: true,
+        clearable: false,
+        options: VISIBILITY_BOOLEAN_OPTIONS,
+      },
+      {
+        $when: "variableId && selectedVariableType == 'number'",
+        name: "numberValue",
+        type: "input-number",
+        label: "Value",
+        required: true,
+      },
+      {
+        $when: "variableId && selectedVariableType == 'string'",
+        name: "stringValue",
+        type: "input-text",
+        label: "Value",
+        required: true,
+      },
+    ],
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "clear",
+          align: "left",
+          variant: "se",
+          label: "Clear",
+          disabled: !hasCondition,
+        },
+        {
+          id: "cancel",
+          variant: "se",
+          label: "Cancel",
+        },
+        {
+          id: "submit",
+          variant: "pr",
+          label: "Save",
+        },
+      ],
+    },
+  };
+};
 
 const toTextStyleOptions = (textStylesData = {}) => {
   const textStyleGroups = toFlatGroups(textStylesData);
@@ -154,6 +316,11 @@ export const createInitialState = () => {
       name: undefined,
       form: undefined,
       context: {},
+    },
+    visibilityConditionDialog: {
+      open: false,
+      key: 0,
+      selectedVariableType: undefined,
     },
     textStylesData: { tree: [], items: {} },
     variablesData: { tree: [], items: {} },
@@ -245,6 +412,31 @@ export const closePopoverForm = ({ state }, _payload = {}) => {
   };
 };
 
+export const openVisibilityConditionDialog = ({ state }, _payload = {}) => {
+  state.visibilityConditionDialog = {
+    open: true,
+    key: state.visibilityConditionDialog.key + 1,
+    selectedVariableType: state.visibilityConditionDialog.selectedVariableType,
+  };
+};
+
+export const closeVisibilityConditionDialog = ({ state }, _payload = {}) => {
+  state.visibilityConditionDialog = {
+    ...state.visibilityConditionDialog,
+    open: false,
+  };
+};
+
+export const setVisibilityConditionDialogSelectedVariableType = (
+  { state },
+  { selectedVariableType } = {},
+) => {
+  state.visibilityConditionDialog = {
+    ...state.visibilityConditionDialog,
+    selectedVariableType: selectedVariableType ?? "string",
+  };
+};
+
 export const selectFieldPopoverForm = ({ constants, props }, { name } = {}) => {
   if (!name) {
     return undefined;
@@ -320,6 +512,14 @@ export const selectTempSelectedImageId = ({ state }) => {
   return state.tempSelectedImageId;
 };
 
+export const selectVisibilityConditionDialog = ({ state }) => {
+  return state.visibilityConditionDialog;
+};
+
+export const selectVisibilityConditionVariableTypeById = ({ state }) => {
+  return toVisibilityConditionVariableTypeById(state.variablesData);
+};
+
 export const selectViewData = ({ state, props, constants }) => {
   const textStyleItems = toTextStyleOptions(state.textStylesData);
   const firstTextStyleId = getFirstTextStyleId(state.textStylesData);
@@ -331,6 +531,10 @@ export const selectViewData = ({ state, props, constants }) => {
     type: "number",
     includeSystem: true,
   });
+  const visibilityConditionVariableOptions =
+    toVisibilityConditionVariableOptions(state.variablesData);
+  const visibilityConditionVariableTypeById =
+    toVisibilityConditionVariableTypeById(state.variablesData);
   const variableOptionsWithNone = [
     { label: "None", value: "" },
     ...variableOptions,
@@ -339,6 +543,9 @@ export const selectViewData = ({ state, props, constants }) => {
     values: state.values,
     firstTextStyleId,
   });
+  const currentVisibilityCondition = splitVisibilityConditionFromWhen(
+    values["$when"],
+  ).visibilityCondition;
   const capabilities = getLayoutEditorItemCapabilities(props.itemType);
   const sections = parseAndRender(
     getLayoutEditPanelSections({
@@ -353,6 +560,10 @@ export const selectViewData = ({ state, props, constants }) => {
       textStyleItemsWithNone,
       variableOptionsWithNone,
       values,
+      visibilityConditionSummary: getVisibilityConditionSummary(
+        currentVisibilityCondition,
+        state.variablesData,
+      ),
       canAddSpriteImageVariant:
         !values.imageId || !values.hoverImageId || !values.clickImageId,
       showsGapField:
@@ -361,6 +572,14 @@ export const selectViewData = ({ state, props, constants }) => {
       ...capabilities,
     },
   );
+  const visibilityConditionDialogDefaults =
+    createVisibilityConditionDialogDefaults(
+      currentVisibilityCondition,
+      visibilityConditionVariableTypeById,
+    );
+  const selectedVisibilityConditionVariableType =
+    state.visibilityConditionDialog.selectedVariableType ??
+    visibilityConditionDialogDefaults.selectedVariableType;
 
   return {
     values: state.values,
@@ -375,6 +594,15 @@ export const selectViewData = ({ state, props, constants }) => {
     revealEffectOptions: REVEAL_EFFECT_OPTIONS,
     revealEffectValue: values.revealEffect,
     popover: state.popover,
+    visibilityConditionDialog: state.visibilityConditionDialog,
+    visibilityConditionDialogDefaults,
+    visibilityConditionDialogForm: createVisibilityConditionForm({
+      hasCondition: !!currentVisibilityCondition?.variableId,
+      variableOptions: visibilityConditionVariableOptions,
+    }),
+    visibilityConditionDialogContext: {
+      selectedVariableType: selectedVisibilityConditionVariableType,
+    },
     imageSelectorDialog: state.imageSelectorDialog,
     tempSelectedImageId: state.tempSelectedImageId,
   };

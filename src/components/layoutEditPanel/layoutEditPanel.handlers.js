@@ -2,6 +2,11 @@ import {
   getInteractionActions,
   getInteractionPayload,
 } from "../../internal/project/interactionPayload.js";
+import {
+  buildVisibilityConditionExpression,
+  mergeWhenExpressions,
+  splitVisibilityConditionFromWhen,
+} from "../../internal/layoutVisibilityCondition.js";
 
 const ACTION_INTERACTION_TYPES = ["click", "rightClick"];
 const EMPTY_TREE = { items: {}, tree: [] };
@@ -104,9 +109,45 @@ export const handleGroupItemClick = (deps, payload) => {
   render();
 };
 
+export const handleVisibilityConditionItemClick = (deps) => {
+  const { render, store } = deps;
+  const variableTypeById = store.selectVisibilityConditionVariableTypeById();
+  const currentVisibilityCondition = splitVisibilityConditionFromWhen(
+    store.selectValues()["$when"],
+  ).visibilityCondition;
+  const variableId = currentVisibilityCondition?.variableId;
+
+  store.setVisibilityConditionDialogSelectedVariableType({
+    selectedVariableType: variableId
+      ? (variableTypeById?.[variableId] ?? "string")
+      : undefined,
+  });
+  store.openVisibilityConditionDialog();
+  render();
+};
+
 export const handlePopverFormClose = (deps) => {
   const { render, store } = deps;
   store.closePopoverForm();
+  render();
+};
+
+export const handleVisibilityConditionDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeVisibilityConditionDialog();
+  render();
+};
+
+export const handleVisibilityConditionFormChange = (deps, payload) => {
+  const { render, store } = deps;
+  const values = payload._event.detail?.values ?? {};
+  const variableTypeById = store.selectVisibilityConditionVariableTypeById();
+
+  store.setVisibilityConditionDialogSelectedVariableType({
+    selectedVariableType: values.variableId
+      ? (variableTypeById?.[values.variableId] ?? "string")
+      : undefined,
+  });
   render();
 };
 
@@ -190,6 +231,69 @@ export const handleFormActions = (deps, payload) => {
     value: _event.detail.values.value,
     closePopover: true,
   });
+};
+
+export const handleVisibilityConditionFormAction = (deps, payload) => {
+  const { store, render } = deps;
+  const detail = payload._event.detail || {};
+  const { actionId, values = {} } = detail;
+  const currentWhen = store.selectValues()["$when"];
+  const { baseWhen } = splitVisibilityConditionFromWhen(currentWhen);
+
+  if (actionId === "cancel") {
+    store.closeVisibilityConditionDialog();
+    render();
+    return;
+  }
+
+  if (actionId === "clear") {
+    applyPanelValueUpdate(deps, {
+      name: "$when",
+      value: baseWhen,
+    });
+    store.closeVisibilityConditionDialog();
+    render();
+    return;
+  }
+
+  if (actionId !== "submit") {
+    return;
+  }
+
+  const variableId = values.variableId;
+  if (!variableId) {
+    applyPanelValueUpdate(deps, {
+      name: "$when",
+      value: baseWhen,
+    });
+    store.closeVisibilityConditionDialog();
+    render();
+    return;
+  }
+
+  const variableType =
+    store.selectVisibilityConditionVariableTypeById()?.[variableId] || "string";
+
+  let conditionValue = values.stringValue ?? "";
+  if (variableType === "boolean") {
+    conditionValue = values.booleanValue === true;
+  } else if (variableType === "number") {
+    const parsedNumber = Number(values.numberValue);
+    conditionValue = Number.isFinite(parsedNumber) ? parsedNumber : 0;
+  }
+
+  const nextVisibilityWhen = buildVisibilityConditionExpression({
+    variableId,
+    op: values.op ?? "eq",
+    value: conditionValue,
+  });
+
+  applyPanelValueUpdate(deps, {
+    name: "$when",
+    value: mergeWhenExpressions(baseWhen, nextVisibilityWhen),
+  });
+  store.closeVisibilityConditionDialog();
+  render();
 };
 
 export const handleActionsChange = (deps, payload) => {
