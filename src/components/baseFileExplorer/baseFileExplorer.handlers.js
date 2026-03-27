@@ -1,4 +1,5 @@
 import { fromEvent, tap } from "rxjs";
+import { canItemReceiveChildren } from "../../internal/fileExplorerDragOptions.js";
 
 const isBooleanAttrEnabled = (attrs, camelName, kebabName) => {
   const compactName = kebabName.replaceAll("-", "");
@@ -111,7 +112,7 @@ const resolveDropPlacement = ({ visibleItems, targetIndex, dropPosition }) => {
   if (dropPosition === "inside") {
     return {
       targetItem,
-      parentId: targetItem.type === "folder" ? targetItem.id : undefined,
+      parentId: canItemReceiveChildren(targetItem) ? targetItem.id : undefined,
     };
   }
 
@@ -215,7 +216,7 @@ export const getSelectedItemIndex = (
         (item) => item.id === lastActualItem.parentId,
       );
 
-      if (parentFolder?.type === "folder") {
+      if (canItemReceiveChildren(parentFolder)) {
         // Return the parent folder's below position
         const parentIndex = sortedItems.findIndex(
           (item) => item.id === parentFolder.id,
@@ -242,7 +243,7 @@ export const getSelectedItemIndex = (
       // Get the actual item data to check its type
       const itemId = currentItem.id;
       const actualItem = items.find((item) => item.id === itemId);
-      const isFolder = actualItem?.type === "folder";
+      const isFolder = canItemReceiveChildren(actualItem);
 
       // Mouse is over an item - determine position with 35% top, 30% middle, 35% bottom
       const relativeY = mouseY - currentItem.top;
