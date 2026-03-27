@@ -259,6 +259,14 @@ export const handleChoiceFormChange = async (deps, payload) => {
   await rerenderLayoutEditorSurface(deps);
 };
 
+export const handlePreviewVariablesFormChange = async (deps, payload) => {
+  const { store } = deps;
+  const { name, value: fieldValue } = payload._event.detail;
+
+  store.setPreviewVariableValue({ name, fieldValue });
+  await rerenderLayoutEditorSurface(deps);
+};
+
 export const handleSliderCreateDialogClose = (deps) => {
   const { store, render } = deps;
   store.closeSliderCreateDialog();

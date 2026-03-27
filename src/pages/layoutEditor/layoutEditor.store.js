@@ -4,11 +4,130 @@ import {
   createLayoutEditorItemTemplate,
   isLayoutEditorContainerItemType,
 } from "../../internal/layoutEditorTypes.js";
+import { getSystemVariableItems } from "../../internal/systemVariables.js";
+import { splitVisibilityConditionFromWhen } from "../../internal/layoutVisibilityCondition.js";
 import {
   DEFAULT_PROJECT_RESOLUTION,
   formatProjectResolutionAspectRatio,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
+
+const PREVIEW_VARIABLE_TYPES = new Set(["boolean", "number", "string"]);
+
+const PREVIEW_BOOLEAN_OPTIONS = [
+  { label: "True", value: true },
+  { label: "False", value: false },
+];
+
+const toPreviewVariableValue = ({ type, value } = {}) => {
+  if (type === "number") {
+    const parsedValue = Number(value);
+    return Number.isFinite(parsedValue) ? parsedValue : 0;
+  }
+
+  if (type === "boolean") {
+    if (typeof value === "boolean") {
+      return value;
+    }
+
+    if (typeof value === "string") {
+      return value === "true";
+    }
+
+    return Boolean(value);
+  }
+
+  return value ?? "";
+};
+
+const getLayoutPreviewVariableItems = (layoutData = {}, variablesData = {}) => {
+  const availableVariables = {
+    ...(variablesData.items ?? {}),
+    ...getSystemVariableItems(),
+  };
+  const previewVariables = [];
+  const addedVariableIds = new Set();
+
+  for (const item of Object.values(layoutData?.items ?? {})) {
+    const visibilityCondition = splitVisibilityConditionFromWhen(
+      item?.["$when"],
+    ).visibilityCondition;
+    const variableId = visibilityCondition?.variableId;
+
+    if (!variableId || addedVariableIds.has(variableId)) {
+      continue;
+    }
+
+    const variable = availableVariables[variableId];
+    const type = String(variable?.type ?? "string").toLowerCase();
+
+    if (!PREVIEW_VARIABLE_TYPES.has(type)) {
+      continue;
+    }
+
+    addedVariableIds.add(variableId);
+    previewVariables.push({
+      id: variableId,
+      name: variable?.name ?? variableId,
+      type,
+      source: variable?.source,
+      description: variable?.description,
+      defaultValue: toPreviewVariableValue({
+        type,
+        value: variable?.value ?? variable?.default,
+      }),
+    });
+  }
+
+  return previewVariables.sort((left, right) =>
+    left.name.localeCompare(right.name),
+  );
+};
+
+const createPreviewVariablesForm = (previewVariableItems = []) => ({
+  title: "Preview",
+  description: "Edit visibility variables to preview conditional elements",
+  fields: previewVariableItems.map((variable) => {
+    const sourceLabel =
+      variable.source === "system" ? "System variable" : "Variable";
+    const descriptionParts = [
+      `${sourceLabel} (${variable.type})`,
+      variable.description,
+    ].filter(Boolean);
+
+    if (variable.type === "boolean") {
+      return {
+        name: variable.id,
+        type: "select",
+        label: variable.name,
+        clearable: false,
+        options: PREVIEW_BOOLEAN_OPTIONS,
+        description: descriptionParts.join(" • "),
+      };
+    }
+
+    return {
+      name: variable.id,
+      type: variable.type === "number" ? "input-number" : "input-text",
+      label: variable.name,
+      description: descriptionParts.join(" • "),
+    };
+  }),
+});
+
+const createPreviewVariableDefaultValues = (
+  previewVariableItems = [],
+  previewVariableValues = {},
+) => {
+  return Object.fromEntries(
+    previewVariableItems.map((variable) => [
+      variable.id,
+      Object.hasOwn(previewVariableValues, variable.id)
+        ? previewVariableValues[variable.id]
+        : variable.defaultValue,
+    ]),
+  );
+};
 
 const toLayoutEditorContextMenuItems = (
   items = [],
@@ -66,6 +185,7 @@ export const createInitialState = () => ({
     choicesNum: 2,
     choices: ["Choice 1", "Choice 2"],
   },
+  previewVariableValues: {},
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
   sliderCreateDialog: {
     open: false,
@@ -94,6 +214,7 @@ export const setItems = ({ state }, { layoutData } = {}) => {
 
 export const setLayout = ({ state }, payload = {}) => {
   const { id, layout, resourceType } = payload || {};
+  const nextResourceType = resourceType || layout?.resourceType || "layouts";
 
   if (!layout && !id) {
     state.layout = undefined;
@@ -103,7 +224,11 @@ export const setLayout = ({ state }, payload = {}) => {
   state.layout = {
     ...layout,
     id: id || layout?.id || undefined,
-    resourceType: resourceType || layout?.resourceType || "layouts",
+    resourceType: nextResourceType,
+    layoutType:
+      nextResourceType === "controls"
+        ? layout?.layoutType
+        : (layout?.layoutType ?? "normal"),
   };
 };
 
@@ -332,6 +457,17 @@ export const setChoiceDefaultValue = ({ state }, { name, fieldValue } = {}) => {
   state.choiceDefaultValues.choices = choices;
 };
 
+export const setPreviewVariableValue = (
+  { state },
+  { name, fieldValue } = {},
+) => {
+  if (!name) {
+    return;
+  }
+
+  state.previewVariableValues[name] = fieldValue;
+};
+
 export const selectDragging = ({ state }) => {
   return {
     isDragging: state.isDragging,
@@ -433,6 +569,10 @@ export const selectChoicesData = ({ state }) => {
   };
 };
 
+export const selectPreviewVariableValues = ({ state }) => {
+  return state.previewVariableValues;
+};
+
 export const selectItems = ({ state }) => {
   return state.layoutData;
 };
@@ -467,6 +607,18 @@ export const selectViewData = ({ state, constants }) => {
       : constants.emptyContextMenuItems,
     { layoutType },
   );
+  const previewVariableItems =
+    layoutType === "normal"
+      ? getLayoutPreviewVariableItems(state.layoutData, state.variablesData)
+      : [];
+  const previewVariablesDefaultValues = createPreviewVariableDefaultValues(
+    previewVariableItems,
+    state.previewVariableValues,
+  );
+  const previewVariablesFormKey =
+    previewVariableItems.length > 0
+      ? previewVariableItems.map((item) => item.id).join("|")
+      : "empty";
 
   return {
     item,
@@ -492,6 +644,10 @@ export const selectViewData = ({ state, constants }) => {
     choicesContext: {
       ...state.choiceDefaultValues,
     },
+    previewVariablesForm: createPreviewVariablesForm(previewVariableItems),
+    previewVariablesDefaultValues,
+    previewVariablesFormKey,
+    hasPreviewVariables: previewVariableItems.length > 0,
     sliderCreateForm: constants.sliderCreateForm,
     sliderCreateDialog: state.sliderCreateDialog,
     sliderCreateImageSelectorDialog: state.sliderCreateImageSelectorDialog,

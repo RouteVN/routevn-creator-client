@@ -231,6 +231,11 @@ layoutSections:
             value: center
           - label: Right
             value: right
+  - label: Visibility
+    items:
+      - type: condition-summary
+        name: visibilityCondition
+        value: "${visibilityConditionSummary}"
   - "$when": "supportsActions"
     id: actions
     label: Actions
@@ -268,6 +273,11 @@ controlSections:
             name: height
             value: "${values.height}"
             popoverForm: *numberPopoverForm
+  - label: Visibility
+    items:
+      - type: condition-summary
+        name: visibilityCondition
+        value: "${visibilityConditionSummary}"
   - "$when": "supportsActions"
     id: actions
     label: Actions

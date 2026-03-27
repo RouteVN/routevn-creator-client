@@ -19,6 +19,11 @@ const TEXT_NODE_TYPES = new Set([
   "text-ref-dialogue-line-content",
 ]);
 
+import {
+  buildVisibilityConditionExpression,
+  mergeWhenExpressions,
+} from "../layoutVisibilityCondition.js";
+
 const TEXT_CONTENT_BY_TYPE = {
   "text-ref-character-name": "${dialogue.character.name}",
   "text-revealing-ref-dialogue-content": "${dialogue.content[0].text}",
@@ -305,8 +310,12 @@ const buildBaseElement = (node) => {
     rightClick: normalizeEngineActions(node.rightClick),
   };
 
-  if (node["$when"]) {
-    element["$when"] = node["$when"];
+  const whenExpression = mergeWhenExpressions(
+    node["$when"],
+    buildVisibilityConditionExpression(node.visibilityCondition),
+  );
+  if (whenExpression) {
+    element["$when"] = whenExpression;
   }
 
   if (node["$each"]) {

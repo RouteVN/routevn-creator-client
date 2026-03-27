@@ -4,6 +4,7 @@ import {
   extractFileIdsFromRenderState,
 } from "./project/layout.js";
 import { toHierarchyStructure } from "./project/tree.js";
+import { getSystemVariableItems } from "./systemVariables.js";
 
 const DEFAULT_DIALOGUE_CHARACTER_NAME = "Character";
 const DEFAULT_DIALOGUE_CONTENT = "This is a sample dialogue content.";
@@ -48,7 +49,12 @@ const toPreviewVariableValue = (variable = {}) => {
 };
 
 const createPreviewVariables = (variablesData = {}) => {
-  return Object.entries(variablesData.items ?? {}).reduce(
+  const variableItems = {
+    ...(variablesData.items ?? {}),
+    ...getSystemVariableItems(),
+  };
+
+  return Object.entries(variableItems).reduce(
     (variables, [variableId, variable]) => {
       if (!variableId || variable?.type === "folder") {
         return variables;
@@ -59,6 +65,31 @@ const createPreviewVariables = (variablesData = {}) => {
     },
     {},
   );
+};
+
+const applyPreviewVariableOverrides = (
+  previewVariables,
+  variablesData = {},
+  previewVariableValues = {},
+) => {
+  const variableItems = {
+    ...(variablesData.items ?? {}),
+    ...getSystemVariableItems(),
+  };
+  const nextPreviewVariables = {
+    ...previewVariables,
+  };
+
+  for (const [variableId, value] of Object.entries(previewVariableValues)) {
+    const variable = variableItems[variableId];
+
+    nextPreviewVariables[variableId] = toPreviewVariableValue({
+      ...variable,
+      value,
+    });
+  }
+
+  return nextPreviewVariables;
 };
 
 const createChoiceItems = (choicesData = {}) => {
@@ -227,6 +258,7 @@ const buildOverlayTree = ({ path, overlayId, draggable }) => {
 
 export const createLayoutEditorPreviewData = ({
   variablesData,
+  previewVariableValues,
   dialogueDefaultValues,
   previewRevealingSpeed,
   choicesData,
@@ -245,7 +277,11 @@ export const createLayoutEditorPreviewData = ({
 
   return {
     variables: {
-      ...createPreviewVariables(variablesData),
+      ...applyPreviewVariableOverrides(
+        createPreviewVariables(variablesData),
+        variablesData,
+        previewVariableValues,
+      ),
       _dialogueTextSpeed: dialogueRevealingSpeed,
     },
     dialogue: {
@@ -438,6 +474,7 @@ export const renderLayoutEditorPreview = async (
       elements: renderStateElements,
       previewData: createLayoutEditorPreviewData({
         variablesData,
+        previewVariableValues: store.selectPreviewVariableValues(),
         dialogueDefaultValues: store.selectDialogueDefaultValues(),
         previewRevealingSpeed: store.selectPreviewRevealingSpeed(),
         choicesData: store.selectChoicesData(),

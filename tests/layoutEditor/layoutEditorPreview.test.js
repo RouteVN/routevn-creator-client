@@ -3,6 +3,7 @@ import {
   createLayoutEditorPreviewData,
   createLayoutEditorSelectionOverlay,
 } from "../../src/internal/layoutEditorPreview.js";
+import { getSystemVariableItems } from "../../src/internal/systemVariables.js";
 
 describe("layoutEditorPreview", () => {
   it("builds stable preview data from variables, dialogue defaults, and choices", () => {
@@ -23,7 +24,7 @@ describe("layoutEditorPreview", () => {
       },
     });
 
-    expect(previewData.variables).toEqual({
+    expect(previewData.variables).toMatchObject({
       numberVar: 7,
       boolVar: true,
       _dialogueTextSpeed: 50,
@@ -48,6 +49,38 @@ describe("layoutEditorPreview", () => {
         },
       },
     ]);
+  });
+
+  it("includes system variables in preview data", () => {
+    const previewData = createLayoutEditorPreviewData({
+      variablesData: {
+        items: {},
+      },
+    });
+    const [firstSystemVariableId] = Object.keys(getSystemVariableItems());
+
+    expect(firstSystemVariableId).toBeTruthy();
+    expect(previewData.variables).toHaveProperty(firstSystemVariableId);
+  });
+
+  it("overrides preview variables with edited values", () => {
+    const previewData = createLayoutEditorPreviewData({
+      variablesData: {
+        items: {
+          score: { type: "number", default: 1 },
+          enabled: { type: "boolean", default: false },
+        },
+      },
+      previewVariableValues: {
+        score: 42,
+        enabled: true,
+      },
+    });
+
+    expect(previewData.variables).toMatchObject({
+      score: 42,
+      enabled: true,
+    });
   });
 
   it("creates a draggable primary overlay and non-draggable repeated overlays", () => {
