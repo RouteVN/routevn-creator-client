@@ -47,7 +47,7 @@ describe("layoutEditorMutations", () => {
     expect(updatedItem.anchorY).toBe(1);
   });
 
-  it("normalizes absolute container direction to an unset saved value", () => {
+  it("keeps cleared container direction unset in saved data", () => {
     const item = {
       id: "choice-container-1",
       type: "container-ref-choice-item",
@@ -57,7 +57,7 @@ describe("layoutEditorMutations", () => {
     const updatedItem = applyLayoutItemFieldChange({
       item,
       name: "direction",
-      value: "absolute",
+      value: undefined,
     });
 
     expect(updatedItem.direction).toBeUndefined();

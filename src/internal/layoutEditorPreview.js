@@ -330,26 +330,6 @@ const resolveLayoutPreviewElements = ({ elements, previewData } = {}) => {
   );
 };
 
-const collectParsedElementCoordinates = (elements = [], parentId) => {
-  return toElementList(elements).flatMap((element) => {
-    const entry = {
-      id: element?.id,
-      type: element?.type,
-      parentId,
-      x: element?.x,
-      y: element?.y,
-      width: element?.width,
-      height: element?.height,
-      rotation: element?.rotation,
-    };
-
-    return [
-      entry,
-      ...collectParsedElementCoordinates(element?.children, element?.id),
-    ];
-  });
-};
-
 export const createLayoutEditorSelectionOverlay = ({
   parsedElements,
   selectedItemId,
@@ -521,10 +501,6 @@ export const renderLayoutEditorPreview = async (
 
     const parsedState = graphicsService.parse({
       elements: finalElements,
-    });
-    console.log("[layoutEditor.preview] parsedElementCoordinates", {
-      selectedItemId: selectedItem?.id,
-      coordinates: collectParsedElementCoordinates(parsedState.elements),
     });
     const overlayElements = createLayoutEditorSelectionOverlay({
       parsedElements: parsedState.elements,
