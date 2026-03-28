@@ -11,6 +11,10 @@ contextMenuItems:
   - label: Slider
     type: item
     createType: slider
+  - "$when": 'layoutType == "normal"'
+    label: Fragment
+    type: item
+    createType: fragment-ref
   - "$when": 'layoutType == "dialogue"'
     label: Text (Dialogue Content)
     type: item
@@ -59,6 +63,10 @@ emptyContextMenuItems:
   - label: Slider
     type: item
     createType: slider
+  - "$when": 'layoutType == "normal"'
+    label: Fragment
+    type: item
+    createType: fragment-ref
   - "$when": 'layoutType == "dialogue"'
     label: Text (Dialogue Content)
     type: item
@@ -200,3 +208,22 @@ sliderCreateForm:
       - id: submit
         variant: pr
         label: Create Slider
+
+fragmentCreateForm:
+  title: Insert Fragment
+  description: Choose which fragment layout to insert into this layout
+  fields:
+    - name: fragmentLayoutId
+      type: select
+      label: Fragment
+      required: true
+      clearable: false
+      options: "${fragmentLayoutOptions}"
+  actions:
+    buttons:
+      - id: cancel
+        variant: se
+        label: Cancel
+      - id: submit
+        variant: pr
+        label: Insert Fragment

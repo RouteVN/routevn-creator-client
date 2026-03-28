@@ -1,4 +1,8 @@
-import { buildLayoutElements } from "../../internal/project/layout.js";
+import {
+  buildLayoutElements,
+  isFragmentLayout,
+  normalizeLayoutType,
+} from "../../internal/project/layout.js";
 import { toHierarchyStructure } from "../../internal/project/tree.js";
 import { buildSceneEditorLineViewModels } from "../../internal/ui/sceneEditor/lineViewModels.js";
 import { overlaySceneWithEditorSession } from "../../internal/ui/sceneEditor/editorSession.js";
@@ -380,14 +384,18 @@ export const selectLayouts = ({ state }) => {
       processedLayouts[layoutId] = {
         id: layoutId,
         name: layout.name,
-        layoutType: layout.layoutType,
+        layoutType: normalizeLayoutType(layout.layoutType),
+        isFragment: isFragmentLayout(layout),
         elements: buildLayoutElements(
           toHierarchyStructure(layout.elements),
           images,
           textStylesData,
           colors,
           fonts,
-          { layoutId },
+          {
+            layoutId,
+            layoutsData: layouts,
+          },
         ).elements,
       };
     }

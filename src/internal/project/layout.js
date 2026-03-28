@@ -1,7 +1,7 @@
 import { resolveLayoutReferences } from "route-engine-js";
 import { getFirstTextStyleId } from "../../constants/textStyles.js";
 import { toAlphanumericId } from "../layoutEditorTypes.js";
-import { filterTreeCollection } from "./tree.js";
+import { filterTreeCollection, toHierarchyStructure } from "./tree.js";
 import { normalizeEngineActions } from "./engineActions.js";
 import {
   getInteractionActions,
@@ -78,6 +78,10 @@ export const BASE_LAYOUT_KEYBOARD_LABELS = Object.fromEntries(
 
 const isLayoutResource = (item) => item?.type === "layout";
 
+export const normalizeLayoutType = (layoutType) => layoutType;
+
+export const isFragmentLayout = (layout) => layout?.isFragment === true;
+
 export const filterLayoutsByType = (layoutsData, layoutTypes = []) => {
   const allowedLayoutTypes = new Set(layoutTypes);
 
@@ -86,7 +90,7 @@ export const filterLayoutsByType = (layoutsData, layoutTypes = []) => {
       return false;
     }
 
-    return allowedLayoutTypes.has(item.layoutType);
+    return allowedLayoutTypes.has(normalizeLayoutType(item.layoutType));
   });
 };
 
@@ -101,7 +105,7 @@ export const filterLayoutsExcludingTypes = (
       return false;
     }
 
-    return !blockedLayoutTypes.has(item.layoutType);
+    return !blockedLayoutTypes.has(normalizeLayoutType(item.layoutType));
   });
 };
 
@@ -274,6 +278,59 @@ const updateChildrenIds = (children, indexVar) => {
 
     return updatedChild;
   });
+};
+
+const prefixElementIds = (elements, prefix) => {
+  return (elements || []).map((element) => {
+    const nextElement = {
+      ...element,
+      id: `${prefix}--${element.id}`,
+    };
+
+    if (
+      Array.isArray(nextElement.children) &&
+      nextElement.children.length > 0
+    ) {
+      nextElement.children = prefixElementIds(nextElement.children, prefix);
+    }
+
+    return nextElement;
+  });
+};
+
+const resolveFragmentChildren = ({ node, imageItems, context }) => {
+  const fragmentLayoutId = node.fragmentLayoutId;
+  const fragmentStack = context.fragmentStack || [];
+  if (
+    !fragmentLayoutId ||
+    fragmentStack.includes(fragmentLayoutId) ||
+    !context.layoutsData?.[fragmentLayoutId]
+  ) {
+    return [];
+  }
+
+  const fragmentLayout = context.layoutsData[fragmentLayoutId];
+  if (fragmentLayout.type !== "layout" || !isFragmentLayout(fragmentLayout)) {
+    return [];
+  }
+
+  const fragmentNodes = toHierarchyStructure(fragmentLayout.elements);
+  const fragmentContext = {
+    ...context,
+    layoutId: fragmentLayoutId,
+    fragmentStack: [...fragmentStack, fragmentLayoutId],
+  };
+
+  return prefixElementIds(
+    fragmentNodes.map((child) =>
+      mapLayoutNode({
+        node: child,
+        imageItems,
+        context: fragmentContext,
+      }),
+    ),
+    node.id,
+  );
 };
 
 const isNvlLinesContainer = (node) => {
@@ -505,7 +562,11 @@ const applySliderNode = ({ element, node, imageItems }) => {
 };
 
 const applyContainerNode = ({ element, node }) => {
-  if (node.type !== "container" && !REPEATING_CONTAINER_CONFIG[node.type]) {
+  if (
+    node.type !== "container" &&
+    node.type !== "fragment-ref" &&
+    !REPEATING_CONTAINER_CONFIG[node.type]
+  ) {
     return element;
   }
 
@@ -526,7 +587,12 @@ const applyContainerNode = ({ element, node }) => {
 
   const repeatingConfig = REPEATING_CONTAINER_CONFIG[node.type];
   if (!repeatingConfig) {
-    return nextElement;
+    return node.type === "fragment-ref"
+      ? {
+          ...nextElement,
+          type: "container",
+        }
+      : nextElement;
   }
 
   return {
@@ -558,14 +624,25 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
   element = applySliderNode({ element, node, imageItems });
   element = applyContainerNode({ element, node });
 
-  if (node.children?.length > 0) {
-    element.children = node.children.map((child) =>
-      mapLayoutNode({
-        node: child,
-        imageItems,
-        context,
-      }),
-    );
+  const resolvedChildren =
+    node.type === "fragment-ref"
+      ? resolveFragmentChildren({
+          node,
+          imageItems,
+          context,
+        })
+      : node.children?.length > 0
+        ? node.children.map((child) =>
+            mapLayoutNode({
+              node: child,
+              imageItems,
+              context,
+            }),
+          )
+        : [];
+
+  if (resolvedChildren.length > 0) {
+    element.children = resolvedChildren;
 
     if (REPEATING_CONTAINER_CONFIG[node.type]) {
       element.children = updateChildrenIds(element.children, "i");
@@ -700,6 +777,8 @@ export const buildLayoutElements = (
     layoutId: options.layoutId ?? "preview",
     textStylesData,
     textStyles,
+    layoutsData: options.layoutsData,
+    fragmentStack: options.fragmentStack ?? [],
   };
 
   const elements = (layout || []).map((node) =>
@@ -1335,6 +1414,7 @@ export const layoutHierarchyStructureToRenderState = (
   textStylesData,
   colorsData,
   fontsData,
+  options = {},
 ) => {
   return buildLayoutRenderElements(
     layout,
@@ -1342,5 +1422,6 @@ export const layoutHierarchyStructureToRenderState = (
     textStylesData,
     colorsData,
     fontsData,
+    options,
   );
 };

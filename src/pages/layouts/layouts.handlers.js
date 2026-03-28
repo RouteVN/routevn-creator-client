@@ -5,9 +5,63 @@ import {
   requireProjectResolution,
   scaleLayoutElementsForProjectResolution,
 } from "../../internal/projectResolution.js";
+import {
+  isFragmentLayout,
+  normalizeLayoutType,
+} from "../../internal/project/layout.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { createLayoutsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+
+const syncEditFormValues = ({ deps, values } = {}) => {
+  const { editForm } = deps.refs;
+  editForm.reset();
+  editForm.setValues({ values });
+};
+
+const navigateToLayoutEditor = ({ appService, layoutId } = {}) => {
+  const currentPayload = appService.getPayload();
+  appService.navigate("/project/layout-editor", {
+    ...createLayoutEditorPayload({
+      payload: currentPayload,
+      layoutId,
+      resourceType: "layouts",
+    }),
+  });
+};
+
+const openEditDialogWithValues = ({ deps, itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  const { store, render, refs } = deps;
+  const layoutItem = store.selectLayoutItemById({ itemId });
+  if (!layoutItem || layoutItem.type !== "layout") {
+    return;
+  }
+
+  store.setSelectedItemId({ itemId });
+  refs.fileExplorer.selectItem({ itemId });
+  store.openEditDialog({
+    itemId,
+    defaultValues: {
+      name: layoutItem.name ?? "",
+      description: layoutItem.description ?? "",
+      isFragment: isFragmentLayout(layoutItem),
+    },
+  });
+  render();
+
+  syncEditFormValues({
+    deps,
+    values: {
+      name: layoutItem.name ?? "",
+      description: layoutItem.description ?? "",
+      isFragment: isFragmentLayout(layoutItem),
+    },
+  });
+};
 
 const {
   handleBeforeMount,
@@ -36,20 +90,12 @@ export {
 };
 
 export const handleItemDoubleClick = (deps, payload) => {
-  const { appService } = deps;
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder) {
     return;
   }
 
-  const currentPayload = appService.getPayload();
-  appService.navigate("/project/layout-editor", {
-    ...createLayoutEditorPayload({
-      payload: currentPayload,
-      layoutId: itemId,
-      resourceType: "layouts",
-    }),
-  });
+  openEditDialogWithValues({ deps, itemId });
 };
 
 export const handleAddLayoutClick = (deps, payload) => {
@@ -65,13 +111,21 @@ export const handleAddDialogClose = (deps) => {
   render();
 };
 
+export const handleEditDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.closeEditDialog();
+  render();
+};
+
 const createLayoutElement = (id, data) => ({
   id,
   ...data,
 });
 
 const createLayoutTemplate = (layoutType, projectResolution) => {
-  if (layoutType === "dialogue") {
+  const normalizedLayoutType = normalizeLayoutType(layoutType);
+
+  if (normalizedLayoutType === "dialogue") {
     const containerId = nanoid();
     const nameTextId = nanoid();
     const contentTextId = nanoid();
@@ -146,7 +200,7 @@ const createLayoutTemplate = (layoutType, projectResolution) => {
     );
   }
 
-  if (layoutType === "nvl") {
+  if (normalizedLayoutType === "nvl") {
     const nvlContainerId = nanoid();
     const nvlBackgroundId = nanoid();
     const nvlLinesId = nanoid();
@@ -279,7 +333,11 @@ const createLayoutTemplate = (layoutType, projectResolution) => {
     );
   }
 
-  if (layoutType === "normal" || layoutType === "save-load") {
+  if (
+    normalizedLayoutType === "normal" ||
+    normalizedLayoutType === "save" ||
+    normalizedLayoutType === "load"
+  ) {
     const rootId = nanoid();
     const textId = nanoid();
 
@@ -348,14 +406,14 @@ const protectedLayoutTypeLabels = {
 const canDeleteLayoutItem = (layouts, itemId) => {
   const items = Object.values(layouts?.items || {});
   const item = layouts?.items?.[itemId];
-  const layoutType = item?.layoutType;
+  const layoutType = normalizeLayoutType(item?.layoutType);
 
   if (!protectedLayoutTypeLabels[layoutType]) {
     return true;
   }
 
   const matchingCount = items.filter(
-    (layout) => layout?.layoutType === layoutType,
+    (layout) => normalizeLayoutType(layout?.layoutType) === layoutType,
   ).length;
 
   return matchingCount > 1;
@@ -379,6 +437,7 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
     appService.showToast("Please select a layout type", { title: "Warning" });
     return;
   }
+  const isFragment = values?.isFragment ?? false;
 
   const projectResolution = requireProjectResolution(
     projectService.getRepositoryState().project?.resolution,
@@ -393,6 +452,7 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
         layoutId: nanoid(),
         name,
         layoutType,
+        isFragment,
         elements: createLayoutTemplate(layoutType, projectResolution),
         parentId: store.getState().targetGroupId,
         position: "last",
@@ -407,11 +467,64 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
   await handleDataChanged(deps);
 };
 
+export const handleEditFormActionClick = async (deps, payload) => {
+  const { store, projectService, appService, render } = deps;
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
+    return;
+  }
+
+  const name = values?.name?.trim();
+  if (!name) {
+    appService.showToast("Please enter a layout name", { title: "Warning" });
+    return;
+  }
+
+  const editItemId = store.getState().editItemId;
+  if (!editItemId) {
+    store.closeEditDialog();
+    render();
+    return;
+  }
+
+  const updateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to update layout.",
+    action: () =>
+      projectService.updateLayoutItem({
+        layoutId: editItemId,
+        data: {
+          name,
+          description: values?.description ?? "",
+          isFragment: values?.isFragment ?? false,
+        },
+      }),
+  });
+  if (!updateAttempt.ok) {
+    return;
+  }
+
+  store.closeEditDialog();
+  await handleDataChanged(deps);
+};
+
+export const handleOpenLayoutEditorClick = (deps, payload) => {
+  const { appService } = deps;
+  const layoutId = payload._event.currentTarget?.dataset?.layoutId;
+  if (!layoutId) {
+    return;
+  }
+
+  navigateToLayoutEditor({ appService, layoutId });
+};
+
 export const handleItemDelete = async (deps, payload) => {
   const { projectService, appService, render } = deps;
   const { itemId } = payload._event.detail;
   const state = projectService.getState();
-  const layoutType = state.layouts?.items?.[itemId]?.layoutType;
+  const layoutType = normalizeLayoutType(
+    state.layouts?.items?.[itemId]?.layoutType,
+  );
 
   const usage = recursivelyCheckResource({
     state,

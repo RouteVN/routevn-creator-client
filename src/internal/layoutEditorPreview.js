@@ -448,7 +448,10 @@ export const createLayoutEditorRenderState = (deps) => {
     { items: textStyleItems },
     { items: colorsItems },
     { items: fontsItems },
-    { layoutId },
+    {
+      layoutId,
+      layoutsData: repositoryState.layouts?.items || {},
+    },
   );
 
   return {

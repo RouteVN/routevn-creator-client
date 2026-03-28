@@ -65,6 +65,14 @@ const CREATE_TEMPLATES = {
     step: 1,
     initialValue: 0,
   }),
+  "fragment-ref": () => ({
+    type: "fragment-ref",
+    name: "Fragment",
+    ...BASE_TRANSFORM,
+    width: 100,
+    height: 100,
+    fragmentLayoutId: undefined,
+  }),
   "slider-horizontal": () => ({
     type: "slider",
     name: "Slider",
@@ -335,6 +343,7 @@ const TYPE_FAMILIES = {
   container: "container",
   "container-ref-choice-item": "container",
   "container-ref-dialogue-line": "container",
+  "fragment-ref": "fragment",
   sprite: "sprite",
   text: "text",
   "text-revealing": "text",
@@ -365,6 +374,9 @@ const FAMILY_CAPABILITIES = {
   container: {
     supportsAnchor: true,
     supportsDirection: true,
+  },
+  fragment: {
+    supportsAnchor: true,
   },
   sprite: {
     supportsSpriteImages: true,
@@ -399,6 +411,14 @@ const TYPE_RULES = {
   container: {
     normalizeFieldValue: ({ name, value }) => {
       if (name === "direction" && (value === null || value === "")) {
+        return undefined;
+      }
+      return value;
+    },
+  },
+  fragment: {
+    normalizeFieldValue: ({ name, value }) => {
+      if (name === "fragmentLayoutId" && (value === null || value === "")) {
         return undefined;
       }
 

@@ -235,6 +235,14 @@ layoutSections:
       - type: condition-summary
         name: visibilityCondition
         value: "${visibilityConditionSummary}"
+  - "$when": 'itemType == "fragment-ref"'
+    label: Fragment
+    items:
+      - type: select
+        label: Fragment
+        name: fragmentLayoutId
+        value: "${values.fragmentLayoutId}"
+        options: "${fragmentLayoutOptions}"
   - "$when": "supportsActions"
     id: actions
     label: Actions

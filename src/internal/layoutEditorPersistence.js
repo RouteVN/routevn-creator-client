@@ -220,7 +220,8 @@ export const syncLayoutEditorRepositoryState = ({
   layoutId,
   resourceType = "layouts",
 } = {}) => {
-  const { images, textStyles, colors, fonts, variables } = repositoryState;
+  const { images, layouts, textStyles, colors, fonts, variables } =
+    repositoryState;
   const resourceCollection = getLayoutEditorResourceCollection(
     repositoryState,
     resourceType,
@@ -233,6 +234,7 @@ export const syncLayoutEditorRepositoryState = ({
   store.setLayout({ id: layoutId, layout, resourceType });
   store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
   store.setImages({ images: images || { items: {}, tree: [] } });
+  store.setLayoutsData({ layoutsData: layouts || { items: {}, tree: [] } });
   store.setTextStylesData({
     textStylesData: textStyles || { items: {}, tree: [] },
   });

@@ -76,6 +76,7 @@ export const handleOnUpdate = (deps, payload) => {
   if (
     oldProps?.key === newProps?.key &&
     oldProps?.values === newProps?.values &&
+    oldProps?.layoutsData === newProps?.layoutsData &&
     oldProps?.variablesData === newProps?.variablesData &&
     oldProps?.textStylesData === newProps?.textStylesData
   ) {

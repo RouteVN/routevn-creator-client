@@ -4,6 +4,7 @@ import {
   createLayoutEditorItemTemplate,
   isLayoutEditorContainerItemType,
 } from "../../internal/layoutEditorTypes.js";
+import { getFragmentLayoutOptions } from "../../internal/layoutFragments.js";
 import { getSystemVariableItems } from "../../internal/systemVariables.js";
 import { splitVisibilityConditionFromWhen } from "../../internal/layoutVisibilityCondition.js";
 import {
@@ -11,9 +12,10 @@ import {
   formatProjectResolutionAspectRatio,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
+import { normalizeLayoutType } from "../../internal/project/layout.js";
 
 const PREVIEW_VARIABLE_TYPES = new Set(["boolean", "number", "string"]);
-const NORMAL_LIKE_LAYOUT_TYPES = new Set(["normal", "save-load"]);
+const NORMAL_LIKE_LAYOUT_TYPES = new Set(["normal", "save", "load"]);
 
 const PREVIEW_BOOLEAN_OPTIONS = [
   { label: "True", value: true },
@@ -207,6 +209,7 @@ export const createInitialState = () => ({
   selectedItemId: undefined,
   layout: undefined,
   images: { tree: [], items: {} },
+  layoutsData: { tree: [], items: {} },
   textStylesData: { tree: [], items: {} },
   colorsData: { tree: [], items: {} },
   fontsData: { tree: [], items: {} },
@@ -250,6 +253,14 @@ export const createInitialState = () => ({
     fieldName: undefined,
     selectedImageId: undefined,
   },
+  fragmentCreateDialog: {
+    open: false,
+    parentId: undefined,
+    key: 0,
+    defaultValues: {
+      fragmentLayoutId: undefined,
+    },
+  },
 });
 
 export const setItems = ({ state }, { layoutData } = {}) => {
@@ -271,8 +282,8 @@ export const setLayout = ({ state }, payload = {}) => {
     resourceType: nextResourceType,
     layoutType:
       nextResourceType === "controls"
-        ? layout?.layoutType
-        : (layout?.layoutType ?? "normal"),
+        ? normalizeLayoutType(layout?.layoutType)
+        : normalizeLayoutType(layout?.layoutType ?? "normal"),
   };
 };
 
@@ -296,6 +307,10 @@ export const updateSelectedItem = ({ state }, { updatedItem } = {}) => {
 
 export const setImages = ({ state }, { images } = {}) => {
   state.images = images;
+};
+
+export const setLayoutsData = ({ state }, { layoutsData } = {}) => {
+  state.layoutsData = layoutsData;
 };
 
 export const setTextStylesData = ({ state }, { textStylesData } = {}) => {
@@ -504,6 +519,31 @@ export const closeSliderCreateImageSelectorDialog = (
   };
 };
 
+export const openFragmentCreateDialog = (
+  { state },
+  { parentId, defaultValues } = {},
+) => {
+  state.fragmentCreateDialog = {
+    open: true,
+    parentId,
+    key: state.fragmentCreateDialog.key + 1,
+    defaultValues: {
+      fragmentLayoutId: defaultValues?.fragmentLayoutId,
+    },
+  };
+};
+
+export const closeFragmentCreateDialog = ({ state }, _payload = {}) => {
+  state.fragmentCreateDialog = {
+    open: false,
+    parentId: undefined,
+    key: state.fragmentCreateDialog.key,
+    defaultValues: {
+      fragmentLayoutId: undefined,
+    },
+  };
+};
+
 export const setSliderCreateImageSelectorSelectedImageId = (
   { state },
   { imageId } = {},
@@ -560,7 +600,7 @@ export const selectLayoutResourceType = ({ state }) => {
 };
 
 export const selectCurrentLayoutType = ({ state }) => {
-  return state.layout?.layoutType;
+  return normalizeLayoutType(state.layout?.layoutType);
 };
 
 export const selectDialogueDefaultValues = ({ state }) => {
@@ -591,7 +631,12 @@ export const selectSliderCreateImageSelectorDialog = ({ state }) => {
   return state.sliderCreateImageSelectorDialog;
 };
 
+export const selectFragmentCreateDialog = ({ state }) => {
+  return state.fragmentCreateDialog;
+};
+
 export const selectImages = ({ state }) => state.images;
+export const selectLayoutsData = ({ state }) => state.layoutsData;
 
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) {
@@ -673,7 +718,14 @@ export const selectViewData = ({ state, constants }) => {
   const item = selectSelectedItem({ state });
   const flatItems = toLayoutEditorExplorerItems(toFlatItems(state.layoutData));
   const isControlResource = state.layout?.resourceType === "controls";
-  const layoutType = state.layout?.layoutType;
+  const layoutType = normalizeLayoutType(state.layout?.layoutType);
+  const layout =
+    state.layout === undefined
+      ? undefined
+      : {
+          ...state.layout,
+          layoutType,
+        };
 
   const parsedContextMenuItems = parseAndRender(
     isControlResource
@@ -690,6 +742,9 @@ export const selectViewData = ({ state, constants }) => {
   const previewVariableItems = NORMAL_LIKE_LAYOUT_TYPES.has(layoutType)
     ? getLayoutPreviewVariableItems(state.layoutData, state.variablesData)
     : [];
+  const fragmentLayoutOptions = getFragmentLayoutOptions(state.layoutsData, {
+    excludeLayoutId: state.layout?.id,
+  });
   const previewVariablesDefaultValues = createPreviewVariableDefaultValues(
     previewVariableItems,
     state.previewVariableValues,
@@ -737,12 +792,18 @@ export const selectViewData = ({ state, constants }) => {
     sliderCreateForm: constants.sliderCreateForm,
     sliderCreateDialog: state.sliderCreateDialog,
     sliderCreateImageSelectorDialog: state.sliderCreateImageSelectorDialog,
+    fragmentCreateForm: parseAndRender(constants.fragmentCreateForm, {
+      fragmentLayoutOptions,
+    }),
+    fragmentCreateDialog: state.fragmentCreateDialog,
+    fragmentLayoutOptions,
     canvasAspectRatio: formatProjectResolutionAspectRatio(
       state.projectResolution,
     ),
-    layout: state.layout,
+    layout,
     textStylesData: state.textStylesData,
     variablesData: state.variablesData,
+    layoutsData: state.layoutsData,
     images: state.images,
   };
 };

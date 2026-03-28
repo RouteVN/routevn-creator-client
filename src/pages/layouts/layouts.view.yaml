@@ -29,6 +29,18 @@ refs:
     eventListeners:
       form-action:
         handler: handleLayoutFormActionClick
+  editDialog:
+    eventListeners:
+      close:
+        handler: handleEditDialogClose
+  editForm:
+    eventListeners:
+      form-action:
+        handler: handleEditFormActionClick
+  openLayoutEditorButton:
+    eventListeners:
+      click:
+        handler: handleOpenLayoutEditorClick
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
@@ -44,9 +56,13 @@ template:
                       - rtgl-view d=v w=f h=f:
                           - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
                               - rtgl-text c=mu-fg: ${selectedItemName}
-                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}: null
+                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
+                              - rtgl-button#openLayoutEditorButton slot="actions" data-layout-id="${selectedItemId}" w=f: Open Layout Editor
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
   - rtgl-dialog#addLayoutDialog ?open=${isAddDialogOpen} s=md:
       - rtgl-form#layoutForm slot=content :defaultValues=${layoutFormDefaults} :form=${layoutForm} w=f: null
+  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
+      - rtgl-view slot=content g=md:
+          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f: null

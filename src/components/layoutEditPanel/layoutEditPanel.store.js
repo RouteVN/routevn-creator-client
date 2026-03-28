@@ -3,6 +3,7 @@ import { toFlatGroups } from "../../internal/project/tree.js";
 import { getFirstTextStyleId } from "../../constants/textStyles.js";
 import { getVariableOptions } from "../../internal/project/projection.js";
 import { getSystemVariableItems } from "../../internal/systemVariables.js";
+import { getFragmentLayoutOptions } from "../../internal/layoutFragments.js";
 import {
   getInteractionActions,
   getInteractionPayload,
@@ -292,6 +293,7 @@ const toInspectorValues = ({ values, firstTextStyleId }) => {
     ...values,
     revealEffect,
     variableId,
+    fragmentLayoutId: values?.fragmentLayoutId ?? "",
     direction: values?.direction,
     textStyleId: values?.textStyleId || firstTextStyleId || "",
     hoverTextStyleId: values?.hoverTextStyleId ?? "",
@@ -531,6 +533,7 @@ export const selectViewData = ({ state, props, constants }) => {
     type: "number",
     includeSystem: true,
   });
+  const fragmentLayoutOptions = getFragmentLayoutOptions(props.layoutsData);
   const visibilityConditionVariableOptions =
     toVisibilityConditionVariableOptions(state.variablesData);
   const visibilityConditionVariableTypeById =
@@ -559,6 +562,7 @@ export const selectViewData = ({ state, props, constants }) => {
       textStyleItems,
       textStyleItemsWithNone,
       variableOptionsWithNone,
+      fragmentLayoutOptions,
       values,
       visibilityConditionSummary: getVisibilityConditionSummary(
         currentVisibilityCondition,
