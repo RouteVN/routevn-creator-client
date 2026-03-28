@@ -398,7 +398,10 @@ const ITEM_TYPE_CAPABILITY_OVERRIDES = {
 const TYPE_RULES = {
   container: {
     normalizeFieldValue: ({ name, value }) => {
-      if (name === "direction" && (value === null || value === "")) {
+      if (
+        name === "direction" &&
+        (value === null || value === "" || value === "absolute")
+      ) {
         return undefined;
       }
 

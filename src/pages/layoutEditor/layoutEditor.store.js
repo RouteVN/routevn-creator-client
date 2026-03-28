@@ -13,6 +13,7 @@ import {
 } from "../../internal/projectResolution.js";
 
 const PREVIEW_VARIABLE_TYPES = new Set(["boolean", "number", "string"]);
+const NORMAL_LIKE_LAYOUT_TYPES = new Set(["normal", "save-load"]);
 
 const PREVIEW_BOOLEAN_OPTIONS = [
   { label: "True", value: true },
@@ -42,7 +43,7 @@ const toPreviewVariableValue = ({ type, value } = {}) => {
 
 const getLayoutPreviewVariableItems = (layoutData = {}, variablesData = {}) => {
   const availableVariables = {
-    ...(variablesData.items ?? {}),
+    ...variablesData.items,
     ...getSystemVariableItems(),
   };
   const previewVariables = [];
@@ -129,6 +130,39 @@ const createPreviewVariableDefaultValues = (
   );
 };
 
+const createChoiceFormDefaultValues = (choiceDefaultValues = {}) => {
+  const choicesNum = Number(choiceDefaultValues.choicesNum);
+  const choiceCount =
+    Number.isFinite(choicesNum) && choicesNum > 0 ? choicesNum : 0;
+  const defaultValues = {
+    choicesNum: choiceCount,
+  };
+
+  for (let index = 0; index < choiceCount; index += 1) {
+    defaultValues[`choice${index}`] =
+      choiceDefaultValues.choices?.[index] ?? `Choice ${index + 1}`;
+  }
+
+  return defaultValues;
+};
+
+const createNvlFormDefaultValues = (nvlDefaultValues = {}) => {
+  const linesNum = Number(nvlDefaultValues.linesNum);
+  const lineCount = Number.isFinite(linesNum) && linesNum > 0 ? linesNum : 0;
+  const defaultValues = {
+    linesNum: lineCount,
+  };
+
+  for (let index = 0; index < lineCount; index += 1) {
+    defaultValues[`characterName${index}`] =
+      nvlDefaultValues.characterNames?.[index] ?? "";
+    defaultValues[`line${index}`] =
+      nvlDefaultValues.lines?.[index] ?? `This is sample NVL line ${index + 1}.`;
+  }
+
+  return defaultValues;
+};
+
 const toLayoutEditorContextMenuItems = (
   items = [],
   projectResolution = DEFAULT_PROJECT_RESOLUTION,
@@ -179,6 +213,15 @@ export const createInitialState = () => ({
   dialogueDefaultValues: {
     "dialogue-character-name": "Character",
     "dialogue-content": "This is a sample dialogue content.",
+  },
+  nvlDefaultValues: {
+    linesNum: 3,
+    characterNames: ["Character", "", "Narrator"],
+    lines: [
+      "This is the first sample NVL line.",
+      "This is the second sample NVL line.",
+      "This is the third sample NVL line.",
+    ],
   },
   previewRevealingSpeed: 50,
   choiceDefaultValues: {
@@ -350,6 +393,38 @@ export const setDialogueDefaultValue = (
   state.dialogueDefaultValues[name] = fieldValue;
 };
 
+export const setNvlDefaultValue = ({ state }, { name, fieldValue } = {}) => {
+  if (/^characterName\d+$/.test(name)) {
+    const index = Number.parseInt(name.slice("characterName".length), 10);
+    state.nvlDefaultValues.characterNames[index] = fieldValue;
+    return;
+  }
+
+  if (/^line\d+$/.test(name)) {
+    const index = Number.parseInt(name.slice("line".length), 10);
+    state.nvlDefaultValues.lines[index] = fieldValue;
+    return;
+  }
+
+  state.nvlDefaultValues[name] = fieldValue;
+
+  if (name !== "linesNum") {
+    return;
+  }
+
+  const lines = [];
+  const characterNames = [];
+  for (let index = 0; index < fieldValue; index += 1) {
+    characterNames.push(state.nvlDefaultValues.characterNames[index] ?? "");
+    lines.push(
+      state.nvlDefaultValues.lines[index] ||
+        `This is sample NVL line ${index + 1}.`,
+    );
+  }
+  state.nvlDefaultValues.characterNames = characterNames;
+  state.nvlDefaultValues.lines = lines;
+};
+
 export const setPreviewRevealingSpeed = ({ state }, { value } = {}) => {
   state.previewRevealingSpeed = value;
 };
@@ -436,8 +511,8 @@ export const setSliderCreateImageSelectorSelectedImageId = (
 };
 
 export const setChoiceDefaultValue = ({ state }, { name, fieldValue } = {}) => {
-  if (name.startsWith("choices[")) {
-    const index = Number.parseInt(name.match(/\d+/)[0], 10);
+  if (/^choice\d+$/.test(name)) {
+    const index = Number.parseInt(name.slice("choice".length), 10);
     state.choiceDefaultValues.choices[index] = fieldValue;
     return;
   }
@@ -489,6 +564,10 @@ export const selectCurrentLayoutType = ({ state }) => {
 
 export const selectDialogueDefaultValues = ({ state }) => {
   return state.dialogueDefaultValues;
+};
+
+export const selectNvlDefaultValues = ({ state }) => {
+  return state.nvlDefaultValues;
 };
 
 export const selectChoiceDefaultValues = ({ state }) => {
@@ -608,7 +687,7 @@ export const selectViewData = ({ state, constants }) => {
     { layoutType },
   );
   const previewVariableItems =
-    layoutType === "normal"
+    NORMAL_LIKE_LAYOUT_TYPES.has(layoutType)
       ? getLayoutPreviewVariableItems(state.layoutData, state.variablesData)
       : [];
   const previewVariablesDefaultValues = createPreviewVariableDefaultValues(
@@ -638,9 +717,16 @@ export const selectViewData = ({ state, constants }) => {
     ),
     dialogueForm: constants.dialogueForm,
     dialogueDefaultValues: state.dialogueDefaultValues,
+    nvlForm: constants.nvlForm,
+    nvlDefaultValues: createNvlFormDefaultValues(state.nvlDefaultValues),
+    nvlContext: {
+      ...state.nvlDefaultValues,
+    },
     previewRevealingSpeed: state.previewRevealingSpeed,
     choiceForm: constants.choiceForm,
-    choiceDefaultValues: state.choiceDefaultValues,
+    choiceDefaultValues: createChoiceFormDefaultValues(
+      state.choiceDefaultValues,
+    ),
     choicesContext: {
       ...state.choiceDefaultValues,
     },

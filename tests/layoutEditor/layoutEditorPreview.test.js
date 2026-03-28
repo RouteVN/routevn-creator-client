@@ -51,6 +51,27 @@ describe("layoutEditorPreview", () => {
     ]);
   });
 
+  it("builds NVL preview lines from the editable content list", () => {
+    const previewData = createLayoutEditorPreviewData({
+      layoutType: "nvl",
+      nvlDefaultValues: {
+        linesNum: 2,
+        characterNames: ["Aki", ""],
+        lines: ["First NVL line", "Second NVL line"],
+      },
+    });
+
+    expect(previewData.dialogue.lines).toEqual([
+      {
+        characterName: "Aki",
+        content: [{ text: "First NVL line" }],
+      },
+      {
+        content: [{ text: "Second NVL line" }],
+      },
+    ]);
+  });
+
   it("includes system variables in preview data", () => {
     const previewData = createLayoutEditorPreviewData({
       variablesData: {
@@ -83,12 +104,12 @@ describe("layoutEditorPreview", () => {
     });
   });
 
-  it("creates a draggable primary overlay and non-draggable repeated overlays", () => {
+  it("creates a draggable overlay only for the first repeated instance", () => {
     const overlays = createLayoutEditorSelectionOverlay({
       selectedItemId: "target",
       parsedElements: [
         {
-          id: "target",
+          id: "target-instance-0",
           type: "rect",
           x: 10,
           y: 20,
@@ -96,7 +117,7 @@ describe("layoutEditorPreview", () => {
           height: 40,
         },
         {
-          id: "target-0",
+          id: "target-instance-1",
           type: "rect",
           x: 140,
           y: 20,
@@ -106,11 +127,9 @@ describe("layoutEditorPreview", () => {
       ],
     });
 
-    expect(overlays).toHaveLength(2);
-    expect(overlays[0].id).toBe("selected-border-preview-0");
-    expect(overlays[0].drag).toBeUndefined();
-    expect(overlays[1].id).toBe("selected-border");
-    expect(overlays[1].drag).toEqual({
+    expect(overlays).toHaveLength(1);
+    expect(overlays[0].id).toBe("selected-border");
+    expect(overlays[0].drag).toEqual({
       start: { payload: {} },
       move: { payload: {} },
       end: { payload: {} },

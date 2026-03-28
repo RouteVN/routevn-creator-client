@@ -123,6 +123,31 @@ const createDialogueLines = ({ characterName, dialogueContent }) => {
   ];
 };
 
+const createNvlLines = (nvlDefaultValues = {}) => {
+  const linesNum = Number(nvlDefaultValues.linesNum);
+  const lineCount =
+    Number.isFinite(linesNum) && linesNum > 0 ? linesNum : 0;
+  const sourceCharacterNames = Array.isArray(nvlDefaultValues.characterNames)
+    ? nvlDefaultValues.characterNames
+    : [];
+  const sourceLines = Array.isArray(nvlDefaultValues.lines)
+    ? nvlDefaultValues.lines
+    : [];
+
+  return Array.from({ length: lineCount }, (_unused, index) => {
+    const characterName = sourceCharacterNames[index] ?? "";
+    const line = {
+      content: [{ text: sourceLines[index] ?? `Line ${index + 1}` }],
+    };
+
+    if (characterName) {
+      line.characterName = characterName;
+    }
+
+    return line;
+  });
+};
+
 const toElementList = (elements) => {
   if (Array.isArray(elements)) {
     return elements.filter(Boolean);
@@ -140,12 +165,7 @@ const isSelectableMatch = (elementId, selectedItemId) => {
     return true;
   }
 
-  if (!elementId.startsWith(`${selectedItemId}-`)) {
-    return false;
-  }
-
-  const repeatedInstanceSuffix = elementId.slice(selectedItemId.length + 1);
-  return /^\d+$/.test(repeatedInstanceSuffix);
+  return elementId === `${selectedItemId}-instance-0`;
 };
 
 const collectMatchingPaths = (
@@ -257,9 +277,11 @@ const buildOverlayTree = ({ path, overlayId, draggable }) => {
 };
 
 export const createLayoutEditorPreviewData = ({
+  layoutType,
   variablesData,
   previewVariableValues,
   dialogueDefaultValues,
+  nvlDefaultValues,
   previewRevealingSpeed,
   choicesData,
 } = {}) => {
@@ -289,10 +311,13 @@ export const createLayoutEditorPreviewData = ({
         name: characterName,
       },
       content: [{ text: dialogueContent }],
-      lines: createDialogueLines({
-        characterName,
-        dialogueContent,
-      }),
+      lines:
+        layoutType === "nvl"
+          ? createNvlLines(nvlDefaultValues)
+          : createDialogueLines({
+              characterName,
+              dialogueContent,
+            }),
     },
     choice: {
       items: createChoiceItems(choicesData),
@@ -304,6 +329,26 @@ const resolveLayoutPreviewElements = ({ elements, previewData } = {}) => {
   return toElementList(
     parseAndRender(toElementList(elements), previewData ?? {}),
   );
+};
+
+const collectParsedElementCoordinates = (elements = [], parentId) => {
+  return toElementList(elements).flatMap((element) => {
+    const entry = {
+      id: element?.id,
+      type: element?.type,
+      parentId,
+      x: element?.x,
+      y: element?.y,
+      width: element?.width,
+      height: element?.height,
+      rotation: element?.rotation,
+    };
+
+    return [
+      entry,
+      ...collectParsedElementCoordinates(element?.children, element?.id),
+    ];
+  });
 };
 
 export const createLayoutEditorSelectionOverlay = ({
@@ -325,18 +370,10 @@ export const createLayoutEditorSelectionOverlay = ({
 
   const primaryPath =
     matchingPaths.find(
-      (path) => path[path.length - 1]?.id === selectedItemId,
+      (path) =>
+        path[path.length - 1]?.id === selectedItemId ||
+        path[path.length - 1]?.id === `${selectedItemId}-instance-0`,
     ) ?? matchingPaths[0];
-  const secondaryPaths = matchingPaths.filter((path) => path !== primaryPath);
-  const secondaryOverlays = secondaryPaths
-    .map((path, index) => {
-      return buildOverlayTree({
-        path,
-        overlayId: `selected-border-preview-${index}`,
-        draggable: false,
-      });
-    })
-    .filter(Boolean);
   const primaryOverlay = buildOverlayTree({
     path: primaryPath,
     overlayId: "selected-border",
@@ -344,10 +381,10 @@ export const createLayoutEditorSelectionOverlay = ({
   });
 
   if (!primaryOverlay) {
-    return secondaryOverlays;
+    return [];
   }
 
-  return [...secondaryOverlays, primaryOverlay];
+  return [primaryOverlay];
 };
 
 const loadLayoutEditorAssets = async (deps, fileReferences, fontsItems) => {
@@ -473,9 +510,11 @@ export const renderLayoutEditorPreview = async (
     const finalElements = resolveLayoutPreviewElements({
       elements: renderStateElements,
       previewData: createLayoutEditorPreviewData({
+        layoutType: store.selectCurrentLayoutType(),
         variablesData,
         previewVariableValues: store.selectPreviewVariableValues(),
         dialogueDefaultValues: store.selectDialogueDefaultValues(),
+        nvlDefaultValues: store.selectNvlDefaultValues(),
         previewRevealingSpeed: store.selectPreviewRevealingSpeed(),
         choicesData: store.selectChoicesData(),
       }),
@@ -483,6 +522,10 @@ export const renderLayoutEditorPreview = async (
 
     const parsedState = graphicsService.parse({
       elements: finalElements,
+    });
+    console.log("[layoutEditor.preview] parsedElementCoordinates", {
+      selectedItemId: selectedItem?.id,
+      coordinates: collectParsedElementCoordinates(parsedState.elements),
     });
     const overlayElements = createLayoutEditorSelectionOverlay({
       parsedElements: parsedState.elements,

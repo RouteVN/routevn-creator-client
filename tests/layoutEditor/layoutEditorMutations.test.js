@@ -47,6 +47,22 @@ describe("layoutEditorMutations", () => {
     expect(updatedItem.anchorY).toBe(1);
   });
 
+  it("normalizes absolute container direction to an unset saved value", () => {
+    const item = {
+      id: "choice-container-1",
+      type: "container-ref-choice-item",
+      direction: "vertical",
+    };
+
+    const updatedItem = applyLayoutItemFieldChange({
+      item,
+      name: "direction",
+      value: "absolute",
+    });
+
+    expect(updatedItem.direction).toBeUndefined();
+  });
+
   it("auto-sizes sprites from the selected image when width and height are unset", () => {
     const item = {
       id: "sprite-1",

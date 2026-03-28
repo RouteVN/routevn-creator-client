@@ -292,7 +292,7 @@ const toInspectorValues = ({ values, firstTextStyleId }) => {
     ...values,
     revealEffect,
     variableId,
-    direction: values?.direction ?? "",
+    direction: values?.direction ?? "absolute",
     textStyleId: values?.textStyleId || firstTextStyleId || "",
     hoverTextStyleId: values?.hoverTextStyleId ?? "",
     clickTextStyleId: values?.clickTextStyleId ?? "",
