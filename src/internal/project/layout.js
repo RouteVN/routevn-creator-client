@@ -262,7 +262,7 @@ const updateChildrenIds = (children, indexVar) => {
   return children.map((child) => {
     const updatedChild = {
       ...child,
-      id: `${child.id}-\${${indexVar}}`,
+      id: `${child.id}-instance-\${${indexVar}}`,
     };
 
     if (updatedChild.children && updatedChild.children.length > 0) {
@@ -533,7 +533,7 @@ const applyContainerNode = ({ element, node }) => {
     ...nextElement,
     type: "container",
     $each: repeatingConfig.each,
-    id: `${node.id}-\${i}`,
+    id: `${node.id}-instance-\${i}`,
     ...(repeatingConfig.click
       ? {
           click: {

@@ -51,12 +51,13 @@ export const applyLayoutItemFieldChange = ({
   }
 
   const typeRules = getLayoutEditorTypeRules(item.type);
-  const normalizedValue =
-    typeRules.normalizeFieldValue?.({
-      item,
-      name,
-      value,
-    }) ?? value;
+  const normalizedValue = typeRules.normalizeFieldValue
+    ? typeRules.normalizeFieldValue({
+        item,
+        name,
+        value,
+      })
+    : value;
 
   const nextItem = structuredClone(item);
 

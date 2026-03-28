@@ -99,7 +99,6 @@ layoutSections:
         value: "${values.direction}"
         options:
           - label: Absolute
-            value: ""
           - label: Horizontal
             value: horizontal
           - label: Vertical

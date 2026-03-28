@@ -47,6 +47,22 @@ describe("layoutEditorMutations", () => {
     expect(updatedItem.anchorY).toBe(1);
   });
 
+  it("keeps cleared container direction unset in saved data", () => {
+    const item = {
+      id: "choice-container-1",
+      type: "container-ref-choice-item",
+      direction: "vertical",
+    };
+
+    const updatedItem = applyLayoutItemFieldChange({
+      item,
+      name: "direction",
+      value: undefined,
+    });
+
+    expect(updatedItem.direction).toBeUndefined();
+  });
+
   it("auto-sizes sprites from the selected image when width and height are unset", () => {
     const item = {
       id: "sprite-1",

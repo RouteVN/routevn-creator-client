@@ -279,7 +279,7 @@ const createLayoutTemplate = (layoutType, projectResolution) => {
     );
   }
 
-  if (layoutType === "normal") {
+  if (layoutType === "normal" || layoutType === "save-load") {
     const rootId = nanoid();
     const textId = nanoid();
 
