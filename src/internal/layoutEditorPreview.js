@@ -50,7 +50,7 @@ const toPreviewVariableValue = (variable = {}) => {
 
 const createPreviewVariables = (variablesData = {}) => {
   const variableItems = {
-    ...(variablesData.items ?? {}),
+    ...variablesData.items,
     ...getSystemVariableItems(),
   };
 
@@ -73,7 +73,7 @@ const applyPreviewVariableOverrides = (
   previewVariableValues = {},
 ) => {
   const variableItems = {
-    ...(variablesData.items ?? {}),
+    ...variablesData.items,
     ...getSystemVariableItems(),
   };
   const nextPreviewVariables = {
@@ -125,8 +125,7 @@ const createDialogueLines = ({ characterName, dialogueContent }) => {
 
 const createNvlLines = (nvlDefaultValues = {}) => {
   const linesNum = Number(nvlDefaultValues.linesNum);
-  const lineCount =
-    Number.isFinite(linesNum) && linesNum > 0 ? linesNum : 0;
+  const lineCount = Number.isFinite(linesNum) && linesNum > 0 ? linesNum : 0;
   const sourceCharacterNames = Array.isArray(nvlDefaultValues.characterNames)
     ? nvlDefaultValues.characterNames
     : [];

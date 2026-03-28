@@ -157,7 +157,8 @@ const createNvlFormDefaultValues = (nvlDefaultValues = {}) => {
     defaultValues[`characterName${index}`] =
       nvlDefaultValues.characterNames?.[index] ?? "";
     defaultValues[`line${index}`] =
-      nvlDefaultValues.lines?.[index] ?? `This is sample NVL line ${index + 1}.`;
+      nvlDefaultValues.lines?.[index] ??
+      `This is sample NVL line ${index + 1}.`;
   }
 
   return defaultValues;
@@ -686,10 +687,9 @@ export const selectViewData = ({ state, constants }) => {
       : constants.emptyContextMenuItems,
     { layoutType },
   );
-  const previewVariableItems =
-    NORMAL_LIKE_LAYOUT_TYPES.has(layoutType)
-      ? getLayoutPreviewVariableItems(state.layoutData, state.variablesData)
-      : [];
+  const previewVariableItems = NORMAL_LIKE_LAYOUT_TYPES.has(layoutType)
+    ? getLayoutPreviewVariableItems(state.layoutData, state.variablesData)
+    : [];
   const previewVariablesDefaultValues = createPreviewVariableDefaultValues(
     previewVariableItems,
     state.previewVariableValues,
