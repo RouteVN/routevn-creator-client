@@ -276,6 +276,16 @@ export const selectActionsData = ({ props, state }) => {
     preview.popLayeredView = true;
   }
 
+  if (actions.rollbackByOffset) {
+    actionsObject.rollbackByOffset = actions.rollbackByOffset;
+    const rawOffset = Number(actions.rollbackByOffset.offset);
+    const offset = Number.isFinite(rawOffset) ? rawOffset : -1;
+    preview.rollbackByOffset = {
+      offset,
+      summary: `Rollback by ${Math.abs(offset)} line${Math.abs(offset) === 1 ? "" : "s"}`,
+    };
+  }
+
   if (presentationState.dialogue) {
     actionsObject.dialogue = presentationState.dialogue;
     const dialogueModeLabel = resolveDialogueModeLabel(

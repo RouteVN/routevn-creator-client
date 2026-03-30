@@ -30,6 +30,7 @@ const ACTION_LABELS = {
   toggleDialogueUI: "Toggle Dialogue Box",
   pushLayeredView: "Push Layered View",
   popLayeredView: "Pop Layered View",
+  rollbackByOffset: "Rollback",
   updateVariable: "Update Variable",
 };
 

@@ -30,7 +30,7 @@ refs:
 template:
   - $if showSelected:
       - rtgl-view g=md w=f:
-          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.dialogue || preview.choice || preview.control || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.toggleDialogueUI || preview.setNextLineConfig || preview.pushLayeredView || preview.popLayeredView || preview.updateVariable:
+          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.dialogue || preview.choice || preview.control || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.toggleDialogueUI || preview.setNextLineConfig || preview.pushLayeredView || preview.popLayeredView || preview.updateVariable || preview.rollbackByOffset:
               - $if preview.control:
                   - rtgl-view#actionItemControl data-mode=control g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=control wh=24: null
@@ -107,6 +107,10 @@ template:
                   - rtgl-view#actionItemPopLayeredView data-mode=popLayeredView g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="layers" wh=24: null
                       - rtgl-text s=sm: Pop current layered view
+              - $if preview.rollbackByOffset:
+                  - rtgl-view#actionItemRollbackByOffset data-mode=rollbackByOffset g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg="next-line" wh=24: null
+                      - rtgl-text s=sm: ${preview.rollbackByOffset.summary}
               - $if preview.setNextLineConfig:
                   - rtgl-view#actionItemSetNextLineConfig data-mode=setNextLineConfig g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=settings wh=24: null
@@ -150,6 +154,8 @@ template:
               - rvn-command-line-push-layered-view#commandLinePushLayeredView :pushLayeredView=${actions.pushLayeredView}: null
             $elif mode == "popLayeredView":
               - rvn-command-line-pop-layered-view#commandLinePopLayeredView :popLayeredView=${actions.popLayeredView}: null
+            $elif mode == "rollbackByOffset":
+              - rvn-command-line-rollback-by-offset#commandLineRollbackByOffset :rollbackByOffset=${actions.rollbackByOffset}: null
             $elif mode == "visual":
               - rvn-command-line-visual#commandLineVisual :visual=${actions.visual} :presentationState=${presentationState}: null
             $elif mode == "setNextLineConfig":

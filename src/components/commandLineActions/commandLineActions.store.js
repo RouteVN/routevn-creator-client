@@ -48,6 +48,12 @@ const SYSTEM_ACTIONS = [
     icon: "variable",
     mode: "updateVariable",
   },
+  {
+    id: "19",
+    label: "Rollback",
+    icon: "next-line",
+    mode: "rollbackByOffset",
+  },
 ];
 
 const PRESENTATION_ACTIONS = [
