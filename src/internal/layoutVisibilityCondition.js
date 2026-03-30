@@ -240,7 +240,9 @@ export const splitVisibilityConditionFromWhen = (expression) => {
       break;
     }
 
-    for (const fixedStateItem of Object.values(getFixedVisibilityStateItems())) {
+    for (const fixedStateItem of Object.values(
+      getFixedVisibilityStateItems(),
+    )) {
       const escapedAccessor = fixedStateItem.accessor.replace(
         /[.*+?^${}()|[\]\\]/g,
         "\\$&",

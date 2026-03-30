@@ -459,10 +459,7 @@ const TYPE_RULES = {
         return "continuous";
       }
 
-      if (
-        name === "paginationVariableId" &&
-        (value === null || value === "")
-      ) {
+      if (name === "paginationVariableId" && (value === null || value === "")) {
         return undefined;
       }
 

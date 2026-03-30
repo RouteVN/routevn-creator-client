@@ -319,7 +319,9 @@ const createSaveLoadPaginationDialogDefaults = (values = {}) => {
     paginationMode: values?.paginationMode ?? "continuous",
     paginationVariableId: values?.paginationVariableId ?? "",
     paginationSize:
-      Number.isFinite(paginationSize) && paginationSize > 0 ? paginationSize : 3,
+      Number.isFinite(paginationSize) && paginationSize > 0
+        ? paginationSize
+        : 3,
   };
 };
 

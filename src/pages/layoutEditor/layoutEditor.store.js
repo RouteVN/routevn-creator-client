@@ -215,8 +215,8 @@ const findSaveLoadPreviewSettings = ({
     ? { layoutType: currentLayoutType }
     : layoutsData?.items?.[layoutId];
   const layoutItems = isCurrentLayout
-    ? currentLayoutData?.items ?? {}
-    : layoutItem?.elements?.items ?? {};
+    ? (currentLayoutData?.items ?? {})
+    : (layoutItem?.elements?.items ?? {});
 
   for (const item of Object.values(layoutItems)) {
     if (item?.type === "container-ref-save-load-slot") {
@@ -1053,8 +1053,7 @@ export const selectViewData = ({ state, constants }) => {
       slotsNum: state.saveLoadDefaultValues.slotsNum,
       saveLoadSlotCount,
       paginationMode: saveLoadPreviewSettings?.paginationMode ?? "continuous",
-      paginationVariableId:
-        saveLoadPreviewSettings?.paginationVariableId ?? "",
+      paginationVariableId: saveLoadPreviewSettings?.paginationVariableId ?? "",
       paginationSize: saveLoadPreviewSettings?.paginationSize,
       saveImageIds: state.saveLoadDefaultValues.saveImageIds,
       saveDates: state.saveLoadDefaultValues.saveDates,
