@@ -9,7 +9,10 @@ import {
   getInteractionPayload,
 } from "../../internal/project/interactionPayload.js";
 import { getLayoutEditorItemCapabilities } from "../../internal/layoutEditorTypes.js";
-import { splitVisibilityConditionFromWhen } from "../../internal/layoutVisibilityCondition.js";
+import {
+  SAVE_DATA_AVAILABLE_CONDITION_ID,
+  splitVisibilityConditionFromWhen,
+} from "../../internal/layoutVisibilityCondition.js";
 
 const ACTION_INTERACTION_LABELS = {
   click: "Click",
@@ -107,7 +110,7 @@ const createDefaultValues = () => ({
   actions: {},
 });
 
-const getScalarVariableItems = (variablesData = {}) => {
+const getScalarVariableItems = (variablesData = {}, options = {}) => {
   const projectVariables = Object.entries(variablesData?.items || {}).filter(
     ([, item]) =>
       item?.type !== "folder" &&
@@ -122,11 +125,25 @@ const getScalarVariableItems = (variablesData = {}) => {
       ),
   );
 
-  return Object.fromEntries([...projectVariables, ...systemVariables]);
+  const scalarVariables = Object.fromEntries([
+    ...projectVariables,
+    ...systemVariables,
+  ]);
+
+  if (options.includeSaveDataAvailable) {
+    scalarVariables[SAVE_DATA_AVAILABLE_CONDITION_ID] = {
+      name: "Save Data Available",
+      type: "boolean",
+      source: "slot",
+      description: "Whether this save/load slot already has saved data",
+    };
+  }
+
+  return scalarVariables;
 };
 
-const toVisibilityConditionVariableOptions = (variablesData = {}) => {
-  return Object.entries(getScalarVariableItems(variablesData)).map(
+const toVisibilityConditionVariableOptions = (variablesData = {}, options = {}) => {
+  return Object.entries(getScalarVariableItems(variablesData, options)).map(
     ([id, variable]) => ({
       label: `${variable.name} (${String(variable.type || "string").toLowerCase()})`,
       value: id,
@@ -134,9 +151,9 @@ const toVisibilityConditionVariableOptions = (variablesData = {}) => {
   );
 };
 
-const toVisibilityConditionVariableTypeById = (variablesData = {}) => {
+const toVisibilityConditionVariableTypeById = (variablesData = {}, options = {}) => {
   return Object.fromEntries(
-    Object.entries(getScalarVariableItems(variablesData)).map(
+    Object.entries(getScalarVariableItems(variablesData, options)).map(
       ([id, variable]) => [id, String(variable.type || "string").toLowerCase()],
     ),
   );
@@ -145,13 +162,14 @@ const toVisibilityConditionVariableTypeById = (variablesData = {}) => {
 const getVisibilityConditionSummary = (
   visibilityCondition,
   variablesData = {},
+  options = {},
 ) => {
   if (!visibilityCondition?.variableId || visibilityCondition?.op !== "eq") {
     return "Always visible";
   }
 
   const variable =
-    getScalarVariableItems(variablesData)[visibilityCondition.variableId];
+    getScalarVariableItems(variablesData, options)[visibilityCondition.variableId];
   const variableName = variable?.name ?? visibilityCondition.variableId;
   const value =
     typeof visibilityCondition.value === "string"
@@ -518,8 +536,10 @@ export const selectVisibilityConditionDialog = ({ state }) => {
   return state.visibilityConditionDialog;
 };
 
-export const selectVisibilityConditionVariableTypeById = ({ state }) => {
-  return toVisibilityConditionVariableTypeById(state.variablesData);
+export const selectVisibilityConditionVariableTypeById = ({ state, props }) => {
+  return toVisibilityConditionVariableTypeById(state.variablesData, {
+    includeSaveDataAvailable: props.isInsideSaveLoadSlot === true,
+  });
 };
 
 export const selectViewData = ({ state, props, constants }) => {
@@ -534,10 +554,19 @@ export const selectViewData = ({ state, props, constants }) => {
     includeSystem: true,
   });
   const fragmentLayoutOptions = getFragmentLayoutOptions(props.layoutsData);
+  const visibilityConditionOptions = {
+    includeSaveDataAvailable: props.isInsideSaveLoadSlot === true,
+  };
   const visibilityConditionVariableOptions =
-    toVisibilityConditionVariableOptions(state.variablesData);
+    toVisibilityConditionVariableOptions(
+      state.variablesData,
+      visibilityConditionOptions,
+    );
   const visibilityConditionVariableTypeById =
-    toVisibilityConditionVariableTypeById(state.variablesData);
+    toVisibilityConditionVariableTypeById(
+      state.variablesData,
+      visibilityConditionOptions,
+    );
   const variableOptionsWithNone = [
     { label: "None", value: "" },
     ...variableOptions,
@@ -567,6 +596,7 @@ export const selectViewData = ({ state, props, constants }) => {
       visibilityConditionSummary: getVisibilityConditionSummary(
         currentVisibilityCondition,
         state.variablesData,
+        visibilityConditionOptions,
       ),
       canAddSpriteImageVariant:
         !values.imageId || !values.hoverImageId || !values.clickImageId,

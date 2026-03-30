@@ -15,6 +15,7 @@ const TEXT_NODE_TYPES = new Set([
   "text-ref-character-name",
   "text-revealing-ref-dialogue-content",
   "text-ref-choice-item-content",
+  "text-ref-save-load-slot-date",
   "text-ref-dialogue-line-character-name",
   "text-ref-dialogue-line-content",
 ]);
@@ -28,6 +29,7 @@ const TEXT_CONTENT_BY_TYPE = {
   "text-ref-character-name": "${dialogue.character.name}",
   "text-revealing-ref-dialogue-content": "${dialogue.content[0].text}",
   "text-ref-choice-item-content": "${item.content}",
+  "text-ref-save-load-slot-date": "${item.saveDate}",
   "text-ref-dialogue-line-character-name": "${line.characterName}",
   "text-ref-dialogue-line-content": "${line.content[0].text}",
 };
@@ -36,13 +38,30 @@ const TEXT_RENDER_TYPE_BY_TYPE = {
   "text-ref-character-name": "text",
   "text-revealing-ref-dialogue-content": "text-revealing",
   "text-ref-choice-item-content": "text",
+  "text-ref-save-load-slot-date": "text",
   "text-ref-dialogue-line-character-name": "text",
   "text-ref-dialogue-line-content": "text",
+};
+
+const SPRITE_IMAGE_BY_TYPE = {
+  "sprite-ref-save-load-slot-image": "${item.saveImageId}",
+};
+
+const SPRITE_RENDER_TYPE_BY_TYPE = {
+  "sprite-ref-save-load-slot-image": "sprite",
 };
 
 const REPEATING_CONTAINER_CONFIG = {
   "container-ref-choice-item": {
     each: "item, i in choice.items",
+    click: {
+      payload: {
+        actions: "${item.events.click.actions}",
+      },
+    },
+  },
+  "container-ref-save-load-slot": {
+    each: "item, i in saveLoad.slots",
     click: {
       payload: {
         actions: "${item.events.click.actions}",
@@ -477,13 +496,18 @@ const applyTextNode = ({ element, node, context }) => {
 };
 
 const applySpriteNode = ({ element, node }) => {
-  if (node.type !== "sprite") {
+  if (node.type !== "sprite" && !SPRITE_IMAGE_BY_TYPE[node.type]) {
     return element;
   }
 
   return {
     ...element,
-    ...(node.imageId ? { imageId: node.imageId } : {}),
+    type: SPRITE_RENDER_TYPE_BY_TYPE[node.type] ?? "sprite",
+    ...(SPRITE_IMAGE_BY_TYPE[node.type]
+      ? { imageId: SPRITE_IMAGE_BY_TYPE[node.type] }
+      : node.imageId
+        ? { imageId: node.imageId }
+        : {}),
     ...(node.hoverImageId ? { hoverImageId: node.hoverImageId } : {}),
     ...(node.clickImageId ? { clickImageId: node.clickImageId } : {}),
   };

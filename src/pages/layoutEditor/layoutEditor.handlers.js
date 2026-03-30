@@ -77,6 +77,20 @@ const resolveFragmentCreateAction = (detail = {}) => {
   return undefined;
 };
 
+const resolveSaveLoadSlotCreateAction = (detail = {}) => {
+  const value = resolveMenuItem(detail)?.value;
+  if (
+    value &&
+    typeof value === "object" &&
+    value.action === "new-child-item" &&
+    value.type === "container-ref-save-load-slot"
+  ) {
+    return value;
+  }
+
+  return undefined;
+};
+
 const getSliderCreateOwnerConfig = (resourceType, projectService) => {
   const isControls = resourceType === "controls";
   return {
@@ -230,6 +244,112 @@ const {
 });
 
 export const handleFileExplorerAction = async (deps, payload) => {
+  const saveLoadSlotAction = resolveSaveLoadSlotCreateAction(
+    payload?._event?.detail,
+  );
+  if (saveLoadSlotAction) {
+    const { appService, projectService, store } = deps;
+    const layoutId = store.selectLayoutId();
+    const resourceType = store.selectLayoutResourceType();
+
+    if (!layoutId || resourceType !== "layouts") {
+      appService.showToast("Layout is missing.", {
+        title: "Error",
+      });
+      return;
+    }
+
+    await projectService.ensureRepository();
+
+    const slotContainerId = nanoid();
+    const slotImageId = nanoid();
+    const slotDateId = nanoid();
+    const parentId = payload?._event?.detail?.itemId ?? null;
+    const projectResolution = store.selectProjectResolution();
+
+    const slotContainer = createLayoutEditorItemTemplate(
+      "container-save-load-slot",
+      {
+        projectResolution,
+      },
+    );
+    const slotImage = createLayoutEditorItemTemplate(
+      "sprite-save-load-slot-image",
+      {
+        projectResolution,
+      },
+    );
+    const slotDate = createLayoutEditorItemTemplate("text-save-load-slot-date", {
+      projectResolution,
+    });
+
+    const createContainerResult = await projectService.createLayoutElement({
+      layoutId,
+      elementId: slotContainerId,
+      data: slotContainer,
+      parentId,
+      position: "last",
+    });
+
+    if (createContainerResult?.valid === false) {
+      appService.showToast(
+        getResultErrorMessage(
+          createContainerResult,
+          "Failed to create save/load slot.",
+        ),
+        {
+          title: "Error",
+        },
+      );
+      return;
+    }
+
+    const createImageResult = await projectService.createLayoutElement({
+      layoutId,
+      elementId: slotImageId,
+      data: slotImage,
+      parentId: slotContainerId,
+      position: "last",
+    });
+
+    if (createImageResult?.valid === false) {
+      appService.showToast(
+        getResultErrorMessage(
+          createImageResult,
+          "Failed to create save/load slot image.",
+        ),
+        {
+          title: "Error",
+        },
+      );
+      return;
+    }
+
+    const createDateResult = await projectService.createLayoutElement({
+      layoutId,
+      elementId: slotDateId,
+      data: slotDate,
+      parentId: slotContainerId,
+      position: "last",
+    });
+
+    if (createDateResult?.valid === false) {
+      appService.showToast(
+        getResultErrorMessage(
+          createDateResult,
+          "Failed to create save/load slot date.",
+        ),
+        {
+          title: "Error",
+        },
+      );
+      return;
+    }
+
+    await refreshLayoutEditorData(deps, { selectedItemId: slotContainerId });
+    return;
+  }
+
   const fragmentAction = resolveFragmentCreateAction(payload?._event?.detail);
   if (fragmentAction) {
     const { store, render, refs, appService } = deps;
@@ -308,6 +428,14 @@ export const handleChoiceFormChange = async (deps, payload) => {
   const { name, value: fieldValue } = payload._event.detail;
 
   store.setChoiceDefaultValue({ name, fieldValue });
+  await rerenderLayoutEditorSurface(deps);
+};
+
+export const handleSaveLoadFormChange = async (deps, payload) => {
+  const { store } = deps;
+  const { name, value: fieldValue } = payload._event.detail;
+
+  store.setSaveLoadDefaultValue({ name, fieldValue });
   await rerenderLayoutEditorSurface(deps);
 };
 

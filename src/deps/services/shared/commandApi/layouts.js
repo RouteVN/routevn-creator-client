@@ -25,6 +25,16 @@ export const createLayoutCommandApi = (shared) => ({
       context.projectId,
       "layouts",
     );
+    const nextData = structuredClone(data || {});
+    const itemType = nextData.type === "folder" ? "folder" : "layout";
+
+    nextData.type = itemType;
+    nextData.name = name;
+
+    if (itemType === "layout") {
+      nextData.layoutType = layoutType;
+      nextData.elements = structuredClone(elements || createTreeCollection());
+    }
 
     const submitResult = await shared.submitCommandWithContext({
       context,
@@ -33,13 +43,7 @@ export const createLayoutCommandApi = (shared) => ({
       type: COMMAND_TYPES.LAYOUT_CREATE,
       payload: {
         layoutId: nextLayoutId,
-        data: {
-          ...structuredClone(data || {}),
-          type: "layout",
-          name,
-          layoutType,
-          elements: structuredClone(elements || createTreeCollection()),
-        },
+        data: nextData,
         ...shared.buildPlacementPayload({
           parentId,
           index: resolvedIndex,

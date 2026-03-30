@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { buildLayoutElements } from "../../src/internal/project/layout.js";
-import { splitVisibilityConditionFromWhen } from "../../src/internal/layoutVisibilityCondition.js";
+import {
+  SAVE_DATA_AVAILABLE_CONDITION_ID,
+  splitVisibilityConditionFromWhen,
+} from "../../src/internal/layoutVisibilityCondition.js";
 
 describe("layout visibility conditions", () => {
   it("compiles a structured visibility condition into $when", () => {
@@ -63,6 +66,40 @@ describe("layout visibility conditions", () => {
         variableId: "flag-enabled",
         op: "eq",
         value: true,
+      },
+    });
+  });
+
+  it("compiles save data availability visibility into item.date checks", () => {
+    const { elements } = buildLayoutElements(
+      [
+        {
+          id: "rect-1",
+          type: "rect",
+          visibilityCondition: {
+            variableId: SAVE_DATA_AVAILABLE_CONDITION_ID,
+            op: "eq",
+            value: false,
+          },
+        },
+      ],
+      {},
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      { layoutId: "layout-1" },
+    );
+
+    expect(elements[0].$when).toBe("!item.date");
+  });
+
+  it("extracts save data availability visibility from $when", () => {
+    expect(splitVisibilityConditionFromWhen("(line.characterName) && (!item.date)")).toEqual({
+      baseWhen: "line.characterName",
+      visibilityCondition: {
+        variableId: SAVE_DATA_AVAILABLE_CONDITION_ID,
+        op: "eq",
+        value: false,
       },
     });
   });

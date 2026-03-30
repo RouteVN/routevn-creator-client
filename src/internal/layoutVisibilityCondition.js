@@ -1,3 +1,5 @@
+export const SAVE_DATA_AVAILABLE_CONDITION_ID = "__saveDataAvailable";
+
 const trimOuterParentheses = (value) => {
   if (typeof value !== "string") {
     return "";
@@ -130,6 +132,13 @@ const parseConditionValue = (value) => {
 
 export const buildVisibilityConditionExpression = (visibilityCondition) => {
   if (
+    visibilityCondition?.variableId === SAVE_DATA_AVAILABLE_CONDITION_ID &&
+    visibilityCondition?.op === "eq"
+  ) {
+    return visibilityCondition.value === false ? "!item.date" : "item.date";
+  }
+
+  if (
     !visibilityCondition?.variableId ||
     typeof visibilityCondition.variableId !== "string"
   ) {
@@ -186,6 +195,17 @@ export const splitVisibilityConditionFromWhen = (expression) => {
 
   for (let index = 0; index < clauses.length; index += 1) {
     const clause = clauses[index];
+
+    if (clause === "item.date" || clause === "!item.date") {
+      visibilityClauseIndex = index;
+      visibilityCondition = {
+        variableId: SAVE_DATA_AVAILABLE_CONDITION_ID,
+        op: "eq",
+        value: clause === "item.date",
+      };
+      break;
+    }
+
     const match = clause.match(/^variables\[(.+)\]\s*==\s*(.+)$/);
     if (!match) {
       continue;

@@ -18,6 +18,7 @@ const TEXT_TYPE_SET = new Set([
   "text-ref-character-name",
   "text-revealing-ref-dialogue-content",
   "text-ref-choice-item-content",
+  "text-ref-save-load-slot-date",
   "text-ref-dialogue-line-character-name",
   "text-ref-dialogue-line-content",
 ]);
@@ -25,6 +26,7 @@ const TEXT_TYPE_SET = new Set([
 const CONTAINER_TYPE_SET = new Set([
   "container",
   "container-ref-choice-item",
+  "container-ref-save-load-slot",
   "container-ref-dialogue-line",
 ]);
 
@@ -168,6 +170,37 @@ const CREATE_TEMPLATES = {
     name: "Container (Choice Item)",
     ...BASE_TRANSFORM,
   }),
+  "container-save-load-slot": () => ({
+    type: "container-ref-save-load-slot",
+    name: "Container (Save/Load Slot)",
+    ...BASE_TRANSFORM,
+  }),
+  "sprite-save-load-slot-image": (projectResolution) =>
+    scaleLayoutElementItemForProjectResolution(
+      {
+        type: "sprite-ref-save-load-slot-image",
+        name: "Sprite (Save Image)",
+        ...BASE_TRANSFORM,
+        width: 320,
+        height: 180,
+      },
+      projectResolution,
+    ),
+  "text-save-load-slot-date": (projectResolution) =>
+    scaleLayoutElementItemForProjectResolution(
+      {
+        type: "text-ref-save-load-slot-date",
+        name: "Text (Save Date)",
+        ...BASE_TRANSFORM,
+        y: 192,
+        text: "text",
+        textStyle: {
+          wordWrapWidth: 320,
+          align: "left",
+        },
+      },
+      projectResolution,
+    ),
   "text-choice-item-content": (projectResolution) =>
     scaleLayoutElementItemForProjectResolution(
       {
@@ -342,14 +375,17 @@ const applySpriteAutoSize = ({ nextItem, imagesData }) => {
 const TYPE_FAMILIES = {
   container: "container",
   "container-ref-choice-item": "container",
+  "container-ref-save-load-slot": "container",
   "container-ref-dialogue-line": "container",
   "fragment-ref": "fragment",
   sprite: "sprite",
+  "sprite-ref-save-load-slot-image": "sprite",
   text: "text",
   "text-revealing": "text",
   "text-ref-character-name": "text",
   "text-revealing-ref-dialogue-content": "text",
   "text-ref-choice-item-content": "text",
+  "text-ref-save-load-slot-date": "text",
   "text-ref-dialogue-line-character-name": "text",
   "text-ref-dialogue-line-content": "text",
   slider: "slider",

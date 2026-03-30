@@ -49,6 +49,90 @@ describe("layoutEditorPreview", () => {
         },
       },
     ]);
+    expect(previewData.saveLoad.slots).toEqual([]);
+  });
+
+  it("builds save/load preview slots for repeating slot containers", () => {
+    const savePreviewData = createLayoutEditorPreviewData({
+      layoutType: "save",
+      saveLoadData: {
+        slots: [
+          {
+            id: "slot-1",
+            saveImageId: "image-1",
+            saveDate: "2026-03-10 18:00",
+          },
+          {
+            id: "slot-2",
+            saveImageId: "image-2",
+            saveDate: "2026-03-11 18:00",
+          },
+        ],
+      },
+    });
+    const loadPreviewData = createLayoutEditorPreviewData({
+      layoutType: "load",
+      saveLoadData: {
+        slots: [
+          {
+            id: "slot-1",
+            saveImageId: "image-3",
+            saveDate: "2026-03-12 18:00",
+          },
+        ],
+      },
+    });
+
+    expect(savePreviewData.saveLoad.slots).toHaveLength(2);
+    expect(savePreviewData.saveLoad.slots[0]).toMatchObject({
+      id: "slot-1",
+      saveImageId: "image-1",
+      saveDate: "2026-03-10 18:00",
+      events: {
+        click: {
+          actions: {
+            saveGame: {
+              slotId: "slot-1",
+            },
+          },
+        },
+      },
+    });
+    expect(loadPreviewData.saveLoad.slots[0]).toMatchObject({
+      id: "slot-1",
+      saveImageId: "image-3",
+      saveDate: "2026-03-12 18:00",
+      events: {
+        click: {
+          actions: {
+            loadGame: {
+              slotId: "slot-1",
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("builds save/load preview slots when enabled from fragment context", () => {
+    const previewData = createLayoutEditorPreviewData({
+      layoutType: "normal",
+      hasSaveLoadPreview: true,
+      saveLoadData: {
+        slots: [
+          {
+            id: "slot-1",
+            saveDate: "2026-03-15 20:00",
+          },
+        ],
+      },
+    });
+
+    expect(previewData.saveLoad.slots).toHaveLength(1);
+    expect(previewData.saveLoad.slots[0]).toMatchObject({
+      id: "slot-1",
+      saveDate: "2026-03-15 20:00",
+    });
   });
 
   it("builds NVL preview lines from the editable content list", () => {

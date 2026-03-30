@@ -1,6 +1,7 @@
 import { parseAndRender } from "jempl";
+import { resolveLayoutReferences } from "route-engine-js";
 import {
-  buildLayoutRenderElements,
+  buildLayoutElements,
   extractFileIdsFromRenderState,
 } from "./project/layout.js";
 import { toHierarchyStructure } from "./project/tree.js";
@@ -107,6 +108,30 @@ const createChoiceItems = (choicesData = {}) => {
   });
 };
 
+const createSaveLoadSlots = (layoutType, saveLoadData = {}) => {
+  const actionType = layoutType === "load" ? "loadGame" : "saveGame";
+  const slots = Array.isArray(saveLoadData.slots) ? saveLoadData.slots : [];
+
+  return slots.map((slot, index) => ({
+    id: slot?.id ?? `slot-${index + 1}`,
+    saveImageId: slot?.saveImageId,
+    saveDate: slot?.saveDate ?? "",
+    image: slot?.image ?? slot?.saveImageId,
+    date: slot?.date ?? slot?.saveDate ?? "",
+    isAvailable: slot?.isAvailable === true,
+    events: {
+      click: {
+        actions:
+          slot?.events?.click?.actions ?? {
+            [actionType]: {
+              slotId: slot?.id ?? `slot-${index + 1}`,
+            },
+          },
+      },
+    },
+  }));
+};
+
 const createDialogueLines = ({ characterName, dialogueContent }) => {
   return [
     {
@@ -153,6 +178,23 @@ const toElementList = (elements) => {
   }
 
   return elements ? [elements] : [];
+};
+
+const flattenElementRenderOrder = (elements, parentId, result = []) => {
+  toElementList(elements).forEach((element, index) => {
+    result.push({
+      id: element.id,
+      type: element.type,
+      parentId,
+      index,
+    });
+
+    if (Array.isArray(element.children) && element.children.length > 0) {
+      flattenElementRenderOrder(element.children, element.id, result);
+    }
+  });
+
+  return result;
 };
 
 const isSelectableMatch = (elementId, selectedItemId) => {
@@ -277,12 +319,14 @@ const buildOverlayTree = ({ path, overlayId, draggable }) => {
 
 export const createLayoutEditorPreviewData = ({
   layoutType,
+  hasSaveLoadPreview,
   variablesData,
   previewVariableValues,
   dialogueDefaultValues,
   nvlDefaultValues,
   previewRevealingSpeed,
   choicesData,
+  saveLoadData,
 } = {}) => {
   const characterName =
     dialogueDefaultValues?.["dialogue-character-name"] ??
@@ -320,6 +364,14 @@ export const createLayoutEditorPreviewData = ({
     },
     choice: {
       items: createChoiceItems(choicesData),
+    },
+    saveLoad: {
+      slots:
+        hasSaveLoadPreview === true ||
+        layoutType === "save" ||
+        layoutType === "load"
+          ? createSaveLoadSlots(layoutType, saveLoadData)
+          : [],
     },
   };
 };
@@ -442,7 +494,7 @@ export const createLayoutEditorRenderState = (deps) => {
   const layoutElements =
     storeElements || resourceCollection?.items?.[layoutId]?.elements;
   const layoutHierarchyStructure = toHierarchyStructure(layoutElements);
-  const renderStateElements = buildLayoutRenderElements(
+  const { elements, resources } = buildLayoutElements(
     layoutHierarchyStructure,
     imageItems,
     { items: textStyleItems },
@@ -455,7 +507,8 @@ export const createLayoutEditorRenderState = (deps) => {
   );
 
   return {
-    renderStateElements,
+    renderStateElements: elements,
+    resources,
     fontsItems,
     variablesData,
   };
@@ -467,10 +520,31 @@ export const renderLayoutEditorPreview = async (
 ) => {
   try {
     const { store, graphicsService } = deps;
-    const { renderStateElements, fontsItems, variablesData } =
+    const { renderStateElements, resources, fontsItems, variablesData } =
       createLayoutEditorRenderState(deps);
     const selectedItem = store.selectSelectedItemData();
-    const fileReferences = extractFileIdsFromRenderState(renderStateElements);
+    const finalElements = resolveLayoutPreviewElements({
+      elements: renderStateElements,
+      previewData: createLayoutEditorPreviewData({
+        layoutType: store.selectCurrentLayoutType(),
+        variablesData,
+        previewVariableValues: store.selectPreviewVariableValues(),
+        dialogueDefaultValues: store.selectDialogueDefaultValues(),
+        nvlDefaultValues: store.selectNvlDefaultValues(),
+        previewRevealingSpeed: store.selectPreviewRevealingSpeed(),
+        choicesData: store.selectChoicesData(),
+        saveLoadData: store.selectSaveLoadData(),
+        hasSaveLoadPreview: store.selectHasSaveLoadPreview(),
+      }),
+    });
+    const resolvedFinalElements = resolveLayoutReferences(finalElements, {
+      resources,
+    });
+    console.log("[layoutEditor.preview] resolvedRenderOrder", {
+      selectedItemId: selectedItem?.id,
+      elements: flattenElementRenderOrder(resolvedFinalElements),
+    });
+    const fileReferences = extractFileIdsFromRenderState(resolvedFinalElements);
 
     if (clearFirst) {
       graphicsService.render({
@@ -489,21 +563,8 @@ export const renderLayoutEditorPreview = async (
       await graphicsService.loadAssets(assets);
     }
 
-    const finalElements = resolveLayoutPreviewElements({
-      elements: renderStateElements,
-      previewData: createLayoutEditorPreviewData({
-        layoutType: store.selectCurrentLayoutType(),
-        variablesData,
-        previewVariableValues: store.selectPreviewVariableValues(),
-        dialogueDefaultValues: store.selectDialogueDefaultValues(),
-        nvlDefaultValues: store.selectNvlDefaultValues(),
-        previewRevealingSpeed: store.selectPreviewRevealingSpeed(),
-        choicesData: store.selectChoicesData(),
-      }),
-    });
-
     const parsedState = graphicsService.parse({
-      elements: finalElements,
+      elements: resolvedFinalElements,
     });
     const overlayElements = createLayoutEditorSelectionOverlay({
       parsedElements: parsedState.elements,
@@ -511,7 +572,7 @@ export const renderLayoutEditorPreview = async (
     });
 
     graphicsService.render({
-      elements: [...finalElements, ...overlayElements],
+      elements: [...resolvedFinalElements, ...overlayElements],
       animations: [],
     });
   } catch (error) {

@@ -34,6 +34,12 @@ refs:
         handler: handleChoiceFormChange
       form-change:
         handler: handleChoiceFormChange
+  saveLoadForm:
+    eventListeners:
+      form-input:
+        handler: handleSaveLoadFormChange
+      form-change:
+        handler: handleSaveLoadFormChange
   previewVariablesForm:
     eventListeners:
       form-input:
@@ -120,6 +126,8 @@ template:
                       - rtgl-button#playPreviewButton v=ol: Play
               - $if layout.layoutType == 'choice':
                   - rtgl-form#choiceForm w=f :form=${choiceForm} :defaultValues=${choiceDefaultValues} :context=${choicesContext}: null
+              - $if hasSaveLoadPreview:
+                  - rtgl-form#saveLoadForm key=${saveLoadFormKey} w=f :form=${saveLoadForm} :defaultValues=${saveLoadDefaultValues} :context=${saveLoadContext}: null
               - $if (layout.layoutType == 'normal' || layout.layoutType == 'save' || layout.layoutType == 'load') && hasPreviewVariables:
                   - rtgl-form#previewVariablesForm key=${previewVariablesFormKey} w=f :form=${previewVariablesForm} :defaultValues=${previewVariablesDefaultValues}: null
       - rvn-resizable-panel#resizableDetailPanel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
@@ -128,7 +136,7 @@ template:
                   - rtgl-view h=48 w=f av=c ph=md:
                       - rtgl-text c=mu-fg: ${item.name} (${item.type})
                   - rtgl-view w=f h=1fg sv pv=md:
-                      - rvn-layout-edit-panel#layoutEditPanel key=${layoutEditPanelKey} layout-type=${layout.layoutType} resource-type=${layout.resourceType} item-type=${item.type} :values=${item} :textStylesData=${textStylesData} :variablesData=${variablesData} :layoutsData=${layoutsData}: null
+                      - rvn-layout-edit-panel#layoutEditPanel key=${layoutEditPanelKey} layout-type=${layout.layoutType} resource-type=${layout.resourceType} item-type=${item.type} :isInsideSaveLoadSlot=${isInsideSaveLoadSlot} :values=${item} :textStylesData=${textStylesData} :variablesData=${variablesData} :layoutsData=${layoutsData}: null
                 $else:
                   - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                       - rtgl-text s=md c=mu-fg: No selection

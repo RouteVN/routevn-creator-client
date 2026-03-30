@@ -15,6 +15,14 @@ contextMenuItems:
     label: Fragment
     type: item
     createType: fragment-ref
+  - "$when": 'layoutType == "save"'
+    label: Fragment
+    type: item
+    createType: fragment-ref
+  - "$when": 'layoutType == "load"'
+    label: Fragment
+    type: item
+    createType: fragment-ref
   - "$when": 'layoutType == "dialogue"'
     label: Text (Dialogue Content)
     type: item
@@ -39,6 +47,30 @@ contextMenuItems:
     label: Container (Choice Item)
     type: item
     createType: container-choice-item
+  - "$when": 'layoutType == "save"'
+    label: Container (Save/Load Slot)
+    type: item
+    createType: container-save-load-slot
+  - "$when": 'layoutType == "load"'
+    label: Container (Save/Load Slot)
+    type: item
+    createType: container-save-load-slot
+  - "$when": 'layoutType == "save"'
+    label: Sprite (Save Image)
+    type: item
+    createType: sprite-save-load-slot-image
+  - "$when": 'layoutType == "load"'
+    label: Sprite (Save Image)
+    type: item
+    createType: sprite-save-load-slot-image
+  - "$when": 'layoutType == "save"'
+    label: Text (Save Date)
+    type: item
+    createType: text-save-load-slot-date
+  - "$when": 'layoutType == "load"'
+    label: Text (Save Date)
+    type: item
+    createType: text-save-load-slot-date
   - "$when": 'layoutType == "choice"'
     label: Text (Choice Item)
     type: item
@@ -67,6 +99,38 @@ emptyContextMenuItems:
     label: Fragment
     type: item
     createType: fragment-ref
+  - "$when": 'layoutType == "save"'
+    label: Fragment
+    type: item
+    createType: fragment-ref
+  - "$when": 'layoutType == "load"'
+    label: Fragment
+    type: item
+    createType: fragment-ref
+  - "$when": 'layoutType == "save"'
+    label: Container (Save/Load Slot)
+    type: item
+    createType: container-save-load-slot
+  - "$when": 'layoutType == "load"'
+    label: Container (Save/Load Slot)
+    type: item
+    createType: container-save-load-slot
+  - "$when": 'layoutType == "save"'
+    label: Sprite (Save Image)
+    type: item
+    createType: sprite-save-load-slot-image
+  - "$when": 'layoutType == "load"'
+    label: Sprite (Save Image)
+    type: item
+    createType: sprite-save-load-slot-image
+  - "$when": 'layoutType == "save"'
+    label: Text (Save Date)
+    type: item
+    createType: text-save-load-slot-date
+  - "$when": 'layoutType == "load"'
+    label: Text (Save Date)
+    type: item
+    createType: text-save-load-slot-date
   - "$when": 'layoutType == "dialogue"'
     label: Text (Dialogue Content)
     type: item
@@ -173,6 +237,42 @@ choiceForm:
       type: input-text
       description: Choice content text
       placeholder: Enter choice text
+
+saveLoadForm:
+  title: Preview
+  description: Edit to see how the layout will look like with different save slot data
+  fields:
+    - name: slotsNum
+      type: select
+      description: Number of Slots
+      options:
+        - label: "1"
+          value: 1
+        - label: "2"
+          value: 2
+        - label: "3"
+          value: 3
+        - label: "4"
+          value: 4
+        - label: "5"
+          value: 5
+        - label: "6"
+          value: 6
+      placeholder: Select number of slots
+      required: true
+    - "$each": 'slot, i in slots'
+      type: section
+      fields:
+        - name: 'saveImageId${i}'
+          type: select
+          description: Save image
+          clearable: true
+          options: "${imageOptions}"
+          placeholder: Select image
+        - name: 'saveDate${i}'
+          type: input-text
+          description: Save date
+          placeholder: Enter save date
 
 sliderCreateForm:
   title: Create Slider

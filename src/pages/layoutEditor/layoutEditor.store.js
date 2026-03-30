@@ -166,6 +166,41 @@ const createNvlFormDefaultValues = (nvlDefaultValues = {}) => {
   return defaultValues;
 };
 
+const createSaveLoadFormDefaultValues = (saveLoadDefaultValues = {}) => {
+  const slotsNum = Number(saveLoadDefaultValues.slotsNum);
+  const slotCount = Number.isFinite(slotsNum) && slotsNum > 0 ? slotsNum : 0;
+  const defaultValues = {
+    slotsNum: slotCount,
+  };
+
+  for (let index = 0; index < slotCount; index += 1) {
+    defaultValues[`saveImageId${index}`] = saveLoadDefaultValues.saveImageIds?.[index];
+    defaultValues[`saveDate${index}`] = saveLoadDefaultValues.saveDates?.[index] ?? "";
+  }
+
+  return defaultValues;
+};
+
+const createSaveLoadImageOptions = (images = {}) => {
+  return Object.entries(images.items ?? {})
+    .filter(([_imageId, item]) => item?.type === "image")
+    .map(([imageId, item]) => ({
+      label: item?.name ?? imageId,
+      value: imageId,
+    }))
+    .sort((left, right) => left.label.localeCompare(right.label));
+};
+
+const hashFormKey = (value = "") => {
+  let hash = 0;
+
+  for (const char of String(value)) {
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  }
+
+  return hash.toString(36);
+};
+
 const toLayoutEditorContextMenuItems = (
   items = [],
   projectResolution = DEFAULT_PROJECT_RESOLUTION,
@@ -197,6 +232,57 @@ const toLayoutEditorExplorerItems = (items = []) => {
       canReceiveChildren: isLayoutEditorContainerItemType(item.type),
     },
   }));
+};
+
+const usesSaveLoadPreviewInLayout = ({
+  currentLayoutId,
+  currentLayoutData,
+  currentLayoutType,
+  layoutsData,
+  layoutId,
+  visited = new Set(),
+}) => {
+  if (!layoutId || visited.has(layoutId)) {
+    return false;
+  }
+
+  visited.add(layoutId);
+
+  const isCurrentLayout = layoutId === currentLayoutId;
+  const layoutItem = isCurrentLayout ? { layoutType: currentLayoutType } : layoutsData?.items?.[layoutId];
+  const layoutItems = isCurrentLayout
+    ? currentLayoutData?.items ?? {}
+    : layoutItem?.elements?.items ?? {};
+
+  const normalizedLayoutType = normalizeLayoutType(layoutItem?.layoutType);
+  if (normalizedLayoutType === "save" || normalizedLayoutType === "load") {
+    return true;
+  }
+
+  for (const item of Object.values(layoutItems)) {
+    if (item?.type === "container-ref-save-load-slot") {
+      return true;
+    }
+
+    if (item?.type !== "fragment-ref" || !item.fragmentLayoutId) {
+      continue;
+    }
+
+    if (
+      usesSaveLoadPreviewInLayout({
+        currentLayoutId,
+        currentLayoutData,
+        currentLayoutType,
+        layoutsData,
+        layoutId: item.fragmentLayoutId,
+        visited,
+      })
+    ) {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 export const createInitialState = () => ({
@@ -231,6 +317,11 @@ export const createInitialState = () => ({
   choiceDefaultValues: {
     choicesNum: 2,
     choices: ["Choice 1", "Choice 2"],
+  },
+  saveLoadDefaultValues: {
+    slotsNum: 3,
+    saveImageIds: [undefined, undefined, undefined],
+    saveDates: ["2026-03-10 18:00", "", ""],
   },
   previewVariableValues: {},
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
@@ -573,6 +664,42 @@ export const setChoiceDefaultValue = ({ state }, { name, fieldValue } = {}) => {
   state.choiceDefaultValues.choices = choices;
 };
 
+export const setSaveLoadDefaultValue = (
+  { state },
+  { name, fieldValue } = {},
+) => {
+  if (/^saveImageId\d+$/.test(name)) {
+    const index = Number.parseInt(name.slice("saveImageId".length), 10);
+    state.saveLoadDefaultValues.saveImageIds[index] = fieldValue;
+    return;
+  }
+
+  if (/^saveDate\d+$/.test(name)) {
+    const index = Number.parseInt(name.slice("saveDate".length), 10);
+    state.saveLoadDefaultValues.saveDates[index] = fieldValue;
+    return;
+  }
+
+  state.saveLoadDefaultValues[name] = fieldValue;
+
+  if (name !== "slotsNum") {
+    return;
+  }
+
+  const saveImageIds = [];
+  const saveDates = [];
+
+  for (let index = 0; index < fieldValue; index += 1) {
+    saveImageIds.push(state.saveLoadDefaultValues.saveImageIds[index]);
+    saveDates.push(
+      state.saveLoadDefaultValues.saveDates[index] ?? "",
+    );
+  }
+
+  state.saveLoadDefaultValues.saveImageIds = saveImageIds;
+  state.saveLoadDefaultValues.saveDates = saveDates;
+};
+
 export const setPreviewVariableValue = (
   { state },
   { name, fieldValue } = {},
@@ -613,6 +740,10 @@ export const selectNvlDefaultValues = ({ state }) => {
 
 export const selectChoiceDefaultValues = ({ state }) => {
   return state.choiceDefaultValues;
+};
+
+export const selectSaveLoadDefaultValues = ({ state }) => {
+  return state.saveLoadDefaultValues;
 };
 
 export const selectPreviewRevealingSpeed = ({ state }) => {
@@ -694,8 +825,59 @@ export const selectChoicesData = ({ state }) => {
   };
 };
 
+export const selectSaveLoadData = ({ state }) => {
+  const slots = [];
+  const slotsNum = Number(state.saveLoadDefaultValues.slotsNum);
+  const slotCount = Number.isFinite(slotsNum) && slotsNum > 0 ? slotsNum : 0;
+  const layoutType = normalizeLayoutType(state.layout?.layoutType);
+  const actionType = layoutType === "load" ? "loadGame" : "saveGame";
+
+  for (let index = 0; index < slotCount; index += 1) {
+    const saveDate = state.saveLoadDefaultValues.saveDates[index] ?? "";
+    const saveImageId = state.saveLoadDefaultValues.saveImageIds[index];
+    const isAvailable = Boolean(saveDate || saveImageId);
+
+    slots.push({
+      id: `slot-${index + 1}`,
+      saveImageId,
+      saveDate,
+      image: saveImageId,
+      date: saveDate,
+      isAvailable,
+      events: {
+        click: {
+          actions: {
+            [actionType]: {
+              slotId: `slot-${index + 1}`,
+            },
+          },
+        },
+      },
+    });
+  }
+
+  return {
+    slots,
+  };
+};
+
 export const selectPreviewVariableValues = ({ state }) => {
   return state.previewVariableValues;
+};
+
+export const selectHasSaveLoadPreview = ({ state }) => {
+  const layoutId = state.layout?.id;
+  if (!layoutId) {
+    return false;
+  }
+
+  return usesSaveLoadPreviewInLayout({
+    currentLayoutId: layoutId,
+    currentLayoutData: state.layoutData,
+    currentLayoutType: state.layout?.layoutType,
+    layoutsData: state.layoutsData,
+    layoutId,
+  });
 };
 
 export const selectItems = ({ state }) => {
@@ -717,6 +899,9 @@ export const selectVariablesData = ({ state }) => {
 export const selectViewData = ({ state, constants }) => {
   const item = selectSelectedItem({ state });
   const flatItems = toLayoutEditorExplorerItems(toFlatItems(state.layoutData));
+  const parentIdById = Object.fromEntries(
+    flatItems.map((flatItem) => [flatItem.id, flatItem.parentId]),
+  );
   const isControlResource = state.layout?.resourceType === "controls";
   const layoutType = normalizeLayoutType(state.layout?.layoutType);
   const layout =
@@ -742,6 +927,15 @@ export const selectViewData = ({ state, constants }) => {
   const previewVariableItems = NORMAL_LIKE_LAYOUT_TYPES.has(layoutType)
     ? getLayoutPreviewVariableItems(state.layoutData, state.variablesData)
     : [];
+  const imageOptions = createSaveLoadImageOptions(state.images);
+  const saveLoadSlots = Array.from(
+    {
+      length: Number(state.saveLoadDefaultValues.slotsNum) || 0,
+    },
+    (_unused, index) => ({
+      id: `slot-${index + 1}`,
+    }),
+  );
   const fragmentLayoutOptions = getFragmentLayoutOptions(state.layoutsData, {
     excludeLayoutId: state.layout?.id,
   });
@@ -753,6 +947,38 @@ export const selectViewData = ({ state, constants }) => {
     previewVariableItems.length > 0
       ? previewVariableItems.map((item) => item.id).join("|")
       : "empty";
+  const hasSaveLoadPreview = usesSaveLoadPreviewInLayout({
+    currentLayoutId: state.layout?.id,
+    currentLayoutData: state.layoutData,
+    currentLayoutType: layoutType,
+    layoutsData: state.layoutsData,
+    layoutId: state.layout?.id,
+  });
+  const saveLoadFormKey = `save-load-${hashFormKey(
+    JSON.stringify({
+      hasSaveLoadPreview,
+      slotsNum: state.saveLoadDefaultValues.slotsNum,
+      saveImageIds: state.saveLoadDefaultValues.saveImageIds,
+      saveDates: state.saveLoadDefaultValues.saveDates,
+    }),
+  )}`;
+  let isInsideSaveLoadSlot = false;
+
+  if (item?.id) {
+    let currentParentId = parentIdById[item.id];
+
+    while (currentParentId) {
+      if (
+        state.layoutData?.items?.[currentParentId]?.type ===
+        "container-ref-save-load-slot"
+      ) {
+        isInsideSaveLoadSlot = true;
+        break;
+      }
+
+      currentParentId = parentIdById[currentParentId];
+    }
+  }
 
   return {
     item,
@@ -785,6 +1011,18 @@ export const selectViewData = ({ state, constants }) => {
     choicesContext: {
       ...state.choiceDefaultValues,
     },
+    saveLoadForm: parseAndRender(constants.saveLoadForm, {
+      imageOptions,
+      slots: saveLoadSlots,
+    }),
+    saveLoadDefaultValues: createSaveLoadFormDefaultValues(
+      state.saveLoadDefaultValues,
+    ),
+    saveLoadContext: {
+      slots: saveLoadSlots,
+    },
+    saveLoadFormKey,
+    hasSaveLoadPreview,
     previewVariablesForm: createPreviewVariablesForm(previewVariableItems),
     previewVariablesDefaultValues,
     previewVariablesFormKey,
@@ -804,6 +1042,7 @@ export const selectViewData = ({ state, constants }) => {
     textStylesData: state.textStylesData,
     variablesData: state.variablesData,
     layoutsData: state.layoutsData,
+    isInsideSaveLoadSlot,
     images: state.images,
   };
 };
