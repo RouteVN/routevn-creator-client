@@ -111,6 +111,18 @@ layoutSections:
             name: gap
             value: "${values.gap}"
             popoverForm: *numberPopoverForm
+  - "$when": "supportsScroll"
+    label: Scroll
+    items:
+      - type: select
+        label: Scroll
+        name: scroll
+        value: "${values.scroll}"
+        options:
+          - label: Disabled
+            value: false
+          - label: Enabled
+            value: true
   - "$when": "supportsSpriteImages"
     id: images
     label: Image
@@ -243,6 +255,12 @@ layoutSections:
         name: fragmentLayoutId
         value: "${values.fragmentLayoutId}"
         options: "${fragmentLayoutOptions}"
+  - "$when": 'itemType == "container-ref-save-load-slot"'
+    label: Pagination
+    items:
+      - type: pagination-summary
+        name: pagination
+        value: "${paginationSummary}"
   - "$when": "supportsActions"
     id: actions
     label: Actions

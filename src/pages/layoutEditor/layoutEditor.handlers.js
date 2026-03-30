@@ -279,9 +279,12 @@ export const handleFileExplorerAction = async (deps, payload) => {
         projectResolution,
       },
     );
-    const slotDate = createLayoutEditorItemTemplate("text-save-load-slot-date", {
-      projectResolution,
-    });
+    const slotDate = createLayoutEditorItemTemplate(
+      "text-save-load-slot-date",
+      {
+        projectResolution,
+      },
+    );
 
     const createContainerResult = await projectService.createLayoutElement({
       layoutId,

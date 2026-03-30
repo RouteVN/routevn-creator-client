@@ -29,7 +29,7 @@ const TEXT_CONTENT_BY_TYPE = {
   "text-ref-character-name": "${dialogue.character.name}",
   "text-revealing-ref-dialogue-content": "${dialogue.content[0].text}",
   "text-ref-choice-item-content": "${item.content}",
-  "text-ref-save-load-slot-date": "${item.saveDate}",
+  "text-ref-save-load-slot-date": "${item.date}",
   "text-ref-dialogue-line-character-name": "${line.characterName}",
   "text-ref-dialogue-line-content": "${line.content[0].text}",
 };
@@ -44,7 +44,7 @@ const TEXT_RENDER_TYPE_BY_TYPE = {
 };
 
 const SPRITE_IMAGE_BY_TYPE = {
-  "sprite-ref-save-load-slot-image": "${item.saveImageId}",
+  "sprite-ref-save-load-slot-image": "${item.image}",
 };
 
 const SPRITE_RENDER_TYPE_BY_TYPE = {
@@ -61,12 +61,7 @@ const REPEATING_CONTAINER_CONFIG = {
     },
   },
   "container-ref-save-load-slot": {
-    each: "item, i in saveLoad.slots",
-    click: {
-      payload: {
-        actions: "${item.events.click.actions}",
-      },
-    },
+    each: "item, i in saveSlots",
   },
   "container-ref-dialogue-line": {
     each: "line, i in dialogue.lines",
@@ -276,6 +271,24 @@ const normalizeSliderChange = (change, sliderId) => {
           ...updateVariable,
           id: sanitizedId,
         },
+      },
+    }),
+  );
+};
+
+const mergeInteractionPayloadActions = (baseInteraction, extraInteraction) => {
+  const basePayload = getInteractionPayload(baseInteraction);
+  const extraPayload = getInteractionPayload(extraInteraction);
+  const baseActions = getInteractionActions(baseInteraction);
+  const extraActions = getInteractionActions(extraInteraction);
+
+  return normalizeEngineActions(
+    withInteractionPayload(baseInteraction, {
+      ...basePayload,
+      ...extraPayload,
+      actions: {
+        ...baseActions,
+        ...extraActions,
       },
     }),
   );
@@ -619,44 +632,73 @@ const applyContainerNode = ({ element, node }) => {
       : nextElement;
   }
 
+  let repeatingClick = repeatingConfig.click;
+  if (node.type === "container-ref-save-load-slot") {
+    const actionName =
+      node.layoutType === "load"
+        ? "loadSaveSlot"
+        : node.layoutType === "save"
+          ? "saveSaveSlot"
+          : undefined;
+
+    repeatingClick = actionName
+      ? {
+          payload: {
+            actions: {
+              [actionName]: {
+                slot: "${item.slotNumber}",
+              },
+            },
+          },
+        }
+      : undefined;
+  }
+
   return {
     ...nextElement,
     type: "container",
     $each: repeatingConfig.each,
     id: `${node.id}-instance-\${i}`,
-    ...(repeatingConfig.click
+    ...(repeatingClick
       ? {
-          click: {
-            ...nextElement.click,
-            ...normalizeEngineActions(repeatingConfig.click),
-          },
+          click: mergeInteractionPayloadActions(
+            nextElement.click,
+            repeatingClick,
+          ),
         }
       : {}),
   };
 };
 
 const mapLayoutNode = ({ node, imageItems, context }) => {
+  const effectiveNode =
+    node.type === "container-ref-save-load-slot"
+      ? {
+          ...node,
+          layoutType: context.layoutType,
+        }
+      : node;
   let element = buildBaseElement(node);
 
   element = applyTextNode({
     element,
-    node,
+    node: effectiveNode,
     context,
   });
-  element = applySpriteNode({ element, node });
-  element = applyRectNode({ element, node });
-  element = applySliderNode({ element, node, imageItems });
-  element = applyContainerNode({ element, node });
+  element = applySpriteNode({ element, node: effectiveNode });
+  element = applyRectNode({ element, node: effectiveNode });
+  element = applySliderNode({ element, node: effectiveNode, imageItems });
+  element = applyContainerNode({ element, node: effectiveNode });
 
   const resolvedChildren =
-    node.type === "fragment-ref"
+    effectiveNode.type === "fragment-ref"
       ? resolveFragmentChildren({
-          node,
+          node: effectiveNode,
           imageItems,
           context,
         })
-      : node.children?.length > 0
-        ? node.children.map((child) =>
+      : effectiveNode.children?.length > 0
+        ? effectiveNode.children.map((child) =>
             mapLayoutNode({
               node: child,
               imageItems,
@@ -668,7 +710,7 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
   if (resolvedChildren.length > 0) {
     element.children = resolvedChildren;
 
-    if (REPEATING_CONTAINER_CONFIG[node.type]) {
+    if (REPEATING_CONTAINER_CONFIG[effectiveNode.type]) {
       element.children = updateChildrenIds(element.children, "i");
     }
   }
@@ -799,6 +841,7 @@ export const buildLayoutElements = (
   };
   const context = {
     layoutId: options.layoutId ?? "preview",
+    layoutType: normalizeLayoutType(options.layoutType),
     textStylesData,
     textStyles,
     layoutsData: options.layoutsData,

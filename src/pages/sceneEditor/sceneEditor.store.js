@@ -394,6 +394,7 @@ export const selectLayouts = ({ state }) => {
           fonts,
           {
             layoutId,
+            layoutType: normalizeLayoutType(layout.layoutType),
             layoutsData: layouts,
           },
         ).elements,

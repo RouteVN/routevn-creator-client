@@ -242,7 +242,8 @@ saveLoadForm:
   title: Preview
   description: Edit to see how the layout will look like with different save slot data
   fields:
-    - name: slotsNum
+    - "$when": "showSlotsNum"
+      name: slotsNum
       type: select
       description: Number of Slots
       options:

@@ -651,6 +651,7 @@ const constructLayoutResources = (
       fonts,
       {
         layoutId,
+        layoutType: normalizeLayoutType(layout.layoutType),
         layoutsData: repositoryLayouts,
       },
     );

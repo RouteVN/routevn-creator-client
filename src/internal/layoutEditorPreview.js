@@ -6,6 +6,10 @@ import {
 } from "./project/layout.js";
 import { toHierarchyStructure } from "./project/tree.js";
 import { getSystemVariableItems } from "./systemVariables.js";
+import {
+  LINE_COMPLETED_CONDITION_ID,
+  getFixedVisibilityStateItems,
+} from "./layoutVisibilityCondition.js";
 
 const DEFAULT_DIALOGUE_CHARACTER_NAME = "Character";
 const DEFAULT_DIALOGUE_CONTENT = "This is a sample dialogue content.";
@@ -93,6 +97,17 @@ const applyPreviewVariableOverrides = (
   return nextPreviewVariables;
 };
 
+const createPreviewFixedStateValues = (previewVariableValues = {}) => {
+  const fixedStateItems = getFixedVisibilityStateItems();
+
+  return {
+    isLineCompleted:
+      previewVariableValues[LINE_COMPLETED_CONDITION_ID] ??
+      fixedStateItems[LINE_COMPLETED_CONDITION_ID]?.default ??
+      false,
+  };
+};
+
 const createChoiceItems = (choicesData = {}) => {
   const choiceItems = Array.isArray(choicesData.items) ? choicesData.items : [];
 
@@ -108,28 +123,23 @@ const createChoiceItems = (choicesData = {}) => {
   });
 };
 
-const createSaveLoadSlots = (layoutType, saveLoadData = {}) => {
-  const actionType = layoutType === "load" ? "loadGame" : "saveGame";
+const createSaveLoadSlots = (saveLoadData = {}) => {
   const slots = Array.isArray(saveLoadData.slots) ? saveLoadData.slots : [];
 
-  return slots.map((slot, index) => ({
-    id: slot?.id ?? `slot-${index + 1}`,
-    saveImageId: slot?.saveImageId,
-    saveDate: slot?.saveDate ?? "",
-    image: slot?.image ?? slot?.saveImageId,
-    date: slot?.date ?? slot?.saveDate ?? "",
-    isAvailable: slot?.isAvailable === true,
-    events: {
-      click: {
-        actions:
-          slot?.events?.click?.actions ?? {
-            [actionType]: {
-              slotId: slot?.id ?? `slot-${index + 1}`,
-            },
-          },
-      },
-    },
-  }));
+  return slots.map((slot, index) => {
+    const slotNumber =
+      Number.isFinite(Number(slot?.slotNumber)) && Number(slot?.slotNumber) > 0
+        ? Number(slot.slotNumber)
+        : index + 1;
+
+    return {
+      slotNumber,
+      image: slot?.image ?? slot?.saveImageId,
+      date: slot?.date ?? slot?.saveDate ?? "",
+      state: slot?.state,
+      isAvailable: slot?.isAvailable === true,
+    };
+  });
 };
 
 const createDialogueLines = ({ characterName, dialogueContent }) => {
@@ -178,23 +188,6 @@ const toElementList = (elements) => {
   }
 
   return elements ? [elements] : [];
-};
-
-const flattenElementRenderOrder = (elements, parentId, result = []) => {
-  toElementList(elements).forEach((element, index) => {
-    result.push({
-      id: element.id,
-      type: element.type,
-      parentId,
-      index,
-    });
-
-    if (Array.isArray(element.children) && element.children.length > 0) {
-      flattenElementRenderOrder(element.children, element.id, result);
-    }
-  });
-
-  return result;
 };
 
 const isSelectableMatch = (elementId, selectedItemId) => {
@@ -349,6 +342,7 @@ export const createLayoutEditorPreviewData = ({
       ),
       _dialogueTextSpeed: dialogueRevealingSpeed,
     },
+    ...createPreviewFixedStateValues(previewVariableValues),
     dialogue: {
       character: {
         name: characterName,
@@ -365,14 +359,12 @@ export const createLayoutEditorPreviewData = ({
     choice: {
       items: createChoiceItems(choicesData),
     },
-    saveLoad: {
-      slots:
-        hasSaveLoadPreview === true ||
-        layoutType === "save" ||
-        layoutType === "load"
-          ? createSaveLoadSlots(layoutType, saveLoadData)
-          : [],
-    },
+    saveSlots:
+      hasSaveLoadPreview === true ||
+      layoutType === "save" ||
+      layoutType === "load"
+        ? createSaveLoadSlots(saveLoadData)
+        : [],
   };
 };
 
@@ -502,6 +494,7 @@ export const createLayoutEditorRenderState = (deps) => {
     { items: fontsItems },
     {
       layoutId,
+      layoutType: store.selectCurrentLayoutType(),
       layoutsData: repositoryState.layouts?.items || {},
     },
   );
@@ -539,10 +532,6 @@ export const renderLayoutEditorPreview = async (
     });
     const resolvedFinalElements = resolveLayoutReferences(finalElements, {
       resources,
-    });
-    console.log("[layoutEditor.preview] resolvedRenderOrder", {
-      selectedItemId: selectedItem?.id,
-      elements: flattenElementRenderOrder(resolvedFinalElements),
     });
     const fileReferences = extractFileIdsFromRenderState(resolvedFinalElements);
 

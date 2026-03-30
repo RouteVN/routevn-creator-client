@@ -6,7 +6,10 @@ import {
 } from "../../internal/layoutEditorTypes.js";
 import { getFragmentLayoutOptions } from "../../internal/layoutFragments.js";
 import { getSystemVariableItems } from "../../internal/systemVariables.js";
-import { splitVisibilityConditionFromWhen } from "../../internal/layoutVisibilityCondition.js";
+import {
+  getFixedVisibilityStateItems,
+  splitVisibilityConditionFromWhen,
+} from "../../internal/layoutVisibilityCondition.js";
 import {
   DEFAULT_PROJECT_RESOLUTION,
   formatProjectResolutionAspectRatio,
@@ -47,6 +50,7 @@ const getLayoutPreviewVariableItems = (layoutData = {}, variablesData = {}) => {
   const availableVariables = {
     ...variablesData.items,
     ...getSystemVariableItems(),
+    ...getFixedVisibilityStateItems(),
   };
   const previewVariables = [];
   const addedVariableIds = new Set();
@@ -89,10 +93,14 @@ const getLayoutPreviewVariableItems = (layoutData = {}, variablesData = {}) => {
 
 const createPreviewVariablesForm = (previewVariableItems = []) => ({
   title: "Preview",
-  description: "Edit visibility variables to preview conditional elements",
+  description: "Edit visibility conditions to preview conditional elements",
   fields: previewVariableItems.map((variable) => {
     const sourceLabel =
-      variable.source === "system" ? "System variable" : "Variable";
+      variable.source === "system"
+        ? "System variable"
+        : variable.source === "runtime"
+          ? "Runtime state"
+          : "Variable";
     const descriptionParts = [
       `${sourceLabel} (${variable.type})`,
       variable.description,
@@ -166,19 +174,95 @@ const createNvlFormDefaultValues = (nvlDefaultValues = {}) => {
   return defaultValues;
 };
 
-const createSaveLoadFormDefaultValues = (saveLoadDefaultValues = {}) => {
-  const slotsNum = Number(saveLoadDefaultValues.slotsNum);
-  const slotCount = Number.isFinite(slotsNum) && slotsNum > 0 ? slotsNum : 0;
+const createSaveLoadFormDefaultValues = (
+  saveLoadDefaultValues = {},
+  slotCount = 0,
+) => {
   const defaultValues = {
-    slotsNum: slotCount,
+    slotsNum:
+      Number.isFinite(Number(saveLoadDefaultValues.slotsNum)) &&
+      Number(saveLoadDefaultValues.slotsNum) > 0
+        ? Number(saveLoadDefaultValues.slotsNum)
+        : 0,
   };
 
   for (let index = 0; index < slotCount; index += 1) {
-    defaultValues[`saveImageId${index}`] = saveLoadDefaultValues.saveImageIds?.[index];
-    defaultValues[`saveDate${index}`] = saveLoadDefaultValues.saveDates?.[index] ?? "";
+    defaultValues[`saveImageId${index}`] =
+      saveLoadDefaultValues.saveImageIds?.[index];
+    defaultValues[`saveDate${index}`] =
+      saveLoadDefaultValues.saveDates?.[index] ?? "";
   }
 
   return defaultValues;
+};
+
+const findSaveLoadPreviewSettings = ({
+  currentLayoutId,
+  currentLayoutData,
+  currentLayoutType,
+  layoutsData,
+  layoutId,
+  visited = new Set(),
+}) => {
+  if (!layoutId || visited.has(layoutId)) {
+    return undefined;
+  }
+
+  visited.add(layoutId);
+
+  const isCurrentLayout = layoutId === currentLayoutId;
+  const layoutItem = isCurrentLayout
+    ? { layoutType: currentLayoutType }
+    : layoutsData?.items?.[layoutId];
+  const layoutItems = isCurrentLayout
+    ? currentLayoutData?.items ?? {}
+    : layoutItem?.elements?.items ?? {};
+
+  for (const item of Object.values(layoutItems)) {
+    if (item?.type === "container-ref-save-load-slot") {
+      return {
+        paginationMode: item.paginationMode ?? "continuous",
+        paginationVariableId: item.paginationVariableId,
+        paginationSize: item.paginationSize,
+      };
+    }
+  }
+
+  for (const item of Object.values(layoutItems)) {
+    if (item?.type !== "fragment-ref" || !item.fragmentLayoutId) {
+      continue;
+    }
+
+    const nestedSettings = findSaveLoadPreviewSettings({
+      currentLayoutId,
+      currentLayoutData,
+      currentLayoutType,
+      layoutsData,
+      layoutId: item.fragmentLayoutId,
+      visited,
+    });
+
+    if (nestedSettings) {
+      return nestedSettings;
+    }
+  }
+
+  return undefined;
+};
+
+const getSaveLoadPreviewSlotCount = ({
+  saveLoadDefaultValues,
+  saveLoadPreviewSettings,
+}) => {
+  if (saveLoadPreviewSettings?.paginationMode === "paginated") {
+    const paginationSize = Number(saveLoadPreviewSettings.paginationSize);
+    return Number.isFinite(paginationSize) && paginationSize > 0
+      ? paginationSize
+      : 0;
+  }
+
+  const slotsNum = Number(saveLoadDefaultValues?.slotsNum);
+  return Number.isFinite(slotsNum) && slotsNum > 0 ? slotsNum : 0;
 };
 
 const createSaveLoadImageOptions = (images = {}) => {
@@ -249,10 +333,12 @@ const usesSaveLoadPreviewInLayout = ({
   visited.add(layoutId);
 
   const isCurrentLayout = layoutId === currentLayoutId;
-  const layoutItem = isCurrentLayout ? { layoutType: currentLayoutType } : layoutsData?.items?.[layoutId];
+  const layoutItem = isCurrentLayout
+    ? { layoutType: currentLayoutType }
+    : layoutsData?.items?.[layoutId];
   const layoutItems = isCurrentLayout
-    ? currentLayoutData?.items ?? {}
-    : layoutItem?.elements?.items ?? {};
+    ? (currentLayoutData?.items ?? {})
+    : (layoutItem?.elements?.items ?? {});
 
   const normalizedLayoutType = normalizeLayoutType(layoutItem?.layoutType);
   if (normalizedLayoutType === "save" || normalizedLayoutType === "load") {
@@ -691,9 +777,7 @@ export const setSaveLoadDefaultValue = (
 
   for (let index = 0; index < fieldValue; index += 1) {
     saveImageIds.push(state.saveLoadDefaultValues.saveImageIds[index]);
-    saveDates.push(
-      state.saveLoadDefaultValues.saveDates[index] ?? "",
-    );
+    saveDates.push(state.saveLoadDefaultValues.saveDates[index] ?? "");
   }
 
   state.saveLoadDefaultValues.saveImageIds = saveImageIds;
@@ -827,10 +911,17 @@ export const selectChoicesData = ({ state }) => {
 
 export const selectSaveLoadData = ({ state }) => {
   const slots = [];
-  const slotsNum = Number(state.saveLoadDefaultValues.slotsNum);
-  const slotCount = Number.isFinite(slotsNum) && slotsNum > 0 ? slotsNum : 0;
-  const layoutType = normalizeLayoutType(state.layout?.layoutType);
-  const actionType = layoutType === "load" ? "loadGame" : "saveGame";
+  const saveLoadPreviewSettings = findSaveLoadPreviewSettings({
+    currentLayoutId: state.layout?.id,
+    currentLayoutData: state.layoutData,
+    currentLayoutType: state.layout?.layoutType,
+    layoutsData: state.layoutsData,
+    layoutId: state.layout?.id,
+  });
+  const slotCount = getSaveLoadPreviewSlotCount({
+    saveLoadDefaultValues: state.saveLoadDefaultValues,
+    saveLoadPreviewSettings,
+  });
 
   for (let index = 0; index < slotCount; index += 1) {
     const saveDate = state.saveLoadDefaultValues.saveDates[index] ?? "";
@@ -838,21 +929,10 @@ export const selectSaveLoadData = ({ state }) => {
     const isAvailable = Boolean(saveDate || saveImageId);
 
     slots.push({
-      id: `slot-${index + 1}`,
-      saveImageId,
-      saveDate,
+      slotNumber: index + 1,
       image: saveImageId,
       date: saveDate,
       isAvailable,
-      events: {
-        click: {
-          actions: {
-            [actionType]: {
-              slotId: `slot-${index + 1}`,
-            },
-          },
-        },
-      },
     });
   }
 
@@ -928,14 +1008,6 @@ export const selectViewData = ({ state, constants }) => {
     ? getLayoutPreviewVariableItems(state.layoutData, state.variablesData)
     : [];
   const imageOptions = createSaveLoadImageOptions(state.images);
-  const saveLoadSlots = Array.from(
-    {
-      length: Number(state.saveLoadDefaultValues.slotsNum) || 0,
-    },
-    (_unused, index) => ({
-      id: `slot-${index + 1}`,
-    }),
-  );
   const fragmentLayoutOptions = getFragmentLayoutOptions(state.layoutsData, {
     excludeLayoutId: state.layout?.id,
   });
@@ -954,10 +1026,36 @@ export const selectViewData = ({ state, constants }) => {
     layoutsData: state.layoutsData,
     layoutId: state.layout?.id,
   });
+  const saveLoadPreviewSettings = findSaveLoadPreviewSettings({
+    currentLayoutId: state.layout?.id,
+    currentLayoutData: state.layoutData,
+    currentLayoutType: layoutType,
+    layoutsData: state.layoutsData,
+    layoutId: state.layout?.id,
+  });
+  const saveLoadSlotCount = getSaveLoadPreviewSlotCount({
+    saveLoadDefaultValues: state.saveLoadDefaultValues,
+    saveLoadPreviewSettings,
+  });
+  const showSaveLoadSlotsNum =
+    saveLoadPreviewSettings?.paginationMode !== "paginated";
+  const saveLoadSlots = Array.from(
+    {
+      length: saveLoadSlotCount,
+    },
+    (_unused, index) => ({
+      id: `slot-${index + 1}`,
+    }),
+  );
   const saveLoadFormKey = `save-load-${hashFormKey(
     JSON.stringify({
       hasSaveLoadPreview,
       slotsNum: state.saveLoadDefaultValues.slotsNum,
+      saveLoadSlotCount,
+      paginationMode: saveLoadPreviewSettings?.paginationMode ?? "continuous",
+      paginationVariableId:
+        saveLoadPreviewSettings?.paginationVariableId ?? "",
+      paginationSize: saveLoadPreviewSettings?.paginationSize,
       saveImageIds: state.saveLoadDefaultValues.saveImageIds,
       saveDates: state.saveLoadDefaultValues.saveDates,
     }),
@@ -1014,12 +1112,15 @@ export const selectViewData = ({ state, constants }) => {
     saveLoadForm: parseAndRender(constants.saveLoadForm, {
       imageOptions,
       slots: saveLoadSlots,
+      showSlotsNum: showSaveLoadSlotsNum,
     }),
     saveLoadDefaultValues: createSaveLoadFormDefaultValues(
       state.saveLoadDefaultValues,
+      saveLoadSlotCount,
     ),
     saveLoadContext: {
       slots: saveLoadSlots,
+      showSlotsNum: showSaveLoadSlotsNum,
     },
     saveLoadFormKey,
     hasSaveLoadPreview,

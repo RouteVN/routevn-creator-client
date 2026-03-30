@@ -11,6 +11,7 @@ import {
 import { getLayoutEditorItemCapabilities } from "../../internal/layoutEditorTypes.js";
 import {
   SAVE_DATA_AVAILABLE_CONDITION_ID,
+  getFixedVisibilityStateItems,
   splitVisibilityConditionFromWhen,
 } from "../../internal/layoutVisibilityCondition.js";
 
@@ -41,6 +42,10 @@ const REVEAL_EFFECT_OPTIONS = [
 ];
 
 const VISIBILITY_CONDITION_OP_OPTIONS = [{ label: "Equals", value: "eq" }];
+const SAVE_LOAD_PAGINATION_MODE_OPTIONS = [
+  { label: "Continuous", value: "continuous" },
+  { label: "Paginated", value: "paginated" },
+];
 
 const VISIBILITY_BOOLEAN_OPTIONS = [
   { label: "True", value: true },
@@ -124,10 +129,18 @@ const getScalarVariableItems = (variablesData = {}, options = {}) => {
         String(item?.type || "string").toLowerCase(),
       ),
   );
+  const fixedStateVariables = Object.entries(
+    getFixedVisibilityStateItems(),
+  ).filter(([, item]) =>
+    SUPPORTED_VISIBILITY_VARIABLE_TYPES.has(
+      String(item?.type || "string").toLowerCase(),
+    ),
+  );
 
   const scalarVariables = Object.fromEntries([
     ...projectVariables,
     ...systemVariables,
+    ...fixedStateVariables,
   ]);
 
   if (options.includeSaveDataAvailable) {
@@ -142,7 +155,10 @@ const getScalarVariableItems = (variablesData = {}, options = {}) => {
   return scalarVariables;
 };
 
-const toVisibilityConditionVariableOptions = (variablesData = {}, options = {}) => {
+const toVisibilityConditionVariableOptions = (
+  variablesData = {},
+  options = {},
+) => {
   return Object.entries(getScalarVariableItems(variablesData, options)).map(
     ([id, variable]) => ({
       label: `${variable.name} (${String(variable.type || "string").toLowerCase()})`,
@@ -151,7 +167,10 @@ const toVisibilityConditionVariableOptions = (variablesData = {}, options = {}) 
   );
 };
 
-const toVisibilityConditionVariableTypeById = (variablesData = {}, options = {}) => {
+const toVisibilityConditionVariableTypeById = (
+  variablesData = {},
+  options = {},
+) => {
   return Object.fromEntries(
     Object.entries(getScalarVariableItems(variablesData, options)).map(
       ([id, variable]) => [id, String(variable.type || "string").toLowerCase()],
@@ -168,8 +187,9 @@ const getVisibilityConditionSummary = (
     return "Always visible";
   }
 
-  const variable =
-    getScalarVariableItems(variablesData, options)[visibilityCondition.variableId];
+  const variable = getScalarVariableItems(variablesData, options)[
+    visibilityCondition.variableId
+  ];
   const variableName = variable?.name ?? visibilityCondition.variableId;
   const value =
     typeof visibilityCondition.value === "string"
@@ -272,6 +292,83 @@ const createVisibilityConditionForm = ({
   };
 };
 
+const getSaveLoadPaginationSummary = ({ values, variablesData } = {}) => {
+  const paginationMode = values?.paginationMode ?? "continuous";
+
+  if (paginationMode !== "paginated") {
+    return "Continuous";
+  }
+
+  const variableId = values?.paginationVariableId;
+  const variableName =
+    variableId &&
+    (variablesData?.items?.[variableId]?.name ??
+      getSystemVariableItems()?.[variableId]?.name ??
+      variableId);
+  const paginationSize = Number(values?.paginationSize);
+  const resolvedPaginationSize =
+    Number.isFinite(paginationSize) && paginationSize > 0 ? paginationSize : 0;
+
+  return `Paginated: ${variableName ?? "No variable"} • ${resolvedPaginationSize} per page`;
+};
+
+const createSaveLoadPaginationDialogDefaults = (values = {}) => {
+  const paginationSize = Number(values?.paginationSize);
+
+  return {
+    paginationMode: values?.paginationMode ?? "continuous",
+    paginationVariableId: values?.paginationVariableId ?? "",
+    paginationSize:
+      Number.isFinite(paginationSize) && paginationSize > 0 ? paginationSize : 3,
+  };
+};
+
+const createSaveLoadPaginationForm = ({ variableOptions } = {}) => {
+  return {
+    title: "Pagination",
+    fields: [
+      {
+        name: "paginationMode",
+        type: "select",
+        label: "Pagination",
+        required: true,
+        clearable: false,
+        options: SAVE_LOAD_PAGINATION_MODE_OPTIONS,
+      },
+      {
+        $when: 'paginationMode == "paginated"',
+        name: "paginationVariableId",
+        type: "select",
+        label: "Pagination Variable",
+        required: true,
+        options: variableOptions,
+      },
+      {
+        $when: 'paginationMode == "paginated"',
+        name: "paginationSize",
+        type: "input-number",
+        label: "Pagination Number",
+        required: true,
+      },
+    ],
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "cancel",
+          variant: "se",
+          label: "Cancel",
+        },
+        {
+          id: "submit",
+          variant: "pr",
+          label: "Save",
+        },
+      ],
+    },
+  };
+};
+
 const toTextStyleOptions = (textStylesData = {}) => {
   const textStyleGroups = toFlatGroups(textStylesData);
   return textStyleGroups.flatMap((group) =>
@@ -312,6 +409,10 @@ const toInspectorValues = ({ values, firstTextStyleId }) => {
     revealEffect,
     variableId,
     fragmentLayoutId: values?.fragmentLayoutId ?? "",
+    paginationMode: values?.paginationMode ?? "continuous",
+    paginationVariableId: values?.paginationVariableId ?? "",
+    paginationSize: values?.paginationSize ?? 3,
+    scroll: values?.scroll ?? false,
     direction: values?.direction,
     textStyleId: values?.textStyleId || firstTextStyleId || "",
     hoverTextStyleId: values?.hoverTextStyleId ?? "",
@@ -341,6 +442,10 @@ export const createInitialState = () => {
       open: false,
       key: 0,
       selectedVariableType: undefined,
+    },
+    saveLoadPaginationDialog: {
+      open: false,
+      key: 0,
     },
     textStylesData: { tree: [], items: {} },
     variablesData: { tree: [], items: {} },
@@ -440,6 +545,20 @@ export const openVisibilityConditionDialog = ({ state }, _payload = {}) => {
   };
 };
 
+export const openSaveLoadPaginationDialog = ({ state }, _payload = {}) => {
+  state.saveLoadPaginationDialog = {
+    open: true,
+    key: state.saveLoadPaginationDialog.key + 1,
+  };
+};
+
+export const closeSaveLoadPaginationDialog = ({ state }, _payload = {}) => {
+  state.saveLoadPaginationDialog = {
+    ...state.saveLoadPaginationDialog,
+    open: false,
+  };
+};
+
 export const closeVisibilityConditionDialog = ({ state }, _payload = {}) => {
   state.visibilityConditionDialog = {
     ...state.visibilityConditionDialog,
@@ -536,6 +655,10 @@ export const selectVisibilityConditionDialog = ({ state }) => {
   return state.visibilityConditionDialog;
 };
 
+export const selectSaveLoadPaginationDialog = ({ state }) => {
+  return state.saveLoadPaginationDialog;
+};
+
 export const selectVisibilityConditionVariableTypeById = ({ state, props }) => {
   return toVisibilityConditionVariableTypeById(state.variablesData, {
     includeSaveDataAvailable: props.isInsideSaveLoadSlot === true,
@@ -590,9 +713,14 @@ export const selectViewData = ({ state, props, constants }) => {
       resourceType: props.resourceType,
       textStyleItems,
       textStyleItemsWithNone,
+      variableOptions,
       variableOptionsWithNone,
       fragmentLayoutOptions,
       values,
+      paginationSummary: getSaveLoadPaginationSummary({
+        values,
+        variablesData: state.variablesData,
+      }),
       visibilityConditionSummary: getVisibilityConditionSummary(
         currentVisibilityCondition,
         state.variablesData,
@@ -637,6 +765,12 @@ export const selectViewData = ({ state, props, constants }) => {
     visibilityConditionDialogContext: {
       selectedVariableType: selectedVisibilityConditionVariableType,
     },
+    saveLoadPaginationDialog: state.saveLoadPaginationDialog,
+    saveLoadPaginationDialogDefaults:
+      createSaveLoadPaginationDialogDefaults(values),
+    saveLoadPaginationDialogForm: createSaveLoadPaginationForm({
+      variableOptions,
+    }),
     imageSelectorDialog: state.imageSelectorDialog,
     tempSelectedImageId: state.tempSelectedImageId,
   };

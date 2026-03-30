@@ -1,4 +1,20 @@
 export const SAVE_DATA_AVAILABLE_CONDITION_ID = "__saveDataAvailable";
+export const LINE_COMPLETED_CONDITION_ID = "__isLineCompleted";
+
+const FIXED_VISIBILITY_STATE_ITEMS = {
+  [LINE_COMPLETED_CONDITION_ID]: {
+    id: LINE_COMPLETED_CONDITION_ID,
+    name: "Line Completed",
+    type: "boolean",
+    source: "runtime",
+    description: "Whether the current line has fully completed rendering",
+    accessor: "isLineCompleted",
+  },
+};
+
+export const getFixedVisibilityStateItems = () => {
+  return FIXED_VISIBILITY_STATE_ITEMS;
+};
 
 const trimOuterParentheses = (value) => {
   if (typeof value !== "string") {
@@ -138,6 +154,24 @@ export const buildVisibilityConditionExpression = (visibilityCondition) => {
     return visibilityCondition.value === false ? "!item.date" : "item.date";
   }
 
+  const fixedStateItem =
+    getFixedVisibilityStateItems()?.[visibilityCondition?.variableId];
+  if (fixedStateItem && visibilityCondition?.op === "eq") {
+    const conditionValue = visibilityCondition.value;
+
+    if (typeof conditionValue === "number" && Number.isFinite(conditionValue)) {
+      return `${fixedStateItem.accessor} == ${conditionValue}`;
+    }
+
+    if (typeof conditionValue === "boolean") {
+      return `${fixedStateItem.accessor} == ${conditionValue}`;
+    }
+
+    return `${fixedStateItem.accessor} == ${JSON.stringify(
+      String(conditionValue ?? ""),
+    )}`;
+  }
+
   if (
     !visibilityCondition?.variableId ||
     typeof visibilityCondition.variableId !== "string"
@@ -203,6 +237,36 @@ export const splitVisibilityConditionFromWhen = (expression) => {
         op: "eq",
         value: clause === "item.date",
       };
+      break;
+    }
+
+    for (const fixedStateItem of Object.values(getFixedVisibilityStateItems())) {
+      const escapedAccessor = fixedStateItem.accessor.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&",
+      );
+      const match = clause.match(
+        new RegExp(`^${escapedAccessor}\\s*==\\s*(.+)$`),
+      );
+      if (!match) {
+        continue;
+      }
+
+      const value = parseConditionValue(match[1]);
+      if (value === undefined) {
+        continue;
+      }
+
+      visibilityClauseIndex = index;
+      visibilityCondition = {
+        variableId: fixedStateItem.id,
+        op: "eq",
+        value,
+      };
+      break;
+    }
+
+    if (visibilityCondition) {
       break;
     }
 

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { buildLayoutElements } from "../../src/internal/project/layout.js";
 import {
+  LINE_COMPLETED_CONDITION_ID,
   SAVE_DATA_AVAILABLE_CONDITION_ID,
+  buildVisibilityConditionExpression,
   splitVisibilityConditionFromWhen,
 } from "../../src/internal/layoutVisibilityCondition.js";
 
@@ -100,6 +102,121 @@ describe("layout visibility conditions", () => {
         variableId: SAVE_DATA_AVAILABLE_CONDITION_ID,
         op: "eq",
         value: false,
+      },
+    });
+  });
+
+  it("compiles fixed runtime visibility into flat template data access", () => {
+    expect(
+      buildVisibilityConditionExpression({
+        variableId: LINE_COMPLETED_CONDITION_ID,
+        op: "eq",
+        value: true,
+      }),
+    ).toBe("isLineCompleted == true");
+  });
+
+  it("extracts fixed runtime visibility from $when", () => {
+    expect(
+      splitVisibilityConditionFromWhen(
+        '(line.characterName) && (isLineCompleted == true)',
+      ),
+    ).toEqual({
+      baseWhen: "line.characterName",
+      visibilityCondition: {
+        variableId: LINE_COMPLETED_CONDITION_ID,
+        op: "eq",
+        value: true,
+      },
+    });
+  });
+
+  it("builds save/load slot containers against the engine saveSlots contract", () => {
+    const { elements } = buildLayoutElements(
+      [
+        {
+          id: "slot-container",
+          type: "container-ref-save-load-slot",
+          name: "Container (Save/Load Slot)",
+          children: [
+            {
+              id: "slot-image",
+              type: "sprite-ref-save-load-slot-image",
+            },
+            {
+              id: "slot-date",
+              type: "text-ref-save-load-slot-date",
+            },
+          ],
+        },
+      ],
+      {},
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      {
+        layoutId: "layout-save",
+        layoutType: "save",
+      },
+    );
+
+    expect(elements[0].$each).toBe("item, i in saveSlots");
+    expect(elements[0].click).toEqual({
+      payload: {
+        actions: {
+          saveSaveSlot: {
+            slot: "${item.slotNumber}",
+          },
+        },
+      },
+    });
+    expect(elements[0].children).toEqual([
+      expect.objectContaining({
+        id: "slot-image-instance-${i}",
+        type: "sprite",
+        imageId: "${item.image}",
+      }),
+      expect.objectContaining({
+        id: "slot-date-instance-${i}",
+        type: "text",
+        content: "${item.date}",
+      }),
+    ]);
+  });
+
+  it("merges custom click actions with save/load slot actions", () => {
+    const { elements } = buildLayoutElements(
+      [
+        {
+          id: "slot-container",
+          type: "container-ref-save-load-slot",
+          click: {
+            payload: {
+              actions: {
+                toggleDialogueUI: {},
+              },
+            },
+          },
+        },
+      ],
+      {},
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      {
+        layoutId: "layout-save",
+        layoutType: "save",
+      },
+    );
+
+    expect(elements[0].click).toEqual({
+      payload: {
+        actions: {
+          toggleDialogueUI: {},
+          saveSaveSlot: {
+            slot: "${item.slotNumber}",
+          },
+        },
       },
     });
   });

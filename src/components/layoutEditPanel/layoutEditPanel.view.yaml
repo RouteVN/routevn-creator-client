@@ -3,6 +3,10 @@ refs:
     eventListeners:
       click:
         handler: handleVisibilityConditionItemClick
+  paginationItem*:
+    eventListeners:
+      click:
+        handler: handleSaveLoadPaginationItemClick
   groupItem*:
     eventListeners:
       click:
@@ -31,6 +35,14 @@ refs:
         handler: handleVisibilityConditionFormAction
       form-change:
         handler: handleVisibilityConditionFormChange
+  saveLoadPaginationDialog:
+    eventListeners:
+      close:
+        handler: handleSaveLoadPaginationDialogClose
+  saveLoadPaginationForm:
+    eventListeners:
+      form-action:
+        handler: handleSaveLoadPaginationFormAction
   sectionAction*:
     eventListeners:
       click:
@@ -120,6 +132,9 @@ template:
                 $elif item.type == 'condition-summary':
                   - rtgl-view#conditionItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                       - rtgl-text s=sm: ${item.value}
+                $elif item.type == 'pagination-summary':
+                  - rtgl-view#paginationItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
+                      - rtgl-text s=sm: ${item.value}
   - rtgl-view h=1 w=f bgc=mu mv=lg: null
   - rvn-system-actions#systemActions :actions=${actionsData} actionType=system :hiddenModes=${hiddenSystemActionModes}: null
   - rtgl-popover#popoverForm ?open=${popover.open} place=b x=${popover.x} y=${popover.y}:
@@ -128,6 +143,9 @@ template:
   - rtgl-dialog#visibilityConditionDialog ?open=${visibilityConditionDialog.open} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-form#visibilityConditionForm key=${visibilityConditionDialog.key} :form=${visibilityConditionDialogForm} :defaultValues=${visibilityConditionDialogDefaults} :context=${visibilityConditionDialogContext} w=f: null
+  - rtgl-dialog#saveLoadPaginationDialog ?open=${saveLoadPaginationDialog.open} s=md:
+      - rtgl-view slot=content g=md:
+          - rtgl-form#saveLoadPaginationForm key=${saveLoadPaginationDialog.key} :form=${saveLoadPaginationDialogForm} :defaultValues=${saveLoadPaginationDialogDefaults} w=f: null
   - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open}:
       - rtgl-view slot=content g=md:
           - rvn-image-selector#imageSelector: null

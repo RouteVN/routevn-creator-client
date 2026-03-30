@@ -174,6 +174,8 @@ const CREATE_TEMPLATES = {
     type: "container-ref-save-load-slot",
     name: "Container (Save/Load Slot)",
     ...BASE_TRANSFORM,
+    paginationMode: "continuous",
+    paginationSize: 3,
   }),
   "sprite-save-load-slot-image": (projectResolution) =>
     scaleLayoutElementItemForProjectResolution(
@@ -396,6 +398,7 @@ const DEFAULT_CAPABILITIES = {
   supportsHeight: true,
   supportsAnchor: false,
   supportsDirection: false,
+  supportsScroll: false,
   supportsTextEditing: false,
   supportsTextRevealEffect: false,
   supportsTextStyles: false,
@@ -410,6 +413,8 @@ const FAMILY_CAPABILITIES = {
   container: {
     supportsAnchor: true,
     supportsDirection: true,
+    supportsScroll: true,
+    supportsActions: true,
   },
   fragment: {
     supportsAnchor: true,
@@ -449,6 +454,18 @@ const TYPE_RULES = {
       if (name === "direction" && (value === null || value === "")) {
         return undefined;
       }
+
+      if (name === "paginationMode" && (value === null || value === "")) {
+        return "continuous";
+      }
+
+      if (
+        name === "paginationVariableId" &&
+        (value === null || value === "")
+      ) {
+        return undefined;
+      }
+
       return value;
     },
   },

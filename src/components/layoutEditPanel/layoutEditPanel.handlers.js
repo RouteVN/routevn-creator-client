@@ -127,6 +127,12 @@ export const handleVisibilityConditionItemClick = (deps) => {
   render();
 };
 
+export const handleSaveLoadPaginationItemClick = (deps) => {
+  const { render, store } = deps;
+  store.openSaveLoadPaginationDialog();
+  render();
+};
+
 export const handlePopverFormClose = (deps) => {
   const { render, store } = deps;
   store.closePopoverForm();
@@ -136,6 +142,12 @@ export const handlePopverFormClose = (deps) => {
 export const handleVisibilityConditionDialogClose = (deps) => {
   const { render, store } = deps;
   store.closeVisibilityConditionDialog();
+  render();
+};
+
+export const handleSaveLoadPaginationDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeSaveLoadPaginationDialog();
   render();
 };
 
@@ -294,6 +306,54 @@ export const handleVisibilityConditionFormAction = (deps, payload) => {
     value: mergeWhenExpressions(baseWhen, nextVisibilityWhen),
   });
   store.closeVisibilityConditionDialog();
+  render();
+};
+
+export const handleSaveLoadPaginationFormAction = (deps, payload) => {
+  const { store, render } = deps;
+  const detail = payload._event.detail || {};
+  const { actionId, values = {} } = detail;
+
+  if (actionId === "cancel") {
+    store.closeSaveLoadPaginationDialog();
+    render();
+    return;
+  }
+
+  if (actionId !== "submit") {
+    return;
+  }
+
+  const paginationMode =
+    values.paginationMode === "paginated" ? "paginated" : "continuous";
+
+  applyPanelValueUpdate(deps, {
+    name: "paginationMode",
+    value: paginationMode,
+  });
+
+  if (paginationMode === "paginated") {
+    applyPanelValueUpdate(deps, {
+      name: "paginationVariableId",
+      value: values.paginationVariableId || undefined,
+    });
+
+    const parsedPaginationSize = Number(values.paginationSize);
+    applyPanelValueUpdate(deps, {
+      name: "paginationSize",
+      value:
+        Number.isFinite(parsedPaginationSize) && parsedPaginationSize > 0
+          ? parsedPaginationSize
+          : 1,
+    });
+  } else {
+    applyPanelValueUpdate(deps, {
+      name: "paginationVariableId",
+      value: undefined,
+    });
+  }
+
+  store.closeSaveLoadPaginationDialog();
   render();
 };
 

@@ -4,6 +4,7 @@ import {
   createLayoutEditorSelectionOverlay,
 } from "../../src/internal/layoutEditorPreview.js";
 import { getSystemVariableItems } from "../../src/internal/systemVariables.js";
+import { LINE_COMPLETED_CONDITION_ID } from "../../src/internal/layoutVisibilityCondition.js";
 
 describe("layoutEditorPreview", () => {
   it("builds stable preview data from variables, dialogue defaults, and choices", () => {
@@ -49,7 +50,7 @@ describe("layoutEditorPreview", () => {
         },
       },
     ]);
-    expect(previewData.saveLoad.slots).toEqual([]);
+    expect(previewData.saveSlots).toEqual([]);
   });
 
   it("builds save/load preview slots for repeating slot containers", () => {
@@ -83,34 +84,16 @@ describe("layoutEditorPreview", () => {
       },
     });
 
-    expect(savePreviewData.saveLoad.slots).toHaveLength(2);
-    expect(savePreviewData.saveLoad.slots[0]).toMatchObject({
-      id: "slot-1",
-      saveImageId: "image-1",
-      saveDate: "2026-03-10 18:00",
-      events: {
-        click: {
-          actions: {
-            saveGame: {
-              slotId: "slot-1",
-            },
-          },
-        },
-      },
+    expect(savePreviewData.saveSlots).toHaveLength(2);
+    expect(savePreviewData.saveSlots[0]).toMatchObject({
+      slotNumber: 1,
+      image: "image-1",
+      date: "2026-03-10 18:00",
     });
-    expect(loadPreviewData.saveLoad.slots[0]).toMatchObject({
-      id: "slot-1",
-      saveImageId: "image-3",
-      saveDate: "2026-03-12 18:00",
-      events: {
-        click: {
-          actions: {
-            loadGame: {
-              slotId: "slot-1",
-            },
-          },
-        },
-      },
+    expect(loadPreviewData.saveSlots[0]).toMatchObject({
+      slotNumber: 1,
+      image: "image-3",
+      date: "2026-03-12 18:00",
     });
   });
 
@@ -128,10 +111,10 @@ describe("layoutEditorPreview", () => {
       },
     });
 
-    expect(previewData.saveLoad.slots).toHaveLength(1);
-    expect(previewData.saveLoad.slots[0]).toMatchObject({
-      id: "slot-1",
-      saveDate: "2026-03-15 20:00",
+    expect(previewData.saveSlots).toHaveLength(1);
+    expect(previewData.saveSlots[0]).toMatchObject({
+      slotNumber: 1,
+      date: "2026-03-15 20:00",
     });
   });
 
@@ -186,6 +169,16 @@ describe("layoutEditorPreview", () => {
       score: 42,
       enabled: true,
     });
+  });
+
+  it("includes fixed runtime state in preview data", () => {
+    const previewData = createLayoutEditorPreviewData({
+      previewVariableValues: {
+        [LINE_COMPLETED_CONDITION_ID]: true,
+      },
+    });
+
+    expect(previewData.isLineCompleted).toBe(true);
   });
 
   it("creates a draggable overlay only for the first repeated instance", () => {
