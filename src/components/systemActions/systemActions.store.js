@@ -344,6 +344,23 @@ export const selectActionsData = ({ props, state }) => {
     };
   }
 
+  if (actions.loadSlot) {
+    actionsObject.loadSlot = actions.loadSlot;
+    const rawSlotId =
+      actions.loadSlot.slotId ??
+      actions.loadSlot.slot ??
+      actions.loadSlot.slotKey;
+    const slotId =
+      rawSlotId === undefined || rawSlotId === null || rawSlotId === ""
+        ? undefined
+        : String(rawSlotId);
+
+    preview.loadSlot = {
+      slotId,
+      label: slotId ?? "Auto",
+    };
+  }
+
   if (presentationState.dialogue) {
     actionsObject.dialogue = presentationState.dialogue;
     const dialogueModeLabel = resolveDialogueModeLabel(

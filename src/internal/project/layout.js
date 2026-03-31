@@ -755,14 +755,6 @@ const applyContainerNode = ({ element, node }) => {
       SPECIAL_CONTAINER_INTERACTIONS[node.type];
 
     if (specialContainerInteraction) {
-      console.log("[layout.build] special confirm container interaction", {
-        id: node.id,
-        type: node.type,
-        click: mergeInteractionPayloadActions(
-          nextElement.click,
-          specialContainerInteraction.click,
-        ),
-      });
       return {
         ...nextElement,
         type: "container",

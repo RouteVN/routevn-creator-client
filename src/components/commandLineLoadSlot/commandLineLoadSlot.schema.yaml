@@ -1,0 +1,6 @@
+componentName: rvn-command-line-load-slot
+propsSchema:
+  type: object
+  properties:
+    loadSlot:
+      type: object

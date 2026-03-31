@@ -35,6 +35,7 @@ const ACTION_LABELS = {
   showConfirmDialog: "Show Confirm Dialog",
   hideConfirmDialog: "Hide Confirm Dialog",
   saveSlot: "Save Slot",
+  loadSlot: "Load Slot",
 };
 
 const ACTION_INTERACTION_TYPES = ["click", "rightClick"];

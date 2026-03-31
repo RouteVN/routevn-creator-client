@@ -935,21 +935,6 @@ export const createGraphicsService = async ({ subject }) => {
       ...nextRenderState,
       animations: nextRenderState?.animations || [],
     };
-    const confirmDialogElement = Array.isArray(nextRenderState.elements)
-      ? nextRenderState.elements.find(
-          (element) => element?.id === "confirmDialog",
-        )
-      : undefined;
-    if (confirmDialogElement) {
-      console.log("[graphicsService] confirm dialog render tree", {
-        childIds: (confirmDialogElement.children || []).map(
-          (child) => child?.id,
-        ),
-        childTypes: (confirmDialogElement.children || []).map(
-          (child) => child?.type,
-        ),
-      });
-    }
     routeGraphics.render(nextRenderState);
     applyInteractiveContainerHitAreas(nextRenderState.elements);
     void pruneDecodedAudioCache(retainedAudioKeys);
@@ -979,34 +964,14 @@ export const createGraphicsService = async ({ subject }) => {
         continue;
       }
 
-      const isConfirmRelated =
-        typeof element.id === "string" && element.id.includes("confirm");
-
       const hasPointerInteraction = Boolean(
         element.hover || element.click || element.rightClick,
       );
-      if (isConfirmRelated) {
-        console.log("[graphicsService] confirm container candidate", {
-          id: element.id,
-          hasPointerInteraction,
-          width: element.width,
-          height: element.height,
-          click: element.click,
-          hover: element.hover,
-          rightClick: element.rightClick,
-        });
-      }
       if (!hasPointerInteraction) {
         continue;
       }
 
       const container = routeGraphics.findElementByLabel(element.id);
-      if (isConfirmRelated) {
-        console.log("[graphicsService] confirm container resolved", {
-          id: element.id,
-          found: Boolean(container),
-        });
-      }
       if (!container) {
         continue;
       }
@@ -1031,14 +996,6 @@ export const createGraphicsService = async ({ subject }) => {
         hitAreaWidth <= 0 ||
         hitAreaHeight <= 0
       ) {
-        if (isConfirmRelated) {
-          console.log("[graphicsService] confirm container skipped hit area", {
-            id: element.id,
-            localBounds,
-            width: element.width,
-            height: element.height,
-          });
-        }
         continue;
       }
 
@@ -1049,16 +1006,6 @@ export const createGraphicsService = async ({ subject }) => {
         hitAreaHeight,
       );
       container.eventMode = "static";
-      if (isConfirmRelated) {
-        console.log("[graphicsService] confirm container hit area applied", {
-          id: element.id,
-          x: hitAreaX,
-          y: hitAreaY,
-          width: hitAreaWidth,
-          height: hitAreaHeight,
-          localBounds,
-        });
-      }
     }
   };
 
@@ -1187,18 +1134,6 @@ export const createGraphicsService = async ({ subject }) => {
           }
 
           const actions = getEventActions(payload);
-
-          if (
-            payload?._event?.id &&
-            String(payload._event.id).includes("confirm")
-          ) {
-            console.log("[graphicsService] confirm-related event", {
-              eventName,
-              eventId: payload._event.id,
-              payload,
-              actions,
-            });
-          }
 
           if (actions && engine) {
             const eventContext = payload._event

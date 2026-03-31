@@ -72,6 +72,12 @@ const SYSTEM_ACTIONS = [
     icon: "dialogue",
     mode: "saveSlot",
   },
+  {
+    id: "23",
+    label: "Load Slot",
+    icon: "dialogue",
+    mode: "loadSlot",
+  },
 ];
 
 const PRESENTATION_ACTIONS = [

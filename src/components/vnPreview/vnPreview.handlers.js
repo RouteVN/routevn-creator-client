@@ -170,12 +170,6 @@ const createBeforeHandleActionsHook = (deps, projectData) => {
     });
     await preloadRuntimeThumbnailImage(deps.graphicsService, thumbnailImage);
     const resolvedActions = resolveEventBindings(actions, eventData);
-    if (resolvedActions?.saveSlot || resolvedActions?.saveSaveSlot) {
-      console.log("[vnPreview.beforeHandleActions] resolved save actions", {
-        eventData,
-        resolvedActions,
-      });
-    }
     const layoutIds = Array.from(
       new Set([
         ...extractLayoutIdsFromValue(resolvedActions, projectData),

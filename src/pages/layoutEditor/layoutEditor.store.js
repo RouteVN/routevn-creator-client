@@ -6,18 +6,21 @@ import {
 } from "../../internal/layoutEditorTypes.js";
 import { getFragmentLayoutOptions } from "../../internal/layoutFragments.js";
 import { getSystemVariableItems } from "../../internal/systemVariables.js";
-import {
-  getFixedVisibilityStateItems,
-  splitVisibilityConditionFromWhen,
-} from "../../internal/layoutVisibilityCondition.js";
+import { getFixedVisibilityStateItems } from "../../internal/layoutVisibilityCondition.js";
 import {
   DEFAULT_PROJECT_RESOLUTION,
   formatProjectResolutionAspectRatio,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
 import { normalizeLayoutType } from "../../internal/project/layout.js";
-
-const PREVIEW_VARIABLE_TYPES = new Set(["boolean", "number", "string"]);
+import {
+  collectLayoutPreviewVariableIds,
+  createSaveLoadPreviewSlots,
+  findSaveLoadPreviewSettings,
+  getSaveLoadPreviewWindow,
+  isSupportedPreviewVariableType,
+  usesSaveLoadPreviewInLayout,
+} from "../../internal/layoutEditorPreviewSupport.js";
 const NORMAL_LIKE_LAYOUT_TYPES = new Set([
   "normal",
   "save",
@@ -51,7 +54,13 @@ const toPreviewVariableValue = ({ type, value } = {}) => {
   return value ?? "";
 };
 
-const getLayoutPreviewVariableItems = (layoutData = {}, variablesData = {}) => {
+const getLayoutPreviewVariableItems = ({
+  currentLayoutId,
+  currentLayoutData,
+  currentLayoutType,
+  layoutsData,
+  variablesData = {},
+} = {}) => {
   const availableVariables = {
     ...variablesData.items,
     ...getSystemVariableItems(),
@@ -60,49 +69,38 @@ const getLayoutPreviewVariableItems = (layoutData = {}, variablesData = {}) => {
   const previewVariables = [];
   const addedVariableIds = new Set();
 
-  for (const item of Object.values(layoutData?.items ?? {})) {
-    const variableIds = [];
-    const visibilityCondition = splitVisibilityConditionFromWhen(
-      item?.["$when"],
-    ).visibilityCondition;
-    if (visibilityCondition?.variableId) {
-      variableIds.push(visibilityCondition.variableId);
+  const variableIds = collectLayoutPreviewVariableIds({
+    currentLayoutId,
+    currentLayoutData,
+    currentLayoutType,
+    layoutsData,
+    layoutId: currentLayoutId,
+  });
+
+  for (const variableId of variableIds) {
+    if (!variableId || addedVariableIds.has(variableId)) {
+      continue;
     }
 
-    const conditionalTextStyles = Array.isArray(item?.conditionalTextStyles)
-      ? item.conditionalTextStyles
-      : [];
-    conditionalTextStyles.forEach((rule) => {
-      if (typeof rule?.variableId === "string" && rule.variableId.length > 0) {
-        variableIds.push(rule.variableId);
-      }
-    });
+    const variable = availableVariables[variableId];
+    const type = String(variable?.type ?? "string").toLowerCase();
 
-    for (const variableId of variableIds) {
-      if (!variableId || addedVariableIds.has(variableId)) {
-        continue;
-      }
+    if (!isSupportedPreviewVariableType(type)) {
+      continue;
+    }
 
-      const variable = availableVariables[variableId];
-      const type = String(variable?.type ?? "string").toLowerCase();
-
-      if (!PREVIEW_VARIABLE_TYPES.has(type)) {
-        continue;
-      }
-
-      addedVariableIds.add(variableId);
-      previewVariables.push({
-        id: variableId,
-        name: variable?.name ?? variableId,
+    addedVariableIds.add(variableId);
+    previewVariables.push({
+      id: variableId,
+      name: variable?.name ?? variableId,
+      type,
+      source: variable?.source,
+      description: variable?.description,
+      defaultValue: toPreviewVariableValue({
         type,
-        source: variable?.source,
-        description: variable?.description,
-        defaultValue: toPreviewVariableValue({
-          type,
-          value: variable?.value ?? variable?.default,
-        }),
-      });
-    }
+        value: variable?.value ?? variable?.default,
+      }),
+    });
   }
 
   return previewVariables.sort((left, right) =>
@@ -215,75 +213,6 @@ const createSaveLoadFormDefaultValues = (
   return defaultValues;
 };
 
-const findSaveLoadPreviewSettings = ({
-  currentLayoutId,
-  currentLayoutData,
-  currentLayoutType,
-  layoutsData,
-  layoutId,
-  visited = new Set(),
-}) => {
-  if (!layoutId || visited.has(layoutId)) {
-    return undefined;
-  }
-
-  visited.add(layoutId);
-
-  const isCurrentLayout = layoutId === currentLayoutId;
-  const layoutItem = isCurrentLayout
-    ? { layoutType: currentLayoutType }
-    : layoutsData?.items?.[layoutId];
-  const layoutItems = isCurrentLayout
-    ? (currentLayoutData?.items ?? {})
-    : (layoutItem?.elements?.items ?? {});
-
-  for (const item of Object.values(layoutItems)) {
-    if (item?.type === "container-ref-save-load-slot") {
-      return {
-        paginationMode: item.paginationMode ?? "continuous",
-        paginationVariableId: item.paginationVariableId,
-        paginationSize: item.paginationSize,
-      };
-    }
-  }
-
-  for (const item of Object.values(layoutItems)) {
-    if (item?.type !== "fragment-ref" || !item.fragmentLayoutId) {
-      continue;
-    }
-
-    const nestedSettings = findSaveLoadPreviewSettings({
-      currentLayoutId,
-      currentLayoutData,
-      currentLayoutType,
-      layoutsData,
-      layoutId: item.fragmentLayoutId,
-      visited,
-    });
-
-    if (nestedSettings) {
-      return nestedSettings;
-    }
-  }
-
-  return undefined;
-};
-
-const getSaveLoadPreviewSlotCount = ({
-  saveLoadDefaultValues,
-  saveLoadPreviewSettings,
-}) => {
-  if (saveLoadPreviewSettings?.paginationMode === "paginated") {
-    const paginationSize = Number(saveLoadPreviewSettings.paginationSize);
-    return Number.isFinite(paginationSize) && paginationSize > 0
-      ? paginationSize
-      : 0;
-  }
-
-  const slotsNum = Number(saveLoadDefaultValues?.slotsNum);
-  return Number.isFinite(slotsNum) && slotsNum > 0 ? slotsNum : 0;
-};
-
 const createSaveLoadImageOptions = (images = {}) => {
   return Object.entries(images.items ?? {})
     .filter(([_imageId, item]) => item?.type === "image")
@@ -335,59 +264,6 @@ const toLayoutEditorExplorerItems = (items = []) => {
       canReceiveChildren: isLayoutEditorContainerItemType(item.type),
     },
   }));
-};
-
-const usesSaveLoadPreviewInLayout = ({
-  currentLayoutId,
-  currentLayoutData,
-  currentLayoutType,
-  layoutsData,
-  layoutId,
-  visited = new Set(),
-}) => {
-  if (!layoutId || visited.has(layoutId)) {
-    return false;
-  }
-
-  visited.add(layoutId);
-
-  const isCurrentLayout = layoutId === currentLayoutId;
-  const layoutItem = isCurrentLayout
-    ? { layoutType: currentLayoutType }
-    : layoutsData?.items?.[layoutId];
-  const layoutItems = isCurrentLayout
-    ? (currentLayoutData?.items ?? {})
-    : (layoutItem?.elements?.items ?? {});
-
-  const normalizedLayoutType = normalizeLayoutType(layoutItem?.layoutType);
-  if (normalizedLayoutType === "save" || normalizedLayoutType === "load") {
-    return true;
-  }
-
-  for (const item of Object.values(layoutItems)) {
-    if (item?.type === "container-ref-save-load-slot") {
-      return true;
-    }
-
-    if (item?.type !== "fragment-ref" || !item.fragmentLayoutId) {
-      continue;
-    }
-
-    if (
-      usesSaveLoadPreviewInLayout({
-        currentLayoutId,
-        currentLayoutData,
-        currentLayoutType,
-        layoutsData,
-        layoutId: item.fragmentLayoutId,
-        visited,
-      })
-    ) {
-      return true;
-    }
-  }
-
-  return false;
 };
 
 export const createInitialState = () => ({
@@ -773,14 +649,30 @@ export const setSaveLoadDefaultValue = (
   { state },
   { name, fieldValue } = {},
 ) => {
+  const saveLoadPreviewSettings = findSaveLoadPreviewSettings({
+    currentLayoutId: state.layout?.id,
+    currentLayoutData: state.layoutData,
+    currentLayoutType: normalizeLayoutType(state.layout?.layoutType),
+    layoutsData: state.layoutsData,
+    layoutId: state.layout?.id,
+  });
+  const { startIndex } = getSaveLoadPreviewWindow({
+    saveLoadDefaultValues: state.saveLoadDefaultValues,
+    saveLoadPreviewSettings,
+    previewVariableValues: state.previewVariableValues,
+    variablesData: state.variablesData,
+  });
+
   if (/^saveImageId\d+$/.test(name)) {
-    const index = Number.parseInt(name.slice("saveImageId".length), 10);
+    const index =
+      startIndex + Number.parseInt(name.slice("saveImageId".length), 10);
     state.saveLoadDefaultValues.saveImageIds[index] = fieldValue;
     return;
   }
 
   if (/^saveDate\d+$/.test(name)) {
-    const index = Number.parseInt(name.slice("saveDate".length), 10);
+    const index =
+      startIndex + Number.parseInt(name.slice("saveDate".length), 10);
     state.saveLoadDefaultValues.saveDates[index] = fieldValue;
     return;
   }
@@ -929,31 +821,19 @@ export const selectChoicesData = ({ state }) => {
 };
 
 export const selectSaveLoadData = ({ state }) => {
-  const slots = [];
   const saveLoadPreviewSettings = findSaveLoadPreviewSettings({
     currentLayoutId: state.layout?.id,
     currentLayoutData: state.layoutData,
-    currentLayoutType: state.layout?.layoutType,
+    currentLayoutType: normalizeLayoutType(state.layout?.layoutType),
     layoutsData: state.layoutsData,
     layoutId: state.layout?.id,
   });
-  const slotCount = getSaveLoadPreviewSlotCount({
+  const slots = createSaveLoadPreviewSlots({
     saveLoadDefaultValues: state.saveLoadDefaultValues,
     saveLoadPreviewSettings,
+    previewVariableValues: state.previewVariableValues,
+    variablesData: state.variablesData,
   });
-
-  for (let index = 0; index < slotCount; index += 1) {
-    const saveDate = state.saveLoadDefaultValues.saveDates[index] ?? "";
-    const saveImageId = state.saveLoadDefaultValues.saveImageIds[index];
-    const isAvailable = Boolean(saveDate || saveImageId);
-
-    slots.push({
-      slotId: index + 1,
-      image: saveImageId,
-      date: saveDate,
-      isAvailable,
-    });
-  }
 
   return {
     slots,
@@ -973,7 +853,7 @@ export const selectHasSaveLoadPreview = ({ state }) => {
   return usesSaveLoadPreviewInLayout({
     currentLayoutId: layoutId,
     currentLayoutData: state.layoutData,
-    currentLayoutType: state.layout?.layoutType,
+    currentLayoutType: normalizeLayoutType(state.layout?.layoutType),
     layoutsData: state.layoutsData,
     layoutId,
   });
@@ -1024,7 +904,13 @@ export const selectViewData = ({ state, constants }) => {
     { layoutType },
   );
   const previewVariableItems = NORMAL_LIKE_LAYOUT_TYPES.has(layoutType)
-    ? getLayoutPreviewVariableItems(state.layoutData, state.variablesData)
+    ? getLayoutPreviewVariableItems({
+        currentLayoutId: state.layout?.id,
+        currentLayoutData: state.layoutData,
+        currentLayoutType: layoutType,
+        layoutsData: state.layoutsData,
+        variablesData: state.variablesData,
+      })
     : [];
   const imageOptions = createSaveLoadImageOptions(state.images);
   const fragmentLayoutOptions = getFragmentLayoutOptions(state.layoutsData, {
@@ -1052,25 +938,25 @@ export const selectViewData = ({ state, constants }) => {
     layoutsData: state.layoutsData,
     layoutId: state.layout?.id,
   });
-  const saveLoadSlotCount = getSaveLoadPreviewSlotCount({
+  const visibleSaveLoadSlots = createSaveLoadPreviewSlots({
     saveLoadDefaultValues: state.saveLoadDefaultValues,
     saveLoadPreviewSettings,
+    previewVariableValues: state.previewVariableValues,
+    variablesData: state.variablesData,
   });
+  const saveLoadSlotCount = visibleSaveLoadSlots.length;
   const showSaveLoadSlotsNum =
     saveLoadPreviewSettings?.paginationMode !== "paginated";
-  const saveLoadSlots = Array.from(
-    {
-      length: saveLoadSlotCount,
-    },
-    (_unused, index) => ({
-      id: `slot-${index + 1}`,
-    }),
-  );
+  const saveLoadSlots = visibleSaveLoadSlots.map((slot) => ({
+    id: `slot-${slot.slotId}`,
+    slotId: slot.slotId,
+  }));
   const saveLoadFormKey = `save-load-${hashFormKey(
     JSON.stringify({
       hasSaveLoadPreview,
       slotsNum: state.saveLoadDefaultValues.slotsNum,
       saveLoadSlotCount,
+      visibleSlotIds: visibleSaveLoadSlots.map((slot) => slot.slotId),
       paginationMode: saveLoadPreviewSettings?.paginationMode ?? "continuous",
       paginationVariableId: saveLoadPreviewSettings?.paginationVariableId ?? "",
       paginationSize: saveLoadPreviewSettings?.paginationSize,
@@ -1133,7 +1019,11 @@ export const selectViewData = ({ state, constants }) => {
       showSlotsNum: showSaveLoadSlotsNum,
     }),
     saveLoadDefaultValues: createSaveLoadFormDefaultValues(
-      state.saveLoadDefaultValues,
+      {
+        ...state.saveLoadDefaultValues,
+        saveImageIds: visibleSaveLoadSlots.map((slot) => slot.image),
+        saveDates: visibleSaveLoadSlots.map((slot) => slot.date),
+      },
       saveLoadSlotCount,
     ),
     saveLoadContext: {

@@ -102,10 +102,6 @@ export const applyRuntimeActionContext = (
     }
 
     if (actionName === "showConfirmDialog") {
-      console.log("[runtimeActionPreparation] showConfirmDialog context", {
-        slotBinding,
-        hasThumbnailImage: thumbnailImage !== undefined,
-      });
       applyRuntimeActionContext(payload.confirmActions, {
         slotBinding,
         thumbnailImage,
@@ -124,12 +120,6 @@ export const applyRuntimeActionContext = (
         actionName === "saveSlot" ? "slotId" : "slot",
       );
       fillThumbnailImage(payload, thumbnailImage);
-      console.log("[runtimeActionPreparation] save action prepared", {
-        actionName,
-        slotId: payload.slotId,
-        slot: payload.slot,
-        hasThumbnailImage: payload.thumbnailImage !== undefined,
-      });
       return;
     }
 
@@ -139,11 +129,6 @@ export const applyRuntimeActionContext = (
         slotBinding,
         actionName === "loadSlot" ? "slotId" : "slot",
       );
-      console.log("[runtimeActionPreparation] load action prepared", {
-        actionName,
-        slotId: payload.slotId,
-        slot: payload.slot,
-      });
     }
   });
 

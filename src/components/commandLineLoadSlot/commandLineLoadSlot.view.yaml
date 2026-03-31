@@ -1,0 +1,20 @@
+refs:
+  breadcrumb:
+    eventListeners:
+      item-click:
+        handler: handleBreadcrumbClick
+  form:
+    eventListeners:
+      form-change:
+        handler: handleFormChange
+  submitButton:
+    eventListeners:
+      click:
+        handler: handleSubmitClick
+template:
+  - rtgl-view w=f h=f p=lg:
+      - rtgl-breadcrumb#breadcrumb :items=${breadcrumb}: null
+      - rtgl-form#form :defaultValues=${defaultValues} :form=${form} w=f: null
+      - rtgl-view h=1fg: null
+      - rtgl-view d=h av=c ah=e w=f g=lg:
+          - rtgl-button#submitButton: Submit

@@ -30,7 +30,7 @@ refs:
 template:
   - $if showSelected:
       - rtgl-view g=md w=f:
-          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.dialogue || preview.choice || preview.control || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.toggleDialogueUI || preview.setNextLineConfig || preview.pushLayeredView || preview.popLayeredView || preview.updateVariable || preview.rollbackByOffset || preview.showConfirmDialog || preview.hideConfirmDialog || preview.saveSlot:
+          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.dialogue || preview.choice || preview.control || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.toggleDialogueUI || preview.setNextLineConfig || preview.pushLayeredView || preview.popLayeredView || preview.updateVariable || preview.rollbackByOffset || preview.showConfirmDialog || preview.hideConfirmDialog || preview.saveSlot || preview.loadSlot:
               - $if preview.control:
                   - rtgl-view#actionItemControl data-mode=control g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=control wh=24: null
@@ -125,6 +125,10 @@ template:
                   - rtgl-view#actionItemSaveSlot data-mode=saveSlot g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="dialogue" wh=24: null
                       - rtgl-text s=sm: 'Save slot ${preview.saveSlot.label}'
+              - $if preview.loadSlot:
+                  - rtgl-view#actionItemLoadSlot data-mode=loadSlot g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg="dialogue" wh=24: null
+                      - rtgl-text s=sm: 'Load slot ${preview.loadSlot.label}'
               - $if preview.setNextLineConfig:
                   - rtgl-view#actionItemSetNextLineConfig data-mode=setNextLineConfig g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=settings wh=24: null
@@ -176,6 +180,8 @@ template:
               - rvn-command-line-hide-confirm-dialog#commandLineHideConfirmDialog :hideConfirmDialog=${actions.hideConfirmDialog}: null
             $elif mode == "saveSlot":
               - rvn-command-line-save-slot#commandLineSaveSlot :saveSlot=${actions.saveSlot}: null
+            $elif mode == "loadSlot":
+              - rvn-command-line-load-slot#commandLineLoadSlot :loadSlot=${actions.loadSlot}: null
             $elif mode == "visual":
               - rvn-command-line-visual#commandLineVisual :visual=${actions.visual} :presentationState=${presentationState}: null
             $elif mode == "setNextLineConfig":
