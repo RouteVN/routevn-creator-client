@@ -1,0 +1,6 @@
+componentName: rvn-command-line-save-slot
+propsSchema:
+  type: object
+  properties:
+    saveSlot:
+      type: object

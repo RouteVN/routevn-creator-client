@@ -28,6 +28,8 @@ const CONTAINER_TYPE_SET = new Set([
   "container-ref-choice-item",
   "container-ref-save-load-slot",
   "container-ref-dialogue-line",
+  "container-ref-confirm-dialog-ok",
+  "container-ref-confirm-dialog-cancel",
 ]);
 
 const CREATE_TEMPLATES = {
@@ -176,6 +178,20 @@ const CREATE_TEMPLATES = {
     ...BASE_TRANSFORM,
     paginationMode: "continuous",
     paginationSize: 3,
+  }),
+  "container-confirm-dialog-ok": () => ({
+    type: "container-ref-confirm-dialog-ok",
+    name: "Container (Confirm OK)",
+    ...BASE_TRANSFORM,
+    width: 160,
+    height: 64,
+  }),
+  "container-confirm-dialog-cancel": () => ({
+    type: "container-ref-confirm-dialog-cancel",
+    name: "Container (Confirm Cancel)",
+    ...BASE_TRANSFORM,
+    width: 160,
+    height: 64,
   }),
   "sprite-save-load-slot-image": (projectResolution) =>
     scaleLayoutElementItemForProjectResolution(
@@ -379,6 +395,8 @@ const TYPE_FAMILIES = {
   "container-ref-choice-item": "container",
   "container-ref-save-load-slot": "container",
   "container-ref-dialogue-line": "container",
+  "container-ref-confirm-dialog-ok": "container",
+  "container-ref-confirm-dialog-cancel": "container",
   "fragment-ref": "fragment",
   sprite: "sprite",
   "sprite-ref-save-load-slot-image": "sprite",

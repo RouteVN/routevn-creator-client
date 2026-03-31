@@ -72,7 +72,7 @@ describe("layout visibility conditions", () => {
     });
   });
 
-  it("compiles save data availability visibility into item.date checks", () => {
+  it("compiles save data availability visibility into item.savedAt checks", () => {
     const { elements } = buildLayoutElements(
       [
         {
@@ -92,12 +92,14 @@ describe("layout visibility conditions", () => {
       { layoutId: "layout-1" },
     );
 
-    expect(elements[0].$when).toBe("!item.date");
+    expect(elements[0].$when).toBe("!item.savedAt");
   });
 
   it("extracts save data availability visibility from $when", () => {
     expect(
-      splitVisibilityConditionFromWhen("(line.characterName) && (!item.date)"),
+      splitVisibilityConditionFromWhen(
+        "(line.characterName) && (!item.savedAt)",
+      ),
     ).toEqual({
       baseWhen: "line.characterName",
       visibilityCondition: {
@@ -183,10 +185,10 @@ describe("layout visibility conditions", () => {
     );
 
     expect(elements[0]).toMatchObject({
-      '$if#1 variables["score"] == 10': {
+      '$if variables["score"] == 10': {
         textStyleId: "score-style",
       },
-      "$if#2 isLineCompleted == true": {
+      "$if isLineCompleted == true": {
         textStyleId: "completed-style",
       },
     });
@@ -239,9 +241,12 @@ describe("layout visibility conditions", () => {
     expect(elements[0].$each).toBe("item, i in saveSlots");
     expect(elements[0].click).toEqual({
       payload: {
+        _event: {
+          slotId: "${item.slotId}",
+        },
         actions: {
           saveSaveSlot: {
-            slot: "${item.slotNumber}",
+            slot: "_event.slotId",
           },
         },
       },
@@ -255,7 +260,7 @@ describe("layout visibility conditions", () => {
       expect.objectContaining({
         id: "slot-date-instance-${i}",
         type: "text",
-        content: "${item.date}",
+        content: "${formatDate(item.savedAt)}",
       }),
     ]);
   });
@@ -287,10 +292,13 @@ describe("layout visibility conditions", () => {
 
     expect(elements[0].click).toEqual({
       payload: {
+        _event: {
+          slotId: "${item.slotId}",
+        },
         actions: {
           toggleDialogueUI: {},
           saveSaveSlot: {
-            slot: "${item.slotNumber}",
+            slot: "_event.slotId",
           },
         },
       },

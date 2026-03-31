@@ -1,0 +1,6 @@
+componentName: rvn-command-line-hide-confirm-dialog
+propsSchema:
+  type: object
+  properties:
+    hideConfirmDialog:
+      type: object

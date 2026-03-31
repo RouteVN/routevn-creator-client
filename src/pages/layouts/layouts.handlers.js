@@ -336,7 +336,8 @@ const createLayoutTemplate = (layoutType, projectResolution) => {
   if (
     normalizedLayoutType === "normal" ||
     normalizedLayoutType === "save" ||
-    normalizedLayoutType === "load"
+    normalizedLayoutType === "load" ||
+    normalizedLayoutType === "confirmDialog"
   ) {
     const rootId = nanoid();
     const textId = nanoid();

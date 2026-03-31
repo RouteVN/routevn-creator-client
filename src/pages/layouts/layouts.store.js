@@ -23,13 +23,14 @@ const layoutForm = {
         { value: "normal", label: "Normal" },
         { value: "save", label: "Save" },
         { value: "load", label: "Load" },
+        { value: "confirmDialog", label: "Confirm Dialog" },
         { value: "dialogue", label: "Dialogue" },
         { value: "nvl", label: "NVL" },
         { value: "choice", label: "Choice" },
       ],
       tooltip: {
         content:
-          "Normal is layout that can be used for background or menu pages. Save is used for save screens. Load is used for load screens. Dialogue is used for ADV mode text dialogue layout. NVL is used for novel mode accumulated dialogue layout. Choice is used for the choices.",
+          "Normal is layout that can be used for background or menu pages. Save is used for save screens. Load is used for load screens. Confirm Dialog is used for compact confirmation prompts with OK and Cancel areas. Dialogue is used for ADV mode text dialogue layout. NVL is used for novel mode accumulated dialogue layout. Choice is used for the choices.",
       },
     },
     {
@@ -98,6 +99,7 @@ const layoutTypeLabels = {
   normal: "Normal",
   save: "Save",
   load: "Load",
+  confirmDialog: "Confirm Dialog",
   dialogue: "Dialogue",
   nvl: "NVL",
   choice: "Choice",

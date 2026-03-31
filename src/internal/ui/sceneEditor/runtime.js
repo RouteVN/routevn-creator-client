@@ -13,6 +13,11 @@ import {
   sanitizeProjectDataForRouteEngine,
   summarizeProjectDataForRouteEngine,
 } from "../../project/routeEngineProjectData.js";
+import {
+  applyRuntimeActionContext,
+  captureCanvasThumbnailImage,
+  preloadRuntimeThumbnailImage,
+} from "../runtimeActionPreparation.js";
 
 const createAssetLoadCache = () => ({
   sceneIds: new Set(),
@@ -347,7 +352,24 @@ const createBeforeHandleActionsHook = (deps) => {
   return async (actions, eventContext) => {
     const projectData = store.selectProjectData();
     const eventData = eventContext?._event;
+    const slotBinding =
+      eventData?.slotId !== undefined ? "_event.slotId" : undefined;
+    const thumbnailImage = await captureCanvasThumbnailImage(
+      deps.graphicsService,
+      deps.refs?.canvas,
+    );
+    applyRuntimeActionContext(actions, {
+      slotBinding,
+      thumbnailImage,
+    });
+    await preloadRuntimeThumbnailImage(deps.graphicsService, thumbnailImage);
     const resolvedActions = resolveEventBindings(actions, eventData);
+    if (resolvedActions?.saveSlot || resolvedActions?.saveSaveSlot) {
+      console.log("[sceneEditor.beforeHandleActions] resolved save actions", {
+        eventData,
+        resolvedActions,
+      });
+    }
     const layoutIds = Array.from(
       new Set([
         ...extractLayoutIdsFromValue(resolvedActions, projectData),

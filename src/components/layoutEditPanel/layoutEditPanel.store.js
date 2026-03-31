@@ -32,6 +32,9 @@ const ACTION_LABELS = {
   popLayeredView: "Pop Layered View",
   rollbackByOffset: "Rollback",
   updateVariable: "Update Variable",
+  showConfirmDialog: "Show Confirm Dialog",
+  hideConfirmDialog: "Hide Confirm Dialog",
+  saveSlot: "Save Slot",
 };
 
 const ACTION_INTERACTION_TYPES = ["click", "rightClick"];

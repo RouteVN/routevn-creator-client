@@ -24,6 +24,26 @@ const OVERLAY_FILL = {
   alpha: 0.001,
 };
 
+const jemplFunctions = {
+  formatDate: (timestamp, format = "DD/MM/YYYY - HH:mm") => {
+    if (!timestamp) {
+      return "";
+    }
+
+    const date = new Date(timestamp);
+    const pad = (value) => String(value).padStart(2, "0");
+
+    return format
+      .replace("DD", pad(date.getDate()))
+      .replace("MM", pad(date.getMonth() + 1))
+      .replace("YYYY", date.getFullYear())
+      .replace("YY", String(date.getFullYear()).slice(-2))
+      .replace("HH", pad(date.getHours()))
+      .replace("mm", pad(date.getMinutes()))
+      .replace("ss", pad(date.getSeconds()));
+  },
+};
+
 const isBlobUrl = (url) => typeof url === "string" && url.startsWith("blob:");
 
 const toPreviewVariableValue = (variable = {}) => {
@@ -128,17 +148,32 @@ const createSaveLoadSlots = (saveLoadData = {}) => {
   const slots = Array.isArray(saveLoadData.slots) ? saveLoadData.slots : [];
 
   return slots.map((slot, index) => {
-    const slotNumber =
-      Number.isFinite(Number(slot?.slotNumber)) && Number(slot?.slotNumber) > 0
-        ? Number(slot.slotNumber)
+    const slotId =
+      Number.isFinite(Number(slot?.slotId)) && Number(slot?.slotId) > 0
+        ? Number(slot.slotId)
         : index + 1;
+    const rawSavedAt =
+      typeof slot?.savedAt === "number"
+        ? slot.savedAt
+        : typeof slot?.date === "number"
+          ? slot.date
+          : typeof slot?.saveDate === "number"
+            ? slot.saveDate
+            : typeof slot?.date === "string" && slot.date.length > 0
+              ? Date.parse(slot.date)
+              : typeof slot?.saveDate === "string" && slot.saveDate.length > 0
+                ? Date.parse(slot.saveDate)
+                : undefined;
+    const savedAt = Number.isFinite(rawSavedAt) ? rawSavedAt : undefined;
 
     return {
-      slotNumber,
+      slotId,
       image: slot?.image ?? slot?.saveImageId,
-      date: slot?.date ?? slot?.saveDate ?? "",
+      savedAt,
       state: slot?.state,
-      isAvailable: slot?.isAvailable === true,
+      isAvailable:
+        slot?.isAvailable === true ||
+        Boolean(slot?.image ?? slot?.saveImageId ?? savedAt),
     };
   });
 };
@@ -360,6 +395,11 @@ export const createLayoutEditorPreviewData = ({
     choice: {
       items: createChoiceItems(choicesData),
     },
+    confirmDialog: {
+      resourceId: "",
+      confirmActions: {},
+      cancelActions: {},
+    },
     saveSlots:
       hasSaveLoadPreview === true ||
       layoutType === "save" ||
@@ -371,7 +411,9 @@ export const createLayoutEditorPreviewData = ({
 
 const resolveLayoutPreviewElements = ({ elements, previewData } = {}) => {
   return toElementList(
-    parseAndRender(toElementList(elements), previewData ?? {}),
+    parseAndRender(toElementList(elements), previewData ?? {}, {
+      functions: jemplFunctions,
+    }),
   );
 };
 

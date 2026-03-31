@@ -128,7 +128,7 @@ template:
                   - rtgl-form#choiceForm w=f :form=${choiceForm} :defaultValues=${choiceDefaultValues} :context=${choicesContext}: null
               - $if hasSaveLoadPreview:
                   - rtgl-form#saveLoadForm key=${saveLoadFormKey} w=f :form=${saveLoadForm} :defaultValues=${saveLoadDefaultValues} :context=${saveLoadContext}: null
-              - $if (layout.layoutType == 'normal' || layout.layoutType == 'save' || layout.layoutType == 'load') && hasPreviewVariables:
+              - $if (layout.layoutType == 'normal' || layout.layoutType == 'save' || layout.layoutType == 'load' || layout.layoutType == 'confirmDialog') && hasPreviewVariables:
                   - rtgl-form#previewVariablesForm key=${previewVariablesFormKey} w=f :form=${previewVariablesForm} :defaultValues=${previewVariablesDefaultValues}: null
       - rvn-resizable-panel#resizableDetailPanel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
           - rtgl-view wh=f slot="content":

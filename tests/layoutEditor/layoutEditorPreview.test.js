@@ -86,14 +86,14 @@ describe("layoutEditorPreview", () => {
 
     expect(savePreviewData.saveSlots).toHaveLength(2);
     expect(savePreviewData.saveSlots[0]).toMatchObject({
-      slotNumber: 1,
+      slotId: 1,
       image: "image-1",
-      date: "2026-03-10 18:00",
+      savedAt: expect.any(Number),
     });
     expect(loadPreviewData.saveSlots[0]).toMatchObject({
-      slotNumber: 1,
+      slotId: 1,
       image: "image-3",
-      date: "2026-03-12 18:00",
+      savedAt: expect.any(Number),
     });
   });
 
@@ -113,8 +113,8 @@ describe("layoutEditorPreview", () => {
 
     expect(previewData.saveSlots).toHaveLength(1);
     expect(previewData.saveSlots[0]).toMatchObject({
-      slotNumber: 1,
-      date: "2026-03-15 20:00",
+      slotId: 1,
+      savedAt: expect.any(Number),
     });
   });
 

@@ -23,6 +23,18 @@ contextMenuItems:
     label: Fragment
     type: item
     createType: fragment-ref
+  - "$when": 'layoutType == "confirmDialog"'
+    label: Fragment
+    type: item
+    createType: fragment-ref
+  - "$when": 'layoutType == "confirmDialog"'
+    label: Container (Confirm OK)
+    type: item
+    createType: container-confirm-dialog-ok
+  - "$when": 'layoutType == "confirmDialog"'
+    label: Container (Confirm Cancel)
+    type: item
+    createType: container-confirm-dialog-cancel
   - "$when": 'layoutType == "dialogue"'
     label: Text (Dialogue Content)
     type: item
@@ -107,6 +119,18 @@ emptyContextMenuItems:
     label: Fragment
     type: item
     createType: fragment-ref
+  - "$when": 'layoutType == "confirmDialog"'
+    label: Fragment
+    type: item
+    createType: fragment-ref
+  - "$when": 'layoutType == "confirmDialog"'
+    label: Container (Confirm OK)
+    type: item
+    createType: container-confirm-dialog-ok
+  - "$when": 'layoutType == "confirmDialog"'
+    label: Container (Confirm Cancel)
+    type: item
+    createType: container-confirm-dialog-cancel
   - "$when": 'layoutType == "save"'
     label: Container (Save/Load Slot)
     type: item

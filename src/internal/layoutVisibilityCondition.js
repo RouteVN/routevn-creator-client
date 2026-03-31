@@ -151,7 +151,9 @@ export const buildVisibilityConditionExpression = (visibilityCondition) => {
     visibilityCondition?.variableId === SAVE_DATA_AVAILABLE_CONDITION_ID &&
     visibilityCondition?.op === "eq"
   ) {
-    return visibilityCondition.value === false ? "!item.date" : "item.date";
+    return visibilityCondition.value === false
+      ? "!item.savedAt"
+      : "item.savedAt";
   }
 
   const fixedStateItem =
@@ -230,12 +232,17 @@ export const splitVisibilityConditionFromWhen = (expression) => {
   for (let index = 0; index < clauses.length; index += 1) {
     const clause = clauses[index];
 
-    if (clause === "item.date" || clause === "!item.date") {
+    if (
+      clause === "item.savedAt" ||
+      clause === "!item.savedAt" ||
+      clause === "item.date" ||
+      clause === "!item.date"
+    ) {
       visibilityClauseIndex = index;
       visibilityCondition = {
         variableId: SAVE_DATA_AVAILABLE_CONDITION_ID,
         op: "eq",
-        value: clause === "item.date",
+        value: clause === "item.savedAt" || clause === "item.date",
       };
       break;
     }

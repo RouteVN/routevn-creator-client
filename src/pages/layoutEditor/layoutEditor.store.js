@@ -18,7 +18,12 @@ import {
 import { normalizeLayoutType } from "../../internal/project/layout.js";
 
 const PREVIEW_VARIABLE_TYPES = new Set(["boolean", "number", "string"]);
-const NORMAL_LIKE_LAYOUT_TYPES = new Set(["normal", "save", "load"]);
+const NORMAL_LIKE_LAYOUT_TYPES = new Set([
+  "normal",
+  "save",
+  "load",
+  "confirmDialog",
+]);
 
 const PREVIEW_BOOLEAN_OPTIONS = [
   { label: "True", value: true },
@@ -943,7 +948,7 @@ export const selectSaveLoadData = ({ state }) => {
     const isAvailable = Boolean(saveDate || saveImageId);
 
     slots.push({
-      slotNumber: index + 1,
+      slotId: index + 1,
       image: saveImageId,
       date: saveDate,
       isAvailable,

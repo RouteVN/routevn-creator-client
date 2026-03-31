@@ -23,13 +23,14 @@ const TEXT_NODE_TYPES = new Set([
 import {
   buildVisibilityConditionExpression,
   mergeWhenExpressions,
+  splitVisibilityConditionFromWhen,
 } from "../layoutVisibilityCondition.js";
 
 const TEXT_CONTENT_BY_TYPE = {
   "text-ref-character-name": "${dialogue.character.name}",
   "text-revealing-ref-dialogue-content": "${dialogue.content[0].text}",
   "text-ref-choice-item-content": "${item.content}",
-  "text-ref-save-load-slot-date": "${item.date}",
+  "text-ref-save-load-slot-date": "${formatDate(item.savedAt)}",
   "text-ref-dialogue-line-character-name": "${line.characterName}",
   "text-ref-dialogue-line-content": "${line.content[0].text}",
 };
@@ -66,6 +67,45 @@ const REPEATING_CONTAINER_CONFIG = {
   "container-ref-dialogue-line": {
     each: "line, i in dialogue.lines",
   },
+};
+
+const SPECIAL_CONTAINER_INTERACTIONS = {
+  "container-ref-confirm-dialog-ok": {
+    click: {
+      payload: {
+        actions: "${confirmDialog.confirmActions}",
+      },
+    },
+  },
+  "container-ref-confirm-dialog-cancel": {
+    click: {
+      payload: {
+        actions: "${confirmDialog.cancelActions}",
+      },
+    },
+  },
+};
+
+const withInteractionEventData = (interaction, eventData) => {
+  const normalizedInteraction = normalizeEngineActions(interaction);
+
+  if (!eventData || typeof eventData !== "object" || Array.isArray(eventData)) {
+    return normalizedInteraction;
+  }
+
+  const payload = getInteractionPayload(normalizedInteraction);
+  const nextEventData =
+    payload._event && typeof payload._event === "object"
+      ? {
+          ...payload._event,
+          ...eventData,
+        }
+      : { ...eventData };
+
+  return withInteractionPayload(normalizedInteraction, {
+    ...payload,
+    _event: nextEventData,
+  });
 };
 
 const DEFAULT_TEXT_STYLE_RESOURCE = {
@@ -281,15 +321,24 @@ const mergeInteractionPayloadActions = (baseInteraction, extraInteraction) => {
   const extraPayload = getInteractionPayload(extraInteraction);
   const baseActions = getInteractionActions(baseInteraction);
   const extraActions = getInteractionActions(extraInteraction);
+  let mergedActions;
+
+  if (typeof extraActions === "string") {
+    mergedActions = extraActions;
+  } else if (typeof baseActions === "string") {
+    mergedActions = baseActions;
+  } else {
+    mergedActions = {
+      ...baseActions,
+      ...extraActions,
+    };
+  }
 
   return normalizeEngineActions(
     withInteractionPayload(baseInteraction, {
       ...basePayload,
       ...extraPayload,
-      actions: {
-        ...baseActions,
-        ...extraActions,
-      },
+      actions: mergedActions,
     }),
   );
 };
@@ -396,7 +445,7 @@ const getImageFileId = (imageItems, imageId) => {
     : undefined;
 };
 
-const buildBaseElement = (node) => {
+const buildBaseElement = (node, context = {}) => {
   const element = {
     id: node.id,
     type: node.type,
@@ -412,7 +461,7 @@ const buildBaseElement = (node) => {
   };
 
   const click = withInheritToChildren(
-    normalizeEngineActions(node.click),
+    withInteractionEventData(node.click, context.slotEventData),
     node.inheritClickToChildren,
   );
   if (click) {
@@ -420,7 +469,7 @@ const buildBaseElement = (node) => {
   }
 
   const rightClick = withInheritToChildren(
-    normalizeEngineActions(node.rightClick),
+    withInteractionEventData(node.rightClick, context.slotEventData),
     node.inheritRightClickToChildren,
   );
   if (rightClick) {
@@ -432,8 +481,14 @@ const buildBaseElement = (node) => {
     element.hover = hover;
   }
 
+  const parsedWhen = splitVisibilityConditionFromWhen(node["$when"]);
+  const normalizedBaseWhen = parsedWhen.baseWhen;
+  const normalizedVisibilityWhen = buildVisibilityConditionExpression(
+    parsedWhen.visibilityCondition,
+  );
   const whenExpression = mergeWhenExpressions(
-    node["$when"],
+    normalizedBaseWhen,
+    normalizedVisibilityWhen,
     buildVisibilityConditionExpression(node.visibilityCondition),
   );
   if (whenExpression) {
@@ -562,7 +617,7 @@ const applyTextNode = ({ element, node, context }) => {
       return;
     }
 
-    nextElement[`$if#${index + 1} ${expression}`] = {
+    nextElement[`$if ${expression}`] = {
       textStyleId: conditionalTextStyleId,
     };
   });
@@ -591,6 +646,7 @@ const applySpriteNode = ({ element, node }) => {
       : node.imageId
         ? { imageId: node.imageId }
         : {}),
+    ...(node.src ? { src: node.src } : {}),
     ...(node.hoverImageId ? { hoverImageId: node.hoverImageId } : {}),
     ...(node.clickImageId ? { clickImageId: node.clickImageId } : {}),
   };
@@ -672,7 +728,8 @@ const applyContainerNode = ({ element, node }) => {
   if (
     node.type !== "container" &&
     node.type !== "fragment-ref" &&
-    !REPEATING_CONTAINER_CONFIG[node.type]
+    !REPEATING_CONTAINER_CONFIG[node.type] &&
+    !SPECIAL_CONTAINER_INTERACTIONS[node.type]
   ) {
     return element;
   }
@@ -694,6 +751,28 @@ const applyContainerNode = ({ element, node }) => {
 
   const repeatingConfig = REPEATING_CONTAINER_CONFIG[node.type];
   if (!repeatingConfig) {
+    const specialContainerInteraction =
+      SPECIAL_CONTAINER_INTERACTIONS[node.type];
+
+    if (specialContainerInteraction) {
+      console.log("[layout.build] special confirm container interaction", {
+        id: node.id,
+        type: node.type,
+        click: mergeInteractionPayloadActions(
+          nextElement.click,
+          specialContainerInteraction.click,
+        ),
+      });
+      return {
+        ...nextElement,
+        type: "container",
+        click: mergeInteractionPayloadActions(
+          nextElement.click,
+          specialContainerInteraction.click,
+        ),
+      };
+    }
+
     return node.type === "fragment-ref"
       ? {
           ...nextElement,
@@ -714,9 +793,12 @@ const applyContainerNode = ({ element, node }) => {
     repeatingClick = actionName
       ? {
           payload: {
+            _event: {
+              slotId: "${item.slotId}",
+            },
             actions: {
               [actionName]: {
-                slot: "${item.slotNumber}",
+                slot: "_event.slotId",
               },
             },
           },
@@ -748,7 +830,7 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
           layoutType: context.layoutType,
         }
       : node;
-  let element = buildBaseElement(node);
+  let element = buildBaseElement(node, context);
 
   element = applyTextNode({
     element,
@@ -760,19 +842,29 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
   element = applySliderNode({ element, node: effectiveNode, imageItems });
   element = applyContainerNode({ element, node: effectiveNode });
 
+  const childContext =
+    effectiveNode.type === "container-ref-save-load-slot"
+      ? {
+          ...context,
+          slotEventData: {
+            slotId: "${item.slotId}",
+          },
+        }
+      : context;
+
   const resolvedChildren =
     effectiveNode.type === "fragment-ref"
       ? resolveFragmentChildren({
           node: effectiveNode,
           imageItems,
-          context,
+          context: childContext,
         })
       : effectiveNode.children?.length > 0
         ? effectiveNode.children.map((child) =>
             mapLayoutNode({
               node: child,
               imageItems,
-              context,
+              context: childContext,
             }),
           )
         : [];
@@ -961,6 +1053,20 @@ export const extractFileIdsFromRenderState = (obj) => {
   const fileReferencesByKey = new Map();
   const defaultFileReferenceType = "image/png";
 
+  const isRuntimeAssetReference = (value) => {
+    if (typeof value !== "string" || value.length === 0) {
+      return false;
+    }
+
+    return (
+      value.includes("${") ||
+      value.startsWith("data:") ||
+      value.startsWith("blob:") ||
+      value.startsWith("http://") ||
+      value.startsWith("https://")
+    );
+  };
+
   const resolvePreferredFileReferenceType = (currentType, nextType) => {
     const normalizedCurrent =
       typeof currentType === "string" && currentType.length > 0
@@ -987,6 +1093,10 @@ export const extractFileIdsFromRenderState = (obj) => {
 
   const addFileReference = (fileId, type = defaultFileReferenceType) => {
     if (typeof fileId !== "string" || fileId.length === 0) {
+      return;
+    }
+
+    if (isRuntimeAssetReference(fileId)) {
       return;
     }
 
