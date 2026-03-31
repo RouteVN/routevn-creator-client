@@ -3,10 +3,18 @@ refs:
     eventListeners:
       click:
         handler: handleVisibilityConditionItemClick
+  conditionalTextStyleItem*:
+    eventListeners:
+      click:
+        handler: handleConditionalTextStylesItemClick
   paginationItem*:
     eventListeners:
       click:
         handler: handleSaveLoadPaginationItemClick
+  childInteractionItem*:
+    eventListeners:
+      click:
+        handler: handleChildInteractionItemClick
   groupItem*:
     eventListeners:
       click:
@@ -39,10 +47,52 @@ refs:
     eventListeners:
       close:
         handler: handleSaveLoadPaginationDialogClose
+  childInteractionDialog:
+    eventListeners:
+      close:
+        handler: handleChildInteractionDialogClose
+  conditionalTextStylesDialog:
+    eventListeners:
+      close:
+        handler: handleConditionalTextStylesDialogClose
   saveLoadPaginationForm:
     eventListeners:
       form-action:
         handler: handleSaveLoadPaginationFormAction
+  childInteractionForm:
+    eventListeners:
+      form-action:
+        handler: handleChildInteractionFormAction
+  conditionalTextStyleRuleForm:
+    eventListeners:
+      form-action:
+        handler: handleConditionalTextStyleFormAction
+      form-change:
+        handler: handleConditionalTextStyleFormChange
+  conditionalTextStyleAdd:
+    eventListeners:
+      click:
+        handler: handleConditionalTextStyleAddClick
+  conditionalTextStyleClose:
+    eventListeners:
+      click:
+        handler: handleConditionalTextStylesCloseClick
+  conditionalTextStyleRule*:
+    eventListeners:
+      click:
+        handler: handleConditionalTextStyleRuleClick
+  conditionalTextStyleMoveUp*:
+    eventListeners:
+      click:
+        handler: handleConditionalTextStyleMoveUpClick
+  conditionalTextStyleMoveDown*:
+    eventListeners:
+      click:
+        handler: handleConditionalTextStyleMoveDownClick
+  conditionalTextStyleDelete*:
+    eventListeners:
+      click:
+        handler: handleConditionalTextStyleDeleteClick
   sectionAction*:
     eventListeners:
       click:
@@ -132,8 +182,14 @@ template:
                 $elif item.type == 'condition-summary':
                   - rtgl-view#conditionItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                       - rtgl-text s=sm: ${item.value}
+                $elif item.type == 'conditional-text-style-summary':
+                  - rtgl-view#conditionalTextStyleItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
+                      - rtgl-text s=sm: ${item.value}
                 $elif item.type == 'pagination-summary':
                   - rtgl-view#paginationItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
+                      - rtgl-text s=sm: ${item.value}
+                $elif item.type == 'child-interaction-summary':
+                  - rtgl-view#childInteractionItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                       - rtgl-text s=sm: ${item.value}
   - rtgl-view h=1 w=f bgc=mu mv=lg: null
   - rvn-system-actions#systemActions :actions=${actionsData} actionType=system :hiddenModes=${hiddenSystemActionModes}: null
@@ -146,6 +202,31 @@ template:
   - rtgl-dialog#saveLoadPaginationDialog ?open=${saveLoadPaginationDialog.open} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-form#saveLoadPaginationForm key=${saveLoadPaginationDialog.key} :form=${saveLoadPaginationDialogForm} :defaultValues=${saveLoadPaginationDialogDefaults} w=f: null
+  - rtgl-dialog#childInteractionDialog ?open=${childInteractionDialog.open} s=md:
+      - rtgl-view slot=content g=md:
+          - rtgl-form#childInteractionForm key=${childInteractionDialog.key} :form=${childInteractionDialogForm} :defaultValues=${childInteractionDialogDefaults} w=f: null
+  - rtgl-dialog#conditionalTextStylesDialog ?open=${conditionalTextStylesDialog.open} s=md:
+      - rtgl-view slot=content g=md:
+          - $if conditionalTextStylesDialog.mode == 'list':
+              - rtgl-text s=md: Conditional Text Styles
+              - $if conditionalTextStyleItems.length > 0:
+                  - $for rule, i in conditionalTextStyleItems:
+                      - rtgl-view d=h g=sm av=c w=f:
+                          - rtgl-view#conditionalTextStyleRule${i} data-index=${rule.index} w=1fg p=md bgc=mu br=md bw=xs bc=bg h-bc=ac cur=pointer:
+                              - rtgl-text s=sm: ${rule.summary}
+                          - rtgl-view#conditionalTextStyleMoveUp${i} data-index=${rule.index} d=h av=c ah=c ph=md h=36 bgc=mu br=md bw=xs bc=bg h-bc=ac cur=pointer:
+                              - rtgl-text s=xs: Up
+                          - rtgl-view#conditionalTextStyleMoveDown${i} data-index=${rule.index} d=h av=c ah=c ph=md h=36 bgc=mu br=md bw=xs bc=bg h-bc=ac cur=pointer:
+                              - rtgl-text s=xs: Down
+                          - rtgl-view#conditionalTextStyleDelete${i} data-index=${rule.index} d=h av=c ah=c ph=md h=36 bgc=mu br=md bw=xs bc=bg h-bc=ac cur=pointer:
+                              - rtgl-text s=xs: Delete
+                $else:
+                  - rtgl-text s=sm c=mu-fg: No conditional text styles
+              - rtgl-view d=h g=sm w=f ah=e:
+                  - rtgl-button#conditionalTextStyleClose variant=se: Close
+                  - rtgl-button#conditionalTextStyleAdd variant=pr: Add Rule
+            $else:
+              - rtgl-form#conditionalTextStyleRuleForm key=${conditionalTextStylesDialog.key} :form=${conditionalTextStyleRuleForm} :defaultValues=${conditionalTextStyleRuleDefaults} :context=${conditionalTextStyleRuleDialogContext} w=f: null
   - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open}:
       - rtgl-view slot=content g=md:
           - rvn-image-selector#imageSelector: null

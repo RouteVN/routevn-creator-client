@@ -96,7 +96,9 @@ describe("layout visibility conditions", () => {
   });
 
   it("extracts save data availability visibility from $when", () => {
-    expect(splitVisibilityConditionFromWhen("(line.characterName) && (!item.date)")).toEqual({
+    expect(
+      splitVisibilityConditionFromWhen("(line.characterName) && (!item.date)"),
+    ).toEqual({
       baseWhen: "line.characterName",
       visibilityCondition: {
         variableId: SAVE_DATA_AVAILABLE_CONDITION_ID,
@@ -116,10 +118,84 @@ describe("layout visibility conditions", () => {
     ).toBe("isLineCompleted == true");
   });
 
+  it("compiles ordered conditional text styles into jempl $if overrides", () => {
+    const { elements } = buildLayoutElements(
+      [
+        {
+          id: "text-1",
+          type: "text",
+          name: "Label",
+          x: 0,
+          y: 0,
+          width: 100,
+          height: 20,
+          anchorX: 0,
+          anchorY: 0,
+          scaleX: 1,
+          scaleY: 1,
+          rotation: 0,
+          text: "Hello",
+          textStyleId: "base-style",
+          conditionalTextStyles: [
+            {
+              variableId: "score",
+              op: "eq",
+              value: 10,
+              textStyleId: "score-style",
+            },
+            {
+              variableId: LINE_COMPLETED_CONDITION_ID,
+              op: "eq",
+              value: true,
+              textStyleId: "completed-style",
+            },
+          ],
+        },
+      ],
+      {},
+      {
+        items: {
+          "base-style": {
+            id: "base-style",
+            type: "textStyle",
+            fontId: "font-1",
+            colorId: "color-1",
+          },
+          "score-style": {
+            id: "score-style",
+            type: "textStyle",
+            fontId: "font-1",
+            colorId: "color-1",
+          },
+          "completed-style": {
+            id: "completed-style",
+            type: "textStyle",
+            fontId: "font-1",
+            colorId: "color-1",
+          },
+        },
+        tree: [],
+      },
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      { layoutId: "layout-1" },
+    );
+
+    expect(elements[0]).toMatchObject({
+      '$if#1 variables["score"] == 10': {
+        textStyleId: "score-style",
+      },
+      "$if#2 isLineCompleted == true": {
+        textStyleId: "completed-style",
+      },
+    });
+  });
+
   it("extracts fixed runtime visibility from $when", () => {
     expect(
       splitVisibilityConditionFromWhen(
-        '(line.characterName) && (isLineCompleted == true)',
+        "(line.characterName) && (isLineCompleted == true)",
       ),
     ).toEqual({
       baseWhen: "line.characterName",
@@ -216,6 +292,70 @@ describe("layout visibility conditions", () => {
           saveSaveSlot: {
             slot: "${item.slotNumber}",
           },
+        },
+      },
+    });
+  });
+
+  it("compiles child interaction inheritance for containers", () => {
+    const { elements } = buildLayoutElements(
+      [
+        {
+          id: "container-1",
+          type: "container",
+          name: "Container",
+          inheritHoverToChildren: true,
+          inheritClickToChildren: true,
+          inheritRightClickToChildren: true,
+        },
+      ],
+      {},
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      { layoutId: "layout-1" },
+    );
+
+    expect(elements[0].hover).toEqual({
+      inheritToChildren: true,
+    });
+    expect(elements[0].click).toEqual({
+      inheritToChildren: true,
+    });
+    expect(elements[0].rightClick).toEqual({
+      inheritToChildren: true,
+    });
+  });
+
+  it("preserves click actions when child interaction inheritance is enabled", () => {
+    const { elements } = buildLayoutElements(
+      [
+        {
+          id: "container-1",
+          type: "container",
+          name: "Container",
+          inheritClickToChildren: true,
+          click: {
+            payload: {
+              actions: {
+                toggleDialogueUI: {},
+              },
+            },
+          },
+        },
+      ],
+      {},
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      { layoutId: "layout-1" },
+    );
+
+    expect(elements[0].click).toEqual({
+      inheritToChildren: true,
+      payload: {
+        actions: {
+          toggleDialogueUI: {},
         },
       },
     });

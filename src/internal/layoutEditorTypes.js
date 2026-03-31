@@ -399,6 +399,7 @@ const DEFAULT_CAPABILITIES = {
   supportsAnchor: false,
   supportsDirection: false,
   supportsScroll: false,
+  supportsChildInteractionInheritance: false,
   supportsTextEditing: false,
   supportsTextRevealEffect: false,
   supportsTextStyles: false,
@@ -414,6 +415,7 @@ const FAMILY_CAPABILITIES = {
     supportsAnchor: true,
     supportsDirection: true,
     supportsScroll: true,
+    supportsChildInteractionInheritance: true,
     supportsActions: true,
   },
   fragment: {

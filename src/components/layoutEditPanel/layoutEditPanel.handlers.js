@@ -133,6 +133,18 @@ export const handleSaveLoadPaginationItemClick = (deps) => {
   render();
 };
 
+export const handleChildInteractionItemClick = (deps) => {
+  const { render, store } = deps;
+  store.openChildInteractionDialog();
+  render();
+};
+
+export const handleConditionalTextStylesItemClick = (deps) => {
+  const { render, store } = deps;
+  store.openConditionalTextStylesDialog();
+  render();
+};
+
 export const handlePopverFormClose = (deps) => {
   const { render, store } = deps;
   store.closePopoverForm();
@@ -151,12 +163,37 @@ export const handleSaveLoadPaginationDialogClose = (deps) => {
   render();
 };
 
+export const handleChildInteractionDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeChildInteractionDialog();
+  render();
+};
+
+export const handleConditionalTextStylesDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeConditionalTextStylesDialog();
+  render();
+};
+
 export const handleVisibilityConditionFormChange = (deps, payload) => {
   const { render, store } = deps;
   const values = payload._event.detail?.values ?? {};
   const variableTypeById = store.selectVisibilityConditionVariableTypeById();
 
   store.setVisibilityConditionDialogSelectedVariableType({
+    selectedVariableType: values.variableId
+      ? (variableTypeById?.[values.variableId] ?? "string")
+      : undefined,
+  });
+  render();
+};
+
+export const handleConditionalTextStyleFormChange = (deps, payload) => {
+  const { render, store } = deps;
+  const values = payload._event.detail?.values ?? {};
+  const variableTypeById = store.selectVisibilityConditionVariableTypeById();
+
+  store.setConditionalTextStylesDialogSelectedVariableType({
     selectedVariableType: values.variableId
       ? (variableTypeById?.[values.variableId] ?? "string")
       : undefined,
@@ -354,6 +391,199 @@ export const handleSaveLoadPaginationFormAction = (deps, payload) => {
   }
 
   store.closeSaveLoadPaginationDialog();
+  render();
+};
+
+export const handleChildInteractionFormAction = (deps, payload) => {
+  const { store, render } = deps;
+  const detail = payload._event.detail || {};
+  const { actionId, values = {} } = detail;
+
+  if (actionId === "cancel") {
+    store.closeChildInteractionDialog();
+    render();
+    return;
+  }
+
+  if (actionId !== "submit") {
+    return;
+  }
+
+  applyPanelValueUpdate(deps, {
+    name: "inheritHoverToChildren",
+    value: values.inheritHoverToChildren === true,
+  });
+  applyPanelValueUpdate(deps, {
+    name: "inheritClickToChildren",
+    value: values.inheritClickToChildren === true,
+  });
+  applyPanelValueUpdate(deps, {
+    name: "inheritRightClickToChildren",
+    value: values.inheritRightClickToChildren === true,
+  });
+
+  store.closeChildInteractionDialog();
+  render();
+};
+
+const getConditionalTextStyleRules = (store) => {
+  const currentRules = store.selectValues().conditionalTextStyles;
+  return Array.isArray(currentRules) ? [...currentRules] : [];
+};
+
+export const handleConditionalTextStyleAddClick = (deps) => {
+  const { render, store } = deps;
+  store.openConditionalTextStyleRuleEditor({
+    editingIndex: undefined,
+    selectedVariableType: undefined,
+  });
+  render();
+};
+
+export const handleConditionalTextStylesCloseClick = (deps) => {
+  const { render, store } = deps;
+  store.closeConditionalTextStylesDialog();
+  render();
+};
+
+export const handleConditionalTextStyleRuleClick = (deps, payload) => {
+  const { render, store } = deps;
+  const index = Number.parseInt(
+    payload._event.currentTarget?.dataset?.index,
+    10,
+  );
+  const rules = getConditionalTextStyleRules(store);
+  const rule = Number.isInteger(index) && index >= 0 ? rules[index] : undefined;
+  const variableTypeById = store.selectVisibilityConditionVariableTypeById();
+
+  store.openConditionalTextStyleRuleEditor({
+    editingIndex: Number.isInteger(index) && index >= 0 ? index : undefined,
+    selectedVariableType: rule?.variableId
+      ? (variableTypeById?.[rule.variableId] ?? "string")
+      : undefined,
+  });
+  render();
+};
+
+const moveConditionalTextStyleRule = (deps, { index, delta } = {}) => {
+  const { render, store } = deps;
+  const parsedIndex = Number.parseInt(index, 10);
+  const rules = getConditionalTextStyleRules(store);
+
+  if (
+    !Number.isInteger(parsedIndex) ||
+    parsedIndex < 0 ||
+    parsedIndex >= rules.length
+  ) {
+    return;
+  }
+
+  const targetIndex = parsedIndex + delta;
+  if (targetIndex < 0 || targetIndex >= rules.length) {
+    return;
+  }
+
+  const nextRules = [...rules];
+  const [movedRule] = nextRules.splice(parsedIndex, 1);
+  nextRules.splice(targetIndex, 0, movedRule);
+
+  applyPanelValueUpdate(deps, {
+    name: "conditionalTextStyles",
+    value: nextRules,
+  });
+  render();
+};
+
+export const handleConditionalTextStyleMoveUpClick = (deps, payload) => {
+  moveConditionalTextStyleRule(deps, {
+    index: payload._event.currentTarget?.dataset?.index,
+    delta: -1,
+  });
+};
+
+export const handleConditionalTextStyleMoveDownClick = (deps, payload) => {
+  moveConditionalTextStyleRule(deps, {
+    index: payload._event.currentTarget?.dataset?.index,
+    delta: 1,
+  });
+};
+
+export const handleConditionalTextStyleDeleteClick = (deps, payload) => {
+  const { render, store } = deps;
+  const index = Number.parseInt(
+    payload._event.currentTarget?.dataset?.index,
+    10,
+  );
+  const rules = getConditionalTextStyleRules(store);
+
+  if (!Number.isInteger(index) || index < 0 || index >= rules.length) {
+    return;
+  }
+
+  const nextRules = rules.filter((_rule, ruleIndex) => ruleIndex !== index);
+  applyPanelValueUpdate(deps, {
+    name: "conditionalTextStyles",
+    value: nextRules.length > 0 ? nextRules : undefined,
+  });
+  render();
+};
+
+export const handleConditionalTextStyleFormAction = (deps, payload) => {
+  const { store, render } = deps;
+  const detail = payload._event.detail || {};
+  const { actionId, values = {} } = detail;
+
+  if (actionId === "cancel") {
+    store.showConditionalTextStylesDialogList();
+    render();
+    return;
+  }
+
+  if (actionId !== "submit") {
+    return;
+  }
+
+  if (!values.variableId || !values.textStyleId) {
+    return;
+  }
+
+  const variableType =
+    store.selectVisibilityConditionVariableTypeById()?.[values.variableId] ||
+    "string";
+
+  let conditionValue = values.stringValue ?? "";
+  if (variableType === "boolean") {
+    conditionValue = values.booleanValue === true;
+  } else if (variableType === "number") {
+    const parsedNumber = Number(values.numberValue);
+    conditionValue = Number.isFinite(parsedNumber) ? parsedNumber : 0;
+  }
+
+  const nextRule = {
+    variableId: values.variableId,
+    op: values.op ?? "eq",
+    value: conditionValue,
+    textStyleId: values.textStyleId,
+  };
+  const rules = getConditionalTextStyleRules(store);
+  const editingIndex = store.selectConditionalTextStylesDialog().editingIndex;
+  const nextRules = [...rules];
+
+  if (
+    Number.isInteger(editingIndex) &&
+    editingIndex >= 0 &&
+    editingIndex < nextRules.length
+  ) {
+    nextRules[editingIndex] = nextRule;
+  } else {
+    nextRules.push(nextRule);
+  }
+
+  applyPanelValueUpdate(deps, {
+    name: "conditionalTextStyles",
+    value: nextRules,
+  });
+  store.showConditionalTextStylesDialogList();
   render();
 };
 

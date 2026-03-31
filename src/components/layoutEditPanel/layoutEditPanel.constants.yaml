@@ -123,6 +123,12 @@ layoutSections:
             value: false
           - label: Enabled
             value: true
+  - "$when": "supportsChildInteractionInheritance"
+    label: Child Interaction
+    items:
+      - type: child-interaction-summary
+        name: childInteraction
+        value: "${childInteractionSummary}"
   - "$when": "supportsSpriteImages"
     id: images
     label: Image
@@ -228,6 +234,9 @@ layoutSections:
         name: clickTextStyleId
         value: "${values.clickTextStyleId}"
         options: "${textStyleItemsWithNone}"
+      - type: conditional-text-style-summary
+        name: conditionalTextStyles
+        value: "${conditionalTextStylesSummary}"
   - "$when": "supportsTextAlignment"
     label: Text Alignment
     items:

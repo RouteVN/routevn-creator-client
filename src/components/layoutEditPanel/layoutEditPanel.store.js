@@ -47,6 +47,10 @@ const SAVE_LOAD_PAGINATION_MODE_OPTIONS = [
   { label: "Continuous", value: "continuous" },
   { label: "Paginated", value: "paginated" },
 ];
+const INHERIT_TO_CHILDREN_OPTIONS = [
+  { label: "Disabled", value: false },
+  { label: "Enabled", value: true },
+];
 
 const VISIBILITY_BOOLEAN_OPTIONS = [
   { label: "True", value: true },
@@ -115,6 +119,28 @@ const createDefaultValues = () => ({
   gap: 0,
   actions: {},
 });
+
+const getChildInteractionSummary = (values = {}) => {
+  const labels = [];
+
+  if (values?.inheritHoverToChildren === true) {
+    labels.push("Hover");
+  }
+
+  if (values?.inheritClickToChildren === true) {
+    labels.push("Click");
+  }
+
+  if (values?.inheritRightClickToChildren === true) {
+    labels.push("Right Click");
+  }
+
+  if (labels.length === 0) {
+    return "None";
+  }
+
+  return labels.join(", ");
+};
 
 const getScalarVariableItems = (variablesData = {}, options = {}) => {
   const projectVariables = Object.entries(variablesData?.items || {}).filter(
@@ -198,6 +224,145 @@ const getVisibilityConditionSummary = (
       : String(visibilityCondition.value);
 
   return `${variableName} == ${value}`;
+};
+
+const normalizeConditionalTextStyleRules = (value) => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter(
+    (rule) =>
+      rule &&
+      typeof rule === "object" &&
+      typeof rule.variableId === "string" &&
+      rule.variableId.length > 0 &&
+      rule.op === "eq" &&
+      typeof rule.textStyleId === "string" &&
+      rule.textStyleId.length > 0,
+  );
+};
+
+const getConditionalTextStyleRuleSummary = (
+  rule,
+  textStylesData = {},
+  variablesData = {},
+  options = {},
+) => {
+  const conditionSummary = getVisibilityConditionSummary(
+    rule,
+    variablesData,
+    options,
+  );
+  const textStyleName =
+    textStylesData?.items?.[rule?.textStyleId]?.name ?? rule?.textStyleId;
+
+  return `${conditionSummary} -> ${textStyleName}`;
+};
+
+const getConditionalTextStylesSummary = (rules = []) => {
+  if (rules.length === 0) {
+    return "No conditional styles";
+  }
+
+  if (rules.length === 1) {
+    return "1 conditional style";
+  }
+
+  return `${rules.length} conditional styles`;
+};
+
+const createConditionalTextStyleRuleDefaults = (rule, variableTypeById) => {
+  const variableId = rule?.variableId ?? "";
+  const selectedVariableType = variableId
+    ? (variableTypeById[variableId] ?? "string")
+    : undefined;
+  const rawValue = rule?.value;
+  const parsedNumberValue = Number(rawValue);
+
+  return {
+    variableId,
+    op: rule?.op ?? "eq",
+    textStyleId: rule?.textStyleId ?? "",
+    booleanValue: rawValue === true,
+    numberValue: Number.isFinite(parsedNumberValue) ? parsedNumberValue : 0,
+    stringValue: typeof rawValue === "string" ? rawValue : "",
+    selectedVariableType,
+  };
+};
+
+const createConditionalTextStyleRuleForm = ({
+  variableOptions,
+  textStyleOptions,
+} = {}) => {
+  return {
+    title: "Conditional Text Style",
+    fields: [
+      {
+        name: "variableId",
+        type: "select",
+        label: "Variable",
+        required: true,
+        clearable: false,
+        options: variableOptions,
+      },
+      {
+        $when: "variableId",
+        name: "op",
+        type: "select",
+        label: "Operation",
+        required: true,
+        clearable: false,
+        options: VISIBILITY_CONDITION_OP_OPTIONS,
+      },
+      {
+        $when: "variableId && selectedVariableType == 'boolean'",
+        name: "booleanValue",
+        type: "select",
+        label: "Value",
+        required: true,
+        clearable: false,
+        options: VISIBILITY_BOOLEAN_OPTIONS,
+      },
+      {
+        $when: "variableId && selectedVariableType == 'number'",
+        name: "numberValue",
+        type: "input-number",
+        label: "Value",
+        required: true,
+      },
+      {
+        $when: "variableId && selectedVariableType == 'string'",
+        name: "stringValue",
+        type: "input-text",
+        label: "Value",
+        required: true,
+      },
+      {
+        name: "textStyleId",
+        type: "select",
+        label: "Text Style",
+        required: true,
+        clearable: false,
+        options: textStyleOptions,
+      },
+    ],
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "cancel",
+          variant: "se",
+          label: "Cancel",
+        },
+        {
+          id: "submit",
+          variant: "pr",
+          label: "Save",
+        },
+      ],
+    },
+  };
 };
 
 const createVisibilityConditionDialogDefaults = (
@@ -372,6 +537,61 @@ const createSaveLoadPaginationForm = ({ variableOptions } = {}) => {
   };
 };
 
+const createChildInteractionDialogDefaults = (values = {}) => {
+  return {
+    inheritHoverToChildren: values?.inheritHoverToChildren === true,
+    inheritClickToChildren: values?.inheritClickToChildren === true,
+    inheritRightClickToChildren: values?.inheritRightClickToChildren === true,
+  };
+};
+
+const createChildInteractionForm = () => {
+  return {
+    title: "Child Interaction",
+    fields: [
+      {
+        name: "inheritHoverToChildren",
+        type: "select",
+        label: "Hover",
+        required: true,
+        clearable: false,
+        options: INHERIT_TO_CHILDREN_OPTIONS,
+      },
+      {
+        name: "inheritClickToChildren",
+        type: "select",
+        label: "Click",
+        required: true,
+        clearable: false,
+        options: INHERIT_TO_CHILDREN_OPTIONS,
+      },
+      {
+        name: "inheritRightClickToChildren",
+        type: "select",
+        label: "Right Click",
+        required: true,
+        clearable: false,
+        options: INHERIT_TO_CHILDREN_OPTIONS,
+      },
+    ],
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "cancel",
+          variant: "se",
+          label: "Cancel",
+        },
+        {
+          id: "submit",
+          variant: "pr",
+          label: "Save",
+        },
+      ],
+    },
+  };
+};
+
 const toTextStyleOptions = (textStylesData = {}) => {
   const textStyleGroups = toFlatGroups(textStylesData);
   return textStyleGroups.flatMap((group) =>
@@ -416,10 +636,16 @@ const toInspectorValues = ({ values, firstTextStyleId }) => {
     paginationVariableId: values?.paginationVariableId ?? "",
     paginationSize: values?.paginationSize ?? 3,
     scroll: values?.scroll ?? false,
+    inheritHoverToChildren: values?.inheritHoverToChildren === true,
+    inheritClickToChildren: values?.inheritClickToChildren === true,
+    inheritRightClickToChildren: values?.inheritRightClickToChildren === true,
     direction: values?.direction,
     textStyleId: values?.textStyleId || firstTextStyleId || "",
     hoverTextStyleId: values?.hoverTextStyleId ?? "",
     clickTextStyleId: values?.clickTextStyleId ?? "",
+    conditionalTextStyles: normalizeConditionalTextStyleRules(
+      values?.conditionalTextStyles,
+    ),
     actions: toLayoutActionItems(values),
   };
 };
@@ -449,6 +675,17 @@ export const createInitialState = () => {
     saveLoadPaginationDialog: {
       open: false,
       key: 0,
+    },
+    childInteractionDialog: {
+      open: false,
+      key: 0,
+    },
+    conditionalTextStylesDialog: {
+      open: false,
+      key: 0,
+      mode: "list",
+      editingIndex: undefined,
+      selectedVariableType: undefined,
     },
     textStylesData: { tree: [], items: {} },
     variablesData: { tree: [], items: {} },
@@ -555,10 +792,67 @@ export const openSaveLoadPaginationDialog = ({ state }, _payload = {}) => {
   };
 };
 
+export const openChildInteractionDialog = ({ state }, _payload = {}) => {
+  state.childInteractionDialog = {
+    open: true,
+    key: state.childInteractionDialog.key + 1,
+  };
+};
+
 export const closeSaveLoadPaginationDialog = ({ state }, _payload = {}) => {
   state.saveLoadPaginationDialog = {
     ...state.saveLoadPaginationDialog,
     open: false,
+  };
+};
+
+export const closeChildInteractionDialog = ({ state }, _payload = {}) => {
+  state.childInteractionDialog = {
+    ...state.childInteractionDialog,
+    open: false,
+  };
+};
+
+export const openConditionalTextStylesDialog = ({ state }, _payload = {}) => {
+  state.conditionalTextStylesDialog = {
+    ...state.conditionalTextStylesDialog,
+    open: true,
+    mode: "list",
+    editingIndex: undefined,
+  };
+};
+
+export const closeConditionalTextStylesDialog = ({ state }, _payload = {}) => {
+  state.conditionalTextStylesDialog = {
+    ...state.conditionalTextStylesDialog,
+    open: false,
+    mode: "list",
+    editingIndex: undefined,
+  };
+};
+
+export const openConditionalTextStyleRuleEditor = (
+  { state },
+  { editingIndex, selectedVariableType } = {},
+) => {
+  state.conditionalTextStylesDialog = {
+    ...state.conditionalTextStylesDialog,
+    open: true,
+    mode: "edit",
+    key: state.conditionalTextStylesDialog.key + 1,
+    editingIndex,
+    selectedVariableType,
+  };
+};
+
+export const showConditionalTextStylesDialogList = (
+  { state },
+  _payload = {},
+) => {
+  state.conditionalTextStylesDialog = {
+    ...state.conditionalTextStylesDialog,
+    mode: "list",
+    editingIndex: undefined,
   };
 };
 
@@ -575,6 +869,16 @@ export const setVisibilityConditionDialogSelectedVariableType = (
 ) => {
   state.visibilityConditionDialog = {
     ...state.visibilityConditionDialog,
+    selectedVariableType: selectedVariableType ?? "string",
+  };
+};
+
+export const setConditionalTextStylesDialogSelectedVariableType = (
+  { state },
+  { selectedVariableType } = {},
+) => {
+  state.conditionalTextStylesDialog = {
+    ...state.conditionalTextStylesDialog,
     selectedVariableType: selectedVariableType ?? "string",
   };
 };
@@ -662,6 +966,14 @@ export const selectSaveLoadPaginationDialog = ({ state }) => {
   return state.saveLoadPaginationDialog;
 };
 
+export const selectChildInteractionDialog = ({ state }) => {
+  return state.childInteractionDialog;
+};
+
+export const selectConditionalTextStylesDialog = ({ state }) => {
+  return state.conditionalTextStylesDialog;
+};
+
 export const selectVisibilityConditionVariableTypeById = ({ state, props }) => {
   return toVisibilityConditionVariableTypeById(state.variablesData, {
     includeSaveDataAvailable: props.isInsideSaveLoadSlot === true,
@@ -704,6 +1016,9 @@ export const selectViewData = ({ state, props, constants }) => {
   const currentVisibilityCondition = splitVisibilityConditionFromWhen(
     values["$when"],
   ).visibilityCondition;
+  const conditionalTextStyleRules = normalizeConditionalTextStyleRules(
+    values.conditionalTextStyles,
+  );
   const capabilities = getLayoutEditorItemCapabilities(props.itemType);
   const sections = parseAndRender(
     getLayoutEditPanelSections({
@@ -724,6 +1039,10 @@ export const selectViewData = ({ state, props, constants }) => {
         values,
         variablesData: state.variablesData,
       }),
+      childInteractionSummary: getChildInteractionSummary(values),
+      conditionalTextStylesSummary: getConditionalTextStylesSummary(
+        conditionalTextStyleRules,
+      ),
       visibilityConditionSummary: getVisibilityConditionSummary(
         currentVisibilityCondition,
         state.variablesData,
@@ -742,9 +1061,24 @@ export const selectViewData = ({ state, props, constants }) => {
       currentVisibilityCondition,
       visibilityConditionVariableTypeById,
     );
+  const editingConditionalTextStyleRule =
+    Number.isInteger(state.conditionalTextStylesDialog.editingIndex) &&
+    state.conditionalTextStylesDialog.editingIndex >= 0
+      ? conditionalTextStyleRules[
+          state.conditionalTextStylesDialog.editingIndex
+        ]
+      : undefined;
+  const conditionalTextStyleRuleDefaults =
+    createConditionalTextStyleRuleDefaults(
+      editingConditionalTextStyleRule,
+      visibilityConditionVariableTypeById,
+    );
   const selectedVisibilityConditionVariableType =
     state.visibilityConditionDialog.selectedVariableType ??
     visibilityConditionDialogDefaults.selectedVariableType;
+  const selectedConditionalTextStyleVariableType =
+    state.conditionalTextStylesDialog.selectedVariableType ??
+    conditionalTextStyleRuleDefaults.selectedVariableType;
 
   return {
     values: state.values,
@@ -774,6 +1108,30 @@ export const selectViewData = ({ state, props, constants }) => {
     saveLoadPaginationDialogForm: createSaveLoadPaginationForm({
       variableOptions,
     }),
+    childInteractionDialog: state.childInteractionDialog,
+    childInteractionDialogDefaults:
+      createChildInteractionDialogDefaults(values),
+    childInteractionDialogForm: createChildInteractionForm(),
+    conditionalTextStylesDialog: state.conditionalTextStylesDialog,
+    conditionalTextStyleItems: conditionalTextStyleRules.map((rule, index) => ({
+      index,
+      summary: getConditionalTextStyleRuleSummary(
+        rule,
+        state.textStylesData,
+        state.variablesData,
+        visibilityConditionOptions,
+      ),
+      canMoveUp: index > 0,
+      canMoveDown: index < conditionalTextStyleRules.length - 1,
+    })),
+    conditionalTextStyleRuleDefaults,
+    conditionalTextStyleRuleForm: createConditionalTextStyleRuleForm({
+      variableOptions: visibilityConditionVariableOptions,
+      textStyleOptions: textStyleItems,
+    }),
+    conditionalTextStyleRuleDialogContext: {
+      selectedVariableType: selectedConditionalTextStyleVariableType,
+    },
     imageSelectorDialog: state.imageSelectorDialog,
     tempSelectedImageId: state.tempSelectedImageId,
   };

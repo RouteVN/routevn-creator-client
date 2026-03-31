@@ -103,6 +103,7 @@ const createPreviewFixedStateValues = (previewVariableValues = {}) => {
   return {
     isLineCompleted:
       previewVariableValues[LINE_COMPLETED_CONDITION_ID] ??
+      fixedStateItems[LINE_COMPLETED_CONDITION_ID]?.value ??
       fixedStateItems[LINE_COMPLETED_CONDITION_ID]?.default ??
       false,
   };

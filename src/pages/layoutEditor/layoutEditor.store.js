@@ -56,34 +56,48 @@ const getLayoutPreviewVariableItems = (layoutData = {}, variablesData = {}) => {
   const addedVariableIds = new Set();
 
   for (const item of Object.values(layoutData?.items ?? {})) {
+    const variableIds = [];
     const visibilityCondition = splitVisibilityConditionFromWhen(
       item?.["$when"],
     ).visibilityCondition;
-    const variableId = visibilityCondition?.variableId;
-
-    if (!variableId || addedVariableIds.has(variableId)) {
-      continue;
+    if (visibilityCondition?.variableId) {
+      variableIds.push(visibilityCondition.variableId);
     }
 
-    const variable = availableVariables[variableId];
-    const type = String(variable?.type ?? "string").toLowerCase();
-
-    if (!PREVIEW_VARIABLE_TYPES.has(type)) {
-      continue;
-    }
-
-    addedVariableIds.add(variableId);
-    previewVariables.push({
-      id: variableId,
-      name: variable?.name ?? variableId,
-      type,
-      source: variable?.source,
-      description: variable?.description,
-      defaultValue: toPreviewVariableValue({
-        type,
-        value: variable?.value ?? variable?.default,
-      }),
+    const conditionalTextStyles = Array.isArray(item?.conditionalTextStyles)
+      ? item.conditionalTextStyles
+      : [];
+    conditionalTextStyles.forEach((rule) => {
+      if (typeof rule?.variableId === "string" && rule.variableId.length > 0) {
+        variableIds.push(rule.variableId);
+      }
     });
+
+    for (const variableId of variableIds) {
+      if (!variableId || addedVariableIds.has(variableId)) {
+        continue;
+      }
+
+      const variable = availableVariables[variableId];
+      const type = String(variable?.type ?? "string").toLowerCase();
+
+      if (!PREVIEW_VARIABLE_TYPES.has(type)) {
+        continue;
+      }
+
+      addedVariableIds.add(variableId);
+      previewVariables.push({
+        id: variableId,
+        name: variable?.name ?? variableId,
+        type,
+        source: variable?.source,
+        description: variable?.description,
+        defaultValue: toPreviewVariableValue({
+          type,
+          value: variable?.value ?? variable?.default,
+        }),
+      });
+    }
   }
 
   return previewVariables.sort((left, right) =>

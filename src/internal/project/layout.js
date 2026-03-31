@@ -294,6 +294,20 @@ const mergeInteractionPayloadActions = (baseInteraction, extraInteraction) => {
   );
 };
 
+const withInheritToChildren = (interaction, inheritToChildren) => {
+  if (inheritToChildren !== true) {
+    return interaction;
+  }
+
+  const nextInteraction =
+    interaction && typeof interaction === "object" ? { ...interaction } : {};
+
+  return {
+    ...nextInteraction,
+    inheritToChildren: true,
+  };
+};
+
 const updateChildrenIds = (children, indexVar) => {
   return children.map((child) => {
     const updatedChild = {
@@ -395,9 +409,28 @@ const buildBaseElement = (node) => {
     scaleX: node.scaleX ?? 1,
     scaleY: node.scaleY ?? 1,
     rotation: node.rotation ?? 0,
-    click: normalizeEngineActions(node.click),
-    rightClick: normalizeEngineActions(node.rightClick),
   };
+
+  const click = withInheritToChildren(
+    normalizeEngineActions(node.click),
+    node.inheritClickToChildren,
+  );
+  if (click) {
+    element.click = click;
+  }
+
+  const rightClick = withInheritToChildren(
+    normalizeEngineActions(node.rightClick),
+    node.inheritRightClickToChildren,
+  );
+  if (rightClick) {
+    element.rightClick = rightClick;
+  }
+
+  const hover = withInheritToChildren(undefined, node.inheritHoverToChildren);
+  if (hover) {
+    element.hover = hover;
+  }
 
   const whenExpression = mergeWhenExpressions(
     node["$when"],
@@ -496,6 +529,43 @@ const applyTextNode = ({ element, node, context }) => {
       };
     }
   }
+
+  const conditionalTextStyles = Array.isArray(node.conditionalTextStyles)
+    ? node.conditionalTextStyles
+    : [];
+
+  conditionalTextStyles.forEach((rule, index) => {
+    if (
+      !rule ||
+      typeof rule !== "object" ||
+      typeof rule.textStyleId !== "string" ||
+      rule.textStyleId.length === 0
+    ) {
+      return;
+    }
+
+    const expression = buildVisibilityConditionExpression(rule);
+    if (!expression) {
+      return;
+    }
+
+    const conditionalTextStyleId = ensureNodeTextStyleId({
+      textStyles: context.textStyles,
+      textStylesData: context.textStylesData,
+      layoutId: context.layoutId,
+      node,
+      textStyleId: rule.textStyleId,
+      variant: `conditional-${index}`,
+    });
+
+    if (!conditionalTextStyleId) {
+      return;
+    }
+
+    nextElement[`$if#${index + 1} ${expression}`] = {
+      textStyleId: conditionalTextStyleId,
+    };
+  });
 
   if (node.type === "text-revealing-ref-dialogue-content") {
     nextElement.speed = "${variables._dialogueTextSpeed}";
