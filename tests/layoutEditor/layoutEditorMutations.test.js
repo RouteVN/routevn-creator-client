@@ -63,6 +63,34 @@ describe("layoutEditorMutations", () => {
     expect(updatedItem.direction).toBeUndefined();
   });
 
+  it("normalizes opacity to the allowed 0..1 range", () => {
+    const item = {
+      id: "rect-1",
+      type: "rect",
+      opacity: 1,
+    };
+
+    const lowOpacityItem = applyLayoutItemFieldChange({
+      item,
+      name: "opacity",
+      value: -0.5,
+    });
+    const highOpacityItem = applyLayoutItemFieldChange({
+      item,
+      name: "opacity",
+      value: 1.5,
+    });
+    const clearedOpacityItem = applyLayoutItemFieldChange({
+      item,
+      name: "opacity",
+      value: null,
+    });
+
+    expect(lowOpacityItem.opacity).toBe(0);
+    expect(highOpacityItem.opacity).toBe(1);
+    expect(clearedOpacityItem.opacity).toBeUndefined();
+  });
+
   it("auto-sizes sprites from the selected image when width and height are unset", () => {
     const item = {
       id: "sprite-1",

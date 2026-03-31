@@ -1,5 +1,7 @@
 export const SAVE_DATA_AVAILABLE_CONDITION_ID = "__saveDataAvailable";
 export const LINE_COMPLETED_CONDITION_ID = "__isLineCompleted";
+export const AUTO_MODE_CONDITION_ID = "__autoMode";
+export const SKIP_MODE_CONDITION_ID = "__skipMode";
 
 const FIXED_VISIBILITY_STATE_ITEMS = {
   [LINE_COMPLETED_CONDITION_ID]: {
@@ -9,6 +11,22 @@ const FIXED_VISIBILITY_STATE_ITEMS = {
     source: "runtime",
     description: "Whether the current line has fully completed rendering",
     accessor: "isLineCompleted",
+  },
+  [AUTO_MODE_CONDITION_ID]: {
+    id: AUTO_MODE_CONDITION_ID,
+    name: "Auto Mode",
+    type: "boolean",
+    source: "runtime",
+    description: "Whether auto mode is currently enabled",
+    accessor: "autoMode",
+  },
+  [SKIP_MODE_CONDITION_ID]: {
+    id: SKIP_MODE_CONDITION_ID,
+    name: "Skip Mode",
+    type: "boolean",
+    source: "runtime",
+    description: "Whether skip mode is currently enabled",
+    accessor: "skipMode",
   },
 };
 

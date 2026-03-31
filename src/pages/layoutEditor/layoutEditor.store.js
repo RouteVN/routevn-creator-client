@@ -284,6 +284,9 @@ export const createInitialState = () => ({
   dialogueDefaultValues: {
     "dialogue-character-name": "Character",
     "dialogue-content": "This is a sample dialogue content.",
+    "dialogue-auto-mode": false,
+    "dialogue-skip-mode": false,
+    "dialogue-is-line-completed": false,
   },
   nvlDefaultValues: {
     linesNum: 3,

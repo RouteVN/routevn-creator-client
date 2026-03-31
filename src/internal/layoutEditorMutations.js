@@ -40,6 +40,23 @@ const setTopLevelValue = (target, name, value) => {
   return target;
 };
 
+const normalizeCommonFieldValue = ({ name, value } = {}) => {
+  if (name !== "opacity") {
+    return value;
+  }
+
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  const parsedValue = Number(value);
+  if (!Number.isFinite(parsedValue)) {
+    return undefined;
+  }
+
+  return Math.max(0, Math.min(1, parsedValue));
+};
+
 export const applyLayoutItemFieldChange = ({
   item,
   name,
@@ -58,20 +75,24 @@ export const applyLayoutItemFieldChange = ({
         value,
       })
     : value;
+  const normalizedCommonValue = normalizeCommonFieldValue({
+    name,
+    value: normalizedValue,
+  });
 
   const nextItem = structuredClone(item);
 
   if (
     name === "anchor" &&
-    normalizedValue &&
-    typeof normalizedValue === "object"
+    normalizedCommonValue &&
+    typeof normalizedCommonValue === "object"
   ) {
-    nextItem.anchorX = normalizedValue.x;
-    nextItem.anchorY = normalizedValue.y;
+    nextItem.anchorX = normalizedCommonValue.x;
+    nextItem.anchorY = normalizedCommonValue.y;
   } else if (name.includes(".")) {
-    setValueAtPath(nextItem, name, normalizedValue);
+    setValueAtPath(nextItem, name, normalizedCommonValue);
   } else {
-    setTopLevelValue(nextItem, name, normalizedValue);
+    setTopLevelValue(nextItem, name, normalizedCommonValue);
   }
 
   const nextAfterTypeChange =
@@ -79,7 +100,7 @@ export const applyLayoutItemFieldChange = ({
       currentItem: item,
       nextItem,
       name,
-      value: normalizedValue,
+      value: normalizedCommonValue,
       imagesData,
     }) ?? nextItem;
 
@@ -88,7 +109,7 @@ export const applyLayoutItemFieldChange = ({
       currentItem: item,
       nextItem: nextAfterTypeChange,
       name,
-      value: normalizedValue,
+      value: normalizedCommonValue,
       imagesData,
     }) ?? nextAfterTypeChange
   );

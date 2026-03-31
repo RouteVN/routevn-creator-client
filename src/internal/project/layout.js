@@ -460,6 +460,10 @@ const buildBaseElement = (node, context = {}) => {
     rotation: node.rotation ?? 0,
   };
 
+  if (typeof node.opacity === "number") {
+    element.alpha = node.opacity;
+  }
+
   const click = withInheritToChildren(
     withInteractionEventData(node.click, context.slotEventData),
     node.inheritClickToChildren,

@@ -114,6 +114,7 @@ const createDefaultValues = () => ({
   y: 0,
   width: 100,
   height: 100,
+  opacity: 1,
   rotation: 0,
   anchor: {
     x: 0,
@@ -633,6 +634,7 @@ const toInspectorValues = ({ values, firstTextStyleId }) => {
 
   return {
     ...values,
+    opacity: values?.opacity ?? 1,
     revealEffect,
     variableId,
     fragmentLayoutId: values?.fragmentLayoutId ?? "",

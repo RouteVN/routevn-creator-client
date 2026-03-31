@@ -8,6 +8,19 @@ numberPopoverForm: &numberPopoverForm
         variant: pr
         label: Submit
 
+opacityPopoverForm: &opacityPopoverForm
+  fields:
+    - name: value
+      type: input-number
+      min: 0
+      max: 1
+      step: 0.05
+  actions:
+    buttons:
+      - id: submit
+        variant: pr
+        label: Submit
+
 textPopoverForm: &textPopoverForm
   fields:
     - name: value
@@ -48,6 +61,15 @@ layoutSections:
             name: height
             value: "${values.height}"
             popoverForm: *numberPopoverForm
+  - label: Appearance
+    items:
+      - type: group
+        fields:
+          - type: clickable-value
+            label: Opacity
+            name: opacity
+            value: "${values.opacity}"
+            popoverForm: *opacityPopoverForm
       - "$when": "supportsAnchor"
         type: select
         label: Anchor
@@ -307,6 +329,15 @@ controlSections:
             name: height
             value: "${values.height}"
             popoverForm: *numberPopoverForm
+  - label: Appearance
+    items:
+      - type: group
+        fields:
+          - type: clickable-value
+            label: Opacity
+            name: opacity
+            value: "${values.opacity}"
+            popoverForm: *opacityPopoverForm
   - label: Visibility
     items:
       - type: condition-summary

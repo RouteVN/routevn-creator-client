@@ -199,6 +199,33 @@ dialogueForm:
     - name: dialogue-content
       description: Dialogue Content
       type: input-text
+    - name: dialogue-auto-mode
+      label: Auto Mode
+      type: select
+      clearable: false
+      options:
+        - label: "False"
+          value: false
+        - label: "True"
+          value: true
+    - name: dialogue-skip-mode
+      label: Skip Mode
+      type: select
+      clearable: false
+      options:
+        - label: "False"
+          value: false
+        - label: "True"
+          value: true
+    - name: dialogue-is-line-completed
+      label: Line Completed
+      type: select
+      clearable: false
+      options:
+        - label: "False"
+          value: false
+        - label: "True"
+          value: true
 
 nvlForm:
   title: Preview

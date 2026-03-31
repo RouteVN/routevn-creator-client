@@ -115,6 +115,7 @@ export const shouldPersistLayoutEditorFieldImmediately = (name) => {
   }
 
   return (
+    name === "conditionalTextStyles" ||
     name === "click" ||
     name.startsWith("click.") ||
     name === "rightClick" ||

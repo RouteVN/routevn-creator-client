@@ -11,6 +11,9 @@ describe("layoutEditorPersistence", () => {
     expect(
       shouldPersistLayoutEditorFieldImmediately("rightClick.payload.actions"),
     ).toBe(true);
+    expect(
+      shouldPersistLayoutEditorFieldImmediately("conditionalTextStyles"),
+    ).toBe(true);
     expect(shouldPersistLayoutEditorFieldImmediately("x")).toBe(false);
   });
 

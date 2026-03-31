@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { buildLayoutElements } from "../../src/internal/project/layout.js";
 import {
+  AUTO_MODE_CONDITION_ID,
   LINE_COMPLETED_CONDITION_ID,
   SAVE_DATA_AVAILABLE_CONDITION_ID,
+  SKIP_MODE_CONDITION_ID,
   buildVisibilityConditionExpression,
   splitVisibilityConditionFromWhen,
 } from "../../src/internal/layoutVisibilityCondition.js";
@@ -29,6 +31,25 @@ describe("layout visibility conditions", () => {
     );
 
     expect(elements[0].$when).toBe('variables["score"] == 10');
+  });
+
+  it("maps editor opacity to runtime alpha", () => {
+    const { elements } = buildLayoutElements(
+      [
+        {
+          id: "rect-1",
+          type: "rect",
+          opacity: 0.35,
+        },
+      ],
+      {},
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      { layoutId: "layout-1" },
+    );
+
+    expect(elements[0].alpha).toBe(0.35);
   });
 
   it("combines a visibility condition with an existing $when", () => {
@@ -118,6 +139,20 @@ describe("layout visibility conditions", () => {
         value: true,
       }),
     ).toBe("isLineCompleted == true");
+    expect(
+      buildVisibilityConditionExpression({
+        variableId: AUTO_MODE_CONDITION_ID,
+        op: "eq",
+        value: true,
+      }),
+    ).toBe("autoMode == true");
+    expect(
+      buildVisibilityConditionExpression({
+        variableId: SKIP_MODE_CONDITION_ID,
+        op: "eq",
+        value: false,
+      }),
+    ).toBe("skipMode == false");
   });
 
   it("compiles ordered conditional text styles into jempl $if overrides", () => {
@@ -205,6 +240,22 @@ describe("layout visibility conditions", () => {
         variableId: LINE_COMPLETED_CONDITION_ID,
         op: "eq",
         value: true,
+      },
+    });
+    expect(splitVisibilityConditionFromWhen("(autoMode == true)")).toEqual({
+      baseWhen: undefined,
+      visibilityCondition: {
+        variableId: AUTO_MODE_CONDITION_ID,
+        op: "eq",
+        value: true,
+      },
+    });
+    expect(splitVisibilityConditionFromWhen("(skipMode == false)")).toEqual({
+      baseWhen: undefined,
+      visibilityCondition: {
+        variableId: SKIP_MODE_CONDITION_ID,
+        op: "eq",
+        value: false,
       },
     });
   });

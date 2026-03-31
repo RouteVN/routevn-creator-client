@@ -4,7 +4,11 @@ import {
   createLayoutEditorSelectionOverlay,
 } from "../../src/internal/layoutEditorPreview.js";
 import { getSystemVariableItems } from "../../src/internal/systemVariables.js";
-import { LINE_COMPLETED_CONDITION_ID } from "../../src/internal/layoutVisibilityCondition.js";
+import {
+  AUTO_MODE_CONDITION_ID,
+  LINE_COMPLETED_CONDITION_ID,
+  SKIP_MODE_CONDITION_ID,
+} from "../../src/internal/layoutVisibilityCondition.js";
 
 describe("layoutEditorPreview", () => {
   it("builds stable preview data from variables, dialogue defaults, and choices", () => {
@@ -174,11 +178,30 @@ describe("layoutEditorPreview", () => {
   it("includes fixed runtime state in preview data", () => {
     const previewData = createLayoutEditorPreviewData({
       previewVariableValues: {
+        [AUTO_MODE_CONDITION_ID]: true,
         [LINE_COMPLETED_CONDITION_ID]: true,
+        [SKIP_MODE_CONDITION_ID]: true,
       },
     });
 
     expect(previewData.isLineCompleted).toBe(true);
+    expect(previewData.autoMode).toBe(true);
+    expect(previewData.skipMode).toBe(true);
+  });
+
+  it("uses dialogue preview toggles for line completion, auto mode, and skip mode", () => {
+    const previewData = createLayoutEditorPreviewData({
+      layoutType: "dialogue",
+      dialogueDefaultValues: {
+        "dialogue-is-line-completed": true,
+        "dialogue-auto-mode": true,
+        "dialogue-skip-mode": true,
+      },
+    });
+
+    expect(previewData.isLineCompleted).toBe(true);
+    expect(previewData.autoMode).toBe(true);
+    expect(previewData.skipMode).toBe(true);
   });
 
   it("creates a draggable overlay only for the first repeated instance", () => {
