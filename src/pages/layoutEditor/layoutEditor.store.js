@@ -4,7 +4,6 @@ import {
   DEFAULT_PROJECT_RESOLUTION,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
-import { getFragmentLayoutOptions } from "../../internal/layoutFragments.js";
 import {
   isItemInsideSaveLoadSlot,
   selectLayoutEditorSelectedItem,
@@ -44,14 +43,6 @@ export const createInitialState = () => {
       open: false,
       fieldName: undefined,
       selectedImageId: undefined,
-    },
-    fragmentCreateDialog: {
-      open: false,
-      parentId: undefined,
-      key: 0,
-      defaultValues: {
-        fragmentLayoutId: undefined,
-      },
     },
   };
 };
@@ -245,31 +236,6 @@ export const closeSliderCreateImageSelectorDialog = (
   };
 };
 
-export const openFragmentCreateDialog = (
-  { state },
-  { parentId, defaultValues } = {},
-) => {
-  state.fragmentCreateDialog = {
-    open: true,
-    parentId,
-    key: state.fragmentCreateDialog.key + 1,
-    defaultValues: {
-      fragmentLayoutId: defaultValues?.fragmentLayoutId,
-    },
-  };
-};
-
-export const closeFragmentCreateDialog = ({ state }, _payload = {}) => {
-  state.fragmentCreateDialog = {
-    open: false,
-    parentId: undefined,
-    key: state.fragmentCreateDialog.key,
-    defaultValues: {
-      fragmentLayoutId: undefined,
-    },
-  };
-};
-
 export const setSliderCreateImageSelectorSelectedImageId = (
   { state },
   { imageId } = {},
@@ -299,10 +265,6 @@ export const selectSliderCreateDialog = ({ state }) => {
 
 export const selectSliderCreateImageSelectorDialog = ({ state }) => {
   return state.sliderCreateImageSelectorDialog;
-};
-
-export const selectFragmentCreateDialog = ({ state }) => {
-  return state.fragmentCreateDialog;
 };
 
 export const selectImages = ({ state }) => state.images;
@@ -385,9 +347,6 @@ export const selectViewData = ({ state, constants }) => {
       : constants.emptyContextMenuItems,
     { layoutType },
   );
-  const fragmentLayoutOptions = getFragmentLayoutOptions(state.layoutsData, {
-    excludeLayoutId: state.layout?.id,
-  });
 
   return {
     item,
@@ -407,11 +366,6 @@ export const selectViewData = ({ state, constants }) => {
     sliderCreateForm: constants.sliderCreateForm,
     sliderCreateDialog: state.sliderCreateDialog,
     sliderCreateImageSelectorDialog: state.sliderCreateImageSelectorDialog,
-    fragmentCreateForm: parseAndRender(constants.fragmentCreateForm, {
-      fragmentLayoutOptions,
-    }),
-    fragmentCreateDialog: state.fragmentCreateDialog,
-    fragmentLayoutOptions,
     layoutState,
     previewData: state.previewData,
     projectResolution: state.projectResolution,

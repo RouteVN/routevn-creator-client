@@ -8,6 +8,7 @@ import {
   getLayoutEditorBackPath,
   resolveLayoutEditorPayload,
 } from "../../internal/layoutEditorRoute.js";
+import { getFragmentLayoutOptions } from "../../internal/layoutFragments.js";
 import { applyLayoutItemFieldChange } from "../../internal/layoutEditorMutations.js";
 import { getLayoutEditorCreateDefinition } from "../../internal/layoutEditorElementRegistry.js";
 import {
@@ -87,6 +88,39 @@ const getSliderCreateOwnerConfig = (resourceType, projectService) => {
     createElement: isControls
       ? projectService.createControlElement.bind(projectService)
       : projectService.createLayoutElement.bind(projectService),
+  };
+};
+
+const createFragmentCreateForm = (fragmentLayoutOptions = []) => {
+  return {
+    title: "Insert Fragment",
+    description: "Choose which fragment layout to insert into this layout",
+    fields: [
+      {
+        name: "fragmentLayoutId",
+        type: "select",
+        label: "Fragment",
+        required: true,
+        clearable: false,
+        options: fragmentLayoutOptions,
+      },
+    ],
+    actions: {
+      buttons: [
+        {
+          id: "cancel",
+          variant: "se",
+          label: "Cancel",
+          align: "left",
+        },
+        {
+          id: "submit",
+          variant: "pr",
+          label: "Insert Fragment",
+          validate: true,
+        },
+      ],
+    },
   };
 };
 
@@ -281,8 +315,14 @@ export const handleFileExplorerAction = async (deps, payload) => {
 
   const fragmentAction = resolveFragmentCreateAction(payload?._event?.detail);
   if (fragmentAction) {
-    const { store, render, refs, appService } = deps;
-    const fragmentLayoutOptions = store.selectViewData().fragmentLayoutOptions;
+    const { appService, projectService, store } = deps;
+    const parentId = payload?._event?.detail?.itemId ?? null;
+    const fragmentLayoutOptions = getFragmentLayoutOptions(
+      store.selectLayoutsData(),
+      {
+        excludeLayoutId: store.selectLayoutId(),
+      },
+    );
 
     if (fragmentLayoutOptions.length === 0) {
       appService.showToast("Mark a layout as a fragment first.", {
@@ -291,20 +331,72 @@ export const handleFileExplorerAction = async (deps, payload) => {
       return;
     }
 
-    store.openFragmentCreateDialog({
-      parentId: payload?._event?.detail?.itemId,
+    const dialogResult = await appService.showFormDialog({
+      form: createFragmentCreateForm(fragmentLayoutOptions),
       defaultValues: {
         fragmentLayoutId: fragmentLayoutOptions[0].value,
       },
     });
-    render();
 
-    const fragmentCreateForm = refs.fragmentCreateForm;
-    const { defaultValues } = store.selectFragmentCreateDialog();
-    fragmentCreateForm.reset();
-    fragmentCreateForm.setValues({
-      values: defaultValues,
+    if (!dialogResult || dialogResult.actionId !== "submit") {
+      return;
+    }
+
+    const fragmentLayoutId = dialogResult.values?.fragmentLayoutId;
+    if (!fragmentLayoutId) {
+      appService.showToast("Fragment is required.", {
+        title: "Warning",
+      });
+      return;
+    }
+
+    const layoutsData = store.selectLayoutsData();
+    const fragmentLayout = layoutsData?.items?.[fragmentLayoutId];
+    if (
+      fragmentLayout?.type !== "layout" ||
+      !isFragmentLayout(fragmentLayout)
+    ) {
+      appService.showToast("Selected fragment is invalid.", {
+        title: "Error",
+      });
+      return;
+    }
+
+    const layoutId = store.selectLayoutId();
+    if (!layoutId) {
+      appService.showToast("Layout is missing.", {
+        title: "Error",
+      });
+      return;
+    }
+
+    await projectService.ensureRepository();
+    const nextElementId = nanoid();
+    const createResult = await projectService.createLayoutElement({
+      layoutId,
+      elementId: nextElementId,
+      data: {
+        ...getLayoutEditorCreateDefinition("fragment-ref", {
+          projectResolution: store.selectProjectResolution(),
+        }).template,
+        name: fragmentLayout.name ?? "Fragment",
+        fragmentLayoutId,
+      },
+      parentId,
+      position: "last",
     });
+
+    if (createResult?.valid === false) {
+      appService.showToast(
+        getResultErrorMessage(createResult, "Failed to create fragment."),
+        {
+          title: "Error",
+        },
+      );
+      return;
+    }
+
+    await refreshLayoutEditorData(deps, { selectedItemId: nextElementId });
     return;
   }
 
@@ -340,12 +432,6 @@ export const handleSliderCreateDialogClose = (deps) => {
   const { store, render } = deps;
   store.closeSliderCreateDialog();
   store.closeSliderCreateImageSelectorDialog();
-  render();
-};
-
-export const handleFragmentCreateDialogClose = (deps) => {
-  const { store, render } = deps;
-  store.closeFragmentCreateDialog();
   render();
 };
 
@@ -497,75 +583,6 @@ export const handleSliderCreateFormAction = async (deps, payload) => {
 
   store.closeSliderCreateDialog();
   store.closeSliderCreateImageSelectorDialog();
-  await refreshLayoutEditorData(deps, { selectedItemId: nextElementId });
-};
-
-export const handleFragmentCreateFormAction = async (deps, payload) => {
-  const { appService, projectService, store } = deps;
-  const { actionId, values } = payload._event.detail;
-
-  if (actionId === "cancel") {
-    store.closeFragmentCreateDialog();
-    deps.render();
-    return;
-  }
-
-  if (actionId !== "submit") {
-    return;
-  }
-
-  const fragmentLayoutId = values?.fragmentLayoutId;
-  if (!fragmentLayoutId) {
-    appService.showToast("Fragment is required.", {
-      title: "Warning",
-    });
-    return;
-  }
-
-  const layoutsData = store.selectLayoutsData();
-  const fragmentLayout = layoutsData?.items?.[fragmentLayoutId];
-  if (fragmentLayout?.type !== "layout" || !isFragmentLayout(fragmentLayout)) {
-    appService.showToast("Selected fragment is invalid.", {
-      title: "Error",
-    });
-    return;
-  }
-
-  const layoutId = store.selectLayoutId();
-  if (!layoutId) {
-    appService.showToast("Layout is missing.", {
-      title: "Error",
-    });
-    return;
-  }
-
-  await projectService.ensureRepository();
-  const nextElementId = nanoid();
-  const createResult = await projectService.createLayoutElement({
-    layoutId,
-    elementId: nextElementId,
-    data: {
-      ...getLayoutEditorCreateDefinition("fragment-ref", {
-        projectResolution: store.selectProjectResolution(),
-      }).template,
-      name: fragmentLayout.name ?? "Fragment",
-      fragmentLayoutId,
-    },
-    parentId: store.selectFragmentCreateDialog().parentId ?? null,
-    position: "last",
-  });
-
-  if (createResult?.valid === false) {
-    appService.showToast(
-      getResultErrorMessage(createResult, "Failed to create fragment."),
-      {
-        title: "Error",
-      },
-    );
-    return;
-  }
-
-  store.closeFragmentCreateDialog();
   await refreshLayoutEditorData(deps, { selectedItemId: nextElementId });
 };
 

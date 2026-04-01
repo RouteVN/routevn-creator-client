@@ -32,14 +32,6 @@ refs:
     eventListeners:
       close:
         handler: handleSliderCreateImageSelectorCancel
-  fragmentCreateDialog:
-    eventListeners:
-      close:
-        handler: handleFragmentCreateDialogClose
-  fragmentCreateForm:
-    eventListeners:
-      form-action:
-        handler: handleFragmentCreateFormAction
   sliderCreateImageSelector:
     eventListeners:
       image-selected:
@@ -128,9 +120,6 @@ template:
                           - rtgl-text c=mu-fg ta=c: Select hover thumb image
                   - $if sliderCreateDialog.images.hoverThumbImageId:
                       - rtgl-button#clearSliderCreateImageHoverThumb data-field-name=hoverThumbImageId variant=se size=sm: Clear
-  - rtgl-dialog#fragmentCreateDialog ?open=${fragmentCreateDialog.open} s=md:
-      - rtgl-view slot=content g=md:
-          - rtgl-form#fragmentCreateForm key=${fragmentCreateDialog.key} :defaultValues=${fragmentCreateDialog.defaultValues} :form=${fragmentCreateForm} w=f: null
   - rtgl-dialog#sliderCreateImageSelectorDialog ?open=${sliderCreateImageSelectorDialog.open}:
       - rtgl-view slot=content g=md:
           - rvn-image-selector#sliderCreateImageSelector selectedImageId=${sliderCreateImageSelectorDialog.selectedImageId}: null
