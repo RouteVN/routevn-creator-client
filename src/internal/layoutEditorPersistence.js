@@ -1,13 +1,6 @@
 import { normalizeInteractionValue } from "./project/interactionPayload.js";
-
-export const getLayoutEditorResourceCollection = (
-  repositoryState,
-  resourceType,
-) => {
-  return resourceType === "controls"
-    ? repositoryState.controls || { items: {}, tree: [] }
-    : repositoryState.layouts || { items: {}, tree: [] };
-};
+import { getLayoutEditorElementDefinition } from "./layoutEditorElementRegistry.js";
+import { getLayoutEditorResourceCollection } from "./ui/layoutEditor/layoutEditorRepositoryState.js";
 
 const getLayoutEditorElementOwnerKey = (resourceType) => {
   return resourceType === "controls" ? "controlId" : "layoutId";
@@ -109,20 +102,24 @@ const normalizeLayoutElementInteractions = (item = {}) => {
   return nextItem;
 };
 
-export const shouldPersistLayoutEditorFieldImmediately = (name) => {
+export const shouldPersistLayoutEditorFieldImmediately = ({
+  name,
+  itemType,
+} = {}) => {
   if (typeof name !== "string" || name.length === 0) {
     return false;
   }
 
-  return (
-    name === "conditionalTextStyles" ||
-    name === "click" ||
-    name.startsWith("click.") ||
-    name === "rightClick" ||
-    name.startsWith("rightClick.") ||
-    name === "change" ||
-    name.startsWith("change.")
-  );
+  const immediatePersistFields =
+    getLayoutEditorElementDefinition(itemType).immediatePersistFields;
+
+  return immediatePersistFields.some((fieldName) => {
+    if (!fieldName.endsWith(".")) {
+      return name === fieldName;
+    }
+
+    return name.startsWith(fieldName);
+  });
 };
 
 export const createLayoutEditorElementPersistPayload = ({
@@ -213,35 +210,4 @@ export const persistLayoutEditorElementUpdate = async ({
     didPersist: true,
     payload,
   };
-};
-
-export const syncLayoutEditorRepositoryState = ({
-  store,
-  repositoryState,
-  layoutId,
-  resourceType = "layouts",
-} = {}) => {
-  const { images, layouts, textStyles, colors, fonts, variables } =
-    repositoryState;
-  const resourceCollection = getLayoutEditorResourceCollection(
-    repositoryState,
-    resourceType,
-  );
-  const layout = layoutId ? resourceCollection.items?.[layoutId] : undefined;
-
-  store.setProjectResolution({
-    projectResolution: repositoryState?.project?.resolution,
-  });
-  store.setLayout({ id: layoutId, layout, resourceType });
-  store.setItems({ layoutData: layout?.elements || { items: {}, tree: [] } });
-  store.setImages({ images: images || { items: {}, tree: [] } });
-  store.setLayoutsData({ layoutsData: layouts || { items: {}, tree: [] } });
-  store.setTextStylesData({
-    textStylesData: textStyles || { items: {}, tree: [] },
-  });
-  store.setColorsData({ colorsData: colors || { items: {}, tree: [] } });
-  store.setFontsData({ fontsData: fonts || { items: {}, tree: [] } });
-  store.setVariablesData({
-    variablesData: variables || { items: {}, tree: [] },
-  });
 };

@@ -8,7 +8,7 @@ import {
   AUTO_MODE_CONDITION_ID,
   LINE_COMPLETED_CONDITION_ID,
   SKIP_MODE_CONDITION_ID,
-} from "../../src/internal/layoutVisibilityCondition.js";
+} from "../../src/internal/layoutConditions.js";
 
 describe("layoutEditorPreview", () => {
   it("builds stable preview data from variables, dialogue defaults, and choices", () => {

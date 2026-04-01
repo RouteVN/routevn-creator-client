@@ -7,7 +7,7 @@ import {
   SKIP_MODE_CONDITION_ID,
   buildVisibilityConditionExpression,
   splitVisibilityConditionFromWhen,
-} from "../../src/internal/layoutVisibilityCondition.js";
+} from "../../src/internal/layoutConditions.js";
 
 describe("layout visibility conditions", () => {
   it("compiles a structured visibility condition into $when", () => {

@@ -5,17 +5,16 @@ import {
   extractFileIdsFromRenderState,
 } from "./project/layout.js";
 import { toHierarchyStructure } from "./project/tree.js";
-import { getSystemVariableItems } from "./systemVariables.js";
 import {
-  AUTO_MODE_CONDITION_ID,
-  LINE_COMPLETED_CONDITION_ID,
-  SKIP_MODE_CONDITION_ID,
-  getFixedVisibilityStateItems,
-} from "./layoutVisibilityCondition.js";
+  applyPreviewVariableOverrides,
+  createChoicePreviewItems,
+  createConfirmDialogPreviewData,
+  createDialoguePreviewData,
+  createPreviewFixedStateValues,
+  createPreviewVariables,
+  createRuntimeSaveSlots,
+} from "./ui/layoutEditor/preview/index.js";
 
-const DEFAULT_DIALOGUE_CHARACTER_NAME = "Character";
-const DEFAULT_DIALOGUE_CONTENT = "This is a sample dialogue content.";
-const DEFAULT_DIALOGUE_REVEALING_SPEED = 50;
 const OVERLAY_BORDER = {
   color: "#ffffff",
   width: 2,
@@ -47,194 +46,6 @@ const jemplFunctions = {
 };
 
 const isBlobUrl = (url) => typeof url === "string" && url.startsWith("blob:");
-
-const toPreviewVariableValue = (variable = {}) => {
-  const value = variable.value ?? variable.default;
-
-  if (variable.type === "number") {
-    const parsedValue = Number(value);
-    return Number.isFinite(parsedValue) ? parsedValue : 0;
-  }
-
-  if (variable.type === "boolean") {
-    if (typeof value === "boolean") {
-      return value;
-    }
-
-    if (typeof value === "string") {
-      return value === "true";
-    }
-
-    return Boolean(value);
-  }
-
-  if (variable.type === "object") {
-    return value && typeof value === "object" ? value : {};
-  }
-
-  return value ?? "";
-};
-
-const createPreviewVariables = (variablesData = {}) => {
-  const variableItems = {
-    ...variablesData.items,
-    ...getSystemVariableItems(),
-  };
-
-  return Object.entries(variableItems).reduce(
-    (variables, [variableId, variable]) => {
-      if (!variableId || variable?.type === "folder") {
-        return variables;
-      }
-
-      variables[variableId] = toPreviewVariableValue(variable);
-      return variables;
-    },
-    {},
-  );
-};
-
-const applyPreviewVariableOverrides = (
-  previewVariables,
-  variablesData = {},
-  previewVariableValues = {},
-) => {
-  const variableItems = {
-    ...variablesData.items,
-    ...getSystemVariableItems(),
-  };
-  const nextPreviewVariables = {
-    ...previewVariables,
-  };
-
-  for (const [variableId, value] of Object.entries(previewVariableValues)) {
-    const variable = variableItems[variableId];
-
-    nextPreviewVariables[variableId] = toPreviewVariableValue({
-      ...variable,
-      value,
-    });
-  }
-
-  return nextPreviewVariables;
-};
-
-const createPreviewFixedStateValues = (
-  previewVariableValues = {},
-  dialogueDefaultValues = {},
-) => {
-  const fixedStateItems = getFixedVisibilityStateItems();
-
-  return {
-    isLineCompleted:
-      previewVariableValues[LINE_COMPLETED_CONDITION_ID] ??
-      dialogueDefaultValues?.["dialogue-is-line-completed"] ??
-      fixedStateItems[LINE_COMPLETED_CONDITION_ID]?.value ??
-      fixedStateItems[LINE_COMPLETED_CONDITION_ID]?.default ??
-      false,
-    autoMode:
-      previewVariableValues[AUTO_MODE_CONDITION_ID] ??
-      dialogueDefaultValues?.["dialogue-auto-mode"] ??
-      fixedStateItems[AUTO_MODE_CONDITION_ID]?.value ??
-      fixedStateItems[AUTO_MODE_CONDITION_ID]?.default ??
-      false,
-    skipMode:
-      previewVariableValues[SKIP_MODE_CONDITION_ID] ??
-      dialogueDefaultValues?.["dialogue-skip-mode"] ??
-      fixedStateItems[SKIP_MODE_CONDITION_ID]?.value ??
-      fixedStateItems[SKIP_MODE_CONDITION_ID]?.default ??
-      false,
-  };
-};
-
-const createChoiceItems = (choicesData = {}) => {
-  const choiceItems = Array.isArray(choicesData.items) ? choicesData.items : [];
-
-  return choiceItems.map((choice, index) => {
-    return {
-      content: choice?.content ?? `Choice ${index + 1}`,
-      events: {
-        click: {
-          actions: {},
-        },
-      },
-    };
-  });
-};
-
-const createSaveLoadSlots = (saveLoadData = {}) => {
-  const slots = Array.isArray(saveLoadData.slots) ? saveLoadData.slots : [];
-
-  return slots.map((slot, index) => {
-    const slotId =
-      Number.isFinite(Number(slot?.slotId)) && Number(slot?.slotId) > 0
-        ? Number(slot.slotId)
-        : index + 1;
-    const rawSavedAt =
-      typeof slot?.savedAt === "number"
-        ? slot.savedAt
-        : typeof slot?.date === "number"
-          ? slot.date
-          : typeof slot?.saveDate === "number"
-            ? slot.saveDate
-            : typeof slot?.date === "string" && slot.date.length > 0
-              ? Date.parse(slot.date)
-              : typeof slot?.saveDate === "string" && slot.saveDate.length > 0
-                ? Date.parse(slot.saveDate)
-                : undefined;
-    const savedAt = Number.isFinite(rawSavedAt) ? rawSavedAt : undefined;
-
-    return {
-      slotId,
-      image: slot?.image ?? slot?.saveImageId,
-      savedAt,
-      state: slot?.state,
-      isAvailable:
-        slot?.isAvailable === true ||
-        Boolean(slot?.image ?? slot?.saveImageId ?? savedAt),
-    };
-  });
-};
-
-const createDialogueLines = ({ characterName, dialogueContent }) => {
-  return [
-    {
-      characterName,
-      content: [{ text: dialogueContent }],
-    },
-    {
-      content: [{ text: dialogueContent }],
-    },
-    {
-      characterName: "Narrator",
-      content: [{ text: dialogueContent }],
-    },
-  ];
-};
-
-const createNvlLines = (nvlDefaultValues = {}) => {
-  const linesNum = Number(nvlDefaultValues.linesNum);
-  const lineCount = Number.isFinite(linesNum) && linesNum > 0 ? linesNum : 0;
-  const sourceCharacterNames = Array.isArray(nvlDefaultValues.characterNames)
-    ? nvlDefaultValues.characterNames
-    : [];
-  const sourceLines = Array.isArray(nvlDefaultValues.lines)
-    ? nvlDefaultValues.lines
-    : [];
-
-  return Array.from({ length: lineCount }, (_unused, index) => {
-    const characterName = sourceCharacterNames[index] ?? "";
-    const line = {
-      content: [{ text: sourceLines[index] ?? `Line ${index + 1}` }],
-    };
-
-    if (characterName) {
-      line.characterName = characterName;
-    }
-
-    return line;
-  });
-};
 
 const toElementList = (elements) => {
   if (Array.isArray(elements)) {
@@ -375,17 +186,12 @@ export const createLayoutEditorPreviewData = ({
   choicesData,
   saveLoadData,
 } = {}) => {
-  const characterName =
-    dialogueDefaultValues?.["dialogue-character-name"] ??
-    DEFAULT_DIALOGUE_CHARACTER_NAME;
-  const dialogueContent =
-    dialogueDefaultValues?.["dialogue-content"] ?? DEFAULT_DIALOGUE_CONTENT;
-  const parsedPreviewRevealingSpeed = Number(previewRevealingSpeed);
-  const dialogueRevealingSpeed =
-    Number.isFinite(parsedPreviewRevealingSpeed) &&
-    parsedPreviewRevealingSpeed > 0
-      ? parsedPreviewRevealingSpeed
-      : DEFAULT_DIALOGUE_REVEALING_SPEED;
+  const { dialogue, dialogueRevealingSpeed } = createDialoguePreviewData({
+    layoutType,
+    dialogueDefaultValues,
+    nvlDefaultValues,
+    previewRevealingSpeed,
+  });
 
   return {
     variables: {
@@ -400,32 +206,16 @@ export const createLayoutEditorPreviewData = ({
       previewVariableValues,
       dialogueDefaultValues,
     ),
-    dialogue: {
-      character: {
-        name: characterName,
-      },
-      content: [{ text: dialogueContent }],
-      lines:
-        layoutType === "nvl"
-          ? createNvlLines(nvlDefaultValues)
-          : createDialogueLines({
-              characterName,
-              dialogueContent,
-            }),
-    },
+    dialogue,
     choice: {
-      items: createChoiceItems(choicesData),
+      items: createChoicePreviewItems(choicesData),
     },
-    confirmDialog: {
-      resourceId: "",
-      confirmActions: {},
-      cancelActions: {},
-    },
+    confirmDialog: createConfirmDialogPreviewData(),
     saveSlots:
       hasSaveLoadPreview === true ||
       layoutType === "save" ||
       layoutType === "load"
-        ? createSaveLoadSlots(saveLoadData)
+        ? createRuntimeSaveSlots(saveLoadData)
         : [],
   };
 };

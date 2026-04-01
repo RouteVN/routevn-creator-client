@@ -3,7 +3,7 @@ export const LINE_COMPLETED_CONDITION_ID = "__isLineCompleted";
 export const AUTO_MODE_CONDITION_ID = "__autoMode";
 export const SKIP_MODE_CONDITION_ID = "__skipMode";
 
-const FIXED_VISIBILITY_STATE_ITEMS = {
+const RUNTIME_LAYOUT_CONDITION_ITEMS = {
   [LINE_COMPLETED_CONDITION_ID]: {
     id: LINE_COMPLETED_CONDITION_ID,
     name: "Line Completed",
@@ -30,8 +30,28 @@ const FIXED_VISIBILITY_STATE_ITEMS = {
   },
 };
 
-export const getFixedVisibilityStateItems = () => {
-  return FIXED_VISIBILITY_STATE_ITEMS;
+export const getRuntimeLayoutConditionItems = () => {
+  return RUNTIME_LAYOUT_CONDITION_ITEMS;
+};
+
+export const getSpecialLayoutConditionItems = ({
+  includeSaveDataAvailable = false,
+} = {}) => {
+  const items = {
+    ...RUNTIME_LAYOUT_CONDITION_ITEMS,
+  };
+
+  if (includeSaveDataAvailable) {
+    items[SAVE_DATA_AVAILABLE_CONDITION_ID] = {
+      id: SAVE_DATA_AVAILABLE_CONDITION_ID,
+      name: "Save Data Available",
+      type: "boolean",
+      source: "slot",
+      description: "Whether this save/load slot already has saved data",
+    };
+  }
+
+  return items;
 };
 
 const trimOuterParentheses = (value) => {
@@ -164,20 +184,18 @@ const parseConditionValue = (value) => {
   return undefined;
 };
 
-export const buildVisibilityConditionExpression = (visibilityCondition) => {
+export const buildLayoutConditionExpression = (condition) => {
   if (
-    visibilityCondition?.variableId === SAVE_DATA_AVAILABLE_CONDITION_ID &&
-    visibilityCondition?.op === "eq"
+    condition?.variableId === SAVE_DATA_AVAILABLE_CONDITION_ID &&
+    condition?.op === "eq"
   ) {
-    return visibilityCondition.value === false
-      ? "!item.savedAt"
-      : "item.savedAt";
+    return condition.value === false ? "!item.savedAt" : "item.savedAt";
   }
 
   const fixedStateItem =
-    getFixedVisibilityStateItems()?.[visibilityCondition?.variableId];
-  if (fixedStateItem && visibilityCondition?.op === "eq") {
-    const conditionValue = visibilityCondition.value;
+    getRuntimeLayoutConditionItems()?.[condition?.variableId];
+  if (fixedStateItem && condition?.op === "eq") {
+    const conditionValue = condition.value;
 
     if (typeof conditionValue === "number" && Number.isFinite(conditionValue)) {
       return `${fixedStateItem.accessor} == ${conditionValue}`;
@@ -192,19 +210,16 @@ export const buildVisibilityConditionExpression = (visibilityCondition) => {
     )}`;
   }
 
-  if (
-    !visibilityCondition?.variableId ||
-    typeof visibilityCondition.variableId !== "string"
-  ) {
+  if (!condition?.variableId || typeof condition.variableId !== "string") {
     return undefined;
   }
 
-  if (visibilityCondition.op !== "eq") {
+  if (condition.op !== "eq") {
     return undefined;
   }
 
-  const variableAccess = `variables[${JSON.stringify(visibilityCondition.variableId)}]`;
-  const conditionValue = visibilityCondition.value;
+  const variableAccess = `variables[${JSON.stringify(condition.variableId)}]`;
+  const conditionValue = condition.value;
 
   if (typeof conditionValue === "number" && Number.isFinite(conditionValue)) {
     return `${variableAccess} == ${conditionValue}`;
@@ -235,7 +250,7 @@ export const mergeWhenExpressions = (...expressions) => {
     .join(" && ");
 };
 
-export const splitVisibilityConditionFromWhen = (expression) => {
+export const splitLayoutConditionFromWhen = (expression) => {
   const clauses = splitTopLevelAndExpressions(expression);
   if (clauses.length === 0) {
     return {
@@ -266,7 +281,7 @@ export const splitVisibilityConditionFromWhen = (expression) => {
     }
 
     for (const fixedStateItem of Object.values(
-      getFixedVisibilityStateItems(),
+      getRuntimeLayoutConditionItems(),
     )) {
       const escapedAccessor = fixedStateItem.accessor.replace(
         /[.*+?^${}()|[\]\\]/g,
@@ -340,3 +355,8 @@ export const splitVisibilityConditionFromWhen = (expression) => {
     visibilityCondition,
   };
 };
+
+export const getFixedVisibilityStateItems = getRuntimeLayoutConditionItems;
+export const buildVisibilityConditionExpression =
+  buildLayoutConditionExpression;
+export const splitVisibilityConditionFromWhen = splitLayoutConditionFromWhen;

@@ -287,6 +287,11 @@ const resolveSliderDefaultImageIds = ({ direction, imagesData } = {}) => {
   };
 };
 
+export const toAlphanumericId = (value, fallback = "sliderUpdate") => {
+  const sanitized = String(value || "").replace(/[^a-zA-Z0-9]/g, "");
+  return sanitized || fallback;
+};
+
 const applySliderDirectionChange = ({
   currentItem,
   nextItem,
@@ -539,9 +544,111 @@ const TYPE_RULES = {
   rect: {},
 };
 
-export const toAlphanumericId = (value, fallback = "sliderUpdate") => {
-  const sanitized = String(value || "").replace(/[^a-zA-Z0-9]/g, "");
-  return sanitized || fallback;
+const DEFAULT_PANEL_FEATURES = ["layout", "appearance", "visibility"];
+const PANEL_FEATURES_BY_TYPE = {
+  container: [
+    ...DEFAULT_PANEL_FEATURES,
+    "actions",
+    "childInteraction",
+    "scroll",
+  ],
+  "container-ref-choice-item": [
+    ...DEFAULT_PANEL_FEATURES,
+    "actions",
+    "childInteraction",
+  ],
+  "container-ref-save-load-slot": [
+    ...DEFAULT_PANEL_FEATURES,
+    "actions",
+    "pagination",
+    "childInteraction",
+  ],
+  "container-ref-dialogue-line": [
+    ...DEFAULT_PANEL_FEATURES,
+    "actions",
+    "childInteraction",
+  ],
+  "container-ref-confirm-dialog-ok": [...DEFAULT_PANEL_FEATURES, "actions"],
+  "container-ref-confirm-dialog-cancel": [...DEFAULT_PANEL_FEATURES, "actions"],
+  sprite: [...DEFAULT_PANEL_FEATURES, "images", "actions"],
+  "sprite-ref-save-load-slot-image": [...DEFAULT_PANEL_FEATURES, "images"],
+  text: [...DEFAULT_PANEL_FEATURES, "text", "textStyles", "actions"],
+  "text-revealing-ref-dialogue-content": [
+    ...DEFAULT_PANEL_FEATURES,
+    "text",
+    "textStyles",
+    "revealEffect",
+  ],
+  "text-ref-character-name": [...DEFAULT_PANEL_FEATURES, "textStyles"],
+  "text-ref-choice-item-content": [...DEFAULT_PANEL_FEATURES, "textStyles"],
+  "text-ref-save-load-slot-date": [...DEFAULT_PANEL_FEATURES, "textStyles"],
+  "text-ref-dialogue-line-character-name": [
+    ...DEFAULT_PANEL_FEATURES,
+    "textStyles",
+  ],
+  "text-ref-dialogue-line-content": [...DEFAULT_PANEL_FEATURES, "textStyles"],
+  slider: [...DEFAULT_PANEL_FEATURES, "slider"],
+  rect: [...DEFAULT_PANEL_FEATURES, "actions"],
+  "fragment-ref": [...DEFAULT_PANEL_FEATURES, "fragmentRef"],
+};
+
+const PREVIEW_DEPENDENCIES_BY_TYPE = {
+  "fragment-ref": { fragments: true },
+  "container-ref-choice-item": { choice: true },
+  "text-ref-choice-item-content": { choice: true },
+  "container-ref-save-load-slot": { saveLoad: true },
+  "sprite-ref-save-load-slot-image": { saveLoad: true },
+  "text-ref-save-load-slot-date": { saveLoad: true },
+  "text-revealing-ref-dialogue-content": { dialogue: true },
+  "text-ref-character-name": { dialogue: true },
+  "container-ref-dialogue-line": { dialogue: true },
+  "text-ref-dialogue-line-character-name": { dialogue: true },
+  "text-ref-dialogue-line-content": { dialogue: true },
+  "container-ref-confirm-dialog-ok": { confirmDialog: true },
+  "container-ref-confirm-dialog-cancel": { confirmDialog: true },
+};
+
+const DEFAULT_IMMEDIATE_PERSIST_FIELDS = [
+  "click",
+  "click.",
+  "rightClick",
+  "rightClick.",
+  "change",
+  "change.",
+];
+
+const IMMEDIATE_PERSIST_FIELDS_BY_TYPE = {
+  text: [...DEFAULT_IMMEDIATE_PERSIST_FIELDS, "conditionalTextStyles"],
+  "text-revealing-ref-dialogue-content": [
+    ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    "conditionalTextStyles",
+  ],
+  "text-ref-character-name": [
+    ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    "conditionalTextStyles",
+  ],
+  "text-ref-choice-item-content": [
+    ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    "conditionalTextStyles",
+  ],
+  "text-ref-save-load-slot-date": [
+    ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    "conditionalTextStyles",
+  ],
+  "text-ref-dialogue-line-character-name": [
+    ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    "conditionalTextStyles",
+  ],
+  "text-ref-dialogue-line-content": [
+    ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    "conditionalTextStyles",
+  ],
+  "container-ref-save-load-slot": [
+    ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    "paginationMode",
+    "paginationVariableId",
+    "paginationSize",
+  ],
 };
 
 export const isLayoutEditorTextItemType = (itemType) => {
@@ -573,4 +680,36 @@ export const getLayoutEditorItemCapabilities = (itemType) => {
 export const getLayoutEditorTypeRules = (itemType) => {
   const family = TYPE_FAMILIES[itemType];
   return family ? (TYPE_RULES[family] ?? {}) : {};
+};
+
+export const getLayoutEditorElementDefinition = (itemType) => {
+  return {
+    type: itemType,
+    capabilities: getLayoutEditorItemCapabilities(itemType),
+    typeRules: getLayoutEditorTypeRules(itemType),
+    panelFeatures: PANEL_FEATURES_BY_TYPE[itemType] ?? DEFAULT_PANEL_FEATURES,
+    previewDependencies: PREVIEW_DEPENDENCIES_BY_TYPE[itemType] ?? {},
+    immediatePersistFields:
+      IMMEDIATE_PERSIST_FIELDS_BY_TYPE[itemType] ??
+      DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    isContainer: isLayoutEditorContainerItemType(itemType),
+    isText: isLayoutEditorTextItemType(itemType),
+  };
+};
+
+export const getLayoutEditorCreateDefinition = (
+  createType,
+  { projectResolution } = {},
+) => {
+  const template = createLayoutEditorItemTemplate(createType, {
+    projectResolution,
+  });
+  const definition = getLayoutEditorElementDefinition(template?.type);
+
+  return {
+    createType,
+    template,
+    itemType: template?.type,
+    ...definition,
+  };
 };

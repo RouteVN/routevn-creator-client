@@ -1,6 +1,6 @@
 import { resolveLayoutReferences } from "route-engine-js";
 import { getFirstTextStyleId } from "../../constants/textStyles.js";
-import { toAlphanumericId } from "../layoutEditorTypes.js";
+import { toAlphanumericId } from "../layoutEditorElementRegistry.js";
 import { filterTreeCollection, toHierarchyStructure } from "./tree.js";
 import { normalizeEngineActions } from "./engineActions.js";
 import {
@@ -24,7 +24,7 @@ import {
   buildVisibilityConditionExpression,
   mergeWhenExpressions,
   splitVisibilityConditionFromWhen,
-} from "../layoutVisibilityCondition.js";
+} from "../layoutConditions.js";
 
 const TEXT_CONTENT_BY_TYPE = {
   "text-ref-character-name": "${dialogue.character.name}",

@@ -6,7 +6,7 @@ import {
   buildVisibilityConditionExpression,
   mergeWhenExpressions,
   splitVisibilityConditionFromWhen,
-} from "../../internal/layoutVisibilityCondition.js";
+} from "../../internal/layoutConditions.js";
 
 const ACTION_INTERACTION_TYPES = ["click", "rightClick"];
 const EMPTY_TREE = { items: {}, tree: [] };

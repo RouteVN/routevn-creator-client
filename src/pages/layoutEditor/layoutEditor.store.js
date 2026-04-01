@@ -1,270 +1,18 @@
-import { toFlatItems } from "../../internal/project/tree.js";
-import { parseAndRender } from "jempl";
-import {
-  createLayoutEditorItemTemplate,
-  isLayoutEditorContainerItemType,
-} from "../../internal/layoutEditorTypes.js";
-import { getFragmentLayoutOptions } from "../../internal/layoutFragments.js";
-import { getSystemVariableItems } from "../../internal/systemVariables.js";
-import { getFixedVisibilityStateItems } from "../../internal/layoutVisibilityCondition.js";
 import {
   DEFAULT_PROJECT_RESOLUTION,
-  formatProjectResolutionAspectRatio,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
 import { normalizeLayoutType } from "../../internal/project/layout.js";
 import {
-  collectLayoutPreviewVariableIds,
-  createSaveLoadPreviewSlots,
   findSaveLoadPreviewSettings,
   getSaveLoadPreviewWindow,
-  isSupportedPreviewVariableType,
-  usesSaveLoadPreviewInLayout,
-} from "../../internal/layoutEditorPreviewSupport.js";
-const NORMAL_LIKE_LAYOUT_TYPES = new Set([
-  "normal",
-  "save",
-  "load",
-  "confirmDialog",
-]);
-
-const PREVIEW_BOOLEAN_OPTIONS = [
-  { label: "True", value: true },
-  { label: "False", value: false },
-];
-
-const toPreviewVariableValue = ({ type, value } = {}) => {
-  if (type === "number") {
-    const parsedValue = Number(value);
-    return Number.isFinite(parsedValue) ? parsedValue : 0;
-  }
-
-  if (type === "boolean") {
-    if (typeof value === "boolean") {
-      return value;
-    }
-
-    if (typeof value === "string") {
-      return value === "true";
-    }
-
-    return Boolean(value);
-  }
-
-  return value ?? "";
-};
-
-const getLayoutPreviewVariableItems = ({
-  currentLayoutId,
-  currentLayoutData,
-  currentLayoutType,
-  layoutsData,
-  variablesData = {},
-} = {}) => {
-  const availableVariables = {
-    ...variablesData.items,
-    ...getSystemVariableItems(),
-    ...getFixedVisibilityStateItems(),
-  };
-  const previewVariables = [];
-  const addedVariableIds = new Set();
-
-  const variableIds = collectLayoutPreviewVariableIds({
-    currentLayoutId,
-    currentLayoutData,
-    currentLayoutType,
-    layoutsData,
-    layoutId: currentLayoutId,
-  });
-
-  for (const variableId of variableIds) {
-    if (!variableId || addedVariableIds.has(variableId)) {
-      continue;
-    }
-
-    const variable = availableVariables[variableId];
-    const type = String(variable?.type ?? "string").toLowerCase();
-
-    if (!isSupportedPreviewVariableType(type)) {
-      continue;
-    }
-
-    addedVariableIds.add(variableId);
-    previewVariables.push({
-      id: variableId,
-      name: variable?.name ?? variableId,
-      type,
-      source: variable?.source,
-      description: variable?.description,
-      defaultValue: toPreviewVariableValue({
-        type,
-        value: variable?.value ?? variable?.default,
-      }),
-    });
-  }
-
-  return previewVariables.sort((left, right) =>
-    left.name.localeCompare(right.name),
-  );
-};
-
-const createPreviewVariablesForm = (previewVariableItems = []) => ({
-  title: "Preview",
-  description: "Edit visibility conditions to preview conditional elements",
-  fields: previewVariableItems.map((variable) => {
-    const sourceLabel =
-      variable.source === "system"
-        ? "System variable"
-        : variable.source === "runtime"
-          ? "Runtime state"
-          : "Variable";
-    const descriptionParts = [
-      `${sourceLabel} (${variable.type})`,
-      variable.description,
-    ].filter(Boolean);
-
-    if (variable.type === "boolean") {
-      return {
-        name: variable.id,
-        type: "select",
-        label: variable.name,
-        clearable: false,
-        options: PREVIEW_BOOLEAN_OPTIONS,
-        description: descriptionParts.join(" • "),
-      };
-    }
-
-    return {
-      name: variable.id,
-      type: variable.type === "number" ? "input-number" : "input-text",
-      label: variable.name,
-      description: descriptionParts.join(" • "),
-    };
-  }),
-});
-
-const createPreviewVariableDefaultValues = (
-  previewVariableItems = [],
-  previewVariableValues = {},
-) => {
-  return Object.fromEntries(
-    previewVariableItems.map((variable) => [
-      variable.id,
-      Object.hasOwn(previewVariableValues, variable.id)
-        ? previewVariableValues[variable.id]
-        : variable.defaultValue,
-    ]),
-  );
-};
-
-const createChoiceFormDefaultValues = (choiceDefaultValues = {}) => {
-  const choicesNum = Number(choiceDefaultValues.choicesNum);
-  const choiceCount =
-    Number.isFinite(choicesNum) && choicesNum > 0 ? choicesNum : 0;
-  const defaultValues = {
-    choicesNum: choiceCount,
-  };
-
-  for (let index = 0; index < choiceCount; index += 1) {
-    defaultValues[`choice${index}`] =
-      choiceDefaultValues.choices?.[index] ?? `Choice ${index + 1}`;
-  }
-
-  return defaultValues;
-};
-
-const createNvlFormDefaultValues = (nvlDefaultValues = {}) => {
-  const linesNum = Number(nvlDefaultValues.linesNum);
-  const lineCount = Number.isFinite(linesNum) && linesNum > 0 ? linesNum : 0;
-  const defaultValues = {
-    linesNum: lineCount,
-  };
-
-  for (let index = 0; index < lineCount; index += 1) {
-    defaultValues[`characterName${index}`] =
-      nvlDefaultValues.characterNames?.[index] ?? "";
-    defaultValues[`line${index}`] =
-      nvlDefaultValues.lines?.[index] ??
-      `This is sample NVL line ${index + 1}.`;
-  }
-
-  return defaultValues;
-};
-
-const createSaveLoadFormDefaultValues = (
-  saveLoadDefaultValues = {},
-  slotCount = 0,
-) => {
-  const defaultValues = {
-    slotsNum:
-      Number.isFinite(Number(saveLoadDefaultValues.slotsNum)) &&
-      Number(saveLoadDefaultValues.slotsNum) > 0
-        ? Number(saveLoadDefaultValues.slotsNum)
-        : 0,
-  };
-
-  for (let index = 0; index < slotCount; index += 1) {
-    defaultValues[`saveImageId${index}`] =
-      saveLoadDefaultValues.saveImageIds?.[index];
-    defaultValues[`saveDate${index}`] =
-      saveLoadDefaultValues.saveDates?.[index] ?? "";
-  }
-
-  return defaultValues;
-};
-
-const createSaveLoadImageOptions = (images = {}) => {
-  return Object.entries(images.items ?? {})
-    .filter(([_imageId, item]) => item?.type === "image")
-    .map(([imageId, item]) => ({
-      label: item?.name ?? imageId,
-      value: imageId,
-    }))
-    .sort((left, right) => left.label.localeCompare(right.label));
-};
-
-const hashFormKey = (value = "") => {
-  let hash = 0;
-
-  for (const char of String(value)) {
-    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  }
-
-  return hash.toString(36);
-};
-
-const toLayoutEditorContextMenuItems = (
-  items = [],
-  projectResolution = DEFAULT_PROJECT_RESOLUTION,
-) => {
-  return items.map((item) => {
-    if (!item?.createType) {
-      return item;
-    }
-
-    const { createType, ...nextItem } = item;
-
-    return {
-      ...nextItem,
-      value: {
-        action: "new-child-item",
-        ...createLayoutEditorItemTemplate(createType, {
-          projectResolution,
-        }),
-      },
-    };
-  });
-};
-
-const toLayoutEditorExplorerItems = (items = []) => {
-  return (items ?? []).map((item) => ({
-    ...item,
-    dragOptions: {
-      ...item.dragOptions,
-      canReceiveChildren: isLayoutEditorContainerItemType(item.type),
-    },
-  }));
-};
+} from "../../internal/ui/layoutEditor/preview/index.js";
+import {
+  selectLayoutEditorHasSaveLoadPreview,
+  selectLayoutEditorSaveLoadData,
+  selectLayoutEditorSelectedItem,
+  selectLayoutEditorViewData,
+} from "../../internal/ui/layoutEditor/layoutEditorViewData.js";
 
 export const createInitialState = () => ({
   lastUpdateDate: undefined,
@@ -432,6 +180,47 @@ export const setFontsData = ({ state }, { fontsData } = {}) => {
 
 export const setVariablesData = ({ state }, { variablesData } = {}) => {
   state.variablesData = variablesData;
+};
+
+export const syncRepositoryState = ({ state }, payload = {}) => {
+  const {
+    projectResolution,
+    layoutId,
+    layout,
+    resourceType = "layouts",
+    layoutData,
+    images,
+    layoutsData,
+    textStylesData,
+    colorsData,
+    fontsData,
+    variablesData,
+  } = payload;
+  const nextResourceType = resourceType || layout?.resourceType || "layouts";
+
+  state.projectResolution = requireProjectResolution(
+    projectResolution,
+    "Project resolution",
+  );
+  state.layout =
+    !layout && !layoutId
+      ? undefined
+      : {
+          ...layout,
+          id: layoutId || layout?.id || undefined,
+          resourceType: nextResourceType,
+          layoutType:
+            nextResourceType === "controls"
+              ? normalizeLayoutType(layout?.layoutType)
+              : normalizeLayoutType(layout?.layoutType ?? "normal"),
+        };
+  state.layoutData = layoutData ?? { items: {}, tree: [] };
+  state.images = images ?? { items: {}, tree: [] };
+  state.layoutsData = layoutsData ?? { items: {}, tree: [] };
+  state.textStylesData = textStylesData ?? { items: {}, tree: [] };
+  state.colorsData = colorsData ?? { items: {}, tree: [] };
+  state.fontsData = fontsData ?? { items: {}, tree: [] };
+  state.variablesData = variablesData ?? { items: {}, tree: [] };
 };
 
 export const setKeyboardNavigationTimeoutId = (
@@ -768,23 +557,7 @@ export const selectImages = ({ state }) => state.images;
 export const selectLayoutsData = ({ state }) => state.layoutsData;
 
 export const selectSelectedItem = ({ state }) => {
-  if (!state.selectedItemId) {
-    return undefined;
-  }
-
-  const flatItems = toLayoutEditorExplorerItems(toFlatItems(state.layoutData));
-  const item = flatItems.find((entry) => entry.id === state.selectedItemId);
-  if (!item) {
-    return undefined;
-  }
-
-  return {
-    ...item,
-    anchor: {
-      x: item.anchorX,
-      y: item.anchorY,
-    },
-  };
+  return selectLayoutEditorSelectedItem({ state });
 };
 
 export const selectSelectedItemData = ({ state }) => {
@@ -824,23 +597,7 @@ export const selectChoicesData = ({ state }) => {
 };
 
 export const selectSaveLoadData = ({ state }) => {
-  const saveLoadPreviewSettings = findSaveLoadPreviewSettings({
-    currentLayoutId: state.layout?.id,
-    currentLayoutData: state.layoutData,
-    currentLayoutType: normalizeLayoutType(state.layout?.layoutType),
-    layoutsData: state.layoutsData,
-    layoutId: state.layout?.id,
-  });
-  const slots = createSaveLoadPreviewSlots({
-    saveLoadDefaultValues: state.saveLoadDefaultValues,
-    saveLoadPreviewSettings,
-    previewVariableValues: state.previewVariableValues,
-    variablesData: state.variablesData,
-  });
-
-  return {
-    slots,
-  };
+  return selectLayoutEditorSaveLoadData({ state });
 };
 
 export const selectPreviewVariableValues = ({ state }) => {
@@ -848,18 +605,7 @@ export const selectPreviewVariableValues = ({ state }) => {
 };
 
 export const selectHasSaveLoadPreview = ({ state }) => {
-  const layoutId = state.layout?.id;
-  if (!layoutId) {
-    return false;
-  }
-
-  return usesSaveLoadPreviewInLayout({
-    currentLayoutId: layoutId,
-    currentLayoutData: state.layoutData,
-    currentLayoutType: normalizeLayoutType(state.layout?.layoutType),
-    layoutsData: state.layoutsData,
-    layoutId,
-  });
+  return selectLayoutEditorHasSaveLoadPreview({ state });
 };
 
 export const selectItems = ({ state }) => {
@@ -879,182 +625,5 @@ export const selectVariablesData = ({ state }) => {
 };
 
 export const selectViewData = ({ state, constants }) => {
-  const item = selectSelectedItem({ state });
-  const flatItems = toLayoutEditorExplorerItems(toFlatItems(state.layoutData));
-  const parentIdById = Object.fromEntries(
-    flatItems.map((flatItem) => [flatItem.id, flatItem.parentId]),
-  );
-  const isControlResource = state.layout?.resourceType === "controls";
-  const layoutType = normalizeLayoutType(state.layout?.layoutType);
-  const layout =
-    state.layout === undefined
-      ? undefined
-      : {
-          ...state.layout,
-          layoutType,
-        };
-
-  const parsedContextMenuItems = parseAndRender(
-    isControlResource
-      ? constants.controlContextMenuItems
-      : constants.contextMenuItems,
-    { layoutType },
-  );
-  const parsedEmptyContextMenuItems = parseAndRender(
-    isControlResource
-      ? constants.controlEmptyContextMenuItems
-      : constants.emptyContextMenuItems,
-    { layoutType },
-  );
-  const previewVariableItems = NORMAL_LIKE_LAYOUT_TYPES.has(layoutType)
-    ? getLayoutPreviewVariableItems({
-        currentLayoutId: state.layout?.id,
-        currentLayoutData: state.layoutData,
-        currentLayoutType: layoutType,
-        layoutsData: state.layoutsData,
-        variablesData: state.variablesData,
-      })
-    : [];
-  const imageOptions = createSaveLoadImageOptions(state.images);
-  const fragmentLayoutOptions = getFragmentLayoutOptions(state.layoutsData, {
-    excludeLayoutId: state.layout?.id,
-  });
-  const previewVariablesDefaultValues = createPreviewVariableDefaultValues(
-    previewVariableItems,
-    state.previewVariableValues,
-  );
-  const previewVariablesFormKey =
-    previewVariableItems.length > 0
-      ? previewVariableItems.map((item) => item.id).join("|")
-      : "empty";
-  const hasSaveLoadPreview = usesSaveLoadPreviewInLayout({
-    currentLayoutId: state.layout?.id,
-    currentLayoutData: state.layoutData,
-    currentLayoutType: layoutType,
-    layoutsData: state.layoutsData,
-    layoutId: state.layout?.id,
-  });
-  const saveLoadPreviewSettings = findSaveLoadPreviewSettings({
-    currentLayoutId: state.layout?.id,
-    currentLayoutData: state.layoutData,
-    currentLayoutType: layoutType,
-    layoutsData: state.layoutsData,
-    layoutId: state.layout?.id,
-  });
-  const visibleSaveLoadSlots = createSaveLoadPreviewSlots({
-    saveLoadDefaultValues: state.saveLoadDefaultValues,
-    saveLoadPreviewSettings,
-    previewVariableValues: state.previewVariableValues,
-    variablesData: state.variablesData,
-  });
-  const saveLoadSlotCount = visibleSaveLoadSlots.length;
-  const showSaveLoadSlotsNum =
-    saveLoadPreviewSettings?.paginationMode !== "paginated";
-  const saveLoadSlots = visibleSaveLoadSlots.map((slot) => ({
-    id: `slot-${slot.slotId}`,
-    slotId: slot.slotId,
-  }));
-  const saveLoadFormKey = `save-load-${hashFormKey(
-    JSON.stringify({
-      hasSaveLoadPreview,
-      slotsNum: state.saveLoadDefaultValues.slotsNum,
-      saveLoadSlotCount,
-      visibleSlotIds: visibleSaveLoadSlots.map((slot) => slot.slotId),
-      paginationMode: saveLoadPreviewSettings?.paginationMode ?? "continuous",
-      paginationVariableId: saveLoadPreviewSettings?.paginationVariableId ?? "",
-      paginationSize: saveLoadPreviewSettings?.paginationSize,
-      saveImageIds: state.saveLoadDefaultValues.saveImageIds,
-      saveDates: state.saveLoadDefaultValues.saveDates,
-    }),
-  )}`;
-  let isInsideSaveLoadSlot = false;
-
-  if (item?.id) {
-    let currentParentId = parentIdById[item.id];
-
-    while (currentParentId) {
-      if (
-        state.layoutData?.items?.[currentParentId]?.type ===
-        "container-ref-save-load-slot"
-      ) {
-        isInsideSaveLoadSlot = true;
-        break;
-      }
-
-      currentParentId = parentIdById[currentParentId];
-    }
-  }
-
-  return {
-    item,
-    canvasCursor: state.isDragging ? "all-scroll" : "default",
-    layoutEditPanelKey: `${item?.id}-${state.lastUpdateDate}`,
-    flatItems,
-    selectedItemId: state.selectedItemId,
-    resourceCategory: isControlResource ? "systemConfig" : "userInterface",
-    selectedResourceId: isControlResource ? "controls" : "layout-editor",
-    contextMenuItems: toLayoutEditorContextMenuItems(
-      parsedContextMenuItems,
-      state.projectResolution,
-    ),
-    emptyContextMenuItems: toLayoutEditorContextMenuItems(
-      parsedEmptyContextMenuItems,
-      state.projectResolution,
-    ),
-    dialogueForm: constants.dialogueForm,
-    dialogueDefaultValues: state.dialogueDefaultValues,
-    nvlForm: constants.nvlForm,
-    nvlDefaultValues: createNvlFormDefaultValues(state.nvlDefaultValues),
-    nvlContext: {
-      ...state.nvlDefaultValues,
-    },
-    previewRevealingSpeed: state.previewRevealingSpeed,
-    choiceForm: constants.choiceForm,
-    choiceDefaultValues: createChoiceFormDefaultValues(
-      state.choiceDefaultValues,
-    ),
-    choicesContext: {
-      ...state.choiceDefaultValues,
-    },
-    saveLoadForm: parseAndRender(constants.saveLoadForm, {
-      imageOptions,
-      slots: saveLoadSlots,
-      showSlotsNum: showSaveLoadSlotsNum,
-    }),
-    saveLoadDefaultValues: createSaveLoadFormDefaultValues(
-      {
-        ...state.saveLoadDefaultValues,
-        saveImageIds: visibleSaveLoadSlots.map((slot) => slot.image),
-        saveDates: visibleSaveLoadSlots.map((slot) => slot.date),
-      },
-      saveLoadSlotCount,
-    ),
-    saveLoadContext: {
-      slots: saveLoadSlots,
-      showSlotsNum: showSaveLoadSlotsNum,
-    },
-    saveLoadFormKey,
-    hasSaveLoadPreview,
-    previewVariablesForm: createPreviewVariablesForm(previewVariableItems),
-    previewVariablesDefaultValues,
-    previewVariablesFormKey,
-    hasPreviewVariables: previewVariableItems.length > 0,
-    sliderCreateForm: constants.sliderCreateForm,
-    sliderCreateDialog: state.sliderCreateDialog,
-    sliderCreateImageSelectorDialog: state.sliderCreateImageSelectorDialog,
-    fragmentCreateForm: parseAndRender(constants.fragmentCreateForm, {
-      fragmentLayoutOptions,
-    }),
-    fragmentCreateDialog: state.fragmentCreateDialog,
-    fragmentLayoutOptions,
-    canvasAspectRatio: formatProjectResolutionAspectRatio(
-      state.projectResolution,
-    ),
-    layout,
-    textStylesData: state.textStylesData,
-    variablesData: state.variablesData,
-    layoutsData: state.layoutsData,
-    isInsideSaveLoadSlot,
-    images: state.images,
-  };
+  return selectLayoutEditorViewData({ state, constants });
 };

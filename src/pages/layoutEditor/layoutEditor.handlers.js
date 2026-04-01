@@ -14,14 +14,14 @@ import {
   applyLayoutItemFieldChange,
   applyLayoutItemKeyboardChange,
 } from "../../internal/layoutEditorMutations.js";
-import { createLayoutEditorItemTemplate } from "../../internal/layoutEditorTypes.js";
+import { getLayoutEditorCreateDefinition } from "../../internal/layoutEditorElementRegistry.js";
 import {
   persistLayoutEditorElementUpdate,
   shouldPersistLayoutEditorFieldImmediately,
-  syncLayoutEditorRepositoryState,
 } from "../../internal/layoutEditorPersistence.js";
 import { isFragmentLayout } from "../../internal/project/layout.js";
 import { createLayoutElementsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { createLayoutEditorRepositoryStoreData } from "../../internal/ui/layoutEditor/layoutEditorRepositoryState.js";
 
 const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
@@ -176,12 +176,13 @@ export const handleAfterMount = async (deps) => {
   const payload = getEditorPayload(appService);
   const { layoutId, resourceType } = payload;
   await projectService.ensureRepository();
-  syncLayoutEditorRepositoryState({
-    store: deps.store,
-    repositoryState: projectService.getRepositoryState(),
-    layoutId,
-    resourceType,
-  });
+  deps.store.syncRepositoryState(
+    createLayoutEditorRepositoryStoreData({
+      repositoryState: projectService.getRepositoryState(),
+      layoutId,
+      resourceType,
+    }),
+  );
 
   const { canvas } = refs;
   const projectResolution = deps.store.selectProjectResolution();
@@ -221,12 +222,13 @@ const refreshLayoutEditorData = async (deps, payload = {}) => {
   const { appService, projectService, store, refs } = deps;
   const { layoutId, resourceType } = getEditorPayload(appService);
   await projectService.ensureRepository();
-  syncLayoutEditorRepositoryState({
-    store,
-    repositoryState: projectService.getRepositoryState(),
-    layoutId,
-    resourceType,
-  });
+  store.syncRepositoryState(
+    createLayoutEditorRepositoryStoreData({
+      repositoryState: projectService.getRepositoryState(),
+      layoutId,
+      resourceType,
+    }),
+  );
   if (payload.selectedItemId) {
     store.setSelectedItemId({ itemId: payload.selectedItemId });
     refs.fileExplorer.selectItem({ itemId: payload.selectedItemId });
@@ -267,24 +269,24 @@ export const handleFileExplorerAction = async (deps, payload) => {
     const parentId = payload?._event?.detail?.itemId ?? null;
     const projectResolution = store.selectProjectResolution();
 
-    const slotContainer = createLayoutEditorItemTemplate(
+    const slotContainer = getLayoutEditorCreateDefinition(
       "container-save-load-slot",
       {
         projectResolution,
       },
-    );
-    const slotImage = createLayoutEditorItemTemplate(
+    ).template;
+    const slotImage = getLayoutEditorCreateDefinition(
       "sprite-save-load-slot-image",
       {
         projectResolution,
       },
-    );
-    const slotDate = createLayoutEditorItemTemplate(
+    ).template;
+    const slotDate = getLayoutEditorCreateDefinition(
       "text-save-load-slot-date",
       {
         projectResolution,
       },
-    );
+    ).template;
 
     const createContainerResult = await projectService.createLayoutElement({
       layoutId,
@@ -569,9 +571,9 @@ export const handleSliderCreateFormAction = async (deps, payload) => {
 
   const createType =
     direction === "vertical" ? "slider-vertical" : "slider-horizontal";
-  const baseItem = createLayoutEditorItemTemplate(createType, {
+  const baseItem = getLayoutEditorCreateDefinition(createType, {
     projectResolution: store.selectProjectResolution(),
-  });
+  }).template;
   const nextElementId = nanoid();
   const nextElementData = {
     ...baseItem,
@@ -659,9 +661,9 @@ export const handleFragmentCreateFormAction = async (deps, payload) => {
     layoutId,
     elementId: nextElementId,
     data: {
-      ...createLayoutEditorItemTemplate("fragment-ref", {
+      ...getLayoutEditorCreateDefinition("fragment-ref", {
         projectResolution: store.selectProjectResolution(),
-      }),
+      }).template,
       name: fragmentLayout.name ?? "Fragment",
       fragmentLayoutId,
     },
@@ -749,12 +751,13 @@ async function handleDebouncedUpdate(deps, payload) {
   }
 
   const currentPayload = getEditorPayload(appService);
-  syncLayoutEditorRepositoryState({
-    store: deps.store,
-    repositoryState: projectService.getRepositoryState(),
-    layoutId: currentPayload.layoutId || layoutId,
-    resourceType: currentPayload.resourceType || resourceType,
-  });
+  deps.store.syncRepositoryState(
+    createLayoutEditorRepositoryStoreData({
+      repositoryState: projectService.getRepositoryState(),
+      layoutId: currentPayload.layoutId || layoutId,
+      resourceType: currentPayload.resourceType || resourceType,
+    }),
+  );
 }
 
 const subscriptions = (deps) => {
@@ -835,7 +838,12 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
 
   store.updateSelectedItem({ updatedItem: updatedItem });
 
-  if (shouldPersistLayoutEditorFieldImmediately(detail.name)) {
+  if (
+    shouldPersistLayoutEditorFieldImmediately({
+      name: detail.name,
+      itemType: currentItem.type,
+    })
+  ) {
     await handleDebouncedUpdate(deps, {
       layoutId,
       resourceType,

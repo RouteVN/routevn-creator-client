@@ -38,6 +38,9 @@ Local-first collaboration:
 - Prefer direct values and `??` defaults over verbose string guards like
   `typeof value === "string" && value.length > 0 ? value : null` when the
   data contract is already stable.
+- In Immer-backed store actions, prefer direct mutation of nested state fields
+  over reconstructing nested objects with spread. Direct mutation is the
+  default style for local store updates.
 - Use simple normalization such as `value ?? null` unless real runtime type
   narrowing is required.
 

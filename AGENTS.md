@@ -74,6 +74,7 @@ If you need deeper or broader Rettangoli framework reference material, use
 - Avoid explicit `= null` initialization; use `let value;` when a later assignment is expected.
 - If state already guarantees a value, use it directly instead of re-normalizing with fallback checks.
 - Do not build objects with conditional object-spread patterns such as `...(condition ? { field } : {})` or nested spread-based payload builders. Build a local object and assign fields explicitly.
+- In Immer-backed store actions, prefer direct mutation of nested state fields over recreating nested objects with spread. Write `state.dialog.open = false`, not `state.dialog = { ...state.dialog, open: false }`.
 
 ## Layering
 
