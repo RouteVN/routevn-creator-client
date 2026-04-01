@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { applyLayoutItemFieldChange } from "../../src/internal/layoutEditorMutations.js";
 import {
-  applyLayoutItemDragChange,
-  applyLayoutItemFieldChange,
-  applyLayoutItemKeyboardChange,
-} from "../../src/internal/layoutEditorMutations.js";
+  applyCanvasItemDragChange,
+  applyCanvasItemKeyboardChange,
+} from "../../src/components/layoutEditorCanvas/layoutEditorCanvas.handlers.js";
 
 describe("layoutEditorMutations", () => {
   it("updates nested fields without replacing sibling data", () => {
@@ -156,7 +156,7 @@ describe("layoutEditorMutations", () => {
     };
 
     expect(
-      applyLayoutItemKeyboardChange({
+      applyCanvasItemKeyboardChange({
         item,
         key: "ArrowLeft",
         unit: 3,
@@ -167,7 +167,7 @@ describe("layoutEditorMutations", () => {
     });
 
     expect(
-      applyLayoutItemKeyboardChange({
+      applyCanvasItemKeyboardChange({
         item,
         key: "ArrowDown",
         unit: 5,
@@ -187,7 +187,7 @@ describe("layoutEditorMutations", () => {
       y: 20,
     };
 
-    const updatedItem = applyLayoutItemDragChange({
+    const updatedItem = applyCanvasItemDragChange({
       item,
       dragStartPosition: {
         x: 100,

@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { filter, fromEvent, tap, debounceTime } from "rxjs";
+import { filter, tap, debounceTime } from "rxjs";
 import {
   createCollabRemoteRefreshStream,
   matchesRemoteTargets,
@@ -8,12 +8,7 @@ import {
   getLayoutEditorBackPath,
   resolveLayoutEditorPayload,
 } from "../../internal/layoutEditorRoute.js";
-import { renderLayoutEditorPreview } from "../../internal/layoutEditorPreview.js";
-import {
-  applyLayoutItemDragChange,
-  applyLayoutItemFieldChange,
-  applyLayoutItemKeyboardChange,
-} from "../../internal/layoutEditorMutations.js";
+import { applyLayoutItemFieldChange } from "../../internal/layoutEditorMutations.js";
 import { getLayoutEditorCreateDefinition } from "../../internal/layoutEditorElementRegistry.js";
 import {
   persistLayoutEditorElementUpdate,
@@ -30,13 +25,7 @@ const mountSubscriptions = (deps) => {
 };
 
 const DEBOUNCE_DELAYS = {
-  UPDATE: 500, // Regular updates (forms, etc)
-  KEYBOARD: 1000, // Keyboard final save
-};
-
-const KEYBOARD_UNITS = {
-  NORMAL: 1,
-  FAST: 10, // With shift key
+  UPDATE: 500,
 };
 
 const getResultErrorMessage = (result, fallbackMessage) => {
@@ -104,75 +93,19 @@ const getSliderCreateOwnerConfig = (resourceType, projectService) => {
 const getEditorPayload = (appService) =>
   resolveLayoutEditorPayload(appService.getPayload() || {});
 
-const rerenderLayoutEditorSurface = async (
-  deps,
-  { renderPage = true, clearFirst = false } = {},
-) => {
-  if (renderPage) {
-    deps.render();
-  }
-
-  await renderLayoutEditorPreview(deps, { clearFirst });
+const restartLayoutEditorPreview = (deps) => {
+  deps.refs.layoutEditorCanvas.restartPreview();
 };
 
 export const handleBeforeMount = (deps) => {
   const cleanupSubscriptions = mountSubscriptions(deps);
   return () => {
-    const keyboardNavigationTimeoutId =
-      deps.store.selectKeyboardNavigationTimeoutId();
-    if (keyboardNavigationTimeoutId !== undefined) {
-      clearTimeout(keyboardNavigationTimeoutId);
-      deps.store.clearKeyboardNavigationTimeout();
-    }
     cleanupSubscriptions?.();
   };
 };
 
-/**
- * Schedule a final save after keyboard navigation stops
- * @param {Object} deps - Component dependencies
- * @param {string} itemId - The item ID being edited
- * @param {string} layoutId - The layout ID
- */
-const scheduleKeyboardSave = (deps, itemId, layoutId) => {
-  const { store } = deps;
-  const keyboardNavigationTimeoutId = store.selectKeyboardNavigationTimeoutId();
-  // Clear existing timeout if still navigating
-  if (keyboardNavigationTimeoutId !== undefined) {
-    clearTimeout(keyboardNavigationTimeoutId);
-  }
-
-  const timeoutId = setTimeout(() => {
-    const { subject } = deps;
-
-    // Check if the selected item has changed
-    if (store.selectSelectedItemId() !== itemId) {
-      store.clearKeyboardNavigationTimeout();
-      return;
-    }
-
-    // Final render to ensure bounds are properly updated
-    renderLayoutEditorPreview(deps);
-
-    // Save final position to repository
-    const finalItem = store.selectSelectedItemData();
-    if (finalItem) {
-      subject.dispatch("layoutEditor.updateElement", {
-        layoutId,
-        resourceType: store.selectLayoutResourceType(),
-        selectedItemId: itemId,
-        updatedItem: finalItem,
-      });
-    }
-
-    store.clearKeyboardNavigationTimeout();
-  }, DEBOUNCE_DELAYS.KEYBOARD);
-
-  store.setKeyboardNavigationTimeoutId({ timeoutId });
-};
-
 export const handleAfterMount = async (deps) => {
-  const { appService, projectService, refs, graphicsService } = deps;
+  const { appService, projectService } = deps;
   const payload = getEditorPayload(appService);
   const { layoutId, resourceType } = payload;
   await projectService.ensureRepository();
@@ -183,16 +116,7 @@ export const handleAfterMount = async (deps) => {
       resourceType,
     }),
   );
-
-  const { canvas } = refs;
-  const projectResolution = deps.store.selectProjectResolution();
-  await graphicsService.init({
-    canvas,
-    width: projectResolution.width,
-    height: projectResolution.height,
-  });
-
-  await rerenderLayoutEditorSurface(deps);
+  deps.render();
 };
 
 export const handleBackClick = (deps) => {
@@ -213,7 +137,7 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
     return;
   }
   store.setSelectedItemId({ itemId: itemId });
-  await rerenderLayoutEditorSurface(deps);
+  deps.render();
 };
 
 export const handleAddLayoutClick = handleRenderOnly;
@@ -233,7 +157,7 @@ const refreshLayoutEditorData = async (deps, payload = {}) => {
     store.setSelectedItemId({ itemId: payload.selectedItemId });
     refs.fileExplorer.selectItem({ itemId: payload.selectedItemId });
   }
-  await rerenderLayoutEditorSurface(deps);
+  deps.render();
 };
 
 const {
@@ -411,46 +335,6 @@ export const handleFileExplorerAction = async (deps, payload) => {
 export { handleFileExplorerTargetChanged };
 
 export const handleDataChanged = refreshLayoutEditorData;
-
-export const handleDialogueFormChange = async (deps, payload) => {
-  const { store } = deps;
-  const { name, value: fieldValue } = payload._event.detail;
-
-  store.setDialogueDefaultValue({ name, fieldValue });
-  await rerenderLayoutEditorSurface(deps);
-};
-
-export const handleNvlFormChange = async (deps, payload) => {
-  const { store } = deps;
-  const { name, value: fieldValue } = payload._event.detail;
-
-  store.setNvlDefaultValue({ name, fieldValue });
-  await rerenderLayoutEditorSurface(deps);
-};
-
-export const handleChoiceFormChange = async (deps, payload) => {
-  const { store } = deps;
-  const { name, value: fieldValue } = payload._event.detail;
-
-  store.setChoiceDefaultValue({ name, fieldValue });
-  await rerenderLayoutEditorSurface(deps);
-};
-
-export const handleSaveLoadFormChange = async (deps, payload) => {
-  const { store } = deps;
-  const { name, value: fieldValue } = payload._event.detail;
-
-  store.setSaveLoadDefaultValue({ name, fieldValue });
-  await rerenderLayoutEditorSurface(deps);
-};
-
-export const handlePreviewVariablesFormChange = async (deps, payload) => {
-  const { store } = deps;
-  const { name, value: fieldValue } = payload._event.detail;
-
-  store.setPreviewVariableValue({ name, fieldValue });
-  await rerenderLayoutEditorSurface(deps);
-};
 
 export const handleSliderCreateDialogClose = (deps) => {
   const { store, render } = deps;
@@ -685,49 +569,6 @@ export const handleFragmentCreateFormAction = async (deps, payload) => {
   await refreshLayoutEditorData(deps, { selectedItemId: nextElementId });
 };
 
-export const handlePreviewRevealingSpeedInput = async (deps, payload) => {
-  const { store } = deps;
-  const rawValue =
-    payload._event.detail?.value ??
-    payload._event.currentTarget?.value ??
-    payload._event.target?.value;
-  const value = Number(rawValue);
-
-  store.setPreviewRevealingSpeed({
-    value: Number.isFinite(value) && value > 0 ? value : 50,
-  });
-  await rerenderLayoutEditorSurface(deps, { renderPage: false });
-};
-
-export const handlePlayPreviewClick = async (deps) => {
-  await rerenderLayoutEditorSurface(deps, {
-    renderPage: false,
-    clearFirst: true,
-  });
-};
-
-export const handleArrowKeyDown = async (deps, payload) => {
-  const { store } = deps;
-  const { _event: e } = payload;
-
-  const currentItem = store.selectSelectedItemData();
-  if (!currentItem) {
-    return;
-  }
-
-  const unit = e.shiftKey ? KEYBOARD_UNITS.FAST : KEYBOARD_UNITS.NORMAL;
-  const layoutId = store.selectLayoutId();
-  const updatedItem = applyLayoutItemKeyboardChange({
-    item: currentItem,
-    key: payload._event.key,
-    unit,
-    resize: e.metaKey,
-  });
-  store.updateSelectedItem({ updatedItem: updatedItem });
-  await rerenderLayoutEditorSurface(deps);
-  scheduleKeyboardSave(deps, currentItem.id, layoutId);
-};
-
 /**
  * Handler for debounced element updates (saves to repository)
  * @param {Object} payload - Update payload
@@ -761,8 +602,7 @@ async function handleDebouncedUpdate(deps, payload) {
 }
 
 const subscriptions = (deps) => {
-  const { subject, appService } = deps;
-  const { isInputFocused } = appService;
+  const { subject } = deps;
   return [
     createCollabRemoteRefreshStream({
       deps,
@@ -777,38 +617,6 @@ const subscriptions = (deps) => {
       ]),
       refresh: refreshLayoutEditorData,
     }),
-    fromEvent(window, "keydown").pipe(
-      filter((e) => {
-        const isInput = isInputFocused();
-        if (isInput) {
-          return;
-        }
-        return ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(
-          e.key,
-        );
-      }),
-      tap((e) => {
-        handleArrowKeyDown(deps, { _event: e });
-      }),
-    ),
-    subject.pipe(
-      filter(({ action }) => action === "border-drag-start"),
-      tap(() => {
-        handlePointerUp(deps);
-      }),
-    ),
-    subject.pipe(
-      filter(({ action }) => action === "border-drag-end"),
-      tap(() => {
-        handlePointerDown(deps);
-      }),
-    ),
-    subject.pipe(
-      filter(({ action }) => action === "border-drag-move"),
-      tap(({ payload }) => {
-        handleCanvasMouseMove(deps, payload);
-      }),
-    ),
     subject.pipe(
       filter(({ action }) => action === "layoutEditor.updateElement"),
       debounceTime(DEBOUNCE_DELAYS.UPDATE),
@@ -817,6 +625,49 @@ const subscriptions = (deps) => {
       }),
     ),
   ];
+};
+
+export const handleLayoutEditorCanvasDragUpdate = (deps, payload) => {
+  const updatedItem = payload._event.detail?.updatedItem;
+  if (!updatedItem) {
+    return;
+  }
+
+  deps.store.updateSelectedItem({ updatedItem });
+  deps.render();
+};
+
+export const handleLayoutEditorCanvasUpdate = async (deps, payload) => {
+  const { store } = deps;
+  const updatedItem = payload._event.detail?.updatedItem;
+  if (!updatedItem) {
+    return;
+  }
+
+  const layoutId = store.selectLayoutId();
+  const resourceType = store.selectLayoutResourceType();
+  const selectedItemId = payload._event.detail?.itemId || updatedItem.id;
+
+  store.updateSelectedItem({ updatedItem });
+  deps.render();
+
+  await handleDebouncedUpdate(deps, {
+    layoutId,
+    resourceType,
+    selectedItemId,
+    updatedItem,
+  });
+};
+
+export const handleLayoutEditorPreviewDataChange = (deps, payload) => {
+  deps.store.setPreviewData({
+    previewData: payload._event.detail?.previewData,
+  });
+  deps.render();
+};
+
+export const handleLayoutEditorPreviewPlay = (deps) => {
+  restartLayoutEditorPreview(deps);
 };
 
 export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
@@ -860,70 +711,5 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     });
   }
 
-  await rerenderLayoutEditorSurface(deps);
-};
-
-export const handleCanvasMouseMove = (deps, payload) => {
-  const { store, subject } = deps;
-  if (
-    !payload ||
-    typeof payload.x !== "number" ||
-    typeof payload.y !== "number"
-  ) {
-    return;
-  }
-  const { x, y } = payload;
-
-  const drag = store.selectDragging();
-
-  const item = store.selectSelectedItemData();
-  if (!item) {
-    return;
-  }
-  if (!drag.dragStartPosition) {
-    store.setDragStartPosition({
-      x,
-      y,
-      itemStartX: item.x,
-      itemStartY: item.y,
-    });
-    return;
-  }
-
-  const updatedItem = applyLayoutItemDragChange({
-    item,
-    dragStartPosition: drag.dragStartPosition,
-    x,
-    y,
-  });
-
-  store.updateSelectedItem({ updatedItem: updatedItem });
-  renderLayoutEditorPreview(deps);
-
-  subject.dispatch("layoutEditor.updateElement", {
-    layoutId: store.selectLayoutId(),
-    resourceType: store.selectLayoutResourceType(),
-    selectedItemId: item.id,
-    updatedItem,
-  });
-};
-
-export const handlePointerUp = (deps) => {
-  const { store, render } = deps;
-  const currentItem = store.selectSelectedItemData();
-  if (!currentItem) {
-    return;
-  }
-  store.startDragging({});
-  render();
-};
-
-export const handlePointerDown = (deps) => {
-  const { store, render } = deps;
-  const currentItem = store.selectSelectedItemData();
-  if (!currentItem) {
-    return;
-  }
-  store.stopDragging({ isDragging: false });
-  render();
+  deps.render();
 };

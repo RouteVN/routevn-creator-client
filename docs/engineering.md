@@ -156,6 +156,7 @@ High-level rules:
 - views stay declarative
 - stores hold UI-local state and derived display data
 - handlers orchestrate
+- page `*.store.js` and `*.handlers.js` remain the composition root for a page
 - `src/internal/ui/` owns shared page/store/handler orchestration
 - `src/internal/project/` owns project meaning and invariants
 - `src/internal/project/` stays intentionally merged into a small number of
@@ -165,6 +166,42 @@ High-level rules:
 - `src/deps/services/` owns service behavior and service adapters
 - `src/deps/clients/` owns low-level platform/external clients
 - setup entry points create dependencies
+
+### UI Feature Slice Pattern
+
+For long-lived page workflows, prefer feature slices over growing one large
+page store or handler file.
+
+Good examples:
+
+- canvas interaction
+- preview-state orchestration
+- dialog/create flows
+
+Recommended shape:
+
+```text
+src/internal/ui/<page-or-domain>/<feature>.js
+```
+
+That feature module may own, together in one file:
+
+- initial state
+- store actions
+- selectors
+- handlers
+- RxJS stream/subscription helpers
+
+Use this pattern when those pieces are tightly coupled and splitting them into
+feature-local `*.store.js` and `*.handlers.js` files would only add
+navigation overhead.
+
+Keep these boundaries:
+
+- page `*.store.js` and `*.handlers.js` stay the composition root
+- cross-feature orchestration stays at page level
+- pure project meaning still belongs in `src/internal/project/`
+- service behavior still belongs behind `appService` / `projectService`
 
 ## Repository Schema Alignment
 

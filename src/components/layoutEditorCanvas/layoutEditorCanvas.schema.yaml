@@ -1,0 +1,17 @@
+componentName: rvn-layout-editor-canvas
+propsSchema:
+  type: object
+  properties:
+    resolution:
+      type: object
+      properties:
+        width:
+          type: number
+        height:
+          type: number
+    layoutState:
+      type: object
+    selectedItemId:
+      type: string
+    previewData:
+      type: object

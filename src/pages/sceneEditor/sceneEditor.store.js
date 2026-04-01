@@ -1,7 +1,6 @@
 import {
   buildLayoutElements,
   isFragmentLayout,
-  normalizeLayoutType,
 } from "../../internal/project/layout.js";
 import { toHierarchyStructure } from "../../internal/project/tree.js";
 import { buildSceneEditorLineViewModels } from "../../internal/ui/sceneEditor/lineViewModels.js";
@@ -384,7 +383,7 @@ export const selectLayouts = ({ state }) => {
       processedLayouts[layoutId] = {
         id: layoutId,
         name: layout.name,
-        layoutType: normalizeLayoutType(layout.layoutType),
+        layoutType: layout.layoutType,
         isFragment: isFragmentLayout(layout),
         elements: buildLayoutElements(
           toHierarchyStructure(layout.elements),
@@ -394,7 +393,7 @@ export const selectLayouts = ({ state }) => {
           fonts,
           {
             layoutId,
-            layoutType: normalizeLayoutType(layout.layoutType),
+            layoutType: layout.layoutType,
             layoutsData: layouts,
           },
         ).elements,

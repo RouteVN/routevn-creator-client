@@ -1,7 +1,35 @@
+import { parseAndRender } from "jempl";
+import { getFirstTextStyleId } from "../../constants/textStyles.js";
+import { getVariableOptions } from "../../internal/project/projection.js";
+import { getFragmentLayoutOptions } from "../../internal/layoutFragments.js";
+import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
+import { splitLayoutConditionFromWhen } from "../../internal/layoutConditions.js";
 import { toVisibilityConditionVariableTypeById } from "../../internal/ui/layoutEditPanel/features/index.js";
 import {
+  createChildInteractionDialogDefaults,
+  createChildInteractionForm,
+  createConditionalTextStyleRuleDefaults,
+  createConditionalTextStyleRuleForm,
+  createSaveLoadPaginationDialogDefaults,
+  createSaveLoadPaginationForm,
+  createVisibilityConditionDialogDefaults,
+  createVisibilityConditionForm,
+  getChildInteractionSummary,
+  getConditionalTextStyleRuleSummary,
+  getConditionalTextStylesSummary,
+  getSaveLoadPaginationSummary,
+  getVisibilityConditionSummary,
+  normalizeConditionalTextStyleRules,
+  toVisibilityConditionVariableOptions,
+} from "../../internal/ui/layoutEditPanel/features/index.js";
+import {
+  ACTION_INTERACTION_TYPES,
+  REVEAL_EFFECT_OPTIONS,
+  getLayoutEditPanelSections,
+  getLayoutInteractionActions,
   selectLayoutEditPanelFieldPopoverForm,
-  selectLayoutEditPanelViewData,
+  toInspectorValues,
+  toTextStyleOptions,
 } from "../../internal/ui/layoutEditPanel/layoutEditPanelViewData.js";
 
 const HIDDEN_LAYOUT_ACTION_MODES = new Set();
@@ -312,10 +340,161 @@ export const selectVisibilityConditionVariableTypeById = ({ state, props }) => {
 };
 
 export const selectViewData = ({ state, props, constants }) => {
-  return selectLayoutEditPanelViewData({
-    state,
-    props,
-    constants,
+  const textStyleItems = toTextStyleOptions(state.textStylesData);
+  const firstTextStyleId = getFirstTextStyleId(state.textStylesData);
+  const textStyleItemsWithNone = [
+    { label: "None", value: "" },
+    ...textStyleItems,
+  ];
+  const variableOptions = getVariableOptions(state.variablesData, {
+    type: "number",
+    includeSystem: true,
+  });
+  const fragmentLayoutOptions = getFragmentLayoutOptions(props.layoutsData);
+  const visibilityConditionOptions = {
+    includeSaveDataAvailable: props.isInsideSaveLoadSlot === true,
+  };
+  const visibilityConditionVariableOptions =
+    toVisibilityConditionVariableOptions(
+      state.variablesData,
+      visibilityConditionOptions,
+    );
+  const visibilityConditionVariableTypeById =
+    toVisibilityConditionVariableTypeById(
+      state.variablesData,
+      visibilityConditionOptions,
+    );
+  const variableOptionsWithNone = [
+    { label: "None", value: "" },
+    ...variableOptions,
+  ];
+  const values = toInspectorValues({
+    values: state.values,
+    firstTextStyleId,
     hiddenActionModes: HIDDEN_LAYOUT_ACTION_MODES,
   });
+  const currentVisibilityCondition = splitLayoutConditionFromWhen(
+    values["$when"],
+  ).visibilityCondition;
+  const conditionalTextStyleRules = normalizeConditionalTextStyleRules(
+    values.conditionalTextStyles,
+  );
+  const capabilities =
+    getLayoutEditorElementDefinition(props.itemType)?.capabilities ?? {};
+  const sections = parseAndRender(
+    getLayoutEditPanelSections({
+      constants,
+      resourceType: props.resourceType,
+    }),
+    {
+      itemType: props.itemType,
+      layoutType: props.layoutType,
+      resourceType: props.resourceType,
+      textStyleItems,
+      textStyleItemsWithNone,
+      variableOptions,
+      variableOptionsWithNone,
+      fragmentLayoutOptions,
+      values,
+      paginationSummary: getSaveLoadPaginationSummary({
+        values,
+        variablesData: state.variablesData,
+      }),
+      childInteractionSummary: getChildInteractionSummary(values),
+      conditionalTextStylesSummary: getConditionalTextStylesSummary(
+        conditionalTextStyleRules,
+      ),
+      visibilityConditionSummary: getVisibilityConditionSummary(
+        currentVisibilityCondition,
+        state.variablesData,
+        visibilityConditionOptions,
+      ),
+      canAddSpriteImageVariant:
+        !values.imageId || !values.hoverImageId || !values.clickImageId,
+      showsGapField:
+        capabilities.supportsDirection &&
+        (values.direction === "vertical" || values.direction === "horizontal"),
+      ...capabilities,
+    },
+  );
+  const visibilityConditionDialogDefaults =
+    createVisibilityConditionDialogDefaults(
+      currentVisibilityCondition,
+      visibilityConditionVariableTypeById,
+    );
+  const editingConditionalTextStyleRule =
+    Number.isInteger(state.conditionalTextStylesDialog.editingIndex) &&
+    state.conditionalTextStylesDialog.editingIndex >= 0
+      ? conditionalTextStyleRules[
+          state.conditionalTextStylesDialog.editingIndex
+        ]
+      : undefined;
+  const conditionalTextStyleRuleDefaults =
+    createConditionalTextStyleRuleDefaults(
+      editingConditionalTextStyleRule,
+      visibilityConditionVariableTypeById,
+    );
+  const selectedVisibilityConditionVariableType =
+    state.visibilityConditionDialog.selectedVariableType ??
+    visibilityConditionDialogDefaults.selectedVariableType;
+  const selectedConditionalTextStyleVariableType =
+    state.conditionalTextStylesDialog.selectedVariableType ??
+    conditionalTextStyleRuleDefaults.selectedVariableType;
+
+  return {
+    values: state.values,
+    actionsData: getLayoutInteractionActions(
+      state.values,
+      state.activeInteractionType,
+    ),
+    hiddenSystemActionModes: [...HIDDEN_LAYOUT_ACTION_MODES],
+    config: {
+      sections,
+    },
+    revealEffectOptions: REVEAL_EFFECT_OPTIONS,
+    revealEffectValue: values.revealEffect,
+    popover: state.popover,
+    visibilityConditionDialog: state.visibilityConditionDialog,
+    visibilityConditionDialogDefaults,
+    visibilityConditionDialogForm: createVisibilityConditionForm({
+      hasCondition: !!currentVisibilityCondition?.variableId,
+      variableOptions: visibilityConditionVariableOptions,
+    }),
+    visibilityConditionDialogContext: {
+      selectedVariableType: selectedVisibilityConditionVariableType,
+    },
+    saveLoadPaginationDialog: state.saveLoadPaginationDialog,
+    saveLoadPaginationDialogDefaults:
+      createSaveLoadPaginationDialogDefaults(values),
+    saveLoadPaginationDialogForm: createSaveLoadPaginationForm({
+      variableOptions,
+    }),
+    childInteractionDialog: state.childInteractionDialog,
+    childInteractionDialogDefaults:
+      createChildInteractionDialogDefaults(values),
+    childInteractionDialogForm: createChildInteractionForm(),
+    conditionalTextStylesDialog: state.conditionalTextStylesDialog,
+    conditionalTextStyleItems: conditionalTextStyleRules.map((rule, index) => ({
+      index,
+      summary: getConditionalTextStyleRuleSummary(
+        rule,
+        state.textStylesData,
+        state.variablesData,
+        visibilityConditionOptions,
+        getVisibilityConditionSummary,
+      ),
+      canMoveUp: index > 0,
+      canMoveDown: index < conditionalTextStyleRules.length - 1,
+    })),
+    conditionalTextStyleRuleDefaults,
+    conditionalTextStyleRuleForm: createConditionalTextStyleRuleForm({
+      variableOptions: visibilityConditionVariableOptions,
+      textStyleOptions: textStyleItems,
+    }),
+    conditionalTextStyleRuleDialogContext: {
+      selectedVariableType: selectedConditionalTextStyleVariableType,
+    },
+    imageSelectorDialog: state.imageSelectorDialog,
+    tempSelectedImageId: state.tempSelectedImageId,
+  };
 };

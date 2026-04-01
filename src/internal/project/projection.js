@@ -2,7 +2,6 @@ import {
   buildLayoutElements,
   createLayoutReferenceResources,
   isFragmentLayout,
-  normalizeLayoutType,
   toRouteEngineKeyboardResource,
 } from "./layout.js";
 import { RESOURCE_TYPES } from "./commands.js";
@@ -251,7 +250,7 @@ const projectRepositoryResources = ({ repositoryState }) => {
             `${resourceType === "controls" ? "Control" : "Layout"} ${resourceId}`,
           ...(resourceType === "layouts"
             ? {
-                layoutType: normalizeLayoutType(item?.layoutType || "normal"),
+                layoutType: item?.layoutType || "normal",
                 isFragment: isFragmentLayout(item),
               }
             : {}),
@@ -651,7 +650,7 @@ const constructLayoutResources = (
       fonts,
       {
         layoutId,
-        layoutType: normalizeLayoutType(layout.layoutType),
+        layoutType: layout.layoutType,
         layoutsData: repositoryLayouts,
       },
     );
@@ -660,7 +659,7 @@ const constructLayoutResources = (
     layouts[layoutId] = {
       id: layoutId,
       name: layout.name,
-      layoutType: normalizeLayoutType(layout.layoutType),
+      layoutType: layout.layoutType,
       isFragment: isFragmentLayout(layout),
       elements,
       ...(Array.isArray(layout.transitions)

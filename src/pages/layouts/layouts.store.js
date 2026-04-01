@@ -1,9 +1,6 @@
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
-import {
-  isFragmentLayout,
-  normalizeLayoutType,
-} from "../../internal/project/layout.js";
+import { isFragmentLayout } from "../../internal/project/layout.js";
 
 const layoutForm = {
   title: "Add Layout",
@@ -110,7 +107,7 @@ const buildDetailFields = (item) => {
     return [];
   }
 
-  const layoutType = normalizeLayoutType(item.layoutType);
+  const layoutType = item.layoutType;
   const fields = [
     {
       type: "slot",
@@ -139,7 +136,7 @@ const buildDetailFields = (item) => {
 };
 
 const buildCatalogItem = (item) => {
-  const layoutType = normalizeLayoutType(item.layoutType);
+  const layoutType = item.layoutType;
   const subtitle = isFragmentLayout(item)
     ? `${layoutTypeLabels[layoutType] ?? layoutType ?? ""} / Fragment`
     : (layoutTypeLabels[layoutType] ?? layoutType ?? "");

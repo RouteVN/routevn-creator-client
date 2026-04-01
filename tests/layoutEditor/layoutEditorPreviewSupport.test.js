@@ -3,7 +3,7 @@ import {
   collectLayoutPreviewVariableIds,
   createSaveLoadPreviewSlots,
 } from "../../src/internal/ui/layoutEditor/preview/index.js";
-import { setSaveLoadDefaultValue } from "../../src/pages/layoutEditor/layoutEditor.store.js";
+import { setSaveLoadDefaultValue } from "../../src/components/layoutEditorPreview/layoutEditorPreview.store.js";
 
 describe("layoutEditorPreviewSupport", () => {
   it("collects preview variable ids from fragments and paginated save/load slots", () => {
@@ -109,25 +109,27 @@ describe("layoutEditorPreviewSupport", () => {
 
   it("writes save/load form edits back to the paginated slot window", () => {
     const state = {
-      layout: {
+      layoutState: {
         id: "layout-1",
         layoutType: "save",
-      },
-      layoutData: {
-        items: {
-          slotContainer: {
-            type: "container-ref-save-load-slot",
-            paginationMode: "paginated",
-            paginationVariableId: "_currentSaveLoadPagination",
-            paginationSize: 3,
+        elements: {
+          items: {
+            slotContainer: {
+              type: "container-ref-save-load-slot",
+              paginationMode: "paginated",
+              paginationVariableId: "_currentSaveLoadPagination",
+              paginationSize: 3,
+            },
           },
         },
       },
-      layoutsData: {
-        items: {},
-      },
-      variablesData: {
-        items: {},
+      repositoryState: {
+        layouts: {
+          items: {},
+        },
+        variables: {
+          items: {},
+        },
       },
       previewVariableValues: {
         _currentSaveLoadPagination: 1,

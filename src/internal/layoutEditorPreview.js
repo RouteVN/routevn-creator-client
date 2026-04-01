@@ -264,8 +264,14 @@ export const createLayoutEditorSelectionOverlay = ({
   return [primaryOverlay];
 };
 
-const loadLayoutEditorAssets = async (deps, fileReferences, fontsItems) => {
-  const { projectService, store } = deps;
+export const loadLayoutEditorAssets = async ({
+  projectService,
+  selectCachedFileContent,
+  clearCachedFileContent,
+  cacheFileContent,
+  fileReferences,
+  fontsItems,
+} = {}) => {
   const assets = {};
 
   for (const fileReference of fileReferences) {
@@ -273,12 +279,12 @@ const loadLayoutEditorAssets = async (deps, fileReferences, fontsItems) => {
     const cacheKey = fileId;
     let url;
 
-    const cachedUrl = store.selectCachedFileContent({ fileId: cacheKey });
+    const cachedUrl = selectCachedFileContent?.({ fileId: cacheKey });
     if (cachedUrl) {
       if (!isBlobUrl(cachedUrl)) {
         url = cachedUrl;
       } else {
-        store.clearCachedFileContent({ fileId: cacheKey });
+        clearCachedFileContent?.({ fileId: cacheKey });
       }
     }
 
@@ -286,7 +292,7 @@ const loadLayoutEditorAssets = async (deps, fileReferences, fontsItems) => {
       const result = await projectService.getFileContent(fileId);
       url = result.url;
       if (!isBlobUrl(url)) {
-        store.cacheFileContent({ fileId: cacheKey, url });
+        cacheFileContent?.({ fileId: cacheKey, url });
       }
     }
 
@@ -318,28 +324,17 @@ const loadLayoutEditorAssets = async (deps, fileReferences, fontsItems) => {
   return assets;
 };
 
-export const createLayoutEditorRenderState = (deps) => {
-  const { store, projectService } = deps;
-  const repositoryState = projectService.getRepositoryState();
-  const {
-    layouts,
-    controls,
-    images: { items: imageItems },
-    textStyles: textStylesData,
-    colors: colorsData,
-    fonts: fontsData,
-    variables: variablesData,
-  } = repositoryState;
-  const textStyleItems = textStylesData?.items || {};
-  const colorsItems = colorsData?.items || {};
-  const fontsItems = fontsData?.items || {};
-  const layoutId = store.selectLayoutId();
-  const resourceType = store.selectLayoutResourceType();
-  const storeElements = store.selectItems();
-  const resourceCollection = resourceType === "controls" ? controls : layouts;
-  const layoutElements =
-    storeElements || resourceCollection?.items?.[layoutId]?.elements;
-  const layoutHierarchyStructure = toHierarchyStructure(layoutElements);
+export const createLayoutEditorRenderState = ({
+  layoutState,
+  repositoryState,
+} = {}) => {
+  const imageItems = repositoryState?.images?.items || {};
+  const textStyleItems = repositoryState?.textStyles?.items || {};
+  const colorsItems = repositoryState?.colors?.items || {};
+  const fontsItems = repositoryState?.fonts?.items || {};
+  const layoutHierarchyStructure = toHierarchyStructure(
+    layoutState?.elements ?? { items: {}, tree: [] },
+  );
   const { elements, resources } = buildLayoutElements(
     layoutHierarchyStructure,
     imageItems,
@@ -347,9 +342,9 @@ export const createLayoutEditorRenderState = (deps) => {
     { items: colorsItems },
     { items: fontsItems },
     {
-      layoutId,
-      layoutType: store.selectCurrentLayoutType(),
-      layoutsData: repositoryState.layouts?.items || {},
+      layoutId: layoutState?.id,
+      layoutType: layoutState?.layoutType,
+      layoutsData: repositoryState?.layouts?.items || {},
     },
   );
 
@@ -357,68 +352,37 @@ export const createLayoutEditorRenderState = (deps) => {
     renderStateElements: elements,
     resources,
     fontsItems,
-    variablesData,
   };
 };
 
-export const renderLayoutEditorPreview = async (
-  deps,
-  { clearFirst = false } = {},
-) => {
-  try {
-    const { store, graphicsService } = deps;
-    const { renderStateElements, resources, fontsItems, variablesData } =
-      createLayoutEditorRenderState(deps);
-    const selectedItem = store.selectSelectedItemData();
-    const finalElements = resolveLayoutPreviewElements({
-      elements: renderStateElements,
-      previewData: createLayoutEditorPreviewData({
-        layoutType: store.selectCurrentLayoutType(),
-        variablesData,
-        previewVariableValues: store.selectPreviewVariableValues(),
-        dialogueDefaultValues: store.selectDialogueDefaultValues(),
-        nvlDefaultValues: store.selectNvlDefaultValues(),
-        previewRevealingSpeed: store.selectPreviewRevealingSpeed(),
-        choicesData: store.selectChoicesData(),
-        saveLoadData: store.selectSaveLoadData(),
-        hasSaveLoadPreview: store.selectHasSaveLoadPreview(),
-      }),
-    });
-    const resolvedFinalElements = resolveLayoutReferences(finalElements, {
-      resources,
-    });
-    const fileReferences = extractFileIdsFromRenderState(resolvedFinalElements);
+export const createLayoutEditorRenderedElements = ({
+  layoutState,
+  repositoryState,
+  previewData,
+  selectedItemId,
+  graphicsService,
+} = {}) => {
+  const { renderStateElements, resources } = createLayoutEditorRenderState({
+    layoutState,
+    repositoryState,
+  });
+  const finalElements = resolveLayoutPreviewElements({
+    elements: renderStateElements,
+    previewData,
+  });
+  const resolvedFinalElements = resolveLayoutReferences(finalElements, {
+    resources,
+  });
+  const parsedState = graphicsService.parse({
+    elements: resolvedFinalElements,
+  });
+  const overlayElements = createLayoutEditorSelectionOverlay({
+    parsedElements: parsedState.elements,
+    selectedItemId,
+  });
 
-    if (clearFirst) {
-      graphicsService.render({
-        id: `layout-editor-preview-clear-${Date.now()}`,
-        elements: [],
-        animations: [],
-      });
-    }
-
-    let assets = await loadLayoutEditorAssets(deps, fileReferences, fontsItems);
-    try {
-      await graphicsService.loadAssets(assets);
-    } catch {
-      deps.store.clearFileContentCache();
-      assets = await loadLayoutEditorAssets(deps, fileReferences, fontsItems);
-      await graphicsService.loadAssets(assets);
-    }
-
-    const parsedState = graphicsService.parse({
-      elements: resolvedFinalElements,
-    });
-    const overlayElements = createLayoutEditorSelectionOverlay({
-      parsedElements: parsedState.elements,
-      selectedItemId: selectedItem?.id,
-    });
-
-    graphicsService.render({
-      elements: [...resolvedFinalElements, ...overlayElements],
-      animations: [],
-    });
-  } catch (error) {
-    console.error("[layoutEditor] Failed to render preview", error);
-  }
+  return {
+    elements: [...resolvedFinalElements, ...overlayElements],
+    fileReferences: extractFileIdsFromRenderState(resolvedFinalElements),
+  };
 };

@@ -132,8 +132,6 @@ export const BASE_LAYOUT_KEYBOARD_LABELS = Object.fromEntries(
 
 const isLayoutResource = (item) => item?.type === "layout";
 
-export const normalizeLayoutType = (layoutType) => layoutType;
-
 export const isFragmentLayout = (layout) => layout?.isFragment === true;
 
 export const filterLayoutsByType = (layoutsData, layoutTypes = []) => {
@@ -144,7 +142,7 @@ export const filterLayoutsByType = (layoutsData, layoutTypes = []) => {
       return false;
     }
 
-    return allowedLayoutTypes.has(normalizeLayoutType(item.layoutType));
+    return allowedLayoutTypes.has(item.layoutType);
   });
 };
 
@@ -159,7 +157,7 @@ export const filterLayoutsExcludingTypes = (
       return false;
     }
 
-    return !blockedLayoutTypes.has(normalizeLayoutType(item.layoutType));
+    return !blockedLayoutTypes.has(item.layoutType);
   });
 };
 
@@ -999,7 +997,7 @@ export const buildLayoutElements = (
   };
   const context = {
     layoutId: options.layoutId ?? "preview",
-    layoutType: normalizeLayoutType(options.layoutType),
+    layoutType: options.layoutType,
     textStylesData,
     textStyles,
     layoutsData: options.layoutsData,

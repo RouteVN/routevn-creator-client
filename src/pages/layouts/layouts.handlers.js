@@ -5,10 +5,7 @@ import {
   requireProjectResolution,
   scaleLayoutElementsForProjectResolution,
 } from "../../internal/projectResolution.js";
-import {
-  isFragmentLayout,
-  normalizeLayoutType,
-} from "../../internal/project/layout.js";
+import { isFragmentLayout } from "../../internal/project/layout.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { createLayoutsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
@@ -123,9 +120,7 @@ const createLayoutElement = (id, data) => ({
 });
 
 const createLayoutTemplate = (layoutType, projectResolution) => {
-  const normalizedLayoutType = normalizeLayoutType(layoutType);
-
-  if (normalizedLayoutType === "dialogue") {
+  if (layoutType === "dialogue") {
     const containerId = nanoid();
     const nameTextId = nanoid();
     const contentTextId = nanoid();
@@ -407,14 +402,14 @@ const protectedLayoutTypeLabels = {
 const canDeleteLayoutItem = (layouts, itemId) => {
   const items = Object.values(layouts?.items || {});
   const item = layouts?.items?.[itemId];
-  const layoutType = normalizeLayoutType(item?.layoutType);
+  const layoutType = item?.layoutType;
 
   if (!protectedLayoutTypeLabels[layoutType]) {
     return true;
   }
 
   const matchingCount = items.filter(
-    (layout) => normalizeLayoutType(layout?.layoutType) === layoutType,
+    (layout) => layout?.layoutType === layoutType,
   ).length;
 
   return matchingCount > 1;
@@ -523,9 +518,7 @@ export const handleItemDelete = async (deps, payload) => {
   const { projectService, appService, render } = deps;
   const { itemId } = payload._event.detail;
   const state = projectService.getState();
-  const layoutType = normalizeLayoutType(
-    state.layouts?.items?.[itemId]?.layoutType,
-  );
+  const layoutType = state.layouts?.items?.[itemId]?.layoutType;
 
   const usage = recursivelyCheckResource({
     state,
