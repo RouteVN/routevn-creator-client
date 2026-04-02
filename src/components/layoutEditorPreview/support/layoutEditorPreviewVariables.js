@@ -131,12 +131,15 @@ export const collectLayoutPreviewTargets = (layoutParams = {}) => {
       targets.add(visibilityCondition.target);
     }
 
-    const conditionalTextStyles = Array.isArray(item?.conditionalTextStyles)
-      ? item.conditionalTextStyles
+    const conditionalOverrides = Array.isArray(item?.conditionalOverrides)
+      ? item.conditionalOverrides
       : [];
-    conditionalTextStyles.forEach((rule) => {
-      if (typeof rule?.target === "string" && rule.target.length > 0) {
-        targets.add(rule.target);
+    conditionalOverrides.forEach((rule) => {
+      if (
+        typeof rule?.when?.target === "string" &&
+        rule.when.target.length > 0
+      ) {
+        targets.add(rule.when.target);
       }
     });
 

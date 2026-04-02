@@ -53,7 +53,7 @@ template:
                   - rtgl-view h=48 w=f av=c ph=md:
                       - rtgl-text c=mu-fg: ${item.name} (${item.type})
                   - rtgl-view w=f h=1fg sv pv=md:
-                      - rvn-layout-edit-panel#layoutEditPanel key=${layoutEditPanelKey} layout-type=${layout.layoutType} resource-type=${layout.resourceType} item-type=${item.type} :isInsideSaveLoadSlot=${isInsideSaveLoadSlot} :values=${item} :textStylesData=${textStylesData} :variablesData=${variablesData} :layoutsData=${layoutsData}: null
+                      - rvn-layout-edit-panel#layoutEditPanel key=${layoutEditPanelKey} layout-type=${layout.layoutType} resource-type=${layout.resourceType} item-type=${item.type} :isInsideSaveLoadSlot=${isInsideSaveLoadSlot} :values=${item} :imagesData=${imagesData} :textStylesData=${textStylesData} :variablesData=${variablesData} :layoutsData=${layoutsData}: null
                 $else:
                   - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                       - rtgl-text s=md c=mu-fg: No selection

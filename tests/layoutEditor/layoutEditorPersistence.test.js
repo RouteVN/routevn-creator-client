@@ -21,8 +21,14 @@ describe("layoutEditorPersistence", () => {
     ).toBe(true);
     expect(
       shouldPersistLayoutEditorFieldImmediately({
-        name: "conditionalTextStyles",
+        name: "conditionalOverrides",
         itemType: "text",
+      }),
+    ).toBe(true);
+    expect(
+      shouldPersistLayoutEditorFieldImmediately({
+        name: "conditionalOverrides",
+        itemType: "sprite",
       }),
     ).toBe(true);
     expect(

@@ -3,7 +3,7 @@ import {
   getInteractionActions,
   getInteractionPayload,
 } from "../../../internal/project/interactionPayload.js";
-import { normalizeConditionalTextStyleRules } from "./layoutEditPanelFeatures.js";
+import { normalizeConditionalOverrideRules } from "./layoutEditPanelFeatures.js";
 
 const ACTION_INTERACTION_LABELS = {
   click: "Click",
@@ -86,6 +86,18 @@ export const toTextStyleOptions = (textStylesData = {}) => {
   );
 };
 
+export const toImageOptions = (imagesData = {}) => {
+  const imageGroups = toFlatGroups(imagesData);
+  return imageGroups.flatMap((group) =>
+    group.children
+      .filter((item) => item.type === "image")
+      .map((item) => ({
+        label: item.name,
+        value: item.id,
+      })),
+  );
+};
+
 const getSliderBoundVariableId = (values = {}) => {
   if (values?.type !== "slider") {
     return values?.variableId;
@@ -129,8 +141,8 @@ export const toInspectorValues = ({
     textStyleId: values?.textStyleId || firstTextStyleId || "",
     hoverTextStyleId: values?.hoverTextStyleId ?? "",
     clickTextStyleId: values?.clickTextStyleId ?? "",
-    conditionalTextStyles: normalizeConditionalTextStyleRules(
-      values?.conditionalTextStyles,
+    conditionalOverrides: normalizeConditionalOverrideRules(
+      values?.conditionalOverrides,
     ),
     actions: toLayoutActionItems(values, hiddenActionModes),
   };

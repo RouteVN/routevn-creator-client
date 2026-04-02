@@ -3,10 +3,6 @@ refs:
     eventListeners:
       click:
         handler: handleVisibilityConditionItemClick
-  conditionalTextStyleItem*:
-    eventListeners:
-      click:
-        handler: handleConditionalTextStylesItemClick
   paginationItem*:
     eventListeners:
       click:
@@ -51,10 +47,14 @@ refs:
     eventListeners:
       close:
         handler: handleChildInteractionDialogClose
-  conditionalTextStylesDialog:
+  conditionalOverrideConditionDialog:
     eventListeners:
       close:
-        handler: handleConditionalTextStylesDialogClose
+        handler: handleConditionalOverrideConditionDialogClose
+  conditionalOverrideAttributeDialog:
+    eventListeners:
+      close:
+        handler: handleConditionalOverrideAttributeDialogClose
   saveLoadPaginationForm:
     eventListeners:
       form-action:
@@ -63,36 +63,36 @@ refs:
     eventListeners:
       form-action:
         handler: handleChildInteractionFormAction
-  conditionalTextStyleRuleForm:
+  conditionalOverrideConditionForm:
     eventListeners:
       form-action:
-        handler: handleConditionalTextStyleFormAction
+        handler: handleConditionalOverrideConditionFormAction
       form-change:
-        handler: handleConditionalTextStyleFormChange
-  conditionalTextStyleAdd:
+        handler: handleConditionalOverrideConditionFormChange
+  conditionalOverrideAttributeForm:
+    eventListeners:
+      form-action:
+        handler: handleConditionalOverrideAttributeFormAction
+  conditionalOverrideCondition*:
     eventListeners:
       click:
-        handler: handleConditionalTextStyleAddClick
-  conditionalTextStyleClose:
+        handler: handleConditionalOverrideConditionClick
+  conditionalOverrideDelete*:
     eventListeners:
       click:
-        handler: handleConditionalTextStylesCloseClick
-  conditionalTextStyleRule*:
+        handler: handleConditionalOverrideConditionDeleteClick
+  conditionalOverrideAddAttribute*:
     eventListeners:
       click:
-        handler: handleConditionalTextStyleRuleClick
-  conditionalTextStyleMoveUp*:
+        handler: handleConditionalOverrideAddAttributeClick
+  conditionalOverrideAttribute*:
     eventListeners:
       click:
-        handler: handleConditionalTextStyleMoveUpClick
-  conditionalTextStyleMoveDown*:
+        handler: handleConditionalOverrideAttributeClick
+  conditionalOverrideAttributeDelete*:
     eventListeners:
       click:
-        handler: handleConditionalTextStyleMoveDownClick
-  conditionalTextStyleDelete*:
-    eventListeners:
-      click:
-        handler: handleConditionalTextStyleDeleteClick
+        handler: handleConditionalOverrideAttributeDeleteClick
   sectionAction*:
     eventListeners:
       click:
@@ -182,9 +182,24 @@ template:
                 $elif item.type == 'condition-summary':
                   - rtgl-view#conditionItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                       - rtgl-text s=sm: ${item.value}
-                $elif item.type == 'conditional-text-style-summary':
-                  - rtgl-view#conditionalTextStyleItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
-                      - rtgl-text s=sm: ${item.value}
+                $elif item.type == 'conditional-override-list':
+                  - $if item.items.length > 0:
+                      - $for conditionalItem, k in item.items:
+                          - rtgl-view w=f g=sm p=md bgc=mu br=md bw=xs bc=bg:
+                              - rtgl-view d=h g=sm av=c w=f:
+                                  - rtgl-view#conditionalOverrideCondition${i}x${j}x${k} data-index=${conditionalItem.index} w=1fg p=sm bgc=bg br=md bw=xs bc=bg h-bc=ac cur=pointer:
+                                      - rtgl-text s=sm: ${conditionalItem.summary}
+                                  - rtgl-button#conditionalOverrideDelete${i}x${j}x${k} data-index=${conditionalItem.index} variant=se s=sm: Delete
+                              - $if conditionalItem.attributeItems.length > 0:
+                                  - $for attributeItem, m in conditionalItem.attributeItems:
+                                      - rtgl-view d=h g=sm av=c w=f:
+                                          - rtgl-view#conditionalOverrideAttribute${i}x${j}x${k}x${m} data-index=${conditionalItem.index} data-field-name=${attributeItem.fieldName} w=1fg p=sm bgc=bg br=md bw=xs bc=bg h-bc=ac cur=pointer:
+                                              - rtgl-text s=xs: ${attributeItem.summary}
+                                          - rtgl-button#conditionalOverrideAttributeDelete${i}x${j}x${k}x${m} data-index=${conditionalItem.index} data-field-name=${attributeItem.fieldName} variant=se s=sm: Remove
+                                $else:
+                                  - rtgl-text s=xs c=mu-fg: No attributes yet
+                              - rtgl-view d=h w=f ah=e:
+                                  - rtgl-button#conditionalOverrideAddAttribute${i}x${j}x${k} data-index=${conditionalItem.index} pre=plus s=sm v=gh: Add Attribute
                 $elif item.type == 'pagination-summary':
                   - rtgl-view#paginationItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                       - rtgl-text s=sm: ${item.value}
@@ -205,28 +220,12 @@ template:
   - rtgl-dialog#childInteractionDialog ?open=${childInteractionDialog.open} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-form#childInteractionForm key=${childInteractionDialog.key} :form=${childInteractionDialogForm} :defaultValues=${childInteractionDialogDefaults} w=f: null
-  - rtgl-dialog#conditionalTextStylesDialog ?open=${conditionalTextStylesDialog.open} s=md:
+  - rtgl-dialog#conditionalOverrideConditionDialog ?open=${conditionalOverrideConditionDialog.open} s=md:
       - rtgl-view slot=content g=md:
-          - $if conditionalTextStylesDialog.mode == 'list':
-              - rtgl-text s=md: Conditional Text Styles
-              - $if conditionalTextStyleItems.length > 0:
-                  - $for rule, i in conditionalTextStyleItems:
-                      - rtgl-view d=h g=sm av=c w=f:
-                          - rtgl-view#conditionalTextStyleRule${i} data-index=${rule.index} w=1fg p=md bgc=mu br=md bw=xs bc=bg h-bc=ac cur=pointer:
-                              - rtgl-text s=sm: ${rule.summary}
-                          - rtgl-view#conditionalTextStyleMoveUp${i} data-index=${rule.index} d=h av=c ah=c ph=md h=36 bgc=mu br=md bw=xs bc=bg h-bc=ac cur=pointer:
-                              - rtgl-text s=xs: Up
-                          - rtgl-view#conditionalTextStyleMoveDown${i} data-index=${rule.index} d=h av=c ah=c ph=md h=36 bgc=mu br=md bw=xs bc=bg h-bc=ac cur=pointer:
-                              - rtgl-text s=xs: Down
-                          - rtgl-view#conditionalTextStyleDelete${i} data-index=${rule.index} d=h av=c ah=c ph=md h=36 bgc=mu br=md bw=xs bc=bg h-bc=ac cur=pointer:
-                              - rtgl-text s=xs: Delete
-                $else:
-                  - rtgl-text s=sm c=mu-fg: No conditional text styles
-              - rtgl-view d=h g=sm w=f ah=e:
-                  - rtgl-button#conditionalTextStyleClose variant=se: Close
-                  - rtgl-button#conditionalTextStyleAdd variant=pr: Add Rule
-            $else:
-              - rtgl-form#conditionalTextStyleRuleForm key=${conditionalTextStylesDialog.key} :form=${conditionalTextStyleRuleForm} :defaultValues=${conditionalTextStyleRuleDefaults} :context=${conditionalTextStyleRuleDialogContext} w=f: null
+          - rtgl-form#conditionalOverrideConditionForm key=${conditionalOverrideConditionDialog.key} :form=${conditionalOverrideConditionForm} :defaultValues=${conditionalOverrideConditionDefaults} :context=${conditionalOverrideConditionDialogContext} w=f: null
+  - rtgl-dialog#conditionalOverrideAttributeDialog ?open=${conditionalOverrideAttributeDialog.open} s=md:
+      - rtgl-view slot=content g=md:
+          - rtgl-form#conditionalOverrideAttributeForm key=${conditionalOverrideAttributeDialog.key} :form=${conditionalOverrideAttributeForm} :defaultValues=${conditionalOverrideAttributeDefaults} :context=${conditionalOverrideAttributeDialogContext} w=f: null
   - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open}:
       - rtgl-view slot=content g=md:
           - rvn-image-selector#imageSelector: null

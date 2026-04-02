@@ -618,30 +618,35 @@ const DEFAULT_IMMEDIATE_PERSIST_FIELDS = [
 ];
 
 const IMMEDIATE_PERSIST_FIELDS_BY_TYPE = {
-  text: [...DEFAULT_IMMEDIATE_PERSIST_FIELDS, "conditionalTextStyles"],
+  sprite: [...DEFAULT_IMMEDIATE_PERSIST_FIELDS, "conditionalOverrides"],
+  "sprite-ref-save-load-slot-image": [
+    ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    "conditionalOverrides",
+  ],
+  text: [...DEFAULT_IMMEDIATE_PERSIST_FIELDS, "conditionalOverrides"],
   "text-revealing-ref-dialogue-content": [
     ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
-    "conditionalTextStyles",
+    "conditionalOverrides",
   ],
   "text-ref-character-name": [
     ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
-    "conditionalTextStyles",
+    "conditionalOverrides",
   ],
   "text-ref-choice-item-content": [
     ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
-    "conditionalTextStyles",
+    "conditionalOverrides",
   ],
   "text-ref-save-load-slot-date": [
     ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
-    "conditionalTextStyles",
+    "conditionalOverrides",
   ],
   "text-ref-dialogue-line-character-name": [
     ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
-    "conditionalTextStyles",
+    "conditionalOverrides",
   ],
   "text-ref-dialogue-line-content": [
     ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
-    "conditionalTextStyles",
+    "conditionalOverrides",
   ],
   "container-ref-save-load-slot": [
     ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,

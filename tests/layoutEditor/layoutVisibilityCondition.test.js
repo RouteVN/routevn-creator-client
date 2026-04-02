@@ -156,7 +156,7 @@ describe("layout visibility conditions", () => {
   });
 
   it("compiles ordered conditional text styles into jempl $if overrides", () => {
-    const { elements } = buildLayoutElements(
+    const { elements, resources } = buildLayoutElements(
       [
         {
           id: "text-1",
@@ -173,18 +173,62 @@ describe("layout visibility conditions", () => {
           rotation: 0,
           text: "Hello",
           textStyleId: "base-style",
-          conditionalTextStyles: [
+          conditionalOverrides: [
             {
-              target: "variables.score",
-              op: "eq",
-              value: 10,
-              textStyleId: "score-style",
+              when: {
+                target: "variables.score",
+                op: "eq",
+                value: 10,
+              },
+              set: {
+                textStyleId: "score-style",
+              },
             },
             {
-              target: LINE_COMPLETED_CONDITION_TARGET,
-              op: "eq",
-              value: true,
-              textStyleId: "completed-style",
+              when: {
+                target: LINE_COMPLETED_CONDITION_TARGET,
+                op: "eq",
+                value: true,
+              },
+              set: {
+                textStyleId: "completed-style",
+              },
+            },
+            {
+              when: {
+                target: AUTO_MODE_CONDITION_TARGET,
+                op: "eq",
+                value: true,
+              },
+              set: {
+                hoverTextStyleId: "hover-style",
+                clickTextStyleId: "click-style",
+              },
+            },
+            {
+              when: {
+                target: SKIP_MODE_CONDITION_TARGET,
+                op: "eq",
+                value: false,
+              },
+              set: {
+                textStyle: {
+                  align: "center",
+                },
+              },
+            },
+            {
+              when: {
+                target: SKIP_MODE_CONDITION_TARGET,
+                op: "eq",
+                value: true,
+              },
+              set: {
+                opacity: 0.4,
+                anchorX: 0.5,
+                anchorY: 1,
+                visible: false,
+              },
             },
           ],
         },
@@ -210,6 +254,18 @@ describe("layout visibility conditions", () => {
             fontId: "font-1",
             colorId: "color-1",
           },
+          "hover-style": {
+            id: "hover-style",
+            type: "textStyle",
+            fontId: "font-1",
+            colorId: "color-1",
+          },
+          "click-style": {
+            id: "click-style",
+            type: "textStyle",
+            fontId: "font-1",
+            colorId: "color-1",
+          },
         },
         tree: [],
       },
@@ -219,6 +275,9 @@ describe("layout visibility conditions", () => {
       { layoutId: "layout-1" },
     );
 
+    const conditionalAlignTextStyleId =
+      elements[0]["$if skipMode == false"]?.textStyleId;
+
     expect(elements[0]).toMatchObject({
       "$if variables.score == 10": {
         textStyleId: "score-style",
@@ -226,6 +285,27 @@ describe("layout visibility conditions", () => {
       "$if isLineCompleted == true": {
         textStyleId: "completed-style",
       },
+      "$if autoMode == true": {
+        hover: {
+          textStyleId: "hover-style",
+        },
+        click: {
+          textStyleId: "click-style",
+        },
+      },
+      "$if skipMode == false": {
+        textStyleId: conditionalAlignTextStyleId,
+      },
+      "$if skipMode == true": {
+        alpha: 0.4,
+        anchorX: 0.5,
+        anchorY: 1,
+      },
+      $when: "!(skipMode == true)",
+    });
+
+    expect(resources.textStyles[conditionalAlignTextStyleId]).toMatchObject({
+      align: "center",
     });
   });
 
@@ -257,6 +337,66 @@ describe("layout visibility conditions", () => {
         op: "eq",
         value: false,
       },
+    });
+  });
+
+  it("compiles sprite conditional overrides into jempl $if overrides", () => {
+    const { elements } = buildLayoutElements(
+      [
+        {
+          id: "sprite-1",
+          type: "sprite",
+          name: "Portrait",
+          x: 0,
+          y: 0,
+          width: 128,
+          height: 128,
+          imageId: "base-image",
+          conditionalOverrides: [
+            {
+              when: {
+                target: AUTO_MODE_CONDITION_TARGET,
+                op: "eq",
+                value: true,
+              },
+              set: {
+                opacity: 0.5,
+                imageId: "auto-image",
+                hoverImageId: "hover-image",
+                clickImageId: "click-image",
+              },
+            },
+            {
+              when: {
+                target: SKIP_MODE_CONDITION_TARGET,
+                op: "eq",
+                value: true,
+              },
+              set: {
+                visible: false,
+              },
+            },
+          ],
+        },
+      ],
+      {},
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      {
+        layoutId: "layout-1",
+      },
+    );
+
+    expect(elements[0]).toMatchObject({
+      imageId: "base-image",
+      "$if autoMode == true": {
+        alpha: 0.5,
+        imageId: "auto-image",
+        hoverImageId: "hover-image",
+        clickImageId: "click-image",
+      },
+      $when: "!(skipMode == true)",
     });
   });
 

@@ -7,6 +7,12 @@ import {
   mergeWhenExpressions,
   splitVisibilityConditionFromWhen,
 } from "../../internal/layoutConditions.js";
+import {
+  buildConditionalOverrideSetUpdate,
+  deleteConditionalOverrideSetField,
+  getConditionalOverrideAttributeOptions,
+} from "./support/layoutEditPanelFeatures.js";
+import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
 
 const ACTION_INTERACTION_TYPES = ["click", "rightClick"];
 const EMPTY_TREE = { items: {}, tree: [] };
@@ -62,6 +68,9 @@ export const handleBeforeMount = (deps) => {
   store.setValues({
     values,
   });
+  store.setImagesData({
+    imagesData: props.imagesData || EMPTY_TREE,
+  });
   store.setTextStylesData({
     textStylesData: props.textStylesData || EMPTY_TREE,
   });
@@ -77,6 +86,7 @@ export const handleOnUpdate = (deps, payload) => {
     oldProps?.key === newProps?.key &&
     oldProps?.values === newProps?.values &&
     oldProps?.layoutsData === newProps?.layoutsData &&
+    oldProps?.imagesData === newProps?.imagesData &&
     oldProps?.variablesData === newProps?.variablesData &&
     oldProps?.textStylesData === newProps?.textStylesData
   ) {
@@ -85,6 +95,9 @@ export const handleOnUpdate = (deps, payload) => {
 
   store.setValues({
     values: newProps.values || {},
+  });
+  store.setImagesData({
+    imagesData: newProps.imagesData || EMPTY_TREE,
   });
   store.setTextStylesData({
     textStylesData: newProps.textStylesData || EMPTY_TREE,
@@ -140,12 +153,6 @@ export const handleChildInteractionItemClick = (deps) => {
   render();
 };
 
-export const handleConditionalTextStylesItemClick = (deps) => {
-  const { render, store } = deps;
-  store.openConditionalTextStylesDialog();
-  render();
-};
-
 export const handlePopverFormClose = (deps) => {
   const { render, store } = deps;
   store.closePopoverForm();
@@ -170,9 +177,15 @@ export const handleChildInteractionDialogClose = (deps) => {
   render();
 };
 
-export const handleConditionalTextStylesDialogClose = (deps) => {
+export const handleConditionalOverrideConditionDialogClose = (deps) => {
   const { render, store } = deps;
-  store.closeConditionalTextStylesDialog();
+  store.closeConditionalOverrideConditionDialog();
+  render();
+};
+
+export const handleConditionalOverrideAttributeDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeConditionalOverrideAttributeDialog();
   render();
 };
 
@@ -190,13 +203,13 @@ export const handleVisibilityConditionFormChange = (deps, payload) => {
   render();
 };
 
-export const handleConditionalTextStyleFormChange = (deps, payload) => {
+export const handleConditionalOverrideConditionFormChange = (deps, payload) => {
   const { render, store } = deps;
   const values = payload._event.detail?.values ?? {};
   const targetTypeByTarget =
     store.selectVisibilityConditionTargetTypeByTarget();
 
-  store.setConditionalTextStylesDialogSelectedVariableType({
+  store.setConditionalOverrideConditionDialogSelectedVariableType({
     selectedVariableType: values.target
       ? (targetTypeByTarget?.[values.target] ?? "string")
       : undefined,
@@ -272,6 +285,12 @@ export const handleSectionActionClick = async (deps, payload) => {
       });
       render();
     }
+  } else if (id === "conditionalOverrides") {
+    store.openConditionalOverrideConditionDialog({
+      editingIndex: undefined,
+      selectedVariableType: undefined,
+    });
+    render();
   }
 };
 
@@ -429,96 +448,41 @@ export const handleChildInteractionFormAction = (deps, payload) => {
   render();
 };
 
-const getConditionalTextStyleRules = (store) => {
-  const currentRules = store.selectValues().conditionalTextStyles;
+const getConditionalOverrideRules = (store) => {
+  const currentRules = store.selectValues().conditionalOverrides;
   return Array.isArray(currentRules) ? [...currentRules] : [];
 };
 
-export const handleConditionalTextStyleAddClick = (deps) => {
-  const { render, store } = deps;
-  store.openConditionalTextStyleRuleEditor({
-    editingIndex: undefined,
-    selectedVariableType: undefined,
-  });
-  render();
-};
-
-export const handleConditionalTextStylesCloseClick = (deps) => {
-  const { render, store } = deps;
-  store.closeConditionalTextStylesDialog();
-  render();
-};
-
-export const handleConditionalTextStyleRuleClick = (deps, payload) => {
+export const handleConditionalOverrideConditionClick = (deps, payload) => {
   const { render, store } = deps;
   const index = Number.parseInt(
     payload._event.currentTarget?.dataset?.index,
     10,
   );
-  const rules = getConditionalTextStyleRules(store);
+  const rules = getConditionalOverrideRules(store);
   const rule = Number.isInteger(index) && index >= 0 ? rules[index] : undefined;
   const targetTypeByTarget =
     store.selectVisibilityConditionTargetTypeByTarget();
 
-  store.openConditionalTextStyleRuleEditor({
+  store.openConditionalOverrideConditionDialog({
     editingIndex: Number.isInteger(index) && index >= 0 ? index : undefined,
-    selectedVariableType: rule?.target
-      ? (targetTypeByTarget?.[rule.target] ?? "string")
+    selectedVariableType: rule?.when?.target
+      ? (targetTypeByTarget?.[rule.when.target] ?? "string")
       : undefined,
   });
   render();
 };
 
-const moveConditionalTextStyleRule = (deps, { index, delta } = {}) => {
-  const { render, store } = deps;
-  const parsedIndex = Number.parseInt(index, 10);
-  const rules = getConditionalTextStyleRules(store);
-
-  if (
-    !Number.isInteger(parsedIndex) ||
-    parsedIndex < 0 ||
-    parsedIndex >= rules.length
-  ) {
-    return;
-  }
-
-  const targetIndex = parsedIndex + delta;
-  if (targetIndex < 0 || targetIndex >= rules.length) {
-    return;
-  }
-
-  const nextRules = [...rules];
-  const [movedRule] = nextRules.splice(parsedIndex, 1);
-  nextRules.splice(targetIndex, 0, movedRule);
-
-  applyPanelValueUpdate(deps, {
-    name: "conditionalTextStyles",
-    value: nextRules,
-  });
-  render();
-};
-
-export const handleConditionalTextStyleMoveUpClick = (deps, payload) => {
-  moveConditionalTextStyleRule(deps, {
-    index: payload._event.currentTarget?.dataset?.index,
-    delta: -1,
-  });
-};
-
-export const handleConditionalTextStyleMoveDownClick = (deps, payload) => {
-  moveConditionalTextStyleRule(deps, {
-    index: payload._event.currentTarget?.dataset?.index,
-    delta: 1,
-  });
-};
-
-export const handleConditionalTextStyleDeleteClick = (deps, payload) => {
+export const handleConditionalOverrideConditionDeleteClick = (
+  deps,
+  payload,
+) => {
   const { render, store } = deps;
   const index = Number.parseInt(
     payload._event.currentTarget?.dataset?.index,
     10,
   );
-  const rules = getConditionalTextStyleRules(store);
+  const rules = getConditionalOverrideRules(store);
 
   if (!Number.isInteger(index) || index < 0 || index >= rules.length) {
     return;
@@ -526,19 +490,100 @@ export const handleConditionalTextStyleDeleteClick = (deps, payload) => {
 
   const nextRules = rules.filter((_rule, ruleIndex) => ruleIndex !== index);
   applyPanelValueUpdate(deps, {
-    name: "conditionalTextStyles",
+    name: "conditionalOverrides",
     value: nextRules.length > 0 ? nextRules : undefined,
   });
   render();
 };
 
-export const handleConditionalTextStyleFormAction = (deps, payload) => {
+export const handleConditionalOverrideAddAttributeClick = (deps, payload) => {
+  const { appService, props, render, store } = deps;
+  const index = Number.parseInt(
+    payload._event.currentTarget?.dataset?.index,
+    10,
+  );
+  const rules = getConditionalOverrideRules(store);
+  const rule = Number.isInteger(index) && index >= 0 ? rules[index] : undefined;
+
+  if (!rule) {
+    return;
+  }
+
+  const availableAttributeOptions = getConditionalOverrideAttributeOptions({
+    rule,
+    capabilities:
+      getLayoutEditorElementDefinition(props.itemType)?.capabilities ?? {},
+  });
+
+  if (availableAttributeOptions.length === 0) {
+    appService.showToast("All supported attributes are already added.");
+    return;
+  }
+
+  store.openConditionalOverrideAttributeDialog({
+    editingIndex: index,
+    fieldName: undefined,
+  });
+  render();
+};
+
+export const handleConditionalOverrideAttributeClick = (deps, payload) => {
+  const { render, store } = deps;
+  const index = Number.parseInt(
+    payload._event.currentTarget?.dataset?.index,
+    10,
+  );
+  const fieldName = payload._event.currentTarget?.dataset?.fieldName;
+
+  store.openConditionalOverrideAttributeDialog({
+    editingIndex: Number.isInteger(index) && index >= 0 ? index : undefined,
+    fieldName,
+  });
+  render();
+};
+
+export const handleConditionalOverrideAttributeDeleteClick = (
+  deps,
+  payload,
+) => {
+  const { render, store } = deps;
+  const index = Number.parseInt(
+    payload._event.currentTarget?.dataset?.index,
+    10,
+  );
+  const fieldName = payload._event.currentTarget?.dataset?.fieldName;
+  const rules = getConditionalOverrideRules(store);
+
+  if (
+    !Number.isInteger(index) ||
+    index < 0 ||
+    index >= rules.length ||
+    !fieldName
+  ) {
+    return;
+  }
+
+  const nextRules = [...rules];
+  const nextRule = {
+    ...nextRules[index],
+    set: deleteConditionalOverrideSetField(nextRules[index]?.set, fieldName),
+  };
+  nextRules[index] = nextRule;
+
+  applyPanelValueUpdate(deps, {
+    name: "conditionalOverrides",
+    value: nextRules,
+  });
+  render();
+};
+
+export const handleConditionalOverrideConditionFormAction = (deps, payload) => {
   const { store, render } = deps;
   const detail = payload._event.detail || {};
   const { actionId, values = {} } = detail;
 
   if (actionId === "cancel") {
-    store.showConditionalTextStylesDialogList();
+    store.closeConditionalOverrideConditionDialog();
     render();
     return;
   }
@@ -547,7 +592,7 @@ export const handleConditionalTextStyleFormAction = (deps, payload) => {
     return;
   }
 
-  if (!values.target || !values.textStyleId) {
+  if (!values.target) {
     return;
   }
 
@@ -564,13 +609,16 @@ export const handleConditionalTextStyleFormAction = (deps, payload) => {
   }
 
   const nextRule = {
-    target: values.target,
-    op: values.op ?? "eq",
-    value: conditionValue,
-    textStyleId: values.textStyleId,
+    when: {
+      target: values.target,
+      op: values.op ?? "eq",
+      value: conditionValue,
+    },
+    set: {},
   };
-  const rules = getConditionalTextStyleRules(store);
-  const editingIndex = store.selectConditionalTextStylesDialog().editingIndex;
+  const rules = getConditionalOverrideRules(store);
+  const editingIndex =
+    store.selectConditionalOverrideConditionDialog().editingIndex;
   const nextRules = [...rules];
 
   if (
@@ -578,16 +626,66 @@ export const handleConditionalTextStyleFormAction = (deps, payload) => {
     editingIndex >= 0 &&
     editingIndex < nextRules.length
   ) {
-    nextRules[editingIndex] = nextRule;
+    nextRules[editingIndex] = {
+      ...nextRules[editingIndex],
+      when: nextRule.when,
+    };
   } else {
     nextRules.push(nextRule);
   }
 
   applyPanelValueUpdate(deps, {
-    name: "conditionalTextStyles",
+    name: "conditionalOverrides",
     value: nextRules,
   });
-  store.showConditionalTextStylesDialogList();
+  store.closeConditionalOverrideConditionDialog();
+  render();
+};
+
+export const handleConditionalOverrideAttributeFormAction = (deps, payload) => {
+  const { store, render } = deps;
+  const detail = payload._event.detail || {};
+  const { actionId, values = {} } = detail;
+
+  if (actionId === "cancel") {
+    store.closeConditionalOverrideAttributeDialog();
+    render();
+    return;
+  }
+
+  if (actionId !== "submit") {
+    return;
+  }
+
+  if (!values.fieldName) {
+    return;
+  }
+
+  const dialog = store.selectConditionalOverrideAttributeDialog();
+  const rules = getConditionalOverrideRules(store);
+  const editingIndex = dialog.editingIndex;
+  if (
+    !Number.isInteger(editingIndex) ||
+    editingIndex < 0 ||
+    editingIndex >= rules.length
+  ) {
+    return;
+  }
+
+  const nextRules = [...rules];
+  nextRules[editingIndex] = {
+    ...nextRules[editingIndex],
+    set: buildConditionalOverrideSetUpdate(
+      nextRules[editingIndex]?.set,
+      values,
+    ),
+  };
+
+  applyPanelValueUpdate(deps, {
+    name: "conditionalOverrides",
+    value: nextRules,
+  });
+  store.closeConditionalOverrideAttributeDialog();
   render();
 };
 

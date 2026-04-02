@@ -8,18 +8,21 @@ import { toVisibilityConditionTargetTypeByTarget } from "./support/layoutEditPan
 import {
   createChildInteractionDialogDefaults,
   createChildInteractionForm,
-  createConditionalTextStyleRuleDefaults,
-  createConditionalTextStyleRuleForm,
+  createConditionalOverrideAttributeDefaults,
+  createConditionalOverrideAttributeForm,
+  createConditionalOverrideConditionDefaults,
+  createConditionalOverrideConditionForm,
   createSaveLoadPaginationDialogDefaults,
   createSaveLoadPaginationForm,
   createVisibilityConditionDialogDefaults,
   createVisibilityConditionForm,
   getChildInteractionSummary,
-  getConditionalTextStyleRuleSummary,
-  getConditionalTextStylesSummary,
+  getConditionalOverrideAttributeOptions,
+  getConditionalOverrideSummary,
   getSaveLoadPaginationSummary,
   getVisibilityConditionSummary,
-  normalizeConditionalTextStyleRules,
+  normalizeConditionalOverrideRules,
+  toConditionalOverrideAttributeItems,
   toVisibilityConditionTargetOptions,
 } from "./support/layoutEditPanelFeatures.js";
 import {
@@ -28,6 +31,7 @@ import {
   getLayoutEditPanelSections,
   getLayoutInteractionActions,
   selectLayoutEditPanelFieldPopoverForm,
+  toImageOptions,
   toInspectorValues,
   toTextStyleOptions,
 } from "./support/layoutEditPanelViewData.js";
@@ -80,13 +84,19 @@ export const createInitialState = () => {
       open: false,
       key: 0,
     },
-    conditionalTextStylesDialog: {
+    conditionalOverrideConditionDialog: {
       open: false,
       key: 0,
-      mode: "list",
       editingIndex: undefined,
       selectedVariableType: undefined,
     },
+    conditionalOverrideAttributeDialog: {
+      open: false,
+      key: 0,
+      editingIndex: undefined,
+      fieldName: undefined,
+    },
+    imagesData: { tree: [], items: {} },
     textStylesData: { tree: [], items: {} },
     variablesData: { tree: [], items: {} },
     values: createDefaultValues(),
@@ -200,35 +210,23 @@ export const closeChildInteractionDialog = ({ state }, _payload = {}) => {
   state.childInteractionDialog.open = false;
 };
 
-export const openConditionalTextStylesDialog = ({ state }, _payload = {}) => {
-  state.conditionalTextStylesDialog.open = true;
-  state.conditionalTextStylesDialog.mode = "list";
-  state.conditionalTextStylesDialog.editingIndex = undefined;
-};
-
-export const closeConditionalTextStylesDialog = ({ state }, _payload = {}) => {
-  state.conditionalTextStylesDialog.open = false;
-  state.conditionalTextStylesDialog.mode = "list";
-  state.conditionalTextStylesDialog.editingIndex = undefined;
-};
-
-export const openConditionalTextStyleRuleEditor = (
+export const openConditionalOverrideConditionDialog = (
   { state },
   { editingIndex, selectedVariableType } = {},
 ) => {
-  state.conditionalTextStylesDialog.open = true;
-  state.conditionalTextStylesDialog.mode = "edit";
-  state.conditionalTextStylesDialog.key += 1;
-  state.conditionalTextStylesDialog.editingIndex = editingIndex;
-  state.conditionalTextStylesDialog.selectedVariableType = selectedVariableType;
+  state.conditionalOverrideConditionDialog.open = true;
+  state.conditionalOverrideConditionDialog.key += 1;
+  state.conditionalOverrideConditionDialog.editingIndex = editingIndex;
+  state.conditionalOverrideConditionDialog.selectedVariableType =
+    selectedVariableType;
 };
 
-export const showConditionalTextStylesDialogList = (
+export const closeConditionalOverrideConditionDialog = (
   { state },
   _payload = {},
 ) => {
-  state.conditionalTextStylesDialog.mode = "list";
-  state.conditionalTextStylesDialog.editingIndex = undefined;
+  state.conditionalOverrideConditionDialog.open = false;
+  state.conditionalOverrideConditionDialog.editingIndex = undefined;
 };
 
 export const closeVisibilityConditionDialog = ({ state }, _payload = {}) => {
@@ -243,12 +241,31 @@ export const setVisibilityConditionDialogSelectedVariableType = (
     selectedVariableType ?? "string";
 };
 
-export const setConditionalTextStylesDialogSelectedVariableType = (
+export const setConditionalOverrideConditionDialogSelectedVariableType = (
   { state },
   { selectedVariableType } = {},
 ) => {
-  state.conditionalTextStylesDialog.selectedVariableType =
+  state.conditionalOverrideConditionDialog.selectedVariableType =
     selectedVariableType ?? "string";
+};
+
+export const openConditionalOverrideAttributeDialog = (
+  { state },
+  { editingIndex, fieldName } = {},
+) => {
+  state.conditionalOverrideAttributeDialog.open = true;
+  state.conditionalOverrideAttributeDialog.key += 1;
+  state.conditionalOverrideAttributeDialog.editingIndex = editingIndex;
+  state.conditionalOverrideAttributeDialog.fieldName = fieldName;
+};
+
+export const closeConditionalOverrideAttributeDialog = (
+  { state },
+  _payload = {},
+) => {
+  state.conditionalOverrideAttributeDialog.open = false;
+  state.conditionalOverrideAttributeDialog.editingIndex = undefined;
+  state.conditionalOverrideAttributeDialog.fieldName = undefined;
 };
 
 export const selectFieldPopoverForm = ({ constants, props }, { name } = {}) => {
@@ -297,6 +314,10 @@ export const setTextStylesData = ({ state }, { textStylesData } = {}) => {
   state.textStylesData = textStylesData;
 };
 
+export const setImagesData = ({ state }, { imagesData } = {}) => {
+  state.imagesData = imagesData;
+};
+
 export const setVariablesData = ({ state }, { variablesData } = {}) => {
   state.variablesData = variablesData;
 };
@@ -329,8 +350,12 @@ export const selectChildInteractionDialog = ({ state }) => {
   return state.childInteractionDialog;
 };
 
-export const selectConditionalTextStylesDialog = ({ state }) => {
-  return state.conditionalTextStylesDialog;
+export const selectConditionalOverrideConditionDialog = ({ state }) => {
+  return state.conditionalOverrideConditionDialog;
+};
+
+export const selectConditionalOverrideAttributeDialog = ({ state }) => {
+  return state.conditionalOverrideAttributeDialog;
 };
 
 export const selectVisibilityConditionTargetTypeByTarget = ({
@@ -344,6 +369,7 @@ export const selectVisibilityConditionTargetTypeByTarget = ({
 
 export const selectViewData = ({ state, props, constants }) => {
   const textStyleItems = toTextStyleOptions(state.textStylesData);
+  const imageItems = toImageOptions(state.imagesData);
   const firstTextStyleId = getFirstTextStyleId(state.textStylesData);
   const textStyleItemsWithNone = [
     { label: "None", value: "" },
@@ -378,8 +404,24 @@ export const selectViewData = ({ state, props, constants }) => {
   const currentVisibilityCondition = splitLayoutConditionFromWhen(
     values["$when"],
   ).visibilityCondition;
-  const conditionalTextStyleRules = normalizeConditionalTextStyleRules(
-    values.conditionalTextStyles,
+  const conditionalOverrideRules = normalizeConditionalOverrideRules(
+    values.conditionalOverrides,
+  );
+  const conditionalOverrideItems = conditionalOverrideRules.map(
+    (rule, index) => ({
+      index,
+      summary: getConditionalOverrideSummary(
+        rule,
+        state.variablesData,
+        visibilityConditionOptions,
+        getVisibilityConditionSummary,
+      ),
+      attributeItems: toConditionalOverrideAttributeItems(
+        rule,
+        state.textStylesData,
+        state.imagesData,
+      ),
+    }),
   );
   const capabilities =
     getLayoutEditorElementDefinition(props.itemType)?.capabilities ?? {};
@@ -403,9 +445,7 @@ export const selectViewData = ({ state, props, constants }) => {
         variablesData: state.variablesData,
       }),
       childInteractionSummary: getChildInteractionSummary(values),
-      conditionalTextStylesSummary: getConditionalTextStylesSummary(
-        conditionalTextStyleRules,
-      ),
+      conditionalOverrideItems,
       visibilityConditionSummary: getVisibilityConditionSummary(
         currentVisibilityCondition,
         state.variablesData,
@@ -424,24 +464,43 @@ export const selectViewData = ({ state, props, constants }) => {
       currentVisibilityCondition,
       visibilityConditionTargetTypeByTarget,
     );
-  const editingConditionalTextStyleRule =
-    Number.isInteger(state.conditionalTextStylesDialog.editingIndex) &&
-    state.conditionalTextStylesDialog.editingIndex >= 0
-      ? conditionalTextStyleRules[
-          state.conditionalTextStylesDialog.editingIndex
+  const editingConditionalOverrideRule =
+    Number.isInteger(state.conditionalOverrideConditionDialog.editingIndex) &&
+    state.conditionalOverrideConditionDialog.editingIndex >= 0
+      ? conditionalOverrideRules[
+          state.conditionalOverrideConditionDialog.editingIndex
         ]
       : undefined;
-  const conditionalTextStyleRuleDefaults =
-    createConditionalTextStyleRuleDefaults(
-      editingConditionalTextStyleRule,
+  const conditionalOverrideConditionDefaults =
+    createConditionalOverrideConditionDefaults(
+      editingConditionalOverrideRule,
       visibilityConditionTargetTypeByTarget,
+    );
+  const editingConditionalOverrideAttributeRule =
+    Number.isInteger(state.conditionalOverrideAttributeDialog.editingIndex) &&
+    state.conditionalOverrideAttributeDialog.editingIndex >= 0
+      ? conditionalOverrideRules[
+          state.conditionalOverrideAttributeDialog.editingIndex
+        ]
+      : undefined;
+  const conditionalOverrideAttributeOptions =
+    getConditionalOverrideAttributeOptions({
+      rule: editingConditionalOverrideAttributeRule,
+      includeFieldName: state.conditionalOverrideAttributeDialog.fieldName,
+      capabilities,
+    });
+  const conditionalOverrideAttributeDefaults =
+    createConditionalOverrideAttributeDefaults(
+      editingConditionalOverrideAttributeRule,
+      state.conditionalOverrideAttributeDialog.fieldName,
+      conditionalOverrideAttributeOptions,
     );
   const selectedVisibilityConditionVariableType =
     state.visibilityConditionDialog.selectedVariableType ??
     visibilityConditionDialogDefaults.selectedVariableType;
-  const selectedConditionalTextStyleVariableType =
-    state.conditionalTextStylesDialog.selectedVariableType ??
-    conditionalTextStyleRuleDefaults.selectedVariableType;
+  const selectedConditionalOverrideVariableType =
+    state.conditionalOverrideConditionDialog.selectedVariableType ??
+    conditionalOverrideConditionDefaults.selectedVariableType;
 
   return {
     values: state.values,
@@ -475,26 +534,30 @@ export const selectViewData = ({ state, props, constants }) => {
     childInteractionDialogDefaults:
       createChildInteractionDialogDefaults(values),
     childInteractionDialogForm: createChildInteractionForm(),
-    conditionalTextStylesDialog: state.conditionalTextStylesDialog,
-    conditionalTextStyleItems: conditionalTextStyleRules.map((rule, index) => ({
-      index,
-      summary: getConditionalTextStyleRuleSummary(
-        rule,
-        state.textStylesData,
-        state.variablesData,
-        visibilityConditionOptions,
-        getVisibilityConditionSummary,
-      ),
-      canMoveUp: index > 0,
-      canMoveDown: index < conditionalTextStyleRules.length - 1,
-    })),
-    conditionalTextStyleRuleDefaults,
-    conditionalTextStyleRuleForm: createConditionalTextStyleRuleForm({
+    conditionalOverrideConditionDialog:
+      state.conditionalOverrideConditionDialog,
+    conditionalOverrideItems,
+    conditionalOverrideConditionDefaults,
+    conditionalOverrideConditionForm: createConditionalOverrideConditionForm({
       targetOptions: visibilityConditionTargetOptions,
-      textStyleOptions: textStyleItems,
+      submitLabel: editingConditionalOverrideRule ? "Save" : "Create",
     }),
-    conditionalTextStyleRuleDialogContext: {
-      selectedVariableType: selectedConditionalTextStyleVariableType,
+    conditionalOverrideConditionDialogContext: {
+      selectedVariableType: selectedConditionalOverrideVariableType,
+    },
+    conditionalOverrideAttributeDialog:
+      state.conditionalOverrideAttributeDialog,
+    conditionalOverrideAttributeDefaults,
+    conditionalOverrideAttributeForm: createConditionalOverrideAttributeForm({
+      attributeOptions: conditionalOverrideAttributeOptions,
+      textStyleOptions: textStyleItems,
+      imageOptions: imageItems,
+      submitLabel: state.conditionalOverrideAttributeDialog.fieldName
+        ? "Save"
+        : "Add",
+    }),
+    conditionalOverrideAttributeDialogContext: {
+      hasAttributeOptions: conditionalOverrideAttributeOptions.length > 0,
     },
     imageSelectorDialog: state.imageSelectorDialog,
     tempSelectedImageId: state.tempSelectedImageId,

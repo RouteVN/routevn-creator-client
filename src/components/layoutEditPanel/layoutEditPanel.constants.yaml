@@ -256,9 +256,6 @@ layoutSections:
         name: clickTextStyleId
         value: "${values.clickTextStyleId}"
         options: "${textStyleItemsWithNone}"
-      - type: conditional-text-style-summary
-        name: conditionalTextStyles
-        value: "${conditionalTextStylesSummary}"
   - "$when": "supportsTextAlignment"
     label: Text Alignment
     items:
@@ -299,6 +296,13 @@ layoutSections:
     items:
       - type: list-item
         items: "${values.actions}"
+  - "$when": "supportsTextStyles || supportsSpriteImages"
+    id: conditionalOverrides
+    label: Conditional
+    labelAction: plus
+    items:
+      - type: conditional-override-list
+        items: "${conditionalOverrideItems}"
 
 controlSections:
   - label: Position

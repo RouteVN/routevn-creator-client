@@ -295,6 +295,190 @@ const ensureNodeTextStyleId = ({
   return derivedId;
 };
 
+const buildConditionalOverrideTextStyleId = ({
+  context,
+  node,
+  rule,
+  baseTextStyleId,
+  variant,
+}) => {
+  const hasTextStyleId =
+    typeof rule?.set?.textStyleId === "string" &&
+    rule.set.textStyleId.length > 0;
+  const hasTextStyleAlign =
+    typeof rule?.set?.textStyle?.align === "string" &&
+    rule.set.textStyle.align.length > 0;
+
+  if (!hasTextStyleId && !hasTextStyleAlign) {
+    return undefined;
+  }
+
+  return ensureNodeTextStyleId({
+    textStyles: context.textStyles,
+    textStylesData: context.textStylesData,
+    layoutId: context.layoutId,
+    node: {
+      ...node,
+      textStyle: {
+        ...node.textStyle,
+        ...rule?.set?.textStyle,
+      },
+    },
+    textStyleId: hasTextStyleId ? rule.set.textStyleId : baseTextStyleId,
+    variant,
+  });
+};
+
+const applyConditionalVisibilityOverride = (
+  currentWhenExpression,
+  expression,
+  visible,
+) => {
+  if (typeof visible !== "boolean") {
+    return currentWhenExpression;
+  }
+
+  if (visible === true) {
+    return currentWhenExpression
+      ? `(${expression}) || (${currentWhenExpression})`
+      : currentWhenExpression;
+  }
+
+  return currentWhenExpression
+    ? `!(${expression}) && (${currentWhenExpression})`
+    : `!(${expression})`;
+};
+
+const applyConditionalOverrides = ({ element, node, context }) => {
+  const conditionalOverrides = Array.isArray(node.conditionalOverrides)
+    ? node.conditionalOverrides
+    : [];
+
+  if (conditionalOverrides.length === 0) {
+    return element;
+  }
+
+  const nextElement = {
+    ...element,
+  };
+  let conditionalWhenExpression = nextElement["$when"];
+
+  conditionalOverrides.forEach((rule, index) => {
+    if (!rule || typeof rule !== "object" || !rule.when || !rule.set) {
+      return;
+    }
+
+    const expression = buildVisibilityConditionExpression(rule.when);
+    if (!expression) {
+      return;
+    }
+
+    const nextConditionalOverride = {};
+
+    const conditionalTextStyleId = buildConditionalOverrideTextStyleId({
+      context,
+      node,
+      rule,
+      baseTextStyleId: node.textStyleId,
+      variant: `conditional-${index}-base`,
+    });
+
+    if (conditionalTextStyleId) {
+      nextConditionalOverride.textStyleId = conditionalTextStyleId;
+    }
+
+    if (
+      typeof rule.set.hoverTextStyleId === "string" &&
+      rule.set.hoverTextStyleId.length > 0
+    ) {
+      const conditionalHoverTextStyleId = ensureNodeTextStyleId({
+        textStyles: context.textStyles,
+        textStylesData: context.textStylesData,
+        layoutId: context.layoutId,
+        node,
+        textStyleId: rule.set.hoverTextStyleId,
+        variant: `conditional-${index}-hover`,
+      });
+
+      if (conditionalHoverTextStyleId) {
+        nextConditionalOverride.hover = {
+          textStyleId: conditionalHoverTextStyleId,
+        };
+      }
+    }
+
+    if (
+      typeof rule.set.clickTextStyleId === "string" &&
+      rule.set.clickTextStyleId.length > 0
+    ) {
+      const conditionalClickTextStyleId = ensureNodeTextStyleId({
+        textStyles: context.textStyles,
+        textStylesData: context.textStylesData,
+        layoutId: context.layoutId,
+        node,
+        textStyleId: rule.set.clickTextStyleId,
+        variant: `conditional-${index}-click`,
+      });
+
+      if (conditionalClickTextStyleId) {
+        nextConditionalOverride.click = {
+          textStyleId: conditionalClickTextStyleId,
+        };
+      }
+    }
+
+    if (typeof rule.set.imageId === "string" && rule.set.imageId.length > 0) {
+      nextConditionalOverride.imageId = rule.set.imageId;
+    }
+
+    if (
+      typeof rule.set.hoverImageId === "string" &&
+      rule.set.hoverImageId.length > 0
+    ) {
+      nextConditionalOverride.hoverImageId = rule.set.hoverImageId;
+    }
+
+    if (
+      typeof rule.set.clickImageId === "string" &&
+      rule.set.clickImageId.length > 0
+    ) {
+      nextConditionalOverride.clickImageId = rule.set.clickImageId;
+    }
+
+    if (typeof rule.set.opacity === "number") {
+      nextConditionalOverride.alpha = rule.set.opacity;
+    }
+
+    if (Number.isFinite(rule.set.anchorX)) {
+      nextConditionalOverride.anchorX = rule.set.anchorX;
+    }
+
+    if (Number.isFinite(rule.set.anchorY)) {
+      nextConditionalOverride.anchorY = rule.set.anchorY;
+    }
+
+    conditionalWhenExpression = applyConditionalVisibilityOverride(
+      conditionalWhenExpression,
+      expression,
+      rule.set.visible,
+    );
+
+    if (Object.keys(nextConditionalOverride).length === 0) {
+      return;
+    }
+
+    nextElement[`$if ${expression}`] = nextConditionalOverride;
+  });
+
+  if (conditionalWhenExpression) {
+    nextElement["$when"] = conditionalWhenExpression;
+  } else {
+    delete nextElement["$when"];
+  }
+
+  return nextElement;
+};
+
 const normalizeSliderChange = (change, sliderId) => {
   const interactionPayload = getInteractionPayload(change);
   const updateVariable = interactionPayload?.actions?.updateVariable;
@@ -579,43 +763,6 @@ const applyTextNode = ({ element, node, context }) => {
     }
   }
 
-  const conditionalTextStyles = Array.isArray(node.conditionalTextStyles)
-    ? node.conditionalTextStyles
-    : [];
-
-  conditionalTextStyles.forEach((rule, index) => {
-    if (
-      !rule ||
-      typeof rule !== "object" ||
-      typeof rule.textStyleId !== "string" ||
-      rule.textStyleId.length === 0
-    ) {
-      return;
-    }
-
-    const expression = buildVisibilityConditionExpression(rule);
-    if (!expression) {
-      return;
-    }
-
-    const conditionalTextStyleId = ensureNodeTextStyleId({
-      textStyles: context.textStyles,
-      textStylesData: context.textStylesData,
-      layoutId: context.layoutId,
-      node,
-      textStyleId: rule.textStyleId,
-      variant: `conditional-${index}`,
-    });
-
-    if (!conditionalTextStyleId) {
-      return;
-    }
-
-    nextElement[`$if ${expression}`] = {
-      textStyleId: conditionalTextStyleId,
-    };
-  });
-
   if (node.type === "text-revealing-ref-dialogue-content") {
     nextElement.speed = "${variables._dialogueTextSpeed}";
   }
@@ -804,6 +951,11 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
   element = applyRectNode({ element, node: effectiveNode });
   element = applySliderNode({ element, node: effectiveNode, imageItems });
   element = applyContainerNode({ element, node: effectiveNode });
+  element = applyConditionalOverrides({
+    element,
+    node: effectiveNode,
+    context: nodeContext,
+  });
 
   const childContext = nodeContext;
 
