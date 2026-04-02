@@ -4,9 +4,13 @@ propsSchema:
   properties:
     values:
       type: object
+    imagesData:
+      type: object
     textStylesData:
       type: object
     variablesData:
+      type: object
+    layoutsData:
       type: object
     itemType:
       type: string
@@ -14,3 +18,5 @@ propsSchema:
       type: string
     resourceType:
       type: string
+    isInsideSaveLoadSlot:
+      type: boolean

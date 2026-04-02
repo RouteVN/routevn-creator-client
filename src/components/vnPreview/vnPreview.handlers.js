@@ -9,6 +9,11 @@ import {
   extractTransitionTargetSceneIds,
   extractTransitionTargetSceneIdsFromActions,
 } from "../../internal/project/layout.js";
+import {
+  applyRuntimeActionContext,
+  captureCanvasThumbnailImage,
+  preloadRuntimeThumbnailImage,
+} from "../../internal/ui/runtimeActionPreparation.js";
 
 /**
  * Load assets (images and fonts) for rendering
@@ -153,6 +158,17 @@ const preloadLayoutAssetsByIds = async (deps, projectData, layoutIds) => {
 const createBeforeHandleActionsHook = (deps, projectData) => {
   return async (actions, eventContext) => {
     const eventData = eventContext?._event;
+    const slotBinding =
+      eventData?.slotId !== undefined ? "_event.slotId" : undefined;
+    const thumbnailImage = await captureCanvasThumbnailImage(
+      deps.graphicsService,
+      deps.refs?.canvas,
+    );
+    applyRuntimeActionContext(actions, {
+      slotBinding,
+      thumbnailImage,
+    });
+    await preloadRuntimeThumbnailImage(deps.graphicsService, thumbnailImage);
     const resolvedActions = resolveEventBindings(actions, eventData);
     const layoutIds = Array.from(
       new Set([

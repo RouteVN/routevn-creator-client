@@ -1,5 +1,6 @@
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
+import { isFragmentLayout } from "../../internal/project/layout.js";
 
 const layoutForm = {
   title: "Add Layout",
@@ -17,15 +18,27 @@ const layoutForm = {
       required: true,
       options: [
         { value: "normal", label: "Normal" },
-        { value: "save-load", label: "Save/Load" },
+        { value: "save-load", label: "Save / Load" },
+        { value: "confirmDialog", label: "Confirm Dialog" },
         { value: "dialogue", label: "Dialogue" },
         { value: "nvl", label: "NVL" },
         { value: "choice", label: "Choice" },
       ],
       tooltip: {
         content:
-          "Normal is layout that can be used for background or menu pages. Save/Load is a normal-style layout intended for save and load screens. Dialogue is used for ADV mode text dialogue layout. NVL is used for novel mode accumulated dialogue layout. Choice is used for the choices.",
+          "Normal is layout that can be used for background or menu pages. Save / Load is used for save-slot based save and load screens. Confirm Dialog is used for compact confirmation prompts with OK and Cancel areas. Dialogue is used for ADV mode text dialogue layout. NVL is used for novel mode accumulated dialogue layout. Choice is used for the choices.",
       },
+    },
+    {
+      name: "isFragment",
+      type: "select",
+      label: "Can Be Used As Fragment",
+      required: true,
+      clearable: false,
+      options: [
+        { value: false, label: "No" },
+        { value: true, label: "Yes" },
+      ],
     },
   ],
   actions: {
@@ -40,34 +53,99 @@ const layoutForm = {
   },
 };
 
+const editLayoutForm = {
+  title: "Edit Layout",
+  fields: [
+    {
+      name: "name",
+      type: "input-text",
+      label: "Layout Name",
+      required: true,
+    },
+    {
+      name: "description",
+      type: "input-textarea",
+      label: "Description",
+    },
+    {
+      name: "isFragment",
+      type: "select",
+      label: "Can Be Used As Fragment",
+      required: true,
+      clearable: false,
+      options: [
+        { value: false, label: "No" },
+        { value: true, label: "Yes" },
+      ],
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        label: "Save",
+      },
+    ],
+  },
+};
+
 const layoutTypeLabels = {
   normal: "Normal",
-  "save-load": "Save/Load",
+  "save-load": "Save / Load",
+  confirmDialog: "Confirm Dialog",
   dialogue: "Dialogue",
   nvl: "NVL",
   choice: "Choice",
 };
 
 const buildDetailFields = (item) => {
-  if (!item) {
+  if (!item || item.type !== "layout") {
     return [];
   }
 
-  return [
+  const layoutType = item.layoutType;
+  const fields = [
+    {
+      type: "slot",
+      slot: "actions",
+    },
     {
       type: "text",
       label: "Layout Type",
-      value: layoutTypeLabels[item.layoutType] ?? item.layoutType ?? "",
+      value: layoutTypeLabels[layoutType] ?? layoutType ?? "",
+    },
+    {
+      type: "text",
+      label: "Fragment",
+      value: isFragmentLayout(item) ? "Yes" : "No",
     },
   ];
+
+  if (item.description) {
+    fields.push({
+      type: "description",
+      value: item.description,
+    });
+  }
+
+  return fields;
 };
 
-const buildCatalogItem = (item) => ({
-  id: item.id,
-  name: item.name,
-  cardKind: "layout",
-  subtitle: layoutTypeLabels[item.layoutType] ?? item.layoutType ?? "",
-});
+const buildCatalogItem = (item) => {
+  const layoutType = item.layoutType;
+  const subtitle = isFragmentLayout(item)
+    ? `${layoutTypeLabels[layoutType] ?? layoutType ?? ""} / Fragment`
+    : (layoutTypeLabels[layoutType] ?? layoutType ?? "");
+
+  return {
+    id: item.id,
+    name: item.name,
+    cardKind: "layout",
+    subtitle,
+  };
+};
 
 const {
   createInitialState: createCatalogInitialState,
@@ -94,6 +172,7 @@ const {
     layoutFormDefaults: {
       name: "",
       layoutType: "normal",
+      isFragment: false,
     },
   }),
 });
@@ -101,6 +180,13 @@ const {
 export const createInitialState = () => ({
   ...createCatalogInitialState(),
   isAddDialogOpen: false,
+  isEditDialogOpen: false,
+  editItemId: undefined,
+  editDefaultValues: {
+    name: "",
+    description: "",
+    isFragment: false,
+  },
   targetGroupId: undefined,
 });
 
@@ -124,11 +210,37 @@ export const closeAddDialog = ({ state }, _payload = {}) => {
   state.targetGroupId = undefined;
 };
 
+export const openEditDialog = (
+  { state },
+  { itemId, defaultValues = {} } = {},
+) => {
+  state.isEditDialogOpen = true;
+  state.editItemId = itemId;
+  state.editDefaultValues = {
+    name: defaultValues?.name ?? "",
+    description: defaultValues?.description ?? "",
+    isFragment: defaultValues?.isFragment ?? false,
+  };
+};
+
+export const closeEditDialog = ({ state }, _payload = {}) => {
+  state.isEditDialogOpen = false;
+  state.editItemId = undefined;
+  state.editDefaultValues = {
+    name: "",
+    description: "",
+    isFragment: false,
+  };
+};
+
 export const selectViewData = (context) => {
   const viewData = selectCatalogViewData(context);
 
   return {
     ...viewData,
+    isEditDialogOpen: context.state.isEditDialogOpen,
+    editDefaultValues: context.state.editDefaultValues,
+    editForm: editLayoutForm,
     flatItems: applyFolderRequiredRootDragOptions(viewData.flatItems),
   };
 };

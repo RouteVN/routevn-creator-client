@@ -12,70 +12,12 @@ refs:
     eventListeners:
       layout-add-click:
         handler: handleAddLayoutClick
-  dialogueForm:
+  layoutEditorPreview:
     eventListeners:
-      form-input:
-        handler: handleDialogueFormChange
-      form-change:
-        handler: handleDialogueFormChange
-  nvlForm:
-    eventListeners:
-      form-input:
-        handler: handleNvlFormChange
-      form-change:
-        handler: handleNvlFormChange
-  revealingSpeedInput:
-    eventListeners:
-      value-input:
-        handler: handlePreviewRevealingSpeedInput
-  choiceForm:
-    eventListeners:
-      form-input:
-        handler: handleChoiceFormChange
-      form-change:
-        handler: handleChoiceFormChange
-  previewVariablesForm:
-    eventListeners:
-      form-input:
-        handler: handlePreviewVariablesFormChange
-      form-change:
-        handler: handlePreviewVariablesFormChange
-  sliderCreateDialog:
-    eventListeners:
-      close:
-        handler: handleSliderCreateDialogClose
-  sliderCreateForm:
-    eventListeners:
-      form-action:
-        handler: handleSliderCreateFormAction
-  sliderCreateImageField*:
-    eventListeners:
-      click:
-        handler: handleSliderCreateImageFieldClick
-  clearSliderCreateImage*:
-    eventListeners:
-      click:
-        handler: handleSliderCreateImageClearClick
-  sliderCreateImageSelectorDialog:
-    eventListeners:
-      close:
-        handler: handleSliderCreateImageSelectorCancel
-  sliderCreateImageSelector:
-    eventListeners:
-      image-selected:
-        handler: handleSliderCreateImageSelected
-  confirmSliderCreateImageSelection:
-    eventListeners:
-      click:
-        handler: handleSliderCreateImageSelectorSubmit
-  cancelSliderCreateImageSelection:
-    eventListeners:
-      click:
-        handler: handleSliderCreateImageSelectorCancel
-  playPreviewButton:
-    eventListeners:
-      click:
-        handler: handlePlayPreviewClick
+      preview-data-change:
+        handler: handleLayoutEditorPreviewDataChange
+      play:
+        handler: handleLayoutEditorPreviewPlay
   backButton:
     eventListeners:
       click:
@@ -84,7 +26,12 @@ refs:
     eventListeners:
       update:
         handler: handleLayoutEditPanelUpdateHandler
-  canvas: {}
+  layoutEditorCanvas:
+    eventListeners:
+      drag-update:
+        handler: handleLayoutEditorCanvasDragUpdate
+      update:
+        handler: handleLayoutEditorCanvasUpdate
 template:
   - rtgl-view d=h w=f h=f:
       - rtgl-view d=h h=f:
@@ -98,66 +45,15 @@ template:
               - rtgl-view w=1fg:
                   - rtgl-text c=mu-fg: ${layout.name}
           - rtgl-view h=1fg sv w=f:
-              - 'rtgl-view w=f bgc=mu pos=rel bwb=xs style="margin-left: 1px; aspect-ratio: ${canvasAspectRatio};"':
-                  - rtgl-view pos=abs cor=full:
-                      - 'div#canvas style="width: 100%; height: 100%;display: flex; cursor: ${canvasCursor}"': null
-              - $if layout.layoutType == 'dialogue':
-                  - rtgl-form#dialogueForm w=f :form=${dialogueForm} :defaultValues=${dialogueDefaultValues}: null
-              - $if layout.layoutType == 'nvl':
-                  - rtgl-form#nvlForm w=f :form=${nvlForm} :defaultValues=${nvlDefaultValues} :context=${nvlContext}: null
-              - $if layout.layoutType == 'dialogue':
-                  - rtgl-view d=h av=c g=sm w=f ph=md pb=md:
-                      - rtgl-text s=sm c=mu-fg: Revealing Speed
-                      - rtgl-input#revealingSpeedInput type=number min=1 step=1 w=120 value=${previewRevealingSpeed}: null
-                      - rtgl-button#playPreviewButton v=ol: Play
-              - $if layout.layoutType == 'choice':
-                  - rtgl-form#choiceForm w=f :form=${choiceForm} :defaultValues=${choiceDefaultValues} :context=${choicesContext}: null
-              - $if (layout.layoutType == 'normal' || layout.layoutType == 'save-load') && hasPreviewVariables:
-                  - rtgl-form#previewVariablesForm key=${previewVariablesFormKey} w=f :form=${previewVariablesForm} :defaultValues=${previewVariablesDefaultValues}: null
+              - rvn-layout-editor-canvas#layoutEditorCanvas :resolution=${projectResolution} :layoutState=${layoutState} selectedItemId=${selectedItemId} :previewData=${previewData}: null
+              - rvn-layout-editor-preview#layoutEditorPreview :layoutState=${layoutState}: null
       - rvn-resizable-panel#resizableDetailPanel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
           - rtgl-view wh=f slot="content":
               - $if selectedItemId:
                   - rtgl-view h=48 w=f av=c ph=md:
                       - rtgl-text c=mu-fg: ${item.name} (${item.type})
                   - rtgl-view w=f h=1fg sv pv=md:
-                      - rvn-layout-edit-panel#layoutEditPanel key=${layoutEditPanelKey} layout-type=${layout.layoutType} resource-type=${layout.resourceType} item-type=${item.type} :values=${item} :textStylesData=${textStylesData} :variablesData=${variablesData}: null
+                      - rvn-layout-edit-panel#layoutEditPanel key=${layoutEditPanelKey} layout-type=${layout.layoutType} resource-type=${layout.resourceType} item-type=${item.type} :isInsideSaveLoadSlot=${isInsideSaveLoadSlot} :values=${item} :imagesData=${imagesData} :textStylesData=${textStylesData} :variablesData=${variablesData} :layoutsData=${layoutsData}: null
                 $else:
                   - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                       - rtgl-text s=md c=mu-fg: No selection
-  - rtgl-dialog#sliderCreateDialog ?open=${sliderCreateDialog.open} s=md:
-      - rtgl-view slot=content g=md:
-          - rtgl-form#sliderCreateForm :defaultValues=${sliderCreateDialog.defaultValues} :form=${sliderCreateForm} w=f:
-              - rtgl-view slot=slider-bar-image d=h g=sm av=c:
-                  - rtgl-view#sliderCreateImageFieldBar data-field-name=barImageId w=280 h=84 bw=xs bc=bo br=md cur=pointer av=c ah=c:
-                      - $if sliderCreateDialog.images.barImageId:
-                          - rvn-file-image imageId=${sliderCreateDialog.images.barImageId} source="thumbnail" w=280 h=84 br=md: null
-                        $else:
-                          - rtgl-text c=mu-fg: Select bar image
-              - rtgl-view slot=slider-thumb-image d=h g=sm av=c:
-                  - rtgl-view#sliderCreateImageFieldThumb data-field-name=thumbImageId w=140 h=140 bw=xs bc=bo br=md cur=pointer av=c ah=c:
-                      - $if sliderCreateDialog.images.thumbImageId:
-                          - rvn-file-image imageId=${sliderCreateDialog.images.thumbImageId} source="thumbnail" w=140 h=140 br=md: null
-                        $else:
-                          - rtgl-text c=mu-fg ta=c: Select thumb image
-              - rtgl-view slot=slider-hover-bar-image d=h g=sm av=c:
-                  - rtgl-view#sliderCreateImageFieldHoverBar data-field-name=hoverBarImageId w=280 h=84 bw=xs bc=bo br=md cur=pointer av=c ah=c:
-                      - $if sliderCreateDialog.images.hoverBarImageId:
-                          - rvn-file-image imageId=${sliderCreateDialog.images.hoverBarImageId} source="thumbnail" w=280 h=84 br=md: null
-                        $else:
-                          - rtgl-text c=mu-fg: Select hover bar image
-                  - $if sliderCreateDialog.images.hoverBarImageId:
-                      - rtgl-button#clearSliderCreateImageHoverBar data-field-name=hoverBarImageId variant=se size=sm: Clear
-              - rtgl-view slot=slider-hover-thumb-image d=h g=sm av=c:
-                  - rtgl-view#sliderCreateImageFieldHoverThumb data-field-name=hoverThumbImageId w=140 h=140 bw=xs bc=bo br=md cur=pointer av=c ah=c:
-                      - $if sliderCreateDialog.images.hoverThumbImageId:
-                          - rvn-file-image imageId=${sliderCreateDialog.images.hoverThumbImageId} source="thumbnail" w=140 h=140 br=md: null
-                        $else:
-                          - rtgl-text c=mu-fg ta=c: Select hover thumb image
-                  - $if sliderCreateDialog.images.hoverThumbImageId:
-                      - rtgl-button#clearSliderCreateImageHoverThumb data-field-name=hoverThumbImageId variant=se size=sm: Clear
-  - rtgl-dialog#sliderCreateImageSelectorDialog ?open=${sliderCreateImageSelectorDialog.open}:
-      - rtgl-view slot=content g=md:
-          - rvn-image-selector#sliderCreateImageSelector selectedImageId=${sliderCreateImageSelectorDialog.selectedImageId}: null
-          - rtgl-view d=h g=sm w=f ah=e:
-              - rtgl-button#cancelSliderCreateImageSelection variant=se: Cancel
-              - rtgl-button#confirmSliderCreateImageSelection variant=pr: OK

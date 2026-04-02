@@ -8,6 +8,19 @@ numberPopoverForm: &numberPopoverForm
         variant: pr
         label: Submit
 
+opacityPopoverForm: &opacityPopoverForm
+  fields:
+    - name: value
+      type: input-number
+      min: 0
+      max: 1
+      step: 0.05
+  actions:
+    buttons:
+      - id: submit
+        variant: pr
+        label: Submit
+
 textPopoverForm: &textPopoverForm
   fields:
     - name: value
@@ -48,6 +61,15 @@ layoutSections:
             name: height
             value: "${values.height}"
             popoverForm: *numberPopoverForm
+  - label: Appearance
+    items:
+      - type: group
+        fields:
+          - type: clickable-value
+            label: Opacity
+            name: opacity
+            value: "${values.opacity}"
+            popoverForm: *opacityPopoverForm
       - "$when": "supportsAnchor"
         type: select
         label: Anchor
@@ -111,6 +133,24 @@ layoutSections:
             name: gap
             value: "${values.gap}"
             popoverForm: *numberPopoverForm
+  - "$when": "supportsScroll"
+    label: Scroll
+    items:
+      - type: select
+        label: Scroll
+        name: scroll
+        value: "${values.scroll}"
+        options:
+          - label: Disabled
+            value: false
+          - label: Enabled
+            value: true
+  - "$when": "supportsChildInteractionInheritance"
+    label: Child Interaction
+    items:
+      - type: child-interaction-summary
+        name: childInteraction
+        value: "${childInteractionSummary}"
   - "$when": "supportsSpriteImages"
     id: images
     label: Image
@@ -235,6 +275,20 @@ layoutSections:
       - type: condition-summary
         name: visibilityCondition
         value: "${visibilityConditionSummary}"
+  - "$when": 'itemType == "fragment-ref"'
+    label: Fragment
+    items:
+      - type: select
+        label: Fragment
+        name: fragmentLayoutId
+        value: "${values.fragmentLayoutId}"
+        options: "${fragmentLayoutOptions}"
+  - "$when": 'itemType == "container-ref-save-load-slot"'
+    label: Pagination
+    items:
+      - type: pagination-summary
+        name: pagination
+        value: "${paginationSummary}"
   - "$when": "supportsActions"
     id: actions
     label: Actions
@@ -242,6 +296,13 @@ layoutSections:
     items:
       - type: list-item
         items: "${values.actions}"
+  - "$when": "supportsTextStyles || supportsSpriteImages"
+    id: conditionalOverrides
+    label: Conditional
+    labelAction: plus
+    items:
+      - type: conditional-override-list
+        items: "${conditionalOverrideItems}"
 
 controlSections:
   - label: Position
@@ -272,6 +333,15 @@ controlSections:
             name: height
             value: "${values.height}"
             popoverForm: *numberPopoverForm
+  - label: Appearance
+    items:
+      - type: group
+        fields:
+          - type: clickable-value
+            label: Opacity
+            name: opacity
+            value: "${values.opacity}"
+            popoverForm: *opacityPopoverForm
   - label: Visibility
     items:
       - type: condition-summary

@@ -18,6 +18,7 @@ const TEXT_TYPE_SET = new Set([
   "text-ref-character-name",
   "text-revealing-ref-dialogue-content",
   "text-ref-choice-item-content",
+  "text-ref-save-load-slot-date",
   "text-ref-dialogue-line-character-name",
   "text-ref-dialogue-line-content",
 ]);
@@ -25,7 +26,10 @@ const TEXT_TYPE_SET = new Set([
 const CONTAINER_TYPE_SET = new Set([
   "container",
   "container-ref-choice-item",
+  "container-ref-save-load-slot",
   "container-ref-dialogue-line",
+  "container-ref-confirm-dialog-ok",
+  "container-ref-confirm-dialog-cancel",
 ]);
 
 const CREATE_TEMPLATES = {
@@ -64,6 +68,14 @@ const CREATE_TEMPLATES = {
     max: 100,
     step: 1,
     initialValue: 0,
+  }),
+  "fragment-ref": () => ({
+    type: "fragment-ref",
+    name: "Fragment",
+    ...BASE_TRANSFORM,
+    width: 100,
+    height: 100,
+    fragmentLayoutId: undefined,
   }),
   "slider-horizontal": () => ({
     type: "slider",
@@ -160,6 +172,53 @@ const CREATE_TEMPLATES = {
     name: "Container (Choice Item)",
     ...BASE_TRANSFORM,
   }),
+  "container-save-load-slot": () => ({
+    type: "container-ref-save-load-slot",
+    name: "Container (Save/Load Slot)",
+    ...BASE_TRANSFORM,
+    paginationMode: "continuous",
+    paginationSize: 3,
+  }),
+  "container-confirm-dialog-ok": () => ({
+    type: "container-ref-confirm-dialog-ok",
+    name: "Container (Confirm OK)",
+    ...BASE_TRANSFORM,
+    width: 160,
+    height: 64,
+  }),
+  "container-confirm-dialog-cancel": () => ({
+    type: "container-ref-confirm-dialog-cancel",
+    name: "Container (Confirm Cancel)",
+    ...BASE_TRANSFORM,
+    width: 160,
+    height: 64,
+  }),
+  "sprite-save-load-slot-image": (projectResolution) =>
+    scaleLayoutElementItemForProjectResolution(
+      {
+        type: "sprite-ref-save-load-slot-image",
+        name: "Sprite (Save Image)",
+        ...BASE_TRANSFORM,
+        width: 320,
+        height: 180,
+      },
+      projectResolution,
+    ),
+  "text-save-load-slot-date": (projectResolution) =>
+    scaleLayoutElementItemForProjectResolution(
+      {
+        type: "text-ref-save-load-slot-date",
+        name: "Text (Save Date)",
+        ...BASE_TRANSFORM,
+        y: 192,
+        text: "text",
+        textStyle: {
+          wordWrapWidth: 320,
+          align: "left",
+        },
+      },
+      projectResolution,
+    ),
   "text-choice-item-content": (projectResolution) =>
     scaleLayoutElementItemForProjectResolution(
       {
@@ -226,6 +285,11 @@ const resolveSliderDefaultImageIds = ({ direction, imagesData } = {}) => {
     thumbImageId: findImageIdByName(imagesData, "slider_thumb"),
     hoverThumbImageId: findImageIdByName(imagesData, "slider_thumb_hover"),
   };
+};
+
+export const toAlphanumericId = (value, fallback = "sliderUpdate") => {
+  const sanitized = String(value || "").replace(/[^a-zA-Z0-9]/g, "");
+  return sanitized || fallback;
 };
 
 const applySliderDirectionChange = ({
@@ -334,13 +398,19 @@ const applySpriteAutoSize = ({ nextItem, imagesData }) => {
 const TYPE_FAMILIES = {
   container: "container",
   "container-ref-choice-item": "container",
+  "container-ref-save-load-slot": "container",
   "container-ref-dialogue-line": "container",
+  "container-ref-confirm-dialog-ok": "container",
+  "container-ref-confirm-dialog-cancel": "container",
+  "fragment-ref": "fragment",
   sprite: "sprite",
+  "sprite-ref-save-load-slot-image": "sprite",
   text: "text",
   "text-revealing": "text",
   "text-ref-character-name": "text",
   "text-revealing-ref-dialogue-content": "text",
   "text-ref-choice-item-content": "text",
+  "text-ref-save-load-slot-date": "text",
   "text-ref-dialogue-line-character-name": "text",
   "text-ref-dialogue-line-content": "text",
   slider: "slider",
@@ -351,6 +421,8 @@ const DEFAULT_CAPABILITIES = {
   supportsHeight: true,
   supportsAnchor: false,
   supportsDirection: false,
+  supportsScroll: false,
+  supportsChildInteractionInheritance: false,
   supportsTextEditing: false,
   supportsTextRevealEffect: false,
   supportsTextStyles: false,
@@ -365,6 +437,12 @@ const FAMILY_CAPABILITIES = {
   container: {
     supportsAnchor: true,
     supportsDirection: true,
+    supportsScroll: true,
+    supportsChildInteractionInheritance: true,
+    supportsActions: true,
+  },
+  fragment: {
+    supportsAnchor: true,
   },
   sprite: {
     supportsSpriteImages: true,
@@ -399,6 +477,23 @@ const TYPE_RULES = {
   container: {
     normalizeFieldValue: ({ name, value }) => {
       if (name === "direction" && (value === null || value === "")) {
+        return undefined;
+      }
+
+      if (name === "paginationMode" && (value === null || value === "")) {
+        return "continuous";
+      }
+
+      if (name === "paginationVariableId" && (value === null || value === "")) {
+        return undefined;
+      }
+
+      return value;
+    },
+  },
+  fragment: {
+    normalizeFieldValue: ({ name, value }) => {
+      if (name === "fragmentLayoutId" && (value === null || value === "")) {
         return undefined;
       }
 
@@ -449,9 +544,116 @@ const TYPE_RULES = {
   rect: {},
 };
 
-export const toAlphanumericId = (value, fallback = "sliderUpdate") => {
-  const sanitized = String(value || "").replace(/[^a-zA-Z0-9]/g, "");
-  return sanitized || fallback;
+const DEFAULT_PANEL_FEATURES = ["layout", "appearance", "visibility"];
+const PANEL_FEATURES_BY_TYPE = {
+  container: [
+    ...DEFAULT_PANEL_FEATURES,
+    "actions",
+    "childInteraction",
+    "scroll",
+  ],
+  "container-ref-choice-item": [
+    ...DEFAULT_PANEL_FEATURES,
+    "actions",
+    "childInteraction",
+  ],
+  "container-ref-save-load-slot": [
+    ...DEFAULT_PANEL_FEATURES,
+    "actions",
+    "pagination",
+    "childInteraction",
+  ],
+  "container-ref-dialogue-line": [
+    ...DEFAULT_PANEL_FEATURES,
+    "actions",
+    "childInteraction",
+  ],
+  "container-ref-confirm-dialog-ok": [...DEFAULT_PANEL_FEATURES, "actions"],
+  "container-ref-confirm-dialog-cancel": [...DEFAULT_PANEL_FEATURES, "actions"],
+  sprite: [...DEFAULT_PANEL_FEATURES, "images", "actions"],
+  "sprite-ref-save-load-slot-image": [...DEFAULT_PANEL_FEATURES, "images"],
+  text: [...DEFAULT_PANEL_FEATURES, "text", "textStyles", "actions"],
+  "text-revealing-ref-dialogue-content": [
+    ...DEFAULT_PANEL_FEATURES,
+    "text",
+    "textStyles",
+    "revealEffect",
+  ],
+  "text-ref-character-name": [...DEFAULT_PANEL_FEATURES, "textStyles"],
+  "text-ref-choice-item-content": [...DEFAULT_PANEL_FEATURES, "textStyles"],
+  "text-ref-save-load-slot-date": [...DEFAULT_PANEL_FEATURES, "textStyles"],
+  "text-ref-dialogue-line-character-name": [
+    ...DEFAULT_PANEL_FEATURES,
+    "textStyles",
+  ],
+  "text-ref-dialogue-line-content": [...DEFAULT_PANEL_FEATURES, "textStyles"],
+  slider: [...DEFAULT_PANEL_FEATURES, "slider"],
+  rect: [...DEFAULT_PANEL_FEATURES, "actions"],
+  "fragment-ref": [...DEFAULT_PANEL_FEATURES, "fragmentRef"],
+};
+
+const PREVIEW_DEPENDENCIES_BY_TYPE = {
+  "fragment-ref": { fragments: true },
+  "container-ref-choice-item": { choice: true },
+  "text-ref-choice-item-content": { choice: true },
+  "container-ref-save-load-slot": { saveLoad: true },
+  "sprite-ref-save-load-slot-image": { saveLoad: true },
+  "text-ref-save-load-slot-date": { saveLoad: true },
+  "text-revealing-ref-dialogue-content": { dialogue: true },
+  "text-ref-character-name": { dialogue: true },
+  "container-ref-dialogue-line": { dialogue: true },
+  "text-ref-dialogue-line-character-name": { dialogue: true },
+  "text-ref-dialogue-line-content": { dialogue: true },
+  "container-ref-confirm-dialog-ok": { confirmDialog: true },
+  "container-ref-confirm-dialog-cancel": { confirmDialog: true },
+};
+
+const DEFAULT_IMMEDIATE_PERSIST_FIELDS = [
+  "click",
+  "click.",
+  "rightClick",
+  "rightClick.",
+  "change",
+  "change.",
+];
+
+const IMMEDIATE_PERSIST_FIELDS_BY_TYPE = {
+  sprite: [...DEFAULT_IMMEDIATE_PERSIST_FIELDS, "conditionalOverrides"],
+  "sprite-ref-save-load-slot-image": [
+    ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    "conditionalOverrides",
+  ],
+  text: [...DEFAULT_IMMEDIATE_PERSIST_FIELDS, "conditionalOverrides"],
+  "text-revealing-ref-dialogue-content": [
+    ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    "conditionalOverrides",
+  ],
+  "text-ref-character-name": [
+    ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    "conditionalOverrides",
+  ],
+  "text-ref-choice-item-content": [
+    ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    "conditionalOverrides",
+  ],
+  "text-ref-save-load-slot-date": [
+    ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    "conditionalOverrides",
+  ],
+  "text-ref-dialogue-line-character-name": [
+    ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    "conditionalOverrides",
+  ],
+  "text-ref-dialogue-line-content": [
+    ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    "conditionalOverrides",
+  ],
+  "container-ref-save-load-slot": [
+    ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    "paginationMode",
+    "paginationVariableId",
+    "paginationSize",
+  ],
 };
 
 export const isLayoutEditorTextItemType = (itemType) => {
@@ -483,4 +685,36 @@ export const getLayoutEditorItemCapabilities = (itemType) => {
 export const getLayoutEditorTypeRules = (itemType) => {
   const family = TYPE_FAMILIES[itemType];
   return family ? (TYPE_RULES[family] ?? {}) : {};
+};
+
+export const getLayoutEditorElementDefinition = (itemType) => {
+  return {
+    type: itemType,
+    capabilities: getLayoutEditorItemCapabilities(itemType),
+    typeRules: getLayoutEditorTypeRules(itemType),
+    panelFeatures: PANEL_FEATURES_BY_TYPE[itemType] ?? DEFAULT_PANEL_FEATURES,
+    previewDependencies: PREVIEW_DEPENDENCIES_BY_TYPE[itemType] ?? {},
+    immediatePersistFields:
+      IMMEDIATE_PERSIST_FIELDS_BY_TYPE[itemType] ??
+      DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    isContainer: isLayoutEditorContainerItemType(itemType),
+    isText: isLayoutEditorTextItemType(itemType),
+  };
+};
+
+export const getLayoutEditorCreateDefinition = (
+  createType,
+  { projectResolution } = {},
+) => {
+  const template = createLayoutEditorItemTemplate(createType, {
+    projectResolution,
+  });
+  const definition = getLayoutEditorElementDefinition(template?.type);
+
+  return {
+    createType,
+    template,
+    itemType: template?.type,
+    ...definition,
+  };
 };

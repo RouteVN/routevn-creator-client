@@ -1,0 +1,67 @@
+refs:
+  sliderCreateForm: {}
+  sliderCreateImageField*:
+    eventListeners:
+      click:
+        handler: handleImageFieldClick
+  clearSliderCreateImage*:
+    eventListeners:
+      click:
+        handler: handleImageClearClick
+  imageSelectorDialog:
+    eventListeners:
+      close:
+        handler: handleImageSelectorCancel
+  imageSelector:
+    eventListeners:
+      image-selected:
+        handler: handleImageSelected
+  confirmImageSelection:
+    eventListeners:
+      click:
+        handler: handleImageSelectorSubmit
+  cancelImageSelection:
+    eventListeners:
+      click:
+        handler: handleImageSelectorCancel
+template:
+  - rtgl-view g=md w=f:
+      - rtgl-form#sliderCreateForm key=${formKey} :defaultValues=${defaultValues} :form=${form} w=f:
+          - rtgl-view slot=slider-bar-image g=xs:
+              - rtgl-view#sliderCreateImageFieldBar data-field-name=barImageId w=280 h=84 bw=xs bc=bo br=md cur=pointer av=c ah=c:
+                  - $if images.barImageId:
+                      - rvn-file-image imageId=${images.barImageId} source="thumbnail" w=280 h=84 br=md: null
+                    $else:
+                      - rtgl-text c=mu-fg: Select bar image
+              - $if validationErrors.barImageId:
+                  - rtgl-text s=sm c=de: ${validationErrors.barImageId}
+          - rtgl-view slot=slider-thumb-image g=xs:
+              - rtgl-view#sliderCreateImageFieldThumb data-field-name=thumbImageId w=140 h=140 bw=xs bc=bo br=md cur=pointer av=c ah=c:
+                  - $if images.thumbImageId:
+                      - rvn-file-image imageId=${images.thumbImageId} source="thumbnail" w=140 h=140 br=md: null
+                    $else:
+                      - rtgl-text c=mu-fg ta=c: Select thumb image
+              - $if validationErrors.thumbImageId:
+                  - rtgl-text s=sm c=de: ${validationErrors.thumbImageId}
+          - rtgl-view slot=slider-hover-bar-image d=h g=sm av=c:
+              - rtgl-view#sliderCreateImageFieldHoverBar data-field-name=hoverBarImageId w=280 h=84 bw=xs bc=bo br=md cur=pointer av=c ah=c:
+                  - $if images.hoverBarImageId:
+                      - rvn-file-image imageId=${images.hoverBarImageId} source="thumbnail" w=280 h=84 br=md: null
+                    $else:
+                      - rtgl-text c=mu-fg: Select hover bar image
+              - $if images.hoverBarImageId:
+                  - rtgl-button#clearSliderCreateImageHoverBar data-field-name=hoverBarImageId variant=se size=sm: Clear
+          - rtgl-view slot=slider-hover-thumb-image d=h g=sm av=c:
+              - rtgl-view#sliderCreateImageFieldHoverThumb data-field-name=hoverThumbImageId w=140 h=140 bw=xs bc=bo br=md cur=pointer av=c ah=c:
+                  - $if images.hoverThumbImageId:
+                      - rvn-file-image imageId=${images.hoverThumbImageId} source="thumbnail" w=140 h=140 br=md: null
+                    $else:
+                      - rtgl-text c=mu-fg ta=c: Select hover thumb image
+              - $if images.hoverThumbImageId:
+                  - rtgl-button#clearSliderCreateImageHoverThumb data-field-name=hoverThumbImageId variant=se size=sm: Clear
+  - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open}:
+      - rtgl-view slot=content g=md:
+          - rvn-image-selector#imageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
+          - rtgl-view d=h g=sm w=f ah=e:
+              - rtgl-button#cancelImageSelection variant=se: Cancel
+              - rtgl-button#confirmImageSelection variant=pr: OK

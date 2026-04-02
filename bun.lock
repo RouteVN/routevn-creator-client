@@ -5,9 +5,9 @@
     "": {
       "dependencies": {
         "@rettangoli/fe": "1.1.0",
-        "@rettangoli/ui": "1.0.18",
+        "@rettangoli/ui": "1.0.20",
         "@rettangoli/vt": "1.0.2",
-        "@routevn/creator-model": "1.1.4",
+        "@routevn/creator-model": "1.1.5",
         "@tauri-apps/api": "^2.8.0",
         "@tauri-apps/plugin-dialog": "2.4.2",
         "@tauri-apps/plugin-fs": "^2.4.2",
@@ -23,8 +23,8 @@
         "jsdom": "^26.1.0",
         "jszip": "^3.10.1",
         "nanoid": "^5.1.5",
-        "route-engine-js": "0.3.7",
-        "route-graphics": "1.1.4",
+        "route-engine-js": "0.5.1",
+        "route-graphics": "1.2.0",
         "rxjs": "^7.8.2",
         "snabbdom": "^3.6.2",
         "snabbdom-to-html": "^7.1.0",
@@ -205,7 +205,7 @@
 
     "@rettangoli/fe": ["@rettangoli/fe@1.1.0", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.0.1", "js-yaml": "^4.1.0", "snabbdom": "^3.6.2", "vite": "^6.3.5" } }, "sha512-rvSEQXbHt7jl9ewATduAuOUXVMO0ES8fG7i7cVpPR3SLSveKhG0k0X4v+v/SsdBEB+w2G6pfokG/atxwYfU9yw=="],
 
-    "@rettangoli/ui": ["@rettangoli/ui@1.0.18", "", { "dependencies": { "@rettangoli/fe": "1.1.1", "jempl": "1.0.1" } }, "sha512-48N9iYpjJzVXPi2Qx1SpPjDp6i/DPUu00n3JZ3+FGBmOcKYyvOUxLWcL+tXUtRXyuHiWanupqrerJfd9tZh/sA=="],
+    "@rettangoli/ui": ["@rettangoli/ui@1.0.20", "", { "dependencies": { "@rettangoli/fe": "1.1.1", "jempl": "1.0.1" } }, "sha512-dETur1bDwFZqk9pS+VXH7lligDtTSpfpjT2+XwvM8fQs+TH7zJsX+q06eAuiwmWirDJDogw8geK7YAv6xeITDw=="],
 
     "@rettangoli/vt": ["@rettangoli/vt@1.0.2", "", { "dependencies": { "commander": "^13.1.0", "js-yaml": "^4.1.0", "liquidjs": "^10.21.0", "pixelmatch": "^7.1.0", "playwright": "1.57.0", "sharp": "^0.34.5", "shiki": "^3.3.0" } }, "sha512-QHweZ2BJFiQi0mc8KvSLiFjKTm9ovjs++x9cOTtN89AyK/Pn0acuD0mA+kjOu4zgPcaHvjOAINNqMFsqhx9Hgw=="],
 
@@ -259,7 +259,7 @@
 
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.55.1", "", { "os": "win32", "cpu": "x64" }, "sha512-SPEpaL6DX4rmcXtnhdrQYgzQ5W2uW3SCJch88lB2zImhJRhIIK44fkUrgIV/Q8yUNfw5oyZ5vkeQsZLhCb06lw=="],
 
-    "@routevn/creator-model": ["@routevn/creator-model@1.1.4", "", {}, "sha512-8fiuVkkIU38cvsvQV9IXNSjUNgU0MYmCVwSDbX7NW8TgRewp4P2q+HzAbCr4/dTZyhboVH70Z7a3AX/P/NL/ow=="],
+    "@routevn/creator-model": ["@routevn/creator-model@1.1.5", "", {}, "sha512-QsNzUy0NeXzAK/qQRx9GDplLXtWYqus+aJ+YbqkkNUH8YJJFUSS4C6KspBzuy6Z3EiLJEMTxRkdIhliVFm118Q=="],
 
     "@shikijs/core": ["@shikijs/core@3.22.0", "", { "dependencies": { "@shikijs/types": "3.22.0", "@shikijs/vscode-textmate": "^10.0.2", "@types/hast": "^3.0.4", "hast-util-to-html": "^9.0.5" } }, "sha512-iAlTtSDDbJiRpvgL5ugKEATDtHdUVkqgHDm/gbD2ZS9c88mx7G1zSYjjOxp5Qa0eaW0MAQosFRmJSk354PRoQA=="],
 
@@ -687,9 +687,9 @@
 
     "rollup": ["rollup@4.55.1", "", { "dependencies": { "@types/estree": "1.0.8" }, "optionalDependencies": { "@rollup/rollup-android-arm-eabi": "4.55.1", "@rollup/rollup-android-arm64": "4.55.1", "@rollup/rollup-darwin-arm64": "4.55.1", "@rollup/rollup-darwin-x64": "4.55.1", "@rollup/rollup-freebsd-arm64": "4.55.1", "@rollup/rollup-freebsd-x64": "4.55.1", "@rollup/rollup-linux-arm-gnueabihf": "4.55.1", "@rollup/rollup-linux-arm-musleabihf": "4.55.1", "@rollup/rollup-linux-arm64-gnu": "4.55.1", "@rollup/rollup-linux-arm64-musl": "4.55.1", "@rollup/rollup-linux-loong64-gnu": "4.55.1", "@rollup/rollup-linux-loong64-musl": "4.55.1", "@rollup/rollup-linux-ppc64-gnu": "4.55.1", "@rollup/rollup-linux-ppc64-musl": "4.55.1", "@rollup/rollup-linux-riscv64-gnu": "4.55.1", "@rollup/rollup-linux-riscv64-musl": "4.55.1", "@rollup/rollup-linux-s390x-gnu": "4.55.1", "@rollup/rollup-linux-x64-gnu": "4.55.1", "@rollup/rollup-linux-x64-musl": "4.55.1", "@rollup/rollup-openbsd-x64": "4.55.1", "@rollup/rollup-openharmony-arm64": "4.55.1", "@rollup/rollup-win32-arm64-msvc": "4.55.1", "@rollup/rollup-win32-ia32-msvc": "4.55.1", "@rollup/rollup-win32-x64-gnu": "4.55.1", "@rollup/rollup-win32-x64-msvc": "4.55.1", "fsevents": "~2.3.2" }, "bin": { "rollup": "dist/bin/rollup" } }, "sha512-wDv/Ht1BNHB4upNbK74s9usvl7hObDnvVzknxqY/E/O3X6rW1U1rV1aENEfJ54eFZDTNo7zv1f5N4edCluH7+A=="],
 
-    "route-engine-js": ["route-engine-js@0.3.7", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.0.0", "js-yaml": "^4.1.0", "puty": "^0.1.1" } }, "sha512-GEb67gxYdcC94IHxwwbkzJA+E3xDM7J9rv3fgxfuYaW+4sP0H8VFkDObd4uhci6PPxMQurbBvCe1dTAf0SURBw=="],
+    "route-engine-js": ["route-engine-js@0.5.1", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.0.0", "js-yaml": "^4.1.0", "puty": "^0.1.1" } }, "sha512-45eiXw3Fs+6n+NZLoeKu08+XO+Iehhujo82YbciN4O/yD2S0NIvIRpogJWNULI+P04D28wC6QIFp6SEYa+xJAQ=="],
 
-    "route-graphics": ["route-graphics@1.1.4", "", { "dependencies": { "@pixi/unsafe-eval": "^7.4.3", "hotkeys-js": "^4.0.0-beta.7", "pixi.js": "^8.7.1" } }, "sha512-SQs20DsNDX+x56w4PdswuuCXC88PeEu6ki3Mv0xvATGjc3du3fdRF3Zc+iFOIJ11IzpeJPLwBLu4ziYkaaQO7Q=="],
+    "route-graphics": ["route-graphics@1.2.0", "", { "dependencies": { "@pixi/unsafe-eval": "^7.4.3", "hotkeys-js": "^4.0.0-beta.7", "pixi.js": "^8.7.1" } }, "sha512-YcatRVGTpBrukjRPBzy8iFu2yz2hgwAqf1gFB1/Wz+J6I5Lhu3okuf3g+gMcyiPE89LEkPl8KR5l/vJQ6oO7Qw=="],
 
     "rrweb-cssom": ["rrweb-cssom@0.8.0", "", {}, "sha512-guoltQEx+9aMf2gDZ0s62EcV8lsXR+0w8915TC3ITdn2YueuNjdAYh/levpU9nFaoChh9RUS5ZdQMrKfVEN9tw=="],
 

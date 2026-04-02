@@ -1,0 +1,6 @@
+componentName: rvn-layout-editor-preview
+propsSchema:
+  type: object
+  properties:
+    layoutState:
+      type: object

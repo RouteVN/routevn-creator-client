@@ -1,0 +1,27 @@
+sliderCreateForm:
+  fields:
+    - name: name
+      type: input-text
+      label: Name
+      required: true
+    - name: direction
+      type: select
+      label: Direction
+      required: true
+      options:
+        - label: Horizontal
+          value: horizontal
+        - label: Vertical
+          value: vertical
+    - type: slot
+      slot: slider-bar-image
+      label: Bar Image
+    - type: slot
+      slot: slider-thumb-image
+      label: Thumb Image
+    - type: slot
+      slot: slider-hover-bar-image
+      label: Hover Bar Image
+    - type: slot
+      slot: slider-hover-thumb-image
+      label: Hover Thumb Image

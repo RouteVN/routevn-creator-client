@@ -1,0 +1,9 @@
+componentName: rvn-command-line-rollback-by-offset
+propsSchema:
+  type: object
+  properties:
+    rollbackByOffset:
+      type: object
+      properties:
+        offset:
+          type: number

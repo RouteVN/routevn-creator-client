@@ -61,6 +61,16 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       layoutType: layout.layoutType,
     }));
 
+  const confirmDialogLayouts = Object.entries(
+    repositoryState.layouts?.items || {},
+  )
+    .filter(([_, layout]) => layout.layoutType === "confirmDialog")
+    .map(([id, layout]) => ({
+      id,
+      name: layout.name,
+      layoutType: layout.layoutType,
+    }));
+
   const allCharacters = Object.entries(repositoryState.characters?.items || {});
 
   const filteredCharacters = allCharacters
@@ -87,6 +97,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     choiceLayouts,
     controlLayouts,
     dialogueLayouts,
+    confirmDialogLayouts,
     allCharacters: filteredCharacters,
     selectedLine: props.selectedLine,
     actionsType: attrs.actionType,
@@ -274,6 +285,80 @@ export const selectActionsData = ({ props, state }) => {
   if (actions.popLayeredView) {
     actionsObject.popLayeredView = actions.popLayeredView;
     preview.popLayeredView = true;
+  }
+
+  if (actions.rollbackByOffset) {
+    actionsObject.rollbackByOffset = actions.rollbackByOffset;
+    const rawOffset = Number(actions.rollbackByOffset.offset);
+    const offset = Number.isFinite(rawOffset) ? rawOffset : -1;
+    preview.rollbackByOffset = {
+      offset,
+      summary: `Rollback by ${Math.abs(offset)} line${Math.abs(offset) === 1 ? "" : "s"}`,
+    };
+  }
+
+  if (actions.showConfirmDialog) {
+    actionsObject.showConfirmDialog = actions.showConfirmDialog;
+    const confirmActions =
+      actions.showConfirmDialog.confirmActions &&
+      typeof actions.showConfirmDialog.confirmActions === "object"
+        ? actions.showConfirmDialog.confirmActions
+        : {};
+    const cancelActions =
+      actions.showConfirmDialog.cancelActions &&
+      typeof actions.showConfirmDialog.cancelActions === "object"
+        ? actions.showConfirmDialog.cancelActions
+        : {};
+
+    preview.showConfirmDialog = {
+      layout: layoutsItems[actions.showConfirmDialog.resourceId],
+      resourceId: actions.showConfirmDialog.resourceId,
+      layoutName:
+        layoutsItems[actions.showConfirmDialog.resourceId]?.name ??
+        actions.showConfirmDialog.resourceId ??
+        "No layout",
+      confirmActionCount: Object.keys(confirmActions).length,
+      cancelActionCount: Object.keys(cancelActions).length,
+    };
+  }
+
+  if (actions.hideConfirmDialog !== undefined) {
+    actionsObject.hideConfirmDialog = actions.hideConfirmDialog;
+    preview.hideConfirmDialog = true;
+  }
+
+  if (actions.saveSlot) {
+    actionsObject.saveSlot = actions.saveSlot;
+    const rawSlotId =
+      actions.saveSlot.slotId ??
+      actions.saveSlot.slot ??
+      actions.saveSlot.slotKey;
+    const slotId =
+      rawSlotId === undefined || rawSlotId === null || rawSlotId === ""
+        ? undefined
+        : String(rawSlotId);
+
+    preview.saveSlot = {
+      slotId,
+      label: slotId ?? "Auto",
+    };
+  }
+
+  if (actions.loadSlot) {
+    actionsObject.loadSlot = actions.loadSlot;
+    const rawSlotId =
+      actions.loadSlot.slotId ??
+      actions.loadSlot.slot ??
+      actions.loadSlot.slotKey;
+    const slotId =
+      rawSlotId === undefined || rawSlotId === null || rawSlotId === ""
+        ? undefined
+        : String(rawSlotId);
+
+    preview.loadSlot = {
+      slotId,
+      label: slotId ?? "Auto",
+    };
   }
 
   if (presentationState.dialogue) {

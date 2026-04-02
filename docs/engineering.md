@@ -38,8 +38,15 @@ Local-first collaboration:
 - Prefer direct values and `??` defaults over verbose string guards like
   `typeof value === "string" && value.length > 0 ? value : null` when the
   data contract is already stable.
+- In Immer-backed store actions, prefer direct mutation of nested state fields
+  over reconstructing nested objects with spread. Direct mutation is the
+  default style for local store updates.
 - Use simple normalization such as `value ?? null` unless real runtime type
   narrowing is required.
+- In handlers, destructure the dependencies you use at the top of the
+  function (`const { store, refs, appService, projectService } = deps`)
+  instead of repeatedly using `deps.store`, `deps.refs`, and similar dotted
+  access throughout the body.
 
 ## Testing
 
@@ -153,6 +160,13 @@ High-level rules:
 - views stay declarative
 - stores hold UI-local state and derived display data
 - handlers orchestrate
+- page `*.store.js` and `*.handlers.js` remain the composition root for a page
+- page-private non-visual support code should stay in the owning page folder
+  under `support/`
+- page-local visual workflows with their own surface and state should usually
+  move into dedicated components under `src/components/`
+- components must not import from other component folders; shared code belongs
+  in page `support/` or another non-component shared layer
 - `src/internal/ui/` owns shared page/store/handler orchestration
 - `src/internal/project/` owns project meaning and invariants
 - `src/internal/project/` stays intentionally merged into a small number of
@@ -287,6 +301,11 @@ scene-specific workflows.
 
 - `src/pages/`
   Route-level screens and screen-specific orchestration.
+  Page-private supporting code that is not a component and not shared across
+  pages should live in `src/pages/<page-name>/support/`.
+  Keep `support/` flat. Do not create nested subfolders under `support/`.
+  If that code becomes a real UI workflow or visual surface, promote it into a
+  component instead of adding more support-folder hierarchy.
 
 - `src/components/`
   Reusable UI building blocks.
@@ -305,6 +324,7 @@ scene-specific workflows.
   - `layout.js`
     `src/internal/ui/` is the only shared home for page/store/handler
     orchestration that does not belong inside one page folder.
+    Do not move page-private support code there.
 
 - `src/deps/services/shared/`
   Shared handler-facing and internal service logic.

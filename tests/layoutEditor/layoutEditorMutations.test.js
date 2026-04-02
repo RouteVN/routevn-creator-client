@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { applyLayoutItemFieldChange } from "../../src/pages/layoutEditor/support/layoutEditorMutations.js";
 import {
-  applyLayoutItemDragChange,
-  applyLayoutItemFieldChange,
-  applyLayoutItemKeyboardChange,
-} from "../../src/internal/layoutEditorMutations.js";
+  applyCanvasItemDragChange,
+  applyCanvasItemKeyboardChange,
+} from "../../src/components/layoutEditorCanvas/layoutEditorCanvas.handlers.js";
 
 describe("layoutEditorMutations", () => {
   it("updates nested fields without replacing sibling data", () => {
@@ -61,6 +61,34 @@ describe("layoutEditorMutations", () => {
     });
 
     expect(updatedItem.direction).toBeUndefined();
+  });
+
+  it("normalizes opacity to the allowed 0..1 range", () => {
+    const item = {
+      id: "rect-1",
+      type: "rect",
+      opacity: 1,
+    };
+
+    const lowOpacityItem = applyLayoutItemFieldChange({
+      item,
+      name: "opacity",
+      value: -0.5,
+    });
+    const highOpacityItem = applyLayoutItemFieldChange({
+      item,
+      name: "opacity",
+      value: 1.5,
+    });
+    const clearedOpacityItem = applyLayoutItemFieldChange({
+      item,
+      name: "opacity",
+      value: null,
+    });
+
+    expect(lowOpacityItem.opacity).toBe(0);
+    expect(highOpacityItem.opacity).toBe(1);
+    expect(clearedOpacityItem.opacity).toBeUndefined();
   });
 
   it("auto-sizes sprites from the selected image when width and height are unset", () => {
@@ -128,7 +156,7 @@ describe("layoutEditorMutations", () => {
     };
 
     expect(
-      applyLayoutItemKeyboardChange({
+      applyCanvasItemKeyboardChange({
         item,
         key: "ArrowLeft",
         unit: 3,
@@ -139,7 +167,7 @@ describe("layoutEditorMutations", () => {
     });
 
     expect(
-      applyLayoutItemKeyboardChange({
+      applyCanvasItemKeyboardChange({
         item,
         key: "ArrowDown",
         unit: 5,
@@ -159,7 +187,7 @@ describe("layoutEditorMutations", () => {
       y: 20,
     };
 
-    const updatedItem = applyLayoutItemDragChange({
+    const updatedItem = applyCanvasItemDragChange({
       item,
       dragStartPosition: {
         x: 100,

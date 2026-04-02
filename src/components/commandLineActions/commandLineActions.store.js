@@ -48,6 +48,36 @@ const SYSTEM_ACTIONS = [
     icon: "variable",
     mode: "updateVariable",
   },
+  {
+    id: "19",
+    label: "Rollback",
+    icon: "next-line",
+    mode: "rollbackByOffset",
+  },
+  {
+    id: "20",
+    label: "Show Confirm Dialog",
+    icon: "dialogue",
+    mode: "showConfirmDialog",
+  },
+  {
+    id: "21",
+    label: "Hide Confirm Dialog",
+    icon: "dialogue",
+    mode: "hideConfirmDialog",
+  },
+  {
+    id: "22",
+    label: "Save Slot",
+    icon: "dialogue",
+    mode: "saveSlot",
+  },
+  {
+    id: "23",
+    label: "Load Slot",
+    icon: "dialogue",
+    mode: "loadSlot",
+  },
 ];
 
 const PRESENTATION_ACTIONS = [

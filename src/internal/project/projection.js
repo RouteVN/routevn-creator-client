@@ -1,6 +1,7 @@
 import {
   buildLayoutElements,
   createLayoutReferenceResources,
+  isFragmentLayout,
   toRouteEngineKeyboardResource,
 } from "./layout.js";
 import { RESOURCE_TYPES } from "./commands.js";
@@ -248,7 +249,10 @@ const projectRepositoryResources = ({ repositoryState }) => {
             item?.name ||
             `${resourceType === "controls" ? "Control" : "Layout"} ${resourceId}`,
           ...(resourceType === "layouts"
-            ? { layoutType: item?.layoutType || "normal" }
+            ? {
+                layoutType: item?.layoutType || "normal",
+                isFragment: isFragmentLayout(item),
+              }
             : {}),
           parentId,
           elements,
@@ -644,7 +648,11 @@ const constructLayoutResources = (
       textStylesData,
       colors,
       fonts,
-      { layoutId },
+      {
+        layoutId,
+        layoutType: layout.layoutType,
+        layoutsData: repositoryLayouts,
+      },
     );
 
     Object.assign(textStyles, resources.textStyles);
@@ -652,6 +660,7 @@ const constructLayoutResources = (
       id: layoutId,
       name: layout.name,
       layoutType: layout.layoutType,
+      isFragment: isFragmentLayout(layout),
       elements,
       ...(Array.isArray(layout.transitions)
         ? { transitions: structuredClone(layout.transitions) }
@@ -670,7 +679,10 @@ const constructLayoutResources = (
       textStylesData,
       colors,
       fonts,
-      { layoutId: controlId },
+      {
+        layoutId: controlId,
+        layoutsData: repositoryLayouts,
+      },
     );
 
     Object.assign(textStyles, resources.textStyles);

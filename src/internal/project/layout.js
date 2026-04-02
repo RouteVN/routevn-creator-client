@@ -1,7 +1,7 @@
 import { resolveLayoutReferences } from "route-engine-js";
 import { getFirstTextStyleId } from "../../constants/textStyles.js";
-import { toAlphanumericId } from "../layoutEditorTypes.js";
-import { filterTreeCollection } from "./tree.js";
+import { toAlphanumericId } from "../layoutEditorElementRegistry.js";
+import { filterTreeCollection, toHierarchyStructure } from "./tree.js";
 import { normalizeEngineActions } from "./engineActions.js";
 import {
   getInteractionActions,
@@ -15,6 +15,7 @@ const TEXT_NODE_TYPES = new Set([
   "text-ref-character-name",
   "text-revealing-ref-dialogue-content",
   "text-ref-choice-item-content",
+  "text-ref-save-load-slot-date",
   "text-ref-dialogue-line-character-name",
   "text-ref-dialogue-line-content",
 ]);
@@ -22,12 +23,14 @@ const TEXT_NODE_TYPES = new Set([
 import {
   buildVisibilityConditionExpression,
   mergeWhenExpressions,
-} from "../layoutVisibilityCondition.js";
+  splitVisibilityConditionFromWhen,
+} from "../layoutConditions.js";
 
 const TEXT_CONTENT_BY_TYPE = {
   "text-ref-character-name": "${dialogue.character.name}",
   "text-revealing-ref-dialogue-content": "${dialogue.content[0].text}",
   "text-ref-choice-item-content": "${item.content}",
+  "text-ref-save-load-slot-date": "${formatDate(item.savedAt)}",
   "text-ref-dialogue-line-character-name": "${line.characterName}",
   "text-ref-dialogue-line-content": "${line.content[0].text}",
 };
@@ -36,8 +39,17 @@ const TEXT_RENDER_TYPE_BY_TYPE = {
   "text-ref-character-name": "text",
   "text-revealing-ref-dialogue-content": "text-revealing",
   "text-ref-choice-item-content": "text",
+  "text-ref-save-load-slot-date": "text",
   "text-ref-dialogue-line-character-name": "text",
   "text-ref-dialogue-line-content": "text",
+};
+
+const SPRITE_IMAGE_BY_TYPE = {
+  "sprite-ref-save-load-slot-image": "${item.image}",
+};
+
+const SPRITE_RENDER_TYPE_BY_TYPE = {
+  "sprite-ref-save-load-slot-image": "sprite",
 };
 
 const REPEATING_CONTAINER_CONFIG = {
@@ -49,9 +61,60 @@ const REPEATING_CONTAINER_CONFIG = {
       },
     },
   },
+  "container-ref-save-load-slot": {
+    each: "item, i in saveSlots",
+  },
   "container-ref-dialogue-line": {
     each: "line, i in dialogue.lines",
   },
+};
+
+const SPECIAL_CONTAINER_INTERACTIONS = {
+  "container-ref-confirm-dialog-ok": {
+    click: {
+      payload: {
+        actions: "${confirmDialog.confirmActions}",
+      },
+    },
+  },
+  "container-ref-confirm-dialog-cancel": {
+    click: {
+      payload: {
+        actions: "${confirmDialog.cancelActions}",
+      },
+    },
+  },
+};
+
+const withInteractionEventData = (interaction, eventData) => {
+  const normalizedInteraction = normalizeEngineActions(interaction);
+
+  if (!eventData || typeof eventData !== "object" || Array.isArray(eventData)) {
+    return normalizedInteraction;
+  }
+
+  if (
+    !normalizedInteraction ||
+    typeof normalizedInteraction !== "object" ||
+    Array.isArray(normalizedInteraction) ||
+    !Object.hasOwn(normalizedInteraction, "payload")
+  ) {
+    return normalizedInteraction;
+  }
+
+  const payload = getInteractionPayload(normalizedInteraction);
+  const nextEventData =
+    payload._event && typeof payload._event === "object"
+      ? {
+          ...payload._event,
+          ...eventData,
+        }
+      : { ...eventData };
+
+  return withInteractionPayload(normalizedInteraction, {
+    ...payload,
+    _event: nextEventData,
+  });
 };
 
 const DEFAULT_TEXT_STYLE_RESOURCE = {
@@ -77,6 +140,8 @@ export const BASE_LAYOUT_KEYBOARD_LABELS = Object.fromEntries(
 );
 
 const isLayoutResource = (item) => item?.type === "layout";
+
+export const isFragmentLayout = (layout) => layout?.isFragment === true;
 
 export const filterLayoutsByType = (layoutsData, layoutTypes = []) => {
   const allowedLayoutTypes = new Set(layoutTypes);
@@ -230,6 +295,190 @@ const ensureNodeTextStyleId = ({
   return derivedId;
 };
 
+const buildConditionalOverrideTextStyleId = ({
+  context,
+  node,
+  rule,
+  baseTextStyleId,
+  variant,
+}) => {
+  const hasTextStyleId =
+    typeof rule?.set?.textStyleId === "string" &&
+    rule.set.textStyleId.length > 0;
+  const hasTextStyleAlign =
+    typeof rule?.set?.textStyle?.align === "string" &&
+    rule.set.textStyle.align.length > 0;
+
+  if (!hasTextStyleId && !hasTextStyleAlign) {
+    return undefined;
+  }
+
+  return ensureNodeTextStyleId({
+    textStyles: context.textStyles,
+    textStylesData: context.textStylesData,
+    layoutId: context.layoutId,
+    node: {
+      ...node,
+      textStyle: {
+        ...node.textStyle,
+        ...rule?.set?.textStyle,
+      },
+    },
+    textStyleId: hasTextStyleId ? rule.set.textStyleId : baseTextStyleId,
+    variant,
+  });
+};
+
+const applyConditionalVisibilityOverride = (
+  currentWhenExpression,
+  expression,
+  visible,
+) => {
+  if (typeof visible !== "boolean") {
+    return currentWhenExpression;
+  }
+
+  if (visible === true) {
+    return currentWhenExpression
+      ? `(${expression}) || (${currentWhenExpression})`
+      : currentWhenExpression;
+  }
+
+  return currentWhenExpression
+    ? `!(${expression}) && (${currentWhenExpression})`
+    : `!(${expression})`;
+};
+
+const applyConditionalOverrides = ({ element, node, context }) => {
+  const conditionalOverrides = Array.isArray(node.conditionalOverrides)
+    ? node.conditionalOverrides
+    : [];
+
+  if (conditionalOverrides.length === 0) {
+    return element;
+  }
+
+  const nextElement = {
+    ...element,
+  };
+  let conditionalWhenExpression = nextElement["$when"];
+
+  conditionalOverrides.forEach((rule, index) => {
+    if (!rule || typeof rule !== "object" || !rule.when || !rule.set) {
+      return;
+    }
+
+    const expression = buildVisibilityConditionExpression(rule.when);
+    if (!expression) {
+      return;
+    }
+
+    const nextConditionalOverride = {};
+
+    const conditionalTextStyleId = buildConditionalOverrideTextStyleId({
+      context,
+      node,
+      rule,
+      baseTextStyleId: node.textStyleId,
+      variant: `conditional-${index}-base`,
+    });
+
+    if (conditionalTextStyleId) {
+      nextConditionalOverride.textStyleId = conditionalTextStyleId;
+    }
+
+    if (
+      typeof rule.set.hoverTextStyleId === "string" &&
+      rule.set.hoverTextStyleId.length > 0
+    ) {
+      const conditionalHoverTextStyleId = ensureNodeTextStyleId({
+        textStyles: context.textStyles,
+        textStylesData: context.textStylesData,
+        layoutId: context.layoutId,
+        node,
+        textStyleId: rule.set.hoverTextStyleId,
+        variant: `conditional-${index}-hover`,
+      });
+
+      if (conditionalHoverTextStyleId) {
+        nextConditionalOverride.hover = {
+          textStyleId: conditionalHoverTextStyleId,
+        };
+      }
+    }
+
+    if (
+      typeof rule.set.clickTextStyleId === "string" &&
+      rule.set.clickTextStyleId.length > 0
+    ) {
+      const conditionalClickTextStyleId = ensureNodeTextStyleId({
+        textStyles: context.textStyles,
+        textStylesData: context.textStylesData,
+        layoutId: context.layoutId,
+        node,
+        textStyleId: rule.set.clickTextStyleId,
+        variant: `conditional-${index}-click`,
+      });
+
+      if (conditionalClickTextStyleId) {
+        nextConditionalOverride.click = {
+          textStyleId: conditionalClickTextStyleId,
+        };
+      }
+    }
+
+    if (typeof rule.set.imageId === "string" && rule.set.imageId.length > 0) {
+      nextConditionalOverride.imageId = rule.set.imageId;
+    }
+
+    if (
+      typeof rule.set.hoverImageId === "string" &&
+      rule.set.hoverImageId.length > 0
+    ) {
+      nextConditionalOverride.hoverImageId = rule.set.hoverImageId;
+    }
+
+    if (
+      typeof rule.set.clickImageId === "string" &&
+      rule.set.clickImageId.length > 0
+    ) {
+      nextConditionalOverride.clickImageId = rule.set.clickImageId;
+    }
+
+    if (typeof rule.set.opacity === "number") {
+      nextConditionalOverride.alpha = rule.set.opacity;
+    }
+
+    if (Number.isFinite(rule.set.anchorX)) {
+      nextConditionalOverride.anchorX = rule.set.anchorX;
+    }
+
+    if (Number.isFinite(rule.set.anchorY)) {
+      nextConditionalOverride.anchorY = rule.set.anchorY;
+    }
+
+    conditionalWhenExpression = applyConditionalVisibilityOverride(
+      conditionalWhenExpression,
+      expression,
+      rule.set.visible,
+    );
+
+    if (Object.keys(nextConditionalOverride).length === 0) {
+      return;
+    }
+
+    nextElement[`$if ${expression}`] = nextConditionalOverride;
+  });
+
+  if (conditionalWhenExpression) {
+    nextElement["$when"] = conditionalWhenExpression;
+  } else {
+    delete nextElement["$when"];
+  }
+
+  return nextElement;
+};
+
 const normalizeSliderChange = (change, sliderId) => {
   const interactionPayload = getInteractionPayload(change);
   const updateVariable = interactionPayload?.actions?.updateVariable;
@@ -258,6 +507,33 @@ const normalizeSliderChange = (change, sliderId) => {
   );
 };
 
+const mergeInteractionPayloadActions = (baseInteraction, extraInteraction) => {
+  const basePayload = getInteractionPayload(baseInteraction);
+  const extraPayload = getInteractionPayload(extraInteraction);
+  const baseActions = getInteractionActions(baseInteraction);
+  const extraActions = getInteractionActions(extraInteraction);
+  let mergedActions;
+
+  if (typeof extraActions === "string") {
+    mergedActions = extraActions;
+  } else if (typeof baseActions === "string") {
+    mergedActions = baseActions;
+  } else {
+    mergedActions = {
+      ...baseActions,
+      ...extraActions,
+    };
+  }
+
+  return normalizeEngineActions(
+    withInteractionPayload(baseInteraction, {
+      ...basePayload,
+      ...extraPayload,
+      actions: mergedActions,
+    }),
+  );
+};
+
 const updateChildrenIds = (children, indexVar) => {
   return children.map((child) => {
     const updatedChild = {
@@ -274,6 +550,59 @@ const updateChildrenIds = (children, indexVar) => {
 
     return updatedChild;
   });
+};
+
+const prefixElementIds = (elements, prefix) => {
+  return (elements || []).map((element) => {
+    const nextElement = {
+      ...element,
+      id: `${prefix}--${element.id}`,
+    };
+
+    if (
+      Array.isArray(nextElement.children) &&
+      nextElement.children.length > 0
+    ) {
+      nextElement.children = prefixElementIds(nextElement.children, prefix);
+    }
+
+    return nextElement;
+  });
+};
+
+const resolveFragmentChildren = ({ node, imageItems, context }) => {
+  const fragmentLayoutId = node.fragmentLayoutId;
+  const fragmentStack = context.fragmentStack || [];
+  if (
+    !fragmentLayoutId ||
+    fragmentStack.includes(fragmentLayoutId) ||
+    !context.layoutsData?.[fragmentLayoutId]
+  ) {
+    return [];
+  }
+
+  const fragmentLayout = context.layoutsData[fragmentLayoutId];
+  if (fragmentLayout.type !== "layout" || !isFragmentLayout(fragmentLayout)) {
+    return [];
+  }
+
+  const fragmentNodes = toHierarchyStructure(fragmentLayout.elements);
+  const fragmentContext = {
+    ...context,
+    layoutId: fragmentLayoutId,
+    fragmentStack: [...fragmentStack, fragmentLayoutId],
+  };
+
+  return prefixElementIds(
+    fragmentNodes.map((child) =>
+      mapLayoutNode({
+        node: child,
+        imageItems,
+        context: fragmentContext,
+      }),
+    ),
+    node.id,
+  );
 };
 
 const isNvlLinesContainer = (node) => {
@@ -293,7 +622,7 @@ const getImageFileId = (imageItems, imageId) => {
     : undefined;
 };
 
-const buildBaseElement = (node) => {
+const buildBaseElement = (node, context = {}) => {
   const element = {
     id: node.id,
     type: node.type,
@@ -306,12 +635,38 @@ const buildBaseElement = (node) => {
     scaleX: node.scaleX ?? 1,
     scaleY: node.scaleY ?? 1,
     rotation: node.rotation ?? 0,
-    click: normalizeEngineActions(node.click),
-    rightClick: normalizeEngineActions(node.rightClick),
   };
 
+  if (typeof node.opacity === "number") {
+    element.alpha = node.opacity;
+  }
+
+  const click = withInteractionEventData(node.click, context.slotEventData);
+  if (click) {
+    element.click = click;
+  }
+
+  const rightClick = withInteractionEventData(
+    node.rightClick,
+    context.slotEventData,
+  );
+  if (rightClick) {
+    element.rightClick = rightClick;
+  }
+
+  const hover = withInteractionEventData(node.hover, context.slotEventData);
+  if (hover) {
+    element.hover = hover;
+  }
+
+  const parsedWhen = splitVisibilityConditionFromWhen(node["$when"]);
+  const normalizedBaseWhen = parsedWhen.baseWhen;
+  const normalizedVisibilityWhen = buildVisibilityConditionExpression(
+    parsedWhen.visibilityCondition,
+  );
   const whenExpression = mergeWhenExpressions(
-    node["$when"],
+    normalizedBaseWhen,
+    normalizedVisibilityWhen,
     buildVisibilityConditionExpression(node.visibilityCondition),
   );
   if (whenExpression) {
@@ -420,13 +775,19 @@ const applyTextNode = ({ element, node, context }) => {
 };
 
 const applySpriteNode = ({ element, node }) => {
-  if (node.type !== "sprite") {
+  if (node.type !== "sprite" && !SPRITE_IMAGE_BY_TYPE[node.type]) {
     return element;
   }
 
   return {
     ...element,
-    ...(node.imageId ? { imageId: node.imageId } : {}),
+    type: SPRITE_RENDER_TYPE_BY_TYPE[node.type] ?? "sprite",
+    ...(SPRITE_IMAGE_BY_TYPE[node.type]
+      ? { imageId: SPRITE_IMAGE_BY_TYPE[node.type] }
+      : node.imageId
+        ? { imageId: node.imageId }
+        : {}),
+    ...(node.src ? { src: node.src } : {}),
     ...(node.hoverImageId ? { hoverImageId: node.hoverImageId } : {}),
     ...(node.clickImageId ? { clickImageId: node.clickImageId } : {}),
   };
@@ -505,7 +866,12 @@ const applySliderNode = ({ element, node, imageItems }) => {
 };
 
 const applyContainerNode = ({ element, node }) => {
-  if (node.type !== "container" && !REPEATING_CONTAINER_CONFIG[node.type]) {
+  if (
+    node.type !== "container" &&
+    node.type !== "fragment-ref" &&
+    !REPEATING_CONTAINER_CONFIG[node.type] &&
+    !SPECIAL_CONTAINER_INTERACTIONS[node.type]
+  ) {
     return element;
   }
 
@@ -526,9 +892,27 @@ const applyContainerNode = ({ element, node }) => {
 
   const repeatingConfig = REPEATING_CONTAINER_CONFIG[node.type];
   if (!repeatingConfig) {
-    return nextElement;
-  }
+    const specialContainerInteraction =
+      SPECIAL_CONTAINER_INTERACTIONS[node.type];
 
+    if (specialContainerInteraction) {
+      return {
+        ...nextElement,
+        type: "container",
+        click: mergeInteractionPayloadActions(
+          nextElement.click,
+          specialContainerInteraction.click,
+        ),
+      };
+    }
+
+    return node.type === "fragment-ref"
+      ? {
+          ...nextElement,
+          type: "container",
+        }
+      : nextElement;
+  }
   return {
     ...nextElement,
     type: "container",
@@ -536,38 +920,66 @@ const applyContainerNode = ({ element, node }) => {
     id: `${node.id}-instance-\${i}`,
     ...(repeatingConfig.click
       ? {
-          click: {
-            ...nextElement.click,
-            ...normalizeEngineActions(repeatingConfig.click),
-          },
+          click: mergeInteractionPayloadActions(
+            nextElement.click,
+            repeatingConfig.click,
+          ),
         }
       : {}),
   };
 };
 
 const mapLayoutNode = ({ node, imageItems, context }) => {
-  let element = buildBaseElement(node);
+  const effectiveNode = node;
+  const nodeContext =
+    effectiveNode.type === "container-ref-save-load-slot"
+      ? {
+          ...context,
+          slotEventData: {
+            slotId: "${item.slotId}",
+          },
+        }
+      : context;
+  let element = buildBaseElement(node, nodeContext);
 
   element = applyTextNode({
     element,
-    node,
-    context,
+    node: effectiveNode,
+    context: nodeContext,
   });
-  element = applySpriteNode({ element, node });
-  element = applyRectNode({ element, node });
-  element = applySliderNode({ element, node, imageItems });
-  element = applyContainerNode({ element, node });
+  element = applySpriteNode({ element, node: effectiveNode });
+  element = applyRectNode({ element, node: effectiveNode });
+  element = applySliderNode({ element, node: effectiveNode, imageItems });
+  element = applyContainerNode({ element, node: effectiveNode });
+  element = applyConditionalOverrides({
+    element,
+    node: effectiveNode,
+    context: nodeContext,
+  });
 
-  if (node.children?.length > 0) {
-    element.children = node.children.map((child) =>
-      mapLayoutNode({
-        node: child,
-        imageItems,
-        context,
-      }),
-    );
+  const childContext = nodeContext;
 
-    if (REPEATING_CONTAINER_CONFIG[node.type]) {
+  const resolvedChildren =
+    effectiveNode.type === "fragment-ref"
+      ? resolveFragmentChildren({
+          node: effectiveNode,
+          imageItems,
+          context: childContext,
+        })
+      : effectiveNode.children?.length > 0
+        ? effectiveNode.children.map((child) =>
+            mapLayoutNode({
+              node: child,
+              imageItems,
+              context: childContext,
+            }),
+          )
+        : [];
+
+  if (resolvedChildren.length > 0) {
+    element.children = resolvedChildren;
+
+    if (REPEATING_CONTAINER_CONFIG[effectiveNode.type]) {
       element.children = updateChildrenIds(element.children, "i");
     }
   }
@@ -698,8 +1110,11 @@ export const buildLayoutElements = (
   };
   const context = {
     layoutId: options.layoutId ?? "preview",
+    layoutType: options.layoutType,
     textStylesData,
     textStyles,
+    layoutsData: options.layoutsData,
+    fragmentStack: options.fragmentStack ?? [],
   };
 
   const elements = (layout || []).map((node) =>
@@ -745,6 +1160,20 @@ export const extractFileIdsFromRenderState = (obj) => {
   const fileReferencesByKey = new Map();
   const defaultFileReferenceType = "image/png";
 
+  const isRuntimeAssetReference = (value) => {
+    if (typeof value !== "string" || value.length === 0) {
+      return false;
+    }
+
+    return (
+      value.includes("${") ||
+      value.startsWith("data:") ||
+      value.startsWith("blob:") ||
+      value.startsWith("http://") ||
+      value.startsWith("https://")
+    );
+  };
+
   const resolvePreferredFileReferenceType = (currentType, nextType) => {
     const normalizedCurrent =
       typeof currentType === "string" && currentType.length > 0
@@ -771,6 +1200,10 @@ export const extractFileIdsFromRenderState = (obj) => {
 
   const addFileReference = (fileId, type = defaultFileReferenceType) => {
     if (typeof fileId !== "string" || fileId.length === 0) {
+      return;
+    }
+
+    if (isRuntimeAssetReference(fileId)) {
       return;
     }
 
@@ -1335,6 +1768,7 @@ export const layoutHierarchyStructureToRenderState = (
   textStylesData,
   colorsData,
   fontsData,
+  options = {},
 ) => {
   return buildLayoutRenderElements(
     layout,
@@ -1342,5 +1776,6 @@ export const layoutHierarchyStructureToRenderState = (
     textStylesData,
     colorsData,
     fontsData,
+    options,
   );
 };

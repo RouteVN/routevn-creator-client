@@ -3,15 +3,46 @@ import {
   createLayoutEditorElementPersistPayload,
   persistLayoutEditorElementUpdate,
   shouldPersistLayoutEditorFieldImmediately,
-} from "../../src/internal/layoutEditorPersistence.js";
+} from "../../src/pages/layoutEditor/support/layoutEditorPersistence.js";
 
 describe("layoutEditorPersistence", () => {
   it("marks interaction fields as immediate-save changes", () => {
-    expect(shouldPersistLayoutEditorFieldImmediately("click")).toBe(true);
     expect(
-      shouldPersistLayoutEditorFieldImmediately("rightClick.payload.actions"),
+      shouldPersistLayoutEditorFieldImmediately({
+        name: "click",
+        itemType: "container",
+      }),
     ).toBe(true);
-    expect(shouldPersistLayoutEditorFieldImmediately("x")).toBe(false);
+    expect(
+      shouldPersistLayoutEditorFieldImmediately({
+        name: "rightClick.payload.actions",
+        itemType: "container",
+      }),
+    ).toBe(true);
+    expect(
+      shouldPersistLayoutEditorFieldImmediately({
+        name: "conditionalOverrides",
+        itemType: "text",
+      }),
+    ).toBe(true);
+    expect(
+      shouldPersistLayoutEditorFieldImmediately({
+        name: "conditionalOverrides",
+        itemType: "sprite",
+      }),
+    ).toBe(true);
+    expect(
+      shouldPersistLayoutEditorFieldImmediately({
+        name: "paginationMode",
+        itemType: "container-ref-save-load-slot",
+      }),
+    ).toBe(true);
+    expect(
+      shouldPersistLayoutEditorFieldImmediately({
+        name: "x",
+        itemType: "container",
+      }),
+    ).toBe(false);
   });
 
   it("creates a patch payload for additive nested changes", () => {

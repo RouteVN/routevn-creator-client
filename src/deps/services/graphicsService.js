@@ -13,7 +13,7 @@ import createRouteGraphics, {
   soundPlugin,
 } from "route-graphics";
 import createRouteEngine, { createEffectsHandler } from "route-engine-js";
-import { Ticker } from "pixi.js";
+import { Rectangle, Ticker } from "pixi.js";
 import { prepareRenderStateKeyboardForGraphics } from "../../internal/project/layout.js";
 import { requireProjectResolution } from "../../internal/projectResolution.js";
 
@@ -936,7 +936,77 @@ export const createGraphicsService = async ({ subject }) => {
       animations: nextRenderState?.animations || [],
     };
     routeGraphics.render(nextRenderState);
+    applyInteractiveContainerHitAreas(nextRenderState.elements);
     void pruneDecodedAudioCache(retainedAudioKeys);
+  };
+
+  const applyInteractiveContainerHitAreas = (elements = []) => {
+    if (
+      !routeGraphics ||
+      typeof routeGraphics.findElementByLabel !== "function" ||
+      !Array.isArray(elements)
+    ) {
+      return;
+    }
+
+    const queue = [...elements];
+    while (queue.length > 0) {
+      const element = queue.shift();
+      if (!element || typeof element !== "object") {
+        continue;
+      }
+
+      if (Array.isArray(element.children) && element.children.length > 0) {
+        queue.push(...element.children);
+      }
+
+      if (element.type !== "container") {
+        continue;
+      }
+
+      const hasPointerInteraction = Boolean(
+        element.hover || element.click || element.rightClick,
+      );
+      if (!hasPointerInteraction) {
+        continue;
+      }
+
+      const container = routeGraphics.findElementByLabel(element.id);
+      if (!container) {
+        continue;
+      }
+
+      const localBounds =
+        typeof container.getLocalBounds === "function"
+          ? container.getLocalBounds()
+          : undefined;
+      const hitAreaX = typeof localBounds?.x === "number" ? localBounds.x : 0;
+      const hitAreaY = typeof localBounds?.y === "number" ? localBounds.y : 0;
+      const hitAreaWidth =
+        typeof element.width === "number" && element.width > 0
+          ? element.width
+          : localBounds?.width;
+      const hitAreaHeight =
+        typeof element.height === "number" && element.height > 0
+          ? element.height
+          : localBounds?.height;
+      if (
+        typeof hitAreaWidth !== "number" ||
+        typeof hitAreaHeight !== "number" ||
+        hitAreaWidth <= 0 ||
+        hitAreaHeight <= 0
+      ) {
+        continue;
+      }
+
+      container.hitArea = new Rectangle(
+        hitAreaX,
+        hitAreaY,
+        hitAreaWidth,
+        hitAreaHeight,
+      );
+      container.eventMode = "static";
+    }
   };
 
   const runWithSuppressedEngineRenderEffects = (callback) => {
@@ -1103,6 +1173,13 @@ export const createGraphicsService = async ({ subject }) => {
       const queuedLoad = assetLoadQueue.then(() => runAssetLoad(assets));
       assetLoadQueue = queuedLoad.catch(() => {});
       return queuedLoad;
+    },
+    extractBase64: async (label) => {
+      if (!routeGraphics || typeof routeGraphics.extractBase64 !== "function") {
+        return;
+      }
+
+      return await routeGraphics.extractBase64(label);
     },
     hasLoadedAsset,
     initRouteEngine: (projectData, options = {}) => {

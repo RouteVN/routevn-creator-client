@@ -1,4 +1,5 @@
 import { getVariableOptions } from "../../internal/project/projection.js";
+import { getSystemVariableItems } from "../../internal/systemVariables.js";
 
 // Operations available per variable type
 const OPERATIONS_BY_TYPE = {
@@ -124,31 +125,31 @@ export const selectOperations = ({ state }) => {
 };
 
 export const selectViewData = ({ state }) => {
-  const variableItems = state.variablesData?.items || {};
+  const projectVariableItems = state.variablesData?.items ?? {};
+  const variableItems = {
+    ...projectVariableItems,
+    ...getSystemVariableItems(),
+  };
 
-  // Build variable options list using helper
   const variableOptions = getVariableOptions(state.variablesData, {
     showType: true,
+    includeSystem: true,
   });
 
-  // Get selected variable type for filtering operations
   const selectedVariable = variableItems[state.tempOperation.variableId];
   const selectedType = (selectedVariable?.type || "string").toLowerCase();
   const operationOptions =
     OPERATIONS_BY_TYPE[selectedType] || OPERATIONS_BY_TYPE.string;
 
-  // Determine input type based on variable type and operation
   const showValueField =
     state.tempOperation.op !== "toggle" && state.tempOperation.op !== "";
   const valueInputType = selectedType;
 
-  // Boolean options for boolean variables
   const booleanOptions = [
     { value: "true", label: "true" },
     { value: "false", label: "false" },
   ];
 
-  // Build operations with display data
   const operationsWithData = state.operations.map((op) => {
     const variable = variableItems[op.variableId];
     const varType = (variable?.type || "string").toLowerCase();

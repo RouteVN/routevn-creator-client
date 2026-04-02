@@ -74,10 +74,14 @@ If you need deeper or broader Rettangoli framework reference material, use
 - Avoid explicit `= null` initialization; use `let value;` when a later assignment is expected.
 - If state already guarantees a value, use it directly instead of re-normalizing with fallback checks.
 - Do not build objects with conditional object-spread patterns such as `...(condition ? { field } : {})` or nested spread-based payload builders. Build a local object and assign fields explicitly.
+- In Immer-backed store actions, prefer direct mutation of nested state fields over recreating nested objects with spread. Write `state.dialog.open = false`, not `state.dialog = { ...state.dialog, open: false }`.
 
 ## Layering
 
 - Keep page/component handlers simple and orchestration-focused.
+- Keep page `*.store.js` and `*.handlers.js` as the composition root for the
+  page. They should stay easy to find and should wire components and shared
+  helpers together explicitly.
 - Push domain logic, validation, and async complexity into services.
 - Route-level async setup/loading should be handled in app-level orchestration, not repeated in page handlers.
 - Prefer single-purpose store actions (`setCurrentProject`, etc.) over multiple related setter calls.
@@ -103,6 +107,10 @@ If you need deeper or broader Rettangoli framework reference material, use
 
 ## Handler Simplicity
 
+- At the top of handlers, destructure what you use from `deps`
+  (`const { store, refs, appService, projectService } = deps`) instead of
+  repeatedly calling `deps.store`, `deps.refs`, and similar dotted access
+  throughout the function body.
 - Do not add dynamic form method wrappers (for example, `callFormMethod`) or retry loops to wait for refs.
 - Call known methods directly (`formRef.reset()`, `formRef.setValues(...)`).
 - Avoid defensive guard noise when data contract is already stable.
@@ -172,6 +180,15 @@ Put it in `src/pages/<page-name>/` with:
 - `<page>.store.js`
 - `<page>.handlers.js`
 
+Page-private supporting code that is not a visual component and not shared
+across pages should live in:
+
+- `src/pages/<page-name>/support/`
+
+Keep `support/` flat. Do not add extra nested folders under `support/`. If a
+piece of code grows into a real visual workflow or UI surface, promote it into
+its own component instead of adding another level under `support/`.
+
 If it is a route-level page, also wire it into:
 
 - `src/pages/app/app.view.yaml`
@@ -183,6 +200,13 @@ Put it in `src/components/<component-name>/`.
 
 If it is not truly reusable, keep it close to the page instead of forcing an abstraction.
 
+For page-local visual workflows that own a real UI surface and local state,
+prefer a dedicated component over a non-visual slice module.
+
+Components must not import from other component folders. If code is shared
+between multiple components in one page, keep it in that page's `support/`
+folder or another non-component shared location.
+
 ### Add a primitive
 
 Put it in `src/primitives/` when the code owns low-level DOM behavior or a browser-native custom element.
@@ -190,6 +214,9 @@ Put it in `src/primitives/` when the code owns low-level DOM behavior or a brows
 ### Add shared page/store/handler orchestration
 
 Put it in `src/internal/ui/*` when the code is shared across pages, may touch stores/refs/render/RxJS/services, and is not a visual component or primitive.
+
+Do not put page-private support code in `src/internal/ui/*`. Keep that code in
+the owning page folder under `support/`.
 
 ### Add a small pure app-owned helper
 

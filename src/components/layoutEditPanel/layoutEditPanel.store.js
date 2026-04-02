@@ -1,101 +1,49 @@
 import { parseAndRender } from "jempl";
-import { toFlatGroups } from "../../internal/project/tree.js";
 import { getFirstTextStyleId } from "../../constants/textStyles.js";
 import { getVariableOptions } from "../../internal/project/projection.js";
-import { getSystemVariableItems } from "../../internal/systemVariables.js";
+import { getFragmentLayoutOptions } from "../../pages/layoutEditor/support/layoutFragments.js";
+import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
+import { splitLayoutConditionFromWhen } from "../../internal/layoutConditions.js";
+import { toVisibilityConditionTargetTypeByTarget } from "./support/layoutEditPanelFeatures.js";
 import {
-  getInteractionActions,
-  getInteractionPayload,
-} from "../../internal/project/interactionPayload.js";
-import { getLayoutEditorItemCapabilities } from "../../internal/layoutEditorTypes.js";
-import { splitVisibilityConditionFromWhen } from "../../internal/layoutVisibilityCondition.js";
-
-const ACTION_INTERACTION_LABELS = {
-  click: "Click",
-  rightClick: "Right Click",
-};
+  createChildInteractionDialogDefaults,
+  createChildInteractionForm,
+  createConditionalOverrideAttributeDefaults,
+  createConditionalOverrideAttributeForm,
+  createConditionalOverrideConditionDefaults,
+  createConditionalOverrideConditionForm,
+  createSaveLoadPaginationDialogDefaults,
+  createSaveLoadPaginationForm,
+  createVisibilityConditionDialogDefaults,
+  createVisibilityConditionForm,
+  getChildInteractionSummary,
+  getConditionalOverrideAttributeOptions,
+  getConditionalOverrideSummary,
+  getSaveLoadPaginationSummary,
+  getVisibilityConditionSummary,
+  normalizeConditionalOverrideRules,
+  toConditionalOverrideAttributeItems,
+  toVisibilityConditionTargetOptions,
+} from "./support/layoutEditPanelFeatures.js";
+import {
+  ACTION_INTERACTION_TYPES,
+  REVEAL_EFFECT_OPTIONS,
+  getLayoutEditPanelSections,
+  getLayoutInteractionActions,
+  selectLayoutEditPanelFieldPopoverForm,
+  toImageOptions,
+  toInspectorValues,
+  toTextStyleOptions,
+} from "./support/layoutEditPanelViewData.js";
 
 const HIDDEN_LAYOUT_ACTION_MODES = new Set();
-
-const ACTION_LABELS = {
-  nextLine: "Next Line",
-  sectionTransition: "Section Transition",
-  toggleAutoMode: "Toggle Auto Mode",
-  toggleSkipMode: "Toggle Skip Mode",
-  toggleDialogueUI: "Toggle Dialogue Box",
-  pushLayeredView: "Push Layered View",
-  popLayeredView: "Pop Layered View",
-  updateVariable: "Update Variable",
-};
-
-const ACTION_INTERACTION_TYPES = ["click", "rightClick"];
-
-const REVEAL_EFFECT_OPTIONS = [
-  { label: "Typewriter", value: "typewriter" },
-  { label: "Soft Wipe", value: "softWipe" },
-  { label: "None", value: "none" },
-];
-
-const VISIBILITY_CONDITION_OP_OPTIONS = [{ label: "Equals", value: "eq" }];
-
-const VISIBILITY_BOOLEAN_OPTIONS = [
-  { label: "True", value: true },
-  { label: "False", value: false },
-];
-
-const SUPPORTED_VISIBILITY_VARIABLE_TYPES = new Set([
-  "boolean",
-  "number",
-  "string",
-]);
-
-const getLayoutInteractionActions = (values, interactionType) => {
-  return getInteractionActions(values?.[interactionType]);
-};
-
-const toLayoutActionItems = (values) => {
-  return ACTION_INTERACTION_TYPES.flatMap((interactionType) =>
-    Object.entries(getLayoutInteractionActions(values, interactionType))
-      .filter(([key]) => !HIDDEN_LAYOUT_ACTION_MODES.has(key))
-      .map(([key]) => ({
-        id: key,
-        interactionType,
-        label: `${ACTION_INTERACTION_LABELS[interactionType]}: ${ACTION_LABELS[key] ?? key}`,
-        svg: `action-${key}`,
-      })),
-  );
-};
-
-const getLayoutEditPanelSections = ({ constants, resourceType }) => {
-  return resourceType === "controls"
-    ? constants.controlSections || []
-    : constants.layoutSections || [];
-};
-
-const findFieldPopoverFormInSections = (sections, fieldName) => {
-  for (const section of sections || []) {
-    for (const item of section.items || []) {
-      if (item.type !== "group") {
-        continue;
-      }
-
-      const field = (item.fields || []).find(
-        (entry) => entry.name === fieldName,
-      );
-      if (field?.popoverForm) {
-        return field.popoverForm;
-      }
-    }
-  }
-
-  return undefined;
-};
 
 const createDefaultValues = () => ({
   x: 0,
   y: 0,
   width: 100,
   height: 100,
+  opacity: 1,
   rotation: 0,
   anchor: {
     x: 0,
@@ -105,200 +53,6 @@ const createDefaultValues = () => ({
   gap: 0,
   actions: {},
 });
-
-const getScalarVariableItems = (variablesData = {}) => {
-  const projectVariables = Object.entries(variablesData?.items || {}).filter(
-    ([, item]) =>
-      item?.type !== "folder" &&
-      SUPPORTED_VISIBILITY_VARIABLE_TYPES.has(
-        String(item?.type || "string").toLowerCase(),
-      ),
-  );
-  const systemVariables = Object.entries(getSystemVariableItems()).filter(
-    ([, item]) =>
-      SUPPORTED_VISIBILITY_VARIABLE_TYPES.has(
-        String(item?.type || "string").toLowerCase(),
-      ),
-  );
-
-  return Object.fromEntries([...projectVariables, ...systemVariables]);
-};
-
-const toVisibilityConditionVariableOptions = (variablesData = {}) => {
-  return Object.entries(getScalarVariableItems(variablesData)).map(
-    ([id, variable]) => ({
-      label: `${variable.name} (${String(variable.type || "string").toLowerCase()})`,
-      value: id,
-    }),
-  );
-};
-
-const toVisibilityConditionVariableTypeById = (variablesData = {}) => {
-  return Object.fromEntries(
-    Object.entries(getScalarVariableItems(variablesData)).map(
-      ([id, variable]) => [id, String(variable.type || "string").toLowerCase()],
-    ),
-  );
-};
-
-const getVisibilityConditionSummary = (
-  visibilityCondition,
-  variablesData = {},
-) => {
-  if (!visibilityCondition?.variableId || visibilityCondition?.op !== "eq") {
-    return "Always visible";
-  }
-
-  const variable =
-    getScalarVariableItems(variablesData)[visibilityCondition.variableId];
-  const variableName = variable?.name ?? visibilityCondition.variableId;
-  const value =
-    typeof visibilityCondition.value === "string"
-      ? `"${visibilityCondition.value}"`
-      : String(visibilityCondition.value);
-
-  return `${variableName} == ${value}`;
-};
-
-const createVisibilityConditionDialogDefaults = (
-  visibilityCondition,
-  variableTypeById,
-) => {
-  const variableId = visibilityCondition?.variableId ?? "";
-  const selectedVariableType = variableId
-    ? (variableTypeById[variableId] ?? "string")
-    : undefined;
-  const rawValue = visibilityCondition?.value;
-  const parsedNumberValue = Number(rawValue);
-
-  return {
-    variableId,
-    op: visibilityCondition?.op ?? "eq",
-    booleanValue: rawValue === true,
-    numberValue: Number.isFinite(parsedNumberValue) ? parsedNumberValue : 0,
-    stringValue: typeof rawValue === "string" ? rawValue : "",
-    selectedVariableType,
-  };
-};
-
-const createVisibilityConditionForm = ({
-  hasCondition,
-  variableOptions,
-} = {}) => {
-  return {
-    title: "Visibility Condition",
-    fields: [
-      {
-        name: "variableId",
-        type: "select",
-        label: "Variable",
-        required: false,
-        options: variableOptions,
-      },
-      {
-        $when: "variableId",
-        name: "op",
-        type: "select",
-        label: "Operation",
-        required: true,
-        clearable: false,
-        options: VISIBILITY_CONDITION_OP_OPTIONS,
-      },
-      {
-        $when: "variableId && selectedVariableType == 'boolean'",
-        name: "booleanValue",
-        type: "select",
-        label: "Value",
-        required: true,
-        clearable: false,
-        options: VISIBILITY_BOOLEAN_OPTIONS,
-      },
-      {
-        $when: "variableId && selectedVariableType == 'number'",
-        name: "numberValue",
-        type: "input-number",
-        label: "Value",
-        required: true,
-      },
-      {
-        $when: "variableId && selectedVariableType == 'string'",
-        name: "stringValue",
-        type: "input-text",
-        label: "Value",
-        required: true,
-      },
-    ],
-    actions: {
-      layout: "",
-      buttons: [
-        {
-          id: "clear",
-          align: "left",
-          variant: "se",
-          label: "Clear",
-          disabled: !hasCondition,
-        },
-        {
-          id: "cancel",
-          variant: "se",
-          label: "Cancel",
-        },
-        {
-          id: "submit",
-          variant: "pr",
-          label: "Save",
-        },
-      ],
-    },
-  };
-};
-
-const toTextStyleOptions = (textStylesData = {}) => {
-  const textStyleGroups = toFlatGroups(textStylesData);
-  return textStyleGroups.flatMap((group) =>
-    group.children.map((item) => ({
-      label: item.name,
-      value: item.id,
-    })),
-  );
-};
-
-const getSliderBoundVariableId = (values = {}) => {
-  if (values?.type !== "slider") {
-    return values?.variableId;
-  }
-
-  if (values?.variableId) {
-    return values.variableId;
-  }
-
-  const interactionPayload = getInteractionPayload(values.change);
-  const updateVariable = interactionPayload?.actions?.updateVariable;
-  const firstOperation = Array.isArray(updateVariable?.operations)
-    ? updateVariable.operations[0]
-    : undefined;
-
-  return firstOperation?.variableId;
-};
-
-const toInspectorValues = ({ values, firstTextStyleId }) => {
-  const revealEffect =
-    values?.type === "text-revealing-ref-dialogue-content"
-      ? (values?.revealEffect ?? "typewriter")
-      : values?.revealEffect;
-  const variableId = getSliderBoundVariableId(values);
-
-  return {
-    ...values,
-    revealEffect,
-    variableId,
-    direction: values?.direction,
-    textStyleId: values?.textStyleId || firstTextStyleId || "",
-    hoverTextStyleId: values?.hoverTextStyleId ?? "",
-    clickTextStyleId: values?.clickTextStyleId ?? "",
-    actions: toLayoutActionItems(values),
-  };
-};
 
 export const createInitialState = () => {
   return {
@@ -322,6 +76,27 @@ export const createInitialState = () => {
       key: 0,
       selectedVariableType: undefined,
     },
+    saveLoadPaginationDialog: {
+      open: false,
+      key: 0,
+    },
+    childInteractionDialog: {
+      open: false,
+      key: 0,
+    },
+    conditionalOverrideConditionDialog: {
+      open: false,
+      key: 0,
+      editingIndex: undefined,
+      selectedVariableType: undefined,
+    },
+    conditionalOverrideAttributeDialog: {
+      open: false,
+      key: 0,
+      editingIndex: undefined,
+      fieldName: undefined,
+    },
+    imagesData: { tree: [], items: {} },
     textStylesData: { tree: [], items: {} },
     variablesData: { tree: [], items: {} },
     values: createDefaultValues(),
@@ -413,41 +188,88 @@ export const closePopoverForm = ({ state }, _payload = {}) => {
 };
 
 export const openVisibilityConditionDialog = ({ state }, _payload = {}) => {
-  state.visibilityConditionDialog = {
-    open: true,
-    key: state.visibilityConditionDialog.key + 1,
-    selectedVariableType: state.visibilityConditionDialog.selectedVariableType,
-  };
+  state.visibilityConditionDialog.open = true;
+  state.visibilityConditionDialog.key += 1;
+};
+
+export const openSaveLoadPaginationDialog = ({ state }, _payload = {}) => {
+  state.saveLoadPaginationDialog.open = true;
+  state.saveLoadPaginationDialog.key += 1;
+};
+
+export const openChildInteractionDialog = ({ state }, _payload = {}) => {
+  state.childInteractionDialog.open = true;
+  state.childInteractionDialog.key += 1;
+};
+
+export const closeSaveLoadPaginationDialog = ({ state }, _payload = {}) => {
+  state.saveLoadPaginationDialog.open = false;
+};
+
+export const closeChildInteractionDialog = ({ state }, _payload = {}) => {
+  state.childInteractionDialog.open = false;
+};
+
+export const openConditionalOverrideConditionDialog = (
+  { state },
+  { editingIndex, selectedVariableType } = {},
+) => {
+  state.conditionalOverrideConditionDialog.open = true;
+  state.conditionalOverrideConditionDialog.key += 1;
+  state.conditionalOverrideConditionDialog.editingIndex = editingIndex;
+  state.conditionalOverrideConditionDialog.selectedVariableType =
+    selectedVariableType;
+};
+
+export const closeConditionalOverrideConditionDialog = (
+  { state },
+  _payload = {},
+) => {
+  state.conditionalOverrideConditionDialog.open = false;
+  state.conditionalOverrideConditionDialog.editingIndex = undefined;
 };
 
 export const closeVisibilityConditionDialog = ({ state }, _payload = {}) => {
-  state.visibilityConditionDialog = {
-    ...state.visibilityConditionDialog,
-    open: false,
-  };
+  state.visibilityConditionDialog.open = false;
 };
 
 export const setVisibilityConditionDialogSelectedVariableType = (
   { state },
   { selectedVariableType } = {},
 ) => {
-  state.visibilityConditionDialog = {
-    ...state.visibilityConditionDialog,
-    selectedVariableType: selectedVariableType ?? "string",
-  };
+  state.visibilityConditionDialog.selectedVariableType =
+    selectedVariableType ?? "string";
+};
+
+export const setConditionalOverrideConditionDialogSelectedVariableType = (
+  { state },
+  { selectedVariableType } = {},
+) => {
+  state.conditionalOverrideConditionDialog.selectedVariableType =
+    selectedVariableType ?? "string";
+};
+
+export const openConditionalOverrideAttributeDialog = (
+  { state },
+  { editingIndex, fieldName } = {},
+) => {
+  state.conditionalOverrideAttributeDialog.open = true;
+  state.conditionalOverrideAttributeDialog.key += 1;
+  state.conditionalOverrideAttributeDialog.editingIndex = editingIndex;
+  state.conditionalOverrideAttributeDialog.fieldName = fieldName;
+};
+
+export const closeConditionalOverrideAttributeDialog = (
+  { state },
+  _payload = {},
+) => {
+  state.conditionalOverrideAttributeDialog.open = false;
+  state.conditionalOverrideAttributeDialog.editingIndex = undefined;
+  state.conditionalOverrideAttributeDialog.fieldName = undefined;
 };
 
 export const selectFieldPopoverForm = ({ constants, props }, { name } = {}) => {
-  if (!name) {
-    return undefined;
-  }
-
-  const sections = getLayoutEditPanelSections({
-    constants,
-    resourceType: props.resourceType,
-  });
-
-  return findFieldPopoverFormInSections(sections, name);
+  return selectLayoutEditPanelFieldPopoverForm({ constants, props }, { name });
 };
 
 export const selectPopoverForm = ({ state }) => {
@@ -492,6 +314,10 @@ export const setTextStylesData = ({ state }, { textStylesData } = {}) => {
   state.textStylesData = textStylesData;
 };
 
+export const setImagesData = ({ state }, { imagesData } = {}) => {
+  state.imagesData = imagesData;
+};
+
 export const setVariablesData = ({ state }, { variablesData } = {}) => {
   state.variablesData = variablesData;
 };
@@ -516,12 +342,34 @@ export const selectVisibilityConditionDialog = ({ state }) => {
   return state.visibilityConditionDialog;
 };
 
-export const selectVisibilityConditionVariableTypeById = ({ state }) => {
-  return toVisibilityConditionVariableTypeById(state.variablesData);
+export const selectSaveLoadPaginationDialog = ({ state }) => {
+  return state.saveLoadPaginationDialog;
+};
+
+export const selectChildInteractionDialog = ({ state }) => {
+  return state.childInteractionDialog;
+};
+
+export const selectConditionalOverrideConditionDialog = ({ state }) => {
+  return state.conditionalOverrideConditionDialog;
+};
+
+export const selectConditionalOverrideAttributeDialog = ({ state }) => {
+  return state.conditionalOverrideAttributeDialog;
+};
+
+export const selectVisibilityConditionTargetTypeByTarget = ({
+  state,
+  props,
+}) => {
+  return toVisibilityConditionTargetTypeByTarget(state.variablesData, {
+    includeSaveDataAvailable: props.isInsideSaveLoadSlot === true,
+  });
 };
 
 export const selectViewData = ({ state, props, constants }) => {
   const textStyleItems = toTextStyleOptions(state.textStylesData);
+  const imageItems = toImageOptions(state.imagesData);
   const firstTextStyleId = getFirstTextStyleId(state.textStylesData);
   const textStyleItemsWithNone = [
     { label: "None", value: "" },
@@ -531,10 +379,19 @@ export const selectViewData = ({ state, props, constants }) => {
     type: "number",
     includeSystem: true,
   });
-  const visibilityConditionVariableOptions =
-    toVisibilityConditionVariableOptions(state.variablesData);
-  const visibilityConditionVariableTypeById =
-    toVisibilityConditionVariableTypeById(state.variablesData);
+  const fragmentLayoutOptions = getFragmentLayoutOptions(props.layoutsData);
+  const visibilityConditionOptions = {
+    includeSaveDataAvailable: props.isInsideSaveLoadSlot === true,
+  };
+  const visibilityConditionTargetOptions = toVisibilityConditionTargetOptions(
+    state.variablesData,
+    visibilityConditionOptions,
+  );
+  const visibilityConditionTargetTypeByTarget =
+    toVisibilityConditionTargetTypeByTarget(
+      state.variablesData,
+      visibilityConditionOptions,
+    );
   const variableOptionsWithNone = [
     { label: "None", value: "" },
     ...variableOptions,
@@ -542,11 +399,32 @@ export const selectViewData = ({ state, props, constants }) => {
   const values = toInspectorValues({
     values: state.values,
     firstTextStyleId,
+    hiddenActionModes: HIDDEN_LAYOUT_ACTION_MODES,
   });
-  const currentVisibilityCondition = splitVisibilityConditionFromWhen(
+  const currentVisibilityCondition = splitLayoutConditionFromWhen(
     values["$when"],
   ).visibilityCondition;
-  const capabilities = getLayoutEditorItemCapabilities(props.itemType);
+  const conditionalOverrideRules = normalizeConditionalOverrideRules(
+    values.conditionalOverrides,
+  );
+  const conditionalOverrideItems = conditionalOverrideRules.map(
+    (rule, index) => ({
+      index,
+      summary: getConditionalOverrideSummary(
+        rule,
+        state.variablesData,
+        visibilityConditionOptions,
+        getVisibilityConditionSummary,
+      ),
+      attributeItems: toConditionalOverrideAttributeItems(
+        rule,
+        state.textStylesData,
+        state.imagesData,
+      ),
+    }),
+  );
+  const capabilities =
+    getLayoutEditorElementDefinition(props.itemType)?.capabilities ?? {};
   const sections = parseAndRender(
     getLayoutEditPanelSections({
       constants,
@@ -558,11 +436,20 @@ export const selectViewData = ({ state, props, constants }) => {
       resourceType: props.resourceType,
       textStyleItems,
       textStyleItemsWithNone,
+      variableOptions,
       variableOptionsWithNone,
+      fragmentLayoutOptions,
       values,
+      paginationSummary: getSaveLoadPaginationSummary({
+        values,
+        variablesData: state.variablesData,
+      }),
+      childInteractionSummary: getChildInteractionSummary(values),
+      conditionalOverrideItems,
       visibilityConditionSummary: getVisibilityConditionSummary(
         currentVisibilityCondition,
         state.variablesData,
+        visibilityConditionOptions,
       ),
       canAddSpriteImageVariant:
         !values.imageId || !values.hoverImageId || !values.clickImageId,
@@ -575,11 +462,45 @@ export const selectViewData = ({ state, props, constants }) => {
   const visibilityConditionDialogDefaults =
     createVisibilityConditionDialogDefaults(
       currentVisibilityCondition,
-      visibilityConditionVariableTypeById,
+      visibilityConditionTargetTypeByTarget,
+    );
+  const editingConditionalOverrideRule =
+    Number.isInteger(state.conditionalOverrideConditionDialog.editingIndex) &&
+    state.conditionalOverrideConditionDialog.editingIndex >= 0
+      ? conditionalOverrideRules[
+          state.conditionalOverrideConditionDialog.editingIndex
+        ]
+      : undefined;
+  const conditionalOverrideConditionDefaults =
+    createConditionalOverrideConditionDefaults(
+      editingConditionalOverrideRule,
+      visibilityConditionTargetTypeByTarget,
+    );
+  const editingConditionalOverrideAttributeRule =
+    Number.isInteger(state.conditionalOverrideAttributeDialog.editingIndex) &&
+    state.conditionalOverrideAttributeDialog.editingIndex >= 0
+      ? conditionalOverrideRules[
+          state.conditionalOverrideAttributeDialog.editingIndex
+        ]
+      : undefined;
+  const conditionalOverrideAttributeOptions =
+    getConditionalOverrideAttributeOptions({
+      rule: editingConditionalOverrideAttributeRule,
+      includeFieldName: state.conditionalOverrideAttributeDialog.fieldName,
+      capabilities,
+    });
+  const conditionalOverrideAttributeDefaults =
+    createConditionalOverrideAttributeDefaults(
+      editingConditionalOverrideAttributeRule,
+      state.conditionalOverrideAttributeDialog.fieldName,
+      conditionalOverrideAttributeOptions,
     );
   const selectedVisibilityConditionVariableType =
     state.visibilityConditionDialog.selectedVariableType ??
     visibilityConditionDialogDefaults.selectedVariableType;
+  const selectedConditionalOverrideVariableType =
+    state.conditionalOverrideConditionDialog.selectedVariableType ??
+    conditionalOverrideConditionDefaults.selectedVariableType;
 
   return {
     values: state.values,
@@ -597,11 +518,46 @@ export const selectViewData = ({ state, props, constants }) => {
     visibilityConditionDialog: state.visibilityConditionDialog,
     visibilityConditionDialogDefaults,
     visibilityConditionDialogForm: createVisibilityConditionForm({
-      hasCondition: !!currentVisibilityCondition?.variableId,
-      variableOptions: visibilityConditionVariableOptions,
+      hasCondition: !!currentVisibilityCondition?.target,
+      targetOptions: visibilityConditionTargetOptions,
     }),
     visibilityConditionDialogContext: {
       selectedVariableType: selectedVisibilityConditionVariableType,
+    },
+    saveLoadPaginationDialog: state.saveLoadPaginationDialog,
+    saveLoadPaginationDialogDefaults:
+      createSaveLoadPaginationDialogDefaults(values),
+    saveLoadPaginationDialogForm: createSaveLoadPaginationForm({
+      variableOptions,
+    }),
+    childInteractionDialog: state.childInteractionDialog,
+    childInteractionDialogDefaults:
+      createChildInteractionDialogDefaults(values),
+    childInteractionDialogForm: createChildInteractionForm(),
+    conditionalOverrideConditionDialog:
+      state.conditionalOverrideConditionDialog,
+    conditionalOverrideItems,
+    conditionalOverrideConditionDefaults,
+    conditionalOverrideConditionForm: createConditionalOverrideConditionForm({
+      targetOptions: visibilityConditionTargetOptions,
+      submitLabel: editingConditionalOverrideRule ? "Save" : "Create",
+    }),
+    conditionalOverrideConditionDialogContext: {
+      selectedVariableType: selectedConditionalOverrideVariableType,
+    },
+    conditionalOverrideAttributeDialog:
+      state.conditionalOverrideAttributeDialog,
+    conditionalOverrideAttributeDefaults,
+    conditionalOverrideAttributeForm: createConditionalOverrideAttributeForm({
+      attributeOptions: conditionalOverrideAttributeOptions,
+      textStyleOptions: textStyleItems,
+      imageOptions: imageItems,
+      submitLabel: state.conditionalOverrideAttributeDialog.fieldName
+        ? "Save"
+        : "Add",
+    }),
+    conditionalOverrideAttributeDialogContext: {
+      hasAttributeOptions: conditionalOverrideAttributeOptions.length > 0,
     },
     imageSelectorDialog: state.imageSelectorDialog,
     tempSelectedImageId: state.tempSelectedImageId,

@@ -1,0 +1,17 @@
+componentName: rvn-command-line-show-confirm-dialog
+propsSchema:
+  type: object
+  properties:
+    showConfirmDialog:
+      type: object
+      properties:
+        resourceId:
+          type: string
+        confirmActions:
+          type: object
+        cancelActions:
+          type: object
+    layouts:
+      type: array
+      items:
+        type: object

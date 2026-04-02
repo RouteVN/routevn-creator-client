@@ -3,6 +3,14 @@ refs:
     eventListeners:
       click:
         handler: handleVisibilityConditionItemClick
+  paginationItem*:
+    eventListeners:
+      click:
+        handler: handleSaveLoadPaginationItemClick
+  childInteractionItem*:
+    eventListeners:
+      click:
+        handler: handleChildInteractionItemClick
   groupItem*:
     eventListeners:
       click:
@@ -31,6 +39,60 @@ refs:
         handler: handleVisibilityConditionFormAction
       form-change:
         handler: handleVisibilityConditionFormChange
+  saveLoadPaginationDialog:
+    eventListeners:
+      close:
+        handler: handleSaveLoadPaginationDialogClose
+  childInteractionDialog:
+    eventListeners:
+      close:
+        handler: handleChildInteractionDialogClose
+  conditionalOverrideConditionDialog:
+    eventListeners:
+      close:
+        handler: handleConditionalOverrideConditionDialogClose
+  conditionalOverrideAttributeDialog:
+    eventListeners:
+      close:
+        handler: handleConditionalOverrideAttributeDialogClose
+  saveLoadPaginationForm:
+    eventListeners:
+      form-action:
+        handler: handleSaveLoadPaginationFormAction
+  childInteractionForm:
+    eventListeners:
+      form-action:
+        handler: handleChildInteractionFormAction
+  conditionalOverrideConditionForm:
+    eventListeners:
+      form-action:
+        handler: handleConditionalOverrideConditionFormAction
+      form-change:
+        handler: handleConditionalOverrideConditionFormChange
+  conditionalOverrideAttributeForm:
+    eventListeners:
+      form-action:
+        handler: handleConditionalOverrideAttributeFormAction
+  conditionalOverrideCondition*:
+    eventListeners:
+      click:
+        handler: handleConditionalOverrideConditionClick
+  conditionalOverrideDelete*:
+    eventListeners:
+      click:
+        handler: handleConditionalOverrideConditionDeleteClick
+  conditionalOverrideAddAttribute*:
+    eventListeners:
+      click:
+        handler: handleConditionalOverrideAddAttributeClick
+  conditionalOverrideAttribute*:
+    eventListeners:
+      click:
+        handler: handleConditionalOverrideAttributeClick
+  conditionalOverrideAttributeDelete*:
+    eventListeners:
+      click:
+        handler: handleConditionalOverrideAttributeDeleteClick
   sectionAction*:
     eventListeners:
       click:
@@ -120,6 +182,30 @@ template:
                 $elif item.type == 'condition-summary':
                   - rtgl-view#conditionItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                       - rtgl-text s=sm: ${item.value}
+                $elif item.type == 'conditional-override-list':
+                  - $if item.items.length > 0:
+                      - $for conditionalItem, k in item.items:
+                          - rtgl-view w=f g=sm p=md bgc=mu br=md bw=xs bc=bg:
+                              - rtgl-view d=h g=sm av=c w=f:
+                                  - rtgl-view#conditionalOverrideCondition${i}x${j}x${k} data-index=${conditionalItem.index} w=1fg p=sm bgc=bg br=md bw=xs bc=bg h-bc=ac cur=pointer:
+                                      - rtgl-text s=sm: ${conditionalItem.summary}
+                                  - rtgl-button#conditionalOverrideDelete${i}x${j}x${k} data-index=${conditionalItem.index} variant=se s=sm: Delete
+                              - $if conditionalItem.attributeItems.length > 0:
+                                  - $for attributeItem, m in conditionalItem.attributeItems:
+                                      - rtgl-view d=h g=sm av=c w=f:
+                                          - rtgl-view#conditionalOverrideAttribute${i}x${j}x${k}x${m} data-index=${conditionalItem.index} data-field-name=${attributeItem.fieldName} w=1fg p=sm bgc=bg br=md bw=xs bc=bg h-bc=ac cur=pointer:
+                                              - rtgl-text s=xs: ${attributeItem.summary}
+                                          - rtgl-button#conditionalOverrideAttributeDelete${i}x${j}x${k}x${m} data-index=${conditionalItem.index} data-field-name=${attributeItem.fieldName} variant=se s=sm: Remove
+                                $else:
+                                  - rtgl-text s=xs c=mu-fg: No attributes yet
+                              - rtgl-view d=h w=f ah=e:
+                                  - rtgl-button#conditionalOverrideAddAttribute${i}x${j}x${k} data-index=${conditionalItem.index} pre=plus s=sm v=gh: Add Attribute
+                $elif item.type == 'pagination-summary':
+                  - rtgl-view#paginationItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
+                      - rtgl-text s=sm: ${item.value}
+                $elif item.type == 'child-interaction-summary':
+                  - rtgl-view#childInteractionItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
+                      - rtgl-text s=sm: ${item.value}
   - rtgl-view h=1 w=f bgc=mu mv=lg: null
   - rvn-system-actions#systemActions :actions=${actionsData} actionType=system :hiddenModes=${hiddenSystemActionModes}: null
   - rtgl-popover#popoverForm ?open=${popover.open} place=b x=${popover.x} y=${popover.y}:
@@ -128,6 +214,18 @@ template:
   - rtgl-dialog#visibilityConditionDialog ?open=${visibilityConditionDialog.open} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-form#visibilityConditionForm key=${visibilityConditionDialog.key} :form=${visibilityConditionDialogForm} :defaultValues=${visibilityConditionDialogDefaults} :context=${visibilityConditionDialogContext} w=f: null
+  - rtgl-dialog#saveLoadPaginationDialog ?open=${saveLoadPaginationDialog.open} s=md:
+      - rtgl-view slot=content g=md:
+          - rtgl-form#saveLoadPaginationForm key=${saveLoadPaginationDialog.key} :form=${saveLoadPaginationDialogForm} :defaultValues=${saveLoadPaginationDialogDefaults} w=f: null
+  - rtgl-dialog#childInteractionDialog ?open=${childInteractionDialog.open} s=md:
+      - rtgl-view slot=content g=md:
+          - rtgl-form#childInteractionForm key=${childInteractionDialog.key} :form=${childInteractionDialogForm} :defaultValues=${childInteractionDialogDefaults} w=f: null
+  - rtgl-dialog#conditionalOverrideConditionDialog ?open=${conditionalOverrideConditionDialog.open} s=md:
+      - rtgl-view slot=content g=md:
+          - rtgl-form#conditionalOverrideConditionForm key=${conditionalOverrideConditionDialog.key} :form=${conditionalOverrideConditionForm} :defaultValues=${conditionalOverrideConditionDefaults} :context=${conditionalOverrideConditionDialogContext} w=f: null
+  - rtgl-dialog#conditionalOverrideAttributeDialog ?open=${conditionalOverrideAttributeDialog.open} s=md:
+      - rtgl-view slot=content g=md:
+          - rtgl-form#conditionalOverrideAttributeForm key=${conditionalOverrideAttributeDialog.key} :form=${conditionalOverrideAttributeForm} :defaultValues=${conditionalOverrideAttributeDefaults} :context=${conditionalOverrideAttributeDialogContext} w=f: null
   - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open}:
       - rtgl-view slot=content g=md:
           - rvn-image-selector#imageSelector: null
