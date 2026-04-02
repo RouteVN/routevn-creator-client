@@ -4,7 +4,7 @@ import { getVariableOptions } from "../../internal/project/projection.js";
 import { getFragmentLayoutOptions } from "../../pages/layoutEditor/support/layoutFragments.js";
 import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
 import { splitLayoutConditionFromWhen } from "../../internal/layoutConditions.js";
-import { toVisibilityConditionVariableTypeById } from "./support/layoutEditPanelFeatures.js";
+import { toVisibilityConditionTargetTypeByTarget } from "./support/layoutEditPanelFeatures.js";
 import {
   createChildInteractionDialogDefaults,
   createChildInteractionForm,
@@ -20,7 +20,7 @@ import {
   getSaveLoadPaginationSummary,
   getVisibilityConditionSummary,
   normalizeConditionalTextStyleRules,
-  toVisibilityConditionVariableOptions,
+  toVisibilityConditionTargetOptions,
 } from "./support/layoutEditPanelFeatures.js";
 import {
   ACTION_INTERACTION_TYPES,
@@ -333,8 +333,11 @@ export const selectConditionalTextStylesDialog = ({ state }) => {
   return state.conditionalTextStylesDialog;
 };
 
-export const selectVisibilityConditionVariableTypeById = ({ state, props }) => {
-  return toVisibilityConditionVariableTypeById(state.variablesData, {
+export const selectVisibilityConditionTargetTypeByTarget = ({
+  state,
+  props,
+}) => {
+  return toVisibilityConditionTargetTypeByTarget(state.variablesData, {
     includeSaveDataAvailable: props.isInsideSaveLoadSlot === true,
   });
 };
@@ -354,13 +357,12 @@ export const selectViewData = ({ state, props, constants }) => {
   const visibilityConditionOptions = {
     includeSaveDataAvailable: props.isInsideSaveLoadSlot === true,
   };
-  const visibilityConditionVariableOptions =
-    toVisibilityConditionVariableOptions(
-      state.variablesData,
-      visibilityConditionOptions,
-    );
-  const visibilityConditionVariableTypeById =
-    toVisibilityConditionVariableTypeById(
+  const visibilityConditionTargetOptions = toVisibilityConditionTargetOptions(
+    state.variablesData,
+    visibilityConditionOptions,
+  );
+  const visibilityConditionTargetTypeByTarget =
+    toVisibilityConditionTargetTypeByTarget(
       state.variablesData,
       visibilityConditionOptions,
     );
@@ -420,7 +422,7 @@ export const selectViewData = ({ state, props, constants }) => {
   const visibilityConditionDialogDefaults =
     createVisibilityConditionDialogDefaults(
       currentVisibilityCondition,
-      visibilityConditionVariableTypeById,
+      visibilityConditionTargetTypeByTarget,
     );
   const editingConditionalTextStyleRule =
     Number.isInteger(state.conditionalTextStylesDialog.editingIndex) &&
@@ -432,7 +434,7 @@ export const selectViewData = ({ state, props, constants }) => {
   const conditionalTextStyleRuleDefaults =
     createConditionalTextStyleRuleDefaults(
       editingConditionalTextStyleRule,
-      visibilityConditionVariableTypeById,
+      visibilityConditionTargetTypeByTarget,
     );
   const selectedVisibilityConditionVariableType =
     state.visibilityConditionDialog.selectedVariableType ??
@@ -457,8 +459,8 @@ export const selectViewData = ({ state, props, constants }) => {
     visibilityConditionDialog: state.visibilityConditionDialog,
     visibilityConditionDialogDefaults,
     visibilityConditionDialogForm: createVisibilityConditionForm({
-      hasCondition: !!currentVisibilityCondition?.variableId,
-      variableOptions: visibilityConditionVariableOptions,
+      hasCondition: !!currentVisibilityCondition?.target,
+      targetOptions: visibilityConditionTargetOptions,
     }),
     visibilityConditionDialogContext: {
       selectedVariableType: selectedVisibilityConditionVariableType,
@@ -488,7 +490,7 @@ export const selectViewData = ({ state, props, constants }) => {
     })),
     conditionalTextStyleRuleDefaults,
     conditionalTextStyleRuleForm: createConditionalTextStyleRuleForm({
-      variableOptions: visibilityConditionVariableOptions,
+      targetOptions: visibilityConditionTargetOptions,
       textStyleOptions: textStyleItems,
     }),
     conditionalTextStyleRuleDialogContext: {

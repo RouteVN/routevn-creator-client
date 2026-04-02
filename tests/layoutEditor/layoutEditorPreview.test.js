@@ -3,9 +3,9 @@ import { createLayoutEditorSelectionOverlay } from "../../src/components/layoutE
 import { createLayoutEditorPreviewData } from "../../src/components/layoutEditorPreview/support/layoutEditorPreviewData.js";
 import { getSystemVariableItems } from "../../src/internal/systemVariables.js";
 import {
-  AUTO_MODE_CONDITION_ID,
-  LINE_COMPLETED_CONDITION_ID,
-  SKIP_MODE_CONDITION_ID,
+  AUTO_MODE_CONDITION_TARGET,
+  LINE_COMPLETED_CONDITION_TARGET,
+  SKIP_MODE_CONDITION_TARGET,
 } from "../../src/internal/layoutConditions.js";
 
 describe("layoutEditorPreview", () => {
@@ -56,8 +56,8 @@ describe("layoutEditorPreview", () => {
   });
 
   it("builds save/load preview slots for repeating slot containers", () => {
-    const savePreviewData = createLayoutEditorPreviewData({
-      layoutType: "save",
+    const saveLoadPreviewData = createLayoutEditorPreviewData({
+      layoutType: "save-load",
       saveLoadData: {
         slots: [
           {
@@ -73,28 +73,11 @@ describe("layoutEditorPreview", () => {
         ],
       },
     });
-    const loadPreviewData = createLayoutEditorPreviewData({
-      layoutType: "load",
-      saveLoadData: {
-        slots: [
-          {
-            id: "slot-1",
-            saveImageId: "image-3",
-            saveDate: "2026-03-12 18:00",
-          },
-        ],
-      },
-    });
 
-    expect(savePreviewData.saveSlots).toHaveLength(2);
-    expect(savePreviewData.saveSlots[0]).toMatchObject({
+    expect(saveLoadPreviewData.saveSlots).toHaveLength(2);
+    expect(saveLoadPreviewData.saveSlots[0]).toMatchObject({
       slotId: 1,
       image: "image-1",
-      savedAt: expect.any(Number),
-    });
-    expect(loadPreviewData.saveSlots[0]).toMatchObject({
-      slotId: 1,
-      image: "image-3",
       savedAt: expect.any(Number),
     });
   });
@@ -162,8 +145,8 @@ describe("layoutEditorPreview", () => {
         },
       },
       previewVariableValues: {
-        score: 42,
-        enabled: true,
+        "variables.score": 42,
+        "variables.enabled": true,
       },
     });
 
@@ -176,9 +159,9 @@ describe("layoutEditorPreview", () => {
   it("includes fixed runtime state in preview data", () => {
     const previewData = createLayoutEditorPreviewData({
       previewVariableValues: {
-        [AUTO_MODE_CONDITION_ID]: true,
-        [LINE_COMPLETED_CONDITION_ID]: true,
-        [SKIP_MODE_CONDITION_ID]: true,
+        [AUTO_MODE_CONDITION_TARGET]: true,
+        [LINE_COMPLETED_CONDITION_TARGET]: true,
+        [SKIP_MODE_CONDITION_TARGET]: true,
       },
     });
 

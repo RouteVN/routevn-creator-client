@@ -1,21 +1,48 @@
 import { getSystemVariableItems } from "../../../internal/systemVariables.js";
 import {
   getRuntimeLayoutConditionItems,
+  parseVariableConditionTarget,
   splitLayoutConditionFromWhen,
+  toVariableConditionTarget,
 } from "../../../internal/layoutConditions.js";
 import { visitLayoutItemsWithFragments } from "./layoutEditorPreviewFragments.js";
 
 const PREVIEW_VARIABLE_TYPES = new Set(["boolean", "number", "string"]);
 const NORMAL_LIKE_LAYOUT_TYPES = new Set([
   "normal",
-  "save",
-  "load",
+  "save-load",
   "confirmDialog",
 ]);
 const PREVIEW_BOOLEAN_OPTIONS = [
   { label: "True", value: true },
   { label: "False", value: false },
 ];
+
+const setNestedValue = (object, path, value) => {
+  const keys = String(path)
+    .split(".")
+    .filter((key) => key.length > 0);
+
+  if (keys.length === 0) {
+    return;
+  }
+
+  if (keys.length === 1) {
+    object[keys[0]] = value;
+    return;
+  }
+
+  let current = object;
+  for (let index = 0; index < keys.length - 1; index += 1) {
+    const key = keys[index];
+    if (!current[key] || typeof current[key] !== "object") {
+      current[key] = {};
+    }
+    current = current[key];
+  }
+
+  current[keys[keys.length - 1]] = value;
+};
 
 export const toPreviewVariableValue = (variable = {}) => {
   const value = variable.value ?? variable.default;
@@ -76,7 +103,12 @@ export const applyPreviewVariableOverrides = (
     ...previewVariables,
   };
 
-  for (const [variableId, value] of Object.entries(previewVariableValues)) {
+  for (const [target, value] of Object.entries(previewVariableValues)) {
+    const variableId = parseVariableConditionTarget(target);
+    if (!variableId) {
+      continue;
+    }
+
     const variable = variableItems[variableId];
 
     nextPreviewVariables[variableId] = toPreviewVariableValue({
@@ -88,23 +120,23 @@ export const applyPreviewVariableOverrides = (
   return nextPreviewVariables;
 };
 
-export const collectLayoutPreviewVariableIds = (layoutParams = {}) => {
-  const variableIds = new Set();
+export const collectLayoutPreviewTargets = (layoutParams = {}) => {
+  const targets = new Set();
 
   visitLayoutItemsWithFragments(layoutParams, ({ item }) => {
     const visibilityCondition = splitLayoutConditionFromWhen(
       item?.["$when"],
     ).visibilityCondition;
-    if (typeof visibilityCondition?.variableId === "string") {
-      variableIds.add(visibilityCondition.variableId);
+    if (typeof visibilityCondition?.target === "string") {
+      targets.add(visibilityCondition.target);
     }
 
     const conditionalTextStyles = Array.isArray(item?.conditionalTextStyles)
       ? item.conditionalTextStyles
       : [];
     conditionalTextStyles.forEach((rule) => {
-      if (typeof rule?.variableId === "string" && rule.variableId.length > 0) {
-        variableIds.add(rule.variableId);
+      if (typeof rule?.target === "string" && rule.target.length > 0) {
+        targets.add(rule.target);
       }
     });
 
@@ -114,14 +146,21 @@ export const collectLayoutPreviewVariableIds = (layoutParams = {}) => {
       typeof item?.paginationVariableId === "string" &&
       item.paginationVariableId.length > 0
     ) {
-      variableIds.add(item.paginationVariableId);
+      const paginationTarget = toVariableConditionTarget(
+        item.paginationVariableId,
+      );
+      if (paginationTarget) {
+        targets.add(paginationTarget);
+      }
     }
 
     return false;
   });
 
-  return Array.from(variableIds);
+  return Array.from(targets);
 };
+
+export const collectLayoutPreviewVariableIds = collectLayoutPreviewTargets;
 
 export const isSupportedPreviewVariableType = (type) => {
   return PREVIEW_VARIABLE_TYPES.has(type);
@@ -137,12 +176,12 @@ export const getLayoutPreviewVariableItems = ({
   const availableVariables = {
     ...variablesData.items,
     ...getSystemVariableItems(),
-    ...getRuntimeLayoutConditionItems(),
   };
+  const runtimeItems = getRuntimeLayoutConditionItems();
   const previewVariables = [];
-  const addedVariableIds = new Set();
+  const addedTargets = new Set();
 
-  const variableIds = collectLayoutPreviewVariableIds({
+  const targets = collectLayoutPreviewTargets({
     currentLayoutId,
     currentLayoutData,
     currentLayoutType,
@@ -150,22 +189,24 @@ export const getLayoutPreviewVariableItems = ({
     layoutId: currentLayoutId,
   });
 
-  for (const variableId of variableIds) {
-    if (!variableId || addedVariableIds.has(variableId)) {
+  for (const target of targets) {
+    if (!target || addedTargets.has(target)) {
       continue;
     }
 
-    const variable = availableVariables[variableId];
+    const runtimeItem = runtimeItems[target];
+    const variableId = parseVariableConditionTarget(target);
+    const variable = variableId ? availableVariables[variableId] : runtimeItem;
     const type = String(variable?.type ?? "string").toLowerCase();
 
     if (!isSupportedPreviewVariableType(type)) {
       continue;
     }
 
-    addedVariableIds.add(variableId);
+    addedTargets.add(target);
     previewVariables.push({
-      id: variableId,
-      name: variable?.name ?? variableId,
+      id: target,
+      name: variable?.name ?? target,
       type,
       source: variable?.source,
       description: variable?.description,
@@ -224,14 +265,17 @@ export const createPreviewVariableDefaultValues = (
   previewVariableItems = [],
   previewVariableValues = {},
 ) => {
-  return Object.fromEntries(
-    previewVariableItems.map((variable) => [
-      variable.id,
-      Object.hasOwn(previewVariableValues, variable.id)
-        ? previewVariableValues[variable.id]
-        : variable.defaultValue,
-    ]),
-  );
+  const defaultValues = {};
+
+  for (const variable of previewVariableItems) {
+    const value = Object.hasOwn(previewVariableValues, variable.id)
+      ? previewVariableValues[variable.id]
+      : variable.defaultValue;
+
+    setNestedValue(defaultValues, variable.id, value);
+  }
+
+  return defaultValues;
 };
 
 export const createPreviewVariablesViewData = ({

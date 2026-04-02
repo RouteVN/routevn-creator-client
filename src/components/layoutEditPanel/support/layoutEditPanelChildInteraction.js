@@ -6,15 +6,15 @@ const INHERIT_TO_CHILDREN_OPTIONS = [
 export const getChildInteractionSummary = (values = {}) => {
   const labels = [];
 
-  if (values?.inheritHoverToChildren === true) {
+  if (values?.hover?.inheritToChildren === true) {
     labels.push("Hover");
   }
 
-  if (values?.inheritClickToChildren === true) {
+  if (values?.click?.inheritToChildren === true) {
     labels.push("Click");
   }
 
-  if (values?.inheritRightClickToChildren === true) {
+  if (values?.rightClick?.inheritToChildren === true) {
     labels.push("Right Click");
   }
 
@@ -27,9 +27,15 @@ export const getChildInteractionSummary = (values = {}) => {
 
 export const createChildInteractionDialogDefaults = (values = {}) => {
   return {
-    inheritHoverToChildren: values?.inheritHoverToChildren === true,
-    inheritClickToChildren: values?.inheritClickToChildren === true,
-    inheritRightClickToChildren: values?.inheritRightClickToChildren === true,
+    hover: {
+      inheritToChildren: values?.hover?.inheritToChildren === true,
+    },
+    click: {
+      inheritToChildren: values?.click?.inheritToChildren === true,
+    },
+    rightClick: {
+      inheritToChildren: values?.rightClick?.inheritToChildren === true,
+    },
   };
 };
 
@@ -38,7 +44,7 @@ export const createChildInteractionForm = () => {
     title: "Child Interaction",
     fields: [
       {
-        name: "inheritHoverToChildren",
+        name: "hover.inheritToChildren",
         type: "select",
         label: "Hover",
         required: true,
@@ -46,7 +52,7 @@ export const createChildInteractionForm = () => {
         options: INHERIT_TO_CHILDREN_OPTIONS,
       },
       {
-        name: "inheritClickToChildren",
+        name: "click.inheritToChildren",
         type: "select",
         label: "Click",
         required: true,
@@ -54,7 +60,7 @@ export const createChildInteractionForm = () => {
         options: INHERIT_TO_CHILDREN_OPTIONS,
       },
       {
-        name: "inheritRightClickToChildren",
+        name: "rightClick.inheritToChildren",
         type: "select",
         label: "Right Click",
         required: true,

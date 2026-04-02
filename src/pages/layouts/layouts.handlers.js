@@ -119,7 +119,7 @@ const createLayoutElement = (id, data) => ({
   ...data,
 });
 
-const createLayoutTemplate = (layoutType, projectResolution) => {
+export const createLayoutTemplate = (layoutType, projectResolution) => {
   if (layoutType === "dialogue") {
     const containerId = nanoid();
     const nameTextId = nanoid();
@@ -195,7 +195,7 @@ const createLayoutTemplate = (layoutType, projectResolution) => {
     );
   }
 
-  if (normalizedLayoutType === "nvl") {
+  if (layoutType === "nvl") {
     const nvlContainerId = nanoid();
     const nvlBackgroundId = nanoid();
     const nvlLinesId = nanoid();
@@ -329,10 +329,9 @@ const createLayoutTemplate = (layoutType, projectResolution) => {
   }
 
   if (
-    normalizedLayoutType === "normal" ||
-    normalizedLayoutType === "save" ||
-    normalizedLayoutType === "load" ||
-    normalizedLayoutType === "confirmDialog"
+    layoutType === "normal" ||
+    layoutType === "save-load" ||
+    layoutType === "confirmDialog"
   ) {
     const rootId = nanoid();
     const textId = nanoid();

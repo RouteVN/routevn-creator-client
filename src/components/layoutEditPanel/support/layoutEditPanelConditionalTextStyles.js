@@ -13,8 +13,8 @@ export const normalizeConditionalTextStyleRules = (value) => {
     (rule) =>
       rule &&
       typeof rule === "object" &&
-      typeof rule.variableId === "string" &&
-      rule.variableId.length > 0 &&
+      typeof rule.target === "string" &&
+      rule.target.length > 0 &&
       rule.op === "eq" &&
       typeof rule.textStyleId === "string" &&
       rule.textStyleId.length > 0,
@@ -53,17 +53,17 @@ export const getConditionalTextStylesSummary = (rules = []) => {
 
 export const createConditionalTextStyleRuleDefaults = (
   rule,
-  variableTypeById,
+  targetTypeByTarget,
 ) => {
-  const variableId = rule?.variableId ?? "";
-  const selectedVariableType = variableId
-    ? (variableTypeById[variableId] ?? "string")
+  const target = rule?.target ?? "";
+  const selectedVariableType = target
+    ? (targetTypeByTarget[target] ?? "string")
     : undefined;
   const rawValue = rule?.value;
   const parsedNumberValue = Number(rawValue);
 
   return {
-    variableId,
+    target,
     op: rule?.op ?? "eq",
     textStyleId: rule?.textStyleId ?? "",
     booleanValue: rawValue === true,
@@ -74,22 +74,22 @@ export const createConditionalTextStyleRuleDefaults = (
 };
 
 export const createConditionalTextStyleRuleForm = ({
-  variableOptions,
+  targetOptions,
   textStyleOptions,
 } = {}) => {
   return {
     title: "Conditional Text Style",
     fields: [
       {
-        name: "variableId",
+        name: "target",
         type: "select",
-        label: "Variable",
+        label: "Target",
         required: true,
         clearable: false,
-        options: variableOptions,
+        options: targetOptions,
       },
       {
-        $when: "variableId",
+        $when: "target",
         name: "op",
         type: "select",
         label: "Operation",
@@ -98,7 +98,7 @@ export const createConditionalTextStyleRuleForm = ({
         options: VISIBILITY_CONDITION_OP_OPTIONS,
       },
       {
-        $when: "variableId && selectedVariableType == 'boolean'",
+        $when: "target && selectedVariableType == 'boolean'",
         name: "booleanValue",
         type: "select",
         label: "Value",
@@ -107,14 +107,14 @@ export const createConditionalTextStyleRuleForm = ({
         options: VISIBILITY_BOOLEAN_OPTIONS,
       },
       {
-        $when: "variableId && selectedVariableType == 'number'",
+        $when: "target && selectedVariableType == 'number'",
         name: "numberValue",
         type: "input-number",
         label: "Value",
         required: true,
       },
       {
-        $when: "variableId && selectedVariableType == 'string'",
+        $when: "target && selectedVariableType == 'string'",
         name: "stringValue",
         type: "input-text",
         label: "Value",

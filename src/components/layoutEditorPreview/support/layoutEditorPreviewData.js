@@ -45,9 +45,7 @@ export const createLayoutEditorPreviewData = ({
     },
     confirmDialog: createConfirmDialogPreviewData(),
     saveSlots:
-      hasSaveLoadPreview === true ||
-      layoutType === "save" ||
-      layoutType === "load"
+      hasSaveLoadPreview === true || layoutType === "save-load"
         ? createRuntimeSaveSlots(saveLoadData)
         : [],
   };

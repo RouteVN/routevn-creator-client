@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { buildLayoutElements } from "../../src/internal/project/layout.js";
 import {
-  AUTO_MODE_CONDITION_ID,
-  LINE_COMPLETED_CONDITION_ID,
-  SAVE_DATA_AVAILABLE_CONDITION_ID,
-  SKIP_MODE_CONDITION_ID,
+  AUTO_MODE_CONDITION_TARGET,
+  LINE_COMPLETED_CONDITION_TARGET,
+  SAVE_DATA_AVAILABLE_CONDITION_TARGET,
+  SKIP_MODE_CONDITION_TARGET,
   buildVisibilityConditionExpression,
   splitVisibilityConditionFromWhen,
 } from "../../src/internal/layoutConditions.js";
@@ -17,7 +17,7 @@ describe("layout visibility conditions", () => {
           id: "rect-1",
           type: "rect",
           visibilityCondition: {
-            variableId: "score",
+            target: "variables.score",
             op: "eq",
             value: 10,
           },
@@ -30,7 +30,7 @@ describe("layout visibility conditions", () => {
       { layoutId: "layout-1" },
     );
 
-    expect(elements[0].$when).toBe('variables["score"] == 10');
+    expect(elements[0].$when).toBe("variables.score == 10");
   });
 
   it("maps editor opacity to runtime alpha", () => {
@@ -60,7 +60,7 @@ describe("layout visibility conditions", () => {
           type: "rect",
           $when: "dialogue.character.name",
           visibilityCondition: {
-            variableId: "flag-enabled",
+            target: 'variables["flag-enabled"]',
             op: "eq",
             value: true,
           },
@@ -86,7 +86,7 @@ describe("layout visibility conditions", () => {
     ).toEqual({
       baseWhen: "line.characterName",
       visibilityCondition: {
-        variableId: "flag-enabled",
+        target: 'variables["flag-enabled"]',
         op: "eq",
         value: true,
       },
@@ -100,7 +100,7 @@ describe("layout visibility conditions", () => {
           id: "rect-1",
           type: "rect",
           visibilityCondition: {
-            variableId: SAVE_DATA_AVAILABLE_CONDITION_ID,
+            target: SAVE_DATA_AVAILABLE_CONDITION_TARGET,
             op: "eq",
             value: false,
           },
@@ -124,7 +124,7 @@ describe("layout visibility conditions", () => {
     ).toEqual({
       baseWhen: "line.characterName",
       visibilityCondition: {
-        variableId: SAVE_DATA_AVAILABLE_CONDITION_ID,
+        target: SAVE_DATA_AVAILABLE_CONDITION_TARGET,
         op: "eq",
         value: false,
       },
@@ -134,21 +134,21 @@ describe("layout visibility conditions", () => {
   it("compiles fixed runtime visibility into flat template data access", () => {
     expect(
       buildVisibilityConditionExpression({
-        variableId: LINE_COMPLETED_CONDITION_ID,
+        target: LINE_COMPLETED_CONDITION_TARGET,
         op: "eq",
         value: true,
       }),
     ).toBe("isLineCompleted == true");
     expect(
       buildVisibilityConditionExpression({
-        variableId: AUTO_MODE_CONDITION_ID,
+        target: AUTO_MODE_CONDITION_TARGET,
         op: "eq",
         value: true,
       }),
     ).toBe("autoMode == true");
     expect(
       buildVisibilityConditionExpression({
-        variableId: SKIP_MODE_CONDITION_ID,
+        target: SKIP_MODE_CONDITION_TARGET,
         op: "eq",
         value: false,
       }),
@@ -175,13 +175,13 @@ describe("layout visibility conditions", () => {
           textStyleId: "base-style",
           conditionalTextStyles: [
             {
-              variableId: "score",
+              target: "variables.score",
               op: "eq",
               value: 10,
               textStyleId: "score-style",
             },
             {
-              variableId: LINE_COMPLETED_CONDITION_ID,
+              target: LINE_COMPLETED_CONDITION_TARGET,
               op: "eq",
               value: true,
               textStyleId: "completed-style",
@@ -220,7 +220,7 @@ describe("layout visibility conditions", () => {
     );
 
     expect(elements[0]).toMatchObject({
-      '$if variables["score"] == 10': {
+      "$if variables.score == 10": {
         textStyleId: "score-style",
       },
       "$if isLineCompleted == true": {
@@ -237,7 +237,7 @@ describe("layout visibility conditions", () => {
     ).toEqual({
       baseWhen: "line.characterName",
       visibilityCondition: {
-        variableId: LINE_COMPLETED_CONDITION_ID,
+        target: LINE_COMPLETED_CONDITION_TARGET,
         op: "eq",
         value: true,
       },
@@ -245,7 +245,7 @@ describe("layout visibility conditions", () => {
     expect(splitVisibilityConditionFromWhen("(autoMode == true)")).toEqual({
       baseWhen: undefined,
       visibilityCondition: {
-        variableId: AUTO_MODE_CONDITION_ID,
+        target: AUTO_MODE_CONDITION_TARGET,
         op: "eq",
         value: true,
       },
@@ -253,7 +253,7 @@ describe("layout visibility conditions", () => {
     expect(splitVisibilityConditionFromWhen("(skipMode == false)")).toEqual({
       baseWhen: undefined,
       visibilityCondition: {
-        variableId: SKIP_MODE_CONDITION_ID,
+        target: SKIP_MODE_CONDITION_TARGET,
         op: "eq",
         value: false,
       },
@@ -285,23 +285,12 @@ describe("layout visibility conditions", () => {
       { items: {}, tree: [] },
       {
         layoutId: "layout-save",
-        layoutType: "save",
+        layoutType: "save-load",
       },
     );
 
     expect(elements[0].$each).toBe("item, i in saveSlots");
-    expect(elements[0].click).toEqual({
-      payload: {
-        _event: {
-          slotId: "${item.slotId}",
-        },
-        actions: {
-          saveSaveSlot: {
-            slot: "_event.slotId",
-          },
-        },
-      },
-    });
+    expect(elements[0].click).toBeUndefined();
     expect(elements[0].children).toEqual([
       expect.objectContaining({
         id: "slot-image-instance-${i}",
@@ -316,7 +305,7 @@ describe("layout visibility conditions", () => {
     ]);
   });
 
-  it("merges custom click actions with save/load slot actions", () => {
+  it("preserves custom click actions on save/load slot containers", () => {
     const { elements } = buildLayoutElements(
       [
         {
@@ -337,7 +326,7 @@ describe("layout visibility conditions", () => {
       { items: {}, tree: [] },
       {
         layoutId: "layout-save",
-        layoutType: "save",
+        layoutType: "save-load",
       },
     );
 
@@ -348,9 +337,6 @@ describe("layout visibility conditions", () => {
         },
         actions: {
           toggleDialogueUI: {},
-          saveSaveSlot: {
-            slot: "_event.slotId",
-          },
         },
       },
     });
@@ -363,9 +349,15 @@ describe("layout visibility conditions", () => {
           id: "container-1",
           type: "container",
           name: "Container",
-          inheritHoverToChildren: true,
-          inheritClickToChildren: true,
-          inheritRightClickToChildren: true,
+          hover: {
+            inheritToChildren: true,
+          },
+          click: {
+            inheritToChildren: true,
+          },
+          rightClick: {
+            inheritToChildren: true,
+          },
         },
       ],
       {},
@@ -393,8 +385,8 @@ describe("layout visibility conditions", () => {
           id: "container-1",
           type: "container",
           name: "Container",
-          inheritClickToChildren: true,
           click: {
+            inheritToChildren: true,
             payload: {
               actions: {
                 toggleDialogueUI: {},

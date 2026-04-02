@@ -32,6 +32,18 @@ export const setItems = ({ state }, { layoutData } = {}) => {
   state.layoutData = layoutData;
 };
 
+const getLayoutEditorLayoutType = (layoutType, resourceType) => {
+  if (resourceType === "controls") {
+    return layoutType;
+  }
+
+  if (layoutType === "save" || layoutType === "load") {
+    return "save-load";
+  }
+
+  return layoutType ?? "normal";
+};
+
 const assignLayoutState = (state, { id, layout, resourceType } = {}) => {
   const nextResourceType = resourceType || layout?.resourceType || "layouts";
 
@@ -54,10 +66,10 @@ const assignLayoutState = (state, { id, layout, resourceType } = {}) => {
 
   state.layout.id = id || layout?.id || undefined;
   state.layout.resourceType = nextResourceType;
-  state.layout.layoutType =
-    nextResourceType === "controls"
-      ? layout?.layoutType
-      : (layout?.layoutType ?? "normal");
+  state.layout.layoutType = getLayoutEditorLayoutType(
+    layout?.layoutType,
+    nextResourceType,
+  );
 };
 
 export const setLayout = ({ state }, payload = {}) => {

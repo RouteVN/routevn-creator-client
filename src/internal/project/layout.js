@@ -93,6 +93,15 @@ const withInteractionEventData = (interaction, eventData) => {
     return normalizedInteraction;
   }
 
+  if (
+    !normalizedInteraction ||
+    typeof normalizedInteraction !== "object" ||
+    Array.isArray(normalizedInteraction) ||
+    !Object.hasOwn(normalizedInteraction, "payload")
+  ) {
+    return normalizedInteraction;
+  }
+
   const payload = getInteractionPayload(normalizedInteraction);
   const nextEventData =
     payload._event && typeof payload._event === "object"
@@ -341,20 +350,6 @@ const mergeInteractionPayloadActions = (baseInteraction, extraInteraction) => {
   );
 };
 
-const withInheritToChildren = (interaction, inheritToChildren) => {
-  if (inheritToChildren !== true) {
-    return interaction;
-  }
-
-  const nextInteraction =
-    interaction && typeof interaction === "object" ? { ...interaction } : {};
-
-  return {
-    ...nextInteraction,
-    inheritToChildren: true,
-  };
-};
-
 const updateChildrenIds = (children, indexVar) => {
   return children.map((child) => {
     const updatedChild = {
@@ -462,23 +457,20 @@ const buildBaseElement = (node, context = {}) => {
     element.alpha = node.opacity;
   }
 
-  const click = withInheritToChildren(
-    withInteractionEventData(node.click, context.slotEventData),
-    node.inheritClickToChildren,
-  );
+  const click = withInteractionEventData(node.click, context.slotEventData);
   if (click) {
     element.click = click;
   }
 
-  const rightClick = withInheritToChildren(
-    withInteractionEventData(node.rightClick, context.slotEventData),
-    node.inheritRightClickToChildren,
+  const rightClick = withInteractionEventData(
+    node.rightClick,
+    context.slotEventData,
   );
   if (rightClick) {
     element.rightClick = rightClick;
   }
 
-  const hover = withInheritToChildren(undefined, node.inheritHoverToChildren);
+  const hover = withInteractionEventData(node.hover, context.slotEventData);
   if (hover) {
     element.hover = hover;
   }
@@ -774,42 +766,16 @@ const applyContainerNode = ({ element, node }) => {
         }
       : nextElement;
   }
-
-  let repeatingClick = repeatingConfig.click;
-  if (node.type === "container-ref-save-load-slot") {
-    const actionName =
-      node.layoutType === "load"
-        ? "loadSaveSlot"
-        : node.layoutType === "save"
-          ? "saveSaveSlot"
-          : undefined;
-
-    repeatingClick = actionName
-      ? {
-          payload: {
-            _event: {
-              slotId: "${item.slotId}",
-            },
-            actions: {
-              [actionName]: {
-                slot: "_event.slotId",
-              },
-            },
-          },
-        }
-      : undefined;
-  }
-
   return {
     ...nextElement,
     type: "container",
     $each: repeatingConfig.each,
     id: `${node.id}-instance-\${i}`,
-    ...(repeatingClick
+    ...(repeatingConfig.click
       ? {
           click: mergeInteractionPayloadActions(
             nextElement.click,
-            repeatingClick,
+            repeatingConfig.click,
           ),
         }
       : {}),
@@ -817,26 +783,8 @@ const applyContainerNode = ({ element, node }) => {
 };
 
 const mapLayoutNode = ({ node, imageItems, context }) => {
-  const effectiveNode =
-    node.type === "container-ref-save-load-slot"
-      ? {
-          ...node,
-          layoutType: context.layoutType,
-        }
-      : node;
-  let element = buildBaseElement(node, context);
-
-  element = applyTextNode({
-    element,
-    node: effectiveNode,
-    context,
-  });
-  element = applySpriteNode({ element, node: effectiveNode });
-  element = applyRectNode({ element, node: effectiveNode });
-  element = applySliderNode({ element, node: effectiveNode, imageItems });
-  element = applyContainerNode({ element, node: effectiveNode });
-
-  const childContext =
+  const effectiveNode = node;
+  const nodeContext =
     effectiveNode.type === "container-ref-save-load-slot"
       ? {
           ...context,
@@ -845,6 +793,19 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
           },
         }
       : context;
+  let element = buildBaseElement(node, nodeContext);
+
+  element = applyTextNode({
+    element,
+    node: effectiveNode,
+    context: nodeContext,
+  });
+  element = applySpriteNode({ element, node: effectiveNode });
+  element = applyRectNode({ element, node: effectiveNode });
+  element = applySliderNode({ element, node: effectiveNode, imageItems });
+  element = applyContainerNode({ element, node: effectiveNode });
+
+  const childContext = nodeContext;
 
   const resolvedChildren =
     effectiveNode.type === "fragment-ref"

@@ -881,6 +881,7 @@ export const createCharacterSpritesFileExplorerHandlers = ({
       const { appService, projectService } = deps;
       await projectService.ensureRepository();
 
+      const state = projectService.getState();
       const characterId = getCharacterId(deps);
       if (!characterId) {
         appService.showToast("Character is missing.");

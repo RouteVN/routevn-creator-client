@@ -112,15 +112,16 @@ export const handleGroupItemClick = (deps, payload) => {
 
 export const handleVisibilityConditionItemClick = (deps) => {
   const { render, store } = deps;
-  const variableTypeById = store.selectVisibilityConditionVariableTypeById();
+  const targetTypeByTarget =
+    store.selectVisibilityConditionTargetTypeByTarget();
   const currentVisibilityCondition = splitVisibilityConditionFromWhen(
     store.selectValues()["$when"],
   ).visibilityCondition;
-  const variableId = currentVisibilityCondition?.variableId;
+  const target = currentVisibilityCondition?.target;
 
   store.setVisibilityConditionDialogSelectedVariableType({
-    selectedVariableType: variableId
-      ? (variableTypeById?.[variableId] ?? "string")
+    selectedVariableType: target
+      ? (targetTypeByTarget?.[target] ?? "string")
       : undefined,
   });
   store.openVisibilityConditionDialog();
@@ -178,11 +179,12 @@ export const handleConditionalTextStylesDialogClose = (deps) => {
 export const handleVisibilityConditionFormChange = (deps, payload) => {
   const { render, store } = deps;
   const values = payload._event.detail?.values ?? {};
-  const variableTypeById = store.selectVisibilityConditionVariableTypeById();
+  const targetTypeByTarget =
+    store.selectVisibilityConditionTargetTypeByTarget();
 
   store.setVisibilityConditionDialogSelectedVariableType({
-    selectedVariableType: values.variableId
-      ? (variableTypeById?.[values.variableId] ?? "string")
+    selectedVariableType: values.target
+      ? (targetTypeByTarget?.[values.target] ?? "string")
       : undefined,
   });
   render();
@@ -191,11 +193,12 @@ export const handleVisibilityConditionFormChange = (deps, payload) => {
 export const handleConditionalTextStyleFormChange = (deps, payload) => {
   const { render, store } = deps;
   const values = payload._event.detail?.values ?? {};
-  const variableTypeById = store.selectVisibilityConditionVariableTypeById();
+  const targetTypeByTarget =
+    store.selectVisibilityConditionTargetTypeByTarget();
 
   store.setConditionalTextStylesDialogSelectedVariableType({
-    selectedVariableType: values.variableId
-      ? (variableTypeById?.[values.variableId] ?? "string")
+    selectedVariableType: values.target
+      ? (targetTypeByTarget?.[values.target] ?? "string")
       : undefined,
   });
   render();
@@ -310,8 +313,8 @@ export const handleVisibilityConditionFormAction = (deps, payload) => {
     return;
   }
 
-  const variableId = values.variableId;
-  if (!variableId) {
+  const target = values.target;
+  if (!target) {
     applyPanelValueUpdate(deps, {
       name: "$when",
       value: baseWhen,
@@ -321,19 +324,19 @@ export const handleVisibilityConditionFormAction = (deps, payload) => {
     return;
   }
 
-  const variableType =
-    store.selectVisibilityConditionVariableTypeById()?.[variableId] || "string";
+  const targetType =
+    store.selectVisibilityConditionTargetTypeByTarget()?.[target] || "string";
 
   let conditionValue = values.stringValue ?? "";
-  if (variableType === "boolean") {
+  if (targetType === "boolean") {
     conditionValue = values.booleanValue === true;
-  } else if (variableType === "number") {
+  } else if (targetType === "number") {
     const parsedNumber = Number(values.numberValue);
     conditionValue = Number.isFinite(parsedNumber) ? parsedNumber : 0;
   }
 
   const nextVisibilityWhen = buildVisibilityConditionExpression({
-    variableId,
+    target,
     op: values.op ?? "eq",
     value: conditionValue,
   });
@@ -410,16 +413,16 @@ export const handleChildInteractionFormAction = (deps, payload) => {
   }
 
   applyPanelValueUpdate(deps, {
-    name: "inheritHoverToChildren",
-    value: values.inheritHoverToChildren === true,
+    name: "hover.inheritToChildren",
+    value: values.hover?.inheritToChildren === true ? true : undefined,
   });
   applyPanelValueUpdate(deps, {
-    name: "inheritClickToChildren",
-    value: values.inheritClickToChildren === true,
+    name: "click.inheritToChildren",
+    value: values.click?.inheritToChildren === true ? true : undefined,
   });
   applyPanelValueUpdate(deps, {
-    name: "inheritRightClickToChildren",
-    value: values.inheritRightClickToChildren === true,
+    name: "rightClick.inheritToChildren",
+    value: values.rightClick?.inheritToChildren === true ? true : undefined,
   });
 
   store.closeChildInteractionDialog();
@@ -454,12 +457,13 @@ export const handleConditionalTextStyleRuleClick = (deps, payload) => {
   );
   const rules = getConditionalTextStyleRules(store);
   const rule = Number.isInteger(index) && index >= 0 ? rules[index] : undefined;
-  const variableTypeById = store.selectVisibilityConditionVariableTypeById();
+  const targetTypeByTarget =
+    store.selectVisibilityConditionTargetTypeByTarget();
 
   store.openConditionalTextStyleRuleEditor({
     editingIndex: Number.isInteger(index) && index >= 0 ? index : undefined,
-    selectedVariableType: rule?.variableId
-      ? (variableTypeById?.[rule.variableId] ?? "string")
+    selectedVariableType: rule?.target
+      ? (targetTypeByTarget?.[rule.target] ?? "string")
       : undefined,
   });
   render();
@@ -543,24 +547,24 @@ export const handleConditionalTextStyleFormAction = (deps, payload) => {
     return;
   }
 
-  if (!values.variableId || !values.textStyleId) {
+  if (!values.target || !values.textStyleId) {
     return;
   }
 
-  const variableType =
-    store.selectVisibilityConditionVariableTypeById()?.[values.variableId] ||
+  const targetType =
+    store.selectVisibilityConditionTargetTypeByTarget()?.[values.target] ||
     "string";
 
   let conditionValue = values.stringValue ?? "";
-  if (variableType === "boolean") {
+  if (targetType === "boolean") {
     conditionValue = values.booleanValue === true;
-  } else if (variableType === "number") {
+  } else if (targetType === "number") {
     const parsedNumber = Number(values.numberValue);
     conditionValue = Number.isFinite(parsedNumber) ? parsedNumber : 0;
   }
 
   const nextRule = {
-    variableId: values.variableId,
+    target: values.target,
     op: values.op ?? "eq",
     value: conditionValue,
     textStyleId: values.textStyleId,

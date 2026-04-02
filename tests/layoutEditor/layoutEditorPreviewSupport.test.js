@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
-  collectLayoutPreviewVariableIds,
+  collectLayoutPreviewTargets,
   createSaveLoadPreviewSlots,
 } from "../../src/components/layoutEditorPreview/support/layoutEditorPreviewSupport.js";
 import { setSaveLoadDefaultValue } from "../../src/components/layoutEditorPreview/layoutEditorPreview.store.js";
 
 describe("layoutEditorPreviewSupport", () => {
   it("collects preview variable ids from fragments and paginated save/load slots", () => {
-    const variableIds = collectLayoutPreviewVariableIds({
+    const targets = collectLayoutPreviewTargets({
       currentLayoutId: "layout-1",
       currentLayoutData: {
         items: {
@@ -41,8 +41,8 @@ describe("layoutEditorPreviewSupport", () => {
       layoutId: "layout-1",
     });
 
-    expect(variableIds).toContain("_currentSaveLoadPagination");
-    expect(variableIds).toContain("score");
+    expect(targets).toContain("variables._currentSaveLoadPagination");
+    expect(targets).toContain("variables.score");
   });
 
   it("builds the visible save/load preview page from paginationVariableId", () => {
@@ -78,7 +78,7 @@ describe("layoutEditorPreviewSupport", () => {
         paginationSize: 3,
       },
       previewVariableValues: {
-        _currentSaveLoadPagination: 2,
+        "variables._currentSaveLoadPagination": 2,
       },
       variablesData: {
         items: {},
@@ -111,7 +111,7 @@ describe("layoutEditorPreviewSupport", () => {
     const state = {
       layoutState: {
         id: "layout-1",
-        layoutType: "save",
+        layoutType: "save-load",
         elements: {
           items: {
             slotContainer: {
@@ -132,7 +132,7 @@ describe("layoutEditorPreviewSupport", () => {
         },
       },
       previewVariableValues: {
-        _currentSaveLoadPagination: 1,
+        "variables._currentSaveLoadPagination": 1,
       },
       saveLoadDefaultValues: {
         slotsNum: 6,

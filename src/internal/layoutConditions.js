@@ -1,33 +1,83 @@
-export const SAVE_DATA_AVAILABLE_CONDITION_ID = "__saveDataAvailable";
-export const LINE_COMPLETED_CONDITION_ID = "__isLineCompleted";
-export const AUTO_MODE_CONDITION_ID = "__autoMode";
-export const SKIP_MODE_CONDITION_ID = "__skipMode";
+export const SAVE_DATA_AVAILABLE_CONDITION_TARGET = "item.savedAt";
+export const LINE_COMPLETED_CONDITION_TARGET = "isLineCompleted";
+export const AUTO_MODE_CONDITION_TARGET = "autoMode";
+export const SKIP_MODE_CONDITION_TARGET = "skipMode";
+
+const VARIABLE_TARGET_IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+const VARIABLE_TARGET_BRACKET_PATTERN = /^variables\[(.+)\]$/;
+const VARIABLE_TARGET_DOT_PATTERN = /^variables\.([A-Za-z_$][A-Za-z0-9_$]*)$/;
 
 const RUNTIME_LAYOUT_CONDITION_ITEMS = {
-  [LINE_COMPLETED_CONDITION_ID]: {
-    id: LINE_COMPLETED_CONDITION_ID,
+  [LINE_COMPLETED_CONDITION_TARGET]: {
+    id: LINE_COMPLETED_CONDITION_TARGET,
+    target: LINE_COMPLETED_CONDITION_TARGET,
     name: "Line Completed",
     type: "boolean",
     source: "runtime",
     description: "Whether the current line has fully completed rendering",
-    accessor: "isLineCompleted",
   },
-  [AUTO_MODE_CONDITION_ID]: {
-    id: AUTO_MODE_CONDITION_ID,
+  [AUTO_MODE_CONDITION_TARGET]: {
+    id: AUTO_MODE_CONDITION_TARGET,
+    target: AUTO_MODE_CONDITION_TARGET,
     name: "Auto Mode",
     type: "boolean",
     source: "runtime",
     description: "Whether auto mode is currently enabled",
-    accessor: "autoMode",
   },
-  [SKIP_MODE_CONDITION_ID]: {
-    id: SKIP_MODE_CONDITION_ID,
+  [SKIP_MODE_CONDITION_TARGET]: {
+    id: SKIP_MODE_CONDITION_TARGET,
+    target: SKIP_MODE_CONDITION_TARGET,
     name: "Skip Mode",
     type: "boolean",
     source: "runtime",
     description: "Whether skip mode is currently enabled",
-    accessor: "skipMode",
   },
+};
+
+export const toVariableConditionTarget = (variableId) => {
+  if (typeof variableId !== "string" || variableId.length === 0) {
+    return undefined;
+  }
+
+  if (VARIABLE_TARGET_IDENTIFIER.test(variableId)) {
+    return `variables.${variableId}`;
+  }
+
+  return `variables[${JSON.stringify(variableId)}]`;
+};
+
+export const parseVariableConditionTarget = (target) => {
+  if (typeof target !== "string" || target.length === 0) {
+    return undefined;
+  }
+
+  const dotMatch = target.match(VARIABLE_TARGET_DOT_PATTERN);
+  if (dotMatch) {
+    return dotMatch[1];
+  }
+
+  const bracketMatch = target.match(VARIABLE_TARGET_BRACKET_PATTERN);
+  if (!bracketMatch) {
+    return undefined;
+  }
+
+  const rawValue = bracketMatch[1].trim();
+
+  try {
+    const variableId = JSON.parse(rawValue);
+    if (typeof variableId === "string" && variableId.length > 0) {
+      return variableId;
+    }
+  } catch {}
+
+  if (rawValue.startsWith("'") && rawValue.endsWith("'")) {
+    const variableId = rawValue.slice(1, -1);
+    if (variableId.length > 0) {
+      return variableId;
+    }
+  }
+
+  return undefined;
 };
 
 export const getRuntimeLayoutConditionItems = () => {
@@ -42,8 +92,9 @@ export const getSpecialLayoutConditionItems = ({
   };
 
   if (includeSaveDataAvailable) {
-    items[SAVE_DATA_AVAILABLE_CONDITION_ID] = {
-      id: SAVE_DATA_AVAILABLE_CONDITION_ID,
+    items[SAVE_DATA_AVAILABLE_CONDITION_TARGET] = {
+      id: SAVE_DATA_AVAILABLE_CONDITION_TARGET,
+      target: SAVE_DATA_AVAILABLE_CONDITION_TARGET,
       name: "Save Data Available",
       type: "boolean",
       source: "slot",
@@ -184,52 +235,38 @@ const parseConditionValue = (value) => {
   return undefined;
 };
 
+const buildScalarConditionExpression = (target, value) => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return `${target} == ${value}`;
+  }
+
+  if (typeof value === "boolean") {
+    return `${target} == ${value}`;
+  }
+
+  return `${target} == ${JSON.stringify(String(value ?? ""))}`;
+};
+
 export const buildLayoutConditionExpression = (condition) => {
+  if (condition?.op !== "eq") {
+    return undefined;
+  }
+
+  const target = condition?.target;
+  if (typeof target !== "string" || target.length === 0) {
+    return undefined;
+  }
+
   if (
-    condition?.variableId === SAVE_DATA_AVAILABLE_CONDITION_ID &&
-    condition?.op === "eq"
+    target === SAVE_DATA_AVAILABLE_CONDITION_TARGET &&
+    typeof condition.value === "boolean"
   ) {
-    return condition.value === false ? "!item.savedAt" : "item.savedAt";
+    return condition.value === false
+      ? "!item.savedAt"
+      : SAVE_DATA_AVAILABLE_CONDITION_TARGET;
   }
 
-  const fixedStateItem =
-    getRuntimeLayoutConditionItems()?.[condition?.variableId];
-  if (fixedStateItem && condition?.op === "eq") {
-    const conditionValue = condition.value;
-
-    if (typeof conditionValue === "number" && Number.isFinite(conditionValue)) {
-      return `${fixedStateItem.accessor} == ${conditionValue}`;
-    }
-
-    if (typeof conditionValue === "boolean") {
-      return `${fixedStateItem.accessor} == ${conditionValue}`;
-    }
-
-    return `${fixedStateItem.accessor} == ${JSON.stringify(
-      String(conditionValue ?? ""),
-    )}`;
-  }
-
-  if (!condition?.variableId || typeof condition.variableId !== "string") {
-    return undefined;
-  }
-
-  if (condition.op !== "eq") {
-    return undefined;
-  }
-
-  const variableAccess = `variables[${JSON.stringify(condition.variableId)}]`;
-  const conditionValue = condition.value;
-
-  if (typeof conditionValue === "number" && Number.isFinite(conditionValue)) {
-    return `${variableAccess} == ${conditionValue}`;
-  }
-
-  if (typeof conditionValue === "boolean") {
-    return `${variableAccess} == ${conditionValue}`;
-  }
-
-  return `${variableAccess} == ${JSON.stringify(String(conditionValue ?? ""))}`;
+  return buildScalarConditionExpression(target, condition.value);
 };
 
 export const mergeWhenExpressions = (...expressions) => {
@@ -250,6 +287,71 @@ export const mergeWhenExpressions = (...expressions) => {
     .join(" && ");
 };
 
+const parseConditionTargetClause = (clause) => {
+  if (
+    clause === SAVE_DATA_AVAILABLE_CONDITION_TARGET ||
+    clause === "item.date"
+  ) {
+    return {
+      target: SAVE_DATA_AVAILABLE_CONDITION_TARGET,
+      op: "eq",
+      value: true,
+    };
+  }
+
+  if (clause === "!item.savedAt" || clause === "!item.date") {
+    return {
+      target: SAVE_DATA_AVAILABLE_CONDITION_TARGET,
+      op: "eq",
+      value: false,
+    };
+  }
+
+  for (const fixedStateItem of Object.values(
+    getRuntimeLayoutConditionItems(),
+  )) {
+    const escapedTarget = fixedStateItem.target.replace(
+      /[.*+?^${}()|[\]\\]/g,
+      "\\$&",
+    );
+    const match = clause.match(new RegExp(`^${escapedTarget}\\s*==\\s*(.+)$`));
+    if (!match) {
+      continue;
+    }
+
+    const value = parseConditionValue(match[1]);
+    if (value === undefined) {
+      continue;
+    }
+
+    return {
+      target: fixedStateItem.target,
+      op: "eq",
+      value,
+    };
+  }
+
+  const variableMatch = clause.match(
+    /^((?:variables\.[A-Za-z_$][A-Za-z0-9_$]*|variables\[(?:".*"|'.*')\]))\s*==\s*(.+)$/,
+  );
+  if (!variableMatch) {
+    return undefined;
+  }
+
+  const variableId = parseVariableConditionTarget(variableMatch[1]);
+  const value = parseConditionValue(variableMatch[2]);
+
+  if (!variableId || value === undefined) {
+    return undefined;
+  }
+
+  return {
+    target: toVariableConditionTarget(variableId),
+    op: "eq",
+    value,
+  };
+};
+
 export const splitLayoutConditionFromWhen = (expression) => {
   const clauses = splitTopLevelAndExpressions(expression);
   if (clauses.length === 0) {
@@ -264,79 +366,15 @@ export const splitLayoutConditionFromWhen = (expression) => {
 
   for (let index = 0; index < clauses.length; index += 1) {
     const clause = clauses[index];
+    const parsedCondition = parseConditionTargetClause(clause);
 
-    if (
-      clause === "item.savedAt" ||
-      clause === "!item.savedAt" ||
-      clause === "item.date" ||
-      clause === "!item.date"
-    ) {
-      visibilityClauseIndex = index;
-      visibilityCondition = {
-        variableId: SAVE_DATA_AVAILABLE_CONDITION_ID,
-        op: "eq",
-        value: clause === "item.savedAt" || clause === "item.date",
-      };
-      break;
-    }
-
-    for (const fixedStateItem of Object.values(
-      getRuntimeLayoutConditionItems(),
-    )) {
-      const escapedAccessor = fixedStateItem.accessor.replace(
-        /[.*+?^${}()|[\]\\]/g,
-        "\\$&",
-      );
-      const match = clause.match(
-        new RegExp(`^${escapedAccessor}\\s*==\\s*(.+)$`),
-      );
-      if (!match) {
-        continue;
-      }
-
-      const value = parseConditionValue(match[1]);
-      if (value === undefined) {
-        continue;
-      }
-
-      visibilityClauseIndex = index;
-      visibilityCondition = {
-        variableId: fixedStateItem.id,
-        op: "eq",
-        value,
-      };
-      break;
-    }
-
-    if (visibilityCondition) {
-      break;
-    }
-
-    const match = clause.match(/^variables\[(.+)\]\s*==\s*(.+)$/);
-    if (!match) {
+    if (!parsedCondition) {
       continue;
     }
 
-    try {
-      const variableId = JSON.parse(match[1].trim());
-      const value = parseConditionValue(match[2]);
-
-      if (
-        typeof variableId === "string" &&
-        variableId.length > 0 &&
-        value !== undefined
-      ) {
-        visibilityClauseIndex = index;
-        visibilityCondition = {
-          variableId,
-          op: "eq",
-          value,
-        };
-        break;
-      }
-    } catch {
-      continue;
-    }
+    visibilityClauseIndex = index;
+    visibilityCondition = parsedCondition;
+    break;
   }
 
   if (!visibilityCondition) {

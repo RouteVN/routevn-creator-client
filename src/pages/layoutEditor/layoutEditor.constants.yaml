@@ -15,11 +15,7 @@ contextMenuItems:
     label: Fragment
     type: item
     createType: fragment-ref
-  - "$when": 'layoutType == "save"'
-    label: Fragment
-    type: item
-    createType: fragment-ref
-  - "$when": 'layoutType == "load"'
+  - "$when": 'layoutType == "save-load"'
     label: Fragment
     type: item
     createType: fragment-ref
@@ -59,27 +55,15 @@ contextMenuItems:
     label: Container (Choice Item)
     type: item
     createType: container-choice-item
-  - "$when": 'layoutType == "save"'
+  - "$when": 'layoutType == "save-load"'
     label: Container (Save/Load Slot)
     type: item
     createType: container-save-load-slot
-  - "$when": 'layoutType == "load"'
-    label: Container (Save/Load Slot)
-    type: item
-    createType: container-save-load-slot
-  - "$when": 'layoutType == "save"'
+  - "$when": 'layoutType == "save-load"'
     label: Sprite (Save Image)
     type: item
     createType: sprite-save-load-slot-image
-  - "$when": 'layoutType == "load"'
-    label: Sprite (Save Image)
-    type: item
-    createType: sprite-save-load-slot-image
-  - "$when": 'layoutType == "save"'
-    label: Text (Save Date)
-    type: item
-    createType: text-save-load-slot-date
-  - "$when": 'layoutType == "load"'
+  - "$when": 'layoutType == "save-load"'
     label: Text (Save Date)
     type: item
     createType: text-save-load-slot-date
@@ -111,11 +95,7 @@ emptyContextMenuItems:
     label: Fragment
     type: item
     createType: fragment-ref
-  - "$when": 'layoutType == "save"'
-    label: Fragment
-    type: item
-    createType: fragment-ref
-  - "$when": 'layoutType == "load"'
+  - "$when": 'layoutType == "save-load"'
     label: Fragment
     type: item
     createType: fragment-ref
@@ -131,27 +111,15 @@ emptyContextMenuItems:
     label: Container (Confirm Cancel)
     type: item
     createType: container-confirm-dialog-cancel
-  - "$when": 'layoutType == "save"'
+  - "$when": 'layoutType == "save-load"'
     label: Container (Save/Load Slot)
     type: item
     createType: container-save-load-slot
-  - "$when": 'layoutType == "load"'
-    label: Container (Save/Load Slot)
-    type: item
-    createType: container-save-load-slot
-  - "$when": 'layoutType == "save"'
+  - "$when": 'layoutType == "save-load"'
     label: Sprite (Save Image)
     type: item
     createType: sprite-save-load-slot-image
-  - "$when": 'layoutType == "load"'
-    label: Sprite (Save Image)
-    type: item
-    createType: sprite-save-load-slot-image
-  - "$when": 'layoutType == "save"'
-    label: Text (Save Date)
-    type: item
-    createType: text-save-load-slot-date
-  - "$when": 'layoutType == "load"'
+  - "$when": 'layoutType == "save-load"'
     label: Text (Save Date)
     type: item
     createType: text-save-load-slot-date

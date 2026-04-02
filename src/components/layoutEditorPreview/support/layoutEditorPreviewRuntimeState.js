@@ -1,7 +1,7 @@
 import {
-  AUTO_MODE_CONDITION_ID,
-  LINE_COMPLETED_CONDITION_ID,
-  SKIP_MODE_CONDITION_ID,
+  AUTO_MODE_CONDITION_TARGET,
+  LINE_COMPLETED_CONDITION_TARGET,
+  SKIP_MODE_CONDITION_TARGET,
   getRuntimeLayoutConditionItems,
 } from "../../../internal/layoutConditions.js";
 
@@ -13,22 +13,22 @@ export const createPreviewFixedStateValues = (
 
   return {
     isLineCompleted:
-      previewVariableValues[LINE_COMPLETED_CONDITION_ID] ??
+      previewVariableValues[LINE_COMPLETED_CONDITION_TARGET] ??
       dialogueDefaultValues?.["dialogue-is-line-completed"] ??
-      fixedStateItems[LINE_COMPLETED_CONDITION_ID]?.value ??
-      fixedStateItems[LINE_COMPLETED_CONDITION_ID]?.default ??
+      fixedStateItems[LINE_COMPLETED_CONDITION_TARGET]?.value ??
+      fixedStateItems[LINE_COMPLETED_CONDITION_TARGET]?.default ??
       false,
     autoMode:
-      previewVariableValues[AUTO_MODE_CONDITION_ID] ??
+      previewVariableValues[AUTO_MODE_CONDITION_TARGET] ??
       dialogueDefaultValues?.["dialogue-auto-mode"] ??
-      fixedStateItems[AUTO_MODE_CONDITION_ID]?.value ??
-      fixedStateItems[AUTO_MODE_CONDITION_ID]?.default ??
+      fixedStateItems[AUTO_MODE_CONDITION_TARGET]?.value ??
+      fixedStateItems[AUTO_MODE_CONDITION_TARGET]?.default ??
       false,
     skipMode:
-      previewVariableValues[SKIP_MODE_CONDITION_ID] ??
+      previewVariableValues[SKIP_MODE_CONDITION_TARGET] ??
       dialogueDefaultValues?.["dialogue-skip-mode"] ??
-      fixedStateItems[SKIP_MODE_CONDITION_ID]?.value ??
-      fixedStateItems[SKIP_MODE_CONDITION_ID]?.default ??
+      fixedStateItems[SKIP_MODE_CONDITION_TARGET]?.value ??
+      fixedStateItems[SKIP_MODE_CONDITION_TARGET]?.default ??
       false,
   };
 };

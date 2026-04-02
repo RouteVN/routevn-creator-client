@@ -12,18 +12,40 @@ const cloneWithDeletedValue = (target, key) => {
 const setValueAtPath = (target, path, value) => {
   const segments = path.split(".");
   let current = target;
+  const parents = [];
 
   for (let index = 0; index < segments.length - 1; index += 1) {
     const segment = segments[index];
     if (!current[segment] || typeof current[segment] !== "object") {
       current[segment] = {};
     }
+    parents.push({
+      parent: current,
+      key: segment,
+    });
     current = current[segment];
   }
 
   const lastSegment = segments[segments.length - 1];
   if (value === undefined) {
     delete current[lastSegment];
+
+    for (let index = parents.length - 1; index >= 0; index -= 1) {
+      const { parent, key } = parents[index];
+      const nestedValue = parent[key];
+
+      if (
+        nestedValue &&
+        typeof nestedValue === "object" &&
+        !Array.isArray(nestedValue) &&
+        Object.keys(nestedValue).length === 0
+      ) {
+        delete parent[key];
+        continue;
+      }
+
+      break;
+    }
   } else {
     current[lastSegment] = value;
   }

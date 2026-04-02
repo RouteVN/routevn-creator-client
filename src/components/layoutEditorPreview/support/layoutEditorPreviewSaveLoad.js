@@ -1,10 +1,11 @@
 import { parseAndRender } from "jempl";
 import { getSystemVariableItems } from "../../../internal/systemVariables.js";
+import { toVariableConditionTarget } from "../../../internal/layoutConditions.js";
 import { visitLayoutItemsWithFragments } from "./layoutEditorPreviewFragments.js";
 
 export const usesSaveLoadPreviewInLayout = (layoutParams = {}) => {
   return visitLayoutItemsWithFragments(layoutParams, ({ item, layoutType }) => {
-    if (layoutType === "save" || layoutType === "load") {
+    if (layoutType === "save-load") {
       return true;
     }
 
@@ -61,9 +62,10 @@ export const getSaveLoadPreviewWindow = ({
         ? paginationSize
         : 0;
     const variableId = saveLoadPreviewSettings.paginationVariableId;
+    const paginationTarget = toVariableConditionTarget(variableId);
     const rawPaginationValue =
-      variableId && Object.hasOwn(previewVariableValues, variableId)
-        ? previewVariableValues[variableId]
+      paginationTarget && Object.hasOwn(previewVariableValues, paginationTarget)
+        ? previewVariableValues[paginationTarget]
         : getPaginationVariableDefaultValue(variableId, variablesData);
     const pageIndex = toPaginationIndex(rawPaginationValue);
 
