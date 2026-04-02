@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   collectLayoutPreviewVariableIds,
   createSaveLoadPreviewSlots,
-} from "../../src/internal/ui/layoutEditor/preview/index.js";
+} from "../../src/components/layoutEditorPreview/support/layoutEditorPreviewSupport.js";
 import { setSaveLoadDefaultValue } from "../../src/components/layoutEditorPreview/layoutEditorPreview.store.js";
 
 describe("layoutEditorPreviewSupport", () => {

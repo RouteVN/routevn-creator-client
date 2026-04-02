@@ -9,7 +9,7 @@ import {
   selectLayoutEditorSelectedItem,
   toLayoutEditorContextMenuItems,
   toLayoutEditorExplorerItems,
-} from "../../internal/ui/layoutEditor/layoutEditorViewData.js";
+} from "./support/layoutEditorViewData.js";
 
 export const createInitialState = () => {
   return {

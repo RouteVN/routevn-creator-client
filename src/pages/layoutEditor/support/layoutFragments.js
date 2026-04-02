@@ -1,5 +1,5 @@
-import { toFlatItems } from "./project/tree.js";
-import { isFragmentLayout } from "./project/layout.js";
+import { toFlatItems } from "../../../internal/project/tree.js";
+import { isFragmentLayout } from "../../../internal/project/layout.js";
 
 export const getFragmentLayoutItems = (
   layoutsData = { items: {}, tree: [] },

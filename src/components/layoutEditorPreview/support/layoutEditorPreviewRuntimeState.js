@@ -3,7 +3,7 @@ import {
   LINE_COMPLETED_CONDITION_ID,
   SKIP_MODE_CONDITION_ID,
   getRuntimeLayoutConditionItems,
-} from "../../../layoutConditions.js";
+} from "../../../internal/layoutConditions.js";
 
 export const createPreviewFixedStateValues = (
   previewVariableValues = {},

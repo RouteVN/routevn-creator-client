@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  createLayoutEditorPreviewData,
-  createLayoutEditorSelectionOverlay,
-} from "../../src/internal/layoutEditorPreview.js";
+import { createLayoutEditorSelectionOverlay } from "../../src/components/layoutEditorCanvas/support/layoutEditorCanvasRender.js";
+import { createLayoutEditorPreviewData } from "../../src/components/layoutEditorPreview/support/layoutEditorPreviewData.js";
 import { getSystemVariableItems } from "../../src/internal/systemVariables.js";
 import {
   AUTO_MODE_CONDITION_ID,

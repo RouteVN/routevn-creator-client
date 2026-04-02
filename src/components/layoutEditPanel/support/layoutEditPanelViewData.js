@@ -1,9 +1,9 @@
-import { toFlatGroups } from "../../project/tree.js";
+import { toFlatGroups } from "../../../internal/project/tree.js";
 import {
   getInteractionActions,
   getInteractionPayload,
-} from "../../project/interactionPayload.js";
-import { normalizeConditionalTextStyleRules } from "./features/index.js";
+} from "../../../internal/project/interactionPayload.js";
+import { normalizeConditionalTextStyleRules } from "./layoutEditPanelFeatures.js";
 
 const ACTION_INTERACTION_LABELS = {
   click: "Click",

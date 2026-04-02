@@ -1,4 +1,4 @@
-import { createLayoutEditorPreviewData } from "../../internal/layoutEditorPreview.js";
+import { createLayoutEditorPreviewData } from "./support/layoutEditorPreviewData.js";
 import {
   createChoiceFormDefaultValues,
   createNvlFormDefaultValues,
@@ -6,7 +6,7 @@ import {
   createSaveLoadPreviewViewData,
   findSaveLoadPreviewSettings,
   getSaveLoadPreviewWindow,
-} from "../../internal/ui/layoutEditor/preview/index.js";
+} from "./support/layoutEditorPreviewSupport.js";
 
 const EMPTY_LAYOUT_DATA = {
   items: {},

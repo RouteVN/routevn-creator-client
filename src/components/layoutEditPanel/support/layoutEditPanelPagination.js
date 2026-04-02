@@ -1,4 +1,4 @@
-import { getSystemVariableItems } from "../../../systemVariables.js";
+import { getSystemVariableItems } from "../../../internal/systemVariables.js";
 
 const SAVE_LOAD_PAGINATION_MODE_OPTIONS = [
   { label: "Continuous", value: "continuous" },

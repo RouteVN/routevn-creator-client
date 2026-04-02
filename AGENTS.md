@@ -80,8 +80,8 @@ If you need deeper or broader Rettangoli framework reference material, use
 
 - Keep page/component handlers simple and orchestration-focused.
 - Keep page `*.store.js` and `*.handlers.js` as the composition root for the
-  page. They should stay easy to find and should wire feature modules together
-  explicitly.
+  page. They should stay easy to find and should wire components and shared
+  helpers together explicitly.
 - Push domain logic, validation, and async complexity into services.
 - Route-level async setup/loading should be handled in app-level orchestration, not repeated in page handlers.
 - Prefer single-purpose store actions (`setCurrentProject`, etc.) over multiple related setter calls.
@@ -107,6 +107,10 @@ If you need deeper or broader Rettangoli framework reference material, use
 
 ## Handler Simplicity
 
+- At the top of handlers, destructure what you use from `deps`
+  (`const { store, refs, appService, projectService } = deps`) instead of
+  repeatedly calling `deps.store`, `deps.refs`, and similar dotted access
+  throughout the function body.
 - Do not add dynamic form method wrappers (for example, `callFormMethod`) or retry loops to wait for refs.
 - Call known methods directly (`formRef.reset()`, `formRef.setValues(...)`).
 - Avoid defensive guard noise when data contract is already stable.
@@ -122,16 +126,6 @@ If you need deeper or broader Rettangoli framework reference material, use
 - For short-lived app-level event windows such as key chords, prefer RxJS stream composition over handler-owned timer/runtime bags.
 - Use one canonical event payload shape per handler; remove multi-fallback id extraction once event contract is known.
 - If two UIs emit similar events with different responsibilities (for example left explorer vs right list), use separate handlers to avoid recursion and side effects.
-- When a page has a cohesive workflow such as canvas interaction, it is valid
-  to move that workflow into one feature module under `src/internal/ui/` and
-  let that module export the related initial state, store actions, selectors,
-  handlers, and stream/subscription helpers together.
-- Prefer one cohesive feature file over splitting the same workflow into a
-  feature-local `*.store.js` and `*.handlers.js` pair when that split would
-  only add indirection.
-- Good candidates for this pattern are workflows where state, handlers, and
-  stream wiring are tightly coupled. Keep cross-feature orchestration and page
-  lifecycle entry points in the page files.
 
 ## UX/Error Handling
 
@@ -186,6 +180,15 @@ Put it in `src/pages/<page-name>/` with:
 - `<page>.store.js`
 - `<page>.handlers.js`
 
+Page-private supporting code that is not a visual component and not shared
+across pages should live in:
+
+- `src/pages/<page-name>/support/`
+
+Keep `support/` flat. Do not add extra nested folders under `support/`. If a
+piece of code grows into a real visual workflow or UI surface, promote it into
+its own component instead of adding another level under `support/`.
+
 If it is a route-level page, also wire it into:
 
 - `src/pages/app/app.view.yaml`
@@ -197,6 +200,13 @@ Put it in `src/components/<component-name>/`.
 
 If it is not truly reusable, keep it close to the page instead of forcing an abstraction.
 
+For page-local visual workflows that own a real UI surface and local state,
+prefer a dedicated component over a non-visual slice module.
+
+Components must not import from other component folders. If code is shared
+between multiple components in one page, keep it in that page's `support/`
+folder or another non-component shared location.
+
 ### Add a primitive
 
 Put it in `src/primitives/` when the code owns low-level DOM behavior or a browser-native custom element.
@@ -205,19 +215,8 @@ Put it in `src/primitives/` when the code owns low-level DOM behavior or a brows
 
 Put it in `src/internal/ui/*` when the code is shared across pages, may touch stores/refs/render/RxJS/services, and is not a visual component or primitive.
 
-For page-local but reusable workflow slices, prefer:
-
-- `src/internal/ui/<page-or-domain>/<feature>.js`
-
-Use this for cohesive features that naturally own:
-
-- initial state
-- store actions/selectors
-- handlers
-- stream/subscription helpers
-
-The page `*.store.js` and `*.handlers.js` should import and re-export or
-compose these feature slices, rather than duplicating the logic inline.
+Do not put page-private support code in `src/internal/ui/*`. Keep that code in
+the owning page folder under `support/`.
 
 ### Add a small pure app-owned helper
 

@@ -8,16 +8,16 @@ import {
   getLayoutEditorBackPath,
   resolveLayoutEditorPayload,
 } from "../../internal/layoutEditorRoute.js";
-import { getFragmentLayoutOptions } from "../../internal/layoutFragments.js";
-import { applyLayoutItemFieldChange } from "../../internal/layoutEditorMutations.js";
+import { getFragmentLayoutOptions } from "./support/layoutFragments.js";
+import { applyLayoutItemFieldChange } from "./support/layoutEditorMutations.js";
 import { getLayoutEditorCreateDefinition } from "../../internal/layoutEditorElementRegistry.js";
 import {
   persistLayoutEditorElementUpdate,
   shouldPersistLayoutEditorFieldImmediately,
-} from "../../internal/layoutEditorPersistence.js";
+} from "./support/layoutEditorPersistence.js";
 import { isFragmentLayout } from "../../internal/project/layout.js";
 import { createLayoutElementsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
-import { createLayoutEditorRepositoryStoreData } from "../../internal/ui/layoutEditor/layoutEditorRepositoryState.js";
+import { createLayoutEditorRepositoryStoreData } from "./support/layoutEditorRepositoryState.js";
 
 const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
@@ -129,10 +129,6 @@ const createFragmentCreateForm = (fragmentLayoutOptions = []) => {
 const getEditorPayload = (appService) =>
   resolveLayoutEditorPayload(appService.getPayload() || {});
 
-const restartLayoutEditorPreview = (deps) => {
-  deps.refs.layoutEditorCanvas.restartPreview();
-};
-
 export const handleBeforeMount = (deps) => {
   const cleanupSubscriptions = mountSubscriptions(deps);
   return () => {
@@ -141,18 +137,18 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { appService, projectService } = deps;
+  const { appService, projectService, store, render } = deps;
   const payload = getEditorPayload(appService);
   const { layoutId, resourceType } = payload;
   await projectService.ensureRepository();
-  deps.store.syncRepositoryState(
+  store.syncRepositoryState(
     createLayoutEditorRepositoryStoreData({
       repositoryState: projectService.getRepositoryState(),
       layoutId,
       resourceType,
     }),
   );
-  deps.render();
+  render();
 };
 
 export const handleBackClick = (deps) => {
@@ -163,23 +159,26 @@ export const handleBackClick = (deps) => {
 };
 
 // Simple render handler for events that only need to trigger a re-render
-export const handleRenderOnly = (deps) => deps.render();
+export const handleRenderOnly = (deps) => {
+  const { render } = deps;
+  render();
+};
 
 export const handleFileExplorerItemClick = async (deps, payload) => {
-  const { store } = deps;
+  const { store, render } = deps;
   const detail = payload._event.detail || {};
   const itemId = detail.id || detail.itemId || detail.item?.id;
   if (!itemId) {
     return;
   }
   store.setSelectedItemId({ itemId: itemId });
-  deps.render();
+  render();
 };
 
 export const handleAddLayoutClick = handleRenderOnly;
 
 const refreshLayoutEditorData = async (deps, payload = {}) => {
-  const { appService, projectService, store, refs } = deps;
+  const { appService, projectService, store, refs, render } = deps;
   const { layoutId, resourceType } = getEditorPayload(appService);
   await projectService.ensureRepository();
   store.syncRepositoryState(
@@ -193,15 +192,15 @@ const refreshLayoutEditorData = async (deps, payload = {}) => {
     store.setSelectedItemId({ itemId: payload.selectedItemId });
     refs.fileExplorer.selectItem({ itemId: payload.selectedItemId });
   }
-  deps.render();
+  render();
 };
 
 const {
   handleFileExplorerAction: handleBaseFileExplorerAction,
   handleFileExplorerTargetChanged,
 } = createLayoutElementsFileExplorerHandlers({
-  getLayoutId: (deps) => deps.store.selectLayoutId(),
-  getResourceType: (deps) => deps.store.selectLayoutResourceType(),
+  getLayoutId: ({ store }) => store.selectLayoutId(),
+  getResourceType: ({ store }) => store.selectLayoutResourceType(),
   refresh: refreshLayoutEditorData,
 });
 
@@ -557,7 +556,7 @@ export const handleDataChanged = refreshLayoutEditorData;
  * @param {boolean} skipUIUpdate - Skip UI updates for drag operations
  */
 async function handleDebouncedUpdate(deps, payload) {
-  const { appService, projectService } = deps;
+  const { appService, projectService, store } = deps;
   const { layoutId, resourceType, selectedItemId, updatedItem, replace } =
     payload;
   const persistResult = await persistLayoutEditorElementUpdate({
@@ -573,7 +572,7 @@ async function handleDebouncedUpdate(deps, payload) {
   }
 
   const currentPayload = getEditorPayload(appService);
-  deps.store.syncRepositoryState(
+  store.syncRepositoryState(
     createLayoutEditorRepositoryStoreData({
       repositoryState: projectService.getRepositoryState(),
       layoutId: currentPayload.layoutId || layoutId,
@@ -609,17 +608,18 @@ const subscriptions = (deps) => {
 };
 
 export const handleLayoutEditorCanvasDragUpdate = (deps, payload) => {
+  const { store, render } = deps;
   const updatedItem = payload._event.detail?.updatedItem;
   if (!updatedItem) {
     return;
   }
 
-  deps.store.updateSelectedItem({ updatedItem });
-  deps.render();
+  store.updateSelectedItem({ updatedItem });
+  render();
 };
 
 export const handleLayoutEditorCanvasUpdate = async (deps, payload) => {
-  const { store } = deps;
+  const { store, render } = deps;
   const updatedItem = payload._event.detail?.updatedItem;
   if (!updatedItem) {
     return;
@@ -630,7 +630,7 @@ export const handleLayoutEditorCanvasUpdate = async (deps, payload) => {
   const selectedItemId = payload._event.detail?.itemId || updatedItem.id;
 
   store.updateSelectedItem({ updatedItem });
-  deps.render();
+  render();
 
   await handleDebouncedUpdate(deps, {
     layoutId,
@@ -641,18 +641,20 @@ export const handleLayoutEditorCanvasUpdate = async (deps, payload) => {
 };
 
 export const handleLayoutEditorPreviewDataChange = (deps, payload) => {
-  deps.store.setPreviewData({
+  const { store, render } = deps;
+  store.setPreviewData({
     previewData: payload._event.detail?.previewData,
   });
-  deps.render();
+  render();
 };
 
 export const handleLayoutEditorPreviewPlay = (deps) => {
-  restartLayoutEditorPreview(deps);
+  const { refs } = deps;
+  refs.layoutEditorCanvas.restartPreview();
 };
 
 export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
-  const { store } = deps;
+  const { store, render } = deps;
   const layoutId = store.selectLayoutId();
   const resourceType = store.selectLayoutResourceType();
   const selectedItemId = store.selectSelectedItemId();
@@ -692,5 +694,5 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     });
   }
 
-  deps.render();
+  render();
 };

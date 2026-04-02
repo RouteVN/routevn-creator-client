@@ -3,17 +3,8 @@ import { resolveLayoutReferences } from "route-engine-js";
 import {
   buildLayoutElements,
   extractFileIdsFromRenderState,
-} from "./project/layout.js";
-import { toHierarchyStructure } from "./project/tree.js";
-import {
-  applyPreviewVariableOverrides,
-  createChoicePreviewItems,
-  createConfirmDialogPreviewData,
-  createDialoguePreviewData,
-  createPreviewFixedStateValues,
-  createPreviewVariables,
-  createRuntimeSaveSlots,
-} from "./ui/layoutEditor/preview/index.js";
+} from "../../../internal/project/layout.js";
+import { toHierarchyStructure } from "../../../internal/project/tree.js";
 
 const OVERLAY_BORDER = {
   color: "#ffffff",
@@ -173,51 +164,6 @@ const buildOverlayTree = ({ path, overlayId, draggable }) => {
   }
 
   return overlayTree;
-};
-
-export const createLayoutEditorPreviewData = ({
-  layoutType,
-  hasSaveLoadPreview,
-  variablesData,
-  previewVariableValues,
-  dialogueDefaultValues,
-  nvlDefaultValues,
-  previewRevealingSpeed,
-  choicesData,
-  saveLoadData,
-} = {}) => {
-  const { dialogue, dialogueRevealingSpeed } = createDialoguePreviewData({
-    layoutType,
-    dialogueDefaultValues,
-    nvlDefaultValues,
-    previewRevealingSpeed,
-  });
-
-  return {
-    variables: {
-      ...applyPreviewVariableOverrides(
-        createPreviewVariables(variablesData),
-        variablesData,
-        previewVariableValues,
-      ),
-      _dialogueTextSpeed: dialogueRevealingSpeed,
-    },
-    ...createPreviewFixedStateValues(
-      previewVariableValues,
-      dialogueDefaultValues,
-    ),
-    dialogue,
-    choice: {
-      items: createChoicePreviewItems(choicesData),
-    },
-    confirmDialog: createConfirmDialogPreviewData(),
-    saveSlots:
-      hasSaveLoadPreview === true ||
-      layoutType === "save" ||
-      layoutType === "load"
-        ? createRuntimeSaveSlots(saveLoadData)
-        : [],
-  };
 };
 
 const resolveLayoutPreviewElements = ({ elements, previewData } = {}) => {

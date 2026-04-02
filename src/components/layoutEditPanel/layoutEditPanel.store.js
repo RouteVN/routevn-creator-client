@@ -1,10 +1,10 @@
 import { parseAndRender } from "jempl";
 import { getFirstTextStyleId } from "../../constants/textStyles.js";
 import { getVariableOptions } from "../../internal/project/projection.js";
-import { getFragmentLayoutOptions } from "../../internal/layoutFragments.js";
+import { getFragmentLayoutOptions } from "../../pages/layoutEditor/support/layoutFragments.js";
 import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
 import { splitLayoutConditionFromWhen } from "../../internal/layoutConditions.js";
-import { toVisibilityConditionVariableTypeById } from "../../internal/ui/layoutEditPanel/features/index.js";
+import { toVisibilityConditionVariableTypeById } from "./support/layoutEditPanelFeatures.js";
 import {
   createChildInteractionDialogDefaults,
   createChildInteractionForm,
@@ -21,7 +21,7 @@ import {
   getVisibilityConditionSummary,
   normalizeConditionalTextStyleRules,
   toVisibilityConditionVariableOptions,
-} from "../../internal/ui/layoutEditPanel/features/index.js";
+} from "./support/layoutEditPanelFeatures.js";
 import {
   ACTION_INTERACTION_TYPES,
   REVEAL_EFFECT_OPTIONS,
@@ -30,7 +30,7 @@ import {
   selectLayoutEditPanelFieldPopoverForm,
   toInspectorValues,
   toTextStyleOptions,
-} from "../../internal/ui/layoutEditPanel/layoutEditPanelViewData.js";
+} from "./support/layoutEditPanelViewData.js";
 
 const HIDDEN_LAYOUT_ACTION_MODES = new Set();
 

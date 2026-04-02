@@ -3,7 +3,7 @@ import {
   createLayoutEditorElementPersistPayload,
   persistLayoutEditorElementUpdate,
   shouldPersistLayoutEditorFieldImmediately,
-} from "../../src/internal/layoutEditorPersistence.js";
+} from "../../src/pages/layoutEditor/support/layoutEditorPersistence.js";
 
 describe("layoutEditorPersistence", () => {
   it("marks interaction fields as immediate-save changes", () => {

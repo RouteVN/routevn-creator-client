@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyLayoutItemFieldChange } from "../../src/internal/layoutEditorMutations.js";
+import { applyLayoutItemFieldChange } from "../../src/pages/layoutEditor/support/layoutEditorMutations.js";
 import {
   applyCanvasItemDragChange,
   applyCanvasItemKeyboardChange,

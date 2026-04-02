@@ -1,6 +1,6 @@
 import { parseAndRender } from "jempl";
-import { getSystemVariableItems } from "../../../systemVariables.js";
-import { visitLayoutItemsWithFragments } from "./fragments.js";
+import { getSystemVariableItems } from "../../../internal/systemVariables.js";
+import { visitLayoutItemsWithFragments } from "./layoutEditorPreviewFragments.js";
 
 export const usesSaveLoadPreviewInLayout = (layoutParams = {}) => {
   return visitLayoutItemsWithFragments(layoutParams, ({ item, layoutType }) => {

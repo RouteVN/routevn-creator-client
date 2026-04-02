@@ -1,9 +1,9 @@
-import { toFlatItems } from "../../project/tree.js";
+import { toFlatItems } from "../../../internal/project/tree.js";
 import {
   getLayoutEditorCreateDefinition,
   getLayoutEditorElementDefinition,
-} from "../../layoutEditorElementRegistry.js";
-import { DEFAULT_PROJECT_RESOLUTION } from "../../projectResolution.js";
+} from "../../../internal/layoutEditorElementRegistry.js";
+import { DEFAULT_PROJECT_RESOLUTION } from "../../../internal/projectResolution.js";
 
 export const toLayoutEditorContextMenuItems = (
   items = [],

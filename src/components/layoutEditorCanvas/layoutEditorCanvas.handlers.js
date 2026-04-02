@@ -6,7 +6,7 @@ import {
 import {
   createLayoutEditorRenderedElements,
   loadLayoutEditorAssets,
-} from "../../internal/layoutEditorPreview.js";
+} from "./support/layoutEditorCanvasRender.js";
 
 const KEYBOARD_SAVE_DELAY = 1000;
 

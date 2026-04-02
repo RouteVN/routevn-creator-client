@@ -1,4 +1,4 @@
-import { getLayoutEditorTypeRules } from "./layoutEditorElementRegistry.js";
+import { getLayoutEditorTypeRules } from "../../../internal/layoutEditorElementRegistry.js";
 
 const cloneWithDeletedValue = (target, key) => {
   if (!target || typeof target !== "object") {

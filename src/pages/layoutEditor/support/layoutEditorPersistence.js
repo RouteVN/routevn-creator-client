@@ -1,6 +1,6 @@
-import { normalizeInteractionValue } from "./project/interactionPayload.js";
-import { getLayoutEditorElementDefinition } from "./layoutEditorElementRegistry.js";
-import { getLayoutEditorResourceCollection } from "./ui/layoutEditor/layoutEditorRepositoryState.js";
+import { normalizeInteractionValue } from "../../../internal/project/interactionPayload.js";
+import { getLayoutEditorElementDefinition } from "../../../internal/layoutEditorElementRegistry.js";
+import { getLayoutEditorResourceCollection } from "./layoutEditorRepositoryState.js";
 
 const getLayoutEditorElementOwnerKey = (resourceType) => {
   return resourceType === "controls" ? "controlId" : "layoutId";

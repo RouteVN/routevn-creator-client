@@ -1,8 +1,8 @@
-import { getSystemVariableItems } from "../../../systemVariables.js";
+import { getSystemVariableItems } from "../../../internal/systemVariables.js";
 import {
   getSpecialLayoutConditionItems,
   splitLayoutConditionFromWhen,
-} from "../../../layoutConditions.js";
+} from "../../../internal/layoutConditions.js";
 
 const VISIBILITY_CONDITION_OP_OPTIONS = [{ label: "Equals", value: "eq" }];
 const VISIBILITY_BOOLEAN_OPTIONS = [
