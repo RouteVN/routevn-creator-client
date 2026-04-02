@@ -90,6 +90,10 @@ export const createAppShellService = ({
       return globalUI.showFormDialog(options);
     },
 
+    showComponentDialog(options) {
+      return globalUI.showComponentDialog(options);
+    },
+
     closeAll() {
       return globalUI.closeAll();
     },

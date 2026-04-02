@@ -29,6 +29,8 @@ const DEBOUNCE_DELAYS = {
   UPDATE: 500,
 };
 
+const SLIDER_CREATE_DIALOG_COMPONENT = "rvn-layout-editor-slider-create-dialog";
+
 const getResultErrorMessage = (result, fallbackMessage) => {
   return (
     result?.error?.message ||
@@ -202,6 +204,39 @@ const {
   getResourceType: (deps) => deps.store.selectLayoutResourceType(),
   refresh: refreshLayoutEditorData,
 });
+
+const showSliderCreateDialog = async (appService, sliderAction = {}) => {
+  return appService.showComponentDialog({
+    component: SLIDER_CREATE_DIALOG_COMPONENT,
+    title: "Create Slider",
+    description: "Choose the slider images before inserting it into the layout",
+    size: "md",
+    props: {
+      direction: sliderAction.direction,
+      defaultValues: {
+        name: sliderAction.name ?? "Slider",
+      },
+    },
+    actions: {
+      buttons: [
+        {
+          id: "cancel",
+          label: "Cancel",
+          variant: "se",
+          align: "left",
+          role: "cancel",
+        },
+        {
+          id: "create",
+          label: "Create Slider",
+          variant: "pr",
+          role: "confirm",
+          validate: true,
+        },
+      ],
+    },
+  });
+};
 
 export const handleFileExplorerAction = async (deps, payload) => {
   const saveLoadSlotAction = resolveSaveLoadSlotCreateAction(
@@ -406,97 +441,25 @@ export const handleFileExplorerAction = async (deps, payload) => {
     return;
   }
 
-  const { store, render, refs } = deps;
-  store.openSliderCreateDialog({
-    parentId: payload?._event?.detail?.itemId,
-    direction: sliderAction.direction,
-    defaultValues: {
-      name: sliderAction.name ?? "Slider",
-    },
-  });
-  render();
-
-  const sliderCreateForm = refs.sliderCreateForm;
-  const { defaultValues } = store.selectSliderCreateDialog();
-  sliderCreateForm.reset();
-  sliderCreateForm.setValues({
-    values: defaultValues,
-  });
-};
-
-export { handleFileExplorerTargetChanged };
-
-export const handleDataChanged = refreshLayoutEditorData;
-
-export const handleSliderCreateDialogClose = (deps) => {
-  const { store, render } = deps;
-  store.closeSliderCreateDialog();
-  store.closeSliderCreateImageSelectorDialog();
-  render();
-};
-
-export const handleSliderCreateImageFieldClick = (deps, payload) => {
-  const { store, render } = deps;
-  const fieldName = payload._event.currentTarget?.dataset?.fieldName;
-  if (!fieldName) {
-    return;
-  }
-
-  store.openSliderCreateImageSelectorDialog({
-    fieldName,
-  });
-  render();
-};
-
-export const handleSliderCreateImageClearClick = (deps, payload) => {
-  const { store, render } = deps;
-  const fieldName = payload._event.currentTarget?.dataset?.fieldName;
-  if (!fieldName) {
-    return;
-  }
-
-  store.setSliderCreateImage({
-    fieldName,
-    imageId: undefined,
-  });
-  render();
-};
-
-export const handleSliderCreateImageSelected = (deps, payload) => {
-  const { store, render } = deps;
-  store.setSliderCreateImageSelectorSelectedImageId({
-    imageId: payload._event.detail?.imageId,
-  });
-  render();
-};
-
-export const handleSliderCreateImageSelectorCancel = (deps) => {
-  const { store, render } = deps;
-  store.closeSliderCreateImageSelectorDialog();
-  render();
-};
-
-export const handleSliderCreateImageSelectorSubmit = (deps) => {
-  const { store, render } = deps;
-  const imageSelectorDialog = store.selectSliderCreateImageSelectorDialog();
-  if (imageSelectorDialog.fieldName) {
-    store.setSliderCreateImage({
-      fieldName: imageSelectorDialog.fieldName,
-      imageId: imageSelectorDialog.selectedImageId,
-    });
-  }
-  store.closeSliderCreateImageSelectorDialog();
-  render();
-};
-
-export const handleSliderCreateFormAction = async (deps, payload) => {
   const { appService, projectService, store } = deps;
-  const { actionId, values } = payload._event.detail;
-  if (actionId !== "submit") {
+  const parentId = payload?._event?.detail?.itemId ?? null;
+  let dialogResult;
+
+  try {
+    dialogResult = await showSliderCreateDialog(appService, sliderAction);
+  } catch {
+    appService.showToast("Failed to open slider dialog.", {
+      title: "Error",
+    });
     return;
   }
 
-  const name = values?.name?.trim();
+  if (!dialogResult || dialogResult.actionId !== "create") {
+    return;
+  }
+
+  const values = dialogResult.values ?? {};
+  const name = values.name?.trim();
   if (!name) {
     appService.showToast("Slider name is required.", {
       title: "Warning",
@@ -504,9 +467,10 @@ export const handleSliderCreateFormAction = async (deps, payload) => {
     return;
   }
 
-  const sliderCreateDialog = store.selectSliderCreateDialog();
-  const { barImageId, thumbImageId, hoverBarImageId, hoverThumbImageId } =
-    sliderCreateDialog.images;
+  const barImageId = values.barImageId;
+  const thumbImageId = values.thumbImageId;
+  const hoverBarImageId = values.hoverBarImageId;
+  const hoverThumbImageId = values.hoverThumbImageId;
 
   if (!barImageId) {
     appService.showToast("Bar image is required.", {
@@ -522,9 +486,7 @@ export const handleSliderCreateFormAction = async (deps, payload) => {
     return;
   }
 
-  const direction =
-    values?.direction === "vertical" ? "vertical" : "horizontal";
-
+  const direction = values.direction === "vertical" ? "vertical" : "horizontal";
   const layoutId = store.selectLayoutId();
   const resourceType = store.selectLayoutResourceType();
   if (!layoutId) {
@@ -567,7 +529,7 @@ export const handleSliderCreateFormAction = async (deps, payload) => {
     [ownerPayloadKey]: layoutId,
     elementId: nextElementId,
     data: nextElementData,
-    parentId: sliderCreateDialog.parentId ?? null,
+    parentId,
     position: "last",
   });
 
@@ -581,10 +543,12 @@ export const handleSliderCreateFormAction = async (deps, payload) => {
     return;
   }
 
-  store.closeSliderCreateDialog();
-  store.closeSliderCreateImageSelectorDialog();
   await refreshLayoutEditorData(deps, { selectedItemId: nextElementId });
 };
+
+export { handleFileExplorerTargetChanged };
+
+export const handleDataChanged = refreshLayoutEditorData;
 
 /**
  * Handler for debounced element updates (saves to repository)

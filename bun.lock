@@ -5,7 +5,7 @@
     "": {
       "dependencies": {
         "@rettangoli/fe": "1.1.0",
-        "@rettangoli/ui": "1.0.18",
+        "@rettangoli/ui": "1.0.20",
         "@rettangoli/vt": "1.0.2",
         "@routevn/creator-model": "file:../routevn-creator-model",
         "@tauri-apps/api": "^2.8.0",
@@ -205,7 +205,7 @@
 
     "@rettangoli/fe": ["@rettangoli/fe@1.1.0", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.0.1", "js-yaml": "^4.1.0", "snabbdom": "^3.6.2", "vite": "^6.3.5" } }, "sha512-rvSEQXbHt7jl9ewATduAuOUXVMO0ES8fG7i7cVpPR3SLSveKhG0k0X4v+v/SsdBEB+w2G6pfokG/atxwYfU9yw=="],
 
-    "@rettangoli/ui": ["@rettangoli/ui@1.0.18", "", { "dependencies": { "@rettangoli/fe": "1.1.1", "jempl": "1.0.1" } }, "sha512-48N9iYpjJzVXPi2Qx1SpPjDp6i/DPUu00n3JZ3+FGBmOcKYyvOUxLWcL+tXUtRXyuHiWanupqrerJfd9tZh/sA=="],
+    "@rettangoli/ui": ["@rettangoli/ui@1.0.20", "", { "dependencies": { "@rettangoli/fe": "1.1.1", "jempl": "1.0.1" } }, "sha512-dETur1bDwFZqk9pS+VXH7lligDtTSpfpjT2+XwvM8fQs+TH7zJsX+q06eAuiwmWirDJDogw8geK7YAv6xeITDw=="],
 
     "@rettangoli/vt": ["@rettangoli/vt@1.0.2", "", { "dependencies": { "commander": "^13.1.0", "js-yaml": "^4.1.0", "liquidjs": "^10.21.0", "pixelmatch": "^7.1.0", "playwright": "1.57.0", "sharp": "^0.34.5", "shiki": "^3.3.0" } }, "sha512-QHweZ2BJFiQi0mc8KvSLiFjKTm9ovjs++x9cOTtN89AyK/Pn0acuD0mA+kjOu4zgPcaHvjOAINNqMFsqhx9Hgw=="],
 

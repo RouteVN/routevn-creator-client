@@ -1,0 +1,19 @@
+componentName: rvn-layout-editor-slider-create-dialog
+propsSchema:
+  type: object
+  properties:
+    direction:
+      type: string
+    defaultValues:
+      type: object
+methods:
+  type: object
+  properties:
+    validate:
+      description: Validates the slider create dialog body and returns shell-compatible validation output.
+      params: []
+      returns: object
+    getValues:
+      description: Returns the current slider create values for the component dialog shell.
+      params: []
+      returns: object

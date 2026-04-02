@@ -25,25 +25,6 @@ export const createInitialState = () => {
     variablesData: { tree: [], items: {} },
     previewData: {},
     projectResolution: DEFAULT_PROJECT_RESOLUTION,
-    sliderCreateDialog: {
-      open: false,
-      parentId: undefined,
-      defaultValues: {
-        name: "Slider",
-        direction: "horizontal",
-      },
-      images: {
-        barImageId: undefined,
-        thumbImageId: undefined,
-        hoverBarImageId: undefined,
-        hoverThumbImageId: undefined,
-      },
-    },
-    sliderCreateImageSelectorDialog: {
-      open: false,
-      fieldName: undefined,
-      selectedImageId: undefined,
-    },
   };
 };
 
@@ -162,87 +143,6 @@ export const syncRepositoryState = ({ state }, payload = {}) => {
   state.variablesData = variablesData ?? { items: {}, tree: [] };
 };
 
-export const openSliderCreateDialog = (
-  { state },
-  { parentId, direction, defaultValues } = {},
-) => {
-  state.sliderCreateDialog = {
-    open: true,
-    parentId,
-    defaultValues: {
-      name: defaultValues?.name ?? "Slider",
-      direction: direction === "vertical" ? "vertical" : "horizontal",
-    },
-    images: {
-      barImageId: undefined,
-      thumbImageId: undefined,
-      hoverBarImageId: undefined,
-      hoverThumbImageId: undefined,
-    },
-  };
-};
-
-export const closeSliderCreateDialog = ({ state }, _payload = {}) => {
-  state.sliderCreateDialog = {
-    open: false,
-    parentId: undefined,
-    defaultValues: {
-      name: "Slider",
-      direction: "horizontal",
-    },
-    images: {
-      barImageId: undefined,
-      thumbImageId: undefined,
-      hoverBarImageId: undefined,
-      hoverThumbImageId: undefined,
-    },
-  };
-};
-
-export const setSliderCreateImage = (
-  { state },
-  { fieldName, imageId } = {},
-) => {
-  if (!fieldName) {
-    return;
-  }
-
-  state.sliderCreateDialog.images[fieldName] = imageId;
-};
-
-export const openSliderCreateImageSelectorDialog = (
-  { state },
-  { fieldName } = {},
-) => {
-  if (!fieldName) {
-    return;
-  }
-
-  state.sliderCreateImageSelectorDialog = {
-    open: true,
-    fieldName,
-    selectedImageId: state.sliderCreateDialog.images[fieldName],
-  };
-};
-
-export const closeSliderCreateImageSelectorDialog = (
-  { state },
-  _payload = {},
-) => {
-  state.sliderCreateImageSelectorDialog = {
-    open: false,
-    fieldName: undefined,
-    selectedImageId: undefined,
-  };
-};
-
-export const setSliderCreateImageSelectorSelectedImageId = (
-  { state },
-  { imageId } = {},
-) => {
-  state.sliderCreateImageSelectorDialog.selectedImageId = imageId;
-};
-
 export const selectLayoutId = ({ state }) => {
   return state.layout?.id;
 };
@@ -257,14 +157,6 @@ export const selectCurrentLayoutType = ({ state }) => {
 
 export const selectProjectResolution = ({ state }) => {
   return state.projectResolution;
-};
-
-export const selectSliderCreateDialog = ({ state }) => {
-  return state.sliderCreateDialog;
-};
-
-export const selectSliderCreateImageSelectorDialog = ({ state }) => {
-  return state.sliderCreateImageSelectorDialog;
 };
 
 export const selectImages = ({ state }) => state.images;
@@ -363,9 +255,6 @@ export const selectViewData = ({ state, constants }) => {
       parsedEmptyContextMenuItems,
       state.projectResolution,
     ),
-    sliderCreateForm: constants.sliderCreateForm,
-    sliderCreateDialog: state.sliderCreateDialog,
-    sliderCreateImageSelectorDialog: state.sliderCreateImageSelectorDialog,
     layoutState,
     previewData: state.previewData,
     projectResolution: state.projectResolution,
