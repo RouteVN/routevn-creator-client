@@ -4,6 +4,13 @@ const toPlainObject = (value) => {
     : {};
 };
 
+const mergeActions = (currentActions, nextPartialActions) => {
+  return {
+    ...toPlainObject(currentActions),
+    ...toPlainObject(nextPartialActions),
+  };
+};
+
 const syncRepositoryState = async (deps) => {
   const { store, projectService } = deps;
   await projectService.ensureRepository();
@@ -14,7 +21,13 @@ const syncRepositoryState = async (deps) => {
 
 export const open = (deps, payload) => {
   const { store, render } = deps;
-  const { mode } = payload;
+  const { mode, actions } = payload;
+  const nextActions =
+    actions !== undefined
+      ? toPlainObject(actions)
+      : toPlainObject(deps.props?.actions);
+
+  store.updateActions(nextActions);
   store.showActionsDialog();
   store.setMode({ mode });
   render();
@@ -40,13 +53,15 @@ export const handleOnUpdate = async (deps, changes) => {
   render();
 };
 
-export const handleBackToActions = (deps) => {
+export const handleBackToActions = (deps, payload) => {
+  payload?._event?.stopPropagation?.();
   const { store, render } = deps;
   store.setMode({ mode: "actions" });
   render();
 };
 
 export const handleActionClicked = (deps, payload) => {
+  payload?._event?.stopPropagation?.();
   const { store, render } = deps;
 
   store.setMode({
@@ -57,10 +72,14 @@ export const handleActionClicked = (deps, payload) => {
 };
 
 export const handleCommandLineSubmit = (deps, payload) => {
+  payload?._event?.stopPropagation?.();
   const { store, render, dispatchEvent } = deps;
+  const nextActions = mergeActions(store.selectAction(), payload._event.detail);
+
+  store.updateActions(nextActions);
   dispatchEvent(
     new CustomEvent("actions-change", {
-      detail: payload._event.detail,
+      detail: nextActions,
     }),
   );
   store.hideActionsDialog();
@@ -72,6 +91,11 @@ export const handleAddActionButtonClicked = (deps) => {
   store.showActionsDialog();
   store.setMode({ mode: "actions" });
   render();
+};
+
+export const handleEmbeddedCloseClick = (deps, payload) => {
+  payload?._event?.stopPropagation?.();
+  deps.dispatchEvent(new CustomEvent("close"));
 };
 
 export const handleActionsDialogClose = (deps) => {

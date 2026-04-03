@@ -445,6 +445,7 @@ const FAMILY_CAPABILITIES = {
     supportsAnchor: true,
   },
   sprite: {
+    supportsAnchor: true,
     supportsSpriteImages: true,
     supportsActions: true,
   },

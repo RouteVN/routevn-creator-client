@@ -27,6 +27,18 @@ const navigateToLayoutEditor = ({ appService, layoutId } = {}) => {
   });
 };
 
+const toFragmentValue = (value) => {
+  if (value === true || value === "true") {
+    return true;
+  }
+
+  if (value === false || value === "false") {
+    return false;
+  }
+
+  return false;
+};
+
 const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   if (!itemId) {
     return;
@@ -60,13 +72,41 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   });
 };
 
+const logSelectedLayoutData = ({ deps, itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  const { store, projectService } = deps;
+  const layoutItem = store.selectLayoutItemById({ itemId });
+
+  if (!layoutItem || layoutItem.type !== "layout") {
+    return;
+  }
+
+  const repositoryState = projectService.getRepositoryState();
+  const layoutData = structuredClone(layoutItem);
+  const textStylesData = structuredClone(repositoryState?.textStyles ?? {});
+  const fontsData = structuredClone(repositoryState?.fonts ?? {});
+  console.log("[layouts] Selected layout data", layoutData);
+  console.log(
+    `[layouts] Selected layout JSON (${itemId})\n${JSON.stringify(layoutData, null, 2)}`,
+  );
+  console.log("[layouts] Text styles data", textStylesData);
+  console.log(
+    `[layouts] Text styles JSON\n${JSON.stringify(textStylesData, null, 2)}`,
+  );
+  console.log("[layouts] Fonts data", fontsData);
+  console.log(`[layouts] Fonts JSON\n${JSON.stringify(fontsData, null, 2)}`);
+};
+
 const {
   handleBeforeMount,
   refreshData: handleDataChanged,
-  handleFileExplorerSelectionChanged,
+  handleFileExplorerSelectionChanged: handleCatalogFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
-  handleItemClick: handleLayoutItemClick,
+  handleItemClick: handleCatalogLayoutItemClick,
   handleSearchInput,
 } = createCatalogPageHandlers({
   resourceType: "layouts",
@@ -79,11 +119,27 @@ const {
 export {
   handleBeforeMount,
   handleDataChanged,
-  handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
-  handleLayoutItemClick,
   handleSearchInput,
+};
+
+export const handleFileExplorerSelectionChanged = (deps, payload) => {
+  handleCatalogFileExplorerSelectionChanged(deps, payload);
+
+  const { itemId, isFolder } = payload._event.detail;
+  if (isFolder) {
+    return;
+  }
+
+  logSelectedLayoutData({ deps, itemId });
+};
+
+export const handleLayoutItemClick = (deps, payload) => {
+  handleCatalogLayoutItemClick(deps, payload);
+
+  const { itemId } = payload._event.detail;
+  logSelectedLayoutData({ deps, itemId });
 };
 
 export const handleItemDoubleClick = (deps, payload) => {
@@ -433,6 +489,7 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
     return;
   }
   const isFragment = values?.isFragment ?? false;
+  const description = values?.description ?? "";
 
   const projectResolution = requireProjectResolution(
     projectService.getRepositoryState().project?.resolution,
@@ -447,7 +504,10 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
         layoutId: nanoid(),
         name,
         layoutType,
-        isFragment,
+        data: {
+          description,
+          isFragment: toFragmentValue(isFragment),
+        },
         elements: createLayoutTemplate(layoutType, projectResolution),
         parentId: store.getState().targetGroupId,
         position: "last",
@@ -491,7 +551,7 @@ export const handleEditFormActionClick = async (deps, payload) => {
         data: {
           name,
           description: values?.description ?? "",
-          isFragment: values?.isFragment ?? false,
+          isFragment: toFragmentValue(values?.isFragment),
         },
       }),
   });

@@ -15,6 +15,16 @@ const OVERLAY_FILL = {
   color: "#ffffff",
   alpha: 0.001,
 };
+const OVERLAY_ANCHOR_FILL = {
+  color: "#ffffff",
+  alpha: 1,
+};
+const OVERLAY_ANCHOR_BORDER = {
+  color: "#111111",
+  width: 1,
+  alpha: 1,
+};
+const OVERLAY_ANCHOR_SIZE = 8;
 
 const jemplFunctions = {
   formatDate: (timestamp, format = "DD/MM/YYYY - HH:mm") => {
@@ -44,6 +54,61 @@ const toElementList = (elements) => {
   }
 
   return elements ? [elements] : [];
+};
+
+const toPlainObject = (value) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return value;
+};
+
+const toArray = (value) => {
+  return Array.isArray(value) ? value : [];
+};
+
+const normalizeLayoutEditorPreviewData = (previewData = {}) => {
+  const nextPreviewData = toPlainObject(previewData);
+  const nextDialogue = toPlainObject(nextPreviewData.dialogue);
+  const nextDialogueCharacter = toPlainObject(nextDialogue.character);
+  const nextChoice = toPlainObject(nextPreviewData.choice);
+  const nextConfirmDialog = toPlainObject(nextPreviewData.confirmDialog);
+  const dialogueContent = toArray(nextDialogue.content);
+
+  return {
+    ...nextPreviewData,
+    variables: toPlainObject(nextPreviewData.variables),
+    isLineCompleted: nextPreviewData.isLineCompleted ?? false,
+    autoMode: nextPreviewData.autoMode ?? false,
+    skipMode: nextPreviewData.skipMode ?? false,
+    dialogue: {
+      ...nextDialogue,
+      character: {
+        ...nextDialogueCharacter,
+        name: nextDialogueCharacter.name ?? "",
+      },
+      content:
+        dialogueContent.length > 0
+          ? dialogueContent
+          : [
+              {
+                text: "",
+              },
+            ],
+      lines: toArray(nextDialogue.lines),
+    },
+    choice: {
+      ...nextChoice,
+      items: toArray(nextChoice.items),
+    },
+    confirmDialog: {
+      ...nextConfirmDialog,
+      confirmActions: toPlainObject(nextConfirmDialog.confirmActions),
+      cancelActions: toPlainObject(nextConfirmDialog.cancelActions),
+    },
+    saveSlots: toArray(nextPreviewData.saveSlots),
+  };
 };
 
 const isSelectableMatch = (elementId, selectedItemId) => {
@@ -93,6 +158,28 @@ const hasRenderableBounds = (element = {}) => {
   );
 };
 
+const getElementOrigin = (element = {}) => {
+  return {
+    x: Number.isFinite(element.originX) ? element.originX : 0,
+    y: Number.isFinite(element.originY) ? element.originY : 0,
+  };
+};
+
+const getElementAnchorRatios = (element = {}) => {
+  const { x: originX, y: originY } = getElementOrigin(element);
+
+  return {
+    anchorX:
+      Number.isFinite(element.width) && element.width > 0
+        ? originX / element.width
+        : 0,
+    anchorY:
+      Number.isFinite(element.height) && element.height > 0
+        ? originY / element.height
+        : 0,
+  };
+};
+
 const buildOverlayRect = ({ element, overlayId, draggable }) => {
   if (!hasRenderableBounds(element)) {
     return undefined;
@@ -101,17 +188,13 @@ const buildOverlayRect = ({ element, overlayId, draggable }) => {
   const overlayRect = {
     id: overlayId,
     type: "rect",
-    x: element.x ?? 0,
-    y: element.y ?? 0,
+    x: 0,
+    y: 0,
     width: element.width,
     height: element.height,
     fill: OVERLAY_FILL,
     border: OVERLAY_BORDER,
   };
-
-  if (typeof element.rotation === "number") {
-    overlayRect.rotation = element.rotation;
-  }
 
   if (draggable) {
     overlayRect.hover = {
@@ -133,34 +216,82 @@ const buildOverlayRect = ({ element, overlayId, draggable }) => {
   return overlayRect;
 };
 
+const buildOverlayAnchorMarker = ({ element, overlayId }) => {
+  if (!hasRenderableBounds(element)) {
+    return undefined;
+  }
+
+  const { x: originX, y: originY } = getElementOrigin(element);
+
+  return {
+    id: `${overlayId}-anchor`,
+    type: "rect",
+    x: originX - OVERLAY_ANCHOR_SIZE / 2,
+    y: originY - OVERLAY_ANCHOR_SIZE / 2,
+    width: OVERLAY_ANCHOR_SIZE,
+    height: OVERLAY_ANCHOR_SIZE,
+    fill: OVERLAY_ANCHOR_FILL,
+    border: OVERLAY_ANCHOR_BORDER,
+  };
+};
+
+const buildOverlayElementContainer = ({ element, overlayId, children }) => {
+  const { x: originX, y: originY } = getElementOrigin(element);
+  const { anchorX, anchorY } = getElementAnchorRatios(element);
+  const overlayContainer = {
+    id: overlayId,
+    type: "container",
+    x: (element.x ?? 0) + originX,
+    y: (element.y ?? 0) + originY,
+    width: element.width,
+    height: element.height,
+    anchorX,
+    anchorY,
+    children,
+  };
+
+  if (typeof element.rotation === "number") {
+    overlayContainer.rotation = element.rotation;
+  }
+
+  if (element.anchorToBottom) {
+    overlayContainer.anchorToBottom = true;
+  }
+
+  return overlayContainer;
+};
+
 const buildOverlayTree = ({ path, overlayId, draggable }) => {
   const selectedElement = path[path.length - 1];
-  let overlayTree = buildOverlayRect({
+  const overlayRect = buildOverlayRect({
     element: selectedElement,
     overlayId,
     draggable,
   });
+  const anchorMarker = buildOverlayAnchorMarker({
+    element: selectedElement,
+    overlayId,
+  });
+  let overlayTree;
 
-  if (!overlayTree) {
+  if (!overlayRect || !anchorMarker) {
     return undefined;
   }
+
+  overlayTree = buildOverlayElementContainer({
+    element: selectedElement,
+    overlayId: `${overlayId}-group`,
+    children: [overlayRect, anchorMarker],
+  });
 
   for (let index = path.length - 2; index >= 0; index -= 1) {
     const ancestor = path[index];
 
-    overlayTree = {
-      id: `${overlayId}-container-${index}`,
-      type: "container",
-      x: ancestor.x ?? 0,
-      y: ancestor.y ?? 0,
-      ...(Number.isFinite(ancestor.width) ? { width: ancestor.width } : {}),
-      ...(Number.isFinite(ancestor.height) ? { height: ancestor.height } : {}),
-      ...(typeof ancestor.rotation === "number"
-        ? { rotation: ancestor.rotation }
-        : {}),
-      ...(ancestor.anchorToBottom ? { anchorToBottom: true } : {}),
+    overlayTree = buildOverlayElementContainer({
+      element: ancestor,
+      overlayId: `${overlayId}-container-${index}`,
       children: [overlayTree],
-    };
+    });
   }
 
   return overlayTree;
@@ -168,9 +299,13 @@ const buildOverlayTree = ({ path, overlayId, draggable }) => {
 
 const resolveLayoutPreviewElements = ({ elements, previewData } = {}) => {
   return toElementList(
-    parseAndRender(toElementList(elements), previewData ?? {}, {
-      functions: jemplFunctions,
-    }),
+    parseAndRender(
+      toElementList(elements),
+      normalizeLayoutEditorPreviewData(previewData),
+      {
+        functions: jemplFunctions,
+      },
+    ),
   );
 };
 

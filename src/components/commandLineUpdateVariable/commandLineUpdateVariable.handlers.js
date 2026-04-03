@@ -1,4 +1,12 @@
 import { nanoid } from "nanoid";
+import { getSystemVariableItems } from "../../internal/systemVariables.js";
+
+const getVariableItems = (variablesData = {}) => {
+  return {
+    ...variablesData?.items,
+    ...getSystemVariableItems(),
+  };
+};
 
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
@@ -86,7 +94,7 @@ export const handleVariableSelectChange = (deps, payload) => {
 
   // Get variable type to set appropriate default value
   const state = store.getState();
-  const variableItems = state.variablesData?.items || {};
+  const variableItems = getVariableItems(state.variablesData);
   const variable = variableItems[value];
   const varType = (variable?.type || "string").toLowerCase();
 
@@ -156,7 +164,7 @@ export const handleSubmitClick = (deps, payload) => {
   const { dispatchEvent, store, appService } = deps;
   const state = store.getState();
   const { actionId, operations, variablesData } = state;
-  const variableItems = variablesData?.items || {};
+  const variableItems = getVariableItems(variablesData);
 
   const validOperations = operations
     .filter((op) => op.variableId && op.op)

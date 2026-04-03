@@ -45,7 +45,7 @@ describe("layoutEditorPersistence", () => {
     ).toBe(false);
   });
 
-  it("creates a patch payload for additive nested changes", () => {
+  it("forces replace payloads for additive nested changes", () => {
     const result = createLayoutEditorElementPersistPayload({
       currentItem: {
         id: "text-1",
@@ -65,8 +65,9 @@ describe("layoutEditorPersistence", () => {
 
     expect(result).toEqual({
       hasChanges: true,
-      replace: false,
+      replace: true,
       data: {
+        type: "text",
         textStyle: {
           align: "center",
         },
@@ -143,6 +144,111 @@ describe("layoutEditorPersistence", () => {
         x: 20,
       },
       replace: false,
+    });
+  });
+
+  it("persists nested interaction action changes as a replace payload", async () => {
+    const updateLayoutElement = vi.fn(async () => {});
+    const projectService = {
+      getRepositoryState: () => ({
+        layouts: {
+          items: {
+            "layout-1": {
+              elements: {
+                items: {
+                  "container-1": {
+                    type: "container",
+                    x: 0,
+                    y: 0,
+                    click: {
+                      payload: {
+                        actions: {
+                          updateVariable: {
+                            id: "updateVariable1",
+                            operations: [
+                              {
+                                variableId: "_currentMenuPage",
+                                op: "set",
+                                value: "options",
+                              },
+                            ],
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        controls: { items: {} },
+      }),
+      updateLayoutElement,
+      updateControlElement: vi.fn(async () => {}),
+    };
+
+    const result = await persistLayoutEditorElementUpdate({
+      projectService,
+      layoutId: "layout-1",
+      resourceType: "layouts",
+      selectedItemId: "container-1",
+      updatedItem: {
+        id: "container-1",
+        type: "container",
+        x: 0,
+        y: 0,
+        click: {
+          payload: {
+            actions: {
+              updateVariable: {
+                id: "updateVariable1",
+                operations: [
+                  {
+                    variableId: "_currentMenuPage",
+                    op: "set",
+                    value: "options",
+                  },
+                ],
+              },
+              pushLayeredView: {
+                resourceId: "layout-settings",
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect(result.didPersist).toBe(true);
+    expect(updateLayoutElement).toHaveBeenCalledWith({
+      layoutId: "layout-1",
+      elementId: "container-1",
+      data: {
+        type: "container",
+        x: 0,
+        y: 0,
+        click: {
+          payload: {
+            actions: {
+              updateVariable: {
+                id: "updateVariable1",
+                operations: [
+                  {
+                    variableId: "_currentMenuPage",
+                    op: "set",
+                    value: "options",
+                  },
+                ],
+              },
+              pushLayeredView: {
+                resourceId: "layout-settings",
+              },
+            },
+          },
+        },
+      },
+      replace: true,
     });
   });
 });

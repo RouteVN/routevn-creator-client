@@ -49,7 +49,7 @@ template:
           - rtgl-button#playPreviewButton v=ol: Play
   - $if layoutType == 'choice':
       - rtgl-form#choiceForm key=${choiceFormKey} w=f :form=${choiceForm} :defaultValues=${choiceDefaultValues} :context=${choicesContext}: null
-  - $if hasSaveLoadPreview:
-      - rtgl-form#saveLoadForm key=${saveLoadFormKey} w=f :form=${saveLoadForm} :defaultValues=${saveLoadDefaultValues} :context=${saveLoadContext}: null
   - $if hasPreviewVariables:
       - rtgl-form#previewVariablesForm key=${previewVariablesFormKey} w=f :form=${previewVariablesForm} :defaultValues=${previewVariablesDefaultValues}: null
+  - $if hasSaveLoadPreview:
+      - rtgl-form#saveLoadForm key=${saveLoadFormKey} w=f :form=${saveLoadForm} :defaultValues=${saveLoadDefaultValues} :context=${saveLoadContext}: null

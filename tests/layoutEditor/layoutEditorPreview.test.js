@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { createLayoutEditorSelectionOverlay } from "../../src/components/layoutEditorCanvas/support/layoutEditorCanvasRender.js";
+import {
+  createLayoutEditorRenderedElements,
+  createLayoutEditorSelectionOverlay,
+} from "../../src/components/layoutEditorCanvas/support/layoutEditorCanvasRender.js";
 import { createLayoutEditorPreviewData } from "../../src/components/layoutEditorPreview/support/layoutEditorPreviewData.js";
 import { getSystemVariableItems } from "../../src/internal/systemVariables.js";
 import {
@@ -103,6 +106,47 @@ describe("layoutEditorPreview", () => {
     });
   });
 
+  it("renders save/load layout elements before preview data is initialized", () => {
+    const rendered = createLayoutEditorRenderedElements({
+      layoutState: {
+        id: "layout-1",
+        layoutType: "save-load",
+        elements: {
+          items: {
+            "slot-container": {
+              type: "container-ref-save-load-slot",
+              name: "Container (Save/Load Slot)",
+              x: 0,
+              y: 0,
+              width: 400,
+              height: 300,
+              anchorX: 0,
+              anchorY: 0,
+              scaleX: 1,
+              scaleY: 1,
+              rotation: 0,
+            },
+          },
+          tree: [{ id: "slot-container", children: [] }],
+        },
+      },
+      repositoryState: {
+        layouts: { items: {} },
+        images: { items: {} },
+        textStyles: { items: {} },
+        colors: { items: {} },
+        fonts: { items: {} },
+      },
+      previewData: {},
+      graphicsService: {
+        parse: ({ elements }) => ({ elements }),
+      },
+    });
+
+    expect(rendered.elements).toEqual([]);
+    expect(rendered.fileReferences).toEqual([]);
+  });
+
   it("builds NVL preview lines from the editable content list", () => {
     const previewData = createLayoutEditorPreviewData({
       layoutType: "nvl",
@@ -196,6 +240,8 @@ describe("layoutEditorPreview", () => {
           y: 20,
           width: 100,
           height: 40,
+          originX: 50,
+          originY: 20,
         },
         {
           id: "target-instance-1",
@@ -209,11 +255,32 @@ describe("layoutEditorPreview", () => {
     });
 
     expect(overlays).toHaveLength(1);
-    expect(overlays[0].id).toBe("selected-border");
-    expect(overlays[0].drag).toEqual({
+    expect(overlays[0].id).toBe("selected-border-group");
+    expect(overlays[0].children).toHaveLength(2);
+    expect(overlays[0].children[0].id).toBe("selected-border");
+    expect(overlays[0].children[0].x).toBe(0);
+    expect(overlays[0].children[0].y).toBe(0);
+    expect(overlays[0].children[0].drag).toEqual({
       start: { payload: {} },
       move: { payload: {} },
       end: { payload: {} },
+    });
+    expect(overlays[0].children[1]).toEqual({
+      id: "selected-border-anchor",
+      type: "rect",
+      x: 46,
+      y: 16,
+      width: 8,
+      height: 8,
+      fill: {
+        color: "#ffffff",
+        alpha: 1,
+      },
+      border: {
+        color: "#111111",
+        width: 1,
+        alpha: 1,
+      },
     });
   });
 });
