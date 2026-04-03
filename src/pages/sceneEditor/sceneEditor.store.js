@@ -99,7 +99,7 @@ const overlayEditorSessionOnRepositoryState = (repositoryState, state) => {
     }
 
     lineItems[line.id] = {
-      ...(repositorySection.lines?.items?.[line.id] || {}),
+      ...repositorySection.lines?.items?.[line.id],
       id: line.id,
       actions: structuredClone(line.actions || {}),
     };

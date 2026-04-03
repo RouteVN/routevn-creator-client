@@ -16,7 +16,6 @@ import createRouteEngine, { createEffectsHandler } from "route-engine-js";
 import { Rectangle, Ticker } from "pixi.js";
 import { prepareRenderStateKeyboardForGraphics } from "../../internal/project/layout.js";
 import { requireProjectResolution } from "../../internal/projectResolution.js";
-import { previewDebugText } from "./shared/debugLog.js";
 
 const cloneBufferForAudioDecode = (value) => {
   if (value instanceof ArrayBuffer) {
@@ -152,199 +151,6 @@ const estimateAudioBufferBytes = (audioBuffer) => {
   }
 
   return audioBuffer.length * audioBuffer.numberOfChannels * 4;
-};
-
-const toPlainObject = (value) => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return {};
-  }
-
-  return value;
-};
-
-const toArray = (value) => {
-  return Array.isArray(value) ? value : [];
-};
-
-const normalizeRenderStateTemplateData = (renderState = {}) => {
-  const nextRenderState = toPlainObject(renderState);
-  const nextDialogue = toPlainObject(nextRenderState.dialogue);
-  const nextDialogueCharacter = toPlainObject(nextDialogue.character);
-  const nextChoice = toPlainObject(nextRenderState.choice);
-  const nextConfirmDialog = toPlainObject(nextRenderState.confirmDialog);
-  const dialogueContent = toArray(nextDialogue.content);
-
-  return {
-    ...nextRenderState,
-    variables: toPlainObject(nextRenderState.variables),
-    isLineCompleted: nextRenderState.isLineCompleted ?? false,
-    autoMode: nextRenderState.autoMode ?? false,
-    skipMode: nextRenderState.skipMode ?? false,
-    dialogue: {
-      ...nextDialogue,
-      character: {
-        ...nextDialogueCharacter,
-        name: nextDialogueCharacter.name ?? "",
-      },
-      content:
-        dialogueContent.length > 0
-          ? dialogueContent
-          : [
-              {
-                text: "",
-              },
-            ],
-      lines: toArray(nextDialogue.lines),
-    },
-    choice: {
-      ...nextChoice,
-      items: toArray(nextChoice.items),
-    },
-    confirmDialog: {
-      ...nextConfirmDialog,
-      confirmActions: toPlainObject(nextConfirmDialog.confirmActions),
-      cancelActions: toPlainObject(nextConfirmDialog.cancelActions),
-    },
-    saveSlots: toArray(nextRenderState.saveSlots),
-  };
-};
-
-const collectDisplayTreeSummary = (
-  node,
-  summaries = [],
-  depth = 0,
-  limit = 40,
-) => {
-  if (!node || summaries.length >= limit) {
-    return summaries;
-  }
-
-  summaries.push({
-    depth,
-    label: node.label,
-    type: node.constructor?.name,
-    text: typeof node.text === "string" ? node.text.slice(0, 120) : undefined,
-    childCount: Array.isArray(node.children) ? node.children.length : 0,
-    visible: node.visible !== false,
-    x: typeof node.x === "number" ? node.x : undefined,
-    y: typeof node.y === "number" ? node.y : undefined,
-  });
-
-  const children = Array.isArray(node.children) ? node.children : [];
-  for (const child of children) {
-    if (summaries.length >= limit) {
-      break;
-    }
-
-    collectDisplayTreeSummary(child, summaries, depth + 1, limit);
-  }
-
-  return summaries;
-};
-
-const summarizeStoryTextNodes = (nodes = []) => {
-  return nodes.filter((node) => {
-    return typeof node.text === "string" && node.text.length > 0;
-  });
-};
-
-const cloneRenderLogValue = (value) => {
-  try {
-    return structuredClone(value);
-  } catch {
-    return value;
-  }
-};
-
-const summarizeRenderElementContent = (element = {}) => {
-  if (typeof element.content === "string") {
-    return previewDebugText(element.content);
-  }
-
-  if (Array.isArray(element.content)) {
-    return previewDebugText(
-      element.content.map((item) => item?.text ?? "").join(""),
-    );
-  }
-
-  return undefined;
-};
-
-const collectRenderElementSummaries = (
-  elements = [],
-  summaries = [],
-  depth = 0,
-  limit = 80,
-) => {
-  if (!Array.isArray(elements) || summaries.length >= limit) {
-    return summaries;
-  }
-
-  for (const element of elements) {
-    if (!element || summaries.length >= limit) {
-      break;
-    }
-
-    summaries.push({
-      depth,
-      id: element.id,
-      type: element.type,
-      content: summarizeRenderElementContent(element),
-      childCount: Array.isArray(element.children) ? element.children.length : 0,
-      x: typeof element.x === "number" ? element.x : undefined,
-      y: typeof element.y === "number" ? element.y : undefined,
-      width: typeof element.width === "number" ? element.width : undefined,
-      height: typeof element.height === "number" ? element.height : undefined,
-      alpha: typeof element.alpha === "number" ? element.alpha : undefined,
-      visible: element.visible !== false,
-    });
-
-    if (Array.isArray(element.children) && element.children.length > 0) {
-      collectRenderElementSummaries(
-        element.children,
-        summaries,
-        depth + 1,
-        limit,
-      );
-    }
-  }
-
-  return summaries;
-};
-
-const summarizeDialogueRenderState = (dialogue = {}) => {
-  const contentItems = toArray(dialogue.content);
-
-  return {
-    mode: dialogue?.mode,
-    uiResourceId: dialogue?.ui?.resourceId,
-    guiResourceId: dialogue?.gui?.resourceId,
-    characterId: dialogue?.character?.id,
-    characterName: dialogue?.character?.name,
-    contentText: previewDebugText(
-      contentItems.map((item) => item?.text ?? "").join(""),
-    ),
-    contentItemCount: contentItems.length,
-    lineCount: toArray(dialogue.lines).length,
-  };
-};
-
-const summarizeRenderState = (renderState = {}) => {
-  const elementSummaries = collectRenderElementSummaries(renderState.elements);
-
-  return {
-    renderId: renderState?.id,
-    topLevelElementCount: toArray(renderState.elements).length,
-    totalElementCount: elementSummaries.length,
-    audioCount: toArray(renderState.audio).length,
-    animationCount: toArray(renderState.animations).length,
-    autoMode: renderState?.autoMode ?? false,
-    skipMode: renderState?.skipMode ?? false,
-    isLineCompleted: renderState?.isLineCompleted ?? false,
-    dialogue: summarizeDialogueRenderState(renderState.dialogue),
-    choiceItemCount: toArray(renderState?.choice?.items).length,
-    elements: elementSummaries,
-  };
 };
 
 let managedAudioDecodeContext;
@@ -501,7 +307,6 @@ export const createGraphicsService = async ({ subject }) => {
   let deferredAudioRenderToken = 0;
   let deferredAudioRenderKeySignature = "";
   let suppressedEngineRenderEffects = 0;
-  let renderDebugId = 0;
 
   const isBlobUrl = (url) => typeof url === "string" && url.startsWith("blob:");
 
@@ -683,7 +488,6 @@ export const createGraphicsService = async ({ subject }) => {
         }
         renderEngineState(nextRenderState, {
           allowDeferredAudio: false,
-          source: "deferredAudioRender",
         });
       })
       .catch((error) => {
@@ -1103,19 +907,8 @@ export const createGraphicsService = async ({ subject }) => {
     return undefined;
   };
 
-  const logRouteGraphicsRender = (source, renderState, meta = {}) => {
-    renderDebugId += 1;
-    console.log("[graphicsService] render", {
-      debugRenderId: renderDebugId,
-      source,
-      ...meta,
-      renderStateSummary: summarizeRenderState(renderState),
-      renderState: cloneRenderLogValue(renderState),
-    });
-  };
-
   const renderEngineState = (renderState, options = {}) => {
-    const { allowDeferredAudio = true, source = "engine" } = options;
+    const { allowDeferredAudio = true } = options;
     let nextRenderState = prepareRenderStateKeyboardForGraphics({
       renderState,
       enableGlobalKeyboardBindings,
@@ -1142,12 +935,6 @@ export const createGraphicsService = async ({ subject }) => {
       ...nextRenderState,
       animations: nextRenderState?.animations || [],
     };
-    nextRenderState = normalizeRenderStateTemplateData(nextRenderState);
-    logRouteGraphicsRender(source, nextRenderState, {
-      allowDeferredAudio,
-      requestedAudioKeys,
-      retainedAudioKeys,
-    });
     routeGraphics.render(nextRenderState);
     applyInteractiveContainerHitAreas(nextRenderState.elements);
     void pruneDecodedAudioCache(retainedAudioKeys);
@@ -1256,13 +1043,6 @@ export const createGraphicsService = async ({ subject }) => {
       clearTimeout(timeoutId);
     }
     pendingClickInteractionTimeouts = new Map();
-  };
-
-  const resetEngineTicker = () => {
-    ticker?.stop();
-    ticker?.destroy?.();
-    ticker = new Ticker();
-    ticker.start();
   };
 
   const scheduleClickInteraction = (actions, eventContext) => {
@@ -1403,7 +1183,7 @@ export const createGraphicsService = async ({ subject }) => {
     },
     hasLoadedAsset,
     initRouteEngine: (projectData, options = {}) => {
-      resetEngineTicker();
+      ticker.start();
       enableGlobalKeyboardBindings =
         options.enableGlobalKeyboardBindings ?? true;
       const suppressRenderEffects = options.suppressRenderEffects === true;
@@ -1416,9 +1196,7 @@ export const createGraphicsService = async ({ subject }) => {
             if (suppressedEngineRenderEffects > 0) {
               return;
             }
-            renderEngineState(renderState, {
-              source: "enginePendingEffects",
-            });
+            renderEngineState(renderState);
           },
         },
         ticker,
@@ -1486,9 +1264,7 @@ export const createGraphicsService = async ({ subject }) => {
       if (skipAnimations) {
         renderState = { ...renderState, animations: [] };
       }
-      renderEngineState(renderState, {
-        source: "engineRenderCurrentState",
-      });
+      renderEngineState(renderState);
     },
 
     engineHandleActions: (actions, eventContext, options = {}) => {
@@ -1503,37 +1279,7 @@ export const createGraphicsService = async ({ subject }) => {
       engine.handleActions(actions, eventContext);
     },
 
-    debugDescribeRenderedStoryGraph: () => {
-      if (
-        !routeGraphics ||
-        typeof routeGraphics.findElementByLabel !== "function"
-      ) {
-        return undefined;
-      }
-
-      const storyNode = routeGraphics.findElementByLabel("story");
-      const canvasParent = routeGraphics.canvas?.parentElement;
-
-      return {
-        hasStoryNode: Boolean(storyNode),
-        canvasParentChildCount: canvasParent?.children?.length,
-        canvasSize: routeGraphics.canvas
-          ? {
-              width: routeGraphics.canvas.getAttribute("width"),
-              height: routeGraphics.canvas.getAttribute("height"),
-            }
-          : undefined,
-        nodes: collectDisplayTreeSummary(storyNode),
-        textNodes: summarizeStoryTextNodes(
-          collectDisplayTreeSummary(storyNode),
-        ),
-      };
-    },
-
-    render: (payload) => {
-      logRouteGraphicsRender("service.render", payload);
-      routeGraphics.render(payload);
-    },
+    render: (payload) => routeGraphics.render(payload),
     parse: (payload) => routeGraphics.parse(payload),
     destroy: destroyRuntime,
   };
