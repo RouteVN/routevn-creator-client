@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createLayoutTemplate,
+  handleItemDuplicate,
   handleLayoutFormActionClick,
 } from "../../src/pages/layouts/layouts.handlers.js";
 
@@ -89,5 +90,62 @@ describe("createLayoutTemplate", () => {
       }),
     );
     expect(deps.store.closeAddDialog).toHaveBeenCalled();
+  });
+
+  it("duplicates a layout and selects the duplicate", async () => {
+    const duplicateLayoutItem = vi.fn(async () => "layout-copy");
+    const deps = {
+      store: {
+        setItems: vi.fn(),
+        setSelectedItemId: vi.fn(),
+      },
+      refs: {
+        fileExplorer: {
+          selectItem: vi.fn(),
+        },
+      },
+      projectService: {
+        duplicateLayoutItem,
+        getRepositoryState: () => ({
+          layouts: {
+            items: {
+              "layout-1": {
+                id: "layout-1",
+                type: "layout",
+                name: "Layout One",
+              },
+              "layout-copy": {
+                id: "layout-copy",
+                type: "layout",
+                name: "Layout One",
+              },
+            },
+            tree: [{ id: "layout-1" }, { id: "layout-copy" }],
+          },
+        }),
+      },
+      appService: {
+        showToast: vi.fn(),
+      },
+      render: vi.fn(),
+    };
+
+    await handleItemDuplicate(deps, {
+      _event: {
+        detail: {
+          itemId: "layout-1",
+        },
+      },
+    });
+
+    expect(duplicateLayoutItem).toHaveBeenCalledWith({
+      layoutId: "layout-1",
+    });
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: "layout-copy",
+    });
+    expect(deps.refs.fileExplorer.selectItem).toHaveBeenCalledWith({
+      itemId: "layout-copy",
+    });
   });
 });

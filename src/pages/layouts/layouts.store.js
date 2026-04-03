@@ -80,6 +80,17 @@ const editLayoutForm = {
   },
 };
 
+const layoutExplorerItemContextMenuItems = [
+  { label: "Rename", type: "item", value: "rename-item" },
+  { label: "Duplicate", type: "item", value: "duplicate-item" },
+  { label: "Delete", type: "item", value: "delete-item" },
+];
+
+const layoutCenterItemContextMenuItems = [
+  { label: "Duplicate", type: "item", value: "duplicate-item" },
+  { label: "Delete", type: "item", value: "delete-item" },
+];
+
 const layoutTypeLabels = {
   normal: "Normal",
   "save-load": "Save / Load",
@@ -152,10 +163,12 @@ const {
   selectedResourceId: "layouts",
   resourceCategory: "userInterface",
   addText: "Add Layout",
+  centerItemContextMenuItems: layoutCenterItemContextMenuItems,
   buildDetailFields,
   buildCatalogItem,
   extendViewData: ({ state, baseViewData }) => ({
     ...baseViewData,
+    itemContextMenuItems: layoutExplorerItemContextMenuItems,
     isAddDialogOpen: state.isAddDialogOpen,
     layoutForm,
     layoutFormDefaults: {

@@ -170,6 +170,76 @@ export const filterLayoutsExcludingTypes = (
   });
 };
 
+const createLayoutDuplicateId = () => {
+  if (typeof crypto?.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  throw new Error(
+    "A createId function is required when crypto.randomUUID is unavailable.",
+  );
+};
+
+const ensureMappedLayoutElementId = (idMap, sourceId, createId) => {
+  if (typeof sourceId !== "string" || sourceId.length === 0) {
+    return createId();
+  }
+
+  const existingId = idMap.get(sourceId);
+  if (existingId) {
+    return existingId;
+  }
+
+  const nextId = createId();
+  idMap.set(sourceId, nextId);
+  return nextId;
+};
+
+const duplicateLayoutTreeNodes = (nodes, idMap, createId) => {
+  return (Array.isArray(nodes) ? nodes : [])
+    .filter((node) => node && typeof node.id === "string")
+    .map((node) => {
+      const nextId = ensureMappedLayoutElementId(idMap, node?.id, createId);
+      const nextNode = {
+        ...node,
+        id: nextId,
+      };
+
+      if (Array.isArray(node?.children) && node.children.length > 0) {
+        nextNode.children = duplicateLayoutTreeNodes(
+          node.children,
+          idMap,
+          createId,
+        );
+      }
+
+      return nextNode;
+    });
+};
+
+export const cloneLayoutElementsWithFreshIds = (
+  elements = {},
+  createId = createLayoutDuplicateId,
+) => {
+  const sourceItems =
+    elements?.items && typeof elements.items === "object" ? elements.items : {};
+  const idMap = new Map();
+  const nextTree = duplicateLayoutTreeNodes(elements?.tree, idMap, createId);
+  const nextItems = {};
+
+  Object.entries(sourceItems).forEach(([sourceId, sourceItem]) => {
+    const nextId = ensureMappedLayoutElementId(idMap, sourceId, createId);
+    const nextItem = structuredClone(sourceItem);
+    nextItem.id = nextId;
+    nextItems[nextId] = nextItem;
+  });
+
+  return {
+    items: nextItems,
+    tree: nextTree,
+  };
+};
+
 const toWordWrapWidth = (value) => {
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : undefined;

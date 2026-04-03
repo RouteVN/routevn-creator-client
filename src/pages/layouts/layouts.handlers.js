@@ -556,3 +556,27 @@ export const handleItemDelete = async (deps, payload) => {
   await projectService.deleteLayoutItem({ layoutIds: [itemId] });
   await handleDataChanged(deps);
 };
+
+export const handleItemDuplicate = async (deps, payload) => {
+  const { appService, projectService } = deps;
+  const { itemId } = payload._event.detail;
+  if (!itemId) {
+    return;
+  }
+
+  const duplicateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to duplicate layout.",
+    action: () =>
+      projectService.duplicateLayoutItem({
+        layoutId: itemId,
+      }),
+  });
+  if (!duplicateAttempt.ok) {
+    return;
+  }
+
+  await handleDataChanged(deps, {
+    selectedItemId: duplicateAttempt.result,
+  });
+};

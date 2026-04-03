@@ -303,6 +303,7 @@ export const createGraphicsService = async ({ subject }) => {
   let beforeHandleActions;
   let actionQueue = Promise.resolve();
   let assetLoadQueue = Promise.resolve();
+  let assetLoadRuntimeVersion = 0;
   let pendingClickInteractionTimeouts = new Map();
   let deferredAudioRenderToken = 0;
   let deferredAudioRenderKeySignature = "";
@@ -783,6 +784,7 @@ export const createGraphicsService = async ({ subject }) => {
   };
 
   const destroyRuntime = async () => {
+    assetLoadRuntimeVersion += 1;
     const trackedVideoEntries = getTrackedVideoEntries();
 
     releaseTrackedVideoResources(trackedVideoEntries);
@@ -812,11 +814,15 @@ export const createGraphicsService = async ({ subject }) => {
     ticker = undefined;
   };
 
-  const loadBuffersWithRetry = async (assets, retryCount = 1) => {
+  const loadBuffersWithRetry = async (
+    bufferManager,
+    assets,
+    retryCount = 1,
+  ) => {
     let attempt = 0;
     while (attempt <= retryCount) {
       try {
-        await assetBufferManager.load(assets);
+        await bufferManager.load(assets);
         return;
       } catch (error) {
         if (attempt >= retryCount) {
@@ -827,10 +833,15 @@ export const createGraphicsService = async ({ subject }) => {
     }
   };
 
-  const runAssetLoad = async (assets) => {
+  const runAssetLoad = async (assets, runtimeVersion) => {
+    const activeBufferManager = assetBufferManager;
+    if (!activeBufferManager || runtimeVersion !== assetLoadRuntimeVersion) {
+      return;
+    }
+
     const assetEntries = Object.entries(assets || {});
     const newAssetEntries = assetEntries.filter(
-      ([key]) => !assetBufferManager.has(key) || !hasLoadedAsset(key),
+      ([key]) => !activeBufferManager.has(key) || !hasLoadedAsset(key),
     );
 
     if (newAssetEntries.length === 0) {
@@ -848,14 +859,21 @@ export const createGraphicsService = async ({ subject }) => {
       .filter(isBlobUrl);
 
     try {
-      await loadBuffersWithRetry(newAssets);
+      await loadBuffersWithRetry(activeBufferManager, newAssets);
     } finally {
       blobUrlsToRevoke.forEach((url) => {
         URL.revokeObjectURL(url);
       });
     }
 
-    const fullBufferMap = assetBufferManager.getBufferMap();
+    if (
+      runtimeVersion !== assetLoadRuntimeVersion ||
+      assetBufferManager !== activeBufferManager
+    ) {
+      return;
+    }
+
+    const fullBufferMap = activeBufferManager.getBufferMap();
     const deltaBufferMap = Object.fromEntries(
       newAssetEntries
         .map(([key]) => [key, fullBufferMap[key]])
@@ -872,6 +890,9 @@ export const createGraphicsService = async ({ subject }) => {
     const renderAssetBufferMap = Object.fromEntries(renderAssetEntries);
 
     if (Object.keys(renderAssetBufferMap).length > 0) {
+      if (!routeGraphics) {
+        return;
+      }
       await routeGraphics.loadAssets(renderAssetBufferMap);
     }
 
@@ -1080,6 +1101,7 @@ export const createGraphicsService = async ({ subject }) => {
       beforeHandleActions = onBeforeHandleActions;
       actionQueue = Promise.resolve();
       assetLoadQueue = Promise.resolve();
+      assetLoadRuntimeVersion += 1;
       invalidateDeferredAudioRender();
       clearAllPendingClickInteractions();
       loadedAssetTypes = new Map();
@@ -1170,7 +1192,10 @@ export const createGraphicsService = async ({ subject }) => {
       }
     },
     loadAssets: async (assets) => {
-      const queuedLoad = assetLoadQueue.then(() => runAssetLoad(assets));
+      const runtimeVersion = assetLoadRuntimeVersion;
+      const queuedLoad = assetLoadQueue.then(() =>
+        runAssetLoad(assets, runtimeVersion),
+      );
       assetLoadQueue = queuedLoad.catch(() => {});
       return queuedLoad;
     },

@@ -1,5 +1,72 @@
 import { createTreeCollection } from "../projectRepository.js";
 import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
+import { cloneLayoutElementsWithFreshIds } from "../../../../internal/project/layout.js";
+import { toFlatItems } from "../../../../internal/project/tree.js";
+
+const getLayoutsResourcePartition = ({ shared, context }) => {
+  return shared.resourceTypePartitionFor(context.projectId, "layouts");
+};
+
+const submitCreateLayoutItem = async ({
+  shared,
+  context,
+  layoutId,
+  name,
+  layoutType = "normal",
+  elements = createTreeCollection(),
+  parentId = null,
+  position = "last",
+  positionTargetId,
+  data = {},
+}) => {
+  const nextLayoutId = layoutId || shared.createId();
+  const resolvedIndex = shared.resolveResourceIndex({
+    state: context.state,
+    resourceType: "layouts",
+    parentId,
+    position,
+    positionTargetId,
+  });
+  const resourcePartition = getLayoutsResourcePartition({ shared, context });
+  const nextData = structuredClone(data || {});
+  const itemType = nextData.type === "folder" ? "folder" : "layout";
+
+  nextData.type = itemType;
+  nextData.name = name;
+
+  if (itemType === "layout") {
+    nextData.layoutType = layoutType;
+    nextData.elements = structuredClone(elements || createTreeCollection());
+  }
+
+  const submitResult = await shared.submitCommandWithContext({
+    context,
+    scope: "resources",
+    basePartition: resourcePartition,
+    type: COMMAND_TYPES.LAYOUT_CREATE,
+    payload: {
+      layoutId: nextLayoutId,
+      data: nextData,
+      ...shared.buildPlacementPayload({
+        parentId,
+        index: resolvedIndex,
+        position,
+        positionTargetId,
+      }),
+    },
+  });
+
+  if (submitResult?.valid === false) {
+    return submitResult;
+  }
+
+  return nextLayoutId;
+};
+
+const resolveLayoutParentId = (layouts, layoutId) => {
+  const flatItems = toFlatItems(layouts);
+  return flatItems.find((item) => item.id === layoutId)?.parentId ?? null;
+};
 
 export const createLayoutCommandApi = (shared) => ({
   async createLayoutItem({
@@ -13,59 +80,60 @@ export const createLayoutCommandApi = (shared) => ({
     data = {},
   }) {
     const context = await shared.ensureCommandContext();
-    const nextLayoutId = layoutId || shared.createId();
-    const resolvedIndex = shared.resolveResourceIndex({
-      state: context.state,
-      resourceType: "layouts",
+    return submitCreateLayoutItem({
+      shared,
+      context,
+      layoutId,
+      name,
+      layoutType,
+      elements,
       parentId,
       position,
       positionTargetId,
+      data,
     });
-    const resourcePartition = shared.resourceTypePartitionFor(
-      context.projectId,
-      "layouts",
-    );
-    const nextData = structuredClone(data || {});
-    const itemType = nextData.type === "folder" ? "folder" : "layout";
+  },
 
-    nextData.type = itemType;
-    nextData.name = name;
+  async duplicateLayoutItem({ layoutId }) {
+    const context = await shared.ensureCommandContext();
+    const sourceLayout = context.state?.layouts?.items?.[layoutId];
 
-    if (itemType === "layout") {
-      nextData.layoutType = layoutType;
-      nextData.elements = structuredClone(elements || createTreeCollection());
+    if (!sourceLayout || sourceLayout.type !== "layout") {
+      return {
+        valid: false,
+        error: {
+          message: "Layout not found.",
+        },
+      };
     }
 
-    const submitResult = await shared.submitCommandWithContext({
+    const sourceLayoutClone = structuredClone(sourceLayout);
+    delete sourceLayoutClone.id;
+    delete sourceLayoutClone.parentId;
+
+    const {
+      name,
+      layoutType = "normal",
+      elements = createTreeCollection(),
+      ...data
+    } = sourceLayoutClone;
+
+    return submitCreateLayoutItem({
+      shared,
       context,
-      scope: "resources",
-      basePartition: resourcePartition,
-      type: COMMAND_TYPES.LAYOUT_CREATE,
-      payload: {
-        layoutId: nextLayoutId,
-        data: nextData,
-        ...shared.buildPlacementPayload({
-          parentId,
-          index: resolvedIndex,
-          position,
-          positionTargetId,
-        }),
-      },
+      name,
+      layoutType,
+      elements: cloneLayoutElementsWithFreshIds(elements, shared.createId),
+      parentId: resolveLayoutParentId(context.state?.layouts, layoutId),
+      position: "after",
+      positionTargetId: layoutId,
+      data,
     });
-
-    if (submitResult?.valid === false) {
-      return submitResult;
-    }
-
-    return nextLayoutId;
   },
 
   async renameLayoutItem({ layoutId, name }) {
     const context = await shared.ensureCommandContext();
-    const resourcePartition = shared.resourceTypePartitionFor(
-      context.projectId,
-      "layouts",
-    );
+    const resourcePartition = getLayoutsResourcePartition({ shared, context });
 
     return shared.submitCommandWithContext({
       context,
@@ -83,10 +151,7 @@ export const createLayoutCommandApi = (shared) => ({
 
   async updateLayoutItem({ layoutId, data }) {
     const context = await shared.ensureCommandContext();
-    const resourcePartition = shared.resourceTypePartitionFor(
-      context.projectId,
-      "layouts",
-    );
+    const resourcePartition = getLayoutsResourcePartition({ shared, context });
 
     return shared.submitCommandWithContext({
       context,
@@ -102,10 +167,7 @@ export const createLayoutCommandApi = (shared) => ({
 
   async deleteLayoutItem({ layoutIds }) {
     const context = await shared.ensureCommandContext();
-    const resourcePartition = shared.resourceTypePartitionFor(
-      context.projectId,
-      "layouts",
-    );
+    const resourcePartition = getLayoutsResourcePartition({ shared, context });
 
     return shared.submitCommandWithContext({
       context,
@@ -135,10 +197,7 @@ export const createLayoutCommandApi = (shared) => ({
       index,
       movingId: layoutId,
     });
-    const resourcePartition = shared.resourceTypePartitionFor(
-      context.projectId,
-      "layouts",
-    );
+    const resourcePartition = getLayoutsResourcePartition({ shared, context });
 
     return shared.submitCommandWithContext({
       context,

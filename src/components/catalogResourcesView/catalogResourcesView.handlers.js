@@ -129,6 +129,16 @@ export const handleContextMenuClickItem = (deps, payload) => {
     );
   }
 
+  if (action === "duplicate-item") {
+    dispatchEvent(
+      new CustomEvent("item-duplicate", {
+        detail: { itemId },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
   store.hideContextMenu();
   render();
 };
