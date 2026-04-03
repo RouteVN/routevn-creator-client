@@ -43,6 +43,7 @@ const createObjectPatch = (previousValue, nextValue) => {
   const patch = {};
   let hasChanges = false;
   let requiresReplace = false;
+  let hasNestedChanges = false;
 
   for (const key of Object.keys(previousObject)) {
     if (!Object.hasOwn(nextObject, key)) {
@@ -71,6 +72,7 @@ const createObjectPatch = (previousValue, nextValue) => {
       } else if (nestedResult.hasChanges) {
         patch[key] = nestedResult.patch;
         hasChanges = true;
+        hasNestedChanges = true;
       }
       continue;
     }
@@ -83,6 +85,7 @@ const createObjectPatch = (previousValue, nextValue) => {
     patch,
     hasChanges,
     requiresReplace,
+    hasNestedChanges,
   };
 };
 
@@ -147,7 +150,8 @@ export const createLayoutEditorElementPersistPayload = ({
     };
   }
 
-  const shouldReplace = replace === true || diff.requiresReplace;
+  const shouldReplace =
+    replace === true || diff.requiresReplace || diff.hasNestedChanges;
   const { id: _ignoredItemId, ...nextReplaceData } = normalizedUpdatedItem;
 
   return {

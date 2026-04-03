@@ -63,10 +63,10 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
 const {
   handleBeforeMount,
   refreshData: handleDataChanged,
-  handleFileExplorerSelectionChanged,
+  handleFileExplorerSelectionChanged: handleCatalogFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
-  handleItemClick: handleLayoutItemClick,
+  handleItemClick: handleCatalogLayoutItemClick,
   handleSearchInput,
 } = createCatalogPageHandlers({
   resourceType: "layouts",
@@ -79,11 +79,22 @@ const {
 export {
   handleBeforeMount,
   handleDataChanged,
-  handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
-  handleLayoutItemClick,
   handleSearchInput,
+};
+
+export const handleFileExplorerSelectionChanged = (deps, payload) => {
+  handleCatalogFileExplorerSelectionChanged(deps, payload);
+
+  const { isFolder } = payload._event.detail;
+  if (isFolder) {
+    return;
+  }
+};
+
+export const handleLayoutItemClick = (deps, payload) => {
+  handleCatalogLayoutItemClick(deps, payload);
 };
 
 export const handleItemDoubleClick = (deps, payload) => {
@@ -165,7 +176,6 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
             x: 40,
             y: 110,
             width: 1440,
-            height: 140,
             anchorX: 0,
             anchorY: 0,
             scaleX: 1,
@@ -433,6 +443,7 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
     return;
   }
   const isFragment = values?.isFragment ?? false;
+  const description = values?.description ?? "";
 
   const projectResolution = requireProjectResolution(
     projectService.getRepositoryState().project?.resolution,
@@ -447,7 +458,10 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
         layoutId: nanoid(),
         name,
         layoutType,
-        isFragment,
+        data: {
+          description,
+          isFragment,
+        },
         elements: createLayoutTemplate(layoutType, projectResolution),
         parentId: store.getState().targetGroupId,
         position: "last",

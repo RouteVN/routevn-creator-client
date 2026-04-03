@@ -75,6 +75,66 @@ const getEditorSessionLines = (session) => {
     .filter(Boolean);
 };
 
+const overlayEditorSessionOnRepositoryState = (repositoryState, state) => {
+  const session = state.editorSession;
+  if (!session?.sceneId || !session?.sectionId) {
+    return repositoryState;
+  }
+
+  const repositoryScenes = repositoryState?.scenes;
+  const repositoryScene = repositoryScenes?.items?.[session.sceneId];
+  const repositorySections = repositoryScene?.sections;
+  const repositorySection = repositorySections?.items?.[session.sectionId];
+
+  if (!repositoryScene || !repositorySection) {
+    return repositoryState;
+  }
+
+  const sessionLines = getEditorSessionLines(session);
+  const lineItems = {};
+
+  for (const line of sessionLines) {
+    if (!line?.id) {
+      continue;
+    }
+
+    lineItems[line.id] = {
+      ...repositorySection.lines?.items?.[line.id],
+      id: line.id,
+      actions: structuredClone(line.actions || {}),
+    };
+  }
+
+  return {
+    ...repositoryState,
+    scenes: {
+      ...repositoryScenes,
+      items: {
+        ...repositoryScenes?.items,
+        [session.sceneId]: {
+          ...repositoryScene,
+          sections: {
+            ...repositorySections,
+            items: {
+              ...repositorySections?.items,
+              [session.sectionId]: {
+                ...repositorySection,
+                initialLineId:
+                  sessionLines[0]?.id ?? repositorySection.initialLineId,
+                lines: {
+                  ...repositorySection.lines,
+                  items: lineItems,
+                  tree: toFlatTree(Object.keys(lineItems)),
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+};
+
 const buildProjectDataSourceState = (state) => {
   const repositoryState = state.repositoryState || {};
   const domainState = state.domainState || {};
@@ -83,7 +143,7 @@ const buildProjectDataSourceState = (state) => {
   const domainLines = domainState.lines || {};
 
   if (Object.keys(domainScenes).length === 0) {
-    return repositoryState;
+    return overlayEditorSessionOnRepositoryState(repositoryState, state);
   }
 
   const sceneIds = Object.keys(domainScenes);

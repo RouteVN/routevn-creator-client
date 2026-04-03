@@ -25,6 +25,9 @@ const cloneOr = (value, fallback) => {
   return structuredClone(value);
 };
 
+const isObjectRecord = (value) =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+
 const getHierarchyNodes = (collection) =>
   Array.isArray(collection?.tree) ? collection.tree : [];
 
@@ -815,11 +818,40 @@ const constructStory = (scenes) => {
   return transformedScenes;
 };
 
+const alignDialogueModesWithLayouts = (story, layouts = {}) => {
+  const scenes = isObjectRecord(story?.scenes) ? story.scenes : {};
+
+  Object.values(scenes).forEach((scene) => {
+    const sections = isObjectRecord(scene?.sections) ? scene.sections : {};
+
+    Object.values(sections).forEach((section) => {
+      const lines = Array.isArray(section?.lines) ? section.lines : [];
+
+      lines.forEach((line) => {
+        const dialogue = line?.actions?.dialogue;
+        const layoutId = dialogue?.ui?.resourceId;
+        const layoutType = layouts?.[layoutId]?.layoutType;
+
+        if (layoutType === "nvl") {
+          dialogue.mode = "nvl";
+        }
+      });
+    });
+  });
+};
+
 export function constructProjectData(state, options = {}) {
   const screenResolution = requireProjectResolution(
     state?.project?.resolution,
     "Repository project resolution",
   );
+  const resources = constructProjectResources(state);
+  const story = {
+    initialSceneId: options.initialSceneId || state.story?.initialSceneId,
+    scenes: constructStory(state.scenes),
+  };
+
+  alignDialogueModesWithLayouts(story, resources.layouts);
 
   return {
     screen: {
@@ -827,11 +859,8 @@ export function constructProjectData(state, options = {}) {
       height: screenResolution.height,
       backgroundColor: "#000000",
     },
-    resources: constructProjectResources(state),
-    story: {
-      initialSceneId: options.initialSceneId || state.story?.initialSceneId,
-      scenes: constructStory(state.scenes),
-    },
+    resources,
+    story,
   };
 }
 

@@ -49,6 +49,6 @@ template:
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#submitButton ?disabled=${submitDisabled}: Submit
         $elif mode == 'confirmActions':
-          - rvn-system-actions#confirmActionsEditor :showSelected=${true} :actions=${confirmActions} actionType=system :hiddenModes=${nestedHiddenModes}: null
+          - rvn-system-actions#confirmActionsEditor w=f h=f :showSelected=${true} :actions=${confirmActions} actionType=system :hiddenModes=${nestedHiddenModes}: null
         $elif mode == 'cancelActions':
-          - rvn-system-actions#cancelActionsEditor :showSelected=${true} :actions=${cancelActions} actionType=system :hiddenModes=${nestedHiddenModes}: null
+          - rvn-system-actions#cancelActionsEditor w=f h=f :showSelected=${true} :actions=${cancelActions} actionType=system :hiddenModes=${nestedHiddenModes}: null

@@ -2,6 +2,18 @@ import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { isFragmentLayout } from "../../internal/project/layout.js";
 
+const fragmentField = {
+  name: "isFragment",
+  type: "checkbox",
+  content: "Can Be Used As Fragment",
+};
+
+const layoutDescriptionField = {
+  name: "description",
+  type: "input-textarea",
+  label: "Description",
+};
+
 const layoutForm = {
   title: "Add Layout",
   fields: [
@@ -29,17 +41,8 @@ const layoutForm = {
           "Normal is layout that can be used for background or menu pages. Save / Load is used for save-slot based save and load screens. Confirm Dialog is used for compact confirmation prompts with OK and Cancel areas. Dialogue is used for ADV mode text dialogue layout. NVL is used for novel mode accumulated dialogue layout. Choice is used for the choices.",
       },
     },
-    {
-      name: "isFragment",
-      type: "select",
-      label: "Can Be Used As Fragment",
-      required: true,
-      clearable: false,
-      options: [
-        { value: false, label: "No" },
-        { value: true, label: "Yes" },
-      ],
-    },
+    layoutDescriptionField,
+    fragmentField,
   ],
   actions: {
     layout: "",
@@ -62,22 +65,8 @@ const editLayoutForm = {
       label: "Layout Name",
       required: true,
     },
-    {
-      name: "description",
-      type: "input-textarea",
-      label: "Description",
-    },
-    {
-      name: "isFragment",
-      type: "select",
-      label: "Can Be Used As Fragment",
-      required: true,
-      clearable: false,
-      options: [
-        { value: false, label: "No" },
-        { value: true, label: "Yes" },
-      ],
-    },
+    layoutDescriptionField,
+    fragmentField,
   ],
   actions: {
     layout: "",
@@ -172,6 +161,7 @@ const {
     layoutFormDefaults: {
       name: "",
       layoutType: "normal",
+      description: "",
       isFragment: false,
     },
   }),

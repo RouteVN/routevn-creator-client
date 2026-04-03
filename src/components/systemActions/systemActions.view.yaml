@@ -11,6 +11,10 @@ refs:
     eventListeners:
       click:
         handler: handleAddActionButtonClicked
+  embeddedCloseButton:
+    eventListeners:
+      click:
+        handler: handleEmbeddedCloseClick
   actionsDialog:
     eventListeners:
       close:
@@ -140,6 +144,9 @@ template:
             $else:
               - rtgl-text s=sm c=mu-fg: No actions added yet
           - rtgl-button#addActionButton v=ol w=f: +
+          - $if actionsType == 'system':
+              - rtgl-view d=h av=c ah=e w=f g=lg:
+                  - rtgl-button#embeddedCloseButton: Confirm
   - rtgl-dialog#actionsDialog key=${mode} ?open=${isActionsDialogOpen}:
       - rtgl-view slot=content w=800 h=80vh:
           - $if mode == "actions":

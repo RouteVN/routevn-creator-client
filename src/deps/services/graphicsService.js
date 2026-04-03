@@ -1186,6 +1186,7 @@ export const createGraphicsService = async ({ subject }) => {
       ticker.start();
       enableGlobalKeyboardBindings =
         options.enableGlobalKeyboardBindings ?? true;
+      const suppressRenderEffects = options.suppressRenderEffects === true;
 
       const handlePendingEffects = createEffectsHandler({
         getEngine: () => engine,
@@ -1201,12 +1202,21 @@ export const createGraphicsService = async ({ subject }) => {
         ticker,
       });
       engine = createRouteEngine({ handlePendingEffects });
-      engine.init({
-        initialState: {
-          global: {},
-          projectData,
-        },
-      });
+      const initEngine = () => {
+        engine.init({
+          initialState: {
+            global: {},
+            projectData,
+          },
+        });
+      };
+
+      if (suppressRenderEffects) {
+        runWithSuppressedEngineRenderEffects(initEngine);
+        return;
+      }
+
+      initEngine();
     },
 
     engineSelectPresentationState: () => {

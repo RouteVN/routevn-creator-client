@@ -478,26 +478,10 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
       lineId,
     },
   );
-  const safeProjectData = cloneWithDiagnostics(
-    projectData,
-    "projectData passed to updateProjectData",
-  );
   const isMuted = store.selectIsMuted();
 
-  const nextActions = {
-    updateProjectData: {
-      projectData: safeProjectData,
-    },
-  };
-
-  if (sectionId && lineId) {
-    nextActions.jumpToLine = {
-      sectionId,
-      lineId,
-    };
-  }
-
-  graphicsService.engineHandleActions(nextActions, undefined, {
+  initRouteEngineWithDiagnostics(graphicsService, projectData, {
+    enableGlobalKeyboardBindings: false,
     suppressRenderEffects: true,
   });
   const currentRenderState = graphicsService.engineSelectRenderState();

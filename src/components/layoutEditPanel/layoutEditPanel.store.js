@@ -101,6 +101,7 @@ export const createInitialState = () => {
     variablesData: { tree: [], items: {} },
     values: createDefaultValues(),
     activeInteractionType: "click",
+    actionsEditorActions: {},
   };
 };
 
@@ -293,6 +294,10 @@ export const closeImageSelectorDialog = ({ state }, _payload = {}) => {
 
 export const setValues = ({ state }, { values } = {}) => {
   state.values = values ?? {};
+  state.actionsEditorActions = getLayoutInteractionActions(
+    state.values,
+    state.activeInteractionType,
+  );
 };
 
 export const setActiveInteractionType = (
@@ -304,6 +309,27 @@ export const setActiveInteractionType = (
   }
 
   state.activeInteractionType = interactionType;
+};
+
+export const syncActionsEditorActions = (
+  { state },
+  { interactionType } = {},
+) => {
+  const nextInteractionType = ACTION_INTERACTION_TYPES.includes(interactionType)
+    ? interactionType
+    : state.activeInteractionType;
+
+  state.actionsEditorActions = getLayoutInteractionActions(
+    state.values,
+    nextInteractionType,
+  );
+};
+
+export const setActionsEditorActions = ({ state }, { actions } = {}) => {
+  state.actionsEditorActions =
+    actions && typeof actions === "object" && !Array.isArray(actions)
+      ? actions
+      : {};
 };
 
 export const selectActiveInteractionType = ({ state }) => {
@@ -504,10 +530,7 @@ export const selectViewData = ({ state, props, constants }) => {
 
   return {
     values: state.values,
-    actionsData: getLayoutInteractionActions(
-      state.values,
-      state.activeInteractionType,
-    ),
+    actionsData: state.actionsEditorActions,
     hiddenSystemActionModes: [...HIDDEN_LAYOUT_ACTION_MODES],
     config: {
       sections,

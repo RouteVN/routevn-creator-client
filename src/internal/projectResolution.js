@@ -20,13 +20,13 @@ export const PROJECT_RESOLUTION_PRESETS = Object.freeze([
   },
   {
     value: "qhd",
-    label: "QHD (2560x1440)",
+    label: "2560x1440 (QHD)",
     width: 2560,
     height: 1440,
   },
   {
     value: "4k",
-    label: "4K (3840x2160)",
+    label: "3840x2160 (4K)",
     width: 3840,
     height: 2160,
   },

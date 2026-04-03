@@ -23,6 +23,11 @@ const getInteractionPropertyName = (interactionType) => {
     : "click";
 };
 
+const getInteractionActionsSnapshot = (store, interactionType) => {
+  const interactionKey = getInteractionPropertyName(interactionType);
+  return getInteractionActions(store.selectValues()[interactionKey]);
+};
+
 const emitPanelUpdate = (
   { dispatchEvent, store },
   { name, value, bubbles = false } = {},
@@ -249,12 +254,21 @@ export const handleSectionActionClick = async (deps, payload) => {
 
     const { item } = result;
     const interactionType = getInteractionPropertyName(item.key);
+    const snapshotActions = getInteractionActionsSnapshot(
+      store,
+      interactionType,
+    );
     store.setActiveInteractionType({
       interactionType,
     });
+    store.syncActionsEditorActions({
+      interactionType,
+    });
+    render();
     const systemActions = refs["systemActions"];
     systemActions.transformedHandlers.open({
       mode: "actions",
+      actions: snapshotActions,
     });
   } else if (id === "images") {
     const items = [];
@@ -712,6 +726,9 @@ export const handleActionsChange = (deps, payload) => {
       actions: newActions,
     },
   });
+  store.setActionsEditorActions({
+    actions: newActions,
+  });
 
   render();
   emitPanelUpdate(deps, {
@@ -801,13 +818,19 @@ export const handleListItemClick = async (deps, payload) => {
   const { _event: event } = payload;
   const systemActions = refs["systemActions"];
   const { id, interaction } = event.currentTarget.dataset;
+  const interactionType = getInteractionPropertyName(interaction);
+  const snapshotActions = getInteractionActionsSnapshot(store, interactionType);
   store.setActiveInteractionType({
-    interactionType: getInteractionPropertyName(interaction),
+    interactionType,
   });
-  systemActions.transformedHandlers.open({
-    mode: id,
+  store.syncActionsEditorActions({
+    interactionType,
   });
   render();
+  systemActions.transformedHandlers.open({
+    mode: id,
+    actions: snapshotActions,
+  });
 };
 
 export const handleListItemRightClick = async (deps, payload) => {
@@ -842,6 +865,11 @@ export const handleListItemRightClick = async (deps, payload) => {
         actions,
       },
     });
+    if (store.selectActiveInteractionType() === interactionKey) {
+      store.setActionsEditorActions({
+        actions,
+      });
+    }
     emitPanelUpdate(deps, {
       name: `${interactionKey}.payload.actions`,
       value: actions,
