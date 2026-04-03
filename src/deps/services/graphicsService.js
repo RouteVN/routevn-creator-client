@@ -153,6 +153,100 @@ const estimateAudioBufferBytes = (audioBuffer) => {
   return audioBuffer.length * audioBuffer.numberOfChannels * 4;
 };
 
+const toPlainObject = (value) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return value;
+};
+
+const toArray = (value) => {
+  return Array.isArray(value) ? value : [];
+};
+
+const normalizeRenderStateTemplateData = (renderState = {}) => {
+  const nextRenderState = toPlainObject(renderState);
+  const nextDialogue = toPlainObject(nextRenderState.dialogue);
+  const nextDialogueCharacter = toPlainObject(nextDialogue.character);
+  const nextChoice = toPlainObject(nextRenderState.choice);
+  const nextConfirmDialog = toPlainObject(nextRenderState.confirmDialog);
+  const dialogueContent = toArray(nextDialogue.content);
+
+  return {
+    ...nextRenderState,
+    variables: toPlainObject(nextRenderState.variables),
+    isLineCompleted: nextRenderState.isLineCompleted ?? false,
+    autoMode: nextRenderState.autoMode ?? false,
+    skipMode: nextRenderState.skipMode ?? false,
+    dialogue: {
+      ...nextDialogue,
+      character: {
+        ...nextDialogueCharacter,
+        name: nextDialogueCharacter.name ?? "",
+      },
+      content:
+        dialogueContent.length > 0
+          ? dialogueContent
+          : [
+              {
+                text: "",
+              },
+            ],
+      lines: toArray(nextDialogue.lines),
+    },
+    choice: {
+      ...nextChoice,
+      items: toArray(nextChoice.items),
+    },
+    confirmDialog: {
+      ...nextConfirmDialog,
+      confirmActions: toPlainObject(nextConfirmDialog.confirmActions),
+      cancelActions: toPlainObject(nextConfirmDialog.cancelActions),
+    },
+    saveSlots: toArray(nextRenderState.saveSlots),
+  };
+};
+
+const collectDisplayTreeSummary = (
+  node,
+  summaries = [],
+  depth = 0,
+  limit = 40,
+) => {
+  if (!node || summaries.length >= limit) {
+    return summaries;
+  }
+
+  summaries.push({
+    depth,
+    label: node.label,
+    type: node.constructor?.name,
+    text: typeof node.text === "string" ? node.text.slice(0, 120) : undefined,
+    childCount: Array.isArray(node.children) ? node.children.length : 0,
+    visible: node.visible !== false,
+    x: typeof node.x === "number" ? node.x : undefined,
+    y: typeof node.y === "number" ? node.y : undefined,
+  });
+
+  const children = Array.isArray(node.children) ? node.children : [];
+  for (const child of children) {
+    if (summaries.length >= limit) {
+      break;
+    }
+
+    collectDisplayTreeSummary(child, summaries, depth + 1, limit);
+  }
+
+  return summaries;
+};
+
+const summarizeStoryTextNodes = (nodes = []) => {
+  return nodes.filter((node) => {
+    return typeof node.text === "string" && node.text.length > 0;
+  });
+};
+
 let managedAudioDecodeContext;
 let managedAudioCache = new Map();
 let managedAudioPendingLoads = new Map();
@@ -935,6 +1029,7 @@ export const createGraphicsService = async ({ subject }) => {
       ...nextRenderState,
       animations: nextRenderState?.animations || [],
     };
+    nextRenderState = normalizeRenderStateTemplateData(nextRenderState);
     routeGraphics.render(nextRenderState);
     applyInteractiveContainerHitAreas(nextRenderState.elements);
     void pruneDecodedAudioCache(retainedAudioKeys);
@@ -1043,6 +1138,13 @@ export const createGraphicsService = async ({ subject }) => {
       clearTimeout(timeoutId);
     }
     pendingClickInteractionTimeouts = new Map();
+  };
+
+  const resetEngineTicker = () => {
+    ticker?.stop();
+    ticker?.destroy?.();
+    ticker = new Ticker();
+    ticker.start();
   };
 
   const scheduleClickInteraction = (actions, eventContext) => {
@@ -1183,9 +1285,10 @@ export const createGraphicsService = async ({ subject }) => {
     },
     hasLoadedAsset,
     initRouteEngine: (projectData, options = {}) => {
-      ticker.start();
+      resetEngineTicker();
       enableGlobalKeyboardBindings =
         options.enableGlobalKeyboardBindings ?? true;
+      const suppressRenderEffects = options.suppressRenderEffects === true;
 
       const handlePendingEffects = createEffectsHandler({
         getEngine: () => engine,
@@ -1201,12 +1304,21 @@ export const createGraphicsService = async ({ subject }) => {
         ticker,
       });
       engine = createRouteEngine({ handlePendingEffects });
-      engine.init({
-        initialState: {
-          global: {},
-          projectData,
-        },
-      });
+      const initEngine = () => {
+        engine.init({
+          initialState: {
+            global: {},
+            projectData,
+          },
+        });
+      };
+
+      if (suppressRenderEffects) {
+        runWithSuppressedEngineRenderEffects(initEngine);
+        return;
+      }
+
+      initEngine();
     },
 
     engineSelectPresentationState: () => {
@@ -1267,6 +1379,33 @@ export const createGraphicsService = async ({ subject }) => {
         });
       }
       engine.handleActions(actions, eventContext);
+    },
+
+    debugDescribeRenderedStoryGraph: () => {
+      if (
+        !routeGraphics ||
+        typeof routeGraphics.findElementByLabel !== "function"
+      ) {
+        return undefined;
+      }
+
+      const storyNode = routeGraphics.findElementByLabel("story");
+      const canvasParent = routeGraphics.canvas?.parentElement;
+
+      return {
+        hasStoryNode: Boolean(storyNode),
+        canvasParentChildCount: canvasParent?.children?.length,
+        canvasSize: routeGraphics.canvas
+          ? {
+              width: routeGraphics.canvas.getAttribute("width"),
+              height: routeGraphics.canvas.getAttribute("height"),
+            }
+          : undefined,
+        nodes: collectDisplayTreeSummary(storyNode),
+        textNodes: summarizeStoryTextNodes(
+          collectDisplayTreeSummary(storyNode),
+        ),
+      };
     },
 
     render: (payload) => routeGraphics.render(payload),

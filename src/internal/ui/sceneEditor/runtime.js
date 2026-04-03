@@ -27,6 +27,7 @@ const createAssetLoadCache = () => ({
 });
 
 let assetLoadCache = createAssetLoadCache();
+let sceneEditorRenderDebugSequence = 0;
 
 const resetAssetLoadCache = () => {
   assetLoadCache = createAssetLoadCache();
@@ -48,6 +49,18 @@ const hasCachedSceneAsset = (deps, fileId) => {
   }
 
   return isStillLoaded;
+};
+
+const shouldLogSceneEditorDebug = () => {
+  return typeof window !== "undefined";
+};
+
+const logSceneEditorDebug = (label, data) => {
+  if (!shouldLogSceneEditorDebug()) {
+    return;
+  }
+
+  console.log(`[sceneEditor] ${label}`, data);
 };
 
 const findNonCloneablePaths = (root, limit = 5) => {
@@ -92,6 +105,174 @@ const findNonCloneablePaths = (root, limit = 5) => {
   }
 
   return paths;
+};
+
+const summarizeDialogueForDebug = (dialogue) => {
+  if (!dialogue || typeof dialogue !== "object") {
+    return undefined;
+  }
+
+  const dialogueLines = Array.isArray(dialogue.lines) ? dialogue.lines : [];
+
+  return {
+    mode: dialogue.mode,
+    ui: dialogue.ui,
+    gui: dialogue.gui,
+    characterId: dialogue.characterId,
+    contentText: Array.isArray(dialogue.content)
+      ? dialogue.content.map((entry) => entry?.text ?? "").join("")
+      : undefined,
+    lineCount: dialogueLines.length,
+    lines: dialogueLines.slice(0, 5).map((line, index) => ({
+      index,
+      contentText: Array.isArray(line?.content)
+        ? line.content.map((entry) => entry?.text ?? "").join("")
+        : undefined,
+      characterId: line?.characterId,
+    })),
+  };
+};
+
+const flattenDialogueSummaryForDebug = (dialogue) => {
+  const summary = summarizeDialogueForDebug(dialogue);
+  if (!summary) {
+    return undefined;
+  }
+
+  return {
+    mode: summary.mode,
+    uiResourceId: summary.ui?.resourceId,
+    guiResourceId: summary.gui?.resourceId,
+    characterId: summary.characterId,
+    contentText: summary.contentText,
+    lineCount: summary.lineCount,
+    lineTexts: Array.isArray(summary.lines)
+      ? summary.lines.map((line) => line.contentText)
+      : [],
+  };
+};
+
+const summarizeSelectedSectionLinesForDebug = (
+  projectData,
+  { sceneId, sectionId } = {},
+) => {
+  const scene = projectData?.story?.scenes?.[sceneId];
+  const section = scene?.sections?.[sectionId];
+  const lines = Array.isArray(section?.lines) ? section.lines : [];
+
+  return {
+    lineCount: lines.length,
+    lines: lines.slice(0, 12).map((line, index) => ({
+      index,
+      id: line?.id,
+      mode: line?.actions?.dialogue?.mode,
+      ui: line?.actions?.dialogue?.ui,
+      contentText: Array.isArray(line?.actions?.dialogue?.content)
+        ? line.actions.dialogue.content
+            .map((entry) => entry?.text ?? "")
+            .join("")
+        : undefined,
+    })),
+  };
+};
+
+const collectRenderElementSummaries = (
+  elements = [],
+  summaries = [],
+  depth = 0,
+  limit = 40,
+) => {
+  if (!Array.isArray(elements) || summaries.length >= limit) {
+    return summaries;
+  }
+
+  for (const element of elements) {
+    if (summaries.length >= limit) {
+      break;
+    }
+
+    if (!element || typeof element !== "object") {
+      continue;
+    }
+
+    summaries.push({
+      depth,
+      id: element.id,
+      type: element.type,
+      content:
+        typeof element.content === "string"
+          ? element.content.slice(0, 120)
+          : undefined,
+      childCount: Array.isArray(element.children) ? element.children.length : 0,
+      x: typeof element.x === "number" ? element.x : undefined,
+      y: typeof element.y === "number" ? element.y : undefined,
+    });
+
+    collectRenderElementSummaries(
+      element.children,
+      summaries,
+      depth + 1,
+      limit,
+    );
+  }
+
+  return summaries;
+};
+
+const summarizeRenderStateForDebug = (renderState) => {
+  const elements = collectRenderElementSummaries(renderState?.elements);
+
+  return {
+    renderId: renderState?.id,
+    topLevelElementCount: Array.isArray(renderState?.elements)
+      ? renderState.elements.length
+      : 0,
+    audioCount: Array.isArray(renderState?.audio)
+      ? renderState.audio.length
+      : 0,
+    animationCount: Array.isArray(renderState?.animations)
+      ? renderState.animations.length
+      : 0,
+    dialogue: flattenDialogueSummaryForDebug(renderState?.dialogue),
+    elements: elements.filter((element) => {
+      const normalizedId = String(element.id || "").toLowerCase();
+      return (
+        element.type === "text" ||
+        element.type === "text-revealing" ||
+        normalizedId === "story" ||
+        normalizedId.includes("dialogue") ||
+        normalizedId.includes("nvl") ||
+        normalizedId.includes("adv")
+      );
+    }),
+  };
+};
+
+const summarizeCanvasMountForDebug = (refs) => {
+  const container = refs?.canvas;
+  if (!container) {
+    return undefined;
+  }
+
+  const children = Array.from(container.children || []);
+
+  return {
+    childCount: children.length,
+    children: children.map((child, index) => ({
+      index,
+      tagName: child?.tagName,
+      className:
+        typeof child?.className === "string" ? child.className : undefined,
+      width:
+        typeof child?.getAttribute === "function"
+          ? child.getAttribute("width")
+          : undefined,
+      height:
+        typeof child?.getAttribute === "function"
+          ? child.getAttribute("height")
+          : undefined,
+    })),
+  };
 };
 
 export const cloneWithDiagnostics = (value, label) => {
@@ -448,28 +629,69 @@ const createProjectDataWithSelectedEntryPoint = (projectData, selection) => {
   return sanitized.projectData;
 };
 
+const summarizeSceneEditorSelectionContext = (
+  projectData,
+  { sceneId, sectionId, lineId } = {},
+) => {
+  const scene = projectData?.story?.scenes?.[sceneId];
+  const section = scene?.sections?.[sectionId];
+  const line = Array.isArray(section?.lines)
+    ? section.lines.find((entry) => entry?.id === lineId)
+    : undefined;
+  const dialogue = line?.actions?.dialogue;
+  const layoutId = dialogue?.ui?.resourceId;
+  const layout = projectData?.resources?.layouts?.[layoutId];
+
+  return {
+    sceneId,
+    sectionId,
+    lineId,
+    sceneInitialSectionId: scene?.initialSectionId,
+    sectionInitialLineId: section?.initialLineId,
+    dialogue: dialogue
+      ? {
+          mode: dialogue.mode,
+          ui: dialogue.ui,
+          characterId: dialogue.characterId,
+          contentLength: Array.isArray(dialogue.content)
+            ? dialogue.content.length
+            : undefined,
+        }
+      : undefined,
+    dialogueLayout: layout
+      ? {
+          id: layout.id,
+          layoutType: layout.layoutType,
+          name: layout.name,
+        }
+      : undefined,
+  };
+};
+
 const initRouteEngineWithDiagnostics = (
   graphicsService,
   projectData,
+  diagnostics = {},
   options = {},
 ) => {
   try {
     graphicsService.initRouteEngine(projectData, options);
   } catch (error) {
-    console.error(
-      "[sceneEditor] RouteEngine init failed",
-      summarizeProjectDataForRouteEngine(projectData),
-    );
+    console.error("[sceneEditor] RouteEngine init failed", {
+      projectData: summarizeProjectDataForRouteEngine(projectData),
+      selection: summarizeSceneEditorSelectionContext(projectData, diagnostics),
+    });
     throw error;
   }
 };
 
 export const renderSceneEditorState = async (deps, payload = {}) => {
-  const { store, graphicsService } = deps;
+  const { store, graphicsService, refs } = deps;
   const { skipAnimations = false } = payload;
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
+  const debugRenderId = ++sceneEditorRenderDebugSequence;
   const projectData = createProjectDataWithSelectedEntryPoint(
     store.selectProjectData(),
     {
@@ -478,32 +700,47 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
       lineId,
     },
   );
-  const safeProjectData = cloneWithDiagnostics(
-    projectData,
-    "projectData passed to updateProjectData",
-  );
   const isMuted = store.selectIsMuted();
 
-  const nextActions = {
-    updateProjectData: {
-      projectData: safeProjectData,
-    },
-  };
-
-  if (sectionId && lineId) {
-    nextActions.jumpToLine = {
+  logSceneEditorDebug("renderSceneEditorState:start", {
+    debugRenderId,
+    payload,
+    isMuted,
+    selection: summarizeSceneEditorSelectionContext(projectData, {
+      sceneId,
       sectionId,
       lineId,
-    };
-  }
-
-  graphicsService.engineHandleActions(nextActions, undefined, {
-    suppressRenderEffects: true,
+    }),
+    projectData: summarizeProjectDataForRouteEngine(projectData),
+    selectedSectionLines: summarizeSelectedSectionLinesForDebug(projectData, {
+      sceneId,
+      sectionId,
+    }),
+    canvasMount: summarizeCanvasMountForDebug(refs),
   });
+
+  initRouteEngineWithDiagnostics(
+    graphicsService,
+    projectData,
+    {
+      sceneId,
+      sectionId,
+      lineId,
+    },
+    {
+      enableGlobalKeyboardBindings: false,
+      suppressRenderEffects: true,
+    },
+  );
   const currentRenderState = graphicsService.engineSelectRenderState();
   if (!currentRenderState) {
     return;
   }
+
+  logSceneEditorDebug("renderSceneEditorState:preRenderState", {
+    debugRenderId,
+    renderState: summarizeRenderStateForDebug(currentRenderState),
+  });
 
   const activeAudioFileIds =
     payload?.skipAudio || isMuted
@@ -533,6 +770,21 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
   const presentationState = graphicsService.engineSelectPresentationState();
   store.setPresentationState({
     presentationState,
+  });
+  const renderedStoryGraph =
+    graphicsService.debugDescribeRenderedStoryGraph?.() ?? undefined;
+
+  logSceneEditorDebug("renderSceneEditorState:end", {
+    debugRenderId,
+    presentationState: {
+      dialogue: flattenDialogueSummaryForDebug(presentationState?.dialogue),
+    },
+    renderedStoryGraph,
+    canvasMount: summarizeCanvasMountForDebug(refs),
+  });
+  logSceneEditorDebug("renderSceneEditorState:end:textNodes", {
+    debugRenderId,
+    textNodes: renderedStoryGraph?.textNodes ?? [],
   });
 };
 
@@ -633,9 +885,18 @@ export const initializeSceneEditorPage = async (deps) => {
     showLoading: true,
   });
   void preloadDirectTransitionScenes(deps, projectData, initialSceneIds);
-  initRouteEngineWithDiagnostics(graphicsService, initialProjectData, {
-    enableGlobalKeyboardBindings: false,
-  });
+  initRouteEngineWithDiagnostics(
+    graphicsService,
+    initialProjectData,
+    {
+      sceneId,
+      sectionId: store.selectSelectedSectionId(),
+      lineId: store.selectSelectedLineId(),
+    },
+    {
+      enableGlobalKeyboardBindings: false,
+    },
+  );
 
   render();
   setTimeout(() => {
@@ -677,9 +938,18 @@ export const restoreSceneEditorFromPreview = async (deps) => {
     showLoading: false,
   });
   void preloadDirectTransitionScenes(deps, projectData, initialSceneIds);
-  initRouteEngineWithDiagnostics(graphicsService, initialProjectData, {
-    enableGlobalKeyboardBindings: false,
-  });
+  initRouteEngineWithDiagnostics(
+    graphicsService,
+    initialProjectData,
+    {
+      sceneId,
+      sectionId: store.selectSelectedSectionId(),
+      lineId: store.selectSelectedLineId(),
+    },
+    {
+      enableGlobalKeyboardBindings: false,
+    },
+  );
 
   await renderSceneEditorState(deps);
 };

@@ -149,7 +149,7 @@ const applyEditorSessionSelectionTarget = (deps, session) => {
 const updateEditorSessionAndRender = (
   deps,
   nextSession,
-  { selectedLineId } = {},
+  { selectedLineId, skipAnimations = true } = {},
 ) => {
   const { store, render, subject } = deps;
 
@@ -159,7 +159,9 @@ const updateEditorSessionAndRender = (
 
   applyEditorSessionSelectionTarget(deps, nextSession);
   render();
-  subject.dispatch("sceneEditor.renderCanvas", {});
+  subject.dispatch("sceneEditor.renderCanvas", {
+    skipAnimations,
+  });
 };
 
 const createDialogueContent = (text) => {
