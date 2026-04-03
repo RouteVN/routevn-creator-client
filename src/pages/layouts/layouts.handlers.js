@@ -188,7 +188,6 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
             x: 40,
             y: 110,
             width: 1440,
-            height: 140,
             anchorX: 0,
             anchorY: 0,
             scaleX: 1,

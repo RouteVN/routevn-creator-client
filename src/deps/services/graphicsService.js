@@ -16,6 +16,7 @@ import createRouteEngine, { createEffectsHandler } from "route-engine-js";
 import { Rectangle, Ticker } from "pixi.js";
 import { prepareRenderStateKeyboardForGraphics } from "../../internal/project/layout.js";
 import { requireProjectResolution } from "../../internal/projectResolution.js";
+import { previewDebugText } from "./shared/debugLog.js";
 
 const cloneBufferForAudioDecode = (value) => {
   if (value instanceof ArrayBuffer) {
@@ -247,6 +248,105 @@ const summarizeStoryTextNodes = (nodes = []) => {
   });
 };
 
+const cloneRenderLogValue = (value) => {
+  try {
+    return structuredClone(value);
+  } catch {
+    return value;
+  }
+};
+
+const summarizeRenderElementContent = (element = {}) => {
+  if (typeof element.content === "string") {
+    return previewDebugText(element.content);
+  }
+
+  if (Array.isArray(element.content)) {
+    return previewDebugText(
+      element.content.map((item) => item?.text ?? "").join(""),
+    );
+  }
+
+  return undefined;
+};
+
+const collectRenderElementSummaries = (
+  elements = [],
+  summaries = [],
+  depth = 0,
+  limit = 80,
+) => {
+  if (!Array.isArray(elements) || summaries.length >= limit) {
+    return summaries;
+  }
+
+  for (const element of elements) {
+    if (!element || summaries.length >= limit) {
+      break;
+    }
+
+    summaries.push({
+      depth,
+      id: element.id,
+      type: element.type,
+      content: summarizeRenderElementContent(element),
+      childCount: Array.isArray(element.children) ? element.children.length : 0,
+      x: typeof element.x === "number" ? element.x : undefined,
+      y: typeof element.y === "number" ? element.y : undefined,
+      width: typeof element.width === "number" ? element.width : undefined,
+      height: typeof element.height === "number" ? element.height : undefined,
+      alpha: typeof element.alpha === "number" ? element.alpha : undefined,
+      visible: element.visible !== false,
+    });
+
+    if (Array.isArray(element.children) && element.children.length > 0) {
+      collectRenderElementSummaries(
+        element.children,
+        summaries,
+        depth + 1,
+        limit,
+      );
+    }
+  }
+
+  return summaries;
+};
+
+const summarizeDialogueRenderState = (dialogue = {}) => {
+  const contentItems = toArray(dialogue.content);
+
+  return {
+    mode: dialogue?.mode,
+    uiResourceId: dialogue?.ui?.resourceId,
+    guiResourceId: dialogue?.gui?.resourceId,
+    characterId: dialogue?.character?.id,
+    characterName: dialogue?.character?.name,
+    contentText: previewDebugText(
+      contentItems.map((item) => item?.text ?? "").join(""),
+    ),
+    contentItemCount: contentItems.length,
+    lineCount: toArray(dialogue.lines).length,
+  };
+};
+
+const summarizeRenderState = (renderState = {}) => {
+  const elementSummaries = collectRenderElementSummaries(renderState.elements);
+
+  return {
+    renderId: renderState?.id,
+    topLevelElementCount: toArray(renderState.elements).length,
+    totalElementCount: elementSummaries.length,
+    audioCount: toArray(renderState.audio).length,
+    animationCount: toArray(renderState.animations).length,
+    autoMode: renderState?.autoMode ?? false,
+    skipMode: renderState?.skipMode ?? false,
+    isLineCompleted: renderState?.isLineCompleted ?? false,
+    dialogue: summarizeDialogueRenderState(renderState.dialogue),
+    choiceItemCount: toArray(renderState?.choice?.items).length,
+    elements: elementSummaries,
+  };
+};
+
 let managedAudioDecodeContext;
 let managedAudioCache = new Map();
 let managedAudioPendingLoads = new Map();
@@ -401,6 +501,7 @@ export const createGraphicsService = async ({ subject }) => {
   let deferredAudioRenderToken = 0;
   let deferredAudioRenderKeySignature = "";
   let suppressedEngineRenderEffects = 0;
+  let renderDebugId = 0;
 
   const isBlobUrl = (url) => typeof url === "string" && url.startsWith("blob:");
 
@@ -582,6 +683,7 @@ export const createGraphicsService = async ({ subject }) => {
         }
         renderEngineState(nextRenderState, {
           allowDeferredAudio: false,
+          source: "deferredAudioRender",
         });
       })
       .catch((error) => {
@@ -1001,8 +1103,19 @@ export const createGraphicsService = async ({ subject }) => {
     return undefined;
   };
 
+  const logRouteGraphicsRender = (source, renderState, meta = {}) => {
+    renderDebugId += 1;
+    console.log("[graphicsService] render", {
+      debugRenderId: renderDebugId,
+      source,
+      ...meta,
+      renderStateSummary: summarizeRenderState(renderState),
+      renderState: cloneRenderLogValue(renderState),
+    });
+  };
+
   const renderEngineState = (renderState, options = {}) => {
-    const { allowDeferredAudio = true } = options;
+    const { allowDeferredAudio = true, source = "engine" } = options;
     let nextRenderState = prepareRenderStateKeyboardForGraphics({
       renderState,
       enableGlobalKeyboardBindings,
@@ -1030,6 +1143,11 @@ export const createGraphicsService = async ({ subject }) => {
       animations: nextRenderState?.animations || [],
     };
     nextRenderState = normalizeRenderStateTemplateData(nextRenderState);
+    logRouteGraphicsRender(source, nextRenderState, {
+      allowDeferredAudio,
+      requestedAudioKeys,
+      retainedAudioKeys,
+    });
     routeGraphics.render(nextRenderState);
     applyInteractiveContainerHitAreas(nextRenderState.elements);
     void pruneDecodedAudioCache(retainedAudioKeys);
@@ -1298,7 +1416,9 @@ export const createGraphicsService = async ({ subject }) => {
             if (suppressedEngineRenderEffects > 0) {
               return;
             }
-            renderEngineState(renderState);
+            renderEngineState(renderState, {
+              source: "enginePendingEffects",
+            });
           },
         },
         ticker,
@@ -1366,7 +1486,9 @@ export const createGraphicsService = async ({ subject }) => {
       if (skipAnimations) {
         renderState = { ...renderState, animations: [] };
       }
-      renderEngineState(renderState);
+      renderEngineState(renderState, {
+        source: "engineRenderCurrentState",
+      });
     },
 
     engineHandleActions: (actions, eventContext, options = {}) => {
@@ -1408,7 +1530,10 @@ export const createGraphicsService = async ({ subject }) => {
       };
     },
 
-    render: (payload) => routeGraphics.render(payload),
+    render: (payload) => {
+      logRouteGraphicsRender("service.render", payload);
+      routeGraphics.render(payload);
+    },
     parse: (payload) => routeGraphics.parse(payload),
     destroy: destroyRuntime,
   };
