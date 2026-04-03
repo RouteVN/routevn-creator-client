@@ -72,34 +72,6 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   });
 };
 
-const logSelectedLayoutData = ({ deps, itemId } = {}) => {
-  if (!itemId) {
-    return;
-  }
-
-  const { store, projectService } = deps;
-  const layoutItem = store.selectLayoutItemById({ itemId });
-
-  if (!layoutItem || layoutItem.type !== "layout") {
-    return;
-  }
-
-  const repositoryState = projectService.getRepositoryState();
-  const layoutData = structuredClone(layoutItem);
-  const textStylesData = structuredClone(repositoryState?.textStyles ?? {});
-  const fontsData = structuredClone(repositoryState?.fonts ?? {});
-  console.log("[layouts] Selected layout data", layoutData);
-  console.log(
-    `[layouts] Selected layout JSON (${itemId})\n${JSON.stringify(layoutData, null, 2)}`,
-  );
-  console.log("[layouts] Text styles data", textStylesData);
-  console.log(
-    `[layouts] Text styles JSON\n${JSON.stringify(textStylesData, null, 2)}`,
-  );
-  console.log("[layouts] Fonts data", fontsData);
-  console.log(`[layouts] Fonts JSON\n${JSON.stringify(fontsData, null, 2)}`);
-};
-
 const {
   handleBeforeMount,
   refreshData: handleDataChanged,
@@ -127,19 +99,14 @@ export {
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   handleCatalogFileExplorerSelectionChanged(deps, payload);
 
-  const { itemId, isFolder } = payload._event.detail;
+  const { isFolder } = payload._event.detail;
   if (isFolder) {
     return;
   }
-
-  logSelectedLayoutData({ deps, itemId });
 };
 
 export const handleLayoutItemClick = (deps, payload) => {
   handleCatalogLayoutItemClick(deps, payload);
-
-  const { itemId } = payload._event.detail;
-  logSelectedLayoutData({ deps, itemId });
 };
 
 export const handleItemDoubleClick = (deps, payload) => {
