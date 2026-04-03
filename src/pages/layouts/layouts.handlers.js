@@ -27,18 +27,6 @@ const navigateToLayoutEditor = ({ appService, layoutId } = {}) => {
   });
 };
 
-const toFragmentValue = (value) => {
-  if (value === true || value === "true") {
-    return true;
-  }
-
-  if (value === false || value === "false") {
-    return false;
-  }
-
-  return false;
-};
-
 const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   if (!itemId) {
     return;
@@ -472,7 +460,7 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
         layoutType,
         data: {
           description,
-          isFragment: toFragmentValue(isFragment),
+          isFragment,
         },
         elements: createLayoutTemplate(layoutType, projectResolution),
         parentId: store.getState().targetGroupId,
@@ -517,7 +505,7 @@ export const handleEditFormActionClick = async (deps, payload) => {
         data: {
           name,
           description: values?.description ?? "",
-          isFragment: toFragmentValue(values?.isFragment),
+          isFragment: values?.isFragment ?? false,
         },
       }),
   });

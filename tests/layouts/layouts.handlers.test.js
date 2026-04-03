@@ -70,7 +70,7 @@ describe("createLayoutTemplate", () => {
             name: "Save",
             layoutType: "save-load",
             description: "Reusable save fragment",
-            isFragment: "true",
+            isFragment: true,
           },
         },
       },

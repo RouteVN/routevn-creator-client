@@ -4,14 +4,8 @@ import { isFragmentLayout } from "../../internal/project/layout.js";
 
 const fragmentField = {
   name: "isFragment",
-  type: "select",
-  label: "Can Be Used As Fragment",
-  required: true,
-  clearable: false,
-  options: [
-    { value: false, label: "No" },
-    { value: true, label: "Yes" },
-  ],
+  type: "checkbox",
+  content: "Can Be Used As Fragment",
 };
 
 const layoutDescriptionField = {
