@@ -110,10 +110,9 @@ export const updateFormValues = (
   { state },
   { values, shouldRemount = false } = {},
 ) => {
-  state.defaultValues = {
-    ...state.defaultValues,
-    ...(values ?? {}),
-  };
+  if (values) {
+    Object.assign(state.defaultValues, values);
+  }
 
   if (shouldRemount) {
     state.formKey += 1;

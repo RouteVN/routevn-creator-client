@@ -59,9 +59,8 @@ export const handleBrowseButtonClick = async (deps) => {
 export const handleFormChange = (deps, payload) => {
   const { store, render } = deps;
   const previousValues = store.selectDefaultValues();
-  const nextValues = {
-    ...(payload?._event?.detail?.values ?? {}),
-  };
+  const nextValues = {};
+  Object.assign(nextValues, payload?._event?.detail?.values);
   let shouldRemount = false;
 
   if (
@@ -124,9 +123,8 @@ export const handleValidate = (deps) => {
       form: "Form is not ready.",
     },
   };
-  const errors = {
-    ...(formValidation.errors ?? {}),
-  };
+  const errors = {};
+  Object.assign(errors, formValidation.errors);
   const customErrors = {};
 
   if (store.selectPlatform() !== "web" && !store.selectProjectPath()) {
@@ -150,8 +148,8 @@ export const handleGetValues = (deps) => {
   const { refs, store } = deps;
   const values = {
     ...store.selectDefaultValues(),
-    ...(refs.createProjectForm?.getValues?.() ?? {}),
   };
+  Object.assign(values, refs.createProjectForm?.getValues?.());
 
   values.projectPath = store.selectProjectPath();
   return values;
