@@ -1048,6 +1048,7 @@ const SCENE_RESOURCE_KEYS = [
 const LAYOUT_RESOURCE_KEYS = [
   "resourceId",
   "layoutId",
+  "fragmentLayoutId",
   "sceneId",
   "sectionId",
   "variableId",
@@ -1092,6 +1093,7 @@ const RESOURCE_KEY_TO_TYPES = {
   characterId: ["characters"],
   animation: ["animations"],
   layoutId: ["layouts"],
+  fragmentLayoutId: ["layouts"],
   bgmId: ["sounds"],
   sfxId: ["sounds"],
   variableId: ["variables"],

@@ -17,6 +17,10 @@ import createRouteGraphics, {
   animatedSpritePlugin,
 } from "route-graphics";
 import { prepareRenderStateKeyboardForGraphics } from "../src/internal/project/layout.js";
+import {
+  captureCanvasThumbnailImage,
+  prepareRuntimeInteractionActions,
+} from "../src/internal/ui/runtimeActionPreparation.js";
 import { BUNDLE_FORMAT_VERSION } from "../src/deps/services/shared/projectExportService.js";
 
 async function parseVNBundle(arrayBuffer) {
@@ -122,6 +126,10 @@ const preloadBundleData = async () => {
   return { jsonData, assetBufferMap };
 };
 
+const createSaveThumbnailAssetId = (slotId, savedAt) => {
+  return `saveThumbnailImage:${slotId}:${savedAt}`;
+};
+
 const prepareEngine = async ({ jsonData, assetBufferMap }) => {
   const plugins = {
     elements: [
@@ -191,44 +199,6 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
     routeGraphics.render(nextRenderState);
   };
 
-  await routeGraphics.init({
-    width: screenWidth,
-    height: screenHeight,
-    plugins,
-    eventHandler: async (eventName, payload) => {
-      if (eventName === "renderComplete") {
-        engine.handleActions({
-          markLineCompleted: {},
-        });
-        return;
-      }
-
-      if (payload.actions) {
-        const eventContext = payload._event
-          ? { _event: payload._event }
-          : undefined;
-        if (payload.actions.saveSaveSlot) {
-          const url = await routeGraphics.extractBase64("story");
-          const assets = {
-            [`saveThumbnailImage:${payload.actions.saveSaveSlot.slot}`]: {
-              buffer: base64ToArrayBuffer(url),
-              type: "image/png",
-            },
-          };
-          await routeGraphics.loadAssets(assets);
-          payload.actions.saveSaveSlot.thumbnailImage = url;
-        }
-        engine.handleActions(payload.actions, eventContext);
-      }
-    },
-  });
-  await routeGraphics.loadAssets(assetBufferMap);
-
-  canvasContainer?.appendChild(routeGraphics.canvas);
-  canvasContainer?.addEventListener("contextmenu", (e) => {
-    e.preventDefault();
-  });
-
   const effectsHandler = createEffectsHandler({
     getEngine: () => engine,
     routeGraphics: {
@@ -237,6 +207,67 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
     },
     ticker,
   });
+
+  const routeGraphicsEventHandler =
+    effectsHandler.createRouteGraphicsEventHandler({
+      preprocessPayload: async (_eventName, payload = {}) => {
+        if (!payload?.actions) {
+          return payload;
+        }
+
+        const eventData = payload._event ?? payload.event;
+        const preparedActions = prepareRuntimeInteractionActions(
+          payload.actions,
+          eventData,
+        );
+        const saveAction = preparedActions?.saveSlot;
+
+        if (!saveAction) {
+          return {
+            ...payload,
+            actions: preparedActions,
+          };
+        }
+
+        const savedAt = Date.now();
+        const thumbnailImage = await captureCanvasThumbnailImage(
+          routeGraphics,
+          routeGraphics.canvas,
+        );
+
+        if (thumbnailImage) {
+          const assetId = createSaveThumbnailAssetId(saveAction.slotId, savedAt);
+          await routeGraphics.loadAssets({
+            [assetId]: {
+              buffer: base64ToArrayBuffer(thumbnailImage),
+              type: "image/jpeg",
+            },
+          });
+          saveAction.thumbnailImage = thumbnailImage;
+        }
+
+        saveAction.savedAt = savedAt;
+
+        return {
+          ...payload,
+          actions: preparedActions,
+        };
+      },
+    });
+
+  await routeGraphics.init({
+    width: screenWidth,
+    height: screenHeight,
+    plugins,
+    eventHandler: routeGraphicsEventHandler,
+  });
+  await routeGraphics.loadAssets(assetBufferMap);
+
+  canvasContainer?.appendChild(routeGraphics.canvas);
+  canvasContainer?.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+  });
+
   engine = createRouteEngine({ handlePendingEffects: effectsHandler });
   const saveSlots = JSON.parse(localStorage.getItem("saveSlots")) || {};
   const globalDeviceVariables =
