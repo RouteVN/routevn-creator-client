@@ -3,7 +3,7 @@ import {
   DEFAULT_PROJECT_RESOLUTION,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
-import { captureCanvasThumbnailImage } from "../../internal/ui/runtimeActionPreparation.js";
+import { captureCanvasThumbnailImage } from "../../internal/runtime/graphicsEngineRuntime.js";
 import {
   createLayoutEditorRenderedElements,
   loadLayoutEditorAssets,

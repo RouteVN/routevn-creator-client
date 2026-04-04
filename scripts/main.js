@@ -2,26 +2,14 @@ import { fileTypeFromBuffer } from "file-type";
 import createRouteEngine, { createEffectsHandler } from "route-engine-js";
 import { Ticker } from "pixi.js";
 
-import createRouteGraphics, {
-  createAssetBufferManager,
-  textPlugin,
-  rectPlugin,
-  spritePlugin,
-  sliderPlugin,
-  containerPlugin,
-  textRevealingPlugin,
-  tweenPlugin,
-  soundPlugin,
-  videoPlugin,
-  particlesPlugin,
-  animatedSpritePlugin,
-} from "route-graphics";
+import createRouteGraphics, { createAssetBufferManager } from "route-graphics";
 import { prepareRenderStateKeyboardForGraphics } from "../src/internal/project/layout.js";
 import {
-  applyRuntimeActionContext,
-  captureCanvasThumbnailImage,
-  preloadRuntimeThumbnailImage,
-} from "../src/internal/ui/runtimeActionPreparation.js";
+  createRuntimeEventContext,
+  getRuntimeEventActions,
+  loadGraphicsEnginePlugins,
+  prepareRuntimeInteractionExecution,
+} from "../src/internal/runtime/graphicsEngineRuntime.js";
 import { BUNDLE_FORMAT_VERSION } from "../src/deps/services/shared/projectExportService.js";
 
 async function parseVNBundle(arrayBuffer) {
@@ -127,57 +115,8 @@ const preloadBundleData = async () => {
   return { jsonData, assetBufferMap };
 };
 
-const getEventActions = (payload = {}) => {
-  if (payload?.actions && typeof payload.actions === "object") {
-    return payload.actions;
-  }
-
-  if (
-    payload?.payload?.actions &&
-    typeof payload.payload.actions === "object"
-  ) {
-    return payload.payload.actions;
-  }
-
-  return undefined;
-};
-
-const hasSaveAction = (actions = {}) => {
-  if (!actions || typeof actions !== "object" || Array.isArray(actions)) {
-    return false;
-  }
-
-  if (actions.saveSlot || actions.saveSaveSlot) {
-    return true;
-  }
-
-  const confirmDialog = actions.showConfirmDialog;
-  if (!confirmDialog || typeof confirmDialog !== "object") {
-    return false;
-  }
-
-  return (
-    hasSaveAction(confirmDialog.confirmActions) ||
-    hasSaveAction(confirmDialog.cancelActions)
-  );
-};
-
 const prepareEngine = async ({ jsonData, assetBufferMap }) => {
-  const plugins = {
-    elements: [
-      textPlugin,
-      rectPlugin,
-      spritePlugin,
-      sliderPlugin,
-      containerPlugin,
-      textRevealingPlugin,
-      videoPlugin,
-      particlesPlugin,
-      animatedSpritePlugin,
-    ],
-    animations: [tweenPlugin],
-    audio: [soundPlugin],
-  };
+  const plugins = await loadGraphicsEnginePlugins();
 
   // Create dedicated ticker for auto mode
   const ticker = new Ticker();
@@ -239,39 +178,27 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
         return;
       }
 
-      const actions = getEventActions(payload);
+      const actions = getRuntimeEventActions(payload);
       if (!actions) {
         return;
       }
 
-      const eventData = payload._event ?? payload.event;
-      const eventContext = eventData
-        ? { _event: eventData }
-        : undefined;
-      const preparedActions = structuredClone(actions);
-      const shouldCaptureThumbnail = hasSaveAction(preparedActions);
-      let thumbnailImage;
+      const eventContext = createRuntimeEventContext(payload);
+      const { preparedActions, thumbnailPreloadError } =
+        await prepareRuntimeInteractionExecution({
+          actions,
+          eventContext,
+          graphicsService: routeGraphics,
+          canvasRoot: routeGraphics.canvas,
+          swallowThumbnailPreloadError: true,
+        });
 
-      if (shouldCaptureThumbnail) {
-        thumbnailImage = await captureCanvasThumbnailImage(
-          routeGraphics,
-          routeGraphics.canvas,
+      if (thumbnailPreloadError) {
+        console.warn(
+          "Failed to preload save thumbnail image.",
+          thumbnailPreloadError,
         );
-
-        if (thumbnailImage) {
-          try {
-            await preloadRuntimeThumbnailImage(routeGraphics, thumbnailImage);
-          } catch (error) {
-            console.warn("Failed to preload save thumbnail image.", error);
-          }
-        }
       }
-
-      applyRuntimeActionContext(preparedActions, {
-        slotBinding:
-          eventData?.slotId !== undefined ? "_event.slotId" : undefined,
-        thumbnailImage,
-      });
 
       engine.handleActions(preparedActions, eventContext);
     },

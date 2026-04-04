@@ -1,9 +1,106 @@
 const SAVE_ACTION_KEYS = new Set(["saveSlot", "saveSaveSlot"]);
 const LOAD_ACTION_KEYS = new Set(["loadSlot", "loadSaveSlot"]);
+const RIGHT_CLICK_EVENT_NAMES = new Set(["rightclick", "rightClick"]);
 const THUMBNAIL_MAX_WIDTH = 400;
 const THUMBNAIL_MAX_HEIGHT = 225;
 const THUMBNAIL_FORMAT = "image/jpeg";
 const THUMBNAIL_QUALITY = 0.75;
+
+let graphicsEnginePlugins;
+
+export const loadGraphicsEnginePlugins = async () => {
+  if (!graphicsEnginePlugins) {
+    const {
+      animatedSpritePlugin,
+      containerPlugin,
+      particlesPlugin,
+      rectPlugin,
+      sliderPlugin,
+      soundPlugin,
+      spritePlugin,
+      textPlugin,
+      textRevealingPlugin,
+      tweenPlugin,
+      videoPlugin,
+    } = await import("route-graphics");
+
+    graphicsEnginePlugins = {
+      elements: [
+        textPlugin,
+        rectPlugin,
+        spritePlugin,
+        sliderPlugin,
+        containerPlugin,
+        textRevealingPlugin,
+        videoPlugin,
+        particlesPlugin,
+        animatedSpritePlugin,
+      ],
+      animations: [tweenPlugin],
+      audio: [soundPlugin],
+    };
+  }
+
+  return {
+    elements: [...graphicsEnginePlugins.elements],
+    animations: [...graphicsEnginePlugins.animations],
+    audio: [...graphicsEnginePlugins.audio],
+  };
+};
+
+export const isRuntimeRightClickEvent = (eventName) => {
+  return RIGHT_CLICK_EVENT_NAMES.has(eventName);
+};
+
+export const getRuntimeEventActions = (payload = {}) => {
+  if (payload?.actions && typeof payload.actions === "object") {
+    return payload.actions;
+  }
+
+  if (
+    payload?.payload?.actions &&
+    typeof payload.payload.actions === "object"
+  ) {
+    return payload.payload.actions;
+  }
+
+  return undefined;
+};
+
+export const getRuntimeEventData = (payload = {}) => {
+  return payload?._event;
+};
+
+export const createRuntimeEventContext = (payload = {}) => {
+  const eventData = getRuntimeEventData(payload);
+  if (!eventData) {
+    return undefined;
+  }
+
+  return {
+    _event: eventData,
+  };
+};
+
+export const hasRuntimeSaveAction = (actions = {}) => {
+  if (!actions || typeof actions !== "object" || Array.isArray(actions)) {
+    return false;
+  }
+
+  if (actions.saveSlot || actions.saveSaveSlot) {
+    return true;
+  }
+
+  const confirmDialog = actions.showConfirmDialog;
+  if (!confirmDialog || typeof confirmDialog !== "object") {
+    return false;
+  }
+
+  return (
+    hasRuntimeSaveAction(confirmDialog.confirmActions) ||
+    hasRuntimeSaveAction(confirmDialog.cancelActions)
+  );
+};
 
 const getCanvasElement = (canvasRoot) => {
   if (!canvasRoot || typeof canvasRoot !== "object") {
@@ -272,4 +369,58 @@ export const preloadRuntimeThumbnailImage = async (graphicsService, value) => {
       type: getDataUrlMimeType(value) ?? "image/jpeg",
     },
   });
+};
+
+export const prepareRuntimeInteractionExecution = async ({
+  actions,
+  eventContext,
+  graphicsService,
+  canvasRoot,
+  resolveEventBindings,
+  captureThumbnail = "save-only",
+  swallowThumbnailPreloadError = false,
+} = {}) => {
+  const eventData = eventContext?._event;
+  const preparedActions = prepareRuntimeInteractionActions(actions, eventData);
+  const shouldCaptureThumbnail =
+    captureThumbnail === "always" ||
+    (captureThumbnail === "save-only" && hasRuntimeSaveAction(preparedActions));
+  let thumbnailImage;
+  let thumbnailPreloadError;
+
+  if (shouldCaptureThumbnail) {
+    thumbnailImage = await captureCanvasThumbnailImage(
+      graphicsService,
+      canvasRoot,
+    );
+  }
+
+  applyRuntimeActionContext(preparedActions, {
+    thumbnailImage,
+  });
+
+  if (thumbnailImage) {
+    try {
+      await preloadRuntimeThumbnailImage(graphicsService, thumbnailImage);
+    } catch (error) {
+      if (!swallowThumbnailPreloadError) {
+        throw error;
+      }
+
+      thumbnailPreloadError = error;
+    }
+  }
+
+  const resolvedActions =
+    typeof resolveEventBindings === "function"
+      ? resolveEventBindings(preparedActions, eventData)
+      : undefined;
+
+  return {
+    eventData,
+    preparedActions,
+    resolvedActions,
+    thumbnailImage,
+    thumbnailPreloadError,
+  };
 };

@@ -9,12 +9,7 @@ import {
   extractTransitionTargetSceneIds,
   extractTransitionTargetSceneIdsFromActions,
 } from "../../internal/project/layout.js";
-import {
-  applyRuntimeActionContext,
-  captureCanvasThumbnailImage,
-  prepareRuntimeInteractionActions,
-  preloadRuntimeThumbnailImage,
-} from "../../internal/ui/runtimeActionPreparation.js";
+import { prepareRuntimeInteractionExecution } from "../../internal/runtime/graphicsEngineRuntime.js";
 import {
   collectSceneIdsFromValue,
   collectSectionIdsFromValue,
@@ -175,20 +170,14 @@ const createBeforeHandleActionsHook = (
   );
 
   return async (actions, eventContext) => {
-    const eventData = eventContext?._event;
-    const preparedActions = prepareRuntimeInteractionActions(
-      actions,
-      eventData,
-    );
-    const thumbnailImage = await captureCanvasThumbnailImage(
-      deps.graphicsService,
-      deps.refs?.canvas,
-    );
-    applyRuntimeActionContext(preparedActions, {
-      thumbnailImage,
-    });
-    await preloadRuntimeThumbnailImage(deps.graphicsService, thumbnailImage);
-    const resolvedActions = resolveEventBindings(preparedActions, eventData);
+    const { eventData, preparedActions, resolvedActions } =
+      await prepareRuntimeInteractionExecution({
+        actions,
+        eventContext,
+        graphicsService: deps.graphicsService,
+        canvasRoot: deps.refs?.canvas,
+        resolveEventBindings,
+      });
     const referencedSceneIds = collectSceneIdsFromValue(
       resolvedActions,
       eventData,

@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   captureCanvasThumbnailImage,
+  prepareRuntimeInteractionExecution,
   prepareRuntimeInteractionActions,
-} from "../../src/internal/ui/runtimeActionPreparation.js";
+} from "../../src/internal/runtime/graphicsEngineRuntime.js";
 
 const createThumbnailCanvas = (result) => {
   const context = {
@@ -168,5 +169,64 @@ describe("prepareRuntimeInteractionActions", () => {
         },
       },
     });
+  });
+});
+
+describe("prepareRuntimeInteractionExecution", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("fills nested save actions and preloads thumbnail images through the shared runtime helper", async () => {
+    const thumbnailCanvas = createThumbnailCanvas(
+      "data:image/jpeg;base64,thumb-save",
+    );
+    vi.stubGlobal("document", {
+      createElement: vi.fn(() => thumbnailCanvas),
+    });
+    vi.stubGlobal("Image", FakeImage);
+
+    const graphicsService = {
+      extractBase64: vi.fn(async () => "data:image/png;base64,full-save"),
+      loadAssets: vi.fn(async () => {}),
+      hasLoadedAsset: vi.fn(() => false),
+    };
+
+    const result = await prepareRuntimeInteractionExecution({
+      actions: {
+        showConfirmDialog: {
+          confirmActions: {
+            saveSlot: {},
+          },
+        },
+      },
+      eventContext: {
+        _event: {
+          slotId: 7,
+        },
+      },
+      graphicsService,
+      captureThumbnail: "save-only",
+    });
+
+    expect(result.preparedActions).toEqual({
+      showConfirmDialog: {
+        confirmActions: {
+          saveSlot: {
+            slotId: 7,
+            thumbnailImage: "data:image/jpeg;base64,thumb-save",
+          },
+        },
+      },
+    });
+    expect(graphicsService.loadAssets).toHaveBeenCalledWith({
+      "data:image/jpeg;base64,thumb-save": {
+        source: "url",
+        url: "data:image/jpeg;base64,thumb-save",
+        type: "image/jpeg",
+      },
+    });
+    expect(result.thumbnailPreloadError).toBeUndefined();
   });
 });
