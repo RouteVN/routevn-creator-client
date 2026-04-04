@@ -1226,7 +1226,6 @@ export const createGraphicsService = async ({ subject }) => {
       const handlePendingEffects = createEffectsHandler({
         getEngine: () => engine,
         routeGraphics: {
-          ...routeGraphics,
           render: (renderState) => {
             if (suppressedEngineRenderEffects > 0) {
               return;

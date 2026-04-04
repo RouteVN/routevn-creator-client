@@ -113,6 +113,7 @@ describe("prepareRuntimeInteractionActions", () => {
       },
       showConfirmDialog: {
         confirmActions: {
+          saveSlot: {},
           loadSlot: {},
         },
       },
@@ -139,6 +140,9 @@ describe("prepareRuntimeInteractionActions", () => {
       },
       showConfirmDialog: {
         confirmActions: {
+          saveSlot: {
+            slotId: 3,
+          },
           loadSlot: {
             slotId: 3,
           },
@@ -159,6 +163,7 @@ describe("prepareRuntimeInteractionActions", () => {
       },
       showConfirmDialog: {
         confirmActions: {
+          saveSlot: {},
           loadSlot: {},
         },
       },

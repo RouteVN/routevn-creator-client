@@ -18,8 +18,9 @@ import createRouteGraphics, {
 } from "route-graphics";
 import { prepareRenderStateKeyboardForGraphics } from "../src/internal/project/layout.js";
 import {
+  applyRuntimeActionContext,
   captureCanvasThumbnailImage,
-  prepareRuntimeInteractionActions,
+  preloadRuntimeThumbnailImage,
 } from "../src/internal/ui/runtimeActionPreparation.js";
 import { BUNDLE_FORMAT_VERSION } from "../src/deps/services/shared/projectExportService.js";
 
@@ -126,8 +127,39 @@ const preloadBundleData = async () => {
   return { jsonData, assetBufferMap };
 };
 
-const createSaveThumbnailAssetId = (slotId, savedAt) => {
-  return `saveThumbnailImage:${slotId}:${savedAt}`;
+const getEventActions = (payload = {}) => {
+  if (payload?.actions && typeof payload.actions === "object") {
+    return payload.actions;
+  }
+
+  if (
+    payload?.payload?.actions &&
+    typeof payload.payload.actions === "object"
+  ) {
+    return payload.payload.actions;
+  }
+
+  return undefined;
+};
+
+const hasSaveAction = (actions = {}) => {
+  if (!actions || typeof actions !== "object" || Array.isArray(actions)) {
+    return false;
+  }
+
+  if (actions.saveSlot || actions.saveSaveSlot) {
+    return true;
+  }
+
+  const confirmDialog = actions.showConfirmDialog;
+  if (!confirmDialog || typeof confirmDialog !== "object") {
+    return false;
+  }
+
+  return (
+    hasSaveAction(confirmDialog.confirmActions) ||
+    hasSaveAction(confirmDialog.cancelActions)
+  );
 };
 
 const prepareEngine = async ({ jsonData, assetBufferMap }) => {
@@ -150,18 +182,6 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
   // Create dedicated ticker for auto mode
   const ticker = new Ticker();
   ticker.start();
-
-  const base64ToArrayBuffer = (base64) => {
-    const binaryString = window.atob(
-      base64.replace(/^data:image\/[a-z]+;base64,/, ""),
-    );
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes.buffer;
-  };
 
   const routeGraphics = createRouteGraphics();
   let engine;
@@ -202,64 +222,59 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
   const effectsHandler = createEffectsHandler({
     getEngine: () => engine,
     routeGraphics: {
-      ...routeGraphics,
       render: renderEngineState,
     },
     ticker,
   });
 
-  const routeGraphicsEventHandler =
-    effectsHandler.createRouteGraphicsEventHandler({
-      preprocessPayload: async (_eventName, payload = {}) => {
-        if (!payload?.actions) {
-          return payload;
-        }
+  await routeGraphics.init({
+    width: screenWidth,
+    height: screenHeight,
+    plugins,
+    eventHandler: async (eventName, payload = {}) => {
+      if (eventName === "renderComplete") {
+        engine.handleActions({
+          markLineCompleted: {},
+        });
+        return;
+      }
 
-        const eventData = payload._event ?? payload.event;
-        const preparedActions = prepareRuntimeInteractionActions(
-          payload.actions,
-          eventData,
-        );
-        const saveAction = preparedActions?.saveSlot;
+      const actions = getEventActions(payload);
+      if (!actions) {
+        return;
+      }
 
-        if (!saveAction) {
-          return {
-            ...payload,
-            actions: preparedActions,
-          };
-        }
+      const eventData = payload._event ?? payload.event;
+      const eventContext = eventData
+        ? { _event: eventData }
+        : undefined;
+      const preparedActions = structuredClone(actions);
+      const shouldCaptureThumbnail = hasSaveAction(preparedActions);
+      let thumbnailImage;
 
-        const savedAt = Date.now();
-        const thumbnailImage = await captureCanvasThumbnailImage(
+      if (shouldCaptureThumbnail) {
+        thumbnailImage = await captureCanvasThumbnailImage(
           routeGraphics,
           routeGraphics.canvas,
         );
 
         if (thumbnailImage) {
-          const assetId = createSaveThumbnailAssetId(saveAction.slotId, savedAt);
-          await routeGraphics.loadAssets({
-            [assetId]: {
-              buffer: base64ToArrayBuffer(thumbnailImage),
-              type: "image/jpeg",
-            },
-          });
-          saveAction.thumbnailImage = thumbnailImage;
+          try {
+            await preloadRuntimeThumbnailImage(routeGraphics, thumbnailImage);
+          } catch (error) {
+            console.warn("Failed to preload save thumbnail image.", error);
+          }
         }
+      }
 
-        saveAction.savedAt = savedAt;
+      applyRuntimeActionContext(preparedActions, {
+        slotBinding:
+          eventData?.slotId !== undefined ? "_event.slotId" : undefined,
+        thumbnailImage,
+      });
 
-        return {
-          ...payload,
-          actions: preparedActions,
-        };
-      },
-    });
-
-  await routeGraphics.init({
-    width: screenWidth,
-    height: screenHeight,
-    plugins,
-    eventHandler: routeGraphicsEventHandler,
+      engine.handleActions(preparedActions, eventContext);
+    },
   });
   await routeGraphics.loadAssets(assetBufferMap);
 

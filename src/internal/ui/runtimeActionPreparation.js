@@ -267,6 +267,7 @@ export const preloadRuntimeThumbnailImage = async (graphicsService, value) => {
 
   await graphicsService.loadAssets({
     [value]: {
+      source: "url",
       url: value,
       type: getDataUrlMimeType(value) ?? "image/jpeg",
     },
