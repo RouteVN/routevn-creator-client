@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { captureCanvasThumbnailImage } from "../../src/internal/ui/runtimeActionPreparation.js";
+import {
+  captureCanvasThumbnailImage,
+  prepareRuntimeInteractionActions,
+} from "../../src/internal/ui/runtimeActionPreparation.js";
 
 const createThumbnailCanvas = (result) => {
   const context = {
@@ -91,5 +94,79 @@ describe("captureCanvasThumbnailImage", () => {
       225,
     );
     expect(result).toBe("data:image/jpeg;base64,thumb-fallback");
+  });
+});
+
+describe("prepareRuntimeInteractionActions", () => {
+  it("fills save slot bindings from event data without resolving other event templates", () => {
+    const actions = {
+      saveSlot: {},
+      updateVariable: {
+        id: "update-1",
+        operations: [
+          {
+            variableId: "var-1",
+            op: "set",
+            value: "_event.value",
+          },
+        ],
+      },
+      showConfirmDialog: {
+        confirmActions: {
+          saveSlot: {},
+          loadSlot: {},
+        },
+      },
+    };
+
+    const result = prepareRuntimeInteractionActions(actions, {
+      slotId: 3,
+      value: 42,
+    });
+
+    expect(result).toEqual({
+      saveSlot: {
+        slotId: 3,
+      },
+      updateVariable: {
+        id: "update-1",
+        operations: [
+          {
+            variableId: "var-1",
+            op: "set",
+            value: "_event.value",
+          },
+        ],
+      },
+      showConfirmDialog: {
+        confirmActions: {
+          saveSlot: {
+            slotId: 3,
+          },
+          loadSlot: {
+            slotId: 3,
+          },
+        },
+      },
+    });
+    expect(actions).toEqual({
+      saveSlot: {},
+      updateVariable: {
+        id: "update-1",
+        operations: [
+          {
+            variableId: "var-1",
+            op: "set",
+            value: "_event.value",
+          },
+        ],
+      },
+      showConfirmDialog: {
+        confirmActions: {
+          saveSlot: {},
+          loadSlot: {},
+        },
+      },
+    });
   });
 });

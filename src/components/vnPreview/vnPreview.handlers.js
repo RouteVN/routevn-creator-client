@@ -12,6 +12,7 @@ import {
 import {
   applyRuntimeActionContext,
   captureCanvasThumbnailImage,
+  prepareRuntimeInteractionActions,
   preloadRuntimeThumbnailImage,
 } from "../../internal/ui/runtimeActionPreparation.js";
 import {
@@ -175,15 +176,15 @@ const createBeforeHandleActionsHook = (
 
   return async (actions, eventContext) => {
     const eventData = eventContext?._event;
-    const preparedActions = structuredClone(actions);
-    const slotBinding =
-      eventData?.slotId !== undefined ? "_event.slotId" : undefined;
+    const preparedActions = prepareRuntimeInteractionActions(
+      actions,
+      eventData,
+    );
     const thumbnailImage = await captureCanvasThumbnailImage(
       deps.graphicsService,
       deps.refs?.canvas,
     );
     applyRuntimeActionContext(preparedActions, {
-      slotBinding,
       thumbnailImage,
     });
     await preloadRuntimeThumbnailImage(deps.graphicsService, thumbnailImage);

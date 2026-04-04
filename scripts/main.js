@@ -17,6 +17,11 @@ import createRouteGraphics, {
   animatedSpritePlugin,
 } from "route-graphics";
 import { prepareRenderStateKeyboardForGraphics } from "../src/internal/project/layout.js";
+import {
+  applyRuntimeActionContext,
+  captureCanvasThumbnailImage,
+  preloadRuntimeThumbnailImage,
+} from "../src/internal/ui/runtimeActionPreparation.js";
 import { BUNDLE_FORMAT_VERSION } from "../src/deps/services/shared/projectExportService.js";
 
 async function parseVNBundle(arrayBuffer) {
@@ -122,6 +127,41 @@ const preloadBundleData = async () => {
   return { jsonData, assetBufferMap };
 };
 
+const getEventActions = (payload = {}) => {
+  if (payload?.actions && typeof payload.actions === "object") {
+    return payload.actions;
+  }
+
+  if (
+    payload?.payload?.actions &&
+    typeof payload.payload.actions === "object"
+  ) {
+    return payload.payload.actions;
+  }
+
+  return undefined;
+};
+
+const hasSaveAction = (actions = {}) => {
+  if (!actions || typeof actions !== "object" || Array.isArray(actions)) {
+    return false;
+  }
+
+  if (actions.saveSlot || actions.saveSaveSlot) {
+    return true;
+  }
+
+  const confirmDialog = actions.showConfirmDialog;
+  if (!confirmDialog || typeof confirmDialog !== "object") {
+    return false;
+  }
+
+  return (
+    hasSaveAction(confirmDialog.confirmActions) ||
+    hasSaveAction(confirmDialog.cancelActions)
+  );
+};
+
 const prepareEngine = async ({ jsonData, assetBufferMap }) => {
   const plugins = {
     elements: [
@@ -142,18 +182,6 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
   // Create dedicated ticker for auto mode
   const ticker = new Ticker();
   ticker.start();
-
-  const base64ToArrayBuffer = (base64) => {
-    const binaryString = window.atob(
-      base64.replace(/^data:image\/[a-z]+;base64,/, ""),
-    );
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes.buffer;
-  };
 
   const routeGraphics = createRouteGraphics();
   let engine;
@@ -191,11 +219,19 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
     routeGraphics.render(nextRenderState);
   };
 
+  const effectsHandler = createEffectsHandler({
+    getEngine: () => engine,
+    routeGraphics: {
+      render: renderEngineState,
+    },
+    ticker,
+  });
+
   await routeGraphics.init({
     width: screenWidth,
     height: screenHeight,
     plugins,
-    eventHandler: async (eventName, payload) => {
+    eventHandler: async (eventName, payload = {}) => {
       if (eventName === "renderComplete") {
         engine.handleActions({
           markLineCompleted: {},
@@ -203,23 +239,41 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
         return;
       }
 
-      if (payload.actions) {
-        const eventContext = payload._event
-          ? { _event: payload._event }
-          : undefined;
-        if (payload.actions.saveSaveSlot) {
-          const url = await routeGraphics.extractBase64("story");
-          const assets = {
-            [`saveThumbnailImage:${payload.actions.saveSaveSlot.slot}`]: {
-              buffer: base64ToArrayBuffer(url),
-              type: "image/png",
-            },
-          };
-          await routeGraphics.loadAssets(assets);
-          payload.actions.saveSaveSlot.thumbnailImage = url;
-        }
-        engine.handleActions(payload.actions, eventContext);
+      const actions = getEventActions(payload);
+      if (!actions) {
+        return;
       }
+
+      const eventData = payload._event ?? payload.event;
+      const eventContext = eventData
+        ? { _event: eventData }
+        : undefined;
+      const preparedActions = structuredClone(actions);
+      const shouldCaptureThumbnail = hasSaveAction(preparedActions);
+      let thumbnailImage;
+
+      if (shouldCaptureThumbnail) {
+        thumbnailImage = await captureCanvasThumbnailImage(
+          routeGraphics,
+          routeGraphics.canvas,
+        );
+
+        if (thumbnailImage) {
+          try {
+            await preloadRuntimeThumbnailImage(routeGraphics, thumbnailImage);
+          } catch (error) {
+            console.warn("Failed to preload save thumbnail image.", error);
+          }
+        }
+      }
+
+      applyRuntimeActionContext(preparedActions, {
+        slotBinding:
+          eventData?.slotId !== undefined ? "_event.slotId" : undefined,
+        thumbnailImage,
+      });
+
+      engine.handleActions(preparedActions, eventContext);
     },
   });
   await routeGraphics.loadAssets(assetBufferMap);
@@ -229,14 +283,6 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
     e.preventDefault();
   });
 
-  const effectsHandler = createEffectsHandler({
-    getEngine: () => engine,
-    routeGraphics: {
-      ...routeGraphics,
-      render: renderEngineState,
-    },
-    ticker,
-  });
   engine = createRouteEngine({ handlePendingEffects: effectsHandler });
   const saveSlots = JSON.parse(localStorage.getItem("saveSlots")) || {};
   const globalDeviceVariables =

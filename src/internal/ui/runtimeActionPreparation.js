@@ -233,6 +233,21 @@ export const applyRuntimeActionContext = (
   return actions;
 };
 
+export const prepareRuntimeInteractionActions = (actions, eventData) => {
+  if (!actions || typeof actions !== "object" || Array.isArray(actions)) {
+    return actions;
+  }
+
+  const preparedActions = structuredClone(actions);
+  const slotBinding = eventData?.slotId;
+
+  applyRuntimeActionContext(preparedActions, {
+    slotBinding,
+  });
+
+  return preparedActions;
+};
+
 export const preloadRuntimeThumbnailImage = async (graphicsService, value) => {
   if (
     !graphicsService ||
@@ -252,6 +267,7 @@ export const preloadRuntimeThumbnailImage = async (graphicsService, value) => {
 
   await graphicsService.loadAssets({
     [value]: {
+      source: "url",
       url: value,
       type: getDataUrlMimeType(value) ?? "image/jpeg",
     },
