@@ -99,6 +99,13 @@ export const handleChoiceFormChange = (deps, payload) => {
   renderAndEmitPreviewDataChange(deps);
 };
 
+export const handleHistoryFormChange = (deps, payload) => {
+  const { name, value: fieldValue } = payload._event.detail;
+
+  deps.store.setHistoryDefaultValue({ name, fieldValue });
+  renderAndEmitPreviewDataChange(deps);
+};
+
 export const handleSaveLoadFormChange = (deps, payload) => {
   const { name, value: fieldValue } = payload._event.detail;
 

@@ -98,6 +98,40 @@ choiceForm:
       description: Choice content text
       placeholder: Enter choice text
 
+historyForm:
+  title: Preview
+  description: Edit to see how the history layout will look like with different history entries
+  fields:
+    - name: linesNum
+      type: select
+      description: Number of History Lines
+      options:
+        - label: "1"
+          value: 1
+        - label: "2"
+          value: 2
+        - label: "3"
+          value: 3
+        - label: "4"
+          value: 4
+        - label: "5"
+          value: 5
+        - label: "6"
+          value: 6
+      placeholder: Select number of history lines
+      required: true
+    - "$each": 'text, i in texts'
+      type: section
+      fields:
+        - name: 'characterName${i}'
+          type: input-text
+          description: Character name
+          placeholder: Enter character name
+        - name: 'text${i}'
+          type: input-text
+          description: History line text
+          placeholder: Enter history line text
+
 saveLoadForm:
   title: Preview
   description: Edit to see how the layout will look like with different save slot data

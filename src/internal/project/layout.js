@@ -18,6 +18,8 @@ const TEXT_NODE_TYPES = new Set([
   "text-ref-save-load-slot-date",
   "text-ref-dialogue-line-character-name",
   "text-ref-dialogue-line-content",
+  "text-ref-history-line-character-name",
+  "text-ref-history-line-content",
 ]);
 
 import {
@@ -33,6 +35,8 @@ const TEXT_CONTENT_BY_TYPE = {
   "text-ref-save-load-slot-date": "${formatDate(item.savedAt)}",
   "text-ref-dialogue-line-character-name": "${line.characterName}",
   "text-ref-dialogue-line-content": "${line.content[0].text}",
+  "text-ref-history-line-character-name": "${item.characterName}",
+  "text-ref-history-line-content": "${item.text}",
 };
 
 const TEXT_RENDER_TYPE_BY_TYPE = {
@@ -42,6 +46,8 @@ const TEXT_RENDER_TYPE_BY_TYPE = {
   "text-ref-save-load-slot-date": "text",
   "text-ref-dialogue-line-character-name": "text",
   "text-ref-dialogue-line-content": "text",
+  "text-ref-history-line-character-name": "text",
+  "text-ref-history-line-content": "text",
 };
 
 const SPRITE_IMAGE_BY_TYPE = {
@@ -66,6 +72,9 @@ const REPEATING_CONTAINER_CONFIG = {
   },
   "container-ref-dialogue-line": {
     each: "line, i in dialogue.lines",
+  },
+  "container-ref-history-line": {
+    each: "item, i in historyDialogue",
   },
 };
 
@@ -870,7 +879,9 @@ const applyRectNode = ({ element, node }) => {
 
   return {
     ...element,
-    ...(node.fill && node.fill !== "transparent" ? { fill: node.fill } : {}),
+    ...(typeof node.colorId === "string" && node.colorId.length > 0
+      ? { colorId: node.colorId }
+      : {}),
     ...(node.border ? { border: structuredClone(node.border) } : {}),
   };
 };

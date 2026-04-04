@@ -21,6 +21,8 @@ const TEXT_TYPE_SET = new Set([
   "text-ref-save-load-slot-date",
   "text-ref-dialogue-line-character-name",
   "text-ref-dialogue-line-content",
+  "text-ref-history-line-character-name",
+  "text-ref-history-line-content",
 ]);
 
 const CONTAINER_TYPE_SET = new Set([
@@ -28,6 +30,7 @@ const CONTAINER_TYPE_SET = new Set([
   "container-ref-choice-item",
   "container-ref-save-load-slot",
   "container-ref-dialogue-line",
+  "container-ref-history-line",
   "container-ref-confirm-dialog-ok",
   "container-ref-confirm-dialog-cancel",
 ]);
@@ -158,6 +161,51 @@ const CREATE_TEMPLATES = {
         x: 0,
         y: 44,
         width: 1640,
+        height: 72,
+        text: "text",
+        textStyle: {
+          wordWrapWidth: 300,
+          align: "left",
+        },
+      },
+      projectResolution,
+    ),
+  "container-history-line": (projectResolution) =>
+    scaleLayoutElementItemForProjectResolution(
+      {
+        type: "container-ref-history-line",
+        name: "Container (History Item)",
+        ...BASE_TRANSFORM,
+        width: 920,
+        gap: 5,
+        direction: "vertical",
+      },
+      projectResolution,
+    ),
+  "text-history-line-character-name": (projectResolution) =>
+    scaleLayoutElementItemForProjectResolution(
+      {
+        type: "text-ref-history-line-character-name",
+        name: "Text (History Character Name)",
+        $when: "item.characterName",
+        ...BASE_TRANSFORM,
+        width: 920,
+        height: 40,
+        text: "text",
+        textStyle: {
+          wordWrapWidth: 300,
+          align: "left",
+        },
+      },
+      projectResolution,
+    ),
+  "text-history-line-content": (projectResolution) =>
+    scaleLayoutElementItemForProjectResolution(
+      {
+        type: "text-ref-history-line-content",
+        name: "Text (History Line Content)",
+        ...BASE_TRANSFORM,
+        width: 920,
         height: 72,
         text: "text",
         textStyle: {
@@ -400,6 +448,7 @@ const TYPE_FAMILIES = {
   "container-ref-choice-item": "container",
   "container-ref-save-load-slot": "container",
   "container-ref-dialogue-line": "container",
+  "container-ref-history-line": "container",
   "container-ref-confirm-dialog-ok": "container",
   "container-ref-confirm-dialog-cancel": "container",
   "fragment-ref": "fragment",
@@ -413,6 +462,8 @@ const TYPE_FAMILIES = {
   "text-ref-save-load-slot-date": "text",
   "text-ref-dialogue-line-character-name": "text",
   "text-ref-dialogue-line-content": "text",
+  "text-ref-history-line-character-name": "text",
+  "text-ref-history-line-content": "text",
   slider: "slider",
   rect: "rect",
 };
@@ -569,6 +620,11 @@ const PANEL_FEATURES_BY_TYPE = {
     "actions",
     "childInteraction",
   ],
+  "container-ref-history-line": [
+    ...DEFAULT_PANEL_FEATURES,
+    "actions",
+    "childInteraction",
+  ],
   "container-ref-confirm-dialog-ok": [...DEFAULT_PANEL_FEATURES, "actions"],
   "container-ref-confirm-dialog-cancel": [...DEFAULT_PANEL_FEATURES, "actions"],
   sprite: [...DEFAULT_PANEL_FEATURES, "images", "actions"],
@@ -588,6 +644,11 @@ const PANEL_FEATURES_BY_TYPE = {
     "textStyles",
   ],
   "text-ref-dialogue-line-content": [...DEFAULT_PANEL_FEATURES, "textStyles"],
+  "text-ref-history-line-character-name": [
+    ...DEFAULT_PANEL_FEATURES,
+    "textStyles",
+  ],
+  "text-ref-history-line-content": [...DEFAULT_PANEL_FEATURES, "textStyles"],
   slider: [...DEFAULT_PANEL_FEATURES, "slider"],
   rect: [...DEFAULT_PANEL_FEATURES, "actions"],
   "fragment-ref": [...DEFAULT_PANEL_FEATURES, "fragmentRef"],
@@ -605,6 +666,9 @@ const PREVIEW_DEPENDENCIES_BY_TYPE = {
   "container-ref-dialogue-line": { dialogue: true },
   "text-ref-dialogue-line-character-name": { dialogue: true },
   "text-ref-dialogue-line-content": { dialogue: true },
+  "container-ref-history-line": { historyDialogue: true },
+  "text-ref-history-line-character-name": { historyDialogue: true },
+  "text-ref-history-line-content": { historyDialogue: true },
   "container-ref-confirm-dialog-ok": { confirmDialog: true },
   "container-ref-confirm-dialog-cancel": { confirmDialog: true },
 };
@@ -646,6 +710,14 @@ const IMMEDIATE_PERSIST_FIELDS_BY_TYPE = {
     "conditionalOverrides",
   ],
   "text-ref-dialogue-line-content": [
+    ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    "conditionalOverrides",
+  ],
+  "text-ref-history-line-character-name": [
+    ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    "conditionalOverrides",
+  ],
+  "text-ref-history-line-content": [
     ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
     "conditionalOverrides",
   ],

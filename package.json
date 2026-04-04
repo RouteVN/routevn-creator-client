@@ -19,7 +19,7 @@
     "@rettangoli/fe": "1.1.0",
     "@rettangoli/ui": "1.0.20",
     "@rettangoli/vt": "1.0.2",
-    "@routevn/creator-model": "git+https://github.com/RouteVN/routevn-creator-model.git#feat/menu-system-variables",
+    "@routevn/creator-model": "file:../routevn-creator-model",
     "@tauri-apps/api": "^2.8.0",
     "@tauri-apps/plugin-dialog": "2.4.2",
     "@tauri-apps/plugin-fs": "^2.4.2",

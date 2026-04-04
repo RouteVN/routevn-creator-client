@@ -3,7 +3,10 @@ import {
   collectLayoutPreviewTargets,
   createSaveLoadPreviewSlots,
 } from "../../src/components/layoutEditorPreview/support/layoutEditorPreviewSupport.js";
-import { setSaveLoadDefaultValue } from "../../src/components/layoutEditorPreview/layoutEditorPreview.store.js";
+import {
+  setHistoryDefaultValue,
+  setSaveLoadDefaultValue,
+} from "../../src/components/layoutEditorPreview/layoutEditorPreview.store.js";
 
 describe("layoutEditorPreviewSupport", () => {
   it("collects preview variable ids from fragments and paginated save/load slots", () => {
@@ -150,5 +153,41 @@ describe("layoutEditorPreviewSupport", () => {
     );
 
     expect(state.saveLoadDefaultValues.saveDates[3]).toBe("2026-03-04 18:00");
+  });
+
+  it("writes history form edits into the resized history preview window", () => {
+    const state = {
+      historyDefaultValues: {
+        linesNum: 2,
+        characterNames: ["Aki", "Mina"],
+        texts: ["Line 1", "Line 2"],
+      },
+    };
+
+    setHistoryDefaultValue(
+      { state },
+      {
+        name: "linesNum",
+        fieldValue: 3,
+      },
+    );
+    setHistoryDefaultValue(
+      { state },
+      {
+        name: "text2",
+        fieldValue: "Line 3",
+      },
+    );
+
+    expect(state.historyDefaultValues.characterNames).toEqual([
+      "Aki",
+      "Mina",
+      "",
+    ]);
+    expect(state.historyDefaultValues.texts).toEqual([
+      "Line 1",
+      "Line 2",
+      "Line 3",
+    ]);
   });
 });

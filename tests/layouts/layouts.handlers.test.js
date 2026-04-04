@@ -35,6 +35,39 @@ describe("createLayoutTemplate", () => {
     expect(Object.keys(template.items).length).toBeGreaterThan(0);
   });
 
+  it("creates a history layout template without throwing", () => {
+    const template = createLayoutTemplate("history", projectResolution);
+    const historyItems = Object.values(template.items);
+    const closeText = historyItems.find(
+      (item) => item.name === "Close Button Text",
+    );
+
+    expect(template).toBeDefined();
+    expect(Array.isArray(template.tree)).toBe(true);
+    expect(Object.keys(template.items).length).toBeGreaterThan(0);
+    expect(
+      historyItems.some(
+        (item) => item.type === "container-ref-history-line",
+      ),
+    ).toBe(true);
+    expect(
+      historyItems.some(
+        (item) =>
+          item.type === "rect" && item.name === "Close Button Background",
+      ),
+    ).toBe(false);
+    expect(closeText).toMatchObject({
+      type: "text",
+      click: {
+        payload: {
+          actions: {
+            popLayeredView: {},
+          },
+        },
+      },
+    });
+  });
+
   it("creates layouts with description and fragment data", async () => {
     const createLayoutItem = vi.fn(async () => "layout-1");
     const deps = {

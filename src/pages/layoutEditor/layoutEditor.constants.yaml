@@ -51,6 +51,18 @@ contextMenuItems:
     label: Text (Line Content)
     type: item
     createType: text-dialogue-line-content
+  - "$when": 'layoutType == "history"'
+    label: Container (History Item)
+    type: item
+    createType: container-history-line
+  - "$when": 'layoutType == "history"'
+    label: Text (History Character Name)
+    type: item
+    createType: text-history-line-character-name
+  - "$when": 'layoutType == "history"'
+    label: Text (History Line Content)
+    type: item
+    createType: text-history-line-content
   - "$when": 'layoutType == "choice"'
     label: Container (Choice Item)
     type: item
@@ -143,6 +155,18 @@ emptyContextMenuItems:
     label: Text (Line Content)
     type: item
     createType: text-dialogue-line-content
+  - "$when": 'layoutType == "history"'
+    label: Container (History Item)
+    type: item
+    createType: container-history-line
+  - "$when": 'layoutType == "history"'
+    label: Text (History Character Name)
+    type: item
+    createType: text-history-line-character-name
+  - "$when": 'layoutType == "history"'
+    label: Text (History Line Content)
+    type: item
+    createType: text-history-line-content
 
 controlContextMenuItems:
   - label: Rename
