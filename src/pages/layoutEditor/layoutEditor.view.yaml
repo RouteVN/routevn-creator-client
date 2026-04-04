@@ -22,6 +22,10 @@ refs:
     eventListeners:
       click:
         handler: handleBackClick
+  saveButton:
+    eventListeners:
+      click:
+        handler: handleSaveButtonClick
   layoutEditPanel:
     eventListeners:
       update:
@@ -44,6 +48,7 @@ template:
               - rtgl-button#backButton sq pre="chevronLeft" v="gh" mr=sm: null
               - rtgl-view w=1fg:
                   - rtgl-text c=mu-fg: ${layout.name}
+              - rtgl-button#saveButton sq pre="download" v="gh" ml=sm: null
           - rtgl-view h=1fg sv w=f:
               - rvn-layout-editor-canvas#layoutEditorCanvas :resolution=${projectResolution} :layoutState=${layoutState} selectedItemId=${selectedItemId} :previewData=${previewData}: null
               - rvn-layout-editor-preview#layoutEditorPreview :layoutState=${layoutState}: null

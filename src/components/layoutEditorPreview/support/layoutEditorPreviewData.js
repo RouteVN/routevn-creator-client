@@ -3,6 +3,7 @@ import {
   createChoicePreviewItems,
   createConfirmDialogPreviewData,
   createDialoguePreviewData,
+  createHistoryLines,
   createPreviewFixedStateValues,
   createPreviewVariables,
   createRuntimeSaveSlots,
@@ -15,6 +16,7 @@ export const createLayoutEditorPreviewData = ({
   previewVariableValues,
   dialogueDefaultValues,
   nvlDefaultValues,
+  historyDefaultValues,
   previewRevealingSpeed,
   choicesData,
   saveLoadData,
@@ -40,6 +42,8 @@ export const createLayoutEditorPreviewData = ({
       dialogueDefaultValues,
     ),
     dialogue,
+    historyDialogue:
+      layoutType === "history" ? createHistoryLines(historyDefaultValues) : [],
     choice: {
       items: createChoicePreviewItems(choicesData),
     },

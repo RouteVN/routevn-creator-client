@@ -164,6 +164,7 @@ const RESOURCE_FILE_EXPLORER_API = Object.freeze({
     updateMethod: "updateTextStyle",
     moveMethod: "moveTextStyle",
     deleteMethod: "deleteTextStyles",
+    duplicateMethod: "duplicateTextStyle",
     idField: "textStyleId",
     deleteField: "textStyleIds",
   },
@@ -375,6 +376,35 @@ export const createResourceFileExplorerHandlers = ({
           appService.showToast("Failed to delete resource.");
           return;
         }
+      } else if (action === "duplicate-item") {
+        if (
+          !itemId ||
+          currentItem?.type === "folder" ||
+          !resourceApi.duplicateMethod
+        ) {
+          return;
+        }
+
+        const duplicateItemId = await projectService[
+          resourceApi.duplicateMethod
+        ]({
+          [resourceApi.idField]: itemId,
+        });
+        if (duplicateItemId?.valid === false) {
+          appService.showToast(
+            getResultErrorMessage(
+              duplicateItemId,
+              "Failed to duplicate resource.",
+            ),
+            {
+              title: "Error",
+            },
+          );
+          return;
+        }
+
+        await refresh(deps, { selectedItemId: duplicateItemId });
+        return;
       } else if (
         action &&
         typeof action === "object" &&
@@ -488,6 +518,29 @@ export const createLayoutsFileExplorerHandlers = ({
         await projectService.deleteLayoutItem({
           layoutIds: [itemId],
         });
+      } else if (action === "duplicate-item") {
+        if (!itemId || currentItem?.type !== "layout") {
+          return;
+        }
+
+        const duplicateLayoutId = await projectService.duplicateLayoutItem({
+          layoutId: itemId,
+        });
+        if (duplicateLayoutId?.valid === false) {
+          appService.showToast(
+            getResultErrorMessage(
+              duplicateLayoutId,
+              "Failed to duplicate layout.",
+            ),
+            {
+              title: "Error",
+            },
+          );
+          return;
+        }
+
+        await refresh(deps, { selectedItemId: duplicateLayoutId });
+        return;
       } else {
         return;
       }

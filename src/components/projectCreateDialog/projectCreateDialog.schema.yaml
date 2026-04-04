@@ -1,0 +1,19 @@
+componentName: rvn-project-create-dialog
+propsSchema:
+  type: object
+  properties:
+    platform:
+      type: string
+    defaultValues:
+      type: object
+methods:
+  type: object
+  properties:
+    validate:
+      description: Validates the create project dialog body and returns shell-compatible validation output.
+      params: []
+      returns: object
+    getValues:
+      description: Returns the current create project dialog values for the component dialog shell.
+      params: []
+      returns: object

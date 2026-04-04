@@ -61,7 +61,7 @@ export const createProjectAssetService = ({
   getCurrentReference,
   getStoreByProject,
 }) => {
-  const storeFile = async ({ file, bytes } = {}) => {
+  const storeRawFile = async ({ file, bytes } = {}) => {
     return fileAdapter.storeFile({
       file,
       bytes,
@@ -77,7 +77,7 @@ export const createProjectAssetService = ({
     const [stored, sha256] = await Promise.all([
       (async () => {
         const storeStartedAt = getNow();
-        const result = await storeFile({ file, bytes: fileBytes });
+        const result = await storeRawFile({ file, bytes: fileBytes });
         if (timings) {
           timings.storeDurationMs = getDurationMs(storeStartedAt);
         }
@@ -294,7 +294,7 @@ export const createProjectAssetService = ({
       };
     }
 
-    const stored = await storeFile({ file });
+    const stored = await storeRawFile({ file });
     return {
       ...stored,
       type: "generic",
@@ -303,6 +303,18 @@ export const createProjectAssetService = ({
   };
 
   return {
+    async storeFile({ file, bytes } = {}) {
+      const stored = await storeFileWithRecord({
+        file,
+        bytes,
+      });
+
+      return {
+        ...stored,
+        fileRecords: [stored.fileRecord],
+      };
+    },
+
     async uploadFiles(files) {
       const fileArray = Array.isArray(files) ? files : Array.from(files);
       const results = await processWithConcurrency(

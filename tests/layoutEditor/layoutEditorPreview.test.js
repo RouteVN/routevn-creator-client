@@ -147,6 +147,102 @@ describe("layoutEditorPreview", () => {
     expect(rendered.fileReferences).toEqual([]);
   });
 
+  it("renders history preview lines from characterName/text items", () => {
+    const rendered = createLayoutEditorRenderedElements({
+      layoutState: {
+        id: "layout-history",
+        layoutType: "history",
+        elements: {
+          items: {
+            "history-item": {
+              type: "container-ref-history-line",
+              name: "Container (History Item)",
+              x: 0,
+              y: 0,
+              width: 400,
+              height: 120,
+              anchorX: 0,
+              anchorY: 0,
+              scaleX: 1,
+              scaleY: 1,
+              rotation: 0,
+            },
+            "history-character": {
+              type: "text-ref-history-line-character-name",
+              name: "Text (History Character Name)",
+              x: 0,
+              y: 0,
+              width: 200,
+              height: 32,
+              anchorX: 0,
+              anchorY: 0,
+              scaleX: 1,
+              scaleY: 1,
+              rotation: 0,
+            },
+            "history-content": {
+              type: "text-ref-history-line-content",
+              name: "Text (History Line Content)",
+              x: 0,
+              y: 40,
+              width: 400,
+              height: 64,
+              anchorX: 0,
+              anchorY: 0,
+              scaleX: 1,
+              scaleY: 1,
+              rotation: 0,
+            },
+          },
+          tree: [
+            {
+              id: "history-item",
+              children: [
+                {
+                  id: "history-character",
+                  children: [],
+                },
+                {
+                  id: "history-content",
+                  children: [],
+                },
+              ],
+            },
+          ],
+        },
+      },
+      repositoryState: {
+        layouts: { items: {} },
+        images: { items: {} },
+        textStyles: { items: {} },
+        colors: { items: {} },
+        fonts: { items: {} },
+      },
+      previewData: {
+        historyDialogue: [
+          {
+            characterName: "Aki",
+            text: "A saved line",
+          },
+        ],
+      },
+      graphicsService: {
+        parse: ({ elements }) => ({ elements }),
+      },
+    });
+
+    expect(rendered.elements[0]).toMatchObject({
+      type: "container",
+      id: "history-item-instance-0",
+    });
+    expect(rendered.elements[0].children[0]).toMatchObject({
+      content: "Aki",
+    });
+    expect(rendered.elements[0].children[1]).toMatchObject({
+      content: "A saved line",
+    });
+  });
+
   it("builds NVL preview lines from the editable content list", () => {
     const previewData = createLayoutEditorPreviewData({
       layoutType: "nvl",
@@ -164,6 +260,28 @@ describe("layoutEditorPreview", () => {
       },
       {
         content: [{ text: "Second NVL line" }],
+      },
+    ]);
+  });
+
+  it("builds history preview lines from the editable history list", () => {
+    const previewData = createLayoutEditorPreviewData({
+      layoutType: "history",
+      historyDefaultValues: {
+        linesNum: 2,
+        characterNames: ["Aki", ""],
+        texts: ["First history line", "Second history line"],
+      },
+    });
+
+    expect(previewData.historyDialogue).toEqual([
+      {
+        characterName: "Aki",
+        text: "First history line",
+      },
+      {
+        characterName: "",
+        text: "Second history line",
       },
     ]);
   });

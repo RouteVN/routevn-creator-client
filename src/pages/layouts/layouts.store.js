@@ -32,13 +32,14 @@ const layoutForm = {
         { value: "normal", label: "Normal" },
         { value: "save-load", label: "Save / Load" },
         { value: "confirmDialog", label: "Confirm Dialog" },
+        { value: "history", label: "History" },
         { value: "dialogue", label: "Dialogue" },
         { value: "nvl", label: "NVL" },
         { value: "choice", label: "Choice" },
       ],
       tooltip: {
         content:
-          "Normal is layout that can be used for background or menu pages. Save / Load is used for save-slot based save and load screens. Confirm Dialog is used for compact confirmation prompts with OK and Cancel areas. Dialogue is used for ADV mode text dialogue layout. NVL is used for novel mode accumulated dialogue layout. Choice is used for the choices.",
+          "Normal is layout that can be used for background or menu pages. Save / Load is used for save-slot based save and load screens. Confirm Dialog is used for compact confirmation prompts with OK and Cancel areas. History is used for dialogue history layered views. Dialogue is used for ADV mode text dialogue layout. NVL is used for novel mode accumulated dialogue layout. Choice is used for the choices.",
       },
     },
     layoutDescriptionField,
@@ -80,10 +81,22 @@ const editLayoutForm = {
   },
 };
 
+const layoutExplorerItemContextMenuItems = [
+  { label: "Rename", type: "item", value: "rename-item" },
+  { label: "Duplicate", type: "item", value: "duplicate-item" },
+  { label: "Delete", type: "item", value: "delete-item" },
+];
+
+const layoutCenterItemContextMenuItems = [
+  { label: "Duplicate", type: "item", value: "duplicate-item" },
+  { label: "Delete", type: "item", value: "delete-item" },
+];
+
 const layoutTypeLabels = {
   normal: "Normal",
   "save-load": "Save / Load",
   confirmDialog: "Confirm Dialog",
+  history: "History",
   dialogue: "Dialogue",
   nvl: "NVL",
   choice: "Choice",
@@ -124,7 +137,7 @@ const buildDetailFields = (item) => {
 
 const buildCatalogItem = (item) => {
   const layoutType = item.layoutType;
-  const subtitle = isFragmentLayout(item)
+  const typeInfo = isFragmentLayout(item)
     ? `${layoutTypeLabels[layoutType] ?? layoutType ?? ""} / Fragment`
     : (layoutTypeLabels[layoutType] ?? layoutType ?? "");
 
@@ -132,7 +145,9 @@ const buildCatalogItem = (item) => {
     id: item.id,
     name: item.name,
     cardKind: "layout",
-    subtitle,
+    cardVariant: "thumbnail",
+    previewFileId: item.thumbnailFileId,
+    typeInfo,
   };
 };
 
@@ -152,10 +167,12 @@ const {
   selectedResourceId: "layouts",
   resourceCategory: "userInterface",
   addText: "Add Layout",
+  centerItemContextMenuItems: layoutCenterItemContextMenuItems,
   buildDetailFields,
   buildCatalogItem,
   extendViewData: ({ state, baseViewData }) => ({
     ...baseViewData,
+    itemContextMenuItems: layoutExplorerItemContextMenuItems,
     isAddDialogOpen: state.isAddDialogOpen,
     layoutForm,
     layoutFormDefaults: {

@@ -285,6 +285,34 @@ export const createCatalogResourceCommandApi = (shared) => ({
       deleteField: "textStyleIds",
       ids: textStyleIds,
     }),
+  async duplicateTextStyle({ textStyleId }) {
+    const context = await shared.ensureCommandContext();
+    const sourceTextStyle = context.state?.textStyles?.items?.[textStyleId];
+
+    if (!sourceTextStyle || sourceTextStyle.type !== "textStyle") {
+      return {
+        valid: false,
+        error: {
+          message: "Text style not found.",
+        },
+      };
+    }
+
+    const nextData = structuredClone(sourceTextStyle);
+    delete nextData.id;
+    delete nextData.parentId;
+
+    return submitCreateResourceCommand({
+      shared,
+      resourceType: "textStyles",
+      type: COMMAND_TYPES.TEXTSTYLE_CREATE,
+      idField: "textStyleId",
+      data: nextData,
+      parentId: sourceTextStyle.parentId ?? null,
+      position: "after",
+      positionTargetId: textStyleId,
+    });
+  },
   createVariable: async ({
     variableId,
     data,

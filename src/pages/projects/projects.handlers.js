@@ -5,10 +5,11 @@ import {
   mapApiUserToAuthUser,
 } from "../../deps/services/shared/authSession.js";
 import {
-  createProjectResolutionFormValues,
   CUSTOM_PROJECT_RESOLUTION_PRESET,
   resolveProjectResolution,
 } from "../../internal/projectResolution.js";
+
+const PROJECT_CREATE_DIALOG_COMPONENT = "rvn-project-create-dialog";
 
 const mapCloudProject = (project) => {
   const projectId = project?.id;
@@ -91,10 +92,125 @@ const getProjectIdFromEvent = (event) => {
   return event?.currentTarget?.dataset?.projectId ?? "";
 };
 
+const showCreateProjectDialog = async (appService) => {
+  return appService.showComponentDialog({
+    component: PROJECT_CREATE_DIALOG_COMPONENT,
+    title: "Create Project",
+    size: "md",
+    props: {
+      platform: appService.getPlatform(),
+    },
+    actions: {
+      buttons: [
+        {
+          id: "cancel",
+          label: "Cancel",
+          variant: "se",
+          align: "left",
+          role: "cancel",
+        },
+        {
+          id: "submit",
+          label: "Submit",
+          variant: "pr",
+          role: "confirm",
+          validate: true,
+        },
+      ],
+    },
+  });
+};
+
 export const handleCreateButtonClick = async (deps) => {
-  const { render, store } = deps;
-  store.toggleDialog();
-  render();
+  const { appService, render, store } = deps;
+  let dialogResult;
+
+  try {
+    dialogResult = await showCreateProjectDialog(appService);
+  } catch {
+    appService.showToast("Failed to open create project dialog.");
+    return;
+  }
+
+  if (!dialogResult || dialogResult.actionId !== "submit") {
+    return;
+  }
+
+  const values = dialogResult.values ?? {};
+  const platform = appService.getPlatform();
+
+  try {
+    const name = values.name ?? "";
+    const description = values.description ?? "";
+    const template = values.template ?? "default";
+    const resolution = values.resolution;
+    const resolutionWidth = values.resolutionWidth;
+    const resolutionHeight = values.resolutionHeight;
+    const projectPath = values.projectPath ?? "";
+
+    if (name === "_TEST_FILE_PERMISSIONS_") {
+      window.location.href = "/test-permissions.html";
+      return;
+    }
+
+    if (!name || !description || (platform !== "web" && !projectPath)) {
+      let message = "Please fill in all required fields.";
+      if (!name) {
+        message = "Project Name is required.";
+      } else if (!description) {
+        message = "Project Description is required.";
+      } else if (platform !== "web" && !projectPath) {
+        message = "Project Location is required.";
+      }
+
+      appService.showToast(message);
+      return;
+    }
+
+    const projectResolution = resolveProjectResolution({
+      preset: resolution,
+      width: resolutionWidth,
+      height: resolutionHeight,
+    });
+
+    if (!projectResolution) {
+      if (resolution === CUSTOM_PROJECT_RESOLUTION_PRESET) {
+        if (!resolutionWidth) {
+          appService.showToast("Resolution Width is required.");
+          return;
+        }
+
+        if (!resolutionHeight) {
+          appService.showToast("Resolution Height is required.");
+          return;
+        }
+
+        appService.showToast(
+          "Resolution Width and Height must be positive integers.",
+        );
+        return;
+      }
+
+      appService.showToast("Project Resolution is invalid.");
+      return;
+    }
+
+    const newProject = await appService.createNewProject({
+      name,
+      description,
+      projectPath,
+      template,
+      projectResolution,
+    });
+
+    store.addProject({ project: newProject });
+    render();
+  } catch (error) {
+    appService.showToast(
+      error?.message ||
+        "Failed to create project. Please check the selected folder and try again.",
+    );
+  }
 };
 
 export const handleCloudCreateButtonClick = (deps) => {
@@ -344,15 +460,6 @@ export const handleProfileDropdownClickItem = async (deps, payload) => {
   }
 };
 
-export const handleCloseDialogue = (deps) => {
-  const { render, store } = deps;
-  if (!store.selectIsCreateDialogOpen()) {
-    return;
-  }
-  store.closeDialog();
-  render();
-};
-
 export const handleProjectsClick = async (deps, payload) => {
   const { appService, projectService, store } = deps;
   const id = getProjectIdFromEvent(payload._event);
@@ -374,135 +481,6 @@ export const handleProjectsClick = async (deps, payload) => {
   }
 
   appService.navigate("/project", { p: id });
-};
-
-export const handleBrowseFolder = async (deps) => {
-  const { appService, store, render } = deps;
-  if (appService.getPlatform() === "web") {
-    return;
-  }
-
-  try {
-    const selected = await appService.openFolderPicker({
-      title: "Select Project Location",
-    });
-
-    if (selected) {
-      store.setProjectPath({ path: selected });
-      render();
-    }
-  } catch {
-    appService.showToast("Failed to select project location.");
-  }
-};
-
-export const handleCreateFormChange = (deps, payload) => {
-  const { store, render } = deps;
-  const previousValues = store.selectDefaultValues();
-  const nextValues = {
-    ...payload?._event?.detail?.values,
-  };
-
-  if (
-    nextValues.resolution &&
-    nextValues.resolution !== CUSTOM_PROJECT_RESOLUTION_PRESET &&
-    nextValues.resolution !== previousValues.resolution
-  ) {
-    Object.assign(
-      nextValues,
-      createProjectResolutionFormValues(nextValues.resolution),
-    );
-  }
-
-  store.updateCreateFormValues(nextValues);
-  render();
-};
-
-export const handleFormSubmit = async (deps, payload) => {
-  const { appService, store, render } = deps;
-  const platform = appService.getPlatform();
-
-  try {
-    if (payload._event.detail.actionId !== "submit") {
-      return;
-    }
-
-    const {
-      name,
-      description,
-      template = "default",
-      resolution,
-      resolutionWidth,
-      resolutionHeight,
-    } = payload._event.detail.values;
-
-    if (name === "_TEST_FILE_PERMISSIONS_") {
-      window.location.href = "/test-permissions.html";
-      return;
-    }
-
-    const projectPath = store.selectProjectPath();
-
-    if (!name || !description || (platform !== "web" && !projectPath)) {
-      let message = "Please fill in all required fields.";
-      if (!name) {
-        message = "Project Name is required.";
-      } else if (!description) {
-        message = "Project Description is required.";
-      } else if (platform !== "web" && !projectPath) {
-        message = "Project Location is required.";
-      }
-
-      appService.showToast(message);
-      return;
-    }
-
-    const projectResolution = resolveProjectResolution({
-      preset: resolution,
-      width: resolutionWidth,
-      height: resolutionHeight,
-    });
-
-    if (!projectResolution) {
-      if (resolution === CUSTOM_PROJECT_RESOLUTION_PRESET) {
-        if (!resolutionWidth) {
-          appService.showToast("Resolution Width is required.");
-          return;
-        }
-
-        if (!resolutionHeight) {
-          appService.showToast("Resolution Height is required.");
-          return;
-        }
-
-        appService.showToast(
-          "Resolution Width and Height must be positive integers.",
-        );
-        return;
-      }
-
-      appService.showToast("Project Resolution is invalid.");
-      return;
-    }
-
-    const newProject = await appService.createNewProject({
-      name,
-      description,
-      projectPath,
-      template,
-      projectResolution,
-    });
-
-    store.addProject({ project: newProject });
-    store.closeDialog();
-    render();
-  } catch (error) {
-    console.error("Failed to create project:", error);
-    appService.showToast(
-      error?.message ||
-        "Failed to create project. Please check the selected folder and try again.",
-    );
-  }
 };
 
 export const handleProjectContextMenu = (deps, payload) => {

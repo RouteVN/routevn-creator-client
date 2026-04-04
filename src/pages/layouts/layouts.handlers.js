@@ -338,6 +338,182 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
     );
   }
 
+  if (layoutType === "history") {
+    const historyContainerId = nanoid();
+    const titleTextId = nanoid();
+    const closeButtonTextId = nanoid();
+    const historyScrollContainerId = nanoid();
+    const historyItemContainerId = nanoid();
+    const historyCharacterNameId = nanoid();
+    const historyContentId = nanoid();
+
+    return scaleLayoutElementsForProjectResolution(
+      {
+        items: {
+          [historyContainerId]: createLayoutElement(historyContainerId, {
+            type: "container",
+            name: "History Container",
+            x: 0,
+            y: 0,
+            gap: 0,
+            width: 1920,
+            height: 1080,
+            anchorX: 0,
+            anchorY: 0,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+          }),
+          [titleTextId]: createLayoutElement(titleTextId, {
+            type: "text",
+            name: "History Title",
+            x: 960,
+            y: 120,
+            width: 720,
+            height: 64,
+            anchorX: 0.5,
+            anchorY: 0.5,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            text: "Dialogue History",
+            textStyle: {
+              align: "center",
+            },
+          }),
+          [historyScrollContainerId]: createLayoutElement(
+            historyScrollContainerId,
+            {
+              type: "container",
+              name: "History Scroll Container",
+              x: 490,
+              y: 220,
+              width: 940,
+              height: 560,
+              direction: "vertical",
+              gap: 15,
+              scroll: true,
+              anchorX: 0,
+              anchorY: 0,
+              scaleX: 1,
+              scaleY: 1,
+              rotation: 0,
+            },
+          ),
+          [historyItemContainerId]: createLayoutElement(
+            historyItemContainerId,
+            {
+              type: "container-ref-history-line",
+              name: "Container (History Item)",
+              x: 0,
+              y: 0,
+              width: 920,
+              gap: 5,
+              direction: "vertical",
+              anchorX: 0,
+              anchorY: 0,
+              scaleX: 1,
+              scaleY: 1,
+              rotation: 0,
+            },
+          ),
+          [historyCharacterNameId]: createLayoutElement(
+            historyCharacterNameId,
+            {
+              type: "text-ref-history-line-character-name",
+              name: "Text (History Character Name)",
+              $when: "item.characterName",
+              x: 0,
+              y: 0,
+              width: 920,
+              height: 40,
+              anchorX: 0,
+              anchorY: 0,
+              scaleX: 1,
+              scaleY: 1,
+              rotation: 0,
+              text: "text",
+              textStyle: {
+                align: "left",
+              },
+            },
+          ),
+          [historyContentId]: createLayoutElement(historyContentId, {
+            type: "text-ref-history-line-content",
+            name: "Text (History Line Content)",
+            x: 0,
+            y: 0,
+            width: 920,
+            height: 72,
+            anchorX: 0,
+            anchorY: 0,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            text: "text",
+            textStyle: {
+              align: "left",
+            },
+          }),
+          [closeButtonTextId]: createLayoutElement(closeButtonTextId, {
+            type: "text",
+            name: "Close Button Text",
+            x: 960,
+            y: 855,
+            width: 120,
+            height: 40,
+            anchorX: 0.5,
+            anchorY: 0.5,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            text: "Close",
+            textStyle: {
+              align: "center",
+            },
+            click: {
+              payload: {
+                actions: {
+                  popLayeredView: {},
+                },
+              },
+            },
+          }),
+        },
+        tree: [
+          {
+            id: historyContainerId,
+            children: [
+              {
+                id: titleTextId,
+              },
+              {
+                id: historyScrollContainerId,
+                children: [
+                  {
+                    id: historyItemContainerId,
+                    children: [
+                      {
+                        id: historyCharacterNameId,
+                      },
+                      {
+                        id: historyContentId,
+                      },
+                    ],
+                  },
+                ],
+              },
+              {
+                id: closeButtonTextId,
+              },
+            ],
+          },
+        ],
+      },
+      projectResolution,
+    );
+  }
+
   if (
     layoutType === "normal" ||
     layoutType === "save-load" ||
@@ -555,4 +731,28 @@ export const handleItemDelete = async (deps, payload) => {
 
   await projectService.deleteLayoutItem({ layoutIds: [itemId] });
   await handleDataChanged(deps);
+};
+
+export const handleItemDuplicate = async (deps, payload) => {
+  const { appService, projectService } = deps;
+  const { itemId } = payload._event.detail;
+  if (!itemId) {
+    return;
+  }
+
+  const duplicateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to duplicate layout.",
+    action: () =>
+      projectService.duplicateLayoutItem({
+        layoutId: itemId,
+      }),
+  });
+  if (!duplicateAttempt.ok) {
+    return;
+  }
+
+  await handleDataChanged(deps, {
+    selectedItemId: duplicateAttempt.result,
+  });
 };

@@ -15,13 +15,20 @@ export const createCatalogPageHandlers = ({
       refresh,
     }),
 }) => {
-  const refreshData = async (deps) => {
-    const { store, render, projectService } = deps;
+  const refreshData = async (deps, { selectedItemId } = {}) => {
+    const { store, render, projectService, refs } = deps;
     const repositoryState = projectService.getRepositoryState();
     const data = selectData(repositoryState);
     store.setItems({ data });
+    if (selectedItemId !== undefined) {
+      store.setSelectedItemId({ itemId: selectedItemId });
+    }
     onProjectStateChanged({ deps, repositoryState });
     render();
+
+    if (selectedItemId) {
+      refs?.fileExplorer?.selectItem?.({ itemId: selectedItemId });
+    }
   };
 
   const handleBeforeMount = (deps) => {

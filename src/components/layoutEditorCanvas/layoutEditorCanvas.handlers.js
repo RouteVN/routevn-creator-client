@@ -3,6 +3,7 @@ import {
   DEFAULT_PROJECT_RESOLUTION,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
+import { captureCanvasThumbnailImage } from "../../internal/ui/runtimeActionPreparation.js";
 import {
   createLayoutEditorRenderedElements,
   loadLayoutEditorAssets,
@@ -243,6 +244,10 @@ const initCanvasGraphics = async (deps, props = deps.props) => {
     width,
     height,
   });
+};
+
+export const handleCaptureThumbnailImage = async (deps) => {
+  return captureCanvasThumbnailImage(deps.graphicsService, deps.refs.canvas);
 };
 
 const handleKeyboardMove = async (deps, event) => {

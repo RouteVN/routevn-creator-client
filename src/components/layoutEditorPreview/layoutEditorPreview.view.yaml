@@ -21,6 +21,12 @@ refs:
         handler: handleChoiceFormChange
       form-change:
         handler: handleChoiceFormChange
+  historyForm:
+    eventListeners:
+      form-input:
+        handler: handleHistoryFormChange
+      form-change:
+        handler: handleHistoryFormChange
   saveLoadForm:
     eventListeners:
       form-input:
@@ -49,6 +55,8 @@ template:
           - rtgl-button#playPreviewButton v=ol: Play
   - $if layoutType == 'choice':
       - rtgl-form#choiceForm key=${choiceFormKey} w=f :form=${choiceForm} :defaultValues=${choiceDefaultValues} :context=${choicesContext}: null
+  - $if layoutType == 'history':
+      - rtgl-form#historyForm key=${historyFormKey} w=f :form=${historyForm} :defaultValues=${historyDefaultValues} :context=${historyContext}: null
   - $if hasPreviewVariables:
       - rtgl-form#previewVariablesForm key=${previewVariablesFormKey} w=f :form=${previewVariablesForm} :defaultValues=${previewVariablesDefaultValues}: null
   - $if hasSaveLoadPreview:

@@ -138,10 +138,18 @@ export const createInitialState = () => ({
     previewText: "",
   },
 
-  // Context menu items
-  contextMenuItems: [
+  folderContextMenuItems: [
     { label: "New Folder", type: "item", value: "new-item" },
     { label: "Rename", type: "item", value: "rename-item" },
+    { label: "Delete", type: "item", value: "delete-item" },
+  ],
+  itemContextMenuItems: [
+    { label: "Rename", type: "item", value: "rename-item" },
+    { label: "Duplicate", type: "item", value: "duplicate-item" },
+    { label: "Delete", type: "item", value: "delete-item" },
+  ],
+  centerItemContextMenuItems: [
+    { label: "Duplicate", type: "item", value: "duplicate-item" },
     { label: "Delete", type: "item", value: "delete-item" },
   ],
   emptyContextMenuItems: [
@@ -702,7 +710,9 @@ export const selectViewData = ({ state }) => {
     detailPreviewFontFamily: detailPreviewFontData.fontFamily,
     detailPreviewFontFileId: detailPreviewFontData.fileId,
     title: "Typography",
-    contextMenuItems: state.contextMenuItems,
+    folderContextMenuItems: state.folderContextMenuItems,
+    itemContextMenuItems: state.itemContextMenuItems,
+    centerItemContextMenuItems: state.centerItemContextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,
     colorsData: state.colorsData,
     fontsData: state.fontsData,

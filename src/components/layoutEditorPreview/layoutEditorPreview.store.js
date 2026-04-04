@@ -1,6 +1,7 @@
 import { createLayoutEditorPreviewData } from "./support/layoutEditorPreviewData.js";
 import {
   createChoiceFormDefaultValues,
+  createHistoryFormDefaultValues,
   createNvlFormDefaultValues,
   createPreviewVariablesViewData,
   createSaveLoadPreviewViewData,
@@ -36,6 +37,16 @@ const createChoiceDefaultValues = () => ({
   choices: ["Choice 1", "Choice 2"],
 });
 
+const createHistoryDefaultValues = () => ({
+  linesNum: 3,
+  characterNames: ["Aki", "Mina", ""],
+  texts: [
+    "The first history line.",
+    "The second history line.",
+    "The third history line.",
+  ],
+});
+
 const createSaveLoadDefaultValues = () => ({
   slotsNum: 3,
   saveImageIds: [undefined, undefined, undefined],
@@ -47,6 +58,7 @@ const resetPreviewStateValues = (state) => {
   state.nvlDefaultValues = createNvlDefaultValues();
   state.previewRevealingSpeed = 50;
   state.choiceDefaultValues = createChoiceDefaultValues();
+  state.historyDefaultValues = createHistoryDefaultValues();
   state.saveLoadDefaultValues = createSaveLoadDefaultValues();
   state.previewVariableValues = {};
 };
@@ -68,6 +80,7 @@ export const createInitialState = () => ({
   nvlDefaultValues: createNvlDefaultValues(),
   previewRevealingSpeed: 50,
   choiceDefaultValues: createChoiceDefaultValues(),
+  historyDefaultValues: createHistoryDefaultValues(),
   saveLoadDefaultValues: createSaveLoadDefaultValues(),
   previewVariableValues: {},
 });
@@ -149,6 +162,42 @@ export const setChoiceDefaultValue = ({ state }, { name, fieldValue } = {}) => {
     );
   }
   state.choiceDefaultValues.choices = choices;
+};
+
+export const setHistoryDefaultValue = (
+  { state },
+  { name, fieldValue } = {},
+) => {
+  if (/^characterName\d+$/.test(name)) {
+    const index = Number.parseInt(name.slice("characterName".length), 10);
+    state.historyDefaultValues.characterNames[index] = fieldValue;
+    return;
+  }
+
+  if (/^text\d+$/.test(name)) {
+    const index = Number.parseInt(name.slice("text".length), 10);
+    state.historyDefaultValues.texts[index] = fieldValue;
+    return;
+  }
+
+  state.historyDefaultValues[name] = fieldValue;
+
+  if (name !== "linesNum") {
+    return;
+  }
+
+  const texts = [];
+  const characterNames = [];
+
+  for (let index = 0; index < fieldValue; index += 1) {
+    characterNames.push(state.historyDefaultValues.characterNames[index] ?? "");
+    texts.push(
+      state.historyDefaultValues.texts[index] ?? `History line ${index + 1}`,
+    );
+  }
+
+  state.historyDefaultValues.characterNames = characterNames;
+  state.historyDefaultValues.texts = texts;
 };
 
 export const setSaveLoadDefaultValue = (
@@ -277,6 +326,7 @@ export const selectPreviewData = ({ state }) => {
     previewVariableValues: state.previewVariableValues,
     dialogueDefaultValues: state.dialogueDefaultValues,
     nvlDefaultValues: state.nvlDefaultValues,
+    historyDefaultValues: state.historyDefaultValues,
     previewRevealingSpeed: state.previewRevealingSpeed,
     choicesData: selectChoicesData({ state }),
     saveLoadData: selectSaveLoadData({ state }),
@@ -331,6 +381,16 @@ export const selectViewData = ({ state, constants }) => {
       choicesNum: state.choiceDefaultValues.choicesNum,
     },
     choiceFormKey: `${identityKey}:choice`,
+    historyForm: constants.historyForm,
+    historyDefaultValues: createHistoryFormDefaultValues(
+      state.historyDefaultValues,
+    ),
+    historyContext: {
+      characterNames: state.historyDefaultValues.characterNames,
+      texts: state.historyDefaultValues.texts,
+      linesNum: state.historyDefaultValues.linesNum,
+    },
+    historyFormKey: `${identityKey}:history`,
     saveLoadForm: saveLoadPreviewViewData.saveLoadForm,
     saveLoadDefaultValues: saveLoadPreviewViewData.saveLoadDefaultValues,
     saveLoadContext: saveLoadPreviewViewData.saveLoadContext,

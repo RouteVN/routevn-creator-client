@@ -1,22 +1,3 @@
-import {
-  createProjectResolutionFormValues,
-  PROJECT_RESOLUTION_OPTIONS,
-} from "../../internal/projectResolution.js";
-
-const createCreateProjectDefaultValues = () => ({
-  name: "",
-  description: "",
-  projectPath: "",
-  template: "default",
-  ...createProjectResolutionFormValues(),
-});
-
-const resetCreateProjectDialogState = (state) => {
-  state.defaultValues = createCreateProjectDefaultValues();
-  state.projectPath = "";
-  state.projectPathDisplay = "No folder selected";
-};
-
 export const createInitialState = () => ({
   localTitle: "Projects",
   cloudTitle: "Cloud Projects",
@@ -33,10 +14,7 @@ export const createInitialState = () => ({
   avatarInitial: "U",
   projects: [],
   cloudProjects: [],
-  isOpen: false,
   platform: "tauri",
-  projectPath: "",
-  projectPathDisplay: "No folder selected",
 
   profileMenu: {
     isOpen: false,
@@ -96,124 +74,7 @@ export const createInitialState = () => ({
       email: "",
     },
   },
-
-  defaultValues: createCreateProjectDefaultValues(),
-
-  form: {
-    title: "Create Project",
-    fields: [
-      {
-        name: "name",
-        type: "input-text",
-        label: "Project Name",
-        required: true,
-        testId: "project-name-input",
-        validations: [
-          {
-            rule: /^.+$/,
-            message: "Name is required",
-          },
-        ],
-      },
-      {
-        name: "description",
-        type: "input-text",
-        label: "Description",
-        description: "Enter a brief description of the project",
-        required: true,
-        testId: "project-description-input",
-        validations: [
-          {
-            rule: /^.+$/,
-            message: "Description is required",
-          },
-        ],
-      },
-      // comment since we only have 1 template
-      // {
-      //   name: "template",
-      //   type: "select",
-      //   label: "Template",
-      //   required: true,
-      //   options: [{ value: "default", label: "Default" }],
-      // },
-      {
-        name: "resolution",
-        type: "select",
-        label: "Resolution",
-        required: true,
-        options: PROJECT_RESOLUTION_OPTIONS,
-      },
-      {
-        $when: "values.resolution == 'custom'",
-        name: "resolutionWidth",
-        type: "input-number",
-        label: "Resolution Width",
-        required: true,
-        min: 1,
-        step: 1,
-      },
-      {
-        $when: "values.resolution == 'custom'",
-        name: "resolutionHeight",
-        type: "input-number",
-        label: "Resolution Height",
-        required: true,
-        min: 1,
-        step: 1,
-      },
-      {
-        $when: "platform == 'tauri'",
-        name: "projectPath",
-        type: "slot",
-        slot: "project-path-selector",
-        label: "Project Location",
-        required: true,
-        validations: [
-          {
-            rule: /^.+$/,
-            message: "Project location is required",
-          },
-        ],
-      },
-    ],
-    actions: {
-      layout: "", // vertical, fill, right, left
-      buttons: [
-        {
-          id: "submit",
-          variant: "pr",
-          label: "Submit",
-          type: "submit",
-          testId: "create-project-submit-button",
-        },
-      ],
-    },
-  },
 });
-
-export const toggleDialog = ({ state }, _payload = {}) => {
-  state.isOpen = !state.isOpen;
-  if (!state.isOpen) {
-    resetCreateProjectDialogState(state);
-  }
-};
-
-export const closeDialog = ({ state }, _payload = {}) => {
-  state.isOpen = false;
-  resetCreateProjectDialogState(state);
-};
-
-export const updateCreateFormValues = ({ state }, values = {}) => {
-  state.defaultValues = {
-    ...state.defaultValues,
-    ...values,
-  };
-};
-
-export const selectIsCreateDialogOpen = ({ state }) => {
-  return Boolean(state.isOpen);
-};
 
 export const setProjects = ({ state }, { projects } = {}) => {
   state.projects = projects;
@@ -311,20 +172,6 @@ export const closeSettingsDialog = ({ state }, _payload = {}) => {
 
 export const selectIsSettingsDialogOpen = ({ state }) => {
   return Boolean(state.settingsDialog?.isOpen);
-};
-
-export const setProjectPath = ({ state }, { path } = {}) => {
-  state.projectPath = path; // Update top-level for binding
-  state.defaultValues.projectPath = path; // Update defaultValues for form
-  state.projectPathDisplay = path || "No folder selected";
-};
-
-export const selectDefaultValues = ({ state }) => {
-  return state.defaultValues;
-};
-
-export const selectProjectPath = ({ state }) => {
-  return state.defaultValues.projectPath;
 };
 
 export const selectProjects = ({ state }) => {
@@ -603,13 +450,8 @@ export const selectViewData = ({ state }) => {
 
   return {
     ...state,
-    createProjectFormKey: `${state.isOpen}-${state.defaultValues.resolution}`,
     profileDisplayName,
     avatarImageSrc,
-    context: {
-      platform: state.platform,
-      values: state.defaultValues,
-    },
     deleteDialogTitle: "Remove Project",
     deleteDialogMessage: `Are you sure you want to remove ${deleteDialogProjectName} from the list? The project folder will still remain on disk. Delete the folder yourself if you want to permanently remove the project files.`,
     deleteDialogConfirmLabel: "Remove",

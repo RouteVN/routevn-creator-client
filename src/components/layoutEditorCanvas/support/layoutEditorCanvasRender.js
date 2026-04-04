@@ -68,6 +68,18 @@ const toArray = (value) => {
   return Array.isArray(value) ? value : [];
 };
 
+const normalizeHistoryDialogueItem = (item) => {
+  const nextItem = toPlainObject(item);
+  const nextContent = toArray(nextItem.content);
+  const firstContentItem = toPlainObject(nextContent[0]);
+
+  return {
+    ...nextItem,
+    characterName: nextItem.characterName ?? "",
+    text: nextItem.text ?? firstContentItem.text ?? "",
+  };
+};
+
 const normalizeLayoutEditorPreviewData = (previewData = {}) => {
   const nextPreviewData = toPlainObject(previewData);
   const nextDialogue = toPlainObject(nextPreviewData.dialogue);
@@ -75,6 +87,7 @@ const normalizeLayoutEditorPreviewData = (previewData = {}) => {
   const nextChoice = toPlainObject(nextPreviewData.choice);
   const nextConfirmDialog = toPlainObject(nextPreviewData.confirmDialog);
   const dialogueContent = toArray(nextDialogue.content);
+  const historyDialogue = toArray(nextPreviewData.historyDialogue);
 
   return {
     ...nextPreviewData,
@@ -107,6 +120,19 @@ const normalizeLayoutEditorPreviewData = (previewData = {}) => {
       confirmActions: toPlainObject(nextConfirmDialog.confirmActions),
       cancelActions: toPlainObject(nextConfirmDialog.cancelActions),
     },
+    historyDialogue:
+      historyDialogue.length > 0
+        ? historyDialogue.map(normalizeHistoryDialogueItem)
+        : [
+            {
+              characterName: "Alice",
+              text: "First history line",
+            },
+            {
+              characterName: "Bob",
+              text: "Second history line",
+            },
+          ],
     saveSlots: toArray(nextPreviewData.saveSlots),
   };
 };

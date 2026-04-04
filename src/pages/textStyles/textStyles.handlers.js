@@ -42,10 +42,17 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
-const refreshTextStylesData = async (deps) => {
-  const { store, render, projectService } = deps;
+const refreshTextStylesData = async (deps, { selectedItemId } = {}) => {
+  const { store, render, projectService, refs } = deps;
   syncRepositoryToStore({ store, projectService });
+  if (selectedItemId !== undefined) {
+    store.setSelectedItemId({ itemId: selectedItemId });
+  }
   render();
+
+  if (selectedItemId) {
+    refs?.fileExplorer?.selectItem?.({ itemId: selectedItemId });
+  }
 };
 
 const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
@@ -588,4 +595,28 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   await refreshTextStylesData(deps);
+};
+
+export const handleItemDuplicate = async (deps, payload) => {
+  const { appService, projectService } = deps;
+  const { itemId } = payload._event.detail;
+  if (!itemId) {
+    return;
+  }
+
+  const duplicateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to duplicate text style.",
+    action: () =>
+      projectService.duplicateTextStyle({
+        textStyleId: itemId,
+      }),
+  });
+  if (!duplicateAttempt.ok) {
+    return;
+  }
+
+  await refreshTextStylesData(deps, {
+    selectedItemId: duplicateAttempt.result,
+  });
 };

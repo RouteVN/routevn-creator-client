@@ -75,8 +75,15 @@ export const createControlCommandApi = (shared) => ({
     });
   },
 
-  async updateControlItem({ controlId, data }) {
+  async updateControlItem({ controlId, data, fileRecords = [] }) {
     const context = await shared.ensureCommandContext();
+    const ensureFilesResult = await shared.ensureFilesExist({
+      context,
+      fileRecords,
+    });
+    if (ensureFilesResult?.valid === false) {
+      return ensureFilesResult;
+    }
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
       "controls",

@@ -19,12 +19,12 @@ export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   state.collapsedIds.push(groupId);
 };
 
-export const showContextMenu = ({ state }, { itemId, x, y } = {}) => {
+export const showContextMenu = ({ state, props }, { itemId, x, y } = {}) => {
   state.dropdownMenu.isOpen = true;
   state.dropdownMenu.x = x;
   state.dropdownMenu.y = y;
   state.dropdownMenu.targetItemId = itemId;
-  state.dropdownMenu.items = [
+  state.dropdownMenu.items = props.itemContextMenuItems ?? [
     { label: "Delete", type: "item", value: "delete-item" },
   ];
 };

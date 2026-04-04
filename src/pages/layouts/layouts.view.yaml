@@ -21,6 +21,8 @@ refs:
         handler: handleSearchInput
       item-delete:
         handler: handleItemDelete
+      item-duplicate:
+        handler: handleItemDuplicate
   addLayoutDialog:
     eventListeners:
       close:

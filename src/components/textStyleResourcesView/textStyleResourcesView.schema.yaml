@@ -23,3 +23,6 @@ propsSchema:
     addText:
       type: string
       description: Text to display in add affordances
+    itemContextMenuItems:
+      type: array
+      description: Context menu items for text style cards

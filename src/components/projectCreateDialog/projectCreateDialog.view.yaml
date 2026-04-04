@@ -1,0 +1,23 @@
+refs:
+  dialogBody:
+    eventListeners:
+      keydown:
+        handler: handleKeyDown
+  createProjectForm:
+    eventListeners:
+      form-change:
+        handler: handleFormChange
+  browseButton:
+    eventListeners:
+      click:
+        handler: handleBrowseButtonClick
+template:
+  - rtgl-view#dialogBody g=md w=f:
+      - rtgl-form#createProjectForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${context} w=f:
+          - $if platform == 'tauri':
+              - rtgl-view slot=project-path-selector g=xs:
+                  - rtgl-view d=h g=sm av=c:
+                      - rtgl-input#pathInput w=f :value=${projectPathDisplay} disabled=true placeholder="No folder selected": null
+                      - rtgl-button#browseButton variant=se: Browse
+                  - $if validationErrors.projectPath:
+                      - rtgl-text s=sm c=de: ${validationErrors.projectPath}

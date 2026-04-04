@@ -96,8 +96,9 @@ export const handleCloseContextMenu = (deps) => {
   render();
 };
 
-export const handleContextMenuClickItem = (deps) => {
+export const handleContextMenuClickItem = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
+  const action = payload._event.detail.item?.value;
   const itemId = store.selectDropdownMenu().targetItemId;
 
   if (!itemId) {
@@ -106,13 +107,25 @@ export const handleContextMenuClickItem = (deps) => {
     return;
   }
 
-  dispatchEvent(
-    new CustomEvent("item-delete", {
-      detail: { itemId },
-      bubbles: true,
-      composed: true,
-    }),
-  );
+  if (action === "duplicate-item") {
+    dispatchEvent(
+      new CustomEvent("item-duplicate", {
+        detail: { itemId },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  if (action === "delete-item") {
+    dispatchEvent(
+      new CustomEvent("item-delete", {
+        detail: { itemId },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
 
   store.hideContextMenu();
   render();

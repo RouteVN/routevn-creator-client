@@ -352,18 +352,19 @@ const createBeforeHandleActionsHook = (deps) => {
   return async (actions, eventContext) => {
     const projectData = store.selectProjectData();
     const eventData = eventContext?._event;
+    const preparedActions = structuredClone(actions);
     const slotBinding =
       eventData?.slotId !== undefined ? "_event.slotId" : undefined;
     const thumbnailImage = await captureCanvasThumbnailImage(
       deps.graphicsService,
       deps.refs?.canvas,
     );
-    applyRuntimeActionContext(actions, {
+    applyRuntimeActionContext(preparedActions, {
       slotBinding,
       thumbnailImage,
     });
     await preloadRuntimeThumbnailImage(deps.graphicsService, thumbnailImage);
-    const resolvedActions = resolveEventBindings(actions, eventData);
+    const resolvedActions = resolveEventBindings(preparedActions, eventData);
     const layoutIds = Array.from(
       new Set([
         ...extractLayoutIdsFromValue(resolvedActions, projectData),
@@ -388,13 +389,14 @@ const createBeforeHandleActionsHook = (deps) => {
     );
 
     if (transitionSceneIds.length === 0) {
-      return;
+      return preparedActions;
     }
 
     await loadAssetsForSceneIds(deps, projectData, transitionSceneIds, {
       showLoading: false,
     });
     await preloadDirectTransitionScenes(deps, projectData, transitionSceneIds);
+    return preparedActions;
   };
 };
 
