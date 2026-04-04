@@ -149,8 +149,15 @@ export const createLayoutCommandApi = (shared) => ({
     });
   },
 
-  async updateLayoutItem({ layoutId, data }) {
+  async updateLayoutItem({ layoutId, data, fileRecords = [] }) {
     const context = await shared.ensureCommandContext();
+    const ensureFilesResult = await shared.ensureFilesExist({
+      context,
+      fileRecords,
+    });
+    if (ensureFilesResult?.valid === false) {
+      return ensureFilesResult;
+    }
     const resourcePartition = getLayoutsResourcePartition({ shared, context });
 
     return shared.submitCommandWithContext({

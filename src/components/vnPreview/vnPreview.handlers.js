@@ -14,6 +14,13 @@ import {
   captureCanvasThumbnailImage,
   preloadRuntimeThumbnailImage,
 } from "../../internal/ui/runtimeActionPreparation.js";
+import {
+  collectSceneIdsFromValue,
+  collectSectionIdsFromValue,
+  ensurePreviewProjectDataTargets,
+  resolveSceneIdForSectionId,
+  withPreviewEntryPoint,
+} from "./support/vnPreviewProjectData.js";
 
 /**
  * Load assets (images and fonts) for rendering
@@ -155,51 +162,146 @@ const preloadLayoutAssetsByIds = async (deps, projectData, layoutIds) => {
   });
 };
 
-const createBeforeHandleActionsHook = (deps, projectData) => {
+const createBeforeHandleActionsHook = (
+  deps,
+  { repository, projectData, sceneId, sectionId, lineId } = {},
+) => {
+  let currentProjectData = projectData;
+  let loadedSceneIds = new Set(
+    typeof sceneId === "string" && sceneId.length > 0
+      ? [sceneId]
+      : Object.keys(projectData?.story?.scenes || {}),
+  );
+
   return async (actions, eventContext) => {
     const eventData = eventContext?._event;
+    const preparedActions = structuredClone(actions);
     const slotBinding =
       eventData?.slotId !== undefined ? "_event.slotId" : undefined;
     const thumbnailImage = await captureCanvasThumbnailImage(
       deps.graphicsService,
       deps.refs?.canvas,
     );
-    applyRuntimeActionContext(actions, {
+    applyRuntimeActionContext(preparedActions, {
       slotBinding,
       thumbnailImage,
     });
     await preloadRuntimeThumbnailImage(deps.graphicsService, thumbnailImage);
-    const resolvedActions = resolveEventBindings(actions, eventData);
-    const layoutIds = Array.from(
-      new Set([
-        ...extractLayoutIdsFromValue(resolvedActions, projectData),
-        ...extractLayoutIdsFromValue(eventData, projectData),
-      ]),
+    const resolvedActions = resolveEventBindings(preparedActions, eventData);
+    const referencedSceneIds = collectSceneIdsFromValue(
+      resolvedActions,
+      eventData,
     );
-    if (layoutIds.length > 0) {
-      await preloadLayoutAssetsByIds(deps, projectData, layoutIds);
-    }
-
-    const transitionSceneIds = Array.from(
-      new Set([
-        ...extractTransitionTargetSceneIdsFromActions(
-          resolvedActions,
-          projectData,
-        ),
-        ...extractTransitionTargetSceneIdsFromActions(eventData, projectData),
-        ...extractSceneIdsFromValue(resolvedActions, projectData),
-        ...extractSceneIdsFromValue(eventData, projectData),
-      ]),
+    const referencedSectionIds = collectSectionIdsFromValue(
+      resolvedActions,
+      eventData,
     );
+    const missingSceneIds = referencedSceneIds.filter(
+      (targetSceneId) => !loadedSceneIds.has(targetSceneId),
+    );
+    const missingSectionIds = [];
 
-    if (transitionSceneIds.length === 0) {
-      return;
-    }
+    referencedSectionIds.forEach((targetSectionId) => {
+      const targetSceneId = resolveSceneIdForSectionId(
+        currentProjectData,
+        targetSectionId,
+      );
 
-    await loadAssetsForSceneIds(deps, projectData, transitionSceneIds, {
-      showLoading: false,
+      if (!targetSceneId) {
+        missingSectionIds.push(targetSectionId);
+        return;
+      }
+
+      if (!loadedSceneIds.has(targetSceneId)) {
+        missingSceneIds.push(targetSceneId);
+      }
     });
-    await preloadDirectTransitionScenes(deps, projectData, transitionSceneIds);
+
+    const shouldShowLoading =
+      missingSceneIds.length > 0 || missingSectionIds.length > 0;
+
+    if (shouldShowLoading) {
+      setAssetLoading(deps, true);
+    }
+
+    try {
+      if (shouldShowLoading) {
+        const hydrationResult = await ensurePreviewProjectDataTargets({
+          repository,
+          projectData: currentProjectData,
+          loadedSceneIds: Array.from(loadedSceneIds),
+          sceneIds: missingSceneIds,
+          sectionIds: missingSectionIds,
+          initialSceneId: sceneId,
+          initialSectionId: sectionId,
+          initialLineId: lineId,
+        });
+
+        if (hydrationResult.didLoad) {
+          currentProjectData = hydrationResult.projectData;
+          loadedSceneIds = new Set(hydrationResult.loadedSceneIds);
+          deps.graphicsService.engineHandleActions(
+            {
+              updateProjectData: {
+                projectData: currentProjectData,
+              },
+            },
+            undefined,
+            {
+              suppressRenderEffects: true,
+            },
+          );
+        }
+      }
+
+      const layoutIds = Array.from(
+        new Set([
+          ...extractLayoutIdsFromValue(resolvedActions, currentProjectData),
+          ...extractLayoutIdsFromValue(eventData, currentProjectData),
+        ]),
+      );
+      if (layoutIds.length > 0) {
+        await preloadLayoutAssetsByIds(deps, currentProjectData, layoutIds);
+      }
+
+      const transitionSceneIds = Array.from(
+        new Set([
+          ...extractTransitionTargetSceneIdsFromActions(
+            resolvedActions,
+            currentProjectData,
+          ),
+          ...extractTransitionTargetSceneIdsFromActions(
+            eventData,
+            currentProjectData,
+          ),
+          ...extractSceneIdsFromValue(resolvedActions, currentProjectData),
+          ...extractSceneIdsFromValue(eventData, currentProjectData),
+        ]),
+      );
+
+      if (transitionSceneIds.length === 0) {
+        return preparedActions;
+      }
+
+      await loadAssetsForSceneIds(
+        deps,
+        currentProjectData,
+        transitionSceneIds,
+        {
+          showLoading: false,
+        },
+      );
+      await preloadDirectTransitionScenes(
+        deps,
+        currentProjectData,
+        transitionSceneIds,
+      );
+      return preparedActions;
+    } finally {
+      if (shouldShowLoading) {
+        setAssetLoading(deps, false);
+      }
+    }
   };
 };
 
@@ -241,21 +343,19 @@ export const handleAfterMount = async (deps) => {
     initialSceneId: sceneId,
   });
 
-  const projectDataWithInitial = structuredClone(projectData);
-  const scene = projectDataWithInitial.story.scenes[sceneId];
+  const projectDataWithInitial = withPreviewEntryPoint(projectData, {
+    sceneId,
+    sectionId,
+    lineId,
+  });
 
-  if (scene && sectionId && sectionId !== "undefined") {
-    scene.initialSectionId = sectionId;
-
-    if (lineId && lineId !== "undefined" && scene.sections[sectionId]) {
-      scene.sections[sectionId].initialLineId = lineId;
-    }
-  }
-
-  const beforeHandleActions = createBeforeHandleActionsHook(
-    deps,
-    projectDataWithInitial,
-  );
+  const beforeHandleActions = createBeforeHandleActionsHook(deps, {
+    repository,
+    projectData: projectDataWithInitial,
+    sceneId,
+    sectionId,
+    lineId,
+  });
   const previewWidth = projectDataWithInitial?.screen?.width;
   const previewHeight = projectDataWithInitial?.screen?.height;
   store.setProjectResolution({

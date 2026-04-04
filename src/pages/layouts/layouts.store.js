@@ -137,7 +137,7 @@ const buildDetailFields = (item) => {
 
 const buildCatalogItem = (item) => {
   const layoutType = item.layoutType;
-  const subtitle = isFragmentLayout(item)
+  const typeInfo = isFragmentLayout(item)
     ? `${layoutTypeLabels[layoutType] ?? layoutType ?? ""} / Fragment`
     : (layoutTypeLabels[layoutType] ?? layoutType ?? "");
 
@@ -145,7 +145,9 @@ const buildCatalogItem = (item) => {
     id: item.id,
     name: item.name,
     cardKind: "layout",
-    subtitle,
+    cardVariant: "thumbnail",
+    previewFileId: item.thumbnailFileId,
+    typeInfo,
   };
 };
 

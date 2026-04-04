@@ -157,6 +157,7 @@ export const createProjectServiceCore = ({
     getCollabSessionMode: collabService.getCollabSessionMode,
     stopCollabSession: collabService.stopCollabSession,
     submitCommand: collabService.submitCommand,
+    storeFile: assetService.storeFile,
     uploadFiles: assetService.uploadFiles,
     getFileContent: assetService.getFileContent,
     downloadMetadata: assetService.downloadMetadata,

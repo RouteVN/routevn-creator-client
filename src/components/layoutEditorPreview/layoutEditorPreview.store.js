@@ -164,7 +164,10 @@ export const setChoiceDefaultValue = ({ state }, { name, fieldValue } = {}) => {
   state.choiceDefaultValues.choices = choices;
 };
 
-export const setHistoryDefaultValue = ({ state }, { name, fieldValue } = {}) => {
+export const setHistoryDefaultValue = (
+  { state },
+  { name, fieldValue } = {},
+) => {
   if (/^characterName\d+$/.test(name)) {
     const index = Number.parseInt(name.slice("characterName".length), 10);
     state.historyDefaultValues.characterNames[index] = fieldValue;

@@ -1,7 +1,9 @@
 export const createHistoryLines = (historyDefaultValues = {}) => {
   const linesNum = Number(historyDefaultValues.linesNum);
   const lineCount = Number.isFinite(linesNum) && linesNum > 0 ? linesNum : 0;
-  const sourceCharacterNames = Array.isArray(historyDefaultValues.characterNames)
+  const sourceCharacterNames = Array.isArray(
+    historyDefaultValues.characterNames,
+  )
     ? historyDefaultValues.characterNames
     : [];
   const sourceTexts = Array.isArray(historyDefaultValues.texts)

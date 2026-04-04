@@ -902,15 +902,24 @@ export const createGraphicsService = async ({ subject }) => {
   };
 
   const runInteractionActions = async (actions, eventContext) => {
+    let nextActions = actions;
+
     if (beforeHandleActions) {
-      await beforeHandleActions(actions, eventContext);
+      const preparedActions = await beforeHandleActions(actions, eventContext);
+      if (preparedActions !== undefined) {
+        nextActions = preparedActions;
+      }
     }
 
     if (!engine) {
       return;
     }
 
-    engine.handleActions(actions, eventContext);
+    engine.handleActions(nextActions, eventContext);
+    return {
+      actions: nextActions,
+      eventContext,
+    };
   };
 
   const getEventActions = (payload) => {
@@ -1161,6 +1170,7 @@ export const createGraphicsService = async ({ subject }) => {
             const eventContext = payload._event
               ? { _event: payload._event }
               : undefined;
+
             const interactionId = eventContext?._event?.id ?? "__unknown__";
 
             if (RIGHT_CLICK_EVENT_NAMES.has(eventName)) {

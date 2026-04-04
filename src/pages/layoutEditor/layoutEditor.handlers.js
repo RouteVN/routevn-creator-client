@@ -39,6 +39,22 @@ const getResultErrorMessage = (result, fallbackMessage) => {
   );
 };
 
+const getLayoutEditorOwnerConfig = (resourceType, projectService) => {
+  const isControls = resourceType === "controls";
+  return {
+    ownerPayloadKey: isControls ? "controlId" : "layoutId",
+    ownerLabel: isControls ? "Control" : "Layout",
+    updateItem: isControls
+      ? projectService.updateControlItem.bind(projectService)
+      : projectService.updateLayoutItem.bind(projectService),
+  };
+};
+
+const dataUrlToBlob = async (value) => {
+  const response = await fetch(value);
+  return response.blob();
+};
+
 const resolveMenuItem = (detail = {}) => detail.item || detail;
 
 const resolveSliderCreateAction = (detail = {}) => {
@@ -156,6 +172,69 @@ export const handleBackClick = (deps) => {
   const currentPayload = appService.getPayload() || {};
   const nextPath = getLayoutEditorBackPath(currentPayload);
   appService.navigate(nextPath, { p: currentPayload.p });
+};
+
+export const handleSaveButtonClick = async (deps) => {
+  const { appService, projectService, refs, store } = deps;
+  const layoutId = store.selectLayoutId();
+  const resourceType = store.selectLayoutResourceType();
+  const { ownerPayloadKey, ownerLabel, updateItem } =
+    getLayoutEditorOwnerConfig(resourceType, projectService);
+
+  if (!layoutId) {
+    appService.showToast(`${ownerLabel} is missing.`, {
+      title: "Error",
+    });
+    return;
+  }
+
+  try {
+    const thumbnailImage =
+      await refs.layoutEditorCanvas.captureThumbnailImage();
+    if (!thumbnailImage) {
+      appService.showToast(
+        `Failed to capture ${ownerLabel.toLowerCase()} thumbnail.`,
+        {
+          title: "Error",
+        },
+      );
+      return;
+    }
+
+    const thumbnailBlob = await dataUrlToBlob(thumbnailImage);
+    const storedFile = await projectService.storeFile({
+      file: thumbnailBlob,
+    });
+    const updateResult = await updateItem({
+      [ownerPayloadKey]: layoutId,
+      data: {
+        thumbnailFileId: storedFile.fileId,
+      },
+      fileRecords: storedFile.fileRecords,
+    });
+
+    if (updateResult?.valid === false) {
+      appService.showToast(
+        `Failed to update ${ownerLabel.toLowerCase()} thumbnail.`,
+        {
+          title: "Error",
+        },
+      );
+      return;
+    }
+
+    await refreshLayoutEditorData(deps, {
+      selectedItemId: store.selectSelectedItemId(),
+    });
+    appService.showToast(`${ownerLabel} thumbnail updated.`);
+  } catch {
+    appService.showToast(
+      `Failed to save ${ownerLabel.toLowerCase()} thumbnail.`,
+      {
+        title: "Error",
+      },
+    );
+  }
 };
 
 // Simple render handler for events that only need to trigger a re-render

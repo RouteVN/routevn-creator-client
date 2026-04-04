@@ -43,9 +43,7 @@ export const createLayoutEditorPreviewData = ({
     ),
     dialogue,
     historyDialogue:
-      layoutType === "history"
-        ? createHistoryLines(historyDefaultValues)
-        : [],
+      layoutType === "history" ? createHistoryLines(historyDefaultValues) : [],
     choice: {
       items: createChoicePreviewItems(choicesData),
     },

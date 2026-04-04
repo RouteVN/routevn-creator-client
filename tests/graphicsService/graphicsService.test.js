@@ -4,9 +4,12 @@ const createAssetBufferManagerMock = vi.fn();
 const createRouteGraphicsMock = vi.fn();
 const createRouteEngineMock = vi.fn();
 const createEffectsHandlerMock = vi.fn(() => vi.fn());
+let routeGraphicsInitOptions;
 
 const routeGraphicsInstance = {
-  init: vi.fn(async () => {}),
+  init: vi.fn(async (options) => {
+    routeGraphicsInitOptions = options;
+  }),
   destroy: vi.fn(),
   loadAssets: vi.fn(async () => {}),
   render: vi.fn(),
@@ -65,7 +68,14 @@ vi.mock("pixi.js", () => ({
 
 describe("graphicsService", () => {
   beforeEach(() => {
+    routeGraphicsInitOptions = undefined;
     assetsCache.clear();
+    audioAssetApi.getAsset = vi.fn(() => undefined);
+    audioAssetApi.load = vi.fn(async () => {});
+    audioAssetApi.unload = vi.fn(async () => {});
+    audioAssetApi.remove = vi.fn();
+    audioAssetApi.clear = vi.fn();
+    audioAssetApi.reset = vi.fn();
     routeGraphicsInstance.init.mockClear();
     routeGraphicsInstance.destroy.mockClear();
     routeGraphicsInstance.loadAssets.mockClear();
@@ -153,5 +163,109 @@ describe("graphicsService", () => {
 
     await expect(pendingLoad).resolves.toBeUndefined();
     expect(routeGraphicsInstance.loadAssets).not.toHaveBeenCalled();
+  });
+
+  it("uses actions returned from beforeHandleActions without mutating the original interaction payload", async () => {
+    const handleActions = vi.fn();
+    createRouteEngineMock.mockReturnValue({
+      init: vi.fn(),
+      selectRenderState: vi.fn(() => ({
+        id: "render-1",
+        elements: [],
+        audio: [],
+        animations: [],
+      })),
+      selectPresentationState: vi.fn(() => undefined),
+      selectPresentationChanges: vi.fn(() => undefined),
+      selectSectionLineChanges: vi.fn(() => []),
+      handleActions,
+    });
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+      beforeHandleActions: async (actions) => {
+        const nextActions = structuredClone(actions);
+        nextActions.toggleSkipMode = {};
+        return nextActions;
+      },
+    });
+
+    service.initRouteEngine({
+      screen: { width: 1920, height: 1080 },
+      story: { scenes: {} },
+      resources: {},
+    });
+
+    const originalActions = {
+      updateVariable: {
+        id: "update-1",
+        operations: [
+          {
+            variableId: "var-1",
+            op: "set",
+            value: "_event.value",
+          },
+        ],
+      },
+    };
+
+    routeGraphicsInitOptions.eventHandler("change", {
+      _event: {
+        id: "slider-1",
+        value: 42,
+      },
+      actions: originalActions,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(handleActions).toHaveBeenCalledWith(
+      {
+        updateVariable: {
+          id: "update-1",
+          operations: [
+            {
+              variableId: "var-1",
+              op: "set",
+              value: "_event.value",
+            },
+          ],
+        },
+        toggleSkipMode: {},
+      },
+      {
+        _event: {
+          id: "slider-1",
+          value: 42,
+        },
+      },
+    );
+    expect(originalActions).toEqual({
+      updateVariable: {
+        id: "update-1",
+        operations: [
+          {
+            variableId: "var-1",
+            op: "set",
+            value: "_event.value",
+          },
+        ],
+      },
+    });
   });
 });
