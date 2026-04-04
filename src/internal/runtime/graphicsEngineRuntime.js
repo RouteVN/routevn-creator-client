@@ -371,6 +371,43 @@ export const preloadRuntimeThumbnailImage = async (graphicsService, value) => {
   });
 };
 
+export const preloadRuntimeSaveSlotImages = async (
+  graphicsService,
+  saveSlots = {},
+) => {
+  if (!saveSlots || typeof saveSlots !== "object" || Array.isArray(saveSlots)) {
+    return {
+      attempted: 0,
+      failed: 0,
+    };
+  }
+
+  const images = Array.from(
+    new Set(
+      Object.values(saveSlots)
+        .map((saveSlot) => saveSlot?.image ?? saveSlot?.thumbnailImage)
+        .filter(
+          (value) => typeof value === "string" && value.startsWith("data:"),
+        ),
+    ),
+  );
+
+  let failed = 0;
+
+  for (const image of images) {
+    try {
+      await preloadRuntimeThumbnailImage(graphicsService, image);
+    } catch {
+      failed += 1;
+    }
+  }
+
+  return {
+    attempted: images.length,
+    failed,
+  };
+};
+
 export const prepareRuntimeInteractionExecution = async ({
   actions,
   eventContext,

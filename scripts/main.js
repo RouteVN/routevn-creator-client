@@ -8,6 +8,7 @@ import {
   createRuntimeEventContext,
   getRuntimeEventActions,
   loadGraphicsEnginePlugins,
+  preloadRuntimeSaveSlotImages,
   prepareRuntimeInteractionExecution,
 } from "../src/internal/runtime/graphicsEngineRuntime.js";
 import { BUNDLE_FORMAT_VERSION } from "../src/deps/services/shared/projectExportService.js";
@@ -216,6 +217,16 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
     JSON.parse(localStorage.getItem("globalDeviceVariables")) || {};
   const globalAccountVariables =
     JSON.parse(localStorage.getItem("globalAccountVariables")) || {};
+  const preloadSaveSlotImagesResult = await preloadRuntimeSaveSlotImages(
+    routeGraphics,
+    saveSlots,
+  );
+
+  if (preloadSaveSlotImagesResult.failed > 0) {
+    console.warn(
+      `Failed to preload ${preloadSaveSlotImagesResult.failed} saved thumbnail image(s) during bundle startup.`,
+    );
+  }
 
   const startEngine = () => {
     engine.init({
