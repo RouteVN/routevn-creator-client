@@ -56,6 +56,13 @@ const canvasToBlob = (canvas, type, quality) => {
   });
 };
 
+const getFileNameWithExtension = (name, extension) => {
+  const normalizedName =
+    String(name || "cropped-image").trim() || "cropped-image";
+  const baseName = normalizedName.replace(/\.[^/.]+$/, "");
+  return `${baseName}${extension}`;
+};
+
 const getScaledThumbnailDimensions = ({
   sourceWidth,
   sourceHeight,
@@ -178,6 +185,102 @@ export const validateIconDimensions = async (file) => {
     isValid: true,
     message: null,
   };
+};
+
+export const validateImageMinimumDimensions = async (
+  file,
+  { minWidth = 1, minHeight = 1 } = {},
+) => {
+  const dimensions = await getImageDimensions(file);
+
+  if (!dimensions) {
+    return {
+      isValid: false,
+      message: "Unable to read image dimensions",
+    };
+  }
+
+  if (dimensions.width < minWidth || dimensions.height < minHeight) {
+    return {
+      isValid: false,
+      message: `Image size must be at least ${minWidth}x${minHeight} pixels. Current size: ${dimensions.width}x${dimensions.height}`,
+    };
+  }
+
+  return {
+    isValid: true,
+    message: null,
+  };
+};
+
+export const createSquareCroppedImageFile = async ({
+  file,
+  sourceX = 0,
+  sourceY = 0,
+  sourceSize,
+  outputSize,
+  preferredFormat = "image/png",
+  quality = 0.92,
+} = {}) => {
+  if (!file) {
+    throw new Error("Image file is required.");
+  }
+
+  const image = await loadImageElement(file);
+  const cropSize = Math.max(
+    1,
+    Math.min(
+      image.naturalWidth,
+      image.naturalHeight,
+      Number(sourceSize) || Math.min(image.naturalWidth, image.naturalHeight),
+    ),
+  );
+  const resolvedOutputSize = Math.max(
+    1,
+    Math.round(Number(outputSize) || cropSize),
+  );
+  const maxSourceX = Math.max(0, image.naturalWidth - cropSize);
+  const maxSourceY = Math.max(0, image.naturalHeight - cropSize);
+  const safeSourceX = Math.min(Math.max(0, Number(sourceX) || 0), maxSourceX);
+  const safeSourceY = Math.min(Math.max(0, Number(sourceY) || 0), maxSourceY);
+
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Unable to create crop canvas context");
+  }
+
+  canvas.width = resolvedOutputSize;
+  canvas.height = resolvedOutputSize;
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+  context.clearRect(0, 0, resolvedOutputSize, resolvedOutputSize);
+  context.drawImage(
+    image,
+    safeSourceX,
+    safeSourceY,
+    cropSize,
+    cropSize,
+    0,
+    0,
+    resolvedOutputSize,
+    resolvedOutputSize,
+  );
+
+  const blob = await canvasToBlob(canvas, preferredFormat, quality);
+  canvas.remove();
+
+  const fileName = getFileNameWithExtension(file.name, ".png");
+  if (typeof File === "function") {
+    return new File([blob], fileName, {
+      type: preferredFormat,
+      lastModified: Date.now(),
+    });
+  }
+
+  blob.name = fileName;
+  blob.lastModified = Date.now();
+  return blob;
 };
 
 // Audio waveform extraction and processing utilities

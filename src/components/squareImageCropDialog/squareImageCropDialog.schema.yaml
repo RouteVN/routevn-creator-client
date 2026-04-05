@@ -1,0 +1,26 @@
+componentName: rvn-square-image-crop-dialog
+propsSchema:
+  type: object
+  properties:
+    open:
+      type: boolean
+      description: Whether the crop dialog is open
+    file:
+      type: object
+      description: The selected source image file to crop
+    title:
+      type: string
+      description: Optional title to display above the cropper
+    description:
+      type: string
+      description: Optional helper text to display above the cropper
+    confirmLabel:
+      type: string
+      description: Optional confirm button label
+methods:
+  type: object
+  properties:
+    getCroppedFile:
+      description: Returns a square-cropped image file based on the current crop state.
+      params: []
+      returns: object

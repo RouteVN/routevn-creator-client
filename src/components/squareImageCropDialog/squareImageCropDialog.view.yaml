@@ -1,0 +1,19 @@
+refs:
+  dialog:
+    eventListeners:
+      close:
+        handler: handleDialogClose
+  confirmButton:
+    eventListeners:
+      click:
+        handler: handleConfirmClick
+  cropper: {}
+template:
+  - rtgl-dialog#dialog ?open=${isOpen} s=sm:
+      - rtgl-view slot=content g=md:
+          - rtgl-view g=xs:
+              - rtgl-text s=md: ${title}
+              - rtgl-text s=sm c=mu-fg: ${description}
+          - rvn-square-image-cropper#cropper :file=${file}: null
+          - rtgl-view d=h w=f ah=e:
+              - rtgl-button#confirmButton v=pr: ${confirmLabel}

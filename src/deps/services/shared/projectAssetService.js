@@ -61,10 +61,12 @@ export const createProjectAssetService = ({
   getCurrentReference,
   getStoreByProject,
 }) => {
-  const storeRawFile = async ({ file, bytes } = {}) => {
+  const storeRawFile = async ({ file, bytes, projectId, projectPath } = {}) => {
     return fileAdapter.storeFile({
       file,
       bytes,
+      projectId,
+      projectPath,
       idGenerator,
       getCurrentStore,
       getCurrentReference,
@@ -72,12 +74,23 @@ export const createProjectAssetService = ({
     });
   };
 
-  const storeFileWithRecord = async ({ file, bytes, timings } = {}) => {
+  const storeFileWithRecord = async ({
+    file,
+    bytes,
+    timings,
+    projectId,
+    projectPath,
+  } = {}) => {
     const fileBytes = bytes ?? (await file.arrayBuffer());
     const [stored, sha256] = await Promise.all([
       (async () => {
         const storeStartedAt = getNow();
-        const result = await storeRawFile({ file, bytes: fileBytes });
+        const result = await storeRawFile({
+          file,
+          bytes: fileBytes,
+          projectId,
+          projectPath,
+        });
         if (timings) {
           timings.storeDurationMs = getDurationMs(storeStartedAt);
         }
@@ -333,6 +346,15 @@ export const createProjectAssetService = ({
         ...stored,
         fileRecords: [stored.fileRecord],
       };
+    },
+
+    async storeFileForProject({ projectId, projectPath, file, bytes } = {}) {
+      return storeFileWithRecord({
+        file,
+        bytes,
+        projectId,
+        projectPath,
+      });
     },
 
     async uploadFiles(files) {

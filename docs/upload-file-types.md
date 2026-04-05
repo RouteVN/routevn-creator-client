@@ -64,6 +64,7 @@ Current explicit page validators:
 Current validation types:
 
 - `square`
+- `image-min-size`
 
 This is used for avatar/icon uploads.
 
@@ -103,11 +104,12 @@ Current shared type fallbacks are intentionally narrower than before:
 
 ### Dialog / Special Upload Surfaces
 
-| Surface                     | Allowed file types                | Extra validation                             | Notes                                      |
-| --------------------------- | --------------------------------- | -------------------------------------------- | ------------------------------------------ |
-| Character avatar upload     | `image/*`                         | `square`                                     | create dialog, edit dialog, avatar replace |
-| Project icon upload         | `image/*`                         | `square`                                     | project settings dialog                    |
-| Text styles add-font dialog | `.ttf`, `.otf`, `.woff`, `.woff2` | none in page, drop zone filters by extension | narrower than Fonts page today             |
+| Surface                             | Allowed file types                | Extra validation                             | Notes                                      |
+| ----------------------------------- | --------------------------------- | -------------------------------------------- | ------------------------------------------ |
+| Character avatar upload             | `image/*`                         | `image-min-size` + square crop dialog        | create dialog, edit dialog, avatar replace |
+| Project icon upload (create dialog) | `image/*`                         | `image-min-size` + square crop dialog        | projects page create dialog                |
+| Project icon upload (settings)      | `image/*`                         | `square`                                     | project settings dialog                    |
+| Text styles add-font dialog         | `.ttf`, `.otf`, `.woff`, `.woff2` | none in page, drop zone filters by extension | narrower than Fonts page today             |
 
 ## Current Code Locations
 
@@ -126,8 +128,13 @@ Current shared type fallbacks are intentionally narrower than before:
 - Text styles font dialog: `src/pages/textStyles/textStyles.view.yaml`,
   `src/pages/textStyles/textStyles.store.js`,
   `src/pages/textStyles/textStyles.handlers.js`
-- Character avatars: `src/pages/characters/characters.handlers.js`
-- Project icon: `src/pages/project/project.handlers.js`
+- Character avatars: `src/pages/characters/characters.handlers.js`,
+  `src/components/squareImageCropDialog/`,
+  `src/components/squareImageCropper/`
+- Project create icon: `src/components/projectCreateDialog/`,
+  `src/components/squareImageCropDialog/`,
+  `src/components/squareImageCropper/`
+- Project settings icon: `src/pages/project/project.handlers.js`
 
 ### Shared Enforcement
 

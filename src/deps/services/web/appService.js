@@ -46,14 +46,25 @@ export const createAppService = (params) => {
       description,
       template,
       projectResolution,
+      iconFile,
       addProjectEntry,
       projectService,
     }) => {
+      const projectId = nanoid();
+      let iconFileId = null;
+      if (iconFile) {
+        const storedIcon = await projectService.storeFileForProject({
+          projectId,
+          file: iconFile,
+        });
+        iconFileId = storedIcon.fileId;
+      }
+
       const projectEntry = {
-        id: nanoid(),
+        id: projectId,
         name,
         description,
-        iconFileId: null,
+        iconFileId,
         createdAt: Date.now(),
         lastOpenedAt: null,
       };
@@ -65,12 +76,23 @@ export const createAppService = (params) => {
         projectInfo: {
           name,
           description,
-          iconFileId: null,
+          iconFileId,
         },
       });
 
       await addProjectEntry(projectEntry);
-      return { ...projectEntry };
+      const fullProject = { ...projectEntry };
+      if (iconFileId) {
+        const iconResult = await platformAdapter.loadProjectIcon({
+          entry: projectEntry,
+          projectService,
+        });
+        if (iconResult?.url) {
+          fullProject.iconUrl = iconResult.url;
+        }
+      }
+
+      return fullProject;
     },
 
     selectFiles: ({ options, multiple, filePicker }) => {

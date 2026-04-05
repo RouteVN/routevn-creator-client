@@ -184,8 +184,17 @@ export const createWebProjectServiceAdapters = ({
   const fileAdapter = {
     continueOnUploadError: true,
 
-    storeFile: async ({ file, bytes, idGenerator, getCurrentStore }) => {
-      const adapter = getCurrentStore();
+    storeFile: async ({
+      file,
+      bytes,
+      projectId,
+      idGenerator,
+      getCurrentStore,
+      getStoreByProject,
+    }) => {
+      const adapter = projectId
+        ? await getStoreByProject(projectId)
+        : getCurrentStore();
       const fileId = idGenerator();
       const totalStartedAt = getNow();
       let blobBuildDurationMs = 0;

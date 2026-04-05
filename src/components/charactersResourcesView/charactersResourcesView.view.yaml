@@ -57,7 +57,7 @@ template:
                                   - $for item, itemIndex in group.children:
                                       - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} w=f cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=lg d=h g=xl wrap p=lg:
                                           - $if item.fileId:
-                                              - rvn-file-image w=96 h=96 br=f fileId=${item.fileId}: null
+                                              - rvn-file-image w=96 h=96 bw=xs bc=bo br=f fileId=${item.fileId}: null
                                             $else:
                                               - rtgl-view w=96 h=96 av=c ah=c bgc=bg bc=bo bw=xs br=f:
                                                   - rtgl-text c=mu-fg s=sm: No Avatar

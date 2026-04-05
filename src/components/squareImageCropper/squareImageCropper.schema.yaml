@@ -1,0 +1,14 @@
+componentName: rvn-square-image-cropper
+propsSchema:
+  type: object
+  properties:
+    file:
+      type: object
+      description: The selected source image file to crop
+methods:
+  type: object
+  properties:
+    getCroppedFile:
+      description: Returns a square-cropped image file based on the current crop state.
+      params: []
+      returns: object

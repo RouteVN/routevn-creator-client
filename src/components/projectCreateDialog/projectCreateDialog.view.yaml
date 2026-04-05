@@ -11,9 +11,31 @@ refs:
     eventListeners:
       click:
         handler: handleBrowseButtonClick
+  iconPreview:
+    eventListeners:
+      click:
+        handler: handleProjectIconClick
+  iconPlaceholder:
+    eventListeners:
+      click:
+        handler: handleProjectIconClick
+  iconCropDialog:
+    eventListeners:
+      close:
+        handler: handleIconCropDialogClose
+      confirm:
+        handler: handleIconCropDialogConfirm
 template:
   - rtgl-view#dialogBody g=md w=f:
       - rtgl-form#createProjectForm key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${context} w=f:
+          - rtgl-view slot=project-icon-selector w=f:
+              - $if iconPreviewUrl:
+                  - rtgl-view w=120 h=120 av=c ah=c:
+                      - rtgl-image#iconPreview src=${iconPreviewUrl} w=120 h=120 of=cov bw=xs bc=bo br=md cur=pointer: null
+                $else:
+                  - rtgl-view w=120 h=120 av=c ah=c:
+                      - rtgl-view#iconPlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                          - rtgl-text c=mu-fg s=sm: Click to Upload
           - $if platform == 'tauri':
               - rtgl-view slot=project-path-selector g=xs:
                   - rtgl-view d=h g=sm av=c:
@@ -21,3 +43,4 @@ template:
                       - rtgl-button#browseButton variant=se: Browse
                   - $if validationErrors.projectPath:
                       - rtgl-text s=sm c=de: ${validationErrors.projectPath}
+  - rvn-square-image-crop-dialog#iconCropDialog :open=${isIconCropDialogOpen} :file=${iconCropFile}: null

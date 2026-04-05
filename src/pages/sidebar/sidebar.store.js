@@ -27,7 +27,7 @@ export const createInitialState = () => ({
       icon: "color",
     },
     {
-      title: "System Config",
+      title: "System",
       path: "/project/controls",
       icon: "settings",
     },
@@ -37,15 +37,15 @@ export const createInitialState = () => ({
       icon: "script",
     },
     {
-      title: "Versions",
+      title: "Release",
       path: "/project/releases/versions",
       icon: "choices",
     },
     {
-      type: "spacer"
+      type: "spacer",
     },
     {
-      title: "About",
+      title: "Settings",
       path: "/project/about",
       icon: "settings",
     },

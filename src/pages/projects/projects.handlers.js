@@ -142,6 +142,7 @@ export const handleCreateButtonClick = async (deps) => {
   try {
     const name = values.name ?? "";
     const description = values.description ?? "";
+    const iconFile = values.iconFile;
     const template = values.template ?? "default";
     const resolution = values.resolution;
     const resolutionWidth = values.resolutionWidth;
@@ -198,6 +199,7 @@ export const handleCreateButtonClick = async (deps) => {
     const newProject = await appService.createNewProject({
       name,
       description,
+      iconFile,
       projectPath,
       template,
       projectResolution,

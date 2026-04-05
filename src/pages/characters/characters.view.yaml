@@ -39,6 +39,12 @@ refs:
     eventListeners:
       click:
         handler: handleDialogAvatarClick
+  avatarCropDialog:
+    eventListeners:
+      close:
+        handler: handleAvatarCropDialogClose
+      confirm:
+        handler: handleAvatarCropDialogConfirm
   editDialog:
     eventListeners:
       close:
@@ -67,7 +73,7 @@ template:
                   - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
                   - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
           - 'rtgl-view w=1fg h=f pl=sm style="min-width: 0; min-height: 0;"':
-              - rvn-characters-resources-view#charactersView :navTitle=${title} :groups=${flatGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery}: null
+              - rvn-characters-resources-view#charactersView :navTitle=${title} :groups=${flatGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :addText=${addText}: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
@@ -77,7 +83,7 @@ template:
                               - rtgl-svg svg=edit wh=16: null
                           - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
                               - $if selectedAvatarFileId:
-                                  - rvn-file-image slot="avatar" w=128 h=128 br=f fileId="${selectedAvatarFileId}": null
+                                  - rvn-file-image slot="avatar" w=128 h=128 bw=xs bc=bo br=f fileId="${selectedAvatarFileId}": null
                                 $else:
                                   - rtgl-view slot="avatar" w=128 h=128 av=c ah=c bgc=bg bc=bo bw=xs br=f:
                                       - rtgl-text c=mu-fg s=sm: No Avatar
@@ -104,3 +110,4 @@ template:
                   - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
                       - rtgl-view#editAvatarPlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
                           - rtgl-text c=mu-fg s=sm: Click to Upload
+  - rvn-square-image-crop-dialog#avatarCropDialog :open=${isAvatarCropDialogOpen} :file=${avatarCropFile}: null

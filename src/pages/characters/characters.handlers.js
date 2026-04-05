@@ -8,6 +8,14 @@ import {
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { tap } from "rxjs";
 
+const AVATAR_VALIDATIONS = [
+  {
+    type: "image-min-size",
+    minWidth: 64,
+    minHeight: 64,
+  },
+];
+
 const syncCharactersData = ({
   store,
   repositoryState,
@@ -45,6 +53,45 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
       shortcut: characterItem.shortcut ?? "",
     },
   });
+};
+
+const openAvatarCropDialog = ({ deps, target, file } = {}) => {
+  if (!file) {
+    return;
+  }
+
+  const { store, render } = deps;
+  store.openAvatarCropDialog({ target, file });
+  render();
+};
+
+const uploadAvatarFile = async ({ deps, file, target } = {}) => {
+  const { appService, projectService, store } = deps;
+  const uploadResults = await projectService.uploadFiles([file]);
+
+  if (!uploadResults || uploadResults.length === 0) {
+    showResourcePageError({
+      appService,
+      errorOrResult: "Failed to upload avatar image.",
+      fallbackMessage: "Failed to upload avatar image.",
+    });
+    return false;
+  }
+
+  const result = uploadResults[0];
+  if (target === "edit") {
+    store.setEditAvatarFileId({
+      fileId: result.fileId,
+      uploadResult: result,
+    });
+    return true;
+  }
+
+  store.setAvatarFileId({
+    fileId: result.fileId,
+    uploadResult: result,
+  });
+  return true;
 };
 
 export const handleBeforeMount = (deps) => {
@@ -221,6 +268,7 @@ export const handleAddCharacterClick = (deps, payload) => {
 
 export const handleCloseDialog = (deps) => {
   const { store, render } = deps;
+  store.closeAvatarCropDialog();
   store.clearAvatarState();
   store.toggleDialog();
   render();
@@ -275,33 +323,21 @@ export const handleDialogFormActionClick = async (deps, payload) => {
 };
 
 export const handleDialogAvatarClick = async (deps) => {
-  const { store, render, appService, projectService } = deps;
+  const { appService } = deps;
 
   try {
     const file = await appService.pickFiles({
       accept: "image/*",
       multiple: false,
-      validations: [{ type: "square" }],
+      validations: AVATAR_VALIDATIONS,
     });
 
     if (file) {
-      const uploadResults = await projectService.uploadFiles([file]);
-
-      if (!uploadResults || uploadResults.length === 0) {
-        showResourcePageError({
-          appService,
-          errorOrResult: "Failed to upload avatar image.",
-          fallbackMessage: "Failed to upload avatar image.",
-        });
-        return;
-      }
-
-      const result = uploadResults[0];
-      store.setAvatarFileId({
-        fileId: result.fileId,
-        uploadResult: result,
+      openAvatarCropDialog({
+        deps,
+        target: "add",
+        file,
       });
-      render();
     }
   } catch (error) {
     showResourcePageError({
@@ -351,44 +387,72 @@ export const handleItemDelete = async (deps, payload) => {
 
 export const handleEditDialogClose = (deps) => {
   const { store, render } = deps;
+  store.closeAvatarCropDialog();
   store.closeEditDialog();
   render();
 };
 
 export const handleEditDialogAvatarClick = async (deps) => {
-  const { store, render, appService, projectService } = deps;
+  const { appService } = deps;
 
   try {
     const file = await appService.pickFiles({
       accept: "image/*",
       multiple: false,
-      validations: [{ type: "square" }],
+      validations: AVATAR_VALIDATIONS,
     });
 
     if (file) {
-      const uploadResults = await projectService.uploadFiles([file]);
-
-      if (!uploadResults || uploadResults.length === 0) {
-        showResourcePageError({
-          appService,
-          errorOrResult: "Failed to upload avatar image.",
-          fallbackMessage: "Failed to upload avatar image.",
-        });
-        return;
-      }
-
-      const result = uploadResults[0];
-      store.setEditAvatarFileId({
-        fileId: result.fileId,
-        uploadResult: result,
+      openAvatarCropDialog({
+        deps,
+        target: "edit",
+        file,
       });
-      render();
     }
   } catch (error) {
     showResourcePageError({
       appService,
       errorOrResult: error,
       fallbackMessage: "Failed to upload avatar image.",
+    });
+  }
+};
+
+export const handleAvatarCropDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.closeAvatarCropDialog();
+  render();
+};
+
+export const handleAvatarCropDialogConfirm = async (deps) => {
+  const { appService, refs, render, store } = deps;
+  const target = store.selectAvatarCropTarget();
+
+  try {
+    const croppedFile = await refs.avatarCropDialog?.getCroppedFile?.();
+    if (!croppedFile) {
+      appService.showToast("Avatar crop is not ready yet.", {
+        title: "Warning",
+      });
+      return;
+    }
+
+    const didUpload = await uploadAvatarFile({
+      deps,
+      file: croppedFile,
+      target,
+    });
+    if (!didUpload) {
+      return;
+    }
+
+    store.closeAvatarCropDialog();
+    render();
+  } catch (error) {
+    showResourcePageError({
+      appService,
+      errorOrResult: error,
+      fallbackMessage: "Failed to crop avatar image.",
     });
   }
 };

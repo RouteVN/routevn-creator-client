@@ -196,7 +196,7 @@ const {
   title: "Transforms",
   selectedResourceId: "transforms",
   resourceCategory: "assets",
-  addText: "Add Transform",
+  addText: "Add",
   emptyMessage: "No transforms found",
   buildDetailFields,
   buildCatalogItem,
