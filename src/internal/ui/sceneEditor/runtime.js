@@ -13,12 +13,7 @@ import {
   sanitizeProjectDataForRouteEngine,
   summarizeProjectDataForRouteEngine,
 } from "../../project/routeEngineProjectData.js";
-import {
-  applyRuntimeActionContext,
-  captureCanvasThumbnailImage,
-  prepareRuntimeInteractionActions,
-  preloadRuntimeThumbnailImage,
-} from "../runtimeActionPreparation.js";
+import { prepareRuntimeInteractionExecution } from "../../runtime/graphicsEngineRuntime.js";
 
 const createAssetLoadCache = () => ({
   sceneIds: new Set(),
@@ -352,20 +347,14 @@ const createBeforeHandleActionsHook = (deps) => {
 
   return async (actions, eventContext) => {
     const projectData = store.selectProjectData();
-    const eventData = eventContext?._event;
-    const preparedActions = prepareRuntimeInteractionActions(
-      actions,
-      eventData,
-    );
-    const thumbnailImage = await captureCanvasThumbnailImage(
-      deps.graphicsService,
-      deps.refs?.canvas,
-    );
-    applyRuntimeActionContext(preparedActions, {
-      thumbnailImage,
-    });
-    await preloadRuntimeThumbnailImage(deps.graphicsService, thumbnailImage);
-    const resolvedActions = resolveEventBindings(preparedActions, eventData);
+    const { eventData, preparedActions, resolvedActions } =
+      await prepareRuntimeInteractionExecution({
+        actions,
+        eventContext,
+        graphicsService: deps.graphicsService,
+        canvasRoot: deps.refs?.canvas,
+        resolveEventBindings,
+      });
     const layoutIds = Array.from(
       new Set([
         ...extractLayoutIdsFromValue(resolvedActions, projectData),

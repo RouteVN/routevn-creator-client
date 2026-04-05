@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   captureCanvasThumbnailImage,
+  preloadRuntimeSaveSlotImages,
+  prepareRuntimeInteractionExecution,
   prepareRuntimeInteractionActions,
-} from "../../src/internal/ui/runtimeActionPreparation.js";
+} from "../../src/internal/runtime/graphicsEngineRuntime.js";
 
 const createThumbnailCanvas = (result) => {
   const context = {
@@ -167,6 +169,109 @@ describe("prepareRuntimeInteractionActions", () => {
           loadSlot: {},
         },
       },
+    });
+  });
+});
+
+describe("prepareRuntimeInteractionExecution", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("fills nested save actions and preloads thumbnail images through the shared runtime helper", async () => {
+    const thumbnailCanvas = createThumbnailCanvas(
+      "data:image/jpeg;base64,thumb-save",
+    );
+    vi.stubGlobal("document", {
+      createElement: vi.fn(() => thumbnailCanvas),
+    });
+    vi.stubGlobal("Image", FakeImage);
+
+    const graphicsService = {
+      extractBase64: vi.fn(async () => "data:image/png;base64,full-save"),
+      loadAssets: vi.fn(async () => {}),
+      hasLoadedAsset: vi.fn(() => false),
+    };
+
+    const result = await prepareRuntimeInteractionExecution({
+      actions: {
+        showConfirmDialog: {
+          confirmActions: {
+            saveSlot: {},
+          },
+        },
+      },
+      eventContext: {
+        _event: {
+          slotId: 7,
+        },
+      },
+      graphicsService,
+      captureThumbnail: "save-only",
+    });
+
+    expect(result.preparedActions).toEqual({
+      showConfirmDialog: {
+        confirmActions: {
+          saveSlot: {
+            slotId: 7,
+            thumbnailImage: "data:image/jpeg;base64,thumb-save",
+          },
+        },
+      },
+    });
+    expect(graphicsService.loadAssets).toHaveBeenCalledWith({
+      "data:image/jpeg;base64,thumb-save": {
+        source: "url",
+        url: "data:image/jpeg;base64,thumb-save",
+        type: "image/jpeg",
+      },
+    });
+    expect(result.thumbnailPreloadError).toBeUndefined();
+  });
+});
+
+describe("preloadRuntimeSaveSlotImages", () => {
+  it("preloads unique saved thumbnail data urls from restored save slots", async () => {
+    const graphicsService = {
+      loadAssets: vi.fn(async () => {}),
+      hasLoadedAsset: vi.fn(() => false),
+    };
+
+    const result = await preloadRuntimeSaveSlotImages(graphicsService, {
+      "slot:1": {
+        image: "data:image/jpeg;base64,one",
+      },
+      "slot:2": {
+        image: "data:image/jpeg;base64,two",
+      },
+      "slot:3": {
+        image: "data:image/jpeg;base64,one",
+      },
+      "slot:4": {
+        image: "blob:https://example.com/not-a-data-url",
+      },
+    });
+
+    expect(graphicsService.loadAssets).toHaveBeenCalledTimes(2);
+    expect(graphicsService.loadAssets).toHaveBeenNthCalledWith(1, {
+      "data:image/jpeg;base64,one": {
+        source: "url",
+        url: "data:image/jpeg;base64,one",
+        type: "image/jpeg",
+      },
+    });
+    expect(graphicsService.loadAssets).toHaveBeenNthCalledWith(2, {
+      "data:image/jpeg;base64,two": {
+        source: "url",
+        url: "data:image/jpeg;base64,two",
+        type: "image/jpeg",
+      },
+    });
+    expect(result).toEqual({
+      attempted: 2,
+      failed: 0,
     });
   });
 });

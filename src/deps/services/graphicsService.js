@@ -2,19 +2,16 @@ import createRouteGraphics, {
   Assets,
   AudioAsset,
   createAssetBufferManager,
-  textPlugin,
-  rectPlugin,
-  spritePlugin,
-  sliderPlugin,
-  containerPlugin,
-  textRevealingPlugin,
-  videoPlugin,
-  tweenPlugin,
-  soundPlugin,
 } from "route-graphics";
 import createRouteEngine, { createEffectsHandler } from "route-engine-js";
 import { Rectangle, Ticker } from "pixi.js";
 import { prepareRenderStateKeyboardForGraphics } from "../../internal/project/layout.js";
+import {
+  createRuntimeEventContext,
+  getRuntimeEventActions,
+  isRuntimeRightClickEvent,
+  loadGraphicsEnginePlugins,
+} from "../../internal/runtime/graphicsEngineRuntime.js";
 import { requireProjectResolution } from "../../internal/projectResolution.js";
 
 const cloneBufferForAudioDecode = (value) => {
@@ -292,7 +289,6 @@ const installManagedAudioAsset = () => {
 installManagedAudioAsset();
 
 export const createGraphicsService = async ({ subject }) => {
-  const RIGHT_CLICK_EVENT_NAMES = new Set(["rightclick", "rightClick"]);
   let routeGraphics;
   let engine;
   let assetBufferManager;
@@ -922,21 +918,6 @@ export const createGraphicsService = async ({ subject }) => {
     };
   };
 
-  const getEventActions = (payload) => {
-    if (payload?.actions && typeof payload.actions === "object") {
-      return payload.actions;
-    }
-
-    if (
-      payload?.payload?.actions &&
-      typeof payload.payload.actions === "object"
-    ) {
-      return payload.payload.actions;
-    }
-
-    return undefined;
-  };
-
   const renderEngineState = (renderState, options = {}) => {
     const { allowDeferredAudio = true } = options;
     let nextRenderState = prepareRenderStateKeyboardForGraphics({
@@ -1117,19 +1098,7 @@ export const createGraphicsService = async ({ subject }) => {
       assetBufferManager = createAssetBufferManager();
       routeGraphics = createRouteGraphics();
 
-      const plugins = {
-        elements: [
-          textPlugin,
-          rectPlugin,
-          spritePlugin,
-          sliderPlugin,
-          containerPlugin,
-          textRevealingPlugin,
-          videoPlugin,
-        ],
-        animations: [tweenPlugin],
-        audio: [soundPlugin],
-      };
+      const plugins = await loadGraphicsEnginePlugins();
 
       await routeGraphics.init({
         width: renderWidth,
@@ -1164,16 +1133,14 @@ export const createGraphicsService = async ({ subject }) => {
             return;
           }
 
-          const actions = getEventActions(payload);
+          const actions = getRuntimeEventActions(payload);
 
           if (actions && engine) {
-            const eventContext = payload._event
-              ? { _event: payload._event }
-              : undefined;
+            const eventContext = createRuntimeEventContext(payload);
 
             const interactionId = eventContext?._event?.id ?? "__unknown__";
 
-            if (RIGHT_CLICK_EVENT_NAMES.has(eventName)) {
+            if (isRuntimeRightClickEvent(eventName)) {
               clearPendingClickInteraction(interactionId);
               enqueueInteractionActions(actions, eventContext);
               return;
