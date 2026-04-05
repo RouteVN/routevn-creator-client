@@ -50,7 +50,7 @@ const buildMediaItem = (item) => ({
   name: item.name,
   cardKind: "sound",
   waveformDataFileId: item.waveformDataFileId,
-  canPreview: true,
+  canPreview: false,
 });
 
 const buildPendingMediaItem = (item) => ({
@@ -114,7 +114,7 @@ const {
   resourceType: "sounds",
   title: "Sounds",
   selectedResourceId: "sounds",
-  uploadText: "Upload Sound",
+  uploadText: "Upload",
   acceptedFileTypes: [".mp3", ".wav", ".ogg"],
   previewMenuLabel: "Play",
   buildDetailFields,

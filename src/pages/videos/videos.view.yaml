@@ -41,6 +41,10 @@ refs:
     eventListeners:
       click:
         handler: handleFormExtraEvent
+  detailHeader:
+    eventListeners:
+      click:
+        handler: handleDetailHeaderClick
   editDialog:
     eventListeners:
       close:
@@ -70,8 +74,9 @@ template:
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
                       - rtgl-view d=v w=f h=f:
-                          - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
-                              - rtgl-text c=mu-fg: ${selectedItemName}
+                          - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+                              - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                              - rtgl-svg svg=edit wh=16: null
                           - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
                               - $if selectedPreviewFileId:
                                   - rvn-file-image#detailThumbnail slot="video-thumbnail-file-id" fileId=${selectedPreviewFileId} h=135 bw=xs bc=bo br=md cur=pointer: null
@@ -89,12 +94,11 @@ template:
                 $else:
                   - rtgl-view#editDialogThumbnailPlaceholder slot="video-slot" w=f h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
                       - rtgl-text c=mu-fg s=sm: Click to Upload
-  - rtgl-dialog#videoPreviewDialog ?open=${videoVisible}:
-      - rtgl-view#dialogContainer slot=content bw=xs bgc=bg w=80vw h=80vh br=sm av=c ah=c:
-          - $if selectedVideo:
-              - $if selectedVideo.url:
-                  - video controls=true autoplay=true style="height:100%; width:100%;":
-                      - source src=${selectedVideo.url} type=${selectedVideo.fileType}: null
-                $else:
-                  - rtgl-view w=f h=f av=c ah=c:
-                      - rtgl-text s=lg c=mu-fg: Loading video...
+  - rtgl-dialog#videoPreviewDialog ?open=${videoVisible} s=lg:
+      - $if selectedVideo:
+          - $if selectedVideo.url:
+              - 'video slot=content controls=true autoplay=true style="width: 100%; height: 80vh; object-fit: contain; display: block; background-color: #000;"':
+                  - source src=${selectedVideo.url} type=${selectedVideo.fileType}: null
+            $else:
+              - rtgl-view slot=content w=f h=80vh av=c ah=c:
+                  - rtgl-text s=lg c=mu-fg: Loading video...

@@ -48,7 +48,7 @@ const buildMediaItem = (item) => ({
   name: item.name,
   cardKind: "video",
   thumbnailFileId: item.thumbnailFileId,
-  canPreview: true,
+  canPreview: false,
 });
 
 const buildPendingMediaItem = (item) => ({
@@ -112,7 +112,7 @@ const {
   resourceType: "videos",
   title: "Videos",
   selectedResourceId: "videos",
-  uploadText: "Upload Video",
+  uploadText: "Upload",
   acceptedFileTypes: [".mp4"],
   buildDetailFields,
   buildMediaItem,

@@ -117,15 +117,14 @@ const handlePanelResize = (deps, payload) => {
 };
 
 const {
+  openEditDialogWithValues,
   handleBeforeMount: handleMediaBeforeMount,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged,
-  handleFileExplorerDoubleClick,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleSearchInput,
   handleItemClick: handleSoundItemClick,
-  handleItemDoubleClick: handleSoundItemDoubleClick,
   handleItemEdit: handleSoundItemEdit,
 } = createMediaPageHandlers({
   resourceType: "sounds",
@@ -164,18 +163,15 @@ export const handleBeforeMount = (deps) => {
 export {
   handleDataChanged,
   handleFileExplorerSelectionChanged,
-  handleFileExplorerDoubleClick,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleSearchInput,
   handleSoundItemClick,
-  handleSoundItemDoubleClick,
   handleSoundItemEdit,
 };
 
-export const handleSoundItemPreview = (deps, payload) => {
-  const { store, render } = deps;
-  const { itemId } = payload._event.detail;
+const openSoundPreviewById = ({ deps, itemId, syncExplorer = false } = {}) => {
+  const { refs, store, render } = deps;
   if (!itemId) {
     return;
   }
@@ -185,11 +181,41 @@ export const handleSoundItemPreview = (deps, payload) => {
     return;
   }
 
+  store.setSelectedItemId({ itemId });
+
+  if (syncExplorer) {
+    refs.fileExplorer.selectItem({ itemId });
+  }
+
   store.openAudioPlayer({
     fileId: soundItem.fileId,
     fileName: soundItem.name,
   });
   render();
+};
+
+export const handleFileExplorerDoubleClick = (deps, payload) => {
+  const { itemId, isFolder } = payload._event.detail;
+  if (isFolder) {
+    return;
+  }
+
+  openSoundPreviewById({ deps, itemId });
+};
+
+export const handleSoundItemDoubleClick = (deps, payload) => {
+  const { itemId } = payload._event.detail;
+  openSoundPreviewById({ deps, itemId, syncExplorer: true });
+};
+
+export const handleDetailHeaderClick = (deps) => {
+  const selectedItemId = deps.store.selectSelectedItemId();
+  openEditDialogWithValues({ deps, itemId: selectedItemId });
+};
+
+export const handleSoundItemPreview = (deps, payload) => {
+  const { itemId } = payload._event.detail;
+  openSoundPreviewById({ deps, itemId });
 };
 
 export const handleUploadClick = async (deps, payload) => {
