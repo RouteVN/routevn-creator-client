@@ -34,6 +34,8 @@ const createSpriteAbortError = () => {
   return error;
 };
 
+const getPreviewFileId = (item) => item?.thumbnailFileId ?? item?.fileId;
+
 const getCharacterIdFromPayload = ({ appService }) => {
   return appService.getPayload().characterId;
 };
@@ -116,7 +118,7 @@ const openEditDialogForSprite = ({
       name: item.name ?? "",
       description: item.description ?? "",
     },
-    previewFileId: item.fileId,
+    previewFileId: getPreviewFileId(item),
   });
   render();
 };
@@ -197,6 +199,7 @@ const createSpritesFromFiles = async ({
               data: {
                 type: "image",
                 fileId: uploadResult.fileId,
+                thumbnailFileId: uploadResult.thumbnailFileId,
                 name: uploadResult.displayName,
                 fileType: uploadResult.file.type,
                 fileSize: uploadResult.file.size,
@@ -277,7 +280,7 @@ export { handleFileExplorerAction, handleFileExplorerTargetChanged };
 export const handleDataChanged = refreshCharacterSpritesData;
 
 export const handleFileExplorerSelectionChanged = async (deps, payload) => {
-  const { render, store } = deps;
+  const { refs, render, store } = deps;
   const { itemId, isFolder } = payload._event.detail;
 
   if (isFolder) {
@@ -290,6 +293,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
     deps,
     itemId,
   });
+  refs.groupview?.scrollItemIntoView?.({ itemId });
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {
@@ -448,6 +452,7 @@ export const handleFormExtraEvent = async (deps) => {
         fileRecords: uploadResult.fileRecords,
         data: {
           fileId: uploadResult.fileId,
+          thumbnailFileId: uploadResult.thumbnailFileId,
           name: uploadResult.displayName,
           fileType: uploadResult.file.type,
           fileSize: uploadResult.file.size,
@@ -500,7 +505,7 @@ export const handleEditDialogImageClick = async (deps) => {
 
   store.setEditUpload({
     uploadResult: file.uploadResult,
-    previewFileId: file.uploadResult.fileId,
+    previewFileId: getPreviewFileId(file.uploadResult),
   });
   render();
 };
@@ -533,6 +538,7 @@ export const handleEditFormAction = async (deps, payload) => {
 
   if (editUploadResult) {
     data.fileId = editUploadResult.fileId;
+    data.thumbnailFileId = editUploadResult.thumbnailFileId;
     data.fileType = editUploadResult.file.type;
     data.fileSize = editUploadResult.file.size;
     data.width = editUploadResult.dimensions.width;

@@ -1,8 +1,14 @@
 import { formatFileSize } from "../../internal/files.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
+import {
+  DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD,
+  shouldStartCollapsedFileExplorer,
+} from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 
 const EMPTY_TREE = { tree: [], items: {} };
+const AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD =
+  DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD;
 
 const folderContextMenuItems = [
   { label: "New Folder", type: "item", value: "new-child-folder" },
@@ -58,6 +64,8 @@ const buildDetailFields = (item) => {
   ];
 };
 
+const getPreviewFileId = (item) => item?.thumbnailFileId ?? item?.fileId;
+
 const createEditForm = () => ({
   title: "Edit Sprite",
   fields: [
@@ -105,7 +113,7 @@ const matchesSearch = (item, searchQuery) => {
 const buildMediaItem = (item) => ({
   ...item,
   cardKind: "image",
-  previewFileId: item.fileId,
+  previewFileId: getPreviewFileId(item),
   canPreview: false,
 });
 
@@ -307,7 +315,9 @@ export const selectViewData = ({ state }) => {
     detailFields:
       selectedItem?.type === "image" ? buildDetailFields(selectedItem) : [],
     selectedPreviewFileId:
-      selectedItem?.type === "image" ? selectedItem.fileId : undefined,
+      selectedItem?.type === "image"
+        ? getPreviewFileId(selectedItem)
+        : undefined,
     searchQuery: state.searchQuery,
     uploadText: "Upload Sprite",
     acceptedFileTypes: [".jpg", ".jpeg", ".png", ".webp"],
@@ -322,5 +332,9 @@ export const selectViewData = ({ state }) => {
     editForm: createEditForm(),
     editDefaultValues: state.editDefaultValues,
     editPreviewFileId: state.editPreviewFileId,
+    startCollapsedFileExplorer: shouldStartCollapsedFileExplorer({
+      flatItems,
+      threshold: AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD,
+    }),
   };
 };
