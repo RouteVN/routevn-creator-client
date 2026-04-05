@@ -45,7 +45,15 @@ const getNow = () => {
 
 const getDurationMs = (startedAt) => Number((getNow() - startedAt).toFixed(2));
 
-const isAudioUploadFile = (file) => file?.type?.startsWith("audio/");
+const isAudioUploadFile = (file) =>
+  [
+    "audio/mpeg",
+    "audio/mp3",
+    "audio/wav",
+    "audio/x-wav",
+    "audio/wave",
+    "audio/ogg",
+  ].includes(file?.type);
 
 async function copyTemplateFiles(templateId, targetPath) {
   const templateFilesPath = `/templates/${templateId}/files/`;

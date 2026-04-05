@@ -21,6 +21,8 @@ refs:
         handler: handleSoundItemEdit
       files-dropped:
         handler: handleFilesDropped
+      files-drop-rejected:
+        handler: handleFilesDropRejected
       upload-click:
         handler: handleUploadClick
       search-input:

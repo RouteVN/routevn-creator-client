@@ -8,8 +8,7 @@ import {
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 
 const VIDEO_FILE_PATTERN = /\.(mp4)$/i;
-const INVALID_VIDEO_FORMAT_MESSAGE =
-  "Invalid file format. Please upload an MP4 video file.";
+const INVALID_VIDEO_FORMAT_MESSAGE = "Only MP4 videos are supported.";
 
 const showInvalidFormatToast = (appService) => {
   appService.showToast(INVALID_VIDEO_FORMAT_MESSAGE, { title: "Warning" });
@@ -225,7 +224,13 @@ export const handleUploadClick = async (deps, payload) => {
 };
 
 export const handleFilesDropped = async (deps, payload) => {
-  const { files, targetGroupId } = payload._event.detail;
+  const { appService } = deps;
+  const { files, rejectedFiles, targetGroupId } = payload._event.detail;
+
+  if ((!files || files.length === 0) && (rejectedFiles?.length ?? 0) > 0) {
+    showInvalidFormatToast(appService);
+    return;
+  }
 
   await createVideosFromFiles({
     deps,

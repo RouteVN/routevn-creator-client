@@ -21,6 +21,8 @@ refs:
         handler: handleImageItemEdit
       files-dropped:
         handler: handleFilesDropped
+      files-drop-rejected:
+        handler: handleFilesDropRejected
       upload-click:
         handler: handleUploadClick
       search-input:

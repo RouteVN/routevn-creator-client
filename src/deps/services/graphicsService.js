@@ -34,36 +34,21 @@ const TAURI_ASSET_URL_PREFIXES = [
   "asset://localhost/",
 ];
 
+const SUPPORTED_AUDIO_MIME_TYPES = new Set([
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/wav",
+  "audio/x-wav",
+  "audio/wave",
+  "audio/ogg",
+]);
+
 // Keep this in sync with src-tauri/src/project_file_protocol.rs.
 const PIXI_EXTENSION_BY_MIME_TYPE = {
-  "image/apng": "apng",
   "image/png": "png",
   "image/jpeg": "jpg",
   "image/webp": "webp",
-  "image/avif": "avif",
-  "image/gif": "gif",
-  "image/bmp": "bmp",
-  "image/x-ms-bmp": "bmp",
-  "image/svg+xml": "svg",
-  "image/tiff": "tif",
-  "image/heic": "heic",
-  "image/heif": "heif",
-  "image/vnd.microsoft.icon": "ico",
-  "image/x-icon": "ico",
-  "image/jxl": "jxl",
   "video/mp4": "mp4",
-  "video/x-m4v": "m4v",
-  "video/webm": "webm",
-  "video/ogg": "ogv",
-  "video/quicktime": "mov",
-  "video/x-msvideo": "avi",
-  "video/avi": "avi",
-  "video/x-ms-wmv": "wmv",
-  "video/mpeg": "mpeg",
-  "video/mp2t": "ts",
-  "video/3gpp": "3gp",
-  "video/3gpp2": "3g2",
-  "video/x-matroska": "mkv",
 };
 
 const isTauriAssetUrl = (url) => {
@@ -312,7 +297,7 @@ export const createGraphicsService = async ({ subject }) => {
       return "texture";
     }
 
-    if (mimeType.startsWith("audio/")) {
+    if (SUPPORTED_AUDIO_MIME_TYPES.has(mimeType)) {
       return "audio";
     }
 
@@ -328,7 +313,7 @@ export const createGraphicsService = async ({ subject }) => {
       return "font";
     }
 
-    if (mimeType.startsWith("video/")) {
+    if (mimeType === "video/mp4") {
       return "video";
     }
 
