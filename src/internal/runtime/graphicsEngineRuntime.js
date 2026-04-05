@@ -10,10 +10,21 @@ let graphicsEnginePlugins;
 
 export const loadGraphicsEnginePlugins = async () => {
   if (!graphicsEnginePlugins) {
+    const routeGraphicsModule = await import("route-graphics");
+    const animatedSpritePlugin = Object.prototype.hasOwnProperty.call(
+      routeGraphicsModule,
+      "animatedSpritePlugin",
+    )
+      ? routeGraphicsModule.animatedSpritePlugin
+      : undefined;
+    const particlesPlugin = Object.prototype.hasOwnProperty.call(
+      routeGraphicsModule,
+      "particlesPlugin",
+    )
+      ? routeGraphicsModule.particlesPlugin
+      : undefined;
     const {
-      animatedSpritePlugin,
       containerPlugin,
-      particlesPlugin,
       rectPlugin,
       sliderPlugin,
       soundPlugin,
@@ -22,7 +33,7 @@ export const loadGraphicsEnginePlugins = async () => {
       textRevealingPlugin,
       tweenPlugin,
       videoPlugin,
-    } = await import("route-graphics");
+    } = routeGraphicsModule;
 
     graphicsEnginePlugins = {
       elements: [
@@ -35,7 +46,7 @@ export const loadGraphicsEnginePlugins = async () => {
         videoPlugin,
         particlesPlugin,
         animatedSpritePlugin,
-      ],
+      ].filter(Boolean),
       animations: [tweenPlugin],
       audio: [soundPlugin],
     };
