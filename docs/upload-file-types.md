@@ -51,9 +51,10 @@ Pages must validate unsupported types and show a user-facing toast/dialog.
 
 Current explicit page validators:
 
+- `src/pages/images/images.handlers.js`
 - `src/pages/videos/videos.handlers.js`
 - `src/pages/fonts/fonts.handlers.js`
-- `src/pages/sounds/sounds.handlers.js` via decoder/upload failure dialog
+- `src/pages/sounds/sounds.handlers.js`
 
 ### 3. Shared Picker Validation
 
@@ -82,16 +83,22 @@ Supported processing buckets today:
 - font
 - generic
 
+Current shared type fallbacks are intentionally narrower than before:
+
+- images: `.jpg`, `.jpeg`, `.png`, `.webp`
+- audio: `.mp3`, `.wav`, `.ogg`
+- video: `.mp4`
+
 ## Current Upload Matrix
 
 ### Media Resource Pages
 
 | Surface                | Allowed file types                                | Extra validation              | Notes                                  |
 | ---------------------- | ------------------------------------------------- | ----------------------------- | -------------------------------------- |
-| Images page            | `.jpg`, `.jpeg`, `.png`, `.webp`                  | none                          | picker, center drag-drop, edit/replace |
+| Images page            | `.jpg`, `.jpeg`, `.png`, `.webp`                  | explicit invalid-format toast | picker, center drag-drop, edit/replace |
 | Character sprites page | `.jpg`, `.jpeg`, `.png`, `.webp`                  | none                          | picker, center drag-drop, edit/replace |
 | Videos page            | `.mp4`                                            | explicit invalid-format toast | picker, center drag-drop, edit/replace |
-| Sounds page            | `.mp3`, `.wav`, `.ogg`                            | upload/decode failure dialog  | picker, center drag-drop, edit/replace |
+| Sounds page            | `.mp3`, `.wav`, `.ogg`                            | explicit invalid-format toast | picker, center drag-drop, edit/replace |
 | Fonts page             | `.ttf`, `.otf`, `.woff`, `.woff2`, `.ttc`, `.eot` | explicit invalid-format toast | picker, center drag-drop, edit/replace |
 
 ### Dialog / Special Upload Surfaces
@@ -152,3 +159,5 @@ When adding or changing an uploadable file type:
   of an explicit extension list.
   If stricter control is required, those surfaces should be narrowed and
   documented here in the same change.
+- Sounds currently show copy that mentions `OGG (Windows only)`, but the upload
+  surface itself does not enforce a platform-specific OGG restriction.

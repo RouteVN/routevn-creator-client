@@ -27,6 +27,7 @@ const stringifyAttrs = (attrs) => {
 export const createInitialState = () => ({
   src: "/public/project_logo_placeholder.png",
   isLoading: true,
+  loadedFileId: undefined,
 });
 
 export const setSrc = ({ state }, { src } = {}) => {
@@ -37,12 +38,20 @@ export const setIsLoading = ({ state }, { isLoading } = {}) => {
   state.isLoading = isLoading;
 };
 
+export const setLoadedFileId = ({ state }, { fileId } = {}) => {
+  state.loadedFileId = fileId;
+};
+
 export const selectSrc = ({ state }) => {
   return state.src;
 };
 
 export const selectIsLoading = ({ state }) => {
   return state.isLoading;
+};
+
+export const selectLoadedFileId = ({ state }) => {
+  return state.loadedFileId;
 };
 
 export const selectViewData = ({ state, props: attrs }) => {

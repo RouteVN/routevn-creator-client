@@ -12,16 +12,29 @@ import {
 const UNSUPPORTED_FORMAT_TITLE = "Unsupported Format";
 const UNSUPPORTED_FORMAT_MESSAGE =
   "The audio file format is not supported. Please use MP3, WAV, or OGG (Windows only) files.";
+const SOUND_FILE_PATTERN = /\.(mp3|wav|ogg)$/i;
+const SOUND_FILE_ACCEPT = ".mp3,.wav,.ogg";
 
-const showUnsupportedFormatDialog = async (
+const showUnsupportedFormatToast = (
   appService,
   message = UNSUPPORTED_FORMAT_MESSAGE,
 ) => {
-  await appService.showDialog({
+  appService.showToast(message, {
     title: UNSUPPORTED_FORMAT_TITLE,
-    message,
-    confirmText: "OK",
   });
+};
+
+const validateSoundFiles = ({ appService, files } = {}) => {
+  const invalidFiles = Array.from(files ?? []).filter(
+    (file) => !file.name.match(SOUND_FILE_PATTERN),
+  );
+
+  if (invalidFiles.length === 0) {
+    return true;
+  }
+
+  showUnsupportedFormatToast(appService);
+  return false;
 };
 
 const pickAndUploadSound = async ({ appService, projectService } = {}) => {
@@ -29,7 +42,7 @@ const pickAndUploadSound = async ({ appService, projectService } = {}) => {
 
   try {
     file = await appService.pickFiles({
-      accept: ".mp3,.wav,.ogg",
+      accept: SOUND_FILE_ACCEPT,
       multiple: false,
     });
   } catch (error) {
@@ -38,6 +51,10 @@ const pickAndUploadSound = async ({ appService, projectService } = {}) => {
 
   if (!file) {
     return { cancelled: true };
+  }
+
+  if (!validateSoundFiles({ appService, files: [file] })) {
+    return { errorType: "validation-failed" };
   }
 
   let uploadedFiles;
@@ -49,7 +66,7 @@ const pickAndUploadSound = async ({ appService, projectService } = {}) => {
 
   const uploadResult = uploadedFiles?.[0];
   if (!uploadResult) {
-    return { error: "upload-failed" };
+    return { error: "upload-failed", errorType: "upload-failed" };
   }
 
   return { uploadResult };
@@ -89,8 +106,8 @@ const createSoundsFromFiles = async ({ deps, files, parentId } = {}) => {
 
       return createAttempt.ok;
     },
-    onUploadError: async ({ error }) => {
-      await showUnsupportedFormatDialog(
+    onUploadError: ({ error }) => {
+      showUnsupportedFormatToast(
         appService,
         getResourcePageErrorMessage(error, UNSUPPORTED_FORMAT_MESSAGE),
       );
@@ -225,7 +242,7 @@ export const handleUploadClick = async (deps, payload) => {
 
   try {
     files = await appService.pickFiles({
-      accept: ".mp3,.wav,.ogg",
+      accept: SOUND_FILE_ACCEPT,
       multiple: true,
     });
   } catch (error) {
@@ -241,6 +258,10 @@ export const handleUploadClick = async (deps, payload) => {
     return;
   }
 
+  if (!validateSoundFiles({ appService, files })) {
+    return;
+  }
+
   await createSoundsFromFiles({
     deps,
     files,
@@ -249,13 +270,30 @@ export const handleUploadClick = async (deps, payload) => {
 };
 
 export const handleFilesDropped = async (deps, payload) => {
-  const { files, targetGroupId } = payload._event.detail;
+  const { appService } = deps;
+  const { files, rejectedFiles, targetGroupId } = payload._event.detail;
+
+  if ((!files || files.length === 0) && (rejectedFiles?.length ?? 0) > 0) {
+    showUnsupportedFormatToast(appService);
+    return;
+  }
 
   await createSoundsFromFiles({
     deps,
     files,
     parentId: targetGroupId ?? undefined,
   });
+};
+
+export const handleFilesDropRejected = (deps, payload) => {
+  const { appService } = deps;
+  const rejectedFiles = payload._event.detail?.rejectedFiles ?? [];
+
+  if (rejectedFiles.length === 0) {
+    return;
+  }
+
+  showUnsupportedFormatToast(appService);
 };
 
 export const handleFormExtraEvent = async (deps) => {
@@ -279,8 +317,12 @@ export const handleFormExtraEvent = async (deps) => {
     return;
   }
 
+  if (result.errorType === "validation-failed") {
+    return;
+  }
+
   if (result.errorType === "upload-failed") {
-    await showUnsupportedFormatDialog(
+    showUnsupportedFormatToast(
       appService,
       getResourcePageErrorMessage(result.error, UNSUPPORTED_FORMAT_MESSAGE),
     );
@@ -335,8 +377,12 @@ export const handleEditDialogSoundClick = async (deps) => {
     return;
   }
 
+  if (result.errorType === "validation-failed") {
+    return;
+  }
+
   if (result.errorType === "upload-failed") {
-    await showUnsupportedFormatDialog(
+    showUnsupportedFormatToast(
       appService,
       getResourcePageErrorMessage(result.error, UNSUPPORTED_FORMAT_MESSAGE),
     );

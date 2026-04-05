@@ -4,5 +4,6 @@ refs:
   canvas:
     selector: canvas
 template:
-  - $if waveformData:
-      - rtgl-waveform :waveformData=${waveformData} w=${w} h=${h}: null
+  - rtgl-view w=${w} h=${h}:
+      - $if waveformData:
+          - rtgl-waveform :waveformData=${waveformData} w=${w} h=${h}: null

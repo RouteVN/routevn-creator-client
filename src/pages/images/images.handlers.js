@@ -9,6 +9,62 @@ import {
 
 const MAX_PARALLEL_UPLOADS = 1;
 const CREATE_IMAGE_ABORT_ERROR = "create-image-abort";
+const IMAGE_FILE_PATTERN = /\.(jpg|jpeg|png|webp)$/i;
+const IMAGE_FILE_ACCEPT = ".jpg,.jpeg,.png,.webp";
+const INVALID_IMAGE_FORMAT_MESSAGE =
+  "Only JPG/JPEG, PNG, and WEBP images are supported.";
+
+const showInvalidFormatToast = (appService) => {
+  appService.showToast(INVALID_IMAGE_FORMAT_MESSAGE, { title: "Warning" });
+};
+
+const validateImageFiles = ({ appService, files } = {}) => {
+  const invalidFiles = Array.from(files ?? []).filter(
+    (file) => !file.name.match(IMAGE_FILE_PATTERN),
+  );
+
+  if (invalidFiles.length === 0) {
+    return true;
+  }
+
+  showInvalidFormatToast(appService);
+  return false;
+};
+
+const pickAndUploadImage = async ({ appService, projectService } = {}) => {
+  let file;
+
+  try {
+    file = await appService.pickFiles({
+      accept: IMAGE_FILE_ACCEPT,
+      multiple: false,
+    });
+  } catch (error) {
+    return { error, errorType: "pick-failed" };
+  }
+
+  if (!file) {
+    return { cancelled: true };
+  }
+
+  if (!validateImageFiles({ appService, files: [file] })) {
+    return { errorType: "validation-failed" };
+  }
+
+  let uploadedFiles;
+  try {
+    uploadedFiles = await projectService.uploadFiles([file]);
+  } catch (error) {
+    return { error, errorType: "upload-failed" };
+  }
+
+  const uploadResult = uploadedFiles?.[0];
+  if (!uploadResult) {
+    return { error: "upload-failed", errorType: "upload-failed" };
+  }
+
+  return { uploadResult };
+};
 
 const createPendingUploads = ({ files, parentId } = {}) => {
   if (!parentId) {
@@ -94,6 +150,11 @@ export const handleDetailHeaderClick = (deps) => {
 
 const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
   const { appService, projectService, store, render } = deps;
+
+  if (!validateImageFiles({ appService, files })) {
+    return;
+  }
+
   const pendingUploads = createPendingUploads({ files, parentId });
   const remainingPendingUploadIds = new Set(
     pendingUploads.map((item) => item.id),
@@ -216,7 +277,7 @@ export const handleUploadClick = async (deps, payload) => {
 
   try {
     files = await appService.pickFiles({
-      accept: ".jpg,.jpeg,.png,.webp",
+      accept: IMAGE_FILE_ACCEPT,
       multiple: true,
     });
   } catch (error) {
@@ -232,6 +293,10 @@ export const handleUploadClick = async (deps, payload) => {
     return;
   }
 
+  if (!validateImageFiles({ appService, files })) {
+    return;
+  }
+
   await createImagesFromFiles({
     deps,
     files,
@@ -240,7 +305,14 @@ export const handleUploadClick = async (deps, payload) => {
 };
 
 export const handleFilesDropped = async (deps, payload) => {
-  const { files, targetGroupId } = payload._event.detail;
+  const { appService } = deps;
+  const { files, rejectedFiles, targetGroupId } = payload._event.detail;
+
+  if ((!files || files.length === 0) && (rejectedFiles?.length ?? 0) > 0) {
+    showInvalidFormatToast(appService);
+    return;
+  }
+
   await createImagesFromFiles({
     deps,
     files,
@@ -248,41 +320,48 @@ export const handleFilesDropped = async (deps, payload) => {
   });
 };
 
+export const handleFilesDropRejected = (deps, payload) => {
+  const { appService } = deps;
+  const rejectedFiles = payload._event.detail?.rejectedFiles ?? [];
+
+  if (rejectedFiles.length === 0) {
+    return;
+  }
+
+  showInvalidFormatToast(appService);
+};
+
 export const handleFormExtraEvent = async (deps) => {
   const { appService, projectService, store } = deps;
-  let file;
-
   const selectedItem = store.selectSelectedItem();
   if (!selectedItem) {
     return;
   }
 
-  try {
-    file = await appService.pickFiles({
-      accept: ".jpg,.jpeg,.png,.webp",
-      multiple: false,
-      upload: true,
-    });
-  } catch (error) {
+  const result = await pickAndUploadImage({ appService, projectService });
+  if (result.cancelled) {
+    return;
+  }
+
+  if (result.errorType === "pick-failed") {
     showResourcePageError({
       appService,
-      errorOrResult: error,
+      errorOrResult: result.error,
       fallbackMessage: "Failed to select file.",
     });
     return;
   }
 
-  if (!file) {
+  if (result.errorType === "validation-failed") {
     return;
   }
 
-  if (!(file.uploadSucessful && file.uploadResult)) {
-    console.error("Failed to upload image:", file);
+  if (result.errorType === "upload-failed") {
     appService.showToast("Failed to upload image.", { title: "Error" });
     return;
   }
 
-  const uploadResult = file.uploadResult;
+  const { uploadResult } = result;
   const updateAttempt = await runResourcePageMutation({
     appService,
     fallbackMessage: "Failed to update image.",
@@ -322,38 +401,35 @@ export const handleEditDialogClose = (deps) => {
 };
 
 export const handleEditDialogImageClick = async (deps) => {
-  const { appService, store, render } = deps;
-  let file;
+  const { appService, projectService, store, render } = deps;
 
-  try {
-    file = await appService.pickFiles({
-      accept: ".jpg,.jpeg,.png,.webp",
-      multiple: false,
-      upload: true,
-    });
-  } catch (error) {
+  const result = await pickAndUploadImage({ appService, projectService });
+  if (result.cancelled) {
+    return;
+  }
+
+  if (result.errorType === "pick-failed") {
     showResourcePageError({
       appService,
-      errorOrResult: error,
+      errorOrResult: result.error,
       fallbackMessage: "Failed to select file.",
     });
     return;
   }
 
-  if (!file) {
+  if (result.errorType === "validation-failed") {
     return;
   }
 
-  if (!(file.uploadSucessful && file.uploadResult)) {
-    console.error("Failed to upload image:", file);
+  if (result.errorType === "upload-failed") {
     appService.showToast("Failed to upload image.", { title: "Error" });
     return;
   }
 
   store.setEditUpload({
-    uploadResult: file.uploadResult,
+    uploadResult: result.uploadResult,
     previewFileId:
-      file.uploadResult.thumbnailFileId ?? file.uploadResult.fileId,
+      result.uploadResult.thumbnailFileId ?? result.uploadResult.fileId,
   });
   render();
 };

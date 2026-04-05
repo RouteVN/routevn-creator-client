@@ -994,22 +994,40 @@ export const extractVideoThumbnail = async (videoFile, options = {}) => {
 
 // File type detection utility
 export const detectFileType = (file) => {
+  const ext = file.name.split(".").pop()?.toLowerCase();
+
   // Check MIME type first
-  if (file.type.startsWith("image/")) return "image";
-  if (file.type.startsWith("audio/")) return "audio";
-  if (file.type.startsWith("video/")) return "video";
+  if (file.type === "video/mp4") return "video";
+  if (
+    ["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
+    (file.type.startsWith("image/") &&
+      ["jpg", "jpeg", "png", "webp"].includes(ext))
+  ) {
+    return "image";
+  }
+  if (
+    [
+      "audio/mpeg",
+      "audio/x-mpeg",
+      "audio/mp3",
+      "audio/wav",
+      "audio/x-wav",
+      "audio/wave",
+      "audio/ogg",
+    ].includes(file.type)
+  ) {
+    return "audio";
+  }
 
   // Fallback to extension check (mainly for fonts which often have no MIME type)
-  const ext = file.name.split(".").pop()?.toLowerCase();
   if (!ext) return "generic";
 
   if (["ttf", "otf", "woff", "woff2", "ttc"].includes(ext)) return "font";
 
   // Additional fallbacks for common formats with unreliable MIME types
-  if (["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"].includes(ext))
-    return "image";
-  if (["mp3", "wav", "ogg", "aac", "m4a", "flac"].includes(ext)) return "audio";
-  if (["mp4", "webm", "avi", "mov", "mkv"].includes(ext)) return "video";
+  if (["jpg", "jpeg", "png", "webp"].includes(ext)) return "image";
+  if (["mp3", "wav", "ogg"].includes(ext)) return "audio";
+  if (ext === "mp4") return "video";
 
   return "generic";
 };

@@ -7,6 +7,12 @@ const getDataAttribute = (event, name) => {
   return event?.currentTarget?.getAttribute?.(name) ?? undefined;
 };
 
+const hasPreviewableItems = (groups = []) => {
+  return groups.some((group) =>
+    (group?.children ?? []).some((item) => item?.canPreview),
+  );
+};
+
 export const handleSearchInput = (deps, payload) => {
   const { dispatchEvent } = deps;
   const value = payload._event.detail.value ?? "";
@@ -111,6 +117,7 @@ export const handleDrop = (deps, payload) => {
     new CustomEvent("files-dropped", {
       detail: {
         files,
+        rejectedFiles,
         targetGroupId,
       },
       bubbles: true,
@@ -147,7 +154,11 @@ export const handleItemClick = (deps, payload) => {
 };
 
 export const handleItemMouseEnter = (deps, payload) => {
-  const { store, render } = deps;
+  const { store, render, props } = deps;
+  if (!hasPreviewableItems(props.groups)) {
+    return;
+  }
+
   const itemId = getDataAttribute(payload._event, "data-item-id");
   if (!itemId || store.selectHoveredItemId() === itemId) {
     return;
@@ -158,7 +169,11 @@ export const handleItemMouseEnter = (deps, payload) => {
 };
 
 export const handleItemMouseLeave = (deps) => {
-  const { store, render } = deps;
+  const { store, render, props } = deps;
+  if (!hasPreviewableItems(props.groups)) {
+    return;
+  }
+
   if (store.selectHoveredItemId() === undefined) {
     return;
   }
