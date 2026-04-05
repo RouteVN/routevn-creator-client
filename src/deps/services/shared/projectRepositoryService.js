@@ -420,6 +420,7 @@ export const createProjectRepositoryService = ({
     getProjectInfoByProjectId,
     getCurrentProjectInfo,
     updateCurrentProjectInfo,
+    updateProjectInfoByProjectId,
     resolveProjectReferenceByProjectId,
     getStoreByProject,
     getStoreByProjectSync(projectId) {

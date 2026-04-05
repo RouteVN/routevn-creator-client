@@ -1,4 +1,7 @@
-import { validateIconDimensions } from "../../clients/web/fileProcessors.js";
+import {
+  validateIconDimensions,
+  validateImageMinimumDimensions,
+} from "../../clients/web/fileProcessors.js";
 
 const FILE_VALIDATION_ERROR_TITLE = "Error";
 
@@ -9,6 +12,13 @@ const runFileValidation = async ({ file, validation } = {}) => {
 
   if (validation.type === "square") {
     return validateIconDimensions(file);
+  }
+
+  if (validation.type === "image-min-size") {
+    return validateImageMinimumDimensions(file, {
+      minWidth: validation.minWidth ?? 1,
+      minHeight: validation.minHeight ?? 1,
+    });
   }
 
   return { isValid: true, message: undefined };

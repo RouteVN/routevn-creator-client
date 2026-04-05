@@ -36,6 +36,9 @@ export const createInitialState = () => ({
   targetGroupId: null,
   avatarFileId: null,
   avatarUploadResult: null,
+  isAvatarCropDialogOpen: false,
+  avatarCropTarget: undefined,
+  avatarCropFile: undefined,
   dialogDefaultValues: {
     name: "",
     description: "",
@@ -117,6 +120,18 @@ export const clearAvatarState = ({ state }, _payload = {}) => {
   state.avatarUploadResult = null;
 };
 
+export const openAvatarCropDialog = ({ state }, { target, file } = {}) => {
+  state.isAvatarCropDialogOpen = true;
+  state.avatarCropTarget = target;
+  state.avatarCropFile = file;
+};
+
+export const closeAvatarCropDialog = ({ state }, _payload = {}) => {
+  state.isAvatarCropDialogOpen = false;
+  state.avatarCropTarget = undefined;
+  state.avatarCropFile = undefined;
+};
+
 export const openEditDialog = ({ state }, { itemId } = {}) => {
   state.isEditDialogOpen = true;
   state.editItemId = itemId;
@@ -145,6 +160,7 @@ export const setEditAvatarFileId = (
 
 export const selectTargetGroupId = ({ state }) => state.targetGroupId;
 export const selectAvatarFileId = ({ state }) => state.avatarFileId;
+export const selectAvatarCropTarget = ({ state }) => state.avatarCropTarget;
 
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return null;
@@ -279,6 +295,7 @@ export const selectViewData = ({ state }) => {
   return {
     flatItems,
     flatGroups,
+    addText: "Add",
     resourceCategory: "assets",
     selectedResourceId: "characters",
     selectedItemId: state.selectedItemId,
@@ -295,6 +312,8 @@ export const selectViewData = ({ state }) => {
     dialogDefaultValues: state.dialogDefaultValues,
     dialogForm: state.dialogForm,
     avatarFileId: state.avatarFileId,
+    isAvatarCropDialogOpen: state.isAvatarCropDialogOpen,
+    avatarCropFile: state.avatarCropFile,
     // Edit dialog data
     isEditDialogOpen: state.isEditDialogOpen,
     editDefaultValues,

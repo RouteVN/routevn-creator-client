@@ -1,0 +1,37 @@
+refs:
+  cropViewport:
+    eventListeners:
+      mousedown:
+        handler: handleViewportMouseDown
+      wheel:
+        handler: handleViewportWheel
+  zoomSlider:
+    eventListeners:
+      change:
+        handler: handleZoomChange
+      input:
+        handler: handleZoomChange
+  zoomOutButton:
+    eventListeners:
+      click:
+        handler: handleZoomOut
+  zoomInButton:
+    eventListeners:
+      click:
+        handler: handleZoomIn
+template:
+  - rtgl-view d=v g=md w=f:
+      - 'rtgl-view#cropViewport pos=rel w=${viewportSize} h=${viewportSize} bgc=bg bc=bo bw=xs br=lg cur=${cropCursor} style="overflow: hidden; touch-action: none; margin: 0 auto;"':
+          - $if imageUrl:
+              - 'rtgl-view style="${imageFrameStyle}"':
+                  - rtgl-image src=${imageUrl} w=f h=f of=cov ondragstart="event.preventDefault()": null
+            $else:
+              - rtgl-view w=f h=f av=c ah=c:
+                  - rtgl-text s=sm c=mu-fg: Loading image...
+          - 'rtgl-view pos=abs bw=sm bc=pr br=lg style="inset: 0; pointer-events: none;"': null
+      - rtgl-view d=h w=f ah=c av=c g=sm:
+          - rtgl-button#zoomOutButton sq v=gh s=sm: '-'
+          - input#zoomSlider type="range" w=1fg min="${minZoom}" max="${maxZoom}" step="${zoomStep}" value="${zoomLevel}": null
+          - rtgl-button#zoomInButton sq v=gh s=sm: +
+          - rtgl-view w=64 ah=c av=c p=sm bgc=co br=full:
+              - rtgl-text s=sm: ${zoomPercent}%

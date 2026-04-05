@@ -189,8 +189,21 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
   const fileAdapter = {
     continueOnUploadError: false,
 
-    storeFile: async ({ file, bytes, idGenerator, getCurrentReference }) => {
-      const reference = getCurrentReference();
+    storeFile: async ({
+      file,
+      bytes,
+      projectId: _projectId,
+      projectPath,
+      idGenerator,
+      getCurrentReference,
+    }) => {
+      const reference = projectPath
+        ? {
+            projectPath,
+            cacheKey: projectPath,
+            repositoryProjectId: projectPath,
+          }
+        : getCurrentReference();
       const fileId = idGenerator();
       const totalStartedAt = getNow();
       let uint8ArrayDurationMs = 0;
@@ -204,6 +217,7 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
         uint8ArrayDurationMs = getDurationMs(uint8ArrayStartedAt);
 
         const filesPath = await getReferenceFilesPath(reference);
+        await mkdir(filesPath, { recursive: true });
         const filePath = await join(filesPath, fileId);
 
         const writeFileStartedAt = getNow();

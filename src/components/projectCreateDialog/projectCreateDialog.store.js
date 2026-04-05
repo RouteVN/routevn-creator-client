@@ -57,6 +57,12 @@ const form = {
       ],
     },
     {
+      name: "projectIcon",
+      type: "slot",
+      slot: "project-icon-selector",
+      label: "Project Icon",
+    },
+    {
       name: "resolution",
       type: "select",
       label: "Resolution",
@@ -97,6 +103,10 @@ export const createInitialState = () => ({
   formKey: 0,
   defaultValues: createCreateProjectDefaultValues(),
   validationErrors: {},
+  iconFile: undefined,
+  iconPreviewUrl: undefined,
+  isIconCropDialogOpen: false,
+  iconCropFile: undefined,
 });
 
 export const syncFromProps = ({ state }, { props } = {}) => {
@@ -104,6 +114,10 @@ export const syncFromProps = ({ state }, { props } = {}) => {
   state.formKey += 1;
   state.defaultValues = createCreateProjectDefaultValues(props?.defaultValues);
   state.validationErrors = {};
+  state.iconFile = undefined;
+  state.iconPreviewUrl = undefined;
+  state.isIconCropDialogOpen = false;
+  state.iconCropFile = undefined;
 };
 
 export const updateFormValues = (
@@ -128,6 +142,26 @@ export const setValidationErrors = ({ state }, { errors } = {}) => {
   state.validationErrors = errors ?? {};
 };
 
+export const setIconFile = ({ state }, { file, previewUrl } = {}) => {
+  state.iconFile = file;
+  state.iconPreviewUrl = previewUrl;
+};
+
+export const clearIconFile = ({ state }) => {
+  state.iconFile = undefined;
+  state.iconPreviewUrl = undefined;
+};
+
+export const openIconCropDialog = ({ state }, { file } = {}) => {
+  state.isIconCropDialogOpen = true;
+  state.iconCropFile = file;
+};
+
+export const closeIconCropDialog = ({ state }) => {
+  state.isIconCropDialogOpen = false;
+  state.iconCropFile = undefined;
+};
+
 export const selectDefaultValues = ({ state }) => {
   return state.defaultValues;
 };
@@ -140,6 +174,18 @@ export const selectPlatform = ({ state }) => {
   return state.platform;
 };
 
+export const selectIconFile = ({ state }) => {
+  return state.iconFile;
+};
+
+export const selectIconPreviewUrl = ({ state }) => {
+  return state.iconPreviewUrl;
+};
+
+export const selectIsIconCropDialogOpen = ({ state }) => {
+  return state.isIconCropDialogOpen;
+};
+
 export const selectViewData = ({ state }) => {
   return {
     platform: state.platform,
@@ -148,6 +194,9 @@ export const selectViewData = ({ state }) => {
     defaultValues: state.defaultValues,
     projectPathDisplay: state.defaultValues.projectPath || "No folder selected",
     validationErrors: state.validationErrors,
+    iconPreviewUrl: state.iconPreviewUrl,
+    isIconCropDialogOpen: state.isIconCropDialogOpen,
+    iconCropFile: state.iconCropFile,
     context: {
       platform: state.platform,
       values: state.defaultValues,

@@ -3,6 +3,14 @@ import {
   CUSTOM_PROJECT_RESOLUTION_PRESET,
 } from "../../internal/projectResolution.js";
 
+const ICON_VALIDATIONS = [
+  {
+    type: "image-min-size",
+    minWidth: 64,
+    minHeight: 64,
+  },
+];
+
 const propsChanged = (oldProps = {}, newProps = {}) => {
   return (
     oldProps.platform !== newProps.platform ||
@@ -10,14 +18,34 @@ const propsChanged = (oldProps = {}, newProps = {}) => {
   );
 };
 
-export const handleBeforeMount = (deps) => {
-  const { store, props } = deps;
+const revokeIconPreviewUrl = ({ store } = {}) => {
+  const previewUrl = store.selectIconPreviewUrl();
+  if (!previewUrl) {
+    return;
+  }
+
+  URL.revokeObjectURL(previewUrl);
+};
+
+const syncFromProps = ({ store, props } = {}) => {
   store.syncFromProps({
     props,
   });
 };
 
+export const handleBeforeMount = (deps) => {
+  const { store, props } = deps;
+  syncFromProps({ store, props });
+
+  return () => {
+    revokeIconPreviewUrl({ store });
+    store.clearIconFile();
+    store.closeIconCropDialog();
+  };
+};
+
 export const handleOnUpdate = (deps, payload = {}) => {
+  const { store, render } = deps;
   const oldProps = payload.oldProps ?? {};
   const newProps = payload.newProps ?? {};
 
@@ -25,10 +53,9 @@ export const handleOnUpdate = (deps, payload = {}) => {
     return;
   }
 
-  deps.store.syncFromProps({
-    props: newProps,
-  });
-  deps.render();
+  revokeIconPreviewUrl({ store });
+  syncFromProps({ store, props: newProps });
+  render();
 };
 
 export const handleBrowseButtonClick = async (deps) => {
@@ -81,6 +108,61 @@ export const handleFormChange = (deps, payload) => {
     shouldRemount,
   });
   render();
+};
+
+export const handleProjectIconClick = async (deps) => {
+  const { appService, store, render } = deps;
+  let file;
+
+  try {
+    file = await appService.pickFiles({
+      accept: "image/*",
+      multiple: false,
+      validations: ICON_VALIDATIONS,
+    });
+  } catch {
+    appService.showToast("Failed to select project icon.");
+    return;
+  }
+
+  if (!file) {
+    return;
+  }
+
+  store.openIconCropDialog({ file });
+  render();
+};
+
+export const handleIconCropDialogClose = (deps) => {
+  const { store, render } = deps;
+  if (!store.selectIsIconCropDialogOpen()) {
+    return;
+  }
+
+  store.closeIconCropDialog();
+  render();
+};
+
+export const handleIconCropDialogConfirm = async (deps) => {
+  const { appService, refs, render, store } = deps;
+
+  try {
+    const croppedFile = await refs.iconCropDialog?.getCroppedFile?.();
+    if (!croppedFile) {
+      throw new Error("Project icon crop is not ready.");
+    }
+
+    revokeIconPreviewUrl({ store });
+    const previewUrl = URL.createObjectURL(croppedFile);
+    store.setIconFile({
+      file: croppedFile,
+      previewUrl,
+    });
+    store.closeIconCropDialog();
+    render();
+  } catch {
+    appService.showToast("Failed to crop project icon.");
+  }
 };
 
 export const handleKeyDown = (deps, payload) => {
@@ -152,5 +234,6 @@ export const handleGetValues = (deps) => {
   Object.assign(values, refs.createProjectForm?.getValues?.());
 
   values.projectPath = store.selectProjectPath();
+  values.iconFile = store.selectIconFile();
   return values;
 };
