@@ -136,6 +136,26 @@ export const handleAnimationItemDoubleClick = async (deps, payload) => {
   });
 };
 
+export const handleDetailHeaderClick = async (deps) => {
+  const { store } = deps;
+  const itemId = store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+
+  const itemData = store.selectAnimationDisplayItemById({ itemId });
+  if (!itemData) {
+    return;
+  }
+
+  await openAnimationDialog({
+    deps,
+    editMode: true,
+    itemId,
+    itemData,
+  });
+};
+
 export const handleCloseDialog = (deps) => {
   const { render, store } = deps;
   store.closeDialog();

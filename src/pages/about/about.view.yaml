@@ -12,12 +12,12 @@ refs:
       click:
         handler: handleClickSocialButton
 template:
-  - rtgl-view d=h w=f h=f:
-      - rtgl-view d=h h=f:
+  - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
+      - 'rtgl-view d=h h=f style="min-width: 0; min-height: 0;"':
           - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
                   - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
-          - rtgl-view w=1fg h=f p=lg d=v:
+          - 'rtgl-view w=1fg h=f p=lg d=v style="min-width: 0; min-height: 0;"':
               - rtgl-text s=h2: About
               - rtgl-view g=xl mt=lg h=1fg:
                   - rtgl-view g=lg:

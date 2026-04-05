@@ -348,6 +348,15 @@ export const handleSpriteItemEdit = (deps, payload) => {
   });
 };
 
+export const handleDetailHeaderClick = (deps) => {
+  const selectedItemId = deps.store.selectSelectedItemId();
+
+  openEditDialogForSprite({
+    deps,
+    itemId: selectedItemId,
+  });
+};
+
 export const handleUploadClick = async (deps, payload) => {
   const { appService } = deps;
   const { groupId } = payload._event.detail;

@@ -4,12 +4,12 @@ refs:
       data-changed:
         handler: handleDataChanged
 template:
-  - rtgl-view d=h w=f h=f:
-      - rtgl-view d=h h=f:
+  - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
+      - 'rtgl-view d=h h=f style="min-width: 0; min-height: 0;"':
           - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
               - rtgl-view slot="content" w=f h=f:
                   - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
-          - rtgl-view w=1fg h=f:
+          - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
               - rtgl-view w=f h=f p=lg:
                   - rtgl-text s=h2: User Settings
                   - rtgl-view g=lg mt=lg:
