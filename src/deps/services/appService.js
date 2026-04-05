@@ -143,16 +143,6 @@ export const createAppService = (params) => {
         lastOpenedAt: null,
       };
 
-      if (iconFile) {
-        const storedIcon = await projectService.storeFileForProject({
-          projectId: projectEntry.id,
-          projectPath,
-          file: iconFile,
-        });
-        iconFileId = storedIcon.fileId;
-        projectEntry.iconFileId = iconFileId;
-      }
-
       await projectService.initializeProject({
         projectId: projectEntry.id,
         projectPath,
@@ -161,9 +151,22 @@ export const createAppService = (params) => {
         projectInfo: {
           name,
           description,
-          iconFileId,
+          iconFileId: null,
         },
       });
+
+      if (iconFile) {
+        const storedIcon = await projectService.storeFileForProject({
+          projectId: projectEntry.id,
+          projectPath,
+          file: iconFile,
+        });
+        iconFileId = storedIcon.fileId;
+        projectEntry.iconFileId = iconFileId;
+        await projectService.updateProjectInfoByPath(projectPath, {
+          iconFileId,
+        });
+      }
 
       await addProjectEntry(projectEntry);
       const fullProject = { ...projectEntry };

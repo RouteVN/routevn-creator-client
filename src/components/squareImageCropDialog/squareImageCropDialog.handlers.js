@@ -34,7 +34,19 @@ export const handleDialogClose = ({ dispatchEvent }) => {
   );
 };
 
-export const handleConfirmClick = ({ dispatchEvent }) => {
+export const handleCropperReadyStateChanged = (deps, payload) => {
+  const { store, render } = deps;
+  store.setCropReady({
+    isReady: payload._event.detail?.isReady === true,
+  });
+  render();
+};
+
+export const handleConfirmClick = ({ dispatchEvent, store }) => {
+  if (!store.selectIsCropReady()) {
+    return;
+  }
+
   dispatchEvent(
     new CustomEvent("confirm", {
       bubbles: true,

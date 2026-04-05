@@ -4,6 +4,12 @@ import {
   userInterfaceItems,
 } from "../resourceTypes/resourceTypes.store.js";
 
+const SIDEBAR_TITLE_ASSETS = "Assets";
+const SIDEBAR_TITLE_USER_INTERFACE = "User Interface";
+const SIDEBAR_TITLE_SYSTEM = "System";
+const SIDEBAR_TITLE_SCENES = "Scenes";
+const SIDEBAR_TITLE_SETTINGS = "Settings";
+
 export const createInitialState = () => ({
   header: {
     label: "Sidebar",
@@ -72,17 +78,21 @@ export const selectViewData = ({ state }) => {
     const categoryMappings = [
       {
         items: assetItems,
-        sidebarPath: state.items.find((item) => item.title === "Assets")?.path,
+        sidebarPath: state.items.find(
+          (item) => item.title === SIDEBAR_TITLE_ASSETS,
+        )?.path,
       },
       {
         items: userInterfaceItems,
-        sidebarPath: state.items.find((item) => item.title === "User Interface")
-          ?.path,
+        sidebarPath: state.items.find(
+          (item) => item.title === SIDEBAR_TITLE_USER_INTERFACE,
+        )?.path,
       },
       {
         items: systemConfigItems,
-        sidebarPath: state.items.find((item) => item.title === "System Config")
-          ?.path,
+        sidebarPath: state.items.find(
+          (item) => item.title === SIDEBAR_TITLE_SYSTEM,
+        )?.path,
       },
     ];
 
@@ -119,13 +129,17 @@ export const selectViewData = ({ state }) => {
 
     // For scenes - match any route starting with /project/scene
     if (currentPath.startsWith("/project/scene")) {
-      const scenesItem = state.items.find((item) => item.title === "Scenes");
+      const scenesItem = state.items.find(
+        (item) => item.title === SIDEBAR_TITLE_SCENES,
+      );
       if (scenesItem) return scenesItem.path;
     }
 
     // For settings
     if (currentPath === "/project/about" || currentPath === "/project/user") {
-      const settingsItem = state.items.find((item) => item.title === "About");
+      const settingsItem = state.items.find(
+        (item) => item.title === SIDEBAR_TITLE_SETTINGS,
+      );
       if (settingsItem) return settingsItem.path;
     }
 

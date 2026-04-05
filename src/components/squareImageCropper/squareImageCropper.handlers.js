@@ -8,6 +8,18 @@ const propsChanged = (oldProps = {}, newProps = {}) => {
   return oldProps.file !== newProps.file;
 };
 
+const emitReadyStateChanged = (deps, isReady) => {
+  deps.dispatchEvent(
+    new CustomEvent("ready-state-changed", {
+      detail: {
+        isReady: isReady === true,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 const revokeImageUrl = (url) => {
   if (!url) {
     return;
@@ -26,6 +38,7 @@ const releaseCurrentImageUrl = ({ store } = {}) => {
 };
 
 const syncFromFile = async (deps, file = deps.props.file) => {
+  emitReadyStateChanged(deps, false);
   releaseCurrentImageUrl(deps);
   deps.store.clearImage();
   deps.render();
@@ -45,6 +58,7 @@ const syncFromFile = async (deps, file = deps.props.file) => {
 
     if (!dimensions) {
       revokeImageUrl(imageUrl);
+      emitReadyStateChanged(deps, false);
       return;
     }
 
@@ -54,8 +68,12 @@ const syncFromFile = async (deps, file = deps.props.file) => {
       imageHeight: dimensions.height,
     });
     deps.render();
+    emitReadyStateChanged(deps, true);
   } catch {
     revokeImageUrl(imageUrl);
+    if (deps.props.file === file) {
+      emitReadyStateChanged(deps, false);
+    }
   }
 };
 
@@ -182,7 +200,7 @@ export const handleGetCroppedFile = async (deps) => {
   const cropSelection = deps.store.selectCropSelection();
 
   if (!file || !cropSelection) {
-    throw new Error("Avatar crop is not ready.");
+    throw new Error("Image crop is not ready.");
   }
 
   return createSquareCroppedImageFile({

@@ -7,7 +7,10 @@ refs:
     eventListeners:
       click:
         handler: handleConfirmClick
-  cropper: {}
+  cropper:
+    eventListeners:
+      ready-state-changed:
+        handler: handleCropperReadyStateChanged
 template:
   - rtgl-dialog#dialog ?open=${isOpen} s=sm:
       - rtgl-view slot=content g=md:
@@ -16,4 +19,4 @@ template:
               - rtgl-text s=sm c=mu-fg: ${description}
           - rvn-square-image-cropper#cropper :file=${file}: null
           - rtgl-view d=h w=f ah=e:
-              - rtgl-button#confirmButton v=pr: ${confirmLabel}
+              - rtgl-button#confirmButton v=pr ?disabled=${!isCropReady}: ${confirmLabel}
