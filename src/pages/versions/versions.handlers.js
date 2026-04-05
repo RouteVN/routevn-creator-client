@@ -6,90 +6,216 @@ import {
 } from "../../internal/project/projection.js";
 import { createBundleInstructions } from "../../deps/services/shared/projectExportService.js";
 
-export const handleAfterMount = async (deps) => {
+const getVersionDescription = (version) => {
+  return version?.description ?? version?.notes ?? "";
+};
+
+const syncVersionFormValues = ({ deps, values } = {}) => {
+  const { versionForm } = deps.refs;
+  versionForm.reset();
+  versionForm.setValues({ values });
+};
+
+const refreshVersionsData = async (deps) => {
   const { store, render, projectService, appService } = deps;
   const { p: projectId } = appService.getPayload();
+
   await projectService.ensureRepository();
   const adapter = projectService.getAdapterById(projectId);
   const versions = (await adapter.app.get("versions")) || [];
-  store.setVersions({ versions: versions });
 
+  store.setVersions({ versions });
   render();
 };
 
-export const handleDataChanged = () => {};
-
-export const handleSaveVersionClick = (deps) => {
+const openCreateVersionDialog = ({ deps } = {}) => {
   const { store, render } = deps;
-  store.setVersionFormData({
-    data: {
+
+  store.openVersionDialog();
+  render();
+
+  syncVersionFormValues({
+    deps,
+    values: {
       name: "",
-      notes: "",
+      description: "",
     },
   });
-  store.setShowVersionForm({ show: true });
+};
+
+const openEditVersionDialog = ({ deps, versionId } = {}) => {
+  if (!versionId) {
+    return;
+  }
+
+  const { store, render } = deps;
+  const version = store.selectVersion(versionId);
+  if (!version) {
+    return;
+  }
+
+  store.setSelectedItemId({ itemId: versionId });
+  store.openVersionDialog({ versionId });
   render();
+
+  syncVersionFormValues({
+    deps,
+    values: {
+      name: version.name ?? "",
+      description: getVersionDescription(version),
+    },
+  });
+};
+
+const resolveVersionIdFromPayload = (payload = {}) => {
+  return payload?._event?.currentTarget?.dataset?.versionId ?? "";
+};
+
+export const handleAfterMount = async (deps) => {
+  await refreshVersionsData(deps);
+};
+
+export const handleDataChanged = refreshVersionsData;
+
+export const handleSaveVersionClick = (deps) => {
+  openCreateVersionDialog({ deps });
+};
+
+export const handleVersionItemClick = (deps, payload) => {
+  const { store, render } = deps;
+  const versionId = resolveVersionIdFromPayload(payload);
+  if (!versionId) {
+    return;
+  }
+
+  store.setSelectedItemId({ itemId: versionId });
+  render();
+};
+
+export const handleVersionItemDoubleClick = (deps, payload) => {
+  const versionId = resolveVersionIdFromPayload(payload);
+  if (!versionId) {
+    return;
+  }
+
+  openEditVersionDialog({ deps, versionId });
+};
+
+export const handleDetailHeaderClick = (deps) => {
+  const versionId = deps.store.selectSelectedItemId();
+  if (!versionId) {
+    return;
+  }
+
+  openEditVersionDialog({ deps, versionId });
 };
 
 export const handleVersionFormClose = (deps) => {
   const { store, render } = deps;
-  store.resetVersionForm();
+  store.closeVersionDialog();
   render();
 };
 
 export const handleVersionFormAction = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
-  const { p } = appService.getPayload();
-  const actionId = payload._event.detail.actionId;
+  const { p: projectId } = appService.getPayload();
+  const { actionId, values } = payload._event.detail;
 
   if (actionId === "cancel") {
-    store.resetVersionForm();
+    store.closeVersionDialog();
     render();
-  } else if (actionId === "submit") {
-    const formData = payload._event.detail.values;
-    const repository = await projectService.getRepository();
+    return;
+  }
 
-    // Get current action count from repository
+  if (actionId !== "submit") {
+    return;
+  }
+
+  const name = values?.name?.trim();
+  if (!name) {
+    appService.showToast("Version name is required.", {
+      title: "Warning",
+    });
+    return;
+  }
+
+  const description = values?.description ?? "";
+  const editingVersionId = store.selectEditingVersionId();
+
+  try {
+    if (editingVersionId) {
+      const currentVersion = store.selectVersion(editingVersionId);
+      if (!currentVersion) {
+        store.closeVersionDialog();
+        render();
+        return;
+      }
+
+      const updatedVersion = {
+        ...currentVersion,
+        name,
+        notes: description,
+      };
+
+      await projectService.updateVersionInProject(projectId, editingVersionId, {
+        name,
+        notes: description,
+      });
+
+      store.updateVersion({ version: updatedVersion });
+      store.setSelectedItemId({ itemId: editingVersionId });
+      store.closeVersionDialog();
+      render();
+      return;
+    }
+
+    const repository = await projectService.getRepository();
     const allEvents = repository.getEvents();
     const currentActionIndex = allEvents.length;
 
-    // Create simple version object
     const newVersion = {
       id: nanoid(),
-      name: formData.name,
-      notes: formData.notes ?? "",
+      name,
+      notes: description,
       actionIndex: currentActionIndex,
       createdAt: new Date().toISOString(),
     };
 
-    // Save version to project
-    await projectService.addVersionToProject(p, newVersion);
+    await projectService.addVersionToProject(projectId, newVersion);
 
-    // Update UI
     store.addVersion({ version: newVersion });
-    store.resetVersionForm();
+    store.setSelectedItemId({ itemId: newVersion.id });
+    store.closeVersionDialog();
     render();
+  } catch {
+    appService.showToast(
+      editingVersionId
+        ? "Failed to update version."
+        : "Failed to create version.",
+      {
+        title: "Error",
+      },
+    );
   }
 };
 
 export const handleVersionContextMenu = (deps, payload) => {
   const { store, render } = deps;
   payload._event.preventDefault();
+  payload._event.stopPropagation();
 
-  const versionId =
-    payload._event.currentTarget?.dataset?.versionId ||
-    payload._event.currentTarget?.id?.replace("versionMoreBtn", "");
-  const versions = store.selectVersions();
-  const version = versions.find((v) => v.id === versionId);
+  const versionId = resolveVersionIdFromPayload(payload);
+  const version = store.selectVersion(versionId);
 
   if (!version) {
     return;
   }
 
+  store.setSelectedItemId({ itemId: versionId });
   store.openDropdownMenu({
     x: payload._event.clientX,
     y: payload._event.clientY,
-    versionId: versionId,
+    versionId,
   });
   render();
 };
@@ -102,38 +228,33 @@ export const handleDropdownMenuClose = (deps) => {
 
 export const handleDownloadZipClick = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
+  payload._event.stopPropagation();
+
   const currentPayload = appService.getPayload();
   const projectId = currentPayload.p ?? "";
 
-  // Create bundle with transformed data
   appService.showToast("Please wait while the bundle is being created...", {
     title: "Bundle in progress",
   });
 
-  // Get versionId from the button or data attributes
-  const versionId =
-    payload._event.currentTarget?.dataset?.versionId ||
-    payload._event.currentTarget?.id?.replace("versionDownload", "");
-
+  const versionId = resolveVersionIdFromPayload(payload);
   const version = store.selectVersion(versionId);
 
   if (!version) {
-    console.warn("Version not found for bundle creation:", versionId);
+    appService.showToast("Version not found.", {
+      title: "Error",
+    });
     return;
   }
 
-  // Close dropdown if open
   store.closeDropdownMenu();
+  store.setSelectedItemId({ itemId: versionId });
   render();
 
   const repository = await projectService.getRepository();
-
-  // Get state at specific action
   const repositoryState = repository.getState(version.actionIndex);
   const usage = collectUsedResourcesForExport(repositoryState);
   const filteredState = buildFilteredStateForExport(repositoryState, usage);
-
-  // Transform filtered project data to the required format
   const constructedProjectData = constructProjectData(filteredState);
   const transformedData = createBundleInstructions({
     projectData: constructedProjectData,
@@ -143,19 +264,20 @@ export const handleDownloadZipClick = async (deps, payload) => {
   });
   const fileIds = usage.fileIds;
   let projectName = "project";
+
   if (projectId && typeof appService.getProjectEntries === "function") {
     const entries = await appService.getProjectEntries();
     const projectEntry = Array.isArray(entries)
       ? entries.find((entry) => entry?.id === projectId)
-      : null;
+      : undefined;
     const entryName = projectEntry?.name?.trim?.();
     if (entryName) {
       projectName = entryName;
     }
   }
+
   const zipName = `${projectName}_${version.name}`;
 
-  // Create and download ZIP with streamed bundle creation
   try {
     const outputPath = await projectService.createDistributionZipStreamed(
       transformedData,
@@ -172,7 +294,6 @@ export const handleDownloadZipClick = async (deps, payload) => {
       title: "Export completed",
     });
   } catch (error) {
-    console.error("Error saving ZIP with dialog:", error);
     appService.showToast(`Failed to save ZIP file: ${error.message}`, {
       title: "Error",
     });
@@ -182,47 +303,36 @@ export const handleDownloadZipClick = async (deps, payload) => {
 export const handleDropdownMenuClickItem = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
   const detail = payload._event.detail;
-
-  // Extract the actual item (rtgl-dropdown-menu wraps it)
   const item = detail.item || detail;
-
-  if (item.value !== "delete") {
-    // Hide dropdown for non-delete actions
-    store.closeDropdownMenu();
-    render();
-    return;
-  }
-
-  // Get versionId BEFORE closing dropdown (important!)
   const versionId = store.selectDropdownMenuTargetVersionId();
 
-  if (!versionId) {
-    console.warn("No versionId found for deletion");
-    store.closeDropdownMenu();
-    render();
-    return;
-  }
-
-  const version = store.selectVersion(versionId);
-
-  if (!version) {
-    console.warn("Version not found for deletion:", versionId);
-    store.closeDropdownMenu();
-    render();
-    return;
-  }
-
-  // Close dropdown
   store.closeDropdownMenu();
-  render();
 
-  // Get project id from appService
-  const { p } = appService.getPayload();
+  if (!versionId) {
+    render();
+    return;
+  }
 
-  // Delete the version entry using service
-  await projectService.deleteVersionFromProject(p, versionId);
+  if (item.value === "edit") {
+    render();
+    openEditVersionDialog({ deps, versionId });
+    return;
+  }
 
-  // Update store by removing from current versions
-  store.deleteVersion({ versionId: versionId });
-  render();
+  if (item.value !== "delete") {
+    render();
+    return;
+  }
+
+  try {
+    const { p: projectId } = appService.getPayload();
+    await projectService.deleteVersionFromProject(projectId, versionId);
+    store.deleteVersion({ versionId });
+    render();
+  } catch {
+    render();
+    appService.showToast("Failed to delete version.", {
+      title: "Error",
+    });
+  }
 };

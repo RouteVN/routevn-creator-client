@@ -42,6 +42,9 @@ export const createInitialState = () => ({
       icon: "choices",
     },
     {
+      type: "spacer"
+    },
+    {
       title: "About",
       path: "/project/about",
       icon: "settings",

@@ -143,6 +143,7 @@ export const createProjectServiceCore = ({
     getCurrentProjectInfo: repositoryService.getCurrentProjectInfo,
     updateCurrentProjectInfo: repositoryService.updateCurrentProjectInfo,
     addVersionToProject: collabService.addVersionToProject,
+    updateVersionInProject: collabService.updateVersionInProject,
     deleteVersionFromProject: collabService.deleteVersionFromProject,
     deleteImageIfUnused: collabService.deleteImageIfUnused,
     deleteSoundIfUnused: collabService.deleteSoundIfUnused,

@@ -1,12 +1,24 @@
 refs:
-  leftPanel:
-    eventListeners:
-      data-changed:
-        handler: handleDataChanged
   saveVersionBtn:
     eventListeners:
       click:
         handler: handleSaveVersionClick
+  versionItemRef*:
+    eventListeners:
+      click:
+        handler: handleVersionItemClick
+      dblclick:
+        handler: handleVersionItemDoubleClick
+      contextmenu:
+        handler: handleVersionContextMenu
+  detailDownloadBtn:
+    eventListeners:
+      click:
+        handler: handleDownloadZipClick
+  detailHeader:
+    eventListeners:
+      click:
+        handler: handleDetailHeaderClick
   versionForm:
     eventListeners:
       form-action:
@@ -15,14 +27,6 @@ refs:
     eventListeners:
       close:
         handler: handleVersionFormClose
-  versionMoreBtnRef*:
-    eventListeners:
-      click:
-        handler: handleVersionContextMenu
-  versionDownloadRef*:
-    eventListeners:
-      click:
-        handler: handleDownloadZipClick
   dropdownMenu:
     eventListeners:
       close:
@@ -31,31 +35,46 @@ refs:
         handler: handleDropdownMenuClickItem
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
-      - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
-          - rtgl-view slot="content" w=f h=f:
-              - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
-      - 'rtgl-view w=1fg p=lg d=v g=lg style="min-width: 0; min-height: 0;"':
-          - rtgl-text s=h2: Versions
-          - rtgl-button#saveVersionBtn v=pr s=md: Create new version
-          - rtgl-view w=f g=md h=1fg oy=a:
-              - $if versions.length == 0:
-                  - rtgl-view w=f h=200 ah=c av=c:
-                      - rtgl-view d=v ah=c g=md:
-                          - rtgl-text s=lg c=mu-fg: No versions saved yet
-                          - rtgl-text s=sm c=mu-fg: Save your first version to track changes
-                $else:
-                  - $for item, i in versions:
-                      - rtgl-view h=auto w=f bw=xs pt=md pb=sm ph=lg d=h av=c:
-                          - rtgl-view w=1fg d=v g=xs:
-                              - rtgl-text s=lg: ${item.name}
-                              - $if item.notes:
-                                  - rtgl-text s=sm c=mu-fg: ${item.notes}
-                              - rtgl-view d=h g=sm av=c:
-                                  - rtgl-text s=xs c=mu-fg: Action ${item.actionIndex} • ${item.formattedCreatedAt}
-                                  - rtgl-button#versionDownloadRef${i} data-version-id="${item.id}" v=gh s=sm pre=download: Download Zip
-                          - rtgl-view d=v g=xs:
-                              - rtgl-button#versionMoreBtnRef${i} data-version-id="${item.id}" v=gh sq pre=ellipsis: null
-  - rtgl-dialog#versionDialog ?open=${showVersionForm} s=md:
+      - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
+          - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
+              - rtgl-view slot="content" w=f h=f:
+                  - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
+          - 'rtgl-view w=1fg h=f pl=sm style="min-width: 0; min-height: 0;"':
+              - 'rtgl-view w=f h=100vh g=sm style="min-width: 0;"':
+                  - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
+                      - rtgl-view w=f d=h av=c g=md wrap:
+                          - rtgl-view av=c g=sm d=h w=1fg:
+                              - rtgl-text: Versions
+                          - rtgl-button#saveVersionBtn v=pr s=sm pre=plus: Add
+                  - 'rtgl-view h=1fg w=f sv style="min-width: 0;"':
+                      - $if versions.length == 0:
+                          - rtgl-view w=f h=f av=c ah=c:
+                              - rtgl-view d=v ah=c g=md:
+                                  - rtgl-text s=lg c=mu-fg: No versions saved yet
+                                  - rtgl-text s=sm c=mu-fg: Save your first version to track changes
+                        $else:
+                          - 'rtgl-view d=v g=md w=f ph=md pt=md pb=sm mb=lg style="min-width: 0;"':
+                              - $for item, i in versions:
+                                  - rtgl-view#versionItemRef${i} data-version-id="${item.id}" h=auto w=f bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md pt=md pb=sm ph=lg d=h av=c cur=pointer:
+                                      - rtgl-view w=1fg d=v g=xs:
+                                          - rtgl-text s=lg: ${item.name}
+                                          - $if item.description:
+                                              - rtgl-text s=sm c=mu-fg: ${item.description}
+                                          - rtgl-text s=xs c=mu-fg: Action ${item.actionIndex} • ${item.formattedCreatedAt}
+                              - rtgl-view w=f h=30vh: null
+          - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
+              - rtgl-view wh=f slot="content":
+                  - $if selectedItemId:
+                      - rtgl-view d=v w=f h=f:
+                          - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+                              - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                              - rtgl-svg svg=edit wh=16: null
+                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
+                              - rtgl-button#detailDownloadBtn slot=actions data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: Download Zip
+                    $else:
+                      - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                          - rtgl-text s=md c=mu-fg: No selection
+  - rtgl-dialog#versionDialog ?open=${isVersionDialogOpen} s=md:
       - rtgl-view slot=content w=f:
-          - rtgl-form#versionForm key=${showVersionForm} :defaultValues=${versionFormData} :form=${versionForm} w=f: null
+          - rtgl-form#versionForm :form=${versionForm} w=f: null
   - rtgl-dropdown-menu#dropdownMenu ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y} :items=${dropdownMenu.items}: null
