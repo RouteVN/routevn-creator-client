@@ -245,29 +245,49 @@ export const createProjectAssetService = ({
     }
 
     if (fileType === "video") {
-      const [dimensions, thumbnailData] = await Promise.all([
-        getVideoDimensions(file),
-        extractVideoThumbnail(file, {
-          timeOffset: 1,
-          width: 240,
-          height: 135,
-          format: "image/jpeg",
-          quality: 0.8,
-        }),
-      ]);
-      const [videoResult, thumbnailResult] = await Promise.all([
+      const [videoResult, dimensions, thumbnailPayload] = await Promise.all([
         storeFileWithRecord({ file }),
-        storeFileWithRecord({
-          file: thumbnailData.blob,
-        }),
+        getVideoDimensions(file),
+        (async () => {
+          try {
+            const thumbnailData = await extractVideoThumbnail(file, {
+              timeOffset: 1,
+              maxWidth: IMAGE_THUMBNAIL_MAX_WIDTH,
+              maxHeight: IMAGE_THUMBNAIL_MAX_HEIGHT,
+              format: "image/jpeg",
+              quality: 0.8,
+            });
+            const thumbnailResult = await storeFileWithRecord({
+              file: thumbnailData.blob,
+            });
+            return {
+              thumbnailData,
+              thumbnailResult,
+            };
+          } catch (error) {
+            console.warn("[videoUpload] thumbnail.failed", {
+              fileName: file.name,
+              fileSize: file.size,
+              fileType: file.type,
+              error: error?.message ?? "Unknown error",
+            });
+            return undefined;
+          }
+        })(),
       ]);
+
       return {
         ...videoResult,
-        thumbnailFileId: thumbnailResult.fileId,
-        thumbnailData,
+        thumbnailFileId: thumbnailPayload?.thumbnailResult?.fileId,
+        thumbnailData: thumbnailPayload?.thumbnailData,
         dimensions,
         type: "video",
-        fileRecords: [videoResult.fileRecord, thumbnailResult.fileRecord],
+        fileRecords: [
+          videoResult.fileRecord,
+          ...(thumbnailPayload?.thumbnailResult
+            ? [thumbnailPayload.thumbnailResult.fileRecord]
+            : []),
+        ],
       };
     }
 

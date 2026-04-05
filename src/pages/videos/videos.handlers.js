@@ -137,15 +137,14 @@ const openVideoPreviewById = async ({ deps, itemId } = {}) => {
 };
 
 const {
+  openEditDialogWithValues,
   handleBeforeMount,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged,
-  handleFileExplorerDoubleClick,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleSearchInput,
   handleItemClick: handleVideoItemClick,
-  handleItemDoubleClick: handleVideoItemDoubleClick,
   handleItemEdit: handleVideoItemEdit,
 } = createMediaPageHandlers({
   resourceType: "videos",
@@ -157,13 +156,37 @@ export {
   handleBeforeMount,
   handleDataChanged,
   handleFileExplorerSelectionChanged,
-  handleFileExplorerDoubleClick,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleSearchInput,
   handleVideoItemClick,
-  handleVideoItemDoubleClick,
   handleVideoItemEdit,
+};
+
+export const handleFileExplorerDoubleClick = async (deps, payload) => {
+  const { itemId, isFolder } = payload._event.detail;
+  if (isFolder) {
+    return;
+  }
+
+  await openVideoPreviewById({ deps, itemId });
+};
+
+export const handleVideoItemDoubleClick = async (deps, payload) => {
+  const { itemId } = payload._event.detail;
+  const { refs, store } = deps;
+  if (!itemId) {
+    return;
+  }
+
+  store.setSelectedItemId({ itemId });
+  refs.fileExplorer.selectItem({ itemId });
+  await openVideoPreviewById({ deps, itemId });
+};
+
+export const handleDetailHeaderClick = (deps) => {
+  const selectedItemId = deps.store.selectSelectedItemId();
+  openEditDialogWithValues({ deps, itemId: selectedItemId });
 };
 
 export const handleVideoItemPreview = async (deps, payload) => {

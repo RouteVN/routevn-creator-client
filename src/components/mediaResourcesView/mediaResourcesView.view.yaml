@@ -62,14 +62,14 @@ refs:
       click:
         handler: handlePreviewActionClick
 template:
-  - 'rtgl-view w=f h=100vh g=lg style="min-width: 0;"':
+  - 'rtgl-view w=f h=100vh g=sm style="min-width: 0;"':
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
           - rtgl-view w=f d=h av=c g=md wrap:
               - rtgl-view av=c g=sm d=h w=1fg:
                   - $if showBackButton:
                       - rtgl-button#backButton sq pre="chevronLeft" v="gh" mr=sm: null
                   - $if navTitle:
-                      - rtgl-text c=mu-fg: ${navTitle}
+                      - rtgl-text: ${navTitle}
               - rtgl-view d=h av=c g=md:
                   - $if showZoomControls:
                       - rtgl-view d=h av=c g=sm:
@@ -85,7 +85,7 @@ template:
                           - 'rtgl-view d=h av=c pos=abs w=f h=f bw=md bc=pr bgc=se op="0.5" style="top: 0; bottom: 0; left: 0; right: 0;"':
                               - rtgl-view w=f h=f av=c ah=c:
                                   - rtgl-text s=lg: Drag file to this area to upload
-                      - 'rtgl-view d=h w=f av=c style="position: sticky; top: 0px;"':
+                      - 'rtgl-view d=h w=f av=c bgc=bg z=100 pv=sm style="position: sticky; top: 0px;"':
                           - rtgl-view#groupToggleRef${gIndex} data-group-id=${group.id} d=h av=c g=md cur=pointer:
                               - $if group.isCollapsed:
                                   - rtgl-svg wh=16 svg=folderArrowRight: null

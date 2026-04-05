@@ -40,7 +40,7 @@ const buildMediaItem = (item) => ({
   name: item.name,
   cardKind: "image",
   previewFileId: item.thumbnailFileId ?? item.fileId,
-  canPreview: true,
+  canPreview: false,
 });
 
 const buildPendingMediaItem = (item) => ({
@@ -104,7 +104,7 @@ const {
   resourceType: "images",
   title: "Images",
   selectedResourceId: "images",
-  uploadText: "Upload Image",
+  uploadText: "Upload",
   acceptedFileTypes: [".jpg", ".jpeg", ".png", ".webp"],
   showZoomControls: true,
   buildDetailFields,

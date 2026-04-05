@@ -30,15 +30,14 @@ const createImageAbortError = () => {
 };
 
 const {
+  openEditDialogWithValues,
   refreshData: handleDataChanged,
   handleBeforeMount,
   handleFileExplorerSelectionChanged,
-  handleFileExplorerDoubleClick,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleSearchInput,
   handleItemClick: handleImageItemClick,
-  handleItemDoubleClick: handleImageItemDoubleClick,
   handleItemEdit: handleImageItemEdit,
 } = createMediaPageHandlers({
   resourceType: "images",
@@ -49,14 +48,48 @@ const {
 export {
   handleBeforeMount,
   handleFileExplorerSelectionChanged,
-  handleFileExplorerDoubleClick,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleDataChanged,
   handleSearchInput,
   handleImageItemClick,
-  handleImageItemDoubleClick,
   handleImageItemEdit,
+};
+
+const openImagePreviewById = ({ deps, itemId, syncExplorer = false } = {}) => {
+  const { refs, store, render } = deps;
+  const item = store.selectImageItemById({ itemId });
+  if (!itemId || !item) {
+    return;
+  }
+
+  store.setSelectedItemId({ itemId });
+
+  if (syncExplorer) {
+    refs.fileExplorer.selectItem({ itemId });
+  }
+
+  store.showFullImagePreview({ itemId });
+  render();
+};
+
+export const handleFileExplorerDoubleClick = (deps, payload) => {
+  const { itemId, isFolder } = payload._event.detail;
+  if (isFolder) {
+    return;
+  }
+
+  openImagePreviewById({ deps, itemId });
+};
+
+export const handleImageItemDoubleClick = (deps, payload) => {
+  const { itemId } = payload._event.detail;
+  openImagePreviewById({ deps, itemId, syncExplorer: true });
+};
+
+export const handleDetailHeaderClick = (deps) => {
+  const selectedItemId = deps.store.selectSelectedItemId();
+  openEditDialogWithValues({ deps, itemId: selectedItemId });
 };
 
 const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {

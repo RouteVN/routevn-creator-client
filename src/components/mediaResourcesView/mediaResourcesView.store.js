@@ -82,11 +82,7 @@ const parseBooleanProp = (value, fallback = false) => {
   return Boolean(value);
 };
 
-const resolveDefaultBorderColor = (cardKind) => {
-  if (cardKind === "sound" || cardKind === "video") {
-    return "tr";
-  }
-
+const resolveDefaultBorderColor = () => {
   return "bo";
 };
 
@@ -113,7 +109,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       isCollapsed,
       children: children.map((item) => {
         const isSelected = item.id === props.selectedItemId;
-        const defaultBorderColor = resolveDefaultBorderColor(item.cardKind);
+        const defaultBorderColor = resolveDefaultBorderColor();
         const isInteractive = item.isInteractive !== false;
 
         return {
