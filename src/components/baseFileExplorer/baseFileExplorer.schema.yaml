@@ -43,6 +43,9 @@ propsSchema:
     shrinkable:
       type: boolean
       description: Show folder expand/collapse controls
+    startCollapsed:
+      type: boolean
+      description: Collapse expandable folders on initial mount
     dropdownMenu:
       type: boolean
       description: Enable context menu dropdown on right-click

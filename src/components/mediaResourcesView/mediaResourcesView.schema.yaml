@@ -41,6 +41,22 @@ propsSchema:
     canUpload:
       type: boolean
       description: Whether upload actions should be shown
+    progressiveRender:
+      type: boolean
+      description: Whether to progressively render media cards
+    lazyImageCards:
+      type: boolean
+      description: Whether image card thumbnails should lazy-load
+    showImageCardPreview:
+      type: boolean
+      description: Whether image cards should render preview media
     itemContextMenuItems:
       type: array
       description: Context menu items for media cards
+methods:
+  type: object
+  properties:
+    scrollItemIntoView:
+      description: Scrolls a rendered media card into view when needed.
+      params: []
+      returns: void

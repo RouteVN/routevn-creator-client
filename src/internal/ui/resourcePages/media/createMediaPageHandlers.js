@@ -40,7 +40,7 @@ export const createMediaPageHandlers = ({
     const editValues = getEditValues(item);
 
     store.setSelectedItemId({ itemId });
-    fileExplorer.selectItem({ itemId });
+    fileExplorer?.selectItem?.({ itemId });
     store.openEditDialog({
       itemId,
       defaultValues: editValues,
@@ -81,7 +81,7 @@ export const createMediaPageHandlers = ({
   };
 
   const handleFileExplorerSelectionChanged = (deps, payload) => {
-    const { store, render } = deps;
+    const { store, render, refs } = deps;
     const { itemId, isFolder } = payload._event.detail;
 
     if (isFolder) {
@@ -96,6 +96,7 @@ export const createMediaPageHandlers = ({
 
     store.setSelectedItemId({ itemId });
     render();
+    refs.groupview?.scrollItemIntoView?.({ itemId });
   };
 
   const handleFileExplorerDoubleClick = (deps, payload) => {
@@ -121,7 +122,7 @@ export const createMediaPageHandlers = ({
     }
 
     store.setSelectedItemId({ itemId });
-    refs.fileExplorer.selectItem({ itemId });
+    refs.fileExplorer?.selectItem?.({ itemId });
     render();
   };
 

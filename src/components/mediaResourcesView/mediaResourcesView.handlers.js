@@ -3,14 +3,315 @@ import {
   isFileTypeAccepted,
 } from "../../internal/fileTypes.js";
 
+const PROGRESSIVE_INITIAL_ITEM_COUNT = 8;
+const PROGRESSIVE_BATCH_ITEM_COUNT = 24;
+const SCROLL_STICKY_TOP_GAP_PX = 12;
+
 const getDataAttribute = (event, name) => {
   return event?.currentTarget?.getAttribute?.(name) ?? undefined;
+};
+
+const parseBooleanProp = (value, fallback = false) => {
+  if (value === undefined || value === null) {
+    return fallback;
+  }
+
+  if (value === true || value === "") {
+    return true;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "1") {
+      return true;
+    }
+    if (normalized === "false" || normalized === "0") {
+      return false;
+    }
+  }
+
+  return Boolean(value);
+};
+
+const isProgressiveRenderEnabled = (props) => {
+  return parseBooleanProp(
+    props?.progressiveRender ?? props?.["progressive-render"],
+  );
+};
+
+const getProgressiveRenderSignature = (groups = []) => {
+  return JSON.stringify(
+    groups.map((group) => [
+      group?.id ?? "",
+      (group?.children ?? []).map((item) => item?.id ?? ""),
+    ]),
+  );
+};
+
+const countProgressiveItems = (groups = []) => {
+  return groups.reduce((sum, group) => sum + (group?.children?.length ?? 0), 0);
+};
+
+const cancelProgressiveRenderFrame = (store) => {
+  const frameId = store.selectProgressiveFrameId();
+  if (frameId === undefined) {
+    return;
+  }
+
+  cancelAnimationFrame(frameId);
+  store.clearProgressiveFrameId();
+};
+
+const scheduleProgressiveRender = (deps) => {
+  const { props, store, render } = deps;
+  if (!isProgressiveRenderEnabled(props)) {
+    return;
+  }
+
+  if (store.selectProgressiveFrameId() !== undefined) {
+    return;
+  }
+
+  const totalItemCount = countProgressiveItems(props.groups);
+  if (store.selectProgressiveRenderedItemCount() >= totalItemCount) {
+    return;
+  }
+
+  const frameId = requestAnimationFrame(() => {
+    store.clearProgressiveFrameId();
+
+    const nextTotalItemCount = countProgressiveItems(deps.props.groups);
+    const nextRenderedItemCount = Math.min(
+      nextTotalItemCount,
+      store.selectProgressiveRenderedItemCount() + PROGRESSIVE_BATCH_ITEM_COUNT,
+    );
+
+    store.setProgressiveRenderedItemCount({
+      itemCount: nextRenderedItemCount,
+    });
+    render();
+
+    if (nextRenderedItemCount < nextTotalItemCount) {
+      scheduleProgressiveRender(deps);
+    }
+  });
+
+  store.setProgressiveFrameId({ frameId });
+};
+
+const syncProgressiveRenderState = (deps) => {
+  const { props, store } = deps;
+  const progressiveRenderEnabled = isProgressiveRenderEnabled(props);
+  const groups = props.groups ?? [];
+  const totalItemCount = countProgressiveItems(groups);
+
+  if (!progressiveRenderEnabled) {
+    cancelProgressiveRenderFrame(store);
+    store.setProgressiveRenderSignature({ signature: "" });
+    store.setProgressiveRenderedItemCount({ itemCount: totalItemCount });
+    return true;
+  }
+
+  const nextSignature = getProgressiveRenderSignature(groups);
+  const currentSignature = store.selectProgressiveRenderSignature();
+  const currentRenderedItemCount = store.selectProgressiveRenderedItemCount();
+
+  if (nextSignature === currentSignature) {
+    if (store.selectProgressiveRenderedItemCount() < totalItemCount) {
+      scheduleProgressiveRender(deps);
+    }
+    return false;
+  }
+
+  cancelProgressiveRenderFrame(store);
+  store.setProgressiveRenderSignature({ signature: nextSignature });
+  const nextRenderedItemCount = currentSignature
+    ? Math.min(
+        totalItemCount,
+        Math.max(currentRenderedItemCount, PROGRESSIVE_INITIAL_ITEM_COUNT),
+      )
+    : Math.min(totalItemCount, PROGRESSIVE_INITIAL_ITEM_COUNT);
+  store.setProgressiveRenderedItemCount({
+    itemCount: nextRenderedItemCount,
+  });
+
+  if (nextRenderedItemCount < totalItemCount) {
+    scheduleProgressiveRender(deps);
+  }
+
+  return true;
 };
 
 const hasPreviewableItems = (groups = []) => {
   return groups.some((group) =>
     (group?.children ?? []).some((item) => item?.canPreview),
   );
+};
+
+const resolveItemRenderTarget = ({
+  groups = [],
+  collapsedIds = [],
+  itemId,
+} = {}) => {
+  if (!itemId) {
+    return undefined;
+  }
+
+  let visibleItemCount = 0;
+
+  for (const group of groups) {
+    const children = group?.children ?? [];
+    const itemIndex = children.findIndex((item) => item?.id === itemId);
+    const isCollapsed = collapsedIds.includes(group?.id);
+
+    if (itemIndex === -1) {
+      if (!isCollapsed) {
+        visibleItemCount += children.length;
+      }
+      continue;
+    }
+
+    if (isCollapsed) {
+      return {
+        itemId,
+        isCollapsed: true,
+      };
+    }
+
+    return {
+      itemId,
+      isCollapsed: false,
+      requiredRenderedItemCount: visibleItemCount + itemIndex + 1,
+    };
+  }
+
+  return undefined;
+};
+
+const getItemElement = (containerElement, itemId) => {
+  if (!containerElement || !itemId) {
+    return undefined;
+  }
+
+  return Array.from(containerElement.querySelectorAll("[data-item-id]")).find(
+    (element) => element.getAttribute("data-item-id") === itemId,
+  );
+};
+
+const getStickyTopOffset = (itemElement) => {
+  const groupElement = itemElement?.closest?.("[data-group-id]");
+  const stickyHeaderElement = groupElement?.firstElementChild;
+  return (stickyHeaderElement?.offsetHeight ?? 0) + SCROLL_STICKY_TOP_GAP_PX;
+};
+
+const isItemFullyVisible = (containerElement, itemElement) => {
+  if (!containerElement || !itemElement) {
+    return false;
+  }
+
+  const containerRect = containerElement.getBoundingClientRect();
+  const itemRect = itemElement.getBoundingClientRect();
+  const stickyTopOffset = getStickyTopOffset(itemElement);
+  const visibleTop = containerRect.top + stickyTopOffset;
+
+  if (itemRect.height >= containerRect.height - stickyTopOffset) {
+    return itemRect.top < containerRect.bottom && itemRect.bottom > visibleTop;
+  }
+
+  return itemRect.top >= visibleTop && itemRect.bottom <= containerRect.bottom;
+};
+
+const scrollRenderedItemIntoView = ({
+  refs,
+  itemId,
+  behavior = "auto",
+} = {}) => {
+  const containerElement = refs.scrollContainer;
+  const itemElement = getItemElement(containerElement, itemId);
+
+  if (!containerElement || !itemElement) {
+    return false;
+  }
+
+  if (isItemFullyVisible(containerElement, itemElement)) {
+    return false;
+  }
+
+  const containerRect = containerElement.getBoundingClientRect();
+  const itemRect = itemElement.getBoundingClientRect();
+  const stickyTopOffset = getStickyTopOffset(itemElement);
+  const visibleTop = containerRect.top + stickyTopOffset;
+
+  let targetScrollTop = containerElement.scrollTop;
+
+  if (itemRect.top < visibleTop) {
+    targetScrollTop += itemRect.top - visibleTop;
+  } else if (itemRect.bottom > containerRect.bottom) {
+    targetScrollTop += itemRect.bottom - containerRect.bottom;
+  } else {
+    return false;
+  }
+
+  containerElement.scrollTo({
+    top: Math.max(0, targetScrollTop),
+    behavior,
+  });
+  return true;
+};
+
+export const handleBeforeMount = (deps) => {
+  syncProgressiveRenderState(deps);
+
+  return () => {
+    cancelProgressiveRenderFrame(deps.store);
+  };
+};
+
+export const handleOnUpdate = (deps) => {
+  const didChange = syncProgressiveRenderState(deps);
+  if (didChange) {
+    deps.render();
+  }
+};
+
+export const handleScrollItemIntoView = (deps, payload = {}) => {
+  const { refs, props, store, render } = deps;
+  const { itemId, behavior = "auto" } = payload;
+
+  if (!itemId) {
+    return false;
+  }
+
+  const target = resolveItemRenderTarget({
+    groups: props.groups ?? [],
+    collapsedIds: store.selectCollapsedIds(),
+    itemId,
+  });
+
+  if (!target || target.isCollapsed) {
+    return false;
+  }
+
+  if (
+    isProgressiveRenderEnabled(props) &&
+    target.requiredRenderedItemCount >
+      store.selectProgressiveRenderedItemCount()
+  ) {
+    store.setProgressiveRenderedItemCount({
+      itemCount: target.requiredRenderedItemCount,
+    });
+    render();
+  }
+
+  requestAnimationFrame(() => {
+    scrollRenderedItemIntoView({
+      refs,
+      itemId,
+      behavior,
+    });
+  });
+
+  return true;
 };
 
 export const handleSearchInput = (deps, payload) => {

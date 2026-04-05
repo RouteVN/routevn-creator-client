@@ -1,4 +1,10 @@
-const blacklistedAttrs = ["fileId", "imageId", "source"];
+const blacklistedAttrs = [
+  "fileId",
+  "imageId",
+  "source",
+  "lazy",
+  "lazyRootMargin",
+];
 
 const stringifyAttrs = (attrs) => {
   return Object.entries(attrs)
@@ -25,9 +31,11 @@ const stringifyAttrs = (attrs) => {
 };
 
 export const createInitialState = () => ({
-  src: "/public/project_logo_placeholder.png",
+  src: "",
   isLoading: true,
   loadedFileId: undefined,
+  shouldLoad: false,
+  isLazyObserved: false,
 });
 
 export const setSrc = ({ state }, { src } = {}) => {
@@ -42,6 +50,14 @@ export const setLoadedFileId = ({ state }, { fileId } = {}) => {
   state.loadedFileId = fileId;
 };
 
+export const setShouldLoad = ({ state }, { shouldLoad } = {}) => {
+  state.shouldLoad = shouldLoad;
+};
+
+export const setIsLazyObserved = ({ state }, { isLazyObserved } = {}) => {
+  state.isLazyObserved = isLazyObserved;
+};
+
 export const selectSrc = ({ state }) => {
   return state.src;
 };
@@ -54,10 +70,19 @@ export const selectLoadedFileId = ({ state }) => {
   return state.loadedFileId;
 };
 
+export const selectShouldLoad = ({ state }) => {
+  return state.shouldLoad;
+};
+
+export const selectIsLazyObserved = ({ state }) => {
+  return state.isLazyObserved;
+};
+
 export const selectViewData = ({ state, props: attrs }) => {
   const { style: _style, bc = "fg", ...restAttrs } = attrs;
   return {
     src: state.src,
+    hasSrc: Boolean(state.src),
     isLoading: state.isLoading,
     borderColor: bc,
     containerAttrString: stringifyAttrs(restAttrs),

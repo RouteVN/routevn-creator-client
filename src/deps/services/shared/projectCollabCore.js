@@ -228,6 +228,19 @@ export const createProjectCollabCore = ({
     await adapter.app.set("versions", versions);
   };
 
+  const updateVersionInProject = async (projectId, versionId, patch) => {
+    let adapter = getAdapterByProject(projectId);
+    if (!adapter) {
+      await getRepositoryByProject(projectId);
+      adapter = getAdapterByProject(projectId);
+    }
+    const versions = (await adapter.app.get("versions")) || [];
+    const nextVersions = versions.map((version) =>
+      version.id === versionId ? { ...version, ...patch } : version,
+    );
+    await adapter.app.set("versions", nextVersions);
+  };
+
   const deleteVersionFromProject = async (projectId, versionId) => {
     let adapter = getAdapterByProject(projectId);
     if (!adapter) {
@@ -319,6 +332,7 @@ export const createProjectCollabCore = ({
     stopCollabSession,
     submitCommand,
     addVersionToProject,
+    updateVersionInProject,
     deleteVersionFromProject,
     deleteImageIfUnused,
     deleteSoundIfUnused,

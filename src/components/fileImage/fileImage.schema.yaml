@@ -22,6 +22,10 @@ propsSchema:
       type: string
     cur:
       type: string
+    lazy:
+      type: boolean
+    lazyRootMargin:
+      type: string
     key:
       type: string
   required: []

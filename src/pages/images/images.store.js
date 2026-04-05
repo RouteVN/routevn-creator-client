@@ -1,6 +1,13 @@
 import { formatFileSize } from "../../internal/files.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { createMediaPageStore } from "../../internal/ui/resourcePages/media/createMediaPageStore.js";
+import {
+  DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD,
+  shouldStartCollapsedFileExplorer,
+} from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+
+const AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD =
+  DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD;
 
 const buildDetailFields = (item) => {
   if (!item) {
@@ -157,9 +164,14 @@ export const hideFullImagePreview = ({ state }, _payload = {}) => {
 
 export const selectViewData = (context) => {
   const viewData = selectMediaViewData(context);
+  const flatItems = applyFolderRequiredRootDragOptions(viewData.flatItems);
 
   return {
     ...viewData,
-    flatItems: applyFolderRequiredRootDragOptions(viewData.flatItems),
+    flatItems,
+    startCollapsedFileExplorer: shouldStartCollapsedFileExplorer({
+      flatItems,
+      threshold: AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD,
+    }),
   };
 };
