@@ -78,6 +78,29 @@ async function copyTemplateFiles(templateId, targetPath) {
 }
 
 export const createTauriProjectServiceAdapters = ({ collabLog }) => {
+  const filesPathByProjectPath = new Map();
+  const fileUrlByCacheKey = new Map();
+
+  const getReferenceFilesPath = async (reference) => {
+    const projectPath = reference?.projectPath;
+    if (!projectPath) {
+      throw new Error("projectPath is required");
+    }
+
+    if (filesPathByProjectPath.has(projectPath)) {
+      return filesPathByProjectPath.get(projectPath);
+    }
+
+    const filesPath = await join(projectPath, "files");
+    filesPathByProjectPath.set(projectPath, filesPath);
+    return filesPath;
+  };
+
+  const getFileUrlCacheKey = (reference, fileId) => {
+    const projectKey = reference?.cacheKey ?? reference?.projectPath ?? "";
+    return `${projectKey}:${fileId ?? ""}`;
+  };
+
   const storageAdapter = {
     resolveProjectReferenceByProjectId: async ({ db, projectId }) => {
       const projects = (await db.get("projectEntries")) || [];
@@ -180,7 +203,7 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
         const uint8Array = new Uint8Array(arrayBuffer);
         uint8ArrayDurationMs = getDurationMs(uint8ArrayStartedAt);
 
-        const filesPath = await join(reference.projectPath, "files");
+        const filesPath = await getReferenceFilesPath(reference);
         const filePath = await join(filesPath, fileId);
 
         const writeFileStartedAt = getNow();
@@ -199,9 +222,12 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
           });
         }
 
+        const fileUrl = convertFileSrc(filePath);
+        fileUrlByCacheKey.set(getFileUrlCacheKey(reference, fileId), fileUrl);
+
         return {
           fileId,
-          downloadUrl: convertFileSrc(filePath),
+          downloadUrl: fileUrl,
         };
       } catch (error) {
         if (isAudioUploadFile(file)) {
@@ -222,15 +248,17 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
 
     getFileContent: async ({ fileId, getCurrentReference }) => {
       const reference = getCurrentReference();
-      const filesPath = await join(reference.projectPath, "files");
-      const filePath = await join(filesPath, fileId);
-
-      const fileExists = await exists(filePath);
-      if (!fileExists) {
-        throw new Error(`File not found: ${fileId}`);
+      const cacheKey = getFileUrlCacheKey(reference, fileId);
+      const cachedUrl = fileUrlByCacheKey.get(cacheKey);
+      if (cachedUrl) {
+        return { url: cachedUrl };
       }
 
-      return { url: convertFileSrc(filePath) };
+      const filesPath = await getReferenceFilesPath(reference);
+      const filePath = await join(filesPath, fileId);
+      const url = convertFileSrc(filePath);
+      fileUrlByCacheKey.set(cacheKey, url);
+      return { url };
     },
 
     downloadBundle: async ({ bundle, filename, options, filePicker }) => {

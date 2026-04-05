@@ -143,6 +143,28 @@ export const toggleFolderExpand = ({ state }, { folderId } = {}) => {
   }
 };
 
+export const setCollapsedIds = ({ state }, { collapsedIds } = {}) => {
+  state.collapsedIds = Array.isArray(collapsedIds) ? collapsedIds : [];
+};
+
+export const expandItemAncestors = ({ state, props }, { itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  const items = props.items ?? [];
+  const itemById = new Map(items.map((item) => [item.id, item]));
+  let currentParentId = itemById.get(itemId)?.parentId;
+
+  while (currentParentId) {
+    const collapsedIndex = state.collapsedIds.indexOf(currentParentId);
+    if (collapsedIndex >= 0) {
+      state.collapsedIds.splice(collapsedIndex, 1);
+    }
+    currentParentId = itemById.get(currentParentId)?.parentId;
+  }
+};
+
 export const showDropdownMenuFileExplorerItem = (
   { state },
   {

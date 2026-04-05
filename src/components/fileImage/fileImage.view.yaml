@@ -1,2 +1,7 @@
+refs:
+  image: {}
 template:
-  - rtgl-image src=${src} bc=${borderColor} of=con ${containerAttrString} ondragstart="event.preventDefault()": null
+  - $if hasSrc:
+      - rtgl-image#image src=${src} bc=${borderColor} of=con ${containerAttrString} ondragstart="event.preventDefault()": null
+    $else:
+      - rtgl-view#image bc=${borderColor} ${containerAttrString}: null

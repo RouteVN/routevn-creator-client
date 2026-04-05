@@ -1,4 +1,5 @@
 refs:
+  scrollContainer: {}
   searchInput:
     eventListeners:
       value-input:
@@ -77,7 +78,7 @@ template:
                           - input#zoomSlider type="range" w=120 min="0.5" max="4.0" step="0.1" value="${zoomLevel}": null
                           - rtgl-button#zoomIn sq v="gh" s=sm: +
                   - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
-      - 'rtgl-view h=1fg w=f sv style="min-width: 0;"':
+      - 'rtgl-view#scrollContainer h=1fg w=f sv style="min-width: 0;"':
           - $if groups.length > 0:
               - $for group, gIndex in groups:
                   - rtgl-view#groupDropRef${gIndex} data-group-id=${group.id} w=f ph=md pos=rel:
@@ -100,11 +101,15 @@ template:
                                           - rtgl-view#itemRef${gIndex}x${itemIndex} key=${item.id} data-item-id=${item.domItemId} cur=${item.cursor} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md:
                                               - $if item.cardKind == 'image':
                                                   - 'rtgl-view p=md g=md br=md w=${maxWidth} pos=rel style="max-width: 100%;"':
-                                                      - $if item.isProcessing:
-                                                          - rtgl-view w=f h=${imageHeight} br=md bw=xs bc=bo av=c ah=c:
-                                                              - rtgl-text s=sm c=mu-fg: Processing...
-                                                        $else:
-                                                          - rvn-file-image br=md w=f h=${imageHeight} fileId=${item.previewFileId} key=${item.previewFileId}-${imageHeight}x${maxWidth}: null
+                                                      - $if showImageCardPreview:
+                                                          - $if item.isProcessing:
+                                                              - rtgl-view w=f h=${imageHeight} br=md bw=xs bc=bo av=c ah=c:
+                                                                  - rtgl-text s=sm c=mu-fg: Processing...
+                                                            $else:
+                                                              - $if lazyImageCards && item.shouldLazyLoadPreview:
+                                                                  - rvn-file-image br=md w=f h=${imageHeight} fileId=${item.previewFileId} lazy: null
+                                                                $else:
+                                                                  - rvn-file-image br=md w=f h=${imageHeight} fileId=${item.previewFileId}: null
                                                       - $if item.showPreviewIcon:
                                                           - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; right: 6px; background-color: #000;"':
                                                               - rtgl-svg svg=zoomIn wh=22 c=white: null

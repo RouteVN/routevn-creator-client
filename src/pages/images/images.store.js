@@ -2,6 +2,8 @@ import { formatFileSize } from "../../internal/files.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { createMediaPageStore } from "../../internal/ui/resourcePages/media/createMediaPageStore.js";
 
+const AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD = 100;
+
 const buildDetailFields = (item) => {
   if (!item) {
     return [];
@@ -157,9 +159,12 @@ export const hideFullImagePreview = ({ state }, _payload = {}) => {
 
 export const selectViewData = (context) => {
   const viewData = selectMediaViewData(context);
+  const flatItems = applyFolderRequiredRootDragOptions(viewData.flatItems);
 
   return {
     ...viewData,
-    flatItems: applyFolderRequiredRootDragOptions(viewData.flatItems),
+    flatItems,
+    startCollapsedFileExplorer:
+      flatItems.length > AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD,
   };
 };

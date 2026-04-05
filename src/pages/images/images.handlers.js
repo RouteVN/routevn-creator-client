@@ -122,7 +122,7 @@ const openImagePreviewById = ({ deps, itemId, syncExplorer = false } = {}) => {
   store.setSelectedItemId({ itemId });
 
   if (syncExplorer) {
-    refs.fileExplorer.selectItem({ itemId });
+    refs.fileExplorer?.selectItem?.({ itemId });
   }
 
   store.showFullImagePreview({ itemId });

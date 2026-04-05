@@ -20,7 +20,27 @@ const mountSubscriptions = (deps) => {
   return () => active.forEach((subscription) => subscription?.unsubscribe?.());
 };
 
+const initializeCollapsedFolders = (deps) => {
+  const { store, props, props: attrs } = deps;
+  const shouldStartCollapsed = isBooleanAttrEnabled(
+    attrs,
+    "startCollapsed",
+    "start-collapsed",
+  );
+
+  if (!shouldStartCollapsed) {
+    return;
+  }
+
+  const collapsedIds = (props.items ?? [])
+    .filter((item) => item?.hasChildren)
+    .map((item) => item.id);
+
+  store.setCollapsedIds({ collapsedIds });
+};
+
 export const handleBeforeMount = (deps) => {
+  initializeCollapsedFolders(deps);
   return mountSubscriptions(deps);
 };
 
@@ -698,6 +718,7 @@ export const handlePageItemClick = (deps, payload) => {
   const { store, render } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
 
+  store.expandItemAncestors({ itemId });
   store.setSelectedItemId({ itemId: itemId });
   render();
 };
