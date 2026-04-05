@@ -30,11 +30,11 @@ refs:
       item-click:
         handler: handleDropdownMenuClickItem
 template:
-  - rtgl-view d=h w=f h=f:
+  - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
           - rtgl-view slot="content" w=f h=f:
               - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
-      - rtgl-view w=1fg p=lg d=v g=lg:
+      - 'rtgl-view w=1fg p=lg d=v g=lg style="min-width: 0; min-height: 0;"':
           - rtgl-text s=h2: Versions
           - rtgl-button#saveVersionBtn v=pr s=md: Create new version
           - rtgl-view w=f g=md h=1fg oy=a:

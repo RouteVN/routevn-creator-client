@@ -118,6 +118,15 @@ export const handleCharacterItemDoubleClick = async (deps, payload) => {
 
   const { fileExplorer } = refs;
   fileExplorer.selectItem({ itemId });
+  handleSpritesButtonClick(deps, payload);
+};
+
+export const handleDetailHeaderClick = (deps) => {
+  const { store } = deps;
+  const itemId = store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
 
   openEditDialogWithValues({ deps, itemId });
 };
@@ -193,84 +202,6 @@ export const handleSpritesButtonClick = (deps, payload) => {
   });
 
   render();
-};
-
-export const handleDetailPanelAvatarClick = async (deps) => {
-  const { appService, projectService, store } = deps;
-
-  // Get the currently selected item
-  const selectedItem = store.selectSelectedItem();
-  if (!selectedItem) {
-    console.warn("No item selected for image replacement");
-    return;
-  }
-
-  let file;
-  try {
-    file = await appService.pickFiles({
-      accept: "image/*",
-      multiple: false,
-      validations: [{ type: "square" }],
-    });
-  } catch (error) {
-    showResourcePageError({
-      appService,
-      errorOrResult: error,
-      fallbackMessage: "Failed to select avatar image.",
-    });
-    return;
-  }
-
-  if (!file) {
-    return; // User cancelled
-  }
-
-  try {
-    // Upload the new avatar file using projectService
-    const uploadedFiles = await projectService.uploadFiles([file]);
-
-    const uploadedFile = uploadedFiles?.[0];
-    if (!uploadedFile) {
-      showResourcePageError({
-        appService,
-        errorOrResult: "Failed to upload avatar image.",
-        fallbackMessage: "Failed to upload avatar image.",
-      });
-      return;
-    }
-
-    const updateData = {
-      fileId: uploadedFile.fileId,
-      fileType: file.type,
-      fileSize: file.size,
-    };
-    if (!selectedItem.name || selectedItem.name === "Untitled Character") {
-      updateData.name = file.name.replace(/\.[^/.]+$/, "");
-    }
-
-    const updateAttempt = await runResourcePageMutation({
-      appService,
-      fallbackMessage: "Failed to update character avatar.",
-      action: () =>
-        projectService.updateCharacter({
-          characterId: selectedItem.id,
-          fileRecords: uploadedFile.fileRecords,
-          data: updateData,
-        }),
-    });
-
-    if (!updateAttempt.ok) {
-      return;
-    }
-
-    await refreshCharactersData(deps);
-  } catch (error) {
-    showResourcePageError({
-      appService,
-      errorOrResult: error,
-      fallbackMessage: "Failed to upload avatar image.",
-    });
-  }
 };
 
 export const handleSearchInput = (deps, payload) => {

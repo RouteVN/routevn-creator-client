@@ -44,8 +44,8 @@ refs:
       item-click:
         handler: handleContextMenuClickItem
 template:
-  - 'rtgl-view w=f h=100vh g=lg style="overflow-y: scroll;"':
-      - rtgl-view g=lg w=f h=f:
+  - 'rtgl-view w=f h=100vh g=sm style="overflow-y: scroll;"':
+      - rtgl-view g=sm w=f h=f:
           - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
               - rtgl-input#searchInput s=sm placeholder="Search variables..." value=${searchQuery}: null
           - $if flatGroups.length > 0:

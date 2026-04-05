@@ -106,7 +106,7 @@ const buildMediaItem = (item) => ({
   ...item,
   cardKind: "image",
   previewFileId: item.fileId,
-  canPreview: true,
+  canPreview: false,
 });
 
 const buildPendingMediaItem = (item) => ({

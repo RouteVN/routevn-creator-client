@@ -192,6 +192,26 @@ export const handleTransformItemDoubleClick = async (deps, payload) => {
   });
 };
 
+export const handleDetailHeaderClick = async (deps) => {
+  const { store } = deps;
+  const itemId = store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+
+  const itemData = store.selectTransformItemById({ itemId });
+  if (!itemData) {
+    return;
+  }
+
+  await openTransformDialog({
+    deps,
+    editMode: true,
+    itemId,
+    itemData,
+  });
+};
+
 export const handleAddTransformClick = async (deps, payload) => {
   const { groupId } = payload._event.detail;
 
