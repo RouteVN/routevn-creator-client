@@ -1008,6 +1008,7 @@ export const detectFileType = (file) => {
   if (
     [
       "audio/mpeg",
+      "audio/x-mpeg",
       "audio/mp3",
       "audio/wav",
       "audio/x-wav",
@@ -1017,9 +1018,6 @@ export const detectFileType = (file) => {
   ) {
     return "audio";
   }
-  if (file.type.startsWith("audio/")) return "generic";
-  if (file.type.startsWith("image/")) return "generic";
-  if (file.type.startsWith("video/")) return "generic";
 
   // Fallback to extension check (mainly for fonts which often have no MIME type)
   if (!ext) return "generic";

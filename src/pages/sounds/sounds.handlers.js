@@ -66,7 +66,7 @@ const pickAndUploadSound = async ({ appService, projectService } = {}) => {
 
   const uploadResult = uploadedFiles?.[0];
   if (!uploadResult) {
-    return { error: "upload-failed" };
+    return { error: "upload-failed", errorType: "upload-failed" };
   }
 
   return { uploadResult };

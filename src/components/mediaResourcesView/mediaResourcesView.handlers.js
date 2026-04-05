@@ -109,6 +109,10 @@ export const handleDrop = (deps, payload) => {
     );
   }
 
+  if (!files.length) {
+    return;
+  }
+
   dispatchEvent(
     new CustomEvent("files-dropped", {
       detail: {
@@ -120,10 +124,6 @@ export const handleDrop = (deps, payload) => {
       composed: true,
     }),
   );
-
-  if (!files.length) {
-    return;
-  }
 };
 
 export const handleGroupClick = (deps, payload) => {

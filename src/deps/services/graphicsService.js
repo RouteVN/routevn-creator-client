@@ -36,11 +36,15 @@ const TAURI_ASSET_URL_PREFIXES = [
 
 const SUPPORTED_AUDIO_MIME_TYPES = new Set([
   "audio/mpeg",
+  "audio/x-mpeg",
   "audio/mp3",
   "audio/wav",
   "audio/x-wav",
   "audio/wave",
+  "audio/vnd.wave",
   "audio/ogg",
+  "audio/x-ogg",
+  "application/ogg",
 ]);
 
 // Keep this in sync with src-tauri/src/project_file_protocol.rs.
