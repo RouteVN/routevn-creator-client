@@ -8,11 +8,13 @@ const EMPTY_TREE = { tree: [], items: {} };
 
 const createVariableResourceData = ({
   name,
+  description = "",
   scope = "global-device",
   type = "string",
   defaultValue = "",
 } = {}) => ({
   name,
+  description,
   scope,
   type,
   default: defaultValue,
@@ -128,6 +130,7 @@ export const handleVariableCreated = async (deps, payload) => {
   const {
     groupId,
     name,
+    description,
     scope,
     type,
     default: defaultValue,
@@ -141,6 +144,7 @@ export const handleVariableCreated = async (deps, payload) => {
         variableId: nanoid(),
         data: createVariableResourceData({
           name,
+          description,
           scope,
           type,
           defaultValue,
@@ -159,7 +163,13 @@ export const handleVariableCreated = async (deps, payload) => {
 
 export const handleVariableUpdated = async (deps, payload) => {
   const { appService, store, projectService } = deps;
-  const { itemId, name, scope, default: defaultValue } = payload._event.detail;
+  const {
+    itemId,
+    name,
+    description,
+    scope,
+    default: defaultValue,
+  } = payload._event.detail;
 
   if (!itemId) {
     return;
@@ -173,6 +183,7 @@ export const handleVariableUpdated = async (deps, payload) => {
         variableId: itemId,
         data: {
           name,
+          description: description ?? "",
           scope,
           default: defaultValue,
           value: defaultValue,

@@ -48,6 +48,10 @@ export const selectViewData = ({ state }) => {
   const detailFields = selectedItem
     ? [
         {
+          type: "description",
+          value: selectedItem.description ?? "",
+        },
+        {
           type: "text",
           label: "Scope",
           value: selectedItem.scope ?? "",

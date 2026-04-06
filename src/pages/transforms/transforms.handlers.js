@@ -65,6 +65,7 @@ const createTransformPayload = (values = {}) => {
 
   return {
     name: values.name?.trim() ?? "",
+    description: values.description ?? "",
     x: parseInt(values.x ?? 0, 10),
     y: parseInt(values.y ?? 0, 10),
     scaleX: parseFloat(values.scaleX ?? 1),
@@ -102,6 +103,7 @@ const renderTransformPreview = ({
 const openTransformDialog = async ({
   deps,
   editMode = false,
+  previewOnly = false,
   itemId,
   itemData,
   targetGroupId,
@@ -109,12 +111,19 @@ const openTransformDialog = async ({
   const { graphicsService, refs, render, store } = deps;
   const projectResolution = store.selectProjectResolution();
 
-  store.openTransformFormDialog({
-    editMode,
-    itemId,
-    itemData,
-    targetGroupId,
-  });
+  if (previewOnly) {
+    store.openTransformPreviewDialog({
+      itemId,
+      itemData,
+    });
+  } else {
+    store.openTransformFormDialog({
+      editMode,
+      itemId,
+      itemData,
+      targetGroupId,
+    });
+  }
   render();
 
   const { canvas } = refs;
@@ -186,7 +195,7 @@ export const handleTransformItemDoubleClick = async (deps, payload) => {
 
   await openTransformDialog({
     deps,
-    editMode: true,
+    previewOnly: true,
     itemId,
     itemData,
   });

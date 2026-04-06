@@ -1269,6 +1269,12 @@ export const createGraphicsService = async ({ subject }) => {
       engine.handleActions(actions, eventContext);
     },
 
+    setAnimationPlaybackMode: (mode) => {
+      routeGraphics?.setAnimationPlaybackMode?.(mode);
+    },
+    setAnimationTime: (timeMs) => {
+      routeGraphics?.setAnimationTime?.(timeMs);
+    },
     render: (payload) => routeGraphics.render(payload),
     parse: (payload) => routeGraphics.parse(payload),
     destroy: destroyRuntime,

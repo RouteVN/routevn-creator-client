@@ -111,6 +111,29 @@ const updateControlKeyboard = async ({
   return true;
 };
 
+const openEditDialogWithValues = ({ deps, itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  const { store, refs, render } = deps;
+  const controlItem = store.selectControlItemById({ itemId });
+  if (!controlItem || controlItem.type !== "control") {
+    return;
+  }
+
+  store.setSelectedItemId({ itemId });
+  refs.fileExplorer?.selectItem?.({ itemId });
+  store.openEditDialog({
+    itemId,
+    defaultValues: {
+      name: controlItem.name ?? "",
+      description: controlItem.description ?? "",
+    },
+  });
+  render();
+};
+
 export const handleItemDoubleClick = (deps, payload) => {
   const { appService } = deps;
   const { itemId, isFolder } = payload._event.detail;
@@ -139,6 +162,11 @@ export const handleAddDialogClose = (deps) => {
   const { store, render } = deps;
   store.closeAddDialog();
   render();
+};
+
+export const handleDetailHeaderClick = (deps) => {
+  const selectedItemId = deps.store.selectSelectedItemId();
+  openEditDialogWithValues({ deps, itemId: selectedItemId });
 };
 
 const createControlTemplate = (projectResolution) => {
@@ -190,26 +218,51 @@ export const handleControlFormActionClick = async (deps, payload) => {
     return;
   }
 
-  const projectResolution = requireProjectResolution(
-    projectService.getRepositoryState().project?.resolution,
-    "Project resolution",
-  );
+  const description = values?.description ?? "";
+  const editItemId = store.getState().editItemId;
 
-  const createAttempt = await runResourcePageMutation({
-    appService,
-    fallbackMessage: "Failed to create control.",
-    action: () =>
-      projectService.createControlItem({
-        controlId: nanoid(),
-        name,
-        elements: createControlTemplate(projectResolution),
-        parentId: store.getState().targetGroupId,
-        position: "last",
-      }),
-  });
+  if (editItemId) {
+    const updateAttempt = await runResourcePageMutation({
+      appService,
+      fallbackMessage: "Failed to update control.",
+      action: () =>
+        projectService.updateControlItem({
+          controlId: editItemId,
+          data: {
+            name,
+            description,
+          },
+        }),
+    });
 
-  if (!createAttempt.ok) {
-    return;
+    if (!updateAttempt.ok) {
+      return;
+    }
+  } else {
+    const projectResolution = requireProjectResolution(
+      projectService.getRepositoryState().project?.resolution,
+      "Project resolution",
+    );
+
+    const createAttempt = await runResourcePageMutation({
+      appService,
+      fallbackMessage: "Failed to create control.",
+      action: () =>
+        projectService.createControlItem({
+          controlId: nanoid(),
+          name,
+          data: {
+            description,
+          },
+          elements: createControlTemplate(projectResolution),
+          parentId: store.getState().targetGroupId,
+          position: "last",
+        }),
+    });
+
+    if (!createAttempt.ok) {
+      return;
+    }
   }
 
   store.closeAddDialog();

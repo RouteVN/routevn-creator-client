@@ -30,6 +30,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
     values: {
       name: colorItem.name ?? "",
       hex: colorItem.hex ?? "",
+      description: colorItem.description ?? "",
     },
   });
 };
@@ -57,12 +58,16 @@ export {
 };
 
 export const handleColorItemDoubleClick = (deps, payload) => {
+  const { store, render, refs } = deps;
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder) {
     return;
   }
 
-  openEditDialogWithValues({ deps, itemId });
+  store.setSelectedItemId({ itemId });
+  refs.fileExplorer?.selectItem?.({ itemId });
+  store.openPreviewDialog();
+  render();
 };
 
 export const handleAddColorClick = (deps, payload) => {
@@ -76,6 +81,17 @@ export const handleEditDialogClose = (deps) => {
   const { store, render } = deps;
   store.closeEditDialog();
   render();
+};
+
+export const handlePreviewDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.closePreviewDialog();
+  render();
+};
+
+export const handleDetailHeaderClick = (deps) => {
+  const selectedItemId = deps.store.selectSelectedItemId();
+  openEditDialogWithValues({ deps, itemId: selectedItemId });
 };
 
 export const handleEditFormAction = async (deps, payload) => {
@@ -107,6 +123,7 @@ export const handleEditFormAction = async (deps, payload) => {
         data: {
           name,
           hex: values?.hex ?? "#ffffff",
+          description: values?.description ?? "",
         },
       }),
   });
@@ -151,6 +168,7 @@ export const handleAddFormAction = async (deps, payload) => {
         data: {
           type: "color",
           name,
+          description: values?.description ?? "",
           hex: values?.hex ?? "#ffffff",
         },
         parentId: store.getState().targetGroupId,

@@ -27,6 +27,12 @@ const editForm = {
       required: true,
     },
     {
+      name: "description",
+      type: "input-textarea",
+      label: "Description",
+      required: false,
+    },
+    {
       name: "hex",
       type: "color-picker",
       label: "Color",
@@ -53,6 +59,12 @@ const addForm = {
       type: "input-text",
       label: "Color Name",
       required: true,
+    },
+    {
+      name: "description",
+      type: "input-textarea",
+      label: "Description",
+      required: false,
     },
     {
       name: "hex",
@@ -83,6 +95,10 @@ const buildDetailFields = (item) => {
       type: "slot",
       slot: "color-preview",
       label: "",
+    },
+    {
+      type: "description",
+      value: item.description ?? "",
     },
     {
       type: "text",
@@ -134,7 +150,7 @@ const {
   title: "Colors",
   selectedResourceId: "colors",
   resourceCategory: "userInterface",
-  addText: "Add Color",
+  addText: "Add",
   matchesSearch,
   buildDetailFields,
   buildCatalogItem,
@@ -148,8 +164,11 @@ const {
       editDefaultValues: {
         name: editItem?.name ?? "",
         hex: editItem?.hex ?? "",
+        description: editItem?.description ?? "",
       },
       editForm,
+      isPreviewDialogOpen: state.isPreviewDialogOpen,
+      previewColorHex: selectedItem?.hex ?? "",
       isAddDialogOpen: state.isAddDialogOpen,
       addDefaultValues: state.addDefaultValues,
       addForm,
@@ -161,10 +180,12 @@ export const createInitialState = () => ({
   ...createCatalogInitialState(),
   isEditDialogOpen: false,
   editItemId: undefined,
+  isPreviewDialogOpen: false,
   isAddDialogOpen: false,
   targetGroupId: undefined,
   addDefaultValues: {
     name: "",
+    description: "",
     hex: "#ffffff",
   },
 });
@@ -189,6 +210,14 @@ export const closeEditDialog = ({ state }, _payload = {}) => {
   state.editItemId = undefined;
 };
 
+export const openPreviewDialog = ({ state }, _payload = {}) => {
+  state.isPreviewDialogOpen = true;
+};
+
+export const closePreviewDialog = ({ state }, _payload = {}) => {
+  state.isPreviewDialogOpen = false;
+};
+
 export const openAddDialog = ({ state }, { groupId } = {}) => {
   state.isAddDialogOpen = true;
   state.targetGroupId = groupId === "_root" ? undefined : groupId;
@@ -199,6 +228,7 @@ export const closeAddDialog = ({ state }, _payload = {}) => {
   state.targetGroupId = undefined;
   state.addDefaultValues = {
     name: "",
+    description: "",
     hex: "#ffffff",
   };
 };

@@ -7,7 +7,7 @@
         "@rettangoli/fe": "1.1.0",
         "@rettangoli/ui": "1.0.20",
         "@rettangoli/vt": "1.0.2",
-        "@routevn/creator-model": "1.1.8",
+        "@routevn/creator-model": "1.1.9",
         "@tauri-apps/api": "^2.8.0",
         "@tauri-apps/plugin-dialog": "2.4.2",
         "@tauri-apps/plugin-fs": "^2.4.2",
@@ -24,7 +24,7 @@
         "jszip": "^3.10.1",
         "nanoid": "^5.1.5",
         "route-engine-js": "0.7.4",
-        "route-graphics": "1.5.3",
+        "route-graphics": "1.5.6",
         "rxjs": "^7.8.2",
         "snabbdom": "^3.6.2",
         "snabbdom-to-html": "^7.1.0",
@@ -259,7 +259,7 @@
 
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.55.1", "", { "os": "win32", "cpu": "x64" }, "sha512-SPEpaL6DX4rmcXtnhdrQYgzQ5W2uW3SCJch88lB2zImhJRhIIK44fkUrgIV/Q8yUNfw5oyZ5vkeQsZLhCb06lw=="],
 
-    "@routevn/creator-model": ["@routevn/creator-model@1.1.8", "", {}, "sha512-htQezLy4l7s4DOyBzVLmaK90xunPynkns5JALpeLiK7lLFAamJfpavqkd0kh9sZ7MLE38GRorIj6HayTVJiZeA=="],
+    "@routevn/creator-model": ["@routevn/creator-model@1.1.9", "", {}, "sha512-JpmtZvKO4oKRG/07nPqLag05evZ3Ibv0AlxGwd154mxWs9hhhiWqPwOAFqy9PM693wnxEsBjItcaCVFD7bZmIQ=="],
 
     "@shikijs/core": ["@shikijs/core@3.22.0", "", { "dependencies": { "@shikijs/types": "3.22.0", "@shikijs/vscode-textmate": "^10.0.2", "@types/hast": "^3.0.4", "hast-util-to-html": "^9.0.5" } }, "sha512-iAlTtSDDbJiRpvgL5ugKEATDtHdUVkqgHDm/gbD2ZS9c88mx7G1zSYjjOxp5Qa0eaW0MAQosFRmJSk354PRoQA=="],
 
@@ -689,7 +689,7 @@
 
     "route-engine-js": ["route-engine-js@0.7.4", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.0.0", "js-yaml": "^4.1.0", "puty": "^0.1.1" } }, "sha512-LwLdpa05I1efP58wGYfpIs+L9GuJUy5ffWk+TI+kAF6nSjwKccCqprYGLOQFMLerHO3MkwYY3iI+T25brkwZ1w=="],
 
-    "route-graphics": ["route-graphics@1.5.3", "", { "dependencies": { "@pixi/unsafe-eval": "^7.4.3", "hotkeys-js": "^4.0.0-beta.7", "pixi.js": "^8.7.1" } }, "sha512-4BKraOBTW8h5BhYirCtjvsS2apD3A1TWH6drtxzux3tpFsqSHDOMRcOy9KDH4yeqHWH7fOE6to0CUfmlRoKBNg=="],
+    "route-graphics": ["route-graphics@1.5.6", "", { "dependencies": { "@pixi/unsafe-eval": "^7.4.3", "hotkeys-js": "^4.0.0-beta.7", "pixi.js": "^8.7.1" } }, "sha512-GuPGlEmLzEvT6RZIMyWI5tOU9eUAqApDTBY/dKAtp8efLB6ujLR0tYT3JwbGo7qe3o3/BfAPdt3dKmhlo/JNDQ=="],
 
     "rrweb-cssom": ["rrweb-cssom@0.8.0", "", {}, "sha512-guoltQEx+9aMf2gDZ0s62EcV8lsXR+0w8915TC3ITdn2YueuNjdAYh/levpU9nFaoChh9RUS5ZdQMrKfVEN9tw=="],
 

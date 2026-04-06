@@ -15,6 +15,8 @@ refs:
         handler: handleFontItemClick
       item-dblclick:
         handler: handleFontItemDoubleClick
+      item-edit:
+        handler: handleFontItemEdit
       files-dropped:
         handler: handleFilesDropped
       upload-click:
@@ -31,10 +33,26 @@ refs:
     eventListeners:
       click:
         handler: handleCloseModal
-  detailFontPreview:
+  detailHeader:
     eventListeners:
       click:
-        handler: handleFormExtraEvent
+        handler: handleDetailHeaderClick
+  editDialog:
+    eventListeners:
+      close:
+        handler: handleEditDialogClose
+  editForm:
+    eventListeners:
+      form-action:
+        handler: handleEditFormAction
+  editDialogFontPreview:
+    eventListeners:
+      click:
+        handler: handleEditDialogFontClick
+  editDialogFontPreviewPlaceholder:
+    eventListeners:
+      click:
+        handler: handleEditDialogFontClick
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
@@ -48,30 +66,39 @@ template:
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
                       - rtgl-view d=v w=f h=f:
-                          - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
-                              - rtgl-text c=mu-fg: ${selectedItemName}
-                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
-                              - $if selectedPreviewFileId:
-                                  - rtgl-view#detailFontPreview slot="font-preview" bw=xs bc=bo br=md p=md cur=pointer:
-                                      - rvn-font-preview fileId=${selectedPreviewFileId} fontFamily=${selectedFontFamily} previewText="Aa" fontSize=60 width=220 height=110 av=c ah=c: null
-                                $else:
-                                  - rtgl-view#detailFontPreview slot="font-preview" h=110 bw=xs bc=bo br=md av=c ah=c cur=pointer:
-                                      - rtgl-text c=mu-fg s=sm: No Preview
+                          - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+                              - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                              - rtgl-svg svg=edit wh=16: null
+                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}: null
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
+      - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
+          - rtgl-view slot=content g=md:
+              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:
+                  - $if editPreviewFileId:
+                      - rtgl-view#editDialogFontPreview slot="font-slot" bw=xs bc=bo br=md p=md cur=pointer:
+                          - rvn-font-preview fileId=${editPreviewFileId} fontFamily=${editPreviewFontFamily} previewText="Aa" fontSize=60 width=320 height=120 av=c ah=c: null
+                    $else:
+                      - rtgl-view#editDialogFontPreviewPlaceholder slot="font-slot" h=120 bw=xs bc=bo br=md av=c ah=c cur=pointer:
+                          - rtgl-text c=mu-fg s=sm: Click to Upload
       - rtgl-dialog#fontDialog ?open=${isModalOpen} s=lg:
           - rtgl-view slot="content" p=xl:
-              - $if selectedFontInfo:
-                  - rtgl-view d=h g=lg h=f:
-                      - rtgl-view w=1fg:
-                          - rtgl-form :form=${fontInfoForm} :defaultValues=${fontInfoValues} :context=${fontInfoValues}: null
-                      - rtgl-view w=2fg mt=xl:
+              - $if modalFontInfo:
+                  - rtgl-view d=v g=md:
+                      - $if modalPreviewRows.length:
+                          - $for previewRow in modalPreviewRows:
+                              - rtgl-view p=md bgc=bg-hover br=sm:
+                                  - 'rtgl-view d=h wrap ah=s style="gap: 4px;"':
+                                      - $for glyph in previewRow.glyphs:
+                                          - rtgl-view wh=40 d=v av=c ah=c br=xs bgc=bg:
+                                              - 'rtgl-text style="font-family: ${modalFontInfo.fontFamily}; font-size: 24px; line-height: 1;"': ${glyph.char}
+                      - $if modalGlyphList.length:
                           - rtgl-view p=md bgc=bg-hover br=sm:
-                              - 'rtgl-view d=h wrap style="gap: 4px;"':
-                                  - $for glyph in glyphList:
+                              - 'rtgl-view d=h wrap ah=s style="gap: 4px;"':
+                                  - $for glyph in modalGlyphList:
                                       - rtgl-view wh=40 d=v av=c ah=c br=xs bgc=bg:
-                                          - 'rtgl-text style="font-family: ${selectedFontInfo.fontFamily}; font-size: 24px; line-height: 1;"': ${glyph.char}
+                                          - 'rtgl-text style="font-family: ${modalFontInfo.fontFamily}; font-size: 24px; line-height: 1;"': ${glyph.char}
                 $else:
                   - rtgl-view d=v av=c ah=c h=200:
                       - rtgl-text c=mu-fg: Loading...

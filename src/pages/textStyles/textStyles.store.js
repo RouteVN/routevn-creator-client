@@ -14,6 +14,13 @@ const createAddColorForm = (colorFolderOptions) => ({
       required: true,
     },
     {
+      name: "description",
+      type: "input-textarea",
+      label: "Description",
+      description: "Optional description for this color",
+      required: false,
+    },
+    {
       name: "hex",
       type: "color-picker",
       label: "Hex Value",
@@ -46,6 +53,13 @@ const createAddFontForm = (fontFolderOptions) => ({
   title: "Add New Font",
   description: "Upload a new font for text styles",
   fields: [
+    {
+      name: "description",
+      type: "input-textarea",
+      label: "Description",
+      description: "Optional description for this font",
+      required: false,
+    },
     {
       name: "folderId",
       type: "select",
@@ -99,6 +113,7 @@ export const createInitialState = () => ({
   isAddColorDialogOpen: false,
   newColorData: {
     name: "",
+    description: "",
     hex: "#ff0000",
     folderId: "_root",
   },
@@ -110,12 +125,14 @@ export const createInitialState = () => ({
   selectedFontFileName: "",
   dragDropText: "Click or drag font file here",
   newFontData: {
+    description: "",
     folderId: "_root",
   },
 
   // Form values for preview
   currentFormValues: {
     name: "",
+    description: "",
     fontColor: "",
     strokeColor: "",
     fontStyle: "",
@@ -128,6 +145,7 @@ export const createInitialState = () => ({
 
   defaultValues: {
     name: "",
+    description: "",
     fontColor: "",
     strokeColor: "",
     fontStyle: "",
@@ -207,6 +225,7 @@ export const updateFormValues = ({ state }, { formData } = {}) => {
 export const resetFormValues = ({ state }, _payload = {}) => {
   state.currentFormValues = {
     name: "",
+    description: "",
     fontColor: "",
     strokeColor: "",
     fontStyle: "",
@@ -224,6 +243,7 @@ export const setFormValuesFromItem = ({ state }, { item } = {}) => {
   }
   state.currentFormValues = {
     name: item.name || "",
+    description: item.description || "",
     fontColor: item.colorId || "",
     strokeColor: item.strokeColorId || "",
     fontStyle: item.fontId || "",
@@ -244,6 +264,7 @@ export const closeAddColorDialog = ({ state }, _payload = {}) => {
   state.isAddColorDialogOpen = false;
   state.newColorData = {
     name: "",
+    description: "",
     hex: "#ff0000",
     folderId: "_root",
   };
@@ -265,6 +286,7 @@ export const closeAddFontDialog = ({ state }, _payload = {}) => {
   state.selectedFontFileName = "";
   state.dragDropText = "Click or drag font file here";
   state.newFontData = {
+    description: "",
     folderId: "_root",
   };
 };
@@ -342,7 +364,10 @@ export const selectViewData = ({ state }) => {
       .map((group) => {
         const filteredChildren = (group.children ?? []).filter((item) => {
           const name = (item.name ?? "").toLowerCase();
-          return name.includes(searchQuery);
+          const description = (item.description ?? "").toLowerCase();
+          return (
+            name.includes(searchQuery) || description.includes(searchQuery)
+          );
         });
 
         const groupName = (group.name ?? "").toLowerCase();
@@ -435,6 +460,10 @@ export const selectViewData = ({ state }) => {
           type: "slot",
           slot: "text-style-preview",
           label: "",
+        },
+        {
+          type: "description",
+          value: selectedItem.description ?? "",
         },
         {
           type: "text",
@@ -547,6 +576,12 @@ export const selectViewData = ({ state }) => {
         required: true,
       },
       {
+        name: "description",
+        type: "input-textarea",
+        label: "Description",
+        required: false,
+      },
+      {
         name: "fontColor",
         type: "select",
         label: "Color",
@@ -644,6 +679,7 @@ export const selectViewData = ({ state }) => {
     state.editMode && editingItem
       ? {
           name: editingItem.name || "",
+          description: editingItem.description || "",
           fontColor: editingItem.colorId || "",
           strokeColor: editingItem.strokeColorId || "",
           fontStyle: editingItem.fontId || "",
@@ -710,6 +746,7 @@ export const selectViewData = ({ state }) => {
     detailPreviewFontFamily: detailPreviewFontData.fontFamily,
     detailPreviewFontFileId: detailPreviewFontData.fileId,
     title: "Typography",
+    addText: "Add",
     folderContextMenuItems: state.folderContextMenuItems,
     itemContextMenuItems: state.itemContextMenuItems,
     centerItemContextMenuItems: state.centerItemContextMenuItems,

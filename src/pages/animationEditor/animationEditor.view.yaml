@@ -1,0 +1,144 @@
+refs:
+  backButton:
+    eventListeners:
+      click:
+        handler: handleBackClick
+  playButton:
+    eventListeners:
+      click:
+        handler: handleReplayAnimation
+  addPropertiesButton:
+    eventListeners:
+      click:
+        handler: handleAddPropertiesClick
+  updateTimeline:
+    eventListeners:
+      add-keyframe:
+        handler: handleAddKeyframeInDialog
+      ruler-time-hover:
+        handler: handleRulerTimeHover
+      ruler-time-leave:
+        handler: handleRulerTimeLeave
+      keyframe-click:
+        handler: handleKeyframeClick
+      keyframe-right-click:
+        handler: handleKeyframeRightClick
+      property-name-click:
+        handler: handlePropertyNameClick
+      initial-value-click:
+        handler: handleInitialValueClick
+  previousTimeline:
+    eventListeners:
+      add-keyframe:
+        handler: handleAddKeyframeInDialog
+      keyframe-click:
+        handler: handleKeyframeClick
+      keyframe-right-click:
+        handler: handleKeyframeRightClick
+      property-name-click:
+        handler: handlePropertyNameClick
+      initial-value-click:
+        handler: handleInitialValueClick
+  nextTimeline:
+    eventListeners:
+      add-keyframe:
+        handler: handleAddKeyframeInDialog
+      keyframe-click:
+        handler: handleKeyframeClick
+      keyframe-right-click:
+        handler: handleKeyframeRightClick
+      property-name-click:
+        handler: handlePropertyNameClick
+      initial-value-click:
+        handler: handleInitialValueClick
+  addPropertyPopover:
+    eventListeners:
+      close:
+        handler: handleClosePopover
+  addPropertyForm:
+    eventListeners:
+      form-action:
+        handler: handleAddPropertyFormSubmit
+      form-change:
+        handler: handleAddPropertyFormChange
+  addKeyframeForm:
+    eventListeners:
+      form-action:
+        handler: handleAddKeyframeFormSubmit
+  editKeyframeForm:
+    eventListeners:
+      form-action:
+        handler: handleEditKeyframeFormSubmit
+  editInitialValueForm:
+    eventListeners:
+      form-action:
+        handler: handleEditInitialValueFormSubmit
+      form-change:
+        handler: handleEditInitialValueFormChange
+  keyframeDropdownMenu:
+    eventListeners:
+      close:
+        handler: handleClosePopover
+      item-click:
+        handler: handleKeyframeDropdownItemClick
+  addPropertySideMenu:
+    eventListeners:
+      close:
+        handler: handleClosePopover
+      item-click:
+        handler: handleAddPropertySideMenuItemClick
+  canvas: {}
+template:
+  - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
+      - rvn-resizable-panel w=300 min-w=200 max-w=500 resize-side="right":
+          - rtgl-view slot="content" w=f h=f:
+              - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
+              - rtgl-view w=f h=f bgc=bg: null
+      - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
+          - rtgl-view h=48 bwb=xs bc=bo d=h av=c w=f ph=md g=md:
+              - rtgl-button#backButton sq pre="chevronLeft" v="gh": null
+              - rtgl-view w=1fg:
+                  - rtgl-text: ${animationName}
+              - $if dialogType == 'update':
+                  - rtgl-button#playButton s=sm: Play
+          - rtgl-view h=1fg sv w=f p=md g=lg:
+              - rtgl-view d=v w=f g=md:
+                  - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: ${canvasAspectRatio};"':
+                      - $if dialogType == 'update':
+                          - rtgl-view pos=abs cor=full:
+                              - 'div#canvas style="width: 100%; height: 100%;display: flex;"': null
+                        $else:
+                          - rtgl-view pos=abs cor=full av=c ah=c:
+                              - rtgl-text s=sm c=mu-fg: Preview not available yet
+              - rtgl-view d=v w=f g=md:
+                  - rtgl-view d=h av=c w=f:
+                      - rtgl-text: Tween Properties
+                      - rtgl-view w=1fg: null
+                      - $if dialogType == 'update' && updateAddPropertyButtonVisible:
+                          - rtgl-button#addPropertiesButton data-side=update pre=plus s=sm: Add
+                      - $if dialogType == 'transition' && transitionAddPropertyButtonVisible:
+                          - rtgl-button#addPropertiesButton pre=plus s=sm: Add
+                  - $if dialogType == 'update':
+                      - rvn-keyframe-timeline#updateTimeline editable=true ?showRuler=true ?interactiveRuler=true side=update ?indicatorVisible=${previewPlayheadVisible} indicatorTimeMs=${previewPlayheadTimeMs} :properties=${updateProperties} :defaultValues=${updateTimelineDefaultValues}: null
+                    $else:
+                      - rtgl-view d=v w=f g=md:
+                          - rtgl-view d=v w=f g=xs:
+                              - rtgl-text s=sm c=mu-fg: Out
+                              - rvn-keyframe-timeline#previousTimeline editable=true ?showRuler=true ?interactiveRuler=true side=prev ?showTotalDuration=false timelineDuration=${transitionTimelineDuration} :properties=${previousProperties} :defaultValues=${transitionTimelineDefaultValues}: null
+                          - rtgl-view d=v w=f g=xs:
+                              - rtgl-text s=sm c=mu-fg: In
+                              - rvn-keyframe-timeline#nextTimeline editable=true ?showRuler=true ?interactiveRuler=true side=next ?showTotalDuration=false timelineDuration=${transitionTimelineDuration} :properties=${nextProperties} :defaultValues=${transitionTimelineDefaultValues}: null
+      - rvn-resizable-panel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
+          - rtgl-view slot="content" w=f h=f bgc=bg ah=c av=c:
+              - rtgl-text c=mu-fg: placeholder
+  - rtgl-popover#addPropertyPopover ?open=${popover.popoverIsOpen} x=${popover.x} y=${popover.y}:
+      - $if popover.mode == 'addProperty':
+          - rtgl-form#addPropertyForm slot=content :form=${addPropertyForm} :context=${addPropertyContext} :defaultValues=${addPropertyFormDefaultValues}: null
+      - $if popover.mode == 'addKeyframe':
+          - rtgl-form#addKeyframeForm slot=content :form=${addKeyframeForm} :defaultValues=${addKeyframeDefaultValues}: null
+      - $if popover.mode == 'editKeyframe':
+          - rtgl-form#editKeyframeForm slot=content :form=${updateKeyframeForm} :defaultValues=${editKeyframeDefaultValues}: null
+      - $if popover.mode == 'editInitialValue':
+          - rtgl-form#editInitialValueForm slot=content :form=${editInitialValueForm} :defaultValues=${editInitialValueDefaultValues} :context=${editInitialValueContext}: null
+  - rtgl-dropdown-menu#keyframeDropdownMenu :items=${keyframeDropdownItems} ?open=${popover.dropdownMenuIsOpen} x=${popover.x} y=${popover.y}: null
+  - rtgl-dropdown-menu#addPropertySideMenu :items=${addPropertySideMenuItems} ?open=${popover.addPropertySideMenuIsOpen} x=${popover.x} y=${popover.y}: null

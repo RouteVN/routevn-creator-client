@@ -1,49 +1,75 @@
 refs:
-  timelineContainer:
+  rulerTrack:
     eventListeners:
       mousemove:
-        handler: handleMouseMove
+        handler: handleRulerMouseMove
       mouseleave:
-        handler: handleMouseLeave
-  addKeyframe*:
+        handler: handleRulerMouseLeave
+  track*:
     eventListeners:
+      mousemove:
+        handler: handleTrackMouseMove
+      mouseleave:
+        handler: handleTrackMouseLeave
       click:
-        handler: handleAddKeyframe
+        handler: handleTrackClick
   keyframe*:
     eventListeners:
+      click:
+        handler: handleKeyframeClick
       contextmenu:
         handler: handleKeyframeRightClick
   propertyName*:
     eventListeners:
-      contextmenu:
-        handler: handlePropertyNameRightClick
+      click:
+        handler: handlePropertyNameClick
   initialValue*:
     eventListeners:
       click:
         handler: handleInitialValueClick
 template:
-  - rtgl-view#timelineContainer g=md w=f pos=rel:
-      - $if showTotalDuration:
-          - rtgl-view d=h w=f mb=sm:
-              - rtgl-view w=f ah=e:
-                  - rtgl-text s=sm: 'Total duration: ${totalDuration}'
+  - rtgl-view g=md w=f pos=rel:
       - $if selectedProperties.length > 0:
-          - $for property, pIndex in selectedProperties:
-              - rtgl-view d=h w=f av=c:
-                  - rtgl-view w=72 av=c d=h:
-                      - rtgl-view w=48 av=c d=h ah=c:
+          - rtgl-view d=v w=f g=xs:
+              - $if showRuler:
+                  - rtgl-view d=h w=f av=e:
+                      - rtgl-view w=72: null
+                      - rtgl-view h=24 w=24 mr=sm ml=sm: null
+                      - 'rtgl-view#rulerTrack w=f h=48 pos=rel style="min-width: 0; overflow: visible;"':
+                          - $if hoverIndicatorVisible:
+                              - 'rtgl-view pos=abs style="${hoverIndicatorLabelStyle}"':
+                                  - rtgl-text s=xs c=fg: ${hoverIndicatorTimeLabel}
+                              - 'rtgl-view pos=abs bgc=fg op="0.5" style="${hoverIndicatorRulerStyle}"': null
+                          - $for tick, tickIndex in rulerTicks:
+                              - 'rtgl-view key=${tick.id} pos=abs bgc=ac op="0.8" style="${tick.tickStyle}"': null
+                              - $if tick.label:
+                                  - 'rtgl-view pos=abs style="${tick.labelStyle}"':
+                                      - rtgl-text s=xs c=mu-fg: ${tick.label}
+              - $for property, pIndex in selectedProperties:
+                  - rtgl-view d=h w=f av=c:
+                      - rtgl-view w=72 av=c d=h ah=c:
                           - rtgl-text#propertyName${pIndex} data-property=${property.name} s=xs cur=pointer: ${property.name}
-                      - $if editable:
-                          - rtgl-button#addKeyframe${pIndex} data-property=${property.name} s=sm w=16 v=gh cur=pointer ml=xs: +
-                  - rtgl-view h=24 w=24 av=c ah=e mr=sm ml=sm:
-                      - rtgl-text#initialValue${pIndex} data-property=${property.name} s=xs cur=pointer: ${property.initialValue}
-                  - rtgl-view d=h w=f h=24 bgc=mu br=sm g=xs:
-                      - $if property.keyframes && property.keyframes.length > 0:
-                          - $for keyframe, j in property.keyframes:
-                              - 'rtgl-view#keyframe${pIndex}x${j} data-property=${property.name} data-index=${j} d=h p=xs h=f bgc=ac br=sm ah=e av=e mr=xs style="width: ${keyframe.widthPercent}%"':
-                                  - rtgl-text s=xs: ${keyframe.value}
-                          - $if property.fillerWidthPercent && property.fillerWidthPercent > 0:
-                              - 'rtgl-view d=h h=f style="width: ${property.fillerWidthPercent}%"': null
-                        $else:
-                          - rtgl-view d=h p=xs h=f w=1fg br=sm ah=c av=c:
-                              - rtgl-text s=xs: No keyframes
+                      - rtgl-view h=24 w=24 av=c ah=e mr=sm ml=sm:
+                          - rtgl-text#initialValue${pIndex} data-property=${property.name} s=xs cur=pointer: ${property.initialValue}
+                      - 'rtgl-view#track${pIndex} data-property=${property.name} d=h w=f h=24 bgc=mu br=sm g=xs pos=rel style="min-width: 0; overflow: hidden; cursor: ${property.trackCursor};"':
+                          - $if hoverIndicatorVisible:
+                              - 'rtgl-view pos=abs bgc=fg op="0.5" style="${hoverIndicatorTrackStyle}"': null
+                          - $if property.hoverTarget:
+                              - 'rtgl-view pos=abs bgc=pr br=sm op="0.14" style="top: 0; bottom: 0; left: ${property.hoverTarget.zoneLeft}px; width: ${property.hoverTarget.zoneWidth}px; pointer-events: none; z-index: 2;"': null
+                              - $if property.hoverTarget.mode == 'empty':
+                                  - 'rtgl-view pos=abs bgc=pr br=f w=16 h=16 ah=c av=c style="top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 4;"':
+                                      - rtgl-text s=xs c=bg: +
+                              - $if property.hoverTarget.mode != 'empty':
+                                  - 'rtgl-view pos=abs bgc=pr style="top: 2px; bottom: 2px; left: ${property.hoverTarget.indicatorLeft}px; width: 2px; transform: translateX(-1px); pointer-events: none; z-index: 4;"': null
+                                  - 'rtgl-view pos=abs bgc=pr br=f w=16 h=16 ah=c av=c style="top: 50%; left: ${property.hoverTarget.chipLeft}px; transform: translate(-50%, -50%); pointer-events: none; z-index: 4;"':
+                                      - rtgl-text s=xs c=bg: +
+                          - $if property.keyframes && property.keyframes.length > 0:
+                              - $for keyframe, j in property.keyframes:
+                                  - 'rtgl-view#keyframe${pIndex}x${j} data-keyframe=true data-property=${property.name} data-index=${j} d=h p=xs h=f bgc=ac br=sm ah=e av=e mr=xs cur=pointer style="width: ${keyframe.widthPercent}%"':
+                                      - rtgl-text s=xs: ${keyframe.value}
+                              - $if property.fillerWidthPercent && property.fillerWidthPercent > 0:
+                                  - 'rtgl-view d=h h=f style="width: ${property.fillerWidthPercent}%"': null
+                            $else:
+                              - rtgl-view d=h p=xs h=f w=1fg br=sm ah=c av=c:
+                                  - $if property.emptyLabelVisible:
+                                      - rtgl-text s=xs: No keyframes

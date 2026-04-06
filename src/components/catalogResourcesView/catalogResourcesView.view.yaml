@@ -89,12 +89,12 @@ template:
                                                                   - rtgl-text s=sm c=mu-fg: 'Total duration: ${item.duration}ms'
                                                           - rtgl-view d=v w=f g=xs:
                                                               - rtgl-text s=xs c=mu-fg: Previous
-                                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false timelineDuration=${item.transitionTimelineDuration} :properties=${item.prevProperties}: null
+                                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=true timelineDuration=${item.transitionTimelineDuration} :properties=${item.prevProperties}: null
                                                           - rtgl-view d=v w=f g=xs:
                                                               - rtgl-text s=xs c=mu-fg: Next
-                                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false timelineDuration=${item.transitionTimelineDuration} :properties=${item.nextProperties}: null
+                                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=true timelineDuration=${item.transitionTimelineDuration} :properties=${item.nextProperties}: null
                                                     $else:
-                                                      - rvn-keyframe-timeline w=f :properties=${item.updateProperties}: null
+                                                      - rvn-keyframe-timeline w=f ?showRuler=true :properties=${item.updateProperties}: null
                                             $else:
                                               - rtgl-view w=225 h=152 d=v ah=c av=c br=md p=md g=sm:
                                                   - rtgl-text s=md ellipsis w=f: ${item.name}

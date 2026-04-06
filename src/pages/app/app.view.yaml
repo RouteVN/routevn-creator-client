@@ -43,6 +43,8 @@ template:
                   - rvn-scenes: []
                 $elif currentRoutePattern == "/project/scene-editor":
                   - rvn-scene-editor: []
+                $elif currentRoutePattern == "/project/animation-editor":
+                  - rvn-animation-editor: []
                 $elif currentRoutePattern == "/project/about":
                   - rvn-about: []
                 $elif currentRoutePattern == "/project/user":

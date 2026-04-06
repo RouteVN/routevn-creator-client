@@ -125,6 +125,11 @@ export const handleEditDialogClose = (deps) => {
   render();
 };
 
+export const handleDetailHeaderClick = (deps) => {
+  const selectedItemId = deps.store.selectSelectedItemId();
+  openEditDialogWithValues({ deps, itemId: selectedItemId });
+};
+
 const createLayoutElement = (id, data) => ({
   id,
   ...data,

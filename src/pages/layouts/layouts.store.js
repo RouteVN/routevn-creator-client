@@ -166,7 +166,7 @@ const {
   title: "Layouts",
   selectedResourceId: "layouts",
   resourceCategory: "userInterface",
-  addText: "Add Layout",
+  addText: "Add",
   centerItemContextMenuItems: layoutCenterItemContextMenuItems,
   buildDetailFields,
   buildCatalogItem,

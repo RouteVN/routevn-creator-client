@@ -1,0 +1,4 @@
+componentName: rvn-animation-editor
+propsSchema:
+  type: object
+  properties: {}

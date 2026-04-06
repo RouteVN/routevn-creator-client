@@ -8,6 +8,10 @@ const propsChanged = (oldProps = {}, newProps = {}) => {
   return oldProps.file !== newProps.file;
 };
 
+const isBlobFile = (file) => {
+  return file instanceof Blob;
+};
+
 const emitReadyStateChanged = (deps, isReady) => {
   deps.dispatchEvent(
     new CustomEvent("ready-state-changed", {
@@ -43,13 +47,14 @@ const syncFromFile = async (deps, file = deps.props.file) => {
   deps.store.clearImage();
   deps.render();
 
-  if (!file) {
+  if (!isBlobFile(file)) {
     return;
   }
 
-  const imageUrl = URL.createObjectURL(file);
+  let imageUrl;
 
   try {
+    imageUrl = URL.createObjectURL(file);
     const dimensions = await getImageDimensions(file);
     if (deps.props.file !== file) {
       revokeImageUrl(imageUrl);

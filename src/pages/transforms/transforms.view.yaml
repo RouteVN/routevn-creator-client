@@ -61,10 +61,18 @@ template:
   - rtgl-dialog#transformDialog ?open=${isDialogOpen} s=lg:
       - rtgl-view slot="content" d=h lg-d=v ah=c g=lg w=f:
           - $if isDialogOpen:
-              - rtgl-view w=4fg lg-w=f:
-                  - rtgl-form#transformForm :defaultValues=${dialogDefaultValues} :form=${transformForm} w=f: null
-              - rtgl-view w=6fg lg-w=f d=v g=md:
-                  - rtgl-text: Preview
-                  - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: ${canvasAspectRatio};"':
-                      - rtgl-view pos=abs cor=full:
-                          - 'div#canvas style="width: 100%; height: 100%;display: flex; background-color: var(--muted);"': null
+              - $if !isPreviewOnlyDialog:
+                  - rtgl-view w=4fg lg-w=f:
+                      - rtgl-form#transformForm :defaultValues=${dialogDefaultValues} :form=${transformForm} w=f: null
+              - $if isPreviewOnlyDialog:
+                  - rtgl-view w=f d=v g=md:
+                      - rtgl-text: Preview
+                      - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: ${canvasAspectRatio};"':
+                          - rtgl-view pos=abs cor=full:
+                              - 'div#canvas style="width: 100%; height: 100%;display: flex; background-color: var(--muted);"': null
+                $else:
+                  - rtgl-view w=6fg lg-w=f d=v g=md:
+                      - rtgl-text: Preview
+                      - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: ${canvasAspectRatio};"':
+                          - rtgl-view pos=abs cor=full:
+                              - 'div#canvas style="width: 100%; height: 100%;display: flex; background-color: var(--muted);"': null

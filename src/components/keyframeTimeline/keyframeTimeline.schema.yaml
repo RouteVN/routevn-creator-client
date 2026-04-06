@@ -27,6 +27,18 @@ propsSchema:
     showTotalDuration:
       type: boolean
       description: Whether the timeline should render its duration header
+    showRuler:
+      type: boolean
+      description: Whether the timeline should render its ruler row
+    interactiveRuler:
+      type: boolean
+      description: Whether the ruler should emit hover events and render the local hover indicator
+    indicatorVisible:
+      type: boolean
+      description: Whether the timeline should render an external playhead indicator
+    indicatorTimeMs:
+      type: number
+      description: Optional external indicator time in milliseconds
     side:
       type: string
       description: Optional timeline context key included in emitted events

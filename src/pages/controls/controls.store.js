@@ -5,14 +5,20 @@ import {
   BASE_LAYOUT_KEYBOARD_OPTIONS,
 } from "../../internal/project/layout.js";
 
-const controlForm = {
-  title: "Add Control",
+const createControlForm = ({ editMode = false } = {}) => ({
+  title: editMode ? "Edit Control" : "Add Control",
   fields: [
     {
       name: "name",
       type: "input-text",
       label: "Control Name",
       required: true,
+    },
+    {
+      name: "description",
+      type: "input-textarea",
+      label: "Description",
+      required: false,
     },
   ],
   actions: {
@@ -21,11 +27,11 @@ const controlForm = {
       {
         id: "submit",
         variant: "pr",
-        label: "Add Control",
+        label: editMode ? "Update Control" : "Add Control",
       },
     ],
   },
-};
+});
 
 const SYSTEM_ACTION_LABELS = {
   nextLine: "Next Line",
@@ -85,6 +91,10 @@ const buildDetailFields = (item) => {
 
   return [
     {
+      type: "description",
+      value: item.description ?? "",
+    },
+    {
       type: "slot",
       slot: "keyboard-slot",
     },
@@ -96,6 +106,16 @@ const buildCatalogItem = (item) => ({
   name: item.name,
   cardKind: "layout",
 });
+
+const matchesSearch = (item, searchQuery) => {
+  if (!searchQuery) {
+    return true;
+  }
+
+  const name = (item.name ?? "").toLowerCase();
+  const description = (item.description ?? "").toLowerCase();
+  return name.includes(searchQuery) || description.includes(searchQuery);
+};
 
 const {
   createInitialState: createCatalogInitialState,
@@ -113,15 +133,16 @@ const {
   selectedResourceId: "controls",
   resourceCategory: "systemConfig",
   addText: "Add Control",
+  matchesSearch,
   buildDetailFields,
   buildCatalogItem,
   extendViewData: ({ state, selectedItem, baseViewData }) => ({
     ...baseViewData,
-    isAddDialogOpen: state.isAddDialogOpen,
-    controlForm,
-    controlFormDefaults: {
-      name: "",
-    },
+    isDialogOpen: state.isDialogOpen,
+    dialogForm: createControlForm({
+      editMode: Boolean(state.editItemId),
+    }),
+    dialogDefaultValues: state.dialogDefaultValues,
     keyboardItems: toKeyboardItems(selectedItem?.keyboard),
     keyboardEditorKey: state.keyboardEditorKey,
     keyboardEditorActions: state.keyboardEditorActions,
@@ -131,8 +152,13 @@ const {
 
 export const createInitialState = () => ({
   ...createCatalogInitialState(),
-  isAddDialogOpen: false,
+  isDialogOpen: false,
   targetGroupId: undefined,
+  editItemId: undefined,
+  dialogDefaultValues: {
+    name: "",
+    description: "",
+  },
   keyboardEditorKey: undefined,
   keyboardEditorActions: {},
 });
@@ -150,13 +176,33 @@ export const selectControlItemById = selectItemById;
 export const selectKeyboardEditorKey = ({ state }) => state.keyboardEditorKey;
 
 export const openAddDialog = ({ state }, { groupId } = {}) => {
-  state.isAddDialogOpen = true;
+  state.isDialogOpen = true;
   state.targetGroupId = groupId === "_root" ? undefined : groupId;
+  state.editItemId = undefined;
+  state.dialogDefaultValues = {
+    name: "",
+    description: "",
+  };
+};
+
+export const openEditDialog = ({ state }, { itemId, defaultValues } = {}) => {
+  state.isDialogOpen = true;
+  state.targetGroupId = undefined;
+  state.editItemId = itemId;
+  state.dialogDefaultValues = {
+    name: defaultValues?.name ?? "",
+    description: defaultValues?.description ?? "",
+  };
 };
 
 export const closeAddDialog = ({ state }, _payload = {}) => {
-  state.isAddDialogOpen = false;
+  state.isDialogOpen = false;
   state.targetGroupId = undefined;
+  state.editItemId = undefined;
+  state.dialogDefaultValues = {
+    name: "",
+    description: "",
+  };
 };
 
 export const openKeyboardEditor = ({ state }, { key, actions = {} } = {}) => {

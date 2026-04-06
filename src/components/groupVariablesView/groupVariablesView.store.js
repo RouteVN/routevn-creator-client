@@ -1,5 +1,6 @@
 const DEFAULT_FORM_VALUES = {
   name: "",
+  description: "",
   scope: "context",
   type: "string",
   default: "",
@@ -35,6 +36,12 @@ export const createInitialState = () => ({
         tooltip: {
           content: "This field is mandatory and must be unique",
         },
+      },
+      {
+        name: "description",
+        type: "input-textarea",
+        label: "Description",
+        required: false,
       },
       {
         name: "scope",
@@ -195,11 +202,13 @@ export const selectViewData = ({ state, props }) => {
     if (!searchQuery) return true;
 
     const name = (item.name || "").toLowerCase();
+    const description = (item.description || "").toLowerCase();
     const type = (item.type || "").toLowerCase();
     const defaultValue = String(item.default ?? "").toLowerCase();
 
     return (
       name.includes(searchQuery) ||
+      description.includes(searchQuery) ||
       type.includes(searchQuery) ||
       defaultValue.includes(searchQuery)
     );
@@ -226,6 +235,7 @@ export const selectViewData = ({ state, props }) => {
             return {
               id: item.id,
               name: item.name,
+              description: item.description ?? "",
               scope: item.scope || "context",
               type: item.type || "string",
               default: defaultValue,

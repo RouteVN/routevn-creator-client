@@ -3,91 +3,37 @@ import { formatFileSize } from "../../internal/files.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { createMediaPageStore } from "../../internal/ui/resourcePages/media/createMediaPageStore.js";
 
-const fontInfoForm = {
-  title: "Font Details",
-  fields: [
-    {
-      name: "fontFamily",
-      type: "read-only-text",
-      label: "Font Family",
-      content: "${fontFamily}",
-    },
-    {
-      name: "fileName",
-      type: "read-only-text",
-      label: "File Name",
-      content: "${fileName}",
-    },
-    {
-      name: "fileSize",
-      type: "read-only-text",
-      label: "File Size",
-      content: "${fileSize}",
-    },
-    {
-      name: "format",
-      type: "read-only-text",
-      label: "Format",
-      content: "${format}",
-    },
-  ],
+const getDetailFileTypeLabel = ({ item, selectedFontInfo } = {}) => {
+  const configuredFileType = formatFontFileTypeLabel({
+    fileType: item?.fileType,
+    fileName: item?.name ?? "",
+  });
+
+  if (configuredFileType !== "Unknown") {
+    return configuredFileType;
+  }
+
+  return selectedFontInfo?.format ?? "Unknown";
 };
 
-const getGlyphList = () => {
-  const glyphs = [];
-
-  const addGlyph = (char) => {
-    const code = char.charCodeAt(0);
-    const unicode = `U+${code.toString(16).toUpperCase().padStart(4, "0")}`;
-    glyphs.push({ char, unicode });
-  };
-
-  for (let i = 65; i <= 90; i++) {
-    addGlyph(String.fromCharCode(i));
-  }
-  for (let i = 97; i <= 122; i++) {
-    addGlyph(String.fromCharCode(i));
-  }
-  for (let i = 48; i <= 57; i++) {
-    addGlyph(String.fromCharCode(i));
-  }
-
-  const punctuation = " !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
-  for (const char of punctuation) {
-    addGlyph(char);
-  }
-
-  const extendedLatin =
-    "ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ";
-  for (const char of extendedLatin) {
-    addGlyph(char);
-  }
-
-  return glyphs;
-};
-
-const buildDetailFields = (item) => {
+const buildDetailFields = ({ item, selectedFontInfo } = {}) => {
   if (!item) {
     return [];
   }
 
-  return [
+  const activeFontInfo =
+    selectedFontInfo?.itemId === item.id ? selectedFontInfo : undefined;
+  const detailFields = [
     {
-      type: "slot",
-      slot: "font-preview",
-      label: "",
-    },
-    {
-      type: "text",
-      label: "Font Family",
-      value: item.fontFamily ?? "",
+      type: "description",
+      value: item.description ?? "",
     },
     {
       type: "text",
       label: "File Type",
-      value: formatFontFileTypeLabel({
-        fileType: item.fileType,
-        fileName: item.name ?? "",
+      value: getDetailFileTypeLabel({
+        item,
+        selectedFontInfo: activeFontInfo,
       }),
     },
     {
@@ -96,6 +42,58 @@ const buildDetailFields = (item) => {
       value: item.fileSize ? formatFileSize(item.fileSize) : "",
     },
   ];
+
+  if (activeFontInfo) {
+    detailFields.push({
+      type: "section",
+      label: "Metadata",
+      fields: [
+        {
+          type: "text",
+          label: "Weight",
+          value: activeFontInfo.weightClass ?? "",
+        },
+        {
+          type: "text",
+          label: "Variable Font",
+          value: activeFontInfo.isVariableFont ?? "",
+        },
+        {
+          type: "text",
+          label: "Supports Italics",
+          value: activeFontInfo.supportsItalics ?? "",
+        },
+        {
+          type: "text",
+          label: "Glyph Count",
+          value: String(activeFontInfo.glyphCount ?? ""),
+        },
+        {
+          type: "text",
+          label: "Supported Scripts",
+          value: activeFontInfo.languageSupport ?? "",
+        },
+      ],
+    });
+
+    if (activeFontInfo.previewNote) {
+      detailFields.push({
+        type: "text",
+        label: "Preview Note",
+        value: activeFontInfo.previewNote,
+      });
+    }
+
+    if (activeFontInfo.error) {
+      detailFields.push({
+        type: "text",
+        label: "Metadata Error",
+        value: activeFontInfo.error,
+      });
+    }
+  }
+
+  return detailFields;
 };
 
 const buildMediaItem = (item) => ({
@@ -116,12 +114,48 @@ const buildPendingMediaItem = (item) => ({
   canPreview: false,
 });
 
+const createEditForm = () => ({
+  title: "Edit Font",
+  fields: [
+    {
+      name: "name",
+      type: "input-text",
+      label: "Name",
+      required: true,
+    },
+    {
+      name: "description",
+      type: "input-textarea",
+      label: "Description",
+      required: false,
+    },
+    {
+      type: "slot",
+      slot: "font-slot",
+      label: "Font",
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        label: "Update Font",
+      },
+    ],
+  },
+});
+
 const {
   createInitialState: createMediaInitialState,
   setItems,
   addPendingUploads,
   removePendingUploads,
   setSelectedItemId,
+  openEditDialog,
+  closeEditDialog,
+  setEditUpload,
   selectSelectedItem,
   selectItemById,
   selectSelectedItemId,
@@ -133,38 +167,45 @@ const {
   title: "Fonts",
   selectedResourceId: "fonts",
   resourceCategory: "userInterface",
-  uploadText: "Upload Font",
+  uploadText: "Upload",
   acceptedFileTypes: [".ttf", ".otf", ".woff", ".woff2", ".ttc", ".eot"],
   centerItemContextMenuItems: [
+    { label: "Edit", type: "item", value: "edit-item" },
     { label: "Delete", type: "item", value: "delete-item" },
   ],
-  buildDetailFields,
+  buildDetailFields: (item) => buildDetailFields({ item }),
   buildMediaItem,
   buildPendingMediaItem,
+  createEditForm,
   getSelectedPreviewFileId: (item) => item?.fileId,
   extendViewData: ({ state, selectedItem, baseViewData }) => {
-    const selectedFontInfo = state.selectedFontInfo;
+    const selectedFontInfo = selectedItem
+      ? state.fontInfoById[selectedItem.id]
+      : undefined;
+    const modalFontInfo = state.previewFontItemId
+      ? state.fontInfoById[state.previewFontItemId]
+      : undefined;
+    const editItem = state.editItemId
+      ? selectItemById({ state }, { itemId: state.editItemId })
+      : undefined;
 
     return {
       ...baseViewData,
       isModalOpen: state.isModalOpen,
       selectedFontInfo,
-      selectedFontFamily: selectedItem?.fontFamily ?? "",
-      fontInfoForm,
-      fontInfoValues: selectedFontInfo
-        ? {
-            fontFamily: selectedFontInfo.fontFamily ?? "",
-            fileName: selectedFontInfo.fileName ?? "",
-            fileSize: selectedFontInfo.fileSize ?? "",
-            format: selectedFontInfo.format ?? "Unknown",
-            weightClass: selectedFontInfo.weightClass ?? "Unknown",
-            isVariableFont: selectedFontInfo.isVariableFont ?? "Unknown",
-            supportsItalics: selectedFontInfo.supportsItalics ?? "Unknown",
-            glyphCount: selectedFontInfo.glyphCount?.toString() ?? "0",
-            languageSupport: selectedFontInfo.languageSupport ?? "Unknown",
-          }
-        : {},
-      glyphList: selectedFontInfo?.glyphs ?? getGlyphList(),
+      modalFontInfo,
+      detailFields: buildDetailFields({
+        item: selectedItem,
+        selectedFontInfo,
+      }),
+      editPreviewFontFamily:
+        state.editUploadResult?.fontName ?? editItem?.fontFamily ?? "",
+      editDefaultValues: {
+        ...baseViewData.editDefaultValues,
+        description: editItem?.description ?? "",
+      },
+      modalPreviewRows: modalFontInfo?.previewRows ?? [],
+      modalGlyphList: modalFontInfo?.glyphs ?? [],
     };
   },
 });
@@ -172,7 +213,8 @@ const {
 export const createInitialState = () => ({
   ...createMediaInitialState(),
   isModalOpen: false,
-  selectedFontInfo: undefined,
+  previewFontItemId: undefined,
+  fontInfoById: {},
 });
 
 export {
@@ -180,6 +222,9 @@ export {
   addPendingUploads,
   removePendingUploads,
   setSelectedItemId,
+  openEditDialog,
+  closeEditDialog,
+  setEditUpload,
   selectSelectedItem,
   selectSelectedItemId,
   setSearchQuery,
@@ -191,8 +236,16 @@ export const setModalOpen = ({ state }, { isOpen } = {}) => {
   state.isModalOpen = isOpen;
 };
 
-export const setSelectedFontInfo = ({ state }, { fontInfo } = {}) => {
-  state.selectedFontInfo = fontInfo;
+export const cacheFontInfo = ({ state }, { itemId, fontInfo } = {}) => {
+  if (!itemId || !fontInfo) {
+    return;
+  }
+
+  state.fontInfoById[itemId] = fontInfo;
+};
+
+export const setPreviewFontItemId = ({ state }, { itemId } = {}) => {
+  state.previewFontItemId = itemId;
 };
 
 export const selectViewData = (context) => {

@@ -25,6 +25,12 @@ const createTransformForm = ({
         required: true,
       },
       {
+        name: "description",
+        type: "input-textarea",
+        label: "Description",
+        required: false,
+      },
+      {
         name: "x",
         type: "slider-with-input",
         min: 0,
@@ -122,6 +128,7 @@ const createTransformForm = ({
 
 const createDialogDefaultValues = (item) => ({
   name: item?.name ?? "",
+  description: item?.description ?? "",
   x: String(item?.x ?? 0),
   y: String(item?.y ?? 0),
   scaleX: String(item?.scaleX ?? 1),
@@ -142,6 +149,10 @@ const buildDetailFields = (item) => {
       type: "slot",
       slot: "transform-preview",
       label: "",
+    },
+    {
+      type: "description",
+      value: item.description ?? "",
     },
     {
       type: "text",
@@ -181,6 +192,16 @@ const buildCatalogItem = (item) => ({
   cardKind: "transform",
 });
 
+const matchesSearch = (item, searchQuery) => {
+  if (!searchQuery) {
+    return true;
+  }
+
+  const name = (item.name ?? "").toLowerCase();
+  const description = (item.description ?? "").toLowerCase();
+  return name.includes(searchQuery) || description.includes(searchQuery);
+};
+
 const {
   createInitialState: createCatalogInitialState,
   setItems,
@@ -198,11 +219,13 @@ const {
   resourceCategory: "assets",
   addText: "Add",
   emptyMessage: "No transforms found",
+  matchesSearch,
   buildDetailFields,
   buildCatalogItem,
   extendViewData: ({ state, selectedItem, baseViewData }) => ({
     ...baseViewData,
     isDialogOpen: state.isDialogOpen,
+    isPreviewOnlyDialog: state.dialogMode === "preview",
     transformForm: state.transformForm,
     dialogDefaultValues: state.dialogDefaultValues,
     canvasAspectRatio: formatProjectResolutionAspectRatio(
@@ -216,6 +239,7 @@ const {
 export const createInitialState = () => ({
   ...createCatalogInitialState(),
   isDialogOpen: false,
+  dialogMode: "form",
   targetGroupId: undefined,
   editMode: false,
   editItemId: undefined,
@@ -246,8 +270,9 @@ export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
   });
 };
 
-export const openTransformFormDialog = ({ state }, options = {}) => {
+const setDialogState = (state, options = {}) => {
   const {
+    dialogMode = "form",
     editMode = false,
     itemId = undefined,
     itemData = undefined,
@@ -255,6 +280,7 @@ export const openTransformFormDialog = ({ state }, options = {}) => {
   } = options;
 
   state.isDialogOpen = true;
+  state.dialogMode = dialogMode;
   state.editMode = editMode;
   state.editItemId = itemId;
   state.targetGroupId = targetGroupId === "_root" ? undefined : targetGroupId;
@@ -265,8 +291,25 @@ export const openTransformFormDialog = ({ state }, options = {}) => {
   });
 };
 
+export const openTransformFormDialog = ({ state }, options = {}) => {
+  setDialogState(state, {
+    ...options,
+    dialogMode: "form",
+  });
+};
+
+export const openTransformPreviewDialog = ({ state }, options = {}) => {
+  setDialogState(state, {
+    ...options,
+    dialogMode: "preview",
+    editMode: false,
+    targetGroupId: undefined,
+  });
+};
+
 export const closeTransformFormDialog = ({ state }, _payload = {}) => {
   state.isDialogOpen = false;
+  state.dialogMode = "form";
   state.targetGroupId = undefined;
   state.editMode = false;
   state.editItemId = undefined;
