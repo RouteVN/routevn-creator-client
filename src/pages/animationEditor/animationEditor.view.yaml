@@ -11,14 +11,6 @@ refs:
     eventListeners:
       click:
         handler: handleAddPropertiesClick
-  previousAddPropertiesButton:
-    eventListeners:
-      click:
-        handler: handleAddPropertiesClick
-  nextAddPropertiesButton:
-    eventListeners:
-      click:
-        handler: handleAddPropertiesClick
   updateTimeline:
     eventListeners:
       add-keyframe:
@@ -89,6 +81,12 @@ refs:
         handler: handleClosePopover
       item-click:
         handler: handleKeyframeDropdownItemClick
+  addPropertySideMenu:
+    eventListeners:
+      close:
+        handler: handleClosePopover
+      item-click:
+        handler: handleAddPropertySideMenuItemClick
   canvas: {}
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
@@ -101,8 +99,6 @@ template:
               - rtgl-button#backButton sq pre="chevronLeft" v="gh": null
               - rtgl-view w=1fg:
                   - rtgl-text: ${animationName}
-              - $if dialogType == 'transition':
-                  - rtgl-text s=sm c=mu-fg: ${dialogTypeLabel}
               - $if dialogType == 'update':
                   - rtgl-button#playButton s=sm: Play
           - rtgl-view h=1fg sv w=f p=md g=lg:
@@ -114,26 +110,24 @@ template:
                         $else:
                           - rtgl-view pos=abs cor=full av=c ah=c:
                               - rtgl-text s=sm c=mu-fg: Preview not available yet
-              - $if dialogType == 'update':
-                  - rtgl-view d=v w=f g=md:
-                      - rtgl-view d=h av=c w=f:
-                          - rtgl-text: Tween Properties
-                          - rtgl-view w=1fg: null
-                          - $if updateAddPropertyButtonVisible:
-                              - rtgl-button#addPropertiesButton data-side=update pre=plus s=sm: Add
+              - rtgl-view d=v w=f g=md:
+                  - rtgl-view d=h av=c w=f:
+                      - rtgl-text: Tween Properties
+                      - rtgl-view w=1fg: null
+                      - $if dialogType == 'update' && updateAddPropertyButtonVisible:
+                          - rtgl-button#addPropertiesButton data-side=update pre=plus s=sm: Add
+                      - $if dialogType == 'transition' && transitionAddPropertyButtonVisible:
+                          - rtgl-button#addPropertiesButton pre=plus s=sm: Add
+                  - $if dialogType == 'update':
                       - rvn-keyframe-timeline#updateTimeline editable=true ?showRuler=true ?interactiveRuler=true side=update ?indicatorVisible=${previewPlayheadVisible} indicatorTimeMs=${previewPlayheadTimeMs} :properties=${updateProperties} :defaultValues=${updateTimelineDefaultValues}: null
-                $else:
-                  - rtgl-view d=v w=f g=lg:
+                    $else:
                       - rtgl-view d=v w=f g=md:
-                          - rvn-keyframe-timeline#previousTimeline editable=true ?showRuler=true ?interactiveRuler=true side=prev ?showTotalDuration=false timelineDuration=${transitionTimelineDuration} :properties=${previousProperties} :defaultValues=${transitionTimelineDefaultValues}: null
-                          - rtgl-view d=h g=md av=c w=f:
-                              - $if previousAddPropertyButtonVisible:
-                                  - rtgl-button#previousAddPropertiesButton data-side=prev w=f v=se s=sm: + Add animation property
-                      - rtgl-view d=v w=f g=md:
-                          - rvn-keyframe-timeline#nextTimeline editable=true ?showRuler=true ?interactiveRuler=true side=next ?showTotalDuration=false timelineDuration=${transitionTimelineDuration} :properties=${nextProperties} :defaultValues=${transitionTimelineDefaultValues}: null
-                          - rtgl-view d=h g=md av=c w=f:
-                              - $if nextAddPropertyButtonVisible:
-                                  - rtgl-button#nextAddPropertiesButton data-side=next w=f v=se s=sm: + Add animation property
+                          - rtgl-view d=v w=f g=xs:
+                              - rtgl-text s=sm c=mu-fg: Out
+                              - rvn-keyframe-timeline#previousTimeline editable=true ?showRuler=true ?interactiveRuler=true side=prev ?showTotalDuration=false timelineDuration=${transitionTimelineDuration} :properties=${previousProperties} :defaultValues=${transitionTimelineDefaultValues}: null
+                          - rtgl-view d=v w=f g=xs:
+                              - rtgl-text s=sm c=mu-fg: In
+                              - rvn-keyframe-timeline#nextTimeline editable=true ?showRuler=true ?interactiveRuler=true side=next ?showTotalDuration=false timelineDuration=${transitionTimelineDuration} :properties=${nextProperties} :defaultValues=${transitionTimelineDefaultValues}: null
       - rvn-resizable-panel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
           - rtgl-view slot="content" w=f h=f bgc=bg ah=c av=c:
               - rtgl-text c=mu-fg: placeholder
@@ -147,3 +141,4 @@ template:
       - $if popover.mode == 'editInitialValue':
           - rtgl-form#editInitialValueForm slot=content :form=${editInitialValueForm} :defaultValues=${editInitialValueDefaultValues} :context=${editInitialValueContext}: null
   - rtgl-dropdown-menu#keyframeDropdownMenu :items=${keyframeDropdownItems} ?open=${popover.dropdownMenuIsOpen} x=${popover.x} y=${popover.y}: null
+  - rtgl-dropdown-menu#addPropertySideMenu :items=${addPropertySideMenuItems} ?open=${popover.addPropertySideMenuIsOpen} x=${popover.x} y=${popover.y}: null

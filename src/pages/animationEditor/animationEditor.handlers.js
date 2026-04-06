@@ -8,23 +8,22 @@ import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourc
 
 const normalizeTween = (properties = {}) => {
   return Object.fromEntries(
-    Object.entries(properties)
-      .map(([property, config]) => {
-        const normalizedConfig = {
-          keyframes: (config?.keyframes ?? []).map((keyframe) => ({
-            duration: Number(keyframe.duration) || 0,
-            value: Number(keyframe.value) || 0,
-            easing: keyframe.easing ?? "linear",
-            relative: keyframe.relative ?? false,
-          })),
-        };
+    Object.entries(properties).map(([property, config]) => {
+      const normalizedConfig = {
+        keyframes: (config?.keyframes ?? []).map((keyframe) => ({
+          duration: Number(keyframe.duration) || 0,
+          value: Number(keyframe.value) || 0,
+          easing: keyframe.easing ?? "linear",
+          relative: keyframe.relative ?? false,
+        })),
+      };
 
-        if (config?.initialValue !== undefined && config.initialValue !== "") {
-          normalizedConfig.initialValue = Number(config.initialValue) || 0;
-        }
+      if (config?.initialValue !== undefined && config.initialValue !== "") {
+        normalizedConfig.initialValue = Number(config.initialValue) || 0;
+      }
 
-        return [property, normalizedConfig];
-      }),
+      return [property, normalizedConfig];
+    }),
   );
 };
 
@@ -37,7 +36,9 @@ const DEFAULT_NEW_ANIMATION_NAME = "New Animation";
 const resolveUpdatePreviewDuration = ({ store } = {}) => {
   let maxDuration = 0;
 
-  for (const config of Object.values(store.selectProperties({ side: "update" }))) {
+  for (const config of Object.values(
+    store.selectProperties({ side: "update" }),
+  )) {
     const propertyDuration = (config?.keyframes ?? []).reduce(
       (sum, keyframe) => sum + (Number(keyframe.duration) || 0),
       0,
@@ -286,7 +287,9 @@ const flushQueuedAutosave = async ({ deps } = {}) => {
   });
 
   try {
-    while (store.selectAutosavePersistedVersion() < store.selectAutosaveVersion()) {
+    while (
+      store.selectAutosavePersistedVersion() < store.selectAutosaveVersion()
+    ) {
       const version = store.selectAutosaveVersion();
       const snapshot = createAnimationPersistSnapshot({
         store,
@@ -354,9 +357,8 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
   const { appService, projectService, render, store } = deps;
   const resolvedRepositoryState =
     repositoryState ?? projectService.getRepositoryState();
-  const { animationId, dialogType, targetGroupId } = getEditorPayload(
-    appService,
-  );
+  const { animationId, dialogType, targetGroupId } =
+    getEditorPayload(appService);
 
   store.setItems({
     data: resolvedRepositoryState?.animations,
@@ -443,14 +445,43 @@ export const handleClosePopover = (deps) => {
 
 export const handleAddPropertiesClick = (deps, payload) => {
   const { render, store } = deps;
-  const side =
-    payload._event.currentTarget?.dataset?.side ??
-    (store.selectDialogType() === "transition" ? "prev" : "update");
+  const side = payload._event.currentTarget?.dataset?.side;
+
+  if (!side && store.selectDialogType() === "transition") {
+    store.setPopover({
+      mode: "addPropertySideMenu",
+      x: payload._event.clientX,
+      y: payload._event.clientY,
+      payload: {},
+    });
+    render();
+    return;
+  }
 
   store.setPopover({
     mode: "addProperty",
     x: payload._event.clientX,
     y: payload._event.clientY,
+    payload: {
+      side: side ?? "update",
+    },
+  });
+  render();
+};
+
+export const handleAddPropertySideMenuItemClick = (deps, payload) => {
+  const { render, store } = deps;
+  const side = payload._event.detail.item?.value;
+
+  if (side !== "prev" && side !== "next") {
+    return;
+  }
+
+  const popover = store.selectPopover();
+  store.setPopover({
+    mode: "addProperty",
+    x: popover.x,
+    y: popover.y,
     payload: {
       side,
     },
@@ -763,7 +794,9 @@ export const handleReplayAnimation = async (deps) => {
   store.setPreviewPlaybackMode({
     mode: "auto",
   });
-  await graphicsService.render(store.selectAnimationRenderStateWithAnimations());
+  await graphicsService.render(
+    store.selectAnimationRenderStateWithAnimations(),
+  );
 
   const durationMs = resolveUpdatePreviewDuration({
     store,

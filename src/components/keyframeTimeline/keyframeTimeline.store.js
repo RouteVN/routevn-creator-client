@@ -221,12 +221,15 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     attrs.indicatorVisible === true &&
     Number.isFinite(externalIndicatorTimeMs) &&
     resolvedTimelineDuration > 0
-      ? clamp((externalIndicatorTimeMs / resolvedTimelineDuration) * 100, 0, 100)
+      ? clamp(
+          (externalIndicatorTimeMs / resolvedTimelineDuration) * 100,
+          0,
+          100,
+        )
       : undefined;
   const indicatorLeftPercent =
     state.hoverIndicatorLeftPercent ?? externalIndicatorLeftPercent;
-  const hoverIndicatorVisible =
-    indicatorLeftPercent !== undefined && showRuler;
+  const hoverIndicatorVisible = indicatorLeftPercent !== undefined && showRuler;
   const hoverIndicatorTimeMs = hoverIndicatorVisible
     ? state.hoverIndicatorLeftPercent !== undefined
       ? Math.round((indicatorLeftPercent / 100) * resolvedTimelineDuration)
@@ -243,7 +246,9 @@ export const selectViewData = ({ state, props, props: attrs }) => {
   const hoverIndicatorLabelStyle = hoverIndicatorVisible
     ? createHoverIndicatorLabelStyle(indicatorLeftPercent)
     : "";
-  const rulerTicks = showRuler ? createRulerTicks(resolvedTimelineDuration) : [];
+  const rulerTicks = showRuler
+    ? createRulerTicks(resolvedTimelineDuration)
+    : [];
 
   selectedProperties = selectedProperties.map((property) => {
     if (property.keyframes && property.keyframes.length > 0) {

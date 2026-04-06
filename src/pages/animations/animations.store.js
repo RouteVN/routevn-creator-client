@@ -480,6 +480,31 @@ const createTypeMenuItems = [
   },
 ];
 
+const createTransitionAddPropertySideMenuItems = ({
+  previousAvailable = false,
+  nextAvailable = false,
+} = {}) => {
+  const items = [];
+
+  if (previousAvailable) {
+    items.push({
+      label: "Out",
+      type: "item",
+      value: "prev",
+    });
+  }
+
+  if (nextAvailable) {
+    items.push({
+      label: "In",
+      type: "item",
+      value: "next",
+    });
+  }
+
+  return items;
+};
+
 const createAnimationForm = ({
   title,
   buttonLabel,
@@ -785,6 +810,21 @@ const {
       TRANSITION_PROPERTY_KEYS,
       propertyFieldConfig,
     );
+    const updateAddPropertyOptions = getAvailableProperties(
+      state,
+      "update",
+      propertyFieldConfig,
+    );
+    const previousAddPropertyOptions = getAvailableProperties(
+      state,
+      "prev",
+      propertyFieldConfig,
+    );
+    const nextAddPropertyOptions = getAvailableProperties(
+      state,
+      "next",
+      propertyFieldConfig,
+    );
 
     const keyframeDropdownItems = (() => {
       if (state.popover.mode !== "keyframeMenu") {
@@ -894,12 +934,13 @@ const {
       editKeyframeDefaultValues,
       editInitialValueDefaultValues,
       keyframeDropdownItems,
-      updateAddPropertyButtonVisible:
-        getAvailableProperties(state, "update", propertyFieldConfig).length > 0,
-      previousAddPropertyButtonVisible:
-        getAvailableProperties(state, "prev", propertyFieldConfig).length > 0,
-      nextAddPropertyButtonVisible:
-        getAvailableProperties(state, "next", propertyFieldConfig).length > 0,
+      updateAddPropertyButtonVisible: updateAddPropertyOptions.length > 0,
+      transitionAddPropertyButtonVisible:
+        previousAddPropertyOptions.length > 0 || nextAddPropertyOptions.length > 0,
+      addPropertySideMenuItems: createTransitionAddPropertySideMenuItems({
+        previousAvailable: previousAddPropertyOptions.length > 0,
+        nextAvailable: nextAddPropertyOptions.length > 0,
+      }),
       popover: {
         ...state.popover,
         popoverIsOpen: [
@@ -911,6 +952,7 @@ const {
         dropdownMenuIsOpen: ["keyframeMenu", "propertyNameMenu"].includes(
           state.popover.mode,
         ),
+        addPropertySideMenuIsOpen: state.popover.mode === "addPropertySideMenu",
       },
       addPropertyFormDefaultValues: {
         useInitialValue: false,

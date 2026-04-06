@@ -437,10 +437,7 @@ export const handleFontItemDoubleClick = async (deps, payload) => {
     return;
   }
 
-  await loadFontInfo(
-    { store, projectService, appService },
-    { itemId },
-  );
+  await loadFontInfo({ store, projectService, appService }, { itemId });
   store.setPreviewFontItemId({ itemId });
   store.setModalOpen({ isOpen: true });
   render();

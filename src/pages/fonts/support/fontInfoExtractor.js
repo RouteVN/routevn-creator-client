@@ -19,7 +19,8 @@ const SCRIPT_PRESETS = [
     id: "japanese",
     label: "Japanese",
     detailText: "あいうえおかきくけこ日人年",
-    sampleText: "あいうえおかきくけこさしすせそのにとはをたでしてる日人年月日時本中大小",
+    sampleText:
+      "あいうえおかきくけこさしすせそのにとはをたでしてる日人年月日時本中大小",
     requiredText: "あいうえおかきくけこ日人年",
     ranges: [
       [0x3040, 0x309f],
@@ -147,7 +148,8 @@ const SCRIPT_PRESETS = [
     id: "cyrillic",
     label: "Cyrillic",
     detailText: "АБВГДЕЁЖЗИЙКЛМ",
-    sampleText: "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя",
+    sampleText:
+      "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя",
     ranges: [
       [0x0400, 0x04ff],
       [0x0500, 0x052f],
@@ -387,10 +389,7 @@ const parseFormat4Ranges = (data, offset) => {
     const endCode = getUint16(data, endCodeOffset + index * 2);
     const startCode = getUint16(data, startCodeOffset + index * 2);
 
-    if (
-      startCode > endCode ||
-      (startCode === 0xffff && endCode === 0xffff)
-    ) {
+    if (startCode > endCode || (startCode === 0xffff && endCode === 0xffff)) {
       continue;
     }
 
@@ -522,7 +521,9 @@ const parseSfntTables = (fontData, offsetTableOffset = 0) => {
   let directoryOffset = offsetTableOffset + 12;
 
   for (let index = 0; index < numTables; index += 1) {
-    const tag = String.fromCharCode(...fontData.slice(directoryOffset, directoryOffset + 4));
+    const tag = String.fromCharCode(
+      ...fontData.slice(directoryOffset, directoryOffset + 4),
+    );
     const tableOffset = getUint32(fontData, directoryOffset + 8);
     const length = getUint32(fontData, directoryOffset + 12);
 
@@ -686,7 +687,10 @@ const filterPreviewTextByCoverage = (sampleText, coverageRanges) => {
     }
 
     const codePoint = char.codePointAt(0);
-    if (codePoint !== undefined && isCodePointCovered(coverageRanges, codePoint)) {
+    if (
+      codePoint !== undefined &&
+      isCodePointCovered(coverageRanges, codePoint)
+    ) {
       value += char;
     }
   }
@@ -812,7 +816,11 @@ const buildTextGlyphEntries = (text) => {
   return glyphs;
 };
 
-const buildScriptMatchGlyphs = ({ coverageRanges, scriptMatches, limit = 36 }) => {
+const buildScriptMatchGlyphs = ({
+  coverageRanges,
+  scriptMatches,
+  limit = 36,
+}) => {
   const glyphCodePoints = [];
   const seenCodePoints = new Set();
   const visibleScriptMatches = scriptMatches.slice(0, 3);
@@ -939,7 +947,9 @@ const buildCoveragePreview = (coverageRanges) => {
       glyphs: buildTextGlyphEntries(preset.sampleText),
     }));
     const primaryPreviewText =
-      scriptMatches[0]?.detailText || previewRows[0]?.text || DEFAULT_PREVIEW_TEXT;
+      scriptMatches[0]?.detailText ||
+      previewRows[0]?.text ||
+      DEFAULT_PREVIEW_TEXT;
     const glyphs = buildScriptMatchGlyphs({
       coverageRanges,
       scriptMatches,

@@ -9,9 +9,7 @@ export const resolveAnimationEditorPayload = (payload = {}) => {
   const targetGroupId =
     getPayloadString(payload, "ag") ?? getPayloadString(payload, "groupId");
   const dialogType =
-    getPayloadString(payload, "at") === "transition"
-      ? "transition"
-      : "update";
+    getPayloadString(payload, "at") === "transition" ? "transition" : "update";
 
   return {
     animationId,

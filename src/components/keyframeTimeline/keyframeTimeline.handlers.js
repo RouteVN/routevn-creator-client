@@ -155,7 +155,10 @@ const resolveTrackHoverTarget = ({ trackElement, clientX } = {}) => {
   for (let index = 0; index < keyframeRects.length - 1; index += 1) {
     const current = keyframeRects[index];
     const next = keyframeRects[index + 1];
-    const zoneLeft = Math.max(0, current.right - BETWEEN_INSERT_ZONE_PADDING_PX);
+    const zoneLeft = Math.max(
+      0,
+      current.right - BETWEEN_INSERT_ZONE_PADDING_PX,
+    );
     const zoneRight = Math.min(
       trackWidth,
       next.left + BETWEEN_INSERT_ZONE_PADDING_PX,
@@ -179,10 +182,7 @@ const resolveTrackHoverTarget = ({ trackElement, clientX } = {}) => {
     trackWidth,
     lastKeyframe.right + EDGE_INSERT_ZONE_WIDTH_PX,
   );
-  const rightZoneLeft = Math.max(
-    0,
-    rightZoneRight - EDGE_INSERT_ZONE_WIDTH_PX,
-  );
+  const rightZoneLeft = Math.max(0, rightZoneRight - EDGE_INSERT_ZONE_WIDTH_PX);
 
   if (relativeX >= rightZoneLeft) {
     return createHoverTarget({
