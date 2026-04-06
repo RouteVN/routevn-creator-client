@@ -27,6 +27,12 @@ refs:
         handler: handlePropertyNameClick
       initial-value-click:
         handler: handleInitialValueClick
+  transitionRuler:
+    eventListeners:
+      ruler-time-hover:
+        handler: handleRulerTimeHover
+      ruler-time-leave:
+        handler: handleRulerTimeLeave
   previousTimeline:
     eventListeners:
       add-keyframe:
@@ -99,17 +105,12 @@ template:
               - rtgl-button#backButton sq pre="chevronLeft" v="gh": null
               - rtgl-view w=1fg:
                   - rtgl-text: ${animationName}
-              - $if dialogType == 'update':
-                  - rtgl-button#playButton s=sm: Play
+              - rtgl-button#playButton s=sm: Play
           - rtgl-view h=1fg sv w=f p=md g=lg:
               - rtgl-view d=v w=f g=md:
                   - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: ${canvasAspectRatio};"':
-                      - $if dialogType == 'update':
-                          - rtgl-view pos=abs cor=full:
-                              - 'div#canvas style="width: 100%; height: 100%;display: flex;"': null
-                        $else:
-                          - rtgl-view pos=abs cor=full av=c ah=c:
-                              - rtgl-text s=sm c=mu-fg: Preview not available yet
+                      - rtgl-view pos=abs cor=full:
+                          - 'div#canvas style="width: 100%; height: 100%; display: flex;"': null
               - rtgl-view d=v w=f g=md:
                   - rtgl-view d=h av=c w=f:
                       - rtgl-text: Tween Properties
@@ -122,12 +123,13 @@ template:
                       - rvn-keyframe-timeline#updateTimeline editable=true ?showRuler=true ?interactiveRuler=true side=update ?indicatorVisible=${previewPlayheadVisible} indicatorTimeMs=${previewPlayheadTimeMs} :properties=${updateProperties} :defaultValues=${updateTimelineDefaultValues}: null
                     $else:
                       - rtgl-view d=v w=f g=md:
+                          - rvn-keyframe-timeline#transitionRuler ?showRuler=true ?showTracks=false ?interactiveRuler=true ?indicatorVisible=${previewPlayheadVisible} indicatorTimeMs=${previewPlayheadTimeMs} timelineDuration=${transitionTimelineDuration}: null
                           - rtgl-view d=v w=f g=xs:
                               - rtgl-text s=sm c=mu-fg: Out
-                              - rvn-keyframe-timeline#previousTimeline editable=true ?showRuler=true ?interactiveRuler=true side=prev ?showTotalDuration=false timelineDuration=${transitionTimelineDuration} :properties=${previousProperties} :defaultValues=${transitionTimelineDefaultValues}: null
+                              - rvn-keyframe-timeline#previousTimeline editable=true side=prev ?showRuler=false ?showTotalDuration=false timelineDuration=${transitionTimelineDuration} ?indicatorVisible=${previewPlayheadVisible} indicatorTimeMs=${previewPlayheadTimeMs} :properties=${previousProperties} :defaultValues=${transitionTimelineDefaultValues}: null
                           - rtgl-view d=v w=f g=xs:
                               - rtgl-text s=sm c=mu-fg: In
-                              - rvn-keyframe-timeline#nextTimeline editable=true ?showRuler=true ?interactiveRuler=true side=next ?showTotalDuration=false timelineDuration=${transitionTimelineDuration} :properties=${nextProperties} :defaultValues=${transitionTimelineDefaultValues}: null
+                              - rvn-keyframe-timeline#nextTimeline editable=true side=next ?showRuler=false ?showTotalDuration=false timelineDuration=${transitionTimelineDuration} ?indicatorVisible=${previewPlayheadVisible} indicatorTimeMs=${previewPlayheadTimeMs} :properties=${nextProperties} :defaultValues=${transitionTimelineDefaultValues}: null
       - rvn-resizable-panel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
           - rtgl-view slot="content" w=f h=f bgc=bg ah=c av=c:
               - rtgl-text c=mu-fg: placeholder

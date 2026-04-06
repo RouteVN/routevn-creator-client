@@ -18,6 +18,12 @@ import {
   PREVIEW_BG_COLOR,
   PREVIEW_RECT_HEIGHT,
   PREVIEW_RECT_WIDTH,
+  PREVIEW_TRANSITION_NEXT_ELEMENT_ID,
+  PREVIEW_TRANSITION_NEXT_FILL,
+  PREVIEW_TRANSITION_OFFSET_X,
+  PREVIEW_TRANSITION_PREV_ELEMENT_ID,
+  PREVIEW_TRANSITION_PREV_FILL,
+  PREVIEW_UPDATE_ELEMENT_ID,
   propertyNameDropdownItems,
   SUPPORTED_EASING_NAMES,
   TRANSITION_PROPERTY_KEYS,
@@ -115,35 +121,75 @@ const formatEasingLabel = (easingName) => {
     .replace(/^./, (value) => value.toUpperCase());
 };
 
-const createAnimationResetState = (projectResolution) => {
+const createPreviewRect = ({
+  id,
+  x,
+  y,
+  fill,
+  width = PREVIEW_RECT_WIDTH,
+  height = PREVIEW_RECT_HEIGHT,
+} = {}) => {
+  return {
+    id,
+    type: "rect",
+    x,
+    y,
+    width,
+    height,
+    fill,
+    anchorX: 0.5,
+    anchorY: 0.5,
+  };
+};
+
+const createAnimationResetState = (dialogType, projectResolution) => {
   const { width, height } = requireProjectResolution(
     projectResolution,
     "Project resolution",
   );
 
-  return {
-    elements: [
-      {
-        id: "bg",
-        type: "rect",
-        x: 0,
-        y: 0,
-        width,
-        height,
-        fill: PREVIEW_BG_COLOR,
-      },
-      {
-        id: "preview-element",
-        type: "rect",
-        x: width / 2,
-        y: height / 2,
-        width: PREVIEW_RECT_WIDTH,
-        height: PREVIEW_RECT_HEIGHT,
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const elements = [
+    {
+      id: "bg",
+      type: "rect",
+      x: 0,
+      y: 0,
+      width,
+      height,
+      fill: PREVIEW_BG_COLOR,
+    },
+  ];
+
+  if (dialogType === "transition") {
+    elements.push(
+      createPreviewRect({
+        id: PREVIEW_TRANSITION_PREV_ELEMENT_ID,
+        x: centerX - PREVIEW_TRANSITION_OFFSET_X,
+        y: centerY,
+        fill: PREVIEW_TRANSITION_PREV_FILL,
+      }),
+      createPreviewRect({
+        id: PREVIEW_TRANSITION_NEXT_ELEMENT_ID,
+        x: centerX + PREVIEW_TRANSITION_OFFSET_X,
+        y: centerY,
+        fill: PREVIEW_TRANSITION_NEXT_FILL,
+      }),
+    );
+  } else {
+    elements.push(
+      createPreviewRect({
+        id: PREVIEW_UPDATE_ELEMENT_ID,
+        x: centerX,
+        y: centerY,
         fill: "white",
-        anchorX: 0.5,
-        anchorY: 0.5,
-      },
-    ],
+      }),
+    );
+  }
+
+  return {
+    elements,
     animations: [],
   };
 };
@@ -620,17 +666,18 @@ export const selectPopover = ({ state }) => {
   return state.popover;
 };
 
-const createAnimationRenderState = (
+const createTweenAnimationsForTarget = ({
   properties,
   projectResolution,
-  includeAnimations = true,
-) => {
+  targetId,
+  animationIdPrefix,
+} = {}) => {
   const animations = [];
   const defaultInitialValuesByProperty = createDefaultInitialValuesByProperty(
     createPropertyFieldConfig(projectResolution),
   );
 
-  if (includeAnimations && properties && Object.keys(properties).length > 0) {
+  if (properties && Object.keys(properties).length > 0) {
     for (const [property, config] of Object.entries(properties)) {
       if (!config.keyframes?.length) {
         continue;
@@ -661,30 +708,90 @@ const createAnimationRenderState = (
       };
 
       animations.push({
-        id: `animation-${property}`,
-        targetId: "preview-element",
+        id: `${animationIdPrefix}-${property}`,
+        targetId,
         type: "update",
         tween,
       });
     }
   }
 
+  return animations;
+};
+
+const getPropertiesDuration = (properties = {}) => {
+  return Object.values(properties).reduce((maxDuration, config) => {
+    const propertyDuration = (config?.keyframes ?? []).reduce(
+      (sum, keyframe) => sum + (Number(keyframe.duration) || 0),
+      0,
+    );
+
+    return Math.max(maxDuration, propertyDuration);
+  }, 0);
+};
+
+const createAnimationRenderState = ({
+  dialogType,
+  updateProperties,
+  previousProperties,
+  nextProperties,
+  projectResolution,
+  includeAnimations = true,
+} = {}) => {
+  const animations = includeAnimations
+    ? dialogType === "transition"
+      ? [
+          ...createTweenAnimationsForTarget({
+            properties: previousProperties,
+            projectResolution,
+            targetId: PREVIEW_TRANSITION_PREV_ELEMENT_ID,
+            animationIdPrefix: "preview-prev-animation",
+          }),
+          ...createTweenAnimationsForTarget({
+            properties: nextProperties,
+            projectResolution,
+            targetId: PREVIEW_TRANSITION_NEXT_ELEMENT_ID,
+            animationIdPrefix: "preview-next-animation",
+          }),
+        ]
+      : createTweenAnimationsForTarget({
+          properties: updateProperties,
+          projectResolution,
+          targetId: PREVIEW_UPDATE_ELEMENT_ID,
+          animationIdPrefix: "preview-animation",
+        })
+    : [];
+
   return {
-    ...createAnimationResetState(projectResolution),
+    ...createAnimationResetState(dialogType, projectResolution),
     animations,
   };
 };
 
 export const selectAnimationResetState = ({ state }) => {
-  return createAnimationResetState(state.projectResolution);
+  return createAnimationResetState(state.dialogType, state.projectResolution);
 };
 
 export const selectAnimationRenderStateWithAnimations = ({ state }) => {
-  return createAnimationRenderState(
-    state.tweenBySection.update,
-    state.projectResolution,
-    true,
-  );
+  return createAnimationRenderState({
+    dialogType: state.dialogType,
+    updateProperties: state.tweenBySection.update,
+    previousProperties: state.tweenBySection.prev,
+    nextProperties: state.tweenBySection.next,
+    projectResolution: state.projectResolution,
+    includeAnimations: true,
+  });
+};
+
+export const selectPreviewDurationMs = ({ state }) => {
+  if (state.dialogType === "transition") {
+    return getTransitionTimelineDuration({
+      prevProperties: state.tweenBySection.prev,
+      nextProperties: state.tweenBySection.next,
+    });
+  }
+
+  return getPropertiesDuration(state.tweenBySection.update);
 };
 
 export const addProperty = (

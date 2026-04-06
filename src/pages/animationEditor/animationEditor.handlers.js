@@ -33,22 +33,6 @@ const getEditorPayload = (appService) => {
 
 const DEFAULT_NEW_ANIMATION_NAME = "New Animation";
 
-const resolveUpdatePreviewDuration = ({ store } = {}) => {
-  let maxDuration = 0;
-
-  for (const config of Object.values(
-    store.selectProperties({ side: "update" }),
-  )) {
-    const propertyDuration = (config?.keyframes ?? []).reduce(
-      (sum, keyframe) => sum + (Number(keyframe.duration) || 0),
-      0,
-    );
-    maxDuration = Math.max(maxDuration, propertyDuration);
-  }
-
-  return maxDuration;
-};
-
 const stopPreviewPlaybackIndicator = ({ store } = {}) => {
   const frameId = store.selectPreviewPlaybackFrameId();
   if (frameId !== undefined) {
@@ -103,7 +87,7 @@ const invalidatePreview = ({ store } = {}) => {
 };
 
 const resetPreviewPlayback = ({ graphicsService, store } = {}) => {
-  if (!graphicsService || store.selectDialogType() !== "update") {
+  if (!graphicsService) {
     return;
   }
 
@@ -118,11 +102,7 @@ const resetPreviewPlayback = ({ graphicsService, store } = {}) => {
 };
 
 const ensureManualPreviewAtTime = ({ graphicsService, store, timeMs } = {}) => {
-  if (
-    !graphicsService ||
-    store.selectDialogType() !== "update" ||
-    timeMs === undefined
-  ) {
+  if (!graphicsService || timeMs === undefined) {
     return;
   }
 
@@ -328,7 +308,7 @@ const queueEditorAutosave = ({ deps } = {}) => {
 
 const initializePreview = async ({ deps } = {}) => {
   const { graphicsService, refs, store } = deps;
-  if (!graphicsService || store.selectDialogType() !== "update") {
+  if (!graphicsService) {
     return;
   }
 
@@ -783,7 +763,7 @@ export const handleEditInitialValueFormChange = (deps, payload) => {
 
 export const handleReplayAnimation = async (deps) => {
   const { graphicsService, render, store } = deps;
-  if (!graphicsService || store.selectDialogType() !== "update") {
+  if (!graphicsService) {
     return;
   }
 
@@ -798,9 +778,7 @@ export const handleReplayAnimation = async (deps) => {
     store.selectAnimationRenderStateWithAnimations(),
   );
 
-  const durationMs = resolveUpdatePreviewDuration({
-    store,
-  });
+  const durationMs = store.selectPreviewDurationMs();
 
   if (durationMs <= 0) {
     render();

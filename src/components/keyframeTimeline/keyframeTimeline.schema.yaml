@@ -30,6 +30,9 @@ propsSchema:
     showRuler:
       type: boolean
       description: Whether the timeline should render its ruler row
+    showTracks:
+      type: boolean
+      description: Whether the timeline should render its property tracks
     interactiveRuler:
       type: boolean
       description: Whether the ruler should emit hover events and render the local hover indicator
