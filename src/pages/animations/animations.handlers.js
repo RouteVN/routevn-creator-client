@@ -29,11 +29,6 @@ const {
   handleSearchInput,
 } = createCatalogPageHandlers({
   resourceType: "animations",
-  onProjectStateChanged: ({ deps, repositoryState }) => {
-    deps.store.setProjectResolution({
-      projectResolution: repositoryState?.project?.resolution,
-    });
-  },
 });
 
 export {
