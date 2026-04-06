@@ -97,6 +97,7 @@ const releaseItems = [
 const resourceParentMapping = {
   "character-sprites": "characters",
   "layout-editor": "layouts",
+  "animation-editor": "animations",
 };
 
 const resourceCategoryNames = {

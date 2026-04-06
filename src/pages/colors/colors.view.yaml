@@ -25,10 +25,18 @@ refs:
     eventListeners:
       click:
         handler: handleFormFieldClick
+  detailHeader:
+    eventListeners:
+      click:
+        handler: handleDetailHeaderClick
   editDialog:
     eventListeners:
       close:
         handler: handleEditDialogClose
+  previewDialog:
+    eventListeners:
+      close:
+        handler: handlePreviewDialogClose
   editForm:
     eventListeners:
       form-action:
@@ -54,8 +62,9 @@ template:
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
                       - rtgl-view d=v w=f h=f:
-                          - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
-                              - rtgl-text c=mu-fg: ${selectedItemName}
+                          - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+                              - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                              - rtgl-svg svg=edit wh=16: null
                           - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
                               - 'rtgl-view#detailColorPreview slot="color-preview" w=f h=130 br=md bw=xs bc=bo cur=pointer style="background-color: ${selectedColorHex};"': null
                     $else:
@@ -63,5 +72,8 @@ template:
                           - rtgl-text s=md c=mu-fg: No selection
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=sm:
       - rtgl-form#editForm key=${isEditDialogOpen} slot=content :defaultValues=${editDefaultValues} :form=${editForm}: null
+  - rtgl-dialog#previewDialog ?open=${isPreviewDialogOpen} s=md:
+      - rtgl-view slot=content d=v g=md:
+          - 'rtgl-view w=f h=240 br=md bw=xs bc=bo style="background-color: ${previewColorHex};"': null
   - rtgl-dialog#addColorDialog ?open=${isAddDialogOpen} s=sm:
       - rtgl-form#addColorForm key=${isAddDialogOpen} slot=content :defaultValues=${addDefaultValues} :form=${addForm} w=f: null

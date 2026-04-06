@@ -27,6 +27,10 @@ refs:
     eventListeners:
       click:
         handler: handleFormExtraEvent
+  detailHeader:
+    eventListeners:
+      click:
+        handler: handleDetailHeaderClick
   addTypographyDialog:
     eventListeners:
       close:
@@ -65,13 +69,14 @@ template:
                   - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
                   - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
           - 'rtgl-view w=1fg h=f pl=sm style="min-width: 0; min-height: 0;"':
-              - rvn-text-style-resources-view#typographyView :navTitle=${title} :groups=${flatGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :itemContextMenuItems=${centerItemContextMenuItems}: null
+              - rvn-text-style-resources-view#typographyView :navTitle=${title} :groups=${flatGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
                       - rtgl-view d=v w=f h=f:
-                          - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
-                              - rtgl-text c=mu-fg: ${selectedItemName}
+                          - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+                              - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                              - rtgl-svg svg=edit wh=16: null
                           - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
                               - rtgl-view#detailTextStylePreview slot="text-style-preview" p=md bw=xs bc=bo br=md cur=pointer:
                                   - rvn-font-preview fontFamily=${detailPreviewFontFamily} previewText="${detailPreviewText}" fileId=${detailPreviewFontFileId} fontSize=${detailPreviewFontSize} lineHeight=${detailPreviewLineHeight} color=${detailPreviewColor} strokeColor=${detailPreviewStrokeColor} strokeWidth=${detailPreviewStrokeWidth} fontWeight=${detailPreviewFontWeight} width=220 showBorder=false: null

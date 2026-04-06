@@ -67,6 +67,7 @@ const openEditDialogForItem = ({ deps, itemId } = {}) => {
     itemId,
     defaultValues: {
       name: item.name || "",
+      description: item.description || "",
       scope: item.scope || "context",
       type,
       default: defaultValue,
@@ -301,6 +302,7 @@ export const handleFormActionClick = (deps, payload) => {
           detail: {
             itemId: editingItemId,
             name,
+            description: formData.description ?? "",
             scope,
             default: defaultValue,
           },
@@ -315,6 +317,7 @@ export const handleFormActionClick = (deps, payload) => {
           detail: {
             groupId: targetGroupId,
             name,
+            description: formData.description ?? "",
             scope,
             type,
             default: defaultValue,

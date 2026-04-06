@@ -97,6 +97,70 @@ const TRANSITION_PROPERTY_KEYS = [
   "scaleX",
   "scaleY",
 ];
+const SUPPORTED_EASING_NAMES = Object.freeze([
+  "linear",
+  "easeInQuad",
+  "easeOutQuad",
+  "easeInOutQuad",
+  "easeInCubic",
+  "easeOutCubic",
+  "easeInOutCubic",
+  "easeInQuart",
+  "easeOutQuart",
+  "easeInOutQuart",
+  "easeInQuint",
+  "easeOutQuint",
+  "easeInOutQuint",
+  "easeInSine",
+  "easeOutSine",
+  "easeInOutSine",
+  "easeInExpo",
+  "easeOutExpo",
+  "easeInOutExpo",
+  "easeInCirc",
+  "easeOutCirc",
+  "easeInOutCirc",
+  "easeInBack",
+  "easeOutBack",
+  "easeInOutBack",
+  "easeInBounce",
+  "easeOutBounce",
+  "easeInOutBounce",
+  "easeInElastic",
+  "easeOutElastic",
+  "easeInOutElastic",
+]);
+
+const formatEasingLabel = (easingName) => {
+  if (easingName === "linear") {
+    return "Linear";
+  }
+
+  return easingName
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/^./, (value) => value.toUpperCase());
+};
+
+const formatAnimationDurationLabel = (durationMs) => {
+  const resolvedDurationMs = Number(durationMs) || 0;
+  if (resolvedDurationMs < 1000) {
+    return `${resolvedDurationMs}ms`;
+  }
+
+  const durationSeconds = resolvedDurationMs / 1000;
+  if (Number.isInteger(durationSeconds)) {
+    return `${durationSeconds}s`;
+  }
+
+  return `${Number(durationSeconds.toFixed(durationSeconds < 10 ? 1 : 2))}s`;
+};
+
+const EASING_OPTIONS = Object.freeze(
+  SUPPORTED_EASING_NAMES.map((easingName) => ({
+    label: formatEasingLabel(easingName),
+    value: easingName,
+  })),
+);
 
 const buildPropertyOptions = (propertyKeys, propertyFieldConfig) => {
   return propertyKeys.map((property) => ({
@@ -220,7 +284,7 @@ const createAddKeyframeForm = (
       name: "easing",
       type: "select",
       label: "Easing",
-      options: [{ label: "Linear", value: "linear" }],
+      options: EASING_OPTIONS,
       required: true,
     },
   );
@@ -434,6 +498,12 @@ const createAnimationForm = ({
         type: "input-text",
         label: "Name",
         required: true,
+      },
+      {
+        name: "description",
+        type: "input-textarea",
+        label: "Description",
+        required: false,
       },
       ...timelineFields,
     ],
@@ -682,7 +752,7 @@ const {
   title: "Animations",
   selectedResourceId: "animations",
   resourceCategory: "assets",
-  addText: "Add Animation",
+  addText: "Add",
   buildCatalogItem,
   matchesSearch,
   extendViewData: ({ state, selectedItem, baseViewData }) => {
@@ -691,8 +761,6 @@ const {
     const selectedAnimationItem = selectedItem
       ? toAnimationDisplayItem(selectedItem)
       : undefined;
-    const selectedAnimationPropertyCount =
-      selectedAnimationItem?.propertyCount ?? 0;
     const dialogType = state.dialogType;
     const updateProperties = getSectionProperties(state, "update");
     const previousProperties = getSectionProperties(state, "prev");
@@ -787,8 +855,10 @@ const {
       ...baseViewData,
       selectedAnimationTypeLabel:
         selectedAnimationItem?.animationTypeLabel ?? "",
-      selectedItemDuration: String(selectedAnimationItem?.duration ?? ""),
-      selectedAnimationPropertyCount,
+      selectedItemDescription: selectedAnimationItem?.description ?? "",
+      selectedItemDuration: formatAnimationDurationLabel(
+        selectedAnimationItem?.duration,
+      ),
       createTypeMenu: state.createTypeMenu,
       isDialogOpen: state.isDialogOpen,
       dialogType,
@@ -858,6 +928,7 @@ export const createInitialState = () => ({
   tweenBySection: createEmptyTweenBySection(),
   dialogDefaultValues: {
     name: "",
+    description: "",
   },
   dialogForm: addUpdateAnimationForm,
   editMode: false,
@@ -936,6 +1007,7 @@ export const openDialog = (
     state.dialogForm = getDialogForm(resolvedDialogType, true);
     state.dialogDefaultValues = {
       name: itemData.name ?? "",
+      description: itemData.description ?? "",
     };
     state.tweenBySection = cloneTweenBySectionFromItem(
       itemData,
@@ -951,6 +1023,7 @@ export const openDialog = (
   state.dialogForm = getDialogForm(resolvedDialogType, false);
   state.dialogDefaultValues = {
     name: "",
+    description: "",
   };
   state.tweenBySection = createEmptyTweenBySection();
 };
@@ -963,6 +1036,7 @@ export const closeDialog = ({ state }, _payload = {}) => {
   state.editItemId = undefined;
   state.dialogDefaultValues = {
     name: "",
+    description: "",
   };
   state.dialogForm = addUpdateAnimationForm;
   state.tweenBySection = createEmptyTweenBySection();

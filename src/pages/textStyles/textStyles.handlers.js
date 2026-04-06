@@ -1,5 +1,4 @@
 import { nanoid } from "nanoid";
-import { toFlatItems } from "../../internal/project/tree.js";
 import {
   getTextStyleCount,
   getTextStyleRemovalCount,
@@ -90,8 +89,30 @@ export const handleTextStyleItemClick = (deps, payload) => {
   render();
 };
 
+const openEditDialogWithValues = ({ deps, itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  const { store, render, refs } = deps;
+  const item = store.selectItemById(itemId);
+  if (!item) {
+    return;
+  }
+
+  store.setSelectedItemId({ itemId });
+  refs.fileExplorer?.selectItem?.({ itemId });
+  store.setFormValuesFromItem({ item });
+  store.setEditMode({ itemId });
+  if (!store.getState().isDialogOpen) {
+    store.toggleDialog();
+  }
+  render();
+};
+
 const buildTextStyleData = ({
   name,
+  description,
   fontSize,
   lineHeight,
   fontColor,
@@ -105,6 +126,7 @@ const buildTextStyleData = ({
   const hasStrokeColor = Boolean(strokeColor);
   const textStyleData = {
     name,
+    description: description ?? "",
     fontSize: Number(fontSize ?? 16),
     lineHeight: Number(lineHeight ?? 1.5),
     colorId: fontColor,
@@ -128,6 +150,7 @@ const handleTextStyleCreated = async (deps, payload) => {
   const {
     groupId,
     name,
+    description,
     fontSize,
     lineHeight,
     fontColor,
@@ -148,6 +171,7 @@ const handleTextStyleCreated = async (deps, payload) => {
           type: "textStyle",
           ...buildTextStyleData({
             name,
+            description,
             fontSize,
             lineHeight,
             fontColor,
@@ -176,6 +200,7 @@ const handleTextStyleUpdated = async (deps, payload) => {
   const {
     itemId,
     name,
+    description,
     fontSize,
     lineHeight,
     fontColor,
@@ -194,6 +219,7 @@ const handleTextStyleUpdated = async (deps, payload) => {
         textStyleId: itemId,
         data: buildTextStyleData({
           name,
+          description,
           fontSize,
           lineHeight,
           fontColor,
@@ -216,21 +242,8 @@ const handleTextStyleUpdated = async (deps, payload) => {
 };
 
 export const handleFormExtraEvent = (deps) => {
-  const { store, render } = deps;
-
-  // Handle text style preview click
-  const selectedItemId = store.selectSelectedItemId();
-  const textStylesData = store.selectTextStylesData();
-  const flatItems = toFlatItems(textStylesData);
-  const selectedItem = flatItems.find((item) => item.id === selectedItemId);
-
-  if (selectedItem) {
-    // Set form values from the selected item and open edit dialog
-    store.setFormValuesFromItem({ item: selectedItem });
-    store.setEditMode({ itemId: selectedItemId });
-    store.toggleDialog();
-    render();
-  }
+  const selectedItemId = deps.store.selectSelectedItemId();
+  openEditDialogWithValues({ deps, itemId: selectedItemId });
 };
 
 // Dialog handlers
@@ -246,22 +259,17 @@ export const handleAddTextStyleClick = (deps, payload) => {
 };
 
 export const handleTextStyleItemDoubleClick = (deps, payload) => {
-  const { store, render } = deps;
   const { itemId, isFolder } = payload._event.detail;
-  if (isFolder) return;
-
-  // Get the item from the store
-  const item = store.selectItemById(itemId);
-
-  if (item) {
-    // Set form values from the item
-    store.setFormValuesFromItem({ item: item });
-
-    // Set edit mode and open dialog
-    store.setEditMode({ itemId: itemId });
-    store.toggleDialog();
-    render();
+  if (isFolder) {
+    return;
   }
+
+  openEditDialogWithValues({ deps, itemId });
+};
+
+export const handleDetailHeaderClick = (deps) => {
+  const selectedItemId = deps.store.selectSelectedItemId();
+  openEditDialogWithValues({ deps, itemId: selectedItemId });
 };
 
 export const handleDialogFormChange = (deps, payload) => {
@@ -370,6 +378,7 @@ export const handleFormActionClick = async (deps, payload) => {
           detail: {
             itemId: editingItemId,
             name: formData.name,
+            description: formData.description,
             fontSize: formData.fontSize,
             lineHeight: formData.lineHeight,
             fontColor: formData.fontColor,
@@ -388,6 +397,7 @@ export const handleFormActionClick = async (deps, payload) => {
           detail: {
             groupId: targetGroupId,
             name: formData.name,
+            description: formData.description,
             fontSize: formData.fontSize,
             lineHeight: formData.lineHeight,
             fontColor: formData.fontColor,
@@ -437,6 +447,7 @@ export const handleAddColorFormAction = async (deps, payload) => {
           data: {
             type: "color",
             name: formData.name,
+            description: formData.description ?? "",
             hex: formData.hex,
           },
           parentId: formData.folderId || null,
@@ -533,6 +544,7 @@ export const handleAddFontFormAction = async (deps, payload) => {
           data: {
             type: "font",
             name: fontName,
+            description: formData.description ?? "",
             fontFamily: fontName,
             fileId: fontData.uploadResult.fileId,
             fileType: getFileType(fontData.uploadResult),
