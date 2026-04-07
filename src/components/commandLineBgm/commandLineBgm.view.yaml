@@ -70,10 +70,10 @@ template:
                                   - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm:
                                       - rtgl-view p=md g=md br=md:
                                           - $if item.waveformDataFileId:
-                                              - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} w=225 h=120: null
+                                              - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} w=200 h=120: null
                                             $else:
-                                              - rtgl-view w=225 h=120 av=c ah=c bgc=mu-fg:
+                                              - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
                                                   - rtgl-text s=sm c=mu-fg: No waveform
-                                          - rtgl-text s=xs c=mu-fg ellipsis w=225: ${item.name}
+                                          - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#buttonSelect: Select
