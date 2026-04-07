@@ -93,6 +93,118 @@ refs:
         handler: handleClosePopover
       item-click:
         handler: handleAddPropertySideMenuItemClick
+  enableMaskButton:
+    eventListeners:
+      click:
+        handler: handleEnableMaskClick
+  disableMaskButton:
+    eventListeners:
+      click:
+        handler: handleDisableMaskClick
+  maskKindSelect:
+    eventListeners:
+      value-change:
+        handler: handleMaskKindChange
+  maskChannelSelect:
+    eventListeners:
+      value-change:
+        handler: handleMaskChannelChange
+  maskInvertSelect:
+    eventListeners:
+      value-change:
+        handler: handleMaskInvertChange
+  maskSampleSelect:
+    eventListeners:
+      value-change:
+        handler: handleMaskSampleChange
+  maskCombineSelect:
+    eventListeners:
+      value-change:
+        handler: handleMaskCombineChange
+  maskSoftnessInput:
+    eventListeners:
+      value-input:
+        handler: handleMaskSoftnessInput
+  maskProgressDurationInput:
+    eventListeners:
+      value-input:
+        handler: handleMaskProgressDurationInput
+  maskProgressEasingSelect:
+    eventListeners:
+      value-change:
+        handler: handleMaskProgressEasingChange
+  singleMaskImageButton:
+    eventListeners:
+      click:
+        handler: handleSingleMaskImageClick
+  singleMaskImageClearButton:
+    eventListeners:
+      click:
+        handler: handleSingleMaskImageClearClick
+  sequenceMaskAddButton:
+    eventListeners:
+      click:
+        handler: handleSequenceMaskAddClick
+  sequenceMaskImageButton*:
+    eventListeners:
+      click:
+        handler: handleSequenceMaskImageClick
+  sequenceMaskMoveUpButton*:
+    eventListeners:
+      click:
+        handler: handleSequenceMaskMoveUpClick
+  sequenceMaskMoveDownButton*:
+    eventListeners:
+      click:
+        handler: handleSequenceMaskMoveDownClick
+  sequenceMaskRemoveButton*:
+    eventListeners:
+      click:
+        handler: handleSequenceMaskRemoveClick
+  compositeMaskAddButton:
+    eventListeners:
+      click:
+        handler: handleCompositeMaskAddClick
+  compositeMaskImageButton*:
+    eventListeners:
+      click:
+        handler: handleCompositeMaskImageClick
+  compositeMaskChannelSelect*:
+    eventListeners:
+      value-change:
+        handler: handleCompositeMaskChannelChange
+  compositeMaskInvertSelect*:
+    eventListeners:
+      value-change:
+        handler: handleCompositeMaskInvertChange
+  compositeMaskMoveUpButton*:
+    eventListeners:
+      click:
+        handler: handleCompositeMaskMoveUpClick
+  compositeMaskMoveDownButton*:
+    eventListeners:
+      click:
+        handler: handleCompositeMaskMoveDownClick
+  compositeMaskRemoveButton*:
+    eventListeners:
+      click:
+        handler: handleCompositeMaskRemoveClick
+  imageSelectorDialog:
+    eventListeners:
+      close:
+        handler: handleCloseMaskImageSelectorDialog
+  imageSelector:
+    eventListeners:
+      image-selected:
+        handler: handleMaskImageSelected
+  confirmMaskImageSelection:
+    eventListeners:
+      click:
+        handler: handleConfirmMaskImageSelection
+  cancelMaskImageSelection:
+    eventListeners:
+      click:
+        handler: handleCancelMaskImageSelection
   canvas: {}
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
@@ -130,17 +242,134 @@ template:
                           - rtgl-view d=v w=f g=xs:
                               - rtgl-text s=sm c=mu-fg: In
                               - rvn-keyframe-timeline#nextTimeline editable=true side=next ?showRuler=false ?showTotalDuration=false timelineDuration=${transitionTimelineDuration} ?indicatorVisible=${previewPlayheadVisible} indicatorTimeMs=${previewPlayheadTimeMs} :properties=${nextProperties} :defaultValues=${transitionTimelineDefaultValues}: null
-      - rvn-resizable-panel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
-          - rtgl-view slot="content" w=f h=f bgc=bg ah=c av=c:
-              - rtgl-text c=mu-fg: placeholder
+      - rvn-resizable-panel panel-type=detail-panel w=300 min-w=220 max-w=500 resize-side="left":
+          - rtgl-view slot="content" w=f h=f bgc=bg:
+              - $if dialogType == 'transition':
+                  - rtgl-view d=v w=f h=f p=md g=md sv:
+                      - rtgl-view d=h av=c w=f:
+                          - rtgl-text: Mask
+                          - rtgl-view w=1fg: null
+                          - $if transitionMaskPanel.enabled:
+                              - rtgl-button#disableMaskButton s=sm v=se: Remove
+                      - $if !transitionMaskPanel.enabled:
+                          - rtgl-view w=f h=f av=c ah=c:
+                              - rtgl-button#enableMaskButton pre=plus s=sm: Enable Mask
+                        $else:
+                              - rtgl-view d=v w=f g=md:
+                                  - rtgl-view d=v g=xs:
+                                      - rtgl-text s=sm c=mu-fg: Kind
+                                  - rtgl-segmented-control#maskKindSelect w=f no-clear :selectedValue=${transitionMaskPanel.kind} :options=${maskKindOptions}: null
+                              - $if transitionMaskPanel.kind != 'composite':
+                                  - rtgl-view d=v g=xs:
+                                      - rtgl-text s=sm c=mu-fg: Channel
+                                      - rtgl-segmented-control#maskChannelSelect w=f no-clear :selectedValue=${transitionMaskPanel.channelValue} :options=${maskChannelOptions}: null
+                                  - rtgl-view d=v g=xs:
+                                      - rtgl-text s=sm c=mu-fg: Invert
+                                      - rtgl-segmented-control#maskInvertSelect w=f no-clear :selectedValue=${transitionMaskPanel.invertValue} :options=${maskBooleanOptions}: null
+                              - $if transitionMaskPanel.kind == 'sequence':
+                                  - rtgl-view d=v g=xs:
+                                      - rtgl-text s=sm c=mu-fg: Sample
+                                      - rtgl-select#maskSampleSelect w=f no-clear :selectedValue=${transitionMaskPanel.sampleValue} :options=${maskSampleOptions}: null
+                              - $if transitionMaskPanel.kind == 'composite':
+                                  - rtgl-view d=v g=xs:
+                                      - rtgl-text s=sm c=mu-fg: Combine
+                                      - rtgl-select#maskCombineSelect w=f no-clear :selectedValue=${transitionMaskPanel.combineValue} :options=${maskCombineOptions}: null
+                              - rtgl-view d=v g=xs:
+                                  - rtgl-text s=sm c=mu-fg: Softness
+                                  - rtgl-input#maskSoftnessInput type=number min=0 step=0.01 w=f value=${transitionMaskPanel.softness}: null
+                              - $if transitionMaskPanel.kind == 'single':
+                                  - rtgl-view d=v g=xs:
+                                      - rtgl-text s=sm c=mu-fg: Image
+                                      - $if transitionMaskPanel.singleImage:
+                                          - rtgl-view d=h g=sm av=c:
+                                              - rtgl-view#singleMaskImageButton cur=pointer br=md:
+                                                  - rvn-file-image w=120 h=90 imageId=${transitionMaskPanel.singleImage.imageId} source="thumbnail": null
+                                              - rtgl-view d=v w=1fg g=xs:
+                                                  - rtgl-text: ${transitionMaskPanel.singleImage.name}
+                                              - rtgl-button#singleMaskImageClearButton s=sm v=se: Clear
+                                        $else:
+                                          - rtgl-view#singleMaskImageButton w=f h=96 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                                              - rtgl-text c=mu-fg: Select image
+                              - $if transitionMaskPanel.kind == 'sequence':
+                                  - rtgl-view d=v g=sm:
+                                      - rtgl-view d=h av=c:
+                                          - rtgl-text s=sm c=mu-fg: Frames
+                                          - rtgl-view w=1fg: null
+                                          - rtgl-button#sequenceMaskAddButton pre=plus s=sm: Add
+                                      - $if transitionMaskPanel.sequenceItems.length == 0:
+                                          - rtgl-view w=f h=84 av=c ah=c bgc=bg bc=bo bw=xs br=md:
+                                              - rtgl-text c=mu-fg: No frames
+                                        $else:
+                                          - $for item, i in transitionMaskPanel.sequenceItems:
+                                              - rtgl-view d=h g=sm av=c w=f key=${item.index}:
+                                                  - $if item.imageId:
+                                                      - rtgl-view#sequenceMaskImageButton${i} data-index=${item.index} cur=pointer br=md:
+                                                          - rvn-file-image w=96 h=72 imageId=${item.imageId} source="thumbnail": null
+                                                    $else:
+                                                      - rtgl-view#sequenceMaskImageButton${i} data-index=${item.index} w=96 h=72 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                                                          - rtgl-text c=mu-fg s=sm: Select
+                                                  - rtgl-view d=v w=1fg g=xs:
+                                                      - rtgl-text: ${item.name}
+                                                  - rtgl-button#sequenceMaskMoveUpButton${i} data-index=${item.index} s=sm v=se ?disabled=${!item.canMoveUp}: Up
+                                                  - rtgl-button#sequenceMaskMoveDownButton${i} data-index=${item.index} s=sm v=se ?disabled=${!item.canMoveDown}: Down
+                                                  - rtgl-button#sequenceMaskRemoveButton${i} data-index=${item.index} s=sm v=se: Remove
+                              - $if transitionMaskPanel.kind == 'composite':
+                                  - rtgl-view d=v g=sm:
+                                      - rtgl-view d=h av=c:
+                                          - rtgl-text s=sm c=mu-fg: Layers
+                                          - rtgl-view w=1fg: null
+                                          - rtgl-button#compositeMaskAddButton pre=plus s=sm: Add
+                                      - $if transitionMaskPanel.compositeItems.length == 0:
+                                          - rtgl-view w=f h=84 av=c ah=c bgc=bg bc=bo bw=xs br=md:
+                                              - rtgl-text c=mu-fg: No layers
+                                        $else:
+                                          - $for item, i in transitionMaskPanel.compositeItems:
+                                              - rtgl-view d=v g=sm w=f p=sm bgc=bg bc=bo bw=xs br=md key=${item.index}:
+                                                  - rtgl-view d=h g=sm av=c:
+                                                      - $if item.imageId:
+                                                          - rtgl-view#compositeMaskImageButton${i} data-index=${item.index} cur=pointer br=md:
+                                                              - rvn-file-image w=96 h=72 imageId=${item.imageId} source="thumbnail": null
+                                                        $else:
+                                                          - rtgl-view#compositeMaskImageButton${i} data-index=${item.index} w=96 h=72 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                                                              - rtgl-text c=mu-fg s=sm: Select
+                                                      - rtgl-view d=v w=1fg g=xs:
+                                                          - rtgl-text: ${item.name}
+                                                      - rtgl-button#compositeMaskMoveUpButton${i} data-index=${item.index} s=sm v=se ?disabled=${!item.canMoveUp}: Up
+                                                      - rtgl-button#compositeMaskMoveDownButton${i} data-index=${item.index} s=sm v=se ?disabled=${!item.canMoveDown}: Down
+                                                      - rtgl-button#compositeMaskRemoveButton${i} data-index=${item.index} s=sm v=se: Remove
+                                                  - rtgl-view d=v g=xs:
+                                                      - rtgl-text s=sm c=mu-fg: Channel
+                                                      - rtgl-select#compositeMaskChannelSelect${i} data-index=${item.index} w=f no-clear :selectedValue=${item.channelValue} :options=${maskChannelOptions}: null
+                                                  - rtgl-view d=v g=xs:
+                                                      - rtgl-text s=sm c=mu-fg: Invert
+                                                      - rtgl-select#compositeMaskInvertSelect${i} data-index=${item.index} w=f no-clear :selectedValue=${item.invertValue} :options=${maskBooleanOptions}: null
+                              - rtgl-view d=v g=xs:
+                                  - rtgl-text s=sm c=mu-fg: Progress Duration (ms)
+                                  - rtgl-input#maskProgressDurationInput type=number min=1 step=1 w=f value=${transitionMaskPanel.progressDuration}: null
+                              - rtgl-view d=v g=xs:
+                                  - rtgl-text s=sm c=mu-fg: Progress Easing
+                                  - rtgl-select#maskProgressEasingSelect w=f no-clear :selectedValue=${transitionMaskPanel.progressEasing} :options=${maskProgressEasingOptions}: null
+                $else:
+                  - rtgl-view w=f h=f ah=c av=c:
+                      - rtgl-text c=mu-fg: placeholder
   - rtgl-popover#addPropertyPopover ?open=${popover.popoverIsOpen} x=${popover.x} y=${popover.y}:
       - $if popover.mode == 'addProperty':
-          - rtgl-form#addPropertyForm slot=content :form=${addPropertyForm} :context=${addPropertyContext} :defaultValues=${addPropertyFormDefaultValues}: null
+          - rtgl-view slot=content:
+              - rtgl-form#addPropertyForm :form=${addPropertyForm} :context=${addPropertyContext} :defaultValues=${addPropertyFormDefaultValues}: null
       - $if popover.mode == 'addKeyframe':
-          - rtgl-form#addKeyframeForm slot=content :form=${addKeyframeForm} :defaultValues=${addKeyframeDefaultValues}: null
+          - rtgl-view slot=content:
+              - rtgl-form#addKeyframeForm :form=${addKeyframeForm} :defaultValues=${addKeyframeDefaultValues}: null
       - $if popover.mode == 'editKeyframe':
-          - rtgl-form#editKeyframeForm slot=content :form=${updateKeyframeForm} :defaultValues=${editKeyframeDefaultValues}: null
+          - rtgl-view slot=content:
+              - rtgl-form#editKeyframeForm :form=${updateKeyframeForm} :defaultValues=${editKeyframeDefaultValues}: null
       - $if popover.mode == 'editInitialValue':
-          - rtgl-form#editInitialValueForm slot=content :form=${editInitialValueForm} :defaultValues=${editInitialValueDefaultValues} :context=${editInitialValueContext}: null
+          - rtgl-view slot=content:
+              - rtgl-form#editInitialValueForm :form=${editInitialValueForm} :defaultValues=${editInitialValueDefaultValues} :context=${editInitialValueContext}: null
   - rtgl-dropdown-menu#keyframeDropdownMenu :items=${keyframeDropdownItems} ?open=${popover.dropdownMenuIsOpen} x=${popover.x} y=${popover.y}: null
   - rtgl-dropdown-menu#addPropertySideMenu :items=${addPropertySideMenuItems} ?open=${popover.addPropertySideMenuIsOpen} x=${popover.x} y=${popover.y}: null
+  - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open}:
+      - rtgl-view slot=content g=md:
+          - rvn-image-selector#imageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
+          - rtgl-view d=h g=sm:
+              - rtgl-button#cancelMaskImageSelection variant=se: Cancel
+              - rtgl-button#confirmMaskImageSelection variant=pr: OK

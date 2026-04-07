@@ -41,13 +41,12 @@ const CREATE_TEMPLATES = {
     name: "Container",
     ...BASE_TRANSFORM,
     gap: 0,
-    width: 100,
-    height: 100,
   }),
   sprite: () => ({
     type: "sprite",
     name: "Sprite",
     ...BASE_TRANSFORM,
+    aspectRatioLock: 1,
     width: 0,
     height: 0,
   }),
@@ -247,6 +246,7 @@ const CREATE_TEMPLATES = {
         type: "sprite-ref-save-load-slot-image",
         name: "Sprite (Save Image)",
         ...BASE_TRANSFORM,
+        aspectRatioLock: 320 / 180,
         width: 320,
         height: 180,
       },
@@ -440,6 +440,15 @@ const applySpriteAutoSize = ({ nextItem, imagesData }) => {
     nextItem.height = image.height;
   }
 
+  if (
+    Number.isFinite(nextItem.width) &&
+    Number.isFinite(nextItem.height) &&
+    nextItem.width > 0 &&
+    nextItem.height > 0
+  ) {
+    nextItem.aspectRatioLock = nextItem.width / nextItem.height;
+  }
+
   return nextItem;
 };
 
@@ -469,6 +478,7 @@ const TYPE_FAMILIES = {
 };
 
 const DEFAULT_CAPABILITIES = {
+  supportsSize: true,
   supportsHeight: true,
   supportsAnchor: false,
   supportsDirection: false,
@@ -486,6 +496,7 @@ const DEFAULT_CAPABILITIES = {
 
 const FAMILY_CAPABILITIES = {
   container: {
+    supportsSize: false,
     supportsAnchor: true,
     supportsDirection: true,
     supportsScroll: true,
@@ -522,6 +533,7 @@ const ITEM_TYPE_CAPABILITY_OVERRIDES = {
   },
   "text-revealing-ref-dialogue-content": {
     supportsTextRevealEffect: true,
+    supportsTextAlignment: false,
   },
 };
 

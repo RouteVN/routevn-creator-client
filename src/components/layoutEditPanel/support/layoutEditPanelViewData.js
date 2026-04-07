@@ -121,6 +121,10 @@ export const toInspectorValues = ({
   firstTextStyleId,
   hiddenActionModes,
 }) => {
+  const derivedAspectRatioLock =
+    Number.isFinite(values?.aspectRatioLock) && values.aspectRatioLock > 0
+      ? values.aspectRatioLock
+      : undefined;
   const revealEffect =
     values?.type === "text-revealing-ref-dialogue-content"
       ? (values?.revealEffect ?? "typewriter")
@@ -130,6 +134,8 @@ export const toInspectorValues = ({
   return {
     ...values,
     opacity: values?.opacity ?? 1,
+    aspectRatioMode: derivedAspectRatioLock !== undefined ? "fixed" : "free",
+    aspectRatioLock: derivedAspectRatioLock,
     revealEffect,
     variableId,
     fragmentLayoutId: values?.fragmentLayoutId ?? "",

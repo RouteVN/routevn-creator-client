@@ -17,6 +17,9 @@ import {
   createVisibilityConditionDialogDefaults,
   createVisibilityConditionForm,
   getChildInteractionSummary,
+  getAvailableChildInteractionItems,
+  getChildInteractionItems,
+  hasChildInteractionInheritance,
   getConditionalOverrideAttributeOptions,
   getConditionalOverrideSummary,
   getSaveLoadPaginationSummary,
@@ -37,6 +40,150 @@ import {
 } from "./support/layoutEditPanelViewData.js";
 
 const HIDDEN_LAYOUT_ACTION_MODES = new Set();
+const POSITION_POPOVER_PRESET_PERCENTAGES = [
+  0, 20, 25, 33.33, 50, 66.66, 70, 75,
+];
+
+const POSITION_POPOVER_AXIS_CONFIG = {
+  x: {
+    resolutionKey: "width",
+    axisLabel: "Width",
+    roundValue: true,
+  },
+  y: {
+    resolutionKey: "height",
+    axisLabel: "Height",
+    roundValue: true,
+  },
+};
+
+const roundPositionPopoverNumber = (value) => {
+  return Number((value + Number.EPSILON).toFixed(2));
+};
+
+const clonePopoverForm = (form) => {
+  if (!form || typeof form !== "object") {
+    return form;
+  }
+
+  const nextForm = {
+    ...form,
+  };
+
+  if (Array.isArray(form.fields)) {
+    nextForm.fields = form.fields.map((field) => ({
+      ...field,
+    }));
+  }
+
+  if (form.actions && typeof form.actions === "object") {
+    nextForm.actions = {
+      ...form.actions,
+    };
+
+    if (Array.isArray(form.actions.buttons)) {
+      nextForm.actions.buttons = form.actions.buttons.map((button) => ({
+        ...button,
+      }));
+    }
+  }
+
+  return nextForm;
+};
+
+const buildPopoverForm = ({ form, name, projectResolution, value }) => {
+  const axisConfig = POSITION_POPOVER_AXIS_CONFIG[name];
+  if (!axisConfig) {
+    return form;
+  }
+
+  const resolutionDimension = Number(
+    projectResolution?.[axisConfig.resolutionKey],
+  );
+  if (!Number.isFinite(resolutionDimension) || resolutionDimension <= 0) {
+    return form;
+  }
+
+  const nextForm = clonePopoverForm(form);
+  const firstField = nextForm?.fields?.[0];
+  if (!firstField) {
+    return nextForm;
+  }
+
+  const currentValue = Number(value);
+  let min = 0;
+  let max = resolutionDimension;
+
+  if (Number.isFinite(currentValue)) {
+    if (currentValue < min) {
+      min = Math.floor(currentValue);
+    }
+    if (currentValue > max) {
+      max = Math.ceil(currentValue);
+    }
+  }
+
+  firstField.type = "slider-with-input";
+  firstField.min = min;
+  firstField.max = max;
+  firstField.step = 1;
+
+  return nextForm;
+};
+
+const buildPositionPopoverContext = ({ name, projectResolution, value }) => {
+  const axisConfig = POSITION_POPOVER_AXIS_CONFIG[name];
+  if (!axisConfig) {
+    return {};
+  }
+
+  const resolutionDimension = Number(
+    projectResolution?.[axisConfig.resolutionKey],
+  );
+  if (!Number.isFinite(resolutionDimension) || resolutionDimension <= 0) {
+    return {};
+  }
+
+  const numericValue = Number(value ?? 0);
+  const percentage = Number.isFinite(numericValue)
+    ? roundPositionPopoverNumber((numericValue / resolutionDimension) * 100)
+    : 0;
+
+  return {
+    isPositionPopover: true,
+    positionAxisLabel: axisConfig.axisLabel,
+    positionResolutionDimension: resolutionDimension,
+    positionPercentageLabel: `${percentage}%`,
+    positionPresetItems: POSITION_POPOVER_PRESET_PERCENTAGES.map((preset) => ({
+      label: `${preset}%`,
+      percentage: preset,
+      value: axisConfig.roundValue
+        ? Math.round((resolutionDimension * preset) / 100)
+        : roundPositionPopoverNumber((resolutionDimension * preset) / 100),
+    })),
+  };
+};
+
+const formatPositionPercentageLabel = ({ name, projectResolution, value }) => {
+  const axisConfig = POSITION_POPOVER_AXIS_CONFIG[name];
+  if (!axisConfig) {
+    return undefined;
+  }
+
+  const resolutionDimension = Number(
+    projectResolution?.[axisConfig.resolutionKey],
+  );
+  const numericValue = Number(value);
+  if (
+    !Number.isFinite(resolutionDimension) ||
+    resolutionDimension <= 0 ||
+    !Number.isFinite(numericValue)
+  ) {
+    return undefined;
+  }
+
+  return `${roundPositionPopoverNumber((numericValue / resolutionDimension) * 100)}%`;
+};
 
 const createDefaultValues = () => ({
   x: 0,
@@ -44,6 +191,7 @@ const createDefaultValues = () => ({
   width: 100,
   height: 100,
   opacity: 1,
+  aspectRatioLock: undefined,
   rotation: 0,
   anchor: {
     x: 0,
@@ -75,6 +223,13 @@ export const createInitialState = () => {
       open: false,
       key: 0,
       selectedVariableType: undefined,
+    },
+    dropdownMenu: {
+      isOpen: false,
+      x: 0,
+      y: 0,
+      targetName: undefined,
+      items: [],
     },
     saveLoadPaginationDialog: {
       open: false,
@@ -138,7 +293,10 @@ export const updateValueProperty = ({ state }, { value, name } = {}) => {
   }
 };
 
-export const openPopoverForm = ({ state }, { x, y, name, form } = {}) => {
+export const openPopoverForm = (
+  { state },
+  { x, y, name, form, projectResolution } = {},
+) => {
   if (!name) {
     return;
   }
@@ -161,18 +319,44 @@ export const openPopoverForm = ({ state }, { x, y, name, form } = {}) => {
     y,
     defaultValues: popoverFormValues,
     name,
-    form,
+    form: buildPopoverForm({
+      form,
+      name,
+      projectResolution,
+      value,
+    }),
     context: {
       popoverFormValues,
+      ...buildPositionPopoverContext({
+        name,
+        projectResolution,
+        value,
+      }),
     },
   };
 };
 
-export const updatePopoverFormContext = ({ state }, { values = {} } = {}) => {
+export const updatePopoverFormContext = (
+  { state },
+  { values = {}, name, projectResolution } = {},
+) => {
+  const nextName = name ?? state.popover.name;
+
   state.popover.context = {
     popoverFormValues: values,
+    ...buildPositionPopoverContext({
+      name: nextName,
+      projectResolution,
+      value: values.value,
+    }),
   };
   state.popover.defaultValues = values;
+  state.popover.form = buildPopoverForm({
+    form: state.popover.form,
+    name: nextName,
+    projectResolution,
+    value: values.value,
+  });
   state.popover.key = state.popover.key + 1;
 };
 
@@ -185,12 +369,34 @@ export const closePopoverForm = ({ state }, _payload = {}) => {
     defaultValues: {},
     name: undefined,
     form: undefined,
+    context: {},
   };
 };
 
 export const openVisibilityConditionDialog = ({ state }, _payload = {}) => {
   state.visibilityConditionDialog.open = true;
   state.visibilityConditionDialog.key += 1;
+};
+
+export const showContextMenu = (
+  { state },
+  { targetName, x, y, items } = {},
+) => {
+  state.dropdownMenu.isOpen = true;
+  state.dropdownMenu.x = x;
+  state.dropdownMenu.y = y;
+  state.dropdownMenu.targetName = targetName;
+  state.dropdownMenu.items = items ?? [
+    { label: "Delete", type: "item", value: "delete" },
+  ];
+};
+
+export const hideContextMenu = ({ state }, _payload = {}) => {
+  state.dropdownMenu.isOpen = false;
+  state.dropdownMenu.x = 0;
+  state.dropdownMenu.y = 0;
+  state.dropdownMenu.targetName = undefined;
+  state.dropdownMenu.items = [];
 };
 
 export const openSaveLoadPaginationDialog = ({ state }, _payload = {}) => {
@@ -368,6 +574,10 @@ export const selectVisibilityConditionDialog = ({ state }) => {
   return state.visibilityConditionDialog;
 };
 
+export const selectDropdownMenu = ({ state }) => {
+  return state.dropdownMenu;
+};
+
 export const selectSaveLoadPaginationDialog = ({ state }) => {
   return state.saveLoadPaginationDialog;
 };
@@ -391,6 +601,10 @@ export const selectVisibilityConditionTargetTypeByTarget = ({
   return toVisibilityConditionTargetTypeByTarget(state.variablesData, {
     includeSaveDataAvailable: props.isInsideSaveLoadSlot === true,
   });
+};
+
+export const selectTextStyleOptions = ({ state }) => {
+  return toTextStyleOptions(state.textStylesData);
 };
 
 export const selectViewData = ({ state, props, constants }) => {
@@ -427,6 +641,9 @@ export const selectViewData = ({ state, props, constants }) => {
     firstTextStyleId,
     hiddenActionModes: HIDDEN_LAYOUT_ACTION_MODES,
   });
+  const supportsWidthMode = props.itemType?.startsWith("text") === true;
+  const widthMode =
+    supportsWidthMode && values.width === undefined ? "auto" : "fixed";
   const currentVisibilityCondition = splitLayoutConditionFromWhen(
     values["$when"],
   ).visibilityCondition;
@@ -460,23 +677,53 @@ export const selectViewData = ({ state, props, constants }) => {
       itemType: props.itemType,
       layoutType: props.layoutType,
       resourceType: props.resourceType,
+      isInsideDirectedContainer: props.isInsideDirectedContainer === true,
       textStyleItems,
       textStyleItemsWithNone,
       variableOptions,
       variableOptionsWithNone,
       fragmentLayoutOptions,
       values,
+      xPercentageLabel: formatPositionPercentageLabel({
+        name: "x",
+        projectResolution: props.projectResolution,
+        value: values.x,
+      }),
+      yPercentageLabel: formatPositionPercentageLabel({
+        name: "y",
+        projectResolution: props.projectResolution,
+        value: values.y,
+      }),
+      widthPercentageLabel: formatPositionPercentageLabel({
+        name: "x",
+        projectResolution: props.projectResolution,
+        value: values.width,
+      }),
+      supportsWidthMode,
+      widthMode,
+      heightPercentageLabel: formatPositionPercentageLabel({
+        name: "y",
+        projectResolution: props.projectResolution,
+        value: values.height,
+      }),
       paginationSummary: getSaveLoadPaginationSummary({
         values,
         variablesData: state.variablesData,
       }),
       childInteractionSummary: getChildInteractionSummary(values),
+      childInteractionItems: getChildInteractionItems(values),
+      hasChildInteractionInheritance: hasChildInteractionInheritance(values),
+      canAddChildInteractionInheritance:
+        getAvailableChildInteractionItems(values).length > 0,
+      canAddTextStyleVariant:
+        !values.hoverTextStyleId || !values.clickTextStyleId,
       conditionalOverrideItems,
       visibilityConditionSummary: getVisibilityConditionSummary(
         currentVisibilityCondition,
         state.variablesData,
         visibilityConditionOptions,
       ),
+      hasVisibilityCondition: !!currentVisibilityCondition?.target,
       canAddSpriteImageVariant:
         !values.imageId || !values.hoverImageId || !values.clickImageId,
       showsGapField:
@@ -539,9 +786,9 @@ export const selectViewData = ({ state, props, constants }) => {
     revealEffectValue: values.revealEffect,
     popover: state.popover,
     visibilityConditionDialog: state.visibilityConditionDialog,
+    dropdownMenu: state.dropdownMenu,
     visibilityConditionDialogDefaults,
     visibilityConditionDialogForm: createVisibilityConditionForm({
-      hasCondition: !!currentVisibilityCondition?.target,
       targetOptions: visibilityConditionTargetOptions,
     }),
     visibilityConditionDialogContext: {

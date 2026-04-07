@@ -125,6 +125,16 @@ export const handleVariableItemClick = (deps, payload) => {
   render();
 };
 
+export const handleDetailHeaderClick = (deps) => {
+  const { refs, store } = deps;
+  const itemId = store.selectSelectedItemId();
+  if (!itemId) {
+    return;
+  }
+
+  refs.groupview?.openEditDialog?.({ itemId });
+};
+
 export const handleVariableCreated = async (deps, payload) => {
   const { appService, projectService } = deps;
   const {

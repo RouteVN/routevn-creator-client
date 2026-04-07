@@ -15,3 +15,5 @@ propsSchema:
       type: string
     previewData:
       type: object
+    disableMoveDrag:
+      type: boolean

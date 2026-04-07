@@ -1329,7 +1329,8 @@ export const extractFileIdsFromRenderState = (obj) => {
             key === "barSrc" ||
             key === "hoverUrl" ||
             key === "clickUrl" ||
-            key === "fontFileId") &&
+            key === "fontFileId" ||
+            key === "texture") &&
           typeof value[key] === "string"
         ) {
           const fileId = value[key].startsWith("file:")
@@ -1337,6 +1338,20 @@ export const extractFileIdsFromRenderState = (obj) => {
             : value[key];
           addFileReference(fileId, value.fileType || "image/png");
         }
+
+        if (key === "textures" && Array.isArray(value[key])) {
+          value[key].forEach((texture) => {
+            if (typeof texture !== "string" || texture.length === 0) {
+              return;
+            }
+
+            const fileId = texture.startsWith("file:")
+              ? texture.replace("file:", "")
+              : texture;
+            addFileReference(fileId, value.fileType || "image/png");
+          });
+        }
+
         traverse(value[key]);
       });
     }

@@ -203,7 +203,7 @@ export const persistLayoutEditorElementUpdate = async ({
       ? projectService.updateControlElement.bind(projectService)
       : projectService.updateLayoutElement.bind(projectService);
 
-  await updateElement({
+  const updateResult = await updateElement({
     [ownerPayloadKey]: layoutId,
     elementId: selectedItemId,
     data: payload.data,
@@ -213,5 +213,6 @@ export const persistLayoutEditorElementUpdate = async ({
   return {
     didPersist: true,
     payload,
+    updateResult,
   };
 };

@@ -1,0 +1,39 @@
+refs:
+  spriteCreateForm: {}
+  spriteCreateImageField:
+    eventListeners:
+      click:
+        handler: handleImageFieldClick
+  imageSelectorDialog:
+    eventListeners:
+      close:
+        handler: handleImageSelectorCancel
+  imageSelector:
+    eventListeners:
+      image-selected:
+        handler: handleImageSelected
+  confirmImageSelection:
+    eventListeners:
+      click:
+        handler: handleImageSelectorSubmit
+  cancelImageSelection:
+    eventListeners:
+      click:
+        handler: handleImageSelectorCancel
+template:
+  - rtgl-view g=md w=f:
+      - rtgl-form#spriteCreateForm key=${formKey} :defaultValues=${defaultValues} :form=${form} w=f:
+          - rtgl-view slot=sprite-image g=xs:
+              - rtgl-view#spriteCreateImageField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c:
+                  - $if imageId:
+                      - rvn-file-image imageId=${imageId} source="thumbnail" w=220 h=160 br=md: null
+                    $else:
+                      - rtgl-text c=mu-fg ta=c: Select image
+              - $if validationErrors.imageId:
+                  - rtgl-text s=sm c=de: ${validationErrors.imageId}
+  - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open}:
+      - rtgl-view slot=content g=md:
+          - rvn-image-selector#imageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
+          - rtgl-view d=h g=sm w=f ah=e:
+              - rtgl-button#cancelImageSelection variant=se: Cancel
+              - rtgl-button#confirmImageSelection variant=pr: OK

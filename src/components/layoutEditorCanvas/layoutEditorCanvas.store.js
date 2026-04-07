@@ -6,18 +6,20 @@ import {
 
 export const createInitialState = () => ({
   isDragging: false,
+  dragMode: "move",
   dragStartPosition: undefined,
   pendingUpdatedItem: undefined,
   fileContentCacheById: {},
 });
 
-export const startDragging = ({ state }, _payload = {}) => {
+export const startDragging = ({ state }, { dragMode = "move" } = {}) => {
   state.isDragging = true;
+  state.dragMode = dragMode;
 };
 
 export const setDragStartPosition = (
   { state },
-  { x, y, itemStartX, itemStartY } = {},
+  { x, y, itemStartX, itemStartY, itemStartWidth, itemStartHeight } = {},
 ) => {
   if (
     typeof x !== "number" ||
@@ -34,10 +36,19 @@ export const setDragStartPosition = (
     itemStartX,
     itemStartY,
   };
+
+  if (typeof itemStartWidth === "number") {
+    state.dragStartPosition.itemStartWidth = itemStartWidth;
+  }
+
+  if (typeof itemStartHeight === "number") {
+    state.dragStartPosition.itemStartHeight = itemStartHeight;
+  }
 };
 
 export const stopDragging = ({ state }, _payload = {}) => {
   state.isDragging = false;
+  state.dragMode = "move";
   state.dragStartPosition = undefined;
 };
 
@@ -80,6 +91,7 @@ export const selectCachedFileContent = ({ state }, { fileId } = {}) => {
 export const selectDragging = ({ state }) => {
   return {
     isDragging: state.isDragging,
+    dragMode: state.dragMode,
     dragStartPosition: state.dragStartPosition,
   };
 };
@@ -96,6 +108,6 @@ export const selectViewData = ({ state, props }) => {
 
   return {
     canvasAspectRatio: formatProjectResolutionAspectRatio(resolution),
-    canvasCursor: state.isDragging ? "all-scroll" : "default",
+    canvasCursor: state.isDragging ? "grabbing" : "default",
   };
 };

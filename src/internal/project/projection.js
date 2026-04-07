@@ -8,6 +8,10 @@ import { RESOURCE_TYPES } from "./commands.js";
 import { normalizeLineActions } from "./engineActions.js";
 import { getInteractionActions } from "./interactionPayload.js";
 import { toFlatItems, toHierarchyStructure } from "./tree.js";
+import {
+  collectTransitionMaskImageIds,
+  compileTransitionMaskForRuntime,
+} from "../animationMasks.js";
 import { requireProjectResolution } from "../projectResolution.js";
 import { getSystemVariableItems } from "../systemVariables.js";
 
@@ -539,14 +543,32 @@ const constructSoundResources = (repositorySounds = {}) => {
   }, {});
 };
 
-const constructAnimationResources = (repositoryAnimations = {}) => {
+const constructAnimationResources = (
+  repositoryAnimations = {},
+  repositoryImages = {},
+) => {
   return Object.entries(repositoryAnimations).reduce(
     (result, [animationId, item]) => {
       if (item?.type !== "animation" || !item.animation) {
         return result;
       }
 
-      result[animationId] = structuredClone(item.animation);
+      const animation = structuredClone(item.animation);
+
+      if (animation?.type === "transition") {
+        const compiledMask = compileTransitionMaskForRuntime(
+          animation.mask,
+          repositoryImages,
+        );
+
+        if (compiledMask) {
+          animation.mask = compiledMask;
+        } else {
+          delete animation.mask;
+        }
+      }
+
+      result[animationId] = animation;
       return result;
     },
     {},
@@ -755,7 +777,10 @@ const constructProjectResources = (repositoryState = {}) => {
     transforms: constructTransformResources(repositoryTransforms),
     characters: constructCharacterResources(repositoryCharacters),
     layouts,
-    animations: constructAnimationResources(repositoryAnimations),
+    animations: constructAnimationResources(
+      repositoryAnimations,
+      repositoryImages,
+    ),
     variables,
   };
 };
@@ -1263,6 +1288,7 @@ const filterCollectionItemsByIds = (collectionState, ids) => {
 
 export const recursivelyCheckResource = ({ state, itemId, checkTargets }) => {
   const inProps = {};
+  const referencedAnimationIds = new Set();
 
   for (const targetName of checkTargets) {
     const keys = RESOURCE_KEYS_MAP[targetName];
@@ -1285,7 +1311,45 @@ export const recursivelyCheckResource = ({ state, itemId, checkTargets }) => {
       if (usages.length > 0) {
         inProps[usageTargetName] = usages;
       }
+
+      scanNodeForResourceReferences(data, ({ key, value }) => {
+        if (key === "animation" && typeof value === "string") {
+          referencedAnimationIds.add(value);
+        }
+      });
     }
+  }
+
+  if (referencedAnimationIds.size > 0) {
+    const animationItems = state.animations?.items ?? {};
+    const imageItems = state.images?.items ?? {};
+
+    referencedAnimationIds.forEach((animationId) => {
+      const animationItem = animationItems[animationId];
+      if (!animationItem?.animation) {
+        return;
+      }
+
+      const animationUsages = [];
+      checkNode(animationItem.animation, itemId, ["imageId"], animationUsages);
+
+      if (
+        animationUsages.length === 0 &&
+        collectTransitionMaskImageIds(
+          animationItem.animation.mask,
+          imageItems,
+        ).includes(itemId)
+      ) {
+        animationUsages.push({
+          property: "mask",
+        });
+      }
+
+      if (animationUsages.length > 0) {
+        const existingAnimationUsages = inProps.animations ?? [];
+        inProps.animations = existingAnimationUsages.concat(animationUsages);
+      }
+    });
   }
 
   const totalUsageCount = Object.values(inProps).reduce(
@@ -1307,10 +1371,12 @@ export const collectUsedResourcesForExport = (state) => {
   const controlQueue = [];
   const textStyleQueue = [];
   const characterQueue = [];
+  const animationQueue = [];
   const scannedLayouts = new Set();
   const scannedControls = new Set();
   const scannedTextStyles = new Set();
   const scannedCharacters = new Set();
+  const scannedAnimations = new Set();
 
   const addUsed = (type, id) => {
     if (!usage[type] || !id) return false;
@@ -1325,6 +1391,8 @@ export const collectUsedResourcesForExport = (state) => {
       textStyleQueue.push(id);
     } else if (type === "characters") {
       characterQueue.push(id);
+    } else if (type === "animations") {
+      animationQueue.push(id);
     } else if (type === "sprites") {
       const ownerId = index.spriteOwnerById.get(id);
       if (ownerId) {
@@ -1395,6 +1463,24 @@ export const collectUsedResourcesForExport = (state) => {
     for (const spriteId of Object.keys(character.sprites?.items || {})) {
       addUsed("sprites", spriteId);
     }
+  }
+
+  while (animationQueue.length > 0) {
+    const animationId = animationQueue.shift();
+    if (scannedAnimations.has(animationId)) continue;
+    scannedAnimations.add(animationId);
+
+    const animation = getCollectionItems(state, "animations")[animationId];
+    if (!animation || animation.type !== "animation") continue;
+
+    scanNodeForResourceReferences(animation.animation, markReference);
+
+    collectTransitionMaskImageIds(
+      animation.animation?.mask,
+      getCollectionItems(state, "images"),
+    ).forEach((imageId) => {
+      addUsed("images", imageId);
+    });
   }
 
   const fileIds = new Set();

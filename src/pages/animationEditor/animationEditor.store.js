@@ -4,6 +4,12 @@ import {
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
 import {
+  compileTransitionMaskForRuntime,
+  createDefaultTransitionMask,
+  createDefaultTransitionMaskCompositeItem,
+  normalizeTransitionMaskForEditor,
+} from "../../internal/animationMasks.js";
+import {
   getDialogType,
   getTransitionTimelineDuration,
   getUpdateAnimationTween,
@@ -15,13 +21,17 @@ import {
   baseKeyframeDropdownItems,
   editInitialValueForm,
   EMPTY_TREE,
+  MASK_BOOLEAN_OPTIONS,
+  MASK_CHANNEL_OPTIONS,
+  MASK_COMBINE_OPTIONS,
+  MASK_KIND_OPTIONS,
+  MASK_SAMPLE_OPTIONS,
   PREVIEW_BG_COLOR,
   PREVIEW_RECT_HEIGHT,
   PREVIEW_RECT_WIDTH,
-  PREVIEW_TRANSITION_NEXT_ELEMENT_ID,
   PREVIEW_TRANSITION_NEXT_FILL,
+  PREVIEW_TRANSITION_ELEMENT_ID,
   PREVIEW_TRANSITION_OFFSET_X,
-  PREVIEW_TRANSITION_PREV_ELEMENT_ID,
   PREVIEW_TRANSITION_PREV_FILL,
   PREVIEW_UPDATE_ELEMENT_ID,
   propertyNameDropdownItems,
@@ -165,16 +175,10 @@ const createAnimationResetState = (dialogType, projectResolution) => {
   if (dialogType === "transition") {
     elements.push(
       createPreviewRect({
-        id: PREVIEW_TRANSITION_PREV_ELEMENT_ID,
+        id: PREVIEW_TRANSITION_ELEMENT_ID,
         x: centerX - PREVIEW_TRANSITION_OFFSET_X,
         y: centerY,
         fill: PREVIEW_TRANSITION_PREV_FILL,
-      }),
-      createPreviewRect({
-        id: PREVIEW_TRANSITION_NEXT_ELEMENT_ID,
-        x: centerX + PREVIEW_TRANSITION_OFFSET_X,
-        y: centerY,
-        fill: PREVIEW_TRANSITION_NEXT_FILL,
       }),
     );
   } else {
@@ -307,7 +311,7 @@ const createAddKeyframeForm = (
     },
     {
       name: "relative",
-      type: "select",
+      type: "segmented-control",
       label: "Value type",
       options: [
         { label: "Absolute", value: false },
@@ -391,8 +395,9 @@ const createAddPropertyForm = (availableProperties, propertyFieldConfig) => {
       },
       {
         name: "useInitialValue",
-        type: "select",
+        type: "segmented-control",
         label: "Use initial value",
+        noClear: true,
         tooltip: {
           content:
             "The initial value of the property at the start of the animation. If not set, it will use the element's current value at start of animation",
@@ -450,10 +455,37 @@ const createTransitionAddPropertySideMenuItems = ({
   return items;
 };
 
+const createInitialImageSelectorDialogState = () => ({
+  open: false,
+  selectedImageId: undefined,
+  target: undefined,
+  index: undefined,
+});
+
 const createEmptyTweenBySection = () => ({
   update: {},
   prev: {},
   next: {},
+});
+
+const createEmptyImagesData = () => ({
+  items: {},
+  tree: [],
+});
+
+const createEmptyMaskPanelData = () => ({
+  enabled: false,
+  kind: "single",
+  channelValue: "red",
+  sampleValue: "step",
+  combineValue: "max",
+  invertValue: "off",
+  softness: 0.08,
+  progressDuration: 900,
+  progressEasing: "linear",
+  singleImage: undefined,
+  sequenceItems: [],
+  compositeItems: [],
 });
 
 const getSectionProperties = (state, side) => {
@@ -466,6 +498,31 @@ const getPropertyFieldConfig = (state) => {
 
 const getDefaultInitialValues = (state) => {
   return createDefaultInitialValuesByProperty(getPropertyFieldConfig(state));
+};
+
+const getTransitionMask = (state) => {
+  return state.transitionMask;
+};
+
+const getImageItems = (state) => {
+  return state.imagesData?.items ?? {};
+};
+
+const getImageItemById = (state, imageId) => {
+  return getImageItems(state)?.[imageId];
+};
+
+const buildMaskImageItem = (state, imageId) => {
+  if (!imageId) {
+    return undefined;
+  }
+
+  const imageItem = getImageItemById(state, imageId);
+
+  return {
+    imageId,
+    name: imageItem?.name ?? imageId,
+  };
 };
 
 const getPropertyOptionsForSide = (side, propertyFieldConfig) => {
@@ -485,11 +542,13 @@ const getAvailableProperties = (state, side, propertyFieldConfig) => {
 
 export const createInitialState = () => ({
   data: EMPTY_TREE,
+  imagesData: createEmptyImagesData(),
   selectedItemId: undefined,
   dialogType: "update",
   targetGroupId: undefined,
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
   tweenBySection: createEmptyTweenBySection(),
+  transitionMask: undefined,
   dialogDefaultValues: {
     name: "",
     description: "",
@@ -514,10 +573,15 @@ export const createInitialState = () => ({
     payload: {},
     formValues: {},
   },
+  imageSelectorDialog: createInitialImageSelectorDialogState(),
 });
 
 export const setItems = ({ state }, { data } = {}) => {
   state.data = data ?? EMPTY_TREE;
+};
+
+export const setImages = ({ state }, { images } = {}) => {
+  state.imagesData = images ?? createEmptyImagesData();
 };
 
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
@@ -564,6 +628,17 @@ const cloneTweenBySectionFromItem = (itemData, dialogType) => {
   return tweenBySection;
 };
 
+const cloneTransitionMaskFromItem = (state, itemData, dialogType) => {
+  if (dialogType !== "transition") {
+    return undefined;
+  }
+
+  return normalizeTransitionMaskForEditor(
+    itemData?.animation?.mask,
+    getImageItems(state),
+  );
+};
+
 export const openDialog = (
   { state },
   { editMode, itemId, itemData, targetGroupId, dialogType } = {},
@@ -585,6 +660,11 @@ export const openDialog = (
       itemData,
       resolvedDialogType,
     );
+    state.transitionMask = cloneTransitionMaskFromItem(
+      state,
+      itemData,
+      resolvedDialogType,
+    );
     return;
   }
 
@@ -597,6 +677,7 @@ export const openDialog = (
     description: "",
   };
   state.tweenBySection = createEmptyTweenBySection();
+  state.transitionMask = undefined;
 };
 
 export const selectTargetGroupId = ({ state }) => {
@@ -609,6 +690,14 @@ export const selectEditMode = ({ state }) => {
 
 export const selectEditItemId = ({ state }) => {
   return state.editItemId;
+};
+
+export const selectEditItemData = ({ state }) => {
+  if (!state.editItemId) {
+    return undefined;
+  }
+
+  return state.data?.items?.[state.editItemId];
 };
 
 export const selectDialogType = ({ state }) => {
@@ -719,6 +808,40 @@ const createTweenAnimationsForTarget = ({
   return animations;
 };
 
+const createTweenPayload = ({ properties, projectResolution } = {}) => {
+  const tween = {};
+  const defaultInitialValuesByProperty = createDefaultInitialValuesByProperty(
+    createPropertyFieldConfig(projectResolution),
+  );
+
+  for (const [property, config] of Object.entries(properties ?? {})) {
+    if (!config?.keyframes?.length) {
+      continue;
+    }
+
+    const defaultValue = defaultInitialValuesByProperty[property] ?? 0;
+    const initialValue =
+      config.initialValue !== undefined && config.initialValue !== ""
+        ? parseFloat(config.initialValue)
+        : defaultValue;
+    const processedInitialValue = Number.isNaN(initialValue)
+      ? defaultValue
+      : initialValue;
+
+    tween[property] = {
+      initialValue: processedInitialValue,
+      keyframes: config.keyframes.map((keyframe) => ({
+        duration: keyframe.duration,
+        value: parseFloat(keyframe.value) ?? 0,
+        easing: keyframe.easing ?? "linear",
+        relative: keyframe.relative ?? false,
+      })),
+    };
+  }
+
+  return tween;
+};
+
 const getPropertiesDuration = (properties = {}) => {
   return Object.values(properties).reduce((maxDuration, config) => {
     const propertyDuration = (config?.keyframes ?? []).reduce(
@@ -735,36 +858,92 @@ const createAnimationRenderState = ({
   updateProperties,
   previousProperties,
   nextProperties,
+  transitionMask,
+  imagesData,
   projectResolution,
   includeAnimations = true,
 } = {}) => {
-  const animations = includeAnimations
-    ? dialogType === "transition"
-      ? [
-          ...createTweenAnimationsForTarget({
-            properties: previousProperties,
-            projectResolution,
-            targetId: PREVIEW_TRANSITION_PREV_ELEMENT_ID,
-            animationIdPrefix: "preview-prev-animation",
-          }),
-          ...createTweenAnimationsForTarget({
-            properties: nextProperties,
-            projectResolution,
-            targetId: PREVIEW_TRANSITION_NEXT_ELEMENT_ID,
-            animationIdPrefix: "preview-next-animation",
-          }),
-        ]
-      : createTweenAnimationsForTarget({
+  if (dialogType !== "transition") {
+    const animations = includeAnimations
+      ? createTweenAnimationsForTarget({
           properties: updateProperties,
           projectResolution,
           targetId: PREVIEW_UPDATE_ELEMENT_ID,
           animationIdPrefix: "preview-animation",
         })
-    : [];
+      : [];
+
+    return {
+      ...createAnimationResetState(dialogType, projectResolution),
+      animations,
+    };
+  }
+
+  const { width, height } = requireProjectResolution(
+    projectResolution,
+    "Project resolution",
+  );
+  const centerY = height / 2;
+  const centerX = width / 2;
+  const prevTween = createTweenPayload({
+    properties: previousProperties,
+    projectResolution,
+  });
+  const nextTween = createTweenPayload({
+    properties: nextProperties,
+    projectResolution,
+  });
+  const compiledMask = compileTransitionMaskForRuntime(
+    transitionMask,
+    imagesData?.items ?? {},
+  );
+  const transitionAnimation = {
+    id: "preview-transition-animation",
+    targetId: PREVIEW_TRANSITION_ELEMENT_ID,
+    type: "transition",
+  };
+
+  if (Object.keys(prevTween).length > 0) {
+    transitionAnimation.prev = {
+      tween: prevTween,
+    };
+  }
+
+  if (Object.keys(nextTween).length > 0) {
+    transitionAnimation.next = {
+      tween: nextTween,
+    };
+  }
+
+  if (compiledMask) {
+    transitionAnimation.mask = compiledMask;
+  }
+
+  const hasTransitionAnimation =
+    includeAnimations &&
+    (transitionAnimation.prev ||
+      transitionAnimation.next ||
+      transitionAnimation.mask);
 
   return {
-    ...createAnimationResetState(dialogType, projectResolution),
-    animations,
+    elements: [
+      {
+        id: "bg",
+        type: "rect",
+        x: 0,
+        y: 0,
+        width,
+        height,
+        fill: PREVIEW_BG_COLOR,
+      },
+      createPreviewRect({
+        id: PREVIEW_TRANSITION_ELEMENT_ID,
+        x: centerX + PREVIEW_TRANSITION_OFFSET_X,
+        y: centerY,
+        fill: PREVIEW_TRANSITION_NEXT_FILL,
+      }),
+    ],
+    animations: hasTransitionAnimation ? [transitionAnimation] : [],
   };
 };
 
@@ -778,6 +957,8 @@ export const selectAnimationRenderStateWithAnimations = ({ state }) => {
     updateProperties: state.tweenBySection.update,
     previousProperties: state.tweenBySection.prev,
     nextProperties: state.tweenBySection.next,
+    transitionMask: state.transitionMask,
+    imagesData: state.imagesData,
     projectResolution: state.projectResolution,
     includeAnimations: true,
   });
@@ -788,6 +969,7 @@ export const selectPreviewDurationMs = ({ state }) => {
     return getTransitionTimelineDuration({
       prevProperties: state.tweenBySection.prev,
       nextProperties: state.tweenBySection.next,
+      mask: state.transitionMask,
     });
   }
 
@@ -912,6 +1094,365 @@ export const updateInitialValue = (
   properties[property].initialValue = initialValue;
 };
 
+export const enableTransitionMask = ({ state }, _payload = {}) => {
+  state.transitionMask = createDefaultTransitionMask();
+};
+
+export const disableTransitionMask = ({ state }, _payload = {}) => {
+  state.transitionMask = undefined;
+};
+
+export const selectTransitionMask = ({ state }) => {
+  return getTransitionMask(state);
+};
+
+export const setTransitionMaskKind = ({ state }, { kind } = {}) => {
+  const currentMask = getTransitionMask(state);
+  if (!currentMask || !kind) {
+    return;
+  }
+
+  const nextMask = createDefaultTransitionMask();
+  nextMask.kind = kind;
+  nextMask.softness = currentMask.softness;
+  nextMask.progressDuration = currentMask.progressDuration;
+  nextMask.progressEasing = currentMask.progressEasing;
+
+  if (kind === "single") {
+    nextMask.imageId = currentMask.imageId;
+    nextMask.channel = currentMask.channel;
+    nextMask.invert = currentMask.invert;
+  } else if (kind === "sequence") {
+    nextMask.imageIds = structuredClone(currentMask.imageIds ?? []);
+    nextMask.channel = currentMask.channel;
+    nextMask.invert = currentMask.invert;
+    nextMask.sample = currentMask.sample;
+  } else if (kind === "composite") {
+    nextMask.items =
+      currentMask.items?.length > 0
+        ? structuredClone(currentMask.items)
+        : [createDefaultTransitionMaskCompositeItem()];
+    nextMask.combine = currentMask.combine;
+  }
+
+  state.transitionMask = nextMask;
+};
+
+export const setTransitionMaskChannel = ({ state }, { channel } = {}) => {
+  if (!getTransitionMask(state) || !channel) {
+    return;
+  }
+
+  state.transitionMask.channel = channel;
+};
+
+export const setTransitionMaskInvert = ({ state }, { invert } = {}) => {
+  if (!getTransitionMask(state)) {
+    return;
+  }
+
+  state.transitionMask.invert = invert ?? false;
+};
+
+export const setTransitionMaskSample = ({ state }, { sample } = {}) => {
+  if (!getTransitionMask(state) || !sample) {
+    return;
+  }
+
+  state.transitionMask.sample = sample;
+};
+
+export const setTransitionMaskCombine = ({ state }, { combine } = {}) => {
+  if (!getTransitionMask(state) || !combine) {
+    return;
+  }
+
+  state.transitionMask.combine = combine;
+};
+
+export const setTransitionMaskSoftness = ({ state }, { softness } = {}) => {
+  if (!getTransitionMask(state)) {
+    return;
+  }
+
+  const numericSoftness = Number(softness);
+  if (!Number.isFinite(numericSoftness) || numericSoftness < 0) {
+    return;
+  }
+
+  state.transitionMask.softness = numericSoftness;
+};
+
+export const setTransitionMaskProgressDuration = (
+  { state },
+  { duration } = {},
+) => {
+  if (!getTransitionMask(state)) {
+    return;
+  }
+
+  const numericDuration = Number(duration);
+  if (!Number.isFinite(numericDuration) || numericDuration < 1) {
+    return;
+  }
+
+  state.transitionMask.progressDuration = numericDuration;
+};
+
+export const setTransitionMaskProgressEasing = ({ state }, { easing } = {}) => {
+  if (!getTransitionMask(state) || !easing) {
+    return;
+  }
+
+  state.transitionMask.progressEasing = easing;
+};
+
+export const setTransitionMaskImage = ({ state }, { imageId } = {}) => {
+  if (!getTransitionMask(state)) {
+    return;
+  }
+
+  state.transitionMask.imageId = imageId;
+};
+
+export const clearTransitionMaskImage = ({ state }, _payload = {}) => {
+  if (!getTransitionMask(state)) {
+    return;
+  }
+
+  state.transitionMask.imageId = undefined;
+};
+
+export const addTransitionMaskSequenceImage = ({ state }, { imageId } = {}) => {
+  if (!getTransitionMask(state) || !imageId) {
+    return;
+  }
+
+  state.transitionMask.imageIds.push(imageId);
+};
+
+export const updateTransitionMaskSequenceImage = (
+  { state },
+  { index, imageId } = {},
+) => {
+  if (!getTransitionMask(state) || imageId === undefined) {
+    return;
+  }
+
+  const numericIndex = Number(index);
+  if (!Number.isInteger(numericIndex)) {
+    return;
+  }
+
+  state.transitionMask.imageIds[numericIndex] = imageId;
+};
+
+export const removeTransitionMaskSequenceImage = (
+  { state },
+  { index } = {},
+) => {
+  if (!getTransitionMask(state)) {
+    return;
+  }
+
+  const numericIndex = Number(index);
+  if (!Number.isInteger(numericIndex)) {
+    return;
+  }
+
+  state.transitionMask.imageIds.splice(numericIndex, 1);
+};
+
+export const moveTransitionMaskSequenceImageUp = (
+  { state },
+  { index } = {},
+) => {
+  if (!getTransitionMask(state)) {
+    return;
+  }
+
+  const numericIndex = Number(index);
+  if (!Number.isInteger(numericIndex) || numericIndex <= 0) {
+    return;
+  }
+
+  const currentImageId = state.transitionMask.imageIds[numericIndex];
+  state.transitionMask.imageIds[numericIndex] =
+    state.transitionMask.imageIds[numericIndex - 1];
+  state.transitionMask.imageIds[numericIndex - 1] = currentImageId;
+};
+
+export const moveTransitionMaskSequenceImageDown = (
+  { state },
+  { index } = {},
+) => {
+  if (!getTransitionMask(state)) {
+    return;
+  }
+
+  const numericIndex = Number(index);
+  if (
+    !Number.isInteger(numericIndex) ||
+    numericIndex >= state.transitionMask.imageIds.length - 1
+  ) {
+    return;
+  }
+
+  const currentImageId = state.transitionMask.imageIds[numericIndex];
+  state.transitionMask.imageIds[numericIndex] =
+    state.transitionMask.imageIds[numericIndex + 1];
+  state.transitionMask.imageIds[numericIndex + 1] = currentImageId;
+};
+
+export const addTransitionMaskCompositeItem = ({ state }, { imageId } = {}) => {
+  if (!getTransitionMask(state)) {
+    return;
+  }
+
+  const item = createDefaultTransitionMaskCompositeItem();
+  item.imageId = imageId;
+  state.transitionMask.items.push(item);
+};
+
+export const updateTransitionMaskCompositeItemImage = (
+  { state },
+  { index, imageId } = {},
+) => {
+  if (!getTransitionMask(state)) {
+    return;
+  }
+
+  const numericIndex = Number(index);
+  if (
+    !Number.isInteger(numericIndex) ||
+    !state.transitionMask.items[numericIndex]
+  ) {
+    return;
+  }
+
+  state.transitionMask.items[numericIndex].imageId = imageId;
+};
+
+export const updateTransitionMaskCompositeItemChannel = (
+  { state },
+  { index, channel } = {},
+) => {
+  if (!getTransitionMask(state) || !channel) {
+    return;
+  }
+
+  const numericIndex = Number(index);
+  if (
+    !Number.isInteger(numericIndex) ||
+    !state.transitionMask.items[numericIndex]
+  ) {
+    return;
+  }
+
+  state.transitionMask.items[numericIndex].channel = channel;
+};
+
+export const updateTransitionMaskCompositeItemInvert = (
+  { state },
+  { index, invert } = {},
+) => {
+  if (!getTransitionMask(state)) {
+    return;
+  }
+
+  const numericIndex = Number(index);
+  if (
+    !Number.isInteger(numericIndex) ||
+    !state.transitionMask.items[numericIndex]
+  ) {
+    return;
+  }
+
+  state.transitionMask.items[numericIndex].invert = invert ?? false;
+};
+
+export const removeTransitionMaskCompositeItem = (
+  { state },
+  { index } = {},
+) => {
+  if (!getTransitionMask(state)) {
+    return;
+  }
+
+  const numericIndex = Number(index);
+  if (!Number.isInteger(numericIndex)) {
+    return;
+  }
+
+  state.transitionMask.items.splice(numericIndex, 1);
+};
+
+export const moveTransitionMaskCompositeItemUp = (
+  { state },
+  { index } = {},
+) => {
+  if (!getTransitionMask(state)) {
+    return;
+  }
+
+  const numericIndex = Number(index);
+  if (!Number.isInteger(numericIndex) || numericIndex <= 0) {
+    return;
+  }
+
+  const currentItem = state.transitionMask.items[numericIndex];
+  state.transitionMask.items[numericIndex] =
+    state.transitionMask.items[numericIndex - 1];
+  state.transitionMask.items[numericIndex - 1] = currentItem;
+};
+
+export const moveTransitionMaskCompositeItemDown = (
+  { state },
+  { index } = {},
+) => {
+  if (!getTransitionMask(state)) {
+    return;
+  }
+
+  const numericIndex = Number(index);
+  if (
+    !Number.isInteger(numericIndex) ||
+    numericIndex >= state.transitionMask.items.length - 1
+  ) {
+    return;
+  }
+
+  const currentItem = state.transitionMask.items[numericIndex];
+  state.transitionMask.items[numericIndex] =
+    state.transitionMask.items[numericIndex + 1];
+  state.transitionMask.items[numericIndex + 1] = currentItem;
+};
+
+export const showImageSelectorDialog = (
+  { state },
+  { target, index, selectedImageId } = {},
+) => {
+  state.imageSelectorDialog.open = true;
+  state.imageSelectorDialog.target = target;
+  state.imageSelectorDialog.index = index;
+  state.imageSelectorDialog.selectedImageId = selectedImageId;
+};
+
+export const hideImageSelectorDialog = ({ state }, _payload = {}) => {
+  state.imageSelectorDialog = createInitialImageSelectorDialogState();
+};
+
+export const setImageSelectorSelectedImageId = (
+  { state },
+  { imageId } = {},
+) => {
+  state.imageSelectorDialog.selectedImageId = imageId;
+};
+
+export const selectImageSelectorDialog = ({ state }) => {
+  return state.imageSelectorDialog;
+};
+
 export const queueAutosave = ({ state }, _payload = {}) => {
   state.autosaveVersion += 1;
 };
@@ -1018,6 +1559,41 @@ export const selectPreviewPlaybackDurationMs = ({ state }) => {
   return state.previewPlaybackDurationMs;
 };
 
+const buildTransitionMaskPanelData = (state) => {
+  const transitionMask = getTransitionMask(state);
+
+  if (!transitionMask) {
+    return createEmptyMaskPanelData();
+  }
+
+  return {
+    enabled: true,
+    kind: transitionMask.kind,
+    channelValue: transitionMask.channel ?? "red",
+    sampleValue: transitionMask.sample ?? "step",
+    combineValue: transitionMask.combine ?? "max",
+    invertValue: transitionMask.invert ? "on" : "off",
+    softness: transitionMask.softness ?? 0.08,
+    progressDuration: transitionMask.progressDuration ?? 900,
+    progressEasing: transitionMask.progressEasing ?? "linear",
+    singleImage: buildMaskImageItem(state, transitionMask.imageId),
+    sequenceItems: (transitionMask.imageIds ?? []).map((imageId, index) => ({
+      ...buildMaskImageItem(state, imageId),
+      index,
+      canMoveUp: index > 0,
+      canMoveDown: index < transitionMask.imageIds.length - 1,
+    })),
+    compositeItems: (transitionMask.items ?? []).map((item, index) => ({
+      ...buildMaskImageItem(state, item.imageId),
+      index,
+      channelValue: item.channel ?? "red",
+      invertValue: item.invert ? "on" : "off",
+      canMoveUp: index > 0,
+      canMoveDown: index < transitionMask.items.length - 1,
+    })),
+  };
+};
+
 export const selectViewData = ({ state }) => {
   const propertyFieldConfig = getPropertyFieldConfig(state);
   const defaultInitialValuesByProperty = getDefaultInitialValues(state);
@@ -1028,6 +1604,7 @@ export const selectViewData = ({ state }) => {
   const transitionTimelineDuration = getTransitionTimelineDuration({
     prevProperties: previousProperties,
     nextProperties,
+    mask: state.transitionMask,
   });
   const addPropertySide =
     state.popover.payload?.side ??
@@ -1060,6 +1637,7 @@ export const selectViewData = ({ state }) => {
     "next",
     propertyFieldConfig,
   );
+  const transitionMaskPanel = buildTransitionMaskPanelData(state);
 
   const keyframeDropdownItems = (() => {
     if (state.popover.mode !== "keyframeMenu") {
@@ -1163,6 +1741,13 @@ export const selectViewData = ({ state }) => {
     editKeyframeDefaultValues,
     editInitialValueDefaultValues,
     keyframeDropdownItems,
+    transitionMaskPanel,
+    maskKindOptions: MASK_KIND_OPTIONS,
+    maskChannelOptions: MASK_CHANNEL_OPTIONS,
+    maskSampleOptions: MASK_SAMPLE_OPTIONS,
+    maskCombineOptions: MASK_COMBINE_OPTIONS,
+    maskBooleanOptions: MASK_BOOLEAN_OPTIONS,
+    maskProgressEasingOptions: EASING_OPTIONS,
     updateAddPropertyButtonVisible: updateAddPropertyOptions.length > 0,
     transitionAddPropertyButtonVisible:
       previousAddPropertyOptions.length > 0 ||
@@ -1187,5 +1772,6 @@ export const selectViewData = ({ state }) => {
     addPropertyFormDefaultValues: {
       useInitialValue: false,
     },
+    imageSelectorDialog: state.imageSelectorDialog,
   };
 };

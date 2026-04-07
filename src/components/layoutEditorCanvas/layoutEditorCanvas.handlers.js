@@ -15,6 +15,9 @@ const KEYBOARD_UNITS = {
   NORMAL: 1,
   FAST: 10,
 };
+const MIN_RESIZE_DIMENSION = 1;
+const RESIZE_TARGET_PREFIX = "selected-border-resize-";
+const VERTICAL_RESIZE_EDGES = new Set(["top", "bottom"]);
 
 const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
@@ -115,6 +118,104 @@ export const applyCanvasItemDragChange = ({
   };
 };
 
+const getAspectRatioLock = (item = {}) => {
+  const aspectRatioLock = Number(item.aspectRatioLock);
+  if (Number.isFinite(aspectRatioLock) && aspectRatioLock > 0) {
+    return aspectRatioLock;
+  }
+
+  return undefined;
+};
+
+const isTextItem = (item = {}) => {
+  return typeof item.type === "string" && item.type.startsWith("text");
+};
+
+const clampResizeDimension = (value) => {
+  if (!Number.isFinite(value)) {
+    return MIN_RESIZE_DIMENSION;
+  }
+
+  return Math.max(MIN_RESIZE_DIMENSION, Math.round(value));
+};
+
+export const applyCanvasItemResizeChange = ({
+  item,
+  dragStartPosition,
+  resizeEdge,
+  x,
+  y,
+} = {}) => {
+  if (
+    !item ||
+    !dragStartPosition ||
+    typeof resizeEdge !== "string" ||
+    typeof x !== "number" ||
+    typeof y !== "number" ||
+    typeof dragStartPosition.itemStartWidth !== "number" ||
+    typeof dragStartPosition.itemStartHeight !== "number"
+  ) {
+    return item;
+  }
+
+  const deltaX = x - dragStartPosition.x;
+  const deltaY = y - dragStartPosition.y;
+  const nextItem = {
+    ...item,
+  };
+  const aspectRatioLock = getAspectRatioLock(item);
+
+  if (isTextItem(item) && VERTICAL_RESIZE_EDGES.has(resizeEdge)) {
+    return item;
+  }
+
+  if (resizeEdge === "left") {
+    nextItem.width = clampResizeDimension(
+      dragStartPosition.itemStartWidth - deltaX,
+    );
+    nextItem.x =
+      dragStartPosition.itemStartX +
+      (dragStartPosition.itemStartWidth - nextItem.width);
+    if (aspectRatioLock) {
+      nextItem.height = clampResizeDimension(nextItem.width / aspectRatioLock);
+    }
+  } else if (resizeEdge === "right") {
+    nextItem.width = clampResizeDimension(
+      dragStartPosition.itemStartWidth + deltaX,
+    );
+    if (aspectRatioLock) {
+      nextItem.height = clampResizeDimension(nextItem.width / aspectRatioLock);
+    }
+  } else if (resizeEdge === "top") {
+    nextItem.height = clampResizeDimension(
+      dragStartPosition.itemStartHeight - deltaY,
+    );
+    nextItem.y =
+      dragStartPosition.itemStartY +
+      (dragStartPosition.itemStartHeight - nextItem.height);
+    if (aspectRatioLock) {
+      nextItem.width = clampResizeDimension(nextItem.height * aspectRatioLock);
+    }
+  } else if (resizeEdge === "bottom") {
+    nextItem.height = clampResizeDimension(
+      dragStartPosition.itemStartHeight + deltaY,
+    );
+    if (aspectRatioLock) {
+      nextItem.width = clampResizeDimension(nextItem.height * aspectRatioLock);
+    }
+  }
+
+  return nextItem;
+};
+
+const getDragModeFromTargetId = (targetId) => {
+  if (targetId?.startsWith(RESIZE_TARGET_PREFIX)) {
+    return targetId.slice(RESIZE_TARGET_PREFIX.length);
+  }
+
+  return "move";
+};
+
 export const applyCanvasItemKeyboardChange = ({
   item,
   key,
@@ -188,13 +289,25 @@ const renderLayoutEditorCanvas = async (
       layoutType: props.layoutState?.layoutType,
       elements: layoutData,
     };
-    const { elements, fileReferences } = createLayoutEditorRenderedElements({
-      layoutState,
-      repositoryState,
-      previewData: props.previewData,
-      selectedItemId: props.selectedItemId,
-      graphicsService: deps.graphicsService,
-    });
+    const { elements, fileReferences, selectedElementMetrics } =
+      createLayoutEditorRenderedElements({
+        layoutState,
+        repositoryState,
+        previewData: props.previewData,
+        selectedItemId: props.selectedItemId,
+        disableMoveDrag: props.disableMoveDrag === true,
+        graphicsService: deps.graphicsService,
+      });
+
+    deps.dispatchEvent(
+      new CustomEvent("selected-element-metrics-change", {
+        detail: {
+          metrics: selectedElementMetrics,
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    );
 
     if (clearFirst) {
       deps.graphicsService.render({
@@ -263,7 +376,7 @@ const handleKeyboardMove = async (deps, event) => {
     item: currentItem,
     key: event.key,
     unit: event.shiftKey ? KEYBOARD_UNITS.FAST : KEYBOARD_UNITS.NORMAL,
-    resize: event.metaKey,
+    resize: event.metaKey || deps.props.disableMoveDrag === true,
   });
 
   deps.store.setPendingUpdatedItem({ updatedItem });
@@ -274,7 +387,7 @@ const handleKeyboardMove = async (deps, event) => {
   });
 };
 
-const handleBorderDragStart = (deps) => {
+const handleBorderDragStart = (deps, payload = {}) => {
   const currentItem = getSelectedItem(
     deps.props,
     deps.store.selectPendingUpdatedItem(),
@@ -283,7 +396,9 @@ const handleBorderDragStart = (deps) => {
     return;
   }
 
-  deps.store.startDragging();
+  deps.store.startDragging({
+    dragMode: getDragModeFromTargetId(payload.targetId),
+  });
   deps.render();
 };
 
@@ -307,16 +422,27 @@ const handleBorderDragMove = async (deps, payload = {}) => {
       y: payload.y,
       itemStartX: currentItem.x,
       itemStartY: currentItem.y,
+      itemStartWidth: currentItem.width,
+      itemStartHeight: currentItem.height,
     });
     return;
   }
 
-  const updatedItem = applyCanvasItemDragChange({
-    item: currentItem,
-    dragStartPosition: dragging.dragStartPosition,
-    x: payload.x,
-    y: payload.y,
-  });
+  const updatedItem =
+    dragging.dragMode === "move"
+      ? applyCanvasItemDragChange({
+          item: currentItem,
+          dragStartPosition: dragging.dragStartPosition,
+          x: payload.x,
+          y: payload.y,
+        })
+      : applyCanvasItemResizeChange({
+          item: currentItem,
+          dragStartPosition: dragging.dragStartPosition,
+          resizeEdge: dragging.dragMode,
+          x: payload.x,
+          y: payload.y,
+        });
 
   deps.store.setPendingUpdatedItem({ updatedItem });
   await renderLayoutEditorCanvas(deps, deps.props, { updatedItem });
@@ -359,8 +485,8 @@ const subscriptions = (deps) => {
     ),
     subject.pipe(
       filter(({ action }) => action === "border-drag-start"),
-      tap(() => {
-        handleBorderDragStart(deps);
+      tap(({ payload }) => {
+        handleBorderDragStart(deps, payload);
       }),
     ),
     subject.pipe(

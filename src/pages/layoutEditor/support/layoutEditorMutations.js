@@ -63,6 +63,18 @@ const setTopLevelValue = (target, name, value) => {
 };
 
 const normalizeCommonFieldValue = ({ name, value } = {}) => {
+  if (
+    (name === "x" || name === "y" || name === "width" || name === "height") &&
+    value !== undefined &&
+    value !== null &&
+    value !== ""
+  ) {
+    const parsedValue = Number(value);
+    if (Number.isFinite(parsedValue)) {
+      return Math.round(parsedValue);
+    }
+  }
+
   if (name !== "opacity") {
     return value;
   }
@@ -77,6 +89,57 @@ const normalizeCommonFieldValue = ({ name, value } = {}) => {
   }
 
   return Math.max(0, Math.min(1, parsedValue));
+};
+
+const roundAspectSyncedValue = (value) => {
+  return Math.round(value);
+};
+
+const getLockedAspectRatio = (item = {}) => {
+  const aspectRatioLock = Number(item?.aspectRatioLock);
+  if (Number.isFinite(aspectRatioLock) && aspectRatioLock > 0) {
+    return aspectRatioLock;
+  }
+
+  return undefined;
+};
+
+const applyFixedAspectRatioFieldChange = ({
+  currentItem,
+  nextItem,
+  name,
+} = {}) => {
+  if (!currentItem || !nextItem) {
+    return nextItem;
+  }
+
+  if (name !== "width" && name !== "height") {
+    return nextItem;
+  }
+
+  const aspectRatioLock =
+    getLockedAspectRatio(nextItem) ?? getLockedAspectRatio(currentItem);
+  if (!Number.isFinite(aspectRatioLock) || aspectRatioLock <= 0) {
+    return nextItem;
+  }
+
+  if (name === "width") {
+    const nextWidth = Number(nextItem.width);
+    if (!Number.isFinite(nextWidth) || nextWidth <= 0) {
+      return nextItem;
+    }
+
+    nextItem.height = roundAspectSyncedValue(nextWidth / aspectRatioLock);
+    return nextItem;
+  }
+
+  const nextHeight = Number(nextItem.height);
+  if (!Number.isFinite(nextHeight) || nextHeight <= 0) {
+    return nextItem;
+  }
+
+  nextItem.width = roundAspectSyncedValue(nextHeight * aspectRatioLock);
+  return nextItem;
 };
 
 export const applyLayoutItemFieldChange = ({
@@ -126,13 +189,19 @@ export const applyLayoutItemFieldChange = ({
       imagesData,
     }) ?? nextItem;
 
+  const nextAfterAspectRatioChange = applyFixedAspectRatioFieldChange({
+    currentItem: item,
+    nextItem: nextAfterTypeChange,
+    name,
+  });
+
   return (
     typeRules.finalizeFieldChange?.({
       currentItem: item,
-      nextItem: nextAfterTypeChange,
+      nextItem: nextAfterAspectRatioChange,
       name,
       value: normalizedCommonValue,
       imagesData,
-    }) ?? nextAfterTypeChange
+    }) ?? nextAfterAspectRatioChange
   );
 };

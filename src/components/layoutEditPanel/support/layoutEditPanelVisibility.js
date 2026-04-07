@@ -143,10 +143,7 @@ export const createVisibilityConditionDialogDefaults = (
   };
 };
 
-export const createVisibilityConditionForm = ({
-  hasCondition,
-  targetOptions,
-} = {}) => {
+export const createVisibilityConditionForm = ({ targetOptions } = {}) => {
   return {
     title: "Visibility Condition",
     fields: [
@@ -160,7 +157,7 @@ export const createVisibilityConditionForm = ({
       {
         $when: "target",
         name: "op",
-        type: "select",
+        type: "segmented-control",
         label: "Operation",
         required: true,
         clearable: false,
@@ -169,7 +166,7 @@ export const createVisibilityConditionForm = ({
       {
         $when: "target && selectedVariableType == 'boolean'",
         name: "booleanValue",
-        type: "select",
+        type: "segmented-control",
         label: "Value",
         required: true,
         clearable: false,
@@ -193,18 +190,6 @@ export const createVisibilityConditionForm = ({
     actions: {
       layout: "",
       buttons: [
-        {
-          id: "clear",
-          align: "left",
-          variant: "se",
-          label: "Clear",
-          disabled: !hasCondition,
-        },
-        {
-          id: "cancel",
-          variant: "se",
-          label: "Cancel",
-        },
         {
           id: "submit",
           variant: "pr",

@@ -30,6 +30,7 @@ const DEBOUNCE_DELAYS = {
 };
 
 const SLIDER_CREATE_DIALOG_COMPONENT = "rvn-layout-editor-slider-create-dialog";
+const SPRITE_CREATE_DIALOG_COMPONENT = "rvn-layout-editor-sprite-create-dialog";
 
 const getResultErrorMessage = (result, fallbackMessage) => {
   return (
@@ -57,6 +58,16 @@ const dataUrlToBlob = async (value) => {
 
 const resolveMenuItem = (detail = {}) => detail.item || detail;
 
+const areSelectedElementMetricsEqual = (left, right) => {
+  return (
+    left?.id === right?.id &&
+    left?.type === right?.type &&
+    left?.width === right?.width &&
+    left?.height === right?.height &&
+    left?.measuredWidth === right?.measuredWidth
+  );
+};
+
 const resolveSliderCreateAction = (detail = {}) => {
   const value = resolveMenuItem(detail)?.value;
   if (
@@ -64,6 +75,20 @@ const resolveSliderCreateAction = (detail = {}) => {
     typeof value === "object" &&
     value.action === "new-child-item" &&
     value.type === "slider"
+  ) {
+    return value;
+  }
+
+  return undefined;
+};
+
+const resolveSpriteCreateAction = (detail = {}) => {
+  const value = resolveMenuItem(detail)?.value;
+  if (
+    value &&
+    typeof value === "object" &&
+    value.action === "new-child-item" &&
+    value.type === "sprite"
   ) {
     return value;
   }
@@ -316,6 +341,38 @@ const showSliderCreateDialog = async (appService, sliderAction = {}) => {
   });
 };
 
+const showSpriteCreateDialog = async (appService, spriteAction = {}) => {
+  return appService.showComponentDialog({
+    component: SPRITE_CREATE_DIALOG_COMPONENT,
+    title: "Create Sprite",
+    description: "Choose the sprite image before inserting it into the layout",
+    size: "md",
+    props: {
+      defaultValues: {
+        name: spriteAction.name ?? "Sprite",
+      },
+    },
+    actions: {
+      buttons: [
+        {
+          id: "cancel",
+          label: "Cancel",
+          variant: "se",
+          align: "left",
+          role: "cancel",
+        },
+        {
+          id: "create",
+          label: "Create Sprite",
+          variant: "pr",
+          role: "confirm",
+          validate: true,
+        },
+      ],
+    },
+  });
+};
+
 export const handleFileExplorerAction = async (deps, payload) => {
   const saveLoadSlotAction = resolveSaveLoadSlotCreateAction(
     payload?._event?.detail,
@@ -513,14 +570,118 @@ export const handleFileExplorerAction = async (deps, payload) => {
     return;
   }
 
+  const spriteAction = resolveSpriteCreateAction(payload?._event?.detail);
   const sliderAction = resolveSliderCreateAction(payload?._event?.detail);
-  if (!sliderAction) {
+  if (!spriteAction && !sliderAction) {
     await handleBaseFileExplorerAction(deps, payload);
     return;
   }
 
   const { appService, projectService, store } = deps;
   const parentId = payload?._event?.detail?.itemId ?? null;
+
+  if (spriteAction) {
+    let spriteDialogResult;
+
+    try {
+      spriteDialogResult = await showSpriteCreateDialog(
+        appService,
+        spriteAction,
+      );
+    } catch {
+      appService.showToast("Failed to open sprite dialog.", {
+        title: "Error",
+      });
+      return;
+    }
+
+    if (!spriteDialogResult || spriteDialogResult.actionId !== "create") {
+      return;
+    }
+
+    const values = spriteDialogResult.values ?? {};
+    const name = values.name?.trim();
+    if (!name) {
+      appService.showToast("Sprite name is required.", {
+        title: "Warning",
+      });
+      return;
+    }
+
+    const imageId = values.imageId;
+    if (!imageId) {
+      appService.showToast("Image is required.", {
+        title: "Warning",
+      });
+      return;
+    }
+
+    const layoutId = store.selectLayoutId();
+    const resourceType = store.selectLayoutResourceType();
+    if (!layoutId) {
+      appService.showToast(
+        resourceType === "controls"
+          ? "Control is missing."
+          : "Layout is missing.",
+        {
+          title: "Error",
+        },
+      );
+      return;
+    }
+
+    const nextElementId = nanoid();
+    const nextElementData = {
+      ...getLayoutEditorCreateDefinition("sprite", {
+        projectResolution: store.selectProjectResolution(),
+      }).template,
+      name,
+      imageId,
+    };
+    const image = store.selectImages()?.items?.[imageId];
+    if (Number.isFinite(image?.width) && image.width > 0) {
+      nextElementData.width = image.width;
+    }
+    if (Number.isFinite(image?.height) && image.height > 0) {
+      nextElementData.height = image.height;
+    }
+    if (
+      Number.isFinite(nextElementData.width) &&
+      Number.isFinite(nextElementData.height) &&
+      nextElementData.width > 0 &&
+      nextElementData.height > 0
+    ) {
+      nextElementData.aspectRatioLock =
+        nextElementData.width / nextElementData.height;
+    }
+
+    await projectService.ensureRepository();
+    const { ownerPayloadKey, createElement } = getSliderCreateOwnerConfig(
+      resourceType,
+      projectService,
+    );
+    const createResult = await createElement({
+      [ownerPayloadKey]: layoutId,
+      elementId: nextElementId,
+      data: nextElementData,
+      parentId,
+      position: "last",
+    });
+
+    if (createResult?.valid === false) {
+      appService.showToast(
+        getResultErrorMessage(createResult, "Failed to create sprite."),
+        {
+          title: "Error",
+        },
+      );
+      return;
+    }
+
+    await refreshLayoutEditorData(deps, { selectedItemId: nextElementId });
+    return;
+  }
+
   let dialogResult;
 
   try {
@@ -719,6 +880,19 @@ export const handleLayoutEditorCanvasUpdate = async (deps, payload) => {
   });
 };
 
+export const handleLayoutEditorCanvasMetricsChange = (deps, payload) => {
+  const { store, render } = deps;
+  const metrics = payload._event.detail?.metrics;
+  const currentMetrics = store.selectSelectedElementMetrics();
+
+  if (areSelectedElementMetricsEqual(currentMetrics, metrics)) {
+    return;
+  }
+
+  store.setSelectedElementMetrics({ metrics });
+  render();
+};
+
 export const handleLayoutEditorPreviewDataChange = (deps, payload) => {
   const { store, render } = deps;
   store.setPreviewData({
@@ -742,12 +916,62 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
   if (!currentItem) {
     return;
   }
-  const updatedItem = applyLayoutItemFieldChange({
-    item: currentItem,
-    name: detail.name,
-    value: detail.value,
-    imagesData: store.selectImages(),
-  });
+  const nextAspectRatioLock =
+    Number.isFinite(detail.formValues?.aspectRatioLock) &&
+    detail.formValues.aspectRatioLock > 0
+      ? detail.formValues.aspectRatioLock
+      : currentItem.aspectRatioLock;
+  const currentItemWithEditorFlags = {
+    ...currentItem,
+    aspectRatioLock: nextAspectRatioLock,
+  };
+  let updatedItem;
+
+  if (detail.name === "aspectRatioMode") {
+    updatedItem = structuredClone(currentItem);
+    if (detail.value === "fixed") {
+      const currentWidth = Number(
+        detail.formValues?.width ?? currentItem.width,
+      );
+      const currentHeight = Number(
+        detail.formValues?.height ?? currentItem.height,
+      );
+      updatedItem.aspectRatioLock =
+        Number.isFinite(currentWidth) &&
+        Number.isFinite(currentHeight) &&
+        currentWidth > 0 &&
+        currentHeight > 0
+          ? currentWidth / currentHeight
+          : undefined;
+    } else {
+      delete updatedItem.aspectRatioLock;
+    }
+    delete updatedItem.aspectRatioMode;
+  } else {
+    updatedItem = applyLayoutItemFieldChange({
+      item: currentItemWithEditorFlags,
+      name: detail.name,
+      value: detail.value,
+      imagesData: store.selectImages(),
+    });
+  }
+
+  if (
+    (detail.name === "width" || detail.name === "height") &&
+    Number.isFinite(detail.formValues?.aspectRatioLock) &&
+    detail.formValues.aspectRatioLock > 0
+  ) {
+    const nextWidth = Number(detail.formValues.width);
+    const nextHeight = Number(detail.formValues.height);
+
+    if (Number.isFinite(nextWidth) && nextWidth > 0) {
+      updatedItem.width = Math.round(nextWidth);
+    }
+
+    if (Number.isFinite(nextHeight) && nextHeight > 0) {
+      updatedItem.height = Math.round(nextHeight);
+    }
+  }
 
   store.updateSelectedItem({ updatedItem: updatedItem });
 

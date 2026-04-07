@@ -289,6 +289,7 @@ export const selectViewData = ({ state, props }) => {
 
   return {
     flatGroups,
+    navTitle: props.navTitle ?? "",
     selectedItemId: props.selectedItemId,
     readonly,
     searchQuery: state.searchQuery,

@@ -44,10 +44,13 @@ refs:
       item-click:
         handler: handleContextMenuClickItem
 template:
-  - 'rtgl-view w=f h=100vh g=sm style="overflow-y: scroll;"':
+  - 'rtgl-view w=f h=f g=sm style="overflow-y: scroll;"':
       - rtgl-view g=sm w=f h=f:
-          - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
-              - rtgl-input#searchInput s=sm placeholder="Search variables..." value=${searchQuery}: null
+          - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c d=h g=md style="position: sticky; top: 0px; z-index: 1000;"':
+              - rtgl-view w=1fg d=h av=c g=md:
+                  - $if navTitle:
+                      - rtgl-text: ${navTitle}
+              - rtgl-input#searchInput s=sm placeholder="Search variables..." value=${searchQuery} h=1fg: null
           - $if flatGroups.length > 0:
               - $for group, i in flatGroups:
                   - rtgl-view w=f ph=md:

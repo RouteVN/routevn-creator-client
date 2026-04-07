@@ -3,18 +3,28 @@ refs:
     eventListeners:
       click:
         handler: handleVisibilityConditionItemClick
+      contextmenu:
+        handler: handleVisibilityConditionContextMenu
+  dropdownMenu:
+    eventListeners:
+      close:
+        handler: handleCloseContextMenu
+      item-click:
+        handler: handleContextMenuClickItem
   paginationItem*:
     eventListeners:
       click:
         handler: handleSaveLoadPaginationItemClick
   childInteractionItem*:
     eventListeners:
-      click:
-        handler: handleChildInteractionItemClick
+      contextmenu:
+        handler: handleChildInteractionContextMenu
   groupItem*:
     eventListeners:
       click:
         handler: handleGroupItemClick
+      wheel:
+        handler: handleGroupItemWheel
   selectItem*:
     eventListeners:
       value-change:
@@ -23,6 +33,10 @@ refs:
     eventListeners:
       close:
         handler: handlePopverFormClose
+  popoverPreset*:
+    eventListeners:
+      click:
+        handler: handlePopoverPresetClick
   visibilityConditionDialog:
     eventListeners:
       close:
@@ -148,19 +162,27 @@ template:
                           - $if field.label:
                               - rtgl-text s=sm w=60: ${field.label}
                           - rtgl-view#groupItem${i}x${j}x${k} data-name=${field.name} w=1fg d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=28:
-                              - $if field.svg:
-                                  - rtgl-svg svg=${field.svg} wh=16: null
-                              - rtgl-text s=xs: ${field.value}
+                              - rtgl-view d=h av=c g=md w=1fg:
+                                  - $if field.svg:
+                                      - rtgl-svg svg=${field.svg} wh=16: null
+                                  - rtgl-text s=xs: ${field.value}
+                              - $if field.metaValue:
+                                  - rtgl-text s=xs c=mu-fg: ${field.metaValue}
                 $elif item.type == 'select':
                   - rtgl-view d=h av=c w=f:
                       - rtgl-text s=xs w=65: ${item.label}
                       - 'rtgl-view style="width: calc(100% - 65px);"':
                           - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=${item.value} :options=${item.options}: null
+                $elif item.type == 'segmented-control':
+                  - rtgl-view d=h av=c w=f:
+                      - rtgl-text s=xs w=65: ${item.label}
+                      - 'rtgl-view style="width: calc(100% - 65px);"':
+                          - rtgl-segmented-control#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=${item.value} :options=${item.options}: null
                 $elif item.type == 'reveal-effect-select':
                   - rtgl-view d=h av=c w=f:
                       - rtgl-text s=xs w=65: ${item.label}
                       - 'rtgl-view style="width: calc(100% - 65px);"':
-                          - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=${revealEffectValue} :options=${revealEffectOptions}: null
+                          - rtgl-segmented-control#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=${revealEffectValue} :options=${revealEffectOptions}: null
                 $elif item.type == 'list-item':
                   - $for listItem, k in item.items:
                       - rtgl-view#listItem${i}x${j}x${k} data-id=${listItem.id} data-interaction=${listItem.interactionType} d=h w=f g=md av=c p=md br=md bw=xs h-bgc=mu cur=pointer:
@@ -203,17 +225,33 @@ template:
                 $elif item.type == 'pagination-summary':
                   - rtgl-view#paginationItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                       - rtgl-text s=sm: ${item.value}
-                $elif item.type == 'child-interaction-summary':
-                  - rtgl-view#childInteractionItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
-                      - rtgl-text s=sm: ${item.value}
+                $elif item.type == 'child-interaction-list':
+                  - rtgl-view d=h w=f wrap g=sm:
+                      - $for childItem, k in item.items:
+                          - rtgl-view#childInteractionItem${i}x${j}x${k} data-name=${childItem.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=context-menu bw=xs bc=bg h-bc=ac h=32:
+                              - rtgl-text s=sm: ${childItem.label}
   - rtgl-view h=1 w=f bgc=mu mv=lg: null
   - rvn-system-actions#systemActions :actions=${actionsData} actionType=system :hiddenModes=${hiddenSystemActionModes}: null
   - rtgl-popover#popoverForm ?open=${popover.open} place=b x=${popover.x} y=${popover.y}:
       - $if popover.open:
-          - rtgl-form#form autofocus key=${popover.key} slot=content :form=${popover.form} :defaultValues=${popover.defaultValues} :context=${popover.context}: null
+          - $if popover.context.isPositionPopover:
+              - rtgl-view slot=content g=md w=280:
+                  - rtgl-view d=h av=c g=md:
+                      - rtgl-view w=1fg:
+                          - rtgl-form#form autofocus key=${popover.key} :form=${popover.form} :defaultValues=${popover.defaultValues} :context=${popover.context}: null
+                      - rtgl-view av=c ah=e:
+                          - rtgl-text s=xs c=mu-fg: ${popover.context.positionPercentageLabel}
+                  - rtgl-view g=sm:
+                      - rtgl-text s=xs c=mu-fg: Full ${popover.context.positionAxisLabel} ${popover.context.positionResolutionDimension}px
+                      - rtgl-view d=h wrap g=sm:
+                          - $for preset, i in popover.context.positionPresetItems:
+                              - rtgl-button#popoverPreset${i} data-value=${preset.value} v=gh s=sm: ${preset.label}
+            $else:
+              - rtgl-form#form autofocus key=${popover.key} slot=content :form=${popover.form} :defaultValues=${popover.defaultValues} :context=${popover.context}: null
   - rtgl-dialog#visibilityConditionDialog ?open=${visibilityConditionDialog.open} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-form#visibilityConditionForm key=${visibilityConditionDialog.key} :form=${visibilityConditionDialogForm} :defaultValues=${visibilityConditionDialogDefaults} :context=${visibilityConditionDialogContext} w=f: null
+  - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}: null
   - rtgl-dialog#saveLoadPaginationDialog ?open=${saveLoadPaginationDialog.open} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-form#saveLoadPaginationForm key=${saveLoadPaginationDialog.key} :form=${saveLoadPaginationDialogForm} :defaultValues=${saveLoadPaginationDialogDefaults} w=f: null

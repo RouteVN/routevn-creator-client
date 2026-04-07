@@ -1,0 +1,17 @@
+componentName: rvn-layout-editor-sprite-create-dialog
+propsSchema:
+  type: object
+  properties:
+    defaultValues:
+      type: object
+methods:
+  type: object
+  properties:
+    validate:
+      description: Validates the sprite create dialog body and returns shell-compatible validation output.
+      params: []
+      returns: object
+    getValues:
+      description: Returns the current sprite create values for the component dialog shell.
+      params: []
+      returns: object

@@ -25,6 +25,12 @@ const OVERLAY_ANCHOR_BORDER = {
   alpha: 1,
 };
 const OVERLAY_ANCHOR_SIZE = 8;
+const OVERLAY_RESIZE_HANDLE_SIZE = 12;
+const VERTICAL_RESIZE_EDGES = ["top", "bottom"];
+
+const isTextElement = (element = {}) => {
+  return typeof element.type === "string" && element.type.startsWith("text");
+};
 
 const jemplFunctions = {
   formatDate: (timestamp, format = "DD/MM/YYYY - HH:mm") => {
@@ -261,6 +267,59 @@ const buildOverlayAnchorMarker = ({ element, overlayId }) => {
   };
 };
 
+const buildOverlayResizeHandle = ({ element, overlayId, edge }) => {
+  if (!hasRenderableBounds(element)) {
+    return undefined;
+  }
+
+  const vertical = edge === "left" || edge === "right";
+  const resizeHandle = {
+    id: `${overlayId}-resize-${edge}`,
+    type: "rect",
+    x:
+      edge === "left"
+        ? -OVERLAY_RESIZE_HANDLE_SIZE / 2
+        : edge === "right"
+          ? element.width - OVERLAY_RESIZE_HANDLE_SIZE / 2
+          : 0,
+    y:
+      edge === "top"
+        ? -OVERLAY_RESIZE_HANDLE_SIZE / 2
+        : edge === "bottom"
+          ? element.height - OVERLAY_RESIZE_HANDLE_SIZE / 2
+          : 0,
+    width: vertical ? OVERLAY_RESIZE_HANDLE_SIZE : element.width,
+    height: vertical ? element.height : OVERLAY_RESIZE_HANDLE_SIZE,
+    fill: OVERLAY_FILL,
+    hover: {
+      cursor: vertical ? "ew-resize" : "ns-resize",
+    },
+    drag: {
+      start: {
+        payload: {},
+      },
+      move: {
+        payload: {},
+      },
+      end: {
+        payload: {},
+      },
+    },
+  };
+
+  return resizeHandle;
+};
+
+const buildOverlayResizeHandles = ({ element, overlayId }) => {
+  const edges = isTextElement(element)
+    ? ["left", "right"]
+    : ["left", "right", ...VERTICAL_RESIZE_EDGES];
+
+  return edges
+    .map((edge) => buildOverlayResizeHandle({ element, overlayId, edge }))
+    .filter(Boolean);
+};
+
 const buildOverlayElementContainer = ({ element, overlayId, children }) => {
   const { x: originX, y: originY } = getElementOrigin(element);
   const { anchorX, anchorY } = getElementAnchorRatios(element);
@@ -307,7 +366,14 @@ const buildOverlayTree = ({ path, overlayId, draggable }) => {
   overlayTree = buildOverlayElementContainer({
     element: selectedElement,
     overlayId: `${overlayId}-group`,
-    children: [overlayRect, anchorMarker],
+    children: [
+      overlayRect,
+      ...buildOverlayResizeHandles({
+        element: selectedElement,
+        overlayId,
+      }),
+      anchorMarker,
+    ],
   });
 
   for (let index = path.length - 2; index >= 0; index -= 1) {
@@ -321,6 +387,44 @@ const buildOverlayTree = ({ path, overlayId, draggable }) => {
   }
 
   return overlayTree;
+};
+
+const selectPrimaryMatchingPath = (parsedElements, selectedItemId) => {
+  if (!selectedItemId) {
+    return undefined;
+  }
+
+  const matchingPaths = collectMatchingPaths(
+    parsedElements,
+    selectedItemId,
+  ).filter((path) => hasRenderableBounds(path[path.length - 1]));
+
+  if (matchingPaths.length === 0) {
+    return undefined;
+  }
+
+  return (
+    matchingPaths.find(
+      (path) =>
+        path[path.length - 1]?.id === selectedItemId ||
+        path[path.length - 1]?.id === `${selectedItemId}-instance-0`,
+    ) ?? matchingPaths[0]
+  );
+};
+
+const toSelectedElementMetrics = (path) => {
+  const element = path?.[path.length - 1];
+  if (!element) {
+    return undefined;
+  }
+
+  return {
+    id: element.id,
+    type: element.type,
+    width: element.width,
+    height: element.height,
+    measuredWidth: element.measuredWidth,
+  };
 };
 
 const resolveLayoutPreviewElements = ({ elements, previewData } = {}) => {
@@ -338,30 +442,17 @@ const resolveLayoutPreviewElements = ({ elements, previewData } = {}) => {
 export const createLayoutEditorSelectionOverlay = ({
   parsedElements,
   selectedItemId,
+  disableMoveDrag = false,
 } = {}) => {
-  if (!selectedItemId) {
+  const primaryPath = selectPrimaryMatchingPath(parsedElements, selectedItemId);
+  if (!primaryPath) {
     return [];
   }
 
-  const matchingPaths = collectMatchingPaths(
-    parsedElements,
-    selectedItemId,
-  ).filter((path) => hasRenderableBounds(path[path.length - 1]));
-
-  if (matchingPaths.length === 0) {
-    return [];
-  }
-
-  const primaryPath =
-    matchingPaths.find(
-      (path) =>
-        path[path.length - 1]?.id === selectedItemId ||
-        path[path.length - 1]?.id === `${selectedItemId}-instance-0`,
-    ) ?? matchingPaths[0];
   const primaryOverlay = buildOverlayTree({
     path: primaryPath,
     overlayId: "selected-border",
-    draggable: true,
+    draggable: disableMoveDrag !== true,
   });
 
   if (!primaryOverlay) {
@@ -467,6 +558,7 @@ export const createLayoutEditorRenderedElements = ({
   repositoryState,
   previewData,
   selectedItemId,
+  disableMoveDrag,
   graphicsService,
 } = {}) => {
   const { renderStateElements, resources } = createLayoutEditorRenderState({
@@ -486,10 +578,15 @@ export const createLayoutEditorRenderedElements = ({
   const overlayElements = createLayoutEditorSelectionOverlay({
     parsedElements: parsedState.elements,
     selectedItemId,
+    disableMoveDrag,
   });
+  const selectedElementMetrics = toSelectedElementMetrics(
+    selectPrimaryMatchingPath(parsedState.elements, selectedItemId),
+  );
 
   return {
     elements: [...resolvedFinalElements, ...overlayElements],
     fileReferences: extractFileIdsFromRenderState(resolvedFinalElements),
+    selectedElementMetrics,
   };
 };

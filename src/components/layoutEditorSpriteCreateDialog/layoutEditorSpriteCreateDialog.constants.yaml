@@ -1,0 +1,9 @@
+spriteCreateForm:
+  fields:
+    - name: name
+      type: input-text
+      label: Name
+      required: true
+    - type: slot
+      slot: sprite-image
+      label: Image

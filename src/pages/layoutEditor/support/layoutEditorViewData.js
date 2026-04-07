@@ -84,3 +84,24 @@ export const isItemInsideSaveLoadSlot = ({
 
   return false;
 };
+
+export const isItemDirectChildOfDirectedContainer = ({
+  layoutData,
+  parentIdById,
+  itemId,
+}) => {
+  if (!itemId) {
+    return false;
+  }
+
+  const parentId = parentIdById[itemId];
+  if (!parentId) {
+    return false;
+  }
+
+  const parent = layoutData?.items?.[parentId];
+  return (
+    parent?.type === "container" &&
+    (parent.direction === "horizontal" || parent.direction === "vertical")
+  );
+};
