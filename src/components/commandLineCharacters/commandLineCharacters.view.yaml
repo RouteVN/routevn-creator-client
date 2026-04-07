@@ -59,13 +59,14 @@ template:
                   - rtgl-view#charactersContainer slot=characters g=md w=f:
                       - $for character, i in defaultValues.characters:
                           - rtgl-view#character${i} data-index=${i} data-character-id=${character.id} d=h g=md av=t p=md br=md w=f:
-                              - rtgl-view g=sm:
-                                  - $if character.spriteFileId:
-                                      - rvn-file-image fileId=${character.spriteFileId} w=120 h=120 br=sm: null
-                                    $else:
-                                      - rtgl-view w=120 h=120 av=c ah=c bgc=mu br=sm cur=pointer:
-                                          - rtgl-text s=sm c=mu-fg: No Sprite
-                                  - rtgl-text s=sm w=120 ah=c ellipsis=true: ${character.displayName}
+                              - rtgl-view cur=pointer bw=xs bc=bo h-bc=ac br=sm:
+                                  - rtgl-view p=md g=md br=md:
+                                      - $if character.spriteFileId:
+                                          - rvn-file-image fileId=${character.spriteFileId} w=200 h=120: null
+                                        $else:
+                                          - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
+                                              - rtgl-text s=sm c=mu-fg: No Sprite
+                                      - rtgl-text s=xs c=mu-fg ellipsis w=200: ${character.displayName}
                               - rtgl-view w=1fg g=sm:
                                   - rtgl-text s=sm c=mu-fg: Transform
                                   - rtgl-select#transform${i} :options=${defaultValues.transformOptions} :selectedValue=${defaultValues.characters[i].transformId} w=f: null
