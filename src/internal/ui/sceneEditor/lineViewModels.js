@@ -111,6 +111,57 @@ const buildCharacterSpritePreview = (
   };
 };
 
+const resolveVisualPreviewFileId = ({ repositoryState, resourceId }) => {
+  if (!resourceId) {
+    return undefined;
+  }
+
+  const image = repositoryState?.images?.items?.[resourceId];
+  if (image) {
+    return image.thumbnailFileId || image.fileId;
+  }
+
+  const video = repositoryState?.videos?.items?.[resourceId];
+  if (video) {
+    return video.thumbnailFileId || video.fileId;
+  }
+
+  const layout = repositoryState?.layouts?.items?.[resourceId];
+  if (layout) {
+    return layout.thumbnailFileId || layout.fileId;
+  }
+
+  return undefined;
+};
+
+const buildVisualPreview = (repositoryState, changes) => {
+  if (!changes.visual) {
+    return undefined;
+  }
+
+  const visualData = changes.visual.data || {};
+  if (!Array.isArray(visualData.items) || visualData.items.length === 0) {
+    return {
+      changeType: changes.visual.changeType,
+      items: [],
+    };
+  }
+
+  return {
+    changeType: changes.visual.changeType,
+    items: visualData.items
+      .map((visualChange) => ({
+        visualId: visualChange.id,
+        resourceId: visualChange.resourceId,
+        fileId: resolveVisualPreviewFileId({
+          repositoryState,
+          resourceId: visualChange.resourceId,
+        }),
+      }))
+      .filter((item) => item.fileId),
+  };
+};
+
 const buildSectionTransitionPreview = (line, sceneLookups) => {
   const lineActions = normalizeLineActions(line.actions || {});
   const transitionData = lineActions?.sectionTransition;
@@ -236,6 +287,7 @@ export const buildSceneEditorLineViewModels = ({
         changes,
         characterLookups.characterItems,
       ),
+      visual: buildVisualPreview(repositoryState, changes),
       sectionTransition: transitionPreview.sectionTransition,
       transitionTarget: transitionPreview.transitionTarget,
       hasChoices: choicesPreview.hasChoices,
