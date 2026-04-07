@@ -95,9 +95,18 @@ export const handleResourceItemClick = (deps, payload) => {
 };
 
 export const handleFileExplorerItemClick = async (deps, payload) => {
-  const { store, render, downloadWaveformData, projectService } = deps;
+  const { refs, store, render, downloadWaveformData, projectService } = deps;
+  const { itemId, isFolder } = payload._event.detail;
+
+  if (isFolder) {
+    const groupElement = refs.galleryScroll?.querySelector(
+      `[data-group-id="${itemId}"]`,
+    );
+    groupElement?.scrollIntoView?.({ block: "start" });
+    return;
+  }
+
   await projectService.ensureRepository();
-  const itemId = payload._event.detail.id;
   const { sounds } = projectService.getState();
 
   store.setTempSelectedResource({
@@ -119,6 +128,12 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
       console.error("Failed to load waveform data:", error);
     }
   }
+};
+
+export const handleSearchInput = (deps, payload) => {
+  const { store, render } = deps;
+  store.setSearchQuery({ value: payload._event.detail.value ?? "" });
+  render();
 };
 
 export const handleSubmitClick = (deps, payload) => {

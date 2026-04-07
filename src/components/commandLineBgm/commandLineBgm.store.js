@@ -40,6 +40,7 @@ export const createInitialState = () => ({
   selectedResourceId: undefined,
   tempSelectedResourceId: undefined,
   bgm: normalizeBgm(),
+  searchQuery: "",
 });
 
 export const setBgmAudio = ({ state }, { resourceId } = {}) => {
@@ -71,6 +72,10 @@ export const selectTempSelectedResourceId = ({ state }) => {
 
 export const setTempSelectedResource = ({ state }, { resourceId } = {}) => {
   state.tempSelectedResourceId = resourceId;
+};
+
+export const setSearchQuery = ({ state }, { value } = {}) => {
+  state.searchQuery = value ?? "";
 };
 
 export const selectSelectedResource = ({ state }) => {
@@ -124,20 +129,36 @@ export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.items).filter(
     (item) => item.type === "folder",
   );
-  const flatGroups = toFlatGroups(state.items).map((group) => {
-    return {
-      ...group,
-      children: group.children.map((child) => {
+  const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
+  const matchesSearch = (item) => {
+    if (!searchQuery) {
+      return true;
+    }
+
+    const name = (item.name ?? "").toLowerCase();
+    const description = (item.description ?? "").toLowerCase();
+    return name.includes(searchQuery) || description.includes(searchQuery);
+  };
+  const flatGroups = toFlatGroups(state.items)
+    .map((group) => {
+      const children = group.children.filter(matchesSearch).map((child) => {
         const isSelected = child.id === state.tempSelectedResourceId;
         return {
           ...child,
-          bw: isSelected ? "md" : "",
-          bc: isSelected ? "fg" : "",
+          itemBorderColor: isSelected ? "pr" : "bo",
+          itemHoverBorderColor: isSelected ? "pr" : "ac",
           waveformDataFileId: child.waveformDataFileId,
         };
-      }),
-    };
-  });
+      });
+
+      return {
+        ...group,
+        children,
+        hasChildren: children.length > 0,
+        shouldDisplay: !searchQuery || children.length > 0,
+      };
+    })
+    .filter((group) => group.shouldDisplay);
 
   const selectedResource = selectSelectedResource({ state });
   const breadcrumb = selectBreadcrumb({ state });
@@ -155,6 +176,8 @@ export const selectViewData = ({ state }) => {
     items: flatItems,
     groups: flatGroups,
     tempSelectedResourceId: state.tempSelectedResourceId,
+    searchQuery: state.searchQuery,
+    searchPlaceholder: "Search...",
     breadcrumb,
     form,
     defaultValues,
