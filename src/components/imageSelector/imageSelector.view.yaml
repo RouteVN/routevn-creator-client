@@ -1,4 +1,5 @@
 refs:
+  container: {}
   imageItem*:
     eventListeners:
       click:

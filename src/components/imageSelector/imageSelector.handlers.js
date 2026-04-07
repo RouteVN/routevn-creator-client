@@ -71,6 +71,9 @@ export const handleScrollToItem = (deps, payload) => {
 
   const { container } = refs;
   const id = payload.itemId ?? payload.id;
+  if (!container || !id) {
+    return;
+  }
 
   // Find the group element by stable data attribute.
   const groupElement = container.querySelector(`[data-group-id="${id}"]`);
