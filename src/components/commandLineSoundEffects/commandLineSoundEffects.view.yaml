@@ -57,9 +57,9 @@ template:
       - rtgl-view d=h g=md: null
       - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
       - $if mode == 'current':
-          - rtgl-view#soundEffectsContainer g=md:
+          - rtgl-view#soundEffectsContainer w=f g=md:
               - $for sfx, i in defaultValues.sfx:
-                  - rtgl-view d=h g=md av=t:
+                  - rtgl-view d=h w=f g=md av=t:
                       - rtgl-view#soundEffectCard${i} data-sfx-id=${sfx.id} cur=pointer bw=xs bc=${sfx.itemBorderColor} h-bc=${sfx.itemHoverBorderColor} br=sm:
                           - rtgl-view p=md g=md br=md:
                               - $if sfx.waveformDataFileId:
