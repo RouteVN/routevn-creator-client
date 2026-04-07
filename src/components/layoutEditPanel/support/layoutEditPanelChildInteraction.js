@@ -2,6 +2,19 @@ const INHERIT_TO_CHILDREN_OPTIONS = [
   { label: "Disabled", value: false },
   { label: "Enabled", value: true },
 ];
+const CHILD_INTERACTION_ITEMS = [
+  { label: "Hover", key: "hover", name: "hover.inheritToChildren" },
+  { label: "Click", key: "click", name: "click.inheritToChildren" },
+  {
+    label: "Right Click",
+    key: "rightClick",
+    name: "rightClick.inheritToChildren",
+  },
+];
+
+const isChildInteractionEnabled = (values = {}, key) => {
+  return values?.[key]?.inheritToChildren === true;
+};
 
 export const getChildInteractionSummary = (values = {}) => {
   const labels = [];
@@ -25,6 +38,24 @@ export const getChildInteractionSummary = (values = {}) => {
   return labels.join(", ");
 };
 
+export const hasChildInteractionInheritance = (values = {}) => {
+  return CHILD_INTERACTION_ITEMS.some((item) =>
+    isChildInteractionEnabled(values, item.key),
+  );
+};
+
+export const getChildInteractionItems = (values = {}) => {
+  return CHILD_INTERACTION_ITEMS.filter((item) =>
+    isChildInteractionEnabled(values, item.key),
+  );
+};
+
+export const getAvailableChildInteractionItems = (values = {}) => {
+  return CHILD_INTERACTION_ITEMS.filter(
+    (item) => !isChildInteractionEnabled(values, item.key),
+  );
+};
+
 export const createChildInteractionDialogDefaults = (values = {}) => {
   return {
     hover: {
@@ -45,7 +76,7 @@ export const createChildInteractionForm = () => {
     fields: [
       {
         name: "hover.inheritToChildren",
-        type: "select",
+        type: "segmented-control",
         label: "Hover",
         required: true,
         clearable: false,
@@ -53,7 +84,7 @@ export const createChildInteractionForm = () => {
       },
       {
         name: "click.inheritToChildren",
-        type: "select",
+        type: "segmented-control",
         label: "Click",
         required: true,
         clearable: false,
@@ -61,7 +92,7 @@ export const createChildInteractionForm = () => {
       },
       {
         name: "rightClick.inheritToChildren",
-        type: "select",
+        type: "segmented-control",
         label: "Right Click",
         required: true,
         clearable: false,

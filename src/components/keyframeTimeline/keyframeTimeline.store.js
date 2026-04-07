@@ -163,6 +163,7 @@ const createRulerTicks = (durationMs) => {
 
 export const selectViewData = ({ state, props, props: attrs }) => {
   const showRuler = attrs.showRuler === true;
+  const showTracks = attrs.showTracks !== false;
   const resolveTrackCursor = ({ propertyName } = {}) => {
     return state.hoverTarget?.property === propertyName ? "pointer" : "default";
   };
@@ -229,7 +230,8 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       : undefined;
   const indicatorLeftPercent =
     state.hoverIndicatorLeftPercent ?? externalIndicatorLeftPercent;
-  const hoverIndicatorVisible = indicatorLeftPercent !== undefined && showRuler;
+  const indicatorVisible = indicatorLeftPercent !== undefined;
+  const hoverIndicatorVisible = indicatorVisible && showRuler;
   const hoverIndicatorTimeMs = hoverIndicatorVisible
     ? state.hoverIndicatorLeftPercent !== undefined
       ? Math.round((indicatorLeftPercent / 100) * resolvedTimelineDuration)
@@ -326,8 +328,10 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     selectedProperties,
     showTotalDuration: attrs.showTotalDuration !== false,
     showRuler,
+    showTracks,
     rulerTicks,
     hoverIndicatorVisible,
+    trackIndicatorVisible: indicatorVisible,
     hoverIndicatorTimeLabel,
     hoverIndicatorLabelStyle,
     hoverIndicatorRulerStyle,

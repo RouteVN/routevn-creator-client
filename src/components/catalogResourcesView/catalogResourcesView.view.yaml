@@ -84,15 +84,13 @@ template:
                                                   - rtgl-text s=xs c=mu-fg mb=md: 'Type: ${item.animationTypeLabel}'
                                                   - $if item.animationType == 'transition':
                                                       - rtgl-view d=v w=f g=md:
-                                                          - rtgl-view d=h w=f:
-                                                              - rtgl-view w=f ah=e:
-                                                                  - rtgl-text s=sm c=mu-fg: 'Total duration: ${item.duration}ms'
+                                                          - rvn-keyframe-timeline w=f ?showRuler=true ?showTracks=false timelineDuration=${item.transitionTimelineDuration}: null
                                                           - rtgl-view d=v w=f g=xs:
-                                                              - rtgl-text s=xs c=mu-fg: Previous
-                                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=true timelineDuration=${item.transitionTimelineDuration} :properties=${item.prevProperties}: null
+                                                              - rtgl-text s=xs c=mu-fg: Out
+                                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${item.transitionTimelineDuration} :properties=${item.prevProperties}: null
                                                           - rtgl-view d=v w=f g=xs:
-                                                              - rtgl-text s=xs c=mu-fg: Next
-                                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=true timelineDuration=${item.transitionTimelineDuration} :properties=${item.nextProperties}: null
+                                                              - rtgl-text s=xs c=mu-fg: In
+                                                              - rvn-keyframe-timeline w=f ?showTotalDuration=false ?showRuler=false timelineDuration=${item.transitionTimelineDuration} :properties=${item.nextProperties}: null
                                                     $else:
                                                       - rvn-keyframe-timeline w=f ?showRuler=true :properties=${item.updateProperties}: null
                                             $else:

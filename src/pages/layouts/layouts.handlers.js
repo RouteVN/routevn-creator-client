@@ -27,6 +27,22 @@ const navigateToLayoutEditor = ({ appService, layoutId } = {}) => {
   });
 };
 
+const openLayoutEditorWithItem = ({ deps, itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  const { appService, refs, store } = deps;
+  const layoutItem = store.selectLayoutItemById({ itemId });
+  if (!layoutItem || layoutItem.type !== "layout") {
+    return;
+  }
+
+  store.setSelectedItemId({ itemId });
+  refs.fileExplorer.selectItem({ itemId });
+  navigateToLayoutEditor({ appService, layoutId: itemId });
+};
+
 const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   if (!itemId) {
     return;
@@ -97,13 +113,18 @@ export const handleLayoutItemClick = (deps, payload) => {
   handleCatalogLayoutItemClick(deps, payload);
 };
 
-export const handleItemDoubleClick = (deps, payload) => {
+export const handleFileExplorerDoubleClick = (deps, payload) => {
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder) {
     return;
   }
 
-  openEditDialogWithValues({ deps, itemId });
+  openLayoutEditorWithItem({ deps, itemId });
+};
+
+export const handleLayoutItemDoubleClick = (deps, payload) => {
+  const { itemId } = payload._event.detail;
+  openLayoutEditorWithItem({ deps, itemId });
 };
 
 export const handleAddLayoutClick = (deps, payload) => {

@@ -1094,18 +1094,30 @@ export const createGraphicsService = async ({ subject }) => {
         height: renderHeight,
         plugins,
         eventHandler: (eventName, payload) => {
+          const eventId = payload?._event?.id;
+          const layoutEditorDragTarget =
+            eventId === "selected-border" ||
+            eventId?.startsWith("selected-border-resize-");
           if (eventName === "dragMove") {
-            if (payload._event.id === "selected-border")
+            if (layoutEditorDragTarget) {
               subject.dispatch("border-drag-move", {
                 x: Math.round(payload._event.x),
                 y: Math.round(payload._event.y),
+                targetId: eventId,
               });
+            }
           } else if (eventName === "dragStart") {
-            if (payload._event.id === "selected-border")
-              subject.dispatch("border-drag-start");
+            if (layoutEditorDragTarget) {
+              subject.dispatch("border-drag-start", {
+                targetId: eventId,
+              });
+            }
           } else if (eventName === "dragEnd") {
-            if (payload._event.id === "selected-border")
-              subject.dispatch("border-drag-end");
+            if (layoutEditorDragTarget) {
+              subject.dispatch("border-drag-end", {
+                targetId: eventId,
+              });
+            }
           }
 
           if (!engine) {

@@ -10,8 +10,8 @@ dialogueForm:
       type: input-text
     - name: dialogue-auto-mode
       label: Auto Mode
-      type: select
-      clearable: false
+      type: segmented-control
+      noClear: true
       options:
         - label: "False"
           value: false
@@ -19,8 +19,8 @@ dialogueForm:
           value: true
     - name: dialogue-skip-mode
       label: Skip Mode
-      type: select
-      clearable: false
+      type: segmented-control
+      noClear: true
       options:
         - label: "False"
           value: false
@@ -28,8 +28,8 @@ dialogueForm:
           value: true
     - name: dialogue-is-line-completed
       label: Line Completed
-      type: select
-      clearable: false
+      type: segmented-control
+      noClear: true
       options:
         - label: "False"
           value: false

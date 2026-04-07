@@ -1,3 +1,5 @@
+import { getTransitionMaskDuration } from "./animationMasks.js";
+
 const getDialogType = (animationType) => {
   return animationType === "transition" ? "transition" : "update";
 };
@@ -48,10 +50,12 @@ const getAnimationDuration = (tween = {}) => {
 export const getTransitionTimelineDuration = ({
   prevProperties = {},
   nextProperties = {},
+  mask,
 } = {}) => {
   return Math.max(
     getAnimationDuration(prevProperties),
     getAnimationDuration(nextProperties),
+    getTransitionMaskDuration(mask),
   );
 };
 
@@ -69,14 +73,16 @@ export const toAnimationDisplayItem = (item) => {
       ? getTransitionTimelineDuration({
           prevProperties,
           nextProperties,
+          mask: item?.animation?.mask,
         })
       : 0;
   const duration =
     animationType === "transition"
-      ? Math.max(
-          getAnimationDuration(getTransitionSideTween(item, "prev")),
-          getAnimationDuration(getTransitionSideTween(item, "next")),
-        )
+      ? getTransitionTimelineDuration({
+          prevProperties: getTransitionSideTween(item, "prev"),
+          nextProperties: getTransitionSideTween(item, "next"),
+          mask: item?.animation?.mask,
+        })
       : getAnimationDuration(getUpdateAnimationTween(item));
 
   return {

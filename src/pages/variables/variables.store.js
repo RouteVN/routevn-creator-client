@@ -72,6 +72,7 @@ export const selectViewData = ({ state }) => {
   return {
     flatItems,
     flatGroups,
+    title: "Variables",
     resourceCategory: "systemConfig",
     selectedResourceId: "variables",
     selectedItemId: state.selectedItemId,

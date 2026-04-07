@@ -8,6 +8,11 @@ export const ANIMATION_SELECTED_RESOURCE_ID = "animations";
 export const PREVIEW_BG_COLOR = "#4a4a4a";
 export const PREVIEW_RECT_WIDTH = 200;
 export const PREVIEW_RECT_HEIGHT = 200;
+export const PREVIEW_UPDATE_ELEMENT_ID = "preview-element";
+export const PREVIEW_TRANSITION_ELEMENT_ID = "preview-transition-element";
+export const PREVIEW_TRANSITION_PREV_FILL = "#ffffff";
+export const PREVIEW_TRANSITION_NEXT_FILL = "#8fd3ff";
+export const PREVIEW_TRANSITION_OFFSET_X = 18;
 
 export const UPDATE_PROPERTY_KEYS = ["alpha", "x", "y", "scaleX", "scaleY"];
 
@@ -133,3 +138,33 @@ export const propertyNameDropdownItems = [
     value: "delete-property",
   },
 ];
+
+export const MASK_KIND_OPTIONS = Object.freeze([
+  { label: "Single", value: "single" },
+  { label: "Sequence", value: "sequence" },
+  { label: "Composite", value: "composite" },
+]);
+
+export const MASK_CHANNEL_OPTIONS = Object.freeze([
+  { label: "Red", value: "red" },
+  { label: "Green", value: "green" },
+  { label: "Blue", value: "blue" },
+  { label: "Alpha", value: "alpha" },
+]);
+
+export const MASK_SAMPLE_OPTIONS = Object.freeze([
+  { label: "Step", value: "step" },
+  { label: "Linear", value: "linear" },
+]);
+
+export const MASK_COMBINE_OPTIONS = Object.freeze([
+  { label: "Max", value: "max" },
+  { label: "Min", value: "min" },
+  { label: "Multiply", value: "multiply" },
+  { label: "Add", value: "add" },
+]);
+
+export const MASK_BOOLEAN_OPTIONS = Object.freeze([
+  { label: "Off", value: "off" },
+  { label: "On", value: "on" },
+]);

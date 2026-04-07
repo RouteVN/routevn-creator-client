@@ -5,6 +5,9 @@ propsSchema:
     flatGroups:
       type: array
       description: Array of variable groups to display
+    navTitle:
+      type: string
+      description: Optional title to display in the header
     selectedItemId:
       type: string
       description: ID of currently selected item

@@ -32,7 +32,8 @@ textPopoverForm: &textPopoverForm
         label: Submit
 
 layoutSections:
-  - label: Position
+  - "$when": "!isInsideDirectedContainer"
+    label: Position
     items:
       - type: group
         fields:
@@ -40,27 +41,53 @@ layoutSections:
             svg: x
             name: x
             value: "${values.x}"
+            metaValue: "${xPercentageLabel}"
             popoverForm: *numberPopoverForm
           - type: clickable-value
             svg: y
             name: y
             value: "${values.y}"
+            metaValue: "${yPercentageLabel}"
             popoverForm: *numberPopoverForm
-  - label: Layout
+  - "$when": "supportsSize"
+    label: Layout
     items:
+      - "$when": "supportsWidthMode"
+        type: segmented-control
+        label: Width
+        name: widthMode
+        value: "${widthMode}"
+        options:
+          - label: Auto
+            value: auto
+          - label: Fixed
+            value: fixed
       - type: group
         fields:
-          - type: clickable-value
+          - "$when": '!supportsWidthMode || widthMode == "fixed"'
+            type: clickable-value
             svg: w
             name: width
             value: "${values.width}"
+            metaValue: "${widthPercentageLabel}"
             popoverForm: *numberPopoverForm
           - "$when": "supportsHeight"
             type: clickable-value
             svg: h
             name: height
             value: "${values.height}"
+            metaValue: "${heightPercentageLabel}"
             popoverForm: *numberPopoverForm
+      - "$when": "supportsHeight"
+        type: segmented-control
+        label: Ratio
+        name: aspectRatioMode
+        value: "${values.aspectRatioMode}"
+        options:
+          - label: Free
+            value: free
+          - label: Fixed
+            value: fixed
   - label: Appearance
     items:
       - type: group
@@ -115,7 +142,7 @@ layoutSections:
   - "$when": "supportsDirection"
     label: Direction
     items:
-      - type: select
+      - type: segmented-control
         label: Direction
         name: direction
         value: "${values.direction}"
@@ -136,7 +163,7 @@ layoutSections:
   - "$when": "supportsScroll"
     label: Scroll
     items:
-      - type: select
+      - type: segmented-control
         label: Scroll
         name: scroll
         value: "${values.scroll}"
@@ -146,11 +173,15 @@ layoutSections:
           - label: Enabled
             value: true
   - "$when": "supportsChildInteractionInheritance"
+    id: childInteraction
     label: Child Interaction
+    "$if canAddChildInteractionInheritance":
+      labelAction: plus
     items:
-      - type: child-interaction-summary
+      - "$when": "hasChildInteractionInheritance"
+        type: child-interaction-list
         name: childInteraction
-        value: "${childInteractionSummary}"
+        items: "${childInteractionItems}"
   - "$when": "supportsSpriteImages"
     id: images
     label: Image
@@ -239,19 +270,24 @@ layoutSections:
         name: revealEffect
         value: "${values.revealEffect}"
   - "$when": "supportsTextStyles"
+    id: textStyles
     label: Text Styles
+    "$if canAddTextStyleVariant":
+      labelAction: plus
     items:
       - type: select
         label: Default
         name: textStyleId
         value: "${values.textStyleId}"
         options: "${textStyleItems}"
-      - type: select
+      - "$when": "values.hoverTextStyleId"
+        type: select
         label: Hover
         name: hoverTextStyleId
         value: "${values.hoverTextStyleId}"
         options: "${textStyleItemsWithNone}"
-      - type: select
+      - "$when": "values.clickTextStyleId"
+        type: select
         label: Clicked
         name: clickTextStyleId
         value: "${values.clickTextStyleId}"
@@ -259,7 +295,7 @@ layoutSections:
   - "$when": "supportsTextAlignment"
     label: Text Alignment
     items:
-      - type: select
+      - type: segmented-control
         label: Alignment
         name: textStyle.align
         value: "${values.textStyle.align}"
@@ -270,9 +306,12 @@ layoutSections:
             value: center
           - label: Right
             value: right
-  - label: Visibility
+  - id: visibilityCondition
+    label: Visibility
+    labelAction: plus
     items:
-      - type: condition-summary
+      - "$when": "hasVisibilityCondition"
+        type: condition-summary
         name: visibilityCondition
         value: "${visibilityConditionSummary}"
   - "$when": 'itemType == "fragment-ref"'
@@ -305,7 +344,8 @@ layoutSections:
         items: "${conditionalOverrideItems}"
 
 controlSections:
-  - label: Position
+  - "$when": "!isInsideDirectedContainer"
+    label: Position
     items:
       - type: group
         fields:
@@ -321,9 +361,20 @@ controlSections:
             popoverForm: *numberPopoverForm
   - label: Layout
     items:
+      - "$when": "supportsWidthMode"
+        type: segmented-control
+        label: Width
+        name: widthMode
+        value: "${widthMode}"
+        options:
+          - label: Auto
+            value: auto
+          - label: Fixed
+            value: fixed
       - type: group
         fields:
-          - type: clickable-value
+          - "$when": '!supportsWidthMode || widthMode == "fixed"'
+            type: clickable-value
             svg: w
             name: width
             value: "${values.width}"
@@ -342,9 +393,12 @@ controlSections:
             name: opacity
             value: "${values.opacity}"
             popoverForm: *opacityPopoverForm
-  - label: Visibility
+  - id: visibilityCondition
+    label: Visibility
+    labelAction: plus
     items:
-      - type: condition-summary
+      - "$when": "hasVisibilityCondition"
+        type: condition-summary
         name: visibilityCondition
         value: "${visibilityConditionSummary}"
   - "$when": "supportsActions"

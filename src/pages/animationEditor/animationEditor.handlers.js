@@ -4,6 +4,7 @@ import {
   getAnimationEditorBackPath,
   resolveAnimationEditorPayload,
 } from "../../internal/animationEditorRoute.js";
+import { serializeTransitionMask } from "../../internal/animationMasks.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 
 const normalizeTween = (properties = {}) => {
@@ -32,22 +33,6 @@ const getEditorPayload = (appService) => {
 };
 
 const DEFAULT_NEW_ANIMATION_NAME = "New Animation";
-
-const resolveUpdatePreviewDuration = ({ store } = {}) => {
-  let maxDuration = 0;
-
-  for (const config of Object.values(
-    store.selectProperties({ side: "update" }),
-  )) {
-    const propertyDuration = (config?.keyframes ?? []).reduce(
-      (sum, keyframe) => sum + (Number(keyframe.duration) || 0),
-      0,
-    );
-    maxDuration = Math.max(maxDuration, propertyDuration);
-  }
-
-  return maxDuration;
-};
 
 const stopPreviewPlaybackIndicator = ({ store } = {}) => {
   const frameId = store.selectPreviewPlaybackFrameId();
@@ -102,8 +87,88 @@ const invalidatePreview = ({ store } = {}) => {
   store.bumpPreviewRenderVersion({});
 };
 
+const collectRuntimeMaskTextureIds = (mask = {}) => {
+  if (!mask) {
+    return [];
+  }
+
+  if (mask.kind === "single") {
+    return mask.texture ? [mask.texture] : [];
+  }
+
+  if (mask.kind === "sequence") {
+    return (mask.textures ?? []).filter(Boolean);
+  }
+
+  return (mask.items ?? []).map((item) => item?.texture).filter(Boolean);
+};
+
+const ensurePreviewAssetsLoaded = async ({
+  graphicsService,
+  projectService,
+  renderState,
+} = {}) => {
+  if (!graphicsService || !projectService || !renderState) {
+    return renderState;
+  }
+
+  const textureIds = Array.from(
+    new Set(
+      (renderState.animations ?? []).flatMap((animation) =>
+        collectRuntimeMaskTextureIds(animation.mask),
+      ),
+    ),
+  );
+
+  if (textureIds.length === 0) {
+    return renderState;
+  }
+
+  const imageItems = projectService.getRepositoryState()?.images?.items ?? {};
+  const imageItemsByFileId = new Map(
+    Object.values(imageItems)
+      .filter((item) => item?.fileId)
+      .map((item) => [item.fileId, item]),
+  );
+  const assets = {};
+
+  for (const fileId of textureIds) {
+    const fileResult = await projectService.getFileContent(fileId);
+    assets[fileId] = {
+      url: fileResult.url,
+      type: imageItemsByFileId.get(fileId)?.fileType ?? "image/png",
+    };
+  }
+
+  await graphicsService.loadAssets(assets);
+  return renderState;
+};
+
+const renderPreviewAnimationState = async ({
+  graphicsService,
+  projectService,
+  store,
+} = {}) => {
+  if (!graphicsService) {
+    return;
+  }
+
+  const renderState = store.selectAnimationRenderStateWithAnimations();
+  await ensurePreviewAssetsLoaded({
+    graphicsService,
+    projectService,
+    renderState,
+  });
+
+  if (store.selectDialogType() === "transition") {
+    await graphicsService.render(store.selectAnimationResetState());
+  }
+
+  await graphicsService.render(renderState);
+};
+
 const resetPreviewPlayback = ({ graphicsService, store } = {}) => {
-  if (!graphicsService || store.selectDialogType() !== "update") {
+  if (!graphicsService) {
     return;
   }
 
@@ -117,12 +182,13 @@ const resetPreviewPlayback = ({ graphicsService, store } = {}) => {
   });
 };
 
-const ensureManualPreviewAtTime = ({ graphicsService, store, timeMs } = {}) => {
-  if (
-    !graphicsService ||
-    store.selectDialogType() !== "update" ||
-    timeMs === undefined
-  ) {
+const ensureManualPreviewAtTime = async ({
+  graphicsService,
+  projectService,
+  store,
+  timeMs,
+} = {}) => {
+  if (!graphicsService || timeMs === undefined) {
     return;
   }
 
@@ -135,7 +201,11 @@ const ensureManualPreviewAtTime = ({ graphicsService, store, timeMs } = {}) => {
       store,
     });
     graphicsService.setAnimationPlaybackMode("manual");
-    graphicsService.render(store.selectAnimationRenderStateWithAnimations());
+    await renderPreviewAnimationState({
+      graphicsService,
+      projectService,
+      store,
+    });
     store.setPreviewPlaybackMode({
       mode: "manual",
     });
@@ -151,6 +221,18 @@ const getAnimationItem = ({ repositoryState, animationId } = {}) => {
   return item?.type === "animation" ? item : undefined;
 };
 
+const resolvePersistedTransitionMask = ({ store, serializedMask } = {}) => {
+  if (serializedMask) {
+    return serializedMask;
+  }
+
+  if (!store.selectEditMode()) {
+    return undefined;
+  }
+
+  return structuredClone(store.selectEditItemData()?.animation?.mask);
+};
+
 const createAnimationPersistSnapshot = ({ store } = {}) => {
   const dialogType = store.selectDialogType();
   let animationData;
@@ -158,6 +240,13 @@ const createAnimationPersistSnapshot = ({ store } = {}) => {
   if (dialogType === "transition") {
     const prevTween = normalizeTween(store.selectProperties({ side: "prev" }));
     const nextTween = normalizeTween(store.selectProperties({ side: "next" }));
+    const serializedTransitionMask = serializeTransitionMask(
+      store.selectTransitionMask(),
+    );
+    const transitionMask = resolvePersistedTransitionMask({
+      store,
+      serializedMask: serializedTransitionMask,
+    });
 
     animationData = {
       type: "transition",
@@ -173,6 +262,10 @@ const createAnimationPersistSnapshot = ({ store } = {}) => {
       animationData.next = {
         tween: nextTween,
       };
+    }
+
+    if (transitionMask) {
+      animationData.mask = transitionMask;
     }
   } else {
     animationData = {
@@ -328,7 +421,7 @@ const queueEditorAutosave = ({ deps } = {}) => {
 
 const initializePreview = async ({ deps } = {}) => {
   const { graphicsService, refs, store } = deps;
-  if (!graphicsService || store.selectDialogType() !== "update") {
+  if (!graphicsService) {
     return;
   }
 
@@ -362,6 +455,9 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
 
   store.setItems({
     data: resolvedRepositoryState?.animations,
+  });
+  store.setImages({
+    images: resolvedRepositoryState?.images,
   });
   store.setProjectResolution({
     projectResolution: resolvedRepositoryState?.project?.resolution,
@@ -716,10 +812,11 @@ export const handleEditKeyframeFormSubmit = (deps, payload) => {
   });
 };
 
-export const handleRulerTimeHover = (deps, payload) => {
-  const { graphicsService, render, store } = deps;
-  const didChangePreviewState = ensureManualPreviewAtTime({
+export const handleRulerTimeHover = async (deps, payload) => {
+  const { graphicsService, projectService, render, store } = deps;
+  const didChangePreviewState = await ensureManualPreviewAtTime({
     graphicsService,
+    projectService,
     store,
     timeMs: payload._event.detail.timeMs,
   });
@@ -763,6 +860,47 @@ const updatePopoverFieldValue = ({ store, detail } = {}) => {
   });
 };
 
+const resolveValueChange = (payload) => {
+  return (
+    payload._event.detail?.value ??
+    payload._event.currentTarget?.value ??
+    payload._event.target?.value
+  );
+};
+
+const resolveIndexFromDataset = (payload) => {
+  return Number.parseInt(
+    payload._event.currentTarget?.dataset?.index ?? "",
+    10,
+  );
+};
+
+const commitMaskChange = (deps) => {
+  const { render, store } = deps;
+  invalidatePreview({
+    store,
+  });
+  render();
+  queueEditorAutosave({
+    deps,
+  });
+};
+
+const openMaskImageSelector = ({
+  render,
+  store,
+  target,
+  index,
+  selectedImageId,
+} = {}) => {
+  store.showImageSelectorDialog({
+    target,
+    index,
+    selectedImageId,
+  });
+  render();
+};
+
 export const handleAddPropertyFormChange = (deps, payload) => {
   const { render, store } = deps;
   updatePopoverFieldValue({
@@ -781,9 +919,277 @@ export const handleEditInitialValueFormChange = (deps, payload) => {
   render();
 };
 
+export const handleEnableMaskClick = (deps) => {
+  const { store } = deps;
+  store.enableTransitionMask({});
+  commitMaskChange(deps);
+};
+
+export const handleDisableMaskClick = (deps) => {
+  const { store } = deps;
+  store.disableTransitionMask({});
+  commitMaskChange(deps);
+};
+
+export const handleMaskKindChange = (deps, payload) => {
+  const { store } = deps;
+  store.setTransitionMaskKind({
+    kind: resolveValueChange(payload),
+  });
+  commitMaskChange(deps);
+};
+
+export const handleMaskChannelChange = (deps, payload) => {
+  const { store } = deps;
+  store.setTransitionMaskChannel({
+    channel: resolveValueChange(payload),
+  });
+  commitMaskChange(deps);
+};
+
+export const handleMaskInvertChange = (deps, payload) => {
+  const { store } = deps;
+  store.setTransitionMaskInvert({
+    invert: resolveValueChange(payload) === "on",
+  });
+  commitMaskChange(deps);
+};
+
+export const handleMaskSampleChange = (deps, payload) => {
+  const { store } = deps;
+  store.setTransitionMaskSample({
+    sample: resolveValueChange(payload),
+  });
+  commitMaskChange(deps);
+};
+
+export const handleMaskCombineChange = (deps, payload) => {
+  const { store } = deps;
+  store.setTransitionMaskCombine({
+    combine: resolveValueChange(payload),
+  });
+  commitMaskChange(deps);
+};
+
+export const handleMaskSoftnessInput = (deps, payload) => {
+  const { store } = deps;
+  store.setTransitionMaskSoftness({
+    softness: resolveValueChange(payload),
+  });
+  commitMaskChange(deps);
+};
+
+export const handleMaskProgressDurationInput = (deps, payload) => {
+  const { store } = deps;
+  store.setTransitionMaskProgressDuration({
+    duration: resolveValueChange(payload),
+  });
+  commitMaskChange(deps);
+};
+
+export const handleMaskProgressEasingChange = (deps, payload) => {
+  const { store } = deps;
+  store.setTransitionMaskProgressEasing({
+    easing: resolveValueChange(payload),
+  });
+  commitMaskChange(deps);
+};
+
+export const handleSingleMaskImageClick = (deps) => {
+  const { render, store } = deps;
+  openMaskImageSelector({
+    render,
+    store,
+    target: "single",
+    selectedImageId: store.selectTransitionMask()?.imageId,
+  });
+};
+
+export const handleSingleMaskImageClearClick = (deps, payload) => {
+  payload._event.stopPropagation();
+  const { store } = deps;
+  store.clearTransitionMaskImage({});
+  commitMaskChange(deps);
+};
+
+export const handleSequenceMaskAddClick = (deps) => {
+  const { render, store } = deps;
+  openMaskImageSelector({
+    render,
+    store,
+    target: "sequence-add",
+  });
+};
+
+export const handleSequenceMaskImageClick = (deps, payload) => {
+  const { render, store } = deps;
+  const index = resolveIndexFromDataset(payload);
+  const transitionMask = store.selectTransitionMask();
+  openMaskImageSelector({
+    render,
+    store,
+    target: "sequence-item",
+    index,
+    selectedImageId: transitionMask?.imageIds?.[index],
+  });
+};
+
+export const handleSequenceMaskRemoveClick = (deps, payload) => {
+  payload._event.stopPropagation();
+  const { store } = deps;
+  store.removeTransitionMaskSequenceImage({
+    index: resolveIndexFromDataset(payload),
+  });
+  commitMaskChange(deps);
+};
+
+export const handleSequenceMaskMoveUpClick = (deps, payload) => {
+  payload._event.stopPropagation();
+  const { store } = deps;
+  store.moveTransitionMaskSequenceImageUp({
+    index: resolveIndexFromDataset(payload),
+  });
+  commitMaskChange(deps);
+};
+
+export const handleSequenceMaskMoveDownClick = (deps, payload) => {
+  payload._event.stopPropagation();
+  const { store } = deps;
+  store.moveTransitionMaskSequenceImageDown({
+    index: resolveIndexFromDataset(payload),
+  });
+  commitMaskChange(deps);
+};
+
+export const handleCompositeMaskAddClick = (deps) => {
+  const { render, store } = deps;
+  openMaskImageSelector({
+    render,
+    store,
+    target: "composite-add",
+  });
+};
+
+export const handleCompositeMaskImageClick = (deps, payload) => {
+  const { render, store } = deps;
+  const index = resolveIndexFromDataset(payload);
+  const transitionMask = store.selectTransitionMask();
+  openMaskImageSelector({
+    render,
+    store,
+    target: "composite-item",
+    index,
+    selectedImageId: transitionMask?.items?.[index]?.imageId,
+  });
+};
+
+export const handleCompositeMaskRemoveClick = (deps, payload) => {
+  payload._event.stopPropagation();
+  const { store } = deps;
+  store.removeTransitionMaskCompositeItem({
+    index: resolveIndexFromDataset(payload),
+  });
+  commitMaskChange(deps);
+};
+
+export const handleCompositeMaskMoveUpClick = (deps, payload) => {
+  payload._event.stopPropagation();
+  const { store } = deps;
+  store.moveTransitionMaskCompositeItemUp({
+    index: resolveIndexFromDataset(payload),
+  });
+  commitMaskChange(deps);
+};
+
+export const handleCompositeMaskMoveDownClick = (deps, payload) => {
+  payload._event.stopPropagation();
+  const { store } = deps;
+  store.moveTransitionMaskCompositeItemDown({
+    index: resolveIndexFromDataset(payload),
+  });
+  commitMaskChange(deps);
+};
+
+export const handleCompositeMaskChannelChange = (deps, payload) => {
+  const { store } = deps;
+  store.updateTransitionMaskCompositeItemChannel({
+    index: resolveIndexFromDataset(payload),
+    channel: resolveValueChange(payload),
+  });
+  commitMaskChange(deps);
+};
+
+export const handleCompositeMaskInvertChange = (deps, payload) => {
+  const { store } = deps;
+  store.updateTransitionMaskCompositeItemInvert({
+    index: resolveIndexFromDataset(payload),
+    invert: resolveValueChange(payload) === "on",
+  });
+  commitMaskChange(deps);
+};
+
+export const handleMaskImageSelected = (deps, payload) => {
+  const { render, store } = deps;
+  store.setImageSelectorSelectedImageId({
+    imageId: payload._event.detail?.imageId,
+  });
+  render();
+};
+
+export const handleConfirmMaskImageSelection = (deps) => {
+  const { render, store } = deps;
+  const imageSelectorDialog = store.selectImageSelectorDialog();
+  const { index, selectedImageId, target } = imageSelectorDialog;
+
+  if (target === "single") {
+    store.setTransitionMaskImage({
+      imageId: selectedImageId,
+    });
+  } else if (target === "sequence-add" && selectedImageId) {
+    store.addTransitionMaskSequenceImage({
+      imageId: selectedImageId,
+    });
+  } else if (target === "sequence-item") {
+    store.updateTransitionMaskSequenceImage({
+      index,
+      imageId: selectedImageId,
+    });
+  } else if (target === "composite-add" && selectedImageId) {
+    store.addTransitionMaskCompositeItem({
+      imageId: selectedImageId,
+    });
+  } else if (target === "composite-item") {
+    store.updateTransitionMaskCompositeItemImage({
+      index,
+      imageId: selectedImageId,
+    });
+  }
+
+  store.hideImageSelectorDialog({});
+  invalidatePreview({
+    store,
+  });
+  render();
+  queueEditorAutosave({
+    deps,
+  });
+};
+
+export const handleCancelMaskImageSelection = (deps) => {
+  const { render, store } = deps;
+  store.hideImageSelectorDialog({});
+  render();
+};
+
+export const handleCloseMaskImageSelectorDialog = (deps) => {
+  const { render, store } = deps;
+  store.hideImageSelectorDialog({});
+  render();
+};
+
 export const handleReplayAnimation = async (deps) => {
-  const { graphicsService, render, store } = deps;
-  if (!graphicsService || store.selectDialogType() !== "update") {
+  const { graphicsService, projectService, render, store } = deps;
+  if (!graphicsService) {
     return;
   }
 
@@ -794,13 +1200,13 @@ export const handleReplayAnimation = async (deps) => {
   store.setPreviewPlaybackMode({
     mode: "auto",
   });
-  await graphicsService.render(
-    store.selectAnimationRenderStateWithAnimations(),
-  );
-
-  const durationMs = resolveUpdatePreviewDuration({
+  await renderPreviewAnimationState({
+    graphicsService,
+    projectService,
     store,
   });
+
+  const durationMs = store.selectPreviewDurationMs();
 
   if (durationMs <= 0) {
     render();

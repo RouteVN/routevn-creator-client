@@ -5,6 +5,7 @@ import {
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
 import {
+  isItemDirectChildOfDirectedContainer,
   isItemInsideSaveLoadSlot,
   selectLayoutEditorSelectedItem,
   toLayoutEditorContextMenuItems,
@@ -25,6 +26,7 @@ export const createInitialState = () => {
     variablesData: { tree: [], items: {} },
     previewData: {},
     projectResolution: DEFAULT_PROJECT_RESOLUTION,
+    selectedElementMetrics: undefined,
   };
 };
 
@@ -85,6 +87,7 @@ export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
 
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
+  state.selectedElementMetrics = undefined;
 };
 
 export const setPreviewData = ({ state }, { previewData } = {}) => {
@@ -96,6 +99,11 @@ export const updateSelectedItem = ({ state }, { updatedItem } = {}) => {
     state.layoutData.items[state.selectedItemId] = updatedItem;
   }
   state.lastUpdateDate = Date.now();
+  state.selectedElementMetrics = undefined;
+};
+
+export const setSelectedElementMetrics = ({ state }, { metrics } = {}) => {
+  state.selectedElementMetrics = metrics;
 };
 
 export const setImages = ({ state }, { images } = {}) => {
@@ -196,6 +204,10 @@ export const selectSelectedItemData = ({ state }) => {
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
+export const selectSelectedElementMetrics = ({ state }) => {
+  return state.selectedElementMetrics;
+};
+
 export const selectItems = ({ state }) => {
   return state.layoutData;
 };
@@ -274,7 +286,13 @@ export const selectViewData = ({ state, constants }) => {
     textStylesData: state.textStylesData,
     variablesData: state.variablesData,
     layoutsData: state.layoutsData,
+    selectedElementMetrics: state.selectedElementMetrics,
     isInsideSaveLoadSlot: isItemInsideSaveLoadSlot({
+      layoutData: state.layoutData,
+      parentIdById,
+      itemId: item?.id,
+    }),
+    isInsideDirectedContainer: isItemDirectChildOfDirectedContainer({
       layoutData: state.layoutData,
       parentIdById,
       itemId: item?.id,

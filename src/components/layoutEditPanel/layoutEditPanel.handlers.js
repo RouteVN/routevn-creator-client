@@ -10,12 +10,29 @@ import {
 import {
   buildConditionalOverrideSetUpdate,
   deleteConditionalOverrideSetField,
+  getAvailableChildInteractionItems,
   getConditionalOverrideAttributeOptions,
 } from "./support/layoutEditPanelFeatures.js";
 import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
 
 const ACTION_INTERACTION_TYPES = ["click", "rightClick"];
 const EMPTY_TREE = { items: {}, tree: [] };
+const INTEGER_ONLY_FIELDS = new Set(["x", "y", "width", "height"]);
+const SIZE_FIELDS = new Set(["width", "height"]);
+const WHEEL_INCREMENT_FIELD_CONFIG = {
+  x: { step: 1, fastStep: 10 },
+  y: { step: 1, fastStep: 10 },
+  width: { step: 1, fastStep: 10 },
+  height: { step: 1, fastStep: 10 },
+  gap: { step: 1, fastStep: 10 },
+  opacity: {
+    defaultValue: 1,
+    step: 0.01,
+    fastStep: 0.1,
+    min: 0,
+    max: 1,
+  },
+};
 
 const getInteractionPropertyName = (interactionType) => {
   return ACTION_INTERACTION_TYPES.includes(interactionType)
@@ -44,16 +61,134 @@ const emitPanelUpdate = (
   );
 };
 
+const getCurrentAspectRatioLock = (values = {}) => {
+  const aspectRatioLock = Number(values?.aspectRatioLock);
+  if (Number.isFinite(aspectRatioLock) && aspectRatioLock > 0) {
+    return aspectRatioLock;
+  }
+
+  return undefined;
+};
+
+const syncFixedAspectRatioValue = (store, { name, value } = {}) => {
+  if (!SIZE_FIELDS.has(name)) {
+    return;
+  }
+
+  const values = store.selectValues();
+  const aspectRatioLock = getCurrentAspectRatioLock(values);
+  if (!Number.isFinite(aspectRatioLock) || aspectRatioLock <= 0) {
+    return;
+  }
+
+  const currentWidth = Number(values.width);
+  const currentHeight = Number(values.height);
+  const nextValue = Number(value);
+
+  if (
+    !Number.isFinite(currentWidth) ||
+    !Number.isFinite(currentHeight) ||
+    currentWidth <= 0 ||
+    currentHeight <= 0 ||
+    !Number.isFinite(nextValue) ||
+    nextValue <= 0
+  ) {
+    return;
+  }
+
+  if (name === "width") {
+    store.updateValueProperty({
+      name: "height",
+      value: Math.round(nextValue / aspectRatioLock),
+    });
+    return;
+  }
+
+  store.updateValueProperty({
+    name: "width",
+    value: Math.round(nextValue * aspectRatioLock),
+  });
+};
+
+const getMeasuredTextWidth = (metrics = {}) => {
+  const measuredWidth = Number(metrics.measuredWidth ?? metrics.width);
+  if (Number.isFinite(measuredWidth) && measuredWidth > 0) {
+    return Math.round(measuredWidth);
+  }
+
+  return undefined;
+};
+
+const applyWidthModeUpdate = (deps, { value } = {}) => {
+  const { props, store } = deps;
+
+  if (value === "auto") {
+    applyPanelValueUpdate(deps, {
+      name: "width",
+      value: undefined,
+    });
+    return;
+  }
+
+  if (value !== "fixed") {
+    return;
+  }
+
+  const measuredWidth = getMeasuredTextWidth(props.selectedElementMetrics);
+  const currentWidth = Number(store.selectValues().width);
+  const fallbackWidth =
+    Number.isFinite(currentWidth) && currentWidth > 0
+      ? currentWidth
+      : undefined;
+  const nextWidth = measuredWidth ?? fallbackWidth;
+  if (nextWidth === undefined) {
+    return;
+  }
+
+  applyPanelValueUpdate(deps, {
+    name: "width",
+    value: nextWidth,
+  });
+};
+
 const applyPanelValueUpdate = (
   deps,
   { name, value, closePopover = false, closeImageSelector = false } = {},
 ) => {
   const { store, render } = deps;
+  const normalizedValue =
+    INTEGER_ONLY_FIELDS.has(name) && Number.isFinite(Number(value))
+      ? Math.round(Number(value))
+      : value;
 
-  store.updateValueProperty({
-    name,
-    value,
-  });
+  if (name === "aspectRatioMode") {
+    const currentValues = store.selectValues();
+    const currentWidth = Number(currentValues.width);
+    const currentHeight = Number(currentValues.height);
+    const nextAspectRatioLock =
+      normalizedValue === "fixed" &&
+      Number.isFinite(currentWidth) &&
+      Number.isFinite(currentHeight) &&
+      currentWidth > 0 &&
+      currentHeight > 0
+        ? currentWidth / currentHeight
+        : undefined;
+
+    store.updateValueProperty({
+      name: "aspectRatioLock",
+      value: nextAspectRatioLock,
+    });
+  } else {
+    syncFixedAspectRatioValue(store, {
+      name,
+      value: normalizedValue,
+    });
+
+    store.updateValueProperty({
+      name,
+      value: normalizedValue,
+    });
+  }
 
   if (closePopover) {
     store.closePopoverForm();
@@ -64,7 +199,7 @@ const applyPanelValueUpdate = (
   }
 
   render();
-  emitPanelUpdate(deps, { name, value });
+  emitPanelUpdate(deps, { name, value: normalizedValue });
 };
 
 export const handleBeforeMount = (deps) => {
@@ -90,10 +225,12 @@ export const handleOnUpdate = (deps, payload) => {
   if (
     oldProps?.key === newProps?.key &&
     oldProps?.values === newProps?.values &&
+    oldProps?.projectResolution === newProps?.projectResolution &&
     oldProps?.layoutsData === newProps?.layoutsData &&
     oldProps?.imagesData === newProps?.imagesData &&
     oldProps?.variablesData === newProps?.variablesData &&
-    oldProps?.textStylesData === newProps?.textStylesData
+    oldProps?.textStylesData === newProps?.textStylesData &&
+    oldProps?.selectedElementMetrics === newProps?.selectedElementMetrics
   ) {
     return;
   }
@@ -110,11 +247,21 @@ export const handleOnUpdate = (deps, payload) => {
   store.setVariablesData({
     variablesData: newProps.variablesData || EMPTY_TREE,
   });
+
+  const popover = store.selectPopoverForm();
+  if (popover.open) {
+    store.updatePopoverFormContext({
+      values: popover.defaultValues,
+      name: popover.name,
+      projectResolution: newProps.projectResolution,
+    });
+  }
+
   render();
 };
 
 export const handleGroupItemClick = (deps, payload) => {
-  const { render, store } = deps;
+  const { props, render, store } = deps;
   const { _event } = payload;
   const name = _event.currentTarget.dataset.name;
   const popoverForm = store.selectFieldPopoverForm({ name });
@@ -123,9 +270,55 @@ export const handleGroupItemClick = (deps, payload) => {
     y: _event.clientY,
     name,
     form: popoverForm,
+    projectResolution: props.projectResolution,
   });
 
   render();
+};
+
+export const handleGroupItemWheel = (deps, payload) => {
+  const { store } = deps;
+  const { _event } = payload;
+  const name = _event.currentTarget.dataset.name;
+  const fieldConfig = WHEEL_INCREMENT_FIELD_CONFIG[name];
+
+  if (!fieldConfig) {
+    return;
+  }
+
+  if (_event.deltaY === 0) {
+    return;
+  }
+
+  const currentValue = Number(
+    store.selectValues()?.[name] ?? fieldConfig.defaultValue,
+  );
+  if (!Number.isFinite(currentValue)) {
+    return;
+  }
+
+  _event.preventDefault();
+
+  const step =
+    _event.shiftKey === true && Number.isFinite(fieldConfig.fastStep)
+      ? fieldConfig.fastStep
+      : fieldConfig.step;
+  const delta = _event.deltaY < 0 ? step : -step;
+  const nextValue = currentValue + delta;
+
+  applyPanelValueUpdate(deps, {
+    name,
+    value:
+      name === "opacity"
+        ? Math.max(
+            fieldConfig.min,
+            Math.min(
+              fieldConfig.max,
+              Number((nextValue + Number.EPSILON).toFixed(2)),
+            ),
+          )
+        : nextValue,
+  });
 };
 
 export const handleVisibilityConditionItemClick = (deps) => {
@@ -146,15 +339,43 @@ export const handleVisibilityConditionItemClick = (deps) => {
   render();
 };
 
+export const handleVisibilityConditionContextMenu = (deps, payload) => {
+  const { render, store } = deps;
+  payload._event.preventDefault();
+
+  const targetName = payload._event.currentTarget?.dataset?.name;
+  if (!targetName) {
+    return;
+  }
+
+  store.showContextMenu({
+    targetName,
+    x: payload._event.clientX,
+    y: payload._event.clientY,
+  });
+  render();
+};
+
 export const handleSaveLoadPaginationItemClick = (deps) => {
   const { render, store } = deps;
   store.openSaveLoadPaginationDialog();
   render();
 };
 
-export const handleChildInteractionItemClick = (deps) => {
+export const handleChildInteractionContextMenu = (deps, payload) => {
   const { render, store } = deps;
-  store.openChildInteractionDialog();
+  payload._event.preventDefault();
+
+  const name = payload._event.currentTarget.dataset.name;
+  if (!name) {
+    return;
+  }
+
+  store.showContextMenu({
+    targetName: name,
+    x: payload._event.clientX,
+    y: payload._event.clientY,
+  });
   render();
 };
 
@@ -194,18 +415,73 @@ export const handleConditionalOverrideAttributeDialogClose = (deps) => {
   render();
 };
 
-export const handleVisibilityConditionFormChange = (deps, payload) => {
+export const handleCloseContextMenu = (deps) => {
   const { render, store } = deps;
+  store.hideContextMenu();
+  render();
+};
+
+export const handleVisibilityConditionFormChange = (deps, payload) => {
+  const { refs, render, store } = deps;
   const values = payload._event.detail?.values ?? {};
   const targetTypeByTarget =
     store.selectVisibilityConditionTargetTypeByTarget();
+  const selectedVariableType = values.target
+    ? (targetTypeByTarget?.[values.target] ?? "string")
+    : undefined;
+
+  if (values.target && values.op === undefined) {
+    const nextValues = {
+      ...values,
+      op: "eq",
+    };
+
+    if (
+      selectedVariableType === "boolean" &&
+      values.booleanValue === undefined
+    ) {
+      nextValues.booleanValue = true;
+    }
+
+    refs.visibilityConditionForm.setValues({
+      values: nextValues,
+    });
+  }
 
   store.setVisibilityConditionDialogSelectedVariableType({
-    selectedVariableType: values.target
-      ? (targetTypeByTarget?.[values.target] ?? "string")
-      : undefined,
+    selectedVariableType,
   });
   render();
+};
+
+export const handleContextMenuClickItem = (deps, payload) => {
+  const { render, store } = deps;
+  const detail = payload._event.detail || {};
+  const item = detail.item || detail;
+  const targetName = store.selectDropdownMenu().targetName;
+
+  store.hideContextMenu();
+
+  if (item.value !== "delete" || !targetName) {
+    render();
+    return;
+  }
+
+  if (targetName === "visibilityCondition") {
+    const currentWhen = store.selectValues()["$when"];
+    const { baseWhen } = splitVisibilityConditionFromWhen(currentWhen);
+
+    applyPanelValueUpdate(deps, {
+      name: "$when",
+      value: baseWhen,
+    });
+    return;
+  }
+
+  applyPanelValueUpdate(deps, {
+    name: targetName,
+    value: undefined,
+  });
 };
 
 export const handleConditionalOverrideConditionFormChange = (deps, payload) => {
@@ -225,10 +501,16 @@ export const handleConditionalOverrideConditionFormChange = (deps, payload) => {
 export const handleOptionSelected = (deps, payload) => {
   const { _event } = payload;
   const name = _event.currentTarget.dataset.name;
+  const value = _event.detail?.item?.value ?? _event.detail?.value;
+
+  if (name === "widthMode") {
+    applyWidthModeUpdate(deps, { value });
+    return;
+  }
 
   applyPanelValueUpdate(deps, {
     name,
-    value: _event.detail.value,
+    value,
     closePopover: true,
   });
 };
@@ -299,12 +581,96 @@ export const handleSectionActionClick = async (deps, payload) => {
       });
       render();
     }
+  } else if (id === "textStyles") {
+    const variantItems = [];
+    const { hoverTextStyleId, clickTextStyleId } = store.selectValues();
+    if (!hoverTextStyleId) {
+      variantItems.push({
+        type: "item",
+        label: "Hover",
+        key: "hoverTextStyleId",
+      });
+    }
+    if (!clickTextStyleId) {
+      variantItems.push({
+        type: "item",
+        label: "Clicked",
+        key: "clickTextStyleId",
+      });
+    }
+
+    if (variantItems.length === 0) {
+      return;
+    }
+
+    const variantResult = await appService.showDropdownMenu({
+      items: variantItems,
+      x: _event.clientX,
+      y: _event.clientY,
+      place: "bs",
+    });
+    if (!variantResult?.item?.key) {
+      return;
+    }
+
+    const textStyleItems = store.selectTextStyleOptions().map((option) => ({
+      type: "item",
+      label: option.label,
+      key: option.value,
+    }));
+    if (textStyleItems.length === 0) {
+      return;
+    }
+
+    const textStyleResult = await appService.showDropdownMenu({
+      items: textStyleItems,
+      x: _event.clientX,
+      y: _event.clientY,
+      place: "bs",
+    });
+    if (!textStyleResult?.item?.key) {
+      return;
+    }
+
+    applyPanelValueUpdate(deps, {
+      name: variantResult.item.key,
+      value: textStyleResult.item.key,
+    });
   } else if (id === "conditionalOverrides") {
     store.openConditionalOverrideConditionDialog({
       editingIndex: undefined,
       selectedVariableType: undefined,
     });
     render();
+  } else if (id === "visibilityCondition") {
+    handleVisibilityConditionItemClick(deps);
+  } else if (id === "childInteraction") {
+    const items = getAvailableChildInteractionItems(store.selectValues()).map(
+      (item) => ({
+        type: "item",
+        label: item.label,
+        key: item.name,
+      }),
+    );
+
+    if (items.length === 0) {
+      return;
+    }
+
+    const result = await appService.showDropdownMenu({
+      items,
+      x: _event.clientX,
+      y: _event.clientY,
+      place: "bs",
+    });
+    if (!result?.item?.key) {
+      return;
+    }
+
+    applyPanelValueUpdate(deps, {
+      name: result.item.key,
+      value: true,
+    });
   }
 };
 
@@ -748,13 +1114,33 @@ export const handleListBarItemClick = async (deps, payload) => {
 };
 
 export const handlePopoverFormChange = async (deps, payload) => {
-  const { store, render } = deps;
+  const { props, store, render } = deps;
   const { _event } = payload;
+  const { name } = store.selectPopoverForm();
 
   store.updatePopoverFormContext({
     values: _event.detail.values,
+    name,
+    projectResolution: props.projectResolution,
   });
   render();
+};
+
+export const handlePopoverPresetClick = (deps, payload) => {
+  const { store } = deps;
+  const { _event } = payload;
+  const { name } = store.selectPopoverForm();
+  const value = Number(_event.currentTarget.dataset.value);
+
+  if (!name || !Number.isFinite(value)) {
+    return;
+  }
+
+  applyPanelValueUpdate(deps, {
+    name,
+    value,
+    closePopover: true,
+  });
 };
 
 export const handleListBarItemRightClick = async (deps, payload) => {

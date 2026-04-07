@@ -8,13 +8,13 @@ refs:
       item-click:
         handler: handleFileExplorerSelectionChanged
       dblclick-item:
-        handler: handleItemDoubleClick
+        handler: handleFileExplorerDoubleClick
   groupview:
     eventListeners:
       item-click:
         handler: handleLayoutItemClick
       item-dblclick:
-        handler: handleItemDoubleClick
+        handler: handleLayoutItemDoubleClick
       add-click:
         handler: handleAddLayoutClick
       search-input:

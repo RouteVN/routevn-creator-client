@@ -5,9 +5,9 @@
     "": {
       "dependencies": {
         "@rettangoli/fe": "1.1.0",
-        "@rettangoli/ui": "1.0.20",
+        "@rettangoli/ui": "1.2.2",
         "@rettangoli/vt": "1.0.2",
-        "@routevn/creator-model": "1.1.9",
+        "@routevn/creator-model": "1.1.11",
         "@tauri-apps/api": "^2.8.0",
         "@tauri-apps/plugin-dialog": "2.4.2",
         "@tauri-apps/plugin-fs": "^2.4.2",
@@ -24,7 +24,7 @@
         "jszip": "^3.10.1",
         "nanoid": "^5.1.5",
         "route-engine-js": "0.7.4",
-        "route-graphics": "1.5.6",
+        "route-graphics": "1.5.7",
         "rxjs": "^7.8.2",
         "snabbdom": "^3.6.2",
         "snabbdom-to-html": "^7.1.0",
@@ -205,7 +205,7 @@
 
     "@rettangoli/fe": ["@rettangoli/fe@1.1.0", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.0.1", "js-yaml": "^4.1.0", "snabbdom": "^3.6.2", "vite": "^6.3.5" } }, "sha512-rvSEQXbHt7jl9ewATduAuOUXVMO0ES8fG7i7cVpPR3SLSveKhG0k0X4v+v/SsdBEB+w2G6pfokG/atxwYfU9yw=="],
 
-    "@rettangoli/ui": ["@rettangoli/ui@1.0.20", "", { "dependencies": { "@rettangoli/fe": "1.1.1", "jempl": "1.0.1" } }, "sha512-dETur1bDwFZqk9pS+VXH7lligDtTSpfpjT2+XwvM8fQs+TH7zJsX+q06eAuiwmWirDJDogw8geK7YAv6xeITDw=="],
+    "@rettangoli/ui": ["@rettangoli/ui@1.2.2", "", { "dependencies": { "@rettangoli/fe": "1.1.1", "jempl": "1.0.1" } }, "sha512-18iJRW/iMV3evrYSQjG17qYPHdOqI8j1uMFIw6JjGJBhQ7t+f1kqvGw/mEHJDpf1VRgTjLT4zRFOQwn1+9i5oQ=="],
 
     "@rettangoli/vt": ["@rettangoli/vt@1.0.2", "", { "dependencies": { "commander": "^13.1.0", "js-yaml": "^4.1.0", "liquidjs": "^10.21.0", "pixelmatch": "^7.1.0", "playwright": "1.57.0", "sharp": "^0.34.5", "shiki": "^3.3.0" } }, "sha512-QHweZ2BJFiQi0mc8KvSLiFjKTm9ovjs++x9cOTtN89AyK/Pn0acuD0mA+kjOu4zgPcaHvjOAINNqMFsqhx9Hgw=="],
 
@@ -259,7 +259,7 @@
 
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.55.1", "", { "os": "win32", "cpu": "x64" }, "sha512-SPEpaL6DX4rmcXtnhdrQYgzQ5W2uW3SCJch88lB2zImhJRhIIK44fkUrgIV/Q8yUNfw5oyZ5vkeQsZLhCb06lw=="],
 
-    "@routevn/creator-model": ["@routevn/creator-model@1.1.9", "", {}, "sha512-JpmtZvKO4oKRG/07nPqLag05evZ3Ibv0AlxGwd154mxWs9hhhiWqPwOAFqy9PM693wnxEsBjItcaCVFD7bZmIQ=="],
+    "@routevn/creator-model": ["@routevn/creator-model@1.1.11", "", {}, "sha512-VnPTLrTEVo8b4ekYVPpyb1rzuSHMpIfAkgV0nbed0LQ5KOt/ByCxmD3s/Mp9tHDZH9hvE3ZbQdspFmZM2tw3SA=="],
 
     "@shikijs/core": ["@shikijs/core@3.22.0", "", { "dependencies": { "@shikijs/types": "3.22.0", "@shikijs/vscode-textmate": "^10.0.2", "@types/hast": "^3.0.4", "hast-util-to-html": "^9.0.5" } }, "sha512-iAlTtSDDbJiRpvgL5ugKEATDtHdUVkqgHDm/gbD2ZS9c88mx7G1zSYjjOxp5Qa0eaW0MAQosFRmJSk354PRoQA=="],
 
@@ -689,7 +689,7 @@
 
     "route-engine-js": ["route-engine-js@0.7.4", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.0.0", "js-yaml": "^4.1.0", "puty": "^0.1.1" } }, "sha512-LwLdpa05I1efP58wGYfpIs+L9GuJUy5ffWk+TI+kAF6nSjwKccCqprYGLOQFMLerHO3MkwYY3iI+T25brkwZ1w=="],
 
-    "route-graphics": ["route-graphics@1.5.6", "", { "dependencies": { "@pixi/unsafe-eval": "^7.4.3", "hotkeys-js": "^4.0.0-beta.7", "pixi.js": "^8.7.1" } }, "sha512-GuPGlEmLzEvT6RZIMyWI5tOU9eUAqApDTBY/dKAtp8efLB6ujLR0tYT3JwbGo7qe3o3/BfAPdt3dKmhlo/JNDQ=="],
+    "route-graphics": ["route-graphics@1.5.7", "", { "dependencies": { "@pixi/unsafe-eval": "^7.4.3", "hotkeys-js": "^4.0.0-beta.7", "pixi.js": "^8.7.1" } }, "sha512-Mh953nfpwY7OjsUFmUbLwlMNpBUAEQhYgub1xGDpstmt6uBloGj4jpftKo3QEYZ2bhOZxqBq7gNG8IEcZHXuvA=="],
 
     "rrweb-cssom": ["rrweb-cssom@0.8.0", "", {}, "sha512-guoltQEx+9aMf2gDZ0s62EcV8lsXR+0w8915TC3ITdn2YueuNjdAYh/levpU9nFaoChh9RUS5ZdQMrKfVEN9tw=="],
 

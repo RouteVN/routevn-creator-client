@@ -18,5 +18,11 @@ propsSchema:
       type: string
     resourceType:
       type: string
+    projectResolution:
+      type: object
+    selectedElementMetrics:
+      type: object
     isInsideSaveLoadSlot:
+      type: boolean
+    isInsideDirectedContainer:
       type: boolean

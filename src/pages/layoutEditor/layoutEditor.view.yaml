@@ -32,6 +32,8 @@ refs:
         handler: handleLayoutEditPanelUpdateHandler
   layoutEditorCanvas:
     eventListeners:
+      selected-element-metrics-change:
+        handler: handleLayoutEditorCanvasMetricsChange
       drag-update:
         handler: handleLayoutEditorCanvasDragUpdate
       update:
@@ -47,18 +49,19 @@ template:
           - rtgl-view h=48 bwb=xs bc=bo d=h av=c w=f ph=md:
               - rtgl-button#backButton sq pre="chevronLeft" v="gh" mr=sm: null
               - rtgl-view w=1fg:
-                  - rtgl-text c=mu-fg: ${layout.name}
+                  - rtgl-text: ${layout.name}
               - rtgl-button#saveButton sq pre="download" v="gh" ml=sm: null
           - rtgl-view h=1fg sv w=f:
-              - rvn-layout-editor-canvas#layoutEditorCanvas :resolution=${projectResolution} :layoutState=${layoutState} selectedItemId=${selectedItemId} :previewData=${previewData}: null
+              - rvn-layout-editor-canvas#layoutEditorCanvas :resolution=${projectResolution} :layoutState=${layoutState} selectedItemId=${selectedItemId} :previewData=${previewData} :disableMoveDrag=${isInsideDirectedContainer}: null
               - rvn-layout-editor-preview#layoutEditorPreview :layoutState=${layoutState}: null
       - rvn-resizable-panel#resizableDetailPanel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
           - rtgl-view wh=f slot="content":
               - $if selectedItemId:
-                  - rtgl-view h=48 w=f av=c ph=md:
-                      - rtgl-text c=mu-fg: ${item.name} (${item.type})
-                  - rtgl-view w=f h=1fg sv pv=md:
-                      - rvn-layout-edit-panel#layoutEditPanel key=${layoutEditPanelKey} layout-type=${layout.layoutType} resource-type=${layout.resourceType} item-type=${item.type} :isInsideSaveLoadSlot=${isInsideSaveLoadSlot} :values=${item} :imagesData=${imagesData} :textStylesData=${textStylesData} :variablesData=${variablesData} :layoutsData=${layoutsData}: null
+                  - rtgl-view d=v w=f h=f:
+                      - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
+                          - rtgl-text w=1fg ellipsis=true: ${item.name} (${item.type})
+                      - rtgl-view w=f h=1fg sv pv=md:
+                          - rvn-layout-edit-panel#layoutEditPanel key=${layoutEditPanelKey} layout-type=${layout.layoutType} resource-type=${layout.resourceType} item-type=${item.type} :projectResolution=${projectResolution} :isInsideSaveLoadSlot=${isInsideSaveLoadSlot} :isInsideDirectedContainer=${isInsideDirectedContainer} :selectedElementMetrics=${selectedElementMetrics} :values=${item} :imagesData=${imagesData} :textStylesData=${textStylesData} :variablesData=${variablesData} :layoutsData=${layoutsData}: null
                 $else:
                   - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                       - rtgl-text s=md c=mu-fg: No selection
