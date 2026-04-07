@@ -20,6 +20,11 @@ export const handleAudioWaveformRightClick = async (deps, payload) => {
   const { store, render, globalUI } = deps;
   const { _event: event } = payload;
   event.preventDefault();
+  event.stopPropagation();
+
+  if (!store.selectSelectedResource()) {
+    return;
+  }
 
   const result = await globalUI.showDropdownMenu({
     items: [{ type: "item", label: "Remove", key: "remove" }],
@@ -28,11 +33,8 @@ export const handleAudioWaveformRightClick = async (deps, payload) => {
     place: "bs",
   });
 
-  if (result.item.key === "remove") {
-    store.setBgmAudio({
-      resourceId: undefined,
-    });
-
+  if (result?.item?.key === "remove") {
+    store.clearBgmAudio();
     render();
   }
 };

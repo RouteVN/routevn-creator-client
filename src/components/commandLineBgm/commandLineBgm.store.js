@@ -55,6 +55,11 @@ export const setBgmAudio = ({ state }, { resourceId } = {}) => {
   };
 };
 
+export const clearBgmAudio = ({ state }, _payload = {}) => {
+  state.bgm.resourceId = undefined;
+  state.tempSelectedResourceId = undefined;
+};
+
 export const setBgm = ({ state }, { bgm } = {}) => {
   state.bgm = normalizeBgm(bgm);
 };
