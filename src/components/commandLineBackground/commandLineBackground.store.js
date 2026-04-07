@@ -201,6 +201,8 @@ export const selectViewData = ({ state }) => {
         )
         .map((child) => {
           const isSelected = child.id === state.tempSelectedResourceId;
+          const itemBorderColor = isSelected ? "pr" : "bo";
+          const itemHoverBorderColor = isSelected ? "pr" : "ac";
           const layoutTypeLabels = {
             normal: "Normal",
             dialogue: "Dialogue",
@@ -209,8 +211,8 @@ export const selectViewData = ({ state }) => {
 
           return {
             ...child,
-            bw: isSelected ? "md" : "xs",
-            bc: isSelected ? "pr" : "mu",
+            itemBorderColor,
+            itemHoverBorderColor,
             layoutTypeDisplay: child.layoutType
               ? layoutTypeLabels[child.layoutType] || child.layoutType
               : "Layout",

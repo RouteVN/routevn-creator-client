@@ -81,7 +81,7 @@ template:
                               - rtgl-text: ${group.name}
                               - rtgl-view d=h w=f wrap g=lg:
                                   - $for item, j in group.children:
-                                      - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} w=200 h=150 ah=c av=c bw=${item.bw} bc=${item.bc} br=sm cur=pointer:
+                                      - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} w=200 h=150 ah=c av=c bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm cur=pointer:
                                           - rtgl-view av=c ah=c:
                                               - rtgl-text s=md: ${item.name}
                                               - rtgl-text s=sm c=mu-fg: ${item.layoutTypeDisplay}
@@ -91,8 +91,8 @@ template:
                               - rtgl-text: ${group.name}
                               - rtgl-view d=h w=f wrap g=lg:
                                   - $for item, j in group.children:
-                                      - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} w=200 h=150 cur=pointer g=sm bw=${item.bw} bc=${item.bc} br=sm:
-                                          - rvn-file-image w=200 h=120 fileId=${item.thumbnailFileId}: null
+                                      - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} w=200 h=150 cur=pointer g=sm bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm:
+                                          - rvn-file-image w=f h=1fg fileId=${item.thumbnailFileId}: null
                                           - rtgl-text s=sm ah=c: ${item.name}
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#buttonSelect: Select

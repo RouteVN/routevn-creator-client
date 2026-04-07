@@ -31,13 +31,12 @@ export const selectViewData = ({ state }) => {
       ...group,
       children: group.children.map((child) => {
         const isSelected = child.id === selectedImageId;
+        const itemBorderColor = isSelected ? "pr" : "bo";
+        const itemHoverBorderColor = isSelected ? "pr" : "ac";
         return {
           ...child,
-          bw: isSelected ? "md" : "xs",
-          bc: isSelected ? "pr" : "mu",
-          selectedStyle: isSelected
-            ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
-            : "",
+          itemBorderColor,
+          itemHoverBorderColor,
         };
       }),
     };
