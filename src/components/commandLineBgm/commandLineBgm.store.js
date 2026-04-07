@@ -115,7 +115,11 @@ export const selectSelectedResource = ({ state }) => {
     name: item.name,
     itemBorderColor: "bo",
     itemHoverBorderColor: "ac",
-    item: item,
+    item: {
+      ...item,
+      itemBorderColor: "bo",
+      itemHoverBorderColor: "ac",
+    },
   };
 };
 
