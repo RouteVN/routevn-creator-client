@@ -2,8 +2,43 @@ const toArray = (value) => {
   return Array.isArray(value) ? value : [];
 };
 
+const clonePlainModelValue = (value) => {
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => clonePlainModelValue(item));
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
+    return undefined;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .map(([key, item]) => [key, clonePlainModelValue(item)])
+      .filter(([, item]) => item !== undefined),
+  );
+};
+
 const cloneLine = (line) => {
-  return structuredClone(line || {});
+  const sourceLine = line || {};
+
+  try {
+    return structuredClone(sourceLine);
+  } catch (error) {
+    if (error?.name !== "DataCloneError") {
+      throw error;
+    }
+  }
+
+  return {
+    id: sourceLine.id,
+    sectionId: sourceLine.sectionId,
+    actions: clonePlainModelValue(sourceLine.actions || {}),
+  };
 };
 
 const ensureLineActions = (line) => {

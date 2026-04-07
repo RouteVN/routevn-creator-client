@@ -1525,6 +1525,23 @@ export const forceSyncAllContentLines = (deps) => {
   syncAllRenderedLineContent(refs, props.lines);
 };
 
+export const hardRefresh = (deps) => {
+  const { refs, props, render, store } = deps;
+
+  clearDeleteShortcutState(store);
+  store.setMode({ mode: "block" });
+  store.setIsNavigating({ isNavigating: false });
+  store.setNavigationDirection({ direction: null });
+  store.setAwaitingCharacterShortcut({ awaitingCharacterShortcut: false });
+  store.setAwaitingDeleteShortcut({ awaitingDeleteShortcut: false });
+  render();
+
+  requestAnimationFrame(() => {
+    syncAllRenderedLineContent(refs, props.lines);
+    focusContainerAfterPaint(refs);
+  });
+};
+
 export const handleOnUpdate = (deps, payload) => {
   const { refs } = deps;
   const oldLines = payload?.oldProps?.lines;

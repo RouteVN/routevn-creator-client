@@ -11,6 +11,8 @@ propsSchema:
       type: string
     keyboardHandlingDisabled:
       type: boolean
+    showLineNumbers:
+      type: boolean
 methods:
   type: object
   properties:
@@ -20,6 +22,10 @@ methods:
       returns: void
     syncAllContentLines:
       description: Forces all rendered line elements to match the current lines prop.
+      params: []
+      returns: void
+    hardRefresh:
+      description: Re-renders the editor and re-syncs all editable line content after paint.
       params: []
       returns: void
     focusLine:

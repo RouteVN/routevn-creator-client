@@ -15,6 +15,28 @@ import {
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
 
+const SCENE_EDITOR_PREVIEW_TEXT_SPEED = 100;
+
+const applySceneEditorPreviewTextSpeed = (projectData) => {
+  const dialogueTextSpeedVariable =
+    projectData.resources.variables._dialogueTextSpeed;
+
+  return {
+    ...projectData,
+    resources: {
+      ...projectData.resources,
+      variables: {
+        ...projectData.resources.variables,
+        _dialogueTextSpeed: {
+          ...dialogueTextSpeedVariable,
+          default: SCENE_EDITOR_PREVIEW_TEXT_SPEED,
+          value: SCENE_EDITOR_PREVIEW_TEXT_SPEED,
+        },
+      },
+    },
+  };
+};
+
 const appendMissingIds = (orderedIds, allIds) => {
   const seen = new Set();
   const result = [];
@@ -253,9 +275,21 @@ export const createInitialState = () => ({
   sectionCreateDialog: {
     isOpen: false,
     formKey: 0,
+    mode: "create",
+    sectionId: undefined,
     defaultValues: {
       name: "",
       inheritPresentationFromSelectedLine: true,
+    },
+  },
+  sceneSettings: {
+    showLineNumbers: true,
+  },
+  sceneSettingsDialog: {
+    isOpen: false,
+    formKey: 0,
+    defaultValues: {
+      showLineNumbers: true,
     },
   },
   repositoryState: {},
@@ -613,8 +647,8 @@ export const showSectionDropdownMenu = (
   { state },
   { position, sectionId } = {},
 ) => {
-  const scene = selectScene({ state });
-  const items = [{ label: "Rename", type: "item", value: "rename-section" }];
+  const scene = selectCommittedScene({ state });
+  const items = [{ label: "Edit", type: "item", value: "edit-section" }];
 
   // Only show delete option if there's more than 1 section
   if (scene && scene.sections && scene.sections.length > 1) {
@@ -700,9 +734,26 @@ export const showSectionCreateDialog = ({ state }, { defaultName } = {}) => {
   state.sectionCreateDialog = {
     isOpen: true,
     formKey: (state.sectionCreateDialog?.formKey || 0) + 1,
+    mode: "create",
+    sectionId: undefined,
     defaultValues: {
       name: defaultName || "",
       inheritPresentationFromSelectedLine: true,
+    },
+  };
+};
+
+export const showSectionEditDialog = ({ state }, { sectionId } = {}) => {
+  const scene = selectCommittedScene({ state });
+  const section = scene?.sections?.find((section) => section.id === sectionId);
+
+  state.sectionCreateDialog = {
+    isOpen: true,
+    formKey: (state.sectionCreateDialog?.formKey || 0) + 1,
+    mode: "edit",
+    sectionId,
+    defaultValues: {
+      name: section?.name || "",
     },
   };
 };
@@ -711,11 +762,30 @@ export const hideSectionCreateDialog = ({ state }, _payload = {}) => {
   state.sectionCreateDialog = {
     ...state.sectionCreateDialog,
     isOpen: false,
+    sectionId: undefined,
   };
 };
 
+export const showSceneSettingsDialog = ({ state }, _payload = {}) => {
+  state.sceneSettingsDialog.isOpen = true;
+  state.sceneSettingsDialog.formKey += 1;
+  state.sceneSettingsDialog.defaultValues = {
+    showLineNumbers: state.sceneSettings.showLineNumbers,
+  };
+};
+
+export const hideSceneSettingsDialog = ({ state }, _payload = {}) => {
+  state.sceneSettingsDialog.isOpen = false;
+};
+
+export const setSceneSettings = ({ state }, { showLineNumbers } = {}) => {
+  state.sceneSettings.showLineNumbers = showLineNumbers ?? true;
+};
+
 export const selectProjectData = ({ state }) => {
-  return constructProjectData(buildProjectDataSourceState(state));
+  return applySceneEditorPreviewTextSpeed(
+    constructProjectData(buildProjectDataSourceState(state)),
+  );
 };
 
 const selectCanvasAspectRatio = ({ state }) => {
@@ -848,34 +918,73 @@ export const selectViewData = ({ state }) => {
     sectionLineChanges: state.sectionLineChanges,
   });
 
+  const isEditingSection = state.sectionCreateDialog.mode === "edit";
+  const sectionCreateFields = [
+    {
+      name: "name",
+      type: "input-text",
+      label: "Section Name",
+      required: true,
+    },
+  ];
+
+  if (!isEditingSection) {
+    sectionCreateFields.push({
+      name: "inheritPresentationFromSelectedLine",
+      type: "segmented-control",
+      label: "Inherit state from selected line",
+      required: true,
+      clearable: false,
+      options: [
+        { value: false, label: "Don't Inherit" },
+        { value: true, label: "Inherit" },
+      ],
+    });
+  }
+
   const sectionCreateForm = {
-    title: "Create Section",
-    fields: [
-      {
-        name: "name",
-        type: "input-text",
-        label: "Section Name",
-        required: true,
-      },
-      {
-        name: "inheritPresentationFromSelectedLine",
-        type: "select",
-        label: "Inherit state from selected line",
-        required: true,
-        clearable: false,
-        options: [
-          { value: false, label: "False" },
-          { value: true, label: "True" },
-        ],
-      },
-    ],
+    title: isEditingSection ? "Edit Section" : "Create Section",
+    fields: sectionCreateFields,
     actions: {
       layout: "",
       buttons: [
         {
           id: "submit",
           variant: "pr",
-          label: "Create",
+          label: isEditingSection ? "Save" : "Create",
+        },
+      ],
+    },
+  };
+
+  const sceneSettingsForm = {
+    title: "Settings",
+    fields: [
+      {
+        name: "showLineNumbers",
+        type: "segmented-control",
+        label: "Show line numbers",
+        required: true,
+        clearable: false,
+        options: [
+          { value: false, label: "Hide" },
+          { value: true, label: "Show" },
+        ],
+      },
+    ],
+    actions: {
+      buttons: [
+        {
+          id: "cancel",
+          variant: "se",
+          label: "Cancel",
+        },
+        {
+          id: "save",
+          variant: "pr",
+          label: "Save",
+          type: "submit",
+          validate: true,
         },
       ],
     },
@@ -914,6 +1023,12 @@ export const selectViewData = ({ state }) => {
     sectionLineChanges: state.sectionLineChanges,
     sectionCreateDialog: state.sectionCreateDialog,
     sectionCreateForm,
+    sceneSettings: state.sceneSettings,
+    linesEditorKey: state.sceneSettings.showLineNumbers
+      ? "line-numbers-show"
+      : "line-numbers-hide",
+    sceneSettingsDialog: state.sceneSettingsDialog,
+    sceneSettingsForm,
     isMuted: state.isMuted,
     muteIcon: state.isMuted ? "mute" : "unmute",
     isSceneAssetLoading: state.isSceneAssetLoading,

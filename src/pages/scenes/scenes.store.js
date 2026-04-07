@@ -309,23 +309,8 @@ export const selectViewData = ({ state }, payload) => {
         }));
     detailFields = [
       {
-        type: "text",
-        label: "",
-        value: selectedSceneName,
-      },
-      {
         type: "description",
         value: selectedItem.description ?? "",
-      },
-      {
-        type: "slot",
-        slot: "open-action",
-        label: "",
-      },
-      {
-        type: "slot",
-        slot: "preview",
-        label: "",
       },
       {
         type: "slot",
@@ -456,6 +441,7 @@ export const selectViewData = ({ state }, payload) => {
     showMapAddHint: state.showMapAddHint,
     sectionsListOpen: state.sectionsListOpen,
     selectedSceneSections,
+    selectedItemName: selectedSceneName,
     deadEndTooltip: state.deadEndTooltip,
     folderContextMenuItems: fileExplorerFolderContextMenuItems,
     itemContextMenuItems: fileExplorerItemContextMenuItems,

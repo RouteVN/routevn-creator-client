@@ -45,6 +45,7 @@ const TEXT_DRAFT_SAVE_DEBOUNCE_MS = 300;
 const STRUCTURE_DRAFT_SAVE_DEBOUNCE_MS = 900;
 const DRAFT_SAVE_MIN_INTERVAL_MS = 1000;
 const DRAFT_SAVE_MAX_INTERVAL_MS = 3000;
+const SHOW_LINE_NUMBERS_CONFIG_KEY = "sceneEditor.showLineNumbers";
 const nowMs = () => {
   if (
     typeof performance !== "undefined" &&
@@ -354,7 +355,12 @@ const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { projectService } = deps;
+  const { projectService, appService, store } = deps;
+  store.setSceneSettings({
+    showLineNumbers:
+      appService.getUserConfig(SHOW_LINE_NUMBERS_CONFIG_KEY) ?? true,
+  });
+
   const cleanupRuntimeSubscriptions = mountSceneEditorSubscriptions(deps);
   const cleanupShortcutSubscriptions =
     mountSceneEditorShortcutSubscriptions(deps);
@@ -422,6 +428,40 @@ export const handleSectionTabClick = async (deps, payload) => {
   await selectSceneEditorSection(deps, sectionId);
   reconcileCurrentEditorSession(deps);
   deps.render();
+};
+
+export const handleSectionsTabsWheel = (deps, payload) => {
+  const event = payload._event;
+  const container = event.currentTarget;
+  const maxScrollLeft = container.scrollWidth - container.clientWidth;
+
+  if (maxScrollLeft <= 0 || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) {
+    return;
+  }
+
+  event.preventDefault();
+  container.scrollLeft = Math.max(
+    0,
+    Math.min(maxScrollLeft, container.scrollLeft + event.deltaY),
+  );
+};
+
+const openSectionTabDropdown = (deps, event) => {
+  const { store, render } = deps;
+  const sectionId =
+    event.currentTarget?.dataset?.sectionId ||
+    event.currentTarget?.id?.replace("sectionTab", "") ||
+    "";
+
+  store.showSectionDropdownMenu({
+    position: {
+      x: event.clientX,
+      y: event.clientY,
+    },
+    sectionId,
+  });
+
+  render();
 };
 
 export const handleCommandLineSubmit = async (deps, payload) => {
@@ -988,27 +1028,15 @@ export const handleMergeLines = async (deps, payload) => {
 };
 
 export const handleSectionTabRightClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { store } = deps;
   if (isSectionsOverviewOpen(store)) {
     return;
   }
 
-  payload._event.preventDefault(); // Prevent default browser context menu
+  payload._event.preventDefault();
+  payload._event.stopPropagation();
 
-  const sectionId =
-    payload._event.currentTarget?.dataset?.sectionId ||
-    payload._event.currentTarget?.id?.replace("sectionTab", "") ||
-    "";
-
-  store.showSectionDropdownMenu({
-    position: {
-      x: payload._event.clientX,
-      y: payload._event.clientY,
-    },
-    sectionId,
-  });
-
-  render();
+  openSectionTabDropdown(deps, payload._event);
 };
 
 export const handleActionsDialogClose = (deps) => {
@@ -1030,9 +1058,6 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   const sectionId = dropdownState.sectionId;
   const actionsType = dropdownState.actionsType;
   const sceneId = store.selectSceneId();
-
-  // Store position before hiding dropdown (for rename popover)
-  const position = dropdownState.position;
 
   store.hideDropdownMenu();
 
@@ -1078,13 +1103,9 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
       });
     }
     reconcileCurrentEditorSession(deps);
-  } else if (action === "rename-section") {
-    // Show rename popover using the stored position
-    store.showPopover({
-      position,
+  } else if (action === "edit-section") {
+    store.showSectionEditDialog({
       sectionId,
-      mode: "rename-section",
-      defaultName: "",
     });
   } else if (action === "delete-actions") {
     const selectedLineId = store.selectSelectedLineId();
@@ -1164,8 +1185,48 @@ export const handleSectionCreateDialogClose = (deps) => {
   render();
 };
 
-export const handleSectionCreateFormActionClick = async (deps, payload) => {
+export const handleSceneSettingsClick = (deps) => {
   const { store, render } = deps;
+  store.showSceneSettingsDialog();
+  render();
+};
+
+export const handleSceneSettingsDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.hideSceneSettingsDialog();
+  render();
+};
+
+export const handleSceneSettingsFormAction = (deps, payload) => {
+  const { store, render, appService, refs } = deps;
+  const detail = payload._event.detail || {};
+  const action = detail.actionId;
+
+  if (action === "cancel") {
+    store.hideSceneSettingsDialog();
+    render();
+    return;
+  }
+
+  if (action !== "save") {
+    return;
+  }
+
+  const showLineNumbers = detail.values?.showLineNumbers ?? true;
+  store.setSceneSettings({
+    showLineNumbers,
+  });
+  appService.setUserConfig(SHOW_LINE_NUMBERS_CONFIG_KEY, showLineNumbers);
+  store.hideSceneSettingsDialog();
+  render();
+
+  requestAnimationFrame(() => {
+    refs.linesEditor?.hardRefresh?.();
+  });
+};
+
+export const handleSectionCreateFormActionClick = async (deps, payload) => {
+  const { store, render, projectService } = deps;
   const detail = payload._event.detail || {};
   const action = detail.actionId;
   const values = detail.values || {};
@@ -1178,7 +1239,40 @@ export const handleSectionCreateFormActionClick = async (deps, payload) => {
   }
 
   if (action === "submit") {
+    const sectionCreateDialog = store.getState().sectionCreateDialog || {};
+    const isEditMode = sectionCreateDialog.mode === "edit";
+    const sectionId = sectionCreateDialog.sectionId;
+    const sceneId = store.selectSceneId();
+
     store.hideSectionCreateDialog();
+    if (isEditMode) {
+      if (sectionId && nextSectionName && sceneId) {
+        await runSceneEditorPersistence(
+          deps,
+          async () => {
+            await projectService.renameSectionItem({
+              sceneId,
+              sectionId,
+              name: nextSectionName,
+            });
+          },
+          {
+            label: "edit-section",
+            meta: {
+              sceneId,
+              sectionId,
+            },
+          },
+        );
+
+        syncStoreProjectState(store, projectService);
+        reconcileCurrentEditorSession(deps);
+      }
+
+      render();
+      return;
+    }
+
     if (nextSectionName) {
       await createSceneEditorSectionWithName(
         deps,

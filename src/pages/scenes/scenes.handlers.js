@@ -406,6 +406,23 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   render();
 };
 
+export const handleFileExplorerDoubleClick = (deps, payload) => {
+  const { store, appService } = deps;
+  const detail = payload?._event?.detail ?? {};
+  const itemId = resolveDetailItemId(detail);
+  const isFolder =
+    detail.isFolder === true ||
+    detail.item?.type === "folder" ||
+    detail.itemType === "folder";
+
+  if (isFolder || !itemId) {
+    return;
+  }
+
+  setSelectedScene({ store, appService, sceneId: itemId });
+  navigateToSceneEditor({ appService, sceneId: itemId });
+};
+
 export const handleFileExplorerClickItem = (deps) => {
   const { appService } = deps;
   const currentPayload = appService.getPayload();
@@ -481,17 +498,6 @@ export const handleWhiteboardItemDoubleClick = (deps, payload) => {
   }
 
   navigateToSceneEditor({ appService, sceneId: itemId });
-};
-
-export const handleOpenSceneClick = (deps, payload) => {
-  const { appService } = deps;
-  const sceneId = payload?._event?.currentTarget?.dataset?.sceneId;
-
-  if (!sceneId) {
-    return;
-  }
-
-  navigateToSceneEditor({ appService, sceneId });
 };
 
 export const handleAddSceneClick = (deps) => {
@@ -631,7 +637,7 @@ export const handleSceneFormAction = async (deps, payload) => {
         sectionId,
         position: "last",
         data: {
-          name: "Section New",
+          name: "Section 1",
         },
       });
       await projectService.createLineItem({
@@ -705,6 +711,12 @@ export const handleMapAddHintClose = (deps) => {
   render();
 };
 
+export const handleDetailHeaderClick = (deps) => {
+  const { store } = deps;
+  const selectedItemId = store.selectSelectedItemId();
+  openEditDialogWithValues({ deps, sceneId: selectedItemId });
+};
+
 export const handleDropdownMenuClickItem = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
   const detail = payload._event.detail;
@@ -750,12 +762,6 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     }
     await refreshScenesData(deps);
   }
-};
-
-export const handleClickShowScenePreview = (deps, payload) => {
-  const { store, render } = deps;
-  store.showPreviewSceneId({ sceneId: payload._event.target.dataset.sceneId });
-  render();
 };
 
 export const handleEditDialogClose = (deps) => {

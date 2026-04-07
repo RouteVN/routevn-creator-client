@@ -7,6 +7,8 @@ refs:
         handler: handleFileExplorerTargetChanged
       item-click:
         handler: handleFileExplorerSelectionChanged
+      dblclick-item:
+        handler: handleFileExplorerDoubleClick
   whiteboard:
     eventListeners:
       item-position-changed:
@@ -51,14 +53,6 @@ refs:
         handler: handleDropdownMenuClose
       item-click:
         handler: handleDropdownMenuClickItem
-  previewButton:
-    eventListeners:
-      click:
-        handler: handleClickShowScenePreview
-  openSceneButton:
-    eventListeners:
-      click:
-        handler: handleOpenSceneClick
   sectionsListToggle:
     eventListeners:
       click:
@@ -81,6 +75,10 @@ refs:
     eventListeners:
       click:
         handler: handleMapAddHintClose
+  detailHeader:
+    eventListeners:
+      click:
+        handler: handleDetailHeaderClick
 template:
   - 'rtgl-view d=h w=f h=f pos=rel style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
@@ -94,24 +92,26 @@ template:
               - rtgl-view wh=f slot="content":
                   - $if selectedItemId:
                       - rtgl-view d=v w=f h=f:
+                          - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+                              - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                              - rtgl-svg svg=edit wh=16: null
                           - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
-                              - rtgl-button#openSceneButton slot="open-action" data-scene-id="${selectedItemId}": Open
-                              - rtgl-button#previewButton slot="preview" data-scene-id="${selectedItemId}": Preview
                               - rtgl-view slot="sections-list" d=v w=f g=sm:
-                                  - rtgl-view h=1 w=f bgc=mu: null
-                                  - rtgl-view#sectionsListToggle d=h av=c ph=md h=36 w=f cur=pointer:
-                                      - rtgl-text s=sm w=f: Sections
-                                      - $if sectionsListOpen:
-                                          - rtgl-svg svg=folderArrowDown wh=16 c=mu-fg: null
-                                        $else:
-                                          - rtgl-svg svg=folderArrowRight wh=16 c=mu-fg: null
-                                  - rtgl-view h=1 w=f bgc=mu: null
+                                  - rtgl-view h=1 w=f bgc=mu mv=lg: null
+                                  - rtgl-view w=f g=md ph=md:
+                                      - rtgl-view#sectionsListToggle d=h w=f av=c cur=pointer:
+                                          - rtgl-text s=sm: Sections
+                                          - rtgl-view w=1fg: null
+                                          - $if sectionsListOpen:
+                                              - rtgl-svg svg=folderArrowDown wh=16 c=mu-fg: null
+                                            $else:
+                                              - rtgl-svg svg=folderArrowRight wh=16 c=mu-fg: null
                                   - $if sectionsListOpen:
                                       - $if selectedSceneSections.length == 0:
                                           - rtgl-view d=h av=c ph=md bw=xs bc=mu bgc=bg br=sm h=36 w=f:
                                               - rtgl-text s=sm c=mu-fg: No sections
                                         $else:
-                                          - rtgl-view d=v w=f:
+                                          - rtgl-view d=v w=f g=sm:
                                               - $for section, sectionIndex in selectedSceneSections:
                                                   - rtgl-view#sectionsListItem${sectionIndex} data-scene-id="${selectedItemId}" data-section-id="${section.id}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                                                       - 'rtgl-text s=sm w=1fg ellipsis=true style="min-width: 0"': ${section.name}

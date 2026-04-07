@@ -66,6 +66,10 @@ export function syncAllContentLines() {
   this.transformedHandlers.forceSyncAllContentLines({});
 }
 
+export function hardRefresh() {
+  this.transformedHandlers.hardRefresh({});
+}
+
 export function focusLine(payload = {}) {
   return focusLineInternally(this, payload);
 }

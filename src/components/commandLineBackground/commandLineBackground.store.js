@@ -99,7 +99,7 @@ export const clearPendingResourceId = ({ state }, _payload = {}) => {
 };
 
 export const setSelectedAnimation = ({ state }, { animationId } = {}) => {
-  state.selectedAnimationId = animationId;
+  state.selectedAnimationId = animationId === "none" ? undefined : animationId;
 };
 
 export const selectSelectedAnimation = ({ state }) => {
@@ -221,18 +221,15 @@ export const selectViewData = ({ state }) => {
 
   const selectedResource = selectSelectedResource({ state });
   const breadcrumb = selectBreadcrumb({ state });
-  const animationOptions = [
-    { value: "none", label: "None" },
-    ...toFlatItems(state.animationItems)
-      .filter((item) => item.type === "animation")
-      .map((item) => {
-        const animationType = item.animation?.type;
-        return {
-          value: item.id,
-          label: animationType ? `${item.name} (${animationType})` : item.name,
-        };
-      }),
-  ];
+  const animationOptions = toFlatItems(state.animationItems)
+    .filter((item) => item.type === "animation")
+    .map((item) => {
+      const animationType = item.animation?.type;
+      return {
+        value: item.id,
+        label: animationType ? `${item.name} (${animationType})` : item.name,
+      };
+    });
 
   const formFields = [
     {
@@ -244,6 +241,7 @@ export const selectViewData = ({ state }) => {
       name: "animation",
       label: "Animation",
       type: "select",
+      placeholder: "No animation",
       options: animationOptions,
     },
   ];
@@ -266,7 +264,7 @@ export const selectViewData = ({ state }) => {
 
   const defaultValues = {
     background: selectedResource?.fileId || "",
-    animation: state.selectedAnimationId ?? "none",
+    animation: state.selectedAnimationId,
     loop: state.backgroundLoop ?? false,
   };
 

@@ -322,11 +322,7 @@ export const handleSubmitClick = (deps, payload) => {
     backgroundData.loop = backgroundLoop ?? false;
   }
 
-  if (
-    selectedResource?.resourceId &&
-    selectedAnimationId &&
-    selectedAnimationId !== "none"
-  ) {
+  if (selectedResource?.resourceId && selectedAnimationId) {
     backgroundData.animations = {
       resourceId: selectedAnimationId,
     };

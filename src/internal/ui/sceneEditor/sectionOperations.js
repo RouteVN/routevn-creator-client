@@ -8,6 +8,28 @@ export const isSectionsOverviewOpen = (store) => {
   return store.selectIsSectionsOverviewOpen();
 };
 
+const updateSceneEditorSelectionPayload = (
+  appService,
+  { sectionId, lineId } = {},
+) => {
+  if (!appService) {
+    return;
+  }
+
+  const nextPayload = {
+    ...appService.getPayload(),
+    sectionId,
+  };
+
+  if (lineId) {
+    nextPayload.lineId = lineId;
+  } else {
+    delete nextPayload.lineId;
+  }
+
+  appService.setPayload(nextPayload);
+};
+
 export const scrollSceneEditorSectionTabIntoView = (deps, sectionId) => {
   const { refs } = deps;
 
@@ -42,18 +64,25 @@ export const scrollSceneEditorSectionTabIntoView = (deps, sectionId) => {
 };
 
 export const selectSceneEditorSection = async (deps, sectionId) => {
-  const { store, render, subject } = deps;
+  const { store, render, subject, appService } = deps;
 
   store.setSelectedSectionId({ selectedSectionId: sectionId });
   const scene = store.selectScene();
   const nextSection = scene?.sections?.find(
     (section) => section.id === sectionId,
   );
+  let nextLineId;
   if (nextSection?.lines?.length > 0) {
-    store.setSelectedLineId({ selectedLineId: nextSection.lines[0].id });
+    nextLineId = nextSection.lines[0].id;
+    store.setSelectedLineId({ selectedLineId: nextLineId });
   } else {
     store.setSelectedLineId({ selectedLineId: undefined });
   }
+
+  updateSceneEditorSelectionPayload(appService, {
+    sectionId,
+    lineId: nextLineId,
+  });
 
   await updateSceneEditorSectionChanges(deps);
 

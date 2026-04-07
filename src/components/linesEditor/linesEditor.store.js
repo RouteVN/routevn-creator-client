@@ -127,5 +127,6 @@ export const selectViewData = ({ state, props }) => {
     selectedLineId: props.selectedLineId,
     mode: state.mode,
     ready: state.ready,
+    showLineNumbers: props.showLineNumbers ?? true,
   };
 };

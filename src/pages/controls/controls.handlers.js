@@ -117,21 +117,26 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   }
 
   const { store, refs, render } = deps;
+  const { fileExplorer, controlForm } = refs;
   const controlItem = store.selectControlItemById({ itemId });
   if (!controlItem || controlItem.type !== "control") {
     return;
   }
 
+  const editValues = {
+    name: controlItem.name ?? "",
+    description: controlItem.description ?? "",
+  };
+
   store.setSelectedItemId({ itemId });
-  refs.fileExplorer?.selectItem?.({ itemId });
+  fileExplorer?.selectItem?.({ itemId });
   store.openEditDialog({
     itemId,
-    defaultValues: {
-      name: controlItem.name ?? "",
-      description: controlItem.description ?? "",
-    },
+    defaultValues: editValues,
   });
   render();
+  controlForm.reset();
+  controlForm.setValues({ values: editValues });
 };
 
 export const handleItemDoubleClick = (deps, payload) => {
