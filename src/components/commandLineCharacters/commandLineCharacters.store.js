@@ -18,6 +18,8 @@ export const createInitialState = () => ({
   tempSelectedSpriteId: undefined,
   selectedCharacterIndex: undefined, // For sprite selection
   searchQuery: "",
+  fullImagePreviewVisible: false,
+  fullImagePreviewFileId: undefined,
   dropdownMenu: {
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -104,6 +106,20 @@ export const setSearchQuery = ({ state }, { value } = {}) => {
   state.searchQuery = value ?? "";
 };
 
+export const showFullImagePreview = ({ state }, { fileId } = {}) => {
+  if (!fileId) {
+    return;
+  }
+
+  state.fullImagePreviewVisible = true;
+  state.fullImagePreviewFileId = fileId;
+};
+
+export const hideFullImagePreview = ({ state }, _payload = {}) => {
+  state.fullImagePreviewVisible = false;
+  state.fullImagePreviewFileId = undefined;
+};
+
 export const setSelectedCharacterIndex = ({ state }, { index } = {}) => {
   state.selectedCharacterIndex = index;
 };
@@ -144,6 +160,16 @@ export const selectMode = ({ state }) => {
 
 export const selectSelectedCharacterIndex = ({ state }) => {
   return state.selectedCharacterIndex;
+};
+
+export const selectCurrentSpriteItemById = ({ state }, { spriteId } = {}) => {
+  const characters = selectCharactersWithRepositoryData({ state });
+  const character = characters[state.selectedCharacterIndex];
+  if (!character?.sprites) {
+    return undefined;
+  }
+
+  return toFlatItems(character.sprites).find((item) => item.id === spriteId);
 };
 
 export const setExistingCharacters = ({ state }, { characters } = {}) => {
@@ -356,6 +382,8 @@ export const selectViewData = ({ state }) => {
     selectedCharacterName,
     searchQuery: state.searchQuery,
     searchPlaceholder: "Search...",
+    fullImagePreviewVisible: state.fullImagePreviewVisible,
+    fullImagePreviewFileId: state.fullImagePreviewFileId,
     breadcrumb,
     form,
     defaultValues,

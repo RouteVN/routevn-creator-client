@@ -225,6 +225,20 @@ export const handleSpriteItemClick = (deps, payload) => {
   render();
 };
 
+export const handleSpriteItemDoubleClick = (deps, payload) => {
+  const { store, render } = deps;
+  const spriteId = payload._event.currentTarget.dataset.spriteId;
+  const sprite = store.selectCurrentSpriteItemById({ spriteId });
+
+  if (!sprite?.fileId) {
+    return;
+  }
+
+  store.setTempSelectedSpriteId({ spriteId });
+  store.showFullImagePreview({ fileId: sprite.fileId });
+  render();
+};
+
 export const handleButtonSelectClick = (deps) => {
   const { store, render, appService } = deps;
   const mode = store.selectMode();
