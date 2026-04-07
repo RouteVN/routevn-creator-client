@@ -56,7 +56,7 @@ template:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
           - rtgl-view h=1fg sv w=f:
               - rtgl-form#form :form=${form} :defaultValues=${defaultValues}:
-                  - rtgl-view#charactersContainer slot=characters g=md w=f cur=pointer:
+                  - rtgl-view#charactersContainer slot=characters g=md w=f:
                       - $for character, i in defaultValues.characters:
                           - rtgl-view#character${i} data-index=${i} data-character-id=${character.id} d=h g=md av=t p=md br=md w=f:
                               - rtgl-view g=sm:
