@@ -91,8 +91,9 @@ template:
                               - rtgl-text: ${group.name}
                               - rtgl-view d=h w=f wrap g=lg:
                                   - $for item, j in group.children:
-                                      - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} w=200 h=150 cur=pointer g=sm bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm:
-                                          - rvn-file-image w=f h=1fg fileId=${item.thumbnailFileId}: null
-                                          - rtgl-text s=sm ah=c: ${item.name}
+                                      - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm:
+                                          - rtgl-view p=md g=md br=md:
+                                              - rvn-file-image w=200 h=120 fileId=${item.thumbnailFileId}: null
+                                              - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#buttonSelect: Select

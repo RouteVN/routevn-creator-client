@@ -10,7 +10,7 @@ template:
               - rtgl-text: ${group.name}
           - rtgl-view d=h w=f wrap g=lg:
               - $for item, j in group.children:
-                  - rtgl-view#imageItemRef${i}x${j} data-item-id=${item.id} w=200 h=150 bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm cur=pointer key=${item.id}:
-                      - rtgl-view p=md g=md br=md w=f h=f:
-                          - rvn-file-image w=f h=1fg imageId=${item.id} source="thumbnail": null
-                          - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
+                  - rtgl-view#imageItemRef${i}x${j} data-item-id=${item.id} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm cur=pointer key=${item.id}:
+                      - rtgl-view p=md g=md br=md:
+                          - rvn-file-image w=200 h=120 imageId=${item.id} source="thumbnail": null
+                          - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
