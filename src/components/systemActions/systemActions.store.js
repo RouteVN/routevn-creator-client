@@ -429,9 +429,11 @@ export const selectActionsData = ({ props, state }) => {
         const imageData = images[item.resourceId];
         const videoData = videos[item.resourceId];
         const layoutData = layoutsItems[item.resourceId];
+        const resource = imageData || videoData || layoutData;
         return {
           ...item,
-          resource: imageData || videoData || layoutData,
+          resource,
+          previewFileId: resource?.thumbnailFileId || resource?.fileId,
           resourceType: imageData ? "image" : videoData ? "video" : "layout",
         };
       }),
