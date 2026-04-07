@@ -17,7 +17,7 @@ const form = {
     {
       name: "loop",
       description: "Loop",
-      type: "select",
+      type: "segmented-control",
       options: [
         { value: true, label: "Loop" },
         { value: false, label: "Don't Loop" },
