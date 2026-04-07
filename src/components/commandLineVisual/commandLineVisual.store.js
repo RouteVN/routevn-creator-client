@@ -1,5 +1,90 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 
+const RESOURCE_TYPES = [
+  { type: "image", label: "Images" },
+  { type: "video", label: "Videos" },
+  { type: "layout", label: "Layouts" },
+];
+
+const getCollectionTree = (collection) => {
+  if (Array.isArray(collection?.tree)) {
+    return collection.tree;
+  }
+  if (Array.isArray(collection?.order)) {
+    return collection.order;
+  }
+
+  return Object.keys(collection?.items || {}).map((id) => ({ id }));
+};
+
+const isSelectableVisualResource = (resourceType, item) => {
+  return resourceType !== "layout" || item?.layoutType === "visual";
+};
+
+const prefixTreeNode = (node, resourceType, items) => {
+  const item = items[node.id];
+  if (
+    item?.type !== "folder" &&
+    !isSelectableVisualResource(resourceType, item)
+  ) {
+    return undefined;
+  }
+
+  const prefixedNode = { id: `${resourceType}:${node.id}` };
+  if (Array.isArray(node.children) && node.children.length > 0) {
+    const children = node.children
+      .map((child) => prefixTreeNode(child, resourceType, items))
+      .filter(Boolean);
+    if (children.length > 0) {
+      prefixedNode.children = children;
+    }
+  }
+  return prefixedNode;
+};
+
+const buildResourceExplorerItems = ({ images, videos, layouts } = {}) => {
+  const collections = { image: images, video: videos, layout: layouts };
+  const items = {};
+  const tree = [];
+
+  RESOURCE_TYPES.forEach(({ type, label }) => {
+    const collection = collections[type] || { items: {}, tree: [] };
+    const rootId = `${type}:root`;
+    const childNodes = getCollectionTree(collection)
+      .map((node) => prefixTreeNode(node, type, collection.items || {}))
+      .filter(Boolean);
+
+    items[rootId] = { type: "folder", name: label, resourceType: type };
+    Object.entries(collection.items || {}).forEach(([id, item]) => {
+      if (item.type !== "folder" && !isSelectableVisualResource(type, item)) {
+        return;
+      }
+
+      items[`${type}:${id}`] = {
+        ...item,
+        resourceId: id,
+        resourceType: type,
+      };
+    });
+
+    tree.push({ id: rootId, children: childNodes });
+  });
+
+  return { items, tree };
+};
+
+const parseResourceExplorerId = (itemId = "") => {
+  const separatorIndex = itemId.indexOf(":");
+  if (separatorIndex === -1) {
+    return { resourceType: undefined, resourceId: itemId };
+  }
+
+  return {
+    resourceType: itemId.slice(0, separatorIndex),
+    resourceId: itemId.slice(separatorIndex + 1),
+  };
+};
+
 export const createInitialState = () => ({
   mode: "current",
   images: { items: {}, tree: [] },
@@ -17,6 +102,9 @@ export const createInitialState = () => ({
   selectedVisuals: [],
   tempSelectedResourceId: undefined,
   selectedVisualIndex: undefined,
+  searchQuery: "",
+  fullImagePreviewVisible: false,
+  fullImagePreviewFileId: undefined,
   dropdownMenu: {
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -87,6 +175,24 @@ export const setTempSelectedResourceId = ({ state }, { resourceId } = {}) => {
   state.tempSelectedResourceId = resourceId;
 };
 
+export const setSearchQuery = ({ state }, { value } = {}) => {
+  state.searchQuery = value ?? "";
+};
+
+export const showFullImagePreview = ({ state }, { fileId } = {}) => {
+  if (!fileId) {
+    return;
+  }
+
+  state.fullImagePreviewVisible = true;
+  state.fullImagePreviewFileId = fileId;
+};
+
+export const hideFullImagePreview = ({ state }, _payload = {}) => {
+  state.fullImagePreviewVisible = false;
+  state.fullImagePreviewFileId = undefined;
+};
+
 export const setSelectedVisualIndex = ({ state }, { index } = {}) => {
   state.selectedVisualIndex = index;
 };
@@ -122,8 +228,43 @@ export const selectSelectedVisualIndex = ({ state }) => {
   return state.selectedVisualIndex;
 };
 
+export const selectResourceExplorerTarget = (_deps, { itemId } = {}) => {
+  return parseResourceExplorerId(itemId);
+};
+
 export const setExistingVisuals = ({ state }, { visuals } = {}) => {
   state.selectedVisuals = visuals;
+};
+
+export const selectResourceItemById = ({ state }, { resourceId } = {}) => {
+  const imageData = state.images.items?.[resourceId];
+  if (imageData) {
+    return {
+      ...imageData,
+      resourceType: "image",
+      previewFileId: imageData.thumbnailFileId || imageData.fileId,
+    };
+  }
+
+  const videoData = state.videos.items?.[resourceId];
+  if (videoData) {
+    return {
+      ...videoData,
+      resourceType: "video",
+      previewFileId: videoData.thumbnailFileId || videoData.fileId,
+    };
+  }
+
+  const layoutData = state.layouts.items?.[resourceId];
+  if (layoutData?.layoutType === "visual") {
+    return {
+      ...layoutData,
+      resourceType: "layout",
+      previewFileId: layoutData.thumbnailFileId || layoutData.fileId,
+    };
+  }
+
+  return undefined;
 };
 
 export const selectVisualsWithRepositoryData = ({ state }) => {
@@ -165,47 +306,72 @@ export const selectVisualsWithRepositoryData = ({ state }) => {
 };
 
 export const selectViewData = ({ state }) => {
+  const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
+  const matchesSearch = (item) => {
+    if (!searchQuery) {
+      return true;
+    }
+
+    const name = (item.name ?? "").toLowerCase();
+    const description = (item.description ?? "").toLowerCase();
+    return name.includes(searchQuery) || description.includes(searchQuery);
+  };
+  const buildResourceGroups = ({ collection, resourceType, childFilter }) => {
+    return toFlatGroups(collection)
+      .map((group) => {
+        const children = group.children
+          .filter(childFilter)
+          .filter(matchesSearch)
+          .map((child) => {
+            const isSelected = child.id === state.tempSelectedResourceId;
+            return {
+              ...child,
+              resourceType,
+              previewFileId: child.thumbnailFileId || child.fileId,
+              itemBorderColor: isSelected ? "pr" : "bo",
+              itemHoverBorderColor: isSelected ? "pr" : "ac",
+            };
+          });
+
+        return {
+          ...group,
+          resourceType,
+          groupId: `${resourceType}:${group.id}`,
+          children,
+          hasChildren: children.length > 0,
+          shouldDisplay: !searchQuery || children.length > 0,
+        };
+      })
+      .filter((group) => group.shouldDisplay);
+  };
+
   // Add images
-  const imageGroups = toFlatGroups(state.images).map((group) => ({
-    ...group,
+  const imageGroups = buildResourceGroups({
+    collection: state.images,
     resourceType: "image",
-    children: group.children.map((child) => ({
-      ...child,
-      resourceType: "image",
-      previewFileId: child.thumbnailFileId || child.fileId,
-      bw: child.id === state.tempSelectedResourceId ? "md" : "",
-    })),
-  }));
+    childFilter: () => true,
+  });
 
   // Add videos
-  const videoGroups = toFlatGroups(state.videos).map((group) => ({
-    ...group,
+  const videoGroups = buildResourceGroups({
+    collection: state.videos,
     resourceType: "video",
-    children: group.children.map((child) => ({
-      ...child,
-      resourceType: "video",
-      previewFileId: child.thumbnailFileId || child.fileId,
-      bw: child.id === state.tempSelectedResourceId ? "md" : "",
-    })),
-  }));
+    childFilter: () => true,
+  });
 
   // Add layouts (only visual type)
-  const layoutGroups = toFlatGroups(state.layouts)
-    .map((group) => ({
-      ...group,
-      resourceType: "layout",
-      children: group.children
-        .filter((child) => child.layoutType === "visual")
-        .map((child) => ({
-          ...child,
-          resourceType: "layout",
-          previewFileId: child.thumbnailFileId || child.fileId,
-          bw: child.id === state.tempSelectedResourceId ? "md" : "",
-        })),
-    }))
-    .filter((group) => group.children.length > 0);
+  const layoutGroups = buildResourceGroups({
+    collection: state.layouts,
+    resourceType: "layout",
+    childFilter: (child) => child.layoutType === "visual",
+  });
 
   const resourceGroups = [...imageGroups, ...videoGroups, ...layoutGroups];
+  const resourceItems = buildResourceExplorerItems({
+    images: state.images,
+    videos: state.videos,
+    layouts: state.layouts,
+  });
 
   // Get transform options
   const transformItems = toFlatItems(state.transforms).filter(
@@ -258,9 +424,14 @@ export const selectViewData = ({ state }) => {
 
   return {
     mode: state.mode,
+    resourceItems,
     resourceGroups,
     selectedVisuals: processedSelectedVisuals,
     transformOptions,
+    searchQuery: state.searchQuery,
+    searchPlaceholder: "Search...",
+    fullImagePreviewVisible: state.fullImagePreviewVisible,
+    fullImagePreviewFileId: state.fullImagePreviewFileId,
     breadcrumb,
     defaultValues,
     dropdownMenu: state.dropdownMenu,
