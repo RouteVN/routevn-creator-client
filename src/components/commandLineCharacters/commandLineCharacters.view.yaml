@@ -110,18 +110,24 @@ template:
       - $if mode == 'sprite-select':
           - rtgl-view d=h g=md:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
-          - 'rtgl-view d=h w=f g=lg h=1fg style="min-height: 0;"':
+          - rtgl-view d=h w=f av=c g=md:
+              - rtgl-view w=1fg: null
+              - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
+          - 'rtgl-view d=h w=f g=lg mt=sm h=1fg style="min-height: 0;"':
               - rtgl-view h=f w=1fg sv:
                   - rvn-base-file-explorer#baseFileExplorer :items=${spriteItems}: null
-              - rtgl-view h=f w=2fg sv g=lg:
+              - rtgl-view#galleryScroll h=f w=2fg sv g=lg:
                   - $for group, i in spriteGroups:
-                      - rtgl-view g=md:
-                          - rtgl-text: ${group.name}
+                      - rtgl-view data-group-id=${group.id} g=md:
+                          - rtgl-view d=h av=c g=md:
+                              - rtgl-svg svg=folder wh=16: null
+                              - rtgl-text: ${group.fullLabel}
                           - rtgl-view d=h w=f wrap g=lg:
                               - $for item, j in group.children:
-                                  - rtgl-view#spriteItem${i}x${j} data-sprite-id=${item.id} w=200 h=150 cur=pointer key=${item.bw} bw=${item.bw} bc=pr br=sm g=sm:
-                                      - rvn-file-image fileId=${item.fileId} w=200 h=120: null
-                                      - rtgl-text s=sm ah=c: ${item.name}
+                                  - rtgl-view#spriteItem${i}x${j} data-sprite-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm:
+                                      - rtgl-view p=md g=md br=md:
+                                          - rvn-file-image fileId=${item.fileId} w=200 h=120: null
+                                          - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#buttonSelect: Select
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

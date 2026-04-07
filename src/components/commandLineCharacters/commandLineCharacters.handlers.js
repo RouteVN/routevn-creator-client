@@ -71,12 +71,19 @@ export const handleTransformChange = (deps, payload) => {
 export const handleFileExplorerItemClick = (deps, payload) => {
   const { refs, store, render } = deps;
   const { itemId, isFolder } = payload._event.detail;
+  const mode = store.selectMode();
 
   if (isFolder) {
     const groupElement = refs.galleryScroll?.querySelector(
       `[data-group-id="${itemId}"]`,
     );
     groupElement?.scrollIntoView?.({ block: "start" });
+    return;
+  }
+
+  if (mode === "sprite-select") {
+    store.setTempSelectedSpriteId({ spriteId: itemId });
+    render();
     return;
   }
 

@@ -274,18 +274,25 @@ export const selectViewData = ({ state }) => {
         (item) => item.type === "folder",
       );
 
-      spriteGroups = toFlatGroups(enrichedSelectedChar.sprites).map((group) => {
-        return {
-          ...group,
-          children: group.children.map((child) => {
+      spriteGroups = toFlatGroups(enrichedSelectedChar.sprites)
+        .map((group) => {
+          const children = group.children.filter(matchesSearch).map((child) => {
             const isSelected = child.id === state.tempSelectedSpriteId;
             return {
               ...child,
-              bw: isSelected ? "md" : "",
+              itemBorderColor: isSelected ? "pr" : "bo",
+              itemHoverBorderColor: isSelected ? "pr" : "ac",
             };
-          }),
-        };
-      });
+          });
+
+          return {
+            ...group,
+            children,
+            hasChildren: children.length > 0,
+            shouldDisplay: !searchQuery || children.length > 0,
+          };
+        })
+        .filter((group) => group.shouldDisplay);
     }
   }
 
