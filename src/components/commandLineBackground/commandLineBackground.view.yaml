@@ -3,6 +3,8 @@ refs:
     eventListeners:
       image-selected:
         handler: handleImageSelected
+      image-dblclick:
+        handler: handleImageDoubleClick
   resourceItem*:
     eventListeners:
       click:
@@ -23,6 +25,10 @@ refs:
     eventListeners:
       item-click:
         handler: handleTabClick
+  searchInput:
+    eventListeners:
+      value-input:
+        handler: handleSearchInput
   form:
     eventListeners:
       form-field-event:
@@ -39,6 +45,10 @@ refs:
     eventListeners:
       item-click:
         handler: handleFileExplorerClickItem
+  previewOverlay:
+    eventListeners:
+      click:
+        action: hideFullImagePreview
 template:
   - rtgl-view w=f h=f p=lg:
       - rtgl-view d=h g=md: null
@@ -47,17 +57,30 @@ template:
           - rtgl-form#form :form=${dialogueForm.form} :defaultValues=${dialogueForm.defaultValues}:
               - $if selectedResource:
                   - $if selectedResource.resourceType == 'image':
-                      - rvn-file-image#backgroundImage fileId=${selectedResource.fileId} w=355 h=200 slot=background cur=pointer: null
+                      - rtgl-view#backgroundImage slot=background cur=pointer bw=xs bc=${selectedResource.itemBorderColor} h-bc=${selectedResource.itemHoverBorderColor} br=sm:
+                          - rtgl-view p=md g=md br=md:
+                              - rvn-file-image w=200 h=120 fileId=${selectedResource.fileId}: null
+                              - rtgl-text s=xs c=mu-fg ellipsis w=200: ${selectedResource.name}
                     $elif selectedResource.resourceType == 'layout':
-                      - rtgl-view#backgroundImage w=355 h=200 bgc=mu av=c ah=c cur=pointer slot=background bw=xs bc=mu br=sm:
-                          - rtgl-view av=c ah=c:
-                              - rtgl-text s=lg: ${selectedResource.name}
-                              - rtgl-text s=sm c=mu-fg: ${selectedResource.layoutTypeDisplay}
+                      - rtgl-view#backgroundImage slot=background cur=pointer bw=xs bc=${selectedResource.itemBorderColor} h-bc=${selectedResource.itemHoverBorderColor} br=sm:
+                          - 'rtgl-view w=225 br=md style="overflow: hidden;"':
+                              - $if selectedResource.item.thumbnailFileId:
+                                  - rvn-file-image fileId=${selectedResource.item.thumbnailFileId} w=225 h=120: null
+                                $else:
+                                  - rtgl-view w=225 h=120 av=c ah=c bgc=mu-fg:
+                                      - rtgl-text s=sm c=mu-fg: No thumbnail
+                              - rtgl-view d=v w=f g=xs ph=md pt=sm pb=md:
+                                  - rtgl-text s=sm ellipsis w=193: ${selectedResource.name}
+                                  - $if selectedResource.typeInfo:
+                                      - rtgl-text s=xs c=mu-fg ellipsis w=193: ${selectedResource.typeInfo}
                     $elif selectedResource.resourceType == 'video':
-                      - rtgl-view#backgroundImage w=355 h=200 cur=pointer slot=background pos=rel:
-                          - rvn-file-image fileId=${selectedResource.item.thumbnailFileId} w=355 h=200: null
-                          - rtgl-view pos=abs w=f h=f av=c ah=c bgc=bg-60:
-                              - rtgl-icon icon=play s=xl c=fg: null
+                      - rtgl-view#backgroundImage slot=background cur=pointer bw=xs bc=${selectedResource.itemBorderColor} h-bc=${selectedResource.itemHoverBorderColor} br=sm:
+                          - rtgl-view p=md g=md br=md:
+                              - rtgl-view pos=rel:
+                                  - rvn-file-image w=200 h=120 fileId=${selectedResource.item.thumbnailFileId}: null
+                                  - rtgl-view pos=abs w=f h=f av=c ah=c bgc=bg-60:
+                                      - rtgl-icon icon=play s=xl c=fg: null
+                              - rtgl-text s=xs c=mu-fg ellipsis w=200: ${selectedResource.name}
                     $else:
                       - rtgl-view#backgroundImage w=355 h=200 bgc=mu av=c ah=c cur=pointer slot=background:
                           - rtgl-text s=md c=mu-fg: Select Background
@@ -68,31 +91,52 @@ template:
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#submitButton: Submit
       - $if mode == 'gallery':
-          - rtgl-tabs#tabs selected-tab=${tab} :items=${tabs}: null
+          - rtgl-view d=h w=f av=c g=md:
+              - rtgl-tabs#tabs selected-tab=${tab} :items=${tabs}: null
+              - rtgl-view w=1fg: null
+              - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
           - 'rtgl-view d=h w=f g=lg mt=sm h=1fg style="min-height: 0;"':
               - rtgl-view h=f w=1fg sv:
                   - rvn-base-file-explorer#baseFileExplorer :items=${items}: null
               - rtgl-view h=f w=2fg sv g=lg:
                   - $if tab == 'image':
-                      - rvn-image-selector#rvnImageSelector selectedImageId=${tempSelectedResourceId}: null
+                      - rvn-image-selector#rvnImageSelector selectedImageId=${tempSelectedResourceId} searchQuery=${searchQuery}: null
                     $elif tab == 'layout':
                       - $for group, i in groups:
                           - rtgl-view g=md:
-                              - rtgl-text: ${group.name}
+                              - rtgl-view d=h av=c g=md:
+                                  - rtgl-svg svg=folder wh=16: null
+                                  - rtgl-text: ${group.fullLabel}
                               - rtgl-view d=h w=f wrap g=lg:
                                   - $for item, j in group.children:
-                                      - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} w=200 h=150 ah=c av=c bw=${item.bw} bc=${item.bc} br=sm cur=pointer:
-                                          - rtgl-view av=c ah=c:
-                                              - rtgl-text s=md: ${item.name}
-                                              - rtgl-text s=sm c=mu-fg: ${item.layoutTypeDisplay}
+                                      - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm:
+                                          - 'rtgl-view w=225 br=md style="overflow: hidden;"':
+                                              - $if item.thumbnailFileId:
+                                                  - rvn-file-image fileId=${item.thumbnailFileId} w=225 h=120: null
+                                                $else:
+                                                  - rtgl-view w=225 h=120 av=c ah=c bgc=mu-fg:
+                                                      - rtgl-text s=sm c=mu-fg: No thumbnail
+                                              - rtgl-view d=v w=f g=xs ph=md pt=sm pb=md:
+                                                  - rtgl-text s=sm ellipsis w=193: ${item.name}
+                                                  - $if item.typeInfo:
+                                                      - rtgl-text s=xs c=mu-fg ellipsis w=193: ${item.typeInfo}
                     $elif tab == 'video':
                       - $for group, i in groups:
                           - rtgl-view g=md:
-                              - rtgl-text: ${group.name}
+                              - rtgl-view d=h av=c g=md:
+                                  - rtgl-svg svg=folder wh=16: null
+                                  - rtgl-text: ${group.fullLabel}
                               - rtgl-view d=h w=f wrap g=lg:
                                   - $for item, j in group.children:
-                                      - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} w=200 h=150 cur=pointer g=sm bw=${item.bw} bc=${item.bc} br=sm:
-                                          - rvn-file-image w=200 h=120 fileId=${item.thumbnailFileId}: null
-                                          - rtgl-text s=sm ah=c: ${item.name}
+                                      - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm:
+                                          - rtgl-view p=md g=md br=md:
+                                              - rvn-file-image w=200 h=120 fileId=${item.thumbnailFileId}: null
+                                              - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#buttonSelect: Select
+  - $when: fullImagePreviewVisible
+    rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
+      - 'rtgl-view w=f h=f pos=fix edge=f style="background-color: #000;"': null
+      - $if fullImagePreviewFileId:
+          - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+              - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=ac bw=xs br=md: null

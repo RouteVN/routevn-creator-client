@@ -27,6 +27,12 @@ export const createInitialState = () => ({
   sfx: [],
   currentEditingId: null, // ID of sound effect being edited
   tempSelectedResourceId: undefined,
+  searchQuery: "",
+  playingSound: {
+    title: "",
+    fileId: undefined,
+  },
+  showAudioPlayer: false,
   // Dropdown menu state
   dropdownMenu: {
     isOpen: false,
@@ -46,6 +52,24 @@ export const setRepositoryState = ({ state }, { sounds } = {}) => {
 
 export const setTempSelectedResourceId = ({ state }, { resourceId } = {}) => {
   state.tempSelectedResourceId = resourceId;
+};
+
+export const setSearchQuery = ({ state }, { value } = {}) => {
+  state.searchQuery = value ?? "";
+};
+
+export const openAudioPlayer = ({ state }, { fileId, fileName } = {}) => {
+  state.playingSound.fileId = fileId;
+  state.playingSound.title = fileName;
+  state.showAudioPlayer = true;
+};
+
+export const closeAudioPlayer = ({ state }, _payload = {}) => {
+  state.showAudioPlayer = false;
+  state.playingSound = {
+    title: "",
+    fileId: undefined,
+  };
 };
 
 export const addSfx = ({ state }, { id } = {}) => {
@@ -126,6 +150,10 @@ export const selectCurrentEditingId = ({ state }) => {
   return state.currentEditingId;
 };
 
+export const selectSoundItemById = ({ state }, { itemId } = {}) => {
+  return toFlatItems(state.items).find((item) => item.id === itemId);
+};
+
 export const selectSfxWithSoundData = ({ state }) => {
   const flatSoundItems = toFlatItems(state.items);
 
@@ -134,7 +162,10 @@ export const selectSfxWithSoundData = ({ state }) => {
     return {
       ...sfx,
       name: soundItem?.name,
+      fileId: soundItem?.fileId,
       waveformDataFileId: soundItem?.waveformDataFileId,
+      itemBorderColor: "bo",
+      itemHoverBorderColor: "ac",
     };
   });
 };
@@ -170,20 +201,36 @@ export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.items).filter(
     (item) => item.type === "folder",
   );
-  const flatGroups = toFlatGroups(state.items).map((group) => {
-    return {
-      ...group,
-      children: group.children.map((child) => {
+  const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
+  const matchesSearch = (item) => {
+    if (!searchQuery) {
+      return true;
+    }
+
+    const name = (item.name ?? "").toLowerCase();
+    const description = (item.description ?? "").toLowerCase();
+    return name.includes(searchQuery) || description.includes(searchQuery);
+  };
+  const flatGroups = toFlatGroups(state.items)
+    .map((group) => {
+      const children = group.children.filter(matchesSearch).map((child) => {
         const isSelected = child.id === state.tempSelectedResourceId;
         return {
           ...child,
-          bw: isSelected ? "md" : "",
-          bc: isSelected ? "fg" : "",
+          itemBorderColor: isSelected ? "pr" : "bo",
+          itemHoverBorderColor: isSelected ? "pr" : "ac",
           waveformDataFileId: child.waveformDataFileId,
         };
-      }),
-    };
-  });
+      });
+
+      return {
+        ...group,
+        children,
+        hasChildren: children.length > 0,
+        shouldDisplay: !searchQuery || children.length > 0,
+      };
+    })
+    .filter((group) => group.shouldDisplay);
 
   const breadcrumb = selectBreadcrumb({ state });
   const sfxWithSoundData = selectSfxWithSoundData({ state });
@@ -199,6 +246,10 @@ export const selectViewData = ({ state }) => {
     groups: flatGroups,
     sfx: sfxWithSoundData,
     tempSelectedResourceId: state.tempSelectedResourceId,
+    searchQuery: state.searchQuery,
+    searchPlaceholder: "Search...",
+    playingSound: state.playingSound,
+    showAudioPlayer: state.showAudioPlayer,
     breadcrumb,
     loopOptions: LOOP_OPTIONS,
     defaultValues,

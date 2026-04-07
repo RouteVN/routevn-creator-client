@@ -17,7 +17,7 @@ const form = {
     {
       name: "loop",
       description: "Loop",
-      type: "select",
+      type: "segmented-control",
       options: [
         { value: true, label: "Loop" },
         { value: false, label: "Don't Loop" },
@@ -40,6 +40,12 @@ export const createInitialState = () => ({
   selectedResourceId: undefined,
   tempSelectedResourceId: undefined,
   bgm: normalizeBgm(),
+  searchQuery: "",
+  playingSound: {
+    title: "",
+    fileId: undefined,
+  },
+  showAudioPlayer: false,
 });
 
 export const setBgmAudio = ({ state }, { resourceId } = {}) => {
@@ -47,6 +53,11 @@ export const setBgmAudio = ({ state }, { resourceId } = {}) => {
     ...normalizeBgm(state.bgm),
     resourceId,
   };
+};
+
+export const clearBgmAudio = ({ state }, _payload = {}) => {
+  state.bgm.resourceId = undefined;
+  state.tempSelectedResourceId = undefined;
 };
 
 export const setBgm = ({ state }, { bgm } = {}) => {
@@ -73,6 +84,24 @@ export const setTempSelectedResource = ({ state }, { resourceId } = {}) => {
   state.tempSelectedResourceId = resourceId;
 };
 
+export const setSearchQuery = ({ state }, { value } = {}) => {
+  state.searchQuery = value ?? "";
+};
+
+export const openAudioPlayer = ({ state }, { fileId, fileName } = {}) => {
+  state.playingSound.fileId = fileId;
+  state.playingSound.title = fileName;
+  state.showAudioPlayer = true;
+};
+
+export const closeAudioPlayer = ({ state }, _payload = {}) => {
+  state.showAudioPlayer = false;
+  state.playingSound = {
+    title: "",
+    fileId: undefined,
+  };
+};
+
 export const selectSelectedResource = ({ state }) => {
   if (!state.bgm.resourceId) {
     return null;
@@ -89,8 +118,18 @@ export const selectSelectedResource = ({ state }) => {
     resourceId: state.bgm.resourceId,
     fileId: item.fileId,
     name: item.name,
-    item: item,
+    itemBorderColor: "bo",
+    itemHoverBorderColor: "ac",
+    item: {
+      ...item,
+      itemBorderColor: "bo",
+      itemHoverBorderColor: "ac",
+    },
   };
+};
+
+export const selectSoundItemById = ({ state }, { itemId } = {}) => {
+  return toFlatItems(state.items).find((item) => item.id === itemId);
 };
 
 export const selectBreadcrumb = ({ state }) => {
@@ -124,20 +163,36 @@ export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.items).filter(
     (item) => item.type === "folder",
   );
-  const flatGroups = toFlatGroups(state.items).map((group) => {
-    return {
-      ...group,
-      children: group.children.map((child) => {
+  const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
+  const matchesSearch = (item) => {
+    if (!searchQuery) {
+      return true;
+    }
+
+    const name = (item.name ?? "").toLowerCase();
+    const description = (item.description ?? "").toLowerCase();
+    return name.includes(searchQuery) || description.includes(searchQuery);
+  };
+  const flatGroups = toFlatGroups(state.items)
+    .map((group) => {
+      const children = group.children.filter(matchesSearch).map((child) => {
         const isSelected = child.id === state.tempSelectedResourceId;
         return {
           ...child,
-          bw: isSelected ? "md" : "",
-          bc: isSelected ? "fg" : "",
+          itemBorderColor: isSelected ? "pr" : "bo",
+          itemHoverBorderColor: isSelected ? "pr" : "ac",
           waveformDataFileId: child.waveformDataFileId,
         };
-      }),
-    };
-  });
+      });
+
+      return {
+        ...group,
+        children,
+        hasChildren: children.length > 0,
+        shouldDisplay: !searchQuery || children.length > 0,
+      };
+    })
+    .filter((group) => group.shouldDisplay);
 
   const selectedResource = selectSelectedResource({ state });
   const breadcrumb = selectBreadcrumb({ state });
@@ -155,6 +210,10 @@ export const selectViewData = ({ state }) => {
     items: flatItems,
     groups: flatGroups,
     tempSelectedResourceId: state.tempSelectedResourceId,
+    searchQuery: state.searchQuery,
+    searchPlaceholder: "Search...",
+    playingSound: state.playingSound,
+    showAudioPlayer: state.showAudioPlayer,
     breadcrumb,
     form,
     defaultValues,

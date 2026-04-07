@@ -1,5 +1,49 @@
 import { toFlatItems } from "../../internal/project/tree.js";
 
+const openBgmGallery = ({ store, render }) => {
+  const selectedResource = store.selectSelectedResource();
+  if (selectedResource) {
+    store.setTempSelectedResource({
+      resourceId: selectedResource.resourceId,
+    });
+  }
+
+  store.setMode({
+    mode: "gallery",
+  });
+  render();
+};
+
+const showCurrentBgmDropdown = async (deps, event) => {
+  const { store, render, globalUI } = deps;
+  const selectedResource = store.selectSelectedResource();
+
+  if (!selectedResource) {
+    openBgmGallery({ store, render });
+    return;
+  }
+
+  const result = await globalUI.showDropdownMenu({
+    items: [
+      { type: "item", label: "Change", key: "change" },
+      { type: "item", label: "Remove", key: "remove" },
+    ],
+    x: event.clientX,
+    y: event.clientY,
+    place: "bs",
+  });
+
+  if (result?.item?.key === "change") {
+    openBgmGallery({ store, render });
+    return;
+  }
+
+  if (result?.item?.key === "remove") {
+    store.clearBgmAudio();
+    render();
+  }
+};
+
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
@@ -17,58 +61,23 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleAudioWaveformRightClick = async (deps, payload) => {
-  const { store, render, globalUI } = deps;
   const { _event: event } = payload;
   event.preventDefault();
+  event.stopPropagation();
 
-  const result = await globalUI.showDropdownMenu({
-    items: [{ type: "item", label: "Remove", key: "remove" }],
-    x: event.clientX,
-    y: event.clientY,
-    place: "bs",
-  });
-
-  if (result.item.key === "remove") {
-    store.setBgmAudio({
-      resourceId: undefined,
-    });
-
-    render();
-  }
+  await showCurrentBgmDropdown(deps, event);
 };
 
-export const handleAudioWaveformClick = (deps) => {
-  const { store, render } = deps;
+export const handleAudioWaveformClick = async (deps, payload) => {
+  const { _event: event } = payload;
+  event.stopPropagation();
 
-  // When user clicks on waveform, open gallery
-  const selectedResource = store.selectSelectedResource();
-  if (selectedResource) {
-    store.setTempSelectedResource({
-      resourceId: selectedResource.resourceId,
-    });
-  }
-
-  store.setMode({
-    mode: "gallery",
-  });
-  render();
+  await showCurrentBgmDropdown(deps, event);
 };
 
 export const handleFormExtra = (deps, _payload) => {
   const { store, render } = deps;
-
-  // When user clicks on waveform field, open gallery
-  const selectedResource = store.selectSelectedResource();
-  if (selectedResource) {
-    store.setTempSelectedResource({
-      resourceId: selectedResource.resourceId,
-    });
-  }
-
-  store.setMode({
-    mode: "gallery",
-  });
-  render();
+  openBgmGallery({ store, render });
 };
 
 export const handleFormChange = (deps, payload) => {
@@ -94,10 +103,38 @@ export const handleResourceItemClick = (deps, payload) => {
   render();
 };
 
+export const handleResourceItemDoubleClick = (deps, payload) => {
+  const { store, render } = deps;
+  const resourceId = payload._event.currentTarget.dataset.resourceId;
+  const selectedItem = store.selectSoundItemById({ itemId: resourceId });
+
+  if (!selectedItem?.fileId) {
+    return;
+  }
+
+  store.setTempSelectedResource({
+    resourceId,
+  });
+  store.openAudioPlayer({
+    fileId: selectedItem.fileId,
+    fileName: selectedItem.name,
+  });
+  render();
+};
+
 export const handleFileExplorerItemClick = async (deps, payload) => {
-  const { store, render, downloadWaveformData, projectService } = deps;
+  const { refs, store, render, downloadWaveformData, projectService } = deps;
+  const { itemId, isFolder } = payload._event.detail;
+
+  if (isFolder) {
+    const groupElement = refs.galleryScroll?.querySelector(
+      `[data-group-id="${itemId}"]`,
+    );
+    groupElement?.scrollIntoView?.({ block: "start" });
+    return;
+  }
+
   await projectService.ensureRepository();
-  const itemId = payload._event.detail.id;
   const { sounds } = projectService.getState();
 
   store.setTempSelectedResource({
@@ -119,6 +156,18 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
       console.error("Failed to load waveform data:", error);
     }
   }
+};
+
+export const handleSearchInput = (deps, payload) => {
+  const { store, render } = deps;
+  store.setSearchQuery({ value: payload._event.detail.value ?? "" });
+  render();
+};
+
+export const handleAudioPlayerClose = (deps) => {
+  const { store, render } = deps;
+  store.closeAudioPlayer();
+  render();
 };
 
 export const handleSubmitClick = (deps, payload) => {

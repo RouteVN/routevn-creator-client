@@ -69,7 +69,10 @@ template:
               - $if preview.visual:
                   - rtgl-view#actionItemVisual data-mode=visual g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=image wh=24: null
-                      - rtgl-text s=sm: ${preview.visual.count} visual(s)
+                      - rtgl-view d=h g=sm av=c:
+                          - $for visualData, i in preview.visual.items:
+                              - $if visualData.previewFileId:
+                                  - rvn-file-image fileId=${visualData.previewFileId} w=32 h=32: null
               - $if preview.sectionTransition:
                   - rtgl-view#actionItemSectionTransition data-mode=sectionTransition g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="transition" wh=24: null

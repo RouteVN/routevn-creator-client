@@ -7,12 +7,21 @@ refs:
     eventListeners:
       click:
         handler: handleSfxClick
+      dblclick:
+        handler: handleSfxDoubleClick
       contextmenu:
         handler: handleSfxContextMenu
+  galleryScroll: {}
+  searchInput:
+    eventListeners:
+      value-input:
+        handler: handleSearchInput
   resourceItem*:
     eventListeners:
       click:
         handler: handleResourceItemClick
+      dblclick:
+        handler: handleResourceItemDoubleClick
   submitButton:
     eventListeners:
       click:
@@ -39,43 +48,61 @@ refs:
         handler: handleDropdownMenuClose
       item-click:
         handler: handleDropdownMenuClickItem
+  rvnAudioPlayer:
+    eventListeners:
+      audio-player-close:
+        handler: handleAudioPlayerClose
 template:
   - rtgl-view w=f h=f p=lg:
       - rtgl-view d=h g=md: null
       - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
       - $if mode == 'current':
-          - rtgl-view#soundEffectsContainer g=md:
+          - rtgl-view#soundEffectsContainer w=f g=md:
               - $for sfx, i in defaultValues.sfx:
-                  - rtgl-view d=h g=md av=t:
-                      - rtgl-view#soundEffectCard${i} data-sfx-id=${sfx.id} cur=pointer:
-                          - rvn-waveform-visualizer waveformDataFileId=${sfx.waveformDataFileId} width=355 height=150: null
+                  - rtgl-view d=h w=f g=md av=t:
+                      - rtgl-view#soundEffectCard${i} data-sfx-id=${sfx.id} cur=pointer bw=xs bc=${sfx.itemBorderColor} h-bc=${sfx.itemHoverBorderColor} br=sm:
+                          - rtgl-view p=md g=md br=md:
+                              - $if sfx.waveformDataFileId:
+                                  - rvn-waveform-visualizer waveformDataFileId=${sfx.waveformDataFileId} w=200 h=120: null
+                                $else:
+                                  - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
+                                      - rtgl-text s=sm c=mu-fg: No waveform
+                              - rtgl-text s=xs c=mu-fg ellipsis w=200: ${sfx.name}
                       - rtgl-view w=1fg g=sm:
-                          - rtgl-text ellipsis=true s=sm c=mu-fg: ${sfx.name}
                           - rtgl-text s=sm c=mu-fg: Loop
-                          - rtgl-select#loopSelect${i} data-index=${i} w=f no-clear :selectedValue=${sfx.loop} :options=${loopOptions}: null
+                          - rtgl-segmented-control#loopSelect${i} data-index=${i} w=f no-clear :selectedValue=${sfx.loop} :options=${loopOptions}: null
                           - rtgl-text s=sm c=mu-fg: Volume
-                          - rtgl-input#volumeInput${i} data-index=${i} type=number min=0 max=1000 step=1 w=f value=${sfx.volume}: null
+                          - rtgl-slider-input#volumeInput${i} data-index=${i} key=${sfx.id} min=0 max=1000 step=1 w=f value=${sfx.volume}: null
               - rtgl-button#addNewButton v=ol w=f mt=md: + Add New Sound Effect
           - rtgl-view h=1fg: null
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#submitButton: Submit
       - $if mode == 'gallery':
+          - rtgl-view d=h w=f av=c g=md:
+              - rtgl-view w=1fg: null
+              - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
           - 'rtgl-view d=h w=f g=lg mt=sm h=1fg style="min-height: 0;"':
               - rtgl-view h=f w=1fg sv:
-                  - rvn-base-file-explorer#baseFileExplorer :items=${items} no-empty-message: null
-              - rtgl-view h=f w=2fg sv g=lg:
+                  - rvn-base-file-explorer#baseFileExplorer :items=${items}: null
+              - rtgl-view#galleryScroll h=f w=2fg sv g=lg:
                   - $for group, i in groups:
-                      - rtgl-view g=md:
-                          - rtgl-text: ${group.name}
+                      - rtgl-view data-group-id=${group.id} g=md:
+                          - rtgl-view d=h av=c g=md:
+                              - rtgl-svg svg=folder wh=16: null
+                              - rtgl-text: ${group.fullLabel}
                           - rtgl-view d=h w=f wrap g=lg:
                               - $for item, j in group.children:
-                                  - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} cur=pointer bw=${item.bw} bc=${item.bc} g=sm:
-                                      - $if item.waveformDataFileId:
-                                          - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} width=225 h=120: null
-                                          - rtgl-text s=sm ah=c: ${item.name}
-                                        $else:
-                                          - rtgl-view w=225 h=120 av=c ah=c bgc=ac:
-                                              - rtgl-text s=sm c=mu-fg: No waveform
+                                  - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm:
+                                      - rtgl-view p=md g=md br=md:
+                                          - $if item.waveformDataFileId:
+                                              - rvn-waveform-visualizer waveformDataFileId=${item.waveformDataFileId} w=200 h=120: null
+                                            $else:
+                                              - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
+                                                  - rtgl-text s=sm c=mu-fg: No waveform
+                                          - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#buttonSelect: Select
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
+  - $if showAudioPlayer:
+      - 'rtgl-view h=72 pos=fix edge=b z=1001 style="left: 0px; right: 0px;"':
+          - rvn-audio-player#rvnAudioPlayer fileId=${playingSound.fileId} autoPlay=true :title=${playingSound.title}: null

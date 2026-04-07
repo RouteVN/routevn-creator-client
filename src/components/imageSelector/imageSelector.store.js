@@ -21,27 +21,45 @@ export const setImages = ({ state }, { images } = {}) => {
   state.images = images;
 };
 
-export const selectViewData = ({ state }) => {
+const matchesSearch = (item, searchQuery) => {
+  if (!searchQuery) {
+    return true;
+  }
+
+  const name = (item.name ?? "").toLowerCase();
+  const description = (item.description ?? "").toLowerCase();
+  return name.includes(searchQuery) || description.includes(searchQuery);
+};
+
+export const selectViewData = ({ state, props = {} }) => {
   const images = state.images || { items: {}, tree: [] }; // Raw data from state
   const selectedImageId = state.selectedImageId; // Use state instead of props
+  const searchQuery = (props.searchQuery ?? "").toLowerCase().trim();
 
   // Process images into groups here, like in commandLineBackground
-  const groups = toFlatGroups(images).map((group) => {
-    return {
-      ...group,
-      children: group.children.map((child) => {
-        const isSelected = child.id === selectedImageId;
-        return {
-          ...child,
-          bw: isSelected ? "md" : "xs",
-          bc: isSelected ? "pr" : "mu",
-          selectedStyle: isSelected
-            ? "outline: 2px solid var(--color-pr); outline-offset: 2px;"
-            : "",
-        };
-      }),
-    };
-  });
+  const groups = toFlatGroups(images)
+    .map((group) => {
+      const children = group.children
+        .filter((child) => matchesSearch(child, searchQuery))
+        .map((child) => {
+          const isSelected = child.id === selectedImageId;
+          const itemBorderColor = isSelected ? "pr" : "bo";
+          const itemHoverBorderColor = isSelected ? "pr" : "ac";
+          return {
+            ...child,
+            itemBorderColor,
+            itemHoverBorderColor,
+          };
+        });
+
+      return {
+        ...group,
+        children,
+        hasChildren: children.length > 0,
+        shouldDisplay: !searchQuery || children.length > 0,
+      };
+    })
+    .filter((group) => group.shouldDisplay);
 
   return {
     groups: groups, // Processed groups for template

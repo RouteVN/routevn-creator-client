@@ -142,6 +142,25 @@ export const handleSfxClick = (deps, payload) => {
   render();
 };
 
+export const handleSfxDoubleClick = (deps, payload) => {
+  const { store, render } = deps;
+  const sfxId = payload._event.currentTarget?.dataset?.sfxId;
+  const soundEffect = store.selectSfxs().find((item) => item.id === sfxId);
+  const soundItem = store.selectSoundItemById({
+    itemId: soundEffect?.resourceId,
+  });
+
+  if (!soundItem?.fileId) {
+    return;
+  }
+
+  store.openAudioPlayer({
+    fileId: soundItem.fileId,
+    fileName: soundItem.name,
+  });
+  render();
+};
+
 export const handleSfxContextMenu = (deps, payload) => {
   payload._event.preventDefault();
   const { store, render } = deps;
@@ -170,6 +189,51 @@ export const handleResourceItemClick = (deps, payload) => {
     resourceId: id,
   });
 
+  render();
+};
+
+export const handleResourceItemDoubleClick = (deps, payload) => {
+  const { store, render } = deps;
+  const resourceId = payload._event.currentTarget.dataset.resourceId;
+  const selectedItem = store.selectSoundItemById({ itemId: resourceId });
+
+  if (!selectedItem?.fileId) {
+    return;
+  }
+
+  store.setTempSelectedResourceId({
+    resourceId,
+  });
+  store.openAudioPlayer({
+    fileId: selectedItem.fileId,
+    fileName: selectedItem.name,
+  });
+  render();
+};
+
+export const handleFileExplorerItemClick = (deps, payload) => {
+  const { refs } = deps;
+  const { itemId, isFolder } = payload._event.detail;
+
+  if (!isFolder) {
+    return;
+  }
+
+  const groupElement = refs.galleryScroll?.querySelector(
+    `[data-group-id="${itemId}"]`,
+  );
+  groupElement?.scrollIntoView?.({ block: "start" });
+};
+
+export const handleSearchInput = (deps, payload) => {
+  const { store, render } = deps;
+  store.setSearchQuery({ value: payload._event.detail.value ?? "" });
+  render();
+};
+
+export const handleAudioPlayerClose = (deps) => {
+  const { store, render } = deps;
+  store.closeAudioPlayer();
   render();
 };
 

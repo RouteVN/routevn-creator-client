@@ -61,27 +61,54 @@ export const handleVisualContextMenu = (deps, payload) => {
 
 export const handleTransformChange = (deps, payload) => {
   const { store, render } = deps;
-  const id = payload._event.currentTarget?.id || payload._event.target?.id;
-  const value =
-    payload._event.detail?.value ||
-    payload._event.currentTarget?.value ||
-    payload._event.target?.value;
-
-  // Extract index from ID (format: transform-{index})
-  const index = parseInt(id.replace("transform", ""));
+  const index = Number.parseInt(payload._event.currentTarget.dataset.index, 10);
+  const value = payload._event.detail.value;
   store.updateVisualTransform({ index, transform: value });
+  render();
+};
+
+export const handleFileExplorerItemClick = (deps, payload) => {
+  const { refs, store, render } = deps;
+  const { itemId, isFolder } = payload._event.detail;
+  const { resourceId } = store.selectResourceExplorerTarget({ itemId });
+
+  if (isFolder) {
+    const groupElement = refs.galleryScroll?.querySelector(
+      `[data-group-id="${itemId}"]`,
+    );
+    groupElement?.scrollIntoView?.({ block: "start" });
+    return;
+  }
+
+  store.setTempSelectedResourceId({ resourceId });
+  render();
+};
+
+export const handleSearchInput = (deps, payload) => {
+  const { store, render } = deps;
+  store.setSearchQuery({ value: payload._event.detail.value ?? "" });
   render();
 };
 
 export const handleResourceItemClick = (deps, payload) => {
   const { store, render } = deps;
-  const target = payload._event.currentTarget;
-  const resourceId =
-    target?.dataset?.resourceId ||
-    target?.id?.replace("resourceItem", "") ||
-    "";
+  const resourceId = payload._event.currentTarget.dataset.resourceId;
 
   store.setTempSelectedResourceId({ resourceId });
+  render();
+};
+
+export const handleResourceItemDoubleClick = (deps, payload) => {
+  const { store, render } = deps;
+  const resourceId = payload._event.currentTarget.dataset.resourceId;
+  const item = store.selectResourceItemById({ resourceId });
+
+  if (!item?.previewFileId) {
+    return;
+  }
+
+  store.setTempSelectedResourceId({ resourceId });
+  store.showFullImagePreview({ fileId: item.previewFileId });
   render();
 };
 

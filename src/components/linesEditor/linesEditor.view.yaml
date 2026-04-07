@@ -89,6 +89,18 @@ template:
                                   - $if line.characterSprites.changeType == "delete":
                                       - rtgl-view pos=abs cor=full bgc=danger av=c ah=c:
                                           - rtgl-svg svg=x wh=16 c=white: null
+                          - $if line.visual:
+                              - rtgl-view#previewVisual data-type="visual" data-id="${line.id}" pos=rel mr=sm:
+                                  - $if line.visual.items && line.visual.items.length > 0:
+                                      - rtgl-view d=h:
+                                          - $for visual in line.visual.items:
+                                              - rvn-file-image fileId=${visual.fileId} w=36 h=24: null
+                                    $else:
+                                      - rtgl-view w=36 h=24 av=c ah=c:
+                                          - rtgl-svg svg=image wh=24: null
+                                  - $if line.visual.changeType == "delete":
+                                      - rtgl-view pos=abs cor=full bgc=danger av=c ah=c:
+                                          - rtgl-svg svg=x wh=16 c=white: null
                           - $if line.hasDialogueLayout:
                               - rtgl-view#previewDialogue data-type="dialogue" data-id="${line.id}" d=h av=c g=xs mr=sm:
                                   - rtgl-view pos=rel w=24 h=24 av=c ah=c:
