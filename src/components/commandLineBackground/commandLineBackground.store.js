@@ -188,15 +188,24 @@ export const selectSelectedResource = ({ state }) => {
 
   const layoutTypeLabels = {
     normal: "Normal",
+    "save-load": "Save / Load",
+    confirmDialog: "Confirm Dialog",
+    history: "History",
     dialogue: "Dialogue",
+    nvl: "NVL",
     choice: "Choice",
   };
+
+  const typeInfo = layoutTypeLabels[item.layoutType] ?? item.layoutType;
 
   return {
     resourceId: state.selectedResourceId,
     resourceType: state.selectedResourceType,
     fileId: item.thumbnailFileId || item.fileId,
     name: item.name,
+    itemBorderColor: "bo",
+    itemHoverBorderColor: "ac",
+    typeInfo,
     layoutType: item.layoutType,
     layoutTypeDisplay: item.layoutType
       ? layoutTypeLabels[item.layoutType] || item.layoutType

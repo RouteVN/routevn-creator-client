@@ -57,17 +57,30 @@ template:
           - rtgl-form#form :form=${dialogueForm.form} :defaultValues=${dialogueForm.defaultValues}:
               - $if selectedResource:
                   - $if selectedResource.resourceType == 'image':
-                      - rvn-file-image#backgroundImage fileId=${selectedResource.fileId} w=355 h=200 slot=background cur=pointer: null
+                      - rtgl-view#backgroundImage slot=background cur=pointer bw=xs bc=${selectedResource.itemBorderColor} h-bc=${selectedResource.itemHoverBorderColor} br=sm:
+                          - rtgl-view p=md g=md br=md:
+                              - rvn-file-image w=200 h=120 fileId=${selectedResource.fileId}: null
+                              - rtgl-text s=xs c=mu-fg ellipsis w=200: ${selectedResource.name}
                     $elif selectedResource.resourceType == 'layout':
-                      - rtgl-view#backgroundImage w=355 h=200 bgc=mu av=c ah=c cur=pointer slot=background bw=xs bc=mu br=sm:
-                          - rtgl-view av=c ah=c:
-                              - rtgl-text s=lg: ${selectedResource.name}
-                              - rtgl-text s=sm c=mu-fg: ${selectedResource.layoutTypeDisplay}
+                      - rtgl-view#backgroundImage slot=background cur=pointer bw=xs bc=${selectedResource.itemBorderColor} h-bc=${selectedResource.itemHoverBorderColor} br=sm:
+                          - 'rtgl-view w=225 br=md style="overflow: hidden;"':
+                              - $if selectedResource.item.thumbnailFileId:
+                                  - rvn-file-image fileId=${selectedResource.item.thumbnailFileId} w=225 h=120: null
+                                $else:
+                                  - rtgl-view w=225 h=120 av=c ah=c bgc=mu-fg:
+                                      - rtgl-text s=sm c=mu-fg: No thumbnail
+                              - rtgl-view d=v w=f g=xs ph=md pt=sm pb=md:
+                                  - rtgl-text s=sm ellipsis w=193: ${selectedResource.name}
+                                  - $if selectedResource.typeInfo:
+                                      - rtgl-text s=xs c=mu-fg ellipsis w=193: ${selectedResource.typeInfo}
                     $elif selectedResource.resourceType == 'video':
-                      - rtgl-view#backgroundImage w=355 h=200 cur=pointer slot=background pos=rel:
-                          - rvn-file-image fileId=${selectedResource.item.thumbnailFileId} w=355 h=200: null
-                          - rtgl-view pos=abs w=f h=f av=c ah=c bgc=bg-60:
-                              - rtgl-icon icon=play s=xl c=fg: null
+                      - rtgl-view#backgroundImage slot=background cur=pointer bw=xs bc=${selectedResource.itemBorderColor} h-bc=${selectedResource.itemHoverBorderColor} br=sm:
+                          - rtgl-view p=md g=md br=md:
+                              - rtgl-view pos=rel:
+                                  - rvn-file-image w=200 h=120 fileId=${selectedResource.item.thumbnailFileId}: null
+                                  - rtgl-view pos=abs w=f h=f av=c ah=c bgc=bg-60:
+                                      - rtgl-icon icon=play s=xl c=fg: null
+                              - rtgl-text s=xs c=mu-fg ellipsis w=200: ${selectedResource.name}
                     $else:
                       - rtgl-view#backgroundImage w=355 h=200 bgc=mu av=c ah=c cur=pointer slot=background:
                           - rtgl-text s=md c=mu-fg: Select Background
