@@ -1,5 +1,49 @@
 import { toFlatItems } from "../../internal/project/tree.js";
 
+const openBgmGallery = ({ store, render }) => {
+  const selectedResource = store.selectSelectedResource();
+  if (selectedResource) {
+    store.setTempSelectedResource({
+      resourceId: selectedResource.resourceId,
+    });
+  }
+
+  store.setMode({
+    mode: "gallery",
+  });
+  render();
+};
+
+const showCurrentBgmDropdown = async (deps, event) => {
+  const { store, render, globalUI } = deps;
+  const selectedResource = store.selectSelectedResource();
+
+  if (!selectedResource) {
+    openBgmGallery({ store, render });
+    return;
+  }
+
+  const result = await globalUI.showDropdownMenu({
+    items: [
+      { type: "item", label: "Change", key: "change" },
+      { type: "item", label: "Remove", key: "remove" },
+    ],
+    x: event.clientX,
+    y: event.clientY,
+    place: "bs",
+  });
+
+  if (result?.item?.key === "change") {
+    openBgmGallery({ store, render });
+    return;
+  }
+
+  if (result?.item?.key === "remove") {
+    store.clearBgmAudio();
+    render();
+  }
+};
+
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
@@ -17,60 +61,23 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleAudioWaveformRightClick = async (deps, payload) => {
-  const { store, render, globalUI } = deps;
   const { _event: event } = payload;
   event.preventDefault();
   event.stopPropagation();
 
-  if (!store.selectSelectedResource()) {
-    return;
-  }
-
-  const result = await globalUI.showDropdownMenu({
-    items: [{ type: "item", label: "Remove", key: "remove" }],
-    x: event.clientX,
-    y: event.clientY,
-    place: "bs",
-  });
-
-  if (result?.item?.key === "remove") {
-    store.clearBgmAudio();
-    render();
-  }
+  await showCurrentBgmDropdown(deps, event);
 };
 
-export const handleAudioWaveformClick = (deps) => {
-  const { store, render } = deps;
+export const handleAudioWaveformClick = async (deps, payload) => {
+  const { _event: event } = payload;
+  event.stopPropagation();
 
-  // When user clicks on waveform, open gallery
-  const selectedResource = store.selectSelectedResource();
-  if (selectedResource) {
-    store.setTempSelectedResource({
-      resourceId: selectedResource.resourceId,
-    });
-  }
-
-  store.setMode({
-    mode: "gallery",
-  });
-  render();
+  await showCurrentBgmDropdown(deps, event);
 };
 
 export const handleFormExtra = (deps, _payload) => {
   const { store, render } = deps;
-
-  // When user clicks on waveform field, open gallery
-  const selectedResource = store.selectSelectedResource();
-  if (selectedResource) {
-    store.setTempSelectedResource({
-      resourceId: selectedResource.resourceId,
-    });
-  }
-
-  store.setMode({
-    mode: "gallery",
-  });
-  render();
+  openBgmGallery({ store, render });
 };
 
 export const handleFormChange = (deps, payload) => {
