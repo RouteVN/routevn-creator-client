@@ -91,7 +91,9 @@ template:
                     $elif tab == 'layout':
                       - $for group, i in groups:
                           - rtgl-view g=md:
-                              - rtgl-text: ${group.name}
+                              - rtgl-view d=h av=c g=md:
+                                  - rtgl-svg svg=folder wh=16: null
+                                  - rtgl-text: ${group.fullLabel}
                               - rtgl-view d=h w=f wrap g=lg:
                                   - $for item, j in group.children:
                                       - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm:
@@ -108,7 +110,9 @@ template:
                     $elif tab == 'video':
                       - $for group, i in groups:
                           - rtgl-view g=md:
-                              - rtgl-text: ${group.name}
+                              - rtgl-view d=h av=c g=md:
+                                  - rtgl-svg svg=folder wh=16: null
+                                  - rtgl-text: ${group.fullLabel}
                               - rtgl-view d=h w=f wrap g=lg:
                                   - $for item, j in group.children:
                                       - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm:
