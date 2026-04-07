@@ -93,7 +93,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {
-  const { store, render, refs } = deps;
+  const { store, render } = deps;
   const detail = payload?._event?.detail ?? {};
   const itemId = resolveDetailItemId(detail);
   const isFolder =
@@ -106,8 +106,6 @@ export const handleFileExplorerDoubleClick = (deps, payload) => {
   }
 
   store.setSelectedItemId({ itemId });
-  const { groupview } = refs;
-  groupview.openEditDialog({ itemId });
   render();
 };
 

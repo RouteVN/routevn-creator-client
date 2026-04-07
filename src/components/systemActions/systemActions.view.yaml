@@ -141,8 +141,6 @@ template:
                   - rtgl-view#actionItemUpdateVariable data-mode=updateVariable g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=variable wh=24: null
                       - rtgl-text s=sm: ${preview.updateVariable.summary}
-            $else:
-              - rtgl-text s=sm c=mu-fg: No actions added yet
           - rtgl-button#addActionButton v=ol w=f: +
           - $if actionsType == 'system':
               - rtgl-view d=h av=c ah=e w=f g=lg:
