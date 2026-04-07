@@ -49,9 +49,10 @@ template:
       - $if mode == 'current':
           - rtgl-form#form key=${audio.id} :form=${form} :defaultValues=${defaultValues}:
               - $if defaultValues.audioWaveformDataFileId:
-                  - rtgl-view slot=audio:
-                      - rvn-waveform-visualizer#audioWaveform waveformDataFileId=${defaultValues.audioWaveformDataFileId} width=355 height=200 cur=pointer: null
-                      - rtgl-text s=sm ah=c: ${audio.name}
+                  - rtgl-view#audioWaveform slot=audio cur=pointer bw=xs bc=${audio.itemBorderColor} h-bc=${audio.itemHoverBorderColor} br=sm:
+                      - rtgl-view p=md g=md br=md:
+                          - rvn-waveform-visualizer waveformDataFileId=${defaultValues.audioWaveformDataFileId} w=200 h=120: null
+                          - rtgl-text s=xs c=mu-fg ellipsis w=200: ${audio.name}
                 $else:
                   - rtgl-view#audioWaveform w=250 h=150 bgc=mu av=c ah=c cur=pointer slot=audio:
                       - rtgl-text s=md c=mu-fg: Select BGM

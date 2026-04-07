@@ -113,6 +113,8 @@ export const selectSelectedResource = ({ state }) => {
     resourceId: state.bgm.resourceId,
     fileId: item.fileId,
     name: item.name,
+    itemBorderColor: "bo",
+    itemHoverBorderColor: "ac",
     item: item,
   };
 };
