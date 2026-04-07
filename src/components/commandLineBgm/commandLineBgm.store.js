@@ -41,6 +41,11 @@ export const createInitialState = () => ({
   tempSelectedResourceId: undefined,
   bgm: normalizeBgm(),
   searchQuery: "",
+  playingSound: {
+    title: "",
+    fileId: undefined,
+  },
+  showAudioPlayer: false,
 });
 
 export const setBgmAudio = ({ state }, { resourceId } = {}) => {
@@ -78,6 +83,20 @@ export const setSearchQuery = ({ state }, { value } = {}) => {
   state.searchQuery = value ?? "";
 };
 
+export const openAudioPlayer = ({ state }, { fileId, fileName } = {}) => {
+  state.playingSound.fileId = fileId;
+  state.playingSound.title = fileName;
+  state.showAudioPlayer = true;
+};
+
+export const closeAudioPlayer = ({ state }, _payload = {}) => {
+  state.showAudioPlayer = false;
+  state.playingSound = {
+    title: "",
+    fileId: undefined,
+  };
+};
+
 export const selectSelectedResource = ({ state }) => {
   if (!state.bgm.resourceId) {
     return null;
@@ -96,6 +115,10 @@ export const selectSelectedResource = ({ state }) => {
     name: item.name,
     item: item,
   };
+};
+
+export const selectSoundItemById = ({ state }, { itemId } = {}) => {
+  return toFlatItems(state.items).find((item) => item.id === itemId);
 };
 
 export const selectBreadcrumb = ({ state }) => {
@@ -178,6 +201,8 @@ export const selectViewData = ({ state }) => {
     tempSelectedResourceId: state.tempSelectedResourceId,
     searchQuery: state.searchQuery,
     searchPlaceholder: "Search...",
+    playingSound: state.playingSound,
+    showAudioPlayer: state.showAudioPlayer,
     breadcrumb,
     form,
     defaultValues,

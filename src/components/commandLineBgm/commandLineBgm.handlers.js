@@ -94,6 +94,25 @@ export const handleResourceItemClick = (deps, payload) => {
   render();
 };
 
+export const handleResourceItemDoubleClick = (deps, payload) => {
+  const { store, render } = deps;
+  const resourceId = payload._event.currentTarget.dataset.resourceId;
+  const selectedItem = store.selectSoundItemById({ itemId: resourceId });
+
+  if (!selectedItem?.fileId) {
+    return;
+  }
+
+  store.setTempSelectedResource({
+    resourceId,
+  });
+  store.openAudioPlayer({
+    fileId: selectedItem.fileId,
+    fileName: selectedItem.name,
+  });
+  render();
+};
+
 export const handleFileExplorerItemClick = async (deps, payload) => {
   const { refs, store, render, downloadWaveformData, projectService } = deps;
   const { itemId, isFolder } = payload._event.detail;
@@ -133,6 +152,12 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
 export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
   store.setSearchQuery({ value: payload._event.detail.value ?? "" });
+  render();
+};
+
+export const handleAudioPlayerClose = (deps) => {
+  const { store, render } = deps;
+  store.closeAudioPlayer();
   render();
 };
 
