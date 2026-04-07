@@ -17,6 +17,7 @@ export const createInitialState = () => ({
   tempSelectedCharacterId: undefined,
   tempSelectedSpriteId: undefined,
   selectedCharacterIndex: undefined, // For sprite selection
+  searchQuery: "",
   dropdownMenu: {
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -97,6 +98,10 @@ export const setTempSelectedCharacterId = ({ state }, { characterId } = {}) => {
 
 export const setTempSelectedSpriteId = ({ state }, { spriteId } = {}) => {
   state.tempSelectedSpriteId = spriteId;
+};
+
+export const setSearchQuery = ({ state }, { value } = {}) => {
+  state.searchQuery = value ?? "";
 };
 
 export const setSelectedCharacterIndex = ({ state }, { index } = {}) => {
@@ -203,18 +208,35 @@ export const selectViewData = ({ state }) => {
   const flatItems = toFlatItems(state.items).filter(
     (item) => item.type === "folder",
   );
-  const flatGroups = toFlatGroups(state.items).map((group) => {
-    return {
-      ...group,
-      children: group.children.map((child) => {
+  const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
+  const matchesSearch = (item) => {
+    if (!searchQuery) {
+      return true;
+    }
+
+    const name = (item.name ?? "").toLowerCase();
+    const description = (item.description ?? "").toLowerCase();
+    return name.includes(searchQuery) || description.includes(searchQuery);
+  };
+  const flatGroups = toFlatGroups(state.items)
+    .map((group) => {
+      const children = group.children.filter(matchesSearch).map((child) => {
         const isSelected = child.id === state.tempSelectedCharacterId;
         return {
           ...child,
-          bw: isSelected ? "md" : "",
+          itemBorderColor: isSelected ? "pr" : "bo",
+          itemHoverBorderColor: isSelected ? "pr" : "ac",
         };
-      }),
-    };
-  });
+      });
+
+      return {
+        ...group,
+        children,
+        hasChildren: children.length > 0,
+        shouldDisplay: !searchQuery || children.length > 0,
+      };
+    })
+    .filter((group) => group.shouldDisplay);
 
   // Initialize sprite data (will be populated later after processedSelectedCharacters is defined)
   let spriteItems = [];
@@ -325,6 +347,8 @@ export const selectViewData = ({ state }) => {
     spriteItems,
     spriteGroups,
     selectedCharacterName,
+    searchQuery: state.searchQuery,
+    searchPlaceholder: "Search...",
     breadcrumb,
     form,
     defaultValues,

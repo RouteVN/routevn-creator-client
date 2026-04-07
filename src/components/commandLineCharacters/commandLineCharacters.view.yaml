@@ -13,6 +13,15 @@ refs:
         handler: handleCharacterClick
       contextmenu:
         handler: handleCharacterContextMenu
+  baseFileExplorer:
+    eventListeners:
+      item-click:
+        handler: handleFileExplorerItemClick
+  galleryScroll: {}
+  searchInput:
+    eventListeners:
+      value-input:
+        handler: handleSearchInput
   spriteItem*:
     eventListeners:
       click:
@@ -69,30 +78,35 @@ template:
                                       - rtgl-text s=xs c=mu-fg ellipsis w=200: ${character.displayName}
                               - rtgl-view w=1fg g=sm:
                                   - rtgl-text s=sm c=mu-fg: Transform
-                                  - rtgl-select#transform${i} :options=${defaultValues.transformOptions} :selectedValue=${defaultValues.characters[i].transformId} w=f: null
+                                  - rtgl-select#transform${i} data-index=${i} key=${character.transformId} :options=${defaultValues.transformOptions} :selectedValue=${character.transformId} w=f no-clear: null
                       - rtgl-button#addCharacterButton v=ol w=f mt=md: + Add Character
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#submitButton: Submit
       - $if mode == 'character-select':
           - rtgl-view d=h g=md:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
+          - rtgl-view d=h w=f av=c g=md:
+              - rtgl-view w=1fg: null
+              - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
           - 'rtgl-view d=h w=f g=lg h=1fg style="min-height: 0;"':
               - rtgl-view h=f w=1fg sv:
                   - rvn-base-file-explorer#baseFileExplorer :items=${items} no-empty-message: null
-              - rtgl-view h=f w=2fg sv g=lg:
+              - rtgl-view#galleryScroll h=f w=2fg sv g=lg:
                   - $for group, i in groups:
-                      - rtgl-view g=md:
-                          - rtgl-text: ${group.name}
+                      - rtgl-view data-group-id=${group.id} g=md:
+                          - rtgl-view d=h av=c g=md:
+                              - rtgl-svg svg=folder wh=16: null
+                              - rtgl-text: ${group.fullLabel}
                           - rtgl-view d=h w=f wrap g=lg:
                               - $for item, j in group.children:
-                                  - rtgl-view#characterItem${i}x${j} data-character-id=${item.id} w=200 h=150 p=sm bgc=mu br=md cur=pointer key=${item.bw} bw=${item.bw}:
-                                      - rtgl-view w=f h=f av=c ah=c g=sm:
+                                  - rtgl-view#characterItem${i}x${j} data-character-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm:
+                                      - rtgl-view p=md g=md br=md:
                                           - $if item.fileId:
-                                              - rvn-file-image fileId=${item.fileId} w=80 h=80 br=f: null
+                                              - rvn-file-image fileId=${item.fileId} w=200 h=120: null
                                             $else:
-                                              - rtgl-view w=80 h=80 bgc=ac av=c ah=c br=f:
-                                                  - rtgl-text s=sm: No Avatar
-                                          - rtgl-text: ${item.name}
+                                              - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
+                                                  - rtgl-text s=sm c=mu-fg: No Avatar
+                                          - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
       - $if mode == 'sprite-select':
           - rtgl-view d=h g=md:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null

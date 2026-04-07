@@ -62,16 +62,39 @@ export const handleCharacterContextMenu = (deps, payload) => {
 
 export const handleTransformChange = (deps, payload) => {
   const { store, render } = deps;
-  const id = payload._event.currentTarget?.id || payload._event.target?.id;
-  // Try both event structures (native change event and custom option-selected event)
-  const value =
-    payload._event.detail?.value ||
-    payload._event.currentTarget?.value ||
-    payload._event.target?.value;
-
-  // Extract index from ID (format: transform-{index})
-  const index = parseInt(id.replace("transform", ""));
+  const index = Number.parseInt(payload._event.currentTarget.dataset.index, 10);
+  const value = payload._event.detail.value;
   store.updateCharacterTransform({ index, transform: value });
+  render();
+};
+
+export const handleFileExplorerItemClick = (deps, payload) => {
+  const { refs, store, render } = deps;
+  const { itemId, isFolder } = payload._event.detail;
+
+  if (isFolder) {
+    const groupElement = refs.galleryScroll?.querySelector(
+      `[data-group-id="${itemId}"]`,
+    );
+    groupElement?.scrollIntoView?.({ block: "start" });
+    return;
+  }
+
+  store.addCharacter({ id: itemId });
+
+  const currentCharacters = store.selectSelectedCharacters();
+  const newCharacterIndex = currentCharacters.length - 1;
+  store.setSelectedCharacterIndex({ index: newCharacterIndex });
+  store.setMode({
+    mode: "sprite-select",
+  });
+
+  render();
+};
+
+export const handleSearchInput = (deps, payload) => {
+  const { store, render } = deps;
+  store.setSearchQuery({ value: payload._event.detail.value ?? "" });
   render();
 };
 
