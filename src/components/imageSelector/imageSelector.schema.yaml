@@ -4,3 +4,5 @@ propsSchema:
   properties:
     selectedImageId:
       type: string
+    searchQuery:
+      type: string

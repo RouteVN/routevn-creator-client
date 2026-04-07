@@ -25,6 +25,10 @@ refs:
     eventListeners:
       item-click:
         handler: handleTabClick
+  searchInput:
+    eventListeners:
+      value-input:
+        handler: handleSearchInput
   form:
     eventListeners:
       form-field-event:
@@ -74,13 +78,16 @@ template:
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#submitButton: Submit
       - $if mode == 'gallery':
-          - rtgl-tabs#tabs selected-tab=${tab} :items=${tabs}: null
+          - rtgl-view d=h w=f av=c g=md:
+              - rtgl-tabs#tabs selected-tab=${tab} :items=${tabs}: null
+              - rtgl-view w=1fg: null
+              - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
           - 'rtgl-view d=h w=f g=lg mt=sm h=1fg style="min-height: 0;"':
               - rtgl-view h=f w=1fg sv:
                   - rvn-base-file-explorer#baseFileExplorer :items=${items}: null
               - rtgl-view h=f w=2fg sv g=lg:
                   - $if tab == 'image':
-                      - rvn-image-selector#rvnImageSelector selectedImageId=${tempSelectedResourceId}: null
+                      - rvn-image-selector#rvnImageSelector selectedImageId=${tempSelectedResourceId} searchQuery=${searchQuery}: null
                     $elif tab == 'layout':
                       - $for group, i in groups:
                           - rtgl-view g=md:

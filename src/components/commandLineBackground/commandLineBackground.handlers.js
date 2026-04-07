@@ -319,6 +319,12 @@ export const handleTabClick = (deps, payload) => {
   render();
 };
 
+export const handleSearchInput = (deps, payload) => {
+  const { store, render } = deps;
+  store.setSearchQuery({ value: payload._event.detail.value ?? "" });
+  render();
+};
+
 export const handleSubmitClick = (deps, payload) => {
   payload?._event?.stopPropagation?.();
   const { dispatchEvent, store } = deps;

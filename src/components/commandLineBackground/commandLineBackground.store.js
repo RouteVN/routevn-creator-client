@@ -47,6 +47,7 @@ export const createInitialState = () => ({
   pendingResourceId: undefined,
   fullImagePreviewVisible: false,
   fullImagePreviewFileId: undefined,
+  searchQuery: "",
 });
 
 export const selectTempSelectedResourceId = ({ state }) => {
@@ -113,6 +114,10 @@ export const showFullImagePreview = ({ state }, { imageId } = {}) => {
 export const hideFullImagePreview = ({ state }, _payload = {}) => {
   state.fullImagePreviewVisible = false;
   state.fullImagePreviewFileId = undefined;
+};
+
+export const setSearchQuery = ({ state }, { value } = {}) => {
+  state.searchQuery = value ?? "";
 };
 
 export const setSelectedAnimation = ({ state }, { animationId } = {}) => {
@@ -209,13 +214,23 @@ export const selectViewData = ({ state }) => {
   };
   const items = itemsMap[state.tab] || createEmptyCollection();
   const flatItems = toFlatItems(items).filter((item) => item.type === "folder");
-  const flatGroups = toFlatGroups(items).map((group) => {
-    return {
-      ...group,
-      children: group.children
+  const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
+  const matchesSearch = (item) => {
+    if (!searchQuery) {
+      return true;
+    }
+
+    const name = (item.name ?? "").toLowerCase();
+    const description = (item.description ?? "").toLowerCase();
+    return name.includes(searchQuery) || description.includes(searchQuery);
+  };
+  const flatGroups = toFlatGroups(items)
+    .map((group) => {
+      const children = group.children
         .filter(
           (layout) => state.tab !== "layout" || layout.layoutType === "normal",
         )
+        .filter(matchesSearch)
         .map((child) => {
           const isSelected = child.id === state.tempSelectedResourceId;
           const itemBorderColor = isSelected ? "pr" : "bo";
@@ -234,9 +249,16 @@ export const selectViewData = ({ state }) => {
               ? layoutTypeLabels[child.layoutType] || child.layoutType
               : "Layout",
           };
-        }),
-    };
-  });
+        });
+
+      return {
+        ...group,
+        children,
+        hasChildren: children.length > 0,
+        shouldDisplay: !searchQuery || children.length > 0,
+      };
+    })
+    .filter((group) => group.shouldDisplay);
 
   const selectedResource = selectSelectedResource({ state });
   const breadcrumb = selectBreadcrumb({ state });
@@ -298,6 +320,8 @@ export const selectViewData = ({ state }) => {
     selectedResource,
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
+    searchQuery: state.searchQuery,
+    searchPlaceholder: "Search...",
     dialogueForm: {
       form,
       defaultValues,
