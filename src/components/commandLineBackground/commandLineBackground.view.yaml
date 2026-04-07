@@ -94,10 +94,17 @@ template:
                               - rtgl-text: ${group.name}
                               - rtgl-view d=h w=f wrap g=lg:
                                   - $for item, j in group.children:
-                                      - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} w=200 h=150 ah=c av=c bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm cur=pointer:
-                                          - rtgl-view av=c ah=c:
-                                              - rtgl-text s=md: ${item.name}
-                                              - rtgl-text s=sm c=mu-fg: ${item.layoutTypeDisplay}
+                                      - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm:
+                                          - 'rtgl-view w=225 br=md style="overflow: hidden;"':
+                                              - $if item.thumbnailFileId:
+                                                  - rvn-file-image fileId=${item.thumbnailFileId} w=225 h=120: null
+                                                $else:
+                                                  - rtgl-view w=225 h=120 av=c ah=c bgc=mu-fg:
+                                                      - rtgl-text s=sm c=mu-fg: No thumbnail
+                                              - rtgl-view d=v w=f g=xs ph=md pt=sm pb=md:
+                                                  - rtgl-text s=sm ellipsis w=193: ${item.name}
+                                                  - $if item.typeInfo:
+                                                      - rtgl-text s=xs c=mu-fg ellipsis w=193: ${item.typeInfo}
                     $elif tab == 'video':
                       - $for group, i in groups:
                           - rtgl-view g=md:

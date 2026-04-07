@@ -237,7 +237,11 @@ export const selectViewData = ({ state }) => {
           const itemHoverBorderColor = isSelected ? "pr" : "ac";
           const layoutTypeLabels = {
             normal: "Normal",
+            "save-load": "Save / Load",
+            confirmDialog: "Confirm Dialog",
+            history: "History",
             dialogue: "Dialogue",
+            nvl: "NVL",
             choice: "Choice",
           };
 
@@ -245,6 +249,7 @@ export const selectViewData = ({ state }) => {
             ...child,
             itemBorderColor,
             itemHoverBorderColor,
+            typeInfo: layoutTypeLabels[child.layoutType] ?? child.layoutType,
             layoutTypeDisplay: child.layoutType
               ? layoutTypeLabels[child.layoutType] || child.layoutType
               : "Layout",
