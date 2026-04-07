@@ -3,6 +3,8 @@ refs:
     eventListeners:
       image-selected:
         handler: handleImageSelected
+      image-dblclick:
+        handler: handleImageDoubleClick
   resourceItem*:
     eventListeners:
       click:
@@ -39,6 +41,10 @@ refs:
     eventListeners:
       item-click:
         handler: handleFileExplorerClickItem
+  previewOverlay:
+    eventListeners:
+      click:
+        action: hideFullImagePreview
 template:
   - rtgl-view w=f h=f p=lg:
       - rtgl-view d=h g=md: null
@@ -97,3 +103,9 @@ template:
                                               - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#buttonSelect: Select
+  - $when: fullImagePreviewVisible
+    rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
+      - 'rtgl-view w=f h=f pos=fix edge=f style="background-color: #000;"': null
+      - $if fullImagePreviewFileId:
+          - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+              - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=ac bw=xs br=md: null

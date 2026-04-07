@@ -252,6 +252,18 @@ export const handleImageSelected = async (deps, payload) => {
   render();
 };
 
+export const handleImageDoubleClick = (deps, payload) => {
+  const { store, render } = deps;
+  const { imageId } = payload._event.detail;
+
+  store.setTempSelectedResource({
+    resourceId: imageId,
+    resourceType: "image",
+  });
+  store.showFullImagePreview({ imageId });
+  render();
+};
+
 export const handleFormExtra = (deps) => {
   const { store, render } = deps;
   store.setMode({
@@ -348,10 +360,10 @@ export const handleFileExplorerClickItem = (deps, payload) => {
     return;
   }
 
-  const { id } = payload._event.detail;
+  const { itemId } = payload._event.detail;
   const imageSelector = refs["rvnImageSelector"];
   if (imageSelector?.transformedHandlers?.handleScrollToItem) {
-    imageSelector.transformedHandlers.handleScrollToItem({ id });
+    imageSelector.transformedHandlers.handleScrollToItem({ itemId });
   }
 };
 

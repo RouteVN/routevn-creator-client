@@ -45,6 +45,8 @@ export const createInitialState = () => ({
   selectedAnimationId: undefined,
   backgroundLoop: false,
   pendingResourceId: undefined,
+  fullImagePreviewVisible: false,
+  fullImagePreviewFileId: undefined,
 });
 
 export const selectTempSelectedResourceId = ({ state }) => {
@@ -96,6 +98,21 @@ export const selectPendingResourceId = ({ state }) => {
 
 export const clearPendingResourceId = ({ state }, _payload = {}) => {
   state.pendingResourceId = undefined;
+};
+
+export const showFullImagePreview = ({ state }, { imageId } = {}) => {
+  const item = state.imageItems.items[imageId];
+  if (!(item?.type === "image") || !item.fileId) {
+    return;
+  }
+
+  state.fullImagePreviewVisible = true;
+  state.fullImagePreviewFileId = item.fileId;
+};
+
+export const hideFullImagePreview = ({ state }, _payload = {}) => {
+  state.fullImagePreviewVisible = false;
+  state.fullImagePreviewFileId = undefined;
 };
 
 export const setSelectedAnimation = ({ state }, { animationId } = {}) => {
@@ -279,6 +296,8 @@ export const selectViewData = ({ state }) => {
     groups: flatGroups,
     tempSelectedResourceId: state.tempSelectedResourceId,
     selectedResource,
+    fullImagePreviewVisible: state.fullImagePreviewVisible,
+    fullImagePreviewFileId: state.fullImagePreviewFileId,
     dialogueForm: {
       form,
       defaultValues,
