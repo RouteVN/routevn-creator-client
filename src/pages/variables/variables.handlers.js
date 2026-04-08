@@ -60,12 +60,41 @@ const refreshVariablesData = async (deps) => {
   render();
 };
 
-const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
-  createVariablesFileExplorerHandlers({
-    refresh: refreshVariablesData,
-  });
+const {
+  handleFileExplorerAction: handleVariablesFileExplorerAction,
+  handleFileExplorerTargetChanged,
+} = createVariablesFileExplorerHandlers({
+  refresh: refreshVariablesData,
+});
 
-export { handleFileExplorerAction, handleFileExplorerTargetChanged };
+const openVariableEditDialog = ({ deps, itemId } = {}) => {
+  const { refs, store, render } = deps;
+  if (!itemId) {
+    return;
+  }
+
+  refs.fileexplorer?.selectItem?.({ itemId });
+  store.setSelectedItemId({ itemId });
+  render();
+  refs.groupview?.openEditDialog?.({ itemId });
+};
+
+export const handleFileExplorerAction = async (deps, payload) => {
+  const detail = payload?._event?.detail ?? {};
+  const action = (detail.item || detail)?.value;
+
+  if (action === "edit-item") {
+    openVariableEditDialog({
+      deps,
+      itemId: detail.itemId,
+    });
+    return;
+  }
+
+  await handleVariablesFileExplorerAction(deps, payload);
+};
+
+export { handleFileExplorerTargetChanged };
 
 export const handleDataChanged = refreshVariablesData;
 
@@ -124,13 +153,13 @@ export const handleVariableItemClick = (deps, payload) => {
 };
 
 export const handleDetailHeaderClick = (deps) => {
-  const { refs, store } = deps;
+  const { store } = deps;
   const itemId = store.selectSelectedItemId();
   if (!itemId) {
     return;
   }
 
-  refs.groupview?.openEditDialog?.({ itemId });
+  openVariableEditDialog({ deps, itemId });
 };
 
 export const handleVariableCreated = async (deps, payload) => {

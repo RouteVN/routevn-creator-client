@@ -12,10 +12,22 @@ const createValidationErrors = (imageId) => {
   return errors;
 };
 
+const syncImagesData = (deps) => {
+  deps.store.setImages({
+    images: deps.projectService.getRepositoryState()?.images,
+  });
+};
+
 export const handleBeforeMount = (deps) => {
+  syncImagesData(deps);
   deps.store.syncFromProps({
     props: deps.props,
   });
+};
+
+export const handleAfterMount = (deps) => {
+  syncImagesData(deps);
+  deps.render();
 };
 
 export const handleOnUpdate = (deps, payload = {}) => {
@@ -55,6 +67,32 @@ export const handleImageSelectorSubmit = (deps) => {
     imageId: imageSelectorDialog.selectedImageId,
   });
   deps.store.closeImageSelectorDialog();
+  deps.render();
+};
+
+export const handleImageDoubleClick = (deps, payload) => {
+  const imageId = payload?._event?.detail?.imageId;
+  if (!imageId) {
+    return;
+  }
+
+  deps.store.showFullImagePreview({ imageId });
+  deps.render();
+};
+
+export const handleFileExplorerClickItem = (deps, payload) => {
+  const itemId = payload?._event?.detail?.itemId;
+  if (!itemId) {
+    return;
+  }
+
+  deps.refs.imageSelector?.transformedHandlers?.handleScrollToItem?.({
+    itemId,
+  });
+};
+
+export const handlePreviewOverlayClick = (deps) => {
+  deps.store.hideFullImagePreview();
   deps.render();
 };
 

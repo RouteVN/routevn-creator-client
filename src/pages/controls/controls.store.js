@@ -132,7 +132,7 @@ const {
   title: "Controls",
   selectedResourceId: "controls",
   resourceCategory: "systemConfig",
-  addText: "Add Control",
+  addText: "Add",
   matchesSearch,
   buildDetailFields,
   buildCatalogItem,

@@ -4,6 +4,10 @@ refs:
     eventListeners:
       click:
         handler: handleImageFieldClick
+  baseFileExplorer:
+    eventListeners:
+      item-click:
+        handler: handleFileExplorerClickItem
   imageSelectorDialog:
     eventListeners:
       close:
@@ -12,6 +16,8 @@ refs:
     eventListeners:
       image-selected:
         handler: handleImageSelected
+      image-dblclick:
+        handler: handleImageDoubleClick
   confirmImageSelection:
     eventListeners:
       click:
@@ -20,6 +26,10 @@ refs:
     eventListeners:
       click:
         handler: handleImageSelectorCancel
+  previewOverlay:
+    eventListeners:
+      click:
+        handler: handlePreviewOverlayClick
 template:
   - rtgl-view g=md w=f:
       - rtgl-form#spriteCreateForm key=${formKey} :defaultValues=${defaultValues} :form=${form} w=f:
@@ -31,9 +41,19 @@ template:
                       - rtgl-text c=mu-fg ta=c: Select image
               - $if validationErrors.imageId:
                   - rtgl-text s=sm c=de: ${validationErrors.imageId}
-  - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open}:
-      - rtgl-view slot=content g=md:
-          - rvn-image-selector#imageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
+  - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=xl:
+      - rtgl-view slot=content d=v w=f g=md:
+          - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':
+              - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
+                  - rvn-base-file-explorer#baseFileExplorer :items=${fileExplorerItems} shrinkable: null
+              - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
+                  - rvn-image-selector#imageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
           - rtgl-view d=h g=sm w=f ah=e:
               - rtgl-button#cancelImageSelection variant=se: Cancel
               - rtgl-button#confirmImageSelection variant=pr: OK
+  - $when: fullImagePreviewVisible
+    rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
+      - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
+      - $if fullImagePreviewImageId:
+          - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+              - rvn-file-image imageId=${fullImagePreviewImageId} w=80% h=80% bc=ac bw=xs br=md: null
