@@ -155,5 +155,36 @@ export const createProjectExportService = ({
         getFileContent,
       });
     },
+
+    ...(typeof fileAdapter.promptDistributionZipPath === "function"
+      ? {
+          async promptDistributionZipPath(zipName, options = {}) {
+            return fileAdapter.promptDistributionZipPath({
+              zipName,
+              options,
+              filePicker,
+            });
+          },
+        }
+      : {}),
+
+    ...(typeof fileAdapter.createDistributionZipStreamedToPath === "function"
+      ? {
+          async createDistributionZipStreamedToPath(
+            projectData,
+            fileIds,
+            outputPath,
+          ) {
+            return fileAdapter.createDistributionZipStreamedToPath({
+              projectData,
+              fileIds,
+              outputPath,
+              staticFiles: await getBundleStaticFiles(),
+              getCurrentReference,
+              getFileContent,
+            });
+          },
+        }
+      : {}),
   };
 };

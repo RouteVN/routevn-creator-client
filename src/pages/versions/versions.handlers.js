@@ -71,6 +71,20 @@ const resolveVersionIdFromPayload = (payload = {}) => {
   return payload?._event?.currentTarget?.dataset?.versionId ?? "";
 };
 
+const getVersionZipName = ({ appService, projectId, version } = {}) => {
+  const currentProjectEntry =
+    typeof appService?.getCurrentProjectEntry === "function"
+      ? appService.getCurrentProjectEntry()
+      : undefined;
+  const entryName =
+    currentProjectEntry?.id === projectId
+      ? currentProjectEntry?.name?.trim?.()
+      : "";
+  const projectName = entryName || "project";
+
+  return `${projectName}_${version?.name ?? "version"}`;
+};
+
 export const handleAfterMount = async (deps) => {
   await refreshVersionsData(deps);
 };
@@ -233,10 +247,6 @@ export const handleDownloadZipClick = async (deps, payload) => {
   const currentPayload = appService.getPayload();
   const projectId = currentPayload.p ?? "";
 
-  appService.showToast("Please wait while the bundle is being created...", {
-    title: "Bundle in progress",
-  });
-
   const versionId = resolveVersionIdFromPayload(payload);
   const version = store.selectVersion(versionId);
 
@@ -251,46 +261,65 @@ export const handleDownloadZipClick = async (deps, payload) => {
   store.setSelectedItemId({ itemId: versionId });
   render();
 
-  const repository = await projectService.getRepository();
-  const repositoryState = repository.getState(version.actionIndex);
-  const usage = collectUsedResourcesForExport(repositoryState);
-  const filteredState = buildFilteredStateForExport(repositoryState, usage);
-  const constructedProjectData = constructProjectData(filteredState);
-  const transformedData = createBundleInstructions({
-    projectData: constructedProjectData,
-    bundler: {
-      appVersion: appService.getAppVersion(),
-    },
+  const zipName = getVersionZipName({
+    appService,
+    projectId,
+    version,
   });
-  const fileIds = usage.fileIds;
-  let projectName = "project";
+  let outputPath;
 
-  if (projectId && typeof appService.getProjectEntries === "function") {
-    const entries = await appService.getProjectEntries();
-    const projectEntry = Array.isArray(entries)
-      ? entries.find((entry) => entry?.id === projectId)
-      : undefined;
-    const entryName = projectEntry?.name?.trim?.();
-    if (entryName) {
-      projectName = entryName;
+  if (typeof projectService.promptDistributionZipPath === "function") {
+    try {
+      outputPath = await projectService.promptDistributionZipPath(zipName);
+    } catch (error) {
+      appService.showToast(`Failed to open save dialog: ${error.message}`, {
+        title: "Error",
+      });
+      return;
     }
-  }
-
-  const zipName = `${projectName}_${version.name}`;
-
-  try {
-    const outputPath = await projectService.createDistributionZipStreamed(
-      transformedData,
-      fileIds,
-      zipName,
-    );
 
     if (!outputPath) {
       appService.closeAll();
       return;
     }
+  }
 
-    appService.showToast(`ZIP export completed.\nSaved to: ${outputPath}`, {
+  appService.showToast("Please wait while the bundle is being created...", {
+    title: "Bundle in progress",
+  });
+
+  try {
+    const repository = await projectService.getRepository();
+    const repositoryState = repository.getState(version.actionIndex);
+    const usage = collectUsedResourcesForExport(repositoryState);
+    const filteredState = buildFilteredStateForExport(repositoryState, usage);
+    const constructedProjectData = constructProjectData(filteredState);
+    const transformedData = createBundleInstructions({
+      projectData: constructedProjectData,
+      bundler: {
+        appVersion: appService.getAppVersion(),
+      },
+    });
+    const savedPath =
+      outputPath &&
+      typeof projectService.createDistributionZipStreamedToPath === "function"
+        ? await projectService.createDistributionZipStreamedToPath(
+            transformedData,
+            usage.fileIds,
+            outputPath,
+          )
+        : await projectService.createDistributionZipStreamed(
+            transformedData,
+            usage.fileIds,
+            zipName,
+          );
+
+    if (!savedPath) {
+      appService.closeAll();
+      return;
+    }
+
+    appService.showToast(`ZIP export completed.\nSaved to: ${savedPath}`, {
       title: "Export completed",
     });
   } catch (error) {
