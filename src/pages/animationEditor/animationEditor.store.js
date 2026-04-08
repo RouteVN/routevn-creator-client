@@ -3,6 +3,7 @@ import {
   formatProjectResolutionAspectRatio,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
+import { toFlatItems } from "../../internal/project/tree.js";
 import {
   compileTransitionMaskForRuntime,
   createDefaultTransitionMask,
@@ -574,6 +575,8 @@ export const createInitialState = () => ({
     formValues: {},
   },
   imageSelectorDialog: createInitialImageSelectorDialogState(),
+  fullImagePreviewVisible: false,
+  fullImagePreviewImageId: undefined,
 });
 
 export const setItems = ({ state }, { data } = {}) => {
@@ -1440,6 +1443,8 @@ export const showImageSelectorDialog = (
 
 export const hideImageSelectorDialog = ({ state }, _payload = {}) => {
   state.imageSelectorDialog = createInitialImageSelectorDialogState();
+  state.fullImagePreviewVisible = false;
+  state.fullImagePreviewImageId = undefined;
 };
 
 export const setImageSelectorSelectedImageId = (
@@ -1447,6 +1452,16 @@ export const setImageSelectorSelectedImageId = (
   { imageId } = {},
 ) => {
   state.imageSelectorDialog.selectedImageId = imageId;
+};
+
+export const showFullImagePreview = ({ state }, { imageId } = {}) => {
+  state.fullImagePreviewVisible = true;
+  state.fullImagePreviewImageId = imageId;
+};
+
+export const hideFullImagePreview = ({ state }, _payload = {}) => {
+  state.fullImagePreviewVisible = false;
+  state.fullImagePreviewImageId = undefined;
 };
 
 export const selectImageSelectorDialog = ({ state }) => {
@@ -1638,6 +1653,9 @@ export const selectViewData = ({ state }) => {
     propertyFieldConfig,
   );
   const transitionMaskPanel = buildTransitionMaskPanelData(state);
+  const imageFolderItems = toFlatItems(state.imagesData).filter(
+    (item) => item.type === "folder",
+  );
 
   const keyframeDropdownItems = (() => {
     if (state.popover.mode !== "keyframeMenu") {
@@ -1773,5 +1791,8 @@ export const selectViewData = ({ state }) => {
       useInitialValue: false,
     },
     imageSelectorDialog: state.imageSelectorDialog,
+    imageFolderItems,
+    fullImagePreviewVisible: state.fullImagePreviewVisible,
+    fullImagePreviewImageId: state.fullImagePreviewImageId,
   };
 };
