@@ -24,6 +24,7 @@ const buildSceneLookups = (repositoryState) => {
   const flatScenes = toFlatItems(repositoryState?.scenes || []);
   const sceneNameById = new Map();
   const sectionNameById = new Map();
+  const sectionSceneIdById = new Map();
 
   for (const scene of flatScenes) {
     sceneNameById.set(scene.id, scene.name || "Unknown Scene");
@@ -35,12 +36,14 @@ const buildSceneLookups = (repositoryState) => {
     const flatSections = toFlatItems(scene.sections);
     for (const section of flatSections) {
       sectionNameById.set(section.id, section.name || "Unknown Section");
+      sectionSceneIdById.set(section.id, scene.id);
     }
   }
 
   return {
     sceneNameById,
     sectionNameById,
+    sectionSceneIdById,
   };
 };
 
@@ -162,7 +165,29 @@ const buildVisualPreview = (repositoryState, changes) => {
   };
 };
 
-const buildSectionTransitionPreview = (line, sceneLookups) => {
+const buildTransitionTargetLabel = ({
+  currentSceneId,
+  sceneLookups,
+  targetSceneId,
+  targetSectionId,
+}) => {
+  const sectionName =
+    sceneLookups.sectionNameById.get(targetSectionId) || "Unknown Section";
+
+  if (!targetSceneId || targetSceneId === currentSceneId) {
+    return sectionName;
+  }
+
+  const sceneName =
+    sceneLookups.sceneNameById.get(targetSceneId) || "Unknown Scene";
+  return `${sceneName}:${sectionName}`;
+};
+
+const buildSectionTransitionPreview = ({
+  currentSceneId,
+  line,
+  sceneLookups,
+}) => {
   const lineActions = normalizeLineActions(line.actions || {});
   const transitionData = lineActions?.sectionTransition;
   if (!transitionData) {
@@ -172,21 +197,28 @@ const buildSectionTransitionPreview = (line, sceneLookups) => {
     };
   }
 
+  if (transitionData.sectionId) {
+    const targetSceneId =
+      transitionData.sceneId ||
+      sceneLookups.sectionSceneIdById.get(transitionData.sectionId);
+
+    return {
+      sectionTransition: true,
+      transitionTarget: buildTransitionTargetLabel({
+        currentSceneId,
+        sceneLookups,
+        targetSceneId,
+        targetSectionId: transitionData.sectionId,
+      }),
+    };
+  }
+
   if (transitionData.sceneId) {
     return {
       sectionTransition: true,
       transitionTarget:
         sceneLookups.sceneNameById.get(transitionData.sceneId) ||
         "Unknown Scene",
-    };
-  }
-
-  if (transitionData.sectionId) {
-    return {
-      sectionTransition: true,
-      transitionTarget:
-        sceneLookups.sectionNameById.get(transitionData.sectionId) ||
-        "Unknown Section",
     };
   }
 
@@ -257,6 +289,7 @@ const toStableDomRefSuffix = (value = "") => {
 };
 
 export const buildSceneEditorLineViewModels = ({
+  currentSceneId,
   lines,
   repositoryState,
   sectionLineChanges,
@@ -267,7 +300,11 @@ export const buildSceneEditorLineViewModels = ({
   return (lines || []).map((line, index) => {
     const lineActions = normalizeLineActions(line.actions || {});
     const changes = getLineChanges(sectionLineChanges, line.id);
-    const transitionPreview = buildSectionTransitionPreview(line, sceneLookups);
+    const transitionPreview = buildSectionTransitionPreview({
+      currentSceneId,
+      line,
+      sceneLookups,
+    });
     const choicesPreview = buildChoicesPreview(line);
 
     return {

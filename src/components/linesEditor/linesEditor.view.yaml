@@ -55,7 +55,7 @@ template:
                               - 'rvn-editable-text#line${line.domRefSuffix} data-line-id="${line.id}" style="width: 100%; padding-bottom: 4px;"': null
                               - $if line.sectionTransition:
                                   - rtgl-view#previewSectionTransition data-type="sectionTransition" data-id="${line.id}" d=h av=c g=xs bgc=mu br=sm pv=xs ph=sm:
-                                      - rtgl-svg svg="section" wh=16: null
+                                      - rtgl-svg svg="transition" wh=16: null
                                       - rtgl-text s=sm: ${line.transitionTarget}
                               - $if line.hasChoices:
                                   - rtgl-view#previewChoice data-type="choice" data-id="${line.id}" d=v:
