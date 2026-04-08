@@ -236,25 +236,44 @@ const generateMinimapData = (items, pan, zoomLevel, containerSize) => {
     };
   }
 
-  let x_tl = Infinity;
-  let y_tl = Infinity;
-  let x_br = -Infinity;
-  let y_br = -Infinity;
-
-  items.forEach((item) => {
-    x_tl = Math.min(x_tl, item.x);
-    y_tl = Math.min(y_tl, item.y);
-    x_br = Math.max(x_br, item.x);
-    y_br = Math.max(y_br, item.y);
-  });
-
-  const minimapWidth = 200;
-  const minimapHeight = 150;
   const itemWidth = SCENE_BOX_WIDTH;
   const itemHeight = SCENE_BOX_HEIGHT;
+  const minimapWidth = 200;
+  const minimapHeight = 150;
   const padding = 30;
-  const standardWidth = x_br - x_tl + itemWidth + 60;
-  const standardHeight = y_br - y_tl + itemHeight + 60;
+  const viewportLeft = -pan.x / zoomLevel;
+  const viewportTop = -pan.y / zoomLevel;
+  const viewportRight = viewportLeft + containerSize.width / zoomLevel;
+  const viewportBottom = viewportTop + containerSize.height / zoomLevel;
+
+  let worldLeft = Infinity;
+  let worldTop = Infinity;
+  let worldRight = -Infinity;
+  let worldBottom = -Infinity;
+
+  items.forEach((item) => {
+    worldLeft = Math.min(worldLeft, item.x);
+    worldTop = Math.min(worldTop, item.y);
+    worldRight = Math.max(worldRight, item.x + itemWidth);
+    worldBottom = Math.max(worldBottom, item.y + itemHeight);
+  });
+
+  if (containerSize.width > 0 && containerSize.height > 0) {
+    // Keep the current viewport represented in the minimap even when the user
+    // pans into empty space beyond the scene-item bounds.
+    worldLeft = Math.min(worldLeft, viewportLeft);
+    worldTop = Math.min(worldTop, viewportTop);
+    worldRight = Math.max(worldRight, viewportRight);
+    worldBottom = Math.max(worldBottom, viewportBottom);
+  }
+
+  worldLeft -= padding;
+  worldTop -= padding;
+  worldRight += padding;
+  worldBottom += padding;
+
+  const standardWidth = Math.max(1, worldRight - worldLeft);
+  const standardHeight = Math.max(1, worldBottom - worldTop);
 
   const scale = Math.min(
     minimapWidth / standardWidth,
@@ -270,18 +289,12 @@ const generateMinimapData = (items, pan, zoomLevel, containerSize) => {
 
   const minimapItems = items.map((item) => ({
     id: item.id,
-    x: (item.x - x_tl + padding) * scale + offsetX,
-    y: (item.y - y_tl + padding) * scale + offsetY,
+    x: (item.x - worldLeft) * scale + offsetX,
+    y: (item.y - worldTop) * scale + offsetY,
   }));
 
   const scaledPanX = pan.x * scale;
   const scaledPanY = pan.y * scale;
-  const worldLeft = x_tl - padding;
-  const worldTop = y_tl - padding;
-  const viewportLeft = -pan.x / zoomLevel;
-  const viewportTop = -pan.y / zoomLevel;
-  const viewportRight = viewportLeft + containerSize.width / zoomLevel;
-  const viewportBottom = viewportTop + containerSize.height / zoomLevel;
   const rawViewportLeft = (viewportLeft - worldLeft) * scale + offsetX;
   const rawViewportTop = (viewportTop - worldTop) * scale + offsetY;
   const rawViewportRight = (viewportRight - worldLeft) * scale + offsetX;
