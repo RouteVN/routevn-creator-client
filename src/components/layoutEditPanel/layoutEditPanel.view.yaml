@@ -125,10 +125,16 @@ refs:
     eventListeners:
       close:
         handler: handleImageSelectorCancel
+  imageSelectorFileExplorer:
+    eventListeners:
+      item-click:
+        handler: handleImageSelectorFileExplorerClickItem
   imageSelector:
     eventListeners:
       image-selected:
         handler: handleImageSelectorImageSelected
+      image-dblclick:
+        handler: handleImageSelectorImageDoubleClick
   confirmImageSelection:
     eventListeners:
       click:
@@ -137,6 +143,10 @@ refs:
     eventListeners:
       click:
         handler: handleImageSelectorCancel
+  previewOverlay:
+    eventListeners:
+      click:
+        handler: handlePreviewOverlayClick
   listBarItem*:
     eventListeners:
       click:
@@ -264,9 +274,19 @@ template:
   - rtgl-dialog#conditionalOverrideAttributeDialog ?open=${conditionalOverrideAttributeDialog.open} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-form#conditionalOverrideAttributeForm key=${conditionalOverrideAttributeDialog.key} :form=${conditionalOverrideAttributeForm} :defaultValues=${conditionalOverrideAttributeDefaults} :context=${conditionalOverrideAttributeDialogContext} w=f: null
-  - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open}:
-      - rtgl-view slot=content g=md:
-          - rvn-image-selector#imageSelector: null
+  - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=xl:
+      - rtgl-view slot=content d=v w=f g=md:
+          - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':
+              - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
+                  - rvn-base-file-explorer#imageSelectorFileExplorer :items=${imageFolderItems} shrinkable: null
+              - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
+                  - rvn-image-selector#imageSelector selectedImageId=${tempSelectedImageId}: null
           - rtgl-view d=h g=sm w=f ah=e:
               - rtgl-button#cancelImageSelection variant=se: Cancel
               - rtgl-button#confirmImageSelection variant=pr: OK
+  - $when: fullImagePreviewVisible
+    rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
+      - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
+      - $if fullImagePreviewImageId:
+          - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+              - rvn-file-image imageId=${fullImagePreviewImageId} w=80% h=80% bc=ac bw=xs br=md: null

@@ -277,6 +277,7 @@ const renderLayoutEditorCanvas = async (
   { clearFirst = false, updatedItem } = {},
 ) => {
   try {
+    await deps.graphicsService.waitUntilReady?.();
     const repositoryState = await getRepositoryState(deps);
     const layoutData = updatedItem
       ? createLayoutDataWithUpdatedItem(

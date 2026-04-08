@@ -1,6 +1,7 @@
 import { parseAndRender } from "jempl";
 import { getFirstTextStyleId } from "../../constants/textStyles.js";
 import { getVariableOptions } from "../../internal/project/projection.js";
+import { toFlatItems } from "../../internal/project/tree.js";
 import { getFragmentLayoutOptions } from "../../pages/layoutEditor/support/layoutFragments.js";
 import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
 import { splitLayoutConditionFromWhen } from "../../internal/layoutConditions.js";
@@ -209,6 +210,8 @@ export const createInitialState = () => {
       open: false,
       name: undefined,
     },
+    fullImagePreviewVisible: false,
+    fullImagePreviewImageId: undefined,
     popover: {
       key: 0,
       x: undefined,
@@ -488,6 +491,8 @@ export const openImageSelectorDialog = ({ state }, { name } = {}) => {
     open: true,
     name,
   };
+  state.tempSelectedImageId =
+    typeof name === "string" ? state.values?.[name] : undefined;
 };
 
 export const closeImageSelectorDialog = ({ state }, _payload = {}) => {
@@ -496,6 +501,16 @@ export const closeImageSelectorDialog = ({ state }, _payload = {}) => {
     name: undefined,
   };
   state.tempSelectedImageId = undefined;
+};
+
+export const showFullImagePreview = ({ state }, { imageId } = {}) => {
+  state.fullImagePreviewVisible = true;
+  state.fullImagePreviewImageId = imageId;
+};
+
+export const hideFullImagePreview = ({ state }, _payload = {}) => {
+  state.fullImagePreviewVisible = false;
+  state.fullImagePreviewImageId = undefined;
 };
 
 export const setValues = ({ state }, { values } = {}) => {
@@ -610,6 +625,9 @@ export const selectTextStyleOptions = ({ state }) => {
 export const selectViewData = ({ state, props, constants }) => {
   const textStyleItems = toTextStyleOptions(state.textStylesData);
   const imageItems = toImageOptions(state.imagesData);
+  const imageFolderItems = toFlatItems(state.imagesData).filter(
+    (item) => item.type === "folder",
+  );
   const firstTextStyleId = getFirstTextStyleId(state.textStylesData);
   const textStyleItemsWithNone = [
     { label: "None", value: "" },
@@ -831,5 +849,8 @@ export const selectViewData = ({ state, props, constants }) => {
     },
     imageSelectorDialog: state.imageSelectorDialog,
     tempSelectedImageId: state.tempSelectedImageId,
+    imageFolderItems,
+    fullImagePreviewVisible: state.fullImagePreviewVisible,
+    fullImagePreviewImageId: state.fullImagePreviewImageId,
   };
 };

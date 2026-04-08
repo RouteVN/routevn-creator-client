@@ -215,9 +215,16 @@ export const handleRowContextMenu = (deps, payload) => {
 export const handleContextMenuClickItem = (deps, payload) => {
   const { store, render, dispatchEvent } = deps;
   const item = payload._event.detail.item;
+  const itemId = store.selectTargetItemId();
+
+  store.hideContextMenu();
+
+  if (item && item.value === "edit-item") {
+    openEditDialogForItem({ deps, itemId });
+    return;
+  }
 
   if (item && item.value === "delete-item") {
-    const itemId = store.selectTargetItemId();
     dispatchEvent(
       new CustomEvent("variable-delete", {
         detail: { itemId },
@@ -227,7 +234,6 @@ export const handleContextMenuClickItem = (deps, payload) => {
     );
   }
 
-  store.hideContextMenu();
   render();
 };
 

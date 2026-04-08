@@ -283,6 +283,7 @@ export const selectViewData = ({ state, constants }) => {
     previewData: state.previewData,
     projectResolution: state.projectResolution,
     layout,
+    imagesData: state.images,
     textStylesData: state.textStylesData,
     variablesData: state.variablesData,
     layoutsData: state.layoutsData,

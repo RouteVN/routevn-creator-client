@@ -1274,6 +1274,27 @@ export const handleImageSelectorImageSelected = (deps, payload) => {
   });
 };
 
+export const handleImageSelectorImageDoubleClick = (deps, payload) => {
+  const imageId = payload?._event?.detail?.imageId;
+  if (!imageId) {
+    return;
+  }
+
+  deps.store.showFullImagePreview({ imageId });
+  deps.render();
+};
+
+export const handleImageSelectorFileExplorerClickItem = (deps, payload) => {
+  const itemId = payload?._event?.detail?.itemId;
+  if (!itemId) {
+    return;
+  }
+
+  deps.refs.imageSelector?.transformedHandlers?.handleScrollToItem?.({
+    itemId,
+  });
+};
+
 export const handleImageSelectorCancel = (deps) => {
   const { store, render } = deps;
   store.closeImageSelectorDialog();
@@ -1289,4 +1310,9 @@ export const handleImageSelectorSubmit = (deps) => {
     value: imageId,
     closeImageSelector: true,
   });
+};
+
+export const handlePreviewOverlayClick = (deps) => {
+  deps.store.hideFullImagePreview();
+  deps.render();
 };

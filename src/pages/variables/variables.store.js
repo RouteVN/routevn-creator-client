@@ -1,16 +1,27 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 
+const folderContextMenuItems = [
+  { label: "New Folder", type: "item", value: "new-item" },
+  { label: "Rename", type: "item", value: "rename-item" },
+  { label: "Delete", type: "item", value: "delete-item" },
+];
+
+const itemContextMenuItems = [
+  { label: "Edit", type: "item", value: "edit-item" },
+  { label: "Rename", type: "item", value: "rename-item" },
+  { label: "Delete", type: "item", value: "delete-item" },
+];
+
+const emptyContextMenuItems = [
+  { label: "New Folder", type: "item", value: "new-item" },
+];
+
 export const createInitialState = () => ({
   variablesData: { tree: [], items: {} },
   selectedItemId: undefined,
-  contextMenuItems: [
-    { label: "New Folder", type: "item", value: "new-item" },
-    { label: "Rename", type: "item", value: "rename-item" },
-    { label: "Delete", type: "item", value: "delete-item" },
-  ],
-  emptyContextMenuItems: [
-    { label: "New Folder", type: "item", value: "new-item" },
-  ],
+  folderContextMenuItems,
+  itemContextMenuItems,
+  emptyContextMenuItems,
 });
 
 export const setItems = ({ state }, { variablesData } = {}) => {
@@ -78,7 +89,8 @@ export const selectViewData = ({ state }) => {
     selectedItemId: state.selectedItemId,
     selectedItemName: selectedItem?.name ?? "",
     detailFields,
-    contextMenuItems: state.contextMenuItems,
+    folderContextMenuItems: state.folderContextMenuItems,
+    itemContextMenuItems: state.itemContextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,
   };
 };

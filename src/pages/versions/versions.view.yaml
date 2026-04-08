@@ -70,7 +70,7 @@ template:
                               - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                               - rtgl-svg svg=edit wh=16: null
                           - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
-                              - rtgl-button#detailDownloadBtn slot=actions data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: Download Zip
+                              - rtgl-button#detailDownloadBtn slot=actions data-version-id="${selectedItemId}" v=se s=sm pre=download w=f: Export Web
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection

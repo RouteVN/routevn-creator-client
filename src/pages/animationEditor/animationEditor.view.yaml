@@ -193,10 +193,16 @@ refs:
     eventListeners:
       close:
         handler: handleCloseMaskImageSelectorDialog
+  imageSelectorFileExplorer:
+    eventListeners:
+      item-click:
+        handler: handleMaskImageFileExplorerClickItem
   imageSelector:
     eventListeners:
       image-selected:
         handler: handleMaskImageSelected
+      image-dblclick:
+        handler: handleMaskImageDoubleClick
   confirmMaskImageSelection:
     eventListeners:
       click:
@@ -205,6 +211,10 @@ refs:
     eventListeners:
       click:
         handler: handleCancelMaskImageSelection
+  previewOverlay:
+    eventListeners:
+      click:
+        handler: handleMaskImagePreviewOverlayClick
   canvas: {}
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
@@ -273,7 +283,7 @@ template:
                               - $if transitionMaskPanel.kind == 'composite':
                                   - rtgl-view d=v g=xs:
                                       - rtgl-text s=sm c=mu-fg: Combine
-                                      - rtgl-select#maskCombineSelect w=f no-clear :selectedValue=${transitionMaskPanel.combineValue} :options=${maskCombineOptions}: null
+                                      - rtgl-segmented-control#maskCombineSelect w=f no-clear :selectedValue=${transitionMaskPanel.combineValue} :options=${maskCombineOptions}: null
                               - rtgl-view d=v g=xs:
                                   - rtgl-text s=sm c=mu-fg: Softness
                                   - rtgl-input#maskSoftnessInput type=number min=0 step=0.01 w=f value=${transitionMaskPanel.softness}: null
@@ -339,10 +349,10 @@ template:
                                                       - rtgl-button#compositeMaskRemoveButton${i} data-index=${item.index} s=sm v=se: Remove
                                                   - rtgl-view d=v g=xs:
                                                       - rtgl-text s=sm c=mu-fg: Channel
-                                                      - rtgl-select#compositeMaskChannelSelect${i} data-index=${item.index} w=f no-clear :selectedValue=${item.channelValue} :options=${maskChannelOptions}: null
+                                                      - rtgl-segmented-control#compositeMaskChannelSelect${i} data-index=${item.index} w=f no-clear :selectedValue=${item.channelValue} :options=${maskChannelOptions}: null
                                                   - rtgl-view d=v g=xs:
                                                       - rtgl-text s=sm c=mu-fg: Invert
-                                                      - rtgl-select#compositeMaskInvertSelect${i} data-index=${item.index} w=f no-clear :selectedValue=${item.invertValue} :options=${maskBooleanOptions}: null
+                                                      - rtgl-segmented-control#compositeMaskInvertSelect${i} data-index=${item.index} w=f no-clear :selectedValue=${item.invertValue} :options=${maskBooleanOptions}: null
                               - rtgl-view d=v g=xs:
                                   - rtgl-text s=sm c=mu-fg: Progress Duration (ms)
                                   - rtgl-input#maskProgressDurationInput type=number min=1 step=1 w=f value=${transitionMaskPanel.progressDuration}: null
@@ -367,9 +377,19 @@ template:
               - rtgl-form#editInitialValueForm :form=${editInitialValueForm} :defaultValues=${editInitialValueDefaultValues} :context=${editInitialValueContext}: null
   - rtgl-dropdown-menu#keyframeDropdownMenu :items=${keyframeDropdownItems} ?open=${popover.dropdownMenuIsOpen} x=${popover.x} y=${popover.y}: null
   - rtgl-dropdown-menu#addPropertySideMenu :items=${addPropertySideMenuItems} ?open=${popover.addPropertySideMenuIsOpen} x=${popover.x} y=${popover.y}: null
-  - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open}:
-      - rtgl-view slot=content g=md:
-          - rvn-image-selector#imageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
-          - rtgl-view d=h g=sm:
+  - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=xl:
+      - rtgl-view slot=content d=v w=f g=md:
+          - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':
+              - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
+                  - rvn-base-file-explorer#imageSelectorFileExplorer :items=${imageFolderItems} shrinkable: null
+              - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
+                  - rvn-image-selector#imageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
+          - rtgl-view d=h g=sm w=f ah=e:
               - rtgl-button#cancelMaskImageSelection variant=se: Cancel
               - rtgl-button#confirmMaskImageSelection variant=pr: OK
+  - $when: fullImagePreviewVisible
+    rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
+      - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
+      - $if fullImagePreviewImageId:
+          - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+              - rvn-file-image imageId=${fullImagePreviewImageId} w=80% h=80% bc=ac bw=xs br=md: null

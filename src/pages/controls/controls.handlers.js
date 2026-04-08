@@ -174,14 +174,16 @@ export const handleDetailHeaderClick = (deps) => {
   openEditDialogWithValues({ deps, itemId: selectedItemId });
 };
 
-const createControlTemplate = (projectResolution) => {
+export const createControlTemplate = (projectResolution) => {
   const spriteId = nanoid();
 
   return scaleLayoutElementsForProjectResolution(
     {
       items: {
         [spriteId]: {
+          id: spriteId,
           type: "sprite",
+          name: "Control Sprite",
           anchorX: 0,
           anchorY: 0,
           click: {

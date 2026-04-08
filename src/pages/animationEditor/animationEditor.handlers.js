@@ -1136,6 +1136,27 @@ export const handleMaskImageSelected = (deps, payload) => {
   render();
 };
 
+export const handleMaskImageDoubleClick = (deps, payload) => {
+  const imageId = payload?._event?.detail?.imageId;
+  if (!imageId) {
+    return;
+  }
+
+  deps.store.showFullImagePreview({ imageId });
+  deps.render();
+};
+
+export const handleMaskImageFileExplorerClickItem = (deps, payload) => {
+  const itemId = payload?._event?.detail?.itemId;
+  if (!itemId) {
+    return;
+  }
+
+  deps.refs.imageSelector?.transformedHandlers?.handleScrollToItem?.({
+    itemId,
+  });
+};
+
 export const handleConfirmMaskImageSelection = (deps) => {
   const { render, store } = deps;
   const imageSelectorDialog = store.selectImageSelectorDialog();
@@ -1185,6 +1206,11 @@ export const handleCloseMaskImageSelectorDialog = (deps) => {
   const { render, store } = deps;
   store.hideImageSelectorDialog({});
   render();
+};
+
+export const handleMaskImagePreviewOverlayClick = (deps) => {
+  deps.store.hideFullImagePreview();
+  deps.render();
 };
 
 export const handleReplayAnimation = async (deps) => {

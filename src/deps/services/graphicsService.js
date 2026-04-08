@@ -279,6 +279,7 @@ installManagedAudioAsset();
 
 export const createGraphicsService = async ({ subject }) => {
   let routeGraphics;
+  let routeGraphicsInitPromise;
   let engine;
   let assetBufferManager;
   let loadedAssetTypes = new Map();
@@ -1060,116 +1061,137 @@ export const createGraphicsService = async ({ subject }) => {
     pendingClickInteractionTimeouts.set(interactionId, timeoutId);
   };
 
+  const waitUntilReady = async () => {
+    if (!routeGraphicsInitPromise) {
+      return;
+    }
+
+    await routeGraphicsInitPromise;
+  };
+
   return {
     init: async (options = {}) => {
+      if (routeGraphicsInitPromise) {
+        await routeGraphicsInitPromise;
+      }
+
       if (routeGraphics) {
         await destroyRuntime();
       }
 
-      ticker = new Ticker();
-      ticker.start();
-      const { canvas, beforeHandleActions: onBeforeHandleActions } = options;
-      const { width: renderWidth, height: renderHeight } =
-        requireProjectResolution(
-          {
-            width: options.width,
-            height: options.height,
-          },
-          "Graphics runtime resolution",
-        );
-      beforeHandleActions = onBeforeHandleActions;
-      actionQueue = Promise.resolve();
-      assetLoadQueue = Promise.resolve();
-      assetLoadRuntimeVersion += 1;
-      invalidateDeferredAudioRender();
-      clearAllPendingClickInteractions();
-      loadedAssetTypes = new Map();
-      assetBufferManager = createAssetBufferManager();
-      routeGraphics = createRouteGraphics();
+      routeGraphicsInitPromise = (async () => {
+        ticker = new Ticker();
+        ticker.start();
+        const { canvas, beforeHandleActions: onBeforeHandleActions } = options;
+        const { width: renderWidth, height: renderHeight } =
+          requireProjectResolution(
+            {
+              width: options.width,
+              height: options.height,
+            },
+            "Graphics runtime resolution",
+          );
+        beforeHandleActions = onBeforeHandleActions;
+        actionQueue = Promise.resolve();
+        assetLoadQueue = Promise.resolve();
+        assetLoadRuntimeVersion += 1;
+        invalidateDeferredAudioRender();
+        clearAllPendingClickInteractions();
+        loadedAssetTypes = new Map();
+        assetBufferManager = createAssetBufferManager();
+        routeGraphics = createRouteGraphics();
 
-      const plugins = await loadGraphicsEnginePlugins();
+        const plugins = await loadGraphicsEnginePlugins();
 
-      await routeGraphics.init({
-        width: renderWidth,
-        height: renderHeight,
-        plugins,
-        eventHandler: (eventName, payload) => {
-          const eventId = payload?._event?.id;
-          const layoutEditorDragTarget =
-            eventId === "selected-border" ||
-            eventId?.startsWith("selected-border-resize-");
-          if (eventName === "dragMove") {
-            if (layoutEditorDragTarget) {
-              subject.dispatch("border-drag-move", {
-                x: Math.round(payload._event.x),
-                y: Math.round(payload._event.y),
-                targetId: eventId,
-              });
+        await routeGraphics.init({
+          width: renderWidth,
+          height: renderHeight,
+          plugins,
+          eventHandler: (eventName, payload) => {
+            const eventId = payload?._event?.id;
+            const layoutEditorDragTarget =
+              eventId === "selected-border" ||
+              eventId?.startsWith("selected-border-resize-");
+            if (eventName === "dragMove") {
+              if (layoutEditorDragTarget) {
+                subject.dispatch("border-drag-move", {
+                  x: Math.round(payload._event.x),
+                  y: Math.round(payload._event.y),
+                  targetId: eventId,
+                });
+              }
+            } else if (eventName === "dragStart") {
+              if (layoutEditorDragTarget) {
+                subject.dispatch("border-drag-start", {
+                  targetId: eventId,
+                });
+              }
+            } else if (eventName === "dragEnd") {
+              if (layoutEditorDragTarget) {
+                subject.dispatch("border-drag-end", {
+                  targetId: eventId,
+                });
+              }
             }
-          } else if (eventName === "dragStart") {
-            if (layoutEditorDragTarget) {
-              subject.dispatch("border-drag-start", {
-                targetId: eventId,
-              });
-            }
-          } else if (eventName === "dragEnd") {
-            if (layoutEditorDragTarget) {
-              subject.dispatch("border-drag-end", {
-                targetId: eventId,
-              });
-            }
-          }
 
-          if (!engine) {
-            return;
-          }
-
-          if (eventName === "renderComplete") {
-            if (payload?.aborted === true) {
+            if (!engine) {
               return;
             }
-            engine.handleActions({
-              markLineCompleted: {},
-            });
-            return;
-          }
 
-          const actions = getRuntimeEventActions(payload);
+            if (eventName === "renderComplete") {
+              if (payload?.aborted === true) {
+                return;
+              }
+              engine.handleActions({
+                markLineCompleted: {},
+              });
+              return;
+            }
 
-          if (actions && engine) {
-            const eventContext = createRuntimeEventContext(payload);
+            const actions = getRuntimeEventActions(payload);
 
-            const interactionId = eventContext?._event?.id ?? "__unknown__";
+            if (actions && engine) {
+              const eventContext = createRuntimeEventContext(payload);
 
-            if (isRuntimeRightClickEvent(eventName)) {
-              clearPendingClickInteraction(interactionId);
+              const interactionId = eventContext?._event?.id ?? "__unknown__";
+
+              if (isRuntimeRightClickEvent(eventName)) {
+                clearPendingClickInteraction(interactionId);
+                enqueueInteractionActions(actions, eventContext);
+                return;
+              }
+
+              if (eventName === "click") {
+                scheduleClickInteraction(actions, eventContext);
+                return;
+              }
+
               enqueueInteractionActions(actions, eventContext);
-              return;
             }
+          },
+        });
 
-            if (eventName === "click") {
-              scheduleClickInteraction(actions, eventContext);
-              return;
-            }
-
-            enqueueInteractionActions(actions, eventContext);
+        if (canvas) {
+          if (canvas.children.length > 0) {
+            canvas.removeChild(canvas.children[0]);
           }
-        },
-      });
-
-      if (canvas) {
-        if (canvas.children.length > 0) {
-          canvas.removeChild(canvas.children[0]);
+          // Keep Pixi's internal render resolution synced to the project screen,
+          // then scale the displayed canvas to the container.
+          routeGraphics.canvas.style.width = "100%";
+          routeGraphics.canvas.style.height = "100%";
+          routeGraphics.canvas.style.display = "block";
+          canvas.appendChild(routeGraphics.canvas);
         }
-        // Keep Pixi's internal render resolution synced to the project screen,
-        // then scale the displayed canvas to the container.
-        routeGraphics.canvas.style.width = "100%";
-        routeGraphics.canvas.style.height = "100%";
-        routeGraphics.canvas.style.display = "block";
-        canvas.appendChild(routeGraphics.canvas);
+      })();
+
+      try {
+        await routeGraphicsInitPromise;
+      } finally {
+        routeGraphicsInitPromise = undefined;
       }
     },
     loadAssets: async (assets) => {
+      await waitUntilReady();
       const runtimeVersion = assetLoadRuntimeVersion;
       const queuedLoad = assetLoadQueue.then(() =>
         runAssetLoad(assets, runtimeVersion),
@@ -1287,6 +1309,7 @@ export const createGraphicsService = async ({ subject }) => {
     setAnimationTime: (timeMs) => {
       routeGraphics?.setAnimationTime?.(timeMs);
     },
+    waitUntilReady,
     render: (payload) => routeGraphics.render(payload),
     parse: (payload) => routeGraphics.parse(payload),
     destroy: destroyRuntime,

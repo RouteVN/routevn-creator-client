@@ -19,7 +19,10 @@ export const createInitialState = () => ({
     x: 0,
     y: 0,
     targetItemId: null,
-    items: [{ label: "Delete", type: "item", value: "delete-item" }],
+    items: [
+      { label: "Edit", type: "item", value: "edit-item" },
+      { label: "Delete", type: "item", value: "delete-item" },
+    ],
   },
 
   defaultValues: structuredClone(DEFAULT_FORM_VALUES),
