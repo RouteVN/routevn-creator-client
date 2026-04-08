@@ -47,11 +47,11 @@ template:
                       - $if showLineNumbers:
                           - rtgl-view h=f w=32 ah=e mr=md pt=sm:
                               - rtgl-text s=sm c=${line.lineColor}: ${line.lineNumber}
-                      - rtgl-view wh=24 br=f mr=md:
+                      - rtgl-view wh=24 br=f mr=lg:
                           - $if line.characterFileId:
                               - rvn-file-image fileId=${line.characterFileId} w=24 h=24 br=f: null
                       - rtgl-view d=h w=f:
-                          - rtgl-view w=f:
+                          - rtgl-view w=f mr=md:
                               - 'rvn-editable-text#line${line.domRefSuffix} data-line-id="${line.id}" style="width: 100%"': null
                           - rtgl-view d=h g=sm:
                               - $if line.background:

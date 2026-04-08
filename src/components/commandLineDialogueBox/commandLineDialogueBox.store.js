@@ -46,7 +46,7 @@ export const createInitialState = () => ({
     fields: [
       {
         name: "mode",
-        type: "select",
+        type: "segmented-control",
         label: "Dialogue Mode",
         description: "",
         required: true,
@@ -78,7 +78,7 @@ export const createInitialState = () => ({
       {
         $when: 'values.mode == "nvl"',
         name: "clearPage",
-        type: "select",
+        type: "segmented-control",
         label: "Clear Page",
         description: "",
         required: true,

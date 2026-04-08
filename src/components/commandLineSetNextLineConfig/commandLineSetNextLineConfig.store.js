@@ -12,7 +12,7 @@ export const createInitialState = () => ({
     fields: [
       {
         name: "applyMode",
-        type: "select",
+        type: "segmented-control",
         label: "Apply Mode",
         description: "",
         required: false,
@@ -27,7 +27,7 @@ export const createInitialState = () => ({
       },
       {
         name: "manualEnabled",
-        type: "select",
+        type: "segmented-control",
         label: "Click to Advance",
         description: "",
         required: false,
@@ -59,7 +59,7 @@ export const createInitialState = () => ({
       // },
       {
         name: "autoEnabled",
-        type: "select",
+        type: "segmented-control",
         label: "Auto Advance",
         description: "",
         required: false,
@@ -75,7 +75,7 @@ export const createInitialState = () => ({
       {
         $when: `values.autoEnabled == true`,
         name: "autoTrigger",
-        type: "select",
+        type: "segmented-control",
         label: "Timer Start",
         description: "",
         required: false,
