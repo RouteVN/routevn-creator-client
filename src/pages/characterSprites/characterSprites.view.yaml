@@ -91,7 +91,7 @@ template:
                           - rtgl-text c=mu-fg s=sm: Click to Upload
   - $when: fullImagePreviewVisible
     rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
-      - 'rtgl-view w=f h=f pos=fix edge=f style="background-color: #000;"': null
+      - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
       - $if fullImagePreviewFileId:
           - rtgl-view pos=fix edge=f ah=c av=c z=3001:
               - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=ac bw=xs br=md: null

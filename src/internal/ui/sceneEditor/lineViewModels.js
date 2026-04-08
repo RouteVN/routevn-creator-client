@@ -20,30 +20,6 @@ const buildCharacterLookups = (repositoryState) => {
   };
 };
 
-const buildSceneLookups = (repositoryState) => {
-  const flatScenes = toFlatItems(repositoryState?.scenes || []);
-  const sceneNameById = new Map();
-  const sectionNameById = new Map();
-
-  for (const scene of flatScenes) {
-    sceneNameById.set(scene.id, scene.name || "Unknown Scene");
-
-    if (!scene.sections) {
-      continue;
-    }
-
-    const flatSections = toFlatItems(scene.sections);
-    for (const section of flatSections) {
-      sectionNameById.set(section.id, section.name || "Unknown Section");
-    }
-  }
-
-  return {
-    sceneNameById,
-    sectionNameById,
-  };
-};
-
 const resolveCharacterSpriteFileId = ({
   repositoryState,
   character,
@@ -162,38 +138,14 @@ const buildVisualPreview = (repositoryState, changes) => {
   };
 };
 
-const buildSectionTransitionPreview = (line, sceneLookups) => {
+const buildSectionTransitionPreview = (line) => {
   const lineActions = normalizeLineActions(line.actions || {});
   const transitionData = lineActions?.sectionTransition;
   if (!transitionData) {
-    return {
-      sectionTransition: false,
-      transitionTarget: undefined,
-    };
+    return false;
   }
 
-  if (transitionData.sceneId) {
-    return {
-      sectionTransition: true,
-      transitionTarget:
-        sceneLookups.sceneNameById.get(transitionData.sceneId) ||
-        "Unknown Scene",
-    };
-  }
-
-  if (transitionData.sectionId) {
-    return {
-      sectionTransition: true,
-      transitionTarget:
-        sceneLookups.sectionNameById.get(transitionData.sectionId) ||
-        "Unknown Section",
-    };
-  }
-
-  return {
-    sectionTransition: false,
-    transitionTarget: undefined,
-  };
+  return !!transitionData.sectionId || !!transitionData.sceneId;
 };
 
 const buildChoicesPreview = (line) => {
@@ -202,13 +154,11 @@ const buildChoicesPreview = (line) => {
   if (!choicesData?.items?.length) {
     return {
       hasChoices: false,
-      choices: undefined,
     };
   }
 
   return {
     hasChoices: true,
-    choices: choicesData.items,
   };
 };
 
@@ -262,12 +212,10 @@ export const buildSceneEditorLineViewModels = ({
   sectionLineChanges,
 }) => {
   const characterLookups = buildCharacterLookups(repositoryState);
-  const sceneLookups = buildSceneLookups(repositoryState);
 
   return (lines || []).map((line, index) => {
     const lineActions = normalizeLineActions(line.actions || {});
     const changes = getLineChanges(sectionLineChanges, line.id);
-    const transitionPreview = buildSectionTransitionPreview(line, sceneLookups);
     const choicesPreview = buildChoicesPreview(line);
 
     return {
@@ -288,10 +236,8 @@ export const buildSceneEditorLineViewModels = ({
         characterLookups.characterItems,
       ),
       visual: buildVisualPreview(repositoryState, changes),
-      sectionTransition: transitionPreview.sectionTransition,
-      transitionTarget: transitionPreview.transitionTarget,
+      sectionTransition: buildSectionTransitionPreview(line),
       hasChoices: choicesPreview.hasChoices,
-      choices: choicesPreview.choices,
       hasSfx: !!changes.sfx,
       sfxChangeType: changes.sfx?.changeType,
       hasSetNextLineConfig:

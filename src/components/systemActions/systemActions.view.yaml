@@ -76,7 +76,7 @@ template:
               - $if preview.sectionTransition:
                   - rtgl-view#actionItemSectionTransition data-mode=sectionTransition g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="transition" wh=24: null
-                      - rtgl-text s=sm: 'Transition to scene: ${preview.sectionTransition.scene.name} section: ${preview.sectionTransition.section.name}'
+                      - rtgl-text s=sm: ${preview.sectionTransition.label}
               - $if preview.dialogue:
                   - rtgl-view#actionItemDialogue data-mode=dialogue g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=dialogue wh=24: null
@@ -86,10 +86,11 @@ template:
               - $if preview.choice && preview.choice.items:
                   - rtgl-view#actionItemChoices data-mode=choice g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer pv=md:
                       - rtgl-svg svg=choices wh=24: null
-                      - rtgl-view d=v:
-                          - rtgl-text s=sm mb=sm: ${preview.choice.layout.name}
-                          - $for choice in preview.choice.items:
-                              - rtgl-text s=xs c=mu-fg: • ${choice.content}
+                      - rtgl-view d=v g=sm:
+                          - rtgl-view d=h g=sm wrap:
+                              - $for choice in preview.choice.items:
+                                  - rtgl-view bw=xs bc=bo br=sm ph=md pv=sm:
+                                      - rtgl-text s=sm: ${choice.content}
               - $if preview.nextLine:
                   - rtgl-view#actionItemNextLine data-mode=nextLine g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="next-line" wh=24: null

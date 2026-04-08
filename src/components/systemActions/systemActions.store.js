@@ -168,6 +168,15 @@ const resolveDialogueModeLabel = (dialogue, layoutsItems) => {
   return "ADV";
 };
 
+const truncatePreviewText = (value = "", maxLength = 36) => {
+  const text = String(value ?? "");
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  return `${text.slice(0, Math.max(0, maxLength - 3))}...`;
+};
+
 // Moved from sceneEditor.store.js - now returns object instead of array
 export const selectActionsData = ({ props, state }) => {
   const actions = props.actions || {};
@@ -264,10 +273,18 @@ export const selectActionsData = ({ props, state }) => {
   if (actions.sectionTransition) {
     actionsObject.sectionTransition = actions.sectionTransition;
     const scene = sceneItems[actions.sectionTransition.sceneId];
+    const section =
+      scene?.sections?.items?.[actions.sectionTransition.sectionId];
     if (scene) {
+      const isCurrentScene =
+        actions.sectionTransition.sceneId === props.currentSceneId;
+      const sceneName = scene.name || "Unknown Scene";
+      const sectionName = section?.name || "Unknown Section";
+
       preview.sectionTransition = {
         scene,
-        section: scene.sections?.items?.[actions.sectionTransition.sectionId],
+        section,
+        label: isCurrentScene ? sectionName : `${sceneName} - ${sectionName}`,
       };
     }
   }
@@ -388,7 +405,12 @@ export const selectActionsData = ({ props, state }) => {
     actionsObject.choice = actions.choice;
     preview.choice = {
       layout: layoutsItems[actions.choice.layoutId],
-      items: actions.choice.items,
+      items: Array.isArray(actions.choice.items)
+        ? actions.choice.items.map((item) => ({
+            ...item,
+            content: truncatePreviewText(item.content),
+          }))
+        : [],
     };
   }
 

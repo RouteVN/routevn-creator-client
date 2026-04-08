@@ -12,7 +12,7 @@ const CHOICE_FORM_TEMPLATE = Object.freeze({
     },
     {
       name: "actionType",
-      type: "select",
+      type: "segmented-control",
       label: "Action",
       required: true,
       options: [
