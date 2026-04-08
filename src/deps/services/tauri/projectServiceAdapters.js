@@ -101,6 +101,76 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
     return `${projectKey}:${fileId ?? ""}`;
   };
 
+  const promptDistributionZipPath = async ({
+    zipName,
+    options = {},
+    filePicker,
+  }) => {
+    return filePicker.saveFilePicker({
+      title: options.title || "Save Distribution ZIP",
+      defaultPath: `${zipName}.zip`,
+      filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
+    });
+  };
+
+  const collectDistributionZipAssets = async ({
+    fileIds,
+    getCurrentReference,
+  }) => {
+    const reference = getCurrentReference();
+    const filesPath = await join(reference.projectPath, "files");
+    const uniqueFileIds = [];
+    const seenFileIds = new Set();
+
+    for (const fileId of fileIds || []) {
+      if (!fileId || seenFileIds.has(fileId)) continue;
+      seenFileIds.add(fileId);
+      uniqueFileIds.push(fileId);
+    }
+
+    const assets = [];
+    for (const fileId of uniqueFileIds) {
+      const filePath = await join(filesPath, fileId);
+      const fileExists = await exists(filePath);
+      if (!fileExists) {
+        console.warn(`Skipping missing file during export: ${fileId}`);
+        continue;
+      }
+      assets.push({
+        id: fileId,
+        path: filePath,
+        mime: "application/octet-stream",
+      });
+    }
+
+    return assets;
+  };
+
+  const createDistributionZipStreamedToPath = async ({
+    projectData,
+    fileIds,
+    outputPath,
+    staticFiles,
+    options = {},
+    getCurrentReference,
+  }) => {
+    const assets = await collectDistributionZipAssets({
+      fileIds,
+      getCurrentReference,
+    });
+
+    await invoke("create_distribution_zip_streamed", {
+      outputPath,
+      assets,
+      instructionsJson: JSON.stringify(projectData),
+      indexHtml: staticFiles.indexHtml || null,
+      mainJs: staticFiles.mainJs || null,
+      usePartFile: options.usePartFile ?? true,
+    });
+
+    return outputPath;
+  };
+
   const storageAdapter = {
     resolveProjectReferenceByProjectId: async ({ db, projectId }) => {
       const projects = (await db.get("projectEntries")) || [];
@@ -338,52 +408,24 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
       getCurrentReference,
     }) => {
       try {
-        const selectedPath = await filePicker.saveFilePicker({
-          title: options.title || "Save Distribution ZIP",
-          defaultPath: `${zipName}.zip`,
-          filters: [{ name: "ZIP Archive", extensions: ["zip"] }],
+        const selectedPath = await promptDistributionZipPath({
+          zipName,
+          options,
+          filePicker,
         });
 
         if (!selectedPath) {
           return null;
         }
 
-        const reference = getCurrentReference();
-        const filesPath = await join(reference.projectPath, "files");
-        const uniqueFileIds = [];
-        const seenFileIds = new Set();
-
-        for (const fileId of fileIds || []) {
-          if (!fileId || seenFileIds.has(fileId)) continue;
-          seenFileIds.add(fileId);
-          uniqueFileIds.push(fileId);
-        }
-
-        const assets = [];
-        for (const fileId of uniqueFileIds) {
-          const filePath = await join(filesPath, fileId);
-          const fileExists = await exists(filePath);
-          if (!fileExists) {
-            console.warn(`Skipping missing file during export: ${fileId}`);
-            continue;
-          }
-          assets.push({
-            id: fileId,
-            path: filePath,
-            mime: "application/octet-stream",
-          });
-        }
-
-        await invoke("create_distribution_zip_streamed", {
+        return createDistributionZipStreamedToPath({
+          projectData,
+          fileIds,
           outputPath: selectedPath,
-          assets,
-          instructionsJson: JSON.stringify(projectData),
-          indexHtml: staticFiles.indexHtml || null,
-          mainJs: staticFiles.mainJs || null,
-          usePartFile: options.usePartFile ?? true,
+          staticFiles,
+          options,
+          getCurrentReference,
         });
-
-        return selectedPath;
       } catch (error) {
         console.error(
           "Error saving streamed distribution ZIP with dialog:",
@@ -392,6 +434,9 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
         throw error;
       }
     },
+
+    promptDistributionZipPath,
+    createDistributionZipStreamedToPath,
   };
 
   const collabAdapter = {

@@ -184,5 +184,16 @@ export const createProjectServiceCore = ({
     downloadBundle: exportService.downloadBundle,
     createDistributionZip: exportService.createDistributionZip,
     createDistributionZipStreamed: exportService.createDistributionZipStreamed,
+    ...("promptDistributionZipPath" in exportService
+      ? {
+          promptDistributionZipPath: exportService.promptDistributionZipPath,
+        }
+      : {}),
+    ...("createDistributionZipStreamedToPath" in exportService
+      ? {
+          createDistributionZipStreamedToPath:
+            exportService.createDistributionZipStreamedToPath,
+        }
+      : {}),
   };
 };
