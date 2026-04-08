@@ -53,7 +53,7 @@ template:
                       - rtgl-view d=h w=f:
                           - rtgl-view w=f:
                               - 'rvn-editable-text#line${line.domRefSuffix} data-line-id="${line.id}" style="width: 100%"': null
-                          - rtgl-view d=h:
+                          - rtgl-view d=h g=sm:
                           - $if line.background:
                               - rtgl-view#previewBackground data-type="background" data-id="${line.id}" pos=rel:
                                   - $if line.background.fileId:
