@@ -180,7 +180,7 @@ const buildTransitionTargetLabel = ({
 
   const sceneName =
     sceneLookups.sceneNameById.get(targetSceneId) || "Unknown Scene";
-  return `${sceneName}:${sectionName}`;
+  return `${sceneName} - ${sectionName}`;
 };
 
 const buildSectionTransitionPreview = ({
