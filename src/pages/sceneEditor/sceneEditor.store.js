@@ -913,7 +913,6 @@ export const selectViewData = ({ state }) => {
     (line) => line.id === state.selectedLineId,
   );
   const currentLines = buildSceneEditorLineViewModels({
-    currentSceneId: state.sceneId,
     lines: Array.isArray(currentSection?.lines) ? currentSection.lines : [],
     repositoryState,
     sectionLineChanges: state.sectionLineChanges,
