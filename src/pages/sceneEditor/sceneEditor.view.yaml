@@ -154,7 +154,7 @@ template:
                       - rtgl-view#sectionsOverview h=32 av=c ph=lg ah=c cur=pointer bgc=mu:
                           - rtgl-text s=sm: ...
                       - rtgl-view w=1fg: null
-                  - rtgl-view w=f p=md sv h=1fg:
+                  - rtgl-view w=f ph=sm pv=md sv h=1fg:
                       - rvn-lines-editor#linesEditor key=${linesEditorKey} :lines=${currentLines} :selectedLineId=${selectedLineId} :keyboardHandlingDisabled=${previewVisible} :showLineNumbers=${sceneSettings.showLineNumbers}: null
                       - rtgl-view h=30vh: null
       - rtgl-view w=1 h=f bgc=mu: null
