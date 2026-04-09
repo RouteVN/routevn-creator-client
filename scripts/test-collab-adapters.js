@@ -5,6 +5,7 @@ import {
   createRepositoryCommandEvent,
   repositoryEventToCommand,
 } from "../src/deps/services/shared/projectRepository.js";
+import { COMMAND_ENVELOPE_VERSION } from "../src/internal/projectCompatibility.js";
 import { createCommandApiShared } from "../src/deps/services/shared/commandApi/shared.js";
 import { createMediaResourceCommandApi } from "../src/deps/services/shared/commandApi/resources/media.js";
 import {
@@ -32,7 +33,7 @@ const createRepositoryEvent = ({
   clientTs = 1000,
   meta,
   type = "image.update",
-  schemaVersion = 1,
+  schemaVersion = COMMAND_ENVELOPE_VERSION,
   payload = {
     imageId: "image-1",
     data: {
@@ -139,7 +140,7 @@ const createRepositoryEvent = ({
     projectId,
     userId: "user-1",
     type: "line.create",
-    schemaVersion: 1,
+    schemaVersion: COMMAND_ENVELOPE_VERSION,
     payload: {
       sectionId: "section-1",
       lines: [

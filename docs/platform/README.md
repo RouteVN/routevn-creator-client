@@ -25,6 +25,7 @@ Date baseline: February 24, 2026.
 2. `04-sync-protocol.md`
 3. `05-storage.md`
 4. `09-partitioning-and-write-contract.md`
+5. `10-model-compatibility-and-upgrades.md`
 
 ## Implementation Mapping
 

@@ -63,6 +63,7 @@ const isAudioUploadFile = (file) =>
 export const createWebProjectServiceAdapters = ({
   onRemoteEvent,
   collabLog,
+  creatorVersion,
 }) => {
   const collabApplyQueueByProject = new Map();
   const collabClientStoresByProject = new Map();
@@ -177,6 +178,7 @@ export const createWebProjectServiceAdapters = ({
         template,
         projectInfo,
         projectResolution,
+        creatorVersion,
       });
     },
   };

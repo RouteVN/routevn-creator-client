@@ -77,7 +77,10 @@ async function copyTemplateFiles(templateId, targetPath) {
   }
 }
 
-export const createTauriProjectServiceAdapters = ({ collabLog }) => {
+export const createTauriProjectServiceAdapters = ({
+  collabLog,
+  creatorVersion,
+}) => {
   const filesPathByProjectPath = new Map();
   const fileUrlByCacheKey = new Map();
 
@@ -251,7 +254,7 @@ export const createTauriProjectServiceAdapters = ({ collabLog }) => {
         createdAt: Number(initialEvent.meta?.clientTs) || 0,
       });
 
-      await store.app.set(CREATOR_VERSION_KEY, 1);
+      await store.app.set(CREATOR_VERSION_KEY, creatorVersion);
       await store.app.set(PROJECT_INFO_KEY, normalizeProjectInfo(projectInfo));
     },
   };

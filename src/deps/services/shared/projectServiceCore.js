@@ -11,6 +11,7 @@ export const createProjectServiceCore = ({
   idGenerator,
   now = () => Date.now(),
   collabLog,
+  creatorVersion,
   storageAdapter,
   fileAdapter,
   collabAdapter,
@@ -18,6 +19,7 @@ export const createProjectServiceCore = ({
   const repositoryService = createProjectRepositoryService({
     router,
     db,
+    creatorVersion,
     storageAdapter,
     collabAdapter,
   });

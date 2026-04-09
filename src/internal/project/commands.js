@@ -1,4 +1,4 @@
-const COMMAND_SCHEMA_VERSION = 1;
+import { COMMAND_ENVELOPE_VERSION } from "../projectCompatibility.js";
 
 export const RESOURCE_TYPES = Object.freeze([
   "images",
@@ -111,7 +111,7 @@ export const COMMAND_TYPES = Object.freeze(
 );
 
 export const COMMAND_EVENT_MODEL = Object.freeze({
-  schemaVersion: COMMAND_SCHEMA_VERSION,
+  schemaVersion: COMMAND_ENVELOPE_VERSION,
   requiredEnvelopeFields: Object.freeze([
     "id",
     "projectId",

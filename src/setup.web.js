@@ -16,7 +16,9 @@ import { createAudioService } from "./deps/services/audioService.js";
 import Subject from "./deps/subject.js";
 import Router from "./deps/clients/router.js";
 import { createGraphicsService } from "./deps/services/graphicsService.js";
+import { CREATOR_VERSION } from "./internal/projectCompatibility.js";
 import { registerPrimitives } from "./primitives/registerPrimitives.js";
+import tauriConfig from "../src-tauri/tauri.conf.json";
 
 registerPrimitives();
 
@@ -33,8 +35,8 @@ const globalUIElement = document.querySelector("rtgl-global-ui");
 const globalUI = createGlobalUI(globalUIElement);
 const audioService = createAudioService();
 
-// Use app version from config (Tauri version comes from API)
-const appVersion = "web";
+const appVersion = tauriConfig.version;
+const creatorVersion = CREATOR_VERSION;
 
 const updater = {
   checkForUpdates: async () => null,
@@ -58,6 +60,7 @@ const projectService = await createWebProjectServiceWithCollab({
   subject,
   db: appDb,
   collabConfig,
+  creatorVersion,
 });
 
 // Create app service (web version)

@@ -7,7 +7,7 @@
         "@rettangoli/fe": "1.1.0",
         "@rettangoli/ui": "1.2.2",
         "@rettangoli/vt": "1.0.2",
-        "@routevn/creator-model": "1.1.11",
+        "@routevn/creator-model": "1.1.12",
         "@tauri-apps/api": "^2.8.0",
         "@tauri-apps/plugin-dialog": "2.4.2",
         "@tauri-apps/plugin-fs": "^2.4.2",
@@ -259,7 +259,7 @@
 
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.55.1", "", { "os": "win32", "cpu": "x64" }, "sha512-SPEpaL6DX4rmcXtnhdrQYgzQ5W2uW3SCJch88lB2zImhJRhIIK44fkUrgIV/Q8yUNfw5oyZ5vkeQsZLhCb06lw=="],
 
-    "@routevn/creator-model": ["@routevn/creator-model@1.1.11", "", {}, "sha512-VnPTLrTEVo8b4ekYVPpyb1rzuSHMpIfAkgV0nbed0LQ5KOt/ByCxmD3s/Mp9tHDZH9hvE3ZbQdspFmZM2tw3SA=="],
+    "@routevn/creator-model": ["@routevn/creator-model@1.1.12", "", {}, "sha512-hEbS8Zwf8b4S6ipFhmnVUDiMMt+D4AKVscjO/+2lP8UjhjaCcmzsvAE5nUXJ/eLBn/tuAOwRorDOViBM9sqpQQ=="],
 
     "@shikijs/core": ["@shikijs/core@3.22.0", "", { "dependencies": { "@shikijs/types": "3.22.0", "@shikijs/vscode-textmate": "^10.0.2", "@types/hast": "^3.0.4", "hast-util-to-html": "^9.0.5" } }, "sha512-iAlTtSDDbJiRpvgL5ugKEATDtHdUVkqgHDm/gbD2ZS9c88mx7G1zSYjjOxp5Qa0eaW0MAQosFRmJSk354PRoQA=="],
 

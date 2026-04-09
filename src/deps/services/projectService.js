@@ -4,7 +4,12 @@ import { createTauriProjectServiceAdapters } from "./tauri/projectServiceAdapter
 
 const ENABLE_VERBOSE_COLLAB_LOGS = false;
 
-export const createProjectService = ({ router, db, filePicker }) => {
+export const createProjectService = ({
+  router,
+  db,
+  filePicker,
+  creatorVersion,
+}) => {
   const collabLog = (level, message, meta = {}) => {
     if (!ENABLE_VERBOSE_COLLAB_LOGS && level !== "warn" && level !== "error") {
       return;
@@ -20,7 +25,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
   };
 
   const { storageAdapter, fileAdapter, collabAdapter } =
-    createTauriProjectServiceAdapters({ collabLog });
+    createTauriProjectServiceAdapters({ collabLog, creatorVersion });
 
   return createProjectServiceCore({
     router,
@@ -29,6 +34,7 @@ export const createProjectService = ({ router, db, filePicker }) => {
     idGenerator: nanoid,
     now: () => Date.now(),
     collabLog,
+    creatorVersion,
     storageAdapter,
     fileAdapter,
     collabAdapter,
