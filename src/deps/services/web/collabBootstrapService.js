@@ -12,6 +12,7 @@ export const createWebProjectServiceWithCollab = async ({
   subject,
   db,
   collabConfig = {},
+  creatorVersion,
 }) => {
   const collabDebugEnabled = resolveCollabDebugEnabled({
     enabled: collabConfig.debugEnabled,
@@ -30,6 +31,7 @@ export const createWebProjectServiceWithCollab = async ({
     filePicker,
     onRemoteEvent,
     db,
+    creatorVersion,
   });
 
   const collabConnectionRuntime = createCollabConnectionRuntime({

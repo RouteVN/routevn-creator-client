@@ -9,6 +9,7 @@ export const createProjectService = ({
   filePicker,
   onRemoteEvent,
   db,
+  creatorVersion,
 }) => {
   const collabLog = (level, message, meta = {}) => {
     if (!ENABLE_VERBOSE_COLLAB_LOGS && level !== "warn" && level !== "error") {
@@ -28,6 +29,7 @@ export const createProjectService = ({
     createWebProjectServiceAdapters({
       onRemoteEvent,
       collabLog,
+      creatorVersion,
     });
 
   return createProjectServiceCore({
@@ -37,6 +39,7 @@ export const createProjectService = ({
     idGenerator: nanoid,
     now: () => Date.now(),
     collabLog,
+    creatorVersion,
     storageAdapter,
     fileAdapter,
     collabAdapter,

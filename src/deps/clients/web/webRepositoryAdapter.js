@@ -57,6 +57,7 @@ export const initializeProject = async ({
   template,
   projectInfo,
   projectResolution,
+  creatorVersion,
 }) => {
   if (!template) {
     throw new Error("Template is required for project initialization");
@@ -91,7 +92,7 @@ export const initializeProject = async ({
     }),
   );
 
-  await adapter.app.set("creatorVersion", 1);
+  await adapter.app.set("creatorVersion", creatorVersion);
   await adapter.app.set(PROJECT_INFO_KEY, normalizeProjectInfo(projectInfo));
 };
 

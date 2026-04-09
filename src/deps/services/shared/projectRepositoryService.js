@@ -7,10 +7,11 @@ import { getOrCreateLocked } from "./getOrCreateLocked.js";
 export const createProjectRepositoryService = ({
   router,
   db,
+  creatorVersion,
   storageAdapter,
   collabAdapter,
 }) => {
-  const CURRENT_CREATOR_MAJOR_VERSION = 1;
+  const CURRENT_CREATOR_VERSION = creatorVersion;
   const CREATOR_VERSION_KEY = "creatorVersion";
   const PROJECT_INFO_KEY = "projectInfo";
   const repositoriesByCacheKey = new Map();
@@ -38,7 +39,7 @@ export const createProjectRepositoryService = ({
         : "0";
 
     return new Error(
-      `You're trying to open an incompatible project with version ${displayedProjectVersion} using RouteVN Creator ${CURRENT_CREATOR_MAJOR_VERSION}. For assistance, please reach out to RouteVN staff for support.`,
+      `You're trying to open an incompatible project with version ${displayedProjectVersion} using RouteVN Creator project format ${CURRENT_CREATOR_VERSION}. For assistance, please reach out to RouteVN staff for support.`,
     );
   };
 
@@ -186,7 +187,7 @@ export const createProjectRepositoryService = ({
   const ensureCompatibleCreatorVersion = async (store) => {
     const creatorVersion = await readCreatorVersionFromStore(store);
 
-    if (creatorVersion !== CURRENT_CREATOR_MAJOR_VERSION) {
+    if (creatorVersion !== CURRENT_CREATOR_VERSION) {
       throw createIncompatibleProjectVersionError(creatorVersion);
     }
 

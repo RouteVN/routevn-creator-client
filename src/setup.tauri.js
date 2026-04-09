@@ -19,6 +19,7 @@ import { createApiService } from "./deps/services/apiService";
 import Subject from "./deps/subject";
 import Router from "./deps/clients/router";
 import { createGraphicsService } from "./deps/services/graphicsService";
+import { CREATOR_VERSION } from "./internal/projectCompatibility.js";
 import { registerPrimitives } from "./primitives/registerPrimitives";
 
 registerPrimitives();
@@ -36,6 +37,7 @@ const audioService = createAudioService();
 
 // Get app version
 const appVersion = await getVersion();
+const creatorVersion = CREATOR_VERSION;
 
 // Create updater
 const updater = createUpdater({ globalUI, keyValueStore: appDb });
@@ -48,6 +50,7 @@ const projectService = createProjectService({
   router,
   db: appDb,
   filePicker,
+  creatorVersion,
 });
 
 // Create app service
