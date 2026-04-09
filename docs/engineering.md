@@ -402,7 +402,11 @@ Exported `package.bin` files have two distinct version concepts:
   - currently includes:
     - `appName`
     - `appVersion`
+  - meanings:
+    - `appName`: which application produced the export
+    - `appVersion`: which released app build/version produced the export
   - used for provenance, debugging, and support
+  - these are not compatibility gates; they are exporter provenance only
 
 Do not collapse these into one field.
 
