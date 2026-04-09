@@ -16,7 +16,7 @@ import { createAudioService } from "./deps/services/audioService.js";
 import Subject from "./deps/subject.js";
 import Router from "./deps/clients/router.js";
 import { createGraphicsService } from "./deps/services/graphicsService.js";
-import { CREATOR_VERSION } from "./internal/projectCompatibility.js";
+import { deriveProjectFormatVersionFromAppVersion } from "./internal/projectCompatibility.js";
 import { registerPrimitives } from "./primitives/registerPrimitives.js";
 import tauriConfig from "../src-tauri/tauri.conf.json";
 
@@ -36,7 +36,7 @@ const globalUI = createGlobalUI(globalUIElement);
 const audioService = createAudioService();
 
 const appVersion = tauriConfig.version;
-const creatorVersion = CREATOR_VERSION;
+const creatorVersion = deriveProjectFormatVersionFromAppVersion(appVersion);
 
 const updater = {
   checkForUpdates: async () => null,

@@ -29,7 +29,8 @@ Collaboration:
 1. Older client opening newer project:
    effectively not supported.
 2. Newer client opening older project:
-   not guaranteed.
+   partially supported only when the stored project format version still
+   matches and the latest model can still replay the older command/state data.
 
 ### Collaboration
 
@@ -62,55 +63,67 @@ validate under the new model.
 
 Current version-like fields:
 
-1. App-level `creatorVersion`
+1. Project format version (`creatorVersion` in project app-store metadata)
 2. Command envelope `schemaVersion`
-3. Model package `SCHEMA_VERSION`
+3. Model package version
+4. Model package `SCHEMA_VERSION`
 
 Current values in this repo:
 
-1. `creatorVersion = 1` when new projects are created:
+1. Project format version `creatorVersion = 1` when new projects are created:
    [webRepositoryAdapter.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/deps/clients/web/webRepositoryAdapter.js#L94)
    [projectServiceAdapters.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/deps/services/tauri/projectServiceAdapters.js#L254)
 2. Command envelope `schemaVersion = 1`:
    [commands.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/internal/project/commands.js#L1)
-3. Creator model `SCHEMA_VERSION = 2`:
+3. Installed creator model package version `1.1.12`:
+   [package.json](/home/tk/Code/yuusoft-org/routevn-creator-client/package.json#L22)
+4. Creator model `SCHEMA_VERSION = 1`:
    [model.js](/home/tk/Code/yuusoft-org/routevn-creator-model/src/model.js#L148)
 
 Problem:
 
-1. There is no single authoritative compatibility version.
-2. The client does not consume the model package `SCHEMA_VERSION`.
-3. It is easy to bump one version and forget the others.
+1. There is no single authoritative compatibility version because these values
+   answer different compatibility questions.
+2. The project format version, command envelope version, and model schema
+   version must remain intentionally separate.
+3. It is still easy to confuse them unless the distinction is documented
+   explicitly.
 
 Impact:
 
-1. Compatibility decisions are inconsistent.
-2. It is unclear which version governs project-open safety.
-3. It is unclear which version governs command replay safety.
+1. Project-open safety is governed by project format version.
+2. Mixed-version collab safety is governed first by command envelope version.
+3. Replay safety still depends on current model behavior and backward-compatible
+   validation.
 
-## Issue 2: Project Open Is Blocked By App Major Version Equality
+## Issue 2: Project Open Is Intentionally Coupled To App Major / Project Format
 
 The repository service currently requires the stored `creatorVersion` to equal
-the runtime `CURRENT_CREATOR_MAJOR_VERSION`.
+the runtime supported project format version.
 
 References:
 
-1. Current major version gate:
+1. Current project format gate:
    [projectRepositoryService.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/deps/services/shared/projectRepositoryService.js#L13)
 2. Equality check:
    [projectRepositoryService.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/deps/services/shared/projectRepositoryService.js#L186)
 
-Problem:
+Status update:
 
-1. If the app major version becomes `2`, a version `2` client will reject a
-   project stamped with `creatorVersion = 1`.
-2. That directly violates the desired one-way compatibility goal for
-   single-user upgrades.
+1. This is intentionally derived from app semver major.
+2. A normal app `2.x` release is therefore also a project format break and will
+   reject projects stamped with `creatorVersion = 1`.
+
+Remaining limitation:
+
+1. Cross-project-format opening is unsupported by design.
+2. Migration between project format generations must happen outside the app.
 
 Impact:
 
-1. Newer client opening older project is explicitly blocked before any
-   migration logic could run.
+1. Project format generations remain a hard compatibility boundary.
+2. One-way compatibility inside the same project format still depends on model
+   replay compatibility.
 
 ## Issue 3: Replay Uses The Current Model, So Validation Tightening Can Break Old Projects
 
@@ -170,7 +183,7 @@ Impact:
 1. Compatibility work scales poorly.
 2. Each schema change becomes a manual judgment call.
 
-## Issue 5: Command Envelope Schema Version Is Disconnected From Model Schema Version
+## Issue 5: Command Envelope Version And Model Schema Version Are Separate On Purpose
 
 Command transport uses the app repo command envelope schema version, not the
 creator model schema version.
@@ -185,17 +198,21 @@ References:
    supported schema version:
    [compatibility.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/deps/services/shared/collab/compatibility.js#L20)
 
-Problem:
+Status update:
 
-1. A command may be marked compatible at the envelope level even if the current
-   model meaning changed.
-2. The model repo `SCHEMA_VERSION` is documented as the source of truth for
-   persisted command compatibility, but the client does not use it.
+1. This is intentional now.
+2. The command envelope version is a client-owned collab wire compatibility
+   version and must stay stable unless the envelope itself changes.
+3. The model schema version is a model-owned persisted replay compatibility
+   version and should not be used directly for mixed-version collab gating.
 
 Impact:
 
-1. Compatibility signaling is weaker than it appears.
-2. The current `schemaVersion` does not fully describe model replay safety.
+1. Mixed-version collab avoids unnecessary projection gaps when the wire
+   envelope is still unchanged.
+2. Envelope compatibility and replay compatibility remain separate concerns.
+3. A command marked collab-compatible can still fail at replay/model level if
+   the current model no longer accepts the older persisted shape.
 
 ## Issue 6: Mixed-Version Collaboration Uses Projection Gaps, Not True Compatibility
 
