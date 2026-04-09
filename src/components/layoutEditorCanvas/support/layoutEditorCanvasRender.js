@@ -527,6 +527,10 @@ export const createLayoutEditorRenderState = ({
   repositoryState,
 } = {}) => {
   const imageItems = repositoryState?.images?.items || {};
+  const spritesheetsData = repositoryState?.spritesheets || {
+    items: {},
+    tree: [],
+  };
   const textStyleItems = repositoryState?.textStyles?.items || {};
   const colorsItems = repositoryState?.colors?.items || {};
   const fontsItems = repositoryState?.fonts?.items || {};
@@ -542,6 +546,7 @@ export const createLayoutEditorRenderState = ({
     {
       layoutId: layoutState?.id,
       layoutType: layoutState?.layoutType,
+      spritesheetsData,
       layoutsData: repositoryState?.layouts?.items || {},
     },
   );

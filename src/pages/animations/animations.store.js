@@ -19,6 +19,17 @@ const createTypeMenuItems = [
   },
 ];
 
+const animationExplorerItemContextMenuItems = [
+  { label: "Edit", type: "item", value: "edit-item" },
+  { label: "Rename", type: "item", value: "rename-item" },
+  { label: "Delete", type: "item", value: "delete-item" },
+];
+
+const animationCenterItemContextMenuItems = [
+  { label: "Edit", type: "item", value: "edit-item" },
+  { label: "Delete", type: "item", value: "delete-item" },
+];
+
 const buildCatalogItem = (item) => {
   return toAnimationDisplayItem(item);
 };
@@ -47,8 +58,9 @@ const {
   resourceType: "animations",
   title: "Animations",
   selectedResourceId: "animations",
-  resourceCategory: "assets",
+  resourceCategory: "animatedAssets",
   addText: "Add",
+  centerItemContextMenuItems: animationCenterItemContextMenuItems,
   buildCatalogItem,
   matchesSearch,
   extendViewData: ({ state, selectedItem, baseViewData }) => {
@@ -58,6 +70,7 @@ const {
 
     return {
       ...baseViewData,
+      itemContextMenuItems: animationExplorerItemContextMenuItems,
       selectedAnimationTypeLabel:
         selectedAnimationItem?.animationTypeLabel ?? "",
       selectedItemDescription: selectedAnimationItem?.description ?? "",

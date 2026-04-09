@@ -182,6 +182,19 @@ layoutSections:
         type: child-interaction-list
         name: childInteraction
         items: "${childInteractionItems}"
+  - "$when": "supportsSpritesheetAnimation"
+    id: spritesheet
+    label: Spritesheet
+    items:
+      - type: spritesheet-preview
+        fileId: "${selectedSpritesheetFileId}"
+        atlas: "${selectedSpritesheetAtlas}"
+        animation: "${selectedSpritesheetAnimation}"
+      - type: select
+        label: Animation
+        name: spritesheetSelection
+        value: "${spritesheetSelectionValue}"
+        options: "${spritesheetSelectionItems}"
   - "$when": "supportsSpriteImages"
     id: images
     label: Image

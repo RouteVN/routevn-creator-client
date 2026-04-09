@@ -15,6 +15,21 @@ const tabs = [
   },
 ];
 
+const ANIMATION_MODE_OPTIONS = [
+  {
+    label: "None",
+    value: "none",
+  },
+  {
+    label: "Update",
+    value: "update",
+  },
+  {
+    label: "Transition",
+    value: "transition",
+  },
+];
+
 // Form structure will be created dynamically in selectViewData
 const createEmptyCollection = () => ({
   items: {},
@@ -32,6 +47,25 @@ const normalizeResourceCollection = (collection) => {
   return { items, tree };
 };
 
+const getAnimationType = (item = {}) => {
+  return item?.animation?.type === "transition" ? "transition" : "update";
+};
+
+const getAnimationItemById = (collection = {}, animationId) => {
+  if (!animationId) {
+    return undefined;
+  }
+
+  return toFlatItems(collection).find(
+    (item) => item.id === animationId && item.type === "animation",
+  );
+};
+
+const getAnimationModeById = (collection = {}, animationId) => {
+  const item = getAnimationItemById(collection, animationId);
+  return item ? getAnimationType(item) : undefined;
+};
+
 export const createInitialState = () => ({
   mode: "current",
   tab: "image",
@@ -42,6 +76,7 @@ export const createInitialState = () => ({
   selectedResourceId: undefined,
   selectedResourceType: undefined,
   tempSelectedResourceId: undefined,
+  selectedAnimationMode: "none",
   selectedAnimationId: undefined,
   backgroundLoop: false,
   pendingResourceId: undefined,
@@ -66,6 +101,14 @@ export const setRepositoryState = (
   state.layoutItems = normalizeResourceCollection(layouts);
   state.videoItems = normalizeResourceCollection(videos);
   state.animationItems = normalizeResourceCollection(animations);
+
+  const selectedAnimationMode = getAnimationModeById(
+    state.animationItems,
+    state.selectedAnimationId,
+  );
+  if (selectedAnimationMode) {
+    state.selectedAnimationMode = selectedAnimationMode;
+  }
 };
 
 export const setTab = ({ state }, { tab } = {}) => {
@@ -120,8 +163,38 @@ export const setSearchQuery = ({ state }, { value } = {}) => {
   state.searchQuery = value ?? "";
 };
 
+export const setSelectedAnimationMode = ({ state }, { mode } = {}) => {
+  if (mode !== "update" && mode !== "transition") {
+    state.selectedAnimationMode = "none";
+    state.selectedAnimationId = undefined;
+    return;
+  }
+
+  state.selectedAnimationMode = mode;
+
+  const selectedAnimationMode = getAnimationModeById(
+    state.animationItems,
+    state.selectedAnimationId,
+  );
+  if (selectedAnimationMode && selectedAnimationMode !== mode) {
+    state.selectedAnimationId = undefined;
+  }
+};
+
+export const selectSelectedAnimationMode = ({ state }) => {
+  return state.selectedAnimationMode;
+};
+
 export const setSelectedAnimation = ({ state }, { animationId } = {}) => {
   state.selectedAnimationId = animationId === "none" ? undefined : animationId;
+
+  const selectedAnimationMode = getAnimationModeById(
+    state.animationItems,
+    state.selectedAnimationId,
+  );
+  if (selectedAnimationMode) {
+    state.selectedAnimationMode = selectedAnimationMode;
+  }
 };
 
 export const selectSelectedAnimation = ({ state }) => {
@@ -276,15 +349,22 @@ export const selectViewData = ({ state }) => {
 
   const selectedResource = selectSelectedResource({ state });
   const breadcrumb = selectBreadcrumb({ state });
-  const animationOptions = toFlatItems(state.animationItems)
-    .filter((item) => item.type === "animation")
-    .map((item) => {
-      const animationType = item.animation?.type;
-      return {
-        value: item.id,
-        label: animationType ? `${item.name} (${animationType})` : item.name,
-      };
-    });
+  const selectedAnimationMode = state.selectedAnimationMode ?? "none";
+  const allAnimationItems = toFlatItems(state.animationItems).filter(
+    (item) => item.type === "animation",
+  );
+  const updateAnimationOptions = allAnimationItems
+    .filter((item) => getAnimationType(item) === "update")
+    .map((item) => ({
+      value: item.id,
+      label: item.name,
+    }));
+  const transitionAnimationOptions = allAnimationItems
+    .filter((item) => getAnimationType(item) === "transition")
+    .map((item) => ({
+      value: item.id,
+      label: item.name,
+    }));
 
   const formFields = [
     {
@@ -293,13 +373,33 @@ export const selectViewData = ({ state }) => {
       description: "Background",
     },
     {
-      name: "animation",
+      name: "animationType",
       label: "Animation",
-      type: "select",
-      placeholder: "No animation",
-      options: animationOptions,
+      type: "segmented-control",
+      clearable: false,
+      options: ANIMATION_MODE_OPTIONS,
     },
   ];
+
+  if (selectedAnimationMode === "update") {
+    formFields.push({
+      name: "updateAnimation",
+      label: "Update Animation",
+      type: "select",
+      clearable: false,
+      placeholder: "Select update animation",
+      options: updateAnimationOptions,
+    });
+  } else if (selectedAnimationMode === "transition") {
+    formFields.push({
+      name: "transitionAnimation",
+      label: "Transition Animation",
+      type: "select",
+      clearable: false,
+      placeholder: "Select transition animation",
+      options: transitionAnimationOptions,
+    });
+  }
 
   if (selectedResource?.resourceType === "video") {
     formFields.push({
@@ -319,7 +419,15 @@ export const selectViewData = ({ state }) => {
 
   const defaultValues = {
     background: selectedResource?.fileId || "",
-    animation: state.selectedAnimationId,
+    animationType: selectedAnimationMode,
+    updateAnimation:
+      selectedAnimationMode === "update"
+        ? state.selectedAnimationId
+        : undefined,
+    transitionAnimation:
+      selectedAnimationMode === "transition"
+        ? state.selectedAnimationId
+        : undefined,
     loop: state.backgroundLoop ?? false,
   };
 
@@ -337,6 +445,13 @@ export const selectViewData = ({ state }) => {
     searchQuery: state.searchQuery,
     searchPlaceholder: "Search...",
     dialogueForm: {
+      key: [
+        selectedResource?.resourceType ?? "none",
+        selectedResource?.resourceId ?? "none",
+        selectedAnimationMode,
+        state.selectedAnimationId ?? "none",
+        state.backgroundLoop ? "loop" : "no-loop",
+      ].join(":"),
       form,
       defaultValues,
     },

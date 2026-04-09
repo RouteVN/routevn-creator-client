@@ -1,0 +1,162 @@
+refs:
+  fileExplorer:
+    eventListeners:
+      file-action:
+        handler: handleFileExplorerAction
+      target-changed:
+        handler: handleFileExplorerTargetChanged
+      item-click:
+        handler: handleFileExplorerSelectionChanged
+      dblclick-item:
+        handler: handleFileExplorerDoubleClick
+  groupview:
+    eventListeners:
+      item-click:
+        handler: handleSpritesheetItemClick
+      item-dblclick:
+        handler: handleSpritesheetItemDoubleClick
+      item-edit:
+        handler: handleSpritesheetItemEdit
+      item-delete:
+        handler: handleItemDelete
+      files-dropped:
+        handler: handleFilesDropped
+      files-drop-rejected:
+        handler: handleFilesDropRejected
+      upload-click:
+        handler: handleAddClick
+      search-input:
+        handler: handleSearchInput
+  detailHeader:
+    eventListeners:
+      click:
+        handler: handleDetailHeaderClick
+  detailClipButton*:
+    eventListeners:
+      click:
+        handler: handleDetailClipClick
+  spritesheetDialog:
+    eventListeners:
+      close:
+        handler: handleDialogClose
+  dialogForm:
+    eventListeners:
+      form-action:
+        handler: handleDialogFormAction
+      form-change:
+        handler: handleDialogFormChange
+  dialogImageSourceButton:
+    eventListeners:
+      click:
+        handler: handleDialogImageSourceClick
+  dialogAtlasSourceButton:
+    eventListeners:
+      click:
+        handler: handleDialogAtlasSourceClick
+  dialogClipButton*:
+    eventListeners:
+      click:
+        handler: handleDialogClipClick
+template:
+  - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
+      - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
+          - rvn-resizable-panel#fileExplorerPanel w=300 min-w=200 max-w=500 resize-side="right":
+              - rtgl-view slot="content" w=f h=f:
+                  - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
+                  - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag start-collapsed=${startCollapsedFileExplorer} :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
+          - 'rtgl-view w=1fg h=f pl=sm style="min-width: 0; min-height: 0;"':
+              - rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-zoom-controls progressive-render lazy-image-cards :groups=${mediaGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems}: null
+          - rvn-resizable-panel panel-type=detail-panel w=300 min-w=220 max-w=520 resize-side="left":
+              - rtgl-view wh=f slot="content":
+                  - $if selectedItemId:
+                      - rtgl-view d=v w=f h=f:
+                          - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+                              - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                              - rtgl-svg svg=edit wh=16: null
+                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
+                              - 'rvn-spritesheet-preview slot="spritesheet-preview" key=${detailPreviewKey} fileId=${detailPreviewFileId} :atlas=${detailPreviewAtlas} :animation=${detailPreviewAnimation} h=220 emptyLabel="No preview available"': null
+                              - 'rtgl-view slot="spritesheet-animations" d=v w=f g=sm':
+                                  - rtgl-text s=sm c=mu-fg: Animations
+                                  - $if detailClipOptions.length > 0:
+                                      - $for clip, clipIndex in detailClipOptions:
+                                          - 'rtgl-view#detailClipButton${clipIndex} data-clip-name=${clip.name} d=v w=f g=xs p=sm bw=xs bc=${clip.borderColor} br=md bgc=${clip.backgroundColor} h-bgc=mu cur=pointer':
+                                              - rtgl-view d=h w=f av=c g=sm:
+                                                  - rtgl-text w=1fg s=sm: ${clip.name}
+                                                  - rtgl-text s=xs c=mu-fg: ${clip.loopLabel}
+                                              - rtgl-text s=xs c=mu-fg: ${clip.frameCount} frames • ${clip.fps} fps
+                                    $else:
+                                      - rtgl-view w=f p=sm bgc=mu br=md:
+                                          - rtgl-text s=xs c=mu-fg: No animations found
+                    $else:
+                      - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                          - rtgl-text s=md c=mu-fg: No selection
+  - rtgl-dialog#spritesheetDialog ?open=${isDialogOpen} s=lg:
+      - $if isDialogPreviewMode:
+          - 'rtgl-view slot="content" d=v w=f g=lg style="min-width: min(960px, 100vw - 64px);"':
+              - rtgl-view d=v g=xs:
+                  - rtgl-text s=sm: ${dialogTitle}
+                  - rtgl-text s=xs c=mu-fg: Preview clips and spritesheet metadata.
+              - 'rvn-spritesheet-preview key=${dialogPreviewKey} src=${dialogPreviewUrl} fileId=${dialogPreviewFileId} :atlas=${dialogPreviewAtlas} :animation=${dialogPreviewAnimation} h=320 emptyLabel="No preview available"': null
+              - rtgl-view d=v w=f g=xs p=md bgc=mu br=md:
+                  - rtgl-text s=sm: Source
+                  - rtgl-text s=xs c=mu-fg: ${dialogImageStatusText}
+                  - rtgl-text s=xs c=mu-fg: ${dialogAtlasStatusText}
+                  - rtgl-text s=xs c=mu-fg: ${dialogAtlasFileName}
+                  - $if dialogFrameCount:
+                      - rtgl-text s=xs c=mu-fg: ${dialogFrameCount} frames
+                  - $if dialogSheetSize:
+                      - rtgl-text s=xs c=mu-fg: ${dialogSheetSize}
+                  - rtgl-text s=xs c=mu-fg: ${dialogClipOptions.length} animations
+              - rtgl-view d=v w=f g=sm:
+                  - rtgl-text s=sm c=mu-fg: Clips
+                  - $if dialogClipOptions.length > 0:
+                      - $for clip, clipIndex in dialogClipOptions:
+                          - 'rtgl-view#dialogClipButton${clipIndex} data-clip-name=${clip.name} d=v w=f g=xs p=sm bw=xs bc=${clip.borderColor} br=md bgc=${clip.backgroundColor} h-bgc=mu cur=pointer':
+                              - rtgl-view d=h w=f av=c g=sm:
+                                  - rtgl-text w=1fg s=sm: ${clip.name}
+                                  - rtgl-text s=xs c=mu-fg: ${clip.loopLabel}
+                              - rtgl-text s=xs c=mu-fg: ${clip.frameCount} frames • ${clip.fps} fps
+                    $else:
+                      - rtgl-view w=f p=sm bgc=mu br=md:
+                          - rtgl-text s=xs c=mu-fg: No animations found
+        $else:
+          - 'rtgl-view slot="content" d=h lg-d=v w=f g=lg style="min-width: min(960px, 100vw - 64px);"':
+              - rtgl-view w=6fg lg-w=f d=v g=md:
+                  - 'rvn-spritesheet-preview key=${dialogPreviewKey} src=${dialogPreviewUrl} fileId=${dialogPreviewFileId} :atlas=${dialogPreviewAtlas} :animation=${dialogPreviewAnimation} h=260 emptyLabel="Select a PNG spritesheet and JSON atlas"': null
+                  - rtgl-view d=v w=f g=xs p=md bgc=mu br=md:
+                      - rtgl-text s=sm: Source
+                      - rtgl-text s=xs c=mu-fg: ${dialogImageStatusText}
+                      - rtgl-text s=xs c=mu-fg: ${dialogAtlasStatusText}
+                      - rtgl-text s=xs c=mu-fg: ${dialogAtlasFileName}
+                      - $if dialogFrameCount:
+                          - rtgl-text s=xs c=mu-fg: ${dialogFrameCount} frames
+                      - $if dialogSheetSize:
+                          - rtgl-text s=xs c=mu-fg: ${dialogSheetSize}
+                      - rtgl-text s=xs c=mu-fg: ${dialogClipOptions.length} animations
+                  - rtgl-view d=v w=f g=sm:
+                      - rtgl-text s=sm c=mu-fg: Clips
+                      - $if dialogClipOptions.length > 0:
+                          - $for clip, clipIndex in dialogClipOptions:
+                              - 'rtgl-view#dialogClipButton${clipIndex} data-clip-name=${clip.name} d=v w=f g=xs p=sm bw=xs bc=${clip.borderColor} br=md bgc=${clip.backgroundColor} h-bgc=mu cur=pointer':
+                                  - rtgl-view d=h w=f av=c g=sm:
+                                      - rtgl-text w=1fg s=sm: ${clip.name}
+                                      - rtgl-text s=xs c=mu-fg: ${clip.loopLabel}
+                                  - rtgl-text s=xs c=mu-fg: ${clip.frameCount} frames • ${clip.fps} fps
+                        $else:
+                          - rtgl-view w=f p=sm bgc=mu br=md:
+                              - rtgl-text s=xs c=mu-fg: Select a valid atlas to detect clips
+              - rtgl-view w=5fg lg-w=f d=v g=md:
+                  - rtgl-view d=v g=xs:
+                      - rtgl-text s=sm: ${dialogTitle}
+                      - rtgl-text s=xs c=mu-fg: Select the PNG image and JSON atlas, then adjust the default size metadata here.
+                  - rtgl-form#dialogForm key=${dialogFormKey} :defaultValues=${dialogValues} :form=${dialogForm} w=f:
+                      - rtgl-view slot=spritesheet-image-source d=v g=xs:
+                          - rtgl-view d=h g=sm av=c:
+                              - rtgl-input w=f :value=${dialogImageFieldValue} disabled=true placeholder="No image selected": null
+                              - rtgl-button#dialogImageSourceButton variant=se size=sm pre=upload: ${dialogImageSourceLabel}
+                          - rtgl-text s=xs c=mu-fg: Select the PNG spritesheet image used for preview and upload.
+                      - rtgl-view slot=spritesheet-atlas-source d=v g=xs:
+                          - rtgl-view d=h g=sm av=c:
+                              - rtgl-input w=f :value=${dialogAtlasFieldValue} disabled=true placeholder="No JSON selected": null
+                              - rtgl-button#dialogAtlasSourceButton variant=se size=sm pre=upload: ${dialogAtlasSourceLabel}
+                          - rtgl-text s=xs c=mu-fg: Select the atlas JSON file that defines the frames and clips.

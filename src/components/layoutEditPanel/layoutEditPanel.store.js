@@ -1,5 +1,10 @@
 import { parseAndRender } from "jempl";
 import { getFirstTextStyleId } from "../../constants/textStyles.js";
+import {
+  getSpritesheetAnimationPreview,
+  toSpritesheetAnimationSelectionItems,
+  toSpritesheetAnimationSelectionValue,
+} from "../../internal/spritesheets.js";
 import { getVariableOptions } from "../../internal/project/projection.js";
 import { toFlatItems } from "../../internal/project/tree.js";
 import { getFragmentLayoutOptions } from "../../pages/layoutEditor/support/layoutFragments.js";
@@ -255,6 +260,7 @@ export const createInitialState = () => {
       fieldName: undefined,
     },
     imagesData: { tree: [], items: {} },
+    spritesheetsData: { tree: [], items: {} },
     textStylesData: { tree: [], items: {} },
     variablesData: { tree: [], items: {} },
     values: createDefaultValues(),
@@ -565,6 +571,10 @@ export const setImagesData = ({ state }, { imagesData } = {}) => {
   state.imagesData = imagesData;
 };
 
+export const setSpritesheetsData = ({ state }, { spritesheetsData } = {}) => {
+  state.spritesheetsData = spritesheetsData;
+};
+
 export const setVariablesData = ({ state }, { variablesData } = {}) => {
   state.variablesData = variablesData;
 };
@@ -625,6 +635,9 @@ export const selectTextStyleOptions = ({ state }) => {
 export const selectViewData = ({ state, props, constants }) => {
   const textStyleItems = toTextStyleOptions(state.textStylesData);
   const imageItems = toImageOptions(state.imagesData);
+  const spritesheetSelectionItems = toSpritesheetAnimationSelectionItems(
+    state.spritesheetsData,
+  );
   const imageFolderItems = toFlatItems(state.imagesData).filter(
     (item) => item.type === "folder",
   );
@@ -659,6 +672,15 @@ export const selectViewData = ({ state, props, constants }) => {
     firstTextStyleId,
     hiddenActionModes: HIDDEN_LAYOUT_ACTION_MODES,
   });
+  const spritesheetSelectionValue = toSpritesheetAnimationSelectionValue(
+    values.resourceId,
+    values.animationName,
+  );
+  const selectedSpritesheetPreview = getSpritesheetAnimationPreview(
+    state.spritesheetsData,
+    values.resourceId,
+    values.animationName,
+  );
   const supportsWidthMode = props.itemType?.startsWith("text") === true;
   const widthMode =
     supportsWidthMode && values.width === undefined ? "auto" : "fixed";
@@ -700,6 +722,11 @@ export const selectViewData = ({ state, props, constants }) => {
       textStyleItemsWithNone,
       variableOptions,
       variableOptionsWithNone,
+      spritesheetSelectionItems,
+      spritesheetSelectionValue,
+      selectedSpritesheetFileId: selectedSpritesheetPreview.fileId,
+      selectedSpritesheetAtlas: selectedSpritesheetPreview.atlas,
+      selectedSpritesheetAnimation: selectedSpritesheetPreview.animation,
       fragmentLayoutOptions,
       values,
       xPercentageLabel: formatPositionPercentageLabel({

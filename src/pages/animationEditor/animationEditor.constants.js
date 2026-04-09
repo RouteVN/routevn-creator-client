@@ -3,7 +3,7 @@ export const EMPTY_TREE = {
   items: {},
 };
 
-export const ANIMATION_RESOURCE_CATEGORY = "assets";
+export const ANIMATION_RESOURCE_CATEGORY = "animatedAssets";
 export const ANIMATION_SELECTED_RESOURCE_ID = "animations";
 export const PREVIEW_BG_COLOR = "#4a4a4a";
 export const PREVIEW_RECT_WIDTH = 200;
@@ -141,8 +141,6 @@ export const propertyNameDropdownItems = [
 
 export const MASK_KIND_OPTIONS = Object.freeze([
   { label: "Single", value: "single" },
-  { label: "Sequence", value: "sequence" },
-  { label: "Composite", value: "composite" },
 ]);
 
 export const MASK_CHANNEL_OPTIONS = Object.freeze([

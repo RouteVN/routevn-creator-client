@@ -38,6 +38,7 @@ export const initialProjectData = {
   },
   files: createTreeCollection(),
   images: createTreeCollection(),
+  spritesheets: createTreeCollection(),
   sounds: createTreeCollection(),
   videos: createTreeCollection(),
   animations: createTreeCollection(),

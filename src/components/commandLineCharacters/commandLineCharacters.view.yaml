@@ -9,10 +9,12 @@ refs:
         handler: handleRemoveCharacterClick
   character*:
     eventListeners:
-      click:
-        handler: handleCharacterClick
       contextmenu:
         handler: handleCharacterContextMenu
+  characterSpriteBox*:
+    eventListeners:
+      click:
+        handler: handleCharacterClick
   baseFileExplorer:
     eventListeners:
       item-click:
@@ -60,6 +62,18 @@ refs:
     eventListeners:
       value-change:
         handler: handleTransformChange
+  animationMode*:
+    eventListeners:
+      value-change:
+        handler: handleAnimationModeChange
+  updateAnimation*:
+    eventListeners:
+      value-change:
+        handler: handleAnimationChange
+  transitionAnimation*:
+    eventListeners:
+      value-change:
+        handler: handleAnimationChange
   characterItem*:
     eventListeners:
       click:
@@ -74,7 +88,7 @@ template:
                   - rtgl-view#charactersContainer slot=characters g=md w=f:
                       - $for character, i in defaultValues.characters:
                           - rtgl-view#character${i} data-index=${i} data-character-id=${character.id} d=h g=md av=t p=md br=md w=f:
-                              - rtgl-view cur=pointer bw=xs bc=bo h-bc=ac br=sm:
+                              - rtgl-view#characterSpriteBox${i} data-index=${i} cur=pointer bw=xs bc=bo h-bc=ac br=sm:
                                   - rtgl-view p=md g=md br=md:
                                       - $if character.spriteFileId:
                                           - rvn-file-image fileId=${character.spriteFileId} w=200 h=120: null
@@ -85,7 +99,13 @@ template:
                               - rtgl-view w=1fg g=sm:
                                   - rtgl-text s=sm c=mu-fg: Transform
                                   - rtgl-select#transform${i} data-index=${i} key=${character.transformId} :options=${defaultValues.transformOptions} :selectedValue=${character.transformId} w=f no-clear: null
-                      - rtgl-button#addCharacterButton v=ol w=f mt=md: + Add Character
+                                  - rtgl-text s=sm c=mu-fg: Animation
+                                  - rtgl-segmented-control#animationMode${i} data-index=${i} key=${character.animationMode} :options=${defaultValues.animationModeOptions} :selectedValue=${character.animationMode} w=f no-clear: null
+                                  - $if character.animationMode == 'update':
+                                      - rtgl-select#updateAnimation${i} data-index=${i} key=${character.animationId} :options=${defaultValues.updateAnimationOptions} :selectedValue=${character.animationId} w=f no-clear: null
+                                    $elif character.animationMode == 'transition':
+                                      - rtgl-select#transitionAnimation${i} data-index=${i} key=${character.animationId} :options=${defaultValues.transitionAnimationOptions} :selectedValue=${character.animationId} w=f no-clear: null
+                  - rtgl-button#addCharacterButton v=ol w=f mt=md: + Add Character
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#submitButton: Submit
       - $if mode == 'character-select':

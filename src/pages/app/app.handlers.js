@@ -184,6 +184,7 @@ const createRouteTransitionRunner = (deps) => {
 const targetPathByKey = {
   p: "/project",
   i: "/project/images",
+  h: "/project/spritesheets",
   c: "/project/characters",
   o: "/project/colors",
   f: "/project/fonts",

@@ -3,12 +3,15 @@ import { toFlatItems } from "../../internal/project/tree.js";
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
-  const { characters, transforms } = projectService.getState();
+  const { animations, characters, transforms } = projectService.getState();
   store.setItems({
     items: characters || { tree: [], items: {} },
   });
   store.setTransforms({
     transforms: transforms || { tree: [], items: {} },
+  });
+  store.setAnimations({
+    animations: animations || { tree: [], items: {} },
   });
 
   // Use presentationState if available, otherwise fall back to character prop
@@ -68,6 +71,22 @@ export const handleTransformChange = (deps, payload) => {
   render();
 };
 
+export const handleAnimationModeChange = (deps, payload) => {
+  const { store, render } = deps;
+  const index = Number.parseInt(payload._event.currentTarget.dataset.index, 10);
+  const value = payload._event.detail.value;
+  store.updateCharacterAnimationMode({ index, animationMode: value });
+  render();
+};
+
+export const handleAnimationChange = (deps, payload) => {
+  const { store, render } = deps;
+  const index = Number.parseInt(payload._event.currentTarget.dataset.index, 10);
+  const value = payload._event.detail.value;
+  store.updateCharacterAnimation({ index, animationId: value });
+  render();
+};
+
 export const handleFileExplorerItemClick = (deps, payload) => {
   const { refs, store, render } = deps;
   const { itemId, isFolder } = payload._event.detail;
@@ -110,7 +129,7 @@ export const handleFormExtra = () => {
 };
 
 export const handleFormChange = () => {
-  // Transform updates are handled by direct value-change listeners on transform* refs.
+  // Transform and animation updates are handled by direct value-change listeners.
 };
 
 export const handleCharacterItemClick = (deps, payload) => {
@@ -143,12 +162,22 @@ export const handleSubmitClick = (deps) => {
 
   const characterData = {
     character: {
-      items: selectedCharacters.map((char) => ({
-        id: char.id,
-        transformId: char.transformId,
-        sprites: char.sprites || [],
-        spriteName: char.spriteName || "",
-      })),
+      items: selectedCharacters.map((char) => {
+        const item = {
+          id: char.id,
+          transformId: char.transformId,
+          sprites: char.sprites || [],
+          spriteName: char.spriteName || "",
+        };
+
+        if (char.animations?.resourceId) {
+          item.animations = {
+            resourceId: char.animations.resourceId,
+          };
+        }
+
+        return item;
+      }),
     },
   };
   dispatchEvent(

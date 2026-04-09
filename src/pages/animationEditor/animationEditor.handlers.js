@@ -160,11 +160,46 @@ const renderPreviewAnimationState = async ({
     renderState,
   });
 
-  if (store.selectDialogType() === "transition") {
-    await graphicsService.render(store.selectAnimationResetState());
+  await graphicsService.render(store.selectAnimationResetState());
+  await graphicsService.render(renderState);
+};
+
+const waitForPreviewPaint = async () => {
+  await new Promise((resolve) => {
+    if (typeof globalThis.requestAnimationFrame === "function") {
+      globalThis.requestAnimationFrame(() => {
+        globalThis.setTimeout(resolve, 0);
+      });
+      return;
+    }
+
+    globalThis.setTimeout(resolve, 0);
+  });
+};
+
+const preparePreviewPlaybackAtStart = async ({
+  graphicsService,
+  projectService,
+  store,
+} = {}) => {
+  if (!graphicsService) {
+    return;
   }
 
-  await graphicsService.render(renderState);
+  stopPreviewPlaybackIndicator({
+    store,
+  });
+  graphicsService.setAnimationPlaybackMode("manual");
+  await renderPreviewAnimationState({
+    graphicsService,
+    projectService,
+    store,
+  });
+  graphicsService.setAnimationTime(0);
+  store.setPreviewPlaybackMode({
+    mode: "manual",
+  });
+  store.markPreviewPrepared({});
 };
 
 const resetPreviewPlayback = ({ graphicsService, store } = {}) => {
@@ -595,10 +630,10 @@ export const handleAddPropertyFormSubmit = (deps, payload) => {
   const defaultInitialValue = store.selectDefaultInitialValue({ property });
 
   const finalInitialValue = useInitialValue
-    ? initialValue !== undefined
+    ? initialValue !== undefined && initialValue !== ""
       ? initialValue
       : defaultInitialValue
-    : defaultInitialValue;
+    : undefined;
 
   store.addProperty({
     side,
@@ -1219,9 +1254,20 @@ export const handleReplayAnimation = async (deps) => {
     return;
   }
 
-  stopPreviewPlaybackIndicator({
+  await preparePreviewPlaybackAtStart({
+    graphicsService,
+    projectService,
     store,
   });
+  render();
+
+  const durationMs = store.selectPreviewDurationMs();
+
+  if (durationMs <= 0) {
+    return;
+  }
+
+  await waitForPreviewPaint();
   graphicsService.setAnimationPlaybackMode("auto");
   store.setPreviewPlaybackMode({
     mode: "auto",
@@ -1231,14 +1277,6 @@ export const handleReplayAnimation = async (deps) => {
     projectService,
     store,
   });
-
-  const durationMs = store.selectPreviewDurationMs();
-
-  if (durationMs <= 0) {
-    render();
-    return;
-  }
-
   store.startPreviewPlayback({
     startedAtMs: globalThis.performance.now(),
     durationMs,
@@ -1259,9 +1297,11 @@ export const handleEditInitialValueFormSubmit = (deps, payload) => {
   const { initialValue, valueSource } = payload._event.detail.values;
   const defaultInitialValue = store.selectDefaultInitialValue({ property });
   const finalInitialValue =
-    valueSource === "default" || initialValue === undefined
-      ? defaultInitialValue
-      : initialValue;
+    valueSource === "default"
+      ? undefined
+      : initialValue === undefined || initialValue === ""
+        ? defaultInitialValue
+        : initialValue;
 
   store.updateInitialValue({
     side,

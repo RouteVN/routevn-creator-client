@@ -96,6 +96,10 @@ const isSpaceKey = (event) => {
   return code === "Space" || key === " " || key === "Spacebar";
 };
 
+const isPrimaryMouseButton = (event) => {
+  return event?.button === 0 && !event?.ctrlKey;
+};
+
 const dispatchPanChanged = ({ store, dispatchEvent } = {}) => {
   const pan = store.selectPan();
 
@@ -177,12 +181,17 @@ export const handlePanButtonClick = (deps) => {
 
 export const handleContainerMouseDown = (deps, payload) => {
   const { store, refs } = deps;
+  const { _event: event } = payload;
+
+  if (!isPrimaryMouseButton(event)) {
+    return;
+  }
 
   if (store.selectIsPanMode()) {
     // Start panning
     store.startPanning({
-      mouseX: payload._event.clientX,
-      mouseY: payload._event.clientY,
+      mouseX: event.clientX,
+      mouseY: event.clientY,
     });
     syncCursorStyles(deps);
   } else {
@@ -193,17 +202,15 @@ export const handleContainerMouseDown = (deps, payload) => {
     const zoomLevel = store.selectZoomLevel();
 
     // Use container coordinates instead of canvas coordinates for proper zoom calculation
-    const canvasX =
-      (payload._event.clientX - containerRect.left - pan.x) / zoomLevel;
-    const canvasY =
-      (payload._event.clientY - containerRect.top - pan.y) / zoomLevel;
+    const canvasX = (event.clientX - containerRect.left - pan.x) / zoomLevel;
+    const canvasY = (event.clientY - containerRect.top - pan.y) / zoomLevel;
 
     // Emit click event with coordinates
     deps.dispatchEvent(
       new CustomEvent("canvas-click", {
         detail: {
-          formX: payload._event.clientX,
-          formY: payload._event.clientY,
+          formX: event.clientX,
+          formY: event.clientY,
           whiteboardX: canvasX,
           whiteboardY: canvasY,
         },
@@ -277,28 +284,31 @@ export const handleZoomOutClick = (deps) => {
 
 export const handleItemMouseDown = (deps, payload) => {
   const { store, refs } = deps;
+  const { _event: event } = payload;
+
+  if (!isPrimaryMouseButton(event)) {
+    return;
+  }
 
   if (store.selectIsPanMode()) {
     // Let the event bubble to the container so Space-pan can start viewport drag.
     return;
   }
 
-  payload._event.stopPropagation();
+  event.stopPropagation();
 
   const itemId =
-    payload._event.currentTarget?.dataset?.itemId ||
-    payload._event.currentTarget?.id?.replace("item", "");
-  const itemElement = payload._event.currentTarget;
+    event.currentTarget?.dataset?.itemId ||
+    event.currentTarget?.id?.replace("item", "");
+  const itemElement = event.currentTarget;
   const canvas = refs.canvas;
   const canvasRect = canvas.getBoundingClientRect();
   const zoomLevel = store.selectZoomLevel();
   const pan = store.selectPan();
 
   // Calculate the mouse position relative to the canvas coordinate space
-  const mouseInCanvasX =
-    (payload._event.clientX - canvasRect.left - pan.x) / zoomLevel;
-  const mouseInCanvasY =
-    (payload._event.clientY - canvasRect.top - pan.y) / zoomLevel;
+  const mouseInCanvasX = (event.clientX - canvasRect.left - pan.x) / zoomLevel;
+  const mouseInCanvasY = (event.clientY - canvasRect.top - pan.y) / zoomLevel;
 
   // Get the item's current position in canvas coordinates
   const itemX = parseInt(itemElement.style.left, 10) || 0;

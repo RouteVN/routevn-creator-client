@@ -23,7 +23,7 @@ const {
   handleBeforeMount: handleBeforeMountBase,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged,
-  handleFileExplorerAction,
+  handleFileExplorerAction: handleFileExplorerActionBase,
   handleFileExplorerTargetChanged,
   handleItemClick: handleAnimationItemClick,
   handleSearchInput,
@@ -34,7 +34,6 @@ const {
 export {
   handleDataChanged,
   handleFileExplorerSelectionChanged,
-  handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleAnimationItemClick,
   handleSearchInput,
@@ -42,6 +41,39 @@ export {
 
 export const handleBeforeMount = (deps) => {
   return handleBeforeMountBase(deps);
+};
+
+const openAnimationEditor = ({ appService, store, itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  const itemData = store.selectAnimationDisplayItemById({ itemId });
+  if (!itemData) {
+    return;
+  }
+
+  navigateToAnimationEditor({
+    appService,
+    animationId: itemId,
+  });
+};
+
+export const handleFileExplorerAction = async (deps, payload) => {
+  const { appService, store } = deps;
+  const detail = payload?._event?.detail ?? {};
+  const action = (detail.item || detail)?.value;
+
+  if (action === "edit-item") {
+    openAnimationEditor({
+      appService,
+      store,
+      itemId: detail.itemId,
+    });
+    return;
+  }
+
+  await handleFileExplorerActionBase(deps, payload);
 };
 
 export const handleAddAnimationClick = async (deps, payload) => {
@@ -57,38 +89,37 @@ export const handleAddAnimationClick = async (deps, payload) => {
 };
 
 export const handleAnimationItemDoubleClick = (deps, payload) => {
-  const { appService } = deps;
+  const { appService, store } = deps;
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder || !itemId) {
     return;
   }
 
-  const itemData = deps.store.selectAnimationDisplayItemById({ itemId });
-  if (!itemData) {
-    return;
-  }
-
-  navigateToAnimationEditor({
+  openAnimationEditor({
     appService,
-    animationId: itemId,
+    store,
+    itemId,
+  });
+};
+
+export const handleAnimationItemEdit = (deps, payload) => {
+  const { appService, store } = deps;
+  const { itemId } = payload._event.detail;
+
+  openAnimationEditor({
+    appService,
+    store,
+    itemId,
   });
 };
 
 export const handleDetailHeaderClick = async (deps) => {
   const { appService, store } = deps;
   const itemId = store.selectSelectedItemId();
-  if (!itemId) {
-    return;
-  }
-
-  const itemData = store.selectAnimationDisplayItemById({ itemId });
-  if (!itemData) {
-    return;
-  }
-
-  navigateToAnimationEditor({
+  openAnimationEditor({
     appService,
-    animationId: itemId,
+    store,
+    itemId,
   });
 };
 

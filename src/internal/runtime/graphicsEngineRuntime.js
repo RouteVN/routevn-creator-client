@@ -6,56 +6,46 @@ const THUMBNAIL_MAX_HEIGHT = 225;
 const THUMBNAIL_FORMAT = "image/jpeg";
 const THUMBNAIL_QUALITY = 0.75;
 
-let graphicsEnginePlugins;
-
 export const loadGraphicsEnginePlugins = async () => {
-  if (!graphicsEnginePlugins) {
-    const routeGraphicsModule = await import("route-graphics");
-    const animatedSpritePlugin = Object.prototype.hasOwnProperty.call(
-      routeGraphicsModule,
-      "animatedSpritePlugin",
-    )
-      ? routeGraphicsModule.animatedSpritePlugin
-      : undefined;
-    const particlesPlugin = Object.prototype.hasOwnProperty.call(
-      routeGraphicsModule,
-      "particlesPlugin",
-    )
-      ? routeGraphicsModule.particlesPlugin
-      : undefined;
-    const {
-      containerPlugin,
-      rectPlugin,
-      sliderPlugin,
-      soundPlugin,
-      spritePlugin,
-      textPlugin,
-      textRevealingPlugin,
-      tweenPlugin,
-      videoPlugin,
-    } = routeGraphicsModule;
-
-    graphicsEnginePlugins = {
-      elements: [
-        textPlugin,
-        rectPlugin,
-        spritePlugin,
-        sliderPlugin,
-        containerPlugin,
-        textRevealingPlugin,
-        videoPlugin,
-        particlesPlugin,
-        animatedSpritePlugin,
-      ].filter(Boolean),
-      animations: [tweenPlugin],
-      audio: [soundPlugin],
-    };
-  }
+  const routeGraphicsModule = await import("route-graphics");
+  const spritesheetAnimationPlugin = Object.prototype.hasOwnProperty.call(
+    routeGraphicsModule,
+    "spritesheetAnimationPlugin",
+  )
+    ? routeGraphicsModule.spritesheetAnimationPlugin
+    : undefined;
+  const particlesPlugin = Object.prototype.hasOwnProperty.call(
+    routeGraphicsModule,
+    "particlesPlugin",
+  )
+    ? routeGraphicsModule.particlesPlugin
+    : undefined;
+  const {
+    containerPlugin,
+    rectPlugin,
+    sliderPlugin,
+    soundPlugin,
+    spritePlugin,
+    textPlugin,
+    textRevealingPlugin,
+    tweenPlugin,
+    videoPlugin,
+  } = routeGraphicsModule;
 
   return {
-    elements: [...graphicsEnginePlugins.elements],
-    animations: [...graphicsEnginePlugins.animations],
-    audio: [...graphicsEnginePlugins.audio],
+    elements: [
+      textPlugin,
+      rectPlugin,
+      spritePlugin,
+      sliderPlugin,
+      containerPlugin,
+      textRevealingPlugin,
+      videoPlugin,
+      particlesPlugin,
+      spritesheetAnimationPlugin,
+    ].filter(Boolean),
+    animations: [tweenPlugin].filter(Boolean),
+    audio: [soundPlugin].filter(Boolean),
   };
 };
 

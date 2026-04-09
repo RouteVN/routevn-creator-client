@@ -516,6 +516,26 @@ const constructImageResources = (repositoryImages = {}) => {
   }, {});
 };
 
+const constructSpritesheetResources = (repositorySpritesheets = {}) => {
+  return Object.entries(repositorySpritesheets).reduce(
+    (result, [spritesheetId, item]) => {
+      if (item?.type !== "spritesheet" || !item.fileId || !item.jsonData) {
+        return result;
+      }
+
+      result[spritesheetId] = pickResourceFields(item, [
+        "fileId",
+        "jsonData",
+        "width",
+        "height",
+        "animations",
+      ]);
+      return result;
+    },
+    {},
+  );
+};
+
 const constructVideoResources = (repositoryVideos = {}) => {
   return Object.entries(repositoryVideos).reduce((result, [videoId, item]) => {
     if (item?.type !== "video" || !item.fileId) {
@@ -646,6 +666,7 @@ const constructLayoutResources = (
   repositoryLayouts = {},
   repositoryControls = {},
   imageItems = {},
+  spritesheetsData = { items: {}, tree: [] },
   textStylesData = { items: {}, tree: [] },
   colors = { items: {}, tree: [] },
   fonts = { items: {}, tree: [] },
@@ -676,6 +697,7 @@ const constructLayoutResources = (
       {
         layoutId,
         layoutType: layout.layoutType,
+        spritesheetsData,
         layoutsData: repositoryLayouts,
       },
     );
@@ -706,6 +728,7 @@ const constructLayoutResources = (
       fonts,
       {
         layoutId: controlId,
+        spritesheetsData,
         layoutsData: repositoryLayouts,
       },
     );
@@ -733,6 +756,7 @@ const constructLayoutResources = (
 
 const constructProjectResources = (repositoryState = {}) => {
   const repositoryImages = repositoryState.images?.items || {};
+  const repositorySpritesheets = repositoryState.spritesheets?.items || {};
   const repositoryVideos = repositoryState.videos?.items || {};
   const repositorySounds = repositoryState.sounds?.items || {};
   const repositoryAnimations = repositoryState.animations?.items || {};
@@ -757,10 +781,15 @@ const constructProjectResources = (repositoryState = {}) => {
     ...constructImageResources(repositoryImages),
     ...characterImages,
   };
+  const spritesheetsData = repositoryState.spritesheets || {
+    items: {},
+    tree: [],
+  };
   const { resources: layoutResources, layouts } = constructLayoutResources(
     repositoryLayouts,
     repositoryControls,
     imageItems,
+    spritesheetsData,
     textStylesData,
     colors,
     fonts,
@@ -768,6 +797,7 @@ const constructProjectResources = (repositoryState = {}) => {
 
   return {
     images: layoutResources.images,
+    spritesheets: constructSpritesheetResources(repositorySpritesheets),
     videos: constructVideoResources(repositoryVideos),
     sounds: constructSoundResources(repositorySounds),
     fonts: layoutResources.fonts,
@@ -1103,6 +1133,7 @@ const RESOURCE_KEY_TO_TYPES = {
     "controls",
     "layouts",
     "images",
+    "spritesheets",
     "videos",
     "sounds",
     "animations",
@@ -1139,6 +1170,7 @@ const RESOURCE_KEY_TO_TYPES = {
 
 const COLLECTION_DEFS = {
   images: { collection: "images", itemType: "image" },
+  spritesheets: { collection: "spritesheets", itemType: "spritesheet" },
   videos: { collection: "videos", itemType: "video" },
   sounds: { collection: "sounds", itemType: "sound" },
   animations: { collection: "animations", itemType: "animation" },
@@ -1493,6 +1525,11 @@ export const collectUsedResourcesForExport = (state) => {
     addFileId(imageItems[id]?.fileId);
   }
 
+  const spritesheetItems = getCollectionItems(state, "spritesheets");
+  for (const id of usage.spritesheets) {
+    addFileId(spritesheetItems[id]?.fileId);
+  }
+
   const videoItems = getCollectionItems(state, "videos");
   for (const id of usage.videos) {
     addFileId(videoItems[id]?.fileId);
@@ -1533,6 +1570,10 @@ export const buildFilteredStateForExport = (
   return {
     ...state,
     images: filterCollectionItemsByIds(state.images, usedIds.images || []),
+    spritesheets: filterCollectionItemsByIds(
+      state.spritesheets,
+      usedIds.spritesheets || [],
+    ),
     videos: filterCollectionItemsByIds(state.videos, usedIds.videos || []),
     sounds: filterCollectionItemsByIds(state.sounds, usedIds.sounds || []),
     animations: filterCollectionItemsByIds(

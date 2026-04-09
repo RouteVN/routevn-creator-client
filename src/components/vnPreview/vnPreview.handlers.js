@@ -338,6 +338,10 @@ export const handleAfterMount = async (deps) => {
     sectionId,
     lineId,
   });
+  const initialSceneIds = extractInitialHybridSceneIds(
+    projectDataWithInitial,
+    sceneId,
+  );
 
   const beforeHandleActions = createBeforeHandleActionsHook(deps, {
     repository,
@@ -364,10 +368,6 @@ export const handleAfterMount = async (deps) => {
   resetAssetLoadCache(store);
   store.setAssetLoading({ isLoading: false });
 
-  const initialSceneIds = extractInitialHybridSceneIds(
-    projectDataWithInitial,
-    sceneId,
-  );
   await loadAssetsForSceneIds(deps, projectDataWithInitial, initialSceneIds, {
     showLoading: true,
   });

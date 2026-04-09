@@ -19,6 +19,8 @@ template:
                   - rvn-project: []
                 $elif currentRoutePattern == "/project/images":
                   - rvn-images: []
+                $elif currentRoutePattern == "/project/spritesheets":
+                  - rvn-spritesheets: []
                 $elif currentRoutePattern == "/project/characters":
                   - rvn-characters: []
                 $elif currentRoutePattern == "/project/character-sprites":

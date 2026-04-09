@@ -775,17 +775,8 @@ const createTweenAnimationsForTarget = ({
         continue;
       }
 
-      const defaultValue = defaultInitialValuesByProperty[property] ?? 0;
-      const initialValue =
-        config.initialValue !== undefined && config.initialValue !== ""
-          ? parseFloat(config.initialValue)
-          : defaultValue;
-      const processedInitialValue = Number.isNaN(initialValue)
-        ? defaultValue
-        : initialValue;
       const tween = {
         [property]: {
-          initialValue: processedInitialValue,
           keyframes: config.keyframes.map((keyframe) => {
             let value = parseFloat(keyframe.value) ?? 0;
 
@@ -798,6 +789,19 @@ const createTweenAnimationsForTarget = ({
           }),
         },
       };
+
+      const defaultValue = defaultInitialValuesByProperty[property] ?? 0;
+      const initialValue =
+        config.initialValue !== undefined && config.initialValue !== ""
+          ? parseFloat(config.initialValue)
+          : undefined;
+      const processedInitialValue = Number.isNaN(initialValue)
+        ? defaultValue
+        : initialValue;
+
+      if (processedInitialValue !== undefined) {
+        tween[property].initialValue = processedInitialValue;
+      }
 
       animations.push({
         id: `${animationIdPrefix}-${property}`,
@@ -822,17 +826,7 @@ const createTweenPayload = ({ properties, projectResolution } = {}) => {
       continue;
     }
 
-    const defaultValue = defaultInitialValuesByProperty[property] ?? 0;
-    const initialValue =
-      config.initialValue !== undefined && config.initialValue !== ""
-        ? parseFloat(config.initialValue)
-        : defaultValue;
-    const processedInitialValue = Number.isNaN(initialValue)
-      ? defaultValue
-      : initialValue;
-
     tween[property] = {
-      initialValue: processedInitialValue,
       keyframes: config.keyframes.map((keyframe) => ({
         duration: keyframe.duration,
         value: parseFloat(keyframe.value) ?? 0,
@@ -840,6 +834,19 @@ const createTweenPayload = ({ properties, projectResolution } = {}) => {
         relative: keyframe.relative ?? false,
       })),
     };
+
+    const defaultValue = defaultInitialValuesByProperty[property] ?? 0;
+    const initialValue =
+      config.initialValue !== undefined && config.initialValue !== ""
+        ? parseFloat(config.initialValue)
+        : undefined;
+    const processedInitialValue = Number.isNaN(initialValue)
+      ? defaultValue
+      : initialValue;
+
+    if (processedInitialValue !== undefined) {
+      tween[property].initialValue = processedInitialValue;
+    }
   }
 
   return tween;
@@ -990,9 +997,12 @@ export const addProperty = (
   }
 
   properties[property] = {
-    initialValue,
     keyframes: [],
   };
+
+  if (initialValue !== undefined && initialValue !== "") {
+    properties[property].initialValue = initialValue;
+  }
 };
 
 export const addKeyframe = ({ state }, keyframe = {}) => {
@@ -1094,6 +1104,11 @@ export const updateInitialValue = (
     return;
   }
 
+  if (initialValue === undefined || initialValue === "") {
+    delete properties[property].initialValue;
+    return;
+  }
+
   properties[property].initialValue = initialValue;
 };
 
@@ -1111,32 +1126,26 @@ export const selectTransitionMask = ({ state }) => {
 
 export const setTransitionMaskKind = ({ state }, { kind } = {}) => {
   const currentMask = getTransitionMask(state);
-  if (!currentMask || !kind) {
+  if (!currentMask || !kind || kind !== "single") {
     return;
   }
 
   const nextMask = createDefaultTransitionMask();
-  nextMask.kind = kind;
   nextMask.softness = currentMask.softness;
   nextMask.progressDuration = currentMask.progressDuration;
   nextMask.progressEasing = currentMask.progressEasing;
-
-  if (kind === "single") {
-    nextMask.imageId = currentMask.imageId;
-    nextMask.channel = currentMask.channel;
-    nextMask.invert = currentMask.invert;
-  } else if (kind === "sequence") {
-    nextMask.imageIds = structuredClone(currentMask.imageIds ?? []);
-    nextMask.channel = currentMask.channel;
-    nextMask.invert = currentMask.invert;
-    nextMask.sample = currentMask.sample;
-  } else if (kind === "composite") {
-    nextMask.items =
-      currentMask.items?.length > 0
-        ? structuredClone(currentMask.items)
-        : [createDefaultTransitionMaskCompositeItem()];
-    nextMask.combine = currentMask.combine;
-  }
+  nextMask.imageId =
+    currentMask.imageId ??
+    currentMask.imageIds?.find(Boolean) ??
+    currentMask.items?.find((item) => item?.imageId)?.imageId;
+  nextMask.channel =
+    currentMask.channel ??
+    currentMask.items?.find((item) => item?.channel)?.channel ??
+    nextMask.channel;
+  nextMask.invert =
+    currentMask.invert ??
+    currentMask.items?.find((item) => item?.invert !== undefined)?.invert ??
+    nextMask.invert;
 
   state.transitionMask = nextMask;
 };
@@ -1709,10 +1718,11 @@ export const selectViewData = ({ state }) => {
     const currentInitialValue = getSectionProperties(state, side)[property]
       ?.initialValue;
     const defaultValue = defaultInitialValuesByProperty[property] ?? 0;
-    const isUsingDefault = currentInitialValue === defaultValue;
+    const isUsingDefault =
+      currentInitialValue === undefined || currentInitialValue === "";
 
     editInitialValueDefaultValues = {
-      initialValue: currentInitialValue,
+      initialValue: isUsingDefault ? defaultValue : currentInitialValue,
       valueSource: isUsingDefault ? "default" : "custom",
     };
 

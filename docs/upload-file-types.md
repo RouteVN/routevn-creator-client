@@ -52,6 +52,7 @@ Pages must validate unsupported types and show a user-facing toast/dialog.
 Current explicit page validators:
 
 - `src/pages/images/images.handlers.js`
+- `src/pages/spritesheets/spritesheets.handlers.js`
 - `src/pages/videos/videos.handlers.js`
 - `src/pages/fonts/fonts.handlers.js`
 - `src/pages/sounds/sounds.handlers.js`
@@ -94,13 +95,14 @@ Current shared type fallbacks are intentionally narrower than before:
 
 ### Media Resource Pages
 
-| Surface                | Allowed file types                                | Extra validation              | Notes                                  |
-| ---------------------- | ------------------------------------------------- | ----------------------------- | -------------------------------------- |
-| Images page            | `.jpg`, `.jpeg`, `.png`, `.webp`                  | explicit invalid-format toast | picker, center drag-drop, edit/replace |
-| Character sprites page | `.jpg`, `.jpeg`, `.png`, `.webp`                  | none                          | picker, center drag-drop, edit/replace |
-| Videos page            | `.mp4`                                            | explicit invalid-format toast | picker, center drag-drop, edit/replace |
-| Sounds page            | `.mp3`, `.wav`, `.ogg`                            | explicit invalid-format toast | picker, center drag-drop, edit/replace |
-| Fonts page             | `.ttf`, `.otf`, `.woff`, `.woff2`, `.ttc`, `.eot` | explicit invalid-format toast | picker, center drag-drop, edit/replace |
+| Surface                | Allowed file types                                | Extra validation              | Notes                                                         |
+| ---------------------- | ------------------------------------------------- | ----------------------------- | ------------------------------------------------------------- |
+| Images page            | `.jpg`, `.jpeg`, `.png`, `.webp`                  | explicit invalid-format toast | picker, center drag-drop, edit/replace                        |
+| Spritesheets page      | `.png` + `.json`                                  | explicit pair + format toast  | picker and drag-drop import one PNG sheet plus one atlas JSON |
+| Character sprites page | `.jpg`, `.jpeg`, `.png`, `.webp`                  | none                          | picker, center drag-drop, edit/replace                        |
+| Videos page            | `.mp4`                                            | explicit invalid-format toast | picker, center drag-drop, edit/replace                        |
+| Sounds page            | `.mp3`, `.wav`, `.ogg`                            | explicit invalid-format toast | picker, center drag-drop, edit/replace                        |
+| Fonts page             | `.ttf`, `.otf`, `.woff`, `.woff2`, `.ttc`, `.eot` | explicit invalid-format toast | picker, center drag-drop, edit/replace                        |
 
 ### Dialog / Special Upload Surfaces
 
@@ -117,6 +119,8 @@ Current shared type fallbacks are intentionally narrower than before:
 
 - Images: `src/pages/images/images.handlers.js`,
   `src/pages/images/images.store.js`
+- Spritesheets: `src/pages/spritesheets/spritesheets.handlers.js`,
+  `src/pages/spritesheets/spritesheets.store.js`
 - Character sprites: `src/pages/characterSprites/characterSprites.handlers.js`,
   `src/pages/characterSprites/characterSprites.store.js`
 - Videos: `src/pages/videos/videos.handlers.js`,

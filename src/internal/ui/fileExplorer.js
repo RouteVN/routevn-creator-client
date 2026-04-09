@@ -103,6 +103,14 @@ const RESOURCE_FILE_EXPLORER_API = Object.freeze({
     idField: "imageId",
     deleteField: "imageIds",
   },
+  spritesheets: {
+    createMethod: "createSpritesheet",
+    updateMethod: "updateSpritesheet",
+    moveMethod: "moveSpritesheet",
+    deleteMethod: "deleteSpritesheets",
+    idField: "spritesheetId",
+    deleteField: "spritesheetIds",
+  },
   sounds: {
     createMethod: "createSound",
     updateMethod: "updateSound",

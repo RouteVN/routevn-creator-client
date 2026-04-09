@@ -91,6 +91,48 @@ const focusLinesEditorContainer = (refs) => {
   });
 };
 
+const shouldAnimateLineNavigation = (
+  store,
+  { previousLineId, nextLineId } = {},
+) => {
+  if (!previousLineId || !nextLineId || previousLineId === nextLineId) {
+    return false;
+  }
+
+  const scene = store.selectScene();
+  const currentSection = scene?.sections?.find(
+    (section) => section.id === store.selectSelectedSectionId(),
+  );
+  const currentLines = Array.isArray(currentSection?.lines)
+    ? currentSection.lines
+    : [];
+  const previousLineIndex = currentLines.findIndex(
+    (line) => line.id === previousLineId,
+  );
+  const nextLineIndex = currentLines.findIndex(
+    (line) => line.id === nextLineId,
+  );
+
+  if (previousLineIndex < 0 || nextLineIndex < 0) {
+    return false;
+  }
+
+  return nextLineIndex === previousLineIndex + 1;
+};
+
+const dispatchLineNavigationRender = (
+  subject,
+  store,
+  { previousLineId, nextLineId } = {},
+) => {
+  subject.dispatch("sceneEditor.renderCanvas", {
+    skipAnimations: !shouldAnimateLineNavigation(store, {
+      previousLineId,
+      nextLineId,
+    }),
+  });
+};
+
 const clearScheduledDraftFlush = (store) => {
   const timerId = store.selectDraftSaveTimerId();
   if (timerId !== undefined) {
@@ -940,14 +982,16 @@ export const handleLineNavigation = (deps, payload) => {
 
   const { targetLineId, mode, direction, targetCursorPosition } =
     payload._event.detail;
+  const currentLineId = store.selectSelectedLineId();
 
   // For block mode, just update the selection and handle scrolling
   if (mode === "block") {
-    const currentLineId = store.selectSelectedLineId();
-
     // Check if we're trying to move up from the first line
     if (direction === "up" && currentLineId === targetLineId) {
-      subject.dispatch("sceneEditor.renderCanvas", {});
+      dispatchLineNavigationRender(subject, store, {
+        previousLineId: currentLineId,
+        nextLineId: targetLineId,
+      });
       return;
     }
 
@@ -961,12 +1005,14 @@ export const handleLineNavigation = (deps, payload) => {
     }
 
     // Trigger debounced canvas render
-    subject.dispatch("sceneEditor.renderCanvas", {});
+    dispatchLineNavigationRender(subject, store, {
+      previousLineId: currentLineId,
+      nextLineId: targetLineId,
+    });
     return;
   }
 
   // For text-editor mode, handle cursor navigation
-  const currentLineId = store.selectSelectedLineId();
   let nextLineId = targetLineId;
 
   // Determine next line based on direction if targetLineId is current line
@@ -1002,10 +1048,16 @@ export const handleLineNavigation = (deps, payload) => {
       }
 
       // Trigger debounced canvas render
-      subject.dispatch("sceneEditor.renderCanvas", {});
+      dispatchLineNavigationRender(subject, store, {
+        previousLineId: currentLineId,
+        nextLineId,
+      });
     });
   } else if (direction === "up" && currentLineId === targetLineId) {
-    subject.dispatch("sceneEditor.renderCanvas", {});
+    dispatchLineNavigationRender(subject, store, {
+      previousLineId: currentLineId,
+      nextLineId: targetLineId,
+    });
   }
 };
 

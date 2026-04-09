@@ -15,6 +15,12 @@ template:
                       - rtgl-view#resourceAsset${i} data-resource-id=${asset.id} h=32 av=c bgc=mu h-bgc=ac cur=pointer p=md w=f:
                           - rtgl-text s=sm: ${asset.label}
           - rtgl-view:
+              - rtgl-text s=h4: Animated Assets
+              - rtgl-view g=sm w=200 p=md:
+                  - $for asset, i in animatedAssets:
+                      - rtgl-view#resourceAnimatedAsset${i} data-resource-id=${asset.id} h=32 av=c bgc=mu h-bgc=ac cur=pointer p=md w=f:
+                          - rtgl-text s=sm: ${asset.label}
+          - rtgl-view:
               - rtgl-text s=h4: User Interface
               - rtgl-view g=sm w=200:
                   - $for uiItem, i in ui:

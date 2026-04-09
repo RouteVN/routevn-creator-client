@@ -12,8 +12,15 @@ export const createLayoutEditorRepositoryStoreData = ({
   layoutId,
   resourceType = "layouts",
 } = {}) => {
-  const { images, layouts, textStyles, colors, fonts, variables } =
-    repositoryState ?? {};
+  const {
+    images,
+    spritesheets,
+    layouts,
+    textStyles,
+    colors,
+    fonts,
+    variables,
+  } = repositoryState ?? {};
   const resourceCollection = getLayoutEditorResourceCollection(
     repositoryState,
     resourceType,
@@ -27,6 +34,7 @@ export const createLayoutEditorRepositoryStoreData = ({
     resourceType,
     layoutData: layout?.elements || { items: {}, tree: [] },
     images: images || { items: {}, tree: [] },
+    spritesheetsData: spritesheets || { items: {}, tree: [] },
     layoutsData: layouts || { items: {}, tree: [] },
     textStylesData: textStyles || { items: {}, tree: [] },
     colorsData: colors || { items: {}, tree: [] },

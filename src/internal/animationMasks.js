@@ -30,6 +30,33 @@ const findImageIdByFileId = (imageItems = {}, fileId) => {
   )?.[0];
 };
 
+const resolveEditorSingleMaskImageId = (mask = {}, imageItems = {}) => {
+  if (mask.kind === "single") {
+    return mask.imageId ?? findImageIdByFileId(imageItems, mask.texture);
+  }
+
+  if (mask.kind === "sequence") {
+    const imageId = Array.isArray(mask.imageIds)
+      ? mask.imageIds.find(Boolean)
+      : undefined;
+    if (imageId) {
+      return imageId;
+    }
+
+    const texture = Array.isArray(mask.textures)
+      ? mask.textures.find(Boolean)
+      : undefined;
+    return findImageIdByFileId(imageItems, texture);
+  }
+
+  const item = Array.isArray(mask.items) ? mask.items.find(Boolean) : undefined;
+  if (!item) {
+    return undefined;
+  }
+
+  return item.imageId ?? findImageIdByFileId(imageItems, item.texture);
+};
+
 const resolveMaskProgress = (mask = {}) => {
   if (Number.isFinite(Number(mask.progressDuration))) {
     return {
@@ -82,53 +109,25 @@ export const normalizeTransitionMaskForEditor = (mask, imageItems = {}) => {
 
   const nextMask = createDefaultTransitionMask();
   const progress = resolveMaskProgress(mask);
+  const compositeItem = Array.isArray(mask.items)
+    ? mask.items.find(Boolean)
+    : undefined;
 
-  nextMask.kind = mask.kind;
-  nextMask.channel = mask.channel ?? nextMask.channel;
-  nextMask.combine = mask.combine ?? nextMask.combine;
-  nextMask.sample = mask.sample ?? nextMask.sample;
   nextMask.softness =
     Number.isFinite(Number(mask.softness)) && Number(mask.softness) >= 0
       ? Number(mask.softness)
       : nextMask.softness;
-  nextMask.invert = mask.invert ?? nextMask.invert;
   nextMask.progressDuration = progress.duration;
   nextMask.progressEasing = progress.easing;
-
-  if (mask.kind === "single") {
-    nextMask.imageId =
-      mask.imageId ?? findImageIdByFileId(imageItems, mask.texture);
-    return nextMask;
-  }
-
-  if (mask.kind === "sequence") {
-    if (Array.isArray(mask.imageIds) && mask.imageIds.length > 0) {
-      nextMask.imageIds = mask.imageIds.filter(Boolean);
-    } else if (Array.isArray(mask.textures) && mask.textures.length > 0) {
-      nextMask.imageIds = mask.textures
-        .map((texture) => findImageIdByFileId(imageItems, texture))
-        .filter(Boolean);
-    }
-
-    return nextMask;
-  }
-
-  if (Array.isArray(mask.items) && mask.items.length > 0) {
-    nextMask.items = mask.items
-      .map((item) => {
-        if (!item) {
-          return undefined;
-        }
-
-        return cloneCompositeItem({
-          imageId:
-            item.imageId ?? findImageIdByFileId(imageItems, item.texture),
-          channel: item.channel,
-          invert: item.invert,
-        });
-      })
-      .filter(Boolean);
-  }
+  nextMask.imageId = resolveEditorSingleMaskImageId(mask, imageItems);
+  nextMask.channel =
+    mask.kind === "composite"
+      ? (compositeItem?.channel ?? nextMask.channel)
+      : (mask.channel ?? nextMask.channel);
+  nextMask.invert =
+    mask.kind === "composite"
+      ? (compositeItem?.invert ?? nextMask.invert)
+      : (mask.invert ?? nextMask.invert);
 
   return nextMask;
 };

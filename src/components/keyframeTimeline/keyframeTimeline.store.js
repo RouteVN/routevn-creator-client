@@ -175,21 +175,10 @@ export const selectViewData = ({ state, props, props: attrs }) => {
   };
 
   let selectedProperties = [];
-  const defaultValues = props.defaultValues ?? {
-    x: 0,
-    y: 0,
-    alpha: 1,
-    scaleX: 1,
-    scaleY: 1,
-    rotation: 0,
-    translateX: 0,
-    translateY: 0,
-  };
-
   if (props.properties) {
     selectedProperties = Object.keys(props.properties).map((propertyName) => {
       const value = props.properties[propertyName].initialValue;
-      const isDefault = value === defaultValues[propertyName];
+      const isDefault = value === undefined || value === "";
       return {
         name: propertyName,
         initialValue: isDefault ? "D" : value,
