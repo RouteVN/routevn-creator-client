@@ -17,7 +17,6 @@ Date baseline: April 9, 2026.
 
 - `project_format_version = 1`
 - `command_envelope_version = 1`
-- `model_package_version = "1.1.12"`
 - `model_schema_version = 1`
 - `bundle_format_version = 2`
 - `protocol_version = "1.0"`
