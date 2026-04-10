@@ -51,8 +51,8 @@ template:
                           - rtgl-view w=72 av=c d=h ah=c:
                               - rtgl-text#propertyName${pIndex} data-property=${property.name} s=xs cur=pointer: ${property.name}
                           - rtgl-view h=24 w=24 av=c ah=e mr=sm ml=sm:
-                              - rtgl-text#initialValue${pIndex} data-property=${property.name} s=xs cur=pointer: ${property.initialValue}
-                          - 'rtgl-view#track${pIndex} data-property=${property.name} d=h w=f h=24 bgc=mu br=sm g=xs pos=rel style="min-width: 0; overflow: hidden; cursor: ${property.trackCursor};"':
+                              - rtgl-text#initialValue${pIndex} data-property=${property.name} data-interactive=${property.initialValueInteractive} s=xs cur=${property.initialValueCursor}: ${property.initialValue}
+                          - 'rtgl-view#track${pIndex} data-property=${property.name} data-track-mode=${property.trackMode} d=h w=f h=24 bgc=mu br=sm g=xs pos=rel style="min-width: 0; overflow: hidden; cursor: ${property.trackCursor};"':
                               - $if trackIndicatorVisible:
                                   - 'rtgl-view pos=abs bgc=fg op="0.5" style="${hoverIndicatorTrackStyle}"': null
                               - $if property.hoverTarget:
@@ -64,13 +64,19 @@ template:
                                       - 'rtgl-view pos=abs bgc=pr style="top: 2px; bottom: 2px; left: ${property.hoverTarget.indicatorLeft}px; width: 2px; transform: translateX(-1px); pointer-events: none; z-index: 4;"': null
                                       - 'rtgl-view pos=abs bgc=pr br=f w=16 h=16 ah=c av=c style="top: 50%; left: ${property.hoverTarget.chipLeft}px; transform: translate(-50%, -50%); pointer-events: none; z-index: 4;"':
                                           - rtgl-text s=xs c=bg: +
-                              - $if property.keyframes && property.keyframes.length > 0:
-                                  - $for keyframe, j in property.keyframes:
-                                      - 'rtgl-view#keyframe${pIndex}x${j} data-keyframe=true data-property=${property.name} data-index=${j} d=h p=xs h=f bgc=ac br=sm ah=e av=e mr=xs cur=pointer style="width: ${keyframe.widthPercent}%"':
-                                          - rtgl-text s=xs: ${keyframe.value}
+                              - $if property.auto:
+                                  - 'rtgl-view d=h p=xs h=f bgc=ac br=sm ah=c av=c style="width: ${property.auto.widthPercent}%"':
+                                      - rtgl-text s=xs: ${property.auto.label}
                                   - $if property.fillerWidthPercent && property.fillerWidthPercent > 0:
                                       - 'rtgl-view d=h h=f style="width: ${property.fillerWidthPercent}%"': null
                                 $else:
-                                  - rtgl-view d=h p=xs h=f w=1fg br=sm ah=c av=c:
-                                      - $if property.emptyLabelVisible:
-                                          - rtgl-text s=xs: No keyframes
+                                  - $if property.keyframes && property.keyframes.length > 0:
+                                      - $for keyframe, j in property.keyframes:
+                                          - 'rtgl-view#keyframe${pIndex}x${j} data-keyframe=true data-property=${property.name} data-index=${j} d=h p=xs h=f bgc=ac br=sm ah=e av=e mr=xs cur=pointer style="width: ${keyframe.widthPercent}%"':
+                                              - rtgl-text s=xs: ${keyframe.value}
+                                      - $if property.fillerWidthPercent && property.fillerWidthPercent > 0:
+                                          - 'rtgl-view d=h h=f style="width: ${property.fillerWidthPercent}%"': null
+                                    $else:
+                                      - rtgl-view d=h p=xs h=f w=1fg br=sm ah=c av=c:
+                                          - $if property.emptyLabelVisible:
+                                              - rtgl-text s=xs: No keyframes

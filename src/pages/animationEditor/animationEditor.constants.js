@@ -13,6 +13,8 @@ export const PREVIEW_TRANSITION_ELEMENT_ID = "preview-transition-element";
 export const PREVIEW_TRANSITION_PREV_FILL = "#ffffff";
 export const PREVIEW_TRANSITION_NEXT_FILL = "#8fd3ff";
 export const PREVIEW_TRANSITION_OFFSET_X = 18;
+export const AUTO_TWEEN_DEFAULT_DURATION = 1000;
+export const AUTO_TWEEN_DEFAULT_EASING = "linear";
 
 export const UPDATE_PROPERTY_KEYS = ["alpha", "x", "y", "scaleX", "scaleY"];
 

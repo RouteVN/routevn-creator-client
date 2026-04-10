@@ -1,6 +1,7 @@
 import { createAnimationEditorPayload } from "../../internal/animationEditorRoute.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
+import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 
 const navigateToAnimationEditor = ({
   appService,
@@ -43,6 +44,34 @@ export const handleBeforeMount = (deps) => {
   return handleBeforeMountBase(deps);
 };
 
+const openEditDialogWithValues = ({ deps, itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  const { refs, render, store } = deps;
+  const { editForm, fileExplorer } = refs;
+  const item = store.selectAnimationItemById({ itemId });
+  if (!item) {
+    return;
+  }
+
+  const editValues = {
+    name: item.name ?? "",
+    description: item.description ?? "",
+  };
+
+  store.setSelectedItemId({ itemId });
+  fileExplorer.selectItem({ itemId });
+  store.openEditDialog({
+    itemId,
+    defaultValues: editValues,
+  });
+  render();
+  editForm.reset();
+  editForm.setValues({ values: editValues });
+};
+
 const openAnimationEditor = ({ appService, store, itemId } = {}) => {
   if (!itemId) {
     return;
@@ -60,14 +89,12 @@ const openAnimationEditor = ({ appService, store, itemId } = {}) => {
 };
 
 export const handleFileExplorerAction = async (deps, payload) => {
-  const { appService, store } = deps;
   const detail = payload?._event?.detail ?? {};
   const action = (detail.item || detail)?.value;
 
   if (action === "edit-item") {
-    openAnimationEditor({
-      appService,
-      store,
+    openEditDialogWithValues({
+      deps,
       itemId: detail.itemId,
     });
     return;
@@ -103,24 +130,64 @@ export const handleAnimationItemDoubleClick = (deps, payload) => {
 };
 
 export const handleAnimationItemEdit = (deps, payload) => {
-  const { appService, store } = deps;
   const { itemId } = payload._event.detail;
 
-  openAnimationEditor({
-    appService,
-    store,
-    itemId,
+  openEditDialogWithValues({ deps, itemId });
+};
+
+export const handleDetailHeaderClick = (deps) => {
+  const { store } = deps;
+  openEditDialogWithValues({
+    deps,
+    itemId: store.selectSelectedItemId(),
   });
 };
 
-export const handleDetailHeaderClick = async (deps) => {
-  const { appService, store } = deps;
-  const itemId = store.selectSelectedItemId();
-  openAnimationEditor({
+export const handleEditDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeEditDialog();
+  render();
+};
+
+export const handleEditFormAction = async (deps, payload) => {
+  const { appService, projectService, store } = deps;
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
+    return;
+  }
+
+  const name = values?.name?.trim();
+  if (!name) {
+    appService.showToast("Please enter an animation name.", {
+      title: "Warning",
+    });
+    return;
+  }
+
+  const editItemId = store.getState().editItemId;
+  if (!editItemId) {
+    return;
+  }
+
+  const updateAttempt = await runResourcePageMutation({
     appService,
-    store,
-    itemId,
+    fallbackMessage: "Failed to update animation.",
+    action: () =>
+      projectService.updateAnimation({
+        animationId: editItemId,
+        data: {
+          name,
+          description: values?.description ?? "",
+        },
+      }),
   });
+
+  if (!updateAttempt.ok) {
+    return;
+  }
+
+  store.closeEditDialog();
+  await handleDataChanged(deps, { selectedItemId: editItemId });
 };
 
 export const handleCloseCreateTypeMenu = (deps) => {

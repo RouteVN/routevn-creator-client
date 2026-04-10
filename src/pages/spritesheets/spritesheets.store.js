@@ -439,18 +439,8 @@ export const selectViewData = ({ state }) => {
   const dialogHasAtlasSource = Boolean(
     state.dialogSourceFiles?.atlasFile || dialogBaseItem?.jsonData,
   );
-  const dialogImageFieldValue = state.dialogSourceFiles?.pngFile?.name
-    ? state.dialogSourceFiles.pngFile.name
-    : dialogBaseItem?.fileId
-      ? "Use current image"
-      : "";
-  const dialogAtlasFieldValue = state.dialogSourceFiles?.atlasFile?.name
-    ? state.dialogSourceFiles.atlasFile.name
-    : dialogBaseItem?.jsonData
-      ? "Use current atlas"
-      : "";
-  const dialogImageStatusText = dialogImageFieldValue || "No image selected";
-  const dialogAtlasStatusText = dialogAtlasFieldValue || "No JSON selected";
+  const dialogImageFieldValue = state.dialogSourceFiles?.pngFile?.name ?? "";
+  const dialogAtlasFieldValue = state.dialogSourceFiles?.atlasFile?.name ?? "";
   const isDialogPreviewMode = state.dialogMode === "preview";
   return {
     resourceCategory: "animatedAssets",
@@ -512,21 +502,11 @@ export const selectViewData = ({ state }) => {
       : "Upload JSON",
     dialogImageFieldValue,
     dialogAtlasFieldValue,
-    dialogImageStatusText,
-    dialogAtlasStatusText,
-    dialogAtlasFileName:
-      state.dialogImportData?.atlasFileName ??
-      (dialogBaseItem?.jsonData
-        ? "Use the current atlas data"
-        : "No atlas selected"),
-    dialogFrameCount:
-      state.dialogImportData?.frameCount ?? resolveFrameCount(dialogBaseItem),
-    dialogSheetSize:
-      (state.dialogImportData?.sheetWidth ||
-        resolveSheetWidth(dialogBaseItem)) &&
-      (state.dialogImportData?.sheetHeight ||
-        resolveSheetHeight(dialogBaseItem))
-        ? `${state.dialogImportData?.sheetWidth ?? resolveSheetWidth(dialogBaseItem)} × ${state.dialogImportData?.sheetHeight ?? resolveSheetHeight(dialogBaseItem)}`
-        : "",
+    dialogImageFieldPlaceholder: dialogHasImageSource
+      ? "Current image"
+      : "No image selected",
+    dialogAtlasFieldPlaceholder: dialogHasAtlasSource
+      ? "Current atlas"
+      : "No JSON selected",
   };
 };

@@ -43,6 +43,26 @@ const formatRulerTimeLabel = (timeMs) => {
   return `${Number(seconds.toFixed(seconds < 10 ? 1 : 2))}s`;
 };
 
+const formatEasingLabel = (easingName) => {
+  if (easingName === "linear") {
+    return "Linear";
+  }
+
+  return easingName
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/^./, (value) => value.toUpperCase());
+};
+
+const getPropertyDuration = (config = {}) => {
+  if (config?.auto) {
+    return Number(config.auto.duration) || 0;
+  }
+
+  return (config?.keyframes ?? []).reduce((sum, keyframe) => {
+    return sum + (parseFloat(keyframe.duration) || 1000);
+  }, 0);
+};
+
 const resolveMajorTickInterval = (durationMs) => {
   if (durationMs <= 0) {
     return 0;
@@ -164,7 +184,11 @@ const createRulerTicks = (durationMs) => {
 export const selectViewData = ({ state, props, props: attrs }) => {
   const showRuler = attrs.showRuler === true;
   const showTracks = attrs.showTracks !== false;
-  const resolveTrackCursor = ({ propertyName } = {}) => {
+  const resolveTrackCursor = ({ propertyName, trackMode } = {}) => {
+    if (attrs.editable && trackMode === "auto") {
+      return "pointer";
+    }
+
     return state.hoverTarget?.property === propertyName ? "pointer" : "default";
   };
   const resolveEmptyLabelVisible = ({ propertyName } = {}) => {
@@ -177,27 +201,30 @@ export const selectViewData = ({ state, props, props: attrs }) => {
   let selectedProperties = [];
   if (props.properties) {
     selectedProperties = Object.keys(props.properties).map((propertyName) => {
-      const value = props.properties[propertyName].initialValue;
+      const propertyConfig = props.properties[propertyName] ?? {};
+      const value = propertyConfig.initialValue;
       const isDefault = value === undefined || value === "";
+      const autoConfig = propertyConfig.auto;
       return {
         name: propertyName,
-        initialValue: isDefault ? "D" : value,
-        keyframes: props.properties[propertyName].keyframes,
+        initialValue: autoConfig ? "" : isDefault ? "D" : value,
+        initialValueInteractive: !autoConfig,
+        trackMode: autoConfig ? "auto" : "keyframes",
+        keyframes: propertyConfig.keyframes,
+        auto: autoConfig
+          ? {
+              duration: Number(autoConfig.duration) || 0,
+              easing: autoConfig.easing ?? "linear",
+            }
+          : undefined,
       };
     });
   }
 
-  // Calculate total duration based on keyframe durations
   let maxDuration = 0;
   if (selectedProperties.length > 0) {
     selectedProperties.forEach((property) => {
-      if (property.keyframes && property.keyframes.length > 0) {
-        const propertyDuration = property.keyframes.reduce(
-          (sum, keyframe) => sum + (parseFloat(keyframe.duration) || 1000),
-          0,
-        );
-        maxDuration = Math.max(maxDuration, propertyDuration);
-      }
+      maxDuration = Math.max(maxDuration, getPropertyDuration(property));
     });
   }
   const resolvedTimelineDuration =
@@ -242,6 +269,36 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     : [];
 
   selectedProperties = selectedProperties.map((property) => {
+    if (property.auto) {
+      const nextProperty = {
+        ...property,
+      };
+      const propertyDuration = getPropertyDuration(property);
+      const autoWidthPercent =
+        resolvedTimelineDuration > 0
+          ? (propertyDuration / resolvedTimelineDuration) * 100
+          : 100;
+
+      nextProperty.auto = {
+        ...property.auto,
+        label: `Auto ${propertyDuration}ms ${formatEasingLabel(property.auto.easing)}`,
+        widthPercent: autoWidthPercent.toFixed(2),
+      };
+      nextProperty.fillerWidthPercent = Math.max(
+        0,
+        100 - autoWidthPercent,
+      ).toFixed(2);
+      nextProperty.hoverTarget = undefined;
+      nextProperty.trackCursor = resolveTrackCursor({
+        propertyName: property.name,
+        trackMode: property.trackMode,
+      });
+      nextProperty.initialValueCursor = "default";
+      nextProperty.emptyLabelVisible = true;
+
+      return nextProperty;
+    }
+
     if (property.keyframes && property.keyframes.length > 0) {
       const nextProperty = {
         ...property,
@@ -289,7 +346,11 @@ export const selectViewData = ({ state, props, props: attrs }) => {
           : undefined;
       nextProperty.trackCursor = resolveTrackCursor({
         propertyName: property.name,
+        trackMode: property.trackMode,
       });
+      nextProperty.initialValueCursor = property.initialValueInteractive
+        ? "pointer"
+        : "default";
       nextProperty.emptyLabelVisible = resolveEmptyLabelVisible({
         propertyName: property.name,
       });
@@ -305,7 +366,11 @@ export const selectViewData = ({ state, props, props: attrs }) => {
           : undefined,
       trackCursor: resolveTrackCursor({
         propertyName: property.name,
+        trackMode: property.trackMode,
       }),
+      initialValueCursor: property.initialValueInteractive
+        ? "pointer"
+        : "default",
       emptyLabelVisible: resolveEmptyLabelVisible({
         propertyName: property.name,
       }),

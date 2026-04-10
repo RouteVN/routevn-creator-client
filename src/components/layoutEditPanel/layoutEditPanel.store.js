@@ -46,19 +46,54 @@ import {
 } from "./support/layoutEditPanelViewData.js";
 
 const HIDDEN_LAYOUT_ACTION_MODES = new Set();
-const POSITION_POPOVER_PRESET_PERCENTAGES = [
-  0, 20, 25, 33.33, 50, 66.66, 70, 75,
+const POSITION_POPOVER_PRESETS = [
+  {
+    label: "0",
+    ratio: 0,
+  },
+  {
+    label: "1/5",
+    ratio: 1 / 5,
+  },
+  {
+    label: "1/4",
+    ratio: 1 / 4,
+  },
+  {
+    label: "1/3",
+    ratio: 1 / 3,
+  },
+  {
+    label: "1/2",
+    ratio: 1 / 2,
+  },
+  {
+    label: "2/3",
+    ratio: 2 / 3,
+  },
+  {
+    label: "3/5",
+    ratio: 3 / 5,
+  },
+  {
+    label: "3/4",
+    ratio: 3 / 4,
+  },
+  {
+    label: "4/5",
+    ratio: 4 / 5,
+  },
 ];
+
+const POSITION_PRESETS_SLOT = "position-presets";
 
 const POSITION_POPOVER_AXIS_CONFIG = {
   x: {
     resolutionKey: "width",
-    axisLabel: "Width",
     roundValue: true,
   },
   y: {
     resolutionKey: "height",
-    axisLabel: "Height",
     roundValue: true,
   },
 };
@@ -111,14 +146,18 @@ const buildPopoverForm = ({ form, name, projectResolution, value }) => {
   }
 
   const nextForm = clonePopoverForm(form);
-  const firstField = nextForm?.fields?.[0];
+  const normalizedFields = Array.isArray(nextForm?.fields)
+    ? nextForm.fields.filter((field) => field?.slot !== POSITION_PRESETS_SLOT)
+    : [];
+  const firstField = normalizedFields[0];
   if (!firstField) {
     return nextForm;
   }
+  const remainingFields = normalizedFields.slice(1);
 
   const currentValue = Number(value);
-  let min = 0;
-  let max = resolutionDimension;
+  let min = -resolutionDimension;
+  let max = resolutionDimension * 2;
 
   if (Number.isFinite(currentValue)) {
     if (currentValue < min) {
@@ -129,10 +168,21 @@ const buildPopoverForm = ({ form, name, projectResolution, value }) => {
     }
   }
 
-  firstField.type = "slider-with-input";
-  firstField.min = min;
-  firstField.max = max;
-  firstField.step = 1;
+  nextForm.fields = [
+    {
+      ...firstField,
+      type: "slider-with-input",
+      min,
+      max,
+      step: 1,
+    },
+    {
+      type: "slot",
+      slot: POSITION_PRESETS_SLOT,
+      label: "Presets",
+    },
+    ...remainingFields,
+  ];
 
   return nextForm;
 };
@@ -150,22 +200,14 @@ const buildPositionPopoverContext = ({ name, projectResolution, value }) => {
     return {};
   }
 
-  const numericValue = Number(value ?? 0);
-  const percentage = Number.isFinite(numericValue)
-    ? roundPositionPopoverNumber((numericValue / resolutionDimension) * 100)
-    : 0;
-
   return {
     isPositionPopover: true,
-    positionAxisLabel: axisConfig.axisLabel,
-    positionResolutionDimension: resolutionDimension,
-    positionPercentageLabel: `${percentage}%`,
-    positionPresetItems: POSITION_POPOVER_PRESET_PERCENTAGES.map((preset) => ({
-      label: `${preset}%`,
-      percentage: preset,
+    positionPresetItems: POSITION_POPOVER_PRESETS.map((preset) => ({
+      label: preset.label,
+      ratio: preset.ratio,
       value: axisConfig.roundValue
-        ? Math.round((resolutionDimension * preset) / 100)
-        : roundPositionPopoverNumber((resolutionDimension * preset) / 100),
+        ? Math.round(resolutionDimension * preset.ratio)
+        : roundPositionPopoverNumber(resolutionDimension * preset.ratio),
     })),
   };
 };

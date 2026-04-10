@@ -1155,20 +1155,25 @@ export const handlePopoverFormChange = async (deps, payload) => {
 };
 
 export const handlePopoverPresetClick = (deps, payload) => {
-  const { store } = deps;
+  const { props, render, store } = deps;
   const { _event } = payload;
-  const { name } = store.selectPopoverForm();
+  const popover = store.selectPopoverForm();
+  const { name } = popover;
   const value = Number(_event.currentTarget.dataset.value);
 
   if (!name || !Number.isFinite(value)) {
     return;
   }
 
-  applyPanelValueUpdate(deps, {
+  store.updatePopoverFormContext({
+    values: {
+      ...(popover.defaultValues ?? {}),
+      value,
+    },
     name,
-    value,
-    closePopover: true,
+    projectResolution: props.projectResolution,
   });
+  render();
 };
 
 export const handleListBarItemRightClick = async (deps, payload) => {

@@ -21,6 +21,8 @@ refs:
         handler: handleRulerTimeLeave
       keyframe-click:
         handler: handleKeyframeClick
+      auto-track-click:
+        handler: handleAutoTrackClick
       keyframe-right-click:
         handler: handleKeyframeRightClick
       property-name-click:
@@ -75,6 +77,10 @@ refs:
     eventListeners:
       form-action:
         handler: handleEditKeyframeFormSubmit
+  editAutoForm:
+    eventListeners:
+      form-action:
+        handler: handleEditAutoFormSubmit
   editInitialValueForm:
     eventListeners:
       form-action:
@@ -372,6 +378,9 @@ template:
       - $if popover.mode == 'editKeyframe':
           - rtgl-view slot=content:
               - rtgl-form#editKeyframeForm :form=${updateKeyframeForm} :defaultValues=${editKeyframeDefaultValues}: null
+      - $if popover.mode == 'editAuto':
+          - rtgl-view slot=content:
+              - rtgl-form#editAutoForm :form=${editAutoForm} :defaultValues=${editAutoDefaultValues}: null
       - $if popover.mode == 'editInitialValue':
           - rtgl-view slot=content:
               - rtgl-form#editInitialValueForm :form=${editInitialValueForm} :defaultValues=${editInitialValueDefaultValues} :context=${editInitialValueContext}: null

@@ -6,6 +6,34 @@ import {
   toAnimationDisplayItem,
 } from "../../internal/animationDisplay.js";
 
+const editForm = {
+  title: "Edit Animation",
+  fields: [
+    {
+      name: "name",
+      type: "input-text",
+      label: "Name",
+      required: true,
+    },
+    {
+      name: "description",
+      type: "input-textarea",
+      label: "Description",
+      required: false,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        label: "Update Animation",
+      },
+    ],
+  },
+};
+
 const createTypeMenuItems = [
   {
     label: "Update",
@@ -70,6 +98,9 @@ const {
 
     return {
       ...baseViewData,
+      isEditDialogOpen: state.isEditDialogOpen,
+      editForm,
+      editDefaultValues: state.editDefaultValues,
       itemContextMenuItems: animationExplorerItemContextMenuItems,
       selectedAnimationTypeLabel:
         selectedAnimationItem?.animationTypeLabel ?? "",
@@ -84,6 +115,12 @@ const {
 
 export const createInitialState = () => ({
   ...createCatalogInitialState(),
+  isEditDialogOpen: false,
+  editItemId: undefined,
+  editDefaultValues: {
+    name: "",
+    description: "",
+  },
   createTypeMenu: {
     isOpen: false,
     x: 0,
@@ -108,6 +145,24 @@ export const selectAnimationDisplayItemById = ({ state }, { itemId } = {}) => {
     (item) => item.id === itemId && item.type === "animation",
   );
   return rawItem ? toAnimationDisplayItem(rawItem) : undefined;
+};
+
+export const openEditDialog = ({ state }, { itemId, defaultValues } = {}) => {
+  state.isEditDialogOpen = true;
+  state.editItemId = itemId;
+  state.editDefaultValues = {
+    name: defaultValues?.name ?? "",
+    description: defaultValues?.description ?? "",
+  };
+};
+
+export const closeEditDialog = ({ state }) => {
+  state.isEditDialogOpen = false;
+  state.editItemId = undefined;
+  state.editDefaultValues = {
+    name: "",
+    description: "",
+  };
 };
 
 export const openCreateTypeMenu = ({ state }, { x, y, targetGroupId } = {}) => {

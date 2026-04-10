@@ -148,7 +148,7 @@ template:
                       - rtgl-view#sectionsTabsScroll d=h sh g=xs:
                           - $for section, sectionIndex in sections:
                                   - rtgl-view#sectionTab${sectionIndex} data-section-id=${section.id} w=120 h=32 av=c ah=c bgc=${section.bgc} cur=pointer:
-                                      - rtgl-text s=sm w=80 ellipsis=true: ${section.name}
+                                      - rtgl-text s=sm w=80 ta=c ellipsis=true: ${section.name}
                       - rtgl-view#sectionAdd h=32 av=c ph=lg ah=c cur=pointer bgc=mu:
                           - rtgl-text s=sm: +
                       - rtgl-view#sectionsOverview h=32 av=c ph=lg ah=c cur=pointer bgc=mu:

@@ -247,17 +247,10 @@ template:
   - rtgl-popover#popoverForm ?open=${popover.open} place=b x=${popover.x} y=${popover.y}:
       - $if popover.open:
           - $if popover.context.isPositionPopover:
-              - rtgl-view slot=content g=md w=280:
-                  - rtgl-view d=h av=c g=md:
-                      - rtgl-view w=1fg:
-                          - rtgl-form#form autofocus key=${popover.key} :form=${popover.form} :defaultValues=${popover.defaultValues} :context=${popover.context}: null
-                      - rtgl-view av=c ah=e:
-                          - rtgl-text s=xs c=mu-fg: ${popover.context.positionPercentageLabel}
-                  - rtgl-view g=sm:
-                      - rtgl-text s=xs c=mu-fg: Full ${popover.context.positionAxisLabel} ${popover.context.positionResolutionDimension}px
-                      - rtgl-view d=h wrap g=sm:
-                          - $for preset, i in popover.context.positionPresetItems:
-                              - rtgl-button#popoverPreset${i} data-value=${preset.value} v=gh s=sm: ${preset.label}
+              - rtgl-form#form autofocus key=${popover.key} slot=content :form=${popover.form} :defaultValues=${popover.defaultValues} :context=${popover.context} w=280:
+                  - rtgl-view slot="position-presets" d=h wrap g=sm:
+                      - $for preset, i in popover.context.positionPresetItems:
+                          - rtgl-button#popoverPreset${i} data-value=${preset.value} v=ol s=sm: ${preset.label}
             $else:
               - rtgl-form#form autofocus key=${popover.key} slot=content :form=${popover.form} :defaultValues=${popover.defaultValues} :context=${popover.context}: null
   - rtgl-dialog#visibilityConditionDialog ?open=${visibilityConditionDialog.open} s=md:

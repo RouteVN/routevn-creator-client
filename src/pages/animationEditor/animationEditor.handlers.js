@@ -6,10 +6,27 @@ import {
 } from "../../internal/animationEditorRoute.js";
 import { serializeTransitionMask } from "../../internal/animationMasks.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
+import {
+  AUTO_TWEEN_DEFAULT_DURATION,
+  AUTO_TWEEN_DEFAULT_EASING,
+} from "./animationEditor.constants.js";
 
 const normalizeTween = (properties = {}) => {
   return Object.fromEntries(
     Object.entries(properties).map(([property, config]) => {
+      if (config?.auto) {
+        return [
+          property,
+          {
+            auto: {
+              duration:
+                Number(config.auto.duration) || AUTO_TWEEN_DEFAULT_DURATION,
+              easing: config.auto.easing ?? AUTO_TWEEN_DEFAULT_EASING,
+            },
+          },
+        ];
+      }
+
       const normalizedConfig = {
         keyframes: (config?.keyframes ?? []).map((keyframe) => ({
           duration: Number(keyframe.duration) || 0,
@@ -625,20 +642,32 @@ export const handleAddPropertyFormSubmit = (deps, payload) => {
   const {
     payload: { side },
   } = store.selectPopover();
-  const { property, initialValue, useInitialValue } =
-    payload._event.detail.values;
+  const {
+    property,
+    initialValue,
+    useInitialValue,
+    tweenMode,
+    duration,
+    easing,
+  } = payload._event.detail.values;
   const defaultInitialValue = store.selectDefaultInitialValue({ property });
+  const useAutoTween = side === "update" && tweenMode === "auto";
 
-  const finalInitialValue = useInitialValue
-    ? initialValue !== undefined && initialValue !== ""
-      ? initialValue
-      : defaultInitialValue
-    : undefined;
+  const finalInitialValue = useAutoTween
+    ? undefined
+    : useInitialValue
+      ? initialValue !== undefined && initialValue !== ""
+        ? initialValue
+        : defaultInitialValue
+      : undefined;
 
   store.addProperty({
     side,
     property,
     initialValue: finalInitialValue,
+    tweenMode,
+    autoDuration: duration,
+    autoEasing: easing,
   });
   invalidatePreview({
     store,
@@ -724,6 +753,20 @@ export const handleKeyframeClick = (deps, payload) => {
       side: payload._event.detail.side,
       property: payload._event.detail.property,
       index: payload._event.detail.index,
+    },
+  });
+  render();
+};
+
+export const handleAutoTrackClick = (deps, payload) => {
+  const { render, store } = deps;
+  store.setPopover({
+    mode: "editAuto",
+    x: payload._event.detail.x,
+    y: payload._event.detail.y,
+    payload: {
+      side: payload._event.detail.side,
+      property: payload._event.detail.property,
     },
   });
   render();
@@ -847,6 +890,35 @@ export const handleEditKeyframeFormSubmit = (deps, payload) => {
   });
 };
 
+export const handleEditAutoFormSubmit = (deps, payload) => {
+  const { render, store } = deps;
+  const {
+    payload: { side, property },
+  } = store.selectPopover();
+  const formValues = {
+    ...payload._event.detail.values,
+  };
+
+  if (formValues.duration < 1) {
+    formValues.duration = 1;
+  }
+
+  store.updateAutoProperty({
+    side,
+    property,
+    duration: formValues.duration,
+    easing: formValues.easing,
+  });
+  invalidatePreview({
+    store,
+  });
+  store.closePopover();
+  render();
+  queueEditorAutosave({
+    deps,
+  });
+};
+
 export const handleRulerTimeHover = async (deps, payload) => {
   const { graphicsService, projectService, render, store } = deps;
   const didChangePreviewState = await ensureManualPreviewAtTime({
@@ -942,6 +1014,19 @@ export const handleAddPropertyFormChange = (deps, payload) => {
     store,
     detail: payload._event.detail,
   });
+
+  const { name, value } = payload._event.detail ?? {};
+  if (name === "tweenMode" && value === "auto") {
+    const currentFormValues = store.selectPopover().formValues ?? {};
+    store.updatePopoverFormValues({
+      formValues: {
+        ...currentFormValues,
+        duration: currentFormValues.duration ?? AUTO_TWEEN_DEFAULT_DURATION,
+        easing: currentFormValues.easing ?? AUTO_TWEEN_DEFAULT_EASING,
+      },
+    });
+  }
+
   render();
 };
 
