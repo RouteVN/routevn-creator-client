@@ -1167,7 +1167,7 @@ export const handlePopoverPresetClick = (deps, payload) => {
 
   store.updatePopoverFormContext({
     values: {
-      ...(popover.defaultValues ?? {}),
+      ...popover.defaultValues,
       value,
     },
     name,

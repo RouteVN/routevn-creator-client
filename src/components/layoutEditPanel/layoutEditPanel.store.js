@@ -187,7 +187,7 @@ const buildPopoverForm = ({ form, name, projectResolution, value }) => {
   return nextForm;
 };
 
-const buildPositionPopoverContext = ({ name, projectResolution, value }) => {
+const buildPositionPopoverContext = ({ name, projectResolution }) => {
   const axisConfig = POSITION_POPOVER_AXIS_CONFIG[name];
   if (!axisConfig) {
     return {};
@@ -381,7 +381,6 @@ export const openPopoverForm = (
       ...buildPositionPopoverContext({
         name,
         projectResolution,
-        value,
       }),
     },
   };
@@ -398,7 +397,6 @@ export const updatePopoverFormContext = (
     ...buildPositionPopoverContext({
       name: nextName,
       projectResolution,
-      value: values.value,
     }),
   };
   state.popover.defaultValues = values;
