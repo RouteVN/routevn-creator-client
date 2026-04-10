@@ -8,6 +8,7 @@ import {
   compileTransitionMaskForRuntime,
   createDefaultTransitionMask,
   createDefaultTransitionMaskCompositeItem,
+  isEditableTransitionMaskKind,
   normalizeTransitionMaskForEditor,
 } from "../../internal/animationMasks.js";
 import {
@@ -573,6 +574,8 @@ const createEmptyImagesData = () => ({
 
 const createEmptyMaskPanelData = () => ({
   enabled: false,
+  unsupported: false,
+  unsupportedKind: undefined,
   kind: "single",
   channelValue: "red",
   sampleValue: "step",
@@ -600,6 +603,36 @@ const getDefaultInitialValues = (state) => {
 
 const getTransitionMask = (state) => {
   return state.transitionMask;
+};
+
+const getPersistedTransitionMask = (state) => {
+  if (!state.editItemId) {
+    return undefined;
+  }
+
+  return state.data?.items?.[state.editItemId]?.animation?.mask;
+};
+
+const getUnsupportedPersistedTransitionMask = (state) => {
+  if (state.dialogType !== "transition" || state.transitionMaskRemoved) {
+    return undefined;
+  }
+
+  const persistedMask = getPersistedTransitionMask(state);
+  if (
+    !persistedMask?.kind ||
+    isEditableTransitionMaskKind(persistedMask.kind)
+  ) {
+    return undefined;
+  }
+
+  return persistedMask;
+};
+
+const getEffectiveTransitionMask = (state) => {
+  return (
+    getTransitionMask(state) ?? getUnsupportedPersistedTransitionMask(state)
+  );
 };
 
 const getImageItems = (state) => {
@@ -674,6 +707,7 @@ export const createInitialState = () => ({
   imageSelectorDialog: createInitialImageSelectorDialogState(),
   fullImagePreviewVisible: false,
   fullImagePreviewImageId: undefined,
+  transitionMaskRemoved: false,
 });
 
 export const setItems = ({ state }, { data } = {}) => {
@@ -749,6 +783,7 @@ export const openDialog = (
   state.dialogType = resolvedDialogType;
   state.editMode = Boolean(editMode);
   state.editItemId = itemId;
+  state.transitionMaskRemoved = false;
 
   if (editMode && itemData) {
     state.targetGroupId = itemData.parentId ?? undefined;
@@ -778,6 +813,7 @@ export const openDialog = (
   };
   state.tweenBySection = createEmptyTweenBySection();
   state.transitionMask = undefined;
+  state.transitionMaskRemoved = false;
 };
 
 export const selectTargetGroupId = ({ state }) => {
@@ -1097,7 +1133,7 @@ export const selectAnimationRenderStateWithAnimations = ({ state }) => {
     updateProperties: state.tweenBySection.update,
     previousProperties: state.tweenBySection.prev,
     nextProperties: state.tweenBySection.next,
-    transitionMask: state.transitionMask,
+    transitionMask: getEffectiveTransitionMask(state),
     imagesData: state.imagesData,
     projectResolution: state.projectResolution,
     includeAnimations: true,
@@ -1109,7 +1145,7 @@ export const selectPreviewDurationMs = ({ state }) => {
     return getTransitionTimelineDuration({
       prevProperties: state.tweenBySection.prev,
       nextProperties: state.tweenBySection.next,
-      mask: state.transitionMask,
+      mask: getEffectiveTransitionMask(state),
     });
   }
 
@@ -1270,14 +1306,20 @@ export const updateAutoProperty = (
 
 export const enableTransitionMask = ({ state }, _payload = {}) => {
   state.transitionMask = createDefaultTransitionMask();
+  state.transitionMaskRemoved = false;
 };
 
 export const disableTransitionMask = ({ state }, _payload = {}) => {
   state.transitionMask = undefined;
+  state.transitionMaskRemoved = true;
 };
 
 export const selectTransitionMask = ({ state }) => {
   return getTransitionMask(state);
+};
+
+export const selectTransitionMaskRemoved = ({ state }) => {
+  return state.transitionMaskRemoved === true;
 };
 
 export const setTransitionMaskKind = ({ state }, { kind } = {}) => {
@@ -1741,13 +1783,25 @@ export const selectPreviewPlaybackDurationMs = ({ state }) => {
 
 const buildTransitionMaskPanelData = (state) => {
   const transitionMask = getTransitionMask(state);
+  const unsupportedPersistedMask = getUnsupportedPersistedTransitionMask(state);
 
-  if (!transitionMask) {
+  if (!transitionMask && !unsupportedPersistedMask) {
     return createEmptyMaskPanelData();
+  }
+
+  if (unsupportedPersistedMask) {
+    return {
+      ...createEmptyMaskPanelData(),
+      enabled: true,
+      unsupported: true,
+      unsupportedKind: unsupportedPersistedMask.kind,
+    };
   }
 
   return {
     enabled: true,
+    unsupported: false,
+    unsupportedKind: undefined,
     kind: transitionMask.kind,
     channelValue: transitionMask.channel ?? "red",
     sampleValue: transitionMask.sample ?? "step",
@@ -1784,7 +1838,7 @@ export const selectViewData = ({ state }) => {
   const transitionTimelineDuration = getTransitionTimelineDuration({
     prevProperties: previousProperties,
     nextProperties,
-    mask: state.transitionMask,
+    mask: getEffectiveTransitionMask(state),
   });
   const addPropertySide =
     state.popover.payload?.side ??

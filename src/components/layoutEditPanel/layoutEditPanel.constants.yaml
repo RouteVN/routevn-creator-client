@@ -187,6 +187,7 @@ layoutSections:
     label: Spritesheet
     items:
       - type: spritesheet-preview
+        key: "${selectedSpritesheetPreviewKey}"
         fileId: "${selectedSpritesheetFileId}"
         atlas: "${selectedSpritesheetAtlas}"
         animation: "${selectedSpritesheetAnimation}"

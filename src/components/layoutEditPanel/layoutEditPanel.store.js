@@ -769,6 +769,9 @@ export const selectViewData = ({ state, props, constants }) => {
       selectedSpritesheetFileId: selectedSpritesheetPreview.fileId,
       selectedSpritesheetAtlas: selectedSpritesheetPreview.atlas,
       selectedSpritesheetAnimation: selectedSpritesheetPreview.animation,
+      selectedSpritesheetPreviewKey:
+        spritesheetSelectionValue ??
+        `${selectedSpritesheetPreview.fileId ?? ""}:${selectedSpritesheetPreview.animation?.frames?.join(",") ?? ""}`,
       fragmentLayoutOptions,
       values,
       xPercentageLabel: formatPositionPercentageLabel({

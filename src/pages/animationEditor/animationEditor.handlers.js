@@ -274,6 +274,10 @@ const getAnimationItem = ({ repositoryState, animationId } = {}) => {
 };
 
 const resolvePersistedTransitionMask = ({ store, serializedMask } = {}) => {
+  if (store.selectTransitionMaskRemoved()) {
+    return undefined;
+  }
+
   if (serializedMask) {
     return serializedMask;
   }

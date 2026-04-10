@@ -7,6 +7,7 @@ const DEFAULT_TRANSITION_MASK_PROGRESS_DURATION = 900;
 const DEFAULT_TRANSITION_MASK_PROGRESS_EASING = "linear";
 
 const TRANSITION_MASK_KINDS = new Set(["single", "sequence", "composite"]);
+const EDITABLE_TRANSITION_MASK_KINDS = new Set(["single"]);
 
 const hasMaskImageReference = (value) => {
   return typeof value === "string" && value.length > 0;
@@ -94,6 +95,10 @@ export const createDefaultTransitionMask = () => {
   };
 };
 
+export const isEditableTransitionMaskKind = (kind) => {
+  return EDITABLE_TRANSITION_MASK_KINDS.has(kind);
+};
+
 export const createDefaultTransitionMaskCompositeItem = () => {
   return {
     imageId: undefined,
@@ -103,15 +108,16 @@ export const createDefaultTransitionMaskCompositeItem = () => {
 };
 
 export const normalizeTransitionMaskForEditor = (mask, imageItems = {}) => {
-  if (!mask || !TRANSITION_MASK_KINDS.has(mask.kind)) {
+  if (
+    !mask ||
+    !TRANSITION_MASK_KINDS.has(mask.kind) ||
+    !isEditableTransitionMaskKind(mask.kind)
+  ) {
     return undefined;
   }
 
   const nextMask = createDefaultTransitionMask();
   const progress = resolveMaskProgress(mask);
-  const compositeItem = Array.isArray(mask.items)
-    ? mask.items.find(Boolean)
-    : undefined;
 
   nextMask.softness =
     Number.isFinite(Number(mask.softness)) && Number(mask.softness) >= 0
@@ -120,14 +126,8 @@ export const normalizeTransitionMaskForEditor = (mask, imageItems = {}) => {
   nextMask.progressDuration = progress.duration;
   nextMask.progressEasing = progress.easing;
   nextMask.imageId = resolveEditorSingleMaskImageId(mask, imageItems);
-  nextMask.channel =
-    mask.kind === "composite"
-      ? (compositeItem?.channel ?? nextMask.channel)
-      : (mask.channel ?? nextMask.channel);
-  nextMask.invert =
-    mask.kind === "composite"
-      ? (compositeItem?.invert ?? nextMask.invert)
-      : (mask.invert ?? nextMask.invert);
+  nextMask.channel = mask.channel ?? nextMask.channel;
+  nextMask.invert = mask.invert ?? nextMask.invert;
 
   return nextMask;
 };

@@ -209,7 +209,7 @@ template:
                               - rtgl-view d=h av=c ah=c h=32 ph=sm bgc=mu br=sm:
                                   - rtgl-text s=xs c=mu: Not set
                 $elif item.type == 'spritesheet-preview':
-                  - 'rvn-spritesheet-preview fileId=${item.fileId} :atlas=${item.atlas} :animation=${item.animation} h=180 emptyLabel="Select a spritesheet animation"': null
+                  - 'rvn-spritesheet-preview key=${item.key} fileId=${item.fileId} :atlas=${item.atlas} :animation=${item.animation} h=180 emptyLabel="Select a spritesheet animation"': null
                 $elif item.type == 'popover-input':
                   - rtgl-view#groupItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
                       - rtgl-text s=sm: ${item.value}
