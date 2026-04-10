@@ -12,6 +12,10 @@ import {
   collectTransitionMaskImageIds,
   compileTransitionMaskForRuntime,
 } from "../animationMasks.js";
+import {
+  collectParticleTextureImageIds,
+  createRenderableParticleData,
+} from "../particles.js";
 import { requireProjectResolution } from "../projectResolution.js";
 import { getSystemVariableItems } from "../systemVariables.js";
 
@@ -636,6 +640,32 @@ const constructTransformResources = (repositoryTransforms = {}) => {
   );
 };
 
+const constructParticleResources = (
+  repositoryParticles = {},
+  imageItems = {},
+) => {
+  return Object.entries(repositoryParticles).reduce(
+    (result, [particleId, item]) => {
+      if (item?.type !== "particle" || !item.modules) {
+        return result;
+      }
+
+      const renderableParticle = createRenderableParticleData(item, imageItems);
+
+      result[particleId] = pickResourceFields(renderableParticle, [
+        "name",
+        "description",
+        "width",
+        "height",
+        "seed",
+        "modules",
+      ]);
+      return result;
+    },
+    {},
+  );
+};
+
 const extractCharacterImages = (repositoryCharacters = {}) => {
   return Object.entries(repositoryCharacters).reduce(
     (result, [, character]) => {
@@ -666,6 +696,7 @@ const constructLayoutResources = (
   repositoryLayouts = {},
   repositoryControls = {},
   imageItems = {},
+  particlesData = { items: {}, tree: [] },
   spritesheetsData = { items: {}, tree: [] },
   textStylesData = { items: {}, tree: [] },
   colors = { items: {}, tree: [] },
@@ -697,6 +728,7 @@ const constructLayoutResources = (
       {
         layoutId,
         layoutType: layout.layoutType,
+        particlesData,
         spritesheetsData,
         layoutsData: repositoryLayouts,
       },
@@ -728,6 +760,7 @@ const constructLayoutResources = (
       fonts,
       {
         layoutId: controlId,
+        particlesData,
         spritesheetsData,
         layoutsData: repositoryLayouts,
       },
@@ -762,6 +795,7 @@ const constructProjectResources = (repositoryState = {}) => {
   const repositoryAnimations = repositoryState.animations?.items || {};
   const repositoryCharacters = repositoryState.characters?.items || {};
   const repositoryTransforms = repositoryState.transforms?.items || {};
+  const repositoryParticles = repositoryState.particles?.items || {};
   const repositoryLayouts = repositoryState.layouts?.items || {};
   const repositoryControls = repositoryState.controls?.items || {};
   const textStylesData = repositoryState.textStyles || { items: {}, tree: [] };
@@ -777,11 +811,16 @@ const constructProjectResources = (repositoryState = {}) => {
   };
 
   const characterImages = extractCharacterImages(repositoryCharacters);
+  const imageResources = constructImageResources(repositoryImages);
   const imageItems = {
-    ...constructImageResources(repositoryImages),
+    ...imageResources,
     ...characterImages,
   };
   const spritesheetsData = repositoryState.spritesheets || {
+    items: {},
+    tree: [],
+  };
+  const particlesData = repositoryState.particles || {
     items: {},
     tree: [],
   };
@@ -789,6 +828,7 @@ const constructProjectResources = (repositoryState = {}) => {
     repositoryLayouts,
     repositoryControls,
     imageItems,
+    particlesData,
     spritesheetsData,
     textStylesData,
     colors,
@@ -800,6 +840,7 @@ const constructProjectResources = (repositoryState = {}) => {
     spritesheets: constructSpritesheetResources(repositorySpritesheets),
     videos: constructVideoResources(repositoryVideos),
     sounds: constructSoundResources(repositorySounds),
+    particles: constructParticleResources(repositoryParticles, imageResources),
     fonts: layoutResources.fonts,
     colors: layoutResources.colors,
     textStyles: layoutResources.textStyles,
@@ -1104,6 +1145,7 @@ const LAYOUT_RESOURCE_KEYS = [
   "resourceId",
   "layoutId",
   "fragmentLayoutId",
+  "particleId",
   "sceneId",
   "sectionId",
   "variableId",
@@ -1136,6 +1178,7 @@ const RESOURCE_KEY_TO_TYPES = {
     "spritesheets",
     "videos",
     "sounds",
+    "particles",
     "animations",
     "transforms",
     "characters",
@@ -1156,6 +1199,7 @@ const RESOURCE_KEY_TO_TYPES = {
   imageId: ["images"],
   hoverImageId: ["images"],
   clickImageId: ["images"],
+  particleId: ["particles"],
   thumbImageId: ["images"],
   barImageId: ["images"],
   hoverThumbImageId: ["images"],
@@ -1173,6 +1217,7 @@ const COLLECTION_DEFS = {
   spritesheets: { collection: "spritesheets", itemType: "spritesheet" },
   videos: { collection: "videos", itemType: "video" },
   sounds: { collection: "sounds", itemType: "sound" },
+  particles: { collection: "particles", itemType: "particle" },
   animations: { collection: "animations", itemType: "animation" },
   transforms: { collection: "transforms", itemType: "transform" },
   characters: { collection: "characters", itemType: "character" },
@@ -1321,6 +1366,7 @@ const filterCollectionItemsByIds = (collectionState, ids) => {
 export const recursivelyCheckResource = ({ state, itemId, checkTargets }) => {
   const inProps = {};
   const referencedAnimationIds = new Set();
+  const referencedParticleIds = new Set();
 
   for (const targetName of checkTargets) {
     const keys = RESOURCE_KEYS_MAP[targetName];
@@ -1347,6 +1393,10 @@ export const recursivelyCheckResource = ({ state, itemId, checkTargets }) => {
       scanNodeForResourceReferences(data, ({ key, value }) => {
         if (key === "animation" && typeof value === "string") {
           referencedAnimationIds.add(value);
+        }
+
+        if (key === "particleId" && typeof value === "string") {
+          referencedParticleIds.add(value);
         }
       });
     }
@@ -1384,6 +1434,28 @@ export const recursivelyCheckResource = ({ state, itemId, checkTargets }) => {
     });
   }
 
+  if (referencedParticleIds.size > 0) {
+    const particleItems = state.particles?.items ?? {};
+    const imageItems = state.images?.items ?? {};
+
+    referencedParticleIds.forEach((particleId) => {
+      const particleItem = particleItems[particleId];
+      if (particleItem?.type !== "particle") {
+        return;
+      }
+
+      if (!collectParticleTextureImageIds(particleItem, imageItems).includes(itemId)) {
+        return;
+      }
+
+      const existingParticleUsages = inProps.particles ?? [];
+      existingParticleUsages.push({
+        property: "modules.appearance.texture",
+      });
+      inProps.particles = existingParticleUsages;
+    });
+  }
+
   const totalUsageCount = Object.values(inProps).reduce(
     (sum, arr) => sum + arr.length,
     0,
@@ -1401,11 +1473,13 @@ export const collectUsedResourcesForExport = (state) => {
   const index = createResourceIndex(state);
   const layoutQueue = [];
   const controlQueue = [];
+  const particleQueue = [];
   const textStyleQueue = [];
   const characterQueue = [];
   const animationQueue = [];
   const scannedLayouts = new Set();
   const scannedControls = new Set();
+  const scannedParticles = new Set();
   const scannedTextStyles = new Set();
   const scannedCharacters = new Set();
   const scannedAnimations = new Set();
@@ -1419,6 +1493,8 @@ export const collectUsedResourcesForExport = (state) => {
       layoutQueue.push(id);
     } else if (type === "controls") {
       controlQueue.push(id);
+    } else if (type === "particles") {
+      particleQueue.push(id);
     } else if (type === "textStyles") {
       textStyleQueue.push(id);
     } else if (type === "characters") {
@@ -1457,6 +1533,8 @@ export const collectUsedResourcesForExport = (state) => {
 
   scanNodeForResourceReferences(state?.scenes, markReference);
 
+  const imageItems = getCollectionItems(state, "images");
+
   while (layoutQueue.length > 0) {
     const layoutId = layoutQueue.shift();
     if (scannedLayouts.has(layoutId)) continue;
@@ -1473,6 +1551,19 @@ export const collectUsedResourcesForExport = (state) => {
     const control = getCollectionItems(state, "controls")[controlId];
     if (!control || control.type !== "control") continue;
     scanNodeForResourceReferences(control, markReference);
+  }
+
+  while (particleQueue.length > 0) {
+    const particleId = particleQueue.shift();
+    if (scannedParticles.has(particleId)) continue;
+    scannedParticles.add(particleId);
+
+    const particle = getCollectionItems(state, "particles")[particleId];
+    if (!particle || particle.type !== "particle") continue;
+
+    collectParticleTextureImageIds(particle, imageItems).forEach((imageId) => {
+      addUsed("images", imageId);
+    });
   }
 
   while (textStyleQueue.length > 0) {
@@ -1520,7 +1611,6 @@ export const collectUsedResourcesForExport = (state) => {
     if (fileId) fileIds.add(fileId);
   };
 
-  const imageItems = getCollectionItems(state, "images");
   for (const id of usage.images) {
     addFileId(imageItems[id]?.fileId);
   }
@@ -1576,6 +1666,10 @@ export const buildFilteredStateForExport = (
     ),
     videos: filterCollectionItemsByIds(state.videos, usedIds.videos || []),
     sounds: filterCollectionItemsByIds(state.sounds, usedIds.sounds || []),
+    particles: filterCollectionItemsByIds(
+      state.particles,
+      usedIds.particles || [],
+    ),
     animations: filterCollectionItemsByIds(
       state.animations,
       usedIds.animations || [],

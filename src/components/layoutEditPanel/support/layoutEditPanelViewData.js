@@ -144,6 +144,7 @@ export const toInspectorValues = ({
     paginationSize: values?.paginationSize ?? 3,
     scroll: values?.scroll ?? false,
     direction: values?.direction,
+    particleId: values?.particleId ?? "",
     textStyleId: values?.textStyleId || firstTextStyleId || "",
     hoverTextStyleId: values?.hoverTextStyleId ?? "",
     clickTextStyleId: values?.clickTextStyleId ?? "",

@@ -135,6 +135,14 @@ const RESOURCE_FILE_EXPLORER_API = Object.freeze({
     idField: "animationId",
     deleteField: "animationIds",
   },
+  particles: {
+    createMethod: "createParticle",
+    updateMethod: "updateParticle",
+    moveMethod: "moveParticle",
+    deleteMethod: "deleteParticles",
+    idField: "particleId",
+    deleteField: "particleIds",
+  },
   characters: {
     createMethod: "createCharacter",
     updateMethod: "updateCharacter",

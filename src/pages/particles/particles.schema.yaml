@@ -1,0 +1,4 @@
+componentName: rvn-particles
+propsSchema:
+  type: object
+  properties: {}

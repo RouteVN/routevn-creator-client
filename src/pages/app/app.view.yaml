@@ -31,6 +31,8 @@ template:
                   - rvn-transforms: []
                 $elif currentRoutePattern == "/project/animations":
                   - rvn-animations: []
+                $elif currentRoutePattern == "/project/particles":
+                  - rvn-particles: []
                 $elif currentRoutePattern == "/project/videos":
                   - rvn-videos: []
                 $elif currentRoutePattern == "/project/text-styles":

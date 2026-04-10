@@ -1,6 +1,10 @@
 import { resolveLayoutReferences } from "route-engine-js";
 import { getFirstTextStyleId } from "../../constants/textStyles.js";
 import { toAlphanumericId } from "../layoutEditorElementRegistry.js";
+import {
+  createRenderableParticleData,
+  isBuiltinParticleTextureName,
+} from "../particles.js";
 import { filterTreeCollection, toHierarchyStructure } from "./tree.js";
 import { normalizeEngineActions } from "./engineActions.js";
 import {
@@ -909,6 +913,44 @@ const applySpriteNode = ({ element, node }) => {
   };
 };
 
+const applyParticleNode = ({ element, node, context }) => {
+  if (node.type !== "particle") {
+    return element;
+  }
+
+  const particle = context.particleItems?.[node.particleId];
+  if (particle?.type !== "particle") {
+    return {
+      ...element,
+      type: "container",
+    };
+  }
+
+  const renderableParticle = createRenderableParticleData(
+    particle,
+    context.imageItems,
+  );
+
+  if (!renderableParticle?.modules?.appearance?.texture) {
+    return {
+      ...element,
+      type: "container",
+    };
+  }
+
+  const nextElement = {
+    ...element,
+    type: "particles",
+    modules: structuredClone(renderableParticle.modules ?? {}),
+  };
+
+  if (renderableParticle.seed !== undefined) {
+    nextElement.seed = renderableParticle.seed;
+  }
+
+  return nextElement;
+};
+
 const applySpritesheetAnimationNode = ({ element, node, context }) => {
   if (node.type !== "spritesheet-animation") {
     return element;
@@ -1122,6 +1164,11 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
     context: nodeContext,
   });
   element = applySpriteNode({ element, node: effectiveNode });
+  element = applyParticleNode({
+    element,
+    node: effectiveNode,
+    context: nodeContext,
+  });
   element = applySpritesheetAnimationNode({
     element,
     node: effectiveNode,
@@ -1290,8 +1337,10 @@ export const buildLayoutElements = (
   const context = {
     layoutId: options.layoutId ?? "preview",
     layoutType: options.layoutType,
+    imageItems,
     textStylesData,
     textStyles,
+    particleItems: options.particlesData?.items || {},
     spritesheetItems: options.spritesheetsData?.items || {},
     layoutsData: options.layoutsData,
     fragmentStack: options.fragmentStack ?? [],
@@ -1436,6 +1485,12 @@ export const extractFileIdsFromRenderState = (obj) => {
           const fileId = value[key].startsWith("file:")
             ? value[key].replace("file:", "")
             : value[key];
+          if (
+            (key === "texture" || key === "src") &&
+            isBuiltinParticleTextureName(fileId)
+          ) {
+            return;
+          }
           addFileReference(fileId, value.fileType || "image/png");
         }
 
@@ -1474,6 +1529,7 @@ const RESOURCE_REFERENCE_KEYS = new Set([
   "fontFileId",
   "colorId",
   "strokeColorId",
+  "particleId",
   "imageId",
   "hoverImageId",
   "clickImageId",
@@ -1488,6 +1544,7 @@ const createResourceSelection = () => ({
   spritesheets: new Set(),
   videos: new Set(),
   sounds: new Set(),
+  particles: new Set(),
   fonts: new Set(),
   colors: new Set(),
   textStyles: new Set(),
@@ -1513,6 +1570,9 @@ const addResourceIdToSelection = (selection, resources, resourceId) => {
   }
   if (resources.sounds?.[resourceId]) {
     selection.sounds.add(resourceId);
+  }
+  if (resources.particles?.[resourceId]) {
+    selection.particles.add(resourceId);
   }
   if (resources.fonts?.[resourceId]) {
     selection.fonts.add(resourceId);
@@ -1809,6 +1869,7 @@ export const extractFileIdsForScene = (projectData, sceneId) => {
     spritesheets: pickByIds(resources.spritesheets, selection.spritesheets),
     videos: pickByIds(resources.videos, selection.videos),
     sounds: pickByIds(resources.sounds, selection.sounds),
+    particles: pickByIds(resources.particles, selection.particles),
     fonts: pickByIds(resources.fonts, selection.fonts),
     colors: pickByIds(resources.colors, selection.colors),
     textStyles: pickByIds(resources.textStyles, selection.textStyles),
@@ -1845,6 +1906,7 @@ export const extractFileIdsForLayouts = (projectData, layoutIds = []) => {
     spritesheets: pickByIds(resources.spritesheets, selection.spritesheets),
     videos: pickByIds(resources.videos, selection.videos),
     sounds: pickByIds(resources.sounds, selection.sounds),
+    particles: pickByIds(resources.particles, selection.particles),
     layouts: scopedLayouts,
     fonts: pickByIds(resources.fonts, selection.fonts),
     colors: pickByIds(resources.colors, selection.colors),

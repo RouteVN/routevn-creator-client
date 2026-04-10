@@ -8,6 +8,9 @@ contextMenuItems:
   - label: Spritesheet Animation
     type: item
     createType: spritesheet-animation
+  - label: Particle
+    type: item
+    createType: particle
   - label: Text
     type: item
     createType: text
@@ -103,6 +106,9 @@ emptyContextMenuItems:
   - label: Spritesheet Animation
     type: item
     createType: spritesheet-animation
+  - label: Particle
+    type: item
+    createType: particle
   - label: Text
     type: item
     createType: text

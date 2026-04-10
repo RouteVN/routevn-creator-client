@@ -374,7 +374,7 @@ describe("layoutEditorPreview", () => {
 
     expect(overlays).toHaveLength(1);
     expect(overlays[0].id).toBe("selected-border-group");
-    expect(overlays[0].children).toHaveLength(2);
+    expect(overlays[0].children).toHaveLength(6);
     expect(overlays[0].children[0].id).toBe("selected-border");
     expect(overlays[0].children[0].x).toBe(0);
     expect(overlays[0].children[0].y).toBe(0);
@@ -383,7 +383,7 @@ describe("layoutEditorPreview", () => {
       move: { payload: {} },
       end: { payload: {} },
     });
-    expect(overlays[0].children[1]).toEqual({
+    expect(overlays[0].children[5]).toEqual({
       id: "selected-border-anchor",
       type: "rect",
       x: 46,
@@ -400,5 +400,56 @@ describe("layoutEditorPreview", () => {
         alpha: 1,
       },
     });
+  });
+
+  it("does not add resize handles for container items without size controls", () => {
+    const overlays = createLayoutEditorSelectionOverlay({
+      selectedItemId: "choice-item",
+      selectedItem: {
+        type: "container-ref-choice-item",
+      },
+      parsedElements: [
+        {
+          id: "choice-item",
+          type: "container",
+          x: 10,
+          y: 20,
+          width: 100,
+          height: 40,
+        },
+      ],
+    });
+
+    expect(overlays).toHaveLength(1);
+    expect(overlays[0].children.map((item) => item.id)).toEqual([
+      "selected-border",
+      "selected-border-anchor",
+    ]);
+  });
+
+  it("does not add resize handles for auto-width text items", () => {
+    const overlays = createLayoutEditorSelectionOverlay({
+      selectedItemId: "text-item",
+      selectedItem: {
+        type: "text",
+        width: undefined,
+      },
+      parsedElements: [
+        {
+          id: "text-item",
+          type: "text",
+          x: 10,
+          y: 20,
+          width: 100,
+          height: 40,
+        },
+      ],
+    });
+
+    expect(overlays).toHaveLength(1);
+    expect(overlays[0].children.map((item) => item.id)).toEqual([
+      "selected-border",
+      "selected-border-anchor",
+    ]);
   });
 });

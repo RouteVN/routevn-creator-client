@@ -33,6 +33,11 @@ export const animatedAssetItems = [
     path: "/project/animations",
   },
   {
+    id: "particles",
+    name: "Particles",
+    path: "/project/particles",
+  },
+  {
     id: "spritesheets",
     name: "Spritesheets",
     path: "/project/spritesheets",

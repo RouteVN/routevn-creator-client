@@ -15,6 +15,7 @@ export const createLayoutEditorRepositoryStoreData = ({
   const {
     images,
     spritesheets,
+    particles,
     layouts,
     textStyles,
     colors,
@@ -35,6 +36,7 @@ export const createLayoutEditorRepositoryStoreData = ({
     layoutData: layout?.elements || { items: {}, tree: [] },
     images: images || { items: {}, tree: [] },
     spritesheetsData: spritesheets || { items: {}, tree: [] },
+    particlesData: particles || { items: {}, tree: [] },
     layoutsData: layouts || { items: {}, tree: [] },
     textStylesData: textStyles || { items: {}, tree: [] },
     colorsData: colors || { items: {}, tree: [] },
