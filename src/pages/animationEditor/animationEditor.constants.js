@@ -3,7 +3,7 @@ export const EMPTY_TREE = {
   items: {},
 };
 
-export const ANIMATION_RESOURCE_CATEGORY = "assets";
+export const ANIMATION_RESOURCE_CATEGORY = "animatedAssets";
 export const ANIMATION_SELECTED_RESOURCE_ID = "animations";
 export const PREVIEW_BG_COLOR = "#4a4a4a";
 export const PREVIEW_RECT_WIDTH = 200;
@@ -13,6 +13,8 @@ export const PREVIEW_TRANSITION_ELEMENT_ID = "preview-transition-element";
 export const PREVIEW_TRANSITION_PREV_FILL = "#ffffff";
 export const PREVIEW_TRANSITION_NEXT_FILL = "#8fd3ff";
 export const PREVIEW_TRANSITION_OFFSET_X = 18;
+export const AUTO_TWEEN_DEFAULT_DURATION = 1000;
+export const AUTO_TWEEN_DEFAULT_EASING = "linear";
 
 export const UPDATE_PROPERTY_KEYS = ["alpha", "x", "y", "scaleX", "scaleY"];
 
@@ -141,8 +143,6 @@ export const propertyNameDropdownItems = [
 
 export const MASK_KIND_OPTIONS = Object.freeze([
   { label: "Single", value: "single" },
-  { label: "Sequence", value: "sequence" },
-  { label: "Composite", value: "composite" },
 ]);
 
 export const MASK_CHANNEL_OPTIONS = Object.freeze([

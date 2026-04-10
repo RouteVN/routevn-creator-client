@@ -5,6 +5,9 @@ contextMenuItems:
   - label: Sprite
     type: item
     createType: sprite
+  - label: Spritesheet Animation
+    type: item
+    createType: spritesheet-animation
   - label: Text
     type: item
     createType: text
@@ -97,6 +100,9 @@ emptyContextMenuItems:
   - label: Sprite
     type: item
     createType: sprite
+  - label: Spritesheet Animation
+    type: item
+    createType: spritesheet-animation
   - label: Text
     type: item
     createType: text

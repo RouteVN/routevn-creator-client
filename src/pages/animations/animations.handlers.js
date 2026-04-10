@@ -1,6 +1,7 @@
 import { createAnimationEditorPayload } from "../../internal/animationEditorRoute.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
+import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 
 const navigateToAnimationEditor = ({
   appService,
@@ -23,7 +24,7 @@ const {
   handleBeforeMount: handleBeforeMountBase,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged,
-  handleFileExplorerAction,
+  handleFileExplorerAction: handleFileExplorerActionBase,
   handleFileExplorerTargetChanged,
   handleItemClick: handleAnimationItemClick,
   handleSearchInput,
@@ -34,7 +35,6 @@ const {
 export {
   handleDataChanged,
   handleFileExplorerSelectionChanged,
-  handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleAnimationItemClick,
   handleSearchInput,
@@ -42,6 +42,65 @@ export {
 
 export const handleBeforeMount = (deps) => {
   return handleBeforeMountBase(deps);
+};
+
+const openEditDialogWithValues = ({ deps, itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  const { refs, render, store } = deps;
+  const { editForm, fileExplorer } = refs;
+  const item = store.selectAnimationItemById({ itemId });
+  if (!item) {
+    return;
+  }
+
+  const editValues = {
+    name: item.name ?? "",
+    description: item.description ?? "",
+  };
+
+  store.setSelectedItemId({ itemId });
+  fileExplorer.selectItem({ itemId });
+  store.openEditDialog({
+    itemId,
+    defaultValues: editValues,
+  });
+  render();
+  editForm.reset();
+  editForm.setValues({ values: editValues });
+};
+
+const openAnimationEditor = ({ appService, store, itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  const itemData = store.selectAnimationDisplayItemById({ itemId });
+  if (!itemData) {
+    return;
+  }
+
+  navigateToAnimationEditor({
+    appService,
+    animationId: itemId,
+  });
+};
+
+export const handleFileExplorerAction = async (deps, payload) => {
+  const detail = payload?._event?.detail ?? {};
+  const action = (detail.item || detail)?.value;
+
+  if (action === "edit-item") {
+    openEditDialogWithValues({
+      deps,
+      itemId: detail.itemId,
+    });
+    return;
+  }
+
+  await handleFileExplorerActionBase(deps, payload);
 };
 
 export const handleAddAnimationClick = async (deps, payload) => {
@@ -57,39 +116,78 @@ export const handleAddAnimationClick = async (deps, payload) => {
 };
 
 export const handleAnimationItemDoubleClick = (deps, payload) => {
-  const { appService } = deps;
+  const { appService, store } = deps;
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder || !itemId) {
     return;
   }
 
-  const itemData = deps.store.selectAnimationDisplayItemById({ itemId });
-  if (!itemData) {
-    return;
-  }
-
-  navigateToAnimationEditor({
+  openAnimationEditor({
     appService,
-    animationId: itemId,
+    store,
+    itemId,
   });
 };
 
-export const handleDetailHeaderClick = async (deps) => {
-  const { appService, store } = deps;
-  const itemId = store.selectSelectedItemId();
-  if (!itemId) {
-    return;
-  }
+export const handleAnimationItemEdit = (deps, payload) => {
+  const { itemId } = payload._event.detail;
 
-  const itemData = store.selectAnimationDisplayItemById({ itemId });
-  if (!itemData) {
-    return;
-  }
+  openEditDialogWithValues({ deps, itemId });
+};
 
-  navigateToAnimationEditor({
-    appService,
-    animationId: itemId,
+export const handleDetailHeaderClick = (deps) => {
+  const { store } = deps;
+  openEditDialogWithValues({
+    deps,
+    itemId: store.selectSelectedItemId(),
   });
+};
+
+export const handleEditDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeEditDialog();
+  render();
+};
+
+export const handleEditFormAction = async (deps, payload) => {
+  const { appService, projectService, store } = deps;
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
+    return;
+  }
+
+  const name = values?.name?.trim();
+  if (!name) {
+    appService.showToast("Please enter an animation name.", {
+      title: "Warning",
+    });
+    return;
+  }
+
+  const editItemId = store.getState().editItemId;
+  if (!editItemId) {
+    return;
+  }
+
+  const updateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to update animation.",
+    action: () =>
+      projectService.updateAnimation({
+        animationId: editItemId,
+        data: {
+          name,
+          description: values?.description ?? "",
+        },
+      }),
+  });
+
+  if (!updateAttempt.ok) {
+    return;
+  }
+
+  store.closeEditDialog();
+  await handleDataChanged(deps, { selectedItemId: editItemId });
 };
 
 export const handleCloseCreateTypeMenu = (deps) => {

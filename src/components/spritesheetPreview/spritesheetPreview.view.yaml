@@ -1,0 +1,25 @@
+onMount:
+  handler: handleAfterMount
+refs:
+  sourceImage:
+    eventListeners:
+      load:
+        handler: handleSourceImageLoad
+      error:
+        handler: handleSourceImageError
+  canvas:
+    selector: canvas
+template:
+  - rtgl-view w=${w} h=${h} pos=rel bgc=bg bc=bo bw=xs br=md of=hidden:
+      - 'canvas#canvas style="width: 100%; height: 100%; display: block;"': null
+      - $if imageSrc:
+          - 'img#sourceImage src=${imageSrc} style="display: none;"': null
+      - $if status == "loading":
+          - rtgl-view pos=abs cor=full av=c ah=c:
+              - rtgl-text s=sm c=mu-fg: Loading preview...
+        $elif status == "empty":
+          - rtgl-view pos=abs cor=full av=c ah=c:
+              - rtgl-text s=sm c=mu-fg: ${emptyLabel}
+        $elif status == "error":
+          - rtgl-view pos=abs cor=full av=c ah=c:
+              - rtgl-text s=sm c=er: Failed to load preview

@@ -6,6 +6,8 @@ propsSchema:
       type: object
     imagesData:
       type: object
+    spritesheetsData:
+      type: object
     textStylesData:
       type: object
     variablesData:

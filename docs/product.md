@@ -111,6 +111,7 @@ It should solve it by keeping the default experience simple while allowing users
 Assets:
 
 - images
+- spritesheets
 - sounds
 - videos
 - characters

@@ -24,10 +24,18 @@ export const assetItems = [
     name: "Transforms",
     path: "/project/transforms",
   },
+];
+
+export const animatedAssetItems = [
   {
     id: "animations",
     name: "Animations",
     path: "/project/animations",
+  },
+  {
+    id: "spritesheets",
+    name: "Spritesheets",
+    path: "/project/spritesheets",
   },
 ];
 
@@ -104,6 +112,10 @@ const resourceCategoryNames = {
   assets: {
     label: "Assets",
     resources: assetItems,
+  },
+  animatedAssets: {
+    label: "Animated Assets",
+    resources: animatedAssetItems,
   },
   userInterface: {
     label: "User Interface",

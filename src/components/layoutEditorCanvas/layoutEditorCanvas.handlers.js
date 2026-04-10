@@ -276,6 +276,10 @@ const renderLayoutEditorCanvas = async (
   props = deps.props,
   { clearFirst = false, updatedItem } = {},
 ) => {
+  if (!deps.store.selectIsGraphicsReady()) {
+    return;
+  }
+
   try {
     await deps.graphicsService.waitUntilReady?.();
     const repositoryState = await getRepositoryState(deps);
@@ -353,11 +357,13 @@ const renderLayoutEditorCanvas = async (
 const initCanvasGraphics = async (deps, props = deps.props) => {
   const { width, height } = requireCanvasResolution(props);
 
+  deps.store.setGraphicsReady({ value: false });
   await deps.graphicsService.init({
     canvas: deps.refs.canvas,
     width,
     height,
   });
+  deps.store.setGraphicsReady({ value: true });
 };
 
 export const handleCaptureThumbnailImage = async (deps) => {
@@ -548,6 +554,10 @@ export const handleOnUpdate = async (deps, changes) => {
 
   if (didResolutionChange) {
     await initCanvasGraphics(deps, newProps);
+  }
+
+  if (!deps.store.selectIsGraphicsReady()) {
+    return;
   }
 
   const pendingUpdatedItem = deps.store.selectPendingUpdatedItem();

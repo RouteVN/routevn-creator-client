@@ -701,6 +701,43 @@ const getImageFileId = (imageItems, imageId) => {
     : undefined;
 };
 
+const toSpritesheetRuntimeClips = (spritesheet = {}) => {
+  const frameNames = Object.keys(spritesheet.jsonData?.frames ?? {});
+
+  return Object.fromEntries(
+    Object.entries(spritesheet.animations ?? {})
+      .map(([clipName, animation]) => {
+        const frames = (animation?.frames ?? [])
+          .map((frameIndex) => frameNames[frameIndex])
+          .filter((frameName) => typeof frameName === "string");
+
+        if (
+          typeof clipName !== "string" ||
+          clipName.length === 0 ||
+          frames.length === 0
+        ) {
+          return undefined;
+        }
+
+        return [clipName, frames];
+      })
+      .filter(Boolean),
+  );
+};
+
+const resolveSpritesheetAnimationName = (spritesheet = {}, animationName) => {
+  if (
+    typeof animationName === "string" &&
+    spritesheet.animations?.[animationName] &&
+    typeof spritesheet.animations[animationName] === "object" &&
+    !Array.isArray(spritesheet.animations[animationName])
+  ) {
+    return animationName;
+  }
+
+  return Object.keys(spritesheet.animations ?? {})[0];
+};
+
 const buildBaseElement = (node, context = {}) => {
   const element = {
     id: node.id,
@@ -872,6 +909,62 @@ const applySpriteNode = ({ element, node }) => {
   };
 };
 
+const applySpritesheetAnimationNode = ({ element, node, context }) => {
+  if (node.type !== "spritesheet-animation") {
+    return element;
+  }
+
+  const spritesheet = context.spritesheetItems?.[node.resourceId];
+  if (
+    spritesheet?.type !== "spritesheet" ||
+    typeof spritesheet.fileId !== "string" ||
+    spritesheet.fileId.length === 0 ||
+    !spritesheet.jsonData
+  ) {
+    return {
+      ...element,
+      type: "container",
+    };
+  }
+
+  const clips = toSpritesheetRuntimeClips(spritesheet);
+  const animationName = resolveSpritesheetAnimationName(
+    spritesheet,
+    node.animationName,
+  );
+  const selectedAnimation =
+    typeof animationName === "string"
+      ? spritesheet.animations?.[animationName]
+      : undefined;
+  const playback = {
+    autoplay: true,
+    loop: selectedAnimation?.loop ?? true,
+  };
+  const fps = Number(selectedAnimation?.animationSpeed) * 60;
+
+  if (typeof animationName === "string" && animationName.length > 0) {
+    playback.clip = animationName;
+  }
+
+  if (Number.isFinite(fps) && fps > 0) {
+    playback.fps = fps;
+  }
+
+  return {
+    ...element,
+    type: "spritesheet-animation",
+    resourceId: node.resourceId,
+    resourceType: "spritesheet",
+    ...(typeof animationName === "string" && animationName.length > 0
+      ? { animationName }
+      : {}),
+    src: `${spritesheet.fileId}`,
+    atlas: structuredClone(spritesheet.jsonData),
+    ...(Object.keys(clips).length > 0 ? { clips } : {}),
+    playback,
+  };
+};
+
 const applyRectNode = ({ element, node }) => {
   if (node.type !== "rect") {
     return element;
@@ -1029,6 +1122,11 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
     context: nodeContext,
   });
   element = applySpriteNode({ element, node: effectiveNode });
+  element = applySpritesheetAnimationNode({
+    element,
+    node: effectiveNode,
+    context: nodeContext,
+  });
   element = applyRectNode({ element, node: effectiveNode });
   element = applySliderNode({ element, node: effectiveNode, imageItems });
   element = applyContainerNode({ element, node: effectiveNode });
@@ -1194,6 +1292,7 @@ export const buildLayoutElements = (
     layoutType: options.layoutType,
     textStylesData,
     textStyles,
+    spritesheetItems: options.spritesheetsData?.items || {},
     layoutsData: options.layoutsData,
     fragmentStack: options.fragmentStack ?? [],
   };
@@ -1330,6 +1429,7 @@ export const extractFileIdsFromRenderState = (obj) => {
             key === "hoverUrl" ||
             key === "clickUrl" ||
             key === "fontFileId" ||
+            key === "fontFamily" ||
             key === "texture") &&
           typeof value[key] === "string"
         ) {
@@ -1385,6 +1485,7 @@ const RESOURCE_REFERENCE_KEYS = new Set([
 
 const createResourceSelection = () => ({
   images: new Set(),
+  spritesheets: new Set(),
   videos: new Set(),
   sounds: new Set(),
   fonts: new Set(),
@@ -1403,6 +1504,9 @@ const addResourceIdToSelection = (selection, resources, resourceId) => {
 
   if (resources.images?.[resourceId]) {
     selection.images.add(resourceId);
+  }
+  if (resources.spritesheets?.[resourceId]) {
+    selection.spritesheets.add(resourceId);
   }
   if (resources.videos?.[resourceId]) {
     selection.videos.add(resourceId);
@@ -1702,6 +1806,7 @@ export const extractFileIdsForScene = (projectData, sceneId) => {
 
   const scopedResources = {
     images: pickByIds(resources.images, selection.images),
+    spritesheets: pickByIds(resources.spritesheets, selection.spritesheets),
     videos: pickByIds(resources.videos, selection.videos),
     sounds: pickByIds(resources.sounds, selection.sounds),
     fonts: pickByIds(resources.fonts, selection.fonts),
@@ -1737,6 +1842,7 @@ export const extractFileIdsForLayouts = (projectData, layoutIds = []) => {
   );
   const scopedResources = {
     images: pickByIds(resources.images, selection.images),
+    spritesheets: pickByIds(resources.spritesheets, selection.spritesheets),
     videos: pickByIds(resources.videos, selection.videos),
     sounds: pickByIds(resources.sounds, selection.sounds),
     layouts: scopedLayouts,

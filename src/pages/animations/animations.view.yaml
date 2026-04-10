@@ -13,6 +13,8 @@ refs:
     eventListeners:
       item-click:
         handler: handleAnimationItemClick
+      item-edit:
+        handler: handleAnimationItemEdit
       add-click:
         handler: handleAddAnimationClick
       item-dblclick:
@@ -31,6 +33,14 @@ refs:
     eventListeners:
       click:
         handler: handleDetailHeaderClick
+  editDialog:
+    eventListeners:
+      close:
+        handler: handleEditDialogClose
+  editForm:
+    eventListeners:
+      form-action:
+        handler: handleEditFormAction
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
@@ -61,4 +71,6 @@ template:
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
+  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
+      - rtgl-form#editForm key=${isEditDialogOpen} slot=content :defaultValues=${editDefaultValues} :form=${editForm} w=f: null
   - rtgl-dropdown-menu#createTypeMenu :items=${createTypeMenu.items} ?open=${createTypeMenu.isOpen} x=${createTypeMenu.x} y=${createTypeMenu.y}: null

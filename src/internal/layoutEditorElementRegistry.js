@@ -50,6 +50,13 @@ const CREATE_TEMPLATES = {
     width: 0,
     height: 0,
   }),
+  "spritesheet-animation": () => ({
+    type: "spritesheet-animation",
+    name: "Spritesheet Animation",
+    ...BASE_TRANSFORM,
+    width: 0,
+    height: 0,
+  }),
   text: () => ({
     type: "text",
     name: "Text",
@@ -462,6 +469,7 @@ const TYPE_FAMILIES = {
   "container-ref-confirm-dialog-cancel": "container",
   "fragment-ref": "fragment",
   sprite: "sprite",
+  "spritesheet-animation": "spritesheetAnimation",
   "sprite-ref-save-load-slot-image": "sprite",
   text: "text",
   "text-revealing": "text",
@@ -490,6 +498,7 @@ const DEFAULT_CAPABILITIES = {
   supportsTextAlignment: false,
   supportsActions: false,
   supportsSpriteImages: false,
+  supportsSpritesheetAnimation: false,
   supportsSliderImages: false,
   supportsSliderValues: false,
 };
@@ -509,6 +518,11 @@ const FAMILY_CAPABILITIES = {
   sprite: {
     supportsAnchor: true,
     supportsSpriteImages: true,
+    supportsActions: true,
+  },
+  spritesheetAnimation: {
+    supportsAnchor: true,
+    supportsSpritesheetAnimation: true,
     supportsActions: true,
   },
   text: {
@@ -570,6 +584,18 @@ const TYPE_RULES = {
         nextItem,
         imagesData,
       });
+    },
+  },
+  spritesheetAnimation: {
+    normalizeFieldValue: ({ name, value }) => {
+      if (
+        (name === "resourceId" || name === "animationName") &&
+        (value === null || value === "")
+      ) {
+        return undefined;
+      }
+
+      return value;
     },
   },
   text: {},
@@ -640,6 +666,11 @@ const PANEL_FEATURES_BY_TYPE = {
   "container-ref-confirm-dialog-ok": [...DEFAULT_PANEL_FEATURES, "actions"],
   "container-ref-confirm-dialog-cancel": [...DEFAULT_PANEL_FEATURES, "actions"],
   sprite: [...DEFAULT_PANEL_FEATURES, "images", "actions"],
+  "spritesheet-animation": [
+    ...DEFAULT_PANEL_FEATURES,
+    "spritesheet",
+    "actions",
+  ],
   "sprite-ref-save-load-slot-image": [...DEFAULT_PANEL_FEATURES, "images"],
   text: [...DEFAULT_PANEL_FEATURES, "text", "textStyles", "actions"],
   "text-revealing-ref-dialogue-content": [

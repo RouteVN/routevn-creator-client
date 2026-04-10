@@ -5,12 +5,17 @@ import {
 } from "../../internal/projectResolution.js";
 
 export const createInitialState = () => ({
+  isGraphicsReady: false,
   isDragging: false,
   dragMode: "move",
   dragStartPosition: undefined,
   pendingUpdatedItem: undefined,
   fileContentCacheById: {},
 });
+
+export const setGraphicsReady = ({ state }, { value = false } = {}) => {
+  state.isGraphicsReady = value === true;
+};
 
 export const startDragging = ({ state }, { dragMode = "move" } = {}) => {
   state.isDragging = true;
@@ -94,6 +99,10 @@ export const selectDragging = ({ state }) => {
     dragMode: state.dragMode,
     dragStartPosition: state.dragStartPosition,
   };
+};
+
+export const selectIsGraphicsReady = ({ state }) => {
+  return state.isGraphicsReady === true;
 };
 
 export const selectPendingUpdatedItem = ({ state }) => {

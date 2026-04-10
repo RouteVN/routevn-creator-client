@@ -19,6 +19,7 @@ export const createInitialState = () => {
     selectedItemId: undefined,
     layout: undefined,
     images: { tree: [], items: {} },
+    spritesheetsData: { tree: [], items: {} },
     layoutsData: { tree: [], items: {} },
     textStylesData: { tree: [], items: {} },
     colorsData: { tree: [], items: {} },
@@ -110,6 +111,10 @@ export const setImages = ({ state }, { images } = {}) => {
   state.images = images;
 };
 
+export const setSpritesheetsData = ({ state }, { spritesheetsData } = {}) => {
+  state.spritesheetsData = spritesheetsData;
+};
+
 export const setLayoutsData = ({ state }, { layoutsData } = {}) => {
   state.layoutsData = layoutsData;
 };
@@ -138,6 +143,7 @@ export const syncRepositoryState = ({ state }, payload = {}) => {
     resourceType = "layouts",
     layoutData,
     images,
+    spritesheetsData,
     layoutsData,
     textStylesData,
     colorsData,
@@ -156,6 +162,7 @@ export const syncRepositoryState = ({ state }, payload = {}) => {
   });
   state.layoutData = layoutData ?? { items: {}, tree: [] };
   state.images = images ?? { items: {}, tree: [] };
+  state.spritesheetsData = spritesheetsData ?? { items: {}, tree: [] };
   state.layoutsData = layoutsData ?? { items: {}, tree: [] };
   state.textStylesData = textStylesData ?? { items: {}, tree: [] };
   state.colorsData = colorsData ?? { items: {}, tree: [] };
@@ -180,6 +187,7 @@ export const selectProjectResolution = ({ state }) => {
 };
 
 export const selectImages = ({ state }) => state.images;
+export const selectSpritesheetsData = ({ state }) => state.spritesheetsData;
 export const selectLayoutsData = ({ state }) => state.layoutsData;
 
 export const selectSelectedItem = ({ state }) => {
@@ -284,6 +292,7 @@ export const selectViewData = ({ state, constants }) => {
     projectResolution: state.projectResolution,
     layout,
     imagesData: state.images,
+    spritesheetsData: state.spritesheetsData,
     textStylesData: state.textStylesData,
     variablesData: state.variablesData,
     layoutsData: state.layoutsData,

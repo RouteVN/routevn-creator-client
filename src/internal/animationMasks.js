@@ -7,6 +7,7 @@ const DEFAULT_TRANSITION_MASK_PROGRESS_DURATION = 900;
 const DEFAULT_TRANSITION_MASK_PROGRESS_EASING = "linear";
 
 const TRANSITION_MASK_KINDS = new Set(["single", "sequence", "composite"]);
+const EDITABLE_TRANSITION_MASK_KINDS = new Set(["single"]);
 
 const hasMaskImageReference = (value) => {
   return typeof value === "string" && value.length > 0;
@@ -28,6 +29,33 @@ const findImageIdByFileId = (imageItems = {}, fileId) => {
   return Object.entries(imageItems).find(
     ([, item]) => item?.fileId === fileId,
   )?.[0];
+};
+
+const resolveEditorSingleMaskImageId = (mask = {}, imageItems = {}) => {
+  if (mask.kind === "single") {
+    return mask.imageId ?? findImageIdByFileId(imageItems, mask.texture);
+  }
+
+  if (mask.kind === "sequence") {
+    const imageId = Array.isArray(mask.imageIds)
+      ? mask.imageIds.find(Boolean)
+      : undefined;
+    if (imageId) {
+      return imageId;
+    }
+
+    const texture = Array.isArray(mask.textures)
+      ? mask.textures.find(Boolean)
+      : undefined;
+    return findImageIdByFileId(imageItems, texture);
+  }
+
+  const item = Array.isArray(mask.items) ? mask.items.find(Boolean) : undefined;
+  if (!item) {
+    return undefined;
+  }
+
+  return item.imageId ?? findImageIdByFileId(imageItems, item.texture);
 };
 
 const resolveMaskProgress = (mask = {}) => {
@@ -67,6 +95,10 @@ export const createDefaultTransitionMask = () => {
   };
 };
 
+export const isEditableTransitionMaskKind = (kind) => {
+  return EDITABLE_TRANSITION_MASK_KINDS.has(kind);
+};
+
 export const createDefaultTransitionMaskCompositeItem = () => {
   return {
     imageId: undefined,
@@ -76,59 +108,26 @@ export const createDefaultTransitionMaskCompositeItem = () => {
 };
 
 export const normalizeTransitionMaskForEditor = (mask, imageItems = {}) => {
-  if (!mask || !TRANSITION_MASK_KINDS.has(mask.kind)) {
+  if (
+    !mask ||
+    !TRANSITION_MASK_KINDS.has(mask.kind) ||
+    !isEditableTransitionMaskKind(mask.kind)
+  ) {
     return undefined;
   }
 
   const nextMask = createDefaultTransitionMask();
   const progress = resolveMaskProgress(mask);
 
-  nextMask.kind = mask.kind;
-  nextMask.channel = mask.channel ?? nextMask.channel;
-  nextMask.combine = mask.combine ?? nextMask.combine;
-  nextMask.sample = mask.sample ?? nextMask.sample;
   nextMask.softness =
     Number.isFinite(Number(mask.softness)) && Number(mask.softness) >= 0
       ? Number(mask.softness)
       : nextMask.softness;
-  nextMask.invert = mask.invert ?? nextMask.invert;
   nextMask.progressDuration = progress.duration;
   nextMask.progressEasing = progress.easing;
-
-  if (mask.kind === "single") {
-    nextMask.imageId =
-      mask.imageId ?? findImageIdByFileId(imageItems, mask.texture);
-    return nextMask;
-  }
-
-  if (mask.kind === "sequence") {
-    if (Array.isArray(mask.imageIds) && mask.imageIds.length > 0) {
-      nextMask.imageIds = mask.imageIds.filter(Boolean);
-    } else if (Array.isArray(mask.textures) && mask.textures.length > 0) {
-      nextMask.imageIds = mask.textures
-        .map((texture) => findImageIdByFileId(imageItems, texture))
-        .filter(Boolean);
-    }
-
-    return nextMask;
-  }
-
-  if (Array.isArray(mask.items) && mask.items.length > 0) {
-    nextMask.items = mask.items
-      .map((item) => {
-        if (!item) {
-          return undefined;
-        }
-
-        return cloneCompositeItem({
-          imageId:
-            item.imageId ?? findImageIdByFileId(imageItems, item.texture),
-          channel: item.channel,
-          invert: item.invert,
-        });
-      })
-      .filter(Boolean);
-  }
+  nextMask.imageId = resolveEditorSingleMaskImageId(mask, imageItems);
+  nextMask.channel = mask.channel ?? nextMask.channel;
+  nextMask.invert = mask.invert ?? nextMask.invert;
 
   return nextMask;
 };

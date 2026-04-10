@@ -277,7 +277,15 @@ export const handleFormInputChange = (deps, payload) => {
   const { store, render } = deps;
   const { name, value: fieldValue } = payload._event.detail;
 
-  if (name === "animation") {
+  if (name === "animationType") {
+    store.setSelectedAnimationMode({
+      mode: fieldValue,
+    });
+    render();
+    return;
+  }
+
+  if (name === "updateAnimation" || name === "transitionAnimation") {
     store.setSelectedAnimation({
       animationId: fieldValue,
     });
@@ -329,6 +337,7 @@ export const handleSubmitClick = (deps, payload) => {
   payload?._event?.stopPropagation?.();
   const { dispatchEvent, store } = deps;
   const selectedResource = store.selectSelectedResource();
+  const selectedAnimationMode = store.selectSelectedAnimationMode();
   const selectedAnimationId = store.selectSelectedAnimation();
   const backgroundLoop = store.selectBackgroundLoop();
 
@@ -340,7 +349,11 @@ export const handleSubmitClick = (deps, payload) => {
     backgroundData.loop = backgroundLoop ?? false;
   }
 
-  if (selectedResource?.resourceId && selectedAnimationId) {
+  if (
+    selectedResource?.resourceId &&
+    selectedAnimationMode !== "none" &&
+    selectedAnimationId
+  ) {
     backgroundData.animations = {
       resourceId: selectedAnimationId,
     };

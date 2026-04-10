@@ -26,10 +26,12 @@ const resolveTimelineDuration = (props = {}) => {
 
   let maxDuration = 0;
   for (const config of Object.values(props.properties ?? {})) {
-    const propertyDuration = (config?.keyframes ?? []).reduce(
-      (sum, keyframe) => sum + (parseFloat(keyframe.duration) || 1000),
-      0,
-    );
+    const propertyDuration = config?.auto
+      ? Number(config.auto.duration) || 0
+      : (config?.keyframes ?? []).reduce(
+          (sum, keyframe) => sum + (parseFloat(keyframe.duration) || 1000),
+          0,
+        );
     maxDuration = Math.max(maxDuration, propertyDuration);
   }
 
@@ -78,6 +80,27 @@ const dispatchAddKeyframeEvent = ({
   );
 };
 
+const dispatchAutoTrackClickEvent = ({
+  dispatchEvent,
+  property,
+  side,
+  x,
+  y,
+} = {}) => {
+  dispatchEvent(
+    new CustomEvent("auto-track-click", {
+      detail: {
+        property,
+        side,
+        x,
+        y,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 const createHoverTarget = ({
   property,
   mode,
@@ -107,10 +130,11 @@ const createHoverTarget = ({
 
 const resolveTrackHoverTarget = ({ trackElement, clientX } = {}) => {
   const property = trackElement?.dataset?.property;
+  const trackMode = trackElement?.dataset?.trackMode;
   const trackRect = trackElement?.getBoundingClientRect?.();
   const trackWidth = trackRect?.width ?? 0;
 
-  if (!property || trackWidth <= 0) {
+  if (!property || trackWidth <= 0 || trackMode === "auto") {
     return undefined;
   }
 
@@ -278,7 +302,19 @@ export const handleTrackClick = (deps, payload) => {
 
   const hoverTarget = store.selectHoverTarget();
   const property = payload._event.currentTarget?.dataset?.property ?? "";
+  const trackMode = payload._event.currentTarget?.dataset?.trackMode ?? "";
   const side = props?.side;
+
+  if (trackMode === "auto") {
+    dispatchAutoTrackClickEvent({
+      dispatchEvent,
+      property,
+      side,
+      x: payload._event.clientX,
+      y: payload._event.clientY,
+    });
+    return;
+  }
 
   if (!hoverTarget || hoverTarget.property !== property) {
     return;
@@ -393,6 +429,10 @@ export const handlePropertyNameClick = (deps, payload) => {
 export const handleInitialValueClick = (deps, payload) => {
   const { dispatchEvent, props } = deps;
   const target = payload._event.currentTarget;
+  if (target?.dataset?.interactive !== "true") {
+    return;
+  }
+
   const property =
     target?.dataset?.property || target?.id?.replace("initialValue", "") || "";
   const side = props?.side;

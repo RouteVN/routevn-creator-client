@@ -2,6 +2,7 @@ import { COMMAND_ENVELOPE_VERSION } from "../projectCompatibility.js";
 
 export const RESOURCE_TYPES = Object.freeze([
   "images",
+  "spritesheets",
   "animations",
   "videos",
   "sounds",
@@ -28,6 +29,7 @@ const FILE_COMMAND_TYPES = Object.freeze([
 
 const RESOURCE_COMMAND_FAMILIES = Object.freeze([
   "image",
+  "spritesheet",
   "sound",
   "video",
   "animation",

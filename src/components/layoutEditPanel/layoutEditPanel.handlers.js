@@ -14,6 +14,7 @@ import {
   getConditionalOverrideAttributeOptions,
 } from "./support/layoutEditPanelFeatures.js";
 import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
+import { parseSpritesheetAnimationSelectionValue } from "../../internal/spritesheets.js";
 
 const ACTION_INTERACTION_TYPES = ["click", "rightClick"];
 const EMPTY_TREE = { items: {}, tree: [] };
@@ -211,6 +212,9 @@ export const handleBeforeMount = (deps) => {
   store.setImagesData({
     imagesData: props.imagesData || EMPTY_TREE,
   });
+  store.setSpritesheetsData({
+    spritesheetsData: props.spritesheetsData || EMPTY_TREE,
+  });
   store.setTextStylesData({
     textStylesData: props.textStylesData || EMPTY_TREE,
   });
@@ -228,6 +232,7 @@ export const handleOnUpdate = (deps, payload) => {
     oldProps?.projectResolution === newProps?.projectResolution &&
     oldProps?.layoutsData === newProps?.layoutsData &&
     oldProps?.imagesData === newProps?.imagesData &&
+    oldProps?.spritesheetsData === newProps?.spritesheetsData &&
     oldProps?.variablesData === newProps?.variablesData &&
     oldProps?.textStylesData === newProps?.textStylesData &&
     oldProps?.selectedElementMetrics === newProps?.selectedElementMetrics
@@ -240,6 +245,9 @@ export const handleOnUpdate = (deps, payload) => {
   });
   store.setImagesData({
     imagesData: newProps.imagesData || EMPTY_TREE,
+  });
+  store.setSpritesheetsData({
+    spritesheetsData: newProps.spritesheetsData || EMPTY_TREE,
   });
   store.setTextStylesData({
     textStylesData: newProps.textStylesData || EMPTY_TREE,
@@ -499,12 +507,32 @@ export const handleConditionalOverrideConditionFormChange = (deps, payload) => {
 };
 
 export const handleOptionSelected = (deps, payload) => {
+  const { render, store } = deps;
   const { _event } = payload;
   const name = _event.currentTarget.dataset.name;
   const value = _event.detail?.item?.value ?? _event.detail?.value;
 
   if (name === "widthMode") {
     applyWidthModeUpdate(deps, { value });
+    return;
+  }
+
+  if (name === "spritesheetSelection") {
+    const { resourceId, animationName } =
+      parseSpritesheetAnimationSelectionValue(value);
+    store.updateValueProperty({
+      name: "resourceId",
+      value: resourceId || undefined,
+    });
+    store.updateValueProperty({
+      name: "animationName",
+      value: animationName || undefined,
+    });
+    render();
+    emitPanelUpdate(deps, {
+      name,
+      value,
+    });
     return;
   }
 
@@ -1127,20 +1155,25 @@ export const handlePopoverFormChange = async (deps, payload) => {
 };
 
 export const handlePopoverPresetClick = (deps, payload) => {
-  const { store } = deps;
+  const { props, render, store } = deps;
   const { _event } = payload;
-  const { name } = store.selectPopoverForm();
+  const popover = store.selectPopoverForm();
+  const { name } = popover;
   const value = Number(_event.currentTarget.dataset.value);
 
   if (!name || !Number.isFinite(value)) {
     return;
   }
 
-  applyPanelValueUpdate(deps, {
+  store.updatePopoverFormContext({
+    values: {
+      ...popover.defaultValues,
+      value,
+    },
     name,
-    value,
-    closePopover: true,
+    projectResolution: props.projectResolution,
   });
+  render();
 };
 
 export const handleListBarItemRightClick = async (deps, payload) => {

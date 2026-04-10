@@ -34,14 +34,19 @@ const getTransitionSideTween = (item = {}, side) => {
   return {};
 };
 
+const getTweenPropertyDuration = (propertyConfig = {}) => {
+  if (propertyConfig?.auto) {
+    return Number(propertyConfig.auto.duration) || 0;
+  }
+
+  return (propertyConfig?.keyframes ?? []).reduce((sum, keyframe) => {
+    return sum + (Number(keyframe?.duration) || 0);
+  }, 0);
+};
+
 const getAnimationDuration = (tween = {}) => {
   return Object.values(tween).reduce((maxDuration, propertyConfig) => {
-    const totalDuration = (propertyConfig?.keyframes ?? []).reduce(
-      (sum, keyframe) => {
-        return sum + (Number(keyframe?.duration) || 0);
-      },
-      0,
-    );
+    const totalDuration = getTweenPropertyDuration(propertyConfig);
 
     return Math.max(maxDuration, totalDuration);
   }, 0);

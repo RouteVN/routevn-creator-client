@@ -8,6 +8,7 @@ import {
   compileTransitionMaskForRuntime,
   createDefaultTransitionMask,
   createDefaultTransitionMaskCompositeItem,
+  isEditableTransitionMaskKind,
   normalizeTransitionMaskForEditor,
 } from "../../internal/animationMasks.js";
 import {
@@ -19,6 +20,8 @@ import {
   addKeyframeDefaultValues,
   ANIMATION_RESOURCE_CATEGORY,
   ANIMATION_SELECTED_RESOURCE_ID,
+  AUTO_TWEEN_DEFAULT_DURATION,
+  AUTO_TWEEN_DEFAULT_EASING,
   baseKeyframeDropdownItems,
   editInitialValueForm,
   EMPTY_TREE,
@@ -206,6 +209,17 @@ const EASING_OPTIONS = Object.freeze(
   })),
 );
 
+const TWEEN_MODE_OPTIONS = Object.freeze([
+  {
+    label: "Keyframes",
+    value: "keyframes",
+  },
+  {
+    label: "Auto",
+    value: "auto",
+  },
+]);
+
 const buildPropertyOptions = (propertyKeys, propertyFieldConfig) => {
   return propertyKeys.map((property) => ({
     label: propertyFieldConfig[property]?.label ?? property,
@@ -270,6 +284,44 @@ const createSliderField = ({
   }
 
   return field;
+};
+
+const createAutoTweenFields = () => {
+  return [
+    {
+      name: "duration",
+      type: "input-text",
+      label: "Duration (ms)",
+      required: true,
+      defaultValue: AUTO_TWEEN_DEFAULT_DURATION,
+      placeholder: "Duration in milliseconds",
+    },
+    {
+      name: "easing",
+      type: "select",
+      label: "Easing",
+      options: EASING_OPTIONS,
+      required: true,
+      defaultValue: AUTO_TWEEN_DEFAULT_EASING,
+    },
+  ];
+};
+
+const createEditAutoTweenForm = () => {
+  return {
+    title: "Edit Auto Tween",
+    fields: createAutoTweenFields(),
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          label: "Update Auto Tween",
+        },
+      ],
+    },
+  };
 };
 
 const createAddKeyframeForm = (
@@ -370,7 +422,12 @@ const createUpdateKeyframeForm = (
   };
 };
 
-const createAddPropertyForm = (availableProperties, propertyFieldConfig) => {
+const createAddPropertyForm = (
+  availableProperties,
+  propertyFieldConfig,
+  { side } = {},
+) => {
+  const isUpdateSide = side === "update";
   const initialValueFields = Object.keys(propertyFieldConfig).map(
     (property) => {
       const field = createSliderField({
@@ -379,21 +436,59 @@ const createAddPropertyForm = (availableProperties, propertyFieldConfig) => {
         name: "initialValue",
         label: "Initial value",
       });
-      field.$when = `property == "${property}"`;
+      field.$when = isUpdateSide
+        ? `tweenMode != "auto" && useInitialValue == true && property == "${property}"`
+        : `useInitialValue == true && property == "${property}"`;
       return field;
     },
   );
+  const fields = [
+    {
+      name: "property",
+      type: "select",
+      label: "Property",
+      options: availableProperties,
+      required: true,
+    },
+  ];
 
-  return {
-    title: "Add animation property",
-    fields: [
-      {
-        name: "property",
-        type: "select",
-        label: "Property",
-        options: availableProperties,
-        required: true,
+  if (isUpdateSide) {
+    fields.push({
+      name: "tweenMode",
+      type: "segmented-control",
+      label: "Tween Mode",
+      noClear: true,
+      options: TWEEN_MODE_OPTIONS,
+      required: true,
+    });
+    fields.push({
+      name: "useInitialValue",
+      type: "segmented-control",
+      label: "Use initial value",
+      noClear: true,
+      $when: 'tweenMode != "auto"',
+      tooltip: {
+        content:
+          "The initial value of the property at the start of the animation. If not set, it will use the element's current value at start of animation",
       },
+      options: [
+        {
+          label: "No",
+          value: false,
+        },
+        {
+          label: "Yes",
+          value: true,
+        },
+      ],
+    });
+    const autoFields = createAutoTweenFields().map((field) => ({
+      ...field,
+      $when: 'tweenMode == "auto"',
+    }));
+    fields.push(...initialValueFields, ...autoFields);
+  } else {
+    fields.push(
       {
         name: "useInitialValue",
         type: "segmented-control",
@@ -414,10 +509,13 @@ const createAddPropertyForm = (availableProperties, propertyFieldConfig) => {
           },
         ],
       },
-      {
-        "$if useInitialValue == true": initialValueFields,
-      },
-    ],
+      ...initialValueFields,
+    );
+  }
+
+  return {
+    title: "Add animation property",
+    fields,
     actions: {
       layout: "",
       buttons: [
@@ -476,6 +574,8 @@ const createEmptyImagesData = () => ({
 
 const createEmptyMaskPanelData = () => ({
   enabled: false,
+  unsupported: false,
+  unsupportedKind: undefined,
   kind: "single",
   channelValue: "red",
   sampleValue: "step",
@@ -503,6 +603,36 @@ const getDefaultInitialValues = (state) => {
 
 const getTransitionMask = (state) => {
   return state.transitionMask;
+};
+
+const getPersistedTransitionMask = (state) => {
+  if (!state.editItemId) {
+    return undefined;
+  }
+
+  return state.data?.items?.[state.editItemId]?.animation?.mask;
+};
+
+const getUnsupportedPersistedTransitionMask = (state) => {
+  if (state.dialogType !== "transition" || state.transitionMaskRemoved) {
+    return undefined;
+  }
+
+  const persistedMask = getPersistedTransitionMask(state);
+  if (
+    !persistedMask?.kind ||
+    isEditableTransitionMaskKind(persistedMask.kind)
+  ) {
+    return undefined;
+  }
+
+  return persistedMask;
+};
+
+const getEffectiveTransitionMask = (state) => {
+  return (
+    getTransitionMask(state) ?? getUnsupportedPersistedTransitionMask(state)
+  );
 };
 
 const getImageItems = (state) => {
@@ -577,6 +707,7 @@ export const createInitialState = () => ({
   imageSelectorDialog: createInitialImageSelectorDialogState(),
   fullImagePreviewVisible: false,
   fullImagePreviewImageId: undefined,
+  transitionMaskRemoved: false,
 });
 
 export const setItems = ({ state }, { data } = {}) => {
@@ -652,6 +783,7 @@ export const openDialog = (
   state.dialogType = resolvedDialogType;
   state.editMode = Boolean(editMode);
   state.editItemId = itemId;
+  state.transitionMaskRemoved = false;
 
   if (editMode && itemData) {
     state.targetGroupId = itemData.parentId ?? undefined;
@@ -681,6 +813,7 @@ export const openDialog = (
   };
   state.tweenBySection = createEmptyTweenBySection();
   state.transitionMask = undefined;
+  state.transitionMaskRemoved = false;
 };
 
 export const selectTargetGroupId = ({ state }) => {
@@ -731,6 +864,29 @@ const getMutableSectionProperties = (state, side) => {
   return state.tweenBySection[resolveDialogSide(state, side)];
 };
 
+const resolveAutoTweenConfig = (config = {}) => {
+  const duration = Number(config.duration);
+  const resolvedDuration =
+    Number.isFinite(duration) && duration >= 1
+      ? duration
+      : AUTO_TWEEN_DEFAULT_DURATION;
+
+  return {
+    duration: resolvedDuration,
+    easing: config.easing ?? AUTO_TWEEN_DEFAULT_EASING,
+  };
+};
+
+const getTweenPropertyDuration = (config = {}) => {
+  if (config?.auto) {
+    return Number(config.auto.duration) || 0;
+  }
+
+  return (config?.keyframes ?? []).reduce((sum, keyframe) => {
+    return sum + (Number(keyframe.duration) || 0);
+  }, 0);
+};
+
 export const selectProperties = ({ state }, { side } = {}) => {
   return getMutableSectionProperties(state, side) ?? {};
 };
@@ -771,21 +927,14 @@ const createTweenAnimationsForTarget = ({
 
   if (properties && Object.keys(properties).length > 0) {
     for (const [property, config] of Object.entries(properties)) {
-      if (!config.keyframes?.length) {
-        continue;
-      }
+      const tween = {};
 
-      const defaultValue = defaultInitialValuesByProperty[property] ?? 0;
-      const initialValue =
-        config.initialValue !== undefined && config.initialValue !== ""
-          ? parseFloat(config.initialValue)
-          : defaultValue;
-      const processedInitialValue = Number.isNaN(initialValue)
-        ? defaultValue
-        : initialValue;
-      const tween = {
-        [property]: {
-          initialValue: processedInitialValue,
+      if (config?.auto) {
+        tween[property] = {
+          auto: resolveAutoTweenConfig(config.auto),
+        };
+      } else if (config?.keyframes?.length) {
+        tween[property] = {
           keyframes: config.keyframes.map((keyframe) => {
             let value = parseFloat(keyframe.value) ?? 0;
 
@@ -796,8 +945,25 @@ const createTweenAnimationsForTarget = ({
               relative: keyframe.relative ?? false,
             };
           }),
-        },
-      };
+        };
+      } else {
+        continue;
+      }
+
+      if (!config?.auto) {
+        const defaultValue = defaultInitialValuesByProperty[property] ?? 0;
+        const initialValue =
+          config.initialValue !== undefined && config.initialValue !== ""
+            ? parseFloat(config.initialValue)
+            : undefined;
+        const processedInitialValue = Number.isNaN(initialValue)
+          ? defaultValue
+          : initialValue;
+
+        if (processedInitialValue !== undefined) {
+          tween[property].initialValue = processedInitialValue;
+        }
+      }
 
       animations.push({
         id: `${animationIdPrefix}-${property}`,
@@ -818,21 +984,18 @@ const createTweenPayload = ({ properties, projectResolution } = {}) => {
   );
 
   for (const [property, config] of Object.entries(properties ?? {})) {
+    if (config?.auto) {
+      tween[property] = {
+        auto: resolveAutoTweenConfig(config.auto),
+      };
+      continue;
+    }
+
     if (!config?.keyframes?.length) {
       continue;
     }
 
-    const defaultValue = defaultInitialValuesByProperty[property] ?? 0;
-    const initialValue =
-      config.initialValue !== undefined && config.initialValue !== ""
-        ? parseFloat(config.initialValue)
-        : defaultValue;
-    const processedInitialValue = Number.isNaN(initialValue)
-      ? defaultValue
-      : initialValue;
-
     tween[property] = {
-      initialValue: processedInitialValue,
       keyframes: config.keyframes.map((keyframe) => ({
         duration: keyframe.duration,
         value: parseFloat(keyframe.value) ?? 0,
@@ -840,6 +1003,19 @@ const createTweenPayload = ({ properties, projectResolution } = {}) => {
         relative: keyframe.relative ?? false,
       })),
     };
+
+    const defaultValue = defaultInitialValuesByProperty[property] ?? 0;
+    const initialValue =
+      config.initialValue !== undefined && config.initialValue !== ""
+        ? parseFloat(config.initialValue)
+        : undefined;
+    const processedInitialValue = Number.isNaN(initialValue)
+      ? defaultValue
+      : initialValue;
+
+    if (processedInitialValue !== undefined) {
+      tween[property].initialValue = processedInitialValue;
+    }
   }
 
   return tween;
@@ -847,10 +1023,7 @@ const createTweenPayload = ({ properties, projectResolution } = {}) => {
 
 const getPropertiesDuration = (properties = {}) => {
   return Object.values(properties).reduce((maxDuration, config) => {
-    const propertyDuration = (config?.keyframes ?? []).reduce(
-      (sum, keyframe) => sum + (Number(keyframe.duration) || 0),
-      0,
-    );
+    const propertyDuration = getTweenPropertyDuration(config);
 
     return Math.max(maxDuration, propertyDuration);
   }, 0);
@@ -960,7 +1133,7 @@ export const selectAnimationRenderStateWithAnimations = ({ state }) => {
     updateProperties: state.tweenBySection.update,
     previousProperties: state.tweenBySection.prev,
     nextProperties: state.tweenBySection.next,
-    transitionMask: state.transitionMask,
+    transitionMask: getEffectiveTransitionMask(state),
     imagesData: state.imagesData,
     projectResolution: state.projectResolution,
     includeAnimations: true,
@@ -972,7 +1145,7 @@ export const selectPreviewDurationMs = ({ state }) => {
     return getTransitionTimelineDuration({
       prevProperties: state.tweenBySection.prev,
       nextProperties: state.tweenBySection.next,
-      mask: state.transitionMask,
+      mask: getEffectiveTransitionMask(state),
     });
   }
 
@@ -981,7 +1154,7 @@ export const selectPreviewDurationMs = ({ state }) => {
 
 export const addProperty = (
   { state },
-  { side, property, initialValue } = {},
+  { side, property, initialValue, tweenMode, autoDuration, autoEasing } = {},
 ) => {
   const properties = getMutableSectionProperties(state, side);
 
@@ -989,10 +1162,23 @@ export const addProperty = (
     return;
   }
 
+  if (resolveDialogSide(state, side) === "update" && tweenMode === "auto") {
+    properties[property] = {
+      auto: resolveAutoTweenConfig({
+        duration: autoDuration,
+        easing: autoEasing,
+      }),
+    };
+    return;
+  }
+
   properties[property] = {
-    initialValue,
     keyframes: [],
   };
+
+  if (initialValue !== undefined && initialValue !== "") {
+    properties[property].initialValue = initialValue;
+  }
 };
 
 export const addKeyframe = ({ state }, keyframe = {}) => {
@@ -1094,49 +1280,70 @@ export const updateInitialValue = (
     return;
   }
 
+  if (initialValue === undefined || initialValue === "") {
+    delete properties[property].initialValue;
+    return;
+  }
+
   properties[property].initialValue = initialValue;
+};
+
+export const updateAutoProperty = (
+  { state },
+  { side, property, duration, easing } = {},
+) => {
+  const properties = getMutableSectionProperties(state, side);
+
+  if (!property || !properties?.[property]?.auto) {
+    return;
+  }
+
+  properties[property].auto = resolveAutoTweenConfig({
+    duration,
+    easing,
+  });
 };
 
 export const enableTransitionMask = ({ state }, _payload = {}) => {
   state.transitionMask = createDefaultTransitionMask();
+  state.transitionMaskRemoved = false;
 };
 
 export const disableTransitionMask = ({ state }, _payload = {}) => {
   state.transitionMask = undefined;
+  state.transitionMaskRemoved = true;
 };
 
 export const selectTransitionMask = ({ state }) => {
   return getTransitionMask(state);
 };
 
+export const selectTransitionMaskRemoved = ({ state }) => {
+  return state.transitionMaskRemoved === true;
+};
+
 export const setTransitionMaskKind = ({ state }, { kind } = {}) => {
   const currentMask = getTransitionMask(state);
-  if (!currentMask || !kind) {
+  if (!currentMask || !kind || kind !== "single") {
     return;
   }
 
   const nextMask = createDefaultTransitionMask();
-  nextMask.kind = kind;
   nextMask.softness = currentMask.softness;
   nextMask.progressDuration = currentMask.progressDuration;
   nextMask.progressEasing = currentMask.progressEasing;
-
-  if (kind === "single") {
-    nextMask.imageId = currentMask.imageId;
-    nextMask.channel = currentMask.channel;
-    nextMask.invert = currentMask.invert;
-  } else if (kind === "sequence") {
-    nextMask.imageIds = structuredClone(currentMask.imageIds ?? []);
-    nextMask.channel = currentMask.channel;
-    nextMask.invert = currentMask.invert;
-    nextMask.sample = currentMask.sample;
-  } else if (kind === "composite") {
-    nextMask.items =
-      currentMask.items?.length > 0
-        ? structuredClone(currentMask.items)
-        : [createDefaultTransitionMaskCompositeItem()];
-    nextMask.combine = currentMask.combine;
-  }
+  nextMask.imageId =
+    currentMask.imageId ??
+    currentMask.imageIds?.find(Boolean) ??
+    currentMask.items?.find((item) => item?.imageId)?.imageId;
+  nextMask.channel =
+    currentMask.channel ??
+    currentMask.items?.find((item) => item?.channel)?.channel ??
+    nextMask.channel;
+  nextMask.invert =
+    currentMask.invert ??
+    currentMask.items?.find((item) => item?.invert !== undefined)?.invert ??
+    nextMask.invert;
 
   state.transitionMask = nextMask;
 };
@@ -1576,13 +1783,25 @@ export const selectPreviewPlaybackDurationMs = ({ state }) => {
 
 const buildTransitionMaskPanelData = (state) => {
   const transitionMask = getTransitionMask(state);
+  const unsupportedPersistedMask = getUnsupportedPersistedTransitionMask(state);
 
-  if (!transitionMask) {
+  if (!transitionMask && !unsupportedPersistedMask) {
     return createEmptyMaskPanelData();
+  }
+
+  if (unsupportedPersistedMask) {
+    return {
+      ...createEmptyMaskPanelData(),
+      enabled: true,
+      unsupported: true,
+      unsupportedKind: unsupportedPersistedMask.kind,
+    };
   }
 
   return {
     enabled: true,
+    unsupported: false,
+    unsupportedKind: undefined,
     kind: transitionMask.kind,
     channelValue: transitionMask.channel ?? "red",
     sampleValue: transitionMask.sample ?? "step",
@@ -1619,7 +1838,7 @@ export const selectViewData = ({ state }) => {
   const transitionTimelineDuration = getTransitionTimelineDuration({
     prevProperties: previousProperties,
     nextProperties,
-    mask: state.transitionMask,
+    mask: getEffectiveTransitionMask(state),
   });
   const addPropertySide =
     state.popover.payload?.side ??
@@ -1682,11 +1901,18 @@ export const selectViewData = ({ state }) => {
 
   let addPropertyContext = {};
   let editKeyframeDefaultValues = {};
+  let editAutoDefaultValues = {};
   let editInitialValueDefaultValues = {};
   let editInitialValueContext = {};
 
   if (state.popover.mode === "addProperty") {
-    addPropertyContext = { ...state.popover.formValues };
+    addPropertyContext = {
+      useInitialValue: false,
+      tweenMode: "keyframes",
+      duration: AUTO_TWEEN_DEFAULT_DURATION,
+      easing: AUTO_TWEEN_DEFAULT_EASING,
+      ...state.popover.formValues,
+    };
   }
 
   if (state.popover.mode === "editKeyframe") {
@@ -1704,15 +1930,28 @@ export const selectViewData = ({ state }) => {
     }
   }
 
+  if (state.popover.mode === "editAuto") {
+    const { side, property } = state.popover.payload;
+    const currentAuto = getSectionProperties(state, side)[property]?.auto;
+
+    if (currentAuto) {
+      editAutoDefaultValues = {
+        duration: currentAuto.duration ?? AUTO_TWEEN_DEFAULT_DURATION,
+        easing: currentAuto.easing ?? AUTO_TWEEN_DEFAULT_EASING,
+      };
+    }
+  }
+
   if (state.popover.mode === "editInitialValue") {
     const { side, property } = state.popover.payload;
     const currentInitialValue = getSectionProperties(state, side)[property]
       ?.initialValue;
     const defaultValue = defaultInitialValuesByProperty[property] ?? 0;
-    const isUsingDefault = currentInitialValue === defaultValue;
+    const isUsingDefault =
+      currentInitialValue === undefined || currentInitialValue === "";
 
     editInitialValueDefaultValues = {
-      initialValue: currentInitialValue,
+      initialValue: isUsingDefault ? defaultValue : currentInitialValue,
       valueSource: isUsingDefault ? "default" : "custom",
     };
 
@@ -1743,6 +1982,9 @@ export const selectViewData = ({ state }) => {
     addPropertyForm: createAddPropertyForm(
       addPropertyOptions,
       propertyFieldConfig,
+      {
+        side: addPropertySide,
+      },
     ),
     addPropertyContext,
     addKeyframeForm: createAddKeyframeForm(
@@ -1754,9 +1996,11 @@ export const selectViewData = ({ state }) => {
       state.popover.payload?.property,
       propertyFieldConfig,
     ),
+    editAutoForm: createEditAutoTweenForm(),
     editInitialValueForm,
     editInitialValueContext,
     editKeyframeDefaultValues,
+    editAutoDefaultValues,
     editInitialValueDefaultValues,
     keyframeDropdownItems,
     transitionMaskPanel,
@@ -1780,6 +2024,7 @@ export const selectViewData = ({ state }) => {
         "addProperty",
         "addKeyframe",
         "editKeyframe",
+        "editAuto",
         "editInitialValue",
       ].includes(state.popover.mode),
       dropdownMenuIsOpen: ["keyframeMenu", "propertyNameMenu"].includes(
@@ -1789,6 +2034,9 @@ export const selectViewData = ({ state }) => {
     },
     addPropertyFormDefaultValues: {
       useInitialValue: false,
+      tweenMode: "keyframes",
+      duration: AUTO_TWEEN_DEFAULT_DURATION,
+      easing: AUTO_TWEEN_DEFAULT_EASING,
     },
     imageSelectorDialog: state.imageSelectorDialog,
     imageFolderItems,

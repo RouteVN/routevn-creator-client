@@ -1,0 +1,18 @@
+componentName: rvn-spritesheet-preview
+propsSchema:
+  type: object
+  properties:
+    fileId:
+      type: string
+    src:
+      type: string
+    atlas:
+      type: object
+    animation:
+      type: object
+    emptyLabel:
+      type: string
+    w:
+      type: string
+    h:
+      type: string

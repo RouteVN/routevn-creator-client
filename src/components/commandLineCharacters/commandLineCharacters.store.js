@@ -1,14 +1,71 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 
+const createEmptyCollection = () => ({
+  items: {},
+  tree: [],
+});
+
+const ANIMATION_MODE_OPTIONS = [
+  {
+    label: "None",
+    value: "none",
+  },
+  {
+    label: "Update",
+    value: "update",
+  },
+  {
+    label: "Transition",
+    value: "transition",
+  },
+];
+
+const getAnimationType = (item = {}) => {
+  return item?.animation?.type === "transition" ? "transition" : "update";
+};
+
+const getAnimationItemById = (collection = {}, animationId) => {
+  if (!animationId) {
+    return undefined;
+  }
+
+  return toFlatItems(collection).find(
+    (item) => item.id === animationId && item.type === "animation",
+  );
+};
+
+const getAnimationModeById = (collection = {}, animationId) => {
+  const item = getAnimationItemById(collection, animationId);
+  return item ? getAnimationType(item) : undefined;
+};
+
+const normalizeSelectedCharacter = (character = {}, animations = {}) => {
+  const nextCharacter = structuredClone(character ?? {});
+  const selectedAnimationId = nextCharacter?.animations?.resourceId;
+  const selectedAnimationMode = getAnimationModeById(
+    animations,
+    selectedAnimationId,
+  );
+
+  nextCharacter.animationMode =
+    nextCharacter.animationMode ??
+    selectedAnimationMode ??
+    (selectedAnimationId ? "update" : "none");
+
+  return nextCharacter;
+};
+
 export const createInitialState = () => ({
   mode: "current",
-  items: { items: {}, tree: [] },
-  transforms: { tree: [], items: {} },
+  items: createEmptyCollection(),
+  transforms: createEmptyCollection(),
+  animations: createEmptyCollection(),
   /**
    * Array of raw character objects with the following structure (same as props):
    * {
    *   id: string,              // Character ID from repository
    *   transformId: string,     // Transform ID
+   *   animations: object,      // Optional animation selection with resourceId
    *   sprites: array,          // Array of sprites with resourceId
    *   spriteName: string       // Display name for sprite
    * }
@@ -40,6 +97,13 @@ export const setTransforms = ({ state }, { transforms } = {}) => {
   state.transforms = transforms;
 };
 
+export const setAnimations = ({ state }, { animations } = {}) => {
+  state.animations = animations;
+  state.selectedCharacters = state.selectedCharacters.map((character) =>
+    normalizeSelectedCharacter(character, state.animations),
+  );
+};
+
 export const addCharacter = ({ state }, { id } = {}) => {
   // Get the first available transform as default
   const transformItems = toFlatItems(state.transforms).filter(
@@ -54,6 +118,7 @@ export const addCharacter = ({ state }, { id } = {}) => {
     transformId: defaultTransform,
     sprites: [],
     spriteName: "",
+    animationMode: "none",
   });
 };
 
@@ -67,6 +132,59 @@ export const updateCharacterTransform = (
 ) => {
   if (state.selectedCharacters[index]) {
     state.selectedCharacters[index].transformId = transform;
+  }
+};
+
+export const updateCharacterAnimation = (
+  { state },
+  { index, animationId } = {},
+) => {
+  if (!state.selectedCharacters[index]) {
+    return;
+  }
+
+  if (!animationId || animationId === "none") {
+    state.selectedCharacters[index].animations = undefined;
+    return;
+  }
+
+  state.selectedCharacters[index].animations = {
+    resourceId: animationId,
+  };
+
+  const selectedAnimationMode = getAnimationModeById(
+    state.animations,
+    animationId,
+  );
+  if (selectedAnimationMode) {
+    state.selectedCharacters[index].animationMode = selectedAnimationMode;
+  }
+};
+
+export const updateCharacterAnimationMode = (
+  { state },
+  { index, animationMode } = {},
+) => {
+  if (!state.selectedCharacters[index]) {
+    return;
+  }
+
+  if (animationMode !== "update" && animationMode !== "transition") {
+    state.selectedCharacters[index].animationMode = "none";
+    state.selectedCharacters[index].animations = undefined;
+    return;
+  }
+
+  state.selectedCharacters[index].animationMode = animationMode;
+
+  const selectedAnimationId =
+    state.selectedCharacters[index]?.animations?.resourceId;
+  const selectedAnimationMode = getAnimationModeById(
+    state.animations,
+    selectedAnimationId,
+  );
+  if (selectedAnimationMode && selectedAnimationMode !== animationMode) {
+    state.selectedCharacters[index].animations = undefined;
   }
 };
 
@@ -173,7 +291,9 @@ export const selectCurrentSpriteItemById = ({ state }, { spriteId } = {}) => {
 };
 
 export const setExistingCharacters = ({ state }, { characters } = {}) => {
-  state.selectedCharacters = characters;
+  state.selectedCharacters = (Array.isArray(characters) ? characters : []).map(
+    (character) => normalizeSelectedCharacter(character, state.animations),
+  );
 };
 
 export const selectCharactersWithRepositoryData = ({ state }) => {
@@ -193,6 +313,8 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
         id: char.id,
         name: "Unknown Character",
         transformId: char.transformId,
+        animations: char.animations,
+        animationMode: char.animationMode,
         spriteId: char.sprites?.[0]?.resourceId,
         spriteFileId: undefined,
         spriteName: char.spriteName || "",
@@ -213,6 +335,8 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
     return {
       ...characterData,
       transformId: char.transformId,
+      animations: char.animations,
+      animationMode: char.animationMode,
       spriteId: char.sprites?.[0]?.resourceId,
       spriteFileId: spriteFileId,
       spriteName: char.spriteName || "",
@@ -277,12 +401,34 @@ export const selectViewData = ({ state }) => {
     label: transform.name,
     value: transform.id,
   }));
+  const animationItems = toFlatItems(state.animations).filter(
+    (item) => item.type === "animation",
+  );
+  const updateAnimationOptions = animationItems
+    .filter((item) => getAnimationType(item) === "update")
+    .map((item) => ({
+      value: item.id,
+      label: item.name,
+    }));
+  const transitionAnimationOptions = animationItems
+    .filter((item) => getAnimationType(item) === "transition")
+    .map((item) => ({
+      value: item.id,
+      label: item.name,
+    }));
 
   // Get enriched character data
   const enrichedCharacters = selectCharactersWithRepositoryData({ state });
   const processedSelectedCharacters = enrichedCharacters.map((character) => ({
     ...character,
     displayName: character.name || "Unnamed Character",
+    animationMode:
+      character.animationMode ??
+      getAnimationModeById(
+        state.animations,
+        character.animations?.resourceId,
+      ) ??
+      "none",
   }));
 
   // Get sprite data for the selected character (after processedSelectedCharacters is defined)
@@ -367,8 +513,12 @@ export const selectViewData = ({ state }) => {
       transformId:
         char.transformId ||
         (transformOptions.length > 0 ? transformOptions[0].value : undefined),
+      animationId: char.animations?.resourceId,
     })),
     transformOptions,
+    animationModeOptions: ANIMATION_MODE_OPTIONS,
+    updateAnimationOptions,
+    transitionAnimationOptions,
   };
 
   return {
@@ -377,6 +527,9 @@ export const selectViewData = ({ state }) => {
     groups: flatGroups,
     selectedCharacters: processedSelectedCharacters,
     transformOptions,
+    animationModeOptions: ANIMATION_MODE_OPTIONS,
+    updateAnimationOptions,
+    transitionAnimationOptions,
     spriteItems,
     spriteGroups,
     selectedCharacterName,

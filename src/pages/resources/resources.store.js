@@ -21,14 +21,21 @@ export const createInitialState = () => ({
       route: "/project/transforms",
     },
     {
+      id: "videos",
+      label: "Videos",
+      route: "/project/videos",
+    },
+  ],
+  animatedAssets: [
+    {
       id: "animations",
       label: "Animations",
       route: "/project/animations",
     },
     {
-      id: "videos",
-      label: "Videos",
-      route: "/project/videos",
+      id: "spritesheets",
+      label: "Spritesheets",
+      route: "/project/spritesheets",
     },
   ],
   ui: [
@@ -60,7 +67,10 @@ export const createInitialState = () => ({
 export const selectResourceRoute = ({ state }, id) => {
   // console.log('payload', payload)
   // const { resourceId, projectId } = payload;
-  const resources = state.assets.concat(state.ui).concat(state.system);
+  const resources = state.assets
+    .concat(state.animatedAssets)
+    .concat(state.ui)
+    .concat(state.system);
   const resource = resources.find((resource) => resource.id === id);
   if (!resource) {
     throw new Error(`Resource ${id} not found`);

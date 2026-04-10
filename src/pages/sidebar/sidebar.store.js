@@ -1,10 +1,12 @@
 import {
   assetItems,
+  animatedAssetItems,
   systemConfigItems,
   userInterfaceItems,
 } from "../resourceTypes/resourceTypes.store.js";
 
 const SIDEBAR_TITLE_ASSETS = "Assets";
+const SIDEBAR_TITLE_ANIMATED_ASSETS = "Animated Assets";
 const SIDEBAR_TITLE_USER_INTERFACE = "User Interface";
 const SIDEBAR_TITLE_SYSTEM = "System";
 const SIDEBAR_TITLE_SCENES = "Scenes";
@@ -26,6 +28,11 @@ export const createInitialState = () => ({
       title: "Assets",
       path: "/project/images",
       icon: "image",
+    },
+    {
+      title: "Animated Assets",
+      path: "/project/animations",
+      icon: "choices",
     },
     {
       title: "User Interface",
@@ -80,6 +87,12 @@ export const selectViewData = ({ state }) => {
         items: assetItems,
         sidebarPath: state.items.find(
           (item) => item.title === SIDEBAR_TITLE_ASSETS,
+        )?.path,
+      },
+      {
+        items: animatedAssetItems,
+        sidebarPath: state.items.find(
+          (item) => item.title === SIDEBAR_TITLE_ANIMATED_ASSETS,
         )?.path,
       },
       {

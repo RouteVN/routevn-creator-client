@@ -16,6 +16,12 @@ import {
   shouldPersistLayoutEditorFieldImmediately,
 } from "./support/layoutEditorPersistence.js";
 import { isFragmentLayout } from "../../internal/project/layout.js";
+import {
+  getFirstSpritesheetAnimationSelectionValue,
+  getSpritesheetResourceDefaultSize,
+  parseSpritesheetAnimationSelectionValue,
+  toSpritesheetAnimationSelectionItems,
+} from "../../internal/spritesheets.js";
 import { createLayoutElementsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { createLayoutEditorRepositoryStoreData } from "./support/layoutEditorRepositoryState.js";
 
@@ -96,6 +102,20 @@ const resolveSpriteCreateAction = (detail = {}) => {
   return undefined;
 };
 
+const resolveSpritesheetCreateAction = (detail = {}) => {
+  const value = resolveMenuItem(detail)?.value;
+  if (
+    value &&
+    typeof value === "object" &&
+    value.action === "new-child-item" &&
+    value.type === "spritesheet-animation"
+  ) {
+    return value;
+  }
+
+  return undefined;
+};
+
 const resolveFragmentCreateAction = (detail = {}) => {
   const value = resolveMenuItem(detail)?.value;
   if (
@@ -160,6 +180,46 @@ const createFragmentCreateForm = (fragmentLayoutOptions = []) => {
           id: "submit",
           variant: "pr",
           label: "Insert Fragment",
+          validate: true,
+        },
+      ],
+    },
+  };
+};
+
+const createSpritesheetCreateForm = (selectionItems = []) => {
+  return {
+    title: "Create Spritesheet Animation",
+    description:
+      "Choose which imported spritesheet animation to insert into the layout",
+    fields: [
+      {
+        name: "name",
+        type: "input-text",
+        label: "Name",
+        required: true,
+      },
+      {
+        name: "spritesheetSelection",
+        type: "select",
+        label: "Animation",
+        required: true,
+        clearable: false,
+        options: selectionItems,
+      },
+    ],
+    actions: {
+      buttons: [
+        {
+          id: "cancel",
+          variant: "se",
+          label: "Cancel",
+          align: "left",
+        },
+        {
+          id: "submit",
+          variant: "pr",
+          label: "Create Animation",
           validate: true,
         },
       ],
@@ -570,6 +630,128 @@ export const handleFileExplorerAction = async (deps, payload) => {
     return;
   }
 
+  const spritesheetAction = resolveSpritesheetCreateAction(
+    payload?._event?.detail,
+  );
+  if (spritesheetAction) {
+    const { appService, projectService, store } = deps;
+    const parentId = payload?._event?.detail?.itemId ?? null;
+    const spritesheetsData = store.selectSpritesheetsData();
+    const selectionItems =
+      toSpritesheetAnimationSelectionItems(spritesheetsData);
+
+    if (selectionItems.length === 0) {
+      appService.showToast("Import a spritesheet first.", {
+        title: "Warning",
+      });
+      return;
+    }
+
+    const dialogResult = await appService.showFormDialog({
+      form: createSpritesheetCreateForm(selectionItems),
+      defaultValues: {
+        name: spritesheetAction.name ?? "Spritesheet Animation",
+        spritesheetSelection:
+          getFirstSpritesheetAnimationSelectionValue(spritesheetsData),
+      },
+    });
+
+    if (!dialogResult || dialogResult.actionId !== "submit") {
+      return;
+    }
+
+    const name = dialogResult.values?.name?.trim();
+    if (!name) {
+      appService.showToast("Animation name is required.", {
+        title: "Warning",
+      });
+      return;
+    }
+
+    const { resourceId, animationName } =
+      parseSpritesheetAnimationSelectionValue(
+        dialogResult.values?.spritesheetSelection,
+      );
+    if (!resourceId || !animationName) {
+      appService.showToast("Spritesheet animation is required.", {
+        title: "Warning",
+      });
+      return;
+    }
+
+    const layoutId = store.selectLayoutId();
+    const resourceType = store.selectLayoutResourceType();
+    if (!layoutId) {
+      appService.showToast(
+        resourceType === "controls"
+          ? "Control is missing."
+          : "Layout is missing.",
+        {
+          title: "Error",
+        },
+      );
+      return;
+    }
+
+    const nextElementId = nanoid();
+    const nextElementData = {
+      ...getLayoutEditorCreateDefinition("spritesheet-animation", {
+        projectResolution: store.selectProjectResolution(),
+      }).template,
+      name,
+      resourceId,
+      animationName,
+    };
+    const resourceSize = getSpritesheetResourceDefaultSize(
+      spritesheetsData,
+      resourceId,
+    );
+    if (Number.isFinite(resourceSize.width) && resourceSize.width > 0) {
+      nextElementData.width = resourceSize.width;
+    }
+    if (Number.isFinite(resourceSize.height) && resourceSize.height > 0) {
+      nextElementData.height = resourceSize.height;
+    }
+    if (
+      Number.isFinite(nextElementData.width) &&
+      Number.isFinite(nextElementData.height) &&
+      nextElementData.width > 0 &&
+      nextElementData.height > 0
+    ) {
+      nextElementData.aspectRatioLock =
+        nextElementData.width / nextElementData.height;
+    }
+
+    await projectService.ensureRepository();
+    const { ownerPayloadKey, createElement } = getSliderCreateOwnerConfig(
+      resourceType,
+      projectService,
+    );
+    const createResult = await createElement({
+      [ownerPayloadKey]: layoutId,
+      elementId: nextElementId,
+      data: nextElementData,
+      parentId,
+      position: "last",
+    });
+
+    if (createResult?.valid === false) {
+      appService.showToast(
+        getResultErrorMessage(
+          createResult,
+          "Failed to create spritesheet animation.",
+        ),
+        {
+          title: "Error",
+        },
+      );
+      return;
+    }
+
+    await refreshLayoutEditorData(deps, { selectedItemId: nextElementId });
+    return;
+  }
+
   const spriteAction = resolveSpriteCreateAction(payload?._event?.detail);
   const sliderAction = resolveSliderCreateAction(payload?._event?.detail);
   if (!spriteAction && !sliderAction) {
@@ -830,6 +1012,7 @@ const subscriptions = (deps) => {
         "layouts",
         "controls",
         "images",
+        "spritesheets",
         "textStyles",
         "colors",
         "fonts",
@@ -948,12 +1131,22 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     }
     delete updatedItem.aspectRatioMode;
   } else {
-    updatedItem = applyLayoutItemFieldChange({
-      item: currentItemWithEditorFlags,
-      name: detail.name,
-      value: detail.value,
-      imagesData: store.selectImages(),
-    });
+    if (detail.name === "spritesheetSelection") {
+      const { resourceId, animationName } =
+        parseSpritesheetAnimationSelectionValue(detail.value);
+      updatedItem = {
+        ...structuredClone(currentItemWithEditorFlags),
+        resourceId,
+        animationName,
+      };
+    } else {
+      updatedItem = applyLayoutItemFieldChange({
+        item: currentItemWithEditorFlags,
+        name: detail.name,
+        value: detail.value,
+        imagesData: store.selectImages(),
+      });
+    }
   }
 
   if (
