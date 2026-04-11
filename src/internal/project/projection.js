@@ -1155,7 +1155,7 @@ const LAYOUT_RESOURCE_KEYS = [
   "fontFileId",
 ];
 
-const TEXT_STYLE_RESOURCE_KEYS = ["colorId", "fontId"];
+const TEXT_STYLE_RESOURCE_KEYS = ["colorId", "strokeColorId", "fontId"];
 
 const EXPORT_RESOURCE_KEYS = new Set([
   ...SCENE_RESOURCE_KEYS,
@@ -1201,6 +1201,7 @@ const RESOURCE_KEY_TO_TYPES = {
   hoverTextStyleId: ["textStyles"],
   clickTextStyleId: ["textStyles"],
   colorId: ["colors"],
+  strokeColorId: ["colors"],
   fontId: ["fonts"],
   fontFileId: ["fonts"],
 };

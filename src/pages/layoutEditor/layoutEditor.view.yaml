@@ -51,9 +51,10 @@ template:
               - rtgl-view w=1fg:
                   - rtgl-text: ${layout.name}
               - rtgl-button#saveButton sq pre="download" v="gh" ml=sm: null
-          - rtgl-view h=1fg sv w=f:
+          - 'rtgl-view d=v h=1fg w=f style="min-height: 0;"':
               - rvn-layout-editor-canvas#layoutEditorCanvas :resolution=${projectResolution} :layoutState=${layoutState} selectedItemId=${selectedItemId} :previewData=${previewData} :disableMoveDrag=${isInsideDirectedContainer}: null
-              - rvn-layout-editor-preview#layoutEditorPreview :layoutState=${layoutState}: null
+              - 'rtgl-view h=1fg w=f sv style="min-height: 0;"':
+                  - rvn-layout-editor-preview#layoutEditorPreview :layoutState=${layoutState}: null
       - rvn-resizable-panel#resizableDetailPanel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
           - rtgl-view wh=f slot="content":
               - $if selectedItemId:

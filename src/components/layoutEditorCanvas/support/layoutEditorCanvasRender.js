@@ -93,6 +93,11 @@ const normalizeLayoutEditorPreviewData = (previewData = {}) => {
 
   return {
     ...nextPreviewData,
+    backgroundImageId:
+      typeof nextPreviewData.backgroundImageId === "string" &&
+      nextPreviewData.backgroundImageId.length > 0
+        ? nextPreviewData.backgroundImageId
+        : undefined,
     variables: toPlainObject(nextPreviewData.variables),
     runtime: {
       ...nextRuntime,
@@ -151,6 +156,51 @@ const normalizeLayoutEditorPreviewData = (previewData = {}) => {
             },
           ],
     saveSlots: toArray(nextPreviewData.saveSlots),
+  };
+};
+
+const toPositiveNumber = (value, fallback) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const createLayoutEditorPreviewBackgroundElement = ({
+  previewData,
+  repositoryState,
+  resolution,
+} = {}) => {
+  const backgroundImageId = previewData?.backgroundImageId;
+  if (!backgroundImageId) {
+    return undefined;
+  }
+
+  const imageItem = repositoryState?.images?.items?.[backgroundImageId];
+  if (imageItem?.type && imageItem.type !== "image") {
+    return undefined;
+  }
+
+  const fileId = imageItem?.fileId;
+  if (typeof fileId !== "string" || fileId.length === 0) {
+    return undefined;
+  }
+
+  const resolutionWidth = toPositiveNumber(resolution?.width, undefined);
+  const resolutionHeight = toPositiveNumber(resolution?.height, undefined);
+  if (resolutionWidth === undefined || resolutionHeight === undefined) {
+    return undefined;
+  }
+
+  return {
+    id: "layout-editor-preview-background",
+    type: "sprite",
+    src: fileId,
+    fileType: imageItem?.fileType ?? "image/png",
+    x: Math.round(resolutionWidth / 2),
+    y: Math.round(resolutionHeight / 2),
+    width: toPositiveNumber(imageItem?.width, resolutionWidth),
+    height: toPositiveNumber(imageItem?.height, resolutionHeight),
+    anchorX: 0.5,
+    anchorY: 0.5,
   };
 };
 
@@ -579,6 +629,7 @@ export const createLayoutEditorRenderedElements = ({
   layoutState,
   repositoryState,
   previewData,
+  resolution,
   selectedItemId,
   disableMoveDrag,
   graphicsService,
@@ -587,15 +638,24 @@ export const createLayoutEditorRenderedElements = ({
     layoutState,
     repositoryState,
   });
+  const normalizedPreviewData = normalizeLayoutEditorPreviewData(previewData);
   const finalElements = resolveLayoutPreviewElements({
     elements: renderStateElements,
-    previewData,
+    previewData: normalizedPreviewData,
   });
   const resolvedFinalElements = resolveLayoutReferences(finalElements, {
     resources,
   });
+  const previewBackgroundElement = createLayoutEditorPreviewBackgroundElement({
+    previewData: normalizedPreviewData,
+    repositoryState,
+    resolution,
+  });
+  const renderedElements = previewBackgroundElement
+    ? [previewBackgroundElement, ...resolvedFinalElements]
+    : resolvedFinalElements;
   const parsedState = graphicsService.parse({
-    elements: resolvedFinalElements,
+    elements: renderedElements,
   });
   const overlayElements = createLayoutEditorSelectionOverlay({
     parsedElements: parsedState.elements,
@@ -608,8 +668,8 @@ export const createLayoutEditorRenderedElements = ({
   );
 
   return {
-    elements: [...resolvedFinalElements, ...overlayElements],
-    fileReferences: extractFileIdsFromRenderState(resolvedFinalElements),
+    elements: [...renderedElements, ...overlayElements],
+    fileReferences: extractFileIdsFromRenderState(renderedElements),
     selectedElementMetrics,
   };
 };

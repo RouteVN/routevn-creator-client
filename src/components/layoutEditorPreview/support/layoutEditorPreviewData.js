@@ -20,6 +20,7 @@ export const createLayoutEditorPreviewData = ({
   previewRevealingSpeed,
   choicesData,
   saveLoadData,
+  backgroundImageId,
 } = {}) => {
   const { dialogue, dialogueRevealingSpeed } = createDialoguePreviewData({
     layoutType,
@@ -29,6 +30,10 @@ export const createLayoutEditorPreviewData = ({
   });
 
   return {
+    backgroundImageId:
+      typeof backgroundImageId === "string" && backgroundImageId.length > 0
+        ? backgroundImageId
+        : undefined,
     variables: {
       ...applyPreviewVariableOverrides(
         createPreviewVariables(variablesData),

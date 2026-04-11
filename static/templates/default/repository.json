@@ -775,6 +775,12 @@
         "type": "color",
         "name": "Yellow",
         "hex": "#FFD84D"
+      },
+      "dL9Qd9q4mW9vM8kWv5wQe": {
+        "id": "dL9Qd9q4mW9vM8kWv5wQe",
+        "type": "color",
+        "name": "Active",
+        "hex": "#ff5252"
       }
     },
     "tree": [
@@ -789,6 +795,9 @@
           },
           {
             "id": "WT1WD8x7KekvJaUrrf2p9"
+          },
+          {
+            "id": "dL9Qd9q4mW9vM8kWv5wQe"
           }
         ]
       }
@@ -807,6 +816,8 @@
         "name": "Default",
         "fontId": "WbhTa7gjrKgfgb7nYptFb",
         "colorId": "yqk8aZABQccrrEZUSoAp2",
+        "strokeColorId": "NqhJ2JeHjnPx8vg9zAJMb",
+        "strokeWidth": 4,
         "fontSize": 24,
         "lineHeight": 1.2,
         "fontWeight": "400",
@@ -818,6 +829,8 @@
         "name": "Character Name",
         "fontId": "WbhTa7gjrKgfgb7nYptFb",
         "colorId": "yqk8aZABQccrrEZUSoAp2",
+        "strokeColorId": "NqhJ2JeHjnPx8vg9zAJMb",
+        "strokeWidth": 4,
         "fontSize": 48,
         "lineHeight": 1.5,
         "fontWeight": "400",
@@ -829,6 +842,8 @@
         "name": "Text View",
         "fontId": "WbhTa7gjrKgfgb7nYptFb",
         "colorId": "yqk8aZABQccrrEZUSoAp2",
+        "strokeColorId": "NqhJ2JeHjnPx8vg9zAJMb",
+        "strokeWidth": 4,
         "fontSize": 36,
         "lineHeight": 1.5,
         "fontWeight": "400",
@@ -840,6 +855,8 @@
         "name": "Default Hover Yellow",
         "fontId": "WbhTa7gjrKgfgb7nYptFb",
         "colorId": "WT1WD8x7KekvJaUrrf2p9",
+        "strokeColorId": "NqhJ2JeHjnPx8vg9zAJMb",
+        "strokeWidth": 4,
         "fontSize": 24,
         "lineHeight": 1.2,
         "fontWeight": "400",
@@ -852,10 +869,11 @@
         "fontSize": 36,
         "lineHeight": 1.5,
         "colorId": "yqk8aZABQccrrEZUSoAp2",
+        "strokeColorId": "NqhJ2JeHjnPx8vg9zAJMb",
         "fontId": "WbhTa7gjrKgfgb7nYptFb",
         "fontWeight": "700",
         "previewText": "Menu Text",
-        "strokeWidth": 0
+        "strokeWidth": 4
       },
       "6wXcAmc_SmJHzMIeKp--Z": {
         "id": "6wXcAmc_SmJHzMIeKp--Z",
@@ -864,10 +882,24 @@
         "fontSize": 36,
         "lineHeight": 1.5,
         "colorId": "WT1WD8x7KekvJaUrrf2p9",
+        "strokeColorId": "NqhJ2JeHjnPx8vg9zAJMb",
         "fontId": "WbhTa7gjrKgfgb7nYptFb",
         "fontWeight": "400",
         "previewText": "",
-        "strokeWidth": 0
+        "strokeWidth": 4
+      },
+      "a8u1N2rL7mV5pQ4tY6wZe": {
+        "id": "a8u1N2rL7mV5pQ4tY6wZe",
+        "type": "textStyle",
+        "name": "Menu Text Active",
+        "fontSize": 36,
+        "lineHeight": 1.5,
+        "colorId": "dL9Qd9q4mW9vM8kWv5wQe",
+        "strokeColorId": "NqhJ2JeHjnPx8vg9zAJMb",
+        "fontId": "WbhTa7gjrKgfgb7nYptFb",
+        "fontWeight": "400",
+        "previewText": "",
+        "strokeWidth": 4
       }
     },
     "tree": [
@@ -892,6 +924,10 @@
           },
           {
             "id": "6wXcAmc_SmJHzMIeKp--Z",
+            "children": []
+          },
+          {
+            "id": "a8u1N2rL7mV5pQ4tY6wZe",
             "children": []
           }
         ]
@@ -1506,7 +1542,16 @@
               "anchorY": 0,
               "scaleX": 1,
               "scaleY": 1,
-              "rotation": 0
+              "rotation": 0,
+              "hover": {
+                "inheritToChildren": true
+              },
+              "click": {
+                "inheritToChildren": true
+              },
+              "rightClick": {
+                "inheritToChildren": true
+              }
             },
             "ghg9bBCPKm8MhCAwzH2Vw": {
               "id": "ghg9bBCPKm8MhCAwzH2Vw",
