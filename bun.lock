@@ -4,8 +4,8 @@
   "workspaces": {
     "": {
       "dependencies": {
-        "@rettangoli/fe": "1.1.2",
-        "@rettangoli/ui": "1.4.1",
+        "@rettangoli/fe": "1.1.3",
+        "@rettangoli/ui": "1.4.2",
         "@rettangoli/vt": "1.0.2",
         "@routevn/creator-model": "1.2.2",
         "@tauri-apps/api": "^2.8.0",
@@ -203,9 +203,9 @@
 
     "@polka/url": ["@polka/url@1.0.0-next.29", "", {}, "sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww=="],
 
-    "@rettangoli/fe": ["@rettangoli/fe@1.1.2", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.0.1", "js-yaml": "^4.1.0", "snabbdom": "^3.6.2", "vite": "^6.3.5" } }, "sha512-1HLVsSXaerxROJoi+XqNkDuYWVVFIdkqoEdPCqtoaUMeSFDN7jNwkXeiWktb0PxbzzB+lgGl+eCm0hzrKnyweg=="],
+    "@rettangoli/fe": ["@rettangoli/fe@1.1.3", "", { "dependencies": { "immer": "^10.1.1", "jempl": "1.0.1", "js-yaml": "^4.1.0", "snabbdom": "^3.6.2", "vite": "^6.3.5" } }, "sha512-/fia9Ir5x5NU7fjfXtuioCwbc4ELj939pM+/vB9R7bOAPVKosKTspyOuYqMrstysfT84xfLEcPidBrI5OY/l0g=="],
 
-    "@rettangoli/ui": ["@rettangoli/ui@1.4.1", "", { "dependencies": { "@rettangoli/fe": "1.1.2", "jempl": "1.0.1" } }, "sha512-PDU0ECa219GudPO40CLj33pwfRtLz45vV9Gsc7e73ngiHz5diRCusUcbrxNA5UPayducQpkObFTr/RPnM7xilQ=="],
+    "@rettangoli/ui": ["@rettangoli/ui@1.4.2", "", { "dependencies": { "@rettangoli/fe": "1.1.3", "jempl": "1.0.1" } }, "sha512-Tjns/M7PmDVZ38NNL/Zte0eDsBguUOQVLtIXfRoUIHZsekMPHls+jvKjnaq5xj2zOAr6P4lKtPyXrB+pSZqvWQ=="],
 
     "@rettangoli/vt": ["@rettangoli/vt@1.0.2", "", { "dependencies": { "commander": "^13.1.0", "js-yaml": "^4.1.0", "liquidjs": "^10.21.0", "pixelmatch": "^7.1.0", "playwright": "1.57.0", "sharp": "^0.34.5", "shiki": "^3.3.0" } }, "sha512-QHweZ2BJFiQi0mc8KvSLiFjKTm9ovjs++x9cOTtN89AyK/Pn0acuD0mA+kjOu4zgPcaHvjOAINNqMFsqhx9Hgw=="],
 

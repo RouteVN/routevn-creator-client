@@ -84,6 +84,40 @@ const getVisibleItems = (allItems, collapsedIds) => {
   });
 };
 
+const emitItemClick = ({ dispatchEvent, item } = {}) => {
+  if (!item) {
+    return;
+  }
+
+  const isFolder = item?.type === "folder";
+
+  dispatchEvent(
+    new CustomEvent("item-click", {
+      detail: {
+        id: item.id,
+        itemId: item.id,
+        item,
+        isFolder,
+      },
+    }),
+  );
+};
+
+const selectVisibleItem = ({ deps, item, emitSelectionEvent = false } = {}) => {
+  const { dispatchEvent, store, render } = deps;
+  if (!item?.id) {
+    return undefined;
+  }
+
+  store.expandItemAncestors({ itemId: item.id });
+  store.setSelectedItemId({ itemId: item.id });
+  render();
+  if (emitSelectionEvent) {
+    emitItemClick({ dispatchEvent, item });
+  }
+  return item;
+};
+
 const resolveDropTargetItem = ({ visibleItems, targetIndex, dropPosition }) => {
   if (dropPosition === "above" && targetIndex === -1) {
     return visibleItems[0];
@@ -668,29 +702,18 @@ export const handleItemContextMenu = (deps, payload) => {
 };
 
 export const handleItemClick = (deps, payload) => {
-  const { dispatchEvent, store, render, props } = deps;
+  const { store, render, props } = deps;
   const itemId = getItemIdFromEvent(payload._event);
   if (!itemId) {
     return;
   }
   const item = props.items?.find((entry) => entry.id === itemId);
-  const isFolder = item?.type === "folder";
 
   // Update selected item
   store.clearPendingDrag();
   store.setSelectedItemId({ itemId: itemId });
   render();
-
-  dispatchEvent(
-    new CustomEvent("item-click", {
-      detail: {
-        id: itemId,
-        itemId,
-        item,
-        isFolder,
-      },
-    }),
-  );
+  emitItemClick({ dispatchEvent: deps.dispatchEvent, item });
 };
 
 export const handleItemDblClick = (deps, payload) => {
@@ -715,12 +738,125 @@ export const handleItemDblClick = (deps, payload) => {
 };
 
 export const handlePageItemClick = (deps, payload) => {
-  const { store, render } = deps;
   const { itemId } = payload._event.detail; // Extract from forwarded event
+  const item = deps.props.items?.find((entry) => entry.id === itemId);
 
-  store.expandItemAncestors({ itemId });
-  store.setSelectedItemId({ itemId: itemId });
+  selectVisibleItem({ deps, item, emitSelectionEvent: false });
+};
+
+export const handleGetSelectedItem = (deps) => {
+  const { props, store } = deps;
+  const itemId = store.selectSelectedItemId();
+  if (!itemId) {
+    return undefined;
+  }
+
+  const item = props.items?.find((entry) => entry.id === itemId);
+  if (!item) {
+    return undefined;
+  }
+
+  return {
+    itemId: item.id,
+    item,
+    isFolder: item.type === "folder",
+    isCollapsed:
+      item.type === "folder" && store.selectCollapsedIds().includes(item.id),
+  };
+};
+
+export const handleNavigateSelection = (deps, payload) => {
+  const { props, store } = deps;
+  const { direction } = payload._event.detail ?? {};
+  const step =
+    direction === "next" ? 1 : direction === "previous" ? -1 : undefined;
+  if (!step) {
+    return undefined;
+  }
+
+  const visibleItems = getVisibleItems(
+    props.items ?? [],
+    store.selectCollapsedIds(),
+  );
+  if (visibleItems.length === 0) {
+    return undefined;
+  }
+
+  const selectedItemId = store.selectSelectedItemId();
+  const currentIndex = visibleItems.findIndex(
+    (item) => item.id === selectedItemId,
+  );
+  const nextItem =
+    currentIndex === -1
+      ? step > 0
+        ? visibleItems[0]
+        : visibleItems[visibleItems.length - 1]
+      : visibleItems[currentIndex + step];
+
+  if (!nextItem) {
+    return undefined;
+  }
+
+  const selectedItem = selectVisibleItem({
+    deps,
+    item: nextItem,
+    emitSelectionEvent: true,
+  });
+  if (!selectedItem) {
+    return undefined;
+  }
+
+  return {
+    itemId: selectedItem.id,
+    item: selectedItem,
+    isFolder: selectedItem.type === "folder",
+    isCollapsed:
+      selectedItem.type === "folder" &&
+      store.selectCollapsedIds().includes(selectedItem.id),
+  };
+};
+
+export const handleSetSelectedFolderExpanded = (deps, payload) => {
+  const { render, store, props } = deps;
+  const { expanded } = payload._event.detail ?? {};
+  const selectedItemId = store.selectSelectedItemId();
+  if (!selectedItemId) {
+    return undefined;
+  }
+
+  const item = props.items?.find((entry) => entry.id === selectedItemId);
+  if (!item || item.type !== "folder" || !item.hasChildren) {
+    return undefined;
+  }
+
+  const isCollapsed = store.selectCollapsedIds().includes(item.id);
+  if (expanded === true && !isCollapsed) {
+    return {
+      itemId: item.id,
+      item,
+      isFolder: true,
+      isCollapsed,
+    };
+  }
+
+  if (expanded === false && isCollapsed) {
+    return {
+      itemId: item.id,
+      item,
+      isFolder: true,
+      isCollapsed,
+    };
+  }
+
+  store.toggleFolderExpand({ folderId: item.id });
   render();
+
+  return {
+    itemId: item.id,
+    item,
+    isFolder: true,
+    isCollapsed: store.selectCollapsedIds().includes(item.id),
+  };
 };
 
 export const handleArrowClick = (deps, payload) => {
