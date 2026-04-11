@@ -129,24 +129,6 @@ const focusPreviewOverlay = ({ refs } = {}) => {
   });
 };
 
-const selectImageById = ({ deps, itemId, syncExplorer = false } = {}) => {
-  const { refs, store, render } = deps;
-  const item = store.selectImageItemById({ itemId });
-  if (!itemId || !item) {
-    return false;
-  }
-
-  store.setSelectedItemId({ itemId });
-
-  if (syncExplorer) {
-    refs.fileExplorer?.selectItem?.({ itemId });
-  }
-
-  render();
-  refs.groupview?.scrollItemIntoView?.({ itemId });
-  return true;
-};
-
 const openImagePreviewById = ({ deps, itemId, syncExplorer = false } = {}) => {
   const { refs, store, render } = deps;
   const item = store.selectImageItemById({ itemId });
@@ -503,7 +485,7 @@ export const handleGroupViewKeyDown = (deps, payload) => {
   const selectedExplorerItem = refs.fileExplorer?.getSelectedItem?.();
   const selectedItemId = selectedExplorerItem?.isFolder
     ? undefined
-    : selectedExplorerItem?.itemId ?? store.selectSelectedItemId();
+    : (selectedExplorerItem?.itemId ?? store.selectSelectedItemId());
 
   if (event.key === "Enter") {
     if (!selectedItemId) {

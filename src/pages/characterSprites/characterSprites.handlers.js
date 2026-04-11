@@ -444,7 +444,7 @@ export const handleGroupViewKeyDown = (deps, payload) => {
   const selectedExplorerItem = refs.fileExplorer?.getSelectedItem?.();
   const selectedItemId = selectedExplorerItem?.isFolder
     ? undefined
-    : selectedExplorerItem?.itemId ?? store.selectSelectedItemId();
+    : (selectedExplorerItem?.itemId ?? store.selectSelectedItemId());
 
   if (event.key === "Enter") {
     if (!selectedItemId) {

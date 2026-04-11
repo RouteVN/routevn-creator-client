@@ -291,7 +291,10 @@ export const selectAdjacentSpriteItemId = (
     .flatMap((children) =>
       children
         .map((child) => child.id)
-        .filter((childItemId) => state.spritesData.items?.[childItemId]?.type === "image"),
+        .filter(
+          (childItemId) =>
+            state.spritesData.items?.[childItemId]?.type === "image",
+        ),
     );
 
   if (visibleSpriteIds.length === 0) {

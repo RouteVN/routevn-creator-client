@@ -535,9 +535,10 @@ export const handleUploadButtonClick = (deps, payload) => {
 
 export const handleZoomChange = (deps, payload) => {
   const { store, render } = deps;
-  const zoomLevel = parseFloat(
+  const nextZoomLevel = parseFloat(
     payload._event.detail?.value ?? payload._event.target?.value ?? 1,
   );
+  const zoomLevel = Math.min(2, Math.max(0.5, nextZoomLevel));
 
   store.setZoomLevel({ zoomLevel });
   render();
@@ -545,7 +546,7 @@ export const handleZoomChange = (deps, payload) => {
 
 export const handleZoomIn = (deps) => {
   const { store, render } = deps;
-  const zoomLevel = Math.min(4, store.selectZoomLevel() + 0.1);
+  const zoomLevel = Math.min(2, store.selectZoomLevel() + 0.1);
   store.setZoomLevel({ zoomLevel });
   render();
 };
