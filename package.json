@@ -63,7 +63,6 @@
     "serve": "bunx serve _site -p 3001",
     "lint": "oxlint && bun prettier --check src",
     "lint:fix": "oxlint && bun prettier --check --write src",
-    "postinstall": "node scripts/prepare-route-engine-package.js",
     "prepare": "husky",
     "tauri": "tauri",
     "tauri:dev:mac": "tauri dev --target aarch64-apple-darwin",
