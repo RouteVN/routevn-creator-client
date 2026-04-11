@@ -1,6 +1,8 @@
 import { parseAndRender } from "jempl";
-import { getSystemVariableItems } from "../../../internal/systemVariables.js";
-import { toVariableConditionTarget } from "../../../internal/layoutConditions.js";
+import {
+  getRuntimeFieldItem,
+  toRuntimeConditionTarget,
+} from "../../../internal/runtimeFields.js";
 import { visitLayoutItemsWithFragments } from "./layoutEditorPreviewFragments.js";
 
 export const usesSaveLoadPreviewInLayout = (layoutParams = {}) => {
@@ -23,7 +25,6 @@ export const findSaveLoadPreviewSettings = (layoutParams = {}) => {
 
     settings = {
       paginationMode: item.paginationMode ?? "continuous",
-      paginationVariableId: item.paginationVariableId,
       paginationSize: item.paginationSize,
     };
     return true;
@@ -32,28 +33,24 @@ export const findSaveLoadPreviewSettings = (layoutParams = {}) => {
   return settings;
 };
 
-const getPaginationVariableDefaultValue = (variableId, variablesData = {}) => {
-  const variable =
-    variablesData?.items?.[variableId] ??
-    getSystemVariableItems()?.[variableId];
-
-  return variable?.value ?? variable?.default;
+const getDefaultSaveLoadPagination = () => {
+  const runtimeField = getRuntimeFieldItem("saveLoadPagination");
+  return runtimeField?.value ?? runtimeField?.default ?? 1;
 };
 
 const toPaginationIndex = (value) => {
   const parsedValue = Number(value);
   if (!Number.isFinite(parsedValue)) {
-    return 0;
+    return 1;
   }
 
-  return Math.max(0, Math.trunc(parsedValue));
+  return Math.max(1, Math.trunc(parsedValue));
 };
 
 export const getSaveLoadPreviewWindow = ({
   saveLoadDefaultValues,
   saveLoadPreviewSettings,
   previewVariableValues = {},
-  variablesData = {},
 } = {}) => {
   if (saveLoadPreviewSettings?.paginationMode === "paginated") {
     const paginationSize = Number(saveLoadPreviewSettings.paginationSize);
@@ -61,18 +58,17 @@ export const getSaveLoadPreviewWindow = ({
       Number.isFinite(paginationSize) && paginationSize > 0
         ? paginationSize
         : 0;
-    const variableId = saveLoadPreviewSettings.paginationVariableId;
-    const paginationTarget = toVariableConditionTarget(variableId);
+    const paginationTarget = toRuntimeConditionTarget("saveLoadPagination");
     const rawPaginationValue =
       paginationTarget && Object.hasOwn(previewVariableValues, paginationTarget)
         ? previewVariableValues[paginationTarget]
-        : getPaginationVariableDefaultValue(variableId, variablesData);
-    const pageIndex = toPaginationIndex(rawPaginationValue);
+        : getDefaultSaveLoadPagination();
+    const pageNumber = toPaginationIndex(rawPaginationValue);
 
     return {
-      startIndex: pageIndex * slotsPerPage,
+      startIndex: (pageNumber - 1) * slotsPerPage,
       slotCount: slotsPerPage,
-      pageIndex,
+      pageIndex: pageNumber,
       slotsPerPage,
     };
   }
@@ -92,13 +88,11 @@ export const createSaveLoadPreviewSlots = ({
   saveLoadDefaultValues,
   saveLoadPreviewSettings,
   previewVariableValues,
-  variablesData,
 } = {}) => {
   const { startIndex, slotCount } = getSaveLoadPreviewWindow({
     saveLoadDefaultValues,
     saveLoadPreviewSettings,
     previewVariableValues,
-    variablesData,
   });
   const slots = [];
 
@@ -167,7 +161,6 @@ export const createSaveLoadPreviewViewData = ({
   layoutsData,
   saveLoadDefaultValues,
   previewVariableValues,
-  variablesData,
   images,
   saveLoadForm,
 } = {}) => {
@@ -189,7 +182,6 @@ export const createSaveLoadPreviewViewData = ({
     saveLoadDefaultValues,
     saveLoadPreviewSettings,
     previewVariableValues,
-    variablesData,
   });
   const saveLoadSlotCount = visibleSaveLoadSlots.length;
   const showSaveLoadSlotsNum =
@@ -205,7 +197,6 @@ export const createSaveLoadPreviewViewData = ({
       saveLoadSlotCount,
       visibleSlotIds: visibleSaveLoadSlots.map((slot) => slot.slotId),
       paginationMode: saveLoadPreviewSettings?.paginationMode ?? "continuous",
-      paginationVariableId: saveLoadPreviewSettings?.paginationVariableId ?? "",
       paginationSize: saveLoadPreviewSettings?.paginationSize,
       saveImageIds: saveLoadDefaultValues?.saveImageIds,
       saveDates: saveLoadDefaultValues?.saveDates,

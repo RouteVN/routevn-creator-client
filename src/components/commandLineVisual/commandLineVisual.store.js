@@ -367,11 +367,13 @@ export const selectViewData = ({ state }) => {
   });
 
   const resourceGroups = [...imageGroups, ...videoGroups, ...layoutGroups];
-  const resourceItems = buildResourceExplorerItems({
-    images: state.images,
-    videos: state.videos,
-    layouts: state.layouts,
-  });
+  const resourceItems = toFlatItems(
+    buildResourceExplorerItems({
+      images: state.images,
+      videos: state.videos,
+      layouts: state.layouts,
+    }),
+  ).filter((item) => item.type === "folder");
 
   // Get transform options
   const transformItems = toFlatItems(state.transforms).filter(

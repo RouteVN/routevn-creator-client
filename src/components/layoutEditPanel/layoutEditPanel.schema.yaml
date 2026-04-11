@@ -8,6 +8,8 @@ propsSchema:
       type: object
     spritesheetsData:
       type: object
+    particlesData:
+      type: object
     textStylesData:
       type: object
     variablesData:

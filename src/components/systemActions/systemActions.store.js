@@ -1,3 +1,9 @@
+import {
+  createRuntimeActionPreview,
+  getRuntimeActionModes,
+  isRuntimeActionMode,
+} from "../../internal/runtimeActions.js";
+
 export const createInitialState = () => ({
   mode: "actions",
   actions: {},
@@ -103,6 +109,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     actionsType: attrs.actionType,
     showSelected: !!attrs.showSelected,
     hiddenModes,
+    isRuntimeActionMode: isRuntimeActionMode(state.mode),
   };
 };
 
@@ -440,6 +447,26 @@ export const selectActionsData = ({ props, state }) => {
   if (actions.toggleDialogueUI !== undefined) {
     actionsObject.toggleDialogueUI = actions.toggleDialogueUI;
     preview.toggleDialogueUI = actions.toggleDialogueUI;
+  }
+
+  const runtimePreviewItems = [];
+  for (const mode of getRuntimeActionModes()) {
+    if (actions[mode] === undefined) {
+      continue;
+    }
+
+    actionsObject[mode] = actions[mode];
+    const runtimePreview = createRuntimeActionPreview(mode, actions[mode]);
+    if (!runtimePreview) {
+      continue;
+    }
+
+    preview[mode] = runtimePreview;
+    runtimePreviewItems.push(runtimePreview);
+  }
+
+  if (runtimePreviewItems.length > 0) {
+    preview.runtimeActions = runtimePreviewItems;
   }
 
   // Visual

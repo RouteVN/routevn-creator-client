@@ -1,38 +1,13 @@
+import { getRuntimeConditionItems } from "./runtimeFields.js";
+
 export const SAVE_DATA_AVAILABLE_CONDITION_TARGET = "item.savedAt";
-export const LINE_COMPLETED_CONDITION_TARGET = "isLineCompleted";
-export const AUTO_MODE_CONDITION_TARGET = "autoMode";
-export const SKIP_MODE_CONDITION_TARGET = "skipMode";
+export const LINE_COMPLETED_CONDITION_TARGET = "runtime.isLineCompleted";
+export const AUTO_MODE_CONDITION_TARGET = "runtime.autoMode";
+export const SKIP_MODE_CONDITION_TARGET = "runtime.skipMode";
 
 const VARIABLE_TARGET_IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 const VARIABLE_TARGET_BRACKET_PATTERN = /^variables\[(.+)\]$/;
 const VARIABLE_TARGET_DOT_PATTERN = /^variables\.([A-Za-z_$][A-Za-z0-9_$]*)$/;
-
-const RUNTIME_LAYOUT_CONDITION_ITEMS = {
-  [LINE_COMPLETED_CONDITION_TARGET]: {
-    id: LINE_COMPLETED_CONDITION_TARGET,
-    target: LINE_COMPLETED_CONDITION_TARGET,
-    name: "Line Completed",
-    type: "boolean",
-    source: "runtime",
-    description: "Whether the current line has fully completed rendering",
-  },
-  [AUTO_MODE_CONDITION_TARGET]: {
-    id: AUTO_MODE_CONDITION_TARGET,
-    target: AUTO_MODE_CONDITION_TARGET,
-    name: "Auto Mode",
-    type: "boolean",
-    source: "runtime",
-    description: "Whether auto mode is currently enabled",
-  },
-  [SKIP_MODE_CONDITION_TARGET]: {
-    id: SKIP_MODE_CONDITION_TARGET,
-    target: SKIP_MODE_CONDITION_TARGET,
-    name: "Skip Mode",
-    type: "boolean",
-    source: "runtime",
-    description: "Whether skip mode is currently enabled",
-  },
-};
 
 export const toVariableConditionTarget = (variableId) => {
   if (typeof variableId !== "string" || variableId.length === 0) {
@@ -81,14 +56,14 @@ export const parseVariableConditionTarget = (target) => {
 };
 
 export const getRuntimeLayoutConditionItems = () => {
-  return RUNTIME_LAYOUT_CONDITION_ITEMS;
+  return getRuntimeConditionItems();
 };
 
 export const getSpecialLayoutConditionItems = ({
   includeSaveDataAvailable = false,
 } = {}) => {
   const items = {
-    ...RUNTIME_LAYOUT_CONDITION_ITEMS,
+    ...getRuntimeConditionItems(),
   };
 
   if (includeSaveDataAvailable) {
@@ -307,9 +282,7 @@ const parseConditionTargetClause = (clause) => {
     };
   }
 
-  for (const fixedStateItem of Object.values(
-    getRuntimeLayoutConditionItems(),
-  )) {
+  for (const fixedStateItem of Object.values(getRuntimeConditionItems())) {
     const escapedTarget = fixedStateItem.target.replace(
       /[.*+?^${}()|[\]\\]/g,
       "\\$&",

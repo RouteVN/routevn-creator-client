@@ -1,0 +1,7 @@
+componentName: rvn-command-line-runtime-action
+
+propsSchema:
+  mode:
+    type: string
+  action:
+    type: object

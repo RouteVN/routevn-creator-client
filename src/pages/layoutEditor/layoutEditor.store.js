@@ -20,6 +20,7 @@ export const createInitialState = () => {
     layout: undefined,
     images: { tree: [], items: {} },
     spritesheetsData: { tree: [], items: {} },
+    particlesData: { tree: [], items: {} },
     layoutsData: { tree: [], items: {} },
     textStylesData: { tree: [], items: {} },
     colorsData: { tree: [], items: {} },
@@ -115,6 +116,10 @@ export const setSpritesheetsData = ({ state }, { spritesheetsData } = {}) => {
   state.spritesheetsData = spritesheetsData;
 };
 
+export const setParticlesData = ({ state }, { particlesData } = {}) => {
+  state.particlesData = particlesData;
+};
+
 export const setLayoutsData = ({ state }, { layoutsData } = {}) => {
   state.layoutsData = layoutsData;
 };
@@ -144,6 +149,7 @@ export const syncRepositoryState = ({ state }, payload = {}) => {
     layoutData,
     images,
     spritesheetsData,
+    particlesData,
     layoutsData,
     textStylesData,
     colorsData,
@@ -163,6 +169,7 @@ export const syncRepositoryState = ({ state }, payload = {}) => {
   state.layoutData = layoutData ?? { items: {}, tree: [] };
   state.images = images ?? { items: {}, tree: [] };
   state.spritesheetsData = spritesheetsData ?? { items: {}, tree: [] };
+  state.particlesData = particlesData ?? { items: {}, tree: [] };
   state.layoutsData = layoutsData ?? { items: {}, tree: [] };
   state.textStylesData = textStylesData ?? { items: {}, tree: [] };
   state.colorsData = colorsData ?? { items: {}, tree: [] };
@@ -188,6 +195,7 @@ export const selectProjectResolution = ({ state }) => {
 
 export const selectImages = ({ state }) => state.images;
 export const selectSpritesheetsData = ({ state }) => state.spritesheetsData;
+export const selectParticlesData = ({ state }) => state.particlesData;
 export const selectLayoutsData = ({ state }) => state.layoutsData;
 
 export const selectSelectedItem = ({ state }) => {
@@ -293,6 +301,7 @@ export const selectViewData = ({ state, constants }) => {
     layout,
     imagesData: state.images,
     spritesheetsData: state.spritesheetsData,
+    particlesData: state.particlesData,
     textStylesData: state.textStylesData,
     variablesData: state.variablesData,
     layoutsData: state.layoutsData,

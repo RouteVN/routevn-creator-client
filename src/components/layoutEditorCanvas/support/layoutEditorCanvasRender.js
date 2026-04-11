@@ -4,6 +4,7 @@ import {
   buildLayoutElements,
   extractFileIdsFromRenderState,
 } from "../../../internal/project/layout.js";
+import { getLayoutEditorItemResizeEdges } from "../../../internal/layoutEditorElementRegistry.js";
 import { toHierarchyStructure } from "../../../internal/project/tree.js";
 
 const OVERLAY_BORDER = {
@@ -26,12 +27,6 @@ const OVERLAY_ANCHOR_BORDER = {
 };
 const OVERLAY_ANCHOR_SIZE = 8;
 const OVERLAY_RESIZE_HANDLE_SIZE = 12;
-const VERTICAL_RESIZE_EDGES = ["top", "bottom"];
-
-const isTextElement = (element = {}) => {
-  return typeof element.type === "string" && element.type.startsWith("text");
-};
-
 const jemplFunctions = {
   formatDate: (timestamp, format = "DD/MM/YYYY - HH:mm") => {
     if (!timestamp) {
@@ -88,6 +83,7 @@ const normalizeHistoryDialogueItem = (item) => {
 
 const normalizeLayoutEditorPreviewData = (previewData = {}) => {
   const nextPreviewData = toPlainObject(previewData);
+  const nextRuntime = toPlainObject(nextPreviewData.runtime);
   const nextDialogue = toPlainObject(nextPreviewData.dialogue);
   const nextDialogueCharacter = toPlainObject(nextDialogue.character);
   const nextChoice = toPlainObject(nextPreviewData.choice);
@@ -98,9 +94,24 @@ const normalizeLayoutEditorPreviewData = (previewData = {}) => {
   return {
     ...nextPreviewData,
     variables: toPlainObject(nextPreviewData.variables),
-    isLineCompleted: nextPreviewData.isLineCompleted ?? false,
-    autoMode: nextPreviewData.autoMode ?? false,
-    skipMode: nextPreviewData.skipMode ?? false,
+    runtime: {
+      ...nextRuntime,
+      dialogueTextSpeed: nextRuntime.dialogueTextSpeed ?? 50,
+      autoMode: nextRuntime.autoMode ?? false,
+      skipMode: nextRuntime.skipMode ?? false,
+      dialogueUIHidden: nextRuntime.dialogueUIHidden ?? false,
+      isLineCompleted: nextRuntime.isLineCompleted ?? false,
+      saveLoadPagination: nextRuntime.saveLoadPagination ?? 1,
+      menuPage: nextRuntime.menuPage ?? "",
+      menuEntryPoint: nextRuntime.menuEntryPoint ?? "",
+      autoForwardDelay: nextRuntime.autoForwardDelay ?? 1000,
+      skipUnseenText: nextRuntime.skipUnseenText ?? false,
+      skipTransitionsAndAnimations:
+        nextRuntime.skipTransitionsAndAnimations ?? false,
+      soundVolume: nextRuntime.soundVolume ?? 500,
+      musicVolume: nextRuntime.musicVolume ?? 500,
+      muteAll: nextRuntime.muteAll ?? false,
+    },
     dialogue: {
       ...nextDialogue,
       character: {
@@ -310,10 +321,8 @@ const buildOverlayResizeHandle = ({ element, overlayId, edge }) => {
   return resizeHandle;
 };
 
-const buildOverlayResizeHandles = ({ element, overlayId }) => {
-  const edges = isTextElement(element)
-    ? ["left", "right"]
-    : ["left", "right", ...VERTICAL_RESIZE_EDGES];
+const buildOverlayResizeHandles = ({ element, overlayId, selectedItem }) => {
+  const edges = getLayoutEditorItemResizeEdges(selectedItem ?? element);
 
   return edges
     .map((edge) => buildOverlayResizeHandle({ element, overlayId, edge }))
@@ -346,7 +355,7 @@ const buildOverlayElementContainer = ({ element, overlayId, children }) => {
   return overlayContainer;
 };
 
-const buildOverlayTree = ({ path, overlayId, draggable }) => {
+const buildOverlayTree = ({ path, overlayId, draggable, selectedItem }) => {
   const selectedElement = path[path.length - 1];
   const overlayRect = buildOverlayRect({
     element: selectedElement,
@@ -371,6 +380,7 @@ const buildOverlayTree = ({ path, overlayId, draggable }) => {
       ...buildOverlayResizeHandles({
         element: selectedElement,
         overlayId,
+        selectedItem,
       }),
       anchorMarker,
     ],
@@ -442,6 +452,7 @@ const resolveLayoutPreviewElements = ({ elements, previewData } = {}) => {
 export const createLayoutEditorSelectionOverlay = ({
   parsedElements,
   selectedItemId,
+  selectedItem,
   disableMoveDrag = false,
 } = {}) => {
   const primaryPath = selectPrimaryMatchingPath(parsedElements, selectedItemId);
@@ -453,6 +464,7 @@ export const createLayoutEditorSelectionOverlay = ({
     path: primaryPath,
     overlayId: "selected-border",
     draggable: disableMoveDrag !== true,
+    selectedItem,
   });
 
   if (!primaryOverlay) {
@@ -531,6 +543,10 @@ export const createLayoutEditorRenderState = ({
     items: {},
     tree: [],
   };
+  const particlesData = repositoryState?.particles || {
+    items: {},
+    tree: [],
+  };
   const textStyleItems = repositoryState?.textStyles?.items || {};
   const colorsItems = repositoryState?.colors?.items || {};
   const fontsItems = repositoryState?.fonts?.items || {};
@@ -546,6 +562,7 @@ export const createLayoutEditorRenderState = ({
     {
       layoutId: layoutState?.id,
       layoutType: layoutState?.layoutType,
+      particlesData,
       spritesheetsData,
       layoutsData: repositoryState?.layouts?.items || {},
     },
@@ -583,6 +600,7 @@ export const createLayoutEditorRenderedElements = ({
   const overlayElements = createLayoutEditorSelectionOverlay({
     parsedElements: parsedState.elements,
     selectedItemId,
+    selectedItem: layoutState?.elements?.items?.[selectedItemId],
     disableMoveDrag,
   });
   const selectedElementMetrics = toSelectedElementMetrics(

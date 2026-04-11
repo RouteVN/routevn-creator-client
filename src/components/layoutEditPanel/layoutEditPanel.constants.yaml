@@ -196,6 +196,15 @@ layoutSections:
         name: spritesheetSelection
         value: "${spritesheetSelectionValue}"
         options: "${spritesheetSelectionItems}"
+  - "$when": "supportsParticleSelection"
+    id: particle
+    label: Particle
+    items:
+      - type: select
+        label: Effect
+        name: particleId
+        value: "${values.particleId}"
+        options: "${particleSelectionItems}"
   - "$when": "supportsSpriteImages"
     id: images
     label: Image

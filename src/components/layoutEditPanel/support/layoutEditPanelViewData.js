@@ -3,6 +3,7 @@ import {
   getInteractionActions,
   getInteractionPayload,
 } from "../../../internal/project/interactionPayload.js";
+import { RUNTIME_ACTION_LABELS } from "../../../internal/runtimeActions.js";
 import { normalizeConditionalOverrideRules } from "./layoutEditPanelFeatures.js";
 
 const ACTION_INTERACTION_LABELS = {
@@ -24,6 +25,7 @@ const ACTION_LABELS = {
   hideConfirmDialog: "Hide Confirm Dialog",
   saveSlot: "Save Slot",
   loadSlot: "Load Slot",
+  ...RUNTIME_ACTION_LABELS,
 };
 
 export const ACTION_INTERACTION_TYPES = ["click", "rightClick"];
@@ -140,10 +142,10 @@ export const toInspectorValues = ({
     variableId,
     fragmentLayoutId: values?.fragmentLayoutId ?? "",
     paginationMode: values?.paginationMode ?? "continuous",
-    paginationVariableId: values?.paginationVariableId ?? "",
     paginationSize: values?.paginationSize ?? 3,
     scroll: values?.scroll ?? false,
     direction: values?.direction,
+    particleId: values?.particleId ?? "",
     textStyleId: values?.textStyleId || firstTextStyleId || "",
     hoverTextStyleId: values?.hoverTextStyleId ?? "",
     clickTextStyleId: values?.clickTextStyleId ?? "",

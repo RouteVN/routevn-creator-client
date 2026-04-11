@@ -5,6 +5,7 @@ import {
   toSpritesheetAnimationSelectionItems,
   toSpritesheetAnimationSelectionValue,
 } from "../../internal/spritesheets.js";
+import { toParticleSelectionItems } from "../../internal/particles.js";
 import { getVariableOptions } from "../../internal/project/projection.js";
 import { toFlatItems } from "../../internal/project/tree.js";
 import { getFragmentLayoutOptions } from "../../pages/layoutEditor/support/layoutFragments.js";
@@ -303,6 +304,7 @@ export const createInitialState = () => {
     },
     imagesData: { tree: [], items: {} },
     spritesheetsData: { tree: [], items: {} },
+    particlesData: { tree: [], items: {} },
     textStylesData: { tree: [], items: {} },
     variablesData: { tree: [], items: {} },
     values: createDefaultValues(),
@@ -615,6 +617,10 @@ export const setSpritesheetsData = ({ state }, { spritesheetsData } = {}) => {
   state.spritesheetsData = spritesheetsData;
 };
 
+export const setParticlesData = ({ state }, { particlesData } = {}) => {
+  state.particlesData = particlesData;
+};
+
 export const setVariablesData = ({ state }, { variablesData } = {}) => {
   state.variablesData = variablesData;
 };
@@ -678,6 +684,7 @@ export const selectViewData = ({ state, props, constants }) => {
   const spritesheetSelectionItems = toSpritesheetAnimationSelectionItems(
     state.spritesheetsData,
   );
+  const particleSelectionItems = toParticleSelectionItems(state.particlesData);
   const imageFolderItems = toFlatItems(state.imagesData).filter(
     (item) => item.type === "folder",
   );
@@ -688,7 +695,6 @@ export const selectViewData = ({ state, props, constants }) => {
   ];
   const variableOptions = getVariableOptions(state.variablesData, {
     type: "number",
-    includeSystem: true,
   });
   const fragmentLayoutOptions = getFragmentLayoutOptions(props.layoutsData);
   const visibilityConditionOptions = {
@@ -763,6 +769,7 @@ export const selectViewData = ({ state, props, constants }) => {
       variableOptions,
       variableOptionsWithNone,
       spritesheetSelectionItems,
+      particleSelectionItems,
       spritesheetSelectionValue,
       selectedSpritesheetFileId: selectedSpritesheetPreview.fileId,
       selectedSpritesheetAtlas: selectedSpritesheetPreview.atlas,

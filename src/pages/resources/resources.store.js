@@ -33,6 +33,11 @@ export const createInitialState = () => ({
       route: "/project/animations",
     },
     {
+      id: "particles",
+      label: "Particles",
+      route: "/project/particles",
+    },
+    {
       id: "spritesheets",
       label: "Spritesheets",
       route: "/project/spritesheets",

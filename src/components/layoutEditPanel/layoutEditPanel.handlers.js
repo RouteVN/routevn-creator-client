@@ -215,6 +215,9 @@ export const handleBeforeMount = (deps) => {
   store.setSpritesheetsData({
     spritesheetsData: props.spritesheetsData || EMPTY_TREE,
   });
+  store.setParticlesData({
+    particlesData: props.particlesData || EMPTY_TREE,
+  });
   store.setTextStylesData({
     textStylesData: props.textStylesData || EMPTY_TREE,
   });
@@ -233,6 +236,7 @@ export const handleOnUpdate = (deps, payload) => {
     oldProps?.layoutsData === newProps?.layoutsData &&
     oldProps?.imagesData === newProps?.imagesData &&
     oldProps?.spritesheetsData === newProps?.spritesheetsData &&
+    oldProps?.particlesData === newProps?.particlesData &&
     oldProps?.variablesData === newProps?.variablesData &&
     oldProps?.textStylesData === newProps?.textStylesData &&
     oldProps?.selectedElementMetrics === newProps?.selectedElementMetrics
@@ -248,6 +252,9 @@ export const handleOnUpdate = (deps, payload) => {
   });
   store.setSpritesheetsData({
     spritesheetsData: newProps.spritesheetsData || EMPTY_TREE,
+  });
+  store.setParticlesData({
+    particlesData: newProps.particlesData || EMPTY_TREE,
   });
   store.setTextStylesData({
     textStylesData: newProps.textStylesData || EMPTY_TREE,
@@ -800,11 +807,6 @@ export const handleSaveLoadPaginationFormAction = (deps, payload) => {
   });
 
   if (paginationMode === "paginated") {
-    applyPanelValueUpdate(deps, {
-      name: "paginationVariableId",
-      value: values.paginationVariableId || undefined,
-    });
-
     const parsedPaginationSize = Number(values.paginationSize);
     applyPanelValueUpdate(deps, {
       name: "paginationSize",
@@ -812,11 +814,6 @@ export const handleSaveLoadPaginationFormAction = (deps, payload) => {
         Number.isFinite(parsedPaginationSize) && parsedPaginationSize > 0
           ? parsedPaginationSize
           : 1,
-    });
-  } else {
-    applyPanelValueUpdate(deps, {
-      name: "paginationVariableId",
-      value: undefined,
     });
   }
 

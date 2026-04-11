@@ -3,6 +3,7 @@ import { applyLayoutItemFieldChange } from "../../src/pages/layoutEditor/support
 import {
   applyCanvasItemDragChange,
   applyCanvasItemKeyboardChange,
+  applyCanvasItemResizeChange,
 } from "../../src/components/layoutEditorCanvas/layoutEditorCanvas.handlers.js";
 
 describe("layoutEditorMutations", () => {
@@ -203,5 +204,53 @@ describe("layoutEditorMutations", () => {
       x: 28,
       y: 40,
     });
+  });
+
+  it("does not resize container items when size controls are unavailable", () => {
+    const item = {
+      id: "choice-container-1",
+      type: "container-ref-choice-item",
+      x: 10,
+      y: 20,
+      width: 100,
+      height: 40,
+    };
+
+    expect(
+      applyCanvasItemResizeChange({
+        item,
+        dragStartPosition: {
+          x: 100,
+          y: 100,
+          itemStartX: 10,
+          itemStartY: 20,
+          itemStartWidth: 100,
+          itemStartHeight: 40,
+        },
+        resizeEdge: "right",
+        x: 130,
+        y: 100,
+      }),
+    ).toBe(item);
+  });
+
+  it("does not keyboard-resize auto-width text items", () => {
+    const item = {
+      id: "text-1",
+      type: "text",
+      x: 10,
+      y: 20,
+      width: undefined,
+      height: 40,
+    };
+
+    expect(
+      applyCanvasItemKeyboardChange({
+        item,
+        key: "ArrowRight",
+        unit: 5,
+        resize: true,
+      }),
+    ).toBe(item);
   });
 });

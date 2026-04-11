@@ -1,11 +1,7 @@
 import { nanoid } from "nanoid";
-import { getSystemVariableItems } from "../../internal/systemVariables.js";
 
 const getVariableItems = (variablesData = {}) => {
-  return {
-    ...variablesData?.items,
-    ...getSystemVariableItems(),
-  };
+  return variablesData?.items ?? {};
 };
 
 export const handleAfterMount = async (deps) => {

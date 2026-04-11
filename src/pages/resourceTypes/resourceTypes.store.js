@@ -33,6 +33,11 @@ export const animatedAssetItems = [
     path: "/project/animations",
   },
   {
+    id: "particles",
+    name: "Particles",
+    path: "/project/particles",
+  },
+  {
     id: "spritesheets",
     name: "Spritesheets",
     path: "/project/spritesheets",
@@ -70,7 +75,7 @@ export const systemConfigItems = [
   },
   {
     id: "systemVariables",
-    name: "System Variables",
+    name: "Runtime",
     path: "/project/system-variables",
   },
   {

@@ -30,7 +30,7 @@ describe("layoutEditorPreviewSupport", () => {
                 slotContainer: {
                   type: "container-ref-save-load-slot",
                   paginationMode: "paginated",
-                  paginationVariableId: "_currentSaveLoadPagination",
+                  paginationSize: 3,
                 },
                 text: {
                   type: "text",
@@ -44,11 +44,11 @@ describe("layoutEditorPreviewSupport", () => {
       layoutId: "layout-1",
     });
 
-    expect(targets).toContain("variables._currentSaveLoadPagination");
+    expect(targets).toContain("runtime.saveLoadPagination");
     expect(targets).toContain("variables.score");
   });
 
-  it("builds the visible save/load preview page from paginationVariableId", () => {
+  it("builds the visible save/load preview page from runtime.saveLoadPagination", () => {
     const slots = createSaveLoadPreviewSlots({
       saveLoadDefaultValues: {
         slotsNum: 12,
@@ -77,14 +77,10 @@ describe("layoutEditorPreviewSupport", () => {
       },
       saveLoadPreviewSettings: {
         paginationMode: "paginated",
-        paginationVariableId: "_currentSaveLoadPagination",
         paginationSize: 3,
       },
       previewVariableValues: {
-        "variables._currentSaveLoadPagination": 2,
-      },
-      variablesData: {
-        items: {},
+        "runtime.saveLoadPagination": 3,
       },
     });
 
@@ -120,7 +116,6 @@ describe("layoutEditorPreviewSupport", () => {
             slotContainer: {
               type: "container-ref-save-load-slot",
               paginationMode: "paginated",
-              paginationVariableId: "_currentSaveLoadPagination",
               paginationSize: 3,
             },
           },
@@ -135,7 +130,7 @@ describe("layoutEditorPreviewSupport", () => {
         },
       },
       previewVariableValues: {
-        "variables._currentSaveLoadPagination": 1,
+        "runtime.saveLoadPagination": 2,
       },
       saveLoadDefaultValues: {
         slotsNum: 6,

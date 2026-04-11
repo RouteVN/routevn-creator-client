@@ -116,6 +116,22 @@ const preloadBundleData = async () => {
   return { jsonData, assetBufferMap };
 };
 
+const readStoredJson = (key, fallbackKey) => {
+  const rawValue =
+    localStorage.getItem(key) ??
+    (fallbackKey ? localStorage.getItem(fallbackKey) : undefined);
+
+  if (!rawValue) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(rawValue) || {};
+  } catch {
+    return {};
+  }
+};
+
 const prepareEngine = async ({ jsonData, assetBufferMap }) => {
   const plugins = await loadGraphicsEnginePlugins();
 
@@ -212,11 +228,15 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
   });
 
   engine = createRouteEngine({ handlePendingEffects: effectsHandler });
-  const saveSlots = JSON.parse(localStorage.getItem("saveSlots")) || {};
-  const globalDeviceVariables =
-    JSON.parse(localStorage.getItem("globalDeviceVariables")) || {};
-  const globalAccountVariables =
-    JSON.parse(localStorage.getItem("globalAccountVariables")) || {};
+  const saveSlots = readStoredJson("saveSlots");
+  const deviceVariables = readStoredJson(
+    "deviceVariables",
+    "globalDeviceVariables",
+  );
+  const accountVariables = readStoredJson(
+    "accountVariables",
+    "globalAccountVariables",
+  );
   const preloadSaveSlotImagesResult = await preloadRuntimeSaveSlotImages(
     routeGraphics,
     saveSlots,
@@ -233,7 +253,7 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
       initialState: {
         global: {
           saveSlots,
-          variables: { ...globalDeviceVariables, ...globalAccountVariables },
+          variables: { ...deviceVariables, ...accountVariables },
         },
         projectData: jsonData,
       },

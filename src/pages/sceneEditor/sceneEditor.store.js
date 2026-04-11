@@ -17,26 +17,6 @@ import {
 
 const SCENE_EDITOR_PREVIEW_TEXT_SPEED = 100;
 
-const applySceneEditorPreviewTextSpeed = (projectData) => {
-  const dialogueTextSpeedVariable =
-    projectData.resources.variables._dialogueTextSpeed;
-
-  return {
-    ...projectData,
-    resources: {
-      ...projectData.resources,
-      variables: {
-        ...projectData.resources.variables,
-        _dialogueTextSpeed: {
-          ...dialogueTextSpeedVariable,
-          default: SCENE_EDITOR_PREVIEW_TEXT_SPEED,
-          value: SCENE_EDITOR_PREVIEW_TEXT_SPEED,
-        },
-      },
-    },
-  };
-};
-
 const appendMissingIds = (orderedIds, allIds) => {
   const seen = new Set();
   const result = [];
@@ -783,9 +763,13 @@ export const setSceneSettings = ({ state }, { showLineNumbers } = {}) => {
 };
 
 export const selectProjectData = ({ state }) => {
-  return applySceneEditorPreviewTextSpeed(
-    constructProjectData(buildProjectDataSourceState(state)),
-  );
+  return constructProjectData(buildProjectDataSourceState(state));
+};
+
+export const selectPreviewRuntimeGlobal = () => {
+  return {
+    dialogueTextSpeed: SCENE_EDITOR_PREVIEW_TEXT_SPEED,
+  };
 };
 
 const selectCanvasAspectRatio = ({ state }) => {

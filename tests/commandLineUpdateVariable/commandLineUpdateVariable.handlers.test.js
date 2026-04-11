@@ -7,14 +7,20 @@ import {
 import { handleVariableSelectChange } from "../../src/components/commandLineUpdateVariable/commandLineUpdateVariable.handlers.js";
 
 describe("commandLineUpdateVariable.handlers", () => {
-  it("uses system variable types when selecting a system variable", () => {
+  it("uses variable types when selecting a project variable", () => {
     const state = createInitialState();
 
     setVariablesData(
       { state },
       {
         variables: {
-          items: {},
+          items: {
+            saveLoadPagination: {
+              id: "saveLoadPagination",
+              type: "number",
+              name: "Save/Load Pagination",
+            },
+          },
           tree: [],
         },
       },
@@ -39,14 +45,14 @@ describe("commandLineUpdateVariable.handlers", () => {
       {
         _event: {
           detail: {
-            value: "_currentSaveLoadPagination",
+            value: "saveLoadPagination",
           },
         },
       },
     );
 
     expect(state.tempOperation).toEqual({
-      variableId: "_currentSaveLoadPagination",
+      variableId: "saveLoadPagination",
       op: "",
       value: 1,
     });

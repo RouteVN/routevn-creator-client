@@ -2,33 +2,101 @@ import {
   AUTO_MODE_CONDITION_TARGET,
   LINE_COMPLETED_CONDITION_TARGET,
   SKIP_MODE_CONDITION_TARGET,
-  getRuntimeLayoutConditionItems,
 } from "../../../internal/layoutConditions.js";
+import {
+  getRuntimeFieldItems,
+  toRuntimeConditionTarget,
+} from "../../../internal/runtimeFields.js";
 
-export const createPreviewFixedStateValues = (
+const toPreviewRuntimeValue = (field = {}, value) => {
+  if (field.type === "number") {
+    const parsedValue = Number(value);
+    return Number.isFinite(parsedValue)
+      ? parsedValue
+      : Number(field.default ?? 0);
+  }
+
+  if (field.type === "boolean") {
+    if (typeof value === "boolean") {
+      return value;
+    }
+
+    if (typeof value === "string") {
+      return value === "true";
+    }
+
+    return Boolean(value ?? field.default);
+  }
+
+  return value ?? field.default ?? "";
+};
+
+const getPreviewRuntimeOverrideValue = (
+  previewVariableValues = {},
+  runtimeId,
+  fallbackValue,
+) => {
+  const target = toRuntimeConditionTarget(runtimeId);
+
+  if (target && Object.hasOwn(previewVariableValues, target)) {
+    return previewVariableValues[target];
+  }
+
+  return fallbackValue;
+};
+
+export const createPreviewRuntimeValues = (
   previewVariableValues = {},
   dialogueDefaultValues = {},
 ) => {
-  const fixedStateItems = getRuntimeLayoutConditionItems();
+  const runtimeFields = getRuntimeFieldItems();
+  const runtime = Object.fromEntries(
+    Object.entries(runtimeFields).map(([runtimeId, field]) => [
+      runtimeId,
+      toPreviewRuntimeValue(
+        field,
+        getPreviewRuntimeOverrideValue(
+          previewVariableValues,
+          runtimeId,
+          field.value ?? field.default,
+        ),
+      ),
+    ]),
+  );
 
-  return {
-    isLineCompleted:
-      previewVariableValues[LINE_COMPLETED_CONDITION_TARGET] ??
+  runtime.isLineCompleted = toPreviewRuntimeValue(
+    runtimeFields.isLineCompleted,
+    getPreviewRuntimeOverrideValue(
+      previewVariableValues,
+      "isLineCompleted",
       dialogueDefaultValues?.["dialogue-is-line-completed"] ??
-      fixedStateItems[LINE_COMPLETED_CONDITION_TARGET]?.value ??
-      fixedStateItems[LINE_COMPLETED_CONDITION_TARGET]?.default ??
-      false,
-    autoMode:
-      previewVariableValues[AUTO_MODE_CONDITION_TARGET] ??
-      dialogueDefaultValues?.["dialogue-auto-mode"] ??
-      fixedStateItems[AUTO_MODE_CONDITION_TARGET]?.value ??
-      fixedStateItems[AUTO_MODE_CONDITION_TARGET]?.default ??
-      false,
-    skipMode:
-      previewVariableValues[SKIP_MODE_CONDITION_TARGET] ??
-      dialogueDefaultValues?.["dialogue-skip-mode"] ??
-      fixedStateItems[SKIP_MODE_CONDITION_TARGET]?.value ??
-      fixedStateItems[SKIP_MODE_CONDITION_TARGET]?.default ??
-      false,
-  };
+        runtime.isLineCompleted,
+    ),
+  );
+  runtime.autoMode = toPreviewRuntimeValue(
+    runtimeFields.autoMode,
+    getPreviewRuntimeOverrideValue(
+      previewVariableValues,
+      "autoMode",
+      dialogueDefaultValues?.["dialogue-auto-mode"] ?? runtime.autoMode,
+    ),
+  );
+  runtime.skipMode = toPreviewRuntimeValue(
+    runtimeFields.skipMode,
+    getPreviewRuntimeOverrideValue(
+      previewVariableValues,
+      "skipMode",
+      dialogueDefaultValues?.["dialogue-skip-mode"] ?? runtime.skipMode,
+    ),
+  );
+
+  return runtime;
+};
+
+export const getPreviewRuntimeConditionTargets = () => {
+  return [
+    LINE_COMPLETED_CONDITION_TARGET,
+    AUTO_MODE_CONDITION_TARGET,
+    SKIP_MODE_CONDITION_TARGET,
+  ];
 };

@@ -61,7 +61,7 @@ template:
                       - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
                           - rtgl-text w=1fg ellipsis=true: ${item.name} (${item.type})
                       - rtgl-view w=f h=1fg sv pv=md:
-                          - rvn-layout-edit-panel#layoutEditPanel key=${layoutEditPanelKey} layout-type=${layout.layoutType} resource-type=${layout.resourceType} item-type=${item.type} :projectResolution=${projectResolution} :isInsideSaveLoadSlot=${isInsideSaveLoadSlot} :isInsideDirectedContainer=${isInsideDirectedContainer} :selectedElementMetrics=${selectedElementMetrics} :values=${item} :imagesData=${imagesData} :spritesheetsData=${spritesheetsData} :textStylesData=${textStylesData} :variablesData=${variablesData} :layoutsData=${layoutsData}: null
+                          - rvn-layout-edit-panel#layoutEditPanel key=${layoutEditPanelKey} layout-type=${layout.layoutType} resource-type=${layout.resourceType} item-type=${item.type} :projectResolution=${projectResolution} :isInsideSaveLoadSlot=${isInsideSaveLoadSlot} :isInsideDirectedContainer=${isInsideDirectedContainer} :selectedElementMetrics=${selectedElementMetrics} :values=${item} :imagesData=${imagesData} :spritesheetsData=${spritesheetsData} :particlesData=${particlesData} :textStylesData=${textStylesData} :variablesData=${variablesData} :layoutsData=${layoutsData}: null
                 $else:
                   - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                       - rtgl-text s=md c=mu-fg: No selection

@@ -35,6 +35,10 @@ const CONTAINER_TYPE_SET = new Set([
   "container-ref-confirm-dialog-cancel",
 ]);
 
+const supportsLayoutEditorWidthMode = (itemType) => {
+  return typeof itemType === "string" && itemType.startsWith("text");
+};
+
 const CREATE_TEMPLATES = {
   container: () => ({
     type: "container",
@@ -47,6 +51,13 @@ const CREATE_TEMPLATES = {
     name: "Sprite",
     ...BASE_TRANSFORM,
     aspectRatioLock: 1,
+    width: 0,
+    height: 0,
+  }),
+  particle: () => ({
+    type: "particle",
+    name: "Particle",
+    ...BASE_TRANSFORM,
     width: 0,
     height: 0,
   }),
@@ -469,6 +480,7 @@ const TYPE_FAMILIES = {
   "container-ref-confirm-dialog-cancel": "container",
   "fragment-ref": "fragment",
   sprite: "sprite",
+  particle: "particle",
   "spritesheet-animation": "spritesheetAnimation",
   "sprite-ref-save-load-slot-image": "sprite",
   text: "text",
@@ -499,6 +511,7 @@ const DEFAULT_CAPABILITIES = {
   supportsActions: false,
   supportsSpriteImages: false,
   supportsSpritesheetAnimation: false,
+  supportsParticleSelection: false,
   supportsSliderImages: false,
   supportsSliderValues: false,
 };
@@ -518,6 +531,11 @@ const FAMILY_CAPABILITIES = {
   sprite: {
     supportsAnchor: true,
     supportsSpriteImages: true,
+    supportsActions: true,
+  },
+  particle: {
+    supportsAnchor: true,
+    supportsParticleSelection: true,
     supportsActions: true,
   },
   spritesheetAnimation: {
@@ -562,10 +580,6 @@ const TYPE_RULES = {
         return "continuous";
       }
 
-      if (name === "paginationVariableId" && (value === null || value === "")) {
-        return undefined;
-      }
-
       return value;
     },
   },
@@ -584,6 +598,15 @@ const TYPE_RULES = {
         nextItem,
         imagesData,
       });
+    },
+  },
+  particle: {
+    normalizeFieldValue: ({ name, value }) => {
+      if (name === "particleId" && (value === null || value === "")) {
+        return undefined;
+      }
+
+      return value;
     },
   },
   spritesheetAnimation: {
@@ -666,6 +689,7 @@ const PANEL_FEATURES_BY_TYPE = {
   "container-ref-confirm-dialog-ok": [...DEFAULT_PANEL_FEATURES, "actions"],
   "container-ref-confirm-dialog-cancel": [...DEFAULT_PANEL_FEATURES, "actions"],
   sprite: [...DEFAULT_PANEL_FEATURES, "images", "actions"],
+  particle: [...DEFAULT_PANEL_FEATURES, "particle", "actions"],
   "spritesheet-animation": [
     ...DEFAULT_PANEL_FEATURES,
     "spritesheet",
@@ -767,7 +791,6 @@ const IMMEDIATE_PERSIST_FIELDS_BY_TYPE = {
   "container-ref-save-load-slot": [
     ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
     "paginationMode",
-    "paginationVariableId",
     "paginationSize",
   ],
 };
@@ -796,6 +819,40 @@ export const getLayoutEditorItemCapabilities = (itemType) => {
     ...FAMILY_CAPABILITIES[family],
     ...ITEM_TYPE_CAPABILITY_OVERRIDES[itemType],
   };
+};
+
+export const canResizeLayoutEditorItemWidth = (item = {}) => {
+  const capabilities = getLayoutEditorItemCapabilities(item?.type);
+  if (capabilities.supportsSize !== true) {
+    return false;
+  }
+
+  if (supportsLayoutEditorWidthMode(item?.type)) {
+    return item?.width !== undefined;
+  }
+
+  return true;
+};
+
+export const canResizeLayoutEditorItemHeight = (item = {}) => {
+  const capabilities = getLayoutEditorItemCapabilities(item?.type);
+  return (
+    capabilities.supportsSize === true && capabilities.supportsHeight === true
+  );
+};
+
+export const getLayoutEditorItemResizeEdges = (item = {}) => {
+  const edges = [];
+
+  if (canResizeLayoutEditorItemWidth(item)) {
+    edges.push("left", "right");
+  }
+
+  if (canResizeLayoutEditorItemHeight(item)) {
+    edges.push("top", "bottom");
+  }
+
+  return edges;
 };
 
 export const getLayoutEditorTypeRules = (itemType) => {
