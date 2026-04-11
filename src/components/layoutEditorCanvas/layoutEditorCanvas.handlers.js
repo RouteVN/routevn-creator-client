@@ -322,6 +322,7 @@ const renderLayoutEditorCanvas = async (
         layoutState,
         repositoryState,
         previewData: props.previewData,
+        resolution: props.resolution,
         selectedItemId: props.selectedItemId,
         disableMoveDrag: props.disableMoveDrag === true,
         graphicsService: deps.graphicsService,

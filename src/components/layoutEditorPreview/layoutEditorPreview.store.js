@@ -8,11 +8,25 @@ import {
   findSaveLoadPreviewSettings,
   getSaveLoadPreviewWindow,
 } from "./support/layoutEditorPreviewSupport.js";
+import { toFlatItems } from "../../internal/project/tree.js";
 
 const EMPTY_LAYOUT_DATA = {
   items: {},
   tree: [],
 };
+const PREVIEW_BACKGROUND_SLOT = "preview-background";
+const PREVIEW_BACKGROUND_FORM_FIELD = {
+  type: "slot",
+  slot: PREVIEW_BACKGROUND_SLOT,
+  label: "Background",
+};
+const PREVIEW_BACKGROUND_MENU_ITEMS = [
+  {
+    type: "item",
+    label: "Remove Background",
+    value: "remove-background",
+  },
+];
 
 const createDialogueDefaultValues = () => ({
   "dialogue-character-name": "Character",
@@ -61,6 +75,104 @@ const resetPreviewStateValues = (state) => {
   state.historyDefaultValues = createHistoryDefaultValues();
   state.saveLoadDefaultValues = createSaveLoadDefaultValues();
   state.previewVariableValues = {};
+  state.previewBackgroundImageId = undefined;
+  state.imageSelectorDialog = {
+    open: false,
+    selectedImageId: undefined,
+  };
+  state.dropdownMenu = {
+    isOpen: false,
+    x: 0,
+    y: 0,
+    items: [],
+  };
+  state.fullImagePreviewVisible = false;
+  state.fullImagePreviewImageId = undefined;
+};
+
+const cloneFormField = (field) => {
+  if (!field || typeof field !== "object") {
+    return field;
+  }
+
+  const nextField = {
+    ...field,
+  };
+
+  if (Array.isArray(field.fields)) {
+    nextField.fields = field.fields.map((childField) =>
+      cloneFormField(childField),
+    );
+  }
+
+  return nextField;
+};
+
+const withPreviewBackgroundSlot = (form) => {
+  if (!form || typeof form !== "object") {
+    return form;
+  }
+
+  const nextFields = Array.isArray(form.fields)
+    ? form.fields.map((field) => cloneFormField(field))
+    : [];
+
+  if (
+    nextFields.some(
+      (field) =>
+        field?.type === "slot" && field?.slot === PREVIEW_BACKGROUND_SLOT,
+    )
+  ) {
+    return {
+      ...form,
+      fields: nextFields,
+    };
+  }
+
+  return {
+    ...form,
+    fields: [PREVIEW_BACKGROUND_FORM_FIELD, ...nextFields],
+  };
+};
+
+const createPreviewBackgroundOnlyForm = () => {
+  return withPreviewBackgroundSlot({
+    title: "Preview",
+    description: "Choose preview-only data for the canvas",
+    fields: [],
+  });
+};
+
+const resolvePreviewBackgroundFormTarget = ({
+  layoutType,
+  hasPreviewVariables,
+  hasSaveLoadPreview,
+} = {}) => {
+  if (layoutType === "dialogue") {
+    return "dialogue";
+  }
+
+  if (layoutType === "nvl") {
+    return "nvl";
+  }
+
+  if (layoutType === "choice") {
+    return "choice";
+  }
+
+  if (layoutType === "history") {
+    return "history";
+  }
+
+  if (hasPreviewVariables) {
+    return "previewVariables";
+  }
+
+  if (hasSaveLoadPreview) {
+    return "saveLoad";
+  }
+
+  return "backgroundOnly";
 };
 
 const getLayoutState = (state) => {
@@ -83,6 +195,19 @@ export const createInitialState = () => ({
   historyDefaultValues: createHistoryDefaultValues(),
   saveLoadDefaultValues: createSaveLoadDefaultValues(),
   previewVariableValues: {},
+  previewBackgroundImageId: undefined,
+  imageSelectorDialog: {
+    open: false,
+    selectedImageId: undefined,
+  },
+  dropdownMenu: {
+    isOpen: false,
+    x: 0,
+    y: 0,
+    items: [],
+  },
+  fullImagePreviewVisible: false,
+  fullImagePreviewImageId: undefined,
 });
 
 export const setLayoutState = ({ state }, { layoutState } = {}) => {
@@ -262,6 +387,57 @@ export const setPreviewVariableValue = (
   state.previewVariableValues[name] = fieldValue;
 };
 
+export const setPreviewBackgroundImageId = ({ state }, { imageId } = {}) => {
+  state.previewBackgroundImageId = imageId ?? undefined;
+};
+
+export const openImageSelectorDialog = ({ state }, _payload = {}) => {
+  state.imageSelectorDialog.open = true;
+  state.imageSelectorDialog.selectedImageId = state.previewBackgroundImageId;
+  state.dropdownMenu.isOpen = false;
+  state.dropdownMenu.x = 0;
+  state.dropdownMenu.y = 0;
+  state.dropdownMenu.items = [];
+};
+
+export const closeImageSelectorDialog = ({ state }, _payload = {}) => {
+  state.imageSelectorDialog.open = false;
+  state.imageSelectorDialog.selectedImageId = undefined;
+};
+
+export const setImageSelectorSelectedImageId = (
+  { state },
+  { imageId } = {},
+) => {
+  state.imageSelectorDialog.selectedImageId = imageId ?? undefined;
+};
+
+export const showFullImagePreview = ({ state }, { imageId } = {}) => {
+  state.fullImagePreviewVisible = true;
+  state.fullImagePreviewImageId = imageId;
+};
+
+export const hideFullImagePreview = ({ state }, _payload = {}) => {
+  state.fullImagePreviewVisible = false;
+  state.fullImagePreviewImageId = undefined;
+};
+
+export const showDropdownMenu = ({ state }, { x, y, items } = {}) => {
+  state.dropdownMenu.isOpen = true;
+  state.dropdownMenu.x = x ?? 0;
+  state.dropdownMenu.y = y ?? 0;
+  state.dropdownMenu.items = Array.isArray(items)
+    ? items
+    : PREVIEW_BACKGROUND_MENU_ITEMS;
+};
+
+export const hideDropdownMenu = ({ state }, _payload = {}) => {
+  state.dropdownMenu.isOpen = false;
+  state.dropdownMenu.x = 0;
+  state.dropdownMenu.y = 0;
+  state.dropdownMenu.items = [];
+};
+
 export const selectPreviewVariableValues = ({ state }) => {
   return state.previewVariableValues;
 };
@@ -331,6 +507,7 @@ export const selectPreviewData = ({ state }) => {
     choicesData: selectChoicesData({ state }),
     saveLoadData: selectSaveLoadData({ state }),
     hasSaveLoadPreview: selectHasSaveLoadPreview({ state }),
+    backgroundImageId: state.previewBackgroundImageId,
   });
 };
 
@@ -357,13 +534,42 @@ export const selectViewData = ({ state, constants }) => {
     saveLoadForm: constants.saveLoadForm,
   });
   const identityKey = `${layoutState.id ?? "none"}:${layoutType ?? "none"}`;
+  const previewBackgroundFormTarget = resolvePreviewBackgroundFormTarget({
+    layoutType,
+    hasPreviewVariables: previewVariablesViewData.hasPreviewVariables,
+    hasSaveLoadPreview: saveLoadPreviewViewData.hasSaveLoadPreview,
+  });
+  const fileExplorerItems = toFlatItems(
+    state.repositoryState.images ?? {
+      items: {},
+      tree: [],
+    },
+  ).filter((item) => item.type === "folder");
 
   return {
     layoutType,
-    dialogueForm: constants.dialogueForm,
+    previewBackgroundSlot: PREVIEW_BACKGROUND_SLOT,
+    previewBackgroundImageId: state.previewBackgroundImageId,
+    previewBackgroundOnlyForm:
+      previewBackgroundFormTarget === "backgroundOnly"
+        ? createPreviewBackgroundOnlyForm()
+        : undefined,
+    previewBackgroundOnlyFormKey: `${identityKey}:background-only`,
+    imageSelectorDialog: state.imageSelectorDialog,
+    dropdownMenu: state.dropdownMenu,
+    fileExplorerItems,
+    fullImagePreviewVisible: state.fullImagePreviewVisible,
+    fullImagePreviewImageId: state.fullImagePreviewImageId,
+    dialogueForm:
+      previewBackgroundFormTarget === "dialogue"
+        ? withPreviewBackgroundSlot(constants.dialogueForm)
+        : constants.dialogueForm,
     dialogueDefaultValues: state.dialogueDefaultValues,
     dialogueFormKey: `${identityKey}:dialogue`,
-    nvlForm: constants.nvlForm,
+    nvlForm:
+      previewBackgroundFormTarget === "nvl"
+        ? withPreviewBackgroundSlot(constants.nvlForm)
+        : constants.nvlForm,
     nvlDefaultValues: createNvlFormDefaultValues(state.nvlDefaultValues),
     nvlContext: {
       characterNames: state.nvlDefaultValues.characterNames,
@@ -372,7 +578,10 @@ export const selectViewData = ({ state, constants }) => {
     },
     nvlFormKey: `${identityKey}:nvl`,
     previewRevealingSpeed: state.previewRevealingSpeed,
-    choiceForm: constants.choiceForm,
+    choiceForm:
+      previewBackgroundFormTarget === "choice"
+        ? withPreviewBackgroundSlot(constants.choiceForm)
+        : constants.choiceForm,
     choiceDefaultValues: createChoiceFormDefaultValues(
       state.choiceDefaultValues,
     ),
@@ -381,7 +590,10 @@ export const selectViewData = ({ state, constants }) => {
       choicesNum: state.choiceDefaultValues.choicesNum,
     },
     choiceFormKey: `${identityKey}:choice`,
-    historyForm: constants.historyForm,
+    historyForm:
+      previewBackgroundFormTarget === "history"
+        ? withPreviewBackgroundSlot(constants.historyForm)
+        : constants.historyForm,
     historyDefaultValues: createHistoryFormDefaultValues(
       state.historyDefaultValues,
     ),
@@ -391,12 +603,20 @@ export const selectViewData = ({ state, constants }) => {
       linesNum: state.historyDefaultValues.linesNum,
     },
     historyFormKey: `${identityKey}:history`,
-    saveLoadForm: saveLoadPreviewViewData.saveLoadForm,
+    saveLoadForm:
+      previewBackgroundFormTarget === "saveLoad"
+        ? withPreviewBackgroundSlot(saveLoadPreviewViewData.saveLoadForm)
+        : saveLoadPreviewViewData.saveLoadForm,
     saveLoadDefaultValues: saveLoadPreviewViewData.saveLoadDefaultValues,
     saveLoadContext: saveLoadPreviewViewData.saveLoadContext,
     saveLoadFormKey: saveLoadPreviewViewData.saveLoadFormKey,
     hasSaveLoadPreview: saveLoadPreviewViewData.hasSaveLoadPreview,
-    previewVariablesForm: previewVariablesViewData.previewVariablesForm,
+    previewVariablesForm:
+      previewBackgroundFormTarget === "previewVariables"
+        ? withPreviewBackgroundSlot(
+            previewVariablesViewData.previewVariablesForm,
+          )
+        : previewVariablesViewData.previewVariablesForm,
     previewVariablesDefaultValues:
       previewVariablesViewData.previewVariablesDefaultValues,
     previewVariablesFormKey: previewVariablesViewData.previewVariablesFormKey,

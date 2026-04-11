@@ -132,6 +132,106 @@ export const handlePreviewRevealingSpeedInput = (deps, payload) => {
   renderAndEmitPreviewDataChange(deps);
 };
 
+export const handlePreviewBackgroundFieldClick = async (deps) => {
+  await syncRepositoryState(deps);
+  deps.store.hideDropdownMenu();
+  deps.store.openImageSelectorDialog();
+  deps.render();
+};
+
+export const handlePreviewBackgroundFieldContextMenu = (deps, payload) => {
+  const imageId = deps.store.selectPreviewData()?.backgroundImageId;
+  if (!imageId) {
+    return;
+  }
+
+  const event = payload._event;
+  event.preventDefault();
+  deps.store.showDropdownMenu({
+    x: event.clientX,
+    y: event.clientY,
+  });
+  deps.render();
+};
+
+export const handleImageSelected = (deps, payload) => {
+  deps.store.setImageSelectorSelectedImageId({
+    imageId: payload._event.detail?.imageId,
+  });
+  deps.render();
+};
+
+export const handleImageSelectorCancel = (deps) => {
+  deps.store.closeImageSelectorDialog();
+  deps.render();
+};
+
+export const handleImageSelectorSubmit = (deps) => {
+  const state = deps.store.getState
+    ? deps.store.getState()
+    : deps.store._state || deps.store.state;
+  const imageSelectorDialog = state?.imageSelectorDialog;
+
+  deps.store.setPreviewBackgroundImageId({
+    imageId: imageSelectorDialog?.selectedImageId,
+  });
+  deps.store.closeImageSelectorDialog();
+  deps.store.hideDropdownMenu();
+  renderAndEmitPreviewDataChange(deps);
+};
+
+export const handleImageDoubleClick = (deps, payload) => {
+  const imageId = payload?._event?.detail?.imageId;
+  if (!imageId) {
+    return;
+  }
+
+  deps.store.showFullImagePreview({ imageId });
+  deps.render();
+};
+
+export const handleFileExplorerClickItem = (deps, payload) => {
+  const itemId = payload?._event?.detail?.itemId;
+  if (!itemId) {
+    return;
+  }
+
+  deps.refs.imageSelector?.transformedHandlers?.handleScrollToItem?.({
+    itemId,
+  });
+};
+
+export const handleClearPreviewBackground = (deps) => {
+  deps.store.setPreviewBackgroundImageId({
+    imageId: undefined,
+  });
+  deps.store.hideDropdownMenu();
+  renderAndEmitPreviewDataChange(deps);
+};
+
+export const handleDropdownMenuClickItem = (deps, payload) => {
+  const item = payload._event.detail?.item || payload._event.detail;
+
+  deps.store.hideDropdownMenu();
+
+  if (item?.value === "remove-background") {
+    handleClearPreviewBackground(deps);
+    return;
+  }
+
+  deps.render();
+};
+
+export const handleDropdownMenuClose = (deps) => {
+  deps.store.hideDropdownMenu();
+  deps.render();
+};
+
+export const handlePreviewOverlayClick = (deps) => {
+  deps.store.hideFullImagePreview();
+  deps.render();
+};
+
 export const handlePlayPreviewClick = (deps) => {
   emitPlay(deps);
 };
