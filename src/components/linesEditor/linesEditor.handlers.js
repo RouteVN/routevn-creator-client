@@ -1658,6 +1658,13 @@ export const handleLineBlur = (deps, payload) => {
     deps.props.lines,
   );
 
+  if (
+    shouldPreserveLiveContent &&
+    !shouldIgnoreElementContentSync(blurredElement)
+  ) {
+    dispatchEditorDataChanged(dispatchEvent, blurredElement);
+  }
+
   // Check if we're navigating between lines - if so, don't switch to block mode
   if (store.selectIsNavigating()) {
     return;
