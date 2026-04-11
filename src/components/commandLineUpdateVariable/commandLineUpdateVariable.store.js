@@ -1,5 +1,4 @@
 import { getVariableOptions } from "../../internal/project/projection.js";
-import { getSystemVariableItems } from "../../internal/systemVariables.js";
 
 // Operations available per variable type
 const OPERATIONS_BY_TYPE = {
@@ -125,15 +124,10 @@ export const selectOperations = ({ state }) => {
 };
 
 export const selectViewData = ({ state }) => {
-  const projectVariableItems = state.variablesData?.items ?? {};
-  const variableItems = {
-    ...projectVariableItems,
-    ...getSystemVariableItems(),
-  };
+  const variableItems = state.variablesData?.items ?? {};
 
   const variableOptions = getVariableOptions(state.variablesData, {
     showType: true,
-    includeSystem: true,
   });
 
   const selectedVariable = variableItems[state.tempOperation.variableId];

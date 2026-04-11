@@ -12,6 +12,7 @@ import {
   prepareRuntimeInteractionExecution,
 } from "../src/internal/runtime/graphicsEngineRuntime.js";
 import { BUNDLE_FORMAT_VERSION } from "../src/deps/services/shared/projectExportService.js";
+import { getRuntimeFieldItems } from "../src/internal/runtimeFields.js";
 
 async function parseVNBundle(arrayBuffer) {
   const dataView = new DataView(arrayBuffer);
@@ -116,6 +117,51 @@ const preloadBundleData = async () => {
   return { jsonData, assetBufferMap };
 };
 
+const PERSISTED_RUNTIME_IDS = new Set(
+  Object.values(getRuntimeFieldItems())
+    .filter((field) => field.scope === "device")
+    .map((field) => field.id),
+);
+
+const readStoredJson = (key) => {
+  const rawValue = localStorage.getItem(key);
+
+  if (!rawValue) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(rawValue) || {};
+  } catch {
+    return {};
+  }
+};
+
+const splitStoredGlobalState = (...sources) => {
+  const runtime = {};
+  const variables = {};
+
+  sources.forEach((source) => {
+    if (!source || typeof source !== "object" || Array.isArray(source)) {
+      return;
+    }
+
+    Object.entries(source).forEach(([key, value]) => {
+      if (PERSISTED_RUNTIME_IDS.has(key)) {
+        runtime[key] = value;
+        return;
+      }
+
+      variables[key] = value;
+    });
+  });
+
+  return {
+    runtime,
+    variables,
+  };
+};
+
 const prepareEngine = async ({ jsonData, assetBufferMap }) => {
   const plugins = await loadGraphicsEnginePlugins();
 
@@ -212,11 +258,13 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
   });
 
   engine = createRouteEngine({ handlePendingEffects: effectsHandler });
-  const saveSlots = JSON.parse(localStorage.getItem("saveSlots")) || {};
-  const globalDeviceVariables =
-    JSON.parse(localStorage.getItem("globalDeviceVariables")) || {};
-  const globalAccountVariables =
-    JSON.parse(localStorage.getItem("globalAccountVariables")) || {};
+  const saveSlots = readStoredJson("saveSlots");
+  const deviceVariables = readStoredJson("deviceVariables");
+  const accountVariables = readStoredJson("accountVariables");
+  const storedGlobalState = splitStoredGlobalState(
+    deviceVariables,
+    accountVariables,
+  );
   const preloadSaveSlotImagesResult = await preloadRuntimeSaveSlotImages(
     routeGraphics,
     saveSlots,
@@ -233,7 +281,8 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
       initialState: {
         global: {
           saveSlots,
-          variables: { ...globalDeviceVariables, ...globalAccountVariables },
+          variables: storedGlobalState.variables,
+          ...storedGlobalState.runtime,
         },
         projectData: jsonData,
       },

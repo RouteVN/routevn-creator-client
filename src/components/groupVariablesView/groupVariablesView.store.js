@@ -56,16 +56,16 @@ export const createInitialState = () => ({
           // # Example: Player progress, inventory items, story flags
           // # Use for values that are tied to gameplay state.
           //
-          // # • global-device – saved on this device only
+          // # • device – saved on this device only
           // # Example: Text speed, sound/music volume, accessibility preferences
           // # Use for user preferences that should persist on the current device.
           //
-          // # • global-account – synced across all devices
+          // # • account – synced across all devices
           // # Example: Whether the game is completed, unlocked bonus content, claimed daily rewards
           // # Use when the value should follow the player across multiple devices (via cloud sync).
           { value: "context", label: "Context" },
-          { value: "global-device", label: "Global Device" },
-          { value: "global-account", label: "Global Account" },
+          { value: "device", label: "Device" },
+          { value: "account", label: "Account" },
         ],
       },
       {

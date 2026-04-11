@@ -1,0 +1,80 @@
+refs:
+  fileExplorer:
+    eventListeners:
+      file-action:
+        handler: handleFileExplorerAction
+      target-changed:
+        handler: handleFileExplorerTargetChanged
+      item-click:
+        handler: handleFileExplorerSelectionChanged
+      dblclick-item:
+        handler: handleParticleItemDoubleClick
+  groupview:
+    eventListeners:
+      item-click:
+        handler: handleParticleItemClick
+      item-dblclick:
+        handler: handleParticleItemDoubleClick
+      add-click:
+        handler: handleAddParticleClick
+      search-input:
+        handler: handleSearchInput
+      item-delete:
+        handler: handleItemDelete
+  particleDialog:
+    eventListeners:
+      close:
+        handler: handleParticleDialogClose
+  particleForm:
+    eventListeners:
+      form-action:
+        handler: handleParticleFormActionClick
+      form-change:
+        handler: handleParticleFormChange
+  tabs:
+    eventListeners:
+      item-click:
+        handler: handleParticleFormTabClick
+  detailHeader:
+    eventListeners:
+      click:
+        handler: handleDetailHeaderClick
+  detailCanvas: {}
+  dialogCanvas: {}
+template:
+  - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
+      - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
+          - rvn-resizable-panel#fileExplorerPanel w=300 min-w=200 max-w=500 resize-side="right":
+              - rtgl-view slot="content" w=f h=f:
+                  - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
+                  - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
+          - 'rtgl-view w=1fg h=f pl=sm style="min-width: 0; min-height: 0;"':
+              - rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} :groups=${catalogGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :emptyMessage=${emptyMessage} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}: null
+          - rvn-resizable-panel panel-type=detail-panel w=300 min-w=220 max-w=520 resize-side="left":
+              - rtgl-view wh=f slot="content":
+                  - $if selectedItemId && selectedItem:
+                      - rtgl-view d=v w=f h=f:
+                          - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+                              - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                              - rtgl-svg svg=edit wh=16: null
+                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
+                              - $if selectedItem:
+                                  - rtgl-view slot="particle-preview" w=f d=v g=sm:
+                                      - 'rtgl-view w=f pos=rel br=md bw=xs bc=bo style="aspect-ratio: ${selectedPreviewAspectRatio}; background: linear-gradient(180deg, #0f1925 0%, #070c12 100%);"':
+                                          - rtgl-view pos=abs cor=full:
+                                              - 'div#detailCanvas style="width: 100%; height: 100%; display: flex;"': null
+                    $else:
+                      - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                          - rtgl-text s=md c=mu-fg: No selection
+  - rtgl-dialog#particleDialog ?open=${isDialogOpen} s=lg:
+      - rtgl-view slot="content" d=h lg-d=v ah=c g=lg w=f:
+          - $if isDialogOpen:
+              - $if !isPreviewOnlyDialog:
+                  - rtgl-view w=4fg lg-w=f d=v g=md:
+                      - rtgl-form#particleForm key=${particleFormKey} :defaultValues=${dialogFormValues} :form=${particleForm} w=f:
+                          - rtgl-tabs#tabs slot=particle-form-tabs selected-tab=${selectedParticleFormTab} :items=${particleFormTabs}: null
+              - rtgl-view w=6fg lg-w=f d=v g=md:
+                  - rtgl-text: Preview
+                  - 'rtgl-view w=f pos=rel br=md bw=xs bc=bo style="aspect-ratio: ${dialogPreviewAspectRatio}; background: linear-gradient(180deg, #0f1925 0%, #070c12 100%);"':
+                      - rtgl-view pos=abs cor=full:
+                          - 'div#dialogCanvas style="width: 100%; height: 100%; display: flex;"': null

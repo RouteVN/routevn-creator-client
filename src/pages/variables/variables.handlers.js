@@ -9,7 +9,7 @@ const EMPTY_TREE = { tree: [], items: {} };
 const createVariableResourceData = ({
   name,
   description = "",
-  scope = "global-device",
+  scope = "device",
   type = "string",
   defaultValue = "",
 } = {}) => ({

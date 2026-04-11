@@ -58,15 +58,8 @@ describe("layoutEditPanel actions", () => {
     handleActionsChange(deps, {
       _event: {
         detail: {
-          updateVariable: {
-            id: "updateVariable1",
-            operations: [
-              {
-                variableId: "_currentMenuPage",
-                op: "set",
-                value: "options",
-              },
-            ],
+          setMenuPage: {
+            value: "options",
           },
         },
       },
@@ -76,30 +69,16 @@ describe("layoutEditPanel actions", () => {
       pushLayeredView: {
         resourceId: "layout-settings",
       },
-      updateVariable: {
-        id: "updateVariable1",
-        operations: [
-          {
-            variableId: "_currentMenuPage",
-            op: "set",
-            value: "options",
-          },
-        ],
+      setMenuPage: {
+        value: "options",
       },
     });
     expect(state.actionsEditorActions).toEqual({
       pushLayeredView: {
         resourceId: "layout-settings",
       },
-      updateVariable: {
-        id: "updateVariable1",
-        operations: [
-          {
-            variableId: "_currentMenuPage",
-            op: "set",
-            value: "options",
-          },
-        ],
+      setMenuPage: {
+        value: "options",
       },
     });
   });

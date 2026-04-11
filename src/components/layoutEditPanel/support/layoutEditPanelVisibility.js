@@ -1,4 +1,3 @@
-import { getSystemVariableItems } from "../../../internal/systemVariables.js";
 import {
   getSpecialLayoutConditionItems,
   parseVariableConditionTarget,
@@ -31,14 +30,6 @@ export const getScalarConditionTargetItems = (
     )
     .map(([variableId, item]) => [toVariableConditionTarget(variableId), item])
     .filter(([target]) => typeof target === "string" && target.length > 0);
-  const systemVariables = Object.entries(getSystemVariableItems())
-    .filter(([, item]) =>
-      SUPPORTED_VISIBILITY_VARIABLE_TYPES.has(
-        String(item?.type || "string").toLowerCase(),
-      ),
-    )
-    .map(([variableId, item]) => [toVariableConditionTarget(variableId), item])
-    .filter(([target]) => typeof target === "string" && target.length > 0);
   const specialTargets = Object.entries(
     getSpecialLayoutConditionItems(options),
   ).filter(([, item]) =>
@@ -47,11 +38,7 @@ export const getScalarConditionTargetItems = (
     ),
   );
 
-  return Object.fromEntries([
-    ...projectVariables,
-    ...systemVariables,
-    ...specialTargets,
-  ]);
+  return Object.fromEntries([...projectVariables, ...specialTargets]);
 };
 
 export const toVisibilityConditionTargetOptions = (

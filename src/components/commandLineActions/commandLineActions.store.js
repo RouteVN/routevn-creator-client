@@ -1,3 +1,5 @@
+import { RUNTIME_ACTION_ITEMS } from "../../internal/runtimeActions.js";
+
 // Define action sets as constants
 const SYSTEM_ACTIONS = [
   {
@@ -78,6 +80,7 @@ const SYSTEM_ACTIONS = [
     icon: "dialogue",
     mode: "loadSlot",
   },
+  ...RUNTIME_ACTION_ITEMS,
 ];
 
 const PRESENTATION_ACTIONS = [

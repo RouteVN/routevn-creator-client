@@ -3,6 +3,10 @@ import {
   DEFAULT_PROJECT_RESOLUTION,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
+import {
+  canResizeLayoutEditorItemHeight,
+  canResizeLayoutEditorItemWidth,
+} from "../../internal/layoutEditorElementRegistry.js";
 import { captureCanvasThumbnailImage } from "../../internal/runtime/graphicsEngineRuntime.js";
 import {
   createLayoutEditorRenderedElements,
@@ -17,7 +21,6 @@ const KEYBOARD_UNITS = {
 };
 const MIN_RESIZE_DIMENSION = 1;
 const RESIZE_TARGET_PREFIX = "selected-border-resize-";
-const VERTICAL_RESIZE_EDGES = new Set(["top", "bottom"]);
 
 const mountSubscriptions = (deps) => {
   const streams = subscriptions(deps) || [];
@@ -127,8 +130,16 @@ const getAspectRatioLock = (item = {}) => {
   return undefined;
 };
 
-const isTextItem = (item = {}) => {
-  return typeof item.type === "string" && item.type.startsWith("text");
+const canResizeCanvasItemForEdge = (item = {}, resizeEdge) => {
+  if (resizeEdge === "left" || resizeEdge === "right") {
+    return canResizeLayoutEditorItemWidth(item);
+  }
+
+  if (resizeEdge === "top" || resizeEdge === "bottom") {
+    return canResizeLayoutEditorItemHeight(item);
+  }
+
+  return false;
 };
 
 const clampResizeDimension = (value) => {
@@ -165,7 +176,7 @@ export const applyCanvasItemResizeChange = ({
   };
   const aspectRatioLock = getAspectRatioLock(item);
 
-  if (isTextItem(item) && VERTICAL_RESIZE_EDGES.has(resizeEdge)) {
+  if (!canResizeCanvasItemForEdge(item, resizeEdge)) {
     return item;
   }
 
@@ -229,18 +240,30 @@ export const applyCanvasItemKeyboardChange = ({
   let change;
 
   if (key === "ArrowUp") {
+    if (resize && !canResizeLayoutEditorItemHeight(item)) {
+      return item;
+    }
     change = resize
       ? { height: Math.round(item.height - unit) }
       : { y: Math.round(item.y - unit) };
   } else if (key === "ArrowDown") {
+    if (resize && !canResizeLayoutEditorItemHeight(item)) {
+      return item;
+    }
     change = resize
       ? { height: Math.round(item.height + unit) }
       : { y: Math.round(item.y + unit) };
   } else if (key === "ArrowLeft") {
+    if (resize && !canResizeLayoutEditorItemWidth(item)) {
+      return item;
+    }
     change = resize
       ? { width: Math.round(item.width - unit) }
       : { x: Math.round(item.x - unit) };
   } else if (key === "ArrowRight") {
+    if (resize && !canResizeLayoutEditorItemWidth(item)) {
+      return item;
+    }
     change = resize
       ? { width: Math.round(item.width + unit) }
       : { x: Math.round(item.x + unit) };
@@ -385,6 +408,9 @@ const handleKeyboardMove = async (deps, event) => {
     unit: event.shiftKey ? KEYBOARD_UNITS.FAST : KEYBOARD_UNITS.NORMAL,
     resize: event.metaKey || deps.props.disableMoveDrag === true,
   });
+  if (updatedItem === currentItem) {
+    return;
+  }
 
   deps.store.setPendingUpdatedItem({ updatedItem });
   await renderLayoutEditorCanvas(deps, deps.props, { updatedItem });
@@ -403,8 +429,16 @@ const handleBorderDragStart = (deps, payload = {}) => {
     return;
   }
 
+  const dragMode = getDragModeFromTargetId(payload.targetId);
+  if (
+    dragMode !== "move" &&
+    !canResizeCanvasItemForEdge(currentItem, dragMode)
+  ) {
+    return;
+  }
+
   deps.store.startDragging({
-    dragMode: getDragModeFromTargetId(payload.targetId),
+    dragMode,
   });
   deps.render();
 };
@@ -450,6 +484,9 @@ const handleBorderDragMove = async (deps, payload = {}) => {
           x: payload.x,
           y: payload.y,
         });
+  if (updatedItem === currentItem) {
+    return;
+  }
 
   deps.store.setPendingUpdatedItem({ updatedItem });
   await renderLayoutEditorCanvas(deps, deps.props, { updatedItem });

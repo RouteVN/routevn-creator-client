@@ -22,6 +22,11 @@ import {
   parseSpritesheetAnimationSelectionValue,
   toSpritesheetAnimationSelectionItems,
 } from "../../internal/spritesheets.js";
+import {
+  getFirstParticleSelectionValue,
+  getParticleResourceDefaultSize,
+  toParticleSelectionItems,
+} from "../../internal/particles.js";
 import { createLayoutElementsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { createLayoutEditorRepositoryStoreData } from "./support/layoutEditorRepositoryState.js";
 
@@ -109,6 +114,20 @@ const resolveSpritesheetCreateAction = (detail = {}) => {
     typeof value === "object" &&
     value.action === "new-child-item" &&
     value.type === "spritesheet-animation"
+  ) {
+    return value;
+  }
+
+  return undefined;
+};
+
+const resolveParticleCreateAction = (detail = {}) => {
+  const value = resolveMenuItem(detail)?.value;
+  if (
+    value &&
+    typeof value === "object" &&
+    value.action === "new-child-item" &&
+    value.type === "particle"
   ) {
     return value;
   }
@@ -220,6 +239,45 @@ const createSpritesheetCreateForm = (selectionItems = []) => {
           id: "submit",
           variant: "pr",
           label: "Create Animation",
+          validate: true,
+        },
+      ],
+    },
+  };
+};
+
+const createParticleCreateForm = (selectionItems = []) => {
+  return {
+    title: "Create Particle",
+    description: "Choose which particle effect to insert into the layout",
+    fields: [
+      {
+        name: "name",
+        type: "input-text",
+        label: "Name",
+        required: true,
+      },
+      {
+        name: "particleId",
+        type: "select",
+        label: "Particle",
+        required: true,
+        clearable: false,
+        options: selectionItems,
+      },
+    ],
+    actions: {
+      buttons: [
+        {
+          id: "cancel",
+          variant: "se",
+          label: "Cancel",
+          align: "left",
+        },
+        {
+          id: "submit",
+          variant: "pr",
+          label: "Create Particle",
           validate: true,
         },
       ],
@@ -752,6 +810,117 @@ export const handleFileExplorerAction = async (deps, payload) => {
     return;
   }
 
+  const particleAction = resolveParticleCreateAction(payload?._event?.detail);
+  if (particleAction) {
+    const { appService, projectService, store } = deps;
+    const parentId = payload?._event?.detail?.itemId ?? null;
+    const particlesData = store.selectParticlesData();
+    const selectionItems = toParticleSelectionItems(particlesData);
+
+    if (selectionItems.length === 0) {
+      appService.showToast("Create a particle effect first.", {
+        title: "Warning",
+      });
+      return;
+    }
+
+    const dialogResult = await appService.showFormDialog({
+      form: createParticleCreateForm(selectionItems),
+      defaultValues: {
+        name: particleAction.name ?? "Particle",
+        particleId: getFirstParticleSelectionValue(particlesData),
+      },
+    });
+
+    if (!dialogResult || dialogResult.actionId !== "submit") {
+      return;
+    }
+
+    const name = dialogResult.values?.name?.trim();
+    if (!name) {
+      appService.showToast("Particle name is required.", {
+        title: "Warning",
+      });
+      return;
+    }
+
+    const particleId = dialogResult.values?.particleId;
+    if (!particleId) {
+      appService.showToast("Particle is required.", {
+        title: "Warning",
+      });
+      return;
+    }
+
+    const layoutId = store.selectLayoutId();
+    const resourceType = store.selectLayoutResourceType();
+    if (!layoutId) {
+      appService.showToast(
+        resourceType === "controls"
+          ? "Control is missing."
+          : "Layout is missing.",
+        {
+          title: "Error",
+        },
+      );
+      return;
+    }
+
+    const nextElementId = nanoid();
+    const nextElementData = {
+      ...getLayoutEditorCreateDefinition("particle", {
+        projectResolution: store.selectProjectResolution(),
+      }).template,
+      name,
+      particleId,
+    };
+    const resourceSize = getParticleResourceDefaultSize(
+      particlesData,
+      particleId,
+    );
+    if (Number.isFinite(resourceSize.width) && resourceSize.width > 0) {
+      nextElementData.width = resourceSize.width;
+    }
+    if (Number.isFinite(resourceSize.height) && resourceSize.height > 0) {
+      nextElementData.height = resourceSize.height;
+    }
+    if (
+      Number.isFinite(nextElementData.width) &&
+      Number.isFinite(nextElementData.height) &&
+      nextElementData.width > 0 &&
+      nextElementData.height > 0
+    ) {
+      nextElementData.aspectRatioLock =
+        nextElementData.width / nextElementData.height;
+    }
+
+    await projectService.ensureRepository();
+    const { ownerPayloadKey, createElement } = getSliderCreateOwnerConfig(
+      resourceType,
+      projectService,
+    );
+    const createResult = await createElement({
+      [ownerPayloadKey]: layoutId,
+      elementId: nextElementId,
+      data: nextElementData,
+      parentId,
+      position: "last",
+    });
+
+    if (createResult?.valid === false) {
+      appService.showToast(
+        getResultErrorMessage(createResult, "Failed to create particle."),
+        {
+          title: "Error",
+        },
+      );
+      return;
+    }
+
+    await refreshLayoutEditorData(deps, { selectedItemId: nextElementId });
+    return;
+  }
+
   const spriteAction = resolveSpriteCreateAction(payload?._event?.detail);
   const sliderAction = resolveSliderCreateAction(payload?._event?.detail);
   if (!spriteAction && !sliderAction) {
@@ -1013,6 +1182,7 @@ const subscriptions = (deps) => {
         "controls",
         "images",
         "spritesheets",
+        "particles",
         "textStyles",
         "colors",
         "fonts",

@@ -185,6 +185,9 @@ describe("renderSceneEditorState with repository fallback project data", () => {
       selectSelectedSectionId: () => selectSelectedSectionId({ state }),
       selectSelectedLineId: () => selectSelectedLineId({ state }),
       selectProjectData: () => selectProjectData({ state }),
+      selectPreviewRuntimeGlobal: () => ({
+        dialogueTextSpeed: 100,
+      }),
       selectIsMuted: () => false,
       setPresentationState: ({ presentationState }) => {
         state.presentationState = presentationState;

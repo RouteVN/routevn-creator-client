@@ -1,5 +1,6 @@
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
 import { getInteractionActions } from "../../internal/project/interactionPayload.js";
+import { RUNTIME_ACTION_LABELS } from "../../internal/runtimeActions.js";
 import {
   BASE_LAYOUT_KEYBOARD_LABELS,
   BASE_LAYOUT_KEYBOARD_OPTIONS,
@@ -42,6 +43,7 @@ const SYSTEM_ACTION_LABELS = {
   pushLayeredView: "Push Layered View",
   popLayeredView: "Pop Layered View",
   updateVariable: "Update Variable",
+  ...RUNTIME_ACTION_LABELS,
 };
 
 const toKeyboardItems = (keyboardValue = {}) => {

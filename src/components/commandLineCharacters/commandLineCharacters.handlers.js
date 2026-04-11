@@ -23,14 +23,12 @@ export const handleAfterMount = async (deps) => {
     characterItems = props.character.items;
   }
 
-  if (!characterItems) {
-    return;
+  if (characterItems) {
+    // Store raw character data from props
+    store.setExistingCharacters({
+      characters: characterItems,
+    });
   }
-
-  // Store raw character data from props
-  store.setExistingCharacters({
-    characters: characterItems,
-  });
 
   render();
 };
@@ -41,6 +39,7 @@ export const handleCharacterClick = (deps, payload) => {
 
   // Set the character index for sprite selection
   store.setSelectedCharacterIndex({ index });
+  store.setSearchQuery({ value: "" });
 
   // Go to sprite selection mode
   store.setMode({
@@ -111,6 +110,7 @@ export const handleFileExplorerItemClick = (deps, payload) => {
   const currentCharacters = store.selectSelectedCharacters();
   const newCharacterIndex = currentCharacters.length - 1;
   store.setSelectedCharacterIndex({ index: newCharacterIndex });
+  store.setSearchQuery({ value: "" });
   store.setMode({
     mode: "sprite-select",
   });
@@ -147,6 +147,7 @@ export const handleCharacterItemClick = (deps, payload) => {
   const currentCharacters = store.selectSelectedCharacters();
   const newCharacterIndex = currentCharacters.length - 1;
   store.setSelectedCharacterIndex({ index: newCharacterIndex });
+  store.setSearchQuery({ value: "" });
 
   // Jump directly to sprite selection mode
   store.setMode({
@@ -192,6 +193,7 @@ export const handleSubmitClick = (deps) => {
 export const handleCharacterSelectorClick = (deps) => {
   const { store, render } = deps;
 
+  store.setSearchQuery({ value: "" });
   store.setMode({
     mode: "character-select",
   });
@@ -214,6 +216,7 @@ export const handleBreadcumbClick = (deps, payload) => {
     });
     render();
   } else if (payload._event.detail.id === "character-select") {
+    store.setSearchQuery({ value: "" });
     store.setMode({
       mode: "sprite-select",
     });
@@ -234,6 +237,7 @@ export const handleRemoveCharacterClick = (deps, payload) => {
 export const handleAddCharacterClick = (deps) => {
   const { store, render } = deps;
 
+  store.setSearchQuery({ value: "" });
   store.setMode({
     mode: "character-select",
   });

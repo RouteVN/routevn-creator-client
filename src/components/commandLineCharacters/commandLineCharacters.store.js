@@ -20,6 +20,10 @@ const ANIMATION_MODE_OPTIONS = [
   },
 ];
 
+const UNGROUPED_CHARACTER_GROUP_ID = "__ungrouped_characters__";
+const UNGROUPED_SPRITE_GROUP_ID = "__ungrouped_sprites__";
+const UNGROUPED_GROUP_LABEL = "Ungrouped";
+
 const getAnimationType = (item = {}) => {
   return item?.animation?.type === "transition" ? "transition" : "update";
 };
@@ -355,9 +359,6 @@ const form = {
 };
 
 export const selectViewData = ({ state }) => {
-  const flatItems = toFlatItems(state.items).filter(
-    (item) => item.type === "folder",
-  );
   const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
   const matchesSearch = (item) => {
     if (!searchQuery) {
@@ -368,10 +369,21 @@ export const selectViewData = ({ state }) => {
     const description = (item.description ?? "").toLowerCase();
     return name.includes(searchQuery) || description.includes(searchQuery);
   };
-  const flatGroups = toFlatGroups(state.items)
-    .map((group) => {
-      const children = group.children.filter(matchesSearch).map((child) => {
-        const isSelected = child.id === state.tempSelectedCharacterId;
+
+  const buildSelectableTreeData = ({
+    collection,
+    selectedItemId,
+    syntheticRootId,
+  } = {}) => {
+    const allItems = toFlatItems(collection);
+    const explorerItems = allItems.filter((item) => item.type === "folder");
+    const rootChildren = allItems.filter(
+      (item) => item.type !== "folder" && item.parentId === null,
+    );
+    const visibleRootChildren = rootChildren
+      .filter(matchesSearch)
+      .map((child) => {
+        const isSelected = child.id === selectedItemId;
         return {
           ...child,
           itemBorderColor: isSelected ? "pr" : "bo",
@@ -379,14 +391,63 @@ export const selectViewData = ({ state }) => {
         };
       });
 
-      return {
-        ...group,
-        children,
-        hasChildren: children.length > 0,
-        shouldDisplay: !searchQuery || children.length > 0,
-      };
-    })
-    .filter((group) => group.shouldDisplay);
+    const groups = toFlatGroups(collection)
+      .map((group) => {
+        const children = group.children.filter(matchesSearch).map((child) => {
+          const isSelected = child.id === selectedItemId;
+          return {
+            ...child,
+            itemBorderColor: isSelected ? "pr" : "bo",
+            itemHoverBorderColor: isSelected ? "pr" : "ac",
+          };
+        });
+
+        return {
+          ...group,
+          children,
+          hasChildren: children.length > 0,
+          shouldDisplay: !searchQuery || children.length > 0,
+        };
+      })
+      .filter((group) => group.shouldDisplay);
+
+    if (rootChildren.length > 0) {
+      explorerItems.unshift({
+        id: syntheticRootId,
+        type: "folder",
+        name: UNGROUPED_GROUP_LABEL,
+        fullLabel: UNGROUPED_GROUP_LABEL,
+        _level: 0,
+        parentId: null,
+        hasChildren: true,
+      });
+    }
+
+    if (visibleRootChildren.length > 0) {
+      groups.unshift({
+        id: syntheticRootId,
+        type: "folder",
+        name: UNGROUPED_GROUP_LABEL,
+        fullLabel: UNGROUPED_GROUP_LABEL,
+        _level: 0,
+        parentId: null,
+        hasChildren: true,
+        children: visibleRootChildren,
+        shouldDisplay: true,
+      });
+    }
+
+    return {
+      explorerItems,
+      groups,
+    };
+  };
+
+  const characterTreeData = buildSelectableTreeData({
+    collection: state.items,
+    selectedItemId: state.tempSelectedCharacterId,
+    syntheticRootId: UNGROUPED_CHARACTER_GROUP_ID,
+  });
 
   // Initialize sprite data (will be populated later after processedSelectedCharacters is defined)
   let spriteItems = [];
@@ -442,29 +503,13 @@ export const selectViewData = ({ state }) => {
 
     if (enrichedSelectedChar && enrichedSelectedChar.sprites) {
       selectedCharacterName = enrichedSelectedChar.name || "Character";
-      spriteItems = toFlatItems(enrichedSelectedChar.sprites).filter(
-        (item) => item.type === "folder",
-      );
-
-      spriteGroups = toFlatGroups(enrichedSelectedChar.sprites)
-        .map((group) => {
-          const children = group.children.filter(matchesSearch).map((child) => {
-            const isSelected = child.id === state.tempSelectedSpriteId;
-            return {
-              ...child,
-              itemBorderColor: isSelected ? "pr" : "bo",
-              itemHoverBorderColor: isSelected ? "pr" : "ac",
-            };
-          });
-
-          return {
-            ...group,
-            children,
-            hasChildren: children.length > 0,
-            shouldDisplay: !searchQuery || children.length > 0,
-          };
-        })
-        .filter((group) => group.shouldDisplay);
+      const spriteTreeData = buildSelectableTreeData({
+        collection: enrichedSelectedChar.sprites,
+        selectedItemId: state.tempSelectedSpriteId,
+        syntheticRootId: UNGROUPED_SPRITE_GROUP_ID,
+      });
+      spriteItems = spriteTreeData.explorerItems;
+      spriteGroups = spriteTreeData.groups;
     }
   }
 
@@ -523,8 +568,8 @@ export const selectViewData = ({ state }) => {
 
   return {
     mode: state.mode,
-    items: flatItems,
-    groups: flatGroups,
+    items: characterTreeData.explorerItems,
+    groups: characterTreeData.groups,
     selectedCharacters: processedSelectedCharacters,
     transformOptions,
     animationModeOptions: ANIMATION_MODE_OPTIONS,

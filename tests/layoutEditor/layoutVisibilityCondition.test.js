@@ -138,21 +138,21 @@ describe("layout visibility conditions", () => {
         op: "eq",
         value: true,
       }),
-    ).toBe("isLineCompleted == true");
+    ).toBe("runtime.isLineCompleted == true");
     expect(
       buildVisibilityConditionExpression({
         target: AUTO_MODE_CONDITION_TARGET,
         op: "eq",
         value: true,
       }),
-    ).toBe("autoMode == true");
+    ).toBe("runtime.autoMode == true");
     expect(
       buildVisibilityConditionExpression({
         target: SKIP_MODE_CONDITION_TARGET,
         op: "eq",
         value: false,
       }),
-    ).toBe("skipMode == false");
+    ).toBe("runtime.skipMode == false");
   });
 
   it("compiles ordered conditional text styles into jempl $if overrides", () => {
@@ -276,16 +276,16 @@ describe("layout visibility conditions", () => {
     );
 
     const conditionalAlignTextStyleId =
-      elements[0]["$if skipMode == false"]?.textStyleId;
+      elements[0]["$if runtime.skipMode == false"]?.textStyleId;
 
     expect(elements[0]).toMatchObject({
       "$if variables.score == 10": {
         textStyleId: "score-style",
       },
-      "$if isLineCompleted == true": {
+      "$if runtime.isLineCompleted == true": {
         textStyleId: "completed-style",
       },
-      "$if autoMode == true": {
+      "$if runtime.autoMode == true": {
         hover: {
           textStyleId: "hover-style",
         },
@@ -293,15 +293,15 @@ describe("layout visibility conditions", () => {
           textStyleId: "click-style",
         },
       },
-      "$if skipMode == false": {
+      "$if runtime.skipMode == false": {
         textStyleId: conditionalAlignTextStyleId,
       },
-      "$if skipMode == true": {
+      "$if runtime.skipMode == true": {
         alpha: 0.4,
         anchorX: 0.5,
         anchorY: 1,
       },
-      $when: "!(skipMode == true)",
+      $when: "!(runtime.skipMode == true)",
     });
 
     expect(resources.textStyles[conditionalAlignTextStyleId]).toMatchObject({
@@ -312,7 +312,7 @@ describe("layout visibility conditions", () => {
   it("extracts fixed runtime visibility from $when", () => {
     expect(
       splitVisibilityConditionFromWhen(
-        "(line.characterName) && (isLineCompleted == true)",
+        "(line.characterName) && (runtime.isLineCompleted == true)",
       ),
     ).toEqual({
       baseWhen: "line.characterName",
@@ -322,7 +322,9 @@ describe("layout visibility conditions", () => {
         value: true,
       },
     });
-    expect(splitVisibilityConditionFromWhen("(autoMode == true)")).toEqual({
+    expect(
+      splitVisibilityConditionFromWhen("(runtime.autoMode == true)"),
+    ).toEqual({
       baseWhen: undefined,
       visibilityCondition: {
         target: AUTO_MODE_CONDITION_TARGET,
@@ -330,7 +332,9 @@ describe("layout visibility conditions", () => {
         value: true,
       },
     });
-    expect(splitVisibilityConditionFromWhen("(skipMode == false)")).toEqual({
+    expect(
+      splitVisibilityConditionFromWhen("(runtime.skipMode == false)"),
+    ).toEqual({
       baseWhen: undefined,
       visibilityCondition: {
         target: SKIP_MODE_CONDITION_TARGET,
@@ -390,13 +394,13 @@ describe("layout visibility conditions", () => {
 
     expect(elements[0]).toMatchObject({
       imageId: "base-image",
-      "$if autoMode == true": {
+      "$if runtime.autoMode == true": {
         alpha: 0.5,
         imageId: "auto-image",
         hoverImageId: "hover-image",
         clickImageId: "click-image",
       },
-      $when: "!(skipMode == true)",
+      $when: "!(runtime.skipMode == true)",
     });
   });
 

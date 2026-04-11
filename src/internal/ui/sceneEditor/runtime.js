@@ -462,6 +462,7 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
+  const previewRuntimeGlobal = store.selectPreviewRuntimeGlobal();
   const projectData = createProjectDataWithSelectedEntryPoint(
     store.selectProjectData(),
     {
@@ -474,6 +475,7 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
 
   initRouteEngineWithDiagnostics(graphicsService, projectData, {
     enableGlobalKeyboardBindings: false,
+    initialGlobal: previewRuntimeGlobal,
     suppressRenderEffects: true,
   });
   const currentRenderState = graphicsService.engineSelectRenderState();

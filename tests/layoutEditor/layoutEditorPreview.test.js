@@ -4,7 +4,7 @@ import {
   createLayoutEditorSelectionOverlay,
 } from "../../src/components/layoutEditorCanvas/support/layoutEditorCanvasRender.js";
 import { createLayoutEditorPreviewData } from "../../src/components/layoutEditorPreview/support/layoutEditorPreviewData.js";
-import { getSystemVariableItems } from "../../src/internal/systemVariables.js";
+import { getRuntimeFieldItems } from "../../src/internal/runtimeFields.js";
 import {
   AUTO_MODE_CONDITION_TARGET,
   LINE_COMPLETED_CONDITION_TARGET,
@@ -33,8 +33,8 @@ describe("layoutEditorPreview", () => {
     expect(previewData.variables).toMatchObject({
       numberVar: 7,
       boolVar: true,
-      _dialogueTextSpeed: 50,
     });
+    expect(previewData.runtime.dialogueTextSpeed).toBe(50);
     expect(previewData.dialogue.character.name).toBe("Aki");
     expect(previewData.dialogue.content[0].text).toBe("Hello there");
     expect(previewData.choice.items).toEqual([
@@ -286,16 +286,16 @@ describe("layoutEditorPreview", () => {
     ]);
   });
 
-  it("includes system variables in preview data", () => {
+  it("includes runtime fields in preview runtime data", () => {
     const previewData = createLayoutEditorPreviewData({
       variablesData: {
         items: {},
       },
     });
-    const [firstSystemVariableId] = Object.keys(getSystemVariableItems());
+    const [firstRuntimeFieldId] = Object.keys(getRuntimeFieldItems());
 
-    expect(firstSystemVariableId).toBeTruthy();
-    expect(previewData.variables).toHaveProperty(firstSystemVariableId);
+    expect(firstRuntimeFieldId).toBeTruthy();
+    expect(previewData.runtime).toHaveProperty(firstRuntimeFieldId);
   });
 
   it("overrides preview variables with edited values", () => {
@@ -327,9 +327,9 @@ describe("layoutEditorPreview", () => {
       },
     });
 
-    expect(previewData.isLineCompleted).toBe(true);
-    expect(previewData.autoMode).toBe(true);
-    expect(previewData.skipMode).toBe(true);
+    expect(previewData.runtime.isLineCompleted).toBe(true);
+    expect(previewData.runtime.autoMode).toBe(true);
+    expect(previewData.runtime.skipMode).toBe(true);
   });
 
   it("uses dialogue preview toggles for line completion, auto mode, and skip mode", () => {
@@ -342,9 +342,9 @@ describe("layoutEditorPreview", () => {
       },
     });
 
-    expect(previewData.isLineCompleted).toBe(true);
-    expect(previewData.autoMode).toBe(true);
-    expect(previewData.skipMode).toBe(true);
+    expect(previewData.runtime.isLineCompleted).toBe(true);
+    expect(previewData.runtime.autoMode).toBe(true);
+    expect(previewData.runtime.skipMode).toBe(true);
   });
 
   it("creates a draggable overlay only for the first repeated instance", () => {
@@ -374,7 +374,7 @@ describe("layoutEditorPreview", () => {
 
     expect(overlays).toHaveLength(1);
     expect(overlays[0].id).toBe("selected-border-group");
-    expect(overlays[0].children).toHaveLength(2);
+    expect(overlays[0].children).toHaveLength(6);
     expect(overlays[0].children[0].id).toBe("selected-border");
     expect(overlays[0].children[0].x).toBe(0);
     expect(overlays[0].children[0].y).toBe(0);
@@ -383,7 +383,7 @@ describe("layoutEditorPreview", () => {
       move: { payload: {} },
       end: { payload: {} },
     });
-    expect(overlays[0].children[1]).toEqual({
+    expect(overlays[0].children[5]).toEqual({
       id: "selected-border-anchor",
       type: "rect",
       x: 46,
@@ -400,5 +400,56 @@ describe("layoutEditorPreview", () => {
         alpha: 1,
       },
     });
+  });
+
+  it("does not add resize handles for container items without size controls", () => {
+    const overlays = createLayoutEditorSelectionOverlay({
+      selectedItemId: "choice-item",
+      selectedItem: {
+        type: "container-ref-choice-item",
+      },
+      parsedElements: [
+        {
+          id: "choice-item",
+          type: "container",
+          x: 10,
+          y: 20,
+          width: 100,
+          height: 40,
+        },
+      ],
+    });
+
+    expect(overlays).toHaveLength(1);
+    expect(overlays[0].children.map((item) => item.id)).toEqual([
+      "selected-border",
+      "selected-border-anchor",
+    ]);
+  });
+
+  it("does not add resize handles for auto-width text items", () => {
+    const overlays = createLayoutEditorSelectionOverlay({
+      selectedItemId: "text-item",
+      selectedItem: {
+        type: "text",
+        width: undefined,
+      },
+      parsedElements: [
+        {
+          id: "text-item",
+          type: "text",
+          x: 10,
+          y: 20,
+          width: 100,
+          height: 40,
+        },
+      ],
+    });
+
+    expect(overlays).toHaveLength(1);
+    expect(overlays[0].children.map((item) => item.id)).toEqual([
+      "selected-border",
+      "selected-border-anchor",
+    ]);
   });
 });

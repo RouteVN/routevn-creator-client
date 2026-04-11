@@ -107,25 +107,13 @@ const createBaseProjectData = () => ({
 
 {
   const projectData = constructProjectData(structuredClone(initialProjectData));
-  const skipUnseenText = projectData.resources.variables._skipUnseenText;
-  const dialogueTextSpeed = projectData.resources.variables._dialogueTextSpeed;
 
   assert.deepEqual(projectData.screen, {
     width: 1920,
     height: 1080,
     backgroundColor: "#000000",
   });
-  assert.equal(typeof skipUnseenText, "object");
-  assert.equal(skipUnseenText.name, "Skip Unseen Text");
-  assert.equal(skipUnseenText.scope, "global-device");
-  assert.equal(skipUnseenText.type, "boolean");
-  assert.equal(skipUnseenText.default, false);
-
-  assert.equal(typeof dialogueTextSpeed, "object");
-  assert.equal(dialogueTextSpeed.name, "Dialogue Text Speed");
-  assert.equal(dialogueTextSpeed.scope, "global-device");
-  assert.equal(dialogueTextSpeed.type, "number");
-  assert.equal(dialogueTextSpeed.default, 50);
+  assert.deepEqual(projectData.resources.variables, {});
 }
 
 {

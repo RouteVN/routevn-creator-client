@@ -1,10 +1,9 @@
-import { getSystemVariableItems } from "../../../internal/systemVariables.js";
 import {
   getRuntimeLayoutConditionItems,
   parseVariableConditionTarget,
   splitLayoutConditionFromWhen,
-  toVariableConditionTarget,
 } from "../../../internal/layoutConditions.js";
+import { toRuntimeConditionTarget } from "../../../internal/runtimeFields.js";
 import { visitLayoutItemsWithFragments } from "./layoutEditorPreviewFragments.js";
 
 const PREVIEW_VARIABLE_TYPES = new Set(["boolean", "number", "string"]);
@@ -72,10 +71,7 @@ export const toPreviewVariableValue = (variable = {}) => {
 };
 
 export const createPreviewVariables = (variablesData = {}) => {
-  const variableItems = {
-    ...variablesData.items,
-    ...getSystemVariableItems(),
-  };
+  const variableItems = variablesData.items ?? {};
 
   return Object.entries(variableItems).reduce(
     (variables, [variableId, variable]) => {
@@ -95,10 +91,7 @@ export const applyPreviewVariableOverrides = (
   variablesData = {},
   previewVariableValues = {},
 ) => {
-  const variableItems = {
-    ...variablesData.items,
-    ...getSystemVariableItems(),
-  };
+  const variableItems = variablesData.items ?? {};
   const nextPreviewVariables = {
     ...previewVariables,
   };
@@ -146,12 +139,9 @@ export const collectLayoutPreviewTargets = (layoutParams = {}) => {
     if (
       item?.type === "container-ref-save-load-slot" &&
       item?.paginationMode === "paginated" &&
-      typeof item?.paginationVariableId === "string" &&
-      item.paginationVariableId.length > 0
+      Number(item?.paginationSize) > 0
     ) {
-      const paginationTarget = toVariableConditionTarget(
-        item.paginationVariableId,
-      );
+      const paginationTarget = toRuntimeConditionTarget("saveLoadPagination");
       if (paginationTarget) {
         targets.add(paginationTarget);
       }
@@ -176,10 +166,7 @@ export const getLayoutPreviewVariableItems = ({
   layoutsData,
   variablesData = {},
 } = {}) => {
-  const availableVariables = {
-    ...variablesData.items,
-    ...getSystemVariableItems(),
-  };
+  const availableVariables = variablesData.items ?? {};
   const runtimeItems = getRuntimeLayoutConditionItems();
   const previewVariables = [];
   const addedTargets = new Set();
@@ -234,11 +221,7 @@ export const createPreviewVariablesForm = (previewVariableItems = []) => ({
   description: "Edit visibility conditions to preview conditional elements",
   fields: previewVariableItems.map((variable) => {
     const sourceLabel =
-      variable.source === "system"
-        ? "System variable"
-        : variable.source === "runtime"
-          ? "Runtime state"
-          : "Variable";
+      variable.source === "runtime" ? "Runtime state" : "Variable";
     const descriptionParts = [
       `${sourceLabel} (${variable.type})`,
       variable.description,

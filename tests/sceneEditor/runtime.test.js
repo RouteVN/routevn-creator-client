@@ -131,6 +131,9 @@ describe("renderSceneEditorState", () => {
       selectSelectedSectionId: () => "section-1",
       selectSelectedLineId: () => "line-2",
       selectProjectData: () => projectData,
+      selectPreviewRuntimeGlobal: () => ({
+        dialogueTextSpeed: 100,
+      }),
       selectIsMuted: () => false,
       setPresentationState: ({ presentationState }) => {
         store.presentationState = presentationState;

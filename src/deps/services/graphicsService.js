@@ -1212,6 +1212,7 @@ export const createGraphicsService = async ({ subject }) => {
       enableGlobalKeyboardBindings =
         options.enableGlobalKeyboardBindings ?? true;
       const suppressRenderEffects = options.suppressRenderEffects === true;
+      const initialGlobal = options.initialGlobal ?? {};
 
       const handlePendingEffects = createEffectsHandler({
         getEngine: () => engine,
@@ -1229,7 +1230,7 @@ export const createGraphicsService = async ({ subject }) => {
       const initEngine = () => {
         engine.init({
           initialState: {
-            global: {},
+            global: initialGlobal,
             projectData,
           },
         });

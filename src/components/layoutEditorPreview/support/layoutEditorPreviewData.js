@@ -4,7 +4,7 @@ import {
   createConfirmDialogPreviewData,
   createDialoguePreviewData,
   createHistoryLines,
-  createPreviewFixedStateValues,
+  createPreviewRuntimeValues,
   createPreviewVariables,
   createRuntimeSaveSlots,
 } from "./layoutEditorPreviewSupport.js";
@@ -35,12 +35,14 @@ export const createLayoutEditorPreviewData = ({
         variablesData,
         previewVariableValues,
       ),
-      _dialogueTextSpeed: dialogueRevealingSpeed,
     },
-    ...createPreviewFixedStateValues(
-      previewVariableValues,
-      dialogueDefaultValues,
-    ),
+    runtime: {
+      ...createPreviewRuntimeValues(
+        previewVariableValues,
+        dialogueDefaultValues,
+      ),
+      dialogueTextSpeed: dialogueRevealingSpeed,
+    },
     dialogue,
     historyDialogue:
       layoutType === "history" ? createHistoryLines(historyDefaultValues) : [],

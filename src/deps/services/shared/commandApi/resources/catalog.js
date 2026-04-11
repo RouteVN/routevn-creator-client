@@ -62,6 +62,61 @@ export const createCatalogResourceCommandApi = (shared) => ({
       deleteField: "animationIds",
       ids: animationIds,
     }),
+  createParticle: async ({
+    particleId,
+    data,
+    parentId,
+    position = "last",
+    positionTargetId,
+    index,
+  }) =>
+    submitCreateResourceCommand({
+      shared,
+      resourceType: "particles",
+      type: COMMAND_TYPES.PARTICLE_CREATE,
+      idField: "particleId",
+      idValue: particleId,
+      data,
+      parentId,
+      position,
+      positionTargetId,
+      index,
+    }),
+  updateParticle: async ({ particleId, data }) =>
+    submitUpdateResourceCommand({
+      shared,
+      resourceType: "particles",
+      type: COMMAND_TYPES.PARTICLE_UPDATE,
+      idField: "particleId",
+      idValue: particleId,
+      data,
+    }),
+  moveParticle: async ({
+    particleId,
+    parentId,
+    position = "last",
+    positionTargetId,
+    index,
+  }) =>
+    submitMoveResourceCommand({
+      shared,
+      resourceType: "particles",
+      type: COMMAND_TYPES.PARTICLE_MOVE,
+      idField: "particleId",
+      idValue: particleId,
+      parentId,
+      position,
+      positionTargetId,
+      index,
+    }),
+  deleteParticles: async ({ particleIds }) =>
+    submitDeleteResourceCommand({
+      shared,
+      resourceType: "particles",
+      type: COMMAND_TYPES.PARTICLE_DELETE,
+      deleteField: "particleIds",
+      ids: particleIds,
+    }),
   createCharacter: async ({
     characterId,
     data,

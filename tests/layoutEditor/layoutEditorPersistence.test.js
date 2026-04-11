@@ -163,15 +163,8 @@ describe("layoutEditorPersistence", () => {
                     click: {
                       payload: {
                         actions: {
-                          updateVariable: {
-                            id: "updateVariable1",
-                            operations: [
-                              {
-                                variableId: "_currentMenuPage",
-                                op: "set",
-                                value: "options",
-                              },
-                            ],
+                          setMenuPage: {
+                            value: "options",
                           },
                         },
                       },
@@ -201,15 +194,8 @@ describe("layoutEditorPersistence", () => {
         click: {
           payload: {
             actions: {
-              updateVariable: {
-                id: "updateVariable1",
-                operations: [
-                  {
-                    variableId: "_currentMenuPage",
-                    op: "set",
-                    value: "options",
-                  },
-                ],
+              setMenuPage: {
+                value: "options",
               },
               pushLayeredView: {
                 resourceId: "layout-settings",
@@ -231,15 +217,8 @@ describe("layoutEditorPersistence", () => {
         click: {
           payload: {
             actions: {
-              updateVariable: {
-                id: "updateVariable1",
-                operations: [
-                  {
-                    variableId: "_currentMenuPage",
-                    op: "set",
-                    value: "options",
-                  },
-                ],
+              setMenuPage: {
+                value: "options",
               },
               pushLayeredView: {
                 resourceId: "layout-settings",

@@ -31,7 +31,7 @@ export const createInitialState = () => ({
     },
     {
       title: "Animated Assets",
-      path: "/project/animations",
+      path: "/project/particles",
       icon: "choices",
     },
     {
