@@ -47,7 +47,7 @@ template:
                       - $if showLineNumbers:
                           - rtgl-view h=f w=32 ah=e mr=md pt=sm:
                               - rtgl-text s=sm c=${line.lineColor}: ${line.lineNumber}
-                      - rtgl-view wh=24 br=f mr=lg:
+                      - rtgl-view wh=24 br=f mr=sm:
                           - $if line.characterFileId:
                               - rvn-file-image fileId=${line.characterFileId} w=24 h=24 br=f: null
                       - rtgl-view d=h w=f:

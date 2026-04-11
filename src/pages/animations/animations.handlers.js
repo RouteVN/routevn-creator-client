@@ -8,6 +8,8 @@ const navigateToAnimationEditor = ({
   animationId,
   dialogType,
   targetGroupId,
+  name,
+  description,
 } = {}) => {
   const currentPayload = appService.getPayload() || {};
   appService.navigate("/project/animation-editor", {
@@ -16,6 +18,8 @@ const navigateToAnimationEditor = ({
       animationId,
       dialogType,
       targetGroupId,
+      name,
+      description,
     }),
   });
 };
@@ -105,13 +109,8 @@ export const handleFileExplorerAction = async (deps, payload) => {
 
 export const handleAddAnimationClick = async (deps, payload) => {
   const { render, store } = deps;
-  const { groupId, x, y } = payload._event.detail;
-
-  store.openCreateTypeMenu({
-    x,
-    y,
-    targetGroupId: groupId,
-  });
+  const { groupId } = payload._event.detail;
+  store.openAddDialog({ groupId });
   render();
 };
 
@@ -190,28 +189,40 @@ export const handleEditFormAction = async (deps, payload) => {
   await handleDataChanged(deps, { selectedItemId: editItemId });
 };
 
-export const handleCloseCreateTypeMenu = (deps) => {
+export const handleAddDialogClose = (deps) => {
   const { render, store } = deps;
-  store.closeCreateTypeMenu();
+  store.closeAddDialog();
   render();
 };
 
-export const handleCreateTypeMenuItemClick = async (deps, payload) => {
+export const handleAddFormAction = async (deps, payload) => {
   const { appService, render, store } = deps;
-  const type = payload._event.detail.item?.value;
-  const targetGroupId = store.selectCreateTypeMenuTargetGroupId();
-
-  store.closeCreateTypeMenu();
-  render();
-
-  if (type !== "update" && type !== "transition") {
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
     return;
   }
+
+  const name = values?.name?.trim();
+  if (!name) {
+    appService.showToast("Please enter an animation name.", {
+      title: "Warning",
+    });
+    return;
+  }
+
+  const dialogType =
+    values?.dialogType === "transition" ? "transition" : "update";
+  const targetGroupId = store.selectTargetGroupId();
+
+  store.closeAddDialog();
+  render();
 
   navigateToAnimationEditor({
     appService,
     targetGroupId,
-    dialogType: type,
+    dialogType,
+    name,
+    description: values?.description ?? "",
   });
 };
 
@@ -238,4 +249,28 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   await handleDataChanged(deps);
+};
+
+export const handleItemDuplicate = async (deps, payload) => {
+  const { appService, projectService } = deps;
+  const { itemId } = payload._event.detail;
+  if (!itemId) {
+    return;
+  }
+
+  const duplicateAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to duplicate animation.",
+    action: () =>
+      projectService.duplicateAnimation({
+        animationId: itemId,
+      }),
+  });
+  if (!duplicateAttempt.ok) {
+    return;
+  }
+
+  await handleDataChanged(deps, {
+    selectedItemId: duplicateAttempt.result,
+  });
 };

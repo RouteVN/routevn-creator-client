@@ -258,7 +258,7 @@ export const createProjectAssetService = ({
     }
 
     if (fileType === "video") {
-      const [videoResult, dimensions, thumbnailPayload] = await Promise.all([
+      const [videoResult, videoMetadata, thumbnailPayload] = await Promise.all([
         storeFileWithRecord({ file }),
         getVideoDimensions(file),
         (async () => {
@@ -293,7 +293,13 @@ export const createProjectAssetService = ({
         ...videoResult,
         thumbnailFileId: thumbnailPayload?.thumbnailResult?.fileId,
         thumbnailData: thumbnailPayload?.thumbnailData,
-        dimensions,
+        dimensions: videoMetadata
+          ? {
+              width: videoMetadata.width,
+              height: videoMetadata.height,
+            }
+          : undefined,
+        duration: videoMetadata?.duration,
         type: "video",
         fileRecords: [
           videoResult.fileRecord,

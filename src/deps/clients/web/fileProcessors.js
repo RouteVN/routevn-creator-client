@@ -143,7 +143,11 @@ export const getVideoDimensions = (file) => {
 
     video.onloadedmetadata = () => {
       URL.revokeObjectURL(url); // Clean up memory
-      resolve({ width: video.videoWidth, height: video.videoHeight });
+      resolve({
+        width: video.videoWidth,
+        height: video.videoHeight,
+        duration: video.duration,
+      });
     };
 
     video.onerror = () => {

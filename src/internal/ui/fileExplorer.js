@@ -132,6 +132,7 @@ const RESOURCE_FILE_EXPLORER_API = Object.freeze({
     updateMethod: "updateAnimation",
     moveMethod: "moveAnimation",
     deleteMethod: "deleteAnimations",
+    duplicateMethod: "duplicateAnimation",
     idField: "animationId",
     deleteField: "animationIds",
   },
