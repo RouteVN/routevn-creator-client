@@ -74,12 +74,13 @@ export const handleActionClicked = (deps, payload) => {
 export const handleCommandLineSubmit = (deps, payload) => {
   payload?._event?.stopPropagation?.();
   const { store, render, dispatchEvent } = deps;
-  const nextActions = mergeActions(store.selectAction(), payload._event.detail);
+  const submittedActions = payload?._event?.detail || {};
+  const nextActions = mergeActions(store.selectAction(), submittedActions);
 
   store.updateActions(nextActions);
   dispatchEvent(
     new CustomEvent("actions-change", {
-      detail: nextActions,
+      detail: submittedActions,
     }),
   );
   store.hideActionsDialog();

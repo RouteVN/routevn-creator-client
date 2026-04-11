@@ -664,7 +664,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     return;
   }
 
-  let submissionData = payload._event.detail;
+  let submissionData = payload?._event?.detail || {};
 
   // Dialogue updates replace the full dialogue action, so keep content here.
   if (submissionData.dialogue) {
