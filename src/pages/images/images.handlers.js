@@ -93,7 +93,7 @@ const {
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleSearchInput,
-  handleItemClick: handleImageItemClick,
+  handleItemClick: handleBaseImageItemClick,
   handleItemEdit: handleImageItemEdit,
 } = createMediaPageHandlers({
   resourceType: "images",
@@ -108,8 +108,25 @@ export {
   handleFileExplorerTargetChanged,
   handleDataChanged,
   handleSearchInput,
-  handleImageItemClick,
   handleImageItemEdit,
+};
+
+const isTextEntryKeyEvent = (event) => {
+  const target = event?.composedPath?.()?.[0] ?? event?.target;
+  const tagName = String(target?.tagName ?? "").toLowerCase();
+  return tagName === "input" || tagName === "textarea";
+};
+
+const focusGroupView = ({ refs } = {}) => {
+  requestAnimationFrame(() => {
+    refs.groupviewKeyboardScope?.focus?.();
+  });
+};
+
+const focusPreviewOverlay = ({ refs } = {}) => {
+  requestAnimationFrame(() => {
+    refs.previewOverlay?.focus?.();
+  });
 };
 
 const openImagePreviewById = ({ deps, itemId, syncExplorer = false } = {}) => {
@@ -127,6 +144,8 @@ const openImagePreviewById = ({ deps, itemId, syncExplorer = false } = {}) => {
 
   store.showFullImagePreview({ itemId });
   render();
+  refs.groupview?.scrollItemIntoView?.({ itemId });
+  focusPreviewOverlay(deps);
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {
@@ -141,6 +160,11 @@ export const handleFileExplorerDoubleClick = (deps, payload) => {
 export const handleImageItemDoubleClick = (deps, payload) => {
   const { itemId } = payload._event.detail;
   openImagePreviewById({ deps, itemId, syncExplorer: true });
+};
+
+export const handleImageItemClick = (deps, payload) => {
+  handleBaseImageItemClick(deps, payload);
+  focusGroupView(deps);
 };
 
 export const handleDetailHeaderClick = (deps) => {
@@ -388,10 +412,123 @@ export const handleFormExtraEvent = async (deps) => {
 };
 
 export const handleImageItemPreview = (deps, payload) => {
-  const { store, render } = deps;
   const { itemId } = payload._event.detail;
-  store.showFullImagePreview({ itemId });
+  openImagePreviewById({ deps, itemId, syncExplorer: true });
+};
+
+export const handlePreviewOverlayClick = (deps) => {
+  const { store, render } = deps;
+  store.hideFullImagePreview();
   render();
+  focusGroupView(deps);
+};
+
+export const handlePreviewOverlayKeyDown = (deps, payload) => {
+  const { store } = deps;
+  const event = payload._event;
+
+  if (!store.getState().fullImagePreviewVisible) {
+    return;
+  }
+
+  if (event.key === "Escape" || event.key === "Enter") {
+    event.preventDefault();
+    event.stopPropagation();
+    store.hideFullImagePreview();
+    deps.render();
+    focusGroupView(deps);
+    return;
+  }
+
+  const selectedItemId = store.selectSelectedItemId();
+  if (!selectedItemId) {
+    return;
+  }
+
+  let direction;
+  if (event.key === "ArrowDown") {
+    direction = "next";
+  } else if (event.key === "ArrowUp") {
+    direction = "previous";
+  }
+
+  if (!direction) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const nextItemId = store.selectAdjacentImageItemId({
+    itemId: selectedItemId,
+    direction,
+  });
+  if (!nextItemId) {
+    return;
+  }
+
+  openImagePreviewById({ deps, itemId: nextItemId, syncExplorer: true });
+};
+
+export const handleGroupViewKeyDown = (deps, payload) => {
+  const { refs, store } = deps;
+  const event = payload._event;
+
+  if (store.getState().fullImagePreviewVisible || isTextEntryKeyEvent(event)) {
+    return;
+  }
+
+  if (event.altKey || event.ctrlKey || event.metaKey) {
+    return;
+  }
+
+  const selectedExplorerItem = refs.fileExplorer?.getSelectedItem?.();
+  const selectedItemId = selectedExplorerItem?.isFolder
+    ? undefined
+    : (selectedExplorerItem?.itemId ?? store.selectSelectedItemId());
+
+  if (event.key === "Enter") {
+    if (!selectedItemId) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    openImagePreviewById({ deps, itemId: selectedItemId, syncExplorer: true });
+    return;
+  }
+
+  let direction;
+  if (event.key === "ArrowDown") {
+    direction = "next";
+  } else if (event.key === "ArrowUp") {
+    direction = "previous";
+  } else if (event.key === "ArrowRight") {
+    event.preventDefault();
+    event.stopPropagation();
+    refs.fileExplorer?.setSelectedFolderExpanded?.({ expanded: true });
+    return;
+  } else if (event.key === "ArrowLeft") {
+    event.preventDefault();
+    event.stopPropagation();
+    refs.fileExplorer?.setSelectedFolderExpanded?.({ expanded: false });
+    return;
+  }
+
+  if (!direction) {
+    return;
+  }
+
+  const nextSelection = refs.fileExplorer?.navigateSelection?.({
+    direction,
+  });
+  if (!nextSelection?.itemId) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  focusGroupView(deps);
 };
 
 export const handleEditDialogClose = (deps) => {

@@ -59,3 +59,15 @@ methods:
       description: Selects an item by id in the explorer list.
       params: []
       returns: void
+    getSelectedItem:
+      description: Returns the currently selected explorer item and folder state.
+      params: []
+      returns: object
+    navigateSelection:
+      description: Moves explorer selection to the previous or next visible item.
+      params: []
+      returns: object
+    setSelectedFolderExpanded:
+      description: Expands or collapses the selected folder item when possible.
+      params: []
+      returns: object

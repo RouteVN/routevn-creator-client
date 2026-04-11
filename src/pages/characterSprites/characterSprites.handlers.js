@@ -40,6 +40,24 @@ const getCharacterIdFromPayload = ({ appService }) => {
   return appService.getPayload().characterId;
 };
 
+const isTextEntryKeyEvent = (event) => {
+  const target = event?.composedPath?.()?.[0] ?? event?.target;
+  const tagName = String(target?.tagName ?? "").toLowerCase();
+  return tagName === "input" || tagName === "textarea";
+};
+
+const focusGroupView = ({ refs } = {}) => {
+  requestAnimationFrame(() => {
+    refs.groupviewKeyboardScope?.focus?.();
+  });
+};
+
+const focusPreviewOverlay = ({ refs } = {}) => {
+  requestAnimationFrame(() => {
+    refs.previewOverlay?.focus?.();
+  });
+};
+
 const syncCharacterSpritesData = ({ deps, repositoryState } = {}) => {
   const { appService, projectService, store } = deps;
   const characterId =
@@ -93,6 +111,26 @@ const selectSprite = ({ deps, itemId, syncExplorer = false } = {}) => {
   }
 
   render();
+  refs.groupview?.scrollItemIntoView?.({ itemId });
+};
+
+const openSpritePreviewById = ({ deps, itemId, syncExplorer = false } = {}) => {
+  const { refs, render, store } = deps;
+  const item = store.selectSpriteItemById({ itemId });
+
+  if (!itemId || !item) {
+    return;
+  }
+
+  store.setSelectedItemId({ itemId });
+  if (syncExplorer) {
+    refs.fileExplorer?.selectItem?.({ itemId });
+  }
+
+  store.showFullImagePreview({ itemId });
+  render();
+  refs.groupview?.scrollItemIntoView?.({ itemId });
+  focusPreviewOverlay(deps);
 };
 
 const openEditDialogForSprite = ({
@@ -297,15 +335,13 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {
-  const { render, store } = deps;
   const { itemId, isFolder } = payload._event.detail;
 
   if (isFolder || !itemId) {
     return;
   }
 
-  store.showFullImagePreview({ itemId });
-  render();
+  openSpritePreviewById({ deps, itemId });
 };
 
 export const handleSpriteItemClick = async (deps, payload) => {
@@ -316,30 +352,142 @@ export const handleSpriteItemClick = async (deps, payload) => {
     itemId,
     syncExplorer: true,
   });
+  focusGroupView(deps);
 };
 
 export const handleSpriteItemDoubleClick = (deps, payload) => {
-  const { render, store } = deps;
   const { itemId } = payload._event.detail;
 
   if (!itemId) {
     return;
   }
 
-  store.showFullImagePreview({ itemId });
-  render();
+  openSpritePreviewById({ deps, itemId, syncExplorer: true });
 };
 
 export const handleSpriteItemPreview = (deps, payload) => {
-  const { render, store } = deps;
   const { itemId } = payload._event.detail;
 
   if (!itemId) {
     return;
   }
 
-  store.showFullImagePreview({ itemId });
+  openSpritePreviewById({ deps, itemId, syncExplorer: true });
+};
+
+export const handlePreviewOverlayClick = (deps) => {
+  const { store, render } = deps;
+  store.hideFullImagePreview();
   render();
+  focusGroupView(deps);
+};
+
+export const handlePreviewOverlayKeyDown = (deps, payload) => {
+  const { store } = deps;
+  const event = payload._event;
+
+  if (!store.getState().fullImagePreviewVisible) {
+    return;
+  }
+
+  if (event.key === "Escape" || event.key === "Enter") {
+    event.preventDefault();
+    event.stopPropagation();
+    store.hideFullImagePreview();
+    deps.render();
+    focusGroupView(deps);
+    return;
+  }
+
+  let direction;
+  if (event.key === "ArrowDown") {
+    direction = "next";
+  } else if (event.key === "ArrowUp") {
+    direction = "previous";
+  }
+
+  if (!direction) {
+    return;
+  }
+
+  const selectedItemId = store.selectSelectedItemId();
+  if (!selectedItemId) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const nextItemId = store.selectAdjacentSpriteItemId({
+    itemId: selectedItemId,
+    direction,
+  });
+  if (!nextItemId) {
+    return;
+  }
+
+  openSpritePreviewById({ deps, itemId: nextItemId, syncExplorer: true });
+};
+
+export const handleGroupViewKeyDown = (deps, payload) => {
+  const { refs, store } = deps;
+  const event = payload._event;
+
+  if (store.getState().fullImagePreviewVisible || isTextEntryKeyEvent(event)) {
+    return;
+  }
+
+  if (event.altKey || event.ctrlKey || event.metaKey) {
+    return;
+  }
+
+  const selectedExplorerItem = refs.fileExplorer?.getSelectedItem?.();
+  const selectedItemId = selectedExplorerItem?.isFolder
+    ? undefined
+    : (selectedExplorerItem?.itemId ?? store.selectSelectedItemId());
+
+  if (event.key === "Enter") {
+    if (!selectedItemId) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    openSpritePreviewById({ deps, itemId: selectedItemId, syncExplorer: true });
+    return;
+  }
+
+  let direction;
+  if (event.key === "ArrowDown") {
+    direction = "next";
+  } else if (event.key === "ArrowUp") {
+    direction = "previous";
+  } else if (event.key === "ArrowRight") {
+    event.preventDefault();
+    event.stopPropagation();
+    refs.fileExplorer?.setSelectedFolderExpanded?.({ expanded: true });
+    return;
+  } else if (event.key === "ArrowLeft") {
+    event.preventDefault();
+    event.stopPropagation();
+    refs.fileExplorer?.setSelectedFolderExpanded?.({ expanded: false });
+    return;
+  }
+
+  if (!direction) {
+    return;
+  }
+
+  const nextSelection = refs.fileExplorer?.navigateSelection?.({
+    direction,
+  });
+  if (!nextSelection?.itemId) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  focusGroupView(deps);
 };
 
 export const handleSpriteItemEdit = (deps, payload) => {

@@ -8,6 +8,8 @@ import {
 
 const AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD =
   DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD;
+const IMAGE_CARD_MAX_WIDTH = 400;
+const IMAGE_CARD_HEIGHT = 225;
 
 const buildDetailFields = (item) => {
   if (!item) {
@@ -113,6 +115,8 @@ const {
   selectedResourceId: "images",
   uploadText: "Upload",
   acceptedFileTypes: [".jpg", ".jpeg", ".png", ".webp"],
+  imageHeight: IMAGE_CARD_HEIGHT,
+  maxWidth: IMAGE_CARD_MAX_WIDTH,
   showZoomControls: true,
   buildDetailFields,
   buildMediaItem,
@@ -146,6 +150,38 @@ export {
 };
 
 export const selectImageItemById = selectItemById;
+
+export const selectAdjacentImageItemId = (
+  context,
+  { itemId, direction } = {},
+) => {
+  const step =
+    direction === "next" ? 1 : direction === "previous" ? -1 : undefined;
+  if (!step) {
+    return undefined;
+  }
+
+  const viewData = selectMediaViewData(context);
+  const items = context.state.data?.items ?? {};
+  const visibleImageIds = (viewData.mediaGroups ?? []).flatMap((group) =>
+    (group.children ?? [])
+      .map((child) => child.id)
+      .filter((childItemId) => items[childItemId]?.type === "image"),
+  );
+
+  if (visibleImageIds.length === 0) {
+    return undefined;
+  }
+
+  const currentIndex = visibleImageIds.indexOf(itemId);
+  if (currentIndex === -1) {
+    return step > 0
+      ? visibleImageIds[0]
+      : visibleImageIds[visibleImageIds.length - 1];
+  }
+
+  return visibleImageIds[currentIndex + step];
+};
 
 export const showFullImagePreview = ({ state }, { itemId } = {}) => {
   const item = state.data?.items?.[itemId];

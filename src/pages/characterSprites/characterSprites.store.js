@@ -9,6 +9,8 @@ import {
 const EMPTY_TREE = { tree: [], items: {} };
 const AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD =
   DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD;
+const IMAGE_CARD_MAX_WIDTH = 400;
+const IMAGE_CARD_HEIGHT = 225;
 
 const folderContextMenuItems = [
   { label: "New Folder", type: "item", value: "new-child-folder" },
@@ -250,6 +252,65 @@ export const selectCharacterId = ({ state }) => {
   return state.characterId;
 };
 
+export const selectAdjacentSpriteItemId = (
+  { state },
+  { itemId, direction } = {},
+) => {
+  const step =
+    direction === "next" ? 1 : direction === "previous" ? -1 : undefined;
+  if (!step) {
+    return undefined;
+  }
+
+  const rawFlatGroups = toFlatGroups(state.spritesData);
+  const searchQuery = state.searchQuery.toLowerCase().trim();
+  const pendingByGroupId = new Map();
+
+  for (const pendingUpload of state.pendingUploads ?? []) {
+    const groupId = pendingUpload?.parentId;
+    if (!groupId) {
+      continue;
+    }
+
+    const existing = pendingByGroupId.get(groupId) ?? [];
+    existing.push(buildPendingMediaItem(pendingUpload));
+    pendingByGroupId.set(groupId, existing);
+  }
+
+  const visibleSpriteIds = rawFlatGroups
+    .map((group) => {
+      const children = (group.children ?? [])
+        .filter((item) => matchesSearch(item, searchQuery))
+        .map(buildMediaItem);
+      const pendingChildren = (pendingByGroupId.get(group.id) ?? []).filter(
+        (item) => matchesSearch(item, searchQuery),
+      );
+
+      return [...children, ...pendingChildren];
+    })
+    .flatMap((children) =>
+      children
+        .map((child) => child.id)
+        .filter(
+          (childItemId) =>
+            state.spritesData.items?.[childItemId]?.type === "image",
+        ),
+    );
+
+  if (visibleSpriteIds.length === 0) {
+    return undefined;
+  }
+
+  const currentIndex = visibleSpriteIds.indexOf(itemId);
+  if (currentIndex === -1) {
+    return step > 0
+      ? visibleSpriteIds[0]
+      : visibleSpriteIds[visibleSpriteIds.length - 1];
+  }
+
+  return visibleSpriteIds[currentIndex + step];
+};
+
 export const showFullImagePreview = ({ state }, { itemId } = {}) => {
   const item = state.spritesData.items?.[itemId];
 
@@ -321,6 +382,8 @@ export const selectViewData = ({ state }) => {
     searchQuery: state.searchQuery,
     uploadText: "Upload Sprite",
     acceptedFileTypes: [".jpg", ".jpeg", ".png", ".webp"],
+    imageHeight: IMAGE_CARD_HEIGHT,
+    maxWidth: IMAGE_CARD_MAX_WIDTH,
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
     folderContextMenuItems,
