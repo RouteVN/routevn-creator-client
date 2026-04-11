@@ -10,10 +10,14 @@ export const resolveAnimationEditorPayload = (payload = {}) => {
     getPayloadString(payload, "ag") ?? getPayloadString(payload, "groupId");
   const dialogType =
     getPayloadString(payload, "at") === "transition" ? "transition" : "update";
+  const name = getPayloadString(payload, "anm");
+  const description = getPayloadString(payload, "ads");
 
   return {
     animationId,
     dialogType,
+    name,
+    description,
     targetGroupId: targetGroupId === "_root" ? undefined : targetGroupId,
   };
 };
@@ -23,6 +27,8 @@ export const createAnimationEditorPayload = ({
   animationId,
   dialogType,
   targetGroupId,
+  name,
+  description,
 } = {}) => {
   const nextPayload = { ...payload };
   delete nextPayload.animationId;
@@ -30,6 +36,8 @@ export const createAnimationEditorPayload = ({
   delete nextPayload.an;
   delete nextPayload.at;
   delete nextPayload.ag;
+  delete nextPayload.anm;
+  delete nextPayload.ads;
 
   if (animationId) {
     nextPayload.an = animationId;
@@ -42,6 +50,14 @@ export const createAnimationEditorPayload = ({
 
   if (targetGroupId) {
     nextPayload.ag = targetGroupId;
+  }
+
+  if (name) {
+    nextPayload.anm = name;
+  }
+
+  if (description) {
+    nextPayload.ads = description;
   }
 
   return nextPayload;

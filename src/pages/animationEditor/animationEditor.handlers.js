@@ -506,7 +506,7 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
   const { appService, projectService, render, store } = deps;
   const resolvedRepositoryState =
     repositoryState ?? projectService.getRepositoryState();
-  const { animationId, dialogType, targetGroupId } =
+  const { animationId, dialogType, targetGroupId, name, description } =
     getEditorPayload(appService);
 
   store.setItems({
@@ -551,7 +551,10 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
       dialogType,
     });
     store.setAnimationName({
-      name: DEFAULT_NEW_ANIMATION_NAME,
+      name: name ?? DEFAULT_NEW_ANIMATION_NAME,
+    });
+    store.setAnimationDescription({
+      description: description ?? "",
     });
   }
 

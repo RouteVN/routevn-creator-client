@@ -23,12 +23,16 @@ refs:
         handler: handleSearchInput
       item-delete:
         handler: handleItemDelete
-  createTypeMenu:
+      item-duplicate:
+        handler: handleItemDuplicate
+  addDialog:
     eventListeners:
       close:
-        handler: handleCloseCreateTypeMenu
-      item-click:
-        handler: handleCreateTypeMenuItemClick
+        handler: handleAddDialogClose
+  addForm:
+    eventListeners:
+      form-action:
+        handler: handleAddFormAction
   detailHeader:
     eventListeners:
       click:
@@ -71,6 +75,7 @@ template:
                     $else:
                       - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                           - rtgl-text s=md c=mu-fg: No selection
+  - rtgl-dialog#addDialog ?open=${isAddDialogOpen} s=md:
+      - rtgl-form#addForm key=${isAddDialogOpen} slot=content :defaultValues=${addFormDefaults} :form=${addForm} w=f: null
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
       - rtgl-form#editForm key=${isEditDialogOpen} slot=content :defaultValues=${editDefaultValues} :form=${editForm} w=f: null
-  - rtgl-dropdown-menu#createTypeMenu :items=${createTypeMenu.items} ?open=${createTypeMenu.isOpen} x=${createTypeMenu.x} y=${createTypeMenu.y}: null

@@ -34,27 +34,61 @@ const editForm = {
   },
 };
 
-const createTypeMenuItems = [
-  {
-    label: "Update",
-    type: "item",
-    value: "update",
+const addForm = {
+  title: "Add Animation",
+  fields: [
+    {
+      name: "name",
+      type: "input-text",
+      label: "Name",
+      required: true,
+    },
+    {
+      name: "description",
+      type: "input-textarea",
+      label: "Description",
+      required: false,
+    },
+    {
+      name: "dialogType",
+      type: "segmented-control",
+      label: "Type",
+      noClear: true,
+      required: true,
+      options: [
+        {
+          label: "Update",
+          value: "update",
+        },
+        {
+          label: "Transition",
+          value: "transition",
+        },
+      ],
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        label: "Continue",
+      },
+    ],
   },
-  {
-    label: "Transition",
-    type: "item",
-    value: "transition",
-  },
-];
+};
 
 const animationExplorerItemContextMenuItems = [
   { label: "Edit", type: "item", value: "edit-item" },
   { label: "Rename", type: "item", value: "rename-item" },
+  { label: "Duplicate", type: "item", value: "duplicate-item" },
   { label: "Delete", type: "item", value: "delete-item" },
 ];
 
 const animationCenterItemContextMenuItems = [
   { label: "Edit", type: "item", value: "edit-item" },
+  { label: "Duplicate", type: "item", value: "duplicate-item" },
   { label: "Delete", type: "item", value: "delete-item" },
 ];
 
@@ -98,6 +132,13 @@ const {
 
     return {
       ...baseViewData,
+      isAddDialogOpen: state.isAddDialogOpen,
+      addForm,
+      addFormDefaults: {
+        name: "",
+        description: "",
+        dialogType: "update",
+      },
       isEditDialogOpen: state.isEditDialogOpen,
       editForm,
       editDefaultValues: state.editDefaultValues,
@@ -108,25 +149,19 @@ const {
       selectedItemDuration: formatAnimationDurationLabel(
         selectedAnimationItem?.duration,
       ),
-      createTypeMenu: state.createTypeMenu,
     };
   },
 });
 
 export const createInitialState = () => ({
   ...createCatalogInitialState(),
+  isAddDialogOpen: false,
+  targetGroupId: undefined,
   isEditDialogOpen: false,
   editItemId: undefined,
   editDefaultValues: {
     name: "",
     description: "",
-  },
-  createTypeMenu: {
-    isOpen: false,
-    x: 0,
-    y: 0,
-    targetGroupId: undefined,
-    items: createTypeMenuItems,
   },
 });
 
@@ -147,6 +182,20 @@ export const selectAnimationDisplayItemById = ({ state }, { itemId } = {}) => {
   return rawItem ? toAnimationDisplayItem(rawItem) : undefined;
 };
 
+export const openAddDialog = ({ state }, { groupId } = {}) => {
+  state.isAddDialogOpen = true;
+  state.targetGroupId = groupId === "_root" ? undefined : groupId;
+};
+
+export const closeAddDialog = ({ state }) => {
+  state.isAddDialogOpen = false;
+  state.targetGroupId = undefined;
+};
+
+export const selectTargetGroupId = ({ state }) => {
+  return state.targetGroupId;
+};
+
 export const openEditDialog = ({ state }, { itemId, defaultValues } = {}) => {
   state.isEditDialogOpen = true;
   state.editItemId = itemId;
@@ -163,25 +212,6 @@ export const closeEditDialog = ({ state }) => {
     name: "",
     description: "",
   };
-};
-
-export const openCreateTypeMenu = ({ state }, { x, y, targetGroupId } = {}) => {
-  state.createTypeMenu.isOpen = true;
-  state.createTypeMenu.x = x ?? 0;
-  state.createTypeMenu.y = y ?? 0;
-  state.createTypeMenu.targetGroupId =
-    targetGroupId === "_root" ? undefined : targetGroupId;
-};
-
-export const closeCreateTypeMenu = ({ state }) => {
-  state.createTypeMenu.isOpen = false;
-  state.createTypeMenu.x = 0;
-  state.createTypeMenu.y = 0;
-  state.createTypeMenu.targetGroupId = undefined;
-};
-
-export const selectCreateTypeMenuTargetGroupId = ({ state }) => {
-  return state.createTypeMenu.targetGroupId;
 };
 
 export const selectViewData = (context) => {

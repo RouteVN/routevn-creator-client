@@ -1,10 +1,16 @@
 import { COMMAND_TYPES } from "../../../../../internal/project/commands.js";
+import { toFlatItems } from "../../../../../internal/project/tree.js";
 import {
   submitCreateResourceCommand,
   submitDeleteResourceCommand,
   submitMoveResourceCommand,
   submitUpdateResourceCommand,
 } from "./shared.js";
+
+const resolveCatalogResourceParentId = (collection, itemId) => {
+  const flatItems = toFlatItems(collection);
+  return flatItems.find((item) => item.id === itemId)?.parentId ?? null;
+};
 
 export const createCatalogResourceCommandApi = (shared) => ({
   createAnimation: async ({
@@ -62,6 +68,37 @@ export const createCatalogResourceCommandApi = (shared) => ({
       deleteField: "animationIds",
       ids: animationIds,
     }),
+  async duplicateAnimation({ animationId }) {
+    const context = await shared.ensureCommandContext();
+    const sourceAnimation = context.state?.animations?.items?.[animationId];
+
+    if (!sourceAnimation || sourceAnimation.type !== "animation") {
+      return {
+        valid: false,
+        error: {
+          message: "Animation not found.",
+        },
+      };
+    }
+
+    const nextData = structuredClone(sourceAnimation);
+    delete nextData.id;
+    delete nextData.parentId;
+
+    return submitCreateResourceCommand({
+      shared,
+      resourceType: "animations",
+      type: COMMAND_TYPES.ANIMATION_CREATE,
+      idField: "animationId",
+      data: nextData,
+      parentId: resolveCatalogResourceParentId(
+        context.state?.animations,
+        animationId,
+      ),
+      position: "after",
+      positionTargetId: animationId,
+    });
+  },
   createParticle: async ({
     particleId,
     data,
@@ -363,7 +400,10 @@ export const createCatalogResourceCommandApi = (shared) => ({
       type: COMMAND_TYPES.TEXTSTYLE_CREATE,
       idField: "textStyleId",
       data: nextData,
-      parentId: sourceTextStyle.parentId ?? null,
+      parentId: resolveCatalogResourceParentId(
+        context.state?.textStyles,
+        textStyleId,
+      ),
       position: "after",
       positionTargetId: textStyleId,
     });

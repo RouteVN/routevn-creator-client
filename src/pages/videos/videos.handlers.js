@@ -91,6 +91,7 @@ const createVideosFromFiles = async ({ deps, files, parentId } = {}) => {
               description: "",
               fileType: uploadResult.file.type,
               fileSize: uploadResult.file.size,
+              duration: uploadResult.duration,
               width: uploadResult.dimensions?.width,
               height: uploadResult.dimensions?.height,
             },
@@ -298,6 +299,7 @@ export const handleFormExtraEvent = async (deps) => {
           name: uploadResult.displayName,
           fileType: uploadResult.file.type,
           fileSize: uploadResult.file.size,
+          duration: uploadResult.duration,
           width: uploadResult.dimensions?.width,
           height: uploadResult.dimensions?.height,
         },
@@ -386,6 +388,7 @@ export const handleEditFormAction = async (deps, payload) => {
         thumbnailFileId: editUploadResult.thumbnailFileId,
         fileType: editUploadResult.file.type,
         fileSize: editUploadResult.file.size,
+        duration: editUploadResult.duration,
         width: editUploadResult.dimensions?.width,
         height: editUploadResult.dimensions?.height,
       }
