@@ -35,7 +35,7 @@
     "jsdom": "^26.1.0",
     "jszip": "^3.10.1",
     "nanoid": "^5.1.5",
-    "route-engine-js": "https://codeload.github.com/RouteVN/route-engine/tar.gz/refs/tags/v1.0.0-rc1",
+    "route-engine-js": "1.0.0",
     "route-graphics": "1.7.1",
     "rxjs": "^7.8.2",
     "snabbdom": "^3.6.2",
