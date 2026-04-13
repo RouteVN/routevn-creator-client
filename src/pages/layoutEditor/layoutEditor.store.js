@@ -29,6 +29,7 @@ export const createInitialState = () => {
     previewData: {},
     projectResolution: DEFAULT_PROJECT_RESOLUTION,
     selectedElementMetrics: undefined,
+    lastPersistErrorAt: 0,
   };
 };
 
@@ -106,6 +107,10 @@ export const updateSelectedItem = ({ state }, { updatedItem } = {}) => {
 
 export const setSelectedElementMetrics = ({ state }, { metrics } = {}) => {
   state.selectedElementMetrics = metrics;
+};
+
+export const setLastPersistErrorAt = ({ state }, { timestamp } = {}) => {
+  state.lastPersistErrorAt = Number.isFinite(timestamp) ? timestamp : 0;
 };
 
 export const setImages = ({ state }, { images } = {}) => {
@@ -222,6 +227,12 @@ export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
 export const selectSelectedElementMetrics = ({ state }) => {
   return state.selectedElementMetrics;
+};
+
+export const selectLastPersistErrorAt = ({ state }) => {
+  return Number.isFinite(state.lastPersistErrorAt)
+    ? state.lastPersistErrorAt
+    : 0;
 };
 
 export const selectItems = ({ state }) => {

@@ -46,15 +46,7 @@ const form = {
       name: "description",
       type: "input-text",
       label: "Description",
-      description: "Enter a brief description of the project",
-      required: true,
       testId: "project-description-input",
-      validations: [
-        {
-          rule: /^.+$/,
-          message: "Description is required",
-        },
-      ],
     },
     {
       name: "projectIcon",
@@ -67,6 +59,7 @@ const form = {
       type: "select",
       label: "Resolution",
       required: true,
+      clearable: false,
       options: PROJECT_RESOLUTION_OPTIONS,
     },
     {

@@ -103,13 +103,6 @@ const showCreateProjectDialog = async (appService) => {
     actions: {
       buttons: [
         {
-          id: "cancel",
-          label: "Cancel",
-          variant: "se",
-          align: "left",
-          role: "cancel",
-        },
-        {
           id: "submit",
           label: "Submit",
           variant: "pr",
@@ -154,12 +147,10 @@ export const handleCreateButtonClick = async (deps) => {
       return;
     }
 
-    if (!name || !description || (platform !== "web" && !projectPath)) {
+    if (!name || (platform !== "web" && !projectPath)) {
       let message = "Please fill in all required fields.";
       if (!name) {
         message = "Project Name is required.";
-      } else if (!description) {
-        message = "Project Description is required.";
       } else if (platform !== "web" && !projectPath) {
         message = "Project Location is required.";
       }

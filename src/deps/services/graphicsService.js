@@ -383,16 +383,6 @@ export const createGraphicsService = async ({ subject }) => {
     return uniqueAudioKeys.filter((key) => !AudioAsset.getAsset?.(key));
   };
 
-  const logRouteGraphicsRenderData = (
-    renderData,
-    { source = "unknown" } = {},
-  ) => {
-    console.log("[graphicsService] routeGraphics.render", {
-      source,
-      renderData,
-    });
-  };
-
   const getDecodableAudioKeys = (assetKeys = []) => {
     const bufferMap = assetBufferManager?.getBufferMap?.() ?? {};
     return Array.from(
@@ -946,7 +936,6 @@ export const createGraphicsService = async ({ subject }) => {
       ...nextRenderState,
       animations: nextRenderState?.animations || [],
     };
-    logRouteGraphicsRenderData(nextRenderState, { source: "engine" });
     routeGraphics.render(nextRenderState);
     applyInteractiveContainerHitAreas(nextRenderState.elements);
     void pruneDecodedAudioCache(retainedAudioKeys);
@@ -1358,7 +1347,6 @@ export const createGraphicsService = async ({ subject }) => {
     },
     waitUntilReady,
     render: (payload) => {
-      logRouteGraphicsRenderData(payload, { source: "direct" });
       return routeGraphics.render(payload);
     },
     parse: (payload) => routeGraphics.parse(payload),

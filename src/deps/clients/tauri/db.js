@@ -1,6 +1,10 @@
 // SQLite wrapper for Tauri - all SQLite access goes through this file
 import Database from "@tauri-apps/plugin-sql";
 import { join } from "@tauri-apps/api/path";
+import {
+  SQLITE_BUSY_TIMEOUT_MS,
+  withSqliteLockRetry,
+} from "../../../internal/sqliteLocking.js";
 
 /**
  * Create a database instance
@@ -27,25 +31,32 @@ export const createDb = ({ path, projectPath, withEvents = false }) => {
       }
 
       db = await Database.load(dbPath);
+      await withSqliteLockRetry(() =>
+        db.execute(`PRAGMA busy_timeout=${SQLITE_BUSY_TIMEOUT_MS}`),
+      );
 
       // Initialize key-value table
-      await db.execute(`
-        CREATE TABLE IF NOT EXISTS kv (
-          key TEXT PRIMARY KEY,
-          value TEXT
-        )
-      `);
+      await withSqliteLockRetry(() =>
+        db.execute(`
+          CREATE TABLE IF NOT EXISTS kv (
+            key TEXT PRIMARY KEY,
+            value TEXT
+          )
+        `),
+      );
 
       // Initialize events table if needed
       if (withEvents) {
-        await db.execute(`
-          CREATE TABLE IF NOT EXISTS events (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            type TEXT NOT NULL,
-            payload TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          )
-        `);
+        await withSqliteLockRetry(() =>
+          db.execute(`
+            CREATE TABLE IF NOT EXISTS events (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              type TEXT NOT NULL,
+              payload TEXT,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+          `),
+        );
       }
 
       initialized = true;
@@ -54,9 +65,9 @@ export const createDb = ({ path, projectPath, withEvents = false }) => {
     async get(key) {
       if (!initialized)
         throw new Error("Db not initialized. Call init() first.");
-      const result = await db.select("SELECT value FROM kv WHERE key = $1", [
-        key,
-      ]);
+      const result = await withSqliteLockRetry(() =>
+        db.select("SELECT value FROM kv WHERE key = $1", [key]),
+      );
       if (result && result.length > 0) {
         try {
           return JSON.parse(result[0].value);
@@ -71,16 +82,20 @@ export const createDb = ({ path, projectPath, withEvents = false }) => {
       if (!initialized)
         throw new Error("Db not initialized. Call init() first.");
       const jsonValue = JSON.stringify(value);
-      await db.execute(
-        "INSERT OR REPLACE INTO kv (key, value) VALUES ($1, $2)",
-        [key, jsonValue],
+      await withSqliteLockRetry(() =>
+        db.execute("INSERT OR REPLACE INTO kv (key, value) VALUES ($1, $2)", [
+          key,
+          jsonValue,
+        ]),
       );
     },
 
     async remove(key) {
       if (!initialized)
         throw new Error("Db not initialized. Call init() first.");
-      await db.execute("DELETE FROM kv WHERE key = $1", [key]);
+      await withSqliteLockRetry(() =>
+        db.execute("DELETE FROM kv WHERE key = $1", [key]),
+      );
     },
   };
 
@@ -101,7 +116,7 @@ export const createDb = ({ path, projectPath, withEvents = false }) => {
 
       query += " ORDER BY id";
 
-      const results = await db.select(query, params);
+      const results = await withSqliteLockRetry(() => db.select(query, params));
       return results.map((row) => ({
         type: row.type,
         payload: row.payload ? JSON.parse(row.payload) : null,
@@ -111,19 +126,21 @@ export const createDb = ({ path, projectPath, withEvents = false }) => {
     instance.appendEvent = async (event) => {
       if (!initialized)
         throw new Error("Db not initialized. Call init() first.");
-      await db.execute("INSERT INTO events (type, payload) VALUES (?, ?)", [
-        event.type,
-        JSON.stringify(event.payload),
-      ]);
+      await withSqliteLockRetry(() =>
+        db.execute("INSERT INTO events (type, payload) VALUES (?, ?)", [
+          event.type,
+          JSON.stringify(event.payload),
+        ]),
+      );
     };
 
     // Snapshot support for fast initialization
     instance.getSnapshot = async () => {
       if (!initialized)
         throw new Error("Db not initialized. Call init() first.");
-      const result = await db.select("SELECT value FROM kv WHERE key = $1", [
-        "_eventsSnapshot",
-      ]);
+      const result = await withSqliteLockRetry(() =>
+        db.select("SELECT value FROM kv WHERE key = $1", ["_eventsSnapshot"]),
+      );
       if (result && result.length > 0) {
         try {
           return JSON.parse(result[0].value);
@@ -138,9 +155,11 @@ export const createDb = ({ path, projectPath, withEvents = false }) => {
       if (!initialized)
         throw new Error("Db not initialized. Call init() first.");
       const jsonValue = JSON.stringify(snapshot);
-      await db.execute(
-        "INSERT OR REPLACE INTO kv (key, value) VALUES ($1, $2)",
-        ["_eventsSnapshot", jsonValue],
+      await withSqliteLockRetry(() =>
+        db.execute("INSERT OR REPLACE INTO kv (key, value) VALUES ($1, $2)", [
+          "_eventsSnapshot",
+          jsonValue,
+        ]),
       );
     };
   }

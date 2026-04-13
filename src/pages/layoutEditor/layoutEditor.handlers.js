@@ -1,9 +1,10 @@
 import { nanoid } from "nanoid";
-import { filter, tap, debounceTime } from "rxjs";
+import { concatMap, debounceTime, filter, from, tap } from "rxjs";
 import {
   createCollabRemoteRefreshStream,
   matchesRemoteTargets,
 } from "../../internal/ui/collabRefresh.js";
+import { isSqliteLockError } from "../../internal/sqliteLocking.js";
 import {
   getLayoutEditorBackPath,
   resolveLayoutEditorPayload,
@@ -15,6 +16,7 @@ import {
   persistLayoutEditorElementUpdate,
   shouldPersistLayoutEditorFieldImmediately,
 } from "./support/layoutEditorPersistence.js";
+import { enqueueLayoutEditorPersistence } from "./support/layoutEditorPersistenceQueue.js";
 import { isFragmentLayout } from "../../internal/project/layout.js";
 import {
   getFirstSpritesheetAnimationSelectionValue,
@@ -42,6 +44,7 @@ const DEBOUNCE_DELAYS = {
 
 const SLIDER_CREATE_DIALOG_COMPONENT = "rvn-layout-editor-slider-create-dialog";
 const SPRITE_CREATE_DIALOG_COMPONENT = "rvn-layout-editor-sprite-create-dialog";
+const LAYOUT_EDITOR_PERSIST_ERROR_COOLDOWN_MS = 1500;
 
 const getResultErrorMessage = (result, fallbackMessage) => {
   return (
@@ -49,6 +52,43 @@ const getResultErrorMessage = (result, fallbackMessage) => {
     result?.error?.creatorModelError?.message ||
     fallbackMessage
   );
+};
+
+const showLayoutEditorError = ({
+  appService,
+  store,
+  error,
+  fallbackMessage,
+  lockedMessage = fallbackMessage,
+  throttle = false,
+} = {}) => {
+  if (throttle) {
+    const now = Date.now();
+    const lastPersistErrorAt = store.selectLastPersistErrorAt();
+    if (
+      Number.isFinite(lastPersistErrorAt) &&
+      now - lastPersistErrorAt < LAYOUT_EDITOR_PERSIST_ERROR_COOLDOWN_MS
+    ) {
+      return;
+    }
+    store.setLastPersistErrorAt({
+      timestamp: now,
+    });
+  }
+
+  const message = isSqliteLockError(error)
+    ? lockedMessage
+    : error?.message || fallbackMessage;
+  appService.showToast(message, {
+    title: "Error",
+  });
+};
+
+const runLayoutEditorPersistence = (deps, task) => {
+  return enqueueLayoutEditorPersistence({
+    owner: deps.projectService,
+    task,
+  });
 };
 
 const getLayoutEditorOwnerConfig = (resourceType, projectService) => {
@@ -491,7 +531,7 @@ const showSpriteCreateDialog = async (appService, spriteAction = {}) => {
   });
 };
 
-export const handleFileExplorerAction = async (deps, payload) => {
+const handleFileExplorerActionUnsafe = async (deps, payload) => {
   const saveLoadSlotAction = resolveSaveLoadSlotCreateAction(
     payload?._event?.detail,
   );
@@ -1136,6 +1176,24 @@ export const handleFileExplorerAction = async (deps, payload) => {
   await refreshLayoutEditorData(deps, { selectedItemId: nextElementId });
 };
 
+export const handleFileExplorerAction = async (deps, payload) => {
+  try {
+    await handleFileExplorerActionUnsafe(deps, payload);
+  } catch (error) {
+    console.error("[layoutEditor] Failed to create layout item", {
+      error,
+    });
+    showLayoutEditorError({
+      appService: deps.appService,
+      store: deps.store,
+      error,
+      fallbackMessage: "Failed to create layout item.",
+      lockedMessage:
+        "The project database is busy. RouteVN couldn't create the layout item. Please wait a moment and try again.",
+    });
+  }
+};
+
 export { handleFileExplorerTargetChanged };
 
 export const handleDataChanged = refreshLayoutEditorData;
@@ -1150,26 +1208,62 @@ async function handleDebouncedUpdate(deps, payload) {
   const { appService, projectService, store } = deps;
   const { layoutId, resourceType, selectedItemId, updatedItem, replace } =
     payload;
-  const persistResult = await persistLayoutEditorElementUpdate({
-    projectService,
-    layoutId,
-    resourceType,
-    selectedItemId,
-    updatedItem,
-    replace,
-  });
-  if (!persistResult.didPersist) {
-    return;
-  }
+  return runLayoutEditorPersistence(deps, async () => {
+    try {
+      const persistResult = await persistLayoutEditorElementUpdate({
+        projectService,
+        layoutId,
+        resourceType,
+        selectedItemId,
+        updatedItem,
+        replace,
+      });
+      if (!persistResult.didPersist) {
+        return;
+      }
 
-  const currentPayload = getEditorPayload(appService);
-  store.syncRepositoryState(
-    createLayoutEditorRepositoryStoreData({
-      repositoryState: projectService.getRepositoryState(),
-      layoutId: currentPayload.layoutId || layoutId,
-      resourceType: currentPayload.resourceType || resourceType,
-    }),
-  );
+      if (persistResult.updateResult?.valid === false) {
+        showLayoutEditorError({
+          appService,
+          store,
+          error: persistResult.updateResult?.error,
+          fallbackMessage: getResultErrorMessage(
+            persistResult.updateResult,
+            "Failed to save layout changes.",
+          ),
+          lockedMessage:
+            "The project database is busy. RouteVN couldn't save the latest layout changes. Please wait a moment and try again.",
+          throttle: true,
+        });
+        return;
+      }
+
+      const currentPayload = getEditorPayload(appService);
+      store.syncRepositoryState(
+        createLayoutEditorRepositoryStoreData({
+          repositoryState: projectService.getRepositoryState(),
+          layoutId: currentPayload.layoutId || layoutId,
+          resourceType: currentPayload.resourceType || resourceType,
+        }),
+      );
+    } catch (error) {
+      console.error("[layoutEditor] Failed to save layout changes", {
+        error,
+        layoutId,
+        resourceType,
+        selectedItemId,
+      });
+      showLayoutEditorError({
+        appService,
+        store,
+        error,
+        fallbackMessage: "Failed to save layout changes.",
+        lockedMessage:
+          "The project database is busy. RouteVN couldn't save the latest layout changes. Please wait a moment and try again.",
+        throttle: true,
+      });
+    }
+  });
 }
 
 const subscriptions = (deps) => {
@@ -1193,9 +1287,7 @@ const subscriptions = (deps) => {
     subject.pipe(
       filter(({ action }) => action === "layoutEditor.updateElement"),
       debounceTime(DEBOUNCE_DELAYS.UPDATE),
-      tap(async ({ payload }) => {
-        await handleDebouncedUpdate(deps, payload);
-      }),
+      concatMap(({ payload }) => from(handleDebouncedUpdate(deps, payload))),
     ),
   ];
 };
