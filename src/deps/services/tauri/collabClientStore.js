@@ -133,7 +133,11 @@ const normalizeSqlArg = (value) => {
 };
 
 const isSqliteCommitStatement = (sql) =>
-  /^COMMIT\b/.test(String(sql ?? "").trim().toUpperCase());
+  /^COMMIT\b/.test(
+    String(sql ?? "")
+      .trim()
+      .toUpperCase(),
+  );
 
 export const executeTauriSqlStatement = async ({
   db,
