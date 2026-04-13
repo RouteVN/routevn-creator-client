@@ -3,6 +3,7 @@ import {
   handleBackClick,
   handleLayoutEditorCanvasDragUpdate,
 } from "../../src/pages/layoutEditor/layoutEditor.handlers.js";
+import { enqueueLayoutEditorPersistence } from "../../src/pages/layoutEditor/support/layoutEditorPersistenceQueue.js";
 
 const createLayoutEditorDeps = ({
   pendingPersistPayload,
@@ -204,5 +205,29 @@ describe("layoutEditor.handleBackClick", () => {
     expect(deps.appService.navigate).toHaveBeenCalledWith("/project/layouts", {
       p: "project-1",
     });
+  });
+
+  it("does not navigate when an in-flight immediate save fails", async () => {
+    let resolveTask;
+    const taskFinished = new Promise((resolve) => {
+      resolveTask = resolve;
+    });
+    const deps = createLayoutEditorDeps();
+
+    void enqueueLayoutEditorPersistence({
+      owner: deps.projectService,
+      task: async () => {
+        await taskFinished;
+        return {
+          ok: false,
+        };
+      },
+    });
+
+    const backPromise = handleBackClick(deps);
+    resolveTask();
+    await backPromise;
+
+    expect(deps.appService.navigate).not.toHaveBeenCalled();
   });
 });

@@ -362,9 +362,17 @@ const flushQueuedLayoutEditorUpdates = async (deps) => {
     flushResult = await handleDebouncedUpdate(deps, pendingPayload);
   }
 
-  await waitForLayoutEditorPersistenceIdle({
+  const idleResult = await waitForLayoutEditorPersistenceIdle({
     owner: projectService,
   });
+
+  if (flushResult.ok === false) {
+    return flushResult;
+  }
+
+  if (idleResult?.ok === false) {
+    return idleResult;
+  }
 
   return flushResult;
 };

@@ -28,5 +28,5 @@ export const waitForLayoutEditorPersistenceIdle = async ({ owner } = {}) => {
     return;
   }
 
-  await pending.catch(() => {});
+  return pending.catch(() => {});
 };

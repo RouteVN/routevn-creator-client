@@ -20,7 +20,12 @@ const LEGACY_ROUTE_REDIRECTS = {
 };
 
 const getCanonicalRoutePath = (path) => {
-  return LEGACY_ROUTE_REDIRECTS[path] ?? path;
+  const normalizedPath =
+    typeof path === "string" && path.length > 1
+      ? path.replace(/\/+$/, "")
+      : path;
+
+  return LEGACY_ROUTE_REDIRECTS[normalizedPath] ?? path;
 };
 
 const getCurrentQueryPayload = (appService) => {
