@@ -98,10 +98,7 @@ export const setPreviewData = ({ state }, { previewData } = {}) => {
   state.previewData = previewData ?? {};
 };
 
-export const updateSelectedItem = (
-  { state },
-  { itemId, updatedItem } = {},
-) => {
+export const updateSelectedItem = ({ state }, { itemId, updatedItem } = {}) => {
   const targetItemId = itemId ?? state.selectedItemId;
 
   if (targetItemId && state.layoutData && state.layoutData.items) {
