@@ -883,7 +883,10 @@ const applyTextNode = ({ element, node, context }) => {
     }
   }
 
-  if (node.type === "text-revealing-ref-dialogue-content") {
+  if (
+    node.type === "text-revealing" ||
+    node.type === "text-revealing-ref-dialogue-content"
+  ) {
     nextElement.speed = "${runtime.dialogueTextSpeed}";
   }
 

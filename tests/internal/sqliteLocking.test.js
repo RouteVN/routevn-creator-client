@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   isSqliteLockError,
+  isSqliteNoActiveTransactionError,
   withSqliteLockRetry,
 } from "../../src/internal/sqliteLocking.js";
 
@@ -25,6 +26,22 @@ describe("sqliteLocking", () => {
     ).toBe(true);
     expect(isSqliteLockError(new Error("database is busy"))).toBe(true);
     expect(isSqliteLockError(new Error("validation failed"))).toBe(false);
+  });
+
+  it("recognizes missing active transaction errors", () => {
+    expect(
+      isSqliteNoActiveTransactionError(
+        new Error("cannot commit - no transaction is active"),
+      ),
+    ).toBe(true);
+    expect(
+      isSqliteNoActiveTransactionError(
+        new Error("cannot rollback - no transaction is active"),
+      ),
+    ).toBe(true);
+    expect(isSqliteNoActiveTransactionError(new Error("database is locked"))).toBe(
+      false,
+    );
   });
 
   it("retries lock errors until the operation succeeds", async () => {
@@ -55,5 +72,29 @@ describe("sqliteLocking", () => {
 
     await expect(withSqliteLockRetry(operation)).rejects.toThrow("boom");
     expect(operation).toHaveBeenCalledTimes(1);
+  });
+
+  it("can recover a missing transaction after a retried lock", async () => {
+    vi.useFakeTimers();
+    const operation = vi
+      .fn()
+      .mockRejectedValueOnce(createLockError())
+      .mockRejectedValueOnce(
+        new Error("cannot commit - no transaction is active"),
+      );
+
+    const pending = withSqliteLockRetry(operation, {
+      retryDelaysMs: [10],
+      shouldRecoverError: (error, { sawLock }) =>
+        sawLock && isSqliteNoActiveTransactionError(error),
+      recoverValue: "recovered",
+    });
+
+    await Promise.resolve();
+    expect(operation).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(10);
+    await expect(pending).resolves.toBe("recovered");
+    expect(operation).toHaveBeenCalledTimes(2);
   });
 });

@@ -119,33 +119,6 @@ describe("layoutEditorMutations", () => {
     expect(updatedItem.height).toBe(180);
   });
 
-  it("binds slider variables through the shared mutation path", () => {
-    const item = {
-      id: "slider-1",
-      type: "slider",
-      min: 5,
-      variableId: "",
-    };
-
-    const updatedItem = applyLayoutItemFieldChange({
-      item,
-      name: "variableId",
-      value: "volume",
-    });
-
-    expect(updatedItem.variableId).toBe("volume");
-    expect(updatedItem.initialValue).toBe("${variables.volume}");
-    expect(
-      updatedItem.change.payload.actions.updateVariable.operations,
-    ).toEqual([
-      {
-        variableId: "volume",
-        op: "set",
-        value: "_event.value",
-      },
-    ]);
-  });
-
   it("applies keyboard moves and resizes as explicit item intents", () => {
     const item = {
       id: "rect-1",

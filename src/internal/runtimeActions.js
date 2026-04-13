@@ -5,6 +5,13 @@ const BOOLEAN_OPTIONS = Object.freeze([
   { label: "False", value: false },
 ]);
 
+const VALUE_SOURCE_OPTIONS = Object.freeze([
+  { label: "Specific Value", value: "fixed" },
+  { label: "Current Value", value: "event" },
+]);
+
+const EVENT_VALUE_BINDING = "_event.value";
+
 const createValueActionDefinition = ({
   mode,
   label,
@@ -186,6 +193,10 @@ export const getRuntimeActionModes = () => {
 };
 
 const formatPreviewValue = (definition, value) => {
+  if (value === EVENT_VALUE_BINDING) {
+    return "Current Value";
+  }
+
   if (definition.inputType === "boolean") {
     return value === true ? "true" : "false";
   }
@@ -195,6 +206,37 @@ const formatPreviewValue = (definition, value) => {
   }
 
   return String(value);
+};
+
+const getRuntimeActionValueSource = (value) => {
+  return value === EVENT_VALUE_BINDING ? "event" : "fixed";
+};
+
+const createFixedValueField = (definition) => {
+  const baseField = {
+    $when: `values.valueSource == 'fixed'`,
+    name: "value",
+    label: definition.valueLabel,
+  };
+
+  if (definition.inputType === "boolean") {
+    return {
+      ...baseField,
+      type: "select",
+      clearable: false,
+      options: BOOLEAN_OPTIONS,
+      description: definition.description,
+    };
+  }
+
+  return {
+    ...baseField,
+    type: definition.inputType === "number" ? "input-number" : "input-text",
+    description: definition.description,
+    min: definition.min,
+    step: definition.step,
+    placeholder: definition.placeholder,
+  };
 };
 
 export const createRuntimeActionForm = (mode) => {
@@ -221,30 +263,19 @@ export const createRuntimeActionForm = (mode) => {
     };
   }
 
-  const field =
-    definition.inputType === "boolean"
-      ? {
-          name: "value",
-          type: "select",
-          label: definition.valueLabel,
-          clearable: false,
-          options: BOOLEAN_OPTIONS,
-          description: definition.description,
-        }
-      : {
-          name: "value",
-          type:
-            definition.inputType === "number" ? "input-number" : "input-text",
-          label: definition.valueLabel,
-          description: definition.description,
-          min: definition.min,
-          step: definition.step,
-          placeholder: definition.placeholder,
-        };
-
   return {
     title: definition.label,
-    fields: [field],
+    fields: [
+      {
+        name: "valueSource",
+        type: "segmented-control",
+        label: "Set To",
+        options: VALUE_SOURCE_OPTIONS,
+        description:
+          "Specific Value lets you enter a value. Current Value uses the value from the triggering control.",
+      },
+      createFixedValueField(definition),
+    ],
     actions: {
       layout: "",
       buttons: [
@@ -268,8 +299,14 @@ export const createRuntimeActionDefaultValues = (mode, action = {}) => {
     return {};
   }
 
+  const valueSource = getRuntimeActionValueSource(action.value);
+
   return {
-    value: action.value ?? definition.defaultValue,
+    valueSource,
+    value:
+      valueSource === "fixed"
+        ? (action.value ?? definition.defaultValue)
+        : definition.defaultValue,
   };
 };
 
@@ -285,9 +322,11 @@ export const createRuntimeActionSubmitDetail = (mode, values = {}) => {
     };
   }
 
+  const valueSource = values.valueSource === "event" ? "event" : "fixed";
+
   return {
     [mode]: {
-      value: values.value,
+      value: valueSource === "event" ? EVENT_VALUE_BINDING : values.value,
     },
   };
 };

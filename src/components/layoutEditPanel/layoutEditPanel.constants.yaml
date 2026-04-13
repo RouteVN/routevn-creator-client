@@ -49,7 +49,7 @@ layoutSections:
             value: "${values.y}"
             metaValue: "${yPercentageLabel}"
             popoverForm: *numberPopoverForm
-  - "$when": "supportsSize"
+  - "$when": "showLayoutSizeSection"
     label: Layout
     items:
       - "$when": "supportsWidthMode"
@@ -62,23 +62,34 @@ layoutSections:
             value: auto
           - label: Fixed
             value: fixed
-      - type: group
+      - "$when": "supportsHeightMode"
+        type: segmented-control
+        label: Height
+        name: heightMode
+        value: "${heightMode}"
+        options:
+          - label: Auto
+            value: auto
+          - label: Fixed
+            value: fixed
+      - "$when": "showWidthField || showHeightField"
+        type: group
         fields:
-          - "$when": '!supportsWidthMode || widthMode == "fixed"'
+          - "$when": "showWidthField"
             type: clickable-value
             svg: w
             name: width
             value: "${values.width}"
             metaValue: "${widthPercentageLabel}"
             popoverForm: *numberPopoverForm
-          - "$when": "supportsHeight"
+          - "$when": "showHeightField"
             type: clickable-value
             svg: h
             name: height
             value: "${values.height}"
             metaValue: "${heightPercentageLabel}"
             popoverForm: *numberPopoverForm
-      - "$when": "supportsHeight"
+      - "$when": "showAspectRatioMode"
         type: segmented-control
         label: Ratio
         name: aspectRatioMode
@@ -252,6 +263,19 @@ layoutSections:
   - "$when": "supportsSliderValues"
     label: Slider Values
     items:
+      - type: select
+        label: Value
+        name: sliderRuntimeValueId
+        value: "${values.sliderRuntimeValueId}"
+        options: "${sliderValueOptions}"
+      - "$when": "!values.sliderRuntimeValueId"
+        type: group
+        fields:
+          - type: clickable-value
+            label: Initial
+            name: sliderManualInitialValue
+            value: "${values.sliderManualInitialValue}"
+            popoverForm: *numberPopoverForm
       - type: group
         fields:
           - type: clickable-value
@@ -271,11 +295,6 @@ layoutSections:
             name: step
             value: "${values.step}"
             popoverForm: *numberPopoverForm
-      - type: select
-        label: Update Variable
-        name: variableId
-        value: "${values.variableId}"
-        options: "${variableOptionsWithNone}"
   - "$when": "supportsTextEditing"
     label: Text
     items:

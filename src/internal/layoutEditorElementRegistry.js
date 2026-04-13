@@ -15,6 +15,7 @@ const BASE_TRANSFORM = {
 
 const TEXT_TYPE_SET = new Set([
   "text",
+  "text-revealing",
   "text-ref-character-name",
   "text-revealing-ref-dialogue-content",
   "text-ref-choice-item-content",
@@ -172,14 +173,14 @@ const CREATE_TEMPLATES = {
   "text-dialogue-line-content": (projectResolution) =>
     scaleLayoutElementItemForProjectResolution(
       {
-        type: "text-ref-dialogue-line-content",
+        type: "text-revealing",
         name: "Text (Line Content)",
         ...BASE_TRANSFORM,
         x: 0,
         y: 44,
         width: 1640,
         height: 72,
-        text: "text",
+        text: "${line.content[0].text}",
         textStyle: {
           wordWrapWidth: 300,
           align: "left",
@@ -405,39 +406,6 @@ const applySliderDirectionChange = ({
   return nextItem;
 };
 
-const applySliderVariableBindingChange = ({ nextItem, value }) => {
-  const variableId = value ?? undefined;
-
-  if (variableId) {
-    nextItem.variableId = variableId;
-    const updateVariableId = toAlphanumericId(`slider${nextItem.id}update`);
-    nextItem.change = {
-      payload: {
-        actions: {
-          updateVariable: {
-            id: updateVariableId,
-            operations: [
-              {
-                variableId,
-                op: "set",
-                value: "_event.value",
-              },
-            ],
-          },
-        },
-      },
-    };
-    nextItem.initialValue = `\${variables.${variableId}}`;
-    return nextItem;
-  }
-
-  delete nextItem.variableId;
-  delete nextItem.change;
-  const parsedMin = Number(nextItem.min);
-  nextItem.initialValue = Number.isFinite(parsedMin) ? parsedMin : 0;
-  return nextItem;
-};
-
 const applySpriteAutoSize = ({ nextItem, imagesData }) => {
   if (
     nextItem.type !== "sprite" ||
@@ -552,6 +520,7 @@ const FAMILY_CAPABILITIES = {
   slider: {
     supportsSliderImages: true,
     supportsSliderValues: true,
+    supportsActions: true,
   },
   rect: {
     supportsActions: true,
@@ -561,6 +530,11 @@ const FAMILY_CAPABILITIES = {
 const ITEM_TYPE_CAPABILITY_OVERRIDES = {
   text: {
     supportsTextEditing: true,
+    supportsActions: true,
+  },
+  "text-revealing": {
+    supportsTextEditing: true,
+    supportsTextRevealEffect: true,
     supportsActions: true,
   },
   "text-revealing-ref-dialogue-content": {
@@ -628,10 +602,6 @@ const TYPE_RULES = {
         return undefined;
       }
 
-      if (name === "variableId" && (value === null || value === "")) {
-        return undefined;
-      }
-
       return value;
     },
     applyFieldChange: ({ currentItem, nextItem, name, value, imagesData }) => {
@@ -641,13 +611,6 @@ const TYPE_RULES = {
           nextItem,
           value,
           imagesData,
-        });
-      }
-
-      if (name === "variableId") {
-        return applySliderVariableBindingChange({
-          nextItem,
-          value,
         });
       }
 
@@ -697,6 +660,13 @@ const PANEL_FEATURES_BY_TYPE = {
   ],
   "sprite-ref-save-load-slot-image": [...DEFAULT_PANEL_FEATURES, "images"],
   text: [...DEFAULT_PANEL_FEATURES, "text", "textStyles", "actions"],
+  "text-revealing": [
+    ...DEFAULT_PANEL_FEATURES,
+    "text",
+    "textStyles",
+    "revealEffect",
+    "actions",
+  ],
   "text-revealing-ref-dialogue-content": [
     ...DEFAULT_PANEL_FEATURES,
     "text",
@@ -716,7 +686,7 @@ const PANEL_FEATURES_BY_TYPE = {
     "textStyles",
   ],
   "text-ref-history-line-content": [...DEFAULT_PANEL_FEATURES, "textStyles"],
-  slider: [...DEFAULT_PANEL_FEATURES, "slider"],
+  slider: [...DEFAULT_PANEL_FEATURES, "slider", "actions"],
   rect: [...DEFAULT_PANEL_FEATURES, "actions"],
   "fragment-ref": [...DEFAULT_PANEL_FEATURES, "fragmentRef"],
 };
@@ -728,6 +698,7 @@ const PREVIEW_DEPENDENCIES_BY_TYPE = {
   "container-ref-save-load-slot": { saveLoad: true },
   "sprite-ref-save-load-slot-image": { saveLoad: true },
   "text-ref-save-load-slot-date": { saveLoad: true },
+  "text-revealing": { dialogue: true },
   "text-revealing-ref-dialogue-content": { dialogue: true },
   "text-ref-character-name": { dialogue: true },
   "container-ref-dialogue-line": { dialogue: true },
@@ -756,6 +727,10 @@ const IMMEDIATE_PERSIST_FIELDS_BY_TYPE = {
     "conditionalOverrides",
   ],
   text: [...DEFAULT_IMMEDIATE_PERSIST_FIELDS, "conditionalOverrides"],
+  "text-revealing": [
+    ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
+    "conditionalOverrides",
+  ],
   "text-revealing-ref-dialogue-content": [
     ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
     "conditionalOverrides",

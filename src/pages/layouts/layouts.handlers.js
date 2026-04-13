@@ -76,6 +76,19 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   });
 };
 
+const logSelectedLayoutData = ({ store, itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  const layoutItem = store.selectLayoutItemById({ itemId });
+  if (!layoutItem || layoutItem.type !== "layout") {
+    return;
+  }
+
+  console.log("[layouts] selected layout", structuredClone(layoutItem));
+};
+
 const {
   handleBeforeMount,
   refreshData: handleDataChanged,
@@ -103,14 +116,24 @@ export {
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   handleCatalogFileExplorerSelectionChanged(deps, payload);
 
-  const { isFolder } = payload._event.detail;
+  const { isFolder, itemId } = payload._event.detail;
   if (isFolder) {
     return;
   }
+
+  logSelectedLayoutData({
+    store: deps.store,
+    itemId,
+  });
 };
 
 export const handleLayoutItemClick = (deps, payload) => {
   handleCatalogLayoutItemClick(deps, payload);
+
+  logSelectedLayoutData({
+    store: deps.store,
+    itemId: payload._event.detail.itemId,
+  });
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {
@@ -310,13 +333,13 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
             scaleX: 1,
             scaleY: 1,
             rotation: 0,
-            text: "text",
+            text: "${line.content[0].text}",
             textStyle: {
               align: "left",
             },
           }),
           [lineContentTextId]: createLayoutElement(lineContentTextId, {
-            type: "text-ref-dialogue-line-content",
+            type: "text-revealing",
             name: "Text (Line Content)",
             x: 0,
             y: 44,

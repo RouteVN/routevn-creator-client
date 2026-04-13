@@ -217,6 +217,32 @@ export const getRuntimeFieldItem = (runtimeId) => {
   return RUNTIME_FIELD_ITEMS[runtimeId];
 };
 
+export const getRuntimeNumberFieldOptions = () => {
+  return Object.values(RUNTIME_FIELD_ITEMS)
+    .filter((field) => field.type === "number")
+    .map((field) => ({
+      label: field.name,
+      value: field.id,
+    }));
+};
+
+export const toRuntimeTemplateValue = (runtimeId) => {
+  if (typeof runtimeId !== "string" || runtimeId.length === 0) {
+    return undefined;
+  }
+
+  return `\${runtime.${runtimeId}}`;
+};
+
+export const parseRuntimeTemplateValue = (value) => {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const match = /^\$\{runtime\.([A-Za-z0-9]+)\}$/.exec(value);
+  return match?.[1];
+};
+
 export const getRuntimeConditionItems = () => {
   return Object.fromEntries(
     Object.values(RUNTIME_FIELD_ITEMS).map((field) => {

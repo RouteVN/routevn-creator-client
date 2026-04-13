@@ -34,6 +34,21 @@ const TAURI_ASSET_URL_PREFIXES = [
   "asset://localhost/",
 ];
 
+const createNoopRouteEnginePersistence = () => ({
+  namespace: "",
+  load: async () => ({
+    saveSlots: {},
+    globalDeviceVariables: {},
+    globalAccountVariables: {},
+    globalRuntime: {},
+  }),
+  clear: async () => {},
+  saveSlots: async () => {},
+  saveGlobalDeviceVariables: async () => {},
+  saveGlobalAccountVariables: async () => {},
+  saveGlobalRuntime: async () => {},
+});
+
 const SUPPORTED_AUDIO_MIME_TYPES = new Set([
   "audio/mpeg",
   "audio/x-mpeg",
@@ -1244,6 +1259,15 @@ export const createGraphicsService = async ({ subject }) => {
         options.enableGlobalKeyboardBindings ?? true;
       const suppressRenderEffects = options.suppressRenderEffects === true;
       const initialGlobal = options.initialGlobal ?? {};
+      const namespace =
+        typeof options.namespace === "string" && options.namespace.length > 0
+          ? options.namespace
+          : undefined;
+      const persistence =
+        options.persistence === false
+          ? createNoopRouteEnginePersistence()
+          : (options.persistence ??
+            (namespace ? undefined : createNoopRouteEnginePersistence()));
 
       const handlePendingEffects = createEffectsHandler({
         getEngine: () => engine,
@@ -1255,6 +1279,8 @@ export const createGraphicsService = async ({ subject }) => {
             renderEngineState(renderState);
           },
         },
+        namespace,
+        persistence,
         ticker,
       });
       engine = createRouteEngine({ handlePendingEffects });
@@ -1264,6 +1290,7 @@ export const createGraphicsService = async ({ subject }) => {
             global: initialGlobal,
             projectData,
           },
+          namespace,
         });
       };
 

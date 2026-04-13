@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const joinMock = vi.fn(async (...parts) => parts.join("/"));
 const loadMock = vi.fn();
@@ -68,6 +68,10 @@ const createStoreMockFactory = () => {
 };
 
 describe("tauri collab client store locking", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     vi.resetModules();
     joinMock.mockReset();
@@ -209,4 +213,33 @@ describe("tauri collab client store locking", () => {
 
     await store.close();
   }, 10000);
+
+  it("recovers a commit retry that loses transaction state", async () => {
+    vi.useFakeTimers();
+    const fakeDb = {
+      execute: vi
+        .fn()
+        .mockRejectedValueOnce(createLockError())
+        .mockRejectedValueOnce(
+          new Error("cannot commit - no transaction is active"),
+        ),
+    };
+
+    const { executeTauriSqlStatement } = await import(
+      "../../src/deps/services/tauri/collabClientStore.js"
+    );
+
+    const pending = executeTauriSqlStatement({
+      db: fakeDb,
+      sql: "COMMIT",
+      retryDelaysMs: [10],
+    });
+
+    await Promise.resolve();
+    expect(fakeDb.execute).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(10);
+    await expect(pending).resolves.toEqual({ rowsAffected: 0 });
+    expect(fakeDb.execute).toHaveBeenCalledTimes(2);
+  });
 });

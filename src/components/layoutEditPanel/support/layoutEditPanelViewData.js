@@ -1,14 +1,13 @@
 import { toFlatGroups } from "../../../internal/project/tree.js";
-import {
-  getInteractionActions,
-  getInteractionPayload,
-} from "../../../internal/project/interactionPayload.js";
+import { getInteractionActions } from "../../../internal/project/interactionPayload.js";
 import { RUNTIME_ACTION_LABELS } from "../../../internal/runtimeActions.js";
+import { parseRuntimeTemplateValue } from "../../../internal/runtimeFields.js";
 import { normalizeConditionalOverrideRules } from "./layoutEditPanelFeatures.js";
 
 const ACTION_INTERACTION_LABELS = {
   click: "Click",
   rightClick: "Right Click",
+  change: "Change",
 };
 
 const ACTION_LABELS = {
@@ -28,7 +27,7 @@ const ACTION_LABELS = {
   ...RUNTIME_ACTION_LABELS,
 };
 
-export const ACTION_INTERACTION_TYPES = ["click", "rightClick"];
+export const ACTION_INTERACTION_TYPES = ["click", "rightClick", "change"];
 
 export const REVEAL_EFFECT_OPTIONS = [
   { label: "Typewriter", value: "typewriter" },
@@ -100,38 +99,32 @@ export const toImageOptions = (imagesData = {}) => {
   );
 };
 
-const getSliderBoundVariableId = (values = {}) => {
-  if (values?.type !== "slider") {
-    return values?.variableId;
-  }
-
-  if (values?.variableId) {
-    return values.variableId;
-  }
-
-  const interactionPayload = getInteractionPayload(values.change);
-  const updateVariable = interactionPayload?.actions?.updateVariable;
-  const firstOperation = Array.isArray(updateVariable?.operations)
-    ? updateVariable.operations[0]
-    : undefined;
-
-  return firstOperation?.variableId;
-};
-
 export const toInspectorValues = ({
   values,
   firstTextStyleId,
   hiddenActionModes,
 }) => {
+  const rawInitialValue = values?.initialValue;
+  const parsedInitialValue = Number(rawInitialValue);
+  const sliderRuntimeValueId =
+    typeof values?.sliderRuntimeValueId === "string"
+      ? values.sliderRuntimeValueId
+      : (parseRuntimeTemplateValue(rawInitialValue) ?? "");
+  const sliderManualInitialValue =
+    typeof values?.sliderManualInitialValue === "number"
+      ? values.sliderManualInitialValue
+      : Number.isFinite(parsedInitialValue)
+        ? parsedInitialValue
+        : 0;
   const derivedAspectRatioLock =
     Number.isFinite(values?.aspectRatioLock) && values.aspectRatioLock > 0
       ? values.aspectRatioLock
       : undefined;
   const revealEffect =
+    values?.type === "text-revealing" ||
     values?.type === "text-revealing-ref-dialogue-content"
       ? (values?.revealEffect ?? "typewriter")
       : values?.revealEffect;
-  const variableId = getSliderBoundVariableId(values);
 
   return {
     ...values,
@@ -139,12 +132,13 @@ export const toInspectorValues = ({
     aspectRatioMode: derivedAspectRatioLock !== undefined ? "fixed" : "free",
     aspectRatioLock: derivedAspectRatioLock,
     revealEffect,
-    variableId,
     fragmentLayoutId: values?.fragmentLayoutId ?? "",
     paginationMode: values?.paginationMode ?? "continuous",
     paginationSize: values?.paginationSize ?? 3,
     scroll: values?.scroll ?? false,
     direction: values?.direction,
+    sliderRuntimeValueId,
+    sliderManualInitialValue,
     particleId: values?.particleId ?? "",
     textStyleId: values?.textStyleId || firstTextStyleId || "",
     hoverTextStyleId: values?.hoverTextStyleId ?? "",

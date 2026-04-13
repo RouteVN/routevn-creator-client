@@ -8,6 +8,10 @@ import {
   splitVisibilityConditionFromWhen,
 } from "../../internal/layoutConditions.js";
 import {
+  getRuntimeFieldItem,
+  toRuntimeTemplateValue,
+} from "../../internal/runtimeFields.js";
+import {
   buildConditionalOverrideSetUpdate,
   deleteConditionalOverrideSetField,
   getAvailableChildInteractionItems,
@@ -16,7 +20,7 @@ import {
 import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
 import { parseSpritesheetAnimationSelectionValue } from "../../internal/spritesheets.js";
 
-const ACTION_INTERACTION_TYPES = ["click", "rightClick"];
+const ACTION_INTERACTION_TYPES = ["click", "rightClick", "change"];
 const EMPTY_TREE = { items: {}, tree: [] };
 const INTEGER_ONLY_FIELDS = new Set(["x", "y", "width", "height"]);
 const SIZE_FIELDS = new Set(["width", "height"]);
@@ -44,6 +48,17 @@ const getInteractionPropertyName = (interactionType) => {
 const getInteractionActionsSnapshot = (store, interactionType) => {
   const interactionKey = getInteractionPropertyName(interactionType);
   return getInteractionActions(store.selectValues()[interactionKey]);
+};
+
+const getAvailableActionInteractionItems = (itemType) => {
+  if (itemType === "slider") {
+    return [{ type: "item", label: "Change", key: "change" }];
+  }
+
+  return [
+    { type: "item", label: "Click", key: "click" },
+    { type: "item", label: "Right Click", key: "rightClick" },
+  ];
 };
 
 const emitPanelUpdate = (
@@ -120,13 +135,41 @@ const getMeasuredTextWidth = (metrics = {}) => {
   return undefined;
 };
 
-const applyWidthModeUpdate = (deps, { value } = {}) => {
+const getMeasuredDimension = (metrics = {}, name) => {
+  const measuredValue = Number(metrics?.[name]);
+  if (Number.isFinite(measuredValue) && measuredValue > 0) {
+    return Math.round(measuredValue);
+  }
+
+  return undefined;
+};
+
+const isDirectedContainerSizeMode = (deps) => {
+  const capabilities =
+    getLayoutEditorElementDefinition(deps.props.itemType)?.capabilities ?? {};
+  const values = deps.store.selectValues();
+
+  return (
+    capabilities.supportsDirection === true &&
+    (values.direction === "horizontal" || values.direction === "vertical")
+  );
+};
+
+const applySizeModeUpdate = (deps, { name, value } = {}) => {
   const { props, store } = deps;
+  const fieldName = name === "heightMode" ? "height" : "width";
+  const isTextWidthMode =
+    fieldName === "width" && props.itemType?.startsWith("text") === true;
+  const usesDirectedContainerAutoSize = isDirectedContainerSizeMode(deps);
+
+  if (!isTextWidthMode && !usesDirectedContainerAutoSize) {
+    return;
+  }
 
   if (value === "auto") {
     applyPanelValueUpdate(deps, {
-      name: "width",
-      value: undefined,
+      name: fieldName,
+      value: isTextWidthMode ? undefined : 0,
     });
     return;
   }
@@ -135,20 +178,24 @@ const applyWidthModeUpdate = (deps, { value } = {}) => {
     return;
   }
 
-  const measuredWidth = getMeasuredTextWidth(props.selectedElementMetrics);
-  const currentWidth = Number(store.selectValues().width);
-  const fallbackWidth =
-    Number.isFinite(currentWidth) && currentWidth > 0
-      ? currentWidth
-      : undefined;
-  const nextWidth = measuredWidth ?? fallbackWidth;
-  if (nextWidth === undefined) {
+  const currentSize = Number(store.selectValues()[fieldName]);
+  const nextSize = isTextWidthMode
+    ? (getMeasuredTextWidth(props.selectedElementMetrics) ??
+      (Number.isFinite(currentSize) && currentSize > 0
+        ? currentSize
+        : undefined))
+    : (getMeasuredDimension(props.selectedElementMetrics, fieldName) ??
+      (Number.isFinite(currentSize) && currentSize > 0
+        ? currentSize
+        : undefined) ??
+      100);
+  if (nextSize === undefined) {
     return;
   }
 
   applyPanelValueUpdate(deps, {
-    name: "width",
-    value: nextWidth,
+    name: fieldName,
+    value: nextSize,
   });
 };
 
@@ -161,6 +208,95 @@ const applyPanelValueUpdate = (
     INTEGER_ONLY_FIELDS.has(name) && Number.isFinite(Number(value))
       ? Math.round(Number(value))
       : value;
+
+  if (name === "sliderRuntimeValueId") {
+    const runtimeId =
+      typeof normalizedValue === "string" ? normalizedValue : "";
+    const currentValues = store.selectValues();
+    const manualInitialValue = Number(currentValues.sliderManualInitialValue);
+    const runtimeField = getRuntimeFieldItem(runtimeId);
+    const runtimeDefaultValue = Number(runtimeField?.default);
+    const nextMin = Number(currentValues.min);
+    const nextMax = Number(currentValues.max);
+    const pendingUpdates = [];
+    const nextInitialValue = runtimeId
+      ? toRuntimeTemplateValue(runtimeId)
+      : Number.isFinite(manualInitialValue)
+        ? manualInitialValue
+        : 0;
+
+    if (runtimeId && Number.isFinite(runtimeDefaultValue)) {
+      const normalizedMin = Number.isFinite(nextMin) ? nextMin : 0;
+      const normalizedMax = Number.isFinite(nextMax) ? nextMax : 100;
+      const widenedMin = Math.min(normalizedMin, runtimeDefaultValue);
+      const widenedMax = Math.max(normalizedMax, runtimeDefaultValue);
+
+      if (widenedMin !== normalizedMin) {
+        store.updateValueProperty({
+          name: "min",
+          value: widenedMin,
+        });
+        pendingUpdates.push({
+          name: "min",
+          value: widenedMin,
+        });
+      }
+
+      if (widenedMax !== normalizedMax) {
+        store.updateValueProperty({
+          name: "max",
+          value: widenedMax,
+        });
+        pendingUpdates.push({
+          name: "max",
+          value: widenedMax,
+        });
+      }
+    }
+
+    store.updateValueProperty({
+      name: "sliderRuntimeValueId",
+      value: runtimeId,
+    });
+    store.updateValueProperty({
+      name: "initialValue",
+      value: nextInitialValue,
+    });
+
+    render();
+    pendingUpdates.forEach((update) => {
+      emitPanelUpdate(deps, update);
+    });
+    emitPanelUpdate(deps, {
+      name: "initialValue",
+      value: nextInitialValue,
+    });
+    return;
+  }
+
+  if (name === "sliderManualInitialValue") {
+    const nextInitialValue = Number(normalizedValue);
+
+    store.updateValueProperty({
+      name: "sliderManualInitialValue",
+      value: nextInitialValue,
+    });
+    store.updateValueProperty({
+      name: "initialValue",
+      value: nextInitialValue,
+    });
+
+    if (closePopover) {
+      store.closePopoverForm();
+    }
+
+    render();
+    emitPanelUpdate(deps, {
+      name: "initialValue",
+      value: nextInitialValue,
+    });
+    return;
+  }
 
   if (name === "aspectRatioMode") {
     const currentValues = store.selectValues();
@@ -519,8 +655,8 @@ export const handleOptionSelected = (deps, payload) => {
   const name = _event.currentTarget.dataset.name;
   const value = _event.detail?.item?.value ?? _event.detail?.value;
 
-  if (name === "widthMode") {
-    applyWidthModeUpdate(deps, { value });
+  if (name === "widthMode" || name === "heightMode") {
+    applySizeModeUpdate(deps, { name, value });
     return;
   }
 
@@ -551,16 +687,13 @@ export const handleOptionSelected = (deps, payload) => {
 };
 
 export const handleSectionActionClick = async (deps, payload) => {
-  const { render, store, appService, refs } = deps;
+  const { render, store, appService, refs, props } = deps;
   const { _event } = payload;
   const id = _event.currentTarget.dataset.id;
 
   if (id === "actions") {
     const result = await appService.showDropdownMenu({
-      items: [
-        { type: "item", label: "Click", key: "click" },
-        { type: "item", label: "Right Click", key: "rightClick" },
-      ],
+      items: getAvailableActionInteractionItems(props.itemType),
       x: _event.clientX,
       y: _event.clientY,
       place: "bs",

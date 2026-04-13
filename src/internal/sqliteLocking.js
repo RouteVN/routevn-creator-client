@@ -27,21 +27,45 @@ export const isSqliteLockError = (error) => {
   );
 };
 
+export const isSqliteNoActiveTransactionError = (error) => {
+  if (!error) {
+    return false;
+  }
+
+  const message = String(error?.message ?? error).toLowerCase();
+  return message.includes("no transaction is active");
+};
+
 export const withSqliteLockRetry = async (
   operation,
-  { retryDelaysMs = SQLITE_LOCK_RETRY_DELAYS_MS } = {},
+  {
+    retryDelaysMs = SQLITE_LOCK_RETRY_DELAYS_MS,
+    shouldRecoverError,
+    recoverValue,
+  } = {},
 ) => {
   const delays = Array.isArray(retryDelaysMs) ? retryDelaysMs : [];
   let attempt = 0;
+  let sawLock = false;
 
   while (true) {
     try {
       return await operation();
     } catch (error) {
+      if (
+        typeof shouldRecoverError === "function" &&
+        shouldRecoverError(error, { attempt, sawLock })
+      ) {
+        return typeof recoverValue === "function"
+          ? recoverValue(error, { attempt, sawLock })
+          : recoverValue;
+      }
+
       if (!isSqliteLockError(error) || attempt >= delays.length) {
         throw error;
       }
 
+      sawLock = true;
       await wait(delays[attempt]);
       attempt += 1;
     }
