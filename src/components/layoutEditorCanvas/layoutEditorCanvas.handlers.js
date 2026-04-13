@@ -495,7 +495,10 @@ const handleBorderDragMove = async (deps, payload = {}) => {
 };
 
 const handleBorderDragEnd = async (deps) => {
-  const pendingUpdatedItem = deps.store.selectPendingUpdatedItem();
+  const pendingUpdatedItem = getSelectedItem(
+    deps.props,
+    deps.store.selectPendingUpdatedItem(),
+  );
 
   deps.store.stopDragging();
   deps.render();
@@ -552,7 +555,10 @@ const subscriptions = (deps) => {
       ),
       debounceTime(KEYBOARD_SAVE_DELAY),
       tap(async ({ payload }) => {
-        const pendingUpdatedItem = deps.store.selectPendingUpdatedItem();
+        const pendingUpdatedItem = getSelectedItem(
+          deps.props,
+          deps.store.selectPendingUpdatedItem(),
+        );
         if (!pendingUpdatedItem || pendingUpdatedItem.id !== payload?.itemId) {
           return;
         }

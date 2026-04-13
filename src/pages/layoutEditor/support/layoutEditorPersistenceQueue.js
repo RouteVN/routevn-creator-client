@@ -17,3 +17,16 @@ export const enqueueLayoutEditorPersistence = async ({ owner, task } = {}) => {
     }
   }
 };
+
+export const waitForLayoutEditorPersistenceIdle = async ({ owner } = {}) => {
+  if (!owner) {
+    return;
+  }
+
+  const pending = queueByOwner.get(owner);
+  if (!pending) {
+    return;
+  }
+
+  await pending.catch(() => {});
+};

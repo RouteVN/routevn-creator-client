@@ -30,6 +30,7 @@ export const createInitialState = () => {
     projectResolution: DEFAULT_PROJECT_RESOLUTION,
     selectedElementMetrics: undefined,
     lastPersistErrorAt: 0,
+    pendingPersistPayload: undefined,
   };
 };
 
@@ -97,9 +98,14 @@ export const setPreviewData = ({ state }, { previewData } = {}) => {
   state.previewData = previewData ?? {};
 };
 
-export const updateSelectedItem = ({ state }, { updatedItem } = {}) => {
-  if (state.selectedItemId && state.layoutData && state.layoutData.items) {
-    state.layoutData.items[state.selectedItemId] = updatedItem;
+export const updateSelectedItem = (
+  { state },
+  { itemId, updatedItem } = {},
+) => {
+  const targetItemId = itemId ?? state.selectedItemId;
+
+  if (targetItemId && state.layoutData && state.layoutData.items) {
+    state.layoutData.items[targetItemId] = updatedItem;
   }
   state.lastUpdateDate = Date.now();
   state.selectedElementMetrics = undefined;
@@ -111,6 +117,27 @@ export const setSelectedElementMetrics = ({ state }, { metrics } = {}) => {
 
 export const setLastPersistErrorAt = ({ state }, { timestamp } = {}) => {
   state.lastPersistErrorAt = Number.isFinite(timestamp) ? timestamp : 0;
+};
+
+export const setPendingPersistPayload = ({ state }, { payload } = {}) => {
+  state.pendingPersistPayload =
+    payload && typeof payload === "object" ? payload : undefined;
+};
+
+export const clearPendingPersistPayload = (
+  { state },
+  { persistenceRequestId } = {},
+) => {
+  if (!persistenceRequestId) {
+    state.pendingPersistPayload = undefined;
+    return;
+  }
+
+  if (
+    state.pendingPersistPayload?.persistenceRequestId === persistenceRequestId
+  ) {
+    state.pendingPersistPayload = undefined;
+  }
 };
 
 export const setImages = ({ state }, { images } = {}) => {
@@ -233,6 +260,10 @@ export const selectLastPersistErrorAt = ({ state }) => {
   return Number.isFinite(state.lastPersistErrorAt)
     ? state.lastPersistErrorAt
     : 0;
+};
+
+export const selectPendingPersistPayload = ({ state }) => {
+  return state.pendingPersistPayload;
 };
 
 export const selectItems = ({ state }) => {

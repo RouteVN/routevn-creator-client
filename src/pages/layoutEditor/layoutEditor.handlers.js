@@ -16,7 +16,10 @@ import {
   persistLayoutEditorElementUpdate,
   shouldPersistLayoutEditorFieldImmediately,
 } from "./support/layoutEditorPersistence.js";
-import { enqueueLayoutEditorPersistence } from "./support/layoutEditorPersistenceQueue.js";
+import {
+  enqueueLayoutEditorPersistence,
+  waitForLayoutEditorPersistenceIdle,
+} from "./support/layoutEditorPersistenceQueue.js";
 import { isFragmentLayout } from "../../internal/project/layout.js";
 import {
   getFirstSpritesheetAnimationSelectionValue,
@@ -328,9 +331,48 @@ const createParticleCreateForm = (selectionItems = []) => {
 const getEditorPayload = (appService) =>
   resolveLayoutEditorPayload(appService.getPayload() || {});
 
+const queuePendingLayoutEditorPersist = (
+  store,
+  { layoutId, resourceType, selectedItemId, updatedItem, replace } = {},
+) => {
+  const pendingPayload = {
+    layoutId,
+    resourceType,
+    selectedItemId,
+    updatedItem,
+    replace,
+    persistenceRequestId: nanoid(),
+  };
+
+  store.setPendingPersistPayload({
+    payload: pendingPayload,
+  });
+
+  return pendingPayload;
+};
+
+const flushQueuedLayoutEditorUpdates = async (deps) => {
+  const { projectService, store } = deps;
+  const pendingPayload = store.selectPendingPersistPayload();
+
+  let flushResult = {
+    ok: true,
+  };
+  if (pendingPayload) {
+    flushResult = await handleDebouncedUpdate(deps, pendingPayload);
+  }
+
+  await waitForLayoutEditorPersistenceIdle({
+    owner: projectService,
+  });
+
+  return flushResult;
+};
+
 export const handleBeforeMount = (deps) => {
   const cleanupSubscriptions = mountSubscriptions(deps);
-  return () => {
+  return async () => {
+    await flushQueuedLayoutEditorUpdates(deps);
     cleanupSubscriptions?.();
   };
 };
@@ -350,8 +392,12 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
-export const handleBackClick = (deps) => {
+export const handleBackClick = async (deps) => {
   const { appService } = deps;
+  const flushResult = await flushQueuedLayoutEditorUpdates(deps);
+  if (!flushResult.ok) {
+    return;
+  }
   const currentPayload = appService.getPayload() || {};
   const nextPath = getLayoutEditorBackPath(currentPayload);
   appService.navigate(nextPath, { p: currentPayload.p });
@@ -1208,6 +1254,18 @@ async function handleDebouncedUpdate(deps, payload) {
   const { appService, projectService, store } = deps;
   const { layoutId, resourceType, selectedItemId, updatedItem, replace } =
     payload;
+
+  if (
+    payload.persistenceRequestId &&
+    store.selectPendingPersistPayload()?.persistenceRequestId !==
+      payload.persistenceRequestId
+  ) {
+    return {
+      ok: true,
+      skipped: true,
+    };
+  }
+
   return runLayoutEditorPersistence(deps, async () => {
     try {
       const persistResult = await persistLayoutEditorElementUpdate({
@@ -1219,7 +1277,13 @@ async function handleDebouncedUpdate(deps, payload) {
         replace,
       });
       if (!persistResult.didPersist) {
-        return;
+        store.clearPendingPersistPayload({
+          persistenceRequestId: payload.persistenceRequestId,
+        });
+        return {
+          ok: true,
+          didPersist: false,
+        };
       }
 
       if (persistResult.updateResult?.valid === false) {
@@ -1235,7 +1299,9 @@ async function handleDebouncedUpdate(deps, payload) {
             "The project database is busy. RouteVN couldn't save the latest layout changes. Please wait a moment and try again.",
           throttle: true,
         });
-        return;
+        return {
+          ok: false,
+        };
       }
 
       const currentPayload = getEditorPayload(appService);
@@ -1246,6 +1312,13 @@ async function handleDebouncedUpdate(deps, payload) {
           resourceType: currentPayload.resourceType || resourceType,
         }),
       );
+      store.clearPendingPersistPayload({
+        persistenceRequestId: payload.persistenceRequestId,
+      });
+      return {
+        ok: true,
+        didPersist: true,
+      };
     } catch (error) {
       console.error("[layoutEditor] Failed to save layout changes", {
         error,
@@ -1262,6 +1335,9 @@ async function handleDebouncedUpdate(deps, payload) {
           "The project database is busy. RouteVN couldn't save the latest layout changes. Please wait a moment and try again.",
         throttle: true,
       });
+      return {
+        ok: false,
+      };
     }
   });
 }
@@ -1293,13 +1369,27 @@ const subscriptions = (deps) => {
 };
 
 export const handleLayoutEditorCanvasDragUpdate = (deps, payload) => {
-  const { store, render } = deps;
+  const { store, render, subject } = deps;
   const updatedItem = payload._event.detail?.updatedItem;
   if (!updatedItem) {
     return;
   }
 
-  store.updateSelectedItem({ updatedItem });
+  const layoutId = store.selectLayoutId();
+  const resourceType = store.selectLayoutResourceType();
+  const selectedItemId = payload._event.detail?.itemId || updatedItem.id;
+  const pendingPayload = queuePendingLayoutEditorPersist(store, {
+    layoutId,
+    resourceType,
+    selectedItemId,
+    updatedItem,
+  });
+
+  store.updateSelectedItem({
+    itemId: selectedItemId,
+    updatedItem,
+  });
+  subject.dispatch("layoutEditor.updateElement", pendingPayload);
   render();
 };
 
@@ -1313,16 +1403,20 @@ export const handleLayoutEditorCanvasUpdate = async (deps, payload) => {
   const layoutId = store.selectLayoutId();
   const resourceType = store.selectLayoutResourceType();
   const selectedItemId = payload._event.detail?.itemId || updatedItem.id;
-
-  store.updateSelectedItem({ updatedItem });
-  render();
-
-  await handleDebouncedUpdate(deps, {
+  const pendingPayload = queuePendingLayoutEditorPersist(store, {
     layoutId,
     resourceType,
     selectedItemId,
     updatedItem,
   });
+
+  store.updateSelectedItem({
+    itemId: selectedItemId,
+    updatedItem,
+  });
+  render();
+
+  await handleDebouncedUpdate(deps, pendingPayload);
 };
 
 export const handleLayoutEditorCanvasMetricsChange = (deps, payload) => {
@@ -1444,12 +1538,13 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     });
   } else {
     const { subject } = deps;
-    subject.dispatch("layoutEditor.updateElement", {
+    const pendingPayload = queuePendingLayoutEditorPersist(store, {
       layoutId,
       resourceType,
       selectedItemId,
       updatedItem,
     });
+    subject.dispatch("layoutEditor.updateElement", pendingPayload);
   }
 
   render();

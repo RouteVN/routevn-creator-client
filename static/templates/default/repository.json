@@ -1040,12 +1040,12 @@
               "id": "NkJVi2XPTmoc7P9nbMtmU",
               "type": "container",
               "name": "Dialogue Container",
-              "x": 35,
-              "y": 695,
+              "x": 0,
+              "y": 1080,
               "width": 1850,
               "height": 350,
               "anchorX": 0,
-              "anchorY": 0,
+              "anchorY": 1,
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
@@ -1057,7 +1057,7 @@
               "name": "Dialogue Box",
               "x": 0,
               "y": 0,
-              "width": 1850,
+              "width": 1920,
               "height": 350,
               "anchorX": 0,
               "anchorY": 0,
@@ -1108,7 +1108,7 @@
               "type": "container",
               "name": "Container",
               "x": 650,
-              "y": 315,
+              "y": 285,
               "anchorX": 0,
               "anchorY": 0,
               "scaleX": 1,
@@ -1340,37 +1340,51 @@
               "textStyleId": "WkzTF7gNhJSnG4MnZTh2U",
               "hoverTextStyleId": "6wXcAmc_SmJHzMIeKp--Z"
             },
-            "USdHiDRTQTIFU1YO4xc-D": {
-              "id": "USdHiDRTQTIFU1YO4xc-D",
+            "HIMgzcAQY_vzolwFwKiQE": {
+              "id": "HIMgzcAQY_vzolwFwKiQE",
               "type": "sprite",
               "name": "Sprite",
-              "x": 1765,
-              "y": 267,
+              "x": 0,
+              "y": 0,
               "anchorX": 0,
               "anchorY": 0,
               "scaleX": 1,
               "scaleY": 1,
               "rotation": 0,
-              "width": 40,
-              "height": 40,
-              "imageId": "B54NNLCGGguAoeSKtx7gD",
-              "$when": "isLineCompleted == true"
-            },
-            "Vy-GZ-6OlKWa2pK66chwe": {
-              "id": "Vy-GZ-6OlKWa2pK66chwe",
-              "type": "sprite",
-              "name": "Skip Indicator",
-              "x": 36,
-              "y": 32,
-              "anchorX": 0,
-              "anchorY": 0,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "width": 300,
+              "width": 240,
               "height": 80,
-              "imageId": "cdCXiw7A7zJxawo4iMwNS",
-              "$when": "skipMode == true"
+              "imageId": "KFdkZTWLURDHTkVV2dGEp"
+            },
+            "UX7zc5395iULxICIXM-03": {
+              "id": "UX7zc5395iULxICIXM-03",
+              "type": "container",
+              "name": "Container",
+              "x": 42,
+              "y": 40,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "gap": 0,
+              "$when": "runtime.skipMode == true"
+            },
+            "3b8rkiHlVY8Smjylb5H6K": {
+              "id": "3b8rkiHlVY8Smjylb5H6K",
+              "type": "text",
+              "name": "Text",
+              "x": 41,
+              "y": 11,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "Skipping",
+              "textStyle": {
+                "align": "center"
+              },
+              "textStyleId": "WkzTF7gNhJSnG4MnZTh2U"
             }
           },
           "tree": [
@@ -1444,16 +1458,21 @@
                       ]
                     }
                   ]
-                },
-                {
-                  "id": "USdHiDRTQTIFU1YO4xc-D",
-                  "children": []
                 }
               ]
             },
             {
-              "id": "Vy-GZ-6OlKWa2pK66chwe",
-              "children": []
+              "id": "UX7zc5395iULxICIXM-03",
+              "children": [
+                {
+                  "id": "HIMgzcAQY_vzolwFwKiQE",
+                  "children": []
+                },
+                {
+                  "id": "3b8rkiHlVY8Smjylb5H6K",
+                  "children": []
+                }
+              ]
             }
           ]
         }
