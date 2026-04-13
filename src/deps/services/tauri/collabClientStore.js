@@ -2,6 +2,10 @@ import { join } from "@tauri-apps/api/path";
 import Database from "@tauri-apps/plugin-sql";
 import { createLibsqlClientStore } from "insieme/client";
 import { Subject, asyncScheduler, throttleTime } from "rxjs";
+import {
+  SQLITE_BUSY_TIMEOUT_MS,
+  withSqliteLockRetry,
+} from "../../../internal/sqliteLocking.js";
 
 export const PROJECT_DB_NAME = "project.db";
 
@@ -292,6 +296,9 @@ export const createPersistedTauriProjectStore = async ({
 
   const storePromise = (async () => {
     const db = await Database.load(`sqlite:${dbPath}`);
+    await withSqliteLockRetry(() =>
+      db.execute(`PRAGMA busy_timeout=${SQLITE_BUSY_TIMEOUT_MS}`),
+    );
 
     let operationQueue = Promise.resolve();
     const queueStoreOperation = async (operation) => {
@@ -300,9 +307,13 @@ export const createPersistedTauriProjectStore = async ({
       return nextOperation;
     };
     const runSelect = (sql, args = []) =>
-      db.select(sql, Array.isArray(args) ? args : []);
+      withSqliteLockRetry(() =>
+        db.select(sql, Array.isArray(args) ? args : []),
+      );
     const runExecute = (sql, args = []) =>
-      db.execute(sql, Array.isArray(args) ? args : []);
+      withSqliteLockRetry(() =>
+        db.execute(sql, Array.isArray(args) ? args : []),
+      );
     let walDirty = false;
     let storeClosed = false;
     const walCheckpointRequests = new Subject();
@@ -359,7 +370,7 @@ export const createPersistedTauriProjectStore = async ({
         applyPragmas: true,
         journalMode: "WAL",
         synchronous: "FULL",
-        busyTimeoutMs: 5000,
+        busyTimeoutMs: SQLITE_BUSY_TIMEOUT_MS,
       },
     );
 

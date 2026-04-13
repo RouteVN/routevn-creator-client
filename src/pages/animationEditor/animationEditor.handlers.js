@@ -1132,9 +1132,26 @@ export const handleSingleMaskImageClick = (deps) => {
   });
 };
 
-export const handleSingleMaskImageClearClick = (deps, payload) => {
-  payload._event.stopPropagation();
-  const { store } = deps;
+export const handleSingleMaskImageRightClick = async (deps, payload) => {
+  const { appService, store } = deps;
+  const event = payload?._event;
+  event?.preventDefault?.();
+
+  if (!store.selectTransitionMask()?.imageId) {
+    return;
+  }
+
+  const result = await appService.showDropdownMenu({
+    items: [{ type: "item", label: "Remove", key: "remove" }],
+    x: event.clientX,
+    y: event.clientY,
+    place: "bs",
+  });
+
+  if (!result || result.item?.key !== "remove") {
+    return;
+  }
+
   store.clearTransitionMaskImage({});
   commitMaskChange(deps);
 };

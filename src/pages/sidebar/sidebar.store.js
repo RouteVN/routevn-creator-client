@@ -32,7 +32,7 @@ export const createInitialState = () => ({
     {
       title: "Animated Assets",
       path: "/project/particles",
-      icon: "choices",
+      icon: "animation",
     },
     {
       title: "User Interface",
@@ -42,7 +42,7 @@ export const createInitialState = () => ({
     {
       title: "System",
       path: "/project/controls",
-      icon: "settings",
+      icon: "sliders",
     },
     {
       title: "Scenes",
@@ -52,7 +52,7 @@ export const createInitialState = () => ({
     {
       title: "Release",
       path: "/project/releases/versions",
-      icon: "choices",
+      icon: "rocket",
     },
     {
       type: "spacer",

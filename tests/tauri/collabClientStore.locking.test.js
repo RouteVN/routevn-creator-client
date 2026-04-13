@@ -1,0 +1,212 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const joinMock = vi.fn(async (...parts) => parts.join("/"));
+const loadMock = vi.fn();
+const createLibsqlClientStoreMock = vi.fn();
+
+vi.mock("@tauri-apps/api/path", () => ({
+  join: joinMock,
+}));
+
+vi.mock("@tauri-apps/plugin-sql", () => ({
+  default: {
+    load: loadMock,
+  },
+}));
+
+vi.mock("insieme/client", () => ({
+  createLibsqlClientStore: createLibsqlClientStoreMock,
+}));
+
+const createLockError = (message = "database is locked") => {
+  const error = new Error(message);
+  error.code = 5;
+  return error;
+};
+
+const createStoreMockFactory = () => {
+  return (client) => ({
+    init: vi.fn(async () => {}),
+    loadCursor: vi.fn(async () => 0),
+    insertDraft: vi.fn(async (payload) =>
+      client.execute({
+        sql: "INSERT DRAFT",
+        args: [payload.id],
+      }),
+    ),
+    insertDrafts: vi.fn(async (items) =>
+      client.execute({
+        sql: "INSERT DRAFTS",
+        args: [items.length],
+      }),
+    ),
+    loadDraftsOrdered: vi.fn(async () =>
+      client.execute({
+        sql: "SELECT DRAFTS",
+      }),
+    ),
+    applySubmitResult: vi.fn(async () =>
+      client.execute({
+        sql: "APPLY SUBMIT",
+      }),
+    ),
+    applyCommittedBatch: vi.fn(async () =>
+      client.execute({
+        sql: "APPLY COMMITTED",
+      }),
+    ),
+    loadMaterializedView: vi.fn(async () => undefined),
+    evictMaterializedView: vi.fn(async () => {}),
+    invalidateMaterializedView: vi.fn(async () => {}),
+    flushMaterializedViews: vi.fn(async () => {}),
+    _debug: {
+      getDrafts: vi.fn(async () => []),
+      getCommitted: vi.fn(async () => []),
+      getCursor: vi.fn(async () => 0),
+    },
+  });
+};
+
+describe("tauri collab client store locking", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    joinMock.mockReset();
+    loadMock.mockReset();
+    createLibsqlClientStoreMock.mockReset();
+  });
+
+  it("retries a locked project-store write and raises the busy timeout", async () => {
+    const executeFailures = new Map([
+      ["PRAGMA busy_timeout", 1],
+      ["INSERT DRAFT", 1],
+    ]);
+    const fakeDb = {
+      execute: vi.fn(async (sql, args = []) => {
+        for (const [pattern, remaining] of executeFailures.entries()) {
+          if (!String(sql).includes(pattern) || remaining <= 0) {
+            continue;
+          }
+          executeFailures.set(pattern, remaining - 1);
+          throw createLockError();
+        }
+
+        return {
+          rowsAffected: Array.isArray(args) ? args.length || 1 : 1,
+        };
+      }),
+      select: vi.fn(async () => []),
+      close: vi.fn(async () => {}),
+    };
+    loadMock.mockResolvedValue(fakeDb);
+    createLibsqlClientStoreMock.mockImplementation(createStoreMockFactory());
+
+    const { createPersistedTauriProjectStore } = await import(
+      "../../src/deps/services/tauri/collabClientStore.js"
+    );
+    const store = await createPersistedTauriProjectStore({
+      projectPath: "/projects/demo",
+      projectId: "project-1",
+    });
+
+    await store.insertDraft({
+      id: "draft-1",
+      partition: "main",
+      type: "layout",
+      schemaVersion: 1,
+      payload: {},
+      clientTs: 1,
+      createdAt: 1,
+    });
+
+    expect(createLibsqlClientStoreMock.mock.calls[0][1].busyTimeoutMs).toBe(
+      15000,
+    );
+    expect(
+      fakeDb.execute.mock.calls.filter(([sql]) =>
+        String(sql).includes("PRAGMA busy_timeout"),
+      ).length,
+    ).toBe(2);
+    expect(
+      fakeDb.execute.mock.calls.filter(([sql]) =>
+        String(sql).includes("INSERT DRAFT"),
+      ).length,
+    ).toBe(2);
+
+    await store.close();
+  }, 10000);
+
+  it("serializes concurrent writes so the db never sees overlapping executes", async () => {
+    let activeExecutions = 0;
+    let maxConcurrentExecutions = 0;
+    const fakeDb = {
+      execute: vi.fn(
+        async (sql) =>
+          new Promise((resolve, reject) => {
+            activeExecutions += 1;
+            maxConcurrentExecutions = Math.max(
+              maxConcurrentExecutions,
+              activeExecutions,
+            );
+
+            if (activeExecutions > 1 && String(sql).includes("INSERT DRAFT")) {
+              activeExecutions -= 1;
+              reject(createLockError("database is locked by overlap"));
+              return;
+            }
+
+            globalThis.setTimeout(() => {
+              activeExecutions -= 1;
+              resolve({ rowsAffected: 1 });
+            }, 10);
+          }),
+      ),
+      select: vi.fn(async () => []),
+      close: vi.fn(async () => {}),
+    };
+    loadMock.mockResolvedValue(fakeDb);
+    createLibsqlClientStoreMock.mockImplementation(createStoreMockFactory());
+
+    const { createPersistedTauriProjectStore } = await import(
+      "../../src/deps/services/tauri/collabClientStore.js"
+    );
+    const store = await createPersistedTauriProjectStore({
+      projectPath: "/projects/serialized",
+      projectId: "project-2",
+    });
+
+    const firstInsert = store.insertDraft({
+      id: "draft-a",
+      partition: "main",
+      type: "layout",
+      schemaVersion: 1,
+      payload: {},
+      clientTs: 1,
+      createdAt: 1,
+    });
+    const secondInsert = store.insertDraft({
+      id: "draft-b",
+      partition: "main",
+      type: "layout",
+      schemaVersion: 1,
+      payload: {},
+      clientTs: 2,
+      createdAt: 2,
+    });
+
+    await expect(Promise.all([firstInsert, secondInsert])).resolves.toEqual([
+      {
+        rows: [],
+        columns: [],
+        rowsAffected: 1,
+      },
+      {
+        rows: [],
+        columns: [],
+        rowsAffected: 1,
+      },
+    ]);
+    expect(maxConcurrentExecutions).toBe(1);
+
+    await store.close();
+  }, 10000);
+});

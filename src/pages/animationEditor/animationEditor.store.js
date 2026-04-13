@@ -31,8 +31,6 @@ import {
   MASK_KIND_OPTIONS,
   MASK_SAMPLE_OPTIONS,
   PREVIEW_BG_COLOR,
-  PREVIEW_RECT_HEIGHT,
-  PREVIEW_RECT_WIDTH,
   PREVIEW_TRANSITION_NEXT_FILL,
   PREVIEW_TRANSITION_ELEMENT_ID,
   PREVIEW_TRANSITION_OFFSET_X,
@@ -135,14 +133,7 @@ const formatEasingLabel = (easingName) => {
     .replace(/^./, (value) => value.toUpperCase());
 };
 
-const createPreviewRect = ({
-  id,
-  x,
-  y,
-  fill,
-  width = PREVIEW_RECT_WIDTH,
-  height = PREVIEW_RECT_HEIGHT,
-} = {}) => {
+const createPreviewRect = ({ id, x, y, fill, width, height } = {}) => {
   return {
     id,
     type: "rect",
@@ -182,6 +173,8 @@ const createAnimationResetState = (dialogType, projectResolution) => {
         id: PREVIEW_TRANSITION_ELEMENT_ID,
         x: centerX - PREVIEW_TRANSITION_OFFSET_X,
         y: centerY,
+        width,
+        height,
         fill: PREVIEW_TRANSITION_PREV_FILL,
       }),
     );
@@ -191,6 +184,8 @@ const createAnimationResetState = (dialogType, projectResolution) => {
         id: PREVIEW_UPDATE_ELEMENT_ID,
         x: centerX,
         y: centerY,
+        width,
+        height,
         fill: "white",
       }),
     );
@@ -577,7 +572,7 @@ const createEmptyMaskPanelData = () => ({
   unsupported: false,
   unsupportedKind: undefined,
   kind: "single",
-  channelValue: "red",
+  channelValue: "alpha",
   sampleValue: "step",
   combineValue: "max",
   invertValue: "off",
@@ -653,6 +648,8 @@ const buildMaskImageItem = (state, imageId) => {
   return {
     imageId,
     name: imageItem?.name ?? imageId,
+    itemBorderColor: "bo",
+    itemHoverBorderColor: "ac",
   };
 };
 
@@ -1116,6 +1113,8 @@ const createAnimationRenderState = ({
         id: PREVIEW_TRANSITION_ELEMENT_ID,
         x: centerX + PREVIEW_TRANSITION_OFFSET_X,
         y: centerY,
+        width,
+        height,
         fill: PREVIEW_TRANSITION_NEXT_FILL,
       }),
     ],
@@ -1348,20 +1347,20 @@ export const setTransitionMaskKind = ({ state }, { kind } = {}) => {
   state.transitionMask = nextMask;
 };
 
-export const setTransitionMaskChannel = ({ state }, { channel } = {}) => {
-  if (!getTransitionMask(state) || !channel) {
-    return;
-  }
-
-  state.transitionMask.channel = channel;
-};
-
 export const setTransitionMaskInvert = ({ state }, { invert } = {}) => {
   if (!getTransitionMask(state)) {
     return;
   }
 
   state.transitionMask.invert = invert ?? false;
+};
+
+export const setTransitionMaskChannel = ({ state }, { channel } = {}) => {
+  if (!getTransitionMask(state) || !channel) {
+    return;
+  }
+
+  state.transitionMask.channel = channel;
 };
 
 export const setTransitionMaskSample = ({ state }, { sample } = {}) => {
@@ -1803,7 +1802,7 @@ const buildTransitionMaskPanelData = (state) => {
     unsupported: false,
     unsupportedKind: undefined,
     kind: transitionMask.kind,
-    channelValue: transitionMask.channel ?? "red",
+    channelValue: transitionMask.channel ?? "alpha",
     sampleValue: transitionMask.sample ?? "step",
     combineValue: transitionMask.combine ?? "max",
     invertValue: transitionMask.invert ? "on" : "off",
@@ -1820,7 +1819,7 @@ const buildTransitionMaskPanelData = (state) => {
     compositeItems: (transitionMask.items ?? []).map((item, index) => ({
       ...buildMaskImageItem(state, item.imageId),
       index,
-      channelValue: item.channel ?? "red",
+      channelValue: item.channel ?? "alpha",
       invertValue: item.invert ? "on" : "off",
       canMoveUp: index > 0,
       canMoveDown: index < transitionMask.items.length - 1,

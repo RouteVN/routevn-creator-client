@@ -74,11 +74,6 @@ export const systemConfigItems = [
     path: "/project/controls",
   },
   {
-    id: "systemVariables",
-    name: "Runtime",
-    path: "/project/system-variables",
-  },
-  {
     id: "variables",
     name: "Variables",
     path: "/project/variables",

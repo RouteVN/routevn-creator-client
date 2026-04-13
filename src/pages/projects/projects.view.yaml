@@ -105,21 +105,23 @@ template:
                           - rtgl-image wh=36 br=f bw=xs bc=bo of=cov src=${avatarImageSrc}: null
                     $else:
                       - rtgl-button#loginButton variant=se: ${loginButtonText}
-      - 'rtgl-view w=f h=f ah=c style="min-height: 0;"':
-          - 'rtgl-view w=f h=f d=v ph=lg style="max-width: 1280px; min-height: 0;"':
-              - rtgl-view h=64: null
-              - 'rtgl-view w=f h=1fg ah=c style="min-height: 0;"':
-                  - 'rtgl-view sm-w=f w=640 h=f d=v g=lg style="min-height: 0;"':
-                      - rtgl-view w=f d=v:
-                          - rtgl-view d=h w=f av=c:
-                              - rtgl-text s=h3: ${localTitle}
-                              - rtgl-view w=1fg: null
-                              - rtgl-view d=h g=sm:
-                                  - rtgl-button#createButton data-testid=create-project-button: ${createButtonText}
-                                  - $if platform != 'web':
-                                      - rtgl-button#openButton variant=se: ${openButtonText}
-                      - 'rtgl-view w=f h=1fg sv d=v g=xl style="min-height: 0;"':
-                          - rtgl-view w=f g=md:
+      - 'rtgl-view w=f h=f d=v style="min-height: 0;"':
+          - rtgl-view h=64: null
+          - 'rtgl-view w=f ah=c bgc=bg':
+              - 'rtgl-view w=f d=v ph=lg style="max-width: 1280px;"':
+                  - 'rtgl-view w=f ah=c':
+                      - 'rtgl-view sm-w=f w=640 d=h av=c pt=sm pb=md':
+                          - rtgl-text s=h3: ${localTitle}
+                          - rtgl-view w=1fg: null
+                          - rtgl-view d=h g=sm:
+                              - rtgl-button#createButton data-testid=create-project-button: ${createButtonText}
+                              - $if platform != 'web':
+                                  - rtgl-button#openButton variant=se: ${openButtonText}
+          - 'rtgl-view w=f h=1fg ah=c sv style="min-height: 0;"':
+              - 'rtgl-view w=f d=v ph=lg style="max-width: 1280px;"':
+                  - 'rtgl-view w=f ah=c':
+                      - rtgl-view sm-w=f w=640 h=1fg d=v g=xl:
+                          - rtgl-view w=f g=md pt=lg:
                               - $if localEmptyMessage:
                                   - rtgl-view w=f h=120 ah=c av=c:
                                       - rtgl-view d=v ah=c g=md:
@@ -128,9 +130,9 @@ template:
                               - $for project, i in projects:
                                   - rtgl-view#projectItem${i} data-project-id=${project.id} h=auto w=f bw=xs bc=bo h-bc=ac p=md cur=pointer d=h av=c g=md:
                                       - $if project.iconUrl:
-                                          - rtgl-image wh=48 src=${project.iconUrl} bc=fg of=con br=sm: null
+                                          - rtgl-image wh=56 src=${project.iconUrl} bw=xs bc=bo of=con br=md: null
                                         $else:
-                                          - rtgl-image wh=48 src="/public/project_logo_placeholder.png" bc=fg of=con br=sm: null
+                                          - rtgl-image wh=56 src="/public/project_logo_placeholder.png" bw=xs bc=bo of=con br=md: null
                                       - rtgl-view w=1fg:
                                           - rtgl-text ellipsis w=f: ${project.name}
                                           - rtgl-view d=h g=sm av=c mt=xs:
@@ -153,7 +155,7 @@ template:
                                                   - rtgl-text s=sm c=mu-fg: ${cloudEmptySubMessage}
                                   - $for project, i in cloudProjects:
                                       - rtgl-view#cloudProjectItem${i} data-project-id=${project.id} h=auto w=f bw=xs bc=bo h-bc=ac p=md d=h av=c g=md cur=pointer:
-                                          - rtgl-image wh=48 src="/public/project_logo_placeholder.png" bc=fg of=con br=sm: null
+                                          - rtgl-image wh=56 src="/public/project_logo_placeholder.png" bw=xs bc=bo of=con br=md: null
                                           - rtgl-view w=1fg:
                                               - rtgl-view d=h av=c:
                                                   - rtgl-text ellipsis w=f: ${project.name}

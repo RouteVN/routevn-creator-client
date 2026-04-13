@@ -717,6 +717,18 @@ export const handleDetailHeaderClick = (deps) => {
   openEditDialogWithValues({ deps, sceneId: selectedItemId });
 };
 
+export const handleDetailPreviewClick = (deps, payload) => {
+  payload?._event?.stopPropagation?.();
+  const { store, render } = deps;
+  const selectedItemId = store.selectSelectedItemId();
+  if (!selectedItemId) {
+    return;
+  }
+
+  store.showPreviewSceneId({ sceneId: selectedItemId });
+  render();
+};
+
 export const handleDropdownMenuClickItem = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
   const detail = payload._event.detail;

@@ -941,6 +941,37 @@ export const createGraphicsService = async ({ subject }) => {
     void pruneDecodedAudioCache(retainedAudioKeys);
   };
 
+  const disableTextRevealingEffects = (elements = []) => {
+    if (!Array.isArray(elements) || elements.length === 0) {
+      return elements;
+    }
+
+    return elements.map((element) => {
+      if (!element || typeof element !== "object") {
+        return element;
+      }
+
+      const nextElement = {
+        ...element,
+      };
+
+      if (nextElement.type === "text-revealing") {
+        nextElement.revealEffect = "none";
+      }
+
+      if (
+        Array.isArray(nextElement.children) &&
+        nextElement.children.length > 0
+      ) {
+        nextElement.children = disableTextRevealingEffects(
+          nextElement.children,
+        );
+      }
+
+      return nextElement;
+    });
+  };
+
   const applyInteractiveContainerHitAreas = (elements = []) => {
     if (
       !routeGraphics ||
@@ -1287,7 +1318,11 @@ export const createGraphicsService = async ({ subject }) => {
         renderState = { ...renderState, audio: [] };
       }
       if (skipAnimations) {
-        renderState = { ...renderState, animations: [] };
+        renderState = {
+          ...renderState,
+          animations: [],
+          elements: disableTextRevealingEffects(renderState?.elements),
+        };
       }
       renderEngineState(renderState);
     },
@@ -1311,7 +1346,9 @@ export const createGraphicsService = async ({ subject }) => {
       routeGraphics?.setAnimationTime?.(timeMs);
     },
     waitUntilReady,
-    render: (payload) => routeGraphics.render(payload),
+    render: (payload) => {
+      return routeGraphics.render(payload);
+    },
     parse: (payload) => routeGraphics.parse(payload),
     destroy: destroyRuntime,
   };
