@@ -15,6 +15,14 @@ const isProjectRoute = (path) => {
   return path === "/project" || path.startsWith("/project/");
 };
 
+const LEGACY_ROUTE_REDIRECTS = {
+  "/project/system-variables": "/project/variables",
+};
+
+const getCanonicalRoutePath = (path) => {
+  return LEGACY_ROUTE_REDIRECTS[path] ?? path;
+};
+
 const getCurrentQueryPayload = (appService) => {
   const payload = appService.getPayload() || {};
   return Object.keys(payload).length > 0 ? payload : undefined;
@@ -130,17 +138,23 @@ const createRouteTransitionRunner = (deps) => {
     const { appService, projectService, store, render } = deps;
     const currentTransitionToken = ++transitionToken;
     const nextPayload = normalizePayload(payload);
+    const canonicalPath = getCanonicalRoutePath(path);
 
     if (shouldUpdateHistory) {
-      appService.redirect(path, nextPayload);
+      appService.redirect(canonicalPath, nextPayload);
+    } else if (canonicalPath !== path) {
+      appService.replace(canonicalPath, nextPayload);
     }
 
     const currentProjectId = appService.getCurrentProjectId();
-    const needsRepository = routeNeedsRepository(path, currentProjectId);
+    const needsRepository = routeNeedsRepository(
+      canonicalPath,
+      currentProjectId,
+    );
     const isAlreadyEnsured =
       currentProjectId === projectService.getEnsuredProjectId();
 
-    store.setCurrentRoute({ route: path });
+    store.setCurrentRoute({ route: canonicalPath });
     store.setRepositoryLoading({
       isLoading: needsRepository && !isAlreadyEnsured,
     });

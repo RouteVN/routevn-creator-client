@@ -56,6 +56,10 @@ export const createAppShellService = ({
       router.redirect(path, payload);
     },
 
+    replace(path, payload) {
+      router.replace(path, payload);
+    },
+
     getPath() {
       return router.getPathName();
     },

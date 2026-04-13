@@ -79,6 +79,10 @@ refs:
     eventListeners:
       click:
         handler: handleDetailHeaderClick
+  detailPreviewButton:
+    eventListeners:
+      click:
+        handler: handleDetailPreviewClick
 template:
   - 'rtgl-view d=h w=f h=f pos=rel style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
@@ -94,6 +98,7 @@ template:
                       - rtgl-view d=v w=f h=f:
                           - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
                               - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                              - rtgl-button#detailPreviewButton s=sm v=se: Preview
                               - rtgl-svg svg=edit wh=16: null
                           - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
                               - rtgl-view slot="sections-list" d=v w=f g=sm:

@@ -1,4 +1,22 @@
 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M4 8L8 16M8 8L4 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M12 10H20M12 14H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path
+    d="M5.5 7H14.5L19 11.5L14.5 16H5.5C4.67157 16 4 15.3284 4 14.5V8.5C4 7.67157 4.67157 7 5.5 7Z"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle
+    cx="7.5"
+    cy="11.5"
+    r="1"
+    stroke="currentColor"
+    stroke-width="2"
+  />
+  <path
+    d="M10.5 11.5H14"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+  />
 </svg>

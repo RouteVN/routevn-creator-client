@@ -143,10 +143,8 @@ refs:
     eventListeners:
       click:
         handler: handleSingleMaskImageClick
-  singleMaskImageClearButton:
-    eventListeners:
-      click:
-        handler: handleSingleMaskImageClearClick
+      contextmenu:
+        handler: handleSingleMaskImageRightClick
   sequenceMaskAddButton:
     eventListeners:
       click:
@@ -292,12 +290,10 @@ template:
                                       - rtgl-view d=v g=xs:
                                           - rtgl-text s=sm c=mu-fg: Image
                                           - $if transitionMaskPanel.singleImage:
-                                              - rtgl-view d=h g=sm av=c:
-                                                  - rtgl-view#singleMaskImageButton cur=pointer br=md:
-                                                      - rvn-file-image w=120 h=90 imageId=${transitionMaskPanel.singleImage.imageId} source="thumbnail": null
-                                                  - rtgl-view d=v w=1fg g=xs:
-                                                      - rtgl-text: ${transitionMaskPanel.singleImage.name}
-                                                  - rtgl-button#singleMaskImageClearButton s=sm v=se: Clear
+                                              - rtgl-view#singleMaskImageButton cur=pointer bw=xs bc=${transitionMaskPanel.singleImage.itemBorderColor} h-bc=${transitionMaskPanel.singleImage.itemHoverBorderColor} br=sm:
+                                                  - rtgl-view p=md g=md br=md:
+                                                      - rvn-file-image w=200 h=120 imageId=${transitionMaskPanel.singleImage.imageId} source="thumbnail": null
+                                                      - rtgl-text s=xs c=mu-fg ellipsis w=200: ${transitionMaskPanel.singleImage.name}
                                             $else:
                                               - rtgl-view#singleMaskImageButton w=f h=96 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
                                                   - rtgl-text c=mu-fg: Select image

@@ -41,8 +41,6 @@ template:
                   - rvn-controls: []
                 $elif currentRoutePattern == "/project/variables":
                   - rvn-variables: []
-                $elif currentRoutePattern == "/project/system-variables":
-                  - rvn-system-variables: []
                 $elif currentRoutePattern == "/project/scenes":
                   - rvn-scenes: []
                 $elif currentRoutePattern == "/project/scene-editor":

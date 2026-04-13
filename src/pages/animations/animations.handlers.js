@@ -1,3 +1,4 @@
+import { nanoid } from "nanoid";
 import { createAnimationEditorPayload } from "../../internal/animationEditorRoute.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
@@ -90,6 +91,33 @@ const openAnimationEditor = ({ appService, store, itemId } = {}) => {
     appService,
     animationId: itemId,
   });
+};
+
+const createInitialAnimationResourceData = ({
+  name,
+  description,
+  dialogType,
+} = {}) => {
+  if (dialogType === "transition") {
+    return {
+      type: "animation",
+      name,
+      description,
+      animation: {
+        type: "transition",
+      },
+    };
+  }
+
+  return {
+    type: "animation",
+    name,
+    description,
+    animation: {
+      type: "update",
+      tween: {},
+    },
+  };
 };
 
 export const handleFileExplorerAction = async (deps, payload) => {
@@ -196,7 +224,7 @@ export const handleAddDialogClose = (deps) => {
 };
 
 export const handleAddFormAction = async (deps, payload) => {
-  const { appService, render, store } = deps;
+  const { appService, projectService, render, store } = deps;
   const { actionId, values } = payload._event.detail;
   if (actionId !== "submit") {
     return;
@@ -213,16 +241,34 @@ export const handleAddFormAction = async (deps, payload) => {
   const dialogType =
     values?.dialogType === "transition" ? "transition" : "update";
   const targetGroupId = store.selectTargetGroupId();
+  const animationId = nanoid();
+
+  const createAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to create animation.",
+    action: () =>
+      projectService.createAnimation({
+        animationId,
+        data: createInitialAnimationResourceData({
+          name,
+          description: values?.description ?? "",
+          dialogType,
+        }),
+        parentId: targetGroupId,
+        position: "last",
+      }),
+  });
+
+  if (!createAttempt.ok) {
+    return;
+  }
 
   store.closeAddDialog();
   render();
 
   navigateToAnimationEditor({
     appService,
-    targetGroupId,
-    dialogType,
-    name,
-    description: values?.description ?? "",
+    animationId,
   });
 };
 

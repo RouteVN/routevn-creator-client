@@ -15,8 +15,6 @@ import {
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
 
-const SCENE_EDITOR_PREVIEW_TEXT_SPEED = 100;
-
 const appendMissingIds = (orderedIds, allIds) => {
   const seen = new Set();
   const result = [];
@@ -764,12 +762,6 @@ export const setSceneSettings = ({ state }, { showLineNumbers } = {}) => {
 
 export const selectProjectData = ({ state }) => {
   return constructProjectData(buildProjectDataSourceState(state));
-};
-
-export const selectPreviewRuntimeGlobal = () => {
-  return {
-    dialogueTextSpeed: SCENE_EDITOR_PREVIEW_TEXT_SPEED,
-  };
 };
 
 const selectCanvasAspectRatio = ({ state }) => {

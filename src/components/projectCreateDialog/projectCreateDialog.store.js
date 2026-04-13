@@ -93,6 +93,7 @@ const form = {
       type: "slot",
       slot: "project-path-selector",
       label: "Project Location",
+      description: "Select an empty folder for the project",
       required: true,
     },
   ],
