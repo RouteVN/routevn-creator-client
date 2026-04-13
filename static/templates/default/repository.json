@@ -972,6 +972,19 @@
         "previewText": "",
         "strokeWidth": 4
       },
+      "WTs4jkPjYmdsxZtz-O4CB": {
+        "id": "WTs4jkPjYmdsxZtz-O4CB",
+        "type": "textStyle",
+        "name": "Title",
+        "fontSize": 58,
+        "lineHeight": 1.5,
+        "colorId": "yqk8aZABQccrrEZUSoAp2",
+        "strokeColorId": "NqhJ2JeHjnPx8vg9zAJMb",
+        "fontId": "WbhTa7gjrKgfgb7nYptFb",
+        "fontWeight": "400",
+        "previewText": "Title",
+        "strokeWidth": 4
+      },
       "a8u1N2rL7mV5pQ4tY6wZe": {
         "id": "a8u1N2rL7mV5pQ4tY6wZe",
         "type": "textStyle",
@@ -1008,6 +1021,10 @@
           },
           {
             "id": "6wXcAmc_SmJHzMIeKp--Z",
+            "children": []
+          },
+          {
+            "id": "WTs4jkPjYmdsxZtz-O4CB",
             "children": []
           },
           {
@@ -1287,7 +1304,22 @@
               "rotation": 0,
               "gap": 0,
               "width": 0,
-              "height": 0
+              "height": 0,
+              "click": {
+                "payload": {
+                  "actions": {
+                    "pushLayeredView": {
+                      "resourceId": "Jy3Rayx5WJx1_D62TVi7f"
+                    },
+                    "setMenuPage": {
+                      "value": "save"
+                    },
+                    "setMenuEntryPoint": {
+                      "value": "story"
+                    }
+                  }
+                }
+              }
             },
             "R2uTjl-tre0Jhhm1K03cE": {
               "id": "R2uTjl-tre0Jhhm1K03cE",
@@ -1320,7 +1352,22 @@
               "rotation": 0,
               "gap": 0,
               "width": 0,
-              "height": 0
+              "height": 0,
+              "click": {
+                "payload": {
+                  "actions": {
+                    "pushLayeredView": {
+                      "resourceId": "Jy3Rayx5WJx1_D62TVi7f"
+                    },
+                    "setMenuEntryPoint": {
+                      "value": "story"
+                    },
+                    "setMenuPage": {
+                      "value": "options"
+                    }
+                  }
+                }
+              }
             },
             "7FgY6Omcj9ofTqQaHxXBZ": {
               "id": "7FgY6Omcj9ofTqQaHxXBZ",
@@ -1753,7 +1800,7 @@
               "textStyle": {
                 "align": "center"
               },
-              "textStyleId": "AZb6o5taVeKePPowGTqqr"
+              "textStyleId": "WTs4jkPjYmdsxZtz-O4CB"
             },
             "f6x1Sm7SCSprtVfidYD42": {
               "id": "f6x1Sm7SCSprtVfidYD42",
@@ -1998,8 +2045,8 @@
               "id": "mJ14zqb9nK8hV6TeHR81K",
               "type": "container",
               "name": "Container",
-              "x": 120,
-              "y": 256,
+              "x": 121,
+              "y": 296,
               "anchorX": 0,
               "anchorY": 0,
               "scaleX": 1,
@@ -2412,8 +2459,8 @@
               "id": "uMIuEglT1b9VA-4292yeJ",
               "type": "text",
               "name": "Text",
-              "x": 146,
-              "y": 106,
+              "x": 120,
+              "y": 120,
               "anchorX": 0,
               "anchorY": 0,
               "scaleX": 1,
@@ -2423,7 +2470,7 @@
               "textStyle": {
                 "align": "left"
               },
-              "textStyleId": "AZb6o5taVeKePPowGTqqr"
+              "textStyleId": "WTs4jkPjYmdsxZtz-O4CB"
             },
             "efD9N-_XrKRuOoJy0uxIk": {
               "id": "efD9N-_XrKRuOoJy0uxIk",
@@ -2730,8 +2777,8 @@
               "id": "DShLdcnSl2p1n8dP7QdRu",
               "type": "text",
               "name": "Text",
-              "x": 146,
-              "y": 106,
+              "x": 120,
+              "y": 120,
               "anchorX": 0,
               "anchorY": 0,
               "scaleX": 1,
@@ -2741,7 +2788,7 @@
               "textStyle": {
                 "align": "left"
               },
-              "textStyleId": "AZb6o5taVeKePPowGTqqr"
+              "textStyleId": "WTs4jkPjYmdsxZtz-O4CB"
             },
             "0T0gmtvnAHxZCiCL7qc0Y": {
               "id": "0T0gmtvnAHxZCiCL7qc0Y",
@@ -3048,8 +3095,8 @@
               "id": "g_uqudvr03gpFEclT0p4t",
               "type": "text",
               "name": "Text",
-              "x": 100,
-              "y": 100,
+              "x": 120,
+              "y": 120,
               "anchorX": 0,
               "anchorY": 0,
               "scaleX": 1,
@@ -3157,7 +3204,7 @@
               "height": 50,
               "direction": "horizontal",
               "min": 0,
-              "max": 1000,
+              "max": 100,
               "step": 1,
               "initialValue": "${runtime.musicVolume}",
               "barImageId": "X17uTP6eSPeaY7pzxWCLm",
@@ -3207,7 +3254,7 @@
               "height": 50,
               "direction": "horizontal",
               "min": 0,
-              "max": 1000,
+              "max": 100,
               "step": 1,
               "initialValue": "${runtime.soundVolume}",
               "barImageId": "X17uTP6eSPeaY7pzxWCLm",
@@ -3407,7 +3454,15 @@
               "rightClick": {
                 "payload": {
                   "actions": {
-                    "toggleDialogueUI": {}
+                    "pushLayeredView": {
+                      "resourceId": "Jy3Rayx5WJx1_D62TVi7f"
+                    },
+                    "setMenuPage": {
+                      "value": "options"
+                    },
+                    "setMenuEntryPoint": {
+                      "value": "story"
+                    }
                   }
                 }
               },

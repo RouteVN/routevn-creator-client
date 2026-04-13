@@ -76,26 +76,13 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   });
 };
 
-const logSelectedLayoutData = ({ store, itemId } = {}) => {
-  if (!itemId) {
-    return;
-  }
-
-  const layoutItem = store.selectLayoutItemById({ itemId });
-  if (!layoutItem || layoutItem.type !== "layout") {
-    return;
-  }
-
-  console.log("[layouts] selected layout", structuredClone(layoutItem));
-};
-
 const {
   handleBeforeMount,
   refreshData: handleDataChanged,
-  handleFileExplorerSelectionChanged: handleCatalogFileExplorerSelectionChanged,
+  handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
-  handleItemClick: handleCatalogLayoutItemClick,
+  handleItemClick: handleLayoutItemClick,
   handleSearchInput,
 } = createCatalogPageHandlers({
   resourceType: "layouts",
@@ -108,32 +95,11 @@ const {
 export {
   handleBeforeMount,
   handleDataChanged,
+  handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
+  handleLayoutItemClick,
   handleSearchInput,
-};
-
-export const handleFileExplorerSelectionChanged = (deps, payload) => {
-  handleCatalogFileExplorerSelectionChanged(deps, payload);
-
-  const { isFolder, itemId } = payload._event.detail;
-  if (isFolder) {
-    return;
-  }
-
-  logSelectedLayoutData({
-    store: deps.store,
-    itemId,
-  });
-};
-
-export const handleLayoutItemClick = (deps, payload) => {
-  handleCatalogLayoutItemClick(deps, payload);
-
-  logSelectedLayoutData({
-    store: deps.store,
-    itemId: payload._event.detail.itemId,
-  });
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {
