@@ -1712,7 +1712,7 @@
               "type": "text-ref-choice-item-content",
               "name": "Text (Choice Item Content)",
               "x": 960,
-              "y": 24,
+              "y": 10,
               "anchorX": 0.5,
               "anchorY": 0,
               "scaleX": 1,
@@ -1722,7 +1722,7 @@
               "textStyle": {
                 "align": "center"
               },
-              "textStyleId": "WTs4jkPjYmdsxZtz-O4CB"
+              "textStyleId": "WkzTF7gNhJSnG4MnZTh2U"
             },
             "qdi6CH34ouMomkrGRfbDw": {
               "id": "qdi6CH34ouMomkrGRfbDw",
