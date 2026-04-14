@@ -157,7 +157,9 @@ describe("graphicsService", () => {
       },
     });
 
-    await Promise.resolve();
+    await vi.waitFor(() => {
+      expect(resolveLoad).toEqual(expect.any(Function));
+    });
     await service.destroy();
     resolveLoad();
 
@@ -267,5 +269,122 @@ describe("graphicsService", () => {
         ],
       },
     });
+  });
+
+  it("uses a noop persistence adapter when initRouteEngine has no namespace", async () => {
+    const engineInit = vi.fn();
+    createRouteEngineMock.mockReturnValue({
+      init: engineInit,
+      selectRenderState: vi.fn(() => ({
+        id: "render-1",
+        elements: [],
+        audio: [],
+        animations: [],
+      })),
+      selectPresentationState: vi.fn(() => undefined),
+      selectPresentationChanges: vi.fn(() => undefined),
+      selectSectionLineChanges: vi.fn(() => []),
+      handleActions: vi.fn(),
+    });
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+
+    service.initRouteEngine({
+      screen: { width: 1920, height: 1080 },
+      story: { scenes: {} },
+      resources: {},
+    });
+
+    expect(createEffectsHandlerMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        namespace: undefined,
+        persistence: expect.objectContaining({
+          load: expect.any(Function),
+          saveSlots: expect.any(Function),
+          saveGlobalRuntime: expect.any(Function),
+        }),
+      }),
+    );
+    expect(engineInit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        namespace: undefined,
+      }),
+    );
+  });
+
+  it("passes namespace through to route-engine persistence when provided", async () => {
+    const engineInit = vi.fn();
+    createRouteEngineMock.mockReturnValue({
+      init: engineInit,
+      selectRenderState: vi.fn(() => ({
+        id: "render-1",
+        elements: [],
+        audio: [],
+        animations: [],
+      })),
+      selectPresentationState: vi.fn(() => undefined),
+      selectPresentationChanges: vi.fn(() => undefined),
+      selectSectionLineChanges: vi.fn(() => []),
+      handleActions: vi.fn(),
+    });
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+
+    service.initRouteEngine(
+      {
+        screen: { width: 1920, height: 1080 },
+        story: { scenes: {} },
+        resources: {},
+      },
+      {
+        namespace: "project-preview",
+      },
+    );
+
+    expect(createEffectsHandlerMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        namespace: "project-preview",
+        persistence: undefined,
+      }),
+    );
+    expect(engineInit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        namespace: "project-preview",
+      }),
+    );
   });
 });

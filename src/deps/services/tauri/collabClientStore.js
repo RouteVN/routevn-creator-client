@@ -4,6 +4,7 @@ import { createLibsqlClientStore } from "insieme/client";
 import { Subject, asyncScheduler, throttleTime } from "rxjs";
 import {
   SQLITE_BUSY_TIMEOUT_MS,
+  isSqliteNoActiveTransactionError,
   withSqliteLockRetry,
 } from "../../../internal/sqliteLocking.js";
 
@@ -129,6 +130,35 @@ const normalizeSqlArg = (value) => {
     };
   }
   return value;
+};
+
+const isSqliteCommitStatement = (sql) =>
+  /^COMMIT\b/.test(
+    String(sql ?? "")
+      .trim()
+      .toUpperCase(),
+  );
+
+export const executeTauriSqlStatement = async ({
+  db,
+  sql,
+  args = [],
+  retryDelaysMs,
+} = {}) => {
+  const resolvedArgs = Array.isArray(args) ? args : [];
+  return withSqliteLockRetry(
+    () => db.execute(sql, resolvedArgs),
+    isSqliteCommitStatement(sql)
+      ? {
+          retryDelaysMs,
+          shouldRecoverError: (error, { sawLock }) =>
+            sawLock && isSqliteNoActiveTransactionError(error),
+          recoverValue: { rowsAffected: 0 },
+        }
+      : {
+          retryDelaysMs,
+        },
+  );
 };
 
 const createLibsqlLikeClient = ({ runSelect, runExecute }) => {
@@ -311,9 +341,11 @@ export const createPersistedTauriProjectStore = async ({
         db.select(sql, Array.isArray(args) ? args : []),
       );
     const runExecute = (sql, args = []) =>
-      withSqliteLockRetry(() =>
-        db.execute(sql, Array.isArray(args) ? args : []),
-      );
+      executeTauriSqlStatement({
+        db,
+        sql,
+        args,
+      });
     let walDirty = false;
     let storeClosed = false;
     const walCheckpointRequests = new Subject();

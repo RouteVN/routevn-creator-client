@@ -12,4 +12,4 @@ refs:
 template:
   - rtgl-view w=f h=f p=lg:
       - rtgl-breadcrumb#breadcrumb :items=${breadcrumb}: null
-      - rtgl-form#form :defaultValues=${defaultValues} :form=${form} w=f: null
+      - rtgl-form#form key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${context} w=f: null

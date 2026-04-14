@@ -80,7 +80,7 @@ export const handleCommandLineSubmit = (deps, payload) => {
   store.updateActions(nextActions);
   dispatchEvent(
     new CustomEvent("actions-change", {
-      detail: submittedActions,
+      detail: nextActions,
     }),
   );
   store.hideActionsDialog();

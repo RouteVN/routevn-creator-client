@@ -23,12 +23,16 @@ refs:
     eventListeners:
       actions-change:
         handler: handleConfirmActionsChange
+      action-delete:
+        handler: handleConfirmActionsDelete
       close:
         handler: handleNestedActionsClose
   cancelActionsEditor:
     eventListeners:
       actions-change:
         handler: handleCancelActionsChange
+      action-delete:
+        handler: handleCancelActionsDelete
       close:
         handler: handleNestedActionsClose
 template:

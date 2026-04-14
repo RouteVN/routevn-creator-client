@@ -82,4 +82,89 @@ describe("layoutEditPanel actions", () => {
       },
     });
   });
+
+  it("keeps existing slider change actions when adding another action", () => {
+    const state = createInitialState();
+
+    setValues(
+      { state },
+      {
+        values: {
+          change: {
+            payload: {
+              actions: {
+                updateVariable: {
+                  operations: [
+                    {
+                      variableId: "volume",
+                      op: "set",
+                      value: "_event.value",
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
+    );
+    setActiveInteractionType(
+      { state },
+      {
+        interactionType: "change",
+      },
+    );
+    syncActionsEditorActions(
+      { state },
+      {
+        interactionType: "change",
+      },
+    );
+
+    const deps = {
+      store: {
+        updateValueProperty: (payload) =>
+          updateValueProperty({ state }, payload),
+        selectActiveInteractionType: () => state.activeInteractionType,
+        selectValues: () => state.values,
+        setActionsEditorActions: (payload) =>
+          setActionsEditorActions({ state }, payload),
+      },
+      render: () => {},
+      dispatchEvent: () => {},
+    };
+
+    handleActionsChange(deps, {
+      _event: {
+        detail: {
+          toggleAutoMode: {},
+        },
+      },
+    });
+
+    expect(state.values.change.payload.actions).toEqual({
+      updateVariable: {
+        operations: [
+          {
+            variableId: "volume",
+            op: "set",
+            value: "_event.value",
+          },
+        ],
+      },
+      toggleAutoMode: {},
+    });
+    expect(state.actionsEditorActions).toEqual({
+      updateVariable: {
+        operations: [
+          {
+            variableId: "volume",
+            op: "set",
+            value: "_event.value",
+          },
+        ],
+      },
+      toggleAutoMode: {},
+    });
+  });
 });

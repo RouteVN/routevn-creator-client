@@ -54,9 +54,9 @@ template:
                                   - $for item, itemIndex in group.children:
                                       - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} w=${item.itemWidth} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md:
                                           - $if item.cardKind == 'color':
-                                              - 'rtgl-view p=md g=md br=md style="overflow: hidden;"':
-                                                  - 'rtgl-view w=193 h=120 br=sm style="background-color: ${item.swatchHex};"': null
-                                                  - rtgl-text s=xs c=mu-fg ellipsis w=193: ${item.name}
+                                              - 'rtgl-view d=v w=f p=md g=md br=md style="overflow: hidden;"':
+                                                  - 'rtgl-view w=f h=120 br=sm style="background-color: ${item.swatchHex};"': null
+                                                  - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                             $elif item.cardKind == 'layout':
                                               - $if item.cardVariant == 'thumbnail':
                                                   - 'rtgl-view w=225 br=md style="overflow: hidden;"':

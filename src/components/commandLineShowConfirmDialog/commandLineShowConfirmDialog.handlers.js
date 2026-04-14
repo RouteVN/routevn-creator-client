@@ -4,6 +4,26 @@ const toPlainObject = (value) => {
     : {};
 };
 
+const mergeActions = (currentActions, nextActions) => {
+  return {
+    ...toPlainObject(currentActions),
+    ...toPlainObject(nextActions),
+  };
+};
+
+const removeAction = (actions, actionType) => {
+  const nextActions = {
+    ...toPlainObject(actions),
+  };
+
+  if (!actionType) {
+    return nextActions;
+  }
+
+  delete nextActions[actionType];
+  return nextActions;
+};
+
 const syncStateFromProps = (deps, showConfirmDialog = {}) => {
   const { props, store } = deps;
   const layouts = Array.isArray(props.layouts) ? props.layouts : [];
@@ -64,16 +84,40 @@ export const handleCancelActionsClick = (deps) => {
 
 export const handleConfirmActionsChange = (deps, payload) => {
   const { render, store } = deps;
+  const state = store.getState();
   store.setConfirmActions({
-    actions: toPlainObject(payload._event.detail),
+    actions: mergeActions(state.confirmActions, payload._event.detail),
   });
   render();
 };
 
 export const handleCancelActionsChange = (deps, payload) => {
   const { render, store } = deps;
+  const state = store.getState();
   store.setCancelActions({
-    actions: toPlainObject(payload._event.detail),
+    actions: mergeActions(state.cancelActions, payload._event.detail),
+  });
+  render();
+};
+
+export const handleConfirmActionsDelete = (deps, payload) => {
+  const { render, store } = deps;
+  const actionType = payload._event.detail?.actionType;
+  const state = store.getState();
+
+  store.setConfirmActions({
+    actions: removeAction(state.confirmActions, actionType),
+  });
+  render();
+};
+
+export const handleCancelActionsDelete = (deps, payload) => {
+  const { render, store } = deps;
+  const actionType = payload._event.detail?.actionType;
+  const state = store.getState();
+
+  store.setCancelActions({
+    actions: removeAction(state.cancelActions, actionType),
   });
   render();
 };

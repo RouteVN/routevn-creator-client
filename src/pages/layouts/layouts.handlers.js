@@ -79,10 +79,10 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
 const {
   handleBeforeMount,
   refreshData: handleDataChanged,
-  handleFileExplorerSelectionChanged: handleCatalogFileExplorerSelectionChanged,
+  handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
-  handleItemClick: handleCatalogLayoutItemClick,
+  handleItemClick: handleLayoutItemClick,
   handleSearchInput,
 } = createCatalogPageHandlers({
   resourceType: "layouts",
@@ -95,22 +95,11 @@ const {
 export {
   handleBeforeMount,
   handleDataChanged,
+  handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
+  handleLayoutItemClick,
   handleSearchInput,
-};
-
-export const handleFileExplorerSelectionChanged = (deps, payload) => {
-  handleCatalogFileExplorerSelectionChanged(deps, payload);
-
-  const { isFolder } = payload._event.detail;
-  if (isFolder) {
-    return;
-  }
-};
-
-export const handleLayoutItemClick = (deps, payload) => {
-  handleCatalogLayoutItemClick(deps, payload);
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {
@@ -310,13 +299,13 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
             scaleX: 1,
             scaleY: 1,
             rotation: 0,
-            text: "text",
+            text: "${line.content[0].text}",
             textStyle: {
               align: "left",
             },
           }),
           [lineContentTextId]: createLayoutElement(lineContentTextId, {
-            type: "text-ref-dialogue-line-content",
+            type: "text-revealing",
             name: "Text (Line Content)",
             x: 0,
             y: 44,

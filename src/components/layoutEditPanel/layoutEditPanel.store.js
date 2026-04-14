@@ -8,6 +8,7 @@ import {
 import { toParticleSelectionItems } from "../../internal/particles.js";
 import { getVariableOptions } from "../../internal/project/projection.js";
 import { toFlatItems } from "../../internal/project/tree.js";
+import { getRuntimeNumberFieldOptions } from "../../internal/runtimeFields.js";
 import { getFragmentLayoutOptions } from "../../pages/layoutEditor/support/layoutFragments.js";
 import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
 import { splitLayoutConditionFromWhen } from "../../internal/layoutConditions.js";
@@ -232,6 +233,18 @@ const formatPositionPercentageLabel = ({ name, projectResolution, value }) => {
   }
 
   return `${roundPositionPopoverNumber((numericValue / resolutionDimension) * 100)}%`;
+};
+
+const isDirectedContainer = (capabilities = {}, values = {}) => {
+  return (
+    capabilities.supportsDirection === true &&
+    (values.direction === "vertical" || values.direction === "horizontal")
+  );
+};
+
+const isAutoContainerSize = (value) => {
+  const parsedValue = Number(value);
+  return !Number.isFinite(parsedValue) || parsedValue <= 0;
 };
 
 const createDefaultValues = () => ({
@@ -696,6 +709,10 @@ export const selectViewData = ({ state, props, constants }) => {
   const variableOptions = getVariableOptions(state.variablesData, {
     type: "number",
   });
+  const sliderValueOptions = [
+    { label: "Manual", value: "" },
+    ...getRuntimeNumberFieldOptions(),
+  ];
   const fragmentLayoutOptions = getFragmentLayoutOptions(props.layoutsData);
   const visibilityConditionOptions = {
     includeSaveDataAvailable: props.isInsideSaveLoadSlot === true,
@@ -709,10 +726,6 @@ export const selectViewData = ({ state, props, constants }) => {
       state.variablesData,
       visibilityConditionOptions,
     );
-  const variableOptionsWithNone = [
-    { label: "None", value: "" },
-    ...variableOptions,
-  ];
   const values = toInspectorValues({
     values: state.values,
     firstTextStyleId,
@@ -727,9 +740,6 @@ export const selectViewData = ({ state, props, constants }) => {
     values.resourceId,
     values.animationName,
   );
-  const supportsWidthMode = props.itemType?.startsWith("text") === true;
-  const widthMode =
-    supportsWidthMode && values.width === undefined ? "auto" : "fixed";
   const currentVisibilityCondition = splitLayoutConditionFromWhen(
     values["$when"],
   ).visibilityCondition;
@@ -754,6 +764,32 @@ export const selectViewData = ({ state, props, constants }) => {
   );
   const capabilities =
     getLayoutEditorElementDefinition(props.itemType)?.capabilities ?? {};
+  const showsDirectedContainerSizeMode = isDirectedContainer(
+    capabilities,
+    values,
+  );
+  const supportsWidthMode =
+    props.itemType?.startsWith("text") === true ||
+    showsDirectedContainerSizeMode;
+  const supportsHeightMode = showsDirectedContainerSizeMode;
+  const widthMode =
+    props.itemType?.startsWith("text") === true
+      ? values.width === undefined
+        ? "auto"
+        : "fixed"
+      : supportsWidthMode && isAutoContainerSize(values.width)
+        ? "auto"
+        : "fixed";
+  const heightMode =
+    supportsHeightMode && isAutoContainerSize(values.height) ? "auto" : "fixed";
+  const showWidthField = !supportsWidthMode || widthMode === "fixed";
+  const showHeightField =
+    capabilities.supportsHeight === true &&
+    (!supportsHeightMode || heightMode === "fixed");
+  const showLayoutSizeSection =
+    capabilities.supportsSize === true || showsDirectedContainerSizeMode;
+  const showAspectRatioMode =
+    capabilities.supportsHeight === true && !showsDirectedContainerSizeMode;
   const sections = parseAndRender(
     getLayoutEditPanelSections({
       constants,
@@ -766,10 +802,9 @@ export const selectViewData = ({ state, props, constants }) => {
       isInsideDirectedContainer: props.isInsideDirectedContainer === true,
       textStyleItems,
       textStyleItemsWithNone,
-      variableOptions,
-      variableOptionsWithNone,
       spritesheetSelectionItems,
       particleSelectionItems,
+      sliderValueOptions,
       spritesheetSelectionValue,
       selectedSpritesheetFileId: selectedSpritesheetPreview.fileId,
       selectedSpritesheetAtlas: selectedSpritesheetPreview.atlas,
@@ -794,13 +829,19 @@ export const selectViewData = ({ state, props, constants }) => {
         projectResolution: props.projectResolution,
         value: values.width,
       }),
+      showLayoutSizeSection,
       supportsWidthMode,
       widthMode,
+      supportsHeightMode,
+      heightMode,
+      showWidthField,
       heightPercentageLabel: formatPositionPercentageLabel({
         name: "y",
         projectResolution: props.projectResolution,
         value: values.height,
       }),
+      showHeightField,
+      showAspectRatioMode,
       paginationSummary: getSaveLoadPaginationSummary({
         values,
         variablesData: state.variablesData,
@@ -821,9 +862,7 @@ export const selectViewData = ({ state, props, constants }) => {
       hasVisibilityCondition: !!currentVisibilityCondition?.target,
       canAddSpriteImageVariant:
         !values.imageId || !values.hoverImageId || !values.clickImageId,
-      showsGapField:
-        capabilities.supportsDirection &&
-        (values.direction === "vertical" || values.direction === "horizontal"),
+      showsGapField: showsDirectedContainerSizeMode,
       ...capabilities,
     },
   );

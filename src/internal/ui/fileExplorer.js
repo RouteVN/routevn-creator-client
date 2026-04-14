@@ -10,6 +10,7 @@ import { recursivelyCheckResource } from "../project/projection.js";
 const isTextElementType = (type) =>
   [
     "text",
+    "text-revealing",
     "text-ref-character-name",
     "text-revealing-ref-dialogue-content",
     "text-ref-choice-item-content",
