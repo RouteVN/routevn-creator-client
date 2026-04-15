@@ -242,4 +242,26 @@ describe("tauri collab client store locking", () => {
     await expect(pending).resolves.toEqual({ rowsAffected: 0 });
     expect(fakeDb.execute).toHaveBeenCalledTimes(2);
   });
+
+  it("recovers a commit that reports no active transaction immediately", async () => {
+    const fakeDb = {
+      execute: vi
+        .fn()
+        .mockRejectedValue(
+          new Error("cannot commit - no transaction is active"),
+        ),
+    };
+
+    const { executeTauriSqlStatement } = await import(
+      "../../src/deps/services/tauri/collabClientStore.js"
+    );
+
+    await expect(
+      executeTauriSqlStatement({
+        db: fakeDb,
+        sql: "COMMIT",
+      }),
+    ).resolves.toEqual({ rowsAffected: 0 });
+    expect(fakeDb.execute).toHaveBeenCalledTimes(1);
+  });
 });

@@ -22,14 +22,22 @@ import { parseSpritesheetAnimationSelectionValue } from "../../internal/spritesh
 
 const ACTION_INTERACTION_TYPES = ["click", "rightClick", "change"];
 const EMPTY_TREE = { items: {}, tree: [] };
-const INTEGER_ONLY_FIELDS = new Set(["x", "y", "width", "height"]);
+const INTEGER_ONLY_FIELDS = new Set([
+  "x",
+  "y",
+  "width",
+  "height",
+  "gapX",
+  "gapY",
+]);
 const SIZE_FIELDS = new Set(["width", "height"]);
 const WHEEL_INCREMENT_FIELD_CONFIG = {
   x: { step: 1, fastStep: 10 },
   y: { step: 1, fastStep: 10 },
   width: { step: 1, fastStep: 10 },
   height: { step: 1, fastStep: 10 },
-  gap: { step: 1, fastStep: 10 },
+  gapX: { step: 1, fastStep: 10 },
+  gapY: { step: 1, fastStep: 10 },
   opacity: {
     defaultValue: 1,
     step: 0.01,

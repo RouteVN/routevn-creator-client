@@ -16,6 +16,19 @@ const syncEditFormValues = ({ deps, values } = {}) => {
   editForm.setValues({ values });
 };
 
+const logSelectedLayoutItem = ({ store, itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  const item = store.selectLayoutItemById({ itemId });
+  if (!item) {
+    return;
+  }
+
+  console.log("Selected layout item", item);
+};
+
 const navigateToLayoutEditor = ({ appService, layoutId } = {}) => {
   const currentPayload = appService.getPayload();
   appService.navigate("/project/layout-editor", {
@@ -79,10 +92,10 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
 const {
   handleBeforeMount,
   refreshData: handleDataChanged,
-  handleFileExplorerSelectionChanged,
+  handleFileExplorerSelectionChanged: handleCatalogFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
-  handleItemClick: handleLayoutItemClick,
+  handleItemClick: handleCatalogLayoutItemClick,
   handleSearchInput,
 } = createCatalogPageHandlers({
   resourceType: "layouts",
@@ -95,11 +108,27 @@ const {
 export {
   handleBeforeMount,
   handleDataChanged,
-  handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
-  handleLayoutItemClick,
   handleSearchInput,
+};
+
+export const handleFileExplorerSelectionChanged = (deps, payload) => {
+  handleCatalogFileExplorerSelectionChanged(deps, payload);
+
+  const { itemId, isFolder } = payload._event.detail;
+  if (isFolder) {
+    return;
+  }
+
+  logSelectedLayoutItem({ store: deps.store, itemId });
+};
+
+export const handleLayoutItemClick = (deps, payload) => {
+  handleCatalogLayoutItemClick(deps, payload);
+
+  const { itemId } = payload._event.detail;
+  logSelectedLayoutItem({ store: deps.store, itemId });
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {
@@ -159,7 +188,8 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
             name: "Dialogue Container",
             x: 35,
             y: 695,
-            gap: 0,
+            gapX: 0,
+            gapY: 0,
             width: 1850,
             height: 350,
             anchorX: 0,
@@ -256,13 +286,15 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
             scaleX: 1,
             scaleY: 1,
             rotation: 0,
+            imageId: "foPOJMdjT9agVRh68ST1o",
           }),
           [nvlLinesId]: createLayoutElement(nvlLinesId, {
             type: "container",
             name: "NVL Lines",
             x: 40,
             y: 30,
-            gap: 24,
+            gapX: 24,
+            gapY: 24,
             width: 1640,
             height: 860,
             direction: "vertical",
@@ -279,7 +311,8 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
             x: 0,
             y: 0,
             width: 1640,
-            height: 120,
+            height: 0,
+            direction: "vertical",
             anchorX: 0,
             anchorY: 0,
             scaleX: 1,
@@ -299,10 +332,11 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
             scaleX: 1,
             scaleY: 1,
             rotation: 0,
-            text: "${line.content[0].text}",
+            text: "text",
             textStyle: {
               align: "left",
             },
+            textStyleId: "qdM8QXbdBoqiPDUHZWheh",
           }),
           [lineContentTextId]: createLayoutElement(lineContentTextId, {
             type: "text-revealing",
@@ -316,10 +350,13 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
             scaleX: 1,
             scaleY: 1,
             rotation: 0,
-            text: "text",
+            text: "${line.content[0].text}",
             textStyle: {
+              wordWrapWidth: 300,
               align: "left",
             },
+            textStyleId: "1TqapkiPUErN434i6YCFW",
+            revealEffect: "none",
           }),
         },
         tree: [
@@ -370,7 +407,8 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
             name: "History Container",
             x: 0,
             y: 0,
-            gap: 0,
+            gapX: 0,
+            gapY: 0,
             width: 1920,
             height: 1080,
             anchorX: 0,
@@ -406,7 +444,8 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
               width: 940,
               height: 560,
               direction: "vertical",
-              gap: 15,
+              gapX: 15,
+              gapY: 15,
               scroll: true,
               anchorX: 0,
               anchorY: 0,
@@ -423,7 +462,8 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
               x: 0,
               y: 0,
               width: 920,
-              gap: 5,
+              gapX: 5,
+              gapY: 5,
               direction: "vertical",
               anchorX: 0,
               anchorY: 0,
@@ -529,11 +569,267 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
     );
   }
 
-  if (
-    layoutType === "normal" ||
-    layoutType === "save-load" ||
-    layoutType === "confirmDialog"
-  ) {
+  if (layoutType === "choice") {
+    const choicesContainerId = nanoid();
+    const choiceItemContainerId = nanoid();
+    const choiceTextId = nanoid();
+    const choiceBackgroundId = nanoid();
+
+    return scaleLayoutElementsForProjectResolution(
+      {
+        items: {
+          [choicesContainerId]: createLayoutElement(choicesContainerId, {
+            type: "container",
+            name: "Choices Container",
+            x: 64,
+            y: 300,
+            width: 0,
+            height: 0,
+            anchorX: 0,
+            anchorY: 0,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            direction: "vertical",
+            gapX: 36,
+            gapY: 36,
+          }),
+          [choiceItemContainerId]: createLayoutElement(choiceItemContainerId, {
+            type: "container-ref-choice-item",
+            name: "Container (Choice Item)",
+            x: 0,
+            y: 0,
+            anchorX: 0,
+            anchorY: 0,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            hover: {
+              inheritToChildren: true,
+            },
+            click: {
+              inheritToChildren: true,
+            },
+            rightClick: {
+              inheritToChildren: true,
+            },
+          }),
+          [choiceTextId]: createLayoutElement(choiceTextId, {
+            type: "text-ref-choice-item-content",
+            name: "Text (Choice Item Content)",
+            x: 960,
+            y: 10,
+            anchorX: 0.5,
+            anchorY: 0,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            text: "text",
+            textStyle: {
+              align: "center",
+            },
+            textStyleId: "WkzTF7gNhJSnG4MnZTh2U",
+          }),
+          [choiceBackgroundId]: createLayoutElement(choiceBackgroundId, {
+            type: "sprite",
+            name: "Choice Background",
+            x: 0,
+            y: 0,
+            width: 1800,
+            height: 80,
+            anchorX: 0,
+            anchorY: 0,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            imageId: "cdCXiw7A7zJxawo4iMwNS",
+            hoverImageId: "KFdkZTWLURDHTkVV2dGEp",
+          }),
+        },
+        tree: [
+          {
+            id: choicesContainerId,
+            children: [
+              {
+                id: choiceItemContainerId,
+                children: [
+                  {
+                    id: choiceBackgroundId,
+                  },
+                  {
+                    id: choiceTextId,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      projectResolution,
+    );
+  }
+
+  if (layoutType === "confirmDialog") {
+    const rootId = nanoid();
+    const textId = nanoid();
+    const confirmOkContainerId = nanoid();
+    const confirmOkTextId = nanoid();
+    const confirmCancelContainerId = nanoid();
+    const confirmCancelTextId = nanoid();
+    const spriteId = nanoid();
+
+    return scaleLayoutElementsForProjectResolution(
+      {
+        items: {
+          [rootId]: createLayoutElement(rootId, {
+            type: "container",
+            name: "Root",
+            x: -1,
+            y: 0,
+            gapX: 0,
+            gapY: 0,
+            width: 1920,
+            height: 1080,
+            anchorX: 0,
+            anchorY: 0,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+          }),
+          [textId]: createLayoutElement(textId, {
+            type: "text",
+            name: "Text",
+            x: 960,
+            y: 400,
+            width: 560,
+            anchorX: 0.5,
+            anchorY: 0,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            text: "Are you sure to go back to title page?",
+            textStyle: {
+              align: "center",
+            },
+            textStyleId: "AZb6o5taVeKePPowGTqqr",
+          }),
+          [confirmOkContainerId]: createLayoutElement(confirmOkContainerId, {
+            type: "container-ref-confirm-dialog-ok",
+            name: "Container (Confirm OK)",
+            x: 800,
+            y: 540,
+            anchorX: 0.5,
+            anchorY: 0,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            width: 0,
+            height: 0,
+          }),
+          [confirmOkTextId]: createLayoutElement(confirmOkTextId, {
+            type: "text",
+            name: "Text",
+            x: 0,
+            y: 0,
+            anchorX: 0,
+            anchorY: 0,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            text: "Yes",
+            textStyle: {
+              align: "left",
+            },
+            textStyleId: "WkzTF7gNhJSnG4MnZTh2U",
+            hoverTextStyleId: "6wXcAmc_SmJHzMIeKp--Z",
+          }),
+          [confirmCancelContainerId]: createLayoutElement(
+            confirmCancelContainerId,
+            {
+              type: "container-ref-confirm-dialog-cancel",
+              name: "Container (Confirm Cancel)",
+              x: 1120,
+              y: 540,
+              anchorX: 0.5,
+              anchorY: 0,
+              scaleX: 1,
+              scaleY: 1,
+              rotation: 0,
+              width: 0,
+              height: 0,
+            },
+          ),
+          [confirmCancelTextId]: createLayoutElement(confirmCancelTextId, {
+            type: "text",
+            name: "Text",
+            x: 0,
+            y: 0,
+            anchorX: 0,
+            anchorY: 0,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            text: "No",
+            textStyle: {
+              align: "left",
+            },
+            textStyleId: "WkzTF7gNhJSnG4MnZTh2U",
+            hoverTextStyleId: "6wXcAmc_SmJHzMIeKp--Z",
+          }),
+          [spriteId]: createLayoutElement(spriteId, {
+            type: "sprite",
+            name: "Sprite",
+            x: 960,
+            y: 336,
+            anchorX: 0.5,
+            anchorY: 0,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            width: 840,
+            height: 320,
+            imageId: "QO_Ou5DAengpMP4_WnMBy",
+          }),
+        },
+        tree: [
+          {
+            id: rootId,
+            children: [
+              {
+                id: spriteId,
+                children: [],
+              },
+              {
+                id: textId,
+                children: [],
+              },
+              {
+                id: confirmOkContainerId,
+                children: [
+                  {
+                    id: confirmOkTextId,
+                    children: [],
+                  },
+                ],
+              },
+              {
+                id: confirmCancelContainerId,
+                children: [
+                  {
+                    id: confirmCancelTextId,
+                    children: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      projectResolution,
+    );
+  }
+
+  if (layoutType === "normal" || layoutType === "save-load") {
     const rootId = nanoid();
     const textId = nanoid();
 
@@ -545,7 +841,8 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
             name: "Root",
             x: 0,
             y: 0,
-            gap: 0,
+            gapX: 0,
+            gapY: 0,
             width: 1920,
             height: 1080,
             anchorX: 0,

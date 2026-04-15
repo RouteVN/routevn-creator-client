@@ -151,8 +151,8 @@ export const executeTauriSqlStatement = async ({
     isSqliteCommitStatement(sql)
       ? {
           retryDelaysMs,
-          shouldRecoverError: (error, { sawLock }) =>
-            sawLock && isSqliteNoActiveTransactionError(error),
+          shouldRecoverError: (error) =>
+            isSqliteNoActiveTransactionError(error),
           recoverValue: { rowsAffected: 0 },
         }
       : {

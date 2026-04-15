@@ -25,6 +25,19 @@ const syncRepositoryToStore = ({
   store.setFontsData({ fontsData: state?.fonts });
 };
 
+const logSelectedTextStyleItem = ({ store, itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  const item = store.selectItemById(itemId);
+  if (!item) {
+    return;
+  }
+
+  console.log("Selected text style item", item);
+};
+
 export const handleBeforeMount = (deps) => {
   const { projectService, store, render } = deps;
   const subscription = createProjectStateStream({ projectService })
@@ -75,6 +88,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   }
 
   store.setSelectedItemId({ itemId });
+  logSelectedTextStyleItem({ store, itemId });
   render();
 };
 
@@ -82,6 +96,7 @@ export const handleTextStyleItemClick = (deps, payload) => {
   const { store, render, refs } = deps;
   const { itemId } = payload._event.detail;
   store.setSelectedItemId({ itemId: itemId });
+  logSelectedTextStyleItem({ store, itemId });
 
   const { fileExplorer } = refs;
   fileExplorer.selectItem({ itemId });

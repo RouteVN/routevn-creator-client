@@ -129,16 +129,8 @@ const scaleLayoutElementItem = (item, scale) => {
   scaleObjectField(nextItem, "y", scale.y);
   scaleObjectField(nextItem, "width", scale.x);
   scaleObjectField(nextItem, "height", scale.y);
-
-  if (Object.hasOwn(nextItem, "gap") && isFiniteNumber(nextItem.gap)) {
-    const gapScale =
-      nextItem.direction === "horizontal"
-        ? scale.x
-        : nextItem.direction === "vertical"
-          ? scale.y
-          : scale.uniform;
-    nextItem.gap = scaleNumericValue(nextItem.gap, gapScale);
-  }
+  scaleObjectField(nextItem, "gapX", scale.x);
+  scaleObjectField(nextItem, "gapY", scale.y);
 
   if (Object.hasOwn(nextItem, "textStyle")) {
     nextItem.textStyle = scaleTextStyleOverrides(nextItem.textStyle, scale);

@@ -37,6 +37,7 @@ const createControlForm = ({ editMode = false } = {}) => ({
 const SYSTEM_ACTION_LABELS = {
   nextLine: "Next Line",
   sectionTransition: "Transition",
+  resetStoryAtSection: "Reset Story At Section",
   toggleAutoMode: "Toggle Auto Mode",
   toggleSkipMode: "Toggle Skip Mode",
   toggleDialogueUI: "Toggle Dialogue Box",

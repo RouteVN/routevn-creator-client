@@ -13,6 +13,7 @@ const ACTION_INTERACTION_LABELS = {
 const ACTION_LABELS = {
   nextLine: "Next Line",
   sectionTransition: "Section Transition",
+  resetStoryAtSection: "Reset Story At Section",
   toggleAutoMode: "Toggle Auto Mode",
   toggleSkipMode: "Toggle Skip Mode",
   toggleDialogueUI: "Toggle Dialogue Box",
@@ -137,6 +138,8 @@ export const toInspectorValues = ({
     paginationSize: values?.paginationSize ?? 3,
     scroll: values?.scroll ?? false,
     direction: values?.direction,
+    gapX: values?.gapX ?? 0,
+    gapY: values?.gapY ?? 0,
     sliderRuntimeValueId,
     sliderManualInitialValue,
     particleId: values?.particleId ?? "",

@@ -15,6 +15,12 @@ const SYSTEM_ACTIONS = [
     mode: "sectionTransition",
   },
   {
+    id: "24",
+    label: "Reset Story At Section",
+    icon: "section",
+    mode: "resetStoryAtSection",
+  },
+  {
     id: "13",
     label: "Toggle Auto Mode",
     icon: "play",

@@ -34,7 +34,7 @@ refs:
 template:
   - $if showSelected:
       - rtgl-view g=md w=f:
-          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.dialogue || preview.choice || preview.control || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.toggleDialogueUI || preview.runtimeActions || preview.setNextLineConfig || preview.pushLayeredView || preview.popLayeredView || preview.updateVariable || preview.rollbackByOffset || preview.showConfirmDialog || preview.hideConfirmDialog || preview.saveSlot || preview.loadSlot:
+          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.resetStoryAtSection || preview.dialogue || preview.choice || preview.control || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.toggleDialogueUI || preview.runtimeActions || preview.setNextLineConfig || preview.pushLayeredView || preview.popLayeredView || preview.updateVariable || preview.rollbackByOffset || preview.showConfirmDialog || preview.hideConfirmDialog || preview.saveSlot || preview.loadSlot:
               - $if preview.control:
                   - rtgl-view#actionItemControl data-mode=control g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=control wh=24: null
@@ -77,6 +77,10 @@ template:
                   - rtgl-view#actionItemSectionTransition data-mode=sectionTransition g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="transition" wh=24: null
                       - rtgl-text s=sm: ${preview.sectionTransition.label}
+              - $if preview.resetStoryAtSection:
+                  - rtgl-view#actionItemResetStoryAtSection data-mode=resetStoryAtSection g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg="section" wh=24: null
+                      - rtgl-text s=sm: ${preview.resetStoryAtSection.label}
               - $if preview.dialogue:
                   - rtgl-view#actionItemDialogue data-mode=dialogue g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=dialogue wh=24: null
@@ -172,6 +176,8 @@ template:
               - rvn-command-line-characters#commandLineCharacters :character=${actions.character} :presentationState=${presentationState}: null
             $elif mode == "sectionTransition":
               - rvn-command-line-section-transition#commandLineSectionTransition :sectionTransition=${actions.sectionTransition} :currentSceneId=${currentSceneId}: null
+            $elif mode == "resetStoryAtSection":
+              - rvn-command-line-reset-story-at-section#commandLineResetStoryAtSection :resetStoryAtSection=${actions.resetStoryAtSection} :currentSceneId=${currentSceneId}: null
             $elif mode == "control":
               - rvn-command-line-control#commandLineControl :controls=${controlLayouts} :control=${actions.control}: null
             $elif mode == "nextLine":
