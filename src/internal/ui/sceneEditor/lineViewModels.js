@@ -189,7 +189,7 @@ const resolveDialogueModeLabel = (repositoryState, line) => {
 
   const layoutId = dialogue.ui?.resourceId ?? dialogue.gui?.resourceId;
   const layoutType = repositoryState?.layouts?.items?.[layoutId]?.layoutType;
-  if (layoutType === "nvl") {
+  if (layoutType === "dialogue-nvl") {
     return "NVL";
   }
 

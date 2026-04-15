@@ -745,7 +745,7 @@ export const selectViewData = ({ state }) => {
       : 0,
     detailPreviewFontFamily: detailPreviewFontData.fontFamily,
     detailPreviewFontFileId: detailPreviewFontData.fileId,
-    title: "Typography",
+    title: "Text Styles",
     addText: "Add",
     folderContextMenuItems: state.folderContextMenuItems,
     itemContextMenuItems: state.itemContextMenuItems,

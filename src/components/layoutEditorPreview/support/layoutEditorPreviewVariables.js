@@ -8,7 +8,7 @@ import { visitLayoutItemsWithFragments } from "./layoutEditorPreviewFragments.js
 
 const PREVIEW_VARIABLE_TYPES = new Set(["boolean", "number", "string"]);
 const NORMAL_LIKE_LAYOUT_TYPES = new Set([
-  "normal",
+  "general",
   "save-load",
   "confirmDialog",
 ]);

@@ -59,7 +59,8 @@ export const selectViewData = ({ state, props, props: attrs }) => {
   const dialogueLayouts = Object.entries(repositoryState.layouts?.items || {})
     .filter(
       ([_, layout]) =>
-        layout.layoutType === "dialogue" || layout.layoutType === "nvl",
+        layout.layoutType === "dialogue-adv" ||
+        layout.layoutType === "dialogue-nvl",
     )
     .map(([id, layout]) => ({
       id,
@@ -168,7 +169,7 @@ const resolveDialogueModeLabel = (dialogue, layoutsItems) => {
 
   const layoutId = dialogue?.ui?.resourceId ?? dialogue?.gui?.resourceId;
   const layoutType = layoutsItems?.[layoutId]?.layoutType;
-  if (layoutType === "nvl") {
+  if (layoutType === "dialogue-nvl") {
     return "NVL";
   }
 

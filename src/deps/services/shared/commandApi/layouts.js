@@ -12,7 +12,7 @@ const submitCreateLayoutItem = async ({
   context,
   layoutId,
   name,
-  layoutType = "normal",
+  layoutType = "general",
   elements = createTreeCollection(),
   parentId = null,
   position = "last",
@@ -72,7 +72,7 @@ export const createLayoutCommandApi = (shared) => ({
   async createLayoutItem({
     layoutId,
     name,
-    layoutType = "normal",
+    layoutType = "general",
     elements = createTreeCollection(),
     parentId = null,
     position = "last",
@@ -113,7 +113,7 @@ export const createLayoutCommandApi = (shared) => ({
 
     const {
       name,
-      layoutType = "normal",
+      layoutType = "general",
       elements = createTreeCollection(),
       ...data
     } = sourceLayoutClone;

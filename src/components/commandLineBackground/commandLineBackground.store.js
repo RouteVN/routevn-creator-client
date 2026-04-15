@@ -260,12 +260,12 @@ export const selectSelectedResource = ({ state }) => {
   }
 
   const layoutTypeLabels = {
-    normal: "Normal",
+    general: "General",
     "save-load": "Save / Load",
     confirmDialog: "Confirm Dialog",
     history: "History",
-    dialogue: "Dialogue",
-    nvl: "NVL",
+    "dialogue-adv": "Dialogue ADV",
+    "dialogue-nvl": "Dialogue NVL",
     choice: "Choice",
   };
 
@@ -310,7 +310,7 @@ export const selectViewData = ({ state }) => {
     .map((group) => {
       const children = group.children
         .filter(
-          (layout) => state.tab !== "layout" || layout.layoutType === "normal",
+          (layout) => state.tab !== "layout" || layout.layoutType === "general",
         )
         .filter(matchesSearch)
         .map((child) => {
@@ -318,12 +318,12 @@ export const selectViewData = ({ state }) => {
           const itemBorderColor = isSelected ? "pr" : "bo";
           const itemHoverBorderColor = isSelected ? "pr" : "ac";
           const layoutTypeLabels = {
-            normal: "Normal",
+            general: "General",
             "save-load": "Save / Load",
             confirmDialog: "Confirm Dialog",
             history: "History",
-            dialogue: "Dialogue",
-            nvl: "NVL",
+            "dialogue-adv": "Dialogue ADV",
+            "dialogue-nvl": "Dialogue NVL",
             choice: "Choice",
           };
 

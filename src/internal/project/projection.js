@@ -260,7 +260,7 @@ const projectRepositoryResources = ({ repositoryState }) => {
             `${resourceType === "controls" ? "Control" : "Layout"} ${resourceId}`,
           ...(resourceType === "layouts"
             ? {
-                layoutType: item?.layoutType || "normal",
+                layoutType: item?.layoutType || "general",
                 isFragment: isFragmentLayout(item),
               }
             : {}),
@@ -924,7 +924,7 @@ const alignDialogueModesWithLayouts = (story, layouts = {}) => {
         const layoutId = dialogue?.ui?.resourceId;
         const layoutType = layouts?.[layoutId]?.layoutType;
 
-        if (layoutType === "nvl") {
+        if (layoutType === "dialogue-nvl") {
           dialogue.mode = "nvl";
         }
       });

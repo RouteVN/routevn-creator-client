@@ -17,7 +17,7 @@ contextMenuItems:
   - label: Slider
     type: item
     createType: slider
-  - "$when": 'layoutType == "normal"'
+  - "$when": 'layoutType == "general"'
     label: Fragment
     type: item
     createType: fragment-ref
@@ -37,23 +37,23 @@ contextMenuItems:
     label: Container (Confirm Cancel)
     type: item
     createType: container-confirm-dialog-cancel
-  - "$when": 'layoutType == "dialogue"'
+  - "$when": 'layoutType == "dialogue-adv"'
     label: Text (Dialogue Content)
     type: item
     createType: text-dialogue-content
-  - "$when": 'layoutType == "dialogue"'
+  - "$when": 'layoutType == "dialogue-adv"'
     label: Text (Character Name)
     type: item
     createType: text-character-name
-  - "$when": 'layoutType == "nvl"'
+  - "$when": 'layoutType == "dialogue-nvl"'
     label: Container (Dialogue Line)
     type: item
     createType: container-dialogue-line
-  - "$when": 'layoutType == "nvl"'
+  - "$when": 'layoutType == "dialogue-nvl"'
     label: Text (Line Character Name)
     type: item
     createType: text-dialogue-line-character-name
-  - "$when": 'layoutType == "nvl"'
+  - "$when": 'layoutType == "dialogue-nvl"'
     label: Text (Line Content)
     type: item
     createType: text-dialogue-line-content
@@ -115,7 +115,7 @@ emptyContextMenuItems:
   - label: Slider
     type: item
     createType: slider
-  - "$when": 'layoutType == "normal"'
+  - "$when": 'layoutType == "general"'
     label: Fragment
     type: item
     createType: fragment-ref
@@ -147,23 +147,23 @@ emptyContextMenuItems:
     label: Text (Save Date)
     type: item
     createType: text-save-load-slot-date
-  - "$when": 'layoutType == "dialogue"'
+  - "$when": 'layoutType == "dialogue-adv"'
     label: Text (Dialogue Content)
     type: item
     createType: text-dialogue-content
-  - "$when": 'layoutType == "dialogue"'
+  - "$when": 'layoutType == "dialogue-adv"'
     label: Text (Character Name)
     type: item
     createType: text-character-name
-  - "$when": 'layoutType == "nvl"'
+  - "$when": 'layoutType == "dialogue-nvl"'
     label: Container (Dialogue Line)
     type: item
     createType: container-dialogue-line
-  - "$when": 'layoutType == "nvl"'
+  - "$when": 'layoutType == "dialogue-nvl"'
     label: Text (Line Character Name)
     type: item
     createType: text-dialogue-line-character-name
-  - "$when": 'layoutType == "nvl"'
+  - "$when": 'layoutType == "dialogue-nvl"'
     label: Text (Line Content)
     type: item
     createType: text-dialogue-line-content

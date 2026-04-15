@@ -90,7 +90,7 @@ template:
                       - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=220 h=160 br=md: null
                     $else:
                       - rtgl-text c=mu-fg ta=c: Select image
-  - $if layoutType == 'dialogue':
+  - $if layoutType == 'dialogue-adv':
       - rtgl-form#dialogueForm key=${dialogueFormKey} w=f :form=${dialogueForm} :defaultValues=${dialogueDefaultValues}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
               - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c:
@@ -98,7 +98,7 @@ template:
                       - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=220 h=160 br=md: null
                     $else:
                       - rtgl-text c=mu-fg ta=c: Select image
-  - $if layoutType == 'nvl':
+  - $if layoutType == 'dialogue-nvl':
       - rtgl-form#nvlForm key=${nvlFormKey} w=f :form=${nvlForm} :defaultValues=${nvlDefaultValues} :context=${nvlContext}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
               - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c:
@@ -106,7 +106,7 @@ template:
                       - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=220 h=160 br=md: null
                     $else:
                       - rtgl-text c=mu-fg ta=c: Select image
-  - $if layoutType == 'dialogue':
+  - $if layoutType == 'dialogue-adv':
       - rtgl-view d=h av=c g=sm w=f ph=md pb=md:
           - rtgl-text s=sm c=mu-fg: Revealing Speed
           - rtgl-input#revealingSpeedInput type=number min=1 step=1 w=120 value=${previewRevealingSpeed}: null

@@ -175,7 +175,7 @@ export const createSceneEditorSectionWithName = async (
 
   if (layouts?.items) {
     for (const [layoutId, layout] of Object.entries(layouts.items)) {
-      if (!dialogueLayoutId && layout.layoutType === "dialogue") {
+      if (!dialogueLayoutId && layout.layoutType === "dialogue-adv") {
         dialogueLayoutId = layoutId;
       }
       if (dialogueLayoutId) {

@@ -148,11 +148,11 @@ const resolvePreviewBackgroundFormTarget = ({
   hasPreviewVariables,
   hasSaveLoadPreview,
 } = {}) => {
-  if (layoutType === "dialogue") {
+  if (layoutType === "dialogue-adv") {
     return "dialogue";
   }
 
-  if (layoutType === "nvl") {
+  if (layoutType === "dialogue-nvl") {
     return "nvl";
   }
 

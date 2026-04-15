@@ -175,7 +175,7 @@ const createLayoutElement = (id, data) => ({
 });
 
 export const createLayoutTemplate = (layoutType, projectResolution) => {
-  if (layoutType === "dialogue") {
+  if (layoutType === "dialogue-adv") {
     const containerId = nanoid();
     const nameTextId = nanoid();
     const contentTextId = nanoid();
@@ -250,7 +250,7 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
     );
   }
 
-  if (layoutType === "nvl") {
+  if (layoutType === "dialogue-nvl") {
     const nvlContainerId = nanoid();
     const nvlBackgroundId = nanoid();
     const nvlLinesId = nanoid();
@@ -829,7 +829,7 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
     );
   }
 
-  if (layoutType === "normal" || layoutType === "save-load") {
+  if (layoutType === "general" || layoutType === "save-load") {
     const rootId = nanoid();
     const textId = nanoid();
 
@@ -891,8 +891,8 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
 };
 
 const protectedLayoutTypeLabels = {
-  dialogue: "Dialogue",
-  nvl: "NVL",
+  "dialogue-adv": "Dialogue ADV",
+  "dialogue-nvl": "Dialogue NVL",
   choice: "Choice",
 };
 

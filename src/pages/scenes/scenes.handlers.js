@@ -578,7 +578,7 @@ export const handleSceneFormAction = async (deps, payload) => {
     if (layouts && layouts.items) {
       // Find first dialogue layout
       for (const [layoutId, layout] of Object.entries(layouts.items)) {
-        if (!dialogueLayoutId && layout.layoutType === "dialogue") {
+        if (!dialogueLayoutId && layout.layoutType === "dialogue-adv") {
           dialogueLayoutId = layoutId;
         }
         if (dialogueLayoutId) {
