@@ -29,15 +29,45 @@ export const toLayoutEditorContextMenuItems = (
   });
 };
 
-export const toLayoutEditorExplorerItems = (items = []) => {
-  return (items ?? []).map((item) => ({
-    ...item,
-    dragOptions: {
-      ...item.dragOptions,
-      canReceiveChildren: getLayoutEditorElementDefinition(item.type)
-        .isContainer,
-    },
-  }));
+const isCreateChildMenuItem = (item = {}) => {
+  if (item?.createType) {
+    return true;
+  }
+
+  const value = item?.value;
+  return (
+    value && typeof value === "object" && value.action === "new-child-item"
+  );
+};
+
+const toLeafItemContextMenuItems = (items = []) => {
+  return (items ?? []).filter((item) => !isCreateChildMenuItem(item));
+};
+
+export const toLayoutEditorExplorerItems = (
+  items = [],
+  { contextMenuItems } = {},
+) => {
+  const leafItemContextMenuItems = toLeafItemContextMenuItems(contextMenuItems);
+
+  return (items ?? []).map((item) => {
+    const definition = getLayoutEditorElementDefinition(item.type);
+    const hasPreviewDependencies =
+      Object.keys(definition.previewDependencies).length > 0;
+
+    return {
+      ...item,
+      contextMenuItems:
+        definition.isContainer === true
+          ? contextMenuItems
+          : leafItemContextMenuItems,
+      trailingSvg: hasPreviewDependencies ? "component" : undefined,
+      dragOptions: {
+        ...item.dragOptions,
+        canReceiveChildren: definition.isContainer,
+      },
+    };
+  });
 };
 
 export const selectLayoutEditorSelectedItem = ({ state }) => {

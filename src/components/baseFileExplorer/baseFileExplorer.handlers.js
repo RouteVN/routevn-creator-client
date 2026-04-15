@@ -681,8 +681,9 @@ export const handleItemContextMenu = (deps, payload) => {
   const itemContextMenuItems = Array.isArray(props.itemContextMenuItems)
     ? props.itemContextMenuItems
     : undefined;
-  const resolvedContextMenuItems =
-    item?.type === "folder"
+  const resolvedContextMenuItems = Array.isArray(item?.contextMenuItems)
+    ? item.contextMenuItems
+    : item?.type === "folder"
       ? (folderContextMenuItems ?? contextMenuItems)
       : (itemContextMenuItems ?? contextMenuItems);
   if (!resolvedContextMenuItems?.length) {
@@ -694,7 +695,7 @@ export const handleItemContextMenu = (deps, payload) => {
     position: { x: payload._event.clientX, y: payload._event.clientY },
     id: itemId,
     type: item?.type,
-    contextMenuItems,
+    contextMenuItems: resolvedContextMenuItems,
     folderContextMenuItems,
     itemContextMenuItems,
   });

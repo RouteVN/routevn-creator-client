@@ -321,12 +321,34 @@ export const selectInitialPreviewData = ({ state }) => {
 
 export const selectViewData = ({ state, constants }) => {
   const item = selectSelectedItem({ state });
-  const flatItems = toLayoutEditorExplorerItems(toFlatItems(state.layoutData));
+  const isControlResource = state.layout?.resourceType === "controls";
+  const layoutType = state.layout?.layoutType;
+  const parsedContextMenuItems = parseAndRender(
+    isControlResource
+      ? constants.controlContextMenuItems
+      : constants.contextMenuItems,
+    { layoutType },
+  );
+  const parsedEmptyContextMenuItems = parseAndRender(
+    isControlResource
+      ? constants.controlEmptyContextMenuItems
+      : constants.emptyContextMenuItems,
+    { layoutType },
+  );
+  const contextMenuItems = toLayoutEditorContextMenuItems(
+    parsedContextMenuItems,
+    state.projectResolution,
+  );
+  const emptyContextMenuItems = toLayoutEditorContextMenuItems(
+    parsedEmptyContextMenuItems,
+    state.projectResolution,
+  );
+  const flatItems = toLayoutEditorExplorerItems(toFlatItems(state.layoutData), {
+    contextMenuItems,
+  });
   const parentIdById = Object.fromEntries(
     flatItems.map((flatItem) => [flatItem.id, flatItem.parentId]),
   );
-  const isControlResource = state.layout?.resourceType === "controls";
-  const layoutType = state.layout?.layoutType;
   const layout =
     state.layout === undefined
       ? undefined
@@ -342,18 +364,6 @@ export const selectViewData = ({ state, constants }) => {
       elements: state.layoutData,
     };
   }
-  const parsedContextMenuItems = parseAndRender(
-    isControlResource
-      ? constants.controlContextMenuItems
-      : constants.contextMenuItems,
-    { layoutType },
-  );
-  const parsedEmptyContextMenuItems = parseAndRender(
-    isControlResource
-      ? constants.controlEmptyContextMenuItems
-      : constants.emptyContextMenuItems,
-    { layoutType },
-  );
 
   return {
     item,
@@ -362,14 +372,8 @@ export const selectViewData = ({ state, constants }) => {
     selectedItemId: state.selectedItemId,
     resourceCategory: isControlResource ? "systemConfig" : "userInterface",
     selectedResourceId: isControlResource ? "controls" : "layout-editor",
-    contextMenuItems: toLayoutEditorContextMenuItems(
-      parsedContextMenuItems,
-      state.projectResolution,
-    ),
-    emptyContextMenuItems: toLayoutEditorContextMenuItems(
-      parsedEmptyContextMenuItems,
-      state.projectResolution,
-    ),
+    contextMenuItems,
+    emptyContextMenuItems,
     layoutState,
     previewData: state.previewData,
     initialPreviewData: state.initialPreviewData,

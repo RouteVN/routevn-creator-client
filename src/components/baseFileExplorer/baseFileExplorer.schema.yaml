@@ -11,6 +11,10 @@ propsSchema:
             type: string
           id:
             type: string
+          trailingSvg:
+            type: string
+          contextMenuItems:
+            type: array
           level:
             type: number
           hasChildren:
