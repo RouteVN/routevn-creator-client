@@ -709,7 +709,7 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
           [confirmOkContainerId]: createLayoutElement(confirmOkContainerId, {
             type: "container-ref-confirm-dialog-ok",
             name: "Container (Confirm OK)",
-            x: 820,
+            x: 800,
             y: 540,
             anchorX: 0.5,
             anchorY: 0,
@@ -741,7 +741,7 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
             {
               type: "container-ref-confirm-dialog-cancel",
               name: "Container (Confirm Cancel)",
-              x: 1100,
+              x: 1120,
               y: 540,
               anchorX: 0.5,
               anchorY: 0,
@@ -779,7 +779,7 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
             scaleX: 1,
             scaleY: 1,
             rotation: 0,
-            width: 640,
+            width: 840,
             height: 320,
             imageId: "QO_Ou5DAengpMP4_WnMBy",
           }),

@@ -5,7 +5,42 @@ import { toFlatItems } from "./tree.js";
 const isNonEmptyString = (value) =>
   typeof value === "string" && value.length > 0;
 
-const getTransitionsFromLayout = (layout, menuSceneId) => {
+const resolveSceneIdFromSectionId = (repositoryState, sectionId) => {
+  if (!isNonEmptyString(sectionId)) {
+    return undefined;
+  }
+
+  for (const [sceneId, scene] of Object.entries(
+    repositoryState?.scenes?.items || {},
+  )) {
+    if (scene?.sections?.items?.[sectionId]) {
+      return sceneId;
+    }
+  }
+
+  return undefined;
+};
+
+const getActionTargetSceneIds = (actions, repositoryState) => {
+  const sceneIds = new Set();
+
+  const sectionTransitionSceneId = actions?.sectionTransition?.sceneId;
+  if (isNonEmptyString(sectionTransitionSceneId)) {
+    sceneIds.add(sectionTransitionSceneId);
+  }
+
+  const resetStorySceneId = resolveSceneIdFromSectionId(
+    repositoryState,
+    actions?.resetStoryAtSection?.sectionId,
+  );
+  if (isNonEmptyString(resetStorySceneId)) {
+    sceneIds.add(resetStorySceneId);
+  }
+
+  return [...sceneIds];
+};
+
+const getTransitionsFromLayout = (layout, menuSceneId, repositoryState) => {
   const transitions = new Set();
   let returnsToMenuScene = false;
 
@@ -18,8 +53,14 @@ const getTransitionsFromLayout = (layout, menuSceneId) => {
 
   for (const element of Object.values(layout.elements.items)) {
     const sceneIds = [
-      getInteractionActions(element?.click).sectionTransition?.sceneId,
-      getInteractionActions(element?.rightClick).sectionTransition?.sceneId,
+      ...getActionTargetSceneIds(
+        getInteractionActions(element?.click),
+        repositoryState,
+      ),
+      ...getActionTargetSceneIds(
+        getInteractionActions(element?.rightClick),
+        repositoryState,
+      ),
     ];
 
     for (const sceneId of sceneIds) {
@@ -74,6 +115,7 @@ const buildSectionOverview = ({
   layouts,
   controls,
   menuSceneId,
+  repositoryState,
 }) => {
   const outgoingSceneIds = new Set();
   let hasMenuReturnAction = false;
@@ -86,27 +128,31 @@ const buildSectionOverview = ({
       hasMenuReturnAction = true;
     }
 
-    const directTransition = lineActions?.sectionTransition?.sceneId;
-    if (isNonEmptyString(directTransition)) {
-      outgoingSceneIds.add(directTransition);
-      if (directTransition === menuSceneId) {
+    const directSceneIds = getActionTargetSceneIds(
+      lineActions,
+      repositoryState,
+    );
+    directSceneIds.forEach((sceneId) => {
+      outgoingSceneIds.add(sceneId);
+      if (sceneId === menuSceneId) {
         returnsToMenuScene = true;
       }
-    }
+    });
 
     const choiceItems = Array.isArray(lineActions?.choice?.items)
       ? lineActions.choice.items
       : [];
     for (const choiceItem of choiceItems) {
-      const choiceTransition =
-        choiceItem?.events?.click?.actions?.sectionTransition?.sceneId;
-      if (!isNonEmptyString(choiceTransition)) {
-        continue;
-      }
-      outgoingSceneIds.add(choiceTransition);
-      if (choiceTransition === menuSceneId) {
-        returnsToMenuScene = true;
-      }
+      const choiceSceneIds = getActionTargetSceneIds(
+        choiceItem?.events?.click?.actions,
+        repositoryState,
+      );
+      choiceSceneIds.forEach((sceneId) => {
+        outgoingSceneIds.add(sceneId);
+        if (sceneId === menuSceneId) {
+          returnsToMenuScene = true;
+        }
+      });
     }
 
     const layoutRefs = [lineActions?.background, lineActions?.control].filter(
@@ -118,7 +164,11 @@ const buildSectionOverview = ({
         layouts,
         controls,
       });
-      const layoutTransitions = getTransitionsFromLayout(layout, menuSceneId);
+      const layoutTransitions = getTransitionsFromLayout(
+        layout,
+        menuSceneId,
+        repositoryState,
+      );
       layoutTransitions.sceneIds.forEach((sceneId) => {
         outgoingSceneIds.add(sceneId);
       });
@@ -168,6 +218,7 @@ export const buildSceneOverview = ({ repositoryState, sceneId }) => {
         layouts,
         controls,
         menuSceneId,
+        repositoryState,
       }),
     );
 

@@ -184,6 +184,35 @@ const truncatePreviewText = (value = "", maxLength = 36) => {
   return `${text.slice(0, Math.max(0, maxLength - 3))}...`;
 };
 
+const findSectionReference = (sceneItems = {}, sectionId) => {
+  if (typeof sectionId !== "string" || sectionId.length === 0) {
+    return {};
+  }
+
+  for (const scene of Object.values(sceneItems)) {
+    const section = scene?.sections?.items?.[sectionId];
+    if (section) {
+      return {
+        scene,
+        section,
+      };
+    }
+  }
+
+  return {};
+};
+
+const formatSectionReferenceLabel = ({ scene, section, sectionId } = {}) => {
+  const sceneName = scene?.name ?? "";
+  const sectionName = section?.name ?? sectionId ?? "";
+
+  if (sceneName && sectionName) {
+    return `${sceneName} - ${sectionName}`;
+  }
+
+  return sectionName || sceneName;
+};
+
 // Moved from sceneEditor.store.js - now returns object instead of array
 export const selectActionsData = ({ props, state }) => {
   const actions = props.actions || {};
@@ -294,6 +323,26 @@ export const selectActionsData = ({ props, state }) => {
         label: isCurrentScene ? sectionName : `${sceneName} - ${sectionName}`,
       };
     }
+  }
+
+  if (actions.resetStoryAtSection) {
+    actionsObject.resetStoryAtSection = actions.resetStoryAtSection;
+    const sectionId = actions.resetStoryAtSection.sectionId;
+    const { scene, section } = findSectionReference(sceneItems, sectionId);
+    const targetLabel = formatSectionReferenceLabel({
+      scene,
+      section,
+      sectionId,
+    });
+
+    preview.resetStoryAtSection = {
+      scene,
+      section,
+      sectionId,
+      label: targetLabel
+        ? `Reset story at ${targetLabel}`
+        : "Reset story at section",
+    };
   }
 
   if (actions.pushLayeredView) {

@@ -13,6 +13,7 @@ const ACTION_INTERACTION_LABELS = {
 const ACTION_LABELS = {
   nextLine: "Next Line",
   sectionTransition: "Section Transition",
+  resetStoryAtSection: "Reset Story At Section",
   toggleAutoMode: "Toggle Auto Mode",
   toggleSkipMode: "Toggle Skip Mode",
   toggleDialogueUI: "Toggle Dialogue Box",

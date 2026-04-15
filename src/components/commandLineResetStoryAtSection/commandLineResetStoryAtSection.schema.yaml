@@ -1,0 +1,8 @@
+componentName: rvn-command-line-reset-story-at-section
+propsSchema:
+  type: object
+  properties:
+    resetStoryAtSection:
+      type: object
+    currentSceneId:
+      type: string
