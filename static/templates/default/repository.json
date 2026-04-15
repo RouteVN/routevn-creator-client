@@ -518,6 +518,13 @@
         "mimeType": "image/jpeg",
         "size": 4102,
         "sha256": "f86e22b3d765e6b1e49aa87a1ae35016bc61b9f34e795fe40238f652a4ddfbff"
+      },
+      "tST4AJhFY02zNCKHlHt7P": {
+        "id": "tST4AJhFY02zNCKHlHt7P",
+        "type": "image",
+        "mimeType": "image/jpeg",
+        "size": 3907,
+        "sha256": "daf83560a69b0ad43b7a72a1ed3866f667823149b7b833d9ede86efd3558473c"
       }
     },
     "tree": [
@@ -601,6 +608,9 @@
       },
       {
         "id": "0300au4rTnroOVq8Ec3wL"
+      },
+      {
+        "id": "tST4AJhFY02zNCKHlHt7P"
       }
     ]
   },
@@ -1266,7 +1276,7 @@
         "id": "HbESBAK58wzdbCozqzZvh",
         "type": "layout",
         "name": "Default Dialogue",
-        "thumbnailFileId": "kZrID7j_MvVJAeIAf-pFg",
+        "thumbnailFileId": "tST4AJhFY02zNCKHlHt7P",
         "layoutType": "dialogue-adv",
         "elements": {
           "items": {
@@ -1276,8 +1286,8 @@
               "name": "Dialogue Container",
               "x": 0,
               "y": 1080,
-              "width": 1850,
-              "height": 350,
+              "width": 0,
+              "height": 0,
               "anchorX": 0,
               "anchorY": 1,
               "scaleX": 1,
