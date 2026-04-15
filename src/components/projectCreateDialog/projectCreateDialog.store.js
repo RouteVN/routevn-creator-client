@@ -28,6 +28,7 @@ const createCreateProjectDefaultValues = (values = {}) => {
 };
 
 const form = {
+  title: "Create Project",
   fields: [
     {
       name: "name",
@@ -58,6 +59,8 @@ const form = {
       name: "resolution",
       type: "select",
       label: "Resolution",
+      description:
+        "Only 1920x1080 is supported for now, more options coming soon.",
       required: true,
       clearable: false,
       options: PROJECT_RESOLUTION_OPTIONS,

@@ -88,7 +88,7 @@ export const createDialoguePreviewData = ({
       },
       content: [{ text: dialogueContent }],
       lines:
-        layoutType === "nvl"
+        layoutType === "dialogue-nvl"
           ? createNvlLines(nvlDefaultValues)
           : createDialogueLines({
               characterName,

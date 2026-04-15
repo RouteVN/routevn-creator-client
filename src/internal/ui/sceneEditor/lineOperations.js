@@ -50,7 +50,7 @@ const resolveEffectiveDialogueMode = ({ repositoryState, dialogue } = {}) => {
     return "nvl";
   }
 
-  if (getDialogueLayoutType({ repositoryState, dialogue }) === "nvl") {
+  if (getDialogueLayoutType({ repositoryState, dialogue }) === "dialogue-nvl") {
     return "nvl";
   }
 

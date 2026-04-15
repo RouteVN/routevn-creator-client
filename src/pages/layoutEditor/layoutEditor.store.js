@@ -47,7 +47,7 @@ const getLayoutEditorLayoutType = (layoutType, resourceType) => {
     return "save-load";
   }
 
-  return layoutType ?? "normal";
+  return layoutType ?? "general";
 };
 
 const assignLayoutState = (state, { id, layout, resourceType } = {}) => {

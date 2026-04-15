@@ -18,7 +18,7 @@ const getCollectionTree = (collection) => {
 };
 
 const isSelectableVisualResource = (resourceType, item) => {
-  return resourceType !== "layout" || item?.layoutType === "visual";
+  return resourceType !== "layout" || item?.layoutType === "general";
 };
 
 const prefixTreeNode = (node, resourceType, items) => {
@@ -256,7 +256,7 @@ export const selectResourceItemById = ({ state }, { resourceId } = {}) => {
   }
 
   const layoutData = state.layouts.items?.[resourceId];
-  if (layoutData?.layoutType === "visual") {
+  if (layoutData?.layoutType === "general") {
     return {
       ...layoutData,
       resourceType: "layout",
@@ -359,11 +359,11 @@ export const selectViewData = ({ state }) => {
     childFilter: () => true,
   });
 
-  // Add layouts (only visual type)
+  // Add layouts (only general type)
   const layoutGroups = buildResourceGroups({
     collection: state.layouts,
     resourceType: "layout",
-    childFilter: (child) => child.layoutType === "visual",
+    childFilter: (child) => child.layoutType === "general",
   });
 
   const resourceGroups = [...imageGroups, ...videoGroups, ...layoutGroups];

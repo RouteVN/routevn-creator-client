@@ -1,5 +1,5 @@
 const getLayoutTypeByMode = (mode) => {
-  return mode === "nvl" ? "nvl" : "dialogue";
+  return mode === "nvl" ? "dialogue-nvl" : "dialogue-adv";
 };
 
 const getLayoutOptions = ({ layouts, mode } = {}) => {
@@ -168,7 +168,10 @@ export const selectViewData = ({ state, props }) => {
           ...field,
           options: layoutOptions,
           value: selectedResourceId,
-          label: selectedMode === "nvl" ? "NVL Layout" : "Dialogue Layout",
+          label:
+            selectedMode === "nvl"
+              ? "Dialogue NVL Layout"
+              : "Dialogue ADV Layout",
         };
       }
       if (field.name === "characterId") {

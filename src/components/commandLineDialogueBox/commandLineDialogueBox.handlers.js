@@ -3,7 +3,7 @@ const toBoolean = (value) => {
 };
 
 const getLayoutTypeByMode = (mode) => {
-  return mode === "nvl" ? "nvl" : "dialogue";
+  return mode === "nvl" ? "dialogue-nvl" : "dialogue-adv";
 };
 
 const resolveDialogueMode = ({ layouts, dialogue } = {}) => {
@@ -12,7 +12,7 @@ const resolveDialogueMode = ({ layouts, dialogue } = {}) => {
     (layout) => layout.id === resourceId,
   )?.layoutType;
 
-  if (dialogue?.mode === "nvl" || layoutType === "nvl") {
+  if (dialogue?.mode === "nvl" || layoutType === "dialogue-nvl") {
     return "nvl";
   }
 
