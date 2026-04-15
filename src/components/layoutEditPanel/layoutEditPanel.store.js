@@ -260,7 +260,8 @@ const createDefaultValues = () => ({
     y: 0,
   },
   direction: undefined,
-  gap: 0,
+  gapX: 0,
+  gapY: 0,
   actions: {},
 });
 

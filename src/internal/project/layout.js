@@ -1094,10 +1094,13 @@ const applyContainerNode = ({ element, node }) => {
     return element;
   }
 
+  const gapX = node.gapX ?? 0;
+  const gapY = node.gapY ?? 0;
   const nextElement = {
     ...element,
     direction: node.direction,
-    gap: node.gap,
+    gapX,
+    gapY,
     containerType: node.containerType,
   };
 

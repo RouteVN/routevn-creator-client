@@ -167,9 +167,14 @@ layoutSections:
         type: group
         fields:
           - type: clickable-value
-            label: Gap
-            name: gap
-            value: "${values.gap}"
+            label: Gap X
+            name: gapX
+            value: "${values.gapX}"
+            popoverForm: *numberPopoverForm
+          - type: clickable-value
+            label: Gap Y
+            name: gapY
+            value: "${values.gapY}"
             popoverForm: *numberPopoverForm
   - "$when": "supportsScroll"
     label: Scroll

@@ -138,6 +138,8 @@ export const toInspectorValues = ({
     paginationSize: values?.paginationSize ?? 3,
     scroll: values?.scroll ?? false,
     direction: values?.direction,
+    gapX: values?.gapX ?? 0,
+    gapY: values?.gapY ?? 0,
     sliderRuntimeValueId,
     sliderManualInitialValue,
     particleId: values?.particleId ?? "",
