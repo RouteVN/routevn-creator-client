@@ -6,10 +6,11 @@ import {
 } from "./compatibility.js";
 import { committedEventToCommand } from "./mappers.js";
 
-export const PROJECTOR_CACHE_VERSION = "1";
+export const PROJECTOR_CACHE_VERSION = "2";
 
 const PROJECTOR_CACHE_VERSION_KEY = "projectorCacheVersion";
 const PROJECTOR_GAP_KEY = "projectorGap";
+const PROJECT_CREATE_COMMAND_TYPE = "project.create";
 
 const readAppValue = async (store, key) => {
   if (!store?.app || typeof store.app.get !== "function") return undefined;
@@ -32,6 +33,22 @@ const getRepositoryEvents = async (repositoryStore) => {
   }
   const events = await repositoryStore.getEvents();
   return Array.isArray(events) ? events : [];
+};
+
+const getCommandTypeFromEvent = (event) => {
+  return committedEventToCommand(event)?.type;
+};
+
+const hasProjectCreateEvent = (events = []) => {
+  return (events || []).some(
+    (event) => getCommandTypeFromEvent(event) === PROJECT_CREATE_COMMAND_TYPE,
+  );
+};
+
+const findProjectCreateEvent = (events = []) => {
+  return (events || []).find(
+    (event) => getCommandTypeFromEvent(event) === PROJECT_CREATE_COMMAND_TYPE,
+  );
 };
 
 export const listCommittedEvents = async (rawClientStore) => {
@@ -122,9 +139,19 @@ export const ensureRawCommittedLogBootstrapped = async ({
 export const buildRepositoryProjectionFromCommittedEvents = ({
   committedEvents,
   supportedSchemaVersion,
+  fallbackRepositoryEvents = [],
 }) => {
   const repositoryEvents = [];
   let projectionGap;
+
+  if (!hasProjectCreateEvent(committedEvents)) {
+    const fallbackProjectCreateEvent = findProjectCreateEvent(
+      fallbackRepositoryEvents,
+    );
+    if (fallbackProjectCreateEvent) {
+      repositoryEvents.push(structuredClone(fallbackProjectCreateEvent));
+    }
+  }
 
   for (const committedEvent of committedEvents || []) {
     if (projectionGap) break;
@@ -189,9 +216,11 @@ export const rebuildRepositoryProjectionCache = async ({
   rawClientStore,
 }) => {
   const committedEvents = await listCommittedEvents(rawClientStore);
+  const fallbackRepositoryEvents = await getRepositoryEvents(repositoryStore);
   const { repositoryEvents, projectionGap } =
     buildRepositoryProjectionFromCommittedEvents({
       committedEvents,
+      fallbackRepositoryEvents,
     });
 
   await clearDerivedRepositoryState(repositoryStore);
