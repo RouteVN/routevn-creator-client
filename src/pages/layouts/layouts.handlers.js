@@ -663,11 +663,166 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
     );
   }
 
-  if (
-    layoutType === "normal" ||
-    layoutType === "save-load" ||
-    layoutType === "confirmDialog"
-  ) {
+  if (layoutType === "confirmDialog") {
+    const rootId = nanoid();
+    const textId = nanoid();
+    const confirmOkContainerId = nanoid();
+    const confirmOkTextId = nanoid();
+    const confirmCancelContainerId = nanoid();
+    const confirmCancelTextId = nanoid();
+    const spriteId = nanoid();
+
+    return scaleLayoutElementsForProjectResolution(
+      {
+        items: {
+          [rootId]: createLayoutElement(rootId, {
+            type: "container",
+            name: "Root",
+            x: -1,
+            y: 0,
+            gap: 0,
+            width: 1920,
+            height: 1080,
+            anchorX: 0,
+            anchorY: 0,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+          }),
+          [textId]: createLayoutElement(textId, {
+            type: "text",
+            name: "Text",
+            x: 960,
+            y: 400,
+            width: 560,
+            anchorX: 0.5,
+            anchorY: 0,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            text: "Are you sure to go back to title page?",
+            textStyle: {
+              align: "center",
+            },
+            textStyleId: "AZb6o5taVeKePPowGTqqr",
+          }),
+          [confirmOkContainerId]: createLayoutElement(confirmOkContainerId, {
+            type: "container-ref-confirm-dialog-ok",
+            name: "Container (Confirm OK)",
+            x: 820,
+            y: 540,
+            anchorX: 0.5,
+            anchorY: 0,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            width: 0,
+            height: 0,
+          }),
+          [confirmOkTextId]: createLayoutElement(confirmOkTextId, {
+            type: "text",
+            name: "Text",
+            x: 0,
+            y: 0,
+            anchorX: 0,
+            anchorY: 0,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            text: "Yes",
+            textStyle: {
+              align: "left",
+            },
+            textStyleId: "WkzTF7gNhJSnG4MnZTh2U",
+            hoverTextStyleId: "6wXcAmc_SmJHzMIeKp--Z",
+          }),
+          [confirmCancelContainerId]: createLayoutElement(
+            confirmCancelContainerId,
+            {
+              type: "container-ref-confirm-dialog-cancel",
+              name: "Container (Confirm Cancel)",
+              x: 1100,
+              y: 540,
+              anchorX: 0.5,
+              anchorY: 0,
+              scaleX: 1,
+              scaleY: 1,
+              rotation: 0,
+              width: 0,
+              height: 0,
+            },
+          ),
+          [confirmCancelTextId]: createLayoutElement(confirmCancelTextId, {
+            type: "text",
+            name: "Text",
+            x: 0,
+            y: 0,
+            anchorX: 0,
+            anchorY: 0,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            text: "No",
+            textStyle: {
+              align: "left",
+            },
+            textStyleId: "WkzTF7gNhJSnG4MnZTh2U",
+            hoverTextStyleId: "6wXcAmc_SmJHzMIeKp--Z",
+          }),
+          [spriteId]: createLayoutElement(spriteId, {
+            type: "sprite",
+            name: "Sprite",
+            x: 960,
+            y: 336,
+            anchorX: 0.5,
+            anchorY: 0,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            width: 640,
+            height: 320,
+            imageId: "QO_Ou5DAengpMP4_WnMBy",
+          }),
+        },
+        tree: [
+          {
+            id: rootId,
+            children: [
+              {
+                id: spriteId,
+                children: [],
+              },
+              {
+                id: textId,
+                children: [],
+              },
+              {
+                id: confirmOkContainerId,
+                children: [
+                  {
+                    id: confirmOkTextId,
+                    children: [],
+                  },
+                ],
+              },
+              {
+                id: confirmCancelContainerId,
+                children: [
+                  {
+                    id: confirmCancelTextId,
+                    children: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      projectResolution,
+    );
+  }
+
+  if (layoutType === "normal" || layoutType === "save-load") {
     const rootId = nanoid();
     const textId = nanoid();
 
