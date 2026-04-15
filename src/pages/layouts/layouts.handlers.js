@@ -16,6 +16,19 @@ const syncEditFormValues = ({ deps, values } = {}) => {
   editForm.setValues({ values });
 };
 
+const logSelectedLayoutItem = ({ store, itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  const item = store.selectLayoutItemById({ itemId });
+  if (!item) {
+    return;
+  }
+
+  console.log("Selected layout item", item);
+};
+
 const navigateToLayoutEditor = ({ appService, layoutId } = {}) => {
   const currentPayload = appService.getPayload();
   appService.navigate("/project/layout-editor", {
@@ -79,10 +92,10 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
 const {
   handleBeforeMount,
   refreshData: handleDataChanged,
-  handleFileExplorerSelectionChanged,
+  handleFileExplorerSelectionChanged: handleCatalogFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
-  handleItemClick: handleLayoutItemClick,
+  handleItemClick: handleCatalogLayoutItemClick,
   handleSearchInput,
 } = createCatalogPageHandlers({
   resourceType: "layouts",
@@ -95,11 +108,27 @@ const {
 export {
   handleBeforeMount,
   handleDataChanged,
-  handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
-  handleLayoutItemClick,
   handleSearchInput,
+};
+
+export const handleFileExplorerSelectionChanged = (deps, payload) => {
+  handleCatalogFileExplorerSelectionChanged(deps, payload);
+
+  const { itemId, isFolder } = payload._event.detail;
+  if (isFolder) {
+    return;
+  }
+
+  logSelectedLayoutItem({ store: deps.store, itemId });
+};
+
+export const handleLayoutItemClick = (deps, payload) => {
+  handleCatalogLayoutItemClick(deps, payload);
+
+  const { itemId } = payload._event.detail;
+  logSelectedLayoutItem({ store: deps.store, itemId });
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {
@@ -256,6 +285,7 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
             scaleX: 1,
             scaleY: 1,
             rotation: 0,
+            imageId: "foPOJMdjT9agVRh68ST1o",
           }),
           [nvlLinesId]: createLayoutElement(nvlLinesId, {
             type: "container",
@@ -279,7 +309,8 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
             x: 0,
             y: 0,
             width: 1640,
-            height: 120,
+            height: 0,
+            direction: "vertical",
             anchorX: 0,
             anchorY: 0,
             scaleX: 1,
@@ -299,10 +330,11 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
             scaleX: 1,
             scaleY: 1,
             rotation: 0,
-            text: "${line.content[0].text}",
+            text: "text",
             textStyle: {
               align: "left",
             },
+            textStyleId: "qdM8QXbdBoqiPDUHZWheh",
           }),
           [lineContentTextId]: createLayoutElement(lineContentTextId, {
             type: "text-revealing",
@@ -316,10 +348,13 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
             scaleX: 1,
             scaleY: 1,
             rotation: 0,
-            text: "text",
+            text: "${line.content[0].text}",
             textStyle: {
+              wordWrapWidth: 300,
               align: "left",
             },
+            textStyleId: "1TqapkiPUErN434i6YCFW",
+            revealEffect: "none",
           }),
         },
         tree: [
@@ -520,6 +555,105 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
               },
               {
                 id: closeButtonTextId,
+              },
+            ],
+          },
+        ],
+      },
+      projectResolution,
+    );
+  }
+
+  if (layoutType === "choice") {
+    const choicesContainerId = nanoid();
+    const choiceItemContainerId = nanoid();
+    const choiceTextId = nanoid();
+    const choiceBackgroundId = nanoid();
+
+    return scaleLayoutElementsForProjectResolution(
+      {
+        items: {
+          [choicesContainerId]: createLayoutElement(choicesContainerId, {
+            type: "container",
+            name: "Choices Container",
+            x: 64,
+            y: 300,
+            width: 0,
+            height: 0,
+            anchorX: 0,
+            anchorY: 0,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            direction: "vertical",
+            gap: 36,
+          }),
+          [choiceItemContainerId]: createLayoutElement(choiceItemContainerId, {
+            type: "container-ref-choice-item",
+            name: "Container (Choice Item)",
+            x: 0,
+            y: 0,
+            anchorX: 0,
+            anchorY: 0,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            hover: {
+              inheritToChildren: true,
+            },
+            click: {
+              inheritToChildren: true,
+            },
+            rightClick: {
+              inheritToChildren: true,
+            },
+          }),
+          [choiceTextId]: createLayoutElement(choiceTextId, {
+            type: "text-ref-choice-item-content",
+            name: "Text (Choice Item Content)",
+            x: 960,
+            y: 10,
+            anchorX: 0.5,
+            anchorY: 0,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            text: "text",
+            textStyle: {
+              align: "center",
+            },
+            textStyleId: "WkzTF7gNhJSnG4MnZTh2U",
+          }),
+          [choiceBackgroundId]: createLayoutElement(choiceBackgroundId, {
+            type: "sprite",
+            name: "Choice Background",
+            x: 0,
+            y: 0,
+            width: 1800,
+            height: 80,
+            anchorX: 0,
+            anchorY: 0,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            imageId: "cdCXiw7A7zJxawo4iMwNS",
+            hoverImageId: "KFdkZTWLURDHTkVV2dGEp",
+          }),
+        },
+        tree: [
+          {
+            id: choicesContainerId,
+            children: [
+              {
+                id: choiceItemContainerId,
+                children: [
+                  {
+                    id: choiceBackgroundId,
+                  },
+                  {
+                    id: choiceTextId,
+                  },
+                ],
               },
             ],
           },
