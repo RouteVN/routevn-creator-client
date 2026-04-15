@@ -4,13 +4,14 @@ import {
   scenePartitionFor,
   scenePartitionTokenFor,
 } from "../collab/partitions.js";
+import { committedEventToCommand } from "../collab/mappers.js";
 
 export const MAIN_VIEW_NAME = "project_repository_main_state";
 export const SCENE_VIEW_NAME = "project_repository_scene_state";
 export const SCENE_OVERVIEW_VIEW_NAME =
   "project_repository_scene_overview_state";
 export const MAIN_VIEW_VERSION = "1";
-export const SCENE_VIEW_VERSION = "1";
+export const SCENE_VIEW_VERSION = "2";
 export const SCENE_OVERVIEW_VIEW_VERSION = "1";
 export const VIEW_CHECKPOINT = {
   mode: "debounce",
@@ -117,10 +118,23 @@ export const getLatestSceneProjectionRevision = ({ events = [], sceneId }) => {
   }
 
   const scenePartition = scenePartitionFor(sceneId);
+  const mainScenePartition = mainScenePartitionFor(sceneId);
   let latestRevision = 0;
 
   for (let index = 0; index < events.length; index += 1) {
-    if (events[index]?.partition === scenePartition) {
+    const event = events[index];
+    const partition = event?.partition;
+    if (partition === scenePartition) {
+      latestRevision = index + 1;
+      continue;
+    }
+
+    if (partition !== mainScenePartition) {
+      continue;
+    }
+
+    const command = committedEventToCommand(event);
+    if (typeof command?.type === "string" && command.type.startsWith("line.")) {
       latestRevision = index + 1;
     }
   }

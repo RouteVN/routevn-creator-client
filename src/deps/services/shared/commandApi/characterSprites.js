@@ -12,14 +12,10 @@ export const createCharacterSpriteCommandApi = (shared) => ({
     index,
   }) {
     const context = await shared.ensureCommandContext();
-    const ensureFilesResult = await shared.ensureFilesExist({
+    const fileCommands = shared.buildMissingFileCommands({
       context,
       fileRecords,
     });
-    if (ensureFilesResult?.valid === false) {
-      return ensureFilesResult;
-    }
-
     const nextSpriteId = spriteId || shared.createId();
     const character = context.state?.characters?.items?.[characterId];
     const resolvedIndex = shared.resolveCharacterSpriteIndex({
@@ -34,22 +30,27 @@ export const createCharacterSpriteCommandApi = (shared) => ({
       "characters",
     );
 
-    const submitResult = await shared.submitCommandWithContext({
+    const submitResult = await shared.submitCommandsWithContext({
       context,
-      scope: "resources",
-      basePartition: resourcePartition,
-      type: COMMAND_TYPES.CHARACTER_SPRITE_CREATE,
-      payload: {
-        characterId,
-        spriteId: nextSpriteId,
-        data: structuredClone(data || {}),
-        ...shared.buildPlacementPayload({
-          parentId,
-          index: resolvedIndex,
-          position,
-          positionTargetId,
-        }),
-      },
+      commands: [
+        ...fileCommands,
+        {
+          scope: "resources",
+          basePartition: resourcePartition,
+          type: COMMAND_TYPES.CHARACTER_SPRITE_CREATE,
+          payload: {
+            characterId,
+            spriteId: nextSpriteId,
+            data: structuredClone(data || {}),
+            ...shared.buildPlacementPayload({
+              parentId,
+              index: resolvedIndex,
+              position,
+              positionTargetId,
+            }),
+          },
+        },
+      ],
     });
 
     if (submitResult?.valid === false) {
@@ -66,29 +67,31 @@ export const createCharacterSpriteCommandApi = (shared) => ({
     fileRecords = [],
   }) {
     const context = await shared.ensureCommandContext();
-    const ensureFilesResult = await shared.ensureFilesExist({
+    const fileCommands = shared.buildMissingFileCommands({
       context,
       fileRecords,
     });
-    if (ensureFilesResult?.valid === false) {
-      return ensureFilesResult;
-    }
 
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
       "characters",
     );
 
-    return shared.submitCommandWithContext({
+    return shared.submitCommandsWithContext({
       context,
-      scope: "resources",
-      basePartition: resourcePartition,
-      type: COMMAND_TYPES.CHARACTER_SPRITE_UPDATE,
-      payload: {
-        characterId,
-        spriteId,
-        data: structuredClone(data || {}),
-      },
+      commands: [
+        ...fileCommands,
+        {
+          scope: "resources",
+          basePartition: resourcePartition,
+          type: COMMAND_TYPES.CHARACTER_SPRITE_UPDATE,
+          payload: {
+            characterId,
+            spriteId,
+            data: structuredClone(data || {}),
+          },
+        },
+      ],
     });
   },
 

@@ -1709,6 +1709,28 @@ const dedupeFileReferences = (fileReferences = []) => {
   return Array.from(dedupedReferences.values());
 };
 
+const resolveTargetSceneIdFromActionEntry = (allScenes, entry) => {
+  if (!entry || typeof entry !== "object") {
+    return undefined;
+  }
+
+  if (typeof entry.sceneId === "string" && allScenes[entry.sceneId]) {
+    return entry.sceneId;
+  }
+
+  if (typeof entry.sectionId !== "string" || entry.sectionId.length === 0) {
+    return undefined;
+  }
+
+  for (const [sceneId, scene] of Object.entries(allScenes)) {
+    if (scene?.sections?.[entry.sectionId]) {
+      return sceneId;
+    }
+  }
+
+  return undefined;
+};
+
 export const extractTransitionTargetSceneIds = (projectData, sceneId) => {
   const scene = projectData?.story?.scenes?.[sceneId];
   const allScenes = projectData?.story?.scenes || {};
@@ -1720,15 +1742,16 @@ export const extractTransitionTargetSceneIds = (projectData, sceneId) => {
   const sceneIds = new Set();
 
   traverseScene(scene, (key, entry) => {
-    if (key !== "sectionTransition" || typeof entry !== "object" || !entry) {
+    if (key !== "sectionTransition" && key !== "resetStoryAtSection") {
       return;
     }
 
-    if (typeof entry.sceneId !== "string" || !allScenes[entry.sceneId]) {
+    const targetSceneId = resolveTargetSceneIdFromActionEntry(allScenes, entry);
+    if (!targetSceneId) {
       return;
     }
 
-    sceneIds.add(entry.sceneId);
+    sceneIds.add(targetSceneId);
   });
 
   return Array.from(sceneIds);
@@ -1745,15 +1768,16 @@ export const extractTransitionTargetSceneIdsFromActions = (
 
   const sceneIds = new Set();
   traverseScene(actions, (key, entry) => {
-    if (key !== "sectionTransition" || typeof entry !== "object" || !entry) {
+    if (key !== "sectionTransition" && key !== "resetStoryAtSection") {
       return;
     }
 
-    if (typeof entry.sceneId !== "string" || !allScenes[entry.sceneId]) {
+    const targetSceneId = resolveTargetSceneIdFromActionEntry(allScenes, entry);
+    if (!targetSceneId) {
       return;
     }
 
-    sceneIds.add(entry.sceneId);
+    sceneIds.add(targetSceneId);
   });
 
   return Array.from(sceneIds);

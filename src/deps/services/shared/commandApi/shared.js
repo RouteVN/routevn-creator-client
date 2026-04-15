@@ -285,16 +285,16 @@ export const createCommandApiShared = ({
     };
   };
 
-  const ensureFilesExist = async ({ context, fileRecords = [] } = {}) => {
+  const buildMissingFileCommands = ({ context, fileRecords = [] } = {}) => {
     const normalizedFileRecords = Array.isArray(fileRecords) ? fileRecords : [];
     if (normalizedFileRecords.length === 0) {
-      return { valid: true, createdCount: 0 };
+      return [];
     }
 
     const knownFileIds = new Set(
       Object.keys(context.state?.files?.items || {}),
     );
-    let createdCount = 0;
+    const commands = [];
 
     for (const fileRecord of normalizedFileRecords) {
       if (
@@ -319,8 +319,7 @@ export const createCommandApiShared = ({
         );
       }
 
-      const submitResult = await submitCommandWithContext({
-        context,
+      commands.push({
         scope: "resources",
         basePartition: filePartitionFor(context.projectId),
         type: COMMAND_TYPES.FILE_CREATE,
@@ -333,15 +332,34 @@ export const createCommandApiShared = ({
           },
         },
       });
-      if (submitResult?.valid === false) {
-        return submitResult;
-      }
 
       knownFileIds.add(fileRecord.id);
-      createdCount += 1;
     }
 
-    return { valid: true, createdCount };
+    return commands;
+  };
+
+  const ensureFilesExist = async ({ context, fileRecords = [] } = {}) => {
+    const commands = buildMissingFileCommands({
+      context,
+      fileRecords,
+    });
+    if (commands.length === 0) {
+      return { valid: true, createdCount: 0 };
+    }
+
+    const submitResult = await submitCommandsWithContext({
+      context,
+      commands,
+    });
+    if (submitResult?.valid === false) {
+      return submitResult;
+    }
+
+    return {
+      valid: true,
+      createdCount: commands.length,
+    };
   };
 
   const buildPlacementPayload = ({
@@ -503,6 +521,7 @@ export const createCommandApiShared = ({
     createId,
     getCurrentProjectId,
     ensureCommandContext,
+    buildMissingFileCommands,
     ensureFilesExist,
     createCommandWithContext,
     submitCommandWithContext,
