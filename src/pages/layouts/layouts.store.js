@@ -137,9 +137,7 @@ const buildDetailFields = (item) => {
 
 const buildCatalogItem = (item) => {
   const layoutType = item.layoutType;
-  const typeInfo = isFragmentLayout(item)
-    ? `${layoutTypeLabels[layoutType] ?? layoutType ?? ""} / Fragment`
-    : (layoutTypeLabels[layoutType] ?? layoutType ?? "");
+  const typeInfo = layoutTypeLabels[layoutType] ?? layoutType ?? "";
 
   return {
     id: item.id,
@@ -148,6 +146,7 @@ const buildCatalogItem = (item) => {
     cardVariant: "thumbnail",
     previewFileId: item.thumbnailFileId,
     typeInfo,
+    typeInfoSvg: isFragmentLayout(item) ? "fragment" : undefined,
   };
 };
 

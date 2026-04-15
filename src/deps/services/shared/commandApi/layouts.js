@@ -151,26 +151,24 @@ export const createLayoutCommandApi = (shared) => ({
 
   async updateLayoutItem({ layoutId, data, fileRecords = [] }) {
     const context = await shared.ensureCommandContext();
-    const fileCommands = shared.buildMissingFileCommands({
+    const ensureFilesResult = await shared.ensureFilesExist({
       context,
       fileRecords,
     });
+    if (ensureFilesResult?.valid === false) {
+      return ensureFilesResult;
+    }
     const resourcePartition = getLayoutsResourcePartition({ shared, context });
 
-    return shared.submitCommandsWithContext({
+    return shared.submitCommandWithContext({
       context,
-      commands: [
-        ...fileCommands,
-        {
-          scope: "resources",
-          basePartition: resourcePartition,
-          type: COMMAND_TYPES.LAYOUT_UPDATE,
-          payload: {
-            layoutId,
-            data: structuredClone(data || {}),
-          },
-        },
-      ],
+      scope: "resources",
+      basePartition: resourcePartition,
+      type: COMMAND_TYPES.LAYOUT_UPDATE,
+      payload: {
+        layoutId,
+        data: structuredClone(data || {}),
+      },
     });
   },
 

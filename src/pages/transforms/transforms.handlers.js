@@ -201,6 +201,25 @@ export const handleTransformItemDoubleClick = async (deps, payload) => {
   });
 };
 
+export const handleTransformItemEdit = async (deps, payload) => {
+  const { itemId } = payload._event.detail;
+  if (!itemId) {
+    return;
+  }
+
+  const itemData = deps.store.selectTransformItemById({ itemId });
+  if (!itemData) {
+    return;
+  }
+
+  await openTransformDialog({
+    deps,
+    editMode: true,
+    itemId,
+    itemData,
+  });
+};
+
 export const handleDetailHeaderClick = async (deps) => {
   const { store } = deps;
   const itemId = store.selectSelectedItemId();
@@ -326,4 +345,42 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   await handleDataChanged(deps);
+};
+
+export const handleItemDuplicate = async (deps, payload) => {
+  const { appService, projectService, store } = deps;
+  const { itemId } = payload._event.detail;
+  if (!itemId) {
+    return;
+  }
+
+  const itemData = store.selectTransformItemById({ itemId });
+  if (!itemData) {
+    return;
+  }
+
+  const duplicateTransformId = nanoid();
+  const createAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to duplicate transform.",
+    action: () =>
+      projectService.createTransform({
+        transformId: duplicateTransformId,
+        data: {
+          type: "transform",
+          ...createTransformPayload(itemData),
+        },
+        parentId: itemData.parentId ?? null,
+        position: "after",
+        positionTargetId: itemId,
+      }),
+  });
+
+  if (!createAttempt.ok) {
+    return;
+  }
+
+  await handleDataChanged(deps, {
+    selectedItemId: duplicateTransformId,
+  });
 };

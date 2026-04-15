@@ -3,10 +3,12 @@ import {
   submitCreateResourceCommand,
   submitUpdateResourceCommand,
 } from "../../src/deps/services/shared/commandApi/resources/shared.js";
+import { createLayoutCommandApi } from "../../src/deps/services/shared/commandApi/layouts.js";
+import { createControlCommandApi } from "../../src/deps/services/shared/commandApi/controls.js";
 import { COMMAND_TYPES } from "../../src/internal/project/commands.js";
 
 const createShared = ({
-  fileCommands = [],
+  ensureFilesResult = { valid: true, createdCount: 0 },
   submitResult = { valid: true, commandIds: [] },
 } = {}) => {
   const context = {
@@ -20,12 +22,13 @@ const createShared = ({
 
   const shared = {
     ensureCommandContext: vi.fn().mockResolvedValue(context),
-    buildMissingFileCommands: vi.fn().mockReturnValue(fileCommands),
+    ensureFilesExist: vi.fn().mockResolvedValue(ensureFilesResult),
     createId: vi.fn().mockReturnValue("generated-resource-id"),
     resolveResourceIndex: vi.fn().mockReturnValue(4),
     buildPlacementPayload: vi
       .fn()
       .mockReturnValue({ parentId: "folder-1", index: 4 }),
+    submitCommandWithContext: vi.fn().mockResolvedValue(submitResult),
     submitCommandsWithContext: vi.fn().mockResolvedValue(submitResult),
     resourceTypePartitionFor: vi.fn().mockReturnValue("main"),
   };
@@ -34,24 +37,9 @@ const createShared = ({
 };
 
 describe("resource command file batching", () => {
-  it("submits missing file records with image creation in one batch", async () => {
-    const fileCommands = [
-      {
-        scope: "resources",
-        type: COMMAND_TYPES.FILE_CREATE,
-        payload: {
-          fileId: "file-1",
-        },
-      },
-      {
-        scope: "resources",
-        type: COMMAND_TYPES.FILE_CREATE,
-        payload: {
-          fileId: "file-2",
-        },
-      },
-    ];
-    const { context, shared } = createShared({ fileCommands });
+  it("ensures missing file records exist before image creation", async () => {
+    const fileRecords = [{ id: "file-1" }, { id: "file-2" }];
+    const { context, shared } = createShared();
 
     const result = await submitCreateResourceCommand({
       shared,
@@ -62,47 +50,44 @@ describe("resource command file batching", () => {
         fileId: "file-1",
         thumbnailFileId: "file-2",
       },
+      fileRecords,
       parentId: "folder-1",
       position: "last",
     });
 
     expect(result).toBe("generated-resource-id");
-    expect(shared.submitCommandsWithContext).toHaveBeenCalledTimes(1);
-    expect(shared.submitCommandsWithContext).toHaveBeenCalledWith({
+    expect(shared.ensureFilesExist).toHaveBeenCalledTimes(1);
+    expect(shared.ensureFilesExist).toHaveBeenCalledWith({
       context,
-      commands: [
-        ...fileCommands,
-        {
-          scope: "resources",
-          basePartition: "main",
-          type: COMMAND_TYPES.IMAGE_CREATE,
-          payload: {
-            imageId: "generated-resource-id",
-            data: {
-              fileId: "file-1",
-              thumbnailFileId: "file-2",
-            },
-            parentId: "folder-1",
-            index: 4,
-          },
-        },
-      ],
+      fileRecords,
     });
+    expect(shared.submitCommandWithContext).toHaveBeenCalledTimes(1);
+    expect(shared.submitCommandWithContext).toHaveBeenCalledWith({
+      context,
+      scope: "resources",
+      basePartition: "main",
+      type: COMMAND_TYPES.IMAGE_CREATE,
+      payload: {
+        imageId: "generated-resource-id",
+        data: {
+          fileId: "file-1",
+          thumbnailFileId: "file-2",
+        },
+        parentId: "folder-1",
+        index: 4,
+      },
+    });
+    expect(shared.submitCommandsWithContext).not.toHaveBeenCalled();
   });
 
-  it("submits missing file records with image updates in one batch", async () => {
-    const fileCommands = [
+  it("ensures missing file records exist before image updates", async () => {
+    const submitResult = { valid: true, commandIds: ["cmd-1"] };
+    const fileRecords = [
       {
-        scope: "resources",
-        type: COMMAND_TYPES.FILE_CREATE,
-        payload: {
-          fileId: "file-3",
-        },
+        id: "file-3",
       },
     ];
-    const submitResult = { valid: true, commandIds: ["cmd-1", "cmd-2"] };
     const { context, shared } = createShared({
-      fileCommands,
       submitResult,
     });
 
@@ -115,31 +100,139 @@ describe("resource command file batching", () => {
       data: {
         fileId: "file-3",
       },
-      fileRecords: [
-        {
-          id: "file-3",
-        },
-      ],
+      fileRecords,
     });
 
     expect(result).toBe(submitResult);
-    expect(shared.submitCommandsWithContext).toHaveBeenCalledTimes(1);
-    expect(shared.submitCommandsWithContext).toHaveBeenCalledWith({
+    expect(shared.ensureFilesExist).toHaveBeenCalledTimes(1);
+    expect(shared.ensureFilesExist).toHaveBeenCalledWith({
       context,
-      commands: [
-        ...fileCommands,
-        {
-          scope: "resources",
-          basePartition: "main",
-          type: COMMAND_TYPES.IMAGE_UPDATE,
-          payload: {
-            imageId: "image-1",
-            data: {
-              fileId: "file-3",
-            },
-          },
-        },
-      ],
+      fileRecords,
     });
+    expect(shared.submitCommandWithContext).toHaveBeenCalledTimes(1);
+    expect(shared.submitCommandWithContext).toHaveBeenCalledWith({
+      context,
+      scope: "resources",
+      basePartition: "main",
+      type: COMMAND_TYPES.IMAGE_UPDATE,
+      payload: {
+        imageId: "image-1",
+        data: {
+          fileId: "file-3",
+        },
+      },
+    });
+    expect(shared.submitCommandsWithContext).not.toHaveBeenCalled();
+  });
+
+  it("ensures missing file records exist before layout updates", async () => {
+    const submitResult = { valid: true, commandIds: ["cmd-1"] };
+    const fileRecords = [{ id: "thumb-1" }];
+    const { context, shared } = createShared({ submitResult });
+    const api = createLayoutCommandApi(shared);
+
+    const result = await api.updateLayoutItem({
+      layoutId: "layout-1",
+      data: {
+        thumbnailFileId: "thumb-1",
+        preview: {},
+      },
+      fileRecords,
+    });
+
+    expect(result).toBe(submitResult);
+    expect(shared.ensureFilesExist).toHaveBeenCalledWith({
+      context,
+      fileRecords,
+    });
+    expect(shared.submitCommandWithContext).toHaveBeenCalledWith({
+      context,
+      scope: "resources",
+      basePartition: "main",
+      type: COMMAND_TYPES.LAYOUT_UPDATE,
+      payload: {
+        layoutId: "layout-1",
+        data: {
+          thumbnailFileId: "thumb-1",
+          preview: {},
+        },
+      },
+    });
+  });
+
+  it("ensures missing file records exist before control updates", async () => {
+    const submitResult = { valid: true, commandIds: ["cmd-1"] };
+    const fileRecords = [{ id: "thumb-2" }];
+    const { context, shared } = createShared({ submitResult });
+    const api = createControlCommandApi(shared);
+
+    const result = await api.updateControlItem({
+      controlId: "control-1",
+      data: {
+        thumbnailFileId: "thumb-2",
+        preview: {},
+      },
+      fileRecords,
+    });
+
+    expect(result).toBe(submitResult);
+    expect(shared.ensureFilesExist).toHaveBeenCalledWith({
+      context,
+      fileRecords,
+    });
+    expect(shared.submitCommandWithContext).toHaveBeenCalledWith({
+      context,
+      scope: "resources",
+      basePartition: "main",
+      type: COMMAND_TYPES.CONTROL_UPDATE,
+      payload: {
+        controlId: "control-1",
+        data: {
+          thumbnailFileId: "thumb-2",
+          preview: {},
+        },
+      },
+    });
+  });
+
+  it("returns early when file creation fails before resource create", async () => {
+    const ensureFilesResult = { valid: false, error: { message: "nope" } };
+    const { shared } = createShared({ ensureFilesResult });
+
+    const result = await submitCreateResourceCommand({
+      shared,
+      resourceType: "images",
+      type: COMMAND_TYPES.IMAGE_CREATE,
+      idField: "imageId",
+      data: {
+        fileId: "file-1",
+      },
+      fileRecords: [{ id: "file-1" }],
+      parentId: "folder-1",
+      position: "last",
+    });
+
+    expect(result).toBe(ensureFilesResult);
+    expect(shared.submitCommandWithContext).not.toHaveBeenCalled();
+  });
+
+  it("returns early when file creation fails before resource update", async () => {
+    const ensureFilesResult = { valid: false, error: { message: "nope" } };
+    const { shared } = createShared({ ensureFilesResult });
+
+    const result = await submitUpdateResourceCommand({
+      shared,
+      resourceType: "images",
+      type: COMMAND_TYPES.IMAGE_UPDATE,
+      idField: "imageId",
+      idValue: "image-1",
+      data: {
+        fileId: "file-3",
+      },
+      fileRecords: [{ id: "file-3" }],
+    });
+
+    expect(result).toBe(ensureFilesResult);
+    expect(shared.submitCommandWithContext).not.toHaveBeenCalled();
   });
 });

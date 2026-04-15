@@ -2,12 +2,17 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleBackClick,
   handleLayoutEditorCanvasDragUpdate,
+  handleSaveButtonClick,
 } from "../../src/pages/layoutEditor/layoutEditor.handlers.js";
 import { enqueueLayoutEditorPersistence } from "../../src/pages/layoutEditor/support/layoutEditorPersistenceQueue.js";
 
 const createLayoutEditorDeps = ({
   pendingPersistPayload,
   updateLayoutElement = vi.fn(async () => ({ valid: true })),
+  updateLayoutItem = vi.fn(async () => ({ valid: true })),
+  previewData = {
+    backgroundImageId: "image-preview",
+  },
 } = {}) => {
   const state = {
     pendingPersistPayload,
@@ -32,6 +37,8 @@ const createLayoutEditorDeps = ({
     syncRepositoryState: vi.fn(),
     selectLayoutId: vi.fn(() => "layout-1"),
     selectLayoutResourceType: vi.fn(() => "layouts"),
+    selectPreviewData: vi.fn(() => previewData),
+    selectSelectedItemId: vi.fn(() => undefined),
     updateSelectedItem: vi.fn(),
   };
 
@@ -75,7 +82,13 @@ const createLayoutEditorDeps = ({
         },
       }),
     })),
+    ensureRepository: vi.fn(async () => {}),
     updateLayoutElement,
+    updateLayoutItem,
+    storeFile: vi.fn(async () => ({
+      fileId: "file-layout-thumb",
+      fileRecords: [{ fileId: "file-layout-thumb" }],
+    })),
   };
 
   return {
@@ -83,6 +96,11 @@ const createLayoutEditorDeps = ({
     projectService,
     store,
     render: vi.fn(),
+    refs: {
+      layoutEditorCanvas: {
+        captureThumbnailImage: vi.fn(async () => "data:text/plain;base64,QQ=="),
+      },
+    },
     subject: {
       dispatch: vi.fn(),
     },
@@ -229,5 +247,35 @@ describe("layoutEditor.handleBackClick", () => {
     await backPromise;
 
     expect(deps.appService.navigate).not.toHaveBeenCalled();
+  });
+});
+
+describe("layoutEditor.handleSaveButtonClick", () => {
+  it("persists the current preview data with the saved thumbnail", async () => {
+    const updateLayoutItem = vi.fn(async () => ({ valid: true }));
+    const previewData = {
+      backgroundImageId: "image-preview",
+      runtime: {
+        autoMode: true,
+      },
+    };
+    const deps = createLayoutEditorDeps({
+      updateLayoutItem,
+      previewData,
+    });
+
+    await handleSaveButtonClick(deps);
+
+    expect(updateLayoutItem).toHaveBeenCalledWith({
+      layoutId: "layout-1",
+      data: {
+        thumbnailFileId: "file-layout-thumb",
+        preview: previewData,
+      },
+      fileRecords: [{ fileId: "file-layout-thumb" }],
+    });
+    expect(deps.appService.showToast).toHaveBeenCalledWith(
+      "Layout preview saved.",
+    );
   });
 });

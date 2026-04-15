@@ -12,6 +12,16 @@ import {
   toLayoutEditorExplorerItems,
 } from "./support/layoutEditorViewData.js";
 
+const normalizePreviewData = (previewData) => {
+  return previewData && typeof previewData === "object"
+    ? structuredClone(previewData)
+    : {};
+};
+
+const arePreviewDataEqual = (left, right) => {
+  return JSON.stringify(left ?? {}) === JSON.stringify(right ?? {});
+};
+
 export const createInitialState = () => {
   return {
     lastUpdateDate: undefined,
@@ -27,6 +37,8 @@ export const createInitialState = () => {
     fontsData: { tree: [], items: {} },
     variablesData: { tree: [], items: {} },
     previewData: {},
+    persistedPreviewData: {},
+    initialPreviewData: {},
     projectResolution: DEFAULT_PROJECT_RESOLUTION,
     selectedElementMetrics: undefined,
     lastPersistErrorAt: 0,
@@ -95,7 +107,7 @@ export const setSelectedItemId = ({ state }, { itemId } = {}) => {
 };
 
 export const setPreviewData = ({ state }, { previewData } = {}) => {
-  state.previewData = previewData ?? {};
+  state.previewData = normalizePreviewData(previewData);
 };
 
 export const updateSelectedItem = ({ state }, { itemId, updatedItem } = {}) => {
@@ -184,7 +196,18 @@ export const syncRepositoryState = ({ state }, payload = {}) => {
     colorsData,
     fontsData,
     variablesData,
+    persistedPreviewData,
   } = payload;
+  const currentLayoutId = state.layout?.id;
+  const currentResourceType = state.layout?.resourceType || "layouts";
+  const nextPersistedPreviewData = normalizePreviewData(persistedPreviewData);
+  const shouldApplyPersistedPreview =
+    currentLayoutId !== layoutId ||
+    currentResourceType !== (resourceType ?? "layouts") ||
+    arePreviewDataEqual(state.previewData, state.persistedPreviewData);
+  const shouldRefreshInitialPreviewData =
+    shouldApplyPersistedPreview ||
+    arePreviewDataEqual(state.previewData, nextPersistedPreviewData);
 
   state.projectResolution = requireProjectResolution(
     projectResolution,
@@ -204,6 +227,15 @@ export const syncRepositoryState = ({ state }, payload = {}) => {
   state.colorsData = colorsData ?? { items: {}, tree: [] };
   state.fontsData = fontsData ?? { items: {}, tree: [] };
   state.variablesData = variablesData ?? { items: {}, tree: [] };
+  state.persistedPreviewData = nextPersistedPreviewData;
+
+  if (shouldApplyPersistedPreview) {
+    state.previewData = normalizePreviewData(nextPersistedPreviewData);
+  }
+
+  if (shouldRefreshInitialPreviewData) {
+    state.initialPreviewData = normalizePreviewData(nextPersistedPreviewData);
+  }
 };
 
 export const selectLayoutId = ({ state }) => {
@@ -283,6 +315,10 @@ export const selectPreviewData = ({ state }) => {
   return state.previewData;
 };
 
+export const selectInitialPreviewData = ({ state }) => {
+  return state.initialPreviewData;
+};
+
 export const selectViewData = ({ state, constants }) => {
   const item = selectSelectedItem({ state });
   const flatItems = toLayoutEditorExplorerItems(toFlatItems(state.layoutData));
@@ -336,6 +372,7 @@ export const selectViewData = ({ state, constants }) => {
     ),
     layoutState,
     previewData: state.previewData,
+    initialPreviewData: state.initialPreviewData,
     projectResolution: state.projectResolution,
     layout,
     imagesData: state.images,

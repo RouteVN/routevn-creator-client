@@ -66,6 +66,7 @@ export const createDialoguePreviewData = ({
   nvlDefaultValues,
   previewRevealingSpeed,
 } = {}) => {
+  const isNvlLayout = layoutType === "dialogue-nvl" || layoutType === "nvl";
   const characterName =
     dialogueDefaultValues?.["dialogue-character-name"] ??
     DEFAULT_DIALOGUE_CHARACTER_NAME;
@@ -87,13 +88,12 @@ export const createDialoguePreviewData = ({
         name: characterName,
       },
       content: [{ text: dialogueContent }],
-      lines:
-        layoutType === "dialogue-nvl"
-          ? createNvlLines(nvlDefaultValues)
-          : createDialogueLines({
-              characterName,
-              dialogueContent,
-            }),
+      lines: isNvlLayout
+        ? createNvlLines(nvlDefaultValues)
+        : createDialogueLines({
+            characterName,
+            dialogueContent,
+          }),
     },
   };
 };

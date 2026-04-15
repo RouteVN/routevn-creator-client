@@ -441,6 +441,83 @@
         "mimeType": "font/sample_font",
         "size": 857712,
         "sha256": "0090683b3ad4b60f59d5699504c4a5aa7b93f6925a376cf18755b5c9a37e4db6"
+      },
+      "irK4-ykOfkSX4X1q27T4X": {
+        "id": "irK4-ykOfkSX4X1q27T4X",
+        "type": "image",
+        "mimeType": "image/png",
+        "size": 2664,
+        "sha256": "4a4ba8f1da495ac357ca583771847df9bd05c8c7d2d76100176cbb59042858b8"
+      },
+      "VUzwUBC8Vj8gLKuvMJ_V3": {
+        "id": "VUzwUBC8Vj8gLKuvMJ_V3",
+        "type": "image",
+        "mimeType": "image/png",
+        "size": 2644,
+        "sha256": "44188a43a22633aa1c2f8b0cbe1ad5d45cdccc6850abaf043f1071e6163fefd8"
+      },
+      "kZrID7j_MvVJAeIAf-pFg": {
+        "id": "kZrID7j_MvVJAeIAf-pFg",
+        "type": "image",
+        "mimeType": "image/jpeg",
+        "size": 3327,
+        "sha256": "911f5d3a0b704df14a353d52f4d2292957efa5ef468d4abd030956b023aad5ce"
+      },
+      "s42BgHGuQ5mtENh0rRbcQ": {
+        "id": "s42BgHGuQ5mtENh0rRbcQ",
+        "type": "image",
+        "mimeType": "image/jpeg",
+        "size": 4583,
+        "sha256": "30b1257e0fdb478db84cb4cc628439148f6fbc6ab0c913131088c45ebf9e9fe1"
+      },
+      "OHQkugUkGtuuci_hZfJqC": {
+        "id": "OHQkugUkGtuuci_hZfJqC",
+        "type": "image",
+        "mimeType": "image/jpeg",
+        "size": 3249,
+        "sha256": "a4533928d546a25af916efbc1ddb3932b246905af8111cb02ad93478ec35a4a6"
+      },
+      "TeHk74YrpNMh2ocpzhD7b": {
+        "id": "TeHk74YrpNMh2ocpzhD7b",
+        "type": "image",
+        "mimeType": "image/jpeg",
+        "size": 2641,
+        "sha256": "872dc42c9c1ae19cc7e62afc597040e74f85767ebed6d6454bafd1792746f960"
+      },
+      "H91JLGgCUCAzvwOrSwm57": {
+        "id": "H91JLGgCUCAzvwOrSwm57",
+        "type": "image",
+        "mimeType": "image/jpeg",
+        "size": 4812,
+        "sha256": "133f260df8cd729c37659350af26d516837c3c946f128a56bbe6ab5ae329f74b"
+      },
+      "Djkim7y2Gvr4mtL777tXz": {
+        "id": "Djkim7y2Gvr4mtL777tXz",
+        "type": "image",
+        "mimeType": "image/jpeg",
+        "size": 2730,
+        "sha256": "943fd877e48920ba4eff24f3341a7038b5c7ceb0209f2525a2b98c341b36b281"
+      },
+      "NGxofsdyyf7ZwTZLFbgSG": {
+        "id": "NGxofsdyyf7ZwTZLFbgSG",
+        "type": "image",
+        "mimeType": "image/jpeg",
+        "size": 4664,
+        "sha256": "70eda469d833e61759c0413cc34911294b966c83617a64f50d875416f03edbef"
+      },
+      "1hmXEkgFfSK237aS_lwSh": {
+        "id": "1hmXEkgFfSK237aS_lwSh",
+        "type": "image",
+        "mimeType": "image/jpeg",
+        "size": 4665,
+        "sha256": "09e160f0f1e817c16fafed30a0e5ff1166d840cd5f2c55c21bf1202df4cd13d9"
+      },
+      "0300au4rTnroOVq8Ec3wL": {
+        "id": "0300au4rTnroOVq8Ec3wL",
+        "type": "image",
+        "mimeType": "image/jpeg",
+        "size": 4102,
+        "sha256": "f86e22b3d765e6b1e49aa87a1ae35016bc61b9f34e795fe40238f652a4ddfbff"
       }
     },
     "tree": [
@@ -491,6 +568,39 @@
       },
       {
         "id": "Y4Krp7oZ436XRiz4VH3rD"
+      },
+      {
+        "id": "irK4-ykOfkSX4X1q27T4X"
+      },
+      {
+        "id": "VUzwUBC8Vj8gLKuvMJ_V3"
+      },
+      {
+        "id": "kZrID7j_MvVJAeIAf-pFg"
+      },
+      {
+        "id": "s42BgHGuQ5mtENh0rRbcQ"
+      },
+      {
+        "id": "OHQkugUkGtuuci_hZfJqC"
+      },
+      {
+        "id": "TeHk74YrpNMh2ocpzhD7b"
+      },
+      {
+        "id": "H91JLGgCUCAzvwOrSwm57"
+      },
+      {
+        "id": "Djkim7y2Gvr4mtL777tXz"
+      },
+      {
+        "id": "NGxofsdyyf7ZwTZLFbgSG"
+      },
+      {
+        "id": "1hmXEkgFfSK237aS_lwSh"
+      },
+      {
+        "id": "0300au4rTnroOVq8Ec3wL"
       }
     ]
   },
@@ -670,6 +780,26 @@
         "width": 1160,
         "height": 240,
         "fileId": "RAoLOeaLPeZn8NtqSyb6B"
+      },
+      "t0owkpcH-SGDabNZp07H-": {
+        "id": "t0owkpcH-SGDabNZp07H-",
+        "type": "image",
+        "name": "slot_idle",
+        "fileType": "image/png",
+        "fileSize": 2664,
+        "width": 400,
+        "height": 225,
+        "fileId": "irK4-ykOfkSX4X1q27T4X"
+      },
+      "EKIvumufDKWgOn3y9mBrq": {
+        "id": "EKIvumufDKWgOn3y9mBrq",
+        "type": "image",
+        "name": "slot_selected",
+        "fileType": "image/png",
+        "fileSize": 2644,
+        "width": 400,
+        "height": 225,
+        "fileId": "VUzwUBC8Vj8gLKuvMJ_V3"
       }
     },
     "tree": [
@@ -731,6 +861,12 @@
           },
           {
             "id": "QO_Ou5DAengpMP4_WnMBy"
+          },
+          {
+            "id": "t0owkpcH-SGDabNZp07H-"
+          },
+          {
+            "id": "EKIvumufDKWgOn3y9mBrq"
           }
         ]
       }
@@ -1129,7 +1265,8 @@
       "HbESBAK58wzdbCozqzZvh": {
         "id": "HbESBAK58wzdbCozqzZvh",
         "type": "layout",
-        "name": "Simple Dialogue",
+        "name": "Default Dialogue",
+        "thumbnailFileId": "kZrID7j_MvVJAeIAf-pFg",
         "layoutType": "dialogue-adv",
         "elements": {
           "items": {
@@ -1568,12 +1705,67 @@
               ]
             }
           ]
+        },
+        "preview": {
+          "backgroundImageId": "FRfD65GX5IY9oEwiGUiRh",
+          "runtime": {
+            "dialogueTextSpeed": 50,
+            "autoForwardDelay": 1000,
+            "skipUnseenText": false,
+            "skipTransitionsAndAnimations": false,
+            "soundVolume": 500,
+            "musicVolume": 500,
+            "muteAll": false,
+            "saveLoadPagination": 1,
+            "menuPage": "",
+            "menuEntryPoint": "",
+            "autoMode": false,
+            "skipMode": false,
+            "dialogueUIHidden": false,
+            "isLineCompleted": false
+          },
+          "dialogue": {
+            "character": {
+              "name": "Character"
+            },
+            "content": [
+              {
+                "text": "This is a sample dialogue content."
+              }
+            ],
+            "lines": [
+              {
+                "characterName": "Character",
+                "content": [
+                  {
+                    "text": "This is a sample dialogue content."
+                  }
+                ]
+              },
+              {
+                "content": [
+                  {
+                    "text": "This is a sample dialogue content."
+                  }
+                ]
+              },
+              {
+                "characterName": "Narrator",
+                "content": [
+                  {
+                    "text": "This is a sample dialogue content."
+                  }
+                ]
+              }
+            ]
+          }
         }
       },
       "UMuPdCgtimWAid1xaaMoE": {
         "id": "UMuPdCgtimWAid1xaaMoE",
         "type": "layout",
         "name": "Default NVL",
+        "thumbnailFileId": "s42BgHGuQ5mtENh0rRbcQ",
         "layoutType": "dialogue-nvl",
         "elements": {
           "items": {
@@ -1708,12 +1900,67 @@
               ]
             }
           ]
+        },
+        "preview": {
+          "backgroundImageId": "FRfD65GX5IY9oEwiGUiRh",
+          "runtime": {
+            "dialogueTextSpeed": 50,
+            "autoForwardDelay": 1000,
+            "skipUnseenText": false,
+            "skipTransitionsAndAnimations": false,
+            "soundVolume": 500,
+            "musicVolume": 500,
+            "muteAll": false,
+            "saveLoadPagination": 1,
+            "menuPage": "",
+            "menuEntryPoint": "",
+            "autoMode": false,
+            "skipMode": false,
+            "dialogueUIHidden": false,
+            "isLineCompleted": false
+          },
+          "dialogue": {
+            "character": {
+              "name": "Character"
+            },
+            "content": [
+              {
+                "text": "This is a sample dialogue content."
+              }
+            ],
+            "lines": [
+              {
+                "content": [
+                  {
+                    "text": "This is the first sample NVL line."
+                  }
+                ],
+                "characterName": "Character"
+              },
+              {
+                "content": [
+                  {
+                    "text": "This is the second sample NVL line."
+                  }
+                ]
+              },
+              {
+                "content": [
+                  {
+                    "text": "This is the third sample NVL line."
+                  }
+                ],
+                "characterName": "Narrator"
+              }
+            ]
+          }
         }
       },
       "kjVTxvMoqNkcHKB73i93B": {
         "id": "kjVTxvMoqNkcHKB73i93B",
         "type": "layout",
         "name": "Default Choice",
+        "thumbnailFileId": "OHQkugUkGtuuci_hZfJqC",
         "layoutType": "choice",
         "elements": {
           "items": {
@@ -1807,6 +2054,29 @@
               ]
             }
           ]
+        },
+        "preview": {
+          "backgroundImageId": "FRfD65GX5IY9oEwiGUiRh",
+          "choice": {
+            "items": [
+              {
+                "content": "Choice 1",
+                "events": {
+                  "click": {
+                    "actions": {}
+                  }
+                }
+              },
+              {
+                "content": "Choice 2",
+                "events": {
+                  "click": {
+                    "actions": {}
+                  }
+                }
+              }
+            ]
+          }
         }
       },
       "NeKtb7n888ErSpapP1diL": {
@@ -2059,7 +2329,9 @@
               ]
             }
           ]
-        }
+        },
+        "thumbnailFileId": "TeHk74YrpNMh2ocpzhD7b",
+        "preview": {}
       },
       "Jy3Rayx5WJx1_D62TVi7f": {
         "id": "Jy3Rayx5WJx1_D62TVi7f",
@@ -2381,6 +2653,52 @@
               "children": []
             }
           ]
+        },
+        "thumbnailFileId": "H91JLGgCUCAzvwOrSwm57",
+        "preview": {
+          "runtime": {
+            "dialogueTextSpeed": 50,
+            "autoForwardDelay": 1000,
+            "skipUnseenText": false,
+            "skipTransitionsAndAnimations": false,
+            "soundVolume": 500,
+            "musicVolume": 500,
+            "muteAll": false,
+            "saveLoadPagination": 1,
+            "menuPage": "options",
+            "menuEntryPoint": "story",
+            "autoMode": false,
+            "skipMode": false,
+            "dialogueUIHidden": false,
+            "isLineCompleted": false
+          },
+          "saveSlots": [
+            {
+              "slotId": 1,
+              "savedAt": 1773136800000,
+              "isAvailable": true
+            },
+            {
+              "slotId": 2,
+              "isAvailable": false
+            },
+            {
+              "slotId": 3,
+              "isAvailable": false
+            },
+            {
+              "slotId": 4,
+              "isAvailable": false
+            },
+            {
+              "slotId": 5,
+              "isAvailable": false
+            },
+            {
+              "slotId": 6,
+              "isAvailable": false
+            }
+          ]
         }
       },
       "AzFHHjIaQivCexxbNZoNy": {
@@ -2539,6 +2857,15 @@
               ]
             }
           ]
+        },
+        "thumbnailFileId": "Djkim7y2Gvr4mtL777tXz",
+        "preview": {
+          "backgroundImageId": "H6Lqp6KhtLDnphG5QCb0S",
+          "confirmDialog": {
+            "resourceId": "",
+            "confirmActions": {},
+            "cancelActions": {}
+          }
         }
       },
       "4TCGlzD_pFLMSuxIOihrY": {
@@ -2760,11 +3087,18 @@
               "paginationMode": "paginated",
               "paginationSize": 6,
               "click": {
+                "inheritToChildren": true,
                 "payload": {
                   "actions": {
                     "loadSlot": {}
                   }
                 }
+              },
+              "hover": {
+                "inheritToChildren": true
+              },
+              "rightClick": {
+                "payload": {}
               }
             },
             "m6TWsYRzeCnkQ25Sb7y-M": {
@@ -2831,7 +3165,8 @@
               "aspectRatioLock": 1.7751479289940828,
               "width": 380,
               "height": 214,
-              "imageId": "D6iPajVpkZpS89SyqxqGd"
+              "imageId": "t0owkpcH-SGDabNZp07H-",
+              "hoverImageId": "EKIvumufDKWgOn3y9mBrq"
             },
             "hWFb1saf6nDiFyd2wJW9D": {
               "id": "hWFb1saf6nDiFyd2wJW9D",
@@ -3461,6 +3796,52 @@
               ]
             }
           ]
+        },
+        "thumbnailFileId": "NGxofsdyyf7ZwTZLFbgSG",
+        "preview": {
+          "backgroundImageId": "H6Lqp6KhtLDnphG5QCb0S",
+          "runtime": {
+            "dialogueTextSpeed": 50,
+            "autoForwardDelay": 1000,
+            "skipUnseenText": false,
+            "skipTransitionsAndAnimations": false,
+            "soundVolume": 500,
+            "musicVolume": 500,
+            "muteAll": false,
+            "saveLoadPagination": 1,
+            "menuPage": "",
+            "menuEntryPoint": "",
+            "autoMode": false,
+            "skipMode": false,
+            "dialogueUIHidden": false,
+            "isLineCompleted": false
+          },
+          "saveSlots": [
+            {
+              "slotId": 1,
+              "isAvailable": false
+            },
+            {
+              "slotId": 2,
+              "isAvailable": false
+            },
+            {
+              "slotId": 3,
+              "isAvailable": false
+            },
+            {
+              "slotId": 4,
+              "isAvailable": false
+            },
+            {
+              "slotId": 5,
+              "isAvailable": false
+            },
+            {
+              "slotId": 6,
+              "isAvailable": false
+            }
+          ]
         }
       },
       "QeN-PvM7-7iPptkTie1Zr": {
@@ -3682,11 +4063,15 @@
               "paginationMode": "paginated",
               "paginationSize": 6,
               "click": {
+                "inheritToChildren": true,
                 "payload": {
                   "actions": {
                     "saveSlot": {}
                   }
                 }
+              },
+              "hover": {
+                "inheritToChildren": true
               }
             },
             "tCnV_vz3-cUY8pVDZxEmt": {
@@ -3753,7 +4138,8 @@
               "aspectRatioLock": 1.7751479289940828,
               "width": 380,
               "height": 214,
-              "imageId": "D6iPajVpkZpS89SyqxqGd"
+              "imageId": "t0owkpcH-SGDabNZp07H-",
+              "hoverImageId": "EKIvumufDKWgOn3y9mBrq"
             },
             "Vq6XjgtA2Lc4bvMUj3oL4": {
               "id": "Vq6XjgtA2Lc4bvMUj3oL4",
@@ -4383,6 +4769,52 @@
               ]
             }
           ]
+        },
+        "thumbnailFileId": "1hmXEkgFfSK237aS_lwSh",
+        "preview": {
+          "backgroundImageId": "H6Lqp6KhtLDnphG5QCb0S",
+          "runtime": {
+            "dialogueTextSpeed": 50,
+            "autoForwardDelay": 1000,
+            "skipUnseenText": false,
+            "skipTransitionsAndAnimations": false,
+            "soundVolume": 500,
+            "musicVolume": 500,
+            "muteAll": false,
+            "saveLoadPagination": 1,
+            "menuPage": "",
+            "menuEntryPoint": "",
+            "autoMode": false,
+            "skipMode": false,
+            "dialogueUIHidden": false,
+            "isLineCompleted": false
+          },
+          "saveSlots": [
+            {
+              "slotId": 1,
+              "isAvailable": false
+            },
+            {
+              "slotId": 2,
+              "isAvailable": false
+            },
+            {
+              "slotId": 3,
+              "isAvailable": false
+            },
+            {
+              "slotId": 4,
+              "isAvailable": false
+            },
+            {
+              "slotId": 5,
+              "isAvailable": false
+            },
+            {
+              "slotId": 6,
+              "isAvailable": false
+            }
+          ]
         }
       },
       "paAZWgrnj4LgAr9vR6zTD": {
@@ -4673,6 +5105,10 @@
               ]
             }
           ]
+        },
+        "thumbnailFileId": "0300au4rTnroOVq8Ec3wL",
+        "preview": {
+          "backgroundImageId": "H6Lqp6KhtLDnphG5QCb0S"
         }
       }
     },

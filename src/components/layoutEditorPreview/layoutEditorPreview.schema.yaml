@@ -4,3 +4,5 @@ propsSchema:
   properties:
     layoutState:
       type: object
+    initialPreviewData:
+      type: object

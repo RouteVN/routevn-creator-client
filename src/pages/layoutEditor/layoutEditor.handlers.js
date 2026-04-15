@@ -415,6 +415,7 @@ export const handleSaveButtonClick = async (deps) => {
   const { appService, projectService, refs, store } = deps;
   const layoutId = store.selectLayoutId();
   const resourceType = store.selectLayoutResourceType();
+  const previewData = store.selectPreviewData();
   const { ownerPayloadKey, ownerLabel, updateItem } =
     getLayoutEditorOwnerConfig(resourceType, projectService);
 
@@ -446,13 +447,14 @@ export const handleSaveButtonClick = async (deps) => {
       [ownerPayloadKey]: layoutId,
       data: {
         thumbnailFileId: storedFile.fileId,
+        preview: previewData,
       },
       fileRecords: storedFile.fileRecords,
     });
 
     if (updateResult?.valid === false) {
       appService.showToast(
-        `Failed to update ${ownerLabel.toLowerCase()} thumbnail.`,
+        `Failed to save ${ownerLabel.toLowerCase()} preview.`,
         {
           title: "Error",
         },
@@ -463,10 +465,10 @@ export const handleSaveButtonClick = async (deps) => {
     await refreshLayoutEditorData(deps, {
       selectedItemId: store.selectSelectedItemId(),
     });
-    appService.showToast(`${ownerLabel} thumbnail updated.`);
+    appService.showToast(`${ownerLabel} preview saved.`);
   } catch {
     appService.showToast(
-      `Failed to save ${ownerLabel.toLowerCase()} thumbnail.`,
+      `Failed to save ${ownerLabel.toLowerCase()} preview.`,
       {
         title: "Error",
       },

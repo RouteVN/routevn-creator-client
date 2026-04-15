@@ -202,6 +202,12 @@ const matchesSearch = (item, searchQuery) => {
   return name.includes(searchQuery) || description.includes(searchQuery);
 };
 
+const transformCenterItemContextMenuItems = [
+  { label: "Edit", type: "item", value: "edit-item" },
+  { label: "Duplicate", type: "item", value: "duplicate-item" },
+  { label: "Delete", type: "item", value: "delete-item" },
+];
+
 const {
   createInitialState: createCatalogInitialState,
   setItems,
@@ -218,6 +224,7 @@ const {
   selectedResourceId: "transforms",
   resourceCategory: "assets",
   addText: "Add",
+  centerItemContextMenuItems: transformCenterItemContextMenuItems,
   emptyMessage: "No transforms found",
   matchesSearch,
   buildDetailFields,

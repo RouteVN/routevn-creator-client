@@ -47,9 +47,19 @@ const didLayoutElementsChange = (oldProps = {}, newProps = {}) => {
   return oldProps.layoutState?.elements !== newProps.layoutState?.elements;
 };
 
+const didInitialPreviewDataChange = (oldProps = {}, newProps = {}) => {
+  return (
+    JSON.stringify(oldProps.initialPreviewData ?? {}) !==
+    JSON.stringify(newProps.initialPreviewData ?? {})
+  );
+};
+
 export const handleBeforeMount = (deps) => {
   deps.store.setLayoutState({
     layoutState: deps.props.layoutState,
+  });
+  deps.store.hydratePreviewState({
+    previewData: deps.props.initialPreviewData,
   });
 };
 
@@ -62,19 +72,33 @@ export const handleOnUpdate = async (deps, payload) => {
   const { oldProps = {}, newProps = {} } = payload;
   const layoutIdentityChanged = didLayoutIdentityChange(oldProps, newProps);
   const layoutElementsChanged = didLayoutElementsChange(oldProps, newProps);
+  const initialPreviewDataChanged = didInitialPreviewDataChange(
+    oldProps,
+    newProps,
+  );
 
-  if (!layoutIdentityChanged && !layoutElementsChanged) {
+  if (
+    !layoutIdentityChanged &&
+    !layoutElementsChanged &&
+    !initialPreviewDataChanged
+  ) {
     return;
-  }
-
-  if (layoutIdentityChanged) {
-    deps.store.resetPreviewState();
   }
 
   deps.store.setLayoutState({
     layoutState: newProps.layoutState,
   });
-  await syncRepositoryState(deps);
+
+  if (layoutIdentityChanged || initialPreviewDataChanged) {
+    deps.store.hydratePreviewState({
+      previewData: newProps.initialPreviewData,
+    });
+  }
+
+  if (layoutIdentityChanged || layoutElementsChanged) {
+    await syncRepositoryState(deps);
+  }
+
   renderAndEmitPreviewDataChange(deps);
 };
 

@@ -66,9 +66,14 @@ template:
                                                           - rtgl-view w=225 h=120 av=c ah=c bgc=mu-fg:
                                                               - rtgl-text s=sm c=mu-fg: No thumbnail
                                                       - rtgl-view d=v w=f g=xs ph=md pt=sm pb=md:
-                                                          - rtgl-text s=sm ellipsis w=193: ${item.name}
-                                                          - $if item.typeInfo:
-                                                              - rtgl-text s=xs c=mu-fg ellipsis w=193: ${item.typeInfo}
+                                                          - rtgl-text s=sm ellipsis w=f: ${item.name}
+                                                          - $if item.typeInfo || item.typeInfoSvg:
+                                                              - rtgl-view d=h av=c w=f:
+                                                                  - $if item.typeInfo:
+                                                                      - rtgl-view w=f:
+                                                                          - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.typeInfo}
+                                                                  - $if item.typeInfoSvg:
+                                                                      - rtgl-svg svg=${item.typeInfoSvg} wh=14 c=mu-fg: null
                                                 $else:
                                                   - rtgl-view w=225 h=152 d=v ah=c av=c br=md p=md g=sm:
                                                       - rtgl-text s=md ellipsis w=f: ${item.name}
