@@ -33,6 +33,7 @@ export const createLayoutEditorRepositoryStoreData = ({
     layoutId,
     layout,
     resourceType,
+    persistedPreviewData: layout?.preview ?? {},
     layoutData: layout?.elements || { items: {}, tree: [] },
     images: images || { items: {}, tree: [] },
     spritesheetsData: spritesheets || { items: {}, tree: [] },

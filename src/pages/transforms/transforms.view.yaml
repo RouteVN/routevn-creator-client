@@ -13,6 +13,8 @@ refs:
     eventListeners:
       item-click:
         handler: handleTransformItemClick
+      item-edit:
+        handler: handleTransformItemEdit
       item-dblclick:
         handler: handleTransformItemDoubleClick
       add-click:
@@ -21,6 +23,8 @@ refs:
         handler: handleSearchInput
       item-delete:
         handler: handleItemDelete
+      item-duplicate:
+        handler: handleItemDuplicate
   transformDialog:
     eventListeners:
       close:

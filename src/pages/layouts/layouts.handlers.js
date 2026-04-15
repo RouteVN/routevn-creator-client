@@ -16,19 +16,6 @@ const syncEditFormValues = ({ deps, values } = {}) => {
   editForm.setValues({ values });
 };
 
-const logSelectedLayoutItem = ({ store, itemId } = {}) => {
-  if (!itemId) {
-    return;
-  }
-
-  const item = store.selectLayoutItemById({ itemId });
-  if (!item) {
-    return;
-  }
-
-  console.log("Selected layout item", item);
-};
-
 const navigateToLayoutEditor = ({ appService, layoutId } = {}) => {
   const currentPayload = appService.getPayload();
   appService.navigate("/project/layout-editor", {
@@ -116,19 +103,14 @@ export {
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   handleCatalogFileExplorerSelectionChanged(deps, payload);
 
-  const { itemId, isFolder } = payload._event.detail;
+  const { isFolder } = payload._event.detail;
   if (isFolder) {
     return;
   }
-
-  logSelectedLayoutItem({ store: deps.store, itemId });
 };
 
 export const handleLayoutItemClick = (deps, payload) => {
   handleCatalogLayoutItemClick(deps, payload);
-
-  const { itemId } = payload._event.detail;
-  logSelectedLayoutItem({ store: deps.store, itemId });
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {

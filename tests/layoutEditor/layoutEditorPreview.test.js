@@ -286,6 +286,77 @@ describe("layoutEditorPreview", () => {
     ]);
   });
 
+  it("omits dialogue-only preview sections for plain general layouts", () => {
+    const previewData = createLayoutEditorPreviewData({
+      layoutType: "general",
+      currentLayoutId: "layout-title",
+      currentLayoutData: {
+        items: {
+          background: {
+            id: "background",
+            type: "sprite",
+          },
+          title: {
+            id: "title",
+            type: "text",
+          },
+        },
+        tree: [{ id: "background" }, { id: "title" }],
+      },
+      layoutsData: {
+        items: {},
+        tree: [],
+      },
+      dialogueDefaultValues: {
+        "dialogue-character-name": "Aki",
+        "dialogue-content": "Hello there",
+      },
+      choicesData: {
+        items: [{ content: "First" }],
+      },
+    });
+
+    expect(previewData).not.toHaveProperty("dialogue");
+    expect(previewData).not.toHaveProperty("choice");
+    expect(previewData).not.toHaveProperty("historyDialogue");
+    expect(previewData).not.toHaveProperty("confirmDialog");
+    expect(previewData).not.toHaveProperty("saveSlots");
+    expect(previewData).not.toHaveProperty("runtime");
+    expect(previewData).not.toHaveProperty("variables");
+  });
+
+  it("keeps runtime but omits variables for dialogue layouts with runtime-only conditions", () => {
+    const previewData = createLayoutEditorPreviewData({
+      layoutType: "dialogue-adv",
+      currentLayoutId: "layout-dialogue",
+      currentLayoutData: {
+        items: {
+          skipBadge: {
+            id: "skipBadge",
+            type: "container",
+            $when: "runtime.skipMode == true",
+          },
+          dialogueText: {
+            id: "dialogueText",
+            type: "text-revealing-ref-dialogue-content",
+          },
+        },
+        tree: [{ id: "skipBadge" }, { id: "dialogueText" }],
+      },
+      layoutsData: {
+        items: {},
+        tree: [],
+      },
+      variablesData: {
+        items: {},
+      },
+    });
+
+    expect(previewData.runtime).toBeDefined();
+    expect(previewData.dialogue).toBeDefined();
+    expect(previewData).not.toHaveProperty("variables");
+  });
+
   it("includes runtime fields in preview runtime data", () => {
     const previewData = createLayoutEditorPreviewData({
       variablesData: {

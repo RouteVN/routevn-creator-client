@@ -8,6 +8,7 @@ import {
   findSaveLoadPreviewSettings,
   getSaveLoadPreviewWindow,
 } from "./support/layoutEditorPreviewSupport.js";
+import { createPersistedPreviewState } from "./support/layoutEditorPreviewPersistence.js";
 import { toFlatItems } from "../../internal/project/tree.js";
 
 const EMPTY_LAYOUT_DATA = {
@@ -188,6 +189,7 @@ const getLayoutState = (state) => {
 export const createInitialState = () => ({
   layoutState: undefined,
   repositoryState: {},
+  previewHydrationVersion: 0,
   dialogueDefaultValues: createDialogueDefaultValues(),
   nvlDefaultValues: createNvlDefaultValues(),
   previewRevealingSpeed: 50,
@@ -220,6 +222,41 @@ export const setRepositoryState = ({ state }, { repositoryState } = {}) => {
 
 export const resetPreviewState = ({ state }, _payload = {}) => {
   resetPreviewStateValues(state);
+  state.previewHydrationVersion += 1;
+};
+
+export const hydratePreviewState = ({ state }, { previewData } = {}) => {
+  resetPreviewStateValues(state);
+  const persistedPreviewState = createPersistedPreviewState(previewData);
+
+  if (persistedPreviewState.dialogueDefaultValues !== undefined) {
+    state.dialogueDefaultValues = persistedPreviewState.dialogueDefaultValues;
+  }
+
+  if (persistedPreviewState.nvlDefaultValues !== undefined) {
+    state.nvlDefaultValues = persistedPreviewState.nvlDefaultValues;
+  }
+
+  if (persistedPreviewState.previewRevealingSpeed !== undefined) {
+    state.previewRevealingSpeed = persistedPreviewState.previewRevealingSpeed;
+  }
+
+  if (persistedPreviewState.choiceDefaultValues !== undefined) {
+    state.choiceDefaultValues = persistedPreviewState.choiceDefaultValues;
+  }
+
+  if (persistedPreviewState.historyDefaultValues !== undefined) {
+    state.historyDefaultValues = persistedPreviewState.historyDefaultValues;
+  }
+
+  if (persistedPreviewState.saveLoadDefaultValues !== undefined) {
+    state.saveLoadDefaultValues = persistedPreviewState.saveLoadDefaultValues;
+  }
+
+  state.previewVariableValues = persistedPreviewState.previewVariableValues;
+  state.previewBackgroundImageId =
+    persistedPreviewState.previewBackgroundImageId;
+  state.previewHydrationVersion += 1;
 };
 
 export const setDialogueDefaultValue = (
@@ -494,10 +531,14 @@ export const selectHasSaveLoadPreview = ({ state }) => {
 };
 
 export const selectPreviewData = ({ state }) => {
-  const layoutType = getLayoutState(state).layoutType;
+  const layoutState = getLayoutState(state);
+  const layoutType = layoutState.layoutType;
 
   return createLayoutEditorPreviewData({
     layoutType,
+    currentLayoutId: layoutState.id,
+    currentLayoutData: layoutState.elements,
+    layoutsData: state.repositoryState.layouts,
     variablesData: state.repositoryState.variables,
     previewVariableValues: state.previewVariableValues,
     dialogueDefaultValues: state.dialogueDefaultValues,
@@ -514,6 +555,9 @@ export const selectPreviewData = ({ state }) => {
 export const selectViewData = ({ state, constants }) => {
   const layoutState = getLayoutState(state);
   const layoutType = layoutState.layoutType;
+  const previewHydrationVersion = Number.isFinite(state.previewHydrationVersion)
+    ? state.previewHydrationVersion
+    : 0;
   const previewVariablesViewData = createPreviewVariablesViewData({
     layoutType,
     currentLayoutId: layoutState.id,
@@ -533,7 +577,7 @@ export const selectViewData = ({ state, constants }) => {
     images: state.repositoryState.images,
     saveLoadForm: constants.saveLoadForm,
   });
-  const identityKey = `${layoutState.id ?? "none"}:${layoutType ?? "none"}`;
+  const identityKey = `${layoutState.id ?? "none"}:${layoutType ?? "none"}:${previewHydrationVersion}`;
   const previewBackgroundFormTarget = resolvePreviewBackgroundFormTarget({
     layoutType,
     hasPreviewVariables: previewVariablesViewData.hasPreviewVariables,
