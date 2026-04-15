@@ -40,7 +40,10 @@ template:
                   - rtgl-text s=h3: ${projectName}
               - rtgl-view#projectDescription slot=project-description cur=pointer:
                   - rtgl-text c=mu-fg: ${projectDescription}
-              - rvn-file-image#projectImage slot=project-icon fileId=${projectIconFileId} w=128 h=128 bw=xs bc=bo br=md cur=pointer: null
+              - $if projectIconFileId:
+                  - rvn-file-image#projectImage slot=project-icon fileId=${projectIconFileId} w=128 h=128 bw=xs bc=bo br=md cur=pointer: null
+                $else:
+                  - rtgl-image#projectImage slot=project-icon src="/public/project_logo_placeholder.png" w=128 h=128 bw=xs bc=bo br=md cur=pointer: null
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
       - rtgl-view slot=content:
           - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:

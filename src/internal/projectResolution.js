@@ -7,33 +7,33 @@ export const DEFAULT_PROJECT_RESOLUTION = Object.freeze({
 
 export const PROJECT_RESOLUTION_PRESETS = Object.freeze([
   {
-    value: "1280x720",
-    label: "1280x720",
-    width: 1280,
-    height: 720,
-  },
-  {
     value: DEFAULT_PROJECT_RESOLUTION_PRESET,
     label: "1920x1080",
     width: 1920,
     height: 1080,
   },
-  {
-    value: "qhd",
-    label: "2560x1440 (QHD)",
-    width: 2560,
-    height: 1440,
-  },
-  {
-    value: "4k",
-    label: "3840x2160 (4K)",
-    width: 3840,
-    height: 2160,
-  },
-  {
-    value: CUSTOM_PROJECT_RESOLUTION_PRESET,
-    label: "Custom",
-  },
+  // {
+  //   value: "1280x720",
+  //   label: "1280x720",
+  //   width: 1280,
+  //   height: 720,
+  // },
+  // {
+  //   value: "qhd",
+  //   label: "2560x1440 (QHD)",
+  //   width: 2560,
+  //   height: 1440,
+  // },
+  // {
+  //   value: "4k",
+  //   label: "3840x2160 (4K)",
+  //   width: 3840,
+  //   height: 2160,
+  // },
+  // {
+  //   value: CUSTOM_PROJECT_RESOLUTION_PRESET,
+  //   label: "Custom",
+  // },
 ]);
 
 export const PROJECT_RESOLUTION_OPTIONS = PROJECT_RESOLUTION_PRESETS.map(

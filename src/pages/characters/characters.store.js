@@ -63,6 +63,7 @@ export const createInitialState = () => ({
         name: "shortcut",
         type: "select",
         label: "Shortcut",
+        description: "Used for keyboard shortcut in scene editor",
         options: CHARACTER_SHORTCUT_OPTIONS,
         required: false,
       },

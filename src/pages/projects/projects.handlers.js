@@ -95,7 +95,6 @@ const getProjectIdFromEvent = (event) => {
 const showCreateProjectDialog = async (appService) => {
   return appService.showComponentDialog({
     component: PROJECT_CREATE_DIALOG_COMPONENT,
-    title: "Create Project",
     size: "md",
     props: {
       platform: appService.getPlatform(),
