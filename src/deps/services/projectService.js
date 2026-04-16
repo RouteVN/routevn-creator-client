@@ -1,6 +1,6 @@
-import { nanoid } from "nanoid";
 import { createProjectServiceCore } from "./shared/projectServiceCore.js";
 import { createTauriProjectServiceAdapters } from "./tauri/projectServiceAdapters.js";
+import { generateId } from "../../internal/id.js";
 
 const ENABLE_VERBOSE_COLLAB_LOGS = false;
 
@@ -31,7 +31,7 @@ export const createProjectService = ({
     router,
     db,
     filePicker,
-    idGenerator: nanoid,
+    idGenerator: generateId,
     now: () => Date.now(),
     collabLog,
     creatorVersion,

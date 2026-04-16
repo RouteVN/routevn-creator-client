@@ -67,6 +67,7 @@ const appService = createAppService({
   projectService,
   subject,
 });
+await appService.initUserConfig();
 
 const apiService = createApiService();
 

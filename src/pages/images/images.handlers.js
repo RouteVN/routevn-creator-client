@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId, generatePrefixedId } from "../../internal/id.js";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
 import { processWithConcurrency } from "../../internal/processWithConcurrency.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
@@ -75,7 +75,7 @@ const createPendingUploads = ({ files, parentId } = {}) => {
   }
 
   return (Array.isArray(files) ? files : []).map((file) => ({
-    id: `pending-image-${nanoid()}`,
+    id: generatePrefixedId("pending-image-"),
     file,
     parentId,
     name: file.name.replace(/\.[^.]+$/, ""),
@@ -238,7 +238,7 @@ const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
           fallbackMessage: "Failed to create image.",
           action: () =>
             projectService.createImage({
-              imageId: nanoid(),
+              imageId: generateId(),
               fileRecords: uploadResult.fileRecords,
               data: {
                 type: "image",

@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId } from "../../internal/id.js";
 import { createLayoutEditorPayload } from "../../internal/layoutEditorRoute.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
@@ -175,7 +175,7 @@ export const handleDetailHeaderClick = (deps) => {
 };
 
 export const createControlTemplate = (projectResolution) => {
-  const spriteId = nanoid();
+  const spriteId = generateId();
 
   return scaleLayoutElementsForProjectResolution(
     {
@@ -259,7 +259,7 @@ export const handleControlFormActionClick = async (deps, payload) => {
       fallbackMessage: "Failed to create control.",
       action: () =>
         projectService.createControlItem({
-          controlId: nanoid(),
+          controlId: generateId(),
           name,
           data: {
             description,

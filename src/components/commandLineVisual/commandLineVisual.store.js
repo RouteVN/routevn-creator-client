@@ -1,4 +1,5 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
+import { generatePrefixedId } from "../../internal/id.js";
 
 const RESOURCE_TYPES = [
   { type: "image", label: "Images" },
@@ -134,7 +135,7 @@ export const setTransforms = ({ state }, { transforms } = {}) => {
 };
 
 const generateVisualId = () => {
-  return `visual-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return generatePrefixedId("visual-");
 };
 
 export const addVisual = ({ state }, { resourceId } = {}) => {

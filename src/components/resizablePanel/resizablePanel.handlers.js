@@ -1,3 +1,13 @@
+const toConfigPanelType = (panelType = "") => {
+  return String(panelType).replace(/-([a-z])/g, (_, character) =>
+    character.toUpperCase(),
+  );
+};
+
+const getPanelWidthConfigKey = (panelType = "file-explorer") => {
+  return `resizablePanel.${toConfigPanelType(panelType)}Width`;
+};
+
 export const handleBeforeMount = (deps) => {
   const { store, props: attrs, appService } = deps;
 
@@ -8,10 +18,11 @@ export const handleBeforeMount = (deps) => {
   const minWidth = parseInt(attrs.minW) || 200;
   const maxWidth = parseInt(attrs.maxW) || 600;
 
-  // Load from localStorage using userConfig pattern
-  const configKey = `resizablePanel.${panelType}Width`;
+  const configKey = getPanelWidthConfigKey(panelType);
   const storedWidth = appService.getUserConfig(configKey);
-  const width = storedWidth ? parseInt(storedWidth, 10) : defaultWidth;
+  const width = Number.isFinite(Number(storedWidth))
+    ? Number(storedWidth)
+    : defaultWidth;
 
   store.initializePanelWidth({
     width,
@@ -80,11 +91,10 @@ const handleResizeEnd = (deps, _, listeners) => {
   const { store, render, props: attrs, appService, subject } = deps;
   const { handleMouseMove, handleMouseUp } = listeners;
 
-  // Save final width to localStorage using userConfig pattern
   const panelType = attrs.panelType || "file-explorer";
-  const configKey = `resizablePanel.${panelType}Width`;
+  const configKey = getPanelWidthConfigKey(panelType);
   const currentWidth = store.selectPanelWidth();
-  appService.setUserConfig(configKey, currentWidth.toString());
+  appService.setUserConfig(configKey, currentWidth);
 
   // Dispatch resize-end event via subject
   subject.dispatch("panel-resize-end", {

@@ -116,10 +116,19 @@ const preloadBundleData = async () => {
   await assetBufferManager.load(assets);
   const assetBufferMap = assetBufferManager.getBufferMap();
 
-  return { jsonData, assetBufferMap };
+  return {
+    jsonData,
+    assetBufferMap,
+    bundleMetadata: vnbundleInstructions.bundleMetadata,
+  };
 };
 
-const createBundleNamespace = () => {
+const createBundleNamespace = (bundleMetadata) => {
+  const metadataNamespace = bundleMetadata?.project?.namespace;
+  if (typeof metadataNamespace === "string" && metadataNamespace.length > 0) {
+    return metadataNamespace;
+  }
+
   const pathname =
     typeof window?.location?.pathname === "string" &&
     window.location.pathname.length > 0
@@ -129,9 +138,9 @@ const createBundleNamespace = () => {
   return `bundle:${pathname}`;
 };
 
-const prepareEngine = async ({ jsonData, assetBufferMap }) => {
+const prepareEngine = async ({ jsonData, assetBufferMap, bundleMetadata }) => {
   const plugins = await loadGraphicsEnginePlugins();
-  const namespace = createBundleNamespace();
+  const namespace = createBundleNamespace(bundleMetadata);
 
   // Create dedicated ticker for auto mode
   const ticker = new Ticker();

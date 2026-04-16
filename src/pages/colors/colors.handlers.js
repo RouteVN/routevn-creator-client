@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId } from "../../internal/id.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
@@ -170,7 +170,7 @@ export const handleAddFormAction = async (deps, payload) => {
     fallbackMessage: "Failed to create color.",
     action: () =>
       projectService.createColor({
-        colorId: nanoid(),
+        colorId: generateId(),
         data: {
           type: "color",
           name,

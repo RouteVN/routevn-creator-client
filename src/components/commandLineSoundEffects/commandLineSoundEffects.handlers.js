@@ -1,5 +1,5 @@
 import { toFlatItems } from "../../internal/project/tree.js";
-import { nanoid } from "nanoid";
+import { generateId } from "../../internal/id.js";
 
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
@@ -113,7 +113,7 @@ export const handleAddNewClick = (deps, payload) => {
   const { store, render } = deps;
 
   // Create a new sound effect but don't add it to the store yet
-  const newId = nanoid();
+  const newId = generateId();
 
   // Set it as currently editing and go to gallery mode
   store.setCurrentEditingId({

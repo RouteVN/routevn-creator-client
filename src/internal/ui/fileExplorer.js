@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId } from "../id.js";
 import {
   getFirstTextStyleId,
   getTextStyleCount,
@@ -333,7 +333,7 @@ export const createResourceFileExplorerHandlers = ({
 
       if (action === "new-item") {
         await projectService[resourceApi.createMethod]({
-          [resourceApi.idField]: nanoid(),
+          [resourceApi.idField]: generateId(),
           data: {
             type: "folder",
             name: "New Folder",
@@ -347,7 +347,7 @@ export const createResourceFileExplorerHandlers = ({
         }
 
         await projectService[resourceApi.createMethod]({
-          [resourceApi.idField]: nanoid(),
+          [resourceApi.idField]: generateId(),
           data: {
             type: "folder",
             name: "New Folder",
@@ -428,7 +428,7 @@ export const createResourceFileExplorerHandlers = ({
       ) {
         const nextValue = {
           ...action,
-          id: nanoid(),
+          id: generateId(),
         };
         delete nextValue.action;
 
@@ -482,7 +482,7 @@ export const createLayoutsFileExplorerHandlers = ({
 
       if (action === "new-item") {
         await projectService.createLayoutItem({
-          layoutId: nanoid(),
+          layoutId: generateId(),
           name: "New Folder",
           parentId: null,
           position: "last",
@@ -496,7 +496,7 @@ export const createLayoutsFileExplorerHandlers = ({
         }
 
         await projectService.createLayoutItem({
-          layoutId: nanoid(),
+          layoutId: generateId(),
           name: "New Folder",
           parentId: itemId,
           position: "last",
@@ -599,7 +599,7 @@ export const createControlsFileExplorerHandlers = ({
 
       if (action === "new-item") {
         await projectService.createControlItem({
-          controlId: nanoid(),
+          controlId: generateId(),
           name: "New Folder",
           parentId: null,
           position: "last",
@@ -613,7 +613,7 @@ export const createControlsFileExplorerHandlers = ({
         }
 
         await projectService.createControlItem({
-          controlId: nanoid(),
+          controlId: generateId(),
           name: "New Folder",
           parentId: itemId,
           position: "last",
@@ -737,7 +737,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
           elementIds: [itemId],
         });
       } else if (action === "new-item") {
-        createdItemId = nanoid();
+        createdItemId = generateId();
         await createElement({
           [ownerPayloadKey]: layoutId,
           elementId: createdItemId,
@@ -753,7 +753,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
           return;
         }
 
-        createdItemId = nanoid();
+        createdItemId = generateId();
         await createElement({
           [ownerPayloadKey]: layoutId,
           elementId: createdItemId,
@@ -771,7 +771,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
       ) {
         const nextValue = {
           ...action,
-          id: nanoid(),
+          id: generateId(),
         };
         delete nextValue.action;
         const { id: nextElementId, ...nextElementData } = nextValue;
@@ -864,7 +864,7 @@ export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
 
       if (action === "new-item") {
         await projectService.createSceneItem({
-          sceneId: nanoid(),
+          sceneId: generateId(),
           parentId: null,
           position: "last",
           data: {
@@ -878,7 +878,7 @@ export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
         }
 
         await projectService.createSceneItem({
-          sceneId: nanoid(),
+          sceneId: generateId(),
           parentId: itemId,
           position: "last",
           data: {
@@ -962,7 +962,7 @@ export const createCharacterSpritesFileExplorerHandlers = ({
       if (action === "new-item") {
         await projectService.createCharacterSpriteItem({
           characterId,
-          spriteId: nanoid(),
+          spriteId: generateId(),
           position: "last",
           data: {
             type: "folder",
@@ -976,7 +976,7 @@ export const createCharacterSpritesFileExplorerHandlers = ({
 
         await projectService.createCharacterSpriteItem({
           characterId,
-          spriteId: nanoid(),
+          spriteId: generateId(),
           parentId: itemId,
           position: "last",
           data: {
@@ -1024,7 +1024,7 @@ export const createCharacterSpritesFileExplorerHandlers = ({
       ) {
         const nextValue = {
           ...action,
-          id: nanoid(),
+          id: generateId(),
         };
         delete nextValue.action;
         const { id: nextSpriteId, ...nextSpriteData } = nextValue;

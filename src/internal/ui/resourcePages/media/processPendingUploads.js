@@ -1,5 +1,5 @@
-import { nanoid } from "nanoid";
 import { processWithConcurrency } from "../../../processWithConcurrency.js";
+import { generatePrefixedId } from "../../../id.js";
 
 const CREATE_ABORT_ERROR = "pending-upload-create-abort";
 
@@ -24,7 +24,7 @@ const createPendingUploads = ({
   }
 
   return (Array.isArray(files) ? files : []).map((file) => ({
-    id: `${pendingIdPrefix}-${nanoid()}`,
+    id: generatePrefixedId(`${pendingIdPrefix}-`),
     file,
     parentId,
     name: getPendingName(file),

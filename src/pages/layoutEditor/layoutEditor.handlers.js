@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId } from "../../internal/id.js";
 import { concatMap, debounceTime, filter, from } from "rxjs";
 import {
   createCollabRemoteRefreshStream,
@@ -339,7 +339,7 @@ const queuePendingLayoutEditorPersist = (
     selectedItemId,
     updatedItem,
     replace,
-    persistenceRequestId: nanoid(),
+    persistenceRequestId: generateId(),
   };
 
   store.setPendingPersistPayload({
@@ -596,9 +596,9 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
 
     await projectService.ensureRepository();
 
-    const slotContainerId = nanoid();
-    const slotImageId = nanoid();
-    const slotDateId = nanoid();
+    const slotContainerId = generateId();
+    const slotImageId = generateId();
+    const slotDateId = generateId();
     const parentId = payload?._event?.detail?.itemId ?? null;
     const projectResolution = store.selectProjectResolution();
 
@@ -741,7 +741,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     }
 
     await projectService.ensureRepository();
-    const nextElementId = nanoid();
+    const nextElementId = generateId();
     const createResult = await projectService.createLayoutElement({
       layoutId,
       elementId: nextElementId,
@@ -836,7 +836,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
       return;
     }
 
-    const nextElementId = nanoid();
+    const nextElementId = generateId();
     const nextElementData = {
       ...getLayoutEditorCreateDefinition("spritesheet-animation", {
         projectResolution: store.selectProjectResolution(),
@@ -951,7 +951,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
       return;
     }
 
-    const nextElementId = nanoid();
+    const nextElementId = generateId();
     const nextElementData = {
       ...getLayoutEditorCreateDefinition("particle", {
         projectResolution: store.selectProjectResolution(),
@@ -1066,7 +1066,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
       return;
     }
 
-    const nextElementId = nanoid();
+    const nextElementId = generateId();
     const nextElementData = {
       ...getLayoutEditorCreateDefinition("sprite", {
         projectResolution: store.selectProjectResolution(),
@@ -1185,7 +1185,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
   const baseItem = getLayoutEditorCreateDefinition(createType, {
     projectResolution: store.selectProjectResolution(),
   }).template;
-  const nextElementId = nanoid();
+  const nextElementId = generateId();
   const nextElementData = {
     ...baseItem,
     name,

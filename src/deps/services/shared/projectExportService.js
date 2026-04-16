@@ -5,13 +5,16 @@
 export const BUNDLE_FORMAT_VERSION = 2;
 export const BUNDLE_APP_NAME = "routevn-creator-client";
 
-export const createBundleInstructions = ({ projectData, bundler }) => {
+export const createBundleInstructions = ({ projectData, bundler, project }) => {
   return {
     projectData,
     bundleMetadata: {
       bundler: {
         appName: bundler?.appName ?? BUNDLE_APP_NAME,
         appVersion: bundler?.appVersion ?? "",
+      },
+      project: {
+        namespace: project?.namespace ?? "",
       },
     },
   };

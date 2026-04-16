@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId } from "../../internal/id.js";
 import { createLayoutEditorPayload } from "../../internal/layoutEditorRoute.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import {
@@ -14,6 +14,14 @@ const syncEditFormValues = ({ deps, values } = {}) => {
   const { editForm } = deps.refs;
   editForm.reset();
   editForm.setValues({ values });
+};
+
+const logSelectedLayoutData = ({ store } = {}) => {
+  const selectedItemId = store.selectSelectedItemId();
+  const selectedLayout = selectedItemId
+    ? store.selectLayoutItemById({ itemId: selectedItemId })
+    : undefined;
+  console.log("[layouts] selected layout data", selectedLayout);
 };
 
 const navigateToLayoutEditor = ({ appService, layoutId } = {}) => {
@@ -102,6 +110,7 @@ export {
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   handleCatalogFileExplorerSelectionChanged(deps, payload);
+  logSelectedLayoutData(deps);
 
   const { isFolder } = payload._event.detail;
   if (isFolder) {
@@ -111,6 +120,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
 
 export const handleLayoutItemClick = (deps, payload) => {
   handleCatalogLayoutItemClick(deps, payload);
+  logSelectedLayoutData(deps);
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {
@@ -158,9 +168,9 @@ const createLayoutElement = (id, data) => ({
 
 export const createLayoutTemplate = (layoutType, projectResolution) => {
   if (layoutType === "dialogue-adv") {
-    const containerId = nanoid();
-    const nameTextId = nanoid();
-    const contentTextId = nanoid();
+    const containerId = generateId();
+    const nameTextId = generateId();
+    const contentTextId = generateId();
 
     return scaleLayoutElementsForProjectResolution(
       {
@@ -232,13 +242,13 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
     );
   }
 
-  if (layoutType === "dialogue-nvl") {
-    const nvlContainerId = nanoid();
-    const nvlBackgroundId = nanoid();
-    const nvlLinesId = nanoid();
-    const lineContainerId = nanoid();
-    const lineNameTextId = nanoid();
-    const lineContentTextId = nanoid();
+  if (layoutType === "dialogue-nvl" || layoutType === "nvl") {
+    const nvlContainerId = generateId();
+    const nvlBackgroundId = generateId();
+    const nvlLinesId = generateId();
+    const lineContainerId = generateId();
+    const lineNameTextId = generateId();
+    const lineContentTextId = generateId();
 
     return scaleLayoutElementsForProjectResolution(
       {
@@ -373,13 +383,13 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
   }
 
   if (layoutType === "history") {
-    const historyContainerId = nanoid();
-    const titleTextId = nanoid();
-    const closeButtonTextId = nanoid();
-    const historyScrollContainerId = nanoid();
-    const historyItemContainerId = nanoid();
-    const historyCharacterNameId = nanoid();
-    const historyContentId = nanoid();
+    const historyContainerId = generateId();
+    const titleTextId = generateId();
+    const closeButtonTextId = generateId();
+    const historyScrollContainerId = generateId();
+    const historyItemContainerId = generateId();
+    const historyCharacterNameId = generateId();
+    const historyContentId = generateId();
 
     return scaleLayoutElementsForProjectResolution(
       {
@@ -552,10 +562,10 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
   }
 
   if (layoutType === "choice") {
-    const choicesContainerId = nanoid();
-    const choiceItemContainerId = nanoid();
-    const choiceTextId = nanoid();
-    const choiceBackgroundId = nanoid();
+    const choicesContainerId = generateId();
+    const choiceItemContainerId = generateId();
+    const choiceTextId = generateId();
+    const choiceBackgroundId = generateId();
 
     return scaleLayoutElementsForProjectResolution(
       {
@@ -652,13 +662,13 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
   }
 
   if (layoutType === "confirmDialog") {
-    const rootId = nanoid();
-    const textId = nanoid();
-    const confirmOkContainerId = nanoid();
-    const confirmOkTextId = nanoid();
-    const confirmCancelContainerId = nanoid();
-    const confirmCancelTextId = nanoid();
-    const spriteId = nanoid();
+    const rootId = generateId();
+    const textId = generateId();
+    const confirmOkContainerId = generateId();
+    const confirmOkTextId = generateId();
+    const confirmCancelContainerId = generateId();
+    const confirmCancelTextId = generateId();
+    const spriteId = generateId();
 
     return scaleLayoutElementsForProjectResolution(
       {
@@ -812,8 +822,8 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
   }
 
   if (layoutType === "general" || layoutType === "save-load") {
-    const rootId = nanoid();
-    const textId = nanoid();
+    const rootId = generateId();
+    const textId = generateId();
 
     return scaleLayoutElementsForProjectResolution(
       {
@@ -931,7 +941,7 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
     fallbackMessage: "Failed to create layout.",
     action: () =>
       projectService.createLayoutItem({
-        layoutId: nanoid(),
+        layoutId: generateId(),
         name,
         layoutType,
         data: {

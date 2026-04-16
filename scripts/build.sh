@@ -7,7 +7,7 @@ set -e
 
 BUILD_TYPE=${1:-web}
 SETUP_FILE="src/setup.${BUILD_TYPE}.js"
-RETTANGOLI_VERSION=$(node -p "require('./package.json').dependencies['@rettangoli/ui']" 2>/dev/null || echo "1.6.0")
+RETTANGOLI_VERSION=$(node -p "require('./package.json').dependencies['@rettangoli/ui']" 2>/dev/null || echo "1.6.1")
 RETTANGOLI_VERSION="${RETTANGOLI_VERSION#^}"
 RETTANGOLI_VERSION="${RETTANGOLI_VERSION#~}"
 RETTANGOLI_URL="https://cdn.jsdelivr.net/npm/@rettangoli/ui@${RETTANGOLI_VERSION}/dist/rettangoli-iife-ui.min.js"

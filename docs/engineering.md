@@ -48,6 +48,21 @@ Local-first collaboration:
   instead of repeatedly using `deps.store`, `deps.refs`, and similar dotted
   access throughout the body.
 
+## ID Generation
+
+Production ID generation is centralized in `src/internal/id.js`.
+
+Rules:
+
+- use `generateId()` by default
+- do not add direct `nanoid`, `crypto.randomUUID()`, `Math.random()`, or
+  timestamp-based generators in feature code
+- if a new use case needs a shorter ID, a prefix, or a composite ID shape,
+  document it in `docs/platform/08-id-generation.md` in the same PR
+
+The platform-level ID format policy, approved lengths, and current prefix rules
+are documented in `docs/platform/08-id-generation.md`.
+
 ## Testing
 
 This repo currently uses two main test styles:
@@ -375,6 +390,14 @@ Handler-facing facade for:
 - file picking
 - app/platform metadata
 
+`appService` user config should be exposed as a synchronous read API backed by
+an in-memory cache, even when the persistence layer is async. The supported
+contract is:
+
+- async boot/load from the global app DB
+- sync reads in handlers/components
+- async persistence on writes
+
 #### `projectService`
 
 Handler-facing facade for:
@@ -407,6 +430,14 @@ Exported `package.bin` files have two distinct version concepts:
     - `appVersion`: which released app build/version produced the export
   - used for provenance, debugging, and support
   - these are not compatibility gates; they are exporter provenance only
+
+- bundled runtime save namespace
+  - source of truth is project-specific DB `projectInfo.namespace`
+  - exported into bundle metadata as `bundleMetadata.project.namespace`
+  - runtime should use that namespace for IndexedDB/save identity
+  - `projectId` must not be exposed into the exported bundle for this purpose
+  - runtime may fall back to `bundle:${window.location.pathname}` only for
+    older bundles that do not carry namespace metadata
 
 Do not collapse these into one field.
 
@@ -614,6 +645,20 @@ That means:
   open
 - keep app-level `projectEntries` as duplicated cached listing data only
 - do not treat repository state as the source of truth for project info
+
+Project identity has an important split:
+
+- projected `state.project.id` comes from the current app project context, not
+  from repository state
+- project-specific DB `projectInfo.id` is the source of truth for canonical
+  project identity on new projects
+- app project entries should mirror that id for routing/listing, but they are
+  not the ownership source
+- committed repository event history in `project.db` still stores `project_id`
+  per committed row, but exported save identity should use `projectInfo.namespace`
+
+For the current full contract, see
+`docs/platform/06-project-identity-and-metadata.md`.
 
 ## Current Canonical Patterns
 

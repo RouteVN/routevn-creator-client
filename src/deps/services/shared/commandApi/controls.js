@@ -77,27 +77,29 @@ export const createControlCommandApi = (shared) => ({
 
   async updateControlItem({ controlId, data, fileRecords = [] }) {
     const context = await shared.ensureCommandContext();
-    const ensureFilesResult = await shared.ensureFilesExist({
+    const fileCommands = shared.buildMissingFileCommands({
       context,
       fileRecords,
     });
-    if (ensureFilesResult?.valid === false) {
-      return ensureFilesResult;
-    }
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
       "controls",
     );
 
-    return shared.submitCommandWithContext({
+    return shared.submitCommandsWithContext({
       context,
-      scope: "resources",
-      basePartition: resourcePartition,
-      type: COMMAND_TYPES.CONTROL_UPDATE,
-      payload: {
-        controlId,
-        data: structuredClone(data || {}),
-      },
+      commands: [
+        ...fileCommands,
+        {
+          scope: "resources",
+          basePartition: resourcePartition,
+          type: COMMAND_TYPES.CONTROL_UPDATE,
+          payload: {
+            controlId,
+            data: structuredClone(data || {}),
+          },
+        },
+      ],
     });
   },
 

@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId } from "../../internal/id.js";
 import {
   buildFilteredStateForExport,
   collectUsedResourcesForExport,
@@ -83,6 +83,18 @@ const getVersionZipName = ({ appService, projectId, version } = {}) => {
   const projectName = entryName || "project";
 
   return `${projectName}_${version?.name ?? "version"}`;
+};
+
+const formatReplayFailureMessage = ({ replay } = {}) => {
+  const failedEventOffset = replay?.failedEventOffset;
+  const targetEventCount = replay?.targetEventCount;
+  const failedType = replay?.failedEvent?.type || "unknown";
+
+  if (!Number.isFinite(Number(failedEventOffset))) {
+    return "History replay failed. Check the app console for details.";
+  }
+
+  return `History replay failed at event ${failedEventOffset}/${targetEventCount || "?"} (${failedType}). Check the app console for details.`;
 };
 
 export const handleAfterMount = async (deps) => {
@@ -189,7 +201,7 @@ export const handleVersionFormAction = async (deps, payload) => {
     const currentActionIndex = allEvents.length;
 
     const newVersion = {
-      id: nanoid(),
+      id: generateId(),
       name,
       notes: description,
       actionIndex: currentActionIndex,
@@ -289,7 +301,8 @@ export const handleDownloadZipClick = async (deps, payload) => {
 
   try {
     const repository = await projectService.getRepository();
-    const repositoryState = repository.getState(version.actionIndex);
+    const projectInfo = await projectService.getCurrentProjectInfo();
+    const repositoryState = repository.getState(version?.actionIndex);
     const usage = collectUsedResourcesForExport(repositoryState);
     const filteredState = buildFilteredStateForExport(repositoryState, usage);
     const constructedProjectData = constructProjectData(filteredState);
@@ -297,6 +310,9 @@ export const handleDownloadZipClick = async (deps, payload) => {
       projectData: constructedProjectData,
       bundler: {
         appVersion: appService.getAppVersion(),
+      },
+      project: {
+        namespace: projectInfo.namespace,
       },
     });
     const savedPath =
@@ -323,8 +339,22 @@ export const handleDownloadZipClick = async (deps, payload) => {
       title: "Export completed",
     });
   } catch (error) {
+    const replay = error?.details?.replay;
+
+    if (replay) {
+      console.error("Version export history replay failed", {
+        versionId,
+        versionName: version?.name,
+        versionActionIndex: version?.actionIndex,
+        replay,
+        error,
+      });
+    }
+
     appService.showAlert({
-      message: `Failed to save ZIP file: ${error.message}`,
+      message: replay
+        ? `${formatReplayFailureMessage({ replay })}\n${error.message}`
+        : `Failed to save ZIP file: ${error.message}`,
       title: "Error",
     });
   }

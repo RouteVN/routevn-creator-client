@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId } from "../../internal/id.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import {
@@ -15,6 +15,12 @@ const AVATAR_VALIDATIONS = [
     minHeight: 64,
   },
 ];
+
+const EMPTY_CHARACTER_FORM_VALUES = {
+  name: "",
+  description: "",
+  shortcut: "",
+};
 
 const syncCharactersData = ({
   store,
@@ -63,6 +69,14 @@ const openAvatarCropDialog = ({ deps, target, file } = {}) => {
   const { store, render } = deps;
   store.openAvatarCropDialog({ target, file });
   render();
+};
+
+const resetAddCharacterForm = ({ refs } = {}) => {
+  const { characterForm } = refs;
+  characterForm?.reset?.();
+  characterForm?.setValues?.({
+    values: EMPTY_CHARACTER_FORM_VALUES,
+  });
 };
 
 const uploadAvatarFile = async ({ deps, file, target } = {}) => {
@@ -188,8 +202,8 @@ export const handleCharacterCreated = async (deps, payload) => {
     avatarFileId,
     avatarUploadResult,
   } = payload._event.detail;
-  const characterId = nanoid();
-  const defaultSpritesFolderId = nanoid();
+  const characterId = generateId();
+  const defaultSpritesFolderId = generateId();
   const characterData = {
     type: "character",
     name,
@@ -264,12 +278,14 @@ export const handleAddCharacterClick = (deps, payload) => {
   store.setTargetGroupId({ groupId: groupId });
   store.toggleDialog();
   render();
+  resetAddCharacterForm(deps);
 };
 
 export const handleCloseDialog = (deps) => {
   const { store, render } = deps;
   store.closeAvatarCropDialog();
   store.clearAvatarState();
+  resetAddCharacterForm(deps);
   store.toggleDialog();
   render();
 };
@@ -318,6 +334,7 @@ export const handleDialogFormActionClick = async (deps, payload) => {
 
     // Clear avatar state and close dialog
     store.clearAvatarState();
+    resetAddCharacterForm(deps);
     store.toggleDialog();
     render();
   }

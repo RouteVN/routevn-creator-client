@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId } from "../../internal/id.js";
 import { filter, tap } from "rxjs";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
@@ -85,7 +85,7 @@ const createSoundsFromFiles = async ({ deps, files, parentId } = {}) => {
         fallbackMessage: "Failed to create sound.",
         action: () =>
           projectService.createSound({
-            soundId: nanoid(),
+            soundId: generateId(),
             fileRecords: uploadResult.fileRecords,
             data: {
               type: "sound",
@@ -167,10 +167,10 @@ export const handleBeforeMount = (deps) => {
   const cleanup = handleMediaBeforeMount(deps);
 
   const defaultLeft = parseInt(
-    appService.getUserConfig("resizablePanel.file-explorerWidth"),
+    appService.getUserConfig("resizablePanel.fileExplorerWidth"),
   );
   const defaultRight = parseInt(
-    appService.getUserConfig("resizablePanel.detail-panelWidth"),
+    appService.getUserConfig("resizablePanel.detailPanelWidth"),
   );
   store.updateAudioPlayerLeft({ width: defaultLeft });
   store.updateAudioPlayerRight({ width: defaultRight });

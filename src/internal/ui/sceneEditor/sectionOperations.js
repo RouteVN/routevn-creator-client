@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId } from "../../id.js";
 import {
   renderSceneEditorState,
   updateSceneEditorSectionChanges,
@@ -164,8 +164,8 @@ export const createSceneEditorSectionWithName = async (
   const { store, projectService, render } = deps;
   const { inheritPresentationFromSelectedLine = true } = options;
   const sceneId = store.selectSceneId();
-  const newSectionId = nanoid();
-  const newLineId = nanoid();
+  const newSectionId = generateId();
+  const newLineId = generateId();
 
   const repositoryState = projectService.getState();
   const layouts = repositoryState.layouts;

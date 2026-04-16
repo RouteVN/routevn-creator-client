@@ -147,10 +147,13 @@ describe("resource command file batching", () => {
     expect(shared.ensureFilesExist).not.toHaveBeenCalled();
   });
 
-  it("ensures missing file records exist before layout updates", async () => {
+  it("batches missing file records with layout updates", async () => {
     const submitResult = { valid: true, commandIds: ["cmd-1"] };
     const fileRecords = [{ id: "thumb-1" }];
-    const { context, shared } = createShared({ submitResult });
+    const fileCommands = [
+      { type: COMMAND_TYPES.FILE_CREATE, payload: { fileId: "thumb-1" } },
+    ];
+    const { context, shared } = createShared({ submitResult, fileCommands });
     const api = createLayoutCommandApi(shared);
 
     const result = await api.updateLayoutItem({
@@ -163,29 +166,39 @@ describe("resource command file batching", () => {
     });
 
     expect(result).toBe(submitResult);
-    expect(shared.ensureFilesExist).toHaveBeenCalledWith({
+    expect(shared.buildMissingFileCommands).toHaveBeenCalledWith({
       context,
       fileRecords,
     });
-    expect(shared.submitCommandWithContext).toHaveBeenCalledWith({
+    expect(shared.submitCommandsWithContext).toHaveBeenCalledWith({
       context,
-      scope: "resources",
-      basePartition: "main",
-      type: COMMAND_TYPES.LAYOUT_UPDATE,
-      payload: {
-        layoutId: "layout-1",
-        data: {
-          thumbnailFileId: "thumb-1",
-          preview: {},
+      commands: [
+        ...fileCommands,
+        {
+          scope: "resources",
+          basePartition: "main",
+          type: COMMAND_TYPES.LAYOUT_UPDATE,
+          payload: {
+            layoutId: "layout-1",
+            data: {
+              thumbnailFileId: "thumb-1",
+              preview: {},
+            },
+          },
         },
-      },
+      ],
     });
+    expect(shared.submitCommandWithContext).not.toHaveBeenCalled();
+    expect(shared.ensureFilesExist).not.toHaveBeenCalled();
   });
 
-  it("ensures missing file records exist before control updates", async () => {
+  it("batches missing file records with control updates", async () => {
     const submitResult = { valid: true, commandIds: ["cmd-1"] };
     const fileRecords = [{ id: "thumb-2" }];
-    const { context, shared } = createShared({ submitResult });
+    const fileCommands = [
+      { type: COMMAND_TYPES.FILE_CREATE, payload: { fileId: "thumb-2" } },
+    ];
+    const { context, shared } = createShared({ submitResult, fileCommands });
     const api = createControlCommandApi(shared);
 
     const result = await api.updateControlItem({
@@ -198,23 +211,30 @@ describe("resource command file batching", () => {
     });
 
     expect(result).toBe(submitResult);
-    expect(shared.ensureFilesExist).toHaveBeenCalledWith({
+    expect(shared.buildMissingFileCommands).toHaveBeenCalledWith({
       context,
       fileRecords,
     });
-    expect(shared.submitCommandWithContext).toHaveBeenCalledWith({
+    expect(shared.submitCommandsWithContext).toHaveBeenCalledWith({
       context,
-      scope: "resources",
-      basePartition: "main",
-      type: COMMAND_TYPES.CONTROL_UPDATE,
-      payload: {
-        controlId: "control-1",
-        data: {
-          thumbnailFileId: "thumb-2",
-          preview: {},
+      commands: [
+        ...fileCommands,
+        {
+          scope: "resources",
+          basePartition: "main",
+          type: COMMAND_TYPES.CONTROL_UPDATE,
+          payload: {
+            controlId: "control-1",
+            data: {
+              thumbnailFileId: "thumb-2",
+              preview: {},
+            },
+          },
         },
-      },
+      ],
     });
+    expect(shared.submitCommandWithContext).not.toHaveBeenCalled();
+    expect(shared.ensureFilesExist).not.toHaveBeenCalled();
   });
 
   it("submits resource create without file commands when there are no missing files", async () => {

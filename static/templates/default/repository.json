@@ -525,6 +525,13 @@
         "mimeType": "image/jpeg",
         "size": 3907,
         "sha256": "daf83560a69b0ad43b7a72a1ed3866f667823149b7b833d9ede86efd3558473c"
+      },
+      "EfA88JsfiN8p5hs2h7_t5": {
+        "id": "EfA88JsfiN8p5hs2h7_t5",
+        "type": "image",
+        "mimeType": "image/jpeg",
+        "size": 3333,
+        "sha256": "a6bb7e0e9ac3991bb9249cb6c5abe65214bab894f68702a67ca1964ee8a36adc"
       }
     },
     "tree": [
@@ -611,6 +618,9 @@
       },
       {
         "id": "tST4AJhFY02zNCKHlHt7P"
+      },
+      {
+        "id": "EfA88JsfiN8p5hs2h7_t5"
       }
     ]
   },
@@ -1320,7 +1330,7 @@
         "id": "HbESBAK58wzdbCozqzZvh",
         "type": "layout",
         "name": "Default ADV",
-        "thumbnailFileId": "tST4AJhFY02zNCKHlHt7P",
+        "thumbnailFileId": "EfA88JsfiN8p5hs2h7_t5",
         "layoutType": "dialogue-adv",
         "elements": {
           "items": {
@@ -1359,9 +1369,8 @@
               "id": "J8eeCQghmMDBgjK3r8Fxm",
               "type": "text-ref-character-name",
               "name": "Character Name",
-              "x": 40,
+              "x": 120,
               "y": 30,
-              "width": 400,
               "height": 40,
               "anchorX": 0,
               "anchorY": 0,
@@ -1377,9 +1386,9 @@
               "id": "TAVMU5bUWTruxHBWZZuAu",
               "type": "text-revealing-ref-dialogue-content",
               "name": "Dialogue Content",
-              "x": 40,
+              "x": 120,
               "y": 110,
-              "width": 1440,
+              "width": 1680,
               "height": 140,
               "anchorX": 0,
               "anchorY": 0,
@@ -1784,7 +1793,7 @@
             },
             "content": [
               {
-                "text": "This is a sample dialogue content."
+                "text": "This is a sample dialogue content"
               }
             ],
             "lines": [
@@ -1792,14 +1801,14 @@
                 "characterName": "Character",
                 "content": [
                   {
-                    "text": "This is a sample dialogue content."
+                    "text": "This is a sample dialogue content"
                   }
                 ]
               },
               {
                 "content": [
                   {
-                    "text": "This is a sample dialogue content."
+                    "text": "This is a sample dialogue content"
                   }
                 ]
               },
@@ -1807,7 +1816,7 @@
                 "characterName": "Narrator",
                 "content": [
                   {
-                    "text": "This is a sample dialogue content."
+                    "text": "This is a sample dialogue content"
                   }
                 ]
               }

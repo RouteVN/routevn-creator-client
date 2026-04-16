@@ -29,6 +29,49 @@ column.
 RouteVN's local project repository event store is separate from this collab
 sync model.
 
+## Project-Specific Local DB
+
+The project-specific local DB also carries app-owned metadata alongside the
+event store.
+
+Storage location:
+
+- desktop: project-specific SQLite `project.db`
+- web: project-specific IndexedDB project DB
+
+Current app-owned keys:
+
+- `projectInfo`
+  - `id`
+  - `namespace`
+  - `name`
+  - `description`
+  - `iconFileId`
+- `creatorVersion`
+
+Important details:
+
+- `projectInfo` is the source of truth for project display metadata
+- `projectInfo.id` is the canonical folder/project id for new projects
+- `projectInfo.namespace` is the canonical exported runtime save namespace for
+  new projects
+- repository state is not the source of truth for `name`, `description`, or
+  `iconFileId`
+- committed event rows also store `project_id`
+- for new projects, app routing/list entries should follow the id stored in
+  `projectInfo`
+
+For the current identity split between app project ids, committed-event
+`project_id`, and bundled runtime namespace, see
+`06-project-identity-and-metadata.md`.
+
+The global app DB separately owns app-level cached project listing data and the
+shared `userConfig` object.
+
+For the agreed persisted key catalog across global app DB, project-specific DB
+`app` store, and non-persisted runtime-only values, see
+`07-persisted-key-catalog.md`.
+
 ## Durability Settings
 
 - WAL mode

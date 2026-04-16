@@ -48,6 +48,8 @@ export const createInitialState = () => ({
   dragOffset: { x: 0, y: 0 },
   lastDraggedPosition: undefined,
   hoveredItemId: undefined,
+  isDraggingMinimapViewport: false,
+  minimapViewportDrag: undefined,
   // Pan state
   isPinnedPanMode: false,
   isKeyboardPanMode: false,
@@ -124,6 +126,66 @@ export const stopPanning = ({ state }, _payload = {}) => {
   state.isPanning = false;
 };
 
+export const startMinimapViewportDragging = (
+  { state },
+  { mouseX, mouseY, minimapData } = {},
+) => {
+  const scale = Number(minimapData?.scale);
+  const viewport = minimapData?.viewport;
+
+  if (
+    !viewport?.visible ||
+    !Number.isFinite(scale) ||
+    scale <= 0 ||
+    !Number.isFinite(Number(mouseX)) ||
+    !Number.isFinite(Number(mouseY))
+  ) {
+    return;
+  }
+
+  state.isDraggingMinimapViewport = true;
+  state.minimapViewportDrag = {
+    offsetX: Number(mouseX) - viewport.x,
+    offsetY: Number(mouseY) - viewport.y,
+    startViewportX: viewport.x,
+    startViewportY: viewport.y,
+    startPanX: state.panX,
+    startPanY: state.panY,
+    scale,
+    zoomLevel: state.zoomLevel,
+  };
+};
+
+export const updatePanFromMinimapViewportDragging = (
+  { state },
+  { mouseX, mouseY } = {},
+) => {
+  if (!state.isDraggingMinimapViewport || !state.minimapViewportDrag) {
+    return;
+  }
+
+  const drag = state.minimapViewportDrag;
+  const nextMouseX = Number(mouseX);
+  const nextMouseY = Number(mouseY);
+
+  if (!Number.isFinite(nextMouseX) || !Number.isFinite(nextMouseY)) {
+    return;
+  }
+
+  const nextViewportX = nextMouseX - drag.offsetX;
+  const nextViewportY = nextMouseY - drag.offsetY;
+  const deltaViewportX = nextViewportX - drag.startViewportX;
+  const deltaViewportY = nextViewportY - drag.startViewportY;
+
+  state.panX = drag.startPanX - (deltaViewportX / drag.scale) * drag.zoomLevel;
+  state.panY = drag.startPanY - (deltaViewportY / drag.scale) * drag.zoomLevel;
+};
+
+export const stopMinimapViewportDragging = ({ state }, _payload = {}) => {
+  state.isDraggingMinimapViewport = false;
+  state.minimapViewportDrag = undefined;
+};
+
 // Zoom functions
 export const zoomAt = ({ state }, { mouseX, mouseY, scaleFactor } = {}) => {
   const newZoom = state.zoomLevel * scaleFactor;
@@ -191,6 +253,8 @@ export const selectIsPanMode = ({ state }) =>
 export const selectIsPinnedPanMode = ({ state }) => state.isPinnedPanMode;
 export const selectIsKeyboardPanMode = ({ state }) => state.isKeyboardPanMode;
 export const selectIsPanning = ({ state }) => state.isPanning;
+export const selectIsDraggingMinimapViewport = ({ state }) =>
+  state.isDraggingMinimapViewport;
 export const selectPan = ({ state }) => ({
   x: state.panX,
   y: state.panY,
@@ -229,10 +293,50 @@ const normalizeCursorValue = (cursor) => {
   return CSS.supports("cursor", cursor) ? cursor : undefined;
 };
 
+const getVisibleViewportAxis = (start, end, limit) => {
+  const clippedStart = clamp(start, 0, limit);
+  const clippedEnd = clamp(end, 0, limit);
+
+  if (clippedEnd > clippedStart) {
+    return {
+      start: clippedStart,
+      size: clippedEnd - clippedStart,
+    };
+  }
+
+  const edgeSize = limit > 0 ? 1 : 0;
+
+  if (end <= 0) {
+    return {
+      start: 0,
+      size: edgeSize,
+    };
+  }
+
+  if (start >= limit) {
+    return {
+      start: Math.max(0, limit - edgeSize),
+      size: edgeSize,
+    };
+  }
+
+  return {
+    start: clippedStart,
+    size: edgeSize,
+  };
+};
+
 const generateMinimapData = (items, pan, zoomLevel, containerSize) => {
   if (!items || items.length === 0) {
     return {
       items: [],
+      minimap: {
+        width: 0,
+        height: 0,
+      },
+      viewport: {
+        visible: false,
+      },
     };
   }
 
@@ -257,15 +361,6 @@ const generateMinimapData = (items, pan, zoomLevel, containerSize) => {
     worldRight = Math.max(worldRight, item.x + itemWidth);
     worldBottom = Math.max(worldBottom, item.y + itemHeight);
   });
-
-  if (containerSize.width > 0 && containerSize.height > 0) {
-    // Keep the current viewport represented in the minimap even when the user
-    // pans into empty space beyond the scene-item bounds.
-    worldLeft = Math.min(worldLeft, viewportLeft);
-    worldTop = Math.min(worldTop, viewportTop);
-    worldRight = Math.max(worldRight, viewportRight);
-    worldBottom = Math.max(worldBottom, viewportBottom);
-  }
 
   worldLeft -= padding;
   worldTop -= padding;
@@ -299,14 +394,15 @@ const generateMinimapData = (items, pan, zoomLevel, containerSize) => {
   const rawViewportTop = (viewportTop - worldTop) * scale + offsetY;
   const rawViewportRight = (viewportRight - worldLeft) * scale + offsetX;
   const rawViewportBottom = (viewportBottom - worldTop) * scale + offsetY;
-  const clippedViewportLeft = clamp(rawViewportLeft, 0, minimapWidth);
-  const clippedViewportTop = clamp(rawViewportTop, 0, minimapHeight);
-  const clippedViewportRight = clamp(rawViewportRight, 0, minimapWidth);
-  const clippedViewportBottom = clamp(rawViewportBottom, 0, minimapHeight);
-  const viewportWidth = Math.max(0, clippedViewportRight - clippedViewportLeft);
-  const viewportHeight = Math.max(
-    0,
-    clippedViewportBottom - clippedViewportTop,
+  const visibleViewportX = getVisibleViewportAxis(
+    rawViewportLeft,
+    rawViewportRight,
+    minimapWidth,
+  );
+  const visibleViewportY = getVisibleViewportAxis(
+    rawViewportTop,
+    rawViewportBottom,
+    minimapHeight,
   );
 
   return {
@@ -318,17 +414,26 @@ const generateMinimapData = (items, pan, zoomLevel, containerSize) => {
     offset: { x: offsetX, y: offsetY },
     scaledPan: { x: scaledPanX, y: scaledPanY },
     viewport: {
-      x: clippedViewportLeft,
-      y: clippedViewportTop,
-      width: viewportWidth,
-      height: viewportHeight,
+      x: visibleViewportX.start,
+      y: visibleViewportY.start,
+      width: visibleViewportX.size,
+      height: visibleViewportY.size,
       visible:
         containerSize.width > 0 &&
         containerSize.height > 0 &&
-        viewportWidth > 0 &&
-        viewportHeight > 0,
+        visibleViewportX.size > 0 &&
+        visibleViewportY.size > 0,
     },
   };
+};
+
+export const selectMinimapData = ({ state }, { items = [] } = {}) => {
+  return generateMinimapData(
+    items,
+    { x: state.panX, y: state.panY },
+    state.zoomLevel,
+    state.containerSize,
+  );
 };
 
 export const selectViewData = ({ state, props }) => {
@@ -348,6 +453,9 @@ export const selectViewData = ({ state, props }) => {
 
   const containerCursor = normalizeCursorValue(props.cursor);
   const itemCursor = normalizeCursorValue(props.cursor) || "move";
+  const minimapViewportCursor = state.isDraggingMinimapViewport
+    ? "grabbing"
+    : "grab";
 
   // Calculate adaptive grid size for container background
   const getAdaptiveGridSize = (zoomLevel) => {
@@ -392,11 +500,11 @@ export const selectViewData = ({ state, props }) => {
   return {
     items,
     showMinimap: items.length > 1,
-    minimapData: generateMinimapData(
-      items,
-      { x: state.panX, y: state.panY },
-      state.zoomLevel,
-      state.containerSize,
+    minimapData: selectMinimapData(
+      { state },
+      {
+        items,
+      },
     ),
     arrowsList,
     selectedItemId: props.selectedItemId,
@@ -408,6 +516,7 @@ export const selectViewData = ({ state, props }) => {
     zoomLevelPercent: Math.round(state.zoomLevel * 100),
     containerCursor,
     itemCursor,
+    minimapViewportCursor,
     gridSize: getAdaptiveGridSize(state.zoomLevel),
     sceneBoxWidth: SCENE_BOX_WIDTH,
     sceneBoxHeight: SCENE_BOX_HEIGHT,

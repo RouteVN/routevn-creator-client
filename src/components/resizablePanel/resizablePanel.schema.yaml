@@ -27,4 +27,4 @@ propsSchema:
       enum:
         - file-explorer
         - detail-panel
-      description: Type of panel for localStorage key differentiation
+      description: Type of panel for userConfig key differentiation

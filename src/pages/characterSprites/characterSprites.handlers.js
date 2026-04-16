@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId, generatePrefixedId } from "../../internal/id.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { processWithConcurrency } from "../../internal/processWithConcurrency.js";
 import { createCharacterSpritesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
@@ -21,7 +21,7 @@ const createPendingUploads = ({ files, parentId } = {}) => {
   }
 
   return (Array.isArray(files) ? files : []).map((file) => ({
-    id: `pending-sprite-${nanoid()}`,
+    id: generatePrefixedId("pending-sprite-"),
     file,
     parentId,
     name: file.name.replace(/\.[^.]+$/, ""),
@@ -230,7 +230,7 @@ const createSpritesFromFiles = async ({
           action: () =>
             projectService.createCharacterSpriteItem({
               characterId,
-              spriteId: nanoid(),
+              spriteId: generateId(),
               fileRecords: uploadResult.fileRecords,
               parentId,
               position: "last",

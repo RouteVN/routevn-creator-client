@@ -20,6 +20,7 @@ export const createProjectServiceCore = ({
     router,
     db,
     creatorVersion,
+    idGenerator,
     storageAdapter,
     collabAdapter,
   });

@@ -64,6 +64,6 @@ export const persistAuthenticatedSession = (appService, authResult) => {
 };
 
 export const clearAuthenticatedSession = (appService) => {
-  appService.setUserConfig("auth.session", null);
-  appService.setUserConfig("auth.user", null);
+  appService.setUserConfig("auth.session", undefined);
+  appService.setUserConfig("auth.user", undefined);
 };

@@ -11,6 +11,7 @@ import {
   resolveIndexFromPosition,
 } from "../projectRepository.js";
 import { collapsePartitionsToSingle } from "../collab/partitions.js";
+import { generateId } from "../../../../internal/id.js";
 
 export const createCommandApiShared = ({
   idGenerator,
@@ -32,12 +33,7 @@ export const createCommandApiShared = ({
         return id;
       }
     }
-    if (typeof crypto?.randomUUID === "function") {
-      return crypto.randomUUID();
-    }
-    throw new Error(
-      "Command id generator is required when crypto.randomUUID is unavailable.",
-    );
+    return generateId();
   };
 
   const getCommandTimestamp = () => {

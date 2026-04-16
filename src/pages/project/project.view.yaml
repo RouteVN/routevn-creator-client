@@ -27,6 +27,12 @@ refs:
     eventListeners:
       click:
         handler: handleEditDialogIconClick
+  editIconCropDialog:
+    eventListeners:
+      close:
+        handler: handleEditIconCropDialogClose
+      confirm:
+        handler: handleEditIconCropDialogConfirm
 template:
   - rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c:
       - rtgl-view w=f d=h av=c g=sm:
@@ -52,3 +58,4 @@ template:
                 $else:
                   - rtgl-view#editDialogIcon slot=project-icon-edit w=120 h=120 av=c ah=c bw=xs bc=bo br=md cur=pointer:
                       - rtgl-text c=mu-fg: Click to upload icon
+  - rvn-square-image-crop-dialog#editIconCropDialog :open=${isEditIconCropDialogOpen} :file=${editIconCropFile}: null

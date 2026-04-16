@@ -8,6 +8,8 @@ import {
 import { COMMAND_ENVELOPE_VERSION } from "../src/internal/projectCompatibility.js";
 import { createCommandApiShared } from "../src/deps/services/shared/commandApi/shared.js";
 import { createMediaResourceCommandApi } from "../src/deps/services/shared/commandApi/resources/media.js";
+import { createLayoutCommandApi } from "../src/deps/services/shared/commandApi/layouts.js";
+import { createControlCommandApi } from "../src/deps/services/shared/commandApi/controls.js";
 import {
   mainScenePartitionFor,
   scenePartitionFor,
@@ -23,6 +25,105 @@ import {
 const projectId = "project-adapter-test-001";
 const scene1MainPartition = mainScenePartitionFor("scene-1");
 const scene1Partition = scenePartitionFor("scene-1");
+
+const createCommandApiHarness = ({
+  projectId: targetProjectId,
+  initialState = initialProjectData,
+} = {}) => {
+  let repositoryState = structuredClone(initialState);
+  let projectedState = structuredClone(initialState);
+  const actor = {
+    userId: `local-${targetProjectId}`,
+    clientId: "local-client",
+  };
+
+  const applyCommands = ({ baseState, commands = [] } = {}) => {
+    return (commands || []).reduce((nextState, command) => {
+      const applyResult = applyCommandToRepositoryState({
+        repositoryState: nextState,
+        command,
+        projectId: targetProjectId,
+      });
+      if (applyResult.valid === false) {
+        throw new Error(
+          applyResult.error?.message || "Failed to apply command",
+        );
+      }
+      return applyResult.repositoryState;
+    }, baseState);
+  };
+
+  const repository = {
+    getState: () => structuredClone(repositoryState),
+    async addEvents(repositoryEvents) {
+      const commands = (repositoryEvents || []).map((repositoryEvent) =>
+        repositoryEventToCommand(repositoryEvent),
+      );
+      repositoryState = applyCommands({
+        baseState: repositoryState,
+        commands,
+      });
+    },
+    async addEvent(repositoryEvent) {
+      await repository.addEvents([repositoryEvent]);
+    },
+  };
+
+  const session = {
+    getActor: () => actor,
+    syncProjectedRepositoryState(nextState) {
+      projectedState = structuredClone(nextState);
+    },
+    async submitCommand(command) {
+      const result = await session.submitCommands([command]);
+      if (result?.valid === false) {
+        return result;
+      }
+      return { valid: true };
+    },
+    async submitCommands(commands) {
+      try {
+        projectedState = applyCommands({
+          baseState: projectedState,
+          commands,
+        });
+        return { valid: true };
+      } catch (error) {
+        return {
+          valid: false,
+          error: {
+            message: error?.message || "Failed to submit commands",
+          },
+        };
+      }
+    },
+  };
+
+  const shared = createCommandApiShared({
+    idGenerator: (() => {
+      let counter = 0;
+      return () => `cmd-${++counter}`;
+    })(),
+    now: (() => {
+      let timestamp = 1000;
+      return () => ++timestamp;
+    })(),
+    getCurrentProjectId: () => targetProjectId,
+    getCurrentRepository: async () => repository,
+    getCachedRepository: () => repository,
+    ensureCommandSessionForProject: async () => session,
+    getOrCreateLocalActor: () => actor,
+    storyBasePartitionFor: () => "m",
+    storyScenePartitionFor: () => "m",
+    scenePartitionFor: () => "m",
+    resourceTypePartitionFor: () => "m",
+  });
+
+  return {
+    shared,
+    getRepositoryState: () => structuredClone(repositoryState),
+  };
+};
 
 const createRepositoryEvent = ({
   id,
@@ -179,70 +280,9 @@ const createRepositoryEvent = ({
 }
 
 {
-  const uploadProjectId = "project-image-upload-001";
-  let repositoryState = structuredClone(initialProjectData);
-
-  const repository = {
-    getState: () => structuredClone(repositoryState),
-    async addEvent(repositoryEvent) {
-      const command = repositoryEventToCommand(repositoryEvent);
-      const applyResult = applyCommandToRepositoryState({
-        repositoryState,
-        command,
-        projectId: uploadProjectId,
-      });
-      if (applyResult.valid === false) {
-        throw new Error(applyResult.error?.message || "Failed to add event");
-      }
-      repositoryState = applyResult.repositoryState;
-    },
-  };
-
-  let projectedState = structuredClone(repositoryState);
-  const actor = {
-    userId: `local-${uploadProjectId}`,
-    clientId: "local-client",
-  };
-
-  const session = {
-    getActor: () => actor,
-    syncProjectedRepositoryState(nextState) {
-      projectedState = structuredClone(nextState);
-    },
-    async submitCommand(command) {
-      const applyResult = applyCommandToRepositoryState({
-        repositoryState: projectedState,
-        command,
-        projectId: uploadProjectId,
-      });
-      if (applyResult.valid === false) {
-        return applyResult;
-      }
-      projectedState = applyResult.repositoryState;
-      return { valid: true };
-    },
-  };
-
-  const shared = createCommandApiShared({
-    idGenerator: (() => {
-      let counter = 0;
-      return () => `cmd-${++counter}`;
-    })(),
-    now: (() => {
-      let timestamp = 1000;
-      return () => ++timestamp;
-    })(),
-    getCurrentProjectId: () => uploadProjectId,
-    getCurrentRepository: async () => repository,
-    getCachedRepository: () => repository,
-    ensureCommandSessionForProject: async () => session,
-    getOrCreateLocalActor: () => actor,
-    storyBasePartitionFor: () => "m",
-    storyScenePartitionFor: () => "m",
-    scenePartitionFor: () => "m",
-    resourceTypePartitionFor: () => "m",
+  const { shared, getRepositoryState } = createCommandApiHarness({
+    projectId: "project-image-upload-001",
   });
-
   const mediaApi = createMediaResourceCommandApi(shared);
   const createdImageId = await mediaApi.createImage({
     imageId: "image-1",
@@ -253,11 +293,17 @@ const createRepositoryEvent = ({
         size: 123,
         sha256: "sha256-1",
       },
+      {
+        id: "thumb-1",
+        mimeType: "image/webp",
+        size: 45,
+        sha256: "sha256-thumb-1",
+      },
     ],
     data: {
       type: "image",
       fileId: "file-1",
-      thumbnailFileId: "file-1",
+      thumbnailFileId: "thumb-1",
       name: "Uploaded Image",
       fileType: "image/png",
       fileSize: 123,
@@ -268,9 +314,115 @@ const createRepositoryEvent = ({
     position: "last",
   });
 
+  const secondImageId = await mediaApi.createImage({
+    imageId: "image-2",
+    fileRecords: [
+      {
+        id: "file-2",
+        mimeType: "image/png",
+        size: 234,
+        sha256: "sha256-2",
+      },
+      {
+        id: "thumb-2",
+        mimeType: "image/webp",
+        size: 56,
+        sha256: "sha256-thumb-2",
+      },
+    ],
+    data: {
+      type: "image",
+      fileId: "file-2",
+      thumbnailFileId: "thumb-2",
+      name: "Uploaded Image 2",
+      fileType: "image/png",
+      fileSize: 234,
+      width: 96,
+      height: 96,
+    },
+    parentId: null,
+    position: "last",
+  });
+
+  const repositoryState = getRepositoryState();
   assert.equal(createdImageId, "image-1");
+  assert.equal(secondImageId, "image-2");
   assert.ok(repositoryState.files.items["file-1"]);
+  assert.ok(repositoryState.files.items["thumb-1"]);
+  assert.ok(repositoryState.files.items["file-2"]);
+  assert.ok(repositoryState.files.items["thumb-2"]);
   assert.ok(repositoryState.images.items["image-1"]);
+  assert.ok(repositoryState.images.items["image-2"]);
+}
+
+{
+  const { shared, getRepositoryState } = createCommandApiHarness({
+    projectId: "project-layout-preview-001",
+  });
+  const layoutApi = createLayoutCommandApi(shared);
+  await layoutApi.createLayoutItem({
+    layoutId: "layout-1",
+    name: "Layout 1",
+  });
+
+  const result = await layoutApi.updateLayoutItem({
+    layoutId: "layout-1",
+    fileRecords: [
+      {
+        id: "layout-thumb-1",
+        mimeType: "image/png",
+        size: 321,
+        sha256: "sha256-layout-thumb-1",
+      },
+    ],
+    data: {
+      thumbnailFileId: "layout-thumb-1",
+      preview: {},
+    },
+  });
+
+  const repositoryState = getRepositoryState();
+  assert.equal(result.valid, true);
+  assert.ok(repositoryState.files.items["layout-thumb-1"]);
+  assert.equal(
+    repositoryState.layouts.items["layout-1"].thumbnailFileId,
+    "layout-thumb-1",
+  );
+}
+
+{
+  const { shared, getRepositoryState } = createCommandApiHarness({
+    projectId: "project-control-preview-001",
+  });
+  const controlApi = createControlCommandApi(shared);
+  await controlApi.createControlItem({
+    controlId: "control-1",
+    name: "Control 1",
+  });
+
+  const result = await controlApi.updateControlItem({
+    controlId: "control-1",
+    fileRecords: [
+      {
+        id: "control-thumb-1",
+        mimeType: "image/png",
+        size: 222,
+        sha256: "sha256-control-thumb-1",
+      },
+    ],
+    data: {
+      thumbnailFileId: "control-thumb-1",
+      preview: {},
+    },
+  });
+
+  const repositoryState = getRepositoryState();
+  assert.equal(result.valid, true);
+  assert.ok(repositoryState.files.items["control-thumb-1"]);
+  assert.equal(
+    repositoryState.controls.items["control-1"].thumbnailFileId,
+    "control-thumb-1",
+  );
 }
 
 {

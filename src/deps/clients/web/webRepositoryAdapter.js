@@ -15,6 +15,8 @@ const MATERIALIZED_VIEW_STORE = "materialized_view_state";
 const PROJECT_INFO_KEY = "projectInfo";
 
 const normalizeProjectInfo = (projectInfo = {}) => ({
+  id: projectInfo.id ?? "",
+  namespace: projectInfo.namespace ?? "",
   name: projectInfo.name ?? "",
   description: projectInfo.description ?? "",
   iconFileId: projectInfo.iconFileId ?? null,

@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId, generatePrefixedId } from "../../internal/id.js";
 import { createFontInfoExtractor } from "./support/fontInfoExtractor.js";
 import { getFileType } from "../../internal/fileTypes.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
@@ -77,7 +77,7 @@ const createPendingUploads = ({ files, parentId } = {}) => {
   }
 
   return (Array.isArray(files) ? files : []).map((file) => ({
-    id: `pending-font-${nanoid()}`,
+    id: generatePrefixedId("pending-font-"),
     file,
     parentId,
     name: file.name.replace(/\.[^.]+$/, ""),
@@ -152,7 +152,7 @@ const createFontsFromFiles = async ({ deps, files, parentId } = {}) => {
           fallbackMessage: "Failed to create font.",
           action: () =>
             projectService.createFont({
-              fontId: nanoid(),
+              fontId: generateId(),
               fileRecords: uploadResult.fileRecords,
               data: {
                 type: "font",

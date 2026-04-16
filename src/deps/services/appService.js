@@ -1,8 +1,8 @@
 import { readDir, exists } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { nanoid } from "nanoid";
 import { createAppServiceCore } from "./shared/appServiceCore.js";
+import { generateId } from "../../internal/id.js";
 
 const deriveProjectNameFromPath = (projectPath) => {
   if (typeof projectPath !== "string" || projectPath.length === 0) {
@@ -88,9 +88,10 @@ export const createAppService = (params) => {
       }
 
       const projectData = await projectService.getProjectInfoByPath(folderPath);
+      const projectId = projectData.id;
 
       const projectEntry = {
-        id: nanoid(),
+        id: projectId,
         projectPath: folderPath,
         name: projectData.name,
         description: projectData.description,
@@ -133,8 +134,10 @@ export const createAppService = (params) => {
       }
 
       let iconFileId = null;
+      const projectId = generateId();
+      const namespace = generateId();
       const projectEntry = {
-        id: nanoid(),
+        id: projectId,
         projectPath,
         name,
         description,
@@ -144,11 +147,13 @@ export const createAppService = (params) => {
       };
 
       await projectService.initializeProject({
-        projectId: projectEntry.id,
+        projectId,
         projectPath,
         template,
         projectResolution,
         projectInfo: {
+          id: projectId,
+          namespace,
           name,
           description,
           iconFileId: null,
@@ -157,7 +162,7 @@ export const createAppService = (params) => {
 
       if (iconFile) {
         const storedIcon = await projectService.storeFileForProject({
-          projectId: projectEntry.id,
+          projectId,
           projectPath,
           file: iconFile,
         });
