@@ -57,20 +57,6 @@ const nowMs = () => {
   return Date.now();
 };
 
-const getDurationMs = (startedAt) => Number((nowMs() - startedAt).toFixed(2));
-
-const countObjectKeys = (value) => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return 0;
-  }
-
-  return Object.keys(value).length;
-};
-
-const logSceneEditorPerf = (event, details = {}) => {
-  console.info(`[sceneEditor.perf] ${event}`, details);
-};
-
 const getLinesEditorRef = (refs) => {
   return refs?.linesEditor;
 };
@@ -377,7 +363,6 @@ const scheduleSceneEditorDraftFlush = (
 };
 
 const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
-  const syncStartedAt = nowMs();
   const { store, render, subject } = deps;
   const hadPendingSessionChanges = hasSceneEditorSessionPendingChanges(
     store.selectEditorSession(),
@@ -389,13 +374,6 @@ const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
   store.setRepositoryRevision({ revision });
 
   if (!store.selectSceneId()) {
-    logSceneEditorPerf("projectState.sync.skipped", {
-      reason: "missing-scene-id",
-      revision,
-      repositorySceneCount: countObjectKeys(repositoryState?.scenes?.items),
-      domainSceneCount: countObjectKeys(domainState?.scenes),
-      totalDurationMs: getDurationMs(syncStartedAt),
-    });
     return;
   }
 
@@ -408,16 +386,6 @@ const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
       skipRender: true,
       skipAnimations: true,
     });
-    logSceneEditorPerf("projectState.sync.complete", {
-      revision,
-      repositorySceneCount: countObjectKeys(repositoryState?.scenes?.items),
-      domainSceneCount: countObjectKeys(domainState?.scenes),
-      sceneId: store.selectSceneId(),
-      selectedSectionId: store.selectSelectedSectionId(),
-      selectedLineId: store.selectSelectedLineId(),
-      hadPendingSessionChanges,
-      totalDurationMs: getDurationMs(syncStartedAt),
-    });
     return;
   }
 
@@ -425,29 +393,13 @@ const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
   subject.dispatch("sceneEditor.renderCanvas", {
     skipAnimations: true,
   });
-  logSceneEditorPerf("projectState.sync.complete", {
-    revision,
-    repositorySceneCount: countObjectKeys(repositoryState?.scenes?.items),
-    domainSceneCount: countObjectKeys(domainState?.scenes),
-    sceneId: store.selectSceneId(),
-    selectedSectionId: store.selectSelectedSectionId(),
-    selectedLineId: store.selectSelectedLineId(),
-    hadPendingSessionChanges,
-    totalDurationMs: getDurationMs(syncStartedAt),
-  });
 };
 
 export const handleBeforeMount = (deps) => {
   const { projectService, appService, store } = deps;
-  const mountStartedAt = nowMs();
-  let projectEmissionCount = 0;
   const showLineNumbers =
     appService.getUserConfig(SHOW_LINE_NUMBERS_CONFIG_KEY) ?? true;
   store.setSceneSettings({
-    showLineNumbers,
-  });
-  logSceneEditorPerf("beforeMount.start", {
-    emitCurrent: false,
     showLineNumbers,
   });
 
@@ -459,37 +411,11 @@ export const handleBeforeMount = (deps) => {
     emitCurrent: false,
   }).subscribe({
     next: (payload) => {
-      projectEmissionCount += 1;
-      const emissionIndex = projectEmissionCount;
-      const emissionStartedAt = nowMs();
-      logSceneEditorPerf("projectState.emission.start", {
-        emissionIndex,
-        revision: payload?.revision,
-        sinceBeforeMountMs: getDurationMs(mountStartedAt),
-      });
-      void syncSceneEditorProjectPayload(deps, payload)
-        .then(() => {
-          logSceneEditorPerf("projectState.emission.complete", {
-            emissionIndex,
-            revision: payload?.revision,
-            sinceBeforeMountMs: getDurationMs(mountStartedAt),
-            emissionDurationMs: getDurationMs(emissionStartedAt),
-          });
-        })
-        .catch((error) => {
-          console.warn("[sceneEditor.perf] projectState.emission.failed", {
-            emissionIndex,
-            revision: payload?.revision,
-            sinceBeforeMountMs: getDurationMs(mountStartedAt),
-            emissionDurationMs: getDurationMs(emissionStartedAt),
-            message: error?.message || "Unknown error",
-          });
-        });
+      void syncSceneEditorProjectPayload(deps, payload).catch(() => {});
     },
   });
 
   return async () => {
-    const cleanupStartedAt = nowMs();
     projectSubscription.unsubscribe();
     cleanupRuntimeSubscriptions();
     cleanupShortcutSubscriptions();
@@ -497,41 +423,18 @@ export const handleBeforeMount = (deps) => {
     const repository = await projectService.getRepository().catch(() => null);
     await repository?.clearActiveSceneId?.();
     await resetSceneEditorRuntime(deps);
-    logSceneEditorPerf("beforeMount.cleanup.complete", {
-      totalDurationMs: getDurationMs(cleanupStartedAt),
-    });
   };
 };
 
 export const handleAfterMount = async (deps) => {
-  const afterMountStartedAt = nowMs();
   try {
-    logSceneEditorPerf("afterMount.initialize.start", {
-      payload: deps.appService?.getPayload?.() || {},
-    });
-    const initializeStartedAt = nowMs();
     await initializeSceneEditorPage({
       ...deps,
       syncProjectState: syncStoreProjectState,
     });
-    const reconcileStartedAt = nowMs();
     reconcileCurrentEditorSession(deps);
-    const renderStartedAt = nowMs();
     deps.render();
-    logSceneEditorPerf("afterMount.initialize.complete", {
-      initializeDurationMs: getDurationMs(initializeStartedAt),
-      reconcileDurationMs: getDurationMs(reconcileStartedAt),
-      renderDurationMs: getDurationMs(renderStartedAt),
-      totalDurationMs: getDurationMs(afterMountStartedAt),
-      sceneId: deps.store.selectSceneId(),
-      selectedSectionId: deps.store.selectSelectedSectionId(),
-      selectedLineId: deps.store.selectSelectedLineId(),
-    });
   } catch (error) {
-    console.warn("[sceneEditor.perf] afterMount.initialize.failed", {
-      totalDurationMs: getDurationMs(afterMountStartedAt),
-      message: error?.message || "Unknown error",
-    });
     if (!isMissingProjectResolutionError(error)) {
       throw error;
     }

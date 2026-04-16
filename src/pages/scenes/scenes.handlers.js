@@ -373,7 +373,6 @@ const refreshSceneOverviews = async ({
   store,
   render,
   projectService,
-  appService,
   orderedSceneIds = [],
   requestId,
 } = {}) => {
@@ -403,11 +402,8 @@ const refreshSceneOverviews = async ({
       sceneItems: resolvedSnapshot.sceneItems,
     });
     render?.();
-  } catch (error) {
-    console.warn("[scenes] failed to load scene overviews", {
-      projectId: appService?.getPayload?.()?.p,
-      message: error?.message || "unknown",
-    });
+  } catch {
+    return;
   }
 };
 
@@ -508,7 +504,6 @@ export const handleAfterMount = async (deps) => {
     store,
     render,
     projectService,
-    appService,
     orderedSceneIds: initialSnapshot?.orderedSceneIds ?? [],
     requestId: initialSnapshot?.requestId,
   });
@@ -520,7 +515,7 @@ export const handleSetInitialScene = async (sceneId, deps) => {
 };
 
 const refreshScenesData = async (deps) => {
-  const { store, render, projectService, appService } = deps;
+  const { store, render, projectService } = deps;
   const snapshot = syncScenesState({
     store,
     render,
@@ -530,7 +525,6 @@ const refreshScenesData = async (deps) => {
     store,
     render,
     projectService,
-    appService,
     orderedSceneIds: snapshot?.orderedSceneIds ?? [],
     requestId: snapshot?.requestId,
   });
