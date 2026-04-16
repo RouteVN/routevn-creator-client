@@ -12,6 +12,7 @@ static/public/@rettangoli
 static/bundle/main.js
 /task
 /keys
+/temp
 /test-versions
 /test-update-server
 /src-tauri/*.bak
