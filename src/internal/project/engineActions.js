@@ -15,7 +15,6 @@ const normalizeDialogueAction = (dialogue = {}) => {
   return normalizedDialogue;
 };
 
-
 export const normalizeEngineActions = (value) => {
   if (Array.isArray(value)) {
     return value.map((entry) => normalizeEngineActions(entry));
@@ -44,7 +43,6 @@ export const normalizeEngineActions = (value) => {
 
   return normalizedValue;
 };
-
 
 export const normalizeLineActions = (value) => {
   return normalizeEngineActions(value);
