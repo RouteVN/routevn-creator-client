@@ -22,7 +22,9 @@ export const handleFormAction = (deps, payload) => {
   const acceptPrivacy = Boolean(detail?.values?.acceptPrivacy);
 
   if (!acceptTerms || !acceptPrivacy) {
-    appService.showToast("Please accept Terms and Privacy Policy.");
+    appService.showAlert({
+      message: "Please accept Terms and Privacy Policy.",
+    });
     return;
   }
 
@@ -34,7 +36,7 @@ export const handleFormAction = (deps, payload) => {
     "";
 
   if (!email) {
-    appService.showToast("Email is required.");
+    appService.showAlert({ message: "Email is required." });
     return;
   }
 

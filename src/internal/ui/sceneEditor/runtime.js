@@ -247,7 +247,8 @@ async function loadAssetsForSceneIds(
     uniqueSceneIds.forEach((sceneId) => {
       assetLoadCache.pendingSceneIds.delete(sceneId);
     });
-    appService?.showToast("Failed to load some scene assets", {
+    appService?.showAlert({
+      message: "Failed to load some scene assets",
       title: "Warning",
     });
     console.error("[sceneEditor] Failed to load scene assets:", error);

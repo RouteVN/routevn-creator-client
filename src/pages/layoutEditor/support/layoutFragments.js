@@ -13,8 +13,8 @@ export const getFragmentLayoutItems = (
         item?.id !== excludeLayoutId,
     )
     .sort((left, right) =>
-      String(left.fullLabel || left.name || left.id).localeCompare(
-        String(right.fullLabel || right.name || right.id),
+      String(left.name || left.id).localeCompare(
+        String(right.name || right.id),
       ),
     );
 };
@@ -24,7 +24,7 @@ export const getFragmentLayoutOptions = (
   options = {},
 ) => {
   return getFragmentLayoutItems(layoutsData, options).map((item) => ({
-    label: item.fullLabel || item.name || item.id,
+    label: item.name || item.id,
     value: item.id,
   }));
 };

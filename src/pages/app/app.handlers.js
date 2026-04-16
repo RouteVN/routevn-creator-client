@@ -53,6 +53,14 @@ const isMissingProjectResolutionError = (error) => {
   );
 };
 
+const isProjectLoadDialogError = (error) => {
+  const message = String(error?.message || "");
+  return (
+    message.includes("incompatible project with version") ||
+    message.includes("requires reset for schema version")
+  );
+};
+
 const getProjectLoadErrorMessage = (error) => {
   if (isMissingProjectResolutionError(error)) {
     return "Project is missing required resolution settings.";
@@ -192,7 +200,15 @@ const createRouteTransitionRunner = (deps) => {
       }
 
       store.setRepositoryLoading({ isLoading: false });
-      appService.showToast(getProjectLoadErrorMessage(error));
+      if (isProjectLoadDialogError(error)) {
+        await appService.showAlert({
+          title: "Incompatible Project",
+          message: getProjectLoadErrorMessage(error),
+          status: "error",
+        });
+      } else {
+        appService.showAlert({ message: getProjectLoadErrorMessage(error) });
+      }
       appService.redirect("/projects");
       store.setCurrentRoute({ route: "/projects" });
       render();

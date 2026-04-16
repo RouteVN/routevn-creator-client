@@ -90,24 +90,34 @@ export const handleSaveChoiceClick = (deps) => {
   const editForm = store.selectEditForm();
 
   if (!editForm.content || editForm.content.trim() === "") {
-    appService.showToast("Choice content cannot be empty", {
+    appService.showAlert({
+      message: "Choice content cannot be empty",
       title: "Warning",
     });
     return;
   }
 
   if (!editForm.actionType) {
-    appService.showToast("Please select an action type", { title: "Warning" });
+    appService.showAlert({
+      message: "Please select an action type",
+      title: "Warning",
+    });
     return;
   }
 
   if (editForm.actionType === "sectionTransition") {
     if (!editForm.sceneId) {
-      appService.showToast("Please select a scene", { title: "Warning" });
+      appService.showAlert({
+        message: "Please select a scene",
+        title: "Warning",
+      });
       return;
     }
     if (!editForm.sectionId) {
-      appService.showToast("Please select a section", { title: "Warning" });
+      appService.showAlert({
+        message: "Please select a section",
+        title: "Warning",
+      });
       return;
     }
   }
@@ -160,7 +170,8 @@ export const handleSubmitClick = (deps) => {
   });
 
   if (!selectedResourceId) {
-    appService.showToast("Please select a choice layout", {
+    appService.showAlert({
+      message: "Please select a choice layout",
       title: "Warning",
     });
     return;

@@ -54,7 +54,8 @@ export const handleEditFormAction = async (deps, payload) => {
 
   const name = values?.name?.trim();
   if (!name) {
-    appService.showToast("Project name is required.", {
+    appService.showAlert({
+      message: "Project name is required.",
       title: "Warning",
     });
     return;
@@ -98,9 +99,7 @@ export const handleEditDialogIconClick = async (deps) => {
       upload: true,
     });
   } catch {
-    appService.showToast("Failed to select file.", {
-      title: "Error",
-    });
+    appService.showAlert({ message: "Failed to select file.", title: "Error" });
     return;
   }
 
@@ -109,7 +108,8 @@ export const handleEditDialogIconClick = async (deps) => {
   }
 
   if (!file.uploadSucessful || !file.uploadResult) {
-    appService.showToast("Failed to upload project icon.", {
+    appService.showAlert({
+      message: "Failed to upload project icon.",
       title: "Error",
     });
     return;

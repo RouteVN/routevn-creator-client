@@ -384,7 +384,8 @@ export const handleAddParticleClick = async (deps, payload) => {
   );
 
   if (!isValidPreset) {
-    appService.showToast("Particle preset is required.", {
+    appService.showAlert({
+      message: "Particle preset is required.",
       title: "Warning",
     });
     return;
@@ -426,20 +427,25 @@ export const handleParticleFormActionClick = async (deps, payload) => {
   });
 
   if (!particleData.name) {
-    appService.showToast("Particle name is required.", { title: "Warning" });
+    appService.showAlert({
+      message: "Particle name is required.",
+      title: "Warning",
+    });
     return;
   }
 
   const textureImageId = `${values?.textureImageId ?? ""}`.trim();
   if (!textureImageId) {
-    appService.showToast("Particle texture image is required.", {
+    appService.showAlert({
+      message: "Particle texture image is required.",
       title: "Warning",
     });
     return;
   }
 
   if (!store.selectImagesData()?.items?.[textureImageId]?.fileId) {
-    appService.showToast("Select a valid particle texture image.", {
+    appService.showAlert({
+      message: "Select a valid particle texture image.",
       title: "Warning",
     });
     return;

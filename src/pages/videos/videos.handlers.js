@@ -11,7 +11,10 @@ const VIDEO_FILE_PATTERN = /\.(mp4)$/i;
 const INVALID_VIDEO_FORMAT_MESSAGE = "Only MP4 videos are supported.";
 
 const showInvalidFormatToast = (appService) => {
-  appService.showToast(INVALID_VIDEO_FORMAT_MESSAGE, { title: "Warning" });
+  appService.showAlert({
+    message: INVALID_VIDEO_FORMAT_MESSAGE,
+    title: "Warning",
+  });
 };
 
 const validateVideoFiles = ({ appService, files } = {}) => {
@@ -110,7 +113,10 @@ const createVideosFromFiles = async ({ deps, files, parentId } = {}) => {
       });
     },
     onNoSuccessfulUploads: () => {
-      appService.showToast("Failed to upload video.", { title: "Error" });
+      appService.showAlert({
+        message: "Failed to upload video.",
+        title: "Error",
+      });
     },
   });
 };
@@ -371,7 +377,10 @@ export const handleEditFormAction = async (deps, payload) => {
 
   const name = values?.name?.trim();
   if (!name) {
-    appService.showToast("Video name is required.", { title: "Warning" });
+    appService.showAlert({
+      message: "Video name is required.",
+      title: "Warning",
+    });
     return;
   }
 
@@ -427,7 +436,9 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   if (!result.deleted) {
-    appService.showToast("Cannot delete resource, it is currently in use.");
+    appService.showAlert({
+      message: "Cannot delete resource, it is currently in use.",
+    });
     render();
     return;
   }

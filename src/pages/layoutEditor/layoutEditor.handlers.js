@@ -82,9 +82,7 @@ const showLayoutEditorError = ({
   const message = isSqliteLockError(error)
     ? lockedMessage
     : error?.message || fallbackMessage;
-  appService.showToast(message, {
-    title: "Error",
-  });
+  appService.showAlert({ message: message, title: "Error" });
 };
 
 const runLayoutEditorPersistence = (deps, task) => {
@@ -420,7 +418,8 @@ export const handleSaveButtonClick = async (deps) => {
     getLayoutEditorOwnerConfig(resourceType, projectService);
 
   if (!layoutId) {
-    appService.showToast(`${ownerLabel} is missing.`, {
+    appService.showAlert({
+      message: `${ownerLabel} is missing.`,
       title: "Error",
     });
     return;
@@ -430,12 +429,10 @@ export const handleSaveButtonClick = async (deps) => {
     const thumbnailImage =
       await refs.layoutEditorCanvas.captureThumbnailImage();
     if (!thumbnailImage) {
-      appService.showToast(
-        `Failed to capture ${ownerLabel.toLowerCase()} thumbnail.`,
-        {
-          title: "Error",
-        },
-      );
+      appService.showAlert({
+        message: `Failed to capture ${ownerLabel.toLowerCase()} thumbnail.`,
+        title: "Error",
+      });
       return;
     }
 
@@ -453,26 +450,22 @@ export const handleSaveButtonClick = async (deps) => {
     });
 
     if (updateResult?.valid === false) {
-      appService.showToast(
-        `Failed to save ${ownerLabel.toLowerCase()} preview.`,
-        {
-          title: "Error",
-        },
-      );
+      appService.showAlert({
+        message: `Failed to save ${ownerLabel.toLowerCase()} preview.`,
+        title: "Error",
+      });
       return;
     }
 
     await refreshLayoutEditorData(deps, {
       selectedItemId: store.selectSelectedItemId(),
     });
-    appService.showToast(`${ownerLabel} preview saved.`);
+    appService.showToast({ message: `${ownerLabel} preview saved.` });
   } catch {
-    appService.showToast(
-      `Failed to save ${ownerLabel.toLowerCase()} preview.`,
-      {
-        title: "Error",
-      },
-    );
+    appService.showAlert({
+      message: `Failed to save ${ownerLabel.toLowerCase()} preview.`,
+      title: "Error",
+    });
   }
 };
 
@@ -597,9 +590,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     const resourceType = store.selectLayoutResourceType();
 
     if (!layoutId || resourceType !== "layouts") {
-      appService.showToast("Layout is missing.", {
-        title: "Error",
-      });
+      appService.showAlert({ message: "Layout is missing.", title: "Error" });
       return;
     }
 
@@ -639,15 +630,13 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     });
 
     if (createContainerResult?.valid === false) {
-      appService.showToast(
-        getResultErrorMessage(
+      appService.showAlert({
+        message: getResultErrorMessage(
           createContainerResult,
           "Failed to create save/load slot.",
         ),
-        {
-          title: "Error",
-        },
-      );
+        title: "Error",
+      });
       return;
     }
 
@@ -660,15 +649,13 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     });
 
     if (createImageResult?.valid === false) {
-      appService.showToast(
-        getResultErrorMessage(
+      appService.showAlert({
+        message: getResultErrorMessage(
           createImageResult,
           "Failed to create save/load slot image.",
         ),
-        {
-          title: "Error",
-        },
-      );
+        title: "Error",
+      });
       return;
     }
 
@@ -681,15 +668,13 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     });
 
     if (createDateResult?.valid === false) {
-      appService.showToast(
-        getResultErrorMessage(
+      appService.showAlert({
+        message: getResultErrorMessage(
           createDateResult,
           "Failed to create save/load slot date.",
         ),
-        {
-          title: "Error",
-        },
-      );
+        title: "Error",
+      });
       return;
     }
 
@@ -709,7 +694,8 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     );
 
     if (fragmentLayoutOptions.length === 0) {
-      appService.showToast("Mark a layout as a fragment first.", {
+      appService.showAlert({
+        message: "Mark a layout as a fragment first.",
         title: "Warning",
       });
       return;
@@ -728,7 +714,8 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
 
     const fragmentLayoutId = dialogResult.values?.fragmentLayoutId;
     if (!fragmentLayoutId) {
-      appService.showToast("Fragment is required.", {
+      appService.showAlert({
+        message: "Fragment is required.",
         title: "Warning",
       });
       return;
@@ -740,7 +727,8 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
       fragmentLayout?.type !== "layout" ||
       !isFragmentLayout(fragmentLayout)
     ) {
-      appService.showToast("Selected fragment is invalid.", {
+      appService.showAlert({
+        message: "Selected fragment is invalid.",
         title: "Error",
       });
       return;
@@ -748,9 +736,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
 
     const layoutId = store.selectLayoutId();
     if (!layoutId) {
-      appService.showToast("Layout is missing.", {
-        title: "Error",
-      });
+      appService.showAlert({ message: "Layout is missing.", title: "Error" });
       return;
     }
 
@@ -771,12 +757,13 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     });
 
     if (createResult?.valid === false) {
-      appService.showToast(
-        getResultErrorMessage(createResult, "Failed to create fragment."),
-        {
-          title: "Error",
-        },
-      );
+      appService.showAlert({
+        message: getResultErrorMessage(
+          createResult,
+          "Failed to create fragment.",
+        ),
+        title: "Error",
+      });
       return;
     }
 
@@ -795,7 +782,8 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
       toSpritesheetAnimationSelectionItems(spritesheetsData);
 
     if (selectionItems.length === 0) {
-      appService.showToast("Import a spritesheet first.", {
+      appService.showAlert({
+        message: "Import a spritesheet first.",
         title: "Warning",
       });
       return;
@@ -816,7 +804,8 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
 
     const name = dialogResult.values?.name?.trim();
     if (!name) {
-      appService.showToast("Animation name is required.", {
+      appService.showAlert({
+        message: "Animation name is required.",
         title: "Warning",
       });
       return;
@@ -827,7 +816,8 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
         dialogResult.values?.spritesheetSelection,
       );
     if (!resourceId || !animationName) {
-      appService.showToast("Spritesheet animation is required.", {
+      appService.showAlert({
+        message: "Spritesheet animation is required.",
         title: "Warning",
       });
       return;
@@ -836,14 +826,13 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     const layoutId = store.selectLayoutId();
     const resourceType = store.selectLayoutResourceType();
     if (!layoutId) {
-      appService.showToast(
-        resourceType === "controls"
-          ? "Control is missing."
-          : "Layout is missing.",
-        {
-          title: "Error",
-        },
-      );
+      appService.showAlert({
+        message:
+          resourceType === "controls"
+            ? "Control is missing."
+            : "Layout is missing.",
+        title: "Error",
+      });
       return;
     }
 
@@ -890,15 +879,13 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     });
 
     if (createResult?.valid === false) {
-      appService.showToast(
-        getResultErrorMessage(
+      appService.showAlert({
+        message: getResultErrorMessage(
           createResult,
           "Failed to create spritesheet animation.",
         ),
-        {
-          title: "Error",
-        },
-      );
+        title: "Error",
+      });
       return;
     }
 
@@ -914,7 +901,8 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     const selectionItems = toParticleSelectionItems(particlesData);
 
     if (selectionItems.length === 0) {
-      appService.showToast("Create a particle effect first.", {
+      appService.showAlert({
+        message: "Create a particle effect first.",
         title: "Warning",
       });
       return;
@@ -934,7 +922,8 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
 
     const name = dialogResult.values?.name?.trim();
     if (!name) {
-      appService.showToast("Particle name is required.", {
+      appService.showAlert({
+        message: "Particle name is required.",
         title: "Warning",
       });
       return;
@@ -942,7 +931,8 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
 
     const particleId = dialogResult.values?.particleId;
     if (!particleId) {
-      appService.showToast("Particle is required.", {
+      appService.showAlert({
+        message: "Particle is required.",
         title: "Warning",
       });
       return;
@@ -951,14 +941,13 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     const layoutId = store.selectLayoutId();
     const resourceType = store.selectLayoutResourceType();
     if (!layoutId) {
-      appService.showToast(
-        resourceType === "controls"
-          ? "Control is missing."
-          : "Layout is missing.",
-        {
-          title: "Error",
-        },
-      );
+      appService.showAlert({
+        message:
+          resourceType === "controls"
+            ? "Control is missing."
+            : "Layout is missing.",
+        title: "Error",
+      });
       return;
     }
 
@@ -1004,12 +993,13 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     });
 
     if (createResult?.valid === false) {
-      appService.showToast(
-        getResultErrorMessage(createResult, "Failed to create particle."),
-        {
-          title: "Error",
-        },
-      );
+      appService.showAlert({
+        message: getResultErrorMessage(
+          createResult,
+          "Failed to create particle.",
+        ),
+        title: "Error",
+      });
       return;
     }
 
@@ -1036,7 +1026,8 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
         spriteAction,
       );
     } catch {
-      appService.showToast("Failed to open sprite dialog.", {
+      appService.showAlert({
+        message: "Failed to open sprite dialog.",
         title: "Error",
       });
       return;
@@ -1049,7 +1040,8 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     const values = spriteDialogResult.values ?? {};
     const name = values.name?.trim();
     if (!name) {
-      appService.showToast("Sprite name is required.", {
+      appService.showAlert({
+        message: "Sprite name is required.",
         title: "Warning",
       });
       return;
@@ -1057,23 +1049,20 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
 
     const imageId = values.imageId;
     if (!imageId) {
-      appService.showToast("Image is required.", {
-        title: "Warning",
-      });
+      appService.showAlert({ message: "Image is required.", title: "Warning" });
       return;
     }
 
     const layoutId = store.selectLayoutId();
     const resourceType = store.selectLayoutResourceType();
     if (!layoutId) {
-      appService.showToast(
-        resourceType === "controls"
-          ? "Control is missing."
-          : "Layout is missing.",
-        {
-          title: "Error",
-        },
-      );
+      appService.showAlert({
+        message:
+          resourceType === "controls"
+            ? "Control is missing."
+            : "Layout is missing.",
+        title: "Error",
+      });
       return;
     }
 
@@ -1116,12 +1105,13 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     });
 
     if (createResult?.valid === false) {
-      appService.showToast(
-        getResultErrorMessage(createResult, "Failed to create sprite."),
-        {
-          title: "Error",
-        },
-      );
+      appService.showAlert({
+        message: getResultErrorMessage(
+          createResult,
+          "Failed to create sprite.",
+        ),
+        title: "Error",
+      });
       return;
     }
 
@@ -1134,7 +1124,8 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
   try {
     dialogResult = await showSliderCreateDialog(appService, sliderAction);
   } catch {
-    appService.showToast("Failed to open slider dialog.", {
+    appService.showAlert({
+      message: "Failed to open slider dialog.",
       title: "Error",
     });
     return;
@@ -1147,7 +1138,8 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
   const values = dialogResult.values ?? {};
   const name = values.name?.trim();
   if (!name) {
-    appService.showToast("Slider name is required.", {
+    appService.showAlert({
+      message: "Slider name is required.",
       title: "Warning",
     });
     return;
@@ -1159,14 +1151,16 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
   const hoverThumbImageId = values.hoverThumbImageId;
 
   if (!barImageId) {
-    appService.showToast("Bar image is required.", {
+    appService.showAlert({
+      message: "Bar image is required.",
       title: "Warning",
     });
     return;
   }
 
   if (!thumbImageId) {
-    appService.showToast("Thumb image is required.", {
+    appService.showAlert({
+      message: "Thumb image is required.",
       title: "Warning",
     });
     return;
@@ -1176,14 +1170,13 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
   const layoutId = store.selectLayoutId();
   const resourceType = store.selectLayoutResourceType();
   if (!layoutId) {
-    appService.showToast(
-      resourceType === "controls"
-        ? "Control is missing."
-        : "Layout is missing.",
-      {
-        title: "Error",
-      },
-    );
+    appService.showAlert({
+      message:
+        resourceType === "controls"
+          ? "Control is missing."
+          : "Layout is missing.",
+      title: "Error",
+    });
     return;
   }
 
@@ -1220,12 +1213,10 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
   });
 
   if (createResult?.valid === false) {
-    appService.showToast(
-      getResultErrorMessage(createResult, "Failed to create slider."),
-      {
-        title: "Error",
-      },
-    );
+    appService.showAlert({
+      message: getResultErrorMessage(createResult, "Failed to create slider."),
+      title: "Error",
+    });
     return;
   }
 

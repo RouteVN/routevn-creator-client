@@ -49,6 +49,7 @@ const createLayoutEditorDeps = ({
       resourceType: "layouts",
     })),
     navigate: vi.fn(),
+    showAlert: vi.fn(),
     showToast: vi.fn(),
   };
 
@@ -169,7 +170,8 @@ describe("layoutEditor.handleBackClick", () => {
 
     await handleBackClick(deps);
 
-    expect(deps.appService.showToast).toHaveBeenCalledWith("save failed", {
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "save failed",
       title: "Error",
     });
     expect(deps.appService.navigate).not.toHaveBeenCalled();
@@ -274,8 +276,8 @@ describe("layoutEditor.handleSaveButtonClick", () => {
       },
       fileRecords: [{ fileId: "file-layout-thumb" }],
     });
-    expect(deps.appService.showToast).toHaveBeenCalledWith(
-      "Layout preview saved.",
-    );
+    expect(deps.appService.showToast).toHaveBeenCalledWith({
+      message: "Layout preview saved.",
+    });
   });
 });

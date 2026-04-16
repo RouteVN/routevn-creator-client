@@ -7,7 +7,7 @@ describe("createLayoutsFileExplorerHandlers", () => {
     const duplicateLayoutItem = vi.fn(async () => "layout-copy");
     const deps = {
       appService: {
-        showToast: vi.fn(),
+        showAlert: vi.fn(),
       },
       projectService: {
         ensureRepository: vi.fn(async () => {}),
@@ -44,6 +44,6 @@ describe("createLayoutsFileExplorerHandlers", () => {
     expect(refresh).toHaveBeenCalledWith(deps, {
       selectedItemId: "layout-copy",
     });
-    expect(deps.appService.showToast).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
   });
 });

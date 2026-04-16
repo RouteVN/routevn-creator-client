@@ -526,7 +526,7 @@ const syncEditorState = async ({ deps, repositoryState } = {}) => {
     });
 
     if (!itemData) {
-      appService.showToast("Animation not found.", { title: "Error" });
+      appService.showAlert({ message: "Animation not found.", title: "Error" });
       appService.navigate(
         getAnimationEditorBackPath(),
         createAnimationEditorPayload({

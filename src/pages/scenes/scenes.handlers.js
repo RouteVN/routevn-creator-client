@@ -663,9 +663,9 @@ export const handleSceneFormAction = async (deps, payload) => {
       await refreshScenesData(deps);
       render();
     } catch (error) {
-      appService.showToast(
-        getProjectErrorMessage(error, "Failed to create scene."),
-      );
+      appService.showAlert({
+        message: getProjectErrorMessage(error, "Failed to create scene."),
+      });
       await refreshScenesData(deps);
       render();
     }
@@ -791,7 +791,10 @@ export const handleEditFormAction = async (deps, payload) => {
 
   const name = values?.name?.trim();
   if (!name) {
-    appService.showToast("Scene name is required.", { title: "Warning" });
+    appService.showAlert({
+      message: "Scene name is required.",
+      title: "Warning",
+    });
     return;
   }
 
@@ -811,10 +814,10 @@ export const handleEditFormAction = async (deps, payload) => {
   });
 
   if (updateResult?.valid === false) {
-    appService.showToast(
-      getProjectErrorMessage(updateResult, "Failed to update scene."),
-      { title: "Error" },
-    );
+    appService.showAlert({
+      message: getProjectErrorMessage(updateResult, "Failed to update scene."),
+      title: "Error",
+    });
     return;
   }
 

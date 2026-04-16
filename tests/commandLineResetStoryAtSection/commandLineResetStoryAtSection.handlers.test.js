@@ -42,7 +42,7 @@ describe("commandLineResetStoryAtSection.handlers", () => {
 
     handleSubmitClick({
       appService: {
-        showToast: vi.fn(),
+        showAlert: vi.fn(),
       },
       dispatchEvent,
       store: {

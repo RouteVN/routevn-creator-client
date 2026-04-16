@@ -221,7 +221,10 @@ export const handleControlFormActionClick = async (deps, payload) => {
 
   const name = values?.name?.trim();
   if (!name) {
-    appService.showToast("Please enter a control name", { title: "Warning" });
+    appService.showAlert({
+      message: "Please enter a control name",
+      title: "Warning",
+    });
     return;
   }
 
@@ -287,7 +290,9 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   if (usage.isUsed) {
-    appService.showToast("Cannot delete resource, it is currently in use.");
+    appService.showAlert({
+      message: "Cannot delete resource, it is currently in use.",
+    });
     render();
     return;
   }
@@ -313,7 +318,8 @@ export const handleKeyboardAddClick = async (deps, payload) => {
   }));
 
   if (availableItems.length === 0) {
-    appService.showToast("All available keyboard keys are already assigned", {
+    appService.showAlert({
+      message: "All available keyboard keys are already assigned",
       title: "Warning",
     });
     return;

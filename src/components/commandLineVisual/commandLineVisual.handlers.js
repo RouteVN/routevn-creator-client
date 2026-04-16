@@ -181,7 +181,10 @@ export const handleButtonSelectClick = (deps) => {
 
   if (mode === "resource-select") {
     if (!tempSelectedResourceId) {
-      appService.showToast("A resource is required.", { title: "Warning" });
+      appService.showAlert({
+        message: "A resource is required.",
+        title: "Warning",
+      });
       return;
     }
 

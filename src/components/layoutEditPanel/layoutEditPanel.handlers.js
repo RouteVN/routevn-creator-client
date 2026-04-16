@@ -1062,7 +1062,9 @@ export const handleConditionalOverrideAddAttributeClick = (deps, payload) => {
   });
 
   if (availableAttributeOptions.length === 0) {
-    appService.showToast("All supported attributes are already added.");
+    appService.showAlert({
+      message: "All supported attributes are already added.",
+    });
     return;
   }
 

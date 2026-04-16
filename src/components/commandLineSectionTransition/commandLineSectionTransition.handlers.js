@@ -49,12 +49,18 @@ export const handleSubmitClick = (deps) => {
   const { formValues, scenes } = store.getState();
 
   if (!formValues?.sceneId) {
-    appService.showToast("Please select a scene", { title: "Warning" });
+    appService.showAlert({
+      message: "Please select a scene",
+      title: "Warning",
+    });
     return;
   }
 
   if (!formValues?.sectionId) {
-    appService.showToast("Please select a section", { title: "Warning" });
+    appService.showAlert({
+      message: "Please select a section",
+      title: "Warning",
+    });
     return;
   }
 
@@ -63,7 +69,8 @@ export const handleSubmitClick = (deps) => {
     selectedScene?.sections?.items?.[formValues.sectionId];
 
   if (!selectedScene || !selectedSection) {
-    appService.showToast("Please select a valid section for selected scene", {
+    appService.showAlert({
+      message: "Please select a valid section for selected scene",
       title: "Warning",
     });
     return;

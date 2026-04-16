@@ -78,7 +78,7 @@ export const handleFormAction = async (deps, payload) => {
   if (detail.actionId === "request-otp") {
     const email = detail?.values?.email?.trim?.() || "";
     if (!email) {
-      appService.showToast("Email is required.");
+      appService.showAlert({ message: "Email is required." });
       return;
     }
 
@@ -87,7 +87,7 @@ export const handleFormAction = async (deps, payload) => {
       store.setOtpRequested({ email });
       render();
     } catch (error) {
-      appService.showToast(getErrorMessage(error));
+      appService.showAlert({ message: getErrorMessage(error) });
     }
     return;
   }
@@ -95,13 +95,13 @@ export const handleFormAction = async (deps, payload) => {
   if (detail.actionId === "next") {
     const otp = detail?.values?.otp?.trim?.() || "";
     if (!otp) {
-      appService.showToast("OTP is required.");
+      appService.showAlert({ message: "OTP is required." });
       return;
     }
 
     const email = store.selectRequestedEmail();
     if (!email) {
-      appService.showToast("Email is required.");
+      appService.showAlert({ message: "Email is required." });
       return;
     }
 
@@ -115,9 +115,9 @@ export const handleFormAction = async (deps, payload) => {
             ? authResult.registerCode
             : "";
         if (!registerCode) {
-          appService.showToast(
-            "Registration failed. Please request OTP again.",
-          );
+          appService.showAlert({
+            message: "Registration failed. Please request OTP again.",
+          });
           return;
         }
         store.setRegisterStep({ registerCode });
@@ -129,7 +129,7 @@ export const handleFormAction = async (deps, payload) => {
       appService.navigate("/projects");
       return;
     } catch (error) {
-      appService.showToast(getAuthenticateErrorMessage(error));
+      appService.showAlert({ message: getAuthenticateErrorMessage(error) });
     }
     return;
   }
@@ -139,14 +139,18 @@ export const handleFormAction = async (deps, payload) => {
     const acceptPrivacy = Boolean(detail?.values?.acceptPrivacy);
 
     if (!acceptTerms || !acceptPrivacy) {
-      appService.showToast("Please accept Terms and Privacy Policy.");
+      appService.showAlert({
+        message: "Please accept Terms and Privacy Policy.",
+      });
       return;
     }
 
     const email = store.selectRequestedEmail();
     const registerCode = store.selectRegisterCode();
     if (!email || !registerCode) {
-      appService.showToast("Registration session expired. Please login again.");
+      appService.showAlert({
+        message: "Registration session expired. Please login again.",
+      });
       return;
     }
 
@@ -159,7 +163,7 @@ export const handleFormAction = async (deps, payload) => {
       appService.navigate("/projects");
     } catch (error) {
       if (!shouldReissueRegisterCode(error)) {
-        appService.showToast(getRegisterErrorMessage(error));
+        appService.showAlert({ message: getRegisterErrorMessage(error) });
         return;
       }
 
@@ -170,9 +174,9 @@ export const handleFormAction = async (deps, payload) => {
         });
         const nextRegisterCode = extractRegisterCode(reissueResult);
         if (!nextRegisterCode) {
-          appService.showToast(
-            "Registration session expired. Please login again.",
-          );
+          appService.showAlert({
+            message: "Registration session expired. Please login again.",
+          });
           return;
         }
 
@@ -184,7 +188,9 @@ export const handleFormAction = async (deps, payload) => {
         persistAuthenticatedSession(appService, registerResult);
         appService.navigate("/projects");
       } catch (reissueError) {
-        appService.showToast(getRegisterErrorMessage(reissueError));
+        appService.showAlert({
+          message: getRegisterErrorMessage(reissueError),
+        });
       }
       return;
     }

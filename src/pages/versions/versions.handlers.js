@@ -147,7 +147,8 @@ export const handleVersionFormAction = async (deps, payload) => {
 
   const name = values?.name?.trim();
   if (!name) {
-    appService.showToast("Version name is required.", {
+    appService.showAlert({
+      message: "Version name is required.",
       title: "Warning",
     });
     return;
@@ -202,14 +203,12 @@ export const handleVersionFormAction = async (deps, payload) => {
     store.closeVersionDialog();
     render();
   } catch {
-    appService.showToast(
-      editingVersionId
+    appService.showAlert({
+      message: editingVersionId
         ? "Failed to update version."
         : "Failed to create version.",
-      {
-        title: "Error",
-      },
-    );
+      title: "Error",
+    });
   }
 };
 
@@ -251,9 +250,7 @@ export const handleDownloadZipClick = async (deps, payload) => {
   const version = store.selectVersion(versionId);
 
   if (!version) {
-    appService.showToast("Version not found.", {
-      title: "Error",
-    });
+    appService.showAlert({ message: "Version not found.", title: "Error" });
     return;
   }
 
@@ -272,7 +269,8 @@ export const handleDownloadZipClick = async (deps, payload) => {
     try {
       outputPath = await projectService.promptDistributionZipPath(zipName);
     } catch (error) {
-      appService.showToast(`Failed to open save dialog: ${error.message}`, {
+      appService.showAlert({
+        message: `Failed to open save dialog: ${error.message}`,
         title: "Error",
       });
       return;
@@ -284,7 +282,8 @@ export const handleDownloadZipClick = async (deps, payload) => {
     }
   }
 
-  appService.showToast("Please wait while the bundle is being created...", {
+  appService.showAlert({
+    message: "Please wait while the bundle is being created...",
     title: "Bundle in progress",
   });
 
@@ -319,11 +318,13 @@ export const handleDownloadZipClick = async (deps, payload) => {
       return;
     }
 
-    appService.showToast(`ZIP export completed.\nSaved to: ${savedPath}`, {
+    appService.showAlert({
+      message: `ZIP export completed.\nSaved to: ${savedPath}`,
       title: "Export completed",
     });
   } catch (error) {
-    appService.showToast(`Failed to save ZIP file: ${error.message}`, {
+    appService.showAlert({
+      message: `Failed to save ZIP file: ${error.message}`,
       title: "Error",
     });
   }
@@ -360,7 +361,8 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     render();
   } catch {
     render();
-    appService.showToast("Failed to delete version.", {
+    appService.showAlert({
+      message: "Failed to delete version.",
       title: "Error",
     });
   }

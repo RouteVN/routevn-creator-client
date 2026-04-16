@@ -82,20 +82,16 @@ export const createAppShellService = ({
 
     openUrl,
 
-    showToast(message, options = {}) {
-      const toastMessage =
-        typeof options.title === "string" && options.title.length > 0
-          ? `${options.title}: ${message}`
-          : message;
-
-      globalUI.showToast({
-        message: toastMessage,
-        size: options.size ?? options.s,
-      });
-    },
-
     showDialog(options) {
       return globalUI.showConfirm(options);
+    },
+
+    showAlert(options) {
+      return globalUI.showAlert(options);
+    },
+
+    showToast(options) {
+      return globalUI.showToast(options);
     },
 
     showFormDialog(options) {
