@@ -124,7 +124,7 @@ const buildSectionOverview = ({
   for (const line of toSectionLines(section)) {
     const lineActions = normalizeLineActions(line?.actions || {});
 
-    if (lineActions?.pushLayeredView || lineActions?.popLayeredView) {
+    if (lineActions?.pushOverlay || lineActions?.popOverlay) {
       hasMenuReturnAction = true;
     }
 

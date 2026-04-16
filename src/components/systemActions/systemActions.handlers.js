@@ -1,7 +1,13 @@
+import { normalizeLineActions } from "../../internal/project/engineActions.js";
+
 const toPlainObject = (value) => {
   return value !== null && typeof value === "object" && !Array.isArray(value)
     ? value
     : {};
+};
+
+const normalizeActionsObject = (value) => {
+  return normalizeLineActions(toPlainObject(value));
 };
 
 const mergeActions = (currentActions, nextPartialActions) => {
@@ -24,8 +30,8 @@ export const open = (deps, payload) => {
   const { mode, actions } = payload;
   const nextActions =
     actions !== undefined
-      ? toPlainObject(actions)
-      : toPlainObject(deps.props?.actions);
+      ? normalizeActionsObject(actions)
+      : normalizeActionsObject(deps.props?.actions);
 
   store.updateActions(nextActions);
   store.showActionsDialog();
@@ -41,14 +47,14 @@ export const handleAfterMount = async (deps) => {
 
 export const handleBeforeMount = (deps) => {
   const { props, render, store } = deps;
-  store.updateActions(toPlainObject(props.actions));
+  store.updateActions(normalizeActionsObject(props.actions));
   render();
 };
 
 export const handleOnUpdate = async (deps, changes) => {
   const { render, store } = deps;
   const { newProps } = changes;
-  store.updateActions(toPlainObject(newProps.actions));
+  store.updateActions(normalizeActionsObject(newProps.actions));
   await syncRepositoryState(deps);
   render();
 };
@@ -75,7 +81,9 @@ export const handleCommandLineSubmit = (deps, payload) => {
   payload?._event?.stopPropagation?.();
   const { store, render, dispatchEvent } = deps;
   const submittedActions = payload?._event?.detail || {};
-  const nextActions = mergeActions(store.selectAction(), submittedActions);
+  const nextActions = normalizeActionsObject(
+    mergeActions(store.selectAction(), submittedActions),
+  );
 
   store.updateActions(nextActions);
   dispatchEvent(

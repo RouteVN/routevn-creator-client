@@ -511,7 +511,7 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
             click: {
               payload: {
                 actions: {
-                  popLayeredView: {},
+                  popOverlay: {},
                 },
               },
             },

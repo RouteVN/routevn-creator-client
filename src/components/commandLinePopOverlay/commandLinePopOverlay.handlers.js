@@ -11,7 +11,7 @@ export const handleSubmitClick = (deps) => {
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
-        popLayeredView: {},
+        popOverlay: {},
       },
       bubbles: true,
       composed: true,

@@ -1,3 +1,5 @@
+import { normalizeLineActions } from "./engineActions.js";
+
 export const getInteractionPayload = (interaction = {}) => {
   if (!interaction || typeof interaction !== "object") {
     return {};
@@ -7,7 +9,7 @@ export const getInteractionPayload = (interaction = {}) => {
 };
 
 export const getInteractionActions = (interaction = {}) => {
-  return getInteractionPayload(interaction).actions ?? {};
+  return normalizeLineActions(getInteractionPayload(interaction).actions ?? {});
 };
 
 export const withInteractionPayload = (interaction = {}, payload = {}) => {

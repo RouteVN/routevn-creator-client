@@ -3,6 +3,7 @@ import {
   getRuntimeActionModes,
   isRuntimeActionMode,
 } from "../../internal/runtimeActions.js";
+import { normalizeLineActions } from "../../internal/project/engineActions.js";
 
 export const createInitialState = () => ({
   mode: "actions",
@@ -216,7 +217,7 @@ const formatSectionReferenceLabel = ({ scene, section, sectionId } = {}) => {
 
 // Moved from sceneEditor.store.js - now returns object instead of array
 export const selectActionsData = ({ props, state }) => {
-  const actions = props.actions || {};
+  const actions = normalizeLineActions(props.actions || {});
   const presentationState =
     props.presentationState && typeof props.presentationState === "object"
       ? props.presentationState
@@ -346,19 +347,19 @@ export const selectActionsData = ({ props, state }) => {
     };
   }
 
-  if (actions.pushLayeredView) {
-    actionsObject.pushLayeredView = actions.pushLayeredView;
-    const layout = layoutsItems[actions.pushLayeredView.resourceId];
+  if (actions.pushOverlay) {
+    actionsObject.pushOverlay = actions.pushOverlay;
+    const layout = layoutsItems[actions.pushOverlay.resourceId];
     if (layout) {
-      preview.pushLayeredView = {
+      preview.pushOverlay = {
         layout,
       };
     }
   }
 
-  if (actions.popLayeredView) {
-    actionsObject.popLayeredView = actions.popLayeredView;
-    preview.popLayeredView = true;
+  if (actions.popOverlay) {
+    actionsObject.popOverlay = actions.popOverlay;
+    preview.popOverlay = true;
   }
 
   if (actions.rollbackByOffset) {

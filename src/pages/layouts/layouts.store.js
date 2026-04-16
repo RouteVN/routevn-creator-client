@@ -39,7 +39,7 @@ const layoutForm = {
       ],
       tooltip: {
         content:
-          "General is the flexible layout type for backgrounds, menus, and other all-purpose screens. Save / Load is used for save-slot based save and load screens. Confirm Dialog is used for compact confirmation prompts with OK and Cancel areas. History is used for dialogue history layered views. Dialogue ADV is used for ADV mode text dialogue layout. Dialogue NVL is used for novel mode accumulated dialogue layout. Choice is used for the choices.",
+          "General is the flexible layout type for backgrounds, menus, and other all-purpose screens. Save / Load is used for save-slot based save and load screens. Confirm Dialog is used for compact confirmation prompts with OK and Cancel areas. History is used for dialogue history overlays. Dialogue ADV is used for ADV mode text dialogue layout. Dialogue NVL is used for novel mode accumulated dialogue layout. Choice is used for the choices.",
       },
     },
     layoutDescriptionField,

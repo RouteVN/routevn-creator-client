@@ -1028,9 +1028,9 @@ export const getSectionPresentation = ({
 
   lines.forEach((line) => {
     const lineActions = normalizeLineActions(line.actions || {});
-    const pushLayeredView = lineActions?.pushLayeredView;
-    const popLayeredView = lineActions?.popLayeredView;
-    if (pushLayeredView || popLayeredView) {
+    const pushOverlay = lineActions?.pushOverlay;
+    const popOverlay = lineActions?.popOverlay;
+    if (pushOverlay || popOverlay) {
       hasMenuReturnAction = true;
     }
 

@@ -171,6 +171,71 @@ describe("prepareRuntimeInteractionActions", () => {
       },
     });
   });
+
+  it("fills nested confirm and cancel save/load bindings without overwriting explicit values", () => {
+    const actions = {
+      showConfirmDialog: {
+        confirmActions: {
+          saveSlot: {
+            slotId: 99,
+          },
+          loadSlot: {},
+        },
+        cancelActions: {
+          saveSlot: {
+            thumbnailImage: "data:image/jpeg;base64,existing",
+          },
+          loadSlot: {
+            slotId: 5,
+          },
+        },
+      },
+    };
+
+    const result = prepareRuntimeInteractionActions(actions, {
+      slotId: 3,
+    });
+
+    expect(result).toEqual({
+      showConfirmDialog: {
+        confirmActions: {
+          saveSlot: {
+            slotId: 99,
+          },
+          loadSlot: {
+            slotId: 3,
+          },
+        },
+        cancelActions: {
+          saveSlot: {
+            slotId: 3,
+            thumbnailImage: "data:image/jpeg;base64,existing",
+          },
+          loadSlot: {
+            slotId: 5,
+          },
+        },
+      },
+    });
+    expect(actions).toEqual({
+      showConfirmDialog: {
+        confirmActions: {
+          saveSlot: {
+            slotId: 99,
+          },
+          loadSlot: {},
+        },
+        cancelActions: {
+          saveSlot: {
+            thumbnailImage: "data:image/jpeg;base64,existing",
+          },
+          loadSlot: {
+            slotId: 5,
+          },
+        },
+      },
+    });
+  });
 });
 
 describe("prepareRuntimeInteractionExecution", () => {

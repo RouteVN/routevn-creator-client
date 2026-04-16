@@ -1,8 +1,8 @@
-componentName: rvn-command-line-push-layered-view
+componentName: rvn-command-line-push-overlay
 propsSchema:
   type: object
   properties:
-    pushLayeredView:
+    pushOverlay:
       type: object
       properties:
         resourceId:

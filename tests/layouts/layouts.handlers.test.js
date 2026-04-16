@@ -61,7 +61,7 @@ describe("createLayoutTemplate", () => {
       click: {
         payload: {
           actions: {
-            popLayeredView: {},
+            popOverlay: {},
           },
         },
       },
