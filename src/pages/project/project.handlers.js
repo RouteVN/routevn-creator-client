@@ -1,5 +1,13 @@
 import { requireProjectResolution } from "../../internal/projectResolution.js";
 
+const ICON_VALIDATIONS = [
+  {
+    type: "image-min-size",
+    minWidth: 64,
+    minHeight: 64,
+  },
+];
+
 export const handleBeforeMount = (deps) => {
   const { appService, store } = deps;
   store.setCurrentProject({
@@ -95,19 +103,60 @@ export const handleEditDialogIconClick = async (deps) => {
     file = await appService.pickFiles({
       accept: "image/*",
       multiple: false,
-      validations: [{ type: "square" }],
-      upload: true,
+      validations: ICON_VALIDATIONS,
     });
   } catch {
-    appService.showAlert({ message: "Failed to select file.", title: "Error" });
+    appService.showAlert({
+      message: "Failed to select project icon.",
+      title: "Error",
+    });
     return;
   }
 
   if (!file) {
-    return; // User cancelled
+    return;
   }
 
-  if (!file.uploadSucessful || !file.uploadResult) {
+  store.openEditIconCropDialog({ file });
+  render();
+};
+
+export const handleEditIconCropDialogClose = (deps) => {
+  const { render, store } = deps;
+  if (!store.getState().isEditIconCropDialogOpen) {
+    return;
+  }
+
+  store.closeEditIconCropDialog();
+  render();
+};
+
+export const handleEditIconCropDialogConfirm = async (deps) => {
+  const { appService, projectService, refs, render, store } = deps;
+
+  let croppedFile;
+  try {
+    croppedFile = await refs.editIconCropDialog?.getCroppedFile?.();
+    if (!croppedFile) {
+      throw new Error("Project icon crop is not ready.");
+    }
+  } catch {
+    appService.showAlert({
+      message: "Failed to crop project icon.",
+      title: "Error",
+    });
+    return;
+  }
+
+  let uploadResult;
+  try {
+    const uploadResults = await projectService.uploadFiles([croppedFile]);
+    uploadResult = uploadResults?.[0];
+  } catch {
+    uploadResult = undefined;
+  }
+
+  if (!uploadResult?.fileId) {
     appService.showAlert({
       message: "Failed to upload project icon.",
       title: "Error",
@@ -115,8 +164,8 @@ export const handleEditDialogIconClick = async (deps) => {
     return;
   }
 
-  const result = file.uploadResult;
-  store.setEditIconFileId({ iconFileId: result.fileId });
+  store.setEditIconFileId({ iconFileId: uploadResult.fileId });
+  store.closeEditIconCropDialog();
   render();
 };
 

@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId } from "../../internal/id.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
@@ -477,7 +477,7 @@ export const handleParticleFormActionClick = async (deps, payload) => {
     return;
   }
 
-  const particleId = nanoid();
+  const particleId = generateId();
   const createAttempt = await runResourcePageMutation({
     appService,
     fallbackMessage: "Failed to create particle.",

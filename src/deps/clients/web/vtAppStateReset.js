@@ -132,10 +132,6 @@ export const resetWebAppStateForVisualTests = async () => {
   }
 
   try {
-    localStorage.clear();
-  } catch {}
-
-  try {
     sessionStorage.clear();
   } catch {}
 

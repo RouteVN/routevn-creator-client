@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId, generatePrefixedId } from "../../internal/id.js";
 import {
   createCollabRemoteRefreshStream,
   matchesRemoteTargets,
@@ -13,6 +13,11 @@ import {
 
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another section.";
+const DEFAULT_SCENES_MAP_VIEWPORT = {
+  zoomLevel: 1.5,
+  panX: -120,
+  panY: -200,
+};
 
 const getProjectErrorMessage = (result, fallbackMessage) => {
   return (
@@ -55,20 +60,26 @@ const isViewportLikelyOffscreen = ({ items, zoomLevel, panX, panY }) => {
 };
 
 const resolveInitialWhiteboardViewport = ({ appService, items }) => {
-  const defaultViewport = { zoomLevel: 1, panX: 0, panY: 0, didReset: false };
+  const defaultViewport = {
+    ...DEFAULT_SCENES_MAP_VIEWPORT,
+    didReset: false,
+  };
 
   const zoomLevel = clamp(
-    parseNumericConfig(appService.getUserConfig("scenesMap.zoomLevel"), 1),
+    parseNumericConfig(
+      getViewportConfigValue({ appService, field: "zoomLevel" }),
+      defaultViewport.zoomLevel,
+    ),
     0.2,
     2,
   );
   const panX = parseNumericConfig(
-    appService.getUserConfig("scenesMap.panX"),
-    0,
+    getViewportConfigValue({ appService, field: "panX" }),
+    defaultViewport.panX,
   );
   const panY = parseNumericConfig(
-    appService.getUserConfig("scenesMap.panY"),
-    0,
+    getViewportConfigValue({ appService, field: "panY" }),
+    defaultViewport.panY,
   );
 
   if (isViewportLikelyOffscreen({ items, zoomLevel, panX, panY })) {
@@ -158,6 +169,43 @@ const navigateToSceneEditor = ({ appService, sceneId, sectionId }) => {
 
 const getCurrentProjectId = (appService) => {
   return appService.getPayload()?.p;
+};
+
+const getViewportConfigKey = ({ appService, field } = {}) => {
+  const projectId = getCurrentProjectId(appService);
+  if (!projectId || !field) {
+    return undefined;
+  }
+
+  return `scenesMap.viewportByProject.${projectId}.${field}`;
+};
+
+const getViewportConfigValue = ({ appService, field } = {}) => {
+  const configKey = getViewportConfigKey({ appService, field });
+  return configKey ? appService.getUserConfig(configKey) : undefined;
+};
+
+const persistViewport = ({ appService, zoomLevel, panX, panY } = {}) => {
+  const zoomLevelKey = getViewportConfigKey({
+    appService,
+    field: "zoomLevel",
+  });
+  const panXKey = getViewportConfigKey({
+    appService,
+    field: "panX",
+  });
+  const panYKey = getViewportConfigKey({
+    appService,
+    field: "panY",
+  });
+
+  if (!zoomLevelKey || !panXKey || !panYKey) {
+    return;
+  }
+
+  appService.setUserConfig(zoomLevelKey, zoomLevel);
+  appService.setUserConfig(panXKey, panX);
+  appService.setUserConfig(panYKey, panY);
 };
 
 const getPersistedSelectedSceneId = ({ appService, sceneItems } = {}) => {
@@ -358,9 +406,12 @@ export const handleAfterMount = async (deps) => {
   });
 
   if (initialViewport.didReset) {
-    appService.setUserConfig("scenesMap.zoomLevel", initialViewport.zoomLevel);
-    appService.setUserConfig("scenesMap.panX", initialViewport.panX);
-    appService.setUserConfig("scenesMap.panY", initialViewport.panY);
+    persistViewport({
+      appService,
+      zoomLevel: initialViewport.zoomLevel,
+      panX: initialViewport.panX,
+      panY: initialViewport.panY,
+    });
   }
 
   render();
@@ -563,12 +614,10 @@ export const handleSceneFormAction = async (deps, payload) => {
     render();
 
     // Use a simple ID generator instead of nanoid
-    const newSceneId = `scene-${Date.now()}-${Math.random()
-      .toString(36)
-      .substr(2, 9)}`;
+    const newSceneId = generatePrefixedId("scene-");
 
-    const sectionId = nanoid();
-    const stepId = nanoid();
+    const sectionId = generateId();
+    const stepId = generateId();
 
     // Get repository resources to find first dialogue layout and control
     const { layouts, controls } = projectService.getRepositoryState();
@@ -865,12 +914,32 @@ export const handleSectionsListItemClick = (deps, payload) => {
 export const handleWhiteboardZoomChanged = (deps, payload) => {
   const { appService } = deps;
   const { zoomLevel } = payload._event.detail;
-  appService.setUserConfig("scenesMap.zoomLevel", zoomLevel);
+  const configKey = getViewportConfigKey({
+    appService,
+    field: "zoomLevel",
+  });
+  if (!configKey) {
+    return;
+  }
+
+  appService.setUserConfig(configKey, zoomLevel);
 };
 
 export const handleWhiteboardPanChanged = (deps, payload) => {
   const { appService } = deps;
   const { panX, panY } = payload._event.detail;
-  appService.setUserConfig("scenesMap.panX", panX);
-  appService.setUserConfig("scenesMap.panY", panY);
+  const panXKey = getViewportConfigKey({
+    appService,
+    field: "panX",
+  });
+  const panYKey = getViewportConfigKey({
+    appService,
+    field: "panY",
+  });
+  if (!panXKey || !panYKey) {
+    return;
+  }
+
+  appService.setUserConfig(panXKey, panX);
+  appService.setUserConfig(panYKey, panY);
 };

@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId } from "../../internal/id.js";
 
 const getVariableItems = (variablesData = {}) => {
   return variablesData?.items ?? {};
@@ -15,7 +15,7 @@ export const handleAfterMount = async (deps) => {
 
   if (!updateVariable) {
     // Generate alphanumeric ID (route-engine requires alphanumeric only)
-    store.setActionId({ id: nanoid(8).replace(/[^a-zA-Z0-9]/g, "a") });
+    store.setActionId({ id: generateId(8) });
     store.setOperations({ operations: [] });
     store.setInitiated();
     render();
@@ -24,11 +24,11 @@ export const handleAfterMount = async (deps) => {
 
   // Initialize from existing data
   store.setActionId({
-    id: updateVariable.id || nanoid(8).replace(/[^a-zA-Z0-9]/g, "a"),
+    id: updateVariable.id || generateId(8),
   });
 
   const operations = (updateVariable.operations || []).map((op) => ({
-    id: nanoid(),
+    id: generateId(),
     variableId: op.variableId,
     op: op.op,
     value: op.value ?? "",
@@ -43,7 +43,7 @@ export const handleAddOperationClick = (deps, payload) => {
   payload._event.stopPropagation();
   const { store, render } = deps;
 
-  const newId = nanoid();
+  const newId = generateId();
   store.addOperation({ id: newId });
   store.resetTempOperation();
   render();

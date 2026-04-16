@@ -26,7 +26,7 @@ import {
   toCommittedProjectEvent,
 } from "./projectRepositoryViews/shared.js";
 
-const replayEventsToRepositoryState = ({
+export const replayEventsToRepositoryState = ({
   events,
   untilEventIndex,
   createInitialState,
@@ -37,14 +37,59 @@ const replayEventsToRepositoryState = ({
     ? Math.max(0, Math.min(Math.floor(parsedIndex), events.length))
     : events.length;
 
+  const summarizeReplayEvent = (event, index) => ({
+    arrayIndex: index,
+    eventOffset: index + 1,
+    id: event?.id,
+    type: event?.type,
+    partition: event?.partition,
+    projectId: event?.projectId,
+    clientTs: Number.isFinite(Number(event?.clientTs))
+      ? Number(event.clientTs)
+      : Number.isFinite(Number(event?.meta?.clientTs))
+        ? Number(event.meta.clientTs)
+        : undefined,
+    payload: structuredClone(event?.payload),
+  });
+
   let state = createInitialState();
   for (let index = 0; index < targetIndex; index += 1) {
-    const nextState = reduceEventToState({
-      repositoryState: state,
-      event: events[index],
-    });
-    if (nextState !== undefined) {
-      state = nextState;
+    try {
+      const nextState = reduceEventToState({
+        repositoryState: state,
+        event: events[index],
+      });
+      if (nextState !== undefined) {
+        state = nextState;
+      }
+    } catch (error) {
+      const startIndex = Math.max(0, index - 2);
+      const endIndex = Math.min(targetIndex, index + 3);
+      const replayDiagnostics = {
+        targetEventCount: targetIndex,
+        failedEventArrayIndex: index,
+        failedEventOffset: index + 1,
+        failedEvent: summarizeReplayEvent(events[index], index),
+        nearbyEvents: events
+          .slice(startIndex, endIndex)
+          .map((event, eventIndexOffset) =>
+            summarizeReplayEvent(event, startIndex + eventIndexOffset),
+          ),
+      };
+      const replayError = new Error(
+        error?.message || "Failed to replay repository history",
+      );
+
+      replayError.name = "ProjectRepositoryReplayError";
+      replayError.code = error?.code || "history_replay_failed";
+      replayError.cause = error;
+      replayError.details = {
+        ...(error?.details && typeof error.details === "object"
+          ? structuredClone(error.details)
+          : {}),
+        replay: replayDiagnostics,
+      };
+      throw replayError;
     }
   }
 

@@ -1,28 +1,16 @@
-import { customAlphabet } from "nanoid";
+import { generateId } from "../../../../internal/id.js";
 
 export const DEFAULT_WEB_COLLAB_ENDPOINT = "ws://127.0.0.1:8787/sync";
 const COLLAB_HEARTBEAT_INTERVAL_MS = 10_000;
 const COLLAB_RECONNECT_INTERVAL_MS = 5_000;
 const COLLAB_CONNECTION_ERROR_THROTTLE_MS = 10_000;
 
-const BASE58_ALPHABET =
-  "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-
-const generateClientIdSuffix = customAlphabet(BASE58_ALPHABET, 12);
-
-const parseEnabledFlag = (value) => value === "1" || value === "true";
-
 export const resolveCollabDebugEnabled = ({ enabled } = {}) => {
   if (enabled !== undefined) {
     return Boolean(enabled);
   }
 
-  try {
-    const storedValue = localStorage.getItem("routevn.collab.debug");
-    return parseEnabledFlag(storedValue);
-  } catch {
-    return false;
-  }
+  return false;
 };
 
 export const createCollabDebugLogger =
@@ -39,7 +27,7 @@ export const createCollabDebugLogger =
           ? console.warn.bind(console)
           : console.info.bind(console);
 
-    fn(`[routevn.collab.debug] ${message}`, meta);
+    fn(`[routevn.collab] ${message}`, meta);
   };
 
 const loadLocalProjectEntries = async ({ db } = {}) => {
@@ -115,7 +103,7 @@ export const createCollabConnectionRuntime = ({
   clientId,
   token,
 }) => {
-  const clientIdSuffix = generateClientIdSuffix();
+  const clientIdSuffix = generateId(12);
   const collabRuntime = {
     endpointUrl,
     autoConnectMode: "not_started",

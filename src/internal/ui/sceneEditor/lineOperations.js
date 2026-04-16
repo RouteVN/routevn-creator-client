@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId } from "../../id.js";
 import {
   clearSceneEditorSessionSelectionTarget,
   getSceneEditorSessionSelectionTarget,
@@ -277,7 +277,7 @@ export const handleSplitLineOperation = async (deps, payload) => {
     repositoryState: projectService.getRepositoryState(),
     line: currentLine,
   });
-  const newLineId = nanoid();
+  const newLineId = generateId();
   const persistedNewLineActions = {
     dialogue: {
       content: createDialogueContent(rightContent ?? ""),
@@ -328,7 +328,7 @@ export const handlePasteLinesOperation = async (deps, payload) => {
   });
 
   const newLines = lines.slice(1).map((content) => ({
-    lineId: nanoid(),
+    lineId: generateId(),
     data: {
       actions: {
         dialogue: {
@@ -384,7 +384,7 @@ export const handleNewLineOperation = async (deps, payload) => {
     fallbackLine: selectedLine,
   });
 
-  const newLineId = nanoid();
+  const newLineId = generateId();
   const persistedActions = {
     dialogue: {
       content: createDialogueContent(""),

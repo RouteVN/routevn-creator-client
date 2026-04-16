@@ -23,6 +23,8 @@ Date baseline: April 9, 2026.
 - `command_version = 1`
 - entity ids are base58 strings
 
+For current ID-generation length and prefix rules, see `08-id-generation.md`.
+
 Notes:
 
 - project format version is derived from app semver major
@@ -46,8 +48,11 @@ Bundle implementation points:
 1. model repo: `https://github.com/RouteVN/routevn-creator-model`
 2. `04-sync-protocol.md`
 3. `05-storage.md`
-4. `09-partitioning-and-write-contract.md`
-5. `10-model-compatibility-and-upgrades.md`
+4. `06-project-identity-and-metadata.md`
+5. `07-persisted-key-catalog.md`
+6. `08-id-generation.md`
+7. `09-partitioning-and-write-contract.md`
+8. `10-model-compatibility-and-upgrades.md`
 
 ## Implementation Mapping
 

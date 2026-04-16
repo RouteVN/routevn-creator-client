@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId } from "../../internal/id.js";
 import { createVariablesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
@@ -178,7 +178,7 @@ export const handleVariableCreated = async (deps, payload) => {
     fallbackMessage: "Failed to create variable.",
     action: () =>
       projectService.createVariable({
-        variableId: nanoid(),
+        variableId: generateId(),
         data: createVariableResourceData({
           name,
           description,

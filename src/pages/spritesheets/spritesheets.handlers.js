@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId } from "../../internal/id.js";
 import { tap } from "rxjs";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
@@ -696,7 +696,7 @@ export const handleDialogFormAction = async (deps, payload) => {
   });
 
   if (dialogMode === "create") {
-    const spritesheetId = nanoid();
+    const spritesheetId = generateId();
     const createAttempt = await runResourcePageMutation({
       appService,
       fallbackMessage: "Failed to create spritesheet.",

@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId } from "../../internal/id.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
@@ -295,7 +295,7 @@ export const handleTransformFormActionClick = async (deps, payload) => {
       fallbackMessage: "Failed to create transform.",
       action: () =>
         projectService.createTransform({
-          transformId: nanoid(),
+          transformId: generateId(),
           data: {
             type: "transform",
             ...transformData,
@@ -364,7 +364,7 @@ export const handleItemDuplicate = async (deps, payload) => {
     return;
   }
 
-  const duplicateTransformId = nanoid();
+  const duplicateTransformId = generateId();
   const createAttempt = await runResourcePageMutation({
     appService,
     fallbackMessage: "Failed to duplicate transform.",

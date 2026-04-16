@@ -3,11 +3,13 @@ import {
   createProjectRepository,
 } from "./projectRepository.js";
 import { getOrCreateLocked } from "./getOrCreateLocked.js";
+import { generateId as generateBaseId } from "../../../internal/id.js";
 
 export const createProjectRepositoryService = ({
   router,
   db,
   creatorVersion,
+  idGenerator,
   storageAdapter,
   collabAdapter,
 }) => {
@@ -26,7 +28,16 @@ export const createProjectRepositoryService = ({
   let currentStore;
   let currentReference;
 
+  const generateId = () => {
+    if (typeof idGenerator === "function") {
+      return idGenerator();
+    }
+    return generateBaseId();
+  };
+
   const createEmptyProjectInfo = () => ({
+    id: "",
+    namespace: "",
     name: "",
     description: "",
     iconFileId: null,
@@ -44,6 +55,8 @@ export const createProjectRepositoryService = ({
   };
 
   const normalizeProjectInfo = (projectInfo) => ({
+    id: projectInfo?.id ?? "",
+    namespace: projectInfo?.namespace ?? "",
     name: projectInfo?.name ?? "",
     description: projectInfo?.description ?? "",
     iconFileId: projectInfo?.iconFileId ?? null,
@@ -64,6 +77,14 @@ export const createProjectRepositoryService = ({
 
     if (Object.hasOwn(patch, "iconFileId")) {
       nextProjectInfo.iconFileId = patch.iconFileId ?? null;
+    }
+
+    if (Object.hasOwn(patch, "id")) {
+      nextProjectInfo.id = patch.id ?? "";
+    }
+
+    if (Object.hasOwn(patch, "namespace")) {
+      nextProjectInfo.namespace = patch.namespace ?? "";
     }
 
     return normalizeProjectInfo(nextProjectInfo);
@@ -141,6 +162,7 @@ export const createProjectRepositoryService = ({
       locks: storeLocksByCacheKey,
       key: reference.cacheKey,
       create: async () => {
+        await ensureCompatibleCreatorVersionForReference(reference);
         const store = await storageAdapter.createStore({ reference, db });
         if (reference.projectId) {
           storesByProject.set(reference.projectId, store);
@@ -184,6 +206,22 @@ export const createProjectRepositoryService = ({
     return storedCreatorVersion;
   };
 
+  const readCreatorVersionFromReference =
+    typeof storageAdapter.readCreatorVersionByReference === "function"
+      ? async (reference) => {
+          const storedCreatorVersion =
+            await storageAdapter.readCreatorVersionByReference({
+              reference,
+              db,
+            });
+          if (!Number.isFinite(storedCreatorVersion)) {
+            return undefined;
+          }
+
+          return storedCreatorVersion;
+        }
+      : undefined;
+
   const ensureCompatibleCreatorVersion = async (store) => {
     const creatorVersion = await readCreatorVersionFromStore(store);
 
@@ -194,17 +232,48 @@ export const createProjectRepositoryService = ({
     return creatorVersion;
   };
 
-  const readProjectInfoFromStore = async (store) => {
+  const ensureCompatibleCreatorVersionForReference =
+    typeof readCreatorVersionFromReference === "function"
+      ? async (reference) => {
+          const creatorVersion =
+            await readCreatorVersionFromReference(reference);
+
+          if (
+            creatorVersion !== undefined &&
+            creatorVersion !== CURRENT_CREATOR_VERSION
+          ) {
+            throw createIncompatibleProjectVersionError(creatorVersion);
+          }
+        }
+      : async () => {};
+
+  const readProjectInfoFromStore = async (
+    store,
+    { fallbackProjectId } = {},
+  ) => {
     if (!store?.app || typeof store.app.get !== "function") {
       return createEmptyProjectInfo();
     }
 
     const storedProjectInfo = await store.app.get(PROJECT_INFO_KEY);
-    return normalizeProjectInfo(storedProjectInfo);
+    const normalizedProjectInfo = normalizeProjectInfo(storedProjectInfo);
+    if (normalizedProjectInfo.id && normalizedProjectInfo.namespace) {
+      return normalizedProjectInfo;
+    }
+
+    const nextProjectInfo = normalizeProjectInfo({
+      ...normalizedProjectInfo,
+      id: normalizedProjectInfo.id || fallbackProjectId || generateId(),
+      namespace: normalizedProjectInfo.namespace || generateId(),
+    });
+    await store.app.set(PROJECT_INFO_KEY, nextProjectInfo);
+    return nextProjectInfo;
   };
 
   const writeProjectInfoToStore = async ({ store, projectId, patch }) => {
-    const currentProjectInfo = await readProjectInfoFromStore(store);
+    const currentProjectInfo = await readProjectInfoFromStore(store, {
+      fallbackProjectId: projectId,
+    });
     const nextProjectInfo = mergeProjectInfo(currentProjectInfo, patch);
 
     if (!store?.app || typeof store.app.set !== "function") {
@@ -223,7 +292,7 @@ export const createProjectRepositoryService = ({
   const getProjectInfoByProjectId = async (projectId) => {
     const store = await getStoreByProject(projectId);
     await ensureCompatibleCreatorVersion(store);
-    return readProjectInfoFromStore(store);
+    return readProjectInfoFromStore(store, { fallbackProjectId: projectId });
   };
 
   const ensureProjectCompatibleByProjectId = async (projectId) => {
@@ -350,7 +419,9 @@ export const createProjectRepositoryService = ({
     currentRepository = repository;
     currentStore = store;
     currentReference = reference;
-    const projectInfo = await readProjectInfoFromStore(store);
+    const projectInfo = await readProjectInfoFromStore(store, {
+      fallbackProjectId: projectId,
+    });
     await syncProjectEntryProjectInfo(projectId, projectInfo);
 
     return repository;

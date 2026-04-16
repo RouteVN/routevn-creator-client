@@ -47,21 +47,28 @@ export const createAppServiceCore = ({
     audioService,
   });
 
-  const userConfigService = createUserConfigService();
+  const userConfigService = createUserConfigService({
+    db,
+    onLoadError: () => {
+      appShellService.showToast({
+        title: "Error",
+        message: "Failed to load app settings. Using defaults.",
+        status: "error",
+      });
+    },
+    onPersistError: () => {
+      appShellService.showToast({
+        title: "Error",
+        message: "Failed to save app settings.",
+        status: "error",
+      });
+    },
+  });
 
   return {
     ...projectEntriesService,
     ...fileSelectionService,
     ...appShellService,
     ...userConfigService,
-    async getSetting(key) {
-      return await db.get(`setting:${key}`);
-    },
-    async setSetting(key, value) {
-      await db.set(`setting:${key}`, value);
-    },
-    async removeSetting(key) {
-      await db.remove(`setting:${key}`);
-    },
   };
 };

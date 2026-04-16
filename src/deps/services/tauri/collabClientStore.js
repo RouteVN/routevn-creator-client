@@ -7,11 +7,18 @@ import {
   isSqliteNoActiveTransactionError,
   withSqliteLockRetry,
 } from "../../../internal/sqliteLocking.js";
+import { createProjectCreateRepositoryEvent } from "../shared/projectRepository.js";
+import {
+  MAIN_PARTITION,
+  MAIN_VIEW_NAME,
+} from "../shared/projectRepositoryViews/shared.js";
 
 export const PROJECT_DB_NAME = "project.db";
 
 const MATERIALIZED_VIEW_TABLE = "materialized_view_state";
 const APP_STATE_TABLE = "app_state";
+const VERSIONS_KEY = "versions";
+const PROJECT_CREATE_COMMAND_TYPE = "project.create";
 const storePromisesByDbPath = new Map();
 const SQL_BYTES_TYPE_KEY = "__routevn_sql_type";
 const SQL_BYTES_TYPE_VALUE = "bytes";
@@ -313,6 +320,213 @@ export const toBootstrappedCommittedEvent = (repositoryEvent, index) => ({
       : index + 1,
 });
 
+const isBootstrapRepositoryEvent = (event) =>
+  event?.type === PROJECT_CREATE_COMMAND_TYPE;
+
+const isSceneLineHistoryEvent = (event) => {
+  const partition = String(event?.partition ?? "");
+  const type = String(event?.type ?? "");
+
+  return (
+    (partition.startsWith("s:") || partition.startsWith("m:s:")) &&
+    type.startsWith("line.")
+  );
+};
+
+const createCommittedEventRecord = (event, index, { projectId } = {}) => {
+  const nextEvent = structuredClone(event);
+  const defaultTimestamp = index + 1;
+
+  nextEvent.committedId = index + 1;
+  nextEvent.projectId = nextEvent.projectId || projectId;
+  nextEvent.clientTs = Number.isFinite(Number(nextEvent?.clientTs))
+    ? Number(nextEvent.clientTs)
+    : defaultTimestamp;
+  nextEvent.serverTs = Number.isFinite(Number(nextEvent?.serverTs))
+    ? Number(nextEvent.serverTs)
+    : nextEvent.clientTs;
+  nextEvent.createdAt = Number.isFinite(Number(nextEvent?.createdAt))
+    ? Number(nextEvent.createdAt)
+    : nextEvent.serverTs;
+
+  return nextEvent;
+};
+
+const createCommittedEventFromDraft = (draft, index, { projectId } = {}) => {
+  return createCommittedEventRecord(
+    {
+      id: draft?.id,
+      projectId,
+      partition: draft?.partition,
+      type: draft?.type,
+      schemaVersion: draft?.schemaVersion,
+      payload: structuredClone(draft?.payload),
+      payloadCompression: draft?.payloadCompression,
+      clientTs: Number.isFinite(Number(draft?.clientTs))
+        ? Number(draft.clientTs)
+        : undefined,
+      serverTs: Number.isFinite(Number(draft?.createdAt))
+        ? Number(draft.createdAt)
+        : undefined,
+      createdAt: Number.isFinite(Number(draft?.createdAt))
+        ? Number(draft.createdAt)
+        : undefined,
+    },
+    index,
+    { projectId },
+  );
+};
+
+const bumpVersionsActionIndex = (versions = [], delta = 0) => {
+  if (!Array.isArray(versions) || delta === 0) {
+    return structuredClone(Array.isArray(versions) ? versions : []);
+  }
+
+  return versions.map((version) => {
+    const nextVersion = structuredClone(version);
+    const actionIndex = Number(nextVersion?.actionIndex);
+    if (!Number.isFinite(actionIndex)) {
+      return nextVersion;
+    }
+
+    nextVersion.actionIndex = Math.max(0, Math.floor(actionIndex) + delta);
+    return nextVersion;
+  });
+};
+
+export const planBootstrapHistoryRepair = ({
+  projectId,
+  committedEvents = [],
+  draftEvents = [],
+  mainCheckpointState,
+  versions = [],
+} = {}) => {
+  const committed = Array.isArray(committedEvents)
+    ? committedEvents.map((event) => structuredClone(event))
+    : [];
+  const drafts = Array.isArray(draftEvents)
+    ? draftEvents.map((event) => structuredClone(event))
+    : [];
+  const normalizedVersions = Array.isArray(versions)
+    ? versions.map((version) => structuredClone(version))
+    : [];
+
+  if (committed.length === 0 && drafts.length === 0) {
+    return {
+      changed: false,
+      reason: "history_empty",
+    };
+  }
+
+  const committedBootstrapIndexes = committed
+    .map((event, index) => (isBootstrapRepositoryEvent(event) ? index : -1))
+    .filter((index) => index >= 0);
+  const draftBootstrapIndexes = drafts
+    .map((event, index) => (isBootstrapRepositoryEvent(event) ? index : -1))
+    .filter((index) => index >= 0);
+
+  if (
+    committedBootstrapIndexes.length === 1 &&
+    committedBootstrapIndexes[0] === 0 &&
+    draftBootstrapIndexes.length === 0
+  ) {
+    return {
+      changed: false,
+      reason: "history_valid",
+    };
+  }
+
+  if (
+    committedBootstrapIndexes.length > 1 ||
+    draftBootstrapIndexes.length > 1 ||
+    (committedBootstrapIndexes.length > 0 && draftBootstrapIndexes.length > 0)
+  ) {
+    return {
+      changed: false,
+      reason: "multiple_bootstrap_events",
+    };
+  }
+
+  if (committedBootstrapIndexes.length === 1) {
+    const bootstrapIndex = committedBootstrapIndexes[0];
+    const [bootstrapEvent] = committed.splice(bootstrapIndex, 1);
+
+    committed.unshift(bootstrapEvent);
+
+    return {
+      changed: true,
+      reason: "reordered_bootstrap_committed_event",
+      committedEvents: committed.map((event, index) =>
+        createCommittedEventRecord(event, index, { projectId }),
+      ),
+      draftEvents: drafts,
+      versions: normalizedVersions,
+    };
+  }
+
+  if (draftBootstrapIndexes.length === 1) {
+    const bootstrapIndex = draftBootstrapIndexes[0];
+    const [bootstrapDraft] = drafts.splice(bootstrapIndex, 1);
+    const repairedCommittedEvents = [
+      createCommittedEventFromDraft(bootstrapDraft, 0, { projectId }),
+      ...committed.map((event, index) =>
+        createCommittedEventRecord(event, index + 1, { projectId }),
+      ),
+    ];
+
+    return {
+      changed: true,
+      reason: "promoted_bootstrap_draft",
+      committedEvents: repairedCommittedEvents,
+      draftEvents: drafts,
+      versions: normalizedVersions,
+    };
+  }
+
+  const rawEvents = [...committed, ...drafts];
+  const hasOnlySceneLineHistory =
+    rawEvents.length > 0 && rawEvents.every(isSceneLineHistoryEvent);
+
+  if (
+    !mainCheckpointState ||
+    typeof mainCheckpointState !== "object" ||
+    Array.isArray(mainCheckpointState) ||
+    !hasOnlySceneLineHistory
+  ) {
+    return {
+      changed: false,
+      reason: "missing_bootstrap_without_safe_recovery",
+    };
+  }
+
+  const bootstrapEvent = createProjectCreateRepositoryEvent({
+    projectId,
+    state: structuredClone(mainCheckpointState),
+    partition: MAIN_PARTITION,
+  });
+  const repairedCommittedEvents = [
+    createCommittedEventRecord(
+      {
+        ...structuredClone(bootstrapEvent),
+        projectId,
+      },
+      0,
+      { projectId },
+    ),
+    ...committed.map((event, index) =>
+      createCommittedEventRecord(event, index + 1, { projectId }),
+    ),
+  ];
+
+  return {
+    changed: true,
+    reason: "synthesized_bootstrap_from_main_checkpoint",
+    committedEvents: repairedCommittedEvents,
+    draftEvents: drafts,
+    versions: bumpVersionsActionIndex(normalizedVersions, 1),
+  };
+};
+
 export const createPersistedTauriProjectStore = async ({
   projectPath,
   projectId,
@@ -407,6 +621,112 @@ export const createPersistedTauriProjectStore = async ({
     );
 
     await store.init();
+
+    let projectHistoryIntegrityPromise;
+    const loadAppValue = async (key) => {
+      const rows = await runSelect(
+        `SELECT value FROM ${APP_STATE_TABLE} WHERE key = $1`,
+        [key],
+      );
+      const row = Array.isArray(rows) ? rows[0] : undefined;
+      return parseStoredValue(row?.value);
+    };
+    const saveAppValue = async (key, value) => {
+      await runExecute(
+        `INSERT OR REPLACE INTO ${APP_STATE_TABLE} (key, value) VALUES ($1, $2)`,
+        [key, JSON.stringify(value)],
+      );
+    };
+    const loadMainCheckpointState = async () => {
+      const rows = await runSelect(
+        `SELECT view_version, last_committed_id, value, updated_at
+         FROM ${MATERIALIZED_VIEW_TABLE}
+         WHERE view_name = $1 AND partition = $2`,
+        [MAIN_VIEW_NAME, MAIN_PARTITION],
+      );
+      const row = Array.isArray(rows) ? rows[0] : undefined;
+      const checkpoint = row
+        ? toMaterializedViewCheckpoint({
+            ...row,
+            partition: MAIN_PARTITION,
+          })
+        : undefined;
+
+      return checkpoint?.value;
+    };
+    const ensureProjectHistoryIntegrity = async () => {
+      if (projectHistoryIntegrityPromise) {
+        return projectHistoryIntegrityPromise;
+      }
+
+      projectHistoryIntegrityPromise = queueWriteOperation(async () => {
+        const committedEvents = await store._debug.getCommitted();
+        const draftEvents = await store._debug.getDrafts();
+        const versions = await loadAppValue(VERSIONS_KEY);
+        const mainCheckpointState = await loadMainCheckpointState();
+        const repairPlan = planBootstrapHistoryRepair({
+          projectId,
+          committedEvents,
+          draftEvents,
+          mainCheckpointState,
+          versions,
+        });
+
+        if (!repairPlan.changed) {
+          if (repairPlan.reason === "missing_bootstrap_without_safe_recovery") {
+            console.warn("Project history is missing a bootstrap event", {
+              projectId,
+              committedEventCount: committedEvents.length,
+              draftEventCount: draftEvents.length,
+            });
+          }
+
+          return repairPlan;
+        }
+
+        const currentCursor = Number(await store._debug.getCursor()) || 0;
+
+        await runExecute("DELETE FROM committed_events");
+        await runExecute("DELETE FROM local_drafts");
+        await runExecute(`DELETE FROM ${MATERIALIZED_VIEW_TABLE}`);
+
+        if ((repairPlan.committedEvents || []).length > 0) {
+          await store.applyCommittedBatch({
+            events: repairPlan.committedEvents,
+            nextCursor: Math.max(
+              currentCursor,
+              repairPlan.committedEvents.length,
+            ),
+          });
+        }
+
+        if ((repairPlan.draftEvents || []).length > 0) {
+          await store.insertDrafts(repairPlan.draftEvents);
+        }
+
+        if (Object.hasOwn(repairPlan, "versions")) {
+          await saveAppValue(VERSIONS_KEY, repairPlan.versions);
+        }
+
+        console.warn("Repaired project bootstrap history", {
+          projectId,
+          reason: repairPlan.reason,
+          committedEventCountBefore: committedEvents.length,
+          committedEventCountAfter: repairPlan.committedEvents.length,
+          draftEventCountBefore: draftEvents.length,
+          draftEventCountAfter: repairPlan.draftEvents.length,
+        });
+
+        return repairPlan;
+      }).catch((error) => {
+        projectHistoryIntegrityPromise = undefined;
+        throw error;
+      });
+
+      return projectHistoryIntegrityPromise;
+    };
+
+    await ensureProjectHistoryIntegrity();
 
     return {
       ...store,

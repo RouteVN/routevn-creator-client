@@ -188,6 +188,12 @@ const PRESENTATION_ACTION_SECTIONS = [
       mode: "sectionTransition",
     },
     {
+      id: "24",
+      label: "Reset Story At Section",
+      icon: "settings",
+      mode: "resetStoryAtSection",
+    },
+    {
       id: "11",
       label: "Control",
       icon: "control",

@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId } from "../../internal/id.js";
 import {
   createAnimationEditorPayload,
   getAnimationEditorBackPath,
@@ -360,7 +360,7 @@ const persistEditorSnapshot = async ({ deps, snapshot } = {}) => {
         }),
     });
   } else {
-    savedAnimationId = nanoid();
+    savedAnimationId = generateId();
     mutationAttempt = await runResourcePageMutation({
       appService,
       fallbackMessage: "Failed to create animation.",

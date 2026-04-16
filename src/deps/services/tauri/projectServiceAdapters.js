@@ -1,12 +1,17 @@
 import { mkdir, writeFile, exists } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import Database from "@tauri-apps/plugin-sql";
 import JSZip from "jszip";
 import {
   loadTemplate,
   getTemplateFiles,
 } from "../../clients/web/templateLoader.js";
-import { createPersistedTauriProjectStore } from "./collabClientStore.js";
+import {
+  PROJECT_DB_NAME,
+  createPersistedTauriProjectStore,
+  toBootstrappedCommittedEvent,
+} from "./collabClientStore.js";
 import { createProjectCollabService } from "../shared/collab/createProjectCollabService.js";
 import {
   clearProjectionGap,
@@ -22,15 +27,34 @@ import {
   resolveProjectResolutionForWrite,
   scaleTemplateProjectStateForResolution,
 } from "../../../internal/projectResolution.js";
+import {
+  SQLITE_BUSY_TIMEOUT_MS,
+  withSqliteLockRetry,
+} from "../../../internal/sqliteLocking.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
 const CREATOR_VERSION_KEY = "creatorVersion";
+const APP_STATE_TABLE = "app_state";
 
 const normalizeProjectInfo = (projectInfo = {}) => ({
+  id: projectInfo.id ?? "",
+  namespace: projectInfo.namespace ?? "",
   name: projectInfo.name ?? "",
   description: projectInfo.description ?? "",
   iconFileId: projectInfo.iconFileId ?? null,
 });
+
+const parseStoredAppValue = (value) => {
+  if (typeof value !== "string" || value.length === 0) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+};
 
 const getNow = () => {
   if (
@@ -195,6 +219,32 @@ export const createTauriProjectServiceAdapters = ({
       repositoryProjectId: projectPath,
     }),
 
+    readCreatorVersionByReference: async ({ reference }) => {
+      const projectPath = reference?.projectPath;
+      if (!projectPath) {
+        return undefined;
+      }
+
+      try {
+        const dbPath = await join(projectPath, PROJECT_DB_NAME);
+        const projectDb = await Database.load(`sqlite:${dbPath}`);
+        await withSqliteLockRetry(() =>
+          projectDb.execute(`PRAGMA busy_timeout=${SQLITE_BUSY_TIMEOUT_MS}`),
+        );
+        const rows = await withSqliteLockRetry(() =>
+          projectDb.select(
+            `SELECT value FROM ${APP_STATE_TABLE} WHERE key = $1`,
+            [CREATOR_VERSION_KEY],
+          ),
+        );
+        const row = Array.isArray(rows) ? rows[0] : undefined;
+        const parsedValue = parseStoredAppValue(row?.value);
+        return Number.isFinite(parsedValue) ? parsedValue : undefined;
+      } catch {
+        return undefined;
+      }
+    },
+
     createStore: async ({ reference }) => {
       return createPersistedTauriProjectStore({
         projectPath: reference.projectPath,
@@ -244,14 +294,16 @@ export const createTauriProjectServiceAdapters = ({
         state: templateData,
       });
 
-      await store.insertDraft({
-        id: initialEvent.id,
-        partition: initialEvent.partition,
-        type: initialEvent.type,
-        schemaVersion: initialEvent.schemaVersion,
-        payload: structuredClone(initialEvent.payload),
-        clientTs: Number(initialEvent.meta?.clientTs) || 0,
-        createdAt: Number(initialEvent.meta?.clientTs) || 0,
+      await store.clearEvents();
+      await store.clearMaterializedViewCheckpoints();
+      await store.applyCommittedBatch({
+        events: [
+          {
+            ...toBootstrappedCommittedEvent(initialEvent, 0),
+            projectId,
+          },
+        ],
+        nextCursor: 1,
       });
 
       await store.app.set(CREATOR_VERSION_KEY, creatorVersion);

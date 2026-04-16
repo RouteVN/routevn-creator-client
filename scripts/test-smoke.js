@@ -571,6 +571,9 @@ const bundlePayload = createBundleInstructions({
   bundler: {
     appVersion: "1.0.0-rc2",
   },
+  project: {
+    namespace: "project-namespace-1",
+  },
 });
 const bundle = await createBundle(bundlePayload);
 const bundleInstructions = parseBundleInstructions(bundle);
@@ -623,6 +626,11 @@ assert.equal(
   BUNDLE_APP_NAME,
 );
 assert.equal(bundleInstructions.bundleMetadata.bundler.appVersion, "1.0.0-rc2");
+assert.equal(
+  bundleInstructions.bundleMetadata.project.namespace,
+  "project-namespace-1",
+);
+assert.equal(bundleInstructions.bundleMetadata.project.id, undefined);
 assert.deepEqual(
   bundleInstructions.projectData.story.scenes["scene-1"].sections[
     "section-1"

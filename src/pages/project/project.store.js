@@ -12,11 +12,13 @@ export const createInitialState = () => ({
     source: "local",
   },
   isEditDialogOpen: false,
+  isEditIconCropDialogOpen: false,
   editDefaultValues: {
     name: "",
     description: "",
   },
   editIconFileId: undefined,
+  editIconCropFile: undefined,
 });
 
 export const setCurrentProject = ({ state }, { project } = {}) => {
@@ -40,15 +42,27 @@ export const openEditDialog = ({ state }, _payload = {}) => {
 
 export const closeEditDialog = ({ state }, _payload = {}) => {
   state.isEditDialogOpen = false;
+  state.isEditIconCropDialogOpen = false;
   state.editDefaultValues = {
     name: "",
     description: "",
   };
   state.editIconFileId = undefined;
+  state.editIconCropFile = undefined;
 };
 
 export const setEditIconFileId = ({ state }, { iconFileId } = {}) => {
   state.editIconFileId = iconFileId;
+};
+
+export const openEditIconCropDialog = ({ state }, { file } = {}) => {
+  state.isEditIconCropDialogOpen = true;
+  state.editIconCropFile = file;
+};
+
+export const closeEditIconCropDialog = ({ state }) => {
+  state.isEditIconCropDialogOpen = false;
+  state.editIconCropFile = undefined;
 };
 
 export const selectViewData = ({ state, constants }) => {
@@ -81,8 +95,10 @@ export const selectViewData = ({ state, constants }) => {
     projectDescription: state.project.description ?? "",
     projectIconFileId: state.project.iconFileId,
     isEditDialogOpen: state.isEditDialogOpen,
+    isEditIconCropDialogOpen: state.isEditIconCropDialogOpen,
     editDefaultValues: state.editDefaultValues,
     editIconFileId: state.editIconFileId,
+    editIconCropFile: state.editIconCropFile,
     editForm: constants.editProjectForm,
     projectSource: state.project.source,
   };

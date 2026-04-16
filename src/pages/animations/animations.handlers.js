@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId } from "../../internal/id.js";
 import { createAnimationEditorPayload } from "../../internal/animationEditorRoute.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
@@ -277,7 +277,7 @@ export const handleAddFormAction = async (deps, payload) => {
   const dialogType =
     values?.dialogType === "transition" ? "transition" : "update";
   const targetGroupId = store.selectTargetGroupId();
-  const animationId = nanoid();
+  const animationId = generateId();
 
   const createAttempt = await runResourcePageMutation({
     appService,

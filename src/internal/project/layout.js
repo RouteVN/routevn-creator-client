@@ -12,6 +12,7 @@ import {
   getInteractionPayload,
   withInteractionPayload,
 } from "./interactionPayload.js";
+import { generateId } from "../id.js";
 
 const TEXT_NODE_TYPES = new Set([
   "text",
@@ -184,13 +185,7 @@ export const filterLayoutsExcludingTypes = (
 };
 
 const createLayoutDuplicateId = () => {
-  if (typeof crypto?.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-
-  throw new Error(
-    "A createId function is required when crypto.randomUUID is unavailable.",
-  );
+  return generateId();
 };
 
 const ensureMappedLayoutElementId = (idMap, sourceId, createId) => {

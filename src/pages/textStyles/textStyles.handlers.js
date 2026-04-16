@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId } from "../../internal/id.js";
 import {
   getTextStyleCount,
   getTextStyleRemovalCount,
@@ -181,7 +181,7 @@ const handleTextStyleCreated = async (deps, payload) => {
     fallbackMessage: "Failed to create text style.",
     action: () =>
       projectService.createTextStyle({
-        textStyleId: nanoid(),
+        textStyleId: generateId(),
         data: {
           type: "textStyle",
           ...buildTextStyleData({
@@ -450,7 +450,7 @@ export const handleAddColorFormAction = async (deps, payload) => {
 
   if (payload._event.detail.actionId === "submit") {
     const formData = payload._event.detail.values;
-    const newColorId = nanoid();
+    const newColorId = generateId();
 
     // Create the color in the repository
     const createAttempt = await runResourcePageMutation({
@@ -549,7 +549,7 @@ export const handleAddFontFormAction = async (deps, payload) => {
     }
 
     const fontName = fontData.fileName;
-    const newFontId = nanoid();
+    const newFontId = generateId();
 
     // Create the font in the repository using the already uploaded file
     const createAttempt = await runResourcePageMutation({

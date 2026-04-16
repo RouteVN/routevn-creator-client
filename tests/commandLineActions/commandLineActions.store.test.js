@@ -190,7 +190,7 @@ describe("commandLineActions.store", () => {
     ).toBe(false);
   });
 
-  it("moves choices and next line config into the navigation presentation section", () => {
+  it("adds resetStoryAtSection to the navigation presentation section only", () => {
     const items = selectItems({
       props: {
         actionsType: "presentation",
@@ -198,13 +198,17 @@ describe("commandLineActions.store", () => {
     });
 
     expect(getSectionModes(items, "Dialogue")).toEqual(["dialogue"]);
+    expect(getSectionModes(items, "Audio")).toEqual(["bgm", "sfx"]);
     expect(getSectionModes(items, "Navigation")).toEqual(
       expect.arrayContaining([
         "choice",
         "setNextLineConfig",
         "sectionTransition",
+        "resetStoryAtSection",
         "control",
       ]),
     );
+    expect(items.some((item) => item.type === "section" && item.label === "Save / Load")).toBe(false);
+    expect(items.some((item) => item.type === "section" && item.label === "Menu")).toBe(false);
   });
 });

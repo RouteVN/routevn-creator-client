@@ -1,5 +1,5 @@
-import { nanoid } from "nanoid";
 import { createAppServiceCore } from "../shared/appServiceCore.js";
+import { generateId } from "../../../internal/id.js";
 
 export const createAppService = (params) => {
   const platformAdapter = {
@@ -50,7 +50,8 @@ export const createAppService = (params) => {
       addProjectEntry,
       projectService,
     }) => {
-      const projectId = nanoid();
+      const projectId = generateId();
+      const namespace = generateId();
       let iconFileId = null;
       if (iconFile) {
         const storedIcon = await projectService.storeFileForProject({
@@ -74,6 +75,8 @@ export const createAppService = (params) => {
         template,
         projectResolution,
         projectInfo: {
+          id: projectId,
+          namespace,
           name,
           description,
           iconFileId,

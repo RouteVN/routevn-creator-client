@@ -68,6 +68,52 @@ const renderWithCursorSync = (deps) => {
   syncCursorStyles(deps);
 };
 
+const syncPanPresentation = ({ store, refs, props } = {}) => {
+  const pan = store.selectPan();
+  const zoomLevel = store.selectZoomLevel();
+
+  if (refs?.container) {
+    refs.container.style.backgroundPosition = `${pan.x}px ${pan.y}px`;
+  }
+
+  if (refs?.canvas) {
+    refs.canvas.style.transform = `translate(${pan.x}px, ${pan.y}px) scale(${zoomLevel})`;
+  }
+
+  if (refs?.minimapViewport && typeof store.selectMinimapData === "function") {
+    const minimapData = store.selectMinimapData({
+      items: props?.items || [],
+    });
+    const viewport = minimapData?.viewport;
+
+    if (!viewport?.visible) {
+      refs.minimapViewport.style.display = "none";
+      return;
+    }
+
+    refs.minimapViewport.style.display = "";
+    refs.minimapViewport.style.left = `${viewport.x}px`;
+    refs.minimapViewport.style.top = `${viewport.y}px`;
+    refs.minimapViewport.style.width = `${viewport.width}px`;
+    refs.minimapViewport.style.height = `${viewport.height}px`;
+  }
+};
+
+const getPointerPositionWithinElement = (event, element) => {
+  if (!element) {
+    return {
+      x: 0,
+      y: 0,
+    };
+  }
+
+  const rect = element.getBoundingClientRect();
+  return {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top,
+  };
+};
+
 const getActiveElement = (root = document) => {
   let active = root?.activeElement;
   while (active?.shadowRoot?.activeElement) {
@@ -225,6 +271,11 @@ export const handleContainerWheel = (deps, payload) => {
   const { _event: event } = payload;
   const { store, refs, dispatchEvent } = deps;
 
+  if (store.selectIsDraggingMinimapViewport()) {
+    event.preventDefault();
+    return;
+  }
+
   // Calculate mouse position relative to container
   const container = refs.container;
   const rect = container.getBoundingClientRect();
@@ -247,6 +298,10 @@ export const handleContainerWheel = (deps, payload) => {
 export const handleZoomInClick = (deps) => {
   const { store, refs, dispatchEvent } = deps;
 
+  if (store.selectIsDraggingMinimapViewport()) {
+    return;
+  }
+
   const container = refs.container;
   const rect = container.getBoundingClientRect();
 
@@ -266,6 +321,10 @@ export const handleZoomInClick = (deps) => {
 export const handleZoomOutClick = (deps) => {
   const { store, refs, dispatchEvent } = deps;
 
+  if (store.selectIsDraggingMinimapViewport()) {
+    return;
+  }
+
   const container = refs.container;
   const rect = container.getBoundingClientRect();
 
@@ -280,6 +339,42 @@ export const handleZoomOutClick = (deps) => {
 
   dispatchZoomChanged({ store, dispatchEvent });
   dispatchPanChanged({ store, dispatchEvent });
+};
+
+export const handleMinimapViewportMouseDown = (deps, payload) => {
+  const { store, refs } = deps;
+  const { _event: event } = payload;
+
+  if (!isPrimaryMouseButton(event)) {
+    return;
+  }
+
+  const minimapContainer = refs.minimapContainer;
+  if (!minimapContainer) {
+    return;
+  }
+
+  const minimapData = store.selectMinimapData({
+    items: deps.props?.items || [],
+  });
+  if (!minimapData?.viewport?.visible) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const { x: mouseX, y: mouseY } = getPointerPositionWithinElement(
+    event,
+    minimapContainer,
+  );
+
+  store.startMinimapViewportDragging({
+    mouseX,
+    mouseY,
+    minimapData,
+  });
+  renderWithCursorSync(deps);
 };
 
 export const handleItemMouseDown = (deps, payload) => {
@@ -409,9 +504,26 @@ export const handleItemMouseLeave = (deps) => {
 
 export const handleWindowMouseMove = (deps, payload) => {
   const { store, refs, dispatchEvent } = deps;
-  const didUpdateSize = syncContainerSize(deps);
 
-  if (store.selectIsPanning()) {
+  if (store.selectIsDraggingMinimapViewport()) {
+    const minimapContainer = refs.minimapContainer;
+    if (!minimapContainer) {
+      store.stopMinimapViewportDragging();
+      renderWithCursorSync(deps);
+      return;
+    }
+
+    const { x: mouseX, y: mouseY } = getPointerPositionWithinElement(
+      payload._event,
+      minimapContainer,
+    );
+
+    store.updatePanFromMinimapViewportDragging({
+      mouseX,
+      mouseY,
+    });
+    syncPanPresentation(deps);
+  } else if (store.selectIsPanning()) {
     // Handle panning
     store.updatePan({
       mouseX: payload._event.clientX,
@@ -421,7 +533,7 @@ export const handleWindowMouseMove = (deps, payload) => {
     // Dispatch pan changed event
     dispatchPanChanged({ store, dispatchEvent });
 
-    renderWithCursorSync(deps);
+    syncPanPresentation(deps);
   } else if (store.selectIsDragging()) {
     // Handle item dragging
     const canvas = refs.canvas;
@@ -481,7 +593,7 @@ export const handleWindowMouseMove = (deps, payload) => {
         },
       }),
     );
-  } else if (didUpdateSize) {
+  } else if (syncContainerSize(deps)) {
     renderWithCursorSync(deps);
   }
 };
@@ -489,8 +601,16 @@ export const handleWindowMouseMove = (deps, payload) => {
 export const handleWindowMouseUp = (deps) => {
   const { store, refs, dispatchEvent } = deps;
 
+  if (store.selectIsDraggingMinimapViewport()) {
+    store.stopMinimapViewportDragging();
+    dispatchPanChanged({ store, dispatchEvent });
+    renderWithCursorSync(deps);
+    return;
+  }
+
   if (store.selectIsPanning()) {
     store.stopPanning();
+    renderWithCursorSync(deps);
   } else if (store.selectIsDragging()) {
     const dragItemId = store.selectDragItemId();
     const itemElement = Object.values(refs || {}).find(
@@ -577,6 +697,11 @@ export const handleWindowBlur = (deps) => {
 
   if (store.selectIsPanning()) {
     store.stopPanning();
+    didChange = true;
+  }
+
+  if (store.selectIsDraggingMinimapViewport()) {
+    store.stopMinimapViewportDragging();
     didChange = true;
   }
 

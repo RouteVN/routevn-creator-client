@@ -88,7 +88,7 @@ const createLayoutEditorDeps = ({
     updateLayoutItem,
     storeFile: vi.fn(async () => ({
       fileId: "file-layout-thumb",
-      fileRecords: [{ fileId: "file-layout-thumb" }],
+      fileRecords: [{ id: "file-layout-thumb" }],
     })),
   };
 
@@ -274,7 +274,7 @@ describe("layoutEditor.handleSaveButtonClick", () => {
         thumbnailFileId: "file-layout-thumb",
         preview: previewData,
       },
-      fileRecords: [{ fileId: "file-layout-thumb" }],
+      fileRecords: [{ id: "file-layout-thumb" }],
     });
     expect(deps.appService.showToast).toHaveBeenCalledWith({
       message: "Layout preview saved.",

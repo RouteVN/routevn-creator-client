@@ -1,6 +1,5 @@
 const DEFAULT_LOCAL_API_BASE_URL = "http://127.0.0.1:8787";
 const DEFAULT_REMOTE_API_BASE_URL = "https://127.0.0.1:8787";
-const API_BASE_URL_STORAGE_KEY = "routevn.apiBaseUrl";
 
 const normalizeBaseUrl = (input) => {
   const value = String(input || "").trim();
@@ -19,34 +18,10 @@ export const resolveDefaultApiBaseUrl = () => {
     return DEFAULT_LOCAL_API_BASE_URL;
   }
 
-  const readStoredBaseUrl = () => {
-    try {
-      return normalizeBaseUrl(localStorage.getItem(API_BASE_URL_STORAGE_KEY));
-    } catch {
-      return "";
-    }
-  };
-
-  const persistBaseUrl = (value) => {
-    try {
-      if (value) {
-        localStorage.setItem(API_BASE_URL_STORAGE_KEY, value);
-      }
-    } catch {
-      // no-op
-    }
-  };
-
   const params = new URLSearchParams(window.location.search);
   const queryBaseUrl = normalizeBaseUrl(params.get("apiBaseUrl"));
   if (queryBaseUrl) {
-    persistBaseUrl(queryBaseUrl);
     return queryBaseUrl;
-  }
-
-  const storedBaseUrl = readStoredBaseUrl();
-  if (storedBaseUrl) {
-    return storedBaseUrl;
   }
 
   const host = window.location.hostname || "";

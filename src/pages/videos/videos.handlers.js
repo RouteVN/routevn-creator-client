@@ -1,4 +1,4 @@
-import { nanoid } from "nanoid";
+import { generateId } from "../../internal/id.js";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 import { processPendingUploads } from "../../internal/ui/resourcePages/media/processPendingUploads.js";
@@ -84,7 +84,7 @@ const createVideosFromFiles = async ({ deps, files, parentId } = {}) => {
         fallbackMessage: "Failed to create video.",
         action: () =>
           projectService.createVideo({
-            videoId: nanoid(),
+            videoId: generateId(),
             fileRecords: uploadResult.fileRecords,
             data: {
               type: "video",
