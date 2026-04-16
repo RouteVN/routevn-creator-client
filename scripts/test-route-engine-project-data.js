@@ -522,7 +522,7 @@ const createBaseProjectData = () => ({
   assert.equal(
     isSceneProjectionCheckpointFresh({
       checkpoint: {
-        viewVersion: "1",
+        viewVersion: "2",
         lastCommittedId: 25,
         value: narrowCheckpointValue,
       },
@@ -542,7 +542,7 @@ const createBaseProjectData = () => ({
   assert.equal(
     isSceneProjectionCheckpointFresh({
       checkpoint: {
-        viewVersion: "1",
+        viewVersion: "2",
         lastCommittedId: 25,
         value: wideLegacyCheckpointValue,
       },

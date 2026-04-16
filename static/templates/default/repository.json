@@ -1508,7 +1508,7 @@
               "click": {
                 "payload": {
                   "actions": {
-                    "pushLayeredView": {
+                    "pushOverlay": {
                       "resourceId": "Jy3Rayx5WJx1_D62TVi7f"
                     },
                     "setMenuPage": {
@@ -1557,7 +1557,7 @@
               "click": {
                 "payload": {
                   "actions": {
-                    "pushLayeredView": {
+                    "pushOverlay": {
                       "resourceId": "Jy3Rayx5WJx1_D62TVi7f"
                     },
                     "setMenuEntryPoint": {
@@ -2217,7 +2217,7 @@
               "click": {
                 "payload": {
                   "actions": {
-                    "pushLayeredView": {
+                    "pushOverlay": {
                       "resourceId": "Jy3Rayx5WJx1_D62TVi7f"
                     },
                     "setMenuPage": {
@@ -2267,7 +2267,7 @@
               "click": {
                 "payload": {
                   "actions": {
-                    "pushLayeredView": {
+                    "pushOverlay": {
                       "resourceId": "Jy3Rayx5WJx1_D62TVi7f"
                     },
                     "setMenuPage": {
@@ -2370,7 +2370,7 @@
               "click": {
                 "payload": {
                   "actions": {
-                    "popLayeredView": {}
+                    "popOverlay": {}
                   }
                 }
               }
@@ -2536,7 +2536,7 @@
                     "showConfirmDialog": {
                       "resourceId": "AzFHHjIaQivCexxbNZoNy",
                       "confirmActions": {
-                        "popLayeredView": {},
+                        "popOverlay": {},
                         "sectionTransition": {
                           "sceneId": "KSbUdfqHXpjf2J49ufgji",
                           "sectionId": "a9Te2munsYzTdqcmj397L",
@@ -2566,7 +2566,7 @@
               "rightClick": {
                 "payload": {
                   "actions": {
-                    "popLayeredView": {}
+                    "popOverlay": {}
                   }
                 }
               }
@@ -5208,7 +5208,7 @@
               "rightClick": {
                 "payload": {
                   "actions": {
-                    "pushLayeredView": {
+                    "pushOverlay": {
                       "resourceId": "Jy3Rayx5WJx1_D62TVi7f"
                     },
                     "setMenuPage": {

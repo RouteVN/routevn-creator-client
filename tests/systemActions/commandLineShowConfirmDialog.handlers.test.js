@@ -59,7 +59,7 @@ describe("commandLineShowConfirmDialog.handlers", () => {
       { state: deps.state },
       {
         actions: {
-          popLayeredView: {},
+          popOverlay: {},
         },
       },
     );
@@ -73,7 +73,7 @@ describe("commandLineShowConfirmDialog.handlers", () => {
     });
 
     expect(deps.state.cancelActions).toEqual({
-      popLayeredView: {},
+      popOverlay: {},
       hideConfirmDialog: {},
     });
   });
@@ -111,7 +111,7 @@ describe("commandLineShowConfirmDialog.handlers", () => {
       { state: deps.state },
       {
         actions: {
-          popLayeredView: {},
+          popOverlay: {},
           hideConfirmDialog: {},
         },
       },
@@ -120,7 +120,7 @@ describe("commandLineShowConfirmDialog.handlers", () => {
     handleCancelActionsDelete(deps, {
       _event: {
         detail: {
-          actionType: "popLayeredView",
+          actionType: "popOverlay",
         },
       },
     });

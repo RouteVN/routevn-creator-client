@@ -1,5 +1,8 @@
 import { fileTypeFromBuffer } from "file-type";
-import createRouteEngine, { createEffectsHandler } from "route-engine-js";
+import createRouteEngine, {
+  createEffectsHandler,
+  createIndexedDbPersistence,
+} from "route-engine-js";
 import { Ticker } from "pixi.js";
 
 import createRouteGraphics, { createAssetBufferManager } from "route-graphics";
@@ -12,7 +15,6 @@ import {
   prepareRuntimeInteractionExecution,
 } from "../src/internal/runtime/graphicsEngineRuntime.js";
 import { BUNDLE_FORMAT_VERSION } from "../src/deps/services/shared/projectExportService.js";
-import { getRuntimeFieldItems } from "../src/internal/runtimeFields.js";
 
 async function parseVNBundle(arrayBuffer) {
   const dataView = new DataView(arrayBuffer);
@@ -117,53 +119,19 @@ const preloadBundleData = async () => {
   return { jsonData, assetBufferMap };
 };
 
-const PERSISTED_RUNTIME_IDS = new Set(
-  Object.values(getRuntimeFieldItems())
-    .filter((field) => field.scope === "device")
-    .map((field) => field.id),
-);
+const createBundleNamespace = () => {
+  const pathname =
+    typeof window?.location?.pathname === "string" &&
+    window.location.pathname.length > 0
+      ? window.location.pathname
+      : "/";
 
-const readStoredJson = (key) => {
-  const rawValue = localStorage.getItem(key);
-
-  if (!rawValue) {
-    return {};
-  }
-
-  try {
-    return JSON.parse(rawValue) || {};
-  } catch {
-    return {};
-  }
-};
-
-const splitStoredGlobalState = (...sources) => {
-  const runtime = {};
-  const variables = {};
-
-  sources.forEach((source) => {
-    if (!source || typeof source !== "object" || Array.isArray(source)) {
-      return;
-    }
-
-    Object.entries(source).forEach(([key, value]) => {
-      if (PERSISTED_RUNTIME_IDS.has(key)) {
-        runtime[key] = value;
-        return;
-      }
-
-      variables[key] = value;
-    });
-  });
-
-  return {
-    runtime,
-    variables,
-  };
+  return `bundle:${pathname}`;
 };
 
 const prepareEngine = async ({ jsonData, assetBufferMap }) => {
   const plugins = await loadGraphicsEnginePlugins();
+  const namespace = createBundleNamespace();
 
   // Create dedicated ticker for auto mode
   const ticker = new Ticker();
@@ -205,50 +173,60 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
     routeGraphics.render(nextRenderState);
   };
 
+  const persistence = createIndexedDbPersistence({ namespace });
+  const {
+    saveSlots,
+    globalDeviceVariables,
+    globalAccountVariables,
+    globalRuntime,
+  } = await persistence.load();
+
   const effectsHandler = createEffectsHandler({
     getEngine: () => engine,
+    persistence,
     routeGraphics: {
       render: renderEngineState,
     },
     ticker,
   });
 
+  const routeGraphicsEventHandler =
+    effectsHandler.createRouteGraphicsEventHandler({
+      preprocessPayload: async (eventName, payload) => {
+        const actions = getRuntimeEventActions(payload);
+        if (!actions) {
+          return payload;
+        }
+
+        const eventContext = createRuntimeEventContext(payload);
+        const { preparedActions, thumbnailPreloadError } =
+          await prepareRuntimeInteractionExecution({
+            actions,
+            eventContext,
+            graphicsService: routeGraphics,
+            canvasRoot: routeGraphics.canvas,
+            swallowThumbnailPreloadError: true,
+          });
+
+        if (thumbnailPreloadError) {
+          console.warn(
+            "Failed to preload save thumbnail image.",
+            thumbnailPreloadError,
+          );
+        }
+
+        return {
+          ...payload,
+          actions: preparedActions,
+        };
+      },
+    });
+
   await routeGraphics.init({
     width: screenWidth,
     height: screenHeight,
     plugins,
-    eventHandler: async (eventName, payload = {}) => {
-      if (eventName === "renderComplete") {
-        engine.handleActions({
-          markLineCompleted: {},
-        });
-        return;
-      }
-
-      const actions = getRuntimeEventActions(payload);
-      if (!actions) {
-        return;
-      }
-
-      const eventContext = createRuntimeEventContext(payload);
-      const { preparedActions, thumbnailPreloadError } =
-        await prepareRuntimeInteractionExecution({
-          actions,
-          eventContext,
-          graphicsService: routeGraphics,
-          canvasRoot: routeGraphics.canvas,
-          swallowThumbnailPreloadError: true,
-        });
-
-      if (thumbnailPreloadError) {
-        console.warn(
-          "Failed to preload save thumbnail image.",
-          thumbnailPreloadError,
-        );
-      }
-
-      engine.handleActions(preparedActions, eventContext);
-    },
+    eventHandler: routeGraphicsEventHandler,
   });
   await routeGraphics.loadAssets(assetBufferMap);
 
@@ -258,13 +236,6 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
   });
 
   engine = createRouteEngine({ handlePendingEffects: effectsHandler });
-  const saveSlots = readStoredJson("saveSlots");
-  const deviceVariables = readStoredJson("deviceVariables");
-  const accountVariables = readStoredJson("accountVariables");
-  const storedGlobalState = splitStoredGlobalState(
-    deviceVariables,
-    accountVariables,
-  );
   const preloadSaveSlotImagesResult = await preloadRuntimeSaveSlotImages(
     routeGraphics,
     saveSlots,
@@ -278,11 +249,15 @@ const prepareEngine = async ({ jsonData, assetBufferMap }) => {
 
   const startEngine = () => {
     engine.init({
+      namespace,
       initialState: {
         global: {
           saveSlots,
-          variables: storedGlobalState.variables,
-          ...storedGlobalState.runtime,
+          variables: {
+            ...globalDeviceVariables,
+            ...globalAccountVariables,
+          },
+          runtime: globalRuntime,
         },
         projectData: jsonData,
       },

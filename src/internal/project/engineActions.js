@@ -44,29 +44,6 @@ export const normalizeEngineActions = (value) => {
   return normalizedValue;
 };
 
-const flattenLegacyLineActions = (actions) => {
-  if (!actions || typeof actions !== "object" || Array.isArray(actions)) {
-    return actions;
-  }
-
-  const nestedActions = actions.actions;
-  if (
-    !nestedActions ||
-    typeof nestedActions !== "object" ||
-    Array.isArray(nestedActions)
-  ) {
-    return actions;
-  }
-
-  const flattenedActions = {
-    ...structuredClone(nestedActions),
-    ...actions,
-  };
-  delete flattenedActions.actions;
-
-  return flattenLegacyLineActions(flattenedActions);
-};
-
 export const normalizeLineActions = (value) => {
-  return flattenLegacyLineActions(normalizeEngineActions(value));
+  return normalizeEngineActions(value);
 };

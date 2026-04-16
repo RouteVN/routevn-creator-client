@@ -41,8 +41,8 @@ const SYSTEM_ACTION_LABELS = {
   toggleAutoMode: "Toggle Auto Mode",
   toggleSkipMode: "Toggle Skip Mode",
   toggleDialogueUI: "Toggle Dialogue Box Visibility",
-  pushLayeredView: "Push Layered View",
-  popLayeredView: "Pop Layered View",
+  pushOverlay: "Push Overlay",
+  popOverlay: "Pop Overlay",
   updateVariable: "Update Variable",
   ...RUNTIME_ACTION_LABELS,
 };

@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildLayoutElements } from "../../src/internal/project/layout.js";
+import { toHierarchyStructure } from "../../src/internal/project/tree.js";
 import {
   AUTO_MODE_CONDITION_TARGET,
   LINE_COMPLETED_CONDITION_TARGET,
@@ -8,6 +10,54 @@ import {
   buildVisibilityConditionExpression,
   splitVisibilityConditionFromWhen,
 } from "../../src/internal/layoutConditions.js";
+
+const defaultRepositoryTemplate = JSON.parse(
+  readFileSync(
+    new URL("../../static/templates/default/repository.json", import.meta.url),
+    "utf8",
+  ),
+);
+
+const findElement = (elements, predicate) => {
+  const stack = [...(Array.isArray(elements) ? elements : [])];
+
+  while (stack.length > 0) {
+    const current = stack.shift();
+    if (!current) {
+      continue;
+    }
+    if (predicate(current)) {
+      return current;
+    }
+    if (Array.isArray(current.children)) {
+      stack.push(...current.children);
+    }
+  }
+
+  return undefined;
+};
+
+const findElementById = (elements, elementId) =>
+  findElement(elements, (element) => element.id === elementId);
+
+const buildDefaultTemplateLayout = (layoutName) => {
+  const layout = Object.values(defaultRepositoryTemplate.layouts.items).find(
+    (entry) => entry.name === layoutName,
+  );
+
+  const emptyCollection = { items: {}, tree: [] };
+  return buildLayoutElements(
+    toHierarchyStructure(layout?.elements),
+    {},
+    emptyCollection,
+    emptyCollection,
+    emptyCollection,
+    {
+      layoutId: layout?.id,
+      layoutType: layout?.layoutType,
+    },
+  );
+};
 
 describe("layout visibility conditions", () => {
   it("compiles a structured visibility condition into $when", () => {
@@ -484,6 +534,226 @@ describe("layout visibility conditions", () => {
         },
       },
     });
+  });
+
+  it("merges slot event data into existing save/load slot click payload event data", () => {
+    const { elements } = buildLayoutElements(
+      [
+        {
+          id: "slot-container",
+          type: "container-ref-save-load-slot",
+          click: {
+            payload: {
+              _event: {
+                interactionSource: "save-grid",
+              },
+              actions: {
+                showConfirmDialog: {
+                  resourceId: "confirm-layout",
+                  confirmActions: {
+                    saveSlot: {},
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
+      {},
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      {
+        layoutId: "layout-save",
+        layoutType: "save-load",
+      },
+    );
+
+    expect(elements[0].click).toEqual({
+      payload: {
+        _event: {
+          interactionSource: "save-grid",
+          slotId: "${item.slotId}",
+        },
+        actions: {
+          showConfirmDialog: {
+            resourceId: "confirm-layout",
+            confirmActions: {
+              saveSlot: {},
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("compiles confirm dialog OK containers to runtime confirm actions", () => {
+    const { elements } = buildLayoutElements(
+      [
+        {
+          id: "confirm-ok",
+          type: "container-ref-confirm-dialog-ok",
+        },
+      ],
+      {},
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      {
+        layoutId: "layout-confirm",
+        layoutType: "confirmDialog",
+      },
+    );
+
+    expect(elements[0]).toEqual(expect.objectContaining({
+      id: "confirm-ok",
+      type: "container",
+      anchorX: 0,
+      anchorY: 0,
+      scaleX: 1,
+      scaleY: 1,
+      rotation: 0,
+      gapX: 0,
+      gapY: 0,
+      click: {
+        payload: {
+          actions: "${confirmDialog.confirmActions}",
+        },
+      },
+    }));
+  });
+
+  it("compiles confirm dialog cancel containers to runtime cancel actions", () => {
+    const { elements } = buildLayoutElements(
+      [
+        {
+          id: "confirm-cancel",
+          type: "container-ref-confirm-dialog-cancel",
+        },
+      ],
+      {},
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      {
+        layoutId: "layout-confirm",
+        layoutType: "confirmDialog",
+      },
+    );
+
+    expect(elements[0]).toEqual(expect.objectContaining({
+      id: "confirm-cancel",
+      type: "container",
+      anchorX: 0,
+      anchorY: 0,
+      scaleX: 1,
+      scaleY: 1,
+      rotation: 0,
+      gapX: 0,
+      gapY: 0,
+      click: {
+        payload: {
+          actions: "${confirmDialog.cancelActions}",
+        },
+      },
+    }));
+  });
+
+  it("lets confirm dialog special container bindings override authored click action payloads", () => {
+    const { elements } = buildLayoutElements(
+      [
+        {
+          id: "confirm-ok",
+          type: "container-ref-confirm-dialog-ok",
+          click: {
+            payload: {
+              actions: {
+                toggleDialogueUI: {},
+              },
+            },
+          },
+        },
+      ],
+      {},
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      {
+        layoutId: "layout-confirm",
+        layoutType: "confirmDialog",
+      },
+    );
+
+    expect(elements[0].click).toEqual({
+      payload: {
+        actions: "${confirmDialog.confirmActions}",
+      },
+    });
+  });
+
+  it("keeps the shipped default confirm dialog layout wired to runtime confirm actions", () => {
+    const { elements } = buildDefaultTemplateLayout("Confirm go to title");
+
+    expect(findElementById(elements, "d0yCIqdbXEFKRGBuLUzCR")?.click).toEqual({
+      payload: {
+        actions: "${confirmDialog.confirmActions}",
+      },
+    });
+    expect(findElementById(elements, "Glr2VGapLNVUCqMoYWZfk")?.click).toEqual({
+      payload: {
+        actions: "${confirmDialog.cancelActions}",
+      },
+    });
+  });
+
+  it("keeps the shipped default save and load layouts wired to saveSlots slot events", () => {
+    const expectedByLayoutName = {
+      Save: {
+        actionType: "saveSlot",
+      },
+      Load: {
+        actionType: "loadSlot",
+        rightClick: {
+          payload: {
+            _event: {
+              slotId: "${item.slotId}",
+            },
+          },
+        },
+      },
+    };
+
+    Object.entries(expectedByLayoutName).forEach(
+      ([layoutName, expectedConfig]) => {
+        const { elements } = buildDefaultTemplateLayout(layoutName);
+        const slotContainer = findElement(
+          elements,
+          (element) => element.$each === "item, i in saveSlots",
+        );
+
+        expect(slotContainer).toMatchObject({
+          type: "container",
+          $each: "item, i in saveSlots",
+          click: {
+            inheritToChildren: true,
+            payload: {
+              actions: {
+                [expectedConfig.actionType]: {},
+              },
+              _event: {
+                slotId: "${item.slotId}",
+              },
+            },
+          },
+          hover: {
+            inheritToChildren: true,
+          },
+        });
+        if (expectedConfig.rightClick) {
+          expect(slotContainer?.rightClick).toEqual(expectedConfig.rightClick);
+        }
+      },
+    );
   });
 
   it("compiles child interaction inheritance for containers", () => {

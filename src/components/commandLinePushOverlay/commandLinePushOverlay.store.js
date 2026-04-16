@@ -6,7 +6,7 @@ const form = {
       name: "resourceId",
       type: "select",
       label: "Layout",
-      description: "Select which layout to display",
+      description: "Select which overlay layout to display",
       required: true,
       placeholder: "Choose a layout",
       options: "${layoutOptions}",
@@ -47,7 +47,7 @@ export const selectViewData = ({ state }) => {
 
   const breadcrumb = [
     { id: "actions", label: "Actions", click: true },
-    { label: "Push Layered View" },
+    { label: "Push Overlay" },
   ];
 
   const layoutOptions = allLayouts.map((layout) => ({

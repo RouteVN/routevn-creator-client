@@ -60,15 +60,15 @@ const SYSTEM_ACTION_SECTIONS = [
   createSection("Layers", [
     {
       id: "15",
-      label: "Push Layered View",
+      label: "Push Overlay",
       icon: "layers",
-      mode: "pushLayeredView",
+      mode: "pushOverlay",
     },
     {
       id: "16",
-      label: "Pop Layered View",
+      label: "Pop Overlay",
       icon: "layers",
-      mode: "popLayeredView",
+      mode: "popOverlay",
     },
   ]),
   // createSection("Variables", [

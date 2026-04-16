@@ -4,13 +4,13 @@ export const handleAfterMount = async (deps) => {
   const { layouts } = projectService.getState();
 
   // Safe access to nested properties
-  const pushLayeredView = props?.pushLayeredView;
+  const pushOverlay = props?.pushOverlay;
 
   store.setLayouts({
     layouts,
   });
 
-  if (!pushLayeredView) {
+  if (!pushOverlay) {
     store.setFormValues({});
     store.setInitiated();
     render();
@@ -19,7 +19,7 @@ export const handleAfterMount = async (deps) => {
 
   // Initialize form values from existing data
   const formValues = {
-    resourceId: pushLayeredView.resourceId,
+    resourceId: pushOverlay.resourceId,
   };
 
   store.setFormValues(formValues);
@@ -35,7 +35,7 @@ export const handleSubmitClick = (deps) => {
     dispatchEvent(
       new CustomEvent("submit", {
         detail: {
-          pushLayeredView: {
+          pushOverlay: {
             resourceId: formValues.resourceId,
           },
         },

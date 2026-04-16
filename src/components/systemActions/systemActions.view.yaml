@@ -34,7 +34,7 @@ refs:
 template:
   - $if showSelected:
       - rtgl-view g=md w=f:
-          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.resetStoryAtSection || preview.dialogue || preview.choice || preview.control || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.toggleDialogueUI || preview.runtimeActions || preview.setNextLineConfig || preview.pushLayeredView || preview.popLayeredView || preview.updateVariable || preview.rollbackByOffset || preview.showConfirmDialog || preview.hideConfirmDialog || preview.saveSlot || preview.loadSlot:
+          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.resetStoryAtSection || preview.dialogue || preview.choice || preview.control || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.toggleDialogueUI || preview.runtimeActions || preview.setNextLineConfig || preview.pushOverlay || preview.popOverlay || preview.updateVariable || preview.rollbackByOffset || preview.showConfirmDialog || preview.hideConfirmDialog || preview.saveSlot || preview.loadSlot:
               - $if preview.control:
                   - rtgl-view#actionItemControl data-mode=control g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=control wh=24: null
@@ -116,14 +116,14 @@ template:
                       - rtgl-view#actionItemRuntime${i} data-mode=${runtimeAction.mode} g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                           - rtgl-svg svg=${runtimeAction.icon} wh=24: null
                           - rtgl-text s=sm: ${runtimeAction.summary}
-              - $if preview.pushLayeredView:
-                  - rtgl-view#actionItemPushLayeredView data-mode=pushLayeredView g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+              - $if preview.pushOverlay:
+                  - rtgl-view#actionItemPushOverlay data-mode=pushOverlay g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="layers" wh=24: null
-                      - rtgl-text s=sm: 'Push view: ${preview.pushLayeredView.layout.name}'
-              - $if preview.popLayeredView:
-                  - rtgl-view#actionItemPopLayeredView data-mode=popLayeredView g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-text s=sm: 'Push overlay: ${preview.pushOverlay.layout.name}'
+              - $if preview.popOverlay:
+                  - rtgl-view#actionItemPopOverlay data-mode=popOverlay g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="layers" wh=24: null
-                      - rtgl-text s=sm: Pop current layered view
+                      - rtgl-text s=sm: Pop current overlay
               - $if preview.rollbackByOffset:
                   - rtgl-view#actionItemRollbackByOffset data-mode=rollbackByOffset g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="settings" wh=24: null
@@ -188,10 +188,10 @@ template:
               - rvn-command-line-toggle-skip-mode#commandLineToggleSkipMode :toggleSkipMode=${actions.toggleSkipMode}: null
             $elif mode == "toggleDialogueUI":
               - rvn-command-line-toggle-dialogue-ui#commandLineToggleDialogueUI :toggleDialogueUI=${actions.toggleDialogueUI}: null
-            $elif mode == "pushLayeredView":
-              - rvn-command-line-push-layered-view#commandLinePushLayeredView :pushLayeredView=${actions.pushLayeredView}: null
-            $elif mode == "popLayeredView":
-              - rvn-command-line-pop-layered-view#commandLinePopLayeredView :popLayeredView=${actions.popLayeredView}: null
+            $elif mode == "pushOverlay":
+              - rvn-command-line-push-overlay#commandLinePushOverlay :pushOverlay=${actions.pushOverlay}: null
+            $elif mode == "popOverlay":
+              - rvn-command-line-pop-overlay#commandLinePopOverlay :popOverlay=${actions.popOverlay}: null
             $elif mode == "rollbackByOffset":
               - rvn-command-line-rollback-by-offset#commandLineRollbackByOffset :rollbackByOffset=${actions.rollbackByOffset}: null
             $elif mode == "showConfirmDialog":

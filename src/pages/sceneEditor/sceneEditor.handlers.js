@@ -564,10 +564,10 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     return;
   }
 
-  // Handle pushLayeredView
-  if (payload._event.detail.pushLayeredView) {
+  // Handle pushOverlay
+  if (payload._event.detail.pushOverlay) {
     if (!lineId) {
-      console.warn("Push layered view requires a selected line");
+      console.warn("Push overlay requires a selected line");
       return;
     }
 
@@ -575,7 +575,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     try {
       safeDetail = cloneWithDiagnostics(
         payload._event.detail,
-        "command line submit detail (pushLayeredView)",
+        "command line submit detail (pushOverlay)",
       );
     } catch {
       appService?.showToast("Invalid action payload (non-serializable data)", {
@@ -594,7 +594,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
         });
       },
       {
-        label: "push-layered-view",
+        label: "push-overlay",
         meta: {
           lineId,
         },
@@ -612,10 +612,10 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     return;
   }
 
-  // Handle popLayeredView
-  if (payload._event.detail.popLayeredView) {
+  // Handle popOverlay
+  if (payload._event.detail.popOverlay) {
     if (!lineId) {
-      console.warn("Pop layered view requires a selected line");
+      console.warn("Pop overlay requires a selected line");
       return;
     }
 
@@ -623,7 +623,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     try {
       safeDetail = cloneWithDiagnostics(
         payload._event.detail,
-        "command line submit detail (popLayeredView)",
+        "command line submit detail (popOverlay)",
       );
     } catch {
       appService?.showToast("Invalid action payload (non-serializable data)", {
@@ -642,7 +642,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
         });
       },
       {
-        label: "pop-layered-view",
+        label: "pop-overlay",
         meta: {
           lineId,
         },

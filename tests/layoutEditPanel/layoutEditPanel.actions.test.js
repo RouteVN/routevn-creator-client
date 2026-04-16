@@ -20,7 +20,7 @@ describe("layoutEditPanel actions", () => {
           click: {
             payload: {
               actions: {
-                pushLayeredView: {
+                pushOverlay: {
                   resourceId: "layout-settings",
                 },
               },
@@ -66,7 +66,7 @@ describe("layoutEditPanel actions", () => {
     });
 
     expect(state.values.click.payload.actions).toEqual({
-      pushLayeredView: {
+      pushOverlay: {
         resourceId: "layout-settings",
       },
       setMenuPage: {
@@ -74,7 +74,7 @@ describe("layoutEditPanel actions", () => {
       },
     });
     expect(state.actionsEditorActions).toEqual({
-      pushLayeredView: {
+      pushOverlay: {
         resourceId: "layout-settings",
       },
       setMenuPage: {

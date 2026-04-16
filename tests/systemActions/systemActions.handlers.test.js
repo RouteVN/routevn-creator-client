@@ -130,7 +130,7 @@ describe("systemActions.handlers", () => {
     const deps = {
       props: {
         actions: {
-          pushLayeredView: {
+          pushOverlay: {
             resourceId: "layout-settings",
           },
         },
@@ -148,7 +148,7 @@ describe("systemActions.handlers", () => {
     });
 
     expect(selectAction({ state })).toEqual({
-      pushLayeredView: {
+      pushOverlay: {
         resourceId: "layout-settings",
       },
     });
@@ -160,7 +160,7 @@ describe("systemActions.handlers", () => {
     const deps = {
       props: {
         actions: {
-          pushLayeredView: {
+          pushOverlay: {
             resourceId: "stale-layout",
           },
         },
@@ -176,7 +176,7 @@ describe("systemActions.handlers", () => {
     open(deps, {
       mode: "actions",
       actions: {
-        pushLayeredView: {
+        pushOverlay: {
           resourceId: "fresh-layout",
         },
         updateVariable: {
@@ -187,7 +187,7 @@ describe("systemActions.handlers", () => {
     });
 
     expect(selectAction({ state })).toEqual({
-      pushLayeredView: {
+      pushOverlay: {
         resourceId: "fresh-layout",
       },
       updateVariable: {

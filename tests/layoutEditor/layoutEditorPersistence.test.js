@@ -197,7 +197,7 @@ describe("layoutEditorPersistence", () => {
               setMenuPage: {
                 value: "options",
               },
-              pushLayeredView: {
+              pushOverlay: {
                 resourceId: "layout-settings",
               },
             },
@@ -220,7 +220,7 @@ describe("layoutEditorPersistence", () => {
               setMenuPage: {
                 value: "options",
               },
-              pushLayeredView: {
+              pushOverlay: {
                 resourceId: "layout-settings",
               },
             },

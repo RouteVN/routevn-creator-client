@@ -1,0 +1,6 @@
+componentName: rvn-command-line-pop-overlay
+propsSchema:
+  type: object
+  properties:
+    popOverlay:
+      type: object
