@@ -562,12 +562,19 @@ const createInitialRepositoryStateForProject = () =>
 export const createProjectRepository = async ({
   projectId,
   store,
-  events: sourceEvents = [],
+  events: sourceEvents,
+  historyLoaded,
+  initialRevision,
+  loadEvents,
+  onHydrationProgress,
 }) =>
   createProjectRepositoryRuntime({
     projectId,
     store,
     events: sourceEvents,
+    historyLoaded,
+    initialRevision,
+    loadEvents,
     createInitialState: () => createInitialRepositoryStateForProject(),
     reduceEventToState: ({ repositoryState, event }) =>
       applyRepositoryEventToRepositoryState({
@@ -576,6 +583,7 @@ export const createProjectRepository = async ({
         projectId,
       }),
     assertState: assertSupportedProjectState,
+    onHydrationProgress,
   });
 
 export const applyCommandToRepository = async ({

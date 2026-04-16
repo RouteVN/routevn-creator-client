@@ -28,6 +28,33 @@ const resetAssetLoadCache = () => {
   assetLoadCache = createAssetLoadCache();
 };
 
+const getNow = () => {
+  if (
+    typeof performance !== "undefined" &&
+    typeof performance.now === "function"
+  ) {
+    return performance.now();
+  }
+
+  return Date.now();
+};
+
+const getDurationMs = (startedAt) => Number((getNow() - startedAt).toFixed(2));
+
+const countObjectKeys = (value) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return 0;
+  }
+
+  return Object.keys(value).length;
+};
+
+const logSceneEditorPerf = (event, details = {}) => {
+  console.info(`[sceneEditor.perf] ${event}`, details);
+};
+
+const SLOW_FILE_LOAD_MS = 200;
+
 const hasCachedSceneAsset = (deps, fileId) => {
   if (!fileId || !assetLoadCache.fileIds.has(fileId)) {
     return false;
@@ -116,6 +143,7 @@ async function createAssetsFromFileIds(
   projectService,
   resources,
 ) {
+  const startedAt = getNow();
   const { sounds, images, videos = {}, fonts = {} } = resources;
   const resourceItemsByFileId = new Map(
     [
@@ -129,13 +157,23 @@ async function createAssetsFromFileIds(
   );
 
   const assets = {};
+  const slowFileLoads = [];
   for (const fileObj of fileReferences) {
     const { url: fileId } = fileObj;
     const foundItem = resourceItemsByFileId.get(fileId);
+    const fileStartedAt = getNow();
 
     try {
       const { url } = await projectService.getFileContent(fileId);
       const type = foundItem?.fileType ?? fileObj?.type;
+      const fileDurationMs = getDurationMs(fileStartedAt);
+
+      if (fileDurationMs >= SLOW_FILE_LOAD_MS) {
+        slowFileLoads.push({
+          fileId,
+          fileDurationMs,
+        });
+      }
 
       assets[fileId] = {
         url,
@@ -146,6 +184,15 @@ async function createAssetsFromFileIds(
     }
   }
 
+  logSceneEditorPerf("assets.resolveFileUrls.complete", {
+    requestedFileCount: Array.isArray(fileReferences)
+      ? fileReferences.length
+      : 0,
+    resolvedFileCount: Object.keys(assets).length,
+    slowFileLoads,
+    totalDurationMs: getDurationMs(startedAt),
+  });
+
   return assets;
 }
 
@@ -155,6 +202,7 @@ async function loadAssetsForSceneIds(
   sceneIds,
   { showLoading = true } = {},
 ) {
+  const loadStartedAt = getNow();
   const { graphicsService, projectService, appService } = deps;
   const allScenes = projectData?.story?.scenes || {};
 
@@ -190,6 +238,16 @@ async function loadAssetsForSceneIds(
   ) {
     return;
   }
+
+  logSceneEditorPerf("assets.load.start", {
+    sceneCount: uniqueSceneIds.length,
+    sceneIds: uniqueSceneIds,
+    fileReferenceCount: fileReferences.length,
+    missingFileCount: missingFileReferences.length,
+    pendingFileCount: pendingFileIds.length,
+    isAnySceneUntracked,
+    showLoading,
+  });
 
   const shouldShowLoading = showLoading && missingFileReferences.length > 0;
   let loadedAssetIds = [];
@@ -243,6 +301,15 @@ async function loadAssetsForSceneIds(
       assetLoadCache.pendingSceneIds.delete(sceneId);
       assetLoadCache.sceneIds.add(sceneId);
     });
+    logSceneEditorPerf("assets.load.complete", {
+      sceneCount: uniqueSceneIds.length,
+      sceneIds: uniqueSceneIds,
+      fileReferenceCount: fileReferences.length,
+      missingFileCount: missingFileReferences.length,
+      pendingFileCount: pendingFileIds.length,
+      loadedAssetCount: loadedAssetIds.length,
+      totalDurationMs: getDurationMs(loadStartedAt),
+    });
   } catch (error) {
     uniqueSceneIds.forEach((sceneId) => {
       assetLoadCache.pendingSceneIds.delete(sceneId);
@@ -252,6 +319,15 @@ async function loadAssetsForSceneIds(
       title: "Warning",
     });
     console.error("[sceneEditor] Failed to load scene assets:", error);
+    console.warn("[sceneEditor.perf] assets.load.failed", {
+      sceneCount: uniqueSceneIds.length,
+      sceneIds: uniqueSceneIds,
+      fileReferenceCount: fileReferences.length,
+      missingFileCount: missingFileReferences.length,
+      pendingFileCount: pendingFileIds.length,
+      totalDurationMs: getDurationMs(loadStartedAt),
+      message: error?.message || "Unknown error",
+    });
   } finally {
     if (shouldShowLoading) {
       setSceneAssetLoading(deps, false);
@@ -458,6 +534,7 @@ const initRouteEngineWithDiagnostics = (
 };
 
 export const renderSceneEditorState = async (deps, payload = {}) => {
+  const renderStartedAt = getNow();
   const { store, graphicsService } = deps;
   const { skipAnimations = false } = payload;
   const sceneId = store.selectSceneId();
@@ -473,12 +550,22 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
   );
   const isMuted = store.selectIsMuted();
 
+  const routeEngineInitStartedAt = getNow();
   initRouteEngineWithDiagnostics(graphicsService, projectData, {
     enableGlobalKeyboardBindings: false,
     suppressRenderEffects: true,
   });
+  const routeEngineInitDurationMs = getDurationMs(routeEngineInitStartedAt);
   const currentRenderState = graphicsService.engineSelectRenderState();
   if (!currentRenderState) {
+    logSceneEditorPerf("renderState.skipped", {
+      reason: "missing-render-state",
+      sceneId,
+      sectionId,
+      lineId,
+      routeEngineInitDurationMs,
+      totalDurationMs: getDurationMs(renderStartedAt),
+    });
     return;
   }
 
@@ -488,11 +575,16 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
       : (currentRenderState.audio || [])
           .map((audioElement) => audioElement?.src)
           .filter(Boolean);
+  const ensureAudioStartedAt = getNow();
   await graphicsService.ensureAudioAssetsLoaded(activeAudioFileIds);
+  const ensureAudioDurationMs = getDurationMs(ensureAudioStartedAt);
+  const engineRenderStartedAt = getNow();
   graphicsService.engineRenderCurrentState({
     skipAudio: isMuted,
     skipAnimations,
   });
+  const engineRenderDurationMs = getDurationMs(engineRenderStartedAt);
+  const handleActionsStartedAt = getNow();
   graphicsService.engineHandleActions(
     {
       setNextLineConfig: {
@@ -506,10 +598,23 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
       suppressRenderEffects: true,
     },
   );
+  const handleActionsDurationMs = getDurationMs(handleActionsStartedAt);
 
   const presentationState = graphicsService.engineSelectPresentationState();
   store.setPresentationState({
     presentationState,
+  });
+  logSceneEditorPerf("renderState.complete", {
+    sceneId,
+    sectionId,
+    lineId,
+    skipAnimations,
+    activeAudioFileCount: activeAudioFileIds.length,
+    routeEngineInitDurationMs,
+    ensureAudioDurationMs,
+    engineRenderDurationMs,
+    handleActionsDurationMs,
+    totalDurationMs: getDurationMs(renderStartedAt),
   });
 };
 
@@ -525,6 +630,7 @@ export const updateSceneEditorSectionChanges = async (deps) => {
 };
 
 export const initializeSceneEditorPage = async (deps) => {
+  const initializeStartedAt = getNow();
   const {
     refs,
     graphicsService,
@@ -536,7 +642,13 @@ export const initializeSceneEditorPage = async (deps) => {
     syncProjectState,
   } = deps;
 
+  logSceneEditorPerf("initialize.start", {
+    payload: appService.getPayload(),
+  });
+
+  const ensureRepositoryStartedAt = getNow();
   const repository = await projectService.ensureRepository();
+  const ensureRepositoryDurationMs = getDurationMs(ensureRepositoryStartedAt);
   const ensuredProjectId =
     typeof projectService.getEnsuredProjectId === "function"
       ? projectService.getEnsuredProjectId()
@@ -558,10 +670,17 @@ export const initializeSceneEditorPage = async (deps) => {
   const sceneId = s;
 
   if (typeof repository?.setActiveSceneId === "function") {
+    const setActiveSceneStartedAt = getNow();
     await repository.setActiveSceneId(sceneId);
+    logSceneEditorPerf("initialize.setActiveScene.complete", {
+      sceneId,
+      durationMs: getDurationMs(setActiveSceneStartedAt),
+    });
   }
 
+  const syncProjectStateStartedAt = getNow();
   syncProjectState(store, projectService);
+  const syncProjectStateDurationMs = getDurationMs(syncProjectStateStartedAt);
 
   store.setSceneId({ sceneId });
 
@@ -589,12 +708,14 @@ export const initializeSceneEditorPage = async (deps) => {
   const previewWidth = projectData?.screen?.width;
   const previewHeight = projectData?.screen?.height;
 
+  const graphicsInitStartedAt = getNow();
   await graphicsService.init({
     canvas: refs.canvas,
     beforeHandleActions: createBeforeHandleActionsHook(deps),
     width: previewWidth,
     height: previewHeight,
   });
+  const graphicsInitDurationMs = getDurationMs(graphicsInitStartedAt);
 
   const initialProjectData = createProjectDataWithSelectedEntryPoint(
     projectData,
@@ -606,15 +727,43 @@ export const initializeSceneEditorPage = async (deps) => {
   );
   const initialSceneIds = extractInitialHybridSceneIds(projectData, sceneId);
 
+  const assetLoadStartedAt = getNow();
   await loadAssetsForSceneIds(deps, projectData, initialSceneIds, {
     showLoading: true,
   });
+  const assetLoadDurationMs = getDurationMs(assetLoadStartedAt);
   void preloadDirectTransitionScenes(deps, projectData, initialSceneIds);
+  const routeEngineInitStartedAt = getNow();
   initRouteEngineWithDiagnostics(graphicsService, initialProjectData, {
     enableGlobalKeyboardBindings: false,
   });
+  const routeEngineInitDurationMs = getDurationMs(routeEngineInitStartedAt);
 
+  const renderStartedAt = getNow();
   render();
+  const renderDurationMs = getDurationMs(renderStartedAt);
+  logSceneEditorPerf("initialize.complete", {
+    sceneId,
+    selectedSectionId: store.selectSelectedSectionId(),
+    selectedLineId: store.selectSelectedLineId(),
+    repositorySceneCount: countObjectKeys(
+      projectData?.story?.scenes || projectData?.scenes?.items,
+    ),
+    resourceImageCount: countObjectKeys(projectData?.resources?.images),
+    resourceSoundCount: countObjectKeys(projectData?.resources?.sounds),
+    resourceVideoCount: countObjectKeys(projectData?.resources?.videos),
+    resourceLayoutCount: countObjectKeys(projectData?.resources?.layouts),
+    initialSceneIds,
+    previewWidth,
+    previewHeight,
+    ensureRepositoryDurationMs,
+    syncProjectStateDurationMs,
+    graphicsInitDurationMs,
+    assetLoadDurationMs,
+    routeEngineInitDurationMs,
+    renderDurationMs,
+    totalDurationMs: getDurationMs(initializeStartedAt),
+  });
   setTimeout(() => {
     subject.dispatch("sceneEditor.renderCanvas", {});
   }, 1000);
@@ -662,6 +811,7 @@ export const restoreSceneEditorFromPreview = async (deps) => {
 };
 
 export const renderSceneEditorCanvas = async (deps, payload) => {
+  const renderCanvasStartedAt = getNow();
   const { store, render } = deps;
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
@@ -675,18 +825,60 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
     },
   );
   const sceneIdsToLoad = extractInitialHybridSceneIds(projectData, sceneId);
+  logSceneEditorPerf("renderCanvas.start", {
+    sceneId,
+    sectionId,
+    lineId,
+    sceneIdsToLoad,
+    skipRender: Boolean(payload?.skipRender),
+    skipAnimations: Boolean(payload?.skipAnimations),
+  });
 
+  const assetLoadStartedAt = getNow();
   await loadAssetsForSceneIds(deps, projectData, sceneIdsToLoad, {
     showLoading: false,
   });
+  const assetLoadDurationMs = getDurationMs(assetLoadStartedAt);
   void preloadDirectTransitionScenes(deps, projectData, sceneIdsToLoad);
 
+  const renderStateStartedAt = getNow();
   await renderSceneEditorState(deps, payload);
+  const renderStateDurationMs = getDurationMs(renderStateStartedAt);
+  const sectionChangesStartedAt = getNow();
   await updateSceneEditorSectionChanges(deps);
+  const sectionChangesDurationMs = getDurationMs(sectionChangesStartedAt);
 
   if (!payload?.skipRender) {
+    const renderStartedAt = getNow();
     render();
+    logSceneEditorPerf("renderCanvas.complete", {
+      sceneId,
+      sectionId,
+      lineId,
+      sceneIdsToLoad,
+      skipRender: Boolean(payload?.skipRender),
+      skipAnimations: Boolean(payload?.skipAnimations),
+      assetLoadDurationMs,
+      renderStateDurationMs,
+      sectionChangesDurationMs,
+      renderDurationMs: getDurationMs(renderStartedAt),
+      totalDurationMs: getDurationMs(renderCanvasStartedAt),
+    });
+    return;
   }
+
+  logSceneEditorPerf("renderCanvas.complete", {
+    sceneId,
+    sectionId,
+    lineId,
+    sceneIdsToLoad,
+    skipRender: Boolean(payload?.skipRender),
+    skipAnimations: Boolean(payload?.skipAnimations),
+    assetLoadDurationMs,
+    renderStateDurationMs,
+    sectionChangesDurationMs,
+    totalDurationMs: getDurationMs(renderCanvasStartedAt),
+  });
 };
 
 export const mountSceneEditorSubscriptions = (deps) => {

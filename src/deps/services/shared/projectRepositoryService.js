@@ -4,6 +4,11 @@ import {
 } from "./projectRepository.js";
 import { getOrCreateLocked } from "./getOrCreateLocked.js";
 import { generateId as generateBaseId } from "../../../internal/id.js";
+import {
+  MAIN_PARTITION,
+  MAIN_VIEW_NAME,
+  MAIN_VIEW_VERSION,
+} from "./projectRepositoryViews/shared.js";
 
 export const createProjectRepositoryService = ({
   router,
@@ -96,6 +101,155 @@ export const createProjectRepositoryService = ({
 
   const getEnsuredProjectId = () => {
     return currentProjectId;
+  };
+
+  const emitRepositoryLoadStage = (onLoadStage, payload = {}) => {
+    if (typeof onLoadStage !== "function") {
+      return;
+    }
+
+    onLoadStage(structuredClone(payload));
+  };
+
+  const isClosedPoolError = (error) =>
+    String(error?.message || "")
+      .toLowerCase()
+      .includes("closed pool");
+
+  const evictCachedReference = async (reference) => {
+    const cacheKey = reference?.cacheKey;
+    if (!cacheKey) {
+      return;
+    }
+
+    repositoriesByCacheKey.delete(cacheKey);
+    storesByCacheKey.delete(cacheKey);
+    repositoryLocksByCacheKey.delete(cacheKey);
+    storeLocksByCacheKey.delete(cacheKey);
+
+    for (const [projectId, cachedReference] of referencesByProject.entries()) {
+      if (cachedReference?.cacheKey !== cacheKey) {
+        continue;
+      }
+      referencesByProject.delete(projectId);
+      storesByProject.delete(projectId);
+    }
+
+    if (currentReference?.cacheKey === cacheKey) {
+      currentRepository = undefined;
+      currentProjectId = undefined;
+      currentStore = undefined;
+      currentReference = undefined;
+    }
+
+    if (typeof storageAdapter?.evictStoreByReference === "function") {
+      await storageAdapter.evictStoreByReference({ reference });
+    }
+  };
+
+  const withRecoveredStore = async (reference, run) => {
+    let hasRetriedClosedPool = false;
+
+    while (true) {
+      const store = await getStoreByReference(reference);
+
+      try {
+        return await run(store);
+      } catch (error) {
+        if (hasRetriedClosedPool || !isClosedPoolError(error)) {
+          throw error;
+        }
+
+        hasRetriedClosedPool = true;
+        await evictCachedReference(reference);
+      }
+    }
+  };
+
+  const loadReusableMainCheckpoint = async ({
+    store,
+    cacheKey,
+    onLoadStage,
+  } = {}) => {
+    if (
+      typeof store?.loadMaterializedViewCheckpoint !== "function" ||
+      typeof store?.getRepositoryHistoryStats !== "function" ||
+      typeof store?.isRepositoryHistoryStatsEqual !== "function"
+    ) {
+      return undefined;
+    }
+
+    emitRepositoryLoadStage(onLoadStage, {
+      stage: "load_main_checkpoint",
+      label: "Loading project state checkpoint...",
+      cacheKey,
+    });
+    const checkpoint = await store.loadMaterializedViewCheckpoint({
+      viewName: MAIN_VIEW_NAME,
+      partition: MAIN_PARTITION,
+    });
+
+    if (
+      !checkpoint ||
+      checkpoint.viewVersion !== MAIN_VIEW_VERSION ||
+      !Number.isFinite(Number(checkpoint?.lastCommittedId))
+    ) {
+      return undefined;
+    }
+
+    const currentHistoryStats = await store.getRepositoryHistoryStats();
+    const checkpointHistoryStats = checkpoint?.meta?.historyStats;
+    const hasCheckpointHistoryStats =
+      checkpointHistoryStats &&
+      typeof checkpointHistoryStats === "object" &&
+      !Array.isArray(checkpointHistoryStats);
+
+    if (hasCheckpointHistoryStats) {
+      if (
+        !store.isRepositoryHistoryStatsEqual(
+          checkpointHistoryStats,
+          currentHistoryStats,
+        )
+      ) {
+        return undefined;
+      }
+    } else {
+      const currentHistoryLength =
+        Number(currentHistoryStats?.committedCount || 0) +
+        Number(currentHistoryStats?.draftCount || 0);
+      const checkpointRevision = Math.max(
+        0,
+        Math.floor(Number(checkpoint.lastCommittedId) || 0),
+      );
+
+      if (checkpointRevision !== currentHistoryLength) {
+        return undefined;
+      }
+
+      emitRepositoryLoadStage(onLoadStage, {
+        stage: "backfill_main_checkpoint_metadata",
+        label: "Updating project state checkpoint...",
+        cacheKey,
+        revision: checkpointRevision,
+      });
+      await store.saveMaterializedViewCheckpoint({
+        viewName: MAIN_VIEW_NAME,
+        partition: MAIN_PARTITION,
+        viewVersion: checkpoint.viewVersion,
+        lastCommittedId: checkpointRevision,
+        value: checkpoint.value,
+        updatedAt: checkpoint.updatedAt || Date.now(),
+      });
+    }
+
+    return {
+      checkpoint,
+      currentHistoryStats,
+      initialRevision: Math.max(
+        0,
+        Math.floor(Number(checkpoint.lastCommittedId) || 0),
+      ),
+    };
   };
 
   const syncProjectEntryProjectInfo = async (projectId, projectInfo) => {
@@ -328,57 +482,149 @@ export const createProjectRepositoryService = ({
     return updateProjectInfoByProjectId(projectId, patch);
   };
 
-  const getRepositoryByReference = async (reference) => {
+  const getRepositoryByReference = async (
+    reference,
+    { onHydrationProgress, onLoadStage, onEventLoadProgress } = {},
+  ) => {
+    if (
+      !repositoriesByCacheKey.has(reference.cacheKey) &&
+      repositoryLocksByCacheKey.has(reference.cacheKey)
+    ) {
+      emitRepositoryLoadStage(onLoadStage, {
+        stage: "wait_repository_creation_lock",
+        label: "Waiting for another repository load...",
+        cacheKey: reference.cacheKey,
+      });
+    }
+
     return getOrCreateLocked({
       cache: repositoriesByCacheKey,
       locks: repositoryLocksByCacheKey,
       key: reference.cacheKey,
       create: async () => {
-        const store = await getStoreByReference(reference);
-        let events = (await store.getEvents()) || [];
-
-        if (typeof collabAdapter?.beforeCreateRepository === "function") {
-          const nextEvents = await collabAdapter.beforeCreateRepository({
-            projectId: reference.projectId,
-            reference,
-            store,
-            events,
-          });
-          if (Array.isArray(nextEvents)) {
-            events = nextEvents;
-          }
-        }
-
-        const repository = await createProjectRepository({
-          projectId: reference.repositoryProjectId,
-          store,
-          events,
+        emitRepositoryLoadStage(onLoadStage, {
+          stage: "open_project_store",
+          label: "Opening project database...",
+          cacheKey: reference.cacheKey,
         });
-        await ensureCompatibleCreatorVersion(store);
-        assertSupportedProjectState(repository.getState());
+        let repositoryResult = await withRecoveredStore(
+          reference,
+          async (store) => {
+            let events = [];
+            let initialRevision;
+            const reusableMainCheckpoint = await loadReusableMainCheckpoint({
+              store,
+              cacheKey: reference.cacheKey,
+              onLoadStage,
+            });
 
-        if (reference.projectId) {
-          storesByProject.set(reference.projectId, store);
-          referencesByProject.set(reference.projectId, reference);
-        }
+            if (reusableMainCheckpoint) {
+              initialRevision = reusableMainCheckpoint.initialRevision;
+              emitRepositoryLoadStage(onLoadStage, {
+                stage: "reuse_main_checkpoint",
+                label: "Using project state checkpoint...",
+                cacheKey: reference.cacheKey,
+                revision: initialRevision,
+              });
+            } else {
+              emitRepositoryLoadStage(onLoadStage, {
+                stage: "read_project_events",
+                label: "Reading project events...",
+                cacheKey: reference.cacheKey,
+              });
+              events =
+                (await store.getEvents({
+                  onProgress: onEventLoadProgress,
+                })) || [];
+              emitRepositoryLoadStage(onLoadStage, {
+                stage: "project_events_loaded",
+                label: "Reading project events...",
+                cacheKey: reference.cacheKey,
+                eventCount: Array.isArray(events) ? events.length : 0,
+              });
+            }
 
-        if (typeof collabAdapter?.afterCreateRepository === "function") {
-          await collabAdapter.afterCreateRepository({
-            projectId: reference.projectId,
-            reference,
-            store,
-            repository,
-          });
-        }
+            if (typeof collabAdapter?.beforeCreateRepository === "function") {
+              emitRepositoryLoadStage(onLoadStage, {
+                stage: "prepare_project_events",
+                label: "Preparing project events...",
+                cacheKey: reference.cacheKey,
+                eventCount: Array.isArray(events) ? events.length : 0,
+              });
+              const nextEvents = await collabAdapter.beforeCreateRepository({
+                projectId: reference.projectId,
+                reference,
+                store,
+                events,
+              });
+              if (Array.isArray(nextEvents)) {
+                events = nextEvents;
+              }
+            }
 
-        return repository;
+            emitRepositoryLoadStage(onLoadStage, {
+              stage: "build_repository_state",
+              label: "Building project state...",
+              cacheKey: reference.cacheKey,
+              eventCount: Array.isArray(events) ? events.length : 0,
+            });
+            const repository = await createProjectRepository({
+              projectId: reference.repositoryProjectId,
+              store,
+              events: reusableMainCheckpoint ? undefined : events,
+              historyLoaded: !reusableMainCheckpoint,
+              initialRevision,
+              loadEvents: async () => (await store.getEvents()) || [],
+              onHydrationProgress,
+            });
+            emitRepositoryLoadStage(onLoadStage, {
+              stage: "validate_repository_state",
+              label: "Validating project state...",
+              cacheKey: reference.cacheKey,
+            });
+            await ensureCompatibleCreatorVersion(store);
+            assertSupportedProjectState(repository.getState());
+
+            if (reference.projectId) {
+              storesByProject.set(reference.projectId, store);
+              referencesByProject.set(reference.projectId, reference);
+            }
+
+            if (typeof collabAdapter?.afterCreateRepository === "function") {
+              emitRepositoryLoadStage(onLoadStage, {
+                stage: "finalize_repository",
+                label: "Finalizing project repository...",
+                cacheKey: reference.cacheKey,
+              });
+              await collabAdapter.afterCreateRepository({
+                projectId: reference.projectId,
+                reference,
+                store,
+                repository,
+              });
+            }
+
+            return {
+              repository,
+            };
+          },
+        );
+
+        return repositoryResult.repository;
       },
     });
   };
 
-  const getRepositoryByProject = async (projectId) => {
+  const getRepositoryByProject = async (
+    projectId,
+    { onHydrationProgress, onLoadStage, onEventLoadProgress } = {},
+  ) => {
     const reference = await resolveProjectReferenceByProjectId(projectId);
-    return getRepositoryByReference(reference);
+    return getRepositoryByReference(reference, {
+      onHydrationProgress,
+      onLoadStage,
+      onEventLoadProgress,
+    });
   };
 
   const getRepositoryByPath =
@@ -395,7 +641,11 @@ export const createProjectRepositoryService = ({
         }
       : undefined;
 
-  const ensureRepository = async () => {
+  const ensureRepository = async ({
+    onHydrationProgress,
+    onLoadStage,
+    onEventLoadProgress,
+  } = {}) => {
     const projectId = getCurrentProjectId();
     if (!projectId) {
       throw new Error("No project selected (missing ?p= in URL)");
@@ -411,18 +661,45 @@ export const createProjectRepositoryService = ({
       return currentRepository;
     }
 
+    emitRepositoryLoadStage(onLoadStage, {
+      stage: "resolve_project_reference",
+      label: "Resolving project reference...",
+      projectId,
+    });
     const reference = await resolveProjectReferenceByProjectId(projectId);
-    const repository = await getRepositoryByReference(reference);
+    const repository = await getRepositoryByReference(reference, {
+      onHydrationProgress,
+      onLoadStage,
+      onEventLoadProgress,
+    });
     const store = await getStoreByReference(reference);
 
     currentProjectId = projectId;
     currentRepository = repository;
     currentStore = store;
     currentReference = reference;
+    emitRepositoryLoadStage(onLoadStage, {
+      stage: "read_project_metadata",
+      label: "Reading project metadata...",
+      projectId,
+      cacheKey: reference.cacheKey,
+    });
     const projectInfo = await readProjectInfoFromStore(store, {
       fallbackProjectId: projectId,
     });
+    emitRepositoryLoadStage(onLoadStage, {
+      stage: "sync_project_entry",
+      label: "Syncing project entry...",
+      projectId,
+      cacheKey: reference.cacheKey,
+    });
     await syncProjectEntryProjectInfo(projectId, projectInfo);
+    emitRepositoryLoadStage(onLoadStage, {
+      stage: "repository_ready",
+      label: "Project ready.",
+      projectId,
+      cacheKey: reference.cacheKey,
+    });
 
     return repository;
   };
@@ -512,8 +789,8 @@ export const createProjectRepositoryService = ({
     getAdapterById(projectId) {
       return storesByProject.get(projectId);
     },
-    async ensureRepository() {
-      return ensureRepository();
+    async ensureRepository(options) {
+      return ensureRepository(options);
     },
     subscribeProjectState(listener, options) {
       return subscribeProjectState(listener, options);
@@ -528,10 +805,33 @@ export const createProjectRepositoryService = ({
     ...(typeof getStoreByPath === "function"
       ? {
           async ensureProjectCompatibleByPath(projectPath) {
-            const store = await getStoreByPath(projectPath);
-            await ensureCompatibleCreatorVersion(store);
+            const reference = normalizeReference(
+              await storageAdapter.resolveProjectReferenceByPath({
+                projectPath,
+              }),
+              projectPath,
+            );
+            await ensureCompatibleCreatorVersionForReference(reference);
           },
           async getProjectInfoByPath(projectPath) {
+            if (
+              typeof storageAdapter.readProjectInfoByReference === "function"
+            ) {
+              const reference = normalizeReference(
+                await storageAdapter.resolveProjectReferenceByPath({
+                  projectPath,
+                }),
+                projectPath,
+              );
+              await ensureCompatibleCreatorVersionForReference(reference);
+              return normalizeProjectInfo(
+                await storageAdapter.readProjectInfoByReference({
+                  reference,
+                  db,
+                }),
+              );
+            }
+
             const store = await getStoreByPath(projectPath);
             await ensureCompatibleCreatorVersion(store);
             return readProjectInfoFromStore(store);

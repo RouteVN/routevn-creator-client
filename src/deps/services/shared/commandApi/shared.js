@@ -510,6 +510,9 @@ export const createCommandApiShared = ({
 
   const getEvents = async () => {
     const repository = await getCurrentRepository();
+    if (typeof repository.loadEvents === "function") {
+      return repository.loadEvents();
+    }
     return repository.getEvents();
   };
 

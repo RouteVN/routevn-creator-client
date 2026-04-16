@@ -24,6 +24,8 @@ const SQL_BYTES_TYPE_KEY = "__routevn_sql_type";
 const SQL_BYTES_TYPE_VALUE = "bytes";
 const SQL_BYTES_DATA_KEY = "data";
 const WAL_CHECKPOINT_THROTTLE_MS = 20000;
+const ROUTEVN_CHECKPOINT_ENVELOPE_KEY = "__routevnCheckpoint";
+const ROUTEVN_CHECKPOINT_ENVELOPE_VERSION = 1;
 
 const isReadQuery = (sql) => {
   const normalized = String(sql ?? "")
@@ -110,13 +112,123 @@ const normalizeSqlValue = (value) => {
   return bytes || value;
 };
 
-const toMaterializedViewCheckpoint = (row) => ({
-  partition: row.partition,
-  viewVersion: row.view_version,
-  lastCommittedId: Number(row.last_committed_id) || 0,
-  value: row.value ? JSON.parse(row.value) : undefined,
-  updatedAt: Number(row.updated_at) || 0,
+const decodeStoredCheckpointValue = (rawValue) => {
+  if (typeof rawValue !== "string" || rawValue.length === 0) {
+    return {
+      value: undefined,
+      meta: undefined,
+    };
+  }
+
+  const parsedValue = JSON.parse(rawValue);
+  const envelope = parsedValue?.[ROUTEVN_CHECKPOINT_ENVELOPE_KEY];
+
+  if (
+    envelope &&
+    typeof envelope === "object" &&
+    !Array.isArray(envelope) &&
+    envelope.version === ROUTEVN_CHECKPOINT_ENVELOPE_VERSION
+  ) {
+    return {
+      value: envelope.value,
+      meta:
+        envelope.meta &&
+        typeof envelope.meta === "object" &&
+        !Array.isArray(envelope.meta)
+          ? envelope.meta
+          : undefined,
+    };
+  }
+
+  return {
+    value: parsedValue,
+    meta: undefined,
+  };
+};
+
+const encodeStoredCheckpointValue = ({ value, meta } = {}) => {
+  if (
+    !meta ||
+    typeof meta !== "object" ||
+    Array.isArray(meta) ||
+    Object.keys(meta).length === 0
+  ) {
+    return JSON.stringify(value === undefined ? null : value);
+  }
+
+  return JSON.stringify({
+    [ROUTEVN_CHECKPOINT_ENVELOPE_KEY]: {
+      version: ROUTEVN_CHECKPOINT_ENVELOPE_VERSION,
+      value: value === undefined ? null : value,
+      meta: structuredClone(meta),
+    },
+  });
+};
+
+const toMaterializedViewCheckpoint = (row) => {
+  const decodedValue = decodeStoredCheckpointValue(row.value);
+
+  return {
+    partition: row.partition,
+    viewVersion: row.view_version,
+    lastCommittedId: Number(row.last_committed_id) || 0,
+    value: decodedValue.value,
+    meta: decodedValue.meta,
+    updatedAt: Number(row.updated_at) || 0,
+  };
+};
+
+const normalizeHistoryStatValue = (value) => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return 0;
+  }
+  return Math.max(0, Math.floor(numericValue));
+};
+
+const normalizeRepositoryHistoryStats = (stats = {}) => ({
+  committedCount: normalizeHistoryStatValue(stats?.committedCount),
+  latestCommittedId: normalizeHistoryStatValue(stats?.latestCommittedId),
+  draftCount: normalizeHistoryStatValue(stats?.draftCount),
+  latestDraftClock: normalizeHistoryStatValue(stats?.latestDraftClock),
 });
+
+const areRepositoryHistoryStatsEqual = (left, right) => {
+  const normalizedLeft = normalizeRepositoryHistoryStats(left);
+  const normalizedRight = normalizeRepositoryHistoryStats(right);
+
+  return (
+    normalizedLeft.committedCount === normalizedRight.committedCount &&
+    normalizedLeft.latestCommittedId === normalizedRight.latestCommittedId &&
+    normalizedLeft.draftCount === normalizedRight.draftCount &&
+    normalizedLeft.latestDraftClock === normalizedRight.latestDraftClock
+  );
+};
+
+export const evictPersistedTauriProjectStoreCache = async ({
+  projectPath,
+} = {}) => {
+  if (!projectPath) {
+    return;
+  }
+
+  const dbPath = await join(projectPath, PROJECT_DB_NAME);
+  const cachedStorePromise = storePromisesByDbPath.get(dbPath);
+  storePromisesByDbPath.delete(dbPath);
+
+  if (!cachedStorePromise) {
+    return;
+  }
+
+  try {
+    const cachedStore = await cachedStorePromise;
+    if (typeof cachedStore?.close === "function") {
+      await cachedStore.close();
+    }
+  } catch {
+    // best-effort eviction for stale/closed pooled handles
+  }
+};
 
 const normalizeSqlRow = (row) => {
   if (!row || typeof row !== "object" || Array.isArray(row)) {
@@ -280,28 +392,101 @@ const assertRepositoryEventShape = (event) => {
   }
 };
 
-const loadRepositoryEvents = async ({ store, projectId }) => {
-  const committed = await store._debug.getCommitted();
-  const drafts = await store._debug.getDrafts();
-
-  const events = committed.map((event) =>
-    toRepositoryEvent(event, {
-      created: event.serverTs,
-      projectId,
-    }),
-  );
-
-  for (const draft of drafts) {
-    events.push(
-      toRepositoryEvent(draft, {
-        created: draft.createdAt,
-        projectId,
-      }),
-    );
+const emitEventLoadProgress = (onProgress, payload = {}) => {
+  if (typeof onProgress !== "function") {
+    return;
   }
 
-  events.forEach(assertRepositoryEventShape);
+  onProgress(structuredClone(payload));
+};
 
+const yieldForUiPaint = async () => {
+  await new Promise((resolve) => {
+    globalThis.setTimeout(resolve, 0);
+  });
+};
+
+export const loadRepositoryEvents = async ({
+  store,
+  projectId,
+  onProgress,
+}) => {
+  const committed = await store._debug.getCommitted();
+  emitEventLoadProgress(onProgress, {
+    phase: "read_project_events",
+    label: "Reading project events...",
+    current: 0,
+    total: committed.length,
+  });
+  const drafts = await store._debug.getDrafts();
+  const totalEventCount = committed.length + drafts.length;
+  let processedEventCount = 0;
+  let lastReportedCount = -1;
+  const reportProgress = ({ force = false } = {}) => {
+    if (!force && processedEventCount === lastReportedCount) {
+      return false;
+    }
+
+    lastReportedCount = processedEventCount;
+    emitEventLoadProgress(onProgress, {
+      phase: "read_project_events",
+      label:
+        drafts.length > 0
+          ? "Reading project events..."
+          : "Loading committed events...",
+      current: processedEventCount,
+      total: totalEventCount,
+    });
+    return true;
+  };
+
+  const events = [];
+  for (const committedEvent of committed) {
+    const nextEvent = toRepositoryEvent(committedEvent, {
+      created: committedEvent.serverTs,
+      projectId,
+    });
+    assertRepositoryEventShape(nextEvent);
+    events.push(nextEvent);
+    processedEventCount += 1;
+    if (
+      processedEventCount === totalEventCount ||
+      processedEventCount % 128 === 0
+    ) {
+      reportProgress();
+      await yieldForUiPaint();
+    }
+  }
+
+  if (drafts.length === 0) {
+    reportProgress({ force: true });
+    return events;
+  }
+
+  emitEventLoadProgress(onProgress, {
+    phase: "replay_local_drafts",
+    label: "Reading project events...",
+    current: processedEventCount,
+    total: totalEventCount,
+  });
+  for (const draft of drafts) {
+    const nextEvent = toRepositoryEvent(draft, {
+      created: draft.createdAt,
+      projectId,
+    });
+    assertRepositoryEventShape(nextEvent);
+    events.push(nextEvent);
+    processedEventCount += 1;
+    if (
+      processedEventCount === totalEventCount ||
+      processedEventCount % 64 === 0
+    ) {
+      reportProgress();
+      await yieldForUiPaint();
+    }
+  }
+
+  reportProgress({ force: true });
   return events;
 };
 
@@ -654,6 +839,27 @@ export const createPersistedTauriProjectStore = async ({
 
       return checkpoint?.value;
     };
+    const loadRepositoryHistoryStats = async () => {
+      const committedRows = await runSelect(
+        `SELECT COUNT(*) AS committedCount, COALESCE(MAX(committed_id), 0) AS latestCommittedId
+         FROM committed_events`,
+      );
+      const draftRows = await runSelect(
+        `SELECT COUNT(*) AS draftCount, COALESCE(MAX(draft_clock), 0) AS latestDraftClock
+         FROM local_drafts`,
+      );
+      const committedRow = Array.isArray(committedRows)
+        ? committedRows[0]
+        : undefined;
+      const draftRow = Array.isArray(draftRows) ? draftRows[0] : undefined;
+
+      return normalizeRepositoryHistoryStats({
+        committedCount: committedRow?.committedCount,
+        latestCommittedId: committedRow?.latestCommittedId,
+        draftCount: draftRow?.draftCount,
+        latestDraftClock: draftRow?.latestDraftClock,
+      });
+    };
     const ensureProjectHistoryIntegrity = async () => {
       if (projectHistoryIntegrityPromise) {
         return projectHistoryIntegrityPromise;
@@ -788,6 +994,10 @@ export const createPersistedTauriProjectStore = async ({
           loadRepositoryEvents({
             store,
             projectId,
+            onProgress:
+              typeof payload?.onProgress === "function"
+                ? payload.onProgress
+                : undefined,
           }),
         );
         const since = Number(payload?.since);
@@ -855,10 +1065,18 @@ export const createPersistedTauriProjectStore = async ({
         viewVersion,
         lastCommittedId,
         value,
+        meta,
         updatedAt,
       }) {
-        await queueWriteOperation(() =>
-          runExecute(
+        await queueWriteOperation(async () => {
+          const checkpointMeta = {
+            ...(meta && typeof meta === "object" && !Array.isArray(meta)
+              ? structuredClone(meta)
+              : {}),
+            historyStats: await loadRepositoryHistoryStats(),
+          };
+
+          return runExecute(
             `INSERT OR REPLACE INTO ${MATERIALIZED_VIEW_TABLE}
            (view_name, partition, view_version, last_committed_id, value, updated_at)
            VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -867,11 +1085,14 @@ export const createPersistedTauriProjectStore = async ({
               partition,
               viewVersion,
               lastCommittedId,
-              JSON.stringify(value),
+              encodeStoredCheckpointValue({
+                value,
+                meta: checkpointMeta,
+              }),
               updatedAt,
             ],
-          ),
-        );
+          );
+        });
       },
 
       async deleteMaterializedViewCheckpoint({ viewName, partition }) {
@@ -925,6 +1146,14 @@ export const createPersistedTauriProjectStore = async ({
           queueStoreOperation(() => store._debug.getCommitted()),
         getCursor: async () =>
           queueStoreOperation(() => store._debug.getCursor()),
+      },
+
+      async getRepositoryHistoryStats() {
+        return queueStoreOperation(() => loadRepositoryHistoryStats());
+      },
+
+      isRepositoryHistoryStatsEqual(left, right) {
+        return areRepositoryHistoryStatsEqual(left, right);
       },
 
       async close() {

@@ -9,7 +9,7 @@ template:
       - 'rtgl-view h=f style="width: ${contentWidth}; min-width: 0;"':
           - $if isRepositoryLoading:
               - rtgl-view w=f h=f d=v ah=c av=c g=sm:
-                  - rtgl-text s=sm c=mu-fg: Loading project...
+                  - rtgl-text s=sm c=mu-fg: ${repositoryLoadingStatusText}
             $else:
               - $if currentRoutePattern == "/projects":
                   - rvn-projects: []

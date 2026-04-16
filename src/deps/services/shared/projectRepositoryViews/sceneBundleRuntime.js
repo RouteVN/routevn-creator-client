@@ -1,5 +1,6 @@
 import { buildSceneOverview } from "../../../../internal/project/sceneOverview.js";
 import {
+  doesCommittedEventAffectSceneOverview,
   getLatestSceneOverviewRevision,
   isMainPartition,
   isNonEmptyString,
@@ -187,6 +188,9 @@ export const createSceneBundleRuntime = ({
         }
 
         if (isMainPartition(partition)) {
+          if (!doesCommittedEventAffectSceneOverview(event)) {
+            continue;
+          }
           sawMainEvent = true;
           if (activeSceneId) {
             scenesToRebuild.add(activeSceneId);

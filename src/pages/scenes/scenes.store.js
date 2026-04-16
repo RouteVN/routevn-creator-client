@@ -60,6 +60,7 @@ export const createInitialState = () => ({
     name: "",
     description: "",
   },
+  sceneOverviewRequestId: 0,
 });
 
 export const setItems = ({ state }, { scenesData } = {}) => {
@@ -75,6 +76,16 @@ export const setSceneOverviews = ({ state }, { sceneOverviewsById } = {}) => {
     sceneOverviewsById && typeof sceneOverviewsById === "object"
       ? sceneOverviewsById
       : {};
+};
+
+export const setSceneOverviewRequestId = ({ state }, { requestId } = {}) => {
+  state.sceneOverviewRequestId = Number.isFinite(Number(requestId))
+    ? Math.max(0, Math.floor(Number(requestId)))
+    : 0;
+};
+
+export const selectSceneOverviewRequestId = ({ state }) => {
+  return Number(state.sceneOverviewRequestId) || 0;
 };
 
 export const showPreviewSceneId = ({ state }, { sceneId } = {}) => {
@@ -242,39 +253,7 @@ export const selectSceneWhiteboardPosition = ({ state }) => {
   return state.sceneWhiteboardPosition;
 };
 
-// Track if we've initialized from repository yet
-let hasInitialized = false;
-
 export const selectViewData = ({ state }, payload) => {
-  const repositoryState = payload?.repository?.getState?.();
-
-  // Check if we need to initialize from repository on first render
-  if (!hasInitialized && repositoryState) {
-    const { scenes, story, layouts: repositoryLayouts } = repositoryState;
-
-    if (scenes && Object.keys(scenes.items || {}).length > 0) {
-      // Initialize the scenes data
-      state.scenesData = scenes;
-      state.layoutsData = repositoryLayouts || { tree: [], items: {} };
-
-      // Transform only scene items (not folders) into whiteboard items
-      const initialSceneId = story?.initialSceneId;
-
-      const sceneItems = Object.entries(scenes.items || {})
-        .filter(([, item]) => item.type === "scene")
-        .map(([sceneId, scene]) => ({
-          id: sceneId,
-          name: scene.name || `Scene ${sceneId}`,
-          x: toFiniteNumberOr(scene.position?.x, 200),
-          y: toFiniteNumberOr(scene.position?.y, 200),
-          isInitial: sceneId === initialSceneId,
-        }));
-
-      state.whiteboardItems = sceneItems;
-      hasInitialized = true;
-    }
-  }
-
   const flatItems = applyFolderRequiredRootDragOptions(
     toFlatItems(state.scenesData),
   );

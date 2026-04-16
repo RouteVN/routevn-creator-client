@@ -1,6 +1,9 @@
 export const createInitialState = () => ({
   currentRoute: "/projects",
   isRepositoryLoading: false,
+  repositoryLoadingPhase: "",
+  repositoryLoadingCurrent: 0,
+  repositoryLoadingTotal: 0,
 });
 
 const SIDEBAR_WIDTH_PX = 64;
@@ -80,14 +83,72 @@ export const setCurrentRoute = ({ state }, { route } = {}) => {
 
 export const setRepositoryLoading = ({ state }, { isLoading } = {}) => {
   state.isRepositoryLoading = !!isLoading;
+  if (state.isRepositoryLoading) {
+    state.repositoryLoadingPhase = "Loading project...";
+    state.repositoryLoadingCurrent = 0;
+    state.repositoryLoadingTotal = 0;
+    return;
+  }
+
+  state.repositoryLoadingPhase = "";
+  state.repositoryLoadingCurrent = 0;
+  state.repositoryLoadingTotal = 0;
+};
+
+export const setRepositoryLoadingPhase = ({ state }, { phase } = {}) => {
+  state.repositoryLoadingPhase = phase ?? "";
+};
+
+export const setRepositoryLoadingProgress = (
+  { state },
+  { current, total } = {},
+) => {
+  const nextCurrent = Number(current);
+  const nextTotal = Number(total);
+  const normalizedTotal = Number.isFinite(nextTotal)
+    ? Math.max(0, Math.floor(nextTotal))
+    : 0;
+  const normalizedCurrent = Number.isFinite(nextCurrent)
+    ? Math.max(0, Math.floor(nextCurrent))
+    : 0;
+
+  state.repositoryLoadingTotal = normalizedTotal;
+  state.repositoryLoadingCurrent =
+    normalizedTotal > 0
+      ? Math.min(normalizedTotal, normalizedCurrent)
+      : normalizedCurrent;
+};
+
+const selectRepositoryLoadingProgressPercent = ({ state }) => {
+  const total = Number(state.repositoryLoadingTotal) || 0;
+  const current = Number(state.repositoryLoadingCurrent) || 0;
+  if (total <= 0) {
+    return 0;
+  }
+
+  return Math.min(100, Math.max(0, Math.round((current / total) * 100)));
 };
 
 export const selectViewData = ({ state }) => {
   const showSidebar = selectShowSidebar({ state });
+  const repositoryLoadingProgressPercent =
+    selectRepositoryLoadingProgressPercent({
+      state,
+    });
+  const hasRepositoryLoadingProgress =
+    state.repositoryLoadingTotal > 0 && state.isRepositoryLoading;
+  const repositoryLoadingBaseText = "Loading project...";
+
   return {
     ...state,
     currentRoutePattern: selectCurrentRoutePattern({ state }),
     showSidebar,
     contentWidth: showSidebar ? `calc(100vw - ${SIDEBAR_WIDTH_PX}px)` : "100vw",
+    repositoryLoadingProgressPercent,
+    repositoryLoadingProgressWidth: `${repositoryLoadingProgressPercent}%`,
+    hasRepositoryLoadingProgress,
+    repositoryLoadingStatusText: hasRepositoryLoadingProgress
+      ? `${repositoryLoadingBaseText} ${repositoryLoadingProgressPercent}%`
+      : repositoryLoadingBaseText,
   };
 };

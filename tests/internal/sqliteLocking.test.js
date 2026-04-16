@@ -20,6 +20,12 @@ describe("sqliteLocking", () => {
     expect(isSqliteLockError(createLockError())).toBe(true);
     expect(
       isSqliteLockError({
+        code: 6,
+        message: "database table is locked",
+      }),
+    ).toBe(true);
+    expect(
+      isSqliteLockError({
         code: "SQLITE_BUSY",
         message: "SQLITE_BUSY: database busy",
       }),
@@ -39,9 +45,9 @@ describe("sqliteLocking", () => {
         new Error("cannot rollback - no transaction is active"),
       ),
     ).toBe(true);
-    expect(isSqliteNoActiveTransactionError(new Error("database is locked"))).toBe(
-      false,
-    );
+    expect(
+      isSqliteNoActiveTransactionError(new Error("database is locked")),
+    ).toBe(false);
   });
 
   it("retries lock errors until the operation succeeds", async () => {

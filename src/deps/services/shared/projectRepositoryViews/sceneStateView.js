@@ -15,6 +15,13 @@ import {
 
 const getScenePartition = (sceneId) => scenePartitionFor(sceneId);
 const getMainScenePartition = (sceneId) => mainScenePartitionFor(sceneId);
+const SCENE_PROJECTION_YIELD_INTERVAL = 128;
+
+const yieldToBrowser = async () => {
+  await new Promise((resolve) => {
+    globalThis.setTimeout(resolve, 0);
+  });
+};
 
 const getSceneProjectionDebugDetails = (event) => {
   const command = committedEventToCommand(event);
@@ -556,6 +563,7 @@ export const loadSceneProjectionState = async ({
   });
   const initialWorkingState = workingState;
   const committedEvents = Array.isArray(events) ? events : [];
+  let processedRelevantEventCount = 0;
   for (
     let index = replayStartIndex;
     index < committedEvents.length;
@@ -565,6 +573,8 @@ export const loadSceneProjectionState = async ({
     if (!isRelevantSceneProjectionEvent({ event, sceneId })) {
       continue;
     }
+
+    processedRelevantEventCount += 1;
 
     try {
       const nextState = reduceEventToState({
@@ -587,6 +597,10 @@ export const loadSceneProjectionState = async ({
         error,
       });
       throw error;
+    }
+
+    if (processedRelevantEventCount % SCENE_PROJECTION_YIELD_INTERVAL === 0) {
+      await yieldToBrowser();
     }
   }
 

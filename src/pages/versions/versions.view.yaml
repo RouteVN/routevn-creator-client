@@ -50,8 +50,7 @@ template:
                       - $if versions.length == 0:
                           - rtgl-view w=f h=f av=c ah=c:
                               - rtgl-view d=v ah=c g=md:
-                                  - rtgl-text s=lg c=mu-fg: No versions saved yet
-                                  - rtgl-text s=sm c=mu-fg: Save your first version to track changes
+                                  - rtgl-text s=lg c=mu-fg: No versions
                         $else:
                           - 'rtgl-view d=v g=md w=f ph=md pt=md pb=sm mb=lg style="min-width: 0;"':
                               - $for item, i in versions:

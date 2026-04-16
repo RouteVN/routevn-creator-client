@@ -124,7 +124,7 @@ const isIncompatibleProjectVersionError = (error) => {
 const getIncompatibleProjectMessage = (error) => {
   const message = error?.message ?? "";
   if (message.includes("requires reset for schema version")) {
-    return "Unsupported project version. Make sure the project was created with RouteVN Creator v1 or later.";
+    return "Unsupported project version. Make sure the project was created with RouteVN Creator v1 or later. Contact RouteVN for support on migrating the old project.";
   }
 
   return message;

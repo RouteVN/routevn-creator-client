@@ -10,18 +10,17 @@ export const handleBeforeMount = (deps) => {
   return mountSubscriptions(deps);
 };
 
-export const handleAfterMount = async (deps) => {
-  const { projectService, store, render } = deps;
-  await projectService.ensureRepository();
-  const project = await projectService.getCurrentProjectInfo();
-
-  if (!project?.iconFileId) {
-    return;
+const syncSidebarProjectIcon = (deps) => {
+  const { appService, store, render } = deps;
+  const currentProjectEntry = appService.getCurrentProjectEntry();
+  if (currentProjectEntry?.iconUrl) {
+    store.setProjectImageUrl({ imageUrl: currentProjectEntry.iconUrl });
+    render();
   }
+};
 
-  const { url } = await projectService.getFileContent(project.iconFileId);
-  store.setProjectImageUrl({ imageUrl: url });
-  render();
+export const handleAfterMount = async (deps) => {
+  syncSidebarProjectIcon(deps);
 };
 
 export const handleItemClick = async (deps, payload) => {
@@ -43,16 +42,9 @@ export const handleHeaderClick = (deps) => {
 };
 
 export const handleProjectImageUpdate = async (deps) => {
-  const { projectService, store, render } = deps;
-  const project = await projectService.getCurrentProjectInfo();
-
-  if (!project?.iconFileId) {
-    return;
-  }
-
-  const { url } = await projectService.getFileContent(project.iconFileId);
-  store.setProjectImageUrl({ imageUrl: url });
-  render();
+  const { appService } = deps;
+  await appService.refreshCurrentProjectEntry();
+  syncSidebarProjectIcon(deps);
 };
 
 const subscriptions = (deps) => {

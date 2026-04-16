@@ -12,10 +12,6 @@ export const createCharacterSpriteCommandApi = (shared) => ({
     index,
   }) {
     const context = await shared.ensureCommandContext();
-    const fileCommands = shared.buildMissingFileCommands({
-      context,
-      fileRecords,
-    });
     const nextSpriteId = spriteId || shared.createId();
     const character = context.state?.characters?.items?.[characterId];
     const resolvedIndex = shared.resolveCharacterSpriteIndex({
@@ -29,6 +25,10 @@ export const createCharacterSpriteCommandApi = (shared) => ({
       context.projectId,
       "characters",
     );
+    const fileCommands = shared.buildMissingFileCommands({
+      context,
+      fileRecords,
+    });
 
     const submitResult = await shared.submitCommandsWithContext({
       context,
@@ -67,15 +67,14 @@ export const createCharacterSpriteCommandApi = (shared) => ({
     fileRecords = [],
   }) {
     const context = await shared.ensureCommandContext();
-    const fileCommands = shared.buildMissingFileCommands({
-      context,
-      fileRecords,
-    });
-
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
       "characters",
     );
+    const fileCommands = shared.buildMissingFileCommands({
+      context,
+      fileRecords,
+    });
 
     return shared.submitCommandsWithContext({
       context,
