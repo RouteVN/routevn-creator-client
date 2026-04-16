@@ -247,10 +247,11 @@ template:
   - rtgl-popover#popoverForm ?open=${popover.open} place=b x=${popover.x} y=${popover.y}:
       - $if popover.open:
           - $if popover.context.isPositionPopover:
-              - rtgl-form#form autofocus key=${popover.key} slot=content :form=${popover.form} :defaultValues=${popover.defaultValues} :context=${popover.context} w=280:
-                  - rtgl-view slot="position-presets" d=h wrap g=sm:
-                      - $for preset, i in popover.context.positionPresetItems:
-                          - rtgl-button#popoverPreset${i} data-value=${preset.value} v=ol s=sm: ${preset.label}
+              - rtgl-view slot=content w=360:
+                  - rtgl-form#form autofocus key=${popover.key} :form=${popover.form} :defaultValues=${popover.defaultValues} :context=${popover.context} w=f:
+                      - rtgl-view slot="position-presets" d=h wrap g=sm:
+                          - $for preset, i in popover.context.positionPresetItems:
+                              - rtgl-button#popoverPreset${i} data-value=${preset.value} v=ol s=sm: ${preset.label}
             $else:
               - rtgl-form#form autofocus key=${popover.key} slot=content :form=${popover.form} :defaultValues=${popover.defaultValues} :context=${popover.context}: null
   - rtgl-dialog#visibilityConditionDialog ?open=${visibilityConditionDialog.open} s=md:

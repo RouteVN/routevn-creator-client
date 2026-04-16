@@ -40,7 +40,7 @@ const SYSTEM_ACTION_LABELS = {
   resetStoryAtSection: "Reset Story At Section",
   toggleAutoMode: "Toggle Auto Mode",
   toggleSkipMode: "Toggle Skip Mode",
-  toggleDialogueUI: "Toggle Dialogue Box",
+  toggleDialogueUI: "Toggle Dialogue Box Visibility",
   pushLayeredView: "Push Layered View",
   popLayeredView: "Pop Layered View",
   updateVariable: "Update Variable",

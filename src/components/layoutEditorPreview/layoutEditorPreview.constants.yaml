@@ -3,10 +3,10 @@ dialogueForm:
   description: Edit to see how the layout will look like with different data
   fields:
     - name: dialogue-character-name
-      description: Character Name
+      label: Character Name
       type: input-text
     - name: dialogue-content
-      description: Dialogue Content
+      label: Dialogue Content
       type: input-text
     - name: dialogue-auto-mode
       label: Auto Mode
@@ -42,7 +42,7 @@ nvlForm:
   fields:
     - name: linesNum
       type: select
-      description: Number of Lines
+      label: Number of Lines
       options:
         - label: "1"
           value: 1
@@ -63,11 +63,11 @@ nvlForm:
       fields:
         - name: 'characterName${i}'
           type: input-text
-          description: Character name
+          label: Character name
           placeholder: Enter character name
         - name: 'line${i}'
           type: input-text
-          description: Line content text
+          label: Line content text
           placeholder: Enter line text
 
 choiceForm:
@@ -76,7 +76,7 @@ choiceForm:
   fields:
     - name: choicesNum
       type: select
-      description: Number of Choices
+      label: Number of Choices
       options:
         - label: "1"
           value: 1
@@ -95,7 +95,7 @@ choiceForm:
     - "$each": 'choice, i in choices'
       name: 'choice${i}'
       type: input-text
-      description: Choice content text
+      label: Choice content text
       placeholder: Enter choice text
 
 historyForm:
@@ -104,7 +104,7 @@ historyForm:
   fields:
     - name: linesNum
       type: select
-      description: Number of History Lines
+      label: Number of History Lines
       options:
         - label: "1"
           value: 1
@@ -125,11 +125,11 @@ historyForm:
       fields:
         - name: 'characterName${i}'
           type: input-text
-          description: Character name
+          label: Character name
           placeholder: Enter character name
         - name: 'text${i}'
           type: input-text
-          description: History line text
+          label: History line text
           placeholder: Enter history line text
 
 saveLoadForm:
@@ -139,7 +139,7 @@ saveLoadForm:
     - "$when": "showSlotsNum"
       name: slotsNum
       type: select
-      description: Number of Slots
+      label: Number of Slots
       options:
         - label: "1"
           value: 1
@@ -160,11 +160,11 @@ saveLoadForm:
       fields:
         - name: 'saveImageId${i}'
           type: select
-          description: Save image
+          label: Save image
           clearable: true
           options: "${imageOptions}"
           placeholder: Select image
         - name: 'saveDate${i}'
           type: input-text
-          description: Save date
+          label: Save date
           placeholder: Enter save date

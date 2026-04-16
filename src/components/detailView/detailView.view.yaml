@@ -1,25 +1,51 @@
 template:
-  - rtgl-view d=v w=f h=f p=md g=md:
-      - rtgl-view d=v w=f g=md:
-          - $for field, i in flatFields:
-              - $if field.type == 'section':
-                  - rtgl-view w=f pt=xs:
-                      - rtgl-text s=sm c=mu-fg: ${field.label}
-                $elif field.type == 'description':
-                  - rtgl-view w=f:
-                      - rtgl-text c=mu-fg: ${field.value}
-                $elif field.type == 'slot':
-                  - rtgl-view w=f g=xs:
-                      - $if field.label:
+  - $if fillHeight:
+      - rtgl-view d=v w=f h=f p=md g=md:
+          - rtgl-view d=v w=f g=md:
+              - $for field, i in flatFields:
+                  - $if field.type == 'section':
+                      - rtgl-view w=f pt=xs:
+                          - rtgl-text s=sm c=mu-fg: ${field.label}
+                    $elif field.type == 'description':
+                      - rtgl-view w=f:
+                          - rtgl-text c=mu-fg: ${field.value}
+                    $elif field.type == 'slot':
+                      - rtgl-view w=f g=xs:
+                          - $if field.label:
+                              - rtgl-text c=mu-fg: ${field.label}
+                          - 'slot name=${field.slot}': null
+                    $elif field.type == 'text':
+                      - rtgl-view w=f g=xs:
+                          - $if field.label:
+                              - rtgl-text c=mu-fg: ${field.label}
+                          - rtgl-text: ${field.value}
+                    $elif field.type == 'text-inline':
+                      - rtgl-view d=h w=f av=c g=sm:
                           - rtgl-text c=mu-fg: ${field.label}
-                      - 'slot name=${field.slot}': null
-                $elif field.type == 'text':
-                  - rtgl-view w=f g=xs:
-                      - $if field.label:
+                          - rtgl-view w=1fg: null
+                          - rtgl-text ta=e: ${field.value}
+    $else:
+      - rtgl-view d=v w=f p=md g=md:
+          - rtgl-view d=v w=f g=md:
+              - $for field, i in flatFields:
+                  - $if field.type == 'section':
+                      - rtgl-view w=f pt=xs:
+                          - rtgl-text s=sm c=mu-fg: ${field.label}
+                    $elif field.type == 'description':
+                      - rtgl-view w=f:
+                          - rtgl-text c=mu-fg: ${field.value}
+                    $elif field.type == 'slot':
+                      - rtgl-view w=f g=xs:
+                          - $if field.label:
+                              - rtgl-text c=mu-fg: ${field.label}
+                          - 'slot name=${field.slot}': null
+                    $elif field.type == 'text':
+                      - rtgl-view w=f g=xs:
+                          - $if field.label:
+                              - rtgl-text c=mu-fg: ${field.label}
+                          - rtgl-text: ${field.value}
+                    $elif field.type == 'text-inline':
+                      - rtgl-view d=h w=f av=c g=sm:
                           - rtgl-text c=mu-fg: ${field.label}
-                      - rtgl-text: ${field.value}
-                $elif field.type == 'text-inline':
-                  - rtgl-view d=h w=f av=c g=sm:
-                      - rtgl-text c=mu-fg: ${field.label}
-                      - rtgl-view w=1fg: null
-                      - rtgl-text ta=e: ${field.value}
+                          - rtgl-view w=1fg: null
+                          - rtgl-text ta=e: ${field.value}

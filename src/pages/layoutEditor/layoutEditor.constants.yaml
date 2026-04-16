@@ -1,4 +1,6 @@
 contextMenuItems:
+  - label: Add Element
+    type: label
   - label: Container
     type: item
     createType: container
@@ -93,6 +95,9 @@ contextMenuItems:
     label: Text (Choice Item)
     type: item
     createType: text-choice-item-content
+  - type: separator
+  - label: Edit
+    type: label
   - label: Rename
     type: item
     value: rename-item
@@ -101,6 +106,8 @@ contextMenuItems:
     value: delete-item
 
 emptyContextMenuItems:
+  - label: Add Element
+    type: label
   - label: Container
     type: item
     createType: container
@@ -189,6 +196,8 @@ emptyContextMenuItems:
     createType: text-history-line-content
 
 controlContextMenuItems:
+  - label: Edit
+    type: label
   - label: Rename
     type: item
     value: rename-item
@@ -197,6 +206,8 @@ controlContextMenuItems:
     value: delete-item
 
 controlEmptyContextMenuItems:
+  - label: Add Element
+    type: label
   - label: Rect
     type: item
     createType: rect

@@ -59,7 +59,7 @@ export const RUNTIME_ACTION_DEFINITIONS = Object.freeze({
   setDialogueTextSpeed: createValueActionDefinition({
     mode: "setDialogueTextSpeed",
     label: "Set Dialogue Text Speed",
-    icon: "dialogue",
+    icon: "settings",
     runtimeId: "dialogueTextSpeed",
     inputType: "number",
     min: 0,
@@ -116,7 +116,7 @@ export const RUNTIME_ACTION_DEFINITIONS = Object.freeze({
   setSaveLoadPagination: createValueActionDefinition({
     mode: "setSaveLoadPagination",
     label: "Set Save/Load Pagination",
-    icon: "next-line",
+    icon: "settings",
     runtimeId: "saveLoadPagination",
     inputType: "number",
     min: 1,
@@ -125,19 +125,19 @@ export const RUNTIME_ACTION_DEFINITIONS = Object.freeze({
   incrementSaveLoadPagination: createEmptyActionDefinition({
     mode: "incrementSaveLoadPagination",
     label: "Next Save/Load Page",
-    icon: "next-line",
+    icon: "settings",
     description: "Increment the current save/load pagination page.",
   }),
   decrementSaveLoadPagination: createEmptyActionDefinition({
     mode: "decrementSaveLoadPagination",
     label: "Previous Save/Load Page",
-    icon: "next-line",
+    icon: "settings",
     description: "Decrement the current save/load pagination page.",
   }),
   setMenuPage: createValueActionDefinition({
     mode: "setMenuPage",
-    label: "Set Menu Page",
-    icon: "layers",
+    label: "Set Current Menu Page",
+    icon: "settings",
     runtimeId: "menuPage",
     inputType: "text",
     placeholder: "menu-page-id",
@@ -145,7 +145,7 @@ export const RUNTIME_ACTION_DEFINITIONS = Object.freeze({
   setMenuEntryPoint: createValueActionDefinition({
     mode: "setMenuEntryPoint",
     label: "Set Menu Entry Point",
-    icon: "layers",
+    icon: "settings",
     runtimeId: "menuEntryPoint",
     inputType: "text",
     placeholder: "entry-point",

@@ -48,6 +48,7 @@ import {
 } from "./support/layoutEditPanelViewData.js";
 
 const HIDDEN_LAYOUT_ACTION_MODES = new Set();
+const POSITION_POPOVER_NAMES = new Set(["x", "y"]);
 const POSITION_POPOVER_PRESETS = [
   {
     label: "0",
@@ -85,23 +86,60 @@ const POSITION_POPOVER_PRESETS = [
     label: "4/5",
     ratio: 4 / 5,
   },
+  {
+    label: "1",
+    ratio: 1,
+  },
 ];
 
 const POSITION_PRESETS_SLOT = "position-presets";
 
-const POSITION_POPOVER_AXIS_CONFIG = {
-  x: {
-    resolutionKey: "width",
-    roundValue: true,
-  },
-  y: {
-    resolutionKey: "height",
-    roundValue: true,
-  },
+const getPositionPopoverResolutionDimension = (projectResolution = {}) => {
+  const width = Number(projectResolution?.width);
+  const height = Number(projectResolution?.height);
+  const dimensions = [width, height].filter(
+    (value) => Number.isFinite(value) && value > 0,
+  );
+
+  if (dimensions.length === 0) {
+    return undefined;
+  }
+
+  return Math.max(...dimensions);
 };
 
-const roundPositionPopoverNumber = (value) => {
-  return Number((value + Number.EPSILON).toFixed(2));
+const getPositionPopoverRange = ({
+  values = {},
+  projectResolution,
+  currentValue,
+} = {}) => {
+  const resolutionDimension =
+    getPositionPopoverResolutionDimension(projectResolution);
+  if (!Number.isFinite(resolutionDimension) || resolutionDimension <= 0) {
+    return undefined;
+  }
+
+  let min = -resolutionDimension;
+  let max = resolutionDimension * 2;
+
+  const numericValues = [values?.x, values?.y, currentValue]
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value));
+
+  for (const value of numericValues) {
+    if (value < min) {
+      min = Math.floor(value);
+    }
+    if (value > max) {
+      max = Math.ceil(value);
+    }
+  }
+
+  return {
+    min,
+    max,
+    resolutionDimension,
+  };
 };
 
 const clonePopoverForm = (form) => {
@@ -134,16 +172,23 @@ const clonePopoverForm = (form) => {
   return nextForm;
 };
 
-const buildPopoverForm = ({ form, name, projectResolution, value }) => {
-  const axisConfig = POSITION_POPOVER_AXIS_CONFIG[name];
-  if (!axisConfig) {
+const buildPopoverForm = ({
+  form,
+  name,
+  projectResolution,
+  values,
+  value,
+} = {}) => {
+  if (!POSITION_POPOVER_NAMES.has(name)) {
     return form;
   }
 
-  const resolutionDimension = Number(
-    projectResolution?.[axisConfig.resolutionKey],
-  );
-  if (!Number.isFinite(resolutionDimension) || resolutionDimension <= 0) {
+  const positionRange = getPositionPopoverRange({
+    values,
+    projectResolution,
+    currentValue: value,
+  });
+  if (!positionRange) {
     return form;
   }
 
@@ -157,25 +202,12 @@ const buildPopoverForm = ({ form, name, projectResolution, value }) => {
   }
   const remainingFields = normalizedFields.slice(1);
 
-  const currentValue = Number(value);
-  let min = -resolutionDimension;
-  let max = resolutionDimension * 2;
-
-  if (Number.isFinite(currentValue)) {
-    if (currentValue < min) {
-      min = Math.floor(currentValue);
-    }
-    if (currentValue > max) {
-      max = Math.ceil(currentValue);
-    }
-  }
-
   nextForm.fields = [
     {
       ...firstField,
       type: "slider-with-input",
-      min,
-      max,
+      min: positionRange.min,
+      max: positionRange.max,
       step: 1,
     },
     {
@@ -189,16 +221,20 @@ const buildPopoverForm = ({ form, name, projectResolution, value }) => {
   return nextForm;
 };
 
-const buildPositionPopoverContext = ({ name, projectResolution }) => {
-  const axisConfig = POSITION_POPOVER_AXIS_CONFIG[name];
-  if (!axisConfig) {
+const buildPositionPopoverContext = ({
+  name,
+  projectResolution,
+  values,
+} = {}) => {
+  if (!POSITION_POPOVER_NAMES.has(name)) {
     return {};
   }
 
-  const resolutionDimension = Number(
-    projectResolution?.[axisConfig.resolutionKey],
-  );
-  if (!Number.isFinite(resolutionDimension) || resolutionDimension <= 0) {
+  const positionRange = getPositionPopoverRange({
+    values,
+    projectResolution,
+  });
+  if (!positionRange) {
     return {};
   }
 
@@ -207,32 +243,9 @@ const buildPositionPopoverContext = ({ name, projectResolution }) => {
     positionPresetItems: POSITION_POPOVER_PRESETS.map((preset) => ({
       label: preset.label,
       ratio: preset.ratio,
-      value: axisConfig.roundValue
-        ? Math.round(resolutionDimension * preset.ratio)
-        : roundPositionPopoverNumber(resolutionDimension * preset.ratio),
+      value: Math.round(positionRange.resolutionDimension * preset.ratio),
     })),
   };
-};
-
-const formatPositionPercentageLabel = ({ name, projectResolution, value }) => {
-  const axisConfig = POSITION_POPOVER_AXIS_CONFIG[name];
-  if (!axisConfig) {
-    return undefined;
-  }
-
-  const resolutionDimension = Number(
-    projectResolution?.[axisConfig.resolutionKey],
-  );
-  const numericValue = Number(value);
-  if (
-    !Number.isFinite(resolutionDimension) ||
-    resolutionDimension <= 0 ||
-    !Number.isFinite(numericValue)
-  ) {
-    return undefined;
-  }
-
-  return `${roundPositionPopoverNumber((numericValue / resolutionDimension) * 100)}%`;
 };
 
 const isDirectedContainer = (capabilities = {}, values = {}) => {
@@ -390,6 +403,7 @@ export const openPopoverForm = (
       form,
       name,
       projectResolution,
+      values: state.values,
       value,
     }),
     context: {
@@ -397,6 +411,7 @@ export const openPopoverForm = (
       ...buildPositionPopoverContext({
         name,
         projectResolution,
+        values: state.values,
       }),
     },
   };
@@ -413,6 +428,7 @@ export const updatePopoverFormContext = (
     ...buildPositionPopoverContext({
       name: nextName,
       projectResolution,
+      values: state.values,
     }),
   };
   state.popover.defaultValues = values;
@@ -420,8 +436,10 @@ export const updatePopoverFormContext = (
     form: state.popover.form,
     name: nextName,
     projectResolution,
+    values: state.values,
     value: values.value,
   });
+  state.popover.name = nextName;
   state.popover.key = state.popover.key + 1;
 };
 
@@ -815,32 +833,12 @@ export const selectViewData = ({ state, props, constants }) => {
         `${selectedSpritesheetPreview.fileId ?? ""}:${selectedSpritesheetPreview.animation?.frames?.join(",") ?? ""}`,
       fragmentLayoutOptions,
       values,
-      xPercentageLabel: formatPositionPercentageLabel({
-        name: "x",
-        projectResolution: props.projectResolution,
-        value: values.x,
-      }),
-      yPercentageLabel: formatPositionPercentageLabel({
-        name: "y",
-        projectResolution: props.projectResolution,
-        value: values.y,
-      }),
-      widthPercentageLabel: formatPositionPercentageLabel({
-        name: "x",
-        projectResolution: props.projectResolution,
-        value: values.width,
-      }),
       showLayoutSizeSection,
       supportsWidthMode,
       widthMode,
       supportsHeightMode,
       heightMode,
       showWidthField,
-      heightPercentageLabel: formatPositionPercentageLabel({
-        name: "y",
-        projectResolution: props.projectResolution,
-        value: values.height,
-      }),
       showHeightField,
       showAspectRatioMode,
       paginationSummary: getSaveLoadPaginationSummary({

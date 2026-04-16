@@ -18,3 +18,5 @@ propsSchema:
             type: string
           fields:
             type: array
+    fillHeight:
+      type: boolean

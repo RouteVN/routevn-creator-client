@@ -68,5 +68,6 @@ const normalizeFields = (fields = []) => {
 export const selectViewData = ({ props }) => {
   return {
     flatFields: normalizeFields(props.fields ?? []),
+    fillHeight: props.fillHeight !== false,
   };
 };

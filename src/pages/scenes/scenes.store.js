@@ -286,11 +286,12 @@ export const selectViewData = ({ state }, payload) => {
     : null;
 
   let selectedSceneName = "";
-  let detailFields = [];
+  let selectedItemDescription = "";
   let selectedSceneSections = [];
   if (selectedItem?.type === "scene") {
     const selectedSceneOverview = state.sceneOverviewsById?.[selectedItem.id];
     selectedSceneName = selectedItem.name ?? "";
+    selectedItemDescription = selectedItem.description ?? "";
     selectedSceneSections = Array.isArray(selectedSceneOverview?.sections)
       ? selectedSceneOverview.sections.map((section, index) => ({
           id: section.sectionId || section.id,
@@ -307,17 +308,6 @@ export const selectViewData = ({ state }, payload) => {
           name: section.name || `Section ${index + 1}`,
           isDeadEnd: false,
         }));
-    detailFields = [
-      {
-        type: "description",
-        value: selectedItem.description ?? "",
-      },
-      {
-        type: "slot",
-        slot: "sections-list",
-        label: "",
-      },
-    ];
   }
 
   // Get folder options for form
@@ -422,8 +412,8 @@ export const selectViewData = ({ state }, payload) => {
     selectedItemId: state.selectedItemId,
     addSceneButtonVariant: state.isWaitingForTransform ? "pr" : "se",
     whiteboardItems: state.whiteboardItems,
-    detailFields,
     selectedSceneName,
+    selectedItemDescription,
     isWaitingForTransform: state.isWaitingForTransform,
     showSceneForm: state.showSceneForm,
     sceneFormKey,
