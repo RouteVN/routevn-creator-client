@@ -14,9 +14,9 @@ import {
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another section.";
 const DEFAULT_SCENES_MAP_VIEWPORT = {
-  zoomLevel: 1.5,
-  panX: -120,
-  panY: -200,
+  zoomLevel: 1,
+  panX: -80,
+  panY: -40,
 };
 
 const getProjectErrorMessage = (result, fallbackMessage) => {
