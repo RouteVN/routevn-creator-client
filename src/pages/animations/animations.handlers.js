@@ -25,19 +25,6 @@ const navigateToAnimationEditor = ({
   });
 };
 
-const logSelectedAnimationData = ({ store, itemId } = {}) => {
-  if (!itemId) {
-    return;
-  }
-
-  const animationItem = store.selectAnimationItemById({ itemId });
-  if (!animationItem) {
-    return;
-  }
-
-  console.log("Selected animation data", animationItem);
-};
-
 const {
   handleBeforeMount: handleBeforeMountBase,
   refreshData: handleDataChanged,
@@ -67,20 +54,10 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   if (isFolder || !itemId) {
     return;
   }
-
-  logSelectedAnimationData({
-    store: deps.store,
-    itemId,
-  });
 };
 
 export const handleAnimationItemClick = (deps, payload) => {
   handleAnimationItemClickBase(deps, payload);
-
-  logSelectedAnimationData({
-    store: deps.store,
-    itemId: payload?._event?.detail?.itemId,
-  });
 };
 
 const openEditDialogWithValues = ({ deps, itemId } = {}) => {

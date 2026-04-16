@@ -75,7 +75,7 @@ describe("projects.handleProjectsClick", () => {
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
       title: "Incompatible Project",
       message:
-        "Client store requires reset for schema version 2; runtime expects 6",
+        "Unsupported project version. Make sure the project was created with RouteVN Creator v1 or later.",
       status: "error",
     });
     expect(deps.appService.navigate).not.toHaveBeenCalled();

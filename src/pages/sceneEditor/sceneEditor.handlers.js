@@ -397,9 +397,10 @@ const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
 
 export const handleBeforeMount = (deps) => {
   const { projectService, appService, store } = deps;
+  const showLineNumbers =
+    appService.getUserConfig(SHOW_LINE_NUMBERS_CONFIG_KEY) ?? true;
   store.setSceneSettings({
-    showLineNumbers:
-      appService.getUserConfig(SHOW_LINE_NUMBERS_CONFIG_KEY) ?? true,
+    showLineNumbers,
   });
 
   const cleanupRuntimeSubscriptions = mountSceneEditorSubscriptions(deps);
@@ -410,7 +411,7 @@ export const handleBeforeMount = (deps) => {
     emitCurrent: false,
   }).subscribe({
     next: (payload) => {
-      void syncSceneEditorProjectPayload(deps, payload);
+      void syncSceneEditorProjectPayload(deps, payload).catch(() => {});
     },
   });
 

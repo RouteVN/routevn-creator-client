@@ -121,6 +121,15 @@ const isIncompatibleProjectVersionError = (error) => {
   );
 };
 
+const getIncompatibleProjectMessage = (error) => {
+  const message = error?.message ?? "";
+  if (message.includes("requires reset for schema version")) {
+    return "Unsupported project version. Make sure the project was created with RouteVN Creator v1 or later. Contact RouteVN for support on migrating the old project.";
+  }
+
+  return message;
+};
+
 export const handleCreateButtonClick = async (deps) => {
   const { appService, render, store } = deps;
   let dialogResult;
@@ -481,7 +490,7 @@ export const handleProjectsClick = async (deps, payload) => {
     if (isIncompatibleProjectVersionError(error)) {
       await appService.showAlert({
         title: "Incompatible Project",
-        message: error.message,
+        message: getIncompatibleProjectMessage(error),
         status: "error",
       });
       return;

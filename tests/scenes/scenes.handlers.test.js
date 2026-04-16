@@ -9,6 +9,7 @@ const originalWindow = globalThis.window;
 
 const createDeps = ({ userConfig = {}, projectId = "project-1" } = {}) => {
   const getUserConfig = vi.fn((key) => userConfig[key]);
+  let sceneOverviewRequestId = 0;
 
   return {
     appService: {
@@ -60,6 +61,10 @@ const createDeps = ({ userConfig = {}, projectId = "project-1" } = {}) => {
       setItems: vi.fn(),
       setLayouts: vi.fn(),
       setSceneOverviews: vi.fn(),
+      selectSceneOverviewRequestId: vi.fn(() => sceneOverviewRequestId),
+      setSceneOverviewRequestId: vi.fn(({ requestId }) => {
+        sceneOverviewRequestId = requestId;
+      }),
       setWhiteboardItems: vi.fn(),
       hideMapAddHint: vi.fn(),
       setSelectedItemId: vi.fn(),
@@ -156,5 +161,38 @@ describe("scenes.handlers config keys", () => {
       160,
     );
     expect(deps.appService.setUserConfig).toHaveBeenCalledTimes(3);
+  });
+
+  it("renders base scene items before scene overviews finish loading", async () => {
+    let resolveOverviews;
+    const loadSceneOverviews = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolveOverviews = resolve;
+        }),
+    );
+    const deps = createDeps();
+    deps.projectService.loadSceneOverviews = loadSceneOverviews;
+
+    await handleAfterMount(deps);
+
+    expect(deps.store.setItems).toHaveBeenCalled();
+    expect(deps.store.setLayouts).toHaveBeenCalled();
+    expect(deps.store.setWhiteboardItems).toHaveBeenCalledWith({
+      items: [
+        {
+          id: "scene-1",
+          isInit: false,
+          name: "Scene 1",
+          transitions: [],
+          x: 0,
+          y: 0,
+        },
+      ],
+    });
+    expect(deps.render).toHaveBeenCalled();
+
+    resolveOverviews({});
+    await Promise.resolve();
   });
 });

@@ -79,7 +79,12 @@ export const createProjectEntriesService = ({
 
       const localEntry = entries.find((entry) => entry?.id === projectId);
       if (localEntry) {
-        return normalizeLocalProjectEntry(localEntry);
+        const project = normalizeLocalProjectEntry(localEntry);
+        const iconResult = await platformAdapter.loadProjectIcon?.({
+          entry: project,
+          projectService,
+        });
+        return setProjectIcon({ project, iconResult });
       }
 
       return createEmptyProjectEntry({

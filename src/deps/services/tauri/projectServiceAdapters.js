@@ -10,6 +10,7 @@ import {
 import {
   PROJECT_DB_NAME,
   createPersistedTauriProjectStore,
+  evictPersistedTauriProjectStoreCache,
   toBootstrappedCommittedEvent,
 } from "./collabClientStore.js";
 import { createProjectCollabService } from "../shared/collab/createProjectCollabService.js";
@@ -107,6 +108,32 @@ export const createTauriProjectServiceAdapters = ({
 }) => {
   const filesPathByProjectPath = new Map();
   const fileUrlByCacheKey = new Map();
+
+  const readProjectAppValueByPath = async ({ projectPath, key }) => {
+    if (!projectPath || !key) {
+      return undefined;
+    }
+
+    try {
+      const dbPath = await join(projectPath, PROJECT_DB_NAME);
+      // plugin-sql pools connections by db path; closing a raw preflight handle
+      // here can tear down the shared pool used by the project store.
+      const projectDb = await Database.load(`sqlite:${dbPath}`);
+      await withSqliteLockRetry(() =>
+        projectDb.execute(`PRAGMA busy_timeout=${SQLITE_BUSY_TIMEOUT_MS}`),
+      );
+      const rows = await withSqliteLockRetry(() =>
+        projectDb.select(
+          `SELECT value FROM ${APP_STATE_TABLE} WHERE key = $1`,
+          [key],
+        ),
+      );
+      const row = Array.isArray(rows) ? rows[0] : undefined;
+      return parseStoredAppValue(row?.value);
+    } catch {
+      return undefined;
+    }
+  };
 
   const getReferenceFilesPath = async (reference) => {
     const projectPath = reference?.projectPath;
@@ -221,34 +248,33 @@ export const createTauriProjectServiceAdapters = ({
 
     readCreatorVersionByReference: async ({ reference }) => {
       const projectPath = reference?.projectPath;
-      if (!projectPath) {
-        return undefined;
-      }
+      const parsedValue = await readProjectAppValueByPath({
+        projectPath,
+        key: CREATOR_VERSION_KEY,
+      });
+      return Number.isFinite(parsedValue) ? parsedValue : undefined;
+    },
 
-      try {
-        const dbPath = await join(projectPath, PROJECT_DB_NAME);
-        const projectDb = await Database.load(`sqlite:${dbPath}`);
-        await withSqliteLockRetry(() =>
-          projectDb.execute(`PRAGMA busy_timeout=${SQLITE_BUSY_TIMEOUT_MS}`),
-        );
-        const rows = await withSqliteLockRetry(() =>
-          projectDb.select(
-            `SELECT value FROM ${APP_STATE_TABLE} WHERE key = $1`,
-            [CREATOR_VERSION_KEY],
-          ),
-        );
-        const row = Array.isArray(rows) ? rows[0] : undefined;
-        const parsedValue = parseStoredAppValue(row?.value);
-        return Number.isFinite(parsedValue) ? parsedValue : undefined;
-      } catch {
-        return undefined;
-      }
+    readProjectInfoByReference: async ({ reference }) => {
+      const projectPath = reference?.projectPath;
+      return normalizeProjectInfo(
+        await readProjectAppValueByPath({
+          projectPath,
+          key: PROJECT_INFO_KEY,
+        }),
+      );
     },
 
     createStore: async ({ reference }) => {
       return createPersistedTauriProjectStore({
         projectPath: reference.projectPath,
         projectId: reference.repositoryProjectId,
+      });
+    },
+
+    evictStoreByReference: async ({ reference }) => {
+      await evictPersistedTauriProjectStoreCache({
+        projectPath: reference?.projectPath,
       });
     },
 

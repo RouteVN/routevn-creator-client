@@ -5,6 +5,7 @@ import {
   scenePartitionTokenFor,
 } from "../collab/partitions.js";
 import { committedEventToCommand } from "../collab/mappers.js";
+import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
 
 export const MAIN_VIEW_NAME = "project_repository_main_state";
 export const SCENE_VIEW_NAME = "project_repository_scene_state";
@@ -20,6 +21,39 @@ export const VIEW_CHECKPOINT = {
 };
 export const OVERVIEW_CHECKPOINT_DEBOUNCE_MS = 1000;
 export const MAIN_PARTITION = mainPartitionFor();
+
+const SCENE_OVERVIEW_RELEVANT_MAIN_COMMAND_TYPES = new Set([
+  COMMAND_TYPES.PROJECT_CREATE,
+  COMMAND_TYPES.STORY_UPDATE,
+  COMMAND_TYPES.SCENE_CREATE,
+  COMMAND_TYPES.SCENE_UPDATE,
+  COMMAND_TYPES.SCENE_DELETE,
+  COMMAND_TYPES.SCENE_MOVE,
+  COMMAND_TYPES.SECTION_CREATE,
+  COMMAND_TYPES.SECTION_UPDATE,
+  COMMAND_TYPES.SECTION_DELETE,
+  COMMAND_TYPES.SECTION_MOVE,
+  COMMAND_TYPES.LINE_CREATE,
+  COMMAND_TYPES.LINE_UPDATE_ACTIONS,
+  COMMAND_TYPES.LINE_DELETE,
+  COMMAND_TYPES.LINE_MOVE,
+  COMMAND_TYPES.LAYOUT_CREATE,
+  COMMAND_TYPES.LAYOUT_UPDATE,
+  COMMAND_TYPES.LAYOUT_MOVE,
+  COMMAND_TYPES.LAYOUT_DELETE,
+  COMMAND_TYPES.LAYOUT_ELEMENT_CREATE,
+  COMMAND_TYPES.LAYOUT_ELEMENT_UPDATE,
+  COMMAND_TYPES.LAYOUT_ELEMENT_MOVE,
+  COMMAND_TYPES.LAYOUT_ELEMENT_DELETE,
+  COMMAND_TYPES.CONTROL_CREATE,
+  COMMAND_TYPES.CONTROL_UPDATE,
+  COMMAND_TYPES.CONTROL_MOVE,
+  COMMAND_TYPES.CONTROL_DELETE,
+  COMMAND_TYPES.CONTROL_ELEMENT_CREATE,
+  COMMAND_TYPES.CONTROL_ELEMENT_UPDATE,
+  COMMAND_TYPES.CONTROL_ELEMENT_MOVE,
+  COMMAND_TYPES.CONTROL_ELEMENT_DELETE,
+]);
 
 export const isNonEmptyString = (value) =>
   typeof value === "string" && value.length > 0;
@@ -152,17 +186,31 @@ export const getLatestSceneOverviewRevision = ({ events = [], sceneId }) => {
   let latestRevision = 0;
 
   for (let index = 0; index < events.length; index += 1) {
-    const partition = events[index]?.partition;
+    const event = events[index];
+    const partition = event?.partition;
+    if (partition === scenePartition || partition === mainScenePartition) {
+      latestRevision = index + 1;
+      continue;
+    }
+
     if (
-      partition === MAIN_PARTITION ||
-      partition === scenePartition ||
-      partition === mainScenePartition
+      partition === MAIN_PARTITION &&
+      doesCommittedEventAffectSceneOverview(event)
     ) {
       latestRevision = index + 1;
     }
   }
 
   return latestRevision;
+};
+
+export const doesCommittedEventAffectSceneOverview = (event) => {
+  if (!isMainPartition(event?.partition)) {
+    return false;
+  }
+
+  const commandType = committedEventToCommand(event)?.type;
+  return SCENE_OVERVIEW_RELEVANT_MAIN_COMMAND_TYPES.has(commandType);
 };
 
 export const createMainProjectionState = (state) =>

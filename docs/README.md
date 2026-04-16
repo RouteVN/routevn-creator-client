@@ -6,7 +6,8 @@
 2. [Engineering](./engineering.md)
 3. [Upload File Types](./upload-file-types.md)
 4. [Scene Editor Text Sync Redesign](./scene-editor-text-sync-redesign.md)
-5. [Animation Editor Transition Mask Plan](./animation-editor-transition-mask-plan.md)
+5. [Project Storage And Sync Redesign](./project-storage-and-sync-redesign.md)
+6. [Animation Editor Transition Mask Plan](./animation-editor-transition-mask-plan.md)
 
 ## Runbooks
 

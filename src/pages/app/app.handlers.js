@@ -166,11 +166,15 @@ const createRouteTransitionRunner = (deps) => {
     );
     const isAlreadyEnsured =
       currentProjectId === projectService.getEnsuredProjectId();
-
     store.setCurrentRoute({ route: canonicalPath });
     store.setRepositoryLoading({
       isLoading: needsRepository && !isAlreadyEnsured,
     });
+    if (needsRepository && !isAlreadyEnsured) {
+      store.setRepositoryLoadingPhase({
+        phase: "Refreshing project entry...",
+      });
+    }
     render();
 
     if (!needsRepository) {
@@ -186,7 +190,56 @@ const createRouteTransitionRunner = (deps) => {
 
     try {
       await appService.refreshCurrentProjectEntry();
-      await projectService.ensureRepository();
+      await projectService.ensureRepository({
+        onLoadStage: ({ label } = {}) => {
+          if (currentTransitionToken !== transitionToken) {
+            return;
+          }
+
+          if (typeof label === "string" && label.length > 0) {
+            store.setRepositoryLoadingPhase({
+              phase: label,
+            });
+            store.setRepositoryLoadingProgress({
+              current: 0,
+              total: 0,
+            });
+            render();
+          }
+        },
+        onEventLoadProgress: ({ current, total, label } = {}) => {
+          if (currentTransitionToken !== transitionToken) {
+            return;
+          }
+
+          if (typeof label === "string" && label.length > 0) {
+            store.setRepositoryLoadingPhase({
+              phase: label,
+            });
+          }
+
+          store.setRepositoryLoadingProgress({
+            current,
+            total,
+          });
+          render();
+        },
+        onHydrationProgress: ({ current, total } = {}) => {
+          if (currentTransitionToken !== transitionToken) {
+            return;
+          }
+
+          store.setRepositoryLoadingPhase({
+            phase: "Building project state...",
+          });
+
+          store.setRepositoryLoadingProgress({
+            current,
+            total,
+          });
+          render();
+        },
+      });
 
       if (currentTransitionToken !== transitionToken) {
         return;

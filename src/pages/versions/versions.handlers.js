@@ -197,7 +197,10 @@ export const handleVersionFormAction = async (deps, payload) => {
     }
 
     const repository = await projectService.getRepository();
-    const allEvents = repository.getEvents();
+    const allEvents =
+      typeof repository.loadEvents === "function"
+        ? await repository.loadEvents()
+        : repository.getEvents();
     const currentActionIndex = allEvents.length;
 
     const newVersion = {
@@ -302,6 +305,9 @@ export const handleDownloadZipClick = async (deps, payload) => {
   try {
     const repository = await projectService.getRepository();
     const projectInfo = await projectService.getCurrentProjectInfo();
+    if (typeof repository.loadEvents === "function") {
+      await repository.loadEvents();
+    }
     const repositoryState = repository.getState(version?.actionIndex);
     const usage = collectUsedResourcesForExport(repositoryState);
     const filteredState = buildFilteredStateForExport(repositoryState, usage);

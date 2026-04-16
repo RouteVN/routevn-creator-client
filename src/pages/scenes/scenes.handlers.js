@@ -150,6 +150,49 @@ const buildSceneWhiteboardItems = ({
   });
 };
 
+const buildScenesStateSnapshot = ({
+  store,
+  projectService,
+  sceneOverviewsById = {},
+} = {}) => {
+  const repositoryState = projectService.getRepositoryState();
+  const domainState = projectService.getDomainState();
+  const sceneData = repositoryState?.scenes ?? { tree: [], items: {} };
+  const layoutsData = repositoryState?.layouts ?? { tree: [], items: {} };
+  const currentWhiteboardItems = store.selectWhiteboardItems() ?? [];
+  const orderedSceneIds = getOrderedSceneIds(domainState).filter(
+    (sceneId) => domainState?.scenes?.[sceneId]?.type !== "folder",
+  );
+  const sceneItems = buildSceneWhiteboardItems({
+    domainState,
+    repositoryState,
+    sceneOverviewsById,
+    currentWhiteboardItems,
+  });
+
+  return {
+    repositoryState,
+    domainState,
+    sceneData,
+    layoutsData,
+    orderedSceneIds,
+    sceneItems,
+  };
+};
+
+const applyScenesStateSnapshot = ({
+  store,
+  sceneData,
+  layoutsData,
+  sceneOverviewsById,
+  sceneItems,
+} = {}) => {
+  store.setItems({ scenesData: sceneData });
+  store.setLayouts({ layoutsData });
+  store.setSceneOverviews({ sceneOverviewsById });
+  store.setWhiteboardItems({ items: sceneItems });
+};
+
 const resolveDetailItemId = (detail = {}) => {
   return detail.itemId || detail.id || detail.item?.id || "";
 };
@@ -301,29 +344,67 @@ const openSceneForm = ({
   sceneForm.setValues({ values: sceneFormValues });
 };
 
-const syncScenesState = async ({ store, projectService } = {}) => {
-  const repositoryState = projectService.getRepositoryState();
-  const domainState = projectService.getDomainState();
-  const sceneData = repositoryState?.scenes ?? { tree: [], items: {} };
-  const layoutsData = repositoryState?.layouts ?? { tree: [], items: {} };
-  const currentWhiteboardItems = store.selectWhiteboardItems() ?? [];
-  const orderedSceneIds = getOrderedSceneIds(domainState).filter(
-    (sceneId) => domainState?.scenes?.[sceneId]?.type !== "folder",
-  );
-  const sceneOverviewsById = await projectService.loadSceneOverviews({
-    sceneIds: orderedSceneIds,
-  });
-  const sceneItems = buildSceneWhiteboardItems({
-    domainState,
-    repositoryState,
-    sceneOverviewsById,
-    currentWhiteboardItems,
+const syncScenesState = ({ store, render, projectService } = {}) => {
+  const baseSnapshot = buildScenesStateSnapshot({
+    store,
+    projectService,
+    sceneOverviewsById: {},
   });
 
-  store.setItems({ scenesData: sceneData });
-  store.setLayouts({ layoutsData });
-  store.setSceneOverviews({ sceneOverviewsById });
-  store.setWhiteboardItems({ items: sceneItems });
+  applyScenesStateSnapshot({
+    store,
+    sceneData: baseSnapshot.sceneData,
+    layoutsData: baseSnapshot.layoutsData,
+    sceneOverviewsById: {},
+    sceneItems: baseSnapshot.sceneItems,
+  });
+
+  const requestId = store.selectSceneOverviewRequestId() + 1;
+  store.setSceneOverviewRequestId({ requestId });
+  render?.();
+
+  return {
+    ...baseSnapshot,
+    requestId,
+  };
+};
+
+const refreshSceneOverviews = async ({
+  store,
+  render,
+  projectService,
+  orderedSceneIds = [],
+  requestId,
+} = {}) => {
+  if (orderedSceneIds.length === 0) {
+    return;
+  }
+
+  try {
+    const sceneOverviewsById = await projectService.loadSceneOverviews({
+      sceneIds: orderedSceneIds,
+    });
+    if (store.selectSceneOverviewRequestId() !== requestId) {
+      return;
+    }
+
+    const resolvedSnapshot = buildScenesStateSnapshot({
+      store,
+      projectService,
+      sceneOverviewsById,
+    });
+
+    applyScenesStateSnapshot({
+      store,
+      sceneData: resolvedSnapshot.sceneData,
+      layoutsData: resolvedSnapshot.layoutsData,
+      sceneOverviewsById,
+      sceneItems: resolvedSnapshot.sceneItems,
+    });
+    render?.();
+  } catch {
+    return;
+  }
 };
 
 const openEditDialogWithValues = ({ deps, sceneId } = {}) => {
@@ -369,8 +450,12 @@ export const handleBeforeMount = (deps) => {
 export const handleAfterMount = async (deps) => {
   const { store, projectService, render, refs, appService } = deps;
   await projectService.ensureRepository();
-  await syncScenesState({ store, projectService });
-  const sceneItems = store.selectWhiteboardItems() ?? [];
+  const initialSnapshot = syncScenesState({
+    store,
+    render,
+    projectService,
+  });
+  const sceneItems = initialSnapshot?.sceneItems ?? [];
 
   const shouldHideMapAddHint =
     appService.getUserConfig("scenesMap.hideAddSceneHint") === true;
@@ -415,6 +500,13 @@ export const handleAfterMount = async (deps) => {
   }
 
   render();
+  void refreshSceneOverviews({
+    store,
+    render,
+    projectService,
+    orderedSceneIds: initialSnapshot?.orderedSceneIds ?? [],
+    requestId: initialSnapshot?.requestId,
+  });
 };
 
 export const handleSetInitialScene = async (sceneId, deps) => {
@@ -424,8 +516,18 @@ export const handleSetInitialScene = async (sceneId, deps) => {
 
 const refreshScenesData = async (deps) => {
   const { store, render, projectService } = deps;
-  await syncScenesState({ store, projectService });
-  render();
+  const snapshot = syncScenesState({
+    store,
+    render,
+    projectService,
+  });
+  void refreshSceneOverviews({
+    store,
+    render,
+    projectService,
+    orderedSceneIds: snapshot?.orderedSceneIds ?? [],
+    requestId: snapshot?.requestId,
+  });
 };
 
 const { handleFileExplorerAction, handleFileExplorerTargetChanged } =

@@ -535,7 +535,6 @@ export const initializeSceneEditorPage = async (deps) => {
     subject,
     syncProjectState,
   } = deps;
-
   const repository = await projectService.ensureRepository();
   const ensuredProjectId =
     typeof projectService.getEnsuredProjectId === "function"

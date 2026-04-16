@@ -18,6 +18,7 @@ import {
 import {
   MAIN_PARTITION,
   MAIN_VIEW_NAME,
+  MAIN_VIEW_VERSION,
   cloneState,
   createMainProjectionState,
   getLatestSceneProjectionRevision,
@@ -107,19 +108,154 @@ export const projectRepositoryMainScenePartitionFor = (sceneId) =>
 export const createProjectRepositoryRuntime = async ({
   projectId,
   store,
-  events: sourceEvents = [],
+  events: sourceEvents,
+  historyLoaded = Array.isArray(sourceEvents),
+  initialRevision,
+  loadEvents,
   createInitialState,
   reduceEventToState,
   assertState = () => {},
+  onHydrationProgress,
 }) => {
-  const events = Array.isArray(sourceEvents)
+  let events = Array.isArray(sourceEvents)
     ? sourceEvents.map((event) => structuredClone(event))
     : [];
+  let hasLoadedEvents = historyLoaded;
+  let historyLoadPromise;
   const listeners = new Set();
   let activeSceneId = null;
   let activeSceneState = null;
   let hasExplicitActiveScene = false;
-  let currentRevision = events.length;
+  let currentRevision = Number.isFinite(Number(initialRevision))
+    ? Math.max(0, Math.floor(Number(initialRevision)))
+    : events.length;
+  let activeHydrationProgress;
+
+  const toProgressValue = (value) => {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) {
+      return 0;
+    }
+
+    return Math.max(0, Math.floor(numericValue));
+  };
+
+  const emitHydrationProgress = ({ current, total }) => {
+    if (typeof onHydrationProgress !== "function") {
+      return;
+    }
+
+    onHydrationProgress({
+      current: toProgressValue(current),
+      total: toProgressValue(total),
+    });
+  };
+
+  const ensureEventHistoryLoaded = async () => {
+    if (hasLoadedEvents) {
+      return events;
+    }
+
+    if (historyLoadPromise) {
+      return historyLoadPromise;
+    }
+
+    if (typeof loadEvents !== "function") {
+      hasLoadedEvents = true;
+      currentRevision = Math.max(currentRevision, events.length);
+      return events;
+    }
+
+    historyLoadPromise = Promise.resolve(loadEvents())
+      .then((loadedEvents) => {
+        events = Array.isArray(loadedEvents)
+          ? loadedEvents.map((event) => structuredClone(event))
+          : [];
+        hasLoadedEvents = true;
+        currentRevision = Math.max(currentRevision, events.length);
+        return events;
+      })
+      .catch((error) => {
+        historyLoadPromise = undefined;
+        throw error;
+      });
+
+    return historyLoadPromise;
+  };
+
+  const beginInitialMainHydrationProgress = async () => {
+    if (typeof onHydrationProgress !== "function") {
+      return undefined;
+    }
+
+    const total = toProgressValue(events.length);
+    const resolvedTotal = Math.max(total, toProgressValue(currentRevision));
+    if (resolvedTotal <= 0) {
+      return undefined;
+    }
+
+    const checkpoint = await store.loadMaterializedViewCheckpoint?.({
+      viewName: MAIN_VIEW_NAME,
+      partition: MAIN_PARTITION,
+    });
+    const current =
+      checkpoint?.viewVersion === MAIN_VIEW_VERSION
+        ? Math.min(resolvedTotal, toProgressValue(checkpoint?.lastCommittedId))
+        : 0;
+
+    if (current >= resolvedTotal) {
+      return undefined;
+    }
+
+    const progress = {
+      total: resolvedTotal,
+      current,
+    };
+
+    activeHydrationProgress = progress;
+    emitHydrationProgress(progress);
+    return progress;
+  };
+
+  const reportHydrationProgressFromBatch = (batch = []) => {
+    if (!activeHydrationProgress) {
+      return;
+    }
+
+    const latestCommittedId = Array.isArray(batch)
+      ? batch.at(-1)?.committedId
+      : 0;
+    const nextCurrent = Math.min(
+      activeHydrationProgress.total,
+      Math.max(
+        activeHydrationProgress.current,
+        toProgressValue(latestCommittedId),
+      ),
+    );
+
+    if (nextCurrent === activeHydrationProgress.current) {
+      return;
+    }
+
+    activeHydrationProgress.current = nextCurrent;
+    emitHydrationProgress(activeHydrationProgress);
+  };
+
+  const endInitialMainHydrationProgress = ({
+    progress,
+    completed = false,
+  } = {}) => {
+    if (!progress || activeHydrationProgress !== progress) {
+      return;
+    }
+
+    if (completed && progress.current < progress.total) {
+      progress.current = progress.total;
+      emitHydrationProgress(progress);
+    }
+
+    activeHydrationProgress = undefined;
+  };
 
   const materializedViewRuntime = createMaterializedViewRuntime({
     materializedViews: [
@@ -128,8 +264,10 @@ export const createProjectRepositoryRuntime = async ({
         reduceEventToState,
       }),
     ],
-    getLatestCommittedId: async () => events.length,
+    getLatestCommittedId: async () =>
+      hasLoadedEvents ? events.length : currentRevision,
     listCommittedAfter: async ({ sinceCommittedId, limit }) => {
+      await ensureEventHistoryLoaded();
       const startIndex = Math.max(
         0,
         Number.isFinite(Number(sinceCommittedId))
@@ -138,8 +276,7 @@ export const createProjectRepositoryRuntime = async ({
       );
       const safeLimit =
         Number.isInteger(limit) && limit > 0 ? limit : events.length;
-
-      return events
+      const batch = events
         .slice(startIndex, startIndex + safeLimit)
         .map((event, index) =>
           toCommittedProjectEvent({
@@ -148,6 +285,9 @@ export const createProjectRepositoryRuntime = async ({
             projectId,
           }),
         );
+
+      reportHydrationProgressFromBatch(batch);
+      return batch;
     },
     loadCheckpoint: async ({ viewName, partition }) =>
       store.loadMaterializedViewCheckpoint?.({
@@ -163,13 +303,25 @@ export const createProjectRepositoryRuntime = async ({
       }),
   });
 
-  let currentMainState = cloneState(
-    await materializedViewRuntime.loadMaterializedView({
-      viewName: MAIN_VIEW_NAME,
-      partition: MAIN_PARTITION,
-    }),
-    createMainProjectionState(createInitialState()),
-  );
+  const initialMainHydrationProgress =
+    await beginInitialMainHydrationProgress();
+  let currentMainState;
+
+  try {
+    currentMainState = cloneState(
+      await materializedViewRuntime.loadMaterializedView({
+        viewName: MAIN_VIEW_NAME,
+        partition: MAIN_PARTITION,
+      }),
+      createMainProjectionState(createInitialState()),
+    );
+  } finally {
+    endInitialMainHydrationProgress({
+      progress: initialMainHydrationProgress,
+      completed: currentMainState !== undefined,
+    });
+  }
+
   assertState(currentMainState);
 
   const refreshMainState = async () => {
@@ -187,7 +339,7 @@ export const createProjectRepositoryRuntime = async ({
     loadSceneProjectionState({
       store,
       mainState: currentMainState,
-      events,
+      events: await ensureEventHistoryLoaded(),
       createInitialState,
       reduceEventToState,
       sceneId,
@@ -421,6 +573,12 @@ export const createProjectRepositoryRuntime = async ({
         return structuredClone(getCurrentComposedState());
       }
 
+      if (!hasLoadedEvents) {
+        throw new Error(
+          "Historical repository snapshots require loaded event history",
+        );
+      }
+
       // Historical snapshots are replayed into a fresh state tree, so returning
       // that replay result directly avoids one more full clone during export.
       return replayEventsToRepositoryState({
@@ -446,6 +604,12 @@ export const createProjectRepositoryRuntime = async ({
 
     getEvents() {
       return events.map((event) => structuredClone(event));
+    },
+
+    async loadEvents() {
+      return (await ensureEventHistoryLoaded()).map((event) =>
+        structuredClone(event),
+      );
     },
 
     subscribe(listener, { emitCurrent = true } = {}) {

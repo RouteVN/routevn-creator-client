@@ -77,14 +77,14 @@ export const createControlCommandApi = (shared) => ({
 
   async updateControlItem({ controlId, data, fileRecords = [] }) {
     const context = await shared.ensureCommandContext();
-    const fileCommands = shared.buildMissingFileCommands({
-      context,
-      fileRecords,
-    });
     const resourcePartition = shared.resourceTypePartitionFor(
       context.projectId,
       "controls",
     );
+    const fileCommands = shared.buildMissingFileCommands({
+      context,
+      fileRecords,
+    });
 
     return shared.submitCommandsWithContext({
       context,

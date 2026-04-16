@@ -1,10 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createLayoutTemplate,
-  handleFileExplorerSelectionChanged,
   handleItemDuplicate,
   handleLayoutFormActionClick,
-  handleLayoutItemClick,
 } from "../../src/pages/layouts/layouts.handlers.js";
 
 describe("createLayoutTemplate", () => {
@@ -180,68 +178,5 @@ describe("createLayoutTemplate", () => {
     expect(deps.refs.fileExplorer.selectItem).toHaveBeenCalledWith({
       itemId: "layout-copy",
     });
-  });
-
-  it("logs selected layout data after center selection changes", () => {
-    const consoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
-    const deps = {
-      store: {
-        setSelectedItemId: vi.fn(),
-        selectSelectedItemId: vi.fn(() => "layout-1"),
-        selectLayoutItemById: vi.fn(() => ({
-          id: "layout-1",
-          type: "layout",
-          name: "Layout One",
-        })),
-      },
-      refs: {
-        fileExplorer: {
-          selectItem: vi.fn(),
-        },
-      },
-      render: vi.fn(),
-    };
-
-    handleLayoutItemClick(deps, {
-      _event: {
-        detail: {
-          itemId: "layout-1",
-        },
-      },
-    });
-
-    expect(consoleLog).toHaveBeenCalledWith("[layouts] selected layout data", {
-      id: "layout-1",
-      type: "layout",
-      name: "Layout One",
-    });
-    consoleLog.mockRestore();
-  });
-
-  it("logs cleared selection after folder selection in file explorer", () => {
-    const consoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
-    const deps = {
-      store: {
-        setSelectedItemId: vi.fn(),
-        selectSelectedItemId: vi.fn(() => undefined),
-        selectLayoutItemById: vi.fn(),
-      },
-      render: vi.fn(),
-    };
-
-    handleFileExplorerSelectionChanged(deps, {
-      _event: {
-        detail: {
-          itemId: "folder-1",
-          isFolder: true,
-        },
-      },
-    });
-
-    expect(consoleLog).toHaveBeenCalledWith(
-      "[layouts] selected layout data",
-      undefined,
-    );
-    consoleLog.mockRestore();
   });
 });

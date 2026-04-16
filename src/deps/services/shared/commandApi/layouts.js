@@ -151,11 +151,11 @@ export const createLayoutCommandApi = (shared) => ({
 
   async updateLayoutItem({ layoutId, data, fileRecords = [] }) {
     const context = await shared.ensureCommandContext();
+    const resourcePartition = getLayoutsResourcePartition({ shared, context });
     const fileCommands = shared.buildMissingFileCommands({
       context,
       fileRecords,
     });
-    const resourcePartition = getLayoutsResourcePartition({ shared, context });
 
     return shared.submitCommandsWithContext({
       context,
