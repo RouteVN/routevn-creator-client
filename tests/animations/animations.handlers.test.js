@@ -5,32 +5,10 @@ import {
 } from "../../src/pages/animations/animations.handlers.js";
 
 describe("animations.handlers", () => {
-  it("logs full animation data when selecting an animation from the catalog", () => {
-    const animationItem = {
-      id: "animation-1",
-      type: "animation",
-      name: "Fade In",
-      animation: {
-        type: "update",
-        tween: {
-          alpha: {
-            keyframes: [
-              {
-                duration: 300,
-                value: 1,
-                easing: "linear",
-                relative: false,
-              },
-            ],
-          },
-        },
-      },
-    };
-    const consoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
+  it("selects an animation from the catalog without logging", () => {
     const deps = {
       store: {
         setSelectedItemId: vi.fn(),
-        selectAnimationItemById: vi.fn(() => animationItem),
       },
       refs: {
         fileExplorer: {
@@ -54,28 +32,12 @@ describe("animations.handlers", () => {
     expect(deps.refs.fileExplorer.selectItem).toHaveBeenCalledWith({
       itemId: "animation-1",
     });
-    expect(consoleLog).toHaveBeenCalledWith(
-      "Selected animation data",
-      animationItem,
-    );
-
-    consoleLog.mockRestore();
   });
 
-  it("logs full animation data when selecting an animation from the file explorer", () => {
-    const animationItem = {
-      id: "animation-1",
-      type: "animation",
-      name: "Slide",
-      animation: {
-        type: "transition",
-      },
-    };
-    const consoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
+  it("selects an animation from the file explorer without logging", () => {
     const deps = {
       store: {
         setSelectedItemId: vi.fn(),
-        selectAnimationItemById: vi.fn(() => animationItem),
       },
       render: vi.fn(),
     };
@@ -92,11 +54,5 @@ describe("animations.handlers", () => {
     expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
       itemId: "animation-1",
     });
-    expect(consoleLog).toHaveBeenCalledWith(
-      "Selected animation data",
-      animationItem,
-    );
-
-    consoleLog.mockRestore();
   });
 });
