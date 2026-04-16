@@ -9,24 +9,26 @@ export const toLayoutEditorContextMenuItems = (
   items = [],
   projectResolution = DEFAULT_PROJECT_RESOLUTION,
 ) => {
-  return items.map((item) => {
-    if (!item?.createType) {
-      return item;
-    }
+  return compactContextMenuItems(
+    items.map((item) => {
+      if (!item?.createType) {
+        return item;
+      }
 
-    const { createType, ...nextItem } = item;
-    const createDefinition = getLayoutEditorCreateDefinition(createType, {
-      projectResolution,
-    });
+      const { createType, ...nextItem } = item;
+      const createDefinition = getLayoutEditorCreateDefinition(createType, {
+        projectResolution,
+      });
 
-    return {
-      ...nextItem,
-      value: {
-        action: "new-child-item",
-        ...createDefinition.template,
-      },
-    };
-  });
+      return {
+        ...nextItem,
+        value: {
+          action: "new-child-item",
+          ...createDefinition.template,
+        },
+      };
+    }),
+  );
 };
 
 const isCreateChildMenuItem = (item = {}) => {
@@ -40,8 +42,61 @@ const isCreateChildMenuItem = (item = {}) => {
   );
 };
 
+const hasItemsBeforeNextLabel = (items = [], startIndex = 0) => {
+  for (let index = startIndex; index < items.length; index += 1) {
+    const item = items[index];
+    if (item?.type === "label") {
+      return false;
+    }
+
+    if (item?.type === "item") {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+const compactContextMenuItems = (items = []) => {
+  const nextItems = [];
+
+  for (let index = 0; index < items.length; index += 1) {
+    const item = items[index];
+    if (!item) {
+      continue;
+    }
+
+    if (
+      item.type === "label" &&
+      !hasItemsBeforeNextLabel(items, index + 1)
+    ) {
+      continue;
+    }
+
+    if (item.type === "separator") {
+      if (nextItems.length === 0) {
+        continue;
+      }
+
+      if (nextItems[nextItems.length - 1]?.type === "separator") {
+        continue;
+      }
+    }
+
+    nextItems.push(item);
+  }
+
+  while (nextItems[nextItems.length - 1]?.type === "separator") {
+    nextItems.pop();
+  }
+
+  return nextItems;
+};
+
 const toLeafItemContextMenuItems = (items = []) => {
-  return (items ?? []).filter((item) => !isCreateChildMenuItem(item));
+  return compactContextMenuItems(
+    (items ?? []).filter((item) => !isCreateChildMenuItem(item)),
+  );
 };
 
 export const toLayoutEditorExplorerItems = (

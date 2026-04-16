@@ -41,13 +41,11 @@ layoutSections:
             svg: x
             name: x
             value: "${values.x}"
-            metaValue: "${xPercentageLabel}"
             popoverForm: *numberPopoverForm
           - type: clickable-value
             svg: y
             name: y
             value: "${values.y}"
-            metaValue: "${yPercentageLabel}"
             popoverForm: *numberPopoverForm
   - "$when": "showLayoutSizeSection"
     label: Layout
@@ -80,14 +78,12 @@ layoutSections:
             svg: w
             name: width
             value: "${values.width}"
-            metaValue: "${widthPercentageLabel}"
             popoverForm: *numberPopoverForm
           - "$when": "showHeightField"
             type: clickable-value
             svg: h
             name: height
             value: "${values.height}"
-            metaValue: "${heightPercentageLabel}"
             popoverForm: *numberPopoverForm
       - "$when": "showAspectRatioMode"
         type: segmented-control
@@ -159,6 +155,7 @@ layoutSections:
         value: "${values.direction}"
         options:
           - label: Absolute
+            value: absolute
           - label: Horizontal
             value: horizontal
           - label: Vertical

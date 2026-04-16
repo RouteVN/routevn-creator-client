@@ -238,7 +238,7 @@ export const createConditionalOverrideConditionForm = ({
       {
         $when: "target",
         name: "op",
-        type: "select",
+        type: "segmented-control",
         label: "Operation",
         required: true,
         clearable: false,
@@ -247,7 +247,7 @@ export const createConditionalOverrideConditionForm = ({
       {
         $when: "target && selectedVariableType == 'boolean'",
         name: "booleanValue",
-        type: "select",
+        type: "segmented-control",
         label: "Value",
         required: true,
         clearable: false,
@@ -417,7 +417,7 @@ export const createConditionalOverrideAttributeForm = ({
       {
         $when: "fieldName == 'textStyle.align'",
         name: "align",
-        type: "select",
+        type: "segmented-control",
         label: "Alignment",
         required: true,
         clearable: false,
@@ -426,7 +426,7 @@ export const createConditionalOverrideAttributeForm = ({
       {
         $when: "fieldName == 'visible'",
         name: "visible",
-        type: "select",
+        type: "segmented-control",
         label: "Visibility",
         required: true,
         clearable: false,

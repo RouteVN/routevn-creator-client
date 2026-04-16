@@ -2,6 +2,7 @@ import { toFlatGroups } from "../../../internal/project/tree.js";
 import { getInteractionActions } from "../../../internal/project/interactionPayload.js";
 import { RUNTIME_ACTION_LABELS } from "../../../internal/runtimeActions.js";
 import { parseRuntimeTemplateValue } from "../../../internal/runtimeFields.js";
+import { getLayoutEditorElementDefinition } from "../../../internal/layoutEditorElementRegistry.js";
 import { normalizeConditionalOverrideRules } from "./layoutEditPanelFeatures.js";
 
 const ACTION_INTERACTION_LABELS = {
@@ -9,6 +10,23 @@ const ACTION_INTERACTION_LABELS = {
   rightClick: "Right Click",
   change: "Change",
 };
+const SETTINGS_ACTION_MODES = new Set([
+  "nextLine",
+  "resetStoryAtSection",
+  "rollbackByOffset",
+  "toggleSkipMode",
+  "toggleDialogueUI",
+  "showConfirmDialog",
+  "hideConfirmDialog",
+  "saveSlot",
+  "loadSlot",
+  "setDialogueTextSpeed",
+  "setSaveLoadPagination",
+  "incrementSaveLoadPagination",
+  "decrementSaveLoadPagination",
+  "setMenuPage",
+  "setMenuEntryPoint",
+]);
 
 const ACTION_LABELS = {
   nextLine: "Next Line",
@@ -16,7 +34,7 @@ const ACTION_LABELS = {
   resetStoryAtSection: "Reset Story At Section",
   toggleAutoMode: "Toggle Auto Mode",
   toggleSkipMode: "Toggle Skip Mode",
-  toggleDialogueUI: "Toggle Dialogue Box",
+  toggleDialogueUI: "Toggle Dialogue Box Visibility",
   pushLayeredView: "Push Layered View",
   popLayeredView: "Pop Layered View",
   rollbackByOffset: "Rollback",
@@ -48,7 +66,7 @@ const toLayoutActionItems = (values, hiddenActionModes) => {
         id: key,
         interactionType,
         label: `${ACTION_INTERACTION_LABELS[interactionType]}: ${ACTION_LABELS[key] ?? key}`,
-        svg: `action-${key}`,
+        svg: SETTINGS_ACTION_MODES.has(key) ? "settings" : `action-${key}`,
       })),
   );
 };
@@ -105,6 +123,8 @@ export const toInspectorValues = ({
   firstTextStyleId,
   hiddenActionModes,
 }) => {
+  const capabilities =
+    getLayoutEditorElementDefinition(values?.type)?.capabilities ?? {};
   const rawInitialValue = values?.initialValue;
   const parsedInitialValue = Number(rawInitialValue);
   const sliderRuntimeValueId =
@@ -126,6 +146,12 @@ export const toInspectorValues = ({
     values?.type === "text-revealing-ref-dialogue-content"
       ? (values?.revealEffect ?? "typewriter")
       : values?.revealEffect;
+  const direction =
+    capabilities.supportsDirection === true &&
+    values?.direction !== "horizontal" &&
+    values?.direction !== "vertical"
+      ? "absolute"
+      : values?.direction;
 
   return {
     ...values,
@@ -137,7 +163,7 @@ export const toInspectorValues = ({
     paginationMode: values?.paginationMode ?? "continuous",
     paginationSize: values?.paginationSize ?? 3,
     scroll: values?.scroll ?? false,
-    direction: values?.direction,
+    direction,
     gapX: values?.gapX ?? 0,
     gapY: values?.gapY ?? 0,
     sliderRuntimeValueId,

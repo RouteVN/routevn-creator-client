@@ -6,7 +6,7 @@ export const createInitialState = () => ({
       {
         name: "placeholder",
         type: "read-only-text",
-        label: "Toggle Dialogue Box Action",
+        label: "Toggle Dialogue Box Visibility Action",
         description: "This action will show or hide the dialogue box",
         required: false,
       },
@@ -26,7 +26,7 @@ export const selectViewData = ({ state }) => {
       click: true,
     },
     {
-      label: "Toggle Dialogue Box",
+      label: "Toggle Dialogue Box Visibility",
     },
   ];
 

@@ -15,6 +15,19 @@ const SUPPORTED_VISIBILITY_VARIABLE_TYPES = new Set([
   "number",
   "string",
 ]);
+const HIDDEN_VISIBILITY_TARGETS = new Set([
+  "runtime.autoForwardDelay",
+  "runtime.dialogueTextSpeed",
+  "runtime.musicVolume",
+  "runtime.muteAll",
+  "runtime.skipTransitionsAndAnimations",
+  "runtime.skipUnseenText",
+  "runtime.soundVolume",
+]);
+
+const isVisibleVisibilityTarget = (target) => {
+  return typeof target === "string" && !HIDDEN_VISIBILITY_TARGETS.has(target);
+};
 
 export const getScalarConditionTargetItems = (
   variablesData = {},
@@ -46,9 +59,11 @@ export const toVisibilityConditionTargetOptions = (
   options = {},
 ) => {
   return Object.entries(getScalarConditionTargetItems(variablesData, options))
+    .filter(([target]) => isVisibleVisibilityTarget(target))
     .map(([target, variable]) => ({
-      label: `${variable.name} (${String(variable.type || "string").toLowerCase()})`,
+      label: variable.name,
       value: target,
+      suffixText: String(variable.type || "string").toLowerCase(),
     }))
     .sort((left, right) => left.label.localeCompare(right.label));
 };

@@ -79,7 +79,7 @@ template:
                       - rtgl-text s=sm: ${preview.sectionTransition.label}
               - $if preview.resetStoryAtSection:
                   - rtgl-view#actionItemResetStoryAtSection data-mode=resetStoryAtSection g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
-                      - rtgl-svg svg="section" wh=24: null
+                      - rtgl-svg svg="settings" wh=24: null
                       - rtgl-text s=sm: ${preview.resetStoryAtSection.label}
               - $if preview.dialogue:
                   - rtgl-view#actionItemDialogue data-mode=dialogue g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
@@ -97,7 +97,7 @@ template:
                                       - rtgl-text s=sm: ${choice.content}
               - $if preview.nextLine:
                   - rtgl-view#actionItemNextLine data-mode=nextLine g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
-                      - rtgl-svg svg="next-line" wh=24: null
+                      - rtgl-svg svg="settings" wh=24: null
                       - rtgl-text s=sm: Next Line
               - $if preview.toggleAutoMode:
                   - rtgl-view#actionItemToggleAutoMode data-mode=toggleAutoMode g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
@@ -105,12 +105,12 @@ template:
                       - rtgl-text s=sm: Toggle Auto Mode
               - $if preview.toggleSkipMode:
                   - rtgl-view#actionItemToggleSkipMode data-mode=toggleSkipMode g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
-                      - rtgl-svg svg="next-line" wh=24: null
+                      - rtgl-svg svg="settings" wh=24: null
                       - rtgl-text s=sm: Toggle Skip Mode
               - $if preview.toggleDialogueUI:
                   - rtgl-view#actionItemToggleDialogueUI data-mode=toggleDialogueUI g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
-                      - rtgl-svg svg="dialogue" wh=24: null
-                      - rtgl-text s=sm: Toggle Dialogue Box
+                      - rtgl-svg svg="settings" wh=24: null
+                      - rtgl-text s=sm: Toggle Dialogue Box Visibility
               - $if preview.runtimeActions:
                   - $for runtimeAction, i in preview.runtimeActions:
                       - rtgl-view#actionItemRuntime${i} data-mode=${runtimeAction.mode} g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
@@ -126,25 +126,25 @@ template:
                       - rtgl-text s=sm: Pop current layered view
               - $if preview.rollbackByOffset:
                   - rtgl-view#actionItemRollbackByOffset data-mode=rollbackByOffset g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
-                      - rtgl-svg svg="next-line" wh=24: null
+                      - rtgl-svg svg="settings" wh=24: null
                       - rtgl-text s=sm: ${preview.rollbackByOffset.summary}
               - $if preview.showConfirmDialog:
                   - rtgl-view#actionItemShowConfirmDialog data-mode=showConfirmDialog g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer pv=md:
-                      - rtgl-svg svg="dialogue" wh=24: null
+                      - rtgl-svg svg="settings" wh=24: null
                       - rtgl-view d=v:
                           - rtgl-text s=sm: 'Show confirm dialog: ${preview.showConfirmDialog.layoutName}'
                           - rtgl-text s=xs c=mu-fg: 'Confirm: ${preview.showConfirmDialog.confirmActionCount} action(s), Cancel: ${preview.showConfirmDialog.cancelActionCount} action(s)'
               - $if preview.hideConfirmDialog:
                   - rtgl-view#actionItemHideConfirmDialog data-mode=hideConfirmDialog g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
-                      - rtgl-svg svg="dialogue" wh=24: null
+                      - rtgl-svg svg="settings" wh=24: null
                       - rtgl-text s=sm: Hide confirm dialog
               - $if preview.saveSlot:
                   - rtgl-view#actionItemSaveSlot data-mode=saveSlot g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
-                      - rtgl-svg svg="dialogue" wh=24: null
+                      - rtgl-svg svg="settings" wh=24: null
                       - rtgl-text s=sm: 'Save slot ${preview.saveSlot.label}'
               - $if preview.loadSlot:
                   - rtgl-view#actionItemLoadSlot data-mode=loadSlot g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
-                      - rtgl-svg svg="dialogue" wh=24: null
+                      - rtgl-svg svg="settings" wh=24: null
                       - rtgl-text s=sm: 'Load slot ${preview.loadSlot.label}'
               - $if preview.setNextLineConfig:
                   - rtgl-view#actionItemSetNextLineConfig data-mode=setNextLineConfig g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:

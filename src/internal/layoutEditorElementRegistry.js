@@ -40,11 +40,14 @@ const supportsLayoutEditorWidthMode = (itemType) => {
   return typeof itemType === "string" && itemType.startsWith("text");
 };
 
+const ABSOLUTE_DIRECTION = "absolute";
+
 const CREATE_TEMPLATES = {
   container: () => ({
     type: "container",
     name: "Container",
     ...BASE_TRANSFORM,
+    direction: ABSOLUTE_DIRECTION,
     gapX: 0,
     gapY: 0,
   }),
@@ -149,6 +152,7 @@ const CREATE_TEMPLATES = {
         type: "container-ref-dialogue-line",
         name: "Container (Dialogue Line)",
         ...BASE_TRANSFORM,
+        direction: ABSOLUTE_DIRECTION,
         width: 1640,
         height: 120,
       },
@@ -239,11 +243,13 @@ const CREATE_TEMPLATES = {
     type: "container-ref-choice-item",
     name: "Container (Choice Item)",
     ...BASE_TRANSFORM,
+    direction: ABSOLUTE_DIRECTION,
   }),
   "container-save-load-slot": () => ({
     type: "container-ref-save-load-slot",
     name: "Container (Save/Load Slot)",
     ...BASE_TRANSFORM,
+    direction: ABSOLUTE_DIRECTION,
     paginationMode: "continuous",
     paginationSize: 3,
   }),
@@ -251,6 +257,7 @@ const CREATE_TEMPLATES = {
     type: "container-ref-confirm-dialog-ok",
     name: "Container (Confirm OK)",
     ...BASE_TRANSFORM,
+    direction: ABSOLUTE_DIRECTION,
     width: 160,
     height: 64,
   }),
@@ -258,6 +265,7 @@ const CREATE_TEMPLATES = {
     type: "container-ref-confirm-dialog-cancel",
     name: "Container (Confirm Cancel)",
     ...BASE_TRANSFORM,
+    direction: ABSOLUTE_DIRECTION,
     width: 160,
     height: 64,
   }),

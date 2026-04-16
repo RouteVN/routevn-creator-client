@@ -98,19 +98,23 @@ template:
                       - rtgl-view d=v w=f h=f:
                           - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
                               - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
-                              - rtgl-button#detailPreviewButton s=sm v=se: Preview
                               - rtgl-svg svg=edit wh=16: null
-                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
-                              - rtgl-view slot="sections-list" d=v w=f g=sm:
-                                  - rtgl-view h=1 w=f bgc=mu mv=lg: null
-                                  - rtgl-view w=f g=md ph=md:
-                                      - rtgl-view#sectionsListToggle d=h w=f av=c cur=pointer:
-                                          - rtgl-text s=sm: Sections
-                                          - rtgl-view w=1fg: null
-                                          - $if sectionsListOpen:
-                                              - rtgl-svg svg=folderArrowDown wh=16 c=mu-fg: null
-                                            $else:
-                                              - rtgl-svg svg=folderArrowRight wh=16 c=mu-fg: null
+                          - 'rtgl-view d=v w=f h=1fg sv style="min-height: 0;"':
+                              - rtgl-view d=h w=f av=c ph=md pt=md:
+                                  - rtgl-view w=1fg: null
+                                  - rtgl-button#detailPreviewButton s=sm v=se: Preview
+                              - $if selectedItemDescription:
+                                  - rtgl-view w=f ph=md pt=md:
+                                      - rtgl-text c=mu-fg: ${selectedItemDescription}
+                              - rtgl-view h=1 w=f bgc=mu mv=md: null
+                              - rtgl-view d=v w=f g=md ph=md pb=md:
+                                  - rtgl-view#sectionsListToggle d=h w=f av=c cur=pointer:
+                                      - rtgl-text s=sm: Sections
+                                      - rtgl-view w=1fg: null
+                                      - $if sectionsListOpen:
+                                          - rtgl-svg svg=folderArrowDown wh=16 c=mu-fg: null
+                                        $else:
+                                          - rtgl-svg svg=folderArrowRight wh=16 c=mu-fg: null
                                   - $if sectionsListOpen:
                                       - $if selectedSceneSections.length == 0:
                                           - rtgl-view d=h av=c ph=md bw=xs bc=mu bgc=bg br=sm h=36 w=f:

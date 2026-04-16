@@ -60,7 +60,9 @@ template:
               - $if selectedItemId:
                   - rtgl-view d=v w=f h=f:
                       - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
-                          - rtgl-text w=1fg ellipsis=true: ${item.name} (${item.type})
+                          - rtgl-view d=h av=c w=1fg g=xs:
+                              - rtgl-text w=1fg ellipsis=true: ${item.name}
+                              - rtgl-text s=xs c=mu-fg: ${item.type}
                       - rtgl-view w=f h=1fg sv pv=md:
                           - rvn-layout-edit-panel#layoutEditPanel key=${layoutEditPanelKey} layout-type=${layout.layoutType} resource-type=${layout.resourceType} item-type=${item.type} :projectResolution=${projectResolution} :isInsideSaveLoadSlot=${isInsideSaveLoadSlot} :isInsideDirectedContainer=${isInsideDirectedContainer} :selectedElementMetrics=${selectedElementMetrics} :values=${item} :imagesData=${imagesData} :spritesheetsData=${spritesheetsData} :particlesData=${particlesData} :textStylesData=${textStylesData} :variablesData=${variablesData} :layoutsData=${layoutsData}: null
                 $else:

@@ -1275,7 +1275,7 @@
       "HbESBAK58wzdbCozqzZvh": {
         "id": "HbESBAK58wzdbCozqzZvh",
         "type": "layout",
-        "name": "Default Dialogue",
+        "name": "Default ADV",
         "thumbnailFileId": "tST4AJhFY02zNCKHlHt7P",
         "layoutType": "dialogue-adv",
         "elements": {
@@ -2714,7 +2714,7 @@
       "AzFHHjIaQivCexxbNZoNy": {
         "id": "AzFHHjIaQivCexxbNZoNy",
         "type": "layout",
-        "name": "Confirm",
+        "name": "Confirm go to title",
         "description": "",
         "layoutType": "confirmDialog",
         "isFragment": false,

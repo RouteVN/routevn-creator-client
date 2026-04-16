@@ -64,6 +64,22 @@ describe("layoutEditorMutations", () => {
     expect(updatedItem.direction).toBeUndefined();
   });
 
+  it("keeps absolute container direction in saved data", () => {
+    const item = {
+      id: "container-1",
+      type: "container",
+      direction: "horizontal",
+    };
+
+    const updatedItem = applyLayoutItemFieldChange({
+      item,
+      name: "direction",
+      value: "absolute",
+    });
+
+    expect(updatedItem.direction).toBe("absolute");
+  });
+
   it("normalizes opacity to the allowed 0..1 range", () => {
     const item = {
       id: "rect-1",

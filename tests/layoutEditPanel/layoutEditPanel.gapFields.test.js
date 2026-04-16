@@ -2,6 +2,18 @@ import { describe, expect, it } from "vitest";
 import { toInspectorValues } from "../../src/components/layoutEditPanel/support/layoutEditPanelViewData.js";
 
 describe("layoutEditPanel spacing axes", () => {
+  it("shows absolute as the default direction for containers", () => {
+    const values = toInspectorValues({
+      values: {
+        type: "container",
+      },
+      firstTextStyleId: "",
+      hiddenActionModes: new Set(),
+    });
+
+    expect(values.direction).toBe("absolute");
+  });
+
   it("defaults both spacing axes to zero in inspector values", () => {
     const values = toInspectorValues({
       values: {
