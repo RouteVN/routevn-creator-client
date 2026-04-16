@@ -935,6 +935,11 @@
         "type": "folder",
         "name": "Transitions"
       },
+      "cB4d0iQ31SxN": {
+        "id": "cB4d0iQ31SxN",
+        "type": "folder",
+        "name": "Updates"
+      },
       "-qYuYOXAq_wt9Pfp_2kIt": {
         "id": "-qYuYOXAq_wt9Pfp_2kIt",
         "type": "animation",
@@ -973,6 +978,29 @@
             }
           }
         }
+      },
+      "z8EhCjJBErGf": {
+        "id": "z8EhCjJBErGf",
+        "type": "animation",
+        "name": "Position auto 0.3s",
+        "description": "",
+        "animation": {
+          "type": "update",
+          "tween": {
+            "x": {
+              "auto": {
+                "duration": 300,
+                "easing": "linear"
+              }
+            },
+            "y": {
+              "auto": {
+                "duration": 300,
+                "easing": "linear"
+              }
+            }
+          }
+        }
       }
     },
     "tree": [
@@ -981,6 +1009,14 @@
         "children": [
           {
             "id": "-qYuYOXAq_wt9Pfp_2kIt"
+          }
+        ]
+      },
+      {
+        "id": "cB4d0iQ31SxN",
+        "children": [
+          {
+            "id": "z8EhCjJBErGf"
           }
         ]
       }
