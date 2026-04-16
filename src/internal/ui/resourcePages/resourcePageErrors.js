@@ -22,7 +22,7 @@ export const showResourcePageError = ({
   title = "Error",
 } = {}) => {
   const message = getResourcePageErrorMessage(errorOrResult, fallbackMessage);
-  appService.showToast(message, { title });
+  appService.showAlert({ message: message, title });
   return message;
 };
 

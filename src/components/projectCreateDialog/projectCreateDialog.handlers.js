@@ -79,7 +79,7 @@ export const handleBrowseButtonClick = async (deps) => {
     });
     render();
   } catch {
-    appService.showToast("Failed to select project location.");
+    appService.showAlert({ message: "Failed to select project location." });
   }
 };
 
@@ -121,7 +121,7 @@ export const handleProjectIconClick = async (deps) => {
       validations: ICON_VALIDATIONS,
     });
   } catch {
-    appService.showToast("Failed to select project icon.");
+    appService.showAlert({ message: "Failed to select project icon." });
     return;
   }
 
@@ -161,7 +161,7 @@ export const handleIconCropDialogConfirm = async (deps) => {
     store.closeIconCropDialog();
     render();
   } catch {
-    appService.showToast("Failed to crop project icon.");
+    appService.showAlert({ message: "Failed to crop project icon." });
   }
 };
 

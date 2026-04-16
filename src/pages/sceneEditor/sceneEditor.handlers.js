@@ -184,9 +184,7 @@ const assertSceneEditorCommandResult = (
   }
 
   const message = result?.error?.message || fallbackMessage;
-  appService?.showToast(message, {
-    title: "Error",
-  });
+  appService?.showAlert({ message: message, title: "Error" });
 
   const error = new Error(message);
   error.code = result?.error?.code || "validation_failed";
@@ -324,7 +322,8 @@ const flushSceneEditorDrafts = async (deps) => {
           revision: store.selectRepositoryRevision(),
           dirtyLineIds: dirtyLines.map(({ lineId }) => lineId),
         });
-        deps.appService?.showToast("Failed to save scene changes", {
+        deps.appService?.showAlert({
+          message: "Failed to save scene changes",
           title: "Error",
         });
         throw error;
@@ -439,7 +438,8 @@ export const handleAfterMount = async (deps) => {
       throw error;
     }
 
-    deps.appService?.showToast(MISSING_PROJECT_RESOLUTION_MESSAGE, {
+    deps.appService?.showAlert({
+      message: MISSING_PROJECT_RESOLUTION_MESSAGE,
       title: "Error",
     });
     deps.appService?.navigate("/projects");
@@ -524,7 +524,8 @@ export const handleCommandLineSubmit = async (deps, payload) => {
         "command line submit detail (sectionTransition)",
       );
     } catch {
-      appService?.showToast("Invalid action payload (non-serializable data)", {
+      appService?.showAlert({
+        message: "Invalid action payload (non-serializable data)",
         title: "Error",
       });
       return;
@@ -578,7 +579,8 @@ export const handleCommandLineSubmit = async (deps, payload) => {
         "command line submit detail (pushOverlay)",
       );
     } catch {
-      appService?.showToast("Invalid action payload (non-serializable data)", {
+      appService?.showAlert({
+        message: "Invalid action payload (non-serializable data)",
         title: "Error",
       });
       return;
@@ -626,7 +628,8 @@ export const handleCommandLineSubmit = async (deps, payload) => {
         "command line submit detail (popOverlay)",
       );
     } catch {
-      appService?.showToast("Invalid action payload (non-serializable data)", {
+      appService?.showAlert({
+        message: "Invalid action payload (non-serializable data)",
         title: "Error",
       });
       return;
@@ -686,7 +689,8 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       "command line submit detail (general)",
     );
   } catch {
-    appService?.showToast("Invalid action payload (non-serializable data)", {
+    appService?.showAlert({
+      message: "Invalid action payload (non-serializable data)",
       title: "Error",
     });
     return;

@@ -15,7 +15,10 @@ const INVALID_IMAGE_FORMAT_MESSAGE =
   "Only JPG/JPEG, PNG, and WEBP images are supported.";
 
 const showInvalidFormatToast = (appService) => {
-  appService.showToast(INVALID_IMAGE_FORMAT_MESSAGE, { title: "Warning" });
+  appService.showAlert({
+    message: INVALID_IMAGE_FORMAT_MESSAGE,
+    title: "Warning",
+  });
 };
 
 const validateImageFiles = ({ appService, files } = {}) => {
@@ -285,7 +288,10 @@ const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
     console.error("Failed to upload images: no successful uploads", {
       fileCount: Array.isArray(files) ? files.length : 0,
     });
-    appService.showToast("Failed to upload images.", { title: "Error" });
+    appService.showAlert({
+      message: "Failed to upload images.",
+      title: "Error",
+    });
     return;
   }
 
@@ -381,7 +387,10 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   if (result.errorType === "upload-failed") {
-    appService.showToast("Failed to upload image.", { title: "Error" });
+    appService.showAlert({
+      message: "Failed to upload image.",
+      title: "Error",
+    });
     return;
   }
 
@@ -559,7 +568,10 @@ export const handleEditDialogImageClick = async (deps) => {
   }
 
   if (result.errorType === "upload-failed") {
-    appService.showToast("Failed to upload image.", { title: "Error" });
+    appService.showAlert({
+      message: "Failed to upload image.",
+      title: "Error",
+    });
     return;
   }
 
@@ -580,7 +592,10 @@ export const handleEditFormAction = async (deps, payload) => {
 
   const name = values?.name?.trim();
   if (!name) {
-    appService.showToast("Image name is required.", { title: "Warning" });
+    appService.showAlert({
+      message: "Image name is required.",
+      title: "Warning",
+    });
     return;
   }
 
@@ -635,7 +650,9 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   if (!result.deleted) {
-    appService.showToast("Cannot delete resource, it is currently in use.");
+    appService.showAlert({
+      message: "Cannot delete resource, it is currently in use.",
+    });
     render();
     return;
   }

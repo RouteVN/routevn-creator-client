@@ -45,7 +45,7 @@ describe("textStyles.handlers", () => {
         }),
       },
       appService: {
-        showToast: vi.fn(),
+        showAlert: vi.fn(),
       },
       render: vi.fn(),
     };

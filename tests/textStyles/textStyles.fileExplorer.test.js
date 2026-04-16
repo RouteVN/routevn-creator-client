@@ -7,7 +7,7 @@ describe("createResourceFileExplorerHandlers", () => {
     const duplicateTextStyle = vi.fn(async () => "text-style-copy");
     const deps = {
       appService: {
-        showToast: vi.fn(),
+        showAlert: vi.fn(),
       },
       projectService: {
         ensureRepository: vi.fn(async () => {}),
@@ -47,6 +47,6 @@ describe("createResourceFileExplorerHandlers", () => {
     expect(refresh).toHaveBeenCalledWith(deps, {
       selectedItemId: "text-style-copy",
     });
-    expect(deps.appService.showToast).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
   });
 });

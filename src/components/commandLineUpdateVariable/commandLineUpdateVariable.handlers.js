@@ -184,7 +184,8 @@ export const handleSubmitClick = (deps, payload) => {
     });
 
   if (validOperations.length === 0) {
-    appService.showToast("Please add at least one valid variable operation.", {
+    appService.showAlert({
+      message: "Please add at least one valid variable operation.",
       title: "Warning",
     });
     return;

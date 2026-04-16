@@ -26,13 +26,15 @@ const INVALID_IMPORT_PAIR_MESSAGE =
   "Spritesheet import requires exactly one PNG image and one JSON atlas.";
 
 const showInvalidImportFormatToast = (appService) => {
-  appService.showToast(INVALID_IMPORT_FORMAT_MESSAGE, {
+  appService.showAlert({
+    message: INVALID_IMPORT_FORMAT_MESSAGE,
     title: "Warning",
   });
 };
 
 const showInvalidImportPairToast = (appService) => {
-  appService.showToast(INVALID_IMPORT_PAIR_MESSAGE, {
+  appService.showAlert({
+    message: INVALID_IMPORT_PAIR_MESSAGE,
     title: "Warning",
   });
 };
@@ -637,7 +639,8 @@ export const handleDialogFormAction = async (deps, payload) => {
 
   const name = values?.name?.trim();
   if (!name) {
-    appService.showToast("Spritesheet name is required.", {
+    appService.showAlert({
+      message: "Spritesheet name is required.",
       title: "Warning",
     });
     return;
@@ -653,14 +656,16 @@ export const handleDialogFormAction = async (deps, payload) => {
     : undefined;
 
   if (dialogMode === "create" && !dialogSourceFiles?.pngFile) {
-    appService.showToast("Spritesheet image is required.", {
+    appService.showAlert({
+      message: "Spritesheet image is required.",
       title: "Warning",
     });
     return;
   }
 
   if (dialogMode === "create" && !dialogSourceFiles?.atlasFile) {
-    appService.showToast("Atlas JSON is required.", {
+    appService.showAlert({
+      message: "Atlas JSON is required.",
       title: "Warning",
     });
     return;
@@ -676,7 +681,8 @@ export const handleDialogFormAction = async (deps, payload) => {
   }
 
   if (dialogMode === "create" && !uploadResult) {
-    appService.showToast("Failed to upload spritesheet image.", {
+    appService.showAlert({
+      message: "Failed to upload spritesheet image.",
       title: "Error",
     });
     return;
@@ -721,7 +727,7 @@ export const handleDialogFormAction = async (deps, payload) => {
   }
 
   if (!dialogItemId || !existingItem) {
-    appService.showToast("Spritesheet not found.", { title: "Error" });
+    appService.showAlert({ message: "Spritesheet not found.", title: "Error" });
     return;
   }
 
@@ -784,7 +790,9 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   if (usage.isUsed) {
-    appService.showToast("Cannot delete resource, it is currently in use.");
+    appService.showAlert({
+      message: "Cannot delete resource, it is currently in use.",
+    });
     return;
   }
 

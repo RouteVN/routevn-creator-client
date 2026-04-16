@@ -76,9 +76,9 @@ export const handleAfterMount = async (deps) => {
           store,
           authToken: cloudSession.authToken,
         }).catch(() => {
-          appService.showToast(
-            "Failed to load cloud projects. Please try again later.",
-          );
+          appService.showAlert({
+            message: "Failed to load cloud projects. Please try again later.",
+          });
         })
       : Promise.resolve();
 
@@ -113,6 +113,14 @@ const showCreateProjectDialog = async (appService) => {
   });
 };
 
+const isIncompatibleProjectVersionError = (error) => {
+  return (
+    typeof error?.message === "string" &&
+    (error.message.includes("incompatible project with version") ||
+      error.message.includes("requires reset for schema version"))
+  );
+};
+
 export const handleCreateButtonClick = async (deps) => {
   const { appService, render, store } = deps;
   let dialogResult;
@@ -120,7 +128,7 @@ export const handleCreateButtonClick = async (deps) => {
   try {
     dialogResult = await showCreateProjectDialog(appService);
   } catch {
-    appService.showToast("Failed to open create project dialog.");
+    appService.showAlert({ message: "Failed to open create project dialog." });
     return;
   }
 
@@ -154,7 +162,7 @@ export const handleCreateButtonClick = async (deps) => {
         message = "Project Location is required.";
       }
 
-      appService.showToast(message);
+      appService.showAlert({ message: message });
       return;
     }
 
@@ -167,22 +175,22 @@ export const handleCreateButtonClick = async (deps) => {
     if (!projectResolution) {
       if (resolution === CUSTOM_PROJECT_RESOLUTION_PRESET) {
         if (!resolutionWidth) {
-          appService.showToast("Resolution Width is required.");
+          appService.showAlert({ message: "Resolution Width is required." });
           return;
         }
 
         if (!resolutionHeight) {
-          appService.showToast("Resolution Height is required.");
+          appService.showAlert({ message: "Resolution Height is required." });
           return;
         }
 
-        appService.showToast(
-          "Resolution Width and Height must be positive integers.",
-        );
+        appService.showAlert({
+          message: "Resolution Width and Height must be positive integers.",
+        });
         return;
       }
 
-      appService.showToast("Project Resolution is invalid.");
+      appService.showAlert({ message: "Project Resolution is invalid." });
       return;
     }
 
@@ -198,10 +206,11 @@ export const handleCreateButtonClick = async (deps) => {
     store.addProject({ project: newProject });
     render();
   } catch (error) {
-    appService.showToast(
-      error?.message ||
+    appService.showAlert({
+      message:
+        error?.message ||
         "Failed to create project. Please check the selected folder and try again.",
-    );
+    });
   }
 };
 
@@ -209,7 +218,9 @@ export const handleCloudCreateButtonClick = (deps) => {
   const { appService, store, render } = deps;
   const cloudSession = getAuthenticatedSession(appService);
   if (!cloudSession) {
-    appService.showToast("Please login to create a cloud project.");
+    appService.showAlert({
+      message: "Please login to create a cloud project.",
+    });
     return;
   }
 
@@ -243,14 +254,16 @@ export const handleCloudCreateFormAction = async (deps, payload) => {
 
   const cloudSession = getAuthenticatedSession(appService);
   if (!cloudSession) {
-    appService.showToast("Please login to create a cloud project.");
+    appService.showAlert({
+      message: "Please login to create a cloud project.",
+    });
     return;
   }
 
   const name = detail?.values?.name?.trim?.() || "";
   const description = detail?.values?.description?.trim?.() || "";
   if (!name) {
-    appService.showToast("Project Name is required.");
+    appService.showAlert({ message: "Project Name is required." });
     return;
   }
 
@@ -269,7 +282,9 @@ export const handleCloudCreateFormAction = async (deps, payload) => {
     store.closeCloudCreateDialog();
     render();
   } catch {
-    appService.showToast("Failed to create cloud project. Please try again.");
+    appService.showAlert({
+      message: "Failed to create cloud project. Please try again.",
+    });
   }
 };
 
@@ -293,14 +308,15 @@ export const handleOpenButtonClick = async (deps) => {
     store.addProject({ project: importedProject });
     render();
 
-    appService.showToast(
-      `Project "${importedProject.name}" has been successfully imported.`,
-    );
+    appService.showAlert({
+      message: `Project "${importedProject.name}" has been successfully imported.`,
+    });
   } catch (error) {
-    appService.showToast(
-      error?.message ||
+    appService.showAlert({
+      message:
+        error?.message ||
         "Failed to import project. Please select a valid project folder.",
-    );
+    });
   }
 };
 
@@ -363,7 +379,7 @@ export const handleProfileFormAction = (deps, payload) => {
   const existingUser = appService.getUserConfig("auth.user") || {};
   const email = existingUser?.email?.trim?.() || "";
   if (!email) {
-    appService.showToast("You are not logged in.");
+    appService.showAlert({ message: "You are not logged in." });
     return;
   }
 
@@ -397,7 +413,7 @@ export const handleSettingsFormAction = (deps, payload) => {
 
   const email = detail?.values?.email?.trim?.() || "";
   if (!email) {
-    appService.showToast("Email is required.");
+    appService.showAlert({ message: "Email is required." });
     return;
   }
 
@@ -462,7 +478,18 @@ export const handleProjectsClick = async (deps, payload) => {
   try {
     await projectService.ensureProjectCompatibleById(id);
   } catch (error) {
-    appService.showToast(error?.message || "Failed to open project.");
+    if (isIncompatibleProjectVersionError(error)) {
+      await appService.showAlert({
+        title: "Incompatible Project",
+        message: error.message,
+        status: "error",
+      });
+      return;
+    }
+
+    appService.showAlert({
+      message: error?.message || "Failed to open project.",
+    });
     return;
   }
 
@@ -577,19 +604,19 @@ export const handleAddMemberFormAction = async (deps, payload) => {
 
   const cloudSession = getAuthenticatedSession(appService);
   if (!cloudSession) {
-    appService.showToast("Please login to add a member.");
+    appService.showAlert({ message: "Please login to add a member." });
     return;
   }
 
   const projectId = store.selectAddMemberDialogProjectId();
   if (!projectId) {
-    appService.showToast("Cloud project is missing.");
+    appService.showAlert({ message: "Cloud project is missing." });
     return;
   }
 
   const email = detail?.values?.email?.trim?.() || "";
   if (!email) {
-    appService.showToast("Email is required.");
+    appService.showAlert({ message: "Email is required." });
     return;
   }
 
@@ -606,15 +633,17 @@ export const handleAddMemberFormAction = async (deps, payload) => {
     const cannotAddOwner = Number(result?.summary?.cannotAddOwner || 0);
 
     if (added > 0) {
-      appService.showToast("Member added.");
+      appService.showAlert({ message: "Member added." });
     } else if (alreadyMember > 0) {
-      appService.showToast("User is already a member.");
+      appService.showAlert({ message: "User is already a member." });
     } else if (userNotFound > 0) {
-      appService.showToast("User not found.");
+      appService.showAlert({ message: "User not found." });
     } else if (cannotAddOwner > 0) {
-      appService.showToast("Project owner cannot be added as a member.");
+      appService.showAlert({
+        message: "Project owner cannot be added as a member.",
+      });
     } else {
-      appService.showToast("No member was added.");
+      appService.showAlert({ message: "No member was added." });
     }
 
     await loadCloudProjects({
@@ -626,7 +655,9 @@ export const handleAddMemberFormAction = async (deps, payload) => {
     store.closeAddMemberDialog();
     render();
   } catch {
-    appService.showToast("Failed to add member. Please try again.");
+    appService.showAlert({
+      message: "Failed to add member. Please try again.",
+    });
   }
 };
 
@@ -643,7 +674,9 @@ export const handleDeleteDialogConfirm = async (deps) => {
     await appService.removeProjectEntry(projectId);
     store.removeProject({ projectId });
   } catch {
-    appService.showToast("Failed to remove project. Please try again.");
+    appService.showAlert({
+      message: "Failed to remove project. Please try again.",
+    });
   } finally {
     store.closeDeleteDialog();
     render();

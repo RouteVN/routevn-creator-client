@@ -378,12 +378,12 @@ export const createResourceFileExplorerHandlers = ({
           itemId,
         });
         if (!deleteValidation.canDelete) {
-          appService.showToast(
-            getDeletionBlockedMessage({
+          appService.showAlert({
+            message: getDeletionBlockedMessage({
               itemType: currentItem?.type,
               reason: deleteValidation.reason,
             }),
-          );
+          });
           return;
         }
 
@@ -391,7 +391,7 @@ export const createResourceFileExplorerHandlers = ({
           [resourceApi.deleteField]: [itemId],
         });
         if (deleteResult?.valid === false) {
-          appService.showToast("Failed to delete resource.");
+          appService.showAlert({ message: "Failed to delete resource." });
           return;
         }
       } else if (action === "duplicate-item") {
@@ -409,15 +409,13 @@ export const createResourceFileExplorerHandlers = ({
           [resourceApi.idField]: itemId,
         });
         if (duplicateItemId?.valid === false) {
-          appService.showToast(
-            getResultErrorMessage(
+          appService.showAlert({
+            message: getResultErrorMessage(
               duplicateItemId,
               "Failed to duplicate resource.",
             ),
-            {
-              title: "Error",
-            },
-          );
+            title: "Error",
+          });
           return;
         }
 
@@ -527,9 +525,9 @@ export const createLayoutsFileExplorerHandlers = ({
         });
 
         if (usage.isUsed) {
-          appService.showToast(
-            "Cannot delete resource, it is currently in use.",
-          );
+          appService.showAlert({
+            message: "Cannot delete resource, it is currently in use.",
+          });
           return;
         }
 
@@ -545,15 +543,13 @@ export const createLayoutsFileExplorerHandlers = ({
           layoutId: itemId,
         });
         if (duplicateLayoutId?.valid === false) {
-          appService.showToast(
-            getResultErrorMessage(
+          appService.showAlert({
+            message: getResultErrorMessage(
               duplicateLayoutId,
               "Failed to duplicate layout.",
             ),
-            {
-              title: "Error",
-            },
-          );
+            title: "Error",
+          });
           return;
         }
 
@@ -646,9 +642,9 @@ export const createControlsFileExplorerHandlers = ({
         });
 
         if (usage.isUsed) {
-          appService.showToast(
-            "Cannot delete resource, it is currently in use.",
-          );
+          appService.showAlert({
+            message: "Cannot delete resource, it is currently in use.",
+          });
           return;
         }
 
@@ -697,9 +693,9 @@ export const createLayoutElementsFileExplorerHandlers = ({
       const resourceType = getResourceType(deps);
       const isControls = resourceType === "controls";
       if (!layoutId) {
-        appService.showToast(
-          isControls ? "Control is missing." : "Layout is missing.",
-        );
+        appService.showAlert({
+          message: isControls ? "Control is missing." : "Layout is missing.",
+        });
         return;
       }
 
@@ -795,12 +791,13 @@ export const createLayoutElementsFileExplorerHandlers = ({
           position: "last",
         });
         if (createResult?.valid === false) {
-          appService.showToast(
-            getResultErrorMessage(createResult, "Failed to create element."),
-            {
-              title: "Error",
-            },
-          );
+          appService.showAlert({
+            message: getResultErrorMessage(
+              createResult,
+              "Failed to create element.",
+            ),
+            title: "Error",
+          });
           console.error("Failed to create layout editor element:", {
             resourceType,
             layoutId,
@@ -826,9 +823,9 @@ export const createLayoutElementsFileExplorerHandlers = ({
       const resourceType = getResourceType(deps);
       const isControls = resourceType === "controls";
       if (!layoutId) {
-        appService.showToast(
-          isControls ? "Control is missing." : "Layout is missing.",
-        );
+        appService.showAlert({
+          message: isControls ? "Control is missing." : "Layout is missing.",
+        });
         return;
       }
 
@@ -955,7 +952,7 @@ export const createCharacterSpritesFileExplorerHandlers = ({
       const state = projectService.getState();
       const characterId = getCharacterId(deps);
       if (!characterId) {
-        appService.showToast("Character is missing.");
+        appService.showAlert({ message: "Character is missing." });
         return;
       }
 
@@ -1010,9 +1007,9 @@ export const createCharacterSpritesFileExplorerHandlers = ({
           checkTargets: ["scenes", "layouts"],
         });
         if (usage.isUsed) {
-          appService.showToast(
-            "Cannot delete resource, it is currently in use.",
-          );
+          appService.showAlert({
+            message: "Cannot delete resource, it is currently in use.",
+          });
           return;
         }
 
@@ -1051,7 +1048,7 @@ export const createCharacterSpritesFileExplorerHandlers = ({
 
       const characterId = getCharacterId(deps);
       if (!characterId) {
-        appService.showToast("Character is missing.");
+        appService.showAlert({ message: "Character is missing." });
         return;
       }
 

@@ -78,14 +78,16 @@ export const handleSubmitClick = (deps) => {
   const sectionId = formValues?.sectionId;
 
   if (!sceneId) {
-    appService.showToast("Please select a scene", {
+    appService.showAlert({
+      message: "Please select a scene",
       title: "Warning",
     });
     return;
   }
 
   if (!sectionId) {
-    appService.showToast("Please select a section", {
+    appService.showAlert({
+      message: "Please select a section",
       title: "Warning",
     });
     return;
@@ -95,7 +97,8 @@ export const handleSubmitClick = (deps) => {
   const selectedSection = selectedScene?.sections?.items?.[sectionId];
 
   if (!selectedScene || !selectedSection || !hasSectionId(scenes, sectionId)) {
-    appService.showToast("Please select a valid section for selected scene", {
+    appService.showAlert({
+      message: "Please select a valid section for selected scene",
       title: "Warning",
     });
     return;

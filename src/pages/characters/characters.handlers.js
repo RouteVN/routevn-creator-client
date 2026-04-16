@@ -282,7 +282,8 @@ export const handleDialogFormActionClick = async (deps, payload) => {
     const formData = payload._event.detail.values;
     const name = formData.name?.trim();
     if (!name) {
-      appService.showToast("Character name is required.", {
+      appService.showAlert({
+        message: "Character name is required.",
         title: "Warning",
       });
       return;
@@ -372,7 +373,9 @@ export const handleItemDelete = async (deps, payload) => {
   }
 
   if (isUsed) {
-    appService.showToast("Cannot delete resource, it is currently in use.");
+    appService.showAlert({
+      message: "Cannot delete resource, it is currently in use.",
+    });
     render();
     return;
   }
@@ -431,7 +434,8 @@ export const handleAvatarCropDialogConfirm = async (deps) => {
   try {
     const croppedFile = await refs.avatarCropDialog?.getCroppedFile?.();
     if (!croppedFile) {
-      appService.showToast("Avatar crop is not ready yet.", {
+      appService.showAlert({
+        message: "Avatar crop is not ready yet.",
         title: "Warning",
       });
       return;

@@ -65,13 +65,13 @@ const syncCharacterSpritesData = ({ deps, repositoryState } = {}) => {
   const state = repositoryState ?? projectService.getState();
 
   if (!characterId) {
-    appService.showToast("Character is missing.", { title: "Error" });
+    appService.showAlert({ message: "Character is missing.", title: "Error" });
     return false;
   }
 
   const character = state?.characters?.items?.[characterId];
   if (!character) {
-    appService.showToast("Character not found.", { title: "Error" });
+    appService.showAlert({ message: "Character not found.", title: "Error" });
     return false;
   }
 
@@ -169,7 +169,7 @@ const createSpritesFromFiles = async ({
   const { appService, projectService, store, render } = deps;
   const characterId = store.selectCharacterId();
   if (!characterId) {
-    appService.showToast("Character is missing.", { title: "Error" });
+    appService.showAlert({ message: "Character is missing.", title: "Error" });
     return;
   }
 
@@ -277,7 +277,10 @@ const createSpritesFromFiles = async ({
   }
 
   if (successfulUploadCount === 0) {
-    appService.showToast("Failed to upload sprites.", { title: "Error" });
+    appService.showAlert({
+      message: "Failed to upload sprites.",
+      title: "Error",
+    });
     return;
   }
 
@@ -579,14 +582,17 @@ export const handleFormExtraEvent = async (deps) => {
   }
 
   if (!(file.uploadSucessful && file.uploadResult)) {
-    appService.showToast("Failed to upload sprite.", { title: "Error" });
+    appService.showAlert({
+      message: "Failed to upload sprite.",
+      title: "Error",
+    });
     return;
   }
 
   const uploadResult = file.uploadResult;
   const characterId = store.selectCharacterId();
   if (!characterId) {
-    appService.showToast("Character is missing.", { title: "Error" });
+    appService.showAlert({ message: "Character is missing.", title: "Error" });
     return;
   }
 
@@ -647,7 +653,10 @@ export const handleEditDialogImageClick = async (deps) => {
   }
 
   if (!(file.uploadSucessful && file.uploadResult)) {
-    appService.showToast("Failed to upload sprite.", { title: "Error" });
+    appService.showAlert({
+      message: "Failed to upload sprite.",
+      title: "Error",
+    });
     return;
   }
 
@@ -668,7 +677,10 @@ export const handleEditFormAction = async (deps, payload) => {
 
   const name = values?.name?.trim();
   if (!name) {
-    appService.showToast("Sprite name is required.", { title: "Warning" });
+    appService.showAlert({
+      message: "Sprite name is required.",
+      title: "Warning",
+    });
     return;
   }
 
@@ -735,7 +747,9 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   if (usage.isUsed) {
-    appService.showToast("Cannot delete resource, it is currently in use.");
+    appService.showAlert({
+      message: "Cannot delete resource, it is currently in use.",
+    });
     return;
   }
 
@@ -745,10 +759,13 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   if (deleteResult?.valid === false) {
-    appService.showToast(
-      getResourcePageErrorMessage(deleteResult, "Failed to delete sprite."),
-      { title: "Error" },
-    );
+    appService.showAlert({
+      message: getResourcePageErrorMessage(
+        deleteResult,
+        "Failed to delete sprite.",
+      ),
+      title: "Error",
+    });
     return;
   }
 

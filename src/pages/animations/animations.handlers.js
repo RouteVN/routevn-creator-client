@@ -25,13 +25,26 @@ const navigateToAnimationEditor = ({
   });
 };
 
+const logSelectedAnimationData = ({ store, itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  const animationItem = store.selectAnimationItemById({ itemId });
+  if (!animationItem) {
+    return;
+  }
+
+  console.log("Selected animation data", animationItem);
+};
+
 const {
   handleBeforeMount: handleBeforeMountBase,
   refreshData: handleDataChanged,
-  handleFileExplorerSelectionChanged,
+  handleFileExplorerSelectionChanged: handleFileExplorerSelectionChangedBase,
   handleFileExplorerAction: handleFileExplorerActionBase,
   handleFileExplorerTargetChanged,
-  handleItemClick: handleAnimationItemClick,
+  handleItemClick: handleAnimationItemClickBase,
   handleSearchInput,
 } = createCatalogPageHandlers({
   resourceType: "animations",
@@ -39,14 +52,35 @@ const {
 
 export {
   handleDataChanged,
-  handleFileExplorerSelectionChanged,
   handleFileExplorerTargetChanged,
-  handleAnimationItemClick,
   handleSearchInput,
 };
 
 export const handleBeforeMount = (deps) => {
   return handleBeforeMountBase(deps);
+};
+
+export const handleFileExplorerSelectionChanged = (deps, payload) => {
+  handleFileExplorerSelectionChangedBase(deps, payload);
+
+  const { itemId, isFolder } = payload?._event?.detail ?? {};
+  if (isFolder || !itemId) {
+    return;
+  }
+
+  logSelectedAnimationData({
+    store: deps.store,
+    itemId,
+  });
+};
+
+export const handleAnimationItemClick = (deps, payload) => {
+  handleAnimationItemClickBase(deps, payload);
+
+  logSelectedAnimationData({
+    store: deps.store,
+    itemId: payload?._event?.detail?.itemId,
+  });
 };
 
 const openEditDialogWithValues = ({ deps, itemId } = {}) => {
@@ -185,7 +219,8 @@ export const handleEditFormAction = async (deps, payload) => {
 
   const name = values?.name?.trim();
   if (!name) {
-    appService.showToast("Please enter an animation name.", {
+    appService.showAlert({
+      message: "Please enter an animation name.",
       title: "Warning",
     });
     return;
@@ -232,7 +267,8 @@ export const handleAddFormAction = async (deps, payload) => {
 
   const name = values?.name?.trim();
   if (!name) {
-    appService.showToast("Please enter an animation name.", {
+    appService.showAlert({
+      message: "Please enter an animation name.",
       title: "Warning",
     });
     return;
@@ -286,7 +322,9 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   if (usage.isUsed) {
-    appService.showToast("Cannot delete resource, it is currently in use.");
+    appService.showAlert({
+      message: "Cannot delete resource, it is currently in use.",
+    });
     return;
   }
 

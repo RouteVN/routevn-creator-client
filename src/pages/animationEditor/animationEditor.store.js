@@ -33,7 +33,6 @@ import {
   PREVIEW_BG_COLOR,
   PREVIEW_TRANSITION_NEXT_FILL,
   PREVIEW_TRANSITION_ELEMENT_ID,
-  PREVIEW_TRANSITION_OFFSET_X,
   PREVIEW_TRANSITION_PREV_FILL,
   PREVIEW_UPDATE_ELEMENT_ID,
   propertyNameDropdownItems,
@@ -171,7 +170,7 @@ const createAnimationResetState = (dialogType, projectResolution) => {
     elements.push(
       createPreviewRect({
         id: PREVIEW_TRANSITION_ELEMENT_ID,
-        x: centerX - PREVIEW_TRANSITION_OFFSET_X,
+        x: centerX,
         y: centerY,
         width,
         height,
@@ -1111,7 +1110,7 @@ const createAnimationRenderState = ({
       },
       createPreviewRect({
         id: PREVIEW_TRANSITION_ELEMENT_ID,
-        x: centerX + PREVIEW_TRANSITION_OFFSET_X,
+        x: centerX,
         y: centerY,
         width,
         height,

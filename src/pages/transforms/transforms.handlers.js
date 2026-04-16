@@ -264,7 +264,10 @@ export const handleTransformFormActionClick = async (deps, payload) => {
 
   const transformData = createTransformPayload(values);
   if (!transformData.name) {
-    appService.showToast("Transform name is required.", { title: "Warning" });
+    appService.showAlert({
+      message: "Transform name is required.",
+      title: "Warning",
+    });
     return;
   }
 
@@ -336,7 +339,9 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   if (usage.isUsed) {
-    appService.showToast("Cannot delete resource, it is currently in use.");
+    appService.showAlert({
+      message: "Cannot delete resource, it is currently in use.",
+    });
     return;
   }
 

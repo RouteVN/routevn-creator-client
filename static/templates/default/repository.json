@@ -923,12 +923,56 @@
       "kGfL2nQv8YpR4mTa6HsWx": {
         "id": "kGfL2nQv8YpR4mTa6HsWx",
         "type": "folder",
-        "name": "Default"
+        "name": "Transitions"
+      },
+      "-qYuYOXAq_wt9Pfp_2kIt": {
+        "id": "-qYuYOXAq_wt9Pfp_2kIt",
+        "type": "animation",
+        "name": "Fade 1s",
+        "description": "",
+        "animation": {
+          "type": "transition",
+          "prev": {
+            "tween": {
+              "alpha": {
+                "keyframes": [
+                  {
+                    "duration": 1000,
+                    "value": 0,
+                    "easing": "linear",
+                    "relative": false
+                  }
+                ],
+                "initialValue": 1
+              }
+            }
+          },
+          "next": {
+            "tween": {
+              "alpha": {
+                "keyframes": [
+                  {
+                    "duration": 1000,
+                    "value": 1,
+                    "easing": "linear",
+                    "relative": false
+                  }
+                ],
+                "initialValue": 0
+              }
+            }
+          }
+        }
       }
     },
     "tree": [
       {
-        "id": "kGfL2nQv8YpR4mTa6HsWx"
+        "id": "kGfL2nQv8YpR4mTa6HsWx",
+        "children": [
+          {
+            "id": "-qYuYOXAq_wt9Pfp_2kIt"
+          }
+        ]
       }
     ]
   },

@@ -903,13 +903,19 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
 
   const name = values?.name?.trim();
   if (!name) {
-    appService.showToast("Please enter a layout name", { title: "Warning" });
+    appService.showAlert({
+      message: "Please enter a layout name",
+      title: "Warning",
+    });
     return;
   }
 
   const layoutType = values?.layoutType;
   if (!layoutType) {
-    appService.showToast("Please select a layout type", { title: "Warning" });
+    appService.showAlert({
+      message: "Please select a layout type",
+      title: "Warning",
+    });
     return;
   }
   const isFragment = values?.isFragment ?? false;
@@ -955,7 +961,10 @@ export const handleEditFormActionClick = async (deps, payload) => {
 
   const name = values?.name?.trim();
   if (!name) {
-    appService.showToast("Please enter a layout name", { title: "Warning" });
+    appService.showAlert({
+      message: "Please enter a layout name",
+      title: "Warning",
+    });
     return;
   }
 
@@ -1010,15 +1019,17 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   if (usage.isUsed) {
-    appService.showToast("Cannot delete resource, it is currently in use.");
+    appService.showAlert({
+      message: "Cannot delete resource, it is currently in use.",
+    });
     render();
     return;
   }
 
   if (!canDeleteLayoutItem(state.layouts, itemId)) {
-    appService.showToast(
-      `Cannot delete the last ${protectedLayoutTypeLabels[layoutType]} layout. At least one ${protectedLayoutTypeLabels[layoutType]} layout must remain.`,
-    );
+    appService.showAlert({
+      message: `Cannot delete the last ${protectedLayoutTypeLabels[layoutType]} layout. At least one ${protectedLayoutTypeLabels[layoutType]} layout must remain.`,
+    });
     render();
     return;
   }

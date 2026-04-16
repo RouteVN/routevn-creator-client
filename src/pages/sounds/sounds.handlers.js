@@ -19,9 +19,7 @@ const showUnsupportedFormatToast = (
   appService,
   message = UNSUPPORTED_FORMAT_MESSAGE,
 ) => {
-  appService.showToast(message, {
-    title: UNSUPPORTED_FORMAT_TITLE,
-  });
+  appService.showAlert({ message: message, title: UNSUPPORTED_FORMAT_TITLE });
 };
 
 const validateSoundFiles = ({ appService, files } = {}) => {
@@ -113,7 +111,10 @@ const createSoundsFromFiles = async ({ deps, files, parentId } = {}) => {
       );
     },
     onNoSuccessfulUploads: () => {
-      appService.showToast("Failed to upload sound.", { title: "Error" });
+      appService.showAlert({
+        message: "Failed to upload sound.",
+        title: "Error",
+      });
     },
   });
 };
@@ -405,7 +406,10 @@ export const handleEditFormAction = async (deps, payload) => {
 
   const name = values?.name?.trim();
   if (!name) {
-    appService.showToast("Sound name is required.", { title: "Warning" });
+    appService.showAlert({
+      message: "Sound name is required.",
+      title: "Warning",
+    });
     return;
   }
 
@@ -465,7 +469,9 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   if (!result.deleted) {
-    appService.showToast("Cannot delete resource, it is currently in use.");
+    appService.showAlert({
+      message: "Cannot delete resource, it is currently in use.",
+    });
     render();
     return;
   }

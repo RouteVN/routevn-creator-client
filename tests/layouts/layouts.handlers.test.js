@@ -91,7 +91,7 @@ describe("createLayoutTemplate", () => {
         }),
       },
       appService: {
-        showToast: vi.fn(),
+        showAlert: vi.fn(),
       },
       render: vi.fn(),
     };
@@ -158,7 +158,7 @@ describe("createLayoutTemplate", () => {
         }),
       },
       appService: {
-        showToast: vi.fn(),
+        showAlert: vi.fn(),
       },
       render: vi.fn(),
     };

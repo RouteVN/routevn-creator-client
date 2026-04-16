@@ -359,7 +359,8 @@ export const handleFormActionClick = async (deps, payload) => {
       !formData.fontStyle ||
       !formData.fontWeight
     ) {
-      appService.showToast("Please fill in all required fields", {
+      appService.showAlert({
+        message: "Please fill in all required fields",
         title: "Warning",
       });
       return;
@@ -367,7 +368,8 @@ export const handleFormActionClick = async (deps, payload) => {
 
     // Validate font size is a number
     if (isNaN(formData.fontSize) || parseInt(formData.fontSize) <= 0) {
-      appService.showToast("Please enter a valid font size (positive number)", {
+      appService.showAlert({
+        message: "Please enter a valid font size (positive number)",
         title: "Warning",
       });
       return;
@@ -375,12 +377,10 @@ export const handleFormActionClick = async (deps, payload) => {
 
     const strokeWidth = Number(formData.strokeWidth ?? 0);
     if (Number.isNaN(strokeWidth) || strokeWidth < 0) {
-      appService.showToast(
-        "Please enter a valid outline thickness (0 or greater)",
-        {
-          title: "Warning",
-        },
-      );
+      appService.showAlert({
+        message: "Please enter a valid outline thickness (0 or greater)",
+        title: "Warning",
+      });
       return;
     }
 
@@ -541,7 +541,10 @@ export const handleAddFontFormAction = async (deps, payload) => {
 
     // Check if a font file was selected and uploaded
     if (!fontData || !fontData.uploadResult) {
-      appService.showToast("Please select a font file", { title: "Warning" });
+      appService.showAlert({
+        message: "Please select a font file",
+        title: "Warning",
+      });
       return;
     }
 
@@ -599,7 +602,7 @@ export const handleItemDelete = async (deps, payload) => {
   const textStyleCount = getTextStyleCount(state.textStyles);
   const removalCount = getTextStyleRemovalCount(state.textStyles, itemId);
   if (textStyleCount - removalCount < 1) {
-    appService.showToast("At least one text style must remain.");
+    appService.showAlert({ message: "At least one text style must remain." });
     render();
     return;
   }
@@ -611,7 +614,9 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   if (usage.isUsed) {
-    appService.showToast("Cannot delete resource, it is currently in use.");
+    appService.showAlert({
+      message: "Cannot delete resource, it is currently in use.",
+    });
     render();
     return;
   }

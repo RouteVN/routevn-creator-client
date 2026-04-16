@@ -103,7 +103,10 @@ export const handleEditFormAction = async (deps, payload) => {
 
   const name = values?.name?.trim();
   if (!name) {
-    appService.showToast("Color name is required.", { title: "Warning" });
+    appService.showAlert({
+      message: "Color name is required.",
+      title: "Warning",
+    });
     return;
   }
 
@@ -155,7 +158,10 @@ export const handleAddFormAction = async (deps, payload) => {
 
   const name = values?.name?.trim();
   if (!name) {
-    appService.showToast("Color name cannot be empty.", { title: "Warning" });
+    appService.showAlert({
+      message: "Color name cannot be empty.",
+      title: "Warning",
+    });
     return;
   }
 
@@ -194,7 +200,9 @@ export const handleItemDelete = async (deps, payload) => {
   });
 
   if (usage.isUsed) {
-    appService.showToast("Cannot delete resource, it is currently in use.");
+    appService.showAlert({
+      message: "Cannot delete resource, it is currently in use.",
+    });
     render();
     return;
   }

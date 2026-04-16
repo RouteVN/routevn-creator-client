@@ -100,7 +100,8 @@ async function loadAssetsForSceneIds(
       sceneIds: uniqueSceneIds,
     });
   } catch (error) {
-    appService?.showToast("Failed to load some preview assets", {
+    appService?.showAlert({
+      message: "Failed to load some preview assets",
       title: "Warning",
     });
     console.error("[vnPreview] Failed to load scene assets:", error);

@@ -282,7 +282,10 @@ export const handleButtonSelectClick = (deps) => {
     const tempSelectedSpriteId = store.selectTempSelectedSpriteId();
 
     if (!tempSelectedSpriteId) {
-      appService.showToast("A sprite is required.", { title: "Warning" });
+      appService.showAlert({
+        message: "A sprite is required.",
+        title: "Warning",
+      });
       return;
     }
 
