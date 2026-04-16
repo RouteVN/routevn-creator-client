@@ -221,7 +221,11 @@ const buildPopoverForm = ({
   return nextForm;
 };
 
-const buildPositionPopoverContext = ({ name, projectResolution, values } = {}) => {
+const buildPositionPopoverContext = ({
+  name,
+  projectResolution,
+  values,
+} = {}) => {
   if (!POSITION_POPOVER_NAMES.has(name)) {
     return {};
   }

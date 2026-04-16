@@ -226,7 +226,8 @@ const getActionItems = (attrs = {}) => {
   return sections.flatMap((section) => {
     const visibleItems = section.items
       .filter(
-        (item) => item && typeof item.mode === "string" && !hiddenModes.has(item.mode),
+        (item) =>
+          item && typeof item.mode === "string" && !hiddenModes.has(item.mode),
       )
       .map(toActionItem);
 

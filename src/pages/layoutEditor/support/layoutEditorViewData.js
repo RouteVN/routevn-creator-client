@@ -66,10 +66,7 @@ const compactContextMenuItems = (items = []) => {
       continue;
     }
 
-    if (
-      item.type === "label" &&
-      !hasItemsBeforeNextLabel(items, index + 1)
-    ) {
+    if (item.type === "label" && !hasItemsBeforeNextLabel(items, index + 1)) {
       continue;
     }
 
