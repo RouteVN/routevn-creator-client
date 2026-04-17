@@ -77,7 +77,7 @@ export const createMediaPageHandlers = ({
   };
 
   const refreshData = async (deps, { selectedItemId, deletedItemId } = {}) => {
-    const { store, render, projectService, refs } = deps;
+    const { store, render, refs } = deps;
     const repositoryState = await waitForExpectedMediaState(deps, {
       selectedItemId,
       deletedItemId,

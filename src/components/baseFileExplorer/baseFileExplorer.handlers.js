@@ -625,7 +625,10 @@ const subscriptions = (deps) => {
 export const handleContainerContextMenu = (deps, payload) => {
   const { store, render, props } = deps;
   const target = payload._event.target;
-  if (typeof target?.closest === "function" && target.closest("[data-item-id]")) {
+  if (
+    typeof target?.closest === "function" &&
+    target.closest("[data-item-id]")
+  ) {
     return;
   }
 
