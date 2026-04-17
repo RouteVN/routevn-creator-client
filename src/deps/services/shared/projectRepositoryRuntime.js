@@ -928,6 +928,14 @@ export const createProjectRepositoryRuntime = async ({
         viewName: MAIN_VIEW_NAME,
         partition: MAIN_PARTITION,
       });
+      await store.saveMaterializedViewCheckpoint({
+        viewName: MAIN_VIEW_NAME,
+        partition: MAIN_PARTITION,
+        viewVersion: MAIN_VIEW_VERSION,
+        lastCommittedId: currentRevision,
+        value: structuredClone(getCurrentComposedState()),
+        updatedAt: Date.now(),
+      });
     },
 
     async flushMaterializedViews() {

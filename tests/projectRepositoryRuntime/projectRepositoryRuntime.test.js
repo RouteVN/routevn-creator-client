@@ -483,6 +483,67 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
     });
   });
 
+  it("flushes the current main checkpoint after local repository updates", async () => {
+    const saveMaterializedViewCheckpoint = vi.fn(async () => {});
+    const loadEvents = vi.fn(async () => [
+      {
+        id: "event-1",
+        type: "resource.update",
+        partition: "m",
+        payload: {},
+      },
+    ]);
+
+    const reduceEventToState = ({ repositoryState, event }) => ({
+      appliedIds: [...(repositoryState?.appliedIds || []), event.id],
+    });
+
+    const repository = await createProjectRepositoryRuntime({
+      projectId: "project-1",
+      store: {
+        loadMaterializedViewCheckpoint: async () => ({
+          viewName: "project_repository_main_state",
+          viewVersion: "1",
+          partition: "m",
+          lastCommittedId: 1,
+          value: {
+            appliedIds: ["event-1"],
+          },
+        }),
+        saveMaterializedViewCheckpoint,
+        deleteMaterializedViewCheckpoint: async () => {},
+      },
+      initialRevision: 1,
+      loadEvents,
+      createInitialState: () => ({
+        appliedIds: [],
+      }),
+      reduceEventToState,
+      reduceEventsToState: createBatchedReducer(reduceEventToState),
+    });
+
+    await repository.addEvent({
+      id: "event-2",
+      type: "resource.update",
+      partition: "m",
+      payload: {},
+    });
+
+    await repository.flushMainCheckpoint();
+
+    expect(saveMaterializedViewCheckpoint).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        viewName: MAIN_VIEW_NAME,
+        partition: "m",
+        viewVersion: "1",
+        lastCommittedId: 2,
+        value: {
+          appliedIds: ["event-1", "event-2"],
+        },
+      }),
+    );
+  });
+
   it("rebuilds a stale scene overview from paged committed history on a checkpoint-backed repository", async () => {
     const sceneId = "scene-1";
     const mainState = {
