@@ -139,4 +139,114 @@ describe("tauri db lock handling", () => {
       ).length,
     ).toBe(2);
   });
+
+  it("serializes concurrent reads and writes on the same connection", async () => {
+    let activeOperations = 0;
+    let maxConcurrentOperations = 0;
+    const kv = new Map();
+
+    const fakeDb = {
+      execute: vi.fn(
+        async (sql, args = []) =>
+          new Promise((resolve) => {
+            activeOperations += 1;
+            maxConcurrentOperations = Math.max(
+              maxConcurrentOperations,
+              activeOperations,
+            );
+
+            globalThis.setTimeout(() => {
+              if (String(sql).includes("INSERT OR REPLACE INTO kv")) {
+                kv.set(args[0], args[1]);
+              }
+              activeOperations -= 1;
+              resolve({ rowsAffected: 1 });
+            }, 10);
+          }),
+      ),
+      select: vi.fn(
+        async (sql, args = []) =>
+          new Promise((resolve) => {
+            activeOperations += 1;
+            maxConcurrentOperations = Math.max(
+              maxConcurrentOperations,
+              activeOperations,
+            );
+
+            globalThis.setTimeout(() => {
+              const value = String(sql).includes("SELECT value FROM kv")
+                ? kv.get(args[0])
+                : undefined;
+              activeOperations -= 1;
+              resolve(value === undefined ? [] : [{ value }]);
+            }, 10);
+          }),
+      ),
+    };
+    loadMock.mockResolvedValue(fakeDb);
+
+    const { createDb } = await import("../../src/deps/clients/tauri/db.js");
+    const db = createDb({ path: "sqlite:app.db" });
+
+    const initPromise = db.init();
+    await vi.runAllTimersAsync();
+    await initPromise;
+
+    const setPromise = db.set("projectEntries", [{ id: "project-1" }]);
+    const getPromise = db.get("projectEntries");
+
+    await vi.runAllTimersAsync();
+
+    await expect(setPromise).resolves.toBeUndefined();
+    await expect(getPromise).resolves.toEqual([{ id: "project-1" }]);
+    expect(maxConcurrentOperations).toBe(1);
+  });
+
+  it("recovers from a closed-pool app db handle by reopening and retrying once", async () => {
+    const kv = new Map();
+    const staleDb = {
+      execute: vi.fn(async (sql, args = []) => {
+        if (String(sql).includes("PRAGMA busy_timeout")) {
+          return { rowsAffected: 0 };
+        }
+        if (String(sql).includes("CREATE TABLE IF NOT EXISTS kv")) {
+          return { rowsAffected: 0 };
+        }
+        if (String(sql).includes("INSERT OR REPLACE INTO kv")) {
+          throw new Error("attempted to acquire a connection on a closed pool");
+        }
+        return { rowsAffected: 0 };
+      }),
+      select: vi.fn(async (sql, args = []) => {
+        const value = kv.get(args[0]);
+        return value === undefined ? [] : [{ value }];
+      }),
+      close: vi.fn(async () => {}),
+    };
+    const freshDb = {
+      execute: vi.fn(async (sql, args = []) => {
+        if (String(sql).includes("INSERT OR REPLACE INTO kv")) {
+          kv.set(args[0], args[1]);
+        }
+        return { rowsAffected: 1 };
+      }),
+      select: vi.fn(async (sql, args = []) => {
+        const value = kv.get(args[0]);
+        return value === undefined ? [] : [{ value }];
+      }),
+    };
+    loadMock.mockResolvedValueOnce(staleDb).mockResolvedValueOnce(freshDb);
+
+    const { createDb } = await import("../../src/deps/clients/tauri/db.js");
+    const db = createDb({ path: "sqlite:app.db" });
+
+    await db.init();
+    await db.set("projectEntries", [{ id: "project-1" }]);
+
+    await expect(db.get("projectEntries")).resolves.toEqual([
+      { id: "project-1" },
+    ]);
+    expect(loadMock).toHaveBeenCalledTimes(2);
+    expect(staleDb.close).toHaveBeenCalledWith("sqlite:app.db");
+  });
 });

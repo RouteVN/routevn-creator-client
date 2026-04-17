@@ -21,6 +21,15 @@ const flushRepositoryMainCheckpoint = async (repository) => {
   }
 };
 
+const flushRepositoryForRelease = async (repository) => {
+  if (typeof repository?.flushMaterializedViews === "function") {
+    await repository.flushMaterializedViews();
+    return;
+  }
+
+  await flushRepositoryMainCheckpoint(repository);
+};
+
 const discardReusableMainCheckpoint = async (store) => {
   if (typeof store?.deleteMaterializedViewCheckpoint !== "function") {
     return;
@@ -167,6 +176,30 @@ export const createProjectRepositoryService = ({
     if (typeof storageAdapter?.evictStoreByReference === "function") {
       await storageAdapter.evictStoreByReference({ reference });
     }
+  };
+
+  const releaseRepositoryByReference = async (reference) => {
+    const cacheKey = reference?.cacheKey;
+    if (!cacheKey) {
+      return;
+    }
+
+    const repository = repositoriesByCacheKey.get(cacheKey);
+    if (repository) {
+      try {
+        await flushRepositoryForRelease(repository);
+      } catch {}
+    }
+
+    await evictCachedReference(reference);
+  };
+
+  const releaseCurrentRepository = async () => {
+    if (!currentReference) {
+      return;
+    }
+
+    await releaseRepositoryByReference(currentReference);
   };
 
   const withRecoveredStore = async (reference, run) => {
@@ -808,6 +841,7 @@ export const createProjectRepositoryService = ({
       return storesByProject.get(projectId);
     },
     getCurrentRepository: ensureRepository,
+    releaseCurrentRepository,
     getCachedRepository,
     getCachedStore,
     getCachedReference,

@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { loadRepositoryEvents } from "../../src/deps/services/tauri/collabClientStore.js";
+import {
+  DRAFT_HISTORY_MODE_SNAPSHOT_ARCHIVE,
+  loadRepositoryEvents,
+} from "../../src/deps/services/tauri/collabClientStore.js";
 
 describe("loadRepositoryEvents", () => {
   it("skips committed replay when there are no drafts", async () => {
@@ -191,6 +194,83 @@ describe("loadRepositoryEvents", () => {
       phase: "read_project_events",
       current: 3,
       total: 3,
+    });
+  });
+
+  it("preserves canonical snapshot draft history without rejecting drafts", async () => {
+    const applySubmitResult = vi.fn(async () => {});
+    const progressUpdates = [];
+
+    const events = await loadRepositoryEvents({
+      projectId: "project-1",
+      draftHistoryMode: DRAFT_HISTORY_MODE_SNAPSHOT_ARCHIVE,
+      onProgress: (payload) => {
+        progressUpdates.push(payload);
+      },
+      store: {
+        _debug: {
+          getCommitted: async () => [],
+          getDrafts: async () => [
+            {
+              id: "bootstrap-draft",
+              partition: "m",
+              projectId: "project-1",
+              userId: "user-1",
+              type: "project.create",
+              schemaVersion: 1,
+              payload: {
+                state: {
+                  scenes: {
+                    items: {
+                      "scene-1": {
+                        id: "scene-1",
+                        type: "scene",
+                        name: "Scene 1",
+                      },
+                    },
+                    tree: [{ id: "scene-1" }],
+                  },
+                },
+              },
+              clientTs: 1000,
+              createdAt: 1000,
+              meta: {},
+            },
+            {
+              id: "draft-2",
+              partition: "m",
+              projectId: "project-1",
+              userId: "user-1",
+              type: "character.create",
+              schemaVersion: 1,
+              payload: {
+                characterId: "character-1",
+                data: {
+                  type: "character",
+                  name: "Dia",
+                },
+                parentId: "characters-folder",
+                index: 0,
+              },
+              clientTs: 1001,
+              createdAt: 1001,
+              meta: {},
+            },
+          ],
+        },
+        applySubmitResult,
+      },
+    });
+
+    expect(events.map((event) => event.id)).toEqual([
+      "bootstrap-draft",
+      "draft-2",
+    ]);
+    expect(applySubmitResult).not.toHaveBeenCalled();
+    expect(progressUpdates.at(-1)).toMatchObject({
+      phase: "read_project_events",
+      current: 2,
+      total: 2,
     });
   });
 });

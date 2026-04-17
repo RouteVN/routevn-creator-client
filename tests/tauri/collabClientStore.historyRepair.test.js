@@ -134,6 +134,55 @@ describe("planBootstrapHistoryRepair", () => {
     expect(repairPlan.draftEvents).toEqual([]);
   });
 
+  it("preserves canonical snapshot draft history without rewriting it", () => {
+    const snapshotState = {
+      scenes: {
+        items: {
+          "scene-1": {
+            id: "scene-1",
+            type: "scene",
+            name: "Scene 1",
+          },
+        },
+        tree: [{ id: "scene-1" }],
+      },
+    };
+    const repairPlan = planBootstrapHistoryRepair({
+      projectId,
+      committedEvents: [],
+      draftEvents: [
+        createDraftEvent({
+          id: "bootstrap-draft",
+          partition: "m",
+          type: "project.create",
+          payload: {
+            state: snapshotState,
+          },
+        }),
+        createDraftEvent({
+          id: "character-1",
+          partition: "m",
+          type: "character.create",
+          payload: {
+            characterId: "character-1",
+            data: {
+              type: "character",
+              name: "Dia",
+            },
+            parentId: "characters-folder",
+            index: 0,
+          },
+        }),
+      ],
+      mainCheckpointState: snapshotState,
+    });
+
+    expect(repairPlan).toEqual({
+      changed: false,
+      reason: "canonical_snapshot_draft_history",
+    });
+  });
+
   it("synthesizes a bootstrap event from the main checkpoint for line-only history", () => {
     const repairPlan = planBootstrapHistoryRepair({
       projectId,

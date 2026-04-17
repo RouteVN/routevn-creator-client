@@ -1,5 +1,4 @@
 import { join } from "@tauri-apps/api/path";
-import Database from "@tauri-apps/plugin-sql";
 import { createLibsqlClientStore } from "insieme/client";
 import { Subject, asyncScheduler, throttleTime } from "rxjs";
 import {
@@ -8,6 +7,7 @@ import {
   isSqliteNoActiveTransactionError,
   withSqliteLockRetry,
 } from "../../../internal/sqliteLocking.js";
+import { getManagedSqliteConnection } from "../../clients/tauri/sqliteConnectionManager.js";
 import {
   applyRepositoryEventsToRepositoryState,
   createProjectCreateRepositoryEvent,
@@ -31,6 +31,7 @@ const SQL_BYTES_DATA_KEY = "data";
 const WAL_CHECKPOINT_THROTTLE_MS = 20000;
 const ROUTEVN_CHECKPOINT_ENVELOPE_KEY = "__routevnCheckpoint";
 const ROUTEVN_CHECKPOINT_ENVELOPE_VERSION = 1;
+export const DRAFT_HISTORY_MODE_SNAPSHOT_ARCHIVE = "snapshot_archive";
 
 const isReadQuery = (sql) => {
   const normalized = String(sql ?? "")
@@ -189,6 +190,21 @@ const normalizeHistoryStatValue = (value) => {
     return 0;
   }
   return Math.max(0, Math.floor(numericValue));
+};
+
+const isPlainObject = (value) =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const areJsonStatesEqual = (left, right) => {
+  if (!isPlainObject(left) || !isPlainObject(right)) {
+    return false;
+  }
+
+  try {
+    return JSON.stringify(left) === JSON.stringify(right);
+  } catch {
+    return false;
+  }
 };
 
 const normalizeRepositoryHistoryStats = (stats = {}) => ({
@@ -441,6 +457,7 @@ export const loadRepositoryEvents = async ({
   store,
   projectId,
   onProgress,
+  draftHistoryMode,
 }) => {
   const committed = await store._debug.getCommitted();
   emitEventLoadProgress(onProgress, {
@@ -494,6 +511,22 @@ export const loadRepositoryEvents = async ({
     return events;
   }
 
+  const draftEvents = drafts.map((draft) => {
+    const nextEvent = toRepositoryEvent(draft, {
+      created: draft.createdAt,
+      projectId,
+    });
+    assertRepositoryEventShape(nextEvent);
+    return nextEvent;
+  });
+
+  if (draftHistoryMode === DRAFT_HISTORY_MODE_SNAPSHOT_ARCHIVE) {
+    processedEventCount = totalEventCount;
+    reportProgress({ force: true });
+    await yieldForUiPaint();
+    return [...events, ...draftEvents];
+  }
+
   emitEventLoadProgress(onProgress, {
     phase: "replay_local_drafts",
     label: "Reading project events...",
@@ -505,15 +538,6 @@ export const loadRepositoryEvents = async ({
     repositoryState: initialProjectData,
     events,
     projectId,
-  });
-
-  const draftEvents = drafts.map((draft) => {
-    const nextEvent = toRepositoryEvent(draft, {
-      created: draft.createdAt,
-      projectId,
-    });
-    assertRepositoryEventShape(nextEvent);
-    return nextEvent;
   });
   const invalidDrafts = [];
   let remainingDraftEvents = draftEvents;
@@ -710,6 +734,20 @@ export const planBootstrapHistoryRepair = ({
     .map((event, index) => (isBootstrapRepositoryEvent(event) ? index : -1))
     .filter((index) => index >= 0);
 
+  const canonicalSnapshotDraftArchive =
+    committed.length === 0 &&
+    drafts.length > 1 &&
+    draftBootstrapIndexes.length === 1 &&
+    draftBootstrapIndexes[0] === 0 &&
+    areJsonStatesEqual(drafts[0]?.payload?.state, mainCheckpointState);
+
+  if (canonicalSnapshotDraftArchive) {
+    return {
+      changed: false,
+      reason: "canonical_snapshot_draft_history",
+    };
+  }
+
   if (
     committedBootstrapIndexes.length === 1 &&
     committedBootstrapIndexes[0] === 0 &&
@@ -824,10 +862,11 @@ export const createPersistedTauriProjectStore = async ({
   }
 
   const storePromise = (async () => {
-    const db = await Database.load(`sqlite:${dbPath}`);
-    await withSqliteLockRetry(() =>
-      db.execute(`PRAGMA busy_timeout=${SQLITE_BUSY_TIMEOUT_MS}`),
-    );
+    const db = getManagedSqliteConnection({
+      dbPath: `sqlite:${dbPath}`,
+      busyTimeoutMs: SQLITE_BUSY_TIMEOUT_MS,
+    });
+    await db.init();
 
     let operationQueue = Promise.resolve();
     const queueStoreOperation = async (labelOrOperation, maybeOperation) => {
@@ -928,6 +967,7 @@ export const createPersistedTauriProjectStore = async ({
     await store.init();
 
     let projectHistoryIntegrityPromise;
+    let draftHistoryMode;
     const loadAppValue = async (key) => {
       const rows = await runSelect(
         `SELECT value FROM ${APP_STATE_TABLE} WHERE key = $1`,
@@ -1009,6 +1049,10 @@ export const createPersistedTauriProjectStore = async ({
                 committedEventCount: committedEvents.length,
                 draftEventCount: draftEvents.length,
               });
+            }
+
+            if (repairPlan.reason === "canonical_snapshot_draft_history") {
+              draftHistoryMode = DRAFT_HISTORY_MODE_SNAPSHOT_ARCHIVE;
             }
 
             return repairPlan;
@@ -1151,6 +1195,7 @@ export const createPersistedTauriProjectStore = async ({
               typeof payload?.onProgress === "function"
                 ? payload.onProgress
                 : undefined,
+            draftHistoryMode,
           }),
         );
         const since = Number(payload?.since);

@@ -92,6 +92,19 @@ const getProjectIdFromEvent = (event) => {
   return event?.currentTarget?.dataset?.projectId ?? "";
 };
 
+const getProjectPathFromEvent = (event) => {
+  return event?.currentTarget?.dataset?.projectPath ?? "";
+};
+
+const getProjectIndexFromEvent = (event) => {
+  const value = event?.currentTarget?.dataset?.projectIndex;
+  const index = Number(value);
+  if (!Number.isInteger(index) || index < 0) {
+    return undefined;
+  }
+  return index;
+};
+
 const showCreateProjectDialog = async (appService) => {
   return appService.showComponentDialog({
     component: PROJECT_CREATE_DIALOG_COMPONENT,
@@ -128,6 +141,44 @@ const getIncompatibleProjectMessage = (error) => {
   }
 
   return message;
+};
+
+const isMissingProjectResolutionError = (error) => {
+  const message = String(error?.message || "").toLowerCase();
+  return (
+    message.includes("project resolution is required") &&
+    message.includes("width") &&
+    message.includes("height")
+  );
+};
+
+const isProjectDatabaseOpenError = (error) => {
+  const message = String(error?.message || "").toLowerCase();
+  return (
+    message.includes("unable to open database file") ||
+    message.includes("(code: 14)")
+  );
+};
+
+const getProjectOpenErrorMessage = (error) => {
+  if (isMissingProjectResolutionError(error)) {
+    return "Project is missing required resolution settings.";
+  }
+
+  if (isProjectDatabaseOpenError(error)) {
+    return "Failed to open the project database. Make sure the project folder still exists and RouteVN can access it.";
+  }
+
+  const detail = typeof error?.message === "string" ? error.message.trim() : "";
+  if (!detail || detail === "Failed to open project.") {
+    return "Failed to open project. An unexpected error occurred while preparing the project.";
+  }
+
+  if (detail.toLowerCase().startsWith("failed to open project")) {
+    return detail;
+  }
+
+  return `Failed to open project. ${detail}`;
 };
 
 export const handleCreateButtonClick = async (deps) => {
@@ -313,12 +364,12 @@ export const handleOpenButtonClick = async (deps) => {
     }
 
     const importedProject = await appService.openExistingProject(selectedPath);
-
-    store.addProject({ project: importedProject });
+    const projects = await appService.loadAllProjects();
+    store.setProjects({ projects });
     render();
 
-    appService.showAlert({
-      message: `Project "${importedProject.name}" has been successfully imported.`,
+    appService.showToast({
+      message: `Project "${importedProject.name}" imported.`,
     });
   } catch (error) {
     appService.showAlert({
@@ -481,8 +532,14 @@ export const handleProjectsClick = async (deps, payload) => {
   const { appService, projectService, store } = deps;
   const id = getProjectIdFromEvent(payload._event);
   if (!id) {
+    appService.showAlert({
+      message:
+        "This project entry is invalid. Remove it from the list and import the project again.",
+    });
     return;
   }
+
+  const project = store.getState().projects.find((entry) => entry?.id === id);
 
   try {
     await projectService.ensureProjectCompatibleById(id);
@@ -497,12 +554,10 @@ export const handleProjectsClick = async (deps, payload) => {
     }
 
     appService.showAlert({
-      message: error?.message || "Failed to open project.",
+      message: getProjectOpenErrorMessage(error),
     });
     return;
   }
-
-  const project = store.getState().projects.find((entry) => entry?.id === id);
 
   if (project) {
     appService.setCurrentProjectEntry(project);
@@ -512,17 +567,33 @@ export const handleProjectsClick = async (deps, payload) => {
 };
 
 export const handleProjectContextMenu = (deps, payload) => {
-  const { store, render } = deps;
+  const { appService, store, render } = deps;
   payload._event.preventDefault();
 
   const projectId = getProjectIdFromEvent(payload._event);
-  if (!projectId) {
-    return;
-  }
   const projects = store.selectProjects();
-  const project = projects.find((p) => p.id === projectId);
+  const projectIndex = getProjectIndexFromEvent(payload._event);
+  const project =
+    projects.find((entry) => entry?.id === projectId) ??
+    (projectIndex === undefined ? undefined : projects[projectIndex]);
+  const projectPath =
+    project?.projectPath || getProjectPathFromEvent(payload._event);
+  if (!projectId) {
+    if (!projectPath) {
+      appService.showAlert({
+        message:
+          "This project entry is invalid. Refresh the projects page and try again.",
+      });
+      return;
+    }
 
-  if (!project) {
+    store.openDropdownMenu({
+      x: payload._event.clientX,
+      y: payload._event.clientY,
+      scope: "local",
+      projectPath,
+    });
+    render();
     return;
   }
 
@@ -531,16 +602,21 @@ export const handleProjectContextMenu = (deps, payload) => {
     y: payload._event.clientY,
     scope: "local",
     projectId: projectId,
+    projectPath,
   });
   render();
 };
 
 export const handleCloudProjectContextMenu = (deps, payload) => {
-  const { store, render } = deps;
+  const { appService, store, render } = deps;
   payload._event.preventDefault();
 
   const projectId = getProjectIdFromEvent(payload._event);
   if (!projectId) {
+    appService.showAlert({
+      message:
+        "This project entry is invalid. Refresh the projects page and try again.",
+    });
     return;
   }
 
@@ -671,17 +747,35 @@ export const handleAddMemberFormAction = async (deps, payload) => {
 };
 
 export const handleDeleteDialogConfirm = async (deps) => {
-  const { appService, store, render } = deps;
+  const { appService, projectService, store, render } = deps;
   const projectId = store.selectDeleteDialogProjectId();
-  if (!projectId) {
+  const projectPath = store.selectDeleteDialogProjectPath();
+  if (!projectId && !projectPath) {
     store.closeDeleteDialog();
     render();
     return;
   }
 
+  let failedStage = "unknown";
+
   try {
-    await appService.removeProjectEntry(projectId);
-    store.removeProject({ projectId });
+    if (
+      projectId &&
+      typeof projectService?.releaseProjectRuntime === "function"
+    ) {
+      failedStage = "release_project_runtime";
+      await projectService.releaseProjectRuntime(projectId);
+    }
+
+    if (projectId) {
+      failedStage = "remove_project_entry";
+      await appService.removeProjectEntry(projectId);
+      store.removeProject({ projectId });
+    } else {
+      failedStage = "remove_project_entry_by_path";
+      await appService.removeProjectEntryByPath(projectPath);
+      store.removeProject({ projectPath });
+    }
   } catch {
     appService.showAlert({
       message: "Failed to remove project. Please try again.",
@@ -699,6 +793,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   const item = detail.item || detail;
   const targetScope = store.selectDropdownMenuTargetScope();
   const projectId = store.selectDropdownMenuTargetProjectId();
+  const projectPath = store.selectDropdownMenuTargetProjectPath();
 
   if (item.value === "add-member" && targetScope === "cloud") {
     if (!projectId) {
@@ -730,25 +825,26 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     return;
   }
 
-  if (!projectId) {
+  if (!projectId && !projectPath) {
     store.closeDropdownMenu();
     render();
     return;
   }
 
   const projects = store.selectProjects();
-  const project = projects.find((p) => p.id === projectId);
+  const project = projects.find((projectItem) => {
+    if (projectId && projectItem?.id === projectId) {
+      return true;
+    }
 
-  if (!project) {
-    store.closeDropdownMenu();
-    render();
-    return;
-  }
+    return projectPath && projectItem?.projectPath === projectPath;
+  });
 
   store.closeDropdownMenu();
   store.openDeleteDialog({
     projectId: projectId,
-    projectName: project.name || "",
+    projectPath,
+    projectName: project?.name || "",
   });
   render();
 };

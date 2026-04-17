@@ -5,7 +5,7 @@ export const createInitialState = () => ({
   loginButtonText: "Login",
   createButtonText: "Create",
   createCloudButtonText: "Create Cloud Project",
-  openButtonText: "Open",
+  openButtonText: "Import",
   isLoggedIn: false,
   userEmail: "",
   userName: "",
@@ -47,12 +47,14 @@ export const createInitialState = () => ({
     y: 0,
     targetScope: "local",
     targetProjectId: null,
+    targetProjectPath: "",
     items: [],
   },
 
   deleteDialog: {
     isOpen: false,
     projectId: null,
+    projectPath: "",
     projectName: "",
   },
 
@@ -81,7 +83,19 @@ export const setProjects = ({ state }, { projects } = {}) => {
 };
 
 export const addProject = ({ state }, { project } = {}) => {
-  state.projects.push(project);
+  if (!project?.id) {
+    return;
+  }
+
+  const existingIndex = state.projects.findIndex(
+    (entry) => entry?.id === project.id,
+  );
+  if (existingIndex === -1) {
+    state.projects.push(project);
+    return;
+  }
+
+  state.projects[existingIndex] = project;
 };
 
 export const setCloudProjects = ({ state }, { projects } = {}) => {
@@ -114,8 +128,18 @@ export const setAuthUser = ({ state }, { user } = {}) => {
   state.avatarInitial = initialSource[0].toUpperCase();
 };
 
-export const removeProject = ({ state }, { projectId } = {}) => {
-  state.projects = state.projects.filter((p) => p.id !== projectId);
+export const removeProject = ({ state }, { projectId, projectPath } = {}) => {
+  state.projects = state.projects.filter((project) => {
+    if (projectId && project?.id === projectId) {
+      return false;
+    }
+
+    if (projectPath && project?.projectPath === projectPath) {
+      return false;
+    }
+
+    return true;
+  });
 };
 
 export const openProfileMenu = ({ state }, { x, y } = {}) => {
@@ -207,6 +231,10 @@ export const selectDropdownMenuTargetProjectId = ({ state }) => {
   return state.dropdownMenu.targetProjectId;
 };
 
+export const selectDropdownMenuTargetProjectPath = ({ state }) => {
+  return state.dropdownMenu.targetProjectPath || "";
+};
+
 export const selectDropdownMenuTargetScope = ({ state }) => {
   return state.dropdownMenu.targetScope || "local";
 };
@@ -217,13 +245,14 @@ export const selectIsProjectDropdownMenuOpen = ({ state }) => {
 
 export const openDropdownMenu = (
   { state },
-  { x, y, scope = "local", projectId, items } = {},
+  { x, y, scope = "local", projectId, projectPath, items } = {},
 ) => {
   state.dropdownMenu.isOpen = true;
   state.dropdownMenu.x = x;
   state.dropdownMenu.y = y;
   state.dropdownMenu.targetScope = scope;
   state.dropdownMenu.targetProjectId = projectId;
+  state.dropdownMenu.targetProjectPath = projectPath ?? "";
   state.dropdownMenu.items = Array.isArray(items)
     ? items
     : [{ label: "Remove", type: "item", value: "delete" }];
@@ -235,26 +264,33 @@ export const closeDropdownMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu.y = 0;
   state.dropdownMenu.targetScope = "local";
   state.dropdownMenu.targetProjectId = null;
+  state.dropdownMenu.targetProjectPath = "";
   state.dropdownMenu.items = [];
 };
 
 export const openDeleteDialog = (
   { state },
-  { projectId, projectName = "" } = {},
+  { projectId, projectPath, projectName = "" } = {},
 ) => {
   state.deleteDialog.isOpen = true;
   state.deleteDialog.projectId = projectId || null;
+  state.deleteDialog.projectPath = projectPath ?? "";
   state.deleteDialog.projectName = projectName;
 };
 
 export const closeDeleteDialog = ({ state }, _payload = {}) => {
   state.deleteDialog.isOpen = false;
   state.deleteDialog.projectId = null;
+  state.deleteDialog.projectPath = "";
   state.deleteDialog.projectName = "";
 };
 
 export const selectDeleteDialogProjectId = ({ state }) => {
   return state.deleteDialog.projectId;
+};
+
+export const selectDeleteDialogProjectPath = ({ state }) => {
+  return state.deleteDialog.projectPath || "";
 };
 
 export const selectIsDeleteDialogOpen = ({ state }) => {

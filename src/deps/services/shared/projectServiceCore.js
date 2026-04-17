@@ -161,11 +161,26 @@ export const createProjectServiceCore = ({
     };
   };
 
+  const releaseProjectRuntime = async (projectId) => {
+    const targetProjectId =
+      projectId ||
+      repositoryService.getEnsuredProjectId() ||
+      router.getPayload()?.p;
+
+    if (targetProjectId) {
+      await collabService.stopCollabSession(targetProjectId);
+    }
+
+    await repositoryService.releaseCurrentRepository();
+  };
+
   return {
     getRepository: repositoryService.getRepository,
     getRepositoryById: repositoryService.getRepositoryById,
     getAdapterById: repositoryService.getAdapterById,
     getEnsuredProjectId: repositoryService.getEnsuredProjectId,
+    releaseCurrentRepository: repositoryService.releaseCurrentRepository,
+    releaseProjectRuntime,
     ensureRepository: repositoryService.ensureRepository,
     ensureProjectCompatibleById:
       repositoryService.ensureProjectCompatibleByProjectId,

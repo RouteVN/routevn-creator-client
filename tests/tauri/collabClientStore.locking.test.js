@@ -220,6 +220,38 @@ describe("tauri collab client store locking", () => {
     await store.close();
   }, 10000);
 
+  it("recovers a closed-pool project db handle by reopening it once", async () => {
+    const staleDb = {
+      execute: vi.fn(async () => ({ rowsAffected: 0 })),
+      select: vi.fn(async () => {
+        throw new Error("attempted to acquire a connection on a closed pool");
+      }),
+      close: vi.fn(async () => {}),
+    };
+    const freshDb = {
+      execute: vi.fn(async () => ({ rowsAffected: 0 })),
+      select: vi.fn(async () => []),
+      close: vi.fn(async () => {}),
+    };
+    loadMock.mockResolvedValueOnce(staleDb).mockResolvedValueOnce(freshDb);
+    createLibsqlClientStoreMock.mockImplementation(createStoreMockFactory());
+
+    const { createPersistedTauriProjectStore } = await import(
+      "../../src/deps/services/tauri/collabClientStore.js"
+    );
+    const store = await createPersistedTauriProjectStore({
+      projectPath: "/projects/recover",
+      projectId: "project-recover",
+    });
+
+    expect(loadMock).toHaveBeenCalledTimes(2);
+    expect(staleDb.close).toHaveBeenCalledWith(
+      "sqlite:/projects/recover/project.db",
+    );
+
+    await store.close();
+  });
+
   it("recovers a commit retry that loses transaction state", async () => {
     vi.useFakeTimers();
     const fakeDb = {

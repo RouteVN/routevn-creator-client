@@ -1,7 +1,6 @@
 import { mkdir, writeFile, exists } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
-import Database from "@tauri-apps/plugin-sql";
 import JSZip from "jszip";
 import {
   loadTemplate,
@@ -28,14 +27,10 @@ import {
   resolveProjectResolutionForWrite,
   scaleTemplateProjectStateForResolution,
 } from "../../../internal/projectResolution.js";
-import {
-  SQLITE_BUSY_TIMEOUT_MS,
-  withSqliteLockRetry,
-} from "../../../internal/sqliteLocking.js";
+import { SQLITE_BUSY_TIMEOUT_MS } from "../../../internal/sqliteLocking.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
 const CREATOR_VERSION_KEY = "creatorVersion";
-const APP_STATE_TABLE = "app_state";
 
 const normalizeProjectInfo = (projectInfo = {}) => ({
   id: projectInfo.id ?? "",
@@ -44,41 +39,6 @@ const normalizeProjectInfo = (projectInfo = {}) => ({
   description: projectInfo.description ?? "",
   iconFileId: projectInfo.iconFileId ?? null,
 });
-
-const parseStoredAppValue = (value) => {
-  if (typeof value !== "string" || value.length === 0) {
-    return undefined;
-  }
-
-  try {
-    return JSON.parse(value);
-  } catch {
-    return value;
-  }
-};
-
-const getNow = () => {
-  if (
-    typeof performance !== "undefined" &&
-    typeof performance.now === "function"
-  ) {
-    return performance.now();
-  }
-
-  return Date.now();
-};
-
-const getDurationMs = (startedAt) => Number((getNow() - startedAt).toFixed(2));
-
-const isAudioUploadFile = (file) =>
-  [
-    "audio/mpeg",
-    "audio/mp3",
-    "audio/wav",
-    "audio/x-wav",
-    "audio/wave",
-    "audio/ogg",
-  ].includes(file?.type);
 
 async function copyTemplateFiles(templateId, targetPath) {
   const templateFilesPath = `/templates/${templateId}/files/`;
@@ -108,32 +68,6 @@ export const createTauriProjectServiceAdapters = ({
 }) => {
   const filesPathByProjectPath = new Map();
   const fileUrlByCacheKey = new Map();
-
-  const readProjectAppValueByPath = async ({ projectPath, key }) => {
-    if (!projectPath || !key) {
-      return undefined;
-    }
-
-    try {
-      const dbPath = await join(projectPath, PROJECT_DB_NAME);
-      // plugin-sql pools connections by db path; closing a raw preflight handle
-      // here can tear down the shared pool used by the project store.
-      const projectDb = await Database.load(`sqlite:${dbPath}`);
-      await withSqliteLockRetry(() =>
-        projectDb.execute(`PRAGMA busy_timeout=${SQLITE_BUSY_TIMEOUT_MS}`),
-      );
-      const rows = await withSqliteLockRetry(() =>
-        projectDb.select(
-          `SELECT value FROM ${APP_STATE_TABLE} WHERE key = $1`,
-          [key],
-        ),
-      );
-      const row = Array.isArray(rows) ? rows[0] : undefined;
-      return parseStoredAppValue(row?.value);
-    } catch {
-      return undefined;
-    }
-  };
 
   const getReferenceFilesPath = async (reference) => {
     const projectPath = reference?.projectPath;
@@ -246,25 +180,6 @@ export const createTauriProjectServiceAdapters = ({
       repositoryProjectId: projectPath,
     }),
 
-    readCreatorVersionByReference: async ({ reference }) => {
-      const projectPath = reference?.projectPath;
-      const parsedValue = await readProjectAppValueByPath({
-        projectPath,
-        key: CREATOR_VERSION_KEY,
-      });
-      return Number.isFinite(parsedValue) ? parsedValue : undefined;
-    },
-
-    readProjectInfoByReference: async ({ reference }) => {
-      const projectPath = reference?.projectPath;
-      return normalizeProjectInfo(
-        await readProjectAppValueByPath({
-          projectPath,
-          key: PROJECT_INFO_KEY,
-        }),
-      );
-    },
-
     createStore: async ({ reference }) => {
       return createPersistedTauriProjectStore({
         projectPath: reference.projectPath,
@@ -356,59 +271,22 @@ export const createTauriProjectServiceAdapters = ({
           }
         : getCurrentReference();
       const fileId = idGenerator();
-      const totalStartedAt = getNow();
-      let uint8ArrayDurationMs = 0;
-      let writeFileDurationMs = 0;
+      const arrayBuffer = bytes ?? (await file.arrayBuffer());
+      const uint8Array = new Uint8Array(arrayBuffer);
 
-      try {
-        const arrayBuffer = bytes ?? (await file.arrayBuffer());
+      const filesPath = await getReferenceFilesPath(reference);
+      await mkdir(filesPath, { recursive: true });
+      const filePath = await join(filesPath, fileId);
 
-        const uint8ArrayStartedAt = getNow();
-        const uint8Array = new Uint8Array(arrayBuffer);
-        uint8ArrayDurationMs = getDurationMs(uint8ArrayStartedAt);
+      await writeFile(filePath, uint8Array);
 
-        const filesPath = await getReferenceFilesPath(reference);
-        await mkdir(filesPath, { recursive: true });
-        const filePath = await join(filesPath, fileId);
+      const fileUrl = convertFileSrc(filePath);
+      fileUrlByCacheKey.set(getFileUrlCacheKey(reference, fileId), fileUrl);
 
-        const writeFileStartedAt = getNow();
-        await writeFile(filePath, uint8Array);
-        writeFileDurationMs = getDurationMs(writeFileStartedAt);
-
-        if (isAudioUploadFile(file)) {
-          console.info("[audioUpload.store.tauri] complete", {
-            fileName: file.name,
-            fileSize: file.size,
-            fileType: file.type,
-            usedPreloadedBytes: bytes !== undefined,
-            uint8ArrayDurationMs,
-            writeFileDurationMs,
-            totalDurationMs: getDurationMs(totalStartedAt),
-          });
-        }
-
-        const fileUrl = convertFileSrc(filePath);
-        fileUrlByCacheKey.set(getFileUrlCacheKey(reference, fileId), fileUrl);
-
-        return {
-          fileId,
-          downloadUrl: fileUrl,
-        };
-      } catch (error) {
-        if (isAudioUploadFile(file)) {
-          console.warn("[audioUpload.store.tauri] failed", {
-            fileName: file.name,
-            fileSize: file.size,
-            fileType: file.type,
-            usedPreloadedBytes: bytes !== undefined,
-            uint8ArrayDurationMs,
-            writeFileDurationMs,
-            totalDurationMs: getDurationMs(totalStartedAt),
-            error: error?.message ?? "Unknown error",
-          });
-        }
-        throw error;
-      }
+      return {
+        fileId,
+        downloadUrl: fileUrl,
+      };
     },
 
     getFileContent: async ({ fileId, getCurrentReference }) => {
