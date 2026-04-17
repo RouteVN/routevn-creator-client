@@ -149,6 +149,56 @@ describe("projectEntriesService", () => {
     ]);
   });
 
+  it("preserves the working path when duplicate repaired entries merge by project id", async () => {
+    const getProjectInfoByPath = vi.fn(async () => ({
+      id: "project-1",
+      name: "DiaLune",
+      description: "Recovered",
+      iconFileId: "icon-1",
+    }));
+    const { db, service } = createService(
+      [
+        {
+          id: "project-1",
+          projectPath: "/projects/working",
+          name: "DiaLune",
+          description: "Working",
+          iconFileId: "icon-working",
+        },
+        {
+          id: "",
+          projectPath: "/projects/stale",
+          name: "",
+          description: "",
+          iconFileId: null,
+        },
+      ],
+      {
+        projectService: {
+          getProjectInfoByPath,
+        },
+      },
+    );
+
+    const projects = await service.loadAllProjects();
+
+    expect(projects).toEqual([
+      expect.objectContaining({
+        id: "project-1",
+        projectPath: "/projects/working",
+      }),
+    ]);
+    expect(db.set).toHaveBeenCalledWith("projectEntries", [
+      {
+        id: "project-1",
+        projectPath: "/projects/working",
+        name: "DiaLune",
+        description: "Recovered",
+        iconFileId: "icon-1",
+      },
+    ]);
+  });
+
   it("removes a stale local project entry by path when its id is missing", async () => {
     const { service } = createService([
       {

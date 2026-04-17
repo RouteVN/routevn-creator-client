@@ -7,6 +7,7 @@ import {
   getTemplateFiles,
 } from "../../clients/web/templateLoader.js";
 import {
+  PROJECT_DB_NAME,
   createPersistedTauriProjectStore,
   evictPersistedTauriProjectStoreCache,
   toBootstrappedCommittedEvent,
@@ -26,6 +27,11 @@ import {
   resolveProjectResolutionForWrite,
   scaleTemplateProjectStateForResolution,
 } from "../../../internal/projectResolution.js";
+import {
+  SQLITE_BUSY_TIMEOUT_MS,
+  withSqliteLockRetry,
+} from "../../../internal/sqliteLocking.js";
+import { getManagedSqliteConnection } from "../../clients/tauri/sqliteConnectionManager.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
 const CREATOR_VERSION_KEY = "creatorVersion";
@@ -37,6 +43,23 @@ const normalizeProjectInfo = (projectInfo = {}) => ({
   description: projectInfo.description ?? "",
   iconFileId: projectInfo.iconFileId ?? null,
 });
+
+const parseStoredAppValue = (value) => {
+  if (typeof value !== "string" || value.length === 0) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+};
+
+const createProjectDatabaseOpenError = () =>
+  new Error(
+    "error returned from database: (code: 14) unable to open database file",
+  );
 
 async function copyTemplateFiles(templateId, targetPath) {
   const templateFilesPath = `/templates/${templateId}/files/`;
@@ -66,6 +89,41 @@ export const createTauriProjectServiceAdapters = ({
 }) => {
   const filesPathByProjectPath = new Map();
   const fileUrlByCacheKey = new Map();
+
+  const readProjectAppValueByReference = async ({ reference, key }) => {
+    const projectPath = reference?.projectPath;
+    if (!projectPath || !key) {
+      return undefined;
+    }
+
+    const dbFilePath = await join(projectPath, PROJECT_DB_NAME);
+    if (!(await exists(dbFilePath))) {
+      throw createProjectDatabaseOpenError();
+    }
+
+    const db = getManagedSqliteConnection({
+      dbPath: `sqlite:${dbFilePath}`,
+      busyTimeoutMs: SQLITE_BUSY_TIMEOUT_MS,
+    });
+    await db.init();
+
+    try {
+      const rows = await withSqliteLockRetry(() =>
+        db.select("SELECT value FROM app_state WHERE key = $1", [key]),
+      );
+      const row = Array.isArray(rows) ? rows[0] : undefined;
+      return parseStoredAppValue(row?.value);
+    } catch (error) {
+      const message = String(error?.message || "").toLowerCase();
+      if (
+        message.includes("no such table") ||
+        message.includes("no such column")
+      ) {
+        return undefined;
+      }
+      throw error;
+    }
+  };
 
   const getReferenceFilesPath = async (reference) => {
     const projectPath = reference?.projectPath;
@@ -177,6 +235,23 @@ export const createTauriProjectServiceAdapters = ({
       cacheKey: projectPath,
       repositoryProjectId: projectPath,
     }),
+
+    readCreatorVersionByReference: async ({ reference }) => {
+      const creatorVersion = await readProjectAppValueByReference({
+        reference,
+        key: CREATOR_VERSION_KEY,
+      });
+      return Number.isFinite(creatorVersion) ? creatorVersion : 0;
+    },
+
+    readProjectInfoByReference: async ({ reference }) => {
+      return normalizeProjectInfo(
+        await readProjectAppValueByReference({
+          reference,
+          key: PROJECT_INFO_KEY,
+        }),
+      );
+    },
 
     createStore: async ({ reference }) => {
       return createPersistedTauriProjectStore({

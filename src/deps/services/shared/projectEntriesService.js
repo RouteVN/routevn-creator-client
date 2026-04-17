@@ -14,6 +14,26 @@ const normalizeLocalProjectEntry = (entry) => ({
   iconFileId: entry?.iconFileId ?? null,
 });
 
+const mergeProjectEntriesPreservingWorkingPath = (currentEntry, nextEntry) => {
+  const mergedEntry = {
+    ...currentEntry,
+    ...nextEntry,
+  };
+
+  if (
+    currentEntry?.id &&
+    nextEntry?.id &&
+    currentEntry.id === nextEntry.id &&
+    currentEntry?.projectPath &&
+    nextEntry?.projectPath &&
+    currentEntry.projectPath !== nextEntry.projectPath
+  ) {
+    mergedEntry.projectPath = currentEntry.projectPath;
+  }
+
+  return mergedEntry;
+};
+
 export const createProjectEntriesService = ({
   db,
   getCurrentProjectId,
@@ -256,10 +276,10 @@ export const createProjectEntriesService = ({
         continue;
       }
 
-      nextEntries[duplicateIndex] = {
-        ...nextEntries[duplicateIndex],
-        ...nextEntry,
-      };
+      nextEntries[duplicateIndex] = mergeProjectEntriesPreservingWorkingPath(
+        nextEntries[duplicateIndex],
+        nextEntry,
+      );
       didChange = true;
     }
 

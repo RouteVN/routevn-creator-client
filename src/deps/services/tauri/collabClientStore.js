@@ -521,10 +521,88 @@ export const loadRepositoryEvents = async ({
   });
 
   if (draftHistoryMode === DRAFT_HISTORY_MODE_SNAPSHOT_ARCHIVE) {
-    processedEventCount = totalEventCount;
+    const bootstrapEvent = draftEvents[0];
+    events.push(bootstrapEvent);
+    processedEventCount += 1;
     reportProgress({ force: true });
     await yieldForUiPaint();
-    return [...events, ...draftEvents];
+
+    if (draftEvents.length === 1) {
+      reportProgress({ force: true });
+      return events;
+    }
+
+    let repositoryState = structuredClone(
+      bootstrapEvent?.payload?.state ?? initialProjectData,
+    );
+    const invalidDrafts = [];
+    let remainingDraftEvents = draftEvents.slice(1);
+
+    while (remainingDraftEvents.length > 0) {
+      try {
+        repositoryState = applyRepositoryEventsToState({
+          repositoryState,
+          events: remainingDraftEvents,
+          projectId,
+        });
+        events.push(...remainingDraftEvents);
+        processedEventCount += remainingDraftEvents.length;
+        reportProgress({ force: true });
+        await yieldForUiPaint();
+        break;
+      } catch (error) {
+        const failedDraftIndex = Number(error?.details?.commandIndex);
+        const resolvedFailedDraftIndex =
+          Number.isInteger(failedDraftIndex) &&
+          failedDraftIndex >= 0 &&
+          failedDraftIndex < remainingDraftEvents.length
+            ? failedDraftIndex
+            : 0;
+        const acceptedPrefix = remainingDraftEvents.slice(
+          0,
+          resolvedFailedDraftIndex,
+        );
+
+        if (acceptedPrefix.length > 0) {
+          repositoryState = applyRepositoryEventsToState({
+            repositoryState,
+            events: acceptedPrefix,
+            projectId,
+          });
+          events.push(...acceptedPrefix);
+          processedEventCount += acceptedPrefix.length;
+          reportProgress({ force: true });
+          await yieldForUiPaint();
+        }
+
+        const failedDraft = remainingDraftEvents[resolvedFailedDraftIndex];
+        invalidDrafts.push({
+          id: failedDraft?.id,
+          code: error?.code || "validation_failed",
+          message: error?.message || "Invalid local draft",
+        });
+        processedEventCount += 1;
+        reportProgress({ force: true });
+        await yieldForUiPaint();
+        remainingDraftEvents = remainingDraftEvents.slice(
+          resolvedFailedDraftIndex + 1,
+        );
+      }
+    }
+
+    for (const invalidDraft of invalidDrafts) {
+      await store.applySubmitResult({
+        result: {
+          id: invalidDraft.id,
+          status: "rejected",
+          reason: invalidDraft.code,
+          message: invalidDraft.message,
+        },
+      });
+    }
+
+    reportProgress({ force: true });
+    return events;
   }
 
   emitEventLoadProgress(onProgress, {
