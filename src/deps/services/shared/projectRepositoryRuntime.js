@@ -32,6 +32,7 @@ export const replayEventsToRepositoryState = ({
   untilEventIndex,
   createInitialState,
   reduceEventToState,
+  reduceEventsToState,
 }) => {
   const parsedIndex = Number(untilEventIndex);
   const targetIndex = Number.isFinite(parsedIndex)
@@ -53,6 +54,69 @@ export const replayEventsToRepositoryState = ({
     payload: structuredClone(event?.payload),
   });
 
+  const toReplayError = (error, failedIndex) => {
+    const hasFailedIndex =
+      Number.isInteger(failedIndex) &&
+      failedIndex >= 0 &&
+      failedIndex < targetIndex;
+    const resolvedFailedIndex = hasFailedIndex ? failedIndex : undefined;
+    const startIndex =
+      resolvedFailedIndex === undefined
+        ? 0
+        : Math.max(0, resolvedFailedIndex - 2);
+    const endIndex =
+      resolvedFailedIndex === undefined
+        ? Math.min(targetIndex, 3)
+        : Math.min(targetIndex, resolvedFailedIndex + 3);
+    const replayDiagnostics = {
+      targetEventCount: targetIndex,
+      failedEventArrayIndex: resolvedFailedIndex,
+      failedEventOffset:
+        resolvedFailedIndex === undefined ? undefined : resolvedFailedIndex + 1,
+      failedEvent:
+        resolvedFailedIndex === undefined
+          ? undefined
+          : summarizeReplayEvent(
+              events[resolvedFailedIndex],
+              resolvedFailedIndex,
+            ),
+      nearbyEvents: events
+        .slice(startIndex, endIndex)
+        .map((event, eventIndexOffset) =>
+          summarizeReplayEvent(event, startIndex + eventIndexOffset),
+        ),
+    };
+    const replayError = new Error(
+      error?.message || "Failed to replay repository history",
+    );
+
+    replayError.name = "ProjectRepositoryReplayError";
+    replayError.code = error?.code || "history_replay_failed";
+    replayError.cause = error;
+    replayError.details = {
+      ...(error?.details && typeof error.details === "object"
+        ? structuredClone(error.details)
+        : {}),
+      replay: replayDiagnostics,
+    };
+    return replayError;
+  };
+
+  if (typeof reduceEventsToState === "function") {
+    try {
+      return reduceEventsToState({
+        repositoryState: createInitialState(),
+        events: events.slice(0, targetIndex),
+      });
+    } catch (error) {
+      const failedIndex = Number(error?.details?.commandIndex);
+      throw toReplayError(
+        error,
+        Number.isInteger(failedIndex) ? failedIndex : undefined,
+      );
+    }
+  }
+
   let state = createInitialState();
   for (let index = 0; index < targetIndex; index += 1) {
     try {
@@ -64,33 +128,7 @@ export const replayEventsToRepositoryState = ({
         state = nextState;
       }
     } catch (error) {
-      const startIndex = Math.max(0, index - 2);
-      const endIndex = Math.min(targetIndex, index + 3);
-      const replayDiagnostics = {
-        targetEventCount: targetIndex,
-        failedEventArrayIndex: index,
-        failedEventOffset: index + 1,
-        failedEvent: summarizeReplayEvent(events[index], index),
-        nearbyEvents: events
-          .slice(startIndex, endIndex)
-          .map((event, eventIndexOffset) =>
-            summarizeReplayEvent(event, startIndex + eventIndexOffset),
-          ),
-      };
-      const replayError = new Error(
-        error?.message || "Failed to replay repository history",
-      );
-
-      replayError.name = "ProjectRepositoryReplayError";
-      replayError.code = error?.code || "history_replay_failed";
-      replayError.cause = error;
-      replayError.details = {
-        ...(error?.details && typeof error.details === "object"
-          ? structuredClone(error.details)
-          : {}),
-        replay: replayDiagnostics,
-      };
-      throw replayError;
+      throw toReplayError(error, index);
     }
   }
 
@@ -114,6 +152,7 @@ export const createProjectRepositoryRuntime = async ({
   loadEvents,
   createInitialState,
   reduceEventToState,
+  reduceEventsToState,
   assertState = () => {},
   onHydrationProgress,
 }) => {
@@ -335,15 +374,18 @@ export const createProjectRepositoryRuntime = async ({
     assertState(currentMainState);
   };
 
-  const loadSceneProjection = async (sceneId) =>
-    loadSceneProjectionState({
+  const loadSceneProjection = async (sceneId) => {
+    const eventsForProjection = await ensureEventHistoryLoaded();
+    return loadSceneProjectionState({
       store,
       mainState: currentMainState,
-      events: await ensureEventHistoryLoaded(),
+      events: eventsForProjection,
       createInitialState,
       reduceEventToState,
+      reduceEventsToState,
       sceneId,
     });
+  };
 
   const sceneBundleRuntime = createSceneBundleRuntime({
     store,
@@ -456,6 +498,7 @@ export const createProjectRepositoryRuntime = async ({
       sceneId: activeSceneId,
       sourceEvents: scopedEvents,
       reduceEventToState,
+      reduceEventsToState,
     });
 
     await saveSceneProjectionCheckpoint({
@@ -586,6 +629,7 @@ export const createProjectRepositoryRuntime = async ({
         untilEventIndex,
         createInitialState,
         reduceEventToState,
+        reduceEventsToState,
       });
     },
 
@@ -731,6 +775,13 @@ export const createProjectRepositoryRuntime = async ({
       await pruneRemovedActiveScene();
       await sceneBundleRuntime.handleCommittedEvents(committedEvents);
       notifyStateListeners();
+    },
+
+    async flushMainCheckpoint() {
+      await materializedViewRuntime.flushMaterializedView({
+        viewName: MAIN_VIEW_NAME,
+        partition: MAIN_PARTITION,
+      });
     },
 
     async flushMaterializedViews() {

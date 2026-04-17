@@ -8,18 +8,9 @@ import { commandToSyncEvent, committedEventToCommand } from "./mappers.js";
 import { projectRepositoryStateToDomainState } from "../../../../internal/project/projection.js";
 import {
   applyCommandToRepositoryState,
+  applyCommandsToRepositoryState,
   initialProjectData,
 } from "../projectRepository.js";
-
-const isTransportDisconnectedError = (error) => {
-  const code = error?.code;
-  if (code === "transport_disconnected") return true;
-  const message = String(error?.message || "").toLowerCase();
-  return (
-    message.includes("websocket is not connected") ||
-    message.includes("transport_disconnected")
-  );
-};
 
 export const createProjectCollabService = ({
   projectId,
@@ -33,97 +24,7 @@ export const createProjectCollabService = ({
 }) => {
   let lastError = null;
   let session = null;
-  let sessionStarted = false;
-  let onlineTransportAttached = Boolean(transport);
-  let serverErrorStopInFlight = false;
   let projectionGap;
-  let activeSubmission = null;
-  const queuedSubmissions = [];
-  const idleWaiters = new Set();
-  let processNextSubmissionTimer;
-  const SUBMISSION_BATCH_WINDOW_MS = 24;
-
-  const resolveIdleWaiters = () => {
-    if (activeSubmission || queuedSubmissions.length > 0) {
-      return;
-    }
-
-    for (const resolve of idleWaiters) {
-      resolve();
-    }
-    idleWaiters.clear();
-  };
-
-  const processNextSubmission = () => {
-    if (processNextSubmissionTimer !== undefined) {
-      clearTimeout(processNextSubmissionTimer);
-      processNextSubmissionTimer = undefined;
-    }
-
-    if (activeSubmission || queuedSubmissions.length === 0) {
-      resolveIdleWaiters();
-      return;
-    }
-
-    const submissions = [];
-    while (queuedSubmissions.length > 0) {
-      submissions.push(queuedSubmissions.shift());
-    }
-    const combinedCommands = submissions.flatMap(
-      (submission) => submission.commands,
-    );
-    activeSubmission = {
-      submissions,
-      commandCount: combinedCommands.length,
-    };
-
-    void (async () => {
-      try {
-        const insertedLocally =
-          await insertDraftCommandsLocally(combinedCommands);
-        if (!insertedLocally) {
-          await session.submitCommands(combinedCommands);
-        }
-        for (const submission of submissions) {
-          submission.resolve(submission.commands.map((command) => command.id));
-        }
-        activeSubmission = null;
-        processNextSubmission();
-      } catch (error) {
-        activeSubmission = null;
-        for (const submission of submissions) {
-          submission.reject(error);
-        }
-        processNextSubmission();
-      }
-    })();
-  };
-
-  const scheduleProcessNextSubmission = () => {
-    if (activeSubmission || queuedSubmissions.length === 0) {
-      resolveIdleWaiters();
-      return;
-    }
-
-    if (processNextSubmissionTimer !== undefined) {
-      return;
-    }
-
-    processNextSubmissionTimer = setTimeout(() => {
-      processNextSubmissionTimer = undefined;
-      processNextSubmission();
-    }, SUBMISSION_BATCH_WINDOW_MS);
-  };
-
-  const waitForIdle = () => {
-    if (!activeSubmission && queuedSubmissions.length === 0) {
-      return Promise.resolve();
-    }
-
-    return new Promise((resolve) => {
-      idleWaiters.add(resolve);
-    });
-  };
 
   const createInitialRepositoryState = () =>
     structuredClone(initialProjectData);
@@ -152,42 +53,21 @@ export const createProjectCollabService = ({
     }
   };
 
-  const getCommandPartition = (command) => {
-    const partition =
-      typeof command?.partition === "string" && command.partition.length > 0
-        ? command.partition
-        : null;
-
-    if (!partition) {
-      throw new Error("Command must include a partition");
+  const createSubmitErrorResult = (error) => {
+    const normalizedError = {
+      code: error?.code || "submit_failed",
+      message: error?.message || "Failed to submit commands",
+    };
+    if (error?.details && typeof error.details === "object") {
+      normalizedError.details = structuredClone(error.details);
     }
-
-    return partition;
+    return {
+      valid: false,
+      error: normalizedError,
+    };
   };
 
-  const insertDraftCommandsLocally = async (commands) => {
-    if (
-      onlineTransportAttached ||
-      !sessionStarted ||
-      !clientStore ||
-      typeof clientStore.insertDrafts !== "function"
-    ) {
-      return false;
-    }
-
-    await clientStore.insertDrafts(
-      commands.map((command) => ({
-        id: command.id,
-        partition: getCommandPartition(command),
-        ...commandToSyncEvent(command),
-        createdAt: Date.now(),
-      })),
-    );
-
-    return true;
-  };
-
-  const enqueueCommands = async (commands) => {
+  const submitValidatedCommands = async (commands) => {
     const normalizedCommands = Array.isArray(commands)
       ? commands.filter(Boolean)
       : [];
@@ -199,54 +79,39 @@ export const createProjectCollabService = ({
     }
 
     let nextProjectedRepositoryState = projectedRepositoryState;
-
-    for (const command of normalizedCommands) {
-      const optimistic = applyCommandToRepositoryState({
-        repositoryState: nextProjectedRepositoryState,
-        command,
-        projectId,
-      });
-
-      if (!optimistic.valid) {
-        lastError = {
-          code: optimistic.error?.code || "validation_failed",
-          message: optimistic.error?.message || "command validation failed",
-          payload: optimistic.error,
-        };
-        return optimistic;
-      }
-
-      nextProjectedRepositoryState = optimistic.repositoryState;
-    }
-
-    projectedRepositoryState = nextProjectedRepositoryState;
-
-    const storedSubmission = new Promise((resolve, reject) => {
-      queuedSubmissions.push({
-        commands: normalizedCommands,
-        resolve,
-        reject: (error) => {
-          if (!isTransportDisconnectedError(error)) {
-            reject(error);
-            return;
-          }
-
-          lastError = {
-            code: "transport_disconnected",
-            message: error?.message || "websocket is not connected",
-          };
-        },
-      });
+    const optimistic = applyCommandsToRepositoryState({
+      repositoryState: nextProjectedRepositoryState,
+      commands: normalizedCommands,
+      projectId,
     });
 
-    void storedSubmission.catch(() => {});
-    scheduleProcessNextSubmission();
-    await storedSubmission;
+    if (!optimistic.valid) {
+      lastError = {
+        code: optimistic.error?.code || "validation_failed",
+        message: optimistic.error?.message || "command validation failed",
+        payload: optimistic.error,
+      };
+      return optimistic;
+    }
 
-    return {
-      valid: true,
-      commandIds: normalizedCommands.map((command) => command.id),
-    };
+    nextProjectedRepositoryState = optimistic.repositoryState;
+
+    try {
+      const commandIds = await session.submitCommands(normalizedCommands);
+      projectedRepositoryState = nextProjectedRepositoryState;
+
+      return {
+        valid: true,
+        commandIds:
+          Array.isArray(commandIds) && commandIds.length > 0
+            ? commandIds
+            : normalizedCommands.map((command) => command.id),
+      };
+    } catch (error) {
+      const submitResult = createSubmitErrorResult(error);
+      lastError = structuredClone(submitResult.error);
+      return submitResult;
+    }
   };
 
   session = createCommandSyncSession({
@@ -343,18 +208,6 @@ export const createProjectCollabService = ({
           code: "unknown_error",
           message: "unknown",
         };
-        // Prevent hot reconnect loops when backend persistently returns
-        // server_error for submit/sync operations.
-        if (
-          payload?.code === "server_error" &&
-          !serverErrorStopInFlight &&
-          session
-        ) {
-          serverErrorStopInFlight = true;
-          void session.stop().finally(() => {
-            serverErrorStopInFlight = false;
-          });
-        }
       } else if (type === "rejected") {
         lastError = {
           code: payload?.reason || "validation_failed",
@@ -362,28 +215,20 @@ export const createProjectCollabService = ({
           payload,
         };
       }
-
-      resolveIdleWaiters();
     },
   });
 
   return {
     async start() {
       await session.start();
-      sessionStarted = true;
     },
 
     async stop() {
-      if (processNextSubmissionTimer !== undefined) {
-        clearTimeout(processNextSubmissionTimer);
-        processNextSubmissionTimer = undefined;
-      }
       await session.stop();
-      sessionStarted = false;
     },
 
     async submitCommand(command) {
-      const submitResult = await enqueueCommands([command]);
+      const submitResult = await submitValidatedCommands([command]);
       if (submitResult?.valid === false) {
         return submitResult;
       }
@@ -395,7 +240,7 @@ export const createProjectCollabService = ({
     },
 
     async submitCommands(commands) {
-      return enqueueCommands(commands);
+      return submitValidatedCommands(commands);
     },
 
     async submitEvent(input) {
@@ -403,12 +248,10 @@ export const createProjectCollabService = ({
     },
 
     async syncNow(options = {}) {
-      await waitForIdle();
       await session.syncNow(options);
     },
 
     async flushDrafts() {
-      await waitForIdle();
       await session.flushDrafts();
     },
 
@@ -446,7 +289,6 @@ export const createProjectCollabService = ({
     },
 
     async setOnlineTransport(nextTransport) {
-      onlineTransportAttached = true;
       await session.setOnlineTransport(nextTransport);
     },
   };

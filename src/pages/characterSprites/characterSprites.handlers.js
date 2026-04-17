@@ -1,5 +1,4 @@
 import { generateId, generatePrefixedId } from "../../internal/id.js";
-import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { processWithConcurrency } from "../../internal/processWithConcurrency.js";
 import { createCharacterSpritesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import {
@@ -740,8 +739,7 @@ export const handleItemDelete = async (deps, payload) => {
     return;
   }
 
-  const usage = recursivelyCheckResource({
-    state: projectService.getState(),
+  const usage = await projectService.checkResourceUsage({
     itemId,
     checkTargets: ["scenes", "layouts"],
   });

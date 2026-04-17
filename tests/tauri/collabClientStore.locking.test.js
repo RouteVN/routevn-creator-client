@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const joinMock = vi.fn(async (...parts) => parts.join("/"));
-const loadMock = vi.fn();
-const createLibsqlClientStoreMock = vi.fn();
+const { joinMock, loadMock, createLibsqlClientStoreMock } = vi.hoisted(() => ({
+  joinMock: vi.fn(async (...parts) => parts.join("/")),
+  loadMock: vi.fn(),
+  createLibsqlClientStoreMock: vi.fn(),
+}));
 
 vi.mock("@tauri-apps/api/path", () => ({
   join: joinMock,
@@ -14,9 +16,13 @@ vi.mock("@tauri-apps/plugin-sql", () => ({
   },
 }));
 
-vi.mock("insieme/client", () => ({
-  createLibsqlClientStore: createLibsqlClientStoreMock,
-}));
+vi.mock("insieme/client", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    createLibsqlClientStore: createLibsqlClientStoreMock,
+  };
+});
 
 const createLockError = (message = "database is locked") => {
   const error = new Error(message);
@@ -263,5 +269,155 @@ describe("tauri collab client store locking", () => {
       }),
     ).resolves.toEqual({ rowsAffected: 0 });
     expect(fakeDb.execute).toHaveBeenCalledTimes(1);
+  });
+
+  it("quarantines invalid local drafts while loading repository events", async () => {
+    const applySubmitResult = vi.fn(async () => {});
+
+    const { loadRepositoryEvents } = await import(
+      "../../src/deps/services/tauri/collabClientStore.js"
+    );
+
+    const events = await loadRepositoryEvents({
+      projectId: "project-1",
+      store: {
+        applySubmitResult,
+        _debug: {
+          getCommitted: async () => [],
+          getDrafts: async () => [
+            {
+              id: "draft-image-1",
+              partition: "m",
+              projectId: "project-1",
+              userId: "user-1",
+              type: "image.create",
+              schemaVersion: 1,
+              payload: {
+                imageId: "image-1",
+                data: {
+                  type: "image",
+                  name: "Broken image",
+                  fileId: "missing-file",
+                },
+                parentId: null,
+                position: "last",
+              },
+              clientTs: 1,
+              createdAt: 1,
+              meta: {},
+            },
+          ],
+        },
+      },
+    });
+
+    expect(events).toEqual([]);
+    expect(applySubmitResult).toHaveBeenCalledWith({
+      result: {
+        id: "draft-image-1",
+        status: "rejected",
+        reason: "precondition_validation_failed",
+        message:
+          "payload.data.fileId must reference an existing non-folder file",
+      },
+    });
+  });
+
+  it("skips a locked passive WAL checkpoint without retrying", async () => {
+    vi.useFakeTimers();
+    const fakeDb = {
+      execute: vi.fn(async () => ({ rowsAffected: 1 })),
+      select: vi.fn(async (sql) => {
+        if (String(sql).includes("wal_checkpoint")) {
+          throw createLockError("database table is locked");
+        }
+        return [];
+      }),
+      close: vi.fn(async () => {}),
+    };
+    loadMock.mockResolvedValue(fakeDb);
+    createLibsqlClientStoreMock.mockImplementation(createStoreMockFactory());
+
+    const { createPersistedTauriProjectStore } = await import(
+      "../../src/deps/services/tauri/collabClientStore.js"
+    );
+    const store = await createPersistedTauriProjectStore({
+      projectPath: "/projects/checkpoint",
+      projectId: "project-3",
+    });
+
+    await store.insertDraft({
+      id: "draft-1",
+      partition: "main",
+      type: "layout",
+      schemaVersion: 1,
+      payload: {},
+      clientTs: 1,
+      createdAt: 1,
+    });
+
+    await vi.advanceTimersByTimeAsync(20000);
+
+    expect(
+      fakeDb.select.mock.calls.filter(([sql]) =>
+        String(sql).includes("wal_checkpoint"),
+      ).length,
+    ).toBe(1);
+
+    await store.close();
+  });
+
+  it("uses sequential single draft inserts instead of insertDrafts batching", async () => {
+    const fakeDb = {
+      execute: vi.fn(async (_sql, args = []) => ({
+        rowsAffected: Array.isArray(args) ? args.length || 1 : 1,
+      })),
+      select: vi.fn(async () => []),
+      close: vi.fn(async () => {}),
+    };
+    loadMock.mockResolvedValue(fakeDb);
+    createLibsqlClientStoreMock.mockImplementation(createStoreMockFactory());
+
+    const { createPersistedTauriProjectStore } = await import(
+      "../../src/deps/services/tauri/collabClientStore.js"
+    );
+    const store = await createPersistedTauriProjectStore({
+      projectPath: "/projects/sequential-insert-drafts",
+      projectId: "project-4",
+    });
+
+    await store.insertDrafts([
+      {
+        id: "draft-a",
+        partition: "main",
+        type: "layout",
+        schemaVersion: 1,
+        payload: {},
+        clientTs: 1,
+        createdAt: 1,
+      },
+      {
+        id: "draft-b",
+        partition: "main",
+        type: "layout",
+        schemaVersion: 1,
+        payload: {},
+        clientTs: 2,
+        createdAt: 2,
+      },
+    ]);
+
+    expect(
+      fakeDb.execute.mock.calls.filter(([sql]) =>
+        String(sql).includes("INSERT DRAFT"),
+      ).length,
+    ).toBe(2);
+    expect(
+      fakeDb.execute.mock.calls.some(([sql]) =>
+        String(sql).includes("BEGIN IMMEDIATE"),
+      ),
+    ).toBe(false);
+
+    await store.close();
   });
 });

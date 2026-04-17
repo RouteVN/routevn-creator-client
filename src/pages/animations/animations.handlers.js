@@ -1,6 +1,5 @@
 import { generateId } from "../../internal/id.js";
 import { createAnimationEditorPayload } from "../../internal/animationEditorRoute.js";
-import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 
@@ -292,8 +291,7 @@ export const handleItemDelete = async (deps, payload) => {
     return;
   }
 
-  const usage = recursivelyCheckResource({
-    state: projectService.getState(),
+  const usage = await projectService.checkResourceUsage({
     itemId,
     checkTargets: ["scenes", "layouts"],
   });

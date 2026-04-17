@@ -5,7 +5,10 @@ import {
   COMMAND_TYPES,
   isSupportedCommandType,
 } from "../../../internal/project/commands.js";
-import { applyCommandToRepositoryStateWithCreatorModel } from "../../../internal/creatorModelAdapter.js";
+import {
+  applyCommandToRepositoryStateWithCreatorModel,
+  applyCommandsToRepositoryStateWithCreatorModel,
+} from "../../../internal/creatorModelAdapter.js";
 import {
   commandToSyncEvent,
   committedEventToCommand,
@@ -526,21 +529,77 @@ export const applyCommandToRepositoryState = ({
   });
 };
 
+export const applyCommandsToRepositoryState = ({
+  repositoryState,
+  commands = [],
+  projectId,
+}) => {
+  return applyCommandsToRepositoryStateWithCreatorModel({
+    repositoryState,
+    commands,
+    projectId,
+  });
+};
+
+const toUnsupportedProjectionResult = ({
+  command,
+  commandIndex,
+  event,
+  eventIndex,
+} = {}) => ({
+  valid: false,
+  error: {
+    code: "validation_failed",
+    message: `No command projection handler for command type '${command?.type || "unknown"}'`,
+    details: {
+      ...(Number.isInteger(commandIndex) ? { commandIndex } : {}),
+      ...(Number.isInteger(eventIndex) ? { eventIndex } : {}),
+      ...(typeof event?.id === "string" ? { eventId: event.id } : {}),
+      ...(typeof command?.type === "string"
+        ? { commandType: command.type }
+        : {}),
+    },
+  },
+});
+
+export const applyRepositoryEventsToRepositoryState = ({
+  repositoryState,
+  events = [],
+  projectId,
+}) => {
+  const normalizedEvents = Array.isArray(events) ? events : [];
+  const commands = [];
+
+  for (let index = 0; index < normalizedEvents.length; index += 1) {
+    const event = normalizedEvents[index];
+    const command = repositoryEventToCommand(event);
+    if (!isDirectDomainProjectionCommand(command)) {
+      return toUnsupportedProjectionResult({
+        command,
+        commandIndex: index,
+        event,
+        eventIndex: index,
+      });
+    }
+
+    commands.push(command);
+  }
+
+  return applyCommandsToRepositoryState({
+    repositoryState,
+    commands,
+    projectId,
+  });
+};
+
 const applyRepositoryEventToRepositoryState = ({
   repositoryState,
   event,
   projectId,
 }) => {
-  const command = repositoryEventToCommand(event);
-  if (!isDirectDomainProjectionCommand(command)) {
-    throw new Error(
-      `No command projection handler for command type '${command?.type || "unknown"}'`,
-    );
-  }
-
-  const applyResult = applyCommandToRepositoryState({
+  const applyResult = applyRepositoryEventsToRepositoryState({
     repositoryState,
-    command,
+    events: [event],
     projectId,
   });
 
@@ -582,6 +641,23 @@ export const createProjectRepository = async ({
         event,
         projectId,
       }),
+    reduceEventsToState: ({ repositoryState, events }) => {
+      const applyResult = applyRepositoryEventsToRepositoryState({
+        repositoryState,
+        events,
+        projectId,
+      });
+      if (!applyResult.valid) {
+        const error = new Error(
+          applyResult.error?.message || "Failed to apply repository events",
+        );
+        error.code = applyResult.error?.code || "validation_failed";
+        error.details = applyResult.error?.details ?? {};
+        throw error;
+      }
+
+      return applyResult.repositoryState;
+    },
     assertState: assertSupportedProjectState,
     onHydrationProgress,
   });

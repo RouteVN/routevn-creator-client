@@ -1,9 +1,11 @@
 import { buildSceneOverview } from "../../../../internal/project/sceneOverview.js";
+import { scenePartitionFor } from "../collab/partitions.js";
 import {
   doesCommittedEventAffectSceneOverview,
   getLatestSceneOverviewRevision,
   isMainPartition,
   isNonEmptyString,
+  OVERVIEW_CHECKPOINT_DEBOUNCE_MS,
   resolveSceneIdForPartition,
 } from "./shared.js";
 import { composeRepositoryState } from "./sceneStateView.js";
@@ -35,6 +37,93 @@ export const createSceneBundleRuntime = ({
     return loadSceneProjection(sceneId);
   };
 
+  let scheduledOverviewFlushId;
+  let overviewCheckpointWriteChain = Promise.resolve();
+  const pendingOverviewDeletes = new Set();
+  const pendingOverviewSavesBySceneId = new Map();
+
+  const flushPendingOverviewWrites = ({ throwOnError = false } = {}) => {
+    const queuedDeletes = [...pendingOverviewDeletes];
+    const queuedSaves = [...pendingOverviewSavesBySceneId.values()];
+    pendingOverviewDeletes.clear();
+    pendingOverviewSavesBySceneId.clear();
+
+    if (queuedDeletes.length === 0 && queuedSaves.length === 0) {
+      return overviewCheckpointWriteChain;
+    }
+
+    const operation = overviewCheckpointWriteChain.then(async () => {
+      for (const partition of queuedDeletes) {
+        await deleteSceneOverviewCheckpointByPartition({
+          store,
+          partition,
+        });
+      }
+
+      for (const checkpoint of queuedSaves) {
+        await saveSceneOverviewCheckpoint({
+          store,
+          sceneId: checkpoint.sceneId,
+          value: checkpoint.value,
+          lastCommittedId: checkpoint.lastCommittedId,
+          updatedAt: checkpoint.updatedAt,
+        });
+      }
+    });
+
+    overviewCheckpointWriteChain = operation.catch((error) => {
+      console.warn("Failed to persist scene overview checkpoints:", error);
+    });
+
+    if (throwOnError) {
+      return operation;
+    }
+
+    return overviewCheckpointWriteChain;
+  };
+
+  const scheduleOverviewWriteFlush = () => {
+    if (scheduledOverviewFlushId !== undefined) {
+      return;
+    }
+
+    scheduledOverviewFlushId = globalThis.setTimeout(() => {
+      scheduledOverviewFlushId = undefined;
+      void flushPendingOverviewWrites();
+    }, OVERVIEW_CHECKPOINT_DEBOUNCE_MS);
+  };
+
+  const queueSceneOverviewSave = ({ sceneId, overview, lastCommittedId }) => {
+    if (!isNonEmptyString(sceneId) || overview === undefined) {
+      return;
+    }
+
+    const partition = scenePartitionFor(sceneId);
+    pendingOverviewDeletes.delete(partition);
+    pendingOverviewSavesBySceneId.set(sceneId, {
+      sceneId,
+      value: structuredClone(overview),
+      lastCommittedId,
+      updatedAt: now(),
+    });
+    scheduleOverviewWriteFlush();
+  };
+
+  const queueSceneOverviewDelete = ({ sceneId, partition }) => {
+    const normalizedPartition =
+      partition ||
+      (isNonEmptyString(sceneId) ? scenePartitionFor(sceneId) : undefined);
+    if (!isNonEmptyString(normalizedPartition)) {
+      return;
+    }
+
+    if (isNonEmptyString(sceneId)) {
+      pendingOverviewSavesBySceneId.delete(sceneId);
+    }
+    pendingOverviewDeletes.add(normalizedPartition);
+    scheduleOverviewWriteFlush();
+  };
+
   const buildAndStoreSceneOverview = async ({ sceneId, checkpoint = null }) => {
     if (!isNonEmptyString(sceneId)) {
       return undefined;
@@ -44,7 +133,7 @@ export const createSceneBundleRuntime = ({
     const sceneExists = Boolean(currentMainState?.scenes?.items?.[sceneId]);
     if (!sceneExists) {
       if (checkpoint) {
-        await deleteSceneOverviewCheckpoint({ store, sceneId });
+        queueSceneOverviewDelete({ sceneId });
       }
       return undefined;
     }
@@ -61,19 +150,17 @@ export const createSceneBundleRuntime = ({
     });
 
     if (!overview) {
-      await deleteSceneOverviewCheckpoint({ store, sceneId });
+      queueSceneOverviewDelete({ sceneId });
       return undefined;
     }
 
-    await saveSceneOverviewCheckpoint({
-      store,
+    queueSceneOverviewSave({
       sceneId,
-      value: overview,
+      overview,
       lastCommittedId: getLatestSceneOverviewRevision({
         events,
         sceneId,
       }),
-      updatedAt: now(),
     });
 
     return structuredClone(overview);
@@ -91,7 +178,7 @@ export const createSceneBundleRuntime = ({
     const sceneExists = Boolean(currentMainState?.scenes?.items?.[sceneId]);
     if (!sceneExists) {
       if (checkpoint) {
-        await deleteSceneOverviewCheckpoint({ store, sceneId });
+        queueSceneOverviewDelete({ sceneId });
       }
       return undefined;
     }
@@ -132,7 +219,7 @@ export const createSceneBundleRuntime = ({
       if (sceneId === activeSceneId) {
         continue;
       }
-      await deleteSceneOverviewCheckpoint({ store, sceneId });
+      queueSceneOverviewDelete({ sceneId });
     }
   };
 
@@ -217,10 +304,7 @@ export const createSceneBundleRuntime = ({
       }
 
       for (const partition of inactivePartitionsToDelete) {
-        await deleteSceneOverviewCheckpointByPartition({
-          store,
-          partition,
-        });
+        queueSceneOverviewDelete({ partition });
       }
 
       for (const sceneId of scenesToRebuild) {
@@ -230,9 +314,21 @@ export const createSceneBundleRuntime = ({
       }
     },
 
-    async flushSceneOverviews() {},
+    async flushSceneOverviews() {
+      if (scheduledOverviewFlushId !== undefined) {
+        globalThis.clearTimeout(scheduledOverviewFlushId);
+        scheduledOverviewFlushId = undefined;
+      }
+
+      await flushPendingOverviewWrites({
+        throwOnError: true,
+      });
+      await overviewCheckpointWriteChain;
+    },
 
     async clearSceneOverview(sceneId) {
+      pendingOverviewSavesBySceneId.delete(sceneId);
+      pendingOverviewDeletes.delete(scenePartitionFor(sceneId));
       await deleteSceneOverviewCheckpoint({ store, sceneId });
     },
 
@@ -240,6 +336,8 @@ export const createSceneBundleRuntime = ({
       for (const sceneId of Object.keys(
         getCurrentMainState()?.scenes?.items || {},
       )) {
+        pendingOverviewSavesBySceneId.delete(sceneId);
+        pendingOverviewDeletes.delete(scenePartitionFor(sceneId));
         await deleteSceneOverviewCheckpoint({ store, sceneId });
       }
     },

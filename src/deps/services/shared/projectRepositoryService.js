@@ -10,6 +10,28 @@ import {
   MAIN_VIEW_VERSION,
 } from "./projectRepositoryViews/shared.js";
 
+const flushRepositoryMainCheckpoint = async (repository) => {
+  if (typeof repository?.flushMainCheckpoint === "function") {
+    await repository.flushMainCheckpoint();
+    return;
+  }
+
+  if (typeof repository?.flushMaterializedViews === "function") {
+    await repository.flushMaterializedViews();
+  }
+};
+
+const discardReusableMainCheckpoint = async (store) => {
+  if (typeof store?.deleteMaterializedViewCheckpoint !== "function") {
+    return;
+  }
+
+  await store.deleteMaterializedViewCheckpoint({
+    viewName: MAIN_VIEW_NAME,
+    partition: MAIN_PARTITION,
+  });
+};
+
 export const createProjectRepositoryService = ({
   router,
   db,
@@ -211,6 +233,7 @@ export const createProjectRepositoryService = ({
           currentHistoryStats,
         )
       ) {
+        await discardReusableMainCheckpoint(store);
         return undefined;
       }
     } else {
@@ -223,6 +246,7 @@ export const createProjectRepositoryService = ({
       );
 
       if (checkpointRevision !== currentHistoryLength) {
+        await discardReusableMainCheckpoint(store);
         return undefined;
       }
 
@@ -241,7 +265,6 @@ export const createProjectRepositoryService = ({
         updatedAt: checkpoint.updatedAt || Date.now(),
       });
     }
-
     return {
       checkpoint,
       currentHistoryStats,
@@ -601,6 +624,15 @@ export const createProjectRepositoryService = ({
                 reference,
                 store,
                 repository,
+              });
+            }
+
+            try {
+              await flushRepositoryMainCheckpoint(repository);
+            } catch (error) {
+              console.warn("Failed to flush project repository checkpoint", {
+                cacheKey: reference.cacheKey,
+                error: error?.message || String(error),
               });
             }
 

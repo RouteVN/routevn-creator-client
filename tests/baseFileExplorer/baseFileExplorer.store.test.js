@@ -49,4 +49,26 @@ describe("baseFileExplorer.store", () => {
     expect(viewData.items).toHaveLength(1);
     expect(viewData.items[0].svg).toBe("fragment");
   });
+
+  it("uses the audio icon for sounds", () => {
+    const state = createInitialState();
+    const viewData = selectViewData({
+      state,
+      props: {
+        items: [
+          {
+            id: "sound-1",
+            type: "sound",
+            name: "BGM",
+            _level: 0,
+            hasChildren: false,
+            parentId: null,
+          },
+        ],
+      },
+    });
+
+    expect(viewData.items).toHaveLength(1);
+    expect(viewData.items[0].svg).toBe("audio");
+  });
 });

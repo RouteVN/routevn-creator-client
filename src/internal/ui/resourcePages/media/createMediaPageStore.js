@@ -115,6 +115,23 @@ export const createMediaPageStore = ({
     );
   };
 
+  const updatePendingUpload = ({ state }, { itemId, updates } = {}) => {
+    if (!itemId || !updates) {
+      return;
+    }
+
+    const pendingUpload = state.pendingUploads.find(
+      (item) => item.id === itemId,
+    );
+    if (!pendingUpload) {
+      return;
+    }
+
+    for (const [key, value] of Object.entries(updates)) {
+      pendingUpload[key] = value;
+    }
+  };
+
   const setSelectedItemId = ({ state }, { itemId } = {}) => {
     state.selectedItemId = itemId;
   };
@@ -168,6 +185,7 @@ export const createMediaPageStore = ({
     const rawFlatGroups = toFlatGroups(state.data);
     const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
     const pendingByGroupId = new Map();
+    const hiddenItemIdsByGroupId = new Map();
 
     if (typeof buildPendingMediaItem === "function") {
       for (const pendingUpload of state.pendingUploads ?? []) {
@@ -179,12 +197,21 @@ export const createMediaPageStore = ({
         const existing = pendingByGroupId.get(groupId) ?? [];
         existing.push(buildPendingMediaItem(pendingUpload));
         pendingByGroupId.set(groupId, existing);
+
+        if (typeof pendingUpload.resolvedItemId === "string") {
+          const hiddenItemIds =
+            hiddenItemIdsByGroupId.get(groupId) ?? new Set();
+          hiddenItemIds.add(pendingUpload.resolvedItemId);
+          hiddenItemIdsByGroupId.set(groupId, hiddenItemIds);
+        }
       }
     }
 
     const mediaGroups = rawFlatGroups
       .map((group) => {
+        const hiddenItemIds = hiddenItemIdsByGroupId.get(group.id);
         const filteredChildren = (group.children ?? [])
+          .filter((item) => !hiddenItemIds?.has(item.id))
           .filter((item) => matchesSearch(item, searchQuery))
           .map(buildMediaItem);
         const filteredPendingChildren = (
@@ -254,6 +281,7 @@ export const createMediaPageStore = ({
     setItems,
     addPendingUploads,
     removePendingUploads,
+    updatePendingUpload,
     setSelectedItemId,
     openEditDialog,
     closeEditDialog,

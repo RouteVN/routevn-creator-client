@@ -66,7 +66,7 @@ const pickAndUploadVideo = async ({ appService, projectService } = {}) => {
 };
 
 const createVideosFromFiles = async ({ deps, files, parentId } = {}) => {
-  const { appService, projectService } = deps;
+  const { appService, projectService, store } = deps;
 
   if (!validateVideoFiles({ appService, files })) {
     return;
@@ -78,13 +78,28 @@ const createVideosFromFiles = async ({ deps, files, parentId } = {}) => {
     parentId,
     pendingIdPrefix: "pending-video",
     refresh: handleDataChanged,
-    createItem: async ({ uploadResult }) => {
+    processFile: async ({ file, pendingUploadId, removePendingUpload }) => {
+      const uploadResults = await projectService.uploadFiles([file]);
+      const uploadResult = uploadResults?.[0];
+
+      if (!uploadResult) {
+        return false;
+      }
+
+      const videoId = generateId();
+      store.updatePendingUpload({
+        itemId: pendingUploadId,
+        updates: {
+          resolvedItemId: videoId,
+        },
+      });
+
       const createAttempt = await runResourcePageMutation({
         appService,
         fallbackMessage: "Failed to create video.",
         action: () =>
           projectService.createVideo({
-            videoId: generateId(),
+            videoId,
             fileRecords: uploadResult.fileRecords,
             data: {
               type: "video",
@@ -102,6 +117,11 @@ const createVideosFromFiles = async ({ deps, files, parentId } = {}) => {
             position: "last",
           }),
       });
+
+      if (createAttempt.ok) {
+        await handleDataChanged(deps);
+        removePendingUpload();
+      }
 
       return createAttempt.ok;
     },
@@ -437,7 +457,9 @@ export const handleItemDelete = async (deps, payload) => {
 
   if (!result.deleted) {
     appService.showAlert({
-      message: "Cannot delete resource, it is currently in use.",
+      message: result.usage?.isUsed
+        ? "Cannot delete resource, it is currently in use."
+        : "Failed to delete resource.",
     });
     render();
     return;

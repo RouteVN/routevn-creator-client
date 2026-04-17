@@ -1,4 +1,7 @@
-import { processCommand as processCreatorModelCommand } from "@routevn/creator-model";
+import {
+  processCommand as processCreatorModelCommand,
+  replayCommands as replayCreatorModelCommands,
+} from "@routevn/creator-model";
 
 class CreatorModelAdapterError extends Error {
   constructor(message) {
@@ -72,19 +75,30 @@ export const commandToCreatorModelCommand = ({ command } = {}) => {
   return normalizedCommand;
 };
 
+export const commandsToCreatorModelCommands = ({ commands } = {}) => {
+  if (!Array.isArray(commands)) {
+    throw new CreatorModelAdapterError("commands must be an array");
+  }
+
+  return commands.map((command) =>
+    commandToCreatorModelCommand({
+      command,
+    }),
+  );
+};
+
 export const applyCommandToRepositoryStateWithCreatorModel = ({
   repositoryState,
   command,
 } = {}) => {
   return captureCreatorModelResult(() => {
-    const creatorModelState = structuredClone(repositoryState);
     const creatorModelCommand = commandToCreatorModelCommand({
       command,
     });
 
     const processResult = toCreatorModelResult(
       processCreatorModelCommand({
-        state: creatorModelState,
+        state: repositoryState,
         command: creatorModelCommand,
       }),
     );
@@ -95,9 +109,35 @@ export const applyCommandToRepositoryStateWithCreatorModel = ({
     return {
       valid: true,
       creatorModelCommand,
-      creatorModelState,
       nextCreatorModelState: processResult.state,
-      repositoryState: structuredClone(processResult.state),
+      repositoryState: processResult.state,
+    };
+  });
+};
+
+export const applyCommandsToRepositoryStateWithCreatorModel = ({
+  repositoryState,
+  commands,
+} = {}) => {
+  return captureCreatorModelResult(() => {
+    const creatorModelCommands = commandsToCreatorModelCommands({
+      commands,
+    });
+    const replayResult = toCreatorModelResult(
+      replayCreatorModelCommands({
+        state: repositoryState,
+        commands: creatorModelCommands,
+      }),
+    );
+    if (!replayResult.valid) {
+      return replayResult;
+    }
+
+    return {
+      valid: true,
+      creatorModelCommands,
+      nextCreatorModelState: replayResult.state,
+      repositoryState: replayResult.state,
     };
   });
 };

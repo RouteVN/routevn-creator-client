@@ -71,7 +71,7 @@ const pickAndUploadSound = async ({ appService, projectService } = {}) => {
 };
 
 const createSoundsFromFiles = async ({ deps, files, parentId } = {}) => {
-  const { appService, projectService } = deps;
+  const { appService, projectService, store } = deps;
 
   await processPendingUploads({
     deps,
@@ -79,13 +79,28 @@ const createSoundsFromFiles = async ({ deps, files, parentId } = {}) => {
     parentId,
     pendingIdPrefix: "pending-sound",
     refresh: handleDataChanged,
-    createItem: async ({ uploadResult }) => {
+    processFile: async ({ file, pendingUploadId, removePendingUpload }) => {
+      const uploadResults = await projectService.uploadFiles([file]);
+      const uploadResult = uploadResults?.[0];
+
+      if (!uploadResult) {
+        return false;
+      }
+
+      const soundId = generateId();
+      store.updatePendingUpload({
+        itemId: pendingUploadId,
+        updates: {
+          resolvedItemId: soundId,
+        },
+      });
+
       const createAttempt = await runResourcePageMutation({
         appService,
         fallbackMessage: "Failed to create sound.",
         action: () =>
           projectService.createSound({
-            soundId: generateId(),
+            soundId,
             fileRecords: uploadResult.fileRecords,
             data: {
               type: "sound",
@@ -101,6 +116,11 @@ const createSoundsFromFiles = async ({ deps, files, parentId } = {}) => {
             position: "last",
           }),
       });
+
+      if (createAttempt.ok) {
+        await handleDataChanged(deps);
+        removePendingUpload();
+      }
 
       return createAttempt.ok;
     },
@@ -470,7 +490,9 @@ export const handleItemDelete = async (deps, payload) => {
 
   if (!result.deleted) {
     appService.showAlert({
-      message: "Cannot delete resource, it is currently in use.",
+      message: result.usage?.isUsed
+        ? "Cannot delete resource, it is currently in use."
+        : "Failed to delete resource.",
     });
     render();
     return;

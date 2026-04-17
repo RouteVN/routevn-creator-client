@@ -38,6 +38,7 @@ export const processPendingUploads = async ({
   pendingIdPrefix = "pending-item",
   concurrency = 1,
   refresh = async () => {},
+  processFile,
   createItem = async () => false,
   onUploadError,
   onNoSuccessfulUploads,
@@ -90,6 +91,28 @@ export const processPendingUploads = async ({
       fileList,
       async (file) => {
         const pendingUploadId = pendingUploadIdByFile.get(file);
+        if (typeof processFile === "function") {
+          const removePendingUpload = () => {
+            removePendingUploads([pendingUploadId]);
+          };
+          const created = await processFile({
+            file,
+            parentId,
+            pendingUploadId,
+            removePendingUpload,
+          });
+
+          removePendingUpload();
+
+          if (!created) {
+            throw createAbortError();
+          }
+
+          successfulUploadCount += 1;
+          await refresh(deps);
+          return { ok: true };
+        }
+
         const uploadResults = await projectService.uploadFiles([file]);
         const uploadResult = uploadResults?.[0];
 

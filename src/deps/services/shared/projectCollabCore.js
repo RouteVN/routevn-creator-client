@@ -1,6 +1,7 @@
 import { createWebSocketTransport } from "../web/collab/createWebSocketTransport.js";
 import { recursivelyCheckResource } from "../../../internal/project/projection.js";
 import { createCommandApi } from "./commandApi.js";
+import { checkProjectResourceUsage } from "./resourceUsage.js";
 import {
   mainPartitionFor,
   mainScenePartitionFor,
@@ -271,20 +272,47 @@ export const createProjectCollabCore = ({
     checkTargets = [],
     deleteItem,
   }) => {
-    const state = commandApi.getState();
-    const usage = recursivelyCheckResource({
-      state,
-      itemId: resourceId,
-      checkTargets,
-    });
+    const projectId = getCurrentProjectId();
+    let usage;
+
+    if (projectId) {
+      const repository = await getCurrentRepository();
+      const store = getAdapterByProject(projectId);
+      if (repository && store) {
+        usage = await checkProjectResourceUsage({
+          repository,
+          store,
+          projectId,
+          itemId: resourceId,
+          checkTargets,
+        });
+      }
+    }
+
+    if (!usage) {
+      const state = commandApi.getState();
+      usage = recursivelyCheckResource({
+        state,
+        itemId: resourceId,
+        checkTargets,
+      });
+    }
 
     if (usage.isUsed) {
       return { deleted: false, usage };
     }
 
-    await deleteItem(resourceId);
+    const deleteResult = await deleteItem(resourceId);
 
-    return { deleted: true, usage };
+    if (deleteResult?.valid === false) {
+      return {
+        deleted: false,
+        usage,
+        deleteResult,
+      };
+    }
+
+    return { deleted: true, usage, deleteResult };
   };
 
   const deleteImageIfUnused = async ({ imageId, checkTargets = [] }) =>

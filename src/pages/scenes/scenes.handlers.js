@@ -771,7 +771,7 @@ export const handleSceneFormAction = async (deps, payload) => {
     }
 
     try {
-      await projectService.createSceneItem({
+      const createSceneResult = await projectService.createSceneItem({
         sceneId: newSceneId,
         parentId: formData.folderId || null,
         position: "last",
@@ -783,7 +783,11 @@ export const handleSceneFormAction = async (deps, payload) => {
           },
         },
       });
-      await projectService.createSectionItem({
+      if (createSceneResult?.valid === false) {
+        throw createSceneResult;
+      }
+
+      const createSectionResult = await projectService.createSectionItem({
         sceneId: newSceneId,
         sectionId,
         position: "last",
@@ -791,7 +795,11 @@ export const handleSceneFormAction = async (deps, payload) => {
           name: "Section 1",
         },
       });
-      await projectService.createLineItem({
+      if (createSectionResult?.valid === false) {
+        throw createSectionResult;
+      }
+
+      const createLineResult = await projectService.createLineItem({
         sectionId,
         lineId: stepId,
         data: {
@@ -799,6 +807,9 @@ export const handleSceneFormAction = async (deps, payload) => {
         },
         position: "last",
       });
+      if (createLineResult?.valid === false) {
+        throw createLineResult;
+      }
 
       // Add to whiteboard items for visual display
       store.addWhiteboardItem({
@@ -827,7 +838,17 @@ export const handleWhiteboardItemDelete = async (deps, payload) => {
   const { store, projectService, appService } = deps;
   const { itemId } = payload._event.detail;
 
-  await projectService.deleteSceneItem({ sceneIds: [itemId] });
+  const deleteResult = await projectService.deleteSceneIfUnused({
+    sceneId: itemId,
+  });
+  if (!deleteResult.deleted) {
+    appService.showAlert({
+      message: deleteResult.usage?.isUsed
+        ? "Cannot delete resource, it is currently in use."
+        : "Failed to delete resource.",
+    });
+    return;
+  }
 
   // Clear selection if the deleted item was selected
   const selectedItemId = store.selectSelectedItemId();
@@ -916,7 +937,17 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
 
   // Handle delete action
   if (item.value === "delete-item" && itemId) {
-    await projectService.deleteSceneItem({ sceneIds: [itemId] });
+    const deleteResult = await projectService.deleteSceneIfUnused({
+      sceneId: itemId,
+    });
+    if (!deleteResult.deleted) {
+      appService.showAlert({
+        message: deleteResult.usage?.isUsed
+          ? "Cannot delete resource, it is currently in use."
+          : "Failed to delete resource.",
+      });
+      return;
+    }
 
     // Clear selection if the deleted item was selected
     const selectedItemId = store.selectSelectedItemId();

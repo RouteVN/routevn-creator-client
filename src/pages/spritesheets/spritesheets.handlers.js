@@ -1,7 +1,6 @@
 import { generateId } from "../../internal/id.js";
 import { tap } from "rxjs";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
-import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 import {
@@ -783,8 +782,7 @@ export const handleItemDelete = async (deps, payload) => {
     return;
   }
 
-  const usage = recursivelyCheckResource({
-    state: projectService.getState(),
+  const usage = await projectService.checkResourceUsage({
     itemId,
     checkTargets: ["scenes", "layouts", "controls"],
   });

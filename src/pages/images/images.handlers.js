@@ -1,6 +1,5 @@
-import { generateId, generatePrefixedId } from "../../internal/id.js";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
-import { processWithConcurrency } from "../../internal/processWithConcurrency.js";
+import { processPendingUploads } from "../../internal/ui/resourcePages/media/processPendingUploads.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 import {
   runResourcePageMutation,
@@ -8,7 +7,6 @@ import {
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 
 const MAX_PARALLEL_UPLOADS = 1;
-const CREATE_IMAGE_ABORT_ERROR = "create-image-abort";
 const IMAGE_FILE_PATTERN = /\.(jpg|jpeg|png|webp)$/i;
 const IMAGE_FILE_ACCEPT = ".jpg,.jpeg,.png,.webp";
 const INVALID_IMAGE_FORMAT_MESSAGE =
@@ -67,25 +65,6 @@ const pickAndUploadImage = async ({ appService, projectService } = {}) => {
   }
 
   return { uploadResult };
-};
-
-const createPendingUploads = ({ files, parentId } = {}) => {
-  if (!parentId) {
-    return [];
-  }
-
-  return (Array.isArray(files) ? files : []).map((file) => ({
-    id: generatePrefixedId("pending-image-"),
-    file,
-    parentId,
-    name: file.name.replace(/\.[^.]+$/, ""),
-  }));
-};
-
-const createImageAbortError = () => {
-  const error = new Error(CREATE_IMAGE_ABORT_ERROR);
-  error.code = CREATE_IMAGE_ABORT_ERROR;
-  return error;
 };
 
 const {
@@ -176,128 +155,45 @@ export const handleDetailHeaderClick = (deps) => {
 };
 
 const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
-  const { appService, projectService, store, render } = deps;
+  const { appService, projectService } = deps;
 
   if (!validateImageFiles({ appService, files })) {
     return;
   }
 
-  const pendingUploads = createPendingUploads({ files, parentId });
-  const remainingPendingUploadIds = new Set(
-    pendingUploads.map((item) => item.id),
-  );
-  const pendingUploadIdByFile = new Map(
-    pendingUploads.map((item) => [item.file, item.id]),
-  );
-  const removePendingUploads = (itemIds) => {
-    const normalizedItemIds = (itemIds ?? []).filter((itemId) =>
-      remainingPendingUploadIds.has(itemId),
-    );
-    if (normalizedItemIds.length === 0) {
-      return;
-    }
+  await processPendingUploads({
+    deps,
+    files,
+    parentId,
+    pendingIdPrefix: "pending-image",
+    concurrency: MAX_PARALLEL_UPLOADS,
+    refresh: handleDataChanged,
+    processFile: async ({ file }) => {
+      const createAttempt = await runResourcePageMutation({
+        appService,
+        fallbackMessage: "Failed to create image.",
+        action: () => projectService.importImageFile({ file, parentId }),
+      });
 
-    store.removePendingUploads({ itemIds: normalizedItemIds });
-    normalizedItemIds.forEach((itemId) =>
-      remainingPendingUploadIds.delete(itemId),
-    );
-    render();
-  };
-
-  if (pendingUploads.length > 0) {
-    store.addPendingUploads({
-      items: pendingUploads.map((item) => ({
-        id: item.id,
-        parentId: item.parentId,
-        name: item.name,
-      })),
-    });
-    render();
-  }
-
-  let successfulUploadCount = 0;
-  let createdCount = 0;
-
-  try {
-    await processWithConcurrency(
-      Array.isArray(files) ? files : [],
-      async (file) => {
-        const pendingUploadId = pendingUploadIdByFile.get(file);
-        const uploadResults = await projectService.uploadFiles([file]);
-        const uploadResult = uploadResults?.[0];
-
-        if (!uploadResult) {
-          removePendingUploads([pendingUploadId]);
-          return { ok: false, reason: "upload-failed" };
-        }
-
-        successfulUploadCount += 1;
-
-        const createAttempt = await runResourcePageMutation({
-          appService,
-          fallbackMessage: "Failed to create image.",
-          action: () =>
-            projectService.createImage({
-              imageId: generateId(),
-              fileRecords: uploadResult.fileRecords,
-              data: {
-                type: "image",
-                fileId: uploadResult.fileId,
-                thumbnailFileId: uploadResult.thumbnailFileId,
-                name: uploadResult.displayName,
-                fileType: uploadResult.file.type,
-                fileSize: uploadResult.file.size,
-                width: uploadResult.dimensions.width,
-                height: uploadResult.dimensions.height,
-              },
-              parentId,
-              position: "last",
-            }),
-        });
-
-        removePendingUploads([pendingUploadId]);
-
-        if (!createAttempt.ok) {
-          throw createImageAbortError();
-        }
-
-        createdCount += 1;
-        await handleDataChanged(deps);
-        return { ok: true };
-      },
-      {
-        concurrency: MAX_PARALLEL_UPLOADS,
-        stopOnError: true,
-      },
-    );
-  } catch (error) {
-    removePendingUploads([...remainingPendingUploadIds]);
-    if (error?.code === CREATE_IMAGE_ABORT_ERROR) {
-      return;
-    }
-
-    showResourcePageError({
-      appService,
-      errorOrResult: error,
-      fallbackMessage: "Failed to upload images.",
-    });
-    return;
-  }
-
-  if (successfulUploadCount === 0) {
-    console.error("Failed to upload images: no successful uploads", {
-      fileCount: Array.isArray(files) ? files.length : 0,
-    });
-    appService.showAlert({
-      message: "Failed to upload images.",
-      title: "Error",
-    });
-    return;
-  }
-
-  if (createdCount > 0) {
-    await handleDataChanged(deps);
-  }
+      return createAttempt.ok;
+    },
+    onUploadError: ({ error }) => {
+      showResourcePageError({
+        appService,
+        errorOrResult: error,
+        fallbackMessage: "Failed to upload images.",
+      });
+    },
+    onNoSuccessfulUploads: ({ fileCount }) => {
+      console.error("Failed to upload images: no successful uploads", {
+        fileCount,
+      });
+      appService.showAlert({
+        message: "Failed to upload images.",
+        title: "Error",
+      });
+    },
+  });
 };
 
 export const handleUploadClick = async (deps, payload) => {
@@ -651,7 +547,9 @@ export const handleItemDelete = async (deps, payload) => {
 
   if (!result.deleted) {
     appService.showAlert({
-      message: "Cannot delete resource, it is currently in use.",
+      message: result.usage?.isUsed
+        ? "Cannot delete resource, it is currently in use."
+        : "Failed to delete resource.",
     });
     render();
     return;

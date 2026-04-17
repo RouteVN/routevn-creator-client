@@ -4,10 +4,15 @@ import { createLibsqlClientStore } from "insieme/client";
 import { Subject, asyncScheduler, throttleTime } from "rxjs";
 import {
   SQLITE_BUSY_TIMEOUT_MS,
+  isSqliteLockError,
   isSqliteNoActiveTransactionError,
   withSqliteLockRetry,
 } from "../../../internal/sqliteLocking.js";
-import { createProjectCreateRepositoryEvent } from "../shared/projectRepository.js";
+import {
+  applyRepositoryEventsToRepositoryState,
+  createProjectCreateRepositoryEvent,
+  initialProjectData,
+} from "../shared/projectRepository.js";
 import {
   MAIN_PARTITION,
   MAIN_VIEW_NAME,
@@ -263,6 +268,7 @@ export const executeTauriSqlStatement = async ({
   sql,
   args = [],
   retryDelaysMs,
+  onRetry,
 } = {}) => {
   const resolvedArgs = Array.isArray(args) ? args : [];
   return withSqliteLockRetry(
@@ -270,12 +276,14 @@ export const executeTauriSqlStatement = async ({
     isSqliteCommitStatement(sql)
       ? {
           retryDelaysMs,
+          onRetry,
           shouldRecoverError: (error) =>
             isSqliteNoActiveTransactionError(error),
           recoverValue: { rowsAffected: 0 },
         }
       : {
           retryDelaysMs,
+          onRetry,
         },
   );
 };
@@ -406,6 +414,29 @@ const yieldForUiPaint = async () => {
   });
 };
 
+const applyRepositoryEventsToState = ({
+  repositoryState,
+  events = [],
+  projectId,
+} = {}) => {
+  const applyResult = applyRepositoryEventsToRepositoryState({
+    repositoryState,
+    events,
+    projectId,
+  });
+
+  if (applyResult?.valid === false || !applyResult?.repositoryState) {
+    const error = new Error(
+      applyResult?.error?.message || "Failed to apply repository events",
+    );
+    error.code = applyResult?.error?.code || "validation_failed";
+    error.details = applyResult?.error?.details ?? {};
+    throw error;
+  }
+
+  return applyResult.repositoryState;
+};
+
 export const loadRepositoryEvents = async ({
   store,
   projectId,
@@ -469,21 +500,90 @@ export const loadRepositoryEvents = async ({
     current: processedEventCount,
     total: totalEventCount,
   });
-  for (const draft of drafts) {
+
+  let repositoryState = applyRepositoryEventsToState({
+    repositoryState: initialProjectData,
+    events,
+    projectId,
+  });
+
+  const draftEvents = drafts.map((draft) => {
     const nextEvent = toRepositoryEvent(draft, {
       created: draft.createdAt,
       projectId,
     });
     assertRepositoryEventShape(nextEvent);
-    events.push(nextEvent);
-    processedEventCount += 1;
-    if (
-      processedEventCount === totalEventCount ||
-      processedEventCount % 64 === 0
-    ) {
-      reportProgress();
+    return nextEvent;
+  });
+  const invalidDrafts = [];
+  let remainingDraftEvents = draftEvents;
+  while (remainingDraftEvents.length > 0) {
+    try {
+      repositoryState = applyRepositoryEventsToState({
+        repositoryState,
+        events: remainingDraftEvents,
+        projectId,
+      });
+      events.push(...remainingDraftEvents);
+      processedEventCount += remainingDraftEvents.length;
+      reportProgress({ force: true });
       await yieldForUiPaint();
+      break;
+    } catch (error) {
+      const failedDraftIndex = Number(error?.details?.commandIndex);
+      const resolvedFailedDraftIndex =
+        Number.isInteger(failedDraftIndex) &&
+        failedDraftIndex >= 0 &&
+        failedDraftIndex < remainingDraftEvents.length
+          ? failedDraftIndex
+          : 0;
+      const acceptedPrefix = remainingDraftEvents.slice(
+        0,
+        resolvedFailedDraftIndex,
+      );
+
+      if (acceptedPrefix.length > 0) {
+        repositoryState = applyRepositoryEventsToState({
+          repositoryState,
+          events: acceptedPrefix,
+          projectId,
+        });
+        events.push(...acceptedPrefix);
+        processedEventCount += acceptedPrefix.length;
+        reportProgress({ force: true });
+        await yieldForUiPaint();
+      }
+
+      const failedDraft = remainingDraftEvents[resolvedFailedDraftIndex];
+      invalidDrafts.push({
+        id: failedDraft?.id,
+        code: error?.code || "validation_failed",
+        message: error?.message || "Invalid local draft",
+      });
+      processedEventCount += 1;
+      reportProgress({ force: true });
+      await yieldForUiPaint();
+      console.warn("Discarding invalid local draft during project load", {
+        projectId,
+        draftId: failedDraft?.id,
+        code: error?.code || "validation_failed",
+        message: error?.message || "Invalid local draft",
+      });
+      remainingDraftEvents = remainingDraftEvents.slice(
+        resolvedFailedDraftIndex + 1,
+      );
     }
+  }
+
+  for (const invalidDraft of invalidDrafts) {
+    await store.applySubmitResult({
+      result: {
+        id: invalidDraft.id,
+        status: "rejected",
+        reason: invalidDraft.code,
+        message: invalidDraft.message,
+      },
+    });
   }
 
   reportProgress({ force: true });
@@ -730,8 +830,12 @@ export const createPersistedTauriProjectStore = async ({
     );
 
     let operationQueue = Promise.resolve();
-    const queueStoreOperation = async (operation) => {
-      const nextOperation = operationQueue.then(operation);
+    const queueStoreOperation = async (labelOrOperation, maybeOperation) => {
+      const operation =
+        typeof labelOrOperation === "function"
+          ? labelOrOperation
+          : maybeOperation;
+      const nextOperation = operationQueue.then(async () => operation());
       operationQueue = nextOperation.catch(() => {});
       return nextOperation;
     };
@@ -739,6 +843,8 @@ export const createPersistedTauriProjectStore = async ({
       withSqliteLockRetry(() =>
         db.select(sql, Array.isArray(args) ? args : []),
       );
+    const runSelectNoRetry = (sql, args = []) =>
+      db.select(sql, Array.isArray(args) ? args : []);
     const runExecute = (sql, args = []) =>
       executeTauriSqlStatement({
         db,
@@ -751,7 +857,14 @@ export const createPersistedTauriProjectStore = async ({
 
     const checkpointWal = async (mode = "PASSIVE") => {
       const checkpointMode = mode === "TRUNCATE" ? "TRUNCATE" : "PASSIVE";
-      await runSelect(`PRAGMA wal_checkpoint(${checkpointMode})`);
+      try {
+        await runSelectNoRetry(`PRAGMA wal_checkpoint(${checkpointMode})`);
+      } catch (error) {
+        if (isSqliteLockError(error)) {
+          return;
+        }
+        throw error;
+      }
       walDirty = false;
     };
 
@@ -763,12 +876,19 @@ export const createPersistedTauriProjectStore = async ({
       walCheckpointRequests.next();
     };
 
-    const queueWriteOperation = async (operation) =>
-      queueStoreOperation(async () => {
+    const queueWriteOperation = async (labelOrOperation, maybeOperation) => {
+      const label =
+        typeof labelOrOperation === "string" ? labelOrOperation : "anonymous";
+      const operation =
+        typeof labelOrOperation === "function"
+          ? labelOrOperation
+          : maybeOperation;
+      return queueStoreOperation(label, async () => {
         const result = await operation();
         schedulePassiveWalCheckpoint();
         return result;
       });
+    };
 
     const walCheckpointSubscription = walCheckpointRequests
       .pipe(
@@ -865,66 +985,71 @@ export const createPersistedTauriProjectStore = async ({
         return projectHistoryIntegrityPromise;
       }
 
-      projectHistoryIntegrityPromise = queueWriteOperation(async () => {
-        const committedEvents = await store._debug.getCommitted();
-        const draftEvents = await store._debug.getDrafts();
-        const versions = await loadAppValue(VERSIONS_KEY);
-        const mainCheckpointState = await loadMainCheckpointState();
-        const repairPlan = planBootstrapHistoryRepair({
-          projectId,
-          committedEvents,
-          draftEvents,
-          mainCheckpointState,
-          versions,
-        });
+      projectHistoryIntegrityPromise = queueWriteOperation(
+        "ensureProjectHistoryIntegrity",
+        async () => {
+          const committedEvents = await store._debug.getCommitted();
+          const draftEvents = await store._debug.getDrafts();
+          const versions = await loadAppValue(VERSIONS_KEY);
+          const mainCheckpointState = await loadMainCheckpointState();
+          const repairPlan = planBootstrapHistoryRepair({
+            projectId,
+            committedEvents,
+            draftEvents,
+            mainCheckpointState,
+            versions,
+          });
 
-        if (!repairPlan.changed) {
-          if (repairPlan.reason === "missing_bootstrap_without_safe_recovery") {
-            console.warn("Project history is missing a bootstrap event", {
-              projectId,
-              committedEventCount: committedEvents.length,
-              draftEventCount: draftEvents.length,
+          if (!repairPlan.changed) {
+            if (
+              repairPlan.reason === "missing_bootstrap_without_safe_recovery"
+            ) {
+              console.warn("Project history is missing a bootstrap event", {
+                projectId,
+                committedEventCount: committedEvents.length,
+                draftEventCount: draftEvents.length,
+              });
+            }
+
+            return repairPlan;
+          }
+
+          const currentCursor = Number(await store._debug.getCursor()) || 0;
+
+          await runExecute("DELETE FROM committed_events");
+          await runExecute("DELETE FROM local_drafts");
+          await runExecute(`DELETE FROM ${MATERIALIZED_VIEW_TABLE}`);
+
+          if ((repairPlan.committedEvents || []).length > 0) {
+            await store.applyCommittedBatch({
+              events: repairPlan.committedEvents,
+              nextCursor: Math.max(
+                currentCursor,
+                repairPlan.committedEvents.length,
+              ),
             });
           }
 
-          return repairPlan;
-        }
+          if ((repairPlan.draftEvents || []).length > 0) {
+            await store.insertDrafts(repairPlan.draftEvents);
+          }
 
-        const currentCursor = Number(await store._debug.getCursor()) || 0;
+          if (Object.hasOwn(repairPlan, "versions")) {
+            await saveAppValue(VERSIONS_KEY, repairPlan.versions);
+          }
 
-        await runExecute("DELETE FROM committed_events");
-        await runExecute("DELETE FROM local_drafts");
-        await runExecute(`DELETE FROM ${MATERIALIZED_VIEW_TABLE}`);
-
-        if ((repairPlan.committedEvents || []).length > 0) {
-          await store.applyCommittedBatch({
-            events: repairPlan.committedEvents,
-            nextCursor: Math.max(
-              currentCursor,
-              repairPlan.committedEvents.length,
-            ),
+          console.warn("Repaired project bootstrap history", {
+            projectId,
+            reason: repairPlan.reason,
+            committedEventCountBefore: committedEvents.length,
+            committedEventCountAfter: repairPlan.committedEvents.length,
+            draftEventCountBefore: draftEvents.length,
+            draftEventCountAfter: repairPlan.draftEvents.length,
           });
-        }
 
-        if ((repairPlan.draftEvents || []).length > 0) {
-          await store.insertDrafts(repairPlan.draftEvents);
-        }
-
-        if (Object.hasOwn(repairPlan, "versions")) {
-          await saveAppValue(VERSIONS_KEY, repairPlan.versions);
-        }
-
-        console.warn("Repaired project bootstrap history", {
-          projectId,
-          reason: repairPlan.reason,
-          committedEventCountBefore: committedEvents.length,
-          committedEventCountAfter: repairPlan.committedEvents.length,
-          draftEventCountBefore: draftEvents.length,
-          draftEventCountAfter: repairPlan.draftEvents.length,
-        });
-
-        return repairPlan;
-      }).catch((error) => {
+          return repairPlan;
+        },
+      ).catch((error) => {
         projectHistoryIntegrityPromise = undefined;
         throw error;
       });
@@ -938,49 +1063,77 @@ export const createPersistedTauriProjectStore = async ({
       ...store,
 
       async init() {
-        return queueStoreOperation(() => store.init());
+        return queueStoreOperation("init", () => store.init());
       },
 
       async loadCursor() {
-        return queueStoreOperation(() => store.loadCursor());
+        return queueStoreOperation("loadCursor", () => store.loadCursor());
       },
 
       async insertDraft(payload) {
-        return queueWriteOperation(() => store.insertDraft(payload));
+        return queueWriteOperation("insertDraft", () =>
+          store.insertDraft(payload),
+        );
       },
 
       async insertDrafts(items) {
-        return queueWriteOperation(() => store.insertDrafts(items));
+        return queueWriteOperation("insertDrafts", async () => {
+          const normalizedItems = Array.isArray(items)
+            ? items.filter(Boolean)
+            : [];
+          if (normalizedItems.length === 0) {
+            return undefined;
+          }
+
+          // plugin-sql does not guarantee a pinned connection across JS-issued
+          // BEGIN/COMMIT batches. Sequential single inserts avoid the long
+          // busy-timeout stalls we were seeing in insertDrafts().
+          for (const item of normalizedItems) {
+            await store.insertDraft(item);
+          }
+
+          return undefined;
+        });
       },
 
       async loadDraftsOrdered() {
-        return queueStoreOperation(() => store.loadDraftsOrdered());
+        return queueStoreOperation("loadDraftsOrdered", () =>
+          store.loadDraftsOrdered(),
+        );
       },
 
       async applySubmitResult(payload) {
-        return queueWriteOperation(() => store.applySubmitResult(payload));
+        return queueWriteOperation("applySubmitResult", () =>
+          store.applySubmitResult(payload),
+        );
       },
 
       async applyCommittedBatch(payload) {
-        return queueWriteOperation(() => store.applyCommittedBatch(payload));
+        return queueWriteOperation("applyCommittedBatch", () =>
+          store.applyCommittedBatch(payload),
+        );
       },
 
       async loadMaterializedView(payload) {
-        return queueStoreOperation(() => store.loadMaterializedView(payload));
+        return queueStoreOperation("loadMaterializedView", () =>
+          store.loadMaterializedView(payload),
+        );
       },
 
       async evictMaterializedView(payload) {
-        return queueStoreOperation(() => store.evictMaterializedView(payload));
+        return queueStoreOperation("evictMaterializedView", () =>
+          store.evictMaterializedView(payload),
+        );
       },
 
       async invalidateMaterializedView(payload) {
-        return queueStoreOperation(() =>
+        return queueStoreOperation("invalidateMaterializedView", () =>
           store.invalidateMaterializedView(payload),
         );
       },
 
       async flushMaterializedViews() {
-        return queueStoreOperation(async () => {
+        return queueStoreOperation("flushMaterializedViews", async () => {
           const result = await store.flushMaterializedViews();
           if (walDirty) {
             await checkpointWal("PASSIVE");
@@ -990,7 +1143,7 @@ export const createPersistedTauriProjectStore = async ({
       },
 
       async getEvents(payload = {}) {
-        const events = await queueStoreOperation(() =>
+        const events = await queueStoreOperation("getEvents", () =>
           loadRepositoryEvents({
             store,
             projectId,
@@ -1017,46 +1170,52 @@ export const createPersistedTauriProjectStore = async ({
       },
 
       async loadMaterializedViewCheckpoint({ viewName, partition }) {
-        return queueStoreOperation(async () => {
-          const rows = await runSelect(
-            `SELECT view_version, last_committed_id, value, updated_at
+        return queueStoreOperation(
+          "loadMaterializedViewCheckpoint",
+          async () => {
+            const rows = await runSelect(
+              `SELECT view_version, last_committed_id, value, updated_at
            FROM ${MATERIALIZED_VIEW_TABLE}
            WHERE view_name = $1 AND partition = $2`,
-            [viewName, partition],
-          );
-          const row = Array.isArray(rows) ? rows[0] : undefined;
-          if (!row) return undefined;
-          return toMaterializedViewCheckpoint({
-            ...row,
-            partition,
-          });
-        });
+              [viewName, partition],
+            );
+            const row = Array.isArray(rows) ? rows[0] : undefined;
+            if (!row) return undefined;
+            return toMaterializedViewCheckpoint({
+              ...row,
+              partition,
+            });
+          },
+        );
       },
 
       async loadMaterializedViewCheckpoints({ viewName, partitions = [] }) {
-        return queueStoreOperation(async () => {
-          const normalizedPartitions = (partitions || []).filter(
-            (partition) =>
-              typeof partition === "string" && partition.length > 0,
-          );
-          if (normalizedPartitions.length === 0) {
-            return [];
-          }
+        return queueStoreOperation(
+          "loadMaterializedViewCheckpoints",
+          async () => {
+            const normalizedPartitions = (partitions || []).filter(
+              (partition) =>
+                typeof partition === "string" && partition.length > 0,
+            );
+            if (normalizedPartitions.length === 0) {
+              return [];
+            }
 
-          const placeholders = normalizedPartitions
-            .map((_, index) => `$${index + 2}`)
-            .join(", ");
-          const rows = await runSelect(
-            `SELECT partition, view_version, last_committed_id, value, updated_at
+            const placeholders = normalizedPartitions
+              .map((_, index) => `$${index + 2}`)
+              .join(", ");
+            const rows = await runSelect(
+              `SELECT partition, view_version, last_committed_id, value, updated_at
            FROM ${MATERIALIZED_VIEW_TABLE}
            WHERE view_name = $1 AND partition IN (${placeholders})`,
-            [viewName, ...normalizedPartitions],
-          );
+              [viewName, ...normalizedPartitions],
+            );
 
-          return Array.isArray(rows)
-            ? rows.map(toMaterializedViewCheckpoint)
-            : [];
-        });
+            return Array.isArray(rows)
+              ? rows.map(toMaterializedViewCheckpoint)
+              : [];
+          },
+        );
       },
 
       async saveMaterializedViewCheckpoint({
@@ -1068,35 +1227,38 @@ export const createPersistedTauriProjectStore = async ({
         meta,
         updatedAt,
       }) {
-        await queueWriteOperation(async () => {
-          const checkpointMeta = {
-            ...(meta && typeof meta === "object" && !Array.isArray(meta)
-              ? structuredClone(meta)
-              : {}),
-            historyStats: await loadRepositoryHistoryStats(),
-          };
+        await queueWriteOperation(
+          "saveMaterializedViewCheckpoint",
+          async () => {
+            const checkpointMeta = {
+              ...(meta && typeof meta === "object" && !Array.isArray(meta)
+                ? structuredClone(meta)
+                : {}),
+              historyStats: await loadRepositoryHistoryStats(),
+            };
 
-          return runExecute(
-            `INSERT OR REPLACE INTO ${MATERIALIZED_VIEW_TABLE}
+            return runExecute(
+              `INSERT OR REPLACE INTO ${MATERIALIZED_VIEW_TABLE}
            (view_name, partition, view_version, last_committed_id, value, updated_at)
            VALUES ($1, $2, $3, $4, $5, $6)`,
-            [
-              viewName,
-              partition,
-              viewVersion,
-              lastCommittedId,
-              encodeStoredCheckpointValue({
-                value,
-                meta: checkpointMeta,
-              }),
-              updatedAt,
-            ],
-          );
-        });
+              [
+                viewName,
+                partition,
+                viewVersion,
+                lastCommittedId,
+                encodeStoredCheckpointValue({
+                  value,
+                  meta: checkpointMeta,
+                }),
+                updatedAt,
+              ],
+            );
+          },
+        );
       },
 
       async deleteMaterializedViewCheckpoint({ viewName, partition }) {
-        await queueWriteOperation(() =>
+        await queueWriteOperation("deleteMaterializedViewCheckpoint", () =>
           runExecute(
             `DELETE FROM ${MATERIALIZED_VIEW_TABLE}
            WHERE view_name = $1 AND partition = $2`,

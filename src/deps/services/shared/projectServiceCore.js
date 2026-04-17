@@ -2,6 +2,11 @@ import { createProjectAssetService } from "./projectAssetService.js";
 import { createProjectCollabCore } from "./projectCollabCore.js";
 import { createProjectExportService } from "./projectExportService.js";
 import { createProjectRepositoryService } from "./projectRepositoryService.js";
+import { importImageFile as importProjectImageFile } from "./resourceImports.js";
+import {
+  checkProjectResourceUsage,
+  checkSceneDeleteUsage,
+} from "./resourceUsage.js";
 import { projectRepositoryStateToDomainState } from "../../../internal/project/projection.js";
 
 export const createProjectServiceCore = ({
@@ -103,6 +108,59 @@ export const createProjectServiceCore = ({
     });
   };
 
+  const checkResourceUsage = async ({ itemId, checkTargets = [] } = {}) => {
+    const repository = await repositoryService.ensureRepository();
+    const store = repositoryService.getCachedStore();
+    const projectId = getCurrentProjectId() || "unknown-project";
+
+    return checkProjectResourceUsage({
+      repository,
+      store,
+      projectId,
+      itemId,
+      checkTargets,
+    });
+  };
+
+  const checkSceneDeletionUsage = async ({ sceneId } = {}) => {
+    await repositoryService.ensureRepository();
+
+    const state = getDomainState();
+    const sceneIds = Object.keys(state?.scenes ?? {}).filter(
+      (candidateSceneId) =>
+        state?.scenes?.[candidateSceneId]?.type !== "folder",
+    );
+    const sceneOverviewsById = await loadSceneOverviews({
+      sceneIds,
+    });
+
+    return checkSceneDeleteUsage({
+      state,
+      sceneOverviewsById,
+      sceneId,
+    });
+  };
+
+  const deleteSceneIfUnused = async ({ sceneId } = {}) => {
+    const usage = await checkSceneDeletionUsage({ sceneId });
+    if (usage.isUsed) {
+      return { deleted: false, usage };
+    }
+
+    const deleteResult = await collabService.commandApi.deleteSceneItem({
+      sceneIds: [sceneId],
+    });
+    if (deleteResult?.valid === false) {
+      return { deleted: false, usage, deleteResult };
+    }
+
+    return {
+      deleted: true,
+      usage,
+      deleteResult,
+    };
+  };
+
   return {
     getRepository: repositoryService.getRepository,
     getRepositoryById: repositoryService.getRepositoryById,
@@ -141,6 +199,9 @@ export const createProjectServiceCore = ({
     getDomainState,
     getRepositoryState,
     getRepositoryRevision,
+    checkResourceUsage,
+    checkSceneDeletionUsage,
+    deleteSceneIfUnused,
     loadSceneOverviews,
     getSceneOverview,
     getCurrentProjectInfo: repositoryService.getCurrentProjectInfo,
@@ -165,6 +226,14 @@ export const createProjectServiceCore = ({
     storeFile: assetService.storeFile,
     storeFileForProject: assetService.storeFileForProject,
     uploadFiles: assetService.uploadFiles,
+    async importImageFile({ file, parentId } = {}) {
+      return importProjectImageFile({
+        file,
+        parentId,
+        uploadFiles: assetService.uploadFiles,
+        createImage: collabService.commandApi.createImage,
+      });
+    },
     getFileContent: assetService.getFileContent,
     downloadMetadata: assetService.downloadMetadata,
     loadFontFile: assetService.loadFontFile,

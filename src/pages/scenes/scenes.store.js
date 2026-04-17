@@ -23,8 +23,6 @@ const fileExplorerItemContextMenuItems = [
 const fileExplorerEmptyContextMenuItems = [
   { label: "New Folder", type: "item", value: "new-item" },
 ];
-const toFiniteNumberOr = (value, fallback) =>
-  Number.isFinite(value) ? value : fallback;
 
 export const createInitialState = () => ({
   scenesData: { tree: [], items: {} },
@@ -253,7 +251,7 @@ export const selectSceneWhiteboardPosition = ({ state }) => {
   return state.sceneWhiteboardPosition;
 };
 
-export const selectViewData = ({ state }, payload) => {
+export const selectViewData = ({ state }) => {
   const flatItems = applyFolderRequiredRootDragOptions(
     toFlatItems(state.scenesData),
   );

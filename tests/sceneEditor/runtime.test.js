@@ -1,6 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import createRouteEngine from "route-engine-js";
-import { renderSceneEditorState } from "../../src/internal/ui/sceneEditor/runtime.js";
+import {
+  createSceneEditorRenderQueue,
+  renderSceneEditorState,
+} from "../../src/internal/ui/sceneEditor/runtime.js";
 
 const createProjectData = () => {
   return {
@@ -123,6 +126,35 @@ const createGraphicsService = () => {
 };
 
 describe("renderSceneEditorState", () => {
+  it("coalesces overlapping canvas renders to the latest pending payload", async () => {
+    const resolvers = [];
+    const renderCanvas = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolvers.push(resolve);
+        }),
+    );
+    const queueRenderCanvas = createSceneEditorRenderQueue(renderCanvas);
+
+    void queueRenderCanvas({ step: 1 });
+    void queueRenderCanvas({ step: 2 });
+    void queueRenderCanvas({ step: 3 });
+
+    expect(renderCanvas).toHaveBeenCalledTimes(1);
+    expect(renderCanvas).toHaveBeenNthCalledWith(1, { step: 1 });
+
+    resolvers.shift()?.();
+    await Promise.resolve();
+
+    expect(renderCanvas).toHaveBeenCalledTimes(2);
+    expect(renderCanvas).toHaveBeenNthCalledWith(2, { step: 3 });
+
+    resolvers.shift()?.();
+    await Promise.resolve();
+
+    expect(renderCanvas).toHaveBeenCalledTimes(2);
+  });
+
   it("re-initializes the engine for selected-line preview updates", async () => {
     const projectData = createProjectData();
     const graphicsService = createGraphicsService();
@@ -163,5 +195,52 @@ describe("renderSceneEditorState", () => {
     expect(store.presentationState?.dialogue?.content?.[0]?.text).toBe(
       "second",
     );
+  });
+
+  it("can warm route-engine state without drawing the canvas", async () => {
+    const projectData = createProjectData();
+    const graphicsService = createGraphicsService();
+    const engineRenderCurrentState = vi.fn();
+    graphicsService.engineRenderCurrentState = engineRenderCurrentState;
+
+    const store = {
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => "section-1",
+      selectSelectedLineId: () => "line-2",
+      selectProjectData: () => projectData,
+      selectPreviewRuntimeGlobal: () => ({
+        dialogueTextSpeed: 100,
+      }),
+      selectIsMuted: () => false,
+      setPresentationState: ({ presentationState }) => {
+        store.presentationState = presentationState;
+      },
+      presentationState: undefined,
+    };
+
+    graphicsService.initRouteEngine(projectData, {
+      enableGlobalKeyboardBindings: false,
+    });
+
+    await renderSceneEditorState(
+      {
+        store,
+        graphicsService,
+      },
+      {
+        skipCanvasPaint: true,
+      },
+    );
+    expect(engineRenderCurrentState).not.toHaveBeenCalled();
+    expect(store.presentationState?.dialogue?.content?.[0]?.text).toBe(
+      "second",
+    );
+
+    await renderSceneEditorState({
+      store,
+      graphicsService,
+    });
+
+    expect(engineRenderCurrentState).toHaveBeenCalledTimes(1);
   });
 });

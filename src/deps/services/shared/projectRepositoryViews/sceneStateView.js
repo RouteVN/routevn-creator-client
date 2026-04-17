@@ -458,6 +458,7 @@ export const loadSceneProjectionState = async ({
   events = [],
   createInitialState,
   reduceEventToState,
+  reduceEventsToState,
   sceneId,
   now = () => Date.now(),
 }) => {
@@ -484,6 +485,11 @@ export const loadSceneProjectionState = async ({
     events,
     sceneId,
   });
+  const checkpointFresh = isSceneProjectionCheckpointFresh({
+    checkpoint,
+    latestRelevantRevision,
+    sceneId,
+  });
 
   if (!sceneExists) {
     if (checkpoint) {
@@ -492,13 +498,7 @@ export const loadSceneProjectionState = async ({
     return emptyProjection;
   }
 
-  if (
-    isSceneProjectionCheckpointFresh({
-      checkpoint,
-      latestRelevantRevision,
-      sceneId,
-    })
-  ) {
+  if (checkpointFresh) {
     return cloneState(
       checkpoint.value,
       createSceneProjectionState(mainState, scenePartition),
@@ -563,44 +563,90 @@ export const loadSceneProjectionState = async ({
   });
   const initialWorkingState = workingState;
   const committedEvents = Array.isArray(events) ? events : [];
-  let processedRelevantEventCount = 0;
+  const relevantEventEntries = [];
   for (
     let index = replayStartIndex;
     index < committedEvents.length;
     index += 1
   ) {
     const event = committedEvents[index];
-    if (!isRelevantSceneProjectionEvent({ event, sceneId })) {
-      continue;
-    }
-
-    processedRelevantEventCount += 1;
-
-    try {
-      const nextState = reduceEventToState({
-        repositoryState: workingState,
+    if (isRelevantSceneProjectionEvent({ event, sceneId })) {
+      relevantEventEntries.push({
         event,
+        index,
+      });
+    }
+  }
+  if (
+    typeof reduceEventsToState === "function" &&
+    relevantEventEntries.length > 0
+  ) {
+    try {
+      const nextState = reduceEventsToState({
+        repositoryState: workingState,
+        events: relevantEventEntries.map(({ event }) => event),
       });
       if (nextState !== undefined) {
         workingState = nextState;
       }
     } catch (error) {
-      logSceneProjectionReplayFailure({
-        sceneId,
-        event,
-        index,
-        events: committedEvents,
-        mainState,
-        bootstrapProjection,
-        initialWorkingState,
-        repositoryState: workingState,
-        error,
-      });
+      const failedRelevantIndex = Number(error?.details?.commandIndex);
+      const failedEntry =
+        Number.isInteger(failedRelevantIndex) &&
+        failedRelevantIndex >= 0 &&
+        failedRelevantIndex < relevantEventEntries.length
+          ? relevantEventEntries[failedRelevantIndex]
+          : relevantEventEntries[0];
+
+      if (failedEntry) {
+        logSceneProjectionReplayFailure({
+          sceneId,
+          event: failedEntry.event,
+          index: failedEntry.index,
+          events: committedEvents,
+          mainState,
+          bootstrapProjection,
+          initialWorkingState,
+          repositoryState: workingState,
+          error,
+        });
+      }
       throw error;
     }
+  } else {
+    for (
+      let relevantIndex = 0;
+      relevantIndex < relevantEventEntries.length;
+      relevantIndex += 1
+    ) {
+      const { event, index } = relevantEventEntries[relevantIndex];
 
-    if (processedRelevantEventCount % SCENE_PROJECTION_YIELD_INTERVAL === 0) {
-      await yieldToBrowser();
+      try {
+        const nextState = reduceEventToState({
+          repositoryState: workingState,
+          event,
+        });
+        if (nextState !== undefined) {
+          workingState = nextState;
+        }
+      } catch (error) {
+        logSceneProjectionReplayFailure({
+          sceneId,
+          event,
+          index,
+          events: committedEvents,
+          mainState,
+          bootstrapProjection,
+          initialWorkingState,
+          repositoryState: workingState,
+          error,
+        });
+        throw error;
+      }
+
+      if ((relevantIndex + 1) % SCENE_PROJECTION_YIELD_INTERVAL === 0) {
+        await yieldToBrowser();
+      }
     }
   }
 
@@ -625,6 +671,7 @@ export const applySceneEventsToLoadedProjection = ({
   sceneId,
   sourceEvents = [],
   reduceEventToState,
+  reduceEventsToState,
 }) => {
   if (!isNonEmptyString(sceneId)) {
     return {
@@ -642,6 +689,42 @@ export const applySceneEventsToLoadedProjection = ({
   });
 
   const committedEvents = Array.isArray(sourceEvents) ? sourceEvents : [];
+  const relevantEvents = committedEvents.filter((event) =>
+    isRelevantSceneProjectionEvent({ event, sceneId }),
+  );
+
+  if (typeof reduceEventsToState === "function" && relevantEvents.length > 0) {
+    try {
+      const nextState = reduceEventsToState({
+        repositoryState: workingState,
+        events: relevantEvents,
+      });
+      if (nextState !== undefined) {
+        workingState = nextState;
+      }
+    } catch (error) {
+      const failedRelevantIndex = Number(error?.details?.commandIndex);
+      const failedEvent =
+        Number.isInteger(failedRelevantIndex) &&
+        failedRelevantIndex >= 0 &&
+        failedRelevantIndex < relevantEvents.length
+          ? relevantEvents[failedRelevantIndex]
+          : relevantEvents[0];
+
+      logSceneProjectionReplayFailure({
+        sceneId,
+        event: failedEvent,
+        index: Math.max(0, committedEvents.indexOf(failedEvent)),
+        events: committedEvents,
+        repositoryState: workingState,
+        error,
+      });
+      throw error;
+    }
+
+    return createSceneProjectionState(workingState, scenePartition);
+  }
+
   for (let index = 0; index < committedEvents.length; index += 1) {
     const event = committedEvents[index];
     if (!isRelevantSceneProjectionEvent({ event, sceneId })) {

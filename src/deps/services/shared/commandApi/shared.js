@@ -3,8 +3,8 @@ import { projectRepositoryStateToDomainState } from "../../../../internal/projec
 import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
 import {
   applyCommandToRepository,
-  applyCommandToRepositoryState,
   applyCommandsToRepository,
+  applyCommandsToRepositoryState,
   assertSupportedProjectState,
   getSiblingOrderNodes,
   normalizeParentId,
@@ -12,6 +12,31 @@ import {
 } from "../projectRepository.js";
 import { collapsePartitionsToSingle } from "../collab/partitions.js";
 import { generateId } from "../../../../internal/id.js";
+
+const flushRepositoryMainCheckpoint = async (repository) => {
+  if (typeof repository?.flushMainCheckpoint === "function") {
+    await repository.flushMainCheckpoint();
+    return;
+  }
+
+  if (typeof repository?.flushMaterializedViews === "function") {
+    await repository.flushMaterializedViews();
+  }
+};
+
+const flushRepositoryMainCheckpointBestEffort = async ({
+  repository,
+  projectId,
+}) => {
+  try {
+    await flushRepositoryMainCheckpoint(repository);
+  } catch (error) {
+    console.warn("Failed to flush repository checkpoint after command submit", {
+      projectId,
+      error: error?.message || String(error),
+    });
+  }
+};
 
 export const createCommandApiShared = ({
   idGenerator,
@@ -167,20 +192,18 @@ export const createCommandApiShared = ({
 
     let nextState = baseState;
     try {
-      for (const command of normalizedCommands) {
-        const applyResult = applyCommandToRepositoryState({
-          repositoryState: nextState,
-          command,
-          projectId: context.projectId,
-        });
-        if (applyResult?.valid === false || !applyResult?.repositoryState) {
-          throw new Error(
-            applyResult?.error?.message ||
-              `Failed to advance context for '${command?.type || "unknown"}'`,
-          );
-        }
-        nextState = applyResult.repositoryState;
+      const applyResult = applyCommandsToRepositoryState({
+        repositoryState: nextState,
+        commands: normalizedCommands,
+        projectId: context.projectId,
+      });
+      if (applyResult?.valid === false || !applyResult?.repositoryState) {
+        throw new Error(
+          applyResult?.error?.message ||
+            `Failed to advance context for '${normalizedCommands[0]?.type || "unknown"}'`,
+        );
       }
+      nextState = applyResult.repositoryState;
       context.state = nextState;
     } catch {
       if (typeof context.repository?.getState === "function") {
@@ -221,6 +244,11 @@ export const createCommandApiShared = ({
       projectId: context.projectId,
     });
 
+    await flushRepositoryMainCheckpointBestEffort({
+      repository: context.repository,
+      projectId: context.projectId,
+    });
+
     advanceContextStateWithCommands({
       context,
       commands: [command],
@@ -256,6 +284,7 @@ export const createCommandApiShared = ({
       };
     }
 
+    const localApplyCommands = structuredClone(normalizedCommands);
     const submitResult =
       await context.session.submitCommands(normalizedCommands);
     if (submitResult?.valid === false) {
@@ -264,18 +293,23 @@ export const createCommandApiShared = ({
 
     const applyResult = await applyCommandsToRepository({
       repository: context.repository,
-      commands: normalizedCommands,
+      commands: localApplyCommands,
+      projectId: context.projectId,
+    });
+
+    await flushRepositoryMainCheckpointBestEffort({
+      repository: context.repository,
       projectId: context.projectId,
     });
 
     advanceContextStateWithCommands({
       context,
-      commands: normalizedCommands,
+      commands: localApplyCommands,
     });
 
     return {
       valid: true,
-      commandIds: normalizedCommands.map((command) => command.id),
+      commandIds: localApplyCommands.map((command) => command.id),
       eventCount: applyResult.events.length,
       applyMode: applyResult.mode,
     };

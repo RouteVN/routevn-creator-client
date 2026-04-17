@@ -301,6 +301,8 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       svg = "fragment";
     } else if (item.type === "layout" && item.isFragment) {
       svg = "fragment";
+    } else if (item.type === "sound") {
+      svg = "audio";
     } else if (item.type.startsWith("text")) {
       svg = "text";
     } else if (item.type.startsWith("container")) {

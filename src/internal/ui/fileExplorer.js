@@ -218,6 +218,29 @@ const getDeletionBlockedMessage = ({ itemType, reason } = {}) => {
   return "Failed to delete resource.";
 };
 
+const checkResourceUsage = async ({
+  projectService,
+  state,
+  itemId,
+  checkTargets = [],
+}) => {
+  if (
+    checkTargets.includes("scenes") &&
+    typeof projectService?.checkResourceUsage === "function"
+  ) {
+    return projectService.checkResourceUsage({
+      itemId,
+      checkTargets,
+    });
+  }
+
+  return recursivelyCheckResource({
+    state,
+    itemId,
+    checkTargets,
+  });
+};
+
 const validateResourceDeletion = async ({
   projectService,
   resourceType,
@@ -270,7 +293,8 @@ const validateResourceDeletion = async ({
   if (currentItemType === "character") {
     if (currentItem?.sprites?.items) {
       for (const spriteId of Object.keys(currentItem.sprites.items)) {
-        const usage = recursivelyCheckResource({
+        const usage = await checkResourceUsage({
+          projectService,
           state,
           itemId: spriteId,
           checkTargets: ["scenes", "layouts", "controls"],
@@ -300,7 +324,8 @@ const validateResourceDeletion = async ({
     checkTargets = ["scenes", "layouts", "controls"];
   }
 
-  const usage = recursivelyCheckResource({
+  const usage = await checkResourceUsage({
+    projectService,
     state,
     itemId,
     checkTargets,
@@ -330,9 +355,10 @@ export const createResourceFileExplorerHandlers = ({
       const itemId = detail.itemId;
       const collection = state?.[resourceType];
       const currentItem = collection?.items?.[itemId];
+      let createdItemId;
 
       if (action === "new-item") {
-        await projectService[resourceApi.createMethod]({
+        createdItemId = await projectService[resourceApi.createMethod]({
           [resourceApi.idField]: generateId(),
           data: {
             type: "folder",
@@ -341,12 +367,15 @@ export const createResourceFileExplorerHandlers = ({
           parentId: null,
           position: "last",
         });
+        if (createdItemId?.valid === false) {
+          return;
+        }
       } else if (action === "new-child-folder") {
         if (!itemId) {
           return;
         }
 
-        await projectService[resourceApi.createMethod]({
+        createdItemId = await projectService[resourceApi.createMethod]({
           [resourceApi.idField]: generateId(),
           data: {
             type: "folder",
@@ -355,6 +384,9 @@ export const createResourceFileExplorerHandlers = ({
           parentId: itemId,
           position: "last",
         });
+        if (createdItemId?.valid === false) {
+          return;
+        }
       } else if (action === "rename-item-confirmed") {
         if (!itemId || !detail.newName) {
           return;
@@ -394,6 +426,9 @@ export const createResourceFileExplorerHandlers = ({
           appService.showAlert({ message: "Failed to delete resource." });
           return;
         }
+
+        await refresh(deps, { deletedItemId: itemId });
+        return;
       } else if (action === "duplicate-item") {
         if (
           !itemId ||
@@ -442,7 +477,7 @@ export const createResourceFileExplorerHandlers = ({
         return;
       }
 
-      await refresh(deps);
+      await refresh(deps, { selectedItemId: createdItemId });
     },
     handleMove: async ({ deps, detail }) => {
       const { projectService } = deps;
@@ -518,7 +553,8 @@ export const createLayoutsFileExplorerHandlers = ({
           return;
         }
 
-        const usage = recursivelyCheckResource({
+        const usage = await checkResourceUsage({
+          projectService,
           state,
           itemId,
           checkTargets: ["scenes"],
@@ -635,7 +671,8 @@ export const createControlsFileExplorerHandlers = ({
           return;
         }
 
-        const usage = recursivelyCheckResource({
+        const usage = await checkResourceUsage({
+          projectService,
           state,
           itemId,
           checkTargets: ["scenes"],
@@ -855,7 +892,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
 export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
   return createActionHandlers({
     handleAction: async ({ deps, detail }) => {
-      const { projectService } = deps;
+      const { appService, projectService } = deps;
       await projectService.ensureRepository();
 
       const menuItem = resolveMenuItem(detail);
@@ -863,7 +900,7 @@ export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
       const itemId = detail.itemId;
 
       if (action === "new-item") {
-        await projectService.createSceneItem({
+        const createResult = await projectService.createSceneItem({
           sceneId: generateId(),
           parentId: null,
           position: "last",
@@ -872,12 +909,21 @@ export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
             type: "folder",
           },
         });
+        if (createResult?.valid === false) {
+          appService.showAlert({
+            message: getResultErrorMessage(
+              createResult,
+              "Failed to create folder.",
+            ),
+          });
+          return;
+        }
       } else if (action === "new-child-folder") {
         if (!itemId) {
           return;
         }
 
-        await projectService.createSceneItem({
+        const createResult = await projectService.createSceneItem({
           sceneId: generateId(),
           parentId: itemId,
           position: "last",
@@ -886,6 +932,15 @@ export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
             type: "folder",
           },
         });
+        if (createResult?.valid === false) {
+          appService.showAlert({
+            message: getResultErrorMessage(
+              createResult,
+              "Failed to create folder.",
+            ),
+          });
+          return;
+        }
       } else if (action === "rename-item-confirmed") {
         if (!itemId || !detail.newName) {
           return;
@@ -902,9 +957,17 @@ export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
           return;
         }
 
-        await projectService.deleteSceneItem({
-          sceneIds: [itemId],
+        const deleteResult = await projectService.deleteSceneIfUnused({
+          sceneId: itemId,
         });
+        if (!deleteResult.deleted) {
+          appService.showAlert({
+            message: deleteResult.usage?.isUsed
+              ? "Cannot delete resource, it is currently in use."
+              : "Failed to delete resource.",
+          });
+          return;
+        }
       } else {
         return;
       }
@@ -1001,7 +1064,8 @@ export const createCharacterSpritesFileExplorerHandlers = ({
           return;
         }
 
-        const usage = recursivelyCheckResource({
+        const usage = await checkResourceUsage({
+          projectService,
           state,
           itemId,
           checkTargets: ["scenes", "layouts"],

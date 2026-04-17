@@ -111,6 +111,18 @@ export const setRepositoryLoadingProgress = (
   const normalizedCurrent = Number.isFinite(nextCurrent)
     ? Math.max(0, Math.floor(nextCurrent))
     : 0;
+  const currentTotal = Number(state.repositoryLoadingTotal) || 0;
+  const currentProgress = Number(state.repositoryLoadingCurrent) || 0;
+  const hasCompletedProgress =
+    currentTotal > 0 && currentProgress >= currentTotal;
+
+  if (
+    normalizedTotal === 0 &&
+    normalizedCurrent === 0 &&
+    hasCompletedProgress
+  ) {
+    return;
+  }
 
   state.repositoryLoadingTotal = normalizedTotal;
   state.repositoryLoadingCurrent =
