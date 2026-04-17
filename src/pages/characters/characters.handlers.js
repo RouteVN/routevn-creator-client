@@ -1,5 +1,4 @@
 import { generateId } from "../../internal/id.js";
-import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import {
   runResourcePageMutation,
@@ -377,8 +376,7 @@ export const handleItemDelete = async (deps, payload) => {
 
   if (character && character.sprites && character.sprites.items) {
     for (const spriteId of Object.keys(character.sprites.items)) {
-      const usage = recursivelyCheckResource({
-        state,
+      const usage = await projectService.checkResourceUsage({
         itemId: spriteId,
         checkTargets: ["scenes", "layouts"],
       });

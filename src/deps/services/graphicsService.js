@@ -1115,6 +1115,32 @@ export const createGraphicsService = async ({ subject }) => {
     await routeGraphicsInitPromise;
   };
 
+  const attachCanvas = async (canvas) => {
+    if (!routeGraphics?.canvas || !canvas) {
+      return;
+    }
+
+    const currentParent = routeGraphics.canvas.parentNode;
+    if (currentParent && currentParent !== canvas) {
+      currentParent.removeChild(routeGraphics.canvas);
+    }
+
+    if (
+      canvas.children.length > 0 &&
+      canvas.children[0] !== routeGraphics.canvas
+    ) {
+      canvas.removeChild(canvas.children[0]);
+    }
+
+    routeGraphics.canvas.style.width = "100%";
+    routeGraphics.canvas.style.height = "100%";
+    routeGraphics.canvas.style.display = "block";
+
+    if (routeGraphics.canvas.parentNode !== canvas) {
+      canvas.appendChild(routeGraphics.canvas);
+    }
+  };
+
   return {
     init: async (options = {}) => {
       if (routeGraphicsInitPromise) {
@@ -1218,15 +1244,7 @@ export const createGraphicsService = async ({ subject }) => {
         });
 
         if (canvas) {
-          if (canvas.children.length > 0) {
-            canvas.removeChild(canvas.children[0]);
-          }
-          // Keep Pixi's internal render resolution synced to the project screen,
-          // then scale the displayed canvas to the container.
-          routeGraphics.canvas.style.width = "100%";
-          routeGraphics.canvas.style.height = "100%";
-          routeGraphics.canvas.style.display = "block";
-          canvas.appendChild(routeGraphics.canvas);
+          await attachCanvas(canvas);
         }
       })();
 
@@ -1373,6 +1391,7 @@ export const createGraphicsService = async ({ subject }) => {
       routeGraphics?.setAnimationTime?.(timeMs);
     },
     waitUntilReady,
+    attachCanvas,
     render: (payload) => {
       return routeGraphics.render(payload);
     },

@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   createProjectCreateRepositoryEvent,
   applyCommandToRepositoryState,
+  applyRepositoryEventsToRepositoryState,
   initialProjectData,
   repositoryEventToCommand,
   createRepositoryCommandEvent,
@@ -211,6 +212,88 @@ describe("scene projection compatibility", () => {
       sceneId,
     });
 
+    expect(
+      projection.scenes.items[sceneId].sections.items[sectionId].lines.items[
+        lineId
+      ].actions,
+    ).toMatchObject({
+      resetStoryAtSection: {
+        sectionId: targetSectionId,
+      },
+    });
+  });
+
+  it("uses batched replay for relevant scene events after bootstrap", async () => {
+    const initialState = createRepositoryState();
+    const events = [
+      createProjectCreateRepositoryEvent({
+        projectId,
+        state: initialState,
+      }),
+      createCommandEvent({
+        id: "line-create-1",
+        partition: mainScenePartitionFor(sceneId),
+        type: COMMAND_TYPES.LINE_CREATE,
+        payload: {
+          sectionId,
+          lines: [
+            {
+              lineId,
+              data: {
+                actions: {},
+              },
+            },
+          ],
+          index: 0,
+        },
+        clientTs: 1,
+      }),
+      createCommandEvent({
+        id: "line-update-1",
+        partition: scenePartitionFor(sceneId),
+        type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
+        payload: {
+          lineId,
+          data: {
+            resetStoryAtSection: {
+              sectionId: targetSectionId,
+            },
+          },
+          replace: false,
+        },
+        clientTs: 2,
+      }),
+    ];
+
+    const singleEventReducer = vi.fn(reduceEventToState);
+    const batchedReducer = vi.fn(({ repositoryState, events }) => {
+      const applyResult = applyRepositoryEventsToRepositoryState({
+        repositoryState,
+        events,
+        projectId,
+      });
+      if (!applyResult.valid) {
+        throw new Error(
+          applyResult.error?.message || "Failed to apply batched events",
+        );
+      }
+
+      return applyResult.repositoryState;
+    });
+
+    const projection = await loadSceneProjectionState({
+      store: {},
+      mainState: createMainProjectionState(initialState),
+      events,
+      createInitialState: () => structuredClone(initialProjectData),
+      reduceEventToState: singleEventReducer,
+      reduceEventsToState: batchedReducer,
+      sceneId,
+    });
+
+    expect(singleEventReducer).toHaveBeenCalledTimes(1);
+    expect(batchedReducer).toHaveBeenCalledTimes(1);
+    expect(batchedReducer.mock.calls[0][0].events).toHaveLength(2);
     expect(
       projection.scenes.items[sceneId].sections.items[sectionId].lines.items[
         lineId

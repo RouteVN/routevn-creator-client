@@ -85,6 +85,72 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
     );
   });
 
+  it("attaches failing event details when batched historical replay throws", () => {
+    const events = [
+      {
+        id: "event-1",
+        type: "scene.create",
+        partition: "m",
+        payload: {
+          sceneId: "scene-1",
+        },
+      },
+      {
+        id: "event-2",
+        type: "line.create",
+        partition: "s:scene-1",
+        payload: {
+          sectionId: "missing-section",
+        },
+      },
+    ];
+
+    let error;
+
+    try {
+      replayEventsToRepositoryState({
+        events,
+        untilEventIndex: events.length,
+        createInitialState: () => ({
+          appliedEventIds: [],
+        }),
+        reduceEventToState: () => {
+          throw new Error("reduceEventToState should not be used");
+        },
+        reduceEventsToState: () => {
+          const replayFailure = new Error(
+            "payload.sectionId must reference an existing section",
+          );
+
+          replayFailure.code = "validation_failed";
+          replayFailure.details = {
+            sectionId: "missing-section",
+            commandIndex: 1,
+          };
+          throw replayFailure;
+        },
+      });
+    } catch (caughtError) {
+      error = caughtError;
+    }
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error?.name).toBe("ProjectRepositoryReplayError");
+    expect(error?.code).toBe("validation_failed");
+    expect(error?.details?.sectionId).toBe("missing-section");
+    expect(error?.details?.commandIndex).toBe(1);
+    expect(error?.details?.replay).toMatchObject({
+      targetEventCount: 2,
+      failedEventArrayIndex: 1,
+      failedEventOffset: 2,
+      failedEvent: {
+        id: "event-2",
+        type: "line.create",
+        partition: "s:scene-1",
+      },
+    });
+  });
+
   it("reports initial main hydration progress while replaying checkpoint gaps", async () => {
     const events = Array.from({ length: 300 }, (_, index) => ({
       id: `event-${index + 1}`,

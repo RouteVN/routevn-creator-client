@@ -42,6 +42,7 @@ export const withSqliteLockRetry = async (
     retryDelaysMs = SQLITE_LOCK_RETRY_DELAYS_MS,
     shouldRecoverError,
     recoverValue,
+    onRetry,
   } = {},
 ) => {
   const delays = Array.isArray(retryDelaysMs) ? retryDelaysMs : [];
@@ -65,6 +66,12 @@ export const withSqliteLockRetry = async (
         throw error;
       }
 
+      onRetry?.({
+        attempt: attempt + 1,
+        delayMs: delays[attempt],
+        error,
+        sawLock,
+      });
       sawLock = true;
       await wait(delays[attempt]);
       attempt += 1;

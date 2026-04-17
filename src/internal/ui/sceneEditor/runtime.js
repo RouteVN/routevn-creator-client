@@ -14,6 +14,61 @@ import {
   summarizeProjectDataForRouteEngine,
 } from "../../project/routeEngineProjectData.js";
 import { prepareRuntimeInteractionExecution } from "../../runtime/graphicsEngineRuntime.js";
+const NO_PENDING_CANVAS_RENDER = Symbol("no-pending-canvas-render");
+
+const waitForNextFrame = () =>
+  new Promise((resolve) => {
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => resolve());
+      return;
+    }
+
+    globalThis.setTimeout(resolve, 0);
+  });
+
+const waitForMountedCanvas = async (refs, maxFrames = 10) => {
+  for (let attempt = 0; attempt < maxFrames; attempt += 1) {
+    const canvas = refs?.canvas;
+    if (canvas?.isConnected) {
+      return canvas;
+    }
+
+    await waitForNextFrame();
+  }
+
+  return refs?.canvas;
+};
+
+export const createSceneEditorRenderQueue = (renderCanvas) => {
+  let activeRenderPromise;
+  let pendingPayload = NO_PENDING_CANVAS_RENDER;
+
+  const start = () => {
+    activeRenderPromise = (async () => {
+      while (pendingPayload !== NO_PENDING_CANVAS_RENDER) {
+        const nextPayload = pendingPayload;
+        pendingPayload = NO_PENDING_CANVAS_RENDER;
+        await renderCanvas(nextPayload);
+      }
+    })().finally(() => {
+      activeRenderPromise = undefined;
+      if (pendingPayload !== NO_PENDING_CANVAS_RENDER) {
+        start();
+      }
+    });
+
+    return activeRenderPromise;
+  };
+
+  return (payload) => {
+    pendingPayload = payload;
+    if (!activeRenderPromise) {
+      return start();
+    }
+
+    return activeRenderPromise;
+  };
+};
 
 const createAssetLoadCache = () => ({
   sceneIds: new Set(),
@@ -459,7 +514,7 @@ const initRouteEngineWithDiagnostics = (
 
 export const renderSceneEditorState = async (deps, payload = {}) => {
   const { store, graphicsService } = deps;
-  const { skipAnimations = false } = payload;
+  const { skipAnimations = false, skipCanvasPaint = false } = payload;
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
@@ -489,10 +544,13 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
           .map((audioElement) => audioElement?.src)
           .filter(Boolean);
   await graphicsService.ensureAudioAssetsLoaded(activeAudioFileIds);
-  graphicsService.engineRenderCurrentState({
-    skipAudio: isMuted,
-    skipAnimations,
-  });
+
+  if (!skipCanvasPaint) {
+    graphicsService.engineRenderCurrentState({
+      skipAudio: isMuted,
+      skipAnimations,
+    });
+  }
   graphicsService.engineHandleActions(
     {
       setNextLineConfig: {
@@ -589,7 +647,6 @@ export const initializeSceneEditorPage = async (deps) => {
   const previewHeight = projectData?.screen?.height;
 
   await graphicsService.init({
-    canvas: refs.canvas,
     beforeHandleActions: createBeforeHandleActionsHook(deps),
     width: previewWidth,
     height: previewHeight,
@@ -606,14 +663,22 @@ export const initializeSceneEditorPage = async (deps) => {
   const initialSceneIds = extractInitialHybridSceneIds(projectData, sceneId);
 
   await loadAssetsForSceneIds(deps, projectData, initialSceneIds, {
-    showLoading: true,
-  });
-  void preloadDirectTransitionScenes(deps, projectData, initialSceneIds);
-  initRouteEngineWithDiagnostics(graphicsService, initialProjectData, {
-    enableGlobalKeyboardBindings: false,
+    showLoading: false,
   });
 
+  store.setScenePageLoading({ isLoading: false });
   render();
+  const mountedCanvas = await waitForMountedCanvas(refs);
+  if (!mountedCanvas?.isConnected) {
+    throw new Error("Scene editor canvas failed to mount");
+  }
+
+  await graphicsService.attachCanvas(mountedCanvas);
+  void preloadDirectTransitionScenes(deps, initialProjectData, initialSceneIds);
+  subject.dispatch("sceneEditor.renderCanvas", {
+    skipAnimations: true,
+    skipCanvasPaint: true,
+  });
   setTimeout(() => {
     subject.dispatch("sceneEditor.renderCanvas", {});
   }, 1000);
@@ -662,6 +727,15 @@ export const restoreSceneEditorFromPreview = async (deps) => {
 
 export const renderSceneEditorCanvas = async (deps, payload) => {
   const { store, render } = deps;
+  if (store.selectIsScenePageLoading()) {
+    return;
+  }
+
+  const mountedCanvas = deps.refs?.canvas;
+  if (!mountedCanvas?.isConnected) {
+    return;
+  }
+
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
@@ -690,13 +764,16 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
 
 export const mountSceneEditorSubscriptions = (deps) => {
   const { subject } = deps;
+  const queueRenderCanvas = createSceneEditorRenderQueue((payload) =>
+    renderSceneEditorCanvas(deps, payload),
+  );
 
   const streams = [
     subject.pipe(
       filter(({ action }) => action === "sceneEditor.renderCanvas"),
       debounceTime(50),
       tap(async ({ payload }) => {
-        await renderSceneEditorCanvas(deps, payload);
+        await queueRenderCanvas(payload);
       }),
     ),
   ];

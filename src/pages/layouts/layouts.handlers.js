@@ -1,6 +1,5 @@
 import { generateId } from "../../internal/id.js";
 import { createLayoutEditorPayload } from "../../internal/layoutEditorRoute.js";
-import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import {
   requireProjectResolution,
   scaleLayoutElementsForProjectResolution,
@@ -1012,8 +1011,7 @@ export const handleItemDelete = async (deps, payload) => {
   const state = projectService.getState();
   const layoutType = state.layouts?.items?.[itemId]?.layoutType;
 
-  const usage = recursivelyCheckResource({
-    state,
+  const usage = await projectService.checkResourceUsage({
     itemId,
     checkTargets: ["scenes"],
   });

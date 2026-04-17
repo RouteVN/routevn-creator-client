@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   handleAfterMount,
+  handleSceneFormAction,
+  handleWhiteboardItemDelete,
   handleWhiteboardPanChanged,
   handleWhiteboardZoomChanged,
 } from "../../src/pages/scenes/scenes.handlers.js";
@@ -17,9 +19,16 @@ const createDeps = ({ userConfig = {}, projectId = "project-1" } = {}) => {
       getUserConfig,
       setUserConfig: vi.fn(),
       navigate: vi.fn(),
+      showAlert: vi.fn(),
     },
     projectService: {
       ensureRepository: vi.fn(async () => {}),
+      deleteSceneIfUnused: vi.fn(async () => ({
+        deleted: true,
+      })),
+      createSceneItem: vi.fn(async () => "scene-2"),
+      createSectionItem: vi.fn(async () => "section-1"),
+      createLineItem: vi.fn(async () => "line-1"),
       getRepositoryState: vi.fn(() => ({
         scenes: {
           tree: [],
@@ -68,6 +77,16 @@ const createDeps = ({ userConfig = {}, projectId = "project-1" } = {}) => {
       setWhiteboardItems: vi.fn(),
       hideMapAddHint: vi.fn(),
       setSelectedItemId: vi.fn(),
+      selectSelectedItemId: vi.fn(() => undefined),
+      resetSceneForm: vi.fn(),
+      addWhiteboardItem: vi.fn(),
+      selectSceneWhiteboardPosition: vi.fn(() => ({
+        x: 0,
+        y: 0,
+      })),
+      getState: vi.fn(() => ({
+        showSceneForm: true,
+      })),
     },
     refs: {
       whiteboard: {
@@ -194,5 +213,61 @@ describe("scenes.handlers config keys", () => {
 
     resolveOverviews({});
     await Promise.resolve();
+  });
+
+  it("blocks whiteboard scene delete when another scene points to it", async () => {
+    const deps = createDeps();
+    deps.projectService.deleteSceneIfUnused.mockResolvedValue({
+      deleted: false,
+      usage: {
+        isUsed: true,
+      },
+    });
+    deps.store.selectSelectedItemId.mockReturnValue("scene-1");
+
+    await handleWhiteboardItemDelete(deps, {
+      _event: {
+        detail: {
+          itemId: "scene-1",
+        },
+      },
+    });
+
+    expect(deps.projectService.deleteSceneIfUnused).toHaveBeenCalledWith({
+      sceneId: "scene-1",
+    });
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "Cannot delete resource, it is currently in use.",
+    });
+    expect(deps.store.setSelectedItemId).not.toHaveBeenCalled();
+  });
+
+  it("shows an error when scene creation is rejected", async () => {
+    const deps = createDeps();
+    deps.projectService.createSceneItem.mockResolvedValue({
+      valid: false,
+      error: {
+        message: "cannot create scene",
+      },
+    });
+
+    await handleSceneFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            name: "Scene 2",
+            folderId: "",
+          },
+        },
+      },
+    });
+
+    expect(deps.projectService.createSectionItem).not.toHaveBeenCalled();
+    expect(deps.projectService.createLineItem).not.toHaveBeenCalled();
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "cannot create scene",
+    });
+    expect(deps.store.addWhiteboardItem).not.toHaveBeenCalled();
   });
 });

@@ -13,15 +13,94 @@ export const createMediaPageHandlers = ({
   }),
   getEditPreviewFileId = () => undefined,
 }) => {
-  const refreshData = async (deps) => {
-    const { store, render, projectService } = deps;
-    const repositoryState = projectService.getState();
+  const waitForExpectedMediaState = async (
+    deps,
+    { selectedItemId, deletedItemId } = {},
+  ) => {
+    const { projectService } = deps;
+    const matchesExpectation = (repositoryState) => {
+      const collection = repositoryState?.[resourceType];
+      if (
+        selectedItemId !== undefined &&
+        !collection?.items?.[selectedItemId]
+      ) {
+        return false;
+      }
+
+      if (
+        deletedItemId !== undefined &&
+        collection?.items?.[deletedItemId] !== undefined
+      ) {
+        return false;
+      }
+
+      return true;
+    };
+
+    const currentState = projectService.getState();
+    if (
+      matchesExpectation(currentState) ||
+      typeof projectService.subscribeProjectState !== "function"
+    ) {
+      return currentState;
+    }
+
+    return new Promise((resolve) => {
+      let settled = false;
+      let cleanupSubscription;
+      let timeoutId;
+      const finish = (repositoryState) => {
+        if (settled) {
+          return;
+        }
+
+        settled = true;
+        clearTimeout(timeoutId);
+        cleanupSubscription?.();
+        resolve(repositoryState);
+      };
+
+      cleanupSubscription = projectService.subscribeProjectState(
+        ({ domainState, repositoryState }) => {
+          const nextState = domainState ?? repositoryState;
+          if (matchesExpectation(nextState)) {
+            finish(nextState);
+          }
+        },
+        { emitCurrent: false },
+      );
+
+      timeoutId = setTimeout(() => {
+        finish(projectService.getState());
+      }, 250);
+    });
+  };
+
+  const refreshData = async (deps, { selectedItemId, deletedItemId } = {}) => {
+    const { store, render, projectService, refs } = deps;
+    const repositoryState = await waitForExpectedMediaState(deps, {
+      selectedItemId,
+      deletedItemId,
+    });
     syncMediaPageData({
       store,
       repositoryState,
       resourceType,
     });
+
+    if (selectedItemId !== undefined) {
+      const nextItem = repositoryState?.[resourceType]?.items?.[selectedItemId];
+      store.setSelectedItemId({
+        itemId:
+          nextItem && nextItem.type !== "folder" ? selectedItemId : undefined,
+      });
+    }
+
     render();
+
+    if (selectedItemId) {
+      refs?.fileExplorer?.selectItem?.({ itemId: selectedItemId });
+    }
   };
 
   const openEditDialogWithValues = ({ deps, itemId } = {}) => {

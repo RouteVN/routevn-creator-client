@@ -71,4 +71,32 @@ describe("app.store repository loading progress", () => {
       100,
     );
   });
+
+  it("keeps 100% progress when a later phase clears progress values", () => {
+    const state = createInitialState();
+
+    setRepositoryLoading({ state }, { isLoading: true });
+    setRepositoryLoadingProgress(
+      { state },
+      {
+        current: 512,
+        total: 512,
+      },
+    );
+    setRepositoryLoadingProgress(
+      { state },
+      {
+        current: 0,
+        total: 0,
+      },
+    );
+
+    expect(state.repositoryLoadingCurrent).toBe(512);
+    expect(state.repositoryLoadingTotal).toBe(512);
+    expect(selectViewData({ state })).toMatchObject({
+      hasRepositoryLoadingProgress: true,
+      repositoryLoadingProgressPercent: 100,
+      repositoryLoadingStatusText: "Loading project... 100%",
+    });
+  });
 });

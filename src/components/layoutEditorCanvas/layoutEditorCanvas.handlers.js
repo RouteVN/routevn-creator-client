@@ -346,6 +346,7 @@ const renderLayoutEditorCanvas = async (
       });
     }
 
+    renderStage = "load_assets";
     let assets = await loadLayoutEditorAssets({
       projectService: deps.projectService,
       selectCachedFileContent: deps.store.selectCachedFileContent,

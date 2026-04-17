@@ -125,6 +125,10 @@ const dispatchLineNavigationRender = (
   store,
   { previousLineId, nextLineId } = {},
 ) => {
+  if (!nextLineId || previousLineId === nextLineId) {
+    return;
+  }
+
   subject.dispatch("sceneEditor.renderCanvas", {
     skipAnimations: !shouldAnimateLineNavigation(store, {
       previousLineId,
@@ -397,6 +401,7 @@ const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
 
 export const handleBeforeMount = (deps) => {
   const { projectService, appService, store } = deps;
+  store.setScenePageLoading({ isLoading: true });
   const showLineNumbers =
     appService.getUserConfig(SHOW_LINE_NUMBERS_CONFIG_KEY) ?? true;
   store.setSceneSettings({
@@ -1018,14 +1023,26 @@ export const handleLineNavigation = (deps, payload) => {
   }
 
   // For text-editor mode, handle cursor navigation
+  const resolvedCurrentLineId = currentLineId || targetLineId;
   let nextLineId = targetLineId;
 
+  if (
+    resolvedCurrentLineId &&
+    targetLineId &&
+    targetLineId !== resolvedCurrentLineId &&
+    (direction === "up" || direction === "down" || direction === "end")
+  ) {
+    nextLineId = resolvedCurrentLineId;
+  }
+
   // Determine next line based on direction if targetLineId is current line
-  if (targetLineId === currentLineId) {
+  if (nextLineId === resolvedCurrentLineId) {
     if (direction === "up" || direction === "end") {
-      nextLineId = store.selectPreviousLineId({ lineId: currentLineId });
+      nextLineId = store.selectPreviousLineId({
+        lineId: resolvedCurrentLineId,
+      });
     } else if (direction === "down") {
-      nextLineId = store.selectNextLineId({ lineId: currentLineId });
+      nextLineId = store.selectNextLineId({ lineId: resolvedCurrentLineId });
     }
   }
 

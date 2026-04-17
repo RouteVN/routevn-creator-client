@@ -624,6 +624,11 @@ const subscriptions = (deps) => {
 
 export const handleContainerContextMenu = (deps, payload) => {
   const { store, render, props } = deps;
+  const target = payload._event.target;
+  if (typeof target?.closest === "function" && target.closest("[data-item-id]")) {
+    return;
+  }
+
   payload._event.preventDefault();
 
   const emptyContextMenuItems = Array.isArray(props.emptyContextMenuItems)
@@ -664,6 +669,7 @@ export const handleEmptyMessageClick = (deps, payload) => {
 export const handleItemContextMenu = (deps, payload) => {
   const { store, render, props } = deps;
   payload._event.preventDefault();
+  payload._event.stopPropagation();
 
   const itemId = getItemIdFromEvent(payload._event);
   if (!itemId) {

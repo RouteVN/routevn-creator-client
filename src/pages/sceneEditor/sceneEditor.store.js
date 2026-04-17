@@ -284,6 +284,7 @@ export const createInitialState = () => ({
   presentationState: {},
   sectionLineChanges: {},
   isMuted: false,
+  isScenePageLoading: true,
   isSceneAssetLoading: false,
   lockingLineId: null, // Lock to prevent duplicate split/merge operations
   deadEndTooltip: {
@@ -356,6 +357,14 @@ export const setPresentationState = ({ state }, { presentationState } = {}) => {
 
 export const setSectionLineChanges = ({ state }, { changes } = {}) => {
   state.sectionLineChanges = changes;
+};
+
+export const setScenePageLoading = ({ state }, { isLoading } = {}) => {
+  state.isScenePageLoading = isLoading;
+};
+
+export const selectIsScenePageLoading = ({ state }) => {
+  return state.isScenePageLoading;
 };
 
 export const setSceneAssetLoading = ({ state }, { isLoading } = {}) => {
@@ -799,6 +808,7 @@ export const selectViewData = ({ state }) => {
         2,
       ),
       canvasAspectRatio: selectCanvasAspectRatio({ state }),
+      isScenePageLoading: state.isScenePageLoading,
       isSceneAssetLoading: state.isSceneAssetLoading,
       deadEndTooltip: state.deadEndTooltip,
     };
@@ -1007,6 +1017,7 @@ export const selectViewData = ({ state }) => {
     sceneSettingsForm,
     isMuted: state.isMuted,
     muteIcon: state.isMuted ? "mute" : "unmute",
+    isScenePageLoading: state.isScenePageLoading,
     isSceneAssetLoading: state.isSceneAssetLoading,
     deadEndTooltip: state.deadEndTooltip,
   };
