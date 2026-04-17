@@ -11,7 +11,6 @@ export const createCommandApi = (options) => {
   return {
     getState: shared.getState,
     getDomainState: shared.getDomainState,
-    getEvents: shared.getEvents,
     ...createStoryCommandApi(shared),
     ...createResourceCommandApi(shared),
     ...createCharacterSpriteCommandApi(shared),

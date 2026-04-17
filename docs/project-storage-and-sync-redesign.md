@@ -58,6 +58,9 @@ It is how local-first sync is supposed to work:
 - `local_drafts` hold accepted local work that is not yet committed by the
   server
 - `committed_events` hold the authoritative committed stream
+- a local-only project may therefore keep its bootstrap `project.create` event
+  in `local_drafts` and still be valid
+- zero committed rows is a valid steady state for an offline-only project
 
 The redesign is only trying to remove the extra persisted RouteVN event/cache
 layer that currently sits beside those two.

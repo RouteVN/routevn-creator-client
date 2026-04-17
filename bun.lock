@@ -17,7 +17,7 @@
         "@tauri-apps/plugin-updater": "^2.9.0",
         "file-type": "^21.0.0",
         "immer": "^10.1.1",
-        "insieme": "2.0.3",
+        "insieme": "2.1.0",
         "jempl": "1.0.0",
         "js-yaml": "^4.1.0",
         "jsdom": "^26.1.0",
@@ -523,7 +523,7 @@
 
     "ini": ["ini@1.3.8", "", {}, "sha512-JV/yugV2uzW5iMRSiZAyDtQd+nxtUnjeLt0acNdw98kKLrvuRVyB80tsREOE7yvGVgalhZ6RNXCmEHkUKBKxew=="],
 
-    "insieme": ["insieme@2.0.3", "", { "dependencies": { "immer": "^11.1.4" } }, "sha512-lHrS8rQeIT3zh1Qrxf0mzpT39/cy6/9k4aN0HWYjuPjbanhc2DDI9HdQWtQbfw1ccEKxijeTDDOUdHflNr+4VA=="],
+    "insieme": ["insieme@2.1.0", "", { "dependencies": { "immer": "^11.1.4" } }, "sha512-LTBw2R5Dc4eyqgkDLsFr2TQ4qCIJGivoHxun3j+kiI78HRCW8q/M5fnfLTWqh8+JOoP986ie7+WrBiYsyWlSHg=="],
 
     "is-fullwidth-code-point": ["is-fullwidth-code-point@5.1.0", "", { "dependencies": { "get-east-asian-width": "^1.3.1" } }, "sha512-5XHYaSyiqADb4RnZ1Bdad6cPp8Toise4TzEjcOYDHZkTCbKgiUl7WTUCpNWHuxmDt91wnsZBc9xinNzopv3JMQ=="],
 

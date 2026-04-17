@@ -1,3 +1,4 @@
+import { generateId } from "../../internal/id.js";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
 import { processPendingUploads } from "../../internal/ui/resourcePages/media/processPendingUploads.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
@@ -155,7 +156,7 @@ export const handleDetailHeaderClick = (deps) => {
 };
 
 const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
-  const { appService, projectService } = deps;
+  const { appService, projectService, store } = deps;
 
   if (!validateImageFiles({ appService, files })) {
     return;
@@ -168,11 +169,24 @@ const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
     pendingIdPrefix: "pending-image",
     concurrency: MAX_PARALLEL_UPLOADS,
     refresh: handleDataChanged,
-    processFile: async ({ file }) => {
+    processFile: async ({ file, pendingUploadId }) => {
+      const imageId = generateId();
+      store.updatePendingUpload({
+        itemId: pendingUploadId,
+        updates: {
+          resolvedItemId: imageId,
+        },
+      });
+
       const createAttempt = await runResourcePageMutation({
         appService,
         fallbackMessage: "Failed to create image.",
-        action: () => projectService.importImageFile({ file, parentId }),
+        action: () =>
+          projectService.importImageFile({
+            file,
+            parentId,
+            imageId,
+          }),
       });
 
       return createAttempt.ok;

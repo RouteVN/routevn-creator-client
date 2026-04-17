@@ -226,7 +226,11 @@ const adoptRepositorySectionIntoSession = (
   return nextSession;
 };
 
-const rebaseDirtyEntryOntoRepositoryLine = (entry, repositoryLine) => {
+const rebaseDirtyEntryOntoRepositoryLine = (
+  entry,
+  repositoryLine,
+  { conflict = false } = {},
+) => {
   const repositoryText = getSceneEditorLineText(repositoryLine);
   const draftText = getSceneEditorLineText(entry.line);
   const rebasedLine = cloneLine(repositoryLine);
@@ -238,7 +242,7 @@ const rebaseDirtyEntryOntoRepositoryLine = (entry, repositoryLine) => {
     line: rebasedLine,
     baseText: repositoryText,
     dirty: draftText !== repositoryText,
-    conflict: false,
+    conflict,
     saveState:
       draftText !== repositoryText ? entry.saveState || "scheduled" : "idle",
   };
@@ -467,6 +471,7 @@ export const reconcileSceneEditorSession = ({
         nextSession.linesById[lineId] = rebaseDirtyEntryOntoRepositoryLine(
           entry,
           repositoryLine,
+          { conflict: true },
         );
         console.warn("[sceneEditor] Rebased dirty draft onto repository text", {
           lineId,
@@ -521,6 +526,7 @@ export const reconcileSceneEditorSession = ({
     nextLinesById[lineId] = rebaseDirtyEntryOntoRepositoryLine(
       currentEntry,
       repositoryLine,
+      { conflict: true },
     );
     console.warn("[sceneEditor] Rebased dirty draft onto repository text", {
       lineId,

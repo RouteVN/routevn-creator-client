@@ -31,6 +31,8 @@ Collaboration:
 2. Newer client opening older project:
    partially supported only when the stored project format version still
    matches and the latest model can still replay the older command/state data.
+3. Older local client-store layouts:
+   rejected explicitly under the hard-cutover storage contract.
 
 ### Collaboration
 
@@ -44,6 +46,9 @@ Collaboration:
 Project state is not loaded from a trusted persisted snapshot. The client
 rebuilds repository state by replaying stored events through the current
 `@routevn/creator-model` reducer and validators.
+
+The local `insieme` client-store layout is also a hard compatibility boundary.
+Older store layouts are not repaired automatically during project open.
 
 Important implementation points:
 
@@ -225,9 +230,9 @@ References:
 1. remote compatibility evaluation:
    [compatibility.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/deps/services/shared/collab/compatibility.js#L30)
 2. projection gap handling during live collaboration:
-   [createProjectCollabService.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/deps/services/shared/collab/createProjectCollabService.js#L282)
-3. projection gap persistence during cache rebuild:
-   [projectorCache.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/deps/services/shared/collab/projectorCache.js#L122)
+   [createProjectCollabService.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/deps/services/shared/collab/createProjectCollabService.js#L48)
+3. projection gap persistence during repository/session handling:
+   [projectionGapState.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/deps/services/shared/collab/projectionGapState.js#L1)
 
 Problem:
 

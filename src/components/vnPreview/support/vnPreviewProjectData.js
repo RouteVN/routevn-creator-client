@@ -107,10 +107,7 @@ export const ensurePreviewProjectDataTargets = async ({
     (sceneId) => !knownLoadedSceneIds.includes(sceneId),
   );
 
-  if (
-    (missingSceneIds.length === 0 && nextSectionIds.length === 0) ||
-    typeof repository?.getContextState !== "function"
-  ) {
+  if (missingSceneIds.length === 0 && nextSectionIds.length === 0) {
     return {
       projectData,
       missingSceneIds,

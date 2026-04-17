@@ -322,9 +322,7 @@ export const handleAfterMount = async (deps) => {
   const lineId = attrs.lineId;
 
   const state =
-    typeof repository?.getContextState === "function" &&
-    typeof sceneId === "string" &&
-    sceneId.length > 0
+    typeof sceneId === "string" && sceneId.length > 0
       ? await repository.getContextState({
           sceneIds: [sceneId],
         })

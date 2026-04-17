@@ -38,10 +38,7 @@ export const createMediaPageHandlers = ({
     };
 
     const currentState = projectService.getState();
-    if (
-      matchesExpectation(currentState) ||
-      typeof projectService.subscribeProjectState !== "function"
-    ) {
+    if (matchesExpectation(currentState)) {
       return currentState;
     }
 

@@ -1,7 +1,32 @@
-import { describe, expect, it, vi } from "vitest";
-import { handleItemDelete } from "../../src/pages/images/images.handlers.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const { generateIdMock, processPendingUploadsMock } = vi.hoisted(() => ({
+  generateIdMock: vi.fn(() => "image-123"),
+  processPendingUploadsMock: vi.fn(),
+}));
+
+vi.mock("../../src/internal/id.js", () => ({
+  generateId: generateIdMock,
+}));
+
+vi.mock(
+  "../../src/internal/ui/resourcePages/media/processPendingUploads.js",
+  () => ({
+    processPendingUploads: processPendingUploadsMock,
+  }),
+);
+
+import {
+  handleItemDelete,
+  handleUploadClick,
+} from "../../src/pages/images/images.handlers.js";
 
 describe("images handlers", () => {
+  beforeEach(() => {
+    generateIdMock.mockClear();
+    processPendingUploadsMock.mockReset();
+  });
+
   it("shows a failure alert when deleteImageIfUnused fails without usage", async () => {
     const deps = {
       projectService: {
@@ -34,5 +59,57 @@ describe("images handlers", () => {
       message: "Failed to delete resource.",
     });
     expect(deps.render).toHaveBeenCalled();
+  });
+
+  it("marks pending uploads with the created image id before importing", async () => {
+    const file = new File(["image"], "hero.png", {
+      type: "image/png",
+    });
+    processPendingUploadsMock.mockImplementation(
+      async ({ files, processFile }) => {
+        await processFile({
+          file: files[0],
+          pendingUploadId: "pending-image-1",
+        });
+        return { status: "ok", successfulUploadCount: 1 };
+      },
+    );
+
+    const deps = {
+      appService: {
+        pickFiles: vi.fn(async () => [file]),
+        showAlert: vi.fn(),
+      },
+      projectService: {
+        importImageFile: vi.fn(async () => ({
+          valid: true,
+          imageId: "image-123",
+        })),
+      },
+      store: {
+        updatePendingUpload: vi.fn(),
+      },
+      render: vi.fn(),
+    };
+
+    await handleUploadClick(deps, {
+      _event: {
+        detail: {
+          groupId: "folder-1",
+        },
+      },
+    });
+
+    expect(deps.store.updatePendingUpload).toHaveBeenCalledWith({
+      itemId: "pending-image-1",
+      updates: {
+        resolvedItemId: "image-123",
+      },
+    });
+    expect(deps.projectService.importImageFile).toHaveBeenCalledWith({
+      file,
+      parentId: "folder-1",
+      imageId: "image-123",
+    });
   });
 });

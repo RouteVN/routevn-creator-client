@@ -19,7 +19,7 @@ const syncRepositoryToStore = ({
   repositoryState,
   projectService,
 } = {}) => {
-  const state = repositoryState ?? projectService?.getState?.();
+  const state = repositoryState ?? projectService.getState();
   store.setItems({ textStylesData: state?.textStyles });
   store.setColorsData({ colorsData: state?.colors });
   store.setFontsData({ fontsData: state?.fonts });

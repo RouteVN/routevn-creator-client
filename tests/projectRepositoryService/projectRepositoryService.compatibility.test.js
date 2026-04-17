@@ -3,28 +3,43 @@ import { createProjectRepositoryService } from "../../src/deps/services/shared/p
 
 const createService = ({
   creatorVersion = 2,
-  readCreatorVersionByReference = undefined,
+  readCreatorVersionByReference = async () => undefined,
   storeCreatorVersion = creatorVersion,
+  storeProjectionGap = undefined,
+  storeOverrides = {},
 } = {}) => {
+  const collabAdapter = {
+    beforeCreateRepository: vi.fn(async () => undefined),
+    afterCreateRepository: vi.fn(async () => undefined),
+  };
+  const baseStore = {
+    app: {
+      get: vi.fn(async (key) =>
+        key === "creatorVersion"
+          ? storeCreatorVersion
+          : key === "projectorGap"
+            ? storeProjectionGap
+            : undefined,
+      ),
+    },
+  };
   const storageAdapter = {
     resolveProjectReferenceByProjectId: vi.fn(async ({ projectId }) => ({
       projectPath: `/tmp/${projectId}`,
       cacheKey: `/tmp/${projectId}`,
       repositoryProjectId: projectId,
     })),
+    readCreatorVersionByReference: vi.fn(readCreatorVersionByReference),
+    evictStoreByReference: vi.fn(async () => {}),
     createStore: vi.fn(async () => ({
+      ...baseStore,
+      ...storeOverrides,
       app: {
-        get: vi.fn(async (key) =>
-          key === "creatorVersion" ? storeCreatorVersion : undefined,
-        ),
+        ...baseStore.app,
+        ...storeOverrides.app,
       },
     })),
   };
-  if (typeof readCreatorVersionByReference === "function") {
-    storageAdapter.readCreatorVersionByReference = vi.fn(
-      readCreatorVersionByReference,
-    );
-  }
 
   const service = createProjectRepositoryService({
     router: {
@@ -33,7 +48,7 @@ const createService = ({
     db: {},
     creatorVersion,
     storageAdapter,
-    collabAdapter: {},
+    collabAdapter,
   });
 
   return {
@@ -73,5 +88,67 @@ describe("projectRepositoryService compatibility ordering", () => {
     );
 
     expect(storageAdapter.createStore).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects projects with a stored projection gap as incompatible", async () => {
+    const { service, storageAdapter } = createService({
+      creatorVersion: 2,
+      storeProjectionGap: {
+        commandType: "scene.update",
+        remoteSchemaVersion: 3,
+        supportedSchemaVersion: 2,
+        message: "schemaVersion 3 is newer than supported 2",
+      },
+    });
+
+    await expect(
+      service.ensureProjectCompatibleByProjectId("project-1"),
+    ).rejects.toMatchObject({
+      code: "project_projection_gap_incompatible",
+    });
+
+    await expect(
+      service.ensureProjectCompatibleByProjectId("project-1"),
+    ).rejects.toThrow(
+      "This project contains committed changes that this RouteVN Creator build cannot project safely.",
+    );
+
+    expect(storageAdapter.createStore).toHaveBeenCalledTimes(2);
+  });
+
+  it("normalizes unsupported project store layouts into a hard-cutover incompatibility error", async () => {
+    const storeFormatError = new Error("bootstrap history unsupported");
+    storeFormatError.code = "project_store_format_unsupported";
+
+    const { service: failingService, storageAdapter } = createService();
+    storageAdapter.createStore.mockRejectedValue(storeFormatError);
+
+    await expect(
+      failingService.ensureProjectCompatibleByProjectId("project-1"),
+    ).rejects.toMatchObject({
+      code: "project_store_format_unsupported",
+      message:
+        "Unsupported project store format. This RouteVN Creator build only supports the current project storage layout and will not repair older local stores automatically.",
+    });
+  });
+
+  it("blocks repository open before event loading when a stored projection gap exists", async () => {
+    const getEvents = vi.fn(async () => []);
+    const { service } = createService({
+      creatorVersion: 2,
+      storeProjectionGap: {
+        commandType: "scene.update",
+        remoteSchemaVersion: 3,
+        supportedSchemaVersion: 2,
+      },
+      storeOverrides: {
+        getEvents,
+      },
+    });
+
+    await expect(service.getRepositoryById("project-1")).rejects.toMatchObject({
+      code: "project_projection_gap_incompatible",
+    });
+    expect(getEvents).not.toHaveBeenCalled();
   });
 });

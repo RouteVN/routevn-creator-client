@@ -593,19 +593,11 @@ export const initializeSceneEditorPage = async (deps) => {
     subject,
     syncProjectState,
   } = deps;
-  const repository = await projectService.ensureRepository();
-  const ensuredProjectId =
-    typeof projectService.getEnsuredProjectId === "function"
-      ? projectService.getEnsuredProjectId()
-      : undefined;
-  if (
-    ensuredProjectId &&
-    typeof projectService.ensureCommandSessionForProject === "function"
-  ) {
-    void projectService
-      .ensureCommandSessionForProject(ensuredProjectId)
-      .catch(() => {});
-  }
+  await projectService.ensureRepository();
+  const ensuredProjectId = projectService.getEnsuredProjectId();
+  void projectService
+    .ensureCommandSessionForProject(ensuredProjectId)
+    .catch(() => {});
 
   const {
     s,
@@ -614,9 +606,7 @@ export const initializeSceneEditorPage = async (deps) => {
   } = appService.getPayload();
   const sceneId = s;
 
-  if (typeof repository?.setActiveSceneId === "function") {
-    await repository.setActiveSceneId(sceneId);
-  }
+  await projectService.setActiveSceneId(sceneId);
 
   syncProjectState(store, projectService);
 

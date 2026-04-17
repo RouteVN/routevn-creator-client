@@ -51,6 +51,17 @@ This document defines the required end-state write contract for the current plat
 
 In short: command stream is authoritative; state is materialized by domain reducer replay.
 
+## Durable Destination Contract
+
+- Normal local/offline command submission persists to `local_drafts`.
+- Authoritative server-approved history persists to `committed_events`.
+- Local-only project bootstrap also persists to `local_drafts`.
+- A local-only project may therefore have zero committed rows.
+- Repository state and materialized views are derived from committed history
+  plus ordered draft overlay.
+- Do not write local/offline project history directly into
+  `committed_events`.
+
 ## Partition Contract
 
 Partitions must be coarse and stable.

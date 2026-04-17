@@ -117,10 +117,9 @@ Current keys:
     - `notes`
     - `actionIndex`
     - `createdAt`
-- `projectorCacheVersion`
-  - projection cache version marker
 - `projectorGap`
-  - stored projection-gap metadata used by collab/projection repair flows
+  - stored projection-gap metadata used by compatibility gating and explicit
+    open-blocked states
 - `collab.lastCommittedId:<projectId>`
   - committed remote cursor watermark
   - currently used by the web collab path

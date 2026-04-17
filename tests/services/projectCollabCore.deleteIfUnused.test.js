@@ -51,9 +51,9 @@ describe("createProjectCollabCore deleteIfUnused", () => {
       getAdapterByProject: () => undefined,
       createSessionForProject: async () => undefined,
       createTransport: () => undefined,
-      onEnsureLocalSession: undefined,
-      onSessionCleared: undefined,
-      onSessionTransportUpdated: undefined,
+      onEnsureLocalSession: () => {},
+      onSessionCleared: () => {},
+      onSessionTransportUpdated: () => {},
     });
 
     const result = await collabCore.deleteImageIfUnused({

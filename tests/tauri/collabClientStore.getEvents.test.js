@@ -1,37 +1,32 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  DRAFT_HISTORY_MODE_SNAPSHOT_ARCHIVE,
-  loadRepositoryEvents,
-} from "../../src/deps/services/tauri/collabClientStore.js";
-import { initialProjectData } from "../../src/deps/services/shared/projectRepository.js";
+import { loadRepositoryEvents } from "../../src/deps/services/tauri/collabClientStore.js";
 
 describe("loadRepositoryEvents", () => {
   it("skips committed replay when there are no drafts", async () => {
     const events = await loadRepositoryEvents({
       projectId: "project-1",
       store: {
-        _debug: {
-          getCommitted: async () => [
-            {
-              id: "event-1",
-              partition: "m:s:scene-1",
-              projectId: "project-1",
-              userId: "user-1",
-              type: "section.create",
-              schemaVersion: 1,
-              payload: {
-                sceneId: "scene-1",
-                sectionId: "section-1",
-                data: {
-                  name: "Section 1",
-                },
+        listCommittedAfter: async () => [
+          {
+            id: "event-1",
+            committedId: 1,
+            partition: "m:s:scene-1",
+            projectId: "project-1",
+            userId: "user-1",
+            type: "section.create",
+            schemaVersion: 1,
+            payload: {
+              sceneId: "scene-1",
+              sectionId: "section-1",
+              data: {
+                name: "Section 1",
               },
-              serverTs: 1000,
-              meta: {},
             },
-          ],
-          getDrafts: async () => [],
-        },
+            serverTs: 1000,
+            meta: {},
+          },
+        ],
+        listDraftsOrdered: async () => [],
       },
     });
 
@@ -57,46 +52,44 @@ describe("loadRepositoryEvents", () => {
         progressUpdates.push(payload);
       },
       store: {
-        _debug: {
-          getCommitted: async () => [],
-          getDrafts: async () => [
-            {
-              id: "draft-1",
-              partition: "m:s:scene-1",
-              projectId: "project-1",
-              userId: "user-1",
-              type: "scene.create",
-              schemaVersion: 1,
-              payload: {
-                sceneId: "scene-1",
-                data: {
-                  name: "Scene 1",
-                },
+        listCommittedAfter: async () => [],
+        listDraftsOrdered: async () => [
+          {
+            id: "draft-1",
+            partition: "m:s:scene-1",
+            projectId: "project-1",
+            userId: "user-1",
+            type: "scene.create",
+            schemaVersion: 1,
+            payload: {
+              sceneId: "scene-1",
+              data: {
+                name: "Scene 1",
               },
-              clientTs: 1000,
-              createdAt: 1000,
-              meta: {},
             },
-            {
-              id: "draft-2",
-              partition: "m:s:scene-1",
-              projectId: "project-1",
-              userId: "user-1",
-              type: "section.create",
-              schemaVersion: 1,
-              payload: {
-                sceneId: "scene-1",
-                sectionId: "section-1",
-                data: {
-                  name: "Section 1",
-                },
+            clientTs: 1000,
+            createdAt: 1000,
+            meta: {},
+          },
+          {
+            id: "draft-2",
+            partition: "m:s:scene-1",
+            projectId: "project-1",
+            userId: "user-1",
+            type: "section.create",
+            schemaVersion: 1,
+            payload: {
+              sceneId: "scene-1",
+              sectionId: "section-1",
+              data: {
+                name: "Section 1",
               },
-              clientTs: 1001,
-              createdAt: 1001,
-              meta: {},
             },
-          ],
-        },
+            clientTs: 1001,
+            createdAt: 1001,
+            meta: {},
+          },
+        ],
         applySubmitResult: async () => {},
       },
     });
@@ -119,64 +112,62 @@ describe("loadRepositoryEvents", () => {
         progressUpdates.push(payload);
       },
       store: {
-        _debug: {
-          getCommitted: async () => [],
-          getDrafts: async () => [
-            {
-              id: "draft-1",
-              partition: "m:s:scene-1",
-              projectId: "project-1",
-              userId: "user-1",
-              type: "scene.create",
-              schemaVersion: 1,
-              payload: {
-                sceneId: "scene-1",
-                data: {
-                  name: "Scene 1",
-                },
+        listCommittedAfter: async () => [],
+        listDraftsOrdered: async () => [
+          {
+            id: "draft-1",
+            partition: "m:s:scene-1",
+            projectId: "project-1",
+            userId: "user-1",
+            type: "scene.create",
+            schemaVersion: 1,
+            payload: {
+              sceneId: "scene-1",
+              data: {
+                name: "Scene 1",
               },
-              clientTs: 1000,
-              createdAt: 1000,
-              meta: {},
             },
-            {
-              id: "draft-2",
-              partition: "m:s:missing-scene",
-              projectId: "project-1",
-              userId: "user-1",
-              type: "section.create",
-              schemaVersion: 1,
-              payload: {
-                sceneId: "missing-scene",
-                sectionId: "section-missing",
-                data: {
-                  name: "Missing Section",
-                },
+            clientTs: 1000,
+            createdAt: 1000,
+            meta: {},
+          },
+          {
+            id: "draft-2",
+            partition: "m:s:missing-scene",
+            projectId: "project-1",
+            userId: "user-1",
+            type: "section.create",
+            schemaVersion: 1,
+            payload: {
+              sceneId: "missing-scene",
+              sectionId: "section-missing",
+              data: {
+                name: "Missing Section",
               },
-              clientTs: 1001,
-              createdAt: 1001,
-              meta: {},
             },
-            {
-              id: "draft-3",
-              partition: "m:s:scene-1",
-              projectId: "project-1",
-              userId: "user-1",
-              type: "section.create",
-              schemaVersion: 1,
-              payload: {
-                sceneId: "scene-1",
-                sectionId: "section-1",
-                data: {
-                  name: "Section 1",
-                },
+            clientTs: 1001,
+            createdAt: 1001,
+            meta: {},
+          },
+          {
+            id: "draft-3",
+            partition: "m:s:scene-1",
+            projectId: "project-1",
+            userId: "user-1",
+            type: "section.create",
+            schemaVersion: 1,
+            payload: {
+              sceneId: "scene-1",
+              sectionId: "section-1",
+              data: {
+                name: "Section 1",
               },
-              clientTs: 1002,
-              createdAt: 1002,
-              meta: {},
             },
-          ],
-        },
+            clientTs: 1002,
+            createdAt: 1002,
+            meta: {},
+          },
+        ],
         applySubmitResult,
       },
     });
@@ -195,132 +186,6 @@ describe("loadRepositoryEvents", () => {
       phase: "read_project_events",
       current: 3,
       total: 3,
-    });
-  });
-
-  it("preserves canonical snapshot draft history without rejecting drafts", async () => {
-    const applySubmitResult = vi.fn(async () => {});
-    const progressUpdates = [];
-
-    const events = await loadRepositoryEvents({
-      projectId: "project-1",
-      draftHistoryMode: DRAFT_HISTORY_MODE_SNAPSHOT_ARCHIVE,
-      onProgress: (payload) => {
-        progressUpdates.push(payload);
-      },
-      store: {
-        _debug: {
-          getCommitted: async () => [],
-          getDrafts: async () => [
-            {
-              id: "bootstrap-draft",
-              partition: "m",
-              projectId: "project-1",
-              userId: "user-1",
-              type: "project.create",
-              schemaVersion: 1,
-              payload: {
-                state: structuredClone(initialProjectData),
-              },
-              clientTs: 1000,
-              createdAt: 1000,
-              meta: {},
-            },
-            {
-              id: "draft-2",
-              partition: "m:s:scene-1",
-              projectId: "project-1",
-              userId: "user-1",
-              type: "scene.create",
-              schemaVersion: 1,
-              payload: {
-                sceneId: "scene-1",
-                data: {
-                  name: "Scene 1",
-                },
-              },
-              clientTs: 1001,
-              createdAt: 1001,
-              meta: {},
-            },
-          ],
-        },
-        applySubmitResult,
-      },
-    });
-
-    expect(events.map((event) => event.id)).toEqual([
-      "bootstrap-draft",
-      "draft-2",
-    ]);
-    expect(applySubmitResult).not.toHaveBeenCalled();
-    expect(progressUpdates.at(-1)).toMatchObject({
-      phase: "read_project_events",
-      current: 2,
-      total: 2,
-    });
-  });
-
-  it("quarantines invalid drafts after the bootstrap snapshot in snapshot-archive mode", async () => {
-    const applySubmitResult = vi.fn(async () => {});
-
-    const events = await loadRepositoryEvents({
-      projectId: "project-1",
-      draftHistoryMode: DRAFT_HISTORY_MODE_SNAPSHOT_ARCHIVE,
-      store: {
-        _debug: {
-          getCommitted: async () => [],
-          getDrafts: async () => [
-            {
-              id: "bootstrap-draft",
-              partition: "m",
-              projectId: "project-1",
-              userId: "user-1",
-              type: "project.create",
-              schemaVersion: 1,
-              payload: {
-                state: structuredClone(initialProjectData),
-              },
-              clientTs: 1000,
-              createdAt: 1000,
-              meta: {},
-            },
-            {
-              id: "broken-draft",
-              partition: "m",
-              projectId: "project-1",
-              userId: "user-1",
-              type: "image.create",
-              schemaVersion: 1,
-              payload: {
-                imageId: "image-1",
-                data: {
-                  type: "image",
-                  name: "Broken image",
-                  fileId: "missing-file",
-                },
-                parentId: null,
-                position: "last",
-              },
-              clientTs: 1001,
-              createdAt: 1001,
-              meta: {},
-            },
-          ],
-        },
-        applySubmitResult,
-      },
-    });
-
-    expect(events.map((event) => event.id)).toEqual(["bootstrap-draft"]);
-    expect(applySubmitResult).toHaveBeenCalledWith({
-      result: {
-        id: "broken-draft",
-        status: "rejected",
-        reason: "precondition_validation_failed",
-        message:
-          "payload.data.fileId must reference an existing non-folder file",
-      },
     });
   });
 });

@@ -425,8 +425,7 @@ export const handleBeforeMount = (deps) => {
     cleanupRuntimeSubscriptions();
     cleanupShortcutSubscriptions();
     await flushSceneEditorDrafts(deps);
-    const repository = await projectService.getRepository().catch(() => null);
-    await repository?.clearActiveSceneId?.();
+    await projectService.clearActiveSceneId().catch(() => {});
     await resetSceneEditorRuntime(deps);
   };
 };

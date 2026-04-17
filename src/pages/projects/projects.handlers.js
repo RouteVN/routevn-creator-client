@@ -5,6 +5,11 @@ import {
   mapApiUserToAuthUser,
 } from "../../deps/services/shared/authSession.js";
 import {
+  getIncompatibleProjectOpenMessage,
+  getProjectOpenErrorMessage,
+  isIncompatibleProjectOpenError,
+} from "../../internal/projectOpenErrors.js";
+import {
   CUSTOM_PROJECT_RESOLUTION_PRESET,
   resolveProjectResolution,
 } from "../../internal/projectResolution.js";
@@ -124,61 +129,6 @@ const showCreateProjectDialog = async (appService) => {
       ],
     },
   });
-};
-
-const isIncompatibleProjectVersionError = (error) => {
-  return (
-    typeof error?.message === "string" &&
-    (error.message.includes("incompatible project with version") ||
-      error.message.includes("requires reset for schema version"))
-  );
-};
-
-const getIncompatibleProjectMessage = (error) => {
-  const message = error?.message ?? "";
-  if (message.includes("requires reset for schema version")) {
-    return "Unsupported project version. Make sure the project was created with RouteVN Creator v1 or later. Contact RouteVN for support on migrating the old project.";
-  }
-
-  return message;
-};
-
-const isMissingProjectResolutionError = (error) => {
-  const message = String(error?.message || "").toLowerCase();
-  return (
-    message.includes("project resolution is required") &&
-    message.includes("width") &&
-    message.includes("height")
-  );
-};
-
-const isProjectDatabaseOpenError = (error) => {
-  const message = String(error?.message || "").toLowerCase();
-  return (
-    message.includes("unable to open database file") ||
-    message.includes("(code: 14)")
-  );
-};
-
-const getProjectOpenErrorMessage = (error) => {
-  if (isMissingProjectResolutionError(error)) {
-    return "Project is missing required resolution settings.";
-  }
-
-  if (isProjectDatabaseOpenError(error)) {
-    return "Failed to open the project database. Make sure the project folder still exists and RouteVN can access it.";
-  }
-
-  const detail = typeof error?.message === "string" ? error.message.trim() : "";
-  if (!detail || detail === "Failed to open project.") {
-    return "Failed to open project. An unexpected error occurred while preparing the project.";
-  }
-
-  if (detail.toLowerCase().startsWith("failed to open project")) {
-    return detail;
-  }
-
-  return `Failed to open project. ${detail}`;
 };
 
 export const handleCreateButtonClick = async (deps) => {
@@ -544,10 +494,10 @@ export const handleProjectsClick = async (deps, payload) => {
   try {
     await projectService.ensureProjectCompatibleById(id);
   } catch (error) {
-    if (isIncompatibleProjectVersionError(error)) {
+    if (isIncompatibleProjectOpenError(error)) {
       await appService.showAlert({
         title: "Incompatible Project",
-        message: getIncompatibleProjectMessage(error),
+        message: getIncompatibleProjectOpenMessage(error),
         status: "error",
       });
       return;
@@ -757,10 +707,7 @@ export const handleDeleteDialogConfirm = async (deps) => {
   }
 
   try {
-    if (
-      projectId &&
-      typeof projectService?.releaseProjectRuntime === "function"
-    ) {
+    if (projectId) {
       await projectService.releaseProjectRuntime(projectId);
     }
 

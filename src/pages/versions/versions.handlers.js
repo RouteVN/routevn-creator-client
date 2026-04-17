@@ -72,10 +72,7 @@ const resolveVersionIdFromPayload = (payload = {}) => {
 };
 
 const getVersionZipName = ({ appService, projectId, version } = {}) => {
-  const currentProjectEntry =
-    typeof appService?.getCurrentProjectEntry === "function"
-      ? appService.getCurrentProjectEntry()
-      : undefined;
+  const currentProjectEntry = appService.getCurrentProjectEntry();
   const entryName =
     currentProjectEntry?.id === projectId
       ? currentProjectEntry?.name?.trim?.()
@@ -196,12 +193,8 @@ export const handleVersionFormAction = async (deps, payload) => {
       return;
     }
 
-    const repository = await projectService.getRepository();
-    const allEvents =
-      typeof repository.loadEvents === "function"
-        ? await repository.loadEvents()
-        : repository.getEvents();
-    const currentActionIndex = allEvents.length;
+    await projectService.ensureRepository();
+    const currentActionIndex = projectService.getRepositoryRevision();
 
     const newVersion = {
       id: generateId(),
@@ -280,21 +273,19 @@ export const handleDownloadZipClick = async (deps, payload) => {
   });
   let outputPath;
 
-  if (typeof projectService.promptDistributionZipPath === "function") {
-    try {
-      outputPath = await projectService.promptDistributionZipPath(zipName);
-    } catch (error) {
-      appService.showAlert({
-        message: `Failed to open save dialog: ${error.message}`,
-        title: "Error",
-      });
-      return;
-    }
+  try {
+    outputPath = await projectService.promptDistributionZipPath(zipName);
+  } catch (error) {
+    appService.showAlert({
+      message: `Failed to open save dialog: ${error.message}`,
+      title: "Error",
+    });
+    return;
+  }
 
-    if (!outputPath) {
-      appService.closeAll();
-      return;
-    }
+  if (outputPath === null) {
+    appService.closeAll();
+    return;
   }
 
   appService.showAlert({
@@ -303,12 +294,10 @@ export const handleDownloadZipClick = async (deps, payload) => {
   });
 
   try {
-    const repository = await projectService.getRepository();
     const projectInfo = await projectService.getCurrentProjectInfo();
-    if (typeof repository.loadEvents === "function") {
-      await repository.loadEvents();
-    }
-    const repositoryState = repository.getState(version?.actionIndex);
+    const repositoryState = await projectService.loadRepositoryState(
+      version?.actionIndex,
+    );
     const usage = collectUsedResourcesForExport(repositoryState);
     const filteredState = buildFilteredStateForExport(repositoryState, usage);
     const constructedProjectData = constructProjectData(filteredState);
@@ -321,19 +310,17 @@ export const handleDownloadZipClick = async (deps, payload) => {
         namespace: projectInfo.namespace,
       },
     });
-    const savedPath =
-      outputPath &&
-      typeof projectService.createDistributionZipStreamedToPath === "function"
-        ? await projectService.createDistributionZipStreamedToPath(
-            transformedData,
-            usage.fileIds,
-            outputPath,
-          )
-        : await projectService.createDistributionZipStreamed(
-            transformedData,
-            usage.fileIds,
-            zipName,
-          );
+    const savedPath = outputPath
+      ? await projectService.createDistributionZipStreamedToPath(
+          transformedData,
+          usage.fileIds,
+          outputPath,
+        )
+      : await projectService.createDistributionZipStreamed(
+          transformedData,
+          usage.fileIds,
+          zipName,
+        );
 
     if (!savedPath) {
       appService.closeAll();

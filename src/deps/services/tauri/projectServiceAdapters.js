@@ -10,13 +10,17 @@ import {
   PROJECT_DB_NAME,
   createPersistedTauriProjectStore,
   evictPersistedTauriProjectStoreCache,
-  toBootstrappedCommittedEvent,
 } from "./collabClientStore.js";
 import { createProjectCollabService } from "../shared/collab/createProjectCollabService.js";
 import {
   clearProjectionGap,
   saveProjectionGap,
-} from "../shared/collab/projectorCache.js";
+} from "../shared/collab/projectionGapState.js";
+import {
+  createCommittedCommandProjectionTracker,
+  createProjectionGap,
+  REMOTE_COMMAND_COMPATIBILITY,
+} from "../shared/collab/compatibility.js";
 import { createWebSocketTransport } from "../web/collab/createWebSocketTransport.js";
 import {
   applyCommandToRepository,
@@ -27,6 +31,13 @@ import {
   resolveProjectResolutionForWrite,
   scaleTemplateProjectStateForResolution,
 } from "../../../internal/projectResolution.js";
+import {
+  createMainProjectionState,
+  MAIN_PARTITION,
+  MAIN_VIEW_NAME,
+  MAIN_VIEW_VERSION,
+} from "../shared/projectRepositoryViews/shared.js";
+import { toBootstrappedDraftEvent } from "../shared/collab/clientStoreHistory.js";
 import {
   SQLITE_BUSY_TIMEOUT_MS,
   withSqliteLockRetry,
@@ -310,14 +321,14 @@ export const createTauriProjectServiceAdapters = ({
 
       await store.clearEvents();
       await store.clearMaterializedViewCheckpoints();
-      await store.applyCommittedBatch({
-        events: [
-          {
-            ...toBootstrappedCommittedEvent(initialEvent, 0),
-            projectId,
-          },
-        ],
-        nextCursor: 1,
+      await store.insertDraft(toBootstrappedDraftEvent(initialEvent, 0));
+      await store.saveMaterializedViewCheckpoint({
+        viewName: MAIN_VIEW_NAME,
+        partition: MAIN_PARTITION,
+        viewVersion: MAIN_VIEW_VERSION,
+        lastCommittedId: 1,
+        value: createMainProjectionState(templateData),
+        updatedAt: Date.now(),
       });
 
       await store.app.set(CREATOR_VERSION_KEY, creatorVersion);
@@ -375,6 +386,12 @@ export const createTauriProjectServiceAdapters = ({
       const url = convertFileSrc(filePath);
       fileUrlByCacheKey.set(cacheKey, url);
       return { url };
+    },
+
+    getFileByProjectId: async () => {
+      throw new Error(
+        "Reading project files by project id is not supported on this platform.",
+      );
     },
 
     downloadBundle: async ({ bundle, filename, options, filePicker }) => {
@@ -472,11 +489,21 @@ export const createTauriProjectServiceAdapters = ({
   };
 
   const collabAdapter = {
+    beforeCreateRepository: async () => {},
+
+    afterCreateRepository: async () => {},
+
     createTransport: ({ endpointUrl }) =>
       createWebSocketTransport({
         url: endpointUrl,
         label: "routevn.collab.tauri.transport",
       }),
+
+    onEnsureLocalSession: () => {},
+
+    onSessionCleared: () => {},
+
+    onSessionTransportUpdated: () => {},
 
     createSessionForProject: async ({
       projectId,
@@ -487,7 +514,6 @@ export const createTauriProjectServiceAdapters = ({
       mode,
       getRepositoryByProject,
       getStoreByProject,
-      getProjectInfoByProjectId,
     }) => {
       collabLog("info", "create session requested", {
         projectId,
@@ -503,13 +529,10 @@ export const createTauriProjectServiceAdapters = ({
       assertSupportedProjectState(state);
 
       const resolvedProjectId = projectId;
-      const projectInfo = await getProjectInfoByProjectId(projectId);
       const repositoryStore = await getStoreByProject(projectId);
+      const projectionTracker = createCommittedCommandProjectionTracker();
       const collabSession = createProjectCollabService({
         projectId: resolvedProjectId,
-        projectName: projectInfo.name,
-        projectDescription: projectInfo.description,
-        initialRepositoryState: state,
         token,
         actor: {
           userId,
@@ -521,20 +544,55 @@ export const createTauriProjectServiceAdapters = ({
         },
         onCommittedCommand: async ({
           command,
+          committedEvent,
+          sourceType,
           isFromCurrentActor,
-          projectionStatus,
-          projectionGap,
         }) => {
+          const { projectionStatus, projectionGap } =
+            projectionTracker.resolveCommittedCommand({
+              command,
+              committedEvent,
+              sourceType,
+              isFromCurrentActor,
+            });
+
           if (projectionGap) {
             await saveProjectionGap(repositoryStore, projectionGap);
           }
           if (isFromCurrentActor) return;
           if (projectionStatus !== "applied") return;
-          await applyCommandToRepository({
-            repository,
-            command,
-            projectId: resolvedProjectId,
-          });
+          try {
+            await applyCommandToRepository({
+              repository,
+              command,
+              projectId: resolvedProjectId,
+            });
+          } catch (error) {
+            await saveProjectionGap(
+              repositoryStore,
+              createProjectionGap({
+                command,
+                committedEvent,
+                compatibility: {
+                  status: REMOTE_COMMAND_COMPATIBILITY.INVALID,
+                  reason: "creator_model_projection_failed",
+                  message: error?.message || "projection failed",
+                },
+                sourceType,
+              }),
+            );
+            collabLog("warn", "remote command projection failed", {
+              projectId: resolvedProjectId,
+              sourceType,
+              commandType: command?.type || null,
+              commandId: command?.id || null,
+              committedId: Number.isFinite(Number(committedEvent?.committedId))
+                ? Number(committedEvent.committedId)
+                : null,
+              error: error?.message || "unknown",
+            });
+            return;
+          }
           await clearProjectionGap(repositoryStore);
         },
       });

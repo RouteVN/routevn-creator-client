@@ -22,10 +22,89 @@ import {
   cloneState,
   createMainProjectionState,
   getLatestSceneProjectionRevision,
+  iterateCommittedEventBatches,
   isNonEmptyString,
   resolveSceneIdForPartition,
   toCommittedProjectEvent,
 } from "./projectRepositoryViews/shared.js";
+
+const summarizeReplayEvent = (event, index) => ({
+  arrayIndex: index,
+  eventOffset: index + 1,
+  id: event?.id,
+  type: event?.type,
+  partition: event?.partition,
+  projectId: event?.projectId,
+  clientTs: Number.isFinite(Number(event?.clientTs))
+    ? Number(event.clientTs)
+    : Number.isFinite(Number(event?.meta?.clientTs))
+      ? Number(event.meta.clientTs)
+      : undefined,
+  payload: structuredClone(event?.payload),
+});
+
+const createReplayError = ({
+  error,
+  events,
+  targetEventCount,
+  failedEventArrayIndex,
+  baseIndex = 0,
+  fallbackFailedBatchIndex,
+}) => {
+  const hasFailedIndex =
+    Number.isInteger(failedEventArrayIndex) &&
+    failedEventArrayIndex >= 0 &&
+    failedEventArrayIndex < targetEventCount;
+  const resolvedFailedIndex = hasFailedIndex
+    ? failedEventArrayIndex
+    : undefined;
+  const failedBatchIndex =
+    resolvedFailedIndex === undefined
+      ? Number.isInteger(fallbackFailedBatchIndex) &&
+        fallbackFailedBatchIndex >= 0 &&
+        fallbackFailedBatchIndex < events.length
+        ? fallbackFailedBatchIndex
+        : undefined
+      : resolvedFailedIndex - baseIndex;
+  const startBatchIndex =
+    failedBatchIndex === undefined ? 0 : Math.max(0, failedBatchIndex - 2);
+  const endBatchIndex =
+    failedBatchIndex === undefined
+      ? Math.min(events.length, 3)
+      : Math.min(events.length, failedBatchIndex + 3);
+  const replayDiagnostics = {
+    targetEventCount,
+    failedEventArrayIndex: resolvedFailedIndex,
+    failedEventOffset:
+      resolvedFailedIndex === undefined ? undefined : resolvedFailedIndex + 1,
+    failedEvent:
+      resolvedFailedIndex === undefined || failedBatchIndex === undefined
+        ? undefined
+        : summarizeReplayEvent(events[failedBatchIndex], resolvedFailedIndex),
+    nearbyEvents: events
+      .slice(startBatchIndex, endBatchIndex)
+      .map((event, eventIndexOffset) =>
+        summarizeReplayEvent(
+          event,
+          baseIndex + startBatchIndex + eventIndexOffset,
+        ),
+      ),
+  };
+  const replayError = new Error(
+    error?.message || "Failed to replay repository history",
+  );
+
+  replayError.name = "ProjectRepositoryReplayError";
+  replayError.code = error?.code || "history_replay_failed";
+  replayError.cause = error;
+  replayError.details = {
+    ...(error?.details && typeof error.details === "object"
+      ? structuredClone(error.details)
+      : {}),
+    replay: replayDiagnostics,
+  };
+  return replayError;
+};
 
 export const replayEventsToRepositoryState = ({
   events,
@@ -39,69 +118,6 @@ export const replayEventsToRepositoryState = ({
     ? Math.max(0, Math.min(Math.floor(parsedIndex), events.length))
     : events.length;
 
-  const summarizeReplayEvent = (event, index) => ({
-    arrayIndex: index,
-    eventOffset: index + 1,
-    id: event?.id,
-    type: event?.type,
-    partition: event?.partition,
-    projectId: event?.projectId,
-    clientTs: Number.isFinite(Number(event?.clientTs))
-      ? Number(event.clientTs)
-      : Number.isFinite(Number(event?.meta?.clientTs))
-        ? Number(event.meta.clientTs)
-        : undefined,
-    payload: structuredClone(event?.payload),
-  });
-
-  const toReplayError = (error, failedIndex) => {
-    const hasFailedIndex =
-      Number.isInteger(failedIndex) &&
-      failedIndex >= 0 &&
-      failedIndex < targetIndex;
-    const resolvedFailedIndex = hasFailedIndex ? failedIndex : undefined;
-    const startIndex =
-      resolvedFailedIndex === undefined
-        ? 0
-        : Math.max(0, resolvedFailedIndex - 2);
-    const endIndex =
-      resolvedFailedIndex === undefined
-        ? Math.min(targetIndex, 3)
-        : Math.min(targetIndex, resolvedFailedIndex + 3);
-    const replayDiagnostics = {
-      targetEventCount: targetIndex,
-      failedEventArrayIndex: resolvedFailedIndex,
-      failedEventOffset:
-        resolvedFailedIndex === undefined ? undefined : resolvedFailedIndex + 1,
-      failedEvent:
-        resolvedFailedIndex === undefined
-          ? undefined
-          : summarizeReplayEvent(
-              events[resolvedFailedIndex],
-              resolvedFailedIndex,
-            ),
-      nearbyEvents: events
-        .slice(startIndex, endIndex)
-        .map((event, eventIndexOffset) =>
-          summarizeReplayEvent(event, startIndex + eventIndexOffset),
-        ),
-    };
-    const replayError = new Error(
-      error?.message || "Failed to replay repository history",
-    );
-
-    replayError.name = "ProjectRepositoryReplayError";
-    replayError.code = error?.code || "history_replay_failed";
-    replayError.cause = error;
-    replayError.details = {
-      ...(error?.details && typeof error.details === "object"
-        ? structuredClone(error.details)
-        : {}),
-      replay: replayDiagnostics,
-    };
-    return replayError;
-  };
-
   if (typeof reduceEventsToState === "function") {
     try {
       return reduceEventsToState({
@@ -110,10 +126,17 @@ export const replayEventsToRepositoryState = ({
       });
     } catch (error) {
       const failedIndex = Number(error?.details?.commandIndex);
-      throw toReplayError(
+      throw createReplayError({
         error,
-        Number.isInteger(failedIndex) ? failedIndex : undefined,
-      );
+        events: events.slice(0, targetIndex),
+        targetEventCount: targetIndex,
+        failedEventArrayIndex: Number.isInteger(failedIndex)
+          ? failedIndex
+          : undefined,
+        fallbackFailedBatchIndex: Number.isInteger(failedIndex)
+          ? failedIndex
+          : undefined,
+      });
     }
   }
 
@@ -128,7 +151,13 @@ export const replayEventsToRepositoryState = ({
         state = nextState;
       }
     } catch (error) {
-      throw toReplayError(error, index);
+      throw createReplayError({
+        error,
+        events: events.slice(0, targetIndex),
+        targetEventCount: targetIndex,
+        failedEventArrayIndex: index,
+        fallbackFailedBatchIndex: index,
+      });
     }
   }
 
@@ -149,12 +178,13 @@ export const createProjectRepositoryRuntime = async ({
   events: sourceEvents,
   historyLoaded = Array.isArray(sourceEvents),
   initialRevision,
-  loadEvents,
+  historyStats,
+  loadEvents = async () => [],
   createInitialState,
   reduceEventToState,
   reduceEventsToState,
   assertState = () => {},
-  onHydrationProgress,
+  onHydrationProgress = () => {},
 }) => {
   let events = Array.isArray(sourceEvents)
     ? sourceEvents.map((event) => structuredClone(event))
@@ -169,6 +199,7 @@ export const createProjectRepositoryRuntime = async ({
     ? Math.max(0, Math.floor(Number(initialRevision)))
     : events.length;
   let activeHydrationProgress;
+  const hasDraftHistory = Number(historyStats?.draftCount || 0) > 0;
 
   const toProgressValue = (value) => {
     const numericValue = Number(value);
@@ -180,10 +211,6 @@ export const createProjectRepositoryRuntime = async ({
   };
 
   const emitHydrationProgress = ({ current, total }) => {
-    if (typeof onHydrationProgress !== "function") {
-      return;
-    }
-
     onHydrationProgress({
       current: toProgressValue(current),
       total: toProgressValue(total),
@@ -197,12 +224,6 @@ export const createProjectRepositoryRuntime = async ({
 
     if (historyLoadPromise) {
       return historyLoadPromise;
-    }
-
-    if (typeof loadEvents !== "function") {
-      hasLoadedEvents = true;
-      currentRevision = Math.max(currentRevision, events.length);
-      return events;
     }
 
     historyLoadPromise = Promise.resolve(loadEvents())
@@ -223,17 +244,13 @@ export const createProjectRepositoryRuntime = async ({
   };
 
   const beginInitialMainHydrationProgress = async () => {
-    if (typeof onHydrationProgress !== "function") {
-      return undefined;
-    }
-
     const total = toProgressValue(events.length);
     const resolvedTotal = Math.max(total, toProgressValue(currentRevision));
     if (resolvedTotal <= 0) {
       return undefined;
     }
 
-    const checkpoint = await store.loadMaterializedViewCheckpoint?.({
+    const checkpoint = await store.loadMaterializedViewCheckpoint({
       viewName: MAIN_VIEW_NAME,
       partition: MAIN_PARTITION,
     });
@@ -306,6 +323,19 @@ export const createProjectRepositoryRuntime = async ({
     getLatestCommittedId: async () =>
       hasLoadedEvents ? events.length : currentRevision,
     listCommittedAfter: async ({ sinceCommittedId, limit }) => {
+      if (!hasLoadedEvents && !hasDraftHistory) {
+        const committedBatch = await store.listCommittedAfter({
+          sinceCommittedId,
+          limit,
+        });
+        const normalizedCommittedBatch = Array.isArray(committedBatch)
+          ? committedBatch.map((event) => structuredClone(event))
+          : [];
+
+        reportHydrationProgressFromBatch(normalizedCommittedBatch);
+        return normalizedCommittedBatch;
+      }
+
       await ensureEventHistoryLoaded();
       const startIndex = Math.max(
         0,
@@ -329,14 +359,14 @@ export const createProjectRepositoryRuntime = async ({
       return batch;
     },
     loadCheckpoint: async ({ viewName, partition }) =>
-      store.loadMaterializedViewCheckpoint?.({
+      store.loadMaterializedViewCheckpoint({
         viewName,
         partition,
       }),
     saveCheckpoint: async (checkpoint) =>
-      store.saveMaterializedViewCheckpoint?.(checkpoint),
+      store.saveMaterializedViewCheckpoint(checkpoint),
     deleteCheckpoint: async ({ viewName, partition }) =>
-      store.deleteMaterializedViewCheckpoint?.({
+      store.deleteMaterializedViewCheckpoint({
         viewName,
         partition,
       }),
@@ -374,12 +404,133 @@ export const createProjectRepositoryRuntime = async ({
     assertState(currentMainState);
   };
 
+  const listCommittedAfterFromStore = async ({ sinceCommittedId, limit }) => {
+    const committedBatch = await store.listCommittedAfter({
+      sinceCommittedId,
+      limit,
+    });
+
+    return Array.isArray(committedBatch)
+      ? committedBatch.map((event) => structuredClone(event))
+      : [];
+  };
+
+  const listCommittedAfterFromRepository = async ({
+    sinceCommittedId,
+    limit,
+  } = {}) => {
+    if (!hasLoadedEvents && !hasDraftHistory) {
+      return listCommittedAfterFromStore({
+        sinceCommittedId,
+        limit,
+      });
+    }
+
+    await ensureEventHistoryLoaded();
+    const startIndex = Math.max(
+      0,
+      Number.isFinite(Number(sinceCommittedId))
+        ? Math.floor(Number(sinceCommittedId))
+        : 0,
+    );
+    const safeLimit =
+      Number.isInteger(limit) && limit > 0 ? limit : events.length;
+    return events
+      .slice(startIndex, startIndex + safeLimit)
+      .map((event, index) =>
+        toCommittedProjectEvent({
+          event,
+          committedId: startIndex + index + 1,
+          projectId,
+        }),
+      );
+  };
+
+  const loadState = async (untilEventIndex) => {
+    if (hasLoadedEvents || hasDraftHistory) {
+      const replayEvents = hasLoadedEvents
+        ? events
+        : await ensureEventHistoryLoaded();
+      return replayEventsToRepositoryState({
+        events: replayEvents,
+        untilEventIndex,
+        createInitialState,
+        reduceEventToState,
+        reduceEventsToState,
+      });
+    }
+
+    const parsedIndex = Number(untilEventIndex);
+    const targetIndex = Number.isFinite(parsedIndex)
+      ? Math.max(0, Math.min(Math.floor(parsedIndex), currentRevision))
+      : currentRevision;
+
+    let replayedEventCount = 0;
+    let state = createInitialState();
+
+    for await (const committedBatch of iterateCommittedEventBatches({
+      listCommittedAfter: listCommittedAfterFromStore,
+    })) {
+      const remainingEventCount = targetIndex - replayedEventCount;
+      if (remainingEventCount <= 0) {
+        break;
+      }
+
+      const replayBatch =
+        committedBatch.length > remainingEventCount
+          ? committedBatch.slice(0, remainingEventCount)
+          : committedBatch;
+      const batchStartIndex = replayedEventCount;
+
+      try {
+        const nextState = reduceEventsToState({
+          repositoryState: state,
+          events: replayBatch,
+        });
+        if (nextState !== undefined) {
+          state = nextState;
+        }
+      } catch (error) {
+        const failedBatchIndex = Number(error?.details?.commandIndex);
+        throw createReplayError({
+          error,
+          events: replayBatch,
+          targetEventCount: targetIndex,
+          failedEventArrayIndex: Number.isInteger(failedBatchIndex)
+            ? batchStartIndex + failedBatchIndex
+            : undefined,
+          baseIndex: batchStartIndex,
+          fallbackFailedBatchIndex: Number.isInteger(failedBatchIndex)
+            ? failedBatchIndex
+            : undefined,
+        });
+      }
+
+      replayedEventCount += replayBatch.length;
+    }
+
+    return state;
+  };
+
   const loadSceneProjection = async (sceneId) => {
+    if (!hasLoadedEvents && !hasDraftHistory) {
+      return loadSceneProjectionState({
+        store,
+        mainState: currentMainState,
+        listCommittedAfter: listCommittedAfterFromRepository,
+        createInitialState,
+        reduceEventToState,
+        reduceEventsToState,
+        sceneId,
+      });
+    }
+
     const eventsForProjection = await ensureEventHistoryLoaded();
     return loadSceneProjectionState({
       store,
       mainState: currentMainState,
       events: eventsForProjection,
+      listCommittedAfter: listCommittedAfterFromRepository,
       createInitialState,
       reduceEventToState,
       reduceEventsToState,
@@ -389,7 +540,7 @@ export const createProjectRepositoryRuntime = async ({
 
   const sceneBundleRuntime = createSceneBundleRuntime({
     store,
-    events,
+    listCommittedAfter: listCommittedAfterFromRepository,
     getCurrentMainState: () => currentMainState,
     getActiveSceneId: () => activeSceneId,
     getActiveSceneState: () => activeSceneState,
@@ -497,7 +648,6 @@ export const createProjectRepositoryRuntime = async ({
       sceneState: activeSceneState,
       sceneId: activeSceneId,
       sourceEvents: scopedEvents,
-      reduceEventToState,
       reduceEventsToState,
     });
 
@@ -646,14 +796,14 @@ export const createProjectRepositoryRuntime = async ({
       return Math.max(0, Math.min(Math.floor(parsedIndex), events.length));
     },
 
-    getEvents() {
-      return events.map((event) => structuredClone(event));
-    },
-
     async loadEvents() {
       return (await ensureEventHistoryLoaded()).map((event) =>
         structuredClone(event),
       );
+    },
+
+    async loadState(untilEventIndex) {
+      return structuredClone(await loadState(untilEventIndex));
     },
 
     subscribe(listener, { emitCurrent = true } = {}) {
@@ -711,8 +861,8 @@ export const createProjectRepositoryRuntime = async ({
     },
 
     async addEvent(event) {
-      if (typeof store.appendEvent === "function") {
-        await store.appendEvent(event);
+      if (!hasLoadedEvents) {
+        await ensureEventHistoryLoaded();
       }
 
       events.push(structuredClone(event));
@@ -745,12 +895,8 @@ export const createProjectRepositoryRuntime = async ({
         return;
       }
 
-      if (typeof store.appendEvents === "function") {
-        await store.appendEvents(nextEvents);
-      } else if (typeof store.appendEvent === "function") {
-        for (const event of nextEvents) {
-          await store.appendEvent(event);
-        }
+      if (!hasLoadedEvents) {
+        await ensureEventHistoryLoaded();
       }
 
       const committedEvents = [];

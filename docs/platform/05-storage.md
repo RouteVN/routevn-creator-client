@@ -26,8 +26,17 @@ column.
 - `app_state` (`collab.lastCommittedId:{projectId}`)
 - optional materialized view state tables
 
-RouteVN's local project repository event store is separate from this collab
-sync model.
+Write-destination contract:
+
+- `local_drafts` hold durable accepted local work that is not yet approved by
+  an authoritative server.
+- Offline/local-only projects therefore store their bootstrap
+  `project.create` event in `local_drafts`.
+- `committed_events` hold only authoritative server-approved history.
+- A valid local-only project may therefore have zero committed rows.
+
+RouteVN does not persist a second local repository event log beside this
+client-store model.
 
 ## Project-Specific Local DB
 
@@ -88,4 +97,6 @@ For the agreed persisted key catalog across global app DB, project-specific DB
 ## Projection Strategy
 
 - Event log is source of truth.
+- Local read state is reconstructed from committed history plus ordered draft
+  overlay.
 - Read models/materialized views can be rebuilt at any time.

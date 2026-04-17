@@ -2,10 +2,14 @@ import JSZip from "jszip";
 import {
   createInsiemeWebStoreAdapter,
   initializeProject as initializeWebProject,
+  readProjectAppValue,
 } from "../../clients/web/webRepositoryAdapter.js";
 import { createProjectCollabService } from "../shared/collab/createProjectCollabService.js";
 import { createWebSocketTransport } from "./collab/createWebSocketTransport.js";
-import { createPersistedInMemoryClientStore } from "./collabClientStore.js";
+import {
+  createPersistedInMemoryClientStore,
+  deletePersistedInMemoryClientStore,
+} from "./collabClientStore.js";
 import {
   clearCommittedCursor,
   loadCommittedCursor,
@@ -21,9 +25,14 @@ import {
 } from "./projectServiceCollabRuntime.js";
 import {
   clearProjectionGap,
-  ensureRepositoryProjectionCache,
   saveProjectionGap,
-} from "../shared/collab/projectorCache.js";
+} from "../shared/collab/projectionGapState.js";
+import { loadRepositoryEventsFromClientStore } from "../shared/collab/clientStoreHistory.js";
+import {
+  createCommittedCommandProjectionTracker,
+  createProjectionGap,
+  REMOTE_COMMAND_COMPATIBILITY,
+} from "../shared/collab/compatibility.js";
 import {
   applyCommandToRepository,
   assertSupportedProjectState,
@@ -61,6 +70,20 @@ export const createWebProjectServiceAdapters = ({
     });
     collabClientStoresByProject.set(projectId, store);
     return store;
+  };
+
+  const evictCollabClientStore = async (projectId) => {
+    const existing = collabClientStoresByProject.get(projectId);
+    collabClientStoresByProject.delete(projectId);
+
+    if (!projectId) {
+      return;
+    }
+
+    await deletePersistedInMemoryClientStore({
+      projectId,
+      store: existing,
+    });
   };
 
   const ensureCommittedIdLoaded = async (projectId, getStoreByProject) => {
@@ -120,6 +143,12 @@ export const createWebProjectServiceAdapters = ({
     return committedIds;
   };
 
+  const clearProjectCollabCaches = (projectId) => {
+    collabApplyQueueByProject.delete(projectId);
+    collabAppliedCommittedIdsByProject.delete(projectId);
+    collabLastCommittedIdByProject.delete(projectId);
+  };
+
   const queueCollabApply = (projectId, task) => {
     return enqueueSerialTask({
       key: projectId,
@@ -137,12 +166,25 @@ export const createWebProjectServiceAdapters = ({
   const storageAdapter = {
     resolveProjectReferenceByProjectId: async ({ projectId }) => ({
       cacheKey: projectId,
+      projectId,
       repositoryProjectId: projectId,
     }),
 
-    createStore: async ({ reference }) => {
-      return createInsiemeWebStoreAdapter(reference.projectId);
+    readCreatorVersionByReference: async ({ reference }) => {
+      return readProjectAppValue({
+        projectId: reference?.projectId || reference?.repositoryProjectId,
+        key: "creatorVersion",
+      });
     },
+
+    createStore: async ({ reference }) => {
+      const rawClientStore = await getCollabClientStore(reference.projectId);
+      return createInsiemeWebStoreAdapter(reference.projectId, {
+        rawClientStore,
+      });
+    },
+
+    evictStoreByReference: async () => {},
 
     initializeProject: async ({
       projectId,
@@ -150,12 +192,16 @@ export const createWebProjectServiceAdapters = ({
       projectInfo,
       projectResolution,
     }) => {
+      clearProjectCollabCaches(projectId);
+      await evictCollabClientStore(projectId);
+      const rawClientStore = await getCollabClientStore(projectId);
       return initializeWebProject({
         projectId,
         template,
         projectInfo,
         projectResolution,
         creatorVersion,
+        rawClientStore,
       });
     },
   };
@@ -268,16 +314,36 @@ export const createWebProjectServiceAdapters = ({
         staticFiles,
       });
     },
+
+    promptDistributionZipPath: async () => undefined,
+
+    createDistributionZipStreamedToPath: async () => {
+      throw new Error(
+        "Streaming distribution ZIP export to a selected path is not supported on this platform.",
+      );
+    },
   };
 
   const collabAdapter = {
-    beforeCreateRepository: async ({ projectId, store, events }) => {
+    beforeCreateRepository: async ({
+      projectId,
+      store,
+      historyStats,
+      initialRevision,
+    }) => {
       const persistedCursor = await loadCommittedCursor({
         adapter: store,
         projectId,
       }).catch(() => 0);
+      const localEventCount = Number.isFinite(Number(initialRevision))
+        ? Math.max(0, Math.floor(Number(initialRevision)))
+        : Math.max(
+            0,
+            Number(historyStats?.committedCount || 0) +
+              Number(historyStats?.draftCount || 0),
+          );
 
-      if (persistedCursor > events.length && events.length <= 1) {
+      if (persistedCursor > localEventCount && localEventCount <= 1) {
         await clearCommittedCursor({
           adapter: store,
           projectId,
@@ -286,26 +352,12 @@ export const createWebProjectServiceAdapters = ({
         collabLog("warn", "reset stale committed cursor for project", {
           projectId,
           persistedCursor,
-          localEventCount: events.length,
+          localEventCount,
         });
       }
-      const rawClientStore = await getCollabClientStore(projectId);
-      const projectionCacheResult = await ensureRepositoryProjectionCache({
-        repositoryStore: store,
-        rawClientStore,
-      });
-
-      collabLog("debug", "repository projection cache ready", {
-        projectId,
-        rebuilt: projectionCacheResult.rebuilt,
-        bootstrapped: projectionCacheResult.bootstrapped,
-        repositoryEventCount: projectionCacheResult.repositoryEventCount,
-        committedEventCount: projectionCacheResult.committedEventCount,
-        projectionGap: projectionCacheResult.projectionGap || null,
-      });
-
-      return store.getEvents();
     },
+
+    afterCreateRepository: async () => {},
 
     createTransport: ({ endpointUrl }) =>
       createWebSocketTransport({
@@ -325,8 +377,7 @@ export const createWebProjectServiceAdapters = ({
     },
 
     onSessionCleared: ({ projectId }) => {
-      collabApplyQueueByProject.delete(projectId);
-      collabAppliedCommittedIdsByProject.delete(projectId);
+      clearProjectCollabCaches(projectId);
     },
 
     onSessionTransportUpdated: () => {},
@@ -340,7 +391,6 @@ export const createWebProjectServiceAdapters = ({
       mode,
       getRepositoryByProject,
       getStoreByProject,
-      getProjectInfoByProjectId,
     }) => {
       collabLog("info", "create session requested", {
         projectId,
@@ -357,14 +407,11 @@ export const createWebProjectServiceAdapters = ({
       const adapter = await getStoreByProject(projectId);
 
       const resolvedProjectId = projectId;
-      const projectInfo = await getProjectInfoByProjectId(projectId);
       const clientStore = await getCollabClientStore(projectId);
       await ensureCommittedIdLoaded(projectId, getStoreByProject);
+      const projectionTracker = createCommittedCommandProjectionTracker();
       const collabSession = createProjectCollabService({
         projectId: resolvedProjectId,
-        projectName: projectInfo.name,
-        projectDescription: projectInfo.description,
-        initialRepositoryState: state,
         token,
         actor: {
           userId,
@@ -390,11 +437,16 @@ export const createWebProjectServiceAdapters = ({
           committedEvent,
           sourceType,
           isFromCurrentActor,
-          compatibility,
-          projectionStatus,
-          projectionGap,
         }) =>
           queueCollabApply(projectId, async () => {
+            const { compatibility, projectionStatus, projectionGap } =
+              projectionTracker.resolveCommittedCommand({
+                command,
+                committedEvent,
+                sourceType,
+                isFromCurrentActor,
+              });
+
             const applyCommittedEventToRepository = async ({
               command,
               committedEvent,
@@ -442,11 +494,39 @@ export const createWebProjectServiceAdapters = ({
 
               const beforeState = repository.getState();
               const beforeImagesCount = countImageEntries(beforeState?.images);
-              const applyResult = await applyCommandToRepository({
-                repository,
-                command,
-                projectId: resolvedProjectId,
-              });
+              let applyResult;
+              try {
+                applyResult = await applyCommandToRepository({
+                  repository,
+                  command,
+                  projectId: resolvedProjectId,
+                });
+              } catch (error) {
+                const nextProjectionGap = createProjectionGap({
+                  command,
+                  committedEvent,
+                  compatibility: {
+                    status: REMOTE_COMMAND_COMPATIBILITY.INVALID,
+                    reason: "creator_model_projection_failed",
+                    message: error?.message || "projection failed",
+                  },
+                  sourceType,
+                });
+                await saveProjectionGap(adapter, nextProjectionGap);
+                collabLog("warn", "remote command projection failed", {
+                  projectId,
+                  sourceType,
+                  commandType: command?.type || null,
+                  commandId: command?.id || null,
+                  committedId: Number.isFinite(
+                    Number(committedEvent?.committedId),
+                  )
+                    ? Number(committedEvent.committedId)
+                    : null,
+                  error: error?.message || "unknown",
+                });
+                return;
+              }
               if (applyResult.events.length === 0) {
                 collabLog("warn", "command ignored (no projection events)", {
                   projectId,
@@ -568,9 +648,10 @@ export const createWebProjectServiceAdapters = ({
             timeoutMs: INITIAL_REMOTE_SYNC_TIMEOUT_MS,
           });
           await queueCollabApply(projectId, async () => {});
-          const repositoryEvents = Array.isArray(repository.getEvents?.())
-            ? repository.getEvents()
-            : [];
+          const repositoryEvents = await loadRepositoryEventsFromClientStore({
+            store: adapter,
+            projectId: resolvedProjectId,
+          });
           const repositoryEventSummary =
             summarizeRepositoryEventsForSync(repositoryEvents);
           collabLog("info", "repository event snapshot before replay", {

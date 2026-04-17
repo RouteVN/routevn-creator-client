@@ -9,32 +9,19 @@ import {
   MAIN_VIEW_NAME,
   MAIN_VIEW_VERSION,
 } from "./projectRepositoryViews/shared.js";
+import { loadProjectionGap } from "./collab/projectionGapState.js";
+import { loadRepositoryEventsFromClientStore } from "./collab/clientStoreHistory.js";
+import { UNSUPPORTED_PROJECT_STORE_FORMAT_MESSAGE } from "../../../internal/projectOpenErrors.js";
 
 const flushRepositoryMainCheckpoint = async (repository) => {
-  if (typeof repository?.flushMainCheckpoint === "function") {
-    await repository.flushMainCheckpoint();
-    return;
-  }
-
-  if (typeof repository?.flushMaterializedViews === "function") {
-    await repository.flushMaterializedViews();
-  }
+  await repository.flushMainCheckpoint();
 };
 
 const flushRepositoryForRelease = async (repository) => {
-  if (typeof repository?.flushMaterializedViews === "function") {
-    await repository.flushMaterializedViews();
-    return;
-  }
-
-  await flushRepositoryMainCheckpoint(repository);
+  await repository.flushMaterializedViews();
 };
 
 const discardReusableMainCheckpoint = async (store) => {
-  if (typeof store?.deleteMaterializedViewCheckpoint !== "function") {
-    return;
-  }
-
   await store.deleteMaterializedViewCheckpoint({
     viewName: MAIN_VIEW_NAME,
     partition: MAIN_PARTITION,
@@ -45,7 +32,7 @@ export const createProjectRepositoryService = ({
   router,
   db,
   creatorVersion,
-  idGenerator,
+  idGenerator = generateBaseId,
   storageAdapter,
   collabAdapter,
 }) => {
@@ -64,20 +51,7 @@ export const createProjectRepositoryService = ({
   let currentStore;
   let currentReference;
 
-  const generateId = () => {
-    if (typeof idGenerator === "function") {
-      return idGenerator();
-    }
-    return generateBaseId();
-  };
-
-  const createEmptyProjectInfo = () => ({
-    id: "",
-    namespace: "",
-    name: "",
-    description: "",
-    iconFileId: null,
-  });
+  const generateId = () => idGenerator();
 
   const createIncompatibleProjectVersionError = (projectVersion) => {
     const displayedProjectVersion =
@@ -88,6 +62,60 @@ export const createProjectRepositoryService = ({
     return new Error(
       `You're trying to open an incompatible project with version ${displayedProjectVersion} using RouteVN Creator project format ${CURRENT_CREATOR_VERSION}. For assistance, please reach out to RouteVN staff for support.`,
     );
+  };
+
+  const createIncompatibleProjectionGapError = (projectionGap = {}) => {
+    const commandType =
+      typeof projectionGap?.commandType === "string" &&
+      projectionGap.commandType.length > 0
+        ? projectionGap.commandType
+        : "unknown";
+    const remoteSchemaVersion = Number(projectionGap?.remoteSchemaVersion);
+    const supportedSchemaVersion = Number(
+      projectionGap?.supportedSchemaVersion,
+    );
+    const hasSchemaVersions =
+      Number.isFinite(remoteSchemaVersion) &&
+      remoteSchemaVersion > 0 &&
+      Number.isFinite(supportedSchemaVersion) &&
+      supportedSchemaVersion > 0;
+    const detailMessage =
+      typeof projectionGap?.message === "string" &&
+      projectionGap.message.length > 0
+        ? projectionGap.message
+        : undefined;
+
+    let message =
+      "This project contains committed changes that this RouteVN Creator build cannot project safely. Update RouteVN Creator before opening the project.";
+
+    if (hasSchemaVersions) {
+      message += ` Last incompatible command '${commandType}' uses schemaVersion ${remoteSchemaVersion}, while this client supports ${supportedSchemaVersion}.`;
+    } else {
+      message += ` Last incompatible command '${commandType}'.`;
+    }
+
+    if (detailMessage) {
+      message += ` ${detailMessage}`;
+    }
+
+    const error = new Error(message);
+    error.name = "ProjectProjectionGapIncompatibleError";
+    error.code = "project_projection_gap_incompatible";
+    error.details = {
+      projectionGap: structuredClone(projectionGap),
+    };
+    return error;
+  };
+
+  const createUnsupportedProjectStoreFormatError = (error) => {
+    const nextError = new Error(UNSUPPORTED_PROJECT_STORE_FORMAT_MESSAGE);
+    nextError.name = "ProjectStoreFormatUnsupportedError";
+    nextError.code = "project_store_format_unsupported";
+    if (error?.details && typeof error.details === "object") {
+      nextError.details = structuredClone(error.details);
+    }
+    nextError.cause = error;
+    return nextError;
   };
 
   const normalizeProjectInfo = (projectInfo) => ({
@@ -173,9 +201,7 @@ export const createProjectRepositoryService = ({
       currentReference = undefined;
     }
 
-    if (typeof storageAdapter?.evictStoreByReference === "function") {
-      await storageAdapter.evictStoreByReference({ reference });
-    }
+    await storageAdapter.evictStoreByReference({ reference });
   };
 
   const releaseRepositoryByReference = async (reference) => {
@@ -226,14 +252,6 @@ export const createProjectRepositoryService = ({
     cacheKey,
     onLoadStage,
   } = {}) => {
-    if (
-      typeof store?.loadMaterializedViewCheckpoint !== "function" ||
-      typeof store?.getRepositoryHistoryStats !== "function" ||
-      typeof store?.isRepositoryHistoryStatsEqual !== "function"
-    ) {
-      return undefined;
-    }
-
     emitRepositoryLoadStage(onLoadStage, {
       stage: "load_main_checkpoint",
       label: "Loading project state checkpoint...",
@@ -308,6 +326,17 @@ export const createProjectRepositoryService = ({
     };
   };
 
+  const getCurrentRepositoryHistoryStats = async (store) => {
+    const currentHistoryStats = await store.getRepositoryHistoryStats();
+    const committedCount = Number(currentHistoryStats?.committedCount) || 0;
+    const draftCount = Number(currentHistoryStats?.draftCount) || 0;
+
+    return {
+      currentHistoryStats,
+      historyLength: Math.max(0, committedCount + draftCount),
+    };
+  };
+
   const syncProjectEntryProjectInfo = async (projectId, projectInfo) => {
     if (!db || typeof db.get !== "function" || typeof db.set !== "function") {
       return;
@@ -373,7 +402,15 @@ export const createProjectRepositoryService = ({
       key: reference.cacheKey,
       create: async () => {
         await ensureCompatibleCreatorVersionForReference(reference);
-        const store = await storageAdapter.createStore({ reference, db });
+        let store;
+        try {
+          store = await storageAdapter.createStore({ reference, db });
+        } catch (error) {
+          if (error?.code === "project_store_format_unsupported") {
+            throw createUnsupportedProjectStoreFormatError(error);
+          }
+          throw error;
+        }
         if (reference.projectId) {
           storesByProject.set(reference.projectId, store);
           referencesByProject.set(reference.projectId, reference);
@@ -390,24 +427,30 @@ export const createProjectRepositoryService = ({
     return store;
   };
 
-  const getStoreByPath =
-    typeof storageAdapter.resolveProjectReferenceByPath === "function"
-      ? async (projectPath) => {
-          const reference = normalizeReference(
-            await storageAdapter.resolveProjectReferenceByPath({
-              projectPath,
-            }),
-            projectPath,
-          );
-          return getStoreByReference(reference);
-        }
-      : undefined;
+  const assertProjectPathSupport = () => {
+    if (!storageAdapter.resolveProjectReferenceByPath) {
+      throw new Error(
+        "Project path operations are not supported on this platform.",
+      );
+    }
+  };
+
+  const resolveProjectReferenceByPath = async (projectPath) => {
+    assertProjectPathSupport();
+    return normalizeReference(
+      await storageAdapter.resolveProjectReferenceByPath({
+        projectPath,
+      }),
+      projectPath,
+    );
+  };
+
+  const getStoreByPath = async (projectPath) => {
+    const reference = await resolveProjectReferenceByPath(projectPath);
+    return getStoreByReference(reference);
+  };
 
   const readCreatorVersionFromStore = async (store) => {
-    if (!store?.app || typeof store.app.get !== "function") {
-      return undefined;
-    }
-
     const storedCreatorVersion = await store.app.get(CREATOR_VERSION_KEY);
     if (!Number.isFinite(storedCreatorVersion)) {
       return undefined;
@@ -416,21 +459,18 @@ export const createProjectRepositoryService = ({
     return storedCreatorVersion;
   };
 
-  const readCreatorVersionFromReference =
-    typeof storageAdapter.readCreatorVersionByReference === "function"
-      ? async (reference) => {
-          const storedCreatorVersion =
-            await storageAdapter.readCreatorVersionByReference({
-              reference,
-              db,
-            });
-          if (!Number.isFinite(storedCreatorVersion)) {
-            return undefined;
-          }
+  const readCreatorVersionFromReference = async (reference) => {
+    const storedCreatorVersion =
+      await storageAdapter.readCreatorVersionByReference({
+        reference,
+        db,
+      });
+    if (!Number.isFinite(storedCreatorVersion)) {
+      return undefined;
+    }
 
-          return storedCreatorVersion;
-        }
-      : undefined;
+    return storedCreatorVersion;
+  };
 
   const ensureCompatibleCreatorVersion = async (store) => {
     const creatorVersion = await readCreatorVersionFromStore(store);
@@ -442,29 +482,35 @@ export const createProjectRepositoryService = ({
     return creatorVersion;
   };
 
-  const ensureCompatibleCreatorVersionForReference =
-    typeof readCreatorVersionFromReference === "function"
-      ? async (reference) => {
-          const creatorVersion =
-            await readCreatorVersionFromReference(reference);
+  const ensureCompatibleCreatorVersionForReference = async (reference) => {
+    const creatorVersion = await readCreatorVersionFromReference(reference);
 
-          if (
-            creatorVersion !== undefined &&
-            creatorVersion !== CURRENT_CREATOR_VERSION
-          ) {
-            throw createIncompatibleProjectVersionError(creatorVersion);
-          }
-        }
-      : async () => {};
+    if (
+      creatorVersion !== undefined &&
+      creatorVersion !== CURRENT_CREATOR_VERSION
+    ) {
+      throw createIncompatibleProjectVersionError(creatorVersion);
+    }
+  };
+
+  const ensureProjectionGapCompatible = async (store) => {
+    const projectionGap = await loadProjectionGap(store);
+    if (projectionGap) {
+      throw createIncompatibleProjectionGapError(projectionGap);
+    }
+
+    return undefined;
+  };
+
+  const ensureStoreOpenCompatible = async (store) => {
+    await ensureCompatibleCreatorVersion(store);
+    await ensureProjectionGapCompatible(store);
+  };
 
   const readProjectInfoFromStore = async (
     store,
     { fallbackProjectId } = {},
   ) => {
-    if (!store?.app || typeof store.app.get !== "function") {
-      return createEmptyProjectInfo();
-    }
-
     const storedProjectInfo = await store.app.get(PROJECT_INFO_KEY);
     const normalizedProjectInfo = normalizeProjectInfo(storedProjectInfo);
     if (normalizedProjectInfo.id && normalizedProjectInfo.namespace) {
@@ -486,10 +532,6 @@ export const createProjectRepositoryService = ({
     });
     const nextProjectInfo = mergeProjectInfo(currentProjectInfo, patch);
 
-    if (!store?.app || typeof store.app.set !== "function") {
-      throw new Error("Project store does not support app.set()");
-    }
-
     await store.app.set(PROJECT_INFO_KEY, nextProjectInfo);
 
     if (projectId) {
@@ -507,12 +549,12 @@ export const createProjectRepositoryService = ({
 
   const ensureProjectCompatibleByProjectId = async (projectId) => {
     const store = await getStoreByProject(projectId);
-    await ensureCompatibleCreatorVersion(store);
+    await ensureStoreOpenCompatible(store);
   };
 
   const updateProjectInfoByProjectId = async (projectId, patch) => {
     const store = await getStoreByProject(projectId);
-    await ensureCompatibleCreatorVersion(store);
+    await ensureStoreOpenCompatible(store);
     return writeProjectInfoToStore({
       store,
       projectId,
@@ -566,8 +608,10 @@ export const createProjectRepositoryService = ({
         let repositoryResult = await withRecoveredStore(
           reference,
           async (store) => {
-            let events = [];
+            await ensureStoreOpenCompatible(store);
+            let events;
             let initialRevision;
+            let currentHistoryStats;
             const reusableMainCheckpoint = await loadReusableMainCheckpoint({
               store,
               cacheKey: reference.cacheKey,
@@ -576,6 +620,7 @@ export const createProjectRepositoryService = ({
 
             if (reusableMainCheckpoint) {
               initialRevision = reusableMainCheckpoint.initialRevision;
+              currentHistoryStats = reusableMainCheckpoint.currentHistoryStats;
               emitRepositoryLoadStage(onLoadStage, {
                 stage: "reuse_main_checkpoint",
                 label: "Using project state checkpoint...",
@@ -584,53 +629,60 @@ export const createProjectRepositoryService = ({
               });
             } else {
               emitRepositoryLoadStage(onLoadStage, {
-                stage: "read_project_events",
-                label: "Reading project events...",
+                stage: "read_project_history_stats",
+                label: "Reading project history...",
                 cacheKey: reference.cacheKey,
               });
-              events =
-                (await store.getEvents({
-                  onProgress: onEventLoadProgress,
-                })) || [];
+              const history = await getCurrentRepositoryHistoryStats(store);
+              currentHistoryStats = history.currentHistoryStats;
+              initialRevision = history.historyLength;
               emitRepositoryLoadStage(onLoadStage, {
-                stage: "project_events_loaded",
-                label: "Reading project events...",
+                stage: "project_history_ready",
+                label: "Reading project history...",
                 cacheKey: reference.cacheKey,
-                eventCount: Array.isArray(events) ? events.length : 0,
+                eventCount: initialRevision,
               });
             }
 
-            if (typeof collabAdapter?.beforeCreateRepository === "function") {
-              emitRepositoryLoadStage(onLoadStage, {
-                stage: "prepare_project_events",
-                label: "Preparing project events...",
-                cacheKey: reference.cacheKey,
-                eventCount: Array.isArray(events) ? events.length : 0,
-              });
-              const nextEvents = await collabAdapter.beforeCreateRepository({
-                projectId: reference.projectId,
-                reference,
-                store,
-                events,
-              });
-              if (Array.isArray(nextEvents)) {
-                events = nextEvents;
-              }
+            emitRepositoryLoadStage(onLoadStage, {
+              stage: "prepare_project_events",
+              label: "Preparing project events...",
+              cacheKey: reference.cacheKey,
+              eventCount: initialRevision || 0,
+            });
+            const nextEvents = await collabAdapter.beforeCreateRepository({
+              projectId: reference.projectId,
+              reference,
+              store,
+              historyStats: currentHistoryStats,
+              initialRevision,
+              events,
+            });
+            if (Array.isArray(nextEvents)) {
+              events = nextEvents;
             }
 
             emitRepositoryLoadStage(onLoadStage, {
               stage: "build_repository_state",
               label: "Building project state...",
               cacheKey: reference.cacheKey,
-              eventCount: Array.isArray(events) ? events.length : 0,
+              eventCount: Array.isArray(events)
+                ? events.length
+                : initialRevision,
             });
             const repository = await createProjectRepository({
               projectId: reference.repositoryProjectId,
               store,
-              events: reusableMainCheckpoint ? undefined : events,
-              historyLoaded: !reusableMainCheckpoint,
+              events,
+              historyLoaded: Array.isArray(events),
               initialRevision,
-              loadEvents: async () => (await store.getEvents()) || [],
+              historyStats: currentHistoryStats,
+              loadEvents: async () =>
+                loadRepositoryEventsFromClientStore({
+                  store,
+                  projectId: reference.repositoryProjectId,
+                  onProgress: onEventLoadProgress,
+                }),
               onHydrationProgress,
             });
             emitRepositoryLoadStage(onLoadStage, {
@@ -638,7 +690,6 @@ export const createProjectRepositoryService = ({
               label: "Validating project state...",
               cacheKey: reference.cacheKey,
             });
-            await ensureCompatibleCreatorVersion(store);
             assertSupportedProjectState(repository.getState());
 
             if (reference.projectId) {
@@ -646,19 +697,17 @@ export const createProjectRepositoryService = ({
               referencesByProject.set(reference.projectId, reference);
             }
 
-            if (typeof collabAdapter?.afterCreateRepository === "function") {
-              emitRepositoryLoadStage(onLoadStage, {
-                stage: "finalize_repository",
-                label: "Finalizing project repository...",
-                cacheKey: reference.cacheKey,
-              });
-              await collabAdapter.afterCreateRepository({
-                projectId: reference.projectId,
-                reference,
-                store,
-                repository,
-              });
-            }
+            emitRepositoryLoadStage(onLoadStage, {
+              stage: "finalize_repository",
+              label: "Finalizing project repository...",
+              cacheKey: reference.cacheKey,
+            });
+            await collabAdapter.afterCreateRepository({
+              projectId: reference.projectId,
+              reference,
+              store,
+              repository,
+            });
 
             try {
               await flushRepositoryMainCheckpoint(repository);
@@ -692,19 +741,37 @@ export const createProjectRepositoryService = ({
     });
   };
 
-  const getRepositoryByPath =
-    typeof storageAdapter.resolveProjectReferenceByPath === "function"
-      ? async (projectPath) => {
-          const reference = normalizeReference(
-            await storageAdapter.resolveProjectReferenceByPath({
-              db,
-              projectPath,
-            }),
-            projectPath,
-          );
-          return getRepositoryByReference(reference);
-        }
-      : undefined;
+  const getRepositoryByPath = async (projectPath) => {
+    const reference = await resolveProjectReferenceByPath(projectPath);
+    return getRepositoryByReference(reference);
+  };
+
+  const ensureProjectCompatibleByPath = async (projectPath) => {
+    const reference = await resolveProjectReferenceByPath(projectPath);
+    await ensureCompatibleCreatorVersionForReference(reference);
+    const store = await getStoreByPath(projectPath);
+    await ensureStoreOpenCompatible(store);
+  };
+
+  const getProjectInfoByPath = async (projectPath) => {
+    const reference = await resolveProjectReferenceByPath(projectPath);
+    await ensureCompatibleCreatorVersionForReference(reference);
+    return normalizeProjectInfo(
+      await storageAdapter.readProjectInfoByReference({
+        reference,
+        db,
+      }),
+    );
+  };
+
+  const updateProjectInfoByPath = async (projectPath, patch) => {
+    const store = await getStoreByPath(projectPath);
+    await ensureStoreOpenCompatible(store);
+    return writeProjectInfoToStore({
+      store,
+      patch,
+    });
+  };
 
   const ensureRepository = async ({
     onHydrationProgress,
@@ -861,56 +928,17 @@ export const createProjectRepositoryService = ({
     subscribeProjectState(listener, options) {
       return subscribeProjectState(listener, options);
     },
-    ...(typeof getRepositoryByPath === "function"
-      ? {
-          async getRepositoryByPath(projectPath) {
-            return getRepositoryByPath(projectPath);
-          },
-        }
-      : {}),
-    ...(typeof getStoreByPath === "function"
-      ? {
-          async ensureProjectCompatibleByPath(projectPath) {
-            const reference = normalizeReference(
-              await storageAdapter.resolveProjectReferenceByPath({
-                projectPath,
-              }),
-              projectPath,
-            );
-            await ensureCompatibleCreatorVersionForReference(reference);
-          },
-          async getProjectInfoByPath(projectPath) {
-            if (
-              typeof storageAdapter.readProjectInfoByReference === "function"
-            ) {
-              const reference = normalizeReference(
-                await storageAdapter.resolveProjectReferenceByPath({
-                  projectPath,
-                }),
-                projectPath,
-              );
-              await ensureCompatibleCreatorVersionForReference(reference);
-              return normalizeProjectInfo(
-                await storageAdapter.readProjectInfoByReference({
-                  reference,
-                  db,
-                }),
-              );
-            }
-
-            const store = await getStoreByPath(projectPath);
-            await ensureCompatibleCreatorVersion(store);
-            return readProjectInfoFromStore(store);
-          },
-          async updateProjectInfoByPath(projectPath, patch) {
-            const store = await getStoreByPath(projectPath);
-            await ensureCompatibleCreatorVersion(store);
-            return writeProjectInfoToStore({
-              store,
-              patch,
-            });
-          },
-        }
-      : {}),
+    async getRepositoryByPath(projectPath) {
+      return getRepositoryByPath(projectPath);
+    },
+    async ensureProjectCompatibleByPath(projectPath) {
+      return ensureProjectCompatibleByPath(projectPath);
+    },
+    async getProjectInfoByPath(projectPath) {
+      return getProjectInfoByPath(projectPath);
+    },
+    async updateProjectInfoByPath(projectPath, patch) {
+      return updateProjectInfoByPath(projectPath, patch);
+    },
   };
 };

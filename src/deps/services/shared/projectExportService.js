@@ -113,7 +113,7 @@ export const createProjectExportService = ({
   getCurrentReference,
   getFileContent,
 }) => {
-  return {
+  const service = {
     createBundle(projectData, assets) {
       return createBundle(projectData, assets);
     },
@@ -158,36 +158,30 @@ export const createProjectExportService = ({
         getFileContent,
       });
     },
-
-    ...(typeof fileAdapter.promptDistributionZipPath === "function"
-      ? {
-          async promptDistributionZipPath(zipName, options = {}) {
-            return fileAdapter.promptDistributionZipPath({
-              zipName,
-              options,
-              filePicker,
-            });
-          },
-        }
-      : {}),
-
-    ...(typeof fileAdapter.createDistributionZipStreamedToPath === "function"
-      ? {
-          async createDistributionZipStreamedToPath(
-            projectData,
-            fileIds,
-            outputPath,
-          ) {
-            return fileAdapter.createDistributionZipStreamedToPath({
-              projectData,
-              fileIds,
-              outputPath,
-              staticFiles: await getBundleStaticFiles(),
-              getCurrentReference,
-              getFileContent,
-            });
-          },
-        }
-      : {}),
   };
+
+  service.promptDistributionZipPath = async (zipName, options = {}) => {
+    return fileAdapter.promptDistributionZipPath({
+      zipName,
+      options,
+      filePicker,
+    });
+  };
+
+  service.createDistributionZipStreamedToPath = async (
+    projectData,
+    fileIds,
+    outputPath,
+  ) => {
+    return fileAdapter.createDistributionZipStreamedToPath({
+      projectData,
+      fileIds,
+      outputPath,
+      staticFiles: await getBundleStaticFiles(),
+      getCurrentReference,
+      getFileContent,
+    });
+  };
+
+  return service;
 };

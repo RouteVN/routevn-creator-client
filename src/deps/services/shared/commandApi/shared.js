@@ -14,14 +14,7 @@ import { collapsePartitionsToSingle } from "../collab/partitions.js";
 import { generateId } from "../../../../internal/id.js";
 
 const flushRepositoryMainCheckpoint = async (repository) => {
-  if (typeof repository?.flushMainCheckpoint === "function") {
-    await repository.flushMainCheckpoint();
-    return;
-  }
-
-  if (typeof repository?.flushMaterializedViews === "function") {
-    await repository.flushMaterializedViews();
-  }
+  await repository.flushMainCheckpoint();
 };
 
 const flushRepositoryMainCheckpointBestEffort = async ({
@@ -81,42 +74,22 @@ export const createCommandApiShared = ({
       repository = await getCurrentRepository();
     }
 
-    const contextState =
-      typeof repository?.getContextState === "function"
-        ? await repository.getContextState({
-            sceneIds,
-            sectionIds,
-            lineIds,
-          })
-        : repository.getState();
-
-    if (
-      typeof repository?.ensureScenesLoaded === "function" &&
-      typeof repository?.getContextState !== "function"
-    ) {
-      await repository.ensureScenesLoaded({
-        sceneIds,
-        sectionIds,
-        lineIds,
-      });
-    }
+    const contextState = await repository.getContextState({
+      sceneIds,
+      sectionIds,
+      lineIds,
+    });
 
     const currentProjectId = getCurrentProjectId();
     if (!currentProjectId) {
       throw new Error("No project selected (missing ?p= in URL)");
     }
-    const state =
-      typeof repository?.getContextState === "function"
-        ? contextState
-        : repository.getState();
+    const state = contextState;
     assertSupportedProjectState(state);
 
     const projectId = currentProjectId;
     const session = await ensureCommandSessionForProject(currentProjectId);
-    const actor =
-      typeof session.getActor === "function"
-        ? session.getActor()
-        : getOrCreateLocalActor(currentProjectId);
+    const actor = session.getActor() ?? getOrCreateLocalActor(currentProjectId);
 
     return {
       repository,
@@ -160,21 +133,36 @@ export const createCommandApiShared = ({
     if (context?.state && typeof context.state === "object") {
       return context.state;
     }
-    if (typeof context?.repository?.getState === "function") {
+    if (context?.repository) {
       return context.repository.getState();
     }
     return null;
   };
 
-  const syncSessionProjectedRepositoryState = (context) => {
-    if (typeof context?.session?.syncProjectedRepositoryState !== "function") {
-      return;
+  const validateCommandsAgainstContext = ({ context, commands = [] } = {}) => {
+    const normalizedCommands = Array.isArray(commands)
+      ? commands.filter(Boolean)
+      : [];
+    if (!context || normalizedCommands.length === 0) {
+      return {
+        valid: true,
+        repositoryState: getContextRepositoryState(context),
+      };
     }
+
     const repositoryState = getContextRepositoryState(context);
     if (!repositoryState) {
-      return;
+      return {
+        valid: true,
+        repositoryState: undefined,
+      };
     }
-    context.session.syncProjectedRepositoryState(repositoryState);
+
+    return applyCommandsToRepositoryState({
+      repositoryState,
+      commands: normalizedCommands,
+      projectId: context.projectId,
+    });
   };
 
   const advanceContextStateWithCommands = ({ context, commands = [] }) => {
@@ -206,7 +194,7 @@ export const createCommandApiShared = ({
       nextState = applyResult.repositoryState;
       context.state = nextState;
     } catch {
-      if (typeof context.repository?.getState === "function") {
+      if (context?.repository) {
         context.state = context.repository.getState();
       }
     }
@@ -221,8 +209,6 @@ export const createCommandApiShared = ({
     partitions = [],
     basePartition,
   }) => {
-    syncSessionProjectedRepositoryState(context);
-
     const command = createCommandWithContext({
       context,
       scope,
@@ -232,6 +218,14 @@ export const createCommandApiShared = ({
       partitions,
       basePartition,
     });
+
+    const validationResult = validateCommandsAgainstContext({
+      context,
+      commands: [command],
+    });
+    if (validationResult?.valid === false) {
+      return validationResult;
+    }
 
     const submitResult = await context.session.submitCommand(command);
     if (submitResult?.valid === false) {
@@ -263,8 +257,6 @@ export const createCommandApiShared = ({
   };
 
   const submitCommandsWithContext = async ({ context, commands = [] } = {}) => {
-    syncSessionProjectedRepositoryState(context);
-
     const normalizedCommands = (commands || []).map((entry) =>
       createCommandWithContext({
         context,
@@ -282,6 +274,14 @@ export const createCommandApiShared = ({
         commandIds: [],
         eventCount: 0,
       };
+    }
+
+    const validationResult = validateCommandsAgainstContext({
+      context,
+      commands: normalizedCommands,
+    });
+    if (validationResult?.valid === false) {
+      return validationResult;
     }
 
     const localApplyCommands = structuredClone(normalizedCommands);
@@ -542,14 +542,6 @@ export const createCommandApiShared = ({
     });
   };
 
-  const getEvents = async () => {
-    const repository = await getCurrentRepository();
-    if (typeof repository.loadEvents === "function") {
-      return repository.loadEvents();
-    }
-    return repository.getEvents();
-  };
-
   return {
     createId,
     getCurrentProjectId,
@@ -573,6 +565,5 @@ export const createCommandApiShared = ({
     resourceTypePartitionFor,
     getState,
     getDomainState,
-    getEvents,
   };
 };

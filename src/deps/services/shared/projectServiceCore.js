@@ -83,19 +83,28 @@ export const createProjectServiceCore = ({
     return repository.getRevision();
   };
 
+  const loadRepositoryState = async (untilEventIndex) => {
+    const repository = await repositoryService.ensureRepository();
+    return repository.loadState(untilEventIndex);
+  };
+
+  const clearActiveSceneId = async () => {
+    const repository = await repositoryService.ensureRepository();
+    await repository.clearActiveSceneId();
+  };
+
+  const setActiveSceneId = async (sceneId) => {
+    const repository = await repositoryService.ensureRepository();
+    await repository.setActiveSceneId(sceneId);
+  };
+
   const loadSceneOverviews = async ({ sceneIds = [] } = {}) => {
     const repository = await repositoryService.ensureRepository();
-    if (typeof repository.loadSceneOverviews !== "function") {
-      return {};
-    }
     return repository.loadSceneOverviews({ sceneIds });
   };
 
   const getSceneOverview = async (sceneId) => {
     const repository = await repositoryService.ensureRepository();
-    if (typeof repository.getSceneOverview !== "function") {
-      return undefined;
-    }
     return repository.getSceneOverview(sceneId);
   };
 
@@ -204,16 +213,15 @@ export const createProjectServiceCore = ({
         options,
       );
     },
-    ...("getRepositoryByPath" in repositoryService
-      ? {
-          getRepositoryByPath: repositoryService.getRepositoryByPath,
-        }
-      : {}),
+    getRepositoryByPath: repositoryService.getRepositoryByPath,
     ...collabService.commandApi,
     getState: getDomainState,
     getDomainState,
     getRepositoryState,
     getRepositoryRevision,
+    loadRepositoryState,
+    setActiveSceneId,
+    clearActiveSceneId,
     checkResourceUsage,
     checkSceneDeletionUsage,
     deleteSceneIfUnused,
@@ -253,34 +261,18 @@ export const createProjectServiceCore = ({
     downloadMetadata: assetService.downloadMetadata,
     loadFontFile: assetService.loadFontFile,
     detectFileType: assetService.detectFileType,
-    ...("getFileByProjectId" in assetService
-      ? {
-          getFileByProjectId: assetService.getFileByProjectId,
-        }
-      : {}),
-    ...("getProjectInfoByPath" in repositoryService
-      ? {
-          ensureProjectCompatibleByPath:
-            repositoryService.ensureProjectCompatibleByPath,
-          getProjectInfoByPath: repositoryService.getProjectInfoByPath,
-          updateProjectInfoByPath: repositoryService.updateProjectInfoByPath,
-        }
-      : {}),
+    getFileByProjectId: assetService.getFileByProjectId,
+    ensureProjectCompatibleByPath:
+      repositoryService.ensureProjectCompatibleByPath,
+    getProjectInfoByPath: repositoryService.getProjectInfoByPath,
+    updateProjectInfoByPath: repositoryService.updateProjectInfoByPath,
     createBundle: exportService.createBundle,
     exportProject: exportService.exportProject,
     downloadBundle: exportService.downloadBundle,
     createDistributionZip: exportService.createDistributionZip,
     createDistributionZipStreamed: exportService.createDistributionZipStreamed,
-    ...("promptDistributionZipPath" in exportService
-      ? {
-          promptDistributionZipPath: exportService.promptDistributionZipPath,
-        }
-      : {}),
-    ...("createDistributionZipStreamedToPath" in exportService
-      ? {
-          createDistributionZipStreamedToPath:
-            exportService.createDistributionZipStreamedToPath,
-        }
-      : {}),
+    promptDistributionZipPath: exportService.promptDistributionZipPath,
+    createDistributionZipStreamedToPath:
+      exportService.createDistributionZipStreamedToPath,
   };
 };

@@ -14,6 +14,7 @@ export const SCENE_OVERVIEW_VIEW_NAME =
 export const MAIN_VIEW_VERSION = "1";
 export const SCENE_VIEW_VERSION = "2";
 export const SCENE_OVERVIEW_VIEW_VERSION = "1";
+export const COMMITTED_HISTORY_BATCH_LIMIT = 256;
 export const VIEW_CHECKPOINT = {
   mode: "debounce",
   debounceMs: 1000,
@@ -235,6 +236,93 @@ export const createSceneProjectionState = (state, loadedPartition) => {
     },
   };
 };
+
+export const getCommittedEventRevision = (event, fallbackCommittedId = 0) => {
+  const committedId = Number(event?.committedId);
+  if (Number.isFinite(committedId) && committedId > 0) {
+    return Math.floor(committedId);
+  }
+
+  const fallback = Number(fallbackCommittedId);
+  if (Number.isFinite(fallback) && fallback > 0) {
+    return Math.floor(fallback);
+  }
+
+  return 0;
+};
+
+const normalizeCommittedEvent = ({ event, committedId }) => {
+  const normalizedEvent = structuredClone(event);
+  if (getCommittedEventRevision(normalizedEvent) <= 0) {
+    normalizedEvent.committedId = committedId;
+  }
+  return normalizedEvent;
+};
+
+export async function* iterateCommittedEventBatches({
+  events,
+  listCommittedAfter,
+  sinceCommittedId = 0,
+  limit = COMMITTED_HISTORY_BATCH_LIMIT,
+}) {
+  const safeLimit =
+    Number.isInteger(limit) && limit > 0
+      ? limit
+      : COMMITTED_HISTORY_BATCH_LIMIT;
+  const startCommittedId = Math.max(
+    0,
+    Number.isFinite(Number(sinceCommittedId))
+      ? Math.floor(Number(sinceCommittedId))
+      : 0,
+  );
+
+  if (Array.isArray(events)) {
+    let cursor = startCommittedId;
+
+    while (cursor < events.length) {
+      const batch = events
+        .slice(cursor, cursor + safeLimit)
+        .map((event, index) =>
+          normalizeCommittedEvent({
+            event,
+            committedId: cursor + index + 1,
+          }),
+        );
+
+      if (batch.length === 0) {
+        return;
+      }
+
+      yield batch;
+      cursor += batch.length;
+    }
+
+    return;
+  }
+
+  let cursor = startCommittedId;
+  while (true) {
+    const sourceBatch = await listCommittedAfter({
+      sinceCommittedId: cursor,
+      limit: safeLimit,
+    });
+    const batch = Array.isArray(sourceBatch)
+      ? sourceBatch.map((event, index) =>
+          normalizeCommittedEvent({
+            event,
+            committedId: cursor + index + 1,
+          }),
+        )
+      : [];
+
+    if (batch.length === 0) {
+      return;
+    }
+
+    yield batch;
+    cursor = getCommittedEventRevision(batch.at(-1), cursor + batch.length);
+  }
+}
 
 export const toCommittedProjectEvent = ({ event, committedId, projectId }) => ({
   ...structuredClone(event),

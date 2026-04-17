@@ -43,6 +43,7 @@ const mocked = vi.hoisted(() => ({
     storeFile: vi.fn(),
     storeFileForProject: vi.fn(),
     getFileContent: vi.fn(),
+    getFileByProjectId: vi.fn(),
     downloadMetadata: vi.fn(),
     loadFontFile: vi.fn(),
     detectFileType: vi.fn(),
@@ -53,6 +54,8 @@ const mocked = vi.hoisted(() => ({
     downloadBundle: vi.fn(),
     createDistributionZip: vi.fn(),
     createDistributionZipStreamed: vi.fn(),
+    promptDistributionZipPath: vi.fn(),
+    createDistributionZipStreamedToPath: vi.fn(),
   },
 }));
 
@@ -86,6 +89,7 @@ import { createProjectServiceCore } from "../../src/deps/services/shared/project
 describe("projectServiceCore releaseProjectRuntime", () => {
   beforeEach(() => {
     mocked.repositoryService.getEnsuredProjectId.mockReset();
+    mocked.repositoryService.ensureRepository.mockReset();
     mocked.repositoryService.releaseCurrentRepository.mockReset();
     mocked.collabService.stopCollabSession.mockReset();
   });
@@ -128,5 +132,66 @@ describe("projectServiceCore releaseProjectRuntime", () => {
       mocked.repositoryService.releaseCurrentRepository.mock
         .invocationCallOrder[0],
     );
+  });
+
+  it("sets the active scene through the ensured repository contract", async () => {
+    const repository = {
+      setActiveSceneId: vi.fn(async () => {}),
+    };
+    mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+
+    const projectService = createProjectServiceCore({
+      router: {
+        getPayload: () => ({ p: "project-1" }),
+      },
+      db: {},
+      filePicker: {},
+      idGenerator: () => "generated-id",
+      now: () => 0,
+      collabLog: () => {},
+      creatorVersion: 1,
+      storageAdapter: {
+        initializeProject: vi.fn(),
+      },
+      fileAdapter: {},
+      collabAdapter: {},
+    });
+
+    await projectService.setActiveSceneId("scene-1");
+
+    expect(mocked.repositoryService.ensureRepository).toHaveBeenCalledTimes(1);
+    expect(repository.setActiveSceneId).toHaveBeenCalledWith("scene-1");
+  });
+
+  it("loads historical repository state through the ensured repository contract", async () => {
+    const repository = {
+      loadState: vi.fn(async (revision) => ({
+        revision,
+      })),
+    };
+    mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+
+    const projectService = createProjectServiceCore({
+      router: {
+        getPayload: () => ({ p: "project-1" }),
+      },
+      db: {},
+      filePicker: {},
+      idGenerator: () => "generated-id",
+      now: () => 0,
+      collabLog: () => {},
+      creatorVersion: 1,
+      storageAdapter: {
+        initializeProject: vi.fn(),
+      },
+      fileAdapter: {},
+      collabAdapter: {},
+    });
+
+    await expect(projectService.loadRepositoryState(12)).resolves.toEqual({
+      revision: 12,
+    });
+    expect(mocked.repositoryService.ensureRepository).toHaveBeenCalledTimes(1);
+    expect(repository.loadState).toHaveBeenCalledWith(12);
   });
 });
