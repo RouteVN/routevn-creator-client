@@ -16,6 +16,11 @@ import {
   loadRepositoryEventsFromClientStore,
   normalizeRepositoryHistoryStats,
 } from "../shared/collab/clientStoreHistory.js";
+import {
+  MAIN_PARTITION,
+  MAIN_VIEW_NAME,
+  MAIN_VIEW_VERSION,
+} from "../shared/projectRepositoryViews/shared.js";
 
 export const PROJECT_DB_NAME = "project.db";
 
@@ -366,6 +371,35 @@ export const inspectBootstrapHistorySupport = ({
   };
 };
 
+export const isCurrentMainCheckpointCompatibleWithHistory = ({
+  checkpoint,
+  historyStats,
+} = {}) => {
+  if (
+    !checkpoint ||
+    checkpoint.viewVersion !== MAIN_VIEW_VERSION ||
+    !Number.isFinite(Number(checkpoint?.lastCommittedId))
+  ) {
+    return false;
+  }
+
+  const checkpointHistoryStats = checkpoint?.meta?.historyStats;
+  const hasCheckpointHistoryStats =
+    checkpointHistoryStats &&
+    typeof checkpointHistoryStats === "object" &&
+    !Array.isArray(checkpointHistoryStats);
+
+  if (hasCheckpointHistoryStats) {
+    return areRepositoryHistoryStatsEqual(checkpointHistoryStats, historyStats);
+  }
+
+  const checkpointRevision = Math.max(
+    0,
+    Math.floor(Number(checkpoint.lastCommittedId) || 0),
+  );
+  return checkpointRevision === getRepositoryHistoryLength(historyStats);
+};
+
 const createUnsupportedProjectHistoryError = ({ projectId, reason } = {}) => {
   let detail =
     "This project uses an unsupported local history format for this RouteVN Creator build.";
@@ -530,6 +564,22 @@ export const createPersistedTauriProjectStore = async ({
         latestDraftClock: draftRow?.latestDraftClock,
       });
     };
+    const loadMainCheckpoint = async () => {
+      const rows = await runSelect(
+        `SELECT view_version, last_committed_id, value, updated_at
+         FROM ${MATERIALIZED_VIEW_TABLE}
+         WHERE view_name = $1 AND partition = $2`,
+        [MAIN_VIEW_NAME, MAIN_PARTITION],
+      );
+      const row = Array.isArray(rows) ? rows[0] : undefined;
+      if (!row) {
+        return undefined;
+      }
+      return toMaterializedViewCheckpoint({
+        ...row,
+        partition: MAIN_PARTITION,
+      });
+    };
     const ensureSupportedProjectHistory = async () => {
       if (projectHistorySupportPromise) {
         return projectHistorySupportPromise;
@@ -541,6 +591,7 @@ export const createPersistedTauriProjectStore = async ({
           const committedEvents =
             await loadCommittedEventsFromClientStore(store);
           const draftEvents = await loadDraftEventsFromClientStore(store);
+          const currentHistoryStats = await loadRepositoryHistoryStats();
           const support = inspectBootstrapHistorySupport({
             committedEvents,
             draftEvents,
@@ -548,6 +599,25 @@ export const createPersistedTauriProjectStore = async ({
 
           if (support.supported) {
             return support;
+          }
+
+          if (
+            support.reason === "missing_bootstrap_event" &&
+            Number(currentHistoryStats?.committedCount || 0) === 0 &&
+            Number(currentHistoryStats?.draftCount || 0) > 0
+          ) {
+            const checkpoint = await loadMainCheckpoint();
+            if (
+              isCurrentMainCheckpointCompatibleWithHistory({
+                checkpoint,
+                historyStats: currentHistoryStats,
+              })
+            ) {
+              return {
+                supported: true,
+                reason: "history_valid_from_current_main_checkpoint",
+              };
+            }
           }
 
           console.warn("Unsupported project bootstrap history", {
