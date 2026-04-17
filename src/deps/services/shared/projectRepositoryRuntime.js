@@ -217,6 +217,17 @@ export const createProjectRepositoryRuntime = async ({
     });
   };
 
+  const saveCurrentMainCheckpoint = async () => {
+    await store.saveMaterializedViewCheckpoint({
+      viewName: MAIN_VIEW_NAME,
+      partition: MAIN_PARTITION,
+      viewVersion: MAIN_VIEW_VERSION,
+      lastCommittedId: currentRevision,
+      value: structuredClone(getCurrentComposedState()),
+      updatedAt: Date.now(),
+    });
+  };
+
   const ensureEventHistoryLoaded = async () => {
     if (hasLoadedEvents) {
       return events;
@@ -928,18 +939,12 @@ export const createProjectRepositoryRuntime = async ({
         viewName: MAIN_VIEW_NAME,
         partition: MAIN_PARTITION,
       });
-      await store.saveMaterializedViewCheckpoint({
-        viewName: MAIN_VIEW_NAME,
-        partition: MAIN_PARTITION,
-        viewVersion: MAIN_VIEW_VERSION,
-        lastCommittedId: currentRevision,
-        value: structuredClone(getCurrentComposedState()),
-        updatedAt: Date.now(),
-      });
+      await saveCurrentMainCheckpoint();
     },
 
     async flushMaterializedViews() {
       await materializedViewRuntime.flushMaterializedViews();
+      await saveCurrentMainCheckpoint();
       await sceneBundleRuntime.flushSceneOverviews();
     },
   };
