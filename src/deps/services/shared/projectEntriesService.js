@@ -14,6 +14,26 @@ const normalizeLocalProjectEntry = (entry) => ({
   iconFileId: entry?.iconFileId ?? null,
 });
 
+const mergeProjectEntriesPreservingWorkingPath = (currentEntry, nextEntry) => {
+  const mergedEntry = {
+    ...currentEntry,
+    ...nextEntry,
+  };
+
+  if (
+    currentEntry?.id &&
+    nextEntry?.id &&
+    currentEntry.id === nextEntry.id &&
+    currentEntry?.projectPath &&
+    nextEntry?.projectPath &&
+    currentEntry.projectPath !== nextEntry.projectPath
+  ) {
+    mergedEntry.projectPath = currentEntry.projectPath;
+  }
+
+  return mergedEntry;
+};
+
 export const createProjectEntriesService = ({
   db,
   getCurrentProjectId,
@@ -111,6 +131,27 @@ export const createProjectEntriesService = ({
 
   const addProjectEntry = async (entry) => {
     const entries = await getProjectEntries();
+    const existingEntryIndex = entries.findIndex(
+      (candidate) => candidate?.id && candidate.id === entry?.id,
+    );
+    if (existingEntryIndex !== -1) {
+      const existingEntry = entries[existingEntryIndex] || {};
+      entries[existingEntryIndex] = {
+        ...existingEntry,
+        ...entry,
+        createdAt: existingEntry.createdAt ?? entry?.createdAt,
+        lastOpenedAt: existingEntry.lastOpenedAt ?? entry?.lastOpenedAt,
+      };
+      await db.set("projectEntries", entries);
+      projectEntriesCache = structuredClone(entries);
+      if (entry?.id === getCurrentProjectId()) {
+        currentProjectEntry = normalizeLocalProjectEntry(
+          entries[existingEntryIndex],
+        );
+      }
+      return entries;
+    }
+
     const isDuplicate = platformAdapter.isDuplicateProjectEntry?.({
       entries,
       entry,
@@ -163,6 +204,94 @@ export const createProjectEntriesService = ({
     return entries;
   };
 
+  const removeProjectEntryByPath = async (projectPath) => {
+    if (!projectPath) {
+      return getProjectEntries();
+    }
+
+    const entries = await getProjectEntries();
+    const filtered = entries.filter(
+      (entry) => entry?.projectPath !== projectPath,
+    );
+    await db.set("projectEntries", filtered);
+    projectEntriesCache = structuredClone(filtered);
+
+    if (currentProjectEntry?.projectPath === projectPath) {
+      const routeProjectId = getCurrentProjectId();
+      currentProjectEntry = routeProjectId
+        ? createEmptyProjectEntry({ id: routeProjectId, source: "cloud" })
+        : createEmptyProjectEntry();
+    }
+
+    return filtered;
+  };
+
+  const repairProjectEntries = async (entries = []) => {
+    if (
+      typeof projectService?.getProjectInfoByPath !== "function" ||
+      !Array.isArray(entries) ||
+      entries.length === 0
+    ) {
+      return Array.isArray(entries) ? entries : [];
+    }
+
+    let didChange = false;
+    const nextEntries = [];
+
+    for (const entry of entries) {
+      let nextEntry = structuredClone(entry);
+
+      if (!nextEntry?.id && nextEntry?.projectPath) {
+        try {
+          const projectInfo = await projectService.getProjectInfoByPath(
+            nextEntry.projectPath,
+          );
+          if (projectInfo?.id) {
+            nextEntry.id = projectInfo.id;
+            nextEntry.name = projectInfo.name ?? nextEntry.name ?? "";
+            nextEntry.description =
+              projectInfo.description ?? nextEntry.description ?? "";
+            nextEntry.iconFileId =
+              projectInfo.iconFileId ?? nextEntry.iconFileId ?? null;
+            didChange = true;
+          }
+        } catch {
+          // Keep the stale entry visible so the user can remove it.
+        }
+      }
+
+      const duplicateIndex = nextEntries.findIndex((candidate) => {
+        if (nextEntry?.id && candidate?.id) {
+          return candidate.id === nextEntry.id;
+        }
+
+        return (
+          nextEntry?.projectPath &&
+          candidate?.projectPath === nextEntry.projectPath
+        );
+      });
+
+      if (duplicateIndex === -1) {
+        nextEntries.push(nextEntry);
+        continue;
+      }
+
+      nextEntries[duplicateIndex] = mergeProjectEntriesPreservingWorkingPath(
+        nextEntries[duplicateIndex],
+        nextEntry,
+      );
+      didChange = true;
+    }
+
+    if (!didChange) {
+      return nextEntries;
+    }
+
+    await db.set("projectEntries", nextEntries);
+    projectEntriesCache = structuredClone(nextEntries);
+    return nextEntries;
+  };
+
   return {
     async getProjectEntries() {
       return getProjectEntries();
@@ -176,12 +305,18 @@ export const createProjectEntriesService = ({
       return removeProjectEntry(projectId);
     },
 
+    async removeProjectEntryByPath(projectPath) {
+      return removeProjectEntryByPath(projectPath);
+    },
+
     async updateProjectEntry(projectId, updates) {
       return updateProjectEntry(projectId, updates);
     },
 
     async loadAllProjects() {
-      const projectEntries = await getProjectEntries();
+      const projectEntries = await repairProjectEntries(
+        await getProjectEntries(),
+      );
       const projectsWithFullData = await Promise.all(
         projectEntries.map(async (entry) => {
           // projectEntries cache the current projectInfo snapshot for fast

@@ -155,106 +155,48 @@ export const createProjectAssetService = ({
     }
 
     if (fileType === "audio") {
-      const totalStartedAt = getNow();
-      let readDurationMs = 0;
-      let waveformDurationMs = 0;
-      let storeAndHashDurationMs = 0;
-      let storeDurationMs = 0;
-      let hashDurationMs = 0;
-      let metadataDurationMs = 0;
+      const arrayBuffer = await file.arrayBuffer();
 
-      try {
-        const readStartedAt = getNow();
-        const arrayBuffer = await file.arrayBuffer();
-        readDurationMs = getDurationMs(readStartedAt);
+      const [waveformData, stored] = await Promise.all([
+        extractWaveformDataFromArrayBuffer(arrayBuffer),
+        storeFileWithRecord({
+          file,
+          bytes: arrayBuffer,
+          timings: {},
+        }),
+      ]);
 
-        const [waveformData, stored] = await Promise.all([
-          (async () => {
-            const waveformStartedAt = getNow();
-            const result =
-              await extractWaveformDataFromArrayBuffer(arrayBuffer);
-            waveformDurationMs = getDurationMs(waveformStartedAt);
-            return result;
-          })(),
-          (async () => {
-            const storeStartedAt = getNow();
-            const storeAndHashTimings = {};
-            const result = await storeFileWithRecord({
-              file,
-              bytes: arrayBuffer,
-              timings: storeAndHashTimings,
-            });
-            storeAndHashDurationMs = getDurationMs(storeStartedAt);
-            storeDurationMs = storeAndHashTimings.storeDurationMs ?? 0;
-            hashDurationMs = storeAndHashTimings.hashDurationMs ?? 0;
-            return result;
-          })(),
-        ]);
-
-        let waveformDataFileId = null;
-        let waveformResult = null;
-        if (waveformData) {
-          const compressedWaveformData = {
-            ...waveformData,
-            amplitudes: waveformData.amplitudes.map((value) =>
-              Math.round(value * 255),
-            ),
-          };
-          const metadataStartedAt = getNow();
-          waveformResult = await storeMetadata({
-            data: compressedWaveformData,
-            storeFile: (metadataFile) =>
-              storeFileWithRecord({
-                file: metadataFile,
-              }),
-            idGenerator,
-          });
-          metadataDurationMs = getDurationMs(metadataStartedAt);
-          waveformDataFileId = waveformResult.fileId;
-        }
-
-        console.info("[audioUpload] process.complete", {
-          fileName: file.name,
-          fileSize: file.size,
-          fileType: file.type,
-          readDurationMs,
-          waveformDurationMs,
-          storeAndHashDurationMs,
-          storeDurationMs,
-          hashDurationMs,
-          metadataDurationMs,
-          totalDurationMs: getDurationMs(totalStartedAt),
-          decodedDurationSeconds: waveformData?.duration,
-          waveformSampleCount: waveformData?.amplitudes?.length ?? 0,
-        });
-
-        return {
-          ...stored,
-          waveformDataFileId,
-          waveformData,
-          duration: waveformData?.duration,
-          type: "audio",
-          fileRecords: [
-            stored.fileRecord,
-            ...(waveformResult ? [waveformResult.fileRecord] : []),
-          ],
+      let waveformDataFileId = null;
+      let waveformResult = null;
+      if (waveformData) {
+        const compressedWaveformData = {
+          ...waveformData,
+          amplitudes: waveformData.amplitudes.map((value) =>
+            Math.round(value * 255),
+          ),
         };
-      } catch (error) {
-        console.warn("[audioUpload] process.failed", {
-          fileName: file.name,
-          fileSize: file.size,
-          fileType: file.type,
-          readDurationMs,
-          waveformDurationMs,
-          storeAndHashDurationMs,
-          storeDurationMs,
-          hashDurationMs,
-          metadataDurationMs,
-          totalDurationMs: getDurationMs(totalStartedAt),
-          error: error?.message ?? "Unknown error",
+        waveformResult = await storeMetadata({
+          data: compressedWaveformData,
+          storeFile: (metadataFile) =>
+            storeFileWithRecord({
+              file: metadataFile,
+            }),
+          idGenerator,
         });
-        throw error;
+        waveformDataFileId = waveformResult.fileId;
       }
+
+      return {
+        ...stored,
+        waveformDataFileId,
+        waveformData,
+        duration: waveformData?.duration,
+        type: "audio",
+        fileRecords: [
+          stored.fileRecord,
+          ...(waveformResult ? [waveformResult.fileRecord] : []),
+        ],
+      };
     }
 
     if (fileType === "video") {

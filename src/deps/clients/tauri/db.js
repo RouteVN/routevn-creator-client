@@ -1,10 +1,9 @@
-// SQLite wrapper for Tauri - all SQLite access goes through this file
-import Database from "@tauri-apps/plugin-sql";
 import { join } from "@tauri-apps/api/path";
 import {
   SQLITE_BUSY_TIMEOUT_MS,
   withSqliteLockRetry,
 } from "../../../internal/sqliteLocking.js";
+import { getManagedSqliteConnection } from "./sqliteConnectionManager.js";
 
 /**
  * Create a database instance
@@ -21,146 +20,184 @@ export const createDb = ({ path, projectPath, withEvents = false }) => {
 
   let db = null;
   let initialized = false;
+  let resolvedDbPath;
+  let operationQueue = Promise.resolve();
+
+  const queueDbOperation = async (operation) => {
+    const nextOperation = operationQueue.then(async () => operation());
+    operationQueue = nextOperation.catch(() => {});
+    return nextOperation;
+  };
+
+  const ensureConnection = async () => {
+    if (initialized && db) {
+      return;
+    }
+
+    if (!resolvedDbPath) {
+      resolvedDbPath = path;
+      if (projectPath) {
+        const fullPath = await join(projectPath, "project.db");
+        resolvedDbPath = `sqlite:${fullPath}`;
+      }
+    }
+
+    db = getManagedSqliteConnection({
+      dbPath: resolvedDbPath,
+      busyTimeoutMs: SQLITE_BUSY_TIMEOUT_MS,
+      onConnect: async (connection) => {
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS kv (
+              key TEXT PRIMARY KEY,
+              value TEXT
+            )
+          `);
+
+        if (withEvents) {
+          await connection.execute(`
+              CREATE TABLE IF NOT EXISTS events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                type TEXT NOT NULL,
+                payload TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+              )
+            `);
+        }
+      },
+    });
+
+    await db.init();
+
+    initialized = true;
+  };
 
   const instance = {
     async init() {
-      let dbPath = path;
-      if (projectPath) {
-        const fullPath = await join(projectPath, "project.db");
-        dbPath = `sqlite:${fullPath}`;
-      }
-
-      db = await Database.load(dbPath);
-      await withSqliteLockRetry(() =>
-        db.execute(`PRAGMA busy_timeout=${SQLITE_BUSY_TIMEOUT_MS}`),
-      );
-
-      // Initialize key-value table
-      await withSqliteLockRetry(() =>
-        db.execute(`
-          CREATE TABLE IF NOT EXISTS kv (
-            key TEXT PRIMARY KEY,
-            value TEXT
-          )
-        `),
-      );
-
-      // Initialize events table if needed
-      if (withEvents) {
-        await withSqliteLockRetry(() =>
-          db.execute(`
-            CREATE TABLE IF NOT EXISTS events (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              type TEXT NOT NULL,
-              payload TEXT,
-              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-          `),
-        );
-      }
-
-      initialized = true;
+      return queueDbOperation(async () => ensureConnection());
     },
 
     async get(key) {
-      if (!initialized)
-        throw new Error("Db not initialized. Call init() first.");
-      const result = await withSqliteLockRetry(() =>
-        db.select("SELECT value FROM kv WHERE key = $1", [key]),
-      );
-      if (result && result.length > 0) {
-        try {
-          return JSON.parse(result[0].value);
-        } catch {
-          return result[0].value;
+      return queueDbOperation(async () => {
+        if (!initialized) {
+          throw new Error("Db not initialized. Call init() first.");
         }
-      }
-      return null;
+        const result = await withSqliteLockRetry(() =>
+          db.select("SELECT value FROM kv WHERE key = $1", [key]),
+        );
+        if (result && result.length > 0) {
+          try {
+            return JSON.parse(result[0].value);
+          } catch {
+            return result[0].value;
+          }
+        }
+        return null;
+      });
     },
 
     async set(key, value) {
-      if (!initialized)
-        throw new Error("Db not initialized. Call init() first.");
-      const jsonValue = JSON.stringify(value);
-      await withSqliteLockRetry(() =>
-        db.execute("INSERT OR REPLACE INTO kv (key, value) VALUES ($1, $2)", [
-          key,
-          jsonValue,
-        ]),
-      );
+      return queueDbOperation(async () => {
+        if (!initialized) {
+          throw new Error("Db not initialized. Call init() first.");
+        }
+        const jsonValue = JSON.stringify(value);
+        await withSqliteLockRetry(() =>
+          db.execute("INSERT OR REPLACE INTO kv (key, value) VALUES ($1, $2)", [
+            key,
+            jsonValue,
+          ]),
+        );
+      });
     },
 
     async remove(key) {
-      if (!initialized)
-        throw new Error("Db not initialized. Call init() first.");
-      await withSqliteLockRetry(() =>
-        db.execute("DELETE FROM kv WHERE key = $1", [key]),
-      );
+      return queueDbOperation(async () => {
+        if (!initialized) {
+          throw new Error("Db not initialized. Call init() first.");
+        }
+        await withSqliteLockRetry(() =>
+          db.execute("DELETE FROM kv WHERE key = $1", [key]),
+        );
+      });
     },
   };
 
   // Add events methods if needed
   if (withEvents) {
     instance.getEvents = async (payload = {}) => {
-      if (!initialized)
-        throw new Error("Db not initialized. Call init() first.");
-      const { since } = payload;
+      return queueDbOperation(async () => {
+        if (!initialized) {
+          throw new Error("Db not initialized. Call init() first.");
+        }
+        const { since } = payload;
 
-      let query = "SELECT type, payload FROM events";
-      let params = [];
+        let query = "SELECT type, payload FROM events";
+        let params = [];
 
-      if (since !== undefined) {
-        query += " WHERE id > $1";
-        params.push(since);
-      }
+        if (since !== undefined) {
+          query += " WHERE id > $1";
+          params.push(since);
+        }
 
-      query += " ORDER BY id";
+        query += " ORDER BY id";
 
-      const results = await withSqliteLockRetry(() => db.select(query, params));
-      return results.map((row) => ({
-        type: row.type,
-        payload: row.payload ? JSON.parse(row.payload) : null,
-      }));
+        const results = await withSqliteLockRetry(() =>
+          db.select(query, params),
+        );
+        return results.map((row) => ({
+          type: row.type,
+          payload: row.payload ? JSON.parse(row.payload) : null,
+        }));
+      });
     };
 
     instance.appendEvent = async (event) => {
-      if (!initialized)
-        throw new Error("Db not initialized. Call init() first.");
-      await withSqliteLockRetry(() =>
-        db.execute("INSERT INTO events (type, payload) VALUES (?, ?)", [
-          event.type,
-          JSON.stringify(event.payload),
-        ]),
-      );
+      return queueDbOperation(async () => {
+        if (!initialized) {
+          throw new Error("Db not initialized. Call init() first.");
+        }
+        await withSqliteLockRetry(() =>
+          db.execute("INSERT INTO events (type, payload) VALUES (?, ?)", [
+            event.type,
+            JSON.stringify(event.payload),
+          ]),
+        );
+      });
     };
 
     // Snapshot support for fast initialization
     instance.getSnapshot = async () => {
-      if (!initialized)
-        throw new Error("Db not initialized. Call init() first.");
-      const result = await withSqliteLockRetry(() =>
-        db.select("SELECT value FROM kv WHERE key = $1", ["_eventsSnapshot"]),
-      );
-      if (result && result.length > 0) {
-        try {
-          return JSON.parse(result[0].value);
-        } catch {
-          return null;
+      return queueDbOperation(async () => {
+        if (!initialized) {
+          throw new Error("Db not initialized. Call init() first.");
         }
-      }
-      return null;
+        const result = await withSqliteLockRetry(() =>
+          db.select("SELECT value FROM kv WHERE key = $1", ["_eventsSnapshot"]),
+        );
+        if (result && result.length > 0) {
+          try {
+            return JSON.parse(result[0].value);
+          } catch {
+            return null;
+          }
+        }
+        return null;
+      });
     };
 
     instance.setSnapshot = async (snapshot) => {
-      if (!initialized)
-        throw new Error("Db not initialized. Call init() first.");
-      const jsonValue = JSON.stringify(snapshot);
-      await withSqliteLockRetry(() =>
-        db.execute("INSERT OR REPLACE INTO kv (key, value) VALUES ($1, $2)", [
-          "_eventsSnapshot",
-          jsonValue,
-        ]),
-      );
+      return queueDbOperation(async () => {
+        if (!initialized) {
+          throw new Error("Db not initialized. Call init() first.");
+        }
+        const jsonValue = JSON.stringify(snapshot);
+        await withSqliteLockRetry(() =>
+          db.execute("INSERT OR REPLACE INTO kv (key, value) VALUES ($1, $2)", [
+            "_eventsSnapshot",
+            jsonValue,
+          ]),
+        );
+      });
     };
   }
 

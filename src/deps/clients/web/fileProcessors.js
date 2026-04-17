@@ -727,13 +727,7 @@ const extractScoredVideoThumbnail = async (videoFile, options = {}) => {
       resolve(result);
     };
 
-    const logContext = {
-      fileName: videoFile?.name ?? "",
-      fileSize: videoFile?.size ?? 0,
-      sampleCount,
-    };
-
-    const refreshActivityTimeout = (stage = "unknown") => {
+    const refreshActivityTimeout = () => {
       if (settled) {
         return;
       }
@@ -743,19 +737,11 @@ const extractScoredVideoThumbnail = async (videoFile, options = {}) => {
       }
 
       activityTimeoutId = window.setTimeout(() => {
-        console.warn("[videoThumbnail] extract.stalled", {
-          ...logContext,
-          stage,
-        });
         rejectOnce(new Error("Timed out while generating video thumbnail"));
       }, VIDEO_THUMBNAIL_ACTIVITY_TIMEOUT_MS);
     };
 
     video.onerror = (error) => {
-      console.warn("[videoThumbnail] load.failed", {
-        ...logContext,
-        error: error?.message || "Unknown error",
-      });
       rejectOnce(
         new Error(`Video load error: ${error.message || "Unknown error"}`),
       );
@@ -763,7 +749,7 @@ const extractScoredVideoThumbnail = async (videoFile, options = {}) => {
 
     video.onloadedmetadata = async () => {
       try {
-        refreshActivityTimeout("metadata-loaded");
+        refreshActivityTimeout();
         const outputDimensions = getScaledThumbnailDimensions({
           sourceWidth: video.videoWidth,
           sourceHeight: video.videoHeight,
@@ -780,22 +766,15 @@ const extractScoredVideoThumbnail = async (videoFile, options = {}) => {
           timeOffset,
           sampleCount,
         });
-        console.info("[videoThumbnail] metadata.loaded", {
-          ...logContext,
-          duration: video.duration,
-          sampleTimes,
-        });
 
         let bestCandidate;
         let bestFallbackCandidate;
-        let sampledFrameCount = 0;
-
         for (const sampleTime of sampleTimes) {
           if (settled) {
             return;
           }
 
-          refreshActivityTimeout(`sampling-${sampleTime}`);
+          refreshActivityTimeout();
 
           try {
             await captureVideoFrameAtTime({
@@ -805,12 +784,7 @@ const extractScoredVideoThumbnail = async (videoFile, options = {}) => {
               height: analysisCanvas.height,
               time: sampleTime,
             });
-          } catch (error) {
-            console.warn("[videoThumbnail] sample.failed", {
-              ...logContext,
-              sampleTime,
-              error: error?.message ?? "Unknown error",
-            });
+          } catch {
             continue;
           }
 
@@ -818,9 +792,7 @@ const extractScoredVideoThumbnail = async (videoFile, options = {}) => {
             return;
           }
 
-          refreshActivityTimeout(`sampled-${sampleTime}`);
-          sampledFrameCount += 1;
-
+          refreshActivityTimeout();
           const frameAnalysis = analyzeVideoFrame({
             ctx: analysisCtx,
             width: analysisCanvas.width,
@@ -862,28 +834,16 @@ const extractScoredVideoThumbnail = async (videoFile, options = {}) => {
 
         const chosenCandidate = bestCandidate ?? bestFallbackCandidate;
         if (!chosenCandidate) {
-          console.warn("[videoThumbnail] sampling.empty", {
-            ...logContext,
-            sampleTimes,
-          });
-          refreshActivityTimeout("capturing-fallback-frame");
+          refreshActivityTimeout();
           await captureVideoFrameAtTime({
             video,
             ctx: fallbackCtx,
             width,
             height,
           });
-        } else {
-          console.info("[videoThumbnail] frame.selected", {
-            ...logContext,
-            sampledFrameCount,
-            selectedTime: chosenCandidate.time,
-            score: Number(chosenCandidate.score.toFixed(2)),
-            usedFallbackFrame: !bestCandidate,
-          });
         }
 
-        refreshActivityTimeout("encoding-thumbnail");
+        refreshActivityTimeout();
         const selectedCanvas = bestCandidate ? bestCanvas : fallbackCanvas;
         const blob = await canvasToBlob(selectedCanvas, format, quality);
         const dataUrl = selectedCanvas.toDataURL(format, quality);
@@ -901,15 +861,11 @@ const extractScoredVideoThumbnail = async (videoFile, options = {}) => {
           return;
         }
 
-        console.warn("[videoThumbnail] extract.failed", {
-          ...logContext,
-          error: error?.message ?? "Unknown error",
-        });
         rejectOnce(new Error(`Thumbnail extraction error: ${error.message}`));
       }
     };
 
-    refreshActivityTimeout("waiting-for-metadata");
+    refreshActivityTimeout();
     objectUrl = URL.createObjectURL(videoFile);
     video.src = objectUrl;
   });
@@ -986,12 +942,7 @@ const extractInitialVideoThumbnail = async (videoFile, options = {}) => {
       resolve(result);
     };
 
-    const logContext = {
-      fileName: videoFile?.name ?? "",
-      fileSize: videoFile?.size ?? 0,
-    };
-
-    const refreshActivityTimeout = (stage = "unknown") => {
+    const refreshActivityTimeout = () => {
       if (settled) {
         return;
       }
@@ -1001,10 +952,6 @@ const extractInitialVideoThumbnail = async (videoFile, options = {}) => {
       }
 
       activityTimeoutId = window.setTimeout(() => {
-        console.warn("[videoThumbnail] fallback.stalled", {
-          ...logContext,
-          stage,
-        });
         rejectOnce(
           new Error("Timed out while generating fallback video thumbnail"),
         );
@@ -1021,7 +968,7 @@ const extractInitialVideoThumbnail = async (videoFile, options = {}) => {
 
     video.onloadedmetadata = async () => {
       try {
-        refreshActivityTimeout("fallback-metadata-loaded");
+        refreshActivityTimeout();
         const outputDimensions = getScaledThumbnailDimensions({
           sourceWidth: video.videoWidth,
           sourceHeight: video.videoHeight,
@@ -1046,13 +993,8 @@ const extractInitialVideoThumbnail = async (videoFile, options = {}) => {
             height,
             time: fallbackTime > 0 ? fallbackTime : undefined,
           });
-        } catch (seekError) {
-          console.warn("[videoThumbnail] fallback.seek-failed", {
-            ...logContext,
-            fallbackTime,
-            error: seekError?.message ?? "Unknown error",
-          });
-          refreshActivityTimeout("fallback-current-frame");
+        } catch {
+          refreshActivityTimeout();
           await captureVideoFrameAtTime({
             video,
             ctx,
@@ -1061,7 +1003,7 @@ const extractInitialVideoThumbnail = async (videoFile, options = {}) => {
           });
         }
 
-        refreshActivityTimeout("fallback-encoding-thumbnail");
+        refreshActivityTimeout();
         const blob = await canvasToBlob(canvas, format, quality);
         const dataUrl = canvas.toDataURL(format, quality);
 
@@ -1080,7 +1022,7 @@ const extractInitialVideoThumbnail = async (videoFile, options = {}) => {
       }
     };
 
-    refreshActivityTimeout("fallback-waiting-for-metadata");
+    refreshActivityTimeout();
     objectUrl = URL.createObjectURL(videoFile);
     video.src = objectUrl;
   });
@@ -1089,12 +1031,7 @@ const extractInitialVideoThumbnail = async (videoFile, options = {}) => {
 export const extractVideoThumbnail = async (videoFile, options = {}) => {
   try {
     return await extractScoredVideoThumbnail(videoFile, options);
-  } catch (error) {
-    console.warn("[videoThumbnail] fallback.attempt", {
-      fileName: videoFile?.name ?? "",
-      fileSize: videoFile?.size ?? 0,
-      error: error?.message ?? "Unknown error",
-    });
+  } catch {
     return extractInitialVideoThumbnail(videoFile, options);
   }
 };

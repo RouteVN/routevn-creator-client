@@ -128,7 +128,7 @@ template:
                                           - rtgl-text s=lg c=mu-fg: ${localEmptyMessage}
                                           - rtgl-text s=sm c=mu-fg: ${localEmptySubMessage}
                               - $for project, i in projects:
-                                  - rtgl-view#projectItem${i} data-project-id=${project.id} h=auto w=f bw=xs bc=bo h-bc=ac p=md cur=pointer d=h av=c g=md:
+                                  - rtgl-view#projectItem${i} data-project-id=${project.id} data-project-index=${i} h=auto w=f bw=xs bc=bo h-bc=ac p=md cur=pointer d=h av=c g=md:
                                       - $if project.iconUrl:
                                           - rtgl-image wh=56 src=${project.iconUrl} bw=xs bc=bo of=con br=md: null
                                         $else:

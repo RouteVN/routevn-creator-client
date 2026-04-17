@@ -37,29 +37,6 @@ const countImageEntries = (imagesData) =>
 
 const INITIAL_REMOTE_SYNC_TIMEOUT_MS = 5_000;
 
-const getNow = () => {
-  if (
-    typeof performance !== "undefined" &&
-    typeof performance.now === "function"
-  ) {
-    return performance.now();
-  }
-
-  return Date.now();
-};
-
-const getDurationMs = (startedAt) => Number((getNow() - startedAt).toFixed(2));
-
-const isAudioUploadFile = (file) =>
-  [
-    "audio/mpeg",
-    "audio/mp3",
-    "audio/wav",
-    "audio/x-wav",
-    "audio/wave",
-    "audio/ogg",
-  ].includes(file?.type);
-
 export const createWebProjectServiceAdapters = ({
   onRemoteEvent,
   collabLog,
@@ -198,49 +175,12 @@ export const createWebProjectServiceAdapters = ({
         ? await getStoreByProject(projectId)
         : getCurrentStore();
       const fileId = idGenerator();
-      const totalStartedAt = getNow();
-      let blobBuildDurationMs = 0;
-      let adapterWriteDurationMs = 0;
+      const fileBlob = new Blob([bytes ?? (await file.arrayBuffer())], {
+        type: file.type,
+      });
+      await adapter.setFile(fileId, fileBlob);
 
-      try {
-        const blobBuildStartedAt = getNow();
-        const fileBlob = new Blob([bytes ?? (await file.arrayBuffer())], {
-          type: file.type,
-        });
-        blobBuildDurationMs = getDurationMs(blobBuildStartedAt);
-
-        const adapterWriteStartedAt = getNow();
-        await adapter.setFile(fileId, fileBlob);
-        adapterWriteDurationMs = getDurationMs(adapterWriteStartedAt);
-
-        if (isAudioUploadFile(file)) {
-          console.info("[audioUpload.store.web] complete", {
-            fileName: file.name,
-            fileSize: file.size,
-            fileType: file.type,
-            usedPreloadedBytes: bytes !== undefined,
-            blobBuildDurationMs,
-            adapterWriteDurationMs,
-            totalDurationMs: getDurationMs(totalStartedAt),
-          });
-        }
-
-        return { fileId };
-      } catch (error) {
-        if (isAudioUploadFile(file)) {
-          console.warn("[audioUpload.store.web] failed", {
-            fileName: file.name,
-            fileSize: file.size,
-            fileType: file.type,
-            usedPreloadedBytes: bytes !== undefined,
-            blobBuildDurationMs,
-            adapterWriteDurationMs,
-            totalDurationMs: getDurationMs(totalStartedAt),
-            error: error?.message ?? "Unknown error",
-          });
-        }
-        throw error;
-      }
+      return { fileId };
     },
 
     getFileContent: async ({ fileId, getCurrentStore }) => {

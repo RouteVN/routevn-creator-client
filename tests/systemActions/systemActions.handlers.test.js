@@ -11,7 +11,7 @@ import {
 } from "../../src/components/systemActions/systemActions.handlers.js";
 
 describe("systemActions.handlers", () => {
-  it("emits the full next action set when adding a new action", () => {
+  it("keeps local merged actions but emits only the submitted action delta", () => {
     const state = createInitialState();
     const dispatchedEvents = [];
     const stopPropagation = () => {};
@@ -51,8 +51,59 @@ describe("systemActions.handlers", () => {
     expect(dispatchedEvents).toHaveLength(1);
     expect(dispatchedEvents[0].type).toBe("actions-change");
     expect(dispatchedEvents[0].detail).toEqual({
-      toggleAutoMode: {},
       toggleSkipMode: {},
+    });
+  });
+
+  it("does not leak stale dialogue content when submitting an unrelated action", () => {
+    const state = createInitialState();
+    const dispatchedEvents = [];
+
+    updateActions(
+      { state },
+      {
+        dialogue: {
+          content: [{ text: "stale draft text" }],
+        },
+      },
+    );
+
+    const deps = {
+      store: {
+        selectAction: () => selectAction({ state }),
+        updateActions: (payload) => updateActions({ state }, payload),
+        hideActionsDialog: () => {},
+      },
+      render: () => {},
+      dispatchEvent: (event) => {
+        dispatchedEvents.push(event);
+      },
+    };
+
+    handleCommandLineSubmit(deps, {
+      _event: {
+        stopPropagation: () => {},
+        detail: {
+          background: {
+            resourceId: "bg-1",
+          },
+        },
+      },
+    });
+
+    expect(selectAction({ state })).toEqual({
+      dialogue: {
+        content: [{ text: "stale draft text" }],
+      },
+      background: {
+        resourceId: "bg-1",
+      },
+    });
+    expect(dispatchedEvents).toHaveLength(1);
+    expect(dispatchedEvents[0].detail).toEqual({
+      background: {
+        resourceId: "bg-1",
+      },
     });
   });
 

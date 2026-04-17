@@ -409,7 +409,12 @@ export const handleKeyboardActionsChange = async (deps, payload) => {
     return;
   }
 
-  const actions = payload._event.detail || {};
+  const control = getSelectedControl(store);
+  const currentActions = getKeyboardEntryActions(control, key);
+  const actions = {
+    ...currentActions,
+    ...payload._event.detail,
+  };
   const interaction = withInteractionPayload({}, { actions });
   const updated = await updateControlKeyboard({
     appService,

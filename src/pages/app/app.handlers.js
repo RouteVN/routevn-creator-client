@@ -164,8 +164,11 @@ const createRouteTransitionRunner = (deps) => {
       canonicalPath,
       currentProjectId,
     );
-    const isAlreadyEnsured =
-      currentProjectId === projectService.getEnsuredProjectId();
+    const ensuredProjectId = projectService.getEnsuredProjectId();
+    const isAlreadyEnsured = currentProjectId === ensuredProjectId;
+    const shouldReleaseEnsuredRepository =
+      !!ensuredProjectId &&
+      (!needsRepository || ensuredProjectId !== currentProjectId);
     store.setCurrentRoute({ route: canonicalPath });
     store.setRepositoryLoading({
       isLoading: needsRepository && !isAlreadyEnsured,
@@ -176,6 +179,10 @@ const createRouteTransitionRunner = (deps) => {
       });
     }
     render();
+
+    if (shouldReleaseEnsuredRepository) {
+      await projectService.releaseProjectRuntime(ensuredProjectId);
+    }
 
     if (!needsRepository) {
       if (currentTransitionToken !== transitionToken) {
