@@ -205,7 +205,7 @@ describe("tauri db lock handling", () => {
   it("recovers from a closed-pool app db handle by reopening and retrying once", async () => {
     const kv = new Map();
     const staleDb = {
-      execute: vi.fn(async (sql, args = []) => {
+      execute: vi.fn(async (sql, _args = []) => {
         if (String(sql).includes("PRAGMA busy_timeout")) {
           return { rowsAffected: 0 };
         }

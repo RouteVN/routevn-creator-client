@@ -7,7 +7,6 @@ import {
   getTemplateFiles,
 } from "../../clients/web/templateLoader.js";
 import {
-  PROJECT_DB_NAME,
   createPersistedTauriProjectStore,
   evictPersistedTauriProjectStoreCache,
   toBootstrappedCommittedEvent,
@@ -27,7 +26,6 @@ import {
   resolveProjectResolutionForWrite,
   scaleTemplateProjectStateForResolution,
 } from "../../../internal/projectResolution.js";
-import { SQLITE_BUSY_TIMEOUT_MS } from "../../../internal/sqliteLocking.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
 const CREATOR_VERSION_KEY = "creatorVersion";

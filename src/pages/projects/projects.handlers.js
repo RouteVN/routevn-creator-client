@@ -756,23 +756,18 @@ export const handleDeleteDialogConfirm = async (deps) => {
     return;
   }
 
-  let failedStage = "unknown";
-
   try {
     if (
       projectId &&
       typeof projectService?.releaseProjectRuntime === "function"
     ) {
-      failedStage = "release_project_runtime";
       await projectService.releaseProjectRuntime(projectId);
     }
 
     if (projectId) {
-      failedStage = "remove_project_entry";
       await appService.removeProjectEntry(projectId);
       store.removeProject({ projectId });
     } else {
-      failedStage = "remove_project_entry_by_path";
       await appService.removeProjectEntryByPath(projectPath);
       store.removeProject({ projectPath });
     }
