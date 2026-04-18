@@ -413,7 +413,7 @@ export const selectViewData = ({ state }) => {
         ? getPreviewFileId(selectedItem)
         : undefined,
     searchQuery: state.searchQuery,
-    uploadText: "Upload Sprite",
+    uploadText: "Upload",
     acceptedFileTypes: [".jpg", ".jpeg", ".png", ".webp"],
     imageHeight: IMAGE_CARD_HEIGHT,
     maxWidth: IMAGE_CARD_MAX_WIDTH,

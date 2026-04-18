@@ -37,9 +37,6 @@ const findElement = (elements, predicate) => {
   return undefined;
 };
 
-const findElementById = (elements, elementId) =>
-  findElement(elements, (element) => element.id === elementId);
-
 const buildDefaultTemplateLayout = (layoutName) => {
   const layout = Object.values(defaultRepositoryTemplate.layouts.items).find(
     (entry) => entry.name === layoutName,
@@ -605,22 +602,24 @@ describe("layout visibility conditions", () => {
       },
     );
 
-    expect(elements[0]).toEqual(expect.objectContaining({
-      id: "confirm-ok",
-      type: "container",
-      anchorX: 0,
-      anchorY: 0,
-      scaleX: 1,
-      scaleY: 1,
-      rotation: 0,
-      gapX: 0,
-      gapY: 0,
-      click: {
-        payload: {
-          actions: "${confirmDialog.confirmActions}",
+    expect(elements[0]).toEqual(
+      expect.objectContaining({
+        id: "confirm-ok",
+        type: "container",
+        anchorX: 0,
+        anchorY: 0,
+        scaleX: 1,
+        scaleY: 1,
+        rotation: 0,
+        gapX: 0,
+        gapY: 0,
+        click: {
+          payload: {
+            actions: "${confirmDialog.confirmActions}",
+          },
         },
-      },
-    }));
+      }),
+    );
   });
 
   it("compiles confirm dialog cancel containers to runtime cancel actions", () => {
@@ -641,22 +640,24 @@ describe("layout visibility conditions", () => {
       },
     );
 
-    expect(elements[0]).toEqual(expect.objectContaining({
-      id: "confirm-cancel",
-      type: "container",
-      anchorX: 0,
-      anchorY: 0,
-      scaleX: 1,
-      scaleY: 1,
-      rotation: 0,
-      gapX: 0,
-      gapY: 0,
-      click: {
-        payload: {
-          actions: "${confirmDialog.cancelActions}",
+    expect(elements[0]).toEqual(
+      expect.objectContaining({
+        id: "confirm-cancel",
+        type: "container",
+        anchorX: 0,
+        anchorY: 0,
+        scaleX: 1,
+        scaleY: 1,
+        rotation: 0,
+        gapX: 0,
+        gapY: 0,
+        click: {
+          payload: {
+            actions: "${confirmDialog.cancelActions}",
+          },
         },
-      },
-    }));
+      }),
+    );
   });
 
   it("lets confirm dialog special container bindings override authored click action payloads", () => {
@@ -694,12 +695,24 @@ describe("layout visibility conditions", () => {
   it("keeps the shipped default confirm dialog layout wired to runtime confirm actions", () => {
     const { elements } = buildDefaultTemplateLayout("Confirm go to title");
 
-    expect(findElementById(elements, "d0yCIqdbXEFKRGBuLUzCR")?.click).toEqual({
+    expect(
+      findElement(
+        elements,
+        (element) =>
+          element.click?.payload?.actions === "${confirmDialog.confirmActions}",
+      )?.click,
+    ).toEqual({
       payload: {
         actions: "${confirmDialog.confirmActions}",
       },
     });
-    expect(findElementById(elements, "Glr2VGapLNVUCqMoYWZfk")?.click).toEqual({
+    expect(
+      findElement(
+        elements,
+        (element) =>
+          element.click?.payload?.actions === "${confirmDialog.cancelActions}",
+      )?.click,
+    ).toEqual({
       payload: {
         actions: "${confirmDialog.cancelActions}",
       },

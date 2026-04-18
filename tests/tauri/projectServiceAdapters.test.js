@@ -169,6 +169,25 @@ describe("tauri project service adapters preflight reads", () => {
     }));
   });
 
+  it("rejects invalid project file ids before resolving tauri file paths", async () => {
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+
+    await expect(
+      fileAdapter.getFileContent({
+        fileId: "../project.db",
+        getCurrentReference: () => ({
+          projectPath: "/projects/dialune",
+          cacheKey: "/projects/dialune",
+        }),
+      }),
+    ).rejects.toThrow("Project file id is invalid.");
+
+    expect(mocked.join).not.toHaveBeenCalled();
+  });
+
   it("reads creatorVersion from app_state without creating the project store", async () => {
     mocked.exists.mockResolvedValue(true);
     mocked.connection.select.mockResolvedValue([

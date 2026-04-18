@@ -127,7 +127,28 @@ export const addCharacter = ({ state }, { id } = {}) => {
 };
 
 export const removeCharacter = ({ state }, { index } = {}) => {
+  if (
+    !Number.isInteger(index) ||
+    index < 0 ||
+    index >= state.selectedCharacters.length
+  ) {
+    return;
+  }
+
   state.selectedCharacters.splice(index, 1);
+
+  if (state.selectedCharacterIndex === index) {
+    state.selectedCharacterIndex = undefined;
+    state.tempSelectedSpriteId = undefined;
+    return;
+  }
+
+  if (
+    Number.isInteger(state.selectedCharacterIndex) &&
+    state.selectedCharacterIndex > index
+  ) {
+    state.selectedCharacterIndex -= 1;
+  }
 };
 
 export const updateCharacterTransform = (
