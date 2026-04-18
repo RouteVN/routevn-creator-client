@@ -19,6 +19,7 @@ const mocked = vi.hoisted(() => ({
   createProjectCollabService: vi.fn(),
   createWebSocketTransport: vi.fn(),
   applyCommandToRepository: vi.fn(),
+  commandToSyncEvent: vi.fn(),
 }));
 
 vi.mock("@tauri-apps/plugin-fs", () => ({
@@ -59,6 +60,10 @@ vi.mock(
     createWebSocketTransport: mocked.createWebSocketTransport,
   }),
 );
+
+vi.mock("../../src/deps/services/shared/collab/mappers.js", () => ({
+  commandToSyncEvent: mocked.commandToSyncEvent,
+}));
 
 vi.mock("../../src/deps/services/shared/projectRepository.js", async () => {
   const actual = await vi.importActual(
@@ -144,6 +149,7 @@ describe("tauri project service adapters preflight reads", () => {
     mocked.createProjectCollabService.mockReset();
     mocked.createWebSocketTransport.mockReset();
     mocked.applyCommandToRepository.mockReset();
+    mocked.commandToSyncEvent.mockReset();
 
     mocked.join.mockImplementation(async (...parts) => parts.join("/"));
     mocked.getManagedSqliteConnection.mockReturnValue(mocked.connection);
@@ -151,6 +157,16 @@ describe("tauri project service adapters preflight reads", () => {
     mocked.createWebSocketTransport.mockReturnValue({
       kind: "transport",
     });
+    mocked.commandToSyncEvent.mockImplementation((command) => ({
+      id: command?.id,
+      partition: command?.partition,
+      projectId: command?.projectId,
+      type: command?.type,
+      schemaVersion: command?.schemaVersion,
+      payload: structuredClone(command?.payload),
+      clientTs: command?.clientTs,
+      meta: structuredClone(command?.meta ?? {}),
+    }));
   });
 
   it("reads creatorVersion from app_state without creating the project store", async () => {
@@ -394,5 +410,63 @@ describe("tauri project service adapters preflight reads", () => {
       projectId: "project-1",
     });
     expect(repositoryStore.app.remove).toHaveBeenCalledWith("projectorGap");
+  });
+
+  it("uses a local-only session in local mode without starting the sync client", async () => {
+    const repository = {
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const repositoryStore = {
+      insertDraft: vi.fn(async () => {}),
+      insertDrafts: vi.fn(async () => {}),
+    };
+
+    const { collabAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+
+    const session = await collabAdapter.createSessionForProject({
+      projectId: "project-1",
+      userId: "user-1",
+      clientId: "client-1",
+      mode: "local",
+      getRepositoryByProject: async () => repository,
+      getStoreByProject: async () => repositoryStore,
+    });
+
+    expect(mocked.createProjectCollabService).not.toHaveBeenCalled();
+
+    await expect(
+      session.submitCommand({
+        id: "cmd-1",
+        partition: "m",
+        projectId: "project-1",
+        type: "scene.create",
+        schemaVersion: 1,
+        payload: {
+          sceneId: "scene-1",
+          data: {
+            name: "Scene 1",
+          },
+        },
+        clientTs: 10,
+        meta: {
+          clientTs: 10,
+        },
+      }),
+    ).resolves.toEqual({
+      valid: true,
+      commandId: "cmd-1",
+    });
+
+    expect(repositoryStore.insertDraft).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "cmd-1",
+        projectId: "project-1",
+        type: "scene.create",
+        createdAt: 10,
+      }),
+    );
   });
 });

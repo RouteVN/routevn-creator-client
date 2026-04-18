@@ -204,6 +204,25 @@ const openDatabase = async (name, version) =>
     request.onerror = (event) => reject(event.target.error);
   });
 
+const createLegacyEventsDatabase = async (name) =>
+  new Promise((resolve, reject) => {
+    const request = indexedDB.open(name, 1);
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains("events")) {
+        db.createObjectStore("events", {
+          keyPath: "id",
+          autoIncrement: true,
+        });
+      }
+    };
+    request.onsuccess = (event) => {
+      event.target.result.close();
+      resolve();
+    };
+    request.onerror = (event) => reject(event.target.error);
+  });
+
 const createRawClientStoreStub = ({
   committed = [],
   drafts = [],
@@ -296,6 +315,27 @@ describe("webRepositoryAdapter", () => {
 
     const db = await openDatabase(projectId, 4);
     expect([...db.objectStoreNames]).not.toContain("events");
+    db.close();
+  });
+
+  it("rejects legacy browser projects that still store repository history in the events store", async () => {
+    const projectId = "web-legacy-events-project";
+    await createLegacyEventsDatabase(projectId);
+
+    await expect(
+      createInsiemeWebStoreAdapter(projectId, {
+        rawClientStore: createRawClientStoreStub(),
+      }),
+    ).rejects.toMatchObject({
+      code: "project_store_format_unsupported",
+      details: expect.objectContaining({
+        projectId,
+        reason: "legacy_web_events_store_unsupported",
+      }),
+    });
+
+    const db = await openDatabase(projectId);
+    expect([...db.objectStoreNames]).toContain("events");
     db.close();
   });
 

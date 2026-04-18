@@ -28,6 +28,21 @@ const REPOSITORY_DB_VERSION = 4;
 const MATERIALIZED_VIEW_STORE = "materialized_view_state";
 const PROJECT_INFO_KEY = "projectInfo";
 
+const createUnsupportedProjectStoreFormatError = ({
+  projectId,
+  reason,
+  details,
+} = {}) => {
+  const error = new Error("Unsupported project store format");
+  error.code = "project_store_format_unsupported";
+  error.details = {
+    projectId,
+    reason,
+    ...(details && typeof details === "object" ? structuredClone(details) : {}),
+  };
+  return error;
+};
+
 const normalizeProjectInfo = (projectInfo = {}) => ({
   id: projectInfo.id ?? "",
   namespace: projectInfo.namespace ?? "",
@@ -195,14 +210,30 @@ export const createInsiemeWebStoreAdapter = async (
     );
   }
 
+  let unsupportedLegacyStoreFormatError;
+
   const db = await openIDB(projectId, REPOSITORY_DB_VERSION, (event) => {
     const idb = event.target.result;
     const previousVersion = Number(event.oldVersion) || 0;
+    const hasLegacyEventsStore = idb.objectStoreNames.contains("events");
+
+    if (
+      previousVersion > 0 &&
+      previousVersion < REPOSITORY_DB_VERSION &&
+      hasLegacyEventsStore
+    ) {
+      unsupportedLegacyStoreFormatError =
+        createUnsupportedProjectStoreFormatError({
+          projectId,
+          reason: "legacy_web_events_store_unsupported",
+          details: {
+            legacyDbVersion: previousVersion,
+          },
+        });
+      return;
+    }
 
     if (previousVersion > 0 && previousVersion < REPOSITORY_DB_VERSION) {
-      if (idb.objectStoreNames.contains("events")) {
-        idb.deleteObjectStore("events");
-      }
       if (idb.objectStoreNames.contains(MATERIALIZED_VIEW_STORE)) {
         idb.deleteObjectStore(MATERIALIZED_VIEW_STORE);
       }
@@ -220,6 +251,11 @@ export const createInsiemeWebStoreAdapter = async (
       });
     }
   });
+
+  if (unsupportedLegacyStoreFormatError) {
+    db.close();
+    throw unsupportedLegacyStoreFormatError;
+  }
 
   return {
     // Insieme store interface

@@ -17,6 +17,7 @@ const mocked = vi.hoisted(() => ({
     getAdapterById: vi.fn(),
     getEnsuredProjectId: vi.fn(),
     releaseCurrentRepository: vi.fn(),
+    releaseRepositoryByProjectId: vi.fn(),
     ensureRepository: vi.fn(),
     ensureProjectCompatibleByProjectId: vi.fn(),
     subscribeProjectState: vi.fn(),
@@ -93,6 +94,7 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     mocked.repositoryService.getEnsuredProjectId.mockReset();
     mocked.repositoryService.ensureRepository.mockReset();
     mocked.repositoryService.releaseCurrentRepository.mockReset();
+    mocked.repositoryService.releaseRepositoryByProjectId.mockReset();
     mocked.collabService.stopCollabSession.mockReset();
   });
 
@@ -237,5 +239,46 @@ describe("projectServiceCore releaseProjectRuntime", () => {
       uploadFiles: mocked.assetService.uploadFiles,
       createImage: mocked.collabService.commandApi.createImage,
     });
+  });
+
+  it("evicts cached repository state before initializing a project store", async () => {
+    const initializeProject = vi.fn(async () => {});
+    mocked.repositoryService.releaseRepositoryByProjectId.mockResolvedValue(
+      undefined,
+    );
+
+    const projectService = createProjectServiceCore({
+      router: {
+        getPayload: () => ({ p: "project-1" }),
+      },
+      db: {},
+      filePicker: {},
+      idGenerator: () => "generated-id",
+      now: () => 0,
+      collabLog: () => {},
+      creatorVersion: 1,
+      storageAdapter: {
+        initializeProject,
+      },
+      fileAdapter: {},
+      collabAdapter: {},
+    });
+
+    await projectService.initializeProject({
+      projectId: "project-1",
+      template: "blank",
+    });
+
+    expect(
+      mocked.repositoryService.releaseRepositoryByProjectId,
+    ).toHaveBeenCalledWith("project-1");
+    expect(initializeProject).toHaveBeenCalledWith({
+      projectId: "project-1",
+      template: "blank",
+    });
+    expect(
+      mocked.repositoryService.releaseRepositoryByProjectId.mock
+        .invocationCallOrder[0],
+    ).toBeLessThan(initializeProject.mock.invocationCallOrder[0]);
   });
 });

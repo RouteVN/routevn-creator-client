@@ -297,6 +297,18 @@ export const createProjectRepositoryRuntime = async ({
     emitHydrationProgress(activeHydrationProgress);
   };
 
+  const saveCurrentMainCheckpoint = async () => {
+    const value = structuredClone(getCurrentComposedState());
+    await store.saveMaterializedViewCheckpoint({
+      viewName: MAIN_VIEW_NAME,
+      partition: MAIN_PARTITION,
+      viewVersion: MAIN_VIEW_VERSION,
+      lastCommittedId: currentRevision,
+      value,
+      updatedAt: Date.now(),
+    });
+  };
+
   const endInitialMainHydrationProgress = ({
     progress,
     completed = false,
@@ -928,10 +940,12 @@ export const createProjectRepositoryRuntime = async ({
         viewName: MAIN_VIEW_NAME,
         partition: MAIN_PARTITION,
       });
+      await saveCurrentMainCheckpoint();
     },
 
     async flushMaterializedViews() {
       await materializedViewRuntime.flushMaterializedViews();
+      await saveCurrentMainCheckpoint();
       await sceneBundleRuntime.flushSceneOverviews();
     },
   };

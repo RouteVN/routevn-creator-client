@@ -228,6 +228,22 @@ export const createProjectRepositoryService = ({
     await releaseRepositoryByReference(currentReference);
   };
 
+  const releaseRepositoryByProjectId = async (projectId) => {
+    if (!projectId) {
+      return;
+    }
+
+    const reference =
+      referencesByProject.get(projectId) ||
+      (currentProjectId === projectId ? currentReference : undefined);
+
+    if (!reference) {
+      return;
+    }
+
+    await releaseRepositoryByReference(reference);
+  };
+
   const withRecoveredStore = async (reference, run) => {
     let hasRetriedClosedPool = false;
 
@@ -921,6 +937,9 @@ export const createProjectRepositoryService = ({
     getRepositoryByProject,
     getAdapterById(projectId) {
       return storesByProject.get(projectId);
+    },
+    async releaseRepositoryByProjectId(projectId) {
+      return releaseRepositoryByProjectId(projectId);
     },
     async ensureRepository(options) {
       return ensureRepository(options);

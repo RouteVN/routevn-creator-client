@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { inspectBootstrapHistorySupport } from "../../src/deps/services/tauri/collabClientStore.js";
+import {
+  inspectBootstrapHistorySupport,
+  isCurrentMainCheckpointCompatibleWithHistory,
+} from "../../src/deps/services/tauri/collabClientStore.js";
 
 const projectId = "project-1";
 
@@ -235,5 +238,30 @@ describe("inspectBootstrapHistorySupport", () => {
       supported: false,
       reason: "multiple_bootstrap_events",
     });
+  });
+
+  it("accepts checkpoint-backed local-only history when current history stats match", () => {
+    expect(
+      isCurrentMainCheckpointCompatibleWithHistory({
+        checkpoint: {
+          viewVersion: "1",
+          lastCommittedId: 8,
+          meta: {
+            historyStats: {
+              committedCount: 0,
+              latestCommittedId: 0,
+              draftCount: 8,
+              latestDraftClock: 8,
+            },
+          },
+        },
+        historyStats: {
+          committedCount: 0,
+          latestCommittedId: 0,
+          draftCount: 8,
+          latestDraftClock: 8,
+        },
+      }),
+    ).toBe(true);
   });
 });

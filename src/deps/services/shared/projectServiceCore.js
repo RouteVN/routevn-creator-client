@@ -237,6 +237,7 @@ export const createProjectServiceCore = ({
     deleteSoundIfUnused: collabService.deleteSoundIfUnused,
     deleteVideoIfUnused: collabService.deleteVideoIfUnused,
     async initializeProject(payload) {
+      await repositoryService.releaseRepositoryByProjectId(payload?.projectId);
       return storageAdapter.initializeProject(payload);
     },
     createCollabSession: collabService.createCollabSession,

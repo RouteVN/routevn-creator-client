@@ -162,6 +162,20 @@ const applyRepositoryEventsToState = ({
   return applyResult.repositoryState;
 };
 
+const logInvalidLocalDraftDuringProjectLoad = ({
+  projectId,
+  failedDraft,
+  error,
+} = {}) => {
+  console.warn("Skipping invalid local draft during project load", {
+    projectId,
+    draftId: failedDraft?.id,
+    draftType: failedDraft?.type,
+    code: error?.code || "validation_failed",
+    message: error?.message || "Invalid local draft",
+  });
+};
+
 export const loadCommittedEventsFromClientStore = async (store) => {
   const committedEvents = [];
   let sinceCommittedId = 0;
@@ -282,7 +296,6 @@ export const loadRepositoryEventsFromClientStore = async ({
     let repositoryState = structuredClone(
       bootstrapEvent?.payload?.state ?? initialProjectData,
     );
-    const invalidDrafts = [];
     let remainingDraftEvents = draftEvents.slice(1);
 
     while (remainingDraftEvents.length > 0) {
@@ -323,29 +336,18 @@ export const loadRepositoryEventsFromClientStore = async ({
         }
 
         const failedDraft = remainingDraftEvents[resolvedFailedDraftIndex];
-        invalidDrafts.push({
-          id: failedDraft?.id,
-          code: error?.code || "validation_failed",
-          message: error?.message || "Invalid local draft",
-        });
         processedEventCount += 1;
         reportProgress({ force: true });
         await yieldForUiPaint();
+        logInvalidLocalDraftDuringProjectLoad({
+          projectId,
+          failedDraft,
+          error,
+        });
         remainingDraftEvents = remainingDraftEvents.slice(
           resolvedFailedDraftIndex + 1,
         );
       }
-    }
-
-    for (const invalidDraft of invalidDrafts) {
-      await store.applySubmitResult?.({
-        result: {
-          id: invalidDraft.id,
-          status: "rejected",
-          reason: invalidDraft.code,
-          message: invalidDraft.message,
-        },
-      });
     }
 
     reportProgress({ force: true });
@@ -364,7 +366,6 @@ export const loadRepositoryEventsFromClientStore = async ({
     events,
     projectId,
   });
-  const invalidDrafts = [];
   let remainingDraftEvents = draftEvents;
   while (remainingDraftEvents.length > 0) {
     try {
@@ -404,35 +405,18 @@ export const loadRepositoryEventsFromClientStore = async ({
       }
 
       const failedDraft = remainingDraftEvents[resolvedFailedDraftIndex];
-      invalidDrafts.push({
-        id: failedDraft?.id,
-        code: error?.code || "validation_failed",
-        message: error?.message || "Invalid local draft",
-      });
       processedEventCount += 1;
       reportProgress({ force: true });
       await yieldForUiPaint();
-      console.warn("Discarding invalid local draft during project load", {
+      logInvalidLocalDraftDuringProjectLoad({
         projectId,
-        draftId: failedDraft?.id,
-        code: error?.code || "validation_failed",
-        message: error?.message || "Invalid local draft",
+        failedDraft,
+        error,
       });
       remainingDraftEvents = remainingDraftEvents.slice(
         resolvedFailedDraftIndex + 1,
       );
     }
-  }
-
-  for (const invalidDraft of invalidDrafts) {
-    await store.applySubmitResult?.({
-      result: {
-        id: invalidDraft.id,
-        status: "rejected",
-        reason: invalidDraft.code,
-        message: invalidDraft.message,
-      },
-    });
   }
 
   reportProgress({ force: true });
