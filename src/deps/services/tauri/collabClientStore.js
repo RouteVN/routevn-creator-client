@@ -9,20 +9,23 @@ import {
 } from "../../../internal/sqliteLocking.js";
 import { getManagedSqliteConnection } from "../../clients/tauri/sqliteConnectionManager.js";
 import {
-  applyRepositoryEventsToRepositoryState,
-  createProjectCreateRepositoryEvent,
-  initialProjectData,
-} from "../shared/projectRepository.js";
+  areRepositoryHistoryStatsEqual,
+  getRepositoryHistoryLength,
+  loadCommittedEventsFromClientStore,
+  loadDraftEventsFromClientStore,
+  loadRepositoryEventsFromClientStore,
+  normalizeRepositoryHistoryStats,
+} from "../shared/collab/clientStoreHistory.js";
 import {
   MAIN_PARTITION,
   MAIN_VIEW_NAME,
+  MAIN_VIEW_VERSION,
 } from "../shared/projectRepositoryViews/shared.js";
 
 export const PROJECT_DB_NAME = "project.db";
 
 const MATERIALIZED_VIEW_TABLE = "materialized_view_state";
 const APP_STATE_TABLE = "app_state";
-const VERSIONS_KEY = "versions";
 const PROJECT_CREATE_COMMAND_TYPE = "project.create";
 const storePromisesByDbPath = new Map();
 const SQL_BYTES_TYPE_KEY = "__routevn_sql_type";
@@ -31,7 +34,8 @@ const SQL_BYTES_DATA_KEY = "data";
 const WAL_CHECKPOINT_THROTTLE_MS = 20000;
 const ROUTEVN_CHECKPOINT_ENVELOPE_KEY = "__routevnCheckpoint";
 const ROUTEVN_CHECKPOINT_ENVELOPE_VERSION = 1;
-export const DRAFT_HISTORY_MODE_SNAPSHOT_ARCHIVE = "snapshot_archive";
+export const loadRepositoryEvents = loadRepositoryEventsFromClientStore;
+export { toBootstrappedCommittedEvent } from "../shared/collab/clientStoreHistory.js";
 
 const isReadQuery = (sql) => {
   const normalized = String(sql ?? "")
@@ -184,48 +188,6 @@ const toMaterializedViewCheckpoint = (row) => {
   };
 };
 
-const normalizeHistoryStatValue = (value) => {
-  const numericValue = Number(value);
-  if (!Number.isFinite(numericValue)) {
-    return 0;
-  }
-  return Math.max(0, Math.floor(numericValue));
-};
-
-const isPlainObject = (value) =>
-  Boolean(value) && typeof value === "object" && !Array.isArray(value);
-
-const areJsonStatesEqual = (left, right) => {
-  if (!isPlainObject(left) || !isPlainObject(right)) {
-    return false;
-  }
-
-  try {
-    return JSON.stringify(left) === JSON.stringify(right);
-  } catch {
-    return false;
-  }
-};
-
-const normalizeRepositoryHistoryStats = (stats = {}) => ({
-  committedCount: normalizeHistoryStatValue(stats?.committedCount),
-  latestCommittedId: normalizeHistoryStatValue(stats?.latestCommittedId),
-  draftCount: normalizeHistoryStatValue(stats?.draftCount),
-  latestDraftClock: normalizeHistoryStatValue(stats?.latestDraftClock),
-});
-
-const areRepositoryHistoryStatsEqual = (left, right) => {
-  const normalizedLeft = normalizeRepositoryHistoryStats(left);
-  const normalizedRight = normalizeRepositoryHistoryStats(right);
-
-  return (
-    normalizedLeft.committedCount === normalizedRight.committedCount &&
-    normalizedLeft.latestCommittedId === normalizedRight.latestCommittedId &&
-    normalizedLeft.draftCount === normalizedRight.draftCount &&
-    normalizedLeft.latestDraftClock === normalizedRight.latestDraftClock
-  );
-};
-
 export const evictPersistedTauriProjectStoreCache = async ({
   projectPath,
 } = {}) => {
@@ -328,465 +290,12 @@ const createLibsqlLikeClient = ({ runSelect, runExecute }) => {
   };
 };
 
-const toRepositoryEvent = (item, { created, projectId } = {}) => {
-  if (typeof item?.partition !== "string" || item.partition.length === 0) {
-    throw new Error("Stored collab row is missing partition");
-  }
-
-  const resolvedProjectId =
-    typeof item?.projectId === "string" && item.projectId.length > 0
-      ? item.projectId
-      : projectId;
-
-  if (typeof resolvedProjectId !== "string" || resolvedProjectId.length === 0) {
-    throw new Error("Stored collab row is missing projectId");
-  }
-
-  return {
-    id: item.id,
-    partition: item.partition,
-    projectId: resolvedProjectId,
-    userId: item.userId,
-    type: item.type,
-    schemaVersion: item.schemaVersion,
-    payload: structuredClone(item.payload),
-    clientTs: Number.isFinite(Number(item?.clientTs))
-      ? Number(item.clientTs)
-      : Number.isFinite(Number(item?.meta?.clientTs))
-        ? Number(item.meta.clientTs)
-        : undefined,
-    meta: item.meta ? structuredClone(item.meta) : {},
-    ...(created !== undefined ? { serverTs: created } : {}),
-  };
-};
-
-const assertRepositoryEventShape = (event) => {
-  if (!event || typeof event !== "object" || Array.isArray(event)) {
-    throw new Error("Reconstructed repository event is invalid");
-  }
-  if (typeof event.partition !== "string" || event.partition.length === 0) {
-    throw new Error(
-      `Reconstructed repository event is missing partition: ${JSON.stringify({
-        id: event?.id,
-        projectId: event?.projectId,
-        type: event?.type,
-        schemaVersion: event?.schemaVersion,
-        keys:
-          event && typeof event === "object" && !Array.isArray(event)
-            ? Object.keys(event)
-            : [],
-      })}`,
-    );
-  }
-  if (typeof event.projectId !== "string" || event.projectId.length === 0) {
-    throw new Error(
-      `Reconstructed repository event is missing projectId: ${JSON.stringify({
-        id: event?.id,
-        partition: event?.partition,
-        type: event?.type,
-        schemaVersion: event?.schemaVersion,
-      })}`,
-    );
-  }
-  if (typeof event.type !== "string" || event.type.length === 0) {
-    throw new Error(
-      `Reconstructed repository event is missing type: ${JSON.stringify({
-        id: event?.id,
-        partition: event?.partition,
-        projectId: event?.projectId,
-      })}`,
-    );
-  }
-  if (
-    !event.payload ||
-    typeof event.payload !== "object" ||
-    Array.isArray(event.payload)
-  ) {
-    throw new Error(
-      `Reconstructed repository event has invalid payload: ${JSON.stringify({
-        id: event?.id,
-        partition: event?.partition,
-        projectId: event?.projectId,
-        type: event?.type,
-        payloadType: Array.isArray(event?.payload)
-          ? "array"
-          : typeof event?.payload,
-      })}`,
-    );
-  }
-};
-
-const emitEventLoadProgress = (onProgress, payload = {}) => {
-  if (typeof onProgress !== "function") {
-    return;
-  }
-
-  onProgress(structuredClone(payload));
-};
-
-const yieldForUiPaint = async () => {
-  await new Promise((resolve) => {
-    globalThis.setTimeout(resolve, 0);
-  });
-};
-
-const applyRepositoryEventsToState = ({
-  repositoryState,
-  events = [],
-  projectId,
-} = {}) => {
-  const applyResult = applyRepositoryEventsToRepositoryState({
-    repositoryState,
-    events,
-    projectId,
-  });
-
-  if (applyResult?.valid === false || !applyResult?.repositoryState) {
-    const error = new Error(
-      applyResult?.error?.message || "Failed to apply repository events",
-    );
-    error.code = applyResult?.error?.code || "validation_failed";
-    error.details = applyResult?.error?.details ?? {};
-    throw error;
-  }
-
-  return applyResult.repositoryState;
-};
-
-export const loadRepositoryEvents = async ({
-  store,
-  projectId,
-  onProgress,
-  draftHistoryMode,
-}) => {
-  const committed = await store._debug.getCommitted();
-  emitEventLoadProgress(onProgress, {
-    phase: "read_project_events",
-    label: "Reading project events...",
-    current: 0,
-    total: committed.length,
-  });
-  const drafts = await store._debug.getDrafts();
-  const totalEventCount = committed.length + drafts.length;
-  let processedEventCount = 0;
-  let lastReportedCount = -1;
-  const reportProgress = ({ force = false } = {}) => {
-    if (!force && processedEventCount === lastReportedCount) {
-      return false;
-    }
-
-    lastReportedCount = processedEventCount;
-    emitEventLoadProgress(onProgress, {
-      phase: "read_project_events",
-      label:
-        drafts.length > 0
-          ? "Reading project events..."
-          : "Loading committed events...",
-      current: processedEventCount,
-      total: totalEventCount,
-    });
-    return true;
-  };
-
-  const events = [];
-  for (const committedEvent of committed) {
-    const nextEvent = toRepositoryEvent(committedEvent, {
-      created: committedEvent.serverTs,
-      projectId,
-    });
-    assertRepositoryEventShape(nextEvent);
-    events.push(nextEvent);
-    processedEventCount += 1;
-    if (
-      processedEventCount === totalEventCount ||
-      processedEventCount % 128 === 0
-    ) {
-      reportProgress();
-      await yieldForUiPaint();
-    }
-  }
-
-  if (drafts.length === 0) {
-    reportProgress({ force: true });
-    return events;
-  }
-
-  const draftEvents = drafts.map((draft) => {
-    const nextEvent = toRepositoryEvent(draft, {
-      created: draft.createdAt,
-      projectId,
-    });
-    assertRepositoryEventShape(nextEvent);
-    return nextEvent;
-  });
-
-  if (draftHistoryMode === DRAFT_HISTORY_MODE_SNAPSHOT_ARCHIVE) {
-    const bootstrapEvent = draftEvents[0];
-    events.push(bootstrapEvent);
-    processedEventCount += 1;
-    reportProgress({ force: true });
-    await yieldForUiPaint();
-
-    if (draftEvents.length === 1) {
-      reportProgress({ force: true });
-      return events;
-    }
-
-    let repositoryState = structuredClone(
-      bootstrapEvent?.payload?.state ?? initialProjectData,
-    );
-    const invalidDrafts = [];
-    let remainingDraftEvents = draftEvents.slice(1);
-
-    while (remainingDraftEvents.length > 0) {
-      try {
-        repositoryState = applyRepositoryEventsToState({
-          repositoryState,
-          events: remainingDraftEvents,
-          projectId,
-        });
-        events.push(...remainingDraftEvents);
-        processedEventCount += remainingDraftEvents.length;
-        reportProgress({ force: true });
-        await yieldForUiPaint();
-        break;
-      } catch (error) {
-        const failedDraftIndex = Number(error?.details?.commandIndex);
-        const resolvedFailedDraftIndex =
-          Number.isInteger(failedDraftIndex) &&
-          failedDraftIndex >= 0 &&
-          failedDraftIndex < remainingDraftEvents.length
-            ? failedDraftIndex
-            : 0;
-        const acceptedPrefix = remainingDraftEvents.slice(
-          0,
-          resolvedFailedDraftIndex,
-        );
-
-        if (acceptedPrefix.length > 0) {
-          repositoryState = applyRepositoryEventsToState({
-            repositoryState,
-            events: acceptedPrefix,
-            projectId,
-          });
-          events.push(...acceptedPrefix);
-          processedEventCount += acceptedPrefix.length;
-          reportProgress({ force: true });
-          await yieldForUiPaint();
-        }
-
-        const failedDraft = remainingDraftEvents[resolvedFailedDraftIndex];
-        invalidDrafts.push({
-          id: failedDraft?.id,
-          code: error?.code || "validation_failed",
-          message: error?.message || "Invalid local draft",
-        });
-        processedEventCount += 1;
-        reportProgress({ force: true });
-        await yieldForUiPaint();
-        remainingDraftEvents = remainingDraftEvents.slice(
-          resolvedFailedDraftIndex + 1,
-        );
-      }
-    }
-
-    for (const invalidDraft of invalidDrafts) {
-      await store.applySubmitResult({
-        result: {
-          id: invalidDraft.id,
-          status: "rejected",
-          reason: invalidDraft.code,
-          message: invalidDraft.message,
-        },
-      });
-    }
-
-    reportProgress({ force: true });
-    return events;
-  }
-
-  emitEventLoadProgress(onProgress, {
-    phase: "replay_local_drafts",
-    label: "Reading project events...",
-    current: processedEventCount,
-    total: totalEventCount,
-  });
-
-  let repositoryState = applyRepositoryEventsToState({
-    repositoryState: initialProjectData,
-    events,
-    projectId,
-  });
-  const invalidDrafts = [];
-  let remainingDraftEvents = draftEvents;
-  while (remainingDraftEvents.length > 0) {
-    try {
-      repositoryState = applyRepositoryEventsToState({
-        repositoryState,
-        events: remainingDraftEvents,
-        projectId,
-      });
-      events.push(...remainingDraftEvents);
-      processedEventCount += remainingDraftEvents.length;
-      reportProgress({ force: true });
-      await yieldForUiPaint();
-      break;
-    } catch (error) {
-      const failedDraftIndex = Number(error?.details?.commandIndex);
-      const resolvedFailedDraftIndex =
-        Number.isInteger(failedDraftIndex) &&
-        failedDraftIndex >= 0 &&
-        failedDraftIndex < remainingDraftEvents.length
-          ? failedDraftIndex
-          : 0;
-      const acceptedPrefix = remainingDraftEvents.slice(
-        0,
-        resolvedFailedDraftIndex,
-      );
-
-      if (acceptedPrefix.length > 0) {
-        repositoryState = applyRepositoryEventsToState({
-          repositoryState,
-          events: acceptedPrefix,
-          projectId,
-        });
-        events.push(...acceptedPrefix);
-        processedEventCount += acceptedPrefix.length;
-        reportProgress({ force: true });
-        await yieldForUiPaint();
-      }
-
-      const failedDraft = remainingDraftEvents[resolvedFailedDraftIndex];
-      invalidDrafts.push({
-        id: failedDraft?.id,
-        code: error?.code || "validation_failed",
-        message: error?.message || "Invalid local draft",
-      });
-      processedEventCount += 1;
-      reportProgress({ force: true });
-      await yieldForUiPaint();
-      console.warn("Discarding invalid local draft during project load", {
-        projectId,
-        draftId: failedDraft?.id,
-        code: error?.code || "validation_failed",
-        message: error?.message || "Invalid local draft",
-      });
-      remainingDraftEvents = remainingDraftEvents.slice(
-        resolvedFailedDraftIndex + 1,
-      );
-    }
-  }
-
-  for (const invalidDraft of invalidDrafts) {
-    await store.applySubmitResult({
-      result: {
-        id: invalidDraft.id,
-        status: "rejected",
-        reason: invalidDraft.code,
-        message: invalidDraft.message,
-      },
-    });
-  }
-
-  reportProgress({ force: true });
-  return events;
-};
-
-export const toBootstrappedCommittedEvent = (repositoryEvent, index) => ({
-  ...structuredClone(repositoryEvent),
-  committedId: index + 1,
-  clientTs: Number.isFinite(Number(repositoryEvent?.clientTs))
-    ? Number(repositoryEvent.clientTs)
-    : Number.isFinite(Number(repositoryEvent?.meta?.clientTs))
-      ? Number(repositoryEvent.meta.clientTs)
-      : index + 1,
-  serverTs: Number.isFinite(Number(repositoryEvent?.clientTs))
-    ? Number(repositoryEvent.clientTs)
-    : Number.isFinite(Number(repositoryEvent?.meta?.clientTs))
-      ? Number(repositoryEvent.meta.clientTs)
-      : index + 1,
-});
-
 const isBootstrapRepositoryEvent = (event) =>
   event?.type === PROJECT_CREATE_COMMAND_TYPE;
 
-const isSceneLineHistoryEvent = (event) => {
-  const partition = String(event?.partition ?? "");
-  const type = String(event?.type ?? "");
-
-  return (
-    (partition.startsWith("s:") || partition.startsWith("m:s:")) &&
-    type.startsWith("line.")
-  );
-};
-
-const createCommittedEventRecord = (event, index, { projectId } = {}) => {
-  const nextEvent = structuredClone(event);
-  const defaultTimestamp = index + 1;
-
-  nextEvent.committedId = index + 1;
-  nextEvent.projectId = nextEvent.projectId || projectId;
-  nextEvent.clientTs = Number.isFinite(Number(nextEvent?.clientTs))
-    ? Number(nextEvent.clientTs)
-    : defaultTimestamp;
-  nextEvent.serverTs = Number.isFinite(Number(nextEvent?.serverTs))
-    ? Number(nextEvent.serverTs)
-    : nextEvent.clientTs;
-  nextEvent.createdAt = Number.isFinite(Number(nextEvent?.createdAt))
-    ? Number(nextEvent.createdAt)
-    : nextEvent.serverTs;
-
-  return nextEvent;
-};
-
-const createCommittedEventFromDraft = (draft, index, { projectId } = {}) => {
-  return createCommittedEventRecord(
-    {
-      id: draft?.id,
-      projectId,
-      partition: draft?.partition,
-      type: draft?.type,
-      schemaVersion: draft?.schemaVersion,
-      payload: structuredClone(draft?.payload),
-      payloadCompression: draft?.payloadCompression,
-      clientTs: Number.isFinite(Number(draft?.clientTs))
-        ? Number(draft.clientTs)
-        : undefined,
-      serverTs: Number.isFinite(Number(draft?.createdAt))
-        ? Number(draft.createdAt)
-        : undefined,
-      createdAt: Number.isFinite(Number(draft?.createdAt))
-        ? Number(draft.createdAt)
-        : undefined,
-    },
-    index,
-    { projectId },
-  );
-};
-
-const bumpVersionsActionIndex = (versions = [], delta = 0) => {
-  if (!Array.isArray(versions) || delta === 0) {
-    return structuredClone(Array.isArray(versions) ? versions : []);
-  }
-
-  return versions.map((version) => {
-    const nextVersion = structuredClone(version);
-    const actionIndex = Number(nextVersion?.actionIndex);
-    if (!Number.isFinite(actionIndex)) {
-      return nextVersion;
-    }
-
-    nextVersion.actionIndex = Math.max(0, Math.floor(actionIndex) + delta);
-    return nextVersion;
-  });
-};
-
-export const planBootstrapHistoryRepair = ({
-  projectId,
+export const inspectBootstrapHistorySupport = ({
   committedEvents = [],
   draftEvents = [],
-  mainCheckpointState,
-  versions = [],
 } = {}) => {
   const committed = Array.isArray(committedEvents)
     ? committedEvents.map((event) => structuredClone(event))
@@ -794,13 +303,10 @@ export const planBootstrapHistoryRepair = ({
   const drafts = Array.isArray(draftEvents)
     ? draftEvents.map((event) => structuredClone(event))
     : [];
-  const normalizedVersions = Array.isArray(versions)
-    ? versions.map((version) => structuredClone(version))
-    : [];
 
   if (committed.length === 0 && drafts.length === 0) {
     return {
-      changed: false,
+      supported: true,
       reason: "history_empty",
     };
   }
@@ -812,27 +318,24 @@ export const planBootstrapHistoryRepair = ({
     .map((event, index) => (isBootstrapRepositoryEvent(event) ? index : -1))
     .filter((index) => index >= 0);
 
-  const canonicalSnapshotDraftArchive =
-    committed.length === 0 &&
-    drafts.length > 1 &&
-    draftBootstrapIndexes.length === 1 &&
-    draftBootstrapIndexes[0] === 0 &&
-    areJsonStatesEqual(drafts[0]?.payload?.state, mainCheckpointState);
-
-  if (canonicalSnapshotDraftArchive) {
-    return {
-      changed: false,
-      reason: "canonical_snapshot_draft_history",
-    };
-  }
-
   if (
     committedBootstrapIndexes.length === 1 &&
     committedBootstrapIndexes[0] === 0 &&
     draftBootstrapIndexes.length === 0
   ) {
     return {
-      changed: false,
+      supported: true,
+      reason: "history_valid",
+    };
+  }
+
+  if (
+    draftBootstrapIndexes.length === 1 &&
+    draftBootstrapIndexes[0] === 0 &&
+    committedBootstrapIndexes.length === 0
+  ) {
+    return {
+      supported: true,
       reason: "history_valid",
     };
   }
@@ -843,89 +346,84 @@ export const planBootstrapHistoryRepair = ({
     (committedBootstrapIndexes.length > 0 && draftBootstrapIndexes.length > 0)
   ) {
     return {
-      changed: false,
+      supported: false,
       reason: "multiple_bootstrap_events",
     };
   }
 
   if (committedBootstrapIndexes.length === 1) {
-    const bootstrapIndex = committedBootstrapIndexes[0];
-    const [bootstrapEvent] = committed.splice(bootstrapIndex, 1);
-
-    committed.unshift(bootstrapEvent);
-
     return {
-      changed: true,
-      reason: "reordered_bootstrap_committed_event",
-      committedEvents: committed.map((event, index) =>
-        createCommittedEventRecord(event, index, { projectId }),
-      ),
-      draftEvents: drafts,
-      versions: normalizedVersions,
+      supported: false,
+      reason: "misordered_bootstrap_committed_event",
     };
   }
 
   if (draftBootstrapIndexes.length === 1) {
-    const bootstrapIndex = draftBootstrapIndexes[0];
-    const [bootstrapDraft] = drafts.splice(bootstrapIndex, 1);
-    const repairedCommittedEvents = [
-      createCommittedEventFromDraft(bootstrapDraft, 0, { projectId }),
-      ...committed.map((event, index) =>
-        createCommittedEventRecord(event, index + 1, { projectId }),
-      ),
-    ];
-
     return {
-      changed: true,
-      reason: "promoted_bootstrap_draft",
-      committedEvents: repairedCommittedEvents,
-      draftEvents: drafts,
-      versions: normalizedVersions,
+      supported: false,
+      reason: "misordered_bootstrap_draft_event",
     };
   }
-
-  const rawEvents = [...committed, ...drafts];
-  const hasOnlySceneLineHistory =
-    rawEvents.length > 0 && rawEvents.every(isSceneLineHistoryEvent);
-
-  if (
-    !mainCheckpointState ||
-    typeof mainCheckpointState !== "object" ||
-    Array.isArray(mainCheckpointState) ||
-    !hasOnlySceneLineHistory
-  ) {
-    return {
-      changed: false,
-      reason: "missing_bootstrap_without_safe_recovery",
-    };
-  }
-
-  const bootstrapEvent = createProjectCreateRepositoryEvent({
-    projectId,
-    state: structuredClone(mainCheckpointState),
-    partition: MAIN_PARTITION,
-  });
-  const repairedCommittedEvents = [
-    createCommittedEventRecord(
-      {
-        ...structuredClone(bootstrapEvent),
-        projectId,
-      },
-      0,
-      { projectId },
-    ),
-    ...committed.map((event, index) =>
-      createCommittedEventRecord(event, index + 1, { projectId }),
-    ),
-  ];
 
   return {
-    changed: true,
-    reason: "synthesized_bootstrap_from_main_checkpoint",
-    committedEvents: repairedCommittedEvents,
-    draftEvents: drafts,
-    versions: bumpVersionsActionIndex(normalizedVersions, 1),
+    supported: false,
+    reason: "missing_bootstrap_event",
   };
+};
+
+export const isCurrentMainCheckpointCompatibleWithHistory = ({
+  checkpoint,
+  historyStats,
+} = {}) => {
+  if (
+    !checkpoint ||
+    checkpoint.viewVersion !== MAIN_VIEW_VERSION ||
+    !Number.isFinite(Number(checkpoint?.lastCommittedId))
+  ) {
+    return false;
+  }
+
+  const checkpointHistoryStats = checkpoint?.meta?.historyStats;
+  const hasCheckpointHistoryStats =
+    checkpointHistoryStats &&
+    typeof checkpointHistoryStats === "object" &&
+    !Array.isArray(checkpointHistoryStats);
+
+  if (hasCheckpointHistoryStats) {
+    return areRepositoryHistoryStatsEqual(checkpointHistoryStats, historyStats);
+  }
+
+  const checkpointRevision = Math.max(
+    0,
+    Math.floor(Number(checkpoint.lastCommittedId) || 0),
+  );
+  return checkpointRevision === getRepositoryHistoryLength(historyStats);
+};
+
+const createUnsupportedProjectHistoryError = ({ projectId, reason } = {}) => {
+  let detail =
+    "This project uses an unsupported local history format for this RouteVN Creator build.";
+
+  if (reason === "misordered_bootstrap_draft_event") {
+    detail =
+      "This project stores its draft bootstrap event in the wrong draft position.";
+  } else if (reason === "misordered_bootstrap_committed_event") {
+    detail =
+      "This project stores its bootstrap event in the wrong committed position.";
+  } else if (reason === "multiple_bootstrap_events") {
+    detail = "This project contains multiple bootstrap events.";
+  } else if (reason === "missing_bootstrap_event") {
+    detail = "This project is missing the required bootstrap event.";
+  }
+
+  const error = new Error(detail);
+  error.name = "ProjectStoreFormatUnsupportedError";
+  error.code = "project_store_format_unsupported";
+  error.details = {
+    projectId,
+    reason,
+  };
+  return error;
 };
 
 export const createPersistedTauriProjectStore = async ({
@@ -1044,39 +542,7 @@ export const createPersistedTauriProjectStore = async ({
 
     await store.init();
 
-    let projectHistoryIntegrityPromise;
-    let draftHistoryMode;
-    const loadAppValue = async (key) => {
-      const rows = await runSelect(
-        `SELECT value FROM ${APP_STATE_TABLE} WHERE key = $1`,
-        [key],
-      );
-      const row = Array.isArray(rows) ? rows[0] : undefined;
-      return parseStoredValue(row?.value);
-    };
-    const saveAppValue = async (key, value) => {
-      await runExecute(
-        `INSERT OR REPLACE INTO ${APP_STATE_TABLE} (key, value) VALUES ($1, $2)`,
-        [key, JSON.stringify(value)],
-      );
-    };
-    const loadMainCheckpointState = async () => {
-      const rows = await runSelect(
-        `SELECT view_version, last_committed_id, value, updated_at
-         FROM ${MATERIALIZED_VIEW_TABLE}
-         WHERE view_name = $1 AND partition = $2`,
-        [MAIN_VIEW_NAME, MAIN_PARTITION],
-      );
-      const row = Array.isArray(rows) ? rows[0] : undefined;
-      const checkpoint = row
-        ? toMaterializedViewCheckpoint({
-            ...row,
-            partition: MAIN_PARTITION,
-          })
-        : undefined;
-
-      return checkpoint?.value;
-    };
+    let projectHistorySupportPromise;
     const loadRepositoryHistoryStats = async () => {
       const committedRows = await runSelect(
         `SELECT COUNT(*) AS committedCount, COALESCE(MAX(committed_id), 0) AS latestCommittedId
@@ -1098,88 +564,82 @@ export const createPersistedTauriProjectStore = async ({
         latestDraftClock: draftRow?.latestDraftClock,
       });
     };
-    const ensureProjectHistoryIntegrity = async () => {
-      if (projectHistoryIntegrityPromise) {
-        return projectHistoryIntegrityPromise;
+    const loadMainCheckpoint = async () => {
+      const rows = await runSelect(
+        `SELECT view_version, last_committed_id, value, updated_at
+         FROM ${MATERIALIZED_VIEW_TABLE}
+         WHERE view_name = $1 AND partition = $2`,
+        [MAIN_VIEW_NAME, MAIN_PARTITION],
+      );
+      const row = Array.isArray(rows) ? rows[0] : undefined;
+      if (!row) {
+        return undefined;
+      }
+      return toMaterializedViewCheckpoint({
+        ...row,
+        partition: MAIN_PARTITION,
+      });
+    };
+    const ensureSupportedProjectHistory = async () => {
+      if (projectHistorySupportPromise) {
+        return projectHistorySupportPromise;
       }
 
-      projectHistoryIntegrityPromise = queueWriteOperation(
-        "ensureProjectHistoryIntegrity",
+      projectHistorySupportPromise = queueStoreOperation(
+        "ensureSupportedProjectHistory",
         async () => {
-          const committedEvents = await store._debug.getCommitted();
-          const draftEvents = await store._debug.getDrafts();
-          const versions = await loadAppValue(VERSIONS_KEY);
-          const mainCheckpointState = await loadMainCheckpointState();
-          const repairPlan = planBootstrapHistoryRepair({
-            projectId,
+          const committedEvents =
+            await loadCommittedEventsFromClientStore(store);
+          const draftEvents = await loadDraftEventsFromClientStore(store);
+          const currentHistoryStats = await loadRepositoryHistoryStats();
+          const support = inspectBootstrapHistorySupport({
             committedEvents,
             draftEvents,
-            mainCheckpointState,
-            versions,
           });
 
-          if (!repairPlan.changed) {
+          if (support.supported) {
+            return support;
+          }
+
+          if (
+            support.reason === "missing_bootstrap_event" &&
+            Number(currentHistoryStats?.committedCount || 0) === 0 &&
+            Number(currentHistoryStats?.draftCount || 0) > 0
+          ) {
+            const checkpoint = await loadMainCheckpoint();
             if (
-              repairPlan.reason === "missing_bootstrap_without_safe_recovery"
+              isCurrentMainCheckpointCompatibleWithHistory({
+                checkpoint,
+                historyStats: currentHistoryStats,
+              })
             ) {
-              console.warn("Project history is missing a bootstrap event", {
-                projectId,
-                committedEventCount: committedEvents.length,
-                draftEventCount: draftEvents.length,
-              });
+              return {
+                supported: true,
+                reason: "history_valid_from_current_main_checkpoint",
+              };
             }
-
-            if (repairPlan.reason === "canonical_snapshot_draft_history") {
-              draftHistoryMode = DRAFT_HISTORY_MODE_SNAPSHOT_ARCHIVE;
-            }
-
-            return repairPlan;
           }
 
-          const currentCursor = Number(await store._debug.getCursor()) || 0;
-
-          await runExecute("DELETE FROM committed_events");
-          await runExecute("DELETE FROM local_drafts");
-          await runExecute(`DELETE FROM ${MATERIALIZED_VIEW_TABLE}`);
-
-          if ((repairPlan.committedEvents || []).length > 0) {
-            await store.applyCommittedBatch({
-              events: repairPlan.committedEvents,
-              nextCursor: Math.max(
-                currentCursor,
-                repairPlan.committedEvents.length,
-              ),
-            });
-          }
-
-          if ((repairPlan.draftEvents || []).length > 0) {
-            await store.insertDrafts(repairPlan.draftEvents);
-          }
-
-          if (Object.hasOwn(repairPlan, "versions")) {
-            await saveAppValue(VERSIONS_KEY, repairPlan.versions);
-          }
-
-          console.warn("Repaired project bootstrap history", {
+          console.warn("Unsupported project bootstrap history", {
             projectId,
-            reason: repairPlan.reason,
+            reason: support.reason,
             committedEventCountBefore: committedEvents.length,
-            committedEventCountAfter: repairPlan.committedEvents.length,
             draftEventCountBefore: draftEvents.length,
-            draftEventCountAfter: repairPlan.draftEvents.length,
           });
-
-          return repairPlan;
+          throw createUnsupportedProjectHistoryError({
+            projectId,
+            reason: support.reason,
+          });
         },
       ).catch((error) => {
-        projectHistoryIntegrityPromise = undefined;
+        projectHistorySupportPromise = undefined;
         throw error;
       });
 
-      return projectHistoryIntegrityPromise;
+      return projectHistorySupportPromise;
     };
 
-    await ensureProjectHistoryIntegrity();
+    await ensureSupportedProjectHistory();
 
     return {
       ...store,
@@ -1213,7 +673,6 @@ export const createPersistedTauriProjectStore = async ({
           for (const item of normalizedItems) {
             await store.insertDraft(item);
           }
-
           return undefined;
         });
       },
@@ -1263,27 +722,6 @@ export const createPersistedTauriProjectStore = async ({
           return result;
         });
       },
-
-      async getEvents(payload = {}) {
-        const events = await queueStoreOperation("getEvents", () =>
-          loadRepositoryEvents({
-            store,
-            projectId,
-            onProgress:
-              typeof payload?.onProgress === "function"
-                ? payload.onProgress
-                : undefined,
-            draftHistoryMode,
-          }),
-        );
-        const since = Number(payload?.since);
-        if (!Number.isFinite(since) || since <= 0) {
-          return events;
-        }
-        return events.slice(Math.floor(since));
-      },
-
-      async appendEvent() {},
 
       async clearEvents() {
         await queueWriteOperation(async () => {
@@ -1424,13 +862,26 @@ export const createPersistedTauriProjectStore = async ({
         },
       },
 
-      _debug: {
-        getDrafts: async () =>
-          queueStoreOperation(() => store._debug.getDrafts()),
-        getCommitted: async () =>
-          queueStoreOperation(() => store._debug.getCommitted()),
-        getCursor: async () =>
-          queueStoreOperation(() => store._debug.getCursor()),
+      async listDraftsOrdered() {
+        return queueStoreOperation("listDraftsOrdered", () =>
+          store.listDraftsOrdered(),
+        );
+      },
+
+      async listCommitted() {
+        return queueStoreOperation("listCommitted", () =>
+          store.listCommitted(),
+        );
+      },
+
+      async listCommittedAfter(payload = {}) {
+        return queueStoreOperation("listCommittedAfter", () =>
+          store.listCommittedAfter(payload),
+        );
+      },
+
+      async getCursor() {
+        return queueStoreOperation("getCursor", () => store.getCursor());
       },
 
       async getRepositoryHistoryStats() {
@@ -1439,6 +890,10 @@ export const createPersistedTauriProjectStore = async ({
 
       isRepositoryHistoryStatsEqual(left, right) {
         return areRepositoryHistoryStatsEqual(left, right);
+      },
+
+      getRepositoryHistoryLength(stats) {
+        return getRepositoryHistoryLength(stats);
       },
 
       async close() {

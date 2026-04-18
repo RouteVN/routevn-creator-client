@@ -51,6 +51,18 @@ const createStoreMockFactory = () => {
         sql: "SELECT DRAFTS",
       }),
     ),
+    listDraftsOrdered: vi.fn(async () => {
+      const result = await client.execute({
+        sql: "SELECT DRAFTS",
+      });
+      return Array.isArray(result?.rows) ? result.rows : [];
+    }),
+    listCommittedAfter: vi.fn(async () => {
+      const result = await client.execute({
+        sql: "SELECT COMMITTED",
+      });
+      return Array.isArray(result?.rows) ? result.rows : [];
+    }),
     applySubmitResult: vi.fn(async () =>
       client.execute({
         sql: "APPLY SUBMIT",
@@ -65,11 +77,6 @@ const createStoreMockFactory = () => {
     evictMaterializedView: vi.fn(async () => {}),
     invalidateMaterializedView: vi.fn(async () => {}),
     flushMaterializedViews: vi.fn(async () => {}),
-    _debug: {
-      getDrafts: vi.fn(async () => []),
-      getCommitted: vi.fn(async () => []),
-      getCursor: vi.fn(async () => 0),
-    },
   });
 };
 
@@ -314,32 +321,30 @@ describe("tauri collab client store locking", () => {
       projectId: "project-1",
       store: {
         applySubmitResult,
-        _debug: {
-          getCommitted: async () => [],
-          getDrafts: async () => [
-            {
-              id: "draft-image-1",
-              partition: "m",
-              projectId: "project-1",
-              userId: "user-1",
-              type: "image.create",
-              schemaVersion: 1,
-              payload: {
-                imageId: "image-1",
-                data: {
-                  type: "image",
-                  name: "Broken image",
-                  fileId: "missing-file",
-                },
-                parentId: null,
-                position: "last",
+        listCommittedAfter: async () => [],
+        listDraftsOrdered: async () => [
+          {
+            id: "draft-image-1",
+            partition: "m",
+            projectId: "project-1",
+            userId: "user-1",
+            type: "image.create",
+            schemaVersion: 1,
+            payload: {
+              imageId: "image-1",
+              data: {
+                type: "image",
+                name: "Broken image",
+                fileId: "missing-file",
               },
-              clientTs: 1,
-              createdAt: 1,
-              meta: {},
+              parentId: null,
+              position: "last",
             },
-          ],
-        },
+            clientTs: 1,
+            createdAt: 1,
+            meta: {},
+          },
+        ],
       },
     });
 

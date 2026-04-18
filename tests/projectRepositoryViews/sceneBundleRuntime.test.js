@@ -97,10 +97,20 @@ const createRuntime = ({ events }) => {
     loadMaterializedViewCheckpoint: vi.fn(async () => undefined),
   };
   const mainState = createMainState();
+  const listCommittedAfter = vi.fn(
+    async ({ sinceCommittedId = 0, limit } = {}) => {
+      const startIndex = Math.max(0, Number(sinceCommittedId) || 0);
+      const normalizedLimit =
+        Number.isInteger(limit) && limit > 0 ? limit : events.length;
+      return events
+        .slice(startIndex, startIndex + normalizedLimit)
+        .map((event) => structuredClone(event));
+    },
+  );
 
   const runtime = createSceneBundleRuntime({
     store,
-    events,
+    listCommittedAfter,
     getCurrentMainState: () => mainState,
     getActiveSceneId: () => activeSceneId,
     getActiveSceneState: () => createSceneState(activeSceneId),

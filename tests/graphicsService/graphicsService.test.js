@@ -152,7 +152,7 @@ describe("graphicsService", () => {
 
     const pendingLoad = service.loadAssets({
       "image-1": {
-        url: "data:image/png;base64,AA==",
+        url: "blob:http://localhost/image-1",
         type: "image/png",
       },
     });
@@ -165,6 +165,110 @@ describe("graphicsService", () => {
 
     await expect(pendingLoad).resolves.toBeUndefined();
     expect(routeGraphicsInstance.loadAssets).not.toHaveBeenCalled();
+  });
+
+  it("routes tauri Pixi media through the provided localhost origin", async () => {
+    const filePath = "/Users/test/project/files/image-1";
+    const localhostOrigin = "http://127.0.0.1:45123";
+    const expectedUrl = `${localhostOrigin}/pixi-asset.png?path=${encodeURIComponent(filePath)}`;
+    const bufferManager = {
+      has: vi.fn(() => false),
+      load: vi.fn(async () => {}),
+      getBufferMap: vi.fn(() => ({
+        "image-1": {
+          url: expectedUrl,
+          type: "image/png",
+          source: "url",
+        },
+      })),
+      clear: vi.fn(),
+    };
+    createAssetBufferManagerMock.mockReturnValue(bufferManager);
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+      projectMediaOrigin: localhostOrigin,
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+
+    await service.loadAssets({
+      "image-1": {
+        url: `http://asset.localhost/${encodeURIComponent(filePath)}`,
+        type: "image/png",
+      },
+    });
+
+    expect(bufferManager.load).toHaveBeenCalledWith({
+      "image-1": {
+        url: expectedUrl,
+        type: "image/png",
+      },
+    });
+    expect(routeGraphicsInstance.loadAssets).toHaveBeenCalledWith({
+      "image-1": {
+        url: expectedUrl,
+        type: "image/png",
+        source: "url",
+      },
+    });
+  });
+
+  it("decodes data url image assets locally instead of sending them through the fetch-based loader", async () => {
+    const bufferManager = {
+      has: vi.fn(() => false),
+      load: vi.fn(async () => {}),
+      getBufferMap: vi.fn(() => ({})),
+      clear: vi.fn(),
+    };
+    createAssetBufferManagerMock.mockReturnValue(bufferManager);
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+
+    await service.loadAssets({
+      "thumb-1": {
+        url: "data:image/jpeg;base64,AA==",
+        type: "image/jpeg",
+      },
+    });
+
+    expect(bufferManager.load).not.toHaveBeenCalled();
+    expect(routeGraphicsInstance.loadAssets).toHaveBeenCalledWith({
+      "thumb-1": {
+        buffer: expect.any(ArrayBuffer),
+        type: "image/jpeg",
+      },
+    });
   });
 
   it("uses actions returned from beforeHandleActions without mutating the original interaction payload", async () => {

@@ -56,6 +56,20 @@ const reduceEventToState = ({ repositoryState, event }) => {
   return applyResult.repositoryState;
 };
 
+const reduceEventsToState = ({ repositoryState, events }) => {
+  const applyResult = applyRepositoryEventsToRepositoryState({
+    repositoryState,
+    events,
+    projectId,
+  });
+
+  if (!applyResult.valid) {
+    throw new Error(applyResult.error?.message || "Failed to apply events");
+  }
+
+  return applyResult.repositoryState;
+};
+
 const createRepositoryState = () => {
   const state = structuredClone(initialProjectData);
   state.project.resolution = {
@@ -96,6 +110,12 @@ const createRepositoryState = () => {
   };
   return state;
 };
+
+const createCheckpointStore = () => ({
+  loadMaterializedViewCheckpoint: async () => undefined,
+  saveMaterializedViewCheckpoint: async () => {},
+  deleteMaterializedViewCheckpoint: async () => {},
+});
 
 describe("scene projection compatibility", () => {
   it("replays legacy line commands from main-scene partitions", async () => {
@@ -141,11 +161,12 @@ describe("scene projection compatibility", () => {
     ];
 
     const projection = await loadSceneProjectionState({
-      store: {},
+      store: createCheckpointStore(),
       mainState: createMainProjectionState(initialState),
       events,
       createInitialState: () => structuredClone(initialProjectData),
       reduceEventToState,
+      reduceEventsToState,
       sceneId,
     });
 
@@ -209,6 +230,7 @@ describe("scene projection compatibility", () => {
       events,
       createInitialState: () => structuredClone(initialProjectData),
       reduceEventToState,
+      reduceEventsToState,
       sceneId,
     });
 
@@ -282,7 +304,7 @@ describe("scene projection compatibility", () => {
     });
 
     const projection = await loadSceneProjectionState({
-      store: {},
+      store: createCheckpointStore(),
       mainState: createMainProjectionState(initialState),
       events,
       createInitialState: () => structuredClone(initialProjectData),
@@ -301,6 +323,316 @@ describe("scene projection compatibility", () => {
     ).toMatchObject({
       resetStoryAtSection: {
         sectionId: targetSectionId,
+      },
+    });
+  });
+
+  it("pages committed history for scene projection replay without a full event array", async () => {
+    const initialState = createRepositoryState();
+    const committedEvents = [
+      createProjectCreateRepositoryEvent({
+        projectId,
+        state: initialState,
+      }),
+      createCommandEvent({
+        id: "line-create-1",
+        partition: mainScenePartitionFor(sceneId),
+        type: COMMAND_TYPES.LINE_CREATE,
+        payload: {
+          sectionId,
+          lines: [
+            {
+              lineId,
+              data: {
+                actions: {},
+              },
+            },
+          ],
+          index: 0,
+        },
+        clientTs: 1,
+      }),
+      createCommandEvent({
+        id: "line-update-1",
+        partition: scenePartitionFor(sceneId),
+        type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
+        payload: {
+          lineId,
+          data: {
+            resetStoryAtSection: {
+              sectionId: targetSectionId,
+            },
+          },
+          replace: false,
+        },
+        clientTs: 2,
+      }),
+    ].map((event, index) => ({
+      ...structuredClone(event),
+      committedId: index + 1,
+    }));
+
+    const listCommittedAfter = vi.fn(
+      async ({ sinceCommittedId = 0, limit } = {}) => {
+        const startIndex = Math.max(0, Number(sinceCommittedId) || 0);
+        const normalizedLimit =
+          Number.isInteger(limit) && limit > 0 ? limit : committedEvents.length;
+        return committedEvents
+          .slice(startIndex, startIndex + normalizedLimit)
+          .map((event) => structuredClone(event));
+      },
+    );
+    const singleEventReducer = vi.fn(reduceEventToState);
+    const batchedReducer = vi.fn(({ repositoryState, events }) => {
+      const applyResult = applyRepositoryEventsToRepositoryState({
+        repositoryState,
+        events,
+        projectId,
+      });
+      if (!applyResult.valid) {
+        throw new Error(
+          applyResult.error?.message || "Failed to apply batched events",
+        );
+      }
+
+      return applyResult.repositoryState;
+    });
+
+    const projection = await loadSceneProjectionState({
+      store: createCheckpointStore(),
+      mainState: createMainProjectionState(initialState),
+      listCommittedAfter,
+      createInitialState: () => structuredClone(initialProjectData),
+      reduceEventToState: singleEventReducer,
+      reduceEventsToState: batchedReducer,
+      sceneId,
+    });
+
+    expect(listCommittedAfter).toHaveBeenCalled();
+    expect(singleEventReducer).toHaveBeenCalledTimes(1);
+    expect(batchedReducer).toHaveBeenCalledTimes(1);
+    expect(
+      projection.scenes.items[sceneId].sections.items[sectionId].lines.items[
+        lineId
+      ].actions,
+    ).toMatchObject({
+      resetStoryAtSection: {
+        sectionId: targetSectionId,
+      },
+    });
+  });
+
+  it("replays section lifecycle events from main-scene partitions before scene line events", async () => {
+    const initialState = createRepositoryState();
+    delete initialState.scenes.items[sceneId].sections.items[targetSectionId];
+    initialState.scenes.items[sceneId].sections.tree = [{ id: sectionId }];
+
+    const events = [
+      createProjectCreateRepositoryEvent({
+        projectId,
+        state: initialState,
+      }),
+      createCommandEvent({
+        id: "section-create-1",
+        partition: mainScenePartitionFor(sceneId),
+        type: COMMAND_TYPES.SECTION_CREATE,
+        payload: {
+          sceneId,
+          sectionId: targetSectionId,
+          parentId: null,
+          index: 1,
+          data: {
+            name: "Section 2",
+          },
+        },
+        clientTs: 1,
+      }),
+      createCommandEvent({
+        id: "line-create-1",
+        partition: scenePartitionFor(sceneId),
+        type: COMMAND_TYPES.LINE_CREATE,
+        payload: {
+          sectionId: targetSectionId,
+          lines: [
+            {
+              lineId,
+              data: {
+                actions: {},
+              },
+            },
+          ],
+          index: 0,
+        },
+        clientTs: 2,
+      }),
+      createCommandEvent({
+        id: "section-delete-1",
+        partition: mainScenePartitionFor(sceneId),
+        type: COMMAND_TYPES.SECTION_DELETE,
+        payload: {
+          sectionIds: [targetSectionId],
+        },
+        clientTs: 3,
+      }),
+    ];
+
+    let finalRepositoryState = structuredClone(initialProjectData);
+    for (const event of events) {
+      finalRepositoryState = reduceEventToState({
+        repositoryState: finalRepositoryState,
+        event,
+      });
+    }
+
+    const projection = await loadSceneProjectionState({
+      store: createCheckpointStore(),
+      mainState: createMainProjectionState(finalRepositoryState),
+      events,
+      createInitialState: () => structuredClone(initialProjectData),
+      reduceEventToState,
+      reduceEventsToState,
+      sceneId,
+    });
+
+    expect(
+      projection.scenes.items[sceneId].sections.items[targetSectionId],
+    ).toBeUndefined();
+  });
+
+  it("skips obsolete section and line lifecycle events while preserving newer scene lines", async () => {
+    const initialState = createRepositoryState();
+    const deletedSectionId = "section-deleted";
+    const deletedLineId = "line-deleted";
+    const currentSectionId = "section-current";
+    const currentLineId = "line-current";
+
+    delete initialState.scenes.items[sceneId].sections.items[targetSectionId];
+    initialState.scenes.items[sceneId].sections.tree = [{ id: sectionId }];
+
+    const events = [
+      createProjectCreateRepositoryEvent({
+        projectId,
+        state: initialState,
+      }),
+      createCommandEvent({
+        id: "section-create-deleted",
+        partition: mainScenePartitionFor(sceneId),
+        type: COMMAND_TYPES.SECTION_CREATE,
+        payload: {
+          sceneId,
+          sectionId: deletedSectionId,
+          parentId: null,
+          index: 1,
+          data: {
+            name: "Deleted Section",
+          },
+        },
+        clientTs: 1,
+      }),
+      createCommandEvent({
+        id: "line-create-deleted",
+        partition: scenePartitionFor(sceneId),
+        type: COMMAND_TYPES.LINE_CREATE,
+        payload: {
+          sectionId: deletedSectionId,
+          lines: [
+            {
+              lineId: deletedLineId,
+              data: {
+                actions: {},
+              },
+            },
+          ],
+          index: 0,
+        },
+        clientTs: 2,
+      }),
+      createCommandEvent({
+        id: "section-delete-deleted",
+        partition: mainScenePartitionFor(sceneId),
+        type: COMMAND_TYPES.SECTION_DELETE,
+        payload: {
+          sectionIds: [deletedSectionId],
+        },
+        clientTs: 3,
+      }),
+      createCommandEvent({
+        id: "section-create-current",
+        partition: mainScenePartitionFor(sceneId),
+        type: COMMAND_TYPES.SECTION_CREATE,
+        payload: {
+          sceneId,
+          sectionId: currentSectionId,
+          parentId: null,
+          index: 1,
+          data: {
+            name: "Current Section",
+          },
+        },
+        clientTs: 4,
+      }),
+      createCommandEvent({
+        id: "line-create-current",
+        partition: scenePartitionFor(sceneId),
+        type: COMMAND_TYPES.LINE_CREATE,
+        payload: {
+          sectionId: currentSectionId,
+          lines: [
+            {
+              lineId: currentLineId,
+              data: {
+                actions: {},
+              },
+            },
+          ],
+          index: 0,
+        },
+        clientTs: 5,
+      }),
+      createCommandEvent({
+        id: "line-update-current",
+        partition: scenePartitionFor(sceneId),
+        type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
+        payload: {
+          lineId: currentLineId,
+          data: {
+            resetStoryAtSection: {
+              sectionId,
+            },
+          },
+          replace: false,
+        },
+        clientTs: 6,
+      }),
+    ];
+
+    let finalRepositoryState = structuredClone(initialProjectData);
+    for (const event of events) {
+      finalRepositoryState = reduceEventToState({
+        repositoryState: finalRepositoryState,
+        event,
+      });
+    }
+
+    const projection = await loadSceneProjectionState({
+      store: createCheckpointStore(),
+      mainState: createMainProjectionState(finalRepositoryState),
+      events,
+      createInitialState: () => structuredClone(initialProjectData),
+      reduceEventToState,
+      reduceEventsToState,
+      sceneId,
+    });
+
+    expect(
+      projection.scenes.items[sceneId].sections.items[deletedSectionId],
+    ).toBeUndefined();
+    expect(
+      projection.scenes.items[sceneId].sections.items[currentSectionId].lines
+        .items[currentLineId].actions,
+    ).toMatchObject({
+      resetStoryAtSection: {
+        sectionId,
       },
     });
   });

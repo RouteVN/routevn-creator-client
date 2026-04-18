@@ -112,3 +112,55 @@ export const createProjectionGap = ({
   reason: compatibility?.reason || "unknown",
   message: compatibility?.message || "projection skipped",
 });
+
+export const createCommittedCommandProjectionTracker = ({
+  supportedSchemaVersion,
+} = {}) => {
+  let projectionGap;
+
+  return {
+    resolveCommittedCommand({
+      command,
+      committedEvent,
+      sourceType,
+      isFromCurrentActor,
+    }) {
+      let compatibility = {
+        status: REMOTE_COMMAND_COMPATIBILITY.COMPATIBLE,
+        reason: "ok",
+      };
+      let projectionStatus = "applied";
+
+      if (!isFromCurrentActor) {
+        compatibility = evaluateRemoteCommandCompatibility(command, {
+          supportedSchemaVersion,
+        });
+
+        if (projectionGap) {
+          projectionStatus = "skipped_due_to_gap";
+        } else if (
+          compatibility.status !== REMOTE_COMMAND_COMPATIBILITY.COMPATIBLE
+        ) {
+          projectionGap = createProjectionGap({
+            command,
+            committedEvent,
+            compatibility,
+            sourceType,
+          });
+          projectionStatus =
+            compatibility.status === REMOTE_COMMAND_COMPATIBILITY.FUTURE
+              ? "skipped_future"
+              : "skipped_invalid";
+        }
+      }
+
+      return {
+        compatibility,
+        projectionStatus,
+        projectionGap: projectionGap
+          ? structuredClone(projectionGap)
+          : undefined,
+      };
+    },
+  };
+};

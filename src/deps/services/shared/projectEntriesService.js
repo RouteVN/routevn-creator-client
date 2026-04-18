@@ -227,11 +227,7 @@ export const createProjectEntriesService = ({
   };
 
   const repairProjectEntries = async (entries = []) => {
-    if (
-      typeof projectService?.getProjectInfoByPath !== "function" ||
-      !Array.isArray(entries) ||
-      entries.length === 0
-    ) {
+    if (!Array.isArray(entries) || entries.length === 0) {
       return Array.isArray(entries) ? entries : [];
     }
 

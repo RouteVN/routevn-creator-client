@@ -1,0 +1,123 @@
+import { describe, expect, it, vi } from "vitest";
+import {
+  handleDownloadZipClick,
+  handleVersionFormAction,
+} from "../../src/pages/versions/versions.handlers.js";
+import { initialProjectData } from "../../src/deps/services/shared/projectRepository.js";
+
+const createDeps = ({ repository, version, editingVersionId } = {}) => {
+  const selectedVersion = version || {
+    id: "version-1",
+    name: "Version 1",
+    actionIndex: 3,
+    createdAt: "2026-01-01T00:00:00.000Z",
+  };
+
+  return {
+    appService: {
+      getPayload: vi.fn(() => ({ p: "project-1" })),
+      getCurrentProjectEntry: vi.fn(() => ({
+        id: "project-1",
+        name: "Project One",
+      })),
+      getAppVersion: vi.fn(() => "1.0.0"),
+      showAlert: vi.fn(),
+      closeAll: vi.fn(),
+    },
+    projectService: {
+      ensureRepository: vi.fn(async () => repository),
+      getRepository: vi.fn(async () => repository),
+      getRepositoryRevision: vi.fn(() => repository?.getRevision?.()),
+      loadRepositoryState: vi.fn(async (actionIndex) =>
+        repository?.loadState?.(actionIndex),
+      ),
+      addVersionToProject: vi.fn(async () => {}),
+      getCurrentProjectInfo: vi.fn(async () => ({
+        namespace: "project-one",
+      })),
+      promptDistributionZipPath: vi.fn(async () => undefined),
+      createDistributionZipStreamedToPath: vi.fn(async () => "/tmp/export.zip"),
+      createDistributionZipStreamed: vi.fn(async () => "/tmp/export.zip"),
+    },
+    store: {
+      selectEditingVersionId: vi.fn(() => editingVersionId),
+      selectVersion: vi.fn((versionId) =>
+        versionId === selectedVersion.id ? selectedVersion : undefined,
+      ),
+      addVersion: vi.fn(),
+      updateVersion: vi.fn(),
+      setSelectedItemId: vi.fn(),
+      closeVersionDialog: vi.fn(),
+      closeDropdownMenu: vi.fn(),
+    },
+    render: vi.fn(),
+  };
+};
+
+describe("versions.handleVersionFormAction", () => {
+  it("uses repository revision to create a version without loading full history", async () => {
+    const repository = {
+      getRevision: vi.fn(() => 7),
+      loadEvents: vi.fn(async () => []),
+      getEvents: vi.fn(() => []),
+    };
+    const deps = createDeps({
+      repository,
+    });
+
+    await handleVersionFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            name: "Checkpoint 7",
+            description: "notes",
+          },
+        },
+      },
+    });
+
+    expect(deps.projectService.ensureRepository).toHaveBeenCalledTimes(1);
+    expect(deps.projectService.getRepositoryRevision).toHaveBeenCalledTimes(1);
+    expect(repository.loadEvents).not.toHaveBeenCalled();
+    expect(deps.projectService.addVersionToProject).toHaveBeenCalledWith(
+      "project-1",
+      expect.objectContaining({
+        name: "Checkpoint 7",
+        notes: "notes",
+        actionIndex: 7,
+      }),
+    );
+    expect(deps.store.closeVersionDialog).toHaveBeenCalled();
+  });
+});
+
+describe("versions.handleDownloadZipClick", () => {
+  it("uses repository.loadState when available instead of forcing full history load", async () => {
+    const repository = {
+      loadState: vi.fn(async () => structuredClone(initialProjectData)),
+      loadEvents: vi.fn(async () => []),
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const deps = createDeps({
+      repository,
+    });
+
+    await handleDownloadZipClick(deps, {
+      _event: {
+        stopPropagation: vi.fn(),
+        currentTarget: {
+          dataset: {
+            versionId: "version-1",
+          },
+        },
+      },
+    });
+
+    expect(deps.projectService.loadRepositoryState).toHaveBeenCalledWith(3);
+    expect(repository.loadEvents).not.toHaveBeenCalled();
+    expect(
+      deps.projectService.createDistributionZipStreamed,
+    ).toHaveBeenCalled();
+  });
+});

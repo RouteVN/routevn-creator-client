@@ -1,4 +1,3 @@
-import { createWebSocketTransport } from "../web/collab/createWebSocketTransport.js";
 import { recursivelyCheckResource } from "../../../internal/project/projection.js";
 import { createCommandApi } from "./commandApi.js";
 import { checkProjectResourceUsage } from "./resourceUsage.js";
@@ -53,9 +52,7 @@ export const createProjectCollabCore = ({
   const clearSession = ({ projectId, reason }) => {
     collabSessionsByProject.delete(projectId);
     collabSessionModeByProject.delete(projectId);
-    if (typeof onSessionCleared === "function") {
-      onSessionCleared({ projectId, reason });
-    }
+    onSessionCleared({ projectId, reason });
   };
 
   const rememberSession = ({ projectId, mode, session }) => {
@@ -83,27 +80,14 @@ export const createProjectCollabCore = ({
     return rememberSession({ projectId, mode, session });
   };
 
-  const syncSessionProjectedState = async ({ projectId, session }) => {
-    if (typeof session?.syncProjectedRepositoryState !== "function") {
-      return;
-    }
-
-    const repository = await getRepositoryByProject(projectId);
-    const repositoryState = repository?.getState?.();
-    session.syncProjectedRepositoryState(repositoryState);
-  };
-
   const ensureCommandSessionForProject = async (projectId) => {
     const existing = collabSessionsByProject.get(projectId);
     if (existing) {
-      await syncSessionProjectedState({ projectId, session: existing });
       return existing;
     }
 
     const actor = getOrCreateLocalActor(projectId);
-    if (typeof onEnsureLocalSession === "function") {
-      onEnsureLocalSession({ projectId, actor });
-    }
+    onEnsureLocalSession({ projectId, actor });
 
     const session = await createAndRememberSession({
       projectId,
@@ -112,16 +96,11 @@ export const createProjectCollabCore = ({
       clientId: actor.clientId,
       mode: "local",
     });
-    await syncSessionProjectedState({ projectId, session });
     return session;
   };
 
-  const resolveTransport = ({ endpointUrl }) => {
-    if (typeof createTransport === "function") {
-      return createTransport({ endpointUrl });
-    }
-    return createWebSocketTransport({ url: endpointUrl });
-  };
+  const resolveTransport = ({ endpointUrl }) =>
+    createTransport({ endpointUrl });
 
   const createCollabSession = async ({
     token,
@@ -159,12 +138,10 @@ export const createProjectCollabCore = ({
         if (endpointUrl) {
           const transport = resolveTransport({ endpointUrl });
           await existing.setOnlineTransport(transport);
-          if (typeof onSessionTransportUpdated === "function") {
-            onSessionTransportUpdated({
-              projectId: currentProjectId,
-              endpointUrl,
-            });
-          }
+          onSessionTransportUpdated({
+            projectId: currentProjectId,
+            endpointUrl,
+          });
           collabLog("info", "updated existing session transport", {
             currentProjectId,
             endpointUrl,

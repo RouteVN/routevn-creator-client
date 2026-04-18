@@ -170,6 +170,21 @@ export const removePendingUploads = ({ state }, { itemIds } = {}) => {
   );
 };
 
+export const updatePendingUpload = ({ state }, { itemId, updates } = {}) => {
+  if (!itemId || !updates) {
+    return;
+  }
+
+  const pendingUpload = state.pendingUploads.find((item) => item.id === itemId);
+  if (!pendingUpload) {
+    return;
+  }
+
+  for (const [key, value] of Object.entries(updates)) {
+    pendingUpload[key] = value;
+  }
+};
+
 export const setCharacterId = ({ state }, { characterId } = {}) => {
   state.characterId = characterId;
 };
@@ -265,6 +280,7 @@ export const selectAdjacentSpriteItemId = (
   const rawFlatGroups = toFlatGroups(state.spritesData);
   const searchQuery = state.searchQuery.toLowerCase().trim();
   const pendingByGroupId = new Map();
+  const hiddenItemIdsByGroupId = new Map();
 
   for (const pendingUpload of state.pendingUploads ?? []) {
     const groupId = pendingUpload?.parentId;
@@ -275,11 +291,19 @@ export const selectAdjacentSpriteItemId = (
     const existing = pendingByGroupId.get(groupId) ?? [];
     existing.push(buildPendingMediaItem(pendingUpload));
     pendingByGroupId.set(groupId, existing);
+
+    if (typeof pendingUpload.resolvedItemId === "string") {
+      const hiddenItemIds = hiddenItemIdsByGroupId.get(groupId) ?? new Set();
+      hiddenItemIds.add(pendingUpload.resolvedItemId);
+      hiddenItemIdsByGroupId.set(groupId, hiddenItemIds);
+    }
   }
 
   const visibleSpriteIds = rawFlatGroups
     .map((group) => {
+      const hiddenItemIds = hiddenItemIdsByGroupId.get(group.id);
       const children = (group.children ?? [])
+        .filter((item) => !hiddenItemIds?.has(item.id))
         .filter((item) => matchesSearch(item, searchQuery))
         .map(buildMediaItem);
       const pendingChildren = (pendingByGroupId.get(group.id) ?? []).filter(
@@ -332,6 +356,7 @@ export const selectViewData = ({ state }) => {
   const rawFlatGroups = toFlatGroups(state.spritesData);
   const searchQuery = state.searchQuery.toLowerCase().trim();
   const pendingByGroupId = new Map();
+  const hiddenItemIdsByGroupId = new Map();
 
   for (const pendingUpload of state.pendingUploads ?? []) {
     const groupId = pendingUpload?.parentId;
@@ -342,11 +367,19 @@ export const selectViewData = ({ state }) => {
     const existing = pendingByGroupId.get(groupId) ?? [];
     existing.push(buildPendingMediaItem(pendingUpload));
     pendingByGroupId.set(groupId, existing);
+
+    if (typeof pendingUpload.resolvedItemId === "string") {
+      const hiddenItemIds = hiddenItemIdsByGroupId.get(groupId) ?? new Set();
+      hiddenItemIds.add(pendingUpload.resolvedItemId);
+      hiddenItemIdsByGroupId.set(groupId, hiddenItemIds);
+    }
   }
 
   const mediaGroups = rawFlatGroups
     .map((group) => {
+      const hiddenItemIds = hiddenItemIdsByGroupId.get(group.id);
       const children = (group.children ?? [])
+        .filter((item) => !hiddenItemIds?.has(item.id))
         .filter((item) => matchesSearch(item, searchQuery))
         .map(buildMediaItem);
       const pendingChildren = (pendingByGroupId.get(group.id) ?? []).filter(

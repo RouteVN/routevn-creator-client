@@ -44,7 +44,7 @@ const toCheckpointMap = ({ sceneIds = [], checkpoints = [] }) => {
 };
 
 export const loadSceneOverviewCheckpoint = async ({ store, sceneId }) =>
-  store.loadMaterializedViewCheckpoint?.({
+  store.loadMaterializedViewCheckpoint({
     viewName: SCENE_OVERVIEW_VIEW_NAME,
     partition: getSceneOverviewPartition(sceneId),
   });
@@ -60,25 +60,14 @@ export const loadSceneOverviewCheckpoints = async ({
     return new Map();
   }
 
-  if (typeof store.loadMaterializedViewCheckpoints === "function") {
-    const checkpoints = await store.loadMaterializedViewCheckpoints({
-      viewName: SCENE_OVERVIEW_VIEW_NAME,
-      partitions: normalizedSceneIds.map(getSceneOverviewPartition),
-    });
-    return toCheckpointMap({
-      sceneIds: normalizedSceneIds,
-      checkpoints,
-    });
-  }
-
-  const entries = await Promise.all(
-    normalizedSceneIds.map(async (sceneId) => [
-      sceneId,
-      await loadSceneOverviewCheckpoint({ store, sceneId }),
-    ]),
-  );
-
-  return new Map(entries.filter(([, checkpoint]) => checkpoint));
+  const checkpoints = await store.loadMaterializedViewCheckpoints({
+    viewName: SCENE_OVERVIEW_VIEW_NAME,
+    partitions: normalizedSceneIds.map(getSceneOverviewPartition),
+  });
+  return toCheckpointMap({
+    sceneIds: normalizedSceneIds,
+    checkpoints,
+  });
 };
 
 export const saveSceneOverviewCheckpoint = async ({
@@ -88,7 +77,7 @@ export const saveSceneOverviewCheckpoint = async ({
   lastCommittedId,
   updatedAt,
 }) => {
-  await store.saveMaterializedViewCheckpoint?.({
+  await store.saveMaterializedViewCheckpoint({
     viewName: SCENE_OVERVIEW_VIEW_NAME,
     partition: getSceneOverviewPartition(sceneId),
     viewVersion: SCENE_OVERVIEW_VIEW_VERSION,
@@ -99,7 +88,7 @@ export const saveSceneOverviewCheckpoint = async ({
 };
 
 export const deleteSceneOverviewCheckpoint = async ({ store, sceneId }) => {
-  await store.deleteMaterializedViewCheckpoint?.({
+  await store.deleteMaterializedViewCheckpoint({
     viewName: SCENE_OVERVIEW_VIEW_NAME,
     partition: getSceneOverviewPartition(sceneId),
   });
@@ -109,7 +98,7 @@ export const deleteSceneOverviewCheckpointByPartition = async ({
   store,
   partition,
 }) => {
-  await store.deleteMaterializedViewCheckpoint?.({
+  await store.deleteMaterializedViewCheckpoint({
     viewName: SCENE_OVERVIEW_VIEW_NAME,
     partition: normalizeSceneOverviewPartition(partition),
   });

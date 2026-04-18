@@ -23,7 +23,11 @@ const createDb = (initialEntries = []) => {
 const createService = (
   initialEntries = [],
   {
-    projectService = {},
+    projectService = {
+      getProjectInfoByPath: vi.fn(async () => {
+        throw new Error("unexpected getProjectInfoByPath call");
+      }),
+    },
     platformAdapter = {
       isDuplicateProjectEntry: ({ entries, entry }) => {
         return entries.some(

@@ -4,15 +4,44 @@ import {
   createProjectCreateRepositoryEvent,
 } from "../../services/shared/projectRepository.js";
 import {
+  areRepositoryHistoryStatsEqual,
+  getRepositoryHistoryLength,
+  loadCommittedEventsFromClientStore,
+  loadDraftEventsFromClientStore,
+  normalizeRepositoryHistoryStats,
+  toBootstrappedDraftEvent,
+} from "../../services/shared/collab/clientStoreHistory.js";
+import {
+  createMainProjectionState,
+  MAIN_PARTITION,
+  MAIN_VIEW_NAME,
+  MAIN_VIEW_VERSION,
+} from "../../services/shared/projectRepositoryViews/shared.js";
+import {
   resolveProjectResolutionForWrite,
   scaleTemplateProjectStateForResolution,
 } from "../../../internal/projectResolution.js";
 
 // Insieme-compatible Web IndexedDB Store Adapter
 
-const REPOSITORY_DB_VERSION = 3;
+const REPOSITORY_DB_VERSION = 4;
 const MATERIALIZED_VIEW_STORE = "materialized_view_state";
 const PROJECT_INFO_KEY = "projectInfo";
+
+const createUnsupportedProjectStoreFormatError = ({
+  projectId,
+  reason,
+  details,
+} = {}) => {
+  const error = new Error("Unsupported project store format");
+  error.code = "project_store_format_unsupported";
+  error.details = {
+    projectId,
+    reason,
+    ...(details && typeof details === "object" ? structuredClone(details) : {}),
+  };
+  return error;
+};
 
 const normalizeProjectInfo = (projectInfo = {}) => ({
   id: projectInfo.id ?? "",
@@ -29,6 +58,45 @@ const openIDB = (name, version, upgradeCallback) => {
     request.onsuccess = (event) => resolve(event.target.result);
     request.onerror = (event) => reject(event.target.error);
   });
+};
+
+const readProjectAppValueFromDb = async (db, key) => {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction("app", "readonly");
+    const store = transaction.objectStore("app");
+    const request = store.get(key);
+    request.onsuccess = (event) => {
+      const result = event.target.result;
+      if (!result?.value) {
+        resolve(undefined);
+        return;
+      }
+
+      try {
+        resolve(JSON.parse(result.value));
+      } catch {
+        resolve(result.value);
+      }
+    };
+    request.onerror = (event) => reject(event.target.error);
+  });
+};
+
+export const readProjectAppValue = async ({ projectId, key }) => {
+  const db = await openIDB(projectId, REPOSITORY_DB_VERSION);
+
+  try {
+    return await readProjectAppValueFromDb(db, key);
+  } catch (error) {
+    const message = String(error?.message || "").toLowerCase();
+    if (message.includes("object store") || message.includes("not found")) {
+      return undefined;
+    }
+
+    throw error;
+  } finally {
+    db.close();
+  }
 };
 
 async function copyTemplateFiles(templateId, adapter) {
@@ -51,6 +119,22 @@ async function copyTemplateFiles(templateId, adapter) {
   }
 }
 
+const loadRepositoryHistoryStatsFromClientStore = async (rawClientStore) => {
+  const committedEvents =
+    await loadCommittedEventsFromClientStore(rawClientStore);
+  const draftEvents = await loadDraftEventsFromClientStore(rawClientStore);
+
+  const latestCommittedId = Number(committedEvents.at(-1)?.committedId) || 0;
+  const latestDraftClock = Number(draftEvents.at(-1)?.draftClock) || 0;
+
+  return normalizeRepositoryHistoryStats({
+    committedCount: committedEvents.length,
+    latestCommittedId,
+    draftCount: draftEvents.length,
+    latestDraftClock,
+  });
+};
+
 /**
  * Initialize a new project with IndexedDB.
  */
@@ -60,13 +144,16 @@ export const initializeProject = async ({
   projectInfo,
   projectResolution,
   creatorVersion,
+  rawClientStore,
 }) => {
   if (!template) {
     throw new Error("Template is required for project initialization");
   }
 
   // Initialize database
-  const adapter = await createInsiemeWebStoreAdapter(projectId);
+  const adapter = await createInsiemeWebStoreAdapter(projectId, {
+    rawClientStore,
+  });
 
   // Load template data from static files
   const loadedTemplateData = await loadTemplate(template);
@@ -84,15 +171,21 @@ export const initializeProject = async ({
 
   assertSupportedProjectState(templateData);
 
-  await adapter.clearEvents();
   await adapter.clearMaterializedViewCheckpoints();
 
-  await adapter.appendEvent(
-    createProjectCreateRepositoryEvent({
-      projectId,
-      state: templateData,
-    }),
-  );
+  const initialEvent = createProjectCreateRepositoryEvent({
+    projectId,
+    state: templateData,
+  });
+  await rawClientStore.insertDraft(toBootstrappedDraftEvent(initialEvent, 0));
+  await adapter.saveMaterializedViewCheckpoint({
+    viewName: MAIN_VIEW_NAME,
+    partition: MAIN_PARTITION,
+    viewVersion: MAIN_VIEW_VERSION,
+    lastCommittedId: 1,
+    value: createMainProjectionState(templateData),
+    updatedAt: Date.now(),
+  });
 
   await adapter.app.set("creatorVersion", creatorVersion);
   await adapter.app.set(PROJECT_INFO_KEY, normalizeProjectInfo(projectInfo));
@@ -102,29 +195,50 @@ export const initializeProject = async ({
  * Creates an Insieme-compatible store adapter using IndexedDB for a specific project.
  * @param {string} projectId - Required project ID to create a unique database.
  */
-export const createInsiemeWebStoreAdapter = async (projectId) => {
+export const createInsiemeWebStoreAdapter = async (
+  projectId,
+  { rawClientStore } = {},
+) => {
   if (!projectId) {
     throw new Error(
       "Project ID is required. Database must be stored per project.",
     );
   }
+  if (!rawClientStore) {
+    throw new Error(
+      "rawClientStore is required for the web repository adapter",
+    );
+  }
+
+  let unsupportedLegacyStoreFormatError;
 
   const db = await openIDB(projectId, REPOSITORY_DB_VERSION, (event) => {
     const idb = event.target.result;
     const previousVersion = Number(event.oldVersion) || 0;
+    const hasLegacyEventsStore = idb.objectStoreNames.contains("events");
+
+    if (
+      previousVersion > 0 &&
+      previousVersion < REPOSITORY_DB_VERSION &&
+      hasLegacyEventsStore
+    ) {
+      unsupportedLegacyStoreFormatError =
+        createUnsupportedProjectStoreFormatError({
+          projectId,
+          reason: "legacy_web_events_store_unsupported",
+          details: {
+            legacyDbVersion: previousVersion,
+          },
+        });
+      return;
+    }
 
     if (previousVersion > 0 && previousVersion < REPOSITORY_DB_VERSION) {
-      if (idb.objectStoreNames.contains("events")) {
-        idb.deleteObjectStore("events");
-      }
       if (idb.objectStoreNames.contains(MATERIALIZED_VIEW_STORE)) {
         idb.deleteObjectStore(MATERIALIZED_VIEW_STORE);
       }
     }
 
-    if (!idb.objectStoreNames.contains("events")) {
-      idb.createObjectStore("events", { keyPath: "id", autoIncrement: true });
-    }
     if (!idb.objectStoreNames.contains("app")) {
       idb.createObjectStore("app", { keyPath: "key" });
     }
@@ -138,64 +252,28 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
     }
   });
 
+  if (unsupportedLegacyStoreFormatError) {
+    db.close();
+    throw unsupportedLegacyStoreFormatError;
+  }
+
   return {
     // Insieme store interface
-    async getEvents(payload = {}) {
-      const { since } = payload;
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction("events", "readonly");
-        const store = transaction.objectStore("events");
-        const request = store.getAll();
-        request.onsuccess = (event) => {
-          try {
-            let events = event.target.result;
-
-            // Filter by since if provided (using auto-increment id)
-            if (since !== undefined) {
-              events = events.filter((row) => row.id > since);
-            }
-
-            resolve(
-              events.map((row) => {
-                if (
-                  typeof row.payload !== "string" ||
-                  row.payload.length === 0
-                ) {
-                  throw new Error("Repository event row is missing payload");
-                }
-                return JSON.parse(row.payload);
-              }),
-            );
-          } catch (error) {
-            reject(error);
-          }
-        };
-        request.onerror = (event) => reject(event.target.error);
+    async listCommittedAfter({ sinceCommittedId, limit } = {}) {
+      const committed = await rawClientStore.listCommittedAfter({
+        sinceCommittedId,
+        limit,
       });
+      return Array.isArray(committed) ? committed : [];
     },
 
-    async appendEvent(event) {
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction("events", "readwrite");
-        const store = transaction.objectStore("events");
-        const eventToStore = {
-          payload: JSON.stringify(event),
-          createdAt: Date.now(),
-        };
-        const request = store.add(eventToStore);
-        request.onsuccess = () => resolve();
-        request.onerror = (event) => reject(event.target.error);
-      });
+    async listDraftsOrdered() {
+      const drafts = await rawClientStore.listDraftsOrdered();
+      return Array.isArray(drafts) ? drafts : [];
     },
 
-    async clearEvents() {
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction("events", "readwrite");
-        const store = transaction.objectStore("events");
-        const request = store.clear();
-        request.onsuccess = () => resolve();
-        request.onerror = (event) => reject(event.target.error);
-      });
+    async getCursor() {
+      return Number(await rawClientStore.getCursor()) || 0;
     },
 
     async loadMaterializedViewCheckpoint({ viewName, partition }) {
@@ -213,6 +291,10 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
             viewVersion: row.viewVersion,
             lastCommittedId: Number(row.lastCommittedId) || 0,
             value: structuredClone(row.value),
+            meta:
+              row.meta && typeof row.meta === "object"
+                ? structuredClone(row.meta)
+                : undefined,
             updatedAt: Number(row.updatedAt) || 0,
           });
         };
@@ -246,6 +328,10 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
                   viewVersion: row.viewVersion,
                   lastCommittedId: Number(row.lastCommittedId) || 0,
                   value: structuredClone(row.value),
+                  meta:
+                    row.meta && typeof row.meta === "object"
+                      ? structuredClone(row.meta)
+                      : undefined,
                   updatedAt: Number(row.updatedAt) || 0,
                 });
               };
@@ -265,8 +351,17 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
       viewVersion,
       lastCommittedId,
       value,
+      meta,
       updatedAt,
     }) {
+      const checkpointMeta = {
+        ...(meta && typeof meta === "object" && !Array.isArray(meta)
+          ? structuredClone(meta)
+          : {}),
+        historyStats:
+          await loadRepositoryHistoryStatsFromClientStore(rawClientStore),
+      };
+
       return new Promise((resolve, reject) => {
         const transaction = db.transaction(
           MATERIALIZED_VIEW_STORE,
@@ -279,6 +374,7 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
           viewVersion,
           lastCommittedId,
           value: structuredClone(value),
+          meta: structuredClone(checkpointMeta),
           updatedAt,
         });
         request.onsuccess = () => resolve();
@@ -310,6 +406,18 @@ export const createInsiemeWebStoreAdapter = async (projectId) => {
         request.onsuccess = () => resolve();
         request.onerror = (event) => reject(event.target.error);
       });
+    },
+
+    async getRepositoryHistoryStats() {
+      return loadRepositoryHistoryStatsFromClientStore(rawClientStore);
+    },
+
+    isRepositoryHistoryStatsEqual(left, right) {
+      return areRepositoryHistoryStatsEqual(left, right);
+    },
+
+    getRepositoryHistoryLength(stats) {
+      return getRepositoryHistoryLength(stats);
     },
 
     // App-specific key-value store for project info

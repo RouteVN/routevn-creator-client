@@ -99,6 +99,7 @@ dependencies = [
  "tauri-plugin-process",
  "tauri-plugin-sql",
  "tauri-plugin-updater",
+ "url",
  "zip 0.6.6",
 ]
 

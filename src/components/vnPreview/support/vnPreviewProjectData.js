@@ -62,6 +62,84 @@ export const resolveSceneIdForSectionId = (projectData, sectionId) => {
   return undefined;
 };
 
+export const hasPreviewSceneLines = (projectData, sceneId) => {
+  if (!sceneId) {
+    return false;
+  }
+
+  const sections = projectData?.story?.scenes?.[sceneId]?.sections || {};
+  return Object.values(sections).some(
+    (section) => Array.isArray(section?.lines) && section.lines.length > 0,
+  );
+};
+
+export const hasPreviewSectionLines = (projectData, sectionId) => {
+  const sceneId = resolveSceneIdForSectionId(projectData, sectionId);
+  if (!sceneId) {
+    return false;
+  }
+
+  const lines =
+    projectData?.story?.scenes?.[sceneId]?.sections?.[sectionId]?.lines;
+  return Array.isArray(lines) && lines.length > 0;
+};
+
+export const collectPreviewMissingTargets = ({
+  projectData,
+  loadedSceneIds = [],
+  sceneIds = [],
+  sectionIds = [],
+} = {}) => {
+  const knownLoadedSceneIds = new Set(
+    Array.from(new Set(loadedSceneIds)).filter(Boolean),
+  );
+  const missingSceneIds = new Set();
+  const missingSectionIds = new Set();
+
+  Array.from(new Set(sceneIds)).forEach((sceneId) => {
+    if (!sceneId) {
+      return;
+    }
+
+    if (
+      !knownLoadedSceneIds.has(sceneId) ||
+      !hasPreviewSceneLines(projectData, sceneId)
+    ) {
+      missingSceneIds.add(sceneId);
+    }
+  });
+
+  Array.from(new Set(sectionIds)).forEach((sectionId) => {
+    if (!sectionId) {
+      return;
+    }
+
+    const sceneId = resolveSceneIdForSectionId(projectData, sectionId);
+    if (!sceneId) {
+      missingSectionIds.add(sectionId);
+      return;
+    }
+
+    if (!hasPreviewSectionLines(projectData, sectionId)) {
+      missingSectionIds.add(sectionId);
+      missingSceneIds.add(sceneId);
+      return;
+    }
+
+    if (
+      !knownLoadedSceneIds.has(sceneId) ||
+      !hasPreviewSceneLines(projectData, sceneId)
+    ) {
+      missingSceneIds.add(sceneId);
+    }
+  });
+
+  return {
+    missingSceneIds: Array.from(missingSceneIds),
+    missingSectionIds: Array.from(missingSectionIds),
+  };
+};
+
 export const withPreviewEntryPoint = (
   projectData,
   { sceneId, sectionId, lineId } = {},
@@ -107,10 +185,7 @@ export const ensurePreviewProjectDataTargets = async ({
     (sceneId) => !knownLoadedSceneIds.includes(sceneId),
   );
 
-  if (
-    (missingSceneIds.length === 0 && nextSectionIds.length === 0) ||
-    typeof repository?.getContextState !== "function"
-  ) {
+  if (missingSceneIds.length === 0 && nextSectionIds.length === 0) {
     return {
       projectData,
       missingSceneIds,

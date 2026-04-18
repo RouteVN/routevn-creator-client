@@ -374,17 +374,12 @@ export const createProjectAssetService = ({
     },
 
     detectFileType,
-
-    ...(typeof fileAdapter.getFileByProjectId === "function"
-      ? {
-          async getFileByProjectId(projectId, fileId) {
-            return fileAdapter.getFileByProjectId({
-              projectId,
-              fileId,
-              getStoreByProject,
-            });
-          },
-        }
-      : {}),
+    async getFileByProjectId(projectId, fileId) {
+      return fileAdapter.getFileByProjectId({
+        projectId,
+        fileId,
+        getStoreByProject,
+      });
+    },
   };
 };

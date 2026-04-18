@@ -224,10 +224,7 @@ const checkResourceUsage = async ({
   itemId,
   checkTargets = [],
 }) => {
-  if (
-    checkTargets.includes("scenes") &&
-    typeof projectService?.checkResourceUsage === "function"
-  ) {
+  if (checkTargets.includes("scenes")) {
     return projectService.checkResourceUsage({
       itemId,
       checkTargets,

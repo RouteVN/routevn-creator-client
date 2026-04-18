@@ -26,7 +26,7 @@ const syncCharactersData = ({
   repositoryState,
   projectService,
 } = {}) => {
-  const state = repositoryState ?? projectService?.getState?.();
+  const state = repositoryState ?? projectService.getState();
   store.setItems({ charactersData: state?.characters });
 };
 

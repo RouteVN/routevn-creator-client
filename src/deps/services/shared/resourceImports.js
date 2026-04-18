@@ -20,6 +20,7 @@ const createMissingUploadResult = (message) => ({
 export const importImageFile = async ({
   file,
   parentId,
+  imageId,
   uploadFiles,
   createImage,
 } = {}) => {
@@ -32,20 +33,21 @@ export const importImageFile = async ({
     return createMissingUploadResult("Failed to upload image.");
   }
 
-  const imageId = await createImage({
+  const createdImageId = await createImage({
+    imageId,
     data: buildImageResourceDataFromUploadResult(uploadResult),
     fileRecords: uploadResult.fileRecords,
     parentId,
     position: "last",
   });
 
-  if (imageId?.valid === false) {
-    return imageId;
+  if (createdImageId?.valid === false) {
+    return createdImageId;
   }
 
   return {
     valid: true,
-    imageId,
+    imageId: createdImageId,
     uploadResult,
   };
 };

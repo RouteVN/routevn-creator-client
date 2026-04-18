@@ -624,6 +624,7 @@ export const createProjectRepository = async ({
   events: sourceEvents,
   historyLoaded,
   initialRevision,
+  historyStats,
   loadEvents,
   onHydrationProgress,
 }) =>
@@ -633,6 +634,7 @@ export const createProjectRepository = async ({
     events: sourceEvents,
     historyLoaded,
     initialRevision,
+    historyStats,
     loadEvents,
     createInitialState: () => createInitialRepositoryStateForProject(),
     reduceEventToState: ({ repositoryState, event }) =>
@@ -728,13 +730,7 @@ export const applyCommandsToRepository = async ({
     }),
   );
 
-  if (typeof repository.addEvents === "function") {
-    await repository.addEvents(repositoryEvents);
-  } else {
-    for (const event of repositoryEvents) {
-      await repository.addEvent(event);
-    }
-  }
+  await repository.addEvents(repositoryEvents);
 
   return {
     mode: "command_event",

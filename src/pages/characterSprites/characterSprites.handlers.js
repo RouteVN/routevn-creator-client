@@ -222,6 +222,13 @@ const createSpritesFromFiles = async ({
         }
 
         successfulUploadCount += 1;
+        const spriteId = generateId();
+        store.updatePendingUpload({
+          itemId: pendingUploadId,
+          updates: {
+            resolvedItemId: spriteId,
+          },
+        });
 
         const createAttempt = await runResourcePageMutation({
           appService,
@@ -229,7 +236,7 @@ const createSpritesFromFiles = async ({
           action: () =>
             projectService.createCharacterSpriteItem({
               characterId,
-              spriteId: generateId(),
+              spriteId,
               fileRecords: uploadResult.fileRecords,
               parentId,
               position: "last",

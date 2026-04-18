@@ -106,6 +106,48 @@ describe("projects.handleProjectsClick", () => {
     expect(deps.appService.navigate).not.toHaveBeenCalled();
   });
 
+  it("shows an alert dialog for stored projection gap incompatibility", async () => {
+    const deps = createDeps({
+      ensureProjectCompatibleById: vi.fn(async () => {
+        const error = new Error(
+          "This project contains committed changes that this RouteVN Creator build cannot project safely. Update RouteVN Creator before opening the project. Last incompatible command 'scene.update' uses schemaVersion 3, while this client supports 2. schemaVersion 3 is newer than supported 2",
+        );
+        error.code = "project_projection_gap_incompatible";
+        throw error;
+      }),
+    });
+
+    await handleProjectsClick(deps, createPayload());
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      title: "Incompatible Project",
+      message:
+        "This project contains committed changes that this RouteVN Creator build cannot project safely. Update RouteVN Creator before opening the project. Last incompatible command 'scene.update' uses schemaVersion 3, while this client supports 2. schemaVersion 3 is newer than supported 2",
+      status: "error",
+    });
+    expect(deps.appService.navigate).not.toHaveBeenCalled();
+  });
+
+  it("shows an alert dialog for unsupported project store formats", async () => {
+    const deps = createDeps({
+      ensureProjectCompatibleById: vi.fn(async () => {
+        const error = new Error("unsupported bootstrap history");
+        error.code = "project_store_format_unsupported";
+        throw error;
+      }),
+    });
+
+    await handleProjectsClick(deps, createPayload());
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      title: "Incompatible Project",
+      message:
+        "Unsupported project store format. This RouteVN Creator build only supports the current project storage layout and will not repair older local stores automatically.",
+      status: "error",
+    });
+    expect(deps.appService.navigate).not.toHaveBeenCalled();
+  });
+
   it("shows a generic alert for other open failures", async () => {
     const deps = createDeps({
       ensureProjectCompatibleById: vi.fn(async () => {

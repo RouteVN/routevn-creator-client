@@ -8,6 +8,10 @@ import {
   tap,
   timeout,
 } from "rxjs";
+import {
+  getProjectOpenErrorMessage,
+  isIncompatibleProjectOpenError,
+} from "../../internal/projectOpenErrors.js";
 
 const GLOBAL_NAV_TIMEOUT_MS = 1500;
 
@@ -42,31 +46,6 @@ const normalizePayload = (payload) => {
 
 const routeNeedsRepository = (path, projectId) => {
   return isProjectRoute(path) && !!projectId;
-};
-
-const isMissingProjectResolutionError = (error) => {
-  const message = String(error?.message || "").toLowerCase();
-  return (
-    message.includes("project resolution is required") &&
-    message.includes("width") &&
-    message.includes("height")
-  );
-};
-
-const isProjectLoadDialogError = (error) => {
-  const message = String(error?.message || "");
-  return (
-    message.includes("incompatible project with version") ||
-    message.includes("requires reset for schema version")
-  );
-};
-
-const getProjectLoadErrorMessage = (error) => {
-  if (isMissingProjectResolutionError(error)) {
-    return "Project is missing required resolution settings.";
-  }
-
-  return error?.message || "Failed to load project.";
 };
 
 const EDITABLE_TAGS = new Set([
@@ -260,14 +239,14 @@ const createRouteTransitionRunner = (deps) => {
       }
 
       store.setRepositoryLoading({ isLoading: false });
-      if (isProjectLoadDialogError(error)) {
+      if (isIncompatibleProjectOpenError(error)) {
         await appService.showAlert({
           title: "Incompatible Project",
-          message: getProjectLoadErrorMessage(error),
+          message: getProjectOpenErrorMessage(error),
           status: "error",
         });
       } else {
-        appService.showAlert({ message: getProjectLoadErrorMessage(error) });
+        appService.showAlert({ message: getProjectOpenErrorMessage(error) });
       }
       appService.redirect("/projects");
       store.setCurrentRoute({ route: "/projects" });

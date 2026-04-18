@@ -28,6 +28,10 @@ If an uploadable file type changes, update this document in the same PR.
    It does not replace surface-level file-type validation.
 6. `src/deps/services/shared/projectAssetService.js` file-type detection is a
    processing fallback, not the product-level policy for what a page accepts.
+7. Media upload pages that render temporary processing cards must preserve a
+   stable final resource id from pending state through the create/import call.
+   The pending card's `resolvedItemId` and the created repository item's id
+   must match.
 
 ## Validation Layers
 
@@ -91,6 +95,25 @@ Current shared type fallbacks are intentionally narrower than before:
 - audio: `.mp3`, `.wav`, `.ogg`
 - video: `.mp4`
 
+### 5. Pending Upload Reconciliation
+
+Media resource pages render temporary processing cards from local
+`pendingUploads` state before the repository item exists.
+
+The reconciliation contract is:
+
+- the page creates a pending upload id for the temporary card
+- once the final repository item id is known, the page stores it as
+  `resolvedItemId`
+- the actual create/import call must use that same final item id
+- `createMediaPageStore` hides the created repository item while the matching
+  pending card is still present
+- the page removes the pending card immediately after a successful refresh
+
+If the final create/import path drops or replaces the caller-owned item id, the
+UI can briefly render both the processing card and the uploaded item at the
+same time.
+
 ## Current Upload Matrix
 
 ### Media Resource Pages
@@ -148,6 +171,9 @@ Current shared type fallbacks are intentionally narrower than before:
 - picker validation flow: `src/deps/services/shared/fileSelectionService.js`
 - upload processing: `src/deps/services/shared/projectAssetService.js`
 - processing type detection: `src/deps/clients/web/fileProcessors.js`
+- pending upload reconciliation: `src/internal/ui/resourcePages/media/createMediaPageStore.js`,
+  `src/internal/ui/resourcePages/media/processPendingUploads.js`,
+  `src/deps/services/shared/projectServiceCore.js`
 
 ## Maintenance Checklist
 
@@ -157,8 +183,10 @@ When adding or changing an uploadable file type:
 2. Update the matching drag-drop `acceptedFileTypes`.
 3. Add or update explicit page-level validation and user-facing error text.
 4. Confirm `projectAssetService` can actually process the accepted file type.
-5. Update this document.
-6. Validate both picker upload and drag-drop upload.
+5. If the surface shows processing cards, confirm the pending card's
+   `resolvedItemId` matches the actual created repository item id.
+6. Update this document.
+7. Validate both picker upload and drag-drop upload.
 
 ## Current Drift To Watch
 

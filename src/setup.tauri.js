@@ -1,6 +1,7 @@
 import { createGlobalUI } from "@rettangoli/ui";
 
 import { getVersion } from "@tauri-apps/api/app";
+import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
 // Infra - Tauri
@@ -72,7 +73,13 @@ await appService.initUserConfig();
 const apiService = createApiService();
 
 // Initialize async resources first
-const graphicsService = await createGraphicsService({ subject });
+const projectMediaOrigin =
+  (await invoke("get_project_media_server_origin").catch(() => undefined)) ??
+  undefined;
+const graphicsService = await createGraphicsService({
+  subject,
+  projectMediaOrigin,
+});
 
 // Create dialogue queue service for debounced writes
 const dialogueQueueService = createPendingQueueService({ debounceMs: 2000 });

@@ -9,7 +9,14 @@ Date baseline: April 9, 2026.
 - The current platform is the only supported project and protocol format.
 - Projects are opened only when their stored project format version matches the
   client-supported project format version.
-- All write operations must go through authoritative collaboration server validation.
+- Projects are opened only when their local `insieme` client-store layout
+  matches the current hard-cutover storage contract.
+- Older local store layouts are rejected explicitly and are not repaired in the
+  normal open path.
+- Local/offline project writes persist to `local_drafts` first.
+- `committed_events` are reserved for authoritative server-approved history.
+- A local-only project may therefore have zero committed rows and a bootstrap
+  `project.create` event in `local_drafts`.
 - The domain model and command schemas are owned by the model repo:
   `https://github.com/RouteVN/routevn-creator-model`
 

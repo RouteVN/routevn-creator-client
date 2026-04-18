@@ -13,6 +13,85 @@ const createRepositoryStore = () => {
 };
 
 describe("commandApi submitCommandsWithContext", () => {
+  it("validates commands against the current repository context before session submit", async () => {
+    const store = createRepositoryStore();
+    const repository = await createProjectRepository({
+      projectId: "project-1",
+      store,
+      events: [],
+      historyLoaded: true,
+    });
+
+    const session = {
+      submitCommands: vi.fn(async (commands) => commands.map((command) => command.id)),
+    };
+
+    const shared = createCommandApiShared({
+      idGenerator: (() => {
+        let index = 0;
+        return () => `cmd-${++index}`;
+      })(),
+      now: () => 1,
+      getCurrentProjectId: () => "project-1",
+      getCurrentRepository: async () => repository,
+      getCachedRepository: () => repository,
+      ensureCommandSessionForProject: async () => session,
+      getOrCreateLocalActor: () => ({
+        userId: "user-1",
+        clientId: "client-1",
+      }),
+      storyBasePartitionFor: () => "m",
+      storyScenePartitionFor: () => "m",
+      scenePartitionFor: () => "s:test",
+      resourceTypePartitionFor: () => "m",
+    });
+
+    const context = {
+      repository,
+      state: repository.getState(),
+      session,
+      actor: {
+        userId: "user-1",
+        clientId: "client-1",
+      },
+      projectId: "project-1",
+    };
+
+    const result = await shared.submitCommandsWithContext({
+      context,
+      commands: [
+        {
+          scope: "resources",
+          partition: "m",
+          type: COMMAND_TYPES.IMAGE_CREATE,
+          payload: {
+            imageId: "image-1",
+            data: {
+              type: "image",
+              name: "Image One",
+              fileId: "missing-file",
+              thumbnailFileId: null,
+              fileType: "image/png",
+              fileSize: 123,
+              width: 640,
+              height: 360,
+            },
+            parentId: null,
+            position: "last",
+          },
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      valid: false,
+      error: {
+        code: "payload_validation_failed",
+      },
+    });
+    expect(session.submitCommands).not.toHaveBeenCalled();
+  });
+
   it("replays a cloned command snapshot after session submit mutates its input", async () => {
     const store = createRepositoryStore();
     const repository = await createProjectRepository({
@@ -28,7 +107,6 @@ describe("commandApi submitCommandsWithContext", () => {
         commands[2].payload.data.fileId = "mutated-file-id";
         return commands.map((command) => command.id);
       }),
-      syncProjectedRepositoryState: vi.fn(),
     };
 
     const shared = createCommandApiShared({

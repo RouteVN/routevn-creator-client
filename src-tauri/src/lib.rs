@@ -3,6 +3,7 @@ use tauri::Manager;
 
 mod export_zip;
 mod project_file_protocol;
+mod project_media_server;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -14,6 +15,7 @@ pub fn run() {
     }
 
     tauri::Builder::default()
+        .manage(project_media_server::ProjectMediaServerState::new())
         .register_uri_scheme_protocol("project-file", project_file_protocol::handle)
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_sql::Builder::new().build())
@@ -24,7 +26,8 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_persisted_scope::init())
         .invoke_handler(tauri::generate_handler![
-            export_zip::create_distribution_zip_streamed
+            export_zip::create_distribution_zip_streamed,
+            project_media_server::get_project_media_server_origin
         ])
         .setup(|_app| {
             #[cfg(debug_assertions)]

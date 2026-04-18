@@ -2,9 +2,20 @@ import { describe, expect, it, vi } from "vitest";
 import { createProjectRepositoryService } from "../../src/deps/services/shared/projectRepositoryService.js";
 import { initialProjectData } from "../../src/deps/services/shared/projectRepository.js";
 
+const createDraftRowsFromRepositoryEvents = (events = []) =>
+  events.map((event, index) => ({
+    ...structuredClone(event),
+    createdAt: Number(event?.clientTs) || index + 1,
+  }));
+
+const noopCollabAdapter = {
+  beforeCreateRepository: async () => undefined,
+  afterCreateRepository: async () => undefined,
+};
+
 describe("projectRepositoryService main checkpoint reuse", () => {
   it("skips full event loading when the persisted main checkpoint is current", async () => {
-    const getEvents = vi.fn(async () => [
+    const repositoryEvents = [
       {
         id: "project-create:project-1",
         partition: "m",
@@ -19,7 +30,10 @@ describe("projectRepositoryService main checkpoint reuse", () => {
           clientTs: 1,
         },
       },
-    ]);
+    ];
+    const listDraftsOrdered = vi.fn(async () =>
+      createDraftRowsFromRepositoryEvents(repositoryEvents),
+    );
     const appGet = vi.fn(async (key) => {
       if (key === "creatorVersion") {
         return 1;
@@ -38,7 +52,9 @@ describe("projectRepositoryService main checkpoint reuse", () => {
       return undefined;
     });
     const store = {
-      getEvents,
+      listCommittedAfter: vi.fn(async () => []),
+      listDraftsOrdered,
+      getCursor: vi.fn(async () => 0),
       getRepositoryHistoryStats: async () => ({
         committedCount: 0,
         latestCommittedId: 0,
@@ -97,25 +113,26 @@ describe("projectRepositoryService main checkpoint reuse", () => {
       db,
       creatorVersion: 1,
       storageAdapter,
-      collabAdapter: {},
+      collabAdapter: noopCollabAdapter,
     });
 
     const repository = await service.ensureRepository();
 
-    expect(getEvents).not.toHaveBeenCalled();
+    expect(listDraftsOrdered).not.toHaveBeenCalled();
     expect(repository.getState()).toEqual(initialProjectData);
 
     const events = await repository.loadEvents();
 
-    expect(getEvents).toHaveBeenCalledTimes(1);
+    expect(listDraftsOrdered).toHaveBeenCalledTimes(1);
     expect(events).toHaveLength(1);
   });
 
   it("backfills legacy checkpoint metadata and still skips full event loading", async () => {
-    const getEvents = vi.fn(async () => []);
     const saveMaterializedViewCheckpoint = vi.fn(async () => {});
     const store = {
-      getEvents,
+      listCommittedAfter: vi.fn(async () => []),
+      listDraftsOrdered: vi.fn(async () => []),
+      getCursor: vi.fn(async () => 0),
       getRepositoryHistoryStats: async () => ({
         committedCount: 1,
         latestCommittedId: 1,
@@ -173,14 +190,14 @@ describe("projectRepositoryService main checkpoint reuse", () => {
       db: {},
       creatorVersion: 1,
       storageAdapter,
-      collabAdapter: {},
+      collabAdapter: noopCollabAdapter,
     });
 
     const repository = await service.ensureRepository();
 
-    expect(getEvents).not.toHaveBeenCalled();
-    expect(saveMaterializedViewCheckpoint).toHaveBeenCalledTimes(1);
-    expect(saveMaterializedViewCheckpoint).toHaveBeenCalledWith({
+    expect(store.listDraftsOrdered).not.toHaveBeenCalled();
+    expect(saveMaterializedViewCheckpoint).toHaveBeenCalledTimes(2);
+    expect(saveMaterializedViewCheckpoint).toHaveBeenNthCalledWith(1, {
       viewName: "project_repository_main_state",
       partition: "m",
       viewVersion: "1",
@@ -188,11 +205,21 @@ describe("projectRepositoryService main checkpoint reuse", () => {
       value: initialProjectData,
       updatedAt: 1,
     });
+    expect(saveMaterializedViewCheckpoint).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        viewName: "project_repository_main_state",
+        partition: "m",
+        viewVersion: "1",
+        lastCommittedId: 3088,
+        value: initialProjectData,
+      }),
+    );
     expect(repository.getState()).toEqual(initialProjectData);
   });
 
   it("flushes a fresh main checkpoint after replaying events for a stale checkpoint", async () => {
-    const getEvents = vi.fn(async () => [
+    const repositoryEvents = [
       {
         id: "project-create:project-1",
         partition: "m",
@@ -207,14 +234,19 @@ describe("projectRepositoryService main checkpoint reuse", () => {
           clientTs: 1,
         },
       },
-    ]);
+    ];
+    const listDraftsOrdered = vi.fn(async () =>
+      createDraftRowsFromRepositoryEvents(repositoryEvents),
+    );
     const saveMaterializedViewCheckpoint = vi.fn(async () => {});
     let checkpointDeleted = false;
     const deleteMaterializedViewCheckpoint = vi.fn(async () => {
       checkpointDeleted = true;
     });
     const store = {
-      getEvents,
+      listCommittedAfter: vi.fn(async () => []),
+      listDraftsOrdered,
+      getCursor: vi.fn(async () => 0),
       getRepositoryHistoryStats: async () => ({
         committedCount: 0,
         latestCommittedId: 0,
@@ -283,12 +315,12 @@ describe("projectRepositoryService main checkpoint reuse", () => {
       db: {},
       creatorVersion: 1,
       storageAdapter,
-      collabAdapter: {},
+      collabAdapter: noopCollabAdapter,
     });
 
     const repository = await service.ensureRepository();
 
-    expect(getEvents).toHaveBeenCalledTimes(1);
+    expect(listDraftsOrdered).toHaveBeenCalledTimes(1);
     expect(deleteMaterializedViewCheckpoint).toHaveBeenCalledWith({
       viewName: "project_repository_main_state",
       partition: "m",
@@ -306,6 +338,9 @@ describe("projectRepositoryService main checkpoint reuse", () => {
 
   it("recovers from a stale closed-pool store by evicting and recreating it", async () => {
     const staleStore = {
+      listCommittedAfter: vi.fn(async () => []),
+      listDraftsOrdered: vi.fn(async () => []),
+      getCursor: vi.fn(async () => 0),
       getRepositoryHistoryStats: async () => ({
         committedCount: 0,
         latestCommittedId: 0,
@@ -317,9 +352,20 @@ describe("projectRepositoryService main checkpoint reuse", () => {
       loadMaterializedViewCheckpoint: async () => {
         throw new Error("attempted to acquire a connection on a closed pool");
       },
+      app: {
+        get: async (key) => {
+          if (key === "creatorVersion") {
+            return 1;
+          }
+
+          return undefined;
+        },
+      },
     };
     const freshStore = {
-      getEvents: vi.fn(async () => []),
+      listCommittedAfter: vi.fn(async () => []),
+      listDraftsOrdered: vi.fn(async () => []),
+      getCursor: vi.fn(async () => 0),
       getRepositoryHistoryStats: async () => ({
         committedCount: 0,
         latestCommittedId: 0,
@@ -391,7 +437,7 @@ describe("projectRepositoryService main checkpoint reuse", () => {
       db: {},
       creatorVersion: 1,
       storageAdapter,
-      collabAdapter: {},
+      collabAdapter: noopCollabAdapter,
     });
 
     const repository = await service.ensureRepository();
@@ -434,7 +480,7 @@ describe("projectRepositoryService main checkpoint reuse", () => {
       db: {},
       creatorVersion: 1,
       storageAdapter,
-      collabAdapter: {},
+      collabAdapter: noopCollabAdapter,
     });
 
     const projectInfo = await service.getProjectInfoByPath("/tmp/project-1");

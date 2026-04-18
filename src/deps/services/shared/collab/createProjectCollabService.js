@@ -1,57 +1,17 @@
 import { createCommandSyncSession } from "insieme/client";
-import {
-  createProjectionGap,
-  evaluateRemoteCommandCompatibility,
-  REMOTE_COMMAND_COMPATIBILITY,
-} from "./compatibility.js";
 import { commandToSyncEvent, committedEventToCommand } from "./mappers.js";
-import { projectRepositoryStateToDomainState } from "../../../../internal/project/projection.js";
-import {
-  applyCommandToRepositoryState,
-  applyCommandsToRepositoryState,
-  initialProjectData,
-} from "../projectRepository.js";
 
 export const createProjectCollabService = ({
   projectId,
-  initialRepositoryState,
   token,
   actor,
   transport,
   clientStore,
   logger = () => {},
-  onCommittedCommand,
+  onCommittedCommand = () => {},
 }) => {
   let lastError = null;
   let session = null;
-  let projectionGap;
-
-  const createInitialRepositoryState = () =>
-    structuredClone(initialProjectData);
-
-  const coerceInitialRepositoryState = () => {
-    if (
-      initialRepositoryState &&
-      typeof initialRepositoryState === "object" &&
-      initialRepositoryState.scenes?.items
-    ) {
-      return structuredClone(initialRepositoryState);
-    }
-
-    return createInitialRepositoryState();
-  };
-
-  let projectedRepositoryState = coerceInitialRepositoryState();
-
-  const syncProjectedRepositoryState = (nextRepositoryState) => {
-    if (
-      nextRepositoryState &&
-      typeof nextRepositoryState === "object" &&
-      nextRepositoryState.scenes?.items
-    ) {
-      projectedRepositoryState = structuredClone(nextRepositoryState);
-    }
-  };
 
   const createSubmitErrorResult = (error) => {
     const normalizedError = {
@@ -78,27 +38,8 @@ export const createProjectCollabService = ({
       };
     }
 
-    let nextProjectedRepositoryState = projectedRepositoryState;
-    const optimistic = applyCommandsToRepositoryState({
-      repositoryState: nextProjectedRepositoryState,
-      commands: normalizedCommands,
-      projectId,
-    });
-
-    if (!optimistic.valid) {
-      lastError = {
-        code: optimistic.error?.code || "validation_failed",
-        message: optimistic.error?.message || "command validation failed",
-        payload: optimistic.error,
-      };
-      return optimistic;
-    }
-
-    nextProjectedRepositoryState = optimistic.repositoryState;
-
     try {
       const commandIds = await session.submitCommands(normalizedCommands);
-      projectedRepositoryState = nextProjectedRepositoryState;
 
       return {
         valid: true,
@@ -138,83 +79,12 @@ export const createProjectCollabService = ({
       sourceType,
       isFromCurrentActor,
     }) => {
-      let compatibility = {
-        status: REMOTE_COMMAND_COMPATIBILITY.COMPATIBLE,
-        reason: "ok",
-      };
-      let projectionStatus = "applied";
-
-      if (!isFromCurrentActor) {
-        compatibility = evaluateRemoteCommandCompatibility(command);
-
-        if (projectionGap) {
-          projectionStatus = "skipped_due_to_gap";
-        } else if (
-          compatibility.status === REMOTE_COMMAND_COMPATIBILITY.COMPATIBLE
-        ) {
-          const result = applyCommandToRepositoryState({
-            repositoryState: projectedRepositoryState,
-            command,
-            projectId,
-          });
-
-          if (result.valid) {
-            projectedRepositoryState = result.repositoryState;
-          } else {
-            compatibility = {
-              status: REMOTE_COMMAND_COMPATIBILITY.INVALID,
-              reason: "creator_model_projection_failed",
-              message: result.error?.message || "projection failed",
-            };
-            projectionGap = createProjectionGap({
-              command,
-              committedEvent,
-              compatibility,
-              sourceType,
-            });
-            projectionStatus = "skipped_invalid";
-          }
-        } else {
-          projectionGap = createProjectionGap({
-            command,
-            committedEvent,
-            compatibility,
-            sourceType,
-          });
-          projectionStatus =
-            compatibility.status === REMOTE_COMMAND_COMPATIBILITY.FUTURE
-              ? "skipped_future"
-              : "skipped_invalid";
-        }
-      }
-
-      if (typeof onCommittedCommand === "function") {
-        void onCommittedCommand({
-          command: structuredClone(command),
-          committedEvent: structuredClone(committedEvent),
-          sourceType,
-          isFromCurrentActor,
-          compatibility: structuredClone(compatibility),
-          projectionStatus,
-          projectionGap: projectionGap
-            ? structuredClone(projectionGap)
-            : undefined,
-        });
-      }
-    },
-    onEvent: ({ type, payload }) => {
-      if (type === "error") {
-        lastError = payload || {
-          code: "unknown_error",
-          message: "unknown",
-        };
-      } else if (type === "rejected") {
-        lastError = {
-          code: payload?.reason || "validation_failed",
-          message: "Server rejected command",
-          payload,
-        };
-      }
+      void onCommittedCommand({
+        command: structuredClone(command),
+        committedEvent: structuredClone(committedEvent),
+        sourceType,
+        isFromCurrentActor,
+      });
     },
   });
 
@@ -259,24 +129,9 @@ export const createProjectCollabService = ({
       return session.getStatus();
     },
 
-    getState() {
-      return projectRepositoryStateToDomainState({
-        repositoryState: projectedRepositoryState,
-        projectId,
-      });
-    },
-
-    syncProjectedRepositoryState(nextRepositoryState) {
-      syncProjectedRepositoryState(nextRepositoryState);
-    },
-
     getLastError() {
       if (lastError) return structuredClone(lastError);
       return session.getLastError();
-    },
-
-    getProjectionGap() {
-      return projectionGap ? structuredClone(projectionGap) : undefined;
     },
 
     clearLastError() {

@@ -1,8 +1,12 @@
 import { buildSceneOverview } from "../../../../internal/project/sceneOverview.js";
-import { scenePartitionFor } from "../collab/partitions.js";
+import {
+  mainScenePartitionFor,
+  scenePartitionFor,
+} from "../collab/partitions.js";
 import {
   doesCommittedEventAffectSceneOverview,
-  getLatestSceneOverviewRevision,
+  getCommittedEventRevision,
+  iterateCommittedEventBatches,
   isMainPartition,
   isNonEmptyString,
   OVERVIEW_CHECKPOINT_DEBOUNCE_MS,
@@ -20,13 +24,42 @@ import {
 
 export const createSceneBundleRuntime = ({
   store,
-  events,
+  listCommittedAfter,
   now = () => Date.now(),
   getCurrentMainState,
   getActiveSceneId,
   getActiveSceneState,
   loadSceneProjection,
 }) => {
+  const getLatestOverviewRevisionForScene = async (sceneId) => {
+    const scenePartition = scenePartitionFor(sceneId);
+    const mainScenePartition = mainScenePartitionFor(sceneId);
+    let latestRelevantRevision = 0;
+
+    for await (const committedBatch of iterateCommittedEventBatches({
+      listCommittedAfter,
+    })) {
+      for (const event of committedBatch) {
+        const partition = event?.partition;
+        const revision = getCommittedEventRevision(event);
+
+        if (partition === scenePartition || partition === mainScenePartition) {
+          latestRelevantRevision = revision;
+          continue;
+        }
+
+        if (
+          isMainPartition(partition) &&
+          doesCommittedEventAffectSceneOverview(event)
+        ) {
+          latestRelevantRevision = revision;
+        }
+      }
+    }
+
+    return latestRelevantRevision;
+  };
+
   const getSceneStateForOverview = async (sceneId) => {
     const activeSceneId = getActiveSceneId();
     const activeSceneState = getActiveSceneState();
@@ -139,7 +172,6 @@ export const createSceneBundleRuntime = ({
     }
 
     const sceneState = await getSceneStateForOverview(sceneId);
-
     const overview = buildSceneOverview({
       repositoryState: composeRepositoryState({
         mainState: currentMainState,
@@ -157,10 +189,7 @@ export const createSceneBundleRuntime = ({
     queueSceneOverviewSave({
       sceneId,
       overview,
-      lastCommittedId: getLatestSceneOverviewRevision({
-        events,
-        sceneId,
-      }),
+      lastCommittedId: await getLatestOverviewRevisionForScene(sceneId),
     });
 
     return structuredClone(overview);
@@ -190,10 +219,8 @@ export const createSceneBundleRuntime = ({
       });
     }
 
-    const latestRelevantRevision = getLatestSceneOverviewRevision({
-      events,
-      sceneId,
-    });
+    const latestRelevantRevision =
+      await getLatestOverviewRevisionForScene(sceneId);
     if (
       isSceneOverviewCheckpointFresh({
         checkpoint,

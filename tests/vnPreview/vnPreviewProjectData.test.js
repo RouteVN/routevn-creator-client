@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { constructProjectData } from "../../src/internal/project/projection.js";
 import {
+  collectPreviewMissingTargets,
   collectSceneIdsFromValue,
   collectSectionIdsFromValue,
   ensurePreviewProjectDataTargets,
+  hasPreviewSceneLines,
+  hasPreviewSectionLines,
   withPreviewEntryPoint,
 } from "../../src/components/vnPreview/support/vnPreviewProjectData.js";
 
@@ -130,6 +133,54 @@ describe("vnPreview project data helpers", () => {
     );
 
     expect(sectionIds).toEqual(["section-2", "section-3"]);
+  });
+
+  it("detects whether preview scenes and sections already have loaded lines", () => {
+    const initialState = createRepositoryState({
+      sceneIds: ["scene-1", "scene-2"],
+    });
+    initialState.scenes.items["scene-2"].sections.items[
+      "scene-2-section-1"
+    ].lines = {
+      items: {},
+      tree: [],
+    };
+    const projectData = constructProjectData(initialState, {
+      initialSceneId: "scene-1",
+    });
+
+    expect(hasPreviewSceneLines(projectData, "scene-1")).toBe(true);
+    expect(hasPreviewSectionLines(projectData, "scene-1-section-1")).toBe(true);
+    expect(hasPreviewSceneLines(projectData, "scene-2")).toBe(false);
+    expect(hasPreviewSectionLines(projectData, "scene-2-section-1")).toBe(
+      false,
+    );
+  });
+
+  it("treats stripped target sections as missing even when the scene id is already known", () => {
+    const initialState = createRepositoryState({
+      sceneIds: ["scene-1", "scene-2"],
+    });
+    initialState.scenes.items["scene-2"].sections.items[
+      "scene-2-section-1"
+    ].lines = {
+      items: {},
+      tree: [],
+    };
+    const projectData = constructProjectData(initialState, {
+      initialSceneId: "scene-1",
+    });
+
+    const result = collectPreviewMissingTargets({
+      projectData,
+      loadedSceneIds: ["scene-1", "scene-2"],
+      sectionIds: ["scene-2-section-1"],
+    });
+
+    expect(result).toEqual({
+      missingSceneIds: ["scene-2"],
+      missingSectionIds: ["scene-2-section-1"],
+    });
   });
 
   it("hydrates missing targets and preserves the preview entry point", async () => {
