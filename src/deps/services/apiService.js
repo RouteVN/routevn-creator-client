@@ -10,7 +10,23 @@ const normalizeBaseUrl = (input) => {
 };
 
 const isLocalHostname = (hostname) => {
-  return hostname === "localhost" || hostname === "127.0.0.1";
+  return (
+    hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1"
+  );
+};
+
+const isAllowedLocalApiOverride = (input) => {
+  try {
+    const parsed = new URL(input);
+
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return false;
+    }
+
+    return isLocalHostname(parsed.hostname);
+  } catch {
+    return false;
+  }
 };
 
 export const resolveDefaultApiBaseUrl = () => {
@@ -18,13 +34,14 @@ export const resolveDefaultApiBaseUrl = () => {
     return DEFAULT_LOCAL_API_BASE_URL;
   }
 
+  const host = window.location.hostname || "";
   const params = new URLSearchParams(window.location.search);
   const queryBaseUrl = normalizeBaseUrl(params.get("apiBaseUrl"));
-  if (queryBaseUrl) {
+
+  if (isLocalHostname(host) && isAllowedLocalApiOverride(queryBaseUrl)) {
     return queryBaseUrl;
   }
 
-  const host = window.location.hostname || "";
   if (isLocalHostname(host)) {
     return DEFAULT_LOCAL_API_BASE_URL;
   }

@@ -7,7 +7,7 @@ refs:
     eventListeners:
       click:
         handler: handleRemoveCharacterClick
-  character*:
+  .characterRow:
     eventListeners:
       contextmenu:
         handler: handleCharacterContextMenu
@@ -88,7 +88,7 @@ template:
                   - rtgl-form#form :form=${form} :defaultValues=${defaultValues}:
                       - rtgl-view#charactersContainer slot=characters g=md w=f:
                           - $for character, i in defaultValues.characters:
-                              - rtgl-view#character${i} data-index=${i} data-character-id=${character.id} d=h g=md av=t p=md br=md w=f:
+                              - rtgl-view#character${i}.characterRow data-index=${i} data-character-id=${character.id} d=h g=md av=t p=md br=md w=f:
                                   - rtgl-view#characterSpriteBox${i} data-index=${i} cur=pointer bw=xs bc=bo h-bc=ac br=sm:
                                       - rtgl-view p=md g=md br=md:
                                           - $if character.spriteFileId:

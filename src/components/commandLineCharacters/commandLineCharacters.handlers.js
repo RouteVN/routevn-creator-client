@@ -1,5 +1,10 @@
 import { toFlatItems } from "../../internal/project/tree.js";
 
+const getCharacterIndexFromEvent = (event) => {
+  const index = Number.parseInt(event?.currentTarget?.dataset?.index, 10);
+  return Number.isInteger(index) ? index : undefined;
+};
+
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
@@ -35,7 +40,11 @@ export const handleAfterMount = async (deps) => {
 
 export const handleCharacterClick = (deps, payload) => {
   const { store, render } = deps;
-  const index = parseInt(payload._event.currentTarget.dataset.index);
+  const index = getCharacterIndexFromEvent(payload._event);
+
+  if (index === undefined) {
+    return;
+  }
 
   // Set the character index for sprite selection
   store.setSelectedCharacterIndex({ index });
@@ -52,7 +61,11 @@ export const handleCharacterClick = (deps, payload) => {
 export const handleCharacterContextMenu = (deps, payload) => {
   payload._event.preventDefault();
   const { store, render } = deps;
-  const index = parseInt(payload._event.currentTarget.dataset.index);
+  const index = getCharacterIndexFromEvent(payload._event);
+
+  if (index === undefined) {
+    return;
+  }
 
   store.showDropdownMenu({
     position: { x: payload._event.clientX, y: payload._event.clientY },

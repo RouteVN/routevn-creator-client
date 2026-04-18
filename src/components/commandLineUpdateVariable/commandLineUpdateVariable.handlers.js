@@ -15,7 +15,7 @@ export const handleAfterMount = async (deps) => {
 
   if (!updateVariable) {
     // Generate alphanumeric ID (route-engine requires alphanumeric only)
-    store.setActionId({ id: generateId(8) });
+    store.setActionId({ id: generateId() });
     store.setOperations({ operations: [] });
     store.setInitiated();
     render();
@@ -24,7 +24,7 @@ export const handleAfterMount = async (deps) => {
 
   // Initialize from existing data
   store.setActionId({
-    id: updateVariable.id || generateId(8),
+    id: updateVariable.id || generateId(),
   });
 
   const operations = (updateVariable.operations || []).map((op) => ({

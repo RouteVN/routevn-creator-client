@@ -3,6 +3,7 @@ import {
   DEFAULT_PROJECT_RESOLUTION,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
+import { generatePrefixedId } from "../../internal/id.js";
 import {
   canResizeLayoutEditorItemHeight,
   canResizeLayoutEditorItemWidth,
@@ -340,7 +341,7 @@ const renderLayoutEditorCanvas = async (
 
     if (clearFirst) {
       deps.graphicsService.render({
-        id: `layout-editor-preview-clear-${Date.now()}`,
+        id: generatePrefixedId("layout-editor-preview-clear-"),
         elements: [],
         animations: [],
       });

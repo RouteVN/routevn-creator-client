@@ -103,7 +103,7 @@ export const createCollabConnectionRuntime = ({
   clientId,
   token,
 }) => {
-  const clientIdSuffix = generateId(12);
+  const clientIdSuffix = generateId();
   const collabRuntime = {
     endpointUrl,
     autoConnectMode: "not_started",

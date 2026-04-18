@@ -63,10 +63,6 @@ Currently approved lengths:
   - use `generateId()`
   - also acceptable for standard generated suffixes inside a larger composite
     identifier when the code wants to make that contract explicit
-- `8`
-  - allowed only where a shorter compact action id is already required
-  - current usage: `updateVariable.id` in
-    `src/components/commandLineUpdateVariable/commandLineUpdateVariable.handlers.js`
 
 If a new use case needs a different length, document the reason in this file in
 the same PR.

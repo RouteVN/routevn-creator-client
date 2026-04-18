@@ -43,6 +43,7 @@ import {
   SQLITE_BUSY_TIMEOUT_MS,
   withSqliteLockRetry,
 } from "../../../internal/sqliteLocking.js";
+import { assertSafeProjectFileId } from "../../../internal/projectFileIds.js";
 import { getManagedSqliteConnection } from "../../clients/tauri/sqliteConnectionManager.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
@@ -304,6 +305,21 @@ export const createTauriProjectServiceAdapters = ({
     return `${projectKey}:${fileId ?? ""}`;
   };
 
+  const resolveReferenceFilePath = async (
+    reference,
+    fileId,
+    { label = "Project file id" } = {},
+  ) => {
+    const safeFileId = assertSafeProjectFileId(fileId, { label });
+    const filesPath = await getReferenceFilesPath(reference);
+
+    return {
+      fileId: safeFileId,
+      filesPath,
+      filePath: await join(filesPath, safeFileId),
+    };
+  };
+
   const promptDistributionZipPath = async ({
     zipName,
     options = {},
@@ -333,14 +349,15 @@ export const createTauriProjectServiceAdapters = ({
 
     const assets = [];
     for (const fileId of uniqueFileIds) {
-      const filePath = await join(filesPath, fileId);
+      const safeFileId = assertSafeProjectFileId(fileId);
+      const filePath = await join(filesPath, safeFileId);
       const fileExists = await exists(filePath);
       if (!fileExists) {
-        console.warn(`Skipping missing file during export: ${fileId}`);
+        console.warn(`Skipping missing file during export: ${safeFileId}`);
         continue;
       }
       assets.push({
-        id: fileId,
+        id: safeFileId,
         path: filePath,
         mime: "application/octet-stream",
       });
@@ -523,14 +540,17 @@ export const createTauriProjectServiceAdapters = ({
 
     getFileContent: async ({ fileId, getCurrentReference }) => {
       const reference = getCurrentReference();
-      const cacheKey = getFileUrlCacheKey(reference, fileId);
+      const safeFileId = assertSafeProjectFileId(fileId);
+      const cacheKey = getFileUrlCacheKey(reference, safeFileId);
       const cachedUrl = fileUrlByCacheKey.get(cacheKey);
       if (cachedUrl) {
         return { url: cachedUrl };
       }
 
-      const filesPath = await getReferenceFilesPath(reference);
-      const filePath = await join(filesPath, fileId);
+      const { filePath } = await resolveReferenceFilePath(
+        reference,
+        safeFileId,
+      );
       const url = convertFileSrc(filePath);
       fileUrlByCacheKey.set(cacheKey, url);
       return { url };

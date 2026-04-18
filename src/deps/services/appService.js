@@ -3,6 +3,7 @@ import { join } from "@tauri-apps/api/path";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { createAppServiceCore } from "./shared/appServiceCore.js";
 import { generateId } from "../../internal/id.js";
+import { assertSafeProjectFileId } from "../../internal/projectFileIds.js";
 
 const deriveProjectNameFromPath = (projectPath) => {
   if (typeof projectPath !== "string" || projectPath.length === 0) {
@@ -31,7 +32,10 @@ export const createAppService = (params) => {
       if (!iconFileId || !projectPath) return null;
 
       try {
-        const filePath = await join(projectPath, "files", iconFileId);
+        const safeIconFileId = assertSafeProjectFileId(iconFileId, {
+          label: "Project icon file id",
+        });
+        const filePath = await join(projectPath, "files", safeIconFileId);
         const fileExists = await exists(filePath);
         if (!fileExists) return null;
         return convertFileSrc(filePath);

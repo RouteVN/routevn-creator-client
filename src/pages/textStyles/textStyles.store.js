@@ -668,7 +668,7 @@ export const selectViewData = ({ state }) => {
         {
           id: "submit",
           variant: "pr",
-          label: state.editMode ? "Update Typography" : "Add Typography",
+          label: state.editMode ? "Update Text Style" : "Add Text Style",
         },
       ],
     },
