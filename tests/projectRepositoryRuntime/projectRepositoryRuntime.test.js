@@ -179,9 +179,7 @@ const createSceneProjectionReducer = () => {
       const section = scene?.sections?.items?.[sectionId];
       const line = event?.payload?.lines?.[0];
       if (!section || !line?.lineId) {
-        throw new Error(
-          "payload.sectionId must reference an existing section",
-        );
+        throw new Error("payload.sectionId must reference an existing section");
       }
 
       if (section.lines.items[line.lineId]) {
@@ -190,7 +188,7 @@ const createSceneProjectionReducer = () => {
 
       section.lines.items[line.lineId] = {
         id: line.lineId,
-        ...(line.data || {}),
+        ...line.data,
       };
       section.lines.tree.push({
         id: line.lineId,

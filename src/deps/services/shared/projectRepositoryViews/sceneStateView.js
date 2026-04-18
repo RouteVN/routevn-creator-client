@@ -250,8 +250,7 @@ const isRelevantSceneProjectionEvent = ({ event, sceneId }) => {
   const command = committedEventToCommand(event);
   return (
     typeof command?.type === "string" &&
-    (command.type.startsWith("line.") ||
-      command.type.startsWith("section."))
+    (command.type.startsWith("line.") || command.type.startsWith("section."))
   );
 };
 
