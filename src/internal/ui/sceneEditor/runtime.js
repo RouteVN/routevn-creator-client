@@ -16,32 +16,6 @@ import {
 import { prepareRuntimeInteractionExecution } from "../../runtime/graphicsEngineRuntime.js";
 const NO_PENDING_CANVAS_RENDER = Symbol("no-pending-canvas-render");
 
-const logSceneEditorRuntime = (event, payload = {}) => {
-  console.info("[sceneEditor.runtime]", {
-    event,
-    ...payload,
-  });
-};
-
-const summarizeRepositoryStateForDiagnostics = (state) => {
-  const scenes = state?.scenes?.items || {};
-  const sceneItems = Object.values(scenes);
-  const sectionItems = sceneItems.flatMap((scene) =>
-    Object.values(scene?.sections?.items || {}),
-  );
-  const lineCount = sectionItems.reduce(
-    (total, section) => total + Object.keys(section?.lines?.items || {}).length,
-    0,
-  );
-
-  return {
-    sceneCount: sceneItems.length,
-    sectionCount: sectionItems.length,
-    lineCount,
-    initialSceneId: state?.story?.initialSceneId,
-  };
-};
-
 const waitForNextFrame = () =>
   new Promise((resolve) => {
     if (typeof requestAnimationFrame === "function") {
@@ -620,7 +594,6 @@ export const initializeSceneEditorPage = async (deps) => {
     syncProjectState,
   } = deps;
   await projectService.ensureRepository();
-  const ensuredProjectId = projectService.getEnsuredProjectId();
 
   const {
     s,
@@ -628,17 +601,6 @@ export const initializeSceneEditorPage = async (deps) => {
     lineId: payloadLineId,
   } = appService.getPayload();
   const sceneId = s;
-
-  logSceneEditorRuntime("initialize_start", {
-    projectId: ensuredProjectId,
-    sceneId,
-    payloadSectionId,
-    payloadLineId,
-    repositoryRevision: projectService.getRepositoryRevision(),
-    stateSummary: summarizeRepositoryStateForDiagnostics(
-      projectService.getRepositoryState(),
-    ),
-  });
 
   await projectService.setActiveSceneId(sceneId);
 
@@ -702,16 +664,6 @@ export const initializeSceneEditorPage = async (deps) => {
   subject.dispatch("sceneEditor.renderCanvas", {
     skipAnimations: true,
     skipCanvasPaint: true,
-  });
-  logSceneEditorRuntime("initialize_complete", {
-    projectId: ensuredProjectId,
-    sceneId,
-    selectedSectionId: store.selectSelectedSectionId(),
-    selectedLineId: store.selectSelectedLineId(),
-    repositoryRevision: projectService.getRepositoryRevision(),
-    stateSummary: summarizeRepositoryStateForDiagnostics(
-      projectService.getRepositoryState(),
-    ),
   });
   setTimeout(() => {
     subject.dispatch("sceneEditor.renderCanvas", {});
@@ -818,15 +770,7 @@ export const mountSceneEditorSubscriptions = (deps) => {
 
 export const resetSceneEditorRuntime = async (deps) => {
   const { graphicsService, store } = deps;
-  logSceneEditorRuntime("reset_start", {
-    sceneId: store.selectSceneId(),
-    selectedSectionId: store.selectSelectedSectionId(),
-    selectedLineId: store.selectSelectedLineId(),
-  });
   store.setSceneAssetLoading({ isLoading: false });
   resetAssetLoadCache("scene editor unmount");
   await graphicsService.destroy();
-  logSceneEditorRuntime("reset_complete", {
-    sceneId: store.selectSceneId(),
-  });
 };

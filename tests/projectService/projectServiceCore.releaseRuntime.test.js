@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocked = vi.hoisted(() => ({
+  importImageFile: vi.fn(),
   repositoryService: {
     getCachedStore: vi.fn(),
     getCachedReference: vi.fn(),
@@ -76,7 +77,7 @@ vi.mock("../../src/deps/services/shared/projectExportService.js", () => ({
 }));
 
 vi.mock("../../src/deps/services/shared/resourceImports.js", () => ({
-  importImageFile: vi.fn(),
+  importImageFile: mocked.importImageFile,
 }));
 
 vi.mock("../../src/deps/services/shared/resourceUsage.js", () => ({
@@ -88,6 +89,7 @@ import { createProjectServiceCore } from "../../src/deps/services/shared/project
 
 describe("projectServiceCore releaseProjectRuntime", () => {
   beforeEach(() => {
+    mocked.importImageFile.mockReset();
     mocked.repositoryService.getEnsuredProjectId.mockReset();
     mocked.repositoryService.ensureRepository.mockReset();
     mocked.repositoryService.releaseCurrentRepository.mockReset();
@@ -193,5 +195,47 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     });
     expect(mocked.repositoryService.ensureRepository).toHaveBeenCalledTimes(1);
     expect(repository.loadState).toHaveBeenCalledWith(12);
+  });
+
+  it("forwards the requested imageId when importing an image file", async () => {
+    mocked.importImageFile.mockResolvedValue({
+      valid: true,
+      imageId: "image-123",
+    });
+
+    const projectService = createProjectServiceCore({
+      router: {
+        getPayload: () => ({ p: "project-1" }),
+      },
+      db: {},
+      filePicker: {},
+      idGenerator: () => "generated-id",
+      now: () => 0,
+      collabLog: () => {},
+      creatorVersion: 1,
+      storageAdapter: {
+        initializeProject: vi.fn(),
+      },
+      fileAdapter: {},
+      collabAdapter: {},
+    });
+
+    const file = new File(["image"], "hero.png", {
+      type: "image/png",
+    });
+
+    await projectService.importImageFile({
+      file,
+      parentId: "folder-1",
+      imageId: "image-123",
+    });
+
+    expect(mocked.importImageFile).toHaveBeenCalledWith({
+      file,
+      parentId: "folder-1",
+      imageId: "image-123",
+      uploadFiles: mocked.assetService.uploadFiles,
+      createImage: mocked.collabService.commandApi.createImage,
+    });
   });
 });

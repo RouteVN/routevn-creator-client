@@ -249,10 +249,11 @@ export const createProjectServiceCore = ({
     storeFile: assetService.storeFile,
     storeFileForProject: assetService.storeFileForProject,
     uploadFiles: assetService.uploadFiles,
-    async importImageFile({ file, parentId } = {}) {
+    async importImageFile({ file, parentId, imageId } = {}) {
       return importProjectImageFile({
         file,
         parentId,
+        imageId,
         uploadFiles: assetService.uploadFiles,
         createImage: collabService.commandApi.createImage,
       });

@@ -65,11 +65,13 @@ describe("images handlers", () => {
     const file = new File(["image"], "hero.png", {
       type: "image/png",
     });
+    const removePendingUpload = vi.fn();
     processPendingUploadsMock.mockImplementation(
       async ({ files, processFile }) => {
         await processFile({
           file: files[0],
           pendingUploadId: "pending-image-1",
+          removePendingUpload,
         });
         return { status: "ok", successfulUploadCount: 1 };
       },
@@ -85,11 +87,31 @@ describe("images handlers", () => {
           valid: true,
           imageId: "image-123",
         })),
+        getState: vi.fn(() => ({
+          images: {
+            tree: [],
+            items: {
+              "image-123": {
+                id: "image-123",
+                type: "image",
+                name: "hero",
+              },
+            },
+          },
+        })),
+        subscribeProjectState: vi.fn(() => () => {}),
       },
       store: {
         updatePendingUpload: vi.fn(),
+        setItems: vi.fn(),
+        setSelectedItemId: vi.fn(),
       },
       render: vi.fn(),
+      refs: {
+        fileExplorer: {
+          selectItem: vi.fn(),
+        },
+      },
     };
 
     await handleUploadClick(deps, {
@@ -110,6 +132,19 @@ describe("images handlers", () => {
       file,
       parentId: "folder-1",
       imageId: "image-123",
+    });
+    expect(removePendingUpload).toHaveBeenCalledTimes(1);
+    expect(deps.store.setItems).toHaveBeenCalledWith({
+      data: {
+        tree: [],
+        items: {
+          "image-123": {
+            id: "image-123",
+            type: "image",
+            name: "hero",
+          },
+        },
+      },
     });
   });
 });

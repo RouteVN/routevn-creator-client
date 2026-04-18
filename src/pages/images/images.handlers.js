@@ -169,7 +169,7 @@ const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
     pendingIdPrefix: "pending-image",
     concurrency: MAX_PARALLEL_UPLOADS,
     refresh: handleDataChanged,
-    processFile: async ({ file, pendingUploadId }) => {
+    processFile: async ({ file, pendingUploadId, removePendingUpload }) => {
       const imageId = generateId();
       store.updatePendingUpload({
         itemId: pendingUploadId,
@@ -188,6 +188,11 @@ const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
             imageId,
           }),
       });
+
+      if (createAttempt.ok) {
+        await handleDataChanged(deps);
+        removePendingUpload();
+      }
 
       return createAttempt.ok;
     },
