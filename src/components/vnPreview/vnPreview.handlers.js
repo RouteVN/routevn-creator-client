@@ -11,10 +11,10 @@ import {
 } from "../../internal/project/layout.js";
 import { prepareRuntimeInteractionExecution } from "../../internal/runtime/graphicsEngineRuntime.js";
 import {
+  collectPreviewMissingTargets,
   collectSceneIdsFromValue,
   collectSectionIdsFromValue,
   ensurePreviewProjectDataTargets,
-  resolveSceneIdForSectionId,
   withPreviewEntryPoint,
 } from "./support/vnPreviewProjectData.js";
 
@@ -161,13 +161,22 @@ const preloadLayoutAssetsByIds = async (deps, projectData, layoutIds) => {
 
 const createBeforeHandleActionsHook = (
   deps,
-  { repository, projectData, sceneId, sectionId, lineId } = {},
+  {
+    repository,
+    projectData,
+    loadedSceneIds: initialLoadedSceneIds = [],
+    sceneId,
+    sectionId,
+    lineId,
+  } = {},
 ) => {
   let currentProjectData = projectData;
   let loadedSceneIds = new Set(
-    typeof sceneId === "string" && sceneId.length > 0
-      ? [sceneId]
-      : Object.keys(projectData?.story?.scenes || {}),
+    initialLoadedSceneIds.length > 0
+      ? initialLoadedSceneIds
+      : typeof sceneId === "string" && sceneId.length > 0
+        ? [sceneId]
+        : Object.keys(projectData?.story?.scenes || {}),
   );
 
   return async (actions, eventContext) => {
@@ -187,26 +196,14 @@ const createBeforeHandleActionsHook = (
       resolvedActions,
       eventData,
     );
-    const missingSceneIds = referencedSceneIds.filter(
-      (targetSceneId) => !loadedSceneIds.has(targetSceneId),
+    const { missingSceneIds, missingSectionIds } = collectPreviewMissingTargets(
+      {
+        projectData: currentProjectData,
+        loadedSceneIds: Array.from(loadedSceneIds),
+        sceneIds: referencedSceneIds,
+        sectionIds: referencedSectionIds,
+      },
     );
-    const missingSectionIds = [];
-
-    referencedSectionIds.forEach((targetSectionId) => {
-      const targetSceneId = resolveSceneIdForSectionId(
-        currentProjectData,
-        targetSectionId,
-      );
-
-      if (!targetSceneId) {
-        missingSectionIds.push(targetSectionId);
-        return;
-      }
-
-      if (!loadedSceneIds.has(targetSceneId)) {
-        missingSceneIds.push(targetSceneId);
-      }
-    });
 
     const shouldShowLoading =
       missingSceneIds.length > 0 || missingSectionIds.length > 0;
@@ -332,7 +329,7 @@ export const handleAfterMount = async (deps) => {
     initialSceneId: sceneId,
   });
 
-  const projectDataWithInitial = withPreviewEntryPoint(projectData, {
+  let projectDataWithInitial = withPreviewEntryPoint(projectData, {
     sceneId,
     sectionId,
     lineId,
@@ -341,10 +338,31 @@ export const handleAfterMount = async (deps) => {
     projectDataWithInitial,
     sceneId,
   );
+  let loadedSceneIds =
+    typeof sceneId === "string" && sceneId.length > 0 ? [sceneId] : [];
+
+  if (initialSceneIds.length > 0) {
+    const hydrationResult = await ensurePreviewProjectDataTargets({
+      repository,
+      projectData: projectDataWithInitial,
+      loadedSceneIds,
+      sceneIds: initialSceneIds,
+      sectionIds: [],
+      initialSceneId: sceneId,
+      initialSectionId: sectionId,
+      initialLineId: lineId,
+    });
+
+    if (hydrationResult.didLoad) {
+      projectDataWithInitial = hydrationResult.projectData;
+      loadedSceneIds = hydrationResult.loadedSceneIds;
+    }
+  }
 
   const beforeHandleActions = createBeforeHandleActionsHook(deps, {
     repository,
     projectData: projectDataWithInitial,
+    loadedSceneIds,
     sceneId,
     sectionId,
     lineId,

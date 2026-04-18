@@ -169,7 +169,11 @@ export const getLatestSceneProjectionRevision = ({ events = [], sceneId }) => {
     }
 
     const command = committedEventToCommand(event);
-    if (typeof command?.type === "string" && command.type.startsWith("line.")) {
+    if (
+      typeof command?.type === "string" &&
+      (command.type.startsWith("line.") ||
+        command.type.startsWith("section."))
+    ) {
       latestRevision = index + 1;
     }
   }

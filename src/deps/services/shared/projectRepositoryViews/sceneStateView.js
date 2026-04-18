@@ -248,7 +248,68 @@ const isRelevantSceneProjectionEvent = ({ event, sceneId }) => {
   }
 
   const command = committedEventToCommand(event);
-  return typeof command?.type === "string" && command.type.startsWith("line.");
+  return (
+    typeof command?.type === "string" &&
+    (command.type.startsWith("line.") ||
+      command.type.startsWith("section."))
+  );
+};
+
+const isMissingSectionReplayError = (error) =>
+  String(error?.message || "").includes(
+    "payload.sectionId must reference an existing section",
+  );
+
+const isMissingLineReplayError = (error) =>
+  String(error?.message || "").includes(
+    "payload.lineId must reference an existing line",
+  );
+
+const isDuplicateSectionReplayError = (error) =>
+  String(error?.message || "").includes(
+    "payload.sectionId must not already exist",
+  );
+
+const isDuplicateLineReplayError = (error) =>
+  String(error?.message || "").includes(
+    "payload.lines.lineId must not already exist",
+  );
+
+const shouldSkipObsoleteSceneReplayEvent = ({
+  event,
+  repositoryState,
+  error,
+}) => {
+  const { command, lineId, sectionId } = getSceneProjectionDebugDetails(event);
+  if (command?.type?.startsWith("section.")) {
+    if (isDuplicateSectionReplayError(error)) {
+      return !command?.type?.endsWith(".create")
+        ? false
+        : Boolean(findSectionLocationInState(repositoryState, sectionId));
+    }
+
+    if (isMissingSectionReplayError(error)) {
+      return !findSectionLocationInState(repositoryState, sectionId);
+    }
+
+    return false;
+  }
+
+  if (command?.type?.startsWith("line.")) {
+    if (isMissingSectionReplayError(error)) {
+      return !findSectionLocationInState(repositoryState, sectionId);
+    }
+
+    if (isMissingLineReplayError(error)) {
+      return !findLineLocationInState(repositoryState, lineId);
+    }
+
+    if (isDuplicateLineReplayError(error)) {
+      return Boolean(findLineLocationInState(repositoryState, lineId));
+    }
+  }
+
+  return false;
 };
 
 const hasOnlySceneTopLevelState = (value) => {
@@ -639,31 +700,54 @@ export const loadSceneProjectionState = async ({
         workingState = nextState;
       }
     } catch (error) {
-      const failedRelevantIndex = Number(error?.details?.commandIndex);
-      const failedEntry =
-        Number.isInteger(failedRelevantIndex) &&
-        failedRelevantIndex >= 0 &&
-        failedRelevantIndex < relevantEventEntries.length
-          ? relevantEventEntries[failedRelevantIndex]
-          : relevantEventEntries[0];
+      let recovered = false;
+      for (const relevantEntry of relevantEventEntries) {
+        try {
+          const nextState = reduceEventToState({
+            repositoryState: workingState,
+            event: relevantEntry.event,
+          });
+          if (nextState !== undefined) {
+            workingState = nextState;
+          }
+        } catch (sequentialError) {
+          if (
+            shouldSkipObsoleteSceneReplayEvent({
+              event: relevantEntry.event,
+              repositoryState: workingState,
+              error: sequentialError,
+            })
+          ) {
+            console.warn("[sceneProjection] skipped obsolete replay event", {
+              sceneId,
+              eventId: relevantEntry.event?.id,
+              partition: relevantEntry.event?.partition,
+              error: sequentialError?.message || "unknown",
+            });
+            continue;
+          }
 
-      if (failedEntry) {
-        logSceneProjectionReplayFailure({
-          sceneId,
-          event: failedEntry.event,
-          index: failedEntry.index,
-          events:
-            streamedDebugReplayEvents === debugReplayEvents
-              ? replayEvents
-              : streamedDebugReplayEvents,
-          mainState,
-          bootstrapProjection,
-          initialWorkingState,
-          repositoryState: workingState,
-          error,
-        });
+          logSceneProjectionReplayFailure({
+            sceneId,
+            event: relevantEntry.event,
+            index: relevantEntry.index,
+            events:
+              streamedDebugReplayEvents === debugReplayEvents
+                ? replayEvents
+                : streamedDebugReplayEvents,
+            mainState,
+            bootstrapProjection,
+            initialWorkingState,
+            repositoryState: workingState,
+            error: sequentialError,
+          });
+          throw sequentialError;
+        }
       }
-      throw error;
+      recovered = true;
+      if (!recovered) {
+        throw error;
+      }
     }
 
     relevantReplayCount += relevantEventEntries.length;

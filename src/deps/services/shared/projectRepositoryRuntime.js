@@ -21,6 +21,7 @@ import {
   MAIN_VIEW_VERSION,
   cloneState,
   createMainProjectionState,
+  createSceneProjectionState,
   getLatestSceneProjectionRevision,
   iterateCommittedEventBatches,
   isNonEmptyString,
@@ -298,7 +299,7 @@ export const createProjectRepositoryRuntime = async ({
   };
 
   const saveCurrentMainCheckpoint = async () => {
-    const value = structuredClone(getCurrentComposedState());
+    const value = createMainProjectionState(currentMainState);
     await store.saveMaterializedViewCheckpoint({
       viewName: MAIN_VIEW_NAME,
       partition: MAIN_PARTITION,
@@ -389,12 +390,14 @@ export const createProjectRepositoryRuntime = async ({
   let currentMainState;
 
   try {
-    currentMainState = cloneState(
-      await materializedViewRuntime.loadMaterializedView({
-        viewName: MAIN_VIEW_NAME,
-        partition: MAIN_PARTITION,
-      }),
-      createMainProjectionState(createInitialState()),
+    currentMainState = createMainProjectionState(
+      cloneState(
+        await materializedViewRuntime.loadMaterializedView({
+          viewName: MAIN_VIEW_NAME,
+          partition: MAIN_PARTITION,
+        }),
+        createMainProjectionState(createInitialState()),
+      ),
     );
   } finally {
     endInitialMainHydrationProgress({
@@ -406,12 +409,14 @@ export const createProjectRepositoryRuntime = async ({
   assertState(currentMainState);
 
   const refreshMainState = async () => {
-    currentMainState = cloneState(
-      await materializedViewRuntime.loadMaterializedView({
-        viewName: MAIN_VIEW_NAME,
-        partition: MAIN_PARTITION,
-      }),
-      createMainProjectionState(createInitialState()),
+    currentMainState = createMainProjectionState(
+      cloneState(
+        await materializedViewRuntime.loadMaterializedView({
+          viewName: MAIN_VIEW_NAME,
+          partition: MAIN_PARTITION,
+        }),
+        createMainProjectionState(createInitialState()),
+      ),
     );
     assertState(currentMainState);
   };
@@ -639,7 +644,10 @@ export const createProjectRepositoryRuntime = async ({
     const scopedEvents = [];
     for (const committedEvent of committedEvents) {
       const partition = committedEvent?.partition;
-      if (!isNonEmptyString(partition) || !partition.startsWith("s:")) {
+      if (
+        !isNonEmptyString(partition) ||
+        (!partition.startsWith("s:") && !partition.startsWith("m:s:"))
+      ) {
         continue;
       }
 
@@ -655,13 +663,32 @@ export const createProjectRepositoryRuntime = async ({
       return;
     }
 
-    activeSceneState = applySceneEventsToLoadedProjection({
-      mainState: currentMainState,
-      sceneState: activeSceneState,
-      sceneId: activeSceneId,
-      sourceEvents: scopedEvents,
-      reduceEventsToState,
+    // Main-scene section lifecycle is already reflected in currentMainState
+    // after refreshMainState(), so rebuild the active snapshot from that base
+    // and replay only scene line events on top.
+    activeSceneState = createSceneProjectionState(
+      composeRepositoryState({
+        mainState: currentMainState,
+        activeSceneId,
+        activeSceneState,
+      }),
+      scenePartitionFor(activeSceneId),
+    );
+
+    const lineScopedEvents = scopedEvents.filter((committedEvent) => {
+      const type = committedEvent?.type;
+      return typeof type === "string" && type.startsWith("line.");
     });
+
+    if (lineScopedEvents.length > 0) {
+      activeSceneState = applySceneEventsToLoadedProjection({
+        mainState: currentMainState,
+        sceneState: activeSceneState,
+        sceneId: activeSceneId,
+        sourceEvents: lineScopedEvents,
+        reduceEventsToState,
+      });
+    }
 
     await saveSceneProjectionCheckpoint({
       store,
@@ -682,7 +709,10 @@ export const createProjectRepositoryRuntime = async ({
 
     for (const committedEvent of committedEvents) {
       const partition = committedEvent?.partition;
-      if (!isNonEmptyString(partition) || !partition.startsWith("s:")) {
+      if (
+        !isNonEmptyString(partition) ||
+        (!partition.startsWith("s:") && !partition.startsWith("m:s:"))
+      ) {
         continue;
       }
 

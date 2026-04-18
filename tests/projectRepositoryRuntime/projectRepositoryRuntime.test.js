@@ -9,6 +9,10 @@ import {
   SCENE_OVERVIEW_VIEW_NAME,
   createMainProjectionState,
 } from "../../src/deps/services/shared/projectRepositoryViews/shared.js";
+import {
+  mainScenePartitionFor,
+  scenePartitionFor,
+} from "../../src/deps/services/shared/collab/partitions.js";
 
 const createBatchedReducer = (reduceEventToState) => {
   return ({ repositoryState, events }) => {
@@ -25,6 +29,176 @@ const createBatchedReducer = (reduceEventToState) => {
     }
 
     return nextState;
+  };
+};
+
+const createSceneRepositoryState = ({
+  sceneId = "scene-1",
+  sectionId = "section-1",
+  lineId,
+} = {}) => ({
+  project: {
+    resolution: {
+      width: 1280,
+      height: 720,
+    },
+  },
+  story: {
+    initialSceneId: sceneId,
+  },
+  files: {
+    items: {},
+    tree: [],
+  },
+  images: {
+    items: {},
+    tree: [],
+  },
+  spritesheets: {
+    items: {},
+    tree: [],
+  },
+  sounds: {
+    items: {},
+    tree: [],
+  },
+  videos: {
+    items: {},
+    tree: [],
+  },
+  animations: {
+    items: {},
+    tree: [],
+  },
+  particles: {
+    items: {},
+    tree: [],
+  },
+  characters: {
+    items: {},
+    tree: [],
+  },
+  fonts: {
+    items: {},
+    tree: [],
+  },
+  transforms: {
+    items: {},
+    tree: [],
+  },
+  colors: {
+    items: {},
+    tree: [],
+  },
+  textStyles: {
+    items: {},
+    tree: [],
+  },
+  variables: {
+    items: {},
+    tree: [],
+  },
+  layouts: {
+    items: {},
+    tree: [],
+  },
+  controls: {
+    items: {},
+    tree: [],
+  },
+  scenes: {
+    items: {
+      [sceneId]: {
+        id: sceneId,
+        type: "scene",
+        name: "Scene 1",
+        sections: {
+          items: {
+            [sectionId]: {
+              id: sectionId,
+              type: "section",
+              name: "Section 1",
+              lines: {
+                items: lineId
+                  ? {
+                      [lineId]: {
+                        id: lineId,
+                        actions: {},
+                      },
+                    }
+                  : {},
+                tree: lineId ? [{ id: lineId }] : [],
+              },
+            },
+          },
+          tree: [{ id: sectionId }],
+        },
+      },
+    },
+    tree: [{ id: sceneId }],
+  },
+});
+
+const createSceneProjectionReducer = () => {
+  return ({ repositoryState, event }) => {
+    if (event?.type === "project.create") {
+      return structuredClone(event.payload.state);
+    }
+
+    if (event?.type === "section.create") {
+      const nextState = structuredClone(repositoryState);
+      const scene = nextState?.scenes?.items?.["scene-1"];
+      const sectionId = event?.payload?.sectionId;
+      if (!scene || typeof sectionId !== "string" || sectionId.length === 0) {
+        throw new Error("payload.sceneId must reference an existing scene");
+      }
+
+      if (scene.sections.items[sectionId]) {
+        throw new Error("payload.sectionId must not already exist");
+      }
+
+      scene.sections.items[sectionId] = {
+        id: sectionId,
+        type: "section",
+        name: event?.payload?.data?.name || "Section",
+        lines: {
+          items: {},
+          tree: [],
+        },
+      };
+      scene.sections.tree.splice(Number(event?.payload?.index) || 0, 0, {
+        id: sectionId,
+      });
+      return nextState;
+    }
+
+    if (event?.type === "line.create") {
+      const nextState = structuredClone(repositoryState);
+      const scene = nextState?.scenes?.items?.["scene-1"];
+      const sectionId = event?.payload?.sectionId;
+      const section = scene?.sections?.items?.[sectionId];
+      const line = event?.payload?.lines?.[0];
+      if (!section || !line?.lineId) {
+        throw new Error(
+          "payload.sectionId must reference an existing section",
+        );
+      }
+
+      if (section.lines.items[line.lineId]) {
+        throw new Error("payload.lines.lineId must not already exist");
+      }
+
+      section.lines.items[line.lineId] = {
+        id: line.lineId,
+        ...(line.data || {}),
+      };
+      section.lines.tree.push({
+        id: line.lineId,
+      });
+      return nextState;
+    }
+
+    return repositoryState;
   };
 };
 
@@ -841,6 +1015,263 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
         .lines.items[lineId],
     ).toMatchObject({
       id: lineId,
+    });
+  });
+
+  it("normalizes polluted main checkpoints before loading a scene projection", async () => {
+    const sceneId = "scene-1";
+    const sectionId = "section-1";
+    const lineId = "line-1";
+    const initialState = createSceneRepositoryState({
+      sceneId,
+      sectionId,
+    });
+    const pollutedMainCheckpoint = createSceneRepositoryState({
+      sceneId,
+      sectionId,
+      lineId,
+    });
+    const committedEvents = [
+      createProjectCreateRepositoryEvent({
+        projectId: "project-1",
+        state: initialState,
+      }),
+      {
+        id: "line-create-1",
+        projectId: "project-1",
+        type: "line.create",
+        partition: scenePartitionFor(sceneId),
+        payload: {
+          sectionId,
+          lines: [
+            {
+              lineId,
+              data: {
+                actions: {},
+              },
+            },
+          ],
+          index: 0,
+        },
+      },
+    ].map((event, index) => ({
+      ...structuredClone(event),
+      committedId: index + 1,
+    }));
+    const listCommittedAfter = vi.fn(
+      async ({ sinceCommittedId = 0, limit } = {}) => {
+        const startIndex = Math.max(0, Number(sinceCommittedId) || 0);
+        const normalizedLimit =
+          Number.isInteger(limit) && limit > 0 ? limit : committedEvents.length;
+        return committedEvents
+          .slice(startIndex, startIndex + normalizedLimit)
+          .map((event) => structuredClone(event));
+      },
+    );
+    const reduceEventToState = createSceneProjectionReducer();
+
+    const repository = await createProjectRepositoryRuntime({
+      projectId: "project-1",
+      store: {
+        listCommittedAfter,
+        loadMaterializedViewCheckpoint: async ({ viewName, partition }) => {
+          if (viewName === MAIN_VIEW_NAME && partition === "m") {
+            return {
+              viewName,
+              viewVersion: "1",
+              partition,
+              lastCommittedId: committedEvents.length,
+              value: pollutedMainCheckpoint,
+            };
+          }
+
+          return undefined;
+        },
+        saveMaterializedViewCheckpoint: async () => {},
+        deleteMaterializedViewCheckpoint: async () => {},
+      },
+      initialRevision: committedEvents.length,
+      historyStats: {
+        committedCount: committedEvents.length,
+        latestCommittedId: committedEvents.length,
+        draftCount: 0,
+        latestDraftClock: 0,
+      },
+      loadEvents: vi.fn(async () => structuredClone(committedEvents)),
+      createInitialState: () => ({
+        scenes: {
+          items: {},
+          tree: [],
+        },
+      }),
+      reduceEventToState,
+      reduceEventsToState: createBatchedReducer(reduceEventToState),
+    });
+
+    await expect(repository.setActiveSceneId(sceneId)).resolves.toBeUndefined();
+    expect(
+      repository.getState().scenes.items[sceneId].sections.items[sectionId]
+        .lines.items[lineId],
+    ).toMatchObject({
+      id: lineId,
+    });
+  });
+
+  it("flushes a stripped main checkpoint even when an active scene is loaded", async () => {
+    const sceneId = "scene-1";
+    const sectionId = "section-1";
+    const lineId = "line-1";
+    const fullRepositoryState = createSceneRepositoryState({
+      sceneId,
+      sectionId,
+      lineId,
+    });
+    const mainCheckpointSaveCalls = [];
+    const committedEvents = [
+      createProjectCreateRepositoryEvent({
+        projectId: "project-1",
+        state: fullRepositoryState,
+      }),
+    ].map((event, index) => ({
+      ...structuredClone(event),
+      committedId: index + 1,
+    }));
+    const listCommittedAfter = vi.fn(
+      async ({ sinceCommittedId = 0, limit } = {}) => {
+        const startIndex = Math.max(0, Number(sinceCommittedId) || 0);
+        const normalizedLimit =
+          Number.isInteger(limit) && limit > 0 ? limit : committedEvents.length;
+        return committedEvents
+          .slice(startIndex, startIndex + normalizedLimit)
+          .map((event) => structuredClone(event));
+      },
+    );
+    const reduceEventToState = createSceneProjectionReducer();
+
+    const repository = await createProjectRepositoryRuntime({
+      projectId: "project-1",
+      store: {
+        listCommittedAfter,
+        loadMaterializedViewCheckpoint: async ({ viewName, partition }) => {
+          if (viewName === MAIN_VIEW_NAME && partition === "m") {
+            return {
+              viewName,
+              viewVersion: "1",
+              partition,
+              lastCommittedId: committedEvents.length,
+              value: createMainProjectionState(fullRepositoryState),
+            };
+          }
+
+          return undefined;
+        },
+        saveMaterializedViewCheckpoint: async (checkpoint) => {
+          if (
+            checkpoint?.viewName === MAIN_VIEW_NAME &&
+            checkpoint?.partition === "m"
+          ) {
+            mainCheckpointSaveCalls.push(structuredClone(checkpoint));
+          }
+        },
+        deleteMaterializedViewCheckpoint: async () => {},
+      },
+      initialRevision: committedEvents.length,
+      historyStats: {
+        committedCount: committedEvents.length,
+        latestCommittedId: committedEvents.length,
+        draftCount: 0,
+        latestDraftClock: 0,
+      },
+      loadEvents: vi.fn(async () => structuredClone(committedEvents)),
+      createInitialState: () => ({
+        scenes: {
+          items: {},
+          tree: [],
+        },
+      }),
+      reduceEventToState,
+      reduceEventsToState: createBatchedReducer(reduceEventToState),
+    });
+
+    await repository.setActiveSceneId(sceneId);
+    await repository.flushMainCheckpoint();
+
+    expect(mainCheckpointSaveCalls).not.toHaveLength(0);
+    expect(
+      mainCheckpointSaveCalls.at(-1)?.value?.scenes?.items?.[sceneId]?.sections
+        ?.items?.[sectionId]?.lines?.items?.[lineId],
+    ).toBeUndefined();
+  });
+
+  it("adopts main-scene section changes without replaying section.create twice", async () => {
+    const sceneId = "scene-1";
+    const sectionId = "section-1";
+    const nextSectionId = "section-2";
+    const initialState = createSceneRepositoryState({
+      sceneId,
+      sectionId,
+    });
+    const reduceEventToState = createSceneProjectionReducer();
+
+    const repository = await createProjectRepositoryRuntime({
+      projectId: "project-1",
+      store: {
+        loadMaterializedViewCheckpoint: async ({ viewName, partition }) => {
+          if (viewName === MAIN_VIEW_NAME && partition === "m") {
+            return {
+              viewName,
+              viewVersion: "1",
+              partition,
+              lastCommittedId: 1,
+              value: createMainProjectionState(initialState),
+            };
+          }
+
+          return undefined;
+        },
+        saveMaterializedViewCheckpoint: async () => {},
+        deleteMaterializedViewCheckpoint: async () => {},
+      },
+      events: [
+        createProjectCreateRepositoryEvent({
+          projectId: "project-1",
+          state: initialState,
+        }),
+      ],
+      createInitialState: () => ({
+        scenes: {
+          items: {},
+          tree: [],
+        },
+      }),
+      reduceEventToState,
+      reduceEventsToState: createBatchedReducer(reduceEventToState),
+    });
+
+    await repository.setActiveSceneId(sceneId);
+    await expect(
+      repository.addEvent({
+        id: "section-create-2",
+        projectId: "project-1",
+        type: "section.create",
+        partition: mainScenePartitionFor(sceneId),
+        payload: {
+          sceneId,
+          sectionId: nextSectionId,
+          parentId: null,
+          index: 1,
+          data: {
+            name: "Section 2",
+          },
+        },
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(
+      repository.getState().scenes.items[sceneId].sections.items[nextSectionId],
+    ).toMatchObject({
+      id: nextSectionId,
+      name: "Section 2",
     });
   });
 });

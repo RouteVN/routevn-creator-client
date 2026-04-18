@@ -421,4 +421,219 @@ describe("scene projection compatibility", () => {
       },
     });
   });
+
+  it("replays section lifecycle events from main-scene partitions before scene line events", async () => {
+    const initialState = createRepositoryState();
+    delete initialState.scenes.items[sceneId].sections.items[targetSectionId];
+    initialState.scenes.items[sceneId].sections.tree = [{ id: sectionId }];
+
+    const events = [
+      createProjectCreateRepositoryEvent({
+        projectId,
+        state: initialState,
+      }),
+      createCommandEvent({
+        id: "section-create-1",
+        partition: mainScenePartitionFor(sceneId),
+        type: COMMAND_TYPES.SECTION_CREATE,
+        payload: {
+          sceneId,
+          sectionId: targetSectionId,
+          parentId: null,
+          index: 1,
+          data: {
+            name: "Section 2",
+          },
+        },
+        clientTs: 1,
+      }),
+      createCommandEvent({
+        id: "line-create-1",
+        partition: scenePartitionFor(sceneId),
+        type: COMMAND_TYPES.LINE_CREATE,
+        payload: {
+          sectionId: targetSectionId,
+          lines: [
+            {
+              lineId,
+              data: {
+                actions: {},
+              },
+            },
+          ],
+          index: 0,
+        },
+        clientTs: 2,
+      }),
+      createCommandEvent({
+        id: "section-delete-1",
+        partition: mainScenePartitionFor(sceneId),
+        type: COMMAND_TYPES.SECTION_DELETE,
+        payload: {
+          sectionIds: [targetSectionId],
+        },
+        clientTs: 3,
+      }),
+    ];
+
+    let finalRepositoryState = structuredClone(initialProjectData);
+    for (const event of events) {
+      finalRepositoryState = reduceEventToState({
+        repositoryState: finalRepositoryState,
+        event,
+      });
+    }
+
+    const projection = await loadSceneProjectionState({
+      store: createCheckpointStore(),
+      mainState: createMainProjectionState(finalRepositoryState),
+      events,
+      createInitialState: () => structuredClone(initialProjectData),
+      reduceEventToState,
+      reduceEventsToState,
+      sceneId,
+    });
+
+    expect(
+      projection.scenes.items[sceneId].sections.items[targetSectionId],
+    ).toBeUndefined();
+  });
+
+  it("skips obsolete section and line lifecycle events while preserving newer scene lines", async () => {
+    const initialState = createRepositoryState();
+    const deletedSectionId = "section-deleted";
+    const deletedLineId = "line-deleted";
+    const currentSectionId = "section-current";
+    const currentLineId = "line-current";
+
+    delete initialState.scenes.items[sceneId].sections.items[targetSectionId];
+    initialState.scenes.items[sceneId].sections.tree = [{ id: sectionId }];
+
+    const events = [
+      createProjectCreateRepositoryEvent({
+        projectId,
+        state: initialState,
+      }),
+      createCommandEvent({
+        id: "section-create-deleted",
+        partition: mainScenePartitionFor(sceneId),
+        type: COMMAND_TYPES.SECTION_CREATE,
+        payload: {
+          sceneId,
+          sectionId: deletedSectionId,
+          parentId: null,
+          index: 1,
+          data: {
+            name: "Deleted Section",
+          },
+        },
+        clientTs: 1,
+      }),
+      createCommandEvent({
+        id: "line-create-deleted",
+        partition: scenePartitionFor(sceneId),
+        type: COMMAND_TYPES.LINE_CREATE,
+        payload: {
+          sectionId: deletedSectionId,
+          lines: [
+            {
+              lineId: deletedLineId,
+              data: {
+                actions: {},
+              },
+            },
+          ],
+          index: 0,
+        },
+        clientTs: 2,
+      }),
+      createCommandEvent({
+        id: "section-delete-deleted",
+        partition: mainScenePartitionFor(sceneId),
+        type: COMMAND_TYPES.SECTION_DELETE,
+        payload: {
+          sectionIds: [deletedSectionId],
+        },
+        clientTs: 3,
+      }),
+      createCommandEvent({
+        id: "section-create-current",
+        partition: mainScenePartitionFor(sceneId),
+        type: COMMAND_TYPES.SECTION_CREATE,
+        payload: {
+          sceneId,
+          sectionId: currentSectionId,
+          parentId: null,
+          index: 1,
+          data: {
+            name: "Current Section",
+          },
+        },
+        clientTs: 4,
+      }),
+      createCommandEvent({
+        id: "line-create-current",
+        partition: scenePartitionFor(sceneId),
+        type: COMMAND_TYPES.LINE_CREATE,
+        payload: {
+          sectionId: currentSectionId,
+          lines: [
+            {
+              lineId: currentLineId,
+              data: {
+                actions: {},
+              },
+            },
+          ],
+          index: 0,
+        },
+        clientTs: 5,
+      }),
+      createCommandEvent({
+        id: "line-update-current",
+        partition: scenePartitionFor(sceneId),
+        type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
+        payload: {
+          lineId: currentLineId,
+          data: {
+            resetStoryAtSection: {
+              sectionId,
+            },
+          },
+          replace: false,
+        },
+        clientTs: 6,
+      }),
+    ];
+
+    let finalRepositoryState = structuredClone(initialProjectData);
+    for (const event of events) {
+      finalRepositoryState = reduceEventToState({
+        repositoryState: finalRepositoryState,
+        event,
+      });
+    }
+
+    const projection = await loadSceneProjectionState({
+      store: createCheckpointStore(),
+      mainState: createMainProjectionState(finalRepositoryState),
+      events,
+      createInitialState: () => structuredClone(initialProjectData),
+      reduceEventToState,
+      reduceEventsToState,
+      sceneId,
+    });
+
+    expect(
+      projection.scenes.items[sceneId].sections.items[deletedSectionId],
+    ).toBeUndefined();
+    expect(
+      projection.scenes.items[sceneId].sections.items[currentSectionId].lines
+        .items[currentLineId].actions,
+    ).toMatchObject({
+      resetStoryAtSection: {
+        sectionId,
+      },
+    });
+  });
 });
