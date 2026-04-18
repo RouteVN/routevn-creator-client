@@ -196,8 +196,8 @@ describe("projectRepositoryService main checkpoint reuse", () => {
     const repository = await service.ensureRepository();
 
     expect(store.listDraftsOrdered).not.toHaveBeenCalled();
-    expect(saveMaterializedViewCheckpoint).toHaveBeenCalledTimes(2);
-    expect(saveMaterializedViewCheckpoint).toHaveBeenNthCalledWith(1, {
+    expect(saveMaterializedViewCheckpoint).toHaveBeenCalledTimes(1);
+    expect(saveMaterializedViewCheckpoint).toHaveBeenCalledWith({
       viewName: "project_repository_main_state",
       partition: "m",
       viewVersion: "1",
@@ -205,16 +205,6 @@ describe("projectRepositoryService main checkpoint reuse", () => {
       value: initialProjectData,
       updatedAt: 1,
     });
-    expect(saveMaterializedViewCheckpoint).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        viewName: "project_repository_main_state",
-        partition: "m",
-        viewVersion: "1",
-        lastCommittedId: 3088,
-        value: initialProjectData,
-      }),
-    );
     expect(repository.getState()).toEqual(initialProjectData);
   });
 

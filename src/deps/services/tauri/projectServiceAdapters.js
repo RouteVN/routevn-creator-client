@@ -16,7 +16,6 @@ import {
   clearProjectionGap,
   saveProjectionGap,
 } from "../shared/collab/projectionGapState.js";
-import { commandToSyncEvent } from "../shared/collab/mappers.js";
 import {
   createCommittedCommandProjectionTracker,
   createProjectionGap,
@@ -72,153 +71,6 @@ const createProjectDatabaseOpenError = () =>
   new Error(
     "error returned from database: (code: 14) unable to open database file",
   );
-
-const createLocalSubmitError = (error) => ({
-  code: error?.code || "submit_failed",
-  message: error?.message || "Failed to persist local draft",
-});
-
-const normalizeLocalDraftCreatedAt = (value) => {
-  const numericValue = Number(value);
-  if (Number.isFinite(numericValue)) {
-    return numericValue;
-  }
-  return Date.now();
-};
-
-const toLocalDraftEvent = (command) => {
-  const syncEvent = commandToSyncEvent(command);
-  return {
-    id: command?.id,
-    partition: syncEvent?.partition ?? command?.partition,
-    projectId: syncEvent?.projectId ?? command?.projectId,
-    ...syncEvent,
-    createdAt: normalizeLocalDraftCreatedAt(
-      syncEvent?.createdAt ?? command?.clientTs ?? command?.meta?.clientTs,
-    ),
-  };
-};
-
-const createLocalOnlyProjectCollabSession = ({
-  actor,
-  clientStore,
-  logger = () => {},
-}) => {
-  let lastError;
-  let status = "idle";
-
-  const submitDrafts = async (commands = []) => {
-    const normalizedCommands = Array.isArray(commands)
-      ? commands.filter(Boolean)
-      : [];
-    if (normalizedCommands.length === 0) {
-      return {
-        valid: true,
-        commandIds: [],
-      };
-    }
-
-    try {
-      const draftEvents = normalizedCommands.map(toLocalDraftEvent);
-      if (draftEvents.length === 1) {
-        await clientStore.insertDraft(draftEvents[0]);
-      } else {
-        await clientStore.insertDrafts(draftEvents);
-      }
-      status = "ready";
-      lastError = undefined;
-      return {
-        valid: true,
-        commandIds: normalizedCommands.map((command) => command.id),
-      };
-    } catch (error) {
-      const normalizedError = createLocalSubmitError(error);
-      lastError = structuredClone(normalizedError);
-      logger({
-        event: "local_submit_failed",
-        error: normalizedError,
-      });
-      return {
-        valid: false,
-        error: normalizedError,
-      };
-    }
-  };
-
-  return {
-    async start() {
-      status = "ready";
-      logger({
-        event: "local_session_started",
-      });
-    },
-
-    async stop() {
-      status = "stopped";
-      logger({
-        event: "local_session_stopped",
-      });
-    },
-
-    async submitCommand(command) {
-      const submitResult = await submitDrafts([command]);
-      if (submitResult?.valid === false) {
-        return submitResult;
-      }
-
-      return {
-        valid: true,
-        commandId: command.id,
-      };
-    },
-
-    async submitCommands(commands) {
-      return submitDrafts(commands);
-    },
-
-    async submitEvent(input) {
-      await clientStore.insertDraft({
-        ...structuredClone(input),
-        createdAt: normalizeLocalDraftCreatedAt(
-          input?.createdAt ?? input?.clientTs ?? input?.meta?.clientTs,
-        ),
-      });
-      status = "ready";
-    },
-
-    async syncNow() {},
-
-    async flushDrafts() {},
-
-    getStatus() {
-      return {
-        phase: status,
-        transportState: "offline",
-      };
-    },
-
-    getLastError() {
-      if (!lastError) {
-        return undefined;
-      }
-      return structuredClone(lastError);
-    },
-
-    clearLastError() {
-      lastError = undefined;
-    },
-
-    getActor() {
-      return structuredClone(actor);
-    },
-
-    async setOnlineTransport() {
-      logger({
-        event: "local_transport_attach_ignored",
-      });
-    },
-  };
-};
 
 async function copyTemplateFiles(templateId, targetPath) {
   const templateFilesPath = `/templates/${templateId}/files/`;
@@ -678,25 +530,6 @@ export const createTauriProjectServiceAdapters = ({
 
       const resolvedProjectId = projectId;
       const repositoryStore = await getStoreByProject(projectId);
-      if (mode === "local" && !endpointUrl) {
-        const localSession = createLocalOnlyProjectCollabSession({
-          actor: {
-            userId,
-            clientId,
-          },
-          clientStore: repositoryStore,
-          logger: (entry) => {
-            collabLog("debug", "local-session", entry);
-          },
-        });
-        await localSession.start();
-        collabLog("info", "local-only session started", {
-          projectId: resolvedProjectId,
-          mode,
-        });
-        return localSession;
-      }
-
       const projectionTracker = createCommittedCommandProjectionTracker();
       const collabSession = createProjectCollabService({
         projectId: resolvedProjectId,

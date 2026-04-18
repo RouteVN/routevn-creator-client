@@ -310,9 +310,8 @@ describe("tauri collab client store locking", () => {
     expect(fakeDb.execute).toHaveBeenCalledTimes(1);
   });
 
-  it("preserves invalid local drafts while loading repository events", async () => {
+  it("quarantines invalid local drafts while loading repository events", async () => {
     const applySubmitResult = vi.fn(async () => {});
-    vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const { loadRepositoryEvents } = await import(
       "../../src/deps/services/tauri/collabClientStore.js"
@@ -350,7 +349,15 @@ describe("tauri collab client store locking", () => {
     });
 
     expect(events).toEqual([]);
-    expect(applySubmitResult).not.toHaveBeenCalled();
+    expect(applySubmitResult).toHaveBeenCalledWith({
+      result: {
+        id: "draft-image-1",
+        status: "rejected",
+        reason: "precondition_validation_failed",
+        message:
+          "payload.data.fileId must reference an existing non-folder file",
+      },
+    });
   });
 
   it("skips a locked passive WAL checkpoint without retrying", async () => {

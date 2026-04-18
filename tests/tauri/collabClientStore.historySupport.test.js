@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  inspectBootstrapHistorySupport,
-  isCurrentMainCheckpointCompatibleWithHistory,
-} from "../../src/deps/services/tauri/collabClientStore.js";
+import { inspectBootstrapHistorySupport } from "../../src/deps/services/tauri/collabClientStore.js";
 
 const projectId = "project-1";
 
@@ -238,67 +235,5 @@ describe("inspectBootstrapHistorySupport", () => {
       supported: false,
       reason: "multiple_bootstrap_events",
     });
-  });
-});
-
-describe("isCurrentMainCheckpointCompatibleWithHistory", () => {
-  it("accepts a current main checkpoint for local-only draft history", () => {
-    expect(
-      isCurrentMainCheckpointCompatibleWithHistory({
-        checkpoint: {
-          viewVersion: "1",
-          lastCommittedId: 24,
-          value: {
-            project: {
-              name: "Project 1",
-            },
-          },
-          meta: {
-            historyStats: {
-              committedCount: 0,
-              latestCommittedId: 0,
-              draftCount: 24,
-              latestDraftClock: 24,
-            },
-          },
-        },
-        historyStats: {
-          committedCount: 0,
-          latestCommittedId: 0,
-          draftCount: 24,
-          latestDraftClock: 24,
-        },
-      }),
-    ).toBe(true);
-  });
-
-  it("rejects a stale main checkpoint for local-only draft history", () => {
-    expect(
-      isCurrentMainCheckpointCompatibleWithHistory({
-        checkpoint: {
-          viewVersion: "1",
-          lastCommittedId: 12,
-          value: {
-            project: {
-              name: "Project 1",
-            },
-          },
-          meta: {
-            historyStats: {
-              committedCount: 0,
-              latestCommittedId: 0,
-              draftCount: 12,
-              latestDraftClock: 12,
-            },
-          },
-        },
-        historyStats: {
-          committedCount: 0,
-          latestCommittedId: 0,
-          draftCount: 24,
-          latestDraftClock: 24,
-        },
-      }),
-    ).toBe(false);
   });
 });
