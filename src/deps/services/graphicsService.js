@@ -89,17 +89,21 @@ const getProjectFileProtocolOrigin = (assetUrl) => {
   return undefined;
 };
 
-const normalizeMediaAssetUrlForPixi = (asset) => {
+const normalizeMediaAssetUrlForPixi = (asset, options = {}) => {
+  const { projectMediaOrigin } = options;
   const url = asset?.url;
   const extension = PIXI_EXTENSION_BY_MIME_TYPE[asset?.type];
-  const projectFileOrigin = getProjectFileProtocolOrigin(url);
+  const mediaOrigin =
+    typeof projectMediaOrigin === "string" && projectMediaOrigin.length > 0
+      ? projectMediaOrigin
+      : getProjectFileProtocolOrigin(url);
   const assetPath = getTauriAssetFilePath(url);
 
-  if (!extension || !projectFileOrigin || !assetPath) {
+  if (!extension || !mediaOrigin || !assetPath) {
     return url;
   }
 
-  return `${projectFileOrigin}/pixi-asset.${extension}?path=${encodeURIComponent(
+  return `${mediaOrigin}/pixi-asset.${extension}?path=${encodeURIComponent(
     assetPath,
   )}`;
 };
@@ -129,7 +133,7 @@ const getTauriAssetFilePath = (assetUrl) => {
   }
 };
 
-const normalizeGraphicsAssetForLoad = (asset = {}) => {
+const normalizeGraphicsAssetForLoad = (asset = {}, options = {}) => {
   const assetType = asset?.type ?? "";
   const isPixiUrlBackedMedia =
     (assetType.startsWith("image/") || assetType.startsWith("video/")) &&
@@ -142,7 +146,7 @@ const normalizeGraphicsAssetForLoad = (asset = {}) => {
 
   return {
     ...asset,
-    url: normalizeMediaAssetUrlForPixi(asset),
+    url: normalizeMediaAssetUrlForPixi(asset, options),
   };
 };
 
@@ -292,7 +296,10 @@ const installManagedAudioAsset = () => {
 
 installManagedAudioAsset();
 
-export const createGraphicsService = async ({ subject }) => {
+export const createGraphicsService = async ({
+  subject,
+  projectMediaOrigin,
+} = {}) => {
   let routeGraphics;
   let routeGraphicsInitPromise;
   let engine;
@@ -852,7 +859,7 @@ export const createGraphicsService = async ({ subject }) => {
     const newAssets = Object.fromEntries(
       newAssetEntries.map(([key, asset]) => [
         key,
-        normalizeGraphicsAssetForLoad(asset),
+        normalizeGraphicsAssetForLoad(asset, { projectMediaOrigin }),
       ]),
     );
     const blobUrlsToRevoke = newAssetEntries

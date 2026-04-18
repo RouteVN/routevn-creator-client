@@ -30,6 +30,7 @@
           "'self'",
           "ipc:",
           "http://ipc.localhost",
+          "http://127.0.0.1:*",
           "blob:",
           "asset:",
           "asset://localhost",
@@ -40,6 +41,7 @@
         "style-src": ["'self'", "'unsafe-inline'"],
         "img-src": [
           "'self'",
+          "http://127.0.0.1:*",
           "asset:",
           "http://asset.localhost",
           "project-file:",
@@ -49,6 +51,7 @@
         ],
         "media-src": [
           "'self'",
+          "http://127.0.0.1:*",
           "asset:",
           "http://asset.localhost",
           "project-file:",
@@ -56,7 +59,8 @@
           "blob:"
         ],
         "font-src": ["'self'", "asset:", "http://asset.localhost", "blob:"],
-        "script-src": ["'self'", "'unsafe-eval'", "'wasm-unsafe-eval'"]
+        "script-src": ["'self'", "'unsafe-eval'", "'wasm-unsafe-eval'"],
+        "worker-src": ["'self'", "blob:"]
       },
       "dangerousDisableAssetCspModification": false,
       "devCsp": null,

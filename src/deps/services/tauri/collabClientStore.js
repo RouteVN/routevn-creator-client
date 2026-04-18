@@ -744,7 +744,6 @@ export const createPersistedTauriProjectStore = async ({
                 updatedAt,
               ],
             );
-            return result;
           },
         );
       },
