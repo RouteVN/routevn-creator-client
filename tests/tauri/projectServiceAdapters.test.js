@@ -293,6 +293,56 @@ describe("tauri project service adapters preflight reads", () => {
     });
   });
 
+  it("uses a local-only draft session for local mode", async () => {
+    const repository = {
+      getState: vi.fn(() => structuredClone(initialProjectData)),
+    };
+    const repositoryStore = {
+      insertDraft: vi.fn(async () => {}),
+      insertDrafts: vi.fn(async () => {}),
+    };
+
+    const { collabAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+
+    const session = await collabAdapter.createSessionForProject({
+      projectId: "project-1",
+      token: "token-1",
+      userId: "user-1",
+      clientId: "client-1",
+      mode: "local",
+      getRepositoryByProject: async () => repository,
+      getStoreByProject: async () => repositoryStore,
+    });
+
+    const command = createRemoteSceneCreateCommand({
+      schemaVersion: 1,
+    });
+    const submitResult = await session.submitCommand(command);
+
+    expect(mocked.createProjectCollabService).not.toHaveBeenCalled();
+    expect(submitResult).toEqual({
+      valid: true,
+      commandId: "cmd-scene-1",
+    });
+    expect(repositoryStore.insertDraft).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "cmd-scene-1",
+        partition: "m",
+        type: "scene.create",
+        clientTs: 1,
+        createdAt: 1,
+        payload: structuredClone(command.payload),
+      }),
+    );
+    expect(session.getActor()).toEqual({
+      userId: "user-1",
+      clientId: "client-1",
+    });
+  });
+
   it("persists a projection gap for incompatible remote commands", async () => {
     const session = createSessionMock();
     const repository = {

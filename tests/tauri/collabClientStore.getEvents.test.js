@@ -1,7 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadRepositoryEvents } from "../../src/deps/services/tauri/collabClientStore.js";
 
 describe("loadRepositoryEvents", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("skips committed replay when there are no drafts", async () => {
     const events = await loadRepositoryEvents({
       projectId: "project-1",
@@ -102,9 +106,10 @@ describe("loadRepositoryEvents", () => {
     });
   });
 
-  it("rejects only the first invalid draft in a batch and continues with the suffix", async () => {
+  it("skips only the first invalid draft in a batch and keeps it in storage", async () => {
     const progressUpdates = [];
     const applySubmitResult = vi.fn(async () => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const events = await loadRepositoryEvents({
       projectId: "project-1",
@@ -173,15 +178,7 @@ describe("loadRepositoryEvents", () => {
     });
 
     expect(events.map((event) => event.id)).toEqual(["draft-1", "draft-3"]);
-    expect(applySubmitResult).toHaveBeenCalledTimes(1);
-    expect(applySubmitResult).toHaveBeenCalledWith({
-      result: {
-        id: "draft-2",
-        status: "rejected",
-        reason: "precondition_validation_failed",
-        message: "payload.sceneId must reference an existing scene",
-      },
-    });
+    expect(applySubmitResult).not.toHaveBeenCalled();
     expect(progressUpdates.at(-1)).toMatchObject({
       phase: "read_project_events",
       current: 3,

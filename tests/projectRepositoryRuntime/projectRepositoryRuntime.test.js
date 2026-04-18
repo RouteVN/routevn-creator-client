@@ -195,6 +195,7 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
     const repository = await createProjectRepositoryRuntime({
       projectId: "project-1",
       store: {
+        getRepositoryHistoryStats: async () => undefined,
         loadMaterializedViewCheckpoint: async () => ({
           viewName: "project_repository_main_state",
           viewVersion: "1",
@@ -256,6 +257,7 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
     const repository = await createProjectRepositoryRuntime({
       projectId: "project-1",
       store: {
+        getRepositoryHistoryStats: async () => undefined,
         loadMaterializedViewCheckpoint: async () => ({
           viewName: "project_repository_main_state",
           viewVersion: "1",
@@ -501,6 +503,7 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
     const repository = await createProjectRepositoryRuntime({
       projectId: "project-1",
       store: {
+        getRepositoryHistoryStats: async () => undefined,
         loadMaterializedViewCheckpoint: async () => ({
           viewName: "project_repository_main_state",
           viewVersion: "1",
@@ -562,6 +565,7 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
     const repository = await createProjectRepositoryRuntime({
       projectId: "project-1",
       store: {
+        getRepositoryHistoryStats: async () => undefined,
         loadMaterializedViewCheckpoint: async () => ({
           viewName: "project_repository_main_state",
           viewVersion: "1",

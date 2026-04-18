@@ -366,6 +366,52 @@ const scheduleSceneEditorDraftFlush = (
   store.setDraftSaveTimerId({ timerId });
 };
 
+const refreshSceneEditorProjectState = (deps) => {
+  const { store, projectService } = deps;
+  syncStoreProjectState(store, projectService);
+  reconcileCurrentEditorSession(deps);
+  reconcileSceneEditorSelection(store);
+};
+
+const getCurrentSceneEditorLine = (store, lineId) => {
+  if (!lineId) {
+    return undefined;
+  }
+
+  const scene = store.selectScene();
+  const section = scene?.sections?.find(
+    (item) => item.id === store.selectSelectedSectionId(),
+  );
+  return section?.lines?.find((line) => line.id === lineId);
+};
+
+const resolveSceneEditorMutationLine = async (
+  deps,
+  { lineId: preferredLineId } = {},
+) => {
+  const { store } = deps;
+
+  if (hasSceneEditorSessionPendingChanges(store.selectEditorSession())) {
+    await flushSceneEditorDrafts(deps);
+    refreshSceneEditorProjectState(deps);
+  }
+
+  const lineId = preferredLineId ?? store.selectSelectedLineId();
+  if (!lineId) {
+    return {};
+  }
+
+  const line = getCurrentSceneEditorLine(store, lineId);
+  if (!line) {
+    return {};
+  }
+
+  return {
+    lineId,
+    line,
+  };
+};
+
 const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
   const { store, render, subject } = deps;
   const hadPendingSessionChanges = hasSceneEditorSessionPendingChanges(
@@ -513,10 +559,10 @@ const openSectionTabDropdown = (deps, event) => {
 
 export const handleCommandLineSubmit = async (deps, payload) => {
   const { store, render, projectService, subject, appService } = deps;
-  const lineId = store.selectSelectedLineId();
 
   // Handle section/scene transitions
   if (payload._event.detail.sectionTransition) {
+    const { lineId } = await resolveSceneEditorMutationLine(deps);
     if (!lineId) {
       console.warn("Section transition requires a selected line");
       return;
@@ -572,6 +618,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
   // Handle pushOverlay
   if (payload._event.detail.pushOverlay) {
+    const { lineId } = await resolveSceneEditorMutationLine(deps);
     if (!lineId) {
       console.warn("Push overlay requires a selected line");
       return;
@@ -621,6 +668,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
   // Handle popOverlay
   if (payload._event.detail.popOverlay) {
+    const { lineId } = await resolveSceneEditorMutationLine(deps);
     if (!lineId) {
       console.warn("Pop overlay requires a selected line");
       return;
@@ -668,6 +716,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     return;
   }
 
+  const { lineId, line } = await resolveSceneEditorMutationLine(deps);
   if (!lineId) {
     return;
   }
@@ -676,7 +725,6 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
   // Dialogue updates replace the full dialogue action, so keep content here.
   if (submissionData.dialogue) {
-    const line = store.selectSelectedLine();
     if (line && line.actions?.dialogue?.content) {
       submissionData = {
         ...submissionData,
@@ -810,20 +858,21 @@ export const handleDialogueCharacterShortcut = async (deps, payload) => {
   }
 
   const detail = payload?._event?.detail || {};
-  const lineId = detail.lineId || store.selectSelectedLineId();
   const shortcut = detail.shortcut;
-  if (!lineId || !shortcut) {
+  if (!shortcut) {
     return;
   }
 
-  const currentSection = store
-    .selectScene()
-    ?.sections?.find(
-      (section) => section.id === store.selectSelectedSectionId(),
-    );
-  const currentLine =
-    currentSection?.lines?.find((line) => line.id === lineId) ||
-    store.selectSelectedLine();
+  const { lineId, line: currentLine } = await resolveSceneEditorMutationLine(
+    deps,
+    {
+      lineId: detail.lineId,
+    },
+  );
+  if (!lineId || !currentLine) {
+    return;
+  }
+
   const existingDialogue = currentLine?.actions?.dialogue || {};
 
   const isClearShortcut = String(shortcut) === "0";
@@ -1181,11 +1230,16 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
       sectionId,
     });
   } else if (action === "delete-actions") {
-    const selectedLineId = store.selectSelectedLineId();
     const selectedSectionId = store.selectSelectedSectionId();
-    const selectedLine = store.selectSelectedLine();
 
-    if (actionsType && selectedLineId && selectedSectionId) {
+    if (actionsType && selectedSectionId) {
+      const { lineId: selectedLineId, line: selectedLine } =
+        await resolveSceneEditorMutationLine(deps);
+      if (!selectedLineId || !selectedLine) {
+        render();
+        return;
+      }
+
       // Special handling for dialogue - keep content, remove only layoutId and characterId
       if (actionsType === "dialogue") {
         const currentDialogue = selectedLine?.actions?.dialogue;
@@ -1517,8 +1571,7 @@ export const handleDeleteLineShortcut = async (deps, payload) => {
 export const handleLineDeleteActionItem = async (deps, payload) => {
   const { store, subject, render, projectService } = deps;
   const { actionType } = payload._event.detail;
-  // Get current selected line
-  const selectedLine = store.selectSelectedLine();
+  const { line: selectedLine } = await resolveSceneEditorMutationLine(deps);
   if (!selectedLine || !selectedLine.actions) {
     return;
   }
@@ -1572,8 +1625,7 @@ export const handleBackClick = async (deps) => {
 export const handleSystemActionsActionDelete = async (deps, payload) => {
   const { store, render, projectService, subject } = deps;
   const { actionType } = payload._event.detail;
-  // Get current selected line
-  const selectedLine = store.selectSelectedLine();
+  const { line: selectedLine } = await resolveSceneEditorMutationLine(deps);
   if (!selectedLine) {
     return;
   }

@@ -28,6 +28,32 @@ import {
   toCommittedProjectEvent,
 } from "./projectRepositoryViews/shared.js";
 
+const logRepositoryRuntime = (event, payload = {}) => {
+  console.info("[projectRepositoryRuntime]", {
+    event,
+    ...payload,
+  });
+};
+
+const summarizeRepositoryStateForDiagnostics = (state) => {
+  const scenes = state?.scenes?.items || {};
+  const sceneItems = Object.values(scenes);
+  const sectionItems = sceneItems.flatMap((scene) =>
+    Object.values(scene?.sections?.items || {}),
+  );
+  const lineCount = sectionItems.reduce(
+    (total, section) => total + Object.keys(section?.lines?.items || {}).length,
+    0,
+  );
+
+  return {
+    sceneCount: sceneItems.length,
+    sectionCount: sectionItems.length,
+    lineCount,
+    initialSceneId: state?.story?.initialSceneId,
+  };
+};
+
 const summarizeReplayEvent = (event, index) => ({
   arrayIndex: index,
   eventOffset: index + 1,
@@ -218,12 +244,23 @@ export const createProjectRepositoryRuntime = async ({
   };
 
   const saveCurrentMainCheckpoint = async () => {
+    const value = structuredClone(getCurrentComposedState());
+    const historyStatsSnapshot = await store.getRepositoryHistoryStats();
+    logRepositoryRuntime("save_main_checkpoint", {
+      projectId,
+      revision: currentRevision,
+      historyStats: historyStatsSnapshot,
+      stateSummary: summarizeRepositoryStateForDiagnostics(value),
+      activeSceneId,
+      hasLoadedEvents,
+      hasDraftHistory,
+    });
     await store.saveMaterializedViewCheckpoint({
       viewName: MAIN_VIEW_NAME,
       partition: MAIN_PARTITION,
       viewVersion: MAIN_VIEW_VERSION,
       lastCommittedId: currentRevision,
-      value: structuredClone(getCurrentComposedState()),
+      value,
       updatedAt: Date.now(),
     });
   };
@@ -401,6 +438,15 @@ export const createProjectRepositoryRuntime = async ({
       completed: currentMainState !== undefined,
     });
   }
+
+  logRepositoryRuntime("runtime_initialized", {
+    projectId,
+    revision: currentRevision,
+    historyStats: historyStats ? structuredClone(historyStats) : undefined,
+    stateSummary: summarizeRepositoryStateForDiagnostics(currentMainState),
+    hasLoadedEvents,
+    hasDraftHistory,
+  });
 
   assertState(currentMainState);
 
@@ -837,6 +883,11 @@ export const createProjectRepositoryRuntime = async ({
 
     async setActiveSceneId(sceneId) {
       const nextSceneId = isNonEmptyString(sceneId) ? sceneId : null;
+      logRepositoryRuntime("set_active_scene_start", {
+        projectId,
+        previousActiveSceneId: activeSceneId,
+        nextSceneId,
+      });
       if (activeSceneId === nextSceneId && (!nextSceneId || activeSceneState)) {
         hasExplicitActiveScene = nextSceneId !== null;
         return;
@@ -852,11 +903,29 @@ export const createProjectRepositoryRuntime = async ({
       }
 
       notifyStateListeners();
+      logRepositoryRuntime("set_active_scene_complete", {
+        projectId,
+        activeSceneId,
+        stateSummary: summarizeRepositoryStateForDiagnostics(
+          getCurrentComposedState(),
+        ),
+      });
     },
 
     async clearActiveSceneId() {
+      logRepositoryRuntime("clear_active_scene_start", {
+        projectId,
+        previousActiveSceneId: activeSceneId,
+      });
       clearActiveSceneProjection({ explicit: true });
       notifyStateListeners();
+      logRepositoryRuntime("clear_active_scene_complete", {
+        projectId,
+        activeSceneId,
+        stateSummary: summarizeRepositoryStateForDiagnostics(
+          getCurrentComposedState(),
+        ),
+      });
     },
 
     async getContextState(payload = {}) {
@@ -935,17 +1004,39 @@ export const createProjectRepositoryRuntime = async ({
     },
 
     async flushMainCheckpoint() {
+      logRepositoryRuntime("flush_main_checkpoint_start", {
+        projectId,
+        revision: currentRevision,
+        stateSummary: summarizeRepositoryStateForDiagnostics(
+          getCurrentComposedState(),
+        ),
+      });
       await materializedViewRuntime.flushMaterializedView({
         viewName: MAIN_VIEW_NAME,
         partition: MAIN_PARTITION,
       });
       await saveCurrentMainCheckpoint();
+      logRepositoryRuntime("flush_main_checkpoint_complete", {
+        projectId,
+        revision: currentRevision,
+      });
     },
 
     async flushMaterializedViews() {
+      logRepositoryRuntime("flush_materialized_views_start", {
+        projectId,
+        revision: currentRevision,
+        stateSummary: summarizeRepositoryStateForDiagnostics(
+          getCurrentComposedState(),
+        ),
+      });
       await materializedViewRuntime.flushMaterializedViews();
       await saveCurrentMainCheckpoint();
       await sceneBundleRuntime.flushSceneOverviews();
+      logRepositoryRuntime("flush_materialized_views_complete", {
+        projectId,
+        revision: currentRevision,
+      });
     },
   };
 };

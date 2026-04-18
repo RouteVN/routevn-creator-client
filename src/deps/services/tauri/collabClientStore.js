@@ -37,6 +37,65 @@ const ROUTEVN_CHECKPOINT_ENVELOPE_VERSION = 1;
 export const loadRepositoryEvents = loadRepositoryEventsFromClientStore;
 export { toBootstrappedCommittedEvent } from "../shared/collab/clientStoreHistory.js";
 
+const logProjectStore = (event, payload = {}) => {
+  console.info("[projectStore]", {
+    event,
+    ...payload,
+  });
+};
+
+const summarizeRepositoryStateForDiagnostics = (state) => {
+  const scenes = state?.scenes?.items || {};
+  const sceneItems = Object.values(scenes);
+  const sectionItems = sceneItems.flatMap((scene) =>
+    Object.values(scene?.sections?.items || {}),
+  );
+  const lineCount = sectionItems.reduce(
+    (total, section) => total + Object.keys(section?.lines?.items || {}).length,
+    0,
+  );
+
+  return {
+    sceneCount: sceneItems.length,
+    sectionCount: sectionItems.length,
+    lineCount,
+    initialSceneId: state?.story?.initialSceneId,
+  };
+};
+
+const summarizeCheckpointForDiagnostics = (checkpoint) => {
+  if (!checkpoint) {
+    return undefined;
+  }
+
+  return {
+    viewVersion: checkpoint.viewVersion,
+    lastCommittedId: checkpoint.lastCommittedId,
+    updatedAt: checkpoint.updatedAt,
+    historyStats:
+      checkpoint?.meta?.historyStats &&
+      typeof checkpoint.meta.historyStats === "object" &&
+      !Array.isArray(checkpoint.meta.historyStats)
+        ? structuredClone(checkpoint.meta.historyStats)
+        : undefined,
+    stateSummary: summarizeRepositoryStateForDiagnostics(checkpoint.value),
+  };
+};
+
+const summarizeDraftForDiagnostics = (draft) => {
+  if (!draft) {
+    return undefined;
+  }
+
+  return {
+    id: draft.id,
+    type: draft.type,
+    partition: draft.partition,
+    clientTs: draft.clientTs,
+    createdAt: draft.createdAt,
+  };
+};
+
 const isReadQuery = (sql) => {
   const normalized = String(sql ?? "")
     .trim()
@@ -653,9 +712,22 @@ export const createPersistedTauriProjectStore = async ({
       },
 
       async insertDraft(payload) {
-        return queueWriteOperation("insertDraft", () =>
-          store.insertDraft(payload),
-        );
+        return queueWriteOperation("insertDraft", async () => {
+          const beforeStats = await loadRepositoryHistoryStats();
+          logProjectStore("insert_draft_start", {
+            projectId,
+            draft: summarizeDraftForDiagnostics(payload),
+            historyStats: beforeStats,
+          });
+          const result = await store.insertDraft(payload);
+          const afterStats = await loadRepositoryHistoryStats();
+          logProjectStore("insert_draft_complete", {
+            projectId,
+            draftId: payload?.id,
+            historyStats: afterStats,
+          });
+          return result;
+        });
       },
 
       async insertDrafts(items) {
@@ -667,6 +739,17 @@ export const createPersistedTauriProjectStore = async ({
             return undefined;
           }
 
+          const beforeStats = await loadRepositoryHistoryStats();
+          logProjectStore("insert_drafts_start", {
+            projectId,
+            draftCount: normalizedItems.length,
+            firstDraft: summarizeDraftForDiagnostics(normalizedItems[0]),
+            lastDraft: summarizeDraftForDiagnostics(
+              normalizedItems[normalizedItems.length - 1],
+            ),
+            historyStats: beforeStats,
+          });
+
           // plugin-sql does not guarantee a pinned connection across JS-issued
           // BEGIN/COMMIT batches. Sequential single inserts avoid the long
           // busy-timeout stalls we were seeing in insertDrafts().
@@ -674,6 +757,12 @@ export const createPersistedTauriProjectStore = async ({
             await store.insertDraft(item);
           }
 
+          const afterStats = await loadRepositoryHistoryStats();
+          logProjectStore("insert_drafts_complete", {
+            projectId,
+            draftCount: normalizedItems.length,
+            historyStats: afterStats,
+          });
           return undefined;
         });
       },
@@ -685,9 +774,23 @@ export const createPersistedTauriProjectStore = async ({
       },
 
       async applySubmitResult(payload) {
-        return queueWriteOperation("applySubmitResult", () =>
-          store.applySubmitResult(payload),
-        );
+        return queueWriteOperation("applySubmitResult", async () => {
+          const beforeStats = await loadRepositoryHistoryStats();
+          logProjectStore("apply_submit_result_start", {
+            projectId,
+            result: structuredClone(payload?.result || {}),
+            historyStats: beforeStats,
+          });
+          const result = await store.applySubmitResult(payload);
+          const afterStats = await loadRepositoryHistoryStats();
+          logProjectStore("apply_submit_result_complete", {
+            projectId,
+            draftId: payload?.result?.id,
+            status: payload?.result?.status,
+            historyStats: afterStats,
+          });
+          return result;
+        });
       },
 
       async applyCommittedBatch(payload) {
@@ -726,8 +829,18 @@ export const createPersistedTauriProjectStore = async ({
 
       async clearEvents() {
         await queueWriteOperation(async () => {
+          const beforeStats = await loadRepositoryHistoryStats();
+          logProjectStore("clear_events_start", {
+            projectId,
+            historyStats: beforeStats,
+          });
           await runExecute("DELETE FROM committed_events");
           await runExecute("DELETE FROM local_drafts");
+          const afterStats = await loadRepositoryHistoryStats();
+          logProjectStore("clear_events_complete", {
+            projectId,
+            historyStats: afterStats,
+          });
         });
       },
 
@@ -743,10 +856,17 @@ export const createPersistedTauriProjectStore = async ({
             );
             const row = Array.isArray(rows) ? rows[0] : undefined;
             if (!row) return undefined;
-            return toMaterializedViewCheckpoint({
+            const checkpoint = toMaterializedViewCheckpoint({
               ...row,
               partition,
             });
+            if (viewName === MAIN_VIEW_NAME && partition === MAIN_PARTITION) {
+              logProjectStore("load_main_checkpoint", {
+                projectId,
+                checkpoint: summarizeCheckpointForDiagnostics(checkpoint),
+              });
+            }
+            return checkpoint;
           },
         );
       },
@@ -792,6 +912,18 @@ export const createPersistedTauriProjectStore = async ({
         await queueWriteOperation(
           "saveMaterializedViewCheckpoint",
           async () => {
+            const stateSummary =
+              viewName === MAIN_VIEW_NAME && partition === MAIN_PARTITION
+                ? summarizeRepositoryStateForDiagnostics(value)
+                : undefined;
+            if (stateSummary) {
+              logProjectStore("save_main_checkpoint_start", {
+                projectId,
+                viewVersion,
+                lastCommittedId,
+                stateSummary,
+              });
+            }
             const checkpointMeta = {
               ...(meta && typeof meta === "object" && !Array.isArray(meta)
                 ? structuredClone(meta)
@@ -799,7 +931,7 @@ export const createPersistedTauriProjectStore = async ({
               historyStats: await loadRepositoryHistoryStats(),
             };
 
-            return runExecute(
+            const result = await runExecute(
               `INSERT OR REPLACE INTO ${MATERIALIZED_VIEW_TABLE}
            (view_name, partition, view_version, last_committed_id, value, updated_at)
            VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -815,6 +947,16 @@ export const createPersistedTauriProjectStore = async ({
                 updatedAt,
               ],
             );
+            if (stateSummary) {
+              logProjectStore("save_main_checkpoint_complete", {
+                projectId,
+                viewVersion,
+                lastCommittedId,
+                historyStats: checkpointMeta.historyStats,
+                stateSummary,
+              });
+            }
+            return result;
           },
         );
       },

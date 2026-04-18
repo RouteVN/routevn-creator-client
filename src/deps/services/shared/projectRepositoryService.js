@@ -13,6 +13,32 @@ import { loadProjectionGap } from "./collab/projectionGapState.js";
 import { loadRepositoryEventsFromClientStore } from "./collab/clientStoreHistory.js";
 import { UNSUPPORTED_PROJECT_STORE_FORMAT_MESSAGE } from "../../../internal/projectOpenErrors.js";
 
+const logRepositoryOpen = (event, payload = {}) => {
+  console.info("[projectRepositoryService]", {
+    event,
+    ...payload,
+  });
+};
+
+const summarizeRepositoryStateForDiagnostics = (state) => {
+  const scenes = state?.scenes?.items || {};
+  const sceneItems = Object.values(scenes);
+  const sectionItems = sceneItems.flatMap((scene) =>
+    Object.values(scene?.sections?.items || {}),
+  );
+  const lineCount = sectionItems.reduce(
+    (total, section) => total + Object.keys(section?.lines?.items || {}).length,
+    0,
+  );
+
+  return {
+    sceneCount: sceneItems.length,
+    sectionCount: sectionItems.length,
+    lineCount,
+    initialSceneId: state?.story?.initialSceneId,
+  };
+};
+
 const flushRepositoryMainCheckpoint = async (repository) => {
   await repository.flushMainCheckpoint();
 };
@@ -261,6 +287,22 @@ export const createProjectRepositoryService = ({
       viewName: MAIN_VIEW_NAME,
       partition: MAIN_PARTITION,
     });
+    logRepositoryOpen("load_main_checkpoint", {
+      cacheKey,
+      checkpoint: checkpoint
+        ? {
+            viewVersion: checkpoint.viewVersion,
+            lastCommittedId: checkpoint.lastCommittedId,
+            updatedAt: checkpoint.updatedAt,
+            historyStats: checkpoint?.meta?.historyStats
+              ? structuredClone(checkpoint.meta.historyStats)
+              : undefined,
+            stateSummary: summarizeRepositoryStateForDiagnostics(
+              checkpoint.value,
+            ),
+          }
+        : undefined,
+    });
 
     if (
       !checkpoint ||
@@ -284,6 +326,11 @@ export const createProjectRepositoryService = ({
           currentHistoryStats,
         )
       ) {
+        logRepositoryOpen("discard_main_checkpoint_history_mismatch", {
+          cacheKey,
+          checkpointHistoryStats,
+          currentHistoryStats,
+        });
         await discardReusableMainCheckpoint(store);
         return undefined;
       }
@@ -297,6 +344,11 @@ export const createProjectRepositoryService = ({
       );
 
       if (checkpointRevision !== currentHistoryLength) {
+        logRepositoryOpen("discard_main_checkpoint_revision_mismatch", {
+          cacheKey,
+          checkpointRevision,
+          currentHistoryLength,
+        });
         await discardReusableMainCheckpoint(store);
         return undefined;
       }
@@ -316,6 +368,15 @@ export const createProjectRepositoryService = ({
         updatedAt: checkpoint.updatedAt || Date.now(),
       });
     }
+    logRepositoryOpen("reuse_main_checkpoint", {
+      cacheKey,
+      currentHistoryStats,
+      initialRevision: Math.max(
+        0,
+        Math.floor(Number(checkpoint.lastCommittedId) || 0),
+      ),
+      stateSummary: summarizeRepositoryStateForDiagnostics(checkpoint.value),
+    });
     return {
       checkpoint,
       currentHistoryStats,
@@ -717,6 +778,16 @@ export const createProjectRepositoryService = ({
                 error: error?.message || String(error),
               });
             }
+
+            logRepositoryOpen("repository_open_complete", {
+              cacheKey: reference.cacheKey,
+              projectId: reference.projectId,
+              revision: repository.getRevision(),
+              stateSummary: summarizeRepositoryStateForDiagnostics(
+                repository.getState(),
+              ),
+              historyStats: currentHistoryStats,
+            });
 
             return {
               repository,
