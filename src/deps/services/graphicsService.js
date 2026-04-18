@@ -150,6 +150,50 @@ const normalizeGraphicsAssetForLoad = (asset = {}, options = {}) => {
   };
 };
 
+const isDataUrl = (value) =>
+  typeof value === "string" && value.startsWith("data:");
+
+const getDataUrlMimeType = (value) => {
+  if (!isDataUrl(value)) {
+    return undefined;
+  }
+
+  const commaIndex = value.indexOf(",");
+  if (commaIndex < 0) {
+    return undefined;
+  }
+
+  const header = value.slice(0, commaIndex);
+  const mimeMatch = header.match(/^data:([^;,]+)?(?:;base64)?$/);
+  return mimeMatch?.[1] ?? undefined;
+};
+
+const decodeDataUrlToArrayBuffer = (value) => {
+  if (!isDataUrl(value)) {
+    throw new Error("Asset URL is not a data URL");
+  }
+
+  const commaIndex = value.indexOf(",");
+  if (commaIndex < 0) {
+    throw new Error("Asset data URL is invalid");
+  }
+
+  const header = value.slice(0, commaIndex);
+  const body = value.slice(commaIndex + 1);
+  const isBase64 = header.includes(";base64");
+
+  if (!isBase64) {
+    return new TextEncoder().encode(decodeURIComponent(body)).buffer;
+  }
+
+  const binary = atob(body);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes.buffer;
+};
+
 const estimateAudioBufferBytes = (audioBuffer) => {
   if (!audioBuffer) {
     return 0;
@@ -847,27 +891,49 @@ export const createGraphicsService = async ({
       return;
     }
 
-    const assetEntries = Object.entries(assets || {});
-    const newAssetEntries = assetEntries.filter(
-      ([key]) => !activeBufferManager.has(key) || !hasLoadedAsset(key),
+    const normalizedAssetEntries = Object.entries(assets || {}).map(
+      ([key, asset]) => [
+        key,
+        normalizeGraphicsAssetForLoad(asset, { projectMediaOrigin }),
+      ],
     );
+    const newAssetEntries = normalizedAssetEntries.filter(([key, asset]) => {
+      if (isDataUrl(asset?.url)) {
+        return !hasLoadedAsset(key);
+      }
+
+      return !activeBufferManager.has(key) || !hasLoadedAsset(key);
+    });
 
     if (newAssetEntries.length === 0) {
       return;
     }
 
-    const newAssets = Object.fromEntries(
-      newAssetEntries.map(([key, asset]) => [
+    const dataUrlAssetEntries = newAssetEntries.filter(([, asset]) =>
+      isDataUrl(asset?.url),
+    );
+    const bufferedAssetEntries = newAssetEntries.filter(
+      ([, asset]) => !isDataUrl(asset?.url),
+    );
+
+    const directBufferMap = Object.fromEntries(
+      dataUrlAssetEntries.map(([key, asset]) => [
         key,
-        normalizeGraphicsAssetForLoad(asset, { projectMediaOrigin }),
+        {
+          buffer: decodeDataUrlToArrayBuffer(asset.url),
+          type: asset.type ?? getDataUrlMimeType(asset.url),
+        },
       ]),
     );
-    const blobUrlsToRevoke = newAssetEntries
+    const bufferedAssets = Object.fromEntries(bufferedAssetEntries);
+    const blobUrlsToRevoke = bufferedAssetEntries
       .map(([, asset]) => asset?.url)
       .filter(isBlobUrl);
 
     try {
-      await loadBuffersWithRetry(activeBufferManager, newAssets);
+      if (bufferedAssetEntries.length > 0) {
+        await loadBuffersWithRetry(activeBufferManager, bufferedAssets);
+      }
     } finally {
       blobUrlsToRevoke.forEach((url) => {
         URL.revokeObjectURL(url);
@@ -882,11 +948,15 @@ export const createGraphicsService = async ({
     }
 
     const fullBufferMap = activeBufferManager.getBufferMap();
-    const deltaBufferMap = Object.fromEntries(
-      newAssetEntries
+    const loadedBufferMap = Object.fromEntries(
+      bufferedAssetEntries
         .map(([key]) => [key, fullBufferMap[key]])
         .filter(([, value]) => !!value),
     );
+    const deltaBufferMap = {
+      ...loadedBufferMap,
+      ...directBufferMap,
+    };
 
     if (Object.keys(deltaBufferMap).length === 0) {
       return;

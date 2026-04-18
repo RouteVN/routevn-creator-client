@@ -152,7 +152,7 @@ describe("graphicsService", () => {
 
     const pendingLoad = service.loadAssets({
       "image-1": {
-        url: "data:image/png;base64,AA==",
+        url: "blob:http://localhost/image-1",
         type: "image/png",
       },
     });
@@ -223,6 +223,50 @@ describe("graphicsService", () => {
         url: expectedUrl,
         type: "image/png",
         source: "url",
+      },
+    });
+  });
+
+  it("decodes data url image assets locally instead of sending them through the fetch-based loader", async () => {
+    const bufferManager = {
+      has: vi.fn(() => false),
+      load: vi.fn(async () => {}),
+      getBufferMap: vi.fn(() => ({})),
+      clear: vi.fn(),
+    };
+    createAssetBufferManagerMock.mockReturnValue(bufferManager);
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+
+    await service.loadAssets({
+      "thumb-1": {
+        url: "data:image/jpeg;base64,AA==",
+        type: "image/jpeg",
+      },
+    });
+
+    expect(bufferManager.load).not.toHaveBeenCalled();
+    expect(routeGraphicsInstance.loadAssets).toHaveBeenCalledWith({
+      "thumb-1": {
+        buffer: expect.any(ArrayBuffer),
+        type: "image/jpeg",
       },
     });
   });
