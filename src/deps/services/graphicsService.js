@@ -360,6 +360,7 @@ export const createGraphicsService = async ({
   let deferredAudioRenderToken = 0;
   let deferredAudioRenderKeySignature = "";
   let suppressedEngineRenderEffects = 0;
+  let isEngineAudioMuted = false;
 
   const isBlobUrl = (url) => typeof url === "string" && url.startsWith("blob:");
 
@@ -429,6 +430,19 @@ export const createGraphicsService = async ({
   const invalidateDeferredAudioRender = () => {
     deferredAudioRenderToken += 1;
     deferredAudioRenderKeySignature = "";
+  };
+
+  const setEngineAudioMuted = (value) => {
+    const nextIsMuted = value === true;
+
+    if (isEngineAudioMuted === nextIsMuted) {
+      return;
+    }
+
+    isEngineAudioMuted = nextIsMuted;
+    if (nextIsMuted) {
+      invalidateDeferredAudioRender();
+    }
   };
 
   const getRenderStateAudioKeys = (renderState) => {
@@ -1001,18 +1015,33 @@ export const createGraphicsService = async ({
   };
 
   const renderEngineState = (renderState, options = {}) => {
-    const { allowDeferredAudio = true } = options;
+    const { allowDeferredAudio = true, skipAudio = false } = options;
     let nextRenderState = prepareRenderStateKeyboardForGraphics({
       renderState,
       enableGlobalKeyboardBindings,
     });
+    const effectiveSkipAudio = skipAudio || isEngineAudioMuted;
+
+    if (
+      effectiveSkipAudio &&
+      Array.isArray(nextRenderState?.audio) &&
+      nextRenderState.audio.length > 0
+    ) {
+      invalidateDeferredAudioRender();
+      nextRenderState = {
+        ...nextRenderState,
+        audio: [],
+      };
+    }
+
     const requestedAudioKeys = getRenderStateAudioKeys(nextRenderState);
     let retainedAudioKeys = requestedAudioKeys;
+    let missingAudioKeys = [];
 
-    if (allowDeferredAudio) {
-      const { renderableAudio, missingAudioKeys } = splitRenderableAudio(
-        nextRenderState.audio,
-      );
+    if (allowDeferredAudio && !effectiveSkipAudio) {
+      const splitAudio = splitRenderableAudio(nextRenderState.audio);
+      const { renderableAudio } = splitAudio;
+      missingAudioKeys = splitAudio.missingAudioKeys;
 
       if (missingAudioKeys.length > 0) {
         nextRenderState = {
@@ -1353,6 +1382,10 @@ export const createGraphicsService = async ({
       enableGlobalKeyboardBindings =
         options.enableGlobalKeyboardBindings ?? true;
       const suppressRenderEffects = options.suppressRenderEffects === true;
+      const onRenderState =
+        typeof options.onRenderState === "function"
+          ? options.onRenderState
+          : undefined;
       const initialGlobal = options.initialGlobal ?? {};
       const namespace =
         typeof options.namespace === "string" && options.namespace.length > 0
@@ -1372,6 +1405,10 @@ export const createGraphicsService = async ({
               return;
             }
             renderEngineState(renderState);
+            onRenderState?.({
+              renderState,
+              systemState: engine?.selectSystemState?.(),
+            });
           },
         },
         namespace,
@@ -1432,13 +1469,8 @@ export const createGraphicsService = async ({
         return;
       }
       const { skipAudio = false, skipAnimations = false } = options;
-      if (skipAudio) {
-        invalidateDeferredAudioRender();
-      }
+      const effectiveSkipAudio = skipAudio || isEngineAudioMuted;
       let renderState = engine.selectRenderState();
-      if (skipAudio) {
-        renderState = { ...renderState, audio: [] };
-      }
       if (skipAnimations) {
         renderState = {
           ...renderState,
@@ -1446,7 +1478,9 @@ export const createGraphicsService = async ({
           elements: disableTextRevealingEffects(renderState?.elements),
         };
       }
-      renderEngineState(renderState);
+      renderEngineState(renderState, {
+        skipAudio: effectiveSkipAudio,
+      });
     },
 
     engineHandleActions: (actions, eventContext, options = {}) => {
@@ -1460,6 +1494,7 @@ export const createGraphicsService = async ({
       }
       engine.handleActions(actions, eventContext);
     },
+    setEngineAudioMuted,
 
     setAnimationPlaybackMode: (mode) => {
       routeGraphics?.setAnimationPlaybackMode?.(mode);

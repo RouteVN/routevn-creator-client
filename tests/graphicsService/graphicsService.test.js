@@ -491,4 +491,182 @@ describe("graphicsService", () => {
       }),
     );
   });
+
+  it("notifies initRouteEngine render callbacks after engine-driven renders", async () => {
+    let effectsHandlerOptions;
+    createEffectsHandlerMock.mockImplementation((options) => {
+      effectsHandlerOptions = options;
+      return vi.fn();
+    });
+
+    createRouteEngineMock.mockReturnValue({
+      init: vi.fn(),
+      selectRenderState: vi.fn(() => ({
+        id: "render-1",
+        elements: [],
+        audio: [],
+        animations: [],
+      })),
+      selectPresentationState: vi.fn(() => undefined),
+      selectPresentationChanges: vi.fn(() => undefined),
+      selectSectionLineChanges: vi.fn(() => []),
+      selectSystemState: vi.fn(() => ({
+        contexts: [
+          {
+            currentPointerMode: "read",
+            pointers: {
+              read: {
+                sectionId: "section-1",
+              },
+            },
+          },
+        ],
+      })),
+      handleActions: vi.fn(),
+    });
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+
+    const onRenderState = vi.fn();
+    service.initRouteEngine(
+      {
+        screen: { width: 1920, height: 1080 },
+        story: { scenes: {} },
+        resources: {},
+      },
+      {
+        onRenderState,
+      },
+    );
+
+    effectsHandlerOptions.routeGraphics.render({
+      id: "render-2",
+      elements: [],
+      audio: [],
+      animations: [],
+    });
+
+    expect(onRenderState).toHaveBeenCalledWith({
+      renderState: {
+        id: "render-2",
+        elements: [],
+        audio: [],
+        animations: [],
+      },
+      systemState: {
+        contexts: [
+          {
+            currentPointerMode: "read",
+            pointers: {
+              read: {
+                sectionId: "section-1",
+              },
+            },
+          },
+        ],
+      },
+    });
+  });
+
+  it("keeps engine-driven follow-up renders muted after renderComplete", async () => {
+    let effectsHandlerOptions;
+    createEffectsHandlerMock.mockImplementation((options) => {
+      effectsHandlerOptions = options;
+      return vi.fn();
+    });
+
+    const handleActions = vi.fn((actions) => {
+      if (actions?.markLineCompleted) {
+        effectsHandlerOptions.routeGraphics.render({
+          id: "render-2",
+          elements: [],
+          audio: [
+            {
+              id: "bgm",
+              src: "file-1",
+              type: "sound",
+              loop: true,
+            },
+          ],
+          animations: [],
+        });
+      }
+    });
+
+    createRouteEngineMock.mockReturnValue({
+      init: vi.fn(),
+      selectRenderState: vi.fn(() => ({
+        id: "render-1",
+        elements: [],
+        audio: [
+          {
+            id: "bgm",
+            src: "file-1",
+            type: "sound",
+            loop: true,
+          },
+        ],
+        animations: [],
+      })),
+      selectPresentationState: vi.fn(() => undefined),
+      selectPresentationChanges: vi.fn(() => undefined),
+      selectSectionLineChanges: vi.fn(() => []),
+      handleActions,
+    });
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+
+    service.setEngineAudioMuted(true);
+    service.initRouteEngine({
+      screen: { width: 1920, height: 1080 },
+      story: { scenes: {} },
+      resources: {},
+    });
+    routeGraphicsInstance.render.mockClear();
+
+    routeGraphicsInitOptions.eventHandler("renderComplete", {});
+
+    expect(handleActions).toHaveBeenCalledWith({
+      markLineCompleted: {},
+    });
+    expect(routeGraphicsInstance.render).toHaveBeenCalledWith(
+      expect.objectContaining({
+        audio: [],
+      }),
+    );
+  });
 });

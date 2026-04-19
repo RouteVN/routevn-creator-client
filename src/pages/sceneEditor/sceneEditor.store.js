@@ -268,6 +268,7 @@ export const createInitialState = () => ({
     formKey: 0,
     defaultValues: {
       showLineNumbers: true,
+      isMuted: false,
     },
   },
   repositoryState: {},
@@ -758,6 +759,7 @@ export const showSceneSettingsDialog = ({ state }, _payload = {}) => {
   state.sceneSettingsDialog.formKey += 1;
   state.sceneSettingsDialog.defaultValues = {
     showLineNumbers: state.sceneSettings.showLineNumbers,
+    isMuted: state.isMuted,
   };
 };
 
@@ -765,8 +767,13 @@ export const hideSceneSettingsDialog = ({ state }, _payload = {}) => {
   state.sceneSettingsDialog.isOpen = false;
 };
 
-export const setSceneSettings = ({ state }, { showLineNumbers } = {}) => {
-  state.sceneSettings.showLineNumbers = showLineNumbers ?? true;
+export const setSceneSettings = (
+  { state },
+  { showLineNumbers, isMuted } = {},
+) => {
+  state.sceneSettings.showLineNumbers =
+    showLineNumbers ?? state.sceneSettings.showLineNumbers;
+  state.isMuted = isMuted ?? state.isMuted;
 };
 
 export const selectProjectData = ({ state }) => {
@@ -957,6 +964,17 @@ export const selectViewData = ({ state }) => {
           { value: true, label: "Show" },
         ],
       },
+      {
+        name: "isMuted",
+        type: "segmented-control",
+        label: "Preview audio",
+        required: true,
+        clearable: false,
+        options: [
+          { value: false, label: "On" },
+          { value: true, label: "Muted" },
+        ],
+      },
     ],
     actions: {
       buttons: [
@@ -1015,8 +1033,6 @@ export const selectViewData = ({ state }) => {
       : "line-numbers-hide",
     sceneSettingsDialog: state.sceneSettingsDialog,
     sceneSettingsForm,
-    isMuted: state.isMuted,
-    muteIcon: state.isMuted ? "mute" : "unmute",
     isScenePageLoading: state.isScenePageLoading,
     isSceneAssetLoading: state.isSceneAssetLoading,
     deadEndTooltip: state.deadEndTooltip,
@@ -1136,10 +1152,6 @@ export const selectSectionTransitionsDAG = ({ state }) => {
     edges,
     adjacencyList,
   };
-};
-
-export const toggleMute = ({ state }, _payload = {}) => {
-  state.isMuted = !state.isMuted;
 };
 
 export const selectIsMuted = ({ state }) => {

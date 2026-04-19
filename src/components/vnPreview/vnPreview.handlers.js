@@ -15,6 +15,7 @@ import {
   collectSceneIdsFromValue,
   collectSectionIdsFromValue,
   ensurePreviewProjectDataTargets,
+  resolveSceneIdForSectionId,
   withPreviewEntryPoint,
 } from "./support/vnPreviewProjectData.js";
 
@@ -159,26 +160,156 @@ const preloadLayoutAssetsByIds = async (deps, projectData, layoutIds) => {
   });
 };
 
-const createBeforeHandleActionsHook = (
+const applyHydrationResult = (deps, runtime, hydrationResult) => {
+  if (!hydrationResult?.didLoad) {
+    return false;
+  }
+
+  runtime.projectData = hydrationResult.projectData;
+  runtime.loadedSceneIds = new Set(hydrationResult.loadedSceneIds);
+  deps.graphicsService.engineHandleActions(
+    {
+      updateProjectData: {
+        projectData: runtime.projectData,
+      },
+    },
+    undefined,
+    {
+      suppressRenderEffects: true,
+    },
+  );
+  return true;
+};
+
+const hydratePreviewTargets = async (
   deps,
   {
     repository,
-    projectData,
-    loadedSceneIds: initialLoadedSceneIds = [],
-    sceneId,
-    sectionId,
-    lineId,
+    runtime,
+    sceneIds = [],
+    sectionIds = [],
+    initialSceneId,
+    initialSectionId,
+    initialLineId,
+    showLoading = false,
   } = {},
 ) => {
-  let currentProjectData = projectData;
-  let loadedSceneIds = new Set(
-    initialLoadedSceneIds.length > 0
-      ? initialLoadedSceneIds
-      : typeof sceneId === "string" && sceneId.length > 0
-        ? [sceneId]
-        : Object.keys(projectData?.story?.scenes || {}),
-  );
+  const { missingSceneIds, missingSectionIds } = collectPreviewMissingTargets({
+    projectData: runtime.projectData,
+    loadedSceneIds: Array.from(runtime.loadedSceneIds),
+    sceneIds,
+    sectionIds,
+  });
+  const hasMissingTargets =
+    missingSceneIds.length > 0 || missingSectionIds.length > 0;
 
+  if (!hasMissingTargets) {
+    return {
+      didLoad: false,
+      projectData: runtime.projectData,
+      loadedSceneIds: Array.from(runtime.loadedSceneIds),
+      missingSceneIds,
+      missingSectionIds,
+    };
+  }
+
+  if (showLoading) {
+    setAssetLoading(deps, true);
+  }
+
+  try {
+    const hydrationResult = await ensurePreviewProjectDataTargets({
+      repository,
+      projectData: runtime.projectData,
+      loadedSceneIds: Array.from(runtime.loadedSceneIds),
+      sceneIds: missingSceneIds,
+      sectionIds: missingSectionIds,
+      initialSceneId,
+      initialSectionId,
+      initialLineId,
+    });
+    applyHydrationResult(deps, runtime, hydrationResult);
+    return hydrationResult;
+  } finally {
+    if (showLoading) {
+      setAssetLoading(deps, false);
+    }
+  }
+};
+
+const selectCurrentSectionId = (systemState = {}) => {
+  const contexts = Array.isArray(systemState?.contexts)
+    ? systemState.contexts
+    : [];
+  const currentContext = contexts[contexts.length - 1];
+  const currentPointerMode = currentContext?.currentPointerMode;
+
+  if (!currentPointerMode) {
+    return undefined;
+  }
+
+  return currentContext?.pointers?.[currentPointerMode]?.sectionId;
+};
+
+const createSceneTargetPrefetcher = (
+  deps,
+  { repository, runtime, initialSceneId, initialSectionId, initialLineId } = {},
+) => {
+  const prefetchedSceneIds = new Set();
+  let prefetchQueue = Promise.resolve();
+
+  return (sceneId) => {
+    if (!sceneId || prefetchedSceneIds.has(sceneId)) {
+      return;
+    }
+
+    prefetchedSceneIds.add(sceneId);
+    prefetchQueue = prefetchQueue
+      .then(async () => {
+        const transitionSceneIds = extractTransitionTargetSceneIds(
+          runtime.projectData,
+          sceneId,
+        );
+
+        if (transitionSceneIds.length === 0) {
+          return;
+        }
+
+        await hydratePreviewTargets(deps, {
+          repository,
+          runtime,
+          sceneIds: transitionSceneIds,
+          sectionIds: [],
+          initialSceneId,
+          initialSectionId,
+          initialLineId,
+          showLoading: false,
+        });
+        await loadAssetsForSceneIds(
+          deps,
+          runtime.projectData,
+          transitionSceneIds,
+          {
+            showLoading: false,
+          },
+        );
+        await preloadDirectTransitionScenes(
+          deps,
+          runtime.projectData,
+          transitionSceneIds,
+        );
+      })
+      .catch((error) => {
+        prefetchedSceneIds.delete(sceneId);
+        console.error("[vnPreview] Failed to prefetch scene targets:", error);
+      });
+  };
+};
+
+const createBeforeHandleActionsHook = (
+  deps,
+  { repository, runtime, sceneId, sectionId, lineId } = {},
+) => {
   return async (actions, eventContext) => {
     const { eventData, preparedActions, resolvedActions } =
       await prepareRuntimeInteractionExecution({
@@ -196,105 +327,61 @@ const createBeforeHandleActionsHook = (
       resolvedActions,
       eventData,
     );
-    const { missingSceneIds, missingSectionIds } = collectPreviewMissingTargets(
-      {
-        projectData: currentProjectData,
-        loadedSceneIds: Array.from(loadedSceneIds),
-        sceneIds: referencedSceneIds,
-        sectionIds: referencedSectionIds,
-      },
+
+    await hydratePreviewTargets(deps, {
+      repository,
+      runtime,
+      sceneIds: referencedSceneIds,
+      sectionIds: referencedSectionIds,
+      initialSceneId: sceneId,
+      initialSectionId: sectionId,
+      initialLineId: lineId,
+      showLoading: true,
+    });
+
+    const layoutIds = Array.from(
+      new Set([
+        ...extractLayoutIdsFromValue(resolvedActions, runtime.projectData),
+        ...extractLayoutIdsFromValue(eventData, runtime.projectData),
+      ]),
+    );
+    if (layoutIds.length > 0) {
+      await preloadLayoutAssetsByIds(deps, runtime.projectData, layoutIds);
+    }
+
+    const transitionSceneIds = Array.from(
+      new Set([
+        ...extractTransitionTargetSceneIdsFromActions(
+          resolvedActions,
+          runtime.projectData,
+        ),
+        ...extractTransitionTargetSceneIdsFromActions(
+          eventData,
+          runtime.projectData,
+        ),
+        ...extractSceneIdsFromValue(resolvedActions, runtime.projectData),
+        ...extractSceneIdsFromValue(eventData, runtime.projectData),
+      ]),
     );
 
-    const shouldShowLoading =
-      missingSceneIds.length > 0 || missingSectionIds.length > 0;
-
-    if (shouldShowLoading) {
-      setAssetLoading(deps, true);
-    }
-
-    try {
-      if (shouldShowLoading) {
-        const hydrationResult = await ensurePreviewProjectDataTargets({
-          repository,
-          projectData: currentProjectData,
-          loadedSceneIds: Array.from(loadedSceneIds),
-          sceneIds: missingSceneIds,
-          sectionIds: missingSectionIds,
-          initialSceneId: sceneId,
-          initialSectionId: sectionId,
-          initialLineId: lineId,
-        });
-
-        if (hydrationResult.didLoad) {
-          currentProjectData = hydrationResult.projectData;
-          loadedSceneIds = new Set(hydrationResult.loadedSceneIds);
-          deps.graphicsService.engineHandleActions(
-            {
-              updateProjectData: {
-                projectData: currentProjectData,
-              },
-            },
-            undefined,
-            {
-              suppressRenderEffects: true,
-            },
-          );
-        }
-      }
-
-      const layoutIds = Array.from(
-        new Set([
-          ...extractLayoutIdsFromValue(resolvedActions, currentProjectData),
-          ...extractLayoutIdsFromValue(eventData, currentProjectData),
-        ]),
-      );
-      if (layoutIds.length > 0) {
-        await preloadLayoutAssetsByIds(deps, currentProjectData, layoutIds);
-      }
-
-      const transitionSceneIds = Array.from(
-        new Set([
-          ...extractTransitionTargetSceneIdsFromActions(
-            resolvedActions,
-            currentProjectData,
-          ),
-          ...extractTransitionTargetSceneIdsFromActions(
-            eventData,
-            currentProjectData,
-          ),
-          ...extractSceneIdsFromValue(resolvedActions, currentProjectData),
-          ...extractSceneIdsFromValue(eventData, currentProjectData),
-        ]),
-      );
-
-      if (transitionSceneIds.length === 0) {
-        return preparedActions;
-      }
-
-      await loadAssetsForSceneIds(
-        deps,
-        currentProjectData,
-        transitionSceneIds,
-        {
-          showLoading: false,
-        },
-      );
-      await preloadDirectTransitionScenes(
-        deps,
-        currentProjectData,
-        transitionSceneIds,
-      );
+    if (transitionSceneIds.length === 0) {
       return preparedActions;
-    } finally {
-      if (shouldShowLoading) {
-        setAssetLoading(deps, false);
-      }
     }
+
+    await loadAssetsForSceneIds(deps, runtime.projectData, transitionSceneIds, {
+      showLoading: false,
+    });
+    await preloadDirectTransitionScenes(
+      deps,
+      runtime.projectData,
+      transitionSceneIds,
+    );
+    return preparedActions;
   };
 };
 
 export const handleBeforeMount = (deps) => {
-  const { dispatchEvent, store } = deps;
+  const { dispatchEvent, store, graphicsService } = deps;
   function handleKeyDown(event) {
     if (event.key === "Escape") {
       dispatchEvent(new CustomEvent("close"));
@@ -305,6 +392,7 @@ export const handleBeforeMount = (deps) => {
   return () => {
     store.setAssetLoading({ isLoading: false });
     resetAssetLoadCache(store);
+    void graphicsService.destroy?.();
     window.removeEventListener("keydown", handleKeyDown);
   };
 };
@@ -313,6 +401,7 @@ export const handleAfterMount = async (deps) => {
   const { projectService, graphicsService, refs, props: attrs, store } = deps;
   const repository = await projectService.ensureRepository();
   const { canvas } = refs;
+  graphicsService.setEngineAudioMuted?.(false);
 
   const sceneId = attrs.sceneId;
   const sectionId = attrs.sectionId;
@@ -359,14 +448,25 @@ export const handleAfterMount = async (deps) => {
     }
   }
 
+  const runtime = {
+    projectData: projectDataWithInitial,
+    loadedSceneIds: new Set(loadedSceneIds),
+  };
   const beforeHandleActions = createBeforeHandleActionsHook(deps, {
     repository,
-    projectData: projectDataWithInitial,
-    loadedSceneIds,
+    runtime,
     sceneId,
     sectionId,
     lineId,
   });
+  const scheduleSceneTargetPrefetch = createSceneTargetPrefetcher(deps, {
+    repository,
+    runtime,
+    initialSceneId: sceneId,
+    initialSectionId: sectionId,
+    initialLineId: lineId,
+  });
+  let lastRenderedSceneId;
   const previewWidth = projectDataWithInitial?.screen?.width;
   const previewHeight = projectDataWithInitial?.screen?.height;
   store.setProjectResolution({
@@ -393,7 +493,21 @@ export const handleAfterMount = async (deps) => {
     projectDataWithInitial,
     initialSceneIds,
   );
-  await graphicsService.initRouteEngine(projectDataWithInitial, {
+  await graphicsService.initRouteEngine(runtime.projectData, {
     handleEffects: true,
+    onRenderState: ({ systemState }) => {
+      const currentSectionId = selectCurrentSectionId(systemState);
+      const currentSceneId = resolveSceneIdForSectionId(
+        runtime.projectData,
+        currentSectionId,
+      );
+
+      if (!currentSceneId || currentSceneId === lastRenderedSceneId) {
+        return;
+      }
+
+      lastRenderedSceneId = currentSceneId;
+      scheduleSceneTargetPrefetch(currentSceneId);
+    },
   });
 };

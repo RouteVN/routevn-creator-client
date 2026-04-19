@@ -73,6 +73,20 @@ export const hasPreviewSceneLines = (projectData, sceneId) => {
   );
 };
 
+export const hasPreviewSceneEntryLines = (projectData, sceneId) => {
+  if (!sceneId) {
+    return false;
+  }
+
+  const scene = projectData?.story?.scenes?.[sceneId];
+  const initialSectionId = scene?.initialSectionId;
+  if (!initialSectionId) {
+    return false;
+  }
+
+  return hasPreviewSectionLines(projectData, initialSectionId);
+};
+
 export const hasPreviewSectionLines = (projectData, sectionId) => {
   const sceneId = resolveSceneIdForSectionId(projectData, sectionId);
   if (!sceneId) {
@@ -103,7 +117,7 @@ export const collectPreviewMissingTargets = ({
 
     if (
       !knownLoadedSceneIds.has(sceneId) ||
-      !hasPreviewSceneLines(projectData, sceneId)
+      !hasPreviewSceneEntryLines(projectData, sceneId)
     ) {
       missingSceneIds.add(sceneId);
     }
@@ -128,7 +142,7 @@ export const collectPreviewMissingTargets = ({
 
     if (
       !knownLoadedSceneIds.has(sceneId) ||
-      !hasPreviewSceneLines(projectData, sceneId)
+      !hasPreviewSceneEntryLines(projectData, sceneId)
     ) {
       missingSceneIds.add(sceneId);
     }
@@ -182,7 +196,9 @@ export const ensurePreviewProjectDataTargets = async ({
   const nextSceneIds = Array.from(new Set(sceneIds)).filter(Boolean);
   const nextSectionIds = Array.from(new Set(sectionIds)).filter(Boolean);
   const missingSceneIds = nextSceneIds.filter(
-    (sceneId) => !knownLoadedSceneIds.includes(sceneId),
+    (sceneId) =>
+      !knownLoadedSceneIds.includes(sceneId) ||
+      !hasPreviewSceneEntryLines(projectData, sceneId),
   );
 
   if (missingSceneIds.length === 0 && nextSectionIds.length === 0) {

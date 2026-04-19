@@ -119,10 +119,6 @@ refs:
     eventListeners:
       click:
         handler: handlePreviewClick
-  muteToggle:
-    eventListeners:
-      click:
-        handler: handleMuteToggle
   vnPreview:
     eventListeners:
       close:
@@ -165,7 +161,6 @@ template:
           - 'rtgl-view w=1fg d=v h=f style="min-width: 0; min-height: 0;"':
               - rtgl-view bwb=xs w=f h=48 av=c ph=sm d=h jc=e g=sm:
                   - rtgl-button#previewButton: Preview
-                  - rtgl-button#muteToggle sq v="gh" pre="${muteIcon}": null
               - rtgl-view w=f h=1fg:
                   - rtgl-view:
                       - 'rtgl-view w=700 pos=rel style="aspect-ratio: ${canvasAspectRatio}; max-width: 100%;"':

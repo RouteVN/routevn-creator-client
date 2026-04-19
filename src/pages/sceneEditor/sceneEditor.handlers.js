@@ -46,6 +46,7 @@ const STRUCTURE_DRAFT_SAVE_DEBOUNCE_MS = 900;
 const DRAFT_SAVE_MIN_INTERVAL_MS = 1000;
 const DRAFT_SAVE_MAX_INTERVAL_MS = 3000;
 const SHOW_LINE_NUMBERS_CONFIG_KEY = "sceneEditor.showLineNumbers";
+const IS_MUTED_CONFIG_KEY = "sceneEditor.isMuted";
 const nowMs = () => {
   if (
     typeof performance !== "undefined" &&
@@ -404,8 +405,10 @@ export const handleBeforeMount = (deps) => {
   store.setScenePageLoading({ isLoading: true });
   const showLineNumbers =
     appService.getUserConfig(SHOW_LINE_NUMBERS_CONFIG_KEY) ?? true;
+  const isMuted = appService.getUserConfig(IS_MUTED_CONFIG_KEY) ?? false;
   store.setSceneSettings({
     showLineNumbers,
+    isMuted,
   });
 
   const cleanupRuntimeSubscriptions = mountSceneEditorSubscriptions(deps);
@@ -1271,7 +1274,7 @@ export const handleSceneSettingsDialogClose = (deps) => {
 };
 
 export const handleSceneSettingsFormAction = (deps, payload) => {
-  const { store, render, appService, refs } = deps;
+  const { store, render, appService, refs, subject } = deps;
   const detail = payload._event.detail || {};
   const action = detail.actionId;
 
@@ -1285,17 +1288,25 @@ export const handleSceneSettingsFormAction = (deps, payload) => {
     return;
   }
 
+  const previousIsMuted = store.selectIsMuted();
   const showLineNumbers = detail.values?.showLineNumbers ?? true;
+  const isMuted = detail.values?.isMuted ?? false;
   store.setSceneSettings({
     showLineNumbers,
+    isMuted,
   });
   appService.setUserConfig(SHOW_LINE_NUMBERS_CONFIG_KEY, showLineNumbers);
+  appService.setUserConfig(IS_MUTED_CONFIG_KEY, isMuted);
   store.hideSceneSettingsDialog();
   render();
 
   requestAnimationFrame(() => {
     refs.linesEditor?.hardRefresh?.();
   });
+
+  if (previousIsMuted !== isMuted) {
+    subject.dispatch("sceneEditor.renderCanvas", {});
+  }
 };
 
 export const handleSectionCreateFormActionClick = async (deps, payload) => {
@@ -1624,13 +1635,5 @@ export const handleSystemActionsActionDelete = async (deps, payload) => {
   // Trigger re-render
   render();
 
-  subject.dispatch("sceneEditor.renderCanvas", {});
-};
-
-export const handleMuteToggle = (deps) => {
-  const { store, render, subject } = deps;
-  store.toggleMute();
-  render();
-  // Re-render canvas with new mute state
   subject.dispatch("sceneEditor.renderCanvas", {});
 };

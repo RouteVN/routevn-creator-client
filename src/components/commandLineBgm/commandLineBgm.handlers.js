@@ -14,7 +14,7 @@ const openBgmGallery = ({ store, render }) => {
   render();
 };
 
-const showCurrentBgmDropdown = async (deps, event) => {
+const showCurrentBgmContextMenu = async (deps, event) => {
   const { store, render, globalUI } = deps;
   const selectedResource = store.selectSelectedResource();
 
@@ -24,19 +24,11 @@ const showCurrentBgmDropdown = async (deps, event) => {
   }
 
   const result = await globalUI.showDropdownMenu({
-    items: [
-      { type: "item", label: "Change", key: "change" },
-      { type: "item", label: "Remove", key: "remove" },
-    ],
+    items: [{ type: "item", label: "Remove", key: "remove" }],
     x: event.clientX,
     y: event.clientY,
     place: "bs",
   });
-
-  if (result?.item?.key === "change") {
-    openBgmGallery({ store, render });
-    return;
-  }
 
   if (result?.item?.key === "remove") {
     store.clearBgmAudio();
@@ -65,14 +57,15 @@ export const handleAudioWaveformRightClick = async (deps, payload) => {
   event.preventDefault();
   event.stopPropagation();
 
-  await showCurrentBgmDropdown(deps, event);
+  await showCurrentBgmContextMenu(deps, event);
 };
 
-export const handleAudioWaveformClick = async (deps, payload) => {
+export const handleAudioWaveformClick = (deps, payload) => {
+  const { store, render } = deps;
   const { _event: event } = payload;
   event.stopPropagation();
 
-  await showCurrentBgmDropdown(deps, event);
+  openBgmGallery({ store, render });
 };
 
 export const handleFormExtra = (deps, _payload) => {
