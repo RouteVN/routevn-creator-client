@@ -1,9 +1,19 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 
+const normalizeVolume = (volume, fallback = 50) => {
+  const parsedVolume = Number(volume);
+  if (!Number.isFinite(parsedVolume)) {
+    return fallback;
+  }
+
+  const nextVolume = parsedVolume > 100 ? parsedVolume / 10 : parsedVolume;
+  return Math.max(0, Math.min(100, Math.round(nextVolume)));
+};
+
 const normalizeBgm = (bgm = {}) => ({
   resourceId: bgm?.resourceId,
   loop: bgm?.loop ?? true,
-  volume: bgm?.volume ?? 500,
+  volume: normalizeVolume(bgm?.volume),
   delay: bgm?.delay,
 });
 
@@ -28,7 +38,7 @@ const form = {
       description: "Volume",
       type: "slider-with-input",
       min: 0,
-      max: 1000,
+      max: 100,
       step: 1,
     },
   ],
@@ -199,7 +209,7 @@ export const selectViewData = ({ state }) => {
 
   const defaultValues = {
     loop: state.bgm?.loop ?? true,
-    volume: state.bgm?.volume ?? 500,
+    volume: normalizeVolume(state.bgm?.volume),
     delay: state.bgm?.delay,
     audioWaveformDataFileId: selectedResource?.item?.waveformDataFileId || "",
   };
