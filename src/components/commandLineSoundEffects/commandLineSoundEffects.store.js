@@ -1,10 +1,20 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 
+const normalizeVolume = (volume, fallback = 50) => {
+  const parsedVolume = Number(volume);
+  if (!Number.isFinite(parsedVolume)) {
+    return fallback;
+  }
+
+  const nextVolume = parsedVolume > 100 ? parsedVolume / 10 : parsedVolume;
+  return Math.max(0, Math.min(100, Math.round(nextVolume)));
+};
+
 const normalizeSfx = (sfx = {}) => ({
   id: sfx?.id,
   resourceId: sfx?.resourceId,
   name: sfx?.name ?? "New Sound Effect",
-  volume: sfx?.volume ?? 500,
+  volume: normalizeVolume(sfx?.volume),
   loop: sfx?.loop ?? false,
 });
 
