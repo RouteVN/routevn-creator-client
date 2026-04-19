@@ -491,4 +491,89 @@ describe("graphicsService", () => {
       }),
     );
   });
+
+  it("keeps engine-driven follow-up renders muted after renderComplete", async () => {
+    let effectsHandlerOptions;
+    createEffectsHandlerMock.mockImplementation((options) => {
+      effectsHandlerOptions = options;
+      return vi.fn();
+    });
+
+    const handleActions = vi.fn((actions) => {
+      if (actions?.markLineCompleted) {
+        effectsHandlerOptions.routeGraphics.render({
+          id: "render-2",
+          elements: [],
+          audio: [
+            {
+              id: "bgm",
+              src: "file-1",
+              type: "sound",
+              loop: true,
+            },
+          ],
+          animations: [],
+        });
+      }
+    });
+
+    createRouteEngineMock.mockReturnValue({
+      init: vi.fn(),
+      selectRenderState: vi.fn(() => ({
+        id: "render-1",
+        elements: [],
+        audio: [
+          {
+            id: "bgm",
+            src: "file-1",
+            type: "sound",
+            loop: true,
+          },
+        ],
+        animations: [],
+      })),
+      selectPresentationState: vi.fn(() => undefined),
+      selectPresentationChanges: vi.fn(() => undefined),
+      selectSectionLineChanges: vi.fn(() => []),
+      handleActions,
+    });
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+
+    service.setEngineAudioMuted(true);
+    service.initRouteEngine({
+      screen: { width: 1920, height: 1080 },
+      story: { scenes: {} },
+      resources: {},
+    });
+    routeGraphicsInstance.render.mockClear();
+
+    routeGraphicsInitOptions.eventHandler("renderComplete", {});
+
+    expect(handleActions).toHaveBeenCalledWith({
+      markLineCompleted: {},
+    });
+    expect(routeGraphicsInstance.render).toHaveBeenCalledWith(
+      expect.objectContaining({
+        audio: [],
+      }),
+    );
+  });
 });

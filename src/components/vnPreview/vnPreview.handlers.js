@@ -294,7 +294,7 @@ const createBeforeHandleActionsHook = (
 };
 
 export const handleBeforeMount = (deps) => {
-  const { dispatchEvent, store } = deps;
+  const { dispatchEvent, store, graphicsService } = deps;
   function handleKeyDown(event) {
     if (event.key === "Escape") {
       dispatchEvent(new CustomEvent("close"));
@@ -305,6 +305,7 @@ export const handleBeforeMount = (deps) => {
   return () => {
     store.setAssetLoading({ isLoading: false });
     resetAssetLoadCache(store);
+    void graphicsService.destroy?.();
     window.removeEventListener("keydown", handleKeyDown);
   };
 };
@@ -313,6 +314,7 @@ export const handleAfterMount = async (deps) => {
   const { projectService, graphicsService, refs, props: attrs, store } = deps;
   const repository = await projectService.ensureRepository();
   const { canvas } = refs;
+  graphicsService.setEngineAudioMuted?.(false);
 
   const sceneId = attrs.sceneId;
   const sectionId = attrs.sectionId;

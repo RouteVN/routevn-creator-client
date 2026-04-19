@@ -546,6 +546,7 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     ? getDebugDurationMs(projectDataSelectionStartedAt)
     : undefined;
   const isMuted = store.selectIsMuted();
+  graphicsService.setEngineAudioMuted?.(isMuted);
 
   const engineInitStartedAt = perfEnabled ? getDebugNow() : 0;
   initRouteEngineWithDiagnostics(graphicsService, projectData, {

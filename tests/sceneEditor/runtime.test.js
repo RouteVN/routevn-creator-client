@@ -102,6 +102,7 @@ const createProjectData = () => {
 
 const createGraphicsService = () => {
   let engine;
+  const setEngineAudioMuted = vi.fn();
 
   return {
     initRouteEngine: (projectData) => {
@@ -122,6 +123,7 @@ const createGraphicsService = () => {
       engine?.handleActions(actions, eventContext, options);
     },
     engineSelectPresentationState: () => engine?.selectPresentationState(),
+    setEngineAudioMuted,
   };
 };
 
@@ -242,5 +244,35 @@ describe("renderSceneEditorState", () => {
     });
 
     expect(engineRenderCurrentState).toHaveBeenCalledTimes(1);
+  });
+
+  it("syncs the graphics engine audio mute state from scene editor settings", async () => {
+    const projectData = createProjectData();
+    const graphicsService = createGraphicsService();
+    const store = {
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => "section-1",
+      selectSelectedLineId: () => "line-2",
+      selectProjectData: () => projectData,
+      selectPreviewRuntimeGlobal: () => ({
+        dialogueTextSpeed: 100,
+      }),
+      selectIsMuted: () => true,
+      setPresentationState: ({ presentationState }) => {
+        store.presentationState = presentationState;
+      },
+      presentationState: undefined,
+    };
+
+    graphicsService.initRouteEngine(projectData, {
+      enableGlobalKeyboardBindings: false,
+    });
+
+    await renderSceneEditorState({
+      store,
+      graphicsService,
+    });
+
+    expect(graphicsService.setEngineAudioMuted).toHaveBeenCalledWith(true);
   });
 });
