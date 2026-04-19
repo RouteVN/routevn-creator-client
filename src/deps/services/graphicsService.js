@@ -13,12 +13,6 @@ import {
   loadGraphicsEnginePlugins,
 } from "../../internal/runtime/graphicsEngineRuntime.js";
 import { requireProjectResolution } from "../../internal/projectResolution.js";
-import {
-  debugLog,
-  getDebugDurationMs,
-  getDebugNow,
-  isDebugEnabled,
-} from "./shared/debugLog.js";
 
 const cloneBufferForAudioDecode = (value) => {
   if (value instanceof ArrayBuffer) {
@@ -75,7 +69,6 @@ const PIXI_EXTENSION_BY_MIME_TYPE = {
   "image/webp": "webp",
   "video/mp4": "mp4",
 };
-const GRAPHICS_PERF_SCOPE = "graphics-perf";
 
 const isTauriAssetUrl = (url) => {
   return (
@@ -898,8 +891,6 @@ export const createGraphicsService = async ({
       return;
     }
 
-    const perfEnabled = isDebugEnabled(GRAPHICS_PERF_SCOPE);
-    const loadStartedAt = perfEnabled ? getDebugNow() : 0;
     const normalizedAssetEntries = Object.entries(assets || {}).map(
       ([key, asset]) => [
         key,
@@ -939,14 +930,9 @@ export const createGraphicsService = async ({
       .map(([, asset]) => asset?.url)
       .filter(isBlobUrl);
 
-    let bufferLoadDurationMs = 0;
     try {
       if (bufferedAssetEntries.length > 0) {
-        const bufferLoadStartedAt = perfEnabled ? getDebugNow() : 0;
         await loadBuffersWithRetry(activeBufferManager, bufferedAssets);
-        if (perfEnabled) {
-          bufferLoadDurationMs = getDebugDurationMs(bufferLoadStartedAt);
-        }
       }
     } finally {
       blobUrlsToRevoke.forEach((url) => {
@@ -981,56 +967,25 @@ export const createGraphicsService = async ({
     );
     const renderAssetBufferMap = Object.fromEntries(renderAssetEntries);
 
-    let routeGraphicsAssetLoadDurationMs = 0;
     if (Object.keys(renderAssetBufferMap).length > 0) {
       if (!routeGraphics) {
         return;
       }
-      const routeGraphicsAssetLoadStartedAt = perfEnabled ? getDebugNow() : 0;
       await routeGraphics.loadAssets(renderAssetBufferMap);
-      if (perfEnabled) {
-        routeGraphicsAssetLoadDurationMs = getDebugDurationMs(
-          routeGraphicsAssetLoadStartedAt,
-        );
-      }
     }
 
     newAssetEntries.forEach(([key, asset]) => {
       loadedAssetTypes.set(key, classifyAsset(asset?.type));
     });
-
-    if (perfEnabled) {
-      debugLog(GRAPHICS_PERF_SCOPE, "assets.load.complete", {
-        durationMs: getDebugDurationMs(loadStartedAt),
-        requestedAssetCount: normalizedAssetEntries.length,
-        newAssetCount: newAssetEntries.length,
-        bufferedAssetCount: bufferedAssetEntries.length,
-        dataUrlAssetCount: dataUrlAssetEntries.length,
-        renderAssetCount: renderAssetEntries.length,
-        audioAssetCount:
-          Object.keys(deltaBufferMap).length - renderAssetEntries.length,
-        bufferLoadDurationMs,
-        routeGraphicsAssetLoadDurationMs,
-      });
-    }
   };
 
   const runInteractionActions = async (actions, eventContext) => {
-    const perfEnabled = isDebugEnabled(GRAPHICS_PERF_SCOPE);
-    const interactionStartedAt = perfEnabled ? getDebugNow() : 0;
     let nextActions = actions;
-    let beforeHandleActionsDurationMs = 0;
 
     if (beforeHandleActions) {
-      const beforeHandleActionsStartedAt = perfEnabled ? getDebugNow() : 0;
       const preparedActions = await beforeHandleActions(actions, eventContext);
       if (preparedActions !== undefined) {
         nextActions = preparedActions;
-      }
-      if (perfEnabled) {
-        beforeHandleActionsDurationMs = getDebugDurationMs(
-          beforeHandleActionsStartedAt,
-        );
       }
     }
 
@@ -1038,21 +993,7 @@ export const createGraphicsService = async ({
       return;
     }
 
-    const engineHandleActionsStartedAt = perfEnabled ? getDebugNow() : 0;
     engine.handleActions(nextActions, eventContext);
-    const engineHandleActionsDurationMs = perfEnabled
-      ? getDebugDurationMs(engineHandleActionsStartedAt)
-      : undefined;
-    if (perfEnabled) {
-      debugLog(GRAPHICS_PERF_SCOPE, "interaction-actions.complete", {
-        durationMs: getDebugDurationMs(interactionStartedAt),
-        beforeHandleActionsDurationMs,
-        engineHandleActionsDurationMs,
-        actionKeys: Object.keys(nextActions || {}),
-        eventId: eventContext?._event?.id,
-        eventType: eventContext?._event?.type,
-      });
-    }
     return {
       actions: nextActions,
       eventContext,
@@ -1060,8 +1001,6 @@ export const createGraphicsService = async ({
   };
 
   const renderEngineState = (renderState, options = {}) => {
-    const perfEnabled = isDebugEnabled(GRAPHICS_PERF_SCOPE);
-    const renderStartedAt = perfEnabled ? getDebugNow() : 0;
     const { allowDeferredAudio = true } = options;
     let nextRenderState = prepareRenderStateKeyboardForGraphics({
       renderState,
@@ -1069,13 +1008,11 @@ export const createGraphicsService = async ({
     });
     const requestedAudioKeys = getRenderStateAudioKeys(nextRenderState);
     let retainedAudioKeys = requestedAudioKeys;
-    let missingAudioCount = 0;
 
     if (allowDeferredAudio) {
       const { renderableAudio, missingAudioKeys } = splitRenderableAudio(
         nextRenderState.audio,
       );
-      missingAudioCount = missingAudioKeys.length;
 
       if (missingAudioKeys.length > 0) {
         nextRenderState = {
@@ -1091,37 +1028,9 @@ export const createGraphicsService = async ({
       ...nextRenderState,
       animations: nextRenderState?.animations || [],
     };
-    const routeGraphicsRenderStartedAt = perfEnabled ? getDebugNow() : 0;
     routeGraphics.render(nextRenderState);
-    const routeGraphicsRenderDurationMs = perfEnabled
-      ? getDebugDurationMs(routeGraphicsRenderStartedAt)
-      : undefined;
-    const hitAreaStartedAt = perfEnabled ? getDebugNow() : 0;
     applyInteractiveContainerHitAreas(nextRenderState.elements);
-    const hitAreaDurationMs = perfEnabled
-      ? getDebugDurationMs(hitAreaStartedAt)
-      : undefined;
     void pruneDecodedAudioCache(retainedAudioKeys);
-    if (perfEnabled) {
-      debugLog(GRAPHICS_PERF_SCOPE, "render-engine-state.complete", {
-        durationMs: getDebugDurationMs(renderStartedAt),
-        allowDeferredAudio,
-        routeGraphicsRenderDurationMs,
-        hitAreaDurationMs,
-        elementCount: Array.isArray(nextRenderState?.elements)
-          ? nextRenderState.elements.length
-          : 0,
-        animationCount: Array.isArray(nextRenderState?.animations)
-          ? nextRenderState.animations.length
-          : 0,
-        audioCount: Array.isArray(nextRenderState?.audio)
-          ? nextRenderState.audio.length
-          : 0,
-        requestedAudioCount: requestedAudioKeys.length,
-        retainedAudioCount: retainedAudioKeys.length,
-        missingAudioCount,
-      });
-    }
   };
 
   const disableTextRevealingEffects = (elements = []) => {

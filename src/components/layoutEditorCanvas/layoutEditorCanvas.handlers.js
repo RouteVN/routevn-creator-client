@@ -10,18 +10,11 @@ import {
 } from "../../internal/layoutEditorElementRegistry.js";
 import { captureCanvasThumbnailImage } from "../../internal/runtime/graphicsEngineRuntime.js";
 import {
-  debugLog,
-  getDebugDurationMs,
-  getDebugNow,
-  isDebugEnabled,
-} from "../../deps/services/shared/debugLog.js";
-import {
   createLayoutEditorRenderedElements,
   loadLayoutEditorAssets,
 } from "./support/layoutEditorCanvasRender.js";
 
 const KEYBOARD_SAVE_DELAY = 1000;
-const LAYOUT_EDITOR_PERF_SCOPE = "layout-editor-perf";
 
 const KEYBOARD_UNITS = {
   NORMAL: 1,
@@ -311,26 +304,9 @@ const renderLayoutEditorCanvas = async (
     return;
   }
 
-  const perfEnabled = isDebugEnabled(LAYOUT_EDITOR_PERF_SCOPE);
-  const renderStartedAt = perfEnabled ? getDebugNow() : 0;
-  let assets = {};
-  let layoutElements = [];
-  let fileReferences = [];
-  let selectedElementMetrics;
-  let assetRetryCount = 0;
-
   try {
-    const waitUntilReadyStartedAt = perfEnabled ? getDebugNow() : 0;
     await deps.graphicsService.waitUntilReady?.();
-    const waitUntilReadyDurationMs = perfEnabled
-      ? getDebugDurationMs(waitUntilReadyStartedAt)
-      : undefined;
-
-    const repositoryStateStartedAt = perfEnabled ? getDebugNow() : 0;
     const repositoryState = await getRepositoryState(deps);
-    const repositoryStateDurationMs = perfEnabled
-      ? getDebugDurationMs(repositoryStateStartedAt)
-      : undefined;
     const layoutData = updatedItem
       ? createLayoutDataWithUpdatedItem(
           props.layoutState?.elements,
@@ -342,23 +318,16 @@ const renderLayoutEditorCanvas = async (
       layoutType: props.layoutState?.layoutType,
       elements: layoutData,
     };
-    const renderStateBuildStartedAt = perfEnabled ? getDebugNow() : 0;
-    ({
-      elements: layoutElements,
-      fileReferences,
-      selectedElementMetrics,
-    } = createLayoutEditorRenderedElements({
-      layoutState,
-      repositoryState,
-      previewData: props.previewData,
-      resolution: props.resolution,
-      selectedItemId: props.selectedItemId,
-      disableMoveDrag: props.disableMoveDrag === true,
-      graphicsService: deps.graphicsService,
-    }));
-    const renderStateBuildDurationMs = perfEnabled
-      ? getDebugDurationMs(renderStateBuildStartedAt)
-      : undefined;
+    const { elements, fileReferences, selectedElementMetrics } =
+      createLayoutEditorRenderedElements({
+        layoutState,
+        repositoryState,
+        previewData: props.previewData,
+        resolution: props.resolution,
+        selectedItemId: props.selectedItemId,
+        disableMoveDrag: props.disableMoveDrag === true,
+        graphicsService: deps.graphicsService,
+      });
 
     deps.dispatchEvent(
       new CustomEvent("selected-element-metrics-change", {
@@ -370,21 +339,15 @@ const renderLayoutEditorCanvas = async (
       }),
     );
 
-    let clearFirstDurationMs = 0;
     if (clearFirst) {
-      const clearFirstStartedAt = perfEnabled ? getDebugNow() : 0;
       deps.graphicsService.render({
         id: generatePrefixedId("layout-editor-preview-clear-"),
         elements: [],
         animations: [],
       });
-      if (perfEnabled) {
-        clearFirstDurationMs = getDebugDurationMs(clearFirstStartedAt);
-      }
     }
 
-    const assetPreparationStartedAt = perfEnabled ? getDebugNow() : 0;
-    assets = await loadLayoutEditorAssets({
+    let assets = await loadLayoutEditorAssets({
       projectService: deps.projectService,
       selectCachedFileContent: deps.store.selectCachedFileContent,
       clearCachedFileContent: deps.store.clearCachedFileContent,
@@ -392,23 +355,10 @@ const renderLayoutEditorCanvas = async (
       fileReferences,
       fontsItems: repositoryState?.fonts?.items || {},
     });
-    let assetPreparationDurationMs = perfEnabled
-      ? getDebugDurationMs(assetPreparationStartedAt)
-      : undefined;
-
-    let graphicsAssetLoadDurationMs = 0;
     try {
-      const graphicsAssetLoadStartedAt = perfEnabled ? getDebugNow() : 0;
       await deps.graphicsService.loadAssets(assets);
-      if (perfEnabled) {
-        graphicsAssetLoadDurationMs = getDebugDurationMs(
-          graphicsAssetLoadStartedAt,
-        );
-      }
     } catch {
-      assetRetryCount += 1;
       deps.store.clearFileContentCache();
-      const retryAssetPreparationStartedAt = perfEnabled ? getDebugNow() : 0;
       assets = await loadLayoutEditorAssets({
         projectService: deps.projectService,
         selectCachedFileContent: deps.store.selectCachedFileContent,
@@ -417,63 +367,14 @@ const renderLayoutEditorCanvas = async (
         fileReferences,
         fontsItems: repositoryState?.fonts?.items || {},
       });
-      if (perfEnabled) {
-        assetPreparationDurationMs += getDebugDurationMs(
-          retryAssetPreparationStartedAt,
-        );
-      }
-      const retryGraphicsAssetLoadStartedAt = perfEnabled ? getDebugNow() : 0;
       await deps.graphicsService.loadAssets(assets);
-      if (perfEnabled) {
-        graphicsAssetLoadDurationMs += getDebugDurationMs(
-          retryGraphicsAssetLoadStartedAt,
-        );
-      }
     }
 
-    const graphicsRenderStartedAt = perfEnabled ? getDebugNow() : 0;
     deps.graphicsService.render({
-      elements: layoutElements,
+      elements,
       animations: [],
     });
-    const graphicsRenderDurationMs = perfEnabled
-      ? getDebugDurationMs(graphicsRenderStartedAt)
-      : undefined;
-
-    if (perfEnabled) {
-      debugLog(LAYOUT_EDITOR_PERF_SCOPE, "canvas-render.complete", {
-        durationMs: getDebugDurationMs(renderStartedAt),
-        clearFirst,
-        updatedItemId: updatedItem?.id,
-        selectedItemId: props.selectedItemId,
-        waitUntilReadyDurationMs,
-        repositoryStateDurationMs,
-        renderStateBuildDurationMs,
-        clearFirstDurationMs,
-        assetPreparationDurationMs,
-        graphicsAssetLoadDurationMs,
-        graphicsRenderDurationMs,
-        elementCount: layoutElements.length,
-        fileReferenceCount: fileReferences.length,
-        assetCount: Object.keys(assets).length,
-        assetRetryCount,
-        selectedElementMetricsId: selectedElementMetrics?.id,
-      });
-    }
   } catch (error) {
-    if (perfEnabled) {
-      debugLog(LAYOUT_EDITOR_PERF_SCOPE, "canvas-render.failed", {
-        durationMs: getDebugDurationMs(renderStartedAt),
-        clearFirst,
-        updatedItemId: updatedItem?.id,
-        selectedItemId: props.selectedItemId,
-        elementCount: layoutElements.length,
-        fileReferenceCount: fileReferences.length,
-        assetCount: Object.keys(assets).length,
-        assetRetryCount,
-        error: error?.message || String(error),
-      });
-    }
     console.error("[layoutEditorCanvas] Failed to render canvas", error);
   }
 };
