@@ -10,17 +10,20 @@ export const handleBeforeMount = (deps) => {
   return mountSubscriptions(deps);
 };
 
-const syncSidebarProjectIcon = (deps) => {
+const syncSidebarProjectIcon = (deps, currentProjectEntry) => {
   const { appService, store, render } = deps;
-  const currentProjectEntry = appService.getCurrentProjectEntry();
-  if (currentProjectEntry?.iconUrl) {
-    store.setProjectImageUrl({ imageUrl: currentProjectEntry.iconUrl });
+  const projectEntry =
+    currentProjectEntry ?? appService.getCurrentProjectEntry();
+  if (projectEntry?.iconUrl) {
+    store.setProjectImageUrl({ imageUrl: projectEntry.iconUrl });
     render();
   }
 };
 
 export const handleAfterMount = async (deps) => {
-  syncSidebarProjectIcon(deps);
+  const { appService } = deps;
+  const currentProjectEntry = await appService.refreshCurrentProjectEntry();
+  syncSidebarProjectIcon(deps, currentProjectEntry);
 };
 
 export const handleItemClick = async (deps, payload) => {
@@ -43,8 +46,8 @@ export const handleHeaderClick = (deps) => {
 
 export const handleProjectImageUpdate = async (deps) => {
   const { appService } = deps;
-  await appService.refreshCurrentProjectEntry();
-  syncSidebarProjectIcon(deps);
+  const currentProjectEntry = await appService.refreshCurrentProjectEntry();
+  syncSidebarProjectIcon(deps, currentProjectEntry);
 };
 
 const subscriptions = (deps) => {
