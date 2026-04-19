@@ -242,4 +242,49 @@ describe("vnPreview project data helpers", () => {
         .initialLineId,
     ).toBe(initialLineId);
   });
+
+  it("rehydrates a known scene id when the cached preview scene has no lines", async () => {
+    const initialSceneId = "scene-1";
+    const initialState = createRepositoryState({
+      sceneIds: [initialSceneId, "scene-2"],
+    });
+    initialState.scenes.items["scene-2"].sections.items[
+      "scene-2-section-1"
+    ].lines = {
+      items: {},
+      tree: [],
+    };
+    const hydratedState = createRepositoryState({
+      sceneIds: [initialSceneId, "scene-2"],
+    });
+    const repository = {
+      getContextState: vi.fn().mockResolvedValue(hydratedState),
+    };
+    const projectData = withPreviewEntryPoint(
+      constructProjectData(initialState, {
+        initialSceneId,
+      }),
+      {
+        sceneId: initialSceneId,
+      },
+    );
+
+    const result = await ensurePreviewProjectDataTargets({
+      repository,
+      projectData,
+      loadedSceneIds: [initialSceneId, "scene-2"],
+      sceneIds: ["scene-2"],
+      sectionIds: [],
+      initialSceneId,
+    });
+
+    expect(repository.getContextState).toHaveBeenCalledWith({
+      sceneIds: [initialSceneId, "scene-2"],
+      sectionIds: [],
+    });
+    expect(result.didLoad).toBe(true);
+    expect(result.missingSceneIds).toEqual(["scene-2"]);
+    expect(result.projectData.story.scenes["scene-2"]).toBeDefined();
+    expect(hasPreviewSceneLines(result.projectData, "scene-2")).toBe(true);
+  });
 });

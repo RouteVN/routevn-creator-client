@@ -182,7 +182,9 @@ export const ensurePreviewProjectDataTargets = async ({
   const nextSceneIds = Array.from(new Set(sceneIds)).filter(Boolean);
   const nextSectionIds = Array.from(new Set(sectionIds)).filter(Boolean);
   const missingSceneIds = nextSceneIds.filter(
-    (sceneId) => !knownLoadedSceneIds.includes(sceneId),
+    (sceneId) =>
+      !knownLoadedSceneIds.includes(sceneId) ||
+      !hasPreviewSceneLines(projectData, sceneId),
   );
 
   if (missingSceneIds.length === 0 && nextSectionIds.length === 0) {
