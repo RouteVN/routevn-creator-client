@@ -253,13 +253,7 @@ const selectCurrentSectionId = (systemState = {}) => {
 
 const createSceneTargetPrefetcher = (
   deps,
-  {
-    repository,
-    runtime,
-    initialSceneId,
-    initialSectionId,
-    initialLineId,
-  } = {},
+  { repository, runtime, initialSceneId, initialSectionId, initialLineId } = {},
 ) => {
   const prefetchedSceneIds = new Set();
   let prefetchQueue = Promise.resolve();
@@ -291,9 +285,14 @@ const createSceneTargetPrefetcher = (
           initialLineId,
           showLoading: false,
         });
-        await loadAssetsForSceneIds(deps, runtime.projectData, transitionSceneIds, {
-          showLoading: false,
-        });
+        await loadAssetsForSceneIds(
+          deps,
+          runtime.projectData,
+          transitionSceneIds,
+          {
+            showLoading: false,
+          },
+        );
         await preloadDirectTransitionScenes(
           deps,
           runtime.projectData,
@@ -309,13 +308,7 @@ const createSceneTargetPrefetcher = (
 
 const createBeforeHandleActionsHook = (
   deps,
-  {
-    repository,
-    runtime,
-    sceneId,
-    sectionId,
-    lineId,
-  } = {},
+  { repository, runtime, sceneId, sectionId, lineId } = {},
 ) => {
   return async (actions, eventContext) => {
     const { eventData, preparedActions, resolvedActions } =
