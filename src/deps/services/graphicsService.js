@@ -1382,6 +1382,10 @@ export const createGraphicsService = async ({
       enableGlobalKeyboardBindings =
         options.enableGlobalKeyboardBindings ?? true;
       const suppressRenderEffects = options.suppressRenderEffects === true;
+      const onRenderState =
+        typeof options.onRenderState === "function"
+          ? options.onRenderState
+          : undefined;
       const initialGlobal = options.initialGlobal ?? {};
       const namespace =
         typeof options.namespace === "string" && options.namespace.length > 0
@@ -1401,6 +1405,10 @@ export const createGraphicsService = async ({
               return;
             }
             renderEngineState(renderState);
+            onRenderState?.({
+              renderState,
+              systemState: engine?.selectSystemState?.(),
+            });
           },
         },
         namespace,
