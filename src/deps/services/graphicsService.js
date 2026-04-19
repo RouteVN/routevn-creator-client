@@ -1039,9 +1039,7 @@ export const createGraphicsService = async ({
     let missingAudioKeys = [];
 
     if (allowDeferredAudio && !effectiveSkipAudio) {
-      const splitAudio = splitRenderableAudio(
-        nextRenderState.audio,
-      );
+      const splitAudio = splitRenderableAudio(nextRenderState.audio);
       const { renderableAudio } = splitAudio;
       missingAudioKeys = splitAudio.missingAudioKeys;
 
