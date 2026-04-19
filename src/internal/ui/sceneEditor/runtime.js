@@ -14,7 +14,15 @@ import {
   summarizeProjectDataForRouteEngine,
 } from "../../project/routeEngineProjectData.js";
 import { prepareRuntimeInteractionExecution } from "../../runtime/graphicsEngineRuntime.js";
+import {
+  debugLog,
+  getDebugDurationMs,
+  getDebugNow,
+  isDebugEnabled,
+} from "../../../deps/services/shared/debugLog.js";
+
 const NO_PENDING_CANVAS_RENDER = Symbol("no-pending-canvas-render");
+const SCENE_EDITOR_PERF_SCOPE = "scene-editor-perf";
 
 const waitForNextFrame = () =>
   new Promise((resolve) => {
@@ -515,25 +523,52 @@ const initRouteEngineWithDiagnostics = (
 export const renderSceneEditorState = async (deps, payload = {}) => {
   const { store, graphicsService } = deps;
   const { skipAnimations = false, skipCanvasPaint = false } = payload;
+  const perfEnabled = isDebugEnabled(SCENE_EDITOR_PERF_SCOPE);
+  const renderStartedAt = perfEnabled ? getDebugNow() : 0;
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
+  const projectDataProjectionStartedAt = perfEnabled ? getDebugNow() : 0;
+  const projectedProjectData = store.selectProjectData();
+  const projectDataProjectionDurationMs = perfEnabled
+    ? getDebugDurationMs(projectDataProjectionStartedAt)
+    : undefined;
+  const projectDataSelectionStartedAt = perfEnabled ? getDebugNow() : 0;
   const projectData = createProjectDataWithSelectedEntryPoint(
-    store.selectProjectData(),
+    projectedProjectData,
     {
       sceneId,
       sectionId,
       lineId,
     },
   );
+  const projectDataSelectionDurationMs = perfEnabled
+    ? getDebugDurationMs(projectDataSelectionStartedAt)
+    : undefined;
   const isMuted = store.selectIsMuted();
 
+  const engineInitStartedAt = perfEnabled ? getDebugNow() : 0;
   initRouteEngineWithDiagnostics(graphicsService, projectData, {
     enableGlobalKeyboardBindings: false,
     suppressRenderEffects: true,
   });
+  const engineInitDurationMs = perfEnabled
+    ? getDebugDurationMs(engineInitStartedAt)
+    : undefined;
+  const renderStateSelectStartedAt = perfEnabled ? getDebugNow() : 0;
   const currentRenderState = graphicsService.engineSelectRenderState();
+  const renderStateSelectDurationMs = perfEnabled
+    ? getDebugDurationMs(renderStateSelectStartedAt)
+    : undefined;
   if (!currentRenderState) {
+    if (perfEnabled) {
+      debugLog(SCENE_EDITOR_PERF_SCOPE, "render-state.missing-render-state", {
+        durationMs: getDebugDurationMs(renderStartedAt),
+        sceneId,
+        sectionId,
+        lineId,
+      });
+    }
     return;
   }
 
@@ -543,14 +578,25 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
       : (currentRenderState.audio || [])
           .map((audioElement) => audioElement?.src)
           .filter(Boolean);
+  const audioLoadStartedAt = perfEnabled ? getDebugNow() : 0;
   await graphicsService.ensureAudioAssetsLoaded(activeAudioFileIds);
+  const audioLoadDurationMs = perfEnabled
+    ? getDebugDurationMs(audioLoadStartedAt)
+    : undefined;
 
+  let canvasPaintDurationMs = 0;
   if (!skipCanvasPaint) {
+    const canvasPaintStartedAt = perfEnabled ? getDebugNow() : 0;
     graphicsService.engineRenderCurrentState({
       skipAudio: isMuted,
       skipAnimations,
     });
+    if (perfEnabled) {
+      canvasPaintDurationMs = getDebugDurationMs(canvasPaintStartedAt);
+    }
   }
+
+  const nextLineConfigStartedAt = perfEnabled ? getDebugNow() : 0;
   graphicsService.engineHandleActions(
     {
       setNextLineConfig: {
@@ -564,11 +610,47 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
       suppressRenderEffects: true,
     },
   );
+  const nextLineConfigDurationMs = perfEnabled
+    ? getDebugDurationMs(nextLineConfigStartedAt)
+    : undefined;
 
+  const presentationStateStartedAt = perfEnabled ? getDebugNow() : 0;
   const presentationState = graphicsService.engineSelectPresentationState();
   store.setPresentationState({
     presentationState,
   });
+  const presentationStateDurationMs = perfEnabled
+    ? getDebugDurationMs(presentationStateStartedAt)
+    : undefined;
+
+  if (perfEnabled) {
+    debugLog(SCENE_EDITOR_PERF_SCOPE, "render-state.complete", {
+      durationMs: getDebugDurationMs(renderStartedAt),
+      sceneId,
+      sectionId,
+      lineId,
+      skipAnimations,
+      skipCanvasPaint,
+      isMuted,
+      projectDataProjectionDurationMs,
+      projectDataSelectionDurationMs,
+      engineInitDurationMs,
+      renderStateSelectDurationMs,
+      audioLoadDurationMs,
+      canvasPaintDurationMs,
+      nextLineConfigDurationMs,
+      presentationStateDurationMs,
+      elementCount: Array.isArray(currentRenderState?.elements)
+        ? currentRenderState.elements.length
+        : 0,
+      animationCount: Array.isArray(currentRenderState?.animations)
+        ? currentRenderState.animations.length
+        : 0,
+      audioCount: Array.isArray(currentRenderState?.audio)
+        ? currentRenderState.audio.length
+        : 0,
+    });
+  }
 };
 
 export const updateSceneEditorSectionChanges = async (deps) => {
@@ -722,6 +804,8 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
     return;
   }
 
+  const perfEnabled = isDebugEnabled(SCENE_EDITOR_PERF_SCOPE);
+  const renderStartedAt = perfEnabled ? getDebugNow() : 0;
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
@@ -735,16 +819,50 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
   );
   const sceneIdsToLoad = extractInitialHybridSceneIds(projectData, sceneId);
 
+  const sceneAssetLoadStartedAt = perfEnabled ? getDebugNow() : 0;
   await loadAssetsForSceneIds(deps, projectData, sceneIdsToLoad, {
     showLoading: false,
   });
+  const sceneAssetLoadDurationMs = perfEnabled
+    ? getDebugDurationMs(sceneAssetLoadStartedAt)
+    : undefined;
   void preloadDirectTransitionScenes(deps, projectData, sceneIdsToLoad);
 
+  const renderSceneStateStartedAt = perfEnabled ? getDebugNow() : 0;
   await renderSceneEditorState(deps, payload);
+  const renderSceneStateDurationMs = perfEnabled
+    ? getDebugDurationMs(renderSceneStateStartedAt)
+    : undefined;
+  const sectionChangesStartedAt = perfEnabled ? getDebugNow() : 0;
   await updateSceneEditorSectionChanges(deps);
+  const sectionChangesDurationMs = perfEnabled
+    ? getDebugDurationMs(sectionChangesStartedAt)
+    : undefined;
 
+  let uiRenderDurationMs = 0;
   if (!payload?.skipRender) {
+    const uiRenderStartedAt = perfEnabled ? getDebugNow() : 0;
     render();
+    if (perfEnabled) {
+      uiRenderDurationMs = getDebugDurationMs(uiRenderStartedAt);
+    }
+  }
+
+  if (perfEnabled) {
+    debugLog(SCENE_EDITOR_PERF_SCOPE, "render-canvas.complete", {
+      durationMs: getDebugDurationMs(renderStartedAt),
+      sceneId,
+      sectionId,
+      lineId,
+      skipRender: payload?.skipRender === true,
+      skipAnimations: payload?.skipAnimations === true,
+      skipCanvasPaint: payload?.skipCanvasPaint === true,
+      sceneAssetLoadDurationMs,
+      renderSceneStateDurationMs,
+      sectionChangesDurationMs,
+      uiRenderDurationMs,
+      sceneIdsToLoad,
+    });
   }
 };
 

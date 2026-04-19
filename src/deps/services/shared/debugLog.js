@@ -28,6 +28,21 @@ export const previewDebugText = (value, maxLength = 120) => {
   return `${text.slice(0, maxLength)}...`;
 };
 
+export const getDebugNow = () => {
+  if (
+    typeof performance !== "undefined" &&
+    typeof performance.now === "function"
+  ) {
+    return performance.now();
+  }
+
+  return Date.now();
+};
+
+export const getDebugDurationMs = (startedAt) => {
+  return Number((getDebugNow() - startedAt).toFixed(2));
+};
+
 export const debugLog = (scope, event, data = {}) => {
   if (!isDebugEnabled(scope)) {
     return;
@@ -36,7 +51,7 @@ export const debugLog = (scope, event, data = {}) => {
   debugSequence += 1;
   const timestamp =
     typeof performance !== "undefined" && typeof performance.now === "function"
-      ? Number(performance.now().toFixed(2))
+      ? Number(getDebugNow().toFixed(2))
       : Date.now();
 
   console.log(`[rvn.debug.${scope}]`, {
