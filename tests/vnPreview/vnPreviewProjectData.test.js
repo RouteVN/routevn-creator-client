@@ -5,6 +5,7 @@ import {
   collectSceneIdsFromValue,
   collectSectionIdsFromValue,
   ensurePreviewProjectDataTargets,
+  hasPreviewSceneEntryLines,
   hasPreviewSceneLines,
   hasPreviewSectionLines,
   withPreviewEntryPoint,
@@ -150,11 +151,61 @@ describe("vnPreview project data helpers", () => {
     });
 
     expect(hasPreviewSceneLines(projectData, "scene-1")).toBe(true);
+    expect(hasPreviewSceneEntryLines(projectData, "scene-1")).toBe(true);
     expect(hasPreviewSectionLines(projectData, "scene-1-section-1")).toBe(true);
     expect(hasPreviewSceneLines(projectData, "scene-2")).toBe(false);
+    expect(hasPreviewSceneEntryLines(projectData, "scene-2")).toBe(false);
     expect(hasPreviewSectionLines(projectData, "scene-2-section-1")).toBe(
       false,
     );
+  });
+
+  it("treats a target scene as missing when only non-entry sections still have lines", () => {
+    const initialState = createRepositoryState({
+      sceneIds: ["scene-1", "scene-2"],
+    });
+    initialState.scenes.items["scene-2"].sections.items[
+      "scene-2-section-1"
+    ].lines = {
+      items: {},
+      tree: [],
+    };
+    initialState.scenes.items["scene-2"].sections.items[
+      "scene-2-section-2"
+    ] = {
+      id: "scene-2-section-2",
+      name: "Section 2",
+      lines: {
+        items: {
+          "scene-2-line-2": {
+            id: "scene-2-line-2",
+            actions: {},
+          },
+        },
+        tree: [{ id: "scene-2-line-2" }],
+      },
+    };
+    initialState.scenes.items["scene-2"].sections.tree = [
+      { id: "scene-2-section-1" },
+      { id: "scene-2-section-2" },
+    ];
+    const projectData = constructProjectData(initialState, {
+      initialSceneId: "scene-1",
+    });
+
+    expect(hasPreviewSceneLines(projectData, "scene-2")).toBe(true);
+    expect(hasPreviewSceneEntryLines(projectData, "scene-2")).toBe(false);
+
+    const result = collectPreviewMissingTargets({
+      projectData,
+      loadedSceneIds: ["scene-1", "scene-2"],
+      sceneIds: ["scene-2"],
+    });
+
+    expect(result).toEqual({
+      missingSceneIds: ["scene-2"],
+      missingSectionIds: [],
+    });
   });
 
   it("treats stripped target sections as missing even when the scene id is already known", () => {
@@ -286,5 +337,70 @@ describe("vnPreview project data helpers", () => {
     expect(result.missingSceneIds).toEqual(["scene-2"]);
     expect(result.projectData.story.scenes["scene-2"]).toBeDefined();
     expect(hasPreviewSceneLines(result.projectData, "scene-2")).toBe(true);
+  });
+
+  it("rehydrates a known scene id when its cached entry section has no lines", async () => {
+    const initialSceneId = "scene-1";
+    const initialState = createRepositoryState({
+      sceneIds: [initialSceneId, "scene-2"],
+    });
+    initialState.scenes.items["scene-2"].sections.items[
+      "scene-2-section-1"
+    ].lines = {
+      items: {},
+      tree: [],
+    };
+    initialState.scenes.items["scene-2"].sections.items[
+      "scene-2-section-2"
+    ] = {
+      id: "scene-2-section-2",
+      name: "Section 2",
+      lines: {
+        items: {
+          "scene-2-line-2": {
+            id: "scene-2-line-2",
+            actions: {},
+          },
+        },
+        tree: [{ id: "scene-2-line-2" }],
+      },
+    };
+    initialState.scenes.items["scene-2"].sections.tree = [
+      { id: "scene-2-section-1" },
+      { id: "scene-2-section-2" },
+    ];
+    const hydratedState = createRepositoryState({
+      sceneIds: [initialSceneId, "scene-2"],
+    });
+    const repository = {
+      getContextState: vi.fn().mockResolvedValue(hydratedState),
+    };
+    const projectData = withPreviewEntryPoint(
+      constructProjectData(initialState, {
+        initialSceneId,
+      }),
+      {
+        sceneId: initialSceneId,
+      },
+    );
+
+    const result = await ensurePreviewProjectDataTargets({
+      repository,
+      projectData,
+      loadedSceneIds: [initialSceneId, "scene-2"],
+      sceneIds: ["scene-2"],
+      sectionIds: [],
+      initialSceneId,
+    });
+
+    expect(repository.getContextState).toHaveBeenCalledWith({
+      sceneIds: [initialSceneId, "scene-2"],
+      sectionIds: [],
+    });
+    expect(result.didLoad).toBe(true);
+    expect(result.missingSceneIds).toEqual(["scene-2"]);
+    expect(hasPreviewSceneEntryLines(result.projectData, "scene-2")).toBe(
+      true,
+    );
   });
 });
