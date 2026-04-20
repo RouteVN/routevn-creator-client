@@ -1038,7 +1038,7 @@ export const extractVideoThumbnail = async (videoFile, options = {}) => {
 
 // File type detection utility
 export const detectFileType = (file) => {
-  const ext = file.name.split(".").pop()?.toLowerCase();
+  const ext = file?.name?.split(".").pop()?.toLowerCase();
 
   // Check MIME type first
   if (file.type === "video/mp4") return "video";

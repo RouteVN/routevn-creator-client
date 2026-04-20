@@ -19,23 +19,23 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "#createProjectDialog rtgl-input[data-field-name='name']"
+    selector: "rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field0 input"
     state: attached
     timeoutMs: 5000
   - action: select
-    selector: "#createProjectDialog rtgl-input[data-field-name='name']"
+    selector: "rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field0 input"
     steps:
       - action: write
         value: VT Images Interactions
   - action: select
-    selector: "#createProjectDialog rtgl-input[data-field-name='description']"
+    selector: "rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field1 input"
     steps:
       - action: write
         value: Capture seeded image interactions and explorer moves.
   - action: wait
     ms: 250
   - action: select
-    selector: "#createProjectDialog rtgl-button[data-action-id='submit']"
+    selector: "rtgl-global-ui rtgl-button[data-action-id='submit']"
     steps:
       - action: click
   - action: waitFor
@@ -85,16 +85,7 @@ steps:
   - action: select
     selector: "rvn-media-resources-view#groupview #itemRef0x0"
     steps:
-      - action: hover
-  - action: waitFor
-    selector: "rvn-media-resources-view#groupview #previewActionRef0x0"
-    state: visible
-    timeoutMs: 5000
-  - action: screenshot
-  - action: select
-    selector: "rvn-media-resources-view#groupview #previewActionRef0x0"
-    steps:
-      - action: click
+      - action: dblclick
   - action: waitFor
     selector: "#previewOverlay"
     state: visible
@@ -117,9 +108,9 @@ steps:
     type: hidden
     selector: "#previewOverlay"
   - action: select
-    selector: "rvn-media-resources-view#groupview #itemRef0x0"
+    selector: "#detailHeader"
     steps:
-      - action: dblclick
+      - action: click
   - action: waitFor
     selector: "#editDialog"
     state: visible
@@ -140,14 +131,14 @@ steps:
     type: hidden
     selector: "#editDialog"
   - action: select
-    selector: "rvn-base-file-explorer#fileExplorer [data-item-id='D6iPajVpkZpS89SyqxqGd']"
+    selector: "rvn-base-file-explorer#fileExplorer #itemRef1"
     steps:
       - action: hover
   - action: mouseDown
   - action: wait
     ms: 200
   - action: select
-    selector: "rvn-base-file-explorer#fileExplorer [data-item-id='vfKppfJKkVdT9jCvR15mV']"
+    selector: "rvn-base-file-explorer#fileExplorer #itemRef7"
     steps:
       - action: hover
   - action: wait
