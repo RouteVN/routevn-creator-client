@@ -310,7 +310,7 @@ describe("tauri collab client store locking", () => {
     expect(fakeDb.execute).toHaveBeenCalledTimes(1);
   });
 
-  it("quarantines invalid local drafts while loading repository events", async () => {
+  it("skips invalid local drafts while loading repository events", async () => {
     const applySubmitResult = vi.fn(async () => {});
 
     const { loadRepositoryEvents } = await import(
@@ -349,24 +349,27 @@ describe("tauri collab client store locking", () => {
     });
 
     expect(events).toEqual([]);
-    expect(applySubmitResult).toHaveBeenCalledWith({
-      result: {
-        id: "draft-image-1",
-        status: "rejected",
-        reason: "precondition_validation_failed",
-        message:
-          "payload.data.fileId must reference an existing non-folder file",
-      },
-    });
+    expect(applySubmitResult).not.toHaveBeenCalled();
   });
 
-  it("skips a locked passive WAL checkpoint without retrying", async () => {
+  it("retries a locked passive WAL checkpoint instead of marking it clean", async () => {
     vi.useFakeTimers();
+    let walCheckpointCalls = 0;
     const fakeDb = {
       execute: vi.fn(async () => ({ rowsAffected: 1 })),
       select: vi.fn(async (sql) => {
         if (String(sql).includes("wal_checkpoint")) {
-          throw createLockError("database table is locked");
+          walCheckpointCalls += 1;
+          if (walCheckpointCalls === 1) {
+            throw createLockError("database table is locked");
+          }
+          return [
+            {
+              busy: 0,
+              log: 4,
+              checkpointed: 4,
+            },
+          ];
         }
         return [];
       }),
@@ -393,15 +396,106 @@ describe("tauri collab client store locking", () => {
       createdAt: 1,
     });
 
-    await vi.advanceTimersByTimeAsync(20000);
+    await vi.advanceTimersByTimeAsync(10000);
+    await vi.advanceTimersByTimeAsync(10000);
 
-    expect(
-      fakeDb.select.mock.calls.filter(([sql]) =>
-        String(sql).includes("wal_checkpoint"),
-      ).length,
-    ).toBe(1);
+    expect(walCheckpointCalls).toBe(2);
 
     await store.close();
+  });
+
+  it("retries an incomplete passive WAL checkpoint result until it completes", async () => {
+    vi.useFakeTimers();
+    let walCheckpointCalls = 0;
+    const fakeDb = {
+      execute: vi.fn(async () => ({ rowsAffected: 1 })),
+      select: vi.fn(async (sql) => {
+        if (String(sql).includes("wal_checkpoint")) {
+          walCheckpointCalls += 1;
+          if (walCheckpointCalls === 1) {
+            return [
+              {
+                busy: 0,
+                log: 4,
+                checkpointed: 2,
+              },
+            ];
+          }
+          return [
+            {
+              busy: 0,
+              log: 4,
+              checkpointed: 4,
+            },
+          ];
+        }
+        return [];
+      }),
+      close: vi.fn(async () => {}),
+    };
+    loadMock.mockResolvedValue(fakeDb);
+    createLibsqlClientStoreMock.mockImplementation(createStoreMockFactory());
+
+    const { createPersistedTauriProjectStore } = await import(
+      "../../src/deps/services/tauri/collabClientStore.js"
+    );
+    const store = await createPersistedTauriProjectStore({
+      projectPath: "/projects/checkpoint-retry",
+      projectId: "project-5",
+    });
+
+    await store.insertDraft({
+      id: "draft-1",
+      partition: "main",
+      type: "layout",
+      schemaVersion: 1,
+      payload: {},
+      clientTs: 1,
+      createdAt: 1,
+    });
+
+    await vi.advanceTimersByTimeAsync(10000);
+    await vi.advanceTimersByTimeAsync(10000);
+
+    expect(walCheckpointCalls).toBe(2);
+
+    await store.close();
+  });
+
+  it("still uses a truncate WAL checkpoint when closing the store", async () => {
+    const checkpointModes = [];
+    const fakeDb = {
+      execute: vi.fn(async () => ({ rowsAffected: 1 })),
+      select: vi.fn(async (sql) => {
+        const match = String(sql).match(/wal_checkpoint\(([^)]+)\)/);
+        if (match) {
+          checkpointModes.push(match[1]);
+          return [
+            {
+              busy: 0,
+              log: 1,
+              checkpointed: 1,
+            },
+          ];
+        }
+        return [];
+      }),
+      close: vi.fn(async () => {}),
+    };
+    loadMock.mockResolvedValue(fakeDb);
+    createLibsqlClientStoreMock.mockImplementation(createStoreMockFactory());
+
+    const { createPersistedTauriProjectStore } = await import(
+      "../../src/deps/services/tauri/collabClientStore.js"
+    );
+    const store = await createPersistedTauriProjectStore({
+      projectPath: "/projects/checkpoint-close",
+      projectId: "project-6",
+    });
+
+    await store.close();
+
+    expect(checkpointModes.at(-1)).toBe("TRUNCATE");
   });
 
   it("uses sequential single draft inserts instead of insertDrafts batching", async () => {

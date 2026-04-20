@@ -178,6 +178,8 @@ export const createProjectServiceCore = ({
 
     if (targetProjectId) {
       await collabService.stopCollabSession(targetProjectId);
+      await repositoryService.releaseRepositoryByProjectId(targetProjectId);
+      return;
     }
 
     await repositoryService.releaseCurrentRepository();
