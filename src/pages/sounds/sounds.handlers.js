@@ -8,6 +8,10 @@ import {
   runResourcePageMutation,
   showResourcePageError,
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
+import {
+  buildSoundResourceDataFromUploadResult,
+  buildSoundResourcePatchFromUploadResult,
+} from "../../deps/services/shared/resourceImports.js";
 
 const UNSUPPORTED_FORMAT_TITLE = "Unsupported Format";
 const UNSUPPORTED_FORMAT_MESSAGE =
@@ -102,16 +106,7 @@ const createSoundsFromFiles = async ({ deps, files, parentId } = {}) => {
           projectService.createSound({
             soundId,
             fileRecords: uploadResult.fileRecords,
-            data: {
-              type: "sound",
-              fileId: uploadResult.fileId,
-              name: uploadResult.displayName,
-              description: "",
-              fileType: uploadResult.file.type,
-              fileSize: uploadResult.file.size,
-              waveformDataFileId: uploadResult.waveformDataFileId,
-              duration: uploadResult.duration,
-            },
+            data: buildSoundResourceDataFromUploadResult(uploadResult),
             parentId,
             position: "last",
           }),
@@ -358,13 +353,7 @@ export const handleFormExtraEvent = async (deps) => {
       projectService.updateSound({
         soundId: selectedItem.id,
         fileRecords: uploadResult.fileRecords,
-        data: {
-          fileId: uploadResult.fileId,
-          fileType: uploadResult.file.type,
-          fileSize: uploadResult.file.size,
-          waveformDataFileId: uploadResult.waveformDataFileId,
-          duration: uploadResult.duration,
-        },
+        data: buildSoundResourcePatchFromUploadResult(uploadResult),
       }),
   });
 
@@ -441,13 +430,7 @@ export const handleEditFormAction = async (deps, payload) => {
   }
 
   const soundPatch = editUploadResult
-    ? {
-        fileId: editUploadResult.fileId,
-        fileType: editUploadResult.file.type,
-        fileSize: editUploadResult.file.size,
-        waveformDataFileId: editUploadResult.waveformDataFileId,
-        duration: editUploadResult.duration,
-      }
+    ? buildSoundResourcePatchFromUploadResult(editUploadResult)
     : {};
 
   const updateAttempt = await runResourcePageMutation({

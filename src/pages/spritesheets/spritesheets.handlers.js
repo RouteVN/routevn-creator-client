@@ -13,6 +13,7 @@ import {
   parseSpritesheetAtlasFile,
   parseSpritesheetImport,
 } from "./support/spritesheetAtlas.js";
+import { withResolvedCollectionFileMetadata } from "../../internal/resourceFileMetadata.js";
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const SPRITESHEET_IMAGE_FILE_ACCEPT = ".png";
@@ -55,7 +56,11 @@ const syncDialogFormValues = ({ refs, values } = {}) => {
 
 const syncSpritesheetData = ({ store, repositoryState } = {}) => {
   store.setItems({
-    data: repositoryState?.spritesheets ?? EMPTY_TREE,
+    data: withResolvedCollectionFileMetadata({
+      collection: repositoryState?.spritesheets ?? EMPTY_TREE,
+      files: repositoryState?.files,
+      resourceTypes: ["spritesheet"],
+    }),
   });
 
   const selectedItemId = store.selectSelectedItemId();
@@ -338,16 +343,6 @@ const buildSpritesheetPayload = ({
     uploadResult?.thumbnailFileId ?? existingItem?.thumbnailFileId;
   if (thumbnailFileId !== undefined) {
     payload.thumbnailFileId = thumbnailFileId;
-  }
-
-  const fileType = uploadResult?.file?.type ?? existingItem?.fileType;
-  if (fileType !== undefined) {
-    payload.fileType = fileType;
-  }
-
-  const fileSize = uploadResult?.file?.size ?? existingItem?.fileSize;
-  if (fileSize !== undefined) {
-    payload.fileSize = fileSize;
   }
 
   const sheetWidth =

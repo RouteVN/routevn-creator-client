@@ -612,6 +612,7 @@ export const createLayoutEditorRenderState = ({
     {
       layoutId: layoutState?.id,
       layoutType: layoutState?.layoutType,
+      filesData: repositoryState?.files,
       particlesData,
       spritesheetsData,
       layoutsData: repositoryState?.layouts?.items || {},

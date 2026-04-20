@@ -5,6 +5,7 @@ import {
   resolveAnimationEditorPayload,
 } from "../../internal/animationEditorRoute.js";
 import { serializeTransitionMask } from "../../internal/animationMasks.js";
+import { resolveResourceFileType } from "../../internal/resourceFileMetadata.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import {
   AUTO_TWEEN_DEFAULT_DURATION,
@@ -141,7 +142,8 @@ const ensurePreviewAssetsLoaded = async ({
     return renderState;
   }
 
-  const imageItems = projectService.getRepositoryState()?.images?.items ?? {};
+  const repositoryState = projectService.getRepositoryState() ?? {};
+  const imageItems = repositoryState.images?.items ?? {};
   const imageItemsByFileId = new Map(
     Object.values(imageItems)
       .filter((item) => item?.fileId)
@@ -151,9 +153,14 @@ const ensurePreviewAssetsLoaded = async ({
 
   for (const fileId of textureIds) {
     const fileResult = await projectService.getFileContent(fileId);
+    const imageItem = imageItemsByFileId.get(fileId);
     assets[fileId] = {
       url: fileResult.url,
-      type: imageItemsByFileId.get(fileId)?.fileType ?? "image/png",
+      type:
+        resolveResourceFileType({
+          item: imageItem,
+          files: repositoryState.files,
+        }) ?? "image/png",
     };
   }
 

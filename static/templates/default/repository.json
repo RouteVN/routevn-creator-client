@@ -442,13 +442,6 @@
         "size": 2644,
         "sha256": "44188a43a22633aa1c2f8b0cbe1ad5d45cdccc6850abaf043f1071e6163fefd8"
       },
-      "4rYSsGDcpNuQ": {
-        "id": "4rYSsGDcpNuQ",
-        "type": "image",
-        "mimeType": "image/jpeg",
-        "size": 3327,
-        "sha256": "911f5d3a0b704df14a353d52f4d2292957efa5ef468d4abd030956b023aad5ce"
-      },
       "e33neduvESTF": {
         "id": "e33neduvESTF",
         "type": "image",
@@ -504,13 +497,6 @@
         "mimeType": "image/jpeg",
         "size": 4102,
         "sha256": "f86e22b3d765e6b1e49aa87a1ae35016bc61b9f34e795fe40238f652a4ddfbff"
-      },
-      "Byq7rN1oaYYR": {
-        "id": "Byq7rN1oaYYR",
-        "type": "image",
-        "mimeType": "image/jpeg",
-        "size": 3907,
-        "sha256": "daf83560a69b0ad43b7a72a1ed3866f667823149b7b833d9ede86efd3558473c"
       },
       "cCSVTqNy12nC": {
         "id": "cCSVTqNy12nC",
@@ -584,9 +570,6 @@
         "id": "z8CjiiizJYjM"
       },
       {
-        "id": "4rYSsGDcpNuQ"
-      },
-      {
         "id": "e33neduvESTF"
       },
       {
@@ -609,9 +592,6 @@
       },
       {
         "id": "X8Bb65Bv2cDd"
-      },
-      {
-        "id": "Byq7rN1oaYYR"
       },
       {
         "id": "cCSVTqNy12nC"
@@ -645,8 +625,6 @@
         "id": "9ne5EN6jfxhj",
         "type": "image",
         "name": "options_black_bg",
-        "fileType": "image/png",
-        "fileSize": 8556,
         "width": 1920,
         "height": 1080,
         "fileId": "L1mNut4zVMsr"
@@ -655,8 +633,6 @@
         "id": "2fhb9gFJmx6x",
         "type": "image",
         "name": "options_white_bg",
-        "fileType": "image/png",
-        "fileSize": 8604,
         "width": 1920,
         "height": 1080,
         "fileId": "9phZ8YaUGoUG"
@@ -665,8 +641,6 @@
         "id": "Nywji71vMz3w",
         "type": "image",
         "name": "options_grey_bg",
-        "fileType": "image/png",
-        "fileSize": 9322,
         "width": 1920,
         "height": 1080,
         "fileId": "BJxpAwLdpPh3"
@@ -675,8 +649,6 @@
         "id": "ns9KbUZ24tqx",
         "type": "image",
         "name": "title_background",
-        "fileType": "image/png",
-        "fileSize": 10570,
         "width": 1920,
         "height": 1080,
         "fileId": "cAqa9XfDPwwN"
@@ -685,8 +657,6 @@
         "id": "c5xw9bBcNAxD",
         "type": "image",
         "name": "menu_background",
-        "fileType": "image/png",
-        "fileSize": 10570,
         "width": 1920,
         "height": 1080,
         "fileId": "cAqa9XfDPwwN"
@@ -695,8 +665,6 @@
         "id": "4d8J6KjXUz84",
         "type": "image",
         "name": "dialogue_box",
-        "fileType": "image/png",
-        "fileSize": 69445,
         "width": 1920,
         "height": 320,
         "fileId": "Wv4ppbqvQYoq"
@@ -705,8 +673,6 @@
         "id": "XXDzaFtB3EGw",
         "type": "image",
         "name": "dialogue_box_nvl",
-        "fileType": "image/png",
-        "fileSize": 6542,
         "width": 1420,
         "height": 853,
         "fileId": "X4XnMJVkMPkm"
@@ -715,8 +681,6 @@
         "id": "mgCciVutrGBN",
         "type": "image",
         "name": "choice_box",
-        "fileType": "image/png",
-        "fileSize": 74903,
         "width": 1420,
         "height": 80,
         "fileId": "rnkzdXP82BVy"
@@ -725,8 +689,6 @@
         "id": "pR3mjjDnnN71",
         "type": "image",
         "name": "choice_box_activated",
-        "fileType": "image/png",
-        "fileSize": 76238,
         "width": 1420,
         "height": 80,
         "fileId": "LPpgu6ojzZ8Z"
@@ -735,8 +697,6 @@
         "id": "WvwCEy9qGYuN",
         "type": "image",
         "name": "slider_bar",
-        "fileType": "image/png",
-        "fileSize": 424,
         "width": 1160,
         "height": 40,
         "fileId": "yjPZPw5y6Bke"
@@ -745,8 +705,6 @@
         "id": "YS9PKn7Ynfbv",
         "type": "image",
         "name": "slider_thumb",
-        "fileType": "image/png",
-        "fileSize": 174,
         "width": 16,
         "height": 40,
         "fileId": "CiE9mn4JqwFF"
@@ -755,8 +713,6 @@
         "id": "E6JDZcSVpH3s",
         "type": "image",
         "name": "slider_bar_hover",
-        "fileType": "image/png",
-        "fileSize": 423,
         "width": 1160,
         "height": 40,
         "fileId": "hscsCELdDoUy"
@@ -765,8 +721,6 @@
         "id": "KLhrEh5Gep9e",
         "type": "image",
         "name": "slider_thumb_hover",
-        "fileType": "image/png",
-        "fileSize": 175,
         "width": 16,
         "height": 40,
         "fileId": "8Qx6A4HsLvHy"
@@ -775,8 +729,6 @@
         "id": "WgNzjYaHcRux",
         "type": "image",
         "name": "confirm_box",
-        "fileType": "image/png",
-        "fileSize": 1420,
         "width": 1160,
         "height": 240,
         "fileId": "v9xr4cLxMmkU"
@@ -785,8 +737,6 @@
         "id": "C33g7FtvGCqu",
         "type": "image",
         "name": "slot_idle",
-        "fileType": "image/png",
-        "fileSize": 2664,
         "width": 400,
         "height": 225,
         "fileId": "Yecv5u5nK9YT"
@@ -795,8 +745,6 @@
         "id": "m8FMqxc27sPg",
         "type": "image",
         "name": "slot_selected",
-        "fileType": "image/png",
-        "fileSize": 2644,
         "width": 400,
         "height": 225,
         "fileId": "z8CjiiizJYjM"
@@ -810,8 +758,6 @@
         "id": "ZvJUEaaujuQj",
         "type": "image",
         "name": "mask_slider",
-        "fileType": "image/png",
-        "fileSize": 1198657,
         "width": 1908,
         "height": 1080,
         "fileId": "Wt2LWBPXdux2",
@@ -1067,8 +1013,6 @@
         "type": "font",
         "name": "sample_font",
         "fontFamily": "sample_font",
-        "fileType": "font/sample_font",
-        "fileSize": 857712,
         "fileId": "Rp37wKfpY5os"
       }
     },

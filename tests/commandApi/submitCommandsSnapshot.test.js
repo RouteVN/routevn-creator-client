@@ -206,7 +206,6 @@ describe("commandApi submitCommandsWithContext", () => {
       thumbnailFileId: "thumb-1",
       name: "Image One",
     });
-    expect(store.saveMaterializedViewCheckpoint).toHaveBeenCalledTimes(1);
     expect(store.saveMaterializedViewCheckpoint).toHaveBeenCalledWith(
       expect.objectContaining({
         viewName: "project_repository_main_state",

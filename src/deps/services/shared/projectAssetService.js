@@ -7,6 +7,7 @@ import {
   detectFileType,
 } from "../../clients/web/fileProcessors.js";
 import { processWithConcurrency } from "../../../internal/processWithConcurrency.js";
+import { getFileType as getFontFileType } from "../../../internal/fileTypes.js";
 import { loadFont } from "./fontLoader.js";
 
 const IMAGE_THUMBNAIL_MAX_WIDTH = 320;
@@ -18,8 +19,20 @@ const bufferToHex = (buffer) =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
 
-const getFileRecordMimeType = ({ file }) =>
-  file.type || "application/octet-stream";
+const getFileRecordMimeType = ({ file, bytes } = {}) => {
+  if (detectFileType(file) === "font") {
+    try {
+      return getFontFileType({
+        file,
+        arrayBuffer: bytes,
+      });
+    } catch {
+      return file.type || "application/octet-stream";
+    }
+  }
+
+  return file.type || "application/octet-stream";
+};
 
 const getNow = () => {
   if (
@@ -61,6 +74,9 @@ export const createProjectAssetService = ({
   getCurrentReference,
   getStoreByProject,
 }) => {
+  const shouldSkipImageThumbnail = (options = {}) =>
+    options?.skipImageThumbnail === true;
+
   const storeRawFile = async ({ file, bytes, projectId, projectPath } = {}) => {
     return fileAdapter.storeFile({
       file,
@@ -110,7 +126,10 @@ export const createProjectAssetService = ({
       ...stored,
       fileRecord: {
         id: stored.fileId,
-        mimeType: getFileRecordMimeType({ file }),
+        mimeType: getFileRecordMimeType({
+          file,
+          bytes: fileBytes,
+        }),
         size: file.size,
         sha256,
       },
@@ -126,7 +145,7 @@ export const createProjectAssetService = ({
     });
   };
 
-  const processFile = async (file) => {
+  const processFile = async (file, options = {}) => {
     const fileType = detectFileType(file);
 
     if (fileType === "image") {
@@ -134,6 +153,15 @@ export const createProjectAssetService = ({
         getImageDimensions(file),
         storeFileWithRecord({ file }),
       ]);
+
+      if (shouldSkipImageThumbnail(options)) {
+        return {
+          ...stored,
+          dimensions,
+          type: "image",
+          fileRecords: [stored.fileRecord],
+        };
+      }
 
       const thumbnailData = await extractImageThumbnail(file, {
         maxWidth: IMAGE_THUMBNAIL_MAX_WIDTH,
@@ -305,13 +333,13 @@ export const createProjectAssetService = ({
       });
     },
 
-    async uploadFiles(files) {
+    async uploadFiles(files, options = {}) {
       const fileArray = Array.isArray(files) ? files : Array.from(files);
       const results = await processWithConcurrency(
         fileArray,
         async (file) => {
           try {
-            const result = await processFile(file);
+            const result = await processFile(file, options);
             return {
               success: true,
               file,

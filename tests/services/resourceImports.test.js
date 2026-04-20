@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  buildFontResourceDataFromUploadResult,
+  buildFontResourcePatchFromUploadResult,
   buildImageResourceDataFromUploadResult,
+  buildImageResourcePatchFromUploadResult,
+  buildSoundResourceDataFromUploadResult,
+  buildSoundResourcePatchFromUploadResult,
+  buildVideoResourceDataFromUploadResult,
+  buildVideoResourcePatchFromUploadResult,
   importImageFile,
 } from "../../src/deps/services/shared/resourceImports.js";
 
@@ -25,10 +32,166 @@ describe("resource image imports", () => {
       fileId: "file-1",
       thumbnailFileId: "thumb-1",
       name: "Image One",
-      fileType: "image/png",
-      fileSize: 123,
       width: 640,
       height: 360,
+    });
+  });
+
+  it("maps upload results to image resource patches without duplicated file metadata", () => {
+    expect(
+      buildImageResourcePatchFromUploadResult({
+        fileId: "file-1",
+        thumbnailFileId: "thumb-1",
+        displayName: "Image One",
+        file: {
+          type: "image/png",
+          size: 123,
+        },
+        dimensions: {
+          width: 640,
+          height: 360,
+        },
+      }),
+    ).toEqual({
+      fileId: "file-1",
+      thumbnailFileId: "thumb-1",
+      name: "Image One",
+      width: 640,
+      height: 360,
+    });
+  });
+
+  it("maps upload results to sound resource data without duplicated file metadata", () => {
+    expect(
+      buildSoundResourceDataFromUploadResult({
+        fileId: "file-1",
+        displayName: "Theme",
+        file: {
+          type: "audio/ogg",
+          size: 123,
+        },
+        waveformDataFileId: "wave-1",
+        duration: 12.5,
+      }),
+    ).toEqual({
+      type: "sound",
+      fileId: "file-1",
+      name: "Theme",
+      description: "",
+      waveformDataFileId: "wave-1",
+      duration: 12.5,
+    });
+  });
+
+  it("maps upload results to sound resource patches without duplicated file metadata", () => {
+    expect(
+      buildSoundResourcePatchFromUploadResult({
+        fileId: "file-1",
+        file: {
+          type: "audio/ogg",
+          size: 123,
+        },
+        waveformDataFileId: "wave-1",
+        duration: 12.5,
+      }),
+    ).toEqual({
+      fileId: "file-1",
+      waveformDataFileId: "wave-1",
+      duration: 12.5,
+    });
+  });
+
+  it("maps upload results to video resource data without duplicated file metadata", () => {
+    expect(
+      buildVideoResourceDataFromUploadResult({
+        fileId: "file-1",
+        thumbnailFileId: "thumb-1",
+        displayName: "Intro",
+        file: {
+          type: "video/mp4",
+          size: 123,
+        },
+        duration: 10,
+        dimensions: {
+          width: 1920,
+          height: 1080,
+        },
+      }),
+    ).toEqual({
+      type: "video",
+      fileId: "file-1",
+      thumbnailFileId: "thumb-1",
+      name: "Intro",
+      description: "",
+      duration: 10,
+      width: 1920,
+      height: 1080,
+    });
+  });
+
+  it("maps upload results to video resource patches without duplicated file metadata", () => {
+    expect(
+      buildVideoResourcePatchFromUploadResult({
+        fileId: "file-1",
+        thumbnailFileId: "thumb-1",
+        displayName: "Intro",
+        file: {
+          type: "video/mp4",
+          size: 123,
+        },
+        duration: 10,
+        dimensions: {
+          width: 1920,
+          height: 1080,
+        },
+      }),
+    ).toEqual({
+      fileId: "file-1",
+      thumbnailFileId: "thumb-1",
+      name: "Intro",
+      duration: 10,
+      width: 1920,
+      height: 1080,
+    });
+  });
+
+  it("maps upload results to font resource data without duplicated file metadata", () => {
+    expect(
+      buildFontResourceDataFromUploadResult({
+        uploadResult: {
+          fileId: "file-1",
+          displayName: "Inter",
+          file: {
+            type: "font/ttf",
+            size: 123,
+          },
+        },
+        fontFamily: "Inter",
+      }),
+    ).toEqual({
+      type: "font",
+      fileId: "file-1",
+      name: "Inter",
+      description: "",
+      fontFamily: "Inter",
+    });
+  });
+
+  it("maps upload results to font resource patches without duplicated file metadata", () => {
+    expect(
+      buildFontResourcePatchFromUploadResult({
+        uploadResult: {
+          fileId: "file-1",
+          file: {
+            type: "font/ttf",
+            size: 123,
+          },
+        },
+        fontFamily: "Inter",
+      }),
+    ).toEqual({
+      fileId: "file-1",
+      fontFamily: "Inter",
     });
   });
 
@@ -84,8 +247,6 @@ describe("resource image imports", () => {
         fileId: "file-1",
         thumbnailFileId: "thumb-1",
         name: "Scene",
-        fileType: "image/png",
-        fileSize: 456,
         width: 800,
         height: 600,
       },
