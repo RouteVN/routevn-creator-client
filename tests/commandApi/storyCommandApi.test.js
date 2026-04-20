@@ -67,6 +67,43 @@ describe("story command api", () => {
     });
   });
 
+  it("includes preserve when explicitly requested for dialogue metadata updates", async () => {
+    const context = {
+      projectId: "project-1",
+      state: createStoryState(),
+    };
+    const shared = {
+      ensureCommandContext: vi.fn(async () => context),
+      submitCommandWithContext: vi.fn(async () => ({ valid: true })),
+      scenePartitionFor: vi.fn(() => "s:scene-1"),
+    };
+    const api = createStoryCommandApi(shared);
+
+    await api.updateLineDialogueAction({
+      lineId: "line-1",
+      dialogue: {
+        characterId: "character-1",
+      },
+      preserve: ["dialogue.content"],
+    });
+
+    expect(shared.submitCommandWithContext).toHaveBeenCalledWith({
+      context,
+      scope: "story",
+      partition: "s:scene-1",
+      type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
+      payload: {
+        lineId: "line-1",
+        data: {
+          dialogue: {
+            characterId: "character-1",
+          },
+        },
+        preserve: ["dialogue.content"],
+      },
+    });
+  });
+
   it("still includes replace when explicitly true", async () => {
     const context = {
       projectId: "project-1",

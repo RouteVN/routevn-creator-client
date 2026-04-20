@@ -3,7 +3,7 @@ import {
   getTextStyleCount,
   getTextStyleRemovalCount,
 } from "../../constants/textStyles.js";
-import { getFileType } from "../../internal/fileTypes.js";
+import { buildFontResourceDataFromUploadResult } from "../../deps/services/shared/resourceImports.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import {
@@ -559,15 +559,12 @@ export const handleAddFontFormAction = async (deps, payload) => {
         projectService.createFont({
           fontId: newFontId,
           fileRecords: fontData.uploadResult.fileRecords,
-          data: {
-            type: "font",
+          data: buildFontResourceDataFromUploadResult({
+            uploadResult: fontData.uploadResult,
             name: fontName,
             description: formData.description ?? "",
             fontFamily: fontName,
-            fileId: fontData.uploadResult.fileId,
-            fileType: getFileType(fontData.uploadResult),
-            fileSize: fontData.file.size,
-          },
+          }),
           parentId: formData.folderId || null,
           position: "last",
         }),

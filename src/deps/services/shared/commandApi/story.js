@@ -92,7 +92,12 @@ export const createStoryCommandApi = (shared) => {
     throw new Error("Could not resolve scene partition for line command");
   };
 
-  const buildLineActionsPayload = ({ lineId, data, replace = false }) => {
+  const buildLineActionsPayload = ({
+    lineId,
+    data,
+    replace = false,
+    preserve,
+  }) => {
     const payload = {
       lineId,
       data: structuredClone(data || {}),
@@ -100,6 +105,10 @@ export const createStoryCommandApi = (shared) => {
 
     if (replace === true) {
       payload.replace = true;
+    }
+
+    if (Array.isArray(preserve) && preserve.length > 0) {
+      payload.preserve = structuredClone(preserve);
     }
 
     return payload;
@@ -122,7 +131,12 @@ export const createStoryCommandApi = (shared) => {
     return grouped;
   };
 
-  const submitLineActionsData = async ({ lineId, data, replace = false }) => {
+  const submitLineActionsData = async ({
+    lineId,
+    data,
+    replace = false,
+    preserve,
+  }) => {
     const context = await shared.ensureCommandContext({
       lineIds: [lineId],
     });
@@ -136,16 +150,18 @@ export const createStoryCommandApi = (shared) => {
         lineId,
         data,
         replace,
+        preserve,
       }),
     });
   };
 
   return {
-    async updateLineActions({ lineId, data, replace = false }) {
+    async updateLineActions({ lineId, data, replace = false, preserve }) {
       return submitLineActionsData({
         lineId,
         data,
         replace,
+        preserve,
       });
     },
 
@@ -163,13 +179,14 @@ export const createStoryCommandApi = (shared) => {
       });
     },
 
-    async updateLineDialogueAction({ lineId, dialogue }) {
+    async updateLineDialogueAction({ lineId, dialogue, preserve }) {
       return submitLineActionsData({
         lineId,
         data: {
           dialogue: structuredClone(dialogue || {}),
         },
         replace: false,
+        preserve,
       });
     },
 

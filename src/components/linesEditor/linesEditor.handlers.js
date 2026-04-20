@@ -1,8 +1,3 @@
-import {
-  debugLog,
-  previewDebugText,
-} from "../../deps/services/shared/debugLog.js";
-
 const getLineContent = (element) => {
   if (!element || typeof element.getContent !== "function") {
     return "";
@@ -147,7 +142,6 @@ const getSelectionRange = (element) => {
 
   return null;
 };
-
 const setSelectionFromRange = (element, range) => {
   const root = element?.getRootNode();
   let selection = window.getSelection();
@@ -233,7 +227,7 @@ const shouldPreserveLiveElementContent = (element, lines) => {
   return getLineContent(element) !== getLineText(line);
 };
 
-const dispatchEditorDataChanged = (dispatchEvent, element) => {
+const dispatchEditorDataChanged = (dispatchEvent, element, { source } = {}) => {
   const lineId = getLineIdFromElement(element);
   if (!lineId) {
     return;
@@ -244,6 +238,7 @@ const dispatchEditorDataChanged = (dispatchEvent, element) => {
       detail: {
         lineId,
         content: getLineContent(element),
+        source,
       },
     }),
   );
@@ -332,7 +327,8 @@ const syncRenderedLineContent = (refs, lines, lineId, { skipLineIds } = {}) => {
     return;
   }
 
-  lineRef.updateContent(getLineText(line));
+  const targetContent = getLineText(line);
+  lineRef.updateContent(targetContent);
 };
 
 const syncAllRenderedLineContent = (refs, lines, options = {}) => {
@@ -1020,7 +1016,9 @@ export const handleLineKeyDown = (deps, payload) => {
   switch (navKey) {
     case "Escape":
       payload._event.preventDefault();
-      dispatchEditorDataChanged(dispatchEvent, payload._event.currentTarget);
+      dispatchEditorDataChanged(dispatchEvent, payload._event.currentTarget, {
+        source: "escape",
+      });
       // Switch to block mode and blur the current element
       store.setMode({ mode: "block" });
       renderPreservingLiveLineContent(
@@ -1340,15 +1338,6 @@ export const handleLineBeforeInput = (deps, payload) => {
     const leftContent = fullText.substring(0, cursorPos);
     const rightContent = fullText.substring(cursorPos);
 
-    debugLog("lines", "editor.beforeinput-split", {
-      lineId,
-      cursorPos,
-      fullTextLength: fullText.length,
-      fullText: previewDebugText(fullText),
-      leftContent: previewDebugText(leftContent),
-      rightContent: previewDebugText(rightContent),
-    });
-
     dispatchEvent(
       new CustomEvent("splitLine", {
         detail: {
@@ -1373,11 +1362,6 @@ export const handleLineBeforeInput = (deps, payload) => {
     if (cursorPos === 0 && currentIndex > 0) {
       event.preventDefault();
       event.stopPropagation();
-
-      debugLog("lines", "editor.beforeinput-merge", {
-        lineId,
-        cursorPos,
-      });
 
       dispatchEvent(
         new CustomEvent("mergeLines", {
@@ -1437,27 +1421,16 @@ export const handleOnInput = (deps, payload) => {
   const currentElement = payload._event.currentTarget;
 
   if (shouldIgnoreElementInput(currentElement)) {
-    debugLog("lines", "editor.input-ignored", {
-      lineId: getLineIdFromElement(currentElement),
-      content: previewDebugText(getLineContent(currentElement)),
-    });
     return;
   }
-
-  const lineId = getLineIdFromElement(currentElement);
-  const content = getLineContent(currentElement);
 
   // Save cursor position on every input
   const cursorPos = getCursorPosition(currentElement);
   store.setCursorPosition({ position: cursorPos });
-  debugLog("lines", "editor.input", {
-    lineId,
-    cursorPos,
-    contentLength: content.length,
-    content: previewDebugText(content),
-  });
 
-  dispatchEditorDataChanged(dispatchEvent, currentElement);
+  dispatchEditorDataChanged(dispatchEvent, currentElement, {
+    source: "input",
+  });
 };
 
 export const handleLinePaste = (deps, payload) => {
@@ -1605,10 +1578,6 @@ export const handleOnFocus = (deps, payload) => {
   const lineElement = payload._event.currentTarget;
   clearElementInputSuppression(lineElement);
   const lineId = getLineIdFromElement(lineElement);
-  debugLog("lines", "editor.focus", {
-    lineId,
-    contentLength: getLineContent(lineElement).length,
-  });
 
   // Get the line element's coordinates
   const lineRect = lineElement.getBoundingClientRect();
@@ -1662,12 +1631,9 @@ export const handleLineBlur = (deps, payload) => {
     shouldPreserveLiveContent &&
     !shouldIgnoreElementContentSync(blurredElement)
   ) {
-    dispatchEditorDataChanged(dispatchEvent, blurredElement);
-  }
-
-  // Check if we're navigating between lines - if so, don't switch to block mode
-  if (store.selectIsNavigating()) {
-    return;
+    dispatchEditorDataChanged(dispatchEvent, blurredElement, {
+      source: "blur",
+    });
   }
 
   const settleBlur = (remainingTransferFrames = 3) => {

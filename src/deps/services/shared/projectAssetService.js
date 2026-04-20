@@ -7,6 +7,7 @@ import {
   detectFileType,
 } from "../../clients/web/fileProcessors.js";
 import { processWithConcurrency } from "../../../internal/processWithConcurrency.js";
+import { getFileType as getFontFileType } from "../../../internal/fileTypes.js";
 import { loadFont } from "./fontLoader.js";
 
 const IMAGE_THUMBNAIL_MAX_WIDTH = 320;
@@ -18,8 +19,20 @@ const bufferToHex = (buffer) =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
 
-const getFileRecordMimeType = ({ file }) =>
-  file.type || "application/octet-stream";
+const getFileRecordMimeType = ({ file, bytes } = {}) => {
+  if (detectFileType(file) === "font") {
+    try {
+      return getFontFileType({
+        file,
+        arrayBuffer: bytes,
+      });
+    } catch {
+      return file.type || "application/octet-stream";
+    }
+  }
+
+  return file.type || "application/octet-stream";
+};
 
 const getNow = () => {
   if (
@@ -113,7 +126,10 @@ export const createProjectAssetService = ({
       ...stored,
       fileRecord: {
         id: stored.fileId,
-        mimeType: getFileRecordMimeType({ file }),
+        mimeType: getFileRecordMimeType({
+          file,
+          bytes: fileBytes,
+        }),
         size: file.size,
         sha256,
       },

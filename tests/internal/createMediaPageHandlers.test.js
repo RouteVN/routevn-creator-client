@@ -188,4 +188,68 @@ describe("createMediaPageHandlers", () => {
       itemId: "folder-1",
     });
   });
+
+  it("hydrates file metadata for video pages from files", async () => {
+    const handlers = createMediaPageHandlers({
+      resourceType: "videos",
+    });
+    const repositoryState = {
+      files: {
+        tree: [],
+        items: {
+          "file-1": {
+            id: "file-1",
+            mimeType: "video/mp4",
+            size: 2048,
+          },
+        },
+      },
+      videos: {
+        tree: [],
+        items: {
+          "video-1": {
+            id: "video-1",
+            type: "video",
+            name: "Intro",
+            fileId: "file-1",
+          },
+        },
+      },
+    };
+    const deps = {
+      projectService: {
+        getState: () => repositoryState,
+      },
+      store: {
+        setItems: vi.fn(),
+        setSelectedItemId: vi.fn(),
+      },
+      refs: {
+        fileExplorer: {
+          selectItem: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    await handlers.refreshData(deps, {
+      selectedItemId: "video-1",
+    });
+
+    expect(deps.store.setItems).toHaveBeenCalledWith({
+      data: {
+        tree: [],
+        items: {
+          "video-1": {
+            id: "video-1",
+            type: "video",
+            name: "Intro",
+            fileId: "file-1",
+            fileType: "video/mp4",
+            fileSize: 2048,
+          },
+        },
+      },
+    });
+  });
 });

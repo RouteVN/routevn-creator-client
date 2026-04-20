@@ -23,10 +23,11 @@ Today the text path looks like this:
 ```text
 rvn-editable-text DOM
 -> linesEditor emits input / split / merge / paste events
--> sceneEditor mutates page store immediately
--> pendingQueueService debounces repository writes
--> structural operations flush the queue before mutating the repository
--> sceneEditor manually resyncs repository/domain state in some handlers
+-> sceneEditor updates editorSession immediately
+-> sceneEditor schedules a debounced draft flush for the active section
+-> persistenceQueue serializes and coalesces overlapping flush work
+-> structural operations and navigation paths explicitly flush before continuing
+-> sceneEditor resyncs repository/domain state from project state subscription
 -> renderCanvas runs on a separate debounced path
 ```
 
@@ -36,9 +37,123 @@ The main files involved are:
 - `src/components/linesEditor/linesEditor.handlers.js`
 - `src/pages/sceneEditor/sceneEditor.handlers.js`
 - `src/pages/sceneEditor/sceneEditor.store.js`
+- `src/internal/ui/sceneEditor/editorSession.js`
+- `src/internal/ui/sceneEditor/persistenceQueue.js`
 - `src/internal/ui/sceneEditor/lineOperations.js`
 - `src/internal/ui/sceneEditor/runtime.js`
-- `src/deps/services/pendingQueueService.js`
+- `src/deps/services/shared/commandApi/story.js`
+
+## Current Persistence Timing And Storage Churn
+
+The current implementation is already closer to the proposed draft-session
+model than the older queue-based flow that originally motivated this document.
+The important remaining problem is not correctness corruption. The important
+problem is write amplification from repeated line saves while the user is still
+editing the same line.
+
+### Current text timing
+
+Text edits currently use these values in
+`src/pages/sceneEditor/sceneEditor.handlers.js`:
+
+- `TEXT_DRAFT_SAVE_DEBOUNCE_MS = 2000`
+- `TEXT_DRAFT_SAVE_MIN_INTERVAL_MS = 4000`
+- `TEXT_DRAFT_SAVE_MAX_INTERVAL_MS = 10000`
+- `STRUCTURE_DRAFT_SAVE_DEBOUNCE_MS = 900`
+- `STRUCTURE_DRAFT_SAVE_MIN_INTERVAL_MS = 1000`
+- `STRUCTURE_DRAFT_SAVE_MAX_INTERVAL_MS = 3000`
+
+That means the editor does not literally save every `2000ms`.
+
+For normal text edits, the scheduler works like this:
+
+- after the latest text edit, wait at least `2000ms`
+- do not start a new text flush less than `4000ms` after the previous text
+  flush started
+- if text editing stays dirty continuously, force a flush no later than
+  `10000ms`
+  after the first still-pending edit in that dirty window
+
+In full-sentence form: the scene editor updates local session state on every
+edit, waits briefly for typing to settle, prevents flushes from starting too
+frequently, but still forces a save eventually if the user keeps typing without
+stopping.
+
+Structural edits still keep the shorter timing window:
+
+- debounce `900ms`
+- min interval `1000ms`
+- max wait `3000ms`
+
+That split is intentional. The text path is slowed down to reduce repeated
+single-line saves in the local DB, while structure-related autosaves remain
+closer to the previous responsiveness and crash-recovery behavior.
+
+### Current flush scope
+
+When a flush runs, `flushSceneEditorDrafts(...)` snapshots the whole active
+section session and passes that snapshot to
+`projectService.syncSectionLinesSnapshot(...)`.
+
+That API does not blindly rewrite every line. It compares the current and
+desired dialogue objects per line and emits `line.update_actions` only for the
+lines whose dialogue changed.
+
+This matters because the storage-growth issue is not "the whole section is
+rewritten every time." The storage-growth issue is "the same line can be saved
+many times during one editing session."
+
+### Current queue behavior
+
+`src/internal/ui/sceneEditor/persistenceQueue.js` already provides two helpful
+controls:
+
+- writes are serialized so multiple persistence operations do not run in
+  parallel
+- overlapping draft flush requests are coalesced so a running flush is followed
+  by at most one more latest flush pass
+
+This queue prevents concurrent duplicate work, but it does not suppress churn
+across time. If typing continues long enough for multiple flush windows to
+complete successfully, the same line can still accumulate multiple committed
+`line.update_actions` events.
+
+### Current immediate flush triggers
+
+Even with debounced text saves, several flows flush immediately:
+
+- editor blur
+- section switch
+- scene editor unmount / cleanup
+- preview open
+- back navigation
+- several destructive or context-changing actions
+
+Those immediate flushes are important for normal navigation safety. They reduce
+the chance of leaving the page with local drafts still pending.
+
+### Why single-line churn grows the DB
+
+The stored command payload for a text change is still the full dialogue object
+for that line. If the user types on one line for long enough to cross several
+flush windows, each successful flush can append another full
+`line.update_actions` payload for that same line.
+
+So the current local DB growth pattern is:
+
+- expected under the present snapshot-style save contract
+- mainly driven by repeated saves of the same line while the user is still
+  editing it
+- only lightly affected by exact duplicate payloads
+
+In other words, the main storage lever is flush cadence, especially for text on
+one active line, not special duplicate filtering inside the command API.
+
+One additional targeted optimization now exists for dialogue metadata updates.
+When the app changes dialogue metadata such as `characterId` or dialogue UI
+without changing the text itself, it can send `line.update_actions` with
+`preserve: ["dialogue.content"]`. That keeps the existing dialogue text in the
+model while avoiding a needless full-text resend for metadata-only edits.
 
 ## What Is Wrong With The Current Model
 

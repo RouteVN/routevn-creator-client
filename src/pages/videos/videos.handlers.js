@@ -6,6 +6,10 @@ import {
   runResourcePageMutation,
   showResourcePageError,
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
+import {
+  buildVideoResourceDataFromUploadResult,
+  buildVideoResourcePatchFromUploadResult,
+} from "../../deps/services/shared/resourceImports.js";
 
 const VIDEO_FILE_PATTERN = /\.(mp4)$/i;
 const INVALID_VIDEO_FORMAT_MESSAGE = "Only MP4 videos are supported.";
@@ -101,18 +105,7 @@ const createVideosFromFiles = async ({ deps, files, parentId } = {}) => {
           projectService.createVideo({
             videoId,
             fileRecords: uploadResult.fileRecords,
-            data: {
-              type: "video",
-              fileId: uploadResult.fileId,
-              thumbnailFileId: uploadResult.thumbnailFileId,
-              name: uploadResult.displayName,
-              description: "",
-              fileType: uploadResult.file.type,
-              fileSize: uploadResult.file.size,
-              duration: uploadResult.duration,
-              width: uploadResult.dimensions?.width,
-              height: uploadResult.dimensions?.height,
-            },
+            data: buildVideoResourceDataFromUploadResult(uploadResult),
             parentId,
             position: "last",
           }),
@@ -319,16 +312,7 @@ export const handleFormExtraEvent = async (deps) => {
       projectService.updateVideo({
         videoId: selectedItem.id,
         fileRecords: uploadResult.fileRecords,
-        data: {
-          fileId: uploadResult.fileId,
-          thumbnailFileId: uploadResult.thumbnailFileId,
-          name: uploadResult.displayName,
-          fileType: uploadResult.file.type,
-          fileSize: uploadResult.file.size,
-          duration: uploadResult.duration,
-          width: uploadResult.dimensions?.width,
-          height: uploadResult.dimensions?.height,
-        },
+        data: buildVideoResourcePatchFromUploadResult(uploadResult),
       }),
   });
 
@@ -412,15 +396,7 @@ export const handleEditFormAction = async (deps, payload) => {
   }
 
   const videoPatch = editUploadResult
-    ? {
-        fileId: editUploadResult.fileId,
-        thumbnailFileId: editUploadResult.thumbnailFileId,
-        fileType: editUploadResult.file.type,
-        fileSize: editUploadResult.file.size,
-        duration: editUploadResult.duration,
-        width: editUploadResult.dimensions?.width,
-        height: editUploadResult.dimensions?.height,
-      }
+    ? buildVideoResourcePatchFromUploadResult(editUploadResult)
     : {};
 
   const updateAttempt = await runResourcePageMutation({

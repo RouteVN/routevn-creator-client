@@ -55,6 +55,35 @@ describe("resourceFileMetadata", () => {
     });
   });
 
+  it("leaves unsupported resource types unchanged", () => {
+    expect(
+      withResolvedResourceFileMetadata({
+        item: {
+          id: "text-style-1",
+          type: "textStyle",
+          fileId: "file-1",
+          fileType: "text/plain",
+          fileSize: 12,
+        },
+        files: {
+          items: {
+            "file-1": {
+              id: "file-1",
+              mimeType: "application/json",
+              size: 128,
+            },
+          },
+        },
+      }),
+    ).toEqual({
+      id: "text-style-1",
+      type: "textStyle",
+      fileId: "file-1",
+      fileType: "text/plain",
+      fileSize: 12,
+    });
+  });
+
   it("normalizes supported collection items while leaving folders unchanged", () => {
     expect(
       withResolvedCollectionFileMetadata({
@@ -99,6 +128,77 @@ describe("resourceFileMetadata", () => {
           fileId: "file-1",
           name: "Theme",
           fileType: "audio/ogg",
+          fileSize: 4096,
+        },
+      },
+    });
+  });
+
+  it("normalizes video, font, and spritesheet items from file records", () => {
+    expect(
+      withResolvedCollectionFileMetadata({
+        collection: {
+          tree: [{ id: "video-1" }, { id: "font-1" }, { id: "sheet-1" }],
+          items: {
+            "video-1": {
+              id: "video-1",
+              type: "video",
+              fileId: "file-video-1",
+            },
+            "font-1": {
+              id: "font-1",
+              type: "font",
+              fileId: "file-font-1",
+            },
+            "sheet-1": {
+              id: "sheet-1",
+              type: "spritesheet",
+              fileId: "file-sheet-1",
+            },
+          },
+        },
+        files: {
+          items: {
+            "file-video-1": {
+              id: "file-video-1",
+              mimeType: "video/mp4",
+              size: 1024,
+            },
+            "file-font-1": {
+              id: "file-font-1",
+              mimeType: "font/woff2",
+              size: 2048,
+            },
+            "file-sheet-1": {
+              id: "file-sheet-1",
+              mimeType: "image/png",
+              size: 4096,
+            },
+          },
+        },
+      }),
+    ).toEqual({
+      tree: [{ id: "video-1" }, { id: "font-1" }, { id: "sheet-1" }],
+      items: {
+        "video-1": {
+          id: "video-1",
+          type: "video",
+          fileId: "file-video-1",
+          fileType: "video/mp4",
+          fileSize: 1024,
+        },
+        "font-1": {
+          id: "font-1",
+          type: "font",
+          fileId: "file-font-1",
+          fileType: "font/woff2",
+          fileSize: 2048,
+        },
+        "sheet-1": {
+          id: "sheet-1",
+          type: "spritesheet",
+          fileId: "file-sheet-1",
+          fileType: "image/png",
           fileSize: 4096,
         },
       },

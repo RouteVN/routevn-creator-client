@@ -43,11 +43,7 @@ export const getDebugDurationMs = (startedAt) => {
   return Number((getDebugNow() - startedAt).toFixed(2));
 };
 
-export const debugLog = (scope, event, data = {}) => {
-  if (!isDebugEnabled(scope)) {
-    return;
-  }
-
+const emitDebugLog = (scope, event, data = {}) => {
   debugSequence += 1;
   const timestamp =
     typeof performance !== "undefined" && typeof performance.now === "function"
@@ -60,4 +56,12 @@ export const debugLog = (scope, event, data = {}) => {
     ts: timestamp,
     ...data,
   });
+};
+
+export const debugLog = (scope, event, data = {}) => {
+  if (!isDebugEnabled(scope)) {
+    return;
+  }
+
+  emitDebugLog(scope, event, data);
 };

@@ -1271,20 +1271,29 @@ const createColorResources = (colorsData = {}) => {
   );
 };
 
-const createFontResources = (fontsData = {}) => {
+const createFontResources = (fontsData = {}, filesData = {}) => {
   return Object.entries(fontsData.items || {}).reduce(
     (result, [fontId, item]) => {
-      if (item?.type && item.type !== "font") {
+      const normalizedItem = withResolvedResourceFileMetadata({
+        item,
+        files: filesData,
+      });
+
+      if (normalizedItem?.type && normalizedItem.type !== "font") {
         return result;
       }
-      if (!item?.fileId) {
+      if (!normalizedItem?.fileId) {
         return result;
       }
 
-      result[fontId] = {
-        fileId: `${item.fileId}`,
-        ...(item.fileType ? { fileType: item.fileType } : {}),
+      const font = {
+        fileId: `${normalizedItem.fileId}`,
       };
+      if (normalizedItem.fileType) {
+        font.fileType = normalizedItem.fileType;
+      }
+
+      result[fontId] = font;
       return result;
     },
     {},
@@ -1320,7 +1329,7 @@ export const createLayoutReferenceResources = (
   return {
     images: createImageResources(imageItems, filesData),
     colors: createColorResources(colorsData),
-    fonts: createFontResources(fontsData),
+    fonts: createFontResources(fontsData, filesData),
     textStyles: createTextStyleResources(textStylesData),
   };
 };

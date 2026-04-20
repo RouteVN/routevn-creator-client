@@ -1,8 +1,11 @@
 import { generateId, generatePrefixedId } from "../../internal/id.js";
 import { createFontInfoExtractor } from "./support/fontInfoExtractor.js";
-import { getFileType } from "../../internal/fileTypes.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { processWithConcurrency } from "../../internal/processWithConcurrency.js";
+import {
+  buildFontResourceDataFromUploadResult,
+  buildFontResourcePatchFromUploadResult,
+} from "../../deps/services/shared/resourceImports.js";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 import {
@@ -154,15 +157,10 @@ const createFontsFromFiles = async ({ deps, files, parentId } = {}) => {
             projectService.createFont({
               fontId: generateId(),
               fileRecords: uploadResult.fileRecords,
-              data: {
-                type: "font",
-                fileId: uploadResult.fileId,
-                name: uploadResult.displayName,
-                description: "",
+              data: buildFontResourceDataFromUploadResult({
+                uploadResult,
                 fontFamily: uploadResult.fontName,
-                fileType: getFileType(uploadResult),
-                fileSize: uploadResult.file.size,
-              },
+              }),
               parentId,
               position: "last",
             }),
@@ -399,12 +397,10 @@ export const handleEditFormAction = async (deps, payload) => {
 
   const editUploadResult = store.getState().editUploadResult;
   const fontPatch = editUploadResult
-    ? {
-        fileId: editUploadResult.fileId,
+    ? buildFontResourcePatchFromUploadResult({
+        uploadResult: editUploadResult,
         fontFamily: editUploadResult.fontName,
-        fileType: getFileType(editUploadResult),
-        fileSize: editUploadResult.file.size,
-      }
+      })
     : {};
 
   const updateAttempt = await runResourcePageMutation({

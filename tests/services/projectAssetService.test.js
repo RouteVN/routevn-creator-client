@@ -93,4 +93,38 @@ describe("projectAssetService", () => {
       getStoreByProject,
     });
   });
+
+  it("normalizes font mime types into file records", async () => {
+    let storedCount = 0;
+    const storeFile = vi.fn(async () => {
+      storedCount += 1;
+      return { fileId: `file-${storedCount}` };
+    });
+    mocked.detectFileType.mockReturnValue("font");
+
+    const service = createProjectAssetService({
+      idGenerator: () => "generated-id",
+      fileAdapter: {
+        storeFile,
+        getFileContent: vi.fn(),
+        getFileByProjectId: vi.fn(),
+      },
+      getCurrentStore: vi.fn(),
+      getCurrentReference: vi.fn(),
+      getStoreByProject: vi.fn(),
+    });
+
+    const result = await service.storeFile({
+      file: new File([new Uint8Array([0x00, 0x01, 0x00, 0x00])], "font.ttf", {
+        type: "",
+      }),
+    });
+
+    expect(result.fileRecords).toEqual([
+      expect.objectContaining({
+        id: "file-1",
+        mimeType: "font/ttf",
+      }),
+    ]);
+  });
 });

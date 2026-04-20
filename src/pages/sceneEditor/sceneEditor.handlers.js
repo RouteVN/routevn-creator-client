@@ -41,10 +41,12 @@ const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another section.";
 const MISSING_PROJECT_RESOLUTION_MESSAGE =
   "Project is missing required resolution settings.";
-const TEXT_DRAFT_SAVE_DEBOUNCE_MS = 300;
+const TEXT_DRAFT_SAVE_DEBOUNCE_MS = 2000;
+const TEXT_DRAFT_SAVE_MIN_INTERVAL_MS = 4000;
+const TEXT_DRAFT_SAVE_MAX_INTERVAL_MS = 10000;
 const STRUCTURE_DRAFT_SAVE_DEBOUNCE_MS = 900;
-const DRAFT_SAVE_MIN_INTERVAL_MS = 1000;
-const DRAFT_SAVE_MAX_INTERVAL_MS = 3000;
+const STRUCTURE_DRAFT_SAVE_MIN_INTERVAL_MS = 1000;
+const STRUCTURE_DRAFT_SAVE_MAX_INTERVAL_MS = 3000;
 const SHOW_LINE_NUMBERS_CONFIG_KEY = "sceneEditor.showLineNumbers";
 const IS_MUTED_CONFIG_KEY = "sceneEditor.isMuted";
 const nowMs = () => {
@@ -155,15 +157,23 @@ const getDraftSaveDelayMs = (store, { reason = "text" } = {}) => {
     reason === "structure"
       ? STRUCTURE_DRAFT_SAVE_DEBOUNCE_MS
       : TEXT_DRAFT_SAVE_DEBOUNCE_MS;
+  const minIntervalMs =
+    reason === "structure"
+      ? STRUCTURE_DRAFT_SAVE_MIN_INTERVAL_MS
+      : TEXT_DRAFT_SAVE_MIN_INTERVAL_MS;
+  const maxIntervalMs =
+    reason === "structure"
+      ? STRUCTURE_DRAFT_SAVE_MAX_INTERVAL_MS
+      : TEXT_DRAFT_SAVE_MAX_INTERVAL_MS;
   const lastFlushStartedAt = store.selectLastDraftFlushStartedAt();
   const pendingSinceAt = store.selectDraftSavePendingSinceAt();
   const remainingThrottleMs =
     lastFlushStartedAt > 0
-      ? Math.max(0, DRAFT_SAVE_MIN_INTERVAL_MS - (nowMs() - lastFlushStartedAt))
+      ? Math.max(0, minIntervalMs - (nowMs() - lastFlushStartedAt))
       : 0;
   const remainingMaxWaitMs =
     pendingSinceAt > 0
-      ? Math.max(0, DRAFT_SAVE_MAX_INTERVAL_MS - (nowMs() - pendingSinceAt))
+      ? Math.max(0, maxIntervalMs - (nowMs() - pendingSinceAt))
       : Number.POSITIVE_INFINITY;
 
   return Math.min(
@@ -677,20 +687,6 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 
   let submissionData = payload?._event?.detail || {};
 
-  // Dialogue updates replace the full dialogue action, so keep content here.
-  if (submissionData.dialogue) {
-    const line = store.selectSelectedLine();
-    if (line && line.actions?.dialogue?.content) {
-      submissionData = {
-        ...submissionData,
-        dialogue: {
-          content: line.actions.dialogue.content,
-          ...submissionData.dialogue,
-        },
-      };
-    }
-  }
-
   try {
     submissionData = cloneWithDiagnostics(
       submissionData,
@@ -705,6 +701,10 @@ export const handleCommandLineSubmit = async (deps, payload) => {
   }
 
   const { dialogue, ...otherActions } = submissionData;
+  const preserveDialogueContent =
+    dialogue && !Object.hasOwn(dialogue, "content")
+      ? ["dialogue.content"]
+      : undefined;
 
   await runSceneEditorPersistence(
     deps,
@@ -714,6 +714,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
           await projectService.updateLineDialogueAction({
             lineId,
             dialogue,
+            preserve: preserveDialogueContent,
           }),
           {
             appService,
@@ -769,6 +770,17 @@ export const handleEditorDataChanged = async (deps, payload) => {
   const currentSession =
     store.selectEditorSession() || reconcileCurrentEditorSession(deps);
   if (!currentSession?.linesById?.[lineId]) {
+    return;
+  }
+
+  const previousText =
+    currentSession.linesById[lineId]?.line?.actions?.dialogue?.content?.[0]?.text;
+  const source = payload?._event?.detail?.source;
+
+  if (
+    (source === "blur" || source === "escape") &&
+    payload._event.detail.content !== previousText
+  ) {
     return;
   }
 
@@ -847,9 +859,9 @@ export const handleDialogueCharacterShortcut = async (deps, payload) => {
     return;
   }
 
-  const updatedDialogue = {
-    ...existingDialogue,
-  };
+  const { content: _content, ...updatedDialogue } = structuredClone(
+    existingDialogue,
+  );
 
   if (isClearShortcut) {
     delete updatedDialogue.characterId;
@@ -863,6 +875,7 @@ export const handleDialogueCharacterShortcut = async (deps, payload) => {
       await projectService.updateLineDialogueAction({
         lineId,
         dialogue: updatedDialogue,
+        preserve: ["dialogue.content"],
       });
     },
     {
@@ -1193,17 +1206,13 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
       if (actionsType === "dialogue") {
         const currentDialogue = selectedLine?.actions?.dialogue;
         if (currentDialogue) {
-          // Keep content if it exists, remove layoutId and characterId
-          const updatedDialogue = {
-            content: currentDialogue.content,
-          };
-
           await runSceneEditorPersistence(
             deps,
             async () => {
               await projectService.updateLineDialogueAction({
                 lineId: selectedLineId,
-                dialogue: updatedDialogue,
+                dialogue: {},
+                preserve: ["dialogue.content"],
               });
             },
             {

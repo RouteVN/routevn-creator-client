@@ -7,7 +7,12 @@ import {
   showResourcePageError,
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
+import {
+  buildImageResourceDataFromUploadResult,
+  buildImageResourcePatchFromUploadResult,
+} from "../../deps/services/shared/resourceImports.js";
 import { tap } from "rxjs";
+import { withResolvedCollectionFileMetadata } from "../../internal/resourceFileMetadata.js";
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const ACCEPTED_FILE_TYPES = ".jpg,.jpeg,.png,.webp";
@@ -76,7 +81,13 @@ const syncCharacterSpritesData = ({ deps, repositoryState } = {}) => {
 
   store.setCharacterId({ characterId });
   store.setCharacterName({ characterName: character.name });
-  store.setItems({ spritesData: character.sprites ?? EMPTY_TREE });
+  store.setItems({
+    spritesData: withResolvedCollectionFileMetadata({
+      collection: character.sprites ?? EMPTY_TREE,
+      files: state?.files,
+      resourceTypes: ["image"],
+    }),
+  });
 
   if (store.selectSelectedItemId() && !store.selectSelectedItem()) {
     store.setSelectedItemId({ itemId: undefined });
@@ -240,16 +251,7 @@ const createSpritesFromFiles = async ({
               fileRecords: uploadResult.fileRecords,
               parentId,
               position: "last",
-              data: {
-                type: "image",
-                fileId: uploadResult.fileId,
-                thumbnailFileId: uploadResult.thumbnailFileId,
-                name: uploadResult.displayName,
-                fileType: uploadResult.file.type,
-                fileSize: uploadResult.file.size,
-                width: uploadResult.dimensions.width,
-                height: uploadResult.dimensions.height,
-              },
+              data: buildImageResourceDataFromUploadResult(uploadResult),
             }),
         });
 
@@ -610,15 +612,7 @@ export const handleFormExtraEvent = async (deps) => {
         characterId,
         spriteId: selectedItem.id,
         fileRecords: uploadResult.fileRecords,
-        data: {
-          fileId: uploadResult.fileId,
-          thumbnailFileId: uploadResult.thumbnailFileId,
-          name: uploadResult.displayName,
-          fileType: uploadResult.file.type,
-          fileSize: uploadResult.file.size,
-          width: uploadResult.dimensions.width,
-          height: uploadResult.dimensions.height,
-        },
+        data: buildImageResourcePatchFromUploadResult(uploadResult),
       }),
   });
 
@@ -703,12 +697,10 @@ export const handleEditFormAction = async (deps, payload) => {
   };
 
   if (editUploadResult) {
-    data.fileId = editUploadResult.fileId;
-    data.thumbnailFileId = editUploadResult.thumbnailFileId;
-    data.fileType = editUploadResult.file.type;
-    data.fileSize = editUploadResult.file.size;
-    data.width = editUploadResult.dimensions.width;
-    data.height = editUploadResult.dimensions.height;
+    Object.assign(
+      data,
+      buildImageResourcePatchFromUploadResult(editUploadResult),
+    );
   }
 
   const updateAttempt = await runResourcePageMutation({
