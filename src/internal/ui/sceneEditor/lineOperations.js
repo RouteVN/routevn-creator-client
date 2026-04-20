@@ -159,7 +159,11 @@ const updateEditorSessionAndRender = (
 
   applyEditorSessionSelectionTarget(deps, nextSession);
   render();
-  subject.dispatch("sceneEditor.renderCanvas", {});
+  // Line operations already rerender the editor immediately to update DOM and
+  // focus. Let the canvas/state refresh run without a second full UI render.
+  subject.dispatch("sceneEditor.renderCanvas", {
+    skipRender: true,
+  });
 };
 
 const createDialogueContent = (text) => {

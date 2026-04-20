@@ -208,8 +208,7 @@ const parseWalCheckpointResult = (rows) => {
     isBusy: busyMetric > 0,
     logFrames: hasWal ? logMetric : 0,
     checkpointedFrames: hasWal ? checkpointedMetric : 0,
-    complete:
-      busyMetric <= 0 && (!hasWal || logMetric === checkpointedMetric),
+    complete: busyMetric <= 0 && (!hasWal || logMetric === checkpointedMetric),
   };
 };
 
