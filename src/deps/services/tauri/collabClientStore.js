@@ -31,7 +31,8 @@ const storePromisesByDbPath = new Map();
 const SQL_BYTES_TYPE_KEY = "__routevn_sql_type";
 const SQL_BYTES_TYPE_VALUE = "bytes";
 const SQL_BYTES_DATA_KEY = "data";
-const WAL_CHECKPOINT_THROTTLE_MS = 20000;
+const WAL_CHECKPOINT_THROTTLE_MS = 10000;
+const WAL_CHECKPOINT_RETRY_MS = 10000;
 const ROUTEVN_CHECKPOINT_ENVELOPE_KEY = "__routevnCheckpoint";
 const ROUTEVN_CHECKPOINT_ENVELOPE_VERSION = 1;
 export const loadRepositoryEvents = loadRepositoryEventsFromClientStore;
@@ -173,6 +174,43 @@ const encodeStoredCheckpointValue = ({ value, meta } = {}) => {
       meta: structuredClone(meta),
     },
   });
+};
+
+const toFiniteCheckpointMetric = (value) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? Math.trunc(numericValue) : undefined;
+};
+
+const parseWalCheckpointResult = (rows) => {
+  const row = Array.isArray(rows) ? rows[0] : undefined;
+  if (!row || typeof row !== "object" || Array.isArray(row)) {
+    return {
+      isBusy: false,
+      logFrames: 0,
+      checkpointedFrames: 0,
+      complete: true,
+    };
+  }
+
+  const metrics = Object.values(row)
+    .map(toFiniteCheckpointMetric)
+    .filter((value) => value !== undefined);
+  const busyMetric = metrics[0] ?? 0;
+  const logMetric = metrics[1] ?? 0;
+  const checkpointedMetric = metrics[2] ?? 0;
+  const hasWal =
+    Number.isFinite(logMetric) &&
+    logMetric >= 0 &&
+    Number.isFinite(checkpointedMetric) &&
+    checkpointedMetric >= 0;
+
+  return {
+    isBusy: busyMetric > 0,
+    logFrames: hasWal ? logMetric : 0,
+    checkpointedFrames: hasWal ? checkpointedMetric : 0,
+    complete:
+      busyMetric <= 0 && (!hasWal || logMetric === checkpointedMetric),
+  };
 };
 
 const toMaterializedViewCheckpoint = (row) => {
@@ -469,18 +507,74 @@ export const createPersistedTauriProjectStore = async ({
     let walDirty = false;
     let storeClosed = false;
     const walCheckpointRequests = new Subject();
+    let walCheckpointRetryTimer;
+
+    const clearWalCheckpointRetryTimer = () => {
+      if (!walCheckpointRetryTimer) {
+        return;
+      }
+      clearTimeout(walCheckpointRetryTimer);
+      walCheckpointRetryTimer = undefined;
+    };
 
     const checkpointWal = async (mode = "PASSIVE") => {
-      const checkpointMode = mode === "TRUNCATE" ? "TRUNCATE" : "PASSIVE";
+      const checkpointMode =
+        mode === "TRUNCATE"
+          ? "TRUNCATE"
+          : mode === "RESTART"
+            ? "RESTART"
+            : "PASSIVE";
       try {
-        await runSelectNoRetry(`PRAGMA wal_checkpoint(${checkpointMode})`);
+        const result = await runSelectNoRetry(
+          `PRAGMA wal_checkpoint(${checkpointMode})`,
+        );
+        return parseWalCheckpointResult(result);
       } catch (error) {
         if (isSqliteLockError(error)) {
-          return;
+          return {
+            isBusy: true,
+            logFrames: 0,
+            checkpointedFrames: 0,
+            complete: false,
+          };
         }
         throw error;
       }
+    };
+
+    const scheduleWalCheckpointRetry = () => {
+      if (storeClosed || !walDirty || walCheckpointRetryTimer) {
+        return;
+      }
+
+      walCheckpointRetryTimer = setTimeout(() => {
+        walCheckpointRetryTimer = undefined;
+        if (storeClosed || !walDirty) {
+          return;
+        }
+
+        void queueStoreOperation("retryWalCheckpoint", flushWalIfNeeded).catch(
+          (error) => {
+            console.warn("Failed to retry SQLite WAL checkpoint:", error);
+          },
+        );
+      }, WAL_CHECKPOINT_RETRY_MS);
+    };
+
+    const flushWalIfNeeded = async () => {
+      if (storeClosed || !walDirty) {
+        clearWalCheckpointRetryTimer();
+        return;
+      }
+
+      const passiveCheckpoint = await checkpointWal("PASSIVE");
+      if (!passiveCheckpoint.complete) {
+        scheduleWalCheckpointRetry();
+        return;
+      }
+
       walDirty = false;
+      clearWalCheckpointRetryTimer();
     };
 
     const schedulePassiveWalCheckpoint = () => {
@@ -488,6 +582,7 @@ export const createPersistedTauriProjectStore = async ({
         return;
       }
       walDirty = true;
+      clearWalCheckpointRetryTimer();
       walCheckpointRequests.next();
     };
 
@@ -516,14 +611,11 @@ export const createPersistedTauriProjectStore = async ({
         if (storeClosed) {
           return;
         }
-        void queueStoreOperation(async () => {
-          if (storeClosed || !walDirty) {
-            return;
-          }
-          await checkpointWal("PASSIVE");
-        }).catch((error) => {
-          console.warn("Failed to checkpoint SQLite WAL:", error);
-        });
+        void queueStoreOperation("flushWalIfNeeded", flushWalIfNeeded).catch(
+          (error) => {
+            console.warn("Failed to checkpoint SQLite WAL:", error);
+          },
+        );
       });
 
     const store = createLibsqlClientStore(
@@ -717,7 +809,7 @@ export const createPersistedTauriProjectStore = async ({
         return queueStoreOperation("flushMaterializedViews", async () => {
           const result = await store.flushMaterializedViews();
           if (walDirty) {
-            await checkpointWal("PASSIVE");
+            await flushWalIfNeeded();
           }
           return result;
         });
@@ -899,11 +991,18 @@ export const createPersistedTauriProjectStore = async ({
       async close() {
         storePromisesByDbPath.delete(dbPath);
         storeClosed = true;
+        clearWalCheckpointRetryTimer();
         walCheckpointSubscription.unsubscribe();
         walCheckpointRequests.complete();
         await queueStoreOperation(async () => {
           await store.flushMaterializedViews();
-          await checkpointWal("TRUNCATE");
+          const truncateCheckpoint = await checkpointWal("TRUNCATE");
+          if (!truncateCheckpoint.complete) {
+            console.warn("SQLite WAL truncate checkpoint did not complete", {
+              dbPath,
+              projectId,
+            });
+          }
         });
         await db.close();
       },

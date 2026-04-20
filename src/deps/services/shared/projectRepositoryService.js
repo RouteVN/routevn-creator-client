@@ -217,6 +217,15 @@ export const createProjectRepositoryService = ({
       } catch {}
     }
 
+    const store =
+      storesByCacheKey.get(cacheKey) ||
+      (currentReference?.cacheKey === cacheKey ? currentStore : undefined);
+    if (store && typeof store.close === "function") {
+      try {
+        await store.close();
+      } catch {}
+    }
+
     await evictCachedReference(reference);
   };
 

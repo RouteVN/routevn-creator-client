@@ -98,10 +98,10 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     mocked.collabService.stopCollabSession.mockReset();
   });
 
-  it("stops the ensured collab session before releasing the current repository", async () => {
+  it("stops the ensured collab session before releasing that project runtime", async () => {
     mocked.repositoryService.getEnsuredProjectId.mockReturnValue("project-1");
     mocked.collabService.stopCollabSession.mockResolvedValue(undefined);
-    mocked.repositoryService.releaseCurrentRepository.mockResolvedValue(
+    mocked.repositoryService.releaseRepositoryByProjectId.mockResolvedValue(
       undefined,
     );
 
@@ -128,14 +128,49 @@ describe("projectServiceCore releaseProjectRuntime", () => {
       "project-1",
     );
     expect(
-      mocked.repositoryService.releaseCurrentRepository,
+      mocked.repositoryService.releaseRepositoryByProjectId,
     ).toHaveBeenCalledTimes(1);
     expect(
       mocked.collabService.stopCollabSession.mock.invocationCallOrder[0],
     ).toBeLessThan(
-      mocked.repositoryService.releaseCurrentRepository.mock
+      mocked.repositoryService.releaseRepositoryByProjectId.mock
         .invocationCallOrder[0],
     );
+  });
+
+  it("falls back to releasing the current repository when no project id is available", async () => {
+    mocked.repositoryService.getEnsuredProjectId.mockReturnValue(undefined);
+    mocked.collabService.stopCollabSession.mockResolvedValue(undefined);
+    mocked.repositoryService.releaseCurrentRepository.mockResolvedValue(
+      undefined,
+    );
+
+    const projectService = createProjectServiceCore({
+      router: {
+        getPayload: () => ({}),
+      },
+      db: {},
+      filePicker: {},
+      idGenerator: () => "generated-id",
+      now: () => 0,
+      collabLog: () => {},
+      creatorVersion: 1,
+      storageAdapter: {
+        initializeProject: vi.fn(),
+      },
+      fileAdapter: {},
+      collabAdapter: {},
+    });
+
+    await projectService.releaseProjectRuntime();
+
+    expect(mocked.collabService.stopCollabSession).not.toHaveBeenCalled();
+    expect(
+      mocked.repositoryService.releaseRepositoryByProjectId,
+    ).not.toHaveBeenCalled();
+    expect(
+      mocked.repositoryService.releaseCurrentRepository,
+    ).toHaveBeenCalledTimes(1);
   });
 
   it("sets the active scene through the ensured repository contract", async () => {
