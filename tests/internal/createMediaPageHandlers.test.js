@@ -252,4 +252,51 @@ describe("createMediaPageHandlers", () => {
       },
     });
   });
+
+  it("keeps projected file metadata when refresh uses domain state without files", async () => {
+    const handlers = createMediaPageHandlers({
+      resourceType: "images",
+    });
+    const domainState = {
+      images: {
+        tree: [],
+        items: {
+          "image-1": {
+            id: "image-1",
+            type: "image",
+            name: "Splash",
+            fileId: "file-1",
+            fileType: "image/jpeg",
+            fileSize: 512,
+          },
+        },
+      },
+    };
+    const deps = {
+      projectService: {
+        getState: () => domainState,
+      },
+      store: {
+        setItems: vi.fn(),
+        setSelectedItemId: vi.fn(),
+      },
+      refs: {
+        fileExplorer: {
+          selectItem: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    await handlers.refreshData(deps, {
+      selectedItemId: "image-1",
+    });
+
+    expect(deps.store.setItems).toHaveBeenCalledWith({
+      data: domainState.images,
+    });
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: "image-1",
+    });
+  });
 });
