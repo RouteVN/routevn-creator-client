@@ -17,9 +17,7 @@ import {
   createRenderableParticleData,
 } from "../particles.js";
 import { requireProjectResolution } from "../projectResolution.js";
-import {
-  withResolvedResourceFileMetadata,
-} from "../resourceFileMetadata.js";
+import { withResolvedResourceFileMetadata } from "../resourceFileMetadata.js";
 
 const DEFAULT_TIMESTAMP = 0;
 const createResourceCollection = () => ({
@@ -509,7 +507,10 @@ const pickResourceFields = (item, fields) => {
   }, {});
 };
 
-const constructImageResources = (repositoryImages = {}, repositoryFiles = {}) => {
+const constructImageResources = (
+  repositoryImages = {},
+  repositoryFiles = {},
+) => {
   return Object.entries(repositoryImages).reduce((result, [imageId, item]) => {
     const normalizedItem = withResolvedResourceFileMetadata({
       item,
@@ -571,7 +572,10 @@ const constructVideoResources = (repositoryVideos = {}) => {
   }, {});
 };
 
-const constructSoundResources = (repositorySounds = {}, repositoryFiles = {}) => {
+const constructSoundResources = (
+  repositorySounds = {},
+  repositoryFiles = {},
+) => {
   return Object.entries(repositorySounds).reduce((result, [soundId, item]) => {
     const normalizedItem = withResolvedResourceFileMetadata({
       item,

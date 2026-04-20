@@ -6,9 +6,7 @@ import {
   runResourcePageMutation,
   showResourcePageError,
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
-import {
-  buildImageResourcePatchFromUploadResult,
-} from "../../deps/services/shared/resourceImports.js";
+import { buildImageResourcePatchFromUploadResult } from "../../deps/services/shared/resourceImports.js";
 
 const MAX_PARALLEL_UPLOADS = 1;
 const IMAGE_FILE_PATTERN = /\.(jpg|jpeg|png|webp)$/i;
