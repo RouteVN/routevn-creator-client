@@ -774,7 +774,8 @@ export const handleEditorDataChanged = async (deps, payload) => {
   }
 
   const previousText =
-    currentSession.linesById[lineId]?.line?.actions?.dialogue?.content?.[0]?.text;
+    currentSession.linesById[lineId]?.line?.actions?.dialogue?.content?.[0]
+      ?.text;
   const source = payload?._event?.detail?.source;
 
   if (
@@ -859,9 +860,8 @@ export const handleDialogueCharacterShortcut = async (deps, payload) => {
     return;
   }
 
-  const { content: _content, ...updatedDialogue } = structuredClone(
-    existingDialogue,
-  );
+  const { content: _content, ...updatedDialogue } =
+    structuredClone(existingDialogue);
 
   if (isClearShortcut) {
     delete updatedDialogue.characterId;
