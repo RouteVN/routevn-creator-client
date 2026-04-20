@@ -56,6 +56,6 @@ template:
               - $if editIconFileId:
                   - rvn-file-image#editDialogIcon fileId=${editIconFileId} w=120 h=120 slot=project-icon-edit bw=xs bc=bo br=md cur=pointer: null
                 $else:
-                  - rtgl-view#editDialogIcon slot=project-icon-edit w=120 h=120 av=c ah=c bw=xs bc=bo br=md cur=pointer:
-                      - rtgl-text c=mu-fg: Click to upload icon
+                  - rtgl-view#editDialogIcon slot=project-icon-edit w=120 h=120 ah=c av=c bw=xs bc=bo br=md cur=pointer:
+                      - rtgl-text c=mu-fg ta=c: Click to upload
   - rvn-square-image-crop-dialog#editIconCropDialog :open=${isEditIconCropDialogOpen} :file=${editIconCropFile}: null

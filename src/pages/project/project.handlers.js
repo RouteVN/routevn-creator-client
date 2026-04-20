@@ -150,7 +150,9 @@ export const handleEditIconCropDialogConfirm = async (deps) => {
 
   let uploadResult;
   try {
-    const uploadResults = await projectService.uploadFiles([croppedFile]);
+    const uploadResults = await projectService.uploadFiles([croppedFile], {
+      skipImageThumbnail: true,
+    });
     uploadResult = uploadResults?.[0];
   } catch {
     uploadResult = undefined;

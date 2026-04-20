@@ -20,19 +20,19 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "#createProjectDialog rtgl-input[data-field-name='name']"
+    selector: "rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field0 input"
     state: attached
     timeoutMs: 5000
   - action: wait
     ms: 300
   - action: screenshot
   - action: select
-    selector: "#createProjectDialog rtgl-input[data-field-name='name']"
+    selector: "rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field0 input"
     steps:
       - action: write
         value: VT UI Flow
   - action: select
-    selector: "#createProjectDialog rtgl-input[data-field-name='description']"
+    selector: "rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field1 input"
     steps:
       - action: write
         value: Created through the real UI.
@@ -40,7 +40,7 @@ steps:
     ms: 250
   - action: screenshot
   - action: select
-    selector: "#createProjectDialog rtgl-button[data-action-id='submit']"
+    selector: "rtgl-global-ui rtgl-button[data-action-id='submit']"
     steps:
       - action: click
   - action: waitFor
