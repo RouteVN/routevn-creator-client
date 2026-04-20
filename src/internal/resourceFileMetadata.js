@@ -1,6 +1,8 @@
 const isPlainObject = (value) =>
   !!value && typeof value === "object" && !Array.isArray(value);
 
+const hasFilesSource = (files) => files !== undefined && files !== null;
+
 const FILES_OWNED_METADATA_ITEM_TYPES = new Set([
   "image",
   "sound",
@@ -47,6 +49,10 @@ export const resolveResourceFileSize = ({ item, files } = {}) => {
 
 export const withResolvedResourceFileMetadata = ({ item, files } = {}) => {
   if (!isPlainObject(item) || !usesFilesOwnedMetadata(item)) {
+    return item;
+  }
+
+  if (!hasFilesSource(files)) {
     return item;
   }
 

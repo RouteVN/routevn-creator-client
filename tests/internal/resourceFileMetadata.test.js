@@ -55,6 +55,26 @@ describe("resourceFileMetadata", () => {
     });
   });
 
+  it("preserves existing resource metadata when file records are unavailable", () => {
+    expect(
+      withResolvedResourceFileMetadata({
+        item: {
+          id: "video-1",
+          type: "video",
+          fileId: "file-1",
+          fileType: "video/mp4",
+          fileSize: 2048,
+        },
+      }),
+    ).toEqual({
+      id: "video-1",
+      type: "video",
+      fileId: "file-1",
+      fileType: "video/mp4",
+      fileSize: 2048,
+    });
+  });
+
   it("leaves unsupported resource types unchanged", () => {
     expect(
       withResolvedResourceFileMetadata({
