@@ -442,13 +442,6 @@
         "size": 2644,
         "sha256": "44188a43a22633aa1c2f8b0cbe1ad5d45cdccc6850abaf043f1071e6163fefd8"
       },
-      "4rYSsGDcpNuQ": {
-        "id": "4rYSsGDcpNuQ",
-        "type": "image",
-        "mimeType": "image/jpeg",
-        "size": 3327,
-        "sha256": "911f5d3a0b704df14a353d52f4d2292957efa5ef468d4abd030956b023aad5ce"
-      },
       "e33neduvESTF": {
         "id": "e33neduvESTF",
         "type": "image",
@@ -504,13 +497,6 @@
         "mimeType": "image/jpeg",
         "size": 4102,
         "sha256": "f86e22b3d765e6b1e49aa87a1ae35016bc61b9f34e795fe40238f652a4ddfbff"
-      },
-      "Byq7rN1oaYYR": {
-        "id": "Byq7rN1oaYYR",
-        "type": "image",
-        "mimeType": "image/jpeg",
-        "size": 3907,
-        "sha256": "daf83560a69b0ad43b7a72a1ed3866f667823149b7b833d9ede86efd3558473c"
       },
       "cCSVTqNy12nC": {
         "id": "cCSVTqNy12nC",
@@ -584,9 +570,6 @@
         "id": "z8CjiiizJYjM"
       },
       {
-        "id": "4rYSsGDcpNuQ"
-      },
-      {
         "id": "e33neduvESTF"
       },
       {
@@ -609,9 +592,6 @@
       },
       {
         "id": "X8Bb65Bv2cDd"
-      },
-      {
-        "id": "Byq7rN1oaYYR"
       },
       {
         "id": "cCSVTqNy12nC"

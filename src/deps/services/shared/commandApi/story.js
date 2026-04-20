@@ -92,6 +92,19 @@ export const createStoryCommandApi = (shared) => {
     throw new Error("Could not resolve scene partition for line command");
   };
 
+  const buildLineActionsPayload = ({ lineId, data, replace = false }) => {
+    const payload = {
+      lineId,
+      data: structuredClone(data || {}),
+    };
+
+    if (replace === true) {
+      payload.replace = true;
+    }
+
+    return payload;
+  };
+
   const groupLineIdsByScene = (context, lineIds = []) => {
     const grouped = new Map();
 
@@ -119,11 +132,11 @@ export const createStoryCommandApi = (shared) => {
       scope: "story",
       partition: getStoryLinePartition(context, [lineId]),
       type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
-      payload: {
+      payload: buildLineActionsPayload({
         lineId,
-        data: structuredClone(data || {}),
-        replace: replace === true,
-      },
+        data,
+        replace,
+      }),
     });
   };
 
@@ -178,13 +191,12 @@ export const createStoryCommandApi = (shared) => {
         commands: normalizedUpdates.map(({ lineId, dialogue }) => ({
           scope: "story",
           type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
-          payload: {
+          payload: buildLineActionsPayload({
             lineId,
             data: {
-              dialogue: structuredClone(dialogue || {}),
+              dialogue,
             },
-            replace: false,
-          },
+          }),
           partition: getStoryLinePartition(context, [lineId]),
         })),
       });
@@ -210,13 +222,12 @@ export const createStoryCommandApi = (shared) => {
           {
             scope: "story",
             type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
-            payload: {
+            payload: buildLineActionsPayload({
               lineId,
               data: {
-                dialogue: structuredClone(leftDialogue || {}),
+                dialogue: leftDialogue,
               },
-              replace: false,
-            },
+            }),
             partition,
           },
           {
@@ -254,13 +265,12 @@ export const createStoryCommandApi = (shared) => {
           {
             scope: "story",
             type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
-            payload: {
+            payload: buildLineActionsPayload({
               lineId: previousLineId,
               data: {
-                dialogue: structuredClone(mergedDialogue || {}),
+                dialogue: mergedDialogue,
               },
-              replace: false,
-            },
+            }),
             partition,
           },
           {
@@ -405,13 +415,12 @@ export const createStoryCommandApi = (shared) => {
         commands.push({
           scope: "story",
           type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
-          payload: {
+          payload: buildLineActionsPayload({
             lineId,
             data: {
-              dialogue: structuredClone(desiredDialogue),
+              dialogue: desiredDialogue,
             },
-            replace: false,
-          },
+          }),
           partition,
         });
       }

@@ -6,6 +6,9 @@ import {
   runResourcePageMutation,
   showResourcePageError,
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
+import {
+  buildImageResourcePatchFromUploadResult,
+} from "../../deps/services/shared/resourceImports.js";
 
 const MAX_PARALLEL_UPLOADS = 1;
 const IMAGE_FILE_PATTERN = /\.(jpg|jpeg|png|webp)$/i;
@@ -317,15 +320,7 @@ export const handleFormExtraEvent = async (deps) => {
       projectService.updateImage({
         imageId: selectedItem.id,
         fileRecords: uploadResult.fileRecords,
-        data: {
-          fileId: uploadResult.fileId,
-          thumbnailFileId: uploadResult.thumbnailFileId,
-          name: uploadResult.displayName,
-          fileType: uploadResult.file.type,
-          fileSize: uploadResult.file.size,
-          width: uploadResult.dimensions.width,
-          height: uploadResult.dimensions.height,
-        },
+        data: buildImageResourcePatchFromUploadResult(uploadResult),
       }),
   });
   if (!updateAttempt.ok) {
@@ -523,14 +518,7 @@ export const handleEditFormAction = async (deps, payload) => {
 
   const editUploadResult = store.getState().editUploadResult;
   const imagePatch = editUploadResult
-    ? {
-        fileId: editUploadResult.fileId,
-        thumbnailFileId: editUploadResult.thumbnailFileId,
-        fileType: editUploadResult.file.type,
-        fileSize: editUploadResult.file.size,
-        width: editUploadResult.dimensions.width,
-        height: editUploadResult.dimensions.height,
-      }
+    ? buildImageResourcePatchFromUploadResult(editUploadResult)
     : {};
 
   const updateAttempt = await runResourcePageMutation({
@@ -541,9 +529,9 @@ export const handleEditFormAction = async (deps, payload) => {
         imageId: editItemId,
         fileRecords: editUploadResult?.fileRecords,
         data: {
+          ...imagePatch,
           name,
           description: values?.description ?? "",
-          ...imagePatch,
         },
       }),
   });

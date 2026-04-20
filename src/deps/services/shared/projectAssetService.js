@@ -61,6 +61,9 @@ export const createProjectAssetService = ({
   getCurrentReference,
   getStoreByProject,
 }) => {
+  const shouldSkipImageThumbnail = (options = {}) =>
+    options?.skipImageThumbnail === true;
+
   const storeRawFile = async ({ file, bytes, projectId, projectPath } = {}) => {
     return fileAdapter.storeFile({
       file,
@@ -126,7 +129,7 @@ export const createProjectAssetService = ({
     });
   };
 
-  const processFile = async (file) => {
+  const processFile = async (file, options = {}) => {
     const fileType = detectFileType(file);
 
     if (fileType === "image") {
@@ -134,6 +137,15 @@ export const createProjectAssetService = ({
         getImageDimensions(file),
         storeFileWithRecord({ file }),
       ]);
+
+      if (shouldSkipImageThumbnail(options)) {
+        return {
+          ...stored,
+          dimensions,
+          type: "image",
+          fileRecords: [stored.fileRecord],
+        };
+      }
 
       const thumbnailData = await extractImageThumbnail(file, {
         maxWidth: IMAGE_THUMBNAIL_MAX_WIDTH,
@@ -305,13 +317,13 @@ export const createProjectAssetService = ({
       });
     },
 
-    async uploadFiles(files) {
+    async uploadFiles(files, options = {}) {
       const fileArray = Array.isArray(files) ? files : Array.from(files);
       const results = await processWithConcurrency(
         fileArray,
         async (file) => {
           try {
-            const result = await processFile(file);
+            const result = await processFile(file, options);
             return {
               success: true,
               file,

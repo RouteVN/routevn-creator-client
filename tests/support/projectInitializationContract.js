@@ -24,6 +24,8 @@ export const expectInitializedProjectStorageContract = ({
       },
     }),
   ]);
+  expect(Number(draftEvents[0]?.clientTs)).toBeGreaterThan(0);
+  expect(Number(draftEvents[0]?.createdAt)).toBeGreaterThan(0);
 
   expect(checkpoint).toEqual(
     expect.objectContaining({

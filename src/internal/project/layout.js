@@ -32,6 +32,7 @@ import {
   mergeWhenExpressions,
   splitVisibilityConditionFromWhen,
 } from "../layoutConditions.js";
+import { withResolvedResourceFileMetadata } from "../resourceFileMetadata.js";
 
 const TEXT_CONTENT_BY_TYPE = {
   "text-ref-character-name": "${dialogue.character.name}",
@@ -1214,30 +1215,35 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
   return element;
 };
 
-const createImageResources = (imageItems = {}) => {
+const createImageResources = (imageItems = {}, filesData = {}) => {
   const images = {};
 
   Object.entries(imageItems).forEach(([imageId, item]) => {
-    if (!item?.fileId) {
+    const normalizedItem = withResolvedResourceFileMetadata({
+      item,
+      files: filesData,
+    });
+
+    if (!normalizedItem?.fileId) {
       return;
     }
 
-    if (item.type && item.type !== "image") {
+    if (normalizedItem.type && normalizedItem.type !== "image") {
       return;
     }
 
     const image = {
-      fileId: `${item.fileId}`,
+      fileId: `${normalizedItem.fileId}`,
     };
 
-    if (item.fileType) {
-      image.fileType = item.fileType;
+    if (normalizedItem.fileType) {
+      image.fileType = normalizedItem.fileType;
     }
-    if (item.width !== undefined) {
-      image.width = item.width;
+    if (normalizedItem.width !== undefined) {
+      image.width = normalizedItem.width;
     }
-    if (item.height !== undefined) {
-      image.height = item.height;
+    if (normalizedItem.height !== undefined) {
+      image.height = normalizedItem.height;
     }
 
     images[imageId] = image;
@@ -1309,9 +1315,10 @@ export const createLayoutReferenceResources = (
   textStylesData,
   colorsData,
   fontsData,
+  filesData,
 ) => {
   return {
-    images: createImageResources(imageItems),
+    images: createImageResources(imageItems, filesData),
     colors: createColorResources(colorsData),
     fonts: createFontResources(fontsData),
     textStyles: createTextStyleResources(textStylesData),
@@ -1331,6 +1338,7 @@ export const buildLayoutElements = (
     textStylesData,
     colorsData,
     fontsData,
+    options.filesData,
   );
   const textStyles = {
     ...resources.textStyles,

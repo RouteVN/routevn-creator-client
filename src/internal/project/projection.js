@@ -17,6 +17,9 @@ import {
   createRenderableParticleData,
 } from "../particles.js";
 import { requireProjectResolution } from "../projectResolution.js";
+import {
+  withResolvedResourceFileMetadata,
+} from "../resourceFileMetadata.js";
 
 const DEFAULT_TIMESTAMP = 0;
 const createResourceCollection = () => ({
@@ -197,6 +200,13 @@ const projectRepositoryResources = ({ repositoryState }) => {
         : (item?.parentId ?? null);
       const createdAt = toFiniteTimestamp(item?.createdAt, DEFAULT_TIMESTAMP);
       const updatedAt = toFiniteTimestamp(item?.updatedAt, createdAt);
+      const normalizedItem =
+        resourceType === "images" || resourceType === "sounds"
+          ? withResolvedResourceFileMetadata({
+              item,
+              files: repositoryState?.files,
+            })
+          : item;
 
       if (resourceType === "layouts" || resourceType === "controls") {
         const clonedLayout = cloneOr(item, {});
@@ -275,7 +285,7 @@ const projectRepositoryResources = ({ repositoryState }) => {
 
       resources[resourceType].items[resourceId] = {
         id: resourceId,
-        ...cloneOr(item, {}),
+        ...cloneOr(normalizedItem, {}),
         ...(resourceType === "characters" && item?.type === "character"
           ? {
               sprites: projectRepositoryNestedCollectionToDomainCollection(
@@ -499,19 +509,25 @@ const pickResourceFields = (item, fields) => {
   }, {});
 };
 
-const constructImageResources = (repositoryImages = {}) => {
+const constructImageResources = (repositoryImages = {}, repositoryFiles = {}) => {
   return Object.entries(repositoryImages).reduce((result, [imageId, item]) => {
-    if (item?.type && item.type !== "image") {
+    const normalizedItem = withResolvedResourceFileMetadata({
+      item,
+      files: repositoryFiles,
+    });
+
+    if (normalizedItem?.type && normalizedItem.type !== "image") {
       return result;
     }
-    if (!item?.fileId) {
+    if (!normalizedItem?.fileId) {
       return result;
     }
 
-    result[imageId] = pickResourceFields(item, [
+    result[imageId] = pickResourceFields(normalizedItem, [
       "fileId",
       "thumbnailFileId",
       "fileType",
+      "fileSize",
       "width",
       "height",
     ]);
@@ -555,13 +571,22 @@ const constructVideoResources = (repositoryVideos = {}) => {
   }, {});
 };
 
-const constructSoundResources = (repositorySounds = {}) => {
+const constructSoundResources = (repositorySounds = {}, repositoryFiles = {}) => {
   return Object.entries(repositorySounds).reduce((result, [soundId, item]) => {
-    if (item?.type !== "sound" || !item.fileId) {
+    const normalizedItem = withResolvedResourceFileMetadata({
+      item,
+      files: repositoryFiles,
+    });
+
+    if (normalizedItem?.type !== "sound" || !normalizedItem.fileId) {
       return result;
     }
 
-    result[soundId] = pickResourceFields(item, ["fileId", "fileType"]);
+    result[soundId] = pickResourceFields(normalizedItem, [
+      "fileId",
+      "fileType",
+      "fileSize",
+    ]);
     return result;
   }, {});
 };
@@ -695,6 +720,7 @@ const constructLayoutResources = (
   repositoryLayouts = {},
   repositoryControls = {},
   imageItems = {},
+  filesData = { items: {}, tree: [] },
   particlesData = { items: {}, tree: [] },
   spritesheetsData = { items: {}, tree: [] },
   textStylesData = { items: {}, tree: [] },
@@ -706,6 +732,7 @@ const constructLayoutResources = (
     textStylesData,
     colors,
     fonts,
+    filesData,
   );
   const textStyles = {
     ...baseLayoutResources.textStyles,
@@ -727,6 +754,7 @@ const constructLayoutResources = (
       {
         layoutId,
         layoutType: layout.layoutType,
+        filesData,
         particlesData,
         spritesheetsData,
         layoutsData: repositoryLayouts,
@@ -759,6 +787,7 @@ const constructLayoutResources = (
       fonts,
       {
         layoutId: controlId,
+        filesData,
         particlesData,
         spritesheetsData,
         layoutsData: repositoryLayouts,
@@ -788,6 +817,7 @@ const constructLayoutResources = (
 
 const constructProjectResources = (repositoryState = {}) => {
   const repositoryImages = repositoryState.images?.items || {};
+  const repositoryFiles = repositoryState.files?.items || {};
   const repositorySpritesheets = repositoryState.spritesheets?.items || {};
   const repositoryVideos = repositoryState.videos?.items || {};
   const repositorySounds = repositoryState.sounds?.items || {};
@@ -807,7 +837,10 @@ const constructProjectResources = (repositoryState = {}) => {
   );
 
   const characterImages = extractCharacterImages(repositoryCharacters);
-  const imageResources = constructImageResources(repositoryImages);
+  const imageResources = constructImageResources(
+    repositoryImages,
+    repositoryFiles,
+  );
   const imageItems = {
     ...imageResources,
     ...characterImages,
@@ -824,6 +857,7 @@ const constructProjectResources = (repositoryState = {}) => {
     repositoryLayouts,
     repositoryControls,
     imageItems,
+    repositoryState.files || { items: {}, tree: [] },
     particlesData,
     spritesheetsData,
     textStylesData,
@@ -835,7 +869,7 @@ const constructProjectResources = (repositoryState = {}) => {
     images: layoutResources.images,
     spritesheets: constructSpritesheetResources(repositorySpritesheets),
     videos: constructVideoResources(repositoryVideos),
-    sounds: constructSoundResources(repositorySounds),
+    sounds: constructSoundResources(repositorySounds, repositoryFiles),
     particles: constructParticleResources(repositoryParticles, imageResources),
     fonts: layoutResources.fonts,
     colors: layoutResources.colors,

@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   buildImageResourceDataFromUploadResult,
+  buildImageResourcePatchFromUploadResult,
+  buildSoundResourceDataFromUploadResult,
+  buildSoundResourcePatchFromUploadResult,
   importImageFile,
 } from "../../src/deps/services/shared/resourceImports.js";
 
@@ -25,10 +28,72 @@ describe("resource image imports", () => {
       fileId: "file-1",
       thumbnailFileId: "thumb-1",
       name: "Image One",
-      fileType: "image/png",
-      fileSize: 123,
       width: 640,
       height: 360,
+    });
+  });
+
+  it("maps upload results to image resource patches without duplicated file metadata", () => {
+    expect(
+      buildImageResourcePatchFromUploadResult({
+        fileId: "file-1",
+        thumbnailFileId: "thumb-1",
+        displayName: "Image One",
+        file: {
+          type: "image/png",
+          size: 123,
+        },
+        dimensions: {
+          width: 640,
+          height: 360,
+        },
+      }),
+    ).toEqual({
+      fileId: "file-1",
+      thumbnailFileId: "thumb-1",
+      name: "Image One",
+      width: 640,
+      height: 360,
+    });
+  });
+
+  it("maps upload results to sound resource data without duplicated file metadata", () => {
+    expect(
+      buildSoundResourceDataFromUploadResult({
+        fileId: "file-1",
+        displayName: "Theme",
+        file: {
+          type: "audio/ogg",
+          size: 123,
+        },
+        waveformDataFileId: "wave-1",
+        duration: 12.5,
+      }),
+    ).toEqual({
+      type: "sound",
+      fileId: "file-1",
+      name: "Theme",
+      description: "",
+      waveformDataFileId: "wave-1",
+      duration: 12.5,
+    });
+  });
+
+  it("maps upload results to sound resource patches without duplicated file metadata", () => {
+    expect(
+      buildSoundResourcePatchFromUploadResult({
+        fileId: "file-1",
+        file: {
+          type: "audio/ogg",
+          size: 123,
+        },
+        waveformDataFileId: "wave-1",
+        duration: 12.5,
+      }),
+    ).toEqual({
+      fileId: "file-1",
+      waveformDataFileId: "wave-1",
+      duration: 12.5,
     });
   });
 
@@ -84,8 +149,6 @@ describe("resource image imports", () => {
         fileId: "file-1",
         thumbnailFileId: "thumb-1",
         name: "Scene",
-        fileType: "image/png",
-        fileSize: 456,
         width: 800,
         height: 600,
       },

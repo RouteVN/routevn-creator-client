@@ -1,8 +1,20 @@
+import { withResolvedCollectionFileMetadata } from "../../../resourceFileMetadata.js";
+
 const EMPTY_TREE = { tree: [], items: {} };
 export const DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD = 100;
 
 export const getMediaPageData = ({ repositoryState, resourceType } = {}) => {
-  return repositoryState?.[resourceType] ?? EMPTY_TREE;
+  const collection = repositoryState?.[resourceType] ?? EMPTY_TREE;
+
+  if (resourceType !== "images" && resourceType !== "sounds") {
+    return collection;
+  }
+
+  return withResolvedCollectionFileMetadata({
+    collection,
+    files: repositoryState?.files,
+    resourceTypes: [resourceType === "images" ? "image" : "sound"],
+  });
 };
 
 export const syncMediaPageData = ({

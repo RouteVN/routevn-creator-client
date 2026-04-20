@@ -7,6 +7,10 @@ describe("createMediaPageHandlers", () => {
       resourceType: "images",
     });
     const repositoryState = {
+      files: {
+        tree: [],
+        items: {},
+      },
       images: {
         tree: [],
         items: {
@@ -54,6 +58,16 @@ describe("createMediaPageHandlers", () => {
       resourceType: "images",
     });
     const repositoryState = {
+      files: {
+        tree: [],
+        items: {
+          "file-1": {
+            id: "file-1",
+            mimeType: "image/jpeg",
+            size: 512,
+          },
+        },
+      },
       images: {
         tree: [],
         items: {
@@ -61,6 +75,7 @@ describe("createMediaPageHandlers", () => {
             id: "image-1",
             type: "image",
             name: "Splash",
+            fileId: "file-1",
           },
         },
       },
@@ -85,6 +100,21 @@ describe("createMediaPageHandlers", () => {
       selectedItemId: "image-1",
     });
 
+    expect(deps.store.setItems).toHaveBeenCalledWith({
+      data: {
+        tree: [],
+        items: {
+          "image-1": {
+            id: "image-1",
+            type: "image",
+            name: "Splash",
+            fileId: "file-1",
+            fileType: "image/jpeg",
+            fileSize: 512,
+          },
+        },
+      },
+    });
     expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
       itemId: "image-1",
     });
@@ -98,12 +128,20 @@ describe("createMediaPageHandlers", () => {
       resourceType: "images",
     });
     const staleState = {
+      files: {
+        tree: [],
+        items: {},
+      },
       images: {
         tree: [],
         items: {},
       },
     };
     const nextState = {
+      files: {
+        tree: [],
+        items: {},
+      },
       images: {
         tree: [],
         items: {

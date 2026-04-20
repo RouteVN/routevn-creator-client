@@ -80,9 +80,17 @@ const resetAddCharacterForm = ({ refs } = {}) => {
 
 const uploadAvatarFile = async ({ deps, file, target } = {}) => {
   const { appService, projectService, store } = deps;
-  const uploadResults = await projectService.uploadFiles([file]);
+  let uploadResults;
+  try {
+    uploadResults = await projectService.uploadFiles([file], {
+      skipImageThumbnail: true,
+    });
+  } catch {
+    uploadResults = undefined;
+  }
 
-  if (!uploadResults || uploadResults.length === 0) {
+  const result = uploadResults?.[0];
+  if (!result?.fileId) {
     showResourcePageError({
       appService,
       errorOrResult: "Failed to upload avatar image.",
@@ -91,7 +99,6 @@ const uploadAvatarFile = async ({ deps, file, target } = {}) => {
     return false;
   }
 
-  const result = uploadResults[0];
   if (target === "edit") {
     store.setEditAvatarFileId({
       fileId: result.fileId,

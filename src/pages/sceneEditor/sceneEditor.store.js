@@ -457,6 +457,7 @@ export const selectLayouts = ({ state }) => {
   };
   const colors = state.repositoryState.colors || { items: {}, tree: [] };
   const fonts = state.repositoryState.fonts || { items: {}, tree: [] };
+  const files = state.repositoryState.files || { items: {}, tree: [] };
   const processedLayouts = {};
 
   Object.keys(layouts).forEach((layoutId) => {
@@ -476,6 +477,7 @@ export const selectLayouts = ({ state }) => {
           {
             layoutId,
             layoutType: layout.layoutType,
+            filesData: files,
             layoutsData: layouts,
           },
         ).elements,

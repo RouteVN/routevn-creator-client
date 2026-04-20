@@ -173,9 +173,11 @@ export const initializeProject = async ({
 
   await adapter.clearMaterializedViewCheckpoints();
 
+  const initialClientTs = Date.now();
   const initialEvent = createProjectCreateRepositoryEvent({
     projectId,
     state: templateData,
+    clientTs: initialClientTs,
   });
   await rawClientStore.insertDraft(toBootstrappedDraftEvent(initialEvent, 0));
   await adapter.saveMaterializedViewCheckpoint({

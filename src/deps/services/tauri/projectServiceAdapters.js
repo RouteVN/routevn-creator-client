@@ -479,9 +479,11 @@ export const createTauriProjectServiceAdapters = ({
         projectPath,
         projectId,
       });
+      const initialClientTs = Date.now();
       const initialEvent = createProjectCreateRepositoryEvent({
         projectId,
         state: templateData,
+        clientTs: initialClientTs,
       });
 
       await store.clearEvents();
