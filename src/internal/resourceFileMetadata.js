@@ -1,8 +1,7 @@
 const isPlainObject = (value) =>
   !!value && typeof value === "object" && !Array.isArray(value);
 
-const hasFilesSource = (files) =>
-  files !== undefined && files !== null;
+const hasFilesSource = (files) => files !== undefined && files !== null;
 
 const FILES_OWNED_METADATA_ITEM_TYPES = new Set([
   "image",
