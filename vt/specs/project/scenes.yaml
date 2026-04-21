@@ -1,0 +1,207 @@
+---
+title: Project Scenes Workflow
+description: Covers the scenes page, add-scene flow, scene detail, preview, scene editor, and sections overview.
+url: /projects
+skipInitialScreenshot: true
+viewport:
+  id: wide
+  width: 1440
+  height: 900
+steps:
+  - action: waitFor
+    selector: "[data-testid='create-project-button']"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 250
+  - action: select
+    testId: create-project-button
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field0 input
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field0 input
+    steps:
+      - action: clear
+      - action: write
+        value: VT Project Scenes Workflow
+  - action: select
+    selector: rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field1 input
+    steps:
+      - action: clear
+      - action: write
+        value: Covers scenes map, previews, and scene editor.
+  - action: wait
+    ms: 250
+  - action: select
+    selector: rtgl-global-ui rtgl-button[data-action-id='submit']
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#projectItem0"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: select
+    selector: "#projectItem0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-project
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: select
+    selector: "#sidebar [data-item-id='/project/scenes']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-scenes
+    state: attached
+    timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/scenes
+  - action: waitFor
+    selector: "#whiteboard #container"
+    state: visible
+    timeoutMs: 10000
+  - action: waitFor
+    selector: "#mapAddHintClose"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 800
+  - action: screenshot
+  - action: select
+    selector: "#mapAddHintClose"
+    steps:
+      - action: click
+  - action: assert
+    type: hidden
+    selector: "#mapAddHintClose"
+  - action: select
+    selector: "#whiteboard #container"
+    steps:
+      - action: rclick
+  - action: wait
+    ms: 250
+  - action: waitFor
+    selector: "#sceneFormPopover"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "#sceneFormPopover rtgl-input[data-field-name='name']"
+    steps:
+      - action: write
+        value: VT Map Added Scene
+  - action: screenshot
+  - action: select
+    selector: "#sceneFormPopover rtgl-button[data-action-id='submit']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#sceneFormPopover"
+    state: hidden
+    timeoutMs: 10000
+  - action: wait
+    ms: 600
+  - action: screenshot
+  - action: waitFor
+    selector: "#whiteboard #itemRef1"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "#whiteboard #itemRef1"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#detailHeader"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 350
+  - action: screenshot
+  - action: select
+    selector: "#sectionsListToggle"
+    steps:
+      - action: click
+  - action: assert
+    type: hidden
+    selector: "#sectionsListItem0"
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: select
+    selector: "#sectionsListToggle"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#sectionsListItem0"
+    state: visible
+    timeoutMs: 5000
+  - action: select
+    selector: "#detailPreviewButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#vnPreview"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 1200
+  - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#vnPreview"
+    state: hidden
+    timeoutMs: 10000
+  - action: select
+    selector: "#whiteboard #itemRef1"
+    steps:
+      - action: dblclick
+  - action: waitFor
+    selector: rvn-scene-editor
+    state: attached
+    timeoutMs: 20000
+  - action: assert
+    type: url
+    value: /project/scene-editor
+  - action: wait
+    ms: 1600
+  - action: screenshot
+  - action: select
+    selector: "#sectionsOverview"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#sectionsOverviewDialog"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 400
+  - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#sectionsOverviewDialog"
+    state: hidden
+    timeoutMs: 10000
+  - action: select
+    selector: "#previewButton"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#vnPreview"
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 1200
+  - action: screenshot
+---
