@@ -32,16 +32,16 @@ export const createInitialState = () => ({
       label: "Animations",
       route: "/project/animations",
     },
-    // {
-    //   id: "particles",
-    //   label: "Particles",
-    //   route: "/project/particles",
-    // },
-    // {
-    //   id: "spritesheets",
-    //   label: "Spritesheets",
-    //   route: "/project/spritesheets",
-    // },
+    {
+      id: "particles",
+      label: "Particles",
+      route: "/project/particles",
+    },
+    {
+      id: "spritesheets",
+      label: "Spritesheets",
+      route: "/project/spritesheets",
+    },
   ],
   ui: [
     {

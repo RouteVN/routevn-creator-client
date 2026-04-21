@@ -363,9 +363,9 @@ export const handlePreviewOverlayKeyDown = (deps, payload) => {
   }
 
   let direction;
-  if (event.key === "ArrowDown") {
+  if (event.key === "ArrowDown" || event.key === "ArrowRight") {
     direction = "next";
-  } else if (event.key === "ArrowUp") {
+  } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
     direction = "previous";
   }
 

@@ -13,7 +13,7 @@ Current target: one broader spec per page, with responsive coverage folded into 
 
 ## Images
 
-- One merged images workflow covering seeded detail/preview/edit, explorer drag/drop, empty search, upload, uploaded preview, rename, and filtered search.
+- One merged images workflow covering seeded detail/preview/edit, explorer keyboard selection auto-scroll, explorer drag/drop, empty search, upload, uploaded preview, rename, and filtered search.
 
 ## Asset Pages
 

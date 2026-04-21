@@ -36,13 +36,11 @@ export const animatedAssetItems = [
     id: "particles",
     name: "Particles",
     path: "/project/particles",
-    hidden: true,
   },
   {
     id: "spritesheets",
     name: "Spritesheets",
     path: "/project/spritesheets",
-    hidden: true,
   },
 ];
 

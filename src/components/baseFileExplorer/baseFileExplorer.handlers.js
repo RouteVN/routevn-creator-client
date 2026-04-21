@@ -103,6 +103,38 @@ const emitItemClick = ({ dispatchEvent, item } = {}) => {
   );
 };
 
+const getItemElement = ({ deps, itemId } = {}) => {
+  if (!itemId) {
+    return undefined;
+  }
+
+  for (const [refId, element] of Object.entries(deps.refs ?? {})) {
+    if (!refId.startsWith("itemRef")) {
+      continue;
+    }
+
+    if (element?.getAttribute?.("data-item-id") === itemId) {
+      return element;
+    }
+  }
+
+  return undefined;
+};
+
+const scrollItemIntoView = ({ deps, itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  requestAnimationFrame(() => {
+    const itemElement = getItemElement({ deps, itemId });
+    itemElement?.scrollIntoView?.({
+      block: "nearest",
+      inline: "nearest",
+    });
+  });
+};
+
 const selectVisibleItem = ({ deps, item, emitSelectionEvent = false } = {}) => {
   const { dispatchEvent, store, render } = deps;
   if (!item?.id) {
@@ -112,6 +144,7 @@ const selectVisibleItem = ({ deps, item, emitSelectionEvent = false } = {}) => {
   store.expandItemAncestors({ itemId: item.id });
   store.setSelectedItemId({ itemId: item.id });
   render();
+  scrollItemIntoView({ deps, itemId: item.id });
   if (emitSelectionEvent) {
     emitItemClick({ dispatchEvent, item });
   }
@@ -723,6 +756,7 @@ export const handleItemClick = (deps, payload) => {
   store.clearPendingDrag();
   store.setSelectedItemId({ itemId: itemId });
   render();
+  scrollItemIntoView({ deps, itemId });
   emitItemClick({ dispatchEvent: deps.dispatchEvent, item });
 };
 
@@ -860,6 +894,7 @@ export const handleSetSelectedFolderExpanded = (deps, payload) => {
 
   store.toggleFolderExpand({ folderId: item.id });
   render();
+  scrollItemIntoView({ deps, itemId: item.id });
 
   return {
     itemId: item.id,
