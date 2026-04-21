@@ -1,5 +1,46 @@
 // A web-based file picker to mimic the Tauri API.
 
+const VT_FILE_PICKER_INPUT_ID = "rtglVtFilePickerInput";
+
+const isTruthyFlag = (value) => {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "number") {
+    return value !== 0;
+  }
+
+  const normalizedValue = String(value ?? "")
+    .trim()
+    .toLowerCase();
+
+  return ["1", "true", "yes", "on"].includes(normalizedValue);
+};
+
+const isVtMode = () => {
+  return (
+    typeof window !== "undefined" &&
+    isTruthyFlag(window.RTGL_VT_RESET_APP_STATE)
+  );
+};
+
+const resolveAccept = (options = {}) => {
+  if (typeof options.accept === "string" && options.accept.trim()) {
+    return options.accept.trim();
+  }
+
+  if (Array.isArray(options.filters) && options.filters.length > 0) {
+    return options.filters
+      .flatMap((filter) => {
+        return (filter.extensions ?? []).map((extension) => `.${extension}`);
+      })
+      .join(",");
+  }
+
+  return "";
+};
+
 export const createWebFilePicker = () => {
   return {
     /**
@@ -17,15 +58,14 @@ export const createWebFilePicker = () => {
      */
     async openFilePicker(options = {}) {
       return new Promise((resolve) => {
+        document.getElementById(VT_FILE_PICKER_INPUT_ID)?.remove();
+
         const input = document.createElement("input");
         input.type = "file";
         input.multiple = options.multiple || false;
-
-        if (options.filters && options.filters.length > 0) {
-          input.accept = options.filters
-            .flatMap((filter) => filter.extensions.map((ext) => `.${ext}`))
-            .join(",");
-        }
+        input.id = VT_FILE_PICKER_INPUT_ID;
+        input.setAttribute("data-testid", VT_FILE_PICKER_INPUT_ID);
+        input.accept = resolveAccept(options);
 
         const cleanup = () => {
           if (document.body.contains(input)) {
@@ -48,7 +88,12 @@ export const createWebFilePicker = () => {
 
         input.style.display = "none";
         document.body.appendChild(input);
-        input.click();
+
+        // VT drives uploads by setting files directly on a stable hidden input.
+        // Skipping the native picker prevents an immediate cancel/cleanup in headless runs.
+        if (!isVtMode()) {
+          input.click();
+        }
       });
     },
 

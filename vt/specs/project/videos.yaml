@@ -1,0 +1,166 @@
+---
+title: Videos Workflow
+description: Covers the videos page upload, detail, preview dialog, edit submit, and filtered search states.
+url: /projects
+skipInitialScreenshot: true
+viewport:
+  id: wide
+  width: 1440
+  height: 900
+steps:
+  - action: waitFor
+    selector: "[data-testid='create-project-button']"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 250
+  - action: select
+    testId: create-project-button
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field0 input
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field0 input
+    steps:
+      - action: clear
+      - action: write
+        value: VT Videos Workflow
+  - action: select
+    selector: rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field1 input
+    steps:
+      - action: clear
+      - action: write
+        value: Covers the videos page.
+  - action: wait
+    ms: 250
+  - action: select
+    selector: rtgl-global-ui rtgl-button[data-action-id='submit']
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#projectItem0"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: select
+    selector: "#projectItem0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-project
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: keypress
+    key: g
+  - action: wait
+    ms: 120
+  - action: keypress
+    key: v
+  - action: waitFor
+    selector: rvn-videos
+    state: attached
+    timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/videos
+  - action: wait
+    ms: 450
+  - action: screenshot
+  - action: waitFor
+    selector: "#uploadBtnHeaderRef0"
+    state: visible
+    timeoutMs: 10000
+  - action: select
+    selector: "#uploadBtnHeaderRef0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#rtglVtFilePickerInput"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "#rtglVtFilePickerInput"
+    steps:
+      - action: upload
+        files:
+          - vt/fixtures/pulse.mp4
+  - action: wait
+    ms: 500
+  - action: waitFor
+    selector: "#groupview #itemRef0x0[data-item-id]:not([data-item-id=''])"
+    state: visible
+    timeoutMs: 15000
+  - action: select
+    selector: "#groupview #itemRef0x0[data-item-id]:not([data-item-id=''])"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#detailView"
+    state: attached
+    timeoutMs: 5000
+  - action: wait
+    ms: 500
+  - action: screenshot
+  - action: select
+    selector: "#groupview #itemRef0x0[data-item-id]:not([data-item-id=''])"
+    steps:
+      - action: dblclick
+  - action: waitFor
+    selector: "#videoPreviewDialog"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 800
+  - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#videoPreviewDialog"
+    state: hidden
+    timeoutMs: 10000
+  - action: wait
+    ms: 250
+  - action: select
+    selector: "#detailHeader"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#editDialog[open]"
+    state: attached
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: select
+    selector: "#editDialog rtgl-input#field0 input"
+    steps:
+      - action: clear
+      - action: write
+        value: Searchable Pulse
+  - action: screenshot
+  - action: select
+    selector: "#editDialog rtgl-button[data-action-id='submit']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#editDialog"
+    state: hidden
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: screenshot
+  - action: select
+    selector: "#searchInput"
+    steps:
+      - action: clear
+      - action: write
+        value: Searchable Pulse
+  - action: wait
+    ms: 350
+  - action: screenshot
+---

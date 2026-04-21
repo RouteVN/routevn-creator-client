@@ -260,6 +260,44 @@ const openParticleDialog = async ({
   });
 };
 
+const restoreParticleFormDialog = async ({
+  deps,
+  editMode = false,
+  itemId,
+  itemData,
+  presetId,
+  targetGroupId,
+  values,
+} = {}) => {
+  await openParticleDialog({
+    deps,
+    editMode,
+    itemId,
+    itemData,
+    presetId,
+    targetGroupId,
+  });
+
+  deps.store.setDialogFormValues({
+    values,
+  });
+  syncDialogFormValues({
+    refs: deps.refs,
+    values,
+  });
+
+  await renderParticlePreview({
+    deps,
+    target: "dialog",
+    particleData: buildDialogParticleData({
+      deps,
+      values,
+      fallbackParticle: itemData,
+    }),
+    forceInit: true,
+  });
+};
+
 const {
   handleBeforeMount: handleBeforeMountBase,
   refreshData: refreshDataBase,
@@ -454,6 +492,21 @@ export const handleParticleFormActionClick = async (deps, payload) => {
   const editMode = store.selectEditMode();
   const editItemId = store.selectEditItemId();
   const targetGroupId = store.selectTargetGroupId();
+  const editItemData = store.selectParticleItemById({
+    itemId: editItemId,
+  });
+  const dialogSnapshot = {
+    editMode,
+    itemId: editItemId,
+    itemData: editItemData,
+    presetId: store.selectDialogPresetId(),
+    targetGroupId,
+    values,
+  };
+
+  store.closeParticleDialog();
+  store.clearPreviewRuntime();
+  render();
 
   if (editMode && editItemId) {
     const updateAttempt = await runResourcePageMutation({
@@ -467,12 +520,13 @@ export const handleParticleFormActionClick = async (deps, payload) => {
     });
 
     if (!updateAttempt.ok) {
+      await restoreParticleFormDialog({
+        deps,
+        ...dialogSnapshot,
+      });
       return;
     }
 
-    store.closeParticleDialog();
-    store.clearPreviewRuntime();
-    render();
     await refreshParticleData(deps, { selectedItemId: editItemId });
     return;
   }
@@ -494,12 +548,13 @@ export const handleParticleFormActionClick = async (deps, payload) => {
   });
 
   if (!createAttempt.ok) {
+    await restoreParticleFormDialog({
+      deps,
+      ...dialogSnapshot,
+    });
     return;
   }
 
-  store.closeParticleDialog();
-  store.clearPreviewRuntime();
-  render();
   await refreshParticleData(deps, { selectedItemId: particleId });
 };
 

@@ -1,0 +1,135 @@
+---
+title: Transforms Workflow
+description: Covers the transforms page detail, preview dialog, edit dialog, and empty search state.
+url: /projects
+skipInitialScreenshot: true
+viewport:
+  id: wide
+  width: 1440
+  height: 900
+steps:
+  - action: waitFor
+    selector: "[data-testid='create-project-button']"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 250
+  - action: select
+    testId: create-project-button
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field0 input
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field0 input
+    steps:
+      - action: clear
+      - action: write
+        value: VT Transforms Workflow
+  - action: select
+    selector: rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field1 input
+    steps:
+      - action: clear
+      - action: write
+        value: Covers the transforms page.
+  - action: wait
+    ms: 250
+  - action: select
+    selector: rtgl-global-ui rtgl-button[data-action-id='submit']
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#projectItem0"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: select
+    selector: "#projectItem0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-project
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: keypress
+    key: g
+  - action: wait
+    ms: 120
+  - action: keypress
+    key: t
+  - action: waitFor
+    selector: rvn-transforms
+    state: attached
+    timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/transforms
+  - action: wait
+    ms: 450
+  - action: screenshot
+  - action: waitFor
+    selector: "#groupview #itemRef0x0"
+    state: visible
+    timeoutMs: 20000
+  - action: select
+    selector: "#groupview #itemRef0x0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#detailView"
+    state: attached
+    timeoutMs: 5000
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: select
+    selector: "#groupview #itemRef0x0"
+    steps:
+      - action: dblclick
+  - action: waitFor
+    selector: "#transformDialog"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#transformDialog"
+    state: hidden
+    timeoutMs: 10000
+  - action: wait
+    ms: 250
+  - action: select
+    selector: "#detailHeader"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#transformDialog"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: screenshot
+  - action: keypress
+    key: Escape
+  - action: waitFor
+    selector: "#transformDialog"
+    state: hidden
+    timeoutMs: 10000
+  - action: select
+    selector: "#searchInput"
+    steps:
+      - action: clear
+      - action: write
+        value: zzzz vt transform
+  - action: wait
+    ms: 350
+  - action: screenshot
+---
