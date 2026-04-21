@@ -1,28 +1,28 @@
 # VT Coverage Checklist
 
-Generated suite additions: 40 specs with 130 explicit screenshots.
+The VT suite is maintained directly in YAML under `vt/specs/`.
+Current target: broad route, dialog, CRUD, upload, preview, and responsive coverage with minimal duplication.
 
-The broader repo VT total also includes the existing checked-in specs under `vt/specs/projects/` and `vt/specs/project/`.
-
-## Existing Baseline Specs Retained
+## Projects And Shell
 
 - Projects page responsive states on wide, laptop, tablet, and mobile viewports.
-- Project creation flow from the real UI into the project shell.
+- Project creation submit flow from the projects page.
 - Seeded workspace navigation through project, about, releases, scenes, scene editor, and core resource routes.
-- Seeded resource detail coverage for colors, fonts, and text styles.
-- Image-specific interaction coverage for detail panels, preview overlay, edit dialog, and explorer drag/drop.
-- Scene map creation flow and seeded scene workspace preview coverage.
-
-## Project Shell And Navigation
-
 - Project overview detail panel and project edit dialog.
 - Project edit submit flow with updated overview state.
 - About route.
 - Versions empty state.
 - Version creation flow, selected detail state, and edit dialog.
 - Version edit submit flow from the selected detail panel.
-- Keyboard route shortcuts for images, colors, variables, and spritesheets.
 - Keyboard route shortcuts for shell routes, UI resources, and asset resources.
+- Scene map creation flow and seeded scene workspace preview coverage.
+
+## Images
+
+- Seeded image interaction coverage for detail panels, preview overlay, edit dialog, and explorer drag/drop.
+- Images search empty state.
+- Uploaded image detail, preview overlay, and edit dialog.
+- Uploaded image rename and filtered search state.
 
 ## UI Resource Pages
 
@@ -41,7 +41,6 @@ The broader repo VT total also includes the existing checked-in specs under `vt/
 
 ## Asset Resource Pages
 
-- Images search empty state.
 - Characters page empty state, create dialog, selected detail state, edit dialog, and character sprites route entry.
 - Characters search filtering for newly created items.
 - Character sprites page empty state, upload flow, selected detail state, full-image preview, and edit dialog.

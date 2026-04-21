@@ -1,6 +1,6 @@
 ---
-title: Projects Wide Desktop
-description: Verifies the projects page and create dialog on a wide desktop viewport.
+title: Projects Create Submit
+description: Creates a project from the projects page and captures the filled dialog and created project card.
 url: /projects
 viewport:
   id: wide
@@ -15,6 +15,35 @@ steps:
     testId: create-project-button
     steps:
       - action: click
+  - action: wait
+    ms: 300
+  - action: waitFor
+    selector: "rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field0 input"
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: "rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field0 input"
+    steps:
+      - action: clear
+      - action: write
+        value: VT Created Project
+  - action: select
+    selector: "rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field1 input"
+    steps:
+      - action: clear
+      - action: write
+        value: Created from the projects page VT flow.
+  - action: wait
+    ms: 250
+  - action: screenshot
+  - action: select
+    selector: "rtgl-global-ui rtgl-button[data-action-id='submit']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#projectItem0"
+    state: visible
+    timeoutMs: 10000
   - action: wait
     ms: 500
   - action: screenshot
