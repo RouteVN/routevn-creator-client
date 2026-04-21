@@ -153,8 +153,12 @@ steps:
     selector: "#vnPreview"
     state: attached
     timeoutMs: 10000
+  - action: waitFor
+    selector: "#vnPreview [data-preview-ready='true']"
+    state: attached
+    timeoutMs: 10000
   - action: wait
-    ms: 1200
+    ms: 150
   - action: screenshot
   - action: keypress
     key: Escape
@@ -201,7 +205,11 @@ steps:
     selector: "#vnPreview"
     state: attached
     timeoutMs: 10000
+  - action: waitFor
+    selector: "#vnPreview [data-preview-ready='true']"
+    state: attached
+    timeoutMs: 10000
   - action: wait
-    ms: 1200
+    ms: 150
   - action: screenshot
 ---

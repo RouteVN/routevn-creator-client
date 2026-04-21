@@ -1,4 +1,11 @@
 refs:
+  videoPreviewElement:
+    selector: "#videoPreviewElement"
+    eventListeners:
+      loadeddata:
+        handler: handleVideoPreviewLoadedData
+      seeked:
+        handler: handleVideoPreviewSeeked
   fileExplorer:
     eventListeners:
       file-action:
@@ -97,7 +104,7 @@ template:
   - rtgl-dialog#videoPreviewDialog ?open=${videoVisible} s=lg:
       - $if selectedVideo:
           - $if selectedVideo.url:
-              - 'video slot=content controls=true autoplay=true style="width: 100%; height: 80vh; object-fit: contain; display: block; background-color: #000;"':
+              - 'video#videoPreviewElement slot=content controls=true autoplay=${selectedVideoAutoplay} muted=${selectedVideoMuted} preload="auto" data-preview-ready=${isVideoPreviewReady} style="width: 100%; height: 80vh; object-fit: contain; display: block; background-color: #000;"':
                   - source src=${selectedVideo.url} type=${selectedVideo.fileType}: null
             $else:
               - rtgl-view slot=content w=f h=80vh av=c ah=c:

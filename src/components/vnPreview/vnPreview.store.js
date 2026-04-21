@@ -43,12 +43,17 @@ const ensureAssetLoadCache = (state) => {
 
 export const createInitialState = () => ({
   isAssetLoading: false,
+  isPreviewReady: false,
   assetLoadCache: createEmptyAssetLoadCache(),
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
 });
 
 export const setAssetLoading = ({ state }, { isLoading } = {}) => {
   state.isAssetLoading = isLoading;
+};
+
+export const setPreviewReady = ({ state }, { isPreviewReady } = {}) => {
+  state.isPreviewReady = isPreviewReady === true;
 };
 
 export const resetAssetLoadCache = ({ state }, _payload = {}) => {
@@ -100,6 +105,7 @@ export const selectViewData = ({ props: attrs, state }) => {
     sectionId: attrs.sectionId,
     lineId: attrs.lineId,
     isAssetLoading: state.isAssetLoading,
+    isPreviewReady: state.isPreviewReady,
     canvasAspectRatio: formatProjectResolutionAspectRatio(
       state.projectResolution,
     ),

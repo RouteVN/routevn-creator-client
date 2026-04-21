@@ -1,4 +1,10 @@
-export const createInitialState = () => ({});
+export const createInitialState = () => ({
+  status: "idle",
+});
+
+export const setStatus = ({ state }, { status } = {}) => {
+  state.status = status ?? "idle";
+};
 
 const getContrastBackground = (color) => {
   if (
@@ -40,7 +46,7 @@ const getContrastBackground = (color) => {
   return "transparent";
 };
 
-export const selectViewData = ({ props: attrs }) => {
+export const selectViewData = ({ props: attrs, state }) => {
   const height = attrs.height ? parseInt(attrs.height) : null;
   const textColor = attrs.color || "currentColor";
   const providedBackground = attrs.backgroundColor;
@@ -58,6 +64,7 @@ export const selectViewData = ({ props: attrs }) => {
       : getContrastBackground(textColor);
 
   return {
+    status: state.status ?? "idle",
     previewText:
       attrs.previewText === "undefined" ? "" : attrs.previewText || "",
     fontFamily: attrs.fontFamily || "sans-serif",

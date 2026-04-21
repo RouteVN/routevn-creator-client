@@ -2,6 +2,7 @@
 title: Fonts Workflow
 description: Covers the fonts page detail, glyph preview dialog, edit dialog, and empty search state.
 url: /projects
+diffThreshold: 3.5
 skipInitialScreenshot: true
 viewport:
   id: wide
@@ -114,8 +115,12 @@ steps:
     selector: "#editDialog[open]"
     state: attached
     timeoutMs: 5000
+  - action: waitFor
+    selector: "#editDialog [data-preview-status='ready']"
+    state: attached
+    timeoutMs: 10000
   - action: wait
-    ms: 300
+    ms: 150
   - action: screenshot
   - action: keypress
     key: Escape

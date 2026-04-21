@@ -1,3 +1,5 @@
+import { isVisualTestMode } from "../../internal/visualTestMode.js";
+
 const PREVIEW_PADDING_PX = 16;
 const DEFAULT_FPS = 30;
 
@@ -160,6 +162,11 @@ const startAnimation = (deps) => {
   const frameCount = props.animation?.frames?.length ?? 0;
   if (frameCount <= 1) {
     drawFrame(deps);
+    return;
+  }
+
+  if (isVisualTestMode()) {
+    drawFrame(deps, { frameOffset: 0 });
     return;
   }
 
