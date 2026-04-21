@@ -147,13 +147,17 @@ const {
   extendViewData: ({ state, baseViewData }) => ({
     ...baseViewData,
     videoVisible: state.videoVisible,
+    isVideoPreviewReady: state.isVideoPreviewReady,
     selectedVideo: state.selectedVideo,
+    selectedVideoAutoplay: state.selectedVideo?.autoplay === true,
+    selectedVideoMuted: state.selectedVideo?.muted === true,
   }),
 });
 
 export const createInitialState = () => ({
   ...createMediaInitialState(),
   videoVisible: false,
+  isVideoPreviewReady: false,
   selectedVideo: undefined,
 });
 
@@ -175,12 +179,21 @@ export const selectVideoItemById = selectItemById;
 
 export const setVideoVisible = ({ state }, { video } = {}) => {
   state.videoVisible = true;
+  state.isVideoPreviewReady = false;
   state.selectedVideo = video?.url ? video : undefined;
 };
 
 export const setVideoNotVisible = ({ state }, _payload = {}) => {
   state.videoVisible = false;
+  state.isVideoPreviewReady = false;
   state.selectedVideo = undefined;
+};
+
+export const setVideoPreviewReady = (
+  { state },
+  { isVideoPreviewReady } = {},
+) => {
+  state.isVideoPreviewReady = isVideoPreviewReady === true;
 };
 
 export const selectViewData = (context) => {

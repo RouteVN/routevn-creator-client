@@ -115,8 +115,12 @@ steps:
     selector: "#videoPreviewDialog"
     state: visible
     timeoutMs: 10000
+  - action: waitFor
+    selector: "#videoPreviewDialog [data-preview-ready='true']"
+    state: attached
+    timeoutMs: 10000
   - action: wait
-    ms: 800
+    ms: 150
   - action: screenshot
   - action: keypress
     key: Escape

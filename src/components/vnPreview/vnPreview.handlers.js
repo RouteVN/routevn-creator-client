@@ -19,6 +19,19 @@ import {
   withPreviewEntryPoint,
 } from "./support/vnPreviewProjectData.js";
 
+const waitForBrowserPaint = async () => {
+  if (typeof requestAnimationFrame !== "function") {
+    await new Promise((resolve) => setTimeout(resolve, 32));
+    return;
+  }
+
+  await new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(resolve);
+    });
+  });
+};
+
 /**
  * Load assets (images and fonts) for rendering
  * @param {Object} deps - Component dependencies
@@ -391,6 +404,7 @@ export const handleBeforeMount = (deps) => {
   window.addEventListener("keydown", handleKeyDown);
   return () => {
     store.setAssetLoading({ isLoading: false });
+    store.setPreviewReady({ isPreviewReady: false });
     resetAssetLoadCache(store);
     void graphicsService.destroy?.();
     window.removeEventListener("keydown", handleKeyDown);
@@ -402,6 +416,7 @@ export const handleAfterMount = async (deps) => {
   const repository = await projectService.ensureRepository();
   const { canvas } = refs;
   graphicsService.setEngineAudioMuted?.(false);
+  store.setPreviewReady({ isPreviewReady: false });
 
   const sceneId = attrs.sceneId;
   const sectionId = attrs.sectionId;
@@ -510,4 +525,7 @@ export const handleAfterMount = async (deps) => {
       scheduleSceneTargetPrefetch(currentSceneId);
     },
   });
+  await waitForBrowserPaint();
+  store.setPreviewReady({ isPreviewReady: true });
+  deps.render();
 };

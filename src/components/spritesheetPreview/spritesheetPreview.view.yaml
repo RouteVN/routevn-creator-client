@@ -10,7 +10,7 @@ refs:
   canvas:
     selector: canvas
 template:
-  - rtgl-view w=${w} h=${h} pos=rel bgc=bg bc=bo bw=xs br=md of=hidden:
+  - 'rtgl-view w=${w} h=${h} pos=rel bgc=bg bc=bo bw=xs br=md of=hidden data-preview-status="${status}"':
       - 'canvas#canvas style="width: 100%; height: 100%; display: block;"': null
       - $if imageSrc:
           - 'img#sourceImage src=${imageSrc} style="display: none;"': null

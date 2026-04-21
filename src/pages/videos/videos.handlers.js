@@ -1,4 +1,5 @@
 import { generateId } from "../../internal/id.js";
+import { isVisualTestMode } from "../../internal/visualTestMode.js";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 import { processPendingUploads } from "../../internal/ui/resourcePages/media/processPendingUploads.js";
@@ -13,6 +14,22 @@ import {
 
 const VIDEO_FILE_PATTERN = /\.(mp4)$/i;
 const INVALID_VIDEO_FORMAT_MESSAGE = "Only MP4 videos are supported.";
+const VT_VIDEO_PREVIEW_TIME_S = 0.75;
+
+const isVideoElement = (value) => value?.tagName === "VIDEO";
+
+const resolveVtVideoPreviewTime = (videoElement) => {
+  const duration = Number(videoElement?.duration);
+  if (!Number.isFinite(duration) || duration <= 0) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(VT_VIDEO_PREVIEW_TIME_S, duration - 0.1));
+};
+
+const isNearVideoTime = (videoElement, targetTime) => {
+  return Math.abs(Number(videoElement?.currentTime) - targetTime) <= 0.05;
+};
 
 const showInvalidFormatToast = (appService) => {
   appService.showAlert({
@@ -146,10 +163,13 @@ const openVideoPreviewById = async ({ deps, itemId } = {}) => {
   }
 
   const { url } = await projectService.getFileContent(videoItem.fileId);
+  const isVtMode = isVisualTestMode();
   store.setVideoVisible({
     video: {
       url,
       fileType: videoItem.fileType,
+      autoplay: !isVtMode,
+      muted: isVtMode,
     },
   });
   render();
@@ -206,6 +226,49 @@ export const handleVideoItemDoubleClick = async (deps, payload) => {
 export const handleDetailHeaderClick = (deps) => {
   const selectedItemId = deps.store.selectSelectedItemId();
   openEditDialogWithValues({ deps, itemId: selectedItemId });
+};
+
+export const handleVideoPreviewLoadedData = (deps) => {
+  const { refs, render, store } = deps;
+  const { videoPreviewElement } = refs;
+
+  if (!isVideoElement(videoPreviewElement)) {
+    return;
+  }
+
+  if (!isVisualTestMode()) {
+    store.setVideoPreviewReady({ isVideoPreviewReady: true });
+    render();
+    return;
+  }
+
+  const previewTime = resolveVtVideoPreviewTime(videoPreviewElement);
+  videoPreviewElement.pause();
+
+  if (previewTime <= 0 || isNearVideoTime(videoPreviewElement, previewTime)) {
+    store.setVideoPreviewReady({ isVideoPreviewReady: true });
+    render();
+    return;
+  }
+
+  try {
+    videoPreviewElement.currentTime = previewTime;
+  } catch {
+    store.setVideoPreviewReady({ isVideoPreviewReady: true });
+    render();
+  }
+};
+
+export const handleVideoPreviewSeeked = (deps) => {
+  const { refs, render, store } = deps;
+  const { videoPreviewElement } = refs;
+
+  if (isVideoElement(videoPreviewElement)) {
+    videoPreviewElement.pause();
+  }
+
+  store.setVideoPreviewReady({ isVideoPreviewReady: true });
+  render();
 };
 
 export const handleVideoItemPreview = async (deps, payload) => {
