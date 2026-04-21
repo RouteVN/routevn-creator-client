@@ -152,10 +152,13 @@ const handlePanelResize = (deps, payload) => {
 const {
   openEditDialogWithValues,
   handleBeforeMount: handleMediaBeforeMount,
+  handleAfterMount,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
+  handleFileExplorerKeyboardScopeKeyDown,
   handleSearchInput,
   handleItemClick: handleSoundItemClick,
   handleItemEdit: handleSoundItemEdit,
@@ -194,10 +197,13 @@ export const handleBeforeMount = (deps) => {
 };
 
 export {
+  handleAfterMount,
   handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
+  handleFileExplorerKeyboardScopeKeyDown,
   handleSearchInput,
   handleSoundItemClick,
   handleSoundItemEdit,

@@ -2,6 +2,7 @@ import { generateId } from "../../internal/id.js";
 import { tap } from "rxjs";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 import {
   runResourcePageMutation,
@@ -401,8 +402,18 @@ const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
     resourceType: "spritesheets",
     refresh: refreshSpritesheetData,
   });
+const {
+  focusKeyboardScope: focusFileExplorerKeyboardScope,
+  handleKeyboardScopeClick: handleFileExplorerKeyboardScopeClick,
+  handleKeyboardScopeKeyDown: handleFileExplorerKeyboardScopeKeyDown,
+} = createFileExplorerKeyboardScopeHandlers();
 
-export { handleFileExplorerAction, handleFileExplorerTargetChanged };
+export {
+  handleFileExplorerAction,
+  handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
+  handleFileExplorerKeyboardScopeKeyDown,
+};
 
 export const handleBeforeMount = (deps) => {
   const { projectService, store } = deps;
@@ -425,6 +436,10 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
+export const handleAfterMount = (deps) => {
+  focusFileExplorerKeyboardScope(deps);
+};
+
 export const handleDataChanged = refreshSpritesheetData;
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
@@ -434,6 +449,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   if (isFolder) {
     store.setSelectedItemId({ itemId: undefined });
     render();
+    focusFileExplorerKeyboardScope(deps);
     return;
   }
 
@@ -444,6 +460,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   store.setSelectedItemId({ itemId });
   render();
   refs.groupview?.scrollItemIntoView?.({ itemId });
+  focusFileExplorerKeyboardScope(deps);
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {

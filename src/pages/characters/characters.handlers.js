@@ -1,5 +1,6 @@
 import { generateId } from "../../internal/id.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import {
   runResourcePageMutation,
   showResourcePageError,
@@ -130,6 +131,10 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
+export const handleAfterMount = (deps) => {
+  focusFileExplorerKeyboardScope(deps);
+};
+
 const refreshCharactersData = async (deps) => {
   const { store, render, projectService } = deps;
   syncCharactersData({ store, projectService });
@@ -141,8 +146,18 @@ const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
     resourceType: "characters",
     refresh: refreshCharactersData,
   });
+const {
+  focusKeyboardScope: focusFileExplorerKeyboardScope,
+  handleKeyboardScopeClick: handleFileExplorerKeyboardScopeClick,
+  handleKeyboardScopeKeyDown: handleFileExplorerKeyboardScopeKeyDown,
+} = createFileExplorerKeyboardScopeHandlers();
 
-export { handleFileExplorerAction, handleFileExplorerTargetChanged };
+export {
+  handleFileExplorerAction,
+  handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
+  handleFileExplorerKeyboardScopeKeyDown,
+};
 
 export const handleDataChanged = refreshCharactersData;
 
@@ -153,6 +168,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   if (isFolder) {
     store.setSelectedItemId({ itemId: undefined });
     render();
+    focusFileExplorerKeyboardScope(deps);
     return;
   }
 
@@ -162,6 +178,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
 
   store.setSelectedItemId({ itemId });
   render();
+  focusFileExplorerKeyboardScope(deps);
 };
 
 export const handleCharacterItemClick = async (deps, payload) => {

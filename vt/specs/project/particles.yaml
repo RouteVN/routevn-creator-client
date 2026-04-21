@@ -75,17 +75,6 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: rtgl-global-ui rtgl-form#formDialog
-    state: attached
-    timeoutMs: 5000
-  - action: wait
-    ms: 250
-  - action: screenshot
-  - action: select
-    selector: rtgl-global-ui rtgl-button[data-action-id='submit']
-    steps:
-      - action: click
-  - action: waitFor
     selector: "#particleDialog"
     state: visible
     timeoutMs: 10000
@@ -110,6 +99,18 @@ steps:
       - action: click
   - action: wait
     ms: 300
+  - action: screenshot
+  - action: select
+    selector: "#particleDialog rtgl-button[data-action-id='submit']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#particleDialog #tabs"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 400
+  - action: screenshot
   - action: select
     selector: "#particleDialog rtgl-button[data-action-id='submit']"
     steps:

@@ -1,4 +1,5 @@
 import { createResourceFileExplorerHandlers } from "../../fileExplorer.js";
+import { createFileExplorerKeyboardScopeHandlers } from "../../fileExplorerKeyboardScope.js";
 import { createProjectStateStream } from "../../../../deps/services/shared/projectStateStream.js";
 import { tap } from "rxjs";
 
@@ -49,6 +50,10 @@ export const createCatalogPageHandlers = ({
     };
   };
 
+  const handleAfterMount = (deps) => {
+    focusKeyboardScope(deps);
+  };
+
   const handleFileExplorerSelectionChanged = (deps, payload) => {
     const { store, render } = deps;
     const { itemId, isFolder } = payload._event.detail;
@@ -56,6 +61,7 @@ export const createCatalogPageHandlers = ({
     if (isFolder) {
       store.setSelectedItemId({ itemId: undefined });
       render();
+      focusKeyboardScope(deps);
       return;
     }
 
@@ -65,10 +71,16 @@ export const createCatalogPageHandlers = ({
 
     store.setSelectedItemId({ itemId });
     render();
+    focusKeyboardScope(deps);
   };
 
   const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
     createExplorerHandlers({ refresh: refreshData });
+  const {
+    focusKeyboardScope,
+    handleKeyboardScopeClick: handleFileExplorerKeyboardScopeClick,
+    handleKeyboardScopeKeyDown: handleFileExplorerKeyboardScopeKeyDown,
+  } = createFileExplorerKeyboardScopeHandlers();
 
   const handleItemClick = (deps, payload) => {
     const { store, render, refs } = deps;
@@ -91,9 +103,12 @@ export const createCatalogPageHandlers = ({
   return {
     refreshData,
     handleBeforeMount,
+    handleAfterMount,
     handleFileExplorerSelectionChanged,
     handleFileExplorerAction,
     handleFileExplorerTargetChanged,
+    handleFileExplorerKeyboardScopeClick,
+    handleFileExplorerKeyboardScopeKeyDown,
     handleItemClick,
     handleSearchInput,
   };

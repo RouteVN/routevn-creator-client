@@ -137,6 +137,10 @@ export const selectAction = ({ state }) => {
   return state.actions || {};
 };
 
+export const selectMode = ({ state }) => {
+  return state.mode;
+};
+
 export const updateActions = ({ state }, payload = {}) => {
   const nextPayload = payload || {};
   state.actions = { ...nextPayload };

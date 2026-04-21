@@ -156,13 +156,14 @@ export const selectViewData = ({ state }) => {
       if (settingsItem) return settingsItem.path;
     }
 
-    // // For versions
-    // if (currentPath === "/project/versions") {
-    //   const versionsItem = state.items.find(
-    //     (item) => item.title === "Versions",
-    //   );
-    //   if (versionsItem) return versionsItem.path;
-    // }
+    if (
+      currentPath === "/project/releases" ||
+      currentPath.startsWith("/project/releases/")
+    ) {
+      const releaseItem = state.items.find((item) => item.title === "Release");
+      if (releaseItem) return releaseItem.path;
+    }
+
     return null;
   };
 

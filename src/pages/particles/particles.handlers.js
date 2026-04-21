@@ -7,7 +7,6 @@ import { createRenderableParticleData } from "../../internal/particles.js";
 import {
   buildParticleFormValues,
   buildParticlePayload,
-  createParticlePresetSelectionForm,
   resolveParticleBaseData,
 } from "./support/particleForm.js";
 import { createParticlePreviewState } from "./support/particlePreview.js";
@@ -15,6 +14,9 @@ import {
   DEFAULT_PARTICLE_PRESET_ID,
   PARTICLE_PRESET_OPTIONS,
 } from "./support/particlePresets.js";
+
+const CREATE_PARTICLE_SETUP_STEP = "setup";
+const PARTICLE_EDITOR_STEP = "editor";
 
 const syncDialogFormValues = ({ refs, values } = {}) => {
   refs.particleForm?.reset?.();
@@ -199,9 +201,49 @@ const buildDialogParticleData = ({ deps, values, fallbackParticle } = {}) => {
   });
 };
 
+const isValidParticlePresetId = (presetId) => {
+  return PARTICLE_PRESET_OPTIONS.some((option) => option.value === presetId);
+};
+
+const getDialogFallbackParticle = (store) => {
+  return store.selectParticleItemById({
+    itemId: store.selectEditItemId(),
+  });
+};
+
+const getTextureImageId = (values = {}) => {
+  return `${values?.textureImageId ?? ""}`.trim();
+};
+
+const hasValidTextureImage = ({ store, textureImageId } = {}) => {
+  return Boolean(
+    textureImageId && store.selectImagesData()?.items?.[textureImageId]?.fileId,
+  );
+};
+
+const resolveCreateSetupDialogValues = ({ deps, values } = {}) => {
+  const { store } = deps;
+  const presetId = `${values?.presetId ?? ""}`.trim();
+
+  if (!presetId || presetId === store.selectDialogPresetId()) {
+    return values;
+  }
+
+  const presetValues = buildParticleFormValues({
+    presetId,
+    projectResolution: store.selectProjectResolution(),
+  });
+
+  return {
+    ...presetValues,
+    textureImageId: values?.textureImageId ?? presetValues.textureImageId ?? "",
+  };
+};
+
 const openParticleDialog = async ({
   deps,
   editMode = false,
+  dialogStep,
   previewOnly = false,
   itemId,
   itemData,
@@ -225,6 +267,7 @@ const openParticleDialog = async ({
   } else {
     store.openParticleFormDialog({
       editMode,
+      dialogStep,
       itemId,
       itemData,
       presetId,
@@ -237,18 +280,15 @@ const openParticleDialog = async ({
   if (!previewOnly) {
     syncDialogFormValues({
       refs,
-      values: buildParticleFormValues({
-        particle: itemData,
-        presetId: store.selectDialogPresetId(),
-        projectResolution: store.selectProjectResolution(),
-      }),
+      values: store.selectDialogFormValues(),
     });
   }
 
   const previewParticle = previewOnly
     ? itemData
-    : resolveDialogBaseParticle({
+    : buildDialogParticleData({
         deps,
+        values: store.selectDialogFormValues(),
         fallbackParticle: itemData,
       });
 
@@ -263,6 +303,7 @@ const openParticleDialog = async ({
 const restoreParticleFormDialog = async ({
   deps,
   editMode = false,
+  dialogStep = PARTICLE_EDITOR_STEP,
   itemId,
   itemData,
   presetId,
@@ -272,6 +313,7 @@ const restoreParticleFormDialog = async ({
   await openParticleDialog({
     deps,
     editMode,
+    dialogStep,
     itemId,
     itemData,
     presetId,
@@ -300,10 +342,13 @@ const restoreParticleFormDialog = async ({
 
 const {
   handleBeforeMount: handleBeforeMountBase,
+  handleAfterMount: handleAfterMountBase,
   refreshData: refreshDataBase,
   handleFileExplorerSelectionChanged: handleFileExplorerSelectionChangedBase,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
+  handleFileExplorerKeyboardScopeKeyDown,
   handleItemClick: handleParticleItemClickBase,
   handleSearchInput,
 } = createCatalogPageHandlers({
@@ -344,10 +389,16 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
+export const handleAfterMount = (deps) => {
+  handleAfterMountBase(deps);
+};
+
 export const handleDataChanged = refreshParticleData;
 export {
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
+  handleFileExplorerKeyboardScopeKeyDown,
   handleSearchInput,
 };
 
@@ -403,35 +454,10 @@ export const handleDetailHeaderClick = async (deps) => {
 };
 
 export const handleAddParticleClick = async (deps, payload) => {
-  const { appService } = deps;
   const { groupId } = payload._event.detail;
-  const presetDialogResult = await appService.showFormDialog({
-    form: createParticlePresetSelectionForm(),
-    defaultValues: {
-      presetId: DEFAULT_PARTICLE_PRESET_ID,
-    },
-  });
-
-  if (!presetDialogResult || presetDialogResult.actionId !== "submit") {
-    return;
-  }
-
-  const presetId = presetDialogResult.values?.presetId;
-  const isValidPreset = PARTICLE_PRESET_OPTIONS.some(
-    (option) => option.value === presetId,
-  );
-
-  if (!isValidPreset) {
-    appService.showAlert({
-      message: "Particle preset is required.",
-      title: "Warning",
-    });
-    return;
-  }
-
   await openParticleDialog({
     deps,
-    presetId,
+    presetId: DEFAULT_PARTICLE_PRESET_ID,
     targetGroupId: groupId,
   });
 };
@@ -445,23 +471,95 @@ export const handleParticleDialogClose = async (deps) => {
 };
 
 export const handleParticleFormActionClick = async (deps, payload) => {
-  const { appService, projectService, store, render } = deps;
+  const { appService, projectService, refs, store, render } = deps;
   const { actionId, values: nextValues } = payload._event.detail;
-  if (actionId !== "submit") {
-    return;
+  const dialogStep = store.selectDialogStep();
+  const mergedValues = mergeDialogFormValues(store, nextValues);
+  const values =
+    dialogStep === CREATE_PARTICLE_SETUP_STEP && !store.selectEditMode()
+      ? resolveCreateSetupDialogValues({
+          deps,
+          values: mergedValues,
+        })
+      : mergedValues;
+  const presetId = `${values?.presetId ?? ""}`.trim();
+
+  if (dialogStep === CREATE_PARTICLE_SETUP_STEP && presetId) {
+    store.setDialogPresetId({
+      presetId,
+    });
   }
 
-  const values = mergeDialogFormValues(store, nextValues);
   store.setDialogFormValues({
     values,
   });
 
+  if (actionId === "cancel") {
+    await handleParticleDialogClose(deps);
+    return;
+  }
+
+  if (actionId !== "submit") {
+    return;
+  }
+
+  if (dialogStep === CREATE_PARTICLE_SETUP_STEP && !store.selectEditMode()) {
+    if (!isValidParticlePresetId(presetId)) {
+      appService.showAlert({
+        message: "Particle preset is required.",
+        title: "Warning",
+      });
+      return;
+    }
+
+    const textureImageId = getTextureImageId(values);
+    if (!textureImageId) {
+      appService.showAlert({
+        message: "Particle texture image is required.",
+        title: "Warning",
+      });
+      return;
+    }
+
+    if (
+      !hasValidTextureImage({
+        store,
+        textureImageId,
+      })
+    ) {
+      appService.showAlert({
+        message: "Select a valid particle texture image.",
+        title: "Warning",
+      });
+      return;
+    }
+
+    store.setDialogStep({
+      step: PARTICLE_EDITOR_STEP,
+    });
+    render();
+    syncDialogFormValues({
+      refs,
+      values,
+    });
+
+    await renderParticlePreview({
+      deps,
+      target: "dialog",
+      particleData: buildDialogParticleData({
+        deps,
+        values,
+        fallbackParticle: getDialogFallbackParticle(store),
+      }),
+      forceInit: true,
+    });
+    return;
+  }
+
   const particleData = buildDialogParticleData({
     deps,
     values,
-    fallbackParticle: store.selectParticleItemById({
-      itemId: store.selectEditItemId(),
-    }),
+    fallbackParticle: getDialogFallbackParticle(store),
   });
 
   if (!particleData.name) {
@@ -472,7 +570,7 @@ export const handleParticleFormActionClick = async (deps, payload) => {
     return;
   }
 
-  const textureImageId = `${values?.textureImageId ?? ""}`.trim();
+  const textureImageId = getTextureImageId(values);
   if (!textureImageId) {
     appService.showAlert({
       message: "Particle texture image is required.",
@@ -481,7 +579,12 @@ export const handleParticleFormActionClick = async (deps, payload) => {
     return;
   }
 
-  if (!store.selectImagesData()?.items?.[textureImageId]?.fileId) {
+  if (
+    !hasValidTextureImage({
+      store,
+      textureImageId,
+    })
+  ) {
     appService.showAlert({
       message: "Select a valid particle texture image.",
       title: "Warning",
@@ -497,6 +600,7 @@ export const handleParticleFormActionClick = async (deps, payload) => {
   });
   const dialogSnapshot = {
     editMode,
+    dialogStep: PARTICLE_EDITOR_STEP,
     itemId: editItemId,
     itemData: editItemData,
     presetId: store.selectDialogPresetId(),
@@ -560,7 +664,26 @@ export const handleParticleFormActionClick = async (deps, payload) => {
 
 export const handleParticleFormChange = async (deps, payload) => {
   const { render, store } = deps;
-  const values = mergeDialogFormValues(store, payload._event.detail.values);
+  const dialogStep = store.selectDialogStep();
+  const mergedValues = mergeDialogFormValues(
+    store,
+    payload._event.detail.values,
+  );
+  const values =
+    dialogStep === CREATE_PARTICLE_SETUP_STEP && !store.selectEditMode()
+      ? resolveCreateSetupDialogValues({
+          deps,
+          values: mergedValues,
+        })
+      : mergedValues;
+  const presetId = `${values?.presetId ?? ""}`.trim();
+
+  if (dialogStep === CREATE_PARTICLE_SETUP_STEP && presetId) {
+    store.setDialogPresetId({
+      presetId,
+    });
+  }
+
   store.setDialogFormValues({
     values,
   });
@@ -568,9 +691,7 @@ export const handleParticleFormChange = async (deps, payload) => {
   const previewParticle = buildDialogParticleData({
     deps,
     values,
-    fallbackParticle: store.selectParticleItemById({
-      itemId: store.selectEditItemId(),
-    }),
+    fallbackParticle: getDialogFallbackParticle(store),
   });
 
   store.setDialogPreviewSize({
@@ -590,7 +711,11 @@ export const handleParticleFormTabClick = (deps, payload) => {
   const { render, store } = deps;
   const tab = payload._event.detail.id;
 
-  if (!tab || tab === store.selectDialogFormTab()) {
+  if (
+    store.selectDialogStep() !== PARTICLE_EDITOR_STEP ||
+    !tab ||
+    tab === store.selectDialogFormTab()
+  ) {
     return;
   }
 

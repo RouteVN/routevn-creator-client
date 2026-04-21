@@ -2,6 +2,7 @@ import { generateId } from "../../internal/id.js";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
 import { processPendingUploads } from "../../internal/ui/resourcePages/media/processPendingUploads.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import {
   runResourcePageMutation,
   showResourcePageError,
@@ -73,9 +74,11 @@ const {
   openEditDialogWithValues,
   refreshData: handleDataChanged,
   handleBeforeMount,
+  handleAfterMount,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
   handleSearchInput,
   handleItemClick: handleBaseImageItemClick,
   handleItemEdit: handleImageItemEdit,
@@ -87,25 +90,30 @@ const {
 
 export {
   handleBeforeMount,
+  handleAfterMount,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
   handleDataChanged,
   handleSearchInput,
   handleImageItemEdit,
 };
-
-const isTextEntryKeyEvent = (event) => {
-  const target = event?.composedPath?.()?.[0] ?? event?.target;
-  const tagName = String(target?.tagName ?? "").toLowerCase();
-  return tagName === "input" || tagName === "textarea";
-};
-
-const focusGroupView = ({ refs } = {}) => {
-  requestAnimationFrame(() => {
-    refs.groupviewKeyboardScope?.focus?.();
-  });
-};
+const {
+  focusKeyboardScope: focusGroupView,
+  handleKeyboardScopeKeyDown: handleBaseFileExplorerKeyboardScopeKeyDown,
+} = createFileExplorerKeyboardScopeHandlers({
+  isNavigationBlocked: ({ deps }) =>
+    deps.store.getState().fullImagePreviewVisible,
+  onEnterKey: ({ deps, selectedItemId }) => {
+    openImagePreviewById({ deps, itemId: selectedItemId, syncExplorer: true });
+  },
+  resolveSelectedItemId: ({ deps, selectedExplorerItem }) => {
+    return selectedExplorerItem?.isFolder
+      ? undefined
+      : (selectedExplorerItem?.itemId ?? deps.store.selectSelectedItemId());
+  },
+});
 
 const focusPreviewOverlay = ({ refs } = {}) => {
   requestAnimationFrame(() => {
@@ -387,66 +395,8 @@ export const handlePreviewOverlayKeyDown = (deps, payload) => {
   openImagePreviewById({ deps, itemId: nextItemId, syncExplorer: true });
 };
 
-export const handleGroupViewKeyDown = (deps, payload) => {
-  const { refs, store } = deps;
-  const event = payload._event;
-
-  if (store.getState().fullImagePreviewVisible || isTextEntryKeyEvent(event)) {
-    return;
-  }
-
-  if (event.altKey || event.ctrlKey || event.metaKey) {
-    return;
-  }
-
-  const selectedExplorerItem = refs.fileExplorer?.getSelectedItem?.();
-  const selectedItemId = selectedExplorerItem?.isFolder
-    ? undefined
-    : (selectedExplorerItem?.itemId ?? store.selectSelectedItemId());
-
-  if (event.key === "Enter") {
-    if (!selectedItemId) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    openImagePreviewById({ deps, itemId: selectedItemId, syncExplorer: true });
-    return;
-  }
-
-  let direction;
-  if (event.key === "ArrowDown") {
-    direction = "next";
-  } else if (event.key === "ArrowUp") {
-    direction = "previous";
-  } else if (event.key === "ArrowRight") {
-    event.preventDefault();
-    event.stopPropagation();
-    refs.fileExplorer?.setSelectedFolderExpanded?.({ expanded: true });
-    return;
-  } else if (event.key === "ArrowLeft") {
-    event.preventDefault();
-    event.stopPropagation();
-    refs.fileExplorer?.setSelectedFolderExpanded?.({ expanded: false });
-    return;
-  }
-
-  if (!direction) {
-    return;
-  }
-
-  const nextSelection = refs.fileExplorer?.navigateSelection?.({
-    direction,
-  });
-  if (!nextSelection?.itemId) {
-    return;
-  }
-
-  event.preventDefault();
-  event.stopPropagation();
-  focusGroupView(deps);
-};
+export const handleFileExplorerKeyboardScopeKeyDown =
+  handleBaseFileExplorerKeyboardScopeKeyDown;
 
 export const handleEditDialogClose = (deps) => {
   const { store, render } = deps;

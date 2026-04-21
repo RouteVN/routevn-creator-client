@@ -178,10 +178,13 @@ const openVideoPreviewById = async ({ deps, itemId } = {}) => {
 const {
   openEditDialogWithValues,
   handleBeforeMount,
+  handleAfterMount,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
+  handleFileExplorerKeyboardScopeKeyDown,
   handleSearchInput,
   handleItemClick: handleVideoItemClick,
   handleItemEdit: handleVideoItemEdit,
@@ -193,10 +196,13 @@ const {
 
 export {
   handleBeforeMount,
+  handleAfterMount,
   handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
+  handleFileExplorerKeyboardScopeKeyDown,
   handleSearchInput,
   handleVideoItemClick,
   handleVideoItemEdit,

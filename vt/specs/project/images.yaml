@@ -88,6 +88,17 @@ steps:
     ms: 300
   - action: screenshot
   - action: select
+    selector: "#detailView"
+    steps:
+      - action: click
+  - action: wait
+    ms: 200
+  - action: keypress
+    key: ArrowDown
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: select
     selector: "rvn-media-resources-view#groupview #itemRef0x0"
     steps:
       - action: dblclick
@@ -288,15 +299,11 @@ steps:
     state: visible
     timeoutMs: 15000
   - action: select
-    selector: "rvn-media-resources-view#groupview #itemRef0x0"
+    selector: "rvn-base-file-explorer#fileExplorer #itemRef0"
     steps:
       - action: click
   - action: wait
     ms: 250
-  - action: select
-    selector: "#groupviewKeyboardScope"
-    steps:
-      - action: focus
   - action: keypress
     key: ArrowDown
   - action: keypress

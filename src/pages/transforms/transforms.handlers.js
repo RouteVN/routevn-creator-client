@@ -153,10 +153,13 @@ const openTransformDialog = async ({
 
 const {
   handleBeforeMount: handleBeforeMountBase,
+  handleAfterMount: handleAfterMountBase,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
+  handleFileExplorerKeyboardScopeKeyDown,
   handleItemClick: handleTransformItemClick,
   handleSearchInput,
 } = createCatalogPageHandlers({
@@ -173,12 +176,18 @@ export {
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
+  handleFileExplorerKeyboardScopeKeyDown,
   handleTransformItemClick,
   handleSearchInput,
 };
 
 export const handleBeforeMount = (deps) => {
   return handleBeforeMountBase(deps);
+};
+
+export const handleAfterMount = (deps) => {
+  handleAfterMountBase(deps);
 };
 
 export const handleTransformItemDoubleClick = async (deps, payload) => {

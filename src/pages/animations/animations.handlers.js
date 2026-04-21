@@ -26,10 +26,13 @@ const navigateToAnimationEditor = ({
 
 const {
   handleBeforeMount: handleBeforeMountBase,
+  handleAfterMount: handleAfterMountBase,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged: handleFileExplorerSelectionChangedBase,
   handleFileExplorerAction: handleFileExplorerActionBase,
   handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
+  handleFileExplorerKeyboardScopeKeyDown,
   handleItemClick: handleAnimationItemClickBase,
   handleSearchInput,
 } = createCatalogPageHandlers({
@@ -39,11 +42,17 @@ const {
 export {
   handleDataChanged,
   handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
+  handleFileExplorerKeyboardScopeKeyDown,
   handleSearchInput,
 };
 
 export const handleBeforeMount = (deps) => {
   return handleBeforeMountBase(deps);
+};
+
+export const handleAfterMount = (deps) => {
+  handleAfterMountBase(deps);
 };
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {

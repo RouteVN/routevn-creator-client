@@ -1,5 +1,6 @@
 import { generateId } from "../../internal/id.js";
 import { createVariablesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { tap } from "rxjs";
@@ -51,6 +52,10 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
+export const handleAfterMount = (deps) => {
+  focusFileExplorerKeyboardScope(deps);
+};
+
 const refreshVariablesData = async (deps) => {
   const { store, render, projectService } = deps;
   syncVariablesData({
@@ -65,6 +70,13 @@ const {
   handleFileExplorerTargetChanged,
 } = createVariablesFileExplorerHandlers({
   refresh: refreshVariablesData,
+});
+const {
+  focusKeyboardScope: focusFileExplorerKeyboardScope,
+  handleKeyboardScopeClick: handleFileExplorerKeyboardScopeClick,
+  handleKeyboardScopeKeyDown: handleFileExplorerKeyboardScopeKeyDown,
+} = createFileExplorerKeyboardScopeHandlers({
+  fileExplorerRefName: "fileexplorer",
 });
 
 const openVariableEditDialog = ({ deps, itemId } = {}) => {
@@ -94,7 +106,11 @@ export const handleFileExplorerAction = async (deps, payload) => {
   await handleVariablesFileExplorerAction(deps, payload);
 };
 
-export { handleFileExplorerTargetChanged };
+export {
+  handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
+  handleFileExplorerKeyboardScopeKeyDown,
+};
 
 export const handleDataChanged = refreshVariablesData;
 
@@ -110,6 +126,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   if (isFolder) {
     store.setSelectedItemId({ itemId: undefined });
     render();
+    focusFileExplorerKeyboardScope(deps);
     return;
   }
 
@@ -119,6 +136,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
 
   store.setSelectedItemId({ itemId });
   render();
+  focusFileExplorerKeyboardScope(deps);
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {

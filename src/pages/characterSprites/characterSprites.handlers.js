@@ -6,6 +6,7 @@ import {
   runResourcePageMutation,
   showResourcePageError,
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
+import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import {
   buildImageResourceDataFromUploadResult,
@@ -44,17 +45,22 @@ const getCharacterIdFromPayload = ({ appService }) => {
   return appService.getPayload().characterId;
 };
 
-const isTextEntryKeyEvent = (event) => {
-  const target = event?.composedPath?.()?.[0] ?? event?.target;
-  const tagName = String(target?.tagName ?? "").toLowerCase();
-  return tagName === "input" || tagName === "textarea";
-};
-
-const focusGroupView = ({ refs } = {}) => {
-  requestAnimationFrame(() => {
-    refs.groupviewKeyboardScope?.focus?.();
-  });
-};
+const {
+  focusKeyboardScope: focusGroupView,
+  handleKeyboardScopeClick: handleFileExplorerKeyboardScopeClick,
+  handleKeyboardScopeKeyDown: handleBaseFileExplorerKeyboardScopeKeyDown,
+} = createFileExplorerKeyboardScopeHandlers({
+  isNavigationBlocked: ({ deps }) =>
+    deps.store.getState().fullImagePreviewVisible,
+  onEnterKey: ({ deps, selectedItemId }) => {
+    openSpritePreviewById({ deps, itemId: selectedItemId, syncExplorer: true });
+  },
+  resolveSelectedItemId: ({ deps, selectedExplorerItem }) => {
+    return selectedExplorerItem?.isFolder
+      ? undefined
+      : (selectedExplorerItem?.itemId ?? deps.store.selectSelectedItemId());
+  },
+});
 
 const focusPreviewOverlay = ({ refs } = {}) => {
   requestAnimationFrame(() => {
@@ -317,6 +323,10 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
+export const handleAfterMount = (deps) => {
+  focusGroupView(deps);
+};
+
 const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
   createCharacterSpritesFileExplorerHandlers({
     getCharacterId: (deps) =>
@@ -325,6 +335,7 @@ const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
   });
 
 export { handleFileExplorerAction, handleFileExplorerTargetChanged };
+export { handleFileExplorerKeyboardScopeClick };
 
 export const handleDataChanged = refreshCharacterSpritesData;
 
@@ -335,6 +346,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   if (isFolder) {
     store.setSelectedItemId({ itemId: undefined });
     render();
+    focusGroupView(deps);
     return;
   }
 
@@ -343,6 +355,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
     itemId,
   });
   refs.groupview?.scrollItemIntoView?.({ itemId });
+  focusGroupView(deps);
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {
@@ -440,66 +453,8 @@ export const handlePreviewOverlayKeyDown = (deps, payload) => {
   openSpritePreviewById({ deps, itemId: nextItemId, syncExplorer: true });
 };
 
-export const handleGroupViewKeyDown = (deps, payload) => {
-  const { refs, store } = deps;
-  const event = payload._event;
-
-  if (store.getState().fullImagePreviewVisible || isTextEntryKeyEvent(event)) {
-    return;
-  }
-
-  if (event.altKey || event.ctrlKey || event.metaKey) {
-    return;
-  }
-
-  const selectedExplorerItem = refs.fileExplorer?.getSelectedItem?.();
-  const selectedItemId = selectedExplorerItem?.isFolder
-    ? undefined
-    : (selectedExplorerItem?.itemId ?? store.selectSelectedItemId());
-
-  if (event.key === "Enter") {
-    if (!selectedItemId) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    openSpritePreviewById({ deps, itemId: selectedItemId, syncExplorer: true });
-    return;
-  }
-
-  let direction;
-  if (event.key === "ArrowDown") {
-    direction = "next";
-  } else if (event.key === "ArrowUp") {
-    direction = "previous";
-  } else if (event.key === "ArrowRight") {
-    event.preventDefault();
-    event.stopPropagation();
-    refs.fileExplorer?.setSelectedFolderExpanded?.({ expanded: true });
-    return;
-  } else if (event.key === "ArrowLeft") {
-    event.preventDefault();
-    event.stopPropagation();
-    refs.fileExplorer?.setSelectedFolderExpanded?.({ expanded: false });
-    return;
-  }
-
-  if (!direction) {
-    return;
-  }
-
-  const nextSelection = refs.fileExplorer?.navigateSelection?.({
-    direction,
-  });
-  if (!nextSelection?.itemId) {
-    return;
-  }
-
-  event.preventDefault();
-  event.stopPropagation();
-  focusGroupView(deps);
-};
+export const handleFileExplorerKeyboardScopeKeyDown =
+  handleBaseFileExplorerKeyboardScopeKeyDown;
 
 export const handleSpriteItemEdit = (deps, payload) => {
   const { itemId } = payload._event.detail;
