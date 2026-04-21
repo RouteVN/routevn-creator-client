@@ -1,6 +1,6 @@
 ---
 title: Images Workflow
-description: Covers seeded image interactions, drag and drop, empty search, upload, preview, edit, rename, and filtered search in one VT scenario.
+description: Covers seeded image interactions, preview keyboard navigation, explorer keyboard navigation, drag and drop, empty search, upload, preview, edit, rename, and filtered search in one VT scenario.
 url: /projects
 skipInitialScreenshot: true
 viewport:
@@ -97,6 +97,16 @@ steps:
     timeoutMs: 10000
   - action: wait
     ms: 600
+  - action: screenshot
+  - action: keypress
+    key: ArrowRight
+  - action: wait
+    ms: 300
+  - action: screenshot
+  - action: keypress
+    key: ArrowLeft
+  - action: wait
+    ms: 300
   - action: screenshot
   - action: select
     selector: "#previewOverlay"
@@ -253,5 +263,73 @@ steps:
         value: Searchable Uploaded Image
   - action: wait
     ms: 350
+  - action: screenshot
+  - action: select
+    selector: "#searchInput"
+    steps:
+      - action: clear
+  - action: wait
+    ms: 250
+  - action: setViewport
+    width: 1440
+    height: 560
+  - action: wait
+    ms: 250
+  - action: waitFor
+    selector: "rvn-media-resources-view#groupview #itemRef0x0"
+    state: visible
+    timeoutMs: 15000
+  - action: select
+    selector: "rvn-media-resources-view#groupview #itemRef0x0"
+    steps:
+      - action: click
+  - action: wait
+    ms: 250
+  - action: select
+    selector: "#groupviewKeyboardScope"
+    steps:
+      - action: focus
+  - action: keypress
+    key: ArrowDown
+  - action: keypress
+    key: ArrowDown
+  - action: keypress
+    key: ArrowDown
+  - action: keypress
+    key: ArrowDown
+  - action: keypress
+    key: ArrowDown
+  - action: keypress
+    key: ArrowDown
+  - action: keypress
+    key: ArrowDown
+  - action: keypress
+    key: ArrowDown
+  - action: keypress
+    key: ArrowDown
+  - action: keypress
+    key: ArrowDown
+  - action: keypress
+    key: ArrowDown
+  - action: keypress
+    key: ArrowDown
+  - action: keypress
+    key: ArrowDown
+  - action: keypress
+    key: ArrowDown
+  - action: keypress
+    key: ArrowDown
+  - action: keypress
+    key: ArrowDown
+  - action: keypress
+    key: ArrowDown
+  - action: keypress
+    key: ArrowDown
+  - action: keypress
+    key: ArrowDown
+  - action: keypress
+    key: ArrowDown
+  - action: wait
+    ms: 250
   - action: screenshot
 ---

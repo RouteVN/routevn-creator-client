@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { generateIdMock, processPendingUploadsMock } = vi.hoisted(() => ({
   generateIdMock: vi.fn(() => "image-123"),
@@ -17,14 +17,21 @@ vi.mock(
 );
 
 import {
+  handlePreviewOverlayKeyDown,
   handleItemDelete,
   handleUploadClick,
 } from "../../src/pages/images/images.handlers.js";
+
+const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
 
 describe("images handlers", () => {
   beforeEach(() => {
     generateIdMock.mockClear();
     processPendingUploadsMock.mockReset();
+  });
+
+  afterEach(() => {
+    globalThis.requestAnimationFrame = originalRequestAnimationFrame;
   });
 
   it("shows a failure alert when deleteImageIfUnused fails without usage", async () => {
@@ -146,5 +153,114 @@ describe("images handlers", () => {
         },
       },
     });
+  });
+
+  it("uses left and right arrows to navigate preview items only while preview is visible", () => {
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      callback();
+      return 1;
+    });
+
+    const createEvent = (key) => ({
+      key,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    });
+    const store = {
+      getState: vi.fn(() => ({
+        fullImagePreviewVisible: true,
+      })),
+      selectSelectedItemId: vi.fn(() => "image-1"),
+      selectAdjacentImageItemId: vi.fn(({ direction }) => {
+        return direction === "next" ? "image-2" : "image-0";
+      }),
+      selectImageItemById: vi.fn(({ itemId }) => ({
+        id: itemId,
+        type: "image",
+        fileId: `${itemId}-file`,
+      })),
+      setSelectedItemId: vi.fn(),
+      showFullImagePreview: vi.fn(),
+    };
+    const deps = {
+      store,
+      render: vi.fn(),
+      refs: {
+        fileExplorer: {
+          selectItem: vi.fn(),
+        },
+        groupview: {
+          scrollItemIntoView: vi.fn(),
+        },
+        previewOverlay: {
+          focus: vi.fn(),
+        },
+      },
+    };
+
+    const rightEvent = createEvent("ArrowRight");
+    handlePreviewOverlayKeyDown(deps, {
+      _event: rightEvent,
+    });
+
+    expect(store.selectAdjacentImageItemId).toHaveBeenCalledWith({
+      itemId: "image-1",
+      direction: "next",
+    });
+    expect(store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: "image-2",
+    });
+    expect(deps.refs.fileExplorer.selectItem).toHaveBeenCalledWith({
+      itemId: "image-2",
+    });
+    expect(rightEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(rightEvent.stopPropagation).toHaveBeenCalledTimes(1);
+
+    const leftEvent = createEvent("ArrowLeft");
+    handlePreviewOverlayKeyDown(deps, {
+      _event: leftEvent,
+    });
+
+    expect(store.selectAdjacentImageItemId).toHaveBeenCalledWith({
+      itemId: "image-1",
+      direction: "previous",
+    });
+    expect(store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: "image-0",
+    });
+    expect(deps.refs.fileExplorer.selectItem).toHaveBeenCalledWith({
+      itemId: "image-0",
+    });
+    expect(leftEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(leftEvent.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(deps.refs.previewOverlay.focus).toHaveBeenCalledTimes(2);
+  });
+
+  it("ignores left and right preview navigation when preview is not visible", () => {
+    const event = {
+      key: "ArrowRight",
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+    const deps = {
+      store: {
+        getState: vi.fn(() => ({
+          fullImagePreviewVisible: false,
+        })),
+        selectSelectedItemId: vi.fn(),
+        selectAdjacentImageItemId: vi.fn(),
+      },
+      render: vi.fn(),
+      refs: {},
+    };
+
+    handlePreviewOverlayKeyDown(deps, {
+      _event: event,
+    });
+
+    expect(deps.store.selectSelectedItemId).not.toHaveBeenCalled();
+    expect(deps.store.selectAdjacentImageItemId).not.toHaveBeenCalled();
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(event.stopPropagation).not.toHaveBeenCalled();
   });
 });

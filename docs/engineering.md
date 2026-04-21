@@ -65,10 +65,11 @@ are documented in `docs/platform/08-id-generation.md`.
 
 ## Testing
 
-This repo currently uses two main test styles:
+This repo currently uses three main test styles:
 
 - script-driven Node tests in `scripts/test-*.js`
 - YAML-driven Puty tests in `tests/puty/`
+- Rettangoli VT workflow specs in `vt/specs/`
 
 Common commands:
 
@@ -78,12 +79,20 @@ bun run test:integration
 bun run test:convergence
 bun run test:collab-adapters
 bun run test:puty
+bun run vt:generate
+bun run vt:report
 ```
 
 Run one Puty scenario directly:
 
 ```bash
 bunx vitest run tests/puty/<file>.spec.yaml
+```
+
+Serve the last generated VT report locally:
+
+```bash
+bun run vt:serve
 ```
 
 ### Test Organization
@@ -107,6 +116,12 @@ bunx vitest run tests/puty/<file>.spec.yaml
   shared Puty helper that runs a real RouteVN collab session against the
   SQLite sync store and returns committed rows for YAML assertions
 
+- `vt/specs/projects/*.yaml`
+  VT specs for project-listing and project-creation flows
+
+- `vt/specs/project/*.yaml`
+  VT specs for project workspace pages and user-visible workflows
+
 ### Puty Storage Pattern
 
 Use Puty for storage assertions when the goal is:
@@ -125,6 +140,43 @@ behavior:
 
 - mixed command persistence across partitions
 - storage idempotency across submit batches
+
+### VT Coverage Expectation
+
+When a PR adds or materially changes a user-visible feature, add or update VT
+coverage in the same PR unless the behavior is genuinely not practical to
+cover there.
+
+Treat this as the default for:
+
+- new page workflows
+- keyboard interactions and focus/selection behavior
+- dialogs, previews, and overlays
+- drag/drop, uploads, and other end-to-end UI flows
+- regressions that are easiest to validate in the running app
+
+Preferred pattern:
+
+- extend an existing page VT spec when the change belongs to that page's main
+  workflow
+- add a new VT spec when the flow is large enough that folding it into the
+  existing spec would make setup or debugging worse
+- keep VT specs focused on stable user-visible behavior, not incidental DOM
+  details
+
+Useful VT commands:
+
+- `bun run vt:generate`
+  build the app and generate candidate screenshots
+
+- `bun run vt:report`
+  generate screenshots and open the VT report workflow
+
+- `bun run vt:accept`
+  accept the current candidate screenshots as the new baseline
+
+- `bun run vt:serve`
+  serve `.rettangoli/vt/_site/` locally for report review
 
 ## Upload File Types
 
