@@ -86,9 +86,21 @@ steps:
     timeoutMs: 5000
   - action: wait
     ms: 300
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { if (!root) return undefined; const direct = root.querySelector?.(selector); if (direct) return direct; for (const node of root.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; return deepQuery(document, '#fileExplorerKeyboardScope')?.tabIndex; })()"
+    value: -1
+  - action: assert
+    type: js
+    fn: eval
+    args:
+      - "(() => { const deepQuery = (root, selector) => { if (!root) return undefined; const direct = root.querySelector?.(selector); if (direct) return direct; for (const node of root.querySelectorAll?.('*') ?? []) { const found = node.shadowRoot ? deepQuery(node.shadowRoot, selector) : undefined; if (found) return found; } return undefined; }; return deepQuery(document, '#fileExplorerDetailKeyboardScope')?.tabIndex; })()"
+    value: -1
   - action: screenshot
   - action: select
-    selector: "#detailView"
+    selector: "#detailView > div"
     steps:
       - action: click
   - action: wait
