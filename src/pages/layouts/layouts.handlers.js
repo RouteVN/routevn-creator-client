@@ -77,10 +77,13 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
 
 const {
   handleBeforeMount,
+  handleAfterMount,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged: handleCatalogFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
+  handleFileExplorerKeyboardScopeKeyDown,
   handleItemClick: handleCatalogLayoutItemClick,
   handleSearchInput,
 } = createCatalogPageHandlers({
@@ -93,9 +96,12 @@ const {
 
 export {
   handleBeforeMount,
+  handleAfterMount,
   handleDataChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
+  handleFileExplorerKeyboardScopeKeyDown,
   handleSearchInput,
 };
 

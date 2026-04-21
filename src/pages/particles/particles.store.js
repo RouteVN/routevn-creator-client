@@ -9,6 +9,7 @@ import {
   buildParticleCatalogItem,
   buildParticleDetailFields,
   buildParticleFormValues,
+  createParticleCreateSetupForm,
   createParticleForm,
 } from "./support/particleForm.js";
 import { DEFAULT_PARTICLE_PRESET_ID } from "./support/particlePresets.js";
@@ -21,15 +22,26 @@ const EMPTY_TREE = {
 };
 
 const DEFAULT_PARTICLE_FORM_TAB = PARTICLE_FORM_TABS[0]?.id ?? "basics";
+const CREATE_PARTICLE_SETUP_STEP = "setup";
+const PARTICLE_EDITOR_STEP = "editor";
 
 const createDialogForm = ({
   editMode = false,
   imagesData = EMPTY_TREE,
   activeTab = DEFAULT_PARTICLE_FORM_TAB,
+  dialogStep = PARTICLE_EDITOR_STEP,
 } = {}) => {
+  const imageOptions = toParticleTextureImageOptions(imagesData);
+
+  if (!editMode && dialogStep === CREATE_PARTICLE_SETUP_STEP) {
+    return createParticleCreateSetupForm({
+      imageOptions,
+    });
+  }
+
   return createParticleForm({
     editMode,
-    imageOptions: toParticleTextureImageOptions(imagesData),
+    imageOptions,
     activeTab,
   });
 };
@@ -88,9 +100,10 @@ const {
     }),
     isDialogOpen: state.isDialogOpen,
     isPreviewOnlyDialog: state.dialogMode === "preview",
+    showParticleFormTabs: state.dialogStep === PARTICLE_EDITOR_STEP,
     particleFormTabs: PARTICLE_FORM_TABS,
     selectedParticleFormTab: state.dialogFormTab,
-    particleFormKey: `particle-form-${state.dialogFormTab}`,
+    particleFormKey: `particle-form-${state.dialogStep}-${state.dialogFormTab}`,
     particleForm: state.particleForm,
     dialogFormValues: state.dialogFormValues,
     dialogPreviewAspectRatio: state.dialogPreviewAspectRatio,
@@ -114,9 +127,12 @@ export const createInitialState = () => {
     previewRuntimeTarget: undefined,
     previewRuntimeWidth: undefined,
     previewRuntimeHeight: undefined,
+    dialogStep: CREATE_PARTICLE_SETUP_STEP,
     dialogFormTab: DEFAULT_PARTICLE_FORM_TAB,
     imagesData: EMPTY_TREE,
-    particleForm: createDialogForm(),
+    particleForm: createDialogForm({
+      dialogStep: CREATE_PARTICLE_SETUP_STEP,
+    }),
     dialogFormValues: defaultDialogState.dialogDefaultValues,
     dialogDefaultValues: defaultDialogState.dialogDefaultValues,
     dialogPresetId: defaultDialogState.dialogPresetId,
@@ -157,6 +173,7 @@ const setDialogState = (state, options = {}) => {
   const {
     dialogMode = "form",
     editMode = false,
+    dialogStep = editMode ? PARTICLE_EDITOR_STEP : CREATE_PARTICLE_SETUP_STEP,
     itemId = undefined,
     itemData = undefined,
     targetGroupId = undefined,
@@ -174,6 +191,7 @@ const setDialogState = (state, options = {}) => {
   state.editMode = editMode;
   state.editItemId = itemId;
   state.targetGroupId = targetGroupId === "_root" ? undefined : targetGroupId;
+  state.dialogStep = dialogStep;
   state.dialogFormTab = DEFAULT_PARTICLE_FORM_TAB;
   state.dialogFormValues = dialogDefaultValues;
   state.dialogPresetId = presetId;
@@ -186,6 +204,7 @@ const setDialogState = (state, options = {}) => {
     editMode,
     imagesData: state.imagesData,
     activeTab: state.dialogFormTab,
+    dialogStep: state.dialogStep,
   });
 };
 
@@ -214,6 +233,7 @@ export const closeParticleDialog = ({ state }, _payload = {}) => {
   state.targetGroupId = undefined;
   state.editMode = false;
   state.editItemId = undefined;
+  state.dialogStep = CREATE_PARTICLE_SETUP_STEP;
   state.dialogFormTab = DEFAULT_PARTICLE_FORM_TAB;
   state.dialogFormValues = defaultDialogState.dialogDefaultValues;
   state.dialogPresetId = defaultDialogState.dialogPresetId;
@@ -222,6 +242,7 @@ export const closeParticleDialog = ({ state }, _payload = {}) => {
   state.particleForm = createDialogForm({
     imagesData: state.imagesData,
     activeTab: state.dialogFormTab,
+    dialogStep: state.dialogStep,
   });
 };
 
@@ -257,6 +278,7 @@ export const setImagesData = ({ state }, { imagesData } = {}) => {
       editMode: state.editMode,
       imagesData: state.imagesData,
       activeTab: state.dialogFormTab,
+      dialogStep: state.dialogStep,
     });
   }
 };
@@ -271,6 +293,17 @@ export const setDialogFormTab = ({ state }, { tab } = {}) => {
     editMode: state.editMode,
     imagesData: state.imagesData,
     activeTab: state.dialogFormTab,
+    dialogStep: state.dialogStep,
+  });
+};
+
+export const setDialogStep = ({ state }, { step } = {}) => {
+  state.dialogStep = step ?? CREATE_PARTICLE_SETUP_STEP;
+  state.particleForm = createDialogForm({
+    editMode: state.editMode,
+    imagesData: state.imagesData,
+    activeTab: state.dialogFormTab,
+    dialogStep: state.dialogStep,
   });
 };
 
@@ -296,6 +329,7 @@ export const selectProjectResolution = ({ state }) => state.projectResolution;
 export const selectDialogPresetId = ({ state }) => state.dialogPresetId;
 export const selectIsDialogOpen = ({ state }) => state.isDialogOpen;
 export const selectDialogMode = ({ state }) => state.dialogMode;
+export const selectDialogStep = ({ state }) => state.dialogStep;
 export const selectDialogFormTab = ({ state }) => state.dialogFormTab;
 export const selectDialogFormValues = ({ state }) => state.dialogFormValues;
 export const selectImagesData = ({ state }) => state.imagesData;

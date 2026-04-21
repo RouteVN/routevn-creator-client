@@ -1,5 +1,6 @@
 import { createAppServiceCore } from "../shared/appServiceCore.js";
 import { generateId } from "../../../internal/id.js";
+import { copyTextToClipboard } from "../../../internal/copyText.js";
 
 export const createAppService = (params) => {
   const platformAdapter = {
@@ -106,8 +107,30 @@ export const createAppService = (params) => {
     },
   };
 
-  return createAppServiceCore({
+  const appService = createAppServiceCore({
     ...params,
     platformAdapter,
   });
+
+  return {
+    ...appService,
+
+    copyText(value) {
+      return copyTextToClipboard(value);
+    },
+
+    async startStaticWebServer() {
+      throw new Error(
+        "Static web server is only available in the desktop app.",
+      );
+    },
+
+    async stopStaticWebServer() {
+      return false;
+    },
+
+    async listStaticWebServers() {
+      return [];
+    },
+  };
 };

@@ -1,4 +1,8 @@
-refs: {}
+refs:
+  helpFloatingButton:
+    eventListeners:
+      click:
+        handler: handleHelpFloatingButtonClick
 subscriptions:
   - from: routePop
     handler: handleWindowPop
@@ -63,3 +67,7 @@ template:
                   - rvn-versions: []
                 $elif currentRoutePattern == "/project/releases/versions":
                   - rvn-versions: []
+                $elif currentRoutePattern == "/project/releases/web-server":
+                  - rvn-web-server: []
+  - 'rtgl-view#helpFloatingButton pos=fix z=1200 w=56 h=56 ah=c av=c bgc=bg bw=xs bc=bo h-bc=ac br=f cur=pointer style="right: 24px; bottom: 24px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);"':
+      - rtgl-text s=h4 c=mu-fg: '?'

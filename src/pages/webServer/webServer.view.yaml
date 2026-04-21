@@ -1,0 +1,86 @@
+refs:
+  addServerBtn:
+    eventListeners:
+      click:
+        handler: handleAddServerClick
+  serverItemRef*:
+    eventListeners:
+      click:
+        handler: handleServerItemClick
+  copyUrlBtn*:
+    eventListeners:
+      click:
+        handler: handleCopyUrlClick
+  startServerBtn*:
+    eventListeners:
+      click:
+        handler: handleStartServerClick
+  stopServerBtn*:
+    eventListeners:
+      click:
+        handler: handleStopServerClick
+  copyDetailUrlBtn:
+    eventListeners:
+      click:
+        handler: handleCopyUrlClick
+  stopDetailServerBtn:
+    eventListeners:
+      click:
+        handler: handleStopServerClick
+  startDetailServerBtn:
+    eventListeners:
+      click:
+        handler: handleStartServerClick
+template:
+  - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
+      - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
+          - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
+              - rtgl-view slot="content" w=f h=f:
+                  - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
+          - 'rtgl-view w=1fg h=f pl=sm style="min-width: 0; min-height: 0;"':
+              - 'rtgl-view w=f h=100vh g=sm style="min-width: 0;"':
+                  - 'rtgl-view h=64 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
+                      - rtgl-view w=f d=h av=c g=md wrap:
+                          - rtgl-view d=h av=b g=md w=1fg wrap:
+                              - rtgl-text: Web Server
+                              - rtgl-text s=sm c=mu-fg: Serve a local static site folder over localhost.
+                          - $if canAdd:
+                              - rtgl-button#addServerBtn v=pr s=sm pre=plus: Add
+                  - 'rtgl-view h=1fg w=f sv style="min-width: 0;"':
+                      - $if servers.length == 0:
+                          - rtgl-view w=f h=f av=c ah=c:
+                              - 'rtgl-view d=v ah=c g=sm style="max-width: 360px; text-align: center;"':
+                                  - rtgl-text s=lg c=mu-fg: ${emptyStateTitle}
+                                  - rtgl-text s=sm c=mu-fg: ${emptyStateDescription}
+                        $else:
+                          - 'rtgl-view d=v g=md w=f ph=md pt=md pb=sm mb=lg style="min-width: 0;"':
+                              - $for item, i in servers:
+                                  - rtgl-view#serverItemRef${i} data-server-id="${item.id}" h=auto w=f bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md pt=md pb=sm ph=lg d=h av=c g=md cur=pointer:
+                                      - 'rtgl-view w=1fg d=v g=xs style="min-width: 0;"':
+                                          - rtgl-text s=lg ellipsis=true: ${item.name}
+                                          - rtgl-text s=xs c=mu-fg: 'Status: ${item.statusText}'
+                                          - rtgl-text s=sm c=mu-fg ellipsis=true: ${item.displayRootPath}
+                                          - rtgl-text s=xs c=mu-fg ellipsis=true: ${item.url}
+                                      - $if item.canCopyUrl:
+                                          - rtgl-button#copyUrlBtn${i} data-server-id="${item.id}" v=se s=sm: Copy URL
+                                      - $if item.canStartServer:
+                                          - rtgl-button#startServerBtn${i} data-server-id="${item.id}" v=se s=sm: Start
+                                      - $if item.canStopServer:
+                                          - rtgl-button#stopServerBtn${i} data-server-id="${item.id}" v=se s=sm: Stop
+                              - rtgl-view w=f h=30vh: null
+          - rvn-resizable-panel panel-type=detail-panel w=300 min-w=220 max-w=500 resize-side="left":
+              - rtgl-view wh=f slot="content":
+                  - $if selectedItemId:
+                      - rtgl-view d=v w=f h=f:
+                          - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
+                              - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
+                              - $if canCopySelectedServerUrl:
+                                  - rtgl-button#copyDetailUrlBtn slot=actions data-server-id="${selectedItemId}" v=se s=sm w=f: Copy URL
+                              - $if canStartSelectedServer:
+                                  - rtgl-button#startDetailServerBtn slot=actions data-server-id="${selectedItemId}" v=se s=sm w=f: Start Web Server
+                              - $if canStopSelectedServer:
+                                  - rtgl-button#stopDetailServerBtn slot=actions data-server-id="${selectedItemId}" v=se s=sm w=f: Stop Web Server
+                    $else:
+                      - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                          - rtgl-text s=md c=mu-fg: No selection

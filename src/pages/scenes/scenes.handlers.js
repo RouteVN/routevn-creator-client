@@ -4,6 +4,7 @@ import {
   matchesRemoteTargets,
 } from "../../internal/ui/collabRefresh.js";
 import { createScenesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { toFlatItems } from "../../internal/project/tree.js";
 import {
   SCENE_BOX_HEIGHT,
@@ -500,6 +501,7 @@ export const handleAfterMount = async (deps) => {
   }
 
   render();
+  focusFileExplorerKeyboardScope(deps);
   void refreshSceneOverviews({
     store,
     render,
@@ -534,8 +536,20 @@ const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
   createScenesFileExplorerHandlers({
     refresh: refreshScenesData,
   });
+const {
+  focusKeyboardScope: focusFileExplorerKeyboardScope,
+  handleKeyboardScopeClick: handleFileExplorerKeyboardScopeClick,
+  handleKeyboardScopeKeyDown: handleFileExplorerKeyboardScopeKeyDown,
+} = createFileExplorerKeyboardScopeHandlers({
+  fileExplorerRefName: "fileexplorer",
+});
 
-export { handleFileExplorerAction, handleFileExplorerTargetChanged };
+export {
+  handleFileExplorerAction,
+  handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
+  handleFileExplorerKeyboardScopeKeyDown,
+};
 
 export const handleDataChanged = refreshScenesData;
 
@@ -548,6 +562,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   if (isFolder) {
     setSelectedScene({ store, appService, sceneId: undefined });
     render();
+    focusFileExplorerKeyboardScope(deps);
     return;
   }
 
@@ -557,6 +572,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
 
   setSelectedScene({ store, appService, sceneId: itemId });
   render();
+  focusFileExplorerKeyboardScope(deps);
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {

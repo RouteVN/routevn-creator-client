@@ -27,6 +27,18 @@ refs:
         handler: handleAddClick
       search-input:
         handler: handleSearchInput
+  fileExplorerKeyboardScope:
+    eventListeners:
+      click:
+        handler: handleFileExplorerKeyboardScopeClick
+      keydown:
+        handler: handleFileExplorerKeyboardScopeKeyDown
+  fileExplorerDetailKeyboardScope:
+    eventListeners:
+      click:
+        handler: handleFileExplorerKeyboardScopeClick
+      keydown:
+        handler: handleFileExplorerKeyboardScopeKeyDown
   detailHeader:
     eventListeners:
       click:
@@ -65,31 +77,33 @@ template:
                   - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
                   - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag start-collapsed=${startCollapsedFileExplorer} :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
           - 'rtgl-view w=1fg h=f pl=sm style="min-width: 0; min-height: 0;"':
-              - rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-zoom-controls progressive-render lazy-image-cards :groups=${mediaGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems}: null
+              - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
+                  - rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-zoom-controls progressive-render lazy-image-cards :groups=${mediaGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems}: null
           - rvn-resizable-panel panel-type=detail-panel w=300 min-w=220 max-w=520 resize-side="left":
               - rtgl-view wh=f slot="content":
-                  - $if selectedItemId:
-                      - rtgl-view d=v w=f h=f:
-                          - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
-                              - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
-                              - rtgl-svg svg=edit wh=16: null
-                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
-                              - 'rvn-spritesheet-preview slot="spritesheet-preview" key=${detailPreviewKey} fileId=${detailPreviewFileId} :atlas=${detailPreviewAtlas} :animation=${detailPreviewAnimation} h=220 emptyLabel="No preview available"': null
-                              - 'rtgl-view slot="spritesheet-animations" d=v w=f g=sm':
-                                  - rtgl-text s=sm c=mu-fg: Animations
-                                  - $if detailClipOptions.length > 0:
-                                      - $for clip, clipIndex in detailClipOptions:
-                                          - 'rtgl-view#detailClipButton${clipIndex} data-clip-name=${clip.name} d=v w=f g=xs p=sm bw=xs bc=${clip.borderColor} br=md bgc=${clip.backgroundColor} h-bgc=mu cur=pointer':
-                                              - rtgl-view d=h w=f av=c g=sm:
-                                                  - rtgl-text w=1fg s=sm: ${clip.name}
-                                                  - rtgl-text s=xs c=mu-fg: ${clip.loopLabel}
-                                              - rtgl-text s=xs c=mu-fg: ${clip.frameCount} frames • ${clip.fps} fps
-                                    $else:
-                                      - rtgl-view w=f p=sm bgc=mu br=md:
-                                          - rtgl-text s=xs c=mu-fg: No animations found
-                    $else:
-                      - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                          - rtgl-text s=md c=mu-fg: No selection
+                  - 'div#fileExplorerDetailKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
+                      - $if selectedItemId:
+                          - rtgl-view d=v w=f h=f:
+                              - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+                                  - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                                  - rtgl-svg svg=edit wh=16: null
+                              - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
+                                  - 'rvn-spritesheet-preview slot="spritesheet-preview" key=${detailPreviewKey} fileId=${detailPreviewFileId} :atlas=${detailPreviewAtlas} :animation=${detailPreviewAnimation} h=220 emptyLabel="No preview available"': null
+                                  - 'rtgl-view slot="spritesheet-animations" d=v w=f g=sm':
+                                      - rtgl-text s=sm c=mu-fg: Animations
+                                      - $if detailClipOptions.length > 0:
+                                          - $for clip, clipIndex in detailClipOptions:
+                                              - 'rtgl-view#detailClipButton${clipIndex} data-clip-name=${clip.name} d=v w=f g=xs p=sm bw=xs bc=${clip.borderColor} br=md bgc=${clip.backgroundColor} h-bgc=mu cur=pointer':
+                                                  - rtgl-view d=h w=f av=c g=sm:
+                                                      - rtgl-text w=1fg s=sm: ${clip.name}
+                                                      - rtgl-text s=xs c=mu-fg: ${clip.loopLabel}
+                                                  - rtgl-text s=xs c=mu-fg: ${clip.frameCount} frames • ${clip.fps} fps
+                                        $else:
+                                          - rtgl-view w=f p=sm bgc=mu br=md:
+                                              - rtgl-text s=xs c=mu-fg: No animations found
+                        $else:
+                          - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                              - rtgl-text s=md c=mu-fg: No selection
   - rtgl-dialog#spritesheetDialog ?open=${isDialogOpen} s=lg:
       - $if isDialogPreviewMode:
           - 'rtgl-view slot="content" d=v w=f g=lg style="min-width: min(960px, 100vw - 64px);"':

@@ -100,6 +100,11 @@ const releaseItems = [
     name: "Versions",
     path: "/project/releases/versions",
   },
+  {
+    id: "webServer",
+    name: "Web Server",
+    path: "/project/releases/web-server",
+  },
 ];
 
 // Map sub-resource IDs to their parent resource IDs for menu highlighting

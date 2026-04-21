@@ -33,3 +33,4 @@ tauri-plugin-opener = "2"
 tauri-plugin-persisted-scope = { version = "2", features = ["protocol-asset"] }
 url = "2"
 zip = { version = "0.6.6", default-features = false }
+urlencoding = "2.1"

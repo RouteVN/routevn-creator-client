@@ -6,6 +6,7 @@ import {
 } from "../../internal/animationEditorRoute.js";
 import { serializeTransitionMask } from "../../internal/animationMasks.js";
 import { resolveResourceFileType } from "../../internal/resourceFileMetadata.js";
+import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import {
   AUTO_TWEEN_DEFAULT_DURATION,
@@ -200,6 +201,15 @@ const waitForPreviewPaint = async () => {
     globalThis.setTimeout(resolve, 0);
   });
 };
+
+const {
+  focusKeyboardScope: focusImageSelectorKeyboardScope,
+  handleKeyboardScopeClick: handleImageSelectorKeyboardScopeClick,
+  handleKeyboardScopeKeyDown: handleImageSelectorKeyboardScopeKeyDown,
+} = createFileExplorerKeyboardScopeHandlers({
+  fileExplorerRefName: "imageSelectorFileExplorer",
+  keyboardScopeRefName: "imageSelectorKeyboardScope",
+});
 
 const preparePreviewPlaybackAtStart = async ({
   graphicsService,
@@ -1306,6 +1316,12 @@ export const handleMaskImageFileExplorerClickItem = (deps, payload) => {
   deps.refs.imageSelector?.transformedHandlers?.handleScrollToItem?.({
     itemId,
   });
+  focusImageSelectorKeyboardScope(deps);
+};
+
+export {
+  handleImageSelectorKeyboardScopeClick,
+  handleImageSelectorKeyboardScopeKeyDown,
 };
 
 export const handleConfirmMaskImageSelection = (deps) => {

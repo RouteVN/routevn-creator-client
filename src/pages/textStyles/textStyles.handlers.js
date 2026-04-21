@@ -6,6 +6,7 @@ import {
 import { buildFontResourceDataFromUploadResult } from "../../deps/services/shared/resourceImports.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import {
   runResourcePageMutation,
   showResourcePageError,
@@ -54,6 +55,10 @@ export const handleBeforeMount = (deps) => {
   };
 };
 
+export const handleAfterMount = (deps) => {
+  focusFileExplorerKeyboardScope(deps);
+};
+
 const refreshTextStylesData = async (deps, { selectedItemId } = {}) => {
   const { store, render, projectService, refs } = deps;
   syncRepositoryToStore({ store, projectService });
@@ -72,8 +77,18 @@ const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
     resourceType: "textStyles",
     refresh: refreshTextStylesData,
   });
+const {
+  focusKeyboardScope: focusFileExplorerKeyboardScope,
+  handleKeyboardScopeClick: handleFileExplorerKeyboardScopeClick,
+  handleKeyboardScopeKeyDown: handleFileExplorerKeyboardScopeKeyDown,
+} = createFileExplorerKeyboardScopeHandlers();
 
-export { handleFileExplorerAction, handleFileExplorerTargetChanged };
+export {
+  handleFileExplorerAction,
+  handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
+  handleFileExplorerKeyboardScopeKeyDown,
+};
 
 export const handleDataChanged = refreshTextStylesData;
 
@@ -84,12 +99,14 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   if (isFolder) {
     store.setSelectedItemId({ itemId: undefined });
     render();
+    focusFileExplorerKeyboardScope(deps);
     return;
   }
 
   store.setSelectedItemId({ itemId });
   logSelectedTextStyleItem({ store, itemId });
   render();
+  focusFileExplorerKeyboardScope(deps);
 };
 
 export const handleTextStyleItemClick = (deps, payload) => {

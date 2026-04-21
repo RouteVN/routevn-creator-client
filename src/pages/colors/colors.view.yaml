@@ -21,6 +21,18 @@ refs:
         handler: handleSearchInput
       item-delete:
         handler: handleItemDelete
+  fileExplorerKeyboardScope:
+    eventListeners:
+      click:
+        handler: handleFileExplorerKeyboardScopeClick
+      keydown:
+        handler: handleFileExplorerKeyboardScopeKeyDown
+  fileExplorerDetailKeyboardScope:
+    eventListeners:
+      click:
+        handler: handleFileExplorerKeyboardScopeClick
+      keydown:
+        handler: handleFileExplorerKeyboardScopeKeyDown
   detailColorPreview:
     eventListeners:
       click:
@@ -57,19 +69,21 @@ template:
                   - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
                   - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
           - 'rtgl-view w=1fg h=f pl=sm style="min-width: 0; min-height: 0;"':
-              - rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} :groups=${catalogGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}: null
+              - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
+                  - rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} :groups=${catalogGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
-                  - $if selectedItemId:
-                      - rtgl-view d=v w=f h=f:
-                          - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
-                              - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
-                              - rtgl-svg svg=edit wh=16: null
-                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
-                              - 'rtgl-view#detailColorPreview slot="color-preview" w=f h=130 br=md bw=xs bc=bo cur=pointer style="background-color: ${selectedColorHex};"': null
-                    $else:
-                      - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                          - rtgl-text s=md c=mu-fg: No selection
+                  - 'div#fileExplorerDetailKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
+                      - $if selectedItemId:
+                          - rtgl-view d=v w=f h=f:
+                              - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+                                  - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                                  - rtgl-svg svg=edit wh=16: null
+                              - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
+                                  - 'rtgl-view#detailColorPreview slot="color-preview" w=f h=130 br=md bw=xs bc=bo cur=pointer style="background-color: ${selectedColorHex};"': null
+                        $else:
+                          - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                              - rtgl-text s=md c=mu-fg: No selection
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=sm:
       - rtgl-form#editForm key=${isEditDialogOpen} slot=content :defaultValues=${editDefaultValues} :form=${editForm}: null
   - rtgl-dialog#previewDialog ?open=${isPreviewDialogOpen} s=md:

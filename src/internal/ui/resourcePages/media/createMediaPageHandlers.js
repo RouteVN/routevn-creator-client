@@ -1,4 +1,5 @@
 import { createResourceFileExplorerHandlers } from "../../fileExplorer.js";
+import { createFileExplorerKeyboardScopeHandlers } from "../../fileExplorerKeyboardScope.js";
 import { createProjectStateStream } from "../../../../deps/services/shared/projectStateStream.js";
 import { syncMediaPageData } from "./mediaPageShared.js";
 import { tap } from "rxjs";
@@ -156,6 +157,10 @@ export const createMediaPageHandlers = ({
     return mountSubscriptions(deps);
   };
 
+  const handleAfterMount = (deps) => {
+    focusKeyboardScope(deps);
+  };
+
   const handleFileExplorerSelectionChanged = (deps, payload) => {
     const { store, render, refs } = deps;
     const { itemId, isFolder } = payload._event.detail;
@@ -163,6 +168,7 @@ export const createMediaPageHandlers = ({
     if (isFolder) {
       store.setSelectedItemId({ itemId: undefined });
       render();
+      focusKeyboardScope(deps);
       return;
     }
 
@@ -173,6 +179,7 @@ export const createMediaPageHandlers = ({
     store.setSelectedItemId({ itemId });
     render();
     refs.groupview?.scrollItemIntoView?.({ itemId });
+    focusKeyboardScope(deps);
   };
 
   const handleFileExplorerDoubleClick = (deps, payload) => {
@@ -189,6 +196,11 @@ export const createMediaPageHandlers = ({
       resourceType,
       refresh: refreshData,
     });
+  const {
+    focusKeyboardScope,
+    handleKeyboardScopeClick: handleFileExplorerKeyboardScopeClick,
+    handleKeyboardScopeKeyDown: handleFileExplorerKeyboardScopeKeyDown,
+  } = createFileExplorerKeyboardScopeHandlers();
 
   const handleItemClick = (deps, payload) => {
     const { store, render, refs } = deps;
@@ -222,10 +234,13 @@ export const createMediaPageHandlers = ({
     refreshData,
     openEditDialogWithValues,
     handleBeforeMount,
+    handleAfterMount,
     handleFileExplorerSelectionChanged,
     handleFileExplorerDoubleClick,
     handleFileExplorerAction,
     handleFileExplorerTargetChanged,
+    handleFileExplorerKeyboardScopeClick,
+    handleFileExplorerKeyboardScopeKeyDown,
     handleItemClick,
     handleItemDoubleClick,
     handleItemEdit,

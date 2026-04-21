@@ -1,7 +1,13 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createMediaPageHandlers } from "../../src/internal/ui/resourcePages/media/createMediaPageHandlers.js";
 
+const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+
 describe("createMediaPageHandlers", () => {
+  afterEach(() => {
+    globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+  });
+
   it("selects the created folder in the explorer while clearing page item selection", async () => {
     const handlers = createMediaPageHandlers({
       resourceType: "images",
@@ -298,5 +304,69 @@ describe("createMediaPageHandlers", () => {
     expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
       itemId: "image-1",
     });
+  });
+
+  it("focuses the keyboard scope after explorer selection changes", () => {
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      callback();
+      return 1;
+    });
+
+    const handlers = createMediaPageHandlers({
+      resourceType: "images",
+    });
+    const deps = {
+      store: {
+        setSelectedItemId: vi.fn(),
+      },
+      refs: {
+        groupview: {
+          scrollItemIntoView: vi.fn(),
+        },
+        fileExplorerKeyboardScope: {
+          focus: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    handlers.handleFileExplorerSelectionChanged(deps, {
+      _event: {
+        detail: {
+          itemId: "image-1",
+          isFolder: false,
+        },
+      },
+    });
+
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: "image-1",
+    });
+    expect(deps.refs.groupview.scrollItemIntoView).toHaveBeenCalledWith({
+      itemId: "image-1",
+    });
+    expect(deps.refs.fileExplorerKeyboardScope.focus).toHaveBeenCalledTimes(1);
+  });
+
+  it("focuses the keyboard scope after mount", () => {
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      callback();
+      return 1;
+    });
+
+    const handlers = createMediaPageHandlers({
+      resourceType: "images",
+    });
+    const deps = {
+      refs: {
+        fileExplorerKeyboardScope: {
+          focus: vi.fn(),
+        },
+      },
+    };
+
+    handlers.handleAfterMount(deps);
+
+    expect(deps.refs.fileExplorerKeyboardScope.focus).toHaveBeenCalledTimes(1);
   });
 });

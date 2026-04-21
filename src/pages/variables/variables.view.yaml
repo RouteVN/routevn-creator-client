@@ -19,6 +19,18 @@ refs:
         handler: handleVariableUpdated
       variable-delete:
         handler: handleVariableDelete
+  fileExplorerKeyboardScope:
+    eventListeners:
+      click:
+        handler: handleFileExplorerKeyboardScopeClick
+      keydown:
+        handler: handleFileExplorerKeyboardScopeKeyDown
+  fileExplorerDetailKeyboardScope:
+    eventListeners:
+      click:
+        handler: handleFileExplorerKeyboardScopeClick
+      keydown:
+        handler: handleFileExplorerKeyboardScopeKeyDown
   detailHeader:
     eventListeners:
       click:
@@ -31,15 +43,17 @@ template:
                   - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
                   - rvn-base-file-explorer#fileexplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
           - 'rtgl-view d=v w=1fg h=f pl=sm style="min-width: 0; min-height: 0;"':
-              - rvn-group-variables-view#groupview w=f h=1fg navTitle=${title} :flatGroups=${flatGroups} :selectedItemId=${selectedItemId}: null
+              - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
+                  - rvn-group-variables-view#groupview w=f h=1fg navTitle=${title} :flatGroups=${flatGroups} :selectedItemId=${selectedItemId}: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
-                  - $if selectedItemId:
-                      - rtgl-view d=v w=f h=f:
-                          - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
-                              - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
-                              - rtgl-svg svg=edit wh=16: null
-                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}: null
-                    $else:
-                      - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                          - rtgl-text s=md c=mu-fg: No selection
+                  - 'div#fileExplorerDetailKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
+                      - $if selectedItemId:
+                          - rtgl-view d=v w=f h=f:
+                              - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+                                  - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                                  - rtgl-svg svg=edit wh=16: null
+                              - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}: null
+                        $else:
+                          - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                              - rtgl-text s=md c=mu-fg: No selection

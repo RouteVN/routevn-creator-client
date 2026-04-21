@@ -319,20 +319,51 @@ const summarizeLifetime = (lifetime) => {
   return `${range.min}s to ${range.max}s`;
 };
 
-export const createParticlePresetSelectionForm = () => ({
-  title: "Choose Particle Preset",
+const withFieldTooltips = (fields = []) =>
+  fields.map((field) => {
+    if (!field || typeof field !== "object" || Array.isArray(field)) {
+      return field;
+    }
+
+    const description = field.description;
+    if (!description) {
+      return field;
+    }
+
+    const { description: _description, ...rest } = field;
+
+    return {
+      ...rest,
+      tooltip: field.tooltip ?? {
+        content: description,
+      },
+    };
+  });
+
+export const createParticleCreateSetupForm = ({ imageOptions = [] } = {}) => ({
+  title: "Create Particle",
   description:
-    "Pick a starting preset. The next step opens the full editor with those values prefilled.",
-  fields: [
+    "Choose a preset and texture image first. The preview updates here before you open the full editor.",
+  fields: withFieldTooltips([
     {
       name: "presetId",
       type: "select",
       label: "Preset",
+      description: "Start from a ready-made particle effect profile.",
       required: true,
       clearable: false,
       options: PARTICLE_PRESET_OPTIONS,
     },
-  ],
+    {
+      name: "textureImageId",
+      type: "select",
+      label: "Texture Image",
+      description: "Choose the image used for each spawned particle.",
+      options: resolveTextureImageOptions(imageOptions),
+      required: true,
+      clearable: false,
+    },
+  ]),
   actions: {
     buttons: [
       {
@@ -344,7 +375,7 @@ export const createParticlePresetSelectionForm = () => ({
       {
         id: "submit",
         variant: "pr",
-        label: "Continue",
+        label: "Next",
         validate: true,
       },
     ],
@@ -364,330 +395,396 @@ const PARTICLE_FORM_TAB_IDS = new Set(
   PARTICLE_FORM_TABS.map((item) => item.id),
 );
 
-const createParticleFieldsByTab = ({ imageOptions = [] } = {}) => ({
-  basics: [
-    {
-      type: "read-only-text",
-      content:
-        "Pick a texture image and adjust the main emitter fields. Preset values were applied before opening this form.",
-    },
-    {
-      name: "name",
-      type: "input-text",
-      label: "Name",
-      required: true,
-    },
-    {
-      name: "description",
-      type: "input-textarea",
-      label: "Description",
-      required: false,
-    },
-    {
-      name: "width",
-      type: "input-number",
-      label: "Width",
-      min: 1,
-      step: 1,
-      required: true,
-    },
-    {
-      name: "height",
-      type: "input-number",
-      label: "Height",
-      min: 1,
-      step: 1,
-      required: true,
-    },
-    {
-      name: "seed",
-      type: "input-number",
-      label: "Seed",
-      step: 1,
-      required: false,
-    },
-  ],
-  emission: [
-    {
-      name: "emissionMode",
-      type: "select",
-      label: "Emission Mode",
-      options: EMISSION_MODE_OPTIONS,
-      required: true,
-    },
-    {
-      name: "emissionRate",
-      type: "input-number",
-      label: "Rate / second",
-      min: 0,
-      step: 1,
-      required: false,
-    },
-    {
-      name: "burstCount",
-      type: "input-number",
-      label: "Burst Count",
-      min: 0,
-      step: 1,
-      required: false,
-    },
-    {
-      name: "maxActive",
-      type: "input-number",
-      label: "Max Active",
-      min: 1,
-      step: 1,
-      required: false,
-    },
-    {
-      name: "durationMode",
-      type: "segmented-control",
-      label: "Duration",
-      options: DURATION_MODE_OPTIONS,
-      required: true,
-    },
-    {
-      name: "durationSeconds",
-      type: "input-number",
-      label: "Duration Seconds",
-      min: 0,
-      step: 0.1,
-      required: false,
-      $when: "values.durationMode == 'timed'",
-    },
-    {
-      name: "lifetimeMin",
-      type: "input-number",
-      label: "Lifetime Min",
-      min: 0,
-      step: 0.1,
-      required: true,
-    },
-    {
-      name: "lifetimeMax",
-      type: "input-number",
-      label: "Lifetime Max",
-      min: 0,
-      step: 0.1,
-      required: true,
-    },
-  ],
-  source: [
-    {
-      name: "sourceKind",
-      type: "select",
-      label: "Source Shape",
-      options: SOURCE_KIND_OPTIONS,
-      required: true,
-    },
-    {
-      name: "sourceX",
-      type: "input-number",
-      label: "Source X",
-      step: 1,
-      required: false,
-    },
-    {
-      name: "sourceY",
-      type: "input-number",
-      label: "Source Y",
-      step: 1,
-      required: false,
-    },
-    {
-      name: "sourceWidth",
-      type: "input-number",
-      label: "Source Width",
-      min: 0,
-      step: 1,
-      required: false,
-    },
-    {
-      name: "sourceHeight",
-      type: "input-number",
-      label: "Source Height",
-      min: 0,
-      step: 1,
-      required: false,
-    },
-    {
-      name: "sourceRadius",
-      type: "input-number",
-      label: "Source Radius",
-      min: 0,
-      step: 1,
-      required: false,
-    },
-    {
-      name: "sourceInnerRadius",
-      type: "input-number",
-      label: "Inner Radius",
-      min: 0,
-      step: 1,
-      required: false,
-    },
-    {
-      name: "sourceX2",
-      type: "input-number",
-      label: "Line X2",
-      step: 1,
-      required: false,
-    },
-    {
-      name: "sourceY2",
-      type: "input-number",
-      label: "Line Y2",
-      step: 1,
-      required: false,
-    },
-  ],
-  movement: [
-    {
-      name: "velocityKind",
-      type: "select",
-      label: "Velocity Type",
-      options: VELOCITY_KIND_OPTIONS,
-      required: true,
-    },
-    {
-      name: "speedMin",
-      type: "input-number",
-      label: "Speed Min",
-      min: 0,
-      step: 1,
-      required: false,
-    },
-    {
-      name: "speedMax",
-      type: "input-number",
-      label: "Speed Max",
-      min: 0,
-      step: 1,
-      required: false,
-    },
-    {
-      name: "directionMin",
-      type: "input-number",
-      label: "Direction / Angle Min",
-      step: 1,
-      required: false,
-    },
-    {
-      name: "directionMax",
-      type: "input-number",
-      label: "Direction / Angle Max",
-      step: 1,
-      required: false,
-    },
-    {
-      name: "accelerationX",
-      type: "input-number",
-      label: "Acceleration X",
-      step: 1,
-      required: false,
-    },
-    {
-      name: "accelerationY",
-      type: "input-number",
-      label: "Acceleration Y",
-      step: 1,
-      required: false,
-    },
-    {
-      name: "maxSpeed",
-      type: "input-number",
-      label: "Max Speed",
-      min: 0,
-      step: 1,
-      required: false,
-    },
-    {
-      name: "faceVelocity",
-      type: "checkbox",
-      content: "Rotate particles toward movement",
-      required: false,
-    },
-  ],
-  appearance: [
-    {
-      name: "textureImageId",
-      type: "select",
-      label: "Texture Image",
-      options: resolveTextureImageOptions(imageOptions),
-      required: true,
-    },
-    {
-      name: "scaleMin",
-      type: "input-number",
-      label: "Scale Min",
-      min: 0,
-      step: 0.05,
-      required: false,
-    },
-    {
-      name: "scaleMax",
-      type: "input-number",
-      label: "Scale Max",
-      min: 0,
-      step: 0.05,
-      required: false,
-    },
-  ],
-  bounds: [
-    {
-      name: "boundsMode",
-      type: "select",
-      label: "Bounds Mode",
-      options: BOUNDS_MODE_OPTIONS,
-      required: true,
-    },
-    {
-      name: "boundsSource",
-      type: "select",
-      label: "Bounds Source",
-      options: BOUNDS_SOURCE_OPTIONS,
-      required: false,
-    },
-    {
-      name: "boundsPadding",
-      type: "input-number",
-      label: "Bounds Padding",
-      min: 0,
-      step: 1,
-      required: false,
-    },
-    {
-      name: "customX",
-      type: "input-number",
-      label: "Custom Bounds X",
-      step: 1,
-      required: false,
-    },
-    {
-      name: "customY",
-      type: "input-number",
-      label: "Custom Bounds Y",
-      step: 1,
-      required: false,
-    },
-    {
-      name: "customWidth",
-      type: "input-number",
-      label: "Custom Bounds Width",
-      min: 0,
-      step: 1,
-      required: false,
-    },
-    {
-      name: "customHeight",
-      type: "input-number",
-      label: "Custom Bounds Height",
-      min: 0,
-      step: 1,
-      required: false,
-    },
-  ],
-});
+const createParticleFieldsByTab = ({ imageOptions = [] } = {}) => {
+  const fieldsByTab = {
+    basics: [
+      {
+        type: "read-only-text",
+        content:
+          "Pick a texture image and adjust the main emitter fields. Preset values were applied before opening this form.",
+      },
+      {
+        name: "name",
+        type: "input-text",
+        label: "Name",
+        description: "Give this particle effect a name for the resource list.",
+        required: true,
+      },
+      {
+        name: "description",
+        type: "input-textarea",
+        label: "Description",
+        description:
+          "Optional notes about where or how this effect should be used.",
+        required: false,
+      },
+      {
+        name: "width",
+        type: "input-number",
+        label: "Width",
+        description:
+          "Set the particle preview and effect canvas width in pixels.",
+        min: 1,
+        step: 1,
+        required: true,
+      },
+      {
+        name: "height",
+        type: "input-number",
+        label: "Height",
+        description:
+          "Set the particle preview and effect canvas height in pixels.",
+        min: 1,
+        step: 1,
+        required: true,
+      },
+      {
+        name: "seed",
+        type: "input-number",
+        label: "Seed",
+        description:
+          "Use a fixed random seed to make the effect replay consistently.",
+        step: 1,
+        required: false,
+      },
+    ],
+    emission: [
+      {
+        name: "emissionMode",
+        type: "select",
+        label: "Emission Mode",
+        description:
+          "Choose whether particles spawn continuously or in bursts.",
+        options: EMISSION_MODE_OPTIONS,
+        required: true,
+      },
+      {
+        name: "emissionRate",
+        type: "input-number",
+        label: "Rate / second",
+        description: "How many particles spawn each second in continuous mode.",
+        min: 0,
+        step: 1,
+        required: false,
+      },
+      {
+        name: "burstCount",
+        type: "input-number",
+        label: "Burst Count",
+        description: "How many particles spawn each time a burst is emitted.",
+        min: 0,
+        step: 1,
+        required: false,
+      },
+      {
+        name: "maxActive",
+        type: "input-number",
+        label: "Max Active",
+        description: "Limit how many particles can exist at the same time.",
+        min: 1,
+        step: 1,
+        required: false,
+      },
+      {
+        name: "durationMode",
+        type: "segmented-control",
+        label: "Duration",
+        description: "Keep emitting forever or stop after a timed window.",
+        options: DURATION_MODE_OPTIONS,
+        required: true,
+      },
+      {
+        name: "durationSeconds",
+        type: "input-number",
+        label: "Duration Seconds",
+        description: "How long emission lasts when using timed duration.",
+        min: 0,
+        step: 0.1,
+        required: false,
+        $when: "values.durationMode == 'timed'",
+      },
+      {
+        name: "lifetimeMin",
+        type: "input-number",
+        label: "Lifetime Min",
+        description:
+          "Shortest lifetime a spawned particle can have, in seconds.",
+        min: 0,
+        step: 0.1,
+        required: true,
+      },
+      {
+        name: "lifetimeMax",
+        type: "input-number",
+        label: "Lifetime Max",
+        description:
+          "Longest lifetime a spawned particle can have, in seconds.",
+        min: 0,
+        step: 0.1,
+        required: true,
+      },
+    ],
+    source: [
+      {
+        name: "sourceKind",
+        type: "select",
+        label: "Source Shape",
+        description: "Choose the emitter shape particles spawn from.",
+        options: SOURCE_KIND_OPTIONS,
+        required: true,
+      },
+      {
+        name: "sourceX",
+        type: "input-number",
+        label: "Source X",
+        description: "Horizontal start position of the emitter shape.",
+        step: 1,
+        required: false,
+      },
+      {
+        name: "sourceY",
+        type: "input-number",
+        label: "Source Y",
+        description: "Vertical start position of the emitter shape.",
+        step: 1,
+        required: false,
+      },
+      {
+        name: "sourceWidth",
+        type: "input-number",
+        label: "Source Width",
+        description: "Width of the rectangle emitter area.",
+        min: 0,
+        step: 1,
+        required: false,
+      },
+      {
+        name: "sourceHeight",
+        type: "input-number",
+        label: "Source Height",
+        description: "Height of the rectangle emitter area.",
+        min: 0,
+        step: 1,
+        required: false,
+      },
+      {
+        name: "sourceRadius",
+        type: "input-number",
+        label: "Source Radius",
+        description: "Outer radius of the circle emitter area.",
+        min: 0,
+        step: 1,
+        required: false,
+      },
+      {
+        name: "sourceInnerRadius",
+        type: "input-number",
+        label: "Inner Radius",
+        description: "Optional inner gap for ring-shaped circle emitters.",
+        min: 0,
+        step: 1,
+        required: false,
+      },
+      {
+        name: "sourceX2",
+        type: "input-number",
+        label: "Line X2",
+        description: "Horizontal end position for line emitters.",
+        step: 1,
+        required: false,
+      },
+      {
+        name: "sourceY2",
+        type: "input-number",
+        label: "Line Y2",
+        description: "Vertical end position for line emitters.",
+        step: 1,
+        required: false,
+      },
+    ],
+    movement: [
+      {
+        name: "velocityKind",
+        type: "select",
+        label: "Velocity Type",
+        description: "Move particles in one direction or spread them radially.",
+        options: VELOCITY_KIND_OPTIONS,
+        required: true,
+      },
+      {
+        name: "speedMin",
+        type: "input-number",
+        label: "Speed Min",
+        description: "Minimum launch speed for new particles.",
+        min: 0,
+        step: 1,
+        required: false,
+      },
+      {
+        name: "speedMax",
+        type: "input-number",
+        label: "Speed Max",
+        description: "Maximum launch speed for new particles.",
+        min: 0,
+        step: 1,
+        required: false,
+      },
+      {
+        name: "directionMin",
+        type: "input-number",
+        label: "Direction / Angle Min",
+        description:
+          "Starting minimum direction or angle for particle movement.",
+        step: 1,
+        required: false,
+      },
+      {
+        name: "directionMax",
+        type: "input-number",
+        label: "Direction / Angle Max",
+        description:
+          "Starting maximum direction or angle for particle movement.",
+        step: 1,
+        required: false,
+      },
+      {
+        name: "accelerationX",
+        type: "input-number",
+        label: "Acceleration X",
+        description:
+          "Horizontal acceleration applied over each particle's lifetime.",
+        step: 1,
+        required: false,
+      },
+      {
+        name: "accelerationY",
+        type: "input-number",
+        label: "Acceleration Y",
+        description:
+          "Vertical acceleration applied over each particle's lifetime.",
+        step: 1,
+        required: false,
+      },
+      {
+        name: "maxSpeed",
+        type: "input-number",
+        label: "Max Speed",
+        description:
+          "Clamp particle speed so acceleration does not exceed this limit.",
+        min: 0,
+        step: 1,
+        required: false,
+      },
+      {
+        name: "faceVelocity",
+        type: "checkbox",
+        content: "Rotate particles toward movement",
+        description:
+          "Turn each particle so it points in the direction it is moving.",
+        required: false,
+      },
+    ],
+    appearance: [
+      {
+        name: "textureImageId",
+        type: "select",
+        label: "Texture Image",
+        description: "Choose the image used to draw each particle sprite.",
+        options: resolveTextureImageOptions(imageOptions),
+        required: true,
+      },
+      {
+        name: "scaleMin",
+        type: "input-number",
+        label: "Scale Min",
+        description:
+          "Minimum particle scale at spawn or across the preset range.",
+        min: 0,
+        step: 0.05,
+        required: false,
+      },
+      {
+        name: "scaleMax",
+        type: "input-number",
+        label: "Scale Max",
+        description:
+          "Maximum particle scale at spawn or across the preset range.",
+        min: 0,
+        step: 0.05,
+        required: false,
+      },
+    ],
+    bounds: [
+      {
+        name: "boundsMode",
+        type: "select",
+        label: "Bounds Mode",
+        description:
+          "Choose what happens when particles leave the effect area.",
+        options: BOUNDS_MODE_OPTIONS,
+        required: true,
+      },
+      {
+        name: "boundsSource",
+        type: "select",
+        label: "Bounds Source",
+        description: "Recycle against the canvas area or a custom rectangle.",
+        options: BOUNDS_SOURCE_OPTIONS,
+        required: false,
+      },
+      {
+        name: "boundsPadding",
+        type: "input-number",
+        label: "Bounds Padding",
+        description: "Extra padding around the canvas before recycle starts.",
+        min: 0,
+        step: 1,
+        required: false,
+      },
+      {
+        name: "customX",
+        type: "input-number",
+        label: "Custom Bounds X",
+        description: "Horizontal start position of the custom recycle area.",
+        step: 1,
+        required: false,
+      },
+      {
+        name: "customY",
+        type: "input-number",
+        label: "Custom Bounds Y",
+        description: "Vertical start position of the custom recycle area.",
+        step: 1,
+        required: false,
+      },
+      {
+        name: "customWidth",
+        type: "input-number",
+        label: "Custom Bounds Width",
+        description: "Width of the custom recycle area.",
+        min: 0,
+        step: 1,
+        required: false,
+      },
+      {
+        name: "customHeight",
+        type: "input-number",
+        label: "Custom Bounds Height",
+        description: "Height of the custom recycle area.",
+        min: 0,
+        step: 1,
+        required: false,
+      },
+    ],
+  };
+
+  return Object.fromEntries(
+    Object.entries(fieldsByTab).map(([tab, fields]) => [
+      tab,
+      withFieldTooltips(fields),
+    ]),
+  );
+};
 
 export const createParticleForm = ({
   editMode = false,
@@ -760,6 +857,7 @@ export const buildParticleFormValues = ({
   const movementValues = resolveMovementValues(movement);
 
   return {
+    presetId,
     name: resolvedParticle.name ?? "",
     description: resolvedParticle.description ?? "",
     width: toTextValue(resolvedParticle.width ?? 1280),

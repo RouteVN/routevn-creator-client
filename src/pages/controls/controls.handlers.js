@@ -15,10 +15,13 @@ import {
 
 const {
   handleBeforeMount,
+  handleAfterMount,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
+  handleFileExplorerKeyboardScopeKeyDown,
   handleItemClick: handleControlItemClick,
   handleSearchInput,
 } = createCatalogPageHandlers({
@@ -31,10 +34,13 @@ const {
 
 export {
   handleBeforeMount,
+  handleAfterMount,
   handleDataChanged,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
+  handleFileExplorerKeyboardScopeKeyDown,
   handleControlItemClick,
   handleSearchInput,
 };

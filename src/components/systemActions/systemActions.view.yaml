@@ -15,6 +15,10 @@ refs:
     eventListeners:
       click:
         handler: handleEmbeddedCloseClick
+  helpFloatingButton:
+    eventListeners:
+      click:
+        handler: handleHelpFloatingButtonClick
   actionsDialog:
     eventListeners:
       close:
@@ -159,7 +163,9 @@ template:
               - rtgl-view d=h av=c ah=e w=f g=lg:
                   - rtgl-button#embeddedCloseButton: Confirm
   - rtgl-dialog#actionsDialog key=${mode} ?open=${isActionsDialogOpen}:
-      - rtgl-view slot=content w=800 h=80vh:
+      - rtgl-view slot=content w=800 h=80vh pos=rel:
+          - 'rtgl-view#helpFloatingButton pos=abs z=10 w=40 h=40 ah=c av=c bgc=bg bw=xs bc=bo h-bc=ac br=f cur=pointer style="top: 16px; right: 16px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);"':
+              - rtgl-text s=sm c=mu-fg: '?'
           - $if mode == "actions":
               - rvn-command-line-actions#commandLineActions :actionsType=${actionsType} :hiddenModes=${hiddenModes}: null
             $elif mode == "dialogue":

@@ -1,9 +1,10 @@
 import { readDir, exists } from "@tauri-apps/plugin-fs";
 import { join } from "@tauri-apps/api/path";
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { createAppServiceCore } from "./shared/appServiceCore.js";
 import { generateId } from "../../internal/id.js";
 import { assertSafeProjectFileId } from "../../internal/projectFileIds.js";
+import { copyTextToClipboard } from "../../internal/copyText.js";
 
 const deriveProjectNameFromPath = (projectPath) => {
   if (typeof projectPath !== "string" || projectPath.length === 0) {
@@ -12,6 +13,14 @@ const deriveProjectNameFromPath = (projectPath) => {
   const normalizedPath = projectPath.replace(/[\\/]+$/, "");
   const segments = normalizedPath.split(/[\\/]/).filter(Boolean);
   return segments[segments.length - 1] || "Untitled Project";
+};
+
+const runningStaticWebServersById = new Map();
+
+const cloneRunningStaticWebServers = () => {
+  return Array.from(runningStaticWebServersById.values()).map((server) => ({
+    ...server,
+  }));
 };
 
 export const createAppService = (params) => {
@@ -225,8 +234,67 @@ export const createAppService = (params) => {
     },
   };
 
-  return createAppServiceCore({
+  const appService = createAppServiceCore({
     ...params,
     platformAdapter,
   });
+
+  return {
+    ...appService,
+
+    copyText(value) {
+      return copyTextToClipboard(value);
+    },
+
+    async startStaticWebServer({ rootPath } = {}) {
+      if (!rootPath) {
+        throw new Error("rootPath is required");
+      }
+
+      const server = await invoke("start_static_web_server", {
+        rootPath,
+      });
+      if (server?.serverId) {
+        runningStaticWebServersById.set(server.serverId, server);
+      }
+      return server;
+    },
+
+    async stopStaticWebServer({ serverId } = {}) {
+      if (!serverId) {
+        return false;
+      }
+
+      const result = await invoke("stop_static_web_server", {
+        serverId,
+      });
+      if (result) {
+        runningStaticWebServersById.delete(serverId);
+      }
+      return result;
+    },
+
+    async listStaticWebServers() {
+      try {
+        const servers = await invoke("list_static_web_servers");
+        runningStaticWebServersById.clear();
+        for (const server of Array.isArray(servers) ? servers : []) {
+          if (server?.serverId) {
+            runningStaticWebServersById.set(server.serverId, server);
+          }
+        }
+        return cloneRunningStaticWebServers();
+      } catch (error) {
+        const message = String(error?.message ?? error ?? "");
+        if (message.includes("Command list_static_web_servers not found")) {
+          console.warn(
+            "list_static_web_servers is unavailable in the running Tauri binary. Falling back to the local cache.",
+          );
+          return cloneRunningStaticWebServers();
+        }
+
+        throw error;
+      }
+    },
+  };
 };

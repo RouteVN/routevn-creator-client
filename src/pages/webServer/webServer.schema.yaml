@@ -1,0 +1,4 @@
+componentName: rvn-web-server
+propsSchema:
+  type: object
+  properties: {}

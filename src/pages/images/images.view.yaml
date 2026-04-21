@@ -29,10 +29,18 @@ refs:
         handler: handleSearchInput
       item-delete:
         handler: handleItemDelete
-  groupviewKeyboardScope:
+  fileExplorerKeyboardScope:
     eventListeners:
+      click:
+        handler: handleFileExplorerKeyboardScopeClick
       keydown:
-        handler: handleGroupViewKeyDown
+        handler: handleFileExplorerKeyboardScopeKeyDown
+  fileExplorerDetailKeyboardScope:
+    eventListeners:
+      click:
+        handler: handleFileExplorerKeyboardScopeClick
+      keydown:
+        handler: handleFileExplorerKeyboardScopeKeyDown
   previewOverlay:
     eventListeners:
       click:
@@ -71,21 +79,22 @@ template:
                   - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
                   - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag start-collapsed=${startCollapsedFileExplorer} :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
           - 'rtgl-view w=1fg h=f pl=sm style="min-width: 0; min-height: 0;"':
-              - 'div#groupviewKeyboardScope tabindex=0 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
+              - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
                   - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-zoom-controls progressive-render lazy-image-cards :groups=${mediaGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :imageHeight=${imageHeight} :maxWidth=${maxWidth} :itemContextMenuItems=${centerItemContextMenuItems}': null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
-                  - $if selectedItemId:
-                      - rtgl-view d=v w=f h=f:
-                          - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
-                              - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
-                              - rtgl-svg svg=edit wh=16: null
-                          - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
-                              - $if selectedPreviewFileId:
-                                  - rvn-file-image#detailImage slot="image-file-id" fileId=${selectedPreviewFileId} w=f h=160 bw=xs bc=bo br=md cur=pointer: null
-                    $else:
-                      - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                          - rtgl-text s=md c=mu-fg: No selection
+                  - 'div#fileExplorerDetailKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
+                      - $if selectedItemId:
+                          - rtgl-view d=v w=f h=f:
+                              - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+                                  - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                                  - rtgl-svg svg=edit wh=16: null
+                              - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
+                                  - $if selectedPreviewFileId:
+                                      - rvn-file-image#detailImage slot="image-file-id" fileId=${selectedPreviewFileId} w=f h=160 bw=xs bc=bo br=md cur=pointer: null
+                        $else:
+                          - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                              - rtgl-text s=md c=mu-fg: No selection
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:

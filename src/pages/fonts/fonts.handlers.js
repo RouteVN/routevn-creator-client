@@ -233,11 +233,14 @@ const loadFontInfo = async (deps, { itemId } = {}) => {
 
 const {
   handleBeforeMount,
+  handleAfterMount,
   openEditDialogWithValues,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged: handleBaseFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
+  handleFileExplorerKeyboardScopeKeyDown,
   handleSearchInput,
   handleItemClick: handleBaseFontItemClick,
   handleItemEdit: handleFontItemEdit,
@@ -251,10 +254,16 @@ const {
   getEditPreviewFileId: (item) => item?.fileId,
 });
 
-export { handleFileExplorerAction, handleFileExplorerTargetChanged };
+export {
+  handleFileExplorerAction,
+  handleFileExplorerTargetChanged,
+  handleFileExplorerKeyboardScopeClick,
+  handleFileExplorerKeyboardScopeKeyDown,
+};
 
 export {
   handleBeforeMount,
+  handleAfterMount,
   handleDataChanged,
   handleSearchInput,
   handleFontItemEdit,
