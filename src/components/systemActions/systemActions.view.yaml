@@ -164,8 +164,8 @@ template:
                   - rtgl-button#embeddedCloseButton: Confirm
   - rtgl-dialog#actionsDialog key=${mode} ?open=${isActionsDialogOpen}:
       - rtgl-view slot=content w=800 h=80vh pos=rel:
-          - 'rtgl-view#helpFloatingButton pos=abs z=10 w=40 h=40 ah=c av=c bgc=bg bw=xs bc=bo h-bc=ac br=f cur=pointer style="top: 16px; right: 16px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);"':
-              - rtgl-text s=sm c=mu-fg: '?'
+          - 'rtgl-view#helpFloatingButton pos=abs z=10 w=28 h=28 ah=c av=c bgc=bg bw=xs bc=bo h-bc=ac br=f cur=pointer style="top: 10px; right: 10px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);"':
+              - rtgl-text s=xs c=mu-fg: '?'
           - $if mode == "actions":
               - rvn-command-line-actions#commandLineActions :actionsType=${actionsType} :hiddenModes=${hiddenModes}: null
             $elif mode == "dialogue":

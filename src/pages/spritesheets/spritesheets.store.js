@@ -447,6 +447,7 @@ export const selectViewData = ({ state }) => {
     selectedResourceId: "spritesheets",
     title: "Spritesheets",
     uploadText: "Add",
+    uploadIcon: "plus",
     acceptedFileTypes: [".png", ".json"],
     flatItems,
     mediaGroups,

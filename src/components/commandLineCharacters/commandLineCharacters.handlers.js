@@ -5,6 +5,51 @@ const getCharacterIndexFromEvent = (event) => {
   return Number.isInteger(index) ? index : undefined;
 };
 
+const getSelectedSpriteId = (character = {}) => {
+  return character?.sprites?.[0]?.resourceId;
+};
+
+const beginExistingCharacterSpriteSelection = (store, index) => {
+  const selectedCharacters = store.selectSelectedCharacters();
+  const selectedCharacter = selectedCharacters[index];
+
+  store.clearPendingCharacterIndex();
+  store.setSelectedCharacterIndex({ index });
+  store.setTempSelectedSpriteId({
+    spriteId: getSelectedSpriteId(selectedCharacter),
+  });
+  store.setSearchQuery({ value: "" });
+  store.setMode({
+    mode: "sprite-select",
+  });
+};
+
+const beginNewCharacterSpriteSelection = (store, characterId) => {
+  store.addCharacter({ id: characterId });
+
+  const currentCharacters = store.selectSelectedCharacters();
+  const newCharacterIndex = currentCharacters.length - 1;
+
+  store.setPendingCharacterIndex({ index: newCharacterIndex });
+  store.setSelectedCharacterIndex({ index: newCharacterIndex });
+  store.setTempSelectedSpriteId({ spriteId: undefined });
+  store.setSearchQuery({ value: "" });
+  store.setMode({
+    mode: "sprite-select",
+  });
+};
+
+const discardPendingCharacterSelection = (store) => {
+  const pendingCharacterIndex = store.selectPendingCharacterIndex();
+
+  if (!Number.isInteger(pendingCharacterIndex)) {
+    return;
+  }
+
+  store.removeCharacter({ index: pendingCharacterIndex });
+  store.clearPendingCharacterIndex();
+};
+
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
@@ -46,15 +91,7 @@ export const handleCharacterClick = (deps, payload) => {
     return;
   }
 
-  // Set the character index for sprite selection
-  store.setSelectedCharacterIndex({ index });
-  store.setSearchQuery({ value: "" });
-
-  // Go to sprite selection mode
-  store.setMode({
-    mode: "sprite-select",
-  });
-
+  beginExistingCharacterSpriteSelection(store, index);
   render();
 };
 
@@ -118,16 +155,7 @@ export const handleFileExplorerItemClick = (deps, payload) => {
     return;
   }
 
-  store.addCharacter({ id: itemId });
-
-  const currentCharacters = store.selectSelectedCharacters();
-  const newCharacterIndex = currentCharacters.length - 1;
-  store.setSelectedCharacterIndex({ index: newCharacterIndex });
-  store.setSearchQuery({ value: "" });
-  store.setMode({
-    mode: "sprite-select",
-  });
-
+  beginNewCharacterSpriteSelection(store, itemId);
   render();
 };
 
@@ -153,20 +181,7 @@ export const handleCharacterItemClick = (deps, payload) => {
     target?.id?.replace("characterItem", "") ||
     "";
 
-  // Add character to selected characters
-  store.addCharacter({ id: characterId });
-
-  // Set the character index for sprite selection
-  const currentCharacters = store.selectSelectedCharacters();
-  const newCharacterIndex = currentCharacters.length - 1;
-  store.setSelectedCharacterIndex({ index: newCharacterIndex });
-  store.setSearchQuery({ value: "" });
-
-  // Jump directly to sprite selection mode
-  store.setMode({
-    mode: "sprite-select",
-  });
-
+  beginNewCharacterSpriteSelection(store, characterId);
   render();
 };
 
@@ -216,6 +231,13 @@ export const handleCharacterSelectorClick = (deps) => {
 
 export const handleBreadcumbClick = (deps, payload) => {
   const { dispatchEvent, store, render } = deps;
+  const mode = store.selectMode();
+
+  if (mode === "sprite-select") {
+    discardPendingCharacterSelection(store);
+    store.setSelectedCharacterIndex({ index: undefined });
+    store.setTempSelectedSpriteId({ spriteId: undefined });
+  }
 
   if (payload._event.detail.id === "actions") {
     dispatchEvent(
@@ -231,7 +253,7 @@ export const handleBreadcumbClick = (deps, payload) => {
   } else if (payload._event.detail.id === "character-select") {
     store.setSearchQuery({ value: "" });
     store.setMode({
-      mode: "sprite-select",
+      mode: "character-select",
     });
     render();
   }
@@ -250,6 +272,9 @@ export const handleRemoveCharacterClick = (deps, payload) => {
 export const handleAddCharacterClick = (deps) => {
   const { store, render } = deps;
 
+  store.clearPendingCharacterIndex();
+  store.setSelectedCharacterIndex({ index: undefined });
+  store.setTempSelectedSpriteId({ spriteId: undefined });
   store.setSearchQuery({ value: "" });
   store.setMode({
     mode: "character-select",
@@ -318,6 +343,9 @@ export const handleButtonSelectClick = (deps) => {
       }
     }
 
+    store.clearPendingCharacterIndex();
+    store.setSelectedCharacterIndex({ index: undefined });
+    store.setTempSelectedSpriteId({ spriteId: undefined });
     store.setMode({
       mode: "current",
     });
