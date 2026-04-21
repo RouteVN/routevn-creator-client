@@ -101,8 +101,16 @@ steps:
   - action: keypress
     key: ArrowRight
   - action: wait
+    ms: 150
+  - action: keypress
+    key: ArrowRight
+  - action: wait
     ms: 300
   - action: screenshot
+  - action: keypress
+    key: ArrowLeft
+  - action: wait
+    ms: 150
   - action: keypress
     key: ArrowLeft
   - action: wait
