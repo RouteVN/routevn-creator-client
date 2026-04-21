@@ -19,7 +19,10 @@ const isTruthyFlag = (value) => {
 };
 
 const isVtMode = () => {
-  return typeof window !== "undefined" && isTruthyFlag(window.RTGL_VT_RESET_APP_STATE);
+  return (
+    typeof window !== "undefined" &&
+    isTruthyFlag(window.RTGL_VT_RESET_APP_STATE)
+  );
 };
 
 const resolveAccept = (options = {}) => {

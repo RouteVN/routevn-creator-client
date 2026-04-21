@@ -153,13 +153,6 @@ const goSidebar = (pathValue, componentSelector) => [
   wait(450),
 ];
 
-const goResource = (resourceId, componentSelector, pathValue) => [
-  select(`rvn-resource-types [data-item-id='${resourceId}']`, [click()]),
-  waitFor(componentSelector, "attached", 10000),
-  assertUrl(pathValue),
-  wait(450),
-];
-
 const goShortcut = (keyValue, componentSelector, pathValue) => [
   keypress("g"),
   wait(120),
