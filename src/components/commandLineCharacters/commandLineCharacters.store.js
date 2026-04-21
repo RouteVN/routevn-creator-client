@@ -78,6 +78,7 @@ export const createInitialState = () => ({
   tempSelectedCharacterId: undefined,
   tempSelectedSpriteId: undefined,
   selectedCharacterIndex: undefined, // For sprite selection
+  pendingCharacterIndex: undefined,
   searchQuery: "",
   fullImagePreviewVisible: false,
   fullImagePreviewFileId: undefined,
@@ -136,6 +137,15 @@ export const removeCharacter = ({ state }, { index } = {}) => {
   }
 
   state.selectedCharacters.splice(index, 1);
+
+  if (state.pendingCharacterIndex === index) {
+    state.pendingCharacterIndex = undefined;
+  } else if (
+    Number.isInteger(state.pendingCharacterIndex) &&
+    state.pendingCharacterIndex > index
+  ) {
+    state.pendingCharacterIndex -= 1;
+  }
 
   if (state.selectedCharacterIndex === index) {
     state.selectedCharacterIndex = undefined;
@@ -235,6 +245,9 @@ export const updateCharacterSpriteName = (
 
 export const clearCharacters = ({ state }, _payload = {}) => {
   state.selectedCharacters = [];
+  state.pendingCharacterIndex = undefined;
+  state.selectedCharacterIndex = undefined;
+  state.tempSelectedSpriteId = undefined;
 };
 
 export const setTempSelectedCharacterId = ({ state }, { characterId } = {}) => {
@@ -265,6 +278,14 @@ export const hideFullImagePreview = ({ state }, _payload = {}) => {
 
 export const setSelectedCharacterIndex = ({ state }, { index } = {}) => {
   state.selectedCharacterIndex = index;
+};
+
+export const setPendingCharacterIndex = ({ state }, { index } = {}) => {
+  state.pendingCharacterIndex = index;
+};
+
+export const clearPendingCharacterIndex = ({ state }) => {
+  state.pendingCharacterIndex = undefined;
 };
 
 export const selectTempSelectedCharacterId = ({ state }) => {
@@ -303,6 +324,10 @@ export const selectMode = ({ state }) => {
 
 export const selectSelectedCharacterIndex = ({ state }) => {
   return state.selectedCharacterIndex;
+};
+
+export const selectPendingCharacterIndex = ({ state }) => {
+  return state.pendingCharacterIndex;
 };
 
 export const selectCurrentSpriteItemById = ({ state }, { spriteId } = {}) => {

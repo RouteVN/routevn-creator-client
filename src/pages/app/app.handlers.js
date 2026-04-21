@@ -12,7 +12,7 @@ import {
   getProjectOpenErrorMessage,
   isIncompatibleProjectOpenError,
 } from "../../internal/projectOpenErrors.js";
-import { ROUTEVN_CREATOR_DOCS_URL } from "../../internal/routevnUrls.js";
+import { getRoutevnCreatorDocsUrl } from "../../internal/routevnUrls.js";
 
 const GLOBAL_NAV_TIMEOUT_MS = 1500;
 
@@ -328,9 +328,10 @@ export const handleUpdateColor = async (deps, payload) => {
 };
 
 export const handleHelpFloatingButtonClick = (deps) => {
-  const { appService } = deps;
+  const { appService, store } = deps;
+  const currentRoutePattern = store.selectCurrentRoutePattern();
 
-  appService.openUrl(ROUTEVN_CREATOR_DOCS_URL);
+  appService.openUrl(getRoutevnCreatorDocsUrl(currentRoutePattern));
 };
 
 const subscriptions = (deps) => {

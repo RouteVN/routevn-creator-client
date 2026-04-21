@@ -92,7 +92,7 @@ template:
                               - rtgl-text: ${group.fullLabel}
                           - rtgl-view w=1fg: null
                           - $if canUpload:
-                              - rtgl-button#uploadBtnHeaderRef${gIndex} data-group-id=${group.id} s=sm w=1fg pre=upload: ${uploadText}
+                              - rtgl-button#uploadBtnHeaderRef${gIndex} data-group-id=${group.id} s=sm w=1fg pre=${uploadIcon}: ${uploadText}
                       - rtgl-view w=f pos=rel:
                           - $if !group.isCollapsed:
                               - 'rtgl-view w=f d=h ph=sm pt=md pb=sm mb=lg wrap g=md style="min-width: 0;"':
@@ -159,7 +159,7 @@ template:
                                     $else:
                                       - $if canUpload:
                                           - rtgl-view#uploadBtnEmptyRef${gIndex} data-group-id=${group.id} w=f h=150 bw=xs br=md ah=c av=c g=sm cur=pointer:
-                                              - rtgl-svg svg=upload wh=32: null
+                                              - rtgl-svg svg=${uploadIcon} wh=32: null
                                               - rtgl-text: ${uploadText}
                           - $if draggingGroupId == group.id:
                               - 'rtgl-view d=h av=c pos=abs w=f h=f bw=md bc=pr style="top: 0; bottom: 0; left: 0; right: 0;"':
@@ -173,7 +173,7 @@ template:
               - rtgl-view w=f h=f av=c ah=c g=lg:
                   - $if canUpload:
                       - rtgl-view#uploadBtnRoot w=300 h=200 bw=xs bc=bo br=md ah=c av=c g=sm cur=pointer:
-                          - rtgl-svg svg=upload wh=32: null
+                          - rtgl-svg svg=${uploadIcon} wh=32: null
                           - rtgl-text: ${uploadText}
                     $else:
                       - rtgl-text s=lg c=mu-fg: No data

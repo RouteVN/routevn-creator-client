@@ -1,5 +1,5 @@
 import { normalizeLineActions } from "../../internal/project/engineActions.js";
-import { ROUTEVN_CREATOR_DOCS_URL } from "../../internal/routevnUrls.js";
+import { getRoutevnCreatorSystemActionDocsUrl } from "../../internal/routevnUrls.js";
 
 const toPlainObject = (value) => {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -111,9 +111,9 @@ export const handleEmbeddedCloseClick = (deps, payload) => {
 export const handleHelpFloatingButtonClick = (deps, payload) => {
   payload?._event?.stopPropagation?.();
   const { appService, store } = deps;
+  const mode = store.selectMode();
 
-  console.log("systemActions mode:", store.selectMode());
-  appService.openUrl(ROUTEVN_CREATOR_DOCS_URL);
+  appService.openUrl(getRoutevnCreatorSystemActionDocsUrl(mode));
 };
 
 export const handleActionsDialogClose = (deps) => {

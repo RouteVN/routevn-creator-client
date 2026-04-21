@@ -210,6 +210,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     searchQuery: props.searchQuery ?? "",
     searchPlaceholder: props.searchPlaceholder ?? "Search...",
     uploadText: props.uploadText ?? "Upload Files",
+    uploadIcon: props.uploadIcon ?? "upload",
     emptyMessage:
       props.emptyMessage ??
       `No items found matching "${props.searchQuery ?? ""}"`,

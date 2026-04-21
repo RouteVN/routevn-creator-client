@@ -17,6 +17,9 @@ propsSchema:
     uploadText:
       type: string
       description: Text to display in upload affordances
+    uploadIcon:
+      type: string
+      description: Icon to display in upload affordances
     acceptedFileTypes:
       type: array
       description: Array of accepted file extensions
