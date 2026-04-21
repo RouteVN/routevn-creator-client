@@ -3,6 +3,7 @@ import { createGlobalUI } from "@rettangoli/ui";
 // Infra - Web
 import { createDb } from "./deps/clients/web/db.js";
 import { createWebFilePicker } from "./deps/clients/web/filePicker.js";
+import { installVtBridge } from "./deps/clients/web/vtBridge.js";
 import { resetWebAppStateForVisualTests } from "./deps/clients/web/vtAppStateReset.js";
 
 // Services - Web
@@ -48,6 +49,7 @@ const updater = {
 
 // Create subject for inter-component communication
 const subject = new Subject();
+installVtBridge({ subject, router });
 const collabConfig = {
   endpointUrl: "ws://127.0.0.1:8787/sync",
   debugEnabled: false,

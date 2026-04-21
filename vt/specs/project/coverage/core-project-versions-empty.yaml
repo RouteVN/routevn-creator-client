@@ -1,0 +1,73 @@
+---
+title: Project Versions Empty
+description: Navigates to the versions page and captures the empty release history state.
+url: /projects
+skipInitialScreenshot: true
+viewport:
+  id: wide
+  width: 1440
+  height: 900
+steps:
+  - action: waitFor
+    selector: "[data-testid='create-project-button']"
+    state: visible
+    timeoutMs: 5000
+  - action: wait
+    ms: 250
+  - action: select
+    testId: create-project-button
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field0 input
+    state: attached
+    timeoutMs: 5000
+  - action: select
+    selector: rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field0 input
+    steps:
+      - action: clear
+      - action: write
+        value: VT Project Versions Empty
+  - action: select
+    selector: rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field1 input
+    steps:
+      - action: clear
+      - action: write
+        value: Navigates to the versions page and captures the empty release history state.
+  - action: wait
+    ms: 250
+  - action: select
+    selector: rtgl-global-ui rtgl-button[data-action-id='submit']
+    steps:
+      - action: click
+  - action: waitFor
+    selector: "#projectItem0"
+    state: visible
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: select
+    selector: "#projectItem0"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-project
+    state: attached
+    timeoutMs: 10000
+  - action: wait
+    ms: 500
+  - action: select
+    selector: "#sidebar [data-item-id='/project/releases/versions']"
+    steps:
+      - action: click
+  - action: waitFor
+    selector: rvn-versions
+    state: attached
+    timeoutMs: 10000
+  - action: assert
+    type: url
+    value: /project/releases/versions
+  - action: wait
+    ms: 450
+  - action: screenshot
+---
