@@ -3,6 +3,7 @@ import createRouteEngine from "route-engine-js";
 import {
   createSceneEditorRenderQueue,
   renderSceneEditorState,
+  updateSceneEditorSectionChanges,
 } from "../../src/internal/ui/sceneEditor/runtime.js";
 
 const createProjectData = () => {
@@ -128,6 +129,30 @@ const createGraphicsService = () => {
 };
 
 describe("renderSceneEditorState", () => {
+  it("requests per-line presentationState from section line changes", async () => {
+    const changes = { lines: [] };
+    const engineSelectSectionLineChanges = vi.fn(() => changes);
+    const setSectionLineChanges = vi.fn();
+
+    await updateSceneEditorSectionChanges({
+      store: {
+        selectSelectedSectionId: () => "section-1",
+        setSectionLineChanges,
+      },
+      graphicsService: {
+        engineSelectSectionLineChanges,
+      },
+    });
+
+    expect(engineSelectSectionLineChanges).toHaveBeenCalledWith({
+      sectionId: "section-1",
+      includePresentationState: true,
+    });
+    expect(setSectionLineChanges).toHaveBeenCalledWith({
+      changes,
+    });
+  });
+
   it("coalesces overlapping canvas renders to the latest pending payload", async () => {
     const resolvers = [];
     const renderCanvas = vi.fn(

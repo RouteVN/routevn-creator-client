@@ -35,14 +35,40 @@ const resolveSelectedResourceId = ({ layouts, mode, resourceId } = {}) => {
   return availableLayouts[0]?.id ?? "";
 };
 
+const getSelectedCharacterName = ({ characters, characterId } = {}) => {
+  if (!characterId) {
+    return "";
+  }
+
+  return (
+    (characters ?? []).find((character) => character.id === characterId)
+      ?.name ?? ""
+  );
+};
+
+const hasDialogueCharacter = ({
+  selectedCharacterId,
+  customCharacterName,
+} = {}) => {
+  return !!selectedCharacterId || toBoolean(customCharacterName);
+};
+
 const syncDialogueStateFromProps = (deps, dialogue = {}) => {
   const { store, props } = deps;
   const selectedMode = resolveDialogueMode({
     layouts: props?.layouts,
     dialogue,
   });
+  const selectedCharacterId = dialogue?.characterId ?? "";
+  const customCharacterName =
+    typeof dialogue?.character?.name === "string" &&
+    dialogue.character.name.length > 0;
+  const hasCharacter = hasDialogueCharacter({
+    selectedCharacterId,
+    customCharacterName,
+  });
   const selectedResourceId =
-    dialogue?.ui?.resourceId || dialogue?.gui?.resourceId || "";
+    dialogue?.ui?.resourceId ?? dialogue?.gui?.resourceId ?? "";
 
   store.setSelectedMode({
     mode: selectedMode,
@@ -55,7 +81,21 @@ const syncDialogueStateFromProps = (deps, dialogue = {}) => {
     }),
   });
   store.setSelectedCharacterId({
-    characterId: dialogue?.characterId || "",
+    characterId: selectedCharacterId,
+  });
+  store.setCustomCharacterName({
+    customCharacterName,
+  });
+  store.setCharacterName({
+    characterName:
+      dialogue?.character?.name ??
+      getSelectedCharacterName({
+        characters: props?.characters,
+        characterId: selectedCharacterId,
+      }),
+  });
+  store.setPersistCharacter({
+    persistCharacter: hasCharacter && dialogue?.persistCharacter === true,
   });
 
   store.setClearPage({
@@ -65,8 +105,15 @@ const syncDialogueStateFromProps = (deps, dialogue = {}) => {
 
 const syncDialogueFormValues = (deps) => {
   const { refs, store } = deps;
-  const { selectedMode, selectedResourceId, selectedCharacterId, clearPage } =
-    store.getState();
+  const {
+    selectedMode,
+    selectedResourceId,
+    selectedCharacterId,
+    customCharacterName,
+    characterName,
+    persistCharacter,
+    clearPage,
+  } = store.getState();
 
   refs.dialogueForm.reset();
   refs.dialogueForm.setValues({
@@ -74,6 +121,9 @@ const syncDialogueFormValues = (deps) => {
       mode: selectedMode,
       resourceId: selectedResourceId,
       characterId: selectedCharacterId,
+      customCharacterName,
+      characterName,
+      persistCharacter,
       clearPage,
     },
   });
@@ -100,31 +150,78 @@ export const handleFormChange = (deps, payload) => {
     return;
   }
 
+  const currentState = store.getState();
   const selectedMode = formValues.mode === "nvl" ? "nvl" : "adv";
-  const modeChanged = selectedMode !== store.getState().selectedMode;
+  const modeChanged = selectedMode !== currentState.selectedMode;
+  const customCharacterName = toBoolean(formValues.customCharacterName);
+  const selectedCharacterId = formValues.characterId ?? "";
+  const hadDialogueCharacter = hasDialogueCharacter({
+    selectedCharacterId: currentState.selectedCharacterId,
+    customCharacterName: currentState.customCharacterName,
+  });
+  const hasCharacter = hasDialogueCharacter({
+    selectedCharacterId,
+    customCharacterName,
+  });
+  const persistCharacterVisibilityChanged =
+    hadDialogueCharacter !== hasCharacter;
+  let characterName = formValues.characterName ?? currentState.characterName;
+
+  if (!customCharacterName) {
+    characterName = getSelectedCharacterName({
+      characters: props?.characters,
+      characterId: selectedCharacterId,
+    });
+  } else if (
+    currentState.customCharacterName !== true &&
+    (characterName ?? "").length === 0
+  ) {
+    characterName = getSelectedCharacterName({
+      characters: props?.characters,
+      characterId: selectedCharacterId,
+    });
+  }
 
   store.setSelectedMode({ mode: selectedMode });
   store.setSelectedResource({
     resourceId: resolveSelectedResourceId({
       layouts: props?.layouts,
       mode: selectedMode,
-      resourceId: formValues.resourceId || "",
+      resourceId: formValues.resourceId ?? "",
     }),
   });
-  store.setSelectedCharacterId({ characterId: formValues.characterId || "" });
+  store.setSelectedCharacterId({ characterId: selectedCharacterId });
+  store.setCustomCharacterName({
+    customCharacterName,
+  });
+  store.setCharacterName({
+    characterName,
+  });
+  const persistCharacter =
+    hasCharacter && hadDialogueCharacter ? formValues.persistCharacter : false;
+  store.setPersistCharacter({
+    persistCharacter,
+  });
   store.setClearPage({ clearPage: formValues.clearPage });
 
   render();
 
-  if (modeChanged) {
+  if (modeChanged || persistCharacterVisibilityChanged) {
     syncDialogueFormValues(deps);
   }
 };
 
 export const handleSubmitClick = (deps) => {
   const { store, dispatchEvent, props } = deps;
-  const { selectedMode, selectedResourceId, selectedCharacterId, clearPage } =
-    store.getState();
+  const {
+    selectedMode,
+    selectedResourceId,
+    selectedCharacterId,
+    customCharacterName,
+    characterName,
+    persistCharacter,
+    clearPage,
+  } = store.getState();
   const effectiveMode = resolveDialogueMode({
     layouts: props?.layouts,
     dialogue: {
@@ -157,6 +254,17 @@ export const handleSubmitClick = (deps) => {
   if (selectedCharacterId) {
     dialogue.characterId = selectedCharacterId;
   }
+  if (toBoolean(customCharacterName)) {
+    dialogue.character = {
+      name: characterName ?? "",
+    };
+  }
+  const persistCharacterEnabled =
+    hasDialogueCharacter({
+      selectedCharacterId,
+      customCharacterName,
+    }) && toBoolean(persistCharacter);
+  dialogue.persistCharacter = persistCharacterEnabled;
   if (effectiveMode === "nvl" && toBoolean(clearPage)) {
     dialogue.clearPage = true;
   }

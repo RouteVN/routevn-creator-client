@@ -32,13 +32,19 @@ export const createInitialState = () => ({
   selectedResourceId: "",
   characters: [],
   selectedCharacterId: "",
+  customCharacterName: false,
+  characterName: "",
   selectedMode: "adv",
+  persistCharacter: false,
   clearPage: false,
 
   defaultValues: {
     mode: "adv",
     resourceId: "",
     characterId: "",
+    customCharacterName: false,
+    characterName: "",
+    persistCharacter: false,
     clearPage: false,
   },
 
@@ -76,6 +82,40 @@ export const createInitialState = () => ({
         options: [],
       },
       {
+        name: "customCharacterName",
+        type: "segmented-control",
+        label: "Custom Character Name",
+        description: "",
+        required: true,
+        clearable: false,
+        options: [
+          { value: false, label: "No" },
+          { value: true, label: "Yes" },
+        ],
+      },
+      {
+        $when: "values.customCharacterName == true",
+        name: "characterName",
+        type: "input-text",
+        label: "Character Name",
+        description: "",
+        required: true,
+        placeholder: "Enter character name",
+      },
+      {
+        $when: "values.characterId || values.customCharacterName",
+        name: "persistCharacter",
+        type: "segmented-control",
+        label: "Persist Character",
+        description: "",
+        required: true,
+        clearable: false,
+        options: [
+          { value: false, label: "No" },
+          { value: true, label: "Yes" },
+        ],
+      },
+      {
         $when: 'values.mode == "nvl"',
         name: "clearPage",
         type: "segmented-control",
@@ -110,10 +150,31 @@ export const setSelectedCharacterId = ({ state }, { characterId } = {}) => {
   state.defaultValues.characterId = characterId;
 };
 
+export const setCustomCharacterName = (
+  { state },
+  { customCharacterName } = {},
+) => {
+  const customCharacterNameValue = toBoolean(customCharacterName);
+  state.customCharacterName = customCharacterNameValue;
+  state.defaultValues.customCharacterName = customCharacterNameValue;
+};
+
+export const setCharacterName = ({ state }, { characterName } = {}) => {
+  const nextCharacterName = characterName ?? "";
+  state.characterName = nextCharacterName;
+  state.defaultValues.characterName = nextCharacterName;
+};
+
 export const setSelectedMode = ({ state }, { mode } = {}) => {
   const selectedMode = mode === "nvl" ? "nvl" : "adv";
   state.selectedMode = selectedMode;
   state.defaultValues.mode = selectedMode;
+};
+
+export const setPersistCharacter = ({ state }, { persistCharacter } = {}) => {
+  const persistCharacterValue = toBoolean(persistCharacter);
+  state.persistCharacter = persistCharacterValue;
+  state.defaultValues.persistCharacter = persistCharacterValue;
 };
 
 export const setClearPage = ({ state }, { clearPage } = {}) => {
@@ -181,6 +242,24 @@ export const selectViewData = ({ state, props }) => {
           value: state.selectedCharacterId,
         };
       }
+      if (field.name === "customCharacterName") {
+        return {
+          ...field,
+          value: state.customCharacterName,
+        };
+      }
+      if (field.name === "characterName") {
+        return {
+          ...field,
+          value: state.characterName,
+        };
+      }
+      if (field.name === "persistCharacter") {
+        return {
+          ...field,
+          value: state.persistCharacter,
+        };
+      }
       if (field.name === "clearPage") {
         return {
           ...field,
@@ -196,6 +275,9 @@ export const selectViewData = ({ state, props }) => {
     mode: selectedMode,
     resourceId: selectedResourceId,
     characterId: state.selectedCharacterId,
+    customCharacterName: state.customCharacterName,
+    characterName: state.characterName,
+    persistCharacter: state.persistCharacter,
     clearPage: state.clearPage,
   };
 
@@ -208,7 +290,10 @@ export const selectViewData = ({ state, props }) => {
     characters: characterOptions,
     selectedResourceId,
     selectedCharacterId: state.selectedCharacterId,
+    customCharacterName: state.customCharacterName,
+    characterName: state.characterName,
     selectedMode,
+    persistCharacter: state.persistCharacter,
     clearPage: state.clearPage,
     submitDisabled: !selectedResourceId,
     breadcrumb,

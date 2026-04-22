@@ -446,10 +446,29 @@ export const selectActionsData = ({ props, state }) => {
       presentationState.dialogue,
       layoutsItems,
     );
+    const customCharacterNameLabel =
+      presentationState.dialogue.clear === true ||
+      typeof presentationState.dialogue.character?.name !== "string" ||
+      presentationState.dialogue.character.name.length === 0
+        ? undefined
+        : `Name: ${truncatePreviewText(
+            presentationState.dialogue.character.name,
+          )}`;
+    const hasDialogueCharacter =
+      !!presentationState.dialogue.characterId ||
+      customCharacterNameLabel !== undefined;
+    const persistCharacterLabel =
+      presentationState.dialogue.clear === true ||
+      hasDialogueCharacter !== true ||
+      presentationState.dialogue.persistCharacter !== true
+        ? undefined
+        : "Persist Character";
     if (presentationState.dialogue.clear === true) {
       preview.dialogue = {
         name: "Dialogue: Clear",
         modeLabel: dialogueModeLabel,
+        customCharacterNameLabel,
+        persistCharacterLabel,
       };
     } else {
       preview.dialogue = {
@@ -459,6 +478,8 @@ export const selectActionsData = ({ props, state }) => {
               presentationState.dialogue.gui?.resourceId
           ]?.name || "No layout",
         modeLabel: dialogueModeLabel,
+        customCharacterNameLabel,
+        persistCharacterLabel,
       };
     }
   }

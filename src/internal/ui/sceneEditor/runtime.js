@@ -661,7 +661,10 @@ export const updateSceneEditorSectionChanges = async (deps) => {
     return;
   }
 
-  const changes = graphicsService.engineSelectSectionLineChanges({ sectionId });
+  const changes = graphicsService.engineSelectSectionLineChanges({
+    sectionId,
+    includePresentationState: true,
+  });
   store.setSectionLineChanges({ changes });
 };
 
