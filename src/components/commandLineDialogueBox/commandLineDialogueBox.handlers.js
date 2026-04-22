@@ -41,12 +41,15 @@ const getSelectedCharacterName = ({ characters, characterId } = {}) => {
   }
 
   return (
-    (characters ?? []).find((character) => character.id === characterId)?.name ??
-    ""
+    (characters ?? []).find((character) => character.id === characterId)
+      ?.name ?? ""
   );
 };
 
-const hasDialogueCharacter = ({ selectedCharacterId, customCharacterName } = {}) => {
+const hasDialogueCharacter = ({
+  selectedCharacterId,
+  customCharacterName,
+} = {}) => {
   return !!selectedCharacterId || toBoolean(customCharacterName);
 };
 
@@ -160,7 +163,8 @@ export const handleFormChange = (deps, payload) => {
     selectedCharacterId,
     customCharacterName,
   });
-  const persistCharacterVisibilityChanged = hadDialogueCharacter !== hasCharacter;
+  const persistCharacterVisibilityChanged =
+    hadDialogueCharacter !== hasCharacter;
   let characterName = formValues.characterName ?? currentState.characterName;
 
   if (!customCharacterName) {
