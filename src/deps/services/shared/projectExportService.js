@@ -11,9 +11,8 @@
 export const BUNDLE_FORMAT_VERSION_V2 = 2;
 export const BUNDLE_FORMAT_VERSION_V3 = 3;
 export const BUNDLE_FORMAT_VERSION_V4 = 4;
-// The shared JS bundle writer is retained for tests, smoke scripts, and
-// benchmarks. Shipping distribution ZIPs are produced by the native Tauri v4
-// exporter.
+// The shared JS bundle writer is retained for tests and smoke scripts only.
+// Shipping distribution ZIPs are produced by the native Tauri v4 exporter.
 export const BUNDLE_FORMAT_VERSION = BUNDLE_FORMAT_VERSION_V3;
 export const BUNDLE_HEADER_SIZE = 16;
 export const BUNDLE_APP_NAME = "routevn-creator-client";
@@ -85,66 +84,22 @@ export const BUNDLE_PLAYER_INDEX_HTML = `<html>
 </html>
 `;
 export const BUNDLE_CHUNKING = Object.freeze({
-  algorithm: "fastcdc",
-  mode: "whole-file-or-fastcdc",
+  algorithm: "none",
+  mode: "whole-file-only",
   minSize: 8 * 1024,
   avgSize: 32 * 1024,
   maxSize: 128 * 1024,
-  smallFileThreshold: 32 * 1024,
-});
-export const BUNDLE_CHUNKING_PRESETS = Object.freeze({
-  wholeFileOnly: Object.freeze({
-    algorithm: "none",
-    mode: "whole-file-only",
-    minSize: BUNDLE_CHUNKING.minSize,
-    avgSize: BUNDLE_CHUNKING.avgSize,
-    maxSize: BUNDLE_CHUNKING.maxSize,
-    smallFileThreshold: Number.MAX_SAFE_INTEGER,
-  }),
-  fastcdcSmall: BUNDLE_CHUNKING,
-  fastcdcMedium: Object.freeze({
-    algorithm: "fastcdc",
-    mode: "whole-file-or-fastcdc",
-    minSize: 16 * 1024,
-    avgSize: 64 * 1024,
-    maxSize: 256 * 1024,
-    smallFileThreshold: 64 * 1024,
-  }),
-  fastcdcLarge: Object.freeze({
-    algorithm: "fastcdc",
-    mode: "whole-file-or-fastcdc",
-    minSize: 32 * 1024,
-    avgSize: 128 * 1024,
-    maxSize: 512 * 1024,
-    smallFileThreshold: 64 * 1024,
-  }),
-  fastcdcConservative: Object.freeze({
-    algorithm: "fastcdc",
-    mode: "whole-file-or-fastcdc",
-    minSize: 16 * 1024,
-    avgSize: 64 * 1024,
-    maxSize: 256 * 1024,
-    smallFileThreshold: 128 * 1024,
-  }),
+  smallFileThreshold: Number.MAX_SAFE_INTEGER,
 });
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
-let fastCdcComputeChunksPromise;
 
 const normalizeChunkingConfig = (chunking = {}) => {
   const normalized = {
     ...BUNDLE_CHUNKING,
     ...chunking,
   };
-
-  if (normalized.mode === "whole-file-only") {
-    return {
-      ...normalized,
-      algorithm: "none",
-      smallFileThreshold: Number.MAX_SAFE_INTEGER,
-    };
-  }
 
   if (
     normalized.minSize > normalized.avgSize ||
@@ -153,10 +108,20 @@ const normalizeChunkingConfig = (chunking = {}) => {
     throw new Error("Invalid chunking config: min/avg/max must be increasing.");
   }
 
+  if (
+    normalized.algorithm !== "none" ||
+    normalized.mode !== "whole-file-only"
+  ) {
+    throw new Error(
+      "Shared JS bundle export only supports whole-file dedupe. Use the native Tauri exporter for advanced chunking.",
+    );
+  }
+
   return {
     ...normalized,
-    algorithm: "fastcdc",
-    mode: "whole-file-or-fastcdc",
+    algorithm: "none",
+    mode: "whole-file-only",
+    smallFileThreshold: Number.MAX_SAFE_INTEGER,
   };
 };
 
@@ -197,116 +162,19 @@ const hashChunkBytes = async (bytes) => {
   return bytesToHex(digest);
 };
 
-const isNodeFastCdcRuntime = () => {
-  return (
-    typeof process !== "undefined" &&
-    Boolean(process.versions?.node) &&
-    typeof window === "undefined"
-  );
-};
-
-const loadFastCdcComputeChunks = async () => {
-  if (!fastCdcComputeChunksPromise) {
-    fastCdcComputeChunksPromise = (async () => {
-      const module = isNodeFastCdcRuntime()
-        ? await import(
-            /* @vite-ignore */ new URL(
-              "./projectExportFastCdc.node.cjs",
-              import.meta.url,
-            ).href
-          )
-        : await import("./projectExportFastCdc.browser.js");
-
-      const computeChunks =
-        module.computeChunks ??
-        module.compute_chunks ??
-        module.default?.computeChunks ??
-        module.default?.compute_chunks;
-
-      if (typeof computeChunks !== "function") {
-        throw new Error("Failed to load FastCDC chunking implementation.");
-      }
-
-      return computeChunks;
-    })();
-  }
-
-  return fastCdcComputeChunksPromise;
-};
-
-const normalizeChunkOffsets = (offsets, totalLength) => {
-  const boundaries = [0];
-  const normalizedOffsets = Array.isArray(offsets)
-    ? offsets
-    : Array.from(offsets || []);
-
-  normalizedOffsets.forEach((offset) => {
-    const numericOffset = Number(offset);
-    if (
-      !Number.isFinite(numericOffset) ||
-      numericOffset <= boundaries[boundaries.length - 1] ||
-      numericOffset >= totalLength
-    ) {
-      return;
-    }
-
-    boundaries.push(numericOffset);
-  });
-
-  if (boundaries[boundaries.length - 1] !== totalLength) {
-    boundaries.push(totalLength);
-  }
-
-  return boundaries;
-};
-
-const shouldUseFastCdcChunking = ({ entryId, byteLength, chunking }) => {
-  return (
-    chunking.mode !== "whole-file-only" &&
-    entryId !== "instructions" &&
-    byteLength >= chunking.smallFileThreshold
-  );
-};
-
 const splitBytesIntoChunks = async ({ bytes, entryId, chunking }) => {
   const normalizedBytes = toUint8Array(bytes);
   if (normalizedBytes.byteLength === 0) {
     return [];
   }
 
-  if (
-    !shouldUseFastCdcChunking({
-      entryId,
-      byteLength: normalizedBytes.byteLength,
-      chunking,
-    })
-  ) {
+  if (entryId === "instructions" || chunking.mode === "whole-file-only") {
     return [normalizedBytes.slice()];
   }
 
-  const computeChunks = await loadFastCdcComputeChunks();
-  const offsets = await computeChunks(
-    normalizedBytes,
-    chunking.minSize,
-    chunking.avgSize,
-    chunking.maxSize,
+  throw new Error(
+    "Shared JS bundle export only supports whole-file dedupe. Use the native Tauri exporter for advanced chunking.",
   );
-  const boundaries = normalizeChunkOffsets(offsets, normalizedBytes.byteLength);
-  const chunks = [];
-
-  for (let index = 0; index < boundaries.length - 1; index += 1) {
-    const start = boundaries[index];
-    const end = boundaries[index + 1];
-    if (end > start) {
-      chunks.push(normalizedBytes.slice(start, end));
-    }
-  }
-
-  if (chunks.length === 0) {
-    return [normalizedBytes.slice()];
-  }
-
-  return chunks;
 };
 
 const createBundleHeader = (version, metadataLength) => {

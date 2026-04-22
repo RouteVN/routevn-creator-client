@@ -16,8 +16,6 @@
   ],
   "type": "module",
   "dependencies": {
-    "@dstanesc/wasm-chunking-fastcdc-node": "^0.1.1",
-    "@dstanesc/wasm-chunking-fastcdc-webpack": "^0.1.1",
     "@rettangoli/fe": "1.1.3",
     "@rettangoli/ui": "1.7.1",
     "@rettangoli/vt": "1.0.2",
@@ -53,7 +51,6 @@
     "test": "node scripts/test.js",
     "test:smoke": "node scripts/test-smoke.js",
     "test:export-bundle": "node scripts/test-export-bundle-pipeline.js",
-    "benchmark:export-chunking": "node scripts/benchmark-export-chunking.js",
     "test:convergence": "node scripts/test-convergence.js",
     "test:integration": "node scripts/test-integration.js",
     "test:collab-adapters": "node scripts/test-collab-adapters.js",

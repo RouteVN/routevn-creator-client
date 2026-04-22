@@ -4,8 +4,6 @@
   "workspaces": {
     "": {
       "dependencies": {
-        "@dstanesc/wasm-chunking-fastcdc-node": "^0.1.1",
-        "@dstanesc/wasm-chunking-fastcdc-webpack": "^0.1.1",
         "@rettangoli/fe": "1.1.3",
         "@rettangoli/ui": "1.7.1",
         "@rettangoli/vt": "1.0.2",
@@ -58,10 +56,6 @@
     "@csstools/css-parser-algorithms": ["@csstools/css-parser-algorithms@3.0.5", "", { "peerDependencies": { "@csstools/css-tokenizer": "^3.0.4" } }, "sha512-DaDeUkXZKjdGhgYaHNJTV9pV7Y9B3b644jCLs9Upc3VeNGg6LWARAT6O+Q+/COo+2gg/bM5rhpMAtf70WqfBdQ=="],
 
     "@csstools/css-tokenizer": ["@csstools/css-tokenizer@3.0.4", "", {}, "sha512-Vd/9EVDiu6PPJt9yAh6roZP6El1xHrdvIVGjyBsHR0RYwNHgL7FJPyIIW4fANJNG6FtyZfvlRPpFI4ZM/lubvw=="],
-
-    "@dstanesc/wasm-chunking-fastcdc-node": ["@dstanesc/wasm-chunking-fastcdc-node@0.1.1", "", {}, "sha512-sR3SEdei2sPhOoK+1GTnQNyuFv1SDjSaxDdZGAKkzaYJzdOAccGxVUJy+oGxzVmt7BTWiUriAIAlOxfO/m1S5A=="],
-
-    "@dstanesc/wasm-chunking-fastcdc-webpack": ["@dstanesc/wasm-chunking-fastcdc-webpack@0.1.1", "", {}, "sha512-D1JUVRFS+rrPWRxb+vbe1bVLO2OSysFR52/f2+FDgL8KfegVNIOCAGEbKNgiBWA5/2UmwR/RmfTZ2ffMAz8Dzw=="],
 
     "@emnapi/runtime": ["@emnapi/runtime@1.8.1", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-mehfKSMWjjNol8659Z8KxEMrdSJDDot5SXMq00dM8BN4o+CLNXQ0xH2V7EchNHV4RmbZLmmPdEaXZc5H2FXmDg=="],
 

@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   BUNDLE_FORMAT_VERSION_V4,
   BUNDLE_HEADER_SIZE,
-  BUNDLE_CHUNKING,
   createBundleResult,
   createProjectExportService,
   normalizeExportFileEntries,
@@ -110,12 +109,9 @@ describe("projectExportService", () => {
     ]);
   });
 
-  it("stores repeated asset chunks once in bundle format v3", async () => {
+  it("stores repeated raw assets once in bundle format v3", async () => {
     const repeatedBytes = Uint8Array.from(
-      Array.from(
-        { length: BUNDLE_CHUNKING.maxSize + BUNDLE_CHUNKING.minSize },
-        (_, index) => index % 251,
-      ),
+      Array.from({ length: 160 * 1024 }, (_, index) => index % 251),
     );
     const { bundle } = await createBundleResult(
       {
@@ -153,7 +149,7 @@ describe("projectExportService", () => {
     expect(parsed.manifest.assets["file-a"].chunks).toEqual(
       parsed.manifest.assets["file-b"].chunks,
     );
-    expect(parsed.manifest.assets["file-a"].chunks.length).toBeGreaterThan(1);
+    expect(parsed.manifest.assets["file-a"].chunks).toHaveLength(1);
     const totalChunkReferences =
       Object.values(parsed.manifest.assets).reduce(
         (sum, asset) => sum + (asset?.chunks?.length ?? 0),
@@ -170,41 +166,13 @@ describe("projectExportService", () => {
     );
   });
 
-  it("reuses chunk ids across large variants with shared regions", async () => {
-    const sharedHeader = Uint8Array.from(
-      Array.from(
-        { length: BUNDLE_CHUNKING.avgSize },
-        (_, index) => index % 251,
-      ),
+  it("stores non-identical raw assets separately in bundle format v3", async () => {
+    const baseBytes = Uint8Array.from(
+      Array.from({ length: 96 * 1024 }, (_, index) => index % 251),
     );
-    const uniqueMiddleA = Uint8Array.from(
-      Array.from(
-        { length: BUNDLE_CHUNKING.avgSize },
-        (_, index) => (index * 7) % 251,
-      ),
+    const variantBytes = Uint8Array.from(
+      Array.from({ length: 96 * 1024 }, (_, index) => (index * 7) % 251),
     );
-    const uniqueMiddleB = Uint8Array.from(
-      Array.from(
-        { length: BUNDLE_CHUNKING.avgSize },
-        (_, index) => (index * 11) % 251,
-      ),
-    );
-    const sharedFooter = Uint8Array.from(
-      Array.from(
-        { length: BUNDLE_CHUNKING.maxSize },
-        (_, index) => (index * 13) % 251,
-      ),
-    );
-    const baseBytes = Uint8Array.from([
-      ...sharedHeader,
-      ...uniqueMiddleA,
-      ...sharedFooter,
-    ]);
-    const variantBytes = Uint8Array.from([
-      ...sharedHeader,
-      ...uniqueMiddleB,
-      ...sharedFooter,
-    ]);
 
     const { bundle } = await createBundleResult(
       {
@@ -239,19 +207,53 @@ describe("projectExportService", () => {
     const parsed = await parseBundle(bundle);
     const baseChunks = parsed.manifest.assets.base.chunks;
     const shiftedChunks = parsed.manifest.assets.shifted.chunks;
-    const sharedChunkCount = baseChunks.filter((chunkId) =>
-      shiftedChunks.includes(chunkId),
-    ).length;
 
-    expect(baseChunks.length).toBeGreaterThan(1);
-    expect(shiftedChunks.length).toBeGreaterThan(1);
+    expect(baseChunks).toHaveLength(1);
+    expect(shiftedChunks).toHaveLength(1);
     expect(baseChunks).not.toEqual(shiftedChunks);
-    expect(sharedChunkCount).toBeGreaterThan(0);
     expect(Array.from(parsed.assets.base.buffer)).toEqual(
       Array.from(baseBytes),
     );
     expect(Array.from(parsed.assets.shifted.buffer)).toEqual(
       Array.from(variantBytes),
+    );
+  });
+
+  it("rejects FastCDC chunking requests in the shared JS bundle writer", async () => {
+    await expect(
+      createBundleResult(
+        {
+          projectData: {
+            story: {
+              initialSceneId: "scene-1",
+              scenes: {
+                "scene-1": {
+                  initialSectionId: "section-1",
+                  sections: {
+                    "section-1": {
+                      lines: [],
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          sample: {
+            buffer: Uint8Array.from([1, 2, 3]),
+            mime: "application/octet-stream",
+          },
+        },
+        {
+          chunking: {
+            algorithm: "fastcdc",
+            mode: "whole-file-or-fastcdc",
+          },
+        },
+      ),
+    ).rejects.toThrow(
+      "Shared JS bundle export only supports whole-file dedupe.",
     );
   });
 

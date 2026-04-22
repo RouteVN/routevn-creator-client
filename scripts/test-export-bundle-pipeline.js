@@ -4,7 +4,6 @@ import createRouteEngine from "route-engine-js";
 import JSZip from "jszip";
 
 import {
-  BUNDLE_CHUNKING,
   createBundleInstructions,
   createBundleResult,
   createProjectExportService,
@@ -47,18 +46,9 @@ const expectEngineInitToSucceed = (projectData) => {
 };
 
 const fileBytesById = {
-  "file-live": createAssetBytes(
-    BUNDLE_CHUNKING.maxSize + BUNDLE_CHUNKING.minSize,
-    0,
-  ),
-  "file-target": createAssetBytes(
-    BUNDLE_CHUNKING.maxSize + BUNDLE_CHUNKING.minSize,
-    0,
-  ),
-  "file-dead": createAssetBytes(
-    BUNDLE_CHUNKING.maxSize + BUNDLE_CHUNKING.minSize,
-    17,
-  ),
+  "file-live": createAssetBytes(160 * 1024, 0),
+  "file-target": createAssetBytes(160 * 1024, 0),
+  "file-dead": createAssetBytes(160 * 1024, 17),
 };
 
 const repositoryState = {
@@ -405,7 +395,7 @@ try {
     parsed.manifest.assets["file-live"].chunks,
     parsed.manifest.assets["file-target"].chunks,
   );
-  assert.ok(parsed.manifest.assets["file-live"].chunks.length > 1);
+  assert.equal(parsed.manifest.assets["file-live"].chunks.length, 1);
   const totalChunkReferences =
     Object.values(parsed.manifest.assets).reduce(
       (sum, asset) => sum + (asset?.chunks?.length ?? 0),
