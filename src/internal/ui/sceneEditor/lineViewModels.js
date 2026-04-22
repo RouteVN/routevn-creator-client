@@ -1,10 +1,9 @@
 import { toFlatItems } from "../../project/tree.js";
 import { normalizeLineActions } from "../../project/engineActions.js";
 
-const getLineChanges = (sectionLineChanges, lineId) => {
+const getSectionLineEntry = (sectionLineChanges, lineId) => {
   const changesLines = sectionLineChanges?.lines || [];
-  const lineChanges = changesLines.find((change) => change.id === lineId);
-  return lineChanges?.changes || {};
+  return changesLines.find((change) => change.id === lineId);
 };
 
 const buildCharacterLookups = (repositoryState) => {
@@ -162,9 +161,7 @@ const buildChoicesPreview = (line) => {
   };
 };
 
-const buildDialogueSpeakerPreview = (line, characterLookups) => {
-  const lineActions = normalizeLineActions(line.actions || {});
-  const characterId = lineActions?.dialogue?.characterId;
+const buildDialogueSpeakerPreview = (characterId, characterLookups) => {
   if (!characterId) {
     return undefined;
   }
@@ -213,10 +210,12 @@ export const buildSceneEditorLineViewModels = ({
 }) => {
   const characterLookups = buildCharacterLookups(repositoryState);
 
-  return (lines || []).map((line, index) => {
+  const viewModels = (lines || []).map((line, index) => {
     const lineActions = normalizeLineActions(line.actions || {});
-    const changes = getLineChanges(sectionLineChanges, line.id);
+    const sectionLineEntry = getSectionLineEntry(sectionLineChanges, line.id);
+    const changes = sectionLineEntry?.changes || {};
     const choicesPreview = buildChoicesPreview(line);
+    const linePresentationState = sectionLineEntry?.presentationState;
 
     return {
       ...line,
@@ -229,7 +228,10 @@ export const buildSceneEditorLineViewModels = ({
             resourceId: changes.bgm.data?.resourceId,
           }
         : undefined,
-      characterFileId: buildDialogueSpeakerPreview(line, characterLookups),
+      characterFileId: buildDialogueSpeakerPreview(
+        linePresentationState?.dialogue?.characterId,
+        characterLookups,
+      ),
       characterSprites: buildCharacterSpritePreview(
         repositoryState,
         changes,
@@ -250,4 +252,6 @@ export const buildSceneEditorLineViewModels = ({
       controlChangeType: changes.control?.changeType,
     };
   });
+
+  return viewModels;
 };

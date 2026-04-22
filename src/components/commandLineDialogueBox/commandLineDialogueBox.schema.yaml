@@ -27,6 +27,8 @@ propsSchema:
           type: string
         clearPage:
           type: boolean
+        persistCharacter:
+          type: boolean
         ui:
           type: object
           properties:
@@ -39,3 +41,8 @@ propsSchema:
               type: string
         characterId:
           type: string
+        character:
+          type: object
+          properties:
+            name:
+              type: string
