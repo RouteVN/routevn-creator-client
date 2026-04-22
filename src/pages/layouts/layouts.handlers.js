@@ -6,8 +6,14 @@ import {
 } from "../../internal/projectResolution.js";
 import { isFragmentLayout } from "../../internal/project/layout.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
+import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { createLayoutsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import {
+  getTagsCollection,
+  resolveCollectionWithTags,
+} from "../../internal/resourceTags.js";
+import { LAYOUT_TAG_SCOPE_KEY } from "./layouts.store.js";
 
 const syncEditFormValues = ({ deps, values } = {}) => {
   const { editForm } = deps.refs;
@@ -31,14 +37,12 @@ const openLayoutEditorWithItem = ({ deps, itemId } = {}) => {
     return;
   }
 
-  const { appService, refs, store } = deps;
+  const { appService, store } = deps;
   const layoutItem = store.selectLayoutItemById({ itemId });
   if (!layoutItem || layoutItem.type !== "layout") {
     return;
   }
 
-  store.setSelectedItemId({ itemId });
-  refs.fileExplorer.selectItem({ itemId });
   navigateToLayoutEditor({ appService, layoutId: itemId });
 };
 
@@ -60,6 +64,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
     defaultValues: {
       name: layoutItem.name ?? "",
       description: layoutItem.description ?? "",
+      tagIds: layoutItem.tagIds ?? [],
       isFragment: isFragmentLayout(layoutItem),
     },
   });
@@ -70,6 +75,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
     values: {
       name: layoutItem.name ?? "",
       description: layoutItem.description ?? "",
+      tagIds: layoutItem.tagIds ?? [],
       isFragment: isFragmentLayout(layoutItem),
     },
   });
@@ -86,12 +92,64 @@ const {
   handleFileExplorerKeyboardScopeKeyDown,
   handleItemClick: handleCatalogLayoutItemClick,
   handleSearchInput,
+  openCreateTagDialogForMode,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 } = createCatalogPageHandlers({
   resourceType: "layouts",
+  selectData: (repositoryState) => {
+    const tagsData = getTagsCollection(repositoryState, LAYOUT_TAG_SCOPE_KEY);
+
+    return resolveCollectionWithTags({
+      collection: repositoryState?.layouts,
+      tagsCollection: tagsData,
+      itemType: "layout",
+    });
+  },
+  onProjectStateChanged: ({ deps, repositoryState }) => {
+    deps.store.setTagsData({
+      tagsData: getTagsCollection(repositoryState, LAYOUT_TAG_SCOPE_KEY),
+    });
+  },
   createExplorerHandlers: ({ refresh }) =>
     createLayoutsFileExplorerHandlers({
       refresh,
     }),
+  tagging: {
+    scopeKey: LAYOUT_TAG_SCOPE_KEY,
+    updateItemTagIds: ({ deps, itemId, tagIds }) =>
+      deps.projectService.updateLayoutItem({
+        layoutId: itemId,
+        data: {
+          tagIds,
+        },
+      }),
+    updateItemTagFallbackMessage: "Failed to update layout tags.",
+    appendCreatedTagByMode: ({ deps, mode, tagId }) => {
+      if (mode === "add-form") {
+        appendTagIdToForm({
+          form: deps.refs.layoutForm,
+          tagId,
+        });
+        return;
+      }
+
+      if (mode !== "edit-form") {
+        return;
+      }
+
+      appendTagIdToForm({
+        form: deps.refs.editForm,
+        tagId,
+      });
+    },
+  },
 });
 
 export {
@@ -103,6 +161,14 @@ export {
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
   handleSearchInput,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 };
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
@@ -154,6 +220,21 @@ export const handleEditDialogClose = (deps) => {
 export const handleDetailHeaderClick = (deps) => {
   const selectedItemId = deps.store.selectSelectedItemId();
   openEditDialogWithValues({ deps, itemId: selectedItemId });
+};
+
+export const handleAddFormAddOptionClick = (deps) => {
+  openCreateTagDialogForMode({
+    deps,
+    mode: "add-form",
+  });
+};
+
+export const handleEditFormAddOptionClick = (deps) => {
+  openCreateTagDialogForMode({
+    deps,
+    mode: "edit-form",
+    itemId: deps.store.getState().editItemId,
+  });
 };
 
 const createLayoutElement = (id, data) => ({
@@ -941,6 +1022,7 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
         layoutType,
         data: {
           description,
+          tagIds: Array.isArray(values?.tagIds) ? values.tagIds : [],
           isFragment,
         },
         elements: createLayoutTemplate(layoutType, projectResolution),
@@ -989,6 +1071,7 @@ export const handleEditFormActionClick = async (deps, payload) => {
         data: {
           name,
           description: values?.description ?? "",
+          tagIds: Array.isArray(values?.tagIds) ? values.tagIds : [],
           isFragment: values?.isFragment ?? false,
         },
       }),

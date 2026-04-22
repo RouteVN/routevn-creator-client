@@ -27,6 +27,8 @@ export const createInitialState = () => {
     lastUpdateDate: undefined,
     layoutData: { tree: [], items: {} },
     selectedItemId: undefined,
+    detailPanelSelectedItemId: undefined,
+    detailPanelSelectionRequestId: 0,
     layout: undefined,
     images: { tree: [], items: {} },
     spritesheetsData: { tree: [], items: {} },
@@ -40,6 +42,7 @@ export const createInitialState = () => {
     previewData: {},
     persistedPreviewData: {},
     initialPreviewData: {},
+    isPreviewMounted: false,
     projectResolution: DEFAULT_PROJECT_RESOLUTION,
     selectedElementMetrics: undefined,
     lastPersistErrorAt: 0,
@@ -105,10 +108,35 @@ export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
   state.selectedElementMetrics = undefined;
+
+  if (!itemId) {
+    state.detailPanelSelectedItemId = undefined;
+    state.detailPanelSelectionRequestId += 1;
+  }
+};
+
+export const setDetailPanelSelectedItemId = ({ state }, { itemId } = {}) => {
+  state.detailPanelSelectedItemId = itemId;
+};
+
+export const requestDetailPanelSelectionSync = (
+  { state },
+  { itemId, requestId } = {},
+) => {
+  state.detailPanelSelectionRequestId =
+    requestId ?? state.detailPanelSelectionRequestId + 1;
+
+  if (!itemId) {
+    state.detailPanelSelectedItemId = undefined;
+  }
 };
 
 export const setPreviewData = ({ state }, { previewData } = {}) => {
   state.previewData = normalizePreviewData(previewData);
+};
+
+export const setPreviewMounted = ({ state }, { isMounted } = {}) => {
+  state.isPreviewMounted = isMounted === true;
 };
 
 export const updateSelectedItem = ({ state }, { itemId, updatedItem } = {}) => {
@@ -266,23 +294,31 @@ export const selectSelectedItem = ({ state }) => {
   return selectLayoutEditorSelectedItem({ state });
 };
 
-export const selectSelectedItemData = ({ state }) => {
-  if (!state.selectedItemId) {
+const selectItemDataById = ({ state }, { itemId } = {}) => {
+  if (!itemId) {
     return undefined;
   }
 
-  const item = state.layoutData?.items?.[state.selectedItemId];
+  const item = state.layoutData?.items?.[itemId];
   if (!item) {
     return undefined;
   }
 
   return {
-    id: state.selectedItemId,
+    id: itemId,
     ...item,
   };
 };
 
+export const selectSelectedItemData = ({ state }) => {
+  return selectItemDataById({ state }, { itemId: state.selectedItemId });
+};
+
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
+export const selectDetailPanelSelectedItemId = ({ state }) =>
+  state.detailPanelSelectedItemId;
+export const selectDetailPanelSelectionRequestId = ({ state }) =>
+  state.detailPanelSelectionRequestId;
 
 export const selectSelectedElementMetrics = ({ state }) => {
   return state.selectedElementMetrics;
@@ -323,7 +359,14 @@ export const selectInitialPreviewData = ({ state }) => {
 };
 
 export const selectViewData = ({ state, constants }) => {
-  const item = selectSelectedItem({ state });
+  const selectedItem = selectItemDataById(
+    { state },
+    { itemId: state.selectedItemId },
+  );
+  const item = selectItemDataById(
+    { state },
+    { itemId: state.detailPanelSelectedItemId },
+  );
   const isControlResource = state.layout?.resourceType === "controls";
   const layoutType = state.layout?.layoutType;
   const parsedContextMenuItems = parseAndRender(
@@ -346,7 +389,8 @@ export const selectViewData = ({ state, constants }) => {
     parsedEmptyContextMenuItems,
     state.projectResolution,
   );
-  const flatItems = toLayoutEditorExplorerItems(toFlatItems(state.layoutData), {
+  const flatLayoutItems = toFlatItems(state.layoutData);
+  const flatItems = toLayoutEditorExplorerItems(flatLayoutItems, {
     contextMenuItems,
   });
   const parentIdById = Object.fromEntries(
@@ -368,11 +412,39 @@ export const selectViewData = ({ state, constants }) => {
     };
   }
 
+  const selectedItemIsInsideSaveLoadSlot = isItemInsideSaveLoadSlot({
+    layoutData: state.layoutData,
+    parentIdById,
+    itemId: selectedItem?.id,
+  });
+  const selectedItemIsInsideDirectedContainer =
+    isItemDirectChildOfDirectedContainer({
+      layoutData: state.layoutData,
+      parentIdById,
+      itemId: selectedItem?.id,
+    });
+  const detailPanelIsInsideSaveLoadSlot =
+    item?.id === selectedItem?.id
+      ? selectedItemIsInsideSaveLoadSlot
+      : isItemInsideSaveLoadSlot({
+          layoutData: state.layoutData,
+          parentIdById,
+          itemId: item?.id,
+        });
+  const detailPanelIsInsideDirectedContainer =
+    item?.id === selectedItem?.id
+      ? selectedItemIsInsideDirectedContainer
+      : isItemDirectChildOfDirectedContainer({
+          layoutData: state.layoutData,
+          parentIdById,
+          itemId: item?.id,
+        });
+
   return {
     item,
-    layoutEditPanelKey: `${item?.id}-${state.lastUpdateDate}`,
     flatItems,
     selectedItemId: state.selectedItemId,
+    detailPanelSelectedItemId: state.detailPanelSelectedItemId,
     resourceCategory: isControlResource ? "systemConfig" : "userInterface",
     selectedResourceId: isControlResource ? "controls" : "layout-editor",
     contextMenuItems,
@@ -380,6 +452,7 @@ export const selectViewData = ({ state, constants }) => {
     layoutState,
     previewData: state.previewData,
     initialPreviewData: state.initialPreviewData,
+    isPreviewMounted: state.isPreviewMounted,
     projectResolution: state.projectResolution,
     layout,
     imagesData: state.images,
@@ -389,16 +462,9 @@ export const selectViewData = ({ state, constants }) => {
     textStylesData: state.textStylesData,
     variablesData: state.variablesData,
     layoutsData: state.layoutsData,
-    selectedElementMetrics: state.selectedElementMetrics,
-    isInsideSaveLoadSlot: isItemInsideSaveLoadSlot({
-      layoutData: state.layoutData,
-      parentIdById,
-      itemId: item?.id,
-    }),
-    isInsideDirectedContainer: isItemDirectChildOfDirectedContainer({
-      layoutData: state.layoutData,
-      parentIdById,
-      itemId: item?.id,
-    }),
+    selectedItemIsInsideSaveLoadSlot,
+    selectedItemIsInsideDirectedContainer,
+    isInsideSaveLoadSlot: detailPanelIsInsideSaveLoadSlot,
+    isInsideDirectedContainer: detailPanelIsInsideDirectedContainer,
   };
 };

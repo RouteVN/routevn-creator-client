@@ -52,19 +52,23 @@ template:
                   - rtgl-text: ${layout.name}
               - rtgl-button#saveButton ml=sm: Save Preview
           - 'rtgl-view d=v h=1fg w=f style="min-height: 0;"':
-              - rvn-layout-editor-canvas#layoutEditorCanvas :resolution=${projectResolution} :layoutState=${layoutState} selectedItemId=${selectedItemId} :previewData=${previewData} :disableMoveDrag=${isInsideDirectedContainer}: null
+              - rvn-layout-editor-canvas#layoutEditorCanvas :resolution=${projectResolution} :layoutState=${layoutState} selectedItemId=${selectedItemId} :previewData=${previewData} :disableMoveDrag=${selectedItemIsInsideDirectedContainer}: null
               - 'rtgl-view h=1fg w=f sv style="min-height: 0;"':
-                  - rvn-layout-editor-preview#layoutEditorPreview :layoutState=${layoutState} :initialPreviewData=${initialPreviewData} :charactersData=${charactersData}: null
+                  - $if isPreviewMounted:
+                      - rvn-layout-editor-preview#layoutEditorPreview :layoutState=${layoutState} :initialPreviewData=${initialPreviewData} :charactersData=${charactersData}: null
+                    $else:
+                      - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                          - rtgl-text s=sm c=mu-fg: Loading preview
       - rvn-resizable-panel#resizableDetailPanel panel-type=detail-panel w=300 min-w=200 max-w=500 resize-side="left":
           - rtgl-view wh=f slot="content":
-              - $if selectedItemId:
+              - $if detailPanelSelectedItemId:
                   - rtgl-view d=v w=f h=f:
                       - rtgl-view h=48 w=f d=h bgc=bg bwb=xs ph=md av=c:
                           - rtgl-view d=h av=c w=1fg g=xs:
                               - rtgl-text w=1fg ellipsis=true: ${item.name}
                               - rtgl-text s=xs c=mu-fg: ${item.type}
                       - rtgl-view w=f h=1fg sv pv=md:
-                          - rvn-layout-edit-panel#layoutEditPanel key=${layoutEditPanelKey} layout-type=${layout.layoutType} resource-type=${layout.resourceType} item-type=${item.type} :projectResolution=${projectResolution} :isInsideSaveLoadSlot=${isInsideSaveLoadSlot} :isInsideDirectedContainer=${isInsideDirectedContainer} :selectedElementMetrics=${selectedElementMetrics} :values=${item} :imagesData=${imagesData} :spritesheetsData=${spritesheetsData} :particlesData=${particlesData} :charactersData=${charactersData} :textStylesData=${textStylesData} :variablesData=${variablesData} :layoutsData=${layoutsData}: null
+                          - rvn-layout-edit-panel#layoutEditPanel layout-type=${layout.layoutType} resource-type=${layout.resourceType} item-type=${item.type} :projectResolution=${projectResolution} :isInsideSaveLoadSlot=${isInsideSaveLoadSlot} :isInsideDirectedContainer=${isInsideDirectedContainer} :values=${item} :imagesData=${imagesData} :spritesheetsData=${spritesheetsData} :particlesData=${particlesData} :charactersData=${charactersData} :textStylesData=${textStylesData} :variablesData=${variablesData} :layoutsData=${layoutsData}: null
                 $else:
                   - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                       - rtgl-text s=md c=mu-fg: No selection

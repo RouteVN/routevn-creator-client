@@ -3,13 +3,14 @@ import {
   DEFAULT_PROJECT_RESOLUTION,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
-import { generatePrefixedId } from "../../internal/id.js";
+import { generateId, generatePrefixedId } from "../../internal/id.js";
 import {
   canResizeLayoutEditorItemHeight,
   canResizeLayoutEditorItemWidth,
 } from "../../internal/layoutEditorElementRegistry.js";
 import { captureCanvasThumbnailImage } from "../../internal/runtime/graphicsEngineRuntime.js";
 import {
+  createLayoutEditorAssetReferences,
   createLayoutEditorRenderedElements,
   loadLayoutEditorAssets,
 } from "./support/layoutEditorCanvasRender.js";
@@ -98,6 +99,25 @@ const areCanvasItemsEquivalent = (left, right) => {
     left.width === right.width &&
     left.height === right.height
   );
+};
+
+const areCanvasLayoutStatesEquivalent = (left = {}, right = {}) => {
+  return (
+    left?.id === right?.id &&
+    left?.layoutType === right?.layoutType &&
+    left?.elements === right?.elements
+  );
+};
+
+const isCanvasRenderRequestStale = (deps, renderRequestId) => {
+  return deps.store.selectActiveRenderRequestId() !== renderRequestId;
+};
+
+const finishStaleCanvasRender = (deps, renderRequestId) => {
+  if (!isCanvasRenderRequestStale(deps, renderRequestId)) {
+    return false;
+  }
+  return true;
 };
 
 export const applyCanvasItemDragChange = ({
@@ -295,10 +315,10 @@ const dispatchCanvasItemEvent = (deps, eventName, updatedItem) => {
   );
 };
 
-const renderLayoutEditorCanvas = async (
+const prefetchLayoutEditorAssets = async (
   deps,
   props = deps.props,
-  { clearFirst = false, updatedItem } = {},
+  _options = {},
 ) => {
   if (!deps.store.selectIsGraphicsReady()) {
     return;
@@ -307,6 +327,59 @@ const renderLayoutEditorCanvas = async (
   try {
     await deps.graphicsService.waitUntilReady?.();
     const repositoryState = await getRepositoryState(deps);
+    const layoutState = {
+      id: props.layoutState?.id,
+      layoutType: props.layoutState?.layoutType,
+      elements: props.layoutState?.elements,
+    };
+    const { fileReferences } = createLayoutEditorAssetReferences({
+      layoutState,
+      repositoryState,
+      previewData: props.previewData,
+      resolution: props.resolution,
+    });
+
+    if (fileReferences.length === 0) {
+      return;
+    }
+
+    const assets = await loadLayoutEditorAssets({
+      projectService: deps.projectService,
+      selectCachedFileContent: deps.store.selectCachedFileContent,
+      clearCachedFileContent: deps.store.clearCachedFileContent,
+      cacheFileContent: deps.store.cacheFileContent,
+      hasLoadedAsset: deps.graphicsService.hasLoadedAsset,
+      fileReferences,
+      fontsItems: repositoryState?.fonts?.items || {},
+    });
+    await deps.graphicsService.loadAssets(assets);
+  } catch (error) {
+    console.error("[layoutEditorCanvas] Failed to prefetch assets", error);
+  }
+};
+
+const renderLayoutEditorCanvas = async (
+  deps,
+  props = deps.props,
+  { clearFirst = false, updatedItem } = {},
+) => {
+  const renderRequestId = generateId();
+  deps.store.setActiveRenderRequestId({
+    requestId: renderRequestId,
+  });
+  if (!deps.store.selectIsGraphicsReady()) {
+    return;
+  }
+
+  try {
+    await deps.graphicsService.waitUntilReady?.();
+    if (finishStaleCanvasRender(deps, renderRequestId)) {
+      return;
+    }
+    const repositoryState = await getRepositoryState(deps);
+    if (finishStaleCanvasRender(deps, renderRequestId)) {
+      return;
+    }
     const layoutData = updatedItem
       ? createLayoutDataWithUpdatedItem(
           props.layoutState?.elements,
@@ -328,6 +401,9 @@ const renderLayoutEditorCanvas = async (
         disableMoveDrag: props.disableMoveDrag === true,
         graphicsService: deps.graphicsService,
       });
+    if (finishStaleCanvasRender(deps, renderRequestId)) {
+      return;
+    }
 
     deps.dispatchEvent(
       new CustomEvent("selected-element-metrics-change", {
@@ -352,11 +428,18 @@ const renderLayoutEditorCanvas = async (
       selectCachedFileContent: deps.store.selectCachedFileContent,
       clearCachedFileContent: deps.store.clearCachedFileContent,
       cacheFileContent: deps.store.cacheFileContent,
+      hasLoadedAsset: deps.graphicsService.hasLoadedAsset,
       fileReferences,
       fontsItems: repositoryState?.fonts?.items || {},
     });
+    if (finishStaleCanvasRender(deps, renderRequestId)) {
+      return;
+    }
     try {
       await deps.graphicsService.loadAssets(assets);
+      if (finishStaleCanvasRender(deps, renderRequestId)) {
+        return;
+      }
     } catch {
       deps.store.clearFileContentCache();
       assets = await loadLayoutEditorAssets({
@@ -364,10 +447,17 @@ const renderLayoutEditorCanvas = async (
         selectCachedFileContent: deps.store.selectCachedFileContent,
         clearCachedFileContent: deps.store.clearCachedFileContent,
         cacheFileContent: deps.store.cacheFileContent,
+        hasLoadedAsset: deps.graphicsService.hasLoadedAsset,
         fileReferences,
         fontsItems: repositoryState?.fonts?.items || {},
       });
+      if (finishStaleCanvasRender(deps, renderRequestId)) {
+        return;
+      }
       await deps.graphicsService.loadAssets(assets);
+      if (finishStaleCanvasRender(deps, renderRequestId)) {
+        return;
+      }
     }
 
     deps.graphicsService.render({
@@ -415,7 +505,10 @@ const handleKeyboardMove = async (deps, event) => {
   }
 
   deps.store.setPendingUpdatedItem({ updatedItem });
-  await renderLayoutEditorCanvas(deps, deps.props, { updatedItem });
+  await renderLayoutEditorCanvas(deps, deps.props, {
+    updatedItem,
+    reason: "keyboard-move",
+  });
   dispatchCanvasItemEvent(deps, "drag-update", updatedItem);
   deps.subject.dispatch("layoutEditorCanvas.keyboardNavigationMoved", {
     itemId: currentItem.id,
@@ -491,7 +584,10 @@ const handleBorderDragMove = async (deps, payload = {}) => {
   }
 
   deps.store.setPendingUpdatedItem({ updatedItem });
-  await renderLayoutEditorCanvas(deps, deps.props, { updatedItem });
+  await renderLayoutEditorCanvas(deps, deps.props, {
+    updatedItem,
+    reason: "border-drag-move",
+  });
   dispatchCanvasItemEvent(deps, "drag-update", updatedItem);
 };
 
@@ -510,6 +606,7 @@ const handleBorderDragEnd = async (deps) => {
 
   await renderLayoutEditorCanvas(deps, deps.props, {
     updatedItem: pendingUpdatedItem,
+    reason: "border-drag-end",
   });
   dispatchCanvasItemEvent(deps, "update", pendingUpdatedItem);
 };
@@ -581,13 +678,29 @@ export const handleBeforeMount = (deps) => {
 
 export const handleAfterMount = async (deps) => {
   await initCanvasGraphics(deps);
-  await renderLayoutEditorCanvas(deps);
+  await prefetchLayoutEditorAssets(deps, deps.props, {
+    reason: "after-mount",
+  });
+  await renderLayoutEditorCanvas(deps, deps.props, {
+    reason: "after-mount",
+  });
+};
+
+export const prefetchAssets = async (
+  deps,
+  { reason = "manual-prefetch", reasonDetails } = {},
+) => {
+  await prefetchLayoutEditorAssets(deps, deps.props, {
+    reason,
+    reasonDetails,
+  });
 };
 
 export const restartPreview = async (deps) => {
   await renderLayoutEditorCanvas(deps, deps.props, {
     clearFirst: true,
     updatedItem: deps.store.selectPendingUpdatedItem(),
+    reason: "restart-preview",
   });
 };
 
@@ -596,6 +709,15 @@ export const handleOnUpdate = async (deps, changes) => {
   const didResolutionChange =
     oldProps.resolution?.width !== newProps.resolution?.width ||
     oldProps.resolution?.height !== newProps.resolution?.height;
+  const didCanvasInputsChange =
+    didResolutionChange ||
+    oldProps.selectedItemId !== newProps.selectedItemId ||
+    oldProps.previewData !== newProps.previewData ||
+    oldProps.disableMoveDrag !== newProps.disableMoveDrag ||
+    !areCanvasLayoutStatesEquivalent(
+      oldProps.layoutState,
+      newProps.layoutState,
+    );
 
   if (didResolutionChange) {
     await initCanvasGraphics(deps, newProps);
@@ -620,7 +742,12 @@ export const handleOnUpdate = async (deps, changes) => {
     deps.store.clearPendingUpdatedItem();
   }
 
+  if (!didCanvasInputsChange) {
+    return;
+  }
+
+  const nextPendingUpdatedItem = deps.store.selectPendingUpdatedItem();
   await renderLayoutEditorCanvas(deps, newProps, {
-    updatedItem: deps.store.selectPendingUpdatedItem(),
+    updatedItem: nextPendingUpdatedItem,
   });
 };

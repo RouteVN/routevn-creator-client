@@ -75,6 +75,7 @@ describe("createLayoutTemplate", () => {
         }),
         closeAddDialog: vi.fn(),
         setItems: vi.fn(),
+        setTagsData: vi.fn(),
       },
       projectService: {
         createLayoutItem,
@@ -114,10 +115,11 @@ describe("createLayoutTemplate", () => {
         layoutType: "save-load",
         parentId: "group-1",
         position: "last",
-        data: {
+        data: expect.objectContaining({
           description: "Reusable save fragment",
           isFragment: true,
-        },
+          tagIds: [],
+        }),
       }),
     );
     expect(deps.store.closeAddDialog).toHaveBeenCalled();
@@ -128,6 +130,7 @@ describe("createLayoutTemplate", () => {
     const deps = {
       store: {
         setItems: vi.fn(),
+        setTagsData: vi.fn(),
         setSelectedItemId: vi.fn(),
       },
       refs: {

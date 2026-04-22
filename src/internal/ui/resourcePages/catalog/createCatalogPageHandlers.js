@@ -2,6 +2,7 @@ import { createResourceFileExplorerHandlers } from "../../fileExplorer.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../fileExplorerKeyboardScope.js";
 import { createProjectStateStream } from "../../../../deps/services/shared/projectStateStream.js";
 import { tap } from "rxjs";
+import { createResourcePageTagHandlers } from "../tags.js";
 
 const EMPTY_TREE = { tree: [], items: {} };
 
@@ -15,6 +16,7 @@ export const createCatalogPageHandlers = ({
       resourceType,
       refresh,
     }),
+  tagging,
 }) => {
   const refreshData = async (deps, { selectedItemId } = {}) => {
     const { store, render, projectService, refs } = deps;
@@ -69,6 +71,11 @@ export const createCatalogPageHandlers = ({
       return;
     }
 
+    if (store.selectSelectedItemId() === itemId) {
+      focusKeyboardScope(deps);
+      return;
+    }
+
     store.setSelectedItemId({ itemId });
     render();
     focusKeyboardScope(deps);
@@ -89,6 +96,10 @@ export const createCatalogPageHandlers = ({
       return;
     }
 
+    if (store.selectSelectedItemId() === itemId) {
+      return;
+    }
+
     store.setSelectedItemId({ itemId });
     refs.fileExplorer.selectItem({ itemId });
     render();
@@ -99,6 +110,32 @@ export const createCatalogPageHandlers = ({
     store.setSearchQuery({ value: payload._event.detail.value ?? "" });
     render();
   };
+
+  const resolveTagScopeKey = ({ deps, itemId, mode } = {}) => {
+    if (typeof tagging?.resolveScopeKey === "function") {
+      return tagging.resolveScopeKey({
+        deps,
+        itemId,
+        mode,
+      });
+    }
+
+    return tagging?.scopeKey;
+  };
+
+  const tagHandlers = tagging
+    ? createResourcePageTagHandlers({
+        resolveScopeKey: resolveTagScopeKey,
+        updateItemTagIds: tagging.updateItemTagIds,
+        refreshAfterItemTagUpdate: ({ deps, itemId }) =>
+          refreshData(deps, { selectedItemId: itemId }),
+        appendCreatedTagByMode: tagging.appendCreatedTagByMode,
+        getSelectedItemId: tagging.getSelectedItemId,
+        getSelectedItemTagIds: tagging.getSelectedItemTagIds,
+        createTagFallbackMessage: tagging.createTagFallbackMessage,
+        updateItemTagFallbackMessage: tagging.updateItemTagFallbackMessage,
+      })
+    : {};
 
   return {
     refreshData,
@@ -111,5 +148,15 @@ export const createCatalogPageHandlers = ({
     handleFileExplorerKeyboardScopeKeyDown,
     handleItemClick,
     handleSearchInput,
+    openCreateTagDialogForMode: tagHandlers.openCreateTagDialogForMode,
+    handleCreateTagDialogClose: tagHandlers.handleCreateTagDialogClose,
+    handleTagFilterChange: tagHandlers.handleTagFilterChange,
+    handleTagFilterAddOptionClick: tagHandlers.handleTagFilterAddOptionClick,
+    handleDetailTagAddOptionClick: tagHandlers.handleDetailTagAddOptionClick,
+    handleDetailTagDraftValueChange:
+      tagHandlers.handleDetailTagDraftValueChange,
+    handleDetailTagOpenChange: tagHandlers.handleDetailTagOpenChange,
+    handleDetailTagValueChange: tagHandlers.handleDetailTagValueChange,
+    handleCreateTagFormAction: tagHandlers.handleCreateTagFormAction,
   };
 };

@@ -157,7 +157,7 @@ template:
   - $for section, i in config.sections:
       - $if i > 0:
           - rtgl-view h=1 w=f bgc=mu mv=lg: null
-      - rtgl-view w=f g=md ph=md:
+      - rtgl-view key=${section.viewKey} w=f g=md ph=md:
           - $if section.labelAction:
               - rtgl-view d=h w=f av=c:
                   - rtgl-text s=sm: ${section.label}
@@ -166,82 +166,83 @@ template:
             $else:
               - rtgl-text s=sm: ${section.label}
           - $for item, j in section.items:
-              - $if item.type == 'group':
-                  - rtgl-view d=h w=f g=md av=c:
-                      - $for field, k in item.fields:
-                          - $if field.label:
-                              - rtgl-text s=sm w=60: ${field.label}
-                          - rtgl-view#groupItem${i}x${j}x${k} data-name=${field.name} w=1fg d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=28:
-                              - rtgl-view d=h av=c g=md w=1fg:
-                                  - $if field.svg:
-                                      - rtgl-svg svg=${field.svg} wh=16: null
-                                  - rtgl-text s=xs: ${field.value}
-                              - $if field.metaValue:
-                                  - rtgl-text s=xs c=mu-fg: ${field.metaValue}
-                $elif item.type == 'select':
-                  - rtgl-view d=h av=c w=f:
-                      - rtgl-text s=xs w=65: ${item.label}
-                      - 'rtgl-view style="width: calc(100% - 65px);"':
-                          - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=${item.value} :options=${item.options}: null
-                $elif item.type == 'segmented-control':
-                  - rtgl-view d=h av=c w=f:
-                      - rtgl-text s=xs w=65: ${item.label}
-                      - 'rtgl-view style="width: calc(100% - 65px);"':
-                          - rtgl-segmented-control#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=${item.value} :options=${item.options}: null
-                $elif item.type == 'reveal-effect-select':
-                  - rtgl-view d=h av=c w=f:
-                      - rtgl-text s=xs w=65: ${item.label}
-                      - 'rtgl-view style="width: calc(100% - 65px);"':
-                          - rtgl-segmented-control#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=${revealEffectValue} :options=${revealEffectOptions}: null
-                $elif item.type == 'list-item':
-                  - $for listItem, k in item.items:
-                      - rtgl-view#listItem${i}x${j}x${k} data-id=${listItem.id} data-interaction=${listItem.interactionType} d=h w=f g=md av=c p=md br=md bw=xs h-bgc=mu cur=pointer:
-                          - rtgl-svg svg=${listItem.svg} wh=16: null
-                          - rtgl-text s=xs: ${listItem.label}
-                $elif item.type == 'list-bar':
-                  - $for barItem, k in item.items:
-                      - rtgl-view#listBarItem${i}x${j}x${k} data-name=${barItem.name} d=h w=f g=md av=c ph=md h-bgc=mu bw=xs br=md cur=pointer:
-                          - rtgl-text s=xs: ${barItem.label}
-                          - rtgl-view w=1fg: null
-                          - $if barItem.imageId:
-                              - rvn-file-image imageId=${barItem.imageId} source="thumbnail" h=32: null
-                            $else:
-                              - rtgl-view d=h av=c ah=c h=32 ph=sm bgc=mu br=sm:
-                                  - rtgl-text s=xs c=mu: Not set
-                $elif item.type == 'spritesheet-preview':
-                  - 'rvn-spritesheet-preview key=${item.key} fileId=${item.fileId} :atlas=${item.atlas} :animation=${item.animation} h=180 emptyLabel="Select a spritesheet animation"': null
-                $elif item.type == 'popover-input':
-                  - rtgl-view#groupItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
-                      - rtgl-text s=sm: ${item.value}
-                $elif item.type == 'condition-summary':
-                  - rtgl-view#conditionItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
-                      - rtgl-text s=sm: ${item.value}
-                $elif item.type == 'conditional-override-list':
-                  - $if item.items.length > 0:
-                      - $for conditionalItem, k in item.items:
-                          - rtgl-view w=f g=sm p=md bgc=mu br=md bw=xs bc=bg:
-                              - rtgl-view d=h g=sm av=c w=f:
-                                  - rtgl-view#conditionalOverrideCondition${i}x${j}x${k} data-index=${conditionalItem.index} w=1fg p=sm bgc=bg br=md bw=xs bc=bg h-bc=ac cur=pointer:
-                                      - rtgl-text s=sm: ${conditionalItem.summary}
-                                  - rtgl-button#conditionalOverrideDelete${i}x${j}x${k} data-index=${conditionalItem.index} variant=se s=sm: Delete
-                              - $if conditionalItem.attributeItems.length > 0:
-                                  - $for attributeItem, m in conditionalItem.attributeItems:
-                                      - rtgl-view d=h g=sm av=c w=f:
-                                          - rtgl-view#conditionalOverrideAttribute${i}x${j}x${k}x${m} data-index=${conditionalItem.index} data-field-name=${attributeItem.fieldName} w=1fg p=sm bgc=bg br=md bw=xs bc=bg h-bc=ac cur=pointer:
-                                              - rtgl-text s=xs: ${attributeItem.summary}
-                                          - rtgl-button#conditionalOverrideAttributeDelete${i}x${j}x${k}x${m} data-index=${conditionalItem.index} data-field-name=${attributeItem.fieldName} variant=se s=sm: Remove
+              - rtgl-view key=${item.viewKey} w=f:
+                  - $if item.type == 'group':
+                      - rtgl-view d=h w=f g=md av=c:
+                          - $for field, k in item.fields:
+                              - $if field.label:
+                                  - rtgl-text s=sm w=60: ${field.label}
+                              - rtgl-view#groupItem${i}x${j}x${k} data-name=${field.name} w=1fg d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=28:
+                                  - rtgl-view d=h av=c g=md w=1fg:
+                                      - $if field.svg:
+                                          - rtgl-svg svg=${field.svg} wh=16: null
+                                      - rtgl-text s=xs: ${field.value}
+                                  - $if field.metaValue:
+                                      - rtgl-text s=xs c=mu-fg: ${field.metaValue}
+                    $elif item.type == 'select':
+                      - rtgl-view d=h av=c w=f:
+                          - rtgl-text s=xs w=65: ${item.label}
+                          - 'rtgl-view style="width: calc(100% - 65px);"':
+                              - rtgl-select#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=${item.value} :options=${item.options}: null
+                    $elif item.type == 'segmented-control':
+                      - rtgl-view d=h av=c w=f:
+                          - rtgl-text s=xs w=65: ${item.label}
+                          - 'rtgl-view style="width: calc(100% - 65px);"':
+                              - rtgl-segmented-control#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=${item.value} :options=${item.options}: null
+                    $elif item.type == 'reveal-effect-select':
+                      - rtgl-view d=h av=c w=f:
+                          - rtgl-text s=xs w=65: ${item.label}
+                          - 'rtgl-view style="width: calc(100% - 65px);"':
+                              - rtgl-segmented-control#selectItem${i}x${j} data-name=${item.name} w=f no-clear :selectedValue=${revealEffectValue} :options=${revealEffectOptions}: null
+                    $elif item.type == 'list-item':
+                      - $for listItem, k in item.items:
+                          - rtgl-view#listItem${i}x${j}x${k} key=${listItem.viewKey} data-id=${listItem.id} data-interaction=${listItem.interactionType} d=h w=f g=md av=c p=md br=md bw=xs h-bgc=mu cur=pointer:
+                              - rtgl-svg svg=${listItem.svg} wh=16: null
+                              - rtgl-text s=xs: ${listItem.label}
+                    $elif item.type == 'list-bar':
+                      - $for barItem, k in item.items:
+                          - rtgl-view#listBarItem${i}x${j}x${k} key=${barItem.viewKey} data-name=${barItem.name} d=h w=f g=md av=c ph=md h-bgc=mu bw=xs br=md cur=pointer:
+                              - rtgl-text s=xs: ${barItem.label}
+                              - rtgl-view w=1fg: null
+                              - $if barItem.imageId:
+                                  - rvn-file-image imageId=${barItem.imageId} source="thumbnail" h=32: null
                                 $else:
-                                  - rtgl-text s=xs c=mu-fg: No attributes yet
-                              - rtgl-view d=h w=f ah=e:
-                                  - rtgl-button#conditionalOverrideAddAttribute${i}x${j}x${k} data-index=${conditionalItem.index} pre=plus s=sm v=gh: Add Attribute
-                $elif item.type == 'pagination-summary':
-                  - rtgl-view#paginationItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
-                      - rtgl-text s=sm: ${item.value}
-                $elif item.type == 'child-interaction-list':
-                  - rtgl-view d=h w=f wrap g=sm:
-                      - $for childItem, k in item.items:
-                          - rtgl-view#childInteractionItem${i}x${j}x${k} data-name=${childItem.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=context-menu bw=xs bc=bg h-bc=ac h=32:
-                              - rtgl-text s=sm: ${childItem.label}
+                                  - rtgl-view d=h av=c ah=c h=32 ph=sm bgc=mu br=sm:
+                                      - rtgl-text s=xs c=mu: Not set
+                    $elif item.type == 'spritesheet-preview':
+                      - 'rvn-spritesheet-preview key=${item.previewKey} fileId=${item.fileId} :atlas=${item.atlas} :animation=${item.animation} h=180 emptyLabel="Select a spritesheet animation"': null
+                    $elif item.type == 'popover-input':
+                      - rtgl-view#groupItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
+                          - rtgl-text s=sm: ${item.value}
+                    $elif item.type == 'condition-summary':
+                      - rtgl-view#conditionItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
+                          - rtgl-text s=sm: ${item.value}
+                    $elif item.type == 'conditional-override-list':
+                      - $if item.items.length > 0:
+                          - $for conditionalItem, k in item.items:
+                              - rtgl-view key=${conditionalItem.viewKey} w=f g=sm p=md bgc=mu br=md bw=xs bc=bg:
+                                  - rtgl-view d=h g=sm av=c w=f:
+                                      - rtgl-view#conditionalOverrideCondition${i}x${j}x${k} data-index=${conditionalItem.index} w=1fg p=sm bgc=bg br=md bw=xs bc=bg h-bc=ac cur=pointer:
+                                          - rtgl-text s=sm: ${conditionalItem.summary}
+                                      - rtgl-button#conditionalOverrideDelete${i}x${j}x${k} data-index=${conditionalItem.index} variant=se s=sm: Delete
+                                  - $if conditionalItem.attributeItems.length > 0:
+                                      - $for attributeItem, m in conditionalItem.attributeItems:
+                                          - rtgl-view key=${attributeItem.viewKey} d=h g=sm av=c w=f:
+                                              - rtgl-view#conditionalOverrideAttribute${i}x${j}x${k}x${m} data-index=${conditionalItem.index} data-field-name=${attributeItem.fieldName} w=1fg p=sm bgc=bg br=md bw=xs bc=bg h-bc=ac cur=pointer:
+                                                  - rtgl-text s=xs: ${attributeItem.summary}
+                                              - rtgl-button#conditionalOverrideAttributeDelete${i}x${j}x${k}x${m} data-index=${conditionalItem.index} data-field-name=${attributeItem.fieldName} variant=se s=sm: Remove
+                                    $else:
+                                      - rtgl-text s=xs c=mu-fg: No attributes yet
+                                  - rtgl-view d=h w=f ah=e:
+                                      - rtgl-button#conditionalOverrideAddAttribute${i}x${j}x${k} data-index=${conditionalItem.index} pre=plus s=sm v=gh: Add Attribute
+                    $elif item.type == 'pagination-summary':
+                      - rtgl-view#paginationItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
+                          - rtgl-text s=sm: ${item.value}
+                    $elif item.type == 'child-interaction-list':
+                      - rtgl-view d=h w=f wrap g=sm:
+                          - $for childItem, k in item.items:
+                              - rtgl-view#childInteractionItem${i}x${j}x${k} key=${childItem.viewKey} data-name=${childItem.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=context-menu bw=xs bc=bg h-bc=ac h=32:
+                                  - rtgl-text s=sm: ${childItem.label}
   - rtgl-view h=1 w=f bgc=mu mv=lg: null
   - rvn-system-actions#systemActions :actions=${actionsData} actionType=system :hiddenModes=${hiddenSystemActionModes}: null
   - rtgl-popover#popoverForm ?open=${popover.open} place=b x=${popover.x} y=${popover.y}:
@@ -255,31 +256,37 @@ template:
             $else:
               - rtgl-form#form autofocus key=${popover.key} slot=content :form=${popover.form} :defaultValues=${popover.defaultValues} :context=${popover.context}: null
   - rtgl-dialog#visibilityConditionDialog ?open=${visibilityConditionDialog.open} s=md:
-      - rtgl-view slot=content g=md:
-          - rtgl-form#visibilityConditionForm key=${visibilityConditionDialog.key} :form=${visibilityConditionDialogForm} :defaultValues=${visibilityConditionDialogDefaults} :context=${visibilityConditionDialogContext} w=f: null
+      - $if visibilityConditionDialog.open:
+          - rtgl-view slot=content g=md:
+              - rtgl-form#visibilityConditionForm key=${visibilityConditionDialog.key} :form=${visibilityConditionDialogForm} :defaultValues=${visibilityConditionDialogDefaults} :context=${visibilityConditionDialogContext} w=f: null
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}: null
   - rtgl-dialog#saveLoadPaginationDialog ?open=${saveLoadPaginationDialog.open} s=md:
-      - rtgl-view slot=content g=md:
-          - rtgl-form#saveLoadPaginationForm key=${saveLoadPaginationDialog.key} :form=${saveLoadPaginationDialogForm} :defaultValues=${saveLoadPaginationDialogDefaults} w=f: null
+      - $if saveLoadPaginationDialog.open:
+          - rtgl-view slot=content g=md:
+              - rtgl-form#saveLoadPaginationForm key=${saveLoadPaginationDialog.key} :form=${saveLoadPaginationDialogForm} :defaultValues=${saveLoadPaginationDialogDefaults} w=f: null
   - rtgl-dialog#childInteractionDialog ?open=${childInteractionDialog.open} s=md:
-      - rtgl-view slot=content g=md:
-          - rtgl-form#childInteractionForm key=${childInteractionDialog.key} :form=${childInteractionDialogForm} :defaultValues=${childInteractionDialogDefaults} w=f: null
+      - $if childInteractionDialog.open:
+          - rtgl-view slot=content g=md:
+              - rtgl-form#childInteractionForm key=${childInteractionDialog.key} :form=${childInteractionDialogForm} :defaultValues=${childInteractionDialogDefaults} w=f: null
   - rtgl-dialog#conditionalOverrideConditionDialog ?open=${conditionalOverrideConditionDialog.open} s=md:
-      - rtgl-view slot=content g=md:
-          - rtgl-form#conditionalOverrideConditionForm key=${conditionalOverrideConditionDialog.key} :form=${conditionalOverrideConditionForm} :defaultValues=${conditionalOverrideConditionDefaults} :context=${conditionalOverrideConditionDialogContext} w=f: null
+      - $if conditionalOverrideConditionDialog.open:
+          - rtgl-view slot=content g=md:
+              - rtgl-form#conditionalOverrideConditionForm key=${conditionalOverrideConditionDialog.key} :form=${conditionalOverrideConditionForm} :defaultValues=${conditionalOverrideConditionDefaults} :context=${conditionalOverrideConditionDialogContext} w=f: null
   - rtgl-dialog#conditionalOverrideAttributeDialog ?open=${conditionalOverrideAttributeDialog.open} s=md:
-      - rtgl-view slot=content g=md:
-          - rtgl-form#conditionalOverrideAttributeForm key=${conditionalOverrideAttributeDialog.key} :form=${conditionalOverrideAttributeForm} :defaultValues=${conditionalOverrideAttributeDefaults} :context=${conditionalOverrideAttributeDialogContext} w=f: null
+      - $if conditionalOverrideAttributeDialog.open:
+          - rtgl-view slot=content g=md:
+              - rtgl-form#conditionalOverrideAttributeForm key=${conditionalOverrideAttributeDialog.key} :form=${conditionalOverrideAttributeForm} :defaultValues=${conditionalOverrideAttributeDefaults} :context=${conditionalOverrideAttributeDialogContext} w=f: null
   - rtgl-dialog#imageSelectorDialog ?open=${imageSelectorDialog.open} s=xl:
-      - rtgl-view slot=content d=v w=f g=md:
-          - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':
-              - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
-                  - rvn-base-file-explorer#imageSelectorFileExplorer :items=${imageFolderItems} shrinkable: null
-              - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
-                  - rvn-image-selector#imageSelector selectedImageId=${tempSelectedImageId}: null
-          - rtgl-view d=h g=sm w=f ah=e:
-              - rtgl-button#cancelImageSelection variant=se: Cancel
-              - rtgl-button#confirmImageSelection variant=pr: OK
+      - $if imageSelectorDialog.open:
+          - rtgl-view slot=content d=v w=f g=md:
+              - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':
+                  - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
+                      - rvn-base-file-explorer#imageSelectorFileExplorer :items=${imageFolderItems} shrinkable: null
+                  - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
+                      - rvn-image-selector#imageSelector selectedImageId=${tempSelectedImageId}: null
+              - rtgl-view d=h g=sm w=f ah=e:
+                  - rtgl-button#cancelImageSelection variant=se: Cancel
+                  - rtgl-button#confirmImageSelection variant=pr: OK
   - $when: fullImagePreviewVisible
     rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
       - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null

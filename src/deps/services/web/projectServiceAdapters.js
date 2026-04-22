@@ -253,12 +253,14 @@ export const createWebProjectServiceAdapters = ({
 
     getFileContent: async ({ fileId, getCurrentStore }) => {
       const adapter = getCurrentStore();
+
       const blob = await adapter.getFile(fileId);
       if (!blob) {
         throw new Error(`File not found: ${fileId}`);
       }
 
       const url = URL.createObjectURL(blob);
+
       return {
         url,
         type: blob.type,

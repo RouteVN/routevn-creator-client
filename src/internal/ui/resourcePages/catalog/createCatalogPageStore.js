@@ -2,6 +2,20 @@ import {
   toFlatGroups,
   toFlatItems,
 } from "../../../../internal/project/tree.js";
+import {
+  buildTagViewData,
+  closeCreateTagDialogState,
+  commitDetailTagIdsState,
+  createTagForm as createDefaultTagForm,
+  createTagState,
+  filterGroupsByActiveTags,
+  openCreateTagDialogState,
+  setActiveTagIdsState,
+  setDetailTagIdsState,
+  setDetailTagPopoverOpenState,
+  setTagsDataState,
+  syncDetailTagIds,
+} from "../tags.js";
 
 const EMPTY_TREE = { tree: [], items: {} };
 
@@ -47,7 +61,12 @@ export const createCatalogPageStore = ({
   buildDetailFields = () => [],
   buildCatalogItem = (item) => item,
   extendViewData,
+  tagging,
 }) => {
+  const taggingEnabled = !!tagging;
+  const createEmptyTagsCollection = tagging?.createEmptyTagsCollection;
+  const createTagFormDefinition =
+    tagging?.createTagForm ?? createDefaultTagForm();
   const selectDataItem = (state, itemId) => {
     const item = state.data?.items?.[itemId];
     return item?.type === itemType ? item : undefined;
@@ -57,14 +76,33 @@ export const createCatalogPageStore = ({
     data: EMPTY_TREE,
     selectedItemId: undefined,
     searchQuery: "",
+    ...(taggingEnabled
+      ? createTagState({
+          createEmptyTagsCollection,
+        })
+      : {}),
   });
 
   const setItems = ({ state }, { data } = {}) => {
     state.data = data ?? EMPTY_TREE;
+    if (taggingEnabled) {
+      syncDetailTagIds({
+        state,
+        item: selectDataItem(state, state.selectedItemId),
+        preserveDirty: true,
+      });
+    }
   };
 
   const setSelectedItemId = ({ state }, { itemId } = {}) => {
     state.selectedItemId = itemId;
+    if (taggingEnabled) {
+      state.isDetailTagSelectOpen = false;
+      syncDetailTagIds({
+        state,
+        item: selectDataItem(state, itemId),
+      });
+    }
   };
 
   const selectSelectedItem = ({ state }) => {
@@ -81,12 +119,67 @@ export const createCatalogPageStore = ({
     state.searchQuery = value ?? "";
   };
 
+  const setTagsData = ({ state }, { tagsData } = {}) => {
+    setTagsDataState({
+      state,
+      tagsData,
+      createEmptyTagsCollection,
+    });
+  };
+
+  const setActiveTagIds = ({ state }, { tagIds } = {}) => {
+    setActiveTagIdsState({
+      state,
+      tagIds,
+    });
+  };
+
+  const setDetailTagIds = ({ state }, { tagIds } = {}) => {
+    setDetailTagIdsState({
+      state,
+      tagIds,
+    });
+  };
+
+  const commitDetailTagIds = ({ state }, { tagIds } = {}) => {
+    commitDetailTagIdsState({
+      state,
+      tagIds,
+    });
+  };
+
+  const setDetailTagPopoverOpen = ({ state }, { open, item } = {}) => {
+    setDetailTagPopoverOpenState({
+      state,
+      open,
+      item,
+    });
+  };
+
+  const openCreateTagDialog = (
+    { state },
+    { mode, itemId, draftTagIds } = {},
+  ) => {
+    openCreateTagDialogState({
+      state,
+      mode,
+      itemId,
+      draftTagIds,
+    });
+  };
+
+  const closeCreateTagDialog = ({ state }, _payload = {}) => {
+    closeCreateTagDialogState({
+      state,
+    });
+  };
+
   const selectViewData = ({ state }) => {
     const flatItems = toFlatItems(state.data);
     const rawFlatGroups = toFlatGroups(state.data);
     const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
 
-    const catalogGroups = rawFlatGroups
+    const unfilteredCatalogGroups = rawFlatGroups
       .map((group) => {
         const filteredChildren = (group.children ?? []).filter((item) =>
           matchesSearch(item, searchQuery),
@@ -107,6 +200,23 @@ export const createCatalogPageStore = ({
       .filter((group) => group.shouldDisplay);
 
     const selectedItem = selectDataItem(state, state.selectedItemId);
+    const catalogGroups = taggingEnabled
+      ? filterGroupsByActiveTags({
+          groups: unfilteredCatalogGroups,
+          itemsById: state.data?.items,
+          activeTagIds: state.activeTagIds,
+        })
+      : unfilteredCatalogGroups;
+    const detailFields = buildDetailFields(selectedItem);
+    const tagViewData = taggingEnabled
+      ? buildTagViewData({
+          state,
+          selectedItem,
+          createTagFormDefinition,
+          tagFilterPlaceholder: tagging?.tagFilterPlaceholder,
+          detailTagAddOptionLabel: tagging?.detailTagAddOptionLabel,
+        })
+      : undefined;
 
     const baseViewData = {
       flatItems,
@@ -115,7 +225,7 @@ export const createCatalogPageStore = ({
       selectedResourceId,
       selectedItemId: state.selectedItemId,
       selectedItemName: selectedItem?.name ?? "",
-      detailFields: buildDetailFields(selectedItem),
+      detailFields,
       searchQuery: state.searchQuery,
       searchPlaceholder,
       title,
@@ -126,6 +236,9 @@ export const createCatalogPageStore = ({
       emptyContextMenuItems,
       centerItemContextMenuItems,
     };
+    if (tagViewData) {
+      Object.assign(baseViewData, tagViewData);
+    }
 
     if (!extendViewData) {
       return baseViewData;
@@ -148,6 +261,13 @@ export const createCatalogPageStore = ({
     selectItemById,
     selectSelectedItemId,
     setSearchQuery,
+    setTagsData,
+    setActiveTagIds,
+    setDetailTagIds,
+    commitDetailTagIds,
+    setDetailTagPopoverOpen,
+    openCreateTagDialog,
+    closeCreateTagDialog,
     selectViewData,
   };
 };

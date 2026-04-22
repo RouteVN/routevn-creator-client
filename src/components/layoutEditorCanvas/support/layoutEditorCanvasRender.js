@@ -69,6 +69,58 @@ const toArray = (value) => {
   return Array.isArray(value) ? value : [];
 };
 
+const dedupeFileReferences = (fileReferences = []) => {
+  const seenFileIds = new Set();
+  const nextFileReferences = [];
+
+  for (const fileReference of fileReferences) {
+    const fileId = fileReference?.url;
+    if (!fileId || seenFileIds.has(fileId)) {
+      continue;
+    }
+
+    seenFileIds.add(fileId);
+    nextFileReferences.push(fileReference);
+  }
+
+  return nextFileReferences;
+};
+
+const resolveFontAssetType = (fileName = "") => {
+  if (fileName.endsWith(".woff2")) {
+    return "font/woff2";
+  }
+
+  if (fileName.endsWith(".woff")) {
+    return "font/woff";
+  }
+
+  if (fileName.endsWith(".ttf")) {
+    return "font/ttf";
+  }
+
+  if (fileName.endsWith(".otf")) {
+    return "font/otf";
+  }
+
+  return "font/ttf";
+};
+
+const createFontAssetTypeByFileId = (fontsItems = {}) => {
+  const fontAssetTypeByFileId = {};
+
+  for (const fontItem of Object.values(fontsItems)) {
+    const fileId = fontItem?.fileId;
+    if (!fileId) {
+      continue;
+    }
+
+    fontAssetTypeByFileId[fileId] = resolveFontAssetType(fontItem.name || "");
+  }
+
+  return fontAssetTypeByFileId;
+};
+
 const normalizeHistoryDialogueItem = (item) => {
   const nextItem = toPlainObject(item);
   const nextContent = toArray(nextItem.content);
@@ -533,55 +585,69 @@ export const loadLayoutEditorAssets = async ({
   selectCachedFileContent,
   clearCachedFileContent,
   cacheFileContent,
+  hasLoadedAsset,
   fileReferences,
   fontsItems,
 } = {}) => {
   const assets = {};
+  const uniqueFileReferences = dedupeFileReferences(fileReferences);
+  const fontAssetTypeByFileId = createFontAssetTypeByFileId(fontsItems);
 
-  for (const fileReference of fileReferences) {
-    const { url: fileId, type: fileType } = fileReference;
-    const cacheKey = fileId;
-    let url;
+  const assetEntries = await Promise.all(
+    uniqueFileReferences.map(async (fileReference) => {
+      const { url: fileId, type: fileType } = fileReference;
+      const cacheKey = fileId;
+      const alreadyLoaded = hasLoadedAsset?.(fileId) === true;
+      let url;
 
-    const cachedUrl = selectCachedFileContent?.({ fileId: cacheKey });
-    if (cachedUrl) {
-      if (!isBlobUrl(cachedUrl)) {
-        url = cachedUrl;
-      } else {
-        clearCachedFileContent?.({ fileId: cacheKey });
+      let type = fileType || "image/png";
+      const fontAssetType = fontAssetTypeByFileId[fileId];
+      if (fontAssetType) {
+        type = fontAssetType;
       }
+
+      if (alreadyLoaded) {
+        return {
+          alreadyLoaded: true,
+          fileId,
+          type,
+          url: undefined,
+        };
+      }
+
+      const cachedUrl = selectCachedFileContent?.({ fileId: cacheKey });
+      if (cachedUrl) {
+        if (!isBlobUrl(cachedUrl)) {
+          url = cachedUrl;
+        } else {
+          clearCachedFileContent?.({ fileId: cacheKey });
+        }
+      }
+
+      if (!url) {
+        const result = await projectService.getFileContent(fileId);
+        url = result.url;
+        if (!isBlobUrl(url)) {
+          cacheFileContent?.({ fileId: cacheKey, url });
+        }
+      }
+
+      return {
+        fileId,
+        type,
+        url,
+      };
+    }),
+  );
+
+  for (const assetEntry of assetEntries) {
+    if (assetEntry.alreadyLoaded) {
+      continue;
     }
 
-    if (!url) {
-      const result = await projectService.getFileContent(fileId);
-      url = result.url;
-      if (!isBlobUrl(url)) {
-        cacheFileContent?.({ fileId: cacheKey, url });
-      }
-    }
-
-    let type = fileType || "image/png";
-    const fontItem = Object.values(fontsItems).find(
-      (font) => font.fileId === fileId,
-    );
-    if (fontItem) {
-      const fileName = fontItem.name || "";
-      if (fileName.endsWith(".woff2")) {
-        type = "font/woff2";
-      } else if (fileName.endsWith(".woff")) {
-        type = "font/woff";
-      } else if (fileName.endsWith(".ttf")) {
-        type = "font/ttf";
-      } else if (fileName.endsWith(".otf")) {
-        type = "font/otf";
-      } else {
-        type = "font/ttf";
-      }
-    }
-
-    assets[`${fileId}`] = {
-      url,
-      type,
+    assets[`${assetEntry.fileId}`] = {
+      url: assetEntry.url,
+      type: assetEntry.type,
     };
   }
 
@@ -630,14 +696,11 @@ export const createLayoutEditorRenderState = ({
   };
 };
 
-export const createLayoutEditorRenderedElements = ({
+const createLayoutEditorResolvedElements = ({
   layoutState,
   repositoryState,
   previewData,
   resolution,
-  selectedItemId,
-  disableMoveDrag,
-  graphicsService,
 } = {}) => {
   const { renderStateElements, resources } = createLayoutEditorRenderState({
     layoutState,
@@ -656,9 +719,48 @@ export const createLayoutEditorRenderedElements = ({
     repositoryState,
     resolution,
   });
-  const renderedElements = previewBackgroundElement
-    ? [previewBackgroundElement, ...resolvedFinalElements]
-    : resolvedFinalElements;
+  return {
+    renderedElements: previewBackgroundElement
+      ? [previewBackgroundElement, ...resolvedFinalElements]
+      : resolvedFinalElements,
+  };
+};
+
+export const createLayoutEditorAssetReferences = ({
+  layoutState,
+  repositoryState,
+  previewData,
+  resolution,
+} = {}) => {
+  const { renderedElements } = createLayoutEditorResolvedElements({
+    layoutState,
+    repositoryState,
+    previewData,
+    resolution,
+  });
+  const fileReferences = extractFileIdsFromRenderState(renderedElements);
+
+  return {
+    fileReferences,
+    renderedElements,
+  };
+};
+
+export const createLayoutEditorRenderedElements = ({
+  layoutState,
+  repositoryState,
+  previewData,
+  resolution,
+  selectedItemId,
+  disableMoveDrag,
+  graphicsService,
+} = {}) => {
+  const { renderedElements } = createLayoutEditorResolvedElements({
+    layoutState,
+    repositoryState,
+    previewData,
+    resolution,
+  });
   const parsedState = graphicsService.parse({
     elements: renderedElements,
   });
@@ -671,10 +773,11 @@ export const createLayoutEditorRenderedElements = ({
   const selectedElementMetrics = toSelectedElementMetrics(
     selectPrimaryMatchingPath(parsedState.elements, selectedItemId),
   );
+  const fileReferences = extractFileIdsFromRenderState(renderedElements);
 
   return {
     elements: [...renderedElements, ...overlayElements],
-    fileReferences: extractFileIdsFromRenderState(renderedElements),
+    fileReferences,
     selectedElementMetrics,
   };
 };
