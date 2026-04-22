@@ -57,7 +57,6 @@ export const rasterizeDicedImagePixels = ({
   vertices = [],
   uvs = [],
   indices = [],
-  rect = {},
 }) => {
   const outputWidth = Number(width ?? 0);
   const outputHeight = Number(height ?? 0);

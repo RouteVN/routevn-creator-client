@@ -12,7 +12,7 @@ let cachedUint8Memory;
 let cachedInt32Memory;
 let cachedUint32Memory;
 
-const heap = new Array(32).fill(undefined);
+const heap = Array.from({ length: 32 });
 heap.push(undefined, null, true, false);
 let heapNext = heap.length;
 

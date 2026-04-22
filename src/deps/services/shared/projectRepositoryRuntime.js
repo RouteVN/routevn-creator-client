@@ -265,7 +265,10 @@ const canSkipDuplicateResourceCreateDuringReplay = ({
   error,
 } = {}) => {
   const replayDefinition = RESOURCE_CREATE_REPLAY_DEFINITIONS[event?.type];
-  if (!replayDefinition || !isDuplicateResourceCreateReplayFailure({ event, error })) {
+  if (
+    !replayDefinition ||
+    !isDuplicateResourceCreateReplayFailure({ event, error })
+  ) {
     return false;
   }
 
@@ -284,7 +287,10 @@ const canSkipDuplicateResourceCreateDuringReplay = ({
 
   return (
     existingItem.id === resourceId &&
-    collectionTreeContainsItemId(repositoryState?.[collectionKey]?.tree, resourceId) &&
+    collectionTreeContainsItemId(
+      repositoryState?.[collectionKey]?.tree,
+      resourceId,
+    ) &&
     isReplayValueSubset(existingItem, resourceData)
   );
 };
