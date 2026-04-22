@@ -1,5 +1,6 @@
 import {
   applyPreviewVariableOverrides,
+  collectLayoutPreviewTargets,
   createChoicePreviewItems,
   createConfirmDialogPreviewData,
   createDialoguePreviewData,
@@ -12,15 +13,13 @@ import {
   visitLayoutItemsWithFragments,
 } from "./layoutEditorPreviewSupport.js";
 
-const DIALOGUE_LAYOUT_TYPES = new Set([
-  "dialogue",
-  "dialogue-adv",
-  "nvl",
-  "dialogue-nvl",
-]);
-const DIALOGUE_ITEM_TYPES = new Set([
+const DIALOGUE_ADV_LAYOUT_TYPES = new Set(["dialogue", "dialogue-adv"]);
+const DIALOGUE_NVL_LAYOUT_TYPES = new Set(["nvl", "dialogue-nvl"]);
+const DIALOGUE_ADV_ITEM_TYPES = new Set([
   "text-ref-character-name",
   "text-revealing-ref-dialogue-content",
+]);
+const DIALOGUE_NVL_ITEM_TYPES = new Set([
   "container-ref-dialogue-line",
   "text-ref-dialogue-line-character-name",
   "text-ref-dialogue-line-content",
@@ -39,6 +38,35 @@ const CONFIRM_DIALOG_ITEM_TYPES = new Set([
   "container-ref-confirm-dialog-cancel",
 ]);
 
+const markDialoguePreviewMode = (sections, dialoguePreviewMode) => {
+  if (dialoguePreviewMode === "nvl") {
+    sections.dialoguePreviewMode = "nvl";
+    sections.includeDialogue = true;
+    return;
+  }
+
+  if (!sections.dialoguePreviewMode) {
+    sections.dialoguePreviewMode = "dialogue";
+  }
+  sections.includeDialogue = true;
+};
+
+const getDialoguePreviewModeForLayoutType = (layoutType) => {
+  if (DIALOGUE_NVL_LAYOUT_TYPES.has(layoutType)) {
+    return "nvl";
+  }
+
+  if (DIALOGUE_ADV_LAYOUT_TYPES.has(layoutType)) {
+    return "dialogue";
+  }
+
+  return undefined;
+};
+
+const isDialoguePreviewTarget = (target) => {
+  return typeof target === "string" && target.startsWith("dialogue.");
+};
+
 const hasLayoutTraversalContext = ({
   layoutType,
   currentLayoutId,
@@ -56,7 +84,7 @@ const hasLayoutTraversalContext = ({
   return Object.keys(currentLayoutData?.items ?? {}).length > 0;
 };
 
-const collectLayoutPreviewSections = ({
+export const getLayoutPreviewSections = ({
   layoutType,
   currentLayoutId,
   currentLayoutData,
@@ -86,15 +114,31 @@ const collectLayoutPreviewSections = ({
       layoutsData,
       layoutId: currentLayoutId,
     });
+  const previewTargets = collectLayoutPreviewTargets({
+    currentLayoutId,
+    currentLayoutData,
+    currentLayoutType: layoutType,
+    layoutsData,
+    layoutId: currentLayoutId,
+  });
   const sections = {
     includePreviewVariables,
     includeRuntime: false,
-    includeDialogue: DIALOGUE_LAYOUT_TYPES.has(layoutType),
+    includeDialogue: false,
+    dialoguePreviewMode: getDialoguePreviewModeForLayoutType(layoutType),
     includeChoice: layoutType === "choice",
     includeHistory: layoutType === "history",
     includeConfirmDialog: layoutType === "confirmDialog",
     includeSaveLoad: includeSaveLoad || layoutType === "save-load",
   };
+
+  if (sections.dialoguePreviewMode) {
+    sections.includeDialogue = true;
+  }
+
+  if (previewTargets.some(isDialoguePreviewTarget)) {
+    markDialoguePreviewMode(sections, "dialogue");
+  }
 
   visitLayoutItemsWithFragments(
     {
@@ -105,8 +149,10 @@ const collectLayoutPreviewSections = ({
       layoutId: currentLayoutId,
     },
     ({ item, layoutType: visitedLayoutType }) => {
-      if (DIALOGUE_LAYOUT_TYPES.has(visitedLayoutType)) {
-        sections.includeDialogue = true;
+      if (DIALOGUE_NVL_LAYOUT_TYPES.has(visitedLayoutType)) {
+        markDialoguePreviewMode(sections, "nvl");
+      } else if (DIALOGUE_ADV_LAYOUT_TYPES.has(visitedLayoutType)) {
+        markDialoguePreviewMode(sections, "dialogue");
       }
 
       if (visitedLayoutType === "choice") {
@@ -121,8 +167,10 @@ const collectLayoutPreviewSections = ({
         sections.includeConfirmDialog = true;
       }
 
-      if (DIALOGUE_ITEM_TYPES.has(item?.type)) {
-        sections.includeDialogue = true;
+      if (DIALOGUE_NVL_ITEM_TYPES.has(item?.type)) {
+        markDialoguePreviewMode(sections, "nvl");
+      } else if (DIALOGUE_ADV_ITEM_TYPES.has(item?.type)) {
+        markDialoguePreviewMode(sections, "dialogue");
       }
 
       if (CHOICE_ITEM_TYPES.has(item?.type)) {
@@ -171,12 +219,13 @@ export const createLayoutEditorPreviewData = ({
   saveLoadData,
   backgroundImageId,
 } = {}) => {
-  const { dialogue, dialogueRevealingSpeed } = createDialoguePreviewData({
-    layoutType,
-    dialogueDefaultValues,
-    nvlDefaultValues,
-    previewRevealingSpeed,
-  });
+  const { dialogue, dialogueLines, dialogueRevealingSpeed } =
+    createDialoguePreviewData({
+      layoutType,
+      dialogueDefaultValues,
+      nvlDefaultValues,
+      previewRevealingSpeed,
+    });
   const backgroundPreviewImageId =
     typeof backgroundImageId === "string" && backgroundImageId.length > 0
       ? backgroundImageId
@@ -216,6 +265,7 @@ export const createLayoutEditorPreviewData = ({
       variables: previewVariables,
       runtime,
       dialogue,
+      dialogueLines,
       historyDialogue,
       choice,
       confirmDialog,
@@ -223,7 +273,7 @@ export const createLayoutEditorPreviewData = ({
     };
   }
 
-  const sections = collectLayoutPreviewSections({
+  const sections = getLayoutPreviewSections({
     layoutType,
     currentLayoutId,
     currentLayoutData,
@@ -247,6 +297,7 @@ export const createLayoutEditorPreviewData = ({
 
   if (sections.includeDialogue) {
     previewData.dialogue = dialogue;
+    previewData.dialogueLines = dialogueLines;
   }
 
   if (sections.includeHistory) {

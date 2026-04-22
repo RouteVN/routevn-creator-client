@@ -119,6 +119,10 @@ const normalizeLayoutEditorPreviewData = (previewData = {}) => {
     },
     dialogue: {
       ...nextDialogue,
+      characterId:
+        typeof nextDialogue.characterId === "string"
+          ? nextDialogue.characterId
+          : "",
       character: {
         ...nextDialogueCharacter,
         name: nextDialogueCharacter.name ?? "",

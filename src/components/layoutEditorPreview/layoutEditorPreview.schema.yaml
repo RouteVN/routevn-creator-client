@@ -6,3 +6,5 @@ propsSchema:
       type: object
     initialPreviewData:
       type: object
+    charactersData:
+      type: object

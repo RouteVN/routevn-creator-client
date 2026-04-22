@@ -12,7 +12,11 @@ import { getRuntimeNumberFieldOptions } from "../../internal/runtimeFields.js";
 import { getFragmentLayoutOptions } from "../../pages/layoutEditor/support/layoutFragments.js";
 import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
 import { splitLayoutConditionFromWhen } from "../../internal/layoutConditions.js";
-import { toVisibilityConditionTargetTypeByTarget } from "./support/layoutEditPanelFeatures.js";
+import {
+  getVisibilityConditionCharacterValueOptions,
+  toVisibilityConditionTargetTypeByTarget,
+  toVisibilityConditionTargetValueKindByTarget,
+} from "./support/layoutEditPanelFeatures.js";
 import {
   createChildInteractionDialogDefaults,
   createChildInteractionForm,
@@ -301,6 +305,7 @@ export const createInitialState = () => {
       open: false,
       key: 0,
       selectedVariableType: undefined,
+      selectedValueKind: undefined,
     },
     dropdownMenu: {
       isOpen: false,
@@ -322,6 +327,7 @@ export const createInitialState = () => {
       key: 0,
       editingIndex: undefined,
       selectedVariableType: undefined,
+      selectedValueKind: undefined,
     },
     conditionalOverrideAttributeDialog: {
       open: false,
@@ -517,26 +523,32 @@ export const closeConditionalOverrideConditionDialog = (
 ) => {
   state.conditionalOverrideConditionDialog.open = false;
   state.conditionalOverrideConditionDialog.editingIndex = undefined;
+  state.conditionalOverrideConditionDialog.selectedValueKind = undefined;
 };
 
 export const closeVisibilityConditionDialog = ({ state }, _payload = {}) => {
   state.visibilityConditionDialog.open = false;
+  state.visibilityConditionDialog.selectedValueKind = undefined;
 };
 
 export const setVisibilityConditionDialogSelectedVariableType = (
   { state },
-  { selectedVariableType } = {},
+  { selectedVariableType, selectedValueKind } = {},
 ) => {
   state.visibilityConditionDialog.selectedVariableType =
     selectedVariableType ?? "string";
+  state.visibilityConditionDialog.selectedValueKind =
+    selectedValueKind ?? selectedVariableType ?? "string";
 };
 
 export const setConditionalOverrideConditionDialogSelectedVariableType = (
   { state },
-  { selectedVariableType } = {},
+  { selectedVariableType, selectedValueKind } = {},
 ) => {
   state.conditionalOverrideConditionDialog.selectedVariableType =
     selectedVariableType ?? "string";
+  state.conditionalOverrideConditionDialog.selectedValueKind =
+    selectedValueKind ?? selectedVariableType ?? "string";
 };
 
 export const openConditionalOverrideAttributeDialog = (
@@ -706,6 +718,15 @@ export const selectVisibilityConditionTargetTypeByTarget = ({
   });
 };
 
+export const selectVisibilityConditionTargetValueKindByTarget = ({
+  state,
+  props,
+}) => {
+  return toVisibilityConditionTargetValueKindByTarget(state.variablesData, {
+    includeSaveDataAvailable: props.isInsideSaveLoadSlot === true,
+  });
+};
+
 export const selectTextStyleOptions = ({ state }) => {
   return toTextStyleOptions(state.textStylesData);
 };
@@ -735,6 +756,7 @@ export const selectViewData = ({ state, props, constants }) => {
   const fragmentLayoutOptions = getFragmentLayoutOptions(props.layoutsData);
   const visibilityConditionOptions = {
     includeSaveDataAvailable: props.isInsideSaveLoadSlot === true,
+    charactersData: props.charactersData,
   };
   const visibilityConditionTargetOptions = toVisibilityConditionTargetOptions(
     state.variablesData,
@@ -742,6 +764,11 @@ export const selectViewData = ({ state, props, constants }) => {
   );
   const visibilityConditionTargetTypeByTarget =
     toVisibilityConditionTargetTypeByTarget(
+      state.variablesData,
+      visibilityConditionOptions,
+    );
+  const visibilityConditionTargetValueKindByTarget =
+    toVisibilityConditionTargetValueKindByTarget(
       state.variablesData,
       visibilityConditionOptions,
     );
@@ -869,6 +896,7 @@ export const selectViewData = ({ state, props, constants }) => {
     createVisibilityConditionDialogDefaults(
       currentVisibilityCondition,
       visibilityConditionTargetTypeByTarget,
+      visibilityConditionTargetValueKindByTarget,
     );
   const editingConditionalOverrideRule =
     Number.isInteger(state.conditionalOverrideConditionDialog.editingIndex) &&
@@ -881,6 +909,7 @@ export const selectViewData = ({ state, props, constants }) => {
     createConditionalOverrideConditionDefaults(
       editingConditionalOverrideRule,
       visibilityConditionTargetTypeByTarget,
+      visibilityConditionTargetValueKindByTarget,
     );
   const editingConditionalOverrideAttributeRule =
     Number.isInteger(state.conditionalOverrideAttributeDialog.editingIndex) &&
@@ -904,9 +933,25 @@ export const selectViewData = ({ state, props, constants }) => {
   const selectedVisibilityConditionVariableType =
     state.visibilityConditionDialog.selectedVariableType ??
     visibilityConditionDialogDefaults.selectedVariableType;
+  const selectedVisibilityConditionValueKind =
+    state.visibilityConditionDialog.selectedValueKind ??
+    visibilityConditionDialogDefaults.selectedValueKind;
   const selectedConditionalOverrideVariableType =
     state.conditionalOverrideConditionDialog.selectedVariableType ??
     conditionalOverrideConditionDefaults.selectedVariableType;
+  const selectedConditionalOverrideValueKind =
+    state.conditionalOverrideConditionDialog.selectedValueKind ??
+    conditionalOverrideConditionDefaults.selectedValueKind;
+  const visibilityConditionCharacterValueOptions =
+    getVisibilityConditionCharacterValueOptions({
+      charactersData: props.charactersData,
+      currentValue: visibilityConditionDialogDefaults.characterValue,
+    });
+  const conditionalOverrideCharacterValueOptions =
+    getVisibilityConditionCharacterValueOptions({
+      charactersData: props.charactersData,
+      currentValue: conditionalOverrideConditionDefaults.characterValue,
+    });
 
   return {
     values: state.values,
@@ -926,6 +971,8 @@ export const selectViewData = ({ state, props, constants }) => {
     }),
     visibilityConditionDialogContext: {
       selectedVariableType: selectedVisibilityConditionVariableType,
+      selectedValueKind: selectedVisibilityConditionValueKind,
+      characterValueOptions: visibilityConditionCharacterValueOptions,
     },
     saveLoadPaginationDialog: state.saveLoadPaginationDialog,
     saveLoadPaginationDialogDefaults:
@@ -947,6 +994,8 @@ export const selectViewData = ({ state, props, constants }) => {
     }),
     conditionalOverrideConditionDialogContext: {
       selectedVariableType: selectedConditionalOverrideVariableType,
+      selectedValueKind: selectedConditionalOverrideValueKind,
+      characterValueOptions: conditionalOverrideCharacterValueOptions,
     },
     conditionalOverrideAttributeDialog:
       state.conditionalOverrideAttributeDialog,

@@ -26,4 +26,16 @@ describe("layoutEditPanel visibility target options", () => {
     ).toBe(false);
     expect(options.some((item) => item.label.includes("("))).toBe(false);
   });
+
+  it("includes the current dialogue character target as a character selector", () => {
+    const options = toVisibilityConditionTargetOptions();
+
+    expect(
+      options.find((item) => item.value === "dialogue.characterId"),
+    ).toEqual({
+      label: "Current Dialogue Character",
+      value: "dialogue.characterId",
+      suffixText: "character",
+    });
+  });
 });

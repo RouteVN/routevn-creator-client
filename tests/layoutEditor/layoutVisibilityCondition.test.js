@@ -4,6 +4,7 @@ import { buildLayoutElements } from "../../src/internal/project/layout.js";
 import { toHierarchyStructure } from "../../src/internal/project/tree.js";
 import {
   AUTO_MODE_CONDITION_TARGET,
+  DIALOGUE_CHARACTER_ID_CONDITION_TARGET,
   LINE_COMPLETED_CONDITION_TARGET,
   SAVE_DATA_AVAILABLE_CONDITION_TARGET,
   SKIP_MODE_CONDITION_TARGET,
@@ -200,6 +201,29 @@ describe("layout visibility conditions", () => {
         value: false,
       }),
     ).toBe("runtime.skipMode == false");
+  });
+
+  it("compiles and extracts dialogue character visibility conditions", () => {
+    expect(
+      buildVisibilityConditionExpression({
+        target: DIALOGUE_CHARACTER_ID_CONDITION_TARGET,
+        op: "eq",
+        value: "character-1",
+      }),
+    ).toBe('dialogue.characterId == "character-1"');
+
+    expect(
+      splitVisibilityConditionFromWhen(
+        '(line.characterName) && (dialogue.characterId == "character-1")',
+      ),
+    ).toEqual({
+      baseWhen: "line.characterName",
+      visibilityCondition: {
+        target: DIALOGUE_CHARACTER_ID_CONDITION_TARGET,
+        op: "eq",
+        value: "character-1",
+      },
+    });
   });
 
   it("compiles ordered conditional text styles into jempl $if overrides", () => {

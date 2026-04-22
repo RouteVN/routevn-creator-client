@@ -2,9 +2,17 @@ export const DEFAULT_DIALOGUE_CHARACTER_NAME = "Character";
 export const DEFAULT_DIALOGUE_CONTENT = "This is a sample dialogue content.";
 export const DEFAULT_DIALOGUE_REVEALING_SPEED = 50;
 
-export const createDialogueLines = ({ characterName, dialogueContent }) => {
+export const createDialogueLines = ({
+  characterId,
+  characterName,
+  dialogueContent,
+}) => {
   return [
     {
+      characterId,
+      character: {
+        name: characterName,
+      },
       characterName,
       content: [{ text: dialogueContent }],
     },
@@ -12,6 +20,9 @@ export const createDialogueLines = ({ characterName, dialogueContent }) => {
       content: [{ text: dialogueContent }],
     },
     {
+      character: {
+        name: "Narrator",
+      },
       characterName: "Narrator",
       content: [{ text: dialogueContent }],
     },
@@ -35,6 +46,9 @@ export const createNvlLines = (nvlDefaultValues = {}) => {
     };
 
     if (characterName) {
+      line.character = {
+        name: characterName,
+      };
       line.characterName = characterName;
     }
 
@@ -67,6 +81,7 @@ export const createDialoguePreviewData = ({
   previewRevealingSpeed,
 } = {}) => {
   const isNvlLayout = layoutType === "dialogue-nvl" || layoutType === "nvl";
+  const characterId = dialogueDefaultValues?.["dialogue-character-id"] ?? "";
   const characterName =
     dialogueDefaultValues?.["dialogue-character-name"] ??
     DEFAULT_DIALOGUE_CHARACTER_NAME;
@@ -78,22 +93,26 @@ export const createDialoguePreviewData = ({
     parsedPreviewRevealingSpeed > 0
       ? parsedPreviewRevealingSpeed
       : DEFAULT_DIALOGUE_REVEALING_SPEED;
+  const dialogueLines = isNvlLayout
+    ? createNvlLines(nvlDefaultValues)
+    : createDialogueLines({
+        characterId,
+        characterName,
+        dialogueContent,
+      });
 
   return {
     characterName,
     dialogueContent,
     dialogueRevealingSpeed,
     dialogue: {
+      characterId,
       character: {
         name: characterName,
       },
       content: [{ text: dialogueContent }],
-      lines: isNvlLayout
-        ? createNvlLines(nvlDefaultValues)
-        : createDialogueLines({
-            characterName,
-            dialogueContent,
-          }),
+      lines: dialogueLines,
     },
+    dialogueLines,
   };
 };

@@ -2,6 +2,20 @@ dialogueForm:
   title: Preview
   description: Edit to see how the layout will look like with different data
   fields:
+    - name: dialogue-character-id
+      label: Character
+      type: select
+      options: "${characterOptions}"
+      clearable: false
+    - name: dialogue-custom-character-name
+      label: Custom Character Name
+      type: segmented-control
+      noClear: true
+      options:
+        - label: "No"
+          value: false
+        - label: "Yes"
+          value: true
     - name: dialogue-character-name
       label: Character Name
       type: input-text

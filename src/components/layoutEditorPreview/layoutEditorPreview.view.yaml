@@ -90,15 +90,15 @@ template:
                       - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=220 h=160 br=md: null
                     $else:
                       - rtgl-text c=mu-fg ta=c: Select image
-  - $if layoutType == 'dialogue-adv':
-      - rtgl-form#dialogueForm key=${dialogueFormKey} w=f :form=${dialogueForm} :defaultValues=${dialogueDefaultValues}:
+  - $if showDialogueForm:
+      - rtgl-form#dialogueForm key=${dialogueFormKey} w=f :form=${dialogueForm} :defaultValues=${dialogueDefaultValues} :context=${dialogueContext}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
               - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c:
                   - $if previewBackgroundImageId:
                       - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=220 h=160 br=md: null
                     $else:
                       - rtgl-text c=mu-fg ta=c: Select image
-  - $if layoutType == 'dialogue-nvl':
+  - $if showNvlForm:
       - rtgl-form#nvlForm key=${nvlFormKey} w=f :form=${nvlForm} :defaultValues=${nvlDefaultValues} :context=${nvlContext}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
               - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c:
@@ -111,7 +111,7 @@ template:
           - rtgl-text s=sm c=mu-fg: Revealing Speed
           - rtgl-input#revealingSpeedInput type=number min=1 step=1 w=120 value=${previewRevealingSpeed}: null
           - rtgl-button#playPreviewButton v=ol: Play
-  - $if layoutType == 'choice':
+  - $if showChoiceForm:
       - rtgl-form#choiceForm key=${choiceFormKey} w=f :form=${choiceForm} :defaultValues=${choiceDefaultValues} :context=${choicesContext}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
               - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c:
@@ -119,7 +119,7 @@ template:
                       - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=220 h=160 br=md: null
                     $else:
                       - rtgl-text c=mu-fg ta=c: Select image
-  - $if layoutType == 'history':
+  - $if showHistoryForm:
       - rtgl-form#historyForm key=${historyFormKey} w=f :form=${historyForm} :defaultValues=${historyDefaultValues} :context=${historyContext}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
               - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c:
@@ -127,7 +127,7 @@ template:
                       - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=220 h=160 br=md: null
                     $else:
                       - rtgl-text c=mu-fg ta=c: Select image
-  - $if hasPreviewVariables:
+  - $if showPreviewVariablesForm:
       - rtgl-form#previewVariablesForm key=${previewVariablesFormKey} w=f :form=${previewVariablesForm} :defaultValues=${previewVariablesDefaultValues}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
               - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c:
@@ -135,7 +135,7 @@ template:
                       - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=220 h=160 br=md: null
                     $else:
                       - rtgl-text c=mu-fg ta=c: Select image
-  - $if hasSaveLoadPreview:
+  - $if showSaveLoadForm:
       - rtgl-form#saveLoadForm key=${saveLoadFormKey} w=f :form=${saveLoadForm} :defaultValues=${saveLoadDefaultValues} :context=${saveLoadContext}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
               - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c:
