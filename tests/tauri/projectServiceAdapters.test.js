@@ -5,6 +5,8 @@ const mocked = vi.hoisted(() => ({
   join: vi.fn(),
   mkdir: vi.fn(async () => {}),
   writeFile: vi.fn(async () => {}),
+  convertFileSrc: vi.fn((value) => value),
+  invoke: vi.fn(async () => {}),
   connection: {
     init: vi.fn(async () => {}),
     select: vi.fn(async () => []),
@@ -33,8 +35,8 @@ vi.mock("@tauri-apps/api/path", () => ({
 }));
 
 vi.mock("@tauri-apps/api/core", () => ({
-  convertFileSrc: vi.fn((value) => value),
-  invoke: vi.fn(async () => {}),
+  convertFileSrc: mocked.convertFileSrc,
+  invoke: mocked.invoke,
 }));
 
 vi.mock("../../src/deps/clients/tauri/sqliteConnectionManager.js", () => ({
@@ -137,6 +139,8 @@ describe("tauri project service adapters preflight reads", () => {
     mocked.join.mockReset();
     mocked.mkdir.mockClear();
     mocked.writeFile.mockClear();
+    mocked.convertFileSrc.mockClear();
+    mocked.invoke.mockReset();
     mocked.connection.init.mockClear();
     mocked.connection.select.mockReset();
     mocked.getManagedSqliteConnection.mockReset();
@@ -154,6 +158,7 @@ describe("tauri project service adapters preflight reads", () => {
     mocked.join.mockImplementation(async (...parts) => parts.join("/"));
     mocked.getManagedSqliteConnection.mockReturnValue(mocked.connection);
     mocked.getTemplateFiles.mockResolvedValue([]);
+    mocked.invoke.mockResolvedValue(undefined);
     mocked.createWebSocketTransport.mockReturnValue({
       kind: "transport",
     });
@@ -186,6 +191,49 @@ describe("tauri project service adapters preflight reads", () => {
     ).rejects.toThrow("Project file id is invalid.");
 
     expect(mocked.join).not.toHaveBeenCalled();
+  });
+
+  it("passes repository mime metadata into streamed native ZIP export", async () => {
+    mocked.exists.mockResolvedValue(true);
+    mocked.invoke.mockResolvedValue({
+      assetCount: 1,
+      rawAssetBytes: 1,
+      storedChunkBytes: 1,
+      packageBinBytes: 1,
+      zipBytes: 1,
+    });
+
+    const { fileAdapter } = createTauriProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+
+    await expect(
+      fileAdapter.createDistributionZipStreamedToPath({
+        projectData: { bundleMetadata: { project: { namespace: "demo" } } },
+        fileEntries: [{ fileId: "font-1", mimeType: "font/ttf" }],
+        outputPath: "/exports/demo.zip",
+        staticFiles: {},
+        getCurrentReference: () => ({
+          projectPath: "/projects/demo",
+          cacheKey: "/projects/demo",
+        }),
+      }),
+    ).resolves.toBe("/exports/demo.zip");
+
+    expect(mocked.invoke).toHaveBeenCalledWith(
+      "create_distribution_zip_streamed",
+      expect.objectContaining({
+        outputPath: "/exports/demo.zip",
+        assets: [
+          {
+            id: "font-1",
+            path: "/projects/demo/files/font-1",
+            mime: "font/ttf",
+          },
+        ],
+      }),
+    );
   });
 
   it("reads creatorVersion from app_state without creating the project store", async () => {

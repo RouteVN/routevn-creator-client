@@ -303,6 +303,39 @@ Migration rule:
 - read v2 and v3 for one release window
 - write only v3 once export confidence is high
 
+## Deferred Follow-Up: `route-graphics` Asset Loading
+
+This is not required for the current bundle-size work, but it is a likely
+follow-up if diced-image exports start improving disk size while still adding
+too much startup cost.
+
+Current limitation:
+
+- the bundle player materializes a full `assetBufferMap` up front
+- `route-graphics.loadAssets(...)` eagerly realizes the entire map
+- diced images therefore pay atlas decode, pixel reconstruction, and runtime
+  texture creation during startup, even when many of those assets are not used
+  by the opening scene
+
+Potential future improvement:
+
+- extend `route-graphics` to support lazy asset resolvers, so assets can be
+  realized on first use instead of all at startup
+- or allow direct `ImageBitmap`, canvas, or raw RGBA pixel sources so diced
+  images do not need to be re-encoded as PNG blobs just to fit the current
+  asset-loading contract
+
+Expected benefit:
+
+- faster first render / startup
+- lower peak memory during bundle boot
+- less wasted CPU work for unused diced assets
+- simpler diced-image runtime pipeline
+
+This should stay deferred until startup cost becomes a real bottleneck. The
+current export/runtime work should not expand into `route-graphics` changes by
+default.
+
 ## Testing Plan
 
 ### Reachability Tests

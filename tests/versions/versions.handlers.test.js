@@ -5,6 +5,11 @@ import {
 } from "../../src/pages/versions/versions.handlers.js";
 import { initialProjectData } from "../../src/deps/services/shared/projectRepository.js";
 
+const createTreeCollection = (items = {}, tree = []) => ({
+  items,
+  tree,
+});
+
 const createDeps = ({ repository, version, editingVersionId } = {}) => {
   const selectedVersion = version || {
     id: "version-1",
@@ -119,5 +124,211 @@ describe("versions.handleDownloadZipClick", () => {
     expect(
       deps.projectService.createDistributionZipStreamed,
     ).toHaveBeenCalled();
+  });
+
+  it("passes file mime metadata into streamed ZIP export", async () => {
+    const repositoryState = structuredClone(initialProjectData);
+    repositoryState.story = {
+      initialSceneId: "scene-1",
+    };
+    repositoryState.files = createTreeCollection(
+      {
+        "file-1": {
+          id: "file-1",
+          mimeType: "image/png",
+          size: 123,
+          sha256: "hash-1",
+        },
+      },
+      [{ id: "file-1" }],
+    );
+    repositoryState.images = createTreeCollection(
+      {
+        "image-1": {
+          id: "image-1",
+          type: "image",
+          fileId: "file-1",
+        },
+      },
+      [{ id: "image-1" }],
+    );
+    repositoryState.scenes = createTreeCollection(
+      {
+        "scene-1": {
+          id: "scene-1",
+          type: "scene",
+          name: "Scene 1",
+          initialSectionId: "section-1",
+          sections: createTreeCollection(
+            {
+              "section-1": {
+                id: "section-1",
+                type: "section",
+                name: "Section 1",
+                lines: createTreeCollection(
+                  {
+                    "line-1": {
+                      id: "line-1",
+                      actions: {
+                        background: {
+                          resourceId: "image-1",
+                          resourceType: "image",
+                        },
+                      },
+                    },
+                  },
+                  [{ id: "line-1" }],
+                ),
+              },
+            },
+            [{ id: "section-1" }],
+          ),
+        },
+      },
+      [{ id: "scene-1" }],
+    );
+
+    const repository = {
+      loadState: vi.fn(async () => repositoryState),
+      loadEvents: vi.fn(async () => []),
+      getState: vi.fn(() => repositoryState),
+    };
+    const deps = createDeps({
+      repository,
+    });
+
+    await handleDownloadZipClick(deps, {
+      _event: {
+        stopPropagation: vi.fn(),
+        currentTarget: {
+          dataset: {
+            versionId: "version-1",
+          },
+        },
+      },
+    });
+
+    expect(deps.projectService.createDistributionZipStreamed).toHaveBeenCalled();
+    expect(
+      deps.projectService.createDistributionZipStreamed.mock.calls[0][1],
+    ).toEqual([{ fileId: "file-1", mimeType: "image/png" }]);
+  });
+
+  it("drops invalid font mime metadata before export", async () => {
+    const repositoryState = structuredClone(initialProjectData);
+    repositoryState.story.initialSceneId = "scene-1";
+    repositoryState.files = createTreeCollection(
+      {
+        "file-font-1": {
+          id: "file-font-1",
+          type: "font",
+          mimeType: "font/sample_font",
+          size: 857712,
+          sha256: "font-hash-1",
+        },
+      },
+      [{ id: "file-font-1" }],
+    );
+    repositoryState.fonts = createTreeCollection(
+      {
+        "font-1": {
+          id: "font-1",
+          type: "font",
+          fileId: "file-font-1",
+        },
+      },
+      [{ id: "font-1" }],
+    );
+    repositoryState.textStyles = createTreeCollection(
+      {
+        "text-style-1": {
+          id: "text-style-1",
+          type: "textStyle",
+          fontId: "font-1",
+        },
+      },
+      [{ id: "text-style-1" }],
+    );
+    repositoryState.layouts = createTreeCollection(
+      {
+        "layout-1": {
+          id: "layout-1",
+          type: "layout",
+          layoutType: "normal",
+          elements: createTreeCollection(
+            {
+              "text-1": {
+                id: "text-1",
+                type: "text",
+                textStyleId: "text-style-1",
+              },
+            },
+            [{ id: "text-1" }],
+          ),
+        },
+      },
+      [{ id: "layout-1" }],
+    );
+    repositoryState.scenes = createTreeCollection(
+      {
+        "scene-1": {
+          id: "scene-1",
+          type: "scene",
+          name: "Scene 1",
+          initialSectionId: "section-1",
+          sections: createTreeCollection(
+            {
+              "section-1": {
+                id: "section-1",
+                type: "section",
+                name: "Section 1",
+                lines: createTreeCollection(
+                  {
+                    "line-1": {
+                      id: "line-1",
+                      actions: {
+                        dialogue: {
+                          ui: {
+                            resourceId: "layout-1",
+                          },
+                        },
+                      },
+                    },
+                  },
+                  [{ id: "line-1" }],
+                ),
+              },
+            },
+            [{ id: "section-1" }],
+          ),
+        },
+      },
+      [{ id: "scene-1" }],
+    );
+
+    const repository = {
+      loadState: vi.fn(async () => repositoryState),
+      loadEvents: vi.fn(async () => []),
+      getState: vi.fn(() => repositoryState),
+    };
+    const deps = createDeps({
+      repository,
+    });
+
+    await handleDownloadZipClick(deps, {
+      _event: {
+        stopPropagation: vi.fn(),
+        currentTarget: {
+          dataset: {
+            versionId: "version-1",
+          },
+        },
+      },
+    });
+
+    expect(deps.projectService.createDistributionZipStreamed).toHaveBeenCalled();
+    expect(
+      deps.projectService.createDistributionZipStreamed.mock.calls[0][1],
+    ).toEqual([{ fileId: "file-font-1" }]);
   });
 });
