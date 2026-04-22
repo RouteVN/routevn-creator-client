@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { createProjectCreateRepositoryEvent } from "../../src/deps/services/shared/projectRepository.js";
+import {
+  createProjectCreateRepositoryEvent,
+  initialProjectData,
+} from "../../src/deps/services/shared/projectRepository.js";
 import {
   createProjectRepositoryRuntime,
   replayEventsToRepositoryState,
@@ -28,6 +31,86 @@ const createBatchedReducer = (reduceEventToState) => {
       }
     }
 
+    return nextState;
+  };
+};
+
+const createBatchedReducerWithCommandIndex = (reduceEventToState) => {
+  return ({ repositoryState, events }) => {
+    let nextState = repositoryState;
+
+    for (let index = 0; index < events.length; index += 1) {
+      try {
+        const reducedState = reduceEventToState({
+          repositoryState: nextState,
+          event: events[index],
+        });
+        if (reducedState !== undefined) {
+          nextState = reducedState;
+        }
+      } catch (error) {
+        error.details = {
+          ...(error?.details && typeof error.details === "object"
+            ? error.details
+            : {}),
+          commandIndex: index,
+        };
+        throw error;
+      }
+    }
+
+    return nextState;
+  };
+};
+
+const createFileReplayReducer = () => {
+  return ({ repositoryState, event }) => {
+    if (event?.type !== "file.create") {
+      return repositoryState;
+    }
+
+    const fileId = event?.payload?.fileId;
+    const fileData = event?.payload?.data ?? {};
+
+    if (repositoryState?.files?.items?.[fileId]) {
+      const error = new Error("payload.fileId must not already exist");
+      error.code = "validation_failed";
+      throw error;
+    }
+
+    const nextState = structuredClone(repositoryState);
+    nextState.files.items[fileId] = {
+      id: fileId,
+      mimeType: fileData.mimeType,
+      size: fileData.size,
+      sha256: fileData.sha256,
+    };
+    nextState.files.tree.push({ id: fileId });
+    return nextState;
+  };
+};
+
+const createImageReplayReducer = () => {
+  return ({ repositoryState, event }) => {
+    if (event?.type !== "image.create") {
+      return repositoryState;
+    }
+
+    const imageId = event?.payload?.imageId;
+    const imageData = event?.payload?.data ?? {};
+
+    if (repositoryState?.images?.items?.[imageId]) {
+      const error = new Error("payload.imageId must not already exist");
+      error.code = "validation_failed";
+      throw error;
+    }
+
+    const nextState = structuredClone(repositoryState);
+    nextState.images.items[imageId] = {
+      id: imageId,
+      ...imageData,
+    };
+    nextState.images.tree.push({ id: imageId });
     return nextState;
   };
 };
@@ -347,6 +430,113 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
     });
   });
 
+  it("recovers identical duplicate file.create events during batched historical replay", () => {
+    const reduceEventToState = createFileReplayReducer();
+    const events = [
+      {
+        id: "event-1",
+        type: "file.create",
+        partition: "m",
+        payload: {
+          fileId: "file-1",
+          data: {
+            mimeType: "image/png",
+            size: 123,
+            sha256: "hash-1",
+          },
+        },
+      },
+      {
+        id: "event-2",
+        type: "file.create",
+        partition: "m",
+        payload: {
+          fileId: "file-1",
+          data: {
+            mimeType: "image/png",
+            size: 123,
+            sha256: "hash-1",
+          },
+        },
+      },
+    ];
+
+    const state = replayEventsToRepositoryState({
+      events,
+      untilEventIndex: events.length,
+      createInitialState: () => structuredClone(initialProjectData),
+      reduceEventToState,
+      reduceEventsToState:
+        createBatchedReducerWithCommandIndex(reduceEventToState),
+    });
+
+    expect(state.files.items["file-1"]).toEqual({
+      id: "file-1",
+      mimeType: "image/png",
+      size: 123,
+      sha256: "hash-1",
+    });
+    expect(state.files.tree).toEqual([{ id: "file-1" }]);
+  });
+
+  it("recovers identical duplicate image.create events during batched historical replay", () => {
+    const reduceEventToState = createImageReplayReducer();
+    const events = [
+      {
+        id: "event-1",
+        type: "image.create",
+        partition: "m",
+        payload: {
+          imageId: "image-1",
+          data: {
+            type: "image",
+            name: "Background",
+            width: 1280,
+            height: 720,
+            fileId: "file-1",
+            thumbnailFileId: "file-2",
+          },
+        },
+      },
+      {
+        id: "event-2",
+        type: "image.create",
+        partition: "m",
+        payload: {
+          imageId: "image-1",
+          data: {
+            type: "image",
+            name: "Background",
+            width: 1280,
+            height: 720,
+            fileId: "file-1",
+            thumbnailFileId: "file-2",
+          },
+        },
+      },
+    ];
+
+    const state = replayEventsToRepositoryState({
+      events,
+      untilEventIndex: events.length,
+      createInitialState: () => structuredClone(initialProjectData),
+      reduceEventToState,
+      reduceEventsToState:
+        createBatchedReducerWithCommandIndex(reduceEventToState),
+    });
+
+    expect(state.images.items["image-1"]).toEqual({
+      id: "image-1",
+      type: "image",
+      name: "Background",
+      width: 1280,
+      height: 720,
+      fileId: "file-1",
+      thumbnailFileId: "file-2",
+    });
+    expect(state.images.tree).toEqual([{ id: "image-1" }]);
+  });
+
   it("reports initial main hydration progress while replaying checkpoint gaps", async () => {
     const events = Array.from({ length: 300 }, (_, index) => ({
       id: `event-${index + 1}`,
@@ -588,6 +778,112 @@ describe("projectRepositoryRuntime replay diagnostics", () => {
 
     await expect(repository.loadState(2)).resolves.toEqual({
       appliedIds: ["event-1", "event-2"],
+    });
+
+    expect(loadEvents).not.toHaveBeenCalled();
+    expect(listCommittedAfter).toHaveBeenCalled();
+  });
+
+  it("recovers duplicate file.create events while loading historical snapshots from committed batches", async () => {
+    const committedEvents = [
+      {
+        id: "event-1",
+        committedId: 1,
+        type: "file.create",
+        partition: "m",
+        payload: {
+          fileId: "file-1",
+          data: {
+            mimeType: "image/png",
+            size: 123,
+            sha256: "hash-1",
+          },
+        },
+      },
+      {
+        id: "event-2",
+        committedId: 2,
+        type: "file.create",
+        partition: "m",
+        payload: {
+          fileId: "file-1",
+          data: {
+            mimeType: "image/png",
+            size: 123,
+            sha256: "hash-1",
+          },
+        },
+      },
+    ];
+    const loadEvents = vi.fn(async () => committedEvents);
+    const listCommittedAfter = vi.fn(
+      async ({ sinceCommittedId = 0, limit } = {}) => {
+        const startIndex = Math.max(0, Number(sinceCommittedId) || 0);
+        const normalizedLimit =
+          Number.isInteger(limit) && limit > 0 ? limit : committedEvents.length;
+        return committedEvents
+          .slice(startIndex, startIndex + normalizedLimit)
+          .map((event) => structuredClone(event));
+      },
+    );
+    const reduceEventToState = createFileReplayReducer();
+    const checkpointState = structuredClone(initialProjectData);
+    checkpointState.files.items["file-1"] = {
+      id: "file-1",
+      mimeType: "image/png",
+      size: 123,
+      sha256: "hash-1",
+    };
+    checkpointState.files.tree = [{ id: "file-1" }];
+
+    const repository = await createProjectRepositoryRuntime({
+      projectId: "project-1",
+      store: {
+        listCommittedAfter,
+        loadMaterializedViewCheckpoint: async () => ({
+          viewName: "project_repository_main_state",
+          viewVersion: "1",
+          partition: "m",
+          lastCommittedId: committedEvents.length,
+          value: createMainProjectionState(checkpointState),
+          meta: {
+            historyStats: {
+              committedCount: committedEvents.length,
+              latestCommittedId: committedEvents.length,
+              draftCount: 0,
+              latestDraftClock: 0,
+            },
+          },
+        }),
+        saveMaterializedViewCheckpoint: async () => {},
+        deleteMaterializedViewCheckpoint: async () => {},
+      },
+      initialRevision: committedEvents.length,
+      historyStats: {
+        committedCount: committedEvents.length,
+        latestCommittedId: committedEvents.length,
+        draftCount: 0,
+        latestDraftClock: 0,
+      },
+      loadEvents,
+      createInitialState: () => structuredClone(initialProjectData),
+      reduceEventToState,
+      reduceEventsToState:
+        createBatchedReducerWithCommandIndex(reduceEventToState),
+    });
+
+    await expect(repository.loadState(2)).resolves.toMatchObject({
+      files: {
+        items: {
+          "file-1": {
+            id: "file-1",
+            mimeType: "image/png",
+            size: 123,
+            sha256: "hash-1",
+          },
+        },
+        tree: [{ id: "file-1" }],
+      },
     });
 
     expect(loadEvents).not.toHaveBeenCalled();

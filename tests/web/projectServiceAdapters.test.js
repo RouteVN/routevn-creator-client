@@ -166,6 +166,20 @@ describe("web project service adapters", () => {
     expect(session.syncNow).toHaveBeenCalledTimes(2);
   });
 
+  it("rejects distribution ZIP export outside the Tauri app", async () => {
+    const { fileAdapter } = createWebProjectServiceAdapters({
+      collabLog: () => {},
+      creatorVersion: 2,
+    });
+
+    await expect(
+      fileAdapter.promptDistributionZipPath(),
+    ).rejects.toThrow("Distribution ZIP export is only supported");
+    await expect(fileAdapter.createDistributionZipStreamed()).rejects.toThrow(
+      "Distribution ZIP export is only supported",
+    );
+  });
+
   it("persists a projection gap for incompatible remote commands", async () => {
     const repository = {
       getState: vi.fn(() => structuredClone(initialProjectData)),

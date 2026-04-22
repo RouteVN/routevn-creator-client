@@ -107,6 +107,267 @@ const createReplayError = ({
   return replayError;
 };
 
+const isPlainObject = (value) =>
+  !!value && typeof value === "object" && !Array.isArray(value);
+
+const RESOURCE_CREATE_REPLAY_DEFINITIONS = Object.freeze({
+  "image.create": {
+    idField: "imageId",
+    collectionKey: "images",
+  },
+  "spritesheet.create": {
+    idField: "spritesheetId",
+    collectionKey: "spritesheets",
+  },
+  "sound.create": {
+    idField: "soundId",
+    collectionKey: "sounds",
+  },
+  "video.create": {
+    idField: "videoId",
+    collectionKey: "videos",
+  },
+  "animation.create": {
+    idField: "animationId",
+    collectionKey: "animations",
+  },
+  "particle.create": {
+    idField: "particleId",
+    collectionKey: "particles",
+  },
+  "character.create": {
+    idField: "characterId",
+    collectionKey: "characters",
+  },
+  "font.create": {
+    idField: "fontId",
+    collectionKey: "fonts",
+  },
+  "transform.create": {
+    idField: "transformId",
+    collectionKey: "transforms",
+  },
+  "color.create": {
+    idField: "colorId",
+    collectionKey: "colors",
+  },
+  "textStyle.create": {
+    idField: "textStyleId",
+    collectionKey: "textStyles",
+  },
+  "variable.create": {
+    idField: "variableId",
+    collectionKey: "variables",
+  },
+  "layout.create": {
+    idField: "layoutId",
+    collectionKey: "layouts",
+  },
+  "control.create": {
+    idField: "controlId",
+    collectionKey: "controls",
+  },
+});
+
+const isReplayValueSubset = (existingValue, expectedValue) => {
+  if (Array.isArray(expectedValue)) {
+    return (
+      Array.isArray(existingValue) &&
+      existingValue.length === expectedValue.length &&
+      expectedValue.every((item, index) =>
+        isReplayValueSubset(existingValue[index], item),
+      )
+    );
+  }
+
+  if (isPlainObject(expectedValue)) {
+    if (!isPlainObject(existingValue)) {
+      return false;
+    }
+
+    return Object.entries(expectedValue).every(([key, value]) =>
+      isReplayValueSubset(existingValue[key], value),
+    );
+  }
+
+  return existingValue === expectedValue;
+};
+
+const collectionTreeContainsItemId = (nodes = [], itemId) => {
+  return (Array.isArray(nodes) ? nodes : []).some((node) => {
+    if (node?.id === itemId) {
+      return true;
+    }
+
+    return collectionTreeContainsItemId(node?.children, itemId);
+  });
+};
+
+const getReplayFailedCommandIndex = (error) => {
+  const failedIndex = Number(error?.details?.commandIndex);
+  return Number.isInteger(failedIndex) && failedIndex >= 0
+    ? failedIndex
+    : undefined;
+};
+
+const isDuplicateFileCreateReplayFailure = ({ event, error } = {}) => {
+  return (
+    event?.type === "file.create" &&
+    String(error?.message || "").includes(
+      "payload.fileId must not already exist",
+    )
+  );
+};
+
+const canSkipDuplicateFileCreateDuringReplay = ({
+  repositoryState,
+  event,
+  error,
+} = {}) => {
+  if (!isDuplicateFileCreateReplayFailure({ event, error })) {
+    return false;
+  }
+
+  const fileId =
+    typeof event?.payload?.fileId === "string" ? event.payload.fileId : "";
+  if (!fileId) {
+    return false;
+  }
+
+  const existingFile = repositoryState?.files?.items?.[fileId];
+  const fileData = event?.payload?.data;
+  if (!isPlainObject(existingFile) || !isPlainObject(fileData)) {
+    return false;
+  }
+
+  return (
+    existingFile.id === fileId &&
+    existingFile.mimeType === fileData.mimeType &&
+    Number(existingFile.size) === Number(fileData.size) &&
+    existingFile.sha256 === fileData.sha256
+  );
+};
+
+const isDuplicateResourceCreateReplayFailure = ({ event, error } = {}) => {
+  const replayDefinition = RESOURCE_CREATE_REPLAY_DEFINITIONS[event?.type];
+  if (!replayDefinition) {
+    return false;
+  }
+
+  return String(error?.message || "").includes(
+    `payload.${replayDefinition.idField} must not already exist`,
+  );
+};
+
+const canSkipDuplicateResourceCreateDuringReplay = ({
+  repositoryState,
+  event,
+  error,
+} = {}) => {
+  const replayDefinition = RESOURCE_CREATE_REPLAY_DEFINITIONS[event?.type];
+  if (
+    !replayDefinition ||
+    !isDuplicateResourceCreateReplayFailure({ event, error })
+  ) {
+    return false;
+  }
+
+  const { idField, collectionKey } = replayDefinition;
+  const resourceId =
+    typeof event?.payload?.[idField] === "string" ? event.payload[idField] : "";
+  if (!resourceId) {
+    return false;
+  }
+
+  const existingItem = repositoryState?.[collectionKey]?.items?.[resourceId];
+  const resourceData = event?.payload?.data;
+  if (!isPlainObject(existingItem) || !isPlainObject(resourceData)) {
+    return false;
+  }
+
+  return (
+    existingItem.id === resourceId &&
+    collectionTreeContainsItemId(
+      repositoryState?.[collectionKey]?.tree,
+      resourceId,
+    ) &&
+    isReplayValueSubset(existingItem, resourceData)
+  );
+};
+
+const canAttemptSequentialReplayRecovery = ({ events, error } = {}) => {
+  const failedIndex = getReplayFailedCommandIndex(error);
+  if (!Number.isInteger(failedIndex) || failedIndex >= (events?.length || 0)) {
+    return false;
+  }
+
+  const failedEvent = events[failedIndex];
+
+  return (
+    isDuplicateFileCreateReplayFailure({
+      event: failedEvent,
+      error,
+    }) ||
+    isDuplicateResourceCreateReplayFailure({
+      event: failedEvent,
+      error,
+    })
+  );
+};
+
+const replayEventsSequentially = ({
+  repositoryState,
+  events,
+  reduceEventToState,
+} = {}) => {
+  let state = repositoryState;
+
+  for (let index = 0; index < events.length; index += 1) {
+    const event = events[index];
+
+    try {
+      const nextState = reduceEventToState({
+        repositoryState: state,
+        event,
+      });
+      if (nextState !== undefined) {
+        state = nextState;
+      }
+    } catch (error) {
+      if (
+        canSkipDuplicateFileCreateDuringReplay({
+          repositoryState: state,
+          event,
+          error,
+        })
+      ) {
+        continue;
+      }
+
+      if (
+        canSkipDuplicateResourceCreateDuringReplay({
+          repositoryState: state,
+          event,
+          error,
+        })
+      ) {
+        continue;
+      }
+
+      return {
+        valid: false,
+        error,
+        failedEventArrayIndex: index,
+      };
+    }
+  }
+
+  return {
+    valid: true,
+    repositoryState: state,
+  };
+};
+
 export const replayEventsToRepositoryState = ({
   events,
   untilEventIndex,
@@ -126,10 +387,37 @@ export const replayEventsToRepositoryState = ({
         events: events.slice(0, targetIndex),
       });
     } catch (error) {
-      const failedIndex = Number(error?.details?.commandIndex);
+      const replayEvents = events.slice(0, targetIndex);
+      if (
+        typeof reduceEventToState === "function" &&
+        canAttemptSequentialReplayRecovery({
+          events: replayEvents,
+          error,
+        })
+      ) {
+        const sequentialReplay = replayEventsSequentially({
+          repositoryState: createInitialState(),
+          events: replayEvents,
+          reduceEventToState,
+        });
+
+        if (sequentialReplay.valid) {
+          return sequentialReplay.repositoryState;
+        }
+
+        throw createReplayError({
+          error: sequentialReplay.error,
+          events: replayEvents,
+          targetEventCount: targetIndex,
+          failedEventArrayIndex: sequentialReplay.failedEventArrayIndex,
+          fallbackFailedBatchIndex: sequentialReplay.failedEventArrayIndex,
+        });
+      }
+
+      const failedIndex = getReplayFailedCommandIndex(error);
       throw createReplayError({
         error,
-        events: events.slice(0, targetIndex),
+        events: replayEvents,
         targetEventCount: targetIndex,
         failedEventArrayIndex: Number.isInteger(failedIndex)
           ? failedIndex
@@ -143,23 +431,23 @@ export const replayEventsToRepositoryState = ({
 
   let state = createInitialState();
   for (let index = 0; index < targetIndex; index += 1) {
-    try {
-      const nextState = reduceEventToState({
-        repositoryState: state,
-        event: events[index],
-      });
-      if (nextState !== undefined) {
-        state = nextState;
-      }
-    } catch (error) {
+    const replayResult = replayEventsSequentially({
+      repositoryState: state,
+      events: [events[index]],
+      reduceEventToState,
+    });
+
+    if (!replayResult.valid) {
       throw createReplayError({
-        error,
+        error: replayResult.error,
         events: events.slice(0, targetIndex),
         targetEventCount: targetIndex,
-        failedEventArrayIndex: index,
-        fallbackFailedBatchIndex: index,
+        failedEventArrayIndex: index + replayResult.failedEventArrayIndex,
+        fallbackFailedBatchIndex: index + replayResult.failedEventArrayIndex,
       });
     }
+
+    state = replayResult.repositoryState;
   }
 
   return state;
@@ -508,7 +796,37 @@ export const createProjectRepositoryRuntime = async ({
           state = nextState;
         }
       } catch (error) {
-        const failedBatchIndex = Number(error?.details?.commandIndex);
+        if (
+          typeof reduceEventToState === "function" &&
+          canAttemptSequentialReplayRecovery({
+            events: replayBatch,
+            error,
+          })
+        ) {
+          const sequentialReplay = replayEventsSequentially({
+            repositoryState: state,
+            events: replayBatch,
+            reduceEventToState,
+          });
+
+          if (sequentialReplay.valid) {
+            state = sequentialReplay.repositoryState;
+            replayedEventCount += replayBatch.length;
+            continue;
+          }
+
+          throw createReplayError({
+            error: sequentialReplay.error,
+            events: replayBatch,
+            targetEventCount: targetIndex,
+            failedEventArrayIndex:
+              batchStartIndex + sequentialReplay.failedEventArrayIndex,
+            baseIndex: batchStartIndex,
+            fallbackFailedBatchIndex: sequentialReplay.failedEventArrayIndex,
+          });
+        }
+
+        const failedBatchIndex = getReplayFailedCommandIndex(error);
         throw createReplayError({
           error,
           events: replayBatch,

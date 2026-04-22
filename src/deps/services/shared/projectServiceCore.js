@@ -270,10 +270,6 @@ export const createProjectServiceCore = ({
       repositoryService.ensureProjectCompatibleByPath,
     getProjectInfoByPath: repositoryService.getProjectInfoByPath,
     updateProjectInfoByPath: repositoryService.updateProjectInfoByPath,
-    createBundle: exportService.createBundle,
-    exportProject: exportService.exportProject,
-    downloadBundle: exportService.downloadBundle,
-    createDistributionZip: exportService.createDistributionZip,
     createDistributionZipStreamed: exportService.createDistributionZipStreamed,
     promptDistributionZipPath: exportService.promptDistributionZipPath,
     createDistributionZipStreamedToPath:

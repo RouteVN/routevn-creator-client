@@ -45,6 +45,7 @@ import {
 } from "../../../internal/sqliteLocking.js";
 import { assertSafeProjectFileId } from "../../../internal/projectFileIds.js";
 import { getManagedSqliteConnection } from "../../clients/tauri/sqliteConnectionManager.js";
+import { normalizeExportFileEntries } from "../shared/projectExportService.js";
 
 const PROJECT_INFO_KEY = "projectInfo";
 const CREATOR_VERSION_KEY = "creatorVersion";
@@ -56,6 +57,26 @@ const normalizeProjectInfo = (projectInfo = {}) => ({
   description: projectInfo.description ?? "",
   iconFileId: projectInfo.iconFileId ?? null,
 });
+
+const getByteLength = (value) => {
+  if (!value) {
+    return 0;
+  }
+
+  if (typeof value.byteLength === "number") {
+    return value.byteLength;
+  }
+
+  if (typeof value.size === "number") {
+    return value.size;
+  }
+
+  return 0;
+};
+
+const logExportSizeStats = (stats = {}) => {
+  console.info("[export.bundle.size]", stats);
+};
 
 const parseStoredAppValue = (value) => {
   if (typeof value !== "string" || value.length === 0) {
@@ -333,23 +354,16 @@ export const createTauriProjectServiceAdapters = ({
   };
 
   const collectDistributionZipAssets = async ({
-    fileIds,
+    fileEntries,
     getCurrentReference,
   }) => {
     const reference = getCurrentReference();
     const filesPath = await join(reference.projectPath, "files");
-    const uniqueFileIds = [];
-    const seenFileIds = new Set();
-
-    for (const fileId of fileIds || []) {
-      if (!fileId || seenFileIds.has(fileId)) continue;
-      seenFileIds.add(fileId);
-      uniqueFileIds.push(fileId);
-    }
+    const normalizedFileEntries = normalizeExportFileEntries(fileEntries);
 
     const assets = [];
-    for (const fileId of uniqueFileIds) {
-      const safeFileId = assertSafeProjectFileId(fileId);
+    for (const fileEntry of normalizedFileEntries) {
+      const safeFileId = assertSafeProjectFileId(fileEntry.id);
       const filePath = await join(filesPath, safeFileId);
       const fileExists = await exists(filePath);
       if (!fileExists) {
@@ -359,7 +373,7 @@ export const createTauriProjectServiceAdapters = ({
       assets.push({
         id: safeFileId,
         path: filePath,
-        mime: "application/octet-stream",
+        mime: fileEntry.mimeType || "application/octet-stream",
       });
     }
 
@@ -368,18 +382,18 @@ export const createTauriProjectServiceAdapters = ({
 
   const createDistributionZipStreamedToPath = async ({
     projectData,
-    fileIds,
+    fileEntries,
     outputPath,
     staticFiles,
     options = {},
     getCurrentReference,
   }) => {
     const assets = await collectDistributionZipAssets({
-      fileIds,
+      fileEntries,
       getCurrentReference,
     });
 
-    await invoke("create_distribution_zip_streamed", {
+    const stats = await invoke("create_distribution_zip_streamed", {
       outputPath,
       assets,
       instructionsJson: JSON.stringify(projectData),
@@ -387,6 +401,7 @@ export const createTauriProjectServiceAdapters = ({
       mainJs: staticFiles.mainJs || null,
       usePartFile: options.usePartFile ?? true,
     });
+    logExportSizeStats(stats);
 
     return outputPath;
   };
@@ -598,7 +613,17 @@ export const createTauriProjectServiceAdapters = ({
           zip.file("index.html", staticFiles.indexHtml);
         if (staticFiles.mainJs) zip.file("main.js", staticFiles.mainJs);
 
-        const zipBlob = await zip.generateAsync({ type: "uint8array" });
+        const zipBlob = await zip.generateAsync({
+          type: "uint8array",
+          compression: "DEFLATE",
+          compressionOptions: {
+            level: 6,
+          },
+        });
+        logExportSizeStats({
+          packageBinBytes: getByteLength(bundle),
+          zipBytes: getByteLength(zipBlob),
+        });
         const selectedPath = await filePicker.saveFilePicker({
           title: options.title || "Save Distribution ZIP",
           defaultPath: `${zipName}.zip`,
@@ -619,7 +644,7 @@ export const createTauriProjectServiceAdapters = ({
 
     createDistributionZipStreamed: async ({
       projectData,
-      fileIds,
+      fileEntries,
       zipName,
       options,
       filePicker,
@@ -639,7 +664,7 @@ export const createTauriProjectServiceAdapters = ({
 
         return createDistributionZipStreamedToPath({
           projectData,
-          fileIds,
+          fileEntries,
           outputPath: selectedPath,
           staticFiles,
           options,

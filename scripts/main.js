@@ -6,6 +6,7 @@ import createRouteEngine, {
 import { Ticker } from "pixi.js";
 
 import createRouteGraphics, { createAssetBufferManager } from "route-graphics";
+import { createRuntimeAssetFromDicedImage } from "../src/internal/bundleRuntimeDicedImages.js";
 import { prepareRenderStateKeyboardForGraphics } from "../src/internal/project/layout.js";
 import {
   createRuntimeEventContext,
@@ -14,53 +15,41 @@ import {
   preloadRuntimeSaveSlotImages,
   prepareRuntimeInteractionExecution,
 } from "../src/internal/runtime/graphicsEngineRuntime.js";
-import { BUNDLE_FORMAT_VERSION } from "../src/deps/services/shared/projectExportService.js";
+import { resolveBundleAssetMimeType } from "../src/internal/bundleRuntimeAssets.js";
+import { parseBundle } from "../src/deps/services/shared/projectExportService.js";
 
 async function parseVNBundle(arrayBuffer) {
-  const dataView = new DataView(arrayBuffer);
-
-  // Read version (byte 0)
-  const version = dataView.getUint8(0);
-  if (version !== BUNDLE_FORMAT_VERSION) {
-    throw new Error(`Unsupported bundle version: ${version}`);
-  }
-
-  // Read index length (bytes 1-4, big-endian)
-  const indexLength = dataView.getUint32(1, false);
-
-  // Fixed header size is 16 bytes
-  const headerSize = 16;
-
-  // Read index (starts after 16-byte header)
-  const indexBuffer = new Uint8Array(arrayBuffer, headerSize, indexLength);
-  const index = JSON.parse(new TextDecoder().decode(indexBuffer));
+  const parsedBundle = await parseBundle(arrayBuffer);
   const assets = {};
-  let instructions = null;
+  const atlasCache = new Map();
 
-  // Data block starts after header and index
-  const dataBlockOffset = headerSize + indexLength;
-
-  for (const [id, metadata] of Object.entries(index)) {
-    const contentStart = metadata.start + dataBlockOffset;
-    const contentEnd = metadata.end + dataBlockOffset + 1;
-    const content = new Uint8Array(
-      arrayBuffer,
-      contentStart,
-      contentEnd - contentStart,
-    );
-    if (id === "instructions") {
-      instructions = JSON.parse(new TextDecoder().decode(content));
-    } else {
-      const fileType = await fileTypeFromBuffer(content);
-      const detectedType = fileType?.mime;
-      assets[id] = {
-        url: URL.createObjectURL(new Blob([content], { type: detectedType })),
-        type: detectedType,
-        size: content.byteLength,
-      };
+  for (const [id, metadata] of Object.entries(parsedBundle.assets || {})) {
+    if (metadata?.encoding === "diced-image") {
+      assets[id] = await createRuntimeAssetFromDicedImage({
+        asset: metadata,
+        atlases: parsedBundle.atlases,
+        atlasCache,
+      });
+      continue;
     }
+
+    const content = metadata.buffer;
+    const fileType = await fileTypeFromBuffer(content);
+    const detectedType = resolveBundleAssetMimeType({
+      bundleMime: metadata.mime,
+      detectedMime: fileType?.mime,
+    });
+    assets[id] = {
+      url: URL.createObjectURL(new Blob([content], { type: detectedType })),
+      type: detectedType,
+      size: content.byteLength,
+    };
   }
-  return { assets, instructions };
+
+  return {
+    assets,
+    instructions: parsedBundle.instructions,
+  };
 }
 
 const hideLoadingOverlay = () => {

@@ -1,4 +1,5 @@
 import { generateId } from "../../internal/id.js";
+import { normalizeExportFileMimeType } from "../../internal/bundleRuntimeAssets.js";
 import {
   buildFilteredStateForExport,
   collectUsedResourcesForExport,
@@ -301,6 +302,22 @@ export const handleDownloadZipClick = async (deps, payload) => {
     const usage = collectUsedResourcesForExport(repositoryState);
     const filteredState = buildFilteredStateForExport(repositoryState, usage);
     const constructedProjectData = constructProjectData(filteredState);
+    const fileEntries = usage.fileIds.map((fileId) => {
+      const fileRecord = filteredState.files?.items?.[fileId];
+      const normalizedMimeType = normalizeExportFileMimeType({
+        mimeType: fileRecord?.mimeType,
+        assetType: fileRecord?.type,
+      });
+      const entry = {
+        fileId,
+      };
+
+      if (normalizedMimeType) {
+        entry.mimeType = normalizedMimeType;
+      }
+
+      return entry;
+    });
     const transformedData = createBundleInstructions({
       projectData: constructedProjectData,
       bundler: {
@@ -313,12 +330,12 @@ export const handleDownloadZipClick = async (deps, payload) => {
     const savedPath = outputPath
       ? await projectService.createDistributionZipStreamedToPath(
           transformedData,
-          usage.fileIds,
+          fileEntries,
           outputPath,
         )
       : await projectService.createDistributionZipStreamed(
           transformedData,
-          usage.fileIds,
+          fileEntries,
           zipName,
         );
 

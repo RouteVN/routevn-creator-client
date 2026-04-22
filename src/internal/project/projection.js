@@ -25,6 +25,14 @@ const createResourceCollection = () => ({
   tree: [],
 });
 
+const createEmptyTagScopes = () => ({
+  images: createResourceCollection(),
+  sounds: createResourceCollection(),
+  videos: createResourceCollection(),
+  characters: createResourceCollection(),
+  transforms: createResourceCollection(),
+});
+
 const toFiniteTimestamp = (value, fallback) =>
   Number.isFinite(Number(value)) ? Number(value) : fallback;
 
@@ -107,8 +115,28 @@ const createEmptyProjectState = ({
     scenes: {},
     sections: {},
     lines: {},
+    tags: createEmptyTagScopes(),
     ...resourceCollections,
   };
+};
+
+const cloneCollectionState = (collection) => ({
+  items: cloneOr(collection?.items, {}),
+  tree: cloneOr(collection?.tree, []),
+});
+
+const projectRepositoryTagsToDomainTags = (repositoryTags) => {
+  const tags = createEmptyTagScopes();
+
+  if (!isObjectRecord(repositoryTags)) {
+    return tags;
+  }
+
+  for (const [scopeKey, collection] of Object.entries(repositoryTags)) {
+    tags[scopeKey] = cloneCollectionState(collection);
+  }
+
+  return tags;
 };
 
 const buildTreeFromParentMap = ({
@@ -360,6 +388,8 @@ export const projectRepositoryStateToDomainState = ({
   if (!repositoryState || typeof repositoryState !== "object") {
     return state;
   }
+
+  state.tags = projectRepositoryTagsToDomainTags(repositoryState?.tags);
 
   const sceneItems = repositoryState?.scenes?.items || {};
   const sceneHierarchy = getHierarchyNodes(repositoryState?.scenes);
@@ -1395,6 +1425,26 @@ const scanNodeForResourceReferences = (node, onReference) => {
   }
 };
 
+const scanNodeForTransitionEntries = (node, onTransition) => {
+  if (!node || typeof node !== "object") {
+    return;
+  }
+
+  for (const [key, value] of Object.entries(node)) {
+    if (
+      (key === "sectionTransition" || key === "resetStoryAtSection") &&
+      value &&
+      typeof value === "object"
+    ) {
+      onTransition(value);
+    }
+
+    if (value && typeof value === "object") {
+      scanNodeForTransitionEntries(value, onTransition);
+    }
+  }
+};
+
 const checkNode = (node, resourceId, keys, usages) => {
   if (!node || typeof node !== "object") {
     return;
@@ -1417,21 +1467,653 @@ const checkNode = (node, resourceId, keys, usages) => {
   }
 };
 
+const filterTreeNodesByIds = (nodes, keepIds) => {
+  if (!Array.isArray(nodes)) {
+    return [];
+  }
+
+  return nodes.reduce((result, node) => {
+    if (!node || typeof node.id !== "string") {
+      return result;
+    }
+
+    const children = filterTreeNodesByIds(node.children, keepIds);
+    if (!keepIds.has(node.id) && children.length === 0) {
+      return result;
+    }
+
+    if (children.length > 0) {
+      result.push({
+        ...node,
+        children,
+      });
+      return result;
+    }
+
+    const nextNode = {
+      ...node,
+    };
+    delete nextNode.children;
+    result.push(nextNode);
+    return result;
+  }, []);
+};
+
+const collectTreeNodeIds = (nodes, ids) => {
+  if (!Array.isArray(nodes)) {
+    return;
+  }
+
+  nodes.forEach((node) => {
+    if (!node || typeof node.id !== "string") {
+      return;
+    }
+
+    ids.add(node.id);
+    collectTreeNodeIds(node.children, ids);
+  });
+};
+
 const filterCollectionItemsByIds = (collectionState, ids) => {
   if (!collectionState) return collectionState;
   const items = collectionState.items || {};
+  const keepIds = new Set(Array.from(ids || []).filter(Boolean));
+  const filteredTree = filterTreeNodesByIds(
+    getHierarchyNodes(collectionState),
+    keepIds,
+  );
+  const finalIds = new Set(keepIds);
+  const treeIds = new Set();
+
+  collectTreeNodeIds(filteredTree, treeIds);
+  treeIds.forEach((id) => {
+    finalIds.add(id);
+  });
+
   const filteredItems = {};
 
-  for (const id of ids) {
+  for (const id of finalIds) {
     const item = items[id];
     if (item) {
       filteredItems[id] = item;
     }
   }
 
+  const nextTree = [...filteredTree];
+  for (const id of finalIds) {
+    if (!items[id] || treeIds.has(id)) {
+      continue;
+    }
+    nextTree.push({ id });
+  }
+
   return {
     ...collectionState,
     items: filteredItems,
+    tree: nextTree,
+  };
+};
+
+const getPlayableSceneIdsForExport = (state) => {
+  const sceneItems = getCollectionItems(state, "scenes");
+  const orderedSceneIds = [];
+
+  walkHierarchy(getHierarchyNodes(state?.scenes), null, (node) => {
+    orderedSceneIds.push(node.id);
+  });
+
+  return appendMissingIds(orderedSceneIds, Object.keys(sceneItems)).filter(
+    (sceneId) => sceneItems[sceneId]?.type === "scene",
+  );
+};
+
+const getPlayableSectionIdsForExport = (scene) => {
+  const sectionItems = scene?.sections?.items || {};
+  const orderedSectionIds = [];
+
+  walkHierarchy(getHierarchyNodes(scene?.sections), null, (node) => {
+    orderedSectionIds.push(node.id);
+  });
+
+  return appendMissingIds(orderedSectionIds, Object.keys(sectionItems)).filter(
+    (sectionId) => sectionItems[sectionId]?.type !== "folder",
+  );
+};
+
+const getLineIdsForExport = (section) => {
+  const lineItems = section?.lines?.items || {};
+  const orderedLineIds = [];
+
+  walkHierarchy(getHierarchyNodes(section?.lines), null, (node) => {
+    orderedLineIds.push(node.id);
+  });
+
+  return appendMissingIds(orderedLineIds, Object.keys(lineItems));
+};
+
+const resolveExportInitialSceneId = (state) => {
+  const sceneItems = getCollectionItems(state, "scenes");
+  const initialSceneId = state?.story?.initialSceneId;
+
+  if (sceneItems[initialSceneId]?.type === "scene") {
+    return initialSceneId;
+  }
+
+  return getPlayableSceneIdsForExport(state)[0];
+};
+
+const resolveExportInitialSectionId = (scene) => {
+  const sectionIds = getPlayableSectionIdsForExport(scene);
+  if (sectionIds.length === 0) {
+    return undefined;
+  }
+
+  if (sectionIds.includes(scene?.initialSectionId)) {
+    return scene.initialSectionId;
+  }
+
+  return sectionIds[0];
+};
+
+const getReachableLineIdsForSection = (section) => {
+  const lineIds = getLineIdsForExport(section);
+  if (lineIds.length === 0) {
+    return [];
+  }
+
+  const startIndex = lineIds.includes(section?.initialLineId)
+    ? lineIds.indexOf(section.initialLineId)
+    : 0;
+
+  return lineIds.slice(startIndex >= 0 ? startIndex : 0);
+};
+
+const createSceneIdBySectionIdIndex = (state) => {
+  const sectionSceneIdBySectionId = new Map();
+  const sceneItems = getCollectionItems(state, "scenes");
+
+  Object.entries(sceneItems).forEach(([sceneId, scene]) => {
+    if (!scene || scene.type !== "scene") {
+      return;
+    }
+
+    Object.entries(scene.sections?.items || {}).forEach(
+      ([sectionId, section]) => {
+        if (section?.type === "folder") {
+          return;
+        }
+
+        sectionSceneIdBySectionId.set(sectionId, sceneId);
+      },
+    );
+  });
+
+  return sectionSceneIdBySectionId;
+};
+
+const filterScenesForExport = (scenesState, storyUsage = {}) => {
+  if (!scenesState) {
+    return scenesState;
+  }
+
+  const sceneIds = new Set(storyUsage.sceneIds || []);
+  const sectionIds = storyUsage.sectionIds || [];
+  const lineIds = storyUsage.lineIds || [];
+  const filteredScenes = filterCollectionItemsByIds(scenesState, sceneIds);
+  const filteredSceneItems = {};
+
+  Object.entries(filteredScenes.items || {}).forEach(([sceneId, scene]) => {
+    if (!scene || scene.type === "folder") {
+      filteredSceneItems[sceneId] = scene;
+      return;
+    }
+
+    if (!sceneIds.has(sceneId)) {
+      return;
+    }
+
+    const filteredSections = filterCollectionItemsByIds(
+      scene.sections,
+      sectionIds,
+    );
+    const filteredSectionItems = {};
+
+    Object.entries(filteredSections.items || {}).forEach(
+      ([sectionId, section]) => {
+        if (!section || section.type === "folder") {
+          filteredSectionItems[sectionId] = section;
+          return;
+        }
+
+        filteredSectionItems[sectionId] = {
+          ...section,
+          lines: filterCollectionItemsByIds(section.lines, lineIds),
+        };
+      },
+    );
+
+    filteredSceneItems[sceneId] = {
+      ...scene,
+      sections: {
+        ...filteredSections,
+        items: filteredSectionItems,
+      },
+    };
+  });
+
+  return {
+    ...filteredScenes,
+    items: filteredSceneItems,
+  };
+};
+
+const createExportUsageCollector = (state) => {
+  const usage = createUsageBuckets();
+  const index = createResourceIndex(state);
+  const layoutQueue = [];
+  const controlQueue = [];
+  const particleQueue = [];
+  const textStyleQueue = [];
+  const characterQueue = [];
+  const animationQueue = [];
+  const scannedLayouts = new Set();
+  const scannedControls = new Set();
+  const scannedParticles = new Set();
+  const scannedTextStyles = new Set();
+  const scannedCharacters = new Set();
+  const scannedAnimations = new Set();
+
+  const addUsed = (type, id) => {
+    if (!usage[type] || !id) {
+      return false;
+    }
+
+    if (usage[type].has(id)) {
+      return false;
+    }
+
+    usage[type].add(id);
+
+    if (type === "layouts") {
+      layoutQueue.push(id);
+    } else if (type === "controls") {
+      controlQueue.push(id);
+    } else if (type === "particles") {
+      particleQueue.push(id);
+    } else if (type === "textStyles") {
+      textStyleQueue.push(id);
+    } else if (type === "characters") {
+      characterQueue.push(id);
+    } else if (type === "animations") {
+      animationQueue.push(id);
+    } else if (type === "sprites") {
+      const ownerId = index.spriteOwnerById.get(id);
+      if (ownerId) {
+        addUsed("characters", ownerId);
+      }
+    }
+
+    return true;
+  };
+
+  const markReference = ({ key, value }) => {
+    const preferredTypes = RESOURCE_KEY_TO_TYPES[key] || [];
+    let matchedPreferredType = false;
+
+    for (const type of preferredTypes) {
+      if (index.byType[type]?.has(value)) {
+        addUsed(type, value);
+        matchedPreferredType = true;
+      }
+    }
+
+    if (matchedPreferredType) {
+      return;
+    }
+
+    const candidateTypes = index.byId.get(value);
+    if (!candidateTypes) {
+      return;
+    }
+
+    for (const type of candidateTypes) {
+      addUsed(type, value);
+    }
+  };
+
+  const collectFromNode = (node) => {
+    scanNodeForResourceReferences(node, markReference);
+  };
+
+  const finalize = () => {
+    const imageItems = getCollectionItems(state, "images");
+
+    while (layoutQueue.length > 0) {
+      const layoutId = layoutQueue.shift();
+      if (scannedLayouts.has(layoutId)) continue;
+      scannedLayouts.add(layoutId);
+      const layout = getCollectionItems(state, "layouts")[layoutId];
+      if (!layout || layout.type !== "layout") continue;
+      collectFromNode(layout);
+    }
+
+    while (controlQueue.length > 0) {
+      const controlId = controlQueue.shift();
+      if (scannedControls.has(controlId)) continue;
+      scannedControls.add(controlId);
+      const control = getCollectionItems(state, "controls")[controlId];
+      if (!control || control.type !== "control") continue;
+      collectFromNode(control);
+    }
+
+    while (particleQueue.length > 0) {
+      const particleId = particleQueue.shift();
+      if (scannedParticles.has(particleId)) continue;
+      scannedParticles.add(particleId);
+
+      const particle = getCollectionItems(state, "particles")[particleId];
+      if (!particle || particle.type !== "particle") continue;
+
+      collectParticleTextureImageIds(particle, imageItems).forEach(
+        (imageId) => {
+          addUsed("images", imageId);
+        },
+      );
+    }
+
+    while (textStyleQueue.length > 0) {
+      const textStyleId = textStyleQueue.shift();
+      if (scannedTextStyles.has(textStyleId)) continue;
+      scannedTextStyles.add(textStyleId);
+      const textStyle = getCollectionItems(state, "textStyles")[textStyleId];
+      if (!textStyle || textStyle.type !== "textStyle") continue;
+      collectFromNode(textStyle);
+    }
+
+    while (characterQueue.length > 0) {
+      const characterId = characterQueue.shift();
+      if (scannedCharacters.has(characterId)) continue;
+      scannedCharacters.add(characterId);
+
+      const character = getCollectionItems(state, "characters")[characterId];
+      if (!character || character.type !== "character") continue;
+
+      for (const spriteId of Object.keys(character.sprites?.items || {})) {
+        addUsed("sprites", spriteId);
+      }
+    }
+
+    while (animationQueue.length > 0) {
+      const animationId = animationQueue.shift();
+      if (scannedAnimations.has(animationId)) continue;
+      scannedAnimations.add(animationId);
+
+      const animation = getCollectionItems(state, "animations")[animationId];
+      if (!animation || animation.type !== "animation") continue;
+
+      collectFromNode(animation.animation);
+
+      collectTransitionMaskImageIds(
+        animation.animation?.mask,
+        getCollectionItems(state, "images"),
+      ).forEach((imageId) => {
+        addUsed("images", imageId);
+      });
+    }
+
+    const fileIds = new Set();
+    const addFileId = (fileId) => {
+      if (fileId) {
+        fileIds.add(fileId);
+      }
+    };
+
+    for (const id of usage.images) {
+      addFileId(imageItems[id]?.fileId);
+    }
+
+    const spritesheetItems = getCollectionItems(state, "spritesheets");
+    for (const id of usage.spritesheets) {
+      addFileId(spritesheetItems[id]?.fileId);
+    }
+
+    const videoItems = getCollectionItems(state, "videos");
+    for (const id of usage.videos) {
+      addFileId(videoItems[id]?.fileId);
+    }
+
+    const soundItems = getCollectionItems(state, "sounds");
+    for (const id of usage.sounds) {
+      addFileId(soundItems[id]?.fileId);
+    }
+
+    const fontItems = getCollectionItems(state, "fonts");
+    for (const id of usage.fonts) {
+      addFileId(fontItems[id]?.fileId);
+    }
+
+    for (const spriteId of usage.sprites) {
+      addFileId(index.spriteFileById.get(spriteId));
+    }
+
+    const usedIds = Object.fromEntries(
+      Object.entries(usage).map(([type, idSet]) => [type, Array.from(idSet)]),
+    );
+
+    return {
+      usedIds,
+      resources: usedIds,
+      fileIds: Array.from(fileIds),
+    };
+  };
+
+  return {
+    index,
+    collectFromNode,
+    finalize,
+  };
+};
+
+export const compileExportReachability = (state) => {
+  const sceneItems = getCollectionItems(state, "scenes");
+  const sectionSceneIdBySectionId = createSceneIdBySectionIdIndex(state);
+  const { index, collectFromNode, finalize } =
+    createExportUsageCollector(state);
+  const pendingSections = [];
+  const queuedSections = new Set();
+  const pendingLayouts = [];
+  const pendingControls = [];
+  const queuedLayouts = new Set();
+  const queuedControls = new Set();
+  const scannedLayouts = new Set();
+  const scannedControls = new Set();
+  const sceneIds = new Set();
+  const sectionIds = new Set();
+  const lineIds = new Set();
+  const initialSceneId = resolveExportInitialSceneId(state) ?? null;
+
+  const queueLayoutOrControl = (type, id) => {
+    if (!id) {
+      return;
+    }
+
+    if (type === "layouts") {
+      if (queuedLayouts.has(id)) {
+        return;
+      }
+      queuedLayouts.add(id);
+      pendingLayouts.push(id);
+      return;
+    }
+
+    if (type === "controls") {
+      if (queuedControls.has(id)) {
+        return;
+      }
+      queuedControls.add(id);
+      pendingControls.push(id);
+    }
+  };
+
+  const queueLayoutAndControlReferencesFromNode = (node) => {
+    scanNodeForResourceReferences(node, ({ key, value }) => {
+      const preferredTypes = RESOURCE_KEY_TO_TYPES[key] || [];
+      let matchedPreferredType = false;
+
+      preferredTypes.forEach((type) => {
+        if (
+          (type === "layouts" || type === "controls") &&
+          index.byType[type]?.has(value)
+        ) {
+          matchedPreferredType = true;
+          queueLayoutOrControl(type, value);
+        }
+      });
+
+      if (matchedPreferredType) {
+        return;
+      }
+
+      const candidateTypes = index.byId.get(value);
+      if (!candidateTypes) {
+        return;
+      }
+
+      candidateTypes.forEach((type) => {
+        if (type === "layouts" || type === "controls") {
+          queueLayoutOrControl(type, value);
+        }
+      });
+    });
+  };
+
+  const queueReachableSection = ({ sceneId, sectionId } = {}) => {
+    if (!sceneId || sceneItems[sceneId]?.type !== "scene") {
+      return;
+    }
+
+    sceneIds.add(sceneId);
+    const scene = sceneItems[sceneId];
+    const nextSectionId =
+      scene.sections?.items?.[sectionId]?.type !== "folder" && sectionId
+        ? sectionId
+        : resolveExportInitialSectionId(scene);
+
+    if (!nextSectionId) {
+      return;
+    }
+
+    const queueKey = `${sceneId}::${nextSectionId}`;
+    if (queuedSections.has(queueKey)) {
+      return;
+    }
+
+    queuedSections.add(queueKey);
+    pendingSections.push({
+      sceneId,
+      sectionId: nextSectionId,
+    });
+  };
+
+  const queueTransitionTarget = (entry) => {
+    if (!entry || typeof entry !== "object") {
+      return;
+    }
+
+    const sceneId =
+      sceneItems[entry.sceneId]?.type === "scene"
+        ? entry.sceneId
+        : sectionSceneIdBySectionId.get(entry.sectionId);
+
+    if (!sceneId) {
+      return;
+    }
+
+    queueReachableSection({
+      sceneId,
+      sectionId: entry.sectionId,
+    });
+  };
+
+  const scanTransitionsFromNode = (node) => {
+    scanNodeForTransitionEntries(node, queueTransitionTarget);
+    queueLayoutAndControlReferencesFromNode(node);
+  };
+
+  if (initialSceneId) {
+    queueReachableSection({ sceneId: initialSceneId });
+  }
+
+  while (
+    pendingSections.length > 0 ||
+    pendingLayouts.length > 0 ||
+    pendingControls.length > 0
+  ) {
+    while (pendingSections.length > 0) {
+      const current = pendingSections.shift();
+      const scene = sceneItems[current?.sceneId];
+      const section = scene?.sections?.items?.[current?.sectionId];
+      if (!scene || !section || section.type === "folder") {
+        continue;
+      }
+
+      sceneIds.add(current.sceneId);
+      sectionIds.add(current.sectionId);
+
+      getReachableLineIdsForSection(section).forEach((lineId) => {
+        const line = section.lines?.items?.[lineId];
+        if (!line) {
+          return;
+        }
+
+        lineIds.add(lineId);
+        scanTransitionsFromNode(line.actions || {});
+      });
+    }
+
+    while (pendingLayouts.length > 0) {
+      const layoutId = pendingLayouts.shift();
+      if (scannedLayouts.has(layoutId)) {
+        continue;
+      }
+
+      scannedLayouts.add(layoutId);
+      const layout = getCollectionItems(state, "layouts")[layoutId];
+      if (!layout || layout.type !== "layout") {
+        continue;
+      }
+
+      scanTransitionsFromNode(layout);
+    }
+
+    while (pendingControls.length > 0) {
+      const controlId = pendingControls.shift();
+      if (scannedControls.has(controlId)) {
+        continue;
+      }
+
+      scannedControls.add(controlId);
+      const control = getCollectionItems(state, "controls")[controlId];
+      if (!control || control.type !== "control") {
+        continue;
+      }
+
+      scanTransitionsFromNode(control);
+    }
+  }
+
+  const reachableStory = {
+    initialSceneId,
+    sceneIds: Array.from(sceneIds),
+    sectionIds: Array.from(sectionIds),
+    lineIds: Array.from(lineIds),
+  };
+
+  collectFromNode(filterScenesForExport(state.scenes, reachableStory));
+
+  return {
+    story: reachableStory,
+    ...finalize(),
   };
 };
 
@@ -1545,184 +2227,7 @@ export const recursivelyCheckResource = ({ state, itemId, checkTargets }) => {
 };
 
 export const collectUsedResourcesForExport = (state) => {
-  const usage = createUsageBuckets();
-  const index = createResourceIndex(state);
-  const layoutQueue = [];
-  const controlQueue = [];
-  const particleQueue = [];
-  const textStyleQueue = [];
-  const characterQueue = [];
-  const animationQueue = [];
-  const scannedLayouts = new Set();
-  const scannedControls = new Set();
-  const scannedParticles = new Set();
-  const scannedTextStyles = new Set();
-  const scannedCharacters = new Set();
-  const scannedAnimations = new Set();
-
-  const addUsed = (type, id) => {
-    if (!usage[type] || !id) return false;
-    if (usage[type].has(id)) return false;
-    usage[type].add(id);
-
-    if (type === "layouts") {
-      layoutQueue.push(id);
-    } else if (type === "controls") {
-      controlQueue.push(id);
-    } else if (type === "particles") {
-      particleQueue.push(id);
-    } else if (type === "textStyles") {
-      textStyleQueue.push(id);
-    } else if (type === "characters") {
-      characterQueue.push(id);
-    } else if (type === "animations") {
-      animationQueue.push(id);
-    } else if (type === "sprites") {
-      const ownerId = index.spriteOwnerById.get(id);
-      if (ownerId) {
-        addUsed("characters", ownerId);
-      }
-    }
-
-    return true;
-  };
-
-  const markReference = ({ key, value }) => {
-    const preferredTypes = RESOURCE_KEY_TO_TYPES[key] || [];
-    let matchedPreferredType = false;
-
-    for (const type of preferredTypes) {
-      if (index.byType[type]?.has(value)) {
-        addUsed(type, value);
-        matchedPreferredType = true;
-      }
-    }
-
-    if (matchedPreferredType) return;
-
-    const candidateTypes = index.byId.get(value);
-    if (!candidateTypes) return;
-    for (const type of candidateTypes) {
-      addUsed(type, value);
-    }
-  };
-
-  scanNodeForResourceReferences(state?.scenes, markReference);
-
-  const imageItems = getCollectionItems(state, "images");
-
-  while (layoutQueue.length > 0) {
-    const layoutId = layoutQueue.shift();
-    if (scannedLayouts.has(layoutId)) continue;
-    scannedLayouts.add(layoutId);
-    const layout = getCollectionItems(state, "layouts")[layoutId];
-    if (!layout || layout.type !== "layout") continue;
-    scanNodeForResourceReferences(layout, markReference);
-  }
-
-  while (controlQueue.length > 0) {
-    const controlId = controlQueue.shift();
-    if (scannedControls.has(controlId)) continue;
-    scannedControls.add(controlId);
-    const control = getCollectionItems(state, "controls")[controlId];
-    if (!control || control.type !== "control") continue;
-    scanNodeForResourceReferences(control, markReference);
-  }
-
-  while (particleQueue.length > 0) {
-    const particleId = particleQueue.shift();
-    if (scannedParticles.has(particleId)) continue;
-    scannedParticles.add(particleId);
-
-    const particle = getCollectionItems(state, "particles")[particleId];
-    if (!particle || particle.type !== "particle") continue;
-
-    collectParticleTextureImageIds(particle, imageItems).forEach((imageId) => {
-      addUsed("images", imageId);
-    });
-  }
-
-  while (textStyleQueue.length > 0) {
-    const textStyleId = textStyleQueue.shift();
-    if (scannedTextStyles.has(textStyleId)) continue;
-    scannedTextStyles.add(textStyleId);
-    const textStyle = getCollectionItems(state, "textStyles")[textStyleId];
-    if (!textStyle || textStyle.type !== "textStyle") continue;
-    scanNodeForResourceReferences(textStyle, markReference);
-  }
-
-  while (characterQueue.length > 0) {
-    const characterId = characterQueue.shift();
-    if (scannedCharacters.has(characterId)) continue;
-    scannedCharacters.add(characterId);
-
-    const character = getCollectionItems(state, "characters")[characterId];
-    if (!character || character.type !== "character") continue;
-
-    for (const spriteId of Object.keys(character.sprites?.items || {})) {
-      addUsed("sprites", spriteId);
-    }
-  }
-
-  while (animationQueue.length > 0) {
-    const animationId = animationQueue.shift();
-    if (scannedAnimations.has(animationId)) continue;
-    scannedAnimations.add(animationId);
-
-    const animation = getCollectionItems(state, "animations")[animationId];
-    if (!animation || animation.type !== "animation") continue;
-
-    scanNodeForResourceReferences(animation.animation, markReference);
-
-    collectTransitionMaskImageIds(
-      animation.animation?.mask,
-      getCollectionItems(state, "images"),
-    ).forEach((imageId) => {
-      addUsed("images", imageId);
-    });
-  }
-
-  const fileIds = new Set();
-  const addFileId = (fileId) => {
-    if (fileId) fileIds.add(fileId);
-  };
-
-  for (const id of usage.images) {
-    addFileId(imageItems[id]?.fileId);
-  }
-
-  const spritesheetItems = getCollectionItems(state, "spritesheets");
-  for (const id of usage.spritesheets) {
-    addFileId(spritesheetItems[id]?.fileId);
-  }
-
-  const videoItems = getCollectionItems(state, "videos");
-  for (const id of usage.videos) {
-    addFileId(videoItems[id]?.fileId);
-  }
-
-  const soundItems = getCollectionItems(state, "sounds");
-  for (const id of usage.sounds) {
-    addFileId(soundItems[id]?.fileId);
-  }
-
-  const fontItems = getCollectionItems(state, "fonts");
-  for (const id of usage.fonts) {
-    addFileId(fontItems[id]?.fileId);
-  }
-
-  for (const spriteId of usage.sprites) {
-    addFileId(index.spriteFileById.get(spriteId));
-  }
-
-  const usedIds = Object.fromEntries(
-    Object.entries(usage).map(([type, ids]) => [type, Array.from(ids)]),
-  );
-
-  return {
-    usedIds,
-    fileIds: Array.from(fileIds),
-  };
+  return compileExportReachability(state);
 };
 
 export const buildFilteredStateForExport = (
@@ -1730,11 +2235,17 @@ export const buildFilteredStateForExport = (
   usage,
   options = { keepAllVariables: true },
 ) => {
-  const usedIds = usage?.usedIds || {};
+  const usedIds = usage?.usedIds || usage?.resources || {};
+  const story = usage?.story || {};
   const keepAllVariables = options?.keepAllVariables ?? true;
 
   return {
     ...state,
+    story: {
+      ...state.story,
+      initialSceneId: story.initialSceneId ?? state.story?.initialSceneId,
+    },
+    scenes: filterScenesForExport(state.scenes, story),
     images: filterCollectionItemsByIds(state.images, usedIds.images || []),
     spritesheets: filterCollectionItemsByIds(
       state.spritesheets,

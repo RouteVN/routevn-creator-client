@@ -37,7 +37,6 @@ import {
   applyCommandToRepository,
   assertSupportedProjectState,
 } from "../shared/projectRepository.js";
-import { createBundle } from "../shared/projectExportService.js";
 
 const countImageEntries = (imagesData) =>
   Object.values(imagesData?.items || {}).filter(
@@ -45,6 +44,29 @@ const countImageEntries = (imagesData) =>
   ).length;
 
 const INITIAL_REMOTE_SYNC_TIMEOUT_MS = 5_000;
+
+const getByteLength = (value) => {
+  if (!value) {
+    return 0;
+  }
+
+  if (typeof value.byteLength === "number") {
+    return value.byteLength;
+  }
+
+  if (typeof value.size === "number") {
+    return value.size;
+  }
+
+  return 0;
+};
+
+const logExportSizeStats = (stats = {}) => {
+  console.info("[export.bundle.size]", stats);
+};
+
+const WEB_DISTRIBUTION_ZIP_UNSUPPORTED_MESSAGE =
+  "Distribution ZIP export is only supported in the Tauri desktop app.";
 
 export const createWebProjectServiceAdapters = ({
   onRemoteEvent,
@@ -262,65 +284,39 @@ export const createWebProjectServiceAdapters = ({
       zipName,
       filePicker,
       staticFiles,
+      stats = {},
     }) => {
       const zip = new JSZip();
       zip.file("package.bin", bundle);
       if (staticFiles.indexHtml) zip.file("index.html", staticFiles.indexHtml);
       if (staticFiles.mainJs) zip.file("main.js", staticFiles.mainJs);
 
-      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const zipBlob = await zip.generateAsync({
+        type: "blob",
+        compression: "DEFLATE",
+        compressionOptions: {
+          level: 6,
+        },
+      });
+      logExportSizeStats({
+        ...stats,
+        packageBinBytes: getByteLength(bundle),
+        zipBytes: getByteLength(zipBlob),
+      });
       await filePicker.saveFilePicker(zipBlob, `${zipName}.zip`);
       return `${zipName}.zip`;
     },
 
-    createDistributionZipStreamed: async ({
-      projectData,
-      fileIds,
-      zipName,
-      filePicker,
-      staticFiles,
-      getFileContent,
-    }) => {
-      const uniqueFileIds = [];
-      const seenFileIds = new Set();
-
-      for (const fileId of fileIds || []) {
-        if (!fileId || seenFileIds.has(fileId)) continue;
-        seenFileIds.add(fileId);
-        uniqueFileIds.push(fileId);
-      }
-
-      const files = {};
-      for (const fileId of uniqueFileIds) {
-        try {
-          const content = await getFileContent(fileId);
-          const response = await fetch(content.url);
-          const buffer = await response.arrayBuffer();
-          files[fileId] = {
-            buffer: new Uint8Array(buffer),
-            mime: content.type,
-          };
-          content.revoke?.();
-        } catch (error) {
-          console.warn(`Failed to fetch file ${fileId}:`, error);
-        }
-      }
-
-      const bundle = await createBundle(projectData, files);
-      return fileAdapter.createDistributionZip({
-        bundle,
-        zipName,
-        filePicker,
-        staticFiles,
-      });
+    createDistributionZipStreamed: async () => {
+      throw new Error(WEB_DISTRIBUTION_ZIP_UNSUPPORTED_MESSAGE);
     },
 
-    promptDistributionZipPath: async () => undefined,
+    promptDistributionZipPath: async () => {
+      throw new Error(WEB_DISTRIBUTION_ZIP_UNSUPPORTED_MESSAGE);
+    },
 
     createDistributionZipStreamedToPath: async () => {
-      throw new Error(
-        "Streaming distribution ZIP export to a selected path is not supported on this platform.",
-      );
+      throw new Error(WEB_DISTRIBUTION_ZIP_UNSUPPORTED_MESSAGE);
     },
   };
 

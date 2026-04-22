@@ -23,9 +23,9 @@ import {
 } from "../src/internal/project/projection.js";
 import {
   BUNDLE_APP_NAME,
-  BUNDLE_FORMAT_VERSION,
   createBundle,
   createBundleInstructions,
+  parseBundle,
 } from "../src/deps/services/shared/projectExportService.js";
 import { toHierarchyStructure } from "../src/internal/project/tree.js";
 
@@ -83,31 +83,9 @@ const stripEmptyChildren = (nodes = []) =>
     return children.length > 0 ? { id: node.id, children } : { id: node.id };
   });
 
-const parseBundleInstructions = (bundle) => {
-  const arrayBuffer = bundle.buffer.slice(
-    bundle.byteOffset,
-    bundle.byteOffset + bundle.byteLength,
-  );
-  const dataView = new DataView(arrayBuffer);
-  const version = dataView.getUint8(0);
-  assert.equal(version, BUNDLE_FORMAT_VERSION);
-
-  const indexLength = dataView.getUint32(1, false);
-  const headerSize = 16;
-  const indexBuffer = new Uint8Array(arrayBuffer, headerSize, indexLength);
-  const index = JSON.parse(new TextDecoder().decode(indexBuffer));
-  const instructionsMeta = index.instructions;
-  assert.ok(instructionsMeta);
-
-  const dataBlockOffset = headerSize + indexLength;
-  const contentStart = instructionsMeta.start + dataBlockOffset;
-  const contentEnd = instructionsMeta.end + dataBlockOffset + 1;
-  const content = new Uint8Array(
-    arrayBuffer,
-    contentStart,
-    contentEnd - contentStart,
-  );
-  return JSON.parse(new TextDecoder().decode(content));
+const parseBundleInstructions = async (bundle) => {
+  const parsedBundle = await parseBundle(bundle);
+  return parsedBundle.instructions;
 };
 
 const store = createRepositoryStoreStub();
@@ -576,7 +554,7 @@ const bundlePayload = createBundleInstructions({
   },
 });
 const bundle = await createBundle(bundlePayload);
-const bundleInstructions = parseBundleInstructions(bundle);
+const bundleInstructions = await parseBundleInstructions(bundle);
 assert.equal(domainState.story.initialSceneId, "scene-1");
 assert.deepEqual(domainState.scenes["scene-1"].sectionIds, [
   "section-1",
