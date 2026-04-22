@@ -1,19 +1,11 @@
 /**
- * Bundle format v2:
- * [version(1)] [indexLength(4)] [reserved(11)] [index(JSON)] [assets...] [instructions(JSON)]
- *
- * Bundle format v3:
- * [version(1)] [manifestLength(4)] [reserved(11)] [manifest(JSON)] [unique chunks...]
- *
  * Bundle format v4:
  * [version(1)] [manifestLength(4)] [reserved(11)] [manifest(JSON)] [unique chunks...]
  */
-export const BUNDLE_FORMAT_VERSION_V2 = 2;
-export const BUNDLE_FORMAT_VERSION_V3 = 3;
 export const BUNDLE_FORMAT_VERSION_V4 = 4;
 // The shared JS bundle writer is retained for tests and smoke scripts only.
 // Shipping distribution ZIPs are produced by the native Tauri v4 exporter.
-export const BUNDLE_FORMAT_VERSION = BUNDLE_FORMAT_VERSION_V3;
+export const BUNDLE_FORMAT_VERSION = BUNDLE_FORMAT_VERSION_V4;
 export const BUNDLE_HEADER_SIZE = 16;
 export const BUNDLE_APP_NAME = "routevn-creator-client";
 export const BUNDLE_PLAYER_INDEX_HTML = `<html>
@@ -83,47 +75,13 @@ export const BUNDLE_PLAYER_INDEX_HTML = `<html>
   <script src="./main.js" type="module"></script>
 </html>
 `;
-export const BUNDLE_CHUNKING = Object.freeze({
+const BUNDLE_MANIFEST_CHUNKING = Object.freeze({
   algorithm: "none",
   mode: "whole-file-only",
-  minSize: 8 * 1024,
-  avgSize: 32 * 1024,
-  maxSize: 128 * 1024,
-  smallFileThreshold: Number.MAX_SAFE_INTEGER,
 });
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
-
-const normalizeChunkingConfig = (chunking = {}) => {
-  const normalized = {
-    ...BUNDLE_CHUNKING,
-    ...chunking,
-  };
-
-  if (
-    normalized.minSize > normalized.avgSize ||
-    normalized.avgSize > normalized.maxSize
-  ) {
-    throw new Error("Invalid chunking config: min/avg/max must be increasing.");
-  }
-
-  if (
-    normalized.algorithm !== "none" ||
-    normalized.mode !== "whole-file-only"
-  ) {
-    throw new Error(
-      "Shared JS bundle export only supports whole-file dedupe. Use the native Tauri exporter for advanced chunking.",
-    );
-  }
-
-  return {
-    ...normalized,
-    algorithm: "none",
-    mode: "whole-file-only",
-    smallFileThreshold: Number.MAX_SAFE_INTEGER,
-  };
-};
 
 const toArrayBufferSlice = (value) => {
   if (value instanceof ArrayBuffer) {
@@ -162,19 +120,13 @@ const hashChunkBytes = async (bytes) => {
   return bytesToHex(digest);
 };
 
-const splitBytesIntoChunks = async ({ bytes, entryId, chunking }) => {
+const splitBytesIntoChunks = async ({ bytes }) => {
   const normalizedBytes = toUint8Array(bytes);
   if (normalizedBytes.byteLength === 0) {
     return [];
   }
 
-  if (entryId === "instructions" || chunking.mode === "whole-file-only") {
-    return [normalizedBytes.slice()];
-  }
-
-  throw new Error(
-    "Shared JS bundle export only supports whole-file dedupe. Use the native Tauri exporter for advanced chunking.",
-  );
+  return [normalizedBytes.slice()];
 };
 
 const createBundleHeader = (version, metadataLength) => {
@@ -187,8 +139,7 @@ const createBundleHeader = (version, metadataLength) => {
   return headerBuffer;
 };
 
-const buildChunkManifest = async (instructions, assets = {}, options = {}) => {
-  const chunking = normalizeChunkingConfig(options.chunking);
+const buildChunkManifest = async (instructions, assets = {}) => {
   const chunkPayloads = new Map();
   const assetEntries = {};
   let rawAssetBytes = 0;
@@ -203,8 +154,6 @@ const buildChunkManifest = async (instructions, assets = {}, options = {}) => {
 
     for (const chunkBytes of await splitBytesIntoChunks({
       bytes: normalizedBytes,
-      entryId,
-      chunking,
     })) {
       const chunkId = await hashChunkBytes(chunkBytes);
       if (!chunkPayloads.has(chunkId)) {
@@ -216,6 +165,7 @@ const buildChunkManifest = async (instructions, assets = {}, options = {}) => {
     }
 
     return {
+      encoding: "raw",
       mime,
       size: normalizedBytes.byteLength,
       chunks: chunkIds,
@@ -254,11 +204,10 @@ const buildChunkManifest = async (instructions, assets = {}, options = {}) => {
 
   return {
     manifest: {
-      chunking: {
-        ...chunking,
-      },
+      chunking: BUNDLE_MANIFEST_CHUNKING,
       chunks,
       assets: assetEntries,
+      atlases: {},
       instructions: instructionsEntry,
     },
     chunkPayloads,
@@ -287,15 +236,10 @@ export const createBundleInstructions = ({ projectData, bundler, project }) => {
   };
 };
 
-export const createBundleResult = async (
-  instructions,
-  assets = {},
-  options = {},
-) => {
+export const createBundleResult = async (instructions, assets = {}) => {
   const { manifest, chunkPayloads, stats } = await buildChunkManifest(
     instructions,
     assets,
-    options,
   );
   const manifestBytes = textEncoder.encode(JSON.stringify(manifest));
   const headerBuffer = createBundleHeader(
@@ -337,8 +281,8 @@ export const createBundleResult = async (
   };
 };
 
-export const createBundle = async (instructions, assets = {}, options = {}) => {
-  const { bundle } = await createBundleResult(instructions, assets, options);
+export const createBundle = async (instructions, assets = {}) => {
+  const { bundle } = await createBundleResult(instructions, assets);
   return bundle;
 };
 
@@ -348,13 +292,11 @@ export const normalizeExportFileEntries = (entries = []) => {
 
   for (const entry of entries || []) {
     const fileId =
-      typeof entry === "string"
-        ? entry
-        : typeof entry?.fileId === "string"
-          ? entry.fileId
-          : typeof entry?.id === "string"
-            ? entry.id
-            : "";
+      typeof entry?.fileId === "string"
+        ? entry.fileId
+        : typeof entry?.id === "string"
+          ? entry.id
+          : "";
     if (!fileId) {
       continue;
     }
@@ -444,7 +386,7 @@ const reconstructV4AssetEntry = ({
       size: Number(metadata?.size ?? 0),
       width: Number(metadata?.width ?? 0),
       height: Number(metadata?.height ?? 0),
-      atlasId: metadata?.atlasId ?? metadata?.atlas_id ?? "",
+      atlasId: metadata?.atlasId ?? "",
       vertices: Array.isArray(metadata?.vertices) ? metadata.vertices : [],
       uvs: Array.isArray(metadata?.uvs) ? metadata.uvs : [],
       indices: Array.isArray(metadata?.indices) ? metadata.indices : [],
@@ -471,53 +413,7 @@ export const parseBundle = async (bundle) => {
   const dataView = new DataView(arrayBuffer);
   const version = dataView.getUint8(0);
 
-  if (version === BUNDLE_FORMAT_VERSION_V2) {
-    const indexLength = dataView.getUint32(1, false);
-    const indexBuffer = new Uint8Array(
-      arrayBuffer,
-      BUNDLE_HEADER_SIZE,
-      indexLength,
-    );
-    const index = JSON.parse(textDecoder.decode(indexBuffer));
-    const assets = {};
-    let instructions;
-    const dataBlockOffset = BUNDLE_HEADER_SIZE + indexLength;
-
-    Object.entries(index).forEach(([id, metadata]) => {
-      const contentStart = metadata.start + dataBlockOffset;
-      const contentEnd = metadata.end + dataBlockOffset + 1;
-      const content = new Uint8Array(
-        arrayBuffer,
-        contentStart,
-        contentEnd - contentStart,
-      );
-
-      if (id === "instructions") {
-        instructions = JSON.parse(textDecoder.decode(content));
-        return;
-      }
-
-      assets[id] = {
-        buffer: content,
-        mime: metadata?.mime,
-        size: content.byteLength,
-      };
-    });
-
-    return {
-      version,
-      manifest: {
-        index,
-      },
-      assets,
-      instructions,
-    };
-  }
-
-  if (
-    version !== BUNDLE_FORMAT_VERSION_V3 &&
-    version !== BUNDLE_FORMAT_VERSION_V4
-  ) {
+  if (version !== BUNDLE_FORMAT_VERSION_V4) {
     throw new Error(`Unsupported bundle version: ${version}`);
   }
 
@@ -544,20 +440,12 @@ export const parseBundle = async (bundle) => {
   }
 
   Object.entries(manifest.assets || {}).forEach(([assetId, metadata]) => {
-    assets[assetId] =
-      version === BUNDLE_FORMAT_VERSION_V4
-        ? reconstructV4AssetEntry({
-            metadata,
-            chunks: manifest.chunks,
-            chunkPayloadOffset,
-            arrayBuffer,
-          })
-        : reconstructChunkedEntry({
-            metadata,
-            chunks: manifest.chunks,
-            chunkPayloadOffset,
-            arrayBuffer,
-          });
+    assets[assetId] = reconstructV4AssetEntry({
+      metadata,
+      chunks: manifest.chunks,
+      chunkPayloadOffset,
+      arrayBuffer,
+    });
   });
 
   const instructionsEntry = reconstructChunkedEntry({
@@ -606,14 +494,13 @@ export const createProjectExportService = ({
   const service = {
     async createDistributionZipStreamed(
       projectData,
-      fileIds,
+      fileEntries,
       zipName,
       options = {},
     ) {
-      const fileEntries = normalizeExportFileEntries(fileIds);
       return fileAdapter.createDistributionZipStreamed({
         projectData,
-        fileEntries,
+        fileEntries: normalizeExportFileEntries(fileEntries),
         zipName,
         options,
         filePicker,
@@ -634,13 +521,12 @@ export const createProjectExportService = ({
 
   service.createDistributionZipStreamedToPath = async (
     projectData,
-    fileIds,
+    fileEntries,
     outputPath,
   ) => {
-    const fileEntries = normalizeExportFileEntries(fileIds);
     return fileAdapter.createDistributionZipStreamedToPath({
       projectData,
-      fileEntries,
+      fileEntries: normalizeExportFileEntries(fileEntries),
       outputPath,
       staticFiles: await getBundleStaticFiles(),
       getCurrentReference,

@@ -16,66 +16,45 @@ is unreachable, we should not ship it at all.
 
 ## Current State
 
-The current export path already has a first pass of resource filtering:
+The current branch implements the main export-bundle changes already:
 
 - `src/pages/versions/versions.handlers.js`
   - snapshots repository state for the selected version
-  - calls `collectUsedResourcesForExport(...)`
-  - calls `buildFilteredStateForExport(...)`
-  - builds `projectData`
-  - exports only the selected `fileIds`
+  - compiles export usage from reachability
+  - builds filtered `projectData`
+  - exports explicit `{ fileId, mimeType }` file entries
 - `src/internal/project/projection.js`
-  - `collectUsedResourcesForExport(...)` scans references and collects used
-    resource ids and file ids
-  - `buildFilteredStateForExport(...)` filters resource collections before
-    `constructProjectData(...)`
+  - walks reachable story content from `story.initialSceneId`
+  - follows transitions from story content and layouts/controls
+  - filters scenes, sections, lines, resources, and file ids from that graph
+- `src-tauri/src/export_zip.rs`
+  - writes shipping distribution ZIPs
+  - emits `package.bin v4`
+  - uses whole-file dedupe for raw payloads
+  - uses diced-image atlases for eligible image groups
+- `scripts/main.js`
+  - reads `package.bin v4`
+  - reconstructs diced images back into normal runtime assets
 
-That is good, but it is not the full optimization we want yet.
+## Remaining Opportunities
 
-## Main Gaps
+### 1. Reachability Needs Continued Regression Coverage
 
-### 1. Reachability Is Not Yet Story-Compiled
+The reachability pass is implemented, but it remains the highest-risk export
+area. Future feature work must keep adding tests for newly introduced runtime
+dependencies.
 
-The current resource scan walks `state.scenes` directly. That means a scene or
-section that is still present in repository state but is no longer reachable
-from `story.initialSceneId` can still keep resources and files alive during
-export.
+### 2. Startup Cost For Diced Images Is Still Eager
 
-We want a stronger reachability pass:
+Bundle size can improve while player startup still does atlas decode and diced
+image reconstruction before first render. This is an acceptable tradeoff for
+now, but it is the main remaining runtime cost to watch.
 
-- start from `story.initialSceneId`
-- walk scene/section/line transitions
-- include transitions originating from layouts and controls
-- include dependencies introduced by text styles, characters, sprites, fonts,
-  colors, animations, transforms, and variables as needed
-- treat anything not reached by that compiled dependency graph as dead for
-  export
+### 3. Some Asset Sets Still Need Raw Fallbacks
 
-This is the "tree shaking" step for story data and resources.
-
-### 2. We Are Still Leaving Easy Compression Wins On The Table
-
-Current ZIP generation does not yet fully exploit compression:
-
-- web export uses `JSZip`
-- Tauri export writes the ZIP in Rust with `CompressionMethod::Stored`
-
-Before building a more complex dedup format, we should capture the simpler
-baseline improvement first.
-
-### 3. Bundle Payload Still Duplicates Repeated Byte Ranges
-
-The current `package.bin` format stores:
-
-- header
-- index JSON
-- full asset byte payloads concatenated one after another
-- instructions JSON
-
-This deduplicates repeated `fileId`s only indirectly through the current
-`Set`-based collection of `fileIds`. It does not deduplicate repeated byte
-ranges across different assets or across slightly changed versions of similar
-assets.
+Not every bundle benefits from image optimization. The native exporter should
+keep raw whole-file storage as the default fallback whenever diced output does
+not earn its keep.
 
 ## Recommended Technical Direction
 
@@ -106,7 +85,7 @@ Expected result:
 
 Apply compression before deduplication work:
 
-- web ZIP export: use `DEFLATE` intentionally and measure the result
+- JS test/smoke ZIP generation: use `DEFLATE` intentionally and measure the result
 - Tauri ZIP export: switch from `Stored` to a compressed mode where practical
 - evaluate whether `package.bin` itself should remain raw inside the ZIP or be
   wrapped in additional compression only at the ZIP layer
@@ -114,47 +93,41 @@ Apply compression before deduplication work:
 This is not a substitute for dedupe, but it should land first because it is
 small, low-risk, and immediately measurable.
 
-### Step C: `package.bin` v3 With Chunk-Level Deduplication
+### Step C: `package.bin` v4 With Native Image Optimization
 
-Keep the custom bundle format, but change how payload bytes are stored.
+Keep the custom bundle format, but move the shipping optimization work into the
+native Tauri exporter.
 
-Do not adopt a third-party archive tool such as `casync` or `zpaq` as the
-shipping export format. They are useful references, but they are not a good
-fit for the current player/runtime integration.
+Current implemented direction:
 
-Recommended algorithm:
+- keep whole-file dedupe for all bundled payloads
+- use `package.bin v4`
+- optimize repeated image regions through diced image atlases in native export
+- reconstruct diced images back into normal runtime image assets in the player
 
-- use content-defined chunking
-- use FastCDC for chunk boundary detection
-- hash each chunk strongly
-- store unique chunks once
-- store per-asset chunk references in the manifest
-
-This gives us deduplication that survives byte shifts better than fixed-size
-chunking and is a better fit than an ad hoc "shuffle" strategy.
+This keeps the player contract stable while letting export optimize the asset
+payloads that actually benefit.
 
 ## Chosen Implementation Model
 
-### One Core Implementation
+### Shipping Export Path
 
-Do not maintain separate chunkers in JS and Rust.
+There is one production export path:
 
-Instead:
+- shipping distribution ZIPs are produced by the native Tauri exporter
+- the native exporter writes `package.bin v4`
+- the player runtime reads `package.bin v4`
 
-- build one Rust export core
-- use it directly from Tauri
-- compile the same Rust core to WebAssembly for web export
-
-This keeps bundle encoding logic, chunking behavior, and manifest semantics
-identical across platforms.
+The shared JS bundle writer is retained only for tests and smoke scripts. It is
+not a production export path.
 
 ### Why This Is The Right Split
 
-- Tauri already has a Rust export path, so the first implementation fits the
-  existing architecture naturally.
-- A separate pure-JS FastCDC implementation would increase maintenance cost and
-  format drift risk.
-- WebAssembly lets web export reuse the exact same chunking and manifest logic.
+- Tauri already owns the production distribution ZIP flow.
+- native export has direct disk access and can run heavier image optimization
+  without adding web-worker/wasm complexity
+- keeping the shared JS path minimal reduces format-drift risk instead of
+  pretending there are two equivalent bundlers
 
 ## Proposed Architecture
 
@@ -217,91 +190,56 @@ Make no format change yet.
 
 This gives a reliable before/after baseline for the dedupe work.
 
-### Phase 3: Rust Bundle Core
+### Phase 3: Native Bundle Core
 
-Create a small Rust core that owns:
+Create a native export core that owns:
 
-- FastCDC chunking
-- chunk hashing
-- `package.bin v3` manifest encoding
-- reconstruction metadata for runtime loading
+- `package.bin v4` manifest encoding
+- whole-file dedupe for raw payloads
+- diced-image atlas generation for eligible images
+- streamed ZIP writing and export stats
 
 Suggested structure:
 
 - keep Tauri command wiring in `src-tauri/src/`
-- move bundle encoding logic into a reusable Rust library crate
+- keep the shared JS writer minimal and test-only
 
-The core should accept:
+## `package.bin v4` Shape
 
-- asset stream descriptors
-- asset ids
-- instructions JSON
-
-And emit:
-
-- `package.bin v3`
-- or a streamed writer for `package.bin v3`
-
-### Phase 4: Tauri First
-
-Implement the new format in Tauri export first.
-
-Why:
-
-- no wasm setup needed for the first milestone
-- faster iteration on chunking parameters
-- easier streaming of large assets directly from disk
-
-Deliverables:
-
-- new bundle encoder in Rust
-- Tauri export command switched to v3
-- player parser updated to read both v2 and v3
-- tests and size benchmarks
-
-## `package.bin v3` Shape
-
-The exact wire format can change during implementation, but it should look like
-this conceptually:
+The implemented format is conceptually:
 
 1. version/header
 2. manifest length
-3. manifest JSON or binary metadata
+3. manifest JSON
 4. unique chunk payload area
-5. instructions payload
 
-Manifest contents should include:
+Manifest contents include:
 
-- chunk table
-  - chunk hash
+- `chunking`
+  - currently `whole-file-only` in the shared JS test writer
+- `chunks`
+  - chunk id/hash
   - start offset
   - byte length
-- asset table
-  - asset id
-  - mime
-  - ordered list of chunk references
-- instructions metadata
-  - location and length
-
-This allows:
-
-- reconstructing any asset by walking its chunk list
-- storing repeated chunks once
-- keeping the player-side loading model deterministic
+- `assets`
+  - raw asset entries
+  - or diced-image entries with atlas references and reconstruction metadata
+- `atlases`
+  - atlas image payload entries for diced assets
+- `instructions`
+  - bundle instructions metadata
 
 ## Runtime / Player Changes
 
 Update `scripts/main.js` to:
 
-- keep support for bundle format v2 during migration
-- add parser support for v3 manifest + chunk references
-- reconstruct asset bytes into `Blob`s before handing them to the existing
-  asset pipeline
+- read `package.bin v4`
+- reconstruct raw assets from stored payload chunks
+- reconstruct diced-image assets from atlas images before handing them to the
+  existing asset pipeline
 
-Migration rule:
-
-- read v2 and v3 for one release window
-- write only v3 once export confidence is high
+There is no migration window in the current branch. The runtime and the
+shipping exporter both target `v4`.
 
 ## Deferred Follow-Up: `route-graphics` Asset Loading
 
@@ -350,30 +288,12 @@ Add tests that prove unused content is removed:
 
 ### Bundle Format Tests
 
-Add tests that prove v3 correctness:
+Add tests that prove `v4` correctness:
 
-- reconstructing all assets from manifest yields original bytes
-- duplicate byte regions collapse into fewer stored bytes
-- chunk references are stable enough across similar inputs
-- v2 parser compatibility remains intact
-
-### Regression / Benchmark Tests
-
-Capture representative samples:
-
-- many identical assets
-- many nearly identical assets
-- mostly unique assets
-- large image/video payloads
-
-Track:
-
-- raw bytes
-- bytes after reachability filtering
-- bytes after ZIP compression
-- bytes after v3 dedupe
-- export time
-- load time
+- reconstructing raw assets from manifest yields original bytes
+- exact duplicate raw assets collapse into one stored payload
+- diced-image assets resolve through atlas metadata correctly
+- exported runtime still boots from the generated bundle
 
 ## Acceptance Criteria
 
@@ -390,11 +310,11 @@ Track:
 
 ### Dedupe Milestone
 
-- `package.bin v3` stores repeated chunks once
+- `package.bin v4` stores repeated raw assets once
+- eligible `png` / `jpeg` / `webp` assets can be emitted as diced-image atlases
 - exported runtime still loads correctly
-- Tauri export ships first
-- web export reuses the same Rust core through wasm
-- no separate JS chunker is maintained
+- Tauri export is the production path
+- the shared JS writer stays minimal and test-only
 
 ## Risks
 
@@ -403,31 +323,29 @@ Track:
 If the reachability compiler misses a runtime dependency, export can become
 broken. This is the highest-risk part and needs strong tests.
 
-### 2. Dedupe Overhead Can Outweigh Gains
+### 2. Image Optimization May Not Help Every Asset Set
 
-If chunk size parameters are poor, manifest overhead can erase benefits on
-small projects. We need benchmark coverage before finalizing defaults.
+Some bundles are dominated by unique or already-compressed assets. In those
+cases, diced-image processing may add complexity without large savings, so the
+exporter must keep raw fallback paths.
 
-### 3. Web Export Could Freeze The UI
+### 3. Diced Images Still Add Startup Work
 
-Web export must run in a worker once wasm is introduced. Do not run large
-chunking jobs on the main thread.
+The current player reconstructs diced assets before engine start. This is
+acceptable for now, but it can become a startup bottleneck on larger bundles.
 
 ## Recommended Delivery Order
 
 1. Strengthen export reachability and dead-resource elimination.
 2. Add ZIP compression and size instrumentation.
-3. Add `package.bin v3` with FastCDC in Rust for Tauri.
-4. Update player parser for v2 + v3.
-5. Reuse the Rust core from web export through wasm and a worker.
+3. Add `package.bin v4` native export with whole-file dedupe plus diced images.
+4. Update player parser/runtime for `v4`.
+5. Optimize startup cost later if diced-image reconstruction becomes a real
+   bottleneck.
 
 ## External References
 
-- FastCDC paper:
-  https://www.usenix.org/conference/atc16/technical-sessions/presentation/xia
-- `fastcdc-rs`:
-  https://github.com/nlfiedler/fastcdc-rs
-- `casync` design reference:
-  https://github.com/systemd/casync
-- wasm-pack targets:
-  https://rustwasm.github.io/docs/wasm-pack/print.html
+- Sprite Dicing:
+  https://github.com/elringus/sprite-dicing
+- Texture atlas compression based on repeated content removal:
+  https://texture-atlas-compression.github.io/

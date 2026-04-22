@@ -94,22 +94,22 @@ describe("projectExportService", () => {
     });
   });
 
-  it("normalizes legacy file id arrays into stable export file entries", () => {
+  it("normalizes export file entries into stable id/mime objects", () => {
     expect(
       normalizeExportFileEntries([
-        "file-1",
         { fileId: "file-2", mimeType: "image/png" },
         { id: "file-2" },
         { id: "file-3", mime: "font/ttf" },
+        { fileId: "file-4" },
       ]),
     ).toEqual([
-      { id: "file-1" },
       { id: "file-2", mimeType: "image/png" },
       { id: "file-3", mimeType: "font/ttf" },
+      { id: "file-4" },
     ]);
   });
 
-  it("stores repeated raw assets once in bundle format v3", async () => {
+  it("stores repeated raw assets once in bundle format v4", async () => {
     const repeatedBytes = Uint8Array.from(
       Array.from({ length: 160 * 1024 }, (_, index) => index % 251),
     );
@@ -145,10 +145,11 @@ describe("projectExportService", () => {
 
     const parsed = await parseBundle(bundle);
 
-    expect(parsed.version).toBe(3);
+    expect(parsed.version).toBe(4);
     expect(parsed.manifest.assets["file-a"].chunks).toEqual(
       parsed.manifest.assets["file-b"].chunks,
     );
+    expect(parsed.manifest.assets["file-a"].encoding).toBe("raw");
     expect(parsed.manifest.assets["file-a"].chunks).toHaveLength(1);
     const totalChunkReferences =
       Object.values(parsed.manifest.assets).reduce(
@@ -166,7 +167,7 @@ describe("projectExportService", () => {
     );
   });
 
-  it("stores non-identical raw assets separately in bundle format v3", async () => {
+  it("stores non-identical raw assets separately in bundle format v4", async () => {
     const baseBytes = Uint8Array.from(
       Array.from({ length: 96 * 1024 }, (_, index) => index % 251),
     );
@@ -216,44 +217,6 @@ describe("projectExportService", () => {
     );
     expect(Array.from(parsed.assets.shifted.buffer)).toEqual(
       Array.from(variantBytes),
-    );
-  });
-
-  it("rejects FastCDC chunking requests in the shared JS bundle writer", async () => {
-    await expect(
-      createBundleResult(
-        {
-          projectData: {
-            story: {
-              initialSceneId: "scene-1",
-              scenes: {
-                "scene-1": {
-                  initialSectionId: "section-1",
-                  sections: {
-                    "section-1": {
-                      lines: [],
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-        {
-          sample: {
-            buffer: Uint8Array.from([1, 2, 3]),
-            mime: "application/octet-stream",
-          },
-        },
-        {
-          chunking: {
-            algorithm: "fastcdc",
-            mode: "whole-file-or-fastcdc",
-          },
-        },
-      ),
-    ).rejects.toThrow(
-      "Shared JS bundle export only supports whole-file dedupe.",
     );
   });
 
@@ -403,118 +366,4 @@ describe("projectExportService", () => {
     );
   });
 
-  it("accepts legacy v4 diced-image manifests with atlas_id", async () => {
-    const textEncoder = new TextEncoder();
-    const atlasChunk = Uint8Array.from([9, 8, 7, 6]);
-    const instructionsChunk = textEncoder.encode(
-      JSON.stringify({
-        projectData: {
-          story: {
-            initialSceneId: "scene-1",
-            scenes: {
-              "scene-1": {
-                initialSectionId: "section-1",
-                sections: {
-                  "section-1": {
-                    lines: [],
-                  },
-                },
-              },
-            },
-          },
-        },
-      }),
-    );
-    const manifest = {
-      chunking: {
-        algorithm: "none",
-        mode: "whole-file-only",
-      },
-      imageOptimization: {
-        algorithm: "sprite-dicing",
-        eligibleMimeTypes: ["image/png", "image/jpeg", "image/webp"],
-        grouping: "decoded-image-dimensions",
-        unitSize: 64,
-        padding: 0,
-        trimTransparent: false,
-        atlasSizeLimit: 2048,
-        ppu: 1,
-        pivot: { x: 0, y: 0 },
-      },
-      chunks: {
-        "chunk-atlas": {
-          start: 0,
-          length: atlasChunk.byteLength,
-          sha256: "chunk-atlas",
-        },
-        "chunk-instructions": {
-          start: atlasChunk.byteLength,
-          length: instructionsChunk.byteLength,
-          sha256: "chunk-instructions",
-        },
-      },
-      assets: {
-        dicedAsset: {
-          encoding: "diced-image",
-          mime: "image/png",
-          size: 16,
-          width: 2,
-          height: 2,
-          atlas_id: "atlas-1",
-          vertices: [
-            { x: 0, y: 0 },
-            { x: 2, y: 0 },
-            { x: 2, y: 2 },
-            { x: 0, y: 2 },
-          ],
-          uvs: [
-            { u: 0, v: 0 },
-            { u: 1, v: 0 },
-            { u: 1, v: 1 },
-            { u: 0, v: 1 },
-          ],
-          indices: [0, 1, 2, 0, 2, 3],
-          rect: { x: 0, y: 0, width: 2, height: 2 },
-          pivot: { x: 0, y: 0 },
-        },
-      },
-      atlases: {
-        "atlas-1": {
-          mime: "image/png",
-          size: atlasChunk.byteLength,
-          chunks: ["chunk-atlas"],
-        },
-      },
-      instructions: {
-        mime: "application/json",
-        size: instructionsChunk.byteLength,
-        chunks: ["chunk-instructions"],
-      },
-    };
-    const manifestBytes = textEncoder.encode(JSON.stringify(manifest));
-    const bundle = new Uint8Array(
-      BUNDLE_HEADER_SIZE +
-        manifestBytes.byteLength +
-        atlasChunk.byteLength +
-        instructionsChunk.byteLength,
-    );
-
-    bundle[0] = BUNDLE_FORMAT_VERSION_V4;
-    new DataView(bundle.buffer).setUint32(1, manifestBytes.byteLength, false);
-    bundle.set(manifestBytes, BUNDLE_HEADER_SIZE);
-    bundle.set(atlasChunk, BUNDLE_HEADER_SIZE + manifestBytes.byteLength);
-    bundle.set(
-      instructionsChunk,
-      BUNDLE_HEADER_SIZE + manifestBytes.byteLength + atlasChunk.byteLength,
-    );
-
-    const parsed = await parseBundle(bundle);
-
-    expect(parsed.assets.dicedAsset).toMatchObject({
-      encoding: "diced-image",
-      atlasId: "atlas-1",
-      width: 2,
-      height: 2,
-    });
-  });
 });

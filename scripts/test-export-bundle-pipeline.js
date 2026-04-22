@@ -249,6 +249,10 @@ assert.deepEqual(new Set(usage.fileIds), new Set(["file-live", "file-target"]));
 
 const filteredState = buildFilteredStateForExport(repositoryState, usage);
 const projectData = constructProjectData(filteredState);
+const fileEntries = usage.fileIds.map((fileId) => ({
+  fileId,
+  mimeType: "image/png",
+}));
 const bundlePayload = createBundleInstructions({
   projectData,
   bundler: {
@@ -347,7 +351,7 @@ try {
 
   await service.createDistributionZipStreamed(
     bundlePayload,
-    usage.fileIds,
+    fileEntries,
     "test-export",
   );
 

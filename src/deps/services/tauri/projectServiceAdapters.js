@@ -355,14 +355,11 @@ export const createTauriProjectServiceAdapters = ({
 
   const collectDistributionZipAssets = async ({
     fileEntries,
-    fileIds,
     getCurrentReference,
   }) => {
     const reference = getCurrentReference();
     const filesPath = await join(reference.projectPath, "files");
-    const normalizedFileEntries = normalizeExportFileEntries(
-      fileEntries || fileIds,
-    );
+    const normalizedFileEntries = normalizeExportFileEntries(fileEntries);
 
     const assets = [];
     for (const fileEntry of normalizedFileEntries) {
@@ -386,7 +383,6 @@ export const createTauriProjectServiceAdapters = ({
   const createDistributionZipStreamedToPath = async ({
     projectData,
     fileEntries,
-    fileIds,
     outputPath,
     staticFiles,
     options = {},
@@ -394,7 +390,6 @@ export const createTauriProjectServiceAdapters = ({
   }) => {
     const assets = await collectDistributionZipAssets({
       fileEntries,
-      fileIds,
       getCurrentReference,
     });
 
@@ -649,7 +644,7 @@ export const createTauriProjectServiceAdapters = ({
 
     createDistributionZipStreamed: async ({
       projectData,
-      fileIds,
+      fileEntries,
       zipName,
       options,
       filePicker,
@@ -669,7 +664,7 @@ export const createTauriProjectServiceAdapters = ({
 
         return createDistributionZipStreamedToPath({
           projectData,
-          fileIds,
+          fileEntries,
           outputPath: selectedPath,
           staticFiles,
           options,
