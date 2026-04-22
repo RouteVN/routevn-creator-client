@@ -22,6 +22,7 @@ describe("layoutEditorPreview", () => {
         },
       },
       dialogueDefaultValues: {
+        "dialogue-character-id": "character-1",
         "dialogue-character-name": "Aki",
         "dialogue-content": "Hello there",
       },
@@ -35,8 +36,17 @@ describe("layoutEditorPreview", () => {
       boolVar: true,
     });
     expect(previewData.runtime.dialogueTextSpeed).toBe(50);
+    expect(previewData.dialogue.characterId).toBe("character-1");
     expect(previewData.dialogue.character.name).toBe("Aki");
     expect(previewData.dialogue.content[0].text).toBe("Hello there");
+    expect(previewData.dialogueLines).toEqual(previewData.dialogue.lines);
+    expect(previewData.dialogue.lines[0]).toMatchObject({
+      characterId: "character-1",
+      character: {
+        name: "Aki",
+      },
+      characterName: "Aki",
+    });
     expect(previewData.choice.items).toEqual([
       {
         content: "First",
@@ -255,6 +265,9 @@ describe("layoutEditorPreview", () => {
 
     expect(previewData.dialogue.lines).toEqual([
       {
+        character: {
+          name: "Aki",
+        },
         characterName: "Aki",
         content: [{ text: "First NVL line" }],
       },
@@ -357,6 +370,39 @@ describe("layoutEditorPreview", () => {
     expect(previewData).not.toHaveProperty("variables");
   });
 
+  it("includes dialogue preview data for general layouts with dialogue character conditions", () => {
+    const previewData = createLayoutEditorPreviewData({
+      layoutType: "general",
+      currentLayoutId: "layout-general",
+      currentLayoutData: {
+        items: {
+          badge: {
+            id: "badge",
+            type: "container",
+            $when: 'dialogue.characterId == "character-1"',
+          },
+        },
+        tree: [{ id: "badge" }],
+      },
+      layoutsData: {
+        items: {},
+        tree: [],
+      },
+      variablesData: {
+        items: {},
+      },
+    });
+
+    expect(previewData.runtime).toBeDefined();
+    expect(previewData.dialogue).toMatchObject({
+      characterId: "",
+      character: {
+        name: "Character",
+      },
+    });
+    expect(previewData).not.toHaveProperty("variables");
+  });
+
   it("includes runtime fields in preview runtime data", () => {
     const previewData = createLayoutEditorPreviewData({
       variablesData: {
@@ -401,6 +447,60 @@ describe("layoutEditorPreview", () => {
     expect(previewData.runtime.isLineCompleted).toBe(true);
     expect(previewData.runtime.autoMode).toBe(true);
     expect(previewData.runtime.skipMode).toBe(true);
+  });
+
+  it("renders dialogue.characterId in preview templates", () => {
+    const rendered = createLayoutEditorRenderedElements({
+      layoutState: {
+        id: "layout-1",
+        layoutType: "general",
+        elements: {
+          items: {
+            "text-1": {
+              id: "text-1",
+              type: "text",
+              name: "Speaker Id",
+              x: 0,
+              y: 0,
+              width: 200,
+              height: 40,
+              anchorX: 0,
+              anchorY: 0,
+              scaleX: 1,
+              scaleY: 1,
+              rotation: 0,
+              content: "${dialogue.characterId}",
+            },
+          },
+          tree: [{ id: "text-1", children: [] }],
+        },
+      },
+      repositoryState: {
+        layouts: { items: {} },
+        images: { items: {} },
+        textStyles: { items: {} },
+        colors: { items: {} },
+        fonts: { items: {} },
+      },
+      previewData: {
+        dialogue: {
+          characterId: "character-1",
+          character: {
+            name: "Aki",
+          },
+          content: [{ text: "Hello there" }],
+          lines: [],
+        },
+      },
+      graphicsService: {
+        parse: ({ elements }) => ({ elements }),
+      },
+    });
+
+    expect(rendered.elements[0]).toMatchObject({
+      type: "text",
+      content: "character-1",
+    });
   });
 
   it("uses dialogue preview toggles for line completion, auto mode, and skip mode", () => {

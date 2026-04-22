@@ -202,10 +202,14 @@ export const getConditionalOverrideAttributeLabel = (fieldName) => {
 export const createConditionalOverrideConditionDefaults = (
   rule,
   targetTypeByTarget,
+  targetValueKindByTarget,
 ) => {
   const target = rule?.when?.target ?? "";
   const selectedVariableType = target
     ? (targetTypeByTarget[target] ?? "string")
+    : undefined;
+  const selectedValueKind = target
+    ? (targetValueKindByTarget?.[target] ?? selectedVariableType ?? "string")
     : undefined;
   const rawValue = rule?.when?.value;
   const parsedNumberValue = Number(rawValue);
@@ -216,7 +220,9 @@ export const createConditionalOverrideConditionDefaults = (
     booleanValue: rawValue === true,
     numberValue: Number.isFinite(parsedNumberValue) ? parsedNumberValue : 0,
     stringValue: typeof rawValue === "string" ? rawValue : "",
+    characterValue: typeof rawValue === "string" ? rawValue : "",
     selectedVariableType,
+    selectedValueKind,
   };
 };
 
@@ -261,11 +267,20 @@ export const createConditionalOverrideConditionForm = ({
         required: true,
       },
       {
-        $when: "target && selectedVariableType == 'string'",
+        $when: "target && selectedValueKind == 'string'",
         name: "stringValue",
         type: "input-text",
         label: "Value",
         required: true,
+      },
+      {
+        $when: "target && selectedValueKind == 'character'",
+        name: "characterValue",
+        type: "select",
+        label: "Character",
+        required: true,
+        clearable: false,
+        options: "${characterValueOptions}",
       },
     ],
     actions: {

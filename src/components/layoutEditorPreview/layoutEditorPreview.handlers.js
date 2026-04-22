@@ -3,6 +3,29 @@ const toPositivePreviewRevealingSpeed = (rawValue) => {
   return Number.isFinite(value) && value > 0 ? value : 50;
 };
 
+const DIALOGUE_CHARACTER_ID_FIELD = "dialogue-character-id";
+const DIALOGUE_CUSTOM_CHARACTER_NAME_FIELD = "dialogue-custom-character-name";
+const DIALOGUE_CHARACTER_NAME_FIELD = "dialogue-character-name";
+
+const getStoreState = (deps) => {
+  return deps.store.getState
+    ? deps.store.getState()
+    : deps.store._state || deps.store.state;
+};
+
+const getPreviewCharactersData = (deps) => {
+  const repositoryState = deps.store.selectRepositoryState();
+  return deps.props.charactersData ?? repositoryState?.characters;
+};
+
+const getSelectedCharacterName = (deps, characterId) => {
+  if (typeof characterId !== "string" || characterId.length === 0) {
+    return "";
+  }
+
+  return getPreviewCharactersData(deps)?.items?.[characterId]?.name ?? "";
+};
+
 const syncRepositoryState = async (deps) => {
   await deps.projectService.ensureRepository();
   deps.store.setRepositoryState({
@@ -104,6 +127,47 @@ export const handleOnUpdate = async (deps, payload) => {
 
 export const handleDialogueFormChange = (deps, payload) => {
   const { name, value: fieldValue } = payload._event.detail;
+
+  if (name === DIALOGUE_CHARACTER_ID_FIELD) {
+    deps.store.setDialogueDefaultValue({
+      name,
+      fieldValue,
+    });
+
+    const dialogueDefaultValues =
+      getStoreState(deps)?.dialogueDefaultValues ?? {};
+    if (dialogueDefaultValues[DIALOGUE_CUSTOM_CHARACTER_NAME_FIELD] !== true) {
+      deps.store.setDialogueDefaultValue({
+        name: DIALOGUE_CHARACTER_NAME_FIELD,
+        fieldValue: getSelectedCharacterName(deps, fieldValue),
+      });
+    }
+
+    renderAndEmitPreviewDataChange(deps);
+    return;
+  }
+
+  if (name === DIALOGUE_CUSTOM_CHARACTER_NAME_FIELD) {
+    deps.store.setDialogueDefaultValue({
+      name,
+      fieldValue,
+    });
+
+    if (fieldValue !== true) {
+      const dialogueDefaultValues =
+        getStoreState(deps)?.dialogueDefaultValues ?? {};
+      deps.store.setDialogueDefaultValue({
+        name: DIALOGUE_CHARACTER_NAME_FIELD,
+        fieldValue: getSelectedCharacterName(
+          deps,
+          dialogueDefaultValues[DIALOGUE_CHARACTER_ID_FIELD] ?? "",
+        ),
+      });
+    }
+
+    renderAndEmitPreviewDataChange(deps);
+    return;
+  }
 
   deps.store.setDialogueDefaultValue({ name, fieldValue });
   renderAndEmitPreviewDataChange(deps);

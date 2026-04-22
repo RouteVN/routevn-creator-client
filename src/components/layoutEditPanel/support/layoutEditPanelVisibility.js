@@ -1,9 +1,14 @@
 import {
+  DIALOGUE_CHARACTER_ID_CONDITION_TARGET,
   getSpecialLayoutConditionItems,
   parseVariableConditionTarget,
   splitLayoutConditionFromWhen,
   toVariableConditionTarget,
 } from "../../../internal/layoutConditions.js";
+import {
+  getCharacterOptionLabel,
+  toCharacterSelectOptions,
+} from "../../../internal/characterOptions.js";
 
 const VISIBILITY_CONDITION_OP_OPTIONS = [{ label: "Equals", value: "eq" }];
 const VISIBILITY_BOOLEAN_OPTIONS = [
@@ -63,7 +68,9 @@ export const toVisibilityConditionTargetOptions = (
     .map(([target, variable]) => ({
       label: variable.name,
       value: target,
-      suffixText: String(variable.type || "string").toLowerCase(),
+      suffixText: String(
+        variable.valueKind || variable.type || "string",
+      ).toLowerCase(),
     }))
     .sort((left, right) => left.label.localeCompare(right.label));
 };
@@ -80,6 +87,30 @@ export const toVisibilityConditionTargetTypeByTarget = (
       ],
     ),
   );
+};
+
+export const toVisibilityConditionTargetValueKindByTarget = (
+  variablesData = {},
+  options = {},
+) => {
+  return Object.fromEntries(
+    Object.entries(getScalarConditionTargetItems(variablesData, options)).map(
+      ([target, variable]) => [
+        target,
+        String(variable?.valueKind || variable?.type || "string").toLowerCase(),
+      ],
+    ),
+  );
+};
+
+export const getVisibilityConditionCharacterValueOptions = ({
+  charactersData,
+  currentValue,
+} = {}) => {
+  return toCharacterSelectOptions(charactersData, {
+    includeNone: true,
+    includeMissingValue: currentValue,
+  });
 };
 
 const getVisibilityConditionTargetName = (
@@ -117,9 +148,17 @@ export const getVisibilityConditionSummary = (
     options,
   );
   const value =
-    typeof visibilityCondition.value === "string"
-      ? `"${visibilityCondition.value}"`
-      : String(visibilityCondition.value);
+    visibilityCondition.target === DIALOGUE_CHARACTER_ID_CONDITION_TARGET
+      ? (getCharacterOptionLabel(
+          options.charactersData,
+          visibilityCondition.value,
+          {
+            noneLabel: "No Character",
+          },
+        ) ?? `"${visibilityCondition.value ?? ""}"`)
+      : typeof visibilityCondition.value === "string"
+        ? `"${visibilityCondition.value}"`
+        : String(visibilityCondition.value);
 
   return `${targetName} == ${value}`;
 };
@@ -127,10 +166,14 @@ export const getVisibilityConditionSummary = (
 export const createVisibilityConditionDialogDefaults = (
   visibilityCondition,
   targetTypeByTarget,
+  targetValueKindByTarget,
 ) => {
   const target = visibilityCondition?.target ?? "";
   const selectedVariableType = target
     ? (targetTypeByTarget[target] ?? "string")
+    : undefined;
+  const selectedValueKind = target
+    ? (targetValueKindByTarget?.[target] ?? selectedVariableType ?? "string")
     : undefined;
   const rawValue = visibilityCondition?.value;
   const parsedNumberValue = Number(rawValue);
@@ -141,7 +184,9 @@ export const createVisibilityConditionDialogDefaults = (
     booleanValue: rawValue === true,
     numberValue: Number.isFinite(parsedNumberValue) ? parsedNumberValue : 0,
     stringValue: typeof rawValue === "string" ? rawValue : "",
+    characterValue: typeof rawValue === "string" ? rawValue : "",
     selectedVariableType,
+    selectedValueKind,
   };
 };
 
@@ -182,11 +227,20 @@ export const createVisibilityConditionForm = ({ targetOptions } = {}) => {
         required: true,
       },
       {
-        $when: "target && selectedVariableType == 'string'",
+        $when: "target && selectedValueKind == 'string'",
         name: "stringValue",
         type: "input-text",
         label: "Value",
         required: true,
+      },
+      {
+        $when: "target && selectedValueKind == 'character'",
+        name: "characterValue",
+        type: "select",
+        label: "Character",
+        required: true,
+        clearable: false,
+        options: "${characterValueOptions}",
       },
     ],
     actions: {

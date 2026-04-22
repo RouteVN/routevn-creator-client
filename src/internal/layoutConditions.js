@@ -1,6 +1,7 @@
 import { getRuntimeConditionItems } from "./runtimeFields.js";
 
 export const SAVE_DATA_AVAILABLE_CONDITION_TARGET = "item.savedAt";
+export const DIALOGUE_CHARACTER_ID_CONDITION_TARGET = "dialogue.characterId";
 export const LINE_COMPLETED_CONDITION_TARGET = "runtime.isLineCompleted";
 export const AUTO_MODE_CONDITION_TARGET = "runtime.autoMode";
 export const SKIP_MODE_CONDITION_TARGET = "runtime.skipMode";
@@ -76,6 +77,17 @@ export const getSpecialLayoutConditionItems = ({
       description: "Whether this save/load slot already has saved data",
     };
   }
+
+  items[DIALOGUE_CHARACTER_ID_CONDITION_TARGET] = {
+    id: DIALOGUE_CHARACTER_ID_CONDITION_TARGET,
+    target: DIALOGUE_CHARACTER_ID_CONDITION_TARGET,
+    name: "Current Dialogue Character",
+    type: "string",
+    source: "dialogue",
+    valueKind: "character",
+    description:
+      "The current dialogue speaker character id for the active line",
+  };
 
   return items;
 };
@@ -282,7 +294,11 @@ const parseConditionTargetClause = (clause) => {
     };
   }
 
-  for (const fixedStateItem of Object.values(getRuntimeConditionItems())) {
+  for (const fixedStateItem of Object.values(
+    getSpecialLayoutConditionItems({
+      includeSaveDataAvailable: true,
+    }),
+  )) {
     const escapedTarget = fixedStateItem.target.replace(
       /[.*+?^${}()|[\]\\]/g,
       "\\$&",

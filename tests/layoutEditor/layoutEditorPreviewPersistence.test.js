@@ -32,6 +32,7 @@ describe("layoutEditor preview persistence", () => {
         isLineCompleted: true,
       },
       dialogue: {
+        characterId: "character-1",
         character: {
           name: "Aki",
         },
@@ -82,7 +83,31 @@ describe("layoutEditor preview persistence", () => {
       },
     );
 
-    expect(selectPreviewData({ state })).toMatchObject(persistedPreviewData);
+    expect(state.dialogueDefaultValues).toMatchObject({
+      "dialogue-character-id": "character-1",
+      "dialogue-custom-character-name": true,
+      "dialogue-character-name": "Aki",
+      "dialogue-content": "Saved dialogue preview",
+    });
+    expect(state.previewVariableValues).toMatchObject({
+      "variables.score": 7,
+    });
+    expect(selectPreviewData({ state })).toMatchObject({
+      backgroundImageId: "image-preview",
+      runtime: {
+        dialogueTextSpeed: 25,
+        autoMode: true,
+        skipMode: false,
+        isLineCompleted: true,
+      },
+      dialogue: {
+        characterId: "character-1",
+        character: {
+          name: "Aki",
+        },
+        content: [{ text: "Saved dialogue preview" }],
+      },
+    });
   });
 
   it("loads persisted preview data but preserves unsaved local preview edits on refresh", () => {

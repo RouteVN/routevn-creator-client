@@ -31,6 +31,7 @@ export const createInitialState = () => {
     images: { tree: [], items: {} },
     spritesheetsData: { tree: [], items: {} },
     particlesData: { tree: [], items: {} },
+    charactersData: { tree: [], items: {} },
     layoutsData: { tree: [], items: {} },
     textStylesData: { tree: [], items: {} },
     colorsData: { tree: [], items: {} },
@@ -191,6 +192,7 @@ export const syncRepositoryState = ({ state }, payload = {}) => {
     images,
     spritesheetsData,
     particlesData,
+    charactersData,
     layoutsData,
     textStylesData,
     colorsData,
@@ -222,6 +224,7 @@ export const syncRepositoryState = ({ state }, payload = {}) => {
   state.images = images ?? { items: {}, tree: [] };
   state.spritesheetsData = spritesheetsData ?? { items: {}, tree: [] };
   state.particlesData = particlesData ?? { items: {}, tree: [] };
+  state.charactersData = charactersData ?? { items: {}, tree: [] };
   state.layoutsData = layoutsData ?? { items: {}, tree: [] };
   state.textStylesData = textStylesData ?? { items: {}, tree: [] };
   state.colorsData = colorsData ?? { items: {}, tree: [] };
@@ -382,6 +385,7 @@ export const selectViewData = ({ state, constants }) => {
     imagesData: state.images,
     spritesheetsData: state.spritesheetsData,
     particlesData: state.particlesData,
+    charactersData: state.charactersData,
     textStylesData: state.textStylesData,
     variablesData: state.variablesData,
     layoutsData: state.layoutsData,

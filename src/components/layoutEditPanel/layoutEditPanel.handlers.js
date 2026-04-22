@@ -484,6 +484,8 @@ export const handleVisibilityConditionItemClick = (deps) => {
   const { render, store } = deps;
   const targetTypeByTarget =
     store.selectVisibilityConditionTargetTypeByTarget();
+  const targetValueKindByTarget =
+    store.selectVisibilityConditionTargetValueKindByTarget();
   const currentVisibilityCondition = splitVisibilityConditionFromWhen(
     store.selectValues()["$when"],
   ).visibilityCondition;
@@ -492,6 +494,11 @@ export const handleVisibilityConditionItemClick = (deps) => {
   store.setVisibilityConditionDialogSelectedVariableType({
     selectedVariableType: target
       ? (targetTypeByTarget?.[target] ?? "string")
+      : undefined,
+    selectedValueKind: target
+      ? (targetValueKindByTarget?.[target] ??
+        targetTypeByTarget?.[target] ??
+        "string")
       : undefined,
   });
   store.openVisibilityConditionDialog();
@@ -585,8 +592,15 @@ export const handleVisibilityConditionFormChange = (deps, payload) => {
   const values = payload._event.detail?.values ?? {};
   const targetTypeByTarget =
     store.selectVisibilityConditionTargetTypeByTarget();
+  const targetValueKindByTarget =
+    store.selectVisibilityConditionTargetValueKindByTarget();
   const selectedVariableType = values.target
     ? (targetTypeByTarget?.[values.target] ?? "string")
+    : undefined;
+  const selectedValueKind = values.target
+    ? (targetValueKindByTarget?.[values.target] ??
+      selectedVariableType ??
+      "string")
     : undefined;
 
   if (values.target && values.op === undefined) {
@@ -609,6 +623,7 @@ export const handleVisibilityConditionFormChange = (deps, payload) => {
 
   store.setVisibilityConditionDialogSelectedVariableType({
     selectedVariableType,
+    selectedValueKind,
   });
   render();
 };
@@ -648,11 +663,20 @@ export const handleConditionalOverrideConditionFormChange = (deps, payload) => {
   const values = payload._event.detail?.values ?? {};
   const targetTypeByTarget =
     store.selectVisibilityConditionTargetTypeByTarget();
+  const targetValueKindByTarget =
+    store.selectVisibilityConditionTargetValueKindByTarget();
+  const selectedVariableType = values.target
+    ? (targetTypeByTarget?.[values.target] ?? "string")
+    : undefined;
+  const selectedValueKind = values.target
+    ? (targetValueKindByTarget?.[values.target] ??
+      selectedVariableType ??
+      "string")
+    : undefined;
 
   store.setConditionalOverrideConditionDialogSelectedVariableType({
-    selectedVariableType: values.target
-      ? (targetTypeByTarget?.[values.target] ?? "string")
-      : undefined,
+    selectedVariableType,
+    selectedValueKind,
   });
   render();
 };
@@ -901,6 +925,9 @@ export const handleVisibilityConditionFormAction = (deps, payload) => {
 
   const targetType =
     store.selectVisibilityConditionTargetTypeByTarget()?.[target] || "string";
+  const targetValueKind =
+    store.selectVisibilityConditionTargetValueKindByTarget()?.[target] ||
+    targetType;
 
   let conditionValue = values.stringValue ?? "";
   if (targetType === "boolean") {
@@ -908,6 +935,8 @@ export const handleVisibilityConditionFormAction = (deps, payload) => {
   } else if (targetType === "number") {
     const parsedNumber = Number(values.numberValue);
     conditionValue = Number.isFinite(parsedNumber) ? parsedNumber : 0;
+  } else if (targetValueKind === "character") {
+    conditionValue = values.characterValue ?? "";
   }
 
   const nextVisibilityWhen = buildVisibilityConditionExpression({
@@ -1009,11 +1038,18 @@ export const handleConditionalOverrideConditionClick = (deps, payload) => {
   const rule = Number.isInteger(index) && index >= 0 ? rules[index] : undefined;
   const targetTypeByTarget =
     store.selectVisibilityConditionTargetTypeByTarget();
+  const targetValueKindByTarget =
+    store.selectVisibilityConditionTargetValueKindByTarget();
 
   store.openConditionalOverrideConditionDialog({
     editingIndex: Number.isInteger(index) && index >= 0 ? index : undefined,
     selectedVariableType: rule?.when?.target
       ? (targetTypeByTarget?.[rule.when.target] ?? "string")
+      : undefined,
+    selectedValueKind: rule?.when?.target
+      ? (targetValueKindByTarget?.[rule.when.target] ??
+        targetTypeByTarget?.[rule.when.target] ??
+        "string")
       : undefined,
   });
   render();
@@ -1147,6 +1183,9 @@ export const handleConditionalOverrideConditionFormAction = (deps, payload) => {
   const targetType =
     store.selectVisibilityConditionTargetTypeByTarget()?.[values.target] ||
     "string";
+  const targetValueKind =
+    store.selectVisibilityConditionTargetValueKindByTarget()?.[values.target] ||
+    targetType;
 
   let conditionValue = values.stringValue ?? "";
   if (targetType === "boolean") {
@@ -1154,6 +1193,8 @@ export const handleConditionalOverrideConditionFormAction = (deps, payload) => {
   } else if (targetType === "number") {
     const parsedNumber = Number(values.numberValue);
     conditionValue = Number.isFinite(parsedNumber) ? parsedNumber : 0;
+  } else if (targetValueKind === "character") {
+    conditionValue = values.characterValue ?? "";
   }
 
   const nextRule = {
