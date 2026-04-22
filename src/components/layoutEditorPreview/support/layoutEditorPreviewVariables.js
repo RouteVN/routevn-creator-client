@@ -186,7 +186,14 @@ export const getLayoutPreviewVariableItems = ({
 
     const runtimeItem = runtimeItems[target];
     const variableId = parseVariableConditionTarget(target);
+    if (!runtimeItem && !variableId) {
+      continue;
+    }
+
     const variable = variableId ? availableVariables[variableId] : runtimeItem;
+    if (!variable) {
+      continue;
+    }
     const type = String(variable?.type ?? "string").toLowerCase();
 
     if (!isSupportedPreviewVariableType(type)) {

@@ -1,4 +1,7 @@
-import { createLayoutEditorPreviewData } from "./support/layoutEditorPreviewData.js";
+import {
+  createLayoutEditorPreviewData,
+  getLayoutPreviewSections,
+} from "./support/layoutEditorPreviewData.js";
 import {
   createChoiceFormDefaultValues,
   createHistoryFormDefaultValues,
@@ -10,6 +13,7 @@ import {
 } from "./support/layoutEditorPreviewSupport.js";
 import { createPersistedPreviewState } from "./support/layoutEditorPreviewPersistence.js";
 import { toFlatItems } from "../../internal/project/tree.js";
+import { toCharacterSelectOptions } from "../../internal/characterOptions.js";
 
 const EMPTY_LAYOUT_DATA = {
   items: {},
@@ -28,8 +32,12 @@ const PREVIEW_BACKGROUND_MENU_ITEMS = [
     value: "remove-background",
   },
 ];
+const DIALOGUE_CUSTOM_CHARACTER_NAME_FIELD = "dialogue-custom-character-name";
+const DIALOGUE_CHARACTER_NAME_FIELD = "dialogue-character-name";
 
 const createDialogueDefaultValues = () => ({
+  "dialogue-character-id": "",
+  [DIALOGUE_CUSTOM_CHARACTER_NAME_FIELD]: false,
   "dialogue-character-name": "Character",
   "dialogue-content": "This is a sample dialogue content.",
   "dialogue-auto-mode": false,
@@ -136,6 +144,23 @@ const withPreviewBackgroundSlot = (form) => {
   };
 };
 
+const withDialogueCharacterNameField = (form, { visible } = {}) => {
+  if (!form || typeof form !== "object") {
+    return form;
+  }
+
+  return {
+    ...form,
+    fields: Array.isArray(form.fields)
+      ? form.fields
+          .map((field) => cloneFormField(field))
+          .filter(
+            (field) => visible || field?.name !== DIALOGUE_CHARACTER_NAME_FIELD,
+          )
+      : [],
+  };
+};
+
 const createPreviewBackgroundOnlyForm = () => {
   return withPreviewBackgroundSlot({
     title: "Preview",
@@ -146,14 +171,15 @@ const createPreviewBackgroundOnlyForm = () => {
 
 const resolvePreviewBackgroundFormTarget = ({
   layoutType,
+  dialoguePreviewMode,
   hasPreviewVariables,
   hasSaveLoadPreview,
 } = {}) => {
-  if (layoutType === "dialogue-adv") {
+  if (layoutType === "dialogue-adv" || dialoguePreviewMode === "dialogue") {
     return "dialogue";
   }
 
-  if (layoutType === "dialogue-nvl") {
+  if (layoutType === "dialogue-nvl" || dialoguePreviewMode === "nvl") {
     return "nvl";
   }
 
@@ -479,6 +505,10 @@ export const selectPreviewVariableValues = ({ state }) => {
   return state.previewVariableValues;
 };
 
+export const selectRepositoryState = ({ state }) => {
+  return state.repositoryState;
+};
+
 export const selectChoicesData = ({ state }) => {
   const choices = [];
 
@@ -552,7 +582,7 @@ export const selectPreviewData = ({ state }) => {
   });
 };
 
-export const selectViewData = ({ state, constants }) => {
+export const selectViewData = ({ state, constants, props = {} }) => {
   const layoutState = getLayoutState(state);
   const layoutType = layoutState.layoutType;
   const previewHydrationVersion = Number.isFinite(state.previewHydrationVersion)
@@ -577,9 +607,20 @@ export const selectViewData = ({ state, constants }) => {
     images: state.repositoryState.images,
     saveLoadForm: constants.saveLoadForm,
   });
+  const previewSections = getLayoutPreviewSections({
+    layoutType,
+    currentLayoutId: layoutState.id,
+    currentLayoutData: layoutState.elements,
+    layoutsData: state.repositoryState.layouts,
+    variablesData: state.repositoryState.variables,
+    hasSaveLoadPreview: saveLoadPreviewViewData.hasSaveLoadPreview,
+  });
+  const charactersData =
+    props.charactersData ?? state.repositoryState.characters;
   const identityKey = `${layoutState.id ?? "none"}:${layoutType ?? "none"}:${previewHydrationVersion}`;
   const previewBackgroundFormTarget = resolvePreviewBackgroundFormTarget({
     layoutType,
+    dialoguePreviewMode: previewSections.dialoguePreviewMode,
     hasPreviewVariables: previewVariablesViewData.hasPreviewVariables,
     hasSaveLoadPreview: saveLoadPreviewViewData.hasSaveLoadPreview,
   });
@@ -589,6 +630,11 @@ export const selectViewData = ({ state, constants }) => {
       tree: [],
     },
   ).filter((item) => item.type === "folder");
+  const dialogueForm = withDialogueCharacterNameField(constants.dialogueForm, {
+    visible:
+      state.dialogueDefaultValues[DIALOGUE_CUSTOM_CHARACTER_NAME_FIELD] ===
+      true,
+  });
 
   return {
     layoutType,
@@ -604,11 +650,25 @@ export const selectViewData = ({ state, constants }) => {
     fileExplorerItems,
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewImageId: state.fullImagePreviewImageId,
+    showDialogueForm: previewBackgroundFormTarget === "dialogue",
+    showNvlForm: previewBackgroundFormTarget === "nvl",
+    showChoiceForm: previewBackgroundFormTarget === "choice",
+    showHistoryForm: previewBackgroundFormTarget === "history",
+    showPreviewVariablesForm:
+      previewBackgroundFormTarget === "previewVariables",
+    showSaveLoadForm: previewBackgroundFormTarget === "saveLoad",
     dialogueForm:
       previewBackgroundFormTarget === "dialogue"
-        ? withPreviewBackgroundSlot(constants.dialogueForm)
-        : constants.dialogueForm,
+        ? withPreviewBackgroundSlot(dialogueForm)
+        : dialogueForm,
     dialogueDefaultValues: state.dialogueDefaultValues,
+    dialogueContext: {
+      characterOptions: toCharacterSelectOptions(charactersData, {
+        includeNone: true,
+        includeMissingValue:
+          state.dialogueDefaultValues["dialogue-character-id"],
+      }),
+    },
     dialogueFormKey: `${identityKey}:dialogue`,
     nvlForm:
       previewBackgroundFormTarget === "nvl"

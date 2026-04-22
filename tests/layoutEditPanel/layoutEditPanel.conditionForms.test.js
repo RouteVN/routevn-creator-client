@@ -3,6 +3,7 @@ import {
   createConditionalOverrideAttributeForm,
   createConditionalOverrideConditionForm,
 } from "../../src/components/layoutEditPanel/support/layoutEditPanelConditionalOverrides.js";
+import { createVisibilityConditionForm } from "../../src/components/layoutEditPanel/support/layoutEditPanelVisibility.js";
 
 describe("layoutEditPanel condition forms", () => {
   it("uses segmented controls for override condition operation and boolean value", () => {
@@ -16,6 +17,34 @@ describe("layoutEditPanel condition forms", () => {
     expect(
       form.fields.find((field) => field.name === "booleanValue")?.type,
     ).toBe("segmented-control");
+  });
+
+  it("uses character selects for character-valued visibility and override targets", () => {
+    const visibilityForm = createVisibilityConditionForm({
+      targetOptions: [
+        { label: "Current Dialogue Character", value: "dialogue.characterId" },
+      ],
+    });
+    const overrideForm = createConditionalOverrideConditionForm({
+      targetOptions: [
+        { label: "Current Dialogue Character", value: "dialogue.characterId" },
+      ],
+    });
+
+    expect(
+      visibilityForm.fields.find((field) => field.name === "characterValue"),
+    ).toMatchObject({
+      type: "select",
+      label: "Character",
+      options: "${characterValueOptions}",
+    });
+    expect(
+      overrideForm.fields.find((field) => field.name === "characterValue"),
+    ).toMatchObject({
+      type: "select",
+      label: "Character",
+      options: "${characterValueOptions}",
+    });
   });
 
   it("uses segmented controls for compact override attribute choices", () => {

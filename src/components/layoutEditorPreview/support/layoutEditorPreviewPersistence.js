@@ -105,6 +105,10 @@ export const createPersistedPreviewState = (previewData) => {
   return {
     dialogueDefaultValues: isPlainObject(normalizedPreviewData.dialogue)
       ? {
+          "dialogue-character-id": dialogue?.characterId ?? "",
+          "dialogue-custom-character-name":
+            typeof dialogue?.character?.name === "string" &&
+            dialogue.character.name.length > 0,
           "dialogue-character-name": dialogue?.character?.name ?? "",
           "dialogue-content": getDialogueText(dialogue),
           "dialogue-auto-mode":
