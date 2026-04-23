@@ -378,6 +378,9 @@ export const handleBeforeMount = (deps) => {
   store.setImagesData({
     imagesData: props.imagesData || EMPTY_TREE,
   });
+  store.setSoundsData({
+    soundsData: props.soundsData || EMPTY_TREE,
+  });
   store.setSpritesheetsData({
     spritesheetsData: props.spritesheetsData || EMPTY_TREE,
   });
@@ -421,6 +424,7 @@ export const handleOnUpdate = (deps, payload) => {
     oldProps?.projectResolution === newProps?.projectResolution &&
     oldProps?.layoutsData === newProps?.layoutsData &&
     oldProps?.imagesData === newProps?.imagesData &&
+    oldProps?.soundsData === newProps?.soundsData &&
     oldProps?.spritesheetsData === newProps?.spritesheetsData &&
     oldProps?.particlesData === newProps?.particlesData &&
     oldProps?.variablesData === newProps?.variablesData &&
@@ -438,6 +442,9 @@ export const handleOnUpdate = (deps, payload) => {
   });
   store.setImagesData({
     imagesData: newProps.imagesData || EMPTY_TREE,
+  });
+  store.setSoundsData({
+    soundsData: newProps.soundsData || EMPTY_TREE,
   });
   store.setSpritesheetsData({
     spritesheetsData: newProps.spritesheetsData || EMPTY_TREE,
@@ -880,6 +887,65 @@ export const handleSectionActionClick = async (deps, payload) => {
     applyPanelValueUpdate(deps, {
       name: variantResult.item.key,
       value: textStyleResult.item.key,
+    });
+  } else if (id === "sounds") {
+    const variantItems = [];
+    const { hoverSoundId, clickSoundId } = store.selectValues();
+    if (!hoverSoundId) {
+      variantItems.push({
+        type: "item",
+        label: "Hover",
+        key: "hoverSoundId",
+      });
+    }
+    if (!clickSoundId) {
+      variantItems.push({
+        type: "item",
+        label: "Click",
+        key: "clickSoundId",
+      });
+    }
+
+    if (variantItems.length === 0) {
+      return;
+    }
+
+    const variantResult = await appService.showDropdownMenu({
+      items: variantItems,
+      x: _event.clientX,
+      y: _event.clientY,
+      place: "bs",
+    });
+    if (!variantResult?.item?.key) {
+      return;
+    }
+
+    const soundItems = store.selectSoundOptions().map((option) => ({
+      type: "item",
+      label: option.label,
+      key: option.value,
+    }));
+    if (soundItems.length === 0) {
+      appService.showAlert({
+        message: "No sounds available. Create a sound resource first.",
+        title: "Warning",
+      });
+      return;
+    }
+
+    const soundResult = await appService.showDropdownMenu({
+      items: soundItems,
+      x: _event.clientX,
+      y: _event.clientY,
+      place: "bs",
+    });
+    if (!soundResult?.item?.key) {
+      return;
+    }
+
+    applyPanelValueUpdate(deps, {
+      name: variantResult.item.key,
+      value: soundResult.item.key,
     });
   } else if (id === "conditionalOverrides") {
     store.openConditionalOverrideConditionDialog({

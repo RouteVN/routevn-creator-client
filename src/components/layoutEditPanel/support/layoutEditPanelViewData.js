@@ -1,4 +1,4 @@
-import { toFlatGroups } from "../../../internal/project/tree.js";
+import { toFlatGroups, toFlatItems } from "../../../internal/project/tree.js";
 import { getInteractionActions } from "../../../internal/project/interactionPayload.js";
 import { RUNTIME_ACTION_LABELS } from "../../../internal/runtimeActions.js";
 import { parseRuntimeTemplateValue } from "../../../internal/runtimeFields.js";
@@ -118,6 +118,15 @@ export const toImageOptions = (imagesData = {}) => {
   );
 };
 
+export const toSoundOptions = (soundsData = {}) => {
+  return toFlatItems(soundsData)
+    .filter((item) => item.type === "sound")
+    .map((item) => ({
+      label: item.name,
+      value: item.id,
+    }));
+};
+
 export const toInspectorValues = ({
   values,
   firstTextStyleId,
@@ -172,6 +181,8 @@ export const toInspectorValues = ({
     textStyleId: values?.textStyleId || firstTextStyleId || "",
     hoverTextStyleId: values?.hoverTextStyleId ?? "",
     clickTextStyleId: values?.clickTextStyleId ?? "",
+    hoverSoundId: values?.hoverSoundId ?? "",
+    clickSoundId: values?.clickSoundId ?? "",
     conditionalOverrides: normalizeConditionalOverrideRules(
       values?.conditionalOverrides,
     ),

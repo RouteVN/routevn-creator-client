@@ -701,6 +701,58 @@ const getImageFileId = (imageItems, imageId) => {
     : undefined;
 };
 
+const getSoundFileReference = (soundItems, soundId) => {
+  const sound = soundItems?.[soundId];
+  const fileId = sound?.fileId;
+
+  if (typeof fileId !== "string" || fileId.length === 0) {
+    return undefined;
+  }
+
+  return {
+    soundSrc: `${fileId}`,
+    soundFileType:
+      typeof sound?.fileType === "string" && sound.fileType.length > 0
+        ? sound.fileType
+        : undefined,
+  };
+};
+
+const applyInteractionSoundVariants = ({ element, node, soundItems }) => {
+  const hoverSound = getSoundFileReference(soundItems, node.hoverSoundId);
+  const clickSound = getSoundFileReference(soundItems, node.clickSoundId);
+
+  if (!hoverSound && !clickSound) {
+    return element;
+  }
+
+  const nextElement = {
+    ...element,
+  };
+
+  if (hoverSound) {
+    nextElement.hover = {
+      ...nextElement.hover,
+      soundSrc: hoverSound.soundSrc,
+      ...(hoverSound.soundFileType
+        ? { soundFileType: hoverSound.soundFileType }
+        : {}),
+    };
+  }
+
+  if (clickSound) {
+    nextElement.click = {
+      ...nextElement.click,
+      soundSrc: clickSound.soundSrc,
+      ...(clickSound.soundFileType
+        ? { soundFileType: clickSound.soundFileType }
+        : {}),
+    };
+  }
+
+  return nextElement;
+};
+
 const toSpritesheetRuntimeClips = (spritesheet = {}) => {
   const frameNames = Object.keys(spritesheet.jsonData?.frames ?? {});
 
@@ -1179,6 +1231,11 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
   element = applyRectNode({ element, node: effectiveNode });
   element = applySliderNode({ element, node: effectiveNode, imageItems });
   element = applyContainerNode({ element, node: effectiveNode });
+  element = applyInteractionSoundVariants({
+    element,
+    node: effectiveNode,
+    soundItems: nodeContext.soundItems,
+  });
   element = applyConditionalOverrides({
     element,
     node: effectiveNode,
@@ -1356,6 +1413,7 @@ export const buildLayoutElements = (
     layoutId: options.layoutId ?? "preview",
     layoutType: options.layoutType,
     imageItems,
+    soundItems: options.soundsData?.items || {},
     textStylesData,
     textStyles,
     particleItems: options.particlesData?.items || {},
@@ -1491,6 +1549,7 @@ export const extractFileIdsFromRenderState = (obj) => {
           (key === "fileId" ||
             key === "url" ||
             key === "src" ||
+            key === "soundSrc" ||
             key === "thumbSrc" ||
             key === "barSrc" ||
             key === "hoverUrl" ||
@@ -1509,7 +1568,12 @@ export const extractFileIdsFromRenderState = (obj) => {
           ) {
             return;
           }
-          addFileReference(fileId, value.fileType || "image/png");
+          addFileReference(
+            fileId,
+            key === "soundSrc"
+              ? value.soundFileType || value.fileType || "audio/*"
+              : value.fileType || "image/png",
+          );
         }
 
         if (key === "textures" && Array.isArray(value[key])) {
@@ -1549,6 +1613,8 @@ const RESOURCE_REFERENCE_KEYS = new Set([
   "strokeColorId",
   "particleId",
   "imageId",
+  "hoverSoundId",
+  "clickSoundId",
   "hoverImageId",
   "clickImageId",
   "thumbImageId",
