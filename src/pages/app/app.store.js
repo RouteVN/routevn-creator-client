@@ -41,6 +41,7 @@ export const selectCurrentRoutePattern = ({ state }) => {
     "/project/scene-editor",
     "/project/animation-editor",
     "/project/about",
+    "/project/appearance",
     "/project/user",
     "/project/fonts",
     "/project/layouts",

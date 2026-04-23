@@ -3,6 +3,10 @@ import { createFileSelectionService } from "./fileSelectionService.js";
 import { createProjectEntriesService } from "./projectEntriesService.js";
 import { createUserConfigService } from "./userConfigService.js";
 
+const normalizeTheme = (theme) => {
+  return theme === "light" ? "light" : "dark";
+};
+
 export const createAppServiceCore = ({
   db,
   router,
@@ -65,10 +69,29 @@ export const createAppServiceCore = ({
     },
   });
 
+  const getTheme = () => {
+    return normalizeTheme(userConfigService.getUserConfig("appearance.theme"));
+  };
+
   return {
     ...projectEntriesService,
     ...fileSelectionService,
     ...appShellService,
     ...userConfigService,
+
+    async initUserConfig() {
+      const userConfig = await userConfigService.initUserConfig();
+      appShellService.applyTheme(getTheme());
+      return userConfig;
+    },
+
+    getTheme,
+
+    setTheme(theme) {
+      const nextTheme = normalizeTheme(theme);
+      userConfigService.setUserConfig("appearance.theme", nextTheme);
+      appShellService.applyTheme(nextTheme);
+      return nextTheme;
+    },
   };
 };
