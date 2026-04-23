@@ -7,10 +7,17 @@ propsSchema:
       properties:
         resourceId:
           type: string
+        transformId:
+          type: string
         animations:
           type: object
           properties:
             resourceId:
               type: string
+            playback:
+              type: object
+              properties:
+                continuity:
+                  type: string
         loop:
           type: boolean
