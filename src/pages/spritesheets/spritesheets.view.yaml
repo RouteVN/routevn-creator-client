@@ -112,7 +112,7 @@ template:
                                   - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                                   - rtgl-svg svg=edit wh=16: null
                               - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
-                                  - 'rvn-spritesheet-preview slot="spritesheet-preview" key=${detailPreviewKey} fileId=${detailPreviewFileId} :atlas=${detailPreviewAtlas} :animation=${detailPreviewAnimation} h=220 emptyLabel="No preview available"': null
+                                  - 'rvn-spritesheet-preview slot="spritesheet-preview" key=${detailPreviewKey} fileId=${detailPreviewFileId} :atlas=${detailPreviewAtlas} :animation=${detailPreviewAnimation} paused=${detailPreviewPaused} h=220 emptyLabel="No preview available"': null
                                   - rtgl-tag-select#detailTagSelect slot="spritesheet-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
                                   - 'rtgl-view slot="spritesheet-animations" d=v w=f g=sm':
                                       - rtgl-text s=sm c=mu-fg: Animations
@@ -150,8 +150,27 @@ template:
                           - rtgl-text s=xs c=mu-fg: No animations found
         $else:
           - 'rtgl-view slot="content" d=h lg-d=v w=f g=lg style="min-width: min(960px, 100vw - 64px);"':
+              - rtgl-view w=5fg lg-w=f d=v g=md:
+                  - rtgl-view d=v g=xs:
+                      - rtgl-text s=sm: ${dialogTitle}
+                      - rtgl-text s=xs c=mu-fg: Set the name and description, then select the PNG image and JSON atlas here.
+                  - rtgl-form#dialogForm key=${dialogFormKey} :defaultValues=${dialogValues} :form=${dialogForm} w=f:
+                      - rtgl-view slot=spritesheet-image-source d=v g=xs:
+                          - rtgl-view w=120 h=120 av=c ah=c:
+                              - $if dialogImageSourcePreviewUrl:
+                                  - rtgl-image#dialogImageSourceButton src=${dialogImageSourcePreviewUrl} w=120 h=120 of=con bw=xs bc=bo br=md cur=pointer: null
+                                $elif dialogImageSourceFileId:
+                                  - rvn-file-image#dialogImageSourceButton fileId=${dialogImageSourceFileId} w=120 h=120 bw=xs bc=bo br=md cur=pointer: null
+                                $else:
+                                  - rtgl-view#dialogImageSourceButton w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
+                                      - rtgl-text c=mu-fg s=sm ta=c: Click to upload
+                      - rtgl-view slot=spritesheet-atlas-source d=v g=xs:
+                          - rtgl-view d=h g=sm av=c:
+                              - rtgl-input w=f :value=${dialogAtlasFieldValue} disabled=true placeholder=${dialogAtlasFieldPlaceholder}: null
+                              - rtgl-button#dialogAtlasSourceButton variant=se size=sm pre=upload: ${dialogAtlasSourceLabel}
+                          - rtgl-text s=xs c=mu-fg: Select the atlas JSON file that defines the frames and clips.
               - rtgl-view w=6fg lg-w=f d=v g=md:
-                  - 'rvn-spritesheet-preview key=${dialogPreviewKey} src=${dialogPreviewUrl} fileId=${dialogPreviewFileId} :atlas=${dialogPreviewAtlas} :animation=${dialogPreviewAnimation} h=260 emptyLabel="Select a PNG spritesheet and JSON atlas"': null
+                  - 'rvn-spritesheet-preview key=${dialogPreviewKey} src=${dialogPreviewUrl} fileId=${dialogPreviewFileId} :atlas=${dialogPreviewAtlas} :animation=${dialogPreviewAnimation} h=260 emptyLabel=""': null
                   - rtgl-view d=v w=f g=sm:
                       - rtgl-text s=sm c=mu-fg: Clips
                       - $if dialogClipOptions.length > 0:
@@ -164,20 +183,5 @@ template:
                         $else:
                           - rtgl-view w=f p=sm bgc=mu br=md:
                               - rtgl-text s=xs c=mu-fg: Select a valid atlas to detect clips
-              - rtgl-view w=5fg lg-w=f d=v g=md:
-                  - rtgl-view d=v g=xs:
-                      - rtgl-text s=sm: ${dialogTitle}
-                      - rtgl-text s=xs c=mu-fg: Select the PNG image and JSON atlas, then adjust the default size metadata here.
-                  - rtgl-form#dialogForm key=${dialogFormKey} :defaultValues=${dialogValues} :form=${dialogForm} w=f:
-                      - rtgl-view slot=spritesheet-image-source d=v g=xs:
-                          - rtgl-view d=h g=sm av=c:
-                              - rtgl-input w=f :value=${dialogImageFieldValue} disabled=true placeholder=${dialogImageFieldPlaceholder}: null
-                              - rtgl-button#dialogImageSourceButton variant=se size=sm pre=upload: ${dialogImageSourceLabel}
-                          - rtgl-text s=xs c=mu-fg: Select the PNG spritesheet image used for preview and upload.
-                          - rtgl-view slot=spritesheet-atlas-source d=v g=xs:
-                              - rtgl-view d=h g=sm av=c:
-                                  - rtgl-input w=f :value=${dialogAtlasFieldValue} disabled=true placeholder=${dialogAtlasFieldPlaceholder}: null
-                                  - rtgl-button#dialogAtlasSourceButton variant=se size=sm pre=upload: ${dialogAtlasSourceLabel}
-                          - rtgl-text s=xs c=mu-fg: Select the atlas JSON file that defines the frames and clips.
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null

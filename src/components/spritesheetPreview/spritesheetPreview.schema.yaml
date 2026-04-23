@@ -10,6 +10,8 @@ propsSchema:
       type: object
     animation:
       type: object
+    paused:
+      type: boolean
     emptyLabel:
       type: string
     w:

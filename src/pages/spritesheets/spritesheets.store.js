@@ -66,16 +66,6 @@ const dialogForm = {
   title: "Spritesheet",
   fields: [
     {
-      type: "slot",
-      slot: "spritesheet-image-source",
-      label: "Image",
-    },
-    {
-      type: "slot",
-      slot: "spritesheet-atlas-source",
-      label: "Atlas JSON",
-    },
-    {
       name: "name",
       type: "input-text",
       label: "Name",
@@ -86,6 +76,16 @@ const dialogForm = {
       type: "input-textarea",
       label: "Description",
       required: false,
+    },
+    {
+      type: "slot",
+      slot: "spritesheet-image-source",
+      label: "Image",
+    },
+    {
+      type: "slot",
+      slot: "spritesheet-atlas-source",
+      label: "Atlas JSON",
     },
     {
       name: "tagIds",
@@ -575,6 +575,10 @@ export const selectViewData = ({ state }) => {
     dialogAnimations?.[dialogSelectedClipName] ?? undefined;
   const dialogAtlas =
     state.dialogImportData?.jsonData ?? dialogBaseItem?.jsonData ?? undefined;
+  const dialogImageSourcePreviewUrl = state.dialogPreviewUrl;
+  const dialogImageSourceFileId = dialogImageSourcePreviewUrl
+    ? undefined
+    : dialogBaseItem?.fileId;
   const dialogPreviewFileId = state.dialogPreviewUrl
     ? undefined
     : dialogBaseItem?.fileId;
@@ -582,13 +586,9 @@ export const selectViewData = ({ state }) => {
   const dialogPreviewSourceKey =
     state.dialogPreviewUrl ?? dialogPreviewFileId ?? "empty";
   const dialogPreviewKey = `${state.dialogRevision}-${dialogSelectedClipName ?? "default"}-${dialogPreviewSourceKey}`;
-  const dialogHasImageSource = Boolean(
-    state.dialogSourceFiles?.pngFile || dialogBaseItem?.fileId,
-  );
   const dialogHasAtlasSource = Boolean(
     state.dialogSourceFiles?.atlasFile || dialogBaseItem?.jsonData,
   );
-  const dialogImageFieldValue = state.dialogSourceFiles?.pngFile?.name ?? "";
   const dialogAtlasFieldValue = state.dialogSourceFiles?.atlasFile?.name ?? "";
   const isDialogPreviewMode = state.dialogMode === "preview";
   return {
@@ -632,6 +632,7 @@ export const selectViewData = ({ state }) => {
     detailPreviewAtlas: selectedItem?.jsonData,
     detailPreviewFileId: selectedItem?.fileId,
     detailPreviewKey,
+    detailPreviewPaused: state.isDialogOpen && isDialogPreviewMode,
     isDialogOpen: state.isDialogOpen,
     isDialogPreviewMode,
     dialogMode: state.dialogMode,
@@ -656,19 +657,14 @@ export const selectViewData = ({ state }) => {
     dialogPreviewKey,
     dialogPreviewAtlas: dialogAtlas,
     dialogPreviewAnimation,
+    dialogImageSourcePreviewUrl,
+    dialogImageSourceFileId,
     dialogClipOptions: dialogSelection.clipOptions,
     dialogSelectedClipName,
-    dialogImageSourceLabel: dialogHasImageSource
-      ? "Replace Image"
-      : "Upload Image",
     dialogAtlasSourceLabel: dialogHasAtlasSource
       ? "Replace JSON"
       : "Upload JSON",
-    dialogImageFieldValue,
     dialogAtlasFieldValue,
-    dialogImageFieldPlaceholder: dialogHasImageSource
-      ? "Current image"
-      : "No image selected",
     dialogAtlasFieldPlaceholder: dialogHasAtlasSource
       ? "Current atlas"
       : "No JSON selected",
