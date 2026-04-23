@@ -1,7 +1,10 @@
 import { generateId } from "../../internal/id.js";
 import { isVisualTestMode } from "../../internal/visualTestMode.js";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
-import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import {
+  getMediaPageData,
+  resolveResourceParentId,
+} from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 import { processPendingUploads } from "../../internal/ui/resourcePages/media/processPendingUploads.js";
 import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import {
@@ -183,11 +186,15 @@ const openVideoPreviewById = async ({ deps, itemId } = {}) => {
 
 const syncVideoPageData = ({ store, repositoryState } = {}) => {
   const tagsData = getTagsCollection(repositoryState, VIDEO_TAG_SCOPE_KEY);
+  const mediaData = getMediaPageData({
+    repositoryState,
+    resourceType: "videos",
+  });
 
   store.setTagsData({ tagsData });
   store.setItems({
     data: resolveCollectionWithTags({
-      collection: repositoryState?.videos,
+      collection: mediaData,
       tagsCollection: tagsData,
       itemType: "video",
     }),

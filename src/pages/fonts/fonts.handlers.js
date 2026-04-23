@@ -7,7 +7,10 @@ import {
   buildFontResourcePatchFromUploadResult,
 } from "../../deps/services/shared/resourceImports.js";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
-import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import {
+  getMediaPageData,
+  resolveResourceParentId,
+} from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import {
   getTagsCollection,
@@ -239,11 +242,15 @@ const loadFontInfo = async (deps, { itemId } = {}) => {
 
 const syncFontPageData = ({ store, repositoryState } = {}) => {
   const tagsData = getTagsCollection(repositoryState, FONT_TAG_SCOPE_KEY);
+  const mediaData = getMediaPageData({
+    repositoryState,
+    resourceType: "fonts",
+  });
 
   store.setTagsData({ tagsData });
   store.setItems({
     data: resolveCollectionWithTags({
-      collection: repositoryState?.fonts,
+      collection: mediaData,
       tagsCollection: tagsData,
       itemType: "font",
     }),
