@@ -1,0 +1,13 @@
+componentName: rvn-scene-editor-preview-canvas
+propsSchema:
+  type: object
+  properties:
+    canvasAspectRatio:
+      type: string
+methods:
+  type: object
+  properties:
+    getCanvasRoot:
+      description: Returns the mounted canvas host element used by the scene editor graphics runtime.
+      params: []
+      returns: object
