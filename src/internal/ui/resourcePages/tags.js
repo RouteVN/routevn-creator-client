@@ -288,6 +288,68 @@ const runAfterNextFrame = (callback) => {
   callback();
 };
 
+const waitForTagsInScope = async ({
+  projectService,
+  scopeKey,
+  tagIds,
+  timeoutMs = 250,
+} = {}) => {
+  if (
+    !projectService ||
+    typeof scopeKey !== "string" ||
+    scopeKey.length === 0 ||
+    !Array.isArray(tagIds) ||
+    tagIds.length === 0
+  ) {
+    return;
+  }
+
+  const tagsExistInState = (state) => {
+    const tagsCollection = getTagsCollection(state, scopeKey);
+    const items = tagsCollection?.items ?? {};
+    return tagIds.every((tagId) => typeof items[tagId] === "object");
+  };
+
+  const currentState =
+    projectService.getRepositoryState?.() ?? projectService.getState?.();
+  if (tagsExistInState(currentState)) {
+    return currentState;
+  }
+
+  await new Promise((resolve) => {
+    let finished = false;
+    let cleanupSubscription;
+    let timeoutId;
+
+    const finish = (state) => {
+      if (finished) {
+        return;
+      }
+
+      finished = true;
+      cleanupSubscription?.();
+      globalThis.clearTimeout(timeoutId);
+      resolve(state);
+    };
+
+    cleanupSubscription = projectService.subscribeProjectState?.(
+      ({ repositoryState, domainState }) => {
+        const nextState = repositoryState ?? domainState;
+        if (tagsExistInState(nextState)) {
+          finish(nextState);
+        }
+      },
+      { emitCurrent: false },
+    );
+
+    timeoutId = globalThis.setTimeout(() => {
+      finish(
+        projectService.getRepositoryState?.() ?? projectService.getState?.(),
+      );
+    }, timeoutMs);
+  });
+};
+
 export const createResourcePageTagHandlers = ({
   resolveScopeKey,
   updateItemTagIds,
@@ -408,13 +470,25 @@ export const createResourcePageTagHandlers = ({
   };
 
   const handleDetailTagValueChange = async (deps, payload) => {
-    const { appService, store } = deps;
+    const { appService, projectService, store } = deps;
     const itemId = getSelectedItemId({ deps });
     if (!itemId) {
       return;
     }
 
     const tagIds = readTagIdsFromEvent(payload);
+    const scopeKey = resolveScopeKey({
+      deps,
+      itemId,
+      mode: "item",
+    });
+
+    await waitForTagsInScope({
+      projectService,
+      scopeKey,
+      tagIds,
+    });
+
     const updateAttempt = await runResourcePageMutation({
       appService,
       fallbackMessage:

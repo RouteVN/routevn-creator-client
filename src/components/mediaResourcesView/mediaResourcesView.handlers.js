@@ -75,6 +75,40 @@ const cancelProgressiveRenderFrame = (store) => {
   store.clearProgressiveFrameId();
 };
 
+const cancelScheduledSyncRender = (store) => {
+  const frameId = store.selectSyncRenderFrameId?.();
+  if (frameId === undefined) {
+    return;
+  }
+
+  cancelAnimationFrame(frameId);
+  store.clearSyncRenderFrameId?.();
+};
+
+const scheduleSyncRender = (deps) => {
+  const { render, store } = deps;
+  if (typeof store.selectSyncRenderFrameId === "function") {
+    const activeFrameId = store.selectSyncRenderFrameId();
+    if (activeFrameId !== undefined) {
+      return;
+    }
+  }
+
+  if (typeof globalThis.requestAnimationFrame !== "function") {
+    render();
+    return;
+  }
+
+  const frameId = globalThis.requestAnimationFrame(() => {
+    store.clearSyncRenderFrameId?.();
+    render();
+  });
+
+  store.setSyncRenderFrameId?.({
+    frameId,
+  });
+};
+
 const scheduleProgressiveRender = (deps) => {
   const { props, store, render } = deps;
   if (!isProgressiveRenderEnabled(props)) {
@@ -277,13 +311,14 @@ export const handleBeforeMount = (deps) => {
 
   return () => {
     cancelProgressiveRenderFrame(deps.store);
+    cancelScheduledSyncRender(deps.store);
   };
 };
 
 export const handleOnUpdate = (deps) => {
   const didChange = syncProgressiveRenderState(deps);
   if (didChange) {
-    deps.render();
+    scheduleSyncRender(deps);
   }
 };
 

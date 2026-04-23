@@ -19,6 +19,7 @@ export const createInitialState = () => ({
   progressiveRenderedItemCount: DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT,
   progressiveRenderSignature: "",
   progressiveFrameId: undefined,
+  syncRenderFrameId: undefined,
   dropdownMenu: {
     isOpen: false,
     x: 0,
@@ -64,6 +65,16 @@ export const clearProgressiveFrameId = ({ state }) => {
 };
 
 export const selectProgressiveFrameId = ({ state }) => state.progressiveFrameId;
+
+export const setSyncRenderFrameId = ({ state }, { frameId } = {}) => {
+  state.syncRenderFrameId = frameId;
+};
+
+export const clearSyncRenderFrameId = ({ state }) => {
+  state.syncRenderFrameId = undefined;
+};
+
+export const selectSyncRenderFrameId = ({ state }) => state.syncRenderFrameId;
 
 export const setDraggingGroupId = ({ state }, { groupId } = {}) => {
   state.draggingGroupId = groupId;

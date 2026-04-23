@@ -330,20 +330,60 @@ const createSpritesFromFiles = async ({
 
 export const handleBeforeMount = (deps) => {
   const { projectService } = deps;
+  let scheduledRenderFrameId;
+  let scheduledFallbackTimeoutId;
+
+  const flushRender = () => {
+    scheduledRenderFrameId = undefined;
+    scheduledFallbackTimeoutId = undefined;
+    deps.render();
+  };
+
+  const scheduleRender = () => {
+    if (
+      scheduledRenderFrameId !== undefined ||
+      scheduledFallbackTimeoutId !== undefined
+    ) {
+      return;
+    }
+
+    if (typeof globalThis.requestAnimationFrame === "function") {
+      scheduledRenderFrameId = globalThis.requestAnimationFrame(() => {
+        flushRender();
+      });
+      return;
+    }
+
+    scheduledFallbackTimeoutId = globalThis.setTimeout(() => {
+      flushRender();
+    }, 0);
+  };
+
   const subscription = createProjectStateStream({ projectService })
     .pipe(
       tap(({ repositoryState }) => {
-        const { store, render } = deps;
+        const { store } = deps;
         const synced = syncCharacterSpritesData({ deps, repositoryState });
         if (!synced) {
           store.clearCharacterSpritesView();
         }
-        render();
+        scheduleRender();
       }),
     )
     .subscribe();
 
   return () => {
+    if (
+      scheduledRenderFrameId !== undefined &&
+      typeof globalThis.cancelAnimationFrame === "function"
+    ) {
+      globalThis.cancelAnimationFrame(scheduledRenderFrameId);
+    }
+
+    if (scheduledFallbackTimeoutId !== undefined) {
+      globalThis.clearTimeout(scheduledFallbackTimeoutId);
+    }
+
     subscription.unsubscribe();
   };
 };
