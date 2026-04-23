@@ -53,6 +53,8 @@ template:
                   - rvn-animation-editor: []
                 $elif currentRoutePattern == "/project/about":
                   - rvn-about: []
+                $elif currentRoutePattern == "/project/appearance":
+                  - rvn-appearance: []
                 $elif currentRoutePattern == "/project/user":
                   - rvn-settings-user: []
                 $elif currentRoutePattern == "/project/colors":

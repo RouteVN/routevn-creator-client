@@ -91,6 +91,7 @@ const getResourceCollectionsFromDomainState = (domainState) => ({
   layouts: normalizeLayoutCollection(domainState?.layouts),
   videos: domainState?.videos || createEmptyCollection(),
   animations: domainState?.animations || createEmptyCollection(),
+  transforms: domainState?.transforms || createEmptyCollection(),
 });
 
 const getDomainStateFromProjectService = (projectService) => {
@@ -116,6 +117,7 @@ export const handleBeforeMount = (deps) => {
 
   const {
     resourceId,
+    transformId,
     animations: backgroundAnimations,
     loop: backgroundLoop,
   } = props.background;
@@ -138,6 +140,20 @@ export const handleBeforeMount = (deps) => {
       animationId: animationResourceId,
     });
   }
+
+  const animationPlaybackContinuity =
+    backgroundAnimations?.playback?.continuity;
+  if (animationPlaybackContinuity) {
+    store.setSelectedAnimationPlaybackContinuity({
+      continuity: animationPlaybackContinuity,
+    });
+  }
+
+  if (transformId) {
+    store.setSelectedTransform({
+      transformId,
+    });
+  }
 };
 
 export const handleAfterMount = async (deps) => {
@@ -145,7 +161,7 @@ export const handleAfterMount = async (deps) => {
 
   await projectService.ensureRepository();
   const domainState = getDomainStateFromProjectService(projectService);
-  const { images, layouts, videos, animations } =
+  const { images, layouts, videos, animations, transforms } =
     getResourceCollectionsFromDomainState(domainState);
 
   store.setRepositoryState({
@@ -153,6 +169,7 @@ export const handleAfterMount = async (deps) => {
     layouts,
     videos,
     animations,
+    transforms,
   });
 
   const pendingResourceId = store.selectPendingResourceId();
@@ -293,6 +310,22 @@ export const handleFormInputChange = (deps, payload) => {
     return;
   }
 
+  if (name === "transformId") {
+    store.setSelectedTransform({
+      transformId: fieldValue,
+    });
+    render();
+    return;
+  }
+
+  if (name === "playbackContinuity") {
+    store.setSelectedAnimationPlaybackContinuity({
+      continuity: fieldValue,
+    });
+    render();
+    return;
+  }
+
   if (name === "loop") {
     store.setBackgroundLoop({
       loop: fieldValue,
@@ -337,8 +370,11 @@ export const handleSubmitClick = (deps, payload) => {
   payload?._event?.stopPropagation?.();
   const { dispatchEvent, store } = deps;
   const selectedResource = store.selectSelectedResource();
+  const selectedTransformId = store.selectSelectedTransform();
   const selectedAnimationMode = store.selectSelectedAnimationMode();
   const selectedAnimationId = store.selectSelectedAnimation();
+  const selectedAnimationPlaybackContinuity =
+    store.selectSelectedAnimationPlaybackContinuity();
   const backgroundLoop = store.selectBackgroundLoop();
 
   const backgroundData = {
@@ -349,6 +385,10 @@ export const handleSubmitClick = (deps, payload) => {
     backgroundData.loop = backgroundLoop ?? false;
   }
 
+  if (selectedResource?.resourceId && selectedTransformId) {
+    backgroundData.transformId = selectedTransformId;
+  }
+
   if (
     selectedResource?.resourceId &&
     selectedAnimationMode !== "none" &&
@@ -356,6 +396,9 @@ export const handleSubmitClick = (deps, payload) => {
   ) {
     backgroundData.animations = {
       resourceId: selectedAnimationId,
+      playback: {
+        continuity: selectedAnimationPlaybackContinuity,
+      },
     };
   }
 

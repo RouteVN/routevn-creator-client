@@ -1,4 +1,7 @@
 const DEFAULT_USER_CONFIG = {
+  appearance: {
+    theme: "dark",
+  },
   groupImagesView: {
     zoomLevel: 1.0,
   },

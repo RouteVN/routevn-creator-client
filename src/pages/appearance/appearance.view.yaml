@@ -1,0 +1,30 @@
+refs:
+  leftPanel:
+    eventListeners:
+      data-changed:
+        handler: handleDataChanged
+  themeCard*:
+    eventListeners:
+      click:
+        handler: handleThemeCardClick
+template:
+  - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
+      - 'rtgl-view d=h h=f style="min-width: 0; min-height: 0;"':
+          - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
+              - rtgl-view slot="content" w=f h=f:
+                  - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
+          - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
+              - 'rtgl-view w=f h=f p=lg sv style="min-width: 0;"':
+                  - rtgl-text s=h2: Appearance
+                  - rtgl-view g=sm mt=lg:
+                      - rtgl-text s=h4: Themes
+                  - rtgl-view d=h g=lg wrap mt=lg:
+                      - $for item, i in themes:
+                          - 'rtgl-view#themeCard${i} data-theme=${item.id} d=v g=md w=320 p=md bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} bgc=bg br=md cur=pointer':
+                              - 'rtgl-view d=v g=sm w=f p=md br=md bw=xs style="background-color: ${item.previewPageBackground}; border-color: ${item.previewBorder}; min-height: 152px;"':
+                                  - 'rtgl-view h=88 w=f br=md style="background-color: ${item.previewPanelBackground};"': null
+                                  - rtgl-view d=h g=sm:
+                                      - 'rtgl-view w=1fg h=36 br=md style="background-color: ${item.previewCardBackground};"': null
+                                      - 'rtgl-view w=1fg h=36 br=md style="background-color: ${item.previewAccent}; opacity: 0.3;"': null
+                                      - 'rtgl-view w=1fg h=36 br=md style="background-color: ${item.previewAccent}; opacity: 0.65;"': null
+                              - rtgl-text s=xs c=mu-fg ellipsis=true w=f mt=auto: ${item.name}
