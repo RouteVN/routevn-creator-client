@@ -49,8 +49,9 @@ describe("characterSprites store", () => {
     );
 
     const viewDataWhilePending = selectViewData({ state });
-    expect(viewDataWhilePending.mediaGroups[0].children.map((child) => child.id))
-      .toEqual(["pending-sprite-1"]);
+    expect(
+      viewDataWhilePending.mediaGroups[0].children.map((child) => child.id),
+    ).toEqual(["pending-sprite-1"]);
 
     removePendingUploads(
       { state },
@@ -60,8 +61,9 @@ describe("characterSprites store", () => {
     );
 
     const viewDataAfterPending = selectViewData({ state });
-    expect(viewDataAfterPending.mediaGroups[0].children.map((child) => child.id))
-      .toEqual(["sprite-1"]);
+    expect(
+      viewDataAfterPending.mediaGroups[0].children.map((child) => child.id),
+    ).toEqual(["sprite-1"]);
   });
 
   it("filters and searches sprites by tags", () => {
@@ -122,12 +124,27 @@ describe("characterSprites store", () => {
     );
 
     const filteredViewData = selectViewData({ state });
-    expect(filteredViewData.mediaGroups[0].children.map((child) => child.id))
-      .toEqual(["sprite-1"]);
+    expect(
+      filteredViewData.mediaGroups[0].children.map((child) => child.id),
+    ).toEqual(["sprite-1"]);
+
+    setActiveTagIds(
+      { state },
+      {
+        tagIds: ["tag-idle", "tag-attack"],
+      },
+    );
+
+    const orFilteredViewData = selectViewData({ state });
+    expect(
+      orFilteredViewData.mediaGroups[0].children.map((child) => child.id),
+    ).toEqual(["sprite-1", "sprite-2"]);
 
     state.searchQuery = "attack";
     const searchViewData = selectViewData({ state });
-    expect(searchViewData.mediaGroups).toEqual([]);
+    expect(
+      searchViewData.mediaGroups[0].children.map((child) => child.id),
+    ).toEqual(["sprite-2"]);
 
     setActiveTagIds(
       { state },
@@ -137,7 +154,8 @@ describe("characterSprites store", () => {
     );
 
     const searchOnlyViewData = selectViewData({ state });
-    expect(searchOnlyViewData.mediaGroups[0].children.map((child) => child.id))
-      .toEqual(["sprite-2"]);
+    expect(
+      searchOnlyViewData.mediaGroups[0].children.map((child) => child.id),
+    ).toEqual(["sprite-2"]);
   });
 });
