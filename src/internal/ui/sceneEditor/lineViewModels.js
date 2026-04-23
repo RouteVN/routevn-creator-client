@@ -1,4 +1,5 @@
 import { toFlatItems } from "../../project/tree.js";
+import { buildCharacterSpritePreviewFileIds } from "../../characterSpritePreview.js";
 import { normalizeLineActions } from "../../project/engineActions.js";
 
 const getSectionLineEntry = (sectionLineChanges, lineId) => {
@@ -19,24 +20,6 @@ const buildCharacterLookups = (repositoryState) => {
   };
 };
 
-const resolveCharacterSpriteFileId = ({
-  repositoryState,
-  character,
-  firstSprite,
-}) => {
-  if (!firstSprite?.resourceId || !character?.sprites) {
-    return undefined;
-  }
-
-  const flatSprites = toFlatItems(character.sprites);
-  const sprite = flatSprites.find((item) => item.id === firstSprite.resourceId);
-  if (sprite?.fileId) {
-    return sprite.fileId;
-  }
-
-  return repositoryState?.images?.items?.[firstSprite.resourceId]?.fileId;
-};
-
 const buildBackgroundPreview = (repositoryState, changes) => {
   if (!changes.background) {
     return undefined;
@@ -50,11 +33,7 @@ const buildBackgroundPreview = (repositoryState, changes) => {
   };
 };
 
-const buildCharacterSpritePreview = (
-  repositoryState,
-  changes,
-  characterItems,
-) => {
+const buildCharacterSpritePreview = (changes, characterItems) => {
   if (!changes.character) {
     return undefined;
   }
@@ -72,17 +51,24 @@ const buildCharacterSpritePreview = (
     items: characterData.items
       .map((characterChange) => {
         const character = characterItems[characterChange.id];
+        const spriteFileIds = buildCharacterSpritePreviewFileIds({
+          spritesCollection: character?.sprites,
+          spriteIds: Array.isArray(characterChange.sprites)
+            ? characterChange.sprites.map((sprite) => sprite?.resourceId)
+            : [],
+        });
+
+        if (spriteFileIds.length === 0) {
+          return undefined;
+        }
+
         return {
           characterId: characterChange.id,
           characterName: character?.name || "Unknown",
-          fileId: resolveCharacterSpriteFileId({
-            repositoryState,
-            character,
-            firstSprite: characterChange.sprites?.[0],
-          }),
+          spriteFileIds,
         };
       })
-      .filter((item) => item.fileId),
+      .filter(Boolean),
   };
 };
 
@@ -233,7 +219,6 @@ export const buildSceneEditorLineViewModels = ({
         characterLookups,
       ),
       characterSprites: buildCharacterSpritePreview(
-        repositoryState,
         changes,
         characterLookups.characterItems,
       ),

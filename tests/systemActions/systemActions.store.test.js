@@ -166,4 +166,88 @@ describe("systemActions.store", () => {
       persistCharacterLabel: "Persist Character",
     });
   });
+
+  it("builds stacked sprite previews for multipart characters", () => {
+    const state = createInitialState();
+
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          characters: {
+            items: {
+              "character-1": {
+                id: "character-1",
+                type: "character",
+                name: "Aki",
+                sprites: {
+                  items: {
+                    "sprite-body": {
+                      id: "sprite-body",
+                      type: "image",
+                      name: "Body",
+                      fileId: "file-body",
+                    },
+                    "sprite-face": {
+                      id: "sprite-face",
+                      type: "image",
+                      name: "Face",
+                      fileId: "file-face",
+                    },
+                  },
+                  tree: [{ id: "sprite-body" }, { id: "sprite-face" }],
+                },
+              },
+            },
+            tree: [{ id: "character-1" }],
+          },
+        },
+      },
+    );
+
+    const { preview } = selectActionsData({
+      state,
+      props: {
+        actions: {},
+        presentationState: {
+          character: {
+            items: [
+              {
+                id: "character-1",
+                sprites: [
+                  {
+                    id: "body",
+                    resourceId: "sprite-body",
+                  },
+                  {
+                    id: "face",
+                    resourceId: "sprite-face",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(preview.character).toEqual([
+      {
+        id: "character-1",
+        sprites: [
+          {
+            id: "body",
+            resourceId: "sprite-body",
+          },
+          {
+            id: "face",
+            resourceId: "sprite-face",
+          },
+        ],
+        name: "Aki",
+        spriteFileIds: ["file-body", "file-face"],
+        hasSpritePreview: true,
+      },
+    ]);
+  });
 });

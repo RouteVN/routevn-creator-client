@@ -68,8 +68,8 @@ template:
                                   - rtgl-view#previewCharacter data-type="character" data-id="${line.id}" pos=rel:
                                       - $if line.characterSprites.items && line.characterSprites.items.length > 0:
                                           - rtgl-view d=h:
-                                              - $for sprite in line.characterSprites.items:
-                                                  - rvn-file-image fileId=${sprite.fileId} w=20 h=24 br=f: null
+                                              - $for characterPreview in line.characterSprites.items:
+                                                  - rvn-stacked-file-images :fileIds=${characterPreview.spriteFileIds} w=20 h=24 br=f: null
                                         $else:
                                           - rtgl-view w=36 h=24 av=c ah=c:
                                               - rtgl-svg svg=character wh=24: null

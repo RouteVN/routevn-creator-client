@@ -3,6 +3,7 @@ import {
   getRuntimeActionModes,
   isRuntimeActionMode,
 } from "../../internal/runtimeActions.js";
+import { buildCharacterSpritePreviewFileIds } from "../../internal/characterSpritePreview.js";
 import { normalizeLineActions } from "../../internal/project/engineActions.js";
 
 export const createInitialState = () => ({
@@ -292,22 +293,22 @@ export const selectActionsData = ({ props, state }) => {
     actionsObject.character = presentationState.character;
     preview.character = presentationState.character.items.map((char) => {
       const character = repositoryStateData.characters?.items?.[char.id];
-      let sprite = {};
+      const spriteFileIds = buildCharacterSpritePreviewFileIds({
+        spritesCollection: character?.sprites,
+        spriteIds: Array.isArray(char.sprites)
+          ? char.sprites.map((sprite) => sprite?.resourceId)
+          : [],
+      });
 
-      if (char.sprites?.[0]?.resourceId && character?.sprites?.items) {
-        const spriteResourceId = char.sprites[0].resourceId;
-        const spriteResource = character.sprites.items[spriteResourceId];
-        if (spriteResource?.fileId) {
-          sprite.fileId = spriteResource.fileId;
-        }
-      } else if (character?.fileId) {
-        sprite.fileId = character.fileId;
+      if (spriteFileIds.length === 0 && character?.fileId) {
+        spriteFileIds.push(character.fileId);
       }
 
       return {
         ...char,
         name: character?.name || "",
-        sprite,
+        spriteFileIds,
+        hasSpritePreview: spriteFileIds.length > 0,
       };
     });
   }

@@ -81,6 +81,28 @@ refs:
         handler: handleEditFormAction
       add-option-click:
         handler: handleEditFormAddOptionClick
+  .spriteGroupAddButton:
+    eventListeners:
+      click:
+        handler: handleSpriteGroupAddClick
+  .spriteGroupCard:
+    eventListeners:
+      contextmenu:
+        handler: handleSpriteGroupContextMenu
+  .spriteGroupNameInput:
+    eventListeners:
+      value-input:
+        handler: handleSpriteGroupNameInput
+  .spriteGroupTags:
+    eventListeners:
+      value-change:
+        handler: handleSpriteGroupTagsChange
+  spriteGroupDropdownMenu:
+    eventListeners:
+      close:
+        handler: handleSpriteGroupDropdownMenuClose
+      item-click:
+        handler: handleSpriteGroupDropdownMenuItemClick
   detailHeader:
     eventListeners:
       click:
@@ -128,6 +150,14 @@ template:
                                       - rtgl-view slot="avatar" w=128 h=128 av=c ah=c bgc=bg bc=bo bw=xs br=f:
                                           - rtgl-text c=mu-fg s=sm: No Avatar
                                   - rtgl-tag-select#detailTagSelect slot="character-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+                                  - 'rtgl-view slot="character-sprite-groups" d=v w=f g=sm':
+                                      - $if selectedItemSpriteGroups.length > 0:
+                                          - $for spriteGroup, i in selectedItemSpriteGroups:
+                                              - rtgl-view d=v w=f g=xs p=md bw=xs bc=bo br=md:
+                                                  - rtgl-text s=sm: ${spriteGroup.name}
+                                                  - rtgl-text s=xs c=mu-fg: ${spriteGroup.tagSummary}
+                                        $else:
+                                          - rtgl-text s=xs c=mu-fg: No sprite groups
                         $else:
                           - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                               - rtgl-text s=md c=mu-fg: No selection
@@ -141,6 +171,9 @@ template:
                       - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
                           - rtgl-view#avatarPlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
                               - rtgl-text c=mu-fg s=sm: Click to Upload
+                  - 'rtgl-view slot="sprite-groups-slot" d=v w=f g=md':
+                      - rtgl-view w=f p=md bgc=mu br=md:
+                          - rtgl-text s=xs c=mu-fg: ${dialogSpriteGroupsMessage}
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:
@@ -151,6 +184,27 @@ template:
                   - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
                       - rtgl-view#editAvatarPlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
                           - rtgl-text c=mu-fg s=sm: Click to Upload
+              - 'rtgl-view slot="sprite-groups-slot" d=v w=f g=md':
+                  - $if editSpriteGroupTagOptions.length > 0:
+                      - rtgl-view d=h w=f ah=e:
+                          - rtgl-view w=1fg: null
+                          - rtgl-button.spriteGroupAddButton data-target=edit s=sm v=gh pre=plus: Add Group
+                      - $if editSpriteGroups.length > 0:
+                          - $for spriteGroup, i in editSpriteGroups:
+                              - rtgl-view.spriteGroupCard data-target=edit data-index=${i} d=v w=f g=md p=md bw=xs bc=bo br=md cur=pointer:
+                                  - rtgl-view d=h w=f av=c:
+                                      - rtgl-text s=sm w=1fg: ${spriteGroup.label}
+                                  - rtgl-input.spriteGroupNameInput data-target=edit data-index=${i} w=f placeholder="Group name" value=${spriteGroup.name}: null
+                                  - rtgl-tag-select.spriteGroupTags key=${spriteGroup.tagSelectKey} data-target=edit data-index=${i} w=f :options=${editSpriteGroupTagOptions} :selectedValues=${spriteGroup.tags} placeholder="Select tags": null
+                                  - $if spriteGroup.tagSummary:
+                                      - rtgl-text s=xs c=mu-fg: ${spriteGroup.tagSummary}
+                        $else:
+                          - rtgl-view w=f p=md bgc=mu br=md:
+                              - rtgl-text s=xs c=mu-fg: No sprite groups yet
+                    $else:
+                      - rtgl-view w=f p=md bgc=mu br=md:
+                          - rtgl-text s=xs c=mu-fg: ${editSpriteGroupsMessage}
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null
+  - rtgl-dropdown-menu#spriteGroupDropdownMenu :items=${spriteGroupDropdownMenu.items} ?open=${spriteGroupDropdownMenu.isOpen} x=${spriteGroupDropdownMenu.x} y=${spriteGroupDropdownMenu.y}: null
   - rvn-square-image-crop-dialog#avatarCropDialog :open=${isAvatarCropDialogOpen} :file=${avatarCropFile}: null
