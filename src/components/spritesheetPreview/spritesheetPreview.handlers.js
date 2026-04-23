@@ -4,7 +4,10 @@ const PREVIEW_PADDING_PX = 16;
 const DEFAULT_FPS = 30;
 
 const clearCanvas = (canvas) => {
-  if (!(canvas instanceof HTMLCanvasElement)) {
+  if (
+    typeof HTMLCanvasElement === "undefined" ||
+    !(canvas instanceof HTMLCanvasElement)
+  ) {
     return;
   }
 
@@ -83,6 +86,8 @@ const drawFrame = (deps, { frameOffset = 0 } = {}) => {
   const { canvas, sourceImage } = refs;
 
   if (
+    typeof HTMLCanvasElement === "undefined" ||
+    typeof HTMLImageElement === "undefined" ||
     !(canvas instanceof HTMLCanvasElement) ||
     !(sourceImage instanceof HTMLImageElement)
   ) {
@@ -213,10 +218,11 @@ const startAnimation = (deps) => {
 };
 
 const loadImageSource = async (deps) => {
-  const { projectService, props, render, store } = deps;
+  const { projectService, props, refs, render, store } = deps;
 
   stopAnimation(store);
   revokeOwnedImageSrc(store);
+  clearCanvas(refs.canvas);
   store.setImageSrc({
     imageSrc: "",
     ownsImageSrc: false,
@@ -254,6 +260,23 @@ const loadImageSource = async (deps) => {
   }
 };
 
+const didSourceChange = (oldProps = {}, newProps = {}) => {
+  return (
+    oldProps?.src !== newProps?.src || oldProps?.fileId !== newProps?.fileId
+  );
+};
+
+const didFrameRenderingChange = (oldProps = {}, newProps = {}) => {
+  return (
+    oldProps?.atlas !== newProps?.atlas ||
+    oldProps?.animation !== newProps?.animation
+  );
+};
+
+const didPausedChange = (oldProps = {}, newProps = {}) => {
+  return oldProps?.paused !== newProps?.paused;
+};
+
 export const handleBeforeMount = (deps) => {
   return () => {
     const { refs, store } = deps;
@@ -268,11 +291,46 @@ export const handleAfterMount = async (deps) => {
   await loadImageSource(deps);
 };
 
-export const handleSourceImageLoad = (deps) => {
+export const handleOnUpdate = async (deps, payload = {}) => {
   const { render, store } = deps;
+  const oldProps = payload.oldProps ?? {};
+  const newProps = payload.newProps ?? {};
+
+  if (didSourceChange(oldProps, newProps)) {
+    await loadImageSource({
+      ...deps,
+      props: newProps,
+    });
+    return;
+  }
+
+  if (
+    (didFrameRenderingChange(oldProps, newProps) ||
+      didPausedChange(oldProps, newProps)) &&
+    store.selectStatus() === "ready"
+  ) {
+    stopAnimation(store);
+    drawFrame({
+      ...deps,
+      props: newProps,
+    });
+    if (newProps.paused !== true) {
+      startAnimation({
+        ...deps,
+        props: newProps,
+      });
+    }
+    render();
+  }
+};
+
+export const handleSourceImageLoad = (deps) => {
+  const { props, render, store } = deps;
   store.setStatus({ status: "ready" });
   drawFrame(deps);
-  startAnimation(deps);
+  if (props.paused !== true) {
+    startAnimation(deps);
+  }
   render();
 };
 

@@ -17,7 +17,7 @@ template:
       - $if status == "loading":
           - rtgl-view pos=abs cor=full av=c ah=c:
               - rtgl-text s=sm c=mu-fg: Loading preview...
-        $elif status == "empty":
+        $elif status == "empty" && emptyLabel:
           - rtgl-view pos=abs cor=full av=c ah=c:
               - rtgl-text s=sm c=mu-fg: ${emptyLabel}
         $elif status == "error":
