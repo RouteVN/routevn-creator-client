@@ -39,6 +39,8 @@ export const selectCurrentRoutePattern = ({ state }) => {
     "/project/variables",
     "/project/scenes",
     "/project/scene-editor",
+    "/project/segmented-text-poc",
+    "/project/lexical-mentions-poc",
     "/project/animation-editor",
     "/project/about",
     "/project/user",

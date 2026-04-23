@@ -110,6 +110,47 @@ const getProjectIndexFromEvent = (event) => {
   return index;
 };
 
+const navigateToProjectRoute = async (
+  { appService, projectService, store },
+  { projectId, path } = {},
+) => {
+  if (!projectId) {
+    appService.showAlert({
+      message:
+        "This project entry is invalid. Remove it from the list and import the project again.",
+    });
+    return;
+  }
+
+  const project = store
+    .getState()
+    .projects.find((entry) => entry?.id === projectId);
+
+  try {
+    await projectService.ensureProjectCompatibleById(projectId);
+  } catch (error) {
+    if (isIncompatibleProjectOpenError(error)) {
+      await appService.showAlert({
+        title: "Incompatible Project",
+        message: getIncompatibleProjectOpenMessage(error),
+        status: "error",
+      });
+      return;
+    }
+
+    appService.showAlert({
+      message: getProjectOpenErrorMessage(error),
+    });
+    return;
+  }
+
+  if (project) {
+    appService.setCurrentProjectEntry(project);
+  }
+
+  appService.navigate(path, { p: projectId });
+};
+
 const showCreateProjectDialog = async (appService) => {
   return appService.showComponentDialog({
     component: PROJECT_CREATE_DIALOG_COMPONENT,
@@ -479,41 +520,35 @@ export const handleProfileDropdownClickItem = async (deps, payload) => {
 };
 
 export const handleProjectsClick = async (deps, payload) => {
-  const { appService, projectService, store } = deps;
   const id = getProjectIdFromEvent(payload._event);
-  if (!id) {
-    appService.showAlert({
-      message:
-        "This project entry is invalid. Remove it from the list and import the project again.",
-    });
-    return;
-  }
+  return navigateToProjectRoute(deps, {
+    projectId: id,
+    path: "/project",
+  });
+};
 
-  const project = store.getState().projects.find((entry) => entry?.id === id);
+export const handleProjectPocButtonClick = async (deps, payload) => {
+  const event = payload?._event;
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
 
-  try {
-    await projectService.ensureProjectCompatibleById(id);
-  } catch (error) {
-    if (isIncompatibleProjectOpenError(error)) {
-      await appService.showAlert({
-        title: "Incompatible Project",
-        message: getIncompatibleProjectOpenMessage(error),
-        status: "error",
-      });
-      return;
-    }
+  const projectId = getProjectIdFromEvent(event);
+  return navigateToProjectRoute(deps, {
+    projectId,
+    path: "/project/segmented-text-poc",
+  });
+};
 
-    appService.showAlert({
-      message: getProjectOpenErrorMessage(error),
-    });
-    return;
-  }
+export const handleProjectLexicalPocButtonClick = async (deps, payload) => {
+  const event = payload?._event;
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
 
-  if (project) {
-    appService.setCurrentProjectEntry(project);
-  }
-
-  appService.navigate("/project", { p: id });
+  const projectId = getProjectIdFromEvent(event);
+  return navigateToProjectRoute(deps, {
+    projectId,
+    path: "/project/lexical-mentions-poc",
+  });
 };
 
 export const handleProjectContextMenu = (deps, payload) => {

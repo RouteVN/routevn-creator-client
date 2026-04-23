@@ -1,0 +1,69 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic:
+      - generic [ref=e5]:
+        - generic:
+          - img "Sidebar" [ref=e8] [cursor=pointer]
+          - generic [ref=e9]:
+            - generic:
+              - generic "Assets" [ref=e10] [cursor=pointer]:
+                - img [ref=e11]
+              - generic "Animated Assets" [ref=e13] [cursor=pointer]:
+                - img [ref=e14]
+              - generic "User Interface" [ref=e18] [cursor=pointer]:
+                - img [ref=e19]
+              - generic "System" [ref=e21] [cursor=pointer]:
+                - img [ref=e22]
+              - generic "Scenes" [ref=e24] [cursor=pointer]:
+                - img [ref=e25]
+              - generic "Release" [ref=e28] [cursor=pointer]:
+                - img [ref=e29]
+              - generic "Settings" [ref=e36] [cursor=pointer]:
+                - img [ref=e37]
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - generic:
+            - generic [ref=e43]:
+              - generic:
+                - generic [ref=e44]:
+                  - generic: Experiment
+                - generic [ref=e45]:
+                  - generic: Segmented Text Editor POC
+            - generic [ref=e46]:
+              - generic: /project/segmented-text-poc
+        - generic [ref=e48]:
+          - generic:
+            - generic [ref=e49]:
+              - generic: "rtgl-text s=sm: This page is intentionally isolated from scene editing. It is here to validate the hardest part first: a segmented contenteditable surface that survives typing, range formatting, paste, and selection restoration.rtgl-text s=xs c=mu-fg: The editor below lets the browser handle live text mutation, then normalizes the DOM back into segment data after each edit."
+            - generic [ref=e51]:
+              - generic [ref=e52]:
+                - generic [ref=e53]: Segmented Editor POC
+                - generic [ref=e54]: This editor lets the browser handle live text input inside styled spans, then normalizes the DOM back into a segment model after edits. Use the toolbar or Cmd/Ctrl+B and Cmd/Ctrl+I on a selection.
+              - generic [ref=e55]:
+                - button "Bold" [disabled] [ref=e56]
+                - button "Italic" [disabled] [ref=e57]
+                - button "Accent" [disabled] [ref=e58]
+                - button "Clear Style" [disabled] [ref=e59]
+                - button "Reset Sample" [ref=e60] [cursor=pointer]
+              - generic [ref=e61]:
+                - generic [ref=e62]:
+                  - generic [ref=e63]: Selection 82..82
+                  - generic [ref=e64]: 82 chars
+                  - generic [ref=e65]: Composition idle
+                - generic [ref=e66]: Segmented editing should keep format boundaries stable while you type across them.
+              - generic [ref=e67]:
+                - generic [ref=e68]:
+                  - generic [ref=e69]: Segments
+                  - generic [ref=e70]: "[ { \"text\": \"Segmented editing \", \"textStyle\": { \"fontWeight\": \"bold\" } }, { \"text\": \"should keep \", \"textStyle\": { \"fontStyle\": \"italic\" } }, { \"text\": \"format boundaries\", \"textStyle\": { \"fill\": \"#b45309\" } }, { \"text\": \" stable while you type across them.\" } ]"
+                - generic [ref=e71]:
+                  - generic [ref=e72]: State
+                  - generic [ref=e73]: "{ \"selection\": { \"start\": 82, \"end\": 82 }, \"isComposing\": false }"
+                - generic [ref=e74]:
+                  - generic [ref=e75]: Plain Text
+                  - generic [ref=e76]: Segmented editing should keep format boundaries stable while you type across them.
+  - generic [ref=e78] [cursor=pointer]:
+    - generic: "?"
+```
