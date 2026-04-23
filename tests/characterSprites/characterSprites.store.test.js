@@ -3,6 +3,7 @@ import {
   addPendingUploads,
   createInitialState,
   removePendingUploads,
+  setActiveTagIds,
   selectViewData,
 } from "../../src/pages/characterSprites/characterSprites.store.js";
 
@@ -61,5 +62,82 @@ describe("characterSprites store", () => {
     const viewDataAfterPending = selectViewData({ state });
     expect(viewDataAfterPending.mediaGroups[0].children.map((child) => child.id))
       .toEqual(["sprite-1"]);
+  });
+
+  it("filters and searches sprites by tags", () => {
+    const state = createInitialState();
+    state.characterName = "Hero";
+    state.tagsData = {
+      tree: [{ id: "tag-idle" }, { id: "tag-attack" }],
+      items: {
+        "tag-idle": {
+          id: "tag-idle",
+          type: "tag",
+          name: "Idle",
+        },
+        "tag-attack": {
+          id: "tag-attack",
+          type: "tag",
+          name: "Attack",
+        },
+      },
+    };
+    state.spritesData = {
+      tree: [
+        {
+          id: "folder-1",
+          children: [{ id: "sprite-1" }, { id: "sprite-2" }],
+        },
+      ],
+      items: {
+        "folder-1": {
+          id: "folder-1",
+          type: "folder",
+          name: "Main",
+        },
+        "sprite-1": {
+          id: "sprite-1",
+          type: "image",
+          name: "Hero Idle",
+          fileId: "file-1",
+          tagIds: ["tag-idle"],
+          resolvedTags: [{ id: "tag-idle", name: "Idle" }],
+        },
+        "sprite-2": {
+          id: "sprite-2",
+          type: "image",
+          name: "Hero Attack",
+          fileId: "file-2",
+          tagIds: ["tag-attack"],
+          resolvedTags: [{ id: "tag-attack", name: "Attack" }],
+        },
+      },
+    };
+
+    setActiveTagIds(
+      { state },
+      {
+        tagIds: ["tag-idle"],
+      },
+    );
+
+    const filteredViewData = selectViewData({ state });
+    expect(filteredViewData.mediaGroups[0].children.map((child) => child.id))
+      .toEqual(["sprite-1"]);
+
+    state.searchQuery = "attack";
+    const searchViewData = selectViewData({ state });
+    expect(searchViewData.mediaGroups).toEqual([]);
+
+    setActiveTagIds(
+      { state },
+      {
+        tagIds: [],
+      },
+    );
+
+    const searchOnlyViewData = selectViewData({ state });
+    expect(searchOnlyViewData.mediaGroups[0].children.map((child) => child.id))
+      .toEqual(["sprite-2"]);
   });
 });

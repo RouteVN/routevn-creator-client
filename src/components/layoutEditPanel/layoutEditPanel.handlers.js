@@ -47,6 +47,26 @@ const WHEEL_INCREMENT_FIELD_CONFIG = {
   },
 };
 
+const arePlainObjectsShallowEqual = (left = {}, right = {}) => {
+  if (left === right) {
+    return true;
+  }
+
+  const leftKeys = Object.keys(left ?? {});
+  const rightKeys = Object.keys(right ?? {});
+  if (leftKeys.length !== rightKeys.length) {
+    return false;
+  }
+
+  for (const key of leftKeys) {
+    if (left[key] !== right[key]) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
 const getInteractionPropertyName = (interactionType) => {
   return ACTION_INTERACTION_TYPES.includes(interactionType)
     ? interactionType
@@ -169,6 +189,8 @@ const applySizeModeUpdate = (deps, { name, value } = {}) => {
   const isTextWidthMode =
     fieldName === "width" && props.itemType?.startsWith("text") === true;
   const usesDirectedContainerAutoSize = isDirectedContainerSizeMode(deps);
+  const selectedElementMetrics =
+    store.selectSelectedElementMetrics?.() ?? props.selectedElementMetrics;
 
   if (!isTextWidthMode && !usesDirectedContainerAutoSize) {
     return;
@@ -188,11 +210,11 @@ const applySizeModeUpdate = (deps, { name, value } = {}) => {
 
   const currentSize = Number(store.selectValues()[fieldName]);
   const nextSize = isTextWidthMode
-    ? (getMeasuredTextWidth(props.selectedElementMetrics) ??
+    ? (getMeasuredTextWidth(selectedElementMetrics) ??
       (Number.isFinite(currentSize) && currentSize > 0
         ? currentSize
         : undefined))
-    : (getMeasuredDimension(props.selectedElementMetrics, fieldName) ??
+    : (getMeasuredDimension(selectedElementMetrics, fieldName) ??
       (Number.isFinite(currentSize) && currentSize > 0
         ? currentSize
         : undefined) ??
@@ -368,24 +390,47 @@ export const handleBeforeMount = (deps) => {
   store.setVariablesData({
     variablesData: props.variablesData || EMPTY_TREE,
   });
+  store.setSelectedElementMetrics?.({
+    metrics: props.selectedElementMetrics,
+  });
+};
+
+export const handleAfterMount = () => {};
+
+export const setSelectedElementMetrics = (deps, { metrics } = {}) => {
+  deps.store.setSelectedElementMetrics?.({
+    metrics,
+  });
+};
+
+export const getSelectedElementMetrics = (deps) => {
+  return deps.store.selectSelectedElementMetrics?.();
 };
 
 export const handleOnUpdate = (deps, payload) => {
   const { oldProps, newProps } = payload;
   const { store, render } = deps;
+  const valuesEquivalent = arePlainObjectsShallowEqual(
+    oldProps?.values || {},
+    newProps?.values || {},
+  );
+
   if (
     oldProps?.key === newProps?.key &&
-    oldProps?.values === newProps?.values &&
+    valuesEquivalent &&
     oldProps?.projectResolution === newProps?.projectResolution &&
     oldProps?.layoutsData === newProps?.layoutsData &&
     oldProps?.imagesData === newProps?.imagesData &&
     oldProps?.spritesheetsData === newProps?.spritesheetsData &&
     oldProps?.particlesData === newProps?.particlesData &&
     oldProps?.variablesData === newProps?.variablesData &&
-    oldProps?.textStylesData === newProps?.textStylesData &&
-    oldProps?.selectedElementMetrics === newProps?.selectedElementMetrics
+    oldProps?.textStylesData === newProps?.textStylesData
   ) {
     return;
+  }
+
+  if (oldProps?.values?.id !== newProps?.values?.id) {
+    store.resetForSelectionChange?.();
   }
 
   store.setValues({

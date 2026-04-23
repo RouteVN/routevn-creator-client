@@ -7,11 +7,20 @@ import {
   buildFontResourcePatchFromUploadResult,
 } from "../../deps/services/shared/resourceImports.js";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
-import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import {
+  getMediaPageData,
+  resolveResourceParentId,
+} from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
+import {
+  getTagsCollection,
+  resolveCollectionWithTags,
+} from "../../internal/resourceTags.js";
 import {
   runResourcePageMutation,
   showResourcePageError,
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
+import { FONT_TAG_SCOPE_KEY } from "./fonts.store.js";
 
 const FONT_FILE_PATTERN = /\.(ttf|otf|woff|woff2|ttc|eot)$/i;
 const FONT_FILE_ACCEPT = ".ttf,.otf,.woff,.woff2,.ttc,.eot";
@@ -231,6 +240,23 @@ const loadFontInfo = async (deps, { itemId } = {}) => {
   return fontInfo;
 };
 
+const syncFontPageData = ({ store, repositoryState } = {}) => {
+  const tagsData = getTagsCollection(repositoryState, FONT_TAG_SCOPE_KEY);
+  const mediaData = getMediaPageData({
+    repositoryState,
+    resourceType: "fonts",
+  });
+
+  store.setTagsData({ tagsData });
+  store.setItems({
+    data: resolveCollectionWithTags({
+      collection: mediaData,
+      tagsCollection: tagsData,
+      itemType: "font",
+    }),
+  });
+};
+
 const {
   handleBeforeMount,
   handleAfterMount,
@@ -244,14 +270,46 @@ const {
   handleSearchInput,
   handleItemClick: handleBaseFontItemClick,
   handleItemEdit: handleFontItemEdit,
+  openCreateTagDialogForMode,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 } = createMediaPageHandlers({
   resourceType: "fonts",
+  syncData: syncFontPageData,
   selectItemById: (store, { itemId }) => store.selectFontItemById({ itemId }),
   getEditValues: (item) => ({
     name: item?.name ?? "",
     description: item?.description ?? "",
+    tagIds: item?.tagIds ?? [],
   }),
   getEditPreviewFileId: (item) => item?.fileId,
+  tagging: {
+    scopeKey: FONT_TAG_SCOPE_KEY,
+    updateItemTagIds: ({ deps, itemId, tagIds }) =>
+      deps.projectService.updateFont({
+        fontId: itemId,
+        data: {
+          tagIds,
+        },
+      }),
+    updateItemTagFallbackMessage: "Failed to update font tags.",
+    appendCreatedTagByMode: ({ deps, mode, tagId }) => {
+      if (mode !== "edit-form") {
+        return;
+      }
+
+      appendTagIdToForm({
+        form: deps.refs.editForm,
+        tagId,
+      });
+    },
+  },
 });
 
 export {
@@ -267,6 +325,14 @@ export {
   handleDataChanged,
   handleSearchInput,
   handleFontItemEdit,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 };
 
 export const handleFileExplorerSelectionChanged = async (deps, payload) => {
@@ -336,6 +402,14 @@ export const handleFilesDropped = async (deps, payload) => {
 export const handleDetailHeaderClick = (deps) => {
   const selectedItemId = deps.store.selectSelectedItemId();
   openEditDialogWithValues({ deps, itemId: selectedItemId });
+};
+
+export const handleEditFormAddOptionClick = (deps) => {
+  openCreateTagDialogForMode({
+    deps,
+    mode: "edit-form",
+    itemId: deps.store.getState().editItemId,
+  });
 };
 
 export const handleEditDialogClose = (deps) => {
@@ -422,6 +496,7 @@ export const handleEditFormAction = async (deps, payload) => {
         data: {
           name,
           description: values?.description ?? "",
+          tagIds: Array.isArray(values?.tagIds) ? values.tagIds : [],
           ...fontPatch,
         },
       }),

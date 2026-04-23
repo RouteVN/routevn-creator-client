@@ -2,6 +2,20 @@ import {
   toFlatGroups,
   toFlatItems,
 } from "../../../../internal/project/tree.js";
+import {
+  buildTagViewData,
+  closeCreateTagDialogState,
+  commitDetailTagIdsState,
+  createTagForm as createDefaultTagForm,
+  createTagState,
+  filterGroupsByActiveTags,
+  openCreateTagDialogState,
+  setActiveTagIdsState,
+  setDetailTagIdsState,
+  setDetailTagPopoverOpenState,
+  setTagsDataState,
+  syncDetailTagIds,
+} from "../tags.js";
 
 const EMPTY_TREE = { tree: [], items: {} };
 
@@ -67,8 +81,17 @@ export const createMediaPageStore = ({
   createEditForm = () => undefined,
   getSelectedPreviewFileId = () => undefined,
   extendViewData,
+  tagging,
 }) => {
+  const taggingEnabled = !!tagging;
+  const createEmptyTagsCollection = tagging?.createEmptyTagsCollection;
+  const createTagFormDefinition =
+    tagging?.createTagForm ?? createDefaultTagForm();
   const editForm = createEditForm();
+  const createEmptyEditDefaultValues = () => ({
+    name: "",
+    description: "",
+  });
   const resolvedCenterItemContextMenuItems =
     centerItemContextMenuItems ??
     createCenterItemContextMenuItems(previewMenuLabel);
@@ -84,16 +107,25 @@ export const createMediaPageStore = ({
     searchQuery: "",
     isEditDialogOpen: false,
     editItemId: undefined,
-    editDefaultValues: {
-      name: "",
-      description: "",
-    },
+    editDefaultValues: createEmptyEditDefaultValues(),
     editPreviewFileId: undefined,
     editUploadResult: undefined,
+    ...(taggingEnabled
+      ? createTagState({
+          createEmptyTagsCollection,
+        })
+      : {}),
   });
 
   const setItems = ({ state }, { data } = {}) => {
     state.data = data ?? EMPTY_TREE;
+    if (taggingEnabled) {
+      syncDetailTagIds({
+        state,
+        item: selectDataItem(state, state.selectedItemId),
+        preserveDirty: true,
+      });
+    }
   };
 
   const addPendingUploads = ({ state }, { items } = {}) => {
@@ -134,6 +166,13 @@ export const createMediaPageStore = ({
 
   const setSelectedItemId = ({ state }, { itemId } = {}) => {
     state.selectedItemId = itemId;
+    if (taggingEnabled) {
+      state.isDetailTagSelectOpen = false;
+      syncDetailTagIds({
+        state,
+        item: selectDataItem(state, itemId),
+      });
+    }
   };
 
   const openEditDialog = (
@@ -143,9 +182,13 @@ export const createMediaPageStore = ({
     state.isEditDialogOpen = true;
     state.editItemId = itemId;
     state.editDefaultValues = {
-      name: defaultValues?.name ?? "",
-      description: defaultValues?.description ?? "",
+      ...createEmptyEditDefaultValues(),
     };
+
+    if (defaultValues) {
+      Object.assign(state.editDefaultValues, defaultValues);
+    }
+
     state.editPreviewFileId = previewFileId;
     state.editUploadResult = undefined;
   };
@@ -153,10 +196,7 @@ export const createMediaPageStore = ({
   const closeEditDialog = ({ state }, _payload = {}) => {
     state.isEditDialogOpen = false;
     state.editItemId = undefined;
-    state.editDefaultValues = {
-      name: "",
-      description: "",
-    };
+    state.editDefaultValues = createEmptyEditDefaultValues();
     state.editPreviewFileId = undefined;
     state.editUploadResult = undefined;
   };
@@ -178,6 +218,61 @@ export const createMediaPageStore = ({
 
   const setSearchQuery = ({ state }, { value } = {}) => {
     state.searchQuery = value ?? "";
+  };
+
+  const setTagsData = ({ state }, { tagsData } = {}) => {
+    setTagsDataState({
+      state,
+      tagsData,
+      createEmptyTagsCollection,
+    });
+  };
+
+  const setActiveTagIds = ({ state }, { tagIds } = {}) => {
+    setActiveTagIdsState({
+      state,
+      tagIds,
+    });
+  };
+
+  const setDetailTagIds = ({ state }, { tagIds } = {}) => {
+    setDetailTagIdsState({
+      state,
+      tagIds,
+    });
+  };
+
+  const commitDetailTagIds = ({ state }, { tagIds } = {}) => {
+    commitDetailTagIdsState({
+      state,
+      tagIds,
+    });
+  };
+
+  const setDetailTagPopoverOpen = ({ state }, { open, item } = {}) => {
+    setDetailTagPopoverOpenState({
+      state,
+      open,
+      item,
+    });
+  };
+
+  const openCreateTagDialog = (
+    { state },
+    { mode, itemId, draftTagIds } = {},
+  ) => {
+    openCreateTagDialogState({
+      state,
+      mode,
+      itemId,
+      draftTagIds,
+    });
+  };
+
+  const closeCreateTagDialog = ({ state }, _payload = {}) => {
+    closeCreateTagDialogState({
+      state,
+    });
   };
 
   const selectViewData = ({ state }) => {
@@ -207,7 +302,7 @@ export const createMediaPageStore = ({
       }
     }
 
-    const mediaGroups = rawFlatGroups
+    const unfilteredMediaGroups = rawFlatGroups
       .map((group) => {
         const hiddenItemIds = hiddenItemIdsByGroupId.get(group.id);
         const filteredChildren = (group.children ?? [])
@@ -233,6 +328,13 @@ export const createMediaPageStore = ({
       .filter((group) => group.shouldDisplay);
 
     const selectedItem = selectDataItem(state, state.selectedItemId);
+    const mediaGroups = taggingEnabled
+      ? filterGroupsByActiveTags({
+          groups: unfilteredMediaGroups,
+          itemsById: state.data?.items,
+          activeTagIds: state.activeTagIds,
+        })
+      : unfilteredMediaGroups;
 
     const baseViewData = {
       flatItems,
@@ -261,6 +363,15 @@ export const createMediaPageStore = ({
       editForm,
       editDefaultValues: state.editDefaultValues,
       editPreviewFileId: state.editPreviewFileId,
+      ...(taggingEnabled
+        ? buildTagViewData({
+            state,
+            selectedItem,
+            createTagFormDefinition,
+            tagFilterPlaceholder: tagging?.tagFilterPlaceholder,
+            detailTagAddOptionLabel: tagging?.detailTagAddOptionLabel,
+          })
+        : {}),
     };
 
     if (!extendViewData) {
@@ -290,6 +401,13 @@ export const createMediaPageStore = ({
     selectItemById,
     selectSelectedItemId,
     setSearchQuery,
+    setTagsData,
+    setActiveTagIds,
+    setDetailTagIds,
+    commitDetailTagIds,
+    setDetailTagPopoverOpen,
+    openCreateTagDialog,
+    closeCreateTagDialog,
     selectViewData,
   };
 };

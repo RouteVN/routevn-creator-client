@@ -1,4 +1,7 @@
-import { COMMAND_TYPES } from "../../../../../internal/project/commands.js";
+import {
+  COMMAND_TYPES,
+  getTagScopePartitionResourceType,
+} from "../../../../../internal/project/commands.js";
 import {
   submitCreateResourceCommand,
   submitDeleteResourceCommand,
@@ -7,6 +10,89 @@ import {
 } from "./shared.js";
 
 export const createMediaResourceCommandApi = (shared) => ({
+  async createTag({ scopeKey, tagId, data }) {
+    const context = await shared.ensureCommandContext();
+    const resourceType = getTagScopePartitionResourceType(scopeKey);
+
+    if (!resourceType) {
+      return {
+        valid: false,
+        error: {
+          message: "Unsupported tag scope.",
+        },
+      };
+    }
+
+    return shared.submitCommandWithContext({
+      context,
+      scope: "resources",
+      basePartition: shared.resourceTypePartitionFor(
+        context.projectId,
+        resourceType,
+      ),
+      type: COMMAND_TYPES.TAG_CREATE,
+      payload: {
+        scopeKey,
+        tagId: tagId ?? shared.createId(),
+        data: structuredClone(data),
+      },
+    });
+  },
+  async updateTag({ scopeKey, tagId, data }) {
+    const context = await shared.ensureCommandContext();
+    const resourceType = getTagScopePartitionResourceType(scopeKey);
+
+    if (!resourceType) {
+      return {
+        valid: false,
+        error: {
+          message: "Unsupported tag scope.",
+        },
+      };
+    }
+
+    return shared.submitCommandWithContext({
+      context,
+      scope: "resources",
+      basePartition: shared.resourceTypePartitionFor(
+        context.projectId,
+        resourceType,
+      ),
+      type: COMMAND_TYPES.TAG_UPDATE,
+      payload: {
+        scopeKey,
+        tagId,
+        data: structuredClone(data),
+      },
+    });
+  },
+  async deleteTags({ scopeKey, tagIds }) {
+    const context = await shared.ensureCommandContext();
+    const resourceType = getTagScopePartitionResourceType(scopeKey);
+
+    if (!resourceType) {
+      return {
+        valid: false,
+        error: {
+          message: "Unsupported tag scope.",
+        },
+      };
+    }
+
+    return shared.submitCommandWithContext({
+      context,
+      scope: "resources",
+      basePartition: shared.resourceTypePartitionFor(
+        context.projectId,
+        resourceType,
+      ),
+      type: COMMAND_TYPES.TAG_DELETE,
+      payload: {
+        scopeKey,
+        tagIds: structuredClone(tagIds ?? []),
+      },
+    });
+  },
   createImage: async ({
     imageId,
     data,

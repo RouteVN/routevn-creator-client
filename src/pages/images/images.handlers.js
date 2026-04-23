@@ -3,11 +3,18 @@ import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/c
 import { processPendingUploads } from "../../internal/ui/resourcePages/media/processPendingUploads.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
+import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import {
   runResourcePageMutation,
   showResourcePageError,
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { buildImageResourcePatchFromUploadResult } from "../../deps/services/shared/resourceImports.js";
+import { withResolvedCollectionFileMetadata } from "../../internal/resourceFileMetadata.js";
+import {
+  getTagsCollection,
+  resolveCollectionWithTags,
+} from "../../internal/resourceTags.js";
+import { IMAGE_TAG_SCOPE_KEY } from "./images.store.js";
 
 const MAX_PARALLEL_UPLOADS = 1;
 const IMAGE_FILE_PATTERN = /\.(jpg|jpeg|png|webp)$/i;
@@ -70,8 +77,27 @@ const pickAndUploadImage = async ({ appService, projectService } = {}) => {
   return { uploadResult };
 };
 
+const syncImagePageData = ({ store, repositoryState } = {}) => {
+  const tagsData = getTagsCollection(repositoryState, IMAGE_TAG_SCOPE_KEY);
+  const collectionWithFileMetadata = withResolvedCollectionFileMetadata({
+    collection: repositoryState?.images,
+    files: repositoryState?.files,
+    resourceTypes: ["image"],
+  });
+
+  store.setTagsData({ tagsData });
+  store.setItems({
+    data: resolveCollectionWithTags({
+      collection: collectionWithFileMetadata,
+      tagsCollection: tagsData,
+      itemType: "image",
+    }),
+  });
+};
+
 const {
   openEditDialogWithValues,
+  openCreateTagDialogForMode,
   refreshData: handleDataChanged,
   handleBeforeMount,
   handleAfterMount,
@@ -82,10 +108,45 @@ const {
   handleSearchInput,
   handleItemClick: handleBaseImageItemClick,
   handleItemEdit: handleImageItemEdit,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 } = createMediaPageHandlers({
   resourceType: "images",
+  syncData: syncImagePageData,
   selectItemById: (store, { itemId }) => store.selectImageItemById({ itemId }),
+  getEditValues: (item) => ({
+    name: item?.name ?? "",
+    description: item?.description ?? "",
+    tagIds: item?.tagIds ?? [],
+  }),
   getEditPreviewFileId: (item) => item?.thumbnailFileId ?? item?.fileId,
+  tagging: {
+    scopeKey: IMAGE_TAG_SCOPE_KEY,
+    updateItemTagIds: ({ deps, itemId, tagIds }) =>
+      deps.projectService.updateImage({
+        imageId: itemId,
+        data: {
+          tagIds,
+        },
+      }),
+    updateItemTagFallbackMessage: "Failed to update image tags.",
+    appendCreatedTagByMode: ({ deps, mode, tagId }) => {
+      if (mode !== "edit-form") {
+        return;
+      }
+
+      appendTagIdToForm({
+        form: deps.refs.editForm,
+        tagId,
+      });
+    },
+  },
 });
 
 export {
@@ -98,6 +159,14 @@ export {
   handleDataChanged,
   handleSearchInput,
   handleImageItemEdit,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 };
 const {
   focusKeyboardScope: focusGroupView,
@@ -162,6 +231,14 @@ export const handleImageItemClick = (deps, payload) => {
 export const handleDetailHeaderClick = (deps) => {
   const selectedItemId = deps.store.selectSelectedItemId();
   openEditDialogWithValues({ deps, itemId: selectedItemId });
+};
+
+export const handleEditFormAddOptionClick = (deps) => {
+  openCreateTagDialogForMode({
+    deps,
+    mode: "edit-form",
+    itemId: deps.store.getState().editItemId,
+  });
 };
 
 const createImagesFromFiles = async ({ deps, files, parentId } = {}) => {
@@ -480,6 +557,7 @@ export const handleEditFormAction = async (deps, payload) => {
           ...imagePatch,
           name,
           description: values?.description ?? "",
+          tagIds: Array.isArray(values?.tagIds) ? values.tagIds : [],
         },
       }),
   });

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleBackClick,
   handleLayoutEditorCanvasDragUpdate,
+  handleLayoutEditorCanvasMetricsChange,
   handleSaveButtonClick,
 } from "../../src/pages/layoutEditor/layoutEditor.handlers.js";
 import { enqueueLayoutEditorPersistence } from "../../src/pages/layoutEditor/support/layoutEditorPersistenceQueue.js";
@@ -279,5 +280,42 @@ describe("layoutEditor.handleSaveButtonClick", () => {
     expect(deps.appService.showToast).toHaveBeenCalledWith({
       message: "Layout preview saved.",
     });
+  });
+});
+
+describe("layoutEditor.handleLayoutEditorCanvasMetricsChange", () => {
+  it("skips syncing panel metrics while the deferred detail panel selection is still pending", () => {
+    const deps = {
+      store: {
+        selectSelectedItemId: vi.fn(() => "selected-item"),
+        selectDetailPanelSelectedItemId: vi.fn(() => "stale-panel-item"),
+      },
+      refs: {
+        layoutEditPanel: {
+          getSelectedElementMetrics: vi.fn(() => ({
+            id: "stale-panel-item",
+            width: 20,
+            height: 20,
+          })),
+          setSelectedElementMetrics: vi.fn(),
+        },
+      },
+    };
+
+    handleLayoutEditorCanvasMetricsChange(deps, {
+      _event: {
+        detail: {
+          metrics: {
+            id: "selected-item",
+            width: 76,
+            height: 54,
+          },
+        },
+      },
+    });
+
+    expect(
+      deps.refs.layoutEditPanel.setSelectedElementMetrics,
+    ).not.toHaveBeenCalled();
   });
 });

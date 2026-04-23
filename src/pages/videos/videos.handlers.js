@@ -1,8 +1,12 @@
 import { generateId } from "../../internal/id.js";
 import { isVisualTestMode } from "../../internal/visualTestMode.js";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
-import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import {
+  getMediaPageData,
+  resolveResourceParentId,
+} from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 import { processPendingUploads } from "../../internal/ui/resourcePages/media/processPendingUploads.js";
+import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import {
   runResourcePageMutation,
   showResourcePageError,
@@ -11,6 +15,11 @@ import {
   buildVideoResourceDataFromUploadResult,
   buildVideoResourcePatchFromUploadResult,
 } from "../../deps/services/shared/resourceImports.js";
+import {
+  getTagsCollection,
+  resolveCollectionWithTags,
+} from "../../internal/resourceTags.js";
+import { VIDEO_TAG_SCOPE_KEY } from "./videos.store.js";
 
 const VIDEO_FILE_PATTERN = /\.(mp4)$/i;
 const INVALID_VIDEO_FORMAT_MESSAGE = "Only MP4 videos are supported.";
@@ -175,8 +184,26 @@ const openVideoPreviewById = async ({ deps, itemId } = {}) => {
   render();
 };
 
+const syncVideoPageData = ({ store, repositoryState } = {}) => {
+  const tagsData = getTagsCollection(repositoryState, VIDEO_TAG_SCOPE_KEY);
+  const mediaData = getMediaPageData({
+    repositoryState,
+    resourceType: "videos",
+  });
+
+  store.setTagsData({ tagsData });
+  store.setItems({
+    data: resolveCollectionWithTags({
+      collection: mediaData,
+      tagsCollection: tagsData,
+      itemType: "video",
+    }),
+  });
+};
+
 const {
   openEditDialogWithValues,
+  openCreateTagDialogForMode,
   handleBeforeMount,
   handleAfterMount,
   refreshData: handleDataChanged,
@@ -188,10 +215,45 @@ const {
   handleSearchInput,
   handleItemClick: handleVideoItemClick,
   handleItemEdit: handleVideoItemEdit,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 } = createMediaPageHandlers({
   resourceType: "videos",
+  syncData: syncVideoPageData,
   selectItemById: (store, { itemId }) => store.selectVideoItemById({ itemId }),
+  getEditValues: (item) => ({
+    name: item?.name ?? "",
+    description: item?.description ?? "",
+    tagIds: item?.tagIds ?? [],
+  }),
   getEditPreviewFileId: (item) => item?.thumbnailFileId,
+  tagging: {
+    scopeKey: VIDEO_TAG_SCOPE_KEY,
+    updateItemTagIds: ({ deps, itemId, tagIds }) =>
+      deps.projectService.updateVideo({
+        videoId: itemId,
+        data: {
+          tagIds,
+        },
+      }),
+    updateItemTagFallbackMessage: "Failed to update video tags.",
+    appendCreatedTagByMode: ({ deps, mode, tagId }) => {
+      if (mode !== "edit-form") {
+        return;
+      }
+
+      appendTagIdToForm({
+        form: deps.refs.editForm,
+        tagId,
+      });
+    },
+  },
 });
 
 export {
@@ -206,6 +268,14 @@ export {
   handleSearchInput,
   handleVideoItemClick,
   handleVideoItemEdit,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 };
 
 export const handleFileExplorerDoubleClick = async (deps, payload) => {
@@ -232,6 +302,14 @@ export const handleVideoItemDoubleClick = async (deps, payload) => {
 export const handleDetailHeaderClick = (deps) => {
   const selectedItemId = deps.store.selectSelectedItemId();
   openEditDialogWithValues({ deps, itemId: selectedItemId });
+};
+
+export const handleEditFormAddOptionClick = (deps) => {
+  openCreateTagDialogForMode({
+    deps,
+    mode: "edit-form",
+    itemId: deps.store.getState().editItemId,
+  });
 };
 
 export const handleVideoPreviewLoadedData = (deps) => {
@@ -478,6 +556,7 @@ export const handleEditFormAction = async (deps, payload) => {
         data: {
           name,
           description: values?.description ?? "",
+          tagIds: Array.isArray(values?.tagIds) ? values.tagIds : [],
           ...videoPatch,
         },
       }),

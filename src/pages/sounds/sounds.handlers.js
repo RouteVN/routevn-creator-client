@@ -1,8 +1,12 @@
 import { generateId } from "../../internal/id.js";
 import { filter, tap } from "rxjs";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
-import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import {
+  getMediaPageData,
+  resolveResourceParentId,
+} from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 import { processPendingUploads } from "../../internal/ui/resourcePages/media/processPendingUploads.js";
+import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import {
   getResourcePageErrorMessage,
   runResourcePageMutation,
@@ -12,6 +16,11 @@ import {
   buildSoundResourceDataFromUploadResult,
   buildSoundResourcePatchFromUploadResult,
 } from "../../deps/services/shared/resourceImports.js";
+import {
+  getTagsCollection,
+  resolveCollectionWithTags,
+} from "../../internal/resourceTags.js";
+import { SOUND_TAG_SCOPE_KEY } from "./sounds.store.js";
 
 const UNSUPPORTED_FORMAT_TITLE = "Unsupported Format";
 const UNSUPPORTED_FORMAT_MESSAGE =
@@ -149,8 +158,26 @@ const handlePanelResize = (deps, payload) => {
   }
 };
 
+const syncSoundPageData = ({ store, repositoryState } = {}) => {
+  const tagsData = getTagsCollection(repositoryState, SOUND_TAG_SCOPE_KEY);
+  const mediaData = getMediaPageData({
+    repositoryState,
+    resourceType: "sounds",
+  });
+
+  store.setTagsData({ tagsData });
+  store.setItems({
+    data: resolveCollectionWithTags({
+      collection: mediaData,
+      tagsCollection: tagsData,
+      itemType: "sound",
+    }),
+  });
+};
+
 const {
   openEditDialogWithValues,
+  openCreateTagDialogForMode,
   handleBeforeMount: handleMediaBeforeMount,
   handleAfterMount,
   refreshData: handleDataChanged,
@@ -162,8 +189,17 @@ const {
   handleSearchInput,
   handleItemClick: handleSoundItemClick,
   handleItemEdit: handleSoundItemEdit,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 } = createMediaPageHandlers({
   resourceType: "sounds",
+  syncData: syncSoundPageData,
   subscriptions: (deps) => {
     const { subject } = deps;
 
@@ -177,7 +213,33 @@ const {
     ];
   },
   selectItemById: (store, { itemId }) => store.selectSoundItemById({ itemId }),
+  getEditValues: (item) => ({
+    name: item?.name ?? "",
+    description: item?.description ?? "",
+    tagIds: item?.tagIds ?? [],
+  }),
   getEditPreviewFileId: (item) => item?.waveformDataFileId,
+  tagging: {
+    scopeKey: SOUND_TAG_SCOPE_KEY,
+    updateItemTagIds: ({ deps, itemId, tagIds }) =>
+      deps.projectService.updateSound({
+        soundId: itemId,
+        data: {
+          tagIds,
+        },
+      }),
+    updateItemTagFallbackMessage: "Failed to update sound tags.",
+    appendCreatedTagByMode: ({ deps, mode, tagId }) => {
+      if (mode !== "edit-form") {
+        return;
+      }
+
+      appendTagIdToForm({
+        form: deps.refs.editForm,
+        tagId,
+      });
+    },
+  },
 });
 
 export const handleBeforeMount = (deps) => {
@@ -207,6 +269,14 @@ export {
   handleSearchInput,
   handleSoundItemClick,
   handleSoundItemEdit,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 };
 
 const openSoundPreviewById = ({ deps, itemId, syncExplorer = false } = {}) => {
@@ -250,6 +320,14 @@ export const handleSoundItemDoubleClick = (deps, payload) => {
 export const handleDetailHeaderClick = (deps) => {
   const selectedItemId = deps.store.selectSelectedItemId();
   openEditDialogWithValues({ deps, itemId: selectedItemId });
+};
+
+export const handleEditFormAddOptionClick = (deps) => {
+  openCreateTagDialogForMode({
+    deps,
+    mode: "edit-form",
+    itemId: deps.store.getState().editItemId,
+  });
 };
 
 export const handleSoundItemPreview = (deps, payload) => {
@@ -449,6 +527,7 @@ export const handleEditFormAction = async (deps, payload) => {
         data: {
           name,
           description: values?.description ?? "",
+          tagIds: Array.isArray(values?.tagIds) ? values.tagIds : [],
           ...soundPatch,
         },
       }),

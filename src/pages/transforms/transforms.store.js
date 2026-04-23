@@ -1,10 +1,14 @@
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
+import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import {
   DEFAULT_PROJECT_RESOLUTION,
   formatProjectResolutionAspectRatio,
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
+import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
+
+const TRANSFORM_TAG_SCOPE_KEY = "transforms";
 
 const createTransformForm = ({
   editMode = false,
@@ -30,6 +34,7 @@ const createTransformForm = ({
         label: "Description",
         required: false,
       },
+      createTagField(),
       {
         name: "x",
         type: "slider-with-input",
@@ -129,6 +134,7 @@ const createTransformForm = ({
 const createDialogDefaultValues = (item) => ({
   name: item?.name ?? "",
   description: item?.description ?? "",
+  tagIds: item?.tagIds ?? [],
   x: String(item?.x ?? 0),
   y: String(item?.y ?? 0),
   scaleX: String(item?.scaleX ?? 1),
@@ -153,6 +159,11 @@ const buildDetailFields = (item) => {
     {
       type: "description",
       value: item.description ?? "",
+    },
+    {
+      type: "slot",
+      slot: "transform-tags",
+      label: "Tags",
     },
     {
       type: "text",
@@ -192,15 +203,7 @@ const buildCatalogItem = (item) => ({
   cardKind: "transform",
 });
 
-const matchesSearch = (item, searchQuery) => {
-  if (!searchQuery) {
-    return true;
-  }
-
-  const name = (item.name ?? "").toLowerCase();
-  const description = (item.description ?? "").toLowerCase();
-  return name.includes(searchQuery) || description.includes(searchQuery);
-};
+const matchesSearch = matchesTagAwareSearch;
 
 const transformCenterItemContextMenuItems = [
   { label: "Edit", type: "item", value: "edit-item" },
@@ -210,12 +213,19 @@ const transformCenterItemContextMenuItems = [
 
 const {
   createInitialState: createCatalogInitialState,
-  setItems,
-  setSelectedItemId,
+  setItems: setBaseItems,
+  setSelectedItemId: setBaseSelectedItemId,
   selectSelectedItem,
   selectItemById,
   selectSelectedItemId,
   setSearchQuery,
+  setTagsData,
+  setActiveTagIds,
+  setDetailTagIds,
+  commitDetailTagIds,
+  setDetailTagPopoverOpen,
+  openCreateTagDialog,
+  closeCreateTagDialog,
   selectViewData: selectCatalogViewData,
 } = createCatalogPageStore({
   itemType: "transform",
@@ -229,18 +239,23 @@ const {
   matchesSearch,
   buildDetailFields,
   buildCatalogItem,
-  extendViewData: ({ state, selectedItem, baseViewData }) => ({
-    ...baseViewData,
-    isDialogOpen: state.isDialogOpen,
-    isPreviewOnlyDialog: state.dialogMode === "preview",
-    transformForm: state.transformForm,
-    dialogDefaultValues: state.dialogDefaultValues,
-    canvasAspectRatio: formatProjectResolutionAspectRatio(
-      state.projectResolution,
-    ),
-    projectResolution: state.projectResolution,
-    selectedItem,
-  }),
+  tagging: {
+    tagFilterPlaceholder: "Filter tags",
+  },
+  extendViewData: ({ state, selectedItem, baseViewData }) => {
+    return {
+      ...baseViewData,
+      isDialogOpen: state.isDialogOpen,
+      isPreviewOnlyDialog: state.dialogMode === "preview",
+      transformForm: state.transformForm,
+      dialogDefaultValues: state.dialogDefaultValues,
+      canvasAspectRatio: formatProjectResolutionAspectRatio(
+        state.projectResolution,
+      ),
+      projectResolution: state.projectResolution,
+      selectedItem,
+    };
+  },
 });
 
 export const createInitialState = () => ({
@@ -256,9 +271,16 @@ export const createInitialState = () => ({
 });
 
 export {
-  setItems,
-  setSelectedItemId,
+  setBaseItems as setItems,
+  setBaseSelectedItemId as setSelectedItemId,
   selectSelectedItem,
+  setTagsData,
+  setActiveTagIds,
+  setDetailTagIds,
+  commitDetailTagIds,
+  setDetailTagPopoverOpen,
+  openCreateTagDialog,
+  closeCreateTagDialog,
   selectSelectedItemId,
   setSearchQuery,
 };
@@ -350,3 +372,5 @@ export const selectViewData = (context) => {
     flatItems: applyFolderRequiredRootDragOptions(viewData.flatItems),
   };
 };
+
+export { TRANSFORM_TAG_SCOPE_KEY };

@@ -98,6 +98,113 @@ const POSITION_POPOVER_PRESETS = [
 
 const POSITION_PRESETS_SLOT = "position-presets";
 
+const toPanelViewKeyPart = (value, fallback) => {
+  if (typeof value === "string" && value.length > 0) {
+    return value;
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+
+  return fallback;
+};
+
+const createPanelViewKey = (...parts) => {
+  return parts
+    .map((part, index) => toPanelViewKeyPart(part, `part-${index}`))
+    .join(":");
+};
+
+const annotatePanelNestedItems = (items = [], { parentKey } = {}) => {
+  return items.map((item, index) => {
+    const nextItem = {
+      ...item,
+    };
+    const itemKeyPart = toPanelViewKeyPart(
+      item?.id ?? item?.name ?? item?.fieldName ?? item?.label,
+      `item-${index}`,
+    );
+    nextItem.viewKey = createPanelViewKey(parentKey, itemKeyPart);
+
+    if (Array.isArray(item?.items)) {
+      nextItem.items = annotatePanelNestedItems(item.items, {
+        parentKey: nextItem.viewKey,
+      });
+    }
+
+    if (Array.isArray(item?.attributeItems)) {
+      nextItem.attributeItems = annotatePanelNestedItems(item.attributeItems, {
+        parentKey: createPanelViewKey(nextItem.viewKey, "attributes"),
+      });
+    }
+
+    return nextItem;
+  });
+};
+
+const annotatePanelFields = (fields = [], { parentKey } = {}) => {
+  return fields.map((field, index) => {
+    const nextField = {
+      ...field,
+    };
+    const fieldKeyPart = toPanelViewKeyPart(
+      field?.name ?? field?.label,
+      `field-${index}`,
+    );
+    nextField.viewKey = createPanelViewKey(parentKey, fieldKeyPart);
+    return nextField;
+  });
+};
+
+const annotatePanelItems = (items = [], { sectionKey } = {}) => {
+  return items.map((item, index) => {
+    const nextItem = {
+      ...item,
+    };
+    const itemKeyPart = toPanelViewKeyPart(
+      item?.name ?? item?.type,
+      `item-${index}`,
+    );
+    nextItem.viewKey = createPanelViewKey(sectionKey, itemKeyPart);
+
+    if (Array.isArray(item?.fields)) {
+      nextItem.fields = annotatePanelFields(item.fields, {
+        parentKey: nextItem.viewKey,
+      });
+    }
+
+    if (Array.isArray(item?.items)) {
+      nextItem.items = annotatePanelNestedItems(item.items, {
+        parentKey: nextItem.viewKey,
+      });
+    }
+
+    if (item?.type === "spritesheet-preview") {
+      nextItem.previewKey = item?.key ?? nextItem.viewKey;
+    }
+
+    return nextItem;
+  });
+};
+
+const annotatePanelSections = (sections = []) => {
+  return sections.map((section, index) => {
+    const nextSection = {
+      ...section,
+    };
+    const sectionKeyPart = toPanelViewKeyPart(
+      section?.id ?? section?.label,
+      `section-${index}`,
+    );
+    nextSection.viewKey = createPanelViewKey(sectionKeyPart);
+    nextSection.items = annotatePanelItems(section?.items ?? [], {
+      sectionKey: nextSection.viewKey,
+    });
+    return nextSection;
+  });
+};
+
 const getPositionPopoverResolutionDimension = (projectResolution = {}) => {
   const width = Number(projectResolution?.width);
   const height = Number(projectResolution?.height);
@@ -282,68 +389,75 @@ const createDefaultValues = () => ({
   actions: {},
 });
 
+const resetSelectionUiState = (state) => {
+  state.tempSelectedImageId = undefined;
+  state.imageSelectorDialog = {
+    open: false,
+    name: undefined,
+  };
+  state.fullImagePreviewVisible = false;
+  state.fullImagePreviewImageId = undefined;
+  state.popover = {
+    key: 0,
+    x: undefined,
+    y: undefined,
+    open: false,
+    defaultValues: {},
+    name: undefined,
+    form: undefined,
+    context: {},
+  };
+  state.visibilityConditionDialog = {
+    open: false,
+    key: 0,
+    selectedVariableType: undefined,
+    selectedValueKind: undefined,
+  };
+  state.dropdownMenu = {
+    isOpen: false,
+    x: 0,
+    y: 0,
+    targetName: undefined,
+    items: [],
+  };
+  state.saveLoadPaginationDialog = {
+    open: false,
+    key: 0,
+  };
+  state.childInteractionDialog = {
+    open: false,
+    key: 0,
+  };
+  state.conditionalOverrideConditionDialog = {
+    open: false,
+    key: 0,
+    editingIndex: undefined,
+    selectedVariableType: undefined,
+    selectedValueKind: undefined,
+  };
+  state.conditionalOverrideAttributeDialog = {
+    open: false,
+    key: 0,
+    editingIndex: undefined,
+    fieldName: undefined,
+  };
+  state.selectedElementMetrics = undefined;
+  state.activeInteractionType = "click";
+  state.actionsEditorActions = {};
+};
+
 export const createInitialState = () => {
-  return {
-    tempSelectedImageId: undefined,
-    imageSelectorDialog: {
-      open: false,
-      name: undefined,
-    },
-    fullImagePreviewVisible: false,
-    fullImagePreviewImageId: undefined,
-    popover: {
-      key: 0,
-      x: undefined,
-      y: undefined,
-      open: false,
-      defaultValues: {},
-      name: undefined,
-      form: undefined,
-      context: {},
-    },
-    visibilityConditionDialog: {
-      open: false,
-      key: 0,
-      selectedVariableType: undefined,
-      selectedValueKind: undefined,
-    },
-    dropdownMenu: {
-      isOpen: false,
-      x: 0,
-      y: 0,
-      targetName: undefined,
-      items: [],
-    },
-    saveLoadPaginationDialog: {
-      open: false,
-      key: 0,
-    },
-    childInteractionDialog: {
-      open: false,
-      key: 0,
-    },
-    conditionalOverrideConditionDialog: {
-      open: false,
-      key: 0,
-      editingIndex: undefined,
-      selectedVariableType: undefined,
-      selectedValueKind: undefined,
-    },
-    conditionalOverrideAttributeDialog: {
-      open: false,
-      key: 0,
-      editingIndex: undefined,
-      fieldName: undefined,
-    },
+  const state = {
     imagesData: { tree: [], items: {} },
     spritesheetsData: { tree: [], items: {} },
     particlesData: { tree: [], items: {} },
     textStylesData: { tree: [], items: {} },
     variablesData: { tree: [], items: {} },
     values: createDefaultValues(),
-    activeInteractionType: "click",
-    actionsEditorActions: {},
   };
+
+  resetSelectionUiState(state);
+  return state;
 };
 
 export const updateValueProperty = ({ state }, { value, name } = {}) => {
@@ -669,8 +783,20 @@ export const setVariablesData = ({ state }, { variablesData } = {}) => {
   state.variablesData = variablesData;
 };
 
+export const setSelectedElementMetrics = ({ state }, { metrics } = {}) => {
+  state.selectedElementMetrics = metrics;
+};
+
+export const resetForSelectionChange = ({ state }, _payload = {}) => {
+  resetSelectionUiState(state);
+};
+
 export const selectValues = ({ state }) => {
   return state.values;
+};
+
+export const selectSelectedElementMetrics = ({ state }) => {
+  return state.selectedElementMetrics;
 };
 
 export const setTempSelectedImageId = ({ state }, { imageId } = {}) => {
@@ -738,7 +864,8 @@ export const selectViewData = ({ state, props, constants }) => {
     state.spritesheetsData,
   );
   const particleSelectionItems = toParticleSelectionItems(state.particlesData);
-  const imageFolderItems = toFlatItems(state.imagesData).filter(
+  const imageFlatItems = toFlatItems(state.imagesData);
+  const imageFolderItems = imageFlatItems.filter(
     (item) => item.type === "folder",
   );
   const firstTextStyleId = getFirstTextStyleId(state.textStylesData);
@@ -836,61 +963,63 @@ export const selectViewData = ({ state, props, constants }) => {
     capabilities.supportsSize === true || showsDirectedContainerSizeMode;
   const showAspectRatioMode =
     capabilities.supportsHeight === true && !showsDirectedContainerSizeMode;
-  const sections = parseAndRender(
-    getLayoutEditPanelSections({
-      constants,
-      resourceType: props.resourceType,
-    }),
-    {
-      itemType: props.itemType,
-      layoutType: props.layoutType,
-      resourceType: props.resourceType,
-      isInsideDirectedContainer: props.isInsideDirectedContainer === true,
-      textStyleItems,
-      textStyleItemsWithNone,
-      spritesheetSelectionItems,
-      particleSelectionItems,
-      sliderValueOptions,
-      spritesheetSelectionValue,
-      selectedSpritesheetFileId: selectedSpritesheetPreview.fileId,
-      selectedSpritesheetAtlas: selectedSpritesheetPreview.atlas,
-      selectedSpritesheetAnimation: selectedSpritesheetPreview.animation,
-      selectedSpritesheetPreviewKey:
-        spritesheetSelectionValue ??
-        `${selectedSpritesheetPreview.fileId ?? ""}:${selectedSpritesheetPreview.animation?.frames?.join(",") ?? ""}`,
-      fragmentLayoutOptions,
-      values,
-      showLayoutSizeSection,
-      supportsWidthMode,
-      widthMode,
-      supportsHeightMode,
-      heightMode,
-      showWidthField,
-      showHeightField,
-      showAspectRatioMode,
-      paginationSummary: getSaveLoadPaginationSummary({
-        values,
-        variablesData: state.variablesData,
+  const sections = annotatePanelSections(
+    parseAndRender(
+      getLayoutEditPanelSections({
+        constants,
+        resourceType: props.resourceType,
       }),
-      childInteractionSummary: getChildInteractionSummary(values),
-      childInteractionItems: getChildInteractionItems(values),
-      hasChildInteractionInheritance: hasChildInteractionInheritance(values),
-      canAddChildInteractionInheritance:
-        getAvailableChildInteractionItems(values).length > 0,
-      canAddTextStyleVariant:
-        !values.hoverTextStyleId || !values.clickTextStyleId,
-      conditionalOverrideItems,
-      visibilityConditionSummary: getVisibilityConditionSummary(
-        currentVisibilityCondition,
-        state.variablesData,
-        visibilityConditionOptions,
-      ),
-      hasVisibilityCondition: !!currentVisibilityCondition?.target,
-      canAddSpriteImageVariant:
-        !values.imageId || !values.hoverImageId || !values.clickImageId,
-      showsGapField: showsDirectedContainerSizeMode,
-      ...capabilities,
-    },
+      {
+        itemType: props.itemType,
+        layoutType: props.layoutType,
+        resourceType: props.resourceType,
+        isInsideDirectedContainer: props.isInsideDirectedContainer === true,
+        textStyleItems,
+        textStyleItemsWithNone,
+        spritesheetSelectionItems,
+        particleSelectionItems,
+        sliderValueOptions,
+        spritesheetSelectionValue,
+        selectedSpritesheetFileId: selectedSpritesheetPreview.fileId,
+        selectedSpritesheetAtlas: selectedSpritesheetPreview.atlas,
+        selectedSpritesheetAnimation: selectedSpritesheetPreview.animation,
+        selectedSpritesheetPreviewKey:
+          spritesheetSelectionValue ??
+          `${selectedSpritesheetPreview.fileId ?? ""}:${selectedSpritesheetPreview.animation?.frames?.join(",") ?? ""}`,
+        fragmentLayoutOptions,
+        values,
+        showLayoutSizeSection,
+        supportsWidthMode,
+        widthMode,
+        supportsHeightMode,
+        heightMode,
+        showWidthField,
+        showHeightField,
+        showAspectRatioMode,
+        paginationSummary: getSaveLoadPaginationSummary({
+          values,
+          variablesData: state.variablesData,
+        }),
+        childInteractionSummary: getChildInteractionSummary(values),
+        childInteractionItems: getChildInteractionItems(values),
+        hasChildInteractionInheritance: hasChildInteractionInheritance(values),
+        canAddChildInteractionInheritance:
+          getAvailableChildInteractionItems(values).length > 0,
+        canAddTextStyleVariant:
+          !values.hoverTextStyleId || !values.clickTextStyleId,
+        conditionalOverrideItems,
+        visibilityConditionSummary: getVisibilityConditionSummary(
+          currentVisibilityCondition,
+          state.variablesData,
+          visibilityConditionOptions,
+        ),
+        hasVisibilityCondition: !!currentVisibilityCondition?.target,
+        canAddSpriteImageVariant:
+          !values.imageId || !values.hoverImageId || !values.clickImageId,
+        showsGapField: showsDirectedContainerSizeMode,
+        ...capabilities,
+      },
+    ),
   );
   const visibilityConditionDialogDefaults =
     createVisibilityConditionDialogDefaults(

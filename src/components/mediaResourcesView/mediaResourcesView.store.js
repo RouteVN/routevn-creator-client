@@ -1,13 +1,25 @@
+import {
+  buildTagFilterPopoverViewData,
+  clearTagFilterPopoverTagIds,
+  closeTagFilterPopover,
+  createTagFilterPopoverState,
+  openTagFilterPopover,
+  selectTagFilterPopoverDraftTagIds,
+  toggleTagFilterPopoverTagId,
+} from "../../internal/ui/tagFilterPopover.js";
+
 const DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT = 8;
 const DEFAULT_EAGER_IMAGE_CARD_COUNT = 8;
 
 export const createInitialState = () => ({
   zoomLevel: 1,
   collapsedIds: [],
+  ...createTagFilterPopoverState(),
   hoveredItemId: undefined,
   progressiveRenderedItemCount: DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT,
   progressiveRenderSignature: "",
   progressiveFrameId: undefined,
+  syncRenderFrameId: undefined,
   dropdownMenu: {
     isOpen: false,
     x: 0,
@@ -54,6 +66,16 @@ export const clearProgressiveFrameId = ({ state }) => {
 
 export const selectProgressiveFrameId = ({ state }) => state.progressiveFrameId;
 
+export const setSyncRenderFrameId = ({ state }, { frameId } = {}) => {
+  state.syncRenderFrameId = frameId;
+};
+
+export const clearSyncRenderFrameId = ({ state }) => {
+  state.syncRenderFrameId = undefined;
+};
+
+export const selectSyncRenderFrameId = ({ state }) => state.syncRenderFrameId;
+
 export const setDraggingGroupId = ({ state }, { groupId } = {}) => {
   state.draggingGroupId = groupId;
 };
@@ -97,6 +119,14 @@ export const hideContextMenu = ({ state }, _payload = {}) => {
 };
 
 export const selectDropdownMenu = ({ state }) => state.dropdownMenu;
+
+export {
+  clearTagFilterPopoverTagIds,
+  closeTagFilterPopover,
+  openTagFilterPopover,
+  selectTagFilterPopoverDraftTagIds,
+  toggleTagFilterPopoverTagId,
+};
 
 const parseBooleanProp = (value, fallback = false) => {
   if (value === undefined || value === null) {
@@ -142,6 +172,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
   const lazyImageCardsAttr = attrs.lazyImageCards ?? attrs["lazy-image-cards"];
   const showImageCardPreviewAttr =
     attrs.showImageCardPreview ?? attrs["show-image-card-preview"];
+  const hasActiveTagFilter = (props.selectedTagFilterValues?.length ?? 0) > 0;
   const lazyImageCards = parseBooleanProp(lazyImageCardsAttr);
   let remainingEagerImageCardCount = lazyImageCards
     ? DEFAULT_EAGER_IMAGE_CARD_COUNT
@@ -209,11 +240,29 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     selectedItemId: props.selectedItemId,
     searchQuery: props.searchQuery ?? "",
     searchPlaceholder: props.searchPlaceholder ?? "Search...",
+    tagFilterOptions: props.tagFilterOptions ?? [],
+    selectedTagFilterValues: props.selectedTagFilterValues ?? [],
+    tagFilterPlaceholder: props.tagFilterPlaceholder ?? "Filter tags",
+    ...buildTagFilterPopoverViewData({
+      state,
+      props,
+    }),
+    hasActiveTagFilter,
+    tagFilterButtonBackgroundColor: hasActiveTagFilter ? "ac" : "bg",
+    tagFilterButtonBorderColor: hasActiveTagFilter ? "ac" : "bo",
+    tagFilterButtonIconColor: hasActiveTagFilter ? "white" : "mu-fg",
+    showTagFilter: parseBooleanProp(
+      props.showTagFilter ?? props["show-tag-filter"],
+    ),
     uploadText: props.uploadText ?? "Upload Files",
     uploadIcon: props.uploadIcon ?? "upload",
     emptyMessage:
       props.emptyMessage ??
-      `No items found matching "${props.searchQuery ?? ""}"`,
+      ((props.searchQuery ?? "").trim().length > 0
+        ? `No items found matching "${props.searchQuery ?? ""}"`
+        : hasActiveTagFilter
+          ? "No items found for the selected tags"
+          : "No items found"),
     acceptedFileTypes: props.acceptedFileTypes ?? [],
     imageHeight,
     maxWidth,

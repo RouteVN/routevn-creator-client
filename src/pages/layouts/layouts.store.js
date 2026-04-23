@@ -1,6 +1,10 @@
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
+import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import { isFragmentLayout } from "../../internal/project/layout.js";
+import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
+
+export const LAYOUT_TAG_SCOPE_KEY = "layouts";
 
 const fragmentField = {
   name: "isFragment",
@@ -43,6 +47,7 @@ const layoutForm = {
       },
     },
     layoutDescriptionField,
+    createTagField(),
     fragmentField,
   ],
   actions: {
@@ -67,6 +72,7 @@ const editLayoutForm = {
       required: true,
     },
     layoutDescriptionField,
+    createTagField(),
     fragmentField,
   ],
   actions: {
@@ -123,6 +129,11 @@ const buildDetailFields = (item) => {
       label: "Fragment",
       value: isFragmentLayout(item) ? "Yes" : "No",
     },
+    {
+      type: "slot",
+      slot: "layout-tags",
+      label: "Tags",
+    },
   ];
 
   if (item.description) {
@@ -158,6 +169,13 @@ const {
   selectItemById,
   selectSelectedItemId,
   setSearchQuery,
+  setTagsData,
+  setActiveTagIds,
+  setDetailTagIds,
+  commitDetailTagIds,
+  setDetailTagPopoverOpen,
+  openCreateTagDialog,
+  closeCreateTagDialog,
   selectViewData: selectCatalogViewData,
 } = createCatalogPageStore({
   itemType: "layout",
@@ -167,8 +185,12 @@ const {
   resourceCategory: "userInterface",
   addText: "Add",
   centerItemContextMenuItems: layoutCenterItemContextMenuItems,
+  matchesSearch: matchesTagAwareSearch,
   buildDetailFields,
   buildCatalogItem,
+  tagging: {
+    tagFilterPlaceholder: "Filter tags",
+  },
   extendViewData: ({ state, baseViewData }) => ({
     ...baseViewData,
     itemContextMenuItems: layoutExplorerItemContextMenuItems,
@@ -178,6 +200,7 @@ const {
       name: "",
       layoutType: "general",
       description: "",
+      tagIds: [],
       isFragment: false,
     },
   }),
@@ -191,6 +214,7 @@ export const createInitialState = () => ({
   editDefaultValues: {
     name: "",
     description: "",
+    tagIds: [],
     isFragment: false,
   },
   targetGroupId: undefined,
@@ -202,6 +226,13 @@ export {
   selectSelectedItem,
   selectSelectedItemId,
   setSearchQuery,
+  setTagsData,
+  setActiveTagIds,
+  setDetailTagIds,
+  commitDetailTagIds,
+  setDetailTagPopoverOpen,
+  openCreateTagDialog,
+  closeCreateTagDialog,
 };
 
 export const selectLayoutItemById = selectItemById;
@@ -225,6 +256,7 @@ export const openEditDialog = (
   state.editDefaultValues = {
     name: defaultValues?.name ?? "",
     description: defaultValues?.description ?? "",
+    tagIds: defaultValues?.tagIds ?? [],
     isFragment: defaultValues?.isFragment ?? false,
   };
 };
@@ -235,18 +267,20 @@ export const closeEditDialog = ({ state }, _payload = {}) => {
   state.editDefaultValues = {
     name: "",
     description: "",
+    tagIds: [],
     isFragment: false,
   };
 };
 
 export const selectViewData = (context) => {
   const viewData = selectCatalogViewData(context);
+  const flatItems = applyFolderRequiredRootDragOptions(viewData.flatItems);
 
   return {
     ...viewData,
     isEditDialogOpen: context.state.isEditDialogOpen,
     editDefaultValues: context.state.editDefaultValues,
     editForm: editLayoutForm,
-    flatItems: applyFolderRequiredRootDragOptions(viewData.flatItems),
+    flatItems,
   };
 };

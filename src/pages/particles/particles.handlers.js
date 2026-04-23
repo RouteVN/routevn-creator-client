@@ -1,9 +1,17 @@
 import { generateId } from "../../internal/id.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import {
+  appendTagIdToForm,
+  createResourcePageTagHandlers,
+} from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { extractFileIdsFromRenderState } from "../../internal/project/layout.js";
 import { createRenderableParticleData } from "../../internal/particles.js";
+import {
+  getTagsCollection,
+  resolveCollectionWithTags,
+} from "../../internal/resourceTags.js";
 import {
   buildParticleFormValues,
   buildParticlePayload,
@@ -14,6 +22,7 @@ import {
   DEFAULT_PARTICLE_PRESET_ID,
   PARTICLE_PRESET_OPTIONS,
 } from "./support/particlePresets.js";
+import { PARTICLE_TAG_SCOPE_KEY } from "./particles.store.js";
 
 const CREATE_PARTICLE_SETUP_STEP = "setup";
 const PARTICLE_EDITOR_STEP = "editor";
@@ -353,7 +362,19 @@ const {
   handleSearchInput,
 } = createCatalogPageHandlers({
   resourceType: "particles",
+  selectData: (repositoryState) => {
+    const tagsData = getTagsCollection(repositoryState, PARTICLE_TAG_SCOPE_KEY);
+
+    return resolveCollectionWithTags({
+      collection: repositoryState?.particles,
+      tagsCollection: tagsData,
+      itemType: "particle",
+    });
+  },
   onProjectStateChanged: ({ deps, repositoryState }) => {
+    deps.store.setTagsData({
+      tagsData: getTagsCollection(repositoryState, PARTICLE_TAG_SCOPE_KEY),
+    });
     deps.store.setProjectResolution({
       projectResolution: repositoryState?.project?.resolution,
     });
@@ -450,6 +471,14 @@ export const handleDetailHeaderClick = async (deps) => {
     editMode: true,
     itemId,
     itemData,
+  });
+};
+
+export const handleParticleFormAddOptionClick = (deps) => {
+  openCreateTagDialogForMode({
+    deps,
+    mode: "form",
+    itemId: deps.store.selectEditItemId(),
   });
 };
 
@@ -705,6 +734,53 @@ export const handleParticleFormChange = async (deps, payload) => {
     target: "dialog",
     particleData: previewParticle,
   });
+};
+
+const {
+  openCreateTagDialogForMode,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
+} = createResourcePageTagHandlers({
+  resolveScopeKey: () => PARTICLE_TAG_SCOPE_KEY,
+  updateItemTagIds: ({ deps, itemId, tagIds }) =>
+    deps.projectService.updateParticle({
+      particleId: itemId,
+      data: {
+        tagIds,
+      },
+    }),
+  refreshAfterItemTagUpdate: ({ deps, itemId }) =>
+    refreshParticleData(deps, { selectedItemId: itemId }),
+  getSelectedItemTagIds: ({ deps }) =>
+    deps.store.selectSelectedParticle()?.tagIds ?? [],
+  appendCreatedTagByMode: ({ deps, mode, tagId }) => {
+    if (mode !== "form") {
+      return;
+    }
+
+    appendTagIdToForm({
+      form: deps.refs.particleForm,
+      tagId,
+    });
+  },
+  updateItemTagFallbackMessage: "Failed to update particle tags.",
+});
+
+export {
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 };
 
 export const handleParticleFormTabClick = (deps, payload) => {

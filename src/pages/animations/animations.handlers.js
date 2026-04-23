@@ -1,7 +1,13 @@
 import { generateId } from "../../internal/id.js";
 import { createAnimationEditorPayload } from "../../internal/animationEditorRoute.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
+import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
+import {
+  getTagsCollection,
+  resolveCollectionWithTags,
+} from "../../internal/resourceTags.js";
+import { ANIMATION_TAG_SCOPE_KEY } from "./animations.store.js";
 
 const navigateToAnimationEditor = ({
   appService,
@@ -35,8 +41,63 @@ const {
   handleFileExplorerKeyboardScopeKeyDown,
   handleItemClick: handleAnimationItemClickBase,
   handleSearchInput,
+  openCreateTagDialogForMode,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 } = createCatalogPageHandlers({
   resourceType: "animations",
+  selectData: (repositoryState) => {
+    const tagsData = getTagsCollection(
+      repositoryState,
+      ANIMATION_TAG_SCOPE_KEY,
+    );
+
+    return resolveCollectionWithTags({
+      collection: repositoryState?.animations,
+      tagsCollection: tagsData,
+      itemType: "animation",
+    });
+  },
+  onProjectStateChanged: ({ deps, repositoryState }) => {
+    deps.store.setTagsData({
+      tagsData: getTagsCollection(repositoryState, ANIMATION_TAG_SCOPE_KEY),
+    });
+  },
+  tagging: {
+    scopeKey: ANIMATION_TAG_SCOPE_KEY,
+    updateItemTagIds: ({ deps, itemId, tagIds }) =>
+      deps.projectService.updateAnimation({
+        animationId: itemId,
+        data: {
+          tagIds,
+        },
+      }),
+    updateItemTagFallbackMessage: "Failed to update animation tags.",
+    appendCreatedTagByMode: ({ deps, mode, tagId }) => {
+      if (mode === "add-form") {
+        appendTagIdToForm({
+          form: deps.refs.addForm,
+          tagId,
+        });
+        return;
+      }
+
+      if (mode !== "edit-form") {
+        return;
+      }
+
+      appendTagIdToForm({
+        form: deps.refs.editForm,
+        tagId,
+      });
+    },
+  },
 });
 
 export {
@@ -45,6 +106,14 @@ export {
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
   handleSearchInput,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 };
 
 export const handleBeforeMount = (deps) => {
@@ -83,6 +152,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   const editValues = {
     name: item.name ?? "",
     description: item.description ?? "",
+    tagIds: item.tagIds ?? [],
   };
 
   store.setSelectedItemId({ itemId });
@@ -116,12 +186,14 @@ const createInitialAnimationResourceData = ({
   name,
   description,
   dialogType,
+  tagIds,
 } = {}) => {
   if (dialogType === "transition") {
     return {
       type: "animation",
       name,
       description,
+      tagIds,
       animation: {
         type: "transition",
       },
@@ -132,6 +204,7 @@ const createInitialAnimationResourceData = ({
     type: "animation",
     name,
     description,
+    tagIds,
     animation: {
       type: "update",
       tween: {},
@@ -189,6 +262,21 @@ export const handleDetailHeaderClick = (deps) => {
   });
 };
 
+export const handleAddFormAddOptionClick = (deps) => {
+  openCreateTagDialogForMode({
+    deps,
+    mode: "add-form",
+  });
+};
+
+export const handleEditFormAddOptionClick = (deps) => {
+  openCreateTagDialogForMode({
+    deps,
+    mode: "edit-form",
+    itemId: deps.store.getState().editItemId,
+  });
+};
+
 export const handleEditDialogClose = (deps) => {
   const { render, store } = deps;
   store.closeEditDialog();
@@ -225,6 +313,7 @@ export const handleEditFormAction = async (deps, payload) => {
         data: {
           name,
           description: values?.description ?? "",
+          tagIds: Array.isArray(values?.tagIds) ? values.tagIds : [],
         },
       }),
   });
@@ -274,6 +363,7 @@ export const handleAddFormAction = async (deps, payload) => {
           name,
           description: values?.description ?? "",
           dialogType,
+          tagIds: Array.isArray(values?.tagIds) ? values.tagIds : [],
         }),
         parentId: targetGroupId,
         position: "last",

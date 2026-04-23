@@ -7,14 +7,14 @@ set -e
 
 BUILD_TYPE=${1:-web}
 SETUP_FILE="src/setup.${BUILD_TYPE}.js"
-RETTANGOLI_VERSION=$(node -p "require('./package.json').dependencies['@rettangoli/ui']" 2>/dev/null || echo "1.6.1")
+RETTANGOLI_VERSION=$(node -p "require('./package.json').dependencies['@rettangoli/ui']" 2>/dev/null || echo "1.7.3")
 RETTANGOLI_VERSION="${RETTANGOLI_VERSION#^}"
 RETTANGOLI_VERSION="${RETTANGOLI_VERSION#~}"
+
 RETTANGOLI_URL="https://cdn.jsdelivr.net/npm/@rettangoli/ui@${RETTANGOLI_VERSION}/dist/rettangoli-iife-ui.min.js"
 RETTANGOLI_DIR="static/public/@rettangoli/ui@${RETTANGOLI_VERSION}/dist"
 RETTANGOLI_FILE="${RETTANGOLI_DIR}/rettangoli-iife-ui.min.js"
 LOCAL_RETTANGOLI_FILE="node_modules/@rettangoli/ui/dist/rettangoli-iife-ui.min.js"
-LOCAL_RETTANGOLI_PACKAGE_JSON="node_modules/@rettangoli/ui/package.json"
 LOCK_FILE="/tmp/routevn-creator-client-build.lock"
 
 echo "Building for ${BUILD_TYPE}..."
@@ -33,13 +33,8 @@ bun run build:bundle
 echo "Checking Rettangoli UI..."
 if [ ! -f "${RETTANGOLI_FILE}" ]; then
   mkdir -p "${RETTANGOLI_DIR}"
-  LOCAL_RETTANGOLI_VERSION=""
 
-  if [ -f "${LOCAL_RETTANGOLI_PACKAGE_JSON}" ]; then
-    LOCAL_RETTANGOLI_VERSION=$(node -p "require('./${LOCAL_RETTANGOLI_PACKAGE_JSON}').version" 2>/dev/null || true)
-  fi
-
-  if [ -f "${LOCAL_RETTANGOLI_FILE}" ] && [ "${LOCAL_RETTANGOLI_VERSION}" = "${RETTANGOLI_VERSION}" ]; then
+  if [ -f "${LOCAL_RETTANGOLI_FILE}" ]; then
     echo "Copying Rettangoli UI v${RETTANGOLI_VERSION} from node_modules..."
     cp "${LOCAL_RETTANGOLI_FILE}" "${RETTANGOLI_FILE}"
   # Download with curl or wget when local package asset is not available

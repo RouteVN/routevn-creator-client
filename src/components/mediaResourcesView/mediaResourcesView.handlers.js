@@ -2,6 +2,13 @@ import {
   getAcceptAttribute,
   isFileTypeAccepted,
 } from "../../internal/fileTypes.js";
+import {
+  applyTagFilterPopoverSelection,
+  clearTagFilterPopoverSelection,
+  closeTagFilterPopoverFromOverlay,
+  openTagFilterPopoverFromButton,
+  toggleTagFilterPopoverOption,
+} from "../../internal/ui/tagFilterPopover.handlers.js";
 
 const PROGRESSIVE_INITIAL_ITEM_COUNT = 8;
 const PROGRESSIVE_BATCH_ITEM_COUNT = 24;
@@ -10,6 +17,12 @@ const SCROLL_STICKY_TOP_GAP_PX = 12;
 const getDataAttribute = (event, name) => {
   return event?.currentTarget?.getAttribute?.(name) ?? undefined;
 };
+
+export const handleTagFilterButtonClick = openTagFilterPopoverFromButton;
+export const handleTagFilterPopoverClose = closeTagFilterPopoverFromOverlay;
+export const handleTagFilterOptionClick = toggleTagFilterPopoverOption;
+export const handleTagFilterClearClick = clearTagFilterPopoverSelection;
+export const handleTagFilterApplyClick = applyTagFilterPopoverSelection;
 
 const parseBooleanProp = (value, fallback = false) => {
   if (value === undefined || value === null) {
@@ -60,6 +73,40 @@ const cancelProgressiveRenderFrame = (store) => {
 
   cancelAnimationFrame(frameId);
   store.clearProgressiveFrameId();
+};
+
+const cancelScheduledSyncRender = (store) => {
+  const frameId = store.selectSyncRenderFrameId?.();
+  if (frameId === undefined) {
+    return;
+  }
+
+  cancelAnimationFrame(frameId);
+  store.clearSyncRenderFrameId?.();
+};
+
+const scheduleSyncRender = (deps) => {
+  const { render, store } = deps;
+  if (typeof store.selectSyncRenderFrameId === "function") {
+    const activeFrameId = store.selectSyncRenderFrameId();
+    if (activeFrameId !== undefined) {
+      return;
+    }
+  }
+
+  if (typeof globalThis.requestAnimationFrame !== "function") {
+    render();
+    return;
+  }
+
+  const frameId = globalThis.requestAnimationFrame(() => {
+    store.clearSyncRenderFrameId?.();
+    render();
+  });
+
+  store.setSyncRenderFrameId?.({
+    frameId,
+  });
 };
 
 const scheduleProgressiveRender = (deps) => {
@@ -264,13 +311,14 @@ export const handleBeforeMount = (deps) => {
 
   return () => {
     cancelProgressiveRenderFrame(deps.store);
+    cancelScheduledSyncRender(deps.store);
   };
 };
 
 export const handleOnUpdate = (deps) => {
   const didChange = syncProgressiveRenderState(deps);
   if (didChange) {
-    deps.render();
+    scheduleSyncRender(deps);
   }
 };
 
@@ -321,6 +369,21 @@ export const handleSearchInput = (deps, payload) => {
   dispatchEvent(
     new CustomEvent("search-input", {
       detail: { value },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+export const handleTagFilterChange = (deps, payload) => {
+  const { dispatchEvent } = deps;
+  const tagIds = Array.isArray(payload._event.detail?.value)
+    ? payload._event.detail.value
+    : [];
+
+  dispatchEvent(
+    new CustomEvent("tag-filter-change", {
+      detail: { tagIds },
       bubbles: true,
       composed: true,
     }),

@@ -35,6 +35,11 @@ describe("animations.handlers", () => {
   });
 
   it("selects an animation from the file explorer without logging", () => {
+    vi.stubGlobal("requestAnimationFrame", (callback) => {
+      callback();
+      return 1;
+    });
+
     const deps = {
       store: {
         setSelectedItemId: vi.fn(),
@@ -54,5 +59,7 @@ describe("animations.handlers", () => {
     expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
       itemId: "animation-1",
     });
+
+    vi.unstubAllGlobals();
   });
 });

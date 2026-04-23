@@ -1,6 +1,20 @@
+import {
+  applyTagFilterPopoverSelection,
+  clearTagFilterPopoverSelection,
+  closeTagFilterPopoverFromOverlay,
+  openTagFilterPopoverFromButton,
+  toggleTagFilterPopoverOption,
+} from "../../internal/ui/tagFilterPopover.handlers.js";
+
 const getDataAttribute = (event, name) => {
   return event?.currentTarget?.getAttribute?.(name) ?? undefined;
 };
+
+export const handleTagFilterButtonClick = openTagFilterPopoverFromButton;
+export const handleTagFilterPopoverClose = closeTagFilterPopoverFromOverlay;
+export const handleTagFilterOptionClick = toggleTagFilterPopoverOption;
+export const handleTagFilterClearClick = clearTagFilterPopoverSelection;
+export const handleTagFilterApplyClick = applyTagFilterPopoverSelection;
 
 export const handleSearchInput = (deps, payload) => {
   const { dispatchEvent } = deps;
@@ -9,6 +23,21 @@ export const handleSearchInput = (deps, payload) => {
   dispatchEvent(
     new CustomEvent("search-input", {
       detail: { value },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+export const handleTagFilterChange = (deps, payload) => {
+  const { dispatchEvent } = deps;
+  const tagIds = Array.isArray(payload._event.detail?.tagIds)
+    ? payload._event.detail.tagIds
+    : [];
+
+  dispatchEvent(
+    new CustomEvent("tag-filter-change", {
+      detail: { tagIds },
       bubbles: true,
       composed: true,
     }),

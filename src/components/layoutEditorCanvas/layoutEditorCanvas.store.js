@@ -11,6 +11,7 @@ export const createInitialState = () => ({
   dragStartPosition: undefined,
   pendingUpdatedItem: undefined,
   fileContentCacheById: {},
+  activeRenderRequestId: undefined,
 });
 
 export const setGraphicsReady = ({ state }, { value = false } = {}) => {
@@ -65,6 +66,10 @@ export const clearPendingUpdatedItem = ({ state }, _payload = {}) => {
   state.pendingUpdatedItem = undefined;
 };
 
+export const setActiveRenderRequestId = ({ state }, { requestId } = {}) => {
+  state.activeRenderRequestId = requestId;
+};
+
 export const cacheFileContent = ({ state }, { fileId, url } = {}) => {
   if (!fileId || !url) {
     return;
@@ -107,6 +112,10 @@ export const selectIsGraphicsReady = ({ state }) => {
 
 export const selectPendingUpdatedItem = ({ state }) => {
   return state.pendingUpdatedItem;
+};
+
+export const selectActiveRenderRequestId = ({ state }) => {
+  return state.activeRenderRequestId;
 };
 
 export const selectViewData = ({ state, props }) => {

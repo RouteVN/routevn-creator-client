@@ -20,7 +20,6 @@ const mergeActions = (currentActions, nextPartialActions) => {
 
 const syncRepositoryState = async (deps) => {
   const { store, projectService } = deps;
-  await projectService.ensureRepository();
   store.setRepositoryState({
     repositoryState: projectService.getRepositoryState(),
   });
@@ -49,14 +48,16 @@ export const handleAfterMount = async (deps) => {
 export const handleBeforeMount = (deps) => {
   const { props, render, store } = deps;
   store.updateActions(normalizeActionsObject(props.actions));
+  store.setRepositoryState({
+    repositoryState: deps.projectService.getRepositoryState(),
+  });
   render();
 };
 
-export const handleOnUpdate = async (deps, changes) => {
+export const handleOnUpdate = (deps, changes) => {
   const { render, store } = deps;
   const { newProps } = changes;
   store.updateActions(normalizeActionsObject(newProps.actions));
-  await syncRepositoryState(deps);
   render();
 };
 

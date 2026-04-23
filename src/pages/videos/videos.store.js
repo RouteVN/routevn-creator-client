@@ -1,6 +1,10 @@
 import { formatFileSize } from "../../internal/files.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { createMediaPageStore } from "../../internal/ui/resourcePages/media/createMediaPageStore.js";
+import { createTagField } from "../../internal/ui/resourcePages/tags.js";
+import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
+
+const VIDEO_TAG_SCOPE_KEY = "videos";
 
 const formatDimensions = (item) => {
   if (!item?.width || !item?.height) {
@@ -43,6 +47,11 @@ const buildDetailFields = (item) => {
     {
       type: "description",
       value: item.description ?? "",
+    },
+    {
+      type: "slot",
+      slot: "video-tags",
+      label: "Tags",
     },
     {
       type: "text",
@@ -99,6 +108,7 @@ const createEditForm = () => ({
       label: "Description",
       required: false,
     },
+    createTagField(),
     {
       type: "slot",
       slot: "video-slot",
@@ -119,11 +129,11 @@ const createEditForm = () => ({
 
 const {
   createInitialState: createMediaInitialState,
-  setItems,
+  setItems: setBaseItems,
   addPendingUploads,
   removePendingUploads,
   updatePendingUpload,
-  setSelectedItemId,
+  setSelectedItemId: setBaseSelectedItemId,
   openEditDialog,
   closeEditDialog,
   setEditUpload,
@@ -131,6 +141,13 @@ const {
   selectItemById,
   selectSelectedItemId,
   setSearchQuery,
+  setTagsData,
+  setActiveTagIds,
+  setDetailTagIds,
+  commitDetailTagIds,
+  setDetailTagPopoverOpen,
+  openCreateTagDialog,
+  closeCreateTagDialog,
   selectViewData: selectMediaViewData,
 } = createMediaPageStore({
   itemType: "video",
@@ -139,19 +156,25 @@ const {
   selectedResourceId: "videos",
   uploadText: "Upload",
   acceptedFileTypes: [".mp4"],
+  matchesSearch: matchesTagAwareSearch,
   buildDetailFields,
   buildMediaItem,
   buildPendingMediaItem,
   createEditForm,
   getSelectedPreviewFileId: (item) => item?.thumbnailFileId,
-  extendViewData: ({ state, baseViewData }) => ({
-    ...baseViewData,
-    videoVisible: state.videoVisible,
-    isVideoPreviewReady: state.isVideoPreviewReady,
-    selectedVideo: state.selectedVideo,
-    selectedVideoAutoplay: state.selectedVideo?.autoplay === true,
-    selectedVideoMuted: state.selectedVideo?.muted === true,
-  }),
+  tagging: {
+    tagFilterPlaceholder: "Filter tags",
+  },
+  extendViewData: ({ state, baseViewData }) => {
+    return {
+      ...baseViewData,
+      videoVisible: state.videoVisible,
+      isVideoPreviewReady: state.isVideoPreviewReady,
+      selectedVideo: state.selectedVideo,
+      selectedVideoAutoplay: state.selectedVideo?.autoplay === true,
+      selectedVideoMuted: state.selectedVideo?.muted === true,
+    };
+  },
 });
 
 export const createInitialState = () => ({
@@ -162,15 +185,22 @@ export const createInitialState = () => ({
 });
 
 export {
-  setItems,
+  setBaseItems as setItems,
   addPendingUploads,
   removePendingUploads,
   updatePendingUpload,
-  setSelectedItemId,
+  setBaseSelectedItemId as setSelectedItemId,
   openEditDialog,
   closeEditDialog,
   setEditUpload,
   selectSelectedItem,
+  setTagsData,
+  setActiveTagIds,
+  setDetailTagIds,
+  commitDetailTagIds,
+  setDetailTagPopoverOpen,
+  openCreateTagDialog,
+  closeCreateTagDialog,
   selectSelectedItemId,
   setSearchQuery,
 };
@@ -204,3 +234,5 @@ export const selectViewData = (context) => {
     flatItems: applyFolderRequiredRootDragOptions(viewData.flatItems),
   };
 };
+
+export { VIDEO_TAG_SCOPE_KEY };

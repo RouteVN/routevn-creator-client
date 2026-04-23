@@ -169,57 +169,58 @@ template:
               - rtgl-view d=h av=c ah=e w=f g=lg:
                   - rtgl-button#embeddedCloseButton: Confirm
   - rtgl-dialog#actionsDialog key=${mode} ?open=${isActionsDialogOpen}:
-      - rtgl-view slot=content w=800 h=80vh pos=rel:
-          - 'rtgl-view#helpFloatingButton pos=abs z=10 w=28 h=28 ah=c av=c bgc=bg bw=xs bc=bo h-bc=ac br=f cur=pointer style="top: 10px; right: 10px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);"':
-              - rtgl-text s=xs c=mu-fg: '?'
-          - $if mode == "actions":
-              - rvn-command-line-actions#commandLineActions :actionsType=${actionsType} :hiddenModes=${hiddenModes}: null
-            $elif mode == "dialogue":
-              - rvn-command-line-dialogue-box#commandLineDialogueBox :layouts=${dialogueLayouts} :characters=${allCharacters} :dialogue=${actions.dialogue}: null
-            $elif mode == "choice":
-              - rvn-command-line-choices#commandLineChoices :layouts=${choiceLayouts} :choice=${actions.choice}: null
-            $elif mode == "background":
-              - rvn-command-line-background#commandLineBackground data-mode="background" :background=${actions.background}: null
-            $elif mode == "bgm":
-              - rvn-command-line-bgm#commandLineBgm :bgm=${actions.bgm}: null
-            $elif mode == "sfx":
-              - rvn-command-line-sound-effects#commandLineSoundEffects :sfx=${actions.sfx}: null
-            $elif mode == "character":
-              - rvn-command-line-characters#commandLineCharacters :character=${actions.character} :presentationState=${presentationState}: null
-            $elif mode == "sectionTransition":
-              - rvn-command-line-section-transition#commandLineSectionTransition :sectionTransition=${actions.sectionTransition} :currentSceneId=${currentSceneId}: null
-            $elif mode == "resetStoryAtSection":
-              - rvn-command-line-reset-story-at-section#commandLineResetStoryAtSection :resetStoryAtSection=${actions.resetStoryAtSection} :currentSceneId=${currentSceneId}: null
-            $elif mode == "control":
-              - rvn-command-line-control#commandLineControl :controls=${controlLayouts} :control=${actions.control}: null
-            $elif mode == "nextLine":
-              - rvn-command-line-next-line#commandLineNextLine :nextLine=${selectedLine.actions.nextLine}: null
-            $elif mode == "toggleAutoMode":
-              - rvn-command-line-toggle-auto-mode#commandLineToggleAutoMode :toggleAutoMode=${actions.toggleAutoMode}: null
-            $elif mode == "toggleSkipMode":
-              - rvn-command-line-toggle-skip-mode#commandLineToggleSkipMode :toggleSkipMode=${actions.toggleSkipMode}: null
-            $elif mode == "toggleDialogueUI":
-              - rvn-command-line-toggle-dialogue-ui#commandLineToggleDialogueUI :toggleDialogueUI=${actions.toggleDialogueUI}: null
-            $elif mode == "pushOverlay":
-              - rvn-command-line-push-overlay#commandLinePushOverlay :pushOverlay=${actions.pushOverlay}: null
-            $elif mode == "popOverlay":
-              - rvn-command-line-pop-overlay#commandLinePopOverlay :popOverlay=${actions.popOverlay}: null
-            $elif mode == "rollbackByOffset":
-              - rvn-command-line-rollback-by-offset#commandLineRollbackByOffset :rollbackByOffset=${actions.rollbackByOffset}: null
-            $elif mode == "showConfirmDialog":
-              - rvn-command-line-show-confirm-dialog#commandLineShowConfirmDialog :layouts=${confirmDialogLayouts} :showConfirmDialog=${actions.showConfirmDialog}: null
-            $elif mode == "hideConfirmDialog":
-              - rvn-command-line-hide-confirm-dialog#commandLineHideConfirmDialog :hideConfirmDialog=${actions.hideConfirmDialog}: null
-            $elif mode == "saveSlot":
-              - rvn-command-line-save-slot#commandLineSaveSlot :saveSlot=${actions.saveSlot}: null
-            $elif mode == "loadSlot":
-              - rvn-command-line-load-slot#commandLineLoadSlot :loadSlot=${actions.loadSlot}: null
-            $elif mode == "visual":
-              - rvn-command-line-visual#commandLineVisual :visual=${actions.visual} :presentationState=${presentationState}: null
-            $elif mode == "setNextLineConfig":
-              - rvn-command-line-set-next-line-config#commandLineSetNextLineConfig :setNextLineConfig=${actions.setNextLineConfig}: null
-            $elif isRuntimeActionMode:
-              - rvn-command-line-runtime-action#commandLineRuntimeAction :mode=${mode} :action=${actions[mode]}: null
-            $elif mode == "updateVariable":
-              - rvn-command-line-update-variable#commandLineUpdateVariable :updateVariable=${actions.updateVariable}: null
+      - $if isActionsDialogOpen:
+          - rtgl-view slot=content w=800 h=80vh pos=rel:
+              - 'rtgl-view#helpFloatingButton pos=abs z=10 w=28 h=28 ah=c av=c bgc=bg bw=xs bc=bo h-bc=ac br=f cur=pointer style="top: 10px; right: 10px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);"':
+                  - rtgl-text s=xs c=mu-fg: '?'
+              - $if mode == "actions":
+                  - rvn-command-line-actions#commandLineActions :actionsType=${actionsType} :hiddenModes=${hiddenModes}: null
+                $elif mode == "dialogue":
+                  - rvn-command-line-dialogue-box#commandLineDialogueBox :layouts=${dialogueLayouts} :characters=${allCharacters} :dialogue=${actions.dialogue}: null
+                $elif mode == "choice":
+                  - rvn-command-line-choices#commandLineChoices :layouts=${choiceLayouts} :choice=${actions.choice}: null
+                $elif mode == "background":
+                  - rvn-command-line-background#commandLineBackground data-mode="background" :background=${actions.background}: null
+                $elif mode == "bgm":
+                  - rvn-command-line-bgm#commandLineBgm :bgm=${actions.bgm}: null
+                $elif mode == "sfx":
+                  - rvn-command-line-sound-effects#commandLineSoundEffects :sfx=${actions.sfx}: null
+                $elif mode == "character":
+                  - rvn-command-line-characters#commandLineCharacters :character=${actions.character} :presentationState=${presentationState}: null
+                $elif mode == "sectionTransition":
+                  - rvn-command-line-section-transition#commandLineSectionTransition :sectionTransition=${actions.sectionTransition} :currentSceneId=${currentSceneId}: null
+                $elif mode == "resetStoryAtSection":
+                  - rvn-command-line-reset-story-at-section#commandLineResetStoryAtSection :resetStoryAtSection=${actions.resetStoryAtSection} :currentSceneId=${currentSceneId}: null
+                $elif mode == "control":
+                  - rvn-command-line-control#commandLineControl :controls=${controlLayouts} :control=${actions.control}: null
+                $elif mode == "nextLine":
+                  - rvn-command-line-next-line#commandLineNextLine :nextLine=${selectedLine.actions.nextLine}: null
+                $elif mode == "toggleAutoMode":
+                  - rvn-command-line-toggle-auto-mode#commandLineToggleAutoMode :toggleAutoMode=${actions.toggleAutoMode}: null
+                $elif mode == "toggleSkipMode":
+                  - rvn-command-line-toggle-skip-mode#commandLineToggleSkipMode :toggleSkipMode=${actions.toggleSkipMode}: null
+                $elif mode == "toggleDialogueUI":
+                  - rvn-command-line-toggle-dialogue-ui#commandLineToggleDialogueUI :toggleDialogueUI=${actions.toggleDialogueUI}: null
+                $elif mode == "pushOverlay":
+                  - rvn-command-line-push-overlay#commandLinePushOverlay :pushOverlay=${actions.pushOverlay}: null
+                $elif mode == "popOverlay":
+                  - rvn-command-line-pop-overlay#commandLinePopOverlay :popOverlay=${actions.popOverlay}: null
+                $elif mode == "rollbackByOffset":
+                  - rvn-command-line-rollback-by-offset#commandLineRollbackByOffset :rollbackByOffset=${actions.rollbackByOffset}: null
+                $elif mode == "showConfirmDialog":
+                  - rvn-command-line-show-confirm-dialog#commandLineShowConfirmDialog :layouts=${confirmDialogLayouts} :showConfirmDialog=${actions.showConfirmDialog}: null
+                $elif mode == "hideConfirmDialog":
+                  - rvn-command-line-hide-confirm-dialog#commandLineHideConfirmDialog :hideConfirmDialog=${actions.hideConfirmDialog}: null
+                $elif mode == "saveSlot":
+                  - rvn-command-line-save-slot#commandLineSaveSlot :saveSlot=${actions.saveSlot}: null
+                $elif mode == "loadSlot":
+                  - rvn-command-line-load-slot#commandLineLoadSlot :loadSlot=${actions.loadSlot}: null
+                $elif mode == "visual":
+                  - rvn-command-line-visual#commandLineVisual :visual=${actions.visual} :presentationState=${presentationState}: null
+                $elif mode == "setNextLineConfig":
+                  - rvn-command-line-set-next-line-config#commandLineSetNextLineConfig :setNextLineConfig=${actions.setNextLineConfig}: null
+                $elif isRuntimeActionMode:
+                  - rvn-command-line-runtime-action#commandLineRuntimeAction :mode=${mode} :action=${actions[mode]}: null
+                $elif mode == "updateVariable":
+                  - rvn-command-line-update-variable#commandLineUpdateVariable :updateVariable=${actions.updateVariable}: null
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

@@ -1,10 +1,14 @@
 import { toFlatItems } from "../../internal/project/tree.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
+import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import {
   formatAnimationDurationLabel,
   toAnimationDisplayItem,
 } from "../../internal/animationDisplay.js";
+import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
+
+export const ANIMATION_TAG_SCOPE_KEY = "animations";
 
 const editForm = {
   title: "Edit Animation",
@@ -21,6 +25,7 @@ const editForm = {
       label: "Description",
       required: false,
     },
+    createTagField(),
   ],
   actions: {
     layout: "",
@@ -49,6 +54,7 @@ const addForm = {
       label: "Description",
       required: false,
     },
+    createTagField(),
     {
       name: "dialogType",
       type: "segmented-control",
@@ -96,24 +102,23 @@ const buildCatalogItem = (item) => {
   return toAnimationDisplayItem(item);
 };
 
-const matchesSearch = (item, searchQuery) => {
-  if (!searchQuery) {
-    return true;
-  }
-
-  const name = (item.name ?? "").toLowerCase();
-  const description = (item.description ?? "").toLowerCase();
-  return name.includes(searchQuery) || description.includes(searchQuery);
-};
+const matchesSearch = matchesTagAwareSearch;
 
 const {
   createInitialState: createCatalogInitialState,
-  setItems,
-  setSelectedItemId,
+  setItems: setBaseItems,
+  setSelectedItemId: setBaseSelectedItemId,
   selectSelectedItem,
   selectItemById,
   selectSelectedItemId,
   setSearchQuery,
+  setTagsData,
+  setActiveTagIds,
+  setDetailTagIds,
+  commitDetailTagIds,
+  setDetailTagPopoverOpen,
+  openCreateTagDialog,
+  closeCreateTagDialog,
   selectViewData: selectCatalogViewData,
 } = createCatalogPageStore({
   itemType: "animation",
@@ -125,6 +130,9 @@ const {
   centerItemContextMenuItems: animationCenterItemContextMenuItems,
   buildCatalogItem,
   matchesSearch,
+  tagging: {
+    tagFilterPlaceholder: "Filter tags",
+  },
   extendViewData: ({ state, selectedItem, baseViewData }) => {
     const selectedAnimationItem = selectedItem
       ? toAnimationDisplayItem(selectedItem)
@@ -137,6 +145,7 @@ const {
       addFormDefaults: {
         name: "",
         description: "",
+        tagIds: [],
         dialogType: "update",
       },
       isEditDialogOpen: state.isEditDialogOpen,
@@ -162,13 +171,20 @@ export const createInitialState = () => ({
   editDefaultValues: {
     name: "",
     description: "",
+    tagIds: [],
   },
 });
-
 export {
-  setItems,
-  setSelectedItemId,
+  setBaseItems as setItems,
+  setBaseSelectedItemId as setSelectedItemId,
   selectSelectedItem,
+  setTagsData,
+  setActiveTagIds,
+  setDetailTagIds,
+  commitDetailTagIds,
+  setDetailTagPopoverOpen,
+  openCreateTagDialog,
+  closeCreateTagDialog,
   selectSelectedItemId,
   setSearchQuery,
 };
@@ -202,6 +218,7 @@ export const openEditDialog = ({ state }, { itemId, defaultValues } = {}) => {
   state.editDefaultValues = {
     name: defaultValues?.name ?? "",
     description: defaultValues?.description ?? "",
+    tagIds: defaultValues?.tagIds ?? [],
   };
 };
 
@@ -211,6 +228,7 @@ export const closeEditDialog = ({ state }) => {
   state.editDefaultValues = {
     name: "",
     description: "",
+    tagIds: [],
   };
 };
 

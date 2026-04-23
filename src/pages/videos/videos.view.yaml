@@ -34,6 +34,10 @@ refs:
         handler: handleUploadClick
       search-input:
         handler: handleSearchInput
+      tag-filter-change:
+        handler: handleTagFilterChange
+      tag-filter-add-option-click:
+        handler: handleTagFilterAddOptionClick
       item-delete:
         handler: handleItemDelete
   fileExplorerKeyboardScope:
@@ -72,6 +76,8 @@ refs:
     eventListeners:
       form-action:
         handler: handleEditFormAction
+      add-option-click:
+        handler: handleEditFormAddOptionClick
   editDialogThumbnail:
     eventListeners:
       click:
@@ -80,6 +86,24 @@ refs:
     eventListeners:
       click:
         handler: handleEditDialogVideoClick
+  detailTagSelect:
+    eventListeners:
+      value-change:
+        handler: handleDetailTagValueChange
+      draft-value-change:
+        handler: handleDetailTagDraftValueChange
+      open-change:
+        handler: handleDetailTagOpenChange
+      add-option-click:
+        handler: handleDetailTagAddOptionClick
+  createTagDialog:
+    eventListeners:
+      close:
+        handler: handleCreateTagDialogClose
+  createTagForm:
+    eventListeners:
+      form-action:
+        handler: handleCreateTagFormAction
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
@@ -89,7 +113,7 @@ template:
                   - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
           - 'rtgl-view w=1fg h=f pl=sm style="min-width: 0; min-height: 0;"':
               - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
-                  - rvn-media-resources-view#groupview w=f h=f :navTitle=${title} :groups=${mediaGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems}: null
+                  - rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-tag-filter :groups=${mediaGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems}: null
           - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - 'div#fileExplorerDetailKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
@@ -104,6 +128,7 @@ template:
                                     $else:
                                       - rtgl-view#detailThumbnailPlaceholder slot="video-thumbnail-file-id" w=f h=135 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
                                           - rtgl-text c=mu-fg s=sm: Click to Upload
+                                  - rtgl-tag-select#detailTagSelect slot="video-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
                         $else:
                           - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                               - rtgl-text s=md c=mu-fg: No selection
@@ -115,6 +140,8 @@ template:
                 $else:
                   - rtgl-view#editDialogThumbnailPlaceholder slot="video-slot" w=f h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
                       - rtgl-text c=mu-fg s=sm: Click to Upload
+  - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
+      - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null
   - rtgl-dialog#videoPreviewDialog ?open=${videoVisible} s=lg:
       - $if selectedVideo:
           - $if selectedVideo.url:

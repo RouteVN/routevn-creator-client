@@ -2,11 +2,20 @@ import { generateId } from "../../internal/id.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import {
+  appendTagIdToForm,
+  createResourcePageTagHandlers,
+} from "../../internal/ui/resourcePages/tags.js";
+import {
   runResourcePageMutation,
   showResourcePageError,
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { tap } from "rxjs";
+import {
+  getTagsCollection,
+  resolveCollectionWithTags,
+} from "../../internal/resourceTags.js";
+import { CHARACTER_TAG_SCOPE_KEY } from "./characters.store.js";
 
 const AVATAR_VALIDATIONS = [
   {
@@ -20,6 +29,7 @@ const EMPTY_CHARACTER_FORM_VALUES = {
   name: "",
   description: "",
   shortcut: "",
+  tagIds: [],
 };
 
 const syncCharactersData = ({
@@ -27,8 +37,20 @@ const syncCharactersData = ({
   repositoryState,
   projectService,
 } = {}) => {
-  const state = repositoryState ?? projectService.getState();
-  store.setItems({ charactersData: state?.characters });
+  const state =
+    repositoryState ??
+    projectService.getRepositoryState?.() ??
+    projectService.getState();
+  const tagsData = getTagsCollection(state, CHARACTER_TAG_SCOPE_KEY);
+
+  store.setTagsData({ tagsData });
+  store.setItems({
+    charactersData: resolveCollectionWithTags({
+      collection: state?.characters,
+      tagsCollection: tagsData,
+      itemType: "character",
+    }),
+  });
 };
 
 const getCharacterItemById = ({ store, itemId } = {}) => {
@@ -57,6 +79,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
       name: characterItem.name ?? "",
       description: characterItem.description ?? "",
       shortcut: characterItem.shortcut ?? "",
+      tagIds: characterItem.tagIds ?? [],
     },
   });
 };
@@ -217,14 +240,16 @@ export const handleDetailHeaderClick = (deps) => {
 
 export const handleCharacterCreated = async (deps, payload) => {
   const { appService, projectService } = deps;
+  const detail = payload._event.detail;
   const {
     groupId,
     name,
     description,
     shortcut,
+    tagIds,
     avatarFileId,
     avatarUploadResult,
-  } = payload._event.detail;
+  } = detail;
   const characterId = generateId();
   const defaultSpritesFolderId = generateId();
   const characterData = {
@@ -232,6 +257,7 @@ export const handleCharacterCreated = async (deps, payload) => {
     name,
     description,
     shortcut: shortcut || "",
+    tagIds: Array.isArray(tagIds) ? tagIds : [],
     sprites: {
       tree: [
         {
@@ -304,6 +330,21 @@ export const handleAddCharacterClick = (deps, payload) => {
   resetAddCharacterForm(deps);
 };
 
+export const handleCharacterFormAddOptionClick = (deps) => {
+  openCreateTagDialogForMode({
+    deps,
+    mode: "create-form",
+  });
+};
+
+export const handleEditFormAddOptionClick = (deps) => {
+  openCreateTagDialogForMode({
+    deps,
+    mode: "edit-form",
+    itemId: deps.store.getState().editItemId,
+  });
+};
+
 export const handleCloseDialog = (deps) => {
   const { store, render } = deps;
   store.closeAvatarCropDialog();
@@ -340,6 +381,7 @@ export const handleDialogFormActionClick = async (deps, payload) => {
           name,
           description: formData.description,
           shortcut: formData.shortcut || "",
+          tagIds: Array.isArray(formData.tagIds) ? formData.tagIds : [],
           avatarFileId: avatarFileId,
           avatarUploadResult,
         },
@@ -361,6 +403,63 @@ export const handleDialogFormActionClick = async (deps, payload) => {
     store.toggleDialog();
     render();
   }
+};
+
+const {
+  openCreateTagDialogForMode,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
+} = createResourcePageTagHandlers({
+  resolveScopeKey: () => CHARACTER_TAG_SCOPE_KEY,
+  updateItemTagIds: ({ deps, itemId, tagIds }) =>
+    deps.projectService.updateCharacter({
+      characterId: itemId,
+      data: {
+        tagIds,
+      },
+    }),
+  refreshAfterItemTagUpdate: ({ deps }) => refreshCharactersData(deps),
+  getSelectedItemTagIds: ({ deps, itemId }) =>
+    getCharacterItemById({
+      store: deps.store,
+      itemId: itemId ?? deps.store.selectSelectedItemId(),
+    })?.tagIds ?? [],
+  appendCreatedTagByMode: ({ deps, mode, tagId }) => {
+    if (mode === "create-form") {
+      appendTagIdToForm({
+        form: deps.refs.characterForm,
+        tagId,
+      });
+      return;
+    }
+
+    if (mode !== "edit-form") {
+      return;
+    }
+
+    appendTagIdToForm({
+      form: deps.refs.editForm,
+      tagId,
+    });
+  },
+  updateItemTagFallbackMessage: "Failed to update character tags.",
+});
+
+export {
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 };
 
 export const handleDialogAvatarClick = async (deps) => {
@@ -513,6 +612,7 @@ export const handleEditFormAction = async (deps, payload) => {
       name: formData.name,
       description: formData.description,
       shortcut: formData.shortcut || "",
+      tagIds: Array.isArray(formData.tagIds) ? formData.tagIds : [],
     };
 
     // Include avatar file ID if it was changed

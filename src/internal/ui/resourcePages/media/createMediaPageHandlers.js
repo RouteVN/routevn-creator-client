@@ -3,16 +3,24 @@ import { createFileExplorerKeyboardScopeHandlers } from "../../fileExplorerKeybo
 import { createProjectStateStream } from "../../../../deps/services/shared/projectStateStream.js";
 import { syncMediaPageData } from "./mediaPageShared.js";
 import { tap } from "rxjs";
+import { createResourcePageTagHandlers } from "../tags.js";
 
 export const createMediaPageHandlers = ({
   resourceType,
   subscriptions,
+  syncData = ({ store, repositoryState }) =>
+    syncMediaPageData({
+      store,
+      repositoryState,
+      resourceType,
+    }),
   selectItemById = (store, { itemId }) => store.selectItemById({ itemId }),
   getEditValues = (item) => ({
     name: item?.name ?? "",
     description: item?.description ?? "",
   }),
   getEditPreviewFileId = () => undefined,
+  tagging,
 }) => {
   const waitForExpectedMediaState = async (
     deps,
@@ -38,7 +46,8 @@ export const createMediaPageHandlers = ({
       return true;
     };
 
-    const currentState = projectService.getState();
+    const currentState =
+      projectService.getRepositoryState?.() ?? projectService.getState();
     if (matchesExpectation(currentState)) {
       return currentState;
     }
@@ -60,7 +69,7 @@ export const createMediaPageHandlers = ({
 
       cleanupSubscription = projectService.subscribeProjectState(
         ({ domainState, repositoryState }) => {
-          const nextState = domainState ?? repositoryState;
+          const nextState = repositoryState ?? domainState;
           if (matchesExpectation(nextState)) {
             finish(nextState);
           }
@@ -69,7 +78,9 @@ export const createMediaPageHandlers = ({
       );
 
       timeoutId = setTimeout(() => {
-        finish(projectService.getState());
+        finish(
+          projectService.getRepositoryState?.() ?? projectService.getState(),
+        );
       }, 250);
     });
   };
@@ -80,7 +91,7 @@ export const createMediaPageHandlers = ({
       selectedItemId,
       deletedItemId,
     });
-    syncMediaPageData({
+    syncData({
       store,
       repositoryState,
       resourceType,
@@ -133,7 +144,7 @@ export const createMediaPageHandlers = ({
     const streams = [
       createProjectStateStream({ projectService }).pipe(
         tap(({ repositoryState }) => {
-          syncMediaPageData({
+          syncData({
             store,
             repositoryState,
             resourceType,
@@ -230,6 +241,32 @@ export const createMediaPageHandlers = ({
     render();
   };
 
+  const resolveTagScopeKey = ({ deps, itemId, mode } = {}) => {
+    if (typeof tagging?.resolveScopeKey === "function") {
+      return tagging.resolveScopeKey({
+        deps,
+        itemId,
+        mode,
+      });
+    }
+
+    return tagging?.scopeKey;
+  };
+
+  const tagHandlers = tagging
+    ? createResourcePageTagHandlers({
+        resolveScopeKey: resolveTagScopeKey,
+        updateItemTagIds: tagging.updateItemTagIds,
+        refreshAfterItemTagUpdate: ({ deps, itemId }) =>
+          refreshData(deps, { selectedItemId: itemId }),
+        appendCreatedTagByMode: tagging.appendCreatedTagByMode,
+        getSelectedItemId: tagging.getSelectedItemId,
+        getSelectedItemTagIds: tagging.getSelectedItemTagIds,
+        createTagFallbackMessage: tagging.createTagFallbackMessage,
+        updateItemTagFallbackMessage: tagging.updateItemTagFallbackMessage,
+      })
+    : {};
+
   return {
     refreshData,
     openEditDialogWithValues,
@@ -245,5 +282,15 @@ export const createMediaPageHandlers = ({
     handleItemDoubleClick,
     handleItemEdit,
     handleSearchInput,
+    openCreateTagDialogForMode: tagHandlers.openCreateTagDialogForMode,
+    handleCreateTagDialogClose: tagHandlers.handleCreateTagDialogClose,
+    handleTagFilterChange: tagHandlers.handleTagFilterChange,
+    handleTagFilterAddOptionClick: tagHandlers.handleTagFilterAddOptionClick,
+    handleDetailTagAddOptionClick: tagHandlers.handleDetailTagAddOptionClick,
+    handleDetailTagDraftValueChange:
+      tagHandlers.handleDetailTagDraftValueChange,
+    handleDetailTagOpenChange: tagHandlers.handleDetailTagOpenChange,
+    handleDetailTagValueChange: tagHandlers.handleDetailTagValueChange,
+    handleCreateTagFormAction: tagHandlers.handleCreateTagFormAction,
   };
 };

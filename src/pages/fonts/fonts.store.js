@@ -2,6 +2,10 @@ import { formatFontFileTypeLabel } from "../../internal/fileTypes.js";
 import { formatFileSize } from "../../internal/files.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { createMediaPageStore } from "../../internal/ui/resourcePages/media/createMediaPageStore.js";
+import { createTagField } from "../../internal/ui/resourcePages/tags.js";
+import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
+
+export const FONT_TAG_SCOPE_KEY = "fonts";
 
 const getDetailFileTypeLabel = ({ item, selectedFontInfo } = {}) => {
   const configuredFileType = formatFontFileTypeLabel({
@@ -27,6 +31,11 @@ const buildDetailFields = ({ item, selectedFontInfo } = {}) => {
     {
       type: "description",
       value: item.description ?? "",
+    },
+    {
+      type: "slot",
+      slot: "font-tags",
+      label: "Tags",
     },
     {
       type: "text",
@@ -129,6 +138,7 @@ const createEditForm = () => ({
       label: "Description",
       required: false,
     },
+    createTagField(),
     {
       type: "slot",
       slot: "font-slot",
@@ -160,6 +170,13 @@ const {
   selectItemById,
   selectSelectedItemId,
   setSearchQuery,
+  setTagsData,
+  setActiveTagIds,
+  setDetailTagIds,
+  commitDetailTagIds,
+  setDetailTagPopoverOpen,
+  openCreateTagDialog,
+  closeCreateTagDialog,
   selectViewData: selectMediaViewData,
 } = createMediaPageStore({
   itemType: "font",
@@ -173,11 +190,15 @@ const {
     { label: "Edit", type: "item", value: "edit-item" },
     { label: "Delete", type: "item", value: "delete-item" },
   ],
+  matchesSearch: matchesTagAwareSearch,
   buildDetailFields: (item) => buildDetailFields({ item }),
   buildMediaItem,
   buildPendingMediaItem,
   createEditForm,
   getSelectedPreviewFileId: (item) => item?.fileId,
+  tagging: {
+    tagFilterPlaceholder: "Filter tags",
+  },
   extendViewData: ({ state, selectedItem, baseViewData }) => {
     const selectedFontInfo = selectedItem
       ? state.fontInfoById[selectedItem.id]
@@ -203,6 +224,7 @@ const {
       editDefaultValues: {
         ...baseViewData.editDefaultValues,
         description: editItem?.description ?? "",
+        tagIds: editItem?.tagIds ?? [],
       },
       modalPreviewRows: modalFontInfo?.previewRows ?? [],
       modalGlyphList: modalFontInfo?.glyphs ?? [],
@@ -228,6 +250,13 @@ export {
   selectSelectedItem,
   selectSelectedItemId,
   setSearchQuery,
+  setTagsData,
+  setActiveTagIds,
+  setDetailTagIds,
+  commitDetailTagIds,
+  setDetailTagPopoverOpen,
+  openCreateTagDialog,
+  closeCreateTagDialog,
 };
 
 export const selectFontItemById = selectItemById;

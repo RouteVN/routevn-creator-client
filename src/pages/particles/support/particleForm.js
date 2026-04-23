@@ -37,6 +37,17 @@ const BOUNDS_SOURCE_OPTIONS = [
   { id: "custom", label: "Custom", value: "custom" },
 ];
 
+const PARTICLE_TAG_FIELD = {
+  name: "tagIds",
+  type: "tag-select",
+  label: "Tags",
+  placeholder: "Select tags",
+  addOption: {
+    label: "Add tag",
+  },
+  required: false,
+};
+
 const resolveTextureImageOptions = (imageOptions = []) => [
   {
     id: "",
@@ -395,7 +406,10 @@ const PARTICLE_FORM_TAB_IDS = new Set(
   PARTICLE_FORM_TABS.map((item) => item.id),
 );
 
-const createParticleFieldsByTab = ({ imageOptions = [] } = {}) => {
+const createParticleFieldsByTab = ({
+  imageOptions = [],
+  tagOptions = [],
+} = {}) => {
   const fieldsByTab = {
     basics: [
       {
@@ -417,6 +431,10 @@ const createParticleFieldsByTab = ({ imageOptions = [] } = {}) => {
         description:
           "Optional notes about where or how this effect should be used.",
         required: false,
+      },
+      {
+        ...PARTICLE_TAG_FIELD,
+        options: tagOptions,
       },
       {
         name: "width",
@@ -789,6 +807,7 @@ const createParticleFieldsByTab = ({ imageOptions = [] } = {}) => {
 export const createParticleForm = ({
   editMode = false,
   imageOptions = [],
+  tagOptions = [],
   activeTab = "basics",
 } = {}) => ({
   title: editMode ? "Edit Particle" : "Add Particle",
@@ -799,6 +818,7 @@ export const createParticleForm = ({
     },
     ...createParticleFieldsByTab({
       imageOptions,
+      tagOptions,
     })[PARTICLE_FORM_TAB_IDS.has(activeTab) ? activeTab : "basics"],
   ],
   actions: {
@@ -860,6 +880,7 @@ export const buildParticleFormValues = ({
     presetId,
     name: resolvedParticle.name ?? "",
     description: resolvedParticle.description ?? "",
+    tagIds: resolvedParticle.tagIds ?? [],
     width: toTextValue(resolvedParticle.width ?? 1280),
     height: toTextValue(resolvedParticle.height ?? 720),
     seed: toTextValue(resolvedParticle.seed),
@@ -1168,6 +1189,7 @@ export const buildParticlePayload = ({
   return {
     name: values?.name?.trim() ?? "",
     description: values?.description ?? "",
+    tagIds: Array.isArray(values?.tagIds) ? values.tagIds : [],
     width,
     height,
     seed: values?.seed === "" ? null : (toOptionalNumber(values?.seed) ?? null),
@@ -1191,6 +1213,11 @@ export const buildParticleDetailFields = (input) => {
     {
       type: "description",
       value: item.description ?? "",
+    },
+    {
+      type: "slot",
+      slot: "particle-tags",
+      label: "Tags",
     },
     {
       type: "text",

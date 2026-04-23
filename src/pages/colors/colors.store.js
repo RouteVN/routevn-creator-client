@@ -1,5 +1,9 @@
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
+import { createTagField } from "../../internal/ui/resourcePages/tags.js";
+import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
+
+export const COLOR_TAG_SCOPE_KEY = "colors";
 
 const hexToRgb = (hex) => {
   if (!hex) {
@@ -32,6 +36,7 @@ const editForm = {
       label: "Description",
       required: false,
     },
+    createTagField(),
     {
       name: "hex",
       type: "color-picker",
@@ -66,6 +71,7 @@ const addForm = {
       label: "Description",
       required: false,
     },
+    createTagField(),
     {
       name: "hex",
       type: "color-picker",
@@ -101,6 +107,11 @@ const buildDetailFields = (item) => {
       value: item.description ?? "",
     },
     {
+      type: "slot",
+      slot: "color-tags",
+      label: "Tags",
+    },
+    {
       type: "text",
       label: "Hex Value",
       value: item.hex ?? "",
@@ -121,13 +132,16 @@ const buildCatalogItem = (item) => ({
 });
 
 const matchesSearch = (item, searchQuery) => {
-  if (!searchQuery) {
+  const normalizedSearchQuery = (searchQuery ?? "").toLowerCase().trim();
+  if (!normalizedSearchQuery) {
     return true;
   }
 
-  const name = (item.name ?? "").toLowerCase();
   const hex = (item.hex ?? "").toLowerCase();
-  return name.includes(searchQuery) || hex.includes(searchQuery);
+  return (
+    matchesTagAwareSearch(item, normalizedSearchQuery) ||
+    hex.includes(normalizedSearchQuery)
+  );
 };
 
 const selectColorDataItem = (state, itemId) => {
@@ -143,6 +157,13 @@ const {
   selectItemById,
   selectSelectedItemId,
   setSearchQuery,
+  setTagsData,
+  setActiveTagIds,
+  setDetailTagIds,
+  commitDetailTagIds,
+  setDetailTagPopoverOpen,
+  openCreateTagDialog,
+  closeCreateTagDialog,
   selectViewData: selectCatalogViewData,
 } = createCatalogPageStore({
   itemType: "color",
@@ -154,6 +175,9 @@ const {
   matchesSearch,
   buildDetailFields,
   buildCatalogItem,
+  tagging: {
+    tagFilterPlaceholder: "Filter tags",
+  },
   extendViewData: ({ state, selectedItem, baseViewData }) => {
     const editItem = selectColorDataItem(state, state.editItemId);
 
@@ -165,6 +189,7 @@ const {
         name: editItem?.name ?? "",
         hex: editItem?.hex ?? "",
         description: editItem?.description ?? "",
+        tagIds: editItem?.tagIds ?? [],
       },
       editForm,
       isPreviewDialogOpen: state.isPreviewDialogOpen,
@@ -186,6 +211,7 @@ export const createInitialState = () => ({
   addDefaultValues: {
     name: "",
     description: "",
+    tagIds: [],
     hex: "#ffffff",
   },
 });
@@ -196,6 +222,13 @@ export {
   selectSelectedItem,
   selectSelectedItemId,
   setSearchQuery,
+  setTagsData,
+  setActiveTagIds,
+  setDetailTagIds,
+  commitDetailTagIds,
+  setDetailTagPopoverOpen,
+  openCreateTagDialog,
+  closeCreateTagDialog,
 };
 
 export const selectColorItemById = selectItemById;
@@ -229,6 +262,7 @@ export const closeAddDialog = ({ state }, _payload = {}) => {
   state.addDefaultValues = {
     name: "",
     description: "",
+    tagIds: [],
     hex: "#ffffff",
   };
 };

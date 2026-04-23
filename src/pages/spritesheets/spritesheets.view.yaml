@@ -27,6 +27,10 @@ refs:
         handler: handleAddClick
       search-input:
         handler: handleSearchInput
+      tag-filter-change:
+        handler: handleTagFilterChange
+      tag-filter-add-option-click:
+        handler: handleTagFilterAddOptionClick
   fileExplorerKeyboardScope:
     eventListeners:
       click:
@@ -57,6 +61,8 @@ refs:
         handler: handleDialogFormAction
       form-change:
         handler: handleDialogFormChange
+      add-option-click:
+        handler: handleDialogFormAddOptionClick
   dialogImageSourceButton:
     eventListeners:
       click:
@@ -69,6 +75,24 @@ refs:
     eventListeners:
       click:
         handler: handleDialogClipClick
+  detailTagSelect:
+    eventListeners:
+      value-change:
+        handler: handleDetailTagValueChange
+      draft-value-change:
+        handler: handleDetailTagDraftValueChange
+      open-change:
+        handler: handleDetailTagOpenChange
+      add-option-click:
+        handler: handleDetailTagAddOptionClick
+  createTagDialog:
+    eventListeners:
+      close:
+        handler: handleCreateTagDialogClose
+  createTagForm:
+    eventListeners:
+      form-action:
+        handler: handleCreateTagFormAction
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
@@ -78,7 +102,7 @@ template:
                   - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag start-collapsed=${startCollapsedFileExplorer} :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
           - 'rtgl-view w=1fg h=f pl=sm style="min-width: 0; min-height: 0;"':
               - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
-                  - rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-zoom-controls progressive-render lazy-image-cards :groups=${mediaGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :uploadText=${uploadText} :uploadIcon=${uploadIcon} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems}: null
+                  - rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-zoom-controls show-tag-filter progressive-render lazy-image-cards :groups=${mediaGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :uploadIcon=${uploadIcon} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems}: null
           - rvn-resizable-panel panel-type=detail-panel w=300 min-w=220 max-w=520 resize-side="left":
               - rtgl-view wh=f slot="content":
                   - 'div#fileExplorerDetailKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
@@ -89,6 +113,7 @@ template:
                                   - rtgl-svg svg=edit wh=16: null
                               - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
                                   - 'rvn-spritesheet-preview slot="spritesheet-preview" key=${detailPreviewKey} fileId=${detailPreviewFileId} :atlas=${detailPreviewAtlas} :animation=${detailPreviewAnimation} h=220 emptyLabel="No preview available"': null
+                                  - rtgl-tag-select#detailTagSelect slot="spritesheet-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
                                   - 'rtgl-view slot="spritesheet-animations" d=v w=f g=sm':
                                       - rtgl-text s=sm c=mu-fg: Animations
                                       - $if detailClipOptions.length > 0:
@@ -149,8 +174,10 @@ template:
                               - rtgl-input w=f :value=${dialogImageFieldValue} disabled=true placeholder=${dialogImageFieldPlaceholder}: null
                               - rtgl-button#dialogImageSourceButton variant=se size=sm pre=upload: ${dialogImageSourceLabel}
                           - rtgl-text s=xs c=mu-fg: Select the PNG spritesheet image used for preview and upload.
-                      - rtgl-view slot=spritesheet-atlas-source d=v g=xs:
-                          - rtgl-view d=h g=sm av=c:
-                              - rtgl-input w=f :value=${dialogAtlasFieldValue} disabled=true placeholder=${dialogAtlasFieldPlaceholder}: null
-                              - rtgl-button#dialogAtlasSourceButton variant=se size=sm pre=upload: ${dialogAtlasSourceLabel}
+                          - rtgl-view slot=spritesheet-atlas-source d=v g=xs:
+                              - rtgl-view d=h g=sm av=c:
+                                  - rtgl-input w=f :value=${dialogAtlasFieldValue} disabled=true placeholder=${dialogAtlasFieldPlaceholder}: null
+                                  - rtgl-button#dialogAtlasSourceButton variant=se size=sm pre=upload: ${dialogAtlasSourceLabel}
                           - rtgl-text s=xs c=mu-fg: Select the atlas JSON file that defines the frames and clips.
+  - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
+      - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null

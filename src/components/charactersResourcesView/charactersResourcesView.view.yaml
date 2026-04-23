@@ -3,6 +3,26 @@ refs:
     eventListeners:
       value-input:
         handler: handleSearchInput
+  tagFilterButton:
+    eventListeners:
+      click:
+        handler: handleTagFilterButtonClick
+  tagFilterPopover:
+    eventListeners:
+      close:
+        handler: handleTagFilterPopoverClose
+  tagFilterOption*:
+    eventListeners:
+      click:
+        handler: handleTagFilterOptionClick
+  tagFilterClear:
+    eventListeners:
+      click:
+        handler: handleTagFilterClearClick
+  tagFilterApply:
+    eventListeners:
+      click:
+        handler: handleTagFilterApplyClick
   contextMenu:
     eventListeners:
       close:
@@ -37,6 +57,9 @@ template:
                   - $if navTitle:
                       - rtgl-text: ${navTitle}
               - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
+              - $if showTagFilter:
+                  - rtgl-view#tagFilterButton w=36 h=36 bw=xs br=md ah=c av=c cur=pointer bgc=${tagFilterButtonBackgroundColor} bc=${tagFilterButtonBorderColor}:
+                      - rtgl-svg svg=filter wh=16 c=${tagFilterButtonIconColor}: null
       - 'rtgl-view h=1fg w=f sv style="min-width: 0;"':
           - $if groups.length > 0:
               - $for group, gIndex in groups:
@@ -71,10 +94,23 @@ template:
                                   - rtgl-view#addBtnEmptyRef${gIndex} data-group-id=${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=pointer:
                                       - rtgl-svg svg=plus wh=24 c=pr: null
                                       - rtgl-text s=md c=pr fw=500: ${addText}
-            $elif searchQuery:
+            $elif searchQuery || selectedTagFilterValues.length > 0:
               - rtgl-view w=f h=400 av=c ah=c:
                   - rtgl-text s=lg c=mu-fg: ${emptyMessage}
             $else:
               - rtgl-view w=f h=f av=c ah=c:
                   - rtgl-text s=lg c=mu-fg: No data
+  - rtgl-popover#tagFilterPopover ?open=${tagFilterPopover.isOpen} x=${tagFilterPopover.position.x} y=${tagFilterPopover.position.y} place=bs content-w=320 content-g=sm content-sv=true content-ph=md content-pv=md:
+      - $if !tagFilterPopover.hasOptions:
+          - rtgl-text s=sm c=mu-fg: No tags available
+      - $if tagFilterPopover.hasOptions:
+          - rtgl-view d=h wrap g=sm w=f:
+              - $for option, i in tagFilterPopover.options:
+                  - rtgl-view#tagFilterOptionRef${i} data-tag-id=${option.value} cur=pointer:
+                      - 'rtgl-tag v=mu style="${option.tagStyle}"':
+                          ${option.label}
+      - rtgl-view d=h av=c g=sm w=f pt=sm:
+          - rtgl-view w=1fg: null
+          - rtgl-button#tagFilterClear v=se s=sm ?disabled=${tagFilterPopover.clearDisabled}: Clear
+          - rtgl-button#tagFilterApply v=pr s=sm: Save
   - rtgl-dropdown-menu#contextMenu :items=${dropdownMenu.items} ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}: null

@@ -5,9 +5,17 @@ import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplor
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 import {
+  appendTagIdToForm,
+  createResourcePageTagHandlers,
+} from "../../internal/ui/resourcePages/tags.js";
+import {
   runResourcePageMutation,
   showResourcePageError,
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
+import {
+  getTagsCollection,
+  resolveCollectionWithTags,
+} from "../../internal/resourceTags.js";
 import {
   getSpritesheetDisplayName,
   normalizeSizeInput,
@@ -15,6 +23,7 @@ import {
   parseSpritesheetImport,
 } from "./support/spritesheetAtlas.js";
 import { withResolvedCollectionFileMetadata } from "../../internal/resourceFileMetadata.js";
+import { SPRITESHEET_TAG_SCOPE_KEY } from "./spritesheets.store.js";
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const SPRITESHEET_IMAGE_FILE_ACCEPT = ".png";
@@ -56,13 +65,22 @@ const syncDialogFormValues = ({ refs, values } = {}) => {
 };
 
 const syncSpritesheetData = ({ store, repositoryState } = {}) => {
+  const tagsData = getTagsCollection(
+    repositoryState,
+    SPRITESHEET_TAG_SCOPE_KEY,
+  );
   store.setItems({
-    data: withResolvedCollectionFileMetadata({
-      collection: repositoryState?.spritesheets ?? EMPTY_TREE,
-      files: repositoryState?.files,
-      resourceTypes: ["spritesheet"],
+    data: resolveCollectionWithTags({
+      collection: withResolvedCollectionFileMetadata({
+        collection: repositoryState?.spritesheets ?? EMPTY_TREE,
+        files: repositoryState?.files,
+        resourceTypes: ["spritesheet"],
+      }),
+      tagsCollection: tagsData,
+      itemType: "spritesheet",
     }),
   });
+  store.setTagsData({ tagsData });
 
   const selectedItemId = store.selectSelectedItemId();
   if (selectedItemId && !store.selectItemById({ itemId: selectedItemId })) {
@@ -74,7 +92,7 @@ const refreshSpritesheetData = async (deps, { selectedItemId } = {}) => {
   const { projectService, refs, render, store } = deps;
   syncSpritesheetData({
     store,
-    repositoryState: projectService.getState(),
+    repositoryState: projectService.getRepositoryState(),
   });
 
   if (selectedItemId && store.selectItemById({ itemId: selectedItemId })) {
@@ -156,6 +174,7 @@ const buildDialogValues = ({ item, importData, currentValues } = {}) => {
   return {
     name,
     description,
+    tagIds: currentValues?.tagIds ?? item?.tagIds ?? [],
     width: resolveDialogValue(
       importData?.defaultWidth,
       currentValues?.width,
@@ -333,6 +352,7 @@ const buildSpritesheetPayload = ({
   const payload = {
     name: values?.name?.trim() ?? "",
     description: values?.description ?? "",
+    tagIds: Array.isArray(values?.tagIds) ? values.tagIds : [],
     fileId: uploadResult?.fileId ?? existingItem?.fileId,
     width,
     height,
@@ -641,6 +661,14 @@ export const handleDialogFormChange = (deps, payload) => {
   render();
 };
 
+export const handleDialogFormAddOptionClick = (deps) => {
+  openCreateTagDialogForMode({
+    deps,
+    mode: "form",
+    itemId: deps.store.selectDialogItemId(),
+  });
+};
+
 export const handleDialogFormAction = async (deps, payload) => {
   const { appService, projectService, render, store } = deps;
   const { actionId, values } = payload._event.detail;
@@ -785,6 +813,51 @@ export const handleDialogClipClick = (deps, payload) => {
   const { render, store } = deps;
   store.setDialogSelectedClipName({ clipName });
   render();
+};
+
+const {
+  openCreateTagDialogForMode,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
+} = createResourcePageTagHandlers({
+  resolveScopeKey: () => SPRITESHEET_TAG_SCOPE_KEY,
+  updateItemTagIds: ({ deps, itemId, tagIds }) =>
+    deps.projectService.updateSpritesheet({
+      spritesheetId: itemId,
+      data: {
+        tagIds,
+      },
+    }),
+  refreshAfterItemTagUpdate: ({ deps, itemId }) =>
+    refreshSpritesheetData(deps, { selectedItemId: itemId }),
+  appendCreatedTagByMode: ({ deps, mode, tagId }) => {
+    if (mode !== "form") {
+      return;
+    }
+
+    appendTagIdToForm({
+      form: deps.refs.dialogForm,
+      tagId,
+    });
+  },
+  updateItemTagFallbackMessage: "Failed to update spritesheet tags.",
+});
+
+export {
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 };
 
 export const handleItemDelete = async (deps, payload) => {

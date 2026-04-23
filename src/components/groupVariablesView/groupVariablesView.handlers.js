@@ -1,9 +1,43 @@
+import { buildUniqueTagIds } from "../../internal/resourceTags.js";
+import {
+  applyTagFilterPopoverSelection,
+  clearTagFilterPopoverSelection,
+  closeTagFilterPopoverFromOverlay,
+  openTagFilterPopoverFromButton,
+  toggleTagFilterPopoverOption,
+} from "../../internal/ui/tagFilterPopover.handlers.js";
+
+export const handleTagFilterButtonClick = openTagFilterPopoverFromButton;
+export const handleTagFilterPopoverClose = closeTagFilterPopoverFromOverlay;
+export const handleTagFilterOptionClick = toggleTagFilterPopoverOption;
+export const handleTagFilterClearClick = clearTagFilterPopoverSelection;
+export const handleTagFilterApplyClick = applyTagFilterPopoverSelection;
+
 export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
   const searchQuery = payload._event.detail.value || "";
 
   store.setSearchQuery({ query: searchQuery });
   render();
+};
+
+export const handleTagFilterChange = (deps, payload) => {
+  const { dispatchEvent } = deps;
+  const detail = payload._event.detail ?? {};
+
+  dispatchEvent(
+    new CustomEvent("tag-filter-change", {
+      detail: {
+        tagIds: Array.isArray(detail.tagIds)
+          ? detail.tagIds
+          : Array.isArray(detail.value)
+            ? detail.value
+            : [],
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
 };
 
 const getDataId = (event, attrName, fallbackPrefix = "") => {
@@ -68,6 +102,7 @@ const openEditDialogForItem = ({ deps, itemId } = {}) => {
     defaultValues: {
       name: item.name || "",
       description: item.description || "",
+      tagIds: item.tagIds ?? [],
       scope: item.scope || "context",
       type,
       default: defaultValue,
@@ -153,6 +188,18 @@ export const handleCloseDialog = (deps) => {
 
   store.closeDialog();
   render();
+};
+
+export const handleFormAddOptionClick = (deps, payload) => {
+  const { dispatchEvent } = deps;
+
+  dispatchEvent(
+    new CustomEvent("form-add-option-click", {
+      detail: payload._event.detail ?? {},
+      bubbles: true,
+      composed: true,
+    }),
+  );
 };
 
 export const handleRowClick = (deps, payload) => {
@@ -243,6 +290,27 @@ export const handleCloseContextMenu = (deps) => {
   render();
 };
 
+export const handleAppendTagIdToForm = (deps, payload = {}) => {
+  const { refs, render, store } = deps;
+  const tagId = payload?.tagId;
+  if (!tagId) {
+    return;
+  }
+
+  const currentValues =
+    refs.variableForm?.getValues?.() ?? store.selectDefaultValues();
+  const nextValues = {
+    ...currentValues,
+    tagIds: buildUniqueTagIds(currentValues?.tagIds ?? [], [tagId]),
+  };
+
+  refs.variableForm?.setValues?.({
+    values: nextValues,
+  });
+  store.updateFormValues(nextValues);
+  render();
+};
+
 export const handleFormActionClick = (deps, payload) => {
   if (deps.props.readonly === true) {
     return;
@@ -321,6 +389,7 @@ export const handleFormActionClick = (deps, payload) => {
             itemId: editingItemId,
             name,
             description: formData.description ?? "",
+            tagIds: Array.isArray(formData.tagIds) ? formData.tagIds : [],
             scope,
             default: defaultValue,
           },
@@ -336,6 +405,7 @@ export const handleFormActionClick = (deps, payload) => {
             groupId: targetGroupId,
             name,
             description: formData.description ?? "",
+            tagIds: Array.isArray(formData.tagIds) ? formData.tagIds : [],
             scope,
             type,
             default: defaultValue,

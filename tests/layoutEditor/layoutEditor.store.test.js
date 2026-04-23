@@ -4,6 +4,8 @@ import {
   selectViewData,
   syncRepositoryState,
   setLayout,
+  setSelectedItemId,
+  setDetailPanelSelectedItemId,
 } from "../../src/pages/layoutEditor/layoutEditor.store.js";
 
 const TEST_CONSTANTS = {
@@ -105,10 +107,7 @@ describe("layoutEditor.store", () => {
               name: "Text",
             },
           },
-          tree: [
-            { id: "text-bound" },
-            { id: "text-free" },
-          ],
+          tree: [{ id: "text-bound" }, { id: "text-free" }],
         },
       },
     );
@@ -197,5 +196,58 @@ describe("layoutEditor.store", () => {
       "Rename",
       "Delete",
     ]);
+  });
+
+  it("keeps canvas selection state based on the selected item while the detail panel lags behind", () => {
+    const state = createInitialState();
+
+    syncRepositoryState(
+      { state },
+      {
+        projectResolution: { width: 1920, height: 1080 },
+        layoutId: "layout-1",
+        layout: {
+          id: "layout-1",
+          layoutType: "general",
+        },
+        layoutData: {
+          items: {
+            "container-directed": {
+              type: "container",
+              name: "Directed Container",
+              direction: "horizontal",
+            },
+            "child-selected": {
+              type: "text",
+              name: "Selected Child",
+            },
+            "panel-item": {
+              type: "text",
+              name: "Panel Item",
+            },
+          },
+          tree: [
+            {
+              id: "container-directed",
+              children: [{ id: "child-selected" }],
+            },
+            { id: "panel-item" },
+          ],
+        },
+      },
+    );
+
+    setSelectedItemId({ state }, { itemId: "child-selected" });
+    setDetailPanelSelectedItemId({ state }, { itemId: "panel-item" });
+
+    const viewData = selectViewData({
+      state,
+      constants: TEST_CONSTANTS,
+    });
+
+    expect(viewData.selectedItemIsInsideDirectedContainer).toBe(true);
+    expect(viewData.isInsideDirectedContainer).toBe(false);
+    expect(viewData.selectedItemId).toBe("child-selected");
+    expect(viewData.detailPanelSelectedItemId).toBe("panel-item");
   });
 });

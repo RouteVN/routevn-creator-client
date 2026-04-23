@@ -1,7 +1,13 @@
 import { generateId } from "../../internal/id.js";
+import {
+  getTagsCollection,
+  resolveCollectionWithTags,
+} from "../../internal/resourceTags.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
+import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
+import { COLOR_TAG_SCOPE_KEY } from "./colors.store.js";
 
 const syncEditFormValues = ({ deps, values } = {}) => {
   const { editForm } = deps.refs;
@@ -31,6 +37,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
       name: colorItem.name ?? "",
       hex: colorItem.hex ?? "",
       description: colorItem.description ?? "",
+      tagIds: colorItem.tagIds ?? [],
     },
   });
 };
@@ -46,8 +53,60 @@ const {
   handleFileExplorerKeyboardScopeKeyDown,
   handleItemClick: handleColorItemClick,
   handleSearchInput,
+  openCreateTagDialogForMode,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 } = createCatalogPageHandlers({
   resourceType: "colors",
+  selectData: (repositoryState) => {
+    const tagsData = getTagsCollection(repositoryState, COLOR_TAG_SCOPE_KEY);
+
+    return resolveCollectionWithTags({
+      collection: repositoryState?.colors,
+      tagsCollection: tagsData,
+      itemType: "color",
+    });
+  },
+  onProjectStateChanged: ({ deps, repositoryState }) => {
+    deps.store.setTagsData({
+      tagsData: getTagsCollection(repositoryState, COLOR_TAG_SCOPE_KEY),
+    });
+  },
+  tagging: {
+    scopeKey: COLOR_TAG_SCOPE_KEY,
+    updateItemTagIds: ({ deps, itemId, tagIds }) =>
+      deps.projectService.updateColor({
+        colorId: itemId,
+        data: {
+          tagIds,
+        },
+      }),
+    updateItemTagFallbackMessage: "Failed to update color tags.",
+    appendCreatedTagByMode: ({ deps, mode, tagId }) => {
+      if (mode === "add-form") {
+        appendTagIdToForm({
+          form: deps.refs.addColorForm,
+          tagId,
+        });
+        return;
+      }
+
+      if (mode !== "edit-form") {
+        return;
+      }
+
+      appendTagIdToForm({
+        form: deps.refs.editForm,
+        tagId,
+      });
+    },
+  },
 });
 
 export {
@@ -61,6 +120,14 @@ export {
   handleFileExplorerKeyboardScopeKeyDown,
   handleColorItemClick,
   handleSearchInput,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 };
 
 export const handleColorItemDoubleClick = (deps, payload) => {
@@ -100,6 +167,21 @@ export const handleDetailHeaderClick = (deps) => {
   openEditDialogWithValues({ deps, itemId: selectedItemId });
 };
 
+export const handleAddFormAddOptionClick = (deps) => {
+  openCreateTagDialogForMode({
+    deps,
+    mode: "add-form",
+  });
+};
+
+export const handleEditFormAddOptionClick = (deps) => {
+  openCreateTagDialogForMode({
+    deps,
+    mode: "edit-form",
+    itemId: deps.store.getState().editItemId,
+  });
+};
+
 export const handleEditFormAction = async (deps, payload) => {
   const { store, projectService, appService, render } = deps;
   const { actionId, values } = payload._event.detail;
@@ -133,6 +215,7 @@ export const handleEditFormAction = async (deps, payload) => {
           name,
           hex: values?.hex ?? "#ffffff",
           description: values?.description ?? "",
+          tagIds: Array.isArray(values?.tagIds) ? values.tagIds : [],
         },
       }),
   });
@@ -181,6 +264,7 @@ export const handleAddFormAction = async (deps, payload) => {
           type: "color",
           name,
           description: values?.description ?? "",
+          tagIds: Array.isArray(values?.tagIds) ? values.tagIds : [],
           hex: values?.hex ?? "#ffffff",
         },
         parentId: store.getState().targetGroupId,

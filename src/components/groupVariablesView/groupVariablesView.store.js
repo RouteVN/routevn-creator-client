@@ -1,13 +1,30 @@
+import {
+  matchesTagAwareSearch,
+  matchesTagFilter,
+} from "../../internal/resourceTags.js";
+import { createTagField } from "../../internal/ui/resourcePages/tags.js";
+import {
+  buildTagFilterPopoverViewData,
+  clearTagFilterPopoverTagIds,
+  closeTagFilterPopover,
+  createTagFilterPopoverState,
+  openTagFilterPopover,
+  selectTagFilterPopoverDraftTagIds,
+  toggleTagFilterPopoverTagId,
+} from "../../internal/ui/tagFilterPopover.js";
+
 const DEFAULT_FORM_VALUES = {
   name: "",
   description: "",
   scope: "context",
   type: "string",
   default: "",
+  tagIds: [],
 };
 
 export const createInitialState = () => ({
   collapsedIds: [],
+  ...createTagFilterPopoverState(),
   searchQuery: "",
   isDialogOpen: false,
   targetGroupId: null,
@@ -46,6 +63,7 @@ export const createInitialState = () => ({
         label: "Description",
         required: false,
       },
+      createTagField(),
       {
         name: "scope",
         type: "select",
@@ -196,22 +214,58 @@ export const selectTargetItemId = ({ state }) => {
   return state.dropdownMenu.targetItemId;
 };
 
+export {
+  clearTagFilterPopoverTagIds,
+  closeTagFilterPopover,
+  openTagFilterPopover,
+  selectTagFilterPopoverDraftTagIds,
+  toggleTagFilterPopoverTagId,
+};
+
+const parseBooleanProp = (value, fallback = false) => {
+  if (value === undefined || value === null) {
+    return fallback;
+  }
+
+  if (value === true || value === "") {
+    return true;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "1") {
+      return true;
+    }
+    if (normalized === "false" || normalized === "0") {
+      return false;
+    }
+  }
+
+  return Boolean(value);
+};
+
 export const selectViewData = ({ state, props }) => {
   const readonly = props.readonly === true;
   const searchQuery = state.searchQuery.toLowerCase();
+  const activeTagIds = props.selectedTagFilterValues ?? [];
+  const hasActiveTagFilter = activeTagIds.length > 0;
 
   // Helper function to check if an item matches the search query
   const matchesSearch = (item) => {
-    if (!searchQuery) return true;
+    if (!searchQuery) {
+      return true;
+    }
 
-    const name = (item.name || "").toLowerCase();
-    const description = (item.description || "").toLowerCase();
+    if (matchesTagAwareSearch(item, searchQuery)) {
+      return true;
+    }
+
+    const scope = (item.scope || "").toLowerCase();
     const type = (item.type || "").toLowerCase();
     const defaultValue = String(item.default ?? "").toLowerCase();
 
     return (
-      name.includes(searchQuery) ||
-      description.includes(searchQuery) ||
+      scope.includes(searchQuery) ||
       type.includes(searchQuery) ||
       defaultValue.includes(searchQuery)
     );
@@ -221,7 +275,14 @@ export const selectViewData = ({ state, props }) => {
   const flatGroups = (props.flatGroups || [])
     .map((group) => {
       // Filter children based on search query
-      const filteredChildren = (group.children || []).filter(matchesSearch);
+      const filteredChildren = (group.children || []).filter(
+        (item) =>
+          matchesSearch(item) &&
+          matchesTagFilter({
+            item,
+            activeTagIds,
+          }),
+      );
 
       // Only show groups that have matching children or if there's no search query
       const hasMatchingChildren = filteredChildren.length > 0;
@@ -296,6 +357,18 @@ export const selectViewData = ({ state, props }) => {
     selectedItemId: props.selectedItemId,
     readonly,
     searchQuery: state.searchQuery,
+    tagFilterOptions: props.tagFilterOptions ?? [],
+    selectedTagFilterValues: activeTagIds,
+    tagFilterPlaceholder: props.tagFilterPlaceholder ?? "Filter tags",
+    ...buildTagFilterPopoverViewData({
+      state,
+      props,
+    }),
+    showTagFilter: parseBooleanProp(props.showTagFilter),
+    hasActiveTagFilter,
+    tagFilterButtonBackgroundColor: hasActiveTagFilter ? "ac" : "bg",
+    tagFilterButtonBorderColor: hasActiveTagFilter ? "ac" : "bo",
+    tagFilterButtonIconColor: hasActiveTagFilter ? "white" : "mu-fg",
     isDialogOpen: state.isDialogOpen,
     defaultValues: defaultValues,
     form,

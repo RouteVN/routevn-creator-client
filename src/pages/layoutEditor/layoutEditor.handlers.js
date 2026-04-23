@@ -41,6 +41,19 @@ const mountSubscriptions = (deps) => {
   return () => active.forEach((subscription) => subscription?.unsubscribe?.());
 };
 
+const scheduleAfterNextPaint = (callback) => {
+  if (typeof globalThis.requestAnimationFrame === "function") {
+    globalThis.requestAnimationFrame(() => {
+      globalThis.requestAnimationFrame(() => {
+        callback();
+      });
+    });
+    return;
+  }
+
+  globalThis.setTimeout(callback, 32);
+};
+
 const DEBOUNCE_DELAYS = {
   UPDATE: 500,
 };
@@ -146,6 +159,10 @@ const areSelectedElementMetricsEqual = (left, right) => {
     left?.height === right?.height &&
     left?.measuredWidth === right?.measuredWidth
   );
+};
+
+const areLayoutEditorItemsEquivalent = (left, right) => {
+  return JSON.stringify(left ?? {}) === JSON.stringify(right ?? {});
 };
 
 const resolveSliderCreateAction = (detail = {}) => {
@@ -424,6 +441,17 @@ export const handleAfterMount = async (deps) => {
     }),
   );
   render();
+
+  scheduleAfterNextPaint(() => {
+    if (store.getState().isPreviewMounted === true) {
+      return;
+    }
+
+    store.setPreviewMounted({
+      isMounted: true,
+    });
+    render();
+  });
 };
 
 export const handleBackClick = async (deps) => {
@@ -503,6 +531,43 @@ export const handleRenderOnly = (deps) => {
   render();
 };
 
+const scheduleDetailPanelSelectionRender = (deps, { itemId } = {}) => {
+  const { store, render } = deps;
+  const requestId = generateId();
+  store.requestDetailPanelSelectionSync({
+    itemId,
+    requestId,
+  });
+
+  const run = () => {
+    if (store.selectDetailPanelSelectionRequestId?.() !== requestId) {
+      return;
+    }
+
+    if (store.selectSelectedItemId() !== itemId) {
+      return;
+    }
+
+    if (store.selectDetailPanelSelectedItemId?.() === itemId) {
+      return;
+    }
+
+    store.setDetailPanelSelectedItemId({
+      itemId,
+    });
+    render();
+  };
+
+  if (typeof globalThis.requestAnimationFrame === "function") {
+    globalThis.requestAnimationFrame(() => {
+      globalThis.requestAnimationFrame(run);
+    });
+    return;
+  }
+
+  globalThis.setTimeout?.(run, 0);
+};
+
 export const handleFileExplorerItemClick = async (deps, payload) => {
   const { store, render } = deps;
   const detail = payload._event.detail || {};
@@ -510,8 +575,12 @@ export const handleFileExplorerItemClick = async (deps, payload) => {
   if (!itemId) {
     return;
   }
+
   store.setSelectedItemId({ itemId: itemId });
   render();
+  scheduleDetailPanelSelectionRender(deps, {
+    itemId,
+  });
 };
 
 export const handleAddLayoutClick = handleRenderOnly;
@@ -529,6 +598,7 @@ const refreshLayoutEditorData = async (deps, payload = {}) => {
   );
   if (payload.selectedItemId) {
     store.setSelectedItemId({ itemId: payload.selectedItemId });
+    store.setDetailPanelSelectedItemId({ itemId: payload.selectedItemId });
     refs.fileExplorer.selectItem({ itemId: payload.selectedItemId });
   }
   render();
@@ -1398,7 +1468,7 @@ const subscriptions = (deps) => {
 };
 
 export const handleLayoutEditorCanvasDragUpdate = (deps, payload) => {
-  const { store, render, subject } = deps;
+  const { store, subject } = deps;
   const updatedItem = payload._event.detail?.updatedItem;
   if (!updatedItem) {
     return;
@@ -1419,7 +1489,6 @@ export const handleLayoutEditorCanvasDragUpdate = (deps, payload) => {
     updatedItem,
   });
   subject.dispatch("layoutEditor.updateElement", pendingPayload);
-  render();
 };
 
 export const handleLayoutEditorCanvasUpdate = async (deps, payload) => {
@@ -1449,16 +1518,28 @@ export const handleLayoutEditorCanvasUpdate = async (deps, payload) => {
 };
 
 export const handleLayoutEditorCanvasMetricsChange = (deps, payload) => {
-  const { store, render } = deps;
+  const { refs, store } = deps;
   const metrics = payload._event.detail?.metrics;
-  const currentMetrics = store.selectSelectedElementMetrics();
+  const selectedItemId = store.selectSelectedItemId();
+  const detailPanelSelectedItemId = store.selectDetailPanelSelectedItemId?.();
+
+  if (metrics?.id && selectedItemId && metrics.id !== selectedItemId) {
+    return;
+  }
+
+  if (selectedItemId && detailPanelSelectedItemId !== selectedItemId) {
+    return;
+  }
+
+  const currentMetrics = refs.layoutEditPanel?.getSelectedElementMetrics?.();
 
   if (areSelectedElementMetricsEqual(currentMetrics, metrics)) {
     return;
   }
 
-  store.setSelectedElementMetrics({ metrics });
-  render();
+  refs.layoutEditPanel?.setSelectedElementMetrics?.({
+    metrics,
+  });
 };
 
 export const handleLayoutEditorPreviewDataChange = (deps, payload) => {
@@ -1551,7 +1632,13 @@ export const handleLayoutEditPanelUpdateHandler = async (deps, payload) => {
     }
   }
 
-  store.updateSelectedItem({ updatedItem: updatedItem });
+  if (areLayoutEditorItemsEquivalent(currentItem, updatedItem)) {
+    return;
+  }
+
+  store.updateSelectedItem({
+    updatedItem: updatedItem,
+  });
 
   if (
     shouldPersistLayoutEditorFieldImmediately({

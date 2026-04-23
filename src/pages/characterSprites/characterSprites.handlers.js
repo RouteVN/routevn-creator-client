@@ -2,6 +2,10 @@ import { generateId, generatePrefixedId } from "../../internal/id.js";
 import { processWithConcurrency } from "../../internal/processWithConcurrency.js";
 import { createCharacterSpritesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import {
+  appendTagIdToForm,
+  createResourcePageTagHandlers,
+} from "../../internal/ui/resourcePages/tags.js";
+import {
   getResourcePageErrorMessage,
   runResourcePageMutation,
   showResourcePageError,
@@ -13,12 +17,17 @@ import {
   buildImageResourcePatchFromUploadResult,
 } from "../../deps/services/shared/resourceImports.js";
 import { tap } from "rxjs";
+import {
+  getTagsCollection,
+  resolveCollectionWithTags,
+} from "../../internal/resourceTags.js";
 import { withResolvedCollectionFileMetadata } from "../../internal/resourceFileMetadata.js";
 
 const EMPTY_TREE = { items: {}, tree: [] };
 const ACCEPTED_FILE_TYPES = ".jpg,.jpeg,.png,.webp";
 const MAX_PARALLEL_UPLOADS = 1;
 const CREATE_SPRITE_ABORT_ERROR = "create-sprite-abort";
+const CHARACTER_SPRITE_TAG_SCOPE_PREFIX = "characterSprites:";
 
 const createPendingUploads = ({ files, parentId } = {}) => {
   if (!parentId) {
@@ -44,6 +53,9 @@ const getPreviewFileId = (item) => item?.thumbnailFileId ?? item?.fileId;
 const getCharacterIdFromPayload = ({ appService }) => {
   return appService.getPayload().characterId;
 };
+
+const resolveCharacterSpriteTagScopeKey = (characterId) =>
+  `${CHARACTER_SPRITE_TAG_SCOPE_PREFIX}${characterId}`;
 
 const {
   focusKeyboardScope: focusGroupView,
@@ -72,7 +84,10 @@ const syncCharacterSpritesData = ({ deps, repositoryState } = {}) => {
   const { appService, projectService, store } = deps;
   const characterId =
     store.selectCharacterId() ?? getCharacterIdFromPayload(deps);
-  const state = repositoryState ?? projectService.getState();
+  const state =
+    repositoryState ??
+    projectService.getRepositoryState?.() ??
+    projectService.getState();
 
   if (!characterId) {
     appService.showAlert({ message: "Character is missing.", title: "Error" });
@@ -85,15 +100,24 @@ const syncCharacterSpritesData = ({ deps, repositoryState } = {}) => {
     return false;
   }
 
+  const tagsData = getTagsCollection(
+    state,
+    resolveCharacterSpriteTagScopeKey(characterId),
+  );
+  const spritesData = withResolvedCollectionFileMetadata({
+    collection: resolveCollectionWithTags({
+      collection: character.sprites ?? EMPTY_TREE,
+      tagsCollection: tagsData,
+      itemType: "image",
+    }),
+    files: state?.files,
+    resourceTypes: ["image"],
+  });
+
   store.setCharacterId({ characterId });
   store.setCharacterName({ characterName: character.name });
-  store.setItems({
-    spritesData: withResolvedCollectionFileMetadata({
-      collection: character.sprites ?? EMPTY_TREE,
-      files: state?.files,
-      resourceTypes: ["image"],
-    }),
-  });
+  store.setTagsData({ tagsData });
+  store.setItems({ spritesData });
 
   if (store.selectSelectedItemId() && !store.selectSelectedItem()) {
     store.setSelectedItemId({ itemId: undefined });
@@ -171,6 +195,7 @@ const openEditDialogForSprite = ({
     defaultValues: {
       name: item.name ?? "",
       description: item.description ?? "",
+      tagIds: item.tagIds ?? [],
     },
     previewFileId: getPreviewFileId(item),
   });
@@ -305,20 +330,60 @@ const createSpritesFromFiles = async ({
 
 export const handleBeforeMount = (deps) => {
   const { projectService } = deps;
+  let scheduledRenderFrameId;
+  let scheduledFallbackTimeoutId;
+
+  const flushRender = () => {
+    scheduledRenderFrameId = undefined;
+    scheduledFallbackTimeoutId = undefined;
+    deps.render();
+  };
+
+  const scheduleRender = () => {
+    if (
+      scheduledRenderFrameId !== undefined ||
+      scheduledFallbackTimeoutId !== undefined
+    ) {
+      return;
+    }
+
+    if (typeof globalThis.requestAnimationFrame === "function") {
+      scheduledRenderFrameId = globalThis.requestAnimationFrame(() => {
+        flushRender();
+      });
+      return;
+    }
+
+    scheduledFallbackTimeoutId = globalThis.setTimeout(() => {
+      flushRender();
+    }, 0);
+  };
+
   const subscription = createProjectStateStream({ projectService })
     .pipe(
       tap(({ repositoryState }) => {
-        const { store, render } = deps;
+        const { store } = deps;
         const synced = syncCharacterSpritesData({ deps, repositoryState });
         if (!synced) {
           store.clearCharacterSpritesView();
         }
-        render();
+        scheduleRender();
       }),
     )
     .subscribe();
 
   return () => {
+    if (
+      scheduledRenderFrameId !== undefined &&
+      typeof globalThis.cancelAnimationFrame === "function"
+    ) {
+      globalThis.cancelAnimationFrame(scheduledRenderFrameId);
+    }
+
+    if (scheduledFallbackTimeoutId !== undefined) {
+      globalThis.clearTimeout(scheduledFallbackTimeoutId);
+    }
+
     subscription.unsubscribe();
   };
 };
@@ -584,6 +649,14 @@ export const handleEditDialogClose = (deps) => {
   render();
 };
 
+export const handleEditFormAddOptionClick = (deps) => {
+  openCreateTagDialogForMode({
+    deps,
+    mode: "edit-form",
+    itemId: deps.store.getState().editItemId,
+  });
+};
+
 export const handleEditDialogImageClick = async (deps) => {
   const { appService, store, render } = deps;
   let file;
@@ -649,6 +722,7 @@ export const handleEditFormAction = async (deps, payload) => {
   const data = {
     name,
     description: values?.description ?? "",
+    tagIds: Array.isArray(values?.tagIds) ? values.tagIds : [],
   };
 
   if (editUploadResult) {
@@ -727,4 +801,52 @@ export const handleItemDelete = async (deps, payload) => {
 export const handleBackClick = (deps) => {
   const { appService } = deps;
   appService.navigate("/project/characters", appService.getPayload());
+};
+
+const {
+  openCreateTagDialogForMode,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
+} = createResourcePageTagHandlers({
+  resolveScopeKey: ({ deps }) =>
+    resolveCharacterSpriteTagScopeKey(deps.store.selectCharacterId()),
+  updateItemTagIds: ({ deps, itemId, tagIds }) =>
+    deps.projectService.updateCharacterSpriteItem({
+      characterId: deps.store.selectCharacterId(),
+      spriteId: itemId,
+      data: {
+        tagIds,
+      },
+    }),
+  refreshAfterItemTagUpdate: ({ deps }) => refreshCharacterSpritesData(deps),
+  getSelectedItemTagIds: ({ deps, itemId }) =>
+    deps.store.selectSpriteItemById({
+      itemId: itemId ?? deps.store.selectSelectedItemId(),
+    })?.tagIds ?? [],
+  appendCreatedTagByMode: ({ deps, mode, tagId }) => {
+    if (mode !== "edit-form") {
+      return;
+    }
+
+    appendTagIdToForm({
+      form: deps.refs.editForm,
+      tagId,
+    });
+  },
+  updateItemTagFallbackMessage: "Failed to update sprite tags.",
+});
+
+export {
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 };

@@ -1,5 +1,25 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
+import {
+  buildTagViewData,
+  closeCreateTagDialogState,
+  createTagField,
+  createTagForm,
+  createTagState,
+  filterGroupsByActiveTags,
+  openCreateTagDialogState,
+  setActiveTagIdsState,
+  setDetailTagIdsState,
+  setDetailTagPopoverOpenState,
+  setTagsDataState,
+  syncDetailTagIds,
+  commitDetailTagIdsState,
+} from "../../internal/ui/resourcePages/tags.js";
+import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
+
+export const TEXT_STYLE_TAG_SCOPE_KEY = "textStyles";
+
+const createTagDialogForm = createTagForm();
 
 // Helper function to create add color form
 const createAddColorForm = (colorFolderOptions) => ({
@@ -102,6 +122,7 @@ export const createInitialState = () => ({
   fontsData: { tree: [], items: {} },
   selectedItemId: undefined,
   searchQuery: "",
+  ...createTagState(),
 
   // Dialog state
   isDialogOpen: false,
@@ -133,6 +154,7 @@ export const createInitialState = () => ({
   currentFormValues: {
     name: "",
     description: "",
+    tagIds: [],
     fontColor: "",
     strokeColor: "",
     fontStyle: "",
@@ -146,6 +168,7 @@ export const createInitialState = () => ({
   defaultValues: {
     name: "",
     description: "",
+    tagIds: [],
     fontColor: "",
     strokeColor: "",
     fontStyle: "",
@@ -177,6 +200,13 @@ export const createInitialState = () => ({
 
 export const setItems = ({ state }, { textStylesData } = {}) => {
   state.textStylesData = textStylesData;
+  syncDetailTagIds({
+    state,
+    item: state.selectedItemId
+      ? state.textStylesData?.items?.[state.selectedItemId]
+      : undefined,
+    preserveDirty: true,
+  });
 };
 
 export const setColorsData = ({ state }, { colorsData } = {}) => {
@@ -189,10 +219,69 @@ export const setFontsData = ({ state }, { fontsData } = {}) => {
 
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
+  state.isDetailTagSelectOpen = false;
+  syncDetailTagIds({
+    state,
+    item: itemId ? state.textStylesData?.items?.[itemId] : undefined,
+  });
 };
 
 export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
+};
+
+export const setTagsData = ({ state }, { tagsData } = {}) => {
+  setTagsDataState({
+    state,
+    tagsData,
+  });
+};
+
+export const setActiveTagIds = ({ state }, { tagIds } = {}) => {
+  setActiveTagIdsState({
+    state,
+    tagIds,
+  });
+};
+
+export const setDetailTagIds = ({ state }, { tagIds } = {}) => {
+  setDetailTagIdsState({
+    state,
+    tagIds,
+  });
+};
+
+export const commitDetailTagIds = ({ state }, { tagIds } = {}) => {
+  commitDetailTagIdsState({
+    state,
+    tagIds,
+  });
+};
+
+export const setDetailTagPopoverOpen = ({ state }, { open, item } = {}) => {
+  setDetailTagPopoverOpenState({
+    state,
+    open,
+    item,
+  });
+};
+
+export const openCreateTagDialog = (
+  { state },
+  { mode, itemId, draftTagIds } = {},
+) => {
+  openCreateTagDialogState({
+    state,
+    mode,
+    itemId,
+    draftTagIds,
+  });
+};
+
+export const closeCreateTagDialog = ({ state }) => {
+  closeCreateTagDialogState({
+    state,
+  });
 };
 
 // Dialog management
@@ -226,6 +315,7 @@ export const resetFormValues = ({ state }, _payload = {}) => {
   state.currentFormValues = {
     name: "",
     description: "",
+    tagIds: [],
     fontColor: "",
     strokeColor: "",
     fontStyle: "",
@@ -242,16 +332,17 @@ export const setFormValuesFromItem = ({ state }, { item } = {}) => {
     throw new Error("Item is required for setFormValuesFromItem");
   }
   state.currentFormValues = {
-    name: item.name || "",
-    description: item.description || "",
-    fontColor: item.colorId || "",
-    strokeColor: item.strokeColorId || "",
-    fontStyle: item.fontId || "",
+    name: item.name ?? "",
+    description: item.description ?? "",
+    tagIds: item.tagIds ?? [],
+    fontColor: item.colorId ?? "",
+    strokeColor: item.strokeColorId ?? "",
+    fontStyle: item.fontId ?? "",
     fontSize: item.fontSize,
     lineHeight: item.lineHeight,
     fontWeight: item.fontWeight,
     strokeWidth: item.strokeWidth ?? 0,
-    previewText: item.previewText || "",
+    previewText: item.previewText ?? "",
   };
 };
 
@@ -362,13 +453,9 @@ export const selectViewData = ({ state }) => {
   if (searchQuery) {
     filteredGroups = rawFlatGroups
       .map((group) => {
-        const filteredChildren = (group.children ?? []).filter((item) => {
-          const name = (item.name ?? "").toLowerCase();
-          const description = (item.description ?? "").toLowerCase();
-          return (
-            name.includes(searchQuery) || description.includes(searchQuery)
-          );
-        });
+        const filteredChildren = (group.children ?? []).filter((item) =>
+          matchesTagAwareSearch(item, searchQuery),
+        );
 
         const groupName = (group.name ?? "").toLowerCase();
         const shouldIncludeGroup =
@@ -384,6 +471,12 @@ export const selectViewData = ({ state }) => {
       })
       .filter(Boolean);
   }
+
+  const tagFilteredGroups = filterGroupsByActiveTags({
+    groups: filteredGroups,
+    itemsById: state.textStylesData?.items,
+    activeTagIds: state.activeTagIds,
+  });
 
   // Helper function to get color hex from ID
   const getColorHex = (colorId) => {
@@ -408,7 +501,7 @@ export const selectViewData = ({ state }) => {
   };
 
   // Add text style preview data. Collapse state is owned by the center view.
-  const flatGroups = filteredGroups.map((group) => ({
+  const flatGroups = tagFilteredGroups.map((group) => ({
     ...group,
     children: (group.children ?? []).map((item) => {
       const fontData = getFontData(item.fontId);
@@ -464,6 +557,11 @@ export const selectViewData = ({ state }) => {
         {
           type: "description",
           value: selectedItem.description ?? "",
+        },
+        {
+          type: "slot",
+          slot: "text-style-tags",
+          label: "Tags",
         },
         {
           type: "text",
@@ -557,9 +655,10 @@ export const selectViewData = ({ state }) => {
   // Get editing item data if in edit mode
   const editingItem =
     state.editMode && state.editingItemId
-      ? flatGroups
-          ?.flatMap((group) => group.children || [])
-          .find((item) => item.id === state.editingItemId)
+      ? flatItems.find(
+          (item) =>
+            item.id === state.editingItemId && item.type === "textStyle",
+        )
       : undefined;
 
   // Generate dynamic dialog form with dropdown options
@@ -581,6 +680,7 @@ export const selectViewData = ({ state }) => {
         label: "Description",
         required: false,
       },
+      createTagField(),
       {
         name: "fontColor",
         type: "select",
@@ -680,6 +780,7 @@ export const selectViewData = ({ state }) => {
       ? {
           name: editingItem.name || "",
           description: editingItem.description || "",
+          tagIds: editingItem.tagIds ?? [],
           fontColor: editingItem.colorId || "",
           strokeColor: editingItem.strokeColorId || "",
           fontStyle: editingItem.fontId || "",
@@ -759,6 +860,12 @@ export const selectViewData = ({ state }) => {
     dialogForm: dialogForm,
     dialogDefaultValues,
     formKey: `${state.selectedItemId}-${state.isDialogOpen || state.isAddFontDialogOpen}`,
+    ...buildTagViewData({
+      state,
+      selectedItem,
+      createTagFormDefinition: createTagDialogForm,
+      tagFilterPlaceholder: "Filter tags",
+    }),
 
     // Add color dialog data
     isAddColorDialogOpen: state.isAddColorDialogOpen,
