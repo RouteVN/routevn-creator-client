@@ -884,10 +884,7 @@ export const selectViewData = ({ state, props, constants }) => {
     { label: "None", value: "" },
     ...textStyleItems,
   ];
-  const soundItemsWithNone = [
-    { label: "None", value: "" },
-    ...soundItems,
-  ];
+  const soundItemsWithNone = [{ label: "None", value: "" }, ...soundItems];
   const variableOptions = getVariableOptions(state.variablesData, {
     type: "number",
   });
