@@ -55,6 +55,7 @@ refs:
         handler: handleSectionsOverviewWarningMouseEnter
       mouseleave:
         handler: handleSectionsOverviewWarningMouseLeave
+  previewCanvasHost: {}
   dropdownMenu:
     eventListeners:
       close:
@@ -162,9 +163,9 @@ template:
               - rtgl-view bwb=xs w=f h=48 av=c ph=sm d=h jc=e g=sm:
                   - rtgl-button#previewButton: Preview
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
-                  - rtgl-view:
-                      - 'rtgl-view w=f pos=rel style="aspect-ratio: ${canvasAspectRatio}; max-width: 100%;"':
-                          - 'div#canvas id=canvas style="width: 100%; height: 100%; display: flex; background: #000;"': null
+                  - 'rtgl-view w=f style="min-width: 0;"':
+                      - 'rtgl-view pos=rel w=f':
+                          - rvn-scene-editor-preview-canvas#previewCanvasHost canvasAspectRatio=${canvasAspectRatio}: null
                           - $if isSceneAssetLoading:
                               - rtgl-view pos=abs cor=full w=f h=f bgc=bg op=0.7 av=c ah=c:
                                   - rtgl-text s=h3: Loading assets...
