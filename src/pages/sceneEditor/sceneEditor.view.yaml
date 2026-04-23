@@ -165,7 +165,7 @@ template:
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - 'rtgl-view w=f style="min-width: 0;"':
                       - 'rtgl-view pos=rel w=f':
-                          - rvn-scene-editor-preview-canvas#previewCanvasHost canvasAspectRatio=${canvasAspectRatio}: null
+                          - rvn-scene-editor-preview-canvas#previewCanvasHost canvas-aspect-ratio="${canvasAspectRatio}": null
                           - $if isSceneAssetLoading:
                               - rtgl-view pos=abs cor=full w=f h=f bgc=bg op=0.7 av=c ah=c:
                                   - rtgl-text s=h3: Loading assets...
