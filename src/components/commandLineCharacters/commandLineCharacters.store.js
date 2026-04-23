@@ -423,7 +423,7 @@ export const setTempSelectedSpriteIds = (
   { state },
   { spriteIdsByGroupId } = {},
 ) => {
-  state.tempSelectedSpriteIds = { ...(spriteIdsByGroupId ?? {}) };
+  state.tempSelectedSpriteIds = { ...spriteIdsByGroupId };
 };
 
 export const clearTempSelectedSpriteIds = ({ state }) => {
