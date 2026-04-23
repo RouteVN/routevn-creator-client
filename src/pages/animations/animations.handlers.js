@@ -53,7 +53,10 @@ const {
 } = createCatalogPageHandlers({
   resourceType: "animations",
   selectData: (repositoryState) => {
-    const tagsData = getTagsCollection(repositoryState, ANIMATION_TAG_SCOPE_KEY);
+    const tagsData = getTagsCollection(
+      repositoryState,
+      ANIMATION_TAG_SCOPE_KEY,
+    );
 
     return resolveCollectionWithTags({
       collection: repositoryState?.animations,

@@ -373,6 +373,4 @@ export const selectViewData = (context) => {
   };
 };
 
-export {
-  TRANSFORM_TAG_SCOPE_KEY,
-};
+export { TRANSFORM_TAG_SCOPE_KEY };

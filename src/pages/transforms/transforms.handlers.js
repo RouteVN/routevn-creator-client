@@ -181,7 +181,10 @@ const {
 } = createCatalogPageHandlers({
   resourceType: "transforms",
   selectData: (repositoryState) => {
-    const tagsData = getTagsCollection(repositoryState, TRANSFORM_TAG_SCOPE_KEY);
+    const tagsData = getTagsCollection(
+      repositoryState,
+      TRANSFORM_TAG_SCOPE_KEY,
+    );
 
     return resolveCollectionWithTags({
       collection: repositoryState?.transforms,

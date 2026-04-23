@@ -293,10 +293,7 @@ export const commitDetailTagIds = ({ state }, { tagIds } = {}) => {
   });
 };
 
-export const setDetailTagPopoverOpen = (
-  { state },
-  { open, item } = {},
-) => {
+export const setDetailTagPopoverOpen = ({ state }, { open, item } = {}) => {
   setDetailTagPopoverOpenState({
     state,
     open,
@@ -383,14 +380,15 @@ export const selectAdjacentSpriteItemId = (
     return undefined;
   }
 
-  const visibleSpriteIds = (selectViewData({ state }).mediaGroups ?? []).flatMap(
-    (group) =>
-      (group.children ?? [])
-        .map((child) => child.id)
-        .filter(
-          (childItemId) =>
-            state.spritesData.items?.[childItemId]?.type === "image",
-        ),
+  const visibleSpriteIds = (
+    selectViewData({ state }).mediaGroups ?? []
+  ).flatMap((group) =>
+    (group.children ?? [])
+      .map((child) => child.id)
+      .filter(
+        (childItemId) =>
+          state.spritesData.items?.[childItemId]?.type === "image",
+      ),
   );
 
   if (visibleSpriteIds.length === 0) {

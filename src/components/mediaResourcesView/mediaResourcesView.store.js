@@ -240,7 +240,9 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     tagFilterButtonBackgroundColor: hasActiveTagFilter ? "ac" : "bg",
     tagFilterButtonBorderColor: hasActiveTagFilter ? "ac" : "bo",
     tagFilterButtonIconColor: hasActiveTagFilter ? "white" : "mu-fg",
-    showTagFilter: parseBooleanProp(props.showTagFilter ?? props["show-tag-filter"]),
+    showTagFilter: parseBooleanProp(
+      props.showTagFilter ?? props["show-tag-filter"],
+    ),
     uploadText: props.uploadText ?? "Upload Files",
     uploadIcon: props.uploadIcon ?? "upload",
     emptyMessage:

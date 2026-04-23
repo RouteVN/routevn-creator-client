@@ -1,4 +1,7 @@
-import { matchesTagAwareSearch, matchesTagFilter } from "../../internal/resourceTags.js";
+import {
+  matchesTagAwareSearch,
+  matchesTagFilter,
+} from "../../internal/resourceTags.js";
 import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import {
   buildTagFilterPopoverViewData,

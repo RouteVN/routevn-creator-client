@@ -183,8 +183,12 @@ export const createMediaPageStore = ({
     state.editItemId = itemId;
     state.editDefaultValues = {
       ...createEmptyEditDefaultValues(),
-      ...(defaultValues ?? {}),
     };
+
+    if (defaultValues) {
+      Object.assign(state.editDefaultValues, defaultValues);
+    }
+
     state.editPreviewFileId = previewFileId;
     state.editUploadResult = undefined;
   };

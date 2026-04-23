@@ -82,8 +82,7 @@ const parseBooleanProp = (value, fallback = false) => {
 
 export const selectViewData = ({ state, props, props: attrs }) => {
   const canAddAttr = attrs.canAdd ?? attrs["can-add"];
-  const showTagFilterAttr =
-    attrs.showTagFilter ?? attrs["show-tag-filter"];
+  const showTagFilterAttr = attrs.showTagFilter ?? attrs["show-tag-filter"];
   const hasActiveTagFilter = (props.selectedTagFilterValues?.length ?? 0) > 0;
 
   const groups = (props.groups ?? []).map((group) => {

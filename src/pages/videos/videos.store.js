@@ -235,6 +235,4 @@ export const selectViewData = (context) => {
   };
 };
 
-export {
-  VIDEO_TAG_SCOPE_KEY,
-};
+export { VIDEO_TAG_SCOPE_KEY };

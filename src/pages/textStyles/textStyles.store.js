@@ -258,10 +258,7 @@ export const commitDetailTagIds = ({ state }, { tagIds } = {}) => {
   });
 };
 
-export const setDetailTagPopoverOpen = (
-  { state },
-  { open, item } = {},
-) => {
+export const setDetailTagPopoverOpen = ({ state }, { open, item } = {}) => {
   setDetailTagPopoverOpenState({
     state,
     open,

@@ -227,6 +227,4 @@ export const selectViewData = (context) => {
   };
 };
 
-export {
-  SOUND_TAG_SCOPE_KEY,
-};
+export { SOUND_TAG_SCOPE_KEY };

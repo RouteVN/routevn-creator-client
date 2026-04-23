@@ -65,7 +65,10 @@ const syncDialogFormValues = ({ refs, values } = {}) => {
 };
 
 const syncSpritesheetData = ({ store, repositoryState } = {}) => {
-  const tagsData = getTagsCollection(repositoryState, SPRITESHEET_TAG_SCOPE_KEY);
+  const tagsData = getTagsCollection(
+    repositoryState,
+    SPRITESHEET_TAG_SCOPE_KEY,
+  );
   store.setItems({
     data: resolveCollectionWithTags({
       collection: withResolvedCollectionFileMetadata({

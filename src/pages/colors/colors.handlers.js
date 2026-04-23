@@ -5,9 +5,7 @@ import {
 } from "../../internal/resourceTags.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
-import {
-  appendTagIdToForm,
-} from "../../internal/ui/resourcePages/tags.js";
+import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { COLOR_TAG_SCOPE_KEY } from "./colors.store.js";
 

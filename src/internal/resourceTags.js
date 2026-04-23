@@ -105,18 +105,18 @@ export const buildUniqueTagIds = (...tagIdGroups) => {
   return [...new Set(tagIdGroups.flat().filter(Boolean))];
 };
 
-export const appendTagToCollection = ({
-  tagsCollection,
-  tag,
-} = {}) => {
+export const appendTagToCollection = ({ tagsCollection, tag } = {}) => {
   if (!tag?.id) {
     return tagsCollection ?? createEmptyTagCollection();
   }
 
-  const items = {
-    ...(tagsCollection?.items ?? {}),
-    [tag.id]: tag,
-  };
+  const items = {};
+
+  if (tagsCollection?.items) {
+    Object.assign(items, tagsCollection.items);
+  }
+
+  items[tag.id] = tag;
   const existingTree = Array.isArray(tagsCollection?.tree)
     ? tagsCollection.tree
     : [];

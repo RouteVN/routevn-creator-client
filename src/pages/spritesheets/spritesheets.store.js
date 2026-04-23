@@ -342,8 +342,12 @@ export const setSearchQuery = ({ state }, { value } = {}) => {
 export const setTagsData = ({ state }, { tagsData } = {}) => {
   state.tagsData = tagsData ?? createEmptyTagCollection();
   const validTagIds = new Set(Object.keys(state.tagsData.items ?? {}));
-  state.activeTagIds = state.activeTagIds.filter((tagId) => validTagIds.has(tagId));
-  state.detailTagIds = state.detailTagIds.filter((tagId) => validTagIds.has(tagId));
+  state.activeTagIds = state.activeTagIds.filter((tagId) =>
+    validTagIds.has(tagId),
+  );
+  state.detailTagIds = state.detailTagIds.filter((tagId) =>
+    validTagIds.has(tagId),
+  );
 };
 
 export const setActiveTagIds = ({ state }, { tagIds } = {}) => {
@@ -457,7 +461,10 @@ export const closeDialog = ({ state }) => {
   state.dialogRevision += 1;
 };
 
-export const openCreateTagDialog = ({ state }, { mode, itemId, draftTagIds } = {}) => {
+export const openCreateTagDialog = (
+  { state },
+  { mode, itemId, draftTagIds } = {},
+) => {
   state.isCreateTagDialogOpen = true;
   state.createTagDefaultValues = {
     ...CREATE_TAG_DEFAULT_VALUES,

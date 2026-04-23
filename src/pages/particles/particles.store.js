@@ -134,7 +134,9 @@ const {
           }),
         ),
       }))
-      .filter((group) => group.children.length > 0 || activeTagIds.length === 0);
+      .filter(
+        (group) => group.children.length > 0 || activeTagIds.length === 0,
+      );
 
     return {
       ...baseViewData,
@@ -240,8 +242,12 @@ export const setSelectedItemId = (context, payload = {}) => {
 export const setTagsData = ({ state }, { tagsData } = {}) => {
   state.tagsData = tagsData ?? createEmptyTagCollection();
   const validTagIds = new Set(Object.keys(state.tagsData.items ?? {}));
-  state.activeTagIds = state.activeTagIds.filter((tagId) => validTagIds.has(tagId));
-  state.detailTagIds = state.detailTagIds.filter((tagId) => validTagIds.has(tagId));
+  state.activeTagIds = state.activeTagIds.filter((tagId) =>
+    validTagIds.has(tagId),
+  );
+  state.detailTagIds = state.detailTagIds.filter((tagId) =>
+    validTagIds.has(tagId),
+  );
   state.particleForm = createDialogForm({
     editMode: state.editMode,
     imagesData: state.imagesData,
@@ -282,7 +288,10 @@ export const setDetailTagPopoverOpen = ({ state }, { open, item } = {}) => {
   }
 };
 
-export const openCreateTagDialog = ({ state }, { mode, itemId, draftTagIds } = {}) => {
+export const openCreateTagDialog = (
+  { state },
+  { mode, itemId, draftTagIds } = {},
+) => {
   state.isCreateTagDialogOpen = true;
   state.createTagDefaultValues = {
     ...CREATE_TAG_DEFAULT_VALUES,
@@ -306,11 +315,7 @@ export const closeCreateTagDialog = ({ state }, _payload = {}) => {
   };
 };
 
-export {
-  selectSelectedItem,
-  selectSelectedItemId,
-  setSearchQuery,
-};
+export { selectSelectedItem, selectSelectedItemId, setSearchQuery };
 
 export const selectParticleItemById = selectItemById;
 export const selectSelectedParticle = selectSelectedItem;

@@ -129,11 +129,7 @@ export const commitDetailTagIdsState = ({ state, tagIds } = {}) => {
   state.detailTagIdsDirty = false;
 };
 
-export const setDetailTagPopoverOpenState = ({
-  state,
-  open,
-  item,
-} = {}) => {
+export const setDetailTagPopoverOpenState = ({ state, open, item } = {}) => {
   state.isDetailTagSelectOpen = !!open;
 
   if (!state.isDetailTagSelectOpen && state.detailTagIdsDirty) {
@@ -361,7 +357,8 @@ export const createResourcePageTagHandlers = ({
 
   const handleCreateTagDialogClose = (deps) => {
     const { render, store } = deps;
-    const { mode, itemId, draftTagIds } = store.getState().createTagContext ?? {};
+    const { mode, itemId, draftTagIds } =
+      store.getState().createTagContext ?? {};
     store.closeCreateTagDialog();
 
     if (mode === "item" && itemId && itemId === getSelectedItemId({ deps })) {
@@ -491,7 +488,8 @@ export const createResourcePageTagHandlers = ({
       return;
     }
 
-    const { mode, itemId, draftTagIds } = store.getState().createTagContext ?? {};
+    const { mode, itemId, draftTagIds } =
+      store.getState().createTagContext ?? {};
     const scopeKey = resolveScopeKey({
       deps,
       itemId,

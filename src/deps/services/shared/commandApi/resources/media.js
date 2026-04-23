@@ -10,11 +10,7 @@ import {
 } from "./shared.js";
 
 export const createMediaResourceCommandApi = (shared) => ({
-  async createTag({
-    scopeKey,
-    tagId,
-    data,
-  }) {
+  async createTag({ scopeKey, tagId, data }) {
     const context = await shared.ensureCommandContext();
     const resourceType = getTagScopePartitionResourceType(scopeKey);
 
@@ -42,11 +38,7 @@ export const createMediaResourceCommandApi = (shared) => ({
       },
     });
   },
-  async updateTag({
-    scopeKey,
-    tagId,
-    data,
-  }) {
+  async updateTag({ scopeKey, tagId, data }) {
     const context = await shared.ensureCommandContext();
     const resourceType = getTagScopePartitionResourceType(scopeKey);
 
@@ -74,10 +66,7 @@ export const createMediaResourceCommandApi = (shared) => ({
       },
     });
   },
-  async deleteTags({
-    scopeKey,
-    tagIds,
-  }) {
+  async deleteTags({ scopeKey, tagIds }) {
     const context = await shared.ensureCommandContext();
     const resourceType = getTagScopePartitionResourceType(scopeKey);
 

@@ -35,10 +35,7 @@ export const createTagFilterPopoverState = () => ({
   },
 });
 
-export const openTagFilterPopover = (
-  { state },
-  { position, tagIds } = {},
-) => {
+export const openTagFilterPopover = ({ state }, { position, tagIds } = {}) => {
   state.tagFilterPopover.isOpen = true;
   state.tagFilterPopover.position = {
     x: position?.x ?? DEFAULT_TAG_FILTER_POPOVER_POSITION.x,
@@ -51,10 +48,7 @@ export const closeTagFilterPopover = ({ state }, _payload = {}) => {
   state.tagFilterPopover.isOpen = false;
 };
 
-export const toggleTagFilterPopoverTagId = (
-  { state },
-  { tagId } = {},
-) => {
+export const toggleTagFilterPopoverTagId = ({ state }, { tagId } = {}) => {
   if (!tagId) {
     return;
   }
@@ -78,10 +72,7 @@ export const selectTagFilterPopoverDraftTagIds = ({ state }) => {
   return state.tagFilterPopover.draftTagIds ?? [];
 };
 
-export const buildTagFilterPopoverViewData = ({
-  state,
-  props,
-} = {}) => {
+export const buildTagFilterPopoverViewData = ({ state, props } = {}) => {
   const draftTagIds = normalizeTagIds(state.tagFilterPopover?.draftTagIds);
   const options = (props.tagFilterOptions ?? []).map((option) => {
     const isSelected = draftTagIds.includes(option.value);
