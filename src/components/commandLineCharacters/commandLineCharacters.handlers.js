@@ -1,26 +1,88 @@
-import { toFlatItems } from "../../internal/project/tree.js";
-
 const getCharacterIndexFromEvent = (event) => {
   const index = Number.parseInt(event?.currentTarget?.dataset?.index, 10);
   return Number.isInteger(index) ? index : undefined;
 };
 
-const getSelectedSpriteId = (character = {}) => {
-  return character?.sprites?.[0]?.resourceId;
+const buildTempSelectedSpriteIdsByGroup = ({
+  character,
+  spriteSelectionGroups,
+} = {}) => {
+  const nextSelectedSpriteIds = {};
+  const currentSprites = Array.isArray(character?.sprites)
+    ? character.sprites
+    : [];
+  const firstSelectedSpriteId = currentSprites.find(
+    (sprite) =>
+      typeof sprite?.resourceId === "string" && sprite.resourceId.length > 0,
+  )?.resourceId;
+
+  for (const [index, spriteSelectionGroup] of (
+    spriteSelectionGroups ?? []
+  ).entries()) {
+    const matchingSprite = currentSprites.find(
+      (sprite) =>
+        sprite?.id === spriteSelectionGroup.id &&
+        typeof sprite?.resourceId === "string" &&
+        sprite.resourceId.length > 0,
+    );
+
+    if (matchingSprite?.resourceId) {
+      nextSelectedSpriteIds[spriteSelectionGroup.id] =
+        matchingSprite.resourceId;
+      continue;
+    }
+
+    if (index === 0 && firstSelectedSpriteId) {
+      nextSelectedSpriteIds[spriteSelectionGroup.id] = firstSelectedSpriteId;
+    }
+  }
+
+  return nextSelectedSpriteIds;
 };
 
 const beginExistingCharacterSpriteSelection = (store, index) => {
   const selectedCharacters = store.selectSelectedCharacters();
   const selectedCharacter = selectedCharacters[index];
+  const spriteSelectionGroups =
+    store.selectSpriteSelectionGroupsForCharacterIndex({
+      index,
+    });
 
   store.clearPendingCharacterIndex();
   store.setSelectedCharacterIndex({ index });
-  store.setTempSelectedSpriteId({
-    spriteId: getSelectedSpriteId(selectedCharacter),
+  store.setTempSelectedSpriteIds({
+    spriteIdsByGroupId: buildTempSelectedSpriteIdsByGroup({
+      character: selectedCharacter,
+      spriteSelectionGroups,
+    }),
+  });
+  store.setSelectedSpriteGroupId({
+    spriteGroupId: spriteSelectionGroups[0]?.id,
   });
   store.setSearchQuery({ value: "" });
   store.setMode({
     mode: "sprite-select",
+  });
+};
+
+const beginExistingCharacterSpriteSelectionAtGroup = (
+  store,
+  index,
+  spriteGroupId,
+) => {
+  const spriteSelectionGroups =
+    store.selectSpriteSelectionGroupsForCharacterIndex({
+      index,
+    });
+  const resolvedSpriteGroupId = spriteSelectionGroups.some(
+    (spriteSelectionGroup) => spriteSelectionGroup.id === spriteGroupId,
+  )
+    ? spriteGroupId
+    : spriteSelectionGroups[0]?.id;
+
+  beginExistingCharacterSpriteSelection(store, index);
+  store.setSelectedSpriteGroupId({
+    spriteGroupId: resolvedSpriteGroupId,
   });
 };
 
@@ -29,10 +91,19 @@ const beginNewCharacterSpriteSelection = (store, characterId) => {
 
   const currentCharacters = store.selectSelectedCharacters();
   const newCharacterIndex = currentCharacters.length - 1;
+  const spriteSelectionGroups =
+    store.selectSpriteSelectionGroupsForCharacterIndex({
+      index: newCharacterIndex,
+    });
 
   store.setPendingCharacterIndex({ index: newCharacterIndex });
   store.setSelectedCharacterIndex({ index: newCharacterIndex });
-  store.setTempSelectedSpriteId({ spriteId: undefined });
+  store.setTempSelectedSpriteIds({
+    spriteIdsByGroupId: {},
+  });
+  store.setSelectedSpriteGroupId({
+    spriteGroupId: spriteSelectionGroups[0]?.id,
+  });
   store.setSearchQuery({ value: "" });
   store.setMode({
     mode: "sprite-select",
@@ -95,6 +166,19 @@ export const handleCharacterClick = (deps, payload) => {
   render();
 };
 
+export const handleCharacterSpriteGroupBoxClick = (deps, payload) => {
+  const { store, render } = deps;
+  const index = getCharacterIndexFromEvent(payload._event);
+  const spriteGroupId = payload?._event?.currentTarget?.dataset?.spriteGroupId;
+
+  if (index === undefined || !spriteGroupId) {
+    return;
+  }
+
+  beginExistingCharacterSpriteSelectionAtGroup(store, index, spriteGroupId);
+  render();
+};
+
 export const handleCharacterContextMenu = (deps, payload) => {
   payload._event.preventDefault();
   const { store, render } = deps;
@@ -150,7 +234,10 @@ export const handleFileExplorerItemClick = (deps, payload) => {
   }
 
   if (mode === "sprite-select") {
-    store.setTempSelectedSpriteId({ spriteId: itemId });
+    store.setTempSelectedSpriteId({
+      groupId: store.selectSelectedSpriteGroupId(),
+      spriteId: itemId,
+    });
     render();
     return;
   }
@@ -182,6 +269,18 @@ export const handleCharacterItemClick = (deps, payload) => {
     "";
 
   beginNewCharacterSpriteSelection(store, characterId);
+  render();
+};
+
+export const handleSpriteGroupTabClick = (deps, payload) => {
+  const { store, render } = deps;
+  const spriteGroupId = payload._event.detail.id;
+
+  if (!spriteGroupId || spriteGroupId === store.selectSelectedSpriteGroupId()) {
+    return;
+  }
+
+  store.setSelectedSpriteGroupId({ spriteGroupId });
   render();
 };
 
@@ -221,6 +320,8 @@ export const handleSubmitClick = (deps) => {
 export const handleCharacterSelectorClick = (deps) => {
   const { store, render } = deps;
 
+  store.clearTempSelectedSpriteIds();
+  store.setSelectedSpriteGroupId({ spriteGroupId: undefined });
   store.setSearchQuery({ value: "" });
   store.setMode({
     mode: "character-select",
@@ -236,7 +337,8 @@ export const handleBreadcumbClick = (deps, payload) => {
   if (mode === "sprite-select") {
     discardPendingCharacterSelection(store);
     store.setSelectedCharacterIndex({ index: undefined });
-    store.setTempSelectedSpriteId({ spriteId: undefined });
+    store.clearTempSelectedSpriteIds();
+    store.setSelectedSpriteGroupId({ spriteGroupId: undefined });
   }
 
   if (payload._event.detail.id === "actions") {
@@ -274,7 +376,8 @@ export const handleAddCharacterClick = (deps) => {
 
   store.clearPendingCharacterIndex();
   store.setSelectedCharacterIndex({ index: undefined });
-  store.setTempSelectedSpriteId({ spriteId: undefined });
+  store.clearTempSelectedSpriteIds();
+  store.setSelectedSpriteGroupId({ spriteGroupId: undefined });
   store.setSearchQuery({ value: "" });
   store.setMode({
     mode: "character-select",
@@ -290,7 +393,8 @@ export const handleSpriteItemClick = (deps, payload) => {
     target?.dataset?.spriteId || target?.id?.replace("spriteItem", "") || "";
 
   store.setTempSelectedSpriteId({
-    spriteId: spriteId,
+    groupId: store.selectSelectedSpriteGroupId(),
+    spriteId,
   });
 
   render();
@@ -305,7 +409,10 @@ export const handleSpriteItemDoubleClick = (deps, payload) => {
     return;
   }
 
-  store.setTempSelectedSpriteId({ spriteId });
+  store.setTempSelectedSpriteId({
+    groupId: store.selectSelectedSpriteGroupId(),
+    spriteId,
+  });
   store.showFullImagePreview({ fileId: sprite.fileId });
   render();
 };
@@ -313,39 +420,47 @@ export const handleSpriteItemDoubleClick = (deps, payload) => {
 export const handleButtonSelectClick = (deps) => {
   const { store, render, appService } = deps;
   const mode = store.selectMode();
-  const selectedCharacters = store.selectCharactersWithRepositoryData();
   const selectedCharacterIndex = store.selectSelectedCharacterIndex();
 
   if (mode === "sprite-select") {
-    const tempSelectedSpriteId = store.selectTempSelectedSpriteId();
+    const spriteSelectionGroups = store.selectCurrentSpriteSelectionGroups();
+    const tempSelectedSpriteIds = store.selectTempSelectedSpriteIds();
+    const missingSpriteGroup = spriteSelectionGroups.find(
+      (spriteSelectionGroup) => !tempSelectedSpriteIds[spriteSelectionGroup.id],
+    );
 
-    if (!tempSelectedSpriteId) {
+    if (missingSpriteGroup) {
       appService.showAlert({
-        message: "A sprite is required.",
+        message:
+          spriteSelectionGroups.length > 1
+            ? `Select a sprite for ${missingSpriteGroup.name}.`
+            : "A sprite is required.",
         title: "Warning",
       });
       return;
     }
 
-    const selectedChar = selectedCharacters[selectedCharacterIndex];
+    store.updateCharacterSprites({
+      index: selectedCharacterIndex,
+      sprites: spriteSelectionGroups
+        .map((spriteSelectionGroup) => {
+          const resourceId = tempSelectedSpriteIds[spriteSelectionGroup.id];
+          if (!resourceId) {
+            return undefined;
+          }
 
-    if (selectedChar && selectedChar.sprites) {
-      const tempSelectedSprite = toFlatItems(selectedChar.sprites).find(
-        (sprite) => sprite.id === tempSelectedSpriteId,
-      );
-      if (tempSelectedSprite) {
-        store.updateCharacterSprite({
-          index: selectedCharacterIndex,
-          spriteId: tempSelectedSpriteId,
-          spriteFileId:
-            tempSelectedSprite.fileId || tempSelectedSprite.resourceId,
-        });
-      }
-    }
+          return {
+            id: spriteSelectionGroup.id,
+            resourceId,
+          };
+        })
+        .filter(Boolean),
+    });
 
     store.clearPendingCharacterIndex();
     store.setSelectedCharacterIndex({ index: undefined });
-    store.setTempSelectedSpriteId({ spriteId: undefined });
+    store.clearTempSelectedSpriteIds();
+    store.setSelectedSpriteGroupId({ spriteGroupId: undefined });
     store.setMode({
       mode: "current",
     });
