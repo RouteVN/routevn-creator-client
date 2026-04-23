@@ -77,7 +77,6 @@ export const systemConfigItems = [
     id: "variables",
     name: "Variables",
     path: "/project/variables",
-    hidden: true,
   },
 ];
 
