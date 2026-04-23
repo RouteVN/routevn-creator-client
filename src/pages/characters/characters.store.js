@@ -1,5 +1,11 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
+import {
+  buildTagFilterOptions,
+  createEmptyTagCollection,
+  matchesTagAwareSearch,
+  matchesTagFilter,
+} from "../../internal/resourceTags.js";
 
 const folderContextMenuItems = [
   { label: "New Folder", type: "item", value: "new-child-folder" },
@@ -28,11 +34,61 @@ const CHARACTER_SHORTCUT_OPTIONS = [
   { label: "9", value: "9" },
 ];
 
+const CHARACTER_TAG_SCOPE_KEY = "characters";
+const CREATE_TAG_DEFAULT_VALUES = Object.freeze({
+  name: "",
+});
+const createTagForm = {
+  title: "Create Tag",
+  fields: [
+    {
+      name: "name",
+      type: "input-text",
+      label: "Tag Name",
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        label: "Create Tag",
+      },
+    ],
+  },
+};
+const CHARACTER_TAG_FIELD = {
+  name: "tagIds",
+  type: "tag-select",
+  label: "Tags",
+  placeholder: "Select tags",
+  addOption: {
+    label: "Add tag",
+  },
+  required: false,
+};
+
 export const createInitialState = () => ({
   charactersData: { tree: [], items: {} },
+  tagsData: createEmptyTagCollection(),
+  activeTagIds: [],
+  detailTagIds: [],
+  detailTagIdsDirty: false,
+  isDetailTagSelectOpen: false,
   selectedItemId: null,
   searchQuery: "",
   isDialogOpen: false,
+  isCreateTagDialogOpen: false,
+  createTagDefaultValues: {
+    ...CREATE_TAG_DEFAULT_VALUES,
+  },
+  createTagContext: {
+    mode: undefined,
+    itemId: undefined,
+    draftTagIds: [],
+  },
   targetGroupId: null,
   avatarFileId: null,
   avatarUploadResult: null,
@@ -43,6 +99,7 @@ export const createInitialState = () => ({
     name: "",
     description: "",
     shortcut: "",
+    tagIds: [],
   },
   dialogForm: {
     title: "Add Character",
@@ -67,6 +124,7 @@ export const createInitialState = () => ({
         options: CHARACTER_SHORTCUT_OPTIONS,
         required: false,
       },
+      CHARACTER_TAG_FIELD,
       {
         type: "slot",
         slot: "avatar-slot",
@@ -93,10 +151,30 @@ export const createInitialState = () => ({
 
 export const setItems = ({ state }, { charactersData } = {}) => {
   state.charactersData = charactersData;
+  if (state.detailTagIdsDirty) {
+    return;
+  }
+
+  const item = state.selectedItemId
+    ? state.charactersData?.items?.[state.selectedItemId]
+    : undefined;
+  state.detailTagIds = Array.isArray(item?.tagIds) ? [...item.tagIds] : [];
+  state.detailTagIdsDirty = false;
+};
+
+export const setTagsData = ({ state }, { tagsData } = {}) => {
+  state.tagsData = tagsData ?? createEmptyTagCollection();
+  const validTagIds = new Set(Object.keys(state.tagsData.items ?? {}));
+  state.activeTagIds = state.activeTagIds.filter((tagId) => validTagIds.has(tagId));
+  state.detailTagIds = state.detailTagIds.filter((tagId) => validTagIds.has(tagId));
 };
 
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
+  state.isDetailTagSelectOpen = false;
+  const item = itemId ? state.charactersData?.items?.[itemId] : undefined;
+  state.detailTagIds = Array.isArray(item?.tagIds) ? [...item.tagIds] : [];
+  state.detailTagIdsDirty = false;
 };
 
 export const setSearchQuery = ({ state }, { query } = {}) => {
@@ -109,6 +187,61 @@ export const setTargetGroupId = ({ state }, { groupId } = {}) => {
 
 export const toggleDialog = ({ state }, _payload = {}) => {
   state.isDialogOpen = !state.isDialogOpen;
+};
+
+export const setActiveTagIds = ({ state }, { tagIds } = {}) => {
+  const validTagIds = new Set(Object.keys(state.tagsData.items ?? {}));
+  state.activeTagIds = [
+    ...new Set((tagIds ?? []).filter((tagId) => validTagIds.has(tagId))),
+  ];
+};
+
+export const setDetailTagIds = ({ state }, { tagIds } = {}) => {
+  const validTagIds = new Set(Object.keys(state.tagsData.items ?? {}));
+  state.detailTagIds = [
+    ...new Set((tagIds ?? []).filter((tagId) => validTagIds.has(tagId))),
+  ];
+  state.detailTagIdsDirty = true;
+};
+
+export const commitDetailTagIds = ({ state }, { tagIds } = {}) => {
+  const validTagIds = new Set(Object.keys(state.tagsData.items ?? {}));
+  state.detailTagIds = [
+    ...new Set((tagIds ?? []).filter((tagId) => validTagIds.has(tagId))),
+  ];
+  state.detailTagIdsDirty = false;
+};
+
+export const setDetailTagPopoverOpen = ({ state }, { open, item } = {}) => {
+  state.isDetailTagSelectOpen = !!open;
+  if (!state.isDetailTagSelectOpen && state.detailTagIdsDirty) {
+    state.detailTagIds = Array.isArray(item?.tagIds) ? [...item.tagIds] : [];
+    state.detailTagIdsDirty = false;
+  }
+};
+
+export const openCreateTagDialog = ({ state }, { mode, itemId, draftTagIds } = {}) => {
+  state.isCreateTagDialogOpen = true;
+  state.createTagDefaultValues = {
+    ...CREATE_TAG_DEFAULT_VALUES,
+  };
+  state.createTagContext = {
+    mode: mode ?? "item",
+    itemId,
+    draftTagIds: Array.isArray(draftTagIds) ? [...draftTagIds] : [],
+  };
+};
+
+export const closeCreateTagDialog = ({ state }, _payload = {}) => {
+  state.isCreateTagDialogOpen = false;
+  state.createTagDefaultValues = {
+    ...CREATE_TAG_DEFAULT_VALUES,
+  };
+  state.createTagContext = {
+    mode: undefined,
+    itemId: undefined,
+    draftTagIds: [],
+  };
 };
 
 export const setAvatarFileId = ({ state }, { fileId, uploadResult } = {}) => {
@@ -201,23 +334,25 @@ export const selectViewData = ({ state }) => {
           label: "Shortcut",
           value: selectedItem.shortcut ?? "",
         },
+        {
+          type: "slot",
+          slot: "character-tags",
+          label: "Tags",
+        },
       ]
     : [];
 
   // Apply search filter
   const searchQuery = (state.searchQuery || "").toLowerCase().trim();
+  const activeTagIds = state.activeTagIds ?? [];
   let filteredGroups = rawFlatGroups;
 
   if (searchQuery) {
     filteredGroups = rawFlatGroups
       .map((group) => {
-        const filteredChildren = (group.children || []).filter((item) => {
-          const name = (item.name || "").toLowerCase();
-          const description = (item.description || "").toLowerCase();
-          return (
-            name.includes(searchQuery) || description.includes(searchQuery)
-          );
-        });
+        const filteredChildren = (group.children || []).filter((item) =>
+          matchesTagAwareSearch(item, searchQuery),
+        );
 
         const groupName = (group.name || "").toLowerCase();
         const shouldIncludeGroup =
@@ -234,7 +369,23 @@ export const selectViewData = ({ state }) => {
       .filter(Boolean);
   }
 
-  const flatGroups = filteredGroups;
+  const flatGroups = filteredGroups
+    .map((group) => ({
+      ...group,
+      children: (group.children || []).filter((item) =>
+        matchesTagFilter({
+          item,
+          activeTagIds,
+        }),
+      ),
+      hasChildren: (group.children || []).some((item) =>
+        matchesTagFilter({
+          item,
+          activeTagIds,
+        }),
+      ),
+    }))
+    .filter((group) => group.children.length > 0 || activeTagIds.length === 0);
 
   // Get edit item details
   const editItem = state.editItemId
@@ -267,6 +418,7 @@ export const selectViewData = ({ state }) => {
         options: CHARACTER_SHORTCUT_OPTIONS,
         required: false,
       },
+      CHARACTER_TAG_FIELD,
       {
         type: "slot",
         slot: "avatar-slot",
@@ -290,6 +442,7 @@ export const selectViewData = ({ state }) => {
       name: editItem.name || "",
       description: editItem.description || "",
       shortcut: editItem.shortcut || "",
+      tagIds: editItem.tagIds || [],
     };
   }
 
@@ -302,8 +455,19 @@ export const selectViewData = ({ state }) => {
     selectedItemId: state.selectedItemId,
     selectedItemName: selectedItem?.name ?? "",
     selectedAvatarFileId: selectedItem?.fileId,
+    selectedItemTagIds: selectedItem?.tagIds ?? [],
+    detailTagDraftValues: state.detailTagIds ?? [],
+    isDetailTagSelectOpen: !!state.isDetailTagSelectOpen,
     detailFields,
     searchQuery: state.searchQuery,
+    tagFilterOptions: buildTagFilterOptions({
+      tagsCollection: state.tagsData,
+    }),
+    selectedTagFilterValues: activeTagIds,
+    tagFilterPlaceholder: "Filter tags",
+    detailTagAddOption: {
+      label: "Add tag",
+    },
     resourceType: "characters",
     title: "Characters",
     folderContextMenuItems,
@@ -312,6 +476,9 @@ export const selectViewData = ({ state }) => {
     isDialogOpen: state.isDialogOpen,
     dialogDefaultValues: state.dialogDefaultValues,
     dialogForm: state.dialogForm,
+    isCreateTagDialogOpen: state.isCreateTagDialogOpen,
+    createTagDefaultValues: state.createTagDefaultValues,
+    createTagForm,
     avatarFileId: state.avatarFileId,
     isAvatarCropDialogOpen: state.isAvatarCropDialogOpen,
     avatarCropFile: state.avatarCropFile,
@@ -321,4 +488,8 @@ export const selectViewData = ({ state }) => {
     editForm,
     editAvatarFileId: state.editAvatarFileId,
   };
+};
+
+export {
+  CHARACTER_TAG_SCOPE_KEY,
 };

@@ -3,6 +3,26 @@ refs:
     eventListeners:
       value-input:
         handler: handleSearchInput
+  tagFilterButton:
+    eventListeners:
+      click:
+        handler: handleTagFilterButtonClick
+  tagFilterPopover:
+    eventListeners:
+      close:
+        handler: handleTagFilterPopoverClose
+  tagFilterOption*:
+    eventListeners:
+      click:
+        handler: handleTagFilterOptionClick
+  tagFilterClear:
+    eventListeners:
+      click:
+        handler: handleTagFilterClearClick
+  tagFilterApply:
+    eventListeners:
+      click:
+        handler: handleTagFilterApplyClick
   group*:
     eventListeners:
       click:
@@ -29,6 +49,8 @@ refs:
         handler: handleFormActionClick
       form-change:
         handler: handleDialogFormChange
+      add-option-click:
+        handler: handleFormAddOptionClick
   row*:
     eventListeners:
       click:
@@ -51,6 +73,9 @@ template:
                   - $if navTitle:
                       - rtgl-text: ${navTitle}
               - rtgl-input#searchInput s=sm placeholder="Search variables..." value=${searchQuery} h=1fg: null
+              - $if showTagFilter:
+                  - rtgl-view#tagFilterButton w=36 h=36 bw=xs br=md ah=c av=c cur=pointer bgc=${tagFilterButtonBackgroundColor} bc=${tagFilterButtonBorderColor}:
+                      - rtgl-svg svg=filter wh=16 c=${tagFilterButtonIconColor}: null
           - $if flatGroups.length > 0:
               - $for group, i in flatGroups:
                   - rtgl-view w=f ph=md:
@@ -107,9 +132,9 @@ template:
                                       - rtgl-view#addVariableEmptyRef${i} data-group-id=${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=pointer:
                                           - rtgl-svg svg=plus wh=24: null
                                           - rtgl-text: Add Variable
-            $elif searchQuery:
+            $elif searchQuery || selectedTagFilterValues.length > 0:
               - rtgl-view w=f h=400 av=c ah=c:
-                  - rtgl-text s=lg c=mu-fg: No variables found matching "${searchQuery}"
+                  - rtgl-text s=lg c=mu-fg: No variables found
             $else:
               - rtgl-view w=f h=f av=c ah=c:
                   - rtgl-text s=lg c=mu-fg: No data
@@ -121,3 +146,16 @@ template:
           - rtgl-view slot=content g=md:
               - rtgl-form#variableForm key=${dialogKey} :defaultValues=${defaultValues} :form=${form} w=f :context=${context}: null
       - rtgl-dropdown-menu#contextMenu :items=${dropdownMenu.items} ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}: null
+  - rtgl-popover#tagFilterPopover ?open=${tagFilterPopover.isOpen} x=${tagFilterPopover.position.x} y=${tagFilterPopover.position.y} place=bs content-w=320 content-g=sm content-sv=true content-ph=md content-pv=md:
+      - $if !tagFilterPopover.hasOptions:
+          - rtgl-text s=sm c=mu-fg: No tags available
+      - $if tagFilterPopover.hasOptions:
+          - rtgl-view d=h wrap g=sm w=f:
+              - $for option, i in tagFilterPopover.options:
+                  - rtgl-view#tagFilterOptionRef${i} data-tag-id=${option.value} cur=pointer:
+                      - 'rtgl-tag v=mu style="${option.tagStyle}"':
+                          ${option.label}
+      - rtgl-view d=h av=c g=sm w=f pt=sm:
+          - rtgl-view w=1fg: null
+          - rtgl-button#tagFilterClear v=se s=sm ?disabled=${tagFilterPopover.clearDisabled}: Clear
+          - rtgl-button#tagFilterApply v=pr s=sm: Save

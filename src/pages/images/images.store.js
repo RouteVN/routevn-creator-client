@@ -1,6 +1,8 @@
 import { formatFileSize } from "../../internal/files.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { createMediaPageStore } from "../../internal/ui/resourcePages/media/createMediaPageStore.js";
+import { createTagField } from "../../internal/ui/resourcePages/tags.js";
+import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
 import {
   DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD,
   shouldStartCollapsedFileExplorer,
@@ -10,6 +12,7 @@ const AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD =
   DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD;
 const IMAGE_CARD_MAX_WIDTH = 400;
 const IMAGE_CARD_HEIGHT = 225;
+export const IMAGE_TAG_SCOPE_KEY = "images";
 
 const buildDetailFields = (item) => {
   if (!item) {
@@ -25,6 +28,11 @@ const buildDetailFields = (item) => {
     {
       type: "description",
       value: item.description ?? "",
+    },
+    {
+      type: "slot",
+      slot: "image-tags",
+      label: "Tags",
     },
     {
       type: "text",
@@ -76,6 +84,7 @@ const createEditForm = () => ({
       label: "Description",
       required: false,
     },
+    createTagField(),
     {
       type: "slot",
       slot: "image-slot",
@@ -96,11 +105,11 @@ const createEditForm = () => ({
 
 const {
   createInitialState: createMediaInitialState,
-  setItems,
+  setItems: setBaseItems,
   addPendingUploads,
   removePendingUploads,
   updatePendingUpload,
-  setSelectedItemId,
+  setSelectedItemId: setBaseSelectedItemId,
   openEditDialog,
   closeEditDialog,
   setEditUpload,
@@ -108,6 +117,13 @@ const {
   selectItemById,
   selectSelectedItemId,
   setSearchQuery,
+  setTagsData,
+  setActiveTagIds,
+  setDetailTagIds,
+  commitDetailTagIds,
+  setDetailTagPopoverOpen,
+  openCreateTagDialog,
+  closeCreateTagDialog,
   selectViewData: selectMediaViewData,
 } = createMediaPageStore({
   itemType: "image",
@@ -119,16 +135,22 @@ const {
   imageHeight: IMAGE_CARD_HEIGHT,
   maxWidth: IMAGE_CARD_MAX_WIDTH,
   showZoomControls: true,
+  matchesSearch: matchesTagAwareSearch,
   buildDetailFields,
   buildMediaItem,
   buildPendingMediaItem,
   createEditForm,
   getSelectedPreviewFileId: (item) => item?.thumbnailFileId ?? item?.fileId,
-  extendViewData: ({ state, baseViewData }) => ({
-    ...baseViewData,
-    fullImagePreviewVisible: state.fullImagePreviewVisible,
-    fullImagePreviewFileId: state.fullImagePreviewFileId,
-  }),
+  tagging: {
+    tagFilterPlaceholder: "Filter tags",
+  },
+  extendViewData: ({ state, baseViewData }) => {
+    return {
+      ...baseViewData,
+      fullImagePreviewVisible: state.fullImagePreviewVisible,
+      fullImagePreviewFileId: state.fullImagePreviewFileId,
+    };
+  },
 });
 
 export const createInitialState = () => ({
@@ -138,15 +160,22 @@ export const createInitialState = () => ({
 });
 
 export {
-  setItems,
+  setBaseItems as setItems,
   addPendingUploads,
   removePendingUploads,
   updatePendingUpload,
-  setSelectedItemId,
+  setBaseSelectedItemId as setSelectedItemId,
   openEditDialog,
   closeEditDialog,
   setEditUpload,
   selectSelectedItem,
+  setTagsData,
+  setActiveTagIds,
+  setDetailTagIds,
+  commitDetailTagIds,
+  setDetailTagPopoverOpen,
+  openCreateTagDialog,
+  closeCreateTagDialog,
   selectSelectedItemId,
   setSearchQuery,
 };

@@ -278,6 +278,22 @@ export const createInsiemeWebStoreAdapter = async (
       return Number(await rawClientStore.getCursor()) || 0;
     },
 
+    async applySubmitResult(payload) {
+      if (typeof rawClientStore.applySubmitResult !== "function") {
+        return undefined;
+      }
+
+      return rawClientStore.applySubmitResult(payload);
+    },
+
+    async applyCommittedBatch(payload) {
+      if (typeof rawClientStore.applyCommittedBatch !== "function") {
+        return undefined;
+      }
+
+      return rawClientStore.applyCommittedBatch(payload);
+    },
+
     async loadMaterializedViewCheckpoint({ viewName, partition }) {
       return new Promise((resolve, reject) => {
         const transaction = db.transaction(MATERIALIZED_VIEW_STORE, "readonly");

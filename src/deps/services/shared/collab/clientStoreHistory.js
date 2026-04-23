@@ -176,6 +176,34 @@ const logInvalidLocalDraftDuringProjectLoad = ({
   });
 };
 
+const discardInvalidLocalDraftDuringProjectLoad = async ({
+  store,
+  failedDraft,
+} = {}) => {
+  if (
+    !store ||
+    typeof store.applySubmitResult !== "function" ||
+    typeof failedDraft?.id !== "string" ||
+    failedDraft.id.length === 0
+  ) {
+    return;
+  }
+
+  try {
+    await store.applySubmitResult({
+      result: {
+        id: failedDraft.id,
+        status: "rejected",
+      },
+    });
+  } catch (error) {
+    console.warn("Failed to discard invalid local draft during project load", {
+      draftId: failedDraft.id,
+      message: error?.message || "Unknown error",
+    });
+  }
+};
+
 export const loadCommittedEventsFromClientStore = async (store) => {
   const committedEvents = [];
   let sinceCommittedId = 0;
@@ -344,6 +372,10 @@ export const loadRepositoryEventsFromClientStore = async ({
           failedDraft,
           error,
         });
+        await discardInvalidLocalDraftDuringProjectLoad({
+          store,
+          failedDraft,
+        });
         remainingDraftEvents = remainingDraftEvents.slice(
           resolvedFailedDraftIndex + 1,
         );
@@ -412,6 +444,10 @@ export const loadRepositoryEventsFromClientStore = async ({
         projectId,
         failedDraft,
         error,
+      });
+      await discardInvalidLocalDraftDuringProjectLoad({
+        store,
+        failedDraft,
       });
       remainingDraftEvents = remainingDraftEvents.slice(
         resolvedFailedDraftIndex + 1,

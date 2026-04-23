@@ -1,6 +1,10 @@
 import { formatFileSize } from "../../internal/files.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { createMediaPageStore } from "../../internal/ui/resourcePages/media/createMediaPageStore.js";
+import { createTagField } from "../../internal/ui/resourcePages/tags.js";
+import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
+
+const SOUND_TAG_SCOPE_KEY = "sounds";
 
 const formatDuration = (duration) => {
   if (duration === undefined || duration === null) {
@@ -26,6 +30,11 @@ const buildDetailFields = (item) => {
     {
       type: "description",
       value: item.description ?? "",
+    },
+    {
+      type: "slot",
+      slot: "sound-tags",
+      label: "Tags",
     },
     {
       type: "text",
@@ -77,6 +86,7 @@ const createEditForm = () => ({
       label: "Description",
       required: false,
     },
+    createTagField(),
     {
       type: "slot",
       slot: "sound-slot",
@@ -97,11 +107,11 @@ const createEditForm = () => ({
 
 const {
   createInitialState: createMediaInitialState,
-  setItems,
+  setItems: setBaseItems,
   addPendingUploads,
   removePendingUploads,
   updatePendingUpload,
-  setSelectedItemId,
+  setSelectedItemId: setBaseSelectedItemId,
   openEditDialog,
   closeEditDialog,
   setEditUpload,
@@ -109,6 +119,13 @@ const {
   selectItemById,
   selectSelectedItemId,
   setSearchQuery,
+  setTagsData,
+  setActiveTagIds,
+  setDetailTagIds,
+  commitDetailTagIds,
+  setDetailTagPopoverOpen,
+  openCreateTagDialog,
+  closeCreateTagDialog,
   selectViewData: selectMediaViewData,
 } = createMediaPageStore({
   itemType: "sound",
@@ -118,18 +135,24 @@ const {
   uploadText: "Upload",
   acceptedFileTypes: [".mp3", ".wav", ".ogg"],
   previewMenuLabel: "Play",
+  matchesSearch: matchesTagAwareSearch,
   buildDetailFields,
   buildMediaItem,
   buildPendingMediaItem,
   createEditForm,
   getSelectedPreviewFileId: (item) => item?.waveformDataFileId,
-  extendViewData: ({ state, baseViewData }) => ({
-    ...baseViewData,
-    playingSound: state.playingSound,
-    showAudioPlayer: state.showAudioPlayer,
-    audioPlayerLeft: state.audioPlayerLeft,
-    audioPlayerRight: state.audioPlayerRight,
-  }),
+  tagging: {
+    tagFilterPlaceholder: "Filter tags",
+  },
+  extendViewData: ({ state, baseViewData }) => {
+    return {
+      ...baseViewData,
+      playingSound: state.playingSound,
+      showAudioPlayer: state.showAudioPlayer,
+      audioPlayerLeft: state.audioPlayerLeft,
+      audioPlayerRight: state.audioPlayerRight,
+    };
+  },
 });
 
 export const createInitialState = () => ({
@@ -144,15 +167,22 @@ export const createInitialState = () => ({
 });
 
 export {
-  setItems,
+  setBaseItems as setItems,
   addPendingUploads,
   removePendingUploads,
   updatePendingUpload,
-  setSelectedItemId,
+  setBaseSelectedItemId as setSelectedItemId,
   openEditDialog,
   closeEditDialog,
   setEditUpload,
   selectSelectedItem,
+  setTagsData,
+  setActiveTagIds,
+  setDetailTagIds,
+  commitDetailTagIds,
+  setDetailTagPopoverOpen,
+  openCreateTagDialog,
+  closeCreateTagDialog,
   selectSelectedItemId,
   setSearchQuery,
 };
@@ -195,4 +225,8 @@ export const selectViewData = (context) => {
     ...viewData,
     flatItems: applyFolderRequiredRootDragOptions(viewData.flatItems),
   };
+};
+
+export {
+  SOUND_TAG_SCOPE_KEY,
 };

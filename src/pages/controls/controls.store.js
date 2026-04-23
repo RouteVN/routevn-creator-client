@@ -1,10 +1,14 @@
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
 import { getInteractionActions } from "../../internal/project/interactionPayload.js";
 import { RUNTIME_ACTION_LABELS } from "../../internal/runtimeActions.js";
+import { createTagField } from "../../internal/ui/resourcePages/tags.js";
+import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
 import {
   BASE_LAYOUT_KEYBOARD_LABELS,
   BASE_LAYOUT_KEYBOARD_OPTIONS,
 } from "../../internal/project/layout.js";
+
+export const CONTROL_TAG_SCOPE_KEY = "controls";
 
 const createControlForm = ({ editMode = false } = {}) => ({
   title: editMode ? "Edit Control" : "Add Control",
@@ -21,6 +25,7 @@ const createControlForm = ({ editMode = false } = {}) => ({
       label: "Description",
       required: false,
     },
+    createTagField(),
   ],
   actions: {
     layout: "",
@@ -99,6 +104,11 @@ const buildDetailFields = (item) => {
     },
     {
       type: "slot",
+      slot: "control-tags",
+      label: "Tags",
+    },
+    {
+      type: "slot",
       slot: "keyboard-slot",
     },
   ];
@@ -110,15 +120,8 @@ const buildCatalogItem = (item) => ({
   cardKind: "layout",
 });
 
-const matchesSearch = (item, searchQuery) => {
-  if (!searchQuery) {
-    return true;
-  }
-
-  const name = (item.name ?? "").toLowerCase();
-  const description = (item.description ?? "").toLowerCase();
-  return name.includes(searchQuery) || description.includes(searchQuery);
-};
+const matchesSearch = (item, searchQuery) =>
+  matchesTagAwareSearch(item, searchQuery);
 
 const {
   createInitialState: createCatalogInitialState,
@@ -128,6 +131,13 @@ const {
   selectItemById,
   selectSelectedItemId,
   setSearchQuery,
+  setTagsData,
+  setActiveTagIds,
+  setDetailTagIds,
+  commitDetailTagIds,
+  setDetailTagPopoverOpen,
+  openCreateTagDialog,
+  closeCreateTagDialog,
   selectViewData: selectCatalogViewData,
 } = createCatalogPageStore({
   itemType: "control",
@@ -139,6 +149,9 @@ const {
   matchesSearch,
   buildDetailFields,
   buildCatalogItem,
+  tagging: {
+    tagFilterPlaceholder: "Filter tags",
+  },
   extendViewData: ({ state, selectedItem, baseViewData }) => ({
     ...baseViewData,
     isDialogOpen: state.isDialogOpen,
@@ -161,6 +174,7 @@ export const createInitialState = () => ({
   dialogDefaultValues: {
     name: "",
     description: "",
+    tagIds: [],
   },
   keyboardEditorKey: undefined,
   keyboardEditorActions: {},
@@ -172,6 +186,13 @@ export {
   selectSelectedItem,
   selectSelectedItemId,
   setSearchQuery,
+  setTagsData,
+  setActiveTagIds,
+  setDetailTagIds,
+  commitDetailTagIds,
+  setDetailTagPopoverOpen,
+  openCreateTagDialog,
+  closeCreateTagDialog,
 };
 
 export const selectControlItemById = selectItemById;
@@ -185,6 +206,7 @@ export const openAddDialog = ({ state }, { groupId } = {}) => {
   state.dialogDefaultValues = {
     name: "",
     description: "",
+    tagIds: [],
   };
 };
 
@@ -195,6 +217,7 @@ export const openEditDialog = ({ state }, { itemId, defaultValues } = {}) => {
   state.dialogDefaultValues = {
     name: defaultValues?.name ?? "",
     description: defaultValues?.description ?? "",
+    tagIds: defaultValues?.tagIds ?? [],
   };
 };
 
@@ -205,6 +228,7 @@ export const closeAddDialog = ({ state }, _payload = {}) => {
   state.dialogDefaultValues = {
     name: "",
     description: "",
+    tagIds: [],
   };
 };
 

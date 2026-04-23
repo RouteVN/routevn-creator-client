@@ -2,6 +2,13 @@ import {
   getAcceptAttribute,
   isFileTypeAccepted,
 } from "../../internal/fileTypes.js";
+import {
+  applyTagFilterPopoverSelection,
+  clearTagFilterPopoverSelection,
+  closeTagFilterPopoverFromOverlay,
+  openTagFilterPopoverFromButton,
+  toggleTagFilterPopoverOption,
+} from "../../internal/ui/tagFilterPopover.handlers.js";
 
 const PROGRESSIVE_INITIAL_ITEM_COUNT = 8;
 const PROGRESSIVE_BATCH_ITEM_COUNT = 24;
@@ -10,6 +17,12 @@ const SCROLL_STICKY_TOP_GAP_PX = 12;
 const getDataAttribute = (event, name) => {
   return event?.currentTarget?.getAttribute?.(name) ?? undefined;
 };
+
+export const handleTagFilterButtonClick = openTagFilterPopoverFromButton;
+export const handleTagFilterPopoverClose = closeTagFilterPopoverFromOverlay;
+export const handleTagFilterOptionClick = toggleTagFilterPopoverOption;
+export const handleTagFilterClearClick = clearTagFilterPopoverSelection;
+export const handleTagFilterApplyClick = applyTagFilterPopoverSelection;
 
 const parseBooleanProp = (value, fallback = false) => {
   if (value === undefined || value === null) {
@@ -321,6 +334,21 @@ export const handleSearchInput = (deps, payload) => {
   dispatchEvent(
     new CustomEvent("search-input", {
       detail: { value },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+export const handleTagFilterChange = (deps, payload) => {
+  const { dispatchEvent } = deps;
+  const tagIds = Array.isArray(payload._event.detail?.value)
+    ? payload._event.detail.value
+    : [];
+
+  dispatchEvent(
+    new CustomEvent("tag-filter-change", {
+      detail: { tagIds },
       bubbles: true,
       composed: true,
     }),

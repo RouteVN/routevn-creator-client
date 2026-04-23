@@ -1,6 +1,12 @@
 import { generateId } from "../../internal/id.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
+import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
+import {
+  getTagsCollection,
+  resolveCollectionWithTags,
+} from "../../internal/resourceTags.js";
+import { TRANSFORM_TAG_SCOPE_KEY } from "./transforms.store.js";
 
 const MARKER_SIZE = 30;
 const BG_COLOR = "#4a4a4a";
@@ -65,6 +71,7 @@ const createTransformPayload = (values = {}) => {
   return {
     name: values.name?.trim() ?? "",
     description: values.description ?? "",
+    tagIds: Array.isArray(values.tagIds) ? values.tagIds : [],
     x: parseInt(values.x ?? 0, 10),
     y: parseInt(values.y ?? 0, 10),
     scaleX: parseFloat(values.scaleX ?? 1),
@@ -162,12 +169,54 @@ const {
   handleFileExplorerKeyboardScopeKeyDown,
   handleItemClick: handleTransformItemClick,
   handleSearchInput,
+  openCreateTagDialogForMode,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 } = createCatalogPageHandlers({
   resourceType: "transforms",
+  selectData: (repositoryState) => {
+    const tagsData = getTagsCollection(repositoryState, TRANSFORM_TAG_SCOPE_KEY);
+
+    return resolveCollectionWithTags({
+      collection: repositoryState?.transforms,
+      tagsCollection: tagsData,
+      itemType: "transform",
+    });
+  },
   onProjectStateChanged: ({ deps, repositoryState }) => {
+    deps.store.setTagsData({
+      tagsData: getTagsCollection(repositoryState, TRANSFORM_TAG_SCOPE_KEY),
+    });
     deps.store.setProjectResolution({
       projectResolution: repositoryState?.project?.resolution,
     });
+  },
+  tagging: {
+    scopeKey: TRANSFORM_TAG_SCOPE_KEY,
+    updateItemTagIds: ({ deps, itemId, tagIds }) =>
+      deps.projectService.updateTransform({
+        transformId: itemId,
+        data: {
+          tagIds,
+        },
+      }),
+    updateItemTagFallbackMessage: "Failed to update transform tags.",
+    appendCreatedTagByMode: ({ deps, mode, tagId }) => {
+      if (mode !== "form") {
+        return;
+      }
+
+      appendTagIdToForm({
+        form: deps.refs.transformForm,
+        tagId,
+      });
+    },
   },
 });
 
@@ -180,6 +229,14 @@ export {
   handleFileExplorerKeyboardScopeKeyDown,
   handleTransformItemClick,
   handleSearchInput,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 };
 
 export const handleBeforeMount = (deps) => {
@@ -254,6 +311,14 @@ export const handleAddTransformClick = async (deps, payload) => {
   await openTransformDialog({
     deps,
     targetGroupId: groupId,
+  });
+};
+
+export const handleTransformFormAddOptionClick = (deps) => {
+  openCreateTagDialogForMode({
+    deps,
+    mode: "form",
+    itemId: deps.store.selectEditItemId(),
   });
 };
 

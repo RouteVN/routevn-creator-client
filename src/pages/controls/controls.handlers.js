@@ -2,6 +2,7 @@ import { generateId } from "../../internal/id.js";
 import { createLayoutEditorPayload } from "../../internal/layoutEditorRoute.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
 import { createControlsFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
+import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import {
   getInteractionActions,
@@ -9,9 +10,14 @@ import {
 } from "../../internal/project/interactionPayload.js";
 import { BASE_LAYOUT_KEYBOARD_OPTIONS } from "../../internal/project/layout.js";
 import {
+  getTagsCollection,
+  resolveCollectionWithTags,
+} from "../../internal/resourceTags.js";
+import {
   requireProjectResolution,
   scaleLayoutElementsForProjectResolution,
 } from "../../internal/projectResolution.js";
+import { CONTROL_TAG_SCOPE_KEY } from "./controls.store.js";
 
 const {
   handleBeforeMount,
@@ -24,12 +30,56 @@ const {
   handleFileExplorerKeyboardScopeKeyDown,
   handleItemClick: handleControlItemClick,
   handleSearchInput,
+  openCreateTagDialogForMode,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 } = createCatalogPageHandlers({
   resourceType: "controls",
+  selectData: (repositoryState) => {
+    const tagsData = getTagsCollection(repositoryState, CONTROL_TAG_SCOPE_KEY);
+
+    return resolveCollectionWithTags({
+      collection: repositoryState?.controls,
+      tagsCollection: tagsData,
+      itemType: "control",
+    });
+  },
+  onProjectStateChanged: ({ deps, repositoryState }) => {
+    deps.store.setTagsData({
+      tagsData: getTagsCollection(repositoryState, CONTROL_TAG_SCOPE_KEY),
+    });
+  },
   createExplorerHandlers: ({ refresh }) =>
     createControlsFileExplorerHandlers({
       refresh,
     }),
+  tagging: {
+    scopeKey: CONTROL_TAG_SCOPE_KEY,
+    updateItemTagIds: ({ deps, itemId, tagIds }) =>
+      deps.projectService.updateControlItem({
+        controlId: itemId,
+        data: {
+          tagIds,
+        },
+      }),
+    updateItemTagFallbackMessage: "Failed to update control tags.",
+    appendCreatedTagByMode: ({ deps, mode, tagId }) => {
+      if (mode !== "form") {
+        return;
+      }
+
+      appendTagIdToForm({
+        form: deps.refs.controlForm,
+        tagId,
+      });
+    },
+  },
 });
 
 export {
@@ -43,6 +93,14 @@ export {
   handleFileExplorerKeyboardScopeKeyDown,
   handleControlItemClick,
   handleSearchInput,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 };
 
 const getSelectedControl = (store) => {
@@ -131,6 +189,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   const editValues = {
     name: controlItem.name ?? "",
     description: controlItem.description ?? "",
+    tagIds: controlItem.tagIds ?? [],
   };
 
   store.setSelectedItemId({ itemId });
@@ -177,6 +236,13 @@ export const handleAddDialogClose = (deps) => {
 export const handleDetailHeaderClick = (deps) => {
   const selectedItemId = deps.store.selectSelectedItemId();
   openEditDialogWithValues({ deps, itemId: selectedItemId });
+};
+
+export const handleControlFormAddOptionClick = (deps) => {
+  openCreateTagDialogForMode({
+    deps,
+    mode: "form",
+  });
 };
 
 export const createControlTemplate = (projectResolution) => {
@@ -234,6 +300,7 @@ export const handleControlFormActionClick = async (deps, payload) => {
   }
 
   const description = values?.description ?? "";
+  const tagIds = Array.isArray(values?.tagIds) ? values.tagIds : [];
   const editItemId = store.getState().editItemId;
 
   if (editItemId) {
@@ -246,6 +313,7 @@ export const handleControlFormActionClick = async (deps, payload) => {
           data: {
             name,
             description,
+            tagIds,
           },
         }),
     });
@@ -268,6 +336,7 @@ export const handleControlFormActionClick = async (deps, payload) => {
           name,
           data: {
             description,
+            tagIds,
           },
           elements: createControlTemplate(projectResolution),
           parentId: store.getState().targetGroupId,

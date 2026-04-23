@@ -6,3 +6,12 @@ export function openEditDialog(payload = {}) {
 
   this.transformedHandlers.handleOpenEditDialog({ itemId });
 }
+
+export function appendTagIdToForm(payload = {}) {
+  const { tagId } = payload;
+  if (!tagId) {
+    return;
+  }
+
+  this.transformedHandlers.handleAppendTagIdToForm({ tagId });
+}

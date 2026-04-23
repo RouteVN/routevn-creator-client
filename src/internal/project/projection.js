@@ -30,7 +30,16 @@ const createEmptyTagScopes = () => ({
   sounds: createResourceCollection(),
   videos: createResourceCollection(),
   characters: createResourceCollection(),
+  fonts: createResourceCollection(),
   transforms: createResourceCollection(),
+  colors: createResourceCollection(),
+  textStyles: createResourceCollection(),
+  variables: createResourceCollection(),
+  layouts: createResourceCollection(),
+  controls: createResourceCollection(),
+  animations: createResourceCollection(),
+  particles: createResourceCollection(),
+  spritesheets: createResourceCollection(),
 });
 
 const toFiniteTimestamp = (value, fallback) =>

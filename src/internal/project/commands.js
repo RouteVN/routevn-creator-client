@@ -22,6 +22,8 @@ export const COLLAB_RESOURCE_TYPES = Object.freeze([
   "files",
 ]);
 
+export const CHARACTER_SPRITE_TAG_SCOPE_PREFIX = "characterSprites:";
+
 const FILE_COMMAND_TYPES = Object.freeze([
   "file.create",
   "file.delete",
@@ -82,6 +84,12 @@ const CONTROL_COMMAND_TYPES = Object.freeze([
   "control.element.delete",
 ]);
 
+const TAG_COMMAND_TYPES = Object.freeze([
+  "tag.create",
+  "tag.update",
+  "tag.delete",
+]);
+
 const RESOURCE_COMMAND_TYPES = Object.freeze([
   ...FILE_COMMAND_TYPES,
   ...RESOURCE_COMMAND_FAMILIES.flatMap((family) =>
@@ -98,6 +106,7 @@ const COMMAND_SCOPE_ENTRIES = Object.freeze([
   ...STORY_COMMAND_TYPES.map((type) => [type, "story"]),
   ...LAYOUT_COMMAND_TYPES.map((type) => [type, "layouts"]),
   ...CONTROL_COMMAND_TYPES.map((type) => [type, "controls"]),
+  ...TAG_COMMAND_TYPES.map((type) => [type, "resources"]),
   ...RESOURCE_COMMAND_TYPES.map((type) => [type, "resources"]),
 ]);
 
@@ -154,3 +163,41 @@ export const isLayoutCommandType = (type) => isCommandInScope(type, "layouts");
 
 export const isControlCommandType = (type) =>
   isCommandInScope(type, "controls");
+
+export const getCharacterSpriteTagScopeKey = (characterId) => {
+  if (typeof characterId !== "string" || characterId.length === 0) {
+    return undefined;
+  }
+
+  return `${CHARACTER_SPRITE_TAG_SCOPE_PREFIX}${characterId}`;
+};
+
+export const getTagScopePartitionResourceType = (scopeKey) => {
+  if (
+    scopeKey === "images" ||
+    scopeKey === "sounds" ||
+    scopeKey === "videos" ||
+    scopeKey === "characters" ||
+    scopeKey === "fonts" ||
+    scopeKey === "transforms" ||
+    scopeKey === "colors" ||
+    scopeKey === "textStyles" ||
+    scopeKey === "variables" ||
+    scopeKey === "layouts" ||
+    scopeKey === "controls" ||
+    scopeKey === "animations" ||
+    scopeKey === "particles" ||
+    scopeKey === "spritesheets"
+  ) {
+    return scopeKey;
+  }
+
+  if (
+    typeof scopeKey === "string" &&
+    scopeKey.startsWith(CHARACTER_SPRITE_TAG_SCOPE_PREFIX)
+  ) {
+    return "characters";
+  }
+
+  return undefined;
+};

@@ -2,9 +2,28 @@ import { formatFileSize } from "../../internal/files.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import {
+  createEmptyTagCollection,
+  matchesTagAwareSearch,
+  matchesTagFilter,
+} from "../../internal/resourceTags.js";
+import {
   DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD,
   shouldStartCollapsedFileExplorer,
 } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import {
+  buildTagViewData,
+  closeCreateTagDialogState,
+  commitDetailTagIdsState,
+  createTagField,
+  createTagForm,
+  createTagState,
+  openCreateTagDialogState,
+  setActiveTagIdsState,
+  setDetailTagIdsState,
+  setDetailTagPopoverOpenState,
+  setTagsDataState,
+  syncDetailTagIds,
+} from "../../internal/ui/resourcePages/tags.js";
 
 const EMPTY_TREE = { tree: [], items: {} };
 const AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD =
@@ -49,6 +68,11 @@ const buildDetailFields = (item) => {
       value: item.description ?? "",
     },
     {
+      type: "slot",
+      slot: "sprite-tags",
+      label: "Tags",
+    },
+    {
       type: "text",
       label: "File Type",
       value: item.fileType ?? "",
@@ -83,6 +107,7 @@ const createEditForm = () => ({
       label: "Description",
       required: false,
     },
+    createTagField(),
     {
       type: "slot",
       slot: "image-slot",
@@ -106,10 +131,7 @@ const matchesSearch = (item, searchQuery) => {
     return true;
   }
 
-  const name = (item.name ?? "").toLowerCase();
-  const description = (item.description ?? "").toLowerCase();
-
-  return name.includes(searchQuery) || description.includes(searchQuery);
+  return matchesTagAwareSearch(item, searchQuery);
 };
 
 const buildMediaItem = (item) => ({
@@ -130,6 +152,7 @@ const buildPendingMediaItem = (item) => ({
 
 export const createInitialState = () => ({
   spritesData: EMPTY_TREE,
+  ...createTagState(),
   pendingUploads: [],
   selectedItemId: undefined,
   characterId: undefined,
@@ -142,6 +165,7 @@ export const createInitialState = () => ({
   editDefaultValues: {
     name: "",
     description: "",
+    tagIds: [],
   },
   editPreviewFileId: undefined,
   editUploadResult: undefined,
@@ -149,6 +173,18 @@ export const createInitialState = () => ({
 
 export const setItems = ({ state }, { spritesData } = {}) => {
   state.spritesData = spritesData ?? EMPTY_TREE;
+  syncDetailTagIds({
+    state,
+    item: state.spritesData.items?.[state.selectedItemId],
+    preserveDirty: true,
+  });
+};
+
+export const setTagsData = ({ state }, { tagsData } = {}) => {
+  setTagsDataState({
+    state,
+    tagsData,
+  });
 };
 
 export const addPendingUploads = ({ state }, { items } = {}) => {
@@ -196,6 +232,11 @@ export const setCharacterName = ({ state }, { characterName } = {}) => {
 export const clearCharacterSpritesView = ({ state }) => {
   state.characterName = undefined;
   state.spritesData = EMPTY_TREE;
+  state.tagsData = createEmptyTagCollection();
+  state.activeTagIds = [];
+  state.detailTagIds = [];
+  state.detailTagIdsDirty = false;
+  state.isDetailTagSelectOpen = false;
   state.pendingUploads = [];
   state.selectedItemId = undefined;
   state.isEditDialogOpen = false;
@@ -203,17 +244,80 @@ export const clearCharacterSpritesView = ({ state }) => {
   state.editDefaultValues = {
     name: "",
     description: "",
+    tagIds: [],
   };
   state.editPreviewFileId = undefined;
   state.editUploadResult = undefined;
+  state.isCreateTagDialogOpen = false;
+  state.createTagDefaultValues = {
+    name: "",
+  };
+  state.createTagContext = {
+    mode: undefined,
+    itemId: undefined,
+    draftTagIds: [],
+  };
 };
 
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
+  state.isDetailTagSelectOpen = false;
+  syncDetailTagIds({
+    state,
+    item: state.spritesData.items?.[itemId],
+  });
 };
 
 export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query ?? "";
+};
+
+export const setActiveTagIds = ({ state }, { tagIds } = {}) => {
+  setActiveTagIdsState({
+    state,
+    tagIds,
+  });
+};
+
+export const setDetailTagIds = ({ state }, { tagIds } = {}) => {
+  setDetailTagIdsState({
+    state,
+    tagIds,
+  });
+};
+
+export const commitDetailTagIds = ({ state }, { tagIds } = {}) => {
+  commitDetailTagIdsState({
+    state,
+    tagIds,
+  });
+};
+
+export const setDetailTagPopoverOpen = (
+  { state },
+  { open, item } = {},
+) => {
+  setDetailTagPopoverOpenState({
+    state,
+    open,
+    item,
+  });
+};
+
+export const openCreateTagDialog = (
+  { state },
+  { mode, itemId, draftTagIds } = {},
+) => {
+  openCreateTagDialogState({
+    state,
+    mode,
+    itemId,
+    draftTagIds,
+  });
+};
+
+export const closeCreateTagDialog = ({ state }) => {
+  closeCreateTagDialogState({ state });
 };
 
 export const openEditDialog = (
@@ -225,6 +329,7 @@ export const openEditDialog = (
   state.editDefaultValues = {
     name: defaultValues?.name ?? "",
     description: defaultValues?.description ?? "",
+    tagIds: defaultValues?.tagIds ?? [],
   };
   state.editPreviewFileId = previewFileId;
   state.editUploadResult = undefined;
@@ -236,6 +341,7 @@ export const closeEditDialog = ({ state }, _payload = {}) => {
   state.editDefaultValues = {
     name: "",
     description: "",
+    tagIds: [],
   };
   state.editPreviewFileId = undefined;
   state.editUploadResult = undefined;
@@ -277,49 +383,15 @@ export const selectAdjacentSpriteItemId = (
     return undefined;
   }
 
-  const rawFlatGroups = toFlatGroups(state.spritesData);
-  const searchQuery = state.searchQuery.toLowerCase().trim();
-  const pendingByGroupId = new Map();
-  const hiddenItemIdsByGroupId = new Map();
-
-  for (const pendingUpload of state.pendingUploads ?? []) {
-    const groupId = pendingUpload?.parentId;
-    if (!groupId) {
-      continue;
-    }
-
-    const existing = pendingByGroupId.get(groupId) ?? [];
-    existing.push(buildPendingMediaItem(pendingUpload));
-    pendingByGroupId.set(groupId, existing);
-
-    if (typeof pendingUpload.resolvedItemId === "string") {
-      const hiddenItemIds = hiddenItemIdsByGroupId.get(groupId) ?? new Set();
-      hiddenItemIds.add(pendingUpload.resolvedItemId);
-      hiddenItemIdsByGroupId.set(groupId, hiddenItemIds);
-    }
-  }
-
-  const visibleSpriteIds = rawFlatGroups
-    .map((group) => {
-      const hiddenItemIds = hiddenItemIdsByGroupId.get(group.id);
-      const children = (group.children ?? [])
-        .filter((item) => !hiddenItemIds?.has(item.id))
-        .filter((item) => matchesSearch(item, searchQuery))
-        .map(buildMediaItem);
-      const pendingChildren = (pendingByGroupId.get(group.id) ?? []).filter(
-        (item) => matchesSearch(item, searchQuery),
-      );
-
-      return [...children, ...pendingChildren];
-    })
-    .flatMap((children) =>
-      children
+  const visibleSpriteIds = (selectViewData({ state }).mediaGroups ?? []).flatMap(
+    (group) =>
+      (group.children ?? [])
         .map((child) => child.id)
         .filter(
           (childItemId) =>
             state.spritesData.items?.[childItemId]?.type === "image",
         ),
-    );
+  );
 
   if (visibleSpriteIds.length === 0) {
     return undefined;
@@ -355,6 +427,7 @@ export const selectViewData = ({ state }) => {
   );
   const rawFlatGroups = toFlatGroups(state.spritesData);
   const searchQuery = state.searchQuery.toLowerCase().trim();
+  const activeTagIds = state.activeTagIds ?? [];
   const pendingByGroupId = new Map();
   const hiddenItemIdsByGroupId = new Map();
 
@@ -381,6 +454,12 @@ export const selectViewData = ({ state }) => {
       const children = (group.children ?? [])
         .filter((item) => !hiddenItemIds?.has(item.id))
         .filter((item) => matchesSearch(item, searchQuery))
+        .filter((item) =>
+          matchesTagFilter({
+            item,
+            activeTagIds,
+          }),
+        )
         .map(buildMediaItem);
       const pendingChildren = (pendingByGroupId.get(group.id) ?? []).filter(
         (item) => matchesSearch(item, searchQuery),
@@ -406,6 +485,11 @@ export const selectViewData = ({ state }) => {
     selectedResourceId: "characters",
     selectedItemId: state.selectedItemId,
     selectedItemName: selectedItem?.name ?? "",
+    ...buildTagViewData({
+      state,
+      selectedItem,
+      createTagFormDefinition: createTagForm(),
+    }),
     detailFields:
       selectedItem?.type === "image" ? buildDetailFields(selectedItem) : [],
     selectedPreviewFileId:

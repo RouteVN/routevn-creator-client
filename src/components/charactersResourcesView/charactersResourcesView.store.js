@@ -1,5 +1,16 @@
+import {
+  buildTagFilterPopoverViewData,
+  clearTagFilterPopoverTagIds,
+  closeTagFilterPopover,
+  createTagFilterPopoverState,
+  openTagFilterPopover,
+  selectTagFilterPopoverDraftTagIds,
+  toggleTagFilterPopoverTagId,
+} from "../../internal/ui/tagFilterPopover.js";
+
 export const createInitialState = () => ({
   collapsedIds: [],
+  ...createTagFilterPopoverState(),
   dropdownMenu: {
     isOpen: false,
     x: 0,
@@ -39,7 +50,39 @@ export const hideContextMenu = ({ state }, _payload = {}) => {
 
 export const selectDropdownMenu = ({ state }) => state.dropdownMenu;
 
-export const selectViewData = ({ state, props }) => {
+export {
+  clearTagFilterPopoverTagIds,
+  closeTagFilterPopover,
+  openTagFilterPopover,
+  selectTagFilterPopoverDraftTagIds,
+  toggleTagFilterPopoverTagId,
+};
+
+const parseBooleanProp = (value, fallback = false) => {
+  if (value === undefined || value === null) {
+    return fallback;
+  }
+
+  if (value === true || value === "") {
+    return true;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "1") {
+      return true;
+    }
+    if (normalized === "false" || normalized === "0") {
+      return false;
+    }
+  }
+
+  return Boolean(value);
+};
+
+export const selectViewData = ({ state, props, props: attrs }) => {
+  const showTagFilterAttr = attrs.showTagFilter ?? attrs["show-tag-filter"];
+  const hasActiveTagFilter = (props.selectedTagFilterValues?.length ?? 0) > 0;
   const groups = (props.groups ?? []).map((group) => {
     const isCollapsed = state.collapsedIds.includes(group.id);
     const children = isCollapsed ? [] : (group.children ?? []);
@@ -65,9 +108,23 @@ export const selectViewData = ({ state, props }) => {
     selectedItemId: props.selectedItemId,
     searchQuery: props.searchQuery ?? "",
     searchPlaceholder: props.searchPlaceholder ?? "Search...",
+    tagFilterOptions: props.tagFilterOptions ?? [],
+    selectedTagFilterValues: props.selectedTagFilterValues ?? [],
+    tagFilterPlaceholder: props.tagFilterPlaceholder ?? "Filter tags",
+    ...buildTagFilterPopoverViewData({
+      state,
+      props,
+    }),
+    showTagFilter: parseBooleanProp(showTagFilterAttr),
+    hasActiveTagFilter,
+    tagFilterButtonBackgroundColor: hasActiveTagFilter ? "ac" : "bg",
+    tagFilterButtonBorderColor: hasActiveTagFilter ? "ac" : "bo",
+    tagFilterButtonIconColor: hasActiveTagFilter ? "white" : "mu-fg",
     emptyMessage:
       props.emptyMessage ??
-      `No characters found matching "${props.searchQuery ?? ""}"`,
+      (hasActiveTagFilter
+        ? "No characters found for the selected tags"
+        : `No characters found matching "${props.searchQuery ?? ""}"`),
     addText: props.addText ?? "Add Character",
     dropdownMenu: state.dropdownMenu,
   };

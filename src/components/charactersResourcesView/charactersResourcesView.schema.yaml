@@ -20,6 +20,18 @@ propsSchema:
     emptyMessage:
       type: string
       description: Message to show when no items match
+    tagFilterOptions:
+      type: array
+      description: Available tag filter options
+    selectedTagFilterValues:
+      type: array
+      description: Currently selected tag ids
+    tagFilterPlaceholder:
+      type: string
+      description: Placeholder text for the tag filter
+    showTagFilter:
+      type: boolean
+      description: Whether the tag filter should be shown
     addText:
       type: string
       description: Text to display in add affordances

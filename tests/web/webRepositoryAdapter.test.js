@@ -28,6 +28,7 @@ import {
   initialProjectData,
 } from "../../src/deps/services/shared/projectRepository.js";
 import { loadRepositoryEventsFromClientStore } from "../../src/deps/services/shared/collab/clientStoreHistory.js";
+import { COMMAND_EVENT_MODEL } from "../../src/internal/project/commands.js";
 import { expectInitializedProjectStorageContract } from "../support/projectInitializationContract.js";
 import {
   createInsiemeWebStoreAdapter,
@@ -424,5 +425,83 @@ describe("webRepositoryAdapter", () => {
         key: "creatorVersion",
       }),
     ).resolves.toBe(21);
+  });
+
+  it("rejects and discards invalid local drafts during project load", async () => {
+    const projectId = "web-invalid-draft-project";
+    const committedEvent = {
+      ...createProjectCreateRepositoryEvent({
+        projectId,
+        state: initialProjectData,
+      }),
+      committedId: 1,
+      clientTs: 100,
+      serverTs: 100,
+    };
+    const committedTagCreate = {
+      id: "tag-committed-1",
+      partition: "r:images",
+      projectId,
+      type: "tag.create",
+      schemaVersion: COMMAND_EVENT_MODEL.schemaVersion,
+      payload: {
+        scopeKey: "images",
+        tagId: "image-tag-1",
+        data: {
+          type: "tag",
+          name: "Background",
+        },
+      },
+      clientTs: 110,
+      serverTs: 110,
+      committedId: 2,
+    };
+    const duplicateDraft = {
+      id: "tag-draft-duplicate",
+      partition: "r:images",
+      projectId,
+      type: "tag.create",
+      schemaVersion: COMMAND_EVENT_MODEL.schemaVersion,
+      payload: {
+        scopeKey: "images",
+        tagId: "image-tag-2",
+        data: {
+          type: "tag",
+          name: "Background",
+        },
+      },
+      clientTs: 120,
+      createdAt: 120,
+    };
+    const rawClientStore = createRawClientStoreStub({
+      committed: [committedEvent, committedTagCreate],
+      drafts: [duplicateDraft],
+      cursor: 2,
+    });
+    const adapter = await createInsiemeWebStoreAdapter(projectId, {
+      rawClientStore,
+    });
+
+    await expect(
+      loadRepositoryEventsFromClientStore({
+        store: adapter,
+        projectId,
+      }),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        type: "project.create",
+      }),
+      expect.objectContaining({
+        type: "tag.create",
+        id: "tag-committed-1",
+      }),
+    ]);
+
+    expect(rawClientStore.getState().submitResults).toEqual([
+      {
+        id: "tag-draft-duplicate",
+        status: "rejected",
+      },
+    ]);
   });
 });

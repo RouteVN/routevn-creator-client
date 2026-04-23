@@ -11,8 +11,17 @@ import {
   runResourcePageMutation,
   showResourcePageError,
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
+import {
+  appendTagIdToForm,
+  createResourcePageTagHandlers,
+} from "../../internal/ui/resourcePages/tags.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
+import {
+  getTagsCollection,
+  resolveCollectionWithTags,
+} from "../../internal/resourceTags.js";
 import { tap } from "rxjs";
+import { TEXT_STYLE_TAG_SCOPE_KEY } from "./textStyles.store.js";
 
 // Helper function to sync repository state to store
 const syncRepositoryToStore = ({
@@ -20,8 +29,20 @@ const syncRepositoryToStore = ({
   repositoryState,
   projectService,
 } = {}) => {
-  const state = repositoryState ?? projectService.getState();
-  store.setItems({ textStylesData: state?.textStyles });
+  const state =
+    repositoryState ??
+    projectService.getRepositoryState?.() ??
+    projectService.getState();
+  const tagsData = getTagsCollection(state, TEXT_STYLE_TAG_SCOPE_KEY);
+
+  store.setTagsData({ tagsData });
+  store.setItems({
+    textStylesData: resolveCollectionWithTags({
+      collection: state?.textStyles,
+      tagsCollection: tagsData,
+      itemType: "textStyle",
+    }),
+  });
   store.setColorsData({ colorsData: state?.colors });
   store.setFontsData({ fontsData: state?.fonts });
 };
@@ -83,11 +104,54 @@ const {
   handleKeyboardScopeKeyDown: handleFileExplorerKeyboardScopeKeyDown,
 } = createFileExplorerKeyboardScopeHandlers();
 
+const {
+  openCreateTagDialogForMode,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
+} = createResourcePageTagHandlers({
+  resolveScopeKey: () => TEXT_STYLE_TAG_SCOPE_KEY,
+  updateItemTagIds: ({ deps, itemId, tagIds }) =>
+    deps.projectService.updateTextStyle({
+      textStyleId: itemId,
+      data: {
+        tagIds,
+      },
+    }),
+  refreshAfterItemTagUpdate: ({ deps, itemId }) =>
+    refreshTextStylesData(deps, { selectedItemId: itemId }),
+  appendCreatedTagByMode: ({ deps, mode, tagId }) => {
+    if (mode !== "form") {
+      return;
+    }
+
+    appendTagIdToForm({
+      form: deps.refs.textStyleForm,
+      tagId,
+    });
+  },
+  createTagFallbackMessage: "Failed to create tag.",
+  updateItemTagFallbackMessage: "Failed to update text style tags.",
+});
+
 export {
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleTagFilterAddOptionClick,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 };
 
 export const handleDataChanged = refreshTextStylesData;
@@ -145,6 +209,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
 const buildTextStyleData = ({
   name,
   description,
+  tagIds,
   fontSize,
   lineHeight,
   fontColor,
@@ -159,6 +224,7 @@ const buildTextStyleData = ({
   const textStyleData = {
     name,
     description: description ?? "",
+    tagIds: Array.isArray(tagIds) ? tagIds : [],
     fontSize: Number(fontSize ?? 16),
     lineHeight: Number(lineHeight ?? 1.5),
     colorId: fontColor,
@@ -183,6 +249,7 @@ const handleTextStyleCreated = async (deps, payload) => {
     groupId,
     name,
     description,
+    tagIds,
     fontSize,
     lineHeight,
     fontColor,
@@ -204,6 +271,7 @@ const handleTextStyleCreated = async (deps, payload) => {
           ...buildTextStyleData({
             name,
             description,
+            tagIds,
             fontSize,
             lineHeight,
             fontColor,
@@ -233,6 +301,7 @@ const handleTextStyleUpdated = async (deps, payload) => {
     itemId,
     name,
     description,
+    tagIds,
     fontSize,
     lineHeight,
     fontColor,
@@ -252,6 +321,7 @@ const handleTextStyleUpdated = async (deps, payload) => {
         data: buildTextStyleData({
           name,
           description,
+          tagIds,
           fontSize,
           lineHeight,
           fontColor,
@@ -302,6 +372,18 @@ export const handleTextStyleItemDoubleClick = (deps, payload) => {
 export const handleDetailHeaderClick = (deps) => {
   const selectedItemId = deps.store.selectSelectedItemId();
   openEditDialogWithValues({ deps, itemId: selectedItemId });
+};
+
+export const handleTextStyleFormAddOptionClick = (deps, payload) => {
+  if (payload?._event?.detail?.name !== "tagIds") {
+    return;
+  }
+
+  openCreateTagDialogForMode({
+    deps,
+    mode: "form",
+    itemId: deps.store.selectDialogState().editingItemId,
+  });
 };
 
 export const handleDialogFormChange = (deps, payload) => {
@@ -411,6 +493,7 @@ export const handleFormActionClick = async (deps, payload) => {
             itemId: editingItemId,
             name: formData.name,
             description: formData.description,
+            tagIds: formData.tagIds,
             fontSize: formData.fontSize,
             lineHeight: formData.lineHeight,
             fontColor: formData.fontColor,
@@ -430,6 +513,7 @@ export const handleFormActionClick = async (deps, payload) => {
             groupId: targetGroupId,
             name: formData.name,
             description: formData.description,
+            tagIds: formData.tagIds,
             fontSize: formData.fontSize,
             lineHeight: formData.lineHeight,
             fontColor: formData.fontColor,

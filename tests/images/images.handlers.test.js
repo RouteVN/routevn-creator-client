@@ -17,6 +17,10 @@ vi.mock(
 );
 
 import {
+  handleCreateTagFormAction,
+  handleCreateTagDialogClose,
+  handleDetailTagAddOptionClick,
+  handleDetailTagValueChange,
   handlePreviewOverlayKeyDown,
   handleItemDelete,
   handleUploadClick,
@@ -110,6 +114,7 @@ describe("images handlers", () => {
       },
       store: {
         updatePendingUpload: vi.fn(),
+        setTagsData: vi.fn(),
         setItems: vi.fn(),
         setSelectedItemId: vi.fn(),
       },
@@ -149,9 +154,271 @@ describe("images handlers", () => {
             id: "image-123",
             type: "image",
             name: "hero",
+            resolvedTags: [],
           },
         },
       },
+    });
+  });
+
+  it("creates and assigns a new tag from the detail-panel flow", async () => {
+    const deps = {
+      appService: {
+        showAlert: vi.fn(),
+      },
+      projectService: {
+        createTag: vi.fn(async () => ({ valid: true })),
+        updateImage: vi.fn(async () => ({ valid: true })),
+        getRepositoryState: vi.fn(() => ({
+          files: { items: {}, tree: [] },
+          images: {
+            tree: [],
+            items: {
+              "image-1": {
+                id: "image-1",
+                type: "image",
+                name: "Hero",
+                tagIds: [],
+              },
+            },
+          },
+          tags: {
+            images: {
+              tree: [{ id: "image-tag-1" }],
+              items: {
+                "image-tag-1": {
+                  id: "image-tag-1",
+                  type: "tag",
+                  name: "Background",
+                },
+              },
+            },
+          },
+        })),
+        subscribeProjectState: vi.fn(() => () => {}),
+      },
+      store: {
+        getState: vi.fn(() => ({
+          createTagContext: {
+            mode: "item",
+            itemId: "image-1",
+            draftTagIds: [],
+          },
+          tagsData: {
+            tree: [{ id: "image-tag-1" }],
+            items: {
+              "image-tag-1": {
+                id: "image-tag-1",
+                type: "tag",
+                name: "Background",
+              },
+            },
+          },
+          detailTagIds: [],
+        })),
+        closeCreateTagDialog: vi.fn(),
+        setTagsData: vi.fn(),
+        setItems: vi.fn(),
+        setDetailTagIds: vi.fn(),
+        setDetailTagPopoverOpen: vi.fn(),
+        selectSelectedItemId: vi.fn(() => "image-1"),
+        selectImageItemById: vi.fn(({ itemId }) => ({
+          id: itemId,
+          type: "image",
+          name: "Hero",
+          tagIds: [],
+        })),
+      },
+      refs: {
+        editForm: {
+          getValues: vi.fn(() => ({})),
+          setValues: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    await handleCreateTagFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            name: "Background",
+          },
+        },
+      },
+    });
+
+    expect(deps.projectService.createTag).toHaveBeenCalledWith({
+      scopeKey: "images",
+      tagId: "image-123",
+      data: {
+        type: "tag",
+        name: "Background",
+      },
+    });
+    expect(deps.store.setItems).not.toHaveBeenCalled();
+    expect(deps.store.setTagsData).toHaveBeenCalledWith({
+      tagsData: {
+        tree: [{ id: "image-tag-1" }, { id: "image-123" }],
+        items: {
+          "image-tag-1": {
+            id: "image-tag-1",
+            type: "tag",
+            name: "Background",
+          },
+          "image-123": {
+            id: "image-123",
+            type: "tag",
+            name: "Background",
+          },
+        },
+      },
+    });
+    expect(deps.store.setDetailTagIds).toHaveBeenCalledWith({
+      tagIds: ["image-123"],
+    });
+    expect(deps.store.setDetailTagPopoverOpen).toHaveBeenCalledWith({
+      open: true,
+    });
+    expect(deps.projectService.updateImage).not.toHaveBeenCalled();
+  });
+
+  it("closes the detail tag popover before opening the create tag dialog", () => {
+    const deps = {
+      store: {
+        getState: vi.fn(() => ({
+          detailTagIds: ["image-tag-1"],
+        })),
+        openCreateTagDialog: vi.fn(),
+        setDetailTagPopoverOpen: vi.fn(),
+        selectSelectedItemId: vi.fn(() => "image-1"),
+        selectImageItemById: vi.fn(() => ({
+          id: "image-1",
+          type: "image",
+          tagIds: ["image-tag-1"],
+        })),
+      },
+      render: vi.fn(),
+    };
+
+    handleDetailTagAddOptionClick(deps);
+
+    expect(deps.store.openCreateTagDialog).toHaveBeenCalledWith({
+      mode: "item",
+      itemId: "image-1",
+      draftTagIds: ["image-tag-1"],
+    });
+    expect(deps.store.setDetailTagPopoverOpen).toHaveBeenCalledWith({
+      open: false,
+      item: {
+        tagIds: [],
+      },
+    });
+    expect(deps.render).toHaveBeenCalled();
+  });
+
+  it("reopens the detail tag popover when the create tag dialog closes", () => {
+    const deps = {
+      store: {
+        getState: vi.fn(() => ({
+          createTagContext: {
+            mode: "item",
+            itemId: "image-1",
+            draftTagIds: ["image-tag-1"],
+          },
+        })),
+        closeCreateTagDialog: vi.fn(),
+        setDetailTagIds: vi.fn(),
+        setDetailTagPopoverOpen: vi.fn(),
+        selectSelectedItemId: vi.fn(() => "image-1"),
+      },
+      render: vi.fn(),
+    };
+
+    handleCreateTagDialogClose(deps);
+
+    expect(deps.store.closeCreateTagDialog).toHaveBeenCalled();
+    expect(deps.store.setDetailTagIds).toHaveBeenCalledWith({
+      tagIds: ["image-tag-1"],
+    });
+    expect(deps.store.setDetailTagPopoverOpen).toHaveBeenCalledWith({
+      open: true,
+    });
+    expect(deps.render).toHaveBeenCalled();
+  });
+
+  it("updates image tags directly from the detail-panel tag selector", async () => {
+    const deps = {
+      appService: {
+        showAlert: vi.fn(),
+      },
+      projectService: {
+        updateImage: vi.fn(async () => ({ valid: true })),
+        getRepositoryState: vi.fn(() => ({
+          files: { items: {}, tree: [] },
+          images: {
+            tree: [],
+            items: {
+              "image-1": {
+                id: "image-1",
+                type: "image",
+                name: "Hero",
+                tagIds: ["tag-1"],
+              },
+            },
+          },
+          tags: {
+            images: {
+              tree: [{ id: "tag-1" }, { id: "tag-2" }],
+              items: {
+                "tag-1": {
+                  id: "tag-1",
+                  type: "tag",
+                  name: "Old",
+                },
+                "tag-2": {
+                  id: "tag-2",
+                  type: "tag",
+                  name: "New",
+                },
+              },
+            },
+          },
+        })),
+        subscribeProjectState: vi.fn(() => () => {}),
+      },
+      store: {
+        selectSelectedItemId: vi.fn(() => "image-1"),
+        commitDetailTagIds: vi.fn(),
+        setTagsData: vi.fn(),
+        setItems: vi.fn(),
+        setSelectedItemId: vi.fn(),
+      },
+      refs: {
+        fileExplorer: {
+          selectItem: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    await handleDetailTagValueChange(deps, {
+      _event: {
+        detail: {
+          value: ["tag-1", "tag-2"],
+        },
+      },
+    });
+
+    expect(deps.projectService.updateImage).toHaveBeenCalledWith({
+      imageId: "image-1",
+      data: {
+        tagIds: ["tag-1", "tag-2"],
+      },
+    });
+    expect(deps.store.commitDetailTagIds).toHaveBeenCalledWith({
+      tagIds: ["tag-1", "tag-2"],
     });
   });
 

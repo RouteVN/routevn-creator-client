@@ -7,6 +7,7 @@ describe("textStyles.handlers", () => {
     const deps = {
       store: {
         setItems: vi.fn(),
+        setTagsData: vi.fn(),
         setColorsData: vi.fn(),
         setFontsData: vi.fn(),
         setSelectedItemId: vi.fn(),

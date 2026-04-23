@@ -2,13 +2,45 @@ import { formatFileSize } from "../../internal/files.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import {
+  buildTagFilterOptions,
+  createEmptyTagCollection,
+  matchesTagAwareSearch,
+  matchesTagFilter,
+} from "../../internal/resourceTags.js";
+import {
   DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD,
   shouldStartCollapsedFileExplorer,
 } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 
 const EMPTY_TREE = { tree: [], items: {} };
+export const SPRITESHEET_TAG_SCOPE_KEY = "spritesheets";
 const AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD =
   DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD;
+const CREATE_TAG_DEFAULT_VALUES = Object.freeze({
+  name: "",
+});
+
+const createTagForm = {
+  title: "Create Tag",
+  fields: [
+    {
+      name: "name",
+      type: "input-text",
+      label: "Tag Name",
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        label: "Create Tag",
+      },
+    ],
+  },
+};
 
 const folderContextMenuItems = [
   { label: "New Folder", type: "item", value: "new-child-folder" },
@@ -56,6 +88,16 @@ const dialogForm = {
       required: false,
     },
     {
+      name: "tagIds",
+      type: "tag-select",
+      label: "Tags",
+      placeholder: "Select tags",
+      addOption: {
+        label: "Add tag",
+      },
+      required: false,
+    },
+    {
       name: "width",
       type: "input-number",
       label: "Default Width",
@@ -91,15 +133,7 @@ const buildDialogForm = (submitLabel) => ({
   },
 });
 
-const matchesSearch = (item, searchQuery) => {
-  if (!searchQuery) {
-    return true;
-  }
-
-  const name = (item.name ?? "").toLowerCase();
-  const description = (item.description ?? "").toLowerCase();
-  return name.includes(searchQuery) || description.includes(searchQuery);
-};
+const matchesSearch = matchesTagAwareSearch;
 
 const buildMediaItem = (item) => ({
   id: item.id,
@@ -160,6 +194,11 @@ const buildDetailFields = (item) => {
     {
       type: "description",
       value: item.description ?? "",
+    },
+    {
+      type: "slot",
+      slot: "spritesheet-tags",
+      label: "Tags",
     },
     {
       type: "text",
@@ -231,6 +270,7 @@ const buildMediaGroups = (state) => {
 const buildDialogValues = (item) => ({
   name: item?.name ?? "",
   description: item?.description ?? "",
+  tagIds: item?.tagIds ?? [],
   width: item?.width ?? "",
   height: item?.height ?? "",
 });
@@ -242,10 +282,24 @@ const createDialogSourceFiles = () => ({
 
 export const createInitialState = () => ({
   data: EMPTY_TREE,
+  tagsData: createEmptyTagCollection(),
+  activeTagIds: [],
+  detailTagIds: [],
+  detailTagIdsDirty: false,
+  isDetailTagSelectOpen: false,
   selectedItemId: undefined,
   searchQuery: "",
   detailSelectedClipName: undefined,
   isDialogOpen: false,
+  isCreateTagDialogOpen: false,
+  createTagDefaultValues: {
+    ...CREATE_TAG_DEFAULT_VALUES,
+  },
+  createTagContext: {
+    mode: undefined,
+    itemId: undefined,
+    draftTagIds: [],
+  },
   dialogMode: "create",
   dialogItemId: undefined,
   dialogParentId: undefined,
@@ -257,17 +311,70 @@ export const createInitialState = () => ({
   dialogRevision: 0,
 });
 
+const syncDetailTagIds = (state, { preserveDirty = false } = {}) => {
+  if (preserveDirty && state.detailTagIdsDirty) {
+    return;
+  }
+
+  const item = state.selectedItemId
+    ? state.data?.items?.[state.selectedItemId]
+    : undefined;
+  state.detailTagIds = Array.isArray(item?.tagIds) ? [...item.tagIds] : [];
+  state.detailTagIdsDirty = false;
+};
+
 export const setItems = ({ state }, { data } = {}) => {
   state.data = data ?? EMPTY_TREE;
+  syncDetailTagIds(state, { preserveDirty: true });
 };
 
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
   state.detailSelectedClipName = undefined;
+  state.isDetailTagSelectOpen = false;
+  syncDetailTagIds(state);
 };
 
 export const setSearchQuery = ({ state }, { value } = {}) => {
   state.searchQuery = value ?? "";
+};
+
+export const setTagsData = ({ state }, { tagsData } = {}) => {
+  state.tagsData = tagsData ?? createEmptyTagCollection();
+  const validTagIds = new Set(Object.keys(state.tagsData.items ?? {}));
+  state.activeTagIds = state.activeTagIds.filter((tagId) => validTagIds.has(tagId));
+  state.detailTagIds = state.detailTagIds.filter((tagId) => validTagIds.has(tagId));
+};
+
+export const setActiveTagIds = ({ state }, { tagIds } = {}) => {
+  const validTagIds = new Set(Object.keys(state.tagsData.items ?? {}));
+  state.activeTagIds = [
+    ...new Set((tagIds ?? []).filter((tagId) => validTagIds.has(tagId))),
+  ];
+};
+
+export const setDetailTagIds = ({ state }, { tagIds } = {}) => {
+  const validTagIds = new Set(Object.keys(state.tagsData.items ?? {}));
+  state.detailTagIds = [
+    ...new Set((tagIds ?? []).filter((tagId) => validTagIds.has(tagId))),
+  ];
+  state.detailTagIdsDirty = true;
+};
+
+export const commitDetailTagIds = ({ state }, { tagIds } = {}) => {
+  const validTagIds = new Set(Object.keys(state.tagsData.items ?? {}));
+  state.detailTagIds = [
+    ...new Set((tagIds ?? []).filter((tagId) => validTagIds.has(tagId))),
+  ];
+  state.detailTagIdsDirty = false;
+};
+
+export const setDetailTagPopoverOpen = ({ state }, { open, item } = {}) => {
+  state.isDetailTagSelectOpen = !!open;
+  if (!state.isDetailTagSelectOpen && state.detailTagIdsDirty) {
+    state.detailTagIds = Array.isArray(item?.tagIds) ? [...item.tagIds] : [];
+    state.detailTagIdsDirty = false;
+  }
 };
 
 export const setDetailSelectedClipName = ({ state }, { clipName } = {}) => {
@@ -350,6 +457,30 @@ export const closeDialog = ({ state }) => {
   state.dialogRevision += 1;
 };
 
+export const openCreateTagDialog = ({ state }, { mode, itemId, draftTagIds } = {}) => {
+  state.isCreateTagDialogOpen = true;
+  state.createTagDefaultValues = {
+    ...CREATE_TAG_DEFAULT_VALUES,
+  };
+  state.createTagContext = {
+    mode: mode ?? "item",
+    itemId,
+    draftTagIds: Array.isArray(draftTagIds) ? [...draftTagIds] : [],
+  };
+};
+
+export const closeCreateTagDialog = ({ state }) => {
+  state.isCreateTagDialogOpen = false;
+  state.createTagDefaultValues = {
+    ...CREATE_TAG_DEFAULT_VALUES,
+  };
+  state.createTagContext = {
+    mode: undefined,
+    itemId: undefined,
+    draftTagIds: [],
+  };
+};
+
 export const setDialogValues = ({ state }, { values } = {}) => {
   state.dialogValues = {
     ...state.dialogValues,
@@ -403,7 +534,18 @@ export const selectDialogPreviewUrl = ({ state }) => state.dialogPreviewUrl;
 
 export const selectViewData = ({ state }) => {
   const flatItems = applyFolderRequiredRootDragOptions(toFlatItems(state.data));
-  const mediaGroups = buildMediaGroups(state);
+  const activeTagIds = state.activeTagIds ?? [];
+  const mediaGroups = buildMediaGroups(state)
+    .map((group) => ({
+      ...group,
+      children: (group.children ?? []).filter((child) =>
+        matchesTagFilter({
+          item: state.data?.items?.[child.id],
+          activeTagIds,
+        }),
+      ),
+    }))
+    .filter((group) => group.children.length > 0 || activeTagIds.length === 0);
   const selectedItem = selectDataItem(state, state.selectedItemId);
   const detailSelection = buildClipOptions(
     selectedItem?.animations,
@@ -451,8 +593,19 @@ export const selectViewData = ({ state }) => {
     acceptedFileTypes: [".png", ".json"],
     flatItems,
     mediaGroups,
+    tagFilterOptions: buildTagFilterOptions({
+      tagsCollection: state.tagsData,
+    }),
+    selectedTagFilterValues: activeTagIds,
+    tagFilterPlaceholder: "Filter tags",
     selectedItemId: state.selectedItemId,
     selectedItemName: selectedItem?.name ?? "",
+    selectedItemTagIds: selectedItem?.tagIds ?? [],
+    detailTagDraftValues: state.detailTagIds ?? [],
+    isDetailTagSelectOpen: !!state.isDetailTagSelectOpen,
+    detailTagAddOption: {
+      label: "Add tag",
+    },
     detailFields: buildDetailFields(selectedItem),
     searchQuery: state.searchQuery,
     searchPlaceholder: "Search...",
@@ -488,6 +641,9 @@ export const selectViewData = ({ state }) => {
     ),
     dialogFormKey: `${state.dialogMode}-${state.dialogItemId ?? "new"}-${state.dialogRevision}`,
     dialogValues: state.dialogValues,
+    isCreateTagDialogOpen: state.isCreateTagDialogOpen,
+    createTagDefaultValues: state.createTagDefaultValues,
+    createTagForm,
     dialogPreviewUrl: state.dialogPreviewUrl,
     dialogPreviewFileId,
     dialogPreviewKey,

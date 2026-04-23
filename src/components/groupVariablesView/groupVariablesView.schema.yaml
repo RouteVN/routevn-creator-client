@@ -11,6 +11,18 @@ propsSchema:
     selectedItemId:
       type: string
       description: ID of currently selected item
+    tagFilterOptions:
+      type: array
+      description: Available tag filter options
+    selectedTagFilterValues:
+      type: array
+      description: Selected tag filter values
+    tagFilterPlaceholder:
+      type: string
+      description: Placeholder for the tag filter control
+    showTagFilter:
+      type: boolean
+      description: Whether to show the header tag filter
     readonly:
       type: boolean
       description: Whether the view should disable add/edit/delete affordances
@@ -19,5 +31,9 @@ methods:
   properties:
     openEditDialog:
       description: Opens the variable edit dialog for an item id.
+      params: []
+      returns: void
+    appendTagIdToForm:
+      description: Appends a tag id into the currently open variable form.
       params: []
       returns: void

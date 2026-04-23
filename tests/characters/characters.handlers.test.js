@@ -52,6 +52,7 @@ describe("characters add dialog form reset", () => {
         name: "",
         description: "",
         shortcut: "",
+        tagIds: [],
       },
     });
   });
@@ -69,6 +70,7 @@ describe("characters add dialog form reset", () => {
         name: "",
         description: "",
         shortcut: "",
+        tagIds: [],
       },
     });
   });
