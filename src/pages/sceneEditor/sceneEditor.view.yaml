@@ -86,6 +86,12 @@ refs:
     eventListeners:
       click:
         handler: handleAddActionsButtonClick
+  mobileKeyboardToolbar:
+    eventListeners:
+      action-click:
+        handler: handleMobileKeyboardToolbarActionClick
+      keyboard-state-change:
+        handler: handleMobileKeyboardToolbarKeyboardStateChange
   toggleSectionsGraphView:
     eventListeners:
       click:
@@ -131,15 +137,14 @@ template:
           - rtgl-text s=sm c=mu-fg: Loading scene...
     $else:
       - $if isTouchMode:
-          - 'rtgl-view d=v w=f h=f style="min-width: 0; min-height: 0;"':
-              - rtgl-view bwb=xs w=f h=56 av=c ph=sm d=h g=sm:
+          - 'rtgl-view d=v w=f h=f pos=rel style="min-width: 0; min-height: 0;"':
+              - 'rtgl-view pos=abs bgc=bg bwb=xs w=f h=56 av=c ph=sm d=h g=sm style="top: 0; left: 0; z-index: 10; visibility: ${mobileTopBarVisibility}; pointer-events: ${mobileTopBarPointerEvents};"':
                   - rtgl-button#backButton sq pre="chevronLeft" v="gh": null
                   - 'rtgl-view w=1fg d=v style="min-width: 0;"':
                       - rtgl-text s=sm w=f ellipsis=true: ${scene.name}
                       - rtgl-view w=f:
                           - rtgl-text s=xs c=mu-fg w=f ellipsis=true: ${currentSectionName}
                   - rtgl-button#sectionsOverview sq pre=section v="gh": null
-                  - rtgl-button#addActionsButton sq pre=plus v="gh": null
                   - rtgl-button#previewButton sq pre=play v="gh": null
                   - rtgl-button#sceneSettingsButton sq pre=settings v="gh": null
               - 'rtgl-view w=f h=1fg sv style="min-height: 0; padding-bottom: ${mobileEditorBottomPadding}; box-sizing: border-box;"':
@@ -154,6 +159,7 @@ template:
                       - rvn-lines-editor#linesEditor key=${linesEditorKey} :lines=${currentLines} :selectedLineId=${selectedLineId} :keyboardHandlingDisabled=${previewVisible} :showLineNumbers=${sceneSettings.showLineNumbers}: null
                       - rtgl-view h=30vh: null
               - rvn-system-actions#systemActions :actions=${selectedLineActions} :selectedLineId=${selectedLineId} :selectedLine=${selectedLine} :currentSceneId=${scene.id} actionType=presentation :presentationState=${presentationState}: null
+              - rvn-mobile-keyboard-toolbar#mobileKeyboardToolbar: null
         $else:
           - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
               - 'rtgl-view w="calc((100vw - 64px) / 2)" d=v h=f style="min-width: 0; min-height: 0;"':

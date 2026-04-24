@@ -71,6 +71,12 @@ propsSchema:
     showImageCardPreview:
       type: boolean
       description: Whether image cards should render preview media
+    fullWidthImageCards:
+      type: boolean
+      description: Whether image cards should fill the available row width and use image aspect ratios
+    mobileLayout:
+      type: boolean
+      description: Whether cards should use the touch/mobile full-width layout and ignore zoom
     itemContextMenuItems:
       type: array
       description: Context menu items for media cards

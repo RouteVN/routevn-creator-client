@@ -360,6 +360,9 @@ const {
   handleFileExplorerKeyboardScopeKeyDown,
   handleItemClick: handleParticleItemClickBase,
   handleSearchInput,
+  handleMobileFileExplorerOpen,
+  handleMobileFileExplorerClose,
+  handleMobileDetailSheetClose,
 } = createCatalogPageHandlers({
   resourceType: "particles",
   selectData: (repositoryState) => {
@@ -421,6 +424,9 @@ export {
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
   handleSearchInput,
+  handleMobileFileExplorerOpen,
+  handleMobileFileExplorerClose,
+  handleMobileDetailSheetClose,
 };
 
 export const handleFileExplorerSelectionChanged = async (deps, payload) => {

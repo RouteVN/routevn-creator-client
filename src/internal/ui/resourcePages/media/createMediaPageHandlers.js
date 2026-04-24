@@ -165,6 +165,7 @@ export const createMediaPageHandlers = ({
   };
 
   const handleBeforeMount = (deps) => {
+    deps.store.setUiConfig?.({ uiConfig: deps.uiConfig });
     return mountSubscriptions(deps);
   };
 
@@ -188,6 +189,10 @@ export const createMediaPageHandlers = ({
     }
 
     store.setSelectedItemId({ itemId });
+    const state = store.getState();
+    if (state.isTouchMode && state.isMobileFileExplorerOpen) {
+      store.closeMobileFileExplorer?.();
+    }
     render();
     refs.groupview?.scrollItemIntoView?.({ itemId });
     focusKeyboardScope(deps);
@@ -223,6 +228,40 @@ export const createMediaPageHandlers = ({
     store.setSelectedItemId({ itemId });
     refs.fileExplorer?.selectItem?.({ itemId });
     render();
+  };
+
+  const handleMobileFileExplorerOpen = (deps) => {
+    const { store, render, refs } = deps;
+    const selectedItemId = store.selectSelectedItemId();
+
+    store.openMobileFileExplorer?.();
+    render();
+
+    if (selectedItemId) {
+      requestAnimationFrame(() => {
+        refs.fileExplorer?.selectItem?.({ itemId: selectedItemId });
+      });
+    }
+  };
+
+  const handleMobileFileExplorerClose = (deps) => {
+    const { store, render } = deps;
+
+    store.closeMobileFileExplorer?.();
+    render();
+    focusKeyboardScope(deps);
+  };
+
+  const handleMobileDetailSheetClose = (deps) => {
+    const { store, render } = deps;
+
+    if (!store.selectSelectedItemId()) {
+      return;
+    }
+
+    store.setSelectedItemId({ itemId: undefined });
+    render();
+    focusKeyboardScope(deps);
   };
 
   const handleItemDoubleClick = (deps, payload) => {
@@ -282,6 +321,9 @@ export const createMediaPageHandlers = ({
     handleItemDoubleClick,
     handleItemEdit,
     handleSearchInput,
+    handleMobileFileExplorerOpen,
+    handleMobileFileExplorerClose,
+    handleMobileDetailSheetClose,
     openCreateTagDialogForMode: tagHandlers.openCreateTagDialogForMode,
     handleCreateTagDialogClose: tagHandlers.handleCreateTagDialogClose,
     handleTagFilterChange: tagHandlers.handleTagFilterChange,

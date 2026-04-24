@@ -80,9 +80,8 @@ const parseBooleanProp = (value, fallback = false) => {
   return Boolean(value);
 };
 
-export const selectViewData = ({ state, props, props: attrs }) => {
-  const canAddAttr = attrs.canAdd ?? attrs["can-add"];
-  const showTagFilterAttr = attrs.showTagFilter ?? attrs["show-tag-filter"];
+export const selectViewData = ({ state, props }) => {
+  const mobileLayout = parseBooleanProp(props.mobileLayout);
   const hasActiveTagFilter = (props.selectedTagFilterValues?.length ?? 0) > 0;
 
   const groups = (props.groups ?? []).map((group) => {
@@ -97,7 +96,10 @@ export const selectViewData = ({ state, props, props: attrs }) => {
 
         return {
           ...item,
-          itemWidth: item.itemWidth ?? 225,
+          itemWidth: mobileLayout ? "f" : (item.itemWidth ?? 225),
+          layoutPreviewWidth: mobileLayout ? "f" : 225,
+          transformPreviewWidth: mobileLayout ? "f" : 193,
+          catalogTextWidth: mobileLayout ? "f" : (item.itemWidth ?? 225),
           itemBorderColor: isSelected ? "pr" : "bo",
           itemHoverBorderColor: isSelected ? "pr" : "ac",
         };
@@ -118,18 +120,21 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       state,
       props,
     }),
-    showTagFilter: parseBooleanProp(showTagFilterAttr),
+    showTagFilter: parseBooleanProp(props.showTagFilter),
     hasActiveTagFilter,
     tagFilterButtonBackgroundColor: hasActiveTagFilter ? "ac" : "bg",
     tagFilterButtonBorderColor: hasActiveTagFilter ? "ac" : "bo",
     tagFilterButtonIconColor: hasActiveTagFilter ? "white" : "mu-fg",
+    showSearch: parseBooleanProp(props.showSearch, true),
+    showMenuButton: parseBooleanProp(props.showMenuButton),
     emptyMessage:
       props.emptyMessage ??
       (hasActiveTagFilter
         ? "No items found for the selected tags"
         : `No items found matching "${props.searchQuery ?? ""}"`),
     addText: props.addText ?? "Add",
-    canAdd: parseBooleanProp(canAddAttr, true),
+    canAdd: parseBooleanProp(props.canAdd, true),
+    mobileLayout,
     dropdownMenu: state.dropdownMenu,
   };
 };

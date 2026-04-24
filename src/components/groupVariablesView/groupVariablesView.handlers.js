@@ -13,6 +13,15 @@ export const handleTagFilterOptionClick = toggleTagFilterPopoverOption;
 export const handleTagFilterClearClick = clearTagFilterPopoverSelection;
 export const handleTagFilterApplyClick = applyTagFilterPopoverSelection;
 
+export const handleMenuClick = ({ dispatchEvent }) => {
+  dispatchEvent(
+    new CustomEvent("menu-click", {
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
   const searchQuery = payload._event.detail.value || "";

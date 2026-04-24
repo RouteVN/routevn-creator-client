@@ -9,6 +9,13 @@ import {
   createResourcePageTagHandlers,
 } from "../../internal/ui/resourcePages/tags.js";
 import {
+  closeMobileResourceFileExplorerAfterSelection,
+  handleMobileResourceDetailSheetClose,
+  handleMobileResourceFileExplorerClose,
+  handleMobileResourceFileExplorerOpen,
+  syncMobileResourcePageUiConfig,
+} from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import {
   runResourcePageMutation,
   showResourcePageError,
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
@@ -433,10 +440,14 @@ export {
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleMobileResourceFileExplorerOpen as handleMobileFileExplorerOpen,
+  handleMobileResourceFileExplorerClose as handleMobileFileExplorerClose,
+  handleMobileResourceDetailSheetClose as handleMobileDetailSheetClose,
 };
 
 export const handleBeforeMount = (deps) => {
   const { projectService, store } = deps;
+  syncMobileResourcePageUiConfig(deps);
   const subscription = createProjectStateStream({ projectService })
     .pipe(
       tap(({ repositoryState }) => {
@@ -478,6 +489,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   }
 
   store.setSelectedItemId({ itemId });
+  closeMobileResourceFileExplorerAfterSelection(deps);
   render();
   refs.groupview?.scrollItemIntoView?.({ itemId });
   focusFileExplorerKeyboardScope(deps);

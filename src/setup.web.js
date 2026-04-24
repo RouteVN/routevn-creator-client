@@ -38,8 +38,11 @@ const uiVersions = {
   },
 };
 
-// Default web UI stays normal while touch/mobile remains available behind config.
-const activeUiVersion = "normal";
+const isTouchPrimaryDevice = () =>
+  window.matchMedia("(pointer: coarse)").matches ||
+  window.matchMedia("(hover: none)").matches;
+
+const activeUiVersion = isTouchPrimaryDevice() ? "touch" : "normal";
 const uiConfig = uiVersions[activeUiVersion];
 document.documentElement.dataset.rvnUiVersion = uiConfig.id;
 document.documentElement.dataset.rvnInputMode = uiConfig.inputMode;

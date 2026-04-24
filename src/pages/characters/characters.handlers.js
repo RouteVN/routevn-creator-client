@@ -11,6 +11,13 @@ import {
   runResourcePageMutation,
   showResourcePageError,
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
+import {
+  closeMobileResourceFileExplorerAfterSelection,
+  handleMobileResourceDetailSheetClose,
+  handleMobileResourceFileExplorerClose,
+  handleMobileResourceFileExplorerOpen,
+  syncMobileResourcePageUiConfig,
+} from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { tap } from "rxjs";
 import {
@@ -112,7 +119,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   if (!characterItem) return;
 
   store.setSelectedItemId({ itemId });
-  fileExplorer.selectItem({ itemId });
+  fileExplorer?.selectItem?.({ itemId });
   store.openEditDialog({
     itemId,
     spriteGroups: characterItem.spriteGroups ?? [],
@@ -186,6 +193,7 @@ const uploadAvatarFile = async ({ deps, file, target } = {}) => {
 
 export const handleBeforeMount = (deps) => {
   const { projectService, store, render } = deps;
+  syncMobileResourcePageUiConfig(deps);
   const subscription = createProjectStateStream({ projectService })
     .pipe(
       tap(({ repositoryState }) => {
@@ -232,6 +240,9 @@ export {
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleMobileResourceFileExplorerOpen as handleMobileFileExplorerOpen,
+  handleMobileResourceFileExplorerClose as handleMobileFileExplorerClose,
+  handleMobileResourceDetailSheetClose as handleMobileDetailSheetClose,
 };
 
 export const handleDataChanged = refreshCharactersData;
@@ -252,6 +263,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   }
 
   store.setSelectedItemId({ itemId });
+  closeMobileResourceFileExplorerAfterSelection(deps);
   render();
   focusFileExplorerKeyboardScope(deps);
 };
@@ -266,7 +278,7 @@ export const handleCharacterItemClick = async (deps, payload) => {
   store.setSelectedItemId({ itemId: itemId });
 
   const { fileExplorer } = refs;
-  fileExplorer.selectItem({ itemId });
+  fileExplorer?.selectItem?.({ itemId });
   render();
 };
 
@@ -276,7 +288,7 @@ export const handleCharacterItemDoubleClick = async (deps, payload) => {
   if (!itemId) return;
 
   const { fileExplorer } = refs;
-  fileExplorer.selectItem({ itemId });
+  fileExplorer?.selectItem?.({ itemId });
   handleSpritesButtonClick(deps, payload);
 };
 

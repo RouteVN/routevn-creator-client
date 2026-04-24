@@ -12,8 +12,18 @@ const AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD =
   DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD;
 const IMAGE_CARD_MAX_WIDTH = 400;
 const IMAGE_CARD_HEIGHT = 225;
-const MOBILE_SCROLL_BOTTOM_PADDING = "calc(96px + env(safe-area-inset-bottom))";
 export const IMAGE_TAG_SCOPE_KEY = "images";
+
+const resolveImageAspectRatio = (item) => {
+  const width = Number(item?.width);
+  const height = Number(item?.height);
+
+  if (!Number.isFinite(width) || !Number.isFinite(height) || height <= 0) {
+    return "16 / 9";
+  }
+
+  return `${Math.max(1, Math.round(width))} / ${Math.max(1, Math.round(height))}`;
+};
 
 const buildDetailFields = (item) => {
   if (!item) {
@@ -58,6 +68,7 @@ const buildMediaItem = (item) => ({
   name: item.name,
   cardKind: "image",
   previewFileId: item.thumbnailFileId ?? item.fileId,
+  previewAspectRatio: resolveImageAspectRatio(item),
   canPreview: false,
 });
 
@@ -114,6 +125,9 @@ const {
   openEditDialog,
   closeEditDialog,
   setEditUpload,
+  setUiConfig,
+  openMobileFileExplorer,
+  closeMobileFileExplorer,
   selectSelectedItem,
   selectItemById,
   selectSelectedItemId,
@@ -145,6 +159,7 @@ const {
   tagging: {
     tagFilterPlaceholder: "Filter tags",
   },
+  hiddenMobileDetailSlots: ["image-file-id"],
   extendViewData: ({ state, baseViewData }) => {
     return {
       ...baseViewData,
@@ -156,8 +171,6 @@ const {
 
 export const createInitialState = () => ({
   ...createMediaInitialState(),
-  isTouchMode: false,
-  isMobileFileExplorerOpen: false,
   fullImagePreviewVisible: false,
   fullImagePreviewFileId: undefined,
 });
@@ -171,6 +184,9 @@ export {
   openEditDialog,
   closeEditDialog,
   setEditUpload,
+  setUiConfig,
+  openMobileFileExplorer,
+  closeMobileFileExplorer,
   selectSelectedItem,
   setTagsData,
   setActiveTagIds,
@@ -184,14 +200,6 @@ export {
 };
 
 export const selectImageItemById = selectItemById;
-
-export const setUiConfig = ({ state }, { uiConfig } = {}) => {
-  state.isTouchMode =
-    uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
-  if (state.isTouchMode) {
-    state.searchQuery = "";
-  }
-};
 
 export const selectAdjacentImageItemId = (
   context,
@@ -240,14 +248,6 @@ export const hideFullImagePreview = ({ state }, _payload = {}) => {
   state.fullImagePreviewFileId = undefined;
 };
 
-export const openMobileFileExplorer = ({ state }, _payload = {}) => {
-  state.isMobileFileExplorerOpen = true;
-};
-
-export const closeMobileFileExplorer = ({ state }, _payload = {}) => {
-  state.isMobileFileExplorerOpen = false;
-};
-
 export const selectViewData = (context) => {
   const viewData = selectMediaViewData(context);
   const flatItems = applyFolderRequiredRootDragOptions(viewData.flatItems);
@@ -255,15 +255,6 @@ export const selectViewData = (context) => {
   return {
     ...viewData,
     flatItems,
-    showExplorerPanel: !context.state.isTouchMode,
-    showDetailPanel: !context.state.isTouchMode,
-    showMobileTopTabs: context.state.isTouchMode,
-    showMobileFileExplorer:
-      context.state.isTouchMode && context.state.isMobileFileExplorerOpen,
-    mobileScrollBottomPadding: context.state.isTouchMode
-      ? MOBILE_SCROLL_BOTTOM_PADDING
-      : "0px",
-    contentLeftPadding: context.state.isTouchMode ? "0" : "sm",
     startCollapsedFileExplorer: shouldStartCollapsedFileExplorer({
       flatItems,
       threshold: AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD,

@@ -137,6 +137,9 @@ const {
   openEditDialog,
   closeEditDialog,
   setEditUpload,
+  setUiConfig,
+  openMobileFileExplorer,
+  closeMobileFileExplorer,
   selectSelectedItem,
   selectItemById,
   selectSelectedItemId,
@@ -165,6 +168,7 @@ const {
   tagging: {
     tagFilterPlaceholder: "Filter tags",
   },
+  hiddenMobileDetailSlots: ["video-thumbnail-file-id"],
   extendViewData: ({ state, baseViewData }) => {
     return {
       ...baseViewData,
@@ -193,6 +197,9 @@ export {
   openEditDialog,
   closeEditDialog,
   setEditUpload,
+  setUiConfig,
+  openMobileFileExplorer,
+  closeMobileFileExplorer,
   selectSelectedItem,
   setTagsData,
   setActiveTagIds,

@@ -6,6 +6,13 @@ import {
   createResourcePageTagHandlers,
 } from "../../internal/ui/resourcePages/tags.js";
 import {
+  closeMobileResourceFileExplorerAfterSelection,
+  handleMobileResourceDetailSheetClose,
+  handleMobileResourceFileExplorerClose,
+  handleMobileResourceFileExplorerOpen,
+  syncMobileResourcePageUiConfig,
+} from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import {
   getResourcePageErrorMessage,
   runResourcePageMutation,
   showResourcePageError,
@@ -147,7 +154,7 @@ const selectSprite = ({ deps, itemId, syncExplorer = false } = {}) => {
   store.setSelectedItemId({ itemId });
 
   if (syncExplorer) {
-    refs.fileExplorer.selectItem({ itemId });
+    refs.fileExplorer?.selectItem?.({ itemId });
   }
 
   render();
@@ -187,7 +194,7 @@ const openEditDialogForSprite = ({
 
   store.setSelectedItemId({ itemId });
   if (syncExplorer) {
-    refs.fileExplorer.selectItem({ itemId });
+    refs.fileExplorer?.selectItem?.({ itemId });
   }
 
   store.openEditDialog({
@@ -330,6 +337,7 @@ const createSpritesFromFiles = async ({
 
 export const handleBeforeMount = (deps) => {
   const { projectService } = deps;
+  syncMobileResourcePageUiConfig(deps);
   let scheduledRenderFrameId;
   let scheduledFallbackTimeoutId;
 
@@ -400,7 +408,12 @@ const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
   });
 
 export { handleFileExplorerAction, handleFileExplorerTargetChanged };
-export { handleFileExplorerKeyboardScopeClick };
+export {
+  handleFileExplorerKeyboardScopeClick,
+  handleMobileResourceFileExplorerOpen as handleMobileFileExplorerOpen,
+  handleMobileResourceFileExplorerClose as handleMobileFileExplorerClose,
+  handleMobileResourceDetailSheetClose as handleMobileDetailSheetClose,
+};
 
 export const handleDataChanged = refreshCharacterSpritesData;
 
@@ -419,6 +432,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
     deps,
     itemId,
   });
+  closeMobileResourceFileExplorerAfterSelection(deps);
   refs.groupview?.scrollItemIntoView?.({ itemId });
   focusGroupView(deps);
 };

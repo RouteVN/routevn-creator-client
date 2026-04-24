@@ -419,6 +419,7 @@ export const selectViewData = ({ state }) => {
     folderContextMenuItems: fileExplorerFolderContextMenuItems,
     itemContextMenuItems: fileExplorerItemContextMenuItems,
     emptyContextMenuItems: fileExplorerEmptyContextMenuItems,
+    isTouchMode: state.isTouchMode,
     showExplorerPanel: !state.isTouchMode,
     showDetailPanel: !state.isTouchMode,
   };

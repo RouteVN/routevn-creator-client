@@ -15,6 +15,13 @@ import {
   appendTagIdToForm,
   createResourcePageTagHandlers,
 } from "../../internal/ui/resourcePages/tags.js";
+import {
+  closeMobileResourceFileExplorerAfterSelection,
+  handleMobileResourceDetailSheetClose,
+  handleMobileResourceFileExplorerClose,
+  handleMobileResourceFileExplorerOpen,
+  syncMobileResourcePageUiConfig,
+} from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import {
   getTagsCollection,
@@ -49,6 +56,7 @@ const syncRepositoryToStore = ({
 
 export const handleBeforeMount = (deps) => {
   const { projectService, store, render } = deps;
+  syncMobileResourcePageUiConfig(deps);
   const subscription = createProjectStateStream({ projectService })
     .pipe(
       tap(({ repositoryState }) => {
@@ -131,6 +139,9 @@ export {
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleMobileResourceFileExplorerOpen as handleMobileFileExplorerOpen,
+  handleMobileResourceFileExplorerClose as handleMobileFileExplorerClose,
+  handleMobileResourceDetailSheetClose as handleMobileDetailSheetClose,
   handleCreateTagDialogClose,
   handleTagFilterChange,
   handleTagFilterAddOptionClick,
@@ -155,6 +166,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   }
 
   store.setSelectedItemId({ itemId });
+  closeMobileResourceFileExplorerAfterSelection(deps);
   render();
   focusFileExplorerKeyboardScope(deps);
 };
@@ -164,7 +176,7 @@ export const handleTextStyleItemClick = (deps, payload) => {
   const { itemId } = payload._event.detail;
   store.setSelectedItemId({ itemId: itemId });
   const { fileExplorer } = refs;
-  fileExplorer.selectItem({ itemId });
+  fileExplorer?.selectItem?.({ itemId });
 
   render();
 };

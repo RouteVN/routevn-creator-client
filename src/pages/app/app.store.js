@@ -10,7 +10,8 @@ export const createInitialState = () => ({
 });
 
 const SIDEBAR_WIDTH_PX = 64;
-const MOBILE_TAB_BAR_HEIGHT_PX = 80;
+const MOBILE_TAB_BAR_HEIGHT_PX = 64;
+const HELP_BUTTON_BOTTOM_OFFSET_PX = 24;
 
 const routesWithoutNavbar = ["/projects", "/authenticate"];
 
@@ -195,12 +196,13 @@ export const selectViewData = ({ state }) => {
     showMobileTabBar,
     mobileTabBarItems,
     mobileSheetVariant: state.mobileSheetVariant ?? "assets",
+    appShellDirection: showMobileTabBar ? "v" : "h",
     contentWidth: showSidebar ? `calc(100vw - ${SIDEBAR_WIDTH_PX}px)` : "100vw",
-    contentBottomPadding: showMobileTabBar
-      ? `${MOBILE_TAB_BAR_HEIGHT_PX}px`
-      : "0px",
+    contentHeight: showMobileTabBar
+      ? `calc(100vh - ${MOBILE_TAB_BAR_HEIGHT_PX}px - env(safe-area-inset-bottom))`
+      : "100%",
     helpButtonBottom: showMobileTabBar
-      ? `${MOBILE_TAB_BAR_HEIGHT_PX + 24}px`
+      ? `calc(${MOBILE_TAB_BAR_HEIGHT_PX + HELP_BUTTON_BOTTOM_OFFSET_PX}px + env(safe-area-inset-bottom))`
       : "24px",
     repositoryLoadingProgressPercent,
     repositoryLoadingProgressWidth: `${repositoryLoadingProgressPercent}%`,

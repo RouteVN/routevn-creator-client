@@ -17,6 +17,13 @@ import {
   setTagsDataState,
   syncDetailTagIds,
 } from "../tags.js";
+import {
+  buildMobileResourcePageViewData,
+  closeMobileResourceFileExplorerState,
+  createMobileResourcePageState,
+  openMobileResourceFileExplorerState,
+  setMobileResourcePageUiConfigState,
+} from "../mobileResourcePage.js";
 
 const EMPTY_TREE = { tree: [], items: {} };
 
@@ -81,6 +88,7 @@ export const createMediaPageStore = ({
   buildPendingMediaItem,
   createEditForm = () => undefined,
   getSelectedPreviewFileId = () => undefined,
+  hiddenMobileDetailSlots = [],
   extendViewData,
   tagging,
 }) => {
@@ -111,6 +119,7 @@ export const createMediaPageStore = ({
     editDefaultValues: createEmptyEditDefaultValues(),
     editPreviewFileId: undefined,
     editUploadResult: undefined,
+    ...createMobileResourcePageState(),
     ...(taggingEnabled
       ? createTagState({
           createEmptyTagsCollection,
@@ -219,6 +228,20 @@ export const createMediaPageStore = ({
 
   const setSearchQuery = ({ state }, { value } = {}) => {
     state.searchQuery = value ?? "";
+  };
+
+  const setUiConfig = ({ state }, { uiConfig } = {}) => {
+    setMobileResourcePageUiConfigState(state, {
+      uiConfig,
+    });
+  };
+
+  const openMobileFileExplorer = ({ state }, _payload = {}) => {
+    openMobileResourceFileExplorerState(state);
+  };
+
+  const closeMobileFileExplorer = ({ state }, _payload = {}) => {
+    closeMobileResourceFileExplorerState(state);
   };
 
   const setTagsData = ({ state }, { tagsData } = {}) => {
@@ -340,6 +363,12 @@ export const createMediaPageStore = ({
           activeTagIds: state.activeTagIds,
         })
       : unfilteredMediaGroups;
+    const detailFields = buildDetailFields(selectedItem);
+    const mobileViewData = buildMobileResourcePageViewData({
+      state,
+      detailFields,
+      hiddenMobileDetailSlots,
+    });
 
     const baseViewData = {
       flatItems,
@@ -348,7 +377,6 @@ export const createMediaPageStore = ({
       selectedResourceId,
       selectedItemId: state.selectedItemId,
       selectedItemName: selectedItem?.name ?? "",
-      detailFields: buildDetailFields(selectedItem),
       searchQuery: state.searchQuery,
       searchPlaceholder,
       resourceType,
@@ -359,6 +387,7 @@ export const createMediaPageStore = ({
       maxWidth,
       showZoomControls,
       selectedPreviewFileId: getSelectedPreviewFileId(selectedItem),
+      detailFields,
       folderContextMenuItems,
       itemContextMenuItems,
       emptyContextMenuItems,
@@ -378,18 +407,32 @@ export const createMediaPageStore = ({
           })
         : {}),
     };
+    Object.assign(baseViewData, mobileViewData);
 
     if (!extendViewData) {
       return baseViewData;
     }
 
-    return extendViewData({
+    const extendedViewData = extendViewData({
       state,
       flatItems,
       selectedItem,
       mediaGroups,
       baseViewData,
     });
+
+    if (extendedViewData.detailFields !== baseViewData.detailFields) {
+      Object.assign(
+        extendedViewData,
+        buildMobileResourcePageViewData({
+          state,
+          detailFields: extendedViewData.detailFields,
+          hiddenMobileDetailSlots,
+        }),
+      );
+    }
+
+    return extendedViewData;
   };
 
   return {
@@ -402,6 +445,9 @@ export const createMediaPageStore = ({
     openEditDialog,
     closeEditDialog,
     setEditUpload,
+    setUiConfig,
+    openMobileFileExplorer,
+    closeMobileFileExplorer,
     selectSelectedItem,
     selectItemById,
     selectSelectedItemId,

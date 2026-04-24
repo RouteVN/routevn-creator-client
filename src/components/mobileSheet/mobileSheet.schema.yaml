@@ -1,0 +1,15 @@
+componentName: rvn-mobile-sheet
+propsSchema:
+  type: object
+  properties:
+    open:
+      type: boolean
+    height:
+      type: string
+    overlayZ:
+      type: string
+    sheetZ:
+      type: string
+events:
+  close:
+    type: object

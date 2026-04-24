@@ -106,6 +106,9 @@ const {
   createInitialState: createCatalogInitialState,
   setItems: setBaseItems,
   setSelectedItemId: setBaseSelectedItemId,
+  setUiConfig,
+  openMobileFileExplorer,
+  closeMobileFileExplorer,
   selectSelectedItem,
   selectItemById,
   selectSelectedItemId,
@@ -122,6 +125,7 @@ const {
   matchesSearch,
   buildDetailFields: buildParticleDetailFields,
   buildCatalogItem: buildParticleCatalogItem,
+  hiddenMobileDetailSlots: ["particle-preview"],
   extendViewData: ({ state, selectedItem, baseViewData }) => {
     const activeTagIds = state.activeTagIds ?? [];
     const filteredCatalogGroups = (baseViewData.catalogGroups ?? [])
@@ -315,7 +319,14 @@ export const closeCreateTagDialog = ({ state }, _payload = {}) => {
   };
 };
 
-export { selectSelectedItem, selectSelectedItemId, setSearchQuery };
+export {
+  closeMobileFileExplorer,
+  openMobileFileExplorer,
+  selectSelectedItem,
+  selectSelectedItemId,
+  setSearchQuery,
+  setUiConfig,
+};
 
 export const selectParticleItemById = selectItemById;
 export const selectSelectedParticle = selectSelectedItem;

@@ -47,9 +47,7 @@ const parseBooleanProp = (value, fallback = false) => {
 };
 
 const isProgressiveRenderEnabled = (props) => {
-  return parseBooleanProp(
-    props?.progressiveRender ?? props?.["progressive-render"],
-  );
+  return parseBooleanProp(props?.progressiveRender);
 };
 
 const getProgressiveRenderSignature = (groups = []) => {

@@ -249,6 +249,7 @@ export const selectViewData = ({ state, props }) => {
   const searchQuery = state.searchQuery.toLowerCase();
   const activeTagIds = props.selectedTagFilterValues ?? [];
   const hasActiveTagFilter = activeTagIds.length > 0;
+  const mobileLayout = parseBooleanProp(props.mobileLayout);
 
   // Helper function to check if an item matches the search query
   const matchesSearch = (item) => {
@@ -365,6 +366,9 @@ export const selectViewData = ({ state, props }) => {
       props,
     }),
     showTagFilter: parseBooleanProp(props.showTagFilter),
+    showSearch: parseBooleanProp(props.showSearch, true),
+    showMenuButton: parseBooleanProp(props.showMenuButton),
+    mobileLayout,
     hasActiveTagFilter,
     tagFilterButtonBackgroundColor: hasActiveTagFilter ? "ac" : "bg",
     tagFilterButtonBorderColor: hasActiveTagFilter ? "ac" : "bo",
