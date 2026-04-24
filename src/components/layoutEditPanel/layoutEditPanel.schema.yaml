@@ -6,6 +6,8 @@ propsSchema:
       type: object
     imagesData:
       type: object
+    soundsData:
+      type: object
     spritesheetsData:
       type: object
     particlesData:

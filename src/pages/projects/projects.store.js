@@ -58,6 +58,12 @@ export const createInitialState = () => ({
     projectName: "",
   },
 
+  createDialog: {
+    isOpen: false,
+    formKey: 0,
+    defaultValues: {},
+  },
+
   cloudCreateDialog: {
     isOpen: false,
     formKey: 0,
@@ -295,6 +301,20 @@ export const selectDeleteDialogProjectPath = ({ state }) => {
 
 export const selectIsDeleteDialogOpen = ({ state }) => {
   return Boolean(state.deleteDialog?.isOpen);
+};
+
+export const openCreateDialog = ({ state }, _payload = {}) => {
+  state.createDialog.isOpen = true;
+  state.createDialog.formKey += 1;
+  state.createDialog.defaultValues = {};
+};
+
+export const closeCreateDialog = ({ state }, _payload = {}) => {
+  state.createDialog.isOpen = false;
+};
+
+export const selectIsCreateDialogOpen = ({ state }) => {
+  return Boolean(state.createDialog?.isOpen);
 };
 
 export const openAddMemberDialog = (

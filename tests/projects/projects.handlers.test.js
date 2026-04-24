@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleCreateButtonClick,
+  handleCreateDialogSubmit,
   handleDeleteDialogConfirm,
   handleOpenButtonClick,
   handleProjectContextMenu,
@@ -14,6 +16,11 @@ const createDeps = ({
     openFolderPicker: vi.fn(),
     openExistingProject: vi.fn(),
     loadAllProjects: vi.fn(async () => []),
+    createNewProject: vi.fn(async () => ({
+      id: "project-2",
+      name: "New Project",
+      projectPath: "/projects/new-project",
+    })),
     showAlert: vi.fn(),
     showToast: vi.fn(),
     setCurrentProjectEntry: vi.fn(),
@@ -44,12 +51,31 @@ const createDeps = ({
         },
       ]),
       openDropdownMenu: vi.fn(),
+      openCreateDialog: vi.fn(),
+      closeCreateDialog: vi.fn(),
+      selectIsCreateDialogOpen: vi.fn(() => true),
+      addProject: vi.fn(),
       selectDeleteDialogProjectId: vi.fn(() => ""),
       selectDeleteDialogProjectPath: vi.fn(() => ""),
       closeDeleteDialog: vi.fn(),
       removeProject: vi.fn(),
     },
     render: vi.fn(),
+    refs: {
+      projectCreateDialogBody: {
+        validate: vi.fn(async () => ({ valid: true })),
+        getValues: vi.fn(async () => ({
+          name: "New Project",
+          description: "",
+          iconFile: undefined,
+          template: "default",
+          resolution: "1920x1080",
+          resolutionWidth: 1920,
+          resolutionHeight: 1080,
+          projectPath: "/projects/new-project",
+        })),
+      },
+    },
   };
 };
 
@@ -211,6 +237,45 @@ describe("projects.handleProjectsClick", () => {
       p: "project-1",
     });
     expect(deps.appService.showAlert).not.toHaveBeenCalled();
+  });
+});
+
+describe("projects create dialog", () => {
+  it("opens the page-owned create dialog", () => {
+    const deps = createDeps();
+
+    handleCreateButtonClick(deps);
+
+    expect(deps.store.openCreateDialog).toHaveBeenCalled();
+    expect(deps.render).toHaveBeenCalled();
+  });
+
+  it("creates a project from the page-owned dialog body methods", async () => {
+    const deps = createDeps();
+
+    await handleCreateDialogSubmit(deps);
+
+    expect(deps.refs.projectCreateDialogBody.validate).toHaveBeenCalled();
+    expect(deps.refs.projectCreateDialogBody.getValues).toHaveBeenCalled();
+    expect(deps.appService.createNewProject).toHaveBeenCalledWith({
+      name: "New Project",
+      description: "",
+      iconFile: undefined,
+      projectPath: "/projects/new-project",
+      template: "default",
+      projectResolution: {
+        width: 1920,
+        height: 1080,
+      },
+    });
+    expect(deps.store.addProject).toHaveBeenCalledWith({
+      project: {
+        id: "project-2",
+        name: "New Project",
+        projectPath: "/projects/new-project",
+      },
+    });
+    expect(deps.store.closeCreateDialog).toHaveBeenCalled();
   });
 });
 

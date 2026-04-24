@@ -71,14 +71,14 @@ const SYSTEM_ACTION_SECTIONS = [
       mode: "popOverlay",
     },
   ]),
-  // createSection("Variables", [
-  //   {
-  //     id: "17",
-  //     label: "Update Variable",
-  //     icon: "variable",
-  //     mode: "updateVariable",
-  //   },
-  // ]),
+  createSection("Variables", [
+    {
+      id: "17",
+      label: "Update Variable",
+      icon: "variable",
+      mode: "updateVariable",
+    },
+  ]),
   createSection("Confirm Dialog", [
     {
       id: "20",

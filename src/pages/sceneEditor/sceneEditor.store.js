@@ -455,6 +455,10 @@ export const selectLayouts = ({ state }) => {
     items: {},
     tree: [],
   };
+  const soundsData = state.repositoryState.sounds || {
+    items: {},
+    tree: [],
+  };
   const colors = state.repositoryState.colors || { items: {}, tree: [] };
   const fonts = state.repositoryState.fonts || { items: {}, tree: [] };
   const files = state.repositoryState.files || { items: {}, tree: [] };
@@ -478,6 +482,7 @@ export const selectLayouts = ({ state }) => {
             layoutId,
             layoutType: layout.layoutType,
             filesData: files,
+            soundsData,
             layoutsData: layouts,
           },
         ).elements,

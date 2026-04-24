@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import yaml from "js-yaml";
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
@@ -33,6 +35,14 @@ const TEST_CONSTANTS = {
   controlContextMenuItems: [],
   controlEmptyContextMenuItems: [],
 };
+
+const LAYOUT_EDITOR_CONSTANTS_URL = new URL(
+  "../../src/pages/layoutEditor/layoutEditor.constants.yaml",
+  import.meta.url,
+);
+const LAYOUT_EDITOR_CONSTANTS = yaml.load(
+  readFileSync(LAYOUT_EDITOR_CONSTANTS_URL, "utf8"),
+);
 
 describe("layoutEditor.store", () => {
   it("normalizes a legacy save layout to save-load", () => {
@@ -82,6 +92,53 @@ describe("layoutEditor.store", () => {
     );
 
     expect(state.layout.layoutType).toBe("save-load");
+  });
+
+  it("shows fragment creation in all layout menus", () => {
+    for (const layoutType of [
+      "general",
+      "save-load",
+      "confirmDialog",
+      "dialogue-adv",
+      "dialogue-nvl",
+      "history",
+      "choice",
+    ]) {
+      const state = createInitialState();
+
+      setLayout(
+        { state },
+        {
+          id: `layout-${layoutType}`,
+          layout: {
+            id: `layout-${layoutType}`,
+            layoutType,
+          },
+        },
+      );
+
+      const viewData = selectViewData({
+        state,
+        constants: LAYOUT_EDITOR_CONSTANTS,
+      });
+
+      expect(
+        viewData.contextMenuItems.some(
+          (item) =>
+            item.label === "Fragment" &&
+            item.value?.action === "new-child-item" &&
+            item.value?.type === "fragment-ref",
+        ),
+      ).toBe(true);
+      expect(
+        viewData.emptyContextMenuItems.some(
+          (item) =>
+            item.label === "Fragment" &&
+            item.value?.action === "new-child-item" &&
+            item.value?.type === "fragment-ref",
+        ),
+      ).toBe(true);
+    }
   });
 
   it("adds the component badge to special layout editor items", () => {

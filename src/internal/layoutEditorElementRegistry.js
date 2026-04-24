@@ -485,6 +485,7 @@ const DEFAULT_CAPABILITIES = {
   supportsTextEditing: false,
   supportsTextRevealEffect: false,
   supportsTextStyles: false,
+  supportsSoundSelection: false,
   supportsTextAlignment: false,
   supportsActions: false,
   supportsSpriteImages: false,
@@ -525,6 +526,7 @@ const FAMILY_CAPABILITIES = {
     supportsHeight: false,
     supportsAnchor: true,
     supportsTextStyles: true,
+    supportsSoundSelection: true,
     supportsTextAlignment: true,
   },
   slider: {

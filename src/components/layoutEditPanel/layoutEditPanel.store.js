@@ -48,6 +48,7 @@ import {
   selectLayoutEditPanelFieldPopoverForm,
   toImageOptions,
   toInspectorValues,
+  toSoundOptions,
   toTextStyleOptions,
 } from "./support/layoutEditPanelViewData.js";
 
@@ -449,6 +450,7 @@ const resetSelectionUiState = (state) => {
 export const createInitialState = () => {
   const state = {
     imagesData: { tree: [], items: {} },
+    soundsData: { tree: [], items: {} },
     spritesheetsData: { tree: [], items: {} },
     particlesData: { tree: [], items: {} },
     textStylesData: { tree: [], items: {} },
@@ -771,6 +773,10 @@ export const setImagesData = ({ state }, { imagesData } = {}) => {
   state.imagesData = imagesData;
 };
 
+export const setSoundsData = ({ state }, { soundsData } = {}) => {
+  state.soundsData = soundsData;
+};
+
 export const setSpritesheetsData = ({ state }, { spritesheetsData } = {}) => {
   state.spritesheetsData = spritesheetsData;
 };
@@ -857,8 +863,13 @@ export const selectTextStyleOptions = ({ state }) => {
   return toTextStyleOptions(state.textStylesData);
 };
 
+export const selectSoundOptions = ({ state }) => {
+  return toSoundOptions(state.soundsData);
+};
+
 export const selectViewData = ({ state, props, constants }) => {
   const textStyleItems = toTextStyleOptions(state.textStylesData);
+  const soundItems = toSoundOptions(state.soundsData);
   const imageItems = toImageOptions(state.imagesData);
   const spritesheetSelectionItems = toSpritesheetAnimationSelectionItems(
     state.spritesheetsData,
@@ -873,6 +884,7 @@ export const selectViewData = ({ state, props, constants }) => {
     { label: "None", value: "" },
     ...textStyleItems,
   ];
+  const soundItemsWithNone = [{ label: "None", value: "" }, ...soundItems];
   const variableOptions = getVariableOptions(state.variablesData, {
     type: "number",
   });
@@ -976,6 +988,8 @@ export const selectViewData = ({ state, props, constants }) => {
         isInsideDirectedContainer: props.isInsideDirectedContainer === true,
         textStyleItems,
         textStyleItemsWithNone,
+        soundItems,
+        soundItemsWithNone,
         spritesheetSelectionItems,
         particleSelectionItems,
         sliderValueOptions,
@@ -1007,6 +1021,7 @@ export const selectViewData = ({ state, props, constants }) => {
           getAvailableChildInteractionItems(values).length > 0,
         canAddTextStyleVariant:
           !values.hoverTextStyleId || !values.clickTextStyleId,
+        canAddSoundVariant: !values.hoverSoundId || !values.clickSoundId,
         conditionalOverrideItems,
         visibilityConditionSummary: getVisibilityConditionSummary(
           currentVisibilityCondition,

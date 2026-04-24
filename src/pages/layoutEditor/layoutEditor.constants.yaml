@@ -23,16 +23,7 @@ contextMenuItems:
   - label: Slider
     type: item
     createType: slider
-  - "$when": 'layoutType == "general"'
-    label: Fragment
-    type: item
-    createType: fragment-ref
-  - "$when": 'layoutType == "save-load"'
-    label: Fragment
-    type: item
-    createType: fragment-ref
-  - "$when": 'layoutType == "confirmDialog"'
-    label: Fragment
+  - label: Fragment
     type: item
     createType: fragment-ref
   - "$when": 'layoutType == "confirmDialog"'
@@ -130,16 +121,7 @@ emptyContextMenuItems:
   - label: Slider
     type: item
     createType: slider
-  - "$when": 'layoutType == "general"'
-    label: Fragment
-    type: item
-    createType: fragment-ref
-  - "$when": 'layoutType == "save-load"'
-    label: Fragment
-    type: item
-    createType: fragment-ref
-  - "$when": 'layoutType == "confirmDialog"'
-    label: Fragment
+  - label: Fragment
     type: item
     createType: fragment-ref
   - "$when": 'layoutType == "confirmDialog"'
