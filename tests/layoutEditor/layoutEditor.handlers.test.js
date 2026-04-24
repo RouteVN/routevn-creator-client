@@ -289,6 +289,7 @@ describe("layoutEditor.handleLayoutEditorCanvasMetricsChange", () => {
       store: {
         selectSelectedItemId: vi.fn(() => "selected-item"),
         selectDetailPanelSelectedItemId: vi.fn(() => "stale-panel-item"),
+        setSelectedElementMetrics: vi.fn(),
       },
       refs: {
         layoutEditPanel: {
@@ -314,6 +315,13 @@ describe("layoutEditor.handleLayoutEditorCanvasMetricsChange", () => {
       },
     });
 
+    expect(deps.store.setSelectedElementMetrics).toHaveBeenCalledWith({
+      metrics: {
+        id: "selected-item",
+        width: 76,
+        height: 54,
+      },
+    });
     expect(
       deps.refs.layoutEditPanel.setSelectedElementMetrics,
     ).not.toHaveBeenCalled();

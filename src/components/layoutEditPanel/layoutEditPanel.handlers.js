@@ -21,6 +21,7 @@ import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorEle
 import { parseSpritesheetAnimationSelectionValue } from "../../internal/spritesheets.js";
 
 const ACTION_INTERACTION_TYPES = ["click", "rightClick", "change"];
+const DEFAULT_TEXT_FIXED_WIDTH = 300;
 const EMPTY_TREE = { items: {}, tree: [] };
 const INTEGER_ONLY_FIELDS = new Set([
   "x",
@@ -155,12 +156,44 @@ const syncFixedAspectRatioValue = (store, { name, value } = {}) => {
 };
 
 const getMeasuredTextWidth = (metrics = {}) => {
-  const measuredWidth = Number(metrics.measuredWidth ?? metrics.width);
+  const measuredWidth = Number(metrics.measuredWidth);
   if (Number.isFinite(measuredWidth) && measuredWidth > 0) {
     return Math.round(measuredWidth);
   }
 
+  const width = Number(metrics.width);
+  if (Number.isFinite(width) && width > 0) {
+    return Math.round(width);
+  }
+
   return undefined;
+};
+
+const getPositiveRoundedNumber = (value) => {
+  const number = Number(value);
+  if (Number.isFinite(number) && number > 0) {
+    return Math.round(number);
+  }
+
+  return undefined;
+};
+
+const getTextFixedWidthFallback = ({ props, values } = {}) => {
+  const wordWrapWidth = getPositiveRoundedNumber(
+    values?.textStyle?.wordWrapWidth,
+  );
+  if (wordWrapWidth !== undefined) {
+    return wordWrapWidth;
+  }
+
+  const projectWidth = getPositiveRoundedNumber(
+    props?.projectResolution?.width,
+  );
+  if (projectWidth !== undefined) {
+    return Math.min(projectWidth, DEFAULT_TEXT_FIXED_WIDTH);
+  }
+
+  return DEFAULT_TEXT_FIXED_WIDTH;
 };
 
 const getMeasuredDimension = (metrics = {}, name) => {
@@ -208,20 +241,19 @@ const applySizeModeUpdate = (deps, { name, value } = {}) => {
     return;
   }
 
-  const currentSize = Number(store.selectValues()[fieldName]);
+  const values = store.selectValues();
+  const currentSize = Number(values[fieldName]);
   const nextSize = isTextWidthMode
     ? (getMeasuredTextWidth(selectedElementMetrics) ??
       (Number.isFinite(currentSize) && currentSize > 0
         ? currentSize
-        : undefined))
+        : undefined) ??
+      getTextFixedWidthFallback({ props, values }))
     : (getMeasuredDimension(selectedElementMetrics, fieldName) ??
       (Number.isFinite(currentSize) && currentSize > 0
         ? currentSize
         : undefined) ??
       100);
-  if (nextSize === undefined) {
-    return;
-  }
 
   applyPanelValueUpdate(deps, {
     name: fieldName,
@@ -428,7 +460,8 @@ export const handleOnUpdate = (deps, payload) => {
     oldProps?.spritesheetsData === newProps?.spritesheetsData &&
     oldProps?.particlesData === newProps?.particlesData &&
     oldProps?.variablesData === newProps?.variablesData &&
-    oldProps?.textStylesData === newProps?.textStylesData
+    oldProps?.textStylesData === newProps?.textStylesData &&
+    oldProps?.selectedElementMetrics === newProps?.selectedElementMetrics
   ) {
     return;
   }
@@ -457,6 +490,9 @@ export const handleOnUpdate = (deps, payload) => {
   });
   store.setVariablesData({
     variablesData: newProps.variablesData || EMPTY_TREE,
+  });
+  store.setSelectedElementMetrics?.({
+    metrics: newProps.selectedElementMetrics,
   });
 
   const popover = store.selectPopoverForm();

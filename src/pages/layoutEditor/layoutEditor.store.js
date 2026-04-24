@@ -471,6 +471,7 @@ export const selectViewData = ({ state, constants }) => {
     textStylesData: state.textStylesData,
     variablesData: state.variablesData,
     layoutsData: state.layoutsData,
+    selectedElementMetrics: state.selectedElementMetrics,
     selectedItemIsInsideSaveLoadSlot,
     selectedItemIsInsideDirectedContainer,
     isInsideSaveLoadSlot: detailPanelIsInsideSaveLoadSlot,

@@ -8,6 +8,7 @@ import { handleOptionSelected } from "../../src/components/layoutEditPanel/layou
 
 const createDeps = ({
   itemType = "container",
+  projectResolution,
   values = {},
   selectedElementMetrics = {},
 } = {}) => {
@@ -17,6 +18,7 @@ const createDeps = ({
   return {
     props: {
       itemType,
+      projectResolution,
       selectedElementMetrics,
     },
     store: {
@@ -112,5 +114,94 @@ describe("layoutEditPanel size modes", () => {
     });
 
     expect(deps.state.values.height).toBe(188);
+  });
+
+  it("sets text width to fixed from measured text width", () => {
+    const deps = createDeps({
+      itemType: "text",
+      values: {
+        type: "text",
+        width: undefined,
+      },
+      selectedElementMetrics: {
+        width: 180,
+        measuredWidth: 142,
+      },
+    });
+
+    handleOptionSelected(deps, {
+      _event: {
+        currentTarget: {
+          dataset: {
+            name: "widthMode",
+          },
+        },
+        detail: {
+          value: "fixed",
+        },
+      },
+    });
+
+    expect(deps.state.values.width).toBe(142);
+  });
+
+  it("sets text width to fixed from word wrap fallback when metrics are missing", () => {
+    const deps = createDeps({
+      itemType: "text",
+      values: {
+        type: "text",
+        textStyle: {
+          wordWrapWidth: 240,
+        },
+      },
+      selectedElementMetrics: undefined,
+    });
+
+    handleOptionSelected(deps, {
+      _event: {
+        currentTarget: {
+          dataset: {
+            name: "widthMode",
+          },
+        },
+        detail: {
+          value: "fixed",
+        },
+      },
+    });
+
+    expect(deps.state.values.width).toBe(240);
+  });
+
+  it("sets text width to fixed from default fallback when text has no measured width", () => {
+    const deps = createDeps({
+      itemType: "text",
+      projectResolution: {
+        width: 200,
+        height: 120,
+      },
+      values: {
+        type: "text",
+      },
+      selectedElementMetrics: {
+        width: 0,
+        measuredWidth: 0,
+      },
+    });
+
+    handleOptionSelected(deps, {
+      _event: {
+        currentTarget: {
+          dataset: {
+            name: "widthMode",
+          },
+        },
+        detail: {
+          value: "fixed",
+        },
+      },
+    });
+
+    expect(deps.state.values.width).toBe(200);
   });
 });
