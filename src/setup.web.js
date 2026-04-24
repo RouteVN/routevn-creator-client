@@ -38,23 +38,11 @@ const uiVersions = {
   },
 };
 
-const toUiVersionId = (value) => (uiVersions[value] ? value : undefined);
-
-const getExplicitUiVersion = () => {
-  const params = new URLSearchParams(window.location.search);
-  return (
-    toUiVersionId(params.get("rvn-ui")) ??
-    toUiVersionId(params.get("ui")) ??
-    toUiVersionId(window.localStorage.getItem("rvn.uiVersion"))
-  );
-};
-
 const isTouchPrimaryDevice = () =>
   window.matchMedia("(pointer: coarse)").matches ||
   window.matchMedia("(hover: none)").matches;
 
-const activeUiVersion =
-  getExplicitUiVersion() ?? (isTouchPrimaryDevice() ? "touch" : "normal");
+const activeUiVersion = isTouchPrimaryDevice() ? "touch" : "normal";
 const uiConfig = uiVersions[activeUiVersion];
 document.documentElement.dataset.rvnUiVersion = uiConfig.id;
 document.documentElement.dataset.rvnInputMode = uiConfig.inputMode;
