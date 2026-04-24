@@ -46,7 +46,8 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { props, render, store } = deps;
+  const { props, render, store, uiConfig } = deps;
+  store.setUiConfig({ uiConfig });
   store.updateActions(normalizeActionsObject(props.actions));
   store.setRepositoryState({
     repositoryState: deps.projectService.getRepositoryState(),
