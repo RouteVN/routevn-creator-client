@@ -3,6 +3,14 @@ refs:
     eventListeners:
       click:
         handler: handleHelpFloatingButtonClick
+  mobileTabItem*:
+    eventListeners:
+      click:
+        handler: handleMobileTabClick
+  mobileSheetOverlay:
+    eventListeners:
+      click:
+        handler: handleMobileSheetClose
 subscriptions:
   - from: routePop
     handler: handleWindowPop
@@ -10,7 +18,7 @@ template:
   - rtgl-view d=h w=f h=f:
       - $if showSidebar:
           - rvn-sidebar: []
-      - 'rtgl-view h=f style="width: ${contentWidth}; min-width: 0;"':
+      - 'rtgl-view h=f style="width: ${contentWidth}; min-width: 0; padding-bottom: ${contentBottomPadding}; box-sizing: border-box;"':
           - $if isRepositoryLoading:
               - rtgl-view w=f h=f d=v ah=c av=c g=sm:
                   - rtgl-text s=sm c=mu-fg: ${repositoryLoadingStatusText}
@@ -71,5 +79,16 @@ template:
                   - rvn-versions: []
                 $elif currentRoutePattern == "/project/releases/web-server":
                   - rvn-web-server: []
-  - 'rtgl-view#helpFloatingButton pos=fix z=1200 w=56 h=56 ah=c av=c bgc=bg bw=xs bc=bo h-bc=ac br=f cur=pointer style="right: 24px; bottom: 24px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);"':
+  - $if showMobileTabBar:
+      - 'rtgl-view pos=fix w=100vw bgc=bg style="left: 0; bottom: 0; z-index: 1000; border-top: 1px solid var(--border); box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.10); padding-bottom: env(safe-area-inset-bottom);"':
+          - rtgl-view w=f h=64 d=h av=c:
+              - $for item, i in mobileTabBarItems:
+                  - rtgl-view#mobileTabItem${i} data-tab-id=${item.id} w=1fg h=f d=v ah=c av=c g=xs cur=pointer:
+                      - rtgl-svg wh=22 svg=${item.icon} c=mu-fg: null
+                      - rtgl-text s=xs c=mu-fg: ${item.label}
+  - $if isMobileSheetOpen:
+      - 'rtgl-view#mobileSheetOverlay pos=fix edge=f z=1300 bgc=bg style="background: rgba(15, 23, 42, 0.42);"': null
+      - 'rtgl-view pos=fix bgc=bg z=1301 style="left: 0; right: 0; bottom: 0; height: 70vh; overflow: hidden; border-top-left-radius: 18px; border-top-right-radius: 18px; box-shadow: 0 -16px 40px rgba(15, 23, 42, 0.22);"':
+          - rvn-mobile-sidebar variant=${mobileSheetVariant} w=f h=f: []
+  - 'rtgl-view#helpFloatingButton pos=fix z=1200 w=56 h=56 ah=c av=c bgc=bg bw=xs bc=bo h-bc=ac br=f cur=pointer style="right: 24px; bottom: ${helpButtonBottom}; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);"':
       - rtgl-text s=h4 c=mu-fg: '?'

@@ -28,6 +28,10 @@ refs:
     eventListeners:
       click:
         handler: handleBackClick
+  menuButton:
+    eventListeners:
+      click:
+        handler: handleMenuClick
   contextMenu:
     eventListeners:
       close:
@@ -87,6 +91,9 @@ template:
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
           - rtgl-view w=f d=h av=c g=md wrap:
               - rtgl-view av=c g=sm d=h w=1fg:
+                  - $if showMenuButton:
+                      - rtgl-view#menuButton w=36 h=36 ah=c av=c cur=pointer:
+                          - rtgl-svg svg=hamburger wh=22 c=mu-fg: null
                   - $if showBackButton:
                       - rtgl-button#backButton sq pre="chevronLeft" v="gh" mr=sm: null
                   - $if navTitle:
@@ -97,11 +104,12 @@ template:
                           - rtgl-button#zoomOut sq v="gh" s=sm: '-'
                           - rtgl-slider#zoomSlider w=120 min="0.5" max="2.0" step="0.1" value="${zoomLevel}": null
                           - rtgl-button#zoomIn sq v="gh" s=sm: +
-                  - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
+                  - $if showSearch:
+                      - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
                   - $if showTagFilter:
                       - rtgl-view#tagFilterButton w=36 h=36 bw=xs br=md ah=c av=c cur=pointer bgc=${tagFilterButtonBackgroundColor} bc=${tagFilterButtonBorderColor}:
                           - rtgl-svg svg=filter wh=16 c=${tagFilterButtonIconColor}: null
-      - 'rtgl-view#scrollContainer h=1fg w=f sv style="min-width: 0;"':
+      - 'rtgl-view#scrollContainer h=1fg w=f sv style="min-width: 0; padding-bottom: ${scrollBottomPadding}; box-sizing: border-box;"':
           - $if groups.length > 0:
               - $for group, gIndex in groups:
                   - rtgl-view#groupDropRef${gIndex} data-group-id=${group.id} w=f ph=md pos=rel:

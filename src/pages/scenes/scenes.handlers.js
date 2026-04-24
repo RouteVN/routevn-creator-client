@@ -426,7 +426,7 @@ const openEditDialogWithValues = ({ deps, sceneId } = {}) => {
 
   setSelectedScene({ store, appService, sceneId });
   const { fileexplorer, editForm } = refs;
-  fileexplorer.selectItem({ itemId: sceneId });
+  fileexplorer?.selectItem({ itemId: sceneId });
   store.openEditDialog({
     itemId: sceneId,
     defaultValues: editValues,
@@ -437,6 +437,9 @@ const openEditDialogWithValues = ({ deps, sceneId } = {}) => {
 };
 
 export const handleBeforeMount = (deps) => {
+  const { store, uiConfig } = deps;
+  store.setUiConfig({ uiConfig });
+
   const subscription = createCollabRemoteRefreshStream({
     deps,
     matches: matchesRemoteTargets(["scenes", "layouts", "story"]),
@@ -475,7 +478,7 @@ export const handleAfterMount = async (deps) => {
       sceneId: persistedSelectedSceneId,
     });
     const { fileexplorer } = refs;
-    fileexplorer.selectItem({ itemId: persistedSelectedSceneId });
+    fileexplorer?.selectItem({ itemId: persistedSelectedSceneId });
   }
 
   const initialViewport = resolveInitialWhiteboardViewport({

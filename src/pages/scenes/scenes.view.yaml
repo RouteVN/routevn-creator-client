@@ -98,51 +98,53 @@ refs:
 template:
   - 'rtgl-view d=h w=f h=f pos=rel style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
-          - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
-              - rtgl-view slot="content" w=f h=f:
-                  - rtgl-text ml=lg s=sm c=mu-fg mv=md: Scenes
-                  - rvn-base-file-explorer#fileexplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
+          - $if showExplorerPanel:
+              - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
+                  - rtgl-view slot="content" w=f h=f:
+                      - rtgl-text ml=lg s=sm c=mu-fg mv=md: Scenes
+                      - rvn-base-file-explorer#fileexplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
           - 'rtgl-view w=1fg h=f style="min-width: 0; min-height: 0;"':
               - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
                   - rvn-whiteboard#whiteboard :items=${whiteboardItems} :cursor=${whiteboardCursor} :selectedItemId=${selectedItemId}: null
-          - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
-              - rtgl-view wh=f slot="content":
-                  - 'div#fileExplorerDetailKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
-                      - $if selectedItemId:
-                          - rtgl-view d=v w=f h=f:
-                              - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
-                                  - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
-                                  - rtgl-svg svg=edit wh=16: null
-                              - 'rtgl-view d=v w=f h=1fg sv style="min-height: 0;"':
-                                  - rtgl-view d=h w=f av=c ph=md pt=md:
-                                      - rtgl-view w=1fg: null
-                                      - rtgl-button#detailPreviewButton s=sm v=se: Preview
-                                  - $if selectedItemDescription:
-                                      - rtgl-view w=f ph=md pt=md:
-                                          - rtgl-text c=mu-fg: ${selectedItemDescription}
-                                  - rtgl-view h=1 w=f bgc=mu mv=md: null
-                                  - rtgl-view d=v w=f g=md ph=md pb=md:
-                                      - rtgl-view#sectionsListToggle d=h w=f av=c cur=pointer:
-                                          - rtgl-text s=sm: Sections
+          - $if showDetailPanel:
+              - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
+                  - rtgl-view wh=f slot="content":
+                      - 'div#fileExplorerDetailKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
+                          - $if selectedItemId:
+                              - rtgl-view d=v w=f h=f:
+                                  - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+                                      - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                                      - rtgl-svg svg=edit wh=16: null
+                                  - 'rtgl-view d=v w=f h=1fg sv style="min-height: 0;"':
+                                      - rtgl-view d=h w=f av=c ph=md pt=md:
                                           - rtgl-view w=1fg: null
+                                          - rtgl-button#detailPreviewButton s=sm v=se: Preview
+                                      - $if selectedItemDescription:
+                                          - rtgl-view w=f ph=md pt=md:
+                                              - rtgl-text c=mu-fg: ${selectedItemDescription}
+                                      - rtgl-view h=1 w=f bgc=mu mv=md: null
+                                      - rtgl-view d=v w=f g=md ph=md pb=md:
+                                          - rtgl-view#sectionsListToggle d=h w=f av=c cur=pointer:
+                                              - rtgl-text s=sm: Sections
+                                              - rtgl-view w=1fg: null
+                                              - $if sectionsListOpen:
+                                                  - rtgl-svg svg=folderArrowDown wh=16 c=mu-fg: null
+                                                $else:
+                                                  - rtgl-svg svg=folderArrowRight wh=16 c=mu-fg: null
                                           - $if sectionsListOpen:
-                                              - rtgl-svg svg=folderArrowDown wh=16 c=mu-fg: null
-                                            $else:
-                                              - rtgl-svg svg=folderArrowRight wh=16 c=mu-fg: null
-                                      - $if sectionsListOpen:
-                                          - $if selectedSceneSections.length == 0:
-                                              - rtgl-view d=h av=c ph=md bw=xs bc=mu bgc=bg br=sm h=36 w=f:
-                                                  - rtgl-text s=sm c=mu-fg: No sections
-                                            $else:
-                                              - rtgl-view d=v w=f g=sm:
-                                                  - $for section, sectionIndex in selectedSceneSections:
-                                                      - rtgl-view#sectionsListItem${sectionIndex} data-scene-id="${selectedItemId}" data-section-id="${section.id}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
-                                                          - 'rtgl-text s=sm w=1fg ellipsis=true style="min-width: 0"': ${section.name}
-                                                          - $if section.isDeadEnd:
-                                                              - rtgl-svg#sectionsListWarning${sectionIndex} svg=warning-dead-end wh=16: null
-                        $else:
-                          - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                              - rtgl-text s=md c=mu-fg: No selection
+                                              - $if selectedSceneSections.length == 0:
+                                                  - rtgl-view d=h av=c ph=md bw=xs bc=mu bgc=bg br=sm h=36 w=f:
+                                                      - rtgl-text s=sm c=mu-fg: No sections
+                                                $else:
+                                                  - rtgl-view d=v w=f g=sm:
+                                                      - $for section, sectionIndex in selectedSceneSections:
+                                                          - rtgl-view#sectionsListItem${sectionIndex} data-scene-id="${selectedItemId}" data-section-id="${section.id}" g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                                                              - 'rtgl-text s=sm w=1fg ellipsis=true style="min-width: 0"': ${section.name}
+                                                              - $if section.isDeadEnd:
+                                                                  - rtgl-svg#sectionsListWarning${sectionIndex} svg=warning-dead-end wh=16: null
+                            $else:
+                              - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                                  - rtgl-text s=md c=mu-fg: No selection
       - rtgl-popover#sceneFormPopover ?open=${showSceneForm} x=${sceneFormPosition.x} y=${sceneFormPosition.y}:
           - rtgl-form#sceneForm key=${sceneFormKey} slot=content :defaultValues=${sceneFormData} :form=${sceneFormFields} w=320: null
       - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:

@@ -25,6 +25,25 @@ registerPrimitives();
 
 await resetWebAppStateForVisualTests();
 
+const uiVersions = {
+  normal: {
+    id: "normal",
+    inputMode: "pointer",
+    navigation: "sidebar",
+  },
+  touch: {
+    id: "touch",
+    inputMode: "touch",
+    navigation: "bottom",
+  },
+};
+
+// Hardcoded while the app supports both normal and touch/mobile UI versions.
+const activeUiVersion = "touch";
+const uiConfig = uiVersions[activeUiVersion];
+document.documentElement.dataset.rvnUiVersion = uiConfig.id;
+document.documentElement.dataset.rvnInputMode = uiConfig.inputMode;
+
 // Initialize app database using web adapter
 const appDb = createDb({ path: "app" });
 await appDb.init();
@@ -89,6 +108,7 @@ const graphicsService = await createGraphicsService({ subject });
 const dialogueQueueService = createPendingQueueService({ debounceMs: 2000 });
 
 const componentDependencies = {
+  uiConfig,
   subject,
   graphicsService,
   appService,
@@ -98,6 +118,7 @@ const componentDependencies = {
 };
 
 const pageDependencies = {
+  uiConfig,
   subject,
   graphicsService,
   appService,

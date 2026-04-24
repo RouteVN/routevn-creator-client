@@ -12,6 +12,7 @@ const AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD =
   DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD;
 const IMAGE_CARD_MAX_WIDTH = 400;
 const IMAGE_CARD_HEIGHT = 225;
+const MOBILE_SCROLL_BOTTOM_PADDING = "calc(96px + env(safe-area-inset-bottom))";
 export const IMAGE_TAG_SCOPE_KEY = "images";
 
 const buildDetailFields = (item) => {
@@ -155,6 +156,8 @@ const {
 
 export const createInitialState = () => ({
   ...createMediaInitialState(),
+  isTouchMode: false,
+  isMobileFileExplorerOpen: false,
   fullImagePreviewVisible: false,
   fullImagePreviewFileId: undefined,
 });
@@ -181,6 +184,14 @@ export {
 };
 
 export const selectImageItemById = selectItemById;
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  state.isTouchMode =
+    uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
+  if (state.isTouchMode) {
+    state.searchQuery = "";
+  }
+};
 
 export const selectAdjacentImageItemId = (
   context,
@@ -229,6 +240,14 @@ export const hideFullImagePreview = ({ state }, _payload = {}) => {
   state.fullImagePreviewFileId = undefined;
 };
 
+export const openMobileFileExplorer = ({ state }, _payload = {}) => {
+  state.isMobileFileExplorerOpen = true;
+};
+
+export const closeMobileFileExplorer = ({ state }, _payload = {}) => {
+  state.isMobileFileExplorerOpen = false;
+};
+
 export const selectViewData = (context) => {
   const viewData = selectMediaViewData(context);
   const flatItems = applyFolderRequiredRootDragOptions(viewData.flatItems);
@@ -236,6 +255,15 @@ export const selectViewData = (context) => {
   return {
     ...viewData,
     flatItems,
+    showExplorerPanel: !context.state.isTouchMode,
+    showDetailPanel: !context.state.isTouchMode,
+    showMobileTopTabs: context.state.isTouchMode,
+    showMobileFileExplorer:
+      context.state.isTouchMode && context.state.isMobileFileExplorerOpen,
+    mobileScrollBottomPadding: context.state.isTouchMode
+      ? MOBILE_SCROLL_BOTTOM_PADDING
+      : "0px",
+    contentLeftPadding: context.state.isTouchMode ? "0" : "sm",
     startCollapsedFileExplorer: shouldStartCollapsedFileExplorer({
       flatItems,
       threshold: AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD,

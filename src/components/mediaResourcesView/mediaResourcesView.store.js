@@ -165,13 +165,17 @@ export const selectViewData = ({ state, props, props: attrs }) => {
   const mediaHeight = Math.round(baseMediaHeight * state.zoomLevel);
   const showZoomControlsAttr =
     attrs.showZoomControls ?? attrs["show-zoom-controls"];
+  const showSearchAttr = attrs.showSearch ?? attrs["show-search"];
   const showBackButtonAttr = attrs.showBackButton ?? attrs["show-back-button"];
+  const showMenuButtonAttr = attrs.showMenuButton ?? attrs["show-menu-button"];
   const canUploadAttr = attrs.canUpload ?? attrs["can-upload"];
   const progressiveRenderAttr =
     attrs.progressiveRender ?? attrs["progressive-render"];
   const lazyImageCardsAttr = attrs.lazyImageCards ?? attrs["lazy-image-cards"];
   const showImageCardPreviewAttr =
     attrs.showImageCardPreview ?? attrs["show-image-card-preview"];
+  const scrollBottomPadding =
+    props.scrollBottomPadding ?? props["scroll-bottom-padding"] ?? "0px";
   const hasActiveTagFilter = (props.selectedTagFilterValues?.length ?? 0) > 0;
   const lazyImageCards = parseBooleanProp(lazyImageCardsAttr);
   let remainingEagerImageCardCount = lazyImageCards
@@ -270,11 +274,14 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     mediaHeight,
     zoomLevel: state.zoomLevel,
     showZoomControls: parseBooleanProp(showZoomControlsAttr),
+    showSearch: parseBooleanProp(showSearchAttr, true),
     showBackButton: parseBooleanProp(showBackButtonAttr),
+    showMenuButton: parseBooleanProp(showMenuButtonAttr),
     canUpload: parseBooleanProp(canUploadAttr, true),
     progressiveRender: parseBooleanProp(progressiveRenderAttr),
     lazyImageCards,
     showImageCardPreview: parseBooleanProp(showImageCardPreviewAttr, true),
+    scrollBottomPadding,
     draggingGroupId: state.draggingGroupId,
     dropdownMenu: state.dropdownMenu,
   };

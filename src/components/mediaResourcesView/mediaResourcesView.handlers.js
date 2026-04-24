@@ -401,6 +401,17 @@ export const handleBackClick = (deps) => {
   );
 };
 
+export const handleMenuClick = (deps) => {
+  const { dispatchEvent } = deps;
+
+  dispatchEvent(
+    new CustomEvent("menu-click", {
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 export const handleDragEnter = (deps, payload) => {
   const { store, render, props } = deps;
   if (props.canUpload === false) {

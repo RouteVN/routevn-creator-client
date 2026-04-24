@@ -150,6 +150,7 @@ const createRouteTransitionRunner = (deps) => {
       !!ensuredProjectId &&
       (!needsRepository || ensuredProjectId !== currentProjectId);
     store.setCurrentRoute({ route: canonicalPath });
+    store.closeMobileSheet();
     store.setRepositoryLoading({
       isLoading: needsRepository && !isAlreadyEnsured,
     });
@@ -276,11 +277,12 @@ const targetPathByKey = {
 
 export const handleBeforeMount = (deps) => {
   const cleanupSubscriptions = mountSubscriptions(deps);
-  const { appService } = deps;
+  const { appService, store, subject, uiConfig } = deps;
   const currentPath = appService.getPath();
   const initialPath = currentPath === "/" ? "/projects" : currentPath;
 
-  deps.subject.dispatch("app.route.request", {
+  store.setUiConfig({ uiConfig });
+  subject.dispatch("app.route.request", {
     path: initialPath,
     payload: appService.getPayload(),
     shouldUpdateHistory: currentPath === "/",
@@ -332,6 +334,28 @@ export const handleHelpFloatingButtonClick = (deps) => {
   const currentRoutePattern = store.selectCurrentRoutePattern();
 
   appService.openUrl(getRoutevnCreatorDocsUrl(currentRoutePattern));
+};
+
+export const handleMobileTabClick = (deps, payload = {}) => {
+  const { store, render } = deps;
+  const tabId = payload._event.currentTarget.dataset.tabId;
+
+  if (
+    tabId === "assets" ||
+    tabId === "scene-map" ||
+    tabId === "release" ||
+    tabId === "settings"
+  ) {
+    store.openMobileSheet({ variant: tabId });
+    render();
+  }
+};
+
+export const handleMobileSheetClose = (deps) => {
+  const { store, render } = deps;
+
+  store.closeMobileSheet();
+  render();
 };
 
 const subscriptions = (deps) => {
