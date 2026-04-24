@@ -14,6 +14,7 @@ export const createLayoutEditorRepositoryStoreData = ({
 } = {}) => {
   const {
     images,
+    sounds,
     spritesheets,
     particles,
     layouts,
@@ -37,6 +38,7 @@ export const createLayoutEditorRepositoryStoreData = ({
     persistedPreviewData: layout?.preview ?? {},
     layoutData: layout?.elements || { items: {}, tree: [] },
     images: images || { items: {}, tree: [] },
+    soundsData: sounds || { items: {}, tree: [] },
     spritesheetsData: spritesheets || { items: {}, tree: [] },
     particlesData: particles || { items: {}, tree: [] },
     charactersData: characters || { items: {}, tree: [] },

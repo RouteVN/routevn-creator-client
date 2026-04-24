@@ -433,16 +433,6 @@ export const selectViewData = ({ state }) => {
     },
   ];
 
-  if (selectedAnimationMode !== "none") {
-    formFields.push({
-      name: "playbackContinuity",
-      label: "Playback Continuity",
-      type: "segmented-control",
-      clearable: false,
-      options: PLAYBACK_CONTINUITY_OPTIONS,
-    });
-  }
-
   if (selectedAnimationMode === "update") {
     formFields.push({
       name: "updateAnimation",
@@ -460,6 +450,16 @@ export const selectViewData = ({ state }) => {
       clearable: false,
       placeholder: "Select transition animation",
       options: transitionAnimationOptions,
+    });
+  }
+
+  if (selectedAnimationMode !== "none") {
+    formFields.push({
+      name: "playbackContinuity",
+      label: "Playback Continuity",
+      type: "segmented-control",
+      clearable: false,
+      options: PLAYBACK_CONTINUITY_OPTIONS,
     });
   }
 

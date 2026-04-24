@@ -80,6 +80,19 @@ refs:
     eventListeners:
       close:
         handler: handleCloudCreateDialogClose
+  createProjectDialog:
+    eventListeners:
+      close:
+        handler: handleCreateDialogClose
+  projectCreateDialogBody: {}
+  createProjectCancelButton:
+    eventListeners:
+      click:
+        handler: handleCreateDialogCancel
+  createProjectSubmitButton:
+    eventListeners:
+      click:
+        handler: handleCreateDialogSubmit
   addMemberDialog:
     eventListeners:
       close:
@@ -175,6 +188,12 @@ template:
           - rtgl-view d=h g=sm w=f ah=e:
               - rtgl-button#deleteCancelButton v=se: Cancel
               - rtgl-button#deleteConfirmButton v=pr: ${deleteDialogConfirmLabel}
+  - rtgl-dialog#createProjectDialog ?open=${createDialog.isOpen} s=md:
+      - rtgl-view slot=content w=f p=lg g=lg:
+          - rvn-project-create-dialog#projectCreateDialogBody key=${createDialog.formKey} :platform=${platform} :defaultValues=${createDialog.defaultValues}: null
+          - rtgl-view d=h g=sm w=f ah=e:
+              - rtgl-button#createProjectCancelButton v=se: Cancel
+              - rtgl-button#createProjectSubmitButton data-action-id=submit v=pr: Submit
   - rtgl-dialog#cloudCreateProjectDialog ?open=${cloudCreateDialog.isOpen} s=md:
       - rtgl-view slot=content w=f p=lg:
           - rtgl-form#cloudCreateForm key=${cloudCreateDialog.formKey} :form=${cloudCreateForm} :defaultValues=${cloudCreateDialog.defaultValues} w=f: null
