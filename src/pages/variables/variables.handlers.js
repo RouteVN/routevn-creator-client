@@ -3,6 +3,13 @@ import { createVariablesFileExplorerHandlers } from "../../internal/ui/fileExplo
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
+import {
+  closeMobileResourceFileExplorerAfterSelection,
+  handleMobileResourceDetailSheetClose,
+  handleMobileResourceFileExplorerClose,
+  handleMobileResourceFileExplorerOpen,
+  syncMobileResourcePageUiConfig,
+} from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { tap } from "rxjs";
 
 const EMPTY_TREE = { tree: [], items: {} };
@@ -38,6 +45,7 @@ const syncVariablesData = ({ store, repositoryState } = {}) => {
 
 export const handleBeforeMount = (deps) => {
   const { projectService, store, render } = deps;
+  syncMobileResourcePageUiConfig(deps);
   const subscription = createProjectStateStream({ projectService })
     .pipe(
       tap(({ repositoryState }) => {
@@ -110,6 +118,9 @@ export {
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleMobileResourceFileExplorerOpen as handleMobileFileExplorerOpen,
+  handleMobileResourceFileExplorerClose as handleMobileFileExplorerClose,
+  handleMobileResourceDetailSheetClose as handleMobileDetailSheetClose,
 };
 
 export const handleDataChanged = refreshVariablesData;
@@ -135,6 +146,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   }
 
   store.setSelectedItemId({ itemId });
+  closeMobileResourceFileExplorerAfterSelection(deps);
   render();
   focusFileExplorerKeyboardScope(deps);
 };
@@ -165,7 +177,7 @@ export const handleVariableItemClick = (deps, payload) => {
   }
 
   const { fileexplorer } = refs;
-  fileexplorer.selectItem({ itemId });
+  fileexplorer?.selectItem?.({ itemId });
   store.setSelectedItemId({ itemId });
   render();
 };

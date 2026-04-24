@@ -1,0 +1,10 @@
+refs:
+  overlay:
+    eventListeners:
+      click:
+        handler: handleOverlayClick
+template:
+  - $if open:
+      - 'rtgl-view#overlay pos=fix edge=f bgc=bg style="z-index: ${overlayZ}; background: rgba(15, 23, 42, 0.42);"': null
+      - 'rtgl-view pos=fix bgc=bg style="left: 0; right: 0; bottom: 0; height: ${height}; overflow: hidden; border-top-left-radius: 18px; border-top-right-radius: 18px; box-shadow: 0 -16px 40px rgba(15, 23, 42, 0.22); z-index: ${sheetZ};"':
+          - 'slot name=content': null

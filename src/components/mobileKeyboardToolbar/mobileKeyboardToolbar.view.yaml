@@ -1,0 +1,15 @@
+refs:
+  toolbarItem*:
+    eventListeners:
+      pointerdown:
+        handler: handleToolbarItemPointerDown
+      click:
+        handler: handleToolbarItemClick
+template:
+  - $if isVisible:
+      - 'rtgl-view pos=fix w=100vw h=48 bgc=bg bw=xs bc=bo style="left: 0; bottom: ${bottomStyle}; z-index: 1450; box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.12);"':
+          - rtgl-view w=f h=f d=h av=c ah=c g=lg:
+              - $for item, i in toolbarItems:
+                  - rtgl-view#toolbarItem${i} data-action-id=${item.id} w=42 h=42 br=md av=c ah=c bgc=mu h-bgc=ac cur=pointer:
+                      - 'rtgl-view style="${item.iconStyle}"':
+                          - rtgl-svg svg=${item.icon} wh=20 c=mu-fg: null

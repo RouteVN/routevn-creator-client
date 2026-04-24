@@ -159,21 +159,27 @@ export const selectViewData = ({ state, props, props: attrs }) => {
   const baseWidth = props.maxWidth ?? 400;
   const baseMediaWidth = 225;
   const baseMediaHeight = 150;
-  const imageHeight = Math.round(baseHeight * state.zoomLevel);
-  const maxWidth = Math.round(baseWidth * state.zoomLevel);
-  const mediaWidth = Math.round(baseMediaWidth * state.zoomLevel);
-  const mediaHeight = Math.round(baseMediaHeight * state.zoomLevel);
   const showZoomControlsAttr =
     attrs.showZoomControls ?? attrs["show-zoom-controls"];
   const showSearchAttr = attrs.showSearch ?? attrs["show-search"];
   const showBackButtonAttr = attrs.showBackButton ?? attrs["show-back-button"];
   const showMenuButtonAttr = attrs.showMenuButton ?? attrs["show-menu-button"];
+  const mobileLayoutAttr = attrs.mobileLayout ?? attrs["mobile-layout"];
   const canUploadAttr = attrs.canUpload ?? attrs["can-upload"];
   const progressiveRenderAttr =
     attrs.progressiveRender ?? attrs["progressive-render"];
   const lazyImageCardsAttr = attrs.lazyImageCards ?? attrs["lazy-image-cards"];
+  const fullWidthImageCardsAttr =
+    attrs.fullWidthImageCards ?? attrs["full-width-image-cards"];
   const showImageCardPreviewAttr =
     attrs.showImageCardPreview ?? attrs["show-image-card-preview"];
+  const fullWidthImageCards = parseBooleanProp(fullWidthImageCardsAttr);
+  const mobileLayout = parseBooleanProp(mobileLayoutAttr);
+  const effectiveZoomLevel = mobileLayout ? 1 : state.zoomLevel;
+  const imageHeight = Math.round(baseHeight * effectiveZoomLevel);
+  const maxWidth = Math.round(baseWidth * effectiveZoomLevel);
+  const mediaWidth = Math.round(baseMediaWidth * effectiveZoomLevel);
+  const mediaHeight = Math.round(baseMediaHeight * effectiveZoomLevel);
   const scrollBottomPadding =
     props.scrollBottomPadding ?? props["scroll-bottom-padding"] ?? "0px";
   const hasActiveTagFilter = (props.selectedTagFilterValues?.length ?? 0) > 0;
@@ -218,11 +224,27 @@ export const selectViewData = ({ state, props, props: attrs }) => {
             remainingEagerImageCardCount - 1,
           );
         }
+        const useFullWidthCard =
+          mobileLayout || (fullWidthImageCards && item.cardKind === "image");
 
         return {
           ...item,
           domItemId: isInteractive ? item.id : "",
           cursor: isInteractive ? "pointer" : "default",
+          itemContainerStyle: useFullWidthCard
+            ? "width: 100%; box-sizing: border-box;"
+            : "",
+          imageCardWidth:
+            useFullWidthCard && item.cardKind === "image" ? "f" : maxWidth,
+          imageCardStyle:
+            useFullWidthCard && item.cardKind === "image"
+              ? "max-width: 100%; box-sizing: border-box;"
+              : "max-width: 100%;",
+          mediaCardWidth: useFullWidthCard ? "f" : mediaWidth,
+          mediaTextWidth: useFullWidthCard ? "f" : mediaWidth,
+          fontPreviewWidth: useFullWidthCard ? 320 : mediaWidth,
+          useFullWidthImageCard: useFullWidthCard && item.cardKind === "image",
+          previewAspectRatio: item.previewAspectRatio ?? "16 / 9",
           itemBorderColor: isSelected ? "pr" : defaultBorderColor,
           itemHoverBorderColor: isSelected
             ? "pr"
@@ -273,10 +295,12 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     mediaWidth,
     mediaHeight,
     zoomLevel: state.zoomLevel,
-    showZoomControls: parseBooleanProp(showZoomControlsAttr),
+    showZoomControls: !mobileLayout && parseBooleanProp(showZoomControlsAttr),
     showSearch: parseBooleanProp(showSearchAttr, true),
     showBackButton: parseBooleanProp(showBackButtonAttr),
     showMenuButton: parseBooleanProp(showMenuButtonAttr),
+    fullWidthImageCards,
+    mobileLayout,
     canUpload: parseBooleanProp(canUploadAttr, true),
     progressiveRender: parseBooleanProp(progressiveRenderAttr),
     lazyImageCards,

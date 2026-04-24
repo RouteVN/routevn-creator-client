@@ -39,6 +39,7 @@ export const createInitialState = () => ({
   flatItems: [],
   appVersion: "",
   platform: "tauri",
+  isTouchMode: false,
 });
 
 export const selectSocial = (_, payload) => {
@@ -50,6 +51,10 @@ export const selectViewData = ({ state }) => {
   return {
     ...state,
     social,
+    showExplorerPanel: !state.isTouchMode,
+    contentPadding: state.isTouchMode ? "0" : "lg",
+    contentBodyPadding: state.isTouchMode ? "lg" : "0",
+    contentBodyMarginTop: state.isTouchMode ? "0" : "lg",
   };
 };
 
@@ -63,4 +68,9 @@ export const setAppVersion = ({ state }, { version } = {}) => {
 
 export const setPlatform = ({ state }, { platform } = {}) => {
   state.platform = platform;
+};
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  state.isTouchMode =
+    uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
 };

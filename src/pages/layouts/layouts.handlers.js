@@ -58,7 +58,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   }
 
   store.setSelectedItemId({ itemId });
-  refs.fileExplorer.selectItem({ itemId });
+  refs.fileExplorer?.selectItem?.({ itemId });
   store.openEditDialog({
     itemId,
     defaultValues: {
@@ -92,6 +92,9 @@ const {
   handleFileExplorerKeyboardScopeKeyDown,
   handleItemClick: handleCatalogLayoutItemClick,
   handleSearchInput,
+  handleMobileFileExplorerOpen,
+  handleMobileFileExplorerClose,
+  handleMobileDetailSheetClose,
   openCreateTagDialogForMode,
   handleCreateTagDialogClose,
   handleTagFilterChange,
@@ -161,6 +164,9 @@ export {
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
   handleSearchInput,
+  handleMobileFileExplorerOpen,
+  handleMobileFileExplorerClose,
+  handleMobileDetailSheetClose,
   handleCreateTagDialogClose,
   handleTagFilterChange,
   handleTagFilterAddOptionClick,

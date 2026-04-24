@@ -232,6 +232,7 @@ export const createInitialState = () => ({
   sceneId: undefined,
   selectedLineId: undefined,
   isTouchMode: false,
+  mobileKeyboardVisible: false,
   sectionsGraphView: false,
   selectedSectionId: "1",
   sectionsOverviewPanel: {
@@ -300,6 +301,14 @@ export const createInitialState = () => ({
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
   state.isTouchMode =
     uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
+};
+
+export const setMobileKeyboardVisible = ({ state }, { isVisible } = {}) => {
+  state.mobileKeyboardVisible = isVisible === true;
+};
+
+export const selectMobileKeyboardVisible = ({ state }) => {
+  return state.mobileKeyboardVisible;
 };
 
 export const setSceneId = ({ state }, { sceneId } = {}) => {
@@ -820,6 +829,11 @@ export const selectViewData = ({ state }) => {
       popover: state.popover,
       selectedLineId: state.selectedLineId,
       isTouchMode: state.isTouchMode,
+      mobileKeyboardVisible: state.mobileKeyboardVisible,
+      mobileTopBarVisibility: state.mobileKeyboardVisible
+        ? "hidden"
+        : "visible",
+      mobileTopBarPointerEvents: state.mobileKeyboardVisible ? "none" : "auto",
       currentSectionName: "",
       mobileEditorBottomPadding: "0px",
       sectionsGraphView: state.sectionsGraphView,
@@ -1023,6 +1037,9 @@ export const selectViewData = ({ state }) => {
     selectedLineId: state.selectedLineId,
     selectedLine,
     isTouchMode: state.isTouchMode,
+    mobileKeyboardVisible: state.mobileKeyboardVisible,
+    mobileTopBarVisibility: state.mobileKeyboardVisible ? "hidden" : "visible",
+    mobileTopBarPointerEvents: state.mobileKeyboardVisible ? "none" : "auto",
     currentSectionName,
     mobileEditorBottomPadding: state.isTouchMode
       ? "calc(96px + env(safe-area-inset-bottom))"

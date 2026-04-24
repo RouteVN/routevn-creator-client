@@ -902,6 +902,27 @@ export const handleAddActionsButtonClick = (deps) => {
   render();
 };
 
+export const handleMobileKeyboardToolbarActionClick = (deps, payload) => {
+  if (payload._event.detail?.actionId !== "add-actions") {
+    return;
+  }
+
+  handleAddActionsButtonClick(deps);
+};
+
+export const handleMobileKeyboardToolbarKeyboardStateChange = (
+  { store, render },
+  payload,
+) => {
+  const isVisible = payload._event.detail?.isVisible === true;
+  if (store.selectMobileKeyboardVisible() === isVisible) {
+    return;
+  }
+
+  store.setMobileKeyboardVisible({ isVisible });
+  render();
+};
+
 export const handleSectionAddClick = (deps) => {
   const { store, render } = deps;
   if (isSectionsOverviewOpen(store)) {

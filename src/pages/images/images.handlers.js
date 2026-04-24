@@ -214,6 +214,18 @@ export const handleMobileFileExplorerClose = (deps) => {
   focusGroupView(deps);
 };
 
+export const handleMobileDetailSheetClose = (deps) => {
+  const { store, render } = deps;
+
+  if (!store.selectSelectedItemId()) {
+    return;
+  }
+
+  store.setSelectedItemId({ itemId: undefined });
+  render();
+  focusGroupView(deps);
+};
+
 const {
   focusKeyboardScope: focusGroupView,
   handleKeyboardScopeKeyDown: handleBaseFileExplorerKeyboardScopeKeyDown,

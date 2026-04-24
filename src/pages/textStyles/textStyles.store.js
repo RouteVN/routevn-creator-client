@@ -15,6 +15,13 @@ import {
   syncDetailTagIds,
   commitDetailTagIdsState,
 } from "../../internal/ui/resourcePages/tags.js";
+import {
+  buildMobileResourcePageViewData,
+  closeMobileResourceFileExplorerState,
+  createMobileResourcePageState,
+  openMobileResourceFileExplorerState,
+  setMobileResourcePageUiConfigState,
+} from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
 
 export const TEXT_STYLE_TAG_SCOPE_KEY = "textStyles";
@@ -122,6 +129,7 @@ export const createInitialState = () => ({
   fontsData: { tree: [], items: {} },
   selectedItemId: undefined,
   searchQuery: "",
+  ...createMobileResourcePageState(),
   ...createTagState(),
 
   // Dialog state
@@ -228,6 +236,20 @@ export const setSelectedItemId = ({ state }, { itemId } = {}) => {
 
 export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
+};
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  setMobileResourcePageUiConfigState(state, {
+    uiConfig,
+  });
+};
+
+export const openMobileFileExplorer = ({ state }, _payload = {}) => {
+  openMobileResourceFileExplorerState(state);
+};
+
+export const closeMobileFileExplorer = ({ state }, _payload = {}) => {
+  closeMobileResourceFileExplorerState(state);
 };
 
 export const setTagsData = ({ state }, { tagsData } = {}) => {
@@ -826,6 +848,11 @@ export const selectViewData = ({ state }) => {
   return {
     flatItems,
     flatGroups,
+    ...buildMobileResourcePageViewData({
+      state,
+      detailFields,
+      hiddenMobileDetailSlots: ["text-style-preview"],
+    }),
     resourceCategory: "userInterface",
     selectedResourceId: "textStyles",
     selectedItemId: state.selectedItemId,

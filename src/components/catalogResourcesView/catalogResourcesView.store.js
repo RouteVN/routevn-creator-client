@@ -83,6 +83,10 @@ const parseBooleanProp = (value, fallback = false) => {
 export const selectViewData = ({ state, props, props: attrs }) => {
   const canAddAttr = attrs.canAdd ?? attrs["can-add"];
   const showTagFilterAttr = attrs.showTagFilter ?? attrs["show-tag-filter"];
+  const showSearchAttr = attrs.showSearch ?? attrs["show-search"];
+  const showMenuButtonAttr = attrs.showMenuButton ?? attrs["show-menu-button"];
+  const mobileLayoutAttr = attrs.mobileLayout ?? attrs["mobile-layout"];
+  const mobileLayout = parseBooleanProp(mobileLayoutAttr);
   const hasActiveTagFilter = (props.selectedTagFilterValues?.length ?? 0) > 0;
 
   const groups = (props.groups ?? []).map((group) => {
@@ -97,7 +101,10 @@ export const selectViewData = ({ state, props, props: attrs }) => {
 
         return {
           ...item,
-          itemWidth: item.itemWidth ?? 225,
+          itemWidth: mobileLayout ? "f" : (item.itemWidth ?? 225),
+          layoutPreviewWidth: mobileLayout ? "f" : 225,
+          transformPreviewWidth: mobileLayout ? "f" : 193,
+          catalogTextWidth: mobileLayout ? "f" : (item.itemWidth ?? 225),
           itemBorderColor: isSelected ? "pr" : "bo",
           itemHoverBorderColor: isSelected ? "pr" : "ac",
         };
@@ -123,6 +130,8 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     tagFilterButtonBackgroundColor: hasActiveTagFilter ? "ac" : "bg",
     tagFilterButtonBorderColor: hasActiveTagFilter ? "ac" : "bo",
     tagFilterButtonIconColor: hasActiveTagFilter ? "white" : "mu-fg",
+    showSearch: parseBooleanProp(showSearchAttr, true),
+    showMenuButton: parseBooleanProp(showMenuButtonAttr),
     emptyMessage:
       props.emptyMessage ??
       (hasActiveTagFilter
@@ -130,6 +139,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
         : `No items found matching "${props.searchQuery ?? ""}"`),
     addText: props.addText ?? "Add",
     canAdd: parseBooleanProp(canAddAttr, true),
+    mobileLayout,
     dropdownMenu: state.dropdownMenu,
   };
 };

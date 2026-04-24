@@ -14,12 +14,19 @@ refs:
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f style="min-width: 0; min-height: 0;"':
-          - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
-              - rtgl-view slot="content" w=f h=f:
-                  - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
-          - 'rtgl-view w=1fg h=f p=lg d=v style="min-width: 0; min-height: 0;"':
-              - rtgl-text s=h2: About
-              - rtgl-view g=xl mt=lg h=1fg:
+          - $if showExplorerPanel:
+              - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
+                  - rtgl-view slot="content" w=f h=f:
+                      - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
+          - 'rtgl-view w=1fg h=f p=${contentPadding} d=v style="min-width: 0; min-height: 0;"':
+              - $if isTouchMode:
+                  - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
+                      - rtgl-view w=f d=h av=c g=md wrap:
+                          - rtgl-view av=c g=sm d=h w=1fg:
+                              - rtgl-text: About
+                $else:
+                  - rtgl-text s=h2: About
+              - 'rtgl-view g=xl mt=${contentBodyMarginTop} h=1fg sv p=${contentBodyPadding} style="min-height: 0;"':
                   - rtgl-view g=lg:
                       - rtgl-text s=h4: Version Information
                       - rtgl-view av=c g=sm:
@@ -29,6 +36,6 @@ template:
                               - rtgl-button#checkUpdateButton v=se: Check for Updates
                   - rtgl-view g=md:
                       - rtgl-text s=h4: Community
-                      - rtgl-view d=h  av=c g=md:
+                      - rtgl-view d=h av=c g=md wrap w=f:
                           - $for item, i in social:
                               - rtgl-button#socialButton${i} data-id="${item.id}" v=se pre=${item.svg}: ${item.label}

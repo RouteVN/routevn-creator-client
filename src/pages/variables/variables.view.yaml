@@ -19,6 +19,16 @@ refs:
         handler: handleVariableUpdated
       variable-delete:
         handler: handleVariableDelete
+      menu-click:
+        handler: handleMobileFileExplorerOpen
+  mobileFileExplorerClose:
+    eventListeners:
+      click:
+        handler: handleMobileFileExplorerClose
+  mobileDetailSheet:
+    eventListeners:
+      close:
+        handler: handleMobileDetailSheetClose
   fileExplorerKeyboardScope:
     eventListeners:
       click:
@@ -38,22 +48,43 @@ refs:
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
-          - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
-              - rtgl-view slot="content" w=f h=f:
-                  - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
-                  - rvn-base-file-explorer#fileexplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
-          - 'rtgl-view d=v w=1fg h=f pl=sm style="min-width: 0; min-height: 0;"':
+          - $if showExplorerPanel:
+              - rvn-resizable-panel#fileExplorer w=300 min-w=200 max-w=500 resize-side="right":
+                  - rtgl-view slot="content" w=f h=f:
+                      - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
+                      - rvn-base-file-explorer#fileexplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
+          - 'rtgl-view d=v w=1fg h=f pl=${contentLeftPadding} style="min-width: 0; min-height: 0;"':
               - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
-                  - rvn-group-variables-view#groupview w=f h=1fg navTitle=${title} :flatGroups=${flatGroups} :selectedItemId=${selectedItemId}: null
-          - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
-              - rtgl-view wh=f slot="content":
-                  - 'div#fileExplorerDetailKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
-                      - $if selectedItemId:
-                          - rtgl-view d=v w=f h=f:
-                              - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
-                                  - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
-                                  - rtgl-svg svg=edit wh=16: null
-                              - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}: null
-                        $else:
-                          - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                              - rtgl-text s=md c=mu-fg: No selection
+                  - $if showMobileTopTabs:
+                      - rvn-group-variables-view#groupview w=f h=1fg navTitle=${title} show-menu-button show-search=false :mobileLayout=${mobileLayout} :flatGroups=${flatGroups} :selectedItemId=${selectedItemId}: null
+                    $else:
+                      - rvn-group-variables-view#groupview w=f h=1fg navTitle=${title} :flatGroups=${flatGroups} :selectedItemId=${selectedItemId}: null
+          - $if showDetailPanel:
+              - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
+                  - rtgl-view wh=f slot="content":
+                      - 'div#fileExplorerDetailKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
+                          - $if selectedItemId:
+                              - rtgl-view d=v w=f h=f:
+                                  - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+                                      - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                                      - rtgl-svg svg=edit wh=16: null
+                                  - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}: null
+                            $else:
+                              - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                                  - rtgl-text s=md c=mu-fg: No selection
+  - $if showMobileFileExplorer:
+      - 'rtgl-view pos=fix edge=f z=1250 bgc=bg d=v style="min-width: 0; min-height: 0;"':
+          - rtgl-view h=56 w=f d=h av=c ph=md bgc=bg bwb=xs g=md:
+              - rtgl-text w=1fg s=md: Files
+              - rtgl-view#mobileFileExplorerClose w=40 h=40 ah=c av=c cur=pointer:
+                  - rtgl-svg svg=x wh=20 c=mu-fg: null
+          - 'rtgl-view w=f h=1fg style="min-height: 0;"':
+              - rvn-base-file-explorer#fileexplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
+  - $if showMobileDetailSheet:
+      - rvn-mobile-sheet#mobileDetailSheet ?open=${showMobileDetailSheet}:
+          - rtgl-view slot=content d=v w=f h=f:
+              - rtgl-view#detailHeader h=56 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+                  - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                  - rtgl-svg svg=edit wh=16: null
+              - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
+                  - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}: null

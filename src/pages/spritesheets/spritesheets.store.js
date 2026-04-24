@@ -11,6 +11,13 @@ import {
   DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD,
   shouldStartCollapsedFileExplorer,
 } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import {
+  buildMobileResourcePageViewData,
+  closeMobileResourceFileExplorerState,
+  createMobileResourcePageState,
+  openMobileResourceFileExplorerState,
+  setMobileResourcePageUiConfigState,
+} from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
 const EMPTY_TREE = { tree: [], items: {} };
 export const SPRITESHEET_TAG_SCOPE_KEY = "spritesheets";
@@ -289,6 +296,7 @@ export const createInitialState = () => ({
   isDetailTagSelectOpen: false,
   selectedItemId: undefined,
   searchQuery: "",
+  ...createMobileResourcePageState(),
   detailSelectedClipName: undefined,
   isDialogOpen: false,
   isCreateTagDialogOpen: false,
@@ -337,6 +345,20 @@ export const setSelectedItemId = ({ state }, { itemId } = {}) => {
 
 export const setSearchQuery = ({ state }, { value } = {}) => {
   state.searchQuery = value ?? "";
+};
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  setMobileResourcePageUiConfigState(state, {
+    uiConfig,
+  });
+};
+
+export const openMobileFileExplorer = ({ state }, _payload = {}) => {
+  openMobileResourceFileExplorerState(state);
+};
+
+export const closeMobileFileExplorer = ({ state }, _payload = {}) => {
+  closeMobileResourceFileExplorerState(state);
 };
 
 export const setTagsData = ({ state }, { tagsData } = {}) => {
@@ -591,6 +613,7 @@ export const selectViewData = ({ state }) => {
   );
   const dialogAtlasFieldValue = state.dialogSourceFiles?.atlasFile?.name ?? "";
   const isDialogPreviewMode = state.dialogMode === "preview";
+  const detailFields = buildDetailFields(selectedItem);
   return {
     resourceCategory: "animatedAssets",
     selectedResourceId: "spritesheets",
@@ -613,7 +636,15 @@ export const selectViewData = ({ state }) => {
     detailTagAddOption: {
       label: "Add tag",
     },
-    detailFields: buildDetailFields(selectedItem),
+    detailFields,
+    ...buildMobileResourcePageViewData({
+      state,
+      detailFields,
+      hiddenMobileDetailSlots: [
+        "spritesheet-preview",
+        "spritesheet-animations",
+      ],
+    }),
     searchQuery: state.searchQuery,
     searchPlaceholder: "Search...",
     folderContextMenuItems,

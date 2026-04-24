@@ -1,6 +1,7 @@
 export const handleBeforeMount = (deps) => {
-  const { appService, store } = deps;
+  const { appService, store, uiConfig } = deps;
 
+  store.setUiConfig({ uiConfig });
   const appVersion = appService.getAppVersion();
   if (appVersion) {
     store.setAppVersion({ version: appVersion });

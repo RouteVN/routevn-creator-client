@@ -23,6 +23,15 @@ propsSchema:
     showTagFilter:
       type: boolean
       description: Whether to show the header tag filter
+    showSearch:
+      type: boolean
+      description: Whether to show the header search input
+    showMenuButton:
+      type: boolean
+      description: Whether to show the mobile menu button
+    mobileLayout:
+      type: boolean
+      description: Whether to use the mobile layout
     readonly:
       type: boolean
       description: Whether the view should disable add/edit/delete affordances

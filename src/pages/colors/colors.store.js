@@ -153,6 +153,9 @@ const {
   createInitialState: createCatalogInitialState,
   setItems,
   setSelectedItemId,
+  setUiConfig,
+  openMobileFileExplorer,
+  closeMobileFileExplorer,
   selectSelectedItem,
   selectItemById,
   selectSelectedItemId,
@@ -175,6 +178,7 @@ const {
   matchesSearch,
   buildDetailFields,
   buildCatalogItem,
+  hiddenMobileDetailSlots: ["color-preview"],
   tagging: {
     tagFilterPlaceholder: "Filter tags",
   },
@@ -219,6 +223,9 @@ export const createInitialState = () => ({
 export {
   setItems,
   setSelectedItemId,
+  setUiConfig,
+  openMobileFileExplorer,
+  closeMobileFileExplorer,
   selectSelectedItem,
   selectSelectedItemId,
   setSearchQuery,

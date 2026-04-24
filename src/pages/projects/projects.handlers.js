@@ -91,6 +91,11 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
+export const handleBeforeMount = (deps) => {
+  const { store, uiConfig } = deps;
+  store.setUiConfig({ uiConfig });
+};
+
 const getProjectIdFromEvent = (event) => {
   return event?.currentTarget?.dataset?.projectId ?? "";
 };
@@ -335,6 +340,40 @@ export const handleOpenButtonClick = async (deps) => {
         "Failed to import project. Please select a valid project folder.",
     });
   }
+};
+
+export const handleMobileCreateMenuButtonClick = (deps, payload) => {
+  const { store, render } = deps;
+  const rect = payload._event.currentTarget.getBoundingClientRect();
+
+  store.openMobileActionMenu({
+    x: rect.right,
+    y: rect.bottom,
+  });
+  render();
+};
+
+export const handleMobileActionMenuClose = (deps) => {
+  const { store, render } = deps;
+  if (!store.selectIsMobileActionMenuOpen()) {
+    return;
+  }
+  store.closeMobileActionMenu();
+  render();
+};
+
+export const handleMobileActionMenuClickItem = (deps, payload) => {
+  const { store, render } = deps;
+  const detail = payload._event.detail;
+  const item = detail.item || detail;
+
+  store.closeMobileActionMenu();
+
+  if (item.value === "create-project") {
+    store.openCreateDialog();
+  }
+
+  render();
 };
 
 export const handleLoginButtonClick = (deps) => {

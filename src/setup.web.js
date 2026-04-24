@@ -38,8 +38,8 @@ const uiVersions = {
   },
 };
 
-// Default web UI stays normal while touch/mobile remains available behind config.
-const activeUiVersion = "normal";
+// Hardcoded while the touch/mobile UI is being iterated on.
+const activeUiVersion = "touch";
 const uiConfig = uiVersions[activeUiVersion];
 document.documentElement.dataset.rvnUiVersion = uiConfig.id;
 document.documentElement.dataset.rvnInputMode = uiConfig.inputMode;

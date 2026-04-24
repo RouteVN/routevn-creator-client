@@ -23,6 +23,10 @@ refs:
     eventListeners:
       click:
         handler: handleTagFilterApplyClick
+  menuButton:
+    eventListeners:
+      click:
+        handler: handleMenuClick
   contextMenu:
     eventListeners:
       close:
@@ -50,13 +54,17 @@ refs:
       click:
         handler: handleSpritesButtonClick
 template:
-  - 'rtgl-view w=f h=100vh g=sm style="min-width: 0;"':
+  - 'rtgl-view w=f h=f g=sm style="min-width: 0; min-height: 0;"':
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
           - rtgl-view w=f d=h av=c g=md wrap:
               - rtgl-view av=c g=sm d=h w=1fg:
+                  - $if showMenuButton:
+                      - rtgl-view#menuButton w=36 h=36 ah=c av=c cur=pointer:
+                          - rtgl-svg svg=hamburger wh=22 c=mu-fg: null
                   - $if navTitle:
                       - rtgl-text: ${navTitle}
-              - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
+              - $if showSearch:
+                  - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
               - $if showTagFilter:
                   - rtgl-view#tagFilterButton w=36 h=36 bw=xs br=md ah=c av=c cur=pointer bgc=${tagFilterButtonBackgroundColor} bc=${tagFilterButtonBorderColor}:
                       - rtgl-svg svg=filter wh=16 c=${tagFilterButtonIconColor}: null

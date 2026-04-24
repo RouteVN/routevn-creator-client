@@ -189,6 +189,9 @@ const {
   handleSearchInput,
   handleItemClick: handleSoundItemClick,
   handleItemEdit: handleSoundItemEdit,
+  handleMobileFileExplorerOpen,
+  handleMobileFileExplorerClose,
+  handleMobileDetailSheetClose,
   handleCreateTagDialogClose,
   handleTagFilterChange,
   handleTagFilterAddOptionClick,
@@ -269,6 +272,9 @@ export {
   handleSearchInput,
   handleSoundItemClick,
   handleSoundItemEdit,
+  handleMobileFileExplorerOpen,
+  handleMobileFileExplorerClose,
+  handleMobileDetailSheetClose,
   handleCreateTagDialogClose,
   handleTagFilterChange,
   handleTagFilterAddOptionClick,
@@ -293,7 +299,7 @@ const openSoundPreviewById = ({ deps, itemId, syncExplorer = false } = {}) => {
   store.setSelectedItemId({ itemId });
 
   if (syncExplorer) {
-    refs.fileExplorer.selectItem({ itemId });
+    refs.fileExplorer?.selectItem?.({ itemId });
   }
 
   store.openAudioPlayer({

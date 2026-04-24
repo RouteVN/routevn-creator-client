@@ -215,6 +215,9 @@ const {
   handleSearchInput,
   handleItemClick: handleVideoItemClick,
   handleItemEdit: handleVideoItemEdit,
+  handleMobileFileExplorerOpen,
+  handleMobileFileExplorerClose,
+  handleMobileDetailSheetClose,
   handleCreateTagDialogClose,
   handleTagFilterChange,
   handleTagFilterAddOptionClick,
@@ -268,6 +271,9 @@ export {
   handleSearchInput,
   handleVideoItemClick,
   handleVideoItemEdit,
+  handleMobileFileExplorerOpen,
+  handleMobileFileExplorerClose,
+  handleMobileDetailSheetClose,
   handleCreateTagDialogClose,
   handleTagFilterChange,
   handleTagFilterAddOptionClick,
@@ -295,7 +301,7 @@ export const handleVideoItemDoubleClick = async (deps, payload) => {
   }
 
   store.setSelectedItemId({ itemId });
-  refs.fileExplorer.selectItem({ itemId });
+  refs.fileExplorer?.selectItem?.({ itemId });
   await openVideoPreviewById({ deps, itemId });
 };
 

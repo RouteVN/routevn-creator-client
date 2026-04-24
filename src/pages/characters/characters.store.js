@@ -1,6 +1,13 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import {
+  buildMobileResourcePageViewData,
+  closeMobileResourceFileExplorerState,
+  createMobileResourcePageState,
+  openMobileResourceFileExplorerState,
+  setMobileResourcePageUiConfigState,
+} from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import {
   buildTagFilterOptions,
   createEmptyTagCollection,
   matchesTagAwareSearch,
@@ -156,6 +163,7 @@ export const createInitialState = () => ({
   isDetailTagSelectOpen: false,
   selectedItemId: null,
   searchQuery: "",
+  ...createMobileResourcePageState(),
   isDialogOpen: false,
   isCreateTagDialogOpen: false,
   createTagDefaultValues: {
@@ -288,6 +296,20 @@ export const setSelectedItemId = ({ state }, { itemId } = {}) => {
 
 export const setSearchQuery = ({ state }, { query } = {}) => {
   state.searchQuery = query;
+};
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  setMobileResourcePageUiConfigState(state, {
+    uiConfig,
+  });
+};
+
+export const openMobileFileExplorer = ({ state }, _payload = {}) => {
+  openMobileResourceFileExplorerState(state);
+};
+
+export const closeMobileFileExplorer = ({ state }, _payload = {}) => {
+  closeMobileResourceFileExplorerState(state);
 };
 
 export const setTargetGroupId = ({ state }, { groupId } = {}) => {
@@ -708,6 +730,11 @@ export const selectViewData = ({ state }) => {
   return {
     flatItems,
     flatGroups,
+    ...buildMobileResourcePageViewData({
+      state,
+      detailFields,
+      hiddenMobileDetailSlots: ["avatar", "character-sprite-groups"],
+    }),
     addText: "Add",
     resourceCategory: "assets",
     selectedResourceId: "characters",

@@ -82,6 +82,10 @@ const parseBooleanProp = (value, fallback = false) => {
 
 export const selectViewData = ({ state, props, props: attrs }) => {
   const showTagFilterAttr = attrs.showTagFilter ?? attrs["show-tag-filter"];
+  const showSearchAttr = attrs.showSearch ?? attrs["show-search"];
+  const showMenuButtonAttr = attrs.showMenuButton ?? attrs["show-menu-button"];
+  const mobileLayoutAttr = attrs.mobileLayout ?? attrs["mobile-layout"];
+  const mobileLayout = parseBooleanProp(mobileLayoutAttr);
   const hasActiveTagFilter = (props.selectedTagFilterValues?.length ?? 0) > 0;
   const groups = (props.groups ?? []).map((group) => {
     const isCollapsed = state.collapsedIds.includes(group.id);
@@ -120,12 +124,15 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     tagFilterButtonBackgroundColor: hasActiveTagFilter ? "ac" : "bg",
     tagFilterButtonBorderColor: hasActiveTagFilter ? "ac" : "bo",
     tagFilterButtonIconColor: hasActiveTagFilter ? "white" : "mu-fg",
+    showSearch: parseBooleanProp(showSearchAttr, true),
+    showMenuButton: parseBooleanProp(showMenuButtonAttr),
     emptyMessage:
       props.emptyMessage ??
       (hasActiveTagFilter
         ? "No characters found for the selected tags"
         : `No characters found matching "${props.searchQuery ?? ""}"`),
     addText: props.addText ?? "Add Character",
+    mobileLayout,
     dropdownMenu: state.dropdownMenu,
   };
 };
