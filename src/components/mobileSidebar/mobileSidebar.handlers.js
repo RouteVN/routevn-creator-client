@@ -21,11 +21,11 @@ export const handleItemClick = (deps, payload = {}) => {
     return;
   }
 
-  const currentPayload = appService.getPayload();
-  const nextPayload = {
-    ...currentPayload,
-    ...(item.payload ?? {}),
-  };
+  const nextPayload = {};
+  Object.assign(nextPayload, appService.getPayload());
+  if (item.payload) {
+    Object.assign(nextPayload, item.payload);
+  }
   for (const key of item.clearPayloadKeys ?? []) {
     delete nextPayload[key];
   }
