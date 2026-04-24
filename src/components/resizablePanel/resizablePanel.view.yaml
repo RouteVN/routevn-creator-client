@@ -8,7 +8,7 @@ refs:
       mouseleave:
         handler: handleResizeHandleMouseLeave
 template:
-  - 'rtgl-view h=f w=${panelWidth} d=h pos=rel style="overflow: visible;"':
+  - 'rtgl-view h=f w=${panelWidth} d=h pos=rel style="${panelDisplayStyle}"':
       - $if resizeSide=="left":
           - 'rtgl-view#resizeHandle pos=abs d=h ah=c h=f style="cursor: col-resize; background: transparent; top: 0; bottom: 0; left: calc(var(--spacing-sm) * -1); width: calc(var(--spacing-sm) * 2); z-index: 10;"':
               - rtgl-view w=1 h=f bgc=${dividerColor}: null

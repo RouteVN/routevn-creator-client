@@ -2,6 +2,7 @@ import {
   toFlatGroups,
   toFlatItems,
 } from "../../../../internal/project/tree.js";
+import { prependRootItemsGroup } from "../rootGroups.js";
 import {
   buildTagViewData,
   closeCreateTagDialogState,
@@ -277,7 +278,11 @@ export const createMediaPageStore = ({
 
   const selectViewData = ({ state }) => {
     const flatItems = toFlatItems(state.data);
-    const rawFlatGroups = toFlatGroups(state.data);
+    const rawFlatGroups = prependRootItemsGroup({
+      data: state.data,
+      groups: toFlatGroups(state.data),
+      label: title,
+    });
     const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
     const pendingByGroupId = new Map();
     const hiddenItemIdsByGroupId = new Map();

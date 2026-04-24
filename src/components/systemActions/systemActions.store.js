@@ -9,6 +9,7 @@ import { normalizeLineActions } from "../../internal/project/engineActions.js";
 export const createInitialState = () => ({
   mode: "actions",
   actions: {},
+  isTouchMode: false,
   isActionsDialogOpen: false,
   dropdownMenu: {
     isOpen: false,
@@ -24,6 +25,11 @@ export const createInitialState = () => ({
   },
   repositoryState: {}, // Add this - default to empty object
 });
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  state.isTouchMode =
+    uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
+};
 
 const getHiddenModes = (attrs = {}) => {
   return Array.isArray(attrs.hiddenModes)
@@ -111,6 +117,8 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     selectedLine: props.selectedLine,
     actionsType: attrs.actionType,
     showSelected: !!attrs.showSelected,
+    actionsDialogWidth: state.isTouchMode ? "100vw" : "800",
+    actionsDialogHeight: state.isTouchMode ? "100vh" : "80vh",
     hiddenModes,
     isRuntimeActionMode: isRuntimeActionMode(state.mode),
   };

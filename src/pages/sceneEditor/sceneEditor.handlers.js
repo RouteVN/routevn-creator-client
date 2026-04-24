@@ -411,8 +411,9 @@ const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { projectService, appService, store } = deps;
+  const { projectService, appService, store, uiConfig } = deps;
   store.setScenePageLoading({ isLoading: true });
+  store.setUiConfig({ uiConfig });
   const showLineNumbers =
     appService.getUserConfig(SHOW_LINE_NUMBERS_CONFIG_KEY) ?? true;
   const isMuted = appService.getUserConfig(IS_MUTED_CONFIG_KEY) ?? false;

@@ -99,9 +99,9 @@ const {
   openEditDialogWithValues,
   openCreateTagDialogForMode,
   refreshData: handleDataChanged,
-  handleBeforeMount,
+  handleBeforeMount: handleMediaBeforeMount,
   handleAfterMount,
-  handleFileExplorerSelectionChanged,
+  handleFileExplorerSelectionChanged: handleBaseFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
@@ -149,8 +149,24 @@ const {
   },
 });
 
+const handleFileExplorerSelectionChanged = (deps, payload) => {
+  handleBaseFileExplorerSelectionChanged(deps, payload);
+
+  const { itemId, isFolder } = payload._event.detail;
+  const state = deps.store.getState();
+  if (
+    state.isTouchMode &&
+    state.isMobileFileExplorerOpen &&
+    itemId &&
+    !isFolder
+  ) {
+    deps.store.closeMobileFileExplorer();
+    deps.render();
+    focusGroupView(deps);
+  }
+};
+
 export {
-  handleBeforeMount,
   handleAfterMount,
   handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
@@ -168,6 +184,36 @@ export {
   handleDetailTagValueChange,
   handleCreateTagFormAction,
 };
+
+export const handleBeforeMount = (deps) => {
+  const { store, uiConfig } = deps;
+
+  store.setUiConfig({ uiConfig });
+  return handleMediaBeforeMount(deps);
+};
+
+export const handleMobileFileExplorerOpen = (deps) => {
+  const { store, render, refs } = deps;
+  const selectedItemId = store.selectSelectedItemId();
+
+  store.openMobileFileExplorer();
+  render();
+
+  if (selectedItemId) {
+    requestAnimationFrame(() => {
+      refs.fileExplorer?.selectItem?.({ itemId: selectedItemId });
+    });
+  }
+};
+
+export const handleMobileFileExplorerClose = (deps) => {
+  const { store, render } = deps;
+
+  store.closeMobileFileExplorer();
+  render();
+  focusGroupView(deps);
+};
+
 const {
   focusKeyboardScope: focusGroupView,
   handleKeyboardScopeKeyDown: handleBaseFileExplorerKeyboardScopeKeyDown,

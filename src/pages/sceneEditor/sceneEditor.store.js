@@ -231,6 +231,7 @@ const buildProjectDataSourceState = (state) => {
 export const createInitialState = () => ({
   sceneId: undefined,
   selectedLineId: undefined,
+  isTouchMode: false,
   sectionsGraphView: false,
   selectedSectionId: "1",
   sectionsOverviewPanel: {
@@ -295,6 +296,11 @@ export const createInitialState = () => ({
     content: "",
   },
 });
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  state.isTouchMode =
+    uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
+};
 
 export const setSceneId = ({ state }, { sceneId } = {}) => {
   state.sceneId = sceneId;
@@ -813,6 +819,9 @@ export const selectViewData = ({ state }) => {
       dropdownMenu: state.dropdownMenu,
       popover: state.popover,
       selectedLineId: state.selectedLineId,
+      isTouchMode: state.isTouchMode,
+      currentSectionName: "",
+      mobileEditorBottomPadding: "0px",
       sectionsGraphView: state.sectionsGraphView,
       layouts: [],
       allCharacters: [],
@@ -908,6 +917,7 @@ export const selectViewData = ({ state }) => {
   const currentSection = scene.sections.find(
     (section) => section.id === state.selectedSectionId,
   );
+  const currentSectionName = currentSection?.name ?? "";
 
   const selectedLine = currentSection?.lines?.find(
     (line) => line.id === state.selectedLineId,
@@ -1012,6 +1022,11 @@ export const selectViewData = ({ state }) => {
     form: sectionForm,
     selectedLineId: state.selectedLineId,
     selectedLine,
+    isTouchMode: state.isTouchMode,
+    currentSectionName,
+    mobileEditorBottomPadding: state.isTouchMode
+      ? "calc(96px + env(safe-area-inset-bottom))"
+      : "0px",
     selectedLineActions: toPlainObject(selectedLine?.actions),
     sectionsGraphView: state.sectionsGraphView,
     layouts: Object.entries(selectLayouts({ state })).map(([id, item]) => ({

@@ -9,7 +9,8 @@ const getPanelWidthConfigKey = (panelType = "file-explorer") => {
 };
 
 export const handleBeforeMount = (deps) => {
-  const { store, props: attrs, appService } = deps;
+  const { store, props: attrs, appService, uiConfig } = deps;
+  store.setUiConfig({ uiConfig });
 
   const panelType = attrs.panelType || "file-explorer";
 
