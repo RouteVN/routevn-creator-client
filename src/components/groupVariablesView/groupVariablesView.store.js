@@ -245,14 +245,11 @@ const parseBooleanProp = (value, fallback = false) => {
 };
 
 export const selectViewData = ({ state, props }) => {
-  const showSearchAttr = props.showSearch ?? props["show-search"];
-  const showMenuButtonAttr = props.showMenuButton ?? props["show-menu-button"];
-  const mobileLayoutAttr = props.mobileLayout ?? props["mobile-layout"];
   const readonly = props.readonly === true;
   const searchQuery = state.searchQuery.toLowerCase();
   const activeTagIds = props.selectedTagFilterValues ?? [];
   const hasActiveTagFilter = activeTagIds.length > 0;
-  const mobileLayout = parseBooleanProp(mobileLayoutAttr);
+  const mobileLayout = parseBooleanProp(props.mobileLayout);
 
   // Helper function to check if an item matches the search query
   const matchesSearch = (item) => {
@@ -369,8 +366,8 @@ export const selectViewData = ({ state, props }) => {
       props,
     }),
     showTagFilter: parseBooleanProp(props.showTagFilter),
-    showSearch: parseBooleanProp(showSearchAttr, true),
-    showMenuButton: parseBooleanProp(showMenuButtonAttr),
+    showSearch: parseBooleanProp(props.showSearch, true),
+    showMenuButton: parseBooleanProp(props.showMenuButton),
     mobileLayout,
     hasActiveTagFilter,
     tagFilterButtonBackgroundColor: hasActiveTagFilter ? "ac" : "bg",
