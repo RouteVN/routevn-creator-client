@@ -5,10 +5,7 @@ import createRouteEngine, {
 } from "route-engine-js";
 import { Ticker } from "pixi.js";
 
-import createRouteGraphics, {
-  Assets,
-  createAssetBufferManager,
-} from "route-graphics";
+import createRouteGraphics, { createAssetBufferManager } from "route-graphics";
 import { createRuntimeAssetFromDicedImage } from "../src/internal/bundleRuntimeDicedImages.js";
 import { prepareRenderStateKeyboardForGraphics } from "../src/internal/project/layout.js";
 import {
@@ -19,10 +16,7 @@ import {
   prepareRuntimeInteractionExecution,
 } from "../src/internal/runtime/graphicsEngineRuntime.js";
 import { resolveBundleAssetMimeType } from "../src/internal/bundleRuntimeAssets.js";
-import { patchRouteGraphicsAssetParserCompatibility } from "../src/internal/routeGraphicsAssetCompatibility.js";
 import { parseBundle } from "../src/deps/services/shared/projectExportService.js";
-
-patchRouteGraphicsAssetParserCompatibility(Assets);
 
 async function parseVNBundle(arrayBuffer) {
   const parsedBundle = await parseBundle(arrayBuffer);
