@@ -7,20 +7,30 @@ const creatorDocsPathByRoutePattern = {
   "/project": "/projects/",
   "/projects": "/projects/",
   "/project/images": "/images/",
+  "/project/spritesheets": "/spritesheets/",
   "/project/characters": "/characters/",
+  "/project/character-sprites": "/characters/#character-sprites",
   "/project/sounds": "/sounds/",
   "/project/transforms": "/transforms/",
   "/project/animations": "/animations/",
+  "/project/animation-editor": "/animations/#animation-editor-page",
+  "/project/particles": "/particles/",
   "/project/videos": "/videos/",
   "/project/colors": "/colors/",
   "/project/text-styles": "/text-styles/",
   "/project/controls": "/controls/",
+  "/project/variables": "/variables/",
   "/project/scenes": "/scene-map/",
   "/project/scene-editor": "/scene-editor/",
   "/project/fonts": "/fonts/",
   "/project/layouts": "/layouts/",
+  "/project/layout-editor": "/layouts/#layout-editor",
   "/project/releases": "/versions/",
   "/project/releases/versions": "/versions/",
+  "/project/releases/web-server": "/web-server/",
+  "/project/about": "/page-index/#settings",
+  "/project/appearance": "/page-index/#settings",
+  "/project/user": "/page-index/#settings",
 };
 
 const creatorDocsPathBySystemActionMode = {
@@ -57,6 +67,7 @@ const creatorDocsPathBySystemActionMode = {
   setMuteAll: "/line-actions/bgm/",
   setMenuPage: "/line-actions/controls/",
   setMenuEntryPoint: "/line-actions/controls/",
+  updateVariable: "/line-actions/update-variable/",
 };
 
 const normalizeRoutePattern = (routePattern) => {

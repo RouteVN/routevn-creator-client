@@ -48,8 +48,14 @@ const CHARACTER_SHORTCUT_OPTIONS = [
 ];
 
 const CHARACTER_TAG_SCOPE_KEY = "characters";
+const SPRITE_GROUPS_CREATE_MESSAGE =
+  "Create the character first, then add groups.";
 const CREATE_TAG_DEFAULT_VALUES = Object.freeze({
   name: "",
+});
+const SPRITE_GROUP_DIALOG_DEFAULT_VALUES = Object.freeze({
+  name: "",
+  tags: [],
 });
 const createTagForm = {
   title: "Create Tag",
@@ -87,6 +93,36 @@ const SPRITE_GROUP_FIELD = {
   slot: "sprite-groups-slot",
   label: "Sprite Groups",
 };
+
+const createSpriteGroupDialogForm = ({ tagOptions, isEditing } = {}) => ({
+  title: isEditing ? "Edit Sprite Group" : "Add Sprite Group",
+  fields: [
+    {
+      name: "name",
+      type: "input-text",
+      label: "Name",
+      required: true,
+    },
+    {
+      name: "tags",
+      type: "tag-select",
+      label: "Tags",
+      placeholder: "Select tags",
+      options: tagOptions ?? [],
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        label: isEditing ? "Update Group" : "Add Group",
+      },
+    ],
+  },
+});
 
 const getValidCharacterTagIds = (state) =>
   new Set(Object.keys(state.tagsData.items ?? {}));
@@ -195,6 +231,12 @@ export const createInitialState = () => ({
     index: undefined,
     items: [],
   },
+  isSpriteGroupDialogOpen: false,
+  spriteGroupDialogTarget: undefined,
+  spriteGroupDialogIndex: undefined,
+  spriteGroupDialogDefaultValues: {
+    ...SPRITE_GROUP_DIALOG_DEFAULT_VALUES,
+  },
   dialogForm: {
     title: "Add Character",
     fields: [
@@ -224,7 +266,6 @@ export const createInitialState = () => ({
         slot: "avatar-slot",
         label: "Avatar",
       },
-      SPRITE_GROUP_FIELD,
     ],
     actions: {
       layout: "",
@@ -396,8 +437,22 @@ export const setSpriteGroups = ({ state }, { target, spriteGroups } = {}) => {
   });
 };
 
-export const addSpriteGroup = ({ state }, { target } = {}) => {
-  state[getSpriteGroupDraftKey(target)].push(createEmptySpriteGroup());
+export const addSpriteGroup = ({ state }, { target, name, tags } = {}) => {
+  const spriteGroup = createEmptySpriteGroup();
+  spriteGroup.name = typeof name === "string" ? name : "";
+  spriteGroup.tags = Array.isArray(tags) ? tags : [];
+
+  const normalizedSpriteGroup = normalizeDraftSpriteGroups({
+    state,
+    target,
+    spriteGroups: [spriteGroup],
+  })[0];
+
+  if (!normalizedSpriteGroup) {
+    return;
+  }
+
+  state[getSpriteGroupDraftKey(target)].push(normalizedSpriteGroup);
 };
 
 export const updateSpriteGroupName = (
@@ -433,6 +488,35 @@ export const updateSpriteGroupTags = (
         },
       ],
     })[0]?.tags ?? [];
+};
+
+export const updateSpriteGroup = (
+  { state },
+  { target, index, name, tags } = {},
+) => {
+  const spriteGroup = state[getSpriteGroupDraftKey(target)]?.[index];
+  if (!spriteGroup) {
+    return;
+  }
+
+  const normalizedSpriteGroup = normalizeDraftSpriteGroups({
+    state,
+    target,
+    spriteGroups: [
+      {
+        id: spriteGroup.id,
+        name,
+        tags,
+      },
+    ],
+  })[0];
+
+  if (!normalizedSpriteGroup) {
+    return;
+  }
+
+  spriteGroup.name = normalizedSpriteGroup.name;
+  spriteGroup.tags = normalizedSpriteGroup.tags;
 };
 
 export const removeSpriteGroup = ({ state }, { target, index } = {}) => {
@@ -494,6 +578,35 @@ export const hideSpriteGroupDropdownMenu = ({ state }, _payload = {}) => {
   };
 };
 
+export const openSpriteGroupDialog = ({ state }, { target, index } = {}) => {
+  const resolvedTarget = target ?? "edit";
+  const spriteGroups = state[getSpriteGroupDraftKey(resolvedTarget)] ?? [];
+  const hasSpriteGroup =
+    Number.isInteger(index) && index >= 0 && index < spriteGroups.length;
+  const spriteGroup = hasSpriteGroup ? spriteGroups[index] : undefined;
+
+  state.isSpriteGroupDialogOpen = true;
+  state.spriteGroupDialogTarget = resolvedTarget;
+  state.spriteGroupDialogIndex = hasSpriteGroup ? index : undefined;
+  state.spriteGroupDialogDefaultValues = spriteGroup
+    ? {
+        name: spriteGroup.name,
+        tags: Array.isArray(spriteGroup.tags) ? [...spriteGroup.tags] : [],
+      }
+    : {
+        ...SPRITE_GROUP_DIALOG_DEFAULT_VALUES,
+      };
+};
+
+export const closeSpriteGroupDialog = ({ state }, _payload = {}) => {
+  state.isSpriteGroupDialogOpen = false;
+  state.spriteGroupDialogTarget = undefined;
+  state.spriteGroupDialogIndex = undefined;
+  state.spriteGroupDialogDefaultValues = {
+    ...SPRITE_GROUP_DIALOG_DEFAULT_VALUES,
+  };
+};
+
 export const openAvatarCropDialog = ({ state }, { target, file } = {}) => {
   state.isAvatarCropDialogOpen = true;
   state.avatarCropTarget = target;
@@ -529,6 +642,12 @@ export const closeEditDialog = ({ state }, _payload = {}) => {
   state.editAvatarFileId = null;
   state.editAvatarUploadResult = null;
   state.editSpriteGroups = [];
+  state.isSpriteGroupDialogOpen = false;
+  state.spriteGroupDialogTarget = undefined;
+  state.spriteGroupDialogIndex = undefined;
+  state.spriteGroupDialogDefaultValues = {
+    ...SPRITE_GROUP_DIALOG_DEFAULT_VALUES,
+  };
   state.spriteGroupDropdownMenu = {
     isOpen: false,
     x: 0,
@@ -748,8 +867,6 @@ export const selectViewData = ({ state }) => {
     detailFields,
     searchQuery: state.searchQuery,
     tagFilterOptions,
-    dialogSpriteGroupsMessage:
-      "Sprite groups use character sprite tags. Create the character first, then edit sprite groups after adding sprite tags on the Character Sprites page.",
     editSpriteGroupTagOptions,
     editSpriteGroupsMessage:
       "No character sprite tags yet. Add sprite tags on the Character Sprites page first.",
@@ -768,10 +885,15 @@ export const selectViewData = ({ state }) => {
     dialogSpriteGroups: buildDraftSpriteGroupViewData({
       spriteGroups: state.dialogSpriteGroups,
       tagsById: {},
-      target: "add",
     }),
     dialogForm: state.dialogForm,
     spriteGroupDropdownMenu: state.spriteGroupDropdownMenu,
+    isSpriteGroupDialogOpen: state.isSpriteGroupDialogOpen,
+    spriteGroupDialogDefaultValues: state.spriteGroupDialogDefaultValues,
+    spriteGroupDialogForm: createSpriteGroupDialogForm({
+      tagOptions: editSpriteGroupTagOptions,
+      isEditing: Number.isInteger(state.spriteGroupDialogIndex),
+    }),
     isCreateTagDialogOpen: state.isCreateTagDialogOpen,
     createTagDefaultValues: state.createTagDefaultValues,
     createTagForm,
@@ -786,9 +908,8 @@ export const selectViewData = ({ state }) => {
     editSpriteGroups: buildDraftSpriteGroupViewData({
       spriteGroups: state.editSpriteGroups,
       tagsById: editSpriteTagsCollection.items ?? {},
-      target: "edit",
     }),
   };
 };
 
-export { CHARACTER_TAG_SCOPE_KEY };
+export { CHARACTER_TAG_SCOPE_KEY, SPRITE_GROUPS_CREATE_MESSAGE };

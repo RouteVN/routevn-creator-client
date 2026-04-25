@@ -102,6 +102,7 @@ export const createCatalogResourceCommandApi = (shared) => ({
   createParticle: async ({
     particleId,
     data,
+    fileRecords,
     parentId,
     position = "last",
     positionTargetId,
@@ -114,12 +115,13 @@ export const createCatalogResourceCommandApi = (shared) => ({
       idField: "particleId",
       idValue: particleId,
       data,
+      fileRecords,
       parentId,
       position,
       positionTargetId,
       index,
     }),
-  updateParticle: async ({ particleId, data }) =>
+  updateParticle: async ({ particleId, data, fileRecords }) =>
     submitUpdateResourceCommand({
       shared,
       resourceType: "particles",
@@ -127,6 +129,7 @@ export const createCatalogResourceCommandApi = (shared) => ({
       idField: "particleId",
       idValue: particleId,
       data,
+      fileRecords,
     }),
   moveParticle: async ({
     particleId,

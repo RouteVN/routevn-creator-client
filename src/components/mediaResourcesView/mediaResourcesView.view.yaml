@@ -170,16 +170,16 @@ template:
                                                               - rtgl-svg svg=play wh=24 c=white: null
                                                       - rtgl-text s=xs c=mu-fg ellipsis w=${item.mediaTextWidth}: ${item.name}
                                                 $elif item.cardKind == 'sound':
-                                                  - 'rtgl-view p=md g=md br=md pos=rel w=${item.mediaCardWidth} style="max-width: 100%; box-sizing: border-box;"':
+                                                  - 'rtgl-view p=md g=md br=md pos=rel w=${item.mediaCardWidth} overflow=hidden style="max-width: 100%; box-sizing: border-box;"':
                                                       - $if item.isProcessing:
-                                                          - rtgl-view g=md:
+                                                          - 'rtgl-view g=md w=f style="min-width: 0;"':
                                                               - rtgl-view w=f h=${mediaHeight} br=md bw=xs bc=bo av=c ah=c:
                                                                   - rtgl-text s=sm c=mu-fg: Processing...
-                                                              - rtgl-text s=xs c=mu-fg ellipsis w=${item.mediaTextWidth}: ${item.name}
+                                                              - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                                         $elif item.waveformDataFileId:
-                                                          - rtgl-view g=md:
-                                                              - rvn-waveform-visualizer key=${item.waveformDataFileId}-${item.mediaCardWidth}x${mediaHeight} waveformDataFileId=${item.waveformDataFileId} w=${item.mediaCardWidth} h=${mediaHeight}: null
-                                                              - rtgl-text s=xs c=mu-fg ellipsis w=${item.mediaTextWidth}: ${item.name}
+                                                          - 'rtgl-view g=md w=f style="min-width: 0;"':
+                                                              - rvn-waveform-visualizer key=${item.waveformDataFileId}-${item.mediaCardWidth}x${mediaHeight} waveformDataFileId=${item.waveformDataFileId} w=f h=${mediaHeight}: null
+                                                              - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                                         $else:
                                                           - rtgl-view w=f h=${mediaHeight} br=md bw=xs bc=bo av=c ah=c:
                                                               - rtgl-text s=xs c=mu-fg: No waveform

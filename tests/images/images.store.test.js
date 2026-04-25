@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   commitDetailTagIds,
   createInitialState,
+  selectAdjacentImageItemId,
   setDetailTagIds,
   setItems,
   setSelectedItemId,
@@ -91,5 +92,73 @@ describe("images store detail tag draft", () => {
 
     expect(context.state.detailTagIds).toEqual(["tag-1"]);
     expect(context.state.detailTagIdsDirty).toBe(false);
+  });
+});
+
+describe("images store preview navigation", () => {
+  it("jumps adjacent image selection by distance and clamps to visible bounds", () => {
+    const context = createContext();
+
+    setItems(context, {
+      data: {
+        tree: [
+          { id: "image-1" },
+          { id: "image-2" },
+          { id: "image-3" },
+          { id: "image-4" },
+          { id: "image-5" },
+        ],
+        items: {
+          "image-1": {
+            id: "image-1",
+            type: "image",
+            name: "Image 1",
+          },
+          "image-2": {
+            id: "image-2",
+            type: "image",
+            name: "Image 2",
+          },
+          "image-3": {
+            id: "image-3",
+            type: "image",
+            name: "Image 3",
+          },
+          "image-4": {
+            id: "image-4",
+            type: "image",
+            name: "Image 4",
+          },
+          "image-5": {
+            id: "image-5",
+            type: "image",
+            name: "Image 5",
+          },
+        },
+      },
+    });
+
+    expect(
+      selectAdjacentImageItemId(context, {
+        itemId: "image-2",
+        direction: "next",
+        distance: 10,
+        clamp: true,
+      }),
+    ).toBe("image-5");
+    expect(
+      selectAdjacentImageItemId(context, {
+        itemId: "image-2",
+        direction: "previous",
+        distance: 10,
+        clamp: true,
+      }),
+    ).toBe("image-1");
+    expect(
+      selectAdjacentImageItemId(context, {
+        itemId: "image-5",
+        direction: "next",
+      }),
+    ).toBeUndefined();
   });
 });

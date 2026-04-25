@@ -2,7 +2,10 @@ import { generateId } from "../../internal/id.js";
 import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/createMediaPageHandlers.js";
 import { processPendingUploads } from "../../internal/ui/resourcePages/media/processPendingUploads.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
-import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
+import {
+  createFileExplorerKeyboardScopeHandlers,
+  isTextEntryKeyEvent,
+} from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import {
   runResourcePageMutation,
@@ -267,6 +270,44 @@ const openImagePreviewById = ({ deps, itemId, syncExplorer = false } = {}) => {
   focusPreviewOverlay(deps);
 };
 
+const resolvePreviewNavigationDirection = (event) => {
+  if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+    return { direction: "next" };
+  }
+
+  if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+    return { direction: "previous" };
+  }
+
+  if (event.altKey || event.metaKey) {
+    return undefined;
+  }
+
+  if (event.ctrlKey) {
+    const key = String(event.key ?? "").toLowerCase();
+    if (key === "d") {
+      return { direction: "next", distance: 10, clamp: true };
+    }
+
+    if (key === "u") {
+      return { direction: "previous", distance: 10, clamp: true };
+    }
+
+    return undefined;
+  }
+
+  const key = String(event.key ?? "").toLowerCase();
+  if (key === "j" || key === "l") {
+    return { direction: "next" };
+  }
+
+  if (key === "k" || key === "h") {
+    return { direction: "previous" };
+  }
+
+  return undefined;
+};
+
 export const handleFileExplorerDoubleClick = (deps, payload) => {
   const { itemId, isFolder } = payload._event.detail;
   if (isFolder) {
@@ -491,6 +532,10 @@ export const handlePreviewOverlayKeyDown = (deps, payload) => {
     return;
   }
 
+  if (isTextEntryKeyEvent(event)) {
+    return;
+  }
+
   if (event.key === "Escape" || event.key === "Enter") {
     event.preventDefault();
     event.stopPropagation();
@@ -505,24 +550,26 @@ export const handlePreviewOverlayKeyDown = (deps, payload) => {
     return;
   }
 
-  let direction;
-  if (event.key === "ArrowDown" || event.key === "ArrowRight") {
-    direction = "next";
-  } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
-    direction = "previous";
-  }
-
-  if (!direction) {
+  const navigation = resolvePreviewNavigationDirection(event);
+  if (!navigation?.direction) {
     return;
   }
 
   event.preventDefault();
   event.stopPropagation();
 
-  const nextItemId = store.selectAdjacentImageItemId({
+  const adjacentPayload = {
     itemId: selectedItemId,
-    direction,
-  });
+    direction: navigation.direction,
+  };
+  if (navigation.distance !== undefined) {
+    adjacentPayload.distance = navigation.distance;
+  }
+  if (navigation.clamp !== undefined) {
+    adjacentPayload.clamp = navigation.clamp;
+  }
+
+  const nextItemId = store.selectAdjacentImageItemId(adjacentPayload);
   if (!nextItemId) {
     return;
   }

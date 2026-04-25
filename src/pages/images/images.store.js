@@ -203,13 +203,18 @@ export const selectImageItemById = selectItemById;
 
 export const selectAdjacentImageItemId = (
   context,
-  { itemId, direction } = {},
+  { itemId, direction, distance = 1, clamp = false } = {},
 ) => {
   const step =
     direction === "next" ? 1 : direction === "previous" ? -1 : undefined;
   if (!step) {
     return undefined;
   }
+  const numericDistance = Number(distance);
+  const itemDistance =
+    Number.isFinite(numericDistance) && numericDistance > 0
+      ? Math.floor(numericDistance)
+      : 1;
 
   const viewData = selectMediaViewData(context);
   const items = context.state.data?.items ?? {};
@@ -230,7 +235,12 @@ export const selectAdjacentImageItemId = (
       : visibleImageIds[visibleImageIds.length - 1];
   }
 
-  return visibleImageIds[currentIndex + step];
+  let nextIndex = currentIndex + step * itemDistance;
+  if (clamp) {
+    nextIndex = Math.max(0, Math.min(nextIndex, visibleImageIds.length - 1));
+  }
+
+  return visibleImageIds[nextIndex];
 };
 
 export const showFullImagePreview = ({ state }, { itemId } = {}) => {

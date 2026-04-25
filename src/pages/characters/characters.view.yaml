@@ -97,16 +97,18 @@ refs:
         handler: handleSpriteGroupAddClick
   .spriteGroupCard:
     eventListeners:
+      click:
+        handler: handleSpriteGroupCardClick
       contextmenu:
         handler: handleSpriteGroupContextMenu
-  .spriteGroupNameInput:
+  spriteGroupDialog:
     eventListeners:
-      value-input:
-        handler: handleSpriteGroupNameInput
-  .spriteGroupTags:
+      close:
+        handler: handleSpriteGroupDialogClose
+  spriteGroupForm:
     eventListeners:
-      value-change:
-        handler: handleSpriteGroupTagsChange
+      form-action:
+        handler: handleSpriteGroupFormAction
   spriteGroupDropdownMenu:
     eventListeners:
       close:
@@ -203,9 +205,6 @@ template:
                   - rtgl-view slot=avatar-slot w=120 h=120 av=c ah=c:
                       - rtgl-view#avatarPlaceholder w=120 h=120 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer:
                           - rtgl-text c=mu-fg s=sm: Click to Upload
-              - 'rtgl-view slot="sprite-groups-slot" d=v w=f g=md':
-                  - rtgl-view w=f p=md bgc=mu br=md:
-                      - rtgl-text s=xs c=mu-fg: ${dialogSpriteGroupsMessage}
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
       - rtgl-view slot=content g=md:
           - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:
@@ -223,11 +222,8 @@ template:
                           - rtgl-button.spriteGroupAddButton data-target=edit s=sm v=gh pre=plus: Add Group
                       - $if editSpriteGroups.length > 0:
                           - $for spriteGroup, i in editSpriteGroups:
-                              - rtgl-view.spriteGroupCard data-target=edit data-index=${i} d=v w=f g=md p=md bw=xs bc=bo br=md cur=pointer:
-                                  - rtgl-view d=h w=f av=c:
-                                      - rtgl-text s=sm w=1fg: ${spriteGroup.label}
-                                  - rtgl-input.spriteGroupNameInput data-target=edit data-index=${i} w=f placeholder="Group name" value=${spriteGroup.name}: null
-                                  - rtgl-tag-select.spriteGroupTags key=${spriteGroup.tagSelectKey} data-target=edit data-index=${i} w=f :options=${editSpriteGroupTagOptions} :selectedValues=${spriteGroup.tags} placeholder="Select tags": null
+                              - rtgl-view.spriteGroupCard data-target=edit data-index=${i} d=v w=f g=xs p=md bw=xs bc=bo h-bc=ac br=md cur=pointer:
+                                  - rtgl-text s=sm: ${spriteGroup.name}
                                   - $if spriteGroup.tagSummary:
                                       - rtgl-text s=xs c=mu-fg: ${spriteGroup.tagSummary}
                         $else:
@@ -236,6 +232,8 @@ template:
                     $else:
                       - rtgl-view w=f p=md bgc=mu br=md:
                           - rtgl-text s=xs c=mu-fg: ${editSpriteGroupsMessage}
+  - rtgl-dialog#spriteGroupDialog ?open=${isSpriteGroupDialogOpen} s=sm:
+      - rtgl-form#spriteGroupForm key=${isSpriteGroupDialogOpen} slot=content :defaultValues=${spriteGroupDialogDefaultValues} :form=${spriteGroupDialogForm} w=f: null
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null
   - rtgl-dropdown-menu#spriteGroupDropdownMenu :items=${spriteGroupDropdownMenu.items} ?open=${spriteGroupDropdownMenu.isOpen} x=${spriteGroupDropdownMenu.x} y=${spriteGroupDropdownMenu.y}: null
