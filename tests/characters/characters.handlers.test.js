@@ -4,7 +4,10 @@ import {
   handleCloseDialog,
   handleDialogFormActionClick,
   handleEditFormAction,
+  handleSpriteGroupAddClick,
+  handleSpriteGroupCardClick,
   handleSpriteGroupDropdownMenuItemClick,
+  handleSpriteGroupFormAction,
 } from "../../src/pages/characters/characters.handlers.js";
 
 const createDeps = () => {
@@ -115,8 +118,7 @@ describe("characters sprite group tag scope", () => {
     });
 
     expect(deps.appService.showAlert).toHaveBeenCalledWith({
-      message:
-        "Sprite groups use character sprite tags. Create the character first, then edit sprite groups after adding sprite tags on the Character Sprites page.",
+      message: "Create the character first, then add groups.",
       title: "Warning",
     });
   });
@@ -187,6 +189,226 @@ describe("characters sprite group tag scope", () => {
       title: "Warning",
     });
     expect(deps.projectService.updateCharacter).not.toHaveBeenCalled();
+  });
+});
+
+describe("characters sprite group dialog", () => {
+  it("opens the sprite group dialog when adding an edit sprite group", () => {
+    const deps = {
+      appService: {
+        showAlert: vi.fn(),
+      },
+      store: {
+        hideSpriteGroupDropdownMenu: vi.fn(),
+        openSpriteGroupDialog: vi.fn(),
+      },
+      render: vi.fn(),
+    };
+
+    handleSpriteGroupAddClick(deps, {
+      _event: {
+        currentTarget: {
+          dataset: {
+            target: "edit",
+          },
+        },
+      },
+    });
+
+    expect(deps.store.hideSpriteGroupDropdownMenu).toHaveBeenCalledTimes(1);
+    expect(deps.store.openSpriteGroupDialog).toHaveBeenCalledWith({
+      target: "edit",
+    });
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens the sprite group dialog for an existing edit sprite group", () => {
+    const deps = {
+      store: {
+        hideSpriteGroupDropdownMenu: vi.fn(),
+        openSpriteGroupDialog: vi.fn(),
+      },
+      render: vi.fn(),
+    };
+
+    handleSpriteGroupCardClick(deps, {
+      _event: {
+        currentTarget: {
+          dataset: {
+            target: "edit",
+            index: "1",
+          },
+        },
+      },
+    });
+
+    expect(deps.store.hideSpriteGroupDropdownMenu).toHaveBeenCalledTimes(1);
+    expect(deps.store.openSpriteGroupDialog).toHaveBeenCalledWith({
+      target: "edit",
+      index: 1,
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it("adds a sprite group from the sprite group dialog form", () => {
+    const deps = {
+      appService: {
+        showAlert: vi.fn(),
+      },
+      store: {
+        getState: vi.fn(() => ({
+          spriteGroupDialogTarget: "edit",
+          editItemId: "character-hero",
+          spriteTagsByCharacterId: {
+            "character-hero": {
+              items: {
+                "sprite-tag-smile": {
+                  id: "sprite-tag-smile",
+                  type: "tag",
+                  name: "Smile",
+                },
+              },
+              tree: [{ id: "sprite-tag-smile" }],
+            },
+          },
+        })),
+        addSpriteGroup: vi.fn(),
+        closeSpriteGroupDialog: vi.fn(),
+      },
+      render: vi.fn(),
+    };
+
+    handleSpriteGroupFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            name: " Face ",
+            tags: ["sprite-tag-smile"],
+          },
+        },
+      },
+    });
+
+    expect(deps.store.addSpriteGroup).toHaveBeenCalledWith({
+      target: "edit",
+      name: "Face",
+      tags: ["sprite-tag-smile"],
+    });
+    expect(deps.store.closeSpriteGroupDialog).toHaveBeenCalledTimes(1);
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it("updates a sprite group from the sprite group dialog form", () => {
+    const deps = {
+      appService: {
+        showAlert: vi.fn(),
+      },
+      store: {
+        getState: vi.fn(() => ({
+          spriteGroupDialogTarget: "edit",
+          spriteGroupDialogIndex: 0,
+          editItemId: "character-hero",
+          editSpriteGroups: [
+            {
+              id: "group-face",
+              name: "Face",
+              tags: ["sprite-tag-smile"],
+            },
+          ],
+          spriteTagsByCharacterId: {
+            "character-hero": {
+              items: {
+                "sprite-tag-neutral": {
+                  id: "sprite-tag-neutral",
+                  type: "tag",
+                  name: "Neutral",
+                },
+              },
+              tree: [{ id: "sprite-tag-neutral" }],
+            },
+          },
+        })),
+        addSpriteGroup: vi.fn(),
+        updateSpriteGroup: vi.fn(),
+        closeSpriteGroupDialog: vi.fn(),
+      },
+      render: vi.fn(),
+    };
+
+    handleSpriteGroupFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            name: " Face Updated ",
+            tags: ["sprite-tag-neutral"],
+          },
+        },
+      },
+    });
+
+    expect(deps.store.updateSpriteGroup).toHaveBeenCalledWith({
+      target: "edit",
+      index: 0,
+      name: "Face Updated",
+      tags: ["sprite-tag-neutral"],
+    });
+    expect(deps.store.addSpriteGroup).not.toHaveBeenCalled();
+    expect(deps.store.closeSpriteGroupDialog).toHaveBeenCalledTimes(1);
+    expect(deps.appService.showAlert).not.toHaveBeenCalled();
+    expect(deps.render).toHaveBeenCalledTimes(1);
+  });
+
+  it("requires sprite group tags in the sprite group dialog form", () => {
+    const deps = {
+      appService: {
+        showAlert: vi.fn(),
+      },
+      store: {
+        getState: vi.fn(() => ({
+          spriteGroupDialogTarget: "edit",
+          editItemId: "character-hero",
+          spriteTagsByCharacterId: {
+            "character-hero": {
+              items: {
+                "sprite-tag-smile": {
+                  id: "sprite-tag-smile",
+                  type: "tag",
+                  name: "Smile",
+                },
+              },
+              tree: [{ id: "sprite-tag-smile" }],
+            },
+          },
+        })),
+        addSpriteGroup: vi.fn(),
+        closeSpriteGroupDialog: vi.fn(),
+      },
+      render: vi.fn(),
+    };
+
+    handleSpriteGroupFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            name: "Face",
+            tags: [],
+          },
+        },
+      },
+    });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "Sprite group 1 must have at least one tag.",
+      title: "Warning",
+    });
+    expect(deps.store.addSpriteGroup).not.toHaveBeenCalled();
+    expect(deps.store.closeSpriteGroupDialog).not.toHaveBeenCalled();
+    expect(deps.render).not.toHaveBeenCalled();
   });
 });
 

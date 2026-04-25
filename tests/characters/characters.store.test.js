@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  openSpriteGroupDialog,
   selectViewData,
 } from "../../src/pages/characters/characters.store.js";
 
@@ -57,6 +58,13 @@ describe("characters store sprite group tags", () => {
         tags: ["sprite-tag-smile"],
       },
     ];
+    openSpriteGroupDialog(
+      { state },
+      {
+        target: "edit",
+        index: 0,
+      },
+    );
 
     const viewData = selectViewData({ state });
 
@@ -81,5 +89,23 @@ describe("characters store sprite group tags", () => {
         value: "sprite-tag-smile",
       },
     ]);
+    expect(viewData.spriteGroupDialogForm.fields[1]).toMatchObject({
+      name: "tags",
+      type: "tag-select",
+      options: [
+        {
+          label: "Smile",
+          value: "sprite-tag-smile",
+        },
+      ],
+    });
+    expect(viewData.spriteGroupDialogDefaultValues).toEqual({
+      name: "Face",
+      tags: ["sprite-tag-smile"],
+    });
+    expect(viewData.spriteGroupDialogForm.title).toBe("Edit Sprite Group");
+    expect(viewData.spriteGroupDialogForm.actions.buttons[0].label).toBe(
+      "Update Group",
+    );
   });
 });

@@ -135,7 +135,6 @@ export const buildSpriteGroupViewData = ({ spriteGroups, tagsById } = {}) => {
 export const buildDraftSpriteGroupViewData = ({
   spriteGroups,
   tagsById,
-  target,
 } = {}) => {
   return normalizeSpriteGroupsForDraft({
     spriteGroups,
@@ -152,12 +151,6 @@ export const buildDraftSpriteGroupViewData = ({
       tagNames,
       tagSummary: tagNames.join(", "),
       label: `Group ${index + 1}`,
-      tagSelectKey: [
-        target ?? "sprite-group",
-        spriteGroup.id,
-        spriteGroup.tags.join("|"),
-        tagNames.join("|"),
-      ].join("::"),
     };
   });
 };

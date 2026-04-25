@@ -5,7 +5,6 @@ import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileE
 import {
   appendTagIdToForm,
   createResourcePageTagHandlers,
-  readTagIdsFromEvent,
 } from "../../internal/ui/resourcePages/tags.js";
 import {
   runResourcePageMutation,
@@ -24,7 +23,10 @@ import {
   getTagsCollection,
   resolveCollectionWithTags,
 } from "../../internal/resourceTags.js";
-import { CHARACTER_TAG_SCOPE_KEY } from "./characters.store.js";
+import {
+  CHARACTER_TAG_SCOPE_KEY,
+  SPRITE_GROUPS_CREATE_MESSAGE,
+} from "./characters.store.js";
 import { validateSpriteGroupsForSave } from "./support/spriteGroups.js";
 import {
   buildSpriteGroupInUseMessage,
@@ -45,9 +47,6 @@ const EMPTY_CHARACTER_FORM_VALUES = {
   shortcut: "",
   tagIds: [],
 };
-
-const SPRITE_GROUPS_CREATE_MESSAGE =
-  "Sprite groups use character sprite tags. Create the character first, then edit sprite groups after adding sprite tags on the Character Sprites page.";
 
 const resolveCharacterSpriteTagScopeKey = (characterId) =>
   `${CHARACTER_SPRITE_TAG_SCOPE_PREFIX}${characterId}`;
@@ -704,39 +703,104 @@ export const handleSpriteGroupAddClick = (deps, payload) => {
   }
 
   store.hideSpriteGroupDropdownMenu();
-  store.addSpriteGroup({
+  store.openSpriteGroupDialog({
     target,
   });
   render();
 };
 
-export const handleSpriteGroupNameInput = (deps, payload) => {
+export const handleSpriteGroupDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.closeSpriteGroupDialog();
+  render();
+};
+
+export const handleSpriteGroupCardClick = (deps, payload) => {
   const { store, render } = deps;
   const index = readSpriteGroupIndex(payload);
   if (Number.isNaN(index)) {
     return;
   }
 
-  store.updateSpriteGroupName({
+  store.hideSpriteGroupDropdownMenu();
+  store.openSpriteGroupDialog({
     target: readSpriteGroupTarget(payload),
     index,
-    name: payload._event.detail.value ?? "",
   });
   render();
 };
 
-export const handleSpriteGroupTagsChange = (deps, payload) => {
-  const { store, render } = deps;
-  const index = readSpriteGroupIndex(payload);
-  if (Number.isNaN(index)) {
+export const handleSpriteGroupFormAction = (deps, payload) => {
+  const { appService, store, render } = deps;
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
     return;
   }
 
-  store.updateSpriteGroupTags({
-    target: readSpriteGroupTarget(payload),
-    index,
-    tagIds: readTagIdsFromEvent(payload),
+  const state = store.getState();
+  const target = state.spriteGroupDialogTarget ?? "edit";
+  const index = state.spriteGroupDialogIndex;
+  const isEditing = Number.isInteger(index);
+  if (target === "add") {
+    appService.showAlert({
+      message: SPRITE_GROUPS_CREATE_MESSAGE,
+      title: "Warning",
+    });
+    return;
+  }
+
+  const name = values?.name?.trim();
+  if (!name) {
+    appService.showAlert({
+      message: "Sprite group name is required.",
+      title: "Warning",
+    });
+    return;
+  }
+
+  const validation = validateSpriteGroupsForSave({
+    spriteGroups: [
+      {
+        id: isEditing
+          ? (target === "edit"
+              ? state.editSpriteGroups
+              : state.dialogSpriteGroups)?.[index]?.id
+          : undefined,
+        name,
+        tags: Array.isArray(values?.tags) ? values.tags : [],
+      },
+    ],
+    validTagIds: getValidSpriteGroupTagIds({
+      store,
+      target,
+      itemId: state.editItemId,
+    }),
   });
+
+  if (!validation.valid) {
+    appService.showAlert({
+      message: validation.message,
+      title: "Warning",
+    });
+    return;
+  }
+
+  const spriteGroup = validation.spriteGroups[0];
+  if (isEditing) {
+    store.updateSpriteGroup({
+      target,
+      index,
+      name: spriteGroup.name,
+      tags: spriteGroup.tags,
+    });
+  } else {
+    store.addSpriteGroup({
+      target,
+      name: spriteGroup.name,
+      tags: spriteGroup.tags,
+    });
+  }
+  store.closeSpriteGroupDialog();
   render();
 };
 

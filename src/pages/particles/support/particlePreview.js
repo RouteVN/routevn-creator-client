@@ -1,4 +1,4 @@
-const PREVIEW_BACKGROUND = "#09131d";
+const PREVIEW_BACKGROUND = "#000000";
 const FALLBACK_ASPECT_RATIO = "16 / 9";
 
 const toPositiveNumber = (value) => {

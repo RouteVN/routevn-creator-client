@@ -394,8 +394,8 @@ export const createParticleCreateSetupForm = ({ imageOptions = [] } = {}) => ({
 });
 
 export const PARTICLE_FORM_TABS = [
-  { id: "appearance", label: "Appearance" },
   { id: "basics", label: "Basics" },
+  { id: "appearance", label: "Appearance" },
   { id: "emission", label: "Emission" },
   { id: "source", label: "Source" },
   { id: "movement", label: "Movement" },
@@ -1263,7 +1263,7 @@ export const buildParticleDetailFields = (input) => {
 export const buildParticleCatalogItem = (item) => ({
   id: item.id,
   name: item.name,
-  subtitle: `${capitalize(
-    item.modules?.emission?.mode ?? "continuous",
-  )} • ${formatDimensionLabel(item.width ?? 0, item.height ?? 0)}`,
+  cardKind: "layout",
+  cardVariant: "thumbnail",
+  previewFileId: item.thumbnailFileId,
 });

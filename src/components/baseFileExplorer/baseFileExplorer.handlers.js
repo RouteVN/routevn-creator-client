@@ -151,6 +151,20 @@ const selectVisibleItem = ({ deps, item, emitSelectionEvent = false } = {}) => {
   return item;
 };
 
+const toExplorerSelection = ({ item, store } = {}) => {
+  if (!item) {
+    return undefined;
+  }
+
+  return {
+    itemId: item.id,
+    item,
+    isFolder: item.type === "folder",
+    isCollapsed:
+      item.type === "folder" && store.selectCollapsedIds().includes(item.id),
+  };
+};
+
 const resolveDropTargetItem = ({ visibleItems, targetIndex, dropPosition }) => {
   if (dropPosition === "above" && targetIndex === -1) {
     return visibleItems[0];
@@ -800,23 +814,26 @@ export const handleGetSelectedItem = (deps) => {
     return undefined;
   }
 
-  return {
-    itemId: item.id,
-    item,
-    isFolder: item.type === "folder",
-    isCollapsed:
-      item.type === "folder" && store.selectCollapsedIds().includes(item.id),
-  };
+  return toExplorerSelection({ item, store });
 };
 
 export const handleNavigateSelection = (deps, payload) => {
   const { props, store } = deps;
-  const { direction } = payload._event.detail ?? {};
+  const {
+    direction,
+    distance = 1,
+    clamp = false,
+  } = payload._event.detail ?? {};
   const step =
     direction === "next" ? 1 : direction === "previous" ? -1 : undefined;
   if (!step) {
     return undefined;
   }
+  const numericDistance = Number(distance);
+  const itemDistance =
+    Number.isFinite(numericDistance) && numericDistance > 0
+      ? Math.floor(numericDistance)
+      : 1;
 
   const visibleItems = getVisibleItems(
     props.items ?? [],
@@ -830,15 +847,24 @@ export const handleNavigateSelection = (deps, payload) => {
   const currentIndex = visibleItems.findIndex(
     (item) => item.id === selectedItemId,
   );
-  const nextItem =
-    currentIndex === -1
-      ? step > 0
-        ? visibleItems[0]
-        : visibleItems[visibleItems.length - 1]
-      : visibleItems[currentIndex + step];
+  let nextIndex;
+  if (currentIndex === -1) {
+    nextIndex = step > 0 ? 0 : visibleItems.length - 1;
+  } else {
+    nextIndex = currentIndex + step * itemDistance;
+    if (clamp) {
+      nextIndex = Math.max(0, Math.min(nextIndex, visibleItems.length - 1));
+    }
+  }
+
+  const nextItem = visibleItems[nextIndex];
 
   if (!nextItem) {
     return undefined;
+  }
+
+  if (nextItem.id === selectedItemId) {
+    return toExplorerSelection({ item: nextItem, store });
   }
 
   const selectedItem = selectVisibleItem({
@@ -850,14 +876,7 @@ export const handleNavigateSelection = (deps, payload) => {
     return undefined;
   }
 
-  return {
-    itemId: selectedItem.id,
-    item: selectedItem,
-    isFolder: selectedItem.type === "folder",
-    isCollapsed:
-      selectedItem.type === "folder" &&
-      store.selectCollapsedIds().includes(selectedItem.id),
-  };
+  return toExplorerSelection({ item: selectedItem, store });
 };
 
 export const handleSetSelectedFolderExpanded = (deps, payload) => {

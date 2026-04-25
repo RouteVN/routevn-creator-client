@@ -68,7 +68,7 @@ methods:
       params: []
       returns: object
     navigateSelection:
-      description: Moves explorer selection to the previous or next visible item.
+      description: Moves explorer selection across visible items.
       params: []
       returns: object
     setSelectedFolderExpanded:

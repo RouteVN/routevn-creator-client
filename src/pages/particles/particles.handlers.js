@@ -8,6 +8,7 @@ import {
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { extractFileIdsFromRenderState } from "../../internal/project/layout.js";
 import { createRenderableParticleData } from "../../internal/particles.js";
+import { captureCanvasThumbnailImage } from "../../internal/runtime/graphicsEngineRuntime.js";
 import {
   getTagsCollection,
   resolveCollectionWithTags,
@@ -26,6 +27,39 @@ import { PARTICLE_TAG_SCOPE_KEY } from "./particles.store.js";
 
 const CREATE_PARTICLE_SETUP_STEP = "setup";
 const PARTICLE_EDITOR_STEP = "editor";
+
+const dataUrlToBlob = async (value) => {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new Error("Thumbnail image is missing");
+  }
+
+  const commaIndex = value.indexOf(",");
+  if (commaIndex < 0) {
+    throw new Error("Thumbnail image is not a valid data URL");
+  }
+
+  const header = value.slice(0, commaIndex);
+  const body = value.slice(commaIndex + 1);
+  const mimeMatch = header.match(/^data:([^;,]+)?(?:;base64)?$/);
+  if (!mimeMatch) {
+    throw new Error("Thumbnail image is not a valid data URL");
+  }
+
+  const mimeType = mimeMatch[1] || "application/octet-stream";
+  const isBase64 = header.includes(";base64");
+
+  if (!isBase64) {
+    return new Blob([decodeURIComponent(body)], { type: mimeType });
+  }
+
+  const binary = atob(body);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return new Blob([bytes], { type: mimeType });
+};
 
 const syncDialogFormValues = ({ refs, values } = {}) => {
   refs.particleForm?.reset?.();
@@ -149,6 +183,46 @@ const renderParticlePreview = async ({
     renderState: previewState,
   });
   graphicsService.render(previewState);
+};
+
+const captureParticleThumbnail = async ({ deps, particleData } = {}) => {
+  const { appService, graphicsService, projectService, refs } = deps;
+
+  try {
+    await renderParticlePreview({
+      deps,
+      target: "dialog",
+      particleData,
+    });
+
+    const thumbnailImage = await captureCanvasThumbnailImage(
+      graphicsService,
+      refs.dialogCanvas,
+    );
+    if (!thumbnailImage) {
+      appService.showAlert({
+        message: "Failed to capture particle thumbnail.",
+        title: "Error",
+      });
+      return;
+    }
+
+    const thumbnailBlob = await dataUrlToBlob(thumbnailImage);
+    const storedFile = await projectService.storeFile({
+      file: thumbnailBlob,
+    });
+
+    return {
+      thumbnailFileId: storedFile.fileId,
+      fileRecords: storedFile.fileRecords,
+    };
+  } catch {
+    appService.showAlert({
+      message: "Failed to save particle thumbnail.",
+      title: "Error",
+    });
+    return;
+  }
 };
 
 async function renderDetailPreview(deps) {
@@ -642,6 +716,16 @@ export const handleParticleFormActionClick = async (deps, payload) => {
     targetGroupId,
     values,
   };
+  const thumbnailResult = await captureParticleThumbnail({
+    deps,
+    particleData,
+  });
+
+  if (!thumbnailResult) {
+    return;
+  }
+
+  particleData.thumbnailFileId = thumbnailResult.thumbnailFileId;
 
   store.closeParticleDialog();
   store.clearPreviewRuntime();
@@ -655,6 +739,7 @@ export const handleParticleFormActionClick = async (deps, payload) => {
         projectService.updateParticle({
           particleId: editItemId,
           data: particleData,
+          fileRecords: thumbnailResult.fileRecords,
         }),
     });
 
@@ -681,6 +766,7 @@ export const handleParticleFormActionClick = async (deps, payload) => {
           type: "particle",
           ...particleData,
         },
+        fileRecords: thumbnailResult.fileRecords,
         parentId: targetGroupId,
         position: "last",
       }),
