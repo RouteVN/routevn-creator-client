@@ -150,7 +150,7 @@ describe("commandLineBackground.store", () => {
       options: [
         {
           value: "render",
-          label: "Render",
+          label: "Current Line",
         },
         {
           value: "persistent",

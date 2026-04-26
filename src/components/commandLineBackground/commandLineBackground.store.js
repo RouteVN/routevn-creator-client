@@ -32,7 +32,7 @@ const ANIMATION_MODE_OPTIONS = [
 
 const PLAYBACK_CONTINUITY_OPTIONS = [
   {
-    label: "Render",
+    label: "Current Line",
     value: "render",
   },
   {
