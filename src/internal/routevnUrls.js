@@ -49,6 +49,8 @@ const creatorDocsPathBySystemActionMode = {
   nextLine: "/line-actions/next-line/",
   toggleAutoMode: "/line-actions/toggle-auto-mode/",
   toggleSkipMode: "/line-actions/toggle-skip-mode/",
+  startSkipMode: "/line-actions/toggle-skip-mode/",
+  stopSkipMode: "/line-actions/toggle-skip-mode/",
   toggleDialogueUI: "/line-actions/dialogue/",
   setDialogueTextSpeed: "/line-actions/dialogue/",
   pushOverlay: "/line-actions/visual/",

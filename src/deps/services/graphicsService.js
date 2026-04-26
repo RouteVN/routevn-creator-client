@@ -5,7 +5,10 @@ import createRouteGraphics, {
 } from "route-graphics";
 import createRouteEngine, { createEffectsHandler } from "route-engine-js";
 import { Rectangle, Ticker } from "pixi.js";
-import { prepareRenderStateKeyboardForGraphics } from "../../internal/project/layout.js";
+import {
+  prepareRenderStateKeyboardForGraphics,
+  toRouteGraphicsKeyboardResource,
+} from "../../internal/project/layout.js";
 import {
   createRuntimeEventContext,
   getRuntimeEventActions,
@@ -350,6 +353,7 @@ export const createGraphicsService = async ({
   let assetBufferManager;
   let loadedAssetTypes = new Map();
   let enableGlobalKeyboardBindings = true;
+  let routeEngineProjectData;
   // Create dedicated ticker for auto mode
   let ticker;
   let beforeHandleActions;
@@ -870,6 +874,7 @@ export const createGraphicsService = async ({
     if (engine) {
       engine = undefined;
     }
+    routeEngineProjectData = undefined;
     enableGlobalKeyboardBindings = true;
     beforeHandleActions = undefined;
     actionQueue = Promise.resolve();
@@ -1014,10 +1019,57 @@ export const createGraphicsService = async ({
     };
   };
 
+  const getActiveControlKeyboard = () => {
+    const presentationState = engine?.selectPresentationState?.();
+    const controlResourceId = presentationState?.control?.resourceId;
+    if (!controlResourceId) {
+      return;
+    }
+
+    const control =
+      routeEngineProjectData?.resources?.controls?.[controlResourceId];
+    const keyboard = toRouteGraphicsKeyboardResource(
+      control?.keyboard,
+      control?.keyup,
+    );
+    return Object.keys(keyboard).length > 0 ? keyboard : undefined;
+  };
+
+  const withActiveControlKeyboard = (renderState) => {
+    if (!enableGlobalKeyboardBindings) {
+      return renderState;
+    }
+
+    const keyboard = getActiveControlKeyboard();
+    if (!keyboard || typeof keyboard !== "object") {
+      return renderState;
+    }
+
+    const global =
+      renderState?.global && typeof renderState.global === "object"
+        ? renderState.global
+        : {};
+
+    return {
+      ...renderState,
+      global: {
+        ...global,
+        keyboard,
+      },
+    };
+  };
+
+  const syncRouteEngineProjectDataFromActions = (actions) => {
+    const projectData = actions?.updateProjectData?.projectData;
+    if (projectData && typeof projectData === "object") {
+      routeEngineProjectData = projectData;
+    }
+  };
+
   const renderEngineState = (renderState, options = {}) => {
     const { allowDeferredAudio = true, skipAudio = false } = options;
     let nextRenderState = prepareRenderStateKeyboardForGraphics({
-      renderState,
+      renderState: withActiveControlKeyboard(renderState),
       enableGlobalKeyboardBindings,
     });
     const effectiveSkipAudio = skipAudio || isEngineAudioMuted;
@@ -1379,6 +1431,7 @@ export const createGraphicsService = async ({
     hasLoadedAsset,
     initRouteEngine: (projectData, options = {}) => {
       ticker.start();
+      routeEngineProjectData = projectData;
       enableGlobalKeyboardBindings =
         options.enableGlobalKeyboardBindings ?? true;
       const suppressRenderEffects = options.suppressRenderEffects === true;
@@ -1487,6 +1540,7 @@ export const createGraphicsService = async ({
       if (!engine) {
         return;
       }
+      syncRouteEngineProjectDataFromActions(actions);
       if (options.suppressRenderEffects) {
         return runWithSuppressedEngineRenderEffects(() => {
           engine.handleActions(actions, eventContext);

@@ -3,6 +3,7 @@ import {
   createLayoutTemplate,
   handleItemDuplicate,
   handleLayoutFormActionClick,
+  handleLayoutItemClick,
 } from "../../src/pages/layouts/layouts.handlers.js";
 
 describe("createLayoutTemplate", () => {
@@ -103,7 +104,7 @@ describe("createLayoutTemplate", () => {
             name: "Save",
             layoutType: "save-load",
             description: "Reusable save fragment",
-            isFragment: true,
+            isFragment: "true",
           },
         },
       },
@@ -123,6 +124,57 @@ describe("createLayoutTemplate", () => {
       }),
     );
     expect(deps.store.closeAddDialog).toHaveBeenCalled();
+  });
+
+  it("prints the selected layout data after selecting a layout", () => {
+    const layoutData = {
+      id: "layout-1",
+      type: "layout",
+      name: "Layout One",
+      layoutType: "general",
+    };
+    let selectedItemId;
+    const consoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
+    const deps = {
+      store: {
+        selectSelectedItemId: vi.fn(() => selectedItemId),
+        setSelectedItemId: vi.fn(({ itemId } = {}) => {
+          selectedItemId = itemId;
+        }),
+        selectLayoutItemById: vi.fn(({ itemId } = {}) =>
+          itemId === "layout-1" ? layoutData : undefined,
+        ),
+      },
+      refs: {
+        fileExplorer: {
+          selectItem: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    try {
+      handleLayoutItemClick(deps, {
+        _event: {
+          detail: {
+            itemId: "layout-1",
+          },
+        },
+      });
+
+      expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+        itemId: "layout-1",
+      });
+      expect(consoleLog).toHaveBeenCalledWith(
+        "[layouts] selected layout data",
+        {
+          selectedItemId: "layout-1",
+          layoutData,
+        },
+      );
+    } finally {
+      consoleLog.mockRestore();
+    }
   });
 
   it("duplicates a layout and selects the duplicate", async () => {

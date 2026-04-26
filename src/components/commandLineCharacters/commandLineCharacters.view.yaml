@@ -118,7 +118,7 @@ template:
                                           - rtgl-text s=sm c=mu-fg: Sprite Groups
                                           - rtgl-view d=h wrap g=xs w=f:
                                               - $for spriteGroup, j in character.spriteGroupBoxes:
-                                                  - 'rtgl-view.characterSpriteGroupBox data-index=${i} data-sprite-group-id=${spriteGroup.id} d=h av=c g=xs ph=md pv=xs cur=pointer bw=xs bc=bo h-bc=pr br=sm bgc=mu':
+                                                  - 'rtgl-view.characterSpriteGroupBox data-index=${i} data-sprite-group-id=${spriteGroup.id} d=h av=c g=xs ph=md pv=xs cur=pointer bw=xs bc=bo h-bc=pr br=sm bgc=${spriteGroup.backgroundColor}':
                                                       - rtgl-text s=xs: ${spriteGroup.name}
                   - rtgl-button#addCharacterButton v=ol w=f mt=md: + Add Character
           - rtgl-view d=h av=c ah=e w=f g=lg:

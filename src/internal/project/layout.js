@@ -145,6 +145,7 @@ export const BASE_LAYOUT_KEYBOARD_OPTIONS = [
   { value: "enter", label: "Enter" },
   { value: "space", label: "Space" },
   { value: "esc", label: "Escape" },
+  { value: "ctrl", label: "Ctrl" },
   { value: "left", label: "Left Arrow" },
   { value: "right", label: "Right Arrow" },
   { value: "up", label: "Up Arrow" },
@@ -2053,6 +2054,8 @@ const KEYBOARD_KEY_CANONICAL_MAP = {
   space: "space",
   esc: "escape",
   escape: "escape",
+  ctrl: "ctrl",
+  control: "ctrl",
   left: "arrowleft",
   arrowleft: "arrowleft",
   right: "arrowright",
@@ -2071,6 +2074,71 @@ export const getLayoutKeyboardResourceId = (layoutId) => {
   return `layout-keyboard:${layoutId}`;
 };
 
+const getKeyboardResourceActions = (interaction) => {
+  if (interaction?.actions && typeof interaction.actions === "object") {
+    return interaction.actions;
+  }
+
+  return getInteractionActions(interaction);
+};
+
+const getKeyboardResourcePayload = (interaction) => {
+  if (interaction?.payload && typeof interaction.payload === "object") {
+    return getInteractionPayload(interaction);
+  }
+
+  return {
+    actions: getKeyboardResourceActions(interaction),
+  };
+};
+
+const assignRouteGraphicsKeyboardPhase = ({ resource, keyboardMap, phase }) => {
+  const input = asKeyboardMap(keyboardMap);
+  if (!input) {
+    return;
+  }
+
+  Object.entries(input).forEach(([key, interaction]) => {
+    const resourceKey = normalizeKeyboardKeyForGraphics(key);
+    const existingEntry = resource[resourceKey] ?? {};
+    const payload = getKeyboardResourcePayload(interaction);
+
+    resource[resourceKey] = {
+      ...existingEntry,
+      [phase]: {
+        payload: structuredClone(payload),
+      },
+    };
+
+    if (phase === "keydown") {
+      resource[resourceKey].actions = structuredClone(
+        getKeyboardResourceActions(interaction),
+      );
+    }
+  });
+};
+export const toRouteGraphicsKeyboardResource = (keyboardMap, keyupMap) => {
+  const hasKeydown = asKeyboardMap(keyboardMap);
+  const hasKeyup = asKeyboardMap(keyupMap);
+  if (!hasKeydown && !hasKeyup) {
+    return {};
+  }
+
+  const resource = {};
+  assignRouteGraphicsKeyboardPhase({
+    resource,
+    keyboardMap,
+    phase: "keydown",
+  });
+  assignRouteGraphicsKeyboardPhase({
+    resource,
+    keyboardMap: keyupMap,
+    phase: "keyup",
+  });
+
+  return resource;
+};
+
 export const toRouteEngineKeyboardResource = (keyboardMap) => {
   const input = asKeyboardMap(keyboardMap);
   if (!input) {
@@ -2086,6 +2154,44 @@ export const toRouteEngineKeyboardResource = (keyboardMap) => {
   });
 
   return resource;
+};
+
+const asKeyboardPayload = (value, fallback = {}) => {
+  if (value?.payload && typeof value.payload === "object") {
+    return value.payload;
+  }
+
+  if (value?.actions && typeof value.actions === "object") {
+    return {
+      actions: value.actions,
+    };
+  }
+
+  return fallback;
+};
+
+const toRouteGraphicsKeyboardEntry = (value = {}) => {
+  const entry = {};
+
+  if (value?.keydown && typeof value.keydown === "object") {
+    entry.keydown = {
+      payload: structuredClone(asKeyboardPayload(value.keydown)),
+    };
+  }
+
+  if (value?.keyup && typeof value.keyup === "object") {
+    entry.keyup = {
+      payload: structuredClone(asKeyboardPayload(value.keyup)),
+    };
+  }
+
+  if (!entry.keydown && !entry.keyup) {
+    entry.keydown = {
+      payload: structuredClone(asKeyboardPayload(value, {})),
+    };
+  }
+
+  return entry;
 };
 
 export const prepareRenderStateKeyboardForGraphics = ({
@@ -2118,9 +2224,8 @@ export const prepareRenderStateKeyboardForGraphics = ({
 
   const normalizedKeyboard = {};
   Object.entries(existingKeyboard).forEach(([key, value]) => {
-    normalizedKeyboard[normalizeKeyboardKeyForGraphics(key)] = {
-      payload: structuredClone(value?.payload ?? {}),
-    };
+    normalizedKeyboard[normalizeKeyboardKeyForGraphics(key)] =
+      toRouteGraphicsKeyboardEntry(value);
   });
 
   return {

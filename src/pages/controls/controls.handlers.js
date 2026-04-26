@@ -23,12 +23,12 @@ const {
   handleBeforeMount,
   handleAfterMount,
   refreshData: handleDataChanged,
-  handleFileExplorerSelectionChanged,
+  handleFileExplorerSelectionChanged: handleCatalogFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
-  handleItemClick: handleControlItemClick,
+  handleItemClick: handleCatalogControlItemClick,
   handleSearchInput,
   handleMobileFileExplorerOpen,
   handleMobileFileExplorerClose,
@@ -85,16 +85,50 @@ const {
   },
 });
 
+const logSelectedControlItem = ({ store }, { itemId } = {}) => {
+  if (!itemId) {
+    return;
+  }
+
+  const item = store.selectControlItemById({ itemId });
+  if (!item) {
+    return;
+  }
+
+  console.log("Selected control item", item);
+};
+
+const getSelectedItemIdFromEvent = (payload) => {
+  return payload._event.detail.itemId;
+};
+
+export const handleFileExplorerSelectionChanged = (deps, payload) => {
+  handleCatalogFileExplorerSelectionChanged(deps, payload);
+
+  if (payload._event.detail.isFolder) {
+    return;
+  }
+
+  logSelectedControlItem(deps, {
+    itemId: getSelectedItemIdFromEvent(payload),
+  });
+};
+
+export const handleControlItemClick = (deps, payload) => {
+  handleCatalogControlItemClick(deps, payload);
+  logSelectedControlItem(deps, {
+    itemId: getSelectedItemIdFromEvent(payload),
+  });
+};
+
 export {
   handleBeforeMount,
   handleAfterMount,
   handleDataChanged,
-  handleFileExplorerSelectionChanged,
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
-  handleControlItemClick,
   handleSearchInput,
   handleMobileFileExplorerOpen,
   handleMobileFileExplorerClose,
@@ -118,8 +152,19 @@ const getSelectedControl = (store) => {
   return selectedItem;
 };
 
-const getKeyboardEntryActions = (layout, key) => {
-  return getInteractionActions(layout?.keyboard?.[key]);
+const getKeyboardPhaseFromEvent = (event) =>
+  event?.currentTarget?.dataset?.phase === "keyup" ? "keyup" : "keydown";
+
+const getKeyboardFieldForPhase = (phase) =>
+  phase === "keyup" ? "keyup" : "keyboard";
+
+const getKeyboardMap = (control, phase) => {
+  const value = control?.[getKeyboardFieldForPhase(phase)];
+  return value && typeof value === "object" ? value : {};
+};
+
+const getKeyboardEntryActions = (control, phase, key) => {
+  return getInteractionActions(getKeyboardMap(control, phase)[key]);
 };
 
 const getKeyboardEditorMode = (actions = {}) => {
@@ -135,6 +180,7 @@ const updateControlKeyboard = async ({
   appService,
   projectService,
   store,
+  phase = "keydown",
   key,
   interaction,
 }) => {
@@ -143,10 +189,8 @@ const updateControlKeyboard = async ({
     return false;
   }
 
-  const currentKeyboard =
-    control.keyboard && typeof control.keyboard === "object"
-      ? control.keyboard
-      : {};
+  const field = getKeyboardFieldForPhase(phase);
+  const currentKeyboard = getKeyboardMap(control, phase);
   const nextKeyboard = {};
 
   Object.entries(currentKeyboard).forEach(([entryKey, entryValue]) => {
@@ -160,8 +204,7 @@ const updateControlKeyboard = async ({
   }
 
   const data = {};
-  data.keyboard =
-    Object.keys(nextKeyboard).length > 0 ? nextKeyboard : undefined;
+  data[field] = Object.keys(nextKeyboard).length > 0 ? nextKeyboard : undefined;
 
   const updateAttempt = await runResourcePageMutation({
     appService,
@@ -387,7 +430,8 @@ export const handleKeyboardAddClick = async (deps, payload) => {
     return;
   }
 
-  const assignedKeys = new Set(Object.keys(control.keyboard || {}));
+  const phase = getKeyboardPhaseFromEvent(payload._event);
+  const assignedKeys = new Set(Object.keys(getKeyboardMap(control, phase)));
   const availableItems = BASE_LAYOUT_KEYBOARD_OPTIONS.filter(
     (item) => !assignedKeys.has(item.value),
   ).map((item) => ({
@@ -415,6 +459,7 @@ export const handleKeyboardAddClick = async (deps, payload) => {
   }
 
   store.openKeyboardEditor({
+    phase,
     key: result.item.key,
     actions: {},
   });
@@ -437,8 +482,10 @@ export const handleKeyboardItemClick = (deps, payload) => {
     return;
   }
 
-  const actions = getKeyboardEntryActions(control, key);
+  const phase = getKeyboardPhaseFromEvent(payload._event);
+  const actions = getKeyboardEntryActions(control, phase, key);
   store.openKeyboardEditor({
+    phase,
     key,
     actions,
   });
@@ -458,6 +505,7 @@ export const handleKeyboardItemRightClick = async (deps, payload) => {
   if (!key) {
     return;
   }
+  const phase = getKeyboardPhaseFromEvent(event);
 
   const result = await appService.showDropdownMenu({
     items: [{ type: "item", key: "remove", label: "Delete" }],
@@ -473,6 +521,7 @@ export const handleKeyboardItemRightClick = async (deps, payload) => {
     appService,
     projectService: deps.projectService,
     store: deps.store,
+    phase,
     key,
     interaction: undefined,
   });
@@ -490,8 +539,9 @@ export const handleKeyboardActionsChange = async (deps, payload) => {
     return;
   }
 
+  const phase = store.selectKeyboardEditorPhase?.() ?? "keydown";
   const control = getSelectedControl(store);
-  const currentActions = getKeyboardEntryActions(control, key);
+  const currentActions = getKeyboardEntryActions(control, phase, key);
   const actions = {
     ...currentActions,
     ...payload._event.detail,
@@ -501,6 +551,7 @@ export const handleKeyboardActionsChange = async (deps, payload) => {
     appService,
     projectService: deps.projectService,
     store,
+    phase,
     key,
     interaction,
   });

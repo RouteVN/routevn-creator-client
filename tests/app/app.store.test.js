@@ -8,6 +8,20 @@ import {
 } from "../../src/pages/app/app.store.js";
 
 describe("app.store repository loading progress", () => {
+  it("does not resolve the hidden variables route", () => {
+    const state = createInitialState();
+    state.currentRoute = "/project/variables";
+
+    expect(selectViewData({ state }).currentRoutePattern).toBeUndefined();
+  });
+
+  it("does not resolve the hidden appearance route", () => {
+    const state = createInitialState();
+    state.currentRoute = "/project/appearance";
+
+    expect(selectViewData({ state }).currentRoutePattern).toBeUndefined();
+  });
+
   it("derives a percentage-based loading message and bar width", () => {
     const state = createInitialState();
 

@@ -31,7 +31,131 @@ const createStoryState = () => ({
   },
 });
 
+const createEmptyStoryState = () => ({
+  scenes: {
+    items: {},
+    tree: [],
+  },
+});
+
 describe("story command api", () => {
+  it("creates a scene with its initial section and line in one ordered batch", async () => {
+    const context = {
+      projectId: "project-1",
+      state: createEmptyStoryState(),
+    };
+    const shared = {
+      ensureCommandContext: vi.fn(async () => context),
+      createId: vi.fn(() => "generated-id"),
+      resolveSceneIndex: vi.fn(() => 0),
+      buildPlacementPayload: vi.fn(
+        ({ parentId = null, index, position, positionTargetId } = {}) => {
+          const payload = {
+            parentId,
+          };
+          if (index !== undefined) {
+            payload.index = index;
+            return payload;
+          }
+          payload.position = position;
+          if (positionTargetId !== undefined) {
+            payload.positionTargetId = positionTargetId;
+          }
+          return payload;
+        },
+      ),
+      submitCommandsWithContext: vi.fn(async () => ({
+        valid: true,
+        commandIds: ["cmd-1", "cmd-2", "cmd-3"],
+        eventCount: 3,
+      })),
+      storyScenePartitionFor: vi.fn(() => "m:s:scene-2"),
+      scenePartitionFor: vi.fn(() => "s:scene-2"),
+    };
+    const api = createStoryCommandApi(shared);
+
+    const result = await api.createSceneWithInitialContent({
+      sceneId: "scene-2",
+      sectionId: "section-2",
+      lineId: "line-2",
+      data: {
+        name: "Scene 2",
+      },
+      sectionData: {
+        name: "Section 1",
+      },
+      lineData: {
+        actions: {
+          dialogue: {
+            mode: "adv",
+          },
+        },
+      },
+    });
+
+    expect(result).toMatchObject({
+      valid: true,
+      sceneId: "scene-2",
+      sectionId: "section-2",
+      lineId: "line-2",
+      commandIds: ["cmd-1", "cmd-2", "cmd-3"],
+      eventCount: 3,
+    });
+    expect(shared.submitCommandsWithContext).toHaveBeenCalledWith({
+      context,
+      commands: [
+        {
+          scope: "story",
+          partition: "m:s:scene-2",
+          type: COMMAND_TYPES.SCENE_CREATE,
+          payload: {
+            sceneId: "scene-2",
+            parentId: null,
+            index: 0,
+            data: {
+              name: "Scene 2",
+            },
+          },
+        },
+        {
+          scope: "story",
+          partition: "m:s:scene-2",
+          type: COMMAND_TYPES.SECTION_CREATE,
+          payload: {
+            sceneId: "scene-2",
+            sectionId: "section-2",
+            parentId: null,
+            position: "last",
+            data: {
+              name: "Section 1",
+            },
+          },
+        },
+        {
+          scope: "story",
+          partition: "s:scene-2",
+          type: COMMAND_TYPES.LINE_CREATE,
+          payload: {
+            sectionId: "section-2",
+            lines: [
+              {
+                lineId: "line-2",
+                data: {
+                  actions: {
+                    dialogue: {
+                      mode: "adv",
+                    },
+                  },
+                },
+              },
+            ],
+            position: "last",
+          },
+        },
+      ],
+    });
+  });
+
   it("omits replace for default line action updates", async () => {
     const context = {
       projectId: "project-1",

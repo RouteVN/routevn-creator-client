@@ -418,27 +418,13 @@ export const handleSpriteItemDoubleClick = (deps, payload) => {
 };
 
 export const handleButtonSelectClick = (deps) => {
-  const { store, render, appService } = deps;
+  const { store, render } = deps;
   const mode = store.selectMode();
   const selectedCharacterIndex = store.selectSelectedCharacterIndex();
 
   if (mode === "sprite-select") {
     const spriteSelectionGroups = store.selectCurrentSpriteSelectionGroups();
     const tempSelectedSpriteIds = store.selectTempSelectedSpriteIds();
-    const missingSpriteGroup = spriteSelectionGroups.find(
-      (spriteSelectionGroup) => !tempSelectedSpriteIds[spriteSelectionGroup.id],
-    );
-
-    if (missingSpriteGroup) {
-      appService.showAlert({
-        message:
-          spriteSelectionGroups.length > 1
-            ? `Select a sprite for ${missingSpriteGroup.name}.`
-            : "A sprite is required.",
-        title: "Warning",
-      });
-      return;
-    }
 
     store.updateCharacterSprites({
       index: selectedCharacterIndex,

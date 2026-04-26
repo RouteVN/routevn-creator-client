@@ -8,6 +8,7 @@ import {
 } from "../../src/pages/scenes/scenes.handlers.js";
 
 const originalWindow = globalThis.window;
+const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
 
 const createDeps = ({ userConfig = {}, projectId = "project-1" } = {}) => {
   const getUserConfig = vi.fn((key) => userConfig[key]);
@@ -25,6 +26,12 @@ const createDeps = ({ userConfig = {}, projectId = "project-1" } = {}) => {
       ensureRepository: vi.fn(async () => {}),
       deleteSceneIfUnused: vi.fn(async () => ({
         deleted: true,
+      })),
+      createSceneWithInitialContent: vi.fn(async () => ({
+        valid: true,
+        sceneId: "scene-2",
+        sectionId: "section-1",
+        lineId: "line-1",
       })),
       createSceneItem: vi.fn(async () => "scene-2"),
       createSectionItem: vi.fn(async () => "section-1"),
@@ -108,10 +115,15 @@ describe("scenes.handlers config keys", () => {
       innerWidth: 1200,
       innerHeight: 800,
     };
+    globalThis.requestAnimationFrame = (callback) => {
+      callback();
+      return 1;
+    };
   });
 
   afterEach(() => {
     globalThis.window = originalWindow;
+    globalThis.requestAnimationFrame = originalRequestAnimationFrame;
   });
 
   it("loads the scenes viewport from project-scoped userConfig keys", async () => {
@@ -242,9 +254,69 @@ describe("scenes.handlers config keys", () => {
     expect(deps.store.setSelectedItemId).not.toHaveBeenCalled();
   });
 
+  it("creates scene, first section, and first line as one project command batch", async () => {
+    const deps = createDeps();
+
+    await handleSceneFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            name: "Scene 2",
+            folderId: "",
+          },
+        },
+      },
+    });
+
+    expect(
+      deps.projectService.createSceneWithInitialContent,
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      deps.projectService.createSceneWithInitialContent,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sceneId: expect.stringMatching(/^scene-/),
+        parentId: null,
+        position: "last",
+        data: {
+          name: "Scene 2",
+          position: {
+            x: 0,
+            y: 0,
+          },
+        },
+        sectionId: expect.any(String),
+        sectionData: {
+          name: "Section 1",
+        },
+        lineId: expect.any(String),
+        lineData: {
+          actions: {
+            dialogue: {
+              mode: "adv",
+              content: [{ text: "" }],
+            },
+          },
+        },
+      }),
+    );
+    expect(deps.projectService.createSceneItem).not.toHaveBeenCalled();
+    expect(deps.projectService.createSectionItem).not.toHaveBeenCalled();
+    expect(deps.projectService.createLineItem).not.toHaveBeenCalled();
+    expect(deps.store.addWhiteboardItem).toHaveBeenCalledWith({
+      newItem: {
+        id: expect.stringMatching(/^scene-/),
+        name: "Scene 2",
+        x: 0,
+        y: 0,
+      },
+    });
+  });
+
   it("shows an error when scene creation is rejected", async () => {
     const deps = createDeps();
-    deps.projectService.createSceneItem.mockResolvedValue({
+    deps.projectService.createSceneWithInitialContent.mockResolvedValue({
       valid: false,
       error: {
         message: "cannot create scene",
@@ -263,6 +335,7 @@ describe("scenes.handlers config keys", () => {
       },
     });
 
+    expect(deps.projectService.createSceneItem).not.toHaveBeenCalled();
     expect(deps.projectService.createSectionItem).not.toHaveBeenCalled();
     expect(deps.projectService.createLineItem).not.toHaveBeenCalled();
     expect(deps.appService.showAlert).toHaveBeenCalledWith({

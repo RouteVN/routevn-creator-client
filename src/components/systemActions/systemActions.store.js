@@ -6,6 +6,8 @@ import {
 import { buildCharacterSpritePreviewFileIds } from "../../internal/characterSpritePreview.js";
 import { normalizeLineActions } from "../../internal/project/engineActions.js";
 
+const HIDDEN_ACTION_MODES = new Set(["updateVariable"]);
+
 export const createInitialState = () => ({
   mode: "actions",
   actions: {},
@@ -529,6 +531,16 @@ export const selectActionsData = ({ props, state }) => {
     preview.toggleSkipMode = actions.toggleSkipMode;
   }
 
+  if (actions.startSkipMode !== undefined) {
+    actionsObject.startSkipMode = actions.startSkipMode;
+    preview.startSkipMode = actions.startSkipMode;
+  }
+
+  if (actions.stopSkipMode !== undefined) {
+    actionsObject.stopSkipMode = actions.stopSkipMode;
+    preview.stopSkipMode = actions.stopSkipMode;
+  }
+
   if (actions.toggleDialogueUI !== undefined) {
     actionsObject.toggleDialogueUI = actions.toggleDialogueUI;
     preview.toggleDialogueUI = actions.toggleDialogueUI;
@@ -583,38 +595,40 @@ export const selectActionsData = ({ props, state }) => {
   // Update Variable
   if (actions.updateVariable) {
     actionsObject.updateVariable = actions.updateVariable;
-    const variableItems = repositoryStateData.variables?.items || {};
-    const operations = Array.isArray(actions.updateVariable.operations)
-      ? actions.updateVariable.operations
-      : [];
+    if (!HIDDEN_ACTION_MODES.has("updateVariable")) {
+      const variableItems = repositoryStateData.variables?.items || {};
+      const operations = Array.isArray(actions.updateVariable.operations)
+        ? actions.updateVariable.operations
+        : [];
 
-    // Build summary string showing operations
-    const summary =
-      operations
-        .map((op) => {
-          const variable = variableItems[op.variableId];
-          const varName = variable?.name || op.variableId;
-          if (op.op === "toggle") {
-            return `${varName} toggle`;
-          } else if (op.op === "set") {
-            return `${varName} = ${op.value}`;
-          } else if (op.op === "increment") {
-            return `${varName} +${op.value ?? 1}`;
-          } else if (op.op === "decrement") {
-            return `${varName} -${op.value ?? 1}`;
-          } else if (op.op === "multiply") {
-            return `${varName} ×${op.value}`;
-          } else if (op.op === "divide") {
-            return `${varName} ÷${op.value}`;
-          }
-          return `${varName} ${op.op}`;
-        })
-        .join(", ") || "No operations";
+      // Build summary string showing operations
+      const summary =
+        operations
+          .map((op) => {
+            const variable = variableItems[op.variableId];
+            const varName = variable?.name || op.variableId;
+            if (op.op === "toggle") {
+              return `${varName} toggle`;
+            } else if (op.op === "set") {
+              return `${varName} = ${op.value}`;
+            } else if (op.op === "increment") {
+              return `${varName} +${op.value ?? 1}`;
+            } else if (op.op === "decrement") {
+              return `${varName} -${op.value ?? 1}`;
+            } else if (op.op === "multiply") {
+              return `${varName} ×${op.value}`;
+            } else if (op.op === "divide") {
+              return `${varName} ÷${op.value}`;
+            }
+            return `${varName} ${op.op}`;
+          })
+          .join(", ") || "No operations";
 
-    preview.updateVariable = {
-      summary,
-      operationCount: operations.length,
-    };
+      preview.updateVariable = {
+        summary,
+        operationCount: operations.length,
+      };
+    }
   }
 
   return {

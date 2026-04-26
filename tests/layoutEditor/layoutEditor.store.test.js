@@ -122,22 +122,25 @@ describe("layoutEditor.store", () => {
         constants: LAYOUT_EDITOR_CONSTANTS,
       });
 
-      expect(
-        viewData.contextMenuItems.some(
-          (item) =>
-            item.label === "Fragment" &&
-            item.value?.action === "new-child-item" &&
-            item.value?.type === "fragment-ref",
-        ),
-      ).toBe(true);
-      expect(
-        viewData.emptyContextMenuItems.some(
-          (item) =>
-            item.label === "Fragment" &&
-            item.value?.action === "new-child-item" &&
-            item.value?.type === "fragment-ref",
-        ),
-      ).toBe(true);
+      const contextMenuFragmentItem = viewData.contextMenuItems.find(
+        (item) =>
+          item.label === "Fragment" &&
+          item.value?.action === "new-child-item" &&
+          item.value?.type === "fragment-ref",
+      );
+      const emptyMenuFragmentItem = viewData.emptyContextMenuItems.find(
+        (item) =>
+          item.label === "Fragment" &&
+          item.value?.action === "new-child-item" &&
+          item.value?.type === "fragment-ref",
+      );
+
+      expect(contextMenuFragmentItem).toBeTruthy();
+      expect(contextMenuFragmentItem.value).not.toHaveProperty("width");
+      expect(contextMenuFragmentItem.value).not.toHaveProperty("height");
+      expect(emptyMenuFragmentItem).toBeTruthy();
+      expect(emptyMenuFragmentItem.value).not.toHaveProperty("width");
+      expect(emptyMenuFragmentItem.value).not.toHaveProperty("height");
     }
   });
 

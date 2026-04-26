@@ -43,7 +43,6 @@ template:
                       - rtgl-view w=f d=h av=c g=md wrap:
                           - rtgl-view d=h av=c g=md w=1fg wrap:
                               - rtgl-text: Web Server
-                              - rtgl-text s=sm c=mu-fg: Serve a local static site folder over localhost.
                           - $if canAdd:
                               - rtgl-button#addServerBtn v=pr s=sm pre=plus: Add
                   - 'rtgl-view h=1fg w=f sv style="min-width: 0;"':

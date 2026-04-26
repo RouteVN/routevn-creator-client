@@ -110,6 +110,7 @@ describe("commandLineCharacters.store sprite group filtering", () => {
         selectedSpriteId: undefined,
         selectedSpriteName: "No sprite",
         hasSelection: false,
+        backgroundColor: "bg",
       },
       {
         id: "face",
@@ -117,6 +118,7 @@ describe("commandLineCharacters.store sprite group filtering", () => {
         selectedSpriteId: undefined,
         selectedSpriteName: "No sprite",
         hasSelection: false,
+        backgroundColor: "bg",
       },
     ]);
   });
@@ -152,6 +154,11 @@ describe("commandLineCharacters.store sprite group filtering", () => {
       "file-body",
       "file-face",
     ]);
+    expect(
+      viewData.defaultValues.characters[0].spriteGroupBoxes.map(
+        (spriteGroupBox) => spriteGroupBox.backgroundColor,
+      ),
+    ).toEqual(["mu", "mu"]);
   });
 
   it("filters sprites by the selected sprite group tags", () => {

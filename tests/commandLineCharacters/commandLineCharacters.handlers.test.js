@@ -520,7 +520,7 @@ describe("commandLineCharacters.handlers", () => {
     expect(render).toHaveBeenCalledTimes(1);
   });
 
-  it("requires a sprite for each sprite group before confirming", () => {
+  it("allows sprite groups to be left empty when confirming", () => {
     const state = createInitialState();
     const render = vi.fn();
     const showAlert = vi.fn();
@@ -587,11 +587,88 @@ describe("commandLineCharacters.handlers", () => {
       store,
     });
 
-    expect(showAlert).toHaveBeenCalledWith({
-      message: "Select a sprite for Face.",
-      title: "Warning",
+    expect(showAlert).not.toHaveBeenCalled();
+    expect(selectSelectedCharacters({ state })[0].sprites).toEqual([
+      {
+        id: "body",
+        resourceId: "sprite-body",
+      },
+    ]);
+    expect(selectMode({ state })).toBe("current");
+    expect(selectSelectedCharacterIndex({ state })).toBeUndefined();
+    expect(selectTempSelectedSpriteIds({ state })).toEqual({});
+  });
+
+  it("allows all sprite groups to be empty when confirming", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const showAlert = vi.fn();
+    const store = createStoreApi(state);
+
+    setItems(
+      { state },
+      {
+        items: {
+          items: {
+            "character-hero": {
+              id: "character-hero",
+              type: "character",
+              name: "Hero",
+              spriteGroups: [
+                {
+                  id: "body",
+                  name: "Body",
+                  tags: [],
+                },
+                {
+                  id: "face",
+                  name: "Face",
+                  tags: [],
+                },
+              ],
+            },
+          },
+          tree: [{ id: "character-hero" }],
+        },
+      },
+    );
+    setExistingCharacters(
+      { state },
+      {
+        characters: [
+          {
+            id: "character-hero",
+            sprites: [
+              {
+                id: "body",
+                resourceId: "sprite-body",
+              },
+            ],
+          },
+        ],
+      },
+    );
+    setMode({ state }, { mode: "sprite-select" });
+    setSelectedCharacterIndex({ state }, { index: 0 });
+    setTempSelectedSpriteIds(
+      { state },
+      {
+        spriteIdsByGroupId: {},
+      },
+    );
+    setSelectedSpriteGroupId({ state }, { spriteGroupId: "body" });
+
+    handleButtonSelectClick({
+      appService: { showAlert },
+      render,
+      store,
     });
-    expect(selectMode({ state })).toBe("sprite-select");
+
+    expect(showAlert).not.toHaveBeenCalled();
+    expect(selectSelectedCharacters({ state })[0].sprites).toEqual([]);
+    expect(selectMode({ state })).toBe("current");
+    expect(selectSelectedCharacterIndex({ state })).toBeUndefined();
+    expect(selectTempSelectedSpriteIds({ state })).toEqual({});
   });
 
   it("stores one selected sprite part per sprite group when confirming", () => {

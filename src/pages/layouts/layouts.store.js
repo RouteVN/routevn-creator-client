@@ -8,8 +8,13 @@ export const LAYOUT_TAG_SCOPE_KEY = "layouts";
 
 const fragmentField = {
   name: "isFragment",
-  type: "checkbox",
-  content: "Can Be Used As Fragment",
+  type: "segmented-control",
+  label: "Can Be Used As Fragment",
+  clearable: false,
+  options: [
+    { value: false, label: "No" },
+    { value: true, label: "Yes" },
+  ],
 };
 
 const layoutDescriptionField = {

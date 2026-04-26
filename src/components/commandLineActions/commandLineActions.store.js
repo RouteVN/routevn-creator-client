@@ -1,5 +1,7 @@
 import { RUNTIME_ACTION_ITEMS } from "../../internal/runtimeActions.js";
 
+const HIDDEN_ACTION_MODES = new Set(["updateVariable"]);
+
 const createSection = (label, items) => ({
   label,
   items,
@@ -48,6 +50,18 @@ const SYSTEM_ACTION_SECTIONS = [
       label: "Toggle Skip Mode",
       icon: "settings",
       mode: "toggleSkipMode",
+    },
+    {
+      id: "25",
+      label: "Start Skip Mode",
+      icon: "settings",
+      mode: "startSkipMode",
+    },
+    {
+      id: "26",
+      label: "Stop Skip Mode",
+      icon: "settings",
+      mode: "stopSkipMode",
     },
     {
       id: "18",
@@ -222,7 +236,10 @@ const toActionItem = (item) => ({
 
 const getActionItems = (attrs = {}) => {
   const actionsType = attrs?.actionsType;
-  const hiddenModes = new Set(getHiddenModes(attrs));
+  const hiddenModes = new Set([
+    ...HIDDEN_ACTION_MODES,
+    ...getHiddenModes(attrs),
+  ]);
   const sections =
     {
       system: SYSTEM_ACTION_SECTIONS,

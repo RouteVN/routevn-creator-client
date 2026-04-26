@@ -223,6 +223,34 @@ describe("layoutEditorMutations", () => {
     ).toBe(item);
   });
 
+  it("does not resize fragment references", () => {
+    const item = {
+      id: "fragment-ref-1",
+      type: "fragment-ref",
+      x: 10,
+      y: 20,
+      width: 100,
+      height: 40,
+    };
+
+    expect(
+      applyCanvasItemResizeChange({
+        item,
+        dragStartPosition: {
+          x: 100,
+          y: 100,
+          itemStartX: 10,
+          itemStartY: 20,
+          itemStartWidth: 100,
+          itemStartHeight: 40,
+        },
+        resizeEdge: "right",
+        x: 130,
+        y: 100,
+      }),
+    ).toBe(item);
+  });
+
   it("does not keyboard-resize auto-width text items", () => {
     const item = {
       id: "text-1",

@@ -1,10 +1,24 @@
+import { readFileSync } from "node:fs";
+import yaml from "js-yaml";
 import { describe, expect, it, vi } from "vitest";
 import {
   createInitialState,
+  selectViewData,
   setValues,
   updateValueProperty,
 } from "../../src/components/layoutEditPanel/layoutEditPanel.store.js";
 import { handleOptionSelected } from "../../src/components/layoutEditPanel/layoutEditPanel.handlers.js";
+
+const EMPTY_TREE = { items: {}, tree: [] };
+const LAYOUT_EDIT_PANEL_CONSTANTS = yaml.load(
+  readFileSync(
+    new URL(
+      "../../src/components/layoutEditPanel/layoutEditPanel.constants.yaml",
+      import.meta.url,
+    ),
+    "utf8",
+  ),
+);
 
 const createDeps = ({
   itemType = "container",
@@ -31,7 +45,49 @@ const createDeps = ({
   };
 };
 
+const createViewProps = ({
+  itemType = "container",
+  resourceType = "layouts",
+} = {}) => ({
+  itemType,
+  layoutType: "general",
+  resourceType,
+  layoutsData: EMPTY_TREE,
+  charactersData: EMPTY_TREE,
+  isInsideSaveLoadSlot: false,
+  isInsideDirectedContainer: false,
+});
+
 describe("layoutEditPanel size modes", () => {
+  it("hides size controls for fragment references", () => {
+    for (const resourceType of ["layouts", "controls"]) {
+      const state = createInitialState();
+
+      setValues(
+        { state },
+        {
+          values: {
+            type: "fragment-ref",
+            fragmentLayoutId: "fragment-1",
+          },
+        },
+      );
+
+      const viewData = selectViewData({
+        state,
+        props: createViewProps({
+          itemType: "fragment-ref",
+          resourceType,
+        }),
+        constants: LAYOUT_EDIT_PANEL_CONSTANTS,
+      });
+
+      expect(
+        viewData.config.sections.some((section) => section.label === "Layout"),
+      ).toBe(false);
+    }
+  });
+
   it("sets directed container width to auto as 0", () => {
     const deps = createDeps({
       values: {

@@ -38,7 +38,7 @@ refs:
 template:
   - $if showSelected:
       - rtgl-view g=md w=f:
-          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.resetStoryAtSection || preview.dialogue || preview.choice || preview.control || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.toggleDialogueUI || preview.runtimeActions || preview.setNextLineConfig || preview.pushOverlay || preview.popOverlay || preview.updateVariable || preview.rollbackByOffset || preview.showConfirmDialog || preview.hideConfirmDialog || preview.saveSlot || preview.loadSlot:
+          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.resetStoryAtSection || preview.dialogue || preview.choice || preview.control || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.startSkipMode || preview.stopSkipMode || preview.toggleDialogueUI || preview.runtimeActions || preview.setNextLineConfig || preview.pushOverlay || preview.popOverlay || preview.rollbackByOffset || preview.showConfirmDialog || preview.hideConfirmDialog || preview.saveSlot || preview.loadSlot:
               - $if preview.control:
                   - rtgl-view#actionItemControl data-mode=control g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=control wh=24: null
@@ -118,6 +118,14 @@ template:
                   - rtgl-view#actionItemToggleSkipMode data-mode=toggleSkipMode g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="settings" wh=24: null
                       - rtgl-text s=sm: Toggle Skip Mode
+              - $if preview.startSkipMode:
+                  - rtgl-view#actionItemStartSkipMode data-mode=startSkipMode g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg="settings" wh=24: null
+                      - rtgl-text s=sm: Start Skip Mode
+              - $if preview.stopSkipMode:
+                  - rtgl-view#actionItemStopSkipMode data-mode=stopSkipMode g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg="settings" wh=24: null
+                      - rtgl-text s=sm: Stop Skip Mode
               - $if preview.toggleDialogueUI:
                   - rtgl-view#actionItemToggleDialogueUI data-mode=toggleDialogueUI g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="settings" wh=24: null
@@ -161,10 +169,6 @@ template:
                   - rtgl-view#actionItemSetNextLineConfig data-mode=setNextLineConfig g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=settings wh=24: null
                       - rtgl-text s=sm: Next Line Config
-              - $if preview.updateVariable:
-                  - rtgl-view#actionItemUpdateVariable data-mode=updateVariable g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
-                      - rtgl-svg svg=variable wh=24: null
-                      - rtgl-text s=sm: ${preview.updateVariable.summary}
           - rtgl-button#addActionButton v=ol w=f: +
           - $if actionsType == 'system':
               - rtgl-view d=h av=c ah=e w=f g=lg:
@@ -200,6 +204,10 @@ template:
                   - rvn-command-line-toggle-auto-mode#commandLineToggleAutoMode :toggleAutoMode=${actions.toggleAutoMode}: null
                 $elif mode == "toggleSkipMode":
                   - rvn-command-line-toggle-skip-mode#commandLineToggleSkipMode :toggleSkipMode=${actions.toggleSkipMode}: null
+                $elif mode == "startSkipMode":
+                  - rvn-command-line-start-skip-mode#commandLineStartSkipMode :startSkipMode=${actions.startSkipMode}: null
+                $elif mode == "stopSkipMode":
+                  - rvn-command-line-stop-skip-mode#commandLineStopSkipMode :stopSkipMode=${actions.stopSkipMode}: null
                 $elif mode == "toggleDialogueUI":
                   - rvn-command-line-toggle-dialogue-ui#commandLineToggleDialogueUI :toggleDialogueUI=${actions.toggleDialogueUI}: null
                 $elif mode == "pushOverlay":
@@ -222,6 +230,4 @@ template:
                   - rvn-command-line-set-next-line-config#commandLineSetNextLineConfig :setNextLineConfig=${actions.setNextLineConfig}: null
                 $elif isRuntimeActionMode:
                   - rvn-command-line-runtime-action#commandLineRuntimeAction :mode=${mode} :action=${actions[mode]}: null
-                $elif mode == "updateVariable":
-                  - rvn-command-line-update-variable#commandLineUpdateVariable :updateVariable=${actions.updateVariable}: null
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
