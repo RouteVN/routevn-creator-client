@@ -38,13 +38,13 @@ const animatedAssetItems = [
     id: "particles",
     label: "Particles",
     path: "/project/particles",
-    icon: "component",
+    icon: "particles",
   },
   {
     id: "spritesheets",
     label: "Spritesheets",
     path: "/project/spritesheets",
-    icon: "sprite",
+    icon: "spritesheets",
   },
 ];
 

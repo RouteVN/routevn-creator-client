@@ -30,17 +30,6 @@ const ANIMATION_MODE_OPTIONS = [
   },
 ];
 
-const PLAYBACK_CONTINUITY_OPTIONS = [
-  {
-    label: "Current Line",
-    value: "render",
-  },
-  {
-    label: "Persistent",
-    value: "persistent",
-  },
-];
-
 // Form structure will be created dynamically in selectViewData
 const createEmptyCollection = () => ({
   items: {},
@@ -450,16 +439,6 @@ export const selectViewData = ({ state }) => {
       clearable: false,
       placeholder: "Select transition animation",
       options: transitionAnimationOptions,
-    });
-  }
-
-  if (selectedAnimationMode !== "none") {
-    formFields.push({
-      name: "playbackContinuity",
-      label: "Playback Continuity",
-      type: "segmented-control",
-      clearable: false,
-      options: PLAYBACK_CONTINUITY_OPTIONS,
     });
   }
 

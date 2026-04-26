@@ -86,7 +86,7 @@ describe("commandLineBackground.store", () => {
     );
   });
 
-  it("shows playback continuity with render first when animation mode is active", () => {
+  it("hides playback continuity when animation mode is active", () => {
     const state = createInitialState();
 
     setRepositoryState(
@@ -143,21 +143,7 @@ describe("commandLineBackground.store", () => {
       (field) => field.name === "playbackContinuity",
     );
 
-    expect(continuityField).toMatchObject({
-      label: "Playback Continuity",
-      type: "segmented-control",
-      clearable: false,
-      options: [
-        {
-          value: "render",
-          label: "Current Line",
-        },
-        {
-          value: "persistent",
-          label: "Persistent",
-        },
-      ],
-    });
+    expect(continuityField).toBeUndefined();
     expect(viewData.dialogueForm.defaultValues.transformId).toBe("bg-center");
     expect(viewData.dialogueForm.defaultValues.playbackContinuity).toBe(
       "render",

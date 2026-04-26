@@ -301,6 +301,10 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       svg = "fragment";
     } else if (item.type === "layout" && item.isFragment) {
       svg = "fragment";
+    } else if (item.type === "particle") {
+      svg = "particles";
+    } else if (item.type === "spritesheet") {
+      svg = "spritesheets";
     } else if (item.type === "sound") {
       svg = "audio";
     } else if (item.type.startsWith("text")) {

@@ -17,6 +17,7 @@ import {
   buildParticleFormValues,
   createParticleCreateSetupForm,
   createParticleForm,
+  resolveParticleTextureImageItem,
 } from "./support/particleForm.js";
 import { DEFAULT_PARTICLE_PRESET_ID } from "./support/particlePresets.js";
 import { formatParticleAspectRatio } from "./support/particlePreview.js";
@@ -128,6 +129,10 @@ const {
   hiddenMobileDetailSlots: ["particle-preview"],
   extendViewData: ({ state, selectedItem, baseViewData }) => {
     const activeTagIds = state.activeTagIds ?? [];
+    const selectedTextureImageItem = resolveParticleTextureImageItem(
+      selectedItem?.modules?.appearance?.texture,
+      state.imagesData?.items,
+    );
     const filteredCatalogGroups = (baseViewData.catalogGroups ?? [])
       .map((group) => ({
         ...group,
@@ -170,6 +175,8 @@ const {
       dialogFormValues: state.dialogFormValues,
       dialogPreviewAspectRatio: state.dialogPreviewAspectRatio,
       selectedPreviewAspectRatio: formatParticleAspectRatio(selectedItem),
+      selectedTextureImageFileId: selectedTextureImageItem?.fileId,
+      selectedTextureImageName: selectedTextureImageItem?.name ?? "",
       isCreateTagDialogOpen: state.isCreateTagDialogOpen,
       createTagDefaultValues: state.createTagDefaultValues,
       createTagForm,

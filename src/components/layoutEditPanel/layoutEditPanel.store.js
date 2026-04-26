@@ -999,7 +999,7 @@ export const selectViewData = ({ state, props, constants }) => {
         selectedSpritesheetAnimation: selectedSpritesheetPreview.animation,
         selectedSpritesheetPreviewKey:
           spritesheetSelectionValue ??
-          `${selectedSpritesheetPreview.fileId ?? ""}:${selectedSpritesheetPreview.animation?.frames?.join(",") ?? ""}`,
+          `${selectedSpritesheetPreview.fileId ?? ""}:${selectedSpritesheetPreview.animation?.frames?.join(",") ?? ""}:${selectedSpritesheetPreview.animation?.fps ?? ""}`,
         fragmentLayoutOptions,
         values,
         showLayoutSizeSection,

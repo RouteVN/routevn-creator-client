@@ -1,7 +1,9 @@
 import { isVisualTestMode } from "../../internal/visualTestMode.js";
+import { resolveSpritesheetAnimationFps } from "../../internal/spritesheets.js";
 
 const PREVIEW_PADDING_PX = 16;
-const DEFAULT_FPS = 30;
+
+const isPaused = (value) => value === true || value === "true";
 
 const clearCanvas = (canvas) => {
   if (
@@ -29,22 +31,8 @@ const clearCanvas = (canvas) => {
   }
 
   context.clearRect(0, 0, width, height);
-  context.fillStyle = "#151515";
+  context.fillStyle = "#000000";
   context.fillRect(0, 0, width, height);
-
-  context.strokeStyle = "rgba(255,255,255,0.08)";
-  for (let x = 0; x < width; x += 24) {
-    context.beginPath();
-    context.moveTo(x, 0);
-    context.lineTo(x, height);
-    context.stroke();
-  }
-  for (let y = 0; y < height; y += 24) {
-    context.beginPath();
-    context.moveTo(0, y);
-    context.lineTo(width, y);
-    context.stroke();
-  }
 };
 
 const revokeOwnedImageSrc = (store) => {
@@ -175,10 +163,7 @@ const startAnimation = (deps) => {
     return;
   }
 
-  const fps = Math.max(
-    1,
-    Number(props.animation?.animationSpeed ?? DEFAULT_FPS / 60) * 60,
-  );
+  const fps = Math.max(1, resolveSpritesheetAnimationFps(props.animation));
   const loop = props.animation?.loop ?? true;
 
   let lastRenderedFrame = -1;
@@ -314,7 +299,7 @@ export const handleOnUpdate = async (deps, payload = {}) => {
       ...deps,
       props: newProps,
     });
-    if (newProps.paused !== true) {
+    if (!isPaused(newProps.paused)) {
       startAnimation({
         ...deps,
         props: newProps,
@@ -328,7 +313,7 @@ export const handleSourceImageLoad = (deps) => {
   const { props, render, store } = deps;
   store.setStatus({ status: "ready" });
   drawFrame(deps);
-  if (props.paused !== true) {
+  if (!isPaused(props.paused)) {
     startAnimation(deps);
   }
   render();
