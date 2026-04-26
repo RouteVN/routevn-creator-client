@@ -85,6 +85,16 @@ refs:
     eventListeners:
       click:
         handler: handleDialogClipClick
+      dblclick:
+        handler: handleDialogClipDoubleClick
+  clipFpsDialog:
+    eventListeners:
+      close:
+        handler: handleClipFpsDialogClose
+  clipFpsForm:
+    eventListeners:
+      form-action:
+        handler: handleClipFpsFormAction
   detailTagSelect:
     eventListeners:
       value-change:
@@ -127,7 +137,7 @@ template:
                                       - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                                       - rtgl-svg svg=edit wh=16: null
                                   - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
-                                      - 'rvn-spritesheet-preview slot="spritesheet-preview" key=${detailPreviewKey} fileId=${detailPreviewFileId} :atlas=${detailPreviewAtlas} :animation=${detailPreviewAnimation} paused=${detailPreviewPaused} h=220 emptyLabel="No preview available"': null
+                                      - 'rvn-spritesheet-preview slot="spritesheet-preview" key=${detailPreviewKey} fileId=${detailPreviewFileId} :atlas=${detailPreviewAtlas} :animation=${detailPreviewAnimation} :paused=${detailPreviewPaused} h=220 emptyLabel="No preview available"': null
                                       - rtgl-tag-select#detailTagSelect slot="spritesheet-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
                                       - 'rtgl-view slot="spritesheet-animations" d=v w=f g=sm':
                                           - rtgl-text s=sm c=mu-fg: Animations
@@ -137,7 +147,7 @@ template:
                                                       - rtgl-view d=h w=f av=c g=sm:
                                                           - rtgl-text w=1fg s=sm: ${clip.name}
                                                           - rtgl-text s=xs c=mu-fg: ${clip.loopLabel}
-                                                      - rtgl-text s=xs c=mu-fg: ${clip.frameCount} frames • ${clip.fps} fps
+                                                      - rtgl-text s=xs c=mu-fg: ${clip.frameCount} frames • ${clip.fpsLabel} fps
                                             $else:
                                               - rtgl-view w=f p=sm bgc=mu br=md:
                                                   - rtgl-text s=xs c=mu-fg: No animations found
@@ -164,9 +174,6 @@ template:
   - rtgl-dialog#spritesheetDialog ?open=${isDialogOpen} s=lg:
       - $if isDialogPreviewMode:
           - 'rtgl-view slot="content" d=v w=f g=lg style="min-width: min(960px, 100vw - 64px);"':
-              - rtgl-view d=v g=xs:
-                  - rtgl-text s=sm: ${dialogTitle}
-                  - rtgl-text s=xs c=mu-fg: Preview clips for this spritesheet.
               - 'rvn-spritesheet-preview key=${dialogPreviewKey} src=${dialogPreviewUrl} fileId=${dialogPreviewFileId} :atlas=${dialogPreviewAtlas} :animation=${dialogPreviewAnimation} h=320 emptyLabel="No preview available"': null
               - rtgl-view d=v w=f g=sm:
                   - rtgl-text s=sm c=mu-fg: Clips
@@ -176,7 +183,7 @@ template:
                               - rtgl-view d=h w=f av=c g=sm:
                                   - rtgl-text w=1fg s=sm: ${clip.name}
                                   - rtgl-text s=xs c=mu-fg: ${clip.loopLabel}
-                              - rtgl-text s=xs c=mu-fg: ${clip.frameCount} frames • ${clip.fps} fps
+                              - rtgl-text s=xs c=mu-fg: ${clip.frameCount} frames • ${clip.fpsLabel} fps
                     $else:
                       - rtgl-view w=f p=sm bgc=mu br=md:
                           - rtgl-text s=xs c=mu-fg: No animations found
@@ -185,7 +192,7 @@ template:
               - rtgl-view w=5fg lg-w=f d=v g=md:
                   - rtgl-view d=v g=xs:
                       - rtgl-text s=sm: ${dialogTitle}
-                      - rtgl-text s=xs c=mu-fg: Set the name and description, then select the PNG image and JSON atlas here.
+                      - rtgl-text s=xs c=mu-fg: Set the name and description, then select the PNG image and spritesheet JSON here.
                   - rtgl-form#dialogForm key=${dialogFormKey} :defaultValues=${dialogValues} :form=${dialogForm} w=f:
                       - rtgl-view slot=spritesheet-image-source d=v g=xs:
                           - rtgl-view w=120 h=120 av=c ah=c:
@@ -200,7 +207,6 @@ template:
                           - rtgl-view d=h g=sm av=c:
                               - rtgl-input w=f :value=${dialogAtlasFieldValue} disabled=true placeholder=${dialogAtlasFieldPlaceholder}: null
                               - rtgl-button#dialogAtlasSourceButton variant=se size=sm pre=upload: ${dialogAtlasSourceLabel}
-                          - rtgl-text s=xs c=mu-fg: Select the atlas JSON file that defines the frames and clips.
               - rtgl-view w=6fg lg-w=f d=v g=md:
                   - 'rvn-spritesheet-preview key=${dialogPreviewKey} src=${dialogPreviewUrl} fileId=${dialogPreviewFileId} :atlas=${dialogPreviewAtlas} :animation=${dialogPreviewAnimation} h=260 emptyLabel=""': null
                   - rtgl-view d=v w=f g=sm:
@@ -211,9 +217,11 @@ template:
                                   - rtgl-view d=h w=f av=c g=sm:
                                       - rtgl-text w=1fg s=sm: ${clip.name}
                                       - rtgl-text s=xs c=mu-fg: ${clip.loopLabel}
-                                  - rtgl-text s=xs c=mu-fg: ${clip.frameCount} frames • ${clip.fps} fps
+                                  - rtgl-text s=xs c=mu-fg: ${clip.frameCount} frames • ${clip.fpsLabel} fps
                         $else:
                           - rtgl-view w=f p=sm bgc=mu br=md:
-                              - rtgl-text s=xs c=mu-fg: Select a valid atlas to detect clips
+                              - rtgl-text s=xs c=mu-fg: Select valid spritesheet JSON to detect clips
+  - rtgl-dialog#clipFpsDialog ?open=${isClipFpsDialogOpen} s=sm:
+      - rtgl-form#clipFpsForm key=${clipFpsDialogKey} slot=content :defaultValues=${clipFpsDialogValues} :form=${clipFpsForm} w=f: null
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null

@@ -86,4 +86,16 @@ describe("layoutEditorViewData", () => {
       },
     ]);
   });
+
+  it("uses the spritesheets icon for spritesheet animation elements", () => {
+    const [item] = toLayoutEditorExplorerItems([
+      {
+        id: "spritesheet-animation-1",
+        type: "spritesheet-animation",
+        name: "Idle",
+      },
+    ]);
+
+    expect(item.svg).toBe("spritesheets");
+  });
 });

@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { handleOnUpdate } from "../../src/components/spritesheetPreview/spritesheetPreview.handlers.js";
+import {
+  handleOnUpdate,
+  handleSourceImageLoad,
+} from "../../src/components/spritesheetPreview/spritesheetPreview.handlers.js";
 import {
   createInitialState,
   selectImageSrc,
@@ -128,6 +131,35 @@ describe("spritesheetPreview.handlers", () => {
 
     expect(cancelAnimationFrameSpy).toHaveBeenCalledWith(42);
     expect(state.animationFrameId).toBeUndefined();
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  it("treats string true as paused", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const requestAnimationFrameSpy = vi.fn();
+    const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+
+    globalThis.requestAnimationFrame = requestAnimationFrameSpy;
+
+    try {
+      handleSourceImageLoad({
+        props: {
+          paused: "true",
+          animation: {
+            frames: [0, 1],
+          },
+        },
+        refs: {},
+        render,
+        store: createStoreApi(state),
+      });
+    } finally {
+      globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+    }
+
+    expect(selectStatus({ state })).toBe("ready");
+    expect(requestAnimationFrameSpy).not.toHaveBeenCalled();
     expect(render).toHaveBeenCalledTimes(1);
   });
 });

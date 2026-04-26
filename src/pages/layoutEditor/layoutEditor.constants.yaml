@@ -7,16 +7,12 @@ contextMenuItems:
   - label: Sprite
     type: item
     createType: sprite
-  # Hidden for now. Restore when layout editor should allow creating
-  # spritesheet animations again.
-  # - label: Spritesheet Animation
-  #   type: item
-  #   createType: spritesheet-animation
-  # Hidden for now. Restore when layout editor should allow creating
-  # particles again.
-  # - label: Particle
-  #   type: item
-  #   createType: particle
+  - label: Spritesheet Animation
+    type: item
+    createType: spritesheet-animation
+  - label: Particle
+    type: item
+    createType: particle
   - label: Text
     type: item
     createType: text
@@ -105,16 +101,12 @@ emptyContextMenuItems:
   - label: Sprite
     type: item
     createType: sprite
-  # Hidden for now. Restore when layout editor should allow creating
-  # spritesheet animations again.
-  # - label: Spritesheet Animation
-  #   type: item
-  #   createType: spritesheet-animation
-  # Hidden for now. Restore when layout editor should allow creating
-  # particles again.
-  # - label: Particle
-  #   type: item
-  #   createType: particle
+  - label: Spritesheet Animation
+    type: item
+    createType: spritesheet-animation
+  - label: Particle
+    type: item
+    createType: particle
   - label: Text
     type: item
     createType: text

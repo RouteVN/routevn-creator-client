@@ -5,6 +5,7 @@ import {
   createRenderableParticleData,
   isBuiltinParticleTextureName,
 } from "../particles.js";
+import { resolveSpritesheetAnimationFps } from "../spritesheets.js";
 import { filterTreeCollection, toHierarchyStructure } from "./tree.js";
 import { normalizeEngineActions } from "./engineActions.js";
 import {
@@ -1029,18 +1030,15 @@ const applySpritesheetAnimationNode = ({ element, node, context }) => {
     typeof animationName === "string"
       ? spritesheet.animations?.[animationName]
       : undefined;
+  const fps = resolveSpritesheetAnimationFps(selectedAnimation);
   const playback = {
     autoplay: true,
+    fps,
     loop: selectedAnimation?.loop ?? true,
   };
-  const fps = Number(selectedAnimation?.animationSpeed) * 60;
 
   if (typeof animationName === "string" && animationName.length > 0) {
     playback.clip = animationName;
-  }
-
-  if (Number.isFinite(fps) && fps > 0) {
-    playback.fps = fps;
   }
 
   return {

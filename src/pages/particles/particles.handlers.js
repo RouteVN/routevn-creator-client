@@ -581,7 +581,7 @@ export const handleParticleDialogClose = async (deps) => {
 
 export const handleParticleFormActionClick = async (deps, payload) => {
   const { appService, projectService, refs, store, render } = deps;
-  const { actionId, values: nextValues } = payload._event.detail;
+  const { actionId, valid, values: nextValues } = payload._event.detail;
   const dialogStep = store.selectDialogStep();
   const mergedValues = mergeDialogFormValues(store, nextValues);
   const values =
@@ -609,6 +609,10 @@ export const handleParticleFormActionClick = async (deps, payload) => {
   }
 
   if (actionId !== "submit") {
+    return;
+  }
+
+  if (valid === false) {
     return;
   }
 

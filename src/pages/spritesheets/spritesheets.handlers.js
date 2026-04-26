@@ -24,6 +24,11 @@ import {
   resolveCollectionWithTags,
 } from "../../internal/resourceTags.js";
 import {
+  INITIAL_SPRITESHEET_CLIP_FPS,
+  normalizeSpritesheetAnimationsFps,
+  normalizeSpritesheetFps,
+} from "../../internal/spritesheets.js";
+import {
   getSpritesheetDisplayName,
   normalizeSizeInput,
   parseSpritesheetAtlasFile,
@@ -38,9 +43,9 @@ const SPRITESHEET_ATLAS_FILE_ACCEPT = ".json";
 const PNG_FILE_PATTERN = /\.png$/i;
 const JSON_FILE_PATTERN = /\.json$/i;
 const INVALID_IMPORT_FORMAT_MESSAGE =
-  "Only PNG spritesheets and JSON atlas files are supported.";
+  "Only PNG spritesheets and spritesheet JSON files are supported.";
 const INVALID_IMPORT_PAIR_MESSAGE =
-  "Spritesheet import requires exactly one PNG image and one JSON atlas.";
+  "Spritesheet import requires exactly one PNG image and one spritesheet JSON file.";
 
 const showInvalidImportFormatToast = (appService) => {
   appService.showAlert({
@@ -156,7 +161,7 @@ const parseImportSelection = async ({ appService, files } = {}) => {
     showResourcePageError({
       appService,
       errorOrResult: error,
-      fallbackMessage: "Failed to import spritesheet atlas.",
+      fallbackMessage: "Failed to import spritesheet JSON.",
     });
     return undefined;
   }
@@ -244,6 +249,7 @@ const openEditDialogForItem = ({ deps, itemId, syncExplorer = false } = {}) => {
   store.openEditDialog({
     itemId,
     values,
+    animations: item.animations,
   });
   render();
   syncDialogFormValues({ refs, values });
@@ -349,6 +355,7 @@ const applyDialogSourceFiles = async ({
 };
 
 const buildSpritesheetPayload = ({
+  dialogAnimations,
   existingItem,
   importData,
   uploadResult,
@@ -356,6 +363,14 @@ const buildSpritesheetPayload = ({
 } = {}) => {
   const width = normalizeSizeInput(values?.width);
   const height = normalizeSizeInput(values?.height);
+  const sourceAnimations =
+    Object.keys(dialogAnimations ?? {}).length > 0
+      ? dialogAnimations
+      : (importData?.animations ?? existingItem?.animations ?? {});
+  const animations = normalizeSpritesheetAnimationsFps(
+    sourceAnimations,
+    INITIAL_SPRITESHEET_CLIP_FPS,
+  );
   const payload = {
     name: values?.name?.trim() ?? "",
     description: values?.description ?? "",
@@ -364,7 +379,7 @@ const buildSpritesheetPayload = ({
     width,
     height,
     jsonData: importData?.jsonData ?? existingItem?.jsonData ?? {},
-    animations: importData?.animations ?? existingItem?.animations ?? {},
+    animations,
   };
 
   const thumbnailFileId =
@@ -701,6 +716,7 @@ export const handleDialogFormAction = async (deps, payload) => {
   const dialogItemId = store.selectDialogItemId();
   const dialogParentId = store.selectDialogParentId();
   const importData = store.selectDialogImportData();
+  const dialogAnimations = store.selectDialogDraftAnimations();
   const dialogSourceFiles = store.selectDialogSourceFiles();
   const existingItem = dialogItemId
     ? store.selectItemById({ itemId: dialogItemId })
@@ -716,7 +732,7 @@ export const handleDialogFormAction = async (deps, payload) => {
 
   if (dialogMode === "create" && !dialogSourceFiles?.atlasFile) {
     appService.showAlert({
-      message: "Atlas JSON is required.",
+      message: "Spritesheet JSON is required.",
       title: "Warning",
     });
     return;
@@ -740,6 +756,7 @@ export const handleDialogFormAction = async (deps, payload) => {
   }
 
   const spritesheetData = buildSpritesheetPayload({
+    dialogAnimations,
     existingItem,
     importData,
     uploadResult,
@@ -824,6 +841,51 @@ export const handleDialogClipClick = (deps, payload) => {
 
   const { render, store } = deps;
   store.setDialogSelectedClipName({ clipName });
+  render();
+};
+
+export const handleDialogClipDoubleClick = (deps, payload) => {
+  const clipName = payload._event.currentTarget.dataset.clipName;
+  if (!clipName) {
+    return;
+  }
+
+  const { render, store } = deps;
+  if (store.selectDialogMode() === "preview") {
+    return;
+  }
+
+  store.openClipFpsDialog({ clipName });
+  render();
+};
+
+export const handleClipFpsDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeClipFpsDialog();
+  render();
+};
+
+export const handleClipFpsFormAction = (deps, payload) => {
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
+    return;
+  }
+
+  const { appService, render, store } = deps;
+  const fps = normalizeSpritesheetFps(values?.fps);
+  if (fps === undefined) {
+    appService.showAlert({
+      message: "Clip FPS must be greater than 0.",
+      title: "Warning",
+    });
+    return;
+  }
+
+  store.setDialogClipFps({
+    clipName: store.selectClipFpsDialogClipName(),
+    fps,
+  });
+  store.closeClipFpsDialog();
   render();
 };
 
