@@ -879,6 +879,7 @@ const constructLayoutResources = (
       id: controlId,
       name: control.name,
       keyboard: toRouteEngineKeyboardResource(control.keyboard),
+      keyup: toRouteEngineKeyboardResource(control.keyup),
       elements,
     };
   });

@@ -108,6 +108,7 @@ const settingsItems = [
     label: "Appearance",
     path: "/project/appearance",
     icon: "color",
+    hidden: true,
   },
 ];
 
@@ -204,7 +205,8 @@ const getSectionsByVariant = (state) => ({
 const getNavigationItems = (state) =>
   Object.values(getSectionsByVariant(state))
     .flat()
-    .flatMap((section) => section.items);
+    .flatMap((section) => section.items)
+    .filter((item) => !item.hidden);
 
 const selectCurrentResourceId = () => {
   if (typeof window === "undefined") {
@@ -245,10 +247,12 @@ export const selectViewData = ({ state, props = {} }) => {
   const selectedResourceId = selectCurrentResourceId();
   const viewSections = sections.map((section) => ({
     ...section,
-    items: section.items.map((item) => ({
-      ...item,
-      bgc: item.id === selectedResourceId ? "ac" : "bg",
-    })),
+    items: section.items
+      .filter((item) => !item.hidden)
+      .map((item) => ({
+        ...item,
+        bgc: item.id === selectedResourceId ? "ac" : "bg",
+      })),
   }));
 
   return {

@@ -65,9 +65,7 @@ describe("routevnUrls", () => {
     expect(getRoutevnCreatorDocsUrl("/project/unknown")).toBe(
       ROUTEVN_CREATOR_DOCS_URL,
     );
-    expect(getRoutevnCreatorDocsUrl(undefined)).toBe(
-      ROUTEVN_CREATOR_DOCS_URL,
-    );
+    expect(getRoutevnCreatorDocsUrl(undefined)).toBe(ROUTEVN_CREATOR_DOCS_URL);
   });
 
   it("returns the dedicated line-action docs page for known system action modes", () => {
@@ -85,6 +83,12 @@ describe("routevnUrls", () => {
   it("maps related system action modes to the closest documented guide", () => {
     expect(getRoutevnCreatorSystemActionDocsUrl("toggleDialogueUI")).toBe(
       "https://routevn.com/creator/docs/line-actions/dialogue/",
+    );
+    expect(getRoutevnCreatorSystemActionDocsUrl("startSkipMode")).toBe(
+      "https://routevn.com/creator/docs/line-actions/toggle-skip-mode/",
+    );
+    expect(getRoutevnCreatorSystemActionDocsUrl("stopSkipMode")).toBe(
+      "https://routevn.com/creator/docs/line-actions/toggle-skip-mode/",
     );
     expect(getRoutevnCreatorSystemActionDocsUrl("setSoundVolume")).toBe(
       "https://routevn.com/creator/docs/line-actions/sfx/",

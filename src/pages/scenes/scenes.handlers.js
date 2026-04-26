@@ -790,44 +790,29 @@ export const handleSceneFormAction = async (deps, payload) => {
     }
 
     try {
-      const createSceneResult = await projectService.createSceneItem({
-        sceneId: newSceneId,
-        parentId: formData.folderId || null,
-        position: "last",
-        data: {
-          name: formData.name || `Scene ${new Date().toLocaleTimeString()}`,
-          position: {
-            x: sceneWhiteboardPosition.x,
-            y: sceneWhiteboardPosition.y,
+      const createSceneResult =
+        await projectService.createSceneWithInitialContent({
+          sceneId: newSceneId,
+          parentId: formData.folderId || null,
+          position: "last",
+          data: {
+            name: formData.name || `Scene ${new Date().toLocaleTimeString()}`,
+            position: {
+              x: sceneWhiteboardPosition.x,
+              y: sceneWhiteboardPosition.y,
+            },
           },
-        },
-      });
+          sectionId,
+          sectionData: {
+            name: "Section 1",
+          },
+          lineId: stepId,
+          lineData: {
+            actions,
+          },
+        });
       if (createSceneResult?.valid === false) {
         throw createSceneResult;
-      }
-
-      const createSectionResult = await projectService.createSectionItem({
-        sceneId: newSceneId,
-        sectionId,
-        position: "last",
-        data: {
-          name: "Section 1",
-        },
-      });
-      if (createSectionResult?.valid === false) {
-        throw createSectionResult;
-      }
-
-      const createLineResult = await projectService.createLineItem({
-        sectionId,
-        lineId: stepId,
-        data: {
-          actions,
-        },
-        position: "last",
-      });
-      if (createLineResult?.valid === false) {
-        throw createLineResult;
       }
 
       // Add to whiteboard items for visual display

@@ -144,6 +144,7 @@ const buildSpriteGroupBoxViewData = ({
       selectedSpriteId,
       selectedSpriteName: selectedSprite?.name ?? "No sprite",
       hasSelection: !!selectedSpriteId,
+      backgroundColor: selectedSpriteId ? "mu" : "bg",
     };
   });
 };

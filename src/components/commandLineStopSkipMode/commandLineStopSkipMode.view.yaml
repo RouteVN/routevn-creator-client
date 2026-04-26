@@ -1,0 +1,20 @@
+refs:
+  breadcumb:
+    eventListeners:
+      item-click:
+        handler: handleBreadcumbClick
+  stopSkipModeForm:
+    eventListeners:
+      form-change:
+        handler: handleFormChange
+  submitButton:
+    eventListeners:
+      click:
+        handler: handleSubmitClick
+template:
+  - rtgl-view w=f h=f p=lg:
+      - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
+      - rtgl-form#stopSkipModeForm :defaultValues=${defaultValues} :form=${form} w=f: null
+      - rtgl-view h=1fg: null
+      - rtgl-view d=h av=c ah=e w=f g=lg:
+          - rtgl-button#submitButton: Submit

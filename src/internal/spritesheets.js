@@ -112,7 +112,7 @@ export const toSpritesheetAnimationSelectionItems = (spritesheetsData = {}) => {
     .filter((item) => item.type === "spritesheet")
     .flatMap((item) =>
       getSpritesheetAnimationNames(item).map((animationName) => ({
-        label: `${item.fullLabel || item.name} / ${animationName}`,
+        label: `${item.name} / ${animationName}`,
         value: toSpritesheetAnimationSelectionValue(item.id, animationName),
         resourceId: item.id,
         animationName,

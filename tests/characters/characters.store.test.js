@@ -74,6 +74,26 @@ describe("characters store sprite group tags", () => {
         value: "character-tag-main",
       },
     ]);
+    expect(viewData.dialogForm.fields[3]).toMatchObject({
+      name: "tagIds",
+      type: "tag-select",
+      options: [
+        {
+          label: "Main Cast",
+          value: "character-tag-main",
+        },
+      ],
+    });
+    expect(viewData.editForm.fields[3]).toMatchObject({
+      name: "tagIds",
+      type: "tag-select",
+      options: [
+        {
+          label: "Main Cast",
+          value: "character-tag-main",
+        },
+      ],
+    });
     expect(viewData.selectedItemSpriteGroups).toEqual([
       {
         id: "group-face",

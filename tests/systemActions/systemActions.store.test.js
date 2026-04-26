@@ -6,6 +6,47 @@ import {
 } from "../../src/components/systemActions/systemActions.store.js";
 
 describe("systemActions.store", () => {
+  it("preserves hidden update variable actions without previewing them", () => {
+    const state = createInitialState();
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          updateVariable: {
+            id: "updateVariable1",
+            operations: [],
+          },
+        },
+      },
+    });
+
+    expect(actions.updateVariable).toEqual({
+      id: "updateVariable1",
+      operations: [],
+    });
+    expect(preview.updateVariable).toBeUndefined();
+  });
+
+  it("preserves and previews explicit skip mode start and stop actions", () => {
+    const state = createInitialState();
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          startSkipMode: {},
+          stopSkipMode: {},
+        },
+      },
+    });
+
+    expect(actions.startSkipMode).toEqual({});
+    expect(actions.stopSkipMode).toEqual({});
+    expect(preview.startSkipMode).toEqual({});
+    expect(preview.stopSkipMode).toEqual({});
+  });
+
   it("builds resetStoryAtSection preview labels from repository sections", () => {
     const state = createInitialState();
 

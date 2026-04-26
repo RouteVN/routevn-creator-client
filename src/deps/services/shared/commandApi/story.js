@@ -131,6 +131,64 @@ export const createStoryCommandApi = (shared) => {
     return grouped;
   };
 
+  const normalizeLineCreateItems = ({ lines, lineId, data = {} } = {}) => {
+    if (Array.isArray(lines) && lines.length > 0) {
+      return lines.map((item) => ({
+        lineId: item?.lineId || shared.createId(),
+        data: structuredClone(item?.data ?? item?.line ?? {}),
+      }));
+    }
+
+    return [
+      {
+        lineId: lineId || shared.createId(),
+        data: structuredClone(data ?? {}),
+      },
+    ];
+  };
+
+  const buildLineCreatePayload = ({
+    sectionId,
+    normalizedLines,
+    resolvedIndex,
+    position = "last",
+    positionTargetId,
+  } = {}) => {
+    const payload = {
+      sectionId,
+      lines: normalizedLines,
+    };
+
+    if (resolvedIndex !== undefined) {
+      payload.index = resolvedIndex;
+      return payload;
+    }
+
+    payload.position = position;
+
+    if (positionTargetId !== undefined) {
+      payload.positionTargetId = positionTargetId;
+    }
+
+    return payload;
+  };
+
+  const assignPlacementPayload = (payload, placement = {}) => {
+    payload.parentId = placement.parentId;
+
+    if (placement.index !== undefined) {
+      payload.index = placement.index;
+    }
+
+    if (placement.position !== undefined) {
+      payload.position = placement.position;
+    }
+
+    if (placement.positionTargetId !== undefined) {
+      payload.positionTargetId = placement.positionTargetId;
+    }
+  };
+
   const submitLineActionsData = async ({
     lineId,
     data,
@@ -456,6 +514,125 @@ export const createStoryCommandApi = (shared) => {
       });
     },
 
+    async createSceneWithInitialContent({
+      sceneId,
+      parentId = null,
+      position = "last",
+      positionTargetId,
+      index,
+      data = {},
+      name,
+      sectionId,
+      sectionData = {},
+      sectionName,
+      lineId,
+      lineData = {},
+      lines,
+    }) {
+      const context = await shared.ensureCommandContext();
+      const finalSceneId = sceneId || shared.createId();
+      const finalSectionId = sectionId || shared.createId();
+      const resolvedSceneIndex = shared.resolveSceneIndex({
+        state: context.state,
+        parentId,
+        position,
+        positionTargetId,
+        index,
+      });
+      const nextSceneData = structuredClone(data ?? {});
+      if (name !== undefined) {
+        nextSceneData.name = name;
+      }
+
+      const nextSectionData = structuredClone(sectionData ?? {});
+      if (sectionName !== undefined) {
+        nextSectionData.name = sectionName;
+      }
+
+      const normalizedLines = normalizeLineCreateItems({
+        lines,
+        lineId,
+        data: lineData,
+      });
+      const mainScenePartition = getMainScenePartition(context, [finalSceneId]);
+      const sceneOnlyPartition = getSceneOnlyPartition(context, [finalSceneId]);
+      const sceneCreatePayload = {
+        sceneId: finalSceneId,
+      };
+      assignPlacementPayload(
+        sceneCreatePayload,
+        shared.buildPlacementPayload({
+          parentId,
+          index: resolvedSceneIndex,
+          position,
+          positionTargetId,
+        }),
+      );
+      sceneCreatePayload.data = nextSceneData;
+
+      const sectionCreatePayload = {
+        sceneId: finalSceneId,
+        sectionId: finalSectionId,
+      };
+      assignPlacementPayload(
+        sectionCreatePayload,
+        shared.buildPlacementPayload({
+          parentId: null,
+          position: "last",
+        }),
+      );
+      sectionCreatePayload.data = nextSectionData;
+
+      const submitResult = await shared.submitCommandsWithContext({
+        context,
+        commands: [
+          {
+            scope: "story",
+            partition: mainScenePartition,
+            type: COMMAND_TYPES.SCENE_CREATE,
+            payload: sceneCreatePayload,
+          },
+          {
+            scope: "story",
+            partition: mainScenePartition,
+            type: COMMAND_TYPES.SECTION_CREATE,
+            payload: sectionCreatePayload,
+          },
+          {
+            scope: "story",
+            partition: sceneOnlyPartition,
+            type: COMMAND_TYPES.LINE_CREATE,
+            payload: buildLineCreatePayload({
+              sectionId: finalSectionId,
+              normalizedLines,
+              position: "last",
+            }),
+          },
+        ],
+      });
+
+      if (submitResult?.valid === false) {
+        return submitResult;
+      }
+
+      const result = {
+        valid: true,
+        sceneId: finalSceneId,
+        sectionId: finalSectionId,
+        commandIds: submitResult.commandIds,
+        eventCount: submitResult.eventCount,
+        applyMode: submitResult.applyMode,
+      };
+
+      if (normalizedLines.length === 1) {
+        result.lineId = normalizedLines[0].lineId;
+      } else {
+        result.lineIds = normalizedLines.map((item) => item.lineId);
+      }
+
+      return result;
+    },
+
     async createSceneItem({
       sceneId,
       parentId = null,
@@ -725,20 +902,11 @@ export const createStoryCommandApi = (shared) => {
       index,
     }) {
       const context = await shared.ensureCommandContext();
-      let normalizedLines;
-      if (Array.isArray(lines) && lines.length > 0) {
-        normalizedLines = lines.map((item) => ({
-          lineId: item?.lineId || shared.createId(),
-          data: structuredClone(item?.data ?? item?.line ?? {}),
-        }));
-      } else {
-        normalizedLines = [
-          {
-            lineId: lineId || shared.createId(),
-            data: structuredClone(data || {}),
-          },
-        ];
-      }
+      const normalizedLines = normalizeLineCreateItems({
+        lines,
+        lineId,
+        data,
+      });
       const sectionLocation = findSectionLocation(context.state, sectionId);
       const resolvedIndex = shared.resolveLineIndex({
         section: sectionLocation?.section,
@@ -752,16 +920,13 @@ export const createStoryCommandApi = (shared) => {
         scope: "story",
         partition: getSceneOnlyPartition(context, [sectionLocation?.sceneId]),
         type: COMMAND_TYPES.LINE_CREATE,
-        payload: {
+        payload: buildLineCreatePayload({
           sectionId,
-          lines: normalizedLines,
-          ...(resolvedIndex !== undefined
-            ? { index: resolvedIndex }
-            : {
-                position: position || "last",
-                ...(positionTargetId !== undefined ? { positionTargetId } : {}),
-              }),
-        },
+          normalizedLines,
+          resolvedIndex,
+          position: position || "last",
+          positionTargetId,
+        }),
       });
 
       if (submitResult?.valid === false) {

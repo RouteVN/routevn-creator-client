@@ -51,8 +51,6 @@ template:
                   - rvn-text-styles: []
                 $elif currentRoutePattern == "/project/controls":
                   - rvn-controls: []
-                $elif currentRoutePattern == "/project/variables":
-                  - rvn-variables: []
                 $elif currentRoutePattern == "/project/scenes":
                   - rvn-scenes: []
                 $elif currentRoutePattern == "/project/scene-editor":
@@ -61,8 +59,6 @@ template:
                   - rvn-animation-editor: []
                 $elif currentRoutePattern == "/project/about":
                   - rvn-about: []
-                $elif currentRoutePattern == "/project/appearance":
-                  - rvn-appearance: []
                 $elif currentRoutePattern == "/project/user":
                   - rvn-settings-user: []
                 $elif currentRoutePattern == "/project/colors":

@@ -79,11 +79,21 @@ refs:
     eventListeners:
       form-action:
         handler: handleCreateTagFormAction
-  keyboardAddButton:
+  keyboardKeydownAddButton:
     eventListeners:
       click:
         handler: handleKeyboardAddClick
-  keyboardItem*:
+  keyboardKeyupAddButton:
+    eventListeners:
+      click:
+        handler: handleKeyboardAddClick
+  keyboardKeydownItem*:
+    eventListeners:
+      click:
+        handler: handleKeyboardItemClick
+      contextmenu:
+        handler: handleKeyboardItemRightClick
+  keyboardKeyupItem*:
     eventListeners:
       click:
         handler: handleKeyboardItemClick
@@ -121,20 +131,33 @@ template:
                                       - rtgl-svg svg=edit wh=16: null
                                   - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
                                       - rtgl-tag-select#detailTagSelect slot="control-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
-                                      - 'rtgl-view slot="keyboard-slot" d=v w=f g=md style="min-height: 0;"':
+                                      - 'rtgl-view slot="keyboard-slot" d=v w=f g=lg style="min-height: 0;"':
                                           - rtgl-view d=h w=f av=c:
-                                              - rtgl-text s=sm: Keyboard
+                                              - rtgl-text s=sm: Keydown
                                               - rtgl-view w=1fg: null
-                                              - rtgl-button#keyboardAddButton pre=plus sq s=sm v=gh: null
-                                          - $if keyboardItems.length > 0:
-                                              - $for item, i in keyboardItems:
-                                                  - rtgl-view#keyboardItem${i} data-key=${item.key} d=h w=f av=c g=md p=md bw=xs br=md h-bgc=mu cur=pointer:
+                                              - rtgl-button#keyboardKeydownAddButton data-phase=keydown pre=plus sq s=sm v=gh: null
+                                          - $if keydownKeyboardItems.length > 0:
+                                              - $for item, i in keydownKeyboardItems:
+                                                  - rtgl-view#keyboardKeydownItem${i} data-phase=keydown data-key=${item.key} d=h w=f av=c g=md p=md bw=xs br=md h-bgc=mu cur=pointer:
                                                       - rtgl-view d=v g=xs w=1fg:
                                                           - rtgl-text s=sm: ${item.keyLabel}
                                                           - rtgl-text s=xs c=mu-fg: ${item.actionLabel}
-                                          - $if keyboardItems.length == 0:
+                                          - $if keydownKeyboardItems.length == 0:
                                               - rtgl-view w=f p=md bgc=mu br=md:
-                                                  - rtgl-text s=xs c=mu-fg: ${keyboardEmptyMessage}
+                                                  - rtgl-text s=xs c=mu-fg: ${keydownKeyboardEmptyMessage}
+                                          - rtgl-view d=h w=f av=c:
+                                              - rtgl-text s=sm: Keyup
+                                              - rtgl-view w=1fg: null
+                                              - rtgl-button#keyboardKeyupAddButton data-phase=keyup pre=plus sq s=sm v=gh: null
+                                          - $if keyupKeyboardItems.length > 0:
+                                              - $for item, i in keyupKeyboardItems:
+                                                  - rtgl-view#keyboardKeyupItem${i} data-phase=keyup data-key=${item.key} d=h w=f av=c g=md p=md bw=xs br=md h-bgc=mu cur=pointer:
+                                                      - rtgl-view d=v g=xs w=1fg:
+                                                          - rtgl-text s=sm: ${item.keyLabel}
+                                                          - rtgl-text s=xs c=mu-fg: ${item.actionLabel}
+                                          - $if keyupKeyboardItems.length == 0:
+                                              - rtgl-view w=f p=md bgc=mu br=md:
+                                                  - rtgl-text s=xs c=mu-fg: ${keyupKeyboardEmptyMessage}
                             $else:
                               - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                                   - rtgl-text s=md c=mu-fg: No selection

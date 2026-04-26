@@ -28,12 +28,18 @@ const yieldToBrowser = async () => {
 const getSceneProjectionDebugDetails = (event) => {
   const command = committedEventToCommand(event);
   const payload = command?.payload || {};
+  const payloadLineIds = Array.isArray(payload.lineIds)
+    ? payload.lineIds.filter((id) => typeof id === "string" && id.length > 0)
+    : [];
+  const payloadLinesLineIds = Array.isArray(payload.lines)
+    ? payload.lines
+        .map((line) => line?.lineId)
+        .filter((id) => typeof id === "string" && id.length > 0)
+    : [];
   const lineId =
     typeof payload.lineId === "string"
       ? payload.lineId
-      : Array.isArray(payload.lineIds) && payload.lineIds.length > 0
-        ? payload.lineIds[0]
-        : undefined;
+      : (payloadLineIds[0] ?? payloadLinesLineIds[0]);
   const sectionId =
     typeof payload.sectionId === "string"
       ? payload.sectionId

@@ -78,21 +78,109 @@ const createTagForm = {
     ],
   },
 };
-const CHARACTER_TAG_FIELD = {
+const createCharacterTagField = ({ tagOptions } = {}) => ({
   name: "tagIds",
   type: "tag-select",
   label: "Tags",
   placeholder: "Select tags",
+  options: tagOptions ?? [],
   addOption: {
     label: "Add tag",
   },
   required: false,
-};
+});
 const SPRITE_GROUP_FIELD = {
   type: "slot",
   slot: "sprite-groups-slot",
   label: "Sprite Groups",
 };
+
+const createCharacterDialogForm = ({ tagOptions } = {}) => ({
+  title: "Add Character",
+  fields: [
+    {
+      name: "name",
+      type: "input-text",
+      label: "Name",
+      required: true,
+    },
+    {
+      name: "description",
+      type: "input-text",
+      label: "Description",
+      required: false,
+    },
+    {
+      name: "shortcut",
+      type: "select",
+      label: "Shortcut",
+      description: "Used for keyboard shortcut in scene editor",
+      options: CHARACTER_SHORTCUT_OPTIONS,
+      required: false,
+    },
+    createCharacterTagField({ tagOptions }),
+    {
+      type: "slot",
+      slot: "avatar-slot",
+      label: "Avatar",
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        label: "Add Character",
+      },
+    ],
+  },
+});
+
+const createEditCharacterDialogForm = ({ tagOptions } = {}) => ({
+  title: "Edit Character",
+  description: "Edit the character details",
+  fields: [
+    {
+      name: "name",
+      type: "input-text",
+      label: "Name",
+      description: "Enter the character name",
+      required: true,
+    },
+    {
+      name: "description",
+      type: "input-text",
+      label: "Description",
+      description: "Enter the character description",
+      required: false,
+    },
+    {
+      name: "shortcut",
+      type: "select",
+      label: "Shortcut",
+      options: CHARACTER_SHORTCUT_OPTIONS,
+      required: false,
+    },
+    createCharacterTagField({ tagOptions }),
+    {
+      type: "slot",
+      slot: "avatar-slot",
+      label: "Avatar",
+    },
+    SPRITE_GROUP_FIELD,
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        label: "Update Character",
+      },
+    ],
+  },
+});
 
 const createSpriteGroupDialogForm = ({ tagOptions, isEditing } = {}) => ({
   title: isEditing ? "Edit Sprite Group" : "Add Sprite Group",
@@ -237,47 +325,7 @@ export const createInitialState = () => ({
   spriteGroupDialogDefaultValues: {
     ...SPRITE_GROUP_DIALOG_DEFAULT_VALUES,
   },
-  dialogForm: {
-    title: "Add Character",
-    fields: [
-      {
-        name: "name",
-        type: "input-text",
-        label: "Name",
-        required: true,
-      },
-      {
-        name: "description",
-        type: "input-text",
-        label: "Description",
-        required: false,
-      },
-      {
-        name: "shortcut",
-        type: "select",
-        label: "Shortcut",
-        description: "Used for keyboard shortcut in scene editor",
-        options: CHARACTER_SHORTCUT_OPTIONS,
-        required: false,
-      },
-      CHARACTER_TAG_FIELD,
-      {
-        type: "slot",
-        slot: "avatar-slot",
-        label: "Avatar",
-      },
-    ],
-    actions: {
-      layout: "",
-      buttons: [
-        {
-          id: "submit",
-          variant: "pr",
-          label: "Add Character",
-        },
-      ],
-    },
-  },
+  dialogForm: createCharacterDialogForm(),
   // Edit dialog state
   isEditDialogOpen: false,
   editItemId: null,
@@ -792,50 +840,9 @@ export const selectViewData = ({ state }) => {
   });
 
   let editDefaultValues = {};
-  let editForm = {
-    title: "Edit Character",
-    description: "Edit the character details",
-    fields: [
-      {
-        name: "name",
-        type: "input-text",
-        label: "Name",
-        description: "Enter the character name",
-        required: true,
-      },
-      {
-        name: "description",
-        type: "input-text",
-        label: "Description",
-        description: "Enter the character description",
-        required: false,
-      },
-      {
-        name: "shortcut",
-        type: "select",
-        label: "Shortcut",
-        options: CHARACTER_SHORTCUT_OPTIONS,
-        required: false,
-      },
-      CHARACTER_TAG_FIELD,
-      {
-        type: "slot",
-        slot: "avatar-slot",
-        label: "Avatar",
-      },
-      SPRITE_GROUP_FIELD,
-    ],
-    actions: {
-      layout: "",
-      buttons: [
-        {
-          id: "submit",
-          variant: "pr",
-          label: "Update Character",
-        },
-      ],
-    },
-  };
+  const editForm = createEditCharacterDialogForm({
+    tagOptions: tagFilterOptions,
+  });
 
   if (editItem) {
     editDefaultValues = {
@@ -886,7 +893,9 @@ export const selectViewData = ({ state }) => {
       spriteGroups: state.dialogSpriteGroups,
       tagsById: {},
     }),
-    dialogForm: state.dialogForm,
+    dialogForm: createCharacterDialogForm({
+      tagOptions: tagFilterOptions,
+    }),
     spriteGroupDropdownMenu: state.spriteGroupDropdownMenu,
     isSpriteGroupDialogOpen: state.isSpriteGroupDialogOpen,
     spriteGroupDialogDefaultValues: state.spriteGroupDialogDefaultValues,

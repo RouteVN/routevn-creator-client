@@ -421,7 +421,8 @@ controlSections:
             name: y
             value: "${values.y}"
             popoverForm: *numberPopoverForm
-  - label: Layout
+  - "$when": 'itemType != "fragment-ref"'
+    label: Layout
     items:
       - "$when": "supportsWidthMode"
         type: segmented-control

@@ -1,0 +1,6 @@
+componentName: rvn-command-line-stop-skip-mode
+propsSchema:
+  type: object
+  properties:
+    stopSkipMode:
+      type: object
