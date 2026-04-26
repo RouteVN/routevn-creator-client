@@ -7,6 +7,61 @@ const RESOURCE_TYPES = [
   { type: "layout", label: "Layouts" },
 ];
 
+const ANIMATION_MODE_OPTIONS = [
+  {
+    label: "None",
+    value: "none",
+  },
+  {
+    label: "Update",
+    value: "update",
+  },
+  {
+    label: "Transition",
+    value: "transition",
+  },
+];
+
+const createEmptyCollection = () => ({
+  items: {},
+  tree: [],
+});
+
+const getAnimationType = (item = {}) => {
+  return item?.animation?.type === "transition" ? "transition" : "update";
+};
+
+const getAnimationItemById = (collection = {}, animationId) => {
+  if (!animationId) {
+    return undefined;
+  }
+
+  return toFlatItems(collection).find(
+    (item) => item.id === animationId && item.type === "animation",
+  );
+};
+
+const getAnimationModeById = (collection = {}, animationId) => {
+  const item = getAnimationItemById(collection, animationId);
+  return item ? getAnimationType(item) : undefined;
+};
+
+const normalizeSelectedVisual = (visual = {}, animations = {}) => {
+  const nextVisual = structuredClone(visual ?? {});
+  const selectedAnimationId = nextVisual?.animations?.resourceId;
+  const selectedAnimationMode = getAnimationModeById(
+    animations,
+    selectedAnimationId,
+  );
+
+  nextVisual.animationMode =
+    nextVisual.animationMode ??
+    selectedAnimationMode ??
+    (selectedAnimationId ? "update" : "none");
+
+  return nextVisual;
+};
+
 const getCollectionTree = (collection) => {
   if (Array.isArray(collection?.tree)) {
     return collection.tree;
@@ -88,16 +143,18 @@ const parseResourceExplorerId = (itemId = "") => {
 
 export const createInitialState = () => ({
   mode: "current",
-  images: { items: {}, tree: [] },
-  videos: { items: {}, tree: [] },
-  layouts: { items: {}, tree: [] },
-  transforms: { tree: [], items: {} },
+  images: createEmptyCollection(),
+  videos: createEmptyCollection(),
+  layouts: createEmptyCollection(),
+  transforms: createEmptyCollection(),
+  animations: createEmptyCollection(),
   /**
    * Array of raw visual objects with the following structure:
    * {
    *   id: string,              // Unique visual ID
    *   resourceId: string,      // Image/video/layout resource ID
    *   transformId: string,     // Transform ID
+   *   animations: object,      // Optional animation selection with resourceId
    * }
    */
   selectedVisuals: [],
@@ -134,6 +191,13 @@ export const setTransforms = ({ state }, { transforms } = {}) => {
   state.transforms = transforms;
 };
 
+export const setAnimations = ({ state }, { animations } = {}) => {
+  state.animations = animations;
+  state.selectedVisuals = state.selectedVisuals.map((visual) =>
+    normalizeSelectedVisual(visual, state.animations),
+  );
+};
+
 const generateVisualId = () => {
   return generatePrefixedId("visual-");
 };
@@ -149,6 +213,7 @@ export const addVisual = ({ state }, { resourceId } = {}) => {
     id: generateVisualId(),
     resourceId: resourceId,
     transformId: defaultTransform,
+    animationMode: "none",
   });
 };
 
@@ -159,6 +224,59 @@ export const removeVisual = ({ state }, { index } = {}) => {
 export const updateVisualTransform = ({ state }, { index, transform } = {}) => {
   if (state.selectedVisuals[index]) {
     state.selectedVisuals[index].transformId = transform;
+  }
+};
+
+export const updateVisualAnimation = (
+  { state },
+  { index, animationId } = {},
+) => {
+  if (!state.selectedVisuals[index]) {
+    return;
+  }
+
+  if (!animationId || animationId === "none") {
+    state.selectedVisuals[index].animations = undefined;
+    return;
+  }
+
+  state.selectedVisuals[index].animations = {
+    resourceId: animationId,
+  };
+
+  const selectedAnimationMode = getAnimationModeById(
+    state.animations,
+    animationId,
+  );
+  if (selectedAnimationMode) {
+    state.selectedVisuals[index].animationMode = selectedAnimationMode;
+  }
+};
+
+export const updateVisualAnimationMode = (
+  { state },
+  { index, animationMode } = {},
+) => {
+  if (!state.selectedVisuals[index]) {
+    return;
+  }
+
+  if (animationMode !== "update" && animationMode !== "transition") {
+    state.selectedVisuals[index].animationMode = "none";
+    state.selectedVisuals[index].animations = undefined;
+    return;
+  }
+
+  state.selectedVisuals[index].animationMode = animationMode;
+
+  const selectedAnimationId =
+    state.selectedVisuals[index]?.animations?.resourceId;
+  const selectedAnimationMode = getAnimationModeById(
+    state.animations,
+    selectedAnimationId,
+  );
+  if (selectedAnimationMode && selectedAnimationMode !== animationMode) {
+    state.selectedVisuals[index].animations = undefined;
   }
 };
 
@@ -234,7 +352,9 @@ export const selectResourceExplorerTarget = (_deps, { itemId } = {}) => {
 };
 
 export const setExistingVisuals = ({ state }, { visuals } = {}) => {
-  state.selectedVisuals = visuals;
+  state.selectedVisuals = (Array.isArray(visuals) ? visuals : []).map(
+    (visual) => normalizeSelectedVisual(visual, state.animations),
+  );
 };
 
 export const selectResourceItemById = ({ state }, { resourceId } = {}) => {
@@ -384,12 +504,31 @@ export const selectViewData = ({ state }) => {
     label: transform.name,
     value: transform.id,
   }));
+  const animationItems = toFlatItems(state.animations).filter(
+    (item) => item.type === "animation",
+  );
+  const updateAnimationOptions = animationItems
+    .filter((item) => getAnimationType(item) === "update")
+    .map((item) => ({
+      value: item.id,
+      label: item.name,
+    }));
+  const transitionAnimationOptions = animationItems
+    .filter((item) => getAnimationType(item) === "transition")
+    .map((item) => ({
+      value: item.id,
+      label: item.name,
+    }));
 
   // Get enriched visual data
   const enrichedVisuals = selectVisualsWithRepositoryData({ state });
   const processedSelectedVisuals = enrichedVisuals.map((visual) => ({
     ...visual,
     displayName: visual.displayName || "Unknown Resource",
+    animationMode:
+      visual.animationMode ??
+      getAnimationModeById(state.animations, visual.animations?.resourceId) ??
+      "none",
   }));
 
   let breadcrumb = [
@@ -421,8 +560,12 @@ export const selectViewData = ({ state }) => {
       transformId:
         visual.transformId ||
         (transformOptions.length > 0 ? transformOptions[0].value : undefined),
+      animationId: visual.animations?.resourceId,
     })),
     transformOptions,
+    animationModeOptions: ANIMATION_MODE_OPTIONS,
+    updateAnimationOptions,
+    transitionAnimationOptions,
   };
 
   return {
@@ -431,6 +574,9 @@ export const selectViewData = ({ state }) => {
     resourceGroups,
     selectedVisuals: processedSelectedVisuals,
     transformOptions,
+    animationModeOptions: ANIMATION_MODE_OPTIONS,
+    updateAnimationOptions,
+    transitionAnimationOptions,
     searchQuery: state.searchQuery,
     searchPlaceholder: "Search...",
     fullImagePreviewVisible: state.fullImagePreviewVisible,
