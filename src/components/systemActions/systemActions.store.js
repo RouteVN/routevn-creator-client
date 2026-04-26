@@ -471,7 +471,7 @@ export const selectActionsData = ({ props, state }) => {
       hasDialogueCharacter !== true ||
       presentationState.dialogue.persistCharacter !== true
         ? undefined
-        : "Persist Character";
+        : "Persist Speaker";
     if (presentationState.dialogue.clear === true) {
       preview.dialogue = {
         name: "Dialogue: Clear",
