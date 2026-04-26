@@ -46,8 +46,10 @@ const createStore = (state) => ({
   getState: () => state,
   setSelectedMode: (payload) => setSelectedMode({ state }, payload),
   setSelectedResource: (payload) => setSelectedResource({ state }, payload),
-  setSelectedCharacterId: (payload) => setSelectedCharacterId({ state }, payload),
-  setCustomCharacterName: (payload) => setCustomCharacterName({ state }, payload),
+  setSelectedCharacterId: (payload) =>
+    setSelectedCharacterId({ state }, payload),
+  setCustomCharacterName: (payload) =>
+    setCustomCharacterName({ state }, payload),
   setCharacterName: (payload) => setCharacterName({ state }, payload),
   setPersistCharacter: (payload) => setPersistCharacter({ state }, payload),
   setClearPage: (payload) => setClearPage({ state }, payload),
@@ -451,6 +453,106 @@ describe("commandLineDialogueBox.handlers", () => {
     expect(state.persistCharacter).toBe(true);
   });
 
+  it("resets persistCharacter when custom naming makes the field appear without a name", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const reset = vi.fn();
+    const setValues = vi.fn();
+
+    handleFormChange(
+      {
+        props: {
+          layouts,
+          characters,
+        },
+        refs: {
+          dialogueForm: {
+            reset,
+            setValues,
+          },
+        },
+        render,
+        store: createStore(state),
+      },
+      {
+        _event: {
+          detail: {
+            values: {
+              mode: "adv",
+              resourceId: "layout-adv",
+              characterId: "",
+              customCharacterName: true,
+              characterName: "",
+              persistCharacter: true,
+              clearPage: false,
+            },
+          },
+        },
+      },
+    );
+
+    expect(state.customCharacterName).toBe(true);
+    expect(state.characterName).toBe("");
+    expect(state.persistCharacter).toBe(false);
+    expect(reset).toHaveBeenCalledTimes(1);
+    expect(setValues).toHaveBeenCalledWith({
+      values: expect.objectContaining({
+        customCharacterName: true,
+        characterName: "",
+        persistCharacter: false,
+      }),
+    });
+  });
+
+  it("keeps persistCharacter when a custom character name is removed but custom naming stays enabled", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const reset = vi.fn();
+    const setValues = vi.fn();
+
+    setCustomCharacterName({ state }, { customCharacterName: true });
+    setCharacterName({ state }, { characterName: "Boss" });
+    setPersistCharacter({ state }, { persistCharacter: true });
+
+    handleFormChange(
+      {
+        props: {
+          layouts,
+          characters,
+        },
+        refs: {
+          dialogueForm: {
+            reset,
+            setValues,
+          },
+        },
+        render,
+        store: createStore(state),
+      },
+      {
+        _event: {
+          detail: {
+            values: {
+              mode: "adv",
+              resourceId: "layout-adv",
+              characterId: "",
+              customCharacterName: true,
+              characterName: "",
+              persistCharacter: true,
+              clearPage: false,
+            },
+          },
+        },
+      },
+    );
+
+    expect(state.customCharacterName).toBe(true);
+    expect(state.characterName).toBe("");
+    expect(state.persistCharacter).toBe(true);
+    expect(reset).not.toHaveBeenCalled();
+    expect(setValues).not.toHaveBeenCalled();
+  });
+
   it("keeps the custom character name when switching characters with custom naming on", () => {
     const state = createInitialState();
     const render = vi.fn();
@@ -636,6 +738,40 @@ describe("commandLineDialogueBox.handlers", () => {
         },
         character: {
           name: "Boss",
+        },
+        persistCharacter: true,
+      },
+    });
+  });
+
+  it("submits persistCharacter when custom naming has no character name", () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+
+    setSelectedMode({ state }, { mode: "adv" });
+    setSelectedResource({ state }, { resourceId: "layout-adv" });
+    setCustomCharacterName({ state }, { customCharacterName: true });
+    setCharacterName({ state }, { characterName: "" });
+    setPersistCharacter({ state }, { persistCharacter: true });
+
+    handleSubmitClick({
+      props: {
+        layouts,
+        dialogue: {},
+      },
+      store: createStore(state),
+      dispatchEvent,
+    });
+
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      dialogue: {
+        mode: "adv",
+        ui: {
+          resourceId: "layout-adv",
+        },
+        character: {
+          name: "",
         },
         persistCharacter: true,
       },

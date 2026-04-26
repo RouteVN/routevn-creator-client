@@ -53,7 +53,7 @@ export const createInitialState = () => ({
       {
         name: "mode",
         type: "segmented-control",
-        label: "Dialogue Mode",
+        label: "Mode",
         description: "",
         required: true,
         clearable: false,
@@ -65,7 +65,7 @@ export const createInitialState = () => ({
       {
         name: "resourceId",
         type: "select",
-        label: "Dialogue Layout",
+        label: "Layout",
         description: "",
         required: true,
         clearable: false,
@@ -75,16 +75,16 @@ export const createInitialState = () => ({
       {
         name: "characterId",
         type: "select",
-        label: "Dialogue Character",
+        label: "Speaker",
         description: "",
         required: false,
-        placeholder: "Choose a character...",
+        placeholder: "Choose a speaker...",
         options: [],
       },
       {
         name: "customCharacterName",
         type: "segmented-control",
-        label: "Custom Character Name",
+        label: "Custom Speaker Name",
         description: "",
         required: true,
         clearable: false,
@@ -97,16 +97,16 @@ export const createInitialState = () => ({
         $when: "values.customCharacterName == true",
         name: "characterName",
         type: "input-text",
-        label: "Character Name",
+        label: "Speaker Name",
         description: "",
         required: true,
-        placeholder: "Enter character name",
+        placeholder: "Enter speaker name",
       },
       {
         $when: "values.characterId || values.customCharacterName",
         name: "persistCharacter",
         type: "segmented-control",
-        label: "Persist Character",
+        label: "Persist Speaker",
         description: "",
         required: true,
         clearable: false,
@@ -229,10 +229,7 @@ export const selectViewData = ({ state, props }) => {
           ...field,
           options: layoutOptions,
           value: selectedResourceId,
-          label:
-            selectedMode === "nvl"
-              ? "Dialogue NVL Layout"
-              : "Dialogue ADV Layout",
+          label: "Layout",
         };
       }
       if (field.name === "characterId") {

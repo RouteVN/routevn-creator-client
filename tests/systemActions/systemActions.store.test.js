@@ -114,7 +114,7 @@ describe("systemActions.store", () => {
       name: "Main Dialogue",
       modeLabel: "ADV",
       customCharacterNameLabel: "Name: Boss",
-      persistCharacterLabel: "Persist Character",
+      persistCharacterLabel: "Persist Speaker",
     });
   });
 
@@ -163,7 +163,7 @@ describe("systemActions.store", () => {
       name: "Main Dialogue",
       modeLabel: "ADV",
       customCharacterNameLabel: "Name: Boss",
-      persistCharacterLabel: "Persist Character",
+      persistCharacterLabel: "Persist Speaker",
     });
   });
 
