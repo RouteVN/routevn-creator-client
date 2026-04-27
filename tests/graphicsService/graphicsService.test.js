@@ -423,6 +423,7 @@ describe("graphicsService", () => {
           load: expect.any(Function),
           saveSlots: expect.any(Function),
           saveGlobalRuntime: expect.any(Function),
+          applyScopedDataUpdates: expect.any(Function),
         }),
       }),
     );

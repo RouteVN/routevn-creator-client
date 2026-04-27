@@ -177,6 +177,7 @@ const prepareEngine = async ({ jsonData, assetBufferMap, bundleMetadata }) => {
     globalDeviceVariables,
     globalAccountVariables,
     globalRuntime,
+    accountViewedRegistry,
   } = await persistence.load();
 
   const effectsHandler = createEffectsHandler({
@@ -256,6 +257,7 @@ const prepareEngine = async ({ jsonData, assetBufferMap, bundleMetadata }) => {
             ...globalAccountVariables,
           },
           runtime: globalRuntime,
+          accountViewedRegistry,
         },
         projectData: jsonData,
       },
