@@ -24,6 +24,10 @@ import {
 const NO_PENDING_CANVAS_RENDER = Symbol("no-pending-canvas-render");
 const SCENE_EDITOR_PERF_SCOPE = "scene-editor-perf";
 
+const isSceneEditorPreviewVisible = (store) => {
+  return store?.selectPreviewScene?.()?.previewVisible === true;
+};
+
 const waitForNextFrame = () =>
   new Promise((resolve) => {
     if (typeof requestAnimationFrame === "function") {
@@ -788,6 +792,10 @@ export const initializeSceneEditorPage = async (deps) => {
   render();
 
   setTimeout(() => {
+    if (isSceneEditorPreviewVisible(store)) {
+      return;
+    }
+
     subject.dispatch("sceneEditor.renderCanvas", {});
   }, 1000);
 };
@@ -840,6 +848,10 @@ export const restoreSceneEditorFromPreview = async (deps) => {
 export const renderSceneEditorCanvas = async (deps, payload) => {
   const { store, render } = deps;
   if (store.selectIsScenePageLoading()) {
+    return;
+  }
+
+  if (isSceneEditorPreviewVisible(store)) {
     return;
   }
 

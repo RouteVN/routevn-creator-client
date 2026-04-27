@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import createRouteEngine from "route-engine-js";
 import {
   createSceneEditorRenderQueue,
+  renderSceneEditorCanvas,
   renderSceneEditorState,
   updateSceneEditorSectionChanges,
 } from "../../src/internal/ui/sceneEditor/runtime.js";
@@ -180,6 +181,34 @@ describe("renderSceneEditorState", () => {
     await Promise.resolve();
 
     expect(renderCanvas).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips inline canvas renders while full-screen preview is visible", async () => {
+    const render = vi.fn();
+    const store = {
+      selectIsScenePageLoading: () => false,
+      selectPreviewScene: () => ({
+        previewVisible: true,
+        previewSceneId: "scene-1",
+      }),
+      selectSceneId: vi.fn(),
+      selectSelectedSectionId: vi.fn(),
+      selectSelectedLineId: vi.fn(),
+      selectProjectData: vi.fn(),
+    };
+
+    await renderSceneEditorCanvas(
+      {
+        store,
+        render,
+        refs: {},
+      },
+      {},
+    );
+
+    expect(render).not.toHaveBeenCalled();
+    expect(store.selectSceneId).not.toHaveBeenCalled();
+    expect(store.selectProjectData).not.toHaveBeenCalled();
   });
 
   it("re-initializes the engine for selected-line preview updates", async () => {

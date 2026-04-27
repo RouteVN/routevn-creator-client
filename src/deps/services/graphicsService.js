@@ -50,6 +50,7 @@ const createNoopRouteEnginePersistence = () => ({
   saveGlobalDeviceVariables: async () => {},
   saveGlobalAccountVariables: async () => {},
   saveGlobalRuntime: async () => {},
+  applyScopedDataUpdates: async () => {},
 });
 
 const SUPPORTED_AUDIO_MIME_TYPES = new Set([
