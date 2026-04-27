@@ -16,7 +16,6 @@ import {
 import { prepareRuntimeInteractionExecution } from "../../runtime/graphicsEngineRuntime.js";
 import {
   debugLog,
-  debugLogAlways as previewDebugLog,
   getDebugDurationMs,
   getDebugNow,
   isDebugEnabled,
@@ -24,31 +23,6 @@ import {
 
 const NO_PENDING_CANVAS_RENDER = Symbol("no-pending-canvas-render");
 const SCENE_EDITOR_PERF_SCOPE = "scene-editor-perf";
-const SCENE_EDITOR_PREVIEW_DEBUG_SCOPE = "scene-editor-preview";
-
-const describeDomNode = (node) => {
-  const rect =
-    typeof node?.getBoundingClientRect === "function"
-      ? node.getBoundingClientRect()
-      : undefined;
-
-  return {
-    exists: Boolean(node),
-    nodeName: node?.nodeName,
-    id: node?.id,
-    isConnected: node?.isConnected,
-    childElementCount: node?.children?.length,
-    parentNodeName: node?.parentNode?.nodeName,
-    rect: rect
-      ? {
-          x: Math.round(rect.x),
-          y: Math.round(rect.y),
-          width: Math.round(rect.width),
-          height: Math.round(rect.height),
-        }
-      : undefined,
-  };
-};
 
 const isSceneEditorPreviewVisible = (store) => {
   return store?.selectPreviewScene?.()?.previewVisible === true;
@@ -81,78 +55,26 @@ const getCurrentCanvasRoot = (refs) => {
 const waitForMountedCanvasRoot = async (refs, maxFrames = 10) => {
   for (let attempt = 0; attempt < maxFrames; attempt += 1) {
     const canvasRoot = getCurrentCanvasRoot(refs);
-    previewDebugLog(
-      SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-      "scene-editor.canvas-wait.attempt",
-      {
-        attempt,
-        maxFrames,
-        previewCanvasHost: describeDomNode(refs?.previewCanvasHost),
-        canvasRoot: describeDomNode(canvasRoot),
-      },
-    );
     if (canvasRoot?.isConnected) {
-      previewDebugLog(
-        SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-        "scene-editor.canvas-wait.connected",
-        {
-          attempt,
-          maxFrames,
-          canvasRoot: describeDomNode(canvasRoot),
-        },
-      );
       return canvasRoot;
     }
 
     await waitForNextFrame();
   }
 
-  const canvasRoot = getCurrentCanvasRoot(refs);
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.canvas-wait.exhausted",
-    {
-      maxFrames,
-      previewCanvasHost: describeDomNode(refs?.previewCanvasHost),
-      canvasRoot: describeDomNode(canvasRoot),
-    },
-  );
-  return canvasRoot;
+  return getCurrentCanvasRoot(refs);
 };
 
 const attachGraphicsCanvasToMountedRoot = async (deps, maxFrames = 10) => {
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.attach-canvas.start",
-    {
-      maxFrames,
-      previewCanvasHost: describeDomNode(deps?.refs?.previewCanvasHost),
-    },
-  );
   const mountedCanvasRoot = await waitForMountedCanvasRoot(
     deps?.refs,
     maxFrames,
   );
   if (!mountedCanvasRoot?.isConnected) {
-    previewDebugLog(
-      SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-      "scene-editor.attach-canvas.skipped",
-      {
-        reason: "canvas-root-not-connected",
-        mountedCanvasRoot: describeDomNode(mountedCanvasRoot),
-      },
-    );
     return mountedCanvasRoot;
   }
 
   await deps?.graphicsService?.attachCanvas?.(mountedCanvasRoot);
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.attach-canvas.complete",
-    {
-      mountedCanvasRoot: describeDomNode(mountedCanvasRoot),
-    },
-  );
   return mountedCanvasRoot;
 };
 
@@ -633,23 +555,10 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
   const { store, graphicsService } = deps;
   const { skipAnimations = false, skipCanvasPaint = false } = payload;
   const perfEnabled = isDebugEnabled(SCENE_EDITOR_PERF_SCOPE);
-  const previewDebugStartedAt = getDebugNow();
   const renderStartedAt = perfEnabled ? getDebugNow() : 0;
   const sceneId = store.selectSceneId();
   const sectionId = store.selectSelectedSectionId();
   const lineId = store.selectSelectedLineId();
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.render-state.start",
-    {
-      sceneId,
-      sectionId,
-      lineId,
-      skipAnimations,
-      skipCanvasPaint,
-      canvasRoot: describeDomNode(getCurrentCanvasRoot(deps.refs)),
-    },
-  );
   const projectDataProjectionStartedAt = perfEnabled ? getDebugNow() : 0;
   const projectedProjectData = store.selectProjectData();
   const projectDataProjectionDurationMs = perfEnabled
@@ -675,17 +584,6 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     enableGlobalKeyboardBindings: false,
     suppressRenderEffects: true,
   });
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.render-state.engine-init",
-    {
-      durationMs: getDebugDurationMs(previewDebugStartedAt),
-      sceneId,
-      sectionId,
-      lineId,
-      projectInitialSceneId: projectData?.story?.initialSceneId,
-    },
-  );
   const engineInitDurationMs = perfEnabled
     ? getDebugDurationMs(engineInitStartedAt)
     : undefined;
@@ -706,17 +604,6 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     ? getDebugDurationMs(renderStateSelectStartedAt)
     : undefined;
   if (!currentRenderState) {
-    previewDebugLog(
-      SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-      "scene-editor.render-state.missing-render-state",
-      {
-        durationMs: getDebugDurationMs(previewDebugStartedAt),
-        sceneId,
-        sectionId,
-        lineId,
-        canvasRoot: describeDomNode(getCurrentCanvasRoot(deps.refs)),
-      },
-    );
     if (perfEnabled) {
       debugLog(SCENE_EDITOR_PERF_SCOPE, "render-state.missing-render-state", {
         durationMs: getDebugDurationMs(renderStartedAt),
@@ -744,34 +631,10 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
   if (!skipCanvasPaint) {
     await attachGraphicsCanvasToMountedRoot(deps, 2);
     const canvasPaintStartedAt = perfEnabled ? getDebugNow() : 0;
-    previewDebugLog(
-      SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-      "scene-editor.render-state.paint-start",
-      {
-        durationMs: getDebugDurationMs(previewDebugStartedAt),
-        sceneId,
-        sectionId,
-        lineId,
-        canvasRoot: describeDomNode(getCurrentCanvasRoot(deps.refs)),
-        renderStateSummary,
-      },
-    );
     graphicsService.engineRenderCurrentState({
       skipAudio: isMuted,
       skipAnimations,
     });
-    previewDebugLog(
-      SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-      "scene-editor.render-state.paint-complete",
-      {
-        durationMs: getDebugDurationMs(previewDebugStartedAt),
-        sceneId,
-        sectionId,
-        lineId,
-        canvasRoot: describeDomNode(getCurrentCanvasRoot(deps.refs)),
-        renderStateSummary,
-      },
-    );
     if (perfEnabled) {
       canvasPaintDurationMs = getDebugDurationMs(canvasPaintStartedAt);
     }
@@ -826,22 +689,6 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
       audioCount: renderStateSummary.audioCount,
     });
   }
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.render-state.complete",
-    {
-      durationMs: getDebugDurationMs(previewDebugStartedAt),
-      sceneId,
-      sectionId,
-      lineId,
-      skipAnimations,
-      skipCanvasPaint,
-      isMuted,
-      renderStateSummary,
-      activeAudioFileIds,
-      canvasRoot: describeDomNode(getCurrentCanvasRoot(deps.refs)),
-    },
-  );
 };
 
 export const updateSceneEditorSectionChanges = async (deps) => {
@@ -869,15 +716,6 @@ export const initializeSceneEditorPage = async (deps) => {
     subject,
     syncProjectState,
   } = deps;
-  const startedAt = getDebugNow();
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.initialize.start",
-    {
-      previewCanvasHost: describeDomNode(refs?.previewCanvasHost),
-      canvasRoot: describeDomNode(getCurrentCanvasRoot(refs)),
-    },
-  );
   await projectService.ensureRepository();
 
   const {
@@ -916,20 +754,6 @@ export const initializeSceneEditorPage = async (deps) => {
   const projectData = store.selectProjectData();
   const previewWidth = projectData?.screen?.width;
   const previewHeight = projectData?.screen?.height;
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.initialize.project-data-ready",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      sceneId,
-      sectionId: store.selectSelectedSectionId(),
-      lineId: store.selectSelectedLineId(),
-      previewWidth,
-      previewHeight,
-      previewCanvasHost: describeDomNode(refs?.previewCanvasHost),
-      canvasRoot: describeDomNode(getCurrentCanvasRoot(refs)),
-    },
-  );
 
   const initialProjectData = createProjectDataWithSelectedEntryPoint(
     projectData,
@@ -943,71 +767,21 @@ export const initializeSceneEditorPage = async (deps) => {
 
   store.setScenePageLoading({ isLoading: false });
   render();
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.initialize.rendered",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      previewCanvasHost: describeDomNode(refs?.previewCanvasHost),
-      canvasRoot: describeDomNode(getCurrentCanvasRoot(refs)),
-    },
-  );
   const mountedCanvasRoot = await waitForMountedCanvasRoot(refs);
   if (!mountedCanvasRoot?.isConnected) {
-    previewDebugLog(
-      SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-      "scene-editor.initialize.canvas-missing",
-      {
-        durationMs: getDebugDurationMs(startedAt),
-        mountedCanvasRoot: describeDomNode(mountedCanvasRoot),
-        previewCanvasHost: describeDomNode(refs?.previewCanvasHost),
-      },
-    );
     throw new Error("Scene editor canvas failed to mount");
   }
 
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.initialize.graphics-init.start",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      mountedCanvasRoot: describeDomNode(mountedCanvasRoot),
-    },
-  );
   await graphicsService.init({
     canvas: mountedCanvasRoot,
     beforeHandleActions: createBeforeHandleActionsHook(deps),
     width: previewWidth,
     height: previewHeight,
   });
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.initialize.graphics-init.complete",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      mountedCanvasRoot: describeDomNode(mountedCanvasRoot),
-    },
-  );
 
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.initialize.asset-load.start",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      initialSceneIds,
-    },
-  );
   await loadAssetsForSceneIds(deps, projectData, initialSceneIds, {
     showLoading: false,
   });
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.initialize.asset-load.complete",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      initialSceneIds,
-    },
-  );
 
   void preloadDirectTransitionScenes(deps, initialProjectData, initialSceneIds);
 
@@ -1016,66 +790,22 @@ export const initializeSceneEditorPage = async (deps) => {
   });
   await updateSceneEditorSectionChanges(deps);
   render();
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.initialize.complete",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      mountedCanvasRoot: describeDomNode(mountedCanvasRoot),
-    },
-  );
 
   setTimeout(() => {
     if (isSceneEditorPreviewVisible(store)) {
-      previewDebugLog(
-        SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-        "scene-editor.initialize.delayed-render-skipped",
-        {
-          durationMs: getDebugDurationMs(startedAt),
-          reason: "fullscreen-preview-visible",
-        },
-      );
       return;
     }
 
-    previewDebugLog(
-      SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-      "scene-editor.initialize.delayed-render-dispatch",
-      {
-        durationMs: getDebugDurationMs(startedAt),
-      },
-    );
     subject.dispatch("sceneEditor.renderCanvas", {});
   }, 1000);
 };
 
 export const restoreSceneEditorFromPreview = async (deps) => {
   const { store, render, graphicsService, refs } = deps;
-  const startedAt = getDebugNow();
   const sceneId = store.selectSceneId();
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.restore.start",
-    {
-      sceneId,
-      sectionId: store.selectSelectedSectionId(),
-      lineId: store.selectSelectedLineId(),
-      previewCanvasHost: describeDomNode(refs?.previewCanvasHost),
-      canvasRoot: describeDomNode(getCurrentCanvasRoot(refs)),
-    },
-  );
 
   store.hidePreviewScene();
   render();
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.restore.rendered",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      previewCanvasHost: describeDomNode(refs?.previewCanvasHost),
-      canvasRoot: describeDomNode(getCurrentCanvasRoot(refs)),
-    },
-  );
 
   resetAssetLoadCache("restore scene editor from preview");
   store.setSceneAssetLoading({ isLoading: false });
@@ -1085,41 +815,14 @@ export const restoreSceneEditorFromPreview = async (deps) => {
   const previewHeight = projectData?.screen?.height;
   const mountedCanvasRoot = await waitForMountedCanvasRoot(refs);
   if (!mountedCanvasRoot?.isConnected) {
-    previewDebugLog(
-      SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-      "scene-editor.restore.canvas-missing",
-      {
-        durationMs: getDebugDurationMs(startedAt),
-        mountedCanvasRoot: describeDomNode(mountedCanvasRoot),
-        previewCanvasHost: describeDomNode(refs?.previewCanvasHost),
-      },
-    );
     throw new Error("Scene editor canvas failed to mount");
   }
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.restore.graphics-init.start",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      mountedCanvasRoot: describeDomNode(mountedCanvasRoot),
-      previewWidth,
-      previewHeight,
-    },
-  );
   await graphicsService.init({
     canvas: mountedCanvasRoot,
     beforeHandleActions: createBeforeHandleActionsHook(deps),
     width: previewWidth,
     height: previewHeight,
   });
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.restore.graphics-init.complete",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      mountedCanvasRoot: describeDomNode(mountedCanvasRoot),
-    },
-  );
 
   const initialProjectData = createProjectDataWithSelectedEntryPoint(
     projectData,
@@ -1134,77 +837,26 @@ export const restoreSceneEditorFromPreview = async (deps) => {
   await loadAssetsForSceneIds(deps, projectData, initialSceneIds, {
     showLoading: false,
   });
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.restore.asset-load.complete",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      initialSceneIds,
-    },
-  );
   void preloadDirectTransitionScenes(deps, projectData, initialSceneIds);
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.restore.route-engine-init.start",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      initialSceneIds,
-    },
-  );
   initRouteEngineWithDiagnostics(graphicsService, initialProjectData, {
     enableGlobalKeyboardBindings: false,
   });
 
   await renderSceneEditorState(deps);
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.restore.complete",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      mountedCanvasRoot: describeDomNode(mountedCanvasRoot),
-    },
-  );
 };
 
 export const renderSceneEditorCanvas = async (deps, payload) => {
   const { store, render } = deps;
   if (store.selectIsScenePageLoading()) {
-    previewDebugLog(
-      SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-      "scene-editor.render-canvas.skipped",
-      {
-        reason: "scene-page-loading",
-        payload,
-      },
-    );
     return;
   }
 
   if (isSceneEditorPreviewVisible(store)) {
-    previewDebugLog(
-      SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-      "scene-editor.render-canvas.skipped",
-      {
-        reason: "fullscreen-preview-visible",
-        payload,
-        preview: store.selectPreviewScene?.(),
-      },
-    );
     return;
   }
 
   const mountedCanvasRoot = getCurrentCanvasRoot(deps.refs);
   if (!mountedCanvasRoot?.isConnected) {
-    previewDebugLog(
-      SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-      "scene-editor.render-canvas.skipped",
-      {
-        reason: "canvas-root-not-connected",
-        payload,
-        previewCanvasHost: describeDomNode(deps.refs?.previewCanvasHost),
-        mountedCanvasRoot: describeDomNode(mountedCanvasRoot),
-      },
-    );
     return;
   }
 
@@ -1222,18 +874,6 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
     },
   );
   const sceneIdsToLoad = extractInitialHybridSceneIds(projectData, sceneId);
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.render-canvas.start",
-    {
-      sceneId,
-      sectionId,
-      lineId,
-      payload,
-      sceneIdsToLoad,
-      mountedCanvasRoot: describeDomNode(mountedCanvasRoot),
-    },
-  );
 
   const sceneAssetLoadStartedAt = perfEnabled ? getDebugNow() : 0;
   await loadAssetsForSceneIds(deps, projectData, sceneIdsToLoad, {
@@ -1280,18 +920,6 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
       sceneIdsToLoad,
     });
   }
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "scene-editor.render-canvas.complete",
-    {
-      sceneId,
-      sectionId,
-      lineId,
-      payload,
-      sceneIdsToLoad,
-      mountedCanvasRoot: describeDomNode(mountedCanvasRoot),
-    },
-  );
 };
 
 export const mountSceneEditorSubscriptions = (deps) => {

@@ -65,7 +65,3 @@ export const debugLog = (scope, event, data = {}) => {
 
   emitDebugLog(scope, event, data);
 };
-
-export const debugLogAlways = (scope, event, data = {}) => {
-  emitDebugLog(scope, event, data);
-};

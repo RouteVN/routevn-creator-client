@@ -11,11 +11,6 @@ import {
 } from "../../internal/project/layout.js";
 import { prepareRuntimeInteractionExecution } from "../../internal/runtime/graphicsEngineRuntime.js";
 import {
-  debugLogAlways as previewDebugLog,
-  getDebugDurationMs,
-  getDebugNow,
-} from "../../deps/services/shared/debugLog.js";
-import {
   collectPreviewMissingTargets,
   collectSceneIdsFromValue,
   collectSectionIdsFromValue,
@@ -23,45 +18,6 @@ import {
   resolveSceneIdForSectionId,
   withPreviewEntryPoint,
 } from "./support/vnPreviewProjectData.js";
-
-const SCENE_EDITOR_PREVIEW_DEBUG_SCOPE = "scene-editor-preview";
-
-const describeDomNode = (node) => {
-  const rect =
-    typeof node?.getBoundingClientRect === "function"
-      ? node.getBoundingClientRect()
-      : undefined;
-
-  return {
-    exists: Boolean(node),
-    nodeName: node?.nodeName,
-    id: node?.id,
-    isConnected: node?.isConnected,
-    childElementCount: node?.children?.length,
-    parentNodeName: node?.parentNode?.nodeName,
-    rect: rect
-      ? {
-          x: Math.round(rect.x),
-          y: Math.round(rect.y),
-          width: Math.round(rect.width),
-          height: Math.round(rect.height),
-        }
-      : undefined,
-  };
-};
-
-const describeDocumentState = () => {
-  if (typeof document === "undefined") {
-    return { exists: false };
-  }
-
-  return {
-    exists: true,
-    readyState: document.readyState,
-    activeElement: describeDomNode(document.activeElement),
-    bodyChildElementCount: document.body?.childElementCount,
-  };
-};
 
 const waitForBrowserPaint = async () => {
   if (typeof requestAnimationFrame !== "function") {
@@ -439,78 +395,25 @@ const createBeforeHandleActionsHook = (
 
 export const handleBeforeMount = (deps) => {
   const { dispatchEvent, store, graphicsService } = deps;
-  previewDebugLog(SCENE_EDITOR_PREVIEW_DEBUG_SCOPE, "vn-preview.before-mount", {
-    props: {
-      sceneId: deps.props?.sceneId,
-      sectionId: deps.props?.sectionId,
-      lineId: deps.props?.lineId,
-    },
-    document: describeDocumentState(),
-  });
-
   function handleKeyDown(event) {
     if (event.key === "Escape") {
-      previewDebugLog(
-        SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-        "vn-preview.escape-close",
-        {
-          document: describeDocumentState(),
-        },
-      );
       dispatchEvent(new CustomEvent("close"));
     }
   }
 
   window.addEventListener("keydown", handleKeyDown);
   return () => {
-    previewDebugLog(
-      SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-      "vn-preview.cleanup.start",
-      {
-        canvas: describeDomNode(deps.refs?.canvas),
-        document: describeDocumentState(),
-      },
-    );
     store.setAssetLoading({ isLoading: false });
     store.setPreviewReady({ isPreviewReady: false });
     resetAssetLoadCache(store);
     void graphicsService.destroy?.();
     window.removeEventListener("keydown", handleKeyDown);
-    previewDebugLog(
-      SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-      "vn-preview.cleanup.complete",
-      {
-        document: describeDocumentState(),
-      },
-    );
   };
 };
 
 export const handleAfterMount = async (deps) => {
   const { projectService, graphicsService, refs, props: attrs, store } = deps;
-  const startedAt = getDebugNow();
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "vn-preview.after-mount.start",
-    {
-      props: {
-        sceneId: attrs.sceneId,
-        sectionId: attrs.sectionId,
-        lineId: attrs.lineId,
-      },
-      canvas: describeDomNode(refs.canvas),
-      document: describeDocumentState(),
-    },
-  );
   const repository = await projectService.ensureRepository();
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "vn-preview.repository-ready",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      hasRepository: Boolean(repository),
-    },
-  );
   const { canvas } = refs;
   graphicsService.setEngineAudioMuted?.(false);
   store.setPreviewReady({ isPreviewReady: false });
@@ -525,31 +428,10 @@ export const handleAfterMount = async (deps) => {
           sceneIds: [sceneId],
         })
       : projectService.getRepositoryState();
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "vn-preview.repository-state-loaded",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      sceneId,
-      usedContextState: typeof sceneId === "string" && sceneId.length > 0,
-      stateSceneCount: Object.keys(state?.scenes?.items ?? state?.scenes ?? {})
-        .length,
-    },
-  );
 
   const projectData = constructProjectData(state, {
     initialSceneId: sceneId,
   });
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "vn-preview.project-data-built",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      screen: projectData?.screen,
-      initialSceneId: projectData?.story?.initialSceneId,
-      sceneCount: Object.keys(projectData?.story?.scenes ?? {}).length,
-    },
-  );
 
   let projectDataWithInitial = withPreviewEntryPoint(projectData, {
     sceneId,
@@ -559,18 +441,6 @@ export const handleAfterMount = async (deps) => {
   const initialSceneIds = extractInitialHybridSceneIds(
     projectDataWithInitial,
     sceneId,
-  );
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "vn-preview.entry-point-resolved",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      sceneId,
-      sectionId,
-      lineId,
-      initialSceneIds,
-      projectInitialSceneId: projectDataWithInitial?.story?.initialSceneId,
-    },
   );
   let loadedSceneIds =
     typeof sceneId === "string" && sceneId.length > 0 ? [sceneId] : [];
@@ -591,25 +461,6 @@ export const handleAfterMount = async (deps) => {
       projectDataWithInitial = hydrationResult.projectData;
       loadedSceneIds = hydrationResult.loadedSceneIds;
     }
-    previewDebugLog(
-      SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-      "vn-preview.targets-hydrated",
-      {
-        durationMs: getDebugDurationMs(startedAt),
-        didLoad: hydrationResult.didLoad,
-        loadedSceneIds,
-        requestedSceneIds: initialSceneIds,
-      },
-    );
-  } else {
-    previewDebugLog(
-      SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-      "vn-preview.targets-hydration-skipped",
-      {
-        durationMs: getDebugDurationMs(startedAt),
-        initialSceneIds,
-      },
-    );
   }
 
   const runtime = {
@@ -639,82 +490,23 @@ export const handleAfterMount = async (deps) => {
       height: previewHeight,
     },
   });
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "vn-preview.project-resolution-set",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      previewWidth,
-      previewHeight,
-      canvasBeforeRender: describeDomNode(canvas),
-    },
-  );
   deps.render();
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "vn-preview.render-before-graphics-init",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      canvasAfterRender: describeDomNode(canvas),
-      document: describeDocumentState(),
-    },
-  );
   await graphicsService.init({
     canvas: canvas,
     beforeHandleActions,
     width: previewWidth,
     height: previewHeight,
   });
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "vn-preview.graphics-init-complete",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      canvas: describeDomNode(canvas),
-    },
-  );
   resetAssetLoadCache(store);
   store.setAssetLoading({ isLoading: false });
 
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "vn-preview.asset-load.start",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      initialSceneIds,
-    },
-  );
   await loadAssetsForSceneIds(deps, projectDataWithInitial, initialSceneIds, {
     showLoading: true,
   });
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "vn-preview.asset-load.complete",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      initialSceneIds,
-    },
-  );
   void preloadDirectTransitionScenes(
     deps,
     projectDataWithInitial,
     initialSceneIds,
-  );
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "vn-preview.direct-preload-scheduled",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      initialSceneIds,
-    },
-  );
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "vn-preview.route-engine-init.start",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      canvas: describeDomNode(canvas),
-    },
   );
   await graphicsService.initRouteEngine(runtime.projectData, {
     handleEffects: true,
@@ -723,17 +515,6 @@ export const handleAfterMount = async (deps) => {
       const currentSceneId = resolveSceneIdForSectionId(
         runtime.projectData,
         currentSectionId,
-      );
-      previewDebugLog(
-        SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-        "vn-preview.render-state",
-        {
-          durationMs: getDebugDurationMs(startedAt),
-          currentSectionId,
-          currentSceneId,
-          lastRenderedSceneId,
-          canvas: describeDomNode(canvas),
-        },
       );
 
       if (!currentSceneId || currentSceneId === lastRenderedSceneId) {
@@ -744,33 +525,7 @@ export const handleAfterMount = async (deps) => {
       scheduleSceneTargetPrefetch(currentSceneId);
     },
   });
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "vn-preview.route-engine-init.complete",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      canvas: describeDomNode(canvas),
-    },
-  );
   await waitForBrowserPaint();
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "vn-preview.browser-paint-complete",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      canvas: describeDomNode(canvas),
-      document: describeDocumentState(),
-    },
-  );
   store.setPreviewReady({ isPreviewReady: true });
   deps.render();
-  previewDebugLog(
-    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
-    "vn-preview.after-mount.complete",
-    {
-      durationMs: getDebugDurationMs(startedAt),
-      canvas: describeDomNode(canvas),
-      document: describeDocumentState(),
-    },
-  );
 };
