@@ -16,6 +16,33 @@ import {
   loadGraphicsEnginePlugins,
 } from "../../internal/runtime/graphicsEngineRuntime.js";
 import { requireProjectResolution } from "../../internal/projectResolution.js";
+import { debugLogAlways as previewDebugLog } from "./shared/debugLog.js";
+
+const SCENE_EDITOR_PREVIEW_DEBUG_SCOPE = "scene-editor-preview";
+
+const describeDomNode = (node) => {
+  const rect =
+    typeof node?.getBoundingClientRect === "function"
+      ? node.getBoundingClientRect()
+      : undefined;
+
+  return {
+    exists: Boolean(node),
+    nodeName: node?.nodeName,
+    id: node?.id,
+    isConnected: node?.isConnected,
+    childElementCount: node?.children?.length,
+    parentNodeName: node?.parentNode?.nodeName,
+    rect: rect
+      ? {
+          x: Math.round(rect.x),
+          y: Math.round(rect.y),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        }
+      : undefined,
+  };
+};
 
 const cloneBufferForAudioDecode = (value) => {
   if (value instanceof ArrayBuffer) {
@@ -1276,9 +1303,26 @@ export const createGraphicsService = async ({
 
   const attachCanvas = async (canvas) => {
     if (!routeGraphics?.canvas || !canvas) {
+      previewDebugLog(
+        SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
+        "graphics.attach-canvas.skipped",
+        {
+          hasRouteGraphicsCanvas: Boolean(routeGraphics?.canvas),
+          target: describeDomNode(canvas),
+        },
+      );
       return;
     }
 
+    previewDebugLog(
+      SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
+      "graphics.attach-canvas.start",
+      {
+        target: describeDomNode(canvas),
+        graphicsCanvas: describeDomNode(routeGraphics.canvas),
+        currentParent: describeDomNode(routeGraphics.canvas.parentNode),
+      },
+    );
     const currentParent = routeGraphics.canvas.parentNode;
     if (currentParent && currentParent !== canvas) {
       currentParent.removeChild(routeGraphics.canvas);
@@ -1298,15 +1342,43 @@ export const createGraphicsService = async ({
     if (routeGraphics.canvas.parentNode !== canvas) {
       canvas.appendChild(routeGraphics.canvas);
     }
+    previewDebugLog(
+      SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
+      "graphics.attach-canvas.complete",
+      {
+        target: describeDomNode(canvas),
+        graphicsCanvas: describeDomNode(routeGraphics.canvas),
+        currentParent: describeDomNode(routeGraphics.canvas.parentNode),
+      },
+    );
   };
 
   return {
     init: async (options = {}) => {
       if (routeGraphicsInitPromise) {
+        previewDebugLog(
+          SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
+          "graphics.init.await-existing",
+          {
+            canvas: describeDomNode(options.canvas),
+            width: options.width,
+            height: options.height,
+          },
+        );
         await routeGraphicsInitPromise;
       }
 
       if (routeGraphics) {
+        previewDebugLog(
+          SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
+          "graphics.init.destroy-existing",
+          {
+            existingCanvas: describeDomNode(routeGraphics.canvas),
+            nextCanvas: describeDomNode(options.canvas),
+            width: options.width,
+            height: options.height,
+          },
+        );
         await destroyRuntime();
       }
 
@@ -1322,6 +1394,17 @@ export const createGraphicsService = async ({
             },
             "Graphics runtime resolution",
           );
+        previewDebugLog(
+          SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
+          "graphics.init.start",
+          {
+            requestedCanvas: describeDomNode(canvas),
+            requestedWidth: options.width,
+            requestedHeight: options.height,
+            renderWidth,
+            renderHeight,
+          },
+        );
         beforeHandleActions = onBeforeHandleActions;
         actionQueue = Promise.resolve();
         assetLoadQueue = Promise.resolve();
@@ -1333,6 +1416,20 @@ export const createGraphicsService = async ({
         routeGraphics = createRouteGraphics();
 
         const plugins = await loadGraphicsEnginePlugins();
+        previewDebugLog(
+          SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
+          "graphics.init.plugins-loaded",
+          {
+            requestedCanvas: describeDomNode(canvas),
+            renderWidth,
+            renderHeight,
+            pluginGroups: {
+              elements: plugins?.elements?.length,
+              animations: plugins?.animations?.length,
+              audio: plugins?.audio?.length,
+            },
+          },
+        );
 
         await routeGraphics.init({
           width: renderWidth,
@@ -1401,9 +1498,29 @@ export const createGraphicsService = async ({
             }
           },
         });
+        previewDebugLog(
+          SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
+          "graphics.init.route-graphics-ready",
+          {
+            requestedCanvas: describeDomNode(canvas),
+            graphicsCanvas: describeDomNode(routeGraphics.canvas),
+            renderWidth,
+            renderHeight,
+          },
+        );
 
         if (canvas) {
           await attachCanvas(canvas);
+        } else {
+          previewDebugLog(
+            SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
+            "graphics.init.no-canvas-target",
+            {
+              renderWidth,
+              renderHeight,
+              graphicsCanvas: describeDomNode(routeGraphics.canvas),
+            },
+          );
         }
       })();
 
@@ -1412,6 +1529,16 @@ export const createGraphicsService = async ({
       } finally {
         routeGraphicsInitPromise = undefined;
       }
+      previewDebugLog(
+        SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
+        "graphics.init.complete",
+        {
+          canvas: describeDomNode(options.canvas),
+          graphicsCanvas: describeDomNode(routeGraphics?.canvas),
+          width: options.width,
+          height: options.height,
+        },
+      );
     },
     loadAssets: async (assets) => {
       await waitUntilReady();
@@ -1450,6 +1577,20 @@ export const createGraphicsService = async ({
           ? createNoopRouteEnginePersistence()
           : (options.persistence ??
             (namespace ? undefined : createNoopRouteEnginePersistence()));
+      previewDebugLog(
+        SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
+        "graphics.route-engine-init.start",
+        {
+          screen: projectData?.screen,
+          sceneCount: Object.keys(projectData?.story?.scenes ?? {}).length,
+          namespace,
+          hasProvidedPersistence: Boolean(options.persistence),
+          suppressRenderEffects,
+          enableGlobalKeyboardBindings,
+          hasRouteGraphicsCanvas: Boolean(routeGraphics?.canvas),
+          graphicsCanvas: describeDomNode(routeGraphics?.canvas),
+        },
+      );
 
       const handlePendingEffects = createEffectsHandler({
         getEngine: () => engine,
@@ -1482,10 +1623,26 @@ export const createGraphicsService = async ({
 
       if (suppressRenderEffects) {
         runWithSuppressedEngineRenderEffects(initEngine);
+        previewDebugLog(
+          SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
+          "graphics.route-engine-init.complete",
+          {
+            suppressRenderEffects,
+            graphicsCanvas: describeDomNode(routeGraphics?.canvas),
+          },
+        );
         return;
       }
 
       initEngine();
+      previewDebugLog(
+        SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
+        "graphics.route-engine-init.complete",
+        {
+          suppressRenderEffects,
+          graphicsCanvas: describeDomNode(routeGraphics?.canvas),
+        },
+      );
     },
 
     engineSelectPresentationState: () => {

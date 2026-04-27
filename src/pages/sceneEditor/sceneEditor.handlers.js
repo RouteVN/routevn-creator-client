@@ -36,6 +36,7 @@ import {
   enqueueLatestSceneEditorPersistence,
   enqueueSceneEditorPersistence,
 } from "../../internal/ui/sceneEditor/persistenceQueue.js";
+import { debugLogAlways as previewDebugLog } from "../../deps/services/shared/debugLog.js";
 
 const DEAD_END_TOOLTIP_CONTENT =
   "This section has no transition to another section.";
@@ -49,6 +50,7 @@ const STRUCTURE_DRAFT_SAVE_MIN_INTERVAL_MS = 1000;
 const STRUCTURE_DRAFT_SAVE_MAX_INTERVAL_MS = 3000;
 const SHOW_LINE_NUMBERS_CONFIG_KEY = "sceneEditor.showLineNumbers";
 const IS_MUTED_CONFIG_KEY = "sceneEditor.isMuted";
+const SCENE_EDITOR_PREVIEW_DEBUG_SCOPE = "scene-editor-preview";
 const nowMs = () => {
   if (
     typeof performance !== "undefined" &&
@@ -1481,10 +1483,48 @@ export const handlePreviewClick = (deps) => {
     const sceneId = store.selectSceneId();
     const sectionId = store.selectSelectedSectionId();
     const lineId = store.selectSelectedLineId();
+    previewDebugLog(
+      SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
+      "scene-editor.preview-click.start",
+      {
+        sceneId,
+        sectionId,
+        lineId,
+        previewVisibleBefore: store.selectViewData?.()?.previewVisible,
+      },
+    );
     await flushSceneEditorDrafts(deps);
+    previewDebugLog(
+      SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
+      "scene-editor.preview-click.drafts-flushed",
+      {
+        sceneId,
+        sectionId,
+        lineId,
+      },
+    );
     appService.blurActiveElement();
     store.showPreviewSceneId({ sceneId, sectionId, lineId });
+    previewDebugLog(
+      SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
+      "scene-editor.preview-click.state-updated",
+      {
+        sceneId,
+        sectionId,
+        lineId,
+        previewVisibleAfter: store.selectViewData?.()?.previewVisible,
+      },
+    );
     render();
+    previewDebugLog(
+      SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
+      "scene-editor.preview-click.rendered",
+      {
+        sceneId,
+        sectionId,
+        lineId,
+      },
+    );
   };
 
   void openPreview();
@@ -1601,7 +1641,25 @@ export const handleLineDeleteActionItem = async (deps, payload) => {
 };
 
 export const handleHidePreviewScene = async (deps) => {
+  previewDebugLog(
+    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
+    "scene-editor.preview-hide.start",
+    {
+      sceneId: deps.store?.selectSceneId?.(),
+      sectionId: deps.store?.selectSelectedSectionId?.(),
+      lineId: deps.store?.selectSelectedLineId?.(),
+    },
+  );
   await restoreSceneEditorFromPreview(deps);
+  previewDebugLog(
+    SCENE_EDITOR_PREVIEW_DEBUG_SCOPE,
+    "scene-editor.preview-hide.complete",
+    {
+      sceneId: deps.store?.selectSceneId?.(),
+      sectionId: deps.store?.selectSelectedSectionId?.(),
+      lineId: deps.store?.selectSelectedLineId?.(),
+    },
+  );
 };
 
 export const handleBackClick = async (deps) => {
