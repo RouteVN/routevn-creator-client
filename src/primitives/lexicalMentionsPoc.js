@@ -17,7 +17,6 @@ import {
   PASTE_COMMAND,
   TextNode,
   createEditor,
-  mergeRegister,
 } from "lexical";
 import {
   $getSelectionStyleValueForProperty,
@@ -25,6 +24,7 @@ import {
 } from "@lexical/selection";
 import { registerRichText } from "@lexical/rich-text";
 import { createEmptyHistoryState, registerHistory } from "@lexical/history";
+import { mergeRegister } from "@lexical/utils";
 
 const ACCENT_FILL = "#b45309";
 

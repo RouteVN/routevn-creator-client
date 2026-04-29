@@ -1,0 +1,50 @@
+componentName: rvn-scene-document-editor-lexical
+propsSchema:
+  type: object
+  properties:
+    lines:
+      type: array
+      items:
+        type: object
+        properties: null
+    lineDecorations:
+      type: array
+      items:
+        type: object
+        properties: null
+    selectedLineId:
+      type: string
+    showLineNumbers:
+      type: boolean
+    textStyles:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+methods:
+  type: object
+  properties:
+    hardRefresh:
+      description: Reloads the current section lines into the document editor.
+      params: []
+      returns: void
+    focusLine:
+      description: Focuses a specific line block in the document editor.
+      params: []
+      returns: boolean
+    focusContainer:
+      description: Focuses the document editor surface.
+      params: []
+      returns: void
+    scrollLineIntoView:
+      description: Scrolls a specific line block into view.
+      params: []
+      returns: void
+    applyTextFormat:
+      description: Applies a format to the current selection.
+      params: []
+      returns: void

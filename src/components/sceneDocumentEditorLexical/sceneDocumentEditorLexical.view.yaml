@@ -1,0 +1,25 @@
+refs:
+  editor:
+    eventListeners:
+      scene-lines-changed:
+        handler: handleSceneLinesChanged
+      selected-line-changed:
+        handler: handleSelectedLineChanged
+      composition-state-changed:
+        handler: handleCompositionStateChanged
+      editor-blur:
+        handler: handleEditorBlur
+      newLine:
+        handler: handleForwardEditorEvent
+      preview-shortcut:
+        handler: handleForwardEditorEvent
+      swapLine:
+        handler: handleForwardEditorEvent
+      dialogue-character-shortcut:
+        handler: handleForwardEditorEvent
+      delete-line-shortcut:
+        handler: handleForwardEditorEvent
+      furigana-dialog-request:
+        handler: handleFuriganaDialogRequest
+template:
+  - rvn-lexical-scene-document-editor#editor :lines=${lines} :lineDecorations=${lineDecorations} :selectedLineId=${selectedLineId} :showLineNumbers=${showLineNumbers} :textStyles=${textStyles}: null

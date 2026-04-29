@@ -59,6 +59,10 @@ template:
                   - rvn-scenes: []
                 $elif currentRoutePattern == "/project/scene-editor":
                   - rvn-scene-editor: []
+                $elif currentRoutePattern == "/project/scene-editor-lexical-lines":
+                  - rvn-scene-editor-lexical-lines-page: []
+                $elif currentRoutePattern == "/project/scene-editor-lexical-document":
+                  - rvn-scene-editor-lexical-document-page: []
                 $elif currentRoutePattern == "/project/segmented-text-poc":
                   - rvn-segmented-text-poc: []
                 $elif currentRoutePattern == "/project/lexical-mentions-poc":

@@ -1,0 +1,6 @@
+componentName: rvn-scene-editor-lexical
+propsSchema:
+  type: object
+  properties:
+    editorKind:
+      type: string

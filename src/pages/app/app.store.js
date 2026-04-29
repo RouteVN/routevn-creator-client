@@ -60,6 +60,8 @@ export const selectCurrentRoutePattern = ({ state }) => {
     "/project/variables",
     "/project/scenes",
     "/project/scene-editor",
+    "/project/scene-editor-lexical-lines",
+    "/project/scene-editor-lexical-document",
     "/project/segmented-text-poc",
     "/project/lexical-mentions-poc",
     "/project/animation-editor",

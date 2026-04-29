@@ -83,6 +83,14 @@ refs:
     eventListeners:
       click:
         handler: handleDetailPreviewClick
+  detailLexicalLinesButton:
+    eventListeners:
+      click:
+        handler: handleDetailLexicalLinesClick
+  detailLexicalDocumentButton:
+    eventListeners:
+      click:
+        handler: handleDetailLexicalDocumentClick
   fileExplorerKeyboardScope:
     eventListeners:
       click:
@@ -119,6 +127,10 @@ template:
                                       - rtgl-view d=h w=f av=c ph=md pt=md:
                                           - rtgl-view w=1fg: null
                                           - rtgl-button#detailPreviewButton s=sm v=se: Preview
+                                      - rtgl-view d=h w=f av=c ph=md pt=sm g=sm:
+                                          - rtgl-view w=1fg: null
+                                          - rtgl-button#detailLexicalLinesButton s=sm v=se: Lexical Lines
+                                          - rtgl-button#detailLexicalDocumentButton s=sm v=se: Lexical Doc
                                       - $if selectedItemDescription:
                                           - rtgl-view w=f ph=md pt=md:
                                               - rtgl-text c=mu-fg: ${selectedItemDescription}

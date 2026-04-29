@@ -1,0 +1,36 @@
+componentName: rvn-lines-editor-lexical
+propsSchema:
+  type: object
+  properties:
+    lines:
+      type: array
+      items:
+        type: object
+        properties: null
+    selectedLineId:
+      type: string
+    showLineNumbers:
+      type: boolean
+methods:
+  type: object
+  properties:
+    hardRefresh:
+      description: Forces the selected editor line to resync from props.
+      params: []
+      returns: void
+    focusLine:
+      description: Focuses a rendered line and applies a caret position when provided.
+      params: []
+      returns: boolean
+    focusContainer:
+      description: Focuses the outer editor container.
+      params: []
+      returns: void
+    scrollLineIntoView:
+      description: Scrolls a rendered line into view.
+      params: []
+      returns: void
+    applyTextFormat:
+      description: Applies a text format to the active line editor.
+      params: []
+      returns: void

@@ -1,0 +1,4 @@
+componentName: rvn-scene-editor-lexical-document-page
+propsSchema:
+  type: object
+  properties: {}

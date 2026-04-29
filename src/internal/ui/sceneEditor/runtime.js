@@ -43,7 +43,8 @@ const getCurrentCanvasRoot = (refs) => {
   const canvasRoot =
     previewCanvasHost?.getCanvasRoot?.() ||
     previewCanvasHost?.shadowRoot?.querySelector?.("#canvas") ||
-    previewCanvasHost?.querySelector?.("#canvas");
+    previewCanvasHost?.querySelector?.("#canvas") ||
+    refs?.canvas;
 
   if (canvasRoot?.isConnected) {
     return canvasRoot;

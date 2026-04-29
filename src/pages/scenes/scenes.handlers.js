@@ -198,7 +198,12 @@ const resolveDetailItemId = (detail = {}) => {
   return detail.itemId || detail.id || detail.item?.id || "";
 };
 
-const navigateToSceneEditor = ({ appService, sceneId, sectionId }) => {
+const navigateToSceneEditor = ({
+  appService,
+  sceneId,
+  sectionId,
+  route = "/project/scene-editor",
+}) => {
   const currentPayload = appService.getPayload();
   const nextPayload = {
     ...currentPayload,
@@ -208,7 +213,7 @@ const navigateToSceneEditor = ({ appService, sceneId, sectionId }) => {
   if (sectionId) {
     nextPayload.sectionId = sectionId;
   }
-  appService.navigate("/project/scene-editor", nextPayload);
+  appService.navigate(route, nextPayload);
 };
 
 const getCurrentProjectId = (appService) => {
@@ -903,6 +908,36 @@ export const handleDetailPreviewClick = (deps, payload) => {
 
   store.showPreviewSceneId({ sceneId: selectedItemId });
   render();
+};
+
+export const handleDetailLexicalLinesClick = (deps, payload) => {
+  payload?._event?.stopPropagation?.();
+  const { store, appService } = deps;
+  const selectedItemId = store.selectSelectedItemId();
+  if (!selectedItemId) {
+    return;
+  }
+
+  navigateToSceneEditor({
+    appService,
+    sceneId: selectedItemId,
+    route: "/project/scene-editor-lexical-lines",
+  });
+};
+
+export const handleDetailLexicalDocumentClick = (deps, payload) => {
+  payload?._event?.stopPropagation?.();
+  const { store, appService } = deps;
+  const selectedItemId = store.selectSelectedItemId();
+  if (!selectedItemId) {
+    return;
+  }
+
+  navigateToSceneEditor({
+    appService,
+    sceneId: selectedItemId,
+    route: "/project/scene-editor-lexical-document",
+  });
 };
 
 export const handleDropdownMenuClickItem = async (deps, payload) => {
