@@ -99,6 +99,24 @@ const syncPanPresentation = ({ store, refs, props } = {}) => {
       items: props?.items || [],
     });
     const viewport = minimapData?.viewport;
+    const minimapItemRefs =
+      refs.minimapContainer?.querySelectorAll?.("[data-minimap-item]") || [];
+
+    (minimapData?.items || []).forEach((item, itemIndex) => {
+      const itemRef = minimapItemRefs[itemIndex];
+      if (!itemRef) {
+        return;
+      }
+
+      itemRef.style.left = `${item.x}px`;
+      itemRef.style.top = `${item.y}px`;
+
+      const marker = itemRef.firstElementChild;
+      if (marker?.style) {
+        marker.style.width = `${minimapData.scaledItem.width}px`;
+        marker.style.height = `${minimapData.scaledItem.height}px`;
+      }
+    });
 
     if (!viewport?.visible) {
       refs.minimapViewport.style.display = "none";

@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   createInitialState,
   selectActionsData,
+  selectViewData,
   setRepositoryState,
+  updateActions,
 } from "../../src/components/systemActions/systemActions.store.js";
 
 describe("systemActions.store", () => {
@@ -156,6 +158,130 @@ describe("systemActions.store", () => {
       modeLabel: "ADV",
       customCharacterNameLabel: "Name: Boss",
       persistCharacterLabel: "Persist Speaker",
+    });
+  });
+
+  it("prefers raw dialogue actions over presentation state when reopening the editor", () => {
+    const state = createInitialState();
+
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          layouts: {
+            items: {
+              "dialogue-layout": {
+                id: "dialogue-layout",
+                type: "layout",
+                name: "Main Dialogue",
+                layoutType: "dialogue-adv",
+              },
+            },
+            tree: [{ id: "dialogue-layout" }],
+          },
+        },
+      },
+    );
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          dialogue: {
+            ui: {
+              resourceId: "dialogue-layout",
+            },
+            mode: "adv",
+            characterId: "character-1",
+            character: {
+              sprite: {
+                transformId: "portrait-left",
+                items: [{ id: "body", resourceId: "sprite-body" }],
+              },
+            },
+          },
+        },
+        presentationState: {
+          dialogue: {
+            ui: {
+              resourceId: "dialogue-layout",
+            },
+            mode: "adv",
+            characterId: "character-1",
+          },
+        },
+      },
+    });
+
+    expect(actions.dialogue.character.sprite).toEqual({
+      transformId: "portrait-left",
+      items: [{ id: "body", resourceId: "sprite-body" }],
+    });
+    expect(preview.dialogue).toMatchObject({
+      name: "Main Dialogue",
+      spriteLabel: "Sprite: 1 layer",
+    });
+  });
+
+  it("renders dialogue editor props from current component action state", () => {
+    const state = createInitialState();
+
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          layouts: {
+            items: {
+              "dialogue-layout": {
+                id: "dialogue-layout",
+                type: "layout",
+                name: "Main Dialogue",
+                layoutType: "dialogue-adv",
+              },
+            },
+            tree: [{ id: "dialogue-layout" }],
+          },
+        },
+      },
+    );
+    updateActions(
+      { state },
+      {
+        dialogue: {
+          ui: {
+            resourceId: "dialogue-layout",
+          },
+          mode: "adv",
+          characterId: "character-1",
+          character: {
+            sprite: {
+              transformId: "portrait-left",
+              items: [{ id: "body", resourceId: "sprite-body" }],
+            },
+          },
+        },
+      },
+    );
+
+    const viewData = selectViewData({
+      state,
+      props: {
+        actions: {},
+        presentationState: {
+          dialogue: {
+            ui: {
+              resourceId: "dialogue-layout",
+            },
+            mode: "adv",
+            characterId: "character-1",
+          },
+        },
+      },
+    });
+
+    expect(viewData.actions.dialogue.character.sprite).toEqual({
+      transformId: "portrait-left",
+      items: [{ id: "body", resourceId: "sprite-body" }],
     });
   });
 

@@ -20,6 +20,14 @@ propsSchema:
             type: string
           name:
             type: string
+          sprites:
+            type: object
+          spriteGroups:
+            type: array
+    transforms:
+      type: object
+    animations:
+      type: object
     dialogue:
       type: object
       properties:
@@ -46,3 +54,5 @@ propsSchema:
           properties:
             name:
               type: string
+            sprite:
+              type: object

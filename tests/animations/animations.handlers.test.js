@@ -8,7 +8,12 @@ describe("animations.handlers", () => {
   it("selects an animation from the catalog without logging", () => {
     const deps = {
       store: {
+        selectSelectedItemId: vi.fn(() => undefined),
         setSelectedItemId: vi.fn(),
+        getState: vi.fn(() => ({
+          isTouchMode: false,
+          isMobileFileExplorerOpen: false,
+        })),
       },
       refs: {
         fileExplorer: {
@@ -42,7 +47,12 @@ describe("animations.handlers", () => {
 
     const deps = {
       store: {
+        selectSelectedItemId: vi.fn(() => undefined),
         setSelectedItemId: vi.fn(),
+        getState: vi.fn(() => ({
+          isTouchMode: false,
+          isMobileFileExplorerOpen: false,
+        })),
       },
       render: vi.fn(),
     };

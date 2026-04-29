@@ -85,6 +85,40 @@ refs:
     eventListeners:
       form-action:
         handler: handleCreateTagFormAction
+  dialogPreviewBackgroundImageButton:
+    eventListeners:
+      click:
+        handler: handleDialogPreviewBackgroundImageClick
+      contextmenu:
+        handler: handleDialogPreviewBackgroundImageContextMenu
+  previewImageSelectorDialog:
+    eventListeners:
+      close:
+        handler: handleClosePreviewImageSelectorDialog
+  imageSelectorFileExplorer:
+    eventListeners:
+      item-click:
+        handler: handlePreviewImageFileExplorerClickItem
+  imageSelectorKeyboardScope:
+    eventListeners:
+      click:
+        handler: handleImageSelectorKeyboardScopeClick
+      keydown:
+        handler: handleImageSelectorKeyboardScopeKeyDown
+  imageSelector:
+    eventListeners:
+      image-selected:
+        handler: handlePreviewImageSelected
+      image-dblclick:
+        handler: handlePreviewImageDoubleClick
+  confirmPreviewImageSelection:
+    eventListeners:
+      click:
+        handler: handleConfirmPreviewImageSelection
+  cancelPreviewImageSelection:
+    eventListeners:
+      click:
+        handler: handleCancelPreviewImageSelection
   detailCanvas: {}
   dialogCanvas: {}
 template:
@@ -155,9 +189,33 @@ template:
                           - rtgl-form#particleForm key=${particleFormKey} :defaultValues=${dialogFormValues} :form=${particleForm} w=f:
                               - $if showParticleFormTabs:
                                   - rtgl-tabs#tabs slot=particle-form-tabs selected-tab=${selectedParticleFormTab} :items=${particleFormTabs}: null
-              - 'rtgl-view w=6fg lg-w=f d=v av=c g=md h=f style="min-width: 0; min-height: 0;"':
+              - 'rtgl-view w=6fg lg-w=f d=v av=c g=md h=f style="min-width: 0; min-height: 0; overflow-y: auto;"':
                   - 'rtgl-view w=f pos=rel br=md bw=xs bc=bo style="aspect-ratio: ${dialogPreviewAspectRatio}; overflow: hidden; background: #000;"':
                       - rtgl-view pos=abs cor=full:
                           - 'div#dialogCanvas style="width: 100%; height: 100%; display: flex; overflow: hidden;"': null
+                  - $if !isPreviewOnlyDialog:
+                      - rtgl-view d=v w=f g=xs:
+                          - rtgl-text s=sm c=mu-fg: Background Image
+                          - rtgl-view d=h wrap g=sm w=f av=c:
+                              - $if dialogPreviewBackgroundImage:
+                                  - 'rtgl-view#dialogPreviewBackgroundImageButton cur=pointer bw=xs bc=${dialogPreviewBackgroundImage.itemBorderColor} h-bc=${dialogPreviewBackgroundImage.itemHoverBorderColor} br=md w=160 style="max-width: 100%; box-sizing: border-box;"':
+                                      - 'rtgl-view p=md g=md br=md w=f style="max-width: 100%; box-sizing: border-box;"':
+                                          - 'rtgl-view w=f br=md style="aspect-ratio: ${dialogPreviewBackgroundImage.previewAspectRatio}; overflow: hidden;"':
+                                              - rvn-file-image br=md w=f h=f fileId=${dialogPreviewBackgroundImage.previewFileId}: null
+                                          - rtgl-text s=xs c=mu-fg ellipsis w=f: ${dialogPreviewBackgroundImage.name}
+                                $else:
+                                  - 'rtgl-view#dialogPreviewBackgroundImageButton w=160 h=90 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer style="max-width: 100%; box-sizing: border-box;"':
+                                      - rtgl-text c=mu-fg s=sm: Select image
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null
+  - rtgl-dialog#previewImageSelectorDialog ?open=${previewImageSelectorDialog.open} s=xl:
+      - $if previewImageSelectorDialog.open:
+          - rtgl-view slot=content d=v w=f g=md:
+              - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':
+                  - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
+                      - rvn-base-file-explorer#imageSelectorFileExplorer :items=${imageFolderItems} shrinkable: null
+                  - 'rtgl-view#imageSelectorKeyboardScope tabindex=-1 w=1fg h=f style="min-width: 0; min-height: 0; outline: none;"':
+                      - rvn-image-selector#imageSelector selectedImageId=${previewImageSelectorDialog.selectedImageId}: null
+              - rtgl-view d=h g=sm w=f ah=e:
+                  - rtgl-button#cancelPreviewImageSelection variant=se: Cancel
+                  - rtgl-button#confirmPreviewImageSelection variant=pr: OK

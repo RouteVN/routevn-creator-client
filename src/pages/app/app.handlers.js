@@ -21,9 +21,7 @@ const isProjectRoute = (path) => {
 };
 
 const LEGACY_ROUTE_REDIRECTS = {
-  "/project/appearance": "/project/about",
   "/project/system-variables": "/project/controls",
-  "/project/variables": "/project/controls",
 };
 
 const getCanonicalRoutePath = (path) => {

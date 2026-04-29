@@ -8,10 +8,27 @@ import {
 const OriginalHTMLElement = globalThis.HTMLElement;
 const OriginalCustomEvent = globalThis.CustomEvent;
 
+const createMinimapItemRefs = () => [
+  {
+    style: {},
+    firstElementChild: {
+      style: {},
+    },
+  },
+  {
+    style: {},
+    firstElementChild: {
+      style: {},
+    },
+  },
+];
+
 const createDeps = ({
   isDraggingMinimapViewport = true,
   pan = { x: -120, y: -80 },
 } = {}) => {
+  const minimapItemRefs = createMinimapItemRefs();
+
   const store = {
     selectContainerSize: vi.fn(() => ({ width: 100, height: 80 })),
     selectIsDraggingMinimapViewport: vi.fn(() => isDraggingMinimapViewport),
@@ -20,6 +37,11 @@ const createDeps = ({
     selectPan: vi.fn(() => pan),
     selectZoomLevel: vi.fn(() => 1.5),
     selectMinimapData: vi.fn(() => ({
+      items: [
+        { id: "scene-1", x: 12, y: 10 },
+        { id: "scene-2", x: 42, y: 34 },
+      ],
+      scaledItem: { width: 18, height: 9 },
       viewport: {
         visible: true,
         x: 24,
@@ -52,6 +74,7 @@ const createDeps = ({
         width: 200,
         height: 150,
       }),
+      querySelectorAll: vi.fn(() => minimapItemRefs),
       style: {},
     },
     minimapViewport: {
@@ -65,6 +88,7 @@ const createDeps = ({
     props: {},
     render: vi.fn(),
     dispatchEvent: vi.fn(),
+    minimapItemRefs,
   };
 };
 
@@ -120,6 +144,10 @@ describe("whiteboard minimap drag handlers", () => {
     expect(deps.refs.canvas.style.transform).toBe(
       "translate(-120px, -80px) scale(1.5)",
     );
+    expect(deps.minimapItemRefs[0].style.left).toBe("12px");
+    expect(deps.minimapItemRefs[0].style.top).toBe("10px");
+    expect(deps.minimapItemRefs[0].firstElementChild.style.width).toBe("18px");
+    expect(deps.minimapItemRefs[0].firstElementChild.style.height).toBe("9px");
   });
 
   it("dispatches one pan-changed event when minimap drag ends", () => {

@@ -157,6 +157,7 @@ const {
       itemContextMenuItems: animationExplorerItemContextMenuItems,
       selectedAnimationTypeLabel:
         selectedAnimationItem?.animationTypeLabel ?? "",
+      selectedAnimationPreviewFileId: selectedAnimationItem?.previewFileId,
       selectedItemDescription: selectedAnimationItem?.description ?? "",
       selectedItemDuration: formatAnimationDurationLabel(
         selectedAnimationItem?.duration,

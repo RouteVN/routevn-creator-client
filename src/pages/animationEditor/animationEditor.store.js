@@ -146,16 +146,139 @@ const createPreviewRect = ({ id, x, y, fill, width, height } = {}) => {
   };
 };
 
-const createAnimationResetState = (dialogType, projectResolution) => {
+const toPositiveNumber = (value, fallback) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue > 0
+    ? numericValue
+    : fallback;
+};
+
+const getPreviewImageResource = (imagesData, imageId) => {
+  if (!imageId) {
+    return undefined;
+  }
+
+  const imageItem = imagesData?.items?.[imageId];
+  if (imageItem?.type && imageItem.type !== "image") {
+    return undefined;
+  }
+
+  if (!imageItem?.fileId) {
+    return undefined;
+  }
+
+  return imageItem;
+};
+
+const PREVIEW_IMAGE_SLOT_CONFIGS = Object.freeze([
+  {
+    label: "BG Image",
+    target: "preview-background",
+    field: "background",
+    supportsTransform: false,
+  },
+  {
+    label: "Outgoing Image",
+    target: "preview-outgoing",
+    field: "outgoing",
+    supportsTransform: true,
+  },
+  {
+    label: "Incoming Image",
+    target: "preview-incoming",
+    field: "incoming",
+    supportsTransform: true,
+  },
+]);
+
+const createInitialPreviewImages = () => ({
+  background: {},
+  outgoing: {},
+  incoming: {},
+});
+
+const getPreviewSlotConfig = (target) => {
+  return PREVIEW_IMAGE_SLOT_CONFIGS.find((slot) => slot.target === target);
+};
+
+const normalizePreviewSlot = (value, { supportsTransform = false } = {}) => {
+  const slot = {};
+
+  if (typeof value === "string" && value.length > 0) {
+    slot.imageId = value;
+    return slot;
+  }
+
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return slot;
+  }
+
+  if (typeof value.imageId === "string" && value.imageId.length > 0) {
+    slot.imageId = value.imageId;
+  }
+
+  if (
+    supportsTransform &&
+    typeof value.transformId === "string" &&
+    value.transformId.length > 0
+  ) {
+    slot.transformId = value.transformId;
+  }
+
+  return slot;
+};
+
+const normalizeAnimationPreviewData = (previewData) => {
+  const source =
+    previewData &&
+    typeof previewData === "object" &&
+    !Array.isArray(previewData)
+      ? previewData
+      : {};
+
+  return {
+    background: normalizePreviewSlot(
+      source.background ?? source.backgroundImageId,
+      { supportsTransform: false },
+    ),
+    outgoing: normalizePreviewSlot(source.outgoing ?? source.outgoingImageId, {
+      supportsTransform: true,
+    }),
+    incoming: normalizePreviewSlot(source.incoming ?? source.incomingImageId, {
+      supportsTransform: true,
+    }),
+  };
+};
+
+const getPreviewSlot = (previewImages, target) => {
+  const slotConfig = getPreviewSlotConfig(target);
+  if (!slotConfig) {
+    return {};
+  }
+
+  return previewImages?.[slotConfig.field] ?? {};
+};
+
+const getPreviewSlotImageId = (previewImages, target) => {
+  return getPreviewSlot(previewImages, target).imageId;
+};
+
+const createPreviewBackgroundElement = ({
+  imagesData,
+  previewImages,
+  projectResolution,
+} = {}) => {
   const { width, height } = requireProjectResolution(
     projectResolution,
     "Project resolution",
   );
+  const imageItem = getPreviewImageResource(
+    imagesData,
+    getPreviewSlotImageId(previewImages, "preview-background"),
+  );
 
-  const centerX = width / 2;
-  const centerY = height / 2;
-  const elements = [
-    {
+  if (!imageItem) {
+    return {
       id: "bg",
       type: "rect",
       x: 0,
@@ -163,29 +286,95 @@ const createAnimationResetState = (dialogType, projectResolution) => {
       width,
       height,
       fill: PREVIEW_BG_COLOR,
-    },
+    };
+  }
+
+  return {
+    id: "bg",
+    type: "sprite",
+    src: imageItem.fileId,
+    fileType: imageItem.fileType ?? "image/png",
+    x: width / 2,
+    y: height / 2,
+    width: toPositiveNumber(imageItem.width, width),
+    height: toPositiveNumber(imageItem.height, height),
+    anchorX: 0.5,
+    anchorY: 0.5,
+  };
+};
+
+const createPreviewContentElement = ({
+  id,
+  previewSlot,
+  imagesData,
+  projectResolution,
+  fallbackFill,
+} = {}) => {
+  const { width, height } = requireProjectResolution(
+    projectResolution,
+    "Project resolution",
+  );
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const imageItem = getPreviewImageResource(imagesData, previewSlot?.imageId);
+
+  if (!imageItem) {
+    return createPreviewRect({
+      id,
+      x: centerX,
+      y: centerY,
+      width,
+      height,
+      fill: fallbackFill,
+    });
+  }
+
+  return {
+    id,
+    type: "sprite",
+    src: imageItem.fileId,
+    fileType: imageItem.fileType ?? "image/png",
+    x: centerX,
+    y: centerY,
+    width: toPositiveNumber(imageItem.width, width),
+    height: toPositiveNumber(imageItem.height, height),
+    anchorX: 0.5,
+    anchorY: 0.5,
+  };
+};
+
+const createAnimationResetState = ({
+  dialogType,
+  imagesData,
+  previewImages,
+  projectResolution,
+} = {}) => {
+  const elements = [
+    createPreviewBackgroundElement({
+      imagesData,
+      previewImages,
+      projectResolution,
+    }),
   ];
 
   if (dialogType === "transition") {
     elements.push(
-      createPreviewRect({
+      createPreviewContentElement({
         id: PREVIEW_TRANSITION_ELEMENT_ID,
-        x: centerX,
-        y: centerY,
-        width,
-        height,
-        fill: PREVIEW_TRANSITION_PREV_FILL,
+        previewSlot: getPreviewSlot(previewImages, "preview-outgoing"),
+        imagesData,
+        projectResolution,
+        fallbackFill: PREVIEW_TRANSITION_PREV_FILL,
       }),
     );
   } else {
     elements.push(
-      createPreviewRect({
+      createPreviewContentElement({
         id: PREVIEW_UPDATE_ELEMENT_ID,
-        x: centerX,
-        y: centerY,
-        width,
-        height,
-        fill: "white",
+        previewSlot: getPreviewSlot(previewImages, "preview-incoming"),
+        imagesData,
+        projectResolution,
+        fallbackFill: "white",
       }),
     );
   }
@@ -219,6 +408,10 @@ const buildPropertyOptions = (propertyKeys, propertyFieldConfig) => {
     label: propertyFieldConfig[property]?.label ?? property,
     value: property,
   }));
+};
+
+const getOptionLabel = (options, value) => {
+  return options.find((option) => option.value === value)?.label ?? value;
 };
 
 const createDefaultInitialValuesByProperty = (propertyFieldConfig) => {
@@ -571,14 +764,21 @@ const createEmptyMaskPanelData = () => ({
   unsupported: false,
   unsupportedKind: undefined,
   kind: "single",
+  kindLabel: "Single",
   channelValue: "alpha",
+  channelLabel: "Alpha",
   sampleValue: "step",
   combineValue: "max",
   invertValue: "off",
+  invertLabel: "Off",
   softness: 0.08,
   progressDuration: 900,
+  progressDurationLabel: "900 ms",
   progressEasing: "linear",
+  progressEasingLabel: "Linear",
   singleImage: undefined,
+  imageItems: [],
+  imageLabel: "No image selected",
   sequenceItems: [],
   compositeItems: [],
 });
@@ -597,6 +797,43 @@ const getDefaultInitialValues = (state) => {
 
 const getTransitionMask = (state) => {
   return state.transitionMask;
+};
+
+const getMaskEditorTransitionMask = (state) => {
+  return state.popover.mode === "addMask"
+    ? state.pendingTransitionMask
+    : getTransitionMask(state);
+};
+
+const setMaskEditorTransitionMask = (state, mask) => {
+  if (state.popover.mode === "addMask") {
+    state.pendingTransitionMask = mask;
+    return;
+  }
+
+  state.transitionMask = mask;
+};
+
+const cloneTransitionMask = (mask = {}) => {
+  const nextMask = {};
+  nextMask.kind = mask.kind;
+  nextMask.imageId = mask.imageId;
+  nextMask.imageIds = Array.isArray(mask.imageIds) ? [...mask.imageIds] : [];
+  nextMask.items = Array.isArray(mask.items)
+    ? mask.items.map((item) => ({
+        imageId: item?.imageId,
+        channel: item?.channel,
+        invert: item?.invert,
+      }))
+    : [];
+  nextMask.channel = mask.channel;
+  nextMask.combine = mask.combine;
+  nextMask.sample = mask.sample;
+  nextMask.softness = mask.softness;
+  nextMask.invert = mask.invert;
+  nextMask.progressDuration = mask.progressDuration;
+  nextMask.progressEasing = mask.progressEasing;
+  return nextMask;
 };
 
 const getPersistedTransitionMask = (state) => {
@@ -637,6 +874,17 @@ const getImageItemById = (state, imageId) => {
   return getImageItems(state)?.[imageId];
 };
 
+const resolveImageAspectRatio = (item) => {
+  const width = Number(item?.width);
+  const height = Number(item?.height);
+
+  if (!Number.isFinite(width) || !Number.isFinite(height) || height <= 0) {
+    return "16 / 9";
+  }
+
+  return `${Math.max(1, Math.round(width))} / ${Math.max(1, Math.round(height))}`;
+};
+
 const buildMaskImageItem = (state, imageId) => {
   if (!imageId) {
     return undefined;
@@ -646,6 +894,8 @@ const buildMaskImageItem = (state, imageId) => {
 
   return {
     imageId,
+    previewFileId: imageItem?.thumbnailFileId ?? imageItem?.fileId,
+    previewAspectRatio: resolveImageAspectRatio(imageItem),
     name: imageItem?.name ?? imageId,
     itemBorderColor: "bo",
     itemHoverBorderColor: "ac",
@@ -676,6 +926,7 @@ export const createInitialState = () => ({
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
   tweenBySection: createEmptyTweenBySection(),
   transitionMask: undefined,
+  pendingTransitionMask: undefined,
   dialogDefaultValues: {
     name: "",
     description: "",
@@ -693,6 +944,7 @@ export const createInitialState = () => ({
   previewPlaybackFrameId: undefined,
   previewPlaybackStartedAtMs: undefined,
   previewPlaybackDurationMs: undefined,
+  previewImages: createInitialPreviewImages(),
   popover: {
     mode: "none",
     x: undefined,
@@ -780,6 +1032,8 @@ export const openDialog = (
   state.editMode = Boolean(editMode);
   state.editItemId = itemId;
   state.transitionMaskRemoved = false;
+  state.pendingTransitionMask = undefined;
+  state.previewImages = normalizeAnimationPreviewData(itemData?.preview);
 
   if (editMode && itemData) {
     state.targetGroupId = itemData.parentId ?? undefined;
@@ -900,6 +1154,7 @@ export const closePopover = ({ state }, _payload = {}) => {
   state.popover.y = undefined;
   state.popover.payload = {};
   state.popover.formValues = {};
+  state.pendingTransitionMask = undefined;
 };
 
 export const updatePopoverFormValues = ({ state }, { formValues } = {}) => {
@@ -1032,6 +1287,7 @@ const createAnimationRenderState = ({
   nextProperties,
   transitionMask,
   imagesData,
+  previewImages,
   projectResolution,
   includeAnimations = true,
 } = {}) => {
@@ -1046,17 +1302,16 @@ const createAnimationRenderState = ({
       : [];
 
     return {
-      ...createAnimationResetState(dialogType, projectResolution),
+      ...createAnimationResetState({
+        dialogType,
+        imagesData,
+        previewImages,
+        projectResolution,
+      }),
       animations,
     };
   }
 
-  const { width, height } = requireProjectResolution(
-    projectResolution,
-    "Project resolution",
-  );
-  const centerY = height / 2;
-  const centerX = width / 2;
   const prevTween = createTweenPayload({
     properties: previousProperties,
     projectResolution,
@@ -1099,22 +1354,17 @@ const createAnimationRenderState = ({
 
   return {
     elements: [
-      {
-        id: "bg",
-        type: "rect",
-        x: 0,
-        y: 0,
-        width,
-        height,
-        fill: PREVIEW_BG_COLOR,
-      },
-      createPreviewRect({
+      createPreviewBackgroundElement({
+        imagesData,
+        previewImages,
+        projectResolution,
+      }),
+      createPreviewContentElement({
         id: PREVIEW_TRANSITION_ELEMENT_ID,
-        x: centerX,
-        y: centerY,
-        width,
-        height,
-        fill: PREVIEW_TRANSITION_NEXT_FILL,
+        previewSlot: getPreviewSlot(previewImages, "preview-incoming"),
+        imagesData,
+        projectResolution,
+        fallbackFill: PREVIEW_TRANSITION_NEXT_FILL,
       }),
     ],
     animations: hasTransitionAnimation ? [transitionAnimation] : [],
@@ -1122,7 +1372,12 @@ const createAnimationRenderState = ({
 };
 
 export const selectAnimationResetState = ({ state }) => {
-  return createAnimationResetState(state.dialogType, state.projectResolution);
+  return createAnimationResetState({
+    dialogType: state.dialogType,
+    imagesData: state.imagesData,
+    previewImages: state.previewImages,
+    projectResolution: state.projectResolution,
+  });
 };
 
 export const selectAnimationRenderStateWithAnimations = ({ state }) => {
@@ -1133,6 +1388,7 @@ export const selectAnimationRenderStateWithAnimations = ({ state }) => {
     nextProperties: state.tweenBySection.next,
     transitionMask: getEffectiveTransitionMask(state),
     imagesData: state.imagesData,
+    previewImages: state.previewImages,
     projectResolution: state.projectResolution,
     includeAnimations: true,
   });
@@ -1307,6 +1563,21 @@ export const enableTransitionMask = ({ state }, _payload = {}) => {
   state.transitionMaskRemoved = false;
 };
 
+export const startPendingTransitionMask = ({ state }, _payload = {}) => {
+  state.pendingTransitionMask = createDefaultTransitionMask();
+  state.transitionMaskRemoved = false;
+};
+
+export const commitPendingTransitionMask = ({ state }, _payload = {}) => {
+  if (!state.pendingTransitionMask) {
+    return;
+  }
+
+  state.transitionMask = cloneTransitionMask(state.pendingTransitionMask);
+  state.pendingTransitionMask = undefined;
+  state.transitionMaskRemoved = false;
+};
+
 export const disableTransitionMask = ({ state }, _payload = {}) => {
   state.transitionMask = undefined;
   state.transitionMaskRemoved = true;
@@ -1316,12 +1587,16 @@ export const selectTransitionMask = ({ state }) => {
   return getTransitionMask(state);
 };
 
+export const selectMaskEditorTransitionMask = ({ state }) => {
+  return getMaskEditorTransitionMask(state);
+};
+
 export const selectTransitionMaskRemoved = ({ state }) => {
   return state.transitionMaskRemoved === true;
 };
 
 export const setTransitionMaskKind = ({ state }, { kind } = {}) => {
-  const currentMask = getTransitionMask(state);
+  const currentMask = getMaskEditorTransitionMask(state);
   if (!currentMask || !kind || kind !== "single") {
     return;
   }
@@ -1343,43 +1618,48 @@ export const setTransitionMaskKind = ({ state }, { kind } = {}) => {
     currentMask.items?.find((item) => item?.invert !== undefined)?.invert ??
     nextMask.invert;
 
-  state.transitionMask = nextMask;
+  setMaskEditorTransitionMask(state, nextMask);
 };
 
 export const setTransitionMaskInvert = ({ state }, { invert } = {}) => {
-  if (!getTransitionMask(state)) {
+  const transitionMask = getMaskEditorTransitionMask(state);
+  if (!transitionMask) {
     return;
   }
 
-  state.transitionMask.invert = invert ?? false;
+  transitionMask.invert = invert ?? false;
 };
 
 export const setTransitionMaskChannel = ({ state }, { channel } = {}) => {
-  if (!getTransitionMask(state) || !channel) {
+  const transitionMask = getMaskEditorTransitionMask(state);
+  if (!transitionMask || !channel) {
     return;
   }
 
-  state.transitionMask.channel = channel;
+  transitionMask.channel = channel;
 };
 
 export const setTransitionMaskSample = ({ state }, { sample } = {}) => {
-  if (!getTransitionMask(state) || !sample) {
+  const transitionMask = getMaskEditorTransitionMask(state);
+  if (!transitionMask || !sample) {
     return;
   }
 
-  state.transitionMask.sample = sample;
+  transitionMask.sample = sample;
 };
 
 export const setTransitionMaskCombine = ({ state }, { combine } = {}) => {
-  if (!getTransitionMask(state) || !combine) {
+  const transitionMask = getMaskEditorTransitionMask(state);
+  if (!transitionMask || !combine) {
     return;
   }
 
-  state.transitionMask.combine = combine;
+  transitionMask.combine = combine;
 };
 
 export const setTransitionMaskSoftness = ({ state }, { softness } = {}) => {
-  if (!getTransitionMask(state)) {
+  const transitionMask = getMaskEditorTransitionMask(state);
+  if (!transitionMask) {
     return;
   }
 
@@ -1388,14 +1668,15 @@ export const setTransitionMaskSoftness = ({ state }, { softness } = {}) => {
     return;
   }
 
-  state.transitionMask.softness = numericSoftness;
+  transitionMask.softness = numericSoftness;
 };
 
 export const setTransitionMaskProgressDuration = (
   { state },
   { duration } = {},
 ) => {
-  if (!getTransitionMask(state)) {
+  const transitionMask = getMaskEditorTransitionMask(state);
+  if (!transitionMask) {
     return;
   }
 
@@ -1404,46 +1685,51 @@ export const setTransitionMaskProgressDuration = (
     return;
   }
 
-  state.transitionMask.progressDuration = numericDuration;
+  transitionMask.progressDuration = numericDuration;
 };
 
 export const setTransitionMaskProgressEasing = ({ state }, { easing } = {}) => {
-  if (!getTransitionMask(state) || !easing) {
+  const transitionMask = getMaskEditorTransitionMask(state);
+  if (!transitionMask || !easing) {
     return;
   }
 
-  state.transitionMask.progressEasing = easing;
+  transitionMask.progressEasing = easing;
 };
 
 export const setTransitionMaskImage = ({ state }, { imageId } = {}) => {
-  if (!getTransitionMask(state)) {
+  const transitionMask = getMaskEditorTransitionMask(state);
+  if (!transitionMask) {
     return;
   }
 
-  state.transitionMask.imageId = imageId;
+  transitionMask.imageId = imageId;
 };
 
 export const clearTransitionMaskImage = ({ state }, _payload = {}) => {
-  if (!getTransitionMask(state)) {
+  const transitionMask = getMaskEditorTransitionMask(state);
+  if (!transitionMask) {
     return;
   }
 
-  state.transitionMask.imageId = undefined;
+  transitionMask.imageId = undefined;
 };
 
 export const addTransitionMaskSequenceImage = ({ state }, { imageId } = {}) => {
-  if (!getTransitionMask(state) || !imageId) {
+  const transitionMask = getMaskEditorTransitionMask(state);
+  if (!transitionMask || !imageId) {
     return;
   }
 
-  state.transitionMask.imageIds.push(imageId);
+  transitionMask.imageIds.push(imageId);
 };
 
 export const updateTransitionMaskSequenceImage = (
   { state },
   { index, imageId } = {},
 ) => {
-  if (!getTransitionMask(state) || imageId === undefined) {
+  const transitionMask = getMaskEditorTransitionMask(state);
+  if (!transitionMask || imageId === undefined) {
     return;
   }
 
@@ -1452,14 +1738,15 @@ export const updateTransitionMaskSequenceImage = (
     return;
   }
 
-  state.transitionMask.imageIds[numericIndex] = imageId;
+  transitionMask.imageIds[numericIndex] = imageId;
 };
 
 export const removeTransitionMaskSequenceImage = (
   { state },
   { index } = {},
 ) => {
-  if (!getTransitionMask(state)) {
+  const transitionMask = getMaskEditorTransitionMask(state);
+  if (!transitionMask) {
     return;
   }
 
@@ -1468,14 +1755,15 @@ export const removeTransitionMaskSequenceImage = (
     return;
   }
 
-  state.transitionMask.imageIds.splice(numericIndex, 1);
+  transitionMask.imageIds.splice(numericIndex, 1);
 };
 
 export const moveTransitionMaskSequenceImageUp = (
   { state },
   { index } = {},
 ) => {
-  if (!getTransitionMask(state)) {
+  const transitionMask = getMaskEditorTransitionMask(state);
+  if (!transitionMask) {
     return;
   }
 
@@ -1484,106 +1772,103 @@ export const moveTransitionMaskSequenceImageUp = (
     return;
   }
 
-  const currentImageId = state.transitionMask.imageIds[numericIndex];
-  state.transitionMask.imageIds[numericIndex] =
-    state.transitionMask.imageIds[numericIndex - 1];
-  state.transitionMask.imageIds[numericIndex - 1] = currentImageId;
+  const currentImageId = transitionMask.imageIds[numericIndex];
+  transitionMask.imageIds[numericIndex] =
+    transitionMask.imageIds[numericIndex - 1];
+  transitionMask.imageIds[numericIndex - 1] = currentImageId;
 };
 
 export const moveTransitionMaskSequenceImageDown = (
   { state },
   { index } = {},
 ) => {
-  if (!getTransitionMask(state)) {
+  const transitionMask = getMaskEditorTransitionMask(state);
+  if (!transitionMask) {
     return;
   }
 
   const numericIndex = Number(index);
   if (
     !Number.isInteger(numericIndex) ||
-    numericIndex >= state.transitionMask.imageIds.length - 1
+    numericIndex >= transitionMask.imageIds.length - 1
   ) {
     return;
   }
 
-  const currentImageId = state.transitionMask.imageIds[numericIndex];
-  state.transitionMask.imageIds[numericIndex] =
-    state.transitionMask.imageIds[numericIndex + 1];
-  state.transitionMask.imageIds[numericIndex + 1] = currentImageId;
+  const currentImageId = transitionMask.imageIds[numericIndex];
+  transitionMask.imageIds[numericIndex] =
+    transitionMask.imageIds[numericIndex + 1];
+  transitionMask.imageIds[numericIndex + 1] = currentImageId;
 };
 
 export const addTransitionMaskCompositeItem = ({ state }, { imageId } = {}) => {
-  if (!getTransitionMask(state)) {
+  const transitionMask = getMaskEditorTransitionMask(state);
+  if (!transitionMask) {
     return;
   }
 
   const item = createDefaultTransitionMaskCompositeItem();
   item.imageId = imageId;
-  state.transitionMask.items.push(item);
+  transitionMask.items.push(item);
 };
 
 export const updateTransitionMaskCompositeItemImage = (
   { state },
   { index, imageId } = {},
 ) => {
-  if (!getTransitionMask(state)) {
+  const transitionMask = getMaskEditorTransitionMask(state);
+  if (!transitionMask) {
     return;
   }
 
   const numericIndex = Number(index);
-  if (
-    !Number.isInteger(numericIndex) ||
-    !state.transitionMask.items[numericIndex]
-  ) {
+  if (!Number.isInteger(numericIndex) || !transitionMask.items[numericIndex]) {
     return;
   }
 
-  state.transitionMask.items[numericIndex].imageId = imageId;
+  transitionMask.items[numericIndex].imageId = imageId;
 };
 
 export const updateTransitionMaskCompositeItemChannel = (
   { state },
   { index, channel } = {},
 ) => {
-  if (!getTransitionMask(state) || !channel) {
+  const transitionMask = getMaskEditorTransitionMask(state);
+  if (!transitionMask || !channel) {
     return;
   }
 
   const numericIndex = Number(index);
-  if (
-    !Number.isInteger(numericIndex) ||
-    !state.transitionMask.items[numericIndex]
-  ) {
+  if (!Number.isInteger(numericIndex) || !transitionMask.items[numericIndex]) {
     return;
   }
 
-  state.transitionMask.items[numericIndex].channel = channel;
+  transitionMask.items[numericIndex].channel = channel;
 };
 
 export const updateTransitionMaskCompositeItemInvert = (
   { state },
   { index, invert } = {},
 ) => {
-  if (!getTransitionMask(state)) {
+  const transitionMask = getMaskEditorTransitionMask(state);
+  if (!transitionMask) {
     return;
   }
 
   const numericIndex = Number(index);
-  if (
-    !Number.isInteger(numericIndex) ||
-    !state.transitionMask.items[numericIndex]
-  ) {
+  if (!Number.isInteger(numericIndex) || !transitionMask.items[numericIndex]) {
     return;
   }
 
-  state.transitionMask.items[numericIndex].invert = invert ?? false;
+  transitionMask.items[numericIndex].invert = invert ?? false;
 };
 
 export const removeTransitionMaskCompositeItem = (
   { state },
   { index } = {},
 ) => {
-  if (!getTransitionMask(state)) {
+  const transitionMask = getMaskEditorTransitionMask(state);
+  if (!transitionMask) {
     return;
   }
 
@@ -1592,14 +1877,15 @@ export const removeTransitionMaskCompositeItem = (
     return;
   }
 
-  state.transitionMask.items.splice(numericIndex, 1);
+  transitionMask.items.splice(numericIndex, 1);
 };
 
 export const moveTransitionMaskCompositeItemUp = (
   { state },
   { index } = {},
 ) => {
-  if (!getTransitionMask(state)) {
+  const transitionMask = getMaskEditorTransitionMask(state);
+  if (!transitionMask) {
     return;
   }
 
@@ -1608,32 +1894,31 @@ export const moveTransitionMaskCompositeItemUp = (
     return;
   }
 
-  const currentItem = state.transitionMask.items[numericIndex];
-  state.transitionMask.items[numericIndex] =
-    state.transitionMask.items[numericIndex - 1];
-  state.transitionMask.items[numericIndex - 1] = currentItem;
+  const currentItem = transitionMask.items[numericIndex];
+  transitionMask.items[numericIndex] = transitionMask.items[numericIndex - 1];
+  transitionMask.items[numericIndex - 1] = currentItem;
 };
 
 export const moveTransitionMaskCompositeItemDown = (
   { state },
   { index } = {},
 ) => {
-  if (!getTransitionMask(state)) {
+  const transitionMask = getMaskEditorTransitionMask(state);
+  if (!transitionMask) {
     return;
   }
 
   const numericIndex = Number(index);
   if (
     !Number.isInteger(numericIndex) ||
-    numericIndex >= state.transitionMask.items.length - 1
+    numericIndex >= transitionMask.items.length - 1
   ) {
     return;
   }
 
-  const currentItem = state.transitionMask.items[numericIndex];
-  state.transitionMask.items[numericIndex] =
-    state.transitionMask.items[numericIndex + 1];
-  state.transitionMask.items[numericIndex + 1] = currentItem;
+  const currentItem = transitionMask.items[numericIndex];
+  transitionMask.items[numericIndex] = transitionMask.items[numericIndex + 1];
+  transitionMask.items[numericIndex + 1] = currentItem;
 };
 
 export const showImageSelectorDialog = (
@@ -1657,6 +1942,26 @@ export const setImageSelectorSelectedImageId = (
   { imageId } = {},
 ) => {
   state.imageSelectorDialog.selectedImageId = imageId;
+};
+
+export const setPreviewImage = ({ state }, { target, imageId } = {}) => {
+  const slotConfig = getPreviewSlotConfig(target);
+  if (!slotConfig) {
+    return;
+  }
+
+  if (!state.previewImages[slotConfig.field]) {
+    state.previewImages[slotConfig.field] = {};
+  }
+  state.previewImages[slotConfig.field].imageId = imageId;
+};
+
+export const selectPreviewImageId = ({ state }, { target } = {}) => {
+  return getPreviewSlotImageId(state.previewImages, target);
+};
+
+export const selectPreviewData = ({ state }) => {
+  return structuredClone(state.previewImages);
 };
 
 export const showFullImagePreview = ({ state }, { imageId } = {}) => {
@@ -1779,10 +2084,11 @@ export const selectPreviewPlaybackDurationMs = ({ state }) => {
   return state.previewPlaybackDurationMs;
 };
 
-const buildTransitionMaskPanelData = (state) => {
-  const transitionMask = getTransitionMask(state);
-  const unsupportedPersistedMask = getUnsupportedPersistedTransitionMask(state);
-
+const buildTransitionMaskPanelDataForMask = (
+  state,
+  transitionMask,
+  unsupportedPersistedMask,
+) => {
   if (!transitionMask && !unsupportedPersistedMask) {
     return createEmptyMaskPanelData();
   }
@@ -1796,34 +2102,97 @@ const buildTransitionMaskPanelData = (state) => {
     };
   }
 
-  return {
-    enabled: true,
-    unsupported: false,
-    unsupportedKind: undefined,
-    kind: transitionMask.kind,
-    channelValue: transitionMask.channel ?? "alpha",
-    sampleValue: transitionMask.sample ?? "step",
-    combineValue: transitionMask.combine ?? "max",
-    invertValue: transitionMask.invert ? "on" : "off",
-    softness: transitionMask.softness ?? 0.08,
-    progressDuration: transitionMask.progressDuration ?? 900,
-    progressEasing: transitionMask.progressEasing ?? "linear",
-    singleImage: buildMaskImageItem(state, transitionMask.imageId),
-    sequenceItems: (transitionMask.imageIds ?? []).map((imageId, index) => ({
+  const kind = transitionMask.kind;
+  const channelValue = transitionMask.channel ?? "alpha";
+  const invertValue = transitionMask.invert ? "on" : "off";
+  const progressDuration = transitionMask.progressDuration ?? 900;
+  const progressEasing = transitionMask.progressEasing ?? "linear";
+  const singleImage = buildMaskImageItem(state, transitionMask.imageId);
+  const sequenceItems = (transitionMask.imageIds ?? []).map(
+    (imageId, index) => ({
       ...buildMaskImageItem(state, imageId),
       index,
       canMoveUp: index > 0,
       canMoveDown: index < transitionMask.imageIds.length - 1,
-    })),
-    compositeItems: (transitionMask.items ?? []).map((item, index) => ({
-      ...buildMaskImageItem(state, item.imageId),
-      index,
-      channelValue: item.channel ?? "alpha",
-      invertValue: item.invert ? "on" : "off",
-      canMoveUp: index > 0,
-      canMoveDown: index < transitionMask.items.length - 1,
-    })),
+    }),
+  );
+  const compositeItems = (transitionMask.items ?? []).map((item, index) => ({
+    ...buildMaskImageItem(state, item.imageId),
+    index,
+    channelValue: item.channel ?? "alpha",
+    invertValue: item.invert ? "on" : "off",
+    canMoveUp: index > 0,
+    canMoveDown: index < transitionMask.items.length - 1,
+  }));
+  const imageItems =
+    kind === "sequence"
+      ? sequenceItems
+      : kind === "composite"
+        ? compositeItems
+        : singleImage
+          ? [singleImage]
+          : [];
+
+  return {
+    enabled: true,
+    unsupported: false,
+    unsupportedKind: undefined,
+    kind,
+    kindLabel: getOptionLabel(MASK_KIND_OPTIONS, kind),
+    channelValue,
+    channelLabel: getOptionLabel(MASK_CHANNEL_OPTIONS, channelValue),
+    sampleValue: transitionMask.sample ?? "step",
+    combineValue: transitionMask.combine ?? "max",
+    invertValue,
+    invertLabel: getOptionLabel(MASK_BOOLEAN_OPTIONS, invertValue),
+    softness: transitionMask.softness ?? 0.08,
+    progressDuration,
+    progressDurationLabel: `${progressDuration} ms`,
+    progressEasing,
+    progressEasingLabel: getOptionLabel(EASING_OPTIONS, progressEasing),
+    singleImage,
+    imageItems: imageItems.filter((item) => item?.imageId),
+    imageLabel: singleImage?.name ?? "No image selected",
+    sequenceItems,
+    compositeItems,
   };
+};
+
+const buildTransitionMaskPanelData = (state) => {
+  return buildTransitionMaskPanelDataForMask(
+    state,
+    getTransitionMask(state),
+    getUnsupportedPersistedTransitionMask(state),
+  );
+};
+
+const buildPreviewPanelData = (state) => {
+  return {
+    items: PREVIEW_IMAGE_SLOT_CONFIGS.map((slot) => {
+      const imageId = state.previewImages[slot.field]?.imageId;
+      const image = buildMaskImageItem(state, imageId);
+
+      return {
+        label: slot.label,
+        target: slot.target,
+        imageId,
+        image,
+        imageLabel: image?.name ?? "Select image",
+      };
+    }),
+  };
+};
+
+const buildMaskEditorPanelData = (state) => {
+  if (state.popover.mode === "addMask") {
+    return buildTransitionMaskPanelDataForMask(
+      state,
+      state.pendingTransitionMask,
+      undefined,
+    );
+  }
+
+  return buildTransitionMaskPanelData(state);
 };
 
 export const selectViewData = ({ state }) => {
@@ -1870,6 +2239,8 @@ export const selectViewData = ({ state }) => {
     propertyFieldConfig,
   );
   const transitionMaskPanel = buildTransitionMaskPanelData(state);
+  const maskEditorPanel = buildMaskEditorPanelData(state);
+  const previewPanel = buildPreviewPanelData(state);
   const imageFolderItems = toFlatItems(state.imagesData).filter(
     (item) => item.type === "folder",
   );
@@ -2002,6 +2373,8 @@ export const selectViewData = ({ state }) => {
     editInitialValueDefaultValues,
     keyframeDropdownItems,
     transitionMaskPanel,
+    maskEditorPanel,
+    previewPanel,
     maskKindOptions: MASK_KIND_OPTIONS,
     maskChannelOptions: MASK_CHANNEL_OPTIONS,
     maskSampleOptions: MASK_SAMPLE_OPTIONS,
@@ -2025,6 +2398,7 @@ export const selectViewData = ({ state }) => {
         "editAuto",
         "editInitialValue",
       ].includes(state.popover.mode),
+      maskDialogIsOpen: ["editMask", "addMask"].includes(state.popover.mode),
       dropdownMenuIsOpen: ["keyframeMenu", "propertyNameMenu"].includes(
         state.popover.mode,
       ),

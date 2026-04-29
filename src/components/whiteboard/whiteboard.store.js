@@ -462,6 +462,13 @@ const generateMinimapData = (items, pan, zoomLevel, containerSize) => {
     worldBottom = Math.max(worldBottom, item.y + itemHeight);
   });
 
+  if (containerSize.width > 0 && containerSize.height > 0) {
+    worldLeft = Math.min(worldLeft, viewportLeft);
+    worldTop = Math.min(worldTop, viewportTop);
+    worldRight = Math.max(worldRight, viewportRight);
+    worldBottom = Math.max(worldBottom, viewportBottom);
+  }
+
   worldLeft -= padding;
   worldTop -= padding;
   worldRight += padding;

@@ -77,7 +77,6 @@ export const systemConfigItems = [
     id: "variables",
     name: "Variables",
     path: "/project/variables",
-    hidden: true,
   },
 ];
 
@@ -91,7 +90,6 @@ const settingsItems = [
     id: "appearance",
     name: "Appearance",
     path: "/project/appearance",
-    hidden: true,
   },
   // {
   //   id: "user",

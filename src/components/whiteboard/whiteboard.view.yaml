@@ -73,7 +73,7 @@ template:
       - $if showMinimap:
           - 'rtgl-view#minimapContainer pos=abs z=100 ah=c p=md bgc=mu w=${minimapData.minimap.width} h=${minimapData.minimap.height} style="left: 20px; bottom: 20px; overflow: hidden;"':
               - $for item in minimapData.items:
-                  - 'rtgl-view d=h pos=abs style="left: ${item.x}px; top: ${item.y}px; z-index: 10; user-select: none;"':
+                  - 'rtgl-view data-minimap-item="true" d=h pos=abs style="left: ${item.x}px; top: ${item.y}px; z-index: 10; user-select: none;"':
                       - rtgl-view w=${minimapData.scaledItem.width} h=${minimapData.scaledItem.height} bgc=ac: null
               - $if minimapData.viewport.visible:
                   - 'rtgl-view#minimapViewport pos=abs cur=${minimapViewportCursor} bw=xs bc=fg style="left: ${minimapData.viewport.x}px; top: ${minimapData.viewport.y}px; width: ${minimapData.viewport.width}px; height: ${minimapData.viewport.height}px; z-index: 20; box-sizing: border-box; user-select: none;"': null
