@@ -199,6 +199,29 @@ const truncatePreviewText = (value = "", maxLength = 36) => {
   return `${text.slice(0, Math.max(0, maxLength - 3))}...`;
 };
 
+const isPlainObject = (value) => {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+};
+
+const resolveDialogueActionForPreview = ({
+  actions,
+  presentationState,
+  props,
+}) => {
+  const authoredDialogue = isPlainObject(actions.dialogue)
+    ? actions.dialogue
+    : undefined;
+  const presentationDialogue = isPlainObject(presentationState.dialogue)
+    ? presentationState.dialogue
+    : undefined;
+
+  if (props.actionType === "presentation") {
+    return presentationDialogue ?? authoredDialogue;
+  }
+
+  return authoredDialogue ?? presentationDialogue;
+};
+
 const findSectionReference = (sceneItems = {}, sectionId) => {
   if (typeof sectionId !== "string" || sectionId.length === 0) {
     return {};
@@ -449,15 +472,17 @@ export const selectActionsData = ({ props, state }) => {
     };
   }
 
-  const dialogueAction =
-    actions.dialogue &&
-    typeof actions.dialogue === "object" &&
-    !Array.isArray(actions.dialogue)
-      ? actions.dialogue
-      : presentationState.dialogue;
+  const dialogueAction = resolveDialogueActionForPreview({
+    actions,
+    presentationState,
+    props,
+  });
 
   if (dialogueAction) {
     actionsObject.dialogue = dialogueAction;
+    const authoredDialogue = isPlainObject(actions.dialogue)
+      ? actions.dialogue
+      : undefined;
     const dialogueModeLabel = resolveDialogueModeLabel(
       dialogueAction,
       layoutsItems,
@@ -487,6 +512,10 @@ export const selectActionsData = ({ props, state }) => {
         : spriteAnimationId
           ? "Sprite Animation"
           : undefined;
+    const appendLabel =
+      authoredDialogue?.append === true || dialogueAction.append === true
+        ? "append"
+        : undefined;
     if (dialogueAction.clear === true) {
       preview.dialogue = {
         name: "Dialogue: Clear",
@@ -494,6 +523,7 @@ export const selectActionsData = ({ props, state }) => {
         customCharacterNameLabel,
         persistCharacterLabel,
         spriteLabel,
+        appendLabel,
       };
     } else {
       preview.dialogue = {
@@ -505,6 +535,7 @@ export const selectActionsData = ({ props, state }) => {
         customCharacterNameLabel,
         persistCharacterLabel,
         spriteLabel,
+        appendLabel,
       };
     }
   }

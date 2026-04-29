@@ -1,15 +1,7 @@
 import { toFlatItems } from "../../internal/project/tree.js";
 
-const DIALOGUE_SPRITE_DEBUG_SCOPE = "dialogue-sprite";
 const DEFAULT_SPRITE_GROUP_ID = "base";
 const DEFAULT_SPRITE_GROUP_NAME = "Sprite";
-
-const logDialogueSprite = (event, data = {}) => {
-  console.log(`[rvn.debug.${DIALOGUE_SPRITE_DEBUG_SCOPE}]`, {
-    event,
-    ...data,
-  });
-};
 
 const toBoolean = (value) => {
   return value === true || value === "true";
@@ -823,16 +815,6 @@ export const handleSubmitClick = (deps) => {
   if (characterSprite) {
     character.sprite = characterSprite;
   }
-  logDialogueSprite("dialogue-box.submit", {
-    selectedCharacterId,
-    spriteCharacterId,
-    characterSpriteEnabled,
-    spriteTransformId,
-    selectedSpriteIds,
-    spriteAnimationMode,
-    spriteAnimationId,
-    characterSprite,
-  });
   if (Object.keys(character).length > 0) {
     dialogue.character = character;
   }

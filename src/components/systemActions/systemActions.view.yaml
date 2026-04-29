@@ -98,6 +98,9 @@ template:
                           - $if preview.dialogue.spriteLabel:
                               - rtgl-view bw=xs bc=bo br=sm ph=md pv=sm:
                                   - rtgl-text s=sm: ${preview.dialogue.spriteLabel}
+                          - $if preview.dialogue.appendLabel:
+                              - rtgl-view bw=xs bc=bo br=sm ph=md pv=sm:
+                                  - rtgl-text s=sm: ${preview.dialogue.appendLabel}
                           - $if preview.dialogue.persistCharacterLabel:
                               - rtgl-view bw=xs bc=bo br=sm ph=md pv=sm:
                                   - rtgl-text s=sm: ${preview.dialogue.persistCharacterLabel}

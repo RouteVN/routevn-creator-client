@@ -23,15 +23,6 @@ import {
 
 const NO_PENDING_CANVAS_RENDER = Symbol("no-pending-canvas-render");
 const SCENE_EDITOR_PERF_SCOPE = "scene-editor-perf";
-const DIALOGUE_SPRITE_DEBUG_SCOPE = "dialogue-sprite";
-const DIALOGUE_CHARACTER_SPRITE_CONTAINER_ID = "dialogue-character-sprite";
-
-const logDialogueSprite = (event, data = {}) => {
-  console.log(`[rvn.debug.${DIALOGUE_SPRITE_DEBUG_SCOPE}]`, {
-    event,
-    ...data,
-  });
-};
 
 const isSceneEditorPreviewVisible = (store) => {
   return store?.selectPreviewScene?.()?.previewVisible === true;
@@ -544,148 +535,6 @@ const createProjectDataWithSelectedEntryPoint = (projectData, selection) => {
   return sanitized.projectData;
 };
 
-const findProjectDataLine = (projectData, { sceneId, sectionId, lineId }) => {
-  if (!sceneId || !sectionId || !lineId) {
-    return undefined;
-  }
-
-  const selectedScene = projectData?.story?.scenes?.[sceneId];
-  const selectedSection = selectedScene?.sections?.[sectionId];
-  return selectedSection?.lines?.find((line) => line?.id === lineId);
-};
-
-const findRenderElementById = (nodes, elementId) => {
-  if (!Array.isArray(nodes)) {
-    return undefined;
-  }
-
-  for (const node of nodes) {
-    if (node?.id === elementId) {
-      return node;
-    }
-
-    const child = findRenderElementById(node?.children, elementId);
-    if (child) {
-      return child;
-    }
-  }
-
-  return undefined;
-};
-
-const summarizeDialogueSpriteForRouteEngine = (sprite, resources = {}) => {
-  const items = Array.isArray(sprite?.items) ? sprite.items : [];
-  const itemResourceIds = items.map((item) => item?.resourceId).filter(Boolean);
-  const missingImageResourceIds = itemResourceIds.filter(
-    (resourceId) => !resources.images?.[resourceId],
-  );
-  const animationResourceId = sprite?.animations?.resourceId;
-  const hasRenderableShape = Boolean(sprite?.transformId && items.length > 0);
-
-  return {
-    present: !!sprite,
-    transformId: sprite?.transformId,
-    hasTransform: Boolean(
-      sprite?.transformId && resources.transforms?.[sprite.transformId],
-    ),
-    hasRenderableShape,
-    itemCount: items.length,
-    itemResourceIds,
-    missingImageResourceIds,
-    animationResourceId,
-    hasAnimation: Boolean(
-      animationResourceId && resources.animations?.[animationResourceId],
-    ),
-    animationOnly: Boolean(animationResourceId && !hasRenderableShape),
-  };
-};
-
-const summarizeDialogueActionForRouteEngine = (dialogue) => {
-  if (!dialogue || typeof dialogue !== "object" || Array.isArray(dialogue)) {
-    return {
-      present: false,
-    };
-  }
-
-  return {
-    present: true,
-    clear: dialogue.clear === true,
-    keys: Object.keys(dialogue),
-    mode: dialogue.mode,
-    uiResourceId: dialogue.ui?.resourceId,
-    characterId: dialogue.characterId,
-    hasContent: Object.hasOwn(dialogue, "content"),
-    contentCount: Array.isArray(dialogue.content)
-      ? dialogue.content.length
-      : undefined,
-    hasCharacter: Boolean(dialogue.character),
-  };
-};
-
-const logDialogueSpriteRenderDiagnostics = ({
-  sceneId,
-  sectionId,
-  lineId,
-  graphicsService,
-  projectData,
-  presentationState,
-  renderState,
-}) => {
-  const authoredLine = findProjectDataLine(projectData, {
-    sceneId,
-    sectionId,
-    lineId,
-  });
-  const authoredSprite = authoredLine?.actions?.dialogue?.character?.sprite;
-  const presentationSprite = presentationState?.dialogue?.character?.sprite;
-  const renderElement = findRenderElementById(
-    renderState?.elements,
-    DIALOGUE_CHARACTER_SPRITE_CONTAINER_ID,
-  );
-
-  logDialogueSprite("scene-editor.render", {
-    sceneId,
-    sectionId,
-    lineId,
-    resourceSummary: {
-      imageCount: Object.keys(projectData?.resources?.images ?? {}).length,
-      transformIds: Object.keys(projectData?.resources?.transforms ?? {}),
-      animationIds: Object.keys(projectData?.resources?.animations ?? {}),
-    },
-    routeEngineDialogueSpriteSupport:
-      graphicsService?.debugRouteEngineDialogueSpriteSupport?.(),
-    authoredDialogue: summarizeDialogueActionForRouteEngine(
-      authoredLine?.actions?.dialogue,
-    ),
-    presentationDialogue: summarizeDialogueActionForRouteEngine(
-      presentationState?.dialogue,
-    ),
-    authoredSprite: summarizeDialogueSpriteForRouteEngine(
-      authoredSprite,
-      projectData?.resources,
-    ),
-    presentationSprite: summarizeDialogueSpriteForRouteEngine(
-      presentationSprite,
-      projectData?.resources,
-    ),
-    renderElementFound: Boolean(renderElement),
-    renderElement: renderElement
-      ? {
-          id: renderElement.id,
-          type: renderElement.type,
-          x: renderElement.x,
-          y: renderElement.y,
-          childCount: Array.isArray(renderElement.children)
-            ? renderElement.children.length
-            : 0,
-          childIds: (renderElement.children ?? [])
-            .map((child) => child?.id)
-            .filter(Boolean),
-        }
-      : undefined,
-  });
-};
-
 const initRouteEngineWithDiagnostics = (
   graphicsService,
   projectData,
@@ -813,15 +662,6 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
   const presentationState = graphicsService.engineSelectPresentationState();
   store.setPresentationState({
     presentationState,
-  });
-  logDialogueSpriteRenderDiagnostics({
-    sceneId,
-    sectionId,
-    lineId,
-    graphicsService,
-    projectData,
-    presentationState,
-    renderState: currentRenderState,
   });
   const presentationStateDurationMs = perfEnabled
     ? getDebugDurationMs(presentationStateStartedAt)

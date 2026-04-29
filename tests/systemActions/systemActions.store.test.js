@@ -223,6 +223,64 @@ describe("systemActions.store", () => {
     });
   });
 
+  it("uses final presentation dialogue for presentation state preview", () => {
+    const state = createInitialState();
+
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          layouts: {
+            items: {
+              "dialogue-layout": {
+                id: "dialogue-layout",
+                type: "layout",
+                name: "Main Dialogue",
+                layoutType: "dialogue-adv",
+              },
+            },
+            tree: [{ id: "dialogue-layout" }],
+          },
+        },
+      },
+    );
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actionType: "presentation",
+        actions: {
+          dialogue: {
+            append: true,
+            content: [{ text: "Continued text" }],
+          },
+        },
+        presentationState: {
+          dialogue: {
+            ui: {
+              resourceId: "dialogue-layout",
+            },
+            mode: "adv",
+            content: [{ text: "Inherited layout text" }],
+          },
+        },
+      },
+    });
+
+    expect(actions.dialogue).toEqual({
+      ui: {
+        resourceId: "dialogue-layout",
+      },
+      mode: "adv",
+      content: [{ text: "Inherited layout text" }],
+    });
+    expect(preview.dialogue).toMatchObject({
+      name: "Main Dialogue",
+      modeLabel: "ADV",
+      appendLabel: "append",
+    });
+  });
+
   it("renders dialogue editor props from current component action state", () => {
     const state = createInitialState();
 
