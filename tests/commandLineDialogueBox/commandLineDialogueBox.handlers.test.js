@@ -2,18 +2,37 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleAfterMount,
   handleBeforeMount,
+  handleButtonSelectClick,
+  handleCharacterItemClick,
   handleFormChange,
+  handleSpriteGroupTabClick,
+  handleSpriteItemClick,
   handleSubmitClick,
 } from "../../src/components/commandLineDialogueBox/commandLineDialogueBox.handlers.js";
 import {
+  clearCharacterSprite,
+  clearTempSelectedSpriteIds,
   createInitialState,
+  setAppendDialogue,
+  setCharacterSpriteEnabled,
   setCharacterName,
   setClearPage,
   setCustomCharacterName,
+  setMode,
   setPersistCharacter,
   setSelectedCharacterId,
+  setSelectedSpriteGroupId,
+  setSelectedSpriteIds,
   setSelectedMode,
   setSelectedResource,
+  setSearchQuery,
+  setSpriteCharacterId,
+  setSpriteAnimationId,
+  setSpriteAnimationMode,
+  setSpriteTransformId,
+  setTempSelectedSpriteId,
+  setTempSelectedSpriteIds,
+  showFullImagePreview,
 } from "../../src/components/commandLineDialogueBox/commandLineDialogueBox.store.js";
 
 const layouts = [
@@ -34,6 +53,25 @@ const characters = [
     id: "character-1",
     type: "character",
     name: "Aki",
+    spriteGroups: [
+      { id: "body", name: "Body" },
+      { id: "face", name: "Face" },
+    ],
+    sprites: {
+      tree: [{ id: "sprite-body" }, { id: "sprite-face" }],
+      items: {
+        "sprite-body": {
+          id: "sprite-body",
+          type: "image",
+          name: "Body",
+        },
+        "sprite-face": {
+          id: "sprite-face",
+          type: "image",
+          name: "Smile",
+        },
+      },
+    },
   },
   {
     id: "character-2",
@@ -41,6 +79,31 @@ const characters = [
     name: "Mina",
   },
 ];
+
+const transforms = {
+  tree: [{ id: "portrait-left" }],
+  items: {
+    "portrait-left": {
+      id: "portrait-left",
+      type: "transform",
+      name: "Portrait Left",
+    },
+  },
+};
+
+const animations = {
+  tree: [{ id: "portrait-in" }],
+  items: {
+    "portrait-in": {
+      id: "portrait-in",
+      type: "animation",
+      name: "Portrait In",
+      animation: {
+        type: "transition",
+      },
+    },
+  },
+};
 
 const createStore = (state) => ({
   getState: () => state,
@@ -51,6 +114,27 @@ const createStore = (state) => ({
   setCustomCharacterName: (payload) =>
     setCustomCharacterName({ state }, payload),
   setCharacterName: (payload) => setCharacterName({ state }, payload),
+  setCharacterSpriteEnabled: (payload) =>
+    setCharacterSpriteEnabled({ state }, payload),
+  setSpriteCharacterId: (payload) => setSpriteCharacterId({ state }, payload),
+  setSpriteTransformId: (payload) => setSpriteTransformId({ state }, payload),
+  setSelectedSpriteIds: (payload) => setSelectedSpriteIds({ state }, payload),
+  setTempSelectedSpriteIds: (payload) =>
+    setTempSelectedSpriteIds({ state }, payload),
+  clearTempSelectedSpriteIds: (payload) =>
+    clearTempSelectedSpriteIds({ state }, payload),
+  setTempSelectedSpriteId: (payload) =>
+    setTempSelectedSpriteId({ state }, payload),
+  setSelectedSpriteGroupId: (payload) =>
+    setSelectedSpriteGroupId({ state }, payload),
+  clearCharacterSprite: (payload) => clearCharacterSprite({ state }, payload),
+  setSearchQuery: (payload) => setSearchQuery({ state }, payload),
+  setMode: (payload) => setMode({ state }, payload),
+  showFullImagePreview: (payload) => showFullImagePreview({ state }, payload),
+  setSpriteAnimationMode: (payload) =>
+    setSpriteAnimationMode({ state }, payload),
+  setSpriteAnimationId: (payload) => setSpriteAnimationId({ state }, payload),
+  setAppendDialogue: (payload) => setAppendDialogue({ state }, payload),
   setPersistCharacter: (payload) => setPersistCharacter({ state }, payload),
   setClearPage: (payload) => setClearPage({ state }, payload),
 });
@@ -78,6 +162,7 @@ describe("commandLineDialogueBox.handlers", () => {
             resourceId: "layout-adv",
           },
           characterId: "character-1",
+          append: true,
           character: {
             name: "Boss",
           },
@@ -97,6 +182,7 @@ describe("commandLineDialogueBox.handlers", () => {
     handleAfterMount(deps);
 
     expect(state.persistCharacter).toBe(true);
+    expect(state.appendDialogue).toBe(true);
     expect(state.customCharacterName).toBe(true);
     expect(state.characterName).toBe("Boss");
     expect(reset).toHaveBeenCalledTimes(1);
@@ -104,7 +190,67 @@ describe("commandLineDialogueBox.handlers", () => {
       values: expect.objectContaining({
         customCharacterName: true,
         characterName: "Boss",
+        append: true,
         persistCharacter: true,
+      }),
+    });
+  });
+
+  it("hydrates dialogue character sprite from props into the form state", () => {
+    const state = createInitialState();
+    const reset = vi.fn();
+    const setValues = vi.fn();
+
+    const deps = {
+      props: {
+        layouts,
+        characters,
+        transforms,
+        animations,
+        dialogue: {
+          mode: "adv",
+          ui: {
+            resourceId: "layout-adv",
+          },
+          characterId: "character-1",
+          character: {
+            sprite: {
+              transformId: "portrait-left",
+              items: [
+                { id: "body", resourceId: "sprite-body" },
+                { id: "face", resourceId: "sprite-face" },
+              ],
+              animations: {
+                resourceId: "portrait-in",
+              },
+            },
+          },
+        },
+      },
+      refs: {
+        dialogueForm: {
+          reset,
+          setValues,
+        },
+      },
+      store: createStore(state),
+    };
+
+    handleBeforeMount(deps);
+    handleAfterMount(deps);
+
+    expect(state.characterSpriteEnabled).toBe(true);
+    expect(state.spriteCharacterId).toBe("character-1");
+    expect(state.spriteTransformId).toBe("portrait-left");
+    expect(state.spriteAnimationMode).toBe("transition");
+    expect(state.spriteAnimationId).toBe("portrait-in");
+    expect(state.selectedSpriteIds).toEqual({
+      body: "sprite-body",
+      face: "sprite-face",
+    });
+    expect(setValues).toHaveBeenCalledWith({
+      values: expect.objectContaining({
+        characterId: "character-1",
       }),
     });
   });
@@ -243,6 +389,7 @@ describe("commandLineDialogueBox.handlers", () => {
               characterId: "character-1",
               customCharacterName: false,
               characterName: "Aki",
+              append: true,
               persistCharacter: true,
               clearPage: false,
             },
@@ -252,6 +399,7 @@ describe("commandLineDialogueBox.handlers", () => {
     );
 
     expect(state.persistCharacter).toBe(true);
+    expect(state.appendDialogue).toBe(true);
     expect(state.characterName).toBe("Aki");
     expect(render).toHaveBeenCalledTimes(2);
   });
@@ -675,6 +823,68 @@ describe("commandLineDialogueBox.handlers", () => {
     });
   });
 
+  it("submits append when enabled for ADV dialogue", () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+
+    setSelectedMode({ state }, { mode: "adv" });
+    setSelectedResource({ state }, { resourceId: "layout-adv" });
+    setAppendDialogue({ state }, { append: true });
+
+    handleSubmitClick({
+      props: {
+        layouts,
+        dialogue: {},
+      },
+      store: createStore(state),
+      dispatchEvent,
+    });
+
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      dialogue: {
+        mode: "adv",
+        ui: {
+          resourceId: "layout-adv",
+        },
+        append: true,
+        persistCharacter: false,
+      },
+    });
+  });
+
+  it("submits append false when clearing existing ADV append", () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+
+    setSelectedMode({ state }, { mode: "adv" });
+    setSelectedResource({ state }, { resourceId: "layout-adv" });
+    setAppendDialogue({ state }, { append: false });
+
+    handleSubmitClick({
+      props: {
+        layouts,
+        dialogue: {
+          append: true,
+        },
+      },
+      store: createStore(state),
+      dispatchEvent,
+    });
+
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      dialogue: {
+        mode: "adv",
+        ui: {
+          resourceId: "layout-adv",
+        },
+        append: false,
+        persistCharacter: false,
+      },
+    });
+  });
+
   it("submits dialogue.character.name when custom naming is enabled", () => {
     const state = createInitialState();
     const dispatchEvent = vi.fn();
@@ -704,6 +914,221 @@ describe("commandLineDialogueBox.handlers", () => {
         characterId: "character-1",
         character: {
           name: "Boss",
+        },
+        persistCharacter: false,
+      },
+    });
+  });
+
+  it("submits dialogue.character.sprite when a character sprite is selected", () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+
+    setSelectedMode({ state }, { mode: "adv" });
+    setSelectedResource({ state }, { resourceId: "layout-adv" });
+    setSelectedCharacterId({ state }, { characterId: "character-1" });
+    setSpriteCharacterId({ state }, { characterId: "character-1" });
+    setCharacterSpriteEnabled(
+      { state },
+      {
+        characterSpriteEnabled: true,
+      },
+    );
+    setSpriteTransformId(
+      { state },
+      {
+        transformId: "portrait-left",
+      },
+    );
+    setSelectedSpriteIds(
+      { state },
+      {
+        spriteIdsByGroupId: {
+          body: "sprite-body",
+          face: "sprite-face",
+        },
+      },
+    );
+    setSpriteAnimationMode(
+      { state },
+      {
+        mode: "transition",
+      },
+    );
+    setSpriteAnimationId(
+      { state },
+      {
+        animationId: "portrait-in",
+      },
+    );
+
+    handleSubmitClick({
+      props: {
+        layouts,
+        characters,
+        transforms,
+        dialogue: {},
+      },
+      store: createStore(state),
+      dispatchEvent,
+    });
+
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      dialogue: {
+        mode: "adv",
+        ui: {
+          resourceId: "layout-adv",
+        },
+        characterId: "character-1",
+        character: {
+          sprite: {
+            transformId: "portrait-left",
+            items: [
+              { id: "body", resourceId: "sprite-body" },
+              { id: "face", resourceId: "sprite-face" },
+            ],
+            animations: {
+              resourceId: "portrait-in",
+            },
+          },
+        },
+        persistCharacter: false,
+      },
+    });
+  });
+
+  it("tracks character sprite selections from the picker before submit", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const deps = {
+      props: {
+        layouts,
+        characters,
+        transforms,
+        animations,
+      },
+      render,
+      store: createStore(state),
+    };
+
+    setSelectedMode({ state }, { mode: "adv" });
+    setSelectedResource({ state }, { resourceId: "layout-adv" });
+    setSelectedCharacterId({ state }, { characterId: "character-1" });
+
+    handleCharacterItemClick(deps, {
+      _event: {
+        currentTarget: {
+          dataset: {
+            characterId: "character-1",
+          },
+        },
+      },
+    });
+
+    expect(state.mode).toBe("sprite-select");
+    expect(state.spriteCharacterId).toBe("character-1");
+    expect(state.spriteTransformId).toBe("portrait-left");
+
+    handleSpriteItemClick(deps, {
+      _event: {
+        currentTarget: {
+          dataset: {
+            spriteId: "sprite-body",
+          },
+        },
+      },
+    });
+    handleSpriteGroupTabClick(deps, {
+      _event: {
+        detail: {
+          id: "face",
+        },
+      },
+    });
+    handleSpriteItemClick(deps, {
+      _event: {
+        currentTarget: {
+          dataset: {
+            spriteId: "sprite-face",
+          },
+        },
+      },
+    });
+    setSpriteAnimationMode({ state }, { mode: "transition" });
+    setSpriteAnimationId({ state }, { animationId: "portrait-in" });
+    handleButtonSelectClick(deps);
+
+    expect(state.selectedSpriteIds).toEqual({
+      body: "sprite-body",
+      face: "sprite-face",
+    });
+    expect(state.characterSpriteEnabled).toBe(true);
+    expect(state.mode).toBe("current");
+
+    handleSubmitClick({
+      props: {
+        layouts,
+        characters,
+        transforms,
+      },
+      store: createStore(state),
+      dispatchEvent,
+    });
+
+    expect(
+      dispatchEvent.mock.calls[0][0].detail.dialogue.character.sprite,
+    ).toEqual({
+      transformId: "portrait-left",
+      items: [
+        { id: "body", resourceId: "sprite-body" },
+        { id: "face", resourceId: "sprite-face" },
+      ],
+      animations: {
+        resourceId: "portrait-in",
+      },
+    });
+  });
+
+  it("submits a character sprite without a selected speaker", () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+
+    setSelectedMode({ state }, { mode: "adv" });
+    setSelectedResource({ state }, { resourceId: "layout-adv" });
+    setSpriteCharacterId({ state }, { characterId: "character-1" });
+    setSpriteTransformId({ state }, { transformId: "portrait-left" });
+    setSelectedSpriteIds(
+      { state },
+      {
+        spriteIdsByGroupId: {
+          body: "sprite-body",
+        },
+      },
+    );
+
+    handleSubmitClick({
+      props: {
+        layouts,
+        characters,
+        transforms,
+      },
+      store: createStore(state),
+      dispatchEvent,
+    });
+
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      dialogue: {
+        mode: "adv",
+        ui: {
+          resourceId: "layout-adv",
+        },
+        character: {
+          sprite: {
+            transformId: "portrait-left",
+            items: [{ id: "body", resourceId: "sprite-body" }],
+          },
         },
         persistCharacter: false,
       },

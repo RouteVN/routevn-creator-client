@@ -3,6 +3,7 @@ import {
   submitCreateResourceCommand,
   submitUpdateResourceCommand,
 } from "../../src/deps/services/shared/commandApi/resources/shared.js";
+import { createCatalogResourceCommandApi } from "../../src/deps/services/shared/commandApi/resources/catalog.js";
 import { createLayoutCommandApi } from "../../src/deps/services/shared/commandApi/layouts.js";
 import { createControlCommandApi } from "../../src/deps/services/shared/commandApi/controls.js";
 import { COMMAND_TYPES } from "../../src/internal/project/commands.js";
@@ -228,6 +229,62 @@ describe("resource command file batching", () => {
             data: {
               thumbnailFileId: "thumb-2",
               preview: {},
+            },
+          },
+        },
+      ],
+    });
+    expect(shared.submitCommandWithContext).not.toHaveBeenCalled();
+    expect(shared.ensureFilesExist).not.toHaveBeenCalled();
+  });
+
+  it("batches missing file records with animation preview updates", async () => {
+    const submitResult = { valid: true, commandIds: ["cmd-1"] };
+    const fileRecords = [{ id: "thumb-animation" }];
+    const fileCommands = [
+      {
+        type: COMMAND_TYPES.FILE_CREATE,
+        payload: { fileId: "thumb-animation" },
+      },
+    ];
+    const { context, shared } = createShared({ submitResult, fileCommands });
+    const api = createCatalogResourceCommandApi(shared);
+
+    const result = await api.updateAnimation({
+      animationId: "animation-1",
+      data: {
+        thumbnailFileId: "thumb-animation",
+        preview: {
+          background: {
+            imageId: "image-bg",
+          },
+        },
+      },
+      fileRecords,
+    });
+
+    expect(result).toBe(submitResult);
+    expect(shared.buildMissingFileCommands).toHaveBeenCalledWith({
+      context,
+      fileRecords,
+    });
+    expect(shared.submitCommandsWithContext).toHaveBeenCalledWith({
+      context,
+      commands: [
+        ...fileCommands,
+        {
+          scope: "resources",
+          basePartition: "main",
+          type: COMMAND_TYPES.ANIMATION_UPDATE,
+          payload: {
+            animationId: "animation-1",
+            data: {
+              thumbnailFileId: "thumb-animation",
+              preview: {
+                background: {
+                  imageId: "image-bg",
+                },
+              },
             },
           },
         },

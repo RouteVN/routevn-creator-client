@@ -18,6 +18,12 @@ const VALID_RESULT = Object.freeze({
 const isPlainObject = (value) =>
   !!value && typeof value === "object" && !Array.isArray(value);
 
+export const toCreatorModelState = (state) => {
+  return state;
+};
+
+const toCreatorModelCommand = (command) => structuredClone(command);
+
 const toCreatorModelInvalidResult = (error) => {
   const normalizedError = {
     code: error?.code || "validation_failed",
@@ -66,7 +72,7 @@ const captureCreatorModelResult = (callback) => {
 };
 
 export const commandToCreatorModelCommand = ({ command } = {}) => {
-  const normalizedCommand = structuredClone(command);
+  const normalizedCommand = toCreatorModelCommand(command);
 
   if (!isPlainObject(normalizedCommand)) {
     throw new CreatorModelAdapterError("command must be an object");
@@ -92,13 +98,14 @@ export const applyCommandToRepositoryStateWithCreatorModel = ({
   command,
 } = {}) => {
   return captureCreatorModelResult(() => {
+    const creatorModelState = toCreatorModelState(repositoryState);
     const creatorModelCommand = commandToCreatorModelCommand({
       command,
     });
 
     const processResult = toCreatorModelResult(
       processCreatorModelCommand({
-        state: repositoryState,
+        state: creatorModelState,
         command: creatorModelCommand,
       }),
     );
@@ -120,12 +127,13 @@ export const applyCommandsToRepositoryStateWithCreatorModel = ({
   commands,
 } = {}) => {
   return captureCreatorModelResult(() => {
+    const creatorModelState = toCreatorModelState(repositoryState);
     const creatorModelCommands = commandsToCreatorModelCommands({
       commands,
     });
     const replayResult = toCreatorModelResult(
       replayCreatorModelCommands({
-        state: repositoryState,
+        state: creatorModelState,
         commands: creatorModelCommands,
       }),
     );

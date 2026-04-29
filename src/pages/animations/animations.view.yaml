@@ -118,6 +118,8 @@ template:
                                       - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
                                       - rtgl-svg svg=edit wh=16: null
                                   - rtgl-view d=v w=f h=1fg p=md g=md:
+                                      - $if selectedAnimationPreviewFileId:
+                                          - rvn-file-image fileId=${selectedAnimationPreviewFileId} w=f h=160 bw=xs bc=bo br=md: null
                                       - $if selectedItemDescription:
                                           - rtgl-view d=v w=f g=xs:
                                               - rtgl-text c=mu-fg: Description
@@ -150,6 +152,8 @@ template:
                   - rtgl-svg svg=edit wh=16: null
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rtgl-view d=v w=f p=md g=md:
+                      - $if selectedAnimationPreviewFileId:
+                          - rvn-file-image fileId=${selectedAnimationPreviewFileId} w=f h=180 bw=xs bc=bo br=md: null
                       - $if selectedItemDescription:
                           - rtgl-view d=v w=f g=xs:
                               - rtgl-text c=mu-fg: Description

@@ -43,6 +43,10 @@ propsSchema:
       type: string
       description: Preview container height
       default: '150'
+    padding:
+      type: string
+      description: Preview container padding in pixels
+      default: '0'
     backgroundColor:
       type: string
       description: Background color

@@ -8,6 +8,7 @@ import {
 import {
   applyCommandToRepositoryStateWithCreatorModel,
   applyCommandsToRepositoryStateWithCreatorModel,
+  toCreatorModelState,
 } from "../../../internal/creatorModelAdapter.js";
 import {
   commandToSyncEvent,
@@ -58,7 +59,9 @@ export const initialProjectData = {
 };
 
 export const assertSupportedProjectState = (state) => {
-  const result = validateCreatorModelState({ state });
+  const result = validateCreatorModelState({
+    state: toCreatorModelState(state),
+  });
   if (!result.valid) {
     throw new Error(
       result.error?.message || "Unsupported project repository state",

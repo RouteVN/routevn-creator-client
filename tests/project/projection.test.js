@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveLayoutReferences } from "route-engine-js";
+import createRouteEngine, { resolveLayoutReferences } from "route-engine-js";
 import {
   buildFilteredStateForExport,
   collectUsedResourcesForExport,
@@ -39,6 +39,40 @@ const createExportRepositoryState = (overrides = {}) => ({
   scenes: createTreeCollection(),
   ...overrides,
 });
+
+const findRenderElementById = (nodes, elementId) => {
+  if (!Array.isArray(nodes)) {
+    return undefined;
+  }
+
+  for (const node of nodes) {
+    if (node?.id === elementId) {
+      return node;
+    }
+
+    const child = findRenderElementById(node?.children, elementId);
+    if (child) {
+      return child;
+    }
+  }
+
+  return undefined;
+};
+
+const selectRouteEngineRenderState = (projectData) => {
+  const engine = createRouteEngine({
+    handlePendingEffects() {},
+  });
+
+  engine.init({
+    initialState: {
+      global: {},
+      projectData,
+    },
+  });
+
+  return engine.selectRenderState();
+};
 
 describe("constructProjectData", () => {
   it("aligns dialogue mode to nvl when the selected ui layout is dialogue-nvl", () => {
@@ -112,6 +146,204 @@ describe("constructProjectData", () => {
       projectData.story.scenes["scene-1"].sections["section-1"].lines[0].actions
         .dialogue.mode,
     ).toBe("nvl");
+  });
+
+  it("projects dialogue character sprites with the route-engine 1.9.0 render contract", () => {
+    const projectData = constructProjectData(
+      createExportRepositoryState({
+        characters: createTreeCollection(
+          {
+            alice: {
+              id: "alice",
+              type: "character",
+              name: "Alice",
+              sprites: createTreeCollection(
+                {
+                  "alice-body": {
+                    id: "alice-body",
+                    type: "image",
+                    name: "Alice Body",
+                    fileId: "alice-body-file",
+                    width: 320,
+                    height: 640,
+                  },
+                },
+                [{ id: "alice-body" }],
+              ),
+            },
+          },
+          [{ id: "alice" }],
+        ),
+        transforms: createTreeCollection(
+          {
+            "dialogue-left": {
+              id: "dialogue-left",
+              type: "transform",
+              x: 240,
+              y: 900,
+              anchorX: 0.5,
+              anchorY: 1,
+              rotation: 0,
+              scaleX: 1,
+              scaleY: 1,
+            },
+          },
+          [{ id: "dialogue-left" }],
+        ),
+        animations: createTreeCollection(
+          {
+            "portrait-in": {
+              id: "portrait-in",
+              type: "animation",
+              animation: {
+                type: "transition",
+                next: {
+                  tween: {
+                    alpha: {
+                      initialValue: 0,
+                      keyframes: [
+                        {
+                          duration: 500,
+                          value: 1,
+                          easing: "linear",
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+          },
+          [{ id: "portrait-in" }],
+        ),
+        layouts: createTreeCollection(
+          {
+            "dialogue-layout": {
+              id: "dialogue-layout",
+              type: "layout",
+              name: "Dialogue Layout",
+              layoutType: "dialogue-adv",
+              elements: {
+                items: {
+                  "dialogue-text": {
+                    id: "dialogue-text",
+                    type: "text-revealing-ref-dialogue-content",
+                    name: "Dialogue Text",
+                    x: 400,
+                    y: 850,
+                    width: 800,
+                    height: 120,
+                  },
+                },
+                tree: [{ id: "dialogue-text" }],
+              },
+            },
+          },
+          [{ id: "dialogue-layout" }],
+        ),
+        scenes: createTreeCollection(
+          {
+            "scene-1": {
+              id: "scene-1",
+              type: "scene",
+              name: "Scene 1",
+              sections: createTreeCollection(
+                {
+                  "section-1": {
+                    id: "section-1",
+                    name: "Section 1",
+                    lines: createTreeCollection(
+                      {
+                        "line-1": {
+                          id: "line-1",
+                          actions: {
+                            dialogue: {
+                              mode: "adv",
+                              ui: {
+                                resourceId: "dialogue-layout",
+                              },
+                              characterId: "alice",
+                              character: {
+                                sprite: {
+                                  transformId: "dialogue-left",
+                                  items: [
+                                    {
+                                      id: "body",
+                                      resourceId: "alice-body",
+                                    },
+                                  ],
+                                  animations: {
+                                    resourceId: "portrait-in",
+                                  },
+                                },
+                              },
+                              content: [{ text: "Hello" }],
+                            },
+                          },
+                        },
+                      },
+                      [{ id: "line-1" }],
+                    ),
+                  },
+                },
+                [{ id: "section-1" }],
+              ),
+            },
+          },
+          [{ id: "scene-1" }],
+        ),
+      }),
+    );
+
+    const dialogue =
+      projectData.story.scenes["scene-1"].sections["section-1"].lines[0].actions
+        .dialogue;
+
+    expect(dialogue.character.sprite).toEqual({
+      transformId: "dialogue-left",
+      items: [
+        {
+          id: "body",
+          resourceId: "alice-body",
+        },
+      ],
+      animations: {
+        resourceId: "portrait-in",
+      },
+    });
+    expect(projectData.resources.images["alice-body"]).toEqual(
+      expect.objectContaining({
+        fileId: "alice-body-file",
+        width: 320,
+        height: 640,
+      }),
+    );
+
+    const renderState = selectRouteEngineRenderState(projectData);
+    const spriteContainer = findRenderElementById(
+      renderState.elements,
+      "dialogue-character-sprite",
+    );
+
+    expect(spriteContainer).toEqual(
+      expect.objectContaining({
+        id: "dialogue-character-sprite",
+        type: "container",
+        x: 240,
+        y: 900,
+        anchorX: 0.5,
+        anchorY: 1,
+      }),
+    );
+    expect(spriteContainer.children).toEqual([
+      expect.objectContaining({
+        id: "dialogue-character-sprite-body",
+        type: "sprite",
+        src: "alice-body-file",
+        width: 320,
+        height: 640,
+      }),
+    ]);
   });
 
   it("keeps fragment layouts in filtered export state and expands them", () => {

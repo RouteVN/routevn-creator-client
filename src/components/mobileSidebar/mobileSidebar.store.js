@@ -108,7 +108,6 @@ const settingsItems = [
     label: "Appearance",
     path: "/project/appearance",
     icon: "color",
-    hidden: true,
   },
 ];
 

@@ -148,6 +148,89 @@ describe("sceneEditor.handlers dialogue persistence", () => {
     });
   });
 
+  it("keeps dialogue character sprite data when submitting dialogue metadata", async () => {
+    const updateLineDialogueAction = vi.fn(async () => ({ valid: true }));
+    const store = {
+      selectSelectedLineId: vi.fn(() => "line-1"),
+      selectSelectedLine: vi.fn(() => ({
+        id: "line-1",
+        actions: {
+          dialogue: {
+            content: [{ text: "Existing text" }],
+          },
+        },
+      })),
+      setRepositoryState: vi.fn(),
+      setDomainState: vi.fn(),
+      setRepositoryRevision: vi.fn(),
+      selectSceneId: vi.fn(() => undefined),
+      selectSelectedSectionId: vi.fn(() => undefined),
+      clearEditorSession: vi.fn(),
+    };
+    const deps = {
+      store,
+      render: vi.fn(),
+      subject: {
+        dispatch: vi.fn(),
+      },
+      projectService: {
+        updateLineDialogueAction,
+        getRepositoryState: vi.fn(() => ({})),
+        getDomainState: vi.fn(() => ({})),
+        getRepositoryRevision: vi.fn(() => 1),
+      },
+      appService: {
+        showAlert: vi.fn(),
+      },
+    };
+
+    await handleCommandLineSubmit(deps, {
+      _event: {
+        detail: {
+          dialogue: {
+            mode: "adv",
+            ui: {
+              resourceId: "layout-adv",
+            },
+            characterId: "character-1",
+            character: {
+              sprite: {
+                transformId: "portrait-left",
+                items: [{ id: "body", resourceId: "sprite-body" }],
+                animations: {
+                  resourceId: "portrait-in",
+                },
+              },
+            },
+            persistCharacter: false,
+          },
+        },
+      },
+    });
+
+    expect(updateLineDialogueAction).toHaveBeenCalledWith({
+      lineId: "line-1",
+      dialogue: {
+        mode: "adv",
+        ui: {
+          resourceId: "layout-adv",
+        },
+        characterId: "character-1",
+        character: {
+          sprite: {
+            transformId: "portrait-left",
+            items: [{ id: "body", resourceId: "sprite-body" }],
+            animations: {
+              resourceId: "portrait-in",
+            },
+          },
+        },
+        persistCharacter: false,
+      },
+      preserve: ["dialogue.content"],
+    });
+  });
+
   it("preserves dialogue content when clearing the dialogue character shortcut", async () => {
     const updateLineDialogueAction = vi.fn(async () => ({ valid: true }));
     const store = {

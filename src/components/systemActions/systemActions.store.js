@@ -6,8 +6,6 @@ import {
 import { buildCharacterSpritePreviewFileIds } from "../../internal/characterSpritePreview.js";
 import { normalizeLineActions } from "../../internal/project/engineActions.js";
 
-const HIDDEN_ACTION_MODES = new Set(["updateVariable"]);
-
 export const createInitialState = () => ({
   mode: "actions",
   actions: {},
@@ -43,8 +41,10 @@ const getHiddenModes = (attrs = {}) => {
 
 export const selectViewData = ({ state, props, props: attrs }) => {
   const displayActions = selectDisplayActions({ state });
+  const actionProps = { ...props };
+  actionProps.actions = selectAction({ state });
   const { actions: actionsObject, preview } = selectActionsData({
-    props,
+    props: actionProps,
     state,
   });
   const hiddenModes = getHiddenModes(attrs);
@@ -88,17 +88,12 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       layoutType: layout.layoutType,
     }));
 
-  const allCharacters = Object.entries(repositoryState.characters?.items || {});
-
-  const filteredCharacters = allCharacters
-    .filter(([_, character]) => {
-      return character.type === "character";
-    })
-    .map(([id, character]) => ({
-      id,
-      name: character.name,
-      type: character.type,
-    }));
+  const allCharacters = Object.entries(
+    repositoryState.characters?.items || {},
+  ).map(([id, character]) => ({
+    id,
+    ...character,
+  }));
 
   return {
     currentSceneId: props.currentSceneId,
@@ -115,7 +110,10 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     controlLayouts,
     dialogueLayouts,
     confirmDialogLayouts,
-    allCharacters: filteredCharacters,
+    allCharacters,
+    characterTree: repositoryState.characters?.tree || [],
+    transforms: repositoryState.transforms || { items: {}, tree: [] },
+    animations: repositoryState.animations || { items: {}, tree: [] },
     selectedLine: props.selectedLine,
     actionsType: attrs.actionType,
     showSelected: !!attrs.showSelected,
@@ -199,6 +197,29 @@ const truncatePreviewText = (value = "", maxLength = 36) => {
   }
 
   return `${text.slice(0, Math.max(0, maxLength - 3))}...`;
+};
+
+const isPlainObject = (value) => {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+};
+
+const resolveDialogueActionForPreview = ({
+  actions,
+  presentationState,
+  props,
+}) => {
+  const authoredDialogue = isPlainObject(actions.dialogue)
+    ? actions.dialogue
+    : undefined;
+  const presentationDialogue = isPlainObject(presentationState.dialogue)
+    ? presentationState.dialogue
+    : undefined;
+
+  if (props.actionType === "presentation") {
+    return presentationDialogue ?? authoredDialogue;
+  }
+
+  return authoredDialogue ?? presentationDialogue;
 };
 
 const findSectionReference = (sceneItems = {}, sectionId) => {
@@ -451,46 +472,70 @@ export const selectActionsData = ({ props, state }) => {
     };
   }
 
-  if (presentationState.dialogue) {
-    actionsObject.dialogue = presentationState.dialogue;
+  const dialogueAction = resolveDialogueActionForPreview({
+    actions,
+    presentationState,
+    props,
+  });
+
+  if (dialogueAction) {
+    actionsObject.dialogue = dialogueAction;
+    const authoredDialogue = isPlainObject(actions.dialogue)
+      ? actions.dialogue
+      : undefined;
     const dialogueModeLabel = resolveDialogueModeLabel(
-      presentationState.dialogue,
+      dialogueAction,
       layoutsItems,
     );
     const customCharacterNameLabel =
-      presentationState.dialogue.clear === true ||
-      typeof presentationState.dialogue.character?.name !== "string" ||
-      presentationState.dialogue.character.name.length === 0
+      dialogueAction.clear === true ||
+      typeof dialogueAction.character?.name !== "string" ||
+      dialogueAction.character.name.length === 0
         ? undefined
-        : `Name: ${truncatePreviewText(
-            presentationState.dialogue.character.name,
-          )}`;
+        : `Name: ${truncatePreviewText(dialogueAction.character.name)}`;
     const hasDialogueCharacter =
-      !!presentationState.dialogue.characterId ||
-      customCharacterNameLabel !== undefined;
+      !!dialogueAction.characterId || customCharacterNameLabel !== undefined;
     const persistCharacterLabel =
-      presentationState.dialogue.clear === true ||
+      dialogueAction.clear === true ||
       hasDialogueCharacter !== true ||
-      presentationState.dialogue.persistCharacter !== true
+      dialogueAction.persistCharacter !== true
         ? undefined
         : "Persist Speaker";
-    if (presentationState.dialogue.clear === true) {
+    const spriteItems = Array.isArray(dialogueAction.character?.sprite?.items)
+      ? dialogueAction.character.sprite.items
+      : [];
+    const spriteAnimationId =
+      dialogueAction.character?.sprite?.animations?.resourceId;
+    const spriteLabel =
+      spriteItems.length > 0
+        ? `Sprite: ${spriteItems.length} layer${spriteItems.length === 1 ? "" : "s"}`
+        : spriteAnimationId
+          ? "Sprite Animation"
+          : undefined;
+    const appendLabel =
+      authoredDialogue?.append === true || dialogueAction.append === true
+        ? "append"
+        : undefined;
+    if (dialogueAction.clear === true) {
       preview.dialogue = {
         name: "Dialogue: Clear",
         modeLabel: dialogueModeLabel,
         customCharacterNameLabel,
         persistCharacterLabel,
+        spriteLabel,
+        appendLabel,
       };
     } else {
       preview.dialogue = {
         name:
           layoutsItems[
-            presentationState.dialogue.ui?.resourceId ??
-              presentationState.dialogue.gui?.resourceId
+            dialogueAction.ui?.resourceId ?? dialogueAction.gui?.resourceId
           ]?.name || "No layout",
         modeLabel: dialogueModeLabel,
         customCharacterNameLabel,
         persistCharacterLabel,
+        spriteLabel,
+        appendLabel,
       };
     }
   }
@@ -595,40 +640,37 @@ export const selectActionsData = ({ props, state }) => {
   // Update Variable
   if (actions.updateVariable) {
     actionsObject.updateVariable = actions.updateVariable;
-    if (!HIDDEN_ACTION_MODES.has("updateVariable")) {
-      const variableItems = repositoryStateData.variables?.items || {};
-      const operations = Array.isArray(actions.updateVariable.operations)
-        ? actions.updateVariable.operations
-        : [];
+    const variableItems = repositoryStateData.variables?.items || {};
+    const operations = Array.isArray(actions.updateVariable.operations)
+      ? actions.updateVariable.operations
+      : [];
 
-      // Build summary string showing operations
-      const summary =
-        operations
-          .map((op) => {
-            const variable = variableItems[op.variableId];
-            const varName = variable?.name || op.variableId;
-            if (op.op === "toggle") {
-              return `${varName} toggle`;
-            } else if (op.op === "set") {
-              return `${varName} = ${op.value}`;
-            } else if (op.op === "increment") {
-              return `${varName} +${op.value ?? 1}`;
-            } else if (op.op === "decrement") {
-              return `${varName} -${op.value ?? 1}`;
-            } else if (op.op === "multiply") {
-              return `${varName} ×${op.value}`;
-            } else if (op.op === "divide") {
-              return `${varName} ÷${op.value}`;
-            }
-            return `${varName} ${op.op}`;
-          })
-          .join(", ") || "No operations";
+    const summary =
+      operations
+        .map((op) => {
+          const variable = variableItems[op.variableId];
+          const varName = variable?.name || op.variableId;
+          if (op.op === "toggle") {
+            return `${varName} toggle`;
+          } else if (op.op === "set") {
+            return `${varName} = ${op.value}`;
+          } else if (op.op === "increment") {
+            return `${varName} +${op.value ?? 1}`;
+          } else if (op.op === "decrement") {
+            return `${varName} -${op.value ?? 1}`;
+          } else if (op.op === "multiply") {
+            return `${varName} *${op.value}`;
+          } else if (op.op === "divide") {
+            return `${varName} /${op.value}`;
+          }
+          return `${varName} ${op.op}`;
+        })
+        .join(", ") || "No operations";
 
-      preview.updateVariable = {
-        summary,
-        operationCount: operations.length,
-      };
-    }
+    preview.updateVariable = {
+      summary,
+      operationCount: operations.length,
+    };
   }
 
   return {

@@ -37,7 +37,7 @@ import { withResolvedResourceFileMetadata } from "../resourceFileMetadata.js";
 
 const TEXT_CONTENT_BY_TYPE = {
   "text-ref-character-name": "${dialogue.character.name}",
-  "text-revealing-ref-dialogue-content": "${dialogue.content[0].text}",
+  "text-revealing-ref-dialogue-content": "${dialogue.content}",
   "text-ref-choice-item-content": "${item.content}",
   "text-ref-save-load-slot-date": "${formatDate(item.savedAt)}",
   "text-ref-dialogue-line-character-name": "${line.characterName}",
@@ -879,7 +879,11 @@ const applyTextNode = ({ element, node, context }) => {
     text: node.text,
   };
 
-  if (renderType === "text-revealing") {
+  if (node.type === "text-revealing-ref-dialogue-content") {
+    nextElement.content = TEXT_CONTENT_BY_TYPE[node.type];
+    nextElement.initialRevealedCharacters =
+      "${dialogue.initialRevealedCharacters}";
+  } else if (renderType === "text-revealing") {
     nextElement.content = toTextRevealingSegments(content);
   } else {
     nextElement.content = content;

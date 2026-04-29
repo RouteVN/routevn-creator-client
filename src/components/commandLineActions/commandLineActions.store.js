@@ -1,7 +1,5 @@
 import { RUNTIME_ACTION_ITEMS } from "../../internal/runtimeActions.js";
 
-const HIDDEN_ACTION_MODES = new Set(["updateVariable"]);
-
 const createSection = (label, items) => ({
   label,
   items,
@@ -236,10 +234,7 @@ const toActionItem = (item) => ({
 
 const getActionItems = (attrs = {}) => {
   const actionsType = attrs?.actionsType;
-  const hiddenModes = new Set([
-    ...HIDDEN_ACTION_MODES,
-    ...getHiddenModes(attrs),
-  ]);
+  const hiddenModes = new Set(getHiddenModes(attrs));
   const sections =
     {
       system: SYSTEM_ACTION_SECTIONS,

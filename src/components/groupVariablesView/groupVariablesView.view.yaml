@@ -114,8 +114,10 @@ template:
                                       - $for item, j in group.children:
                                           - $if item.isSelected:
                                               - rtgl-view#rowRef${i}x${j} data-item-id=${item.id} d=h w=f pv=md bwb=xs cur=pointer g=md bgc=mu h-bgc=mu br=sm:
-                                                  - rtgl-view w=2fg:
+                                                  - rtgl-view w=2fg d=h av=c g=sm:
                                                       - rtgl-text s=sm: ${item.name}
+                                                      - $if item.isEnum:
+                                                          - rtgl-tag v=mu: Enum
                                                   - rtgl-view w=1fg:
                                                       - rtgl-text s=sm: ${item.scope}
                                                   - rtgl-view w=1fg:
@@ -124,8 +126,10 @@ template:
                                                       - rtgl-text s=sm: ${item.default}
                                             $else:
                                               - rtgl-view#rowRef${i}x${j} data-item-id=${item.id} d=h w=f pv=md bwb=xs cur=pointer g=md h-bgc=mu:
-                                                  - rtgl-view w=2fg:
+                                                  - rtgl-view w=2fg d=h av=c g=sm:
                                                       - rtgl-text s=sm: ${item.name}
+                                                      - $if item.isEnum:
+                                                          - rtgl-tag v=mu: Enum
                                                   - rtgl-view w=1fg:
                                                       - rtgl-text s=sm: ${item.scope}
                                                   - rtgl-view w=1fg:

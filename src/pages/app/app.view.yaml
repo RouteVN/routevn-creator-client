@@ -49,8 +49,12 @@ template:
                   - rvn-videos: []
                 $elif currentRoutePattern == "/project/text-styles":
                   - rvn-text-styles: []
+                $elif currentRoutePattern == "/project/appearance":
+                  - rvn-appearance: []
                 $elif currentRoutePattern == "/project/controls":
                   - rvn-controls: []
+                $elif currentRoutePattern == "/project/variables":
+                  - rvn-variables: []
                 $elif currentRoutePattern == "/project/scenes":
                   - rvn-scenes: []
                 $elif currentRoutePattern == "/project/scene-editor":

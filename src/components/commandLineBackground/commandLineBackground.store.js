@@ -30,6 +30,17 @@ const ANIMATION_MODE_OPTIONS = [
   },
 ];
 
+const ANIMATION_PLAYBACK_CONTINUITY_OPTIONS = [
+  {
+    label: "Render",
+    value: "render",
+  },
+  {
+    label: "Persistent",
+    value: "persistent",
+  },
+];
+
 // Form structure will be created dynamically in selectViewData
 const createEmptyCollection = () => ({
   items: {},
@@ -439,6 +450,16 @@ export const selectViewData = ({ state }) => {
       clearable: false,
       placeholder: "Select transition animation",
       options: transitionAnimationOptions,
+    });
+  }
+
+  if (selectedAnimationMode !== "none") {
+    formFields.push({
+      name: "playbackContinuity",
+      label: "Playback",
+      type: "segmented-control",
+      clearable: false,
+      options: ANIMATION_PLAYBACK_CONTINUITY_OPTIONS,
     });
   }
 
