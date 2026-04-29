@@ -172,7 +172,7 @@ const STYLES = `
   }
 
   .gutter-row[data-selected="true"] .line-number {
-    color: rgba(248, 250, 252, 0.98);
+    color: var(--foreground);
   }
 
   .gutter-row[data-selected="true"][data-mode="block"] {
@@ -181,7 +181,7 @@ const STYLES = `
 
   .line-number {
     width: 32px;
-    color: rgba(148, 163, 184, 0.92);
+    color: var(--foreground);
     font-size: 12px;
     font-weight: 600;
     line-height: 1.5;
