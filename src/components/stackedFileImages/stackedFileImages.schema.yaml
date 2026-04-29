@@ -1,0 +1,17 @@
+componentName: rvn-stacked-file-images
+propsSchema:
+  type: object
+  properties:
+    fileIds:
+      type: array
+      items:
+        type: string
+    w:
+      type: string
+    h:
+      type: string
+    br:
+      type: string
+    lazy:
+      type: boolean
+  required: []

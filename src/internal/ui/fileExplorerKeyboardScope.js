@@ -2,19 +2,26 @@ const getEventTarget = (event) => {
   return event?.composedPath?.()?.[0] ?? event?.target;
 };
 
+const TEXT_ENTRY_TAGS = new Set([
+  "input",
+  "textarea",
+  "select",
+  "rtgl-input",
+  "rtgl-select",
+  "rtgl-textarea",
+  "rvn-editable-text",
+]);
+
+const TEXT_ENTRY_SELECTOR =
+  "input, textarea, select, rtgl-input, rtgl-select, rtgl-textarea, rvn-editable-text, [contenteditable=''], [contenteditable='true']";
+
 const isFocusableInteractiveTarget = (target) => {
   if (!target) {
     return false;
   }
 
   const tagName = String(target?.tagName ?? "").toLowerCase();
-  if (
-    tagName === "input" ||
-    tagName === "textarea" ||
-    tagName === "select" ||
-    tagName === "button" ||
-    tagName === "a"
-  ) {
+  if (TEXT_ENTRY_TAGS.has(tagName) || tagName === "button" || tagName === "a") {
     return true;
   }
 
@@ -26,23 +33,77 @@ const isFocusableInteractiveTarget = (target) => {
     return false;
   }
 
-  return Boolean(
-    target.closest(
-      "input, textarea, select, button, a, [contenteditable=''], [contenteditable='true']",
-    ),
-  );
+  return Boolean(target.closest(`${TEXT_ENTRY_SELECTOR}, button, a`));
+};
+
+const VIM_ARROW_KEYS = {
+  h: "ArrowLeft",
+  j: "ArrowDown",
+  k: "ArrowUp",
+  l: "ArrowRight",
+};
+
+const JUMP_DISTANCE = 10;
+
+const resolveJumpDirection = (event) => {
+  if (!event.ctrlKey || event.altKey || event.metaKey) {
+    return undefined;
+  }
+
+  const key = String(event.key ?? "").toLowerCase();
+  if (key === "d") {
+    return "next";
+  }
+
+  if (key === "u") {
+    return "previous";
+  }
+
+  return undefined;
+};
+
+const resolveNavigationKey = (event) => {
+  if (
+    event.key === "ArrowUp" ||
+    event.key === "ArrowDown" ||
+    event.key === "ArrowLeft" ||
+    event.key === "ArrowRight"
+  ) {
+    return event.key;
+  }
+
+  if (event.altKey || event.ctrlKey || event.metaKey) {
+    return undefined;
+  }
+
+  return VIM_ARROW_KEYS[String(event.key ?? "").toLowerCase()];
+};
+
+const isTextEntryTarget = (target) => {
+  const tagName = String(target?.tagName ?? "").toLowerCase();
+
+  if (TEXT_ENTRY_TAGS.has(tagName) || target?.isContentEditable === true) {
+    return true;
+  }
+
+  if (typeof target?.closest !== "function") {
+    return false;
+  }
+
+  return Boolean(target.closest(TEXT_ENTRY_SELECTOR));
 };
 
 export const isTextEntryKeyEvent = (event) => {
-  const target = getEventTarget(event);
-  const tagName = String(target?.tagName ?? "").toLowerCase();
+  const path =
+    typeof event?.composedPath === "function" ? event.composedPath() : [];
 
-  return (
-    tagName === "input" ||
-    tagName === "textarea" ||
-    tagName === "select" ||
-    target?.isContentEditable === true
-  );
+  for (const node of path) {
+    if (isTextEntryTarget(node)) {
+      return true;
+    }
+  }
+
+  return isTextEntryTarget(event?.target);
 };
 
 export const createFileExplorerKeyboardScopeHandlers = ({
@@ -93,7 +154,8 @@ export const createFileExplorerKeyboardScopeHandlers = ({
       return;
     }
 
-    if (event.altKey || event.ctrlKey || event.metaKey) {
+    const jumpDirection = resolveJumpDirection(event);
+    if (event.altKey || event.metaKey || (event.ctrlKey && !jumpDirection)) {
       return;
     }
 
@@ -108,13 +170,9 @@ export const createFileExplorerKeyboardScopeHandlers = ({
       event,
       selectedExplorerItem,
     });
-    const isArrowKey =
-      event.key === "ArrowUp" ||
-      event.key === "ArrowDown" ||
-      event.key === "ArrowLeft" ||
-      event.key === "ArrowRight";
+    const navigationKey = resolveNavigationKey(event);
 
-    if (!selectedExplorerItem && isArrowKey) {
+    if (!selectedExplorerItem && (navigationKey || jumpDirection)) {
       const didSelectInitialItem = selectInitialExplorerItem({
         deps,
         fileExplorer,
@@ -144,7 +202,7 @@ export const createFileExplorerKeyboardScopeHandlers = ({
       return;
     }
 
-    if (event.key === "ArrowRight") {
+    if (navigationKey === "ArrowRight") {
       event.preventDefault();
       event.stopPropagation();
       fileExplorer.setSelectedFolderExpanded?.({ expanded: true });
@@ -152,7 +210,7 @@ export const createFileExplorerKeyboardScopeHandlers = ({
       return;
     }
 
-    if (event.key === "ArrowLeft") {
+    if (navigationKey === "ArrowLeft") {
       event.preventDefault();
       event.stopPropagation();
       fileExplorer.setSelectedFolderExpanded?.({ expanded: false });
@@ -160,10 +218,26 @@ export const createFileExplorerKeyboardScopeHandlers = ({
       return;
     }
 
+    if (jumpDirection) {
+      const nextSelection = fileExplorer.navigateSelection?.({
+        direction: jumpDirection,
+        distance: JUMP_DISTANCE,
+        clamp: true,
+      });
+      if (!nextSelection?.itemId) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      focusKeyboardScope(deps);
+      return;
+    }
+
     const direction =
-      event.key === "ArrowDown"
+      navigationKey === "ArrowDown"
         ? "next"
-        : event.key === "ArrowUp"
+        : navigationKey === "ArrowUp"
           ? "previous"
           : undefined;
     if (!direction) {

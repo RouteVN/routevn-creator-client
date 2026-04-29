@@ -130,4 +130,88 @@ describe("sceneEditor.lineViewModels", () => {
 
     expect(viewModels[0].characterFileId).toBeUndefined();
   });
+
+  it("builds stacked sprite previews for multipart character changes", () => {
+    const lines = [
+      {
+        id: "line-1",
+      },
+    ];
+
+    const repositoryState = {
+      characters: {
+        items: {
+          "character-1": {
+            id: "character-1",
+            type: "character",
+            name: "Aki",
+            sprites: {
+              items: {
+                "sprite-body": {
+                  id: "sprite-body",
+                  type: "image",
+                  name: "Body",
+                  fileId: "file-body",
+                },
+                "sprite-face": {
+                  id: "sprite-face",
+                  type: "image",
+                  name: "Face",
+                  fileId: "file-face",
+                },
+              },
+              tree: [{ id: "sprite-body" }, { id: "sprite-face" }],
+            },
+          },
+        },
+        tree: [{ id: "character-1" }],
+      },
+    };
+
+    const viewModels = buildSceneEditorLineViewModels({
+      lines,
+      repositoryState,
+      sectionLineChanges: {
+        lines: [
+          {
+            id: "line-1",
+            changes: {
+              character: {
+                changeType: "set",
+                data: {
+                  items: [
+                    {
+                      id: "character-1",
+                      sprites: [
+                        {
+                          id: "body",
+                          resourceId: "sprite-body",
+                        },
+                        {
+                          id: "face",
+                          resourceId: "sprite-face",
+                        },
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+            presentationState: {},
+          },
+        ],
+      },
+    });
+
+    expect(viewModels[0].characterSprites).toEqual({
+      changeType: "set",
+      items: [
+        {
+          characterId: "character-1",
+          characterName: "Aki",
+          spriteFileIds: ["file-body", "file-face"],
+        },
+      ],
+    });
+  });
 });

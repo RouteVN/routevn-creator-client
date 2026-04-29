@@ -8,6 +8,29 @@ const createNoopUpdater = () => ({
   isUpdateAvailable: () => false,
 });
 
+const normalizeTheme = (theme) => {
+  return theme === "light" ? "light" : "dark";
+};
+
+const applyThemeToDocument = (
+  theme,
+  root = typeof document === "undefined" ? undefined : document,
+) => {
+  const resolvedTheme = normalizeTheme(theme);
+  const body = root?.body;
+  const documentElement = root?.documentElement;
+
+  if (body?.classList) {
+    body.classList.toggle("dark", resolvedTheme === "dark");
+  }
+
+  if (documentElement?.classList) {
+    documentElement.classList.toggle("dark", resolvedTheme === "dark");
+  }
+
+  return resolvedTheme;
+};
+
 const getActiveElement = (root = document) => {
   let active = root.activeElement;
   while (active && active.shadowRoot && active.shadowRoot.activeElement) {
@@ -129,6 +152,10 @@ export const createAppShellService = ({
       if (active?.blur) {
         active.blur();
       }
+    },
+
+    applyTheme(theme) {
+      return applyThemeToDocument(theme);
     },
 
     getAppVersion() {

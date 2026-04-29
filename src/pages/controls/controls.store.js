@@ -45,6 +45,8 @@ const SYSTEM_ACTION_LABELS = {
   resetStoryAtSection: "Reset Story At Section",
   toggleAutoMode: "Toggle Auto Mode",
   toggleSkipMode: "Toggle Skip Mode",
+  startSkipMode: "Start Skip Mode",
+  stopSkipMode: "Stop Skip Mode",
   toggleDialogueUI: "Toggle Dialogue Box Visibility",
   pushOverlay: "Push Overlay",
   popOverlay: "Pop Overlay",
@@ -127,6 +129,9 @@ const {
   createInitialState: createCatalogInitialState,
   setItems,
   setSelectedItemId,
+  setUiConfig,
+  openMobileFileExplorer,
+  closeMobileFileExplorer,
   selectSelectedItem,
   selectItemById,
   selectSelectedItemId,
@@ -149,6 +154,7 @@ const {
   matchesSearch,
   buildDetailFields,
   buildCatalogItem,
+  hiddenMobileDetailSlots: ["keyboard-slot"],
   tagging: {
     tagFilterPlaceholder: "Filter tags",
   },
@@ -159,10 +165,13 @@ const {
       editMode: Boolean(state.editItemId),
     }),
     dialogDefaultValues: state.dialogDefaultValues,
-    keyboardItems: toKeyboardItems(selectedItem?.keyboard),
+    keydownKeyboardItems: toKeyboardItems(selectedItem?.keyboard),
+    keyupKeyboardItems: toKeyboardItems(selectedItem?.keyup),
     keyboardEditorKey: state.keyboardEditorKey,
+    keyboardEditorPhase: state.keyboardEditorPhase,
     keyboardEditorActions: state.keyboardEditorActions,
-    keyboardEmptyMessage: "No keyboard actions added yet",
+    keydownKeyboardEmptyMessage: "No keydown actions added yet",
+    keyupKeyboardEmptyMessage: "No keyup actions added yet",
   }),
 });
 
@@ -177,12 +186,16 @@ export const createInitialState = () => ({
     tagIds: [],
   },
   keyboardEditorKey: undefined,
+  keyboardEditorPhase: "keydown",
   keyboardEditorActions: {},
 });
 
 export {
   setItems,
   setSelectedItemId,
+  setUiConfig,
+  openMobileFileExplorer,
+  closeMobileFileExplorer,
   selectSelectedItem,
   selectSelectedItemId,
   setSearchQuery,
@@ -198,6 +211,8 @@ export {
 export const selectControlItemById = selectItemById;
 
 export const selectKeyboardEditorKey = ({ state }) => state.keyboardEditorKey;
+export const selectKeyboardEditorPhase = ({ state }) =>
+  state.keyboardEditorPhase;
 
 export const openAddDialog = ({ state }, { groupId } = {}) => {
   state.isDialogOpen = true;
@@ -232,13 +247,18 @@ export const closeAddDialog = ({ state }, _payload = {}) => {
   };
 };
 
-export const openKeyboardEditor = ({ state }, { key, actions = {} } = {}) => {
+export const openKeyboardEditor = (
+  { state },
+  { phase = "keydown", key, actions = {} } = {},
+) => {
+  state.keyboardEditorPhase = phase;
   state.keyboardEditorKey = key;
   state.keyboardEditorActions = actions;
 };
 
 export const closeKeyboardEditor = ({ state }, _payload = {}) => {
   state.keyboardEditorKey = undefined;
+  state.keyboardEditorPhase = "keydown";
   state.keyboardEditorActions = {};
 };
 

@@ -26,6 +26,9 @@ propsSchema:
     searchPlaceholder:
       type: string
       description: Placeholder text for search input
+    showSearch:
+      type: boolean
+      description: Whether to render the search input
     tagFilterOptions:
       type: array
       description: Tag filter options for the header selector
@@ -53,6 +56,9 @@ propsSchema:
     showBackButton:
       type: boolean
       description: Whether to show a back button in the header
+    showMenuButton:
+      type: boolean
+      description: Whether to show a menu icon in the header
     canUpload:
       type: boolean
       description: Whether upload actions should be shown
@@ -65,9 +71,18 @@ propsSchema:
     showImageCardPreview:
       type: boolean
       description: Whether image cards should render preview media
+    fullWidthImageCards:
+      type: boolean
+      description: Whether image cards should fill the available row width and use image aspect ratios
+    mobileLayout:
+      type: boolean
+      description: Whether cards should use the touch/mobile full-width layout and ignore zoom
     itemContextMenuItems:
       type: array
       description: Context menu items for media cards
+    scrollBottomPadding:
+      type: string
+      description: Extra bottom padding inside the scroll container
 methods:
   type: object
   properties:

@@ -14,8 +14,6 @@ import {
   resolveProjectResolution,
 } from "../../internal/projectResolution.js";
 
-const PROJECT_CREATE_DIALOG_COMPONENT = "rvn-project-create-dialog";
-
 const mapCloudProject = (project) => {
   const projectId = project?.id;
   const name = project?.name ?? "Untitled";
@@ -93,6 +91,11 @@ export const handleAfterMount = async (deps) => {
   render();
 };
 
+export const handleBeforeMount = (deps) => {
+  const { store, uiConfig } = deps;
+  store.setUiConfig({ uiConfig });
+};
+
 const getProjectIdFromEvent = (event) => {
   return event?.currentTarget?.dataset?.projectId ?? "";
 };
@@ -151,43 +154,8 @@ const navigateToProjectRoute = async (
   appService.navigate(path, { p: projectId });
 };
 
-const showCreateProjectDialog = async (appService) => {
-  return appService.showComponentDialog({
-    component: PROJECT_CREATE_DIALOG_COMPONENT,
-    size: "md",
-    props: {
-      platform: appService.getPlatform(),
-    },
-    actions: {
-      buttons: [
-        {
-          id: "submit",
-          label: "Submit",
-          variant: "pr",
-          role: "confirm",
-          validate: true,
-        },
-      ],
-    },
-  });
-};
-
-export const handleCreateButtonClick = async (deps) => {
+const createProjectFromValues = async (deps, values = {}) => {
   const { appService, render, store } = deps;
-  let dialogResult;
-
-  try {
-    dialogResult = await showCreateProjectDialog(appService);
-  } catch {
-    appService.showAlert({ message: "Failed to open create project dialog." });
-    return;
-  }
-
-  if (!dialogResult || dialogResult.actionId !== "submit") {
-    return;
-  }
-
-  const values = dialogResult.values ?? {};
   const platform = appService.getPlatform();
 
   try {
@@ -255,6 +223,7 @@ export const handleCreateButtonClick = async (deps) => {
     });
 
     store.addProject({ project: newProject });
+    store.closeCreateDialog();
     render();
   } catch (error) {
     appService.showAlert({
@@ -263,6 +232,49 @@ export const handleCreateButtonClick = async (deps) => {
         "Failed to create project. Please check the selected folder and try again.",
     });
   }
+};
+
+export const handleCreateButtonClick = (deps) => {
+  const { store, render } = deps;
+  store.openCreateDialog();
+  render();
+};
+
+export const handleCreateDialogClose = (deps) => {
+  const { store, render } = deps;
+  if (!store.selectIsCreateDialogOpen()) {
+    return;
+  }
+  store.closeCreateDialog();
+  render();
+};
+
+export const handleCreateDialogCancel = (deps) => {
+  const { store, render } = deps;
+  store.closeCreateDialog();
+  render();
+};
+
+export const handleCreateDialogSubmit = async (deps) => {
+  const { appService, refs } = deps;
+  const dialogBody = refs.projectCreateDialogBody;
+
+  if (
+    !dialogBody ||
+    typeof dialogBody.validate !== "function" ||
+    typeof dialogBody.getValues !== "function"
+  ) {
+    appService.showAlert({ message: "Create project dialog is not ready." });
+    return;
+  }
+
+  const validation = await dialogBody.validate();
+  if (validation?.valid === false) {
+    return;
+  }
+
+  const values = await dialogBody.getValues();
+  await createProjectFromValues(deps, values);
 };
 
 export const handleCloudCreateButtonClick = (deps) => {
@@ -369,6 +381,40 @@ export const handleOpenButtonClick = async (deps) => {
         "Failed to import project. Please select a valid project folder.",
     });
   }
+};
+
+export const handleMobileCreateMenuButtonClick = (deps, payload) => {
+  const { store, render } = deps;
+  const rect = payload._event.currentTarget.getBoundingClientRect();
+
+  store.openMobileActionMenu({
+    x: rect.right,
+    y: rect.bottom,
+  });
+  render();
+};
+
+export const handleMobileActionMenuClose = (deps) => {
+  const { store, render } = deps;
+  if (!store.selectIsMobileActionMenuOpen()) {
+    return;
+  }
+  store.closeMobileActionMenu();
+  render();
+};
+
+export const handleMobileActionMenuClickItem = (deps, payload) => {
+  const { store, render } = deps;
+  const detail = payload._event.detail;
+  const item = detail.item || detail;
+
+  store.closeMobileActionMenu();
+
+  if (item.value === "create-project") {
+    store.openCreateDialog();
+  }
+
+  render();
 };
 
 export const handleLoginButtonClick = (deps) => {

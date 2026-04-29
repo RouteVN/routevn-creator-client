@@ -2,6 +2,11 @@ import {
   matchesTagAwareSearch,
   matchesTagFilter,
 } from "../../internal/resourceTags.js";
+import {
+  buildVariableEnumOptions,
+  isVariableEnumEnabled,
+  normalizeVariableEnumValues,
+} from "../../internal/variableEnums.js";
 import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import {
   buildTagFilterPopoverViewData,
@@ -18,6 +23,8 @@ const DEFAULT_FORM_VALUES = {
   description: "",
   scope: "context",
   type: "string",
+  isEnum: false,
+  enumValues: [],
   default: "",
   tagIds: [],
 };
@@ -98,6 +105,24 @@ export const createInitialState = () => ({
         ],
       },
       {
+        $when: "values.type == 'string'",
+        name: "isEnum",
+        type: "checkbox",
+        content: "Enum",
+      },
+      {
+        $when: "values.type == 'string' && values.isEnum == true",
+        name: "enumValues",
+        type: "tag-select",
+        label: "Values",
+        placeholder: "Add value",
+        addOption: {
+          label: "Add value",
+        },
+        options: "${enumValueOptions}",
+        required: false,
+      },
+      {
         $when: "values.type == 'boolean'",
         name: "default",
         type: "select",
@@ -109,10 +134,19 @@ export const createInitialState = () => ({
         required: true,
       },
       {
-        $when: "values.type == 'string'",
+        $when: "values.type == 'string' && values.isEnum != true",
         name: "default",
         type: "input-text",
         label: "Default",
+        required: false,
+      },
+      {
+        $when: "values.type == 'string' && values.isEnum == true",
+        name: "default",
+        type: "select",
+        label: "Default",
+        clearable: false,
+        options: "${enumValueOptions}",
         required: false,
       },
       {
@@ -249,6 +283,7 @@ export const selectViewData = ({ state, props }) => {
   const searchQuery = state.searchQuery.toLowerCase();
   const activeTagIds = props.selectedTagFilterValues ?? [];
   const hasActiveTagFilter = activeTagIds.length > 0;
+  const mobileLayout = parseBooleanProp(props.mobileLayout);
 
   // Helper function to check if an item matches the search query
   const matchesSearch = (item) => {
@@ -303,6 +338,7 @@ export const selectViewData = ({ state, props }) => {
               scope: item.scope || "context",
               type: item.type || "string",
               default: defaultValue,
+              isEnum: isVariableEnumEnabled(item),
               isSelected: item.id === props.selectedItemId,
             };
           });
@@ -349,7 +385,15 @@ export const selectViewData = ({ state, props }) => {
     }
   }
 
-  const dialogKey = `${state.dialogMode}-${state.editingItemId || "new"}-${defaultValues.type}-${String(defaultValues.default)}`;
+  const enumValueOptions = buildVariableEnumOptions(defaultValues.enumValues);
+  const dialogKey = [
+    state.dialogMode,
+    state.editingItemId || "new",
+    defaultValues.type,
+    defaultValues.isEnum ? "enum" : "plain",
+    normalizeVariableEnumValues(defaultValues.enumValues).join("|"),
+    String(defaultValues.default),
+  ].join("-");
 
   return {
     flatGroups,
@@ -365,6 +409,9 @@ export const selectViewData = ({ state, props }) => {
       props,
     }),
     showTagFilter: parseBooleanProp(props.showTagFilter),
+    showSearch: parseBooleanProp(props.showSearch, true),
+    showMenuButton: parseBooleanProp(props.showMenuButton),
+    mobileLayout,
     hasActiveTagFilter,
     tagFilterButtonBackgroundColor: hasActiveTagFilter ? "ac" : "bg",
     tagFilterButtonBorderColor: hasActiveTagFilter ? "ac" : "bo",
@@ -377,6 +424,7 @@ export const selectViewData = ({ state, props }) => {
     editingItemId: state.editingItemId,
     context: {
       values: defaultValues,
+      enumValueOptions,
     },
     dropdownMenu: state.dropdownMenu,
   };

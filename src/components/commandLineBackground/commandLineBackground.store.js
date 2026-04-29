@@ -30,6 +30,17 @@ const ANIMATION_MODE_OPTIONS = [
   },
 ];
 
+const ANIMATION_PLAYBACK_CONTINUITY_OPTIONS = [
+  {
+    label: "Render",
+    value: "render",
+  },
+  {
+    label: "Persistent",
+    value: "persistent",
+  },
+];
+
 // Form structure will be created dynamically in selectViewData
 const createEmptyCollection = () => ({
   items: {},
@@ -73,11 +84,14 @@ export const createInitialState = () => ({
   layoutItems: createEmptyCollection(),
   videoItems: createEmptyCollection(),
   animationItems: createEmptyCollection(),
+  transformItems: createEmptyCollection(),
   selectedResourceId: undefined,
   selectedResourceType: undefined,
   tempSelectedResourceId: undefined,
+  selectedTransformId: undefined,
   selectedAnimationMode: "none",
   selectedAnimationId: undefined,
+  selectedAnimationPlaybackContinuity: "render",
   backgroundLoop: false,
   pendingResourceId: undefined,
   fullImagePreviewVisible: false,
@@ -95,12 +109,13 @@ export const setMode = ({ state }, { mode } = {}) => {
 
 export const setRepositoryState = (
   { state },
-  { images, layouts, videos, animations } = {},
+  { images, layouts, videos, animations, transforms } = {},
 ) => {
   state.imageItems = normalizeResourceCollection(images);
   state.layoutItems = normalizeResourceCollection(layouts);
   state.videoItems = normalizeResourceCollection(videos);
   state.animationItems = normalizeResourceCollection(animations);
+  state.transformItems = normalizeResourceCollection(transforms);
 
   const selectedAnimationMode = getAnimationModeById(
     state.animationItems,
@@ -199,6 +214,29 @@ export const setSelectedAnimation = ({ state }, { animationId } = {}) => {
 
 export const selectSelectedAnimation = ({ state }) => {
   return state.selectedAnimationId;
+};
+
+export const setSelectedTransform = ({ state }, { transformId } = {}) => {
+  state.selectedTransformId =
+    typeof transformId === "string" && transformId.length > 0
+      ? transformId
+      : undefined;
+};
+
+export const selectSelectedTransform = ({ state }) => {
+  return state.selectedTransformId;
+};
+
+export const setSelectedAnimationPlaybackContinuity = (
+  { state },
+  { continuity } = {},
+) => {
+  state.selectedAnimationPlaybackContinuity =
+    continuity === "persistent" ? "persistent" : "render";
+};
+
+export const selectSelectedAnimationPlaybackContinuity = ({ state }) => {
+  return state.selectedAnimationPlaybackContinuity;
 };
 
 export const setBackgroundLoop = ({ state }, { loop } = {}) => {
@@ -365,12 +403,26 @@ export const selectViewData = ({ state }) => {
       value: item.id,
       label: item.name,
     }));
+  const transformOptions = toFlatItems(state.transformItems)
+    .filter((item) => item.type === "transform")
+    .map((item) => ({
+      value: item.id,
+      label: item.name,
+    }));
 
   const formFields = [
     {
       type: "slot",
       slot: "background",
       description: "Background",
+    },
+    {
+      name: "transformId",
+      label: "Transform",
+      type: "select",
+      clearable: true,
+      placeholder: "Select transform",
+      options: transformOptions,
     },
     {
       name: "animationType",
@@ -401,6 +453,16 @@ export const selectViewData = ({ state }) => {
     });
   }
 
+  if (selectedAnimationMode !== "none") {
+    formFields.push({
+      name: "playbackContinuity",
+      label: "Playback",
+      type: "segmented-control",
+      clearable: false,
+      options: ANIMATION_PLAYBACK_CONTINUITY_OPTIONS,
+    });
+  }
+
   if (selectedResource?.resourceType === "video") {
     formFields.push({
       name: "loop",
@@ -419,6 +481,8 @@ export const selectViewData = ({ state }) => {
 
   const defaultValues = {
     background: selectedResource?.fileId || "",
+    transformId: state.selectedTransformId,
+    playbackContinuity: state.selectedAnimationPlaybackContinuity,
     animationType: selectedAnimationMode,
     updateAnimation:
       selectedAnimationMode === "update"
@@ -448,6 +512,8 @@ export const selectViewData = ({ state }) => {
       key: [
         selectedResource?.resourceType ?? "none",
         selectedResource?.resourceId ?? "none",
+        state.selectedTransformId ?? "none",
+        state.selectedAnimationPlaybackContinuity ?? "render",
         selectedAnimationMode,
         state.selectedAnimationId ?? "none",
         state.backgroundLoop ? "loop" : "no-loop",

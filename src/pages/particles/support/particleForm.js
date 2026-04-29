@@ -27,14 +27,9 @@ const VELOCITY_KIND_OPTIONS = [
   { id: "radial", label: "Radial", value: "radial" },
 ];
 
-const BOUNDS_MODE_OPTIONS = [
-  { id: "recycle", label: "Recycle", value: "recycle" },
-  { id: "none", label: "None", value: "none" },
-];
-
-const BOUNDS_SOURCE_OPTIONS = [
-  { id: "area", label: "Area", value: "area" },
-  { id: "custom", label: "Custom", value: "custom" },
+const FACE_VELOCITY_OPTIONS = [
+  { id: "off", label: "Off", value: false },
+  { id: "on", label: "On", value: true },
 ];
 
 const PARTICLE_TAG_FIELD = {
@@ -192,24 +187,6 @@ const resolveTextureFields = (texture) => {
   };
 };
 
-const resolvePaddingValue = (padding) => {
-  if (typeof padding === "number" && Number.isFinite(padding)) {
-    return padding;
-  }
-
-  if (padding && typeof padding === "object") {
-    const values = ["top", "right", "bottom", "left"]
-      .map((key) => Number(padding[key]))
-      .filter((value) => Number.isFinite(value));
-
-    if (values.length > 0) {
-      return Math.max(...values);
-    }
-  }
-
-  return 24;
-};
-
 const resolveSourceDefaults = (particle) => ({
   x: Math.round((particle?.width ?? 1280) / 2),
   y: Math.round((particle?.height ?? 720) / 2),
@@ -315,19 +292,34 @@ const summarizeTexture = (texture, imageItems = {}) => {
   return "Legacy shape";
 };
 
+export const resolveParticleTextureImageItem = (texture, imageItems = {}) => {
+  if (typeof texture === "string") {
+    if (isBuiltinParticleTextureName(texture)) {
+      return;
+    }
+
+    const imageItem = imageItems?.[texture];
+    return imageItem?.type === "image" ? imageItem : undefined;
+  }
+
+  if (!texture || typeof texture !== "object" || Array.isArray(texture)) {
+    return;
+  }
+
+  const firstItem = Array.isArray(texture.items)
+    ? texture.items.find((item) => item?.src)
+    : undefined;
+
+  if (!firstItem?.src) {
+    return;
+  }
+
+  return resolveParticleTextureImageItem(firstItem.src, imageItems);
+};
+
 const summarizeSource = (source) => {
   const kind = source?.kind ?? "rect";
   return capitalize(kind);
-};
-
-const summarizeLifetime = (lifetime) => {
-  const range = resolveRange(lifetime, 1, 1);
-
-  if (range.min === range.max) {
-    return `${range.min}s`;
-  }
-
-  return `${range.min}s to ${range.max}s`;
 };
 
 const withFieldTooltips = (fields = []) =>
@@ -394,12 +386,11 @@ export const createParticleCreateSetupForm = ({ imageOptions = [] } = {}) => ({
 });
 
 export const PARTICLE_FORM_TABS = [
-  { id: "appearance", label: "Appearance" },
   { id: "basics", label: "Basics" },
+  { id: "appearance", label: "Appearance" },
   { id: "emission", label: "Emission" },
   { id: "source", label: "Source" },
   { id: "movement", label: "Movement" },
-  { id: "bounds", label: "Bounds" },
 ];
 
 const PARTICLE_FORM_TAB_IDS = new Set(
@@ -484,15 +475,17 @@ const createParticleFieldsByTab = ({
         min: 0,
         step: 1,
         required: false,
+        $when: "emissionMode == 'continuous'",
       },
       {
         name: "burstCount",
         type: "input-number",
         label: "Burst Count",
         description: "How many particles spawn each time a burst is emitted.",
-        min: 0,
+        min: 1,
         step: 1,
-        required: false,
+        required: true,
+        $when: "emissionMode == 'burst'",
       },
       {
         name: "maxActive",
@@ -502,6 +495,7 @@ const createParticleFieldsByTab = ({
         min: 1,
         step: 1,
         required: false,
+        $when: "emissionMode == 'continuous'",
       },
       {
         name: "durationMode",
@@ -510,6 +504,7 @@ const createParticleFieldsByTab = ({
         description: "Keep emitting forever or stop after a timed window.",
         options: DURATION_MODE_OPTIONS,
         required: true,
+        $when: "emissionMode == 'continuous'",
       },
       {
         name: "durationSeconds",
@@ -519,7 +514,7 @@ const createParticleFieldsByTab = ({
         min: 0,
         step: 0.1,
         required: false,
-        $when: "values.durationMode == 'timed'",
+        $when: "emissionMode == 'continuous' && durationMode == 'timed'",
       },
       {
         name: "lifetimeMin",
@@ -575,6 +570,7 @@ const createParticleFieldsByTab = ({
         min: 0,
         step: 1,
         required: false,
+        $when: "sourceKind == 'rect'",
       },
       {
         name: "sourceHeight",
@@ -584,6 +580,7 @@ const createParticleFieldsByTab = ({
         min: 0,
         step: 1,
         required: false,
+        $when: "sourceKind == 'rect'",
       },
       {
         name: "sourceRadius",
@@ -593,6 +590,7 @@ const createParticleFieldsByTab = ({
         min: 0,
         step: 1,
         required: false,
+        $when: "sourceKind == 'circle'",
       },
       {
         name: "sourceInnerRadius",
@@ -602,6 +600,7 @@ const createParticleFieldsByTab = ({
         min: 0,
         step: 1,
         required: false,
+        $when: "sourceKind == 'circle'",
       },
       {
         name: "sourceX2",
@@ -610,6 +609,7 @@ const createParticleFieldsByTab = ({
         description: "Horizontal end position for line emitters.",
         step: 1,
         required: false,
+        $when: "sourceKind == 'line'",
       },
       {
         name: "sourceY2",
@@ -618,6 +618,7 @@ const createParticleFieldsByTab = ({
         description: "Vertical end position for line emitters.",
         step: 1,
         required: false,
+        $when: "sourceKind == 'line'",
       },
     ],
     movement: [
@@ -695,11 +696,13 @@ const createParticleFieldsByTab = ({
       },
       {
         name: "faceVelocity",
-        type: "checkbox",
-        content: "Rotate particles toward movement",
+        type: "segmented-control",
+        label: "Rotate Toward Movement",
         description:
           "Turn each particle so it points in the direction it is moving.",
-        required: false,
+        options: FACE_VELOCITY_OPTIONS,
+        required: true,
+        clearable: false,
       },
     ],
     appearance: [
@@ -729,68 +732,6 @@ const createParticleFieldsByTab = ({
           "Maximum particle scale at spawn or across the preset range.",
         min: 0,
         step: 0.05,
-        required: false,
-      },
-    ],
-    bounds: [
-      {
-        name: "boundsMode",
-        type: "select",
-        label: "Bounds Mode",
-        description:
-          "Choose what happens when particles leave the effect area.",
-        options: BOUNDS_MODE_OPTIONS,
-        required: true,
-      },
-      {
-        name: "boundsSource",
-        type: "select",
-        label: "Bounds Source",
-        description: "Recycle against the canvas area or a custom rectangle.",
-        options: BOUNDS_SOURCE_OPTIONS,
-        required: false,
-      },
-      {
-        name: "boundsPadding",
-        type: "input-number",
-        label: "Bounds Padding",
-        description: "Extra padding around the canvas before recycle starts.",
-        min: 0,
-        step: 1,
-        required: false,
-      },
-      {
-        name: "customX",
-        type: "input-number",
-        label: "Custom Bounds X",
-        description: "Horizontal start position of the custom recycle area.",
-        step: 1,
-        required: false,
-      },
-      {
-        name: "customY",
-        type: "input-number",
-        label: "Custom Bounds Y",
-        description: "Vertical start position of the custom recycle area.",
-        step: 1,
-        required: false,
-      },
-      {
-        name: "customWidth",
-        type: "input-number",
-        label: "Custom Bounds Width",
-        description: "Width of the custom recycle area.",
-        min: 0,
-        step: 1,
-        required: false,
-      },
-      {
-        name: "customHeight",
-        type: "input-number",
-        label: "Custom Bounds Height",
-        description: "Height of the custom recycle area.",
-        min: 0,
-        step: 1,
         required: false,
       },
     ],
@@ -828,6 +769,7 @@ export const createParticleForm = ({
         id: "submit",
         variant: "pr",
         label: editMode ? "Update Particle" : "Add Particle",
+        validate: true,
       },
     ],
   },
@@ -869,7 +811,6 @@ export const buildParticleFormValues = ({
   const emission = modules.emission ?? {};
   const movement = modules.movement ?? {};
   const appearance = modules.appearance ?? {};
-  const bounds = modules.bounds ?? {};
   const lifetime = resolveRange(emission.particleLifetime, 1, 2);
   const scale = resolveScaleRange(appearance.scale);
   const textureFields = resolveTextureFields(appearance.texture);
@@ -903,17 +844,6 @@ export const buildParticleFormValues = ({
     ...textureFields,
     scaleMin: toTextValue(scale.min),
     scaleMax: toTextValue(scale.max),
-    boundsMode: bounds.mode ?? "recycle",
-    boundsSource: bounds.source ?? "area",
-    boundsPadding: toTextValue(resolvePaddingValue(bounds.padding)),
-    customX: toTextValue(bounds.custom?.x ?? 0),
-    customY: toTextValue(bounds.custom?.y ?? 0),
-    customWidth: toTextValue(
-      bounds.custom?.width ?? resolvedParticle.width ?? 1280,
-    ),
-    customHeight: toTextValue(
-      bounds.custom?.height ?? resolvedParticle.height ?? 720,
-    ),
   };
 };
 
@@ -1046,34 +976,6 @@ const buildMovementDefinition = (values = {}) => {
   };
 };
 
-const buildBoundsDefinition = ({ values, width, height }) => {
-  const boundsMode = values.boundsMode ?? "recycle";
-  if (boundsMode === "none") {
-    return {
-      mode: "none",
-    };
-  }
-
-  const boundsSource = values.boundsSource ?? "area";
-  const bounds = {
-    mode: "recycle",
-    source: boundsSource,
-  };
-
-  if (boundsSource === "custom") {
-    bounds.custom = {
-      x: toOptionalNumber(values.customX) ?? 0,
-      y: toOptionalNumber(values.customY) ?? 0,
-      width: toPositiveNumber(values.customWidth, width),
-      height: toPositiveNumber(values.customHeight, height),
-    };
-    return bounds;
-  }
-
-  bounds.padding = toNonNegativeNumber(values.boundsPadding, 24);
-  return bounds;
-};
-
 export const buildParticlePayload = ({
   values,
   baseParticle,
@@ -1099,6 +1001,7 @@ export const buildParticlePayload = ({
     Math.round(toPositiveNumber(values?.height, resolvedBaseParticle.height)),
   );
   const modules = structuredClone(resolvedBaseParticle.modules ?? {});
+  const emissionMode = values?.emissionMode ?? "continuous";
   const emissionRate = Number(values?.emissionRate);
   const durationMode = values?.durationMode ?? "infinite";
   const resolvedBaseDuration = resolvedBaseParticle.modules?.emission?.duration;
@@ -1110,15 +1013,7 @@ export const buildParticlePayload = ({
 
   modules.emission = {
     ...modules.emission,
-    mode: values?.emissionMode ?? "continuous",
-    maxActive: Math.max(1, Math.round(toPositiveNumber(values?.maxActive, 60))),
-    duration:
-      durationMode === "timed"
-        ? Math.max(
-            0,
-            toNonNegativeNumber(values?.durationSeconds, fallbackTimedDuration),
-          )
-        : "infinite",
+    mode: emissionMode,
     particleLifetime: {
       min: Math.max(0, toNonNegativeNumber(values?.lifetimeMin, 1)),
       max: Math.max(
@@ -1142,7 +1037,20 @@ export const buildParticlePayload = ({
       Math.round(toPositiveNumber(values?.burstCount, 1)),
     );
     delete modules.emission.rate;
+    delete modules.emission.maxActive;
+    delete modules.emission.duration;
   } else {
+    modules.emission.maxActive = Math.max(
+      1,
+      Math.round(toPositiveNumber(values?.maxActive, 60)),
+    );
+    modules.emission.duration =
+      durationMode === "timed"
+        ? Math.max(
+            0,
+            toNonNegativeNumber(values?.durationSeconds, fallbackTimedDuration),
+          )
+        : "infinite";
     modules.emission.rate = Number.isFinite(emissionRate)
       ? Math.max(1, emissionRate)
       : 20;
@@ -1150,11 +1058,6 @@ export const buildParticlePayload = ({
   }
 
   modules.movement = buildMovementDefinition(values);
-  modules.bounds = buildBoundsDefinition({
-    values,
-    width,
-    height,
-  });
   modules.appearance = {
     ...modules.appearance,
   };
@@ -1204,6 +1107,23 @@ export const buildParticleDetailFields = (input) => {
     return [];
   }
 
+  const texture = item.modules?.appearance?.texture;
+  const textureImageItem = resolveParticleTextureImageItem(
+    texture,
+    imagesData?.items,
+  );
+  const textureImageField = textureImageItem?.fileId
+    ? {
+        type: "slot",
+        slot: "particle-texture-image",
+        label: "Texture Image",
+      }
+    : {
+        type: "text",
+        label: "Texture Image",
+        value: summarizeTexture(texture, imagesData?.items),
+      };
+
   return [
     {
       type: "slot",
@@ -1234,24 +1154,7 @@ export const buildParticleDetailFields = (input) => {
       label: "Source",
       value: summarizeSource(item.modules?.emission?.source),
     },
-    {
-      type: "text",
-      label: "Texture Image",
-      value: summarizeTexture(
-        item.modules?.appearance?.texture,
-        imagesData?.items,
-      ),
-    },
-    {
-      type: "text",
-      label: "Lifetime",
-      value: summarizeLifetime(item.modules?.emission?.particleLifetime),
-    },
-    {
-      type: "text",
-      label: "Max Active",
-      value: toTextValue(item.modules?.emission?.maxActive ?? ""),
-    },
+    textureImageField,
     {
       type: "text",
       label: "Seed",
@@ -1263,7 +1166,7 @@ export const buildParticleDetailFields = (input) => {
 export const buildParticleCatalogItem = (item) => ({
   id: item.id,
   name: item.name,
-  subtitle: `${capitalize(
-    item.modules?.emission?.mode ?? "continuous",
-  )} • ${formatDimensionLabel(item.width ?? 0, item.height ?? 0)}`,
+  cardKind: "layout",
+  cardVariant: "thumbnail",
+  previewFileId: item.thumbnailFileId,
 });

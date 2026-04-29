@@ -279,7 +279,7 @@ Recommended behavior:
 - each supported page gets a `Manage Tags` action
 - the page header uses `rtgl-tag-select` for tag filtering
 - selected filter tags render inside the `rtgl-tag-select` trigger
-- selecting multiple tags uses AND semantics
+- selecting multiple tags uses OR semantics
 - search matches item name, item description, and assigned tag names
 - the detail panel shows assigned tags through a slot in `rvn-detail-view`
 - edit dialogs use `rtgl-form` `field.type: "tag-select"` for tag assignment
@@ -295,7 +295,7 @@ already covers the filter-selection surface cleanly.
 
 ## Rettangoli UI Direction
 
-This spec assumes `@rettangoli/ui` `1.7.3`.
+This spec assumes `@rettangoli/ui` `1.7.5`.
 
 Relevant component support:
 
@@ -471,7 +471,7 @@ collection shape inside existing resource roots.
 Implement this in this order:
 
 1. `routevn-creator-model`
-2. client core contract, command API, and `@rettangoli/ui` `1.7.3`
+2. client core contract, command API, and `@rettangoli/ui` `1.7.5`
 3. shared media-page UI for images, sounds, and videos
 4. character-sprites integration
 5. tests, VT coverage, and manual validation
@@ -761,9 +761,7 @@ Add shared helpers to:
 Recommended derived field:
 
 ```js
-item.resolvedTags = [
-  { id, name, color },
-]
+item.resolvedTags = [{ id, name, color }];
 ```
 
 Do not persist `resolvedTags`. This is client-only display data.
@@ -789,7 +787,7 @@ Add actions/selectors:
 
 Filtering behavior:
 
-- selected tags use AND semantics
+- selected tags use OR semantics
 - search matches `name`, `description`, and `resolvedTags[].name`
 - filtering happens in the shared store so images, sounds, and videos all use
   one implementation
@@ -809,7 +807,7 @@ Mirror the same local store behavior as the shared media-page store:
 - `activeTagIds`
 - `isTagsDialogOpen`
 - search includes tag names
-- selected tags filter with AND semantics
+- selected tags filter with OR semantics
 
 Character sprites remain the one custom page because their scope key depends on
 the current character id.
@@ -985,7 +983,7 @@ Minimum expected visible coverage:
 - create a tag with color
 - assign multiple tags to one item
 - filter by one tag
-- filter by multiple tags with AND semantics
+- filter by multiple tags with OR semantics
 - clear filters
 - edit tag name/color
 - delete a tag and verify the assignment disappears

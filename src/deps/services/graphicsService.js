@@ -5,7 +5,10 @@ import createRouteGraphics, {
 } from "route-graphics";
 import createRouteEngine, { createEffectsHandler } from "route-engine-js";
 import { Rectangle, Ticker } from "pixi.js";
-import { prepareRenderStateKeyboardForGraphics } from "../../internal/project/layout.js";
+import {
+  prepareRenderStateKeyboardForGraphics,
+  toRouteGraphicsKeyboardResource,
+} from "../../internal/project/layout.js";
 import {
   createRuntimeEventContext,
   getRuntimeEventActions,
@@ -47,7 +50,140 @@ const createNoopRouteEnginePersistence = () => ({
   saveGlobalDeviceVariables: async () => {},
   saveGlobalAccountVariables: async () => {},
   saveGlobalRuntime: async () => {},
+  applyScopedDataUpdates: async () => {},
 });
+
+const DIALOGUE_CHARACTER_SPRITE_CONTAINER_ID = "dialogue-character-sprite";
+
+const findRenderElementById = (nodes, elementId) => {
+  if (!Array.isArray(nodes)) {
+    return undefined;
+  }
+
+  for (const node of nodes) {
+    if (node?.id === elementId) {
+      return node;
+    }
+
+    const child = findRenderElementById(node?.children, elementId);
+    if (child) {
+      return child;
+    }
+  }
+
+  return undefined;
+};
+
+let routeEngineDialogueSpriteSupportProbe;
+
+const getRouteEngineDialogueSpriteSupportProbe = () => {
+  if (routeEngineDialogueSpriteSupportProbe) {
+    return routeEngineDialogueSpriteSupportProbe;
+  }
+
+  try {
+    const probeProjectData = {
+      screen: {
+        width: 100,
+        height: 100,
+      },
+      resources: {
+        images: {
+          probeImage: {
+            fileId: "probe-image",
+            width: 10,
+            height: 10,
+          },
+        },
+        transforms: {
+          probeTransform: {
+            x: 1,
+            y: 2,
+          },
+        },
+        layouts: {
+          probeLayout: {
+            elements: [],
+          },
+        },
+        animations: {},
+        characters: {},
+        controls: {},
+        colors: {},
+        fonts: {},
+        sounds: {},
+        textStyles: {},
+        variables: {},
+        videos: {},
+      },
+      story: {
+        initialSceneId: "probeScene",
+        scenes: {
+          probeScene: {
+            initialSectionId: "probeSection",
+            sections: {
+              probeSection: {
+                initialLineId: "probeLine",
+                lines: [
+                  {
+                    id: "probeLine",
+                    actions: {
+                      dialogue: {
+                        mode: "adv",
+                        ui: {
+                          resourceId: "probeLayout",
+                        },
+                        character: {
+                          sprite: {
+                            transformId: "probeTransform",
+                            items: [
+                              {
+                                id: "base",
+                                resourceId: "probeImage",
+                              },
+                            ],
+                          },
+                        },
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    };
+    const probeEngine = createRouteEngine({
+      handlePendingEffects() {},
+    });
+    probeEngine.init({
+      initialState: {
+        global: {},
+        projectData: probeProjectData,
+      },
+    });
+    const presentationSprite =
+      probeEngine.selectPresentationState()?.dialogue?.character?.sprite;
+    const renderElement = findRenderElementById(
+      probeEngine.selectRenderState()?.elements,
+      DIALOGUE_CHARACTER_SPRITE_CONTAINER_ID,
+    );
+
+    routeEngineDialogueSpriteSupportProbe = {
+      presentationSpritePresent: Boolean(presentationSprite),
+      renderElementFound: Boolean(renderElement),
+    };
+  } catch (error) {
+    routeEngineDialogueSpriteSupportProbe = {
+      presentationSpritePresent: false,
+      renderElementFound: false,
+      error: error?.message || String(error),
+    };
+  }
+
+  return routeEngineDialogueSpriteSupportProbe;
+};
 
 const SUPPORTED_AUDIO_MIME_TYPES = new Set([
   "audio/mpeg",
@@ -350,6 +486,7 @@ export const createGraphicsService = async ({
   let assetBufferManager;
   let loadedAssetTypes = new Map();
   let enableGlobalKeyboardBindings = true;
+  let routeEngineProjectData;
   // Create dedicated ticker for auto mode
   let ticker;
   let beforeHandleActions;
@@ -870,6 +1007,7 @@ export const createGraphicsService = async ({
     if (engine) {
       engine = undefined;
     }
+    routeEngineProjectData = undefined;
     enableGlobalKeyboardBindings = true;
     beforeHandleActions = undefined;
     actionQueue = Promise.resolve();
@@ -1014,10 +1152,57 @@ export const createGraphicsService = async ({
     };
   };
 
+  const getActiveControlKeyboard = () => {
+    const presentationState = engine?.selectPresentationState?.();
+    const controlResourceId = presentationState?.control?.resourceId;
+    if (!controlResourceId) {
+      return;
+    }
+
+    const control =
+      routeEngineProjectData?.resources?.controls?.[controlResourceId];
+    const keyboard = toRouteGraphicsKeyboardResource(
+      control?.keyboard,
+      control?.keyup,
+    );
+    return Object.keys(keyboard).length > 0 ? keyboard : undefined;
+  };
+
+  const withActiveControlKeyboard = (renderState) => {
+    if (!enableGlobalKeyboardBindings) {
+      return renderState;
+    }
+
+    const keyboard = getActiveControlKeyboard();
+    if (!keyboard || typeof keyboard !== "object") {
+      return renderState;
+    }
+
+    const global =
+      renderState?.global && typeof renderState.global === "object"
+        ? renderState.global
+        : {};
+
+    return {
+      ...renderState,
+      global: {
+        ...global,
+        keyboard,
+      },
+    };
+  };
+
+  const syncRouteEngineProjectDataFromActions = (actions) => {
+    const projectData = actions?.updateProjectData?.projectData;
+    if (projectData && typeof projectData === "object") {
+      routeEngineProjectData = projectData;
+    }
+  };
+
   const renderEngineState = (renderState, options = {}) => {
     const { allowDeferredAudio = true, skipAudio = false } = options;
     let nextRenderState = prepareRenderStateKeyboardForGraphics({
-      renderState,
+      renderState: withActiveControlKeyboard(renderState),
       enableGlobalKeyboardBindings,
     });
     const effectiveSkipAudio = skipAudio || isEngineAudioMuted;
@@ -1379,6 +1564,7 @@ export const createGraphicsService = async ({
     hasLoadedAsset,
     initRouteEngine: (projectData, options = {}) => {
       ticker.start();
+      routeEngineProjectData = projectData;
       enableGlobalKeyboardBindings =
         options.enableGlobalKeyboardBindings ?? true;
       const suppressRenderEffects = options.suppressRenderEffects === true;
@@ -1441,6 +1627,10 @@ export const createGraphicsService = async ({
       return engine.selectPresentationState();
     },
 
+    debugRouteEngineDialogueSpriteSupport: () => {
+      return getRouteEngineDialogueSpriteSupportProbe();
+    },
+
     engineSelectRenderState: () => {
       if (!engine) {
         return undefined;
@@ -1487,6 +1677,7 @@ export const createGraphicsService = async ({
       if (!engine) {
         return;
       }
+      syncRouteEngineProjectDataFromActions(actions);
       if (options.suppressRenderEffects) {
         return runWithSuppressedEngineRenderEffects(() => {
           engine.handleActions(actions, eventContext);

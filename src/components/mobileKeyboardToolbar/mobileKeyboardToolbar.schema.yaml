@@ -1,0 +1,9 @@
+componentName: rvn-mobile-keyboard-toolbar
+propsSchema:
+  type: object
+  properties: {}
+events:
+  action-click:
+    type: object
+  keyboard-state-change:
+    type: object

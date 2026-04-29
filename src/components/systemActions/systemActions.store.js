@@ -3,11 +3,13 @@ import {
   getRuntimeActionModes,
   isRuntimeActionMode,
 } from "../../internal/runtimeActions.js";
+import { buildCharacterSpritePreviewFileIds } from "../../internal/characterSpritePreview.js";
 import { normalizeLineActions } from "../../internal/project/engineActions.js";
 
 export const createInitialState = () => ({
   mode: "actions",
   actions: {},
+  isTouchMode: false,
   isActionsDialogOpen: false,
   dropdownMenu: {
     isOpen: false,
@@ -24,6 +26,11 @@ export const createInitialState = () => ({
   repositoryState: {}, // Add this - default to empty object
 });
 
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  state.isTouchMode =
+    uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
+};
+
 const getHiddenModes = (attrs = {}) => {
   return Array.isArray(attrs.hiddenModes)
     ? attrs.hiddenModes.filter(
@@ -34,8 +41,10 @@ const getHiddenModes = (attrs = {}) => {
 
 export const selectViewData = ({ state, props, props: attrs }) => {
   const displayActions = selectDisplayActions({ state });
+  const actionProps = { ...props };
+  actionProps.actions = selectAction({ state });
   const { actions: actionsObject, preview } = selectActionsData({
-    props,
+    props: actionProps,
     state,
   });
   const hiddenModes = getHiddenModes(attrs);
@@ -79,17 +88,12 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       layoutType: layout.layoutType,
     }));
 
-  const allCharacters = Object.entries(repositoryState.characters?.items || {});
-
-  const filteredCharacters = allCharacters
-    .filter(([_, character]) => {
-      return character.type === "character";
-    })
-    .map(([id, character]) => ({
-      id,
-      name: character.name,
-      type: character.type,
-    }));
+  const allCharacters = Object.entries(
+    repositoryState.characters?.items || {},
+  ).map(([id, character]) => ({
+    id,
+    ...character,
+  }));
 
   return {
     currentSceneId: props.currentSceneId,
@@ -106,10 +110,15 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     controlLayouts,
     dialogueLayouts,
     confirmDialogLayouts,
-    allCharacters: filteredCharacters,
+    allCharacters,
+    characterTree: repositoryState.characters?.tree || [],
+    transforms: repositoryState.transforms || { items: {}, tree: [] },
+    animations: repositoryState.animations || { items: {}, tree: [] },
     selectedLine: props.selectedLine,
     actionsType: attrs.actionType,
     showSelected: !!attrs.showSelected,
+    actionsDialogWidth: state.isTouchMode ? "100vw" : "800",
+    actionsDialogHeight: state.isTouchMode ? "100vh" : "80vh",
     hiddenModes,
     isRuntimeActionMode: isRuntimeActionMode(state.mode),
   };
@@ -188,6 +197,29 @@ const truncatePreviewText = (value = "", maxLength = 36) => {
   }
 
   return `${text.slice(0, Math.max(0, maxLength - 3))}...`;
+};
+
+const isPlainObject = (value) => {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+};
+
+const resolveDialogueActionForPreview = ({
+  actions,
+  presentationState,
+  props,
+}) => {
+  const authoredDialogue = isPlainObject(actions.dialogue)
+    ? actions.dialogue
+    : undefined;
+  const presentationDialogue = isPlainObject(presentationState.dialogue)
+    ? presentationState.dialogue
+    : undefined;
+
+  if (props.actionType === "presentation") {
+    return presentationDialogue ?? authoredDialogue;
+  }
+
+  return authoredDialogue ?? presentationDialogue;
 };
 
 const findSectionReference = (sceneItems = {}, sectionId) => {
@@ -292,22 +324,22 @@ export const selectActionsData = ({ props, state }) => {
     actionsObject.character = presentationState.character;
     preview.character = presentationState.character.items.map((char) => {
       const character = repositoryStateData.characters?.items?.[char.id];
-      let sprite = {};
+      const spriteFileIds = buildCharacterSpritePreviewFileIds({
+        spritesCollection: character?.sprites,
+        spriteIds: Array.isArray(char.sprites)
+          ? char.sprites.map((sprite) => sprite?.resourceId)
+          : [],
+      });
 
-      if (char.sprites?.[0]?.resourceId && character?.sprites?.items) {
-        const spriteResourceId = char.sprites[0].resourceId;
-        const spriteResource = character.sprites.items[spriteResourceId];
-        if (spriteResource?.fileId) {
-          sprite.fileId = spriteResource.fileId;
-        }
-      } else if (character?.fileId) {
-        sprite.fileId = character.fileId;
+      if (spriteFileIds.length === 0 && character?.fileId) {
+        spriteFileIds.push(character.fileId);
       }
 
       return {
         ...char,
         name: character?.name || "",
-        sprite,
+        spriteFileIds,
+        hasSpritePreview: spriteFileIds.length > 0,
       };
     });
   }
@@ -440,46 +472,70 @@ export const selectActionsData = ({ props, state }) => {
     };
   }
 
-  if (presentationState.dialogue) {
-    actionsObject.dialogue = presentationState.dialogue;
+  const dialogueAction = resolveDialogueActionForPreview({
+    actions,
+    presentationState,
+    props,
+  });
+
+  if (dialogueAction) {
+    actionsObject.dialogue = dialogueAction;
+    const authoredDialogue = isPlainObject(actions.dialogue)
+      ? actions.dialogue
+      : undefined;
     const dialogueModeLabel = resolveDialogueModeLabel(
-      presentationState.dialogue,
+      dialogueAction,
       layoutsItems,
     );
     const customCharacterNameLabel =
-      presentationState.dialogue.clear === true ||
-      typeof presentationState.dialogue.character?.name !== "string" ||
-      presentationState.dialogue.character.name.length === 0
+      dialogueAction.clear === true ||
+      typeof dialogueAction.character?.name !== "string" ||
+      dialogueAction.character.name.length === 0
         ? undefined
-        : `Name: ${truncatePreviewText(
-            presentationState.dialogue.character.name,
-          )}`;
+        : `Name: ${truncatePreviewText(dialogueAction.character.name)}`;
     const hasDialogueCharacter =
-      !!presentationState.dialogue.characterId ||
-      customCharacterNameLabel !== undefined;
+      !!dialogueAction.characterId || customCharacterNameLabel !== undefined;
     const persistCharacterLabel =
-      presentationState.dialogue.clear === true ||
+      dialogueAction.clear === true ||
       hasDialogueCharacter !== true ||
-      presentationState.dialogue.persistCharacter !== true
+      dialogueAction.persistCharacter !== true
         ? undefined
-        : "Persist Character";
-    if (presentationState.dialogue.clear === true) {
+        : "Persist Speaker";
+    const spriteItems = Array.isArray(dialogueAction.character?.sprite?.items)
+      ? dialogueAction.character.sprite.items
+      : [];
+    const spriteAnimationId =
+      dialogueAction.character?.sprite?.animations?.resourceId;
+    const spriteLabel =
+      spriteItems.length > 0
+        ? `Sprite: ${spriteItems.length} layer${spriteItems.length === 1 ? "" : "s"}`
+        : spriteAnimationId
+          ? "Sprite Animation"
+          : undefined;
+    const appendLabel =
+      authoredDialogue?.append === true || dialogueAction.append === true
+        ? "append"
+        : undefined;
+    if (dialogueAction.clear === true) {
       preview.dialogue = {
         name: "Dialogue: Clear",
         modeLabel: dialogueModeLabel,
         customCharacterNameLabel,
         persistCharacterLabel,
+        spriteLabel,
+        appendLabel,
       };
     } else {
       preview.dialogue = {
         name:
           layoutsItems[
-            presentationState.dialogue.ui?.resourceId ??
-              presentationState.dialogue.gui?.resourceId
+            dialogueAction.ui?.resourceId ?? dialogueAction.gui?.resourceId
           ]?.name || "No layout",
         modeLabel: dialogueModeLabel,
         customCharacterNameLabel,
         persistCharacterLabel,
+        spriteLabel,
+        appendLabel,
       };
     }
   }
@@ -518,6 +574,16 @@ export const selectActionsData = ({ props, state }) => {
   if (actions.toggleSkipMode !== undefined) {
     actionsObject.toggleSkipMode = actions.toggleSkipMode;
     preview.toggleSkipMode = actions.toggleSkipMode;
+  }
+
+  if (actions.startSkipMode !== undefined) {
+    actionsObject.startSkipMode = actions.startSkipMode;
+    preview.startSkipMode = actions.startSkipMode;
+  }
+
+  if (actions.stopSkipMode !== undefined) {
+    actionsObject.stopSkipMode = actions.stopSkipMode;
+    preview.stopSkipMode = actions.stopSkipMode;
   }
 
   if (actions.toggleDialogueUI !== undefined) {
@@ -579,7 +645,6 @@ export const selectActionsData = ({ props, state }) => {
       ? actions.updateVariable.operations
       : [];
 
-    // Build summary string showing operations
     const summary =
       operations
         .map((op) => {
@@ -594,9 +659,9 @@ export const selectActionsData = ({ props, state }) => {
           } else if (op.op === "decrement") {
             return `${varName} -${op.value ?? 1}`;
           } else if (op.op === "multiply") {
-            return `${varName} ×${op.value}`;
+            return `${varName} *${op.value}`;
           } else if (op.op === "divide") {
-            return `${varName} ÷${op.value}`;
+            return `${varName} /${op.value}`;
           }
           return `${varName} ${op.op}`;
         })

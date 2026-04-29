@@ -108,6 +108,9 @@ const {
   createInitialState: createCatalogInitialState,
   setItems: setBaseItems,
   setSelectedItemId: setBaseSelectedItemId,
+  setUiConfig,
+  openMobileFileExplorer,
+  closeMobileFileExplorer,
   selectSelectedItem,
   selectItemById,
   selectSelectedItemId,
@@ -154,6 +157,7 @@ const {
       itemContextMenuItems: animationExplorerItemContextMenuItems,
       selectedAnimationTypeLabel:
         selectedAnimationItem?.animationTypeLabel ?? "",
+      selectedAnimationPreviewFileId: selectedAnimationItem?.previewFileId,
       selectedItemDescription: selectedAnimationItem?.description ?? "",
       selectedItemDuration: formatAnimationDurationLabel(
         selectedAnimationItem?.duration,
@@ -177,6 +181,9 @@ export const createInitialState = () => ({
 export {
   setBaseItems as setItems,
   setBaseSelectedItemId as setSelectedItemId,
+  setUiConfig,
+  openMobileFileExplorer,
+  closeMobileFileExplorer,
   selectSelectedItem,
   setTagsData,
   setActiveTagIds,

@@ -68,6 +68,14 @@ describe("fileExplorerKeyboardScope", () => {
       },
     });
 
+    handleKeyboardScopeClick(deps, {
+      _event: {
+        target: {
+          tagName: "RTGL-INPUT",
+        },
+      },
+    });
+
     expect(deps.refs.fileExplorerKeyboardScope.focus).not.toHaveBeenCalled();
   });
 
@@ -96,6 +104,86 @@ describe("fileExplorerKeyboardScope", () => {
     expect(deps.refs.fileExplorerKeyboardScope.focus).toHaveBeenCalledTimes(1);
   });
 
+  it("navigates explorer selection with j and k", () => {
+    const fileExplorer = {
+      getSelectedItem: vi.fn(() => ({
+        itemId: "item-1",
+        isFolder: false,
+      })),
+      navigateSelection: vi.fn(() => ({
+        itemId: "item-2",
+      })),
+    };
+    const deps = createDeps({
+      fileExplorer,
+    });
+    const { handleKeyboardScopeKeyDown } =
+      createFileExplorerKeyboardScopeHandlers();
+    const downEvent = createKeyEvent("j");
+    const upEvent = createKeyEvent("k");
+
+    handleKeyboardScopeKeyDown(deps, {
+      _event: downEvent,
+    });
+    handleKeyboardScopeKeyDown(deps, {
+      _event: upEvent,
+    });
+
+    expect(fileExplorer.navigateSelection).toHaveBeenNthCalledWith(1, {
+      direction: "next",
+    });
+    expect(fileExplorer.navigateSelection).toHaveBeenNthCalledWith(2, {
+      direction: "previous",
+    });
+    expect(downEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(upEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(deps.refs.fileExplorerKeyboardScope.focus).toHaveBeenCalledTimes(2);
+  });
+
+  it("jumps explorer selection by ten with ctrl+d and ctrl+u", () => {
+    const fileExplorer = {
+      getSelectedItem: vi.fn(() => ({
+        itemId: "item-1",
+        isFolder: false,
+      })),
+      navigateSelection: vi.fn(() => ({
+        itemId: "item-11",
+      })),
+    };
+    const deps = createDeps({
+      fileExplorer,
+    });
+    const { handleKeyboardScopeKeyDown } =
+      createFileExplorerKeyboardScopeHandlers();
+    const downEvent = createKeyEvent("d", {
+      ctrlKey: true,
+    });
+    const upEvent = createKeyEvent("u", {
+      ctrlKey: true,
+    });
+
+    handleKeyboardScopeKeyDown(deps, {
+      _event: downEvent,
+    });
+    handleKeyboardScopeKeyDown(deps, {
+      _event: upEvent,
+    });
+
+    expect(fileExplorer.navigateSelection).toHaveBeenNthCalledWith(1, {
+      direction: "next",
+      distance: 10,
+      clamp: true,
+    });
+    expect(fileExplorer.navigateSelection).toHaveBeenNthCalledWith(2, {
+      direction: "previous",
+      distance: 10,
+      clamp: true,
+    });
+    expect(downEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(upEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(deps.refs.fileExplorerKeyboardScope.focus).toHaveBeenCalledTimes(2);
+  });
+
   it("expands and collapses the selected folder with right and left arrows", () => {
     const fileExplorer = {
       getSelectedItem: vi.fn(() => ({
@@ -111,6 +199,40 @@ describe("fileExplorerKeyboardScope", () => {
       createFileExplorerKeyboardScopeHandlers();
     const rightEvent = createKeyEvent("ArrowRight");
     const leftEvent = createKeyEvent("ArrowLeft");
+
+    handleKeyboardScopeKeyDown(deps, {
+      _event: rightEvent,
+    });
+    handleKeyboardScopeKeyDown(deps, {
+      _event: leftEvent,
+    });
+
+    expect(fileExplorer.setSelectedFolderExpanded).toHaveBeenNthCalledWith(1, {
+      expanded: true,
+    });
+    expect(fileExplorer.setSelectedFolderExpanded).toHaveBeenNthCalledWith(2, {
+      expanded: false,
+    });
+    expect(rightEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(leftEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(deps.refs.fileExplorerKeyboardScope.focus).toHaveBeenCalledTimes(2);
+  });
+
+  it("expands and collapses the selected folder with l and h", () => {
+    const fileExplorer = {
+      getSelectedItem: vi.fn(() => ({
+        itemId: "folder-1",
+        isFolder: true,
+      })),
+      setSelectedFolderExpanded: vi.fn(),
+    };
+    const deps = createDeps({
+      fileExplorer,
+    });
+    const { handleKeyboardScopeKeyDown } =
+      createFileExplorerKeyboardScopeHandlers();
+    const rightEvent = createKeyEvent("l");
+    const leftEvent = createKeyEvent("h");
 
     handleKeyboardScopeKeyDown(deps, {
       _event: rightEvent,
@@ -219,7 +341,7 @@ describe("fileExplorerKeyboardScope", () => {
     expect(fileExplorer.navigateSelection).not.toHaveBeenCalled();
 
     const textEntryHandlers = createFileExplorerKeyboardScopeHandlers();
-    const textEntryEvent = createKeyEvent("ArrowRight", {
+    const textEntryEvent = createKeyEvent("l", {
       target: {
         tagName: "INPUT",
       },
@@ -230,5 +352,36 @@ describe("fileExplorerKeyboardScope", () => {
     });
 
     expect(fileExplorer.setSelectedFolderExpanded).not.toHaveBeenCalled();
+    expect(fileExplorer.navigateSelection).not.toHaveBeenCalled();
+    expect(textEntryEvent.preventDefault).not.toHaveBeenCalled();
+
+    const customInputEvent = createKeyEvent("j", {
+      composedPath: () => [
+        {
+          tagName: "RTGL-INPUT",
+        },
+      ],
+    });
+
+    textEntryHandlers.handleKeyboardScopeKeyDown(deps, {
+      _event: customInputEvent,
+    });
+
+    expect(fileExplorer.navigateSelection).not.toHaveBeenCalled();
+    expect(customInputEvent.preventDefault).not.toHaveBeenCalled();
+
+    const inputJumpEvent = createKeyEvent("d", {
+      ctrlKey: true,
+      target: {
+        tagName: "TEXTAREA",
+      },
+    });
+
+    textEntryHandlers.handleKeyboardScopeKeyDown(deps, {
+      _event: inputJumpEvent,
+    });
+
+    expect(fileExplorer.navigateSelection).not.toHaveBeenCalled();
+    expect(inputJumpEvent.preventDefault).not.toHaveBeenCalled();
   });
 });

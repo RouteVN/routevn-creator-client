@@ -336,6 +336,24 @@ layoutSections:
         name: clickTextStyleId
         value: "${values.clickTextStyleId}"
         options: "${textStyleItemsWithNone}"
+  - "$when": "supportsSoundSelection"
+    id: sounds
+    label: Sound
+    "$if canAddSoundVariant":
+      labelAction: plus
+    items:
+      - "$when": "values.hoverSoundId"
+        type: select
+        label: Hover
+        name: hoverSoundId
+        value: "${values.hoverSoundId}"
+        options: "${soundItemsWithNone}"
+      - "$when": "values.clickSoundId"
+        type: select
+        label: Click
+        name: clickSoundId
+        value: "${values.clickSoundId}"
+        options: "${soundItemsWithNone}"
   - "$when": "supportsTextAlignment"
     label: Text Alignment
     items:
@@ -403,7 +421,8 @@ controlSections:
             name: y
             value: "${values.y}"
             popoverForm: *numberPopoverForm
-  - label: Layout
+  - "$when": 'itemType != "fragment-ref"'
+    label: Layout
     items:
       - "$when": "supportsWidthMode"
         type: segmented-control

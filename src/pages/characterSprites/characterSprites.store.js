@@ -11,6 +11,13 @@ import {
   shouldStartCollapsedFileExplorer,
 } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 import {
+  buildMobileResourcePageViewData,
+  closeMobileResourceFileExplorerState,
+  createMobileResourcePageState,
+  openMobileResourceFileExplorerState,
+  setMobileResourcePageUiConfigState,
+} from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import {
   buildTagViewData,
   closeCreateTagDialogState,
   commitDetailTagIdsState,
@@ -158,6 +165,7 @@ export const createInitialState = () => ({
   characterId: undefined,
   characterName: undefined,
   searchQuery: "",
+  ...createMobileResourcePageState(),
   fullImagePreviewVisible: false,
   fullImagePreviewFileId: undefined,
   isEditDialogOpen: false,
@@ -185,6 +193,20 @@ export const setTagsData = ({ state }, { tagsData } = {}) => {
     state,
     tagsData,
   });
+};
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  setMobileResourcePageUiConfigState(state, {
+    uiConfig,
+  });
+};
+
+export const openMobileFileExplorer = ({ state }, _payload = {}) => {
+  openMobileResourceFileExplorerState(state);
+};
+
+export const closeMobileFileExplorer = ({ state }, _payload = {}) => {
+  closeMobileResourceFileExplorerState(state);
 };
 
 export const addPendingUploads = ({ state }, { items } = {}) => {
@@ -475,6 +497,8 @@ export const selectViewData = ({ state }) => {
     .filter((group) => group.shouldDisplay);
 
   const selectedItem = state.spritesData.items?.[state.selectedItemId];
+  const detailFields =
+    selectedItem?.type === "image" ? buildDetailFields(selectedItem) : [];
 
   return {
     flatItems,
@@ -488,8 +512,12 @@ export const selectViewData = ({ state }) => {
       selectedItem,
       createTagFormDefinition: createTagForm(),
     }),
-    detailFields:
-      selectedItem?.type === "image" ? buildDetailFields(selectedItem) : [],
+    detailFields,
+    ...buildMobileResourcePageViewData({
+      state,
+      detailFields,
+      hiddenMobileDetailSlots: ["image-file-id"],
+    }),
     selectedPreviewFileId:
       selectedItem?.type === "image"
         ? getPreviewFileId(selectedItem)

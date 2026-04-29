@@ -25,7 +25,7 @@ describe("createControlTemplate", () => {
 });
 
 describe("handleKeyboardActionsChange", () => {
-  it("merges the submitted action delta with existing keyboard actions", async () => {
+  it("merges the submitted action delta with existing keydown actions", async () => {
     const updateControlItem = vi.fn(async () => ({}));
     const deps = {
       appService: {
@@ -41,12 +41,13 @@ describe("handleKeyboardActionsChange", () => {
         }),
       },
       store: {
-        selectKeyboardEditorKey: () => "Enter",
+        selectKeyboardEditorPhase: () => "keydown",
+        selectKeyboardEditorKey: () => "enter",
         selectSelectedItem: () => ({
           id: "control-1",
           type: "control",
           keyboard: {
-            Enter: {
+            enter: {
               payload: {
                 actions: {
                   toggleAutoMode: {},
@@ -57,6 +58,7 @@ describe("handleKeyboardActionsChange", () => {
         }),
         closeKeyboardEditor: vi.fn(),
         setItems: vi.fn(),
+        setTagsData: vi.fn(),
       },
       render: vi.fn(),
       refs: {},
@@ -74,7 +76,71 @@ describe("handleKeyboardActionsChange", () => {
       controlId: "control-1",
       data: {
         keyboard: {
-          Enter: {
+          enter: {
+            payload: {
+              actions: {
+                toggleAutoMode: {},
+                toggleSkipMode: {},
+              },
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("writes submitted keyup actions to control.keyup", async () => {
+    const updateControlItem = vi.fn(async () => ({}));
+    const deps = {
+      appService: {
+        showAlert: vi.fn(),
+      },
+      projectService: {
+        updateControlItem,
+        getRepositoryState: () => ({
+          controls: {
+            items: {},
+            tree: [],
+          },
+        }),
+      },
+      store: {
+        selectKeyboardEditorPhase: () => "keyup",
+        selectKeyboardEditorKey: () => "enter",
+        selectSelectedItem: () => ({
+          id: "control-1",
+          type: "control",
+          keyup: {
+            enter: {
+              payload: {
+                actions: {
+                  toggleAutoMode: {},
+                },
+              },
+            },
+          },
+        }),
+        closeKeyboardEditor: vi.fn(),
+        setItems: vi.fn(),
+        setTagsData: vi.fn(),
+      },
+      render: vi.fn(),
+      refs: {},
+    };
+
+    await handleKeyboardActionsChange(deps, {
+      _event: {
+        detail: {
+          toggleSkipMode: {},
+        },
+      },
+    });
+
+    expect(updateControlItem).toHaveBeenCalledWith({
+      controlId: "control-1",
+      data: {
+        keyup: {
+          enter: {
             payload: {
               actions: {
                 toggleAutoMode: {},

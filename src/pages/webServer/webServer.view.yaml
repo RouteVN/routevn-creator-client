@@ -38,12 +38,11 @@ template:
               - rtgl-view slot="content" w=f h=f:
                   - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
           - 'rtgl-view w=1fg h=f pl=sm style="min-width: 0; min-height: 0;"':
-              - 'rtgl-view w=f h=100vh g=sm style="min-width: 0;"':
-                  - 'rtgl-view h=64 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
+              - 'rtgl-view w=f h=f g=sm style="min-width: 0; min-height: 0;"':
+                  - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
                       - rtgl-view w=f d=h av=c g=md wrap:
-                          - rtgl-view d=h av=b g=md w=1fg wrap:
+                          - rtgl-view d=h av=c g=md w=1fg wrap:
                               - rtgl-text: Web Server
-                              - rtgl-text s=sm c=mu-fg: Serve a local static site folder over localhost.
                           - $if canAdd:
                               - rtgl-button#addServerBtn v=pr s=sm pre=plus: Add
                   - 'rtgl-view h=1fg w=f sv style="min-width: 0;"':

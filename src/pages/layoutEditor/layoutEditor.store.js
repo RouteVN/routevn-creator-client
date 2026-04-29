@@ -31,6 +31,7 @@ export const createInitialState = () => {
     detailPanelSelectionRequestId: 0,
     layout: undefined,
     images: { tree: [], items: {} },
+    soundsData: { tree: [], items: {} },
     spritesheetsData: { tree: [], items: {} },
     particlesData: { tree: [], items: {} },
     charactersData: { tree: [], items: {} },
@@ -182,6 +183,10 @@ export const setImages = ({ state }, { images } = {}) => {
   state.images = images;
 };
 
+export const setSoundsData = ({ state }, { soundsData } = {}) => {
+  state.soundsData = soundsData;
+};
+
 export const setSpritesheetsData = ({ state }, { spritesheetsData } = {}) => {
   state.spritesheetsData = spritesheetsData;
 };
@@ -218,6 +223,7 @@ export const syncRepositoryState = ({ state }, payload = {}) => {
     resourceType = "layouts",
     layoutData,
     images,
+    soundsData,
     spritesheetsData,
     particlesData,
     charactersData,
@@ -250,6 +256,7 @@ export const syncRepositoryState = ({ state }, payload = {}) => {
   });
   state.layoutData = layoutData ?? { items: {}, tree: [] };
   state.images = images ?? { items: {}, tree: [] };
+  state.soundsData = soundsData ?? { items: {}, tree: [] };
   state.spritesheetsData = spritesheetsData ?? { items: {}, tree: [] };
   state.particlesData = particlesData ?? { items: {}, tree: [] };
   state.charactersData = charactersData ?? { items: {}, tree: [] };
@@ -286,6 +293,7 @@ export const selectProjectResolution = ({ state }) => {
 };
 
 export const selectImages = ({ state }) => state.images;
+export const selectSoundsData = ({ state }) => state.soundsData;
 export const selectSpritesheetsData = ({ state }) => state.spritesheetsData;
 export const selectParticlesData = ({ state }) => state.particlesData;
 export const selectLayoutsData = ({ state }) => state.layoutsData;
@@ -456,12 +464,14 @@ export const selectViewData = ({ state, constants }) => {
     projectResolution: state.projectResolution,
     layout,
     imagesData: state.images,
+    soundsData: state.soundsData,
     spritesheetsData: state.spritesheetsData,
     particlesData: state.particlesData,
     charactersData: state.charactersData,
     textStylesData: state.textStylesData,
     variablesData: state.variablesData,
     layoutsData: state.layoutsData,
+    selectedElementMetrics: state.selectedElementMetrics,
     selectedItemIsInsideSaveLoadSlot,
     selectedItemIsInsideDirectedContainer,
     isInsideSaveLoadSlot: detailPanelIsInsideSaveLoadSlot,

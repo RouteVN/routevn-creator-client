@@ -47,9 +47,7 @@ const parseBooleanProp = (value, fallback = false) => {
 };
 
 const isProgressiveRenderEnabled = (props) => {
-  return parseBooleanProp(
-    props?.progressiveRender ?? props?.["progressive-render"],
-  );
+  return parseBooleanProp(props?.progressiveRender);
 };
 
 const getProgressiveRenderSignature = (groups = []) => {
@@ -395,6 +393,17 @@ export const handleBackClick = (deps) => {
 
   dispatchEvent(
     new CustomEvent("back-click", {
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+export const handleMenuClick = (deps) => {
+  const { dispatchEvent } = deps;
+
+  dispatchEvent(
+    new CustomEvent("menu-click", {
       bubbles: true,
       composed: true,
     }),

@@ -68,12 +68,26 @@ const renderWithCursorSync = (deps) => {
   syncCursorStyles(deps);
 };
 
+const getAdaptiveGridSize = (zoomLevel) => {
+  const canvasGridSize = 20;
+  const visualGridSize = canvasGridSize * zoomLevel;
+  const minVisualGridSize = 28;
+  const gridMultiplier = Math.max(
+    1,
+    Math.ceil(minVisualGridSize / visualGridSize),
+  );
+
+  return canvasGridSize * gridMultiplier * zoomLevel;
+};
+
 const syncPanPresentation = ({ store, refs, props } = {}) => {
   const pan = store.selectPan();
   const zoomLevel = store.selectZoomLevel();
 
   if (refs?.container) {
+    const gridSize = getAdaptiveGridSize(zoomLevel);
     refs.container.style.backgroundPosition = `${pan.x}px ${pan.y}px`;
+    refs.container.style.backgroundSize = `${gridSize}px ${gridSize}px`;
   }
 
   if (refs?.canvas) {
@@ -85,6 +99,24 @@ const syncPanPresentation = ({ store, refs, props } = {}) => {
       items: props?.items || [],
     });
     const viewport = minimapData?.viewport;
+    const minimapItemRefs =
+      refs.minimapContainer?.querySelectorAll?.("[data-minimap-item]") || [];
+
+    (minimapData?.items || []).forEach((item, itemIndex) => {
+      const itemRef = minimapItemRefs[itemIndex];
+      if (!itemRef) {
+        return;
+      }
+
+      itemRef.style.left = `${item.x}px`;
+      itemRef.style.top = `${item.y}px`;
+
+      const marker = itemRef.firstElementChild;
+      if (marker?.style) {
+        marker.style.width = `${minimapData.scaledItem.width}px`;
+        marker.style.height = `${minimapData.scaledItem.height}px`;
+      }
+    });
 
     if (!viewport?.visible) {
       refs.minimapViewport.style.display = "none";
@@ -111,6 +143,47 @@ const getPointerPositionWithinElement = (event, element) => {
   return {
     x: event.clientX - rect.left,
     y: event.clientY - rect.top,
+  };
+};
+
+const preventTouchDefault = (event) => {
+  if (event && event.cancelable !== false) {
+    event.preventDefault();
+  }
+};
+
+const getTouchPointWithinElement = (touch, element) => {
+  if (!touch || !element) {
+    return undefined;
+  }
+
+  const rect = element.getBoundingClientRect();
+  return {
+    x: touch.clientX - rect.left,
+    y: touch.clientY - rect.top,
+  };
+};
+
+const getPrimaryTouchPoint = (event, element) => {
+  return getTouchPointWithinElement(event?.touches?.[0], element);
+};
+
+const getTouchPairMetrics = (event, element) => {
+  const firstPoint = getTouchPointWithinElement(event?.touches?.[0], element);
+  const secondPoint = getTouchPointWithinElement(event?.touches?.[1], element);
+
+  if (!firstPoint || !secondPoint) {
+    return undefined;
+  }
+
+  const deltaX = secondPoint.x - firstPoint.x;
+  const deltaY = secondPoint.y - firstPoint.y;
+  const distance = Math.hypot(deltaX, deltaY);
+
+  return {
+    centerX: (firstPoint.x + secondPoint.x) / 2,
+    centerY: (firstPoint.y + secondPoint.y) / 2,
+    distance,
   };
 };
 
@@ -293,6 +366,133 @@ export const handleContainerWheel = (deps, payload) => {
 
   dispatchZoomChanged({ store, dispatchEvent });
   dispatchPanChanged({ store, dispatchEvent });
+};
+
+export const handleContainerTouchStart = (deps, payload) => {
+  const { store, refs } = deps;
+  const { _event: event } = payload;
+  const touchCount = event?.touches?.length ?? 0;
+
+  if (touchCount === 0) {
+    return;
+  }
+
+  syncContainerSize(deps);
+
+  if (touchCount >= 2) {
+    preventTouchDefault(event);
+    event.stopPropagation();
+
+    const metrics = getTouchPairMetrics(event, refs.container);
+    if (!metrics) {
+      return;
+    }
+
+    store.startTouchPinch(metrics);
+    return;
+  }
+
+  const point = getPrimaryTouchPoint(event, refs.container);
+  if (!point) {
+    return;
+  }
+
+  store.startTouchPan({
+    touchX: point.x,
+    touchY: point.y,
+  });
+};
+
+export const handleContainerTouchMove = (deps, payload) => {
+  const { store, refs, dispatchEvent } = deps;
+  const { _event: event } = payload;
+  const touchCount = event?.touches?.length ?? 0;
+
+  if (touchCount === 0) {
+    return;
+  }
+
+  preventTouchDefault(event);
+  event.stopPropagation();
+  syncContainerSize(deps);
+
+  if (touchCount >= 2) {
+    const metrics = getTouchPairMetrics(event, refs.container);
+    if (!metrics) {
+      return;
+    }
+
+    if (store.selectTouchGesture()?.type !== "pinch") {
+      store.startTouchPinch(metrics);
+    }
+
+    store.updateTouchPinch(metrics);
+    syncPanPresentation(deps);
+    dispatchZoomChanged({ store, dispatchEvent });
+    dispatchPanChanged({ store, dispatchEvent });
+    return;
+  }
+
+  const point = getPrimaryTouchPoint(event, refs.container);
+  if (!point) {
+    return;
+  }
+
+  if (store.selectTouchGesture()?.type !== "pan") {
+    store.startTouchPan({
+      touchX: point.x,
+      touchY: point.y,
+    });
+  }
+
+  store.updateTouchPan({
+    touchX: point.x,
+    touchY: point.y,
+  });
+  syncPanPresentation(deps);
+  dispatchPanChanged({ store, dispatchEvent });
+};
+
+export const handleContainerTouchEnd = (deps, payload) => {
+  const { store, refs } = deps;
+  const { _event: event } = payload;
+  const touchCount = event?.touches?.length ?? 0;
+  const gesture = store.selectTouchGesture();
+
+  if (gesture?.hasMoved || gesture?.type === "pinch") {
+    preventTouchDefault(event);
+  }
+
+  if (touchCount >= 2) {
+    const metrics = getTouchPairMetrics(event, refs.container);
+    if (metrics) {
+      store.startTouchPinch(metrics);
+    }
+    return;
+  }
+
+  if (touchCount === 1) {
+    const point = getPrimaryTouchPoint(event, refs.container);
+    if (point) {
+      store.startTouchPan({
+        touchX: point.x,
+        touchY: point.y,
+      });
+    }
+    return;
+  }
+
+  store.stopTouchGesture();
+};
+
+export const handleContainerTouchCancel = (deps, payload) => {
+  preventTouchDefault(payload?._event);
+  deps.store.stopTouchGesture();
+};
+
+export const handleContainerGestureEvent = (_deps, payload) => {
+  preventTouchDefault(payload?._event);
+  payload?._event?.stopPropagation?.();
 };
 
 export const handleZoomInClick = (deps) => {
@@ -702,6 +902,11 @@ export const handleWindowBlur = (deps) => {
 
   if (store.selectIsDraggingMinimapViewport()) {
     store.stopMinimapViewportDragging();
+    didChange = true;
+  }
+
+  if (store.selectTouchGesture()) {
+    store.stopTouchGesture();
     didChange = true;
   }
 

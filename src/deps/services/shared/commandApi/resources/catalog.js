@@ -16,6 +16,7 @@ export const createCatalogResourceCommandApi = (shared) => ({
   createAnimation: async ({
     animationId,
     data,
+    fileRecords,
     parentId,
     position = "last",
     positionTargetId,
@@ -28,12 +29,13 @@ export const createCatalogResourceCommandApi = (shared) => ({
       idField: "animationId",
       idValue: animationId,
       data,
+      fileRecords,
       parentId,
       position,
       positionTargetId,
       index,
     }),
-  updateAnimation: async ({ animationId, data }) =>
+  updateAnimation: async ({ animationId, data, fileRecords }) =>
     submitUpdateResourceCommand({
       shared,
       resourceType: "animations",
@@ -41,6 +43,7 @@ export const createCatalogResourceCommandApi = (shared) => ({
       idField: "animationId",
       idValue: animationId,
       data,
+      fileRecords,
     }),
   moveAnimation: async ({
     animationId,
@@ -102,6 +105,7 @@ export const createCatalogResourceCommandApi = (shared) => ({
   createParticle: async ({
     particleId,
     data,
+    fileRecords,
     parentId,
     position = "last",
     positionTargetId,
@@ -114,12 +118,13 @@ export const createCatalogResourceCommandApi = (shared) => ({
       idField: "particleId",
       idValue: particleId,
       data,
+      fileRecords,
       parentId,
       position,
       positionTargetId,
       index,
     }),
-  updateParticle: async ({ particleId, data }) =>
+  updateParticle: async ({ particleId, data, fileRecords }) =>
     submitUpdateResourceCommand({
       shared,
       resourceType: "particles",
@@ -127,6 +132,7 @@ export const createCatalogResourceCommandApi = (shared) => ({
       idField: "particleId",
       idValue: particleId,
       data,
+      fileRecords,
     }),
   moveParticle: async ({
     particleId,

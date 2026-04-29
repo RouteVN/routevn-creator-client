@@ -2,6 +2,13 @@ import { formatFileSize } from "../../internal/files.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import {
+  INITIAL_SPRITESHEET_CLIP_FPS,
+  formatSpritesheetFps,
+  normalizeSpritesheetAnimationsFps,
+  normalizeSpritesheetFps,
+  resolveSpritesheetAnimationFps,
+} from "../../internal/spritesheets.js";
+import {
   buildTagFilterOptions,
   createEmptyTagCollection,
   matchesTagAwareSearch,
@@ -11,6 +18,13 @@ import {
   DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD,
   shouldStartCollapsedFileExplorer,
 } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import {
+  buildMobileResourcePageViewData,
+  closeMobileResourceFileExplorerState,
+  createMobileResourcePageState,
+  openMobileResourceFileExplorerState,
+  setMobileResourcePageUiConfigState,
+} from "../../internal/ui/resourcePages/mobileResourcePage.js";
 
 const EMPTY_TREE = { tree: [], items: {} };
 export const SPRITESHEET_TAG_SCOPE_KEY = "spritesheets";
@@ -66,16 +80,6 @@ const dialogForm = {
   title: "Spritesheet",
   fields: [
     {
-      type: "slot",
-      slot: "spritesheet-image-source",
-      label: "Image",
-    },
-    {
-      type: "slot",
-      slot: "spritesheet-atlas-source",
-      label: "Atlas JSON",
-    },
-    {
       name: "name",
       type: "input-text",
       label: "Name",
@@ -86,6 +90,16 @@ const dialogForm = {
       type: "input-textarea",
       label: "Description",
       required: false,
+    },
+    {
+      type: "slot",
+      slot: "spritesheet-image-source",
+      label: "Image",
+    },
+    {
+      type: "slot",
+      slot: "spritesheet-atlas-source",
+      label: "Spritesheet JSON",
     },
     {
       name: "tagIds",
@@ -133,6 +147,38 @@ const buildDialogForm = (submitLabel) => ({
   },
 });
 
+const clipFpsForm = {
+  title: "Clip FPS",
+  fields: [
+    {
+      name: "fps",
+      type: "input-number",
+      label: "FPS",
+      min: 0.1,
+      step: 1,
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        label: "Update FPS",
+      },
+    ],
+  },
+};
+
+const buildClipFpsForm = (clipName) => ({
+  ...clipFpsForm,
+  title:
+    typeof clipName === "string" && clipName.length > 0
+      ? `Clip FPS: ${clipName}`
+      : clipFpsForm.title,
+});
+
 const matchesSearch = matchesTagAwareSearch;
 
 const buildMediaItem = (item) => ({
@@ -152,15 +198,29 @@ const resolveSheetHeight = (item) =>
 const resolveFrameCount = (item) =>
   item?.frameCount ?? Object.keys(item?.jsonData?.frames ?? {}).length ?? 0;
 
-const buildClipOptions = (animations = {}, selectedClipName) => {
+const cloneDialogAnimations = (
+  animations = {},
+  missingClipFps = INITIAL_SPRITESHEET_CLIP_FPS,
+) => normalizeSpritesheetAnimationsFps(animations, missingClipFps);
+
+const buildClipOptions = (
+  animations = {},
+  selectedClipName,
+  missingClipFps = INITIAL_SPRITESHEET_CLIP_FPS,
+) => {
   const clipOptions = Object.entries(animations ?? {}).map(
-    ([name, animation]) => ({
-      name,
-      frameCount: animation?.frames?.length ?? 0,
-      fps: Math.round(Number(animation?.animationSpeed ?? 0.5) * 60),
-      loop: animation?.loop ?? true,
-      isSelected: name === selectedClipName,
-    }),
+    ([name, animation]) => {
+      const fps = resolveSpritesheetAnimationFps(animation, missingClipFps);
+
+      return {
+        name,
+        frameCount: animation?.frames?.length ?? 0,
+        fps,
+        fpsLabel: formatSpritesheetFps(fps),
+        loop: animation?.loop ?? true,
+        isSelected: name === selectedClipName,
+      };
+    },
   );
 
   const fallbackSelectedClipName =
@@ -280,6 +340,10 @@ const createDialogSourceFiles = () => ({
   atlasFile: undefined,
 });
 
+const createClipFpsDialogValues = (fps = INITIAL_SPRITESHEET_CLIP_FPS) => ({
+  fps,
+});
+
 export const createInitialState = () => ({
   data: EMPTY_TREE,
   tagsData: createEmptyTagCollection(),
@@ -289,6 +353,7 @@ export const createInitialState = () => ({
   isDetailTagSelectOpen: false,
   selectedItemId: undefined,
   searchQuery: "",
+  ...createMobileResourcePageState(),
   detailSelectedClipName: undefined,
   isDialogOpen: false,
   isCreateTagDialogOpen: false,
@@ -306,10 +371,22 @@ export const createInitialState = () => ({
   dialogValues: buildDialogValues(),
   dialogPreviewUrl: undefined,
   dialogImportData: undefined,
+  dialogDraftAnimations: {},
   dialogSourceFiles: createDialogSourceFiles(),
   dialogSelectedClipName: undefined,
   dialogRevision: 0,
+  isClipFpsDialogOpen: false,
+  clipFpsDialogClipName: undefined,
+  clipFpsDialogValues: createClipFpsDialogValues(),
+  clipFpsDialogRevision: 0,
 });
+
+const closeClipFpsDialogState = (state) => {
+  state.isClipFpsDialogOpen = false;
+  state.clipFpsDialogClipName = undefined;
+  state.clipFpsDialogValues = createClipFpsDialogValues();
+  state.clipFpsDialogRevision += 1;
+};
 
 const syncDetailTagIds = (state, { preserveDirty = false } = {}) => {
   if (preserveDirty && state.detailTagIdsDirty) {
@@ -337,6 +414,20 @@ export const setSelectedItemId = ({ state }, { itemId } = {}) => {
 
 export const setSearchQuery = ({ state }, { value } = {}) => {
   state.searchQuery = value ?? "";
+};
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  setMobileResourcePageUiConfigState(state, {
+    uiConfig,
+  });
+};
+
+export const openMobileFileExplorer = ({ state }, _payload = {}) => {
+  openMobileResourceFileExplorerState(state);
+};
+
+export const closeMobileFileExplorer = ({ state }, _payload = {}) => {
+  closeMobileResourceFileExplorerState(state);
 };
 
 export const setTagsData = ({ state }, { tagsData } = {}) => {
@@ -398,18 +489,23 @@ export const openCreateDialog = (
     ...values,
   };
   state.dialogImportData = importData;
+  state.dialogDraftAnimations = cloneDialogAnimations(
+    importData?.animations,
+    INITIAL_SPRITESHEET_CLIP_FPS,
+  );
   state.dialogPreviewUrl = previewUrl;
   state.dialogSourceFiles = {
     ...createDialogSourceFiles(),
     ...sourceFiles,
   };
   state.dialogSelectedClipName = undefined;
+  closeClipFpsDialogState(state);
   state.dialogRevision += 1;
 };
 
 export const openEditDialog = (
   { state },
-  { itemId, values, previewUrl, sourceFiles } = {},
+  { itemId, values, previewUrl, sourceFiles, animations } = {},
 ) => {
   state.isDialogOpen = true;
   state.dialogMode = "edit";
@@ -420,12 +516,17 @@ export const openEditDialog = (
     ...values,
   };
   state.dialogImportData = undefined;
+  state.dialogDraftAnimations = cloneDialogAnimations(
+    animations,
+    INITIAL_SPRITESHEET_CLIP_FPS,
+  );
   state.dialogPreviewUrl = previewUrl;
   state.dialogSourceFiles = {
     ...createDialogSourceFiles(),
     ...sourceFiles,
   };
   state.dialogSelectedClipName = undefined;
+  closeClipFpsDialogState(state);
   state.dialogRevision += 1;
 };
 
@@ -442,9 +543,11 @@ export const openPreviewDialog = (
     ...values,
   };
   state.dialogImportData = undefined;
+  state.dialogDraftAnimations = {};
   state.dialogPreviewUrl = previewUrl;
   state.dialogSourceFiles = createDialogSourceFiles();
   state.dialogSelectedClipName = undefined;
+  closeClipFpsDialogState(state);
   state.dialogRevision += 1;
 };
 
@@ -456,8 +559,10 @@ export const closeDialog = ({ state }) => {
   state.dialogValues = buildDialogValues();
   state.dialogPreviewUrl = undefined;
   state.dialogImportData = undefined;
+  state.dialogDraftAnimations = {};
   state.dialogSourceFiles = createDialogSourceFiles();
   state.dialogSelectedClipName = undefined;
+  closeClipFpsDialogState(state);
   state.dialogRevision += 1;
 };
 
@@ -500,6 +605,10 @@ export const setDialogImport = (
   { importData, previewUrl, values, sourceFiles } = {},
 ) => {
   state.dialogImportData = importData;
+  state.dialogDraftAnimations = cloneDialogAnimations(
+    importData?.animations,
+    INITIAL_SPRITESHEET_CLIP_FPS,
+  );
   state.dialogPreviewUrl = previewUrl;
   state.dialogSourceFiles = {
     ...createDialogSourceFiles(),
@@ -510,11 +619,56 @@ export const setDialogImport = (
     ...values,
   };
   state.dialogSelectedClipName = undefined;
+  closeClipFpsDialogState(state);
   state.dialogRevision += 1;
+};
+
+export const setDialogClipFps = ({ state }, { clipName, fps } = {}) => {
+  if (typeof clipName !== "string" || clipName.length === 0) {
+    return;
+  }
+
+  const animation = state.dialogDraftAnimations?.[clipName];
+  if (!animation) {
+    return;
+  }
+
+  const normalizedFps = normalizeSpritesheetFps(fps);
+  if (normalizedFps === undefined) {
+    delete animation.fps;
+    return;
+  }
+
+  animation.fps = normalizedFps;
+  delete animation.animationSpeed;
 };
 
 export const setDialogSelectedClipName = ({ state }, { clipName } = {}) => {
   state.dialogSelectedClipName = clipName;
+};
+
+export const openClipFpsDialog = ({ state }, { clipName } = {}) => {
+  if (typeof clipName !== "string" || clipName.length === 0) {
+    return;
+  }
+
+  const dialogBaseItem = selectDataItem(state, state.dialogItemId);
+  const animation =
+    state.dialogDraftAnimations?.[clipName] ??
+    state.dialogImportData?.animations?.[clipName] ??
+    dialogBaseItem?.animations?.[clipName];
+
+  state.dialogSelectedClipName = clipName;
+  state.isClipFpsDialogOpen = true;
+  state.clipFpsDialogClipName = clipName;
+  state.clipFpsDialogValues = createClipFpsDialogValues(
+    resolveSpritesheetAnimationFps(animation, INITIAL_SPRITESHEET_CLIP_FPS),
+  );
+  state.clipFpsDialogRevision += 1;
+};
+
+export const closeClipFpsDialog = ({ state }) => {
+  closeClipFpsDialogState(state);
 };
 
 export const selectSelectedItem = ({ state }) =>
@@ -533,11 +687,17 @@ export const selectDialogParentId = ({ state }) => state.dialogParentId;
 
 export const selectDialogImportData = ({ state }) => state.dialogImportData;
 
+export const selectDialogDraftAnimations = ({ state }) =>
+  state.dialogDraftAnimations;
+
 export const selectDialogSourceFiles = ({ state }) => state.dialogSourceFiles;
 
 export const selectDialogValues = ({ state }) => state.dialogValues;
 
 export const selectDialogPreviewUrl = ({ state }) => state.dialogPreviewUrl;
+
+export const selectClipFpsDialogClipName = ({ state }) =>
+  state.clipFpsDialogClipName;
 
 export const selectViewData = ({ state }) => {
   const flatItems = applyFolderRequiredRootDragOptions(toFlatItems(state.data));
@@ -557,17 +717,24 @@ export const selectViewData = ({ state }) => {
   const detailSelection = buildClipOptions(
     selectedItem?.animations,
     state.detailSelectedClipName,
+    INITIAL_SPRITESHEET_CLIP_FPS,
   );
   const detailSelectedClipName = detailSelection.selectedClipName;
   const detailPreviewAnimation =
     selectedItem?.animations?.[detailSelectedClipName];
 
   const dialogBaseItem = selectDataItem(state, state.dialogItemId);
+  const dialogDraftAnimations = state.dialogDraftAnimations ?? {};
   const dialogAnimations =
-    state.dialogImportData?.animations ?? dialogBaseItem?.animations ?? {};
+    Object.keys(dialogDraftAnimations).length > 0
+      ? dialogDraftAnimations
+      : (state.dialogImportData?.animations ??
+        dialogBaseItem?.animations ??
+        {});
   const dialogSelection = buildClipOptions(
     dialogAnimations,
     state.dialogSelectedClipName,
+    INITIAL_SPRITESHEET_CLIP_FPS,
   );
   const dialogSelectedClipName = dialogSelection.selectedClipName;
 
@@ -575,22 +742,23 @@ export const selectViewData = ({ state }) => {
     dialogAnimations?.[dialogSelectedClipName] ?? undefined;
   const dialogAtlas =
     state.dialogImportData?.jsonData ?? dialogBaseItem?.jsonData ?? undefined;
+  const dialogImageSourcePreviewUrl = state.dialogPreviewUrl;
+  const dialogImageSourceFileId = dialogImageSourcePreviewUrl
+    ? undefined
+    : dialogBaseItem?.fileId;
   const dialogPreviewFileId = state.dialogPreviewUrl
     ? undefined
     : dialogBaseItem?.fileId;
-  const detailPreviewKey = `${state.selectedItemId ?? "empty"}-${detailSelectedClipName ?? "default"}`;
+  const detailPreviewKey = `${state.selectedItemId ?? "empty"}-${detailSelectedClipName ?? "default"}-${detailPreviewAnimation?.fps ?? detailPreviewAnimation?.animationSpeed ?? ""}`;
   const dialogPreviewSourceKey =
     state.dialogPreviewUrl ?? dialogPreviewFileId ?? "empty";
-  const dialogPreviewKey = `${state.dialogRevision}-${dialogSelectedClipName ?? "default"}-${dialogPreviewSourceKey}`;
-  const dialogHasImageSource = Boolean(
-    state.dialogSourceFiles?.pngFile || dialogBaseItem?.fileId,
-  );
+  const dialogPreviewKey = `${state.dialogRevision}-${dialogSelectedClipName ?? "default"}-${dialogPreviewSourceKey}-${dialogPreviewAnimation?.fps ?? dialogPreviewAnimation?.animationSpeed ?? ""}`;
   const dialogHasAtlasSource = Boolean(
     state.dialogSourceFiles?.atlasFile || dialogBaseItem?.jsonData,
   );
-  const dialogImageFieldValue = state.dialogSourceFiles?.pngFile?.name ?? "";
   const dialogAtlasFieldValue = state.dialogSourceFiles?.atlasFile?.name ?? "";
   const isDialogPreviewMode = state.dialogMode === "preview";
+  const detailFields = buildDetailFields(selectedItem);
   return {
     resourceCategory: "animatedAssets",
     selectedResourceId: "spritesheets",
@@ -613,7 +781,15 @@ export const selectViewData = ({ state }) => {
     detailTagAddOption: {
       label: "Add tag",
     },
-    detailFields: buildDetailFields(selectedItem),
+    detailFields,
+    ...buildMobileResourcePageViewData({
+      state,
+      detailFields,
+      hiddenMobileDetailSlots: [
+        "spritesheet-preview",
+        "spritesheet-animations",
+      ],
+    }),
     searchQuery: state.searchQuery,
     searchPlaceholder: "Search...",
     folderContextMenuItems,
@@ -632,6 +808,7 @@ export const selectViewData = ({ state }) => {
     detailPreviewAtlas: selectedItem?.jsonData,
     detailPreviewFileId: selectedItem?.fileId,
     detailPreviewKey,
+    detailPreviewPaused: state.isDialogOpen,
     isDialogOpen: state.isDialogOpen,
     isDialogPreviewMode,
     dialogMode: state.dialogMode,
@@ -640,7 +817,7 @@ export const selectViewData = ({ state }) => {
         ? "Add Spritesheet"
         : state.dialogMode === "edit"
           ? "Edit Spritesheet"
-          : "Preview Spritesheet",
+          : "",
     dialogSubmitLabel:
       state.dialogMode === "create" ? "Add Spritesheet" : "Update Spritesheet",
     dialogForm: buildDialogForm(
@@ -651,26 +828,23 @@ export const selectViewData = ({ state }) => {
     isCreateTagDialogOpen: state.isCreateTagDialogOpen,
     createTagDefaultValues: state.createTagDefaultValues,
     createTagForm,
+    isClipFpsDialogOpen: state.isClipFpsDialogOpen,
+    clipFpsDialogValues: state.clipFpsDialogValues,
+    clipFpsDialogKey: `${state.clipFpsDialogClipName ?? "none"}-${state.clipFpsDialogRevision}`,
+    clipFpsForm: buildClipFpsForm(state.clipFpsDialogClipName),
     dialogPreviewUrl: state.dialogPreviewUrl,
     dialogPreviewFileId,
     dialogPreviewKey,
     dialogPreviewAtlas: dialogAtlas,
     dialogPreviewAnimation,
+    dialogImageSourcePreviewUrl,
+    dialogImageSourceFileId,
     dialogClipOptions: dialogSelection.clipOptions,
     dialogSelectedClipName,
-    dialogImageSourceLabel: dialogHasImageSource
-      ? "Replace Image"
-      : "Upload Image",
-    dialogAtlasSourceLabel: dialogHasAtlasSource
-      ? "Replace JSON"
-      : "Upload JSON",
-    dialogImageFieldValue,
+    dialogAtlasSourceLabel: "Upload",
     dialogAtlasFieldValue,
-    dialogImageFieldPlaceholder: dialogHasImageSource
-      ? "Current image"
-      : "No image selected",
     dialogAtlasFieldPlaceholder: dialogHasAtlasSource
-      ? "Current atlas"
+      ? "Current spritesheet JSON"
       : "No JSON selected",
   };
 };

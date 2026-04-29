@@ -106,7 +106,7 @@ steps:
   - action: wait
     ms: 200
   - action: keypress
-    key: ArrowDown
+    key: j
   - action: wait
     ms: 300
   - action: screenshot
@@ -122,7 +122,7 @@ steps:
     ms: 600
   - action: screenshot
   - action: keypress
-    key: ArrowRight
+    key: l
   - action: wait
     ms: 150
   - action: keypress
@@ -131,7 +131,7 @@ steps:
     ms: 300
   - action: screenshot
   - action: keypress
-    key: ArrowLeft
+    key: h
   - action: wait
     ms: 150
   - action: keypress

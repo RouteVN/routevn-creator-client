@@ -23,7 +23,6 @@ const getSectionModes = (items, label) => {
 };
 
 describe("commandLineActions.store", () => {
-
   it("uses settings icons for generic system actions", () => {
     const items = selectItems({
       props: {
@@ -41,6 +40,8 @@ describe("commandLineActions.store", () => {
     expect(iconByMode.resetStoryAtSection).toBe("settings");
     expect(iconByMode.rollbackByOffset).toBe("settings");
     expect(iconByMode.toggleSkipMode).toBe("settings");
+    expect(iconByMode.startSkipMode).toBe("settings");
+    expect(iconByMode.stopSkipMode).toBe("settings");
     expect(iconByMode.toggleDialogueUI).toBe("settings");
     expect(iconByMode.showConfirmDialog).toBe("settings");
     expect(iconByMode.hideConfirmDialog).toBe("settings");
@@ -87,7 +88,7 @@ describe("commandLineActions.store", () => {
     ).toBe(true);
   });
 
-  it("hides the variables section and update variable action", () => {
+  it("shows the variables section and update variable action", () => {
     const items = selectItems({
       props: {
         actionsType: "system",
@@ -95,9 +96,11 @@ describe("commandLineActions.store", () => {
     });
 
     expect(
-      items.some((item) => item.type === "section" && item.label === "Variables"),
-    ).toBe(false);
-    expect(items.some((item) => item.mode === "updateVariable")).toBe(false);
+      items.some(
+        (item) => item.type === "section" && item.label === "Variables",
+      ),
+    ).toBe(true);
+    expect(items.some((item) => item.mode === "updateVariable")).toBe(true);
   });
 
   it("moves dialogue text speed into the dialogue section", () => {
@@ -107,9 +110,18 @@ describe("commandLineActions.store", () => {
       },
     });
 
-    expect(getSectionModes(items, "Dialogue")).toContain("setDialogueTextSpeed");
-    expect(getSectionModes(items, "Sound")).not.toContain("setDialogueTextSpeed");
-    expect(getSectionModes(items, "Menu")).not.toContain("setDialogueTextSpeed");
+    expect(getSectionModes(items, "Dialogue")).toContain(
+      "setDialogueTextSpeed",
+    );
+    expect(getSectionModes(items, "Dialogue")).toEqual(
+      expect.arrayContaining(["startSkipMode", "stopSkipMode"]),
+    );
+    expect(getSectionModes(items, "Sound")).not.toContain(
+      "setDialogueTextSpeed",
+    );
+    expect(getSectionModes(items, "Menu")).not.toContain(
+      "setDialogueTextSpeed",
+    );
   });
 
   it("moves save load pagination actions into the save load section", () => {
@@ -126,8 +138,12 @@ describe("commandLineActions.store", () => {
         "decrementSaveLoadPagination",
       ]),
     );
-    expect(getSectionModes(items, "Sound")).not.toContain("setSaveLoadPagination");
-    expect(getSectionModes(items, "Menu")).not.toContain("setSaveLoadPagination");
+    expect(getSectionModes(items, "Sound")).not.toContain(
+      "setSaveLoadPagination",
+    );
+    expect(getSectionModes(items, "Menu")).not.toContain(
+      "setSaveLoadPagination",
+    );
   });
 
   it("removes mute all from the chooser", () => {
@@ -147,7 +163,9 @@ describe("commandLineActions.store", () => {
       },
     });
 
-    expect(items.some((item) => item.mode === "setAutoForwardDelay")).toBe(false);
+    expect(items.some((item) => item.mode === "setAutoForwardDelay")).toBe(
+      false,
+    );
     expect(items.some((item) => item.mode === "setSkipUnseenText")).toBe(false);
     expect(
       items.some((item) => item.mode === "setSkipTransitionsAndAnimations"),
@@ -208,7 +226,13 @@ describe("commandLineActions.store", () => {
         "control",
       ]),
     );
-    expect(items.some((item) => item.type === "section" && item.label === "Save / Load")).toBe(false);
-    expect(items.some((item) => item.type === "section" && item.label === "Menu")).toBe(false);
+    expect(
+      items.some(
+        (item) => item.type === "section" && item.label === "Save / Load",
+      ),
+    ).toBe(false);
+    expect(
+      items.some((item) => item.type === "section" && item.label === "Menu"),
+    ).toBe(false);
   });
 });

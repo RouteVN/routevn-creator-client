@@ -2,6 +2,7 @@ import {
   toFlatGroups,
   toFlatItems,
 } from "../../../../internal/project/tree.js";
+import { prependRootItemsGroup } from "../rootGroups.js";
 import {
   buildTagViewData,
   closeCreateTagDialogState,
@@ -16,6 +17,13 @@ import {
   setTagsDataState,
   syncDetailTagIds,
 } from "../tags.js";
+import {
+  buildMobileResourcePageViewData,
+  closeMobileResourceFileExplorerState,
+  createMobileResourcePageState,
+  openMobileResourceFileExplorerState,
+  setMobileResourcePageUiConfigState,
+} from "../mobileResourcePage.js";
 
 const EMPTY_TREE = { tree: [], items: {} };
 
@@ -60,6 +68,7 @@ export const createCatalogPageStore = ({
   matchesSearch = defaultMatchesSearch,
   buildDetailFields = () => [],
   buildCatalogItem = (item) => item,
+  hiddenMobileDetailSlots = [],
   extendViewData,
   tagging,
 }) => {
@@ -76,6 +85,7 @@ export const createCatalogPageStore = ({
     data: EMPTY_TREE,
     selectedItemId: undefined,
     searchQuery: "",
+    ...createMobileResourcePageState(),
     ...(taggingEnabled
       ? createTagState({
           createEmptyTagsCollection,
@@ -117,6 +127,20 @@ export const createCatalogPageStore = ({
 
   const setSearchQuery = ({ state }, { value } = {}) => {
     state.searchQuery = value ?? "";
+  };
+
+  const setUiConfig = ({ state }, { uiConfig } = {}) => {
+    setMobileResourcePageUiConfigState(state, {
+      uiConfig,
+    });
+  };
+
+  const openMobileFileExplorer = ({ state }, _payload = {}) => {
+    openMobileResourceFileExplorerState(state);
+  };
+
+  const closeMobileFileExplorer = ({ state }, _payload = {}) => {
+    closeMobileResourceFileExplorerState(state);
   };
 
   const setTagsData = ({ state }, { tagsData } = {}) => {
@@ -176,7 +200,11 @@ export const createCatalogPageStore = ({
 
   const selectViewData = ({ state }) => {
     const flatItems = toFlatItems(state.data);
-    const rawFlatGroups = toFlatGroups(state.data);
+    const rawFlatGroups = prependRootItemsGroup({
+      data: state.data,
+      groups: toFlatGroups(state.data),
+      label: title,
+    });
     const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
 
     const unfilteredCatalogGroups = rawFlatGroups
@@ -208,6 +236,11 @@ export const createCatalogPageStore = ({
         })
       : unfilteredCatalogGroups;
     const detailFields = buildDetailFields(selectedItem);
+    const mobileViewData = buildMobileResourcePageViewData({
+      state,
+      detailFields,
+      hiddenMobileDetailSlots,
+    });
     const tagViewData = taggingEnabled
       ? buildTagViewData({
           state,
@@ -236,6 +269,7 @@ export const createCatalogPageStore = ({
       emptyContextMenuItems,
       centerItemContextMenuItems,
     };
+    Object.assign(baseViewData, mobileViewData);
     if (tagViewData) {
       Object.assign(baseViewData, tagViewData);
     }
@@ -244,19 +278,35 @@ export const createCatalogPageStore = ({
       return baseViewData;
     }
 
-    return extendViewData({
+    const extendedViewData = extendViewData({
       state,
       flatItems,
       selectedItem,
       catalogGroups,
       baseViewData,
     });
+
+    if (extendedViewData.detailFields !== baseViewData.detailFields) {
+      Object.assign(
+        extendedViewData,
+        buildMobileResourcePageViewData({
+          state,
+          detailFields: extendedViewData.detailFields,
+          hiddenMobileDetailSlots,
+        }),
+      );
+    }
+
+    return extendedViewData;
   };
 
   return {
     createInitialState,
     setItems,
     setSelectedItemId,
+    setUiConfig,
+    openMobileFileExplorer,
+    closeMobileFileExplorer,
     selectSelectedItem,
     selectItemById,
     selectSelectedItemId,

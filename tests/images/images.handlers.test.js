@@ -428,10 +428,11 @@ describe("images handlers", () => {
       return 1;
     });
 
-    const createEvent = (key) => ({
+    const createEvent = (key, overrides = {}) => ({
       key,
       preventDefault: vi.fn(),
       stopPropagation: vi.fn(),
+      ...overrides,
     });
     const store = {
       getState: vi.fn(() => ({
@@ -501,6 +502,193 @@ describe("images handlers", () => {
     expect(leftEvent.preventDefault).toHaveBeenCalledTimes(1);
     expect(leftEvent.stopPropagation).toHaveBeenCalledTimes(1);
     expect(deps.refs.previewOverlay.focus).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses h, j, k, and l to navigate preview items without handling text entry", () => {
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      callback();
+      return 1;
+    });
+
+    const createEvent = (key, overrides = {}) => ({
+      key,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      ...overrides,
+    });
+    const store = {
+      getState: vi.fn(() => ({
+        fullImagePreviewVisible: true,
+      })),
+      selectSelectedItemId: vi.fn(() => "image-1"),
+      selectAdjacentImageItemId: vi.fn(({ direction }) => {
+        return direction === "next" ? "image-2" : "image-0";
+      }),
+      selectImageItemById: vi.fn(({ itemId }) => ({
+        id: itemId,
+        type: "image",
+        fileId: `${itemId}-file`,
+      })),
+      setSelectedItemId: vi.fn(),
+      showFullImagePreview: vi.fn(),
+    };
+    const deps = {
+      store,
+      render: vi.fn(),
+      refs: {
+        fileExplorer: {
+          selectItem: vi.fn(),
+        },
+        groupview: {
+          scrollItemIntoView: vi.fn(),
+        },
+        previewOverlay: {
+          focus: vi.fn(),
+        },
+      },
+    };
+
+    for (const key of ["j", "l"]) {
+      handlePreviewOverlayKeyDown(deps, {
+        _event: createEvent(key),
+      });
+    }
+
+    for (const key of ["k", "h"]) {
+      handlePreviewOverlayKeyDown(deps, {
+        _event: createEvent(key),
+      });
+    }
+
+    expect(store.selectAdjacentImageItemId).toHaveBeenNthCalledWith(1, {
+      itemId: "image-1",
+      direction: "next",
+    });
+    expect(store.selectAdjacentImageItemId).toHaveBeenNthCalledWith(2, {
+      itemId: "image-1",
+      direction: "next",
+    });
+    expect(store.selectAdjacentImageItemId).toHaveBeenNthCalledWith(3, {
+      itemId: "image-1",
+      direction: "previous",
+    });
+    expect(store.selectAdjacentImageItemId).toHaveBeenNthCalledWith(4, {
+      itemId: "image-1",
+      direction: "previous",
+    });
+
+    const inputEvent = createEvent("j", {
+      target: {
+        tagName: "INPUT",
+      },
+    });
+    handlePreviewOverlayKeyDown(deps, {
+      _event: inputEvent,
+    });
+
+    expect(store.selectAdjacentImageItemId).toHaveBeenCalledTimes(4);
+    expect(inputEvent.preventDefault).not.toHaveBeenCalled();
+    expect(inputEvent.stopPropagation).not.toHaveBeenCalled();
+  });
+
+  it("uses ctrl+d and ctrl+u to jump preview items by ten", () => {
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      callback();
+      return 1;
+    });
+
+    const createEvent = (key, overrides = {}) => ({
+      key,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      ...overrides,
+    });
+    const store = {
+      getState: vi.fn(() => ({
+        fullImagePreviewVisible: true,
+      })),
+      selectSelectedItemId: vi.fn(() => "image-11"),
+      selectAdjacentImageItemId: vi.fn(({ direction }) => {
+        return direction === "next" ? "image-21" : "image-1";
+      }),
+      selectImageItemById: vi.fn(({ itemId }) => ({
+        id: itemId,
+        type: "image",
+        fileId: `${itemId}-file`,
+      })),
+      setSelectedItemId: vi.fn(),
+      showFullImagePreview: vi.fn(),
+    };
+    const deps = {
+      store,
+      render: vi.fn(),
+      refs: {
+        fileExplorer: {
+          selectItem: vi.fn(),
+        },
+        groupview: {
+          scrollItemIntoView: vi.fn(),
+        },
+        previewOverlay: {
+          focus: vi.fn(),
+        },
+      },
+    };
+
+    const downEvent = createEvent("d", {
+      ctrlKey: true,
+    });
+    handlePreviewOverlayKeyDown(deps, {
+      _event: downEvent,
+    });
+
+    expect(store.selectAdjacentImageItemId).toHaveBeenNthCalledWith(1, {
+      itemId: "image-11",
+      direction: "next",
+      distance: 10,
+      clamp: true,
+    });
+    expect(store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: "image-21",
+    });
+    expect(downEvent.preventDefault).toHaveBeenCalledTimes(1);
+
+    const upEvent = createEvent("u", {
+      ctrlKey: true,
+    });
+    handlePreviewOverlayKeyDown(deps, {
+      _event: upEvent,
+    });
+
+    expect(store.selectAdjacentImageItemId).toHaveBeenNthCalledWith(2, {
+      itemId: "image-11",
+      direction: "previous",
+      distance: 10,
+      clamp: true,
+    });
+    expect(store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: "image-1",
+    });
+    expect(upEvent.preventDefault).toHaveBeenCalledTimes(1);
+
+    const inputEvent = createEvent("d", {
+      ctrlKey: true,
+      target: {
+        tagName: "INPUT",
+      },
+    });
+    handlePreviewOverlayKeyDown(deps, {
+      _event: inputEvent,
+    });
+
+    expect(store.selectAdjacentImageItemId).toHaveBeenCalledTimes(2);
+    expect(inputEvent.preventDefault).not.toHaveBeenCalled();
   });
 
   it("ignores left and right preview navigation when preview is not visible", () => {

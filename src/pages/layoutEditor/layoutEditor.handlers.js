@@ -1527,6 +1527,10 @@ export const handleLayoutEditorCanvasMetricsChange = (deps, payload) => {
     return;
   }
 
+  store.setSelectedElementMetrics({
+    metrics,
+  });
+
   if (selectedItemId && detailPanelSelectedItemId !== selectedItemId) {
     return;
   }

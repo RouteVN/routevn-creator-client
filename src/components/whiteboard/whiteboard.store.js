@@ -42,12 +42,15 @@ const getNextZoomLevel = (currentZoom, direction) => {
   }
 };
 
+const clampZoomLevel = (zoomLevel) => Math.min(2, Math.max(0.2, zoomLevel));
+
 export const createInitialState = () => ({
   isDragging: false,
   dragItemId: null,
   dragOffset: { x: 0, y: 0 },
   lastDraggedPosition: undefined,
   hoveredItemId: undefined,
+  touchGesture: undefined,
   isDraggingMinimapViewport: false,
   minimapViewportDrag: undefined,
   // Pan state
@@ -126,6 +129,108 @@ export const stopPanning = ({ state }, _payload = {}) => {
   state.isPanning = false;
 };
 
+export const startTouchPan = ({ state }, { touchX, touchY } = {}) => {
+  const startX = Number(touchX);
+  const startY = Number(touchY);
+
+  if (!Number.isFinite(startX) || !Number.isFinite(startY)) {
+    return;
+  }
+
+  state.touchGesture = {
+    type: "pan",
+    startX,
+    startY,
+    startPanX: state.panX,
+    startPanY: state.panY,
+    hasMoved: false,
+  };
+};
+
+export const updateTouchPan = ({ state }, { touchX, touchY } = {}) => {
+  const gesture = state.touchGesture;
+  const nextX = Number(touchX);
+  const nextY = Number(touchY);
+
+  if (
+    gesture?.type !== "pan" ||
+    !Number.isFinite(nextX) ||
+    !Number.isFinite(nextY)
+  ) {
+    return;
+  }
+
+  const deltaX = nextX - gesture.startX;
+  const deltaY = nextY - gesture.startY;
+
+  state.panX = gesture.startPanX + deltaX;
+  state.panY = gesture.startPanY + deltaY;
+  gesture.hasMoved = gesture.hasMoved || Math.hypot(deltaX, deltaY) > 3;
+};
+
+export const startTouchPinch = (
+  { state },
+  { centerX, centerY, distance } = {},
+) => {
+  const startCenterX = Number(centerX);
+  const startCenterY = Number(centerY);
+  const startDistance = Number(distance);
+
+  if (
+    !Number.isFinite(startCenterX) ||
+    !Number.isFinite(startCenterY) ||
+    !Number.isFinite(startDistance) ||
+    startDistance <= 0
+  ) {
+    return;
+  }
+
+  state.touchGesture = {
+    type: "pinch",
+    startDistance,
+    startZoomLevel: state.zoomLevel,
+    anchorCanvasX: (startCenterX - state.panX) / state.zoomLevel,
+    anchorCanvasY: (startCenterY - state.panY) / state.zoomLevel,
+    hasMoved: false,
+  };
+};
+
+export const updateTouchPinch = (
+  { state },
+  { centerX, centerY, distance } = {},
+) => {
+  const gesture = state.touchGesture;
+  const nextCenterX = Number(centerX);
+  const nextCenterY = Number(centerY);
+  const nextDistance = Number(distance);
+
+  if (
+    gesture?.type !== "pinch" ||
+    !Number.isFinite(nextCenterX) ||
+    !Number.isFinite(nextCenterY) ||
+    !Number.isFinite(nextDistance) ||
+    nextDistance <= 0
+  ) {
+    return;
+  }
+
+  const nextZoomLevel = clampZoomLevel(
+    gesture.startZoomLevel * (nextDistance / gesture.startDistance),
+  );
+
+  state.zoomLevel = nextZoomLevel;
+  state.panX = nextCenterX - gesture.anchorCanvasX * nextZoomLevel;
+  state.panY = nextCenterY - gesture.anchorCanvasY * nextZoomLevel;
+  gesture.hasMoved =
+    gesture.hasMoved || Math.abs(nextDistance - gesture.startDistance) > 3;
+};
+
+export const stopTouchGesture = ({ state }, _payload = {}) => {
+  state.touchGesture = undefined;
+};
+
+export const selectTouchGesture = ({ state }) => state.touchGesture;
+
 export const startMinimapViewportDragging = (
   { state },
   { mouseX, mouseY, minimapData } = {},
@@ -191,12 +296,7 @@ export const zoomAt = ({ state }, { mouseX, mouseY, scaleFactor } = {}) => {
   const newZoom = state.zoomLevel * scaleFactor;
 
   // Clamp zoom level between 0.2x and 2x, snapping to limits if exceeded
-  let clampedZoom = newZoom;
-  if (newZoom < 0.2) {
-    clampedZoom = 0.2;
-  } else if (newZoom > 2) {
-    clampedZoom = 2.0;
-  }
+  const clampedZoom = clampZoomLevel(newZoom);
 
   // Don't update if already at the limit and trying to go further
   if (clampedZoom === state.zoomLevel) return;
@@ -362,6 +462,13 @@ const generateMinimapData = (items, pan, zoomLevel, containerSize) => {
     worldBottom = Math.max(worldBottom, item.y + itemHeight);
   });
 
+  if (containerSize.width > 0 && containerSize.height > 0) {
+    worldLeft = Math.min(worldLeft, viewportLeft);
+    worldTop = Math.min(worldTop, viewportTop);
+    worldRight = Math.max(worldRight, viewportRight);
+    worldBottom = Math.max(worldBottom, viewportBottom);
+  }
+
   worldLeft -= padding;
   worldTop -= padding;
   worldRight += padding;
@@ -437,6 +544,7 @@ export const selectMinimapData = ({ state }, { items = [] } = {}) => {
 };
 
 export const selectViewData = ({ state, props }) => {
+  const isTouchMode = props.isTouchMode === true;
   const items = (props.items || []).map((item) => ({
     ...item,
     borderColor:
@@ -499,7 +607,8 @@ export const selectViewData = ({ state, props }) => {
 
   return {
     items,
-    showMinimap: items.length > 1,
+    showMinimap: !isTouchMode && items.length > 1,
+    showControls: !isTouchMode,
     minimapData: selectMinimapData(
       { state },
       {

@@ -59,7 +59,13 @@ export const createInitialState = () => ({
     description: "",
   },
   sceneOverviewRequestId: 0,
+  isTouchMode: false,
 });
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  state.isTouchMode =
+    uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
+};
 
 export const setItems = ({ state }, { scenesData } = {}) => {
   state.scenesData = scenesData;
@@ -413,5 +419,8 @@ export const selectViewData = ({ state }) => {
     folderContextMenuItems: fileExplorerFolderContextMenuItems,
     itemContextMenuItems: fileExplorerItemContextMenuItems,
     emptyContextMenuItems: fileExplorerEmptyContextMenuItems,
+    isTouchMode: state.isTouchMode,
+    showExplorerPanel: !state.isTouchMode,
+    showDetailPanel: !state.isTouchMode,
   };
 };

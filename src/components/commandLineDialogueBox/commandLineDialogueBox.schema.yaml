@@ -20,12 +20,30 @@ propsSchema:
             type: string
           name:
             type: string
+          type:
+            type: string
+          fileId:
+            type: string
+          parentId:
+            type: string
+          sprites:
+            type: object
+          spriteGroups:
+            type: array
+    characterTree:
+      type: array
+    transforms:
+      type: object
+    animations:
+      type: object
     dialogue:
       type: object
       properties:
         mode:
           type: string
         clearPage:
+          type: boolean
+        append:
           type: boolean
         persistCharacter:
           type: boolean
@@ -46,3 +64,5 @@ propsSchema:
           properties:
             name:
               type: string
+            sprite:
+              type: object

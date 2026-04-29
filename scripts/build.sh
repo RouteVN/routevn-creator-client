@@ -7,7 +7,7 @@ set -e
 
 BUILD_TYPE=${1:-web}
 SETUP_FILE="src/setup.${BUILD_TYPE}.js"
-RETTANGOLI_VERSION=$(node -p "require('./package.json').dependencies['@rettangoli/ui']" 2>/dev/null || echo "1.7.3")
+RETTANGOLI_VERSION=$(node -p "require('./package.json').dependencies['@rettangoli/ui']" 2>/dev/null || echo "1.7.5")
 RETTANGOLI_VERSION="${RETTANGOLI_VERSION#^}"
 RETTANGOLI_VERSION="${RETTANGOLI_VERSION#~}"
 

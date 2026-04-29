@@ -115,6 +115,9 @@ const {
   openEditDialog,
   closeEditDialog,
   setEditUpload,
+  setUiConfig,
+  openMobileFileExplorer,
+  closeMobileFileExplorer,
   selectSelectedItem,
   selectItemById,
   selectSelectedItemId,
@@ -144,6 +147,7 @@ const {
   tagging: {
     tagFilterPlaceholder: "Filter tags",
   },
+  hiddenMobileDetailSlots: ["sound-waveform"],
   extendViewData: ({ state, baseViewData }) => {
     return {
       ...baseViewData,
@@ -175,6 +179,9 @@ export {
   openEditDialog,
   closeEditDialog,
   setEditUpload,
+  setUiConfig,
+  openMobileFileExplorer,
+  closeMobileFileExplorer,
   selectSelectedItem,
   setTagsData,
   setActiveTagIds,

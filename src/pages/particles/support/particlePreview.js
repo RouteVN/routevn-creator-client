@@ -1,4 +1,4 @@
-const PREVIEW_BACKGROUND = "#09131d";
+const PREVIEW_BACKGROUND = "#000000";
 const FALLBACK_ASPECT_RATIO = "16 / 9";
 
 const toPositiveNumber = (value) => {
@@ -33,7 +33,37 @@ const hasRenderableTexture = (texture) => {
   return Array.isArray(texture?.items) && texture.items.length > 0;
 };
 
-export const createParticlePreviewState = (particle = {}) => {
+const createPreviewBackgroundElement = ({ width, height, image } = {}) => {
+  if (image?.fileId) {
+    return {
+      id: "particle-preview-bg",
+      type: "sprite",
+      src: image.fileId,
+      fileType: image.fileType ?? "image/png",
+      x: Math.round(width / 2),
+      y: Math.round(height / 2),
+      width,
+      height,
+      anchorX: 0.5,
+      anchorY: 0.5,
+    };
+  }
+
+  return {
+    id: "particle-preview-bg",
+    type: "rect",
+    x: 0,
+    y: 0,
+    width,
+    height,
+    fill: PREVIEW_BACKGROUND,
+  };
+};
+
+export const createParticlePreviewState = (
+  particle = {},
+  { backgroundImage } = {},
+) => {
   const width = Math.max(1, Math.round(toPositiveNumber(particle.width) ?? 1));
   const height = Math.max(
     1,
@@ -55,15 +85,11 @@ export const createParticlePreviewState = (particle = {}) => {
   }
 
   const elements = [
-    {
-      id: "particle-preview-bg",
-      type: "rect",
-      x: 0,
-      y: 0,
+    createPreviewBackgroundElement({
       width,
       height,
-      fill: PREVIEW_BACKGROUND,
-    },
+      image: backgroundImage,
+    }),
   ];
 
   if (hasRenderableTexture(particle?.modules?.appearance?.texture)) {

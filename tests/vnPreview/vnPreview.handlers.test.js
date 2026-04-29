@@ -40,14 +40,17 @@ vi.mock("../../src/internal/runtime/graphicsEngineRuntime.js", () => ({
   })),
 }));
 
-vi.mock("../../src/components/vnPreview/support/vnPreviewProjectData.js", () => ({
-  collectPreviewMissingTargets: collectPreviewMissingTargetsMock,
-  collectSceneIdsFromValue: vi.fn(() => []),
-  collectSectionIdsFromValue: vi.fn(() => []),
-  ensurePreviewProjectDataTargets: ensurePreviewProjectDataTargetsMock,
-  resolveSceneIdForSectionId: resolveSceneIdForSectionIdMock,
-  withPreviewEntryPoint: withPreviewEntryPointMock,
-}));
+vi.mock(
+  "../../src/components/vnPreview/support/vnPreviewProjectData.js",
+  () => ({
+    collectPreviewMissingTargets: collectPreviewMissingTargetsMock,
+    collectSceneIdsFromValue: vi.fn(() => []),
+    collectSectionIdsFromValue: vi.fn(() => []),
+    ensurePreviewProjectDataTargets: ensurePreviewProjectDataTargetsMock,
+    resolveSceneIdForSectionId: resolveSceneIdForSectionIdMock,
+    withPreviewEntryPoint: withPreviewEntryPointMock,
+  }),
+);
 
 describe("vnPreview.handlers", () => {
   afterEach(() => {
@@ -105,6 +108,7 @@ describe("vnPreview.handlers", () => {
       store: {
         setProjectResolution: vi.fn(),
         setAssetLoading: vi.fn(),
+        setPreviewReady: vi.fn(),
         resetAssetLoadCache: vi.fn(),
         selectHasLoadedAssetFileId: vi.fn(() => false),
         selectHasLoadedAssetSceneId: vi.fn(() => false),
@@ -145,22 +149,28 @@ describe("vnPreview.handlers", () => {
         },
       });
     });
-    extractTransitionTargetSceneIdsMock.mockImplementation((_projectData, sceneId) => {
-      if (sceneId === "scene-2") {
-        return ["scene-3"];
-      }
-      return [];
-    });
-    resolveSceneIdForSectionIdMock.mockImplementation((_projectData, sectionId) => {
-      if (sectionId === "scene-2-section-1") {
-        return "scene-2";
-      }
-      return undefined;
-    });
-    collectPreviewMissingTargetsMock.mockImplementation(({ sceneIds = [] }) => ({
-      missingSceneIds: sceneIds,
-      missingSectionIds: [],
-    }));
+    extractTransitionTargetSceneIdsMock.mockImplementation(
+      (_projectData, sceneId) => {
+        if (sceneId === "scene-2") {
+          return ["scene-3"];
+        }
+        return [];
+      },
+    );
+    resolveSceneIdForSectionIdMock.mockImplementation(
+      (_projectData, sectionId) => {
+        if (sectionId === "scene-2-section-1") {
+          return "scene-2";
+        }
+        return undefined;
+      },
+    );
+    collectPreviewMissingTargetsMock.mockImplementation(
+      ({ sceneIds = [] }) => ({
+        missingSceneIds: sceneIds,
+        missingSectionIds: [],
+      }),
+    );
 
     const deps = {
       projectService: {
@@ -183,6 +193,7 @@ describe("vnPreview.handlers", () => {
       store: {
         setProjectResolution: vi.fn(),
         setAssetLoading: vi.fn(),
+        setPreviewReady: vi.fn(),
         resetAssetLoadCache: vi.fn(),
         selectHasLoadedAssetFileId: vi.fn(() => false),
         selectHasLoadedAssetSceneId: vi.fn(() => false),
@@ -220,6 +231,7 @@ describe("vnPreview.handlers", () => {
       },
       store: {
         setAssetLoading: vi.fn(),
+        setPreviewReady: vi.fn(),
         resetAssetLoadCache: vi.fn(),
       },
     };

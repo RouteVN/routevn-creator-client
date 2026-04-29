@@ -6,6 +6,7 @@ import {
 } from "../../internal/animationEditorRoute.js";
 import { serializeTransitionMask } from "../../internal/animationMasks.js";
 import { resolveResourceFileType } from "../../internal/resourceFileMetadata.js";
+import { captureCanvasThumbnailImage } from "../../internal/runtime/graphicsEngineRuntime.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import {
@@ -52,6 +53,39 @@ const getEditorPayload = (appService) => {
 };
 
 const DEFAULT_NEW_ANIMATION_NAME = "New Animation";
+
+const dataUrlToBlob = async (value) => {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new Error("Thumbnail image is missing");
+  }
+
+  const commaIndex = value.indexOf(",");
+  if (commaIndex < 0) {
+    throw new Error("Thumbnail image is not a valid data URL");
+  }
+
+  const header = value.slice(0, commaIndex);
+  const body = value.slice(commaIndex + 1);
+  const mimeMatch = header.match(/^data:([^;,]+)?(?:;base64)?$/);
+  if (!mimeMatch) {
+    throw new Error("Thumbnail image is not a valid data URL");
+  }
+
+  const mimeType = mimeMatch[1] || "application/octet-stream";
+  const isBase64 = header.includes(";base64");
+
+  if (!isBase64) {
+    return new Blob([decodeURIComponent(body)], { type: mimeType });
+  }
+
+  const binary = atob(body);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return new Blob([bytes], { type: mimeType });
+};
 
 const stopPreviewPlaybackIndicator = ({ store } = {}) => {
   const frameId = store.selectPreviewPlaybackFrameId();
@@ -122,6 +156,31 @@ const collectRuntimeMaskTextureIds = (mask = {}) => {
   return (mask.items ?? []).map((item) => item?.texture).filter(Boolean);
 };
 
+const collectRuntimeElementTextureIds = (elements = []) => {
+  const textureIds = [];
+
+  for (const element of elements ?? []) {
+    if (element?.type === "sprite" && element.src) {
+      textureIds.push(element.src);
+    }
+
+    if (Array.isArray(element?.children)) {
+      textureIds.push(...collectRuntimeElementTextureIds(element.children));
+    }
+  }
+
+  return textureIds;
+};
+
+const collectRuntimeRenderStateTextureIds = (renderState = {}) => {
+  return [
+    ...collectRuntimeElementTextureIds(renderState.elements),
+    ...(renderState.animations ?? []).flatMap((animation) =>
+      collectRuntimeMaskTextureIds(animation.mask),
+    ),
+  ];
+};
+
 const ensurePreviewAssetsLoaded = async ({
   graphicsService,
   projectService,
@@ -131,12 +190,9 @@ const ensurePreviewAssetsLoaded = async ({
     return renderState;
   }
 
+  const renderStates = Array.isArray(renderState) ? renderState : [renderState];
   const textureIds = Array.from(
-    new Set(
-      (renderState.animations ?? []).flatMap((animation) =>
-        collectRuntimeMaskTextureIds(animation.mask),
-      ),
-    ),
+    new Set(renderStates.flatMap(collectRuntimeRenderStateTextureIds)),
   );
 
   if (textureIds.length === 0) {
@@ -178,14 +234,15 @@ const renderPreviewAnimationState = async ({
     return;
   }
 
+  const resetState = store.selectAnimationResetState();
   const renderState = store.selectAnimationRenderStateWithAnimations();
   await ensurePreviewAssetsLoaded({
     graphicsService,
     projectService,
-    renderState,
+    renderState: [resetState, renderState],
   });
 
-  await graphicsService.render(store.selectAnimationResetState());
+  await graphicsService.render(resetState);
   await graphicsService.render(renderState);
 };
 
@@ -236,21 +293,6 @@ const preparePreviewPlaybackAtStart = async ({
   store.markPreviewPrepared({});
 };
 
-const resetPreviewPlayback = ({ graphicsService, store } = {}) => {
-  if (!graphicsService) {
-    return;
-  }
-
-  stopPreviewPlaybackIndicator({
-    store,
-  });
-  graphicsService.setAnimationPlaybackMode("auto");
-  graphicsService.render(store.selectAnimationResetState());
-  store.setPreviewPlaybackMode({
-    mode: "auto",
-  });
-};
-
 const ensureManualPreviewAtTime = async ({
   graphicsService,
   projectService,
@@ -283,6 +325,27 @@ const ensureManualPreviewAtTime = async ({
 
   graphicsService.setAnimationTime(timeMs);
   return needsPreparation;
+};
+
+const renderPreviewForThumbnailCapture = async ({
+  graphicsService,
+  projectService,
+  store,
+} = {}) => {
+  if (!graphicsService) {
+    return;
+  }
+
+  const captureTimeMs = store.selectPreviewPlayheadVisible()
+    ? (store.selectPreviewPlayheadTimeMs() ?? 0)
+    : 0;
+
+  await ensureManualPreviewAtTime({
+    graphicsService,
+    projectService,
+    store,
+    timeMs: captureTimeMs,
+  });
 };
 
 const getAnimationItem = ({ repositoryState, animationId } = {}) => {
@@ -493,7 +556,7 @@ const queueEditorAutosave = ({ deps } = {}) => {
 };
 
 const initializePreview = async ({ deps } = {}) => {
-  const { graphicsService, refs, store } = deps;
+  const { graphicsService, projectService, refs, store } = deps;
   if (!graphicsService) {
     return;
   }
@@ -513,7 +576,13 @@ const initializePreview = async ({ deps } = {}) => {
     store,
   });
   graphicsService.setAnimationPlaybackMode("auto");
-  graphicsService.render(store.selectAnimationResetState());
+  const resetState = store.selectAnimationResetState();
+  await ensurePreviewAssetsLoaded({
+    graphicsService,
+    projectService,
+    renderState: resetState,
+  });
+  graphicsService.render(resetState);
   store.setPreviewPlaybackMode({
     mode: "auto",
   });
@@ -607,6 +676,82 @@ export const handleBackClick = async (deps) => {
       payload: currentPayload,
     }),
   );
+};
+
+export const handleSavePreviewClick = async (deps) => {
+  const { appService, graphicsService, projectService, refs, render, store } =
+    deps;
+  const autosaveAttempt = await flushQueuedAutosave({
+    deps,
+  });
+
+  if (!autosaveAttempt.ok) {
+    return;
+  }
+
+  const animationId = store.selectEditItemId();
+  if (!animationId) {
+    appService.showAlert({
+      message: "Animation is missing.",
+      title: "Error",
+    });
+    return;
+  }
+
+  try {
+    await renderPreviewForThumbnailCapture({
+      graphicsService,
+      projectService,
+      store,
+    });
+    await waitForPreviewPaint();
+
+    const thumbnailImage = await captureCanvasThumbnailImage(
+      graphicsService,
+      refs.canvas,
+    );
+    if (!thumbnailImage) {
+      appService.showAlert({
+        message: "Failed to capture animation thumbnail.",
+        title: "Error",
+      });
+      return;
+    }
+
+    const thumbnailBlob = await dataUrlToBlob(thumbnailImage);
+    const storedFile = await projectService.storeFile({
+      file: thumbnailBlob,
+    });
+    const previewData = store.selectPreviewData();
+    const updateAttempt = await runResourcePageMutation({
+      appService,
+      fallbackMessage: "Failed to save animation preview.",
+      action: () =>
+        projectService.updateAnimation({
+          animationId,
+          data: {
+            thumbnailFileId: storedFile.fileId,
+            preview: previewData,
+          },
+          fileRecords: storedFile.fileRecords,
+        }),
+    });
+
+    if (!updateAttempt.ok) {
+      return;
+    }
+
+    store.setItems({
+      data: projectService.getRepositoryState()?.animations,
+    });
+    render();
+    appService.showToast({ message: "Animation preview saved." });
+  } catch {
+    appService.showAlert({
+      message: "Failed to save animation preview.",
+      title: "Error",
+    });
+  }
 };
 
 export const handleClosePopover = (deps) => {
@@ -945,11 +1090,16 @@ export const handleEditAutoFormSubmit = (deps, payload) => {
 
 export const handleRulerTimeHover = async (deps, payload) => {
   const { graphicsService, projectService, render, store } = deps;
+  const timeMs = payload._event.detail.timeMs;
+  store.setPreviewPlayhead({
+    timeMs,
+    visible: true,
+  });
   const didChangePreviewState = await ensureManualPreviewAtTime({
     graphicsService,
     projectService,
     store,
-    timeMs: payload._event.detail.timeMs,
+    timeMs,
   });
 
   if (didChangePreviewState) {
@@ -957,14 +1107,7 @@ export const handleRulerTimeHover = async (deps, payload) => {
   }
 };
 
-export const handleRulerTimeLeave = (deps) => {
-  const { graphicsService, render, store } = deps;
-  resetPreviewPlayback({
-    graphicsService,
-    store,
-  });
-  render();
-};
+export const handleRulerTimeLeave = () => {};
 
 export const handleInitialValueClick = (deps, payload) => {
   const { render, store } = deps;
@@ -1008,6 +1151,11 @@ const resolveIndexFromDataset = (payload) => {
 
 const commitMaskChange = (deps) => {
   const { render, store } = deps;
+  if (store.selectPopover().mode === "addMask") {
+    render();
+    return;
+  }
+
   invalidatePreview({
     store,
   });
@@ -1030,6 +1178,16 @@ const openMaskImageSelector = ({
     selectedImageId,
   });
   render();
+};
+
+const PREVIEW_IMAGE_SELECTOR_TARGETS = new Set([
+  "preview-background",
+  "preview-outgoing",
+  "preview-incoming",
+]);
+
+const isPreviewImageSelectorTarget = (target) => {
+  return PREVIEW_IMAGE_SELECTOR_TARGETS.has(target);
 };
 
 export const handleAddPropertyFormChange = (deps, payload) => {
@@ -1063,9 +1221,33 @@ export const handleEditInitialValueFormChange = (deps, payload) => {
   render();
 };
 
-export const handleEnableMaskClick = (deps) => {
+export const handleEditMaskClick = (deps, payload) => {
+  const { render, store } = deps;
+  store.setPopover({
+    mode: "editMask",
+    x: payload._event.clientX,
+    y: payload._event.clientY,
+    payload: {},
+  });
+  render();
+};
+
+export const handleOpenAddMaskClick = (deps, payload) => {
+  const { render, store } = deps;
+  store.startPendingTransitionMask({});
+  store.setPopover({
+    mode: "addMask",
+    x: payload._event.clientX,
+    y: payload._event.clientY,
+    payload: {},
+  });
+  render();
+};
+
+export const handleAddMaskClick = (deps) => {
   const { store } = deps;
-  store.enableTransitionMask({});
+  store.commitPendingTransitionMask({});
+  store.closePopover();
   commitMaskChange(deps);
 };
 
@@ -1145,7 +1327,7 @@ export const handleSingleMaskImageClick = (deps) => {
     render,
     store,
     target: "single",
-    selectedImageId: store.selectTransitionMask()?.imageId,
+    selectedImageId: store.selectMaskEditorTransitionMask()?.imageId,
   });
 };
 
@@ -1154,7 +1336,7 @@ export const handleSingleMaskImageRightClick = async (deps, payload) => {
   const event = payload?._event;
   event?.preventDefault?.();
 
-  if (!store.selectTransitionMask()?.imageId) {
+  if (!store.selectMaskEditorTransitionMask()?.imageId) {
     return;
   }
 
@@ -1185,7 +1367,7 @@ export const handleSequenceMaskAddClick = (deps) => {
 export const handleSequenceMaskImageClick = (deps, payload) => {
   const { render, store } = deps;
   const index = resolveIndexFromDataset(payload);
-  const transitionMask = store.selectTransitionMask();
+  const transitionMask = store.selectMaskEditorTransitionMask();
   openMaskImageSelector({
     render,
     store,
@@ -1234,7 +1416,7 @@ export const handleCompositeMaskAddClick = (deps) => {
 export const handleCompositeMaskImageClick = (deps, payload) => {
   const { render, store } = deps;
   const index = resolveIndexFromDataset(payload);
-  const transitionMask = store.selectTransitionMask();
+  const transitionMask = store.selectMaskEditorTransitionMask();
   openMaskImageSelector({
     render,
     store,
@@ -1289,6 +1471,21 @@ export const handleCompositeMaskInvertChange = (deps, payload) => {
   commitMaskChange(deps);
 };
 
+export const handlePreviewImageClick = (deps, payload) => {
+  const { render, store } = deps;
+  const target = payload._event.currentTarget?.dataset?.target;
+  if (!isPreviewImageSelectorTarget(target)) {
+    return;
+  }
+
+  openMaskImageSelector({
+    render,
+    store,
+    target,
+    selectedImageId: store.selectPreviewImageId({ target }),
+  });
+};
+
 export const handleMaskImageSelected = (deps, payload) => {
   const { render, store } = deps;
   store.setImageSelectorSelectedImageId({
@@ -1324,10 +1521,11 @@ export {
   handleImageSelectorKeyboardScopeKeyDown,
 };
 
-export const handleConfirmMaskImageSelection = (deps) => {
-  const { render, store } = deps;
+export const handleConfirmMaskImageSelection = async (deps) => {
+  const { appService, graphicsService, projectService, render, store } = deps;
   const imageSelectorDialog = store.selectImageSelectorDialog();
   const { index, selectedImageId, target } = imageSelectorDialog;
+  const isPreviewImageSelection = isPreviewImageSelectorTarget(target);
 
   if (target === "single") {
     store.setTransitionMaskImage({
@@ -1351,15 +1549,37 @@ export const handleConfirmMaskImageSelection = (deps) => {
       index,
       imageId: selectedImageId,
     });
+  } else if (isPreviewImageSelection) {
+    store.setPreviewImage({
+      target,
+      imageId: selectedImageId,
+    });
   }
 
   store.hideImageSelectorDialog({});
-  invalidatePreview({
+  if (isPreviewImageSelection) {
+    invalidatePreview({
+      store,
+    });
+    render();
+    try {
+      await renderPreviewForThumbnailCapture({
+        graphicsService,
+        projectService,
+        store,
+      });
+    } catch {
+      appService?.showToast?.({
+        message: "Failed to update preview image.",
+      });
+    }
+    return;
+  }
+
+  commitMaskChange({
+    ...deps,
+    render,
     store,
-  });
-  render();
-  queueEditorAutosave({
-    deps,
   });
 };
 
@@ -1410,7 +1630,7 @@ export const handleReplayAnimation = async (deps) => {
     store,
   });
   store.startPreviewPlayback({
-    startedAtMs: globalThis.performance.now(),
+    startedAtMs: performance.now(),
     durationMs,
   });
   schedulePreviewPlaybackIndicatorFrame({

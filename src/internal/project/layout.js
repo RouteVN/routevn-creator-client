@@ -5,6 +5,7 @@ import {
   createRenderableParticleData,
   isBuiltinParticleTextureName,
 } from "../particles.js";
+import { resolveSpritesheetAnimationFps } from "../spritesheets.js";
 import { filterTreeCollection, toHierarchyStructure } from "./tree.js";
 import { normalizeEngineActions } from "./engineActions.js";
 import {
@@ -36,7 +37,7 @@ import { withResolvedResourceFileMetadata } from "../resourceFileMetadata.js";
 
 const TEXT_CONTENT_BY_TYPE = {
   "text-ref-character-name": "${dialogue.character.name}",
-  "text-revealing-ref-dialogue-content": "${dialogue.content[0].text}",
+  "text-revealing-ref-dialogue-content": "${dialogue.content}",
   "text-ref-choice-item-content": "${item.content}",
   "text-ref-save-load-slot-date": "${formatDate(item.savedAt)}",
   "text-ref-dialogue-line-character-name": "${line.characterName}",
@@ -144,6 +145,7 @@ export const BASE_LAYOUT_KEYBOARD_OPTIONS = [
   { value: "enter", label: "Enter" },
   { value: "space", label: "Space" },
   { value: "esc", label: "Escape" },
+  { value: "ctrl", label: "Ctrl" },
   { value: "left", label: "Left Arrow" },
   { value: "right", label: "Right Arrow" },
   { value: "up", label: "Up Arrow" },
@@ -701,6 +703,58 @@ const getImageFileId = (imageItems, imageId) => {
     : undefined;
 };
 
+const getSoundFileReference = (soundItems, soundId) => {
+  const sound = soundItems?.[soundId];
+  const fileId = sound?.fileId;
+
+  if (typeof fileId !== "string" || fileId.length === 0) {
+    return undefined;
+  }
+
+  return {
+    soundSrc: `${fileId}`,
+    soundFileType:
+      typeof sound?.fileType === "string" && sound.fileType.length > 0
+        ? sound.fileType
+        : undefined,
+  };
+};
+
+const applyInteractionSoundVariants = ({ element, node, soundItems }) => {
+  const hoverSound = getSoundFileReference(soundItems, node.hoverSoundId);
+  const clickSound = getSoundFileReference(soundItems, node.clickSoundId);
+
+  if (!hoverSound && !clickSound) {
+    return element;
+  }
+
+  const nextElement = {
+    ...element,
+  };
+
+  if (hoverSound) {
+    nextElement.hover = {
+      ...nextElement.hover,
+      soundSrc: hoverSound.soundSrc,
+      ...(hoverSound.soundFileType
+        ? { soundFileType: hoverSound.soundFileType }
+        : {}),
+    };
+  }
+
+  if (clickSound) {
+    nextElement.click = {
+      ...nextElement.click,
+      soundSrc: clickSound.soundSrc,
+      ...(clickSound.soundFileType
+        ? { soundFileType: clickSound.soundFileType }
+        : {}),
+    };
+  }
+
+  return nextElement;
+};
+
 const toSpritesheetRuntimeClips = (spritesheet = {}) => {
   const frameNames = Object.keys(spritesheet.jsonData?.frames ?? {});
 
@@ -825,7 +879,11 @@ const applyTextNode = ({ element, node, context }) => {
     text: node.text,
   };
 
-  if (renderType === "text-revealing") {
+  if (node.type === "text-revealing-ref-dialogue-content") {
+    nextElement.content = TEXT_CONTENT_BY_TYPE[node.type];
+    nextElement.initialRevealedCharacters =
+      "${dialogue.initialRevealedCharacters}";
+  } else if (renderType === "text-revealing") {
     nextElement.content = toTextRevealingSegments(content);
   } else {
     nextElement.content = content;
@@ -977,18 +1035,15 @@ const applySpritesheetAnimationNode = ({ element, node, context }) => {
     typeof animationName === "string"
       ? spritesheet.animations?.[animationName]
       : undefined;
+  const fps = resolveSpritesheetAnimationFps(selectedAnimation);
   const playback = {
     autoplay: true,
+    fps,
     loop: selectedAnimation?.loop ?? true,
   };
-  const fps = Number(selectedAnimation?.animationSpeed) * 60;
 
   if (typeof animationName === "string" && animationName.length > 0) {
     playback.clip = animationName;
-  }
-
-  if (Number.isFinite(fps) && fps > 0) {
-    playback.fps = fps;
   }
 
   return {
@@ -1179,6 +1234,11 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
   element = applyRectNode({ element, node: effectiveNode });
   element = applySliderNode({ element, node: effectiveNode, imageItems });
   element = applyContainerNode({ element, node: effectiveNode });
+  element = applyInteractionSoundVariants({
+    element,
+    node: effectiveNode,
+    soundItems: nodeContext.soundItems,
+  });
   element = applyConditionalOverrides({
     element,
     node: effectiveNode,
@@ -1356,6 +1416,7 @@ export const buildLayoutElements = (
     layoutId: options.layoutId ?? "preview",
     layoutType: options.layoutType,
     imageItems,
+    soundItems: options.soundsData?.items || {},
     textStylesData,
     textStyles,
     particleItems: options.particlesData?.items || {},
@@ -1491,6 +1552,7 @@ export const extractFileIdsFromRenderState = (obj) => {
           (key === "fileId" ||
             key === "url" ||
             key === "src" ||
+            key === "soundSrc" ||
             key === "thumbSrc" ||
             key === "barSrc" ||
             key === "hoverUrl" ||
@@ -1509,7 +1571,12 @@ export const extractFileIdsFromRenderState = (obj) => {
           ) {
             return;
           }
-          addFileReference(fileId, value.fileType || "image/png");
+          addFileReference(
+            fileId,
+            key === "soundSrc"
+              ? value.soundFileType || value.fileType || "audio/*"
+              : value.fileType || "image/png",
+          );
         }
 
         if (key === "textures" && Array.isArray(value[key])) {
@@ -1549,6 +1616,8 @@ const RESOURCE_REFERENCE_KEYS = new Set([
   "strokeColorId",
   "particleId",
   "imageId",
+  "hoverSoundId",
+  "clickSoundId",
   "hoverImageId",
   "clickImageId",
   "thumbImageId",
@@ -1989,6 +2058,8 @@ const KEYBOARD_KEY_CANONICAL_MAP = {
   space: "space",
   esc: "escape",
   escape: "escape",
+  ctrl: "ctrl",
+  control: "ctrl",
   left: "arrowleft",
   arrowleft: "arrowleft",
   right: "arrowright",
@@ -2007,6 +2078,71 @@ export const getLayoutKeyboardResourceId = (layoutId) => {
   return `layout-keyboard:${layoutId}`;
 };
 
+const getKeyboardResourceActions = (interaction) => {
+  if (interaction?.actions && typeof interaction.actions === "object") {
+    return interaction.actions;
+  }
+
+  return getInteractionActions(interaction);
+};
+
+const getKeyboardResourcePayload = (interaction) => {
+  if (interaction?.payload && typeof interaction.payload === "object") {
+    return getInteractionPayload(interaction);
+  }
+
+  return {
+    actions: getKeyboardResourceActions(interaction),
+  };
+};
+
+const assignRouteGraphicsKeyboardPhase = ({ resource, keyboardMap, phase }) => {
+  const input = asKeyboardMap(keyboardMap);
+  if (!input) {
+    return;
+  }
+
+  Object.entries(input).forEach(([key, interaction]) => {
+    const resourceKey = normalizeKeyboardKeyForGraphics(key);
+    const existingEntry = resource[resourceKey] ?? {};
+    const payload = getKeyboardResourcePayload(interaction);
+
+    resource[resourceKey] = {
+      ...existingEntry,
+      [phase]: {
+        payload: structuredClone(payload),
+      },
+    };
+
+    if (phase === "keydown") {
+      resource[resourceKey].actions = structuredClone(
+        getKeyboardResourceActions(interaction),
+      );
+    }
+  });
+};
+export const toRouteGraphicsKeyboardResource = (keyboardMap, keyupMap) => {
+  const hasKeydown = asKeyboardMap(keyboardMap);
+  const hasKeyup = asKeyboardMap(keyupMap);
+  if (!hasKeydown && !hasKeyup) {
+    return {};
+  }
+
+  const resource = {};
+  assignRouteGraphicsKeyboardPhase({
+    resource,
+    keyboardMap,
+    phase: "keydown",
+  });
+  assignRouteGraphicsKeyboardPhase({
+    resource,
+    keyboardMap: keyupMap,
+    phase: "keyup",
+  });
+
+  return resource;
+};
+
 export const toRouteEngineKeyboardResource = (keyboardMap) => {
   const input = asKeyboardMap(keyboardMap);
   if (!input) {
@@ -2022,6 +2158,44 @@ export const toRouteEngineKeyboardResource = (keyboardMap) => {
   });
 
   return resource;
+};
+
+const asKeyboardPayload = (value, fallback = {}) => {
+  if (value?.payload && typeof value.payload === "object") {
+    return value.payload;
+  }
+
+  if (value?.actions && typeof value.actions === "object") {
+    return {
+      actions: value.actions,
+    };
+  }
+
+  return fallback;
+};
+
+const toRouteGraphicsKeyboardEntry = (value = {}) => {
+  const entry = {};
+
+  if (value?.keydown && typeof value.keydown === "object") {
+    entry.keydown = {
+      payload: structuredClone(asKeyboardPayload(value.keydown)),
+    };
+  }
+
+  if (value?.keyup && typeof value.keyup === "object") {
+    entry.keyup = {
+      payload: structuredClone(asKeyboardPayload(value.keyup)),
+    };
+  }
+
+  if (!entry.keydown && !entry.keyup) {
+    entry.keydown = {
+      payload: structuredClone(asKeyboardPayload(value, {})),
+    };
+  }
+
+  return entry;
 };
 
 export const prepareRenderStateKeyboardForGraphics = ({
@@ -2054,9 +2228,8 @@ export const prepareRenderStateKeyboardForGraphics = ({
 
   const normalizedKeyboard = {};
   Object.entries(existingKeyboard).forEach(([key, value]) => {
-    normalizedKeyboard[normalizeKeyboardKeyForGraphics(key)] = {
-      payload: structuredClone(value?.payload ?? {}),
-    };
+    normalizedKeyboard[normalizeKeyboardKeyForGraphics(key)] =
+      toRouteGraphicsKeyboardEntry(value);
   });
 
   return {

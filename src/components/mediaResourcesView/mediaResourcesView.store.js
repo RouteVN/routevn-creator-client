@@ -154,30 +154,25 @@ const resolveDefaultBorderColor = () => {
   return "bo";
 };
 
-export const selectViewData = ({ state, props, props: attrs }) => {
+export const selectViewData = ({ state, props }) => {
   const baseHeight = props.imageHeight ?? 150;
   const baseWidth = props.maxWidth ?? 400;
   const baseMediaWidth = 225;
   const baseMediaHeight = 150;
-  const imageHeight = Math.round(baseHeight * state.zoomLevel);
-  const maxWidth = Math.round(baseWidth * state.zoomLevel);
-  const mediaWidth = Math.round(baseMediaWidth * state.zoomLevel);
-  const mediaHeight = Math.round(baseMediaHeight * state.zoomLevel);
-  const showZoomControlsAttr =
-    attrs.showZoomControls ?? attrs["show-zoom-controls"];
-  const showBackButtonAttr = attrs.showBackButton ?? attrs["show-back-button"];
-  const canUploadAttr = attrs.canUpload ?? attrs["can-upload"];
-  const progressiveRenderAttr =
-    attrs.progressiveRender ?? attrs["progressive-render"];
-  const lazyImageCardsAttr = attrs.lazyImageCards ?? attrs["lazy-image-cards"];
-  const showImageCardPreviewAttr =
-    attrs.showImageCardPreview ?? attrs["show-image-card-preview"];
+  const fullWidthImageCards = parseBooleanProp(props.fullWidthImageCards);
+  const mobileLayout = parseBooleanProp(props.mobileLayout);
+  const effectiveZoomLevel = mobileLayout ? 1 : state.zoomLevel;
+  const imageHeight = Math.round(baseHeight * effectiveZoomLevel);
+  const maxWidth = Math.round(baseWidth * effectiveZoomLevel);
+  const mediaWidth = Math.round(baseMediaWidth * effectiveZoomLevel);
+  const mediaHeight = Math.round(baseMediaHeight * effectiveZoomLevel);
+  const scrollBottomPadding = props.scrollBottomPadding ?? "0px";
   const hasActiveTagFilter = (props.selectedTagFilterValues?.length ?? 0) > 0;
-  const lazyImageCards = parseBooleanProp(lazyImageCardsAttr);
+  const lazyImageCards = parseBooleanProp(props.lazyImageCards);
   let remainingEagerImageCardCount = lazyImageCards
     ? DEFAULT_EAGER_IMAGE_CARD_COUNT
     : Number.POSITIVE_INFINITY;
-  let remainingProgressiveItemCount = parseBooleanProp(progressiveRenderAttr)
+  let remainingProgressiveItemCount = parseBooleanProp(props.progressiveRender)
     ? state.progressiveRenderedItemCount
     : Number.POSITIVE_INFINITY;
 
@@ -214,11 +209,27 @@ export const selectViewData = ({ state, props, props: attrs }) => {
             remainingEagerImageCardCount - 1,
           );
         }
+        const useFullWidthCard =
+          mobileLayout || (fullWidthImageCards && item.cardKind === "image");
 
         return {
           ...item,
           domItemId: isInteractive ? item.id : "",
           cursor: isInteractive ? "pointer" : "default",
+          itemContainerStyle: useFullWidthCard
+            ? "width: 100%; box-sizing: border-box;"
+            : "",
+          imageCardWidth:
+            useFullWidthCard && item.cardKind === "image" ? "f" : maxWidth,
+          imageCardStyle:
+            useFullWidthCard && item.cardKind === "image"
+              ? "max-width: 100%; box-sizing: border-box;"
+              : "max-width: 100%;",
+          mediaCardWidth: useFullWidthCard ? "f" : mediaWidth,
+          mediaTextWidth: useFullWidthCard ? "f" : mediaWidth,
+          fontPreviewWidth: useFullWidthCard ? 320 : mediaWidth,
+          useFullWidthImageCard: useFullWidthCard && item.cardKind === "image",
+          previewAspectRatio: item.previewAspectRatio ?? "16 / 9",
           itemBorderColor: isSelected ? "pr" : defaultBorderColor,
           itemHoverBorderColor: isSelected
             ? "pr"
@@ -251,9 +262,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     tagFilterButtonBackgroundColor: hasActiveTagFilter ? "ac" : "bg",
     tagFilterButtonBorderColor: hasActiveTagFilter ? "ac" : "bo",
     tagFilterButtonIconColor: hasActiveTagFilter ? "white" : "mu-fg",
-    showTagFilter: parseBooleanProp(
-      props.showTagFilter ?? props["show-tag-filter"],
-    ),
+    showTagFilter: parseBooleanProp(props.showTagFilter),
     uploadText: props.uploadText ?? "Upload Files",
     uploadIcon: props.uploadIcon ?? "upload",
     emptyMessage:
@@ -269,12 +278,17 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     mediaWidth,
     mediaHeight,
     zoomLevel: state.zoomLevel,
-    showZoomControls: parseBooleanProp(showZoomControlsAttr),
-    showBackButton: parseBooleanProp(showBackButtonAttr),
-    canUpload: parseBooleanProp(canUploadAttr, true),
-    progressiveRender: parseBooleanProp(progressiveRenderAttr),
+    showZoomControls: !mobileLayout && parseBooleanProp(props.showZoomControls),
+    showSearch: parseBooleanProp(props.showSearch, true),
+    showBackButton: parseBooleanProp(props.showBackButton),
+    showMenuButton: parseBooleanProp(props.showMenuButton),
+    fullWidthImageCards,
+    mobileLayout,
+    canUpload: parseBooleanProp(props.canUpload, true),
+    progressiveRender: parseBooleanProp(props.progressiveRender),
     lazyImageCards,
-    showImageCardPreview: parseBooleanProp(showImageCardPreviewAttr, true),
+    showImageCardPreview: parseBooleanProp(props.showImageCardPreview, true),
+    scrollBottomPadding,
     draggingGroupId: state.draggingGroupId,
     dropdownMenu: state.dropdownMenu,
   };

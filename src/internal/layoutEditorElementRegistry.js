@@ -98,8 +98,6 @@ const CREATE_TEMPLATES = {
     type: "fragment-ref",
     name: "Fragment",
     ...BASE_TRANSFORM,
-    width: 100,
-    height: 100,
     fragmentLayoutId: undefined,
   }),
   "slider-horizontal": () => ({
@@ -485,6 +483,7 @@ const DEFAULT_CAPABILITIES = {
   supportsTextEditing: false,
   supportsTextRevealEffect: false,
   supportsTextStyles: false,
+  supportsSoundSelection: false,
   supportsTextAlignment: false,
   supportsActions: false,
   supportsSpriteImages: false,
@@ -504,6 +503,8 @@ const FAMILY_CAPABILITIES = {
     supportsActions: true,
   },
   fragment: {
+    supportsSize: false,
+    supportsHeight: false,
     supportsAnchor: true,
   },
   sprite: {
@@ -525,6 +526,7 @@ const FAMILY_CAPABILITIES = {
     supportsHeight: false,
     supportsAnchor: true,
     supportsTextStyles: true,
+    supportsSoundSelection: true,
     supportsTextAlignment: true,
   },
   slider: {

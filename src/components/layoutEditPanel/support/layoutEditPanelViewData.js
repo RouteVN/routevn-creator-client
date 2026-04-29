@@ -1,4 +1,4 @@
-import { toFlatGroups } from "../../../internal/project/tree.js";
+import { toFlatGroups, toFlatItems } from "../../../internal/project/tree.js";
 import { getInteractionActions } from "../../../internal/project/interactionPayload.js";
 import { RUNTIME_ACTION_LABELS } from "../../../internal/runtimeActions.js";
 import { parseRuntimeTemplateValue } from "../../../internal/runtimeFields.js";
@@ -15,6 +15,8 @@ const SETTINGS_ACTION_MODES = new Set([
   "resetStoryAtSection",
   "rollbackByOffset",
   "toggleSkipMode",
+  "startSkipMode",
+  "stopSkipMode",
   "toggleDialogueUI",
   "showConfirmDialog",
   "hideConfirmDialog",
@@ -34,6 +36,8 @@ const ACTION_LABELS = {
   resetStoryAtSection: "Reset Story At Section",
   toggleAutoMode: "Toggle Auto Mode",
   toggleSkipMode: "Toggle Skip Mode",
+  startSkipMode: "Start Skip Mode",
+  stopSkipMode: "Stop Skip Mode",
   toggleDialogueUI: "Toggle Dialogue Box Visibility",
   pushOverlay: "Push Overlay",
   popOverlay: "Pop Overlay",
@@ -118,6 +122,15 @@ export const toImageOptions = (imagesData = {}) => {
   );
 };
 
+export const toSoundOptions = (soundsData = {}) => {
+  return toFlatItems(soundsData)
+    .filter((item) => item.type === "sound")
+    .map((item) => ({
+      label: item.name,
+      value: item.id,
+    }));
+};
+
 export const toInspectorValues = ({
   values,
   firstTextStyleId,
@@ -172,6 +185,8 @@ export const toInspectorValues = ({
     textStyleId: values?.textStyleId || firstTextStyleId || "",
     hoverTextStyleId: values?.hoverTextStyleId ?? "",
     clickTextStyleId: values?.clickTextStyleId ?? "",
+    hoverSoundId: values?.hoverSoundId ?? "",
+    clickSoundId: values?.clickSoundId ?? "",
     conditionalOverrides: normalizeConditionalOverrideRules(
       values?.conditionalOverrides,
     ),

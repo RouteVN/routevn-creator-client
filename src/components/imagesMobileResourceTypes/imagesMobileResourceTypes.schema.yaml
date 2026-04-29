@@ -1,0 +1,13 @@
+componentName: rvn-images-mobile-resource-types
+propsSchema:
+  type: object
+  properties:
+    resourceCategory:
+      type: string
+      enum:
+        - assets
+        - animatedAssets
+        - userInterface
+        - systemConfig
+    selectedResourceId:
+      type: string

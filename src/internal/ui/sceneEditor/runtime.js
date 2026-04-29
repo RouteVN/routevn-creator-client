@@ -24,6 +24,10 @@ import {
 const NO_PENDING_CANVAS_RENDER = Symbol("no-pending-canvas-render");
 const SCENE_EDITOR_PERF_SCOPE = "scene-editor-perf";
 
+const isSceneEditorPreviewVisible = (store) => {
+  return store?.selectPreviewScene?.()?.previewVisible === true;
+};
+
 const waitForNextFrame = () =>
   new Promise((resolve) => {
     if (typeof requestAnimationFrame === "function") {
@@ -34,17 +38,44 @@ const waitForNextFrame = () =>
     globalThis.setTimeout(resolve, 0);
   });
 
-const waitForMountedCanvas = async (refs, maxFrames = 10) => {
+const getCurrentCanvasRoot = (refs) => {
+  const previewCanvasHost = refs?.previewCanvasHost;
+  const canvasRoot =
+    previewCanvasHost?.getCanvasRoot?.() ||
+    previewCanvasHost?.shadowRoot?.querySelector?.("#canvas") ||
+    previewCanvasHost?.querySelector?.("#canvas");
+
+  if (canvasRoot?.isConnected) {
+    return canvasRoot;
+  }
+
+  return canvasRoot;
+};
+
+const waitForMountedCanvasRoot = async (refs, maxFrames = 10) => {
   for (let attempt = 0; attempt < maxFrames; attempt += 1) {
-    const canvas = refs?.canvas;
-    if (canvas?.isConnected) {
-      return canvas;
+    const canvasRoot = getCurrentCanvasRoot(refs);
+    if (canvasRoot?.isConnected) {
+      return canvasRoot;
     }
 
     await waitForNextFrame();
   }
 
-  return refs?.canvas;
+  return getCurrentCanvasRoot(refs);
+};
+
+const attachGraphicsCanvasToMountedRoot = async (deps, maxFrames = 10) => {
+  const mountedCanvasRoot = await waitForMountedCanvasRoot(
+    deps?.refs,
+    maxFrames,
+  );
+  if (!mountedCanvasRoot?.isConnected) {
+    return mountedCanvasRoot;
+  }
+
+  await deps?.graphicsService?.attachCanvas?.(mountedCanvasRoot);
+  return mountedCanvasRoot;
 };
 
 export const createSceneEditorRenderQueue = (renderCanvas) => {
@@ -416,7 +447,7 @@ const createBeforeHandleActionsHook = (deps) => {
         actions,
         eventContext,
         graphicsService: deps.graphicsService,
-        canvasRoot: deps.refs?.canvas,
+        canvasRoot: getCurrentCanvasRoot(deps.refs),
         resolveEventBindings,
       });
     const layoutIds = Array.from(
@@ -558,6 +589,17 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     : undefined;
   const renderStateSelectStartedAt = perfEnabled ? getDebugNow() : 0;
   const currentRenderState = graphicsService.engineSelectRenderState();
+  const renderStateSummary = {
+    elementCount: Array.isArray(currentRenderState?.elements)
+      ? currentRenderState.elements.length
+      : 0,
+    animationCount: Array.isArray(currentRenderState?.animations)
+      ? currentRenderState.animations.length
+      : 0,
+    audioCount: Array.isArray(currentRenderState?.audio)
+      ? currentRenderState.audio.length
+      : 0,
+  };
   const renderStateSelectDurationMs = perfEnabled
     ? getDebugDurationMs(renderStateSelectStartedAt)
     : undefined;
@@ -587,6 +629,7 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
 
   let canvasPaintDurationMs = 0;
   if (!skipCanvasPaint) {
+    await attachGraphicsCanvasToMountedRoot(deps, 2);
     const canvasPaintStartedAt = perfEnabled ? getDebugNow() : 0;
     graphicsService.engineRenderCurrentState({
       skipAudio: isMuted,
@@ -641,15 +684,9 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
       canvasPaintDurationMs,
       nextLineConfigDurationMs,
       presentationStateDurationMs,
-      elementCount: Array.isArray(currentRenderState?.elements)
-        ? currentRenderState.elements.length
-        : 0,
-      animationCount: Array.isArray(currentRenderState?.animations)
-        ? currentRenderState.animations.length
-        : 0,
-      audioCount: Array.isArray(currentRenderState?.audio)
-        ? currentRenderState.audio.length
-        : 0,
+      elementCount: renderStateSummary.elementCount,
+      animationCount: renderStateSummary.animationCount,
+      audioCount: renderStateSummary.audioCount,
     });
   }
 };
@@ -718,12 +755,6 @@ export const initializeSceneEditorPage = async (deps) => {
   const previewWidth = projectData?.screen?.width;
   const previewHeight = projectData?.screen?.height;
 
-  await graphicsService.init({
-    beforeHandleActions: createBeforeHandleActionsHook(deps),
-    width: previewWidth,
-    height: previewHeight,
-  });
-
   const initialProjectData = createProjectDataWithSelectedEntryPoint(
     projectData,
     {
@@ -734,24 +765,37 @@ export const initializeSceneEditorPage = async (deps) => {
   );
   const initialSceneIds = extractInitialHybridSceneIds(projectData, sceneId);
 
+  store.setScenePageLoading({ isLoading: false });
+  render();
+  const mountedCanvasRoot = await waitForMountedCanvasRoot(refs);
+  if (!mountedCanvasRoot?.isConnected) {
+    throw new Error("Scene editor canvas failed to mount");
+  }
+
+  await graphicsService.init({
+    canvas: mountedCanvasRoot,
+    beforeHandleActions: createBeforeHandleActionsHook(deps),
+    width: previewWidth,
+    height: previewHeight,
+  });
+
   await loadAssetsForSceneIds(deps, projectData, initialSceneIds, {
     showLoading: false,
   });
 
-  store.setScenePageLoading({ isLoading: false });
-  render();
-  const mountedCanvas = await waitForMountedCanvas(refs);
-  if (!mountedCanvas?.isConnected) {
-    throw new Error("Scene editor canvas failed to mount");
-  }
-
-  await graphicsService.attachCanvas(mountedCanvas);
   void preloadDirectTransitionScenes(deps, initialProjectData, initialSceneIds);
-  subject.dispatch("sceneEditor.renderCanvas", {
+
+  await renderSceneEditorState(deps, {
     skipAnimations: true,
-    skipCanvasPaint: true,
   });
+  await updateSceneEditorSectionChanges(deps);
+  render();
+
   setTimeout(() => {
+    if (isSceneEditorPreviewVisible(store)) {
+      return;
+    }
+
     subject.dispatch("sceneEditor.renderCanvas", {});
   }, 1000);
 };
@@ -769,8 +813,12 @@ export const restoreSceneEditorFromPreview = async (deps) => {
   const projectData = store.selectProjectData();
   const previewWidth = projectData?.screen?.width;
   const previewHeight = projectData?.screen?.height;
+  const mountedCanvasRoot = await waitForMountedCanvasRoot(refs);
+  if (!mountedCanvasRoot?.isConnected) {
+    throw new Error("Scene editor canvas failed to mount");
+  }
   await graphicsService.init({
-    canvas: refs.canvas,
+    canvas: mountedCanvasRoot,
     beforeHandleActions: createBeforeHandleActionsHook(deps),
     width: previewWidth,
     height: previewHeight,
@@ -803,8 +851,12 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
     return;
   }
 
-  const mountedCanvas = deps.refs?.canvas;
-  if (!mountedCanvas?.isConnected) {
+  if (isSceneEditorPreviewVisible(store)) {
+    return;
+  }
+
+  const mountedCanvasRoot = getCurrentCanvasRoot(deps.refs);
+  if (!mountedCanvasRoot?.isConnected) {
     return;
   }
 

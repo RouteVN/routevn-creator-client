@@ -32,6 +32,20 @@ const navigateToLayoutEditor = ({ appService, layoutId } = {}) => {
   });
 };
 
+const normalizeBooleanField = (value) => value === true || value === "true";
+
+const printSelectedLayoutData = (store, { itemId } = {}) => {
+  const layoutData = store.selectLayoutItemById({ itemId });
+  if (!layoutData || layoutData.type !== "layout") {
+    return;
+  }
+
+  console.log("[layouts] selected layout data", {
+    selectedItemId: itemId,
+    layoutData,
+  });
+};
+
 const openLayoutEditorWithItem = ({ deps, itemId } = {}) => {
   if (!itemId) {
     return;
@@ -58,7 +72,7 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   }
 
   store.setSelectedItemId({ itemId });
-  refs.fileExplorer.selectItem({ itemId });
+  refs.fileExplorer?.selectItem?.({ itemId });
   store.openEditDialog({
     itemId,
     defaultValues: {
@@ -92,6 +106,9 @@ const {
   handleFileExplorerKeyboardScopeKeyDown,
   handleItemClick: handleCatalogLayoutItemClick,
   handleSearchInput,
+  handleMobileFileExplorerOpen,
+  handleMobileFileExplorerClose,
+  handleMobileDetailSheetClose,
   openCreateTagDialogForMode,
   handleCreateTagDialogClose,
   handleTagFilterChange,
@@ -161,6 +178,9 @@ export {
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
   handleSearchInput,
+  handleMobileFileExplorerOpen,
+  handleMobileFileExplorerClose,
+  handleMobileDetailSheetClose,
   handleCreateTagDialogClose,
   handleTagFilterChange,
   handleTagFilterAddOptionClick,
@@ -172,16 +192,26 @@ export {
 };
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
+  const previousItemId = deps.store.selectSelectedItemId();
   handleCatalogFileExplorerSelectionChanged(deps, payload);
 
-  const { isFolder } = payload._event.detail;
-  if (isFolder) {
+  const { itemId, isFolder } = payload._event.detail;
+  if (isFolder || !itemId || previousItemId === itemId) {
     return;
   }
+
+  printSelectedLayoutData(deps.store, { itemId });
 };
 
 export const handleLayoutItemClick = (deps, payload) => {
+  const previousItemId = deps.store.selectSelectedItemId();
   handleCatalogLayoutItemClick(deps, payload);
+  const { itemId } = payload._event.detail;
+  if (!itemId || previousItemId === itemId) {
+    return;
+  }
+
+  printSelectedLayoutData(deps.store, { itemId });
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {
@@ -1004,7 +1034,7 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
     });
     return;
   }
-  const isFragment = values?.isFragment ?? false;
+  const isFragment = normalizeBooleanField(values?.isFragment);
   const description = values?.description ?? "";
 
   const projectResolution = requireProjectResolution(
@@ -1072,7 +1102,7 @@ export const handleEditFormActionClick = async (deps, payload) => {
           name,
           description: values?.description ?? "",
           tagIds: Array.isArray(values?.tagIds) ? values.tagIds : [],
-          isFragment: values?.isFragment ?? false,
+          isFragment: normalizeBooleanField(values?.isFragment),
         },
       }),
   });

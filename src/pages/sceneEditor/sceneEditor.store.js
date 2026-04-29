@@ -231,6 +231,8 @@ const buildProjectDataSourceState = (state) => {
 export const createInitialState = () => ({
   sceneId: undefined,
   selectedLineId: undefined,
+  isTouchMode: false,
+  mobileKeyboardVisible: false,
   sectionsGraphView: false,
   selectedSectionId: "1",
   sectionsOverviewPanel: {
@@ -295,6 +297,19 @@ export const createInitialState = () => ({
     content: "",
   },
 });
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  state.isTouchMode =
+    uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
+};
+
+export const setMobileKeyboardVisible = ({ state }, { isVisible } = {}) => {
+  state.mobileKeyboardVisible = isVisible === true;
+};
+
+export const selectMobileKeyboardVisible = ({ state }) => {
+  return state.mobileKeyboardVisible;
+};
 
 export const setSceneId = ({ state }, { sceneId } = {}) => {
   state.sceneId = sceneId;
@@ -455,6 +470,10 @@ export const selectLayouts = ({ state }) => {
     items: {},
     tree: [],
   };
+  const soundsData = state.repositoryState.sounds || {
+    items: {},
+    tree: [],
+  };
   const colors = state.repositoryState.colors || { items: {}, tree: [] };
   const fonts = state.repositoryState.fonts || { items: {}, tree: [] };
   const files = state.repositoryState.files || { items: {}, tree: [] };
@@ -478,6 +497,7 @@ export const selectLayouts = ({ state }) => {
             layoutId,
             layoutType: layout.layoutType,
             filesData: files,
+            soundsData,
             layoutsData: layouts,
           },
         ).elements,
@@ -808,6 +828,14 @@ export const selectViewData = ({ state }) => {
       dropdownMenu: state.dropdownMenu,
       popover: state.popover,
       selectedLineId: state.selectedLineId,
+      isTouchMode: state.isTouchMode,
+      mobileKeyboardVisible: state.mobileKeyboardVisible,
+      mobileTopBarVisibility: state.mobileKeyboardVisible
+        ? "hidden"
+        : "visible",
+      mobileTopBarPointerEvents: state.mobileKeyboardVisible ? "none" : "auto",
+      currentSectionName: "",
+      mobileEditorBottomPadding: "0px",
       sectionsGraphView: state.sectionsGraphView,
       layouts: [],
       allCharacters: [],
@@ -903,6 +931,7 @@ export const selectViewData = ({ state }) => {
   const currentSection = scene.sections.find(
     (section) => section.id === state.selectedSectionId,
   );
+  const currentSectionName = currentSection?.name ?? "";
 
   const selectedLine = currentSection?.lines?.find(
     (line) => line.id === state.selectedLineId,
@@ -1007,6 +1036,14 @@ export const selectViewData = ({ state }) => {
     form: sectionForm,
     selectedLineId: state.selectedLineId,
     selectedLine,
+    isTouchMode: state.isTouchMode,
+    mobileKeyboardVisible: state.mobileKeyboardVisible,
+    mobileTopBarVisibility: state.mobileKeyboardVisible ? "hidden" : "visible",
+    mobileTopBarPointerEvents: state.mobileKeyboardVisible ? "none" : "auto",
+    currentSectionName,
+    mobileEditorBottomPadding: state.isTouchMode
+      ? "calc(96px + env(safe-area-inset-bottom))"
+      : "0px",
     selectedLineActions: toPlainObject(selectedLine?.actions),
     sectionsGraphView: state.sectionsGraphView,
     layouts: Object.entries(selectLayouts({ state })).map(([id, item]) => ({

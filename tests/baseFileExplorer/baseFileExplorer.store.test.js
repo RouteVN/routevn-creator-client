@@ -71,4 +71,27 @@ describe("baseFileExplorer.store", () => {
     expect(viewData.items).toHaveLength(1);
     expect(viewData.items[0].svg).toBe("audio");
   });
+
+  it("preserves an explicit item icon", () => {
+    const state = createInitialState();
+    const viewData = selectViewData({
+      state,
+      props: {
+        items: [
+          {
+            id: "custom-item-1",
+            type: "custom-item",
+            name: "Custom",
+            svg: "component",
+            _level: 0,
+            hasChildren: false,
+            parentId: null,
+          },
+        ],
+      },
+    });
+
+    expect(viewData.items).toHaveLength(1);
+    expect(viewData.items[0].svg).toBe("component");
+  });
 });

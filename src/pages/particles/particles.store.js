@@ -1,5 +1,6 @@
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
 import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerDragOptions.js";
+import { toFlatItems } from "../../internal/project/tree.js";
 import {
   DEFAULT_PROJECT_RESOLUTION,
   requireProjectResolution,
@@ -17,6 +18,7 @@ import {
   buildParticleFormValues,
   createParticleCreateSetupForm,
   createParticleForm,
+  resolveParticleTextureImageItem,
 } from "./support/particleForm.js";
 import { DEFAULT_PARTICLE_PRESET_ID } from "./support/particlePresets.js";
 import { formatParticleAspectRatio } from "./support/particlePreview.js";
@@ -35,6 +37,46 @@ const PARTICLE_EDITOR_STEP = "editor";
 const CREATE_TAG_DEFAULT_VALUES = Object.freeze({
   name: "",
 });
+
+const createInitialPreviewImageSelectorDialogState = () => ({
+  open: false,
+  selectedImageId: undefined,
+});
+
+const getImageItems = (state) => state.imagesData?.items ?? {};
+
+const getImageItemById = (state, imageId) => {
+  return imageId ? getImageItems(state)?.[imageId] : undefined;
+};
+
+const resolveImageAspectRatio = (item) => {
+  const width = Number(item?.width);
+  const height = Number(item?.height);
+
+  if (!Number.isFinite(width) || !Number.isFinite(height) || height <= 0) {
+    return "16 / 9";
+  }
+
+  return `${Math.max(1, Math.round(width))} / ${Math.max(1, Math.round(height))}`;
+};
+
+const buildDialogPreviewBackgroundImage = (state) => {
+  const imageId = state.dialogPreviewBackgroundImageId;
+  const imageItem = getImageItemById(state, imageId);
+
+  if (!imageId || !imageItem?.fileId) {
+    return undefined;
+  }
+
+  return {
+    imageId,
+    previewFileId: imageItem.thumbnailFileId ?? imageItem.fileId,
+    previewAspectRatio: resolveImageAspectRatio(imageItem),
+    name: imageItem.name ?? imageId,
+    itemBorderColor: "bo",
+    itemHoverBorderColor: "ac",
+  };
+};
 
 const createTagForm = {
   title: "Create Tag",
@@ -106,6 +148,9 @@ const {
   createInitialState: createCatalogInitialState,
   setItems: setBaseItems,
   setSelectedItemId: setBaseSelectedItemId,
+  setUiConfig,
+  openMobileFileExplorer,
+  closeMobileFileExplorer,
   selectSelectedItem,
   selectItemById,
   selectSelectedItemId,
@@ -122,8 +167,13 @@ const {
   matchesSearch,
   buildDetailFields: buildParticleDetailFields,
   buildCatalogItem: buildParticleCatalogItem,
+  hiddenMobileDetailSlots: ["particle-preview"],
   extendViewData: ({ state, selectedItem, baseViewData }) => {
     const activeTagIds = state.activeTagIds ?? [];
+    const selectedTextureImageItem = resolveParticleTextureImageItem(
+      selectedItem?.modules?.appearance?.texture,
+      state.imagesData?.items,
+    );
     const filteredCatalogGroups = (baseViewData.catalogGroups ?? [])
       .map((group) => ({
         ...group,
@@ -165,7 +215,14 @@ const {
       particleForm: state.particleForm,
       dialogFormValues: state.dialogFormValues,
       dialogPreviewAspectRatio: state.dialogPreviewAspectRatio,
+      dialogPreviewBackgroundImage: buildDialogPreviewBackgroundImage(state),
+      previewImageSelectorDialog: state.previewImageSelectorDialog,
+      imageFolderItems: toFlatItems(state.imagesData).filter(
+        (item) => item.type === "folder",
+      ),
       selectedPreviewAspectRatio: formatParticleAspectRatio(selectedItem),
+      selectedTextureImageFileId: selectedTextureImageItem?.fileId,
+      selectedTextureImageName: selectedTextureImageItem?.name ?? "",
       isCreateTagDialogOpen: state.isCreateTagDialogOpen,
       createTagDefaultValues: state.createTagDefaultValues,
       createTagForm,
@@ -194,6 +251,8 @@ export const createInitialState = () => {
     previewRuntimeTarget: undefined,
     previewRuntimeWidth: undefined,
     previewRuntimeHeight: undefined,
+    dialogPreviewBackgroundImageId: undefined,
+    previewImageSelectorDialog: createInitialPreviewImageSelectorDialogState(),
     dialogStep: CREATE_PARTICLE_SETUP_STEP,
     dialogFormTab: DEFAULT_PARTICLE_FORM_TAB,
     imagesData: EMPTY_TREE,
@@ -315,7 +374,14 @@ export const closeCreateTagDialog = ({ state }, _payload = {}) => {
   };
 };
 
-export { selectSelectedItem, selectSelectedItemId, setSearchQuery };
+export {
+  closeMobileFileExplorer,
+  openMobileFileExplorer,
+  selectSelectedItem,
+  selectSelectedItemId,
+  setSearchQuery,
+  setUiConfig,
+};
 
 export const selectParticleItemById = selectItemById;
 export const selectSelectedParticle = selectSelectedItem;
@@ -409,6 +475,8 @@ export const closeParticleDialog = ({ state }, _payload = {}) => {
   state.dialogPresetId = defaultDialogState.dialogPresetId;
   state.dialogDefaultValues = defaultDialogState.dialogDefaultValues;
   state.dialogPreviewAspectRatio = defaultDialogState.dialogPreviewAspectRatio;
+  state.previewImageSelectorDialog =
+    createInitialPreviewImageSelectorDialogState();
   state.particleForm = createDialogForm({
     imagesData: state.imagesData,
     tagsData: state.tagsData,
@@ -443,6 +511,13 @@ export const setDialogPreviewSize = ({ state }, { width, height } = {}) => {
 
 export const setImagesData = ({ state }, { imagesData } = {}) => {
   state.imagesData = imagesData ?? EMPTY_TREE;
+  const backgroundImage = getImageItemById(
+    state,
+    state.dialogPreviewBackgroundImageId,
+  );
+  if (!backgroundImage?.fileId) {
+    state.dialogPreviewBackgroundImageId = undefined;
+  }
   state.particleForm = createDialogForm({
     editMode: state.editMode,
     imagesData: state.imagesData,
@@ -493,6 +568,35 @@ export const clearPreviewRuntime = ({ state }, _payload = {}) => {
   state.previewRuntimeHeight = undefined;
 };
 
+export const setDialogPreviewBackgroundImage = (
+  { state },
+  { imageId } = {},
+) => {
+  state.dialogPreviewBackgroundImageId = imageId ?? undefined;
+};
+
+export const clearDialogPreviewBackgroundImage = ({ state }, _payload = {}) => {
+  state.dialogPreviewBackgroundImageId = undefined;
+};
+
+export const showPreviewImageSelectorDialog = ({ state }, _payload = {}) => {
+  state.previewImageSelectorDialog.open = true;
+  state.previewImageSelectorDialog.selectedImageId =
+    state.dialogPreviewBackgroundImageId;
+};
+
+export const hidePreviewImageSelectorDialog = ({ state }, _payload = {}) => {
+  state.previewImageSelectorDialog =
+    createInitialPreviewImageSelectorDialogState();
+};
+
+export const setPreviewImageSelectorSelectedImageId = (
+  { state },
+  { imageId } = {},
+) => {
+  state.previewImageSelectorDialog.selectedImageId = imageId ?? undefined;
+};
+
 export const selectTargetGroupId = ({ state }) => state.targetGroupId;
 export const selectEditMode = ({ state }) => state.editMode;
 export const selectEditItemId = ({ state }) => state.editItemId;
@@ -504,6 +608,12 @@ export const selectDialogStep = ({ state }) => state.dialogStep;
 export const selectDialogFormTab = ({ state }) => state.dialogFormTab;
 export const selectDialogFormValues = ({ state }) => state.dialogFormValues;
 export const selectImagesData = ({ state }) => state.imagesData;
+export const selectDialogPreviewBackgroundImage = ({ state }) => {
+  return getImageItemById(state, state.dialogPreviewBackgroundImageId);
+};
+export const selectPreviewImageSelectorDialog = ({ state }) => {
+  return state.previewImageSelectorDialog;
+};
 export const selectPreviewRuntime = ({ state }) => ({
   target: state.previewRuntimeTarget,
   width: state.previewRuntimeWidth,

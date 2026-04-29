@@ -663,6 +663,10 @@ export const createLayoutEditorRenderState = ({
     items: {},
     tree: [],
   };
+  const soundsData = repositoryState?.sounds || {
+    items: {},
+    tree: [],
+  };
   const particlesData = repositoryState?.particles || {
     items: {},
     tree: [],
@@ -683,6 +687,7 @@ export const createLayoutEditorRenderState = ({
       layoutId: layoutState?.id,
       layoutType: layoutState?.layoutType,
       filesData: repositoryState?.files,
+      soundsData,
       particlesData,
       spritesheetsData,
       layoutsData: repositoryState?.layouts?.items || {},

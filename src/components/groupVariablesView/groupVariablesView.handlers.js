@@ -1,5 +1,9 @@
 import { buildUniqueTagIds } from "../../internal/resourceTags.js";
 import {
+  isVariableEnumEnabled,
+  normalizeVariableEnumValues,
+} from "../../internal/variableEnums.js";
+import {
   applyTagFilterPopoverSelection,
   clearTagFilterPopoverSelection,
   closeTagFilterPopoverFromOverlay,
@@ -12,6 +16,15 @@ export const handleTagFilterPopoverClose = closeTagFilterPopoverFromOverlay;
 export const handleTagFilterOptionClick = toggleTagFilterPopoverOption;
 export const handleTagFilterClearClick = clearTagFilterPopoverSelection;
 export const handleTagFilterApplyClick = applyTagFilterPopoverSelection;
+
+export const handleMenuClick = ({ dispatchEvent }) => {
+  dispatchEvent(
+    new CustomEvent("menu-click", {
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
 
 export const handleSearchInput = (deps, payload) => {
   const { store, render } = deps;
@@ -61,6 +74,89 @@ const getDefaultValueByType = (type) => {
   return "";
 };
 
+const addEnumValueForm = {
+  title: "Add Enum Value",
+  fields: [
+    {
+      name: "value",
+      type: "input-text",
+      label: "Value",
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        label: "Add Value",
+      },
+    ],
+  },
+};
+
+const getFormFieldNameFromEvent = (event) => {
+  const directFieldName = event?.target?.dataset?.fieldName;
+  if (directFieldName) {
+    return directFieldName;
+  }
+
+  const path =
+    typeof event?.composedPath === "function" ? event.composedPath() : [];
+  for (const node of path) {
+    const fieldName = node?.dataset?.fieldName;
+    if (fieldName) {
+      return fieldName;
+    }
+  }
+
+  return event?.detail?.fieldName ?? event?.detail?.name ?? "";
+};
+
+const resolveVariableFormValues = ({
+  prevValues = {},
+  newValues = {},
+  isEditMode = false,
+} = {}) => {
+  const nextValues = {
+    ...prevValues,
+    ...newValues,
+  };
+  const type = nextValues.type ?? "string";
+  const typeChanged = type !== prevValues.type;
+  let isEnum = type === "string" && nextValues.isEnum === true;
+  let enumValues = isEnum
+    ? normalizeVariableEnumValues(nextValues.enumValues)
+    : [];
+  let defaultValue = nextValues.default;
+
+  if (!isEditMode && typeChanged) {
+    defaultValue = getDefaultValueByType(type);
+    if (type === "string") {
+      isEnum = false;
+      enumValues = [];
+    }
+  }
+
+  if (type !== "string") {
+    isEnum = false;
+    enumValues = [];
+  }
+
+  if (isEnum && !enumValues.includes(defaultValue)) {
+    defaultValue = enumValues[0] ?? "";
+  }
+
+  return {
+    ...nextValues,
+    type,
+    isEnum,
+    enumValues,
+    default: defaultValue,
+  };
+};
+
 const findVariableWithGroup = (flatGroups = [], itemId) => {
   for (const group of flatGroups) {
     for (const item of group.children || []) {
@@ -105,6 +201,8 @@ const openEditDialogForItem = ({ deps, itemId } = {}) => {
       tagIds: item.tagIds ?? [],
       scope: item.scope || "context",
       type,
+      isEnum: isVariableEnumEnabled(item),
+      enumValues: normalizeVariableEnumValues(item.enumValues),
       default: defaultValue,
     },
   });
@@ -146,17 +244,12 @@ export const handleDialogFormChange = (deps, payload) => {
     : store._state || store.state;
   const isEditMode = storeState?.dialogMode === "edit";
 
-  // When type changes, set appropriate default value
-  let defaultValue = newValues.default;
-  if (!isEditMode && newValues.type !== prevValues.type) {
-    defaultValue = getDefaultValueByType(newValues.type);
-  }
-
-  // Update form values for preview
   store.updateFormValues({
-    ...prevValues,
-    ...newValues,
-    default: defaultValue,
+    ...resolveVariableFormValues({
+      prevValues,
+      newValues,
+      isEditMode,
+    }),
   });
   render();
 };
@@ -190,12 +283,67 @@ export const handleCloseDialog = (deps) => {
   render();
 };
 
-export const handleFormAddOptionClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
+export const handleFormAddOptionClick = async (deps, payload) => {
+  const { appService, dispatchEvent, refs, render, store } = deps;
+  const fieldName = getFormFieldNameFromEvent(payload?._event);
+
+  if (fieldName === "enumValues") {
+    payload?._event?.stopPropagation?.();
+    const dialogResult = await appService.showFormDialog({
+      form: addEnumValueForm,
+      defaultValues: {
+        value: "",
+      },
+    });
+
+    if (!dialogResult || dialogResult.actionId !== "submit") {
+      return;
+    }
+
+    const value = String(dialogResult.values?.value ?? "").trim();
+    if (!value) {
+      appService.showAlert({
+        message: "Enum value is required.",
+        title: "Warning",
+      });
+      return;
+    }
+
+    const currentValues =
+      refs.variableForm?.getValues?.() ?? store.selectDefaultValues();
+    const enumValues = normalizeVariableEnumValues(currentValues.enumValues);
+    if (enumValues.includes(value)) {
+      appService.showAlert({
+        message: "Enum value must be unique.",
+        title: "Warning",
+      });
+      return;
+    }
+
+    const nextEnumValues = [...enumValues, value];
+    const nextValues = {
+      ...currentValues,
+      isEnum: true,
+      enumValues: nextEnumValues,
+      default: nextEnumValues.includes(currentValues.default)
+        ? currentValues.default
+        : value,
+    };
+
+    refs.variableForm?.setValues?.({
+      values: nextValues,
+    });
+    store.updateFormValues(nextValues);
+    render();
+    return;
+  }
 
   dispatchEvent(
     new CustomEvent("form-add-option-click", {
-      detail: payload._event.detail ?? {},
+      detail: {
+        ...payload?._event?.detail,
+        fieldName,
+      },
       bubbles: true,
       composed: true,
     }),
@@ -345,6 +493,10 @@ export const handleFormActionClick = (deps, payload) => {
     const scope =
       formData.scope ?? storeState.defaultValues?.scope ?? "context";
     const type = formData.type ?? storeState.defaultValues?.type ?? "string";
+    const isEnum = type === "string" && formData.isEnum === true;
+    const enumValues = isEnum
+      ? normalizeVariableEnumValues(formData.enumValues)
+      : [];
     if (isEditMode && !editingItemId) {
       appService.showAlert({
         message:
@@ -356,6 +508,20 @@ export const handleFormActionClick = (deps, payload) => {
     if (!isEditMode && !targetGroupId) {
       appService.showAlert({
         message: "Unable to add variable. Please select a group and try again.",
+        title: "Warning",
+      });
+      return;
+    }
+    if (isEnum && enumValues.length === 0) {
+      appService.showAlert({
+        message: "Enum variables need at least one value.",
+        title: "Warning",
+      });
+      return;
+    }
+    if (isEnum && !enumValues.includes(formData.default)) {
+      appService.showAlert({
+        message: "Choose a default value from the enum list.",
         title: "Warning",
       });
       return;
@@ -381,6 +547,9 @@ export const handleFormActionClick = (deps, payload) => {
     if (defaultValue === undefined || defaultValue === "") {
       defaultValue = getDefaultValueByType(type);
     }
+    if (isEnum) {
+      defaultValue = formData.default;
+    }
 
     if (isEditMode) {
       dispatchEvent(
@@ -391,6 +560,8 @@ export const handleFormActionClick = (deps, payload) => {
             description: formData.description ?? "",
             tagIds: Array.isArray(formData.tagIds) ? formData.tagIds : [],
             scope,
+            isEnum,
+            enumValues,
             default: defaultValue,
           },
           bubbles: true,
@@ -408,6 +579,8 @@ export const handleFormActionClick = (deps, payload) => {
             tagIds: Array.isArray(formData.tagIds) ? formData.tagIds : [],
             scope,
             type,
+            isEnum,
+            enumValues,
             default: defaultValue,
           },
           bubbles: true,

@@ -26,6 +26,33 @@ const createItems = () => [
 ];
 
 describe("whiteboard minimap viewport drag", () => {
+  it("scales minimap items against the zoomed-out visible viewport", () => {
+    const state = createInitialState();
+    const items = createItems();
+
+    setContainerSize({ state }, { width: 1000, height: 800 });
+    setInitialZoomAndPan({ state }, { zoomLevel: 1, panX: 0, panY: 0 });
+
+    const normalMinimapData = selectMinimapData({ state }, { items });
+
+    setInitialZoomAndPan({ state }, { zoomLevel: 0.2, panX: 0, panY: 0 });
+
+    const zoomedOutMinimapData = selectMinimapData({ state }, { items });
+
+    expect(zoomedOutMinimapData.scaledItem.width).toBeLessThan(
+      normalMinimapData.scaledItem.width,
+    );
+    expect(zoomedOutMinimapData.scaledItem.height).toBeLessThan(
+      normalMinimapData.scaledItem.height,
+    );
+    expect(zoomedOutMinimapData.viewport.width).toBeGreaterThan(
+      normalMinimapData.viewport.width,
+    );
+    expect(zoomedOutMinimapData.viewport.height).toBeGreaterThan(
+      normalMinimapData.viewport.height,
+    );
+  });
+
   it("updates pan from minimap viewport drag movement", () => {
     const state = createInitialState();
     const items = createItems();
@@ -61,7 +88,7 @@ describe("whiteboard minimap viewport drag", () => {
     expect(state.panY).toBeCloseTo(-120 - (18 / minimapData.scale) * 1.25, 6);
   });
 
-  it("allows the viewport to move outside minimap bounds while dragging", () => {
+  it("expands minimap bounds to include an off-scene viewport while dragging", () => {
     const state = createInitialState();
     const items = createItems();
 
@@ -97,14 +124,19 @@ describe("whiteboard minimap viewport drag", () => {
     expect(state.panY).toBeCloseTo(expectedPanY, 6);
 
     const draggedMinimapData = selectMinimapData({ state }, { items });
-    expect(draggedMinimapData.viewport.x).toBe(
-      draggedMinimapData.minimap.width - 1,
+    expect(draggedMinimapData.viewport.x).toBeGreaterThan(0);
+    expect(draggedMinimapData.viewport.y).toBeGreaterThan(0);
+    expect(
+      draggedMinimapData.viewport.x + draggedMinimapData.viewport.width,
+    ).toBeLessThanOrEqual(draggedMinimapData.minimap.width);
+    expect(
+      draggedMinimapData.viewport.y + draggedMinimapData.viewport.height,
+    ).toBeLessThanOrEqual(draggedMinimapData.minimap.height);
+    expect(draggedMinimapData.viewport.width).toBeGreaterThan(1);
+    expect(draggedMinimapData.viewport.height).toBeGreaterThan(1);
+    expect(draggedMinimapData.scaledItem.width).toBeLessThan(
+      minimapData.scaledItem.width,
     );
-    expect(draggedMinimapData.viewport.y).toBe(
-      draggedMinimapData.minimap.height - 1,
-    );
-    expect(draggedMinimapData.viewport.width).toBe(1);
-    expect(draggedMinimapData.viewport.height).toBe(1);
 
     expect(selectIsDraggingMinimapViewport({ state })).toBe(true);
 

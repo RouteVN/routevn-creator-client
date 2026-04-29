@@ -23,6 +23,10 @@ refs:
     eventListeners:
       click:
         handler: handleTagFilterApplyClick
+  menuButton:
+    eventListeners:
+      click:
+        handler: handleMenuClick
   contextMenu:
     eventListeners:
       close:
@@ -46,13 +50,17 @@ refs:
       contextmenu:
         handler: handleItemContextMenu
 template:
-  - 'rtgl-view w=f h=100vh g=sm style="min-width: 0;"':
+  - 'rtgl-view w=f h=f g=sm style="min-width: 0; min-height: 0;"':
       - 'rtgl-view h=48 w=f bgc=bg bwb=xs ph=md av=c style="position: sticky; top: 0px; z-index: 1000;"':
           - rtgl-view w=f d=h av=c g=md wrap:
               - rtgl-view av=c g=sm d=h w=1fg:
+                  - $if showMenuButton:
+                      - rtgl-view#menuButton w=36 h=36 ah=c av=c cur=pointer:
+                          - rtgl-svg svg=hamburger wh=22 c=mu-fg: null
                   - $if navTitle:
                       - rtgl-text c=mu-fg: ${navTitle}
-              - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
+              - $if showSearch:
+                  - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
               - $if showTagFilter:
                   - rtgl-view#tagFilterButton w=36 h=36 bw=xs br=md ah=c av=c cur=pointer bgc=${tagFilterButtonBackgroundColor} bc=${tagFilterButtonBorderColor}:
                       - rtgl-svg svg=filter wh=16 c=${tagFilterButtonIconColor}: null
@@ -74,9 +82,9 @@ template:
                           - 'rtgl-view w=f d=h ph=sm pt=md pb=sm mb=lg wrap g=md style="min-width: 0;"':
                               - $if group.hasChildren:
                                   - $for item, itemIndex in group.children:
-                                      - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} w=360 cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md:
+                                      - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} w=${item.itemWidth} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md:
                                           - rtgl-view p=md g=md w=f br=md:
-                                              - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} lineHeight=${item.lineHeight} color=${item.color} strokeColor=${item.strokeColor} strokeWidth=${item.strokeWidth} fontWeight=${item.fontWeight} width=${previewWidth} height=96 showBorder=false: null
+                                              - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} lineHeight=${item.lineHeight} color=${item.color} strokeColor=${item.strokeColor} strokeWidth=${item.strokeWidth} fontWeight=${item.fontWeight} width=${item.previewWidth} height=96 padding=8 showBorder=false: null
                                               - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                 $else:
                                   - rtgl-view#addBtnEmptyRef${gIndex} data-group-id=${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=pointer:

@@ -1,0 +1,5 @@
+template:
+  - 'rtgl-view pos=rel w=${w} h=${h} br=${br} style="overflow: hidden;"':
+      - $for layer, i in fileLayers:
+          - rtgl-view pos=abs edge=f:
+              - rvn-file-image fileId=${layer.fileId} w=f h=f br=${br} ?lazy=${lazy} key=${layer.key}: null

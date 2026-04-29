@@ -1,4 +1,5 @@
 import { generateId } from "../../internal/id.js";
+import { CHARACTER_SPRITE_TAG_SCOPE_PREFIX } from "../../internal/project/commands.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import {
@@ -9,13 +10,28 @@ import {
   runResourcePageMutation,
   showResourcePageError,
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
+import {
+  closeMobileResourceFileExplorerAfterSelection,
+  handleMobileResourceDetailSheetClose,
+  handleMobileResourceFileExplorerClose,
+  handleMobileResourceFileExplorerOpen,
+  syncMobileResourcePageUiConfig,
+} from "../../internal/ui/resourcePages/mobileResourcePage.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { tap } from "rxjs";
 import {
   getTagsCollection,
   resolveCollectionWithTags,
 } from "../../internal/resourceTags.js";
-import { CHARACTER_TAG_SCOPE_KEY } from "./characters.store.js";
+import {
+  CHARACTER_TAG_SCOPE_KEY,
+  SPRITE_GROUPS_CREATE_MESSAGE,
+} from "./characters.store.js";
+import { validateSpriteGroupsForSave } from "./support/spriteGroups.js";
+import {
+  buildSpriteGroupInUseMessage,
+  findSpriteGroupUsage,
+} from "./support/spriteGroupUsage.js";
 
 const AVATAR_VALIDATIONS = [
   {
@@ -32,6 +48,37 @@ const EMPTY_CHARACTER_FORM_VALUES = {
   tagIds: [],
 };
 
+const resolveCharacterSpriteTagScopeKey = (characterId) =>
+  `${CHARACTER_SPRITE_TAG_SCOPE_PREFIX}${characterId}`;
+
+const buildSpriteTagsByCharacterId = (state) => {
+  const spriteTagsByCharacterId = {};
+
+  for (const [characterId, item] of Object.entries(
+    state?.characters?.items ?? {},
+  )) {
+    if (item?.type !== "character") {
+      continue;
+    }
+
+    spriteTagsByCharacterId[characterId] = getTagsCollection(
+      state,
+      resolveCharacterSpriteTagScopeKey(characterId),
+    );
+  }
+
+  return spriteTagsByCharacterId;
+};
+
+const getValidSpriteGroupTagIds = ({ store, target, itemId } = {}) => {
+  const state = store.getState();
+  const characterId =
+    itemId ?? (target === "edit" ? state.editItemId : undefined);
+  return new Set(
+    Object.keys(state.spriteTagsByCharacterId?.[characterId]?.items ?? {}),
+  );
+};
+
 const syncCharactersData = ({
   store,
   repositoryState,
@@ -42,8 +89,10 @@ const syncCharactersData = ({
     projectService.getRepositoryState?.() ??
     projectService.getState();
   const tagsData = getTagsCollection(state, CHARACTER_TAG_SCOPE_KEY);
+  const spriteTagsByCharacterId = buildSpriteTagsByCharacterId(state);
 
   store.setTagsData({ tagsData });
+  store.setSpriteTagsByCharacterId({ spriteTagsByCharacterId });
   store.setItems({
     charactersData: resolveCollectionWithTags({
       collection: state?.characters,
@@ -69,8 +118,11 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   if (!characterItem) return;
 
   store.setSelectedItemId({ itemId });
-  fileExplorer.selectItem({ itemId });
-  store.openEditDialog({ itemId });
+  fileExplorer?.selectItem?.({ itemId });
+  store.openEditDialog({
+    itemId,
+    spriteGroups: characterItem.spriteGroups ?? [],
+  });
   render();
 
   editForm.reset();
@@ -140,6 +192,7 @@ const uploadAvatarFile = async ({ deps, file, target } = {}) => {
 
 export const handleBeforeMount = (deps) => {
   const { projectService, store, render } = deps;
+  syncMobileResourcePageUiConfig(deps);
   const subscription = createProjectStateStream({ projectService })
     .pipe(
       tap(({ repositoryState }) => {
@@ -164,6 +217,12 @@ const refreshCharactersData = async (deps) => {
   render();
 };
 
+const readSpriteGroupTarget = (payload) =>
+  payload?._event?.currentTarget?.dataset?.target === "edit" ? "edit" : "add";
+
+const readSpriteGroupIndex = (payload) =>
+  Number.parseInt(payload?._event?.currentTarget?.dataset?.index ?? "", 10);
+
 const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
   createResourceFileExplorerHandlers({
     resourceType: "characters",
@@ -180,6 +239,9 @@ export {
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleMobileResourceFileExplorerOpen as handleMobileFileExplorerOpen,
+  handleMobileResourceFileExplorerClose as handleMobileFileExplorerClose,
+  handleMobileResourceDetailSheetClose as handleMobileDetailSheetClose,
 };
 
 export const handleDataChanged = refreshCharactersData;
@@ -200,6 +262,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   }
 
   store.setSelectedItemId({ itemId });
+  closeMobileResourceFileExplorerAfterSelection(deps);
   render();
   focusFileExplorerKeyboardScope(deps);
 };
@@ -214,7 +277,7 @@ export const handleCharacterItemClick = async (deps, payload) => {
   store.setSelectedItemId({ itemId: itemId });
 
   const { fileExplorer } = refs;
-  fileExplorer.selectItem({ itemId });
+  fileExplorer?.selectItem?.({ itemId });
   render();
 };
 
@@ -224,7 +287,7 @@ export const handleCharacterItemDoubleClick = async (deps, payload) => {
   if (!itemId) return;
 
   const { fileExplorer } = refs;
-  fileExplorer.selectItem({ itemId });
+  fileExplorer?.selectItem?.({ itemId });
   handleSpritesButtonClick(deps, payload);
 };
 
@@ -247,6 +310,7 @@ export const handleCharacterCreated = async (deps, payload) => {
     description,
     shortcut,
     tagIds,
+    spriteGroups,
     avatarFileId,
     avatarUploadResult,
   } = detail;
@@ -277,6 +341,10 @@ export const handleCharacterCreated = async (deps, payload) => {
 
   if (avatarFileId) {
     characterData.fileId = avatarFileId;
+  }
+
+  if (Array.isArray(spriteGroups) && spriteGroups.length > 0) {
+    characterData.spriteGroups = spriteGroups;
   }
 
   const createAttempt = await runResourcePageMutation({
@@ -325,6 +393,11 @@ export const handleAddCharacterClick = (deps, payload) => {
   const { store, render } = deps;
   const { groupId } = payload._event.detail;
   store.setTargetGroupId({ groupId: groupId });
+  store.hideSpriteGroupDropdownMenu();
+  store.setSpriteGroups({
+    target: "add",
+    spriteGroups: [],
+  });
   store.toggleDialog();
   render();
   resetAddCharacterForm(deps);
@@ -349,6 +422,11 @@ export const handleCloseDialog = (deps) => {
   const { store, render } = deps;
   store.closeAvatarCropDialog();
   store.clearAvatarState();
+  store.hideSpriteGroupDropdownMenu();
+  store.setSpriteGroups({
+    target: "add",
+    spriteGroups: [],
+  });
   resetAddCharacterForm(deps);
   store.toggleDialog();
   render();
@@ -369,6 +447,14 @@ export const handleDialogFormActionClick = async (deps, payload) => {
       return;
     }
 
+    if ((store.getState().dialogSpriteGroups ?? []).length > 0) {
+      appService.showAlert({
+        message: SPRITE_GROUPS_CREATE_MESSAGE,
+        title: "Warning",
+      });
+      return;
+    }
+
     const targetGroupId = store.selectTargetGroupId();
     const avatarFileId = store.selectAvatarFileId();
     const avatarUploadResult = store.getState().avatarUploadResult;
@@ -382,6 +468,7 @@ export const handleDialogFormActionClick = async (deps, payload) => {
           description: formData.description,
           shortcut: formData.shortcut || "",
           tagIds: Array.isArray(formData.tagIds) ? formData.tagIds : [],
+          spriteGroups: [],
           avatarFileId: avatarFileId,
           avatarUploadResult,
         },
@@ -399,6 +486,10 @@ export const handleDialogFormActionClick = async (deps, payload) => {
 
     // Clear avatar state and close dialog
     store.clearAvatarState();
+    store.setSpriteGroups({
+      target: "add",
+      spriteGroups: [],
+    });
     resetAddCharacterForm(deps);
     store.toggleDialog();
     render();
@@ -529,6 +620,7 @@ export const handleItemDelete = async (deps, payload) => {
 export const handleEditDialogClose = (deps) => {
   const { store, render } = deps;
   store.closeAvatarCropDialog();
+  store.hideSpriteGroupDropdownMenu();
   store.closeEditDialog();
   render();
 };
@@ -599,6 +691,204 @@ export const handleAvatarCropDialogConfirm = async (deps) => {
   }
 };
 
+export const handleSpriteGroupAddClick = (deps, payload) => {
+  const { appService, store, render } = deps;
+  const target = readSpriteGroupTarget(payload);
+  if (target === "add") {
+    appService.showAlert({
+      message: SPRITE_GROUPS_CREATE_MESSAGE,
+      title: "Warning",
+    });
+    return;
+  }
+
+  store.hideSpriteGroupDropdownMenu();
+  store.openSpriteGroupDialog({
+    target,
+  });
+  render();
+};
+
+export const handleSpriteGroupDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.closeSpriteGroupDialog();
+  render();
+};
+
+export const handleSpriteGroupCardClick = (deps, payload) => {
+  const { store, render } = deps;
+  const index = readSpriteGroupIndex(payload);
+  if (Number.isNaN(index)) {
+    return;
+  }
+
+  store.hideSpriteGroupDropdownMenu();
+  store.openSpriteGroupDialog({
+    target: readSpriteGroupTarget(payload),
+    index,
+  });
+  render();
+};
+
+export const handleSpriteGroupFormAction = (deps, payload) => {
+  const { appService, store, render } = deps;
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
+    return;
+  }
+
+  const state = store.getState();
+  const target = state.spriteGroupDialogTarget ?? "edit";
+  const index = state.spriteGroupDialogIndex;
+  const isEditing = Number.isInteger(index);
+  if (target === "add") {
+    appService.showAlert({
+      message: SPRITE_GROUPS_CREATE_MESSAGE,
+      title: "Warning",
+    });
+    return;
+  }
+
+  const name = values?.name?.trim();
+  if (!name) {
+    appService.showAlert({
+      message: "Sprite group name is required.",
+      title: "Warning",
+    });
+    return;
+  }
+
+  const validation = validateSpriteGroupsForSave({
+    spriteGroups: [
+      {
+        id: isEditing
+          ? (target === "edit"
+              ? state.editSpriteGroups
+              : state.dialogSpriteGroups)?.[index]?.id
+          : undefined,
+        name,
+        tags: Array.isArray(values?.tags) ? values.tags : [],
+      },
+    ],
+    validTagIds: getValidSpriteGroupTagIds({
+      store,
+      target,
+      itemId: state.editItemId,
+    }),
+  });
+
+  if (!validation.valid) {
+    appService.showAlert({
+      message: validation.message,
+      title: "Warning",
+    });
+    return;
+  }
+
+  const spriteGroup = validation.spriteGroups[0];
+  if (isEditing) {
+    store.updateSpriteGroup({
+      target,
+      index,
+      name: spriteGroup.name,
+      tags: spriteGroup.tags,
+    });
+  } else {
+    store.addSpriteGroup({
+      target,
+      name: spriteGroup.name,
+      tags: spriteGroup.tags,
+    });
+  }
+  store.closeSpriteGroupDialog();
+  render();
+};
+
+export const handleSpriteGroupContextMenu = (deps, payload) => {
+  const { store, render } = deps;
+  payload._event.preventDefault();
+
+  const index = readSpriteGroupIndex(payload);
+  if (Number.isNaN(index)) {
+    return;
+  }
+
+  store.showSpriteGroupDropdownMenu({
+    target: readSpriteGroupTarget(payload),
+    index,
+    x: payload._event.clientX,
+    y: payload._event.clientY,
+  });
+  render();
+};
+
+export const handleSpriteGroupDropdownMenuClose = (deps) => {
+  const { store, render } = deps;
+  store.hideSpriteGroupDropdownMenu();
+  render();
+};
+
+export const handleSpriteGroupDropdownMenuItemClick = (deps, payload) => {
+  const { appService, projectService, store, render } = deps;
+  const detail = payload._event.detail;
+  const item = detail.item || detail;
+  const state = store.getState();
+  const { target, index } = state.spriteGroupDropdownMenu;
+
+  store.hideSpriteGroupDropdownMenu();
+
+  if (!target || Number.isNaN(index)) {
+    render();
+    return;
+  }
+
+  if (item.value === "move-up") {
+    store.moveSpriteGroup({
+      target,
+      index,
+      offset: -1,
+    });
+  }
+
+  if (item.value === "move-down") {
+    store.moveSpriteGroup({
+      target,
+      index,
+      offset: 1,
+    });
+  }
+
+  if (item.value === "remove") {
+    if (target === "edit") {
+      const spriteGroup = state.editSpriteGroups?.[index];
+      const usage = findSpriteGroupUsage({
+        repositoryState: projectService?.getRepositoryState?.(),
+        characterId: state.editItemId,
+        spriteGroupId: spriteGroup?.id,
+      });
+
+      if (usage) {
+        appService.showAlert({
+          message: buildSpriteGroupInUseMessage({
+            spriteGroupName: spriteGroup?.name,
+            usage,
+          }),
+          title: "Warning",
+        });
+        render();
+        return;
+      }
+    }
+
+    store.removeSpriteGroup({
+      target,
+      index,
+    });
+  }
+
+  render();
+};
+
 export const handleEditFormAction = async (deps, payload) => {
   const { appService, store, render, projectService } = deps;
 
@@ -606,6 +896,21 @@ export const handleEditFormAction = async (deps, payload) => {
     const formData = payload._event.detail.values;
     const editItemId = store.getState().editItemId;
     const { editAvatarFileId, editAvatarUploadResult } = store.getState();
+    const spriteGroupValidation = validateSpriteGroupsForSave({
+      spriteGroups: store.getState().editSpriteGroups,
+      validTagIds: getValidSpriteGroupTagIds({
+        store,
+        target: "edit",
+        itemId: editItemId,
+      }),
+    });
+    if (!spriteGroupValidation.valid) {
+      appService.showAlert({
+        message: spriteGroupValidation.message,
+        title: "Warning",
+      });
+      return;
+    }
 
     // Update the character in the repository
     const updateData = {
@@ -613,6 +918,7 @@ export const handleEditFormAction = async (deps, payload) => {
       description: formData.description,
       shortcut: formData.shortcut || "",
       tagIds: Array.isArray(formData.tagIds) ? formData.tagIds : [],
+      spriteGroups: spriteGroupValidation.spriteGroups,
     };
 
     // Include avatar file ID if it was changed

@@ -106,9 +106,12 @@ export const toLayoutEditorExplorerItems = (
     const definition = getLayoutEditorElementDefinition(item.type);
     const hasPreviewDependencies =
       Object.keys(definition.previewDependencies).length > 0;
+    const svg =
+      item.type === "spritesheet-animation" ? "spritesheets" : item.svg;
 
     return {
       ...item,
+      svg,
       contextMenuItems:
         definition.isContainer === true
           ? contextMenuItems

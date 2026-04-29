@@ -1,6 +1,66 @@
 import { toFlatItems } from "./project/tree.js";
 
 const SPRITESHEET_SELECTION_SEPARATOR = "::";
+export const INITIAL_SPRITESHEET_CLIP_FPS = 24;
+
+export const normalizeSpritesheetFps = (value) => {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  const fps = Number(value);
+  if (!Number.isFinite(fps) || fps <= 0) {
+    return undefined;
+  }
+
+  return fps;
+};
+
+export const formatSpritesheetFps = (value) => {
+  const fps = normalizeSpritesheetFps(value);
+  if (fps === undefined) {
+    return "";
+  }
+
+  return Number.isInteger(fps)
+    ? String(fps)
+    : fps.toFixed(2).replace(/\.?0+$/, "");
+};
+
+export const resolveSpritesheetAnimationFps = (
+  animation = {},
+  missingClipFps = INITIAL_SPRITESHEET_CLIP_FPS,
+) => {
+  const explicitFps = normalizeSpritesheetFps(animation?.fps);
+  if (explicitFps !== undefined) {
+    return explicitFps;
+  }
+
+  const animationSpeed = Number(animation?.animationSpeed);
+  if (Number.isFinite(animationSpeed) && animationSpeed > 0) {
+    return animationSpeed * 60;
+  }
+
+  return (
+    normalizeSpritesheetFps(missingClipFps) ?? INITIAL_SPRITESHEET_CLIP_FPS
+  );
+};
+
+export const normalizeSpritesheetAnimationsFps = (
+  animations = {},
+  missingClipFps = INITIAL_SPRITESHEET_CLIP_FPS,
+) => {
+  return Object.fromEntries(
+    Object.entries(animations ?? {}).map(([name, animation]) => {
+      const normalizedAnimation = {
+        ...animation,
+        fps: resolveSpritesheetAnimationFps(animation, missingClipFps),
+      };
+      delete normalizedAnimation.animationSpeed;
+      return [name, normalizedAnimation];
+    }),
+  );
+};
 
 const getSpritesheetAnimationNames = (item = {}) => {
   return Object.keys(item.animations ?? {});
@@ -52,7 +112,7 @@ export const toSpritesheetAnimationSelectionItems = (spritesheetsData = {}) => {
     .filter((item) => item.type === "spritesheet")
     .flatMap((item) =>
       getSpritesheetAnimationNames(item).map((animationName) => ({
-        label: `${item.fullLabel || item.name} / ${animationName}`,
+        label: `${item.name} / ${animationName}`,
         value: toSpritesheetAnimationSelectionValue(item.id, animationName),
         resourceId: item.id,
         animationName,

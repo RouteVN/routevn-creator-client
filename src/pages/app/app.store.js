@@ -1,5 +1,8 @@
 export const createInitialState = () => ({
   currentRoute: "/projects",
+  isTouchMode: false,
+  isMobileSheetOpen: false,
+  mobileSheetVariant: undefined,
   isRepositoryLoading: false,
   repositoryLoadingPhase: "",
   repositoryLoadingCurrent: 0,
@@ -7,16 +10,33 @@ export const createInitialState = () => ({
 });
 
 const SIDEBAR_WIDTH_PX = 64;
+const MOBILE_TAB_BAR_HEIGHT_PX = 64;
+const HELP_BUTTON_BOTTOM_OFFSET_PX = 24;
 
 const routesWithoutNavbar = ["/projects", "/authenticate"];
 
-export const selectShowSidebar = ({ state }) => {
+const mobileTabBarItems = [
+  { id: "assets", icon: "image", label: "Assets" },
+  { id: "scene-map", icon: "script", label: "Scene Map" },
+  { id: "release", icon: "rocket", label: "Release" },
+  { id: "settings", icon: "settings", label: "Settings" },
+];
+
+const selectShowAppNavigation = ({ state }) => {
   const currentRoutePattern = selectCurrentRoutePattern({ state });
   const normalizedPattern = currentRoutePattern?.replace(/\/$/, "");
   const normalizedRoutesWithoutNavbar = routesWithoutNavbar.map((route) =>
     route.replace(/\/$/, ""),
   );
   return !normalizedRoutesWithoutNavbar.includes(normalizedPattern);
+};
+
+export const selectShowSidebar = ({ state }) => {
+  return selectShowAppNavigation({ state }) && !state.isTouchMode;
+};
+
+export const selectShowMobileTabBar = ({ state }) => {
+  return selectShowAppNavigation({ state }) && state.isTouchMode;
 };
 
 export const selectCurrentRoutePattern = ({ state }) => {
@@ -35,6 +55,7 @@ export const selectCurrentRoutePattern = ({ state }) => {
     "/project/videos",
     "/project/colors",
     "/project/text-styles",
+    "/project/appearance",
     "/project/controls",
     "/project/variables",
     "/project/scenes",
@@ -80,8 +101,23 @@ export const selectCurrentRoutePattern = ({ state }) => {
   return routePattern;
 };
 
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  state.isTouchMode =
+    uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
+};
+
 export const setCurrentRoute = ({ state }, { route } = {}) => {
   state.currentRoute = route;
+};
+
+export const openMobileSheet = ({ state }, { variant } = {}) => {
+  state.isMobileSheetOpen = true;
+  state.mobileSheetVariant = variant ?? "assets";
+};
+
+export const closeMobileSheet = ({ state }, _payload = {}) => {
+  state.isMobileSheetOpen = false;
+  state.mobileSheetVariant = undefined;
 };
 
 export const setRepositoryLoading = ({ state }, { isLoading } = {}) => {
@@ -146,6 +182,7 @@ const selectRepositoryLoadingProgressPercent = ({ state }) => {
 
 export const selectViewData = ({ state }) => {
   const showSidebar = selectShowSidebar({ state });
+  const showMobileTabBar = selectShowMobileTabBar({ state });
   const repositoryLoadingProgressPercent =
     selectRepositoryLoadingProgressPercent({
       state,
@@ -158,7 +195,17 @@ export const selectViewData = ({ state }) => {
     ...state,
     currentRoutePattern: selectCurrentRoutePattern({ state }),
     showSidebar,
+    showMobileTabBar,
+    mobileTabBarItems,
+    mobileSheetVariant: state.mobileSheetVariant ?? "assets",
+    appShellDirection: showMobileTabBar ? "v" : "h",
     contentWidth: showSidebar ? `calc(100vw - ${SIDEBAR_WIDTH_PX}px)` : "100vw",
+    contentHeight: showMobileTabBar
+      ? `calc(100vh - ${MOBILE_TAB_BAR_HEIGHT_PX}px - env(safe-area-inset-bottom))`
+      : "100%",
+    helpButtonBottom: showMobileTabBar
+      ? `calc(${MOBILE_TAB_BAR_HEIGHT_PX + HELP_BUTTON_BOTTOM_OFFSET_PX}px + env(safe-area-inset-bottom))`
+      : "24px",
     repositoryLoadingProgressPercent,
     repositoryLoadingProgressWidth: `${repositoryLoadingProgressPercent}%`,
     hasRepositoryLoadingProgress,

@@ -329,6 +329,20 @@
         "mimeType": "image/png",
         "size": 33100,
         "sha256": "cdc97c661af638180f0b8e695189f26f207cd5dd96de95e08189446c571b19ff"
+      },
+      "zoHtXFvnrjzi": {
+        "id": "zoHtXFvnrjzi",
+        "type": "image",
+        "mimeType": "image/jpeg",
+        "size": 1859,
+        "sha256": "bb41689376eb6e4b3d923277f336524d822d6485d84354dd55a8b19ed775edcd"
+      },
+      "iHmYeZoi3pZZ": {
+        "id": "iHmYeZoi3pZZ",
+        "type": "image",
+        "mimeType": "image/jpeg",
+        "size": 3453,
+        "sha256": "82d1bee90c9c0dd0721912ee3b3cd9677b763925c161a3f82720595c4d2880c9"
       }
     },
     "tree": [
@@ -412,6 +426,12 @@
       },
       {
         "id": "oVd6cHn2uKUk"
+      },
+      {
+        "id": "zoHtXFvnrjzi"
+      },
+      {
+        "id": "iHmYeZoi3pZZ"
       }
     ]
   },
@@ -1136,7 +1156,7 @@
         "id": "6E1mZaxeXgaN",
         "type": "layout",
         "name": "Default ADV",
-        "thumbnailFileId": "cCSVTqNy12nC",
+        "thumbnailFileId": "iHmYeZoi3pZZ",
         "layoutType": "dialogue-adv",
         "elements": {
           "items": {
@@ -1176,7 +1196,7 @@
               "type": "text-ref-character-name",
               "name": "Character Name",
               "x": 120,
-              "y": 30,
+              "y": 26,
               "height": 40,
               "anchorX": 0,
               "anchorY": 0,
@@ -1193,7 +1213,7 @@
               "type": "text-revealing-ref-dialogue-content",
               "name": "Dialogue Content",
               "x": 120,
-              "y": 110,
+              "y": 106,
               "width": 1680,
               "height": 140,
               "anchorX": 0,
@@ -1205,247 +1225,7 @@
                 "align": "left"
               },
               "textStyleId": "5rwEfyx2GBEi",
-              "revealEffect": "none"
-            },
-            "7mAmt3pnFAcR": {
-              "id": "7mAmt3pnFAcR",
-              "type": "container",
-              "name": "Container",
-              "x": 650,
-              "y": 285,
-              "anchorX": 0,
-              "anchorY": 0,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "gapX": 32,
-              "gapY": 32,
-              "width": 0,
-              "height": 0,
-              "direction": "horizontal"
-            },
-            "UbwqXz2NEdeJ": {
-              "id": "UbwqXz2NEdeJ",
-              "type": "container",
-              "name": "Container",
-              "x": 750,
-              "y": 255,
-              "anchorX": 0,
-              "anchorY": 0,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "gapX": 0,
-              "gapY": 0,
-              "width": 0,
-              "height": 0,
-              "click": {
-                "payload": {
-                  "actions": {
-                    "rollbackByOffset": {
-                      "offset": -1
-                    }
-                  }
-                }
-              }
-            },
-            "Gre18NcUSMoL": {
-              "id": "Gre18NcUSMoL",
-              "type": "text",
-              "name": "Text",
-              "x": 0,
-              "y": 0,
-              "anchorX": 0,
-              "anchorY": 0,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "text": "Back",
-              "textStyle": {
-                "align": "left"
-              },
-              "textStyleId": "e2WbW3vcPZR9",
-              "hoverTextStyleId": "saV5A4pkvHRb"
-            },
-            "M2HGU4WF8CGu": {
-              "id": "M2HGU4WF8CGu",
-              "type": "container",
-              "name": "Container",
-              "x": 0,
-              "y": 0,
-              "anchorX": 0,
-              "anchorY": 0,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "gapX": 0,
-              "gapY": 0,
-              "width": 0,
-              "height": 0,
-              "click": {
-                "payload": {
-                  "actions": {
-                    "toggleSkipMode": {}
-                  }
-                }
-              }
-            },
-            "YzJmY9Nqcpbz": {
-              "id": "YzJmY9Nqcpbz",
-              "type": "text",
-              "name": "Text",
-              "x": 0,
-              "y": 0,
-              "anchorX": 0,
-              "anchorY": 0,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "text": "Skip",
-              "textStyle": {
-                "align": "left"
-              },
-              "textStyleId": "e2WbW3vcPZR9",
-              "hoverTextStyleId": "saV5A4pkvHRb"
-            },
-            "ekUVmvRVSeLH": {
-              "id": "ekUVmvRVSeLH",
-              "type": "container",
-              "name": "Container",
-              "x": 0,
-              "y": 0,
-              "anchorX": 0,
-              "anchorY": 0,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "gapX": 0,
-              "gapY": 0,
-              "width": 0,
-              "height": 0,
-              "click": {
-                "payload": {
-                  "actions": {
-                    "toggleAutoMode": {}
-                  }
-                }
-              }
-            },
-            "k4ejKtJNxyGG": {
-              "id": "k4ejKtJNxyGG",
-              "type": "text",
-              "name": "Text",
-              "x": 0,
-              "y": 0,
-              "anchorX": 0,
-              "anchorY": 0,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "text": "Auto",
-              "textStyle": {
-                "align": "left"
-              },
-              "textStyleId": "e2WbW3vcPZR9",
-              "hoverTextStyleId": "saV5A4pkvHRb"
-            },
-            "y6gW2sLFYWVx": {
-              "id": "y6gW2sLFYWVx",
-              "type": "container",
-              "name": "Container",
-              "x": 0,
-              "y": 0,
-              "anchorX": 0,
-              "anchorY": 0,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "gapX": 0,
-              "gapY": 0,
-              "width": 0,
-              "height": 0,
-              "click": {
-                "payload": {
-                  "actions": {
-                    "pushOverlay": {
-                      "resourceId": "fKr5fa67MQWh"
-                    },
-                    "setMenuPage": {
-                      "value": "save"
-                    },
-                    "setMenuEntryPoint": {
-                      "value": "story"
-                    }
-                  }
-                }
-              }
-            },
-            "HjudnXdgR5Cu": {
-              "id": "HjudnXdgR5Cu",
-              "type": "text",
-              "name": "Text",
-              "x": 0,
-              "y": 0,
-              "anchorX": 0,
-              "anchorY": 0,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "text": "Save",
-              "textStyle": {
-                "align": "left"
-              },
-              "textStyleId": "e2WbW3vcPZR9",
-              "hoverTextStyleId": "saV5A4pkvHRb"
-            },
-            "sFxkvyrK9D67": {
-              "id": "sFxkvyrK9D67",
-              "type": "container",
-              "name": "Container",
-              "x": 0,
-              "y": 0,
-              "anchorX": 0,
-              "anchorY": 0,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "gapX": 0,
-              "gapY": 0,
-              "width": 0,
-              "height": 0,
-              "click": {
-                "payload": {
-                  "actions": {
-                    "pushOverlay": {
-                      "resourceId": "fKr5fa67MQWh"
-                    },
-                    "setMenuEntryPoint": {
-                      "value": "story"
-                    },
-                    "setMenuPage": {
-                      "value": "options"
-                    }
-                  }
-                }
-              }
-            },
-            "QgzbBLpt9GKA": {
-              "id": "QgzbBLpt9GKA",
-              "type": "text",
-              "name": "Text",
-              "x": 0,
-              "y": 0,
-              "anchorX": 0,
-              "anchorY": 0,
-              "scaleX": 1,
-              "scaleY": 1,
-              "rotation": 0,
-              "text": "Options",
-              "textStyle": {
-                "align": "left"
-              },
-              "textStyleId": "e2WbW3vcPZR9",
-              "hoverTextStyleId": "saV5A4pkvHRb"
+              "revealEffect": "typewriter"
             },
             "Un9PfT2ucyDo": {
               "id": "Un9PfT2ucyDo",
@@ -1493,6 +1273,21 @@
                 "align": "center"
               },
               "textStyleId": "e2WbW3vcPZR9"
+            },
+            "sGRikdvNCwDP": {
+              "id": "sGRikdvNCwDP",
+              "type": "fragment-ref",
+              "name": "Dialogue Menu",
+              "x": 1246,
+              "y": 1010,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "width": 0,
+              "height": 0,
+              "fragmentLayoutId": "ob6i5RdAgrcK"
             }
           },
           "tree": [
@@ -1507,56 +1302,6 @@
                 },
                 {
                   "id": "Qm3JPEhEy7mx"
-                },
-                {
-                  "id": "7mAmt3pnFAcR",
-                  "children": [
-                    {
-                      "id": "UbwqXz2NEdeJ",
-                      "children": [
-                        {
-                          "id": "Gre18NcUSMoL",
-                          "children": []
-                        }
-                      ]
-                    },
-                    {
-                      "id": "M2HGU4WF8CGu",
-                      "children": [
-                        {
-                          "id": "YzJmY9Nqcpbz",
-                          "children": []
-                        }
-                      ]
-                    },
-                    {
-                      "id": "ekUVmvRVSeLH",
-                      "children": [
-                        {
-                          "id": "k4ejKtJNxyGG",
-                          "children": []
-                        }
-                      ]
-                    },
-                    {
-                      "id": "y6gW2sLFYWVx",
-                      "children": [
-                        {
-                          "id": "HjudnXdgR5Cu",
-                          "children": []
-                        }
-                      ]
-                    },
-                    {
-                      "id": "sFxkvyrK9D67",
-                      "children": [
-                        {
-                          "id": "QgzbBLpt9GKA",
-                          "children": []
-                        }
-                      ]
-                    }
-                  ]
                 }
               ]
             },
@@ -1572,6 +1317,10 @@
                   "children": []
                 }
               ]
+            },
+            {
+              "id": "sGRikdvNCwDP",
+              "children": []
             }
           ]
         },
@@ -1594,6 +1343,7 @@
             "isLineCompleted": false
           },
           "dialogue": {
+            "characterId": "",
             "character": {
               "name": "Character"
             },
@@ -1604,6 +1354,10 @@
             ],
             "lines": [
               {
+                "characterId": "",
+                "character": {
+                  "name": "Character"
+                },
                 "characterName": "Character",
                 "content": [
                   {
@@ -1619,6 +1373,9 @@
                 ]
               },
               {
+                "character": {
+                  "name": "Narrator"
+                },
                 "characterName": "Narrator",
                 "content": [
                   {
@@ -1627,7 +1384,39 @@
                 ]
               }
             ]
-          }
+          },
+          "dialogueLines": [
+            {
+              "characterId": "",
+              "character": {
+                "name": "Character"
+              },
+              "characterName": "Character",
+              "content": [
+                {
+                  "text": "This is a sample dialogue content"
+                }
+              ]
+            },
+            {
+              "content": [
+                {
+                  "text": "This is a sample dialogue content"
+                }
+              ]
+            },
+            {
+              "character": {
+                "name": "Narrator"
+              },
+              "characterName": "Narrator",
+              "content": [
+                {
+                  "text": "This is a sample dialogue content"
+                }
+              ]
+            }
+          ]
         }
       },
       "o8MKsa3NKfxu": {
@@ -2205,7 +1994,7 @@
       "fKr5fa67MQWh": {
         "id": "fKr5fa67MQWh",
         "type": "layout",
-        "name": "Menu",
+        "name": "Menu Page",
         "layoutType": "general",
         "elements": {
           "items": {
@@ -4979,6 +4768,307 @@
         "preview": {
           "backgroundImageId": "c5xw9bBcNAxD"
         }
+      },
+      "ob6i5RdAgrcK": {
+        "id": "ob6i5RdAgrcK",
+        "type": "layout",
+        "name": "Dialogue Menu",
+        "description": "",
+        "layoutType": "general",
+        "isFragment": true,
+        "elements": {
+          "items": {
+            "4bWTeidhdJNq": {
+              "id": "4bWTeidhdJNq",
+              "type": "container",
+              "name": "Container",
+              "x": 0,
+              "y": 0,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "direction": "horizontal",
+              "gapX": 24,
+              "gapY": 0
+            },
+            "jEwhZmaCBpTK": {
+              "id": "jEwhZmaCBpTK",
+              "type": "container",
+              "name": "Container",
+              "x": 0,
+              "y": 0,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "direction": "absolute",
+              "gapX": 0,
+              "gapY": 0,
+              "click": {
+                "payload": {
+                  "actions": {
+                    "rollbackByOffset": {
+                      "offset": -1
+                    }
+                  }
+                }
+              }
+            },
+            "rYqVZqaBS81Z": {
+              "id": "rYqVZqaBS81Z",
+              "type": "container",
+              "name": "Container",
+              "x": 0,
+              "y": 0,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "direction": "absolute",
+              "gapX": 0,
+              "gapY": 0,
+              "click": {
+                "payload": {
+                  "actions": {
+                    "toggleSkipMode": {}
+                  }
+                }
+              }
+            },
+            "taiqMcGHQq1u": {
+              "id": "taiqMcGHQq1u",
+              "type": "container",
+              "name": "Container",
+              "x": 0,
+              "y": 0,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "direction": "absolute",
+              "gapX": 0,
+              "gapY": 0,
+              "click": {
+                "payload": {
+                  "actions": {
+                    "toggleAutoMode": {}
+                  }
+                }
+              }
+            },
+            "mVWvsgDwcVGv": {
+              "id": "mVWvsgDwcVGv",
+              "type": "container",
+              "name": "Container",
+              "x": 0,
+              "y": 0,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "direction": "absolute",
+              "gapX": 0,
+              "gapY": 0,
+              "click": {
+                "payload": {
+                  "actions": {
+                    "pushOverlay": {
+                      "resourceId": "fKr5fa67MQWh"
+                    },
+                    "setMenuPage": {
+                      "value": "save"
+                    },
+                    "setMenuEntryPoint": {
+                      "value": "story"
+                    }
+                  }
+                }
+              }
+            },
+            "7YoNNxFhJ6Je": {
+              "id": "7YoNNxFhJ6Je",
+              "type": "text",
+              "name": "Text",
+              "x": 0,
+              "y": 0,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "Back",
+              "textStyle": {
+                "align": "left"
+              },
+              "textStyleId": "e2WbW3vcPZR9",
+              "hoverTextStyleId": "saV5A4pkvHRb"
+            },
+            "1UhrZecBBnfA": {
+              "id": "1UhrZecBBnfA",
+              "type": "text",
+              "name": "Text",
+              "x": 0,
+              "y": 0,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "Skip",
+              "textStyle": {
+                "align": "left"
+              },
+              "textStyleId": "e2WbW3vcPZR9",
+              "hoverTextStyleId": "saV5A4pkvHRb"
+            },
+            "j4Wcb8g5ADrG": {
+              "id": "j4Wcb8g5ADrG",
+              "type": "text",
+              "name": "Text",
+              "x": 0,
+              "y": 0,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "Auto",
+              "textStyle": {
+                "align": "left"
+              },
+              "textStyleId": "e2WbW3vcPZR9",
+              "hoverTextStyleId": "saV5A4pkvHRb"
+            },
+            "MdSrD1PPEPfc": {
+              "id": "MdSrD1PPEPfc",
+              "type": "text",
+              "name": "Text",
+              "x": 0,
+              "y": 0,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "Save",
+              "textStyle": {
+                "align": "left"
+              },
+              "textStyleId": "e2WbW3vcPZR9",
+              "hoverTextStyleId": "saV5A4pkvHRb"
+            },
+            "HZLWJW1eqHz5": {
+              "id": "HZLWJW1eqHz5",
+              "type": "container",
+              "name": "Container",
+              "x": 0,
+              "y": 0,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "direction": "absolute",
+              "gapX": 0,
+              "gapY": 0,
+              "click": {
+                "payload": {
+                  "actions": {
+                    "pushOverlay": {
+                      "resourceId": "fKr5fa67MQWh"
+                    },
+                    "setMenuPage": {
+                      "value": "options"
+                    },
+                    "setMenuEntryPoint": {
+                      "value": "story"
+                    }
+                  }
+                }
+              }
+            },
+            "PFLWNXpZDXXU": {
+              "id": "PFLWNXpZDXXU",
+              "type": "text",
+              "name": "Text",
+              "x": 0,
+              "y": 0,
+              "anchorX": 0,
+              "anchorY": 0,
+              "scaleX": 1,
+              "scaleY": 1,
+              "rotation": 0,
+              "text": "Options",
+              "textStyle": {
+                "align": "left"
+              },
+              "textStyleId": "e2WbW3vcPZR9",
+              "hoverTextStyleId": "saV5A4pkvHRb"
+            }
+          },
+          "tree": [
+            {
+              "id": "4bWTeidhdJNq",
+              "children": [
+                {
+                  "id": "jEwhZmaCBpTK",
+                  "children": [
+                    {
+                      "id": "7YoNNxFhJ6Je",
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "id": "rYqVZqaBS81Z",
+                  "children": [
+                    {
+                      "id": "1UhrZecBBnfA",
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "id": "taiqMcGHQq1u",
+                  "children": [
+                    {
+                      "id": "j4Wcb8g5ADrG",
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "id": "mVWvsgDwcVGv",
+                  "children": [
+                    {
+                      "id": "MdSrD1PPEPfc",
+                      "children": []
+                    }
+                  ]
+                },
+                {
+                  "id": "HZLWJW1eqHz5",
+                  "children": [
+                    {
+                      "id": "PFLWNXpZDXXU",
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "thumbnailFileId": "zoHtXFvnrjzi",
+        "preview": {
+          "backgroundImageId": "Nywji71vMz3w"
+        }
       }
     },
     "tree": [
@@ -4987,6 +5077,9 @@
         "children": [
           {
             "id": "6E1mZaxeXgaN"
+          },
+          {
+            "id": "ob6i5RdAgrcK"
           },
           {
             "id": "o8MKsa3NKfxu"
@@ -5041,6 +5134,13 @@
                 "nextLine": {}
               }
             }
+          },
+          "ctrl": {
+            "payload": {
+              "actions": {
+                "startSkipMode": {}
+              }
+            }
           }
         },
         "elements": {
@@ -5087,6 +5187,15 @@
               "id": "scWbysrXTgti"
             }
           ]
+        },
+        "keyup": {
+          "ctrl": {
+            "payload": {
+              "actions": {
+                "stopSkipMode": {}
+              }
+            }
+          }
         }
       }
     },

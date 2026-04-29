@@ -14,6 +14,17 @@ const IMAGE_CARD_MAX_WIDTH = 400;
 const IMAGE_CARD_HEIGHT = 225;
 export const IMAGE_TAG_SCOPE_KEY = "images";
 
+const resolveImageAspectRatio = (item) => {
+  const width = Number(item?.width);
+  const height = Number(item?.height);
+
+  if (!Number.isFinite(width) || !Number.isFinite(height) || height <= 0) {
+    return "16 / 9";
+  }
+
+  return `${Math.max(1, Math.round(width))} / ${Math.max(1, Math.round(height))}`;
+};
+
 const buildDetailFields = (item) => {
   if (!item) {
     return [];
@@ -57,6 +68,7 @@ const buildMediaItem = (item) => ({
   name: item.name,
   cardKind: "image",
   previewFileId: item.thumbnailFileId ?? item.fileId,
+  previewAspectRatio: resolveImageAspectRatio(item),
   canPreview: false,
 });
 
@@ -113,6 +125,9 @@ const {
   openEditDialog,
   closeEditDialog,
   setEditUpload,
+  setUiConfig,
+  openMobileFileExplorer,
+  closeMobileFileExplorer,
   selectSelectedItem,
   selectItemById,
   selectSelectedItemId,
@@ -144,6 +159,7 @@ const {
   tagging: {
     tagFilterPlaceholder: "Filter tags",
   },
+  hiddenMobileDetailSlots: ["image-file-id"],
   extendViewData: ({ state, baseViewData }) => {
     return {
       ...baseViewData,
@@ -168,6 +184,9 @@ export {
   openEditDialog,
   closeEditDialog,
   setEditUpload,
+  setUiConfig,
+  openMobileFileExplorer,
+  closeMobileFileExplorer,
   selectSelectedItem,
   setTagsData,
   setActiveTagIds,
@@ -184,13 +203,18 @@ export const selectImageItemById = selectItemById;
 
 export const selectAdjacentImageItemId = (
   context,
-  { itemId, direction } = {},
+  { itemId, direction, distance = 1, clamp = false } = {},
 ) => {
   const step =
     direction === "next" ? 1 : direction === "previous" ? -1 : undefined;
   if (!step) {
     return undefined;
   }
+  const numericDistance = Number(distance);
+  const itemDistance =
+    Number.isFinite(numericDistance) && numericDistance > 0
+      ? Math.floor(numericDistance)
+      : 1;
 
   const viewData = selectMediaViewData(context);
   const items = context.state.data?.items ?? {};
@@ -211,7 +235,12 @@ export const selectAdjacentImageItemId = (
       : visibleImageIds[visibleImageIds.length - 1];
   }
 
-  return visibleImageIds[currentIndex + step];
+  let nextIndex = currentIndex + step * itemDistance;
+  if (clamp) {
+    nextIndex = Math.max(0, Math.min(nextIndex, visibleImageIds.length - 1));
+  }
+
+  return visibleImageIds[nextIndex];
 };
 
 export const showFullImagePreview = ({ state }, { itemId } = {}) => {

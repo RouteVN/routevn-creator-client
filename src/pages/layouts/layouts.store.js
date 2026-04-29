@@ -8,8 +8,13 @@ export const LAYOUT_TAG_SCOPE_KEY = "layouts";
 
 const fragmentField = {
   name: "isFragment",
-  type: "checkbox",
-  content: "Can Be Used As Fragment",
+  type: "segmented-control",
+  label: "Can Be Used As Fragment",
+  clearable: false,
+  options: [
+    { value: false, label: "No" },
+    { value: true, label: "Yes" },
+  ],
 };
 
 const layoutDescriptionField = {
@@ -165,6 +170,9 @@ const {
   createInitialState: createCatalogInitialState,
   setItems,
   setSelectedItemId,
+  setUiConfig,
+  openMobileFileExplorer,
+  closeMobileFileExplorer,
   selectSelectedItem,
   selectItemById,
   selectSelectedItemId,
@@ -188,6 +196,7 @@ const {
   matchesSearch: matchesTagAwareSearch,
   buildDetailFields,
   buildCatalogItem,
+  hiddenMobileDetailSlots: ["actions"],
   tagging: {
     tagFilterPlaceholder: "Filter tags",
   },
@@ -223,6 +232,9 @@ export const createInitialState = () => ({
 export {
   setItems,
   setSelectedItemId,
+  setUiConfig,
+  openMobileFileExplorer,
+  closeMobileFileExplorer,
   selectSelectedItem,
   selectSelectedItemId,
   setSearchQuery,

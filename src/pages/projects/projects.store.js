@@ -1,4 +1,6 @@
 export const createInitialState = () => ({
+  isTouchMode: false,
+  mobileAppName: "Creator",
   localTitle: "Projects",
   cloudTitle: "Cloud Projects",
   showCloudProjects: false,
@@ -17,6 +19,13 @@ export const createInitialState = () => ({
   platform: "tauri",
 
   profileMenu: {
+    isOpen: false,
+    x: 0,
+    y: 0,
+    items: [],
+  },
+
+  mobileActionMenu: {
     isOpen: false,
     x: 0,
     y: 0,
@@ -56,6 +65,12 @@ export const createInitialState = () => ({
     projectId: null,
     projectPath: "",
     projectName: "",
+  },
+
+  createDialog: {
+    isOpen: false,
+    formKey: 0,
+    defaultValues: {},
   },
 
   cloudCreateDialog: {
@@ -100,6 +115,11 @@ export const addProject = ({ state }, { project } = {}) => {
 
 export const setCloudProjects = ({ state }, { projects } = {}) => {
   state.cloudProjects = Array.isArray(projects) ? projects : [];
+};
+
+export const setUiConfig = ({ state }, { uiConfig } = {}) => {
+  state.isTouchMode =
+    uiConfig?.id === "touch" || uiConfig?.inputMode === "touch";
 };
 
 export const addCloudProject = ({ state }, { project } = {}) => {
@@ -176,6 +196,32 @@ export const closeProfileDialog = ({ state }, _payload = {}) => {
 
 export const selectIsProfileMenuOpen = ({ state }) => {
   return Boolean(state.profileMenu?.isOpen);
+};
+
+export const openMobileActionMenu = ({ state }, { x, y } = {}) => {
+  state.mobileActionMenu.isOpen = true;
+  state.mobileActionMenu.x = x;
+  state.mobileActionMenu.y = y;
+  state.mobileActionMenu.items = [
+    { label: "Create Project", type: "item", value: "create-project" },
+    {
+      label: "Import Project",
+      type: "item",
+      value: "import-project",
+      disabled: true,
+    },
+  ];
+};
+
+export const closeMobileActionMenu = ({ state }, _payload = {}) => {
+  state.mobileActionMenu.isOpen = false;
+  state.mobileActionMenu.x = 0;
+  state.mobileActionMenu.y = 0;
+  state.mobileActionMenu.items = [];
+};
+
+export const selectIsMobileActionMenuOpen = ({ state }) => {
+  return Boolean(state.mobileActionMenu?.isOpen);
 };
 
 export const selectIsProfileDialogOpen = ({ state }) => {
@@ -295,6 +341,20 @@ export const selectDeleteDialogProjectPath = ({ state }) => {
 
 export const selectIsDeleteDialogOpen = ({ state }) => {
   return Boolean(state.deleteDialog?.isOpen);
+};
+
+export const openCreateDialog = ({ state }, _payload = {}) => {
+  state.createDialog.isOpen = true;
+  state.createDialog.formKey += 1;
+  state.createDialog.defaultValues = {};
+};
+
+export const closeCreateDialog = ({ state }, _payload = {}) => {
+  state.createDialog.isOpen = false;
+};
+
+export const selectIsCreateDialogOpen = ({ state }) => {
+  return Boolean(state.createDialog?.isOpen);
 };
 
 export const openAddMemberDialog = (
@@ -488,6 +548,8 @@ export const selectViewData = ({ state }) => {
     ...state,
     profileDisplayName,
     avatarImageSrc,
+    showMobileTopNav: Boolean(state.isTouchMode),
+    showDesktopTopActions: !state.isTouchMode,
     deleteDialogTitle: "Remove Project",
     deleteDialogMessage: `Are you sure you want to remove ${deleteDialogProjectName} from the list? The project folder will still remain on disk. Delete the folder yourself if you want to permanently remove the project files.`,
     deleteDialogConfirmLabel: "Remove",

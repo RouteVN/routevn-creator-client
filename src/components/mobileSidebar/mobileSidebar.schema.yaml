@@ -1,0 +1,10 @@
+componentName: rvn-mobile-sidebar
+propsSchema:
+  type: object
+  properties:
+    variant:
+      type: string
+    w:
+      type: string
+    h:
+      type: string

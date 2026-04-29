@@ -5,6 +5,20 @@ refs:
         handler: handleContainerWheel
       mousedown:
         handler: handleContainerMouseDown
+      touchstart:
+        handler: handleContainerTouchStart
+      touchmove:
+        handler: handleContainerTouchMove
+      touchend:
+        handler: handleContainerTouchEnd
+      touchcancel:
+        handler: handleContainerTouchCancel
+      gesturestart:
+        handler: handleContainerGestureEvent
+      gesturechange:
+        handler: handleContainerGestureEvent
+      gestureend:
+        handler: handleContainerGestureEvent
       contextmenu:
         handler: handleContainerContextMenu
   canvas: {}
@@ -39,7 +53,7 @@ refs:
       click:
         handler: handlePanButtonClick
 template:
-  - 'rtgl-view#container w=f h=f pos=rel bgc=bg cur=${containerCursor} style="overflow: hidden; min-height: 400px; background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: ${gridSize}px ${gridSize}px; background-position: ${panX}px ${panY}px;"':
+  - 'rtgl-view#container w=f h=f pos=rel bgc=bg cur=${containerCursor} style="overflow: hidden; min-height: 400px; touch-action: none; overscroll-behavior: contain; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; background-image: radial-gradient(circle, var(--input) 1px, transparent 1px); background-size: ${gridSize}px ${gridSize}px; background-position: ${panX}px ${panY}px;"':
       - 'rtgl-view#canvas w=f h=f pos=rel style="transform: translate(${panX}px, ${panY}px) scale(${zoomLevel}); transform-origin: 0 0; min-width: 100%; min-height: 100%;"':
           - $for item, itemIndex in items:
               - $if item.isInit == true:
@@ -59,14 +73,15 @@ template:
       - $if showMinimap:
           - 'rtgl-view#minimapContainer pos=abs z=100 ah=c p=md bgc=mu w=${minimapData.minimap.width} h=${minimapData.minimap.height} style="left: 20px; bottom: 20px; overflow: hidden;"':
               - $for item in minimapData.items:
-                  - 'rtgl-view d=h pos=abs style="left: ${item.x}px; top: ${item.y}px; z-index: 10; user-select: none;"':
+                  - 'rtgl-view data-minimap-item="true" d=h pos=abs style="left: ${item.x}px; top: ${item.y}px; z-index: 10; user-select: none;"':
                       - rtgl-view w=${minimapData.scaledItem.width} h=${minimapData.scaledItem.height} bgc=ac: null
               - $if minimapData.viewport.visible:
                   - 'rtgl-view#minimapViewport pos=abs cur=${minimapViewportCursor} bw=xs bc=fg style="left: ${minimapData.viewport.x}px; top: ${minimapData.viewport.y}px; width: ${minimapData.viewport.width}px; height: ${minimapData.viewport.height}px; z-index: 20; box-sizing: border-box; user-select: none;"': null
-      - 'rtgl-view pos=abs z=100 ah=c p=md bgc=mu br=md style="right: 20px; bottom: 20px;"':
-          - rtgl-view d=h av=c gap=sm:
-              - rtgl-button#panBtn sq pre=hand v=${panModeV}: null
-              - rtgl-button#zoomOutBtn v=se s=md sq: '-'
-              - rtgl-view bgc=co p=sm br=full w=50 ah=c av=c:
-                  - rtgl-text s=sm: ${zoomLevelPercent}%
-              - rtgl-button#zoomInBtn v=se s=md sq: +
+      - $if showControls:
+          - 'rtgl-view pos=abs z=100 ah=c p=md bgc=mu br=md style="right: 20px; bottom: 20px;"':
+              - rtgl-view d=h av=c gap=sm:
+                  - rtgl-button#panBtn sq pre=hand v=${panModeV}: null
+                  - rtgl-button#zoomOutBtn v=se s=md sq: '-'
+                  - rtgl-view bgc=co p=sm br=full w=50 ah=c av=c:
+                      - rtgl-text s=sm: ${zoomLevelPercent}%
+                  - rtgl-button#zoomInBtn v=se s=md sq: +

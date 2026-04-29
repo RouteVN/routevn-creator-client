@@ -107,6 +107,61 @@ describe("systemActions.handlers", () => {
     });
   });
 
+  it("emits dialogue character sprite data in the submitted action delta", () => {
+    const state = createInitialState();
+    const dispatchedEvents = [];
+
+    const deps = {
+      store: {
+        selectAction: () => selectAction({ state }),
+        updateActions: (payload) => updateActions({ state }, payload),
+        hideActionsDialog: () => {},
+      },
+      render: () => {},
+      dispatchEvent: (event) => {
+        dispatchedEvents.push(event);
+      },
+    };
+
+    handleCommandLineSubmit(deps, {
+      _event: {
+        stopPropagation: () => {},
+        detail: {
+          dialogue: {
+            mode: "adv",
+            characterId: "character-1",
+            character: {
+              sprite: {
+                transformId: "portrait-left",
+                items: [{ id: "body", resourceId: "sprite-body" }],
+                animations: {
+                  resourceId: "portrait-in",
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect(dispatchedEvents).toHaveLength(1);
+    expect(dispatchedEvents[0].detail).toEqual({
+      dialogue: {
+        mode: "adv",
+        characterId: "character-1",
+        character: {
+          sprite: {
+            transformId: "portrait-left",
+            items: [{ id: "body", resourceId: "sprite-body" }],
+            animations: {
+              resourceId: "portrait-in",
+            },
+          },
+        },
+      },
+    });
+  });
+
   it("stops nested submit events from leaking to outer action editors", () => {
     const state = createInitialState();
     let stopPropagationCalled = false;

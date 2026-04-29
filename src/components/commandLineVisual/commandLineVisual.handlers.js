@@ -1,7 +1,8 @@
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
-  const { images, videos, layouts, transforms } = projectService.getState();
+  const { animations, images, videos, layouts, transforms } =
+    projectService.getState();
 
   store.setImages({
     images: images || { tree: [], items: {} },
@@ -14,6 +15,9 @@ export const handleAfterMount = async (deps) => {
   });
   store.setTransforms({
     transforms: transforms || { tree: [], items: {} },
+  });
+  store.setAnimations({
+    animations: animations || { tree: [], items: {} },
   });
 
   // Use presentationState if available, otherwise fall back to visual prop
@@ -64,6 +68,22 @@ export const handleTransformChange = (deps, payload) => {
   const index = Number.parseInt(payload._event.currentTarget.dataset.index, 10);
   const value = payload._event.detail.value;
   store.updateVisualTransform({ index, transform: value });
+  render();
+};
+
+export const handleAnimationModeChange = (deps, payload) => {
+  const { store, render } = deps;
+  const index = Number.parseInt(payload._event.currentTarget.dataset.index, 10);
+  const value = payload._event.detail.value;
+  store.updateVisualAnimationMode({ index, animationMode: value });
+  render();
+};
+
+export const handleAnimationChange = (deps, payload) => {
+  const { store, render } = deps;
+  const index = Number.parseInt(payload._event.currentTarget.dataset.index, 10);
+  const value = payload._event.detail.value;
+  store.updateVisualAnimation({ index, animationId: value });
   render();
 };
 
@@ -118,11 +138,21 @@ export const handleSubmitClick = (deps) => {
 
   const visualData = {
     visual: {
-      items: selectedVisuals.map((visual) => ({
-        id: visual.id,
-        resourceId: visual.resourceId,
-        transformId: visual.transformId,
-      })),
+      items: selectedVisuals.map((visual) => {
+        const item = {
+          id: visual.id,
+          resourceId: visual.resourceId,
+          transformId: visual.transformId,
+        };
+
+        if (visual.animations?.resourceId) {
+          item.animations = {
+            resourceId: visual.animations.resourceId,
+          };
+        }
+
+        return item;
+      }),
     },
   };
 

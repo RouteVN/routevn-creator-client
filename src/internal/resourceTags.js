@@ -98,7 +98,7 @@ export const matchesTagFilter = ({ item, activeTagIds = [] } = {}) => {
   }
 
   const itemTagIds = Array.isArray(item?.tagIds) ? item.tagIds : [];
-  return activeTagIds.every((tagId) => itemTagIds.includes(tagId));
+  return activeTagIds.some((tagId) => itemTagIds.includes(tagId));
 };
 
 export const buildUniqueTagIds = (...tagIdGroups) => {

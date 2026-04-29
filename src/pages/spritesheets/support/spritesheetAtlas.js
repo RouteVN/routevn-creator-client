@@ -1,7 +1,8 @@
 import { getImageDimensions } from "../../../deps/clients/web/fileProcessors.js";
-
-const DEFAULT_PLAYBACK_FPS = 30;
-const DEFAULT_ANIMATION_SPEED = DEFAULT_PLAYBACK_FPS / 60;
+import {
+  INITIAL_SPRITESHEET_CLIP_FPS,
+  resolveSpritesheetAnimationFps,
+} from "../../../internal/spritesheets.js";
 
 const normalizeAtlasFrame = (frame = {}) => {
   if (frame.frame) {
@@ -245,7 +246,7 @@ const buildResourceAnimations = (atlas = {}, clipFrameNames = {}) => {
           clipName,
           {
             frames,
-            animationSpeed: DEFAULT_ANIMATION_SPEED,
+            fps: INITIAL_SPRITESHEET_CLIP_FPS,
             loop: true,
           },
         ];
@@ -277,7 +278,7 @@ const createClipSummaries = (resourceAnimations = {}) => {
   return Object.entries(resourceAnimations).map(([name, animation]) => ({
     name,
     frameCount: animation.frames?.length ?? 0,
-    fps: Math.round((animation.animationSpeed ?? DEFAULT_ANIMATION_SPEED) * 60),
+    fps: resolveSpritesheetAnimationFps(animation),
     loop: animation.loop ?? true,
   }));
 };
@@ -303,7 +304,7 @@ export const normalizeSizeInput = (value) => {
 
 export const parseSpritesheetAtlasFile = async ({ atlasFile } = {}) => {
   if (!atlasFile) {
-    throw new Error("An atlas JSON file is required.");
+    throw new Error("A spritesheet JSON file is required.");
   }
 
   const atlasText = await atlasFile.text();
@@ -312,21 +313,21 @@ export const parseSpritesheetAtlasFile = async ({ atlasFile } = {}) => {
   try {
     atlasInput = JSON.parse(atlasText);
   } catch {
-    throw new Error("Atlas JSON is invalid.");
+    throw new Error("Spritesheet JSON is invalid.");
   }
 
   const jsonData = normalizeSpritesheetAtlas(atlasInput);
   const frameNames = Object.keys(jsonData.frames ?? {});
 
   if (frameNames.length === 0) {
-    throw new Error("Atlas JSON does not contain any frames.");
+    throw new Error("Spritesheet JSON does not contain any frames.");
   }
 
   const clipFrameNames = buildClipFrameNames(jsonData);
   const animations = buildResourceAnimations(jsonData, clipFrameNames);
 
   if (Object.keys(animations).length === 0) {
-    throw new Error("Atlas JSON did not produce any usable animations.");
+    throw new Error("Spritesheet JSON did not produce any usable animations.");
   }
 
   const defaultFrameSize = getDefaultFrameSize(jsonData, clipFrameNames);

@@ -42,6 +42,10 @@ refs:
     eventListeners:
       item-click:
         handler: handleBreadcumbClick
+  spriteGroupTabs:
+    eventListeners:
+      item-click:
+        handler: handleSpriteGroupTabClick
   buttonSelect:
     eventListeners:
       click:
@@ -74,6 +78,10 @@ refs:
     eventListeners:
       value-change:
         handler: handleAnimationChange
+  .characterSpriteGroupBox:
+    eventListeners:
+      click:
+        handler: handleCharacterSpriteGroupBoxClick
   characterItem*:
     eventListeners:
       click:
@@ -91,8 +99,8 @@ template:
                               - rtgl-view#character${i}.characterRow data-index=${i} data-character-id=${character.id} d=h g=md av=t pv=md br=md w=f:
                                   - rtgl-view#characterSpriteBox${i} data-index=${i} cur=pointer bw=xs bc=bo h-bc=ac br=sm:
                                       - rtgl-view p=md g=md br=md:
-                                          - $if character.spriteFileId:
-                                              - rvn-file-image fileId=${character.spriteFileId} w=200 h=120: null
+                                          - $if character.hasSpritePreview:
+                                              - rvn-stacked-file-images :fileIds=${character.spritePreviewFileIds} w=200 h=120 br=sm lazy: null
                                             $else:
                                               - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
                                                   - rtgl-text s=sm c=mu-fg: No Sprite
@@ -106,6 +114,12 @@ template:
                                           - rtgl-select#updateAnimation${i} data-index=${i} key=${character.animationId} :options=${defaultValues.updateAnimationOptions} :selectedValue=${character.animationId} w=f no-clear: null
                                         $elif character.animationMode == 'transition':
                                           - rtgl-select#transitionAnimation${i} data-index=${i} key=${character.animationId} :options=${defaultValues.transitionAnimationOptions} :selectedValue=${character.animationId} w=f no-clear: null
+                                      - $if character.showSpriteGroupBoxes:
+                                          - rtgl-text s=sm c=mu-fg: Sprite Groups
+                                          - rtgl-view d=h wrap g=xs w=f:
+                                              - $for spriteGroup, j in character.spriteGroupBoxes:
+                                                  - 'rtgl-view.characterSpriteGroupBox data-index=${i} data-sprite-group-id=${spriteGroup.id} d=h av=c g=xs ph=md pv=xs cur=pointer bw=xs bc=bo h-bc=pr br=sm bgc=${spriteGroup.backgroundColor}':
+                                                      - rtgl-text s=xs: ${spriteGroup.name}
                   - rtgl-button#addCharacterButton v=ol w=f mt=md: + Add Character
           - rtgl-view d=h av=c ah=e w=f g=lg:
               - rtgl-button#submitButton: Submit
@@ -137,6 +151,8 @@ template:
       - $if mode == 'sprite-select':
           - rtgl-view d=h g=md:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
+          - $if showSpriteGroupTabs:
+              - rtgl-tabs#spriteGroupTabs :items=${spriteSelectionTabs} selected-tab=${selectedSpriteGroupId}: null
           - rtgl-view d=h w=f av=c g=md:
               - rtgl-view w=1fg: null
               - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null

@@ -29,6 +29,16 @@ refs:
         handler: handleTagFilterAddOptionClick
       item-delete:
         handler: handleItemDelete
+      menu-click:
+        handler: handleMobileFileExplorerOpen
+  mobileFileExplorerClose:
+    eventListeners:
+      click:
+        handler: handleMobileFileExplorerClose
+  mobileDetailSheet:
+    eventListeners:
+      close:
+        handler: handleMobileDetailSheetClose
   fileExplorerKeyboardScope:
     eventListeners:
       click:
@@ -92,54 +102,77 @@ refs:
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
-          - rvn-resizable-panel#fileExplorerPanel w=300 min-w=200 max-w=500 resize-side="right":
-              - rtgl-view slot="content" w=f h=f:
-                  - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
-                  - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
-          - 'rtgl-view w=1fg h=f pl=sm style="min-width: 0; min-height: 0;"':
+          - $if showExplorerPanel:
+              - rvn-resizable-panel#fileExplorerPanel w=300 min-w=200 max-w=500 resize-side="right":
+                  - rtgl-view slot="content" w=f h=f:
+                      - rvn-resource-types :resourceCategory=${resourceCategory} :selectedResourceId=${selectedResourceId}: null
+                      - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
+          - 'rtgl-view w=1fg h=f pl=${contentLeftPadding} style="min-width: 0; min-height: 0;"':
               - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
-                  - rvn-media-resources-view#groupview :navTitle=${title} show-tag-filter :groups=${mediaGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems}: null
-          - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
-              - rtgl-view wh=f slot="content":
-                  - 'div#fileExplorerDetailKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
-                      - $if selectedItemId:
-                          - rtgl-view d=v w=f h=f:
-                              - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
-                                  - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
-                                  - rtgl-svg svg=edit wh=16: null
-                              - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
-                                  - rtgl-tag-select#detailTagSelect slot="font-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
-                        $else:
-                          - rtgl-view wh=f av=c ah=c bgc=mu-fg:
-                              - rtgl-text s=md c=mu-fg: No selection
-      - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
-          - rtgl-view slot=content g=md:
-              - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:
-                  - $if editPreviewFileId:
-                      - rtgl-view#editDialogFontPreview slot="font-slot" bw=xs bc=bo br=md p=md cur=pointer:
-                          - rvn-font-preview fileId=${editPreviewFileId} fontFamily=${editPreviewFontFamily} previewText="Aa" fontSize=60 width=320 height=120 av=c ah=c: null
+                  - $if showMobileTopTabs:
+                      - 'rtgl-view d=v w=f h=f style="min-width: 0; min-height: 0;"':
+                          - 'rvn-media-resources-view#groupview w=f h=f :navTitle=${title} show-menu-button show-search=false show-tag-filter :mobileLayout=${mobileLayout} :groups=${mediaGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems}': null
                     $else:
-                      - rtgl-view#editDialogFontPreviewPlaceholder slot="font-slot" h=120 bw=xs bc=bo br=md av=c ah=c cur=pointer:
-                          - rtgl-text c=mu-fg s=sm: Click to Upload
-      - rtgl-dialog#fontDialog ?open=${isModalOpen} s=lg:
-          - rtgl-view slot="content" p=xl:
-              - $if modalFontInfo:
-                  - rtgl-view d=v g=md:
-                      - $if modalPreviewRows.length:
-                          - $for previewRow in modalPreviewRows:
-                              - rtgl-view p=md bgc=bg-hover br=sm:
-                                  - 'rtgl-view d=h wrap ah=s style="gap: 4px;"':
-                                      - $for glyph in previewRow.glyphs:
-                                          - rtgl-view wh=40 d=v av=c ah=c br=xs bgc=bg:
-                                              - 'rtgl-text style="font-family: ${modalFontInfo.fontFamily}; font-size: 24px; line-height: 1;"': ${glyph.char}
-                      - $if modalGlyphList.length:
+                      - rvn-media-resources-view#groupview :navTitle=${title} show-tag-filter :groups=${mediaGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :uploadText=${uploadText} :acceptedFileTypes=${acceptedFileTypes} :itemContextMenuItems=${centerItemContextMenuItems}: null
+          - $if showDetailPanel:
+              - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
+                  - rtgl-view wh=f slot="content":
+                      - 'div#fileExplorerDetailKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
+                          - $if selectedItemId:
+                              - rtgl-view d=v w=f h=f:
+                                  - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+                                      - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                                      - rtgl-svg svg=edit wh=16: null
+                                  - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
+                                      - rtgl-tag-select#detailTagSelect slot="font-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+                            $else:
+                              - rtgl-view wh=f av=c ah=c bgc=mu-fg:
+                                  - rtgl-text s=md c=mu-fg: No selection
+  - $if showMobileFileExplorer:
+      - 'rtgl-view pos=fix edge=f z=1250 bgc=bg d=v style="min-width: 0; min-height: 0;"':
+          - rtgl-view h=56 w=f d=h av=c ph=md bgc=bg bwb=xs g=md:
+              - rtgl-text w=1fg s=md: Files
+              - rtgl-view#mobileFileExplorerClose w=40 h=40 ah=c av=c cur=pointer:
+                  - rtgl-svg svg=x wh=20 c=mu-fg: null
+          - 'rtgl-view w=f h=1fg style="min-height: 0;"':
+              - rvn-base-file-explorer#fileExplorer :items=${flatItems} shrinkable dropdown-menu allowDrag :folderContextMenuItems=${folderContextMenuItems} :itemContextMenuItems=${itemContextMenuItems} :emptyContextMenuItems=${emptyContextMenuItems}: null
+  - $if showMobileDetailSheet:
+      - rvn-mobile-sheet#mobileDetailSheet ?open=${showMobileDetailSheet}:
+          - rtgl-view slot=content d=v w=f h=f:
+              - rtgl-view#detailHeader h=56 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
+                  - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                  - rtgl-svg svg=edit wh=16: null
+              - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
+                  - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
+                      - rtgl-tag-select#detailTagSelect slot="font-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+  - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:
+      - rtgl-view slot=content g=md:
+          - rtgl-form#editForm key=${isEditDialogOpen} :defaultValues=${editDefaultValues} :form=${editForm} w=f:
+              - $if editPreviewFileId:
+                  - rtgl-view#editDialogFontPreview slot="font-slot" bw=xs bc=bo br=md p=md cur=pointer:
+                      - rvn-font-preview fileId=${editPreviewFileId} fontFamily=${editPreviewFontFamily} previewText="Aa" fontSize=60 width=320 height=120 av=c ah=c: null
+                $else:
+                  - rtgl-view#editDialogFontPreviewPlaceholder slot="font-slot" h=120 bw=xs bc=bo br=md av=c ah=c cur=pointer:
+                      - rtgl-text c=mu-fg s=sm: Click to Upload
+  - rtgl-dialog#fontDialog ?open=${isModalOpen} s=lg:
+      - rtgl-view slot="content" p=xl:
+          - $if modalFontInfo:
+              - rtgl-view d=v g=md:
+                  - $if modalPreviewRows.length:
+                      - $for previewRow in modalPreviewRows:
                           - rtgl-view p=md bgc=bg-hover br=sm:
                               - 'rtgl-view d=h wrap ah=s style="gap: 4px;"':
-                                  - $for glyph in modalGlyphList:
+                                  - $for glyph in previewRow.glyphs:
                                       - rtgl-view wh=40 d=v av=c ah=c br=xs bgc=bg:
                                           - 'rtgl-text style="font-family: ${modalFontInfo.fontFamily}; font-size: 24px; line-height: 1;"': ${glyph.char}
-                $else:
-                  - rtgl-view d=v av=c ah=c h=200:
-                      - rtgl-text c=mu-fg: Loading...
+                  - $if modalGlyphList.length:
+                      - rtgl-view p=md bgc=bg-hover br=sm:
+                          - 'rtgl-view d=h wrap ah=s style="gap: 4px;"':
+                              - $for glyph in modalGlyphList:
+                                  - rtgl-view wh=40 d=v av=c ah=c br=xs bgc=bg:
+                                      - 'rtgl-text style="font-family: ${modalFontInfo.fontFamily}; font-size: 24px; line-height: 1;"': ${glyph.char}
+            $else:
+              - rtgl-view d=v av=c ah=c h=200:
+                  - rtgl-text c=mu-fg: Loading...
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null

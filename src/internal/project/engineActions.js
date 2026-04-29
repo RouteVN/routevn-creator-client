@@ -12,6 +12,13 @@ const normalizeDialogueAction = (dialogue = {}) => {
     normalizedDialogue.content = [{ text: normalizedDialogue.content }];
   }
 
+  const hasNonClearFields = Object.keys(normalizedDialogue).some(
+    (key) => key !== "clear",
+  );
+  if (normalizedDialogue.clear === true && hasNonClearFields) {
+    delete normalizedDialogue.clear;
+  }
+
   return normalizedDialogue;
 };
 

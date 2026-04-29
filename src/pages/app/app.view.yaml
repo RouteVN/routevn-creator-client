@@ -3,14 +3,22 @@ refs:
     eventListeners:
       click:
         handler: handleHelpFloatingButtonClick
+  mobileTabItem*:
+    eventListeners:
+      click:
+        handler: handleMobileTabClick
+  mobileSheet:
+    eventListeners:
+      close:
+        handler: handleMobileSheetClose
 subscriptions:
   - from: routePop
     handler: handleWindowPop
 template:
-  - rtgl-view d=h w=f h=f:
+  - 'rtgl-view d=${appShellDirection} w=f h=f style="min-width: 0; min-height: 0; height: 100vh; max-height: 100vh; overflow: hidden;"':
       - $if showSidebar:
           - rvn-sidebar: []
-      - 'rtgl-view h=f style="width: ${contentWidth}; min-width: 0;"':
+      - 'rtgl-view style="width: ${contentWidth}; height: ${contentHeight}; min-width: 0; min-height: 0; overflow: hidden; box-sizing: border-box; flex-shrink: 1;"':
           - $if isRepositoryLoading:
               - rtgl-view w=f h=f d=v ah=c av=c g=sm:
                   - rtgl-text s=sm c=mu-fg: ${repositoryLoadingStatusText}
@@ -41,6 +49,8 @@ template:
                   - rvn-videos: []
                 $elif currentRoutePattern == "/project/text-styles":
                   - rvn-text-styles: []
+                $elif currentRoutePattern == "/project/appearance":
+                  - rvn-appearance: []
                 $elif currentRoutePattern == "/project/controls":
                   - rvn-controls: []
                 $elif currentRoutePattern == "/project/variables":
@@ -73,5 +83,15 @@ template:
                   - rvn-versions: []
                 $elif currentRoutePattern == "/project/releases/web-server":
                   - rvn-web-server: []
-  - 'rtgl-view#helpFloatingButton pos=fix z=1200 w=56 h=56 ah=c av=c bgc=bg bw=xs bc=bo h-bc=ac br=f cur=pointer style="right: 24px; bottom: 24px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);"':
+      - $if showMobileTabBar:
+          - 'rtgl-view w=f bgc=bg style="border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); flex-shrink: 0;"':
+              - rtgl-view w=f h=64 d=h av=c:
+                  - $for item, i in mobileTabBarItems:
+                      - rtgl-view#mobileTabItem${i} data-tab-id=${item.id} w=1fg h=f d=v ah=c av=c g=xs cur=pointer:
+                          - rtgl-svg wh=22 svg=${item.icon} c=mu-fg: null
+                          - rtgl-text s=xs c=mu-fg: ${item.label}
+  - $if isMobileSheetOpen:
+      - rvn-mobile-sheet#mobileSheet ?open=${isMobileSheetOpen}:
+          - rvn-mobile-sidebar slot=content variant=${mobileSheetVariant} w=f h=f: []
+  - 'rtgl-view#helpFloatingButton pos=fix z=1200 w=56 h=56 ah=c av=c bgc=bg bw=xs bc=bo h-bc=ac br=f cur=pointer style="right: 24px; bottom: ${helpButtonBottom}; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);"':
       - rtgl-text s=h4 c=mu-fg: '?'

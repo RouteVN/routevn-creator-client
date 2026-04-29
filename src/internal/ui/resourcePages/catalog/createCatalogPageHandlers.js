@@ -36,6 +36,7 @@ export const createCatalogPageHandlers = ({
 
   const handleBeforeMount = (deps) => {
     const { projectService, store, render } = deps;
+    store.setUiConfig?.({ uiConfig: deps.uiConfig });
     const subscription = createProjectStateStream({ projectService })
       .pipe(
         tap(({ repositoryState }) => {
@@ -77,6 +78,10 @@ export const createCatalogPageHandlers = ({
     }
 
     store.setSelectedItemId({ itemId });
+    const state = store.getState();
+    if (state.isTouchMode && state.isMobileFileExplorerOpen) {
+      store.closeMobileFileExplorer?.();
+    }
     render();
     focusKeyboardScope(deps);
   };
@@ -101,8 +106,42 @@ export const createCatalogPageHandlers = ({
     }
 
     store.setSelectedItemId({ itemId });
-    refs.fileExplorer.selectItem({ itemId });
+    refs.fileExplorer?.selectItem?.({ itemId });
     render();
+  };
+
+  const handleMobileFileExplorerOpen = (deps) => {
+    const { store, render, refs } = deps;
+    const selectedItemId = store.selectSelectedItemId();
+
+    store.openMobileFileExplorer?.();
+    render();
+
+    if (selectedItemId) {
+      requestAnimationFrame(() => {
+        refs.fileExplorer?.selectItem?.({ itemId: selectedItemId });
+      });
+    }
+  };
+
+  const handleMobileFileExplorerClose = (deps) => {
+    const { store, render } = deps;
+
+    store.closeMobileFileExplorer?.();
+    render();
+    focusKeyboardScope(deps);
+  };
+
+  const handleMobileDetailSheetClose = (deps) => {
+    const { store, render } = deps;
+
+    if (!store.selectSelectedItemId()) {
+      return;
+    }
+
+    store.setSelectedItemId({ itemId: undefined });
+    render();
+    focusKeyboardScope(deps);
   };
 
   const handleSearchInput = (deps, payload) => {
@@ -148,6 +187,9 @@ export const createCatalogPageHandlers = ({
     handleFileExplorerKeyboardScopeKeyDown,
     handleItemClick,
     handleSearchInput,
+    handleMobileFileExplorerOpen,
+    handleMobileFileExplorerClose,
+    handleMobileDetailSheetClose,
     openCreateTagDialogForMode: tagHandlers.openCreateTagDialogForMode,
     handleCreateTagDialogClose: tagHandlers.handleCreateTagDialogClose,
     handleTagFilterChange: tagHandlers.handleTagFilterChange,

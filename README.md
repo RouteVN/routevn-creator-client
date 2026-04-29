@@ -100,7 +100,7 @@ The project uses platform-specific entry points that are automatically configure
 
 Run the project in watch mode:
 ```shell
-bun run watch
+bun run watch:web
 ```
 
 Or build project and serve without watch mode:
@@ -114,7 +114,7 @@ Open: http://localhost:3001/project
 
 **Build Commands:**
 - `bun run build` or `bun run build:web` - Build for web platform
-- `bun run watch` - Watch mode for web development
+- `bun run watch:web` - Watch mode for web development
 
 ### Desktop Application (Tauri)
 
@@ -131,6 +131,9 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 # Ubuntu/Debian:
 sudo apt update
 sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+# Arch Linux:
+sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file openssl libayatana-appindicator librsvg
 
 # Fedora/RHEL:
 sudo dnf install webkit2gtk4.1-devel openssl-devel curl wget file libappindicator-gtk3-devel librsvg2-devel

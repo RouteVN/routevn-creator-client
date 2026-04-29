@@ -1,8 +1,22 @@
 import { generateId } from "../../internal/id.js";
+import {
+  getTagsCollection,
+  resolveCollectionWithTags,
+} from "../../internal/resourceTags.js";
 import { createVariablesFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
+import { normalizeVariableEnumValues } from "../../internal/variableEnums.js";
+import { createResourcePageTagHandlers } from "../../internal/ui/resourcePages/tags.js";
+import {
+  closeMobileResourceFileExplorerAfterSelection,
+  handleMobileResourceDetailSheetClose,
+  handleMobileResourceFileExplorerClose,
+  handleMobileResourceFileExplorerOpen,
+  syncMobileResourcePageUiConfig,
+} from "../../internal/ui/resourcePages/mobileResourcePage.js";
+import { VARIABLE_TAG_SCOPE_KEY } from "./variables.store.js";
 import { tap } from "rxjs";
 
 const EMPTY_TREE = { tree: [], items: {} };
@@ -13,17 +27,36 @@ const createVariableResourceData = ({
   scope = "device",
   type = "string",
   defaultValue = "",
-} = {}) => ({
-  name,
-  description,
-  scope,
-  type,
-  default: defaultValue,
-  value: defaultValue,
-});
+  isEnum = false,
+  enumValues = [],
+  tagIds = [],
+} = {}) => {
+  const enumEnabled = type === "string" && isEnum === true;
+
+  return {
+    name,
+    description,
+    tagIds,
+    scope,
+    type,
+    isEnum: enumEnabled,
+    enumValues: enumEnabled ? normalizeVariableEnumValues(enumValues) : [],
+    default: defaultValue,
+    value: defaultValue,
+  };
+};
 
 const getVariablesData = ({ repositoryState } = {}) => {
-  return repositoryState?.variables ?? EMPTY_TREE;
+  const tagsData = getTagsCollection(repositoryState, VARIABLE_TAG_SCOPE_KEY);
+
+  return {
+    tagsData,
+    variablesData: resolveCollectionWithTags({
+      collection: repositoryState?.variables ?? EMPTY_TREE,
+      tagsCollection: tagsData,
+      itemType: "variable",
+    }),
+  };
 };
 
 const resolveDetailItemId = (detail = {}) => {
@@ -31,13 +64,16 @@ const resolveDetailItemId = (detail = {}) => {
 };
 
 const syncVariablesData = ({ store, repositoryState } = {}) => {
+  const { tagsData, variablesData } = getVariablesData({ repositoryState });
+  store.setTagsData({ tagsData });
   store.setItems({
-    variablesData: getVariablesData({ repositoryState }),
+    variablesData,
   });
 };
 
 export const handleBeforeMount = (deps) => {
   const { projectService, store, render } = deps;
+  syncMobileResourcePageUiConfig(deps);
   const subscription = createProjectStateStream({ projectService })
     .pipe(
       tap(({ repositoryState }) => {
@@ -79,6 +115,37 @@ const {
   fileExplorerRefName: "fileexplorer",
 });
 
+const {
+  openCreateTagDialogForMode,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
+} = createResourcePageTagHandlers({
+  resolveScopeKey: () => VARIABLE_TAG_SCOPE_KEY,
+  updateItemTagIds: ({ deps, itemId, tagIds }) =>
+    deps.projectService.updateVariable({
+      variableId: itemId,
+      data: {
+        tagIds,
+      },
+    }),
+  refreshAfterItemTagUpdate: ({ deps }) => refreshVariablesData(deps),
+  getSelectedItemTagIds: ({ deps }) =>
+    deps.store.selectSelectedItem()?.tagIds ?? [],
+  appendCreatedTagByMode: ({ deps, mode, tagId }) => {
+    if (mode !== "form") {
+      return;
+    }
+
+    deps.refs.groupview?.appendTagIdToForm?.({ tagId });
+  },
+  updateItemTagFallbackMessage: "Failed to update variable tags.",
+});
+
 const openVariableEditDialog = ({ deps, itemId } = {}) => {
   const { refs, store, render } = deps;
   if (!itemId) {
@@ -110,6 +177,16 @@ export {
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
+  handleMobileResourceFileExplorerOpen as handleMobileFileExplorerOpen,
+  handleMobileResourceFileExplorerClose as handleMobileFileExplorerClose,
+  handleMobileResourceDetailSheetClose as handleMobileDetailSheetClose,
+  handleCreateTagDialogClose,
+  handleTagFilterChange,
+  handleDetailTagAddOptionClick,
+  handleDetailTagDraftValueChange,
+  handleDetailTagOpenChange,
+  handleDetailTagValueChange,
+  handleCreateTagFormAction,
 };
 
 export const handleDataChanged = refreshVariablesData;
@@ -135,6 +212,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   }
 
   store.setSelectedItemId({ itemId });
+  closeMobileResourceFileExplorerAfterSelection(deps);
   render();
   focusFileExplorerKeyboardScope(deps);
 };
@@ -165,7 +243,7 @@ export const handleVariableItemClick = (deps, payload) => {
   }
 
   const { fileexplorer } = refs;
-  fileexplorer.selectItem({ itemId });
+  fileexplorer?.selectItem?.({ itemId });
   store.setSelectedItemId({ itemId });
   render();
 };
@@ -180,14 +258,30 @@ export const handleDetailHeaderClick = (deps) => {
   openVariableEditDialog({ deps, itemId });
 };
 
+export const handleVariableFormAddOptionClick = (deps, payload) => {
+  const detail = payload?._event?.detail ?? {};
+  const fieldName = detail.fieldName ?? detail.name;
+  if (fieldName !== "tagIds") {
+    return;
+  }
+
+  openCreateTagDialogForMode({
+    deps,
+    mode: "form",
+  });
+};
+
 export const handleVariableCreated = async (deps, payload) => {
   const { appService, projectService } = deps;
   const {
     groupId,
     name,
     description,
+    tagIds,
     scope,
     type,
+    isEnum,
+    enumValues,
     default: defaultValue,
   } = payload._event.detail;
 
@@ -200,8 +294,11 @@ export const handleVariableCreated = async (deps, payload) => {
         data: createVariableResourceData({
           name,
           description,
+          tagIds,
           scope,
           type,
+          isEnum,
+          enumValues,
           defaultValue,
         }),
         parentId: groupId,
@@ -222,7 +319,10 @@ export const handleVariableUpdated = async (deps, payload) => {
     itemId,
     name,
     description,
+    tagIds,
     scope,
+    isEnum,
+    enumValues,
     default: defaultValue,
   } = payload._event.detail;
 
@@ -239,7 +339,11 @@ export const handleVariableUpdated = async (deps, payload) => {
         data: {
           name,
           description: description ?? "",
+          tagIds,
           scope,
+          isEnum: isEnum === true,
+          enumValues:
+            isEnum === true ? normalizeVariableEnumValues(enumValues) : [],
           default: defaultValue,
           value: defaultValue,
         },

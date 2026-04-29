@@ -50,6 +50,18 @@ const SYSTEM_ACTION_SECTIONS = [
       mode: "toggleSkipMode",
     },
     {
+      id: "25",
+      label: "Start Skip Mode",
+      icon: "settings",
+      mode: "startSkipMode",
+    },
+    {
+      id: "26",
+      label: "Stop Skip Mode",
+      icon: "settings",
+      mode: "stopSkipMode",
+    },
+    {
       id: "18",
       label: "Toggle Dialogue Box Visibility",
       icon: "settings",
@@ -71,14 +83,14 @@ const SYSTEM_ACTION_SECTIONS = [
       mode: "popOverlay",
     },
   ]),
-  // createSection("Variables", [
-  //   {
-  //     id: "17",
-  //     label: "Update Variable",
-  //     icon: "variable",
-  //     mode: "updateVariable",
-  //   },
-  // ]),
+  createSection("Variables", [
+    {
+      id: "17",
+      label: "Update Variable",
+      icon: "variable",
+      mode: "updateVariable",
+    },
+  ]),
   createSection("Confirm Dialog", [
     {
       id: "20",

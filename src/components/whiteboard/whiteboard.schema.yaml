@@ -19,3 +19,5 @@ propsSchema:
       type: string
     selectedItemId:
       type: string
+    isTouchMode:
+      type: boolean

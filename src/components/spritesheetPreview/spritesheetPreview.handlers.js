@@ -1,10 +1,15 @@
 import { isVisualTestMode } from "../../internal/visualTestMode.js";
+import { resolveSpritesheetAnimationFps } from "../../internal/spritesheets.js";
 
 const PREVIEW_PADDING_PX = 16;
-const DEFAULT_FPS = 30;
+
+const isPaused = (value) => value === true || value === "true";
 
 const clearCanvas = (canvas) => {
-  if (!(canvas instanceof HTMLCanvasElement)) {
+  if (
+    typeof HTMLCanvasElement === "undefined" ||
+    !(canvas instanceof HTMLCanvasElement)
+  ) {
     return;
   }
 
@@ -26,22 +31,8 @@ const clearCanvas = (canvas) => {
   }
 
   context.clearRect(0, 0, width, height);
-  context.fillStyle = "#151515";
+  context.fillStyle = "#000000";
   context.fillRect(0, 0, width, height);
-
-  context.strokeStyle = "rgba(255,255,255,0.08)";
-  for (let x = 0; x < width; x += 24) {
-    context.beginPath();
-    context.moveTo(x, 0);
-    context.lineTo(x, height);
-    context.stroke();
-  }
-  for (let y = 0; y < height; y += 24) {
-    context.beginPath();
-    context.moveTo(0, y);
-    context.lineTo(width, y);
-    context.stroke();
-  }
 };
 
 const revokeOwnedImageSrc = (store) => {
@@ -83,6 +74,8 @@ const drawFrame = (deps, { frameOffset = 0 } = {}) => {
   const { canvas, sourceImage } = refs;
 
   if (
+    typeof HTMLCanvasElement === "undefined" ||
+    typeof HTMLImageElement === "undefined" ||
     !(canvas instanceof HTMLCanvasElement) ||
     !(sourceImage instanceof HTMLImageElement)
   ) {
@@ -170,10 +163,7 @@ const startAnimation = (deps) => {
     return;
   }
 
-  const fps = Math.max(
-    1,
-    Number(props.animation?.animationSpeed ?? DEFAULT_FPS / 60) * 60,
-  );
+  const fps = Math.max(1, resolveSpritesheetAnimationFps(props.animation));
   const loop = props.animation?.loop ?? true;
 
   let lastRenderedFrame = -1;
@@ -213,10 +203,11 @@ const startAnimation = (deps) => {
 };
 
 const loadImageSource = async (deps) => {
-  const { projectService, props, render, store } = deps;
+  const { projectService, props, refs, render, store } = deps;
 
   stopAnimation(store);
   revokeOwnedImageSrc(store);
+  clearCanvas(refs.canvas);
   store.setImageSrc({
     imageSrc: "",
     ownsImageSrc: false,
@@ -254,6 +245,23 @@ const loadImageSource = async (deps) => {
   }
 };
 
+const didSourceChange = (oldProps = {}, newProps = {}) => {
+  return (
+    oldProps?.src !== newProps?.src || oldProps?.fileId !== newProps?.fileId
+  );
+};
+
+const didFrameRenderingChange = (oldProps = {}, newProps = {}) => {
+  return (
+    oldProps?.atlas !== newProps?.atlas ||
+    oldProps?.animation !== newProps?.animation
+  );
+};
+
+const didPausedChange = (oldProps = {}, newProps = {}) => {
+  return oldProps?.paused !== newProps?.paused;
+};
+
 export const handleBeforeMount = (deps) => {
   return () => {
     const { refs, store } = deps;
@@ -268,11 +276,46 @@ export const handleAfterMount = async (deps) => {
   await loadImageSource(deps);
 };
 
-export const handleSourceImageLoad = (deps) => {
+export const handleOnUpdate = async (deps, payload = {}) => {
   const { render, store } = deps;
+  const oldProps = payload.oldProps ?? {};
+  const newProps = payload.newProps ?? {};
+
+  if (didSourceChange(oldProps, newProps)) {
+    await loadImageSource({
+      ...deps,
+      props: newProps,
+    });
+    return;
+  }
+
+  if (
+    (didFrameRenderingChange(oldProps, newProps) ||
+      didPausedChange(oldProps, newProps)) &&
+    store.selectStatus() === "ready"
+  ) {
+    stopAnimation(store);
+    drawFrame({
+      ...deps,
+      props: newProps,
+    });
+    if (!isPaused(newProps.paused)) {
+      startAnimation({
+        ...deps,
+        props: newProps,
+      });
+    }
+    render();
+  }
+};
+
+export const handleSourceImageLoad = (deps) => {
+  const { props, render, store } = deps;
   store.setStatus({ status: "ready" });
   drawFrame(deps);
-  startAnimation(deps);
+  if (!isPaused(props.paused)) {
+    startAnimation(deps);
+  }
   render();
 };
 

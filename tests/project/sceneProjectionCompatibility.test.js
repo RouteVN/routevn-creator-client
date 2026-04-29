@@ -636,4 +636,63 @@ describe("scene projection compatibility", () => {
       },
     });
   });
+
+  it("skips duplicate line create events that use payload.lines line ids", async () => {
+    const initialState = createRepositoryState();
+    const lineCreatePayload = {
+      sectionId,
+      lines: [
+        {
+          lineId,
+          data: {
+            actions: {
+              dialogue: {
+                content: [{ text: "Hello" }],
+              },
+            },
+          },
+        },
+      ],
+      index: 0,
+    };
+    const projectCreateEvent = createProjectCreateRepositoryEvent({
+      projectId,
+      state: initialState,
+    });
+    const lineCreateEvent = createCommandEvent({
+      id: "line-create-current",
+      partition: scenePartitionFor(sceneId),
+      type: COMMAND_TYPES.LINE_CREATE,
+      payload: lineCreatePayload,
+      clientTs: 1,
+    });
+    const duplicateLineCreateEvent = createCommandEvent({
+      id: "line-create-current-duplicate",
+      partition: scenePartitionFor(sceneId),
+      type: COMMAND_TYPES.LINE_CREATE,
+      payload: lineCreatePayload,
+      clientTs: 2,
+    });
+
+    const finalRepositoryState = reduceEventsToState({
+      repositoryState: structuredClone(initialProjectData),
+      events: [projectCreateEvent, lineCreateEvent],
+    });
+
+    const projection = await loadSceneProjectionState({
+      store: createCheckpointStore(),
+      mainState: createMainProjectionState(finalRepositoryState),
+      events: [projectCreateEvent, lineCreateEvent, duplicateLineCreateEvent],
+      createInitialState: () => structuredClone(initialProjectData),
+      reduceEventToState,
+      reduceEventsToState,
+      sceneId,
+    });
+
+    expect(
+      projection.scenes.items[sceneId].sections.items[sectionId].lines.items[
+        lineId
+      ].actions.dialogue.content,
+    ).toEqual([{ text: "Hello" }]);
+  });
 });

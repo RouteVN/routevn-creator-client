@@ -8,6 +8,8 @@ import {
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { extractFileIdsFromRenderState } from "../../internal/project/layout.js";
 import { createRenderableParticleData } from "../../internal/particles.js";
+import { captureCanvasThumbnailImage } from "../../internal/runtime/graphicsEngineRuntime.js";
+import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import {
   getTagsCollection,
   resolveCollectionWithTags,
@@ -27,6 +29,39 @@ import { PARTICLE_TAG_SCOPE_KEY } from "./particles.store.js";
 const CREATE_PARTICLE_SETUP_STEP = "setup";
 const PARTICLE_EDITOR_STEP = "editor";
 
+const dataUrlToBlob = async (value) => {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new Error("Thumbnail image is missing");
+  }
+
+  const commaIndex = value.indexOf(",");
+  if (commaIndex < 0) {
+    throw new Error("Thumbnail image is not a valid data URL");
+  }
+
+  const header = value.slice(0, commaIndex);
+  const body = value.slice(commaIndex + 1);
+  const mimeMatch = header.match(/^data:([^;,]+)?(?:;base64)?$/);
+  if (!mimeMatch) {
+    throw new Error("Thumbnail image is not a valid data URL");
+  }
+
+  const mimeType = mimeMatch[1] || "application/octet-stream";
+  const isBase64 = header.includes(";base64");
+
+  if (!isBase64) {
+    return new Blob([decodeURIComponent(body)], { type: mimeType });
+  }
+
+  const binary = atob(body);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return new Blob([bytes], { type: mimeType });
+};
+
 const syncDialogFormValues = ({ refs, values } = {}) => {
   refs.particleForm?.reset?.();
   refs.particleForm?.setValues?.({ values });
@@ -35,6 +70,15 @@ const syncDialogFormValues = ({ refs, values } = {}) => {
 const getPreviewCanvasRef = (refs, target) => {
   return target === "dialog" ? refs.dialogCanvas : refs.detailCanvas;
 };
+
+const {
+  focusKeyboardScope: focusImageSelectorKeyboardScope,
+  handleKeyboardScopeClick: handleImageSelectorKeyboardScopeClick,
+  handleKeyboardScopeKeyDown: handleImageSelectorKeyboardScopeKeyDown,
+} = createFileExplorerKeyboardScopeHandlers({
+  fileExplorerRefName: "imageSelectorFileExplorer",
+  keyboardScopeRefName: "imageSelectorKeyboardScope",
+});
 
 const loadParticlePreviewAssets = async ({ deps, renderState } = {}) => {
   const { graphicsService, projectService } = deps;
@@ -143,12 +187,163 @@ const renderParticlePreview = async ({
     return;
   }
 
-  const previewState = createParticlePreviewState(renderableParticle);
+  const previewState = createParticlePreviewState(renderableParticle, {
+    backgroundImage:
+      target === "dialog" && store.selectDialogMode() === "form"
+        ? store.selectDialogPreviewBackgroundImage()
+        : undefined,
+  });
   await loadParticlePreviewAssets({
     deps,
     renderState: previewState,
   });
   graphicsService.render(previewState);
+};
+
+const showParticleThumbnailError = ({ appService, message, error } = {}) => {
+  if (error) {
+    console.error(`[particles] ${message}`, error);
+  } else {
+    console.error(`[particles] ${message}`);
+  }
+
+  appService.showAlert({
+    message,
+    title: "Error",
+  });
+};
+
+const captureParticleThumbnail = async ({ deps, particleData } = {}) => {
+  const { appService, graphicsService, projectService, refs, store } = deps;
+
+  let renderableParticle;
+  try {
+    renderableParticle = createRenderableParticleData(
+      particleData,
+      store.selectImagesData()?.items || {},
+    );
+  } catch (error) {
+    showParticleThumbnailError({
+      appService,
+      error,
+      message:
+        "Failed to save particle thumbnail: particle data preparation failed.",
+    });
+    return;
+  }
+
+  const width = Math.max(1, Math.round(Number(renderableParticle.width) || 1));
+  const height = Math.max(
+    1,
+    Math.round(Number(renderableParticle.height) || 1),
+  );
+  let isReady;
+  try {
+    isReady = await ensurePreviewRuntime({
+      deps,
+      target: "dialog",
+      width,
+      height,
+    });
+  } catch (error) {
+    showParticleThumbnailError({
+      appService,
+      error,
+      message:
+        "Failed to save particle thumbnail: preview runtime setup failed.",
+    });
+    return;
+  }
+
+  if (!isReady) {
+    showParticleThumbnailError({
+      appService,
+      message: "Failed to save particle thumbnail: preview canvas unavailable.",
+    });
+    return;
+  }
+
+  let previewState;
+  try {
+    previewState = createParticlePreviewState(renderableParticle);
+  } catch (error) {
+    showParticleThumbnailError({
+      appService,
+      error,
+      message:
+        "Failed to save particle thumbnail: preview state creation failed.",
+    });
+    return;
+  }
+
+  try {
+    await loadParticlePreviewAssets({
+      deps,
+      renderState: previewState,
+    });
+  } catch (error) {
+    showParticleThumbnailError({
+      appService,
+      error,
+      message: "Failed to save particle thumbnail: texture asset load failed.",
+    });
+    return;
+  }
+
+  try {
+    graphicsService.render(previewState);
+  } catch (error) {
+    showParticleThumbnailError({
+      appService,
+      error,
+      message: "Failed to save particle thumbnail: preview render failed.",
+    });
+    return;
+  }
+
+  const thumbnailImage = await captureCanvasThumbnailImage(
+    graphicsService,
+    refs.dialogCanvas,
+  );
+  if (!thumbnailImage) {
+    showParticleThumbnailError({
+      appService,
+      message:
+        "Failed to save particle thumbnail: canvas capture returned no image.",
+    });
+    return;
+  }
+
+  let thumbnailBlob;
+  try {
+    thumbnailBlob = await dataUrlToBlob(thumbnailImage);
+  } catch (error) {
+    showParticleThumbnailError({
+      appService,
+      error,
+      message: "Failed to save particle thumbnail: image conversion failed.",
+    });
+    return;
+  }
+
+  let storedFile;
+  try {
+    storedFile = await projectService.storeFile({
+      file: thumbnailBlob,
+    });
+  } catch (error) {
+    showParticleThumbnailError({
+      appService,
+      error,
+      message: "Failed to save particle thumbnail: file storage failed.",
+    });
+    return;
+  }
+
+  return {
+    thumbnailFileId: storedFile.fileId,
+    fileRecords: storedFile.fileRecords,
+  };
 };
 
 async function renderDetailPreview(deps) {
@@ -217,6 +412,27 @@ const isValidParticlePresetId = (presetId) => {
 const getDialogFallbackParticle = (store) => {
   return store.selectParticleItemById({
     itemId: store.selectEditItemId(),
+  });
+};
+
+const renderCurrentDialogPreview = async (deps, { forceInit = false } = {}) => {
+  const { store } = deps;
+  const previewParticle = buildDialogParticleData({
+    deps,
+    values: store.selectDialogFormValues(),
+    fallbackParticle: getDialogFallbackParticle(store),
+  });
+
+  store.setDialogPreviewSize({
+    width: previewParticle.width,
+    height: previewParticle.height,
+  });
+
+  await renderParticlePreview({
+    deps,
+    target: "dialog",
+    particleData: previewParticle,
+    forceInit,
   });
 };
 
@@ -360,6 +576,9 @@ const {
   handleFileExplorerKeyboardScopeKeyDown,
   handleItemClick: handleParticleItemClickBase,
   handleSearchInput,
+  handleMobileFileExplorerOpen,
+  handleMobileFileExplorerClose,
+  handleMobileDetailSheetClose,
 } = createCatalogPageHandlers({
   resourceType: "particles",
   selectData: (repositoryState) => {
@@ -421,6 +640,9 @@ export {
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
   handleSearchInput,
+  handleMobileFileExplorerOpen,
+  handleMobileFileExplorerClose,
+  handleMobileDetailSheetClose,
 };
 
 export const handleFileExplorerSelectionChanged = async (deps, payload) => {
@@ -501,7 +723,7 @@ export const handleParticleDialogClose = async (deps) => {
 
 export const handleParticleFormActionClick = async (deps, payload) => {
   const { appService, projectService, refs, store, render } = deps;
-  const { actionId, values: nextValues } = payload._event.detail;
+  const { actionId, valid, values: nextValues } = payload._event.detail;
   const dialogStep = store.selectDialogStep();
   const mergedValues = mergeDialogFormValues(store, nextValues);
   const values =
@@ -529,6 +751,10 @@ export const handleParticleFormActionClick = async (deps, payload) => {
   }
 
   if (actionId !== "submit") {
+    return;
+  }
+
+  if (valid === false) {
     return;
   }
 
@@ -636,6 +862,16 @@ export const handleParticleFormActionClick = async (deps, payload) => {
     targetGroupId,
     values,
   };
+  const thumbnailResult = await captureParticleThumbnail({
+    deps,
+    particleData,
+  });
+
+  if (!thumbnailResult) {
+    return;
+  }
+
+  particleData.thumbnailFileId = thumbnailResult.thumbnailFileId;
 
   store.closeParticleDialog();
   store.clearPreviewRuntime();
@@ -649,6 +885,7 @@ export const handleParticleFormActionClick = async (deps, payload) => {
         projectService.updateParticle({
           particleId: editItemId,
           data: particleData,
+          fileRecords: thumbnailResult.fileRecords,
         }),
     });
 
@@ -675,6 +912,7 @@ export const handleParticleFormActionClick = async (deps, payload) => {
           type: "particle",
           ...particleData,
         },
+        fileRecords: thumbnailResult.fileRecords,
         parentId: targetGroupId,
         position: "last",
       }),
@@ -734,6 +972,105 @@ export const handleParticleFormChange = async (deps, payload) => {
     target: "dialog",
     particleData: previewParticle,
   });
+};
+
+export const handleDialogPreviewBackgroundImageClick = (deps) => {
+  const { render, store } = deps;
+  store.showPreviewImageSelectorDialog();
+  render();
+};
+
+export const handleDialogPreviewBackgroundImageContextMenu = async (
+  deps,
+  payload,
+) => {
+  const { appService, render, store } = deps;
+  const event = payload?._event;
+  event?.preventDefault?.();
+
+  if (!store.selectDialogPreviewBackgroundImage()) {
+    return;
+  }
+
+  const result = await appService.showDropdownMenu({
+    items: [{ type: "item", label: "Remove", key: "remove" }],
+    x: event.clientX,
+    y: event.clientY,
+    place: "bs",
+  });
+
+  if (!result || result.item?.key !== "remove") {
+    return;
+  }
+
+  store.clearDialogPreviewBackgroundImage();
+  render();
+  await renderCurrentDialogPreview(deps);
+};
+
+const applyDialogPreviewBackgroundImage = async (deps, imageId) => {
+  const { render, store } = deps;
+  store.setDialogPreviewBackgroundImage({
+    imageId,
+  });
+  store.hidePreviewImageSelectorDialog();
+  render();
+  await renderCurrentDialogPreview(deps);
+};
+
+export const handlePreviewImageSelected = (deps, payload) => {
+  const { render, store } = deps;
+  store.setPreviewImageSelectorSelectedImageId({
+    imageId: payload._event.detail?.imageId,
+  });
+  render();
+};
+
+export const handlePreviewImageDoubleClick = async (deps, payload) => {
+  const imageId = payload?._event?.detail?.imageId;
+  if (!imageId) {
+    return;
+  }
+
+  await applyDialogPreviewBackgroundImage(deps, imageId);
+};
+
+export const handlePreviewImageFileExplorerClickItem = (deps, payload) => {
+  const itemId = payload?._event?.detail?.itemId;
+  if (!itemId) {
+    return;
+  }
+
+  deps.refs.imageSelector?.transformedHandlers?.handleScrollToItem?.({
+    itemId,
+  });
+  focusImageSelectorKeyboardScope(deps);
+};
+
+export {
+  handleImageSelectorKeyboardScopeClick,
+  handleImageSelectorKeyboardScopeKeyDown,
+};
+
+export const handleConfirmPreviewImageSelection = async (deps) => {
+  const { store } = deps;
+  const imageSelectorDialog = store.selectPreviewImageSelectorDialog();
+  await applyDialogPreviewBackgroundImage(
+    deps,
+    imageSelectorDialog.selectedImageId,
+  );
+};
+
+export const handleCancelPreviewImageSelection = (deps) => {
+  const { render, store } = deps;
+  store.hidePreviewImageSelectorDialog();
+  render();
+};
+
+export const handleClosePreviewImageSelectorDialog = (deps) => {
+  const { render, store } = deps;
+  store.hidePreviewImageSelectorDialog();
+  render();
 };
 
 const {
