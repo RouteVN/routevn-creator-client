@@ -11,8 +11,7 @@ const getLineElement = (element, lineId) => {
 
 const getSelectedLineElement = (element) => {
   const selectedLineId =
-    element.props?.selectedLineId ||
-    element.store?.getState?.()?.activeLineId;
+    element.props?.selectedLineId || element.store?.getState?.()?.activeLineId;
   return getLineElement(element, selectedLineId);
 };
 

@@ -10,7 +10,6 @@ import {
   $isTextNode,
   $setSelection,
   COMMAND_PRIORITY_HIGH,
-  FORMAT_TEXT_COMMAND,
   KEY_ARROW_DOWN_COMMAND,
   KEY_ARROW_UP_COMMAND,
   KEY_ENTER_COMMAND,
@@ -492,7 +491,6 @@ const createLineMeta = (line = {}) => {
     typeof nextLine?.id === "string" && nextLine.id.length > 0
       ? nextLine.id
       : generateId();
-  nextLine.sectionId = nextLine?.sectionId;
   nextLine.actions = structuredClone(nextLine?.actions || {});
   nextLine.createdAt = toFiniteTimestamp(nextLine?.createdAt, 0);
   nextLine.updatedAt = toFiniteTimestamp(

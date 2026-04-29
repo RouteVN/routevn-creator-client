@@ -1044,8 +1044,9 @@ export const handleEditorBlur = async (deps) => {
       return;
     }
 
-    Promise.resolve(scheduleSceneEditorDraftFlush(deps, { immediate: true }))
-      .catch(() => {});
+    Promise.resolve(
+      scheduleSceneEditorDraftFlush(deps, { immediate: true }),
+    ).catch(() => {});
   }, 0);
 };
 
@@ -1481,11 +1482,7 @@ export const handleSwapLine = async (deps, payload) => {
     const targetIndex =
       direction === "up" ? currentIndex - 1 : currentIndex + 1;
 
-    if (
-      currentIndex < 0 ||
-      targetIndex < 0 ||
-      targetIndex >= lines.length
-    ) {
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= lines.length) {
       return;
     }
 

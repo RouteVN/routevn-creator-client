@@ -26,8 +26,7 @@ import {
 
 const TEXT_STYLE_ID_PROPERTY = "--rvn-text-style-id";
 export const FURIGANA_TEXT_PROPERTY = "--rvn-furigana-text";
-export const FURIGANA_TEXT_STYLE_ID_PROPERTY =
-  "--rvn-furigana-text-style-id";
+export const FURIGANA_TEXT_STYLE_ID_PROPERTY = "--rvn-furigana-text-style-id";
 
 const ACTIVE_ELEMENT_PATCH_COUNTS = new WeakMap();
 const DOCUMENT_SELECTION_PATCH_COUNTS = new WeakMap();
@@ -126,7 +125,9 @@ export const getTextStyleFromNode = (node) => {
 };
 
 export const getTextStyleIdFromNode = (node) => {
-  return cloneTextStyleId(parseStyleText(node.getStyle())[TEXT_STYLE_ID_PROPERTY]);
+  return cloneTextStyleId(
+    parseStyleText(node.getStyle())[TEXT_STYLE_ID_PROPERTY],
+  );
 };
 
 export const getFuriganaFromNode = (node) => {

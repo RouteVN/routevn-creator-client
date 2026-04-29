@@ -69,7 +69,7 @@ const focusLineAfterRender = (refs, { lineId, cursorPosition } = {}) => {
     if (typeof cursorPosition === "number") {
       const targetPosition =
         cursorPosition < 0
-          ? lineElement.getPlainText?.().length ?? 0
+          ? (lineElement.getPlainText?.().length ?? 0)
           : cursorPosition;
       lineElement.setCaretPosition?.(targetPosition, {
         preventScroll: true,
@@ -212,11 +212,18 @@ export const handleLineMergeRequest = (deps, payload) => {
 export const handleLinePasteRequest = (deps, payload) => {
   const { dispatchEvent, props, store } = deps;
   const lineId = getLineIdFromElement(payload?._event?.currentTarget);
-  const { leftContent, rightContent, lines: pastedLines } =
-    payload?._event?.detail || {};
+  const {
+    leftContent,
+    rightContent,
+    lines: pastedLines,
+  } = payload?._event?.detail || {};
   const lines = getLinesSnapshot(props);
   const lineIndex = lines.findIndex((item) => item.id === lineId);
-  if (lineIndex < 0 || !Array.isArray(pastedLines) || pastedLines.length === 0) {
+  if (
+    lineIndex < 0 ||
+    !Array.isArray(pastedLines) ||
+    pastedLines.length === 0
+  ) {
     return;
   }
 
@@ -247,7 +254,10 @@ export const handleLinePasteRequest = (deps, payload) => {
   }
 
   if (nextLines.length === 0) {
-    setLineDialogueContent(currentLine, appendContentArrays(firstContent, rightContent));
+    setLineDialogueContent(
+      currentLine,
+      appendContentArrays(firstContent, rightContent),
+    );
     cursorPosition = getContentLength(firstContent);
   }
 
@@ -285,7 +295,7 @@ export const handleLineNavigateRequest = (deps, payload) => {
 
   const targetPosition =
     requestedCursorPosition === -1
-      ? getLineElementById(refs, targetLine.id)?.getPlainText?.().length ?? 0
+      ? (getLineElementById(refs, targetLine.id)?.getPlainText?.().length ?? 0)
       : requestedCursorPosition;
 
   setActiveLineIdIfUncontrolled(store, props, targetLine.id);

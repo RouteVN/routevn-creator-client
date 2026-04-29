@@ -240,7 +240,10 @@ const getDraftSectionForSelection = (state, sceneId, sectionId) => {
     return undefined;
   }
 
-  if (draftSection.sceneId !== sceneId || draftSection.sectionId !== sectionId) {
+  if (
+    draftSection.sceneId !== sceneId ||
+    draftSection.sectionId !== sectionId
+  ) {
     return undefined;
   }
 
@@ -282,7 +285,7 @@ const overlayDraftSectionOnRepositoryState = (repositoryState, state) => {
     scenes: {
       ...repositoryScenes,
       items: {
-      ...repositoryScenes?.items,
+        ...repositoryScenes?.items,
         [draftSection.sceneId]: {
           ...repositoryScene,
           sections: {
@@ -362,9 +365,7 @@ const buildProjectDataSourceState = (state) => {
       sectionItems[sectionId] = {
         id: sectionId,
         name: section.name || `Section ${sectionId}`,
-        initialLineId: draftSection
-          ? draftLines[0]?.id
-          : section.initialLineId,
+        initialLineId: draftSection ? draftLines[0]?.id : section.initialLineId,
         lines: {
           items: lineItems,
           tree: toFlatTree(Object.keys(lineItems)),
@@ -526,10 +527,7 @@ export const hidePreviewScene = ({ state }, _payload = {}) => {
   state.previewLineId = undefined;
 };
 
-export const setSkipNextEditorBlurDraftFlush = (
-  { state },
-  { value } = {},
-) => {
+export const setSkipNextEditorBlurDraftFlush = ({ state }, { value } = {}) => {
   state.skipNextEditorBlurDraftFlush = value === true;
 };
 

@@ -449,7 +449,10 @@ export class LexicalLineEditorElement extends HTMLElement {
       this.handleMentionMenuClick,
     );
 
-    this.loadContent(this.state.content, { focusAtEnd: false, emitChange: false });
+    this.loadContent(this.state.content, {
+      focusAtEnd: false,
+      emitChange: false,
+    });
     this.render();
   }
 
@@ -557,9 +560,7 @@ export class LexicalLineEditorElement extends HTMLElement {
     return { ...this.state.selection };
   }
 
-  setSelectionOffsets(
-    { start = 0, end = start, preventScroll = true } = {},
-  ) {
+  setSelectionOffsets({ start = 0, end = start, preventScroll = true } = {}) {
     const range = createRangeFromOffsets(this.refs.editor, start, end);
     this.focus({ preventScroll });
     setSelectionFromRange(this.refs.editor, range);
@@ -665,11 +666,7 @@ export class LexicalLineEditorElement extends HTMLElement {
   }
 
   applyTextFormat(format) {
-    if (
-      format === "bold" ||
-      format === "italic" ||
-      format === "underline"
-    ) {
+    if (format === "bold" || format === "italic" || format === "underline") {
       this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, format);
       this.focus({ preventScroll: true });
       return;
@@ -833,9 +830,7 @@ export class LexicalLineEditorElement extends HTMLElement {
 
   handlePasteEvent(event) {
     const pastedText = event?.clipboardData?.getData("text/plain") ?? "";
-    const normalizedLines = pastedText
-      .replace(/\r\n?/g, "\n")
-      .split("\n");
+    const normalizedLines = pastedText.replace(/\r\n?/g, "\n").split("\n");
 
     if (normalizedLines.length <= 1) {
       this.insertPlainText(pastedText);
@@ -854,7 +849,9 @@ export class LexicalLineEditorElement extends HTMLElement {
         detail: {
           leftContent: before,
           rightContent: after,
-          lines: normalizedLines.map((line) => ensureContentArray([{ text: line }])),
+          lines: normalizedLines.map((line) =>
+            ensureContentArray([{ text: line }]),
+          ),
         },
         bubbles: true,
       }),
@@ -862,7 +859,9 @@ export class LexicalLineEditorElement extends HTMLElement {
   }
 
   insertPlainText(text) {
-    const nextText = String(text ?? "").replace(/\r\n?/g, "\n").replace(/\n/g, " ");
+    const nextText = String(text ?? "")
+      .replace(/\r\n?/g, "\n")
+      .replace(/\n/g, " ");
 
     this.editor.update(
       () => {
@@ -905,7 +904,9 @@ export class LexicalLineEditorElement extends HTMLElement {
       return;
     }
 
-    const selection = preserveSelection ? this.getSelectionOffsets() : undefined;
+    const selection = preserveSelection
+      ? this.getSelectionOffsets()
+      : undefined;
     this.renderContent(nextContent, {
       focusAtEnd: false,
       emitChange,

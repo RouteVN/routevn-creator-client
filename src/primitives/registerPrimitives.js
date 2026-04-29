@@ -26,7 +26,10 @@ export const registerPrimitives = () => {
   }
 
   if (!customElements.get(LEXICAL_LINE_EDITOR_TAG_NAME)) {
-    customElements.define(LEXICAL_LINE_EDITOR_TAG_NAME, LexicalLineEditorElement);
+    customElements.define(
+      LEXICAL_LINE_EDITOR_TAG_NAME,
+      LexicalLineEditorElement,
+    );
   }
 
   if (!customElements.get(LEXICAL_SCENE_DOCUMENT_EDITOR_TAG_NAME)) {
