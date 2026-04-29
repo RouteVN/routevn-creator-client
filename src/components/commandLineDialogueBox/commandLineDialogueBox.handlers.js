@@ -1,10 +1,15 @@
 import { toFlatItems } from "../../internal/project/tree.js";
-import { debugLog } from "../../deps/services/shared/debugLog.js";
 
 const DIALOGUE_SPRITE_DEBUG_SCOPE = "dialogue-sprite";
-const SPRITE_GROUP_FIELD_PREFIX = "spriteGroup:";
 const DEFAULT_SPRITE_GROUP_ID = "base";
 const DEFAULT_SPRITE_GROUP_NAME = "Sprite";
+
+const logDialogueSprite = (event, data = {}) => {
+  console.log(`[rvn.debug.${DIALOGUE_SPRITE_DEBUG_SCOPE}]`, {
+    event,
+    ...data,
+  });
+};
 
 const toBoolean = (value) => {
   return value === true || value === "true";
@@ -108,6 +113,7 @@ const buildSpriteSelectionGroups = (character = {}) => {
       {
         id: DEFAULT_SPRITE_GROUP_ID,
         name: DEFAULT_SPRITE_GROUP_NAME,
+        tags: [],
       },
     ];
   }
@@ -115,11 +121,8 @@ const buildSpriteSelectionGroups = (character = {}) => {
   return character.spriteGroups.map((spriteGroup, index) => ({
     id: resolveSpriteGroupId(spriteGroup, index),
     name: resolveSpriteGroupName(spriteGroup, index),
+    tags: Array.isArray(spriteGroup?.tags) ? spriteGroup.tags : [],
   }));
-};
-
-const getSpriteGroupFieldName = (spriteGroupId) => {
-  return `${SPRITE_GROUP_FIELD_PREFIX}${spriteGroupId}`;
 };
 
 const buildSelectedSpriteIdsByGroup = (items = []) => {
@@ -136,55 +139,31 @@ const buildSelectedSpriteIdsByGroup = (items = []) => {
   return selectedSpriteIds;
 };
 
-const buildSpriteFormValues = (selectedSpriteIds = {}) => {
-  const values = {};
-
-  for (const [spriteGroupId, spriteId] of Object.entries(selectedSpriteIds)) {
-    values[getSpriteGroupFieldName(spriteGroupId)] = spriteId;
-  }
-
-  return values;
-};
-
-const getSelectedSpriteIdsFromFormValues = ({
-  formValues,
+const buildTempSelectedSpriteIdsByGroup = ({
+  selectedSpriteIds,
   spriteSelectionGroups,
-  fallbackSelectedSpriteIds,
 } = {}) => {
-  const selectedSpriteIds = {};
+  const nextSelectedSpriteIds = {};
+  const firstSelectedSpriteId = Object.values(selectedSpriteIds ?? {}).find(
+    Boolean,
+  );
 
-  for (const spriteSelectionGroup of spriteSelectionGroups ?? []) {
-    const fieldName = getSpriteGroupFieldName(spriteSelectionGroup.id);
-    const spriteId =
-      formValues[fieldName] ??
-      fallbackSelectedSpriteIds?.[spriteSelectionGroup.id];
+  for (const [index, spriteSelectionGroup] of (
+    spriteSelectionGroups ?? []
+  ).entries()) {
+    const selectedSpriteId = selectedSpriteIds?.[spriteSelectionGroup.id];
 
-    if (spriteId) {
-      selectedSpriteIds[spriteSelectionGroup.id] = spriteId;
+    if (selectedSpriteId) {
+      nextSelectedSpriteIds[spriteSelectionGroup.id] = selectedSpriteId;
+      continue;
+    }
+
+    if (index === 0 && firstSelectedSpriteId) {
+      nextSelectedSpriteIds[spriteSelectionGroup.id] = firstSelectedSpriteId;
     }
   }
 
-  return selectedSpriteIds;
-};
-
-const normalizeSpriteAnimationMode = (mode) => {
-  return mode === "update" || mode === "transition" ? mode : "none";
-};
-
-const getSpriteAnimationIdFromFormValues = ({
-  formValues,
-  spriteAnimationMode,
-  fallbackAnimationId,
-} = {}) => {
-  if (spriteAnimationMode === "update") {
-    return formValues.updateSpriteAnimation ?? fallbackAnimationId ?? "";
-  }
-
-  if (spriteAnimationMode === "transition") {
-    return formValues.transitionSpriteAnimation ?? fallbackAnimationId ?? "";
-  }
-
-  return "";
+  return nextSelectedSpriteIds;
 };
 
 const resolveSelectedTransformId = ({ transforms, transformId } = {}) => {
@@ -202,23 +181,141 @@ const resolveSelectedTransformId = ({ transforms, transformId } = {}) => {
   return transformItems[0]?.id ?? "";
 };
 
+const getDefaultTransformId = (transforms) => {
+  return (
+    toFlatItems(transforms ?? createEmptyCollection()).find(
+      (item) => item.type === "transform",
+    )?.id ?? ""
+  );
+};
+
+const characterHasSpriteItems = ({ character, spriteItems } = {}) => {
+  const resourceIds = (Array.isArray(spriteItems) ? spriteItems : [])
+    .map((item) => item?.resourceId)
+    .filter(Boolean);
+
+  if (resourceIds.length === 0) {
+    return false;
+  }
+
+  const spriteIds = new Set(
+    toFlatItems(character?.sprites ?? createEmptyCollection())
+      .filter((item) => item.type === "image")
+      .map((item) => item.id),
+  );
+  return resourceIds.every((resourceId) => spriteIds.has(resourceId));
+};
+
+const inferSpriteCharacterId = ({
+  characters,
+  selectedCharacterId,
+  spriteItems,
+} = {}) => {
+  const selectedCharacter = getCharacterById({
+    characters,
+    characterId: selectedCharacterId,
+  });
+
+  if (characterHasSpriteItems({ character: selectedCharacter, spriteItems })) {
+    return selectedCharacterId;
+  }
+
+  const character = (characters ?? []).find(
+    (candidate) =>
+      candidate?.type === "character" &&
+      characterHasSpriteItems({
+        character: candidate,
+        spriteItems,
+      }),
+  );
+
+  return character?.id ?? "";
+};
+
+const getSpriteSelectionGroupsForCharacterId = ({
+  characters,
+  characterId,
+} = {}) => {
+  return buildSpriteSelectionGroups(
+    getCharacterById({
+      characters,
+      characterId,
+    }),
+  );
+};
+
+const resolveSelectedSpriteGroupId = ({
+  selectedSpriteGroupId,
+  spriteSelectionGroups,
+} = {}) => {
+  if (
+    spriteSelectionGroups?.some(
+      (spriteSelectionGroup) =>
+        spriteSelectionGroup.id === selectedSpriteGroupId,
+    )
+  ) {
+    return selectedSpriteGroupId;
+  }
+
+  return spriteSelectionGroups?.[0]?.id;
+};
+
+const beginSpriteSelectionForCharacter = (
+  { store, props },
+  { characterId, spriteGroupId } = {},
+) => {
+  const state = store.getState();
+  const spriteSelectionGroups = getSpriteSelectionGroupsForCharacterId({
+    characters: props?.characters,
+    characterId,
+  });
+  const keepSelectedSprites = characterId === state.spriteCharacterId;
+  const selectedSpriteIds = keepSelectedSprites ? state.selectedSpriteIds : {};
+  const selectedSpriteGroupId =
+    spriteGroupId ??
+    resolveSelectedSpriteGroupId({
+      selectedSpriteGroupId: state.selectedSpriteGroupId,
+      spriteSelectionGroups,
+    });
+
+  store.setSpriteCharacterId({ characterId });
+  if (!state.spriteTransformId) {
+    store.setSpriteTransformId({
+      transformId: getDefaultTransformId(props?.transforms),
+    });
+  }
+  store.setTempSelectedSpriteIds({
+    spriteIdsByGroupId: buildTempSelectedSpriteIdsByGroup({
+      selectedSpriteIds,
+      spriteSelectionGroups,
+    }),
+  });
+  store.setSelectedSpriteGroupId({
+    spriteGroupId: selectedSpriteGroupId,
+  });
+  store.setSearchQuery({ value: "" });
+  store.setMode({
+    mode: "sprite-select",
+  });
+};
+
 const buildDialogueCharacterSprite = ({
   characters,
   transforms,
-  selectedCharacterId,
+  spriteCharacterId,
   characterSpriteEnabled,
   spriteTransformId,
   selectedSpriteIds,
   spriteAnimationMode,
   spriteAnimationId,
 } = {}) => {
-  if (!toBoolean(characterSpriteEnabled)) {
+  if (!toBoolean(characterSpriteEnabled) || !spriteCharacterId) {
     return undefined;
   }
 
   const selectedCharacter = getCharacterById({
     characters,
-    characterId: selectedCharacterId,
+    characterId: spriteCharacterId,
   });
   const spriteSelectionGroups = selectedCharacter
     ? buildSpriteSelectionGroups(selectedCharacter)
@@ -241,16 +338,19 @@ const buildDialogueCharacterSprite = ({
     });
   }
 
-  const sprite = {};
   const resolvedTransformId = resolveSelectedTransformId({
     transforms,
     transformId: spriteTransformId,
   });
 
-  if (resolvedTransformId && items.length > 0) {
-    sprite.transformId = resolvedTransformId;
-    sprite.items = items;
+  if (!resolvedTransformId || items.length === 0) {
+    return undefined;
   }
+
+  const sprite = {
+    transformId: resolvedTransformId,
+    items,
+  };
 
   if (spriteAnimationMode !== "none" && spriteAnimationId) {
     sprite.animations = {
@@ -258,7 +358,7 @@ const buildDialogueCharacterSprite = ({
     };
   }
 
-  return Object.keys(sprite).length > 0 ? sprite : undefined;
+  return sprite;
 };
 
 const hasDialogueCharacter = ({
@@ -289,6 +389,13 @@ const syncDialogueStateFromProps = (deps, dialogue = {}) => {
   const spriteAnimationMode =
     getAnimationModeById(props?.animations, spriteAnimationId) ??
     (spriteAnimationId ? "update" : "none");
+  const spriteCharacterId = characterSprite
+    ? inferSpriteCharacterId({
+        characters: props?.characters,
+        selectedCharacterId,
+        spriteItems: characterSprite?.items,
+      })
+    : "";
 
   store.setSelectedMode({
     mode: selectedMode,
@@ -314,6 +421,9 @@ const syncDialogueStateFromProps = (deps, dialogue = {}) => {
         characterId: selectedCharacterId,
       }),
   });
+  store.setSpriteCharacterId({
+    characterId: spriteCharacterId,
+  });
   store.setCharacterSpriteEnabled({
     characterSpriteEnabled: !!characterSprite,
   });
@@ -332,6 +442,9 @@ const syncDialogueStateFromProps = (deps, dialogue = {}) => {
   store.setPersistCharacter({
     persistCharacter: hasCharacter && dialogue?.persistCharacter === true,
   });
+  store.setAppendDialogue({
+    append: selectedMode === "adv" && dialogue?.append === true,
+  });
 
   store.setClearPage({
     clearPage: dialogue?.clearPage === true,
@@ -340,17 +453,18 @@ const syncDialogueStateFromProps = (deps, dialogue = {}) => {
 
 const syncDialogueFormValues = (deps) => {
   const { refs, store } = deps;
+
+  if (!refs.dialogueForm) {
+    return;
+  }
+
   const {
     selectedMode,
     selectedResourceId,
     selectedCharacterId,
     customCharacterName,
     characterName,
-    characterSpriteEnabled,
-    spriteTransformId,
-    spriteAnimationMode,
-    spriteAnimationId,
-    selectedSpriteIds,
+    appendDialogue,
     persistCharacter,
     clearPage,
   } = store.getState();
@@ -360,22 +474,10 @@ const syncDialogueFormValues = (deps) => {
     characterId: selectedCharacterId,
     customCharacterName,
     characterName,
-    characterSpriteEnabled,
-    spriteTransformId,
-    spriteAnimationMode,
-    updateSpriteAnimation:
-      spriteAnimationMode === "update" ? spriteAnimationId : "",
-    transitionSpriteAnimation:
-      spriteAnimationMode === "transition" ? spriteAnimationId : "",
+    append: appendDialogue,
     persistCharacter,
     clearPage,
   };
-
-  for (const [name, value] of Object.entries(
-    buildSpriteFormValues(selectedSpriteIds),
-  )) {
-    values[name] = value;
-  }
 
   refs.dialogueForm.reset();
   refs.dialogueForm.setValues({
@@ -409,8 +511,6 @@ export const handleFormChange = (deps, payload) => {
   const modeChanged = selectedMode !== currentState.selectedMode;
   const customCharacterName = toBoolean(formValues.customCharacterName);
   const selectedCharacterId = formValues.characterId ?? "";
-  const selectedCharacterChanged =
-    selectedCharacterId !== currentState.selectedCharacterId;
   const hadDialogueCharacter = hasDialogueCharacter({
     selectedCharacterId: currentState.selectedCharacterId,
     customCharacterName: currentState.customCharacterName,
@@ -422,34 +522,6 @@ export const handleFormChange = (deps, payload) => {
   const persistCharacterVisibilityChanged =
     hadDialogueCharacter !== hasCharacter;
   let characterName = formValues.characterName ?? currentState.characterName;
-  const characterSpriteEnabled = toBoolean(
-    formValues.characterSpriteEnabled ?? currentState.characterSpriteEnabled,
-  );
-  const selectedCharacter = getCharacterById({
-    characters: props?.characters,
-    characterId: selectedCharacterId,
-  });
-  const spriteSelectionGroups = buildSpriteSelectionGroups(selectedCharacter);
-  const selectedSpriteIds =
-    characterSpriteEnabled && selectedCharacter && !selectedCharacterChanged
-      ? getSelectedSpriteIdsFromFormValues({
-          formValues,
-          spriteSelectionGroups,
-          fallbackSelectedSpriteIds: currentState.selectedSpriteIds,
-        })
-      : characterSpriteEnabled && !selectedCharacterChanged
-        ? currentState.selectedSpriteIds
-        : {};
-  const spriteAnimationMode = characterSpriteEnabled
-    ? normalizeSpriteAnimationMode(
-        formValues.spriteAnimationMode ?? currentState.spriteAnimationMode,
-      )
-    : "none";
-  const spriteAnimationId = getSpriteAnimationIdFromFormValues({
-    formValues,
-    spriteAnimationMode,
-    fallbackAnimationId: currentState.spriteAnimationId,
-  });
 
   if (!customCharacterName) {
     characterName = getSelectedCharacterName({
@@ -481,25 +553,12 @@ export const handleFormChange = (deps, payload) => {
   store.setCharacterName({
     characterName,
   });
-  store.setCharacterSpriteEnabled({
-    characterSpriteEnabled,
-  });
-  store.setSpriteTransformId({
-    transformId: characterSpriteEnabled
-      ? (formValues.spriteTransformId ?? currentState.spriteTransformId)
-      : "",
-  });
-  store.setSelectedSpriteIds({
-    spriteIdsByGroupId: selectedSpriteIds,
-  });
-  store.setSpriteAnimationMode({
-    mode: spriteAnimationMode,
-  });
-  store.setSpriteAnimationId({
-    animationId: spriteAnimationId,
-  });
   const persistCharacter =
     hasCharacter && hadDialogueCharacter ? formValues.persistCharacter : false;
+  const appendDialogue = selectedMode === "adv" && toBoolean(formValues.append);
+  store.setAppendDialogue({
+    append: appendDialogue,
+  });
   store.setPersistCharacter({
     persistCharacter,
   });
@@ -507,14 +566,195 @@ export const handleFormChange = (deps, payload) => {
 
   render();
 
-  if (
-    modeChanged ||
-    persistCharacterVisibilityChanged ||
-    selectedCharacterChanged ||
-    currentState.characterSpriteEnabled !== characterSpriteEnabled
-  ) {
+  if (modeChanged || persistCharacterVisibilityChanged) {
     syncDialogueFormValues(deps);
   }
+};
+
+export const handleCharacterSpriteBoxClick = (deps) => {
+  const { store, render } = deps;
+
+  store.clearTempSelectedSpriteIds();
+  store.setSelectedSpriteGroupId({ spriteGroupId: undefined });
+  store.setSearchQuery({ value: "" });
+  store.setMode({
+    mode: "character-select",
+  });
+
+  render();
+};
+
+export const handleCharacterSpriteGroupBoxClick = (deps, payload) => {
+  const { store, render } = deps;
+  const spriteGroupId = payload?._event?.currentTarget?.dataset?.spriteGroupId;
+  const characterId = store.getState().spriteCharacterId;
+
+  if (!characterId) {
+    return;
+  }
+
+  beginSpriteSelectionForCharacter(deps, {
+    characterId,
+    spriteGroupId,
+  });
+  render();
+};
+
+export const handleClearCharacterSpriteClick = (deps, payload) => {
+  const { store, render } = deps;
+
+  payload?._event?.stopPropagation?.();
+  store.clearCharacterSprite();
+  render();
+};
+
+export const handleFileExplorerItemClick = (deps, payload) => {
+  const { refs, store, render } = deps;
+  const { itemId, isFolder } = payload._event.detail;
+  const mode = store.getState().mode;
+
+  if (isFolder) {
+    const groupElement = refs.galleryScroll?.querySelector(
+      `[data-group-id="${itemId}"]`,
+    );
+    groupElement?.scrollIntoView?.({ block: "start" });
+    return;
+  }
+
+  if (mode === "sprite-select") {
+    store.setTempSelectedSpriteId({
+      groupId: store.getState().selectedSpriteGroupId,
+      spriteId: itemId,
+    });
+    render();
+    return;
+  }
+
+  beginSpriteSelectionForCharacter(deps, {
+    characterId: itemId,
+  });
+  render();
+};
+
+export const handleSearchInput = (deps, payload) => {
+  const { store, render } = deps;
+  store.setSearchQuery({ value: payload._event.detail.value ?? "" });
+  render();
+};
+
+export const handleCharacterItemClick = (deps, payload) => {
+  const { render } = deps;
+  const characterId = payload._event.currentTarget.dataset.characterId;
+
+  beginSpriteSelectionForCharacter(deps, {
+    characterId,
+  });
+  render();
+};
+
+export const handleSpriteItemClick = (deps, payload) => {
+  const { store, render } = deps;
+  const spriteId = payload._event.currentTarget.dataset.spriteId;
+
+  store.setTempSelectedSpriteId({
+    groupId: store.getState().selectedSpriteGroupId,
+    spriteId,
+  });
+
+  render();
+};
+
+export const handleSpriteItemDoubleClick = (deps, payload) => {
+  const { store, render, props } = deps;
+  const spriteId = payload._event.currentTarget.dataset.spriteId;
+  const character = getCharacterById({
+    characters: props?.characters,
+    characterId: store.getState().spriteCharacterId,
+  });
+  const sprite = toFlatItems(
+    character?.sprites ?? createEmptyCollection(),
+  ).find((item) => item.id === spriteId && item.type === "image");
+
+  if (!sprite?.fileId) {
+    return;
+  }
+
+  store.setTempSelectedSpriteId({
+    groupId: store.getState().selectedSpriteGroupId,
+    spriteId,
+  });
+  store.showFullImagePreview({ fileId: sprite.fileId });
+  render();
+};
+
+export const handleSpriteGroupTabClick = (deps, payload) => {
+  const { store, render } = deps;
+  const spriteGroupId = payload._event.detail.id;
+
+  if (
+    !spriteGroupId ||
+    spriteGroupId === store.getState().selectedSpriteGroupId
+  ) {
+    return;
+  }
+
+  store.setSelectedSpriteGroupId({ spriteGroupId });
+  render();
+};
+
+export const handleTransformChange = (deps, payload) => {
+  const { store, render } = deps;
+  const value = payload._event.detail.value;
+  store.setSpriteTransformId({ transformId: value });
+  render();
+};
+
+export const handleAnimationModeChange = (deps, payload) => {
+  const { store, render } = deps;
+  const value = payload._event.detail.value;
+  store.setSpriteAnimationMode({ mode: value });
+  render();
+};
+
+export const handleAnimationChange = (deps, payload) => {
+  const { store, render } = deps;
+  const value = payload._event.detail.value;
+  store.setSpriteAnimationId({ animationId: value });
+  render();
+};
+
+export const handleButtonSelectClick = (deps) => {
+  const { store, props, render } = deps;
+  const state = store.getState();
+
+  if (state.mode === "sprite-select") {
+    const spriteSelectionGroups = getSpriteSelectionGroupsForCharacterId({
+      characters: props?.characters,
+      characterId: state.spriteCharacterId,
+    });
+    const selectedSpriteIds = {};
+
+    for (const spriteSelectionGroup of spriteSelectionGroups) {
+      const resourceId = state.tempSelectedSpriteIds[spriteSelectionGroup.id];
+      if (!resourceId) {
+        continue;
+      }
+
+      selectedSpriteIds[spriteSelectionGroup.id] = resourceId;
+    }
+
+    store.setSelectedSpriteIds({
+      spriteIdsByGroupId: selectedSpriteIds,
+    });
+    store.clearTempSelectedSpriteIds();
+    store.setSelectedSpriteGroupId({ spriteGroupId: undefined });
+    store.setSearchQuery({ value: "" });
+    store.setMode({
+      mode: "current",
+    });
+  }
+
+  render();
 };
 
 export const handleSubmitClick = (deps) => {
@@ -526,10 +766,12 @@ export const handleSubmitClick = (deps) => {
     customCharacterName,
     characterName,
     characterSpriteEnabled,
+    spriteCharacterId,
     spriteTransformId,
     spriteAnimationMode,
     spriteAnimationId,
     selectedSpriteIds,
+    appendDialogue,
     persistCharacter,
     clearPage,
   } = store.getState();
@@ -552,7 +794,6 @@ export const handleSubmitClick = (deps) => {
     return;
   }
 
-  // Create dialogue object with only non-empty values
   const dialogue = {
     mode: effectiveMode,
   };
@@ -572,7 +813,7 @@ export const handleSubmitClick = (deps) => {
   const characterSprite = buildDialogueCharacterSprite({
     characters: props?.characters,
     transforms: props?.transforms,
-    selectedCharacterId,
+    spriteCharacterId,
     characterSpriteEnabled,
     spriteTransformId,
     selectedSpriteIds,
@@ -582,8 +823,9 @@ export const handleSubmitClick = (deps) => {
   if (characterSprite) {
     character.sprite = characterSprite;
   }
-  debugLog(DIALOGUE_SPRITE_DEBUG_SCOPE, "dialogue-box.submit", {
+  logDialogueSprite("dialogue-box.submit", {
     selectedCharacterId,
+    spriteCharacterId,
     characterSpriteEnabled,
     spriteTransformId,
     selectedSpriteIds,
@@ -599,6 +841,14 @@ export const handleSubmitClick = (deps) => {
       selectedCharacterId,
       customCharacterName,
     }) && toBoolean(persistCharacter);
+  const appendDialogueEnabled = toBoolean(appendDialogue);
+  const appendDialoguePreviouslyEnabled = props?.dialogue?.append === true;
+  if (
+    effectiveMode === "adv" &&
+    (appendDialogueEnabled || appendDialoguePreviouslyEnabled)
+  ) {
+    dialogue.append = appendDialogueEnabled;
+  }
   dialogue.persistCharacter = persistCharacterEnabled;
   if (effectiveMode === "nvl" && toBoolean(clearPage)) {
     dialogue.clearPage = true;
@@ -614,13 +864,34 @@ export const handleSubmitClick = (deps) => {
 };
 
 export const handleBreadcumbClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
+  const { dispatchEvent, store, render } = deps;
+  const itemId = payload._event.detail.id;
 
-  if (payload._event.detail.id === "actions") {
+  if (itemId === "actions") {
     dispatchEvent(
       new CustomEvent("back-to-actions", {
         detail: {},
       }),
     );
+    return;
+  }
+
+  if (itemId === "current") {
+    store.clearTempSelectedSpriteIds();
+    store.setSelectedSpriteGroupId({ spriteGroupId: undefined });
+    store.setSearchQuery({ value: "" });
+    store.setMode({
+      mode: "current",
+    });
+    render();
+    return;
+  }
+
+  if (itemId === "character-select") {
+    store.setSearchQuery({ value: "" });
+    store.setMode({
+      mode: "character-select",
+    });
+    render();
   }
 };

@@ -256,9 +256,18 @@ Do not solve schema gaps with UI-only reinterpretation such as:
   repository type
 - adding projection/export-time translation layers to compensate for missing
   repository support
+- stripping fields before `routevn-creator-model` validation and then
+  reattaching them to client repository state
+- persisting command payload fields that `routevn-creator-model` does not
+  accept as first-class schema
 
 Projection is allowed to adapt repository data to downstream runtime contracts,
 but it must not be used to hide missing first-class repository concepts.
+
+Client adapters may normalize or migrate already-supported schema versions, but
+they must not make unsupported new repository fields appear to work. If a new
+field needs to be saved in project data, update `routevn-creator-model` first
+and only then wire the client to write that field.
 
 If RouteVN Creator introduces a user-visible resource such as `controls`, the
 expected implementation path is:

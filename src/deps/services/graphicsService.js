@@ -53,6 +53,138 @@ const createNoopRouteEnginePersistence = () => ({
   applyScopedDataUpdates: async () => {},
 });
 
+const DIALOGUE_CHARACTER_SPRITE_CONTAINER_ID = "dialogue-character-sprite";
+
+const findRenderElementById = (nodes, elementId) => {
+  if (!Array.isArray(nodes)) {
+    return undefined;
+  }
+
+  for (const node of nodes) {
+    if (node?.id === elementId) {
+      return node;
+    }
+
+    const child = findRenderElementById(node?.children, elementId);
+    if (child) {
+      return child;
+    }
+  }
+
+  return undefined;
+};
+
+let routeEngineDialogueSpriteSupportProbe;
+
+const getRouteEngineDialogueSpriteSupportProbe = () => {
+  if (routeEngineDialogueSpriteSupportProbe) {
+    return routeEngineDialogueSpriteSupportProbe;
+  }
+
+  try {
+    const probeProjectData = {
+      screen: {
+        width: 100,
+        height: 100,
+      },
+      resources: {
+        images: {
+          probeImage: {
+            fileId: "probe-image",
+            width: 10,
+            height: 10,
+          },
+        },
+        transforms: {
+          probeTransform: {
+            x: 1,
+            y: 2,
+          },
+        },
+        layouts: {
+          probeLayout: {
+            elements: [],
+          },
+        },
+        animations: {},
+        characters: {},
+        controls: {},
+        colors: {},
+        fonts: {},
+        sounds: {},
+        textStyles: {},
+        variables: {},
+        videos: {},
+      },
+      story: {
+        initialSceneId: "probeScene",
+        scenes: {
+          probeScene: {
+            initialSectionId: "probeSection",
+            sections: {
+              probeSection: {
+                initialLineId: "probeLine",
+                lines: [
+                  {
+                    id: "probeLine",
+                    actions: {
+                      dialogue: {
+                        mode: "adv",
+                        ui: {
+                          resourceId: "probeLayout",
+                        },
+                        character: {
+                          sprite: {
+                            transformId: "probeTransform",
+                            items: [
+                              {
+                                id: "base",
+                                resourceId: "probeImage",
+                              },
+                            ],
+                          },
+                        },
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    };
+    const probeEngine = createRouteEngine({
+      handlePendingEffects() {},
+    });
+    probeEngine.init({
+      initialState: {
+        global: {},
+        projectData: probeProjectData,
+      },
+    });
+    const presentationSprite =
+      probeEngine.selectPresentationState()?.dialogue?.character?.sprite;
+    const renderElement = findRenderElementById(
+      probeEngine.selectRenderState()?.elements,
+      DIALOGUE_CHARACTER_SPRITE_CONTAINER_ID,
+    );
+
+    routeEngineDialogueSpriteSupportProbe = {
+      presentationSpritePresent: Boolean(presentationSprite),
+      renderElementFound: Boolean(renderElement),
+    };
+  } catch (error) {
+    routeEngineDialogueSpriteSupportProbe = {
+      presentationSpritePresent: false,
+      renderElementFound: false,
+      error: error?.message || String(error),
+    };
+  }
+
+  return routeEngineDialogueSpriteSupportProbe;
+};
+
 const SUPPORTED_AUDIO_MIME_TYPES = new Set([
   "audio/mpeg",
   "audio/x-mpeg",
@@ -1493,6 +1625,10 @@ export const createGraphicsService = async ({
         return undefined;
       }
       return engine.selectPresentationState();
+    },
+
+    debugRouteEngineDialogueSpriteSupport: () => {
+      return getRouteEngineDialogueSpriteSupportProbe();
     },
 
     engineSelectRenderState: () => {

@@ -156,11 +156,18 @@ describe("animationEditor.handlers", () => {
       })),
       queueAutosave: vi.fn(),
       selectPreviewPlayheadVisible: vi.fn(() => false),
+      selectPreviewPlaybackMode: vi.fn(() => "auto"),
+      selectPreviewPreparedVersion: vi.fn(() => undefined),
+      selectPreviewRenderVersion: vi.fn(() => 1),
+      setPreviewPlaybackMode: vi.fn(),
+      markPreviewPrepared: vi.fn(),
       selectAnimationResetState: vi.fn(() => resetState),
       selectAnimationRenderStateWithAnimations: vi.fn(() => renderState),
     };
     const graphicsService = {
       render: vi.fn(),
+      setAnimationPlaybackMode: vi.fn(),
+      setAnimationTime: vi.fn(),
     };
     const render = vi.fn();
 
@@ -178,8 +185,12 @@ describe("animationEditor.handlers", () => {
     expect(store.bumpPreviewRenderVersion).toHaveBeenCalledWith({});
     expect(render).toHaveBeenCalled();
     expect(store.queueAutosave).not.toHaveBeenCalled();
+    expect(graphicsService.setAnimationPlaybackMode).toHaveBeenCalledWith(
+      "manual",
+    );
     expect(graphicsService.render).toHaveBeenNthCalledWith(1, resetState);
     expect(graphicsService.render).toHaveBeenNthCalledWith(2, renderState);
+    expect(graphicsService.setAnimationTime).toHaveBeenCalledWith(0);
   });
 
   it("tracks the current timeline hover time for later preview updates", async () => {
@@ -262,6 +273,13 @@ describe("animationEditor.handlers", () => {
       selectAutosaveVersion: vi.fn(() => 1),
       selectEditItemId: vi.fn(() => "animation-1"),
       selectPreviewPlayheadVisible: vi.fn(() => false),
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      stopPreviewPlayback: vi.fn(),
+      selectPreviewPlaybackMode: vi.fn(() => "auto"),
+      selectPreviewPreparedVersion: vi.fn(() => undefined),
+      selectPreviewRenderVersion: vi.fn(() => 1),
+      setPreviewPlaybackMode: vi.fn(),
+      markPreviewPrepared: vi.fn(),
       selectAnimationResetState: vi.fn(() => ({
         elements: [],
         animations: [],
@@ -293,6 +311,8 @@ describe("animationEditor.handlers", () => {
     const graphicsService = {
       extractBase64: vi.fn(async () => "data:image/jpeg;base64,SGVsbG8="),
       render: vi.fn(),
+      setAnimationPlaybackMode: vi.fn(),
+      setAnimationTime: vi.fn(),
     };
     const render = vi.fn();
 
@@ -308,6 +328,10 @@ describe("animationEditor.handlers", () => {
     });
 
     expect(projectService.storeFile).toHaveBeenCalledTimes(1);
+    expect(graphicsService.setAnimationPlaybackMode).toHaveBeenCalledWith(
+      "manual",
+    );
+    expect(graphicsService.setAnimationTime).toHaveBeenCalledWith(0);
     expect(projectService.updateAnimation).toHaveBeenCalledWith({
       animationId: "animation-1",
       data: {

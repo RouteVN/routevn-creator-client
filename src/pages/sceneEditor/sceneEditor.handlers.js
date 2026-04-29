@@ -49,6 +49,13 @@ const STRUCTURE_DRAFT_SAVE_MIN_INTERVAL_MS = 1000;
 const STRUCTURE_DRAFT_SAVE_MAX_INTERVAL_MS = 3000;
 const SHOW_LINE_NUMBERS_CONFIG_KEY = "sceneEditor.showLineNumbers";
 const IS_MUTED_CONFIG_KEY = "sceneEditor.isMuted";
+const DIALOGUE_SPRITE_DEBUG_SCOPE = "dialogue-sprite";
+const logDialogueSprite = (event, data = {}) => {
+  console.log(`[rvn.debug.${DIALOGUE_SPRITE_DEBUG_SCOPE}]`, {
+    event,
+    ...data,
+  });
+};
 const nowMs = () => {
   if (
     typeof performance !== "undefined" &&
@@ -706,6 +713,13 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     dialogue && !Object.hasOwn(dialogue, "content")
       ? ["dialogue.content"]
       : undefined;
+  logDialogueSprite("scene-editor.submit-dialogue", {
+    lineId,
+    hasDialogue: Boolean(dialogue),
+    hasSprite: Boolean(dialogue?.character?.sprite),
+    preserveDialogueContent,
+    sprite: dialogue?.character?.sprite,
+  });
 
   await runSceneEditorPersistence(
     deps,

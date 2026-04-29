@@ -21,12 +21,6 @@ const isPlainObject = (value) =>
 
 const VARIABLE_CREATE_COMMAND = "variable.create";
 const VARIABLE_UPDATE_COMMAND = "variable.update";
-const ANIMATION_CREATE_COMMAND = "animation.create";
-const ANIMATION_UPDATE_COMMAND = "animation.update";
-const ANIMATION_PREVIEW_METADATA_KEYS = Object.freeze([
-  "thumbnailFileId",
-  "preview",
-]);
 
 const stripVariableEnumFields = (item) => {
   if (!isPlainObject(item)) {
@@ -38,7 +32,6 @@ const stripVariableEnumFields = (item) => {
 };
 
 const getVariableItems = (state) => state?.variables?.items ?? {};
-const getAnimationItems = (state) => state?.animations?.items ?? {};
 
 const hasVariableEnumMetadata = (state) => {
   const variableItems = getVariableItems(state);
@@ -51,37 +44,10 @@ const hasVariableEnumMetadata = (state) => {
   );
 };
 
-const hasAnimationPreviewMetadata = (state) => {
-  const animationItems = getAnimationItems(state);
-
-  return Object.values(animationItems).some(
-    (item) =>
-      isPlainObject(item) &&
-      item.type === "animation" &&
-      ANIMATION_PREVIEW_METADATA_KEYS.some((key) =>
-        Object.prototype.hasOwnProperty.call(item, key),
-      ),
-  );
-};
-
-const stripAnimationPreviewMetadataFields = (item) => {
-  if (!isPlainObject(item)) {
-    return;
-  }
-
-  for (const key of ANIMATION_PREVIEW_METADATA_KEYS) {
-    delete item[key];
-  }
-};
-
-const hasObjectFields = (value) =>
-  isPlainObject(value) && Object.keys(value).length > 0;
-
 export const toCreatorModelState = (state) => {
   const shouldStripVariableEnums = hasVariableEnumMetadata(state);
-  const shouldStripAnimationPreview = hasAnimationPreviewMetadata(state);
 
-  if (!shouldStripVariableEnums && !shouldStripAnimationPreview) {
+  if (!shouldStripVariableEnums) {
     return state;
   }
 
@@ -97,27 +63,12 @@ export const toCreatorModelState = (state) => {
     }
   }
 
-  if (shouldStripAnimationPreview) {
-    const animationItems = getAnimationItems(nextState);
-
-    for (const item of Object.values(animationItems)) {
-      if (item?.type === "animation") {
-        stripAnimationPreviewMetadataFields(item);
-      }
-    }
-  }
-
   return nextState;
 };
 
 const commandHasVariableData = (command) =>
   (command?.type === VARIABLE_CREATE_COMMAND ||
     command?.type === VARIABLE_UPDATE_COMMAND) &&
-  isPlainObject(command?.payload?.data);
-
-const commandHasAnimationData = (command) =>
-  (command?.type === ANIMATION_CREATE_COMMAND ||
-    command?.type === ANIMATION_UPDATE_COMMAND) &&
   isPlainObject(command?.payload?.data);
 
 const toCreatorModelCommand = (command) => {
@@ -127,22 +78,8 @@ const toCreatorModelCommand = (command) => {
     stripVariableEnumFields(nextCommand.payload.data);
   }
 
-  if (commandHasAnimationData(nextCommand)) {
-    stripAnimationPreviewMetadataFields(nextCommand.payload.data);
-  }
-
   return nextCommand;
 };
-
-const isClientOwnedAnimationPreviewNoop = ({
-  originalCommand,
-  creatorModelCommand,
-} = {}) =>
-  originalCommand?.type === ANIMATION_UPDATE_COMMAND &&
-  commandHasAnimationData(originalCommand) &&
-  hasAnimationPreviewPayload(originalCommand.payload.data) &&
-  creatorModelCommand?.type === ANIMATION_UPDATE_COMMAND &&
-  !hasObjectFields(creatorModelCommand.payload?.data);
 
 const hasVariableEnumPayload = (data) =>
   Object.prototype.hasOwnProperty.call(data || {}, "isEnum") ||
@@ -154,46 +91,6 @@ const commandsHaveVariableEnumPayload = (commands = []) =>
       commandHasVariableData(command) &&
       hasVariableEnumPayload(command.payload.data),
   );
-
-const hasAnimationPreviewPayload = (data) =>
-  ANIMATION_PREVIEW_METADATA_KEYS.some((key) =>
-    Object.prototype.hasOwnProperty.call(data || {}, key),
-  );
-
-const commandsHaveAnimationPreviewPayload = (commands = []) =>
-  commands.some(
-    (command) =>
-      commandHasAnimationData(command) &&
-      hasAnimationPreviewPayload(command.payload.data),
-  );
-
-const copyAnimationPreviewMetadata = ({ targetItem, sourceItem } = {}) => {
-  if (
-    !isPlainObject(targetItem) ||
-    !isPlainObject(sourceItem) ||
-    targetItem.type !== "animation"
-  ) {
-    return;
-  }
-
-  for (const key of ANIMATION_PREVIEW_METADATA_KEYS) {
-    if (sourceItem[key] !== undefined) {
-      targetItem[key] = structuredClone(sourceItem[key]);
-    }
-  }
-};
-
-const applyAnimationPreviewPayload = ({ item, data } = {}) => {
-  if (!isPlainObject(item) || item.type !== "animation") {
-    return;
-  }
-
-  for (const key of ANIMATION_PREVIEW_METADATA_KEYS) {
-    if (data?.[key] !== undefined) {
-      item[key] = structuredClone(data[key]);
-    }
-  }
-};
 
 const applyVariableEnumPayload = ({ item, data } = {}) => {
   if (!isPlainObject(item)) {
@@ -280,63 +177,6 @@ const restoreVariableEnumMetadata = ({
   return restoredState;
 };
 
-const restoreAnimationPreviewMetadata = ({
-  baseState,
-  nextState,
-  commands = [],
-} = {}) => {
-  if (
-    !hasAnimationPreviewMetadata(baseState) &&
-    !commandsHaveAnimationPreviewPayload(commands)
-  ) {
-    return nextState;
-  }
-
-  const restoredState = structuredClone(nextState);
-  const baseAnimationItems = getAnimationItems(baseState);
-  const nextAnimationItems = getAnimationItems(restoredState);
-
-  for (const [animationId, item] of Object.entries(nextAnimationItems)) {
-    copyAnimationPreviewMetadata({
-      targetItem: item,
-      sourceItem: baseAnimationItems[animationId],
-    });
-  }
-
-  for (const command of commands) {
-    if (!commandHasAnimationData(command)) {
-      continue;
-    }
-
-    const animationId = command.payload?.animationId;
-    const item = nextAnimationItems[animationId];
-    applyAnimationPreviewPayload({
-      item,
-      data: command.payload.data,
-    });
-  }
-
-  return restoredState;
-};
-
-const restoreClientOwnedMetadata = ({
-  baseState,
-  nextState,
-  commands = [],
-} = {}) => {
-  const withVariableEnumMetadata = restoreVariableEnumMetadata({
-    baseState,
-    nextState,
-    commands,
-  });
-
-  return restoreAnimationPreviewMetadata({
-    baseState,
-    nextState: withVariableEnumMetadata,
-    commands,
-  });
-};
-
 const toCreatorModelInvalidResult = (error) => {
   const normalizedError = {
     code: error?.code || "validation_failed",
@@ -416,24 +256,6 @@ export const applyCommandToRepositoryStateWithCreatorModel = ({
       command,
     });
 
-    if (
-      isClientOwnedAnimationPreviewNoop({
-        originalCommand: command,
-        creatorModelCommand,
-      })
-    ) {
-      return {
-        valid: true,
-        creatorModelCommand,
-        nextCreatorModelState: creatorModelState,
-        repositoryState: restoreClientOwnedMetadata({
-          baseState: repositoryState,
-          nextState: creatorModelState,
-          commands: [command],
-        }),
-      };
-    }
-
     const processResult = toCreatorModelResult(
       processCreatorModelCommand({
         state: creatorModelState,
@@ -448,7 +270,7 @@ export const applyCommandToRepositoryStateWithCreatorModel = ({
       valid: true,
       creatorModelCommand,
       nextCreatorModelState: processResult.state,
-      repositoryState: restoreClientOwnedMetadata({
+      repositoryState: restoreVariableEnumMetadata({
         baseState: repositoryState,
         nextState: processResult.state,
         commands: [command],
@@ -465,13 +287,7 @@ export const applyCommandsToRepositoryStateWithCreatorModel = ({
     const creatorModelState = toCreatorModelState(repositoryState);
     const creatorModelCommands = commandsToCreatorModelCommands({
       commands,
-    }).filter(
-      (creatorModelCommand, index) =>
-        !isClientOwnedAnimationPreviewNoop({
-          originalCommand: commands[index],
-          creatorModelCommand,
-        }),
-    );
+    });
     const replayResult = toCreatorModelResult(
       replayCreatorModelCommands({
         state: creatorModelState,
@@ -486,7 +302,7 @@ export const applyCommandsToRepositoryStateWithCreatorModel = ({
       valid: true,
       creatorModelCommands,
       nextCreatorModelState: replayResult.state,
-      repositoryState: restoreClientOwnedMetadata({
+      repositoryState: restoreVariableEnumMetadata({
         baseState: repositoryState,
         nextState: replayResult.state,
         commands,

@@ -88,19 +88,12 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       layoutType: layout.layoutType,
     }));
 
-  const allCharacters = Object.entries(repositoryState.characters?.items || {});
-
-  const filteredCharacters = allCharacters
-    .filter(([_, character]) => {
-      return character.type === "character";
-    })
-    .map(([id, character]) => ({
-      id,
-      name: character.name,
-      type: character.type,
-      sprites: character.sprites,
-      spriteGroups: character.spriteGroups,
-    }));
+  const allCharacters = Object.entries(
+    repositoryState.characters?.items || {},
+  ).map(([id, character]) => ({
+    id,
+    ...character,
+  }));
 
   return {
     currentSceneId: props.currentSceneId,
@@ -117,7 +110,8 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     controlLayouts,
     dialogueLayouts,
     confirmDialogLayouts,
-    allCharacters: filteredCharacters,
+    allCharacters,
+    characterTree: repositoryState.characters?.tree || [],
     transforms: repositoryState.transforms || { items: {}, tree: [] },
     animations: repositoryState.animations || { items: {}, tree: [] },
     selectedLine: props.selectedLine,

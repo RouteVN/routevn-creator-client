@@ -31,6 +31,28 @@ const createCommand = (overrides = {}) => ({
   ...overrides,
 });
 
+const createFileCommand = (overrides = {}) => ({
+  id: "file-command-1",
+  projectId: "project-1",
+  partition: "project-1:resources:files",
+  type: COMMAND_TYPES.FILE_CREATE,
+  payload: {
+    fileId: "file-thumb",
+    data: {
+      mimeType: "image/webp",
+      size: 1,
+      sha256: "file-thumb-sha256",
+    },
+  },
+  actor: {
+    userId: "user-1",
+    clientId: "client-1",
+  },
+  clientTs: 1,
+  schemaVersion: 1,
+  ...overrides,
+});
+
 describe("animation preview metadata", () => {
   it("keeps thumbnail and transform-ready preview data in repository state", () => {
     const result = applyCommandsToRepositoryState({
@@ -38,6 +60,7 @@ describe("animation preview metadata", () => {
       projectId: "project-1",
       commands: [
         createCommand(),
+        createFileCommand(),
         createCommand({
           id: "command-2",
           type: COMMAND_TYPES.ANIMATION_UPDATE,

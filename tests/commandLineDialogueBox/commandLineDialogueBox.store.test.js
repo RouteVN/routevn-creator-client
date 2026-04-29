@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import { parseAndRender } from "jempl";
 import {
   createInitialState,
+  setAppendDialogue,
   setCharacterName,
-  setCharacterSpriteEnabled,
   setCustomCharacterName,
   selectViewData,
   setPersistCharacter,
-  setSelectedCharacterId,
   setSelectedSpriteIds,
+  setSpriteCharacterId,
   setSpriteAnimationId,
   setSpriteAnimationMode,
   setSpriteTransformId,
@@ -74,6 +74,7 @@ describe("commandLineDialogueBox.store", () => {
 
     expect(viewData.defaultValues.customCharacterName).toBe(true);
     expect(viewData.defaultValues.characterName).toBe("Boss");
+    expect(viewData.defaultValues.append).toBe(false);
     expect(viewData.defaultValues.persistCharacter).toBe(true);
     expect(
       viewData.form.fields.find((field) => field.name === "mode"),
@@ -109,11 +110,16 @@ describe("commandLineDialogueBox.store", () => {
       value: "Boss",
     });
     expect(
-      viewData.form.fields.find(
-        (field) => field.name === "characterSpriteEnabled",
-      ),
+      viewData.form.fields.find((field) => field.slot === "characterSprite"),
     ).toMatchObject({
-      label: "Speaker Sprite",
+      label: "Character Sprite",
+      type: "slot",
+    });
+    expect(
+      viewData.form.fields.find((field) => field.name === "append"),
+    ).toMatchObject({
+      $when: 'values.mode == "adv"',
+      label: "Append",
       type: "segmented-control",
       value: false,
     });
@@ -121,7 +127,7 @@ describe("commandLineDialogueBox.store", () => {
       viewData.form.fields.find(
         (field) => field.name === "characterSpriteEnabled",
       ),
-    ).not.toHaveProperty("$when");
+    ).toBeUndefined();
     expect(
       viewData.form.fields.find((field) => field.name === "persistCharacter"),
     ).toMatchObject({
@@ -174,6 +180,41 @@ describe("commandLineDialogueBox.store", () => {
       nvlViewData.form.fields.find((field) => field.name === "resourceId"),
     ).toMatchObject({
       label: "Layout",
+    });
+  });
+
+  it("tracks append in form defaults and field values", () => {
+    const state = createInitialState();
+
+    setAppendDialogue(
+      { state },
+      {
+        append: true,
+      },
+    );
+
+    const viewData = selectViewData({
+      state,
+      props: {
+        layouts: [
+          {
+            id: "layout-adv",
+            name: "ADV Layout",
+            layoutType: "dialogue-adv",
+          },
+        ],
+        characters: [],
+      },
+    });
+
+    expect(viewData.appendDialogue).toBe(true);
+    expect(viewData.defaultValues.append).toBe(true);
+    expect(
+      viewData.form.fields.find((field) => field.name === "append"),
+    ).toMatchObject({
+      label: "Append",
+      type: "segmented-control",
+      value: true,
     });
   });
 
@@ -248,19 +289,13 @@ describe("commandLineDialogueBox.store", () => {
     ).toBe(true);
   });
 
-  it("adds speaker sprite fields for the selected character sprite groups", () => {
+  it("exposes one visual character sprite picker with transform and sprite data", () => {
     const state = createInitialState();
 
-    setSelectedCharacterId(
+    setSpriteCharacterId(
       { state },
       {
         characterId: "character-1",
-      },
-    );
-    setCharacterSpriteEnabled(
-      { state },
-      {
-        characterSpriteEnabled: true,
       },
     );
     setSpriteTransformId(
@@ -355,43 +390,41 @@ describe("commandLineDialogueBox.store", () => {
     });
 
     expect(
-      viewData.form.fields.find(
-        (field) => field.name === "characterSpriteEnabled",
-      ),
+      viewData.form.fields.find((field) => field.slot === "characterSprite"),
     ).toMatchObject({
-      label: "Speaker Sprite",
-      value: true,
+      label: "Character Sprite",
+      type: "slot",
     });
-    expect(
-      viewData.form.fields.find((field) => field.name === "spriteTransformId"),
-    ).toMatchObject({
-      options: [{ value: "portrait-left", label: "Portrait Left" }],
-      value: "portrait-left",
-    });
-    expect(
-      viewData.form.fields.find(
-        (field) => field.name === "transitionSpriteAnimation",
-      ),
-    ).toMatchObject({
-      options: [{ value: "portrait-in", label: "Portrait In" }],
-      value: "portrait-in",
-    });
-    expect(
-      viewData.form.fields.find((field) => field.name === "spriteGroup:body"),
-    ).toMatchObject({
-      label: "Body",
-      options: [
-        { value: "sprite-body", label: "Body" },
-        { value: "sprite-face", label: "Smile" },
+    expect(viewData.hasSpriteCharacter).toBe(true);
+    expect(viewData.characterSpriteEnabled).toBe(true);
+    expect(viewData.spriteCharacterId).toBe("character-1");
+    expect(viewData.spriteTransformId).toBe("portrait-left");
+    expect(viewData.spriteAnimationMode).toBe("transition");
+    expect(viewData.spriteAnimationId).toBe("portrait-in");
+    expect(viewData.transformOptions).toEqual([
+      { value: "portrait-left", label: "Portrait Left" },
+    ]);
+    expect(viewData.transitionAnimationOptions).toEqual([
+      { value: "portrait-in", label: "Portrait In" },
+    ]);
+    expect(viewData.selectedSpriteCharacter).toMatchObject({
+      id: "character-1",
+      displayName: "Aki",
+      showSpriteGroupBoxes: true,
+      spriteGroupBoxes: [
+        {
+          id: "body",
+          name: "Body",
+          selectedSpriteId: "sprite-body",
+          backgroundColor: "mu",
+        },
+        {
+          id: "face",
+          name: "Face",
+          selectedSpriteId: "sprite-face",
+          backgroundColor: "mu",
+        },
       ],
-      value: "sprite-body",
-    });
-    expect(
-      viewData.form.fields.find((field) => field.name === "spriteGroup:face"),
-    ).toMatchObject({
-      label: "Face",
-      options: [{ value: "sprite-face", label: "Smile" }],
-      value: "sprite-face",
     });
   });
 });

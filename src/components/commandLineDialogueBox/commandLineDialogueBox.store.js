@@ -1,6 +1,5 @@
-import { toFlatItems } from "../../internal/project/tree.js";
-
-const SPRITE_GROUP_FIELD_PREFIX = "spriteGroup:";
+import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
+import { buildCharacterSpritePreviewFileIds } from "../../internal/characterSpritePreview.js";
 
 const ANIMATION_MODE_OPTIONS = [
   {
@@ -19,11 +18,31 @@ const ANIMATION_MODE_OPTIONS = [
 
 const DEFAULT_SPRITE_GROUP_ID = "base";
 const DEFAULT_SPRITE_GROUP_NAME = "Sprite";
+const UNGROUPED_CHARACTER_GROUP_ID = "__ungrouped_dialogue_characters__";
+const UNGROUPED_SPRITE_GROUP_ID = "__ungrouped_dialogue_sprites__";
+const UNGROUPED_GROUP_LABEL = "Ungrouped";
 
 const createEmptyCollection = () => ({
   items: {},
   tree: [],
 });
+
+const toCharacterCollection = ({ characters = [], tree } = {}) => {
+  const items = {};
+
+  for (const character of characters ?? []) {
+    if (!character?.id) {
+      continue;
+    }
+
+    items[character.id] = character;
+  }
+
+  return {
+    items,
+    tree: Array.isArray(tree) ? tree : undefined,
+  };
+};
 
 const getAnimationType = (item = {}) => {
   return item?.animation?.type === "transition" ? "transition" : "update";
@@ -95,10 +114,6 @@ const buildSpriteSelectionGroups = (character = {}) => {
   }));
 };
 
-const getSpriteGroupFieldName = (spriteGroupId) => {
-  return `${SPRITE_GROUP_FIELD_PREFIX}${spriteGroupId}`;
-};
-
 const matchesSpriteGroupTags = ({ item, tagIds } = {}) => {
   if (!Array.isArray(tagIds) || tagIds.length === 0) {
     return true;
@@ -116,22 +131,6 @@ const getCharacterById = ({ characters, characterId } = {}) => {
   return (characters ?? []).find((character) => character.id === characterId);
 };
 
-const getSpriteOptionsForGroup = ({ character, spriteGroup } = {}) => {
-  return toFlatItems(character?.sprites ?? createEmptyCollection())
-    .filter(
-      (item) =>
-        item.type === "image" &&
-        matchesSpriteGroupTags({
-          item,
-          tagIds: spriteGroup?.tags,
-        }),
-    )
-    .map((item) => ({
-      value: item.id,
-      label: item.name,
-    }));
-};
-
 const resolveSelectedOptionValue = ({ options, value } = {}) => {
   if (value && options.some((option) => option.value === value)) {
     return value;
@@ -140,7 +139,137 @@ const resolveSelectedOptionValue = ({ options, value } = {}) => {
   return "";
 };
 
+const buildSpriteGroupBoxViewData = ({
+  spriteSelectionGroups,
+  selectedSpriteIdsByGroup,
+  spritesCollection,
+} = {}) => {
+  const spriteItemsById = Object.fromEntries(
+    toFlatItems(spritesCollection ?? createEmptyCollection())
+      .filter((item) => item.type === "image")
+      .map((item) => [item.id, item]),
+  );
+
+  return (spriteSelectionGroups ?? []).map((spriteSelectionGroup) => {
+    const selectedSpriteId =
+      selectedSpriteIdsByGroup?.[spriteSelectionGroup.id];
+    const selectedSprite = selectedSpriteId
+      ? spriteItemsById[selectedSpriteId]
+      : undefined;
+
+    return {
+      id: spriteSelectionGroup.id,
+      name: spriteSelectionGroup.name,
+      selectedSpriteId,
+      selectedSpriteName: selectedSprite?.name ?? "No sprite",
+      hasSelection: !!selectedSpriteId,
+      backgroundColor: selectedSpriteId ? "mu" : "bg",
+    };
+  });
+};
+
+const buildSelectableTreeData = ({
+  collection,
+  selectedItemId,
+  syntheticRootId,
+  itemFilter = () => true,
+  hideEmptyGroups = false,
+  searchQuery = "",
+} = {}) => {
+  const normalizedSearchQuery = searchQuery.toLowerCase().trim();
+  const matchesSearch = (item) => {
+    if (!normalizedSearchQuery) {
+      return true;
+    }
+
+    const name = (item.name ?? "").toLowerCase();
+    const description = (item.description ?? "").toLowerCase();
+    return (
+      name.includes(normalizedSearchQuery) ||
+      description.includes(normalizedSearchQuery)
+    );
+  };
+  const allItems = toFlatItems(collection);
+  const filterVisibleItem = (item) =>
+    itemFilter(item) && matchesSearch(item) && item.type !== "folder";
+  const rootChildren = allItems.filter(
+    (item) => item.type !== "folder" && item.parentId === null,
+  );
+  const visibleRootChildren = rootChildren
+    .filter(filterVisibleItem)
+    .map((child) => {
+      const isSelected = child.id === selectedItemId;
+      return {
+        ...child,
+        itemBorderColor: isSelected ? "pr" : "bo",
+        itemHoverBorderColor: isSelected ? "pr" : "ac",
+      };
+    });
+
+  const groups = toFlatGroups(collection)
+    .map((group) => {
+      const children = group.children.filter(filterVisibleItem).map((child) => {
+        const isSelected = child.id === selectedItemId;
+        return {
+          ...child,
+          itemBorderColor: isSelected ? "pr" : "bo",
+          itemHoverBorderColor: isSelected ? "pr" : "ac",
+        };
+      });
+
+      return {
+        ...group,
+        children,
+        hasChildren: children.length > 0,
+        shouldDisplay:
+          children.length > 0 || (!hideEmptyGroups && !normalizedSearchQuery),
+      };
+    })
+    .filter((group) => group.shouldDisplay);
+
+  const visibleGroupIds = new Set(groups.map((group) => group.id));
+  const explorerItems = allItems.filter(
+    (item) =>
+      item.type === "folder" &&
+      (!hideEmptyGroups || visibleGroupIds.has(item.id)),
+  );
+
+  if (
+    hideEmptyGroups ? visibleRootChildren.length > 0 : rootChildren.length > 0
+  ) {
+    explorerItems.unshift({
+      id: syntheticRootId,
+      type: "folder",
+      name: UNGROUPED_GROUP_LABEL,
+      fullLabel: UNGROUPED_GROUP_LABEL,
+      _level: 0,
+      parentId: null,
+      hasChildren: true,
+    });
+  }
+
+  if (visibleRootChildren.length > 0) {
+    groups.unshift({
+      id: syntheticRootId,
+      type: "folder",
+      name: UNGROUPED_GROUP_LABEL,
+      fullLabel: UNGROUPED_GROUP_LABEL,
+      _level: 0,
+      parentId: null,
+      hasChildren: true,
+      children: visibleRootChildren,
+      shouldDisplay: true,
+    });
+  }
+
+  return {
+    explorerItems,
+    groups,
+  };
+};
+
 export const createInitialState = () => ({
+  mode: "current",
   layouts: [],
   selectedResourceId: "",
   characters: [],
@@ -148,13 +277,20 @@ export const createInitialState = () => ({
   customCharacterName: false,
   characterName: "",
   characterSpriteEnabled: false,
+  spriteCharacterId: "",
   spriteTransformId: "",
   spriteAnimationMode: "none",
   spriteAnimationId: "",
   selectedSpriteIds: {},
+  tempSelectedSpriteIds: {},
+  selectedSpriteGroupId: undefined,
   selectedMode: "adv",
+  appendDialogue: false,
   persistCharacter: false,
   clearPage: false,
+  searchQuery: "",
+  fullImagePreviewVisible: false,
+  fullImagePreviewFileId: undefined,
 
   defaultValues: {
     mode: "adv",
@@ -162,11 +298,7 @@ export const createInitialState = () => ({
     characterId: "",
     customCharacterName: false,
     characterName: "",
-    characterSpriteEnabled: false,
-    spriteTransformId: "",
-    spriteAnimationMode: "none",
-    updateSpriteAnimation: "",
-    transitionSpriteAnimation: "",
+    append: false,
     persistCharacter: false,
     clearPage: false,
   },
@@ -226,9 +358,15 @@ export const createInitialState = () => ({
         placeholder: "Enter speaker name",
       },
       {
-        name: "characterSpriteEnabled",
+        type: "slot",
+        slot: "characterSprite",
+        label: "Character Sprite",
+      },
+      {
+        $when: 'values.mode == "adv"',
+        name: "append",
         type: "segmented-control",
-        label: "Speaker Sprite",
+        label: "Append",
         description: "",
         required: true,
         clearable: false,
@@ -236,48 +374,6 @@ export const createInitialState = () => ({
           { value: false, label: "No" },
           { value: true, label: "Yes" },
         ],
-      },
-      {
-        $when: "values.characterSpriteEnabled",
-        name: "spriteTransformId",
-        type: "select",
-        label: "Sprite Transform",
-        description: "",
-        required: true,
-        placeholder: "Choose a transform...",
-        options: [],
-      },
-      {
-        $when: "values.characterSpriteEnabled",
-        name: "spriteAnimationMode",
-        type: "segmented-control",
-        label: "Sprite Animation",
-        description: "",
-        required: true,
-        clearable: false,
-        options: ANIMATION_MODE_OPTIONS,
-      },
-      {
-        $when:
-          'values.characterSpriteEnabled && values.spriteAnimationMode == "update"',
-        name: "updateSpriteAnimation",
-        type: "select",
-        label: "Update Animation",
-        description: "",
-        required: false,
-        placeholder: "Choose an update animation...",
-        options: [],
-      },
-      {
-        $when:
-          'values.characterSpriteEnabled && values.spriteAnimationMode == "transition"',
-        name: "transitionSpriteAnimation",
-        type: "select",
-        label: "Transition Animation",
-        description: "",
-        required: false,
-        placeholder: "Choose a transition animation...",
-        options: [],
       },
       {
         $when: "values.characterId || values.customCharacterName",
@@ -313,6 +409,10 @@ export const createInitialState = () => ({
   },
 });
 
+export const setMode = ({ state }, { mode } = {}) => {
+  state.mode = mode;
+};
+
 export const setLayouts = ({ state }, { layouts } = {}) => {
   state.layouts = layouts;
 };
@@ -323,8 +423,8 @@ export const setSelectedResource = ({ state }, { resourceId } = {}) => {
 };
 
 export const setSelectedCharacterId = ({ state }, { characterId } = {}) => {
-  state.selectedCharacterId = characterId;
-  state.defaultValues.characterId = characterId;
+  state.selectedCharacterId = characterId ?? "";
+  state.defaultValues.characterId = characterId ?? "";
 };
 
 export const setCustomCharacterName = (
@@ -346,36 +446,35 @@ export const setCharacterSpriteEnabled = (
   { state },
   { characterSpriteEnabled } = {},
 ) => {
-  const enabled = toBoolean(characterSpriteEnabled);
-  state.characterSpriteEnabled = enabled;
-  state.defaultValues.characterSpriteEnabled = enabled;
+  state.characterSpriteEnabled = toBoolean(characterSpriteEnabled);
+};
+
+export const setSpriteCharacterId = ({ state }, { characterId } = {}) => {
+  state.spriteCharacterId = characterId ?? "";
+
+  if (!state.spriteCharacterId) {
+    state.characterSpriteEnabled = false;
+    state.selectedSpriteIds = {};
+    state.tempSelectedSpriteIds = {};
+    state.selectedSpriteGroupId = undefined;
+  }
 };
 
 export const setSpriteTransformId = ({ state }, { transformId } = {}) => {
-  const nextTransformId = transformId ?? "";
-  state.spriteTransformId = nextTransformId;
-  state.defaultValues.spriteTransformId = nextTransformId;
+  state.spriteTransformId = transformId ?? "";
 };
 
 export const setSpriteAnimationMode = ({ state }, { mode } = {}) => {
   const nextMode = mode === "update" || mode === "transition" ? mode : "none";
   state.spriteAnimationMode = nextMode;
-  state.defaultValues.spriteAnimationMode = nextMode;
 
   if (nextMode === "none") {
     state.spriteAnimationId = "";
-    state.defaultValues.updateSpriteAnimation = "";
-    state.defaultValues.transitionSpriteAnimation = "";
   }
 };
 
 export const setSpriteAnimationId = ({ state }, { animationId } = {}) => {
-  const nextAnimationId = animationId ?? "";
-  state.spriteAnimationId = nextAnimationId;
-  state.defaultValues.updateSpriteAnimation =
-    state.spriteAnimationMode === "update" ? nextAnimationId : "";
-  state.defaultValues.transitionSpriteAnimation =
-    state.spriteAnimationMode === "transition" ? nextAnimationId : "";
+  state.spriteAnimationId = animationId ?? "";
 };
 
 export const setSelectedSpriteIds = (
@@ -387,14 +486,97 @@ export const setSelectedSpriteIds = (
   for (const [spriteGroupId, spriteId] of Object.entries(
     spriteIdsByGroupId ?? {},
   )) {
-    state.selectedSpriteIds[spriteGroupId] = spriteId;
+    if (spriteId) {
+      state.selectedSpriteIds[spriteGroupId] = spriteId;
+    }
   }
+
+  state.characterSpriteEnabled =
+    !!state.spriteCharacterId &&
+    Object.keys(state.selectedSpriteIds).length > 0;
+};
+
+export const setTempSelectedSpriteIds = (
+  { state },
+  { spriteIdsByGroupId } = {},
+) => {
+  state.tempSelectedSpriteIds = {};
+
+  for (const [spriteGroupId, spriteId] of Object.entries(
+    spriteIdsByGroupId ?? {},
+  )) {
+    if (spriteId) {
+      state.tempSelectedSpriteIds[spriteGroupId] = spriteId;
+    }
+  }
+};
+
+export const clearTempSelectedSpriteIds = ({ state }) => {
+  state.tempSelectedSpriteIds = {};
+};
+
+export const setTempSelectedSpriteId = (
+  { state },
+  { groupId, spriteId } = {},
+) => {
+  const nextGroupId =
+    groupId ?? state.selectedSpriteGroupId ?? DEFAULT_SPRITE_GROUP_ID;
+
+  if (!nextGroupId) {
+    return;
+  }
+
+  if (!spriteId) {
+    delete state.tempSelectedSpriteIds[nextGroupId];
+    return;
+  }
+
+  state.tempSelectedSpriteIds[nextGroupId] = spriteId;
+};
+
+export const setSelectedSpriteGroupId = ({ state }, { spriteGroupId } = {}) => {
+  state.selectedSpriteGroupId = spriteGroupId;
+};
+
+export const clearCharacterSprite = ({ state }) => {
+  state.characterSpriteEnabled = false;
+  state.spriteCharacterId = "";
+  state.spriteTransformId = "";
+  state.spriteAnimationMode = "none";
+  state.spriteAnimationId = "";
+  state.selectedSpriteIds = {};
+  state.tempSelectedSpriteIds = {};
+  state.selectedSpriteGroupId = undefined;
+};
+
+export const setSearchQuery = ({ state }, { value } = {}) => {
+  state.searchQuery = value ?? "";
+};
+
+export const showFullImagePreview = ({ state }, { fileId } = {}) => {
+  if (!fileId) {
+    return;
+  }
+
+  state.fullImagePreviewVisible = true;
+  state.fullImagePreviewFileId = fileId;
+};
+
+export const hideFullImagePreview = ({ state }) => {
+  state.fullImagePreviewVisible = false;
+  state.fullImagePreviewFileId = undefined;
 };
 
 export const setSelectedMode = ({ state }, { mode } = {}) => {
   const selectedMode = mode === "nvl" ? "nvl" : "adv";
   state.selectedMode = selectedMode;
   state.defaultValues.mode = selectedMode;
+};
+
+export const setAppendDialogue = ({ state }, { append } = {}) => {
+  const appendValue = toBoolean(append);
+  state.appendDialogue = appendValue;
+  state.defaultValues.append = appendValue;
 };
 
 export const setPersistCharacter = ({ state }, { persistCharacter } = {}) => {
@@ -407,6 +589,53 @@ export const setClearPage = ({ state }, { clearPage } = {}) => {
   const clearPageValue = toBoolean(clearPage);
   state.clearPage = clearPageValue;
   state.defaultValues.clearPage = clearPageValue;
+};
+
+export const selectMode = ({ state }) => state.mode;
+
+export const selectSpriteCharacterId = ({ state }) => state.spriteCharacterId;
+
+export const selectTempSelectedSpriteIds = ({ state }) =>
+  state.tempSelectedSpriteIds;
+
+export const selectCurrentSpriteSelectionGroups = ({ state, props }) => {
+  const selectedCharacter = getCharacterById({
+    characters: props?.characters,
+    characterId: state.spriteCharacterId,
+  });
+  return buildSpriteSelectionGroups(selectedCharacter);
+};
+
+export const selectSelectedSpriteGroupId = ({ state, props }) => {
+  const spriteSelectionGroups = selectCurrentSpriteSelectionGroups({
+    state,
+    props,
+  });
+
+  if (
+    spriteSelectionGroups.some(
+      (spriteSelectionGroup) =>
+        spriteSelectionGroup.id === state.selectedSpriteGroupId,
+    )
+  ) {
+    return state.selectedSpriteGroupId;
+  }
+
+  return spriteSelectionGroups[0]?.id;
+};
+
+export const selectCurrentSpriteItemById = (
+  { state, props },
+  { spriteId } = {},
+) => {
+  const selectedCharacter = getCharacterById({
+    characters: props?.characters,
+    characterId: state.spriteCharacterId,
+  });
+
+  return toFlatItems(
+    selectedCharacter?.sprites ?? createEmptyCollection(),
+  ).find((item) => item.id === spriteId && item.type === "image");
 };
 
 export const selectViewData = ({ state, props }) => {
@@ -423,19 +652,52 @@ export const selectViewData = ({ state, props }) => {
     layoutOptions,
     resourceId: state.selectedResourceId,
   });
-
+  const characterCollection = toCharacterCollection({
+    characters,
+    tree: props.characterTree,
+  });
   const characterOptions = characters
     .filter((character) => character.type === "character")
     .map((character) => ({
       value: character.id,
       label: character.name,
     }));
-
-  const selectedCharacter = getCharacterById({
+  const selectedSpriteCharacter = getCharacterById({
     characters,
-    characterId: state.selectedCharacterId,
+    characterId: state.spriteCharacterId,
   });
-  const spriteSelectionGroups = buildSpriteSelectionGroups(selectedCharacter);
+  const spriteSelectionGroups = buildSpriteSelectionGroups(
+    selectedSpriteCharacter,
+  );
+  const spriteGroupBoxes = buildSpriteGroupBoxViewData({
+    spriteSelectionGroups,
+    selectedSpriteIdsByGroup: state.selectedSpriteIds,
+    spritesCollection: selectedSpriteCharacter?.sprites,
+  });
+  const spritePreviewFileIds = buildCharacterSpritePreviewFileIds({
+    spritesCollection: selectedSpriteCharacter?.sprites,
+    spriteIds: spriteSelectionGroups.map(
+      (spriteSelectionGroup) =>
+        state.selectedSpriteIds?.[spriteSelectionGroup.id],
+    ),
+  });
+  const selectedSpriteCharacterView = selectedSpriteCharacter
+    ? {
+        ...selectedSpriteCharacter,
+        displayName: selectedSpriteCharacter.name || "Unnamed Character",
+        hasSpritePreview: spritePreviewFileIds.length > 0,
+        spritePreviewFileIds,
+        spriteGroupBoxes,
+        showSpriteGroupBoxes: spriteGroupBoxes.length > 1,
+      }
+    : {
+        id: "",
+        displayName: "No Character",
+        hasSpritePreview: false,
+        spritePreviewFileIds: [],
+        spriteGroupBoxes: [],
+        showSpriteGroupBoxes: false,
+      };
   const transformOptions = toFlatItems(transforms)
     .filter((item) => item.type === "transform")
     .map((transform) => ({
@@ -461,38 +723,86 @@ export const selectViewData = ({ state, props }) => {
       value: item.id,
       label: item.name,
     }));
+  const characterTreeData = buildSelectableTreeData({
+    collection: characterCollection,
+    selectedItemId: state.spriteCharacterId,
+    syntheticRootId: UNGROUPED_CHARACTER_GROUP_ID,
+    itemFilter: (item) => item.type === "character",
+    searchQuery: state.searchQuery,
+  });
 
-  let breadcrumb = [
+  let spriteItems = [];
+  let spriteGroups = [];
+  let spriteSelectionTabs = [];
+  let selectedSpriteGroupId = undefined;
+
+  if (state.mode === "sprite-select" && selectedSpriteCharacter) {
+    spriteSelectionTabs = spriteSelectionGroups.map((spriteSelectionGroup) => ({
+      id: spriteSelectionGroup.id,
+      label: spriteSelectionGroup.name,
+    }));
+    selectedSpriteGroupId = selectSelectedSpriteGroupId({ state, props });
+    const selectedSpriteGroup = spriteSelectionGroups.find(
+      (spriteSelectionGroup) =>
+        spriteSelectionGroup.id === selectedSpriteGroupId,
+    );
+    const selectedSpriteId =
+      selectedSpriteGroupId &&
+      state.tempSelectedSpriteIds?.[selectedSpriteGroupId];
+    const spriteTreeData = buildSelectableTreeData({
+      collection: selectedSpriteCharacter.sprites ?? createEmptyCollection(),
+      selectedItemId: selectedSpriteId,
+      syntheticRootId: UNGROUPED_SPRITE_GROUP_ID,
+      itemFilter: (item) =>
+        item.type === "image" &&
+        matchesSpriteGroupTags({
+          item,
+          tagIds: selectedSpriteGroup?.tags,
+        }),
+      hideEmptyGroups: (selectedSpriteGroup?.tags ?? []).length > 0,
+      searchQuery: state.searchQuery,
+    });
+    spriteItems = spriteTreeData.explorerItems;
+    spriteGroups = spriteTreeData.groups;
+  }
+
+  const breadcrumb = [
     {
       id: "actions",
       label: "Actions",
       click: true,
     },
-    {
-      label: "Dialogue Box",
-    },
   ];
 
-  const spriteGroupFields = [];
-  if (state.characterSpriteEnabled && selectedCharacter) {
-    for (const spriteSelectionGroup of spriteSelectionGroups) {
-      spriteGroupFields.push({
-        name: getSpriteGroupFieldName(spriteSelectionGroup.id),
-        type: "select",
-        label: spriteSelectionGroup.name,
-        description: "",
-        required: false,
-        placeholder: `Choose ${spriteSelectionGroup.name}...`,
-        options: getSpriteOptionsForGroup({
-          character: selectedCharacter,
-          spriteGroup: spriteSelectionGroup,
-        }),
-        value: state.selectedSpriteIds[spriteSelectionGroup.id] ?? "",
-      });
-    }
+  if (state.mode === "character-select") {
+    breadcrumb.push({
+      id: "current",
+      label: "Dialogue Box",
+      click: true,
+    });
+    breadcrumb.push({
+      label: "Select Character",
+    });
+  } else if (state.mode === "sprite-select") {
+    breadcrumb.push({
+      id: "current",
+      label: "Dialogue Box",
+      click: true,
+    });
+    breadcrumb.push({
+      id: "character-select",
+      label: selectedSpriteCharacter?.name || "Character",
+      click: true,
+    });
+    breadcrumb.push({
+      label: "Sprite Selection",
+    });
+  } else {
+    breadcrumb.push({
+      label: "Dialogue Box",
+    });
   }
 
-  // Update form options with current data
   const mappedFields = state.form.fields.map((field) => {
     if (field.name === "mode") {
       return {
@@ -527,47 +837,16 @@ export const selectViewData = ({ state, props }) => {
         value: state.characterName,
       };
     }
-    if (field.name === "characterSpriteEnabled") {
-      return {
-        ...field,
-        value: state.characterSpriteEnabled,
-      };
-    }
-    if (field.name === "spriteTransformId") {
-      return {
-        ...field,
-        options: transformOptions,
-        value: selectedSpriteTransformId,
-      };
-    }
-    if (field.name === "spriteAnimationMode") {
-      return {
-        ...field,
-        value: state.spriteAnimationMode,
-      };
-    }
-    if (field.name === "updateSpriteAnimation") {
-      return {
-        ...field,
-        options: updateAnimationOptions,
-        value:
-          state.spriteAnimationMode === "update" ? state.spriteAnimationId : "",
-      };
-    }
-    if (field.name === "transitionSpriteAnimation") {
-      return {
-        ...field,
-        options: transitionAnimationOptions,
-        value:
-          state.spriteAnimationMode === "transition"
-            ? state.spriteAnimationId
-            : "",
-      };
-    }
     if (field.name === "persistCharacter") {
       return {
         ...field,
         value: state.persistCharacter,
+      };
+    }
+    if (field.name === "append") {
+      return {
+        ...field,
+        value: state.appendDialogue,
       };
     }
     if (field.name === "clearPage") {
@@ -578,47 +857,23 @@ export const selectViewData = ({ state, props }) => {
     }
     return field;
   });
-  const form = {
-    ...state.form,
-    fields: [],
-  };
 
-  for (const field of mappedFields) {
-    form.fields.push(field);
-
-    if (field.name === "spriteTransformId") {
-      form.fields.push(...spriteGroupFields);
-    }
-  }
-
-  // Update default values with current selections
   const defaultValues = {
     mode: selectedMode,
     resourceId: selectedResourceId,
     characterId: state.selectedCharacterId,
     customCharacterName: state.customCharacterName,
     characterName: state.characterName,
-    characterSpriteEnabled: state.characterSpriteEnabled,
-    spriteTransformId: selectedSpriteTransformId,
-    spriteAnimationMode: state.spriteAnimationMode,
-    updateSpriteAnimation:
-      state.spriteAnimationMode === "update" ? state.spriteAnimationId : "",
-    transitionSpriteAnimation:
-      state.spriteAnimationMode === "transition" ? state.spriteAnimationId : "",
+    append: state.appendDialogue,
     persistCharacter: state.persistCharacter,
     clearPage: state.clearPage,
   };
-
-  for (const spriteSelectionGroup of spriteSelectionGroups) {
-    defaultValues[getSpriteGroupFieldName(spriteSelectionGroup.id)] =
-      state.selectedSpriteIds[spriteSelectionGroup.id] ?? "";
-  }
-
   const context = {
     values: defaultValues,
   };
 
   return {
+    mode: state.mode,
     layouts: layoutOptions,
     characters: characterOptions,
     selectedResourceId,
@@ -626,17 +881,39 @@ export const selectViewData = ({ state, props }) => {
     customCharacterName: state.customCharacterName,
     characterName: state.characterName,
     characterSpriteEnabled: state.characterSpriteEnabled,
+    spriteCharacterId: state.spriteCharacterId,
+    selectedSpriteCharacter: selectedSpriteCharacterView,
+    hasSpriteCharacter: !!selectedSpriteCharacter,
     spriteTransformId: selectedSpriteTransformId,
     spriteAnimationMode: state.spriteAnimationMode,
     spriteAnimationId: state.spriteAnimationId,
     selectedSpriteIds: state.selectedSpriteIds,
     selectedMode,
+    appendDialogue: state.appendDialogue,
     persistCharacter: state.persistCharacter,
     clearPage: state.clearPage,
     submitDisabled: !selectedResourceId,
     breadcrumb,
-    form,
+    form: {
+      ...state.form,
+      fields: mappedFields,
+    },
     defaultValues,
     context,
+    items: characterTreeData.explorerItems,
+    groups: characterTreeData.groups,
+    transformOptions,
+    animationModeOptions: ANIMATION_MODE_OPTIONS,
+    updateAnimationOptions,
+    transitionAnimationOptions,
+    spriteItems,
+    spriteGroups,
+    showSpriteGroupTabs: spriteSelectionTabs.length > 1,
+    spriteSelectionTabs,
+    selectedSpriteGroupId,
+    searchQuery: state.searchQuery,
+    searchPlaceholder: "Search...",
+    fullImagePreviewVisible: state.fullImagePreviewVisible,
+    fullImagePreviewFileId: state.fullImagePreviewFileId,
   };
 };

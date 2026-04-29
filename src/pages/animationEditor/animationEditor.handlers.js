@@ -336,24 +336,15 @@ const renderPreviewForThumbnailCapture = async ({
     return;
   }
 
-  const currentTimeMs = store.selectPreviewPlayheadVisible()
-    ? store.selectPreviewPlayheadTimeMs()
-    : undefined;
+  const captureTimeMs = store.selectPreviewPlayheadVisible()
+    ? (store.selectPreviewPlayheadTimeMs() ?? 0)
+    : 0;
 
-  if (currentTimeMs !== undefined) {
-    await ensureManualPreviewAtTime({
-      graphicsService,
-      projectService,
-      store,
-      timeMs: currentTimeMs,
-    });
-    return;
-  }
-
-  await renderPreviewAnimationState({
+  await ensureManualPreviewAtTime({
     graphicsService,
     projectService,
     store,
+    timeMs: captureTimeMs,
   });
 };
 

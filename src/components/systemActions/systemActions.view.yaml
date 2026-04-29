@@ -188,7 +188,7 @@ template:
               - $if mode == "actions":
                   - rvn-command-line-actions#commandLineActions :actionsType=${actionsType} :hiddenModes=${hiddenModes}: null
                 $elif mode == "dialogue":
-                  - rvn-command-line-dialogue-box#commandLineDialogueBox :layouts=${dialogueLayouts} :characters=${allCharacters} :transforms=${transforms} :animations=${animations} :dialogue=${actions.dialogue}: null
+                  - rvn-command-line-dialogue-box#commandLineDialogueBox :layouts=${dialogueLayouts} :characters=${allCharacters} :characterTree=${characterTree} :transforms=${transforms} :animations=${animations} :dialogue=${actions.dialogue}: null
                 $elif mode == "choice":
                   - rvn-command-line-choices#commandLineChoices :layouts=${choiceLayouts} :choice=${actions.choice}: null
                 $elif mode == "background":
