@@ -466,9 +466,10 @@ export const setSpriteTransformId = ({ state }, { transformId } = {}) => {
 
 export const setSpriteAnimationMode = ({ state }, { mode } = {}) => {
   const nextMode = mode === "update" || mode === "transition" ? mode : "none";
+  const previousMode = state.spriteAnimationMode ?? "none";
   state.spriteAnimationMode = nextMode;
 
-  if (nextMode === "none") {
+  if (nextMode !== previousMode) {
     state.spriteAnimationId = "";
   }
 };

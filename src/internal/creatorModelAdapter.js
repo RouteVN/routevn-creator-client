@@ -2,7 +2,6 @@ import {
   processCommand as processCreatorModelCommand,
   replayCommands as replayCreatorModelCommands,
 } from "@routevn/creator-model";
-import { normalizeVariableEnumValues } from "./variableEnums.js";
 
 class CreatorModelAdapterError extends Error {
   constructor(message) {
@@ -19,163 +18,11 @@ const VALID_RESULT = Object.freeze({
 const isPlainObject = (value) =>
   !!value && typeof value === "object" && !Array.isArray(value);
 
-const VARIABLE_CREATE_COMMAND = "variable.create";
-const VARIABLE_UPDATE_COMMAND = "variable.update";
-
-const stripVariableEnumFields = (item) => {
-  if (!isPlainObject(item)) {
-    return;
-  }
-
-  delete item.isEnum;
-  delete item.enumValues;
-};
-
-const getVariableItems = (state) => state?.variables?.items ?? {};
-
-const hasVariableEnumMetadata = (state) => {
-  const variableItems = getVariableItems(state);
-
-  return Object.values(variableItems).some(
-    (item) =>
-      isPlainObject(item) &&
-      (Object.prototype.hasOwnProperty.call(item, "isEnum") ||
-        Object.prototype.hasOwnProperty.call(item, "enumValues")),
-  );
-};
-
 export const toCreatorModelState = (state) => {
-  const shouldStripVariableEnums = hasVariableEnumMetadata(state);
-
-  if (!shouldStripVariableEnums) {
-    return state;
-  }
-
-  const nextState = structuredClone(state);
-
-  if (shouldStripVariableEnums) {
-    const variableItems = getVariableItems(nextState);
-
-    for (const item of Object.values(variableItems)) {
-      if (item?.type !== "folder") {
-        stripVariableEnumFields(item);
-      }
-    }
-  }
-
-  return nextState;
+  return state;
 };
 
-const commandHasVariableData = (command) =>
-  (command?.type === VARIABLE_CREATE_COMMAND ||
-    command?.type === VARIABLE_UPDATE_COMMAND) &&
-  isPlainObject(command?.payload?.data);
-
-const toCreatorModelCommand = (command) => {
-  const nextCommand = structuredClone(command);
-
-  if (commandHasVariableData(nextCommand)) {
-    stripVariableEnumFields(nextCommand.payload.data);
-  }
-
-  return nextCommand;
-};
-
-const hasVariableEnumPayload = (data) =>
-  Object.prototype.hasOwnProperty.call(data || {}, "isEnum") ||
-  Object.prototype.hasOwnProperty.call(data || {}, "enumValues");
-
-const commandsHaveVariableEnumPayload = (commands = []) =>
-  commands.some(
-    (command) =>
-      commandHasVariableData(command) &&
-      hasVariableEnumPayload(command.payload.data),
-  );
-
-const applyVariableEnumPayload = ({ item, data } = {}) => {
-  if (!isPlainObject(item)) {
-    return;
-  }
-
-  const enumEnabled =
-    data?.isEnum === true ||
-    (data?.isEnum === undefined && item.isEnum === true);
-
-  if (item.type !== "string" || !enumEnabled) {
-    delete item.isEnum;
-    delete item.enumValues;
-    return;
-  }
-
-  item.isEnum = true;
-  item.enumValues = normalizeVariableEnumValues(data.enumValues);
-};
-
-const copyVariableEnumMetadata = ({ targetItem, sourceItem } = {}) => {
-  if (
-    !isPlainObject(targetItem) ||
-    !isPlainObject(sourceItem) ||
-    targetItem.type !== "string" ||
-    sourceItem.isEnum !== true
-  ) {
-    return;
-  }
-
-  targetItem.isEnum = true;
-  targetItem.enumValues = normalizeVariableEnumValues(sourceItem.enumValues);
-};
-
-const restoreVariableEnumMetadata = ({
-  baseState,
-  nextState,
-  commands = [],
-} = {}) => {
-  if (
-    !hasVariableEnumMetadata(baseState) &&
-    !commandsHaveVariableEnumPayload(commands)
-  ) {
-    return nextState;
-  }
-
-  const restoredState = structuredClone(nextState);
-  const baseVariableItems = getVariableItems(baseState);
-  const nextVariableItems = getVariableItems(restoredState);
-
-  for (const [variableId, item] of Object.entries(nextVariableItems)) {
-    copyVariableEnumMetadata({
-      targetItem: item,
-      sourceItem: baseVariableItems[variableId],
-    });
-  }
-
-  for (const command of commands) {
-    if (!commandHasVariableData(command)) {
-      continue;
-    }
-
-    const variableId = command.payload?.variableId;
-    const item = nextVariableItems[variableId];
-    if (command.type === VARIABLE_CREATE_COMMAND) {
-      applyVariableEnumPayload({
-        item,
-        data: command.payload.data,
-      });
-      continue;
-    }
-
-    if (
-      command.type === VARIABLE_UPDATE_COMMAND &&
-      hasVariableEnumPayload(command.payload.data)
-    ) {
-      applyVariableEnumPayload({
-        item,
-        data: command.payload.data,
-      });
-    }
-  }
-
-  return restoredState;
-};
+const toCreatorModelCommand = (command) => structuredClone(command);
 
 const toCreatorModelInvalidResult = (error) => {
   const normalizedError = {
@@ -270,11 +117,7 @@ export const applyCommandToRepositoryStateWithCreatorModel = ({
       valid: true,
       creatorModelCommand,
       nextCreatorModelState: processResult.state,
-      repositoryState: restoreVariableEnumMetadata({
-        baseState: repositoryState,
-        nextState: processResult.state,
-        commands: [command],
-      }),
+      repositoryState: processResult.state,
     };
   });
 };
@@ -302,11 +145,7 @@ export const applyCommandsToRepositoryStateWithCreatorModel = ({
       valid: true,
       creatorModelCommands,
       nextCreatorModelState: replayResult.state,
-      repositoryState: restoreVariableEnumMetadata({
-        baseState: repositoryState,
-        nextState: replayResult.state,
-        commands,
-      }),
+      repositoryState: replayResult.state,
     };
   });
 };

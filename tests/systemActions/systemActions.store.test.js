@@ -8,7 +8,7 @@ import {
 } from "../../src/components/systemActions/systemActions.store.js";
 
 describe("systemActions.store", () => {
-  it("preserves hidden update variable actions without previewing them", () => {
+  it("preserves and previews update variable actions", () => {
     const state = createInitialState();
 
     const { actions, preview } = selectActionsData({
@@ -17,7 +17,13 @@ describe("systemActions.store", () => {
         actions: {
           updateVariable: {
             id: "updateVariable1",
-            operations: [],
+            operations: [
+              {
+                variableId: "score",
+                op: "increment",
+                value: 2,
+              },
+            ],
           },
         },
       },
@@ -25,9 +31,18 @@ describe("systemActions.store", () => {
 
     expect(actions.updateVariable).toEqual({
       id: "updateVariable1",
-      operations: [],
+      operations: [
+        {
+          variableId: "score",
+          op: "increment",
+          value: 2,
+        },
+      ],
     });
-    expect(preview.updateVariable).toBeUndefined();
+    expect(preview.updateVariable).toEqual({
+      summary: "score +2",
+      operationCount: 1,
+    });
   });
 
   it("preserves and previews explicit skip mode start and stop actions", () => {

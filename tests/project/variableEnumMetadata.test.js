@@ -56,6 +56,33 @@ describe("variable enum metadata", () => {
     ).not.toThrow();
   });
 
+  it("rejects invalid enum metadata through creator model validation", () => {
+    const createResult = applyCommandToRepositoryState({
+      repositoryState: structuredClone(initialProjectData),
+      command: createCommand({
+        payload: {
+          variableId: "mood",
+          data: {
+            type: "string",
+            name: "Mood",
+            description: "",
+            scope: "context",
+            isEnum: true,
+            enumValues: [42],
+            default: "happy",
+            value: "happy",
+          },
+        },
+      }),
+      projectId: "project-1",
+    });
+
+    expect(createResult.valid).toBe(false);
+    expect(createResult.error?.message).toContain(
+      "payload.data.enumValues[0] must be a string",
+    );
+  });
+
   it("clears enum metadata when a variable update turns enum off", () => {
     const commands = [
       createCommand(),

@@ -427,4 +427,15 @@ describe("commandLineDialogueBox.store", () => {
       ],
     });
   });
+
+  it("clears the selected sprite animation when animation mode changes", () => {
+    const state = createInitialState();
+
+    setSpriteAnimationMode({ state }, { mode: "update" });
+    setSpriteAnimationId({ state }, { animationId: "portrait-update" });
+    setSpriteAnimationMode({ state }, { mode: "transition" });
+
+    expect(state.spriteAnimationMode).toBe("transition");
+    expect(state.spriteAnimationId).toBe("");
+  });
 });

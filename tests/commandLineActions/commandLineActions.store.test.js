@@ -88,7 +88,7 @@ describe("commandLineActions.store", () => {
     ).toBe(true);
   });
 
-  it("hides the variables section and update variable action", () => {
+  it("shows the variables section and update variable action", () => {
     const items = selectItems({
       props: {
         actionsType: "system",
@@ -99,8 +99,8 @@ describe("commandLineActions.store", () => {
       items.some(
         (item) => item.type === "section" && item.label === "Variables",
       ),
-    ).toBe(false);
-    expect(items.some((item) => item.mode === "updateVariable")).toBe(false);
+    ).toBe(true);
+    expect(items.some((item) => item.mode === "updateVariable")).toBe(true);
   });
 
   it("moves dialogue text speed into the dialogue section", () => {
