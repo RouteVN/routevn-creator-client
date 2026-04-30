@@ -3023,10 +3023,26 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
   }
 
-  keepMentionMenuNonModal() {
+  keepMentionMenuNonModal({ restoreFocus = false } = {}) {
     const popover =
       this.refs.mentionMenu?.shadowRoot?.querySelector?.("rtgl-popover");
     popover?.setAttribute("no-overlay", "");
+    popover?.shadowRoot
+      ?.querySelector?.("dialog")
+      ?.setAttribute("tabindex", "-1");
+
+    if (!restoreFocus) {
+      return;
+    }
+
+    setTimeout(() => {
+      if (!this.isConnected || !this.state.mentionMenu.isOpen) {
+        return;
+      }
+
+      this.keepMentionMenuNonModal();
+      this.focus({ preventScroll: true });
+    }, 0);
   }
 
   selectMentionByIndex(index) {
@@ -3130,8 +3146,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         this.refs.editor,
         this.refs.surface,
       );
-      this.state.mentionMenu.left = position.left;
-      this.state.mentionMenu.top = position.top;
+      const surfaceRect = this.refs.surface.getBoundingClientRect();
+      this.state.mentionMenu.left = surfaceRect.left + position.left;
+      this.state.mentionMenu.top = surfaceRect.top + position.top;
     } else {
       this.closeMentionMenu();
     }
@@ -3846,6 +3863,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     menu.h = "240";
     menu.open = true;
     menu.render?.();
-    this.keepMentionMenuNonModal();
+    this.keepMentionMenuNonModal({ restoreFocus: true });
   }
 }
