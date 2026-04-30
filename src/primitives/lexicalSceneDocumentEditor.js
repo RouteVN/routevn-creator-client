@@ -12,8 +12,6 @@ import {
   $isTextNode,
   $setSelection,
   COMMAND_PRIORITY_HIGH,
-  KEY_ARROW_DOWN_COMMAND,
-  KEY_ARROW_UP_COMMAND,
   KEY_ENTER_COMMAND,
   KEY_ESCAPE_COMMAND,
   PASTE_COMMAND,
@@ -930,15 +928,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
             return false;
           }
 
-          if (
-            this.state.mentionMenu.isOpen &&
-            this.state.mentionMenu.items.length > 0
-          ) {
-            event?.preventDefault?.();
-            this.selectMentionByIndex(this.state.mentionMenu.highlightedIndex);
-            return true;
-          }
-
           if (event?.shiftKey) {
             event.preventDefault();
             event.stopPropagation?.();
@@ -957,32 +946,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           requestAnimationFrame(() => {
             this.pendingParagraphSplitBeforeInput = false;
           });
-          return true;
-        },
-        COMMAND_PRIORITY_HIGH,
-      ),
-      this.editor.registerCommand(
-        KEY_ARROW_DOWN_COMMAND,
-        (event) => {
-          if (!this.state.mentionMenu.isOpen) {
-            return false;
-          }
-
-          event?.preventDefault?.();
-          this.moveMentionHighlight(1);
-          return true;
-        },
-        COMMAND_PRIORITY_HIGH,
-      ),
-      this.editor.registerCommand(
-        KEY_ARROW_UP_COMMAND,
-        (event) => {
-          if (!this.state.mentionMenu.isOpen) {
-            return false;
-          }
-
-          event?.preventDefault?.();
-          this.moveMentionHighlight(-1);
           return true;
         },
         COMMAND_PRIORITY_HIGH,
@@ -2997,20 +2960,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     );
   }
 
-  moveMentionHighlight(delta) {
-    const optionCount = this.state.mentionMenu.items.length;
-    if (optionCount === 0) {
-      return;
-    }
-
-    const nextIndex =
-      (this.state.mentionMenu.highlightedIndex + delta + optionCount) %
-      optionCount;
-
-    this.state.mentionMenu.highlightedIndex = nextIndex;
-    this.renderMentionMenu();
-  }
-
   closeMentionMenu({ shouldRender = false } = {}) {
     this.state.mentionMenu = createClosedMentionMenuState();
 
@@ -3131,10 +3080,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         isOpen: true,
         query: snapshot.mentionTrigger.query,
         items,
-        highlightedIndex: Math.min(
-          this.state.mentionMenu.highlightedIndex,
-          Math.max(0, items.length - 1),
-        ),
+        highlightedIndex: 0,
         left: 12,
         top: 18,
         nodeKey: snapshot.mentionTrigger.nodeKey,
@@ -3847,15 +3793,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
-    menu.items = menuState.items.map((item, index) => {
-      const isHighlighted = index === menuState.highlightedIndex;
-      return {
-        id: `mention:${item.id}`,
-        type: "item",
-        label: `${isHighlighted ? "> " : ""}@${item.label}`,
-        suffixText: item.id,
-      };
-    });
+    menu.items = menuState.items.map((item) => ({
+      id: `mention:${item.id}`,
+      type: "item",
+      label: `@${item.label}`,
+      suffixText: item.id,
+    }));
     menu.x = String(menuState.left);
     menu.y = String(menuState.top);
     menu.place = "bs";
