@@ -21,6 +21,14 @@ import { tap } from "rxjs";
 
 const EMPTY_TREE = { tree: [], items: {} };
 
+const normalizeOptionalTagIds = (tagIds) => {
+  if (!Array.isArray(tagIds) || tagIds.length === 0) {
+    return undefined;
+  }
+
+  return tagIds;
+};
+
 const createVariableResourceData = ({
   name,
   description = "",
@@ -29,21 +37,31 @@ const createVariableResourceData = ({
   defaultValue = "",
   isEnum = false,
   enumValues = [],
-  tagIds = [],
+  tagIds,
 } = {}) => {
   const enumEnabled = type === "string" && isEnum === true;
-
-  return {
+  const data = {
     name,
     description,
-    tagIds,
     scope,
     type,
-    isEnum: enumEnabled,
-    enumValues: enumEnabled ? normalizeVariableEnumValues(enumValues) : [],
     default: defaultValue,
     value: defaultValue,
   };
+  const normalizedTagIds = normalizeOptionalTagIds(tagIds);
+
+  if (type === "string") {
+    data.isEnum = enumEnabled;
+    data.enumValues = enumEnabled
+      ? normalizeVariableEnumValues(enumValues)
+      : [];
+  }
+
+  if (normalizedTagIds !== undefined) {
+    data.tagIds = normalizedTagIds;
+  }
+
+  return data;
 };
 
 const getVariablesData = ({ repositoryState } = {}) => {
@@ -329,6 +347,25 @@ export const handleVariableUpdated = async (deps, payload) => {
   if (!itemId) {
     return;
   }
+  const data = {
+    name,
+    description: description ?? "",
+    scope,
+    default: defaultValue,
+    value: defaultValue,
+  };
+  const selectedItem = store.selectSelectedItem();
+  const normalizedTagIds = normalizeOptionalTagIds(tagIds);
+
+  if (selectedItem?.type === "string") {
+    data.isEnum = isEnum === true;
+    data.enumValues =
+      isEnum === true ? normalizeVariableEnumValues(enumValues) : [];
+  }
+
+  if (normalizedTagIds !== undefined) {
+    data.tagIds = normalizedTagIds;
+  }
 
   const updateAttempt = await runResourcePageMutation({
     appService,
@@ -336,17 +373,7 @@ export const handleVariableUpdated = async (deps, payload) => {
     action: () =>
       projectService.updateVariable({
         variableId: itemId,
-        data: {
-          name,
-          description: description ?? "",
-          tagIds,
-          scope,
-          isEnum: isEnum === true,
-          enumValues:
-            isEnum === true ? normalizeVariableEnumValues(enumValues) : [],
-          default: defaultValue,
-          value: defaultValue,
-        },
+        data,
       }),
   });
 

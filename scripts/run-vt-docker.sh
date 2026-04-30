@@ -80,15 +80,21 @@ fi
 rtgl_args=("$@")
 if [ "${1:-}" = "vt" ] && [ "${2:-}" = "screenshot" ]; then
   has_isolation_flag=0
+  has_concurrency_flag=0
   for arg in "${rtgl_args[@]}"; do
     if [ "$arg" = "--isolation" ] || [[ "$arg" == --isolation=* ]]; then
       has_isolation_flag=1
-      break
+    fi
+    if [ "$arg" = "--concurrency" ] || [[ "$arg" == --concurrency=* ]]; then
+      has_concurrency_flag=1
     fi
   done
 
   if [ "$has_isolation_flag" -eq 0 ]; then
     rtgl_args+=(--isolation strict)
+  fi
+  if [ "$has_concurrency_flag" -eq 0 ]; then
+    rtgl_args+=(--concurrency "${RTGL_VT_CONCURRENCY:-1}")
   fi
 fi
 
