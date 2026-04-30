@@ -187,65 +187,144 @@ const ensurePocTextStyleResource = (repositoryState = {}) => {
   };
 };
 
-const sanitizeInlineTextStyleMetadata = (
-  value,
+const sanitizeDialogueContentInlineTextStyleMetadata = (
+  content,
   { fallbackTextStyleId } = {},
 ) => {
-  if (Array.isArray(value)) {
-    let changed = false;
-    const nextItems = value.map((item) => {
-      const nextItem = sanitizeInlineTextStyleMetadata(item, {
-        fallbackTextStyleId,
-      });
-      if (nextItem !== item) {
-        changed = true;
-      }
-      return nextItem;
-    });
-
-    return changed ? nextItems : value;
-  }
-
-  if (!isPlainObject(value)) {
-    return value;
+  if (!Array.isArray(content)) {
+    return content;
   }
 
   let changed = false;
-  let hadInlineTextStyle = false;
-  const nextValue = {};
-
-  Object.entries(value).forEach(([key, item]) => {
-    if (key === "textStyle") {
-      hadInlineTextStyle = true;
-      changed = true;
-      return;
+  const nextContent = content.map((item) => {
+    if (!isPlainObject(item)) {
+      return item;
     }
 
-    if (key === "textStyleSegmentId") {
-      changed = true;
-      return;
+    const hasInlineTextStyle = Object.hasOwn(item, "textStyle");
+    const hasTextStyleSegmentId = Object.hasOwn(item, "textStyleSegmentId");
+    if (!hasInlineTextStyle && !hasTextStyleSegmentId) {
+      return item;
     }
 
-    const nextItem = sanitizeInlineTextStyleMetadata(item, {
-      fallbackTextStyleId,
-    });
-    if (nextItem !== item) {
-      changed = true;
+    const nextItem = { ...item };
+    delete nextItem.textStyle;
+    delete nextItem.textStyleSegmentId;
+
+    if (
+      hasInlineTextStyle &&
+      fallbackTextStyleId &&
+      typeof item.text === "string" &&
+      !item.textStyleId
+    ) {
+      nextItem.textStyleId = fallbackTextStyleId;
     }
-    nextValue[key] = nextItem;
+
+    changed = true;
+    return nextItem;
   });
 
-  if (
-    hadInlineTextStyle &&
-    fallbackTextStyleId &&
-    typeof value.text === "string" &&
-    !value.textStyleId
-  ) {
-    nextValue.textStyleId = fallbackTextStyleId;
-    changed = true;
+  return changed ? nextContent : content;
+};
+
+const sanitizeSceneDialogueContentInlineTextStyleMetadata = (
+  repositoryState = {},
+  { fallbackTextStyleId } = {},
+) => {
+  const sceneItems = repositoryState.scenes?.items;
+  if (!isPlainObject(sceneItems)) {
+    return repositoryState;
   }
 
-  return changed ? nextValue : value;
+  let scenesChanged = false;
+  const nextSceneItems = {};
+
+  Object.entries(sceneItems).forEach(([sceneId, scene]) => {
+    const sectionItems = scene?.sections?.items;
+    if (!isPlainObject(sectionItems)) {
+      nextSceneItems[sceneId] = scene;
+      return;
+    }
+
+    let sectionsChanged = false;
+    const nextSectionItems = {};
+
+    Object.entries(sectionItems).forEach(([sectionId, section]) => {
+      const lineItems = section?.lines?.items;
+      if (!isPlainObject(lineItems)) {
+        nextSectionItems[sectionId] = section;
+        return;
+      }
+
+      let linesChanged = false;
+      const nextLineItems = {};
+
+      Object.entries(lineItems).forEach(([lineId, line]) => {
+        const dialogue = line?.actions?.dialogue;
+        const nextContent = sanitizeDialogueContentInlineTextStyleMetadata(
+          dialogue?.content,
+          { fallbackTextStyleId },
+        );
+
+        if (nextContent === dialogue?.content) {
+          nextLineItems[lineId] = line;
+          return;
+        }
+
+        nextLineItems[lineId] = {
+          ...line,
+          actions: {
+            ...line.actions,
+            dialogue: {
+              ...dialogue,
+              content: nextContent,
+            },
+          },
+        };
+        linesChanged = true;
+      });
+
+      if (!linesChanged) {
+        nextSectionItems[sectionId] = section;
+        return;
+      }
+
+      nextSectionItems[sectionId] = {
+        ...section,
+        lines: {
+          ...section.lines,
+          items: nextLineItems,
+        },
+      };
+      sectionsChanged = true;
+    });
+
+    if (!sectionsChanged) {
+      nextSceneItems[sceneId] = scene;
+      return;
+    }
+
+    nextSceneItems[sceneId] = {
+      ...scene,
+      sections: {
+        ...scene.sections,
+        items: nextSectionItems,
+      },
+    };
+    scenesChanged = true;
+  });
+
+  if (!scenesChanged) {
+    return repositoryState;
+  }
+
+  return {
+    ...repositoryState,
+    scenes: {
+      ...repositoryState.scenes,
+      items: nextSceneItems,
+    },
+  };
 };
 
 const prepareProjectDataSourceStateForPreview = (repositoryState = {}) => {
@@ -255,9 +334,10 @@ const prepareProjectDataSourceStateForPreview = (repositoryState = {}) => {
     !!repositoryStateWithPocTextStyle.textStyles?.items?.[POC_TEXT_STYLE_ID];
   const fallbackTextStyleId = hasPocTextStyle ? POC_TEXT_STYLE_ID : undefined;
 
-  return sanitizeInlineTextStyleMetadata(repositoryStateWithPocTextStyle, {
-    fallbackTextStyleId,
-  });
+  return sanitizeSceneDialogueContentInlineTextStyleMetadata(
+    repositoryStateWithPocTextStyle,
+    { fallbackTextStyleId },
+  );
 };
 
 const getDraftSectionForSelection = (state, sceneId, sectionId) => {

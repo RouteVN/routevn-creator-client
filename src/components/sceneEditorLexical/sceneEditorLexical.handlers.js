@@ -445,7 +445,10 @@ const mountSceneEditorShortcutSubscriptions = (deps) => {
   return () => active.forEach((subscription) => subscription?.unsubscribe?.());
 };
 
-const flushSceneEditorDrafts = async (deps, { liveLines } = {}) => {
+const flushSceneEditorDrafts = async (
+  deps,
+  { liveLines, showErrorAlert = true } = {},
+) => {
   const { store } = deps;
   clearScheduledDraftFlush(store);
   if (Array.isArray(liveLines) && liveLines.length > 0) {
@@ -530,10 +533,12 @@ const flushSceneEditorDrafts = async (deps, { liveLines } = {}) => {
           revision: store.selectRepositoryRevision(),
           dirtyLineIds: snapshotLines.map((line) => line.id),
         });
-        deps.appService?.showAlert({
-          message: "Failed to save scene changes",
-          title: "Error",
-        });
+        if (showErrorAlert) {
+          deps.appService?.showAlert({
+            message: "Failed to save scene changes",
+            title: "Error",
+          });
+        }
         throw error;
       }
     },
@@ -1825,6 +1830,7 @@ export const handleToggleSectionsGraphView = (deps) => {
 export const handlePreviewClick = (deps, payload) => {
   const openPreview = async () => {
     const { store, render, appService, projectService } = deps;
+    let didPersistDraft = false;
 
     try {
       const sceneId = store.selectSceneId();
@@ -1837,25 +1843,24 @@ export const handlePreviewClick = (deps, payload) => {
         getLiveLinesFromElement(liveLinesEditorElement),
       );
 
-      cancelSceneEditorDraftFlush(deps);
-      if (Array.isArray(liveLines) && liveLines.length > 0) {
-        void projectService
-          .syncSectionLinesSnapshot({
-            sectionId,
-            lines: liveLines,
-          })
-          .then(() => {
-            syncStoreProjectState(store, projectService);
-          })
-          .catch(() => {});
-      }
+      await flushSceneEditorDrafts(deps, {
+        liveLines,
+        showErrorAlert: false,
+      });
+      syncStoreProjectState(store, projectService);
+      didPersistDraft = true;
+      store.setSkipNextEditorBlurDraftFlush({ value: true });
+      appService?.blurActiveElement?.();
       store.showPreviewSceneId({ sceneId, sectionId, lineId });
       store.setSkipNextEditorBlurDraftFlush({ value: false });
       render();
-    } catch {
+    } catch (error) {
       store.setSkipNextEditorBlurDraftFlush({ value: false });
+      console.error("[sceneEditor] Failed to open preview", { error });
       appService?.showAlert({
-        message: "Failed to open preview",
+        message: didPersistDraft
+          ? "Failed to open preview"
+          : "Failed to save scene changes before preview",
         title: "Error",
       });
     }
