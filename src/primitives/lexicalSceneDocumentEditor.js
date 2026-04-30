@@ -2,10 +2,12 @@ import {
   $createRangeSelection,
   $createParagraphNode,
   $createTextNode,
+  $getNearestNodeFromDOMNode,
   $getNodeByKey,
   $getRoot,
   $getSelection,
   $isElementNode,
+  $isLineBreakNode,
   $isRangeSelection,
   $isTextNode,
   $setSelection,
@@ -66,11 +68,11 @@ import {
   unpatchWindowGetSelection,
 } from "./lexicalRichTextShared.js";
 
-const DEFAULT_PLACEHOLDER =
-  "Write the whole section here. Enter creates a new line. Use @ for mentions.";
-const LEFT_GUTTER_WIDTH_WITH_NUMBERS = 80;
-const LEFT_GUTTER_WIDTH_WITHOUT_NUMBERS = 32;
+const DEFAULT_PLACEHOLDER = "";
+const LEFT_GUTTER_WIDTH_WITH_NUMBERS = 60;
+const LEFT_GUTTER_WIDTH_WITHOUT_NUMBERS = 26;
 const DEFAULT_RIGHT_GUTTER_WIDTH = 24;
+const MIN_EDITOR_TEXT_WIDTH = 160;
 const BLOCK_ROW_BACKGROUND = "var(--muted)";
 const DELETE_SHORTCUT_TIMEOUT_MS = 1200;
 
@@ -86,18 +88,23 @@ const STYLES = `
 
   rvn-lexical-scene-document-editor * {
     box-sizing: border-box;
+    -webkit-user-drag: none;
   }
 
   .surface {
     position: relative;
     width: 100%;
+    min-width: 0;
+    max-width: 100%;
     min-height: 280px;
     outline: none;
   }
 
   .editor {
     min-height: 280px;
+    min-width: 0;
     width: 100%;
+    max-width: 100%;
     outline: none;
     border: 0;
     border-radius: 0;
@@ -107,12 +114,11 @@ const STYLES = `
     font-size: 16px;
     font-weight: 400;
     line-height: 1.5;
-    padding: 0
-      calc(var(--right-gutter-width) + var(--editor-inline-padding))
-      0 calc(var(--left-gutter-width) + var(--editor-inline-padding));
+    padding: 0 0 0 calc(var(--left-gutter-width) + var(--editor-inline-padding));
     white-space: pre-wrap;
     word-break: break-word;
-    caret-color: #0f766e;
+    overflow-wrap: anywhere;
+    caret-color: var(--primary);
   }
 
   .editor:focus {
@@ -123,9 +129,12 @@ const STYLES = `
   .editor-paragraph {
     position: relative;
     margin: 0;
+    min-width: 0;
+    max-width: 100%;
     min-height: 24px;
     padding: 0;
     border-radius: 0;
+    overflow-wrap: anywhere;
   }
 
   .editor-paragraph[data-selected="true"][data-mode="block"] {
@@ -152,7 +161,7 @@ const STYLES = `
   .gutter-row {
     position: absolute;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
     min-height: 24px;
     border-radius: 0;
@@ -160,19 +169,26 @@ const STYLES = `
 
   .gutter-left .gutter-row {
     width: 100%;
+    gap: 0;
     justify-content: flex-start;
   }
 
   .gutter-right .gutter-row {
-    left: 0;
-    width: 100%;
+    right: 0;
+    width: max-content;
+    max-width: none;
     justify-content: flex-start;
     padding-left: 0;
     padding-right: 0;
   }
 
+  .gutter-right .gutter-row[data-constrained="true"] {
+    width: var(--line-right-gutter-width);
+    max-width: var(--line-right-gutter-width);
+  }
+
   .gutter-row[data-selected="true"] .line-number {
-    color: var(--foreground);
+    color: var(--muted-foreground);
   }
 
   .gutter-row[data-selected="true"][data-mode="block"] {
@@ -180,13 +196,14 @@ const STYLES = `
   }
 
   .line-number {
+    align-self: flex-start;
     width: 32px;
-    color: var(--foreground);
+    color: var(--muted-foreground);
     font-size: 12px;
     font-weight: 600;
     line-height: 1.5;
     text-align: right;
-    margin-right: 8px;
+    margin-right: 2px;
   }
 
   .speaker-slot {
@@ -195,7 +212,7 @@ const STYLES = `
     height: 24px;
     border-radius: 999px;
     overflow: hidden;
-    margin-right: 8px;
+    margin-right: 2px;
     background: transparent;
   }
 
@@ -204,18 +221,30 @@ const STYLES = `
   }
 
   .preview-items {
-    display: flex;
+    display: inline-flex;
     flex-wrap: nowrap;
+    align-items: flex-start;
     justify-content: flex-start;
     gap: 8px;
+    min-width: 0;
     width: max-content;
+    max-width: none;
+  }
+
+  .gutter-right .gutter-row[data-constrained="true"] .preview-items {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
     max-width: 100%;
   }
 
   .preview-item {
     display: inline-flex;
-    align-items: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
     gap: 6px;
+    min-width: 0;
+    max-width: 100%;
     min-height: 24px;
   }
 
@@ -255,9 +284,12 @@ const STYLES = `
   }
 
   .preview-image-stack {
-    display: inline-flex;
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 4px;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .preview-group-delete-overlay {
@@ -319,7 +351,7 @@ const STYLES = `
   }
 
   .editor [style*="--rvn-text-style-id"] {
-    display: inline-block;
+    display: inline;
     margin-inline: 0.5px;
     padding-inline: 0.5px;
     color: inherit;
@@ -331,7 +363,7 @@ const STYLES = `
   }
 
   .editor [style*="--rvn-furigana-text"] {
-    display: inline-block;
+    display: inline;
     margin-inline: 0.5px;
     padding-inline: 0.5px;
     color: inherit;
@@ -526,6 +558,7 @@ const createShell = () => {
         id="editor"
         class="editor"
         contenteditable="true"
+        draggable="false"
         role="textbox"
         aria-multiline="true"
       ></div>
@@ -537,13 +570,32 @@ const createShell = () => {
   return template.content.cloneNode(true);
 };
 
-const walkTextNodes = (node, visitor) => {
+const walkTextUnits = (node, visitor) => {
   if (node.nodeType === Node.TEXT_NODE) {
-    return visitor(node);
+    return visitor({
+      length: node.textContent.length,
+      setRangeAtOffset: (range, offset) => {
+        range.setStart(node, offset);
+        range.setEnd(node, offset);
+      },
+    });
+  }
+
+  if (node.nodeType === Node.ELEMENT_NODE && node.nodeName === "BR") {
+    return visitor({
+      length: 1,
+      setRangeAtOffset: (range, offset) => {
+        const parent = node.parentNode;
+        const childIndex = Array.from(parent.childNodes).indexOf(node);
+        const pointOffset = childIndex + (offset > 0 ? 1 : 0);
+        range.setStart(parent, pointOffset);
+        range.setEnd(parent, pointOffset);
+      },
+    });
   }
 
   for (const child of node.childNodes) {
-    if (walkTextNodes(child, visitor)) {
+    if (walkTextUnits(child, visitor)) {
       return true;
     }
   }
@@ -555,20 +607,17 @@ const createCollapsedRangeAtPosition = (element, targetPosition) => {
   const range = document.createRange();
   const normalizedTargetPosition = Math.max(0, Number(targetPosition) || 0);
   let currentPosition = 0;
-  let lastTextNode;
-  let lastTextNodeLength = 0;
+  let lastUnit;
   let actualPosition = 0;
   let foundNode = false;
 
-  walkTextNodes(element, (node) => {
-    const nodeLength = node.textContent.length;
-    lastTextNode = node;
-    lastTextNodeLength = nodeLength;
+  walkTextUnits(element, (unit) => {
+    const nodeLength = unit.length;
+    lastUnit = unit;
 
     if (currentPosition + nodeLength >= normalizedTargetPosition) {
       const offset = normalizedTargetPosition - currentPosition;
-      range.setStart(node, offset);
-      range.setEnd(node, offset);
+      unit.setRangeAtOffset(range, offset);
       actualPosition = normalizedTargetPosition;
       foundNode = true;
       return true;
@@ -578,9 +627,8 @@ const createCollapsedRangeAtPosition = (element, targetPosition) => {
     return false;
   });
 
-  if (!foundNode && lastTextNode) {
-    range.setStart(lastTextNode, lastTextNodeLength);
-    range.setEnd(lastTextNode, lastTextNodeLength);
+  if (!foundNode && lastUnit) {
+    lastUnit.setRangeAtOffset(range, lastUnit.length);
     actualPosition = currentPosition;
     foundNode = true;
   }
@@ -596,7 +644,50 @@ const createCollapsedRangeAtPosition = (element, targetPosition) => {
   };
 };
 
+const clampDomPointOffset = (node, offset) => {
+  const numericOffset = Math.max(0, Number(offset) || 0);
+  if (node.nodeType === Node.TEXT_NODE) {
+    return Math.min(numericOffset, node.textContent?.length ?? 0);
+  }
+
+  return Math.min(numericOffset, node.childNodes?.length ?? 0);
+};
+
+const createSafeRange = (element, range) => {
+  if (
+    !element ||
+    !range ||
+    !range.startContainer?.isConnected ||
+    !range.endContainer?.isConnected ||
+    !element.contains(range.startContainer) ||
+    !element.contains(range.endContainer)
+  ) {
+    return undefined;
+  }
+
+  const nextRange = document.createRange();
+  const startOffset = clampDomPointOffset(
+    range.startContainer,
+    range.startOffset,
+  );
+  const endOffset = clampDomPointOffset(range.endContainer, range.endOffset);
+
+  try {
+    nextRange.setStart(range.startContainer, startOffset);
+    nextRange.setEnd(range.endContainer, endOffset);
+  } catch {
+    return undefined;
+  }
+
+  return nextRange;
+};
+
 const setSelectionFromRange = (element, range) => {
+  const safeRange = createSafeRange(element, range);
+  if (!safeRange) {
+    return;
+  }
+
   const root = element.getRootNode();
   let selection = window.getSelection();
 
@@ -609,12 +700,16 @@ const setSelectionFromRange = (element, range) => {
   }
 
   selection.removeAllRanges();
-  selection.addRange(range);
+  selection.addRange(safeRange);
 };
 
 const getLexicalTextLength = (node) => {
+  if ($isLineBreakNode(node)) {
+    return 1;
+  }
+
   if ($isTextNode(node)) {
-    return normalizeSingleLineText(node.getTextContent()).length;
+    return node.getTextContentSize?.() ?? node.getTextContent().length;
   }
 
   if ($isElementNode(node)) {
@@ -626,11 +721,50 @@ const getLexicalTextLength = (node) => {
   return 0;
 };
 
+const getLexicalOffsetBeforeNode = (node, targetKey) => {
+  if (node.getKey() === targetKey) {
+    return { found: true, offset: 0 };
+  }
+
+  if (!$isElementNode(node)) {
+    return { found: false, offset: getLexicalTextLength(node) };
+  }
+
+  let offset = 0;
+
+  for (const childNode of node.getChildren()) {
+    const result = getLexicalOffsetBeforeNode(childNode, targetKey);
+    if (result.found) {
+      return {
+        found: true,
+        offset: offset + result.offset,
+      };
+    }
+
+    offset += result.offset;
+  }
+
+  return { found: false, offset };
+};
+
 const resolvePointAtOffset = (node, offset) => {
   const targetOffset = Math.max(0, Number(offset) || 0);
 
+  if ($isLineBreakNode(node)) {
+    const parent = node.getParent();
+    if (!parent) {
+      return undefined;
+    }
+
+    return {
+      key: parent.getKey(),
+      offset: node.getIndexWithinParent() + (targetOffset > 0 ? 1 : 0),
+      type: "element",
+    };
+  }
+
   if ($isTextNode(node)) {
-    const textLength = normalizeSingleLineText(node.getTextContent()).length;
+    const textLength = getLexicalTextLength(node);
     return {
       key: node.getKey(),
       offset: Math.min(targetOffset, textLength),
@@ -647,6 +781,15 @@ const resolvePointAtOffset = (node, offset) => {
 
   for (const childNode of children) {
     const childLength = getLexicalTextLength(childNode);
+    if ($isLineBreakNode(childNode) && remainingOffset <= childLength) {
+      return {
+        key: node.getKey(),
+        offset:
+          childNode.getIndexWithinParent() + (remainingOffset > 0 ? 1 : 0),
+        type: "element",
+      };
+    }
+
     if (remainingOffset <= childLength) {
       const point = resolvePointAtOffset(childNode, remainingOffset);
       if (point) {
@@ -723,7 +866,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.lineMetaByKey = new Map();
     this.lineKeyById = new Map();
     this.pendingChangeReason = "text";
-    this.pendingMouseSelectionRange = undefined;
     this.pendingSelectionSnapshot = undefined;
     this.selectionMenuIsOpen = false;
     this.furiganaDialogIsPending = false;
@@ -731,6 +873,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.rightGutterWidth = DEFAULT_RIGHT_GUTTER_WIDTH;
     this.leftGutterRowsByLineId = new Map();
     this.rightGutterRowsByLineId = new Map();
+    this.pendingSoftLineBreakBeforeInput = false;
 
     this.editor = createEditor({
       namespace: "routevn-lexical-scene-document-editor",
@@ -751,6 +894,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.handleNativeBlur = this.handleNativeBlur.bind(this);
     this.handleNativeKeyDown = this.handleNativeKeyDown.bind(this);
     this.handleNativeBeforeInput = this.handleNativeBeforeInput.bind(this);
+    this.handleNativeDragEvent = this.handleNativeDragEvent.bind(this);
     this.handleNativeMouseUp = this.handleNativeMouseUp.bind(this);
     this.handleNativeContextMenu = this.handleNativeContextMenu.bind(this);
     this.handleCompositionStart = this.handleCompositionStart.bind(this);
@@ -812,6 +956,17 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
             return true;
           }
 
+          if (event?.shiftKey) {
+            event.preventDefault();
+            event.stopPropagation?.();
+            this.pendingSoftLineBreakBeforeInput = true;
+            this.insertSoftLineBreak();
+            requestAnimationFrame(() => {
+              this.pendingSoftLineBreakBeforeInput = false;
+            });
+            return true;
+          }
+
           return false;
         },
         COMMAND_PRIORITY_HIGH,
@@ -868,6 +1023,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.refs.editor.addEventListener("blur", this.handleNativeBlur);
     this.refs.editor.addEventListener("keydown", this.handleNativeKeyDown);
     this.refs.editor.addEventListener("mouseup", this.handleNativeMouseUp);
+    this.refs.editor.addEventListener("dragstart", this.handleNativeDragEvent);
+    this.refs.editor.addEventListener("dragenter", this.handleNativeDragEvent);
+    this.refs.editor.addEventListener("dragover", this.handleNativeDragEvent);
+    this.refs.editor.addEventListener("drop", this.handleNativeDragEvent);
     this.refs.editor.addEventListener(
       "contextmenu",
       this.handleNativeContextMenu,
@@ -928,6 +1087,19 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.refs.editor?.removeEventListener("blur", this.handleNativeBlur);
     this.refs.editor?.removeEventListener("keydown", this.handleNativeKeyDown);
     this.refs.editor?.removeEventListener("mouseup", this.handleNativeMouseUp);
+    this.refs.editor?.removeEventListener(
+      "dragstart",
+      this.handleNativeDragEvent,
+    );
+    this.refs.editor?.removeEventListener(
+      "dragenter",
+      this.handleNativeDragEvent,
+    );
+    this.refs.editor?.removeEventListener(
+      "dragover",
+      this.handleNativeDragEvent,
+    );
+    this.refs.editor?.removeEventListener("drop", this.handleNativeDragEvent);
     this.refs.editor?.removeEventListener(
       "contextmenu",
       this.handleNativeContextMenu,
@@ -1358,7 +1530,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     this.isEditorFocused = false;
     this.hideSelectionPopover();
-    this.pendingMouseSelectionRange = undefined;
     this.pendingSelectionSnapshot = undefined;
     this.enterBlockMode({
       focusSurface: false,
@@ -1375,7 +1546,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   handleNativeKeyDown(event) {
     this.hideSelectionPopover();
-    this.restorePendingMouseSelectionRange();
 
     if (event.key === "Escape" && !event.isComposing) {
       if (this.state.mentionMenu.isOpen) {
@@ -1402,7 +1572,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   handleNativeMouseUp() {
     const range = getSelectionRange(this.refs.editor);
-    this.pendingMouseSelectionRange = range?.cloneRange?.() || undefined;
     const lineId = this.getLineIdFromRange(range);
     if (!lineId) {
       this.scheduleRender();
@@ -1422,8 +1591,46 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
   }
 
+  handleNativeDragEvent(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+
+    if (event.dataTransfer) {
+      try {
+        event.dataTransfer.dropEffect = "none";
+        event.dataTransfer.effectAllowed = "none";
+      } catch {
+        // Some browsers restrict DataTransfer writes outside dragstart.
+      }
+    }
+  }
+
   handleNativeContextMenu(event) {
     const range = getSelectionRange(this.refs.editor);
+    if (
+      range &&
+      !range.collapsed &&
+      this.isContextMenuEventInsideRange(event, range)
+    ) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.showSelectionPopover(event);
+      return;
+    }
+
+    const segmentSnapshot =
+      this.getTextStyleSegmentSnapshotFromContextEvent(event);
+    if (segmentSnapshot) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.selectSnapshot(segmentSnapshot);
+      this.showSelectionPopover(event, {
+        selectionSnapshot: segmentSnapshot,
+      });
+      return;
+    }
+
     if (!range || range.collapsed) {
       this.hideSelectionPopover();
       return;
@@ -1432,6 +1639,94 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
     this.showSelectionPopover(event);
+  }
+
+  isContextMenuEventInsideRange(event, range) {
+    const target = event.composedPath?.()[0] ?? event.target;
+    const node =
+      target?.nodeType === Node.TEXT_NODE ? target : target?.closest?.("*");
+    if (!node || !this.refs.editor?.contains(node)) {
+      return false;
+    }
+
+    try {
+      return range.intersectsNode(node);
+    } catch {
+      return false;
+    }
+  }
+
+  getTextStyleSegmentSnapshotFromContextEvent(event) {
+    const element = this.getTextStyleSegmentElementFromContextEvent(event);
+    if (!element) {
+      return undefined;
+    }
+
+    return this.getTextStyleSegmentSnapshotFromElement(element);
+  }
+
+  getTextStyleSegmentElementFromContextEvent(event) {
+    const selector =
+      '[style*="--rvn-text-style-id"], [style*="--rvn-furigana-text"]';
+    const path = event.composedPath?.() ?? [];
+
+    for (const target of path) {
+      const element =
+        target?.nodeType === Node.TEXT_NODE ? target.parentElement : target;
+      const segmentElement = element?.closest?.(selector);
+      if (segmentElement && this.refs.editor?.contains(segmentElement)) {
+        return segmentElement;
+      }
+
+      if (target === this.refs.editor) {
+        break;
+      }
+    }
+
+    return undefined;
+  }
+
+  getTextStyleSegmentSnapshotFromElement(element) {
+    return this.editor.read(() => {
+      const node = $getNearestNodeFromDOMNode(element);
+      if (!$isTextNode(node) || $isMentionNode(node)) {
+        return undefined;
+      }
+
+      const style = node.getStyle();
+      const hasTextStyleId = /(?:^|;)\s*--rvn-text-style-id\s*:/.test(style);
+      const hasFurigana = /(?:^|;)\s*--rvn-furigana-text\s*:/.test(style);
+      if (!hasTextStyleId && !hasFurigana) {
+        return undefined;
+      }
+
+      const root = $getRoot();
+      let lineNode = node;
+      while (lineNode?.getParent?.() && lineNode.getParent() !== root) {
+        lineNode = lineNode.getParent();
+      }
+
+      if (!lineNode || lineNode === root || lineNode.getParent?.() !== root) {
+        return undefined;
+      }
+
+      const lineMeta = this.lineMetaByKey.get(lineNode.getKey());
+      if (!lineMeta) {
+        return undefined;
+      }
+
+      const result = getLexicalOffsetBeforeNode(lineNode, node.getKey());
+      if (!result.found) {
+        return undefined;
+      }
+
+      const start = result.offset;
+      return {
+        lineId: lineMeta.id,
+        start,
+        end: start + getLexicalTextLength(node),
+      };
+    });
   }
 
   handleSurfaceKeyDown(event) {
@@ -1565,11 +1860,24 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   handleNativeBeforeInput(event) {
     this.hideSelectionPopover();
 
-    if (event.defaultPrevented || event.isComposing) {
+    if (event.defaultPrevented || event.isComposing || this.isComposing) {
       return;
     }
 
     const inputType = String(event.inputType ?? "");
+    if (inputType === "insertLineBreak") {
+      event.preventDefault();
+      event.stopPropagation?.();
+      event.stopImmediatePropagation?.();
+      if (this.pendingSoftLineBreakBeforeInput) {
+        this.pendingSoftLineBreakBeforeInput = false;
+        return;
+      }
+
+      this.insertSoftLineBreak();
+      return;
+    }
+
     if (inputType === "insertText" || inputType === "insertReplacementText") {
       event.preventDefault();
       event.stopPropagation?.();
@@ -1594,7 +1902,14 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
-    if (inputType === "deleteByCut" || inputType === "deleteByDrag") {
+    if (inputType === "insertFromDrop" || inputType === "deleteByDrag") {
+      event.preventDefault();
+      event.stopPropagation?.();
+      event.stopImmediatePropagation?.();
+      return;
+    }
+
+    if (inputType === "deleteByCut") {
       event.preventDefault();
       event.stopPropagation?.();
       event.stopImmediatePropagation?.();
@@ -1606,7 +1921,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   handleCompositionStart() {
     this.isComposing = true;
     this.hideSelectionPopover();
-    this.pendingMouseSelectionRange = undefined;
     this.dispatchEvent(
       new CustomEvent("composition-state-changed", {
         detail: {
@@ -1741,7 +2055,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   clearPendingRichTextSelection() {
     this.furiganaDialogIsPending = false;
     this.pendingSelectionSnapshot = undefined;
-    this.pendingMouseSelectionRange = undefined;
     this.selectionMenuIsOpen = false;
 
     if (this.refs.selectionMenu) {
@@ -1763,6 +2076,25 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
 
     applySelectionToLineNode(lineNode, snapshot);
+  }
+
+  selectSnapshot(snapshot) {
+    if (!snapshot?.lineId) {
+      return;
+    }
+
+    this.editor.update(
+      () => {
+        const lineKey = this.lineKeyById.get(snapshot.lineId);
+        const lineNode = lineKey ? $getNodeByKey(lineKey) : undefined;
+        if (!lineNode) {
+          return;
+        }
+
+        applySelectionToLineNode(lineNode, snapshot);
+      },
+      { discrete: true },
+    );
   }
 
   selectionContainsTextStyleId() {
@@ -1838,16 +2170,15 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     menu.render?.();
   }
 
-  showSelectionPopover(event) {
+  showSelectionPopover(event, { selectionSnapshot } = {}) {
     const menu = this.refs.selectionMenu;
     if (!menu) {
       return;
     }
 
     this.selectionMenuIsOpen = true;
-    this.pendingMouseSelectionRange =
-      getSelectionRange(this.refs.editor)?.cloneRange?.() || undefined;
-    this.pendingSelectionSnapshot = this.getCurrentSelectionSnapshot();
+    this.pendingSelectionSnapshot =
+      selectionSnapshot ?? this.getCurrentSelectionSnapshot();
 
     const hasTextStyle = this.selectionContainsTextStyleId();
     const hasFurigana = !!this.getSelectionFurigana();
@@ -1951,7 +2282,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.pendingSelectionSnapshot = snapshot;
     this.furiganaDialogIsPending = true;
     this.selectionMenuIsOpen = false;
-    this.pendingMouseSelectionRange = undefined;
 
     if (this.refs.selectionMenu) {
       this.refs.selectionMenu.open = false;
@@ -1974,7 +2304,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   hideSelectionPopover() {
     this.selectionMenuIsOpen = false;
-    this.pendingMouseSelectionRange = undefined;
     this.pendingSelectionSnapshot = undefined;
     this.furiganaDialogIsPending = false;
 
@@ -2526,7 +2855,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
               anchorNode.setTextContent(cleanedText);
               const nextOffset = Math.min(
                 selection.anchor.offset,
-                cleanedText.length,
+                anchorNode.getTextContentSize?.() ?? cleanedText.length,
               );
               selection.anchor.set(anchorNode.getKey(), nextOffset, "text");
               selection.focus.set(anchorNode.getKey(), nextOffset, "text");
@@ -2535,6 +2864,37 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         }
 
         selection.insertText(nextText);
+      },
+      { discrete: true },
+    );
+  }
+
+  insertSoftLineBreak() {
+    this.editor.update(
+      () => {
+        const selection = $getSelection();
+        if (!$isRangeSelection(selection)) {
+          return;
+        }
+
+        const anchorNode = selection.anchor.getNode();
+        if ($isTextNode(anchorNode)) {
+          const anchorText = anchorNode.getTextContent();
+          if (anchorText.includes(EDITOR_CARET_TEXT)) {
+            const cleanedText = anchorText.replaceAll(EDITOR_CARET_TEXT, "");
+            if (cleanedText !== anchorText) {
+              anchorNode.setTextContent(cleanedText);
+              const nextOffset = Math.min(
+                selection.anchor.offset,
+                anchorNode.getTextContentSize?.() ?? cleanedText.length,
+              );
+              selection.anchor.set(anchorNode.getKey(), nextOffset, "text");
+              selection.focus.set(anchorNode.getKey(), nextOffset, "text");
+            }
+          }
+        }
+
+        selection.insertLineBreak(false);
       },
       { discrete: true },
     );
@@ -2679,33 +3039,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     );
 
     this.focus({ preventScroll: true });
-    this.pendingMouseSelectionRange = undefined;
-  }
-
-  restorePendingMouseSelectionRange() {
-    if (!this.pendingMouseSelectionRange) {
-      return;
-    }
-
-    const range = this.pendingMouseSelectionRange;
-    this.pendingMouseSelectionRange = undefined;
-
-    const currentRange = getSelectionRange(this.refs.editor);
-    if (
-      currentRange &&
-      currentRange.startContainer === range.startContainer &&
-      currentRange.startOffset === range.startOffset &&
-      currentRange.endContainer === range.endContainer &&
-      currentRange.endOffset === range.endOffset
-    ) {
-      return;
-    }
-
-    if (!this.refs.editor?.contains(range.startContainer)) {
-      return;
-    }
-
-    setSelectionFromRange(this.refs.editor, range);
   }
 
   syncFromEditorState(editorState) {
@@ -2873,6 +3206,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
 
     const surfaceRect = this.refs.surface.getBoundingClientRect();
+    const maxRightGutterWidth = this.getMaxRightGutterWidth();
+    let maxLineRightGutterWidth = DEFAULT_RIGHT_GUTTER_WIDTH;
+    let shouldRenderAgain = false;
     const seenLeftRows = new Set();
     const seenRightRows = new Set();
 
@@ -2908,6 +3244,8 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       const previewItems = this.createPreviewItems(lineDecoration);
       if (previewItems.childNodes.length === 0) {
         this.removeGutterRow(this.rightGutterRowsByLineId, line.id);
+        shouldRenderAgain =
+          this.setLineRightGutterWidth(lineElement, 0) || shouldRenderAgain;
         return;
       }
 
@@ -2922,12 +3260,28 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         isSelected,
       });
       this.updateRightGutterRow(rightRow, lineDecoration, previewItems);
+      const lineRightGutter = this.syncLineRightGutterWidth(
+        lineElement,
+        rightRow,
+        maxRightGutterWidth,
+      );
+      maxLineRightGutterWidth = Math.max(
+        maxLineRightGutterWidth,
+        lineRightGutter.width,
+      );
+      shouldRenderAgain =
+        lineRightGutter.didUpdateLinePadding || shouldRenderAgain;
       seenRightRows.add(line.id);
     });
 
     this.removeStaleGutterRows(this.leftGutterRowsByLineId, seenLeftRows);
     this.removeStaleGutterRows(this.rightGutterRowsByLineId, seenRightRows);
-    this.syncRightGutterWidth();
+    shouldRenderAgain =
+      this.syncRightGutterWidth(maxLineRightGutterWidth) || shouldRenderAgain;
+
+    if (shouldRenderAgain) {
+      this.scheduleRender();
+    }
   }
 
   getOrCreateGutterRow(map, container, lineId) {
@@ -3026,20 +3380,72 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
   }
 
-  syncRightGutterWidth() {
-    const rightRows = Array.from(this.refs.rightGutter.children || []);
-    const measuredWidth = rightRows.reduce((maxWidth, row) => {
-      return Math.max(maxWidth, Math.ceil(row.getBoundingClientRect().width));
-    }, 0);
-    const nextWidth = Math.max(DEFAULT_RIGHT_GUTTER_WIDTH, measuredWidth);
+  getMaxRightGutterWidth() {
+    const surfaceWidth = this.refs.surface.getBoundingClientRect().width;
+    const leftGutterWidth = this.state.showLineNumbers
+      ? LEFT_GUTTER_WIDTH_WITH_NUMBERS
+      : LEFT_GUTTER_WIDTH_WITHOUT_NUMBERS;
 
-    if (Math.abs(nextWidth - this.rightGutterWidth) < 1) {
-      return;
+    return Math.max(
+      DEFAULT_RIGHT_GUTTER_WIDTH,
+      surfaceWidth - leftGutterWidth - MIN_EDITOR_TEXT_WIDTH,
+    );
+  }
+
+  syncLineRightGutterWidth(lineElement, rightRow, maxRightGutterWidth) {
+    rightRow.removeAttribute("data-constrained");
+
+    const previewItems = rightRow.firstElementChild;
+    const measuredNaturalWidth = Math.max(
+      Math.ceil(previewItems?.getBoundingClientRect?.().width ?? 0),
+      Math.ceil(previewItems?.scrollWidth ?? 0),
+    );
+    const isConstrained = measuredNaturalWidth > maxRightGutterWidth;
+    const lineRightGutterWidth = Math.min(
+      maxRightGutterWidth,
+      Math.max(DEFAULT_RIGHT_GUTTER_WIDTH, measuredNaturalWidth),
+    );
+
+    rightRow.dataset.constrained = String(isConstrained);
+    rightRow.style.setProperty(
+      "--line-right-gutter-width",
+      `${lineRightGutterWidth}px`,
+    );
+    const didUpdateLinePadding = this.setLineRightGutterWidth(
+      lineElement,
+      lineRightGutterWidth,
+    );
+
+    return {
+      width: lineRightGutterWidth,
+      didUpdateLinePadding,
+    };
+  }
+
+  setLineRightGutterWidth(lineElement, width) {
+    const nextWidth = Math.max(0, Math.ceil(Number(width) || 0));
+    const nextPaddingRight = `${nextWidth}px`;
+    if (lineElement.style.paddingRight === nextPaddingRight) {
+      return false;
     }
 
-    this.rightGutterWidth = nextWidth;
-    this.style.setProperty("--right-gutter-width", `${nextWidth}px`);
-    this.scheduleRender();
+    lineElement.style.paddingRight = nextPaddingRight;
+    return true;
+  }
+
+  syncRightGutterWidth(nextWidth = DEFAULT_RIGHT_GUTTER_WIDTH) {
+    const normalizedWidth = Math.max(
+      DEFAULT_RIGHT_GUTTER_WIDTH,
+      Math.ceil(Number(nextWidth) || 0),
+    );
+
+    if (Math.abs(normalizedWidth - this.rightGutterWidth) < 1) {
+      return false;
+    }
+
+    this.rightGutterWidth = normalizedWidth;
+    this.style.setProperty("--right-gutter-width", `${normalizedWidth}px`);
+    return true;
   }
 
   createSpeakerSlot(lineDecoration = {}) {

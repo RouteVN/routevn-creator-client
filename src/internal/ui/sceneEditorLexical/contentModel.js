@@ -18,6 +18,12 @@ export const normalizeSingleLineText = (value) => {
     .replace(/\n+/g, " ");
 };
 
+export const normalizeDialogueText = (value) => {
+  return String(value ?? "")
+    .replaceAll(EDITOR_CARET_TEXT, "")
+    .replace(/\r\n?/g, "\n");
+};
+
 export const normalizeMentionLabel = (value) => {
   return String(value ?? "")
     .trim()
@@ -128,7 +134,7 @@ export const cloneContentItems = (items = []) => {
       continue;
     }
 
-    const text = normalizeSingleLineText(item?.text);
+    const text = normalizeDialogueText(item?.text);
     if (text.length === 0) {
       continue;
     }
@@ -195,7 +201,7 @@ export const getContentLength = (items = []) => {
 };
 
 export const createContentFromPlainText = (text) => {
-  const normalizedText = normalizeSingleLineText(text);
+  const normalizedText = normalizeDialogueText(text);
   return normalizedText.length > 0
     ? [{ text: normalizedText }]
     : createEmptyContent();

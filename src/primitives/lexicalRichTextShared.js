@@ -1,9 +1,11 @@
 import {
   $applyNodeReplacement,
+  $createLineBreakNode,
   $createTextNode,
   $getRoot,
   $getSelection,
   $isElementNode,
+  $isLineBreakNode,
   $isRangeSelection,
   $isTextNode,
   TextNode,
@@ -20,8 +22,8 @@ import {
   createMentionText,
   getPlainTextFromContent,
   mergeAdjacentContentItems,
+  normalizeDialogueText,
   normalizeMentionLabel,
-  normalizeSingleLineText,
 } from "../internal/ui/sceneEditorLexical/contentModel.js";
 
 const TEXT_STYLE_ID_PROPERTY = "--rvn-text-style-id";
@@ -319,8 +321,13 @@ export const collectContentItemsFromNode = (node, items) => {
     return;
   }
 
+  if ($isLineBreakNode(node)) {
+    items.push({ text: "\n" });
+    return;
+  }
+
   if ($isTextNode(node)) {
-    const text = normalizeSingleLineText(node.getTextContent());
+    const text = normalizeDialogueText(node.getTextContent());
     if (text.length === 0) {
       return;
     }
@@ -359,24 +366,39 @@ export const createNodesFromContent = (items = []) => {
       continue;
     }
 
-    const text = normalizeSingleLineText(item?.text);
+    const text = normalizeDialogueText(item?.text);
     if (text.length === 0) {
       continue;
     }
 
-    const textNode = $createTextNode(text);
-    applyTextStyleToNode(textNode, item?.textStyle);
-    applyTextStyleIdToNode(textNode, item?.textStyleId);
-    applyFuriganaToNode(textNode, item?.furigana);
-    nodes.push(textNode);
+    const textParts = text.split("\n");
+    textParts.forEach((textPart, index) => {
+      if (index > 0) {
+        nodes.push($createLineBreakNode());
+      }
+
+      if (textPart.length === 0) {
+        return;
+      }
+
+      const textNode = $createTextNode(textPart);
+      applyTextStyleToNode(textNode, item?.textStyle);
+      applyTextStyleIdToNode(textNode, item?.textStyleId);
+      applyFuriganaToNode(textNode, item?.furigana);
+      nodes.push(textNode);
+    });
   }
 
   return nodes;
 };
 
 const getTextLengthOfNode = (node) => {
+  if ($isLineBreakNode(node)) {
+    return 1;
+  }
+
   if ($isTextNode(node)) {
-    return normalizeSingleLineText(node.getTextContent()).length;
+    return node.getTextContentSize?.() ?? node.getTextContent().length;
   }
 
   if ($isElementNode(node)) {
@@ -417,10 +439,11 @@ const getPointAbsoluteOffset = (rootNode, point) => {
   if (point.type === "text") {
     const result = getOffsetBeforeNodeKey(rootNode, point.key);
     const pointNode = point.getNode();
-    const textBeforeOffset = normalizeSingleLineText(
-      pointNode.getTextContent().slice(0, point.offset),
+    const textLength = getTextLengthOfNode(pointNode);
+    return (
+      result.offset +
+      Math.max(0, Math.min(Number(point.offset) || 0, textLength))
     );
-    return result.offset + textBeforeOffset.length;
   }
 
   const elementNode = point.getNode();
@@ -552,6 +575,35 @@ const getDeepActiveElement = (documentObject, fallbackActiveElement) => {
   return activeElement ?? null;
 };
 
+const isDomSelectionPointValid = (node, offset) => {
+  if (!node?.isConnected) {
+    return false;
+  }
+
+  const numericOffset = Number(offset);
+  if (!Number.isInteger(numericOffset) || numericOffset < 0) {
+    return false;
+  }
+
+  const maxOffset =
+    node.nodeType === Node.TEXT_NODE
+      ? (node.textContent?.length ?? 0)
+      : (node.childNodes?.length ?? 0);
+
+  return numericOffset <= maxOffset;
+};
+
+const isDomRangeValidInsideElement = (element, range) => {
+  return (
+    !!element &&
+    !!range &&
+    element.contains(range.startContainer) &&
+    element.contains(range.endContainer) &&
+    isDomSelectionPointValid(range.startContainer, range.startOffset) &&
+    isDomSelectionPointValid(range.endContainer, range.endOffset)
+  );
+};
+
 const resolveDeepShadowSelection = (windowObject) => {
   const documentObject = windowObject?.document;
   const deepActiveElement = getDeepActiveElement(
@@ -580,6 +632,13 @@ const resolveDeepShadowSelection = (windowObject) => {
     !focusNode ||
     anchorNode.getRootNode?.() !== root ||
     focusNode.getRootNode?.() !== root
+  ) {
+    return undefined;
+  }
+
+  if (
+    !isDomSelectionPointValid(anchorNode, shadowSelection.anchorOffset) ||
+    !isDomSelectionPointValid(focusNode, shadowSelection.focusOffset)
   ) {
     return undefined;
   }
@@ -779,7 +838,7 @@ export const getSelectionRange = (element) => {
     const shadowSelection = root.getSelection();
     if (shadowSelection && shadowSelection.rangeCount > 0) {
       const shadowRange = shadowSelection.getRangeAt(0);
-      if (element.contains(shadowRange.startContainer)) {
+      if (isDomRangeValidInsideElement(element, shadowRange)) {
         return shadowRange;
       }
     }
@@ -794,7 +853,18 @@ export const getSelectionRange = (element) => {
       const ranges = selection.getComposedRanges(root);
       if (ranges.length > 0) {
         const composedRange = ranges[0];
-        if (element.contains(composedRange.startContainer)) {
+        if (
+          element.contains(composedRange.startContainer) &&
+          element.contains(composedRange.endContainer) &&
+          isDomSelectionPointValid(
+            composedRange.startContainer,
+            composedRange.startOffset,
+          ) &&
+          isDomSelectionPointValid(
+            composedRange.endContainer,
+            composedRange.endOffset,
+          )
+        ) {
           const range = document.createRange();
           range.setStart(
             composedRange.startContainer,
@@ -810,7 +880,7 @@ export const getSelectionRange = (element) => {
   }
 
   const range = selection.getRangeAt(0);
-  if (element.contains(range.startContainer)) {
+  if (isDomRangeValidInsideElement(element, range)) {
     return range;
   }
 
