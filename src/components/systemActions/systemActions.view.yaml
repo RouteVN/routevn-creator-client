@@ -247,7 +247,7 @@ template:
                 $elif mode == "updateVariable":
                   - rvn-command-line-update-variable#commandLineUpdateVariable :updateVariable=${actions.updateVariable}: null
                 $elif mode == "conditional":
-                  - rvn-command-line-conditional#commandLineConditional :conditional=${actions.conditional}: null
+                  - rvn-command-line-conditional#commandLineConditional :conditional=${actions.conditional} :hiddenModes=${hiddenModes}: null
                 $elif isRuntimeActionMode:
                   - rvn-command-line-runtime-action#commandLineRuntimeAction :mode=${mode} :action=${actions[mode]}: null
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

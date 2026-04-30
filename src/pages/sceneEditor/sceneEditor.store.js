@@ -56,6 +56,10 @@ const collectActionTargetSectionIds = (actions) => {
   const sectionIds = new Set();
 
   const scanActionValue = (value, key) => {
+    if (key === "when") {
+      return;
+    }
+
     if (!value || typeof value !== "object") {
       return;
     }

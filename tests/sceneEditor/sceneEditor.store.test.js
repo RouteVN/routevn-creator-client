@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  selectViewData,
   selectSectionTransitionsDAG,
   setRepositoryState,
   setSceneId,
@@ -109,5 +110,9 @@ describe("sceneEditor.store", () => {
         lineId: "line-1",
       },
     ]);
+
+    const viewData = selectViewData({ state });
+    expect(viewData.sections[0].isDeadEnd).toBe(false);
+    expect(viewData.sectionsOverviewItems[0].isDeadEnd).toBe(false);
   });
 });

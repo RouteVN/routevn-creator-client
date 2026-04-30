@@ -25,6 +25,10 @@ const getActionTargetSceneIds = (actions, repositoryState) => {
   const sceneIds = new Set();
 
   const scanActionValue = (value, key) => {
+    if (key === "when") {
+      return;
+    }
+
     if (!value || typeof value !== "object") {
       return;
     }

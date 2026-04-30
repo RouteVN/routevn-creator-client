@@ -141,6 +141,14 @@ const hasBranchCondition = (branch) => {
   return Object.hasOwn(toPlainObject(branch), "when");
 };
 
+const getHiddenModes = (attrs = {}) => {
+  return Array.isArray(attrs.hiddenModes)
+    ? attrs.hiddenModes.filter(
+        (mode) => typeof mode === "string" && mode.length > 0,
+      )
+    : [];
+};
+
 export const createInitialState = () => ({
   mode: "current",
   initiated: false,
@@ -273,7 +281,7 @@ export const selectDropdownMenuBranchId = ({ state }) => {
   return state.dropdownMenu.branchId;
 };
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, props }) => {
   const variableItems = state.variablesData?.items ?? {};
   const variableOptions = getVariableOptions(state.variablesData, {
     showType: true,
@@ -370,6 +378,7 @@ export const selectViewData = ({ state }) => {
     isEditingDefault: state.tempBranch.conditionKind === "default",
     editBranchTitle:
       state.tempBranch.conditionKind === "default" ? "Default" : "Branch",
+    hiddenModes: getHiddenModes(props),
     dropdownMenu: state.dropdownMenu,
   };
 };

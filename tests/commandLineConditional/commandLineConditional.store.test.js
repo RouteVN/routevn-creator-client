@@ -71,6 +71,22 @@ describe("commandLineConditional.store", () => {
     );
   });
 
+  it("exposes inherited hidden modes for nested branch action editors", () => {
+    const state = createInitialState();
+
+    const viewData = selectViewData({
+      state,
+      props: {
+        hiddenModes: ["showConfirmDialog", "", 42, "hideConfirmDialog"],
+      },
+    });
+
+    expect(viewData.hiddenModes).toEqual([
+      "showConfirmDialog",
+      "hideConfirmDialog",
+    ]);
+  });
+
   it("inserts new conditional branches before an existing default branch", () => {
     const state = createInitialState();
 

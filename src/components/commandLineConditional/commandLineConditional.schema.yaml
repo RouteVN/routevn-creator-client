@@ -9,3 +9,7 @@ propsSchema:
           type: array
           items:
             type: object
+    hiddenModes:
+      type: array
+      items:
+        type: string

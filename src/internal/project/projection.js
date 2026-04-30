@@ -1093,6 +1093,65 @@ const createTransitionKey = (transition) => {
   return `${sceneId}::${sectionId}`;
 };
 
+const collectActionPresentationData = (actions = {}) => {
+  const transitions = [];
+  const layoutRefs = [];
+  let hasMenuReturnAction = false;
+
+  const scanActionValue = (value, key) => {
+    if (key === "when") {
+      return;
+    }
+
+    if (!value || typeof value !== "object") {
+      return;
+    }
+
+    if (key === "pushOverlay" || key === "popOverlay") {
+      hasMenuReturnAction = true;
+    }
+
+    if (key === "sectionTransition") {
+      transitions.push(value);
+    }
+
+    if (
+      key === "resetStoryAtSection" &&
+      typeof value.sectionId === "string" &&
+      value.sectionId.length > 0
+    ) {
+      transitions.push({
+        sectionId: value.sectionId,
+      });
+    }
+
+    if (
+      (key === "background" || key === "control") &&
+      typeof value.resourceId === "string" &&
+      value.resourceId.length > 0
+    ) {
+      layoutRefs.push(value);
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach((entry) => scanActionValue(entry));
+      return;
+    }
+
+    Object.entries(value).forEach(([entryKey, entryValue]) => {
+      scanActionValue(entryValue, entryKey);
+    });
+  };
+
+  scanActionValue(actions);
+
+  return {
+    transitions,
+    layoutRefs,
+    hasMenuReturnAction,
+  };
+};
+
 const getTransitionsFromLayout = (layout) => {
   if (!layout?.elements?.items) {
     return [];
@@ -1150,42 +1209,26 @@ export const getSectionPresentation = ({
 
   lines.forEach((line) => {
     const lineActions = normalizeLineActions(line.actions || {});
-    const pushOverlay = lineActions?.pushOverlay;
-    const popOverlay = lineActions?.popOverlay;
-    if (pushOverlay || popOverlay) {
+    const actionPresentationData = collectActionPresentationData(lineActions);
+    if (actionPresentationData.hasMenuReturnAction) {
       hasMenuReturnAction = true;
     }
 
-    const sectionTransition = lineActions?.sectionTransition;
-    if (menuSceneId && sectionTransition?.sceneId === menuSceneId) {
-      returnsToMenuScene = true;
-    }
-    const sectionTransitionKey = createTransitionKey(sectionTransition);
-    if (sectionTransitionKey) {
-      transitions.add(sectionTransitionKey);
-    }
+    actionPresentationData.transitions.forEach((actionTransition) => {
+      if (menuSceneId && actionTransition?.sceneId === menuSceneId) {
+        returnsToMenuScene = true;
+      }
+      const actionTransitionKey = createTransitionKey(actionTransition);
+      if (actionTransitionKey) {
+        transitions.add(actionTransitionKey);
+      }
+    });
 
     const choice = lineActions?.choice;
     const choiceItems = Array.isArray(choice?.items) ? choice.items : [];
     choiceCount += choiceItems.length;
 
-    choiceItems.forEach((choiceItem) => {
-      const choiceTransition =
-        choiceItem.events?.click?.actions?.sectionTransition;
-      if (menuSceneId && choiceTransition?.sceneId === menuSceneId) {
-        returnsToMenuScene = true;
-      }
-      const choiceTransitionKey = createTransitionKey(choiceTransition);
-      if (choiceTransitionKey) {
-        transitions.add(choiceTransitionKey);
-      }
-    });
-
-    const layoutRefs = [lineActions?.background, lineActions?.control].filter(
-      (ref) => ref?.resourceId,
-    );
-
-    layoutRefs.forEach((layoutRef) => {
+    actionPresentationData.layoutRefs.forEach((layoutRef) => {
       const layout = resolveLayoutReference({
         ref: layoutRef,
         layouts,
