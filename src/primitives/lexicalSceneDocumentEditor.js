@@ -3023,6 +3023,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
   }
 
+  keepMentionMenuNonModal() {
+    const popover =
+      this.refs.mentionMenu?.shadowRoot?.querySelector?.("rtgl-popover");
+    popover?.setAttribute("no-overlay", "");
+  }
+
   selectMentionByIndex(index) {
     const mention = this.state.mentionMenu.items[index];
     if (!mention) {
@@ -3840,5 +3846,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     menu.h = "240";
     menu.open = true;
     menu.render?.();
+    this.keepMentionMenuNonModal();
   }
 }
