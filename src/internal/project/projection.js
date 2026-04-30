@@ -16,6 +16,7 @@ import {
   collectParticleTextureImageIds,
   createRenderableParticleData,
 } from "../particles.js";
+import { toVariableConditionTarget } from "../layoutConditions.js";
 import { requireProjectResolution } from "../projectResolution.js";
 import { withResolvedResourceFileMetadata } from "../resourceFileMetadata.js";
 
@@ -52,6 +53,145 @@ const cloneOr = (value, fallback) => {
 
 const isObjectRecord = (value) =>
   value !== null && typeof value === "object" && !Array.isArray(value);
+
+const getReferenceResourceId = (item) => {
+  if (typeof item?.reference?.resourceId === "string") {
+    return item.reference.resourceId;
+  }
+
+  if (typeof item?.mention?.id === "string") {
+    return item.mention.id;
+  }
+
+  return "";
+};
+
+const getReferenceVariableText = (item) => {
+  const variableId = getReferenceResourceId(item);
+  if (!variableId) {
+    return "";
+  }
+
+  return `\${${toVariableConditionTarget(variableId)}}`;
+};
+
+const mapDialogueContentReferencesForEngine = (content) => {
+  if (!Array.isArray(content)) {
+    return content;
+  }
+
+  let changed = false;
+  const mappedContent = content.map((item) => {
+    if (
+      !isObjectRecord(item) ||
+      (!isObjectRecord(item.reference) && !isObjectRecord(item.mention))
+    ) {
+      return item;
+    }
+
+    changed = true;
+    const {
+      mention: _mention,
+      reference: _reference,
+      text: _text,
+      ...engineItem
+    } = item;
+    engineItem.text = getReferenceVariableText(item);
+    return engineItem;
+  });
+
+  return changed ? mappedContent : content;
+};
+
+const mapDialogueReferencesForEngine = (dialogue) => {
+  if (!isObjectRecord(dialogue)) {
+    return dialogue;
+  }
+
+  let changed = false;
+  const mappedDialogue = { ...dialogue };
+  const content = mapDialogueContentReferencesForEngine(dialogue.content);
+  if (content !== dialogue.content) {
+    mappedDialogue.content = content;
+    changed = true;
+  }
+
+  const initialRevealedContent = mapDialogueContentReferencesForEngine(
+    dialogue.initialRevealedContent,
+  );
+  if (initialRevealedContent !== dialogue.initialRevealedContent) {
+    mappedDialogue.initialRevealedContent = initialRevealedContent;
+    changed = true;
+  }
+
+  if (Array.isArray(dialogue.lines)) {
+    let linesChanged = false;
+    const lines = dialogue.lines.map((line) => {
+      if (!isObjectRecord(line)) {
+        return line;
+      }
+
+      const lineContent = mapDialogueContentReferencesForEngine(line.content);
+      if (lineContent === line.content) {
+        return line;
+      }
+
+      linesChanged = true;
+      return {
+        ...line,
+        content: lineContent,
+      };
+    });
+
+    if (linesChanged) {
+      mappedDialogue.lines = lines;
+      changed = true;
+    }
+  }
+
+  return changed ? mappedDialogue : dialogue;
+};
+
+const mapActionReferencesForEngine = (value) => {
+  if (Array.isArray(value)) {
+    let changed = false;
+    const mappedValue = value.map((item) => {
+      const mappedItem = mapActionReferencesForEngine(item);
+      if (mappedItem !== item) {
+        changed = true;
+      }
+      return mappedItem;
+    });
+
+    return changed ? mappedValue : value;
+  }
+
+  if (!isObjectRecord(value)) {
+    return value;
+  }
+
+  let changed = false;
+  const mappedValue = {};
+
+  for (const [key, item] of Object.entries(value)) {
+    const mappedItem =
+      key === "dialogue"
+        ? mapDialogueReferencesForEngine(item)
+        : mapActionReferencesForEngine(item);
+
+    mappedValue[key] = mappedItem;
+    if (mappedItem !== item) {
+      changed = true;
+    }
+  }
+
+  return changed ? mappedValue : value;
+};
+
+const normalizeLineActionsForEngine = (actions) => {
+  const lineActions = normalizeLineActions(actions || {});
+  return mapActionReferencesForEngine(lineActions);
+};
 
 const getHierarchyNodes = (collection) =>
   Array.isArray(collection?.tree) ? collection.tree : [];
@@ -1017,7 +1157,7 @@ const constructStory = (scenes) => {
 
             transformedSection.lines.push({
               id: lineId,
-              actions: normalizeLineActions(line.actions || {}),
+              actions: normalizeLineActionsForEngine(line.actions),
             });
           });
         }

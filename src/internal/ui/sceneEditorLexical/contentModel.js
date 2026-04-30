@@ -17,11 +17,61 @@ export const normalizeDialogueText = (value) => {
 export const normalizeMentionLabel = (value) => {
   return String(value ?? "")
     .trim()
-    .replace(/^@+/, "");
+    .replace(/^[@/]+/, "");
 };
 
 export const createMentionText = (label) => {
-  return `@${normalizeMentionLabel(label)}`;
+  return normalizeMentionLabel(label);
+};
+
+const REFERENCE_DISPLAY_TEXT_PROPERTY = "__displayText";
+
+export const getReferenceDisplayText = (item = {}) => {
+  const reference = item?.reference;
+  const displayText = reference?.[REFERENCE_DISPLAY_TEXT_PROPERTY];
+  if (typeof displayText === "string" && displayText.length > 0) {
+    return displayText;
+  }
+
+  const resourceId = reference?.resourceId;
+  if (typeof resourceId === "string" && resourceId.length > 0) {
+    return resourceId;
+  }
+
+  return "";
+};
+
+export const getReferenceResourceId = (item = {}) => {
+  const resourceId =
+    item?.reference?.resourceId ?? item?.mention?.id ?? item?.mention?.label;
+  return typeof resourceId === "string" && resourceId.length > 0
+    ? resourceId
+    : undefined;
+};
+
+const createReferenceItem = ({ resourceId, displayText, sourceItem } = {}) => {
+  if (typeof resourceId !== "string" || resourceId.length === 0) {
+    return undefined;
+  }
+
+  const item = {
+    reference: {
+      resourceId,
+    },
+  };
+  const normalizedDisplayText = normalizeMentionLabel(
+    displayText ?? resourceId,
+  );
+  if (normalizedDisplayText) {
+    Object.defineProperty(item.reference, REFERENCE_DISPLAY_TEXT_PROPERTY, {
+      value: normalizedDisplayText,
+      enumerable: false,
+      configurable: true,
+    });
+  }
+  copyTextMetadata(item, sourceItem);
+
+  return item;
 };
 
 export const cloneTextStyle = (textStyle) => {
@@ -100,27 +150,30 @@ const getTextStyleKey = (item = {}) => {
   });
 };
 
-export const cloneMentionItem = (mention) => {
-  const label = normalizeMentionLabel(mention?.label);
-  if (!label) {
+export const cloneReferenceItem = (item = {}) => {
+  const resourceId = getReferenceResourceId(item);
+  if (!resourceId) {
     return undefined;
   }
 
-  return {
-    mention: {
-      id: String(mention?.id ?? label),
-      label,
-    },
-  };
+  return createReferenceItem({
+    resourceId,
+    sourceItem: item,
+    displayText:
+      item?.reference?.[REFERENCE_DISPLAY_TEXT_PROPERTY] ??
+      item?.reference?.label ??
+      item?.mention?.label ??
+      resourceId,
+  });
 };
 
 export const cloneContentItems = (items = []) => {
   const nextItems = [];
 
   for (const item of Array.isArray(items) ? items : []) {
-    const mentionItem = cloneMentionItem(item?.mention);
-    if (mentionItem) {
-      nextItems.push(mentionItem);
+    const referenceItem = cloneReferenceItem(item);
+    if (referenceItem) {
+      nextItems.push(referenceItem);
       continue;
     }
 
@@ -141,7 +194,7 @@ export const mergeAdjacentContentItems = (items = []) => {
   const result = [];
 
   for (const item of cloneContentItems(items)) {
-    if (item?.mention) {
+    if (item?.reference) {
       result.push(item);
       continue;
     }
@@ -149,7 +202,7 @@ export const mergeAdjacentContentItems = (items = []) => {
     const previousItem = result[result.length - 1];
     if (
       previousItem &&
-      !previousItem.mention &&
+      !previousItem.reference &&
       getTextStyleKey(previousItem) === getTextStyleKey(item)
     ) {
       previousItem.text += item.text;
@@ -170,8 +223,8 @@ export const ensureContentArray = (items = []) => {
 };
 
 export const getItemPlainText = (item) => {
-  if (item?.mention) {
-    return createMentionText(item.mention.label);
+  if (item?.reference) {
+    return getReferenceDisplayText(item);
   }
 
   return String(item?.text ?? "");
@@ -231,7 +284,7 @@ export const splitContentAtOffset = (items = [], offset = 0) => {
       continue;
     }
 
-    if (item?.mention) {
+    if (item?.reference) {
       leftItems.push(item);
       consumed = nextConsumed;
       continue;

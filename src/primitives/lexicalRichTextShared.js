@@ -15,10 +15,12 @@ import {
   ACCENT_FILL,
   cloneContentItems,
   cloneFurigana,
-  cloneMentionItem,
+  cloneReferenceItem,
   cloneTextStyle,
   cloneTextStyleId,
   createMentionText,
+  getReferenceDisplayText,
+  getReferenceResourceId,
   getPlainTextFromContent,
   mergeAdjacentContentItems,
   normalizeDialogueText,
@@ -198,6 +200,34 @@ export const applyFuriganaToNode = (node, furigana) => {
   return node;
 };
 
+export const removeNodeCustomStyleProperties = (node, propertyNames = []) => {
+  const styleParts = String(node.getStyle() ?? "")
+    .split(";")
+    .map((part) => part.trim())
+    .filter((part) => {
+      if (!part) {
+        return false;
+      }
+
+      const propertyName = part.split(":")[0]?.trim();
+      return !propertyNames.includes(propertyName);
+    });
+
+  node.setStyle(styleParts.length > 0 ? `${styleParts.join("; ")};` : "");
+  return node;
+};
+
+export const removeTextStyleIdFromNode = (node) => {
+  return removeNodeCustomStyleProperties(node, [TEXT_STYLE_ID_PROPERTY]);
+};
+
+export const removeFuriganaFromNode = (node) => {
+  return removeNodeCustomStyleProperties(node, [
+    FURIGANA_TEXT_PROPERTY,
+    FURIGANA_TEXT_STYLE_ID_PROPERTY,
+  ]);
+};
+
 export class MentionNode extends TextNode {
   static getType() {
     return "rvn-mention";
@@ -205,8 +235,8 @@ export class MentionNode extends TextNode {
 
   static clone(node) {
     return new MentionNode(
-      node.__mentionId,
-      node.__mentionLabel,
+      node.__resourceId,
+      node.__referenceLabel,
       node.__text,
       node.__key,
     );
@@ -214,8 +244,8 @@ export class MentionNode extends TextNode {
 
   static importJSON(serializedNode) {
     return $createMentionNode({
-      id: serializedNode?.mentionId,
-      label: serializedNode?.mentionLabel,
+      resourceId: serializedNode?.resourceId ?? serializedNode?.mentionId,
+      label: serializedNode?.referenceLabel ?? serializedNode?.mentionLabel,
     }).updateFromJSON(serializedNode);
   }
 
@@ -229,9 +259,11 @@ export class MentionNode extends TextNode {
         return {
           conversion: () => {
             const label = domNode.getAttribute("data-rvn-mention-label");
-            const id = domNode.getAttribute("data-rvn-mention-id");
+            const resourceId =
+              domNode.getAttribute("data-rvn-reference-resource-id") ??
+              domNode.getAttribute("data-rvn-mention-id");
             return {
-              node: $createMentionNode({ id, label }),
+              node: $createMentionNode({ resourceId, label }),
             };
           },
           priority: 1,
@@ -240,17 +272,19 @@ export class MentionNode extends TextNode {
     };
   }
 
-  constructor(mentionId, mentionLabel, text, key) {
-    super(text ?? createMentionText(mentionLabel), key);
-    this.__mentionId = String(mentionId ?? normalizeMentionLabel(mentionLabel));
-    this.__mentionLabel = normalizeMentionLabel(mentionLabel);
+  constructor(resourceId, referenceLabel, text, key) {
+    super(text ?? createMentionText(referenceLabel ?? resourceId), key);
+    this.__resourceId = String(
+      resourceId ?? normalizeMentionLabel(referenceLabel),
+    );
+    this.__referenceLabel = normalizeMentionLabel(referenceLabel ?? resourceId);
   }
 
   exportJSON() {
     return {
       ...super.exportJSON(),
-      mentionId: this.__mentionId,
-      mentionLabel: this.__mentionLabel,
+      resourceId: this.__resourceId,
+      referenceLabel: this.__referenceLabel,
       type: MentionNode.getType(),
       version: 1,
     };
@@ -258,19 +292,39 @@ export class MentionNode extends TextNode {
 
   createDOM(config) {
     const dom = super.createDOM(config);
-    dom.className = "mention-chip";
-    dom.dataset.rvnMention = "true";
-    dom.dataset.rvnMentionId = this.__mentionId;
-    dom.dataset.rvnMentionLabel = this.__mentionLabel;
-    dom.spellcheck = false;
+    this.syncDOMAttributes(dom);
     return dom;
+  }
+
+  updateDOM(prevNode, dom, config) {
+    const shouldReplace = super.updateDOM(prevNode, dom, config);
+    if (shouldReplace) {
+      return true;
+    }
+
+    this.syncDOMAttributes(dom);
+    return false;
+  }
+
+  syncDOMAttributes(dom) {
+    dom.className = "mention-chip";
+    dom.contentEditable = "false";
+    dom.draggable = false;
+    dom.dataset.rvnMention = "true";
+    dom.dataset.rvnReferenceKey = this.getKey();
+    dom.dataset.rvnReferenceResourceId = this.__resourceId;
+    dom.dataset.rvnMentionLabel = this.__referenceLabel;
+    dom.setAttribute("contenteditable", "false");
+    dom.setAttribute("draggable", "false");
+    dom.setAttribute("aria-label", this.__referenceLabel);
+    dom.spellcheck = false;
   }
 
   exportDOM() {
     const element = document.createElement("span");
     element.setAttribute("data-rvn-mention", "true");
-    element.setAttribute("data-rvn-mention-id", this.__mentionId);
-    element.setAttribute("data-rvn-mention-label", this.__mentionLabel);
+    element.setAttribute("data-rvn-reference-resource-id", this.__resourceId);
+    element.setAttribute("data-rvn-mention-label", this.__referenceLabel);
     element.textContent = this.getTextContent();
     return { element };
   }
@@ -287,21 +341,21 @@ export class MentionNode extends TextNode {
     return false;
   }
 
-  getMentionData() {
+  getReferenceData() {
     return {
-      id: this.__mentionId,
-      label: this.__mentionLabel,
+      resourceId: this.__resourceId,
+      label: this.__referenceLabel,
     };
   }
 }
 
-export const $createMentionNode = ({ id, label } = {}) => {
-  const mentionLabel = normalizeMentionLabel(label);
-  const mentionId = String(id ?? mentionLabel);
+export const $createMentionNode = ({ id, resourceId, label } = {}) => {
+  const referenceResourceId = String(resourceId ?? id ?? label ?? "");
+  const referenceLabel = normalizeMentionLabel(label ?? referenceResourceId);
   const mentionNode = new MentionNode(
-    mentionId,
-    mentionLabel,
-    createMentionText(mentionLabel),
+    referenceResourceId,
+    referenceLabel,
+    createMentionText(referenceLabel),
   );
   mentionNode.setMode("token").toggleDirectionless();
   return $applyNodeReplacement(mentionNode);
@@ -313,9 +367,27 @@ export const $isMentionNode = (node) => {
 
 export const collectContentItemsFromNode = (node, items) => {
   if ($isMentionNode(node)) {
-    const mentionItem = cloneMentionItem(node.getMentionData());
-    if (mentionItem) {
-      items.push(mentionItem);
+    const nextItem = {
+      reference: node.getReferenceData(),
+    };
+    const textStyle = getTextStyleFromNode(node);
+    if (textStyle) {
+      nextItem.textStyle = textStyle;
+    }
+    const textStyleId = getTextStyleIdFromNode(node);
+    if (textStyleId) {
+      nextItem.textStyleId = textStyleId;
+    }
+    const furigana = getFuriganaFromNode(node);
+    if (furigana) {
+      nextItem.furigana = furigana;
+    }
+
+    const referenceItem = cloneReferenceItem({
+      ...nextItem,
+    });
+    if (referenceItem) {
+      items.push(referenceItem);
     }
     return;
   }
@@ -355,13 +427,26 @@ export const collectContentItemsFromNode = (node, items) => {
   }
 };
 
-export const createNodesFromContent = (items = []) => {
+export const createNodesFromContent = (
+  items = [],
+  { resolveReferenceLabel } = {},
+) => {
   const nodes = [];
 
   for (const item of mergeAdjacentContentItems(items)) {
-    const mentionItem = cloneMentionItem(item?.mention);
-    if (mentionItem) {
-      nodes.push($createMentionNode(mentionItem.mention));
+    const referenceItem = cloneReferenceItem(item);
+    if (referenceItem) {
+      const resourceId = getReferenceResourceId(referenceItem);
+      const mentionNode = $createMentionNode({
+        resourceId,
+        label:
+          resolveReferenceLabel?.(resourceId) ??
+          getReferenceDisplayText(referenceItem),
+      });
+      applyTextStyleToNode(mentionNode, referenceItem.textStyle);
+      applyTextStyleIdToNode(mentionNode, referenceItem.textStyleId);
+      applyFuriganaToNode(mentionNode, referenceItem.furigana);
+      nodes.push(mentionNode);
       continue;
     }
 
@@ -490,14 +575,14 @@ export const getMentionTriggerMatch = (selection) => {
   const anchorOffset = selection.anchor.offset;
   const text = anchorNode.getTextContent();
   const beforeCaret = text.slice(0, anchorOffset);
-  const match = beforeCaret.match(/(?:^|\s)@([a-z0-9._-]*)$/i);
+  const match = beforeCaret.match(/(?:^|\s)\/([a-z0-9._-]*)$/i);
 
   if (!match) {
     return undefined;
   }
 
   const query = match[1] ?? "";
-  const startOffset = beforeCaret.lastIndexOf(`@${query}`);
+  const startOffset = beforeCaret.lastIndexOf(`/${query}`);
   if (startOffset === -1) {
     return undefined;
   }

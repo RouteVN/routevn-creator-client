@@ -51,15 +51,20 @@ import {
   FURIGANA_TEXT_STYLE_ID_PROPERTY,
   LEXICAL_EDITOR_THEME,
   MentionNode,
+  applyFuriganaToNode,
+  applyTextStyleIdToNode,
   collectContentItemsFromNode,
-  createNodesFromContent,
+  createNodesFromContent as createLexicalNodesFromContent,
   filterMentionSuggestions,
   getFuriganaFromNode,
   getMentionMenuPosition,
   getSelectionRange,
   getSelectionOffsets,
+  getTextStyleIdFromNode,
   patchDocumentActiveElement,
   patchDocumentGetSelection,
+  removeFuriganaFromNode,
+  removeTextStyleIdFromNode,
   patchWindowGetSelection,
   unpatchDocumentActiveElement,
   unpatchDocumentGetSelection,
@@ -77,7 +82,7 @@ const DELETE_SHORTCUT_TIMEOUT_MS = 1200;
 const normalizeMentionTarget = (target = {}) => {
   const label = String(target.label ?? "")
     .trim()
-    .replace(/^@+/, "");
+    .replace(/^[@/]+/, "");
   if (!label) {
     return undefined;
   }
@@ -385,7 +390,7 @@ const STYLES = `
     color: inherit !important;
   }
 
-  .editor [style*="--rvn-text-style-id"] {
+  .editor [style*="--rvn-text-style-id"]:not(.mention-chip) {
     display: inline;
     margin-inline: 0.5px;
     padding-inline: 0.5px;
@@ -397,7 +402,7 @@ const STYLES = `
     text-decoration-skip-ink: none;
   }
 
-  .editor [style*="--rvn-furigana-text"] {
+  .editor [style*="--rvn-furigana-text"]:not(.mention-chip) {
     display: inline;
     margin-inline: 0.5px;
     padding-inline: 0.5px;
@@ -427,6 +432,15 @@ const STYLES = `
     line-height: 1.35;
     white-space: nowrap;
     vertical-align: baseline;
+    cursor: default;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .mention-chip[data-rvn-reference-selected="true"] {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: var(--primary-foreground);
   }
 
   .placeholder {
@@ -566,6 +580,22 @@ const createShell = () => {
 };
 
 const walkTextUnits = (node, visitor) => {
+  if (
+    node.nodeType === Node.ELEMENT_NODE &&
+    node.matches?.('[data-rvn-mention="true"][data-rvn-reference-key]')
+  ) {
+    return visitor({
+      length: node.textContent?.length ?? 0,
+      setRangeAtOffset: (range, offset) => {
+        const parent = node.parentNode;
+        const childIndex = Array.from(parent.childNodes).indexOf(node);
+        const pointOffset = childIndex + (offset > 0 ? 1 : 0);
+        range.setStart(parent, pointOffset);
+        range.setEnd(parent, pointOffset);
+      },
+    });
+  }
+
   if (node.nodeType === Node.TEXT_NODE) {
     return visitor({
       length: node.textContent.length,
@@ -875,6 +905,8 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.pendingChangeReason = "text";
     this.pendingSelectionSnapshot = undefined;
     this.selectionMenuIsOpen = false;
+    this.referenceMenuTarget = undefined;
+    this.selectedReferenceNodeKey = undefined;
     this.furiganaDialogIsPending = false;
     this.selectionMenuPosition = { x: "0", y: "0" };
     this.rightGutterWidth = DEFAULT_RIGHT_GUTTER_WIDTH;
@@ -903,6 +935,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.handleNativeKeyDown = this.handleNativeKeyDown.bind(this);
     this.handleNativeBeforeInput = this.handleNativeBeforeInput.bind(this);
     this.handleNativeDragEvent = this.handleNativeDragEvent.bind(this);
+    this.handleNativeMouseDown = this.handleNativeMouseDown.bind(this);
     this.handleNativeMouseUp = this.handleNativeMouseUp.bind(this);
     this.handleNativeContextMenu = this.handleNativeContextMenu.bind(this);
     this.handleCompositionStart = this.handleCompositionStart.bind(this);
@@ -996,7 +1029,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           }
 
           event?.preventDefault?.();
-          this.closeMentionMenu({ shouldRender: true });
+          this.closeMentionMenu({
+            shouldRender: true,
+          });
           return true;
         },
         COMMAND_PRIORITY_HIGH,
@@ -1013,6 +1048,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.refs.editor.addEventListener("focus", this.handleNativeFocus);
     this.refs.editor.addEventListener("blur", this.handleNativeBlur);
     this.refs.editor.addEventListener("keydown", this.handleNativeKeyDown);
+    this.refs.editor.addEventListener(
+      "mousedown",
+      this.handleNativeMouseDown,
+      true,
+    );
     this.refs.editor.addEventListener("mouseup", this.handleNativeMouseUp);
     this.refs.editor.addEventListener("dragstart", this.handleNativeDragEvent);
     this.refs.editor.addEventListener("dragenter", this.handleNativeDragEvent);
@@ -1081,6 +1121,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.refs.editor?.removeEventListener("focus", this.handleNativeFocus);
     this.refs.editor?.removeEventListener("blur", this.handleNativeBlur);
     this.refs.editor?.removeEventListener("keydown", this.handleNativeKeyDown);
+    this.refs.editor?.removeEventListener(
+      "mousedown",
+      this.handleNativeMouseDown,
+      true,
+    );
     this.refs.editor?.removeEventListener("mouseup", this.handleNativeMouseUp);
     this.refs.editor?.removeEventListener(
       "dragstart",
@@ -1371,6 +1416,8 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     lineId = this.state.selectedLineId || this.state.lines[0]?.id,
     emitSelectionChange = false,
   } = {}) {
+    this.clearSelectedReferenceNodeKey();
+
     if (lineId) {
       this.state.selectedLineId = lineId;
       this.scrollLineIntoView({ lineId });
@@ -1530,13 +1577,44 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
   }
 
-  handleNativeBlur() {
+  handleNativeBlur(event) {
     if (this.selectionMenuIsOpen || this.furiganaDialogIsPending) {
       return;
     }
 
+    if (this.state.mentionMenu.isOpen && this.hasActiveMentionTrigger()) {
+      const relatedTarget = event?.relatedTarget;
+      if (this.isMentionMenuFocusTarget(relatedTarget)) {
+        this.keepMentionMenuNonModal({ restoreFocus: true });
+        return;
+      }
+
+      setTimeout(() => {
+        if (!this.isConnected || !this.state.mentionMenu.isOpen) {
+          return;
+        }
+
+        if (this.refs.editor?.contains(document.activeElement)) {
+          return;
+        }
+
+        if (this.isMentionMenuFocusTarget(document.activeElement)) {
+          this.keepMentionMenuNonModal({ restoreFocus: true });
+          return;
+        }
+
+        this.commitNativeBlur();
+      }, 0);
+      return;
+    }
+
+    this.commitNativeBlur();
+  }
+
+  commitNativeBlur() {
     this.isEditorFocused = false;
     this.hideSelectionPopover();
+    this.closeMentionMenu();
     this.pendingSelectionSnapshot = undefined;
     this.enterBlockMode({
       focusSurface: false,
@@ -1553,6 +1631,14 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   handleNativeKeyDown(event) {
     this.hideSelectionPopover();
+
+    if (this.handleReferenceArrowNavigation(event)) {
+      return;
+    }
+
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+      this.clearSelectedReferenceNodeKey();
+    }
 
     if (event.key === "Escape" && !event.isComposing) {
       if (this.state.mentionMenu.isOpen) {
@@ -1575,6 +1661,34 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         event.preventDefault();
       }
     }
+  }
+
+  handleNativeMouseDown(event) {
+    if (event.button !== 0) {
+      return;
+    }
+
+    const referenceSnapshot = this.getReferenceSnapshotFromContextEvent(event);
+    if (!referenceSnapshot) {
+      this.clearSelectedReferenceNodeKey();
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    this.hideSelectionPopover();
+    this.closeMentionMenu();
+    this.setMode("text-editor");
+    this.focus({ preventScroll: true });
+    this.selectReferenceByNodeKey(referenceSnapshot.nodeKey);
+    requestAnimationFrame(() => {
+      if (!this.isConnected) {
+        return;
+      }
+
+      this.selectReferenceByNodeKey(referenceSnapshot.nodeKey);
+    });
   }
 
   handleNativeMouseUp() {
@@ -1614,6 +1728,14 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   handleNativeContextMenu(event) {
+    const referenceSnapshot = this.getReferenceSnapshotFromContextEvent(event);
+    if (referenceSnapshot) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.showReferencePopover(event, referenceSnapshot);
+      return;
+    }
+
     const range = getSelectionRange(this.refs.editor);
     if (
       range &&
@@ -1734,6 +1856,610 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         end: start + getLexicalTextLength(node),
       };
     });
+  }
+
+  getReferenceElementFromContextEvent(event) {
+    const selector = '[data-rvn-mention="true"][data-rvn-reference-key]';
+    const path = event.composedPath?.() ?? [];
+
+    for (const target of path) {
+      const element =
+        target?.nodeType === Node.TEXT_NODE ? target.parentElement : target;
+      const referenceElement = element?.closest?.(selector);
+      if (referenceElement && this.refs.editor?.contains(referenceElement)) {
+        return referenceElement;
+      }
+
+      if (target === this.refs.editor) {
+        break;
+      }
+    }
+
+    return undefined;
+  }
+
+  getReferenceSnapshotFromContextEvent(event) {
+    const element = this.getReferenceElementFromContextEvent(event);
+    if (!element) {
+      return undefined;
+    }
+
+    return this.getReferenceSnapshotFromElement(element);
+  }
+
+  getReferenceSnapshotFromElement(element) {
+    return this.editor.read(() => {
+      const node = $getNearestNodeFromDOMNode(element);
+      if (!$isMentionNode(node)) {
+        return undefined;
+      }
+
+      return this.getReferenceSnapshotFromNode(node);
+    });
+  }
+
+  getReferenceSnapshotFromNode(node) {
+    const reference = node.getReferenceData();
+    return {
+      nodeKey: node.getKey(),
+      resourceId: reference.resourceId,
+      label: reference.label,
+    };
+  }
+
+  getReferenceRichTextState(nodeKey) {
+    if (!nodeKey) {
+      return {
+        textStyleId: undefined,
+        furigana: undefined,
+      };
+    }
+
+    return this.editor.getEditorState().read(() => {
+      const node = $getNodeByKey(nodeKey);
+      if (!$isMentionNode(node)) {
+        return {
+          textStyleId: undefined,
+          furigana: undefined,
+        };
+      }
+
+      return {
+        textStyleId: getTextStyleIdFromNode(node),
+        furigana: getFuriganaFromNode(node),
+      };
+    });
+  }
+
+  getReferenceSelectionInfo(selection) {
+    if (!$isRangeSelection(selection)) {
+      return undefined;
+    }
+
+    const points = selection.getStartEndPoints();
+    if (!points) {
+      return undefined;
+    }
+
+    const [startPoint, endPoint] = points;
+    if (
+      startPoint.type === "element" &&
+      endPoint.type === "element" &&
+      startPoint.key === endPoint.key &&
+      endPoint.offset === startPoint.offset + 1
+    ) {
+      const parentNode = startPoint.getNode();
+      const childNode = $isElementNode(parentNode)
+        ? parentNode.getChildAtIndex(startPoint.offset)
+        : undefined;
+      if ($isMentionNode(childNode)) {
+        return {
+          node: childNode,
+          isCollapsed: false,
+          isWhole: true,
+        };
+      }
+    }
+
+    const startNode = startPoint.getNode();
+    const endNode = endPoint.getNode();
+    if (!$isMentionNode(startNode) || startNode !== endNode) {
+      return undefined;
+    }
+
+    const textLength = getLexicalTextLength(startNode);
+    const isCollapsed = selection.isCollapsed();
+    return {
+      node: startNode,
+      isCollapsed,
+      isWhole:
+        !isCollapsed &&
+        startPoint.offset === 0 &&
+        endPoint.offset === textLength,
+    };
+  }
+
+  selectReferenceNodeAsElement(node) {
+    this.selectedReferenceNodeKey = node.getKey();
+
+    const parentNode = node.getParent();
+    if (!$isElementNode(parentNode)) {
+      node.select(0, getLexicalTextLength(node));
+      return;
+    }
+
+    const index = node.getIndexWithinParent();
+    parentNode.select(index, index + 1);
+  }
+
+  placeCaretAroundReferenceNode(node, direction) {
+    const parentNode = node.getParent();
+    if (!$isElementNode(parentNode)) {
+      if (direction < 0) {
+        node.selectStart();
+        return;
+      }
+
+      node.selectEnd();
+      return;
+    }
+
+    const referenceIndex = node.getIndexWithinParent();
+    const caretIndex = referenceIndex + (direction > 0 ? 1 : 0);
+    parentNode.select(caretIndex, caretIndex);
+  }
+
+  isCollapsedReferenceCaretMovingIntoNode(selection, node, direction) {
+    if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
+      return false;
+    }
+
+    const point = selection.anchor;
+    if (point.getNode() !== node) {
+      return false;
+    }
+
+    const textLength = getLexicalTextLength(node);
+    if (point.offset > 0 && point.offset < textLength) {
+      return true;
+    }
+
+    return (
+      (direction > 0 && point.offset <= 0) ||
+      (direction < 0 && point.offset >= textLength)
+    );
+  }
+
+  getAdjacentReferenceNodeForCollapsedSelection(selection, direction) {
+    if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
+      return undefined;
+    }
+
+    const point = selection.anchor;
+    const node = point.getNode();
+    let candidate;
+
+    if ($isMentionNode(node)) {
+      candidate = this.isCollapsedReferenceCaretMovingIntoNode(
+        selection,
+        node,
+        direction,
+      )
+        ? node
+        : undefined;
+    } else if (point.type === "text" && $isTextNode(node)) {
+      const textLength = getLexicalTextLength(node);
+      if (direction < 0 && point.offset === 0) {
+        candidate = node.getPreviousSibling();
+      } else if (direction > 0 && point.offset >= textLength) {
+        candidate = node.getNextSibling();
+      }
+    } else if (point.type === "element" && $isElementNode(node)) {
+      const childIndex = direction < 0 ? point.offset - 1 : point.offset;
+      candidate =
+        childIndex >= 0 && childIndex < node.getChildrenSize()
+          ? node.getChildAtIndex(childIndex)
+          : undefined;
+    }
+
+    return $isMentionNode(candidate) ? candidate : undefined;
+  }
+
+  handleReferenceArrowNavigation(event) {
+    const direction =
+      event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
+    if (
+      direction === 0 ||
+      event.isComposing ||
+      this.isComposing ||
+      event.shiftKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey
+    ) {
+      return false;
+    }
+
+    let didHandle = false;
+    let nextSelectedReferenceNodeKey = this.selectedReferenceNodeKey;
+    this.editor.update(
+      () => {
+        const selectedReferenceNode = this.selectedReferenceNodeKey
+          ? $getNodeByKey(this.selectedReferenceNodeKey)
+          : undefined;
+        const selection = $getSelection();
+        if (!$isRangeSelection(selection)) {
+          if ($isMentionNode(selectedReferenceNode)) {
+            this.placeCaretAroundReferenceNode(
+              selectedReferenceNode,
+              direction,
+            );
+            nextSelectedReferenceNodeKey = undefined;
+            didHandle = true;
+          }
+          return;
+        }
+
+        const referenceSelection = this.getReferenceSelectionInfo(selection);
+        if (referenceSelection?.node) {
+          const isSelectedReference =
+            this.selectedReferenceNodeKey === referenceSelection.node.getKey();
+          if (referenceSelection.isWhole || isSelectedReference) {
+            this.placeCaretAroundReferenceNode(
+              referenceSelection.node,
+              direction,
+            );
+            nextSelectedReferenceNodeKey = undefined;
+          } else if (
+            referenceSelection.isCollapsed &&
+            !this.isCollapsedReferenceCaretMovingIntoNode(
+              selection,
+              referenceSelection.node,
+              direction,
+            )
+          ) {
+            nextSelectedReferenceNodeKey = undefined;
+            return;
+          } else {
+            this.selectReferenceNodeAsElement(referenceSelection.node);
+            nextSelectedReferenceNodeKey = referenceSelection.node.getKey();
+          }
+          didHandle = true;
+          return;
+        }
+
+        if ($isMentionNode(selectedReferenceNode)) {
+          this.placeCaretAroundReferenceNode(selectedReferenceNode, direction);
+          nextSelectedReferenceNodeKey = undefined;
+          didHandle = true;
+          return;
+        }
+
+        const adjacentReference =
+          this.getAdjacentReferenceNodeForCollapsedSelection(
+            selection,
+            direction,
+          );
+        if (!adjacentReference) {
+          return;
+        }
+
+        this.selectReferenceNodeAsElement(adjacentReference);
+        nextSelectedReferenceNodeKey = adjacentReference.getKey();
+        didHandle = true;
+      },
+      { discrete: true },
+    );
+
+    if (!didHandle) {
+      return false;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    this.selectedReferenceNodeKey = nextSelectedReferenceNodeKey;
+    this.updateReferenceSelectionMarkers();
+    return true;
+  }
+
+  selectReferenceByNodeKey(nodeKey) {
+    if (!nodeKey) {
+      return;
+    }
+
+    this.editor.update(
+      () => {
+        const node = $getNodeByKey(nodeKey);
+        if ($isMentionNode(node)) {
+          this.selectReferenceNodeAsElement(node);
+          this.selectedReferenceNodeKey = nodeKey;
+        }
+      },
+      { discrete: true },
+    );
+    this.updateReferenceSelectionMarkers();
+  }
+
+  showReferencePopover(event, referenceSnapshot) {
+    const menu = this.refs.selectionMenu;
+    if (!menu || !referenceSnapshot?.nodeKey) {
+      return;
+    }
+
+    this.selectionMenuIsOpen = true;
+    this.pendingSelectionSnapshot = undefined;
+    this.referenceMenuTarget = referenceSnapshot;
+    this.selectionMenuPosition = {
+      x: String(event.clientX),
+      y: String(event.clientY),
+    };
+
+    this.selectReferenceByNodeKey(referenceSnapshot.nodeKey);
+
+    const richTextState = this.getReferenceRichTextState(
+      referenceSnapshot.nodeKey,
+    );
+    const hasTextStyle = !!richTextState.textStyleId;
+    const hasFurigana = !!richTextState.furigana;
+    menu.items = [
+      {
+        id: "change-reference",
+        type: "item",
+        label: "Change variable",
+      },
+      {
+        id: "remove-reference",
+        type: "item",
+        label: "Remove variable",
+      },
+      {
+        id: hasTextStyle ? "edit-text-style" : "add-text-style",
+        type: "item",
+        label: hasTextStyle ? "Edit text style" : "Add text style",
+      },
+      {
+        id: hasFurigana ? "edit-furigana" : "add-furigana",
+        type: "item",
+        label: hasFurigana ? "Edit furigana" : "Add furigana",
+      },
+    ];
+    if (hasTextStyle) {
+      menu.items.push({
+        id: "remove-text-style",
+        type: "item",
+        label: "Remove text style",
+      });
+    }
+    if (hasFurigana) {
+      menu.items.push({
+        id: "remove-furigana",
+        type: "item",
+        label: "Remove furigana",
+      });
+    }
+
+    menu.x = this.selectionMenuPosition.x;
+    menu.y = this.selectionMenuPosition.y;
+    menu.place = "bs";
+    menu.open = true;
+    menu.render?.();
+  }
+
+  getReferenceVariableMenuItems() {
+    if (this.state.mentionTargets.length === 0) {
+      return [
+        {
+          id: "no-reference-targets",
+          type: "item",
+          label: "No variables",
+          disabled: true,
+        },
+      ];
+    }
+
+    return this.state.mentionTargets.map((target) => ({
+      id: `reference:${target.id}`,
+      type: "item",
+      label: target.label,
+      suffixText: target.variableType || "",
+      referenceResourceId: target.id,
+    }));
+  }
+
+  showReferenceVariableSelectionMenu() {
+    const menu = this.refs.selectionMenu;
+    if (!menu || !this.referenceMenuTarget?.nodeKey) {
+      this.hideSelectionPopover();
+      return;
+    }
+
+    menu.items = this.getReferenceVariableMenuItems();
+    menu.x = this.selectionMenuPosition.x;
+    menu.y = this.selectionMenuPosition.y;
+    menu.place = "bs";
+    menu.open = true;
+    menu.render?.();
+  }
+
+  replaceReferenceNode(nodeKey, resourceId) {
+    if (!nodeKey || !resourceId) {
+      return;
+    }
+
+    this.pendingChangeReason = "text";
+    this.editor.update(
+      () => {
+        const node = $getNodeByKey(nodeKey);
+        if (!$isMentionNode(node)) {
+          return;
+        }
+
+        const currentTextStyleId = getTextStyleIdFromNode(node);
+        const currentFurigana = getFuriganaFromNode(node);
+        const replacementNode = $createMentionNode({
+          resourceId,
+          label: this.getReferenceLabel(resourceId),
+        });
+        applyTextStyleIdToNode(replacementNode, currentTextStyleId);
+        applyFuriganaToNode(replacementNode, currentFurigana);
+        node.replace(replacementNode);
+        this.selectReferenceNodeAsElement(replacementNode);
+      },
+      { discrete: true },
+    );
+  }
+
+  applyTextStyleIdToReference(nodeKey, textStyleId) {
+    if (!nodeKey || !textStyleId) {
+      return;
+    }
+
+    this.pendingChangeReason = "text";
+    this.editor.update(
+      () => {
+        const node = $getNodeByKey(nodeKey);
+        if (!$isMentionNode(node)) {
+          return;
+        }
+
+        applyTextStyleIdToNode(node, textStyleId);
+        this.selectReferenceNodeAsElement(node);
+      },
+      { discrete: true },
+    );
+  }
+
+  removeTextStyleIdFromReference(nodeKey) {
+    if (!nodeKey) {
+      return;
+    }
+
+    this.pendingChangeReason = "text";
+    this.editor.update(
+      () => {
+        const node = $getNodeByKey(nodeKey);
+        if (!$isMentionNode(node)) {
+          return;
+        }
+
+        removeTextStyleIdFromNode(node);
+        this.selectReferenceNodeAsElement(node);
+      },
+      { discrete: true },
+    );
+  }
+
+  applyFuriganaToReference(nodeKey, furigana) {
+    if (!nodeKey) {
+      return;
+    }
+
+    this.pendingChangeReason = "text";
+    this.editor.update(
+      () => {
+        const node = $getNodeByKey(nodeKey);
+        if (!$isMentionNode(node)) {
+          return;
+        }
+
+        applyFuriganaToNode(node, furigana);
+        this.selectReferenceNodeAsElement(node);
+      },
+      { discrete: true },
+    );
+  }
+
+  removeFuriganaFromReference(nodeKey) {
+    if (!nodeKey) {
+      return;
+    }
+
+    this.pendingChangeReason = "text";
+    this.editor.update(
+      () => {
+        const node = $getNodeByKey(nodeKey);
+        if (!$isMentionNode(node)) {
+          return;
+        }
+
+        removeFuriganaFromNode(node);
+        this.selectReferenceNodeAsElement(node);
+      },
+      { discrete: true },
+    );
+  }
+
+  removeReferenceNode(nodeKey) {
+    if (!nodeKey) {
+      return;
+    }
+
+    this.pendingChangeReason = "text";
+    this.editor.update(
+      () => {
+        const node = $getNodeByKey(nodeKey);
+        if (!$isMentionNode(node)) {
+          return;
+        }
+
+        const parentNode = node.getParent();
+        const referenceIndex = node.getIndexWithinParent();
+        node.remove();
+
+        if ($isElementNode(parentNode)) {
+          const caretIndex = Math.min(
+            referenceIndex,
+            parentNode.getChildrenSize(),
+          );
+          parentNode.select(caretIndex, caretIndex);
+        }
+      },
+      { discrete: true },
+    );
+    if (this.selectedReferenceNodeKey === nodeKey) {
+      this.clearSelectedReferenceNodeKey();
+    }
+  }
+
+  hasReferenceNodeKey(nodeKey) {
+    if (!nodeKey) {
+      return false;
+    }
+
+    return this.editor.getEditorState().read(() => {
+      return $isMentionNode($getNodeByKey(nodeKey));
+    });
+  }
+
+  clearSelectedReferenceNodeKey() {
+    if (!this.selectedReferenceNodeKey) {
+      return;
+    }
+
+    this.selectedReferenceNodeKey = undefined;
+    this.updateReferenceSelectionMarkers();
+  }
+
+  updateReferenceSelectionMarkers() {
+    if (!this.refs.editor) {
+      return;
+    }
+
+    let selectedKey = this.selectedReferenceNodeKey;
+    if (selectedKey && !this.hasReferenceNodeKey(selectedKey)) {
+      selectedKey = undefined;
+      this.selectedReferenceNodeKey = undefined;
+    }
+
+    for (const element of this.refs.editor.querySelectorAll(
+      "[data-rvn-reference-key]",
+    )) {
+      if (element.dataset.rvnReferenceKey === selectedKey) {
+        element.dataset.rvnReferenceSelected = "true";
+      } else {
+        delete element.dataset.rvnReferenceSelected;
+      }
+    }
   }
 
   handleSurfaceKeyDown(event) {
@@ -1871,6 +2597,8 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
+    this.clearSelectedReferenceNodeKey();
+
     const inputType = String(event.inputType ?? "");
     if (inputType === "insertParagraph") {
       event.preventDefault();
@@ -1982,11 +2710,26 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
+    if (this.hasActiveMentionTrigger()) {
+      this.refs.mentionMenu.open = true;
+      this.scheduleRender();
+      return;
+    }
+
     this.closeMentionMenu();
   }
 
   applyTextStyleIdToSelection(textStyleId) {
     if (!textStyleId) {
+      return;
+    }
+
+    if (this.referenceMenuTarget?.nodeKey) {
+      this.applyTextStyleIdToReference(
+        this.referenceMenuTarget.nodeKey,
+        textStyleId,
+      );
+      this.clearPendingRichTextSelection();
       return;
     }
 
@@ -2009,6 +2752,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   removeTextStyleIdFromSelection() {
+    if (this.referenceMenuTarget?.nodeKey) {
+      this.removeTextStyleIdFromReference(this.referenceMenuTarget.nodeKey);
+      this.clearPendingRichTextSelection();
+      return;
+    }
+
     this.pendingChangeReason = "text";
     this.editor.update(
       () => {
@@ -2033,6 +2782,15 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
+    if (this.referenceMenuTarget?.nodeKey) {
+      this.applyFuriganaToReference(this.referenceMenuTarget.nodeKey, {
+        text: furiganaText,
+        textStyleId,
+      });
+      this.clearPendingRichTextSelection();
+      return;
+    }
+
     this.pendingChangeReason = "text";
     this.editor.update(
       () => {
@@ -2054,6 +2812,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   removeFuriganaFromSelection() {
+    if (this.referenceMenuTarget?.nodeKey) {
+      this.removeFuriganaFromReference(this.referenceMenuTarget.nodeKey);
+      this.clearPendingRichTextSelection();
+      return;
+    }
+
     this.pendingChangeReason = "text";
     this.editor.update(
       () => {
@@ -2077,6 +2841,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   clearPendingRichTextSelection() {
     this.furiganaDialogIsPending = false;
     this.pendingSelectionSnapshot = undefined;
+    this.referenceMenuTarget = undefined;
     this.selectionMenuIsOpen = false;
 
     if (this.refs.selectionMenu) {
@@ -2199,6 +2964,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
 
     this.selectionMenuIsOpen = true;
+    this.referenceMenuTarget = undefined;
     this.pendingSelectionSnapshot =
       selectionSnapshot ?? this.getCurrentSelectionSnapshot();
 
@@ -2255,6 +3021,27 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     const item = event.detail?.item || {};
     const action = event.detail?.id ?? item.id;
 
+    if (action === "change-reference") {
+      this.showReferenceVariableSelectionMenu();
+      return;
+    }
+
+    if (item.referenceResourceId) {
+      const nodeKey = this.referenceMenuTarget?.nodeKey;
+      this.replaceReferenceNode(nodeKey, item.referenceResourceId);
+      this.hideSelectionPopover();
+      this.focus({ preventScroll: true });
+      return;
+    }
+
+    if (action === "remove-reference") {
+      const nodeKey = this.referenceMenuTarget?.nodeKey;
+      this.removeReferenceNode(nodeKey);
+      this.hideSelectionPopover();
+      this.focus({ preventScroll: true });
+      return;
+    }
+
     if (action === "add-text-style" || action === "edit-text-style") {
       this.showTextStyleSelectionMenu();
       return;
@@ -2294,6 +3081,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   requestFuriganaDialog() {
+    if (this.referenceMenuTarget?.nodeKey) {
+      this.requestReferenceFuriganaDialog();
+      return;
+    }
+
     const snapshot =
       this.pendingSelectionSnapshot ?? this.getCurrentSelectionSnapshot();
     if (!snapshot || snapshot.start === snapshot.end) {
@@ -2324,9 +3116,40 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     );
   }
 
+  requestReferenceFuriganaDialog() {
+    const nodeKey = this.referenceMenuTarget?.nodeKey;
+    if (!nodeKey) {
+      this.hideSelectionPopover();
+      return;
+    }
+
+    this.furiganaDialogIsPending = true;
+    this.selectionMenuIsOpen = false;
+
+    if (this.refs.selectionMenu) {
+      this.refs.selectionMenu.open = false;
+      this.refs.selectionMenu.render?.();
+    }
+
+    const richTextState = this.getReferenceRichTextState(nodeKey);
+    const furigana = richTextState.furigana ?? {};
+    this.dispatchEvent(
+      new CustomEvent("furigana-dialog-request", {
+        detail: {
+          furigana,
+          defaultTextStyleId:
+            furigana.textStyleId ?? this.state.textStyles[0]?.id ?? "",
+          textStyles: this.state.textStyles,
+        },
+        bubbles: true,
+      }),
+    );
+  }
+
   hideSelectionPopover() {
     this.selectionMenuIsOpen = false;
     this.pendingSelectionSnapshot = undefined;
+    this.referenceMenuTarget = undefined;
     this.furiganaDialogIsPending = false;
 
     if (this.refs.selectionMenu) {
@@ -2531,13 +3354,13 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
               const anchorOffset = selection.anchor.offset;
               const text = anchorNode.getTextContent();
               const beforeCaret = text.slice(0, anchorOffset);
-              const match = beforeCaret.match(/(?:^|\s)@([a-z0-9._-]*)$/i);
+              const match = beforeCaret.match(/(?:^|\s)\/([a-z0-9._-]*)$/i);
               if (!match) {
                 return undefined;
               }
 
               const query = match[1] ?? "";
-              const startOffset = beforeCaret.lastIndexOf(`@${query}`);
+              const startOffset = beforeCaret.lastIndexOf(`/${query}`);
               if (startOffset === -1) {
                 return undefined;
               }
@@ -2568,8 +3391,21 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     return line;
   }
 
+  getReferenceLabel(resourceId) {
+    const target = this.state.mentionTargets.find(
+      (item) => item.id === resourceId,
+    );
+    return target?.label ?? resourceId;
+  }
+
+  createNodesFromContent(content) {
+    return createLexicalNodesFromContent(content, {
+      resolveReferenceLabel: (resourceId) => this.getReferenceLabel(resourceId),
+    });
+  }
+
   appendParagraphContent(lineNode, content) {
-    const nodes = createNodesFromContent(content);
+    const nodes = this.createNodesFromContent(content);
     if (nodes.length > 0) {
       lineNode.append(...nodes);
       return;
@@ -3018,6 +3854,57 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
   }
 
+  hasActiveMentionTrigger() {
+    if (!this.isEditorFocused) {
+      return false;
+    }
+
+    try {
+      return Boolean(this.readEditorSnapshot().mentionTrigger);
+    } catch {
+      return false;
+    }
+  }
+
+  shouldPreserveMentionMenuAfterSelectionLoss() {
+    if (!this.state.mentionMenu.isOpen || !this.isEditorFocused) {
+      return false;
+    }
+
+    return this.isMentionMenuFocusTarget(document.activeElement);
+  }
+
+  isMentionMenuFocusTarget(element) {
+    if (!element) {
+      return false;
+    }
+
+    if (element === this.refs.mentionMenu) {
+      return true;
+    }
+
+    if (this.refs.mentionMenu?.contains?.(element)) {
+      return true;
+    }
+
+    if (this.refs.mentionMenu?.shadowRoot?.contains?.(element)) {
+      return true;
+    }
+
+    const popover =
+      this.refs.mentionMenu?.shadowRoot?.querySelector?.("rtgl-popover");
+    const popoverDialog = popover?.shadowRoot?.querySelector?.("dialog");
+    return Boolean(
+      element === popover ||
+        element === popoverDialog ||
+        popover?.contains?.(element) ||
+        popover?.shadowRoot?.contains?.(element) ||
+        (this.refs.mentionMenu?.open === true &&
+          element.tagName === "DIALOG" &&
+          element.querySelector?.(".popover-container")),
+    );
+  }
+
   keepMentionMenuNonModal({ restoreFocus = false } = {}) {
     const popover =
       this.refs.mentionMenu?.shadowRoot?.querySelector?.("rtgl-popover");
@@ -3079,7 +3966,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           replaceNode = splitNodes[0];
         }
 
-        const mentionNode = $createMentionNode(mention);
+        const mentionNode = $createMentionNode({
+          resourceId: mention.id,
+          label: mention.label,
+        });
         replaceNode.replace(mentionNode);
 
         const nextSibling = mentionNode.getNextSibling();
@@ -3144,6 +4034,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       const surfaceRect = this.refs.surface.getBoundingClientRect();
       this.state.mentionMenu.left = surfaceRect.left + position.left;
       this.state.mentionMenu.top = surfaceRect.top + position.top;
+    } else if (this.shouldPreserveMentionMenuAfterSelectionLoss()) {
+      this.refs.mentionMenu.open = true;
+      this.keepMentionMenuNonModal({ restoreFocus: true });
     } else {
       this.closeMentionMenu();
     }
@@ -3260,6 +4153,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.refs.placeholder.textContent = this.state.placeholder;
     this.renderGutters();
     this.renderMentionMenu();
+    this.updateReferenceSelectionMarkers();
   }
 
   renderGutters() {
@@ -3845,10 +4739,8 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     menu.items = menuState.items.map((item) => ({
       id: `mention:${item.id}`,
       type: "item",
-      label: `@${item.label}`,
-      suffixText: item.variableType
-        ? `${item.id} (${item.variableType})`
-        : item.id,
+      label: item.label,
+      suffixText: item.variableType || "",
     }));
     menu.x = String(menuState.left);
     menu.y = String(menuState.top);
