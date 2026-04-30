@@ -147,6 +147,10 @@ const buildChoicesPreview = (line) => {
   };
 };
 
+const buildConditionalPreview = (lineActions) => {
+  return !!lineActions?.conditional;
+};
+
 const buildDialogueSpeakerPreview = (characterId, characterLookups) => {
   if (!characterId) {
     return undefined;
@@ -225,6 +229,7 @@ export const buildSceneEditorLineViewModels = ({
       visual: buildVisualPreview(repositoryState, changes),
       sectionTransition: buildSectionTransitionPreview(line),
       hasChoices: choicesPreview.hasChoices,
+      hasConditional: buildConditionalPreview(lineActions),
       hasSfx: !!changes.sfx,
       sfxChangeType: changes.sfx?.changeType,
       hasSetNextLineConfig:

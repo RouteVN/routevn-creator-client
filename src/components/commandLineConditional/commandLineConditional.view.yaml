@@ -1,46 +1,139 @@
 refs:
-  conditionTypeSelect:
+  breadcrumb:
+    eventListeners:
+      item-click:
+        handler: handleBreadcrumbClick
+  addBranchButton:
+    eventListeners:
+      click:
+        handler: handleAddBranchClick
+  addDefaultButton:
+    eventListeners:
+      click:
+        handler: handleAddDefaultClick
+  defaultBranch:
+    eventListeners:
+      click:
+        handler: handleBranchClick
+      contextmenu:
+        handler: handleBranchContextMenu
+  conditionalBranch*:
+    eventListeners:
+      click:
+        handler: handleBranchClick
+      contextmenu:
+        handler: handleBranchContextMenu
+  conditionKindSelect:
     eventListeners:
       value-change:
-        handler: handleConditionTypeChange
+        handler: handleConditionKindChange
   variableSelect:
     eventListeners:
       value-change:
-        handler: handleVariableSelect
+        handler: handleVariableSelectChange
   operatorSelect:
     eventListeners:
       value-change:
-        handler: handleOperatorSelect
+        handler: handleOperatorSelectChange
   valueInput:
     eventListeners:
       value-input:
-        handler: handleValueInput
+        handler: handleValueInputChange
+  booleanSelect:
+    eventListeners:
+      value-change:
+        handler: handleBooleanSelectChange
+  expressionInput:
+    eventListeners:
+      value-input:
+        handler: handleExpressionInputChange
+  jsonInput:
+    eventListeners:
+      value-input:
+        handler: handleJsonInputChange
+  branchActionsButton:
+    eventListeners:
+      click:
+        handler: handleBranchActionsClick
+  branchActionsEditor:
+    eventListeners:
+      actions-change:
+        handler: handleBranchActionsChange
+      action-delete:
+        handler: handleBranchActionsDelete
+      close:
+        handler: handleNestedActionsClose
+  saveBranchButton:
+    eventListeners:
+      click:
+        handler: handleSaveBranchClick
   submitButton:
     eventListeners:
       click:
         handler: handleSubmitClick
-  breadcumb:
+  dropdownMenu:
     eventListeners:
+      close:
+        handler: handleDropdownMenuClose
       item-click:
-        handler: handleBreadcumbClick
+        handler: handleDropdownMenuClickItem
 template:
   - rtgl-view w=f h=f p=lg:
-      - rtgl-view d=h g=md:
-          - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
-      - rtgl-text: Conditional Logic Configuration
-      - rtgl-view g=md:
-          - rtgl-text: Condition Type
-          - rtgl-select#conditionTypeSelect w=f :selectedValue=${conditionType} :options=${conditionTypeOptions}: null
-          - $if conditionType == 'variable':
-              - rtgl-text: Variable
-              - rtgl-select#variableSelect w=f :selectedValue=${selectedVariable} :options=${variableOptions}: null
-              - rtgl-text: Operator
-              - rtgl-select#operatorSelect w=f :selectedValue=${operator} :options=${operatorOptions}: null
-              - rtgl-text: Value
-              - rtgl-input#valueInput w=f placeholder="Enter value..." value=${comparisonValue}: null
-          - rtgl-text: Preview
-          - rtgl-view w=f p=md bgc=bg br=sm:
-              - rtgl-text: IF
-      - rtgl-view h=1fg: null
-      - rtgl-view d=h av=c ah=e w=f g=lg:
-          - rtgl-button#submitButton: Submit
+      - $if mode == 'current' && initiated:
+          - rtgl-breadcrumb#breadcrumb :items=${breadcrumb}: null
+          - rtgl-view g=md mt=md w=f:
+              - rtgl-text s=sm c=mu-fg: Branches
+              - $for branch, i in branches:
+                  - rtgl-view#conditionalBranch${i} data-branch-id=${branch.id} cur=pointer d=h av=c ah=s g=md p=md bgc=mu h-bgc=ac br=md w=f:
+                      - rtgl-view d=v w=1fg:
+                          - rtgl-text s=sm: ${branch.summary}
+                          - rtgl-text s=xs c=mu-fg: ${branch.actionsSummary}
+              - rtgl-button#addBranchButton v=ol w=f mt=md: + Add Branch
+              - rtgl-text s=sm c=mu-fg mt=md: Default
+              - $if hasDefaultBranch:
+                  - rtgl-view#defaultBranch data-branch-id=${defaultBranch.id} cur=pointer d=h av=c ah=s g=md p=md bgc=mu h-bgc=ac br=md w=f:
+                      - rtgl-view d=v w=1fg:
+                          - rtgl-text s=sm: ${defaultBranch.summary}
+                          - rtgl-text s=xs c=mu-fg: ${defaultBranch.actionsSummary}
+              - $if !hasDefaultBranch:
+                  - rtgl-button#addDefaultButton v=ol w=f: + Add Default
+          - rtgl-view h=1fg: null
+          - rtgl-view d=h av=c ah=e w=f g=lg:
+              - rtgl-button#submitButton ?disabled=${!hasBranches}: Submit
+      - $if mode == 'editBranch' && initiated:
+          - rtgl-breadcrumb#breadcrumb :items=${breadcrumb}: null
+          - rtgl-view g=md mt=md w=f:
+              - $if !isEditingDefault:
+                  - rtgl-text s=sm c=mu-fg: Condition
+                  - rtgl-select#conditionKindSelect w=f :selectedValue=${tempBranch.conditionKind} :options=${conditionKindOptions}: null
+                  - $if tempBranch.conditionKind == 'variable':
+                      - rtgl-text s=sm c=mu-fg mt=md: Variable
+                      - rtgl-select#variableSelect w=f :selectedValue=${tempBranch.variableId} :options=${variableOptions} placeholder="Choose a variable...": null
+                      - $if tempBranch.variableId:
+                          - rtgl-text s=sm c=mu-fg mt=md: Operator
+                          - rtgl-select#operatorSelect w=f :selectedValue=${tempBranch.op} :options=${operatorOptions}: null
+                      - $if showValueField && valueInputType == 'number':
+                          - rtgl-text s=sm c=mu-fg mt=md: Value
+                          - rtgl-input#valueInput type=number w=f placeholder="Enter number..." value=${tempBranch.value}: null
+                      - $if showValueField && valueInputType == 'boolean':
+                          - rtgl-text s=sm c=mu-fg mt=md: Value
+                          - rtgl-select#booleanSelect w=f :selectedValue=${tempBranch.booleanValue} :options=${booleanOptions}: null
+                      - $if showValueField && valueInputType == 'string':
+                          - rtgl-text s=sm c=mu-fg mt=md: Value
+                          - rtgl-input#valueInput w=f placeholder="Enter text..." value=${tempBranch.value}: null
+                  - $if tempBranch.conditionKind == 'expression':
+                      - rtgl-text s=sm c=mu-fg mt=md: Expression
+                      - rtgl-input#expressionInput w=f placeholder="variables.score >= 10" value=${tempBranch.expression}: null
+                  - $if tempBranch.conditionKind == 'json':
+                      - rtgl-text s=sm c=mu-fg mt=md: Semantic JSON
+                      - rtgl-input#jsonInput w=f placeholder="Semantic JSON condition" value=${tempBranch.json}: null
+              - rtgl-view#branchActionsButton d=h av=c ah=s g=md p=md bgc=mu h-bgc=ac br=md w=f cur=pointer mt=md:
+                  - rtgl-view d=v:
+                      - rtgl-text s=sm: ${editBranchTitle} Actions
+                      - rtgl-text s=xs c=mu-fg: ${branchActionsSummary}
+          - rtgl-view h=1fg: null
+          - rtgl-view d=h av=c ah=e w=f g=lg:
+              - rtgl-button#saveBranchButton ?disabled=${!canSaveBranch}: Save ${editBranchTitle}
+      - $if mode == 'branchActions' && initiated:
+          - rvn-system-actions#branchActionsEditor :showSelected=${true} :actions=${branchActions} actionType=system: null
+  - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

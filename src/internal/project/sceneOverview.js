@@ -24,18 +24,39 @@ const resolveSceneIdFromSectionId = (repositoryState, sectionId) => {
 const getActionTargetSceneIds = (actions, repositoryState) => {
   const sceneIds = new Set();
 
-  const sectionTransitionSceneId = actions?.sectionTransition?.sceneId;
-  if (isNonEmptyString(sectionTransitionSceneId)) {
-    sceneIds.add(sectionTransitionSceneId);
-  }
+  const scanActionValue = (value, key) => {
+    if (!value || typeof value !== "object") {
+      return;
+    }
 
-  const resetStorySceneId = resolveSceneIdFromSectionId(
-    repositoryState,
-    actions?.resetStoryAtSection?.sectionId,
-  );
-  if (isNonEmptyString(resetStorySceneId)) {
-    sceneIds.add(resetStorySceneId);
-  }
+    if (key === "sectionTransition") {
+      const sectionTransitionSceneId = value.sceneId;
+      if (isNonEmptyString(sectionTransitionSceneId)) {
+        sceneIds.add(sectionTransitionSceneId);
+      }
+    }
+
+    if (key === "resetStoryAtSection") {
+      const resetStorySceneId = resolveSceneIdFromSectionId(
+        repositoryState,
+        value.sectionId,
+      );
+      if (isNonEmptyString(resetStorySceneId)) {
+        sceneIds.add(resetStorySceneId);
+      }
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach((entry) => scanActionValue(entry));
+      return;
+    }
+
+    Object.entries(value).forEach(([entryKey, entryValue]) => {
+      scanActionValue(entryValue, entryKey);
+    });
+  };
+
+  scanActionValue(actions);
 
   return [...sceneIds];
 };

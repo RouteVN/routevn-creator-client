@@ -64,6 +64,47 @@ describe("systemActions.store", () => {
     expect(preview.stopSkipMode).toEqual({});
   });
 
+  it("preserves and previews conditional actions", () => {
+    const state = createInitialState();
+    const conditional = {
+      branches: [
+        {
+          when: {
+            gte: [{ var: "variables.trust" }, 70],
+          },
+          actions: {
+            nextLine: {},
+          },
+        },
+        {
+          actions: {
+            sectionTransition: {
+              sceneId: "scene-2",
+              sectionId: "section-2",
+            },
+          },
+        },
+      ],
+    };
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          conditional,
+        },
+      },
+    });
+
+    expect(actions.conditional).toEqual(conditional);
+    expect(preview.conditional).toEqual({
+      branchCount: 2,
+      actionCount: 2,
+      summary: "1 branch + default",
+      actionsSummary: "2 nested actions",
+    });
+  });
+
   it("builds resetStoryAtSection preview labels from repository sections", () => {
     const state = createInitialState();
 

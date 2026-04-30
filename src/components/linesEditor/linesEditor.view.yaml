@@ -120,6 +120,9 @@ template:
                               - $if line.hasChoices:
                                   - rtgl-view#previewChoice data-type="choice" data-id="${line.id}" pos=rel wh=24 av=c ah=c:
                                       - rtgl-svg svg="choices" wh=24: null
+                              - $if line.hasConditional:
+                                  - rtgl-view#previewConditional data-type="conditional" data-id="${line.id}" pos=rel wh=24 av=c ah=c:
+                                      - rtgl-svg svg="settings" wh=24: null
                               - $if line.hasSetNextLineConfig:
                                   - rtgl-view#previewSetNextLineConfig data-type="setNextLineConfig" data-id="${line.id}" pos=rel wh=24 av=c ah=c:
                                       - rtgl-svg svg="settings" wh=24: null

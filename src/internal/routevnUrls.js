@@ -70,6 +70,7 @@ const creatorDocsPathBySystemActionMode = {
   setMenuPage: "/line-actions/controls/",
   setMenuEntryPoint: "/line-actions/controls/",
   updateVariable: "/line-actions/update-variable/",
+  conditional: "/line-actions/controls/",
 };
 
 const normalizeRoutePattern = (routePattern) => {
