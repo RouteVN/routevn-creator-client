@@ -376,14 +376,22 @@ const STYLES = `
   }
 
   .mention-chip {
-    display: inline-block;
-    padding: 0.08em 0.48em;
-    border-radius: 999px;
-    border: 1px solid rgba(103, 232, 249, 0.28);
-    background: rgba(8, 145, 178, 0.22);
-    color: #ecfeff;
-    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    min-height: 20px;
+    margin-inline: 1px;
+    padding: 0 8px;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: var(--tag-border-radius, 9999px);
+    background: var(--muted);
+    color: var(--muted-foreground);
+    font-size: 0.88em;
+    font-weight: 500;
+    line-height: 1.35;
     white-space: nowrap;
+    vertical-align: baseline;
   }
 
   .placeholder {
@@ -397,54 +405,6 @@ const STYLES = `
 
   .placeholder[hidden] {
     display: none;
-  }
-
-  .mention-menu {
-    position: absolute;
-    z-index: 12;
-    width: min(260px, calc(100vw - 48px));
-    overflow: hidden;
-    border: 1px solid rgba(148, 163, 184, 0.24);
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.98);
-    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
-  }
-
-  .mention-menu[hidden] {
-    display: none;
-  }
-
-  .mention-item {
-    display: grid;
-    gap: 4px;
-    width: 100%;
-    border: 0;
-    border-bottom: 1px solid rgba(226, 232, 240, 0.92);
-    background: transparent;
-    padding: 10px 12px;
-    text-align: left;
-    font: inherit;
-    cursor: pointer;
-  }
-
-  .mention-item:last-child {
-    border-bottom: 0;
-  }
-
-  .mention-item:hover,
-  .mention-item[data-active="true"] {
-    background: #f0f9ff;
-  }
-
-  .mention-item-label {
-    font-size: 13px;
-    font-weight: 700;
-    color: #0f172a;
-  }
-
-  .mention-item-meta {
-    font-size: 11px;
-    color: #64748b;
   }
 
 `;
@@ -562,7 +522,7 @@ const createShell = () => {
         role="textbox"
         aria-multiline="true"
       ></div>
-      <div id="mentionMenu" class="mention-menu" hidden></div>
+      <rtgl-dropdown-menu id="mentionMenu"></rtgl-dropdown-menu>
       <rtgl-dropdown-menu id="selectionMenu"></rtgl-dropdown-menu>
     </div>
   `;
@@ -913,7 +873,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.handleCompositionEnd = this.handleCompositionEnd.bind(this);
     this.handleMentionMenuMouseDown =
       this.handleMentionMenuMouseDown.bind(this);
-    this.handleMentionMenuClick = this.handleMentionMenuClick.bind(this);
+    this.handleMentionMenuItemClick =
+      this.handleMentionMenuItemClick.bind(this);
+    this.handleMentionMenuClose = this.handleMentionMenuClose.bind(this);
     this.handleSelectionMenuMouseDown =
       this.handleSelectionMenuMouseDown.bind(this);
     this.handleSelectionMenuItemClick =
@@ -948,6 +910,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.refs.selectionMenu.items = [];
     this.refs.selectionMenu.open = false;
     this.refs.selectionMenu.place = "bs";
+    this.refs.mentionMenu.items = [];
+    this.refs.mentionMenu.open = false;
+    this.refs.mentionMenu.place = "bs";
+    this.refs.mentionMenu.w = "260";
+    this.refs.mentionMenu.h = "240";
     this.editor.setRootElement(this.refs.editor);
 
     this.unregister = mergeRegister(
@@ -1073,8 +1040,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       this.handleMentionMenuMouseDown,
     );
     this.refs.mentionMenu.addEventListener(
-      "click",
-      this.handleMentionMenuClick,
+      "item-click",
+      this.handleMentionMenuItemClick,
+    );
+    this.refs.mentionMenu.addEventListener(
+      "close",
+      this.handleMentionMenuClose,
     );
     this.refs.selectionMenu.addEventListener(
       "mousedown",
@@ -1149,8 +1120,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       this.handleMentionMenuMouseDown,
     );
     this.refs.mentionMenu?.removeEventListener(
-      "click",
-      this.handleMentionMenuClick,
+      "item-click",
+      this.handleMentionMenuItemClick,
+    );
+    this.refs.mentionMenu?.removeEventListener(
+      "close",
+      this.handleMentionMenuClose,
     );
     this.refs.selectionMenu?.removeEventListener(
       "mousedown",
@@ -1980,23 +1955,25 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   handleMentionMenuMouseDown(event) {
-    if (event.target?.closest?.("button[data-index]")) {
-      event.preventDefault();
-    }
+    event.preventDefault();
+    event.stopPropagation();
   }
 
-  handleMentionMenuClick(event) {
-    const button = event.target?.closest?.("button[data-index]");
-    if (!button) {
-      return;
-    }
-
-    const index = Number(button.dataset.index);
+  handleMentionMenuItemClick(event) {
+    const index = Number(event.detail?.index);
     if (!Number.isInteger(index)) {
       return;
     }
 
     this.selectMentionByIndex(index);
+  }
+
+  handleMentionMenuClose() {
+    if (!this.state.mentionMenu.isOpen) {
+      return;
+    }
+
+    this.closeMentionMenu();
   }
 
   applyTextStyleIdToSelection(textStyleId) {
@@ -3036,7 +3013,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   closeMentionMenu({ shouldRender = false } = {}) {
     this.state.mentionMenu = createClosedMentionMenuState();
-    if (shouldRender) {
+
+    if (this.refs.mentionMenu) {
+      this.refs.mentionMenu.items = [];
+      this.refs.mentionMenu.open = false;
+      this.refs.mentionMenu.render?.();
+    } else if (shouldRender) {
       this.renderMentionMenu();
     }
   }
@@ -3830,31 +3812,33 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   renderMentionMenu() {
     const menuState = this.state.mentionMenu;
-    this.refs.mentionMenu.hidden =
-      !menuState.isOpen || menuState.items.length === 0;
-
-    if (!menuState.isOpen || menuState.items.length === 0) {
-      this.refs.mentionMenu.replaceChildren();
+    const menu = this.refs.mentionMenu;
+    if (!menu) {
       return;
     }
 
-    this.refs.mentionMenu.style.left = `${menuState.left}px`;
-    this.refs.mentionMenu.style.top = `${menuState.top}px`;
+    if (!menuState.isOpen || menuState.items.length === 0) {
+      menu.items = [];
+      menu.open = false;
+      menu.render?.();
+      return;
+    }
 
-    const fragment = document.createDocumentFragment();
-    menuState.items.forEach((item, index) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "mention-item";
-      button.dataset.index = String(index);
-      button.dataset.active = String(index === menuState.highlightedIndex);
-      button.innerHTML = `
-        <span class="mention-item-label">@${item.label}</span>
-        <span class="mention-item-meta">${item.id}</span>
-      `;
-      fragment.append(button);
+    menu.items = menuState.items.map((item, index) => {
+      const isHighlighted = index === menuState.highlightedIndex;
+      return {
+        id: `mention:${item.id}`,
+        type: "item",
+        label: `${isHighlighted ? "> " : ""}@${item.label}`,
+        suffixText: item.id,
+      };
     });
-
-    this.refs.mentionMenu.replaceChildren(fragment);
+    menu.x = String(menuState.left);
+    menu.y = String(menuState.top);
+    menu.place = "bs";
+    menu.w = "260";
+    menu.h = "240";
+    menu.open = true;
+    menu.render?.();
   }
 }
