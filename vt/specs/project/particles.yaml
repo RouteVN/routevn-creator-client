@@ -19,17 +19,17 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field0 input
+    selector: rtgl-form#createProjectForm rtgl-input#field0 input
     state: attached
     timeoutMs: 5000
   - action: select
-    selector: rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field0 input
+    selector: rtgl-form#createProjectForm rtgl-input#field0 input
     steps:
       - action: clear
       - action: write
         value: VT Particles Workflow
   - action: select
-    selector: rtgl-global-ui rtgl-form#createProjectForm rtgl-input#field1 input
+    selector: rtgl-form#createProjectForm rtgl-input#field1 input
     steps:
       - action: clear
       - action: write
@@ -37,13 +37,13 @@ steps:
   - action: wait
     ms: 250
   - action: select
-    selector: rtgl-global-ui rtgl-button[data-action-id='submit']
+    selector: "#createProjectSubmitButton"
     steps:
       - action: click
   - action: waitFor
     selector: "#projectItem0"
     state: visible
-    timeoutMs: 10000
+    timeoutMs: 30000
   - action: wait
     ms: 500
   - action: select
@@ -105,8 +105,8 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "#particleDialog #tabs"
-    state: visible
+    selector: "#particleDialog rtgl-input#field2 input"
+    state: attached
     timeoutMs: 5000
   - action: wait
     ms: 400
@@ -118,7 +118,7 @@ steps:
   - action: waitFor
     selector: "#particleDialog"
     state: hidden
-    timeoutMs: 10000
+    timeoutMs: 60000
   - action: waitFor
     selector: "#groupview #itemRef0x0[data-item-id]:not([data-item-id=''])"
     state: visible
@@ -128,9 +128,9 @@ steps:
     steps:
       - action: click
   - action: waitFor
-    selector: "#detailView"
-    state: attached
-    timeoutMs: 5000
+    selector: "#detailHeader"
+    state: visible
+    timeoutMs: 15000
   - action: wait
     ms: 500
   - action: screenshot

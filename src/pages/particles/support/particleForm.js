@@ -1089,15 +1089,22 @@ export const buildParticlePayload = ({
     modules.appearance.scale = buildScaleDefinition(values);
   }
 
-  return {
+  const payload = {
     name: values?.name?.trim() ?? "",
     description: values?.description ?? "",
-    tagIds: Array.isArray(values?.tagIds) ? values.tagIds : [],
     width,
     height,
     seed: values?.seed === "" ? null : (toOptionalNumber(values?.seed) ?? null),
     modules,
   };
+  const tagIds = Array.isArray(values?.tagIds)
+    ? values.tagIds.filter(Boolean)
+    : [];
+  if (tagIds.length > 0) {
+    payload.tagIds = tagIds;
+  }
+
+  return payload;
 };
 
 export const buildParticleDetailFields = (input) => {
