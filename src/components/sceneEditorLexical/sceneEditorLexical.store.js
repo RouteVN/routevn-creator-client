@@ -3,15 +3,11 @@ import {
   isFragmentLayout,
 } from "../../internal/project/layout.js";
 import { toHierarchyStructure } from "../../internal/project/tree.js";
-import {
-  buildSceneDocumentLineDecorations,
-  buildSceneEditorLineViewModels,
-} from "../../internal/ui/sceneEditor/lineViewModels.js";
+import { buildSceneDocumentLineDecorations } from "../../internal/ui/sceneEditor/lineViewModels.js";
 import {
   cloneSceneEditorLines,
   overlaySceneWithDraftSection,
 } from "../../internal/ui/sceneEditorLexical/draftSection.js";
-import { getLineDialogueContent } from "../../internal/ui/sceneEditorLexical/contentModel.js";
 import {
   constructProjectData,
   getSectionPresentation,
@@ -61,10 +57,6 @@ const toPlainObject = (value) => {
 
 const toFlatTree = (ids = []) => {
   return ids.map((id) => ({ id }));
-};
-
-const buildDialogueContentJson = (line) => {
-  return JSON.stringify(getLineDialogueContent(line), null, 2);
 };
 
 const buildTextStyleOptions = (repositoryState = {}) => {
@@ -990,7 +982,7 @@ const selectCanvasAspectRatio = ({ state }) => {
   return formatProjectResolutionAspectRatio(projectResolution);
 };
 
-export const selectViewData = ({ state, props }) => {
+export const selectViewData = ({ state }) => {
   const scene = selectScene({ state });
   if (!scene) {
     return {
@@ -998,10 +990,8 @@ export const selectViewData = ({ state, props }) => {
       sections: [],
       sectionsOverviewOpen: false,
       sectionsOverviewItems: [],
-      currentLines: [],
       documentEditorLines: [],
       textStyles: [],
-      dialogueContentJson: buildDialogueContentJson(),
       currentLine: null,
       actionsData: [],
       presentationState: null,
@@ -1064,8 +1054,6 @@ export const selectViewData = ({ state, props }) => {
     isDeadEnd: !!sectionPresentationById[section.id]?.isDeadEnd,
   }));
 
-  // const currentLines = state.sections.find(section => section.id === state.selectedSectionId).lines;
-
   const popoverMode = state.popover.mode;
   const isCreateSectionPopover = popoverMode === "create-section";
   const popoverSectionId = state.popover.sectionId || state.selectedSectionId;
@@ -1111,12 +1099,6 @@ export const selectViewData = ({ state, props }) => {
   const documentEditorLines = Array.isArray(currentSection?.lines)
     ? currentSection.lines
     : [];
-  const dialogueContentJson = buildDialogueContentJson(selectedLine);
-  const currentLines = buildSceneEditorLineViewModels({
-    lines: documentEditorLines,
-    repositoryState,
-    sectionLineChanges: state.sectionLineChanges,
-  });
   const documentLineDecorations = buildSceneDocumentLineDecorations({
     lines: documentEditorLines,
     repositoryState,
@@ -1208,14 +1190,11 @@ export const selectViewData = ({ state, props }) => {
 
   return {
     scene: scene,
-    editorKind: props.editorKind ?? "lines",
     sections,
     sectionsOverviewOpen: state.sectionsOverviewPanel.isOpen,
     sectionsOverviewItems,
-    currentLines,
     documentEditorLines,
     textStyles,
-    dialogueContentJson,
     documentLineDecorations,
     dropdownMenu: state.dropdownMenu,
     popover: state.popover,
@@ -1245,18 +1224,13 @@ export const selectViewData = ({ state, props }) => {
     sectionCreateDialog: state.sectionCreateDialog,
     sectionCreateForm,
     sceneSettings: state.sceneSettings,
-    linesEditorKey: `${props.editorKind ?? "lines"}-${state.sceneSettings.showLineNumbers ? "line-numbers-show" : "line-numbers-hide"}`,
+    linesEditorKey: `document-${state.sceneSettings.showLineNumbers ? "line-numbers-show" : "line-numbers-hide"}`,
     sceneSettingsDialog: state.sceneSettingsDialog,
     sceneSettingsForm,
     isScenePageLoading: state.isScenePageLoading,
     isSceneAssetLoading: state.isSceneAssetLoading,
     deadEndTooltip: state.deadEndTooltip,
   };
-};
-
-export const selectLineIdIndex = ({ state }, props, payload) => {
-  const { lineId } = payload;
-  return state.currentLines.findIndex((line) => line.id === lineId);
 };
 
 export const selectPreviousLineId = ({ state }, payload) => {

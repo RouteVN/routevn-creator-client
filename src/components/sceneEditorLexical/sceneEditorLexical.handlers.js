@@ -15,10 +15,8 @@ import { createEmptyContent } from "../../internal/ui/sceneEditorLexical/content
 import {
   findCharacterIdByShortcut,
   handleMergeLinesOperation,
-  handleNewLineOperation,
   handlePasteLinesOperation,
   handleSplitLineOperation,
-  handleSwapLineOperation,
   syncSceneEditorProjectState as syncStoreProjectState,
 } from "../../internal/ui/sceneEditor/lineOperations.js";
 import {
@@ -133,13 +131,10 @@ const getLiveLinesEditorElementFromPayload = (payload) => {
       return undefined;
     }
 
-    const wrapper =
-      node.querySelector("rvn-scene-document-editor-lexical") ||
-      node.querySelector("rvn-lines-editor-lexical");
-    const primitive =
-      wrapper?.shadowRoot?.querySelector?.(
-        "rvn-lexical-scene-document-editor",
-      ) || wrapper?.shadowRoot?.querySelector?.("rvn-lexical-line-editor");
+    const wrapper = node.querySelector("rvn-scene-document-editor-lexical");
+    const primitive = wrapper?.shadowRoot?.querySelector?.(
+      "rvn-lexical-scene-document-editor",
+    );
 
     return primitive || wrapper;
   };
@@ -167,10 +162,6 @@ const getLiveLinesFromElement = (element) => {
   return (
     element?.getLines?.() || element?.getLinesSnapshot?.() || element?.lines
   );
-};
-
-const isDocumentEditor = (deps) => {
-  return deps?.props?.editorKind === "document";
 };
 
 const resolveActionTargetLineId = (store) => {
@@ -993,9 +984,7 @@ export const handleEditorDataChanged = async (deps, payload) => {
       selectedLineId,
     });
   }
-  if (changeReason !== "text" || isDocumentEditor(deps)) {
-    deps.render();
-  }
+  deps.render();
   const focusTarget = payload?._event?.detail?.focusTarget;
   if (focusTarget?.lineId) {
     requestAnimationFrame(() => {
@@ -1036,9 +1025,7 @@ export const handleEditorBlur = async (deps) => {
   }
 
   setTimeout(() => {
-    if (isDocumentEditor(deps)) {
-      deps.render();
-    }
+    deps.render();
 
     if (skipDraftFlush) {
       return;
@@ -1062,21 +1049,6 @@ export const handleSelectedLineChanged = (deps, payload) => {
   store.setSelectedLineId({ selectedLineId: lineId });
 
   render();
-
-  if (
-    !isDocumentEditor(deps) &&
-    detail.isCollapsed === true &&
-    Number.isFinite(detail.cursorPosition)
-  ) {
-    const focusTarget = {
-      lineId,
-      cursorPosition: detail.cursorPosition,
-    };
-    focusLinesEditorLine(deps.refs, focusTarget);
-    requestAnimationFrame(() => {
-      focusLinesEditorLine(deps.refs, focusTarget);
-    });
-  }
 
   dispatchLineNavigationRender(subject, store, {
     previousLineId,
@@ -1272,83 +1244,75 @@ export const handleNewLine = async (deps, payload) => {
   }
   cancelSceneEditorDraftFlush(deps);
 
-  if (isDocumentEditor(deps)) {
-    const { store, render, subject, refs, projectService } = deps;
-    const detail = payload?._event?.detail || {};
-    const draftSection =
-      store.selectDraftSection() || reconcileCurrentEditorSession(deps);
-    if (!draftSection) {
-      return;
-    }
-
-    const lines = cloneSceneEditorLines(draftSection.lines);
-    const requestedPosition =
-      detail.position === "before" || detail.position === "after"
-        ? detail.position
-        : undefined;
-    const selectedLineId = store.selectSelectedLineId();
-    const baseLineId =
-      typeof detail.lineId === "string" && detail.lineId
-        ? detail.lineId
-        : selectedLineId;
-    const baseLine = baseLineId
-      ? lines.find((line) => line.id === baseLineId)
-      : undefined;
-    const fallbackLine = selectedLineId
-      ? lines.find((line) => line.id === selectedLineId)
-      : undefined;
-    const controlAction = resolveDocumentLineControlAction({
-      repositoryState: projectService.getRepositoryState(),
-      line: baseLine,
-      fallbackLine,
-    });
-    const newLine = createDocumentDraftLine({
-      sectionId: draftSection.sectionId || baseLine?.sectionId,
-      controlAction,
-    });
-    const baseIndex = baseLineId
-      ? lines.findIndex((line) => line.id === baseLineId)
-      : -1;
-
-    if (requestedPosition === "before" && baseIndex >= 0) {
-      lines.splice(baseIndex, 0, newLine);
-    } else if (requestedPosition === "after" && baseIndex >= 0) {
-      lines.splice(baseIndex + 1, 0, newLine);
-    } else {
-      lines.push(newLine);
-    }
-
-    const nextDraftSection = replaceSceneEditorDraftSectionLines(draftSection, {
-      lines,
-      source: "structure",
-      dirty: true,
-    });
-    store.setDraftSection({ draftSection: nextDraftSection });
-    store.setSelectedLineId({ selectedLineId: newLine.id });
-    render();
-    subject.dispatch("sceneEditor.renderCanvas", {
-      skipRender: true,
-      skipAnimations: true,
-    });
-
-    const focusTarget = {
-      lineId: newLine.id,
-      cursorPosition: 0,
-    };
-    requestAnimationFrame(() => {
-      focusLinesEditorLine(refs, focusTarget);
-      requestAnimationFrame(() => {
-        focusLinesEditorLine(refs, focusTarget);
-      });
-    });
-
-    scheduleSceneEditorDraftFlush(deps, {
-      reason: "structure",
-    });
+  const { store, render, subject, refs, projectService } = deps;
+  const detail = payload?._event?.detail || {};
+  const draftSection =
+    store.selectDraftSection() || reconcileCurrentEditorSession(deps);
+  if (!draftSection) {
     return;
   }
 
-  await handleNewLineOperation(deps, payload);
+  const lines = cloneSceneEditorLines(draftSection.lines);
+  const requestedPosition =
+    detail.position === "before" || detail.position === "after"
+      ? detail.position
+      : undefined;
+  const selectedLineId = store.selectSelectedLineId();
+  const baseLineId =
+    typeof detail.lineId === "string" && detail.lineId
+      ? detail.lineId
+      : selectedLineId;
+  const baseLine = baseLineId
+    ? lines.find((line) => line.id === baseLineId)
+    : undefined;
+  const fallbackLine = selectedLineId
+    ? lines.find((line) => line.id === selectedLineId)
+    : undefined;
+  const controlAction = resolveDocumentLineControlAction({
+    repositoryState: projectService.getRepositoryState(),
+    line: baseLine,
+    fallbackLine,
+  });
+  const newLine = createDocumentDraftLine({
+    sectionId: draftSection.sectionId || baseLine?.sectionId,
+    controlAction,
+  });
+  const baseIndex = baseLineId
+    ? lines.findIndex((line) => line.id === baseLineId)
+    : -1;
+
+  if (requestedPosition === "before" && baseIndex >= 0) {
+    lines.splice(baseIndex, 0, newLine);
+  } else if (requestedPosition === "after" && baseIndex >= 0) {
+    lines.splice(baseIndex + 1, 0, newLine);
+  } else {
+    lines.push(newLine);
+  }
+
+  const nextDraftSection = replaceSceneEditorDraftSectionLines(draftSection, {
+    lines,
+    source: "structure",
+    dirty: true,
+  });
+  store.setDraftSection({ draftSection: nextDraftSection });
+  store.setSelectedLineId({ selectedLineId: newLine.id });
+  render();
+  subject.dispatch("sceneEditor.renderCanvas", {
+    skipRender: true,
+    skipAnimations: true,
+  });
+
+  const focusTarget = {
+    lineId: newLine.id,
+    cursorPosition: 0,
+  };
+  requestAnimationFrame(() => {
+    focusLinesEditorLine(refs, focusTarget);
+    requestAnimationFrame(() => {
+      focusLinesEditorLine(refs, focusTarget);
+    });
+  });
+
   scheduleSceneEditorDraftFlush(deps, {
     reason: "structure",
   });
@@ -1459,61 +1423,52 @@ export const handleSwapLine = async (deps, payload) => {
   }
   cancelSceneEditorDraftFlush(deps);
 
-  if (isDocumentEditor(deps)) {
-    const { store, render, refs, subject } = deps;
-    const detail = payload?._event?.detail || {};
-    const direction =
-      detail.direction === "up" || detail.direction === "down"
-        ? detail.direction
-        : undefined;
-    const lineId =
-      typeof detail.lineId === "string" && detail.lineId
-        ? detail.lineId
-        : store.selectSelectedLineId();
-    const draftSection =
-      store.selectDraftSection() || reconcileCurrentEditorSession(deps);
+  const { store, render, refs, subject } = deps;
+  const detail = payload?._event?.detail || {};
+  const direction =
+    detail.direction === "up" || detail.direction === "down"
+      ? detail.direction
+      : undefined;
+  const lineId =
+    typeof detail.lineId === "string" && detail.lineId
+      ? detail.lineId
+      : store.selectSelectedLineId();
+  const draftSection =
+    store.selectDraftSection() || reconcileCurrentEditorSession(deps);
 
-    if (!direction || !lineId || !draftSection) {
-      return;
-    }
-
-    const lines = cloneSceneEditorLines(draftSection.lines);
-    const currentIndex = lines.findIndex((line) => line.id === lineId);
-    const targetIndex =
-      direction === "up" ? currentIndex - 1 : currentIndex + 1;
-
-    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= lines.length) {
-      return;
-    }
-
-    const [movedLine] = lines.splice(currentIndex, 1);
-    lines.splice(targetIndex, 0, movedLine);
-
-    const nextDraftSection = replaceSceneEditorDraftSectionLines(draftSection, {
-      lines,
-      source: "structure",
-      dirty: true,
-    });
-    store.setDraftSection({ draftSection: nextDraftSection });
-    store.setSelectedLineId({ selectedLineId: lineId });
-    render();
-    subject.dispatch("sceneEditor.renderCanvas", {
-      skipRender: true,
-      skipAnimations: true,
-    });
-
-    requestAnimationFrame(() => {
-      scrollLinesEditorLineIntoView(refs, lineId);
-      focusLinesEditorContainer(refs);
-    });
-
-    scheduleSceneEditorDraftFlush(deps, {
-      reason: "structure",
-    });
+  if (!direction || !lineId || !draftSection) {
     return;
   }
 
-  await handleSwapLineOperation(deps, payload);
+  const lines = cloneSceneEditorLines(draftSection.lines);
+  const currentIndex = lines.findIndex((line) => line.id === lineId);
+  const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+
+  if (currentIndex < 0 || targetIndex < 0 || targetIndex >= lines.length) {
+    return;
+  }
+
+  const [movedLine] = lines.splice(currentIndex, 1);
+  lines.splice(targetIndex, 0, movedLine);
+
+  const nextDraftSection = replaceSceneEditorDraftSectionLines(draftSection, {
+    lines,
+    source: "structure",
+    dirty: true,
+  });
+  store.setDraftSection({ draftSection: nextDraftSection });
+  store.setSelectedLineId({ selectedLineId: lineId });
+  render();
+  subject.dispatch("sceneEditor.renderCanvas", {
+    skipRender: true,
+    skipAnimations: true,
+  });
+
+  requestAnimationFrame(() => {
+    scrollLinesEditorLineIntoView(refs, lineId);
+    focusLinesEditorContainer(refs);
+  });
+
   scheduleSceneEditorDraftFlush(deps, {
     reason: "structure",
   });
@@ -1882,38 +1837,18 @@ export const handlePreviewClick = (deps, payload) => {
         getLiveLinesFromElement(liveLinesEditorElement),
       );
 
-      if (isDocumentEditor(deps)) {
-        cancelSceneEditorDraftFlush(deps);
-        if (Array.isArray(liveLines) && liveLines.length > 0) {
-          void projectService
-            .syncSectionLinesSnapshot({
-              sectionId,
-              lines: liveLines,
-            })
-            .then(() => {
-              syncStoreProjectState(store, projectService);
-            })
-            .catch(() => {});
-        }
-        store.showPreviewSceneId({ sceneId, sectionId, lineId });
-        store.setSkipNextEditorBlurDraftFlush({ value: false });
-        render();
-        return;
+      cancelSceneEditorDraftFlush(deps);
+      if (Array.isArray(liveLines) && liveLines.length > 0) {
+        void projectService
+          .syncSectionLinesSnapshot({
+            sectionId,
+            lines: liveLines,
+          })
+          .then(() => {
+            syncStoreProjectState(store, projectService);
+          })
+          .catch(() => {});
       }
-
-      await new Promise((resolve) => {
-        requestAnimationFrame(() => {
-          resolve();
-        });
-      });
-      syncDraftSectionFromLines(
-        deps,
-        getLiveLinesFromElement(liveLinesEditorElement),
-      );
-      await flushSceneEditorDrafts(deps, {
-        liveLines,
-      });
-      appService.blurActiveElement();
       store.showPreviewSceneId({ sceneId, sectionId, lineId });
       store.setSkipNextEditorBlurDraftFlush({ value: false });
       render();

@@ -150,10 +150,7 @@ template:
                               - rtgl-text s=sm: ...
                           - rtgl-view w=1fg: null
                       - rtgl-view w=f ph=sm pv=md sv h=1fg:
-                          - $if editorKind == "document":
-                              - rvn-scene-document-editor-lexical#linesEditor key=${linesEditorKey} :lines=${documentEditorLines} :lineDecorations=${documentLineDecorations} :selectedLineId=${selectedLineId} :showLineNumbers=${sceneSettings.showLineNumbers} :textStyles=${textStyles}: null
-                            $else:
-                              - rvn-lines-editor-lexical#linesEditor key=${linesEditorKey} :lines=${currentLines} :selectedLineId=${selectedLineId} :showLineNumbers=${sceneSettings.showLineNumbers}: null
+                          - rvn-scene-document-editor-lexical#linesEditor key=${linesEditorKey} :lines=${documentEditorLines} :lineDecorations=${documentLineDecorations} :selectedLineId=${selectedLineId} :showLineNumbers=${sceneSettings.showLineNumbers} :textStyles=${textStyles}: null
                           - rtgl-view h=30vh: null
           - rtgl-view w=1 h=f bgc=mu: null
           - 'rtgl-view w=1fg d=v h=f style="min-width: 0; min-height: 0;"':
@@ -172,10 +169,6 @@ template:
                           - rtgl-text s=sm c=mu-fg: State
                       - rtgl-view g=md w=f pv=md:
                           - rvn-system-actions#systemActions :showSelected=${true} :actions=${selectedLineActions} :selectedLineId=${selectedLineId} :selectedLine=${selectedLine} :currentSceneId=${scene.id} actionType=presentation :presentationState=${presentationState}: null
-                      - rtgl-view d=v g=xs w=f mt=md:
-                          - rtgl-text s=sm c=mu-fg: Dialogue Content JSON
-                          - 'rtgl-view w=f p=sm bgc=mu br=sm style="max-height: 280px; overflow: auto;"':
-                              - 'pre style="margin: 0; color: rgba(248, 250, 252, 0.96); font-size: 12px; line-height: 1.45; white-space: pre-wrap; word-break: break-word;"': ${dialogueContentJson}
       - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
       - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
           - rtgl-form#form slot=content :form=${form}: null

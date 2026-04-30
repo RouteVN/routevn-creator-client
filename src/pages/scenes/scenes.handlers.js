@@ -910,36 +910,6 @@ export const handleDetailPreviewClick = (deps, payload) => {
   render();
 };
 
-export const handleDetailLexicalLinesClick = (deps, payload) => {
-  payload?._event?.stopPropagation?.();
-  const { store, appService } = deps;
-  const selectedItemId = store.selectSelectedItemId();
-  if (!selectedItemId) {
-    return;
-  }
-
-  navigateToSceneEditor({
-    appService,
-    sceneId: selectedItemId,
-    route: "/project/scene-editor-lexical-lines",
-  });
-};
-
-export const handleDetailLexicalDocumentClick = (deps, payload) => {
-  payload?._event?.stopPropagation?.();
-  const { store, appService } = deps;
-  const selectedItemId = store.selectSelectedItemId();
-  if (!selectedItemId) {
-    return;
-  }
-
-  navigateToSceneEditor({
-    appService,
-    sceneId: selectedItemId,
-    route: "/project/scene-editor-lexical-document",
-  });
-};
-
 export const handleDropdownMenuClickItem = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
   const detail = payload._event.detail;

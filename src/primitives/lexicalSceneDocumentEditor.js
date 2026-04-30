@@ -829,6 +829,17 @@ const applySelectionToLineNode = (lineNode, selectionSnapshot = {}) => {
   $setSelection(selection);
 };
 
+const clearSelectionTextFormatting = (selection) => {
+  selection.format = 0;
+  selection.setStyle("");
+
+  const anchorNode = selection.anchor.getNode();
+  if ($isTextNode(anchorNode)) {
+    anchorNode.setFormat(0);
+    anchorNode.setStyle("");
+  }
+};
+
 export const LEXICAL_SCENE_DOCUMENT_EDITOR_TAG_NAME =
   "rvn-lexical-scene-document-editor";
 
@@ -874,6 +885,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.leftGutterRowsByLineId = new Map();
     this.rightGutterRowsByLineId = new Map();
     this.pendingSoftLineBreakBeforeInput = false;
+    this.pendingParagraphSplitBeforeInput = false;
 
     this.editor = createEditor({
       namespace: "routevn-lexical-scene-document-editor",
@@ -947,6 +959,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       this.editor.registerCommand(
         KEY_ENTER_COMMAND,
         (event) => {
+          if (event?.isComposing || this.isComposing) {
+            return false;
+          }
+
           if (
             this.state.mentionMenu.isOpen &&
             this.state.mentionMenu.items.length > 0
@@ -967,7 +983,14 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
             return true;
           }
 
-          return false;
+          event?.preventDefault?.();
+          event?.stopPropagation?.();
+          this.pendingParagraphSplitBeforeInput = true;
+          this.splitCurrentLine();
+          requestAnimationFrame(() => {
+            this.pendingParagraphSplitBeforeInput = false;
+          });
+          return true;
         },
         COMMAND_PRIORITY_HIGH,
       ),
@@ -1865,6 +1888,19 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
 
     const inputType = String(event.inputType ?? "");
+    if (inputType === "insertParagraph") {
+      event.preventDefault();
+      event.stopPropagation?.();
+      event.stopImmediatePropagation?.();
+      if (this.pendingParagraphSplitBeforeInput) {
+        this.pendingParagraphSplitBeforeInput = false;
+        return;
+      }
+
+      this.splitCurrentLine();
+      return;
+    }
+
     if (inputType === "insertLineBreak") {
       event.preventDefault();
       event.stopPropagation?.();
@@ -2660,6 +2696,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         });
         this.lineKeyById.set(newLineId, nextLineNode.getKey());
         nextLineNode.selectStart();
+
+        const selection = $getSelection();
+        if ($isRangeSelection(selection) && getContentLength(after) === 0) {
+          clearSelectionTextFormatting(selection);
+        }
       },
       { discrete: true },
     );
@@ -2674,6 +2715,15 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         () => {
           const nextLineNode = $getNodeByKey(nextLineKey);
           nextLineNode?.selectStart();
+
+          const selection = $getSelection();
+          if (
+            nextLineNode &&
+            $isRangeSelection(selection) &&
+            getContentLength(this.serializeLineContent(nextLineNode)) === 0
+          ) {
+            clearSelectionTextFormatting(selection);
+          }
         },
         { discrete: true },
       );
@@ -2846,6 +2896,8 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           return;
         }
 
+        this.clearEmptyLineInsertionFormatting(selection);
+
         const anchorNode = selection.anchor.getNode();
         if ($isTextNode(anchorNode)) {
           const anchorText = anchorNode.getTextContent();
@@ -2867,6 +2919,22 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       },
       { discrete: true },
     );
+  }
+
+  clearEmptyLineInsertionFormatting(selection) {
+    if (!selection.isCollapsed()) {
+      return;
+    }
+
+    const lineNode = this.getLineNodeFromSelection(selection);
+    if (
+      !lineNode ||
+      getContentLength(this.serializeLineContent(lineNode)) !== 0
+    ) {
+      return;
+    }
+
+    clearSelectionTextFormatting(selection);
   }
 
   insertSoftLineBreak() {
