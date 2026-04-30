@@ -573,30 +573,6 @@ export const handleProjectsClick = async (deps, payload) => {
   });
 };
 
-export const handleProjectPocButtonClick = async (deps, payload) => {
-  const event = payload?._event;
-  event?.preventDefault?.();
-  event?.stopPropagation?.();
-
-  const projectId = getProjectIdFromEvent(event);
-  return navigateToProjectRoute(deps, {
-    projectId,
-    path: "/project/segmented-text-poc",
-  });
-};
-
-export const handleProjectLexicalPocButtonClick = async (deps, payload) => {
-  const event = payload?._event;
-  event?.preventDefault?.();
-  event?.stopPropagation?.();
-
-  const projectId = getProjectIdFromEvent(event);
-  return navigateToProjectRoute(deps, {
-    projectId,
-    path: "/project/lexical-mentions-poc",
-  });
-};
-
 export const handleProjectContextMenu = (deps, payload) => {
   const { appService, store, render } = deps;
   payload._event.preventDefault();

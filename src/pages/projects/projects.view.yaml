@@ -61,16 +61,6 @@ refs:
         handler: handleProjectsClick
       contextmenu:
         handler: handleProjectContextMenu
-  pocButton*:
-    eventListeners:
-      click:
-        required: true
-        handler: handleProjectPocButtonClick
-  lexicalPocButton*:
-    eventListeners:
-      click:
-        required: true
-        handler: handleProjectLexicalPocButtonClick
   cloudProject*:
     eventListeners:
       click:
@@ -179,9 +169,6 @@ template:
                                           - rtgl-view d=h g=sm av=c mt=xs:
                                               - rtgl-svg wh=14 svg=folder c=mu-fg: null
                                               - rtgl-text s=xs c=mu-fg: ${project.projectPath}
-                                      - rtgl-view d=h g=sm:
-                                          - rtgl-button#pocButton${i} data-project-id=${project.id} variant=se: Text POC
-                                          - rtgl-button#lexicalPocButton${i} data-project-id=${project.id} variant=se: Lexical POC
                               - rtgl-view h="33vh": null
                           - $if showCloudProjects:
                               - rtgl-view w=f d=v g=md:
