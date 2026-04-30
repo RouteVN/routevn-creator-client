@@ -74,6 +74,43 @@ const MIN_EDITOR_TEXT_WIDTH = 160;
 const BLOCK_ROW_BACKGROUND = "var(--muted)";
 const DELETE_SHORTCUT_TIMEOUT_MS = 1200;
 
+const normalizeMentionTarget = (target = {}) => {
+  const label = String(target.label ?? "")
+    .trim()
+    .replace(/^@+/, "");
+  if (!label) {
+    return undefined;
+  }
+
+  const mentionTarget = {
+    id: String(target.id ?? label),
+    label,
+  };
+
+  if (typeof target.variableType === "string" && target.variableType) {
+    mentionTarget.variableType = target.variableType;
+  }
+
+  return mentionTarget;
+};
+
+const normalizeMentionTargets = (targets = []) => {
+  const result = [];
+  const seenIds = new Set();
+
+  for (const target of Array.isArray(targets) ? targets : []) {
+    const mentionTarget = normalizeMentionTarget(target);
+    if (!mentionTarget || seenIds.has(mentionTarget.id)) {
+      continue;
+    }
+
+    seenIds.add(mentionTarget.id);
+    result.push(mentionTarget);
+  }
+
+  return result;
+};
+
 const STYLES = `
   rvn-lexical-scene-document-editor {
     display: block;
@@ -813,6 +850,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       showLineNumbers: true,
       mode: "block",
       plainText: "",
+      mentionTargets: [],
       activeFormats: {
         bold: false,
         italic: false,
@@ -1172,6 +1210,14 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   get textStyles() {
     return this.state.textStyles;
+  }
+
+  set mentionTargets(value) {
+    this.state.mentionTargets = normalizeMentionTargets(value);
+  }
+
+  get mentionTargets() {
+    return normalizeMentionTargets(this.state.mentionTargets);
   }
 
   set selectedLineId(value) {
@@ -3075,7 +3121,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       .join("\n");
 
     if (snapshot.mentionTrigger) {
-      const items = filterMentionSuggestions(snapshot.mentionTrigger.query);
+      const items = filterMentionSuggestions(
+        snapshot.mentionTrigger.query,
+        this.state.mentionTargets,
+      );
       this.state.mentionMenu = {
         isOpen: true,
         query: snapshot.mentionTrigger.query,
@@ -3797,7 +3846,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       id: `mention:${item.id}`,
       type: "item",
       label: `@${item.label}`,
-      suffixText: item.id,
+      suffixText: item.variableType
+        ? `${item.id} (${item.variableType})`
+        : item.id,
     }));
     menu.x = String(menuState.left);
     menu.y = String(menuState.top);

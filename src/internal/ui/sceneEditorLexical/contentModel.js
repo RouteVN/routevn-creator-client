@@ -1,16 +1,6 @@
 export const ACCENT_FILL = "#b45309";
 export const EDITOR_CARET_TEXT = "\u200b";
 
-export const MENTION_SUGGESTIONS = [
-  { id: "user-alice", label: "alice" },
-  { id: "user-allen", label: "allen" },
-  { id: "user-amina", label: "amina" },
-  { id: "user-brook", label: "brook" },
-  { id: "user-kai", label: "kai" },
-  { id: "user-route-dev", label: "route-dev" },
-  { id: "user-scene-editor", label: "scene-editor" },
-];
-
 export const normalizeSingleLineText = (value) => {
   return String(value ?? "")
     .replaceAll(EDITOR_CARET_TEXT, "")

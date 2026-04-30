@@ -13,7 +13,6 @@ import {
 import { $getSelectionStyleValueForProperty } from "@lexical/selection";
 import {
   ACCENT_FILL,
-  MENTION_SUGGESTIONS,
   cloneContentItems,
   cloneFurigana,
   cloneMentionItem,
@@ -511,14 +510,37 @@ export const getMentionTriggerMatch = (selection) => {
   };
 };
 
-export const filterMentionSuggestions = (query) => {
-  const normalizedQuery = String(query ?? "").toLowerCase();
-  if (!normalizedQuery) {
-    return [...MENTION_SUGGESTIONS];
+const normalizeMentionSuggestion = (option = {}) => {
+  const label = normalizeMentionLabel(option.label);
+  if (!label) {
+    return undefined;
   }
 
-  return MENTION_SUGGESTIONS.filter((option) => {
-    return option.label.toLowerCase().startsWith(normalizedQuery);
+  const suggestion = {
+    id: String(option.id ?? label),
+    label,
+  };
+
+  if (typeof option.variableType === "string" && option.variableType) {
+    suggestion.variableType = option.variableType;
+  }
+
+  return suggestion;
+};
+
+export const filterMentionSuggestions = (query, suggestions = []) => {
+  const normalizedSuggestions = (Array.isArray(suggestions) ? suggestions : [])
+    .map((option) => normalizeMentionSuggestion(option))
+    .filter(Boolean);
+  const normalizedQuery = String(query ?? "").toLowerCase();
+  if (!normalizedQuery) {
+    return normalizedSuggestions;
+  }
+
+  return normalizedSuggestions.filter((option) => {
+    const label = option.label.toLowerCase();
+    const id = option.id.toLowerCase();
+    return label.startsWith(normalizedQuery) || id.startsWith(normalizedQuery);
   });
 };
 

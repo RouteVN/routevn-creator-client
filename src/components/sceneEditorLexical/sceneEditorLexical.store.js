@@ -2,7 +2,10 @@ import {
   buildLayoutElements,
   isFragmentLayout,
 } from "../../internal/project/layout.js";
-import { toHierarchyStructure } from "../../internal/project/tree.js";
+import {
+  toFlatItems,
+  toHierarchyStructure,
+} from "../../internal/project/tree.js";
 import { buildSceneDocumentLineDecorations } from "../../internal/ui/sceneEditor/lineViewModels.js";
 import {
   cloneSceneEditorLines,
@@ -73,6 +76,37 @@ const buildTextStyleOptions = (repositoryState = {}) => {
     .map((item) => ({
       id: item.id,
       name: item.name || item.id,
+    }));
+};
+
+const MENTION_VARIABLE_TYPES = new Set(["string", "number", "integer"]);
+
+const buildMentionTargetOptions = (repositoryState = {}) => {
+  const variablesData = repositoryState.variables || { items: {}, tree: [] };
+  const variableItems = variablesData.items || {};
+  const flatItems = toFlatItems(variablesData);
+  const seenIds = new Set(flatItems.map((item) => item.id));
+
+  for (const [id, item] of Object.entries(variableItems)) {
+    if (seenIds.has(id)) {
+      continue;
+    }
+
+    flatItems.push({
+      id,
+      ...item,
+    });
+  }
+
+  return flatItems
+    .filter((item) => {
+      const variableType = String(item?.type ?? "").toLowerCase();
+      return MENTION_VARIABLE_TYPES.has(variableType);
+    })
+    .map((item) => ({
+      id: item.id,
+      label: item.name || item.id,
+      variableType: String(item.type).toLowerCase(),
     }));
 };
 
@@ -992,6 +1026,7 @@ export const selectViewData = ({ state }) => {
       sectionsOverviewItems: [],
       documentEditorLines: [],
       textStyles: [],
+      mentionTargets: [],
       currentLine: null,
       actionsData: [],
       presentationState: null,
@@ -1017,6 +1052,7 @@ export const selectViewData = ({ state }) => {
   const layouts = repositoryState.layouts || { items: {} };
   const controls = repositoryState.controls || { items: {} };
   const textStyles = buildTextStyleOptions(repositoryState);
+  const mentionTargets = buildMentionTargetOptions(repositoryState);
   const selectedSceneFirstSectionId = scene.sections?.[0]?.id;
   const selectedSceneInitialSectionId =
     scene.initialSectionId || selectedSceneFirstSectionId;
@@ -1195,6 +1231,7 @@ export const selectViewData = ({ state }) => {
     sectionsOverviewItems,
     documentEditorLines,
     textStyles,
+    mentionTargets,
     documentLineDecorations,
     dropdownMenu: state.dropdownMenu,
     popover: state.popover,

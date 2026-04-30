@@ -22,4 +22,4 @@ refs:
       furigana-dialog-request:
         handler: handleFuriganaDialogRequest
 template:
-  - rvn-lexical-scene-document-editor#editor :lines=${lines} :lineDecorations=${lineDecorations} :selectedLineId=${selectedLineId} :showLineNumbers=${showLineNumbers} :textStyles=${textStyles}: null
+  - rvn-lexical-scene-document-editor#editor :lines=${lines} :lineDecorations=${lineDecorations} :selectedLineId=${selectedLineId} :showLineNumbers=${showLineNumbers} :textStyles=${textStyles} :mentionTargets=${mentionTargets}: null

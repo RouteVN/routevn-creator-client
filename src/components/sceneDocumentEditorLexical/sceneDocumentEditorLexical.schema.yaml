@@ -25,6 +25,17 @@ propsSchema:
             type: string
           name:
             type: string
+    mentionTargets:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          label:
+            type: string
+          variableType:
+            type: string
 methods:
   type: object
   properties:
