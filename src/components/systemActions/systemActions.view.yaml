@@ -38,7 +38,7 @@ refs:
 template:
   - $if showSelected:
       - rtgl-view g=md w=f:
-          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.resetStoryAtSection || preview.dialogue || preview.choice || preview.control || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.startSkipMode || preview.stopSkipMode || preview.toggleDialogueUI || preview.runtimeActions || preview.setNextLineConfig || preview.updateVariable || preview.pushOverlay || preview.popOverlay || preview.rollbackByOffset || preview.showConfirmDialog || preview.hideConfirmDialog || preview.saveSlot || preview.loadSlot:
+          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.resetStoryAtSection || preview.dialogue || preview.choice || preview.control || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.startSkipMode || preview.stopSkipMode || preview.toggleDialogueUI || preview.runtimeActions || preview.setNextLineConfig || preview.updateVariable || preview.conditional || preview.pushOverlay || preview.popOverlay || preview.rollbackByOffset || preview.showConfirmDialog || preview.hideConfirmDialog || preview.saveSlot || preview.loadSlot:
               - $if preview.control:
                   - rtgl-view#actionItemControl data-mode=control g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=control wh=24: null
@@ -179,6 +179,12 @@ template:
                   - rtgl-view#actionItemUpdateVariable data-mode=updateVariable g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=variable wh=24: null
                       - rtgl-text s=sm: ${preview.updateVariable.summary}
+              - $if preview.conditional:
+                  - rtgl-view#actionItemConditional data-mode=conditional g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer pv=md:
+                      - rtgl-svg svg=settings wh=24: null
+                      - rtgl-view d=v:
+                          - rtgl-text s=sm: 'Conditional: ${preview.conditional.summary}'
+                          - rtgl-text s=xs c=mu-fg: ${preview.conditional.actionsSummary}
           - rtgl-button#addActionButton v=ol w=f: +
           - $if actionsType == 'system':
               - rtgl-view d=h av=c ah=e w=f g=lg:
@@ -209,7 +215,7 @@ template:
                 $elif mode == "control":
                   - rvn-command-line-control#commandLineControl :controls=${controlLayouts} :control=${actions.control}: null
                 $elif mode == "nextLine":
-                  - rvn-command-line-next-line#commandLineNextLine :nextLine=${selectedLine.actions.nextLine}: null
+                  - rvn-command-line-next-line#commandLineNextLine :nextLine=${actions.nextLine}: null
                 $elif mode == "toggleAutoMode":
                   - rvn-command-line-toggle-auto-mode#commandLineToggleAutoMode :toggleAutoMode=${actions.toggleAutoMode}: null
                 $elif mode == "toggleSkipMode":
@@ -240,6 +246,8 @@ template:
                   - rvn-command-line-set-next-line-config#commandLineSetNextLineConfig :setNextLineConfig=${actions.setNextLineConfig}: null
                 $elif mode == "updateVariable":
                   - rvn-command-line-update-variable#commandLineUpdateVariable :updateVariable=${actions.updateVariable}: null
+                $elif mode == "conditional":
+                  - rvn-command-line-conditional#commandLineConditional :conditional=${actions.conditional} :hiddenModes=${hiddenModes}: null
                 $elif isRuntimeActionMode:
                   - rvn-command-line-runtime-action#commandLineRuntimeAction :mode=${mode} :action=${actions[mode]}: null
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

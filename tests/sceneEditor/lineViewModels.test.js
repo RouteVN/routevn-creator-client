@@ -214,4 +214,44 @@ describe("sceneEditor.lineViewModels", () => {
       ],
     });
   });
+
+  it("marks conditional actions for inline action previews", () => {
+    const lines = [
+      {
+        id: "line-1",
+        actions: {
+          conditional: {
+            branches: [
+              {
+                when: { gte: [{ var: "variables.trust" }, 70] },
+                actions: {
+                  nextLine: {},
+                },
+              },
+              {
+                actions: {
+                  nextLine: {},
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: "line-2",
+        actions: {},
+      },
+    ];
+
+    const viewModels = buildSceneEditorLineViewModels({
+      lines,
+      repositoryState: createRepositoryState(),
+      sectionLineChanges: {
+        lines: [],
+      },
+    });
+
+    expect(viewModels[0].hasConditional).toBe(true);
+    expect(viewModels[1].hasConditional).toBe(false);
+  });
 });

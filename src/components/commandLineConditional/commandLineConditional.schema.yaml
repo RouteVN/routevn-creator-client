@@ -1,4 +1,15 @@
 componentName: rvn-command-line-conditional
 propsSchema:
   type: object
-  properties: {}
+  properties:
+    conditional:
+      type: object
+      properties:
+        branches:
+          type: array
+          items:
+            type: object
+    hiddenModes:
+      type: array
+      items:
+        type: string

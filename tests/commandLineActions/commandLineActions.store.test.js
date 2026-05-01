@@ -53,6 +53,7 @@ describe("commandLineActions.store", () => {
     expect(iconByMode.decrementSaveLoadPagination).toBe("settings");
     expect(iconByMode.setMenuPage).toBe("settings");
     expect(iconByMode.setMenuEntryPoint).toBe("settings");
+    expect(iconByMode.conditional).toBe("settings");
   });
 
   it("offers resetStoryAtSection in system actions and drops resetStorySession", () => {
@@ -101,6 +102,24 @@ describe("commandLineActions.store", () => {
       ),
     ).toBe(true);
     expect(items.some((item) => item.mode === "updateVariable")).toBe(true);
+  });
+
+  it("shows conditional actions in the logic section", () => {
+    const systemItems = selectItems({
+      props: {
+        actionsType: "system",
+      },
+    });
+    const presentationItems = selectItems({
+      props: {
+        actionsType: "presentation",
+      },
+    });
+
+    expect(getSectionModes(systemItems, "Logic")).toEqual(["conditional"]);
+    expect(getSectionModes(presentationItems, "Logic")).toEqual([
+      "conditional",
+    ]);
   });
 
   it("moves dialogue text speed into the dialogue section", () => {

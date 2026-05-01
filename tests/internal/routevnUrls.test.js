@@ -78,6 +78,9 @@ describe("routevnUrls", () => {
     expect(getRoutevnCreatorSystemActionDocsUrl("updateVariable")).toBe(
       "https://routevn.com/creator/docs/line-actions/update-variable/",
     );
+    expect(getRoutevnCreatorSystemActionDocsUrl("conditional")).toBe(
+      "https://routevn.com/creator/docs/line-actions/controls/",
+    );
   });
 
   it("maps related system action modes to the closest documented guide", () => {

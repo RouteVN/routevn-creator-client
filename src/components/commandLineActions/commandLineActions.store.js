@@ -91,6 +91,14 @@ const SYSTEM_ACTION_SECTIONS = [
       mode: "updateVariable",
     },
   ]),
+  createSection("Logic", [
+    {
+      id: "27",
+      label: "Conditional",
+      icon: "settings",
+      mode: "conditional",
+    },
+  ]),
   createSection("Confirm Dialog", [
     {
       id: "20",
@@ -210,6 +218,14 @@ const PRESENTATION_ACTION_SECTIONS = [
       label: "Control",
       icon: "control",
       mode: "control",
+    },
+  ]),
+  createSection("Logic", [
+    {
+      id: "27",
+      label: "Conditional",
+      icon: "settings",
+      mode: "conditional",
     },
   ]),
 ];

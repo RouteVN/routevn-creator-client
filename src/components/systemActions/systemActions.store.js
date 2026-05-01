@@ -251,6 +251,44 @@ const formatSectionReferenceLabel = ({ scene, section, sectionId } = {}) => {
   return sectionName || sceneName;
 };
 
+const countActions = (actions = {}) => {
+  return actions && typeof actions === "object" && !Array.isArray(actions)
+    ? Object.keys(actions).length
+    : 0;
+};
+
+const isActionBranchDefault = (branch) => {
+  return (
+    branch &&
+    typeof branch === "object" &&
+    !Array.isArray(branch) &&
+    !Object.hasOwn(branch, "when")
+  );
+};
+
+const formatConditionalSummary = (branches = []) => {
+  const conditionalCount = branches.filter(
+    (branch) => !isActionBranchDefault(branch),
+  ).length;
+  const hasDefault = branches.some((branch) => isActionBranchDefault(branch));
+  const branchLabel =
+    conditionalCount === 1
+      ? "1 branch"
+      : conditionalCount > 1
+        ? `${conditionalCount} branches`
+        : "";
+
+  if (branchLabel && hasDefault) {
+    return `${branchLabel} + default`;
+  }
+
+  if (branchLabel) {
+    return branchLabel;
+  }
+
+  return hasDefault ? "default" : "0 branches";
+};
+
 // Moved from sceneEditor.store.js - now returns object instead of array
 export const selectActionsData = ({ props, state }) => {
   const actions = normalizeLineActions(props.actions || {});
@@ -430,6 +468,24 @@ export const selectActionsData = ({ props, state }) => {
         "No layout",
       confirmActionCount: Object.keys(confirmActions).length,
       cancelActionCount: Object.keys(cancelActions).length,
+    };
+  }
+
+  if (actions.conditional) {
+    actionsObject.conditional = actions.conditional;
+    const branches = Array.isArray(actions.conditional.branches)
+      ? actions.conditional.branches
+      : [];
+    const actionCount = branches.reduce(
+      (total, branch) => total + countActions(branch?.actions),
+      0,
+    );
+
+    preview.conditional = {
+      branchCount: branches.length,
+      actionCount,
+      summary: formatConditionalSummary(branches),
+      actionsSummary: `${actionCount} nested action${actionCount === 1 ? "" : "s"}`,
     };
   }
 

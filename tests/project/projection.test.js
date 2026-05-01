@@ -4,6 +4,7 @@ import {
   buildFilteredStateForExport,
   collectUsedResourcesForExport,
   constructProjectData,
+  getSectionPresentation,
 } from "../../src/internal/project/projection.js";
 
 const createTreeCollection = (items = {}, tree = []) => ({
@@ -75,6 +76,51 @@ const selectRouteEngineRenderState = (projectData) => {
 };
 
 describe("constructProjectData", () => {
+  it("counts conditional branch targets when determining section presentation", () => {
+    const presentation = getSectionPresentation({
+      section: {
+        id: "section-1",
+        lines: createTreeCollection(
+          {
+            "line-1": {
+              id: "line-1",
+              actions: {
+                conditional: {
+                  branches: [
+                    {
+                      when: "variables.trust >= 70",
+                      actions: {
+                        sectionTransition: {
+                          sceneId: "scene-1",
+                          sectionId: "section-2",
+                        },
+                      },
+                    },
+                    {
+                      actions: {
+                        resetStoryAtSection: {
+                          sectionId: "section-3",
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          [{ id: "line-1" }],
+        ),
+      },
+      initialSectionId: "section-1",
+      layouts: createTreeCollection(),
+      controls: createTreeCollection(),
+      menuSceneId: "menu-scene",
+    });
+
+    expect(presentation.outgoingCount).toBe(2);
+    expect(presentation.isDeadEnd).toBe(false);
+  });
+
   it("aligns dialogue mode to nvl when the selected ui layout is dialogue-nvl", () => {
     const projectData = constructProjectData({
       project: {
