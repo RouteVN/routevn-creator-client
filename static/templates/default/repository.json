@@ -2185,10 +2185,8 @@
                       "resourceId": "3SbNExCHBKaN",
                       "confirmActions": {
                         "popOverlay": {},
-                        "sectionTransition": {
-                          "sceneId": "HydQaTUAxHyS",
-                          "sectionId": "oivTjWAhhYG1",
-                          "animation": "fade"
+                        "resetStoryAtSection": {
+                          "sectionId": "oivTjWAhhYG1"
                         }
                       }
                     }
