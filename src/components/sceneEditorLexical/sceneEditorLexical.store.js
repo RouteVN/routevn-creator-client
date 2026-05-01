@@ -110,8 +110,6 @@ const buildMentionTargetOptions = (repositoryState = {}) => {
     }));
 };
 
-const POC_TEXT_STYLE_ID = "random";
-
 const isPlainObject = (value) => {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return false;
@@ -121,76 +119,7 @@ const isPlainObject = (value) => {
   return prototype === Object.prototype || prototype === null;
 };
 
-const findFirstResourceItem = (collection = {}, type) => {
-  return Object.values(collection?.items || {}).find((item) => {
-    return !type || item?.type === type;
-  });
-};
-
-const createPocTextStyleResource = (repositoryState = {}) => {
-  const existingTextStyle = findFirstResourceItem(
-    repositoryState.textStyles,
-    "textStyle",
-  );
-
-  if (existingTextStyle) {
-    return {
-      ...existingTextStyle,
-      id: POC_TEXT_STYLE_ID,
-      type: "textStyle",
-      name: "POC Inline Segment",
-      previewText: "POC Inline Segment",
-    };
-  }
-
-  const font = findFirstResourceItem(repositoryState.fonts, "font");
-  const color = findFirstResourceItem(repositoryState.colors, "color");
-  if (!font?.id || !color?.id) {
-    return undefined;
-  }
-
-  return {
-    id: POC_TEXT_STYLE_ID,
-    type: "textStyle",
-    name: "POC Inline Segment",
-    fontId: font.id,
-    colorId: color.id,
-    fontSize: 36,
-    lineHeight: 1.5,
-    fontWeight: "400",
-    previewText: "POC Inline Segment",
-  };
-};
-
-const ensurePocTextStyleResource = (repositoryState = {}) => {
-  const textStyles = repositoryState.textStyles || { items: {}, tree: [] };
-  const textStyleItems = textStyles.items || {};
-  if (textStyleItems[POC_TEXT_STYLE_ID]) {
-    return repositoryState;
-  }
-
-  const pocTextStyle = createPocTextStyleResource(repositoryState);
-  if (!pocTextStyle) {
-    return repositoryState;
-  }
-
-  return {
-    ...repositoryState,
-    textStyles: {
-      ...textStyles,
-      items: {
-        ...textStyleItems,
-        [POC_TEXT_STYLE_ID]: pocTextStyle,
-      },
-      tree: textStyles.tree || [],
-    },
-  };
-};
-
-const sanitizeDialogueContentInlineTextStyleMetadata = (
-  content,
-  { fallbackTextStyleId } = {},
-) => {
+const sanitizeDialogueContentInlineTextStyleMetadata = (content) => {
   if (!Array.isArray(content)) {
     return content;
   }
@@ -211,15 +140,6 @@ const sanitizeDialogueContentInlineTextStyleMetadata = (
     delete nextItem.textStyle;
     delete nextItem.textStyleSegmentId;
 
-    if (
-      hasInlineTextStyle &&
-      fallbackTextStyleId &&
-      typeof item.text === "string" &&
-      !item.textStyleId
-    ) {
-      nextItem.textStyleId = fallbackTextStyleId;
-    }
-
     changed = true;
     return nextItem;
   });
@@ -229,7 +149,6 @@ const sanitizeDialogueContentInlineTextStyleMetadata = (
 
 const sanitizeSceneDialogueContentInlineTextStyleMetadata = (
   repositoryState = {},
-  { fallbackTextStyleId } = {},
 ) => {
   const sceneItems = repositoryState.scenes?.items;
   if (!isPlainObject(sceneItems)) {
@@ -263,7 +182,6 @@ const sanitizeSceneDialogueContentInlineTextStyleMetadata = (
         const dialogue = line?.actions?.dialogue;
         const nextContent = sanitizeDialogueContentInlineTextStyleMetadata(
           dialogue?.content,
-          { fallbackTextStyleId },
         );
 
         if (nextContent === dialogue?.content) {
@@ -328,16 +246,7 @@ const sanitizeSceneDialogueContentInlineTextStyleMetadata = (
 };
 
 const prepareProjectDataSourceStateForPreview = (repositoryState = {}) => {
-  const repositoryStateWithPocTextStyle =
-    ensurePocTextStyleResource(repositoryState);
-  const hasPocTextStyle =
-    !!repositoryStateWithPocTextStyle.textStyles?.items?.[POC_TEXT_STYLE_ID];
-  const fallbackTextStyleId = hasPocTextStyle ? POC_TEXT_STYLE_ID : undefined;
-
-  return sanitizeSceneDialogueContentInlineTextStyleMetadata(
-    repositoryStateWithPocTextStyle,
-    { fallbackTextStyleId },
-  );
+  return sanitizeSceneDialogueContentInlineTextStyleMetadata(repositoryState);
 };
 
 const getDraftSectionForSelection = (state, sceneId, sectionId) => {

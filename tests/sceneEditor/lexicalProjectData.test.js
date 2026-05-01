@@ -153,8 +153,8 @@ describe("sceneEditorLexical.store selectProjectData", () => {
 
     expect(dialogueContent[0]).toMatchObject({
       text: "Styled dialogue",
-      textStyleId: "random",
     });
+    expect(dialogueContent[0]).not.toHaveProperty("textStyleId");
     expect(dialogueContent[0]).not.toHaveProperty("textStyle");
     expect(dialogueContent[0]).not.toHaveProperty("textStyleSegmentId");
     expect(projectData.resources.textStyles[conditionalTextStyleId]).toEqual(
