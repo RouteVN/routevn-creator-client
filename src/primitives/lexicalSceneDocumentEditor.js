@@ -650,6 +650,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.pendingParagraphSplitBeforeInput = false;
     this.isPointerDownInsideEditor = false;
     this.pointerDownInsideEditorTimerId = undefined;
+    this.pendingPointerFallbackSelection = undefined;
 
     this.editor = createEditor({
       namespace: "routevn-lexical-scene-document-editor",
@@ -1255,6 +1256,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   clearPointerDownInsideEditor() {
     this.isPointerDownInsideEditor = false;
+    this.pendingPointerFallbackSelection = undefined;
 
     if (this.pointerDownInsideEditorTimerId !== undefined) {
       clearTimeout(this.pointerDownInsideEditorTimerId);
@@ -1446,6 +1448,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.markPointerDownInsideEditor();
 
     const referenceSnapshot = this.getReferenceSnapshotFromContextEvent(event);
+    this.pendingPointerFallbackSelection =
+      referenceSnapshot === undefined
+        ? this.createPointerFallbackSelection(event)
+        : undefined;
     if (!referenceSnapshot) {
       this.clearSelectedReferenceNodeKey();
       return;
@@ -1475,10 +1481,18 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     const range = getSelectionRange(this.refs.editor);
     const lineId = this.getLineIdFromRange(range);
+    const fallbackSelection =
+      this.pendingPointerFallbackSelection ||
+      this.createPointerFallbackSelection(event);
     if (!lineId) {
       if (this.refs.editor?.contains(event?.target)) {
-        this.setMode("text-editor");
-        this.focus({ preventScroll: true });
+        const didRestoreFallback =
+          this.restorePointerFallbackSelection(fallbackSelection);
+        if (!didRestoreFallback) {
+          this.setMode("text-editor");
+          this.focus({ preventScroll: true });
+        }
+        this.schedulePointerFallbackSelectionValidation(fallbackSelection);
       }
       this.scheduleRender();
       return;
@@ -1487,6 +1501,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     const didLineChange = this.state.selectedLineId !== lineId;
     this.state.selectedLineId = lineId;
     this.scheduleRender();
+    this.schedulePointerFallbackSelectionValidation(fallbackSelection);
 
     if (didLineChange) {
       this.dispatchSelectedLineChanged(lineId, {
@@ -4077,6 +4092,178 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     return slot;
   }
 
+  getLineElementFromEvent(event) {
+    const target = event?.composedPath?.()[0] ?? event?.target;
+    const element =
+      target?.nodeType === Node.TEXT_NODE ? target.parentElement : target;
+    return element?.closest?.(".editor-paragraph");
+  }
+
+  getLineIdFromLineElement(lineElement) {
+    if (!lineElement) {
+      return undefined;
+    }
+
+    for (const [lineKey, lineMeta] of this.lineMetaByKey.entries()) {
+      if (this.editor.getElementByKey(lineKey) === lineElement) {
+        return lineMeta?.id;
+      }
+    }
+
+    return undefined;
+  }
+
+  getCaretRangeFromPointerEvent(event, lineElement) {
+    if (!event || !lineElement) {
+      return undefined;
+    }
+
+    const root = lineElement.getRootNode?.();
+    const createRangeFromCaretPosition = (position) => {
+      if (!position?.offsetNode) {
+        return undefined;
+      }
+
+      const range = document.createRange();
+      range.setStart(position.offsetNode, position.offset);
+      range.collapse(true);
+      return range;
+    };
+
+    if (typeof document.caretPositionFromPoint === "function") {
+      try {
+        const position =
+          root instanceof ShadowRoot
+            ? document.caretPositionFromPoint(event.clientX, event.clientY, {
+                shadowRoots: [root],
+              })
+            : document.caretPositionFromPoint(event.clientX, event.clientY);
+        const range = createRangeFromCaretPosition(position);
+        if (range) {
+          return range;
+        }
+      } catch {
+        try {
+          const position = document.caretPositionFromPoint(
+            event.clientX,
+            event.clientY,
+          );
+          const range = createRangeFromCaretPosition(position);
+          if (range) {
+            return range;
+          }
+        } catch {
+          // Fall through to the legacy API.
+        }
+      }
+    }
+
+    if (typeof document.caretRangeFromPoint !== "function") {
+      return undefined;
+    }
+
+    try {
+      return document.caretRangeFromPoint(event.clientX, event.clientY);
+    } catch {
+      return undefined;
+    }
+  }
+
+  getLineOffsetFromRange(lineElement, range) {
+    if (
+      !lineElement ||
+      !range?.startContainer ||
+      (range.startContainer !== lineElement &&
+        !lineElement.contains(range.startContainer))
+    ) {
+      return undefined;
+    }
+
+    try {
+      const prefixRange = document.createRange();
+      prefixRange.selectNodeContents(lineElement);
+      prefixRange.setEnd(range.startContainer, range.startOffset);
+      return prefixRange.toString().length;
+    } catch {
+      return undefined;
+    }
+  }
+
+  getLineOffsetFromPointerEvent(event, lineElement) {
+    const caretRange = this.getCaretRangeFromPointerEvent(event, lineElement);
+    const caretOffset = this.getLineOffsetFromRange(lineElement, caretRange);
+    if (typeof caretOffset === "number") {
+      return caretOffset;
+    }
+
+    if ((lineElement?.textContent?.length ?? 0) === 0) {
+      return 0;
+    }
+
+    return -1;
+  }
+
+  createPointerFallbackSelection(event) {
+    const lineElement = this.getLineElementFromEvent(event);
+    const lineId = this.getLineIdFromLineElement(lineElement);
+    if (!lineId) {
+      return undefined;
+    }
+
+    return {
+      lineId,
+      cursorPosition: this.getLineOffsetFromPointerEvent(event, lineElement),
+    };
+  }
+
+  restorePointerFallbackSelection(fallbackSelection) {
+    if (!fallbackSelection?.lineId) {
+      return false;
+    }
+
+    this.setMode("text-editor");
+    this.state.selectedLineId = fallbackSelection.lineId;
+    const didFocus = this.focusLine({
+      lineId: fallbackSelection.lineId,
+      cursorPosition: fallbackSelection.cursorPosition,
+    });
+
+    if (!didFocus) {
+      return false;
+    }
+
+    this.scheduleRender();
+    this.dispatchSelectedLineChanged(fallbackSelection.lineId, {
+      cursorPosition:
+        fallbackSelection.cursorPosition >= 0
+          ? fallbackSelection.cursorPosition
+          : undefined,
+      isCollapsed: true,
+      mode: "text-editor",
+    });
+    return true;
+  }
+
+  schedulePointerFallbackSelectionValidation(fallbackSelection) {
+    if (!fallbackSelection?.lineId) {
+      return;
+    }
+
+    setTimeout(() => {
+      if (!this.isConnected || !this.isEditorFocused) {
+        return;
+      }
+
+      const range = getSelectionRange(this.refs.editor);
+      const lineId = this.getLineIdFromRange(range);
+      if (lineId) {
+        return;
+      }
+
+      this.restorePointerFallbackSelection(fallbackSelection);
+    }, 0);
+  }
+
   getLineElementFromRangePoint(container, offset) {
     const element =
       container?.nodeType === Node.TEXT_NODE
@@ -4126,13 +4313,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return undefined;
     }
 
-    for (const [lineKey, lineMeta] of this.lineMetaByKey.entries()) {
-      if (this.editor.getElementByKey(lineKey) === lineElement) {
-        return lineMeta?.id;
-      }
-    }
-
-    return undefined;
+    return this.getLineIdFromLineElement(lineElement);
   }
 
   createPreviewItems(lineDecoration = {}) {
