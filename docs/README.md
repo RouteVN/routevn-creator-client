@@ -9,6 +9,7 @@
 5. [Project Storage And Sync Redesign](./project-storage-and-sync-redesign.md)
 6. [Insieme 2.1.0 Hard Cutover Checklist](./insieme-2.1.0-hard-cutover-checklist.md)
 7. [Animation Editor Transition Mask Plan](./animation-editor-transition-mask-plan.md)
+8. [Resource Tags Spec](./resource-tags-spec.md)
 
 ## Runbooks
 

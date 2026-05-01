@@ -58,7 +58,7 @@ template:
                 $elif currentRoutePattern == "/project/scenes":
                   - rvn-scenes: []
                 $elif currentRoutePattern == "/project/scene-editor":
-                  - rvn-scene-editor: []
+                  - rvn-scene-editor-lexical: []
                 $elif currentRoutePattern == "/project/animation-editor":
                   - rvn-animation-editor: []
                 $elif currentRoutePattern == "/project/about":

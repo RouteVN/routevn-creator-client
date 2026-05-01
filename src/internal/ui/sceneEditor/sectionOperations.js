@@ -94,7 +94,8 @@ export const selectSceneEditorSection = async (deps, sectionId) => {
 export const reconcileSceneEditorSelection = (store) => {
   const scene = store.selectScene();
   const previousSectionId = store.selectSelectedSectionId();
-  const previousLineId = store.selectSelectedLineId();
+  const previousLineId =
+    store.selectActionTargetLineId?.() || store.selectSelectedLineId();
 
   if (!scene || !Array.isArray(scene.sections) || scene.sections.length === 0) {
     if (previousSectionId !== undefined) {

@@ -194,6 +194,132 @@ describe("constructProjectData", () => {
     ).toBe("nvl");
   });
 
+  it("maps dialogue reference segments to jempl variable text for route-engine data", () => {
+    const repositoryState = createExportRepositoryState({
+      variables: createTreeCollection(
+        {
+          playerName: {
+            id: "playerName",
+            type: "string",
+            scope: "context",
+            default: "Alice",
+          },
+          "score-total": {
+            id: "score-total",
+            type: "number",
+            scope: "context",
+            default: 7,
+          },
+        },
+        [{ id: "playerName" }, { id: "score-total" }],
+      ),
+      layouts: createTreeCollection(
+        {
+          "dialogue-layout": {
+            id: "dialogue-layout",
+            type: "layout",
+            name: "Dialogue Layout",
+            layoutType: "dialogue-adv",
+            elements: createTreeCollection(
+              {
+                "dialogue-text": {
+                  id: "dialogue-text",
+                  type: "text-revealing-ref-dialogue-content",
+                  name: "Dialogue Text",
+                  width: 800,
+                  height: 160,
+                },
+              },
+              [{ id: "dialogue-text" }],
+            ),
+          },
+        },
+        [{ id: "dialogue-layout" }],
+      ),
+      scenes: createTreeCollection(
+        {
+          "scene-1": {
+            id: "scene-1",
+            type: "scene",
+            name: "Scene 1",
+            sections: createTreeCollection(
+              {
+                "section-1": {
+                  id: "section-1",
+                  name: "Section 1",
+                  lines: createTreeCollection(
+                    {
+                      "line-1": {
+                        id: "line-1",
+                        actions: {
+                          dialogue: {
+                            ui: {
+                              resourceId: "dialogue-layout",
+                            },
+                            content: [
+                              { text: "Hello " },
+                              {
+                                reference: {
+                                  resourceId: "playerName",
+                                },
+                              },
+                              { text: ". Score: " },
+                              {
+                                reference: {
+                                  resourceId: "score-total",
+                                },
+                              },
+                            ],
+                          },
+                        },
+                      },
+                    },
+                    [{ id: "line-1" }],
+                  ),
+                },
+              },
+              [{ id: "section-1" }],
+            ),
+          },
+        },
+        [{ id: "scene-1" }],
+      ),
+    });
+    const projectData = constructProjectData(repositoryState);
+
+    const content =
+      projectData.story.scenes["scene-1"].sections["section-1"].lines[0].actions
+        .dialogue.content;
+
+    expect(content).toEqual([
+      { text: "Hello " },
+      { text: "${variables.playerName}" },
+      { text: ". Score: " },
+      { text: '${variables["score-total"]}' },
+    ]);
+    expect(
+      repositoryState.scenes.items["scene-1"].sections.items["section-1"].lines
+        .items["line-1"].actions.dialogue.content[1],
+    ).toEqual({
+      reference: {
+        resourceId: "playerName",
+      },
+    });
+
+    const renderState = selectRouteEngineRenderState(projectData);
+    const dialogueText = findRenderElementById(
+      renderState.elements,
+      "dialogue-text",
+    );
+
+    expect(dialogueText.content).toEqual([
+      { text: "Hello " },
+      { text: "Alice" },
+      { text: ". Score: " },
+      { text: 7 },
+    ]);
+  });
+
   it("projects dialogue character sprites with the route-engine 1.9.0 render contract", () => {
     const projectData = constructProjectData(
       createExportRepositoryState({

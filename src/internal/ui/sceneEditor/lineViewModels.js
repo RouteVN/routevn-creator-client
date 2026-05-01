@@ -33,6 +33,29 @@ const buildBackgroundPreview = (repositoryState, changes) => {
   };
 };
 
+const resolvePreviewResourceFileId = ({ repositoryState, resourceId }) => {
+  if (!resourceId) {
+    return undefined;
+  }
+
+  const image = repositoryState?.images?.items?.[resourceId];
+  if (image) {
+    return image.thumbnailFileId || image.fileId;
+  }
+
+  const video = repositoryState?.videos?.items?.[resourceId];
+  if (video) {
+    return video.thumbnailFileId || video.fileId;
+  }
+
+  const layout = repositoryState?.layouts?.items?.[resourceId];
+  if (layout) {
+    return layout.thumbnailFileId || layout.fileId;
+  }
+
+  return undefined;
+};
+
 const buildCharacterSpritePreview = (changes, characterItems) => {
   if (!changes.character) {
     return undefined;
@@ -65,6 +88,7 @@ const buildCharacterSpritePreview = (changes, characterItems) => {
         return {
           characterId: characterChange.id,
           characterName: character?.name || "Unknown",
+          fileId: spriteFileIds[0],
           spriteFileIds,
         };
       })
@@ -73,26 +97,7 @@ const buildCharacterSpritePreview = (changes, characterItems) => {
 };
 
 const resolveVisualPreviewFileId = ({ repositoryState, resourceId }) => {
-  if (!resourceId) {
-    return undefined;
-  }
-
-  const image = repositoryState?.images?.items?.[resourceId];
-  if (image) {
-    return image.thumbnailFileId || image.fileId;
-  }
-
-  const video = repositoryState?.videos?.items?.[resourceId];
-  if (video) {
-    return video.thumbnailFileId || video.fileId;
-  }
-
-  const layout = repositoryState?.layouts?.items?.[resourceId];
-  if (layout) {
-    return layout.thumbnailFileId || layout.fileId;
-  }
-
-  return undefined;
+  return resolvePreviewResourceFileId({ repositoryState, resourceId });
 };
 
 const buildVisualPreview = (repositoryState, changes) => {
@@ -244,4 +249,16 @@ export const buildSceneEditorLineViewModels = ({
   });
 
   return viewModels;
+};
+
+export const buildSceneDocumentLineDecorations = ({
+  lines,
+  repositoryState,
+  sectionLineChanges,
+}) => {
+  return buildSceneEditorLineViewModels({
+    lines,
+    repositoryState,
+    sectionLineChanges,
+  });
 };
