@@ -40,6 +40,23 @@ const MISSING_PROJECT_RESOLUTION_MESSAGE =
 const SHOW_LINE_NUMBERS_CONFIG_KEY = "sceneEditor.showLineNumbers";
 const IS_MUTED_CONFIG_KEY = "sceneEditor.isMuted";
 
+const toPlainObject = (value) => {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : {};
+};
+
+const normalizeTemporaryPresentationState = (detail = {}) => {
+  return toPlainObject(detail.presentationState);
+};
+
+const requestTemporaryPresentationCanvasRender = (subject) => {
+  subject?.dispatch?.("sceneEditor.renderCanvas", {
+    skipRender: true,
+    skipAnimations: true,
+  });
+};
+
 const getLinesEditorRef = (refs) => {
   return refs?.linesEditor;
 };
@@ -754,6 +771,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     },
   );
 
+  store.clearTemporaryPresentationState?.();
   await refreshSceneEditorStateFromProject(deps);
   finalizeActionTargetLine(store, lineId);
   render();
@@ -1305,13 +1323,26 @@ export const handleSectionTabRightClick = (deps, payload) => {
 };
 
 export const handleActionsDialogClose = (deps) => {
-  const { render, store } = deps;
+  const { render, store, subject } = deps;
   const lineId = store.selectActionTargetLineId?.();
   if (lineId) {
     store.setSelectedLineId({ selectedLineId: lineId });
   }
   store.clearActionTargetLineId?.();
+  store.clearTemporaryPresentationState?.();
   render();
+  requestTemporaryPresentationCanvasRender(subject);
+};
+
+export const handleTemporaryPresentationStateChange = (deps, payload) => {
+  payload?._event?.stopPropagation?.();
+  const { store, subject } = deps;
+  store.setTemporaryPresentationState?.({
+    presentationState: normalizeTemporaryPresentationState(
+      payload?._event?.detail,
+    ),
+  });
+  requestTemporaryPresentationCanvasRender(subject);
 };
 
 export const handleDropdownMenuClickOverlay = (deps) => {

@@ -404,6 +404,62 @@ describe("commandLineDialogueBox.handlers", () => {
     expect(render).toHaveBeenCalledTimes(2);
   });
 
+  it("emits temporary presentation state changes from form edits", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const refs = createFormRefs();
+
+    handleFormChange(
+      {
+        props: {
+          layouts,
+          characters,
+          dialogue: {
+            content: [{ text: "Line text" }],
+          },
+        },
+        refs,
+        render,
+        store: createStore(state),
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            values: {
+              mode: "adv",
+              resourceId: "layout-adv",
+              characterId: "character-1",
+              customCharacterName: false,
+              characterName: "",
+              persistCharacter: false,
+              clearPage: false,
+            },
+          },
+        },
+      },
+    );
+
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].type).toBe(
+      "temporary-presentation-state-change",
+    );
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        dialogue: {
+          mode: "adv",
+          ui: {
+            resourceId: "layout-adv",
+          },
+          characterId: "character-1",
+          persistCharacter: false,
+          content: [{ text: "Line text" }],
+        },
+      },
+    });
+  });
+
   it("resets persistCharacter to false when selecting a character makes the field appear", () => {
     const state = createInitialState();
     const render = vi.fn();
@@ -1089,6 +1145,59 @@ describe("commandLineDialogueBox.handlers", () => {
         resourceId: "portrait-in",
       },
     });
+  });
+
+  it("emits temporary sprite selections before the picker is submitted", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const deps = {
+      props: {
+        layouts,
+        characters,
+        transforms,
+        dialogue: {
+          content: [{ text: "Sprite line" }],
+        },
+      },
+      render,
+      dispatchEvent,
+      store: createStore(state),
+    };
+
+    setSelectedMode({ state }, { mode: "adv" });
+    setSelectedResource({ state }, { resourceId: "layout-adv" });
+    setSelectedCharacterId({ state }, { characterId: "character-1" });
+
+    handleCharacterItemClick(deps, {
+      _event: {
+        currentTarget: {
+          dataset: {
+            characterId: "character-1",
+          },
+        },
+      },
+    });
+    handleSpriteItemClick(deps, {
+      _event: {
+        currentTarget: {
+          dataset: {
+            spriteId: "sprite-body",
+          },
+        },
+      },
+    });
+
+    const event =
+      dispatchEvent.mock.calls[dispatchEvent.mock.calls.length - 1][0];
+    expect(event.type).toBe("temporary-presentation-state-change");
+    expect(event.detail.presentationState.dialogue.character.sprite).toEqual({
+      transformId: "portrait-left",
+      items: [{ id: "body", resourceId: "sprite-body" }],
+    });
+    expect(event.detail.presentationState.dialogue.content).toEqual([
+      { text: "Sprite line" },
+    ]);
   });
 
   it("submits a character sprite without a selected speaker", () => {

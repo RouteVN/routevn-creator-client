@@ -5,8 +5,10 @@ import {
   updateActions,
 } from "../../src/components/systemActions/systemActions.store.js";
 import {
+  handleActionsDialogClose,
   handleEmbeddedCloseClick,
   handleCommandLineSubmit,
+  handleTemporaryPresentationStateChange,
   open,
 } from "../../src/components/systemActions/systemActions.handlers.js";
 
@@ -199,6 +201,46 @@ describe("systemActions.handlers", () => {
     });
   });
 
+  it("forwards temporary presentation state changes from action editors", () => {
+    const dispatchedEvents = [];
+    let stopPropagationCalled = false;
+
+    handleTemporaryPresentationStateChange(
+      {
+        dispatchEvent: (event) => {
+          dispatchedEvents.push(event);
+        },
+      },
+      {
+        _event: {
+          stopPropagation: () => {
+            stopPropagationCalled = true;
+          },
+          detail: {
+            presentationState: {
+              dialogue: {
+                mode: "adv",
+              },
+            },
+          },
+        },
+      },
+    );
+
+    expect(stopPropagationCalled).toBe(true);
+    expect(dispatchedEvents).toHaveLength(1);
+    expect(dispatchedEvents[0].type).toBe(
+      "temporary-presentation-state-change",
+    );
+    expect(dispatchedEvents[0].detail).toEqual({
+      presentationState: {
+        dialogue: {
+          mode: "adv",
+        },
+      },
+    });
+  });
+
   it("emits close from embedded system action editors", () => {
     const dispatchedEvents = [];
     let stopPropagationCalled = false;
@@ -219,8 +261,49 @@ describe("systemActions.handlers", () => {
     );
 
     expect(stopPropagationCalled).toBe(true);
-    expect(dispatchedEvents).toHaveLength(1);
-    expect(dispatchedEvents[0].type).toBe("close");
+    expect(dispatchedEvents).toHaveLength(2);
+    expect(dispatchedEvents[0].type).toBe(
+      "temporary-presentation-state-change",
+    );
+    expect(dispatchedEvents[0].detail).toEqual({
+      presentationState: {},
+    });
+    expect(dispatchedEvents[1].type).toBe("close");
+  });
+
+  it("clears temporary presentation state when the actions dialog closes", () => {
+    const dispatchedEvents = [];
+    const state = createInitialState();
+
+    const deps = {
+      store: {
+        hideActionsDialog: () => {
+          state.isActionsDialogOpen = false;
+        },
+        setMode: ({ mode }) => {
+          state.mode = mode;
+        },
+      },
+      render: () => {},
+      dispatchEvent: (event) => {
+        dispatchedEvents.push(event);
+      },
+    };
+
+    state.isActionsDialogOpen = true;
+    state.mode = "dialogue";
+
+    handleActionsDialogClose(deps);
+
+    expect(state.isActionsDialogOpen).toBe(false);
+    expect(dispatchedEvents).toHaveLength(2);
+    expect(dispatchedEvents[0].type).toBe(
+      "temporary-presentation-state-change",
+    );
+    expect(dispatchedEvents[0].detail).toEqual({
+      presentationState: {},
+    });
+    expect(dispatchedEvents[1].type).toBe("close");
   });
 
   it("resyncs local actions from props when opened", () => {

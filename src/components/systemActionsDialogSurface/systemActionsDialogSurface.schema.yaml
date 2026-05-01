@@ -1,0 +1,20 @@
+componentName: rvn-system-actions-dialog-surface
+propsSchema:
+  type: object
+  properties:
+    open:
+      type: boolean
+    variant:
+      type: string
+      enum:
+        - default
+        - scene-editor-left
+    dialogWidth:
+      type: string
+    dialogHeight:
+      type: string
+    panelWidth:
+      type: string
+events:
+  close:
+    type: object

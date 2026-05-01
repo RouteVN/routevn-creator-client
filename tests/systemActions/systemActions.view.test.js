@@ -25,4 +25,42 @@ describe("systemActions view", () => {
       "rvn-system-actions#branchActionsEditor :showSelected=${true} :actions=${branchActions} actionType=system :hiddenModes=${hiddenModes}",
     );
   });
+
+  it("uses a shared dialog surface with a scene-only left-docked variant", () => {
+    const systemActionsView = readFileSync(
+      new URL(
+        "../../src/components/systemActions/systemActions.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const sceneEditorView = readFileSync(
+      new URL(
+        "../../src/pages/sceneEditor/sceneEditor.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const sceneEditorLexicalView = readFileSync(
+      new URL(
+        "../../src/components/sceneEditorLexical/sceneEditorLexical.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(systemActionsView).toContain(
+      "rvn-system-actions-dialog-surface#actionsDialog",
+    );
+    expect(sceneEditorView).toContain("dialog-variant=scene-editor-left");
+    expect(sceneEditorLexicalView).toContain(
+      "dialog-variant=scene-editor-left",
+    );
+    expect(sceneEditorView).toContain(
+      'dialog-panel-width="calc((100vw - 64px) / 2)"',
+    );
+    expect(sceneEditorLexicalView).toContain(
+      'dialog-panel-width="calc((100vw - 64px) / 2)"',
+    );
+  });
 });

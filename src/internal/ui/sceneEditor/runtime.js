@@ -2,6 +2,7 @@ import { debounceTime, filter, tap } from "rxjs";
 import {
   extractFileIdsForLayouts,
   extractFileIdsForScenes,
+  extractFileIdsForValue,
   extractInitialHybridSceneIds,
   extractLayoutIdsFromValue,
   extractSceneIdsFromValue,
@@ -354,6 +355,92 @@ async function loadAssetsForSceneIds(
   }
 }
 
+async function preloadFileReferences(
+  deps,
+  fileReferences,
+  { resources = {}, showLoading = false } = {},
+) {
+  if (!Array.isArray(fileReferences) || fileReferences.length === 0) {
+    return;
+  }
+
+  const { graphicsService, projectService, appService } = deps;
+  const missingFileReferences = fileReferences.filter((fileReference) => {
+    const fileId = fileReference?.url;
+    return (
+      fileId &&
+      !hasCachedSceneAsset(deps, fileId) &&
+      !assetLoadCache.pendingFileLoads.has(fileId)
+    );
+  });
+  const pendingFileIds = fileReferences
+    .map((fileReference) => fileReference?.url)
+    .filter((fileId) => assetLoadCache.pendingFileLoads.has(fileId));
+
+  if (missingFileReferences.length === 0 && pendingFileIds.length === 0) {
+    return;
+  }
+
+  const shouldShowLoading = showLoading && missingFileReferences.length > 0;
+  const pendingLoadPromises = pendingFileIds
+    .map((fileId) => assetLoadCache.pendingFileLoads.get(fileId))
+    .filter(Boolean);
+  const newFileIds = missingFileReferences
+    .map((fileReference) => fileReference?.url)
+    .filter(Boolean);
+
+  try {
+    if (shouldShowLoading) {
+      setSceneAssetLoading(deps, true);
+    }
+
+    if (missingFileReferences.length > 0) {
+      const nextLoadPromise = (async () => {
+        const assets = await createAssetsFromFileIds(
+          missingFileReferences,
+          projectService,
+          resources,
+        );
+        if (Object.keys(assets).length > 0) {
+          await graphicsService.loadAssets?.(assets);
+        }
+        return Object.keys(assets);
+      })();
+
+      newFileIds.forEach((fileId) => {
+        assetLoadCache.pendingFileLoads.set(fileId, nextLoadPromise);
+      });
+
+      const loadedAssetIds = await nextLoadPromise.finally(() => {
+        newFileIds.forEach((fileId) => {
+          assetLoadCache.pendingFileLoads.delete(fileId);
+        });
+      });
+
+      loadedAssetIds.forEach((fileId) => {
+        assetLoadCache.fileIds.add(fileId);
+      });
+    }
+
+    if (pendingLoadPromises.length > 0) {
+      await Promise.all(pendingLoadPromises);
+    }
+  } catch (error) {
+    appService?.showAlert({
+      message: "Failed to load some scene assets",
+      title: "Warning",
+    });
+    console.error(
+      "[sceneEditor] Failed to load temporary scene assets:",
+      error,
+    );
+  } finally {
+    if (shouldShowLoading) {
+      setSceneAssetLoading(deps, false);
+    }
+  }
+}
+
 async function preloadDirectTransitionScenes(deps, projectData, sceneIds) {
   const directTargets = Array.from(
     new Set(
@@ -552,6 +639,74 @@ const initRouteEngineWithDiagnostics = (
   }
 };
 
+const toPlainObject = (value) => {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : {};
+};
+
+const selectTemporaryPresentationState = (store) => {
+  return toPlainObject(store.selectTemporaryPresentationState?.());
+};
+
+const hasTemporaryPresentationState = (presentationState) => {
+  return Object.keys(toPlainObject(presentationState)).length > 0;
+};
+
+const createProjectDataWithTemporaryPresentationState = (
+  projectData,
+  { sceneId, sectionId, lineId },
+  temporaryPresentationState,
+) => {
+  if (!hasTemporaryPresentationState(temporaryPresentationState)) {
+    return projectData;
+  }
+
+  const nextProjectData = structuredClone(projectData);
+  const selectedSection =
+    nextProjectData?.story?.scenes?.[sceneId]?.sections?.[sectionId];
+  const selectedLine = selectedSection?.lines?.find(
+    (line) => line?.id === lineId,
+  );
+
+  if (!selectedLine) {
+    return projectData;
+  }
+
+  selectedLine.actions = {
+    ...toPlainObject(selectedLine.actions),
+    ...temporaryPresentationState,
+  };
+
+  return nextProjectData;
+};
+
+const prepareTemporaryPresentationProjectData = async (
+  deps,
+  projectData,
+  selection,
+  temporaryPresentationState,
+) => {
+  if (!hasTemporaryPresentationState(temporaryPresentationState)) {
+    return projectData;
+  }
+
+  await preloadFileReferences(
+    deps,
+    extractFileIdsForValue(projectData, temporaryPresentationState),
+    {
+      resources: projectData?.resources,
+      showLoading: false,
+    },
+  );
+
+  return createProjectDataWithTemporaryPresentationState(
+    projectData,
+    selection,
+    temporaryPresentationState,
+  );
+};
+
 export const renderSceneEditorState = async (deps, payload = {}) => {
   const { store, graphicsService } = deps;
   const { skipAnimations = false, skipCanvasPaint = false } = payload;
@@ -566,13 +721,14 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     ? getDebugDurationMs(projectDataProjectionStartedAt)
     : undefined;
   const projectDataSelectionStartedAt = perfEnabled ? getDebugNow() : 0;
+  const selection = {
+    sceneId,
+    sectionId,
+    lineId,
+  };
   const projectData = createProjectDataWithSelectedEntryPoint(
     projectedProjectData,
-    {
-      sceneId,
-      sectionId,
-      lineId,
-    },
+    selection,
   );
   const projectDataSelectionDurationMs = perfEnabled
     ? getDebugDurationMs(projectDataSelectionStartedAt)
@@ -587,6 +743,31 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
   });
   const engineInitDurationMs = perfEnabled
     ? getDebugDurationMs(engineInitStartedAt)
+    : undefined;
+  const presentationStateStartedAt = perfEnabled ? getDebugNow() : 0;
+  const presentationState = graphicsService.engineSelectPresentationState();
+  store.setPresentationState({
+    presentationState,
+  });
+  const presentationStateDurationMs = perfEnabled
+    ? getDebugDurationMs(presentationStateStartedAt)
+    : undefined;
+  const temporaryPresentationState = selectTemporaryPresentationState(store);
+  const temporaryPresentationStateStartedAt = perfEnabled ? getDebugNow() : 0;
+  const renderProjectData = await prepareTemporaryPresentationProjectData(
+    deps,
+    projectData,
+    selection,
+    temporaryPresentationState,
+  );
+  if (renderProjectData !== projectData) {
+    initRouteEngineWithDiagnostics(graphicsService, renderProjectData, {
+      enableGlobalKeyboardBindings: false,
+      suppressRenderEffects: true,
+    });
+  }
+  const temporaryPresentationStateDurationMs = perfEnabled
+    ? getDebugDurationMs(temporaryPresentationStateStartedAt)
     : undefined;
   const renderStateSelectStartedAt = perfEnabled ? getDebugNow() : 0;
   const currentRenderState = graphicsService.engineSelectRenderState();
@@ -659,15 +840,6 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     ? getDebugDurationMs(nextLineConfigStartedAt)
     : undefined;
 
-  const presentationStateStartedAt = perfEnabled ? getDebugNow() : 0;
-  const presentationState = graphicsService.engineSelectPresentationState();
-  store.setPresentationState({
-    presentationState,
-  });
-  const presentationStateDurationMs = perfEnabled
-    ? getDebugDurationMs(presentationStateStartedAt)
-    : undefined;
-
   if (perfEnabled) {
     debugLog(SCENE_EDITOR_PERF_SCOPE, "render-state.complete", {
       durationMs: getDebugDurationMs(renderStartedAt),
@@ -685,6 +857,7 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
       canvasPaintDurationMs,
       nextLineConfigDurationMs,
       presentationStateDurationMs,
+      temporaryPresentationStateDurationMs,
       elementCount: renderStateSummary.elementCount,
       animationCount: renderStateSummary.animationCount,
       audioCount: renderStateSummary.audioCount,

@@ -1,3 +1,88 @@
+const TEMPORARY_VISUAL_PREVIEW_ID = "temporary-visual-preview";
+
+const buildVisualItem = (visual = {}) => {
+  const item = {
+    id: visual.id,
+    resourceId: visual.resourceId,
+    transformId: visual.transformId,
+  };
+
+  if (visual.animations?.resourceId) {
+    item.animations = {
+      resourceId: visual.animations.resourceId,
+    };
+  }
+
+  return item;
+};
+
+const buildVisualItemsFromState = (
+  store,
+  { includeTemporaryResource = false } = {},
+) => {
+  const visualItems = store.selectSelectedVisuals().map(buildVisualItem);
+
+  if (!includeTemporaryResource || store.selectMode?.() !== "resource-select") {
+    return visualItems;
+  }
+
+  const tempSelectedResourceId = store.selectTempSelectedResourceId?.();
+  if (!tempSelectedResourceId) {
+    return visualItems;
+  }
+
+  const selectedVisualIndex = store.selectSelectedVisualIndex?.();
+  if (selectedVisualIndex === -1) {
+    visualItems.push({
+      id: TEMPORARY_VISUAL_PREVIEW_ID,
+      resourceId: tempSelectedResourceId,
+      transformId: store.selectDefaultTransformId?.(),
+    });
+    return visualItems;
+  }
+
+  if (
+    Number.isInteger(selectedVisualIndex) &&
+    visualItems[selectedVisualIndex]
+  ) {
+    visualItems[selectedVisualIndex] = {
+      ...visualItems[selectedVisualIndex],
+      resourceId: tempSelectedResourceId,
+    };
+  }
+
+  return visualItems;
+};
+
+const buildVisualDataFromState = (
+  store,
+  { includeTemporaryResource = false } = {},
+) => ({
+  visual: {
+    items: buildVisualItemsFromState(store, {
+      includeTemporaryResource,
+    }),
+  },
+});
+
+const dispatchTemporaryPresentationStateChange = (deps) => {
+  const { dispatchEvent, store } = deps;
+
+  if (typeof dispatchEvent !== "function") {
+    return;
+  }
+
+  dispatchEvent(
+    new CustomEvent("temporary-presentation-state-change", {
+      detail: {
+        presentationState: buildVisualDataFromState(store, {
+          includeTemporaryResource: true,
+        }),
+      },
+    }),
+  );
+};
+
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
@@ -69,6 +154,7 @@ export const handleTransformChange = (deps, payload) => {
   const value = payload._event.detail.value;
   store.updateVisualTransform({ index, transform: value });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleAnimationModeChange = (deps, payload) => {
@@ -77,6 +163,7 @@ export const handleAnimationModeChange = (deps, payload) => {
   const value = payload._event.detail.value;
   store.updateVisualAnimationMode({ index, animationMode: value });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleAnimationChange = (deps, payload) => {
@@ -85,6 +172,7 @@ export const handleAnimationChange = (deps, payload) => {
   const value = payload._event.detail.value;
   store.updateVisualAnimation({ index, animationId: value });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleFileExplorerItemClick = (deps, payload) => {
@@ -102,6 +190,7 @@ export const handleFileExplorerItemClick = (deps, payload) => {
 
   store.setTempSelectedResourceId({ resourceId });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleSearchInput = (deps, payload) => {
@@ -116,6 +205,7 @@ export const handleResourceItemClick = (deps, payload) => {
 
   store.setTempSelectedResourceId({ resourceId });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleResourceItemDoubleClick = (deps, payload) => {
@@ -130,31 +220,12 @@ export const handleResourceItemDoubleClick = (deps, payload) => {
   store.setTempSelectedResourceId({ resourceId });
   store.showFullImagePreview({ fileId: item.previewFileId });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store } = deps;
-  const selectedVisuals = store.selectSelectedVisuals();
-
-  const visualData = {
-    visual: {
-      items: selectedVisuals.map((visual) => {
-        const item = {
-          id: visual.id,
-          resourceId: visual.resourceId,
-          transformId: visual.transformId,
-        };
-
-        if (visual.animations?.resourceId) {
-          item.animations = {
-            resourceId: visual.animations.resourceId,
-          };
-        }
-
-        return item;
-      }),
-    },
-  };
+  const visualData = buildVisualDataFromState(store);
 
   dispatchEvent(
     new CustomEvent("submit", {
@@ -190,6 +261,7 @@ export const handleBreadcumbClick = (deps, payload) => {
       mode: "current",
     });
     render();
+    dispatchTemporaryPresentationStateChange(deps);
   }
 };
 
@@ -201,6 +273,7 @@ export const handleRemoveVisualClick = (deps, payload) => {
 
   store.removeVisual({ index: index });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleButtonSelectClick = (deps) => {
@@ -236,6 +309,7 @@ export const handleButtonSelectClick = (deps) => {
   }
 
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleDropdownMenuClose = (deps) => {
@@ -255,4 +329,5 @@ export const handleDropdownMenuClickItem = (deps, payload) => {
 
   store.hideDropdownMenu();
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };

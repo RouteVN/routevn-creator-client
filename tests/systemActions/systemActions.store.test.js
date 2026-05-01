@@ -531,4 +531,25 @@ describe("systemActions.store", () => {
       },
     ]);
   });
+
+  it("exposes default and scene-editor dialog surface options", () => {
+    const defaultViewData = selectViewData({
+      state: createInitialState(),
+      props: {},
+    });
+    const sceneViewData = selectViewData({
+      state: createInitialState(),
+      props: {
+        dialogVariant: "scene-editor-left",
+        dialogPanelWidth: "calc((100vw - 64px) / 2)",
+      },
+    });
+
+    expect(defaultViewData.dialogVariant).toBe("default");
+    expect(defaultViewData.actionsDialogPanelWidth).toBe("50vw");
+    expect(sceneViewData.dialogVariant).toBe("scene-editor-left");
+    expect(sceneViewData.actionsDialogPanelWidth).toBe(
+      "calc((100vw - 64px) / 2)",
+    );
+  });
 });

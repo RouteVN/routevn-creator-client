@@ -60,6 +60,23 @@ const nowMs = () => {
   return Date.now();
 };
 
+const toPlainObject = (value) => {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : {};
+};
+
+const normalizeTemporaryPresentationState = (detail = {}) => {
+  return toPlainObject(detail.presentationState);
+};
+
+const requestTemporaryPresentationCanvasRender = (subject) => {
+  subject?.dispatch?.("sceneEditor.renderCanvas", {
+    skipRender: true,
+    skipAnimations: true,
+  });
+};
+
 const getLinesEditorRef = (refs) => {
   return refs?.linesEditor;
 };
@@ -748,6 +765,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
     },
   );
 
+  store.clearTemporaryPresentationState?.();
   syncStoreProjectState(store, projectService);
   reconcileCurrentEditorSession(deps);
   render();
@@ -1151,8 +1169,21 @@ export const handleSectionTabRightClick = (deps, payload) => {
 };
 
 export const handleActionsDialogClose = (deps) => {
-  const { render } = deps;
+  const { render, store, subject } = deps;
+  store.clearTemporaryPresentationState?.();
   render();
+  requestTemporaryPresentationCanvasRender(subject);
+};
+
+export const handleTemporaryPresentationStateChange = (deps, payload) => {
+  payload?._event?.stopPropagation?.();
+  const { store, subject } = deps;
+  store.setTemporaryPresentationState?.({
+    presentationState: normalizeTemporaryPresentationState(
+      payload?._event?.detail,
+    ),
+  });
+  requestTemporaryPresentationCanvasRender(subject);
 };
 
 export const handleDropdownMenuClickOverlay = (deps) => {

@@ -121,6 +121,87 @@ const discardPendingCharacterSelection = (store) => {
   store.clearPendingCharacterIndex();
 };
 
+const buildCharacterItemsFromState = (
+  store,
+  { includeTemporarySprites = false } = {},
+) => {
+  const selectedCharacters = store.selectSelectedCharacters();
+  const mode = store.selectMode?.();
+  const selectedCharacterIndex = store.selectSelectedCharacterIndex?.();
+  const shouldUseTemporarySprites =
+    includeTemporarySprites &&
+    mode === "sprite-select" &&
+    Number.isInteger(selectedCharacterIndex);
+  const spriteSelectionGroups = shouldUseTemporarySprites
+    ? store.selectCurrentSpriteSelectionGroups()
+    : [];
+  const tempSelectedSpriteIds = shouldUseTemporarySprites
+    ? store.selectTempSelectedSpriteIds()
+    : {};
+
+  return selectedCharacters.map((char, index) => {
+    const item = {
+      id: char.id,
+      transformId: char.transformId,
+      sprites: char.sprites || [],
+      spriteName: char.spriteName || "",
+    };
+
+    if (shouldUseTemporarySprites && index === selectedCharacterIndex) {
+      item.sprites = spriteSelectionGroups
+        .map((spriteSelectionGroup) => {
+          const resourceId = tempSelectedSpriteIds[spriteSelectionGroup.id];
+          if (!resourceId) {
+            return undefined;
+          }
+
+          return {
+            id: spriteSelectionGroup.id,
+            resourceId,
+          };
+        })
+        .filter(Boolean);
+    }
+
+    if (char.animations?.resourceId) {
+      item.animations = {
+        resourceId: char.animations.resourceId,
+      };
+    }
+
+    return item;
+  });
+};
+
+const buildCharacterDataFromState = (
+  store,
+  { includeTemporarySprites = false } = {},
+) => ({
+  character: {
+    items: buildCharacterItemsFromState(store, {
+      includeTemporarySprites,
+    }),
+  },
+});
+
+const dispatchTemporaryPresentationStateChange = (deps) => {
+  const { dispatchEvent, store } = deps;
+
+  if (typeof dispatchEvent !== "function") {
+    return;
+  }
+
+  dispatchEvent(
+    new CustomEvent("temporary-presentation-state-change", {
+      detail: {
+        presentationState: buildCharacterDataFromState(store, {
+          includeTemporarySprites: true,
+        }),
+      },
+    }),
+  );
+};
+
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
@@ -202,6 +283,7 @@ export const handleTransformChange = (deps, payload) => {
   const value = payload._event.detail.value;
   store.updateCharacterTransform({ index, transform: value });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleAnimationModeChange = (deps, payload) => {
@@ -210,6 +292,7 @@ export const handleAnimationModeChange = (deps, payload) => {
   const value = payload._event.detail.value;
   store.updateCharacterAnimationMode({ index, animationMode: value });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleAnimationChange = (deps, payload) => {
@@ -218,6 +301,7 @@ export const handleAnimationChange = (deps, payload) => {
   const value = payload._event.detail.value;
   store.updateCharacterAnimation({ index, animationId: value });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleFileExplorerItemClick = (deps, payload) => {
@@ -239,11 +323,13 @@ export const handleFileExplorerItemClick = (deps, payload) => {
       spriteId: itemId,
     });
     render();
+    dispatchTemporaryPresentationStateChange(deps);
     return;
   }
 
   beginNewCharacterSpriteSelection(store, itemId);
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleSearchInput = (deps, payload) => {
@@ -270,6 +356,7 @@ export const handleCharacterItemClick = (deps, payload) => {
 
   beginNewCharacterSpriteSelection(store, characterId);
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleSpriteGroupTabClick = (deps, payload) => {
@@ -286,28 +373,7 @@ export const handleSpriteGroupTabClick = (deps, payload) => {
 
 export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store } = deps;
-  const selectedCharacters = store.selectSelectedCharacters();
-
-  const characterData = {
-    character: {
-      items: selectedCharacters.map((char) => {
-        const item = {
-          id: char.id,
-          transformId: char.transformId,
-          sprites: char.sprites || [],
-          spriteName: char.spriteName || "",
-        };
-
-        if (char.animations?.resourceId) {
-          item.animations = {
-            resourceId: char.animations.resourceId,
-          };
-        }
-
-        return item;
-      }),
-    },
-  };
+  const characterData = buildCharacterDataFromState(store);
   dispatchEvent(
     new CustomEvent("submit", {
       detail: characterData,
@@ -352,12 +418,14 @@ export const handleBreadcumbClick = (deps, payload) => {
       mode: "current",
     });
     render();
+    dispatchTemporaryPresentationStateChange(deps);
   } else if (payload._event.detail.id === "character-select") {
     store.setSearchQuery({ value: "" });
     store.setMode({
       mode: "character-select",
     });
     render();
+    dispatchTemporaryPresentationStateChange(deps);
   }
 };
 
@@ -369,6 +437,7 @@ export const handleRemoveCharacterClick = (deps, payload) => {
 
   store.removeCharacter({ index: index });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleAddCharacterClick = (deps) => {
@@ -398,6 +467,7 @@ export const handleSpriteItemClick = (deps, payload) => {
   });
 
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleSpriteItemDoubleClick = (deps, payload) => {
@@ -415,6 +485,7 @@ export const handleSpriteItemDoubleClick = (deps, payload) => {
   });
   store.showFullImagePreview({ fileId: sprite.fileId });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleButtonSelectClick = (deps) => {
@@ -453,6 +524,7 @@ export const handleButtonSelectClick = (deps) => {
   }
 
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleDropdownMenuClose = (deps) => {
@@ -472,4 +544,5 @@ export const handleDropdownMenuClickItem = (deps, payload) => {
 
   store.hideDropdownMenu();
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };

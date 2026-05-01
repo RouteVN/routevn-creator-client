@@ -18,6 +18,19 @@ const mergeActions = (currentActions, nextPartialActions) => {
   };
 };
 
+const dispatchTemporaryPresentationStateChange = (
+  { dispatchEvent },
+  presentationState = {},
+) => {
+  dispatchEvent(
+    new CustomEvent("temporary-presentation-state-change", {
+      detail: {
+        presentationState,
+      },
+    }),
+  );
+};
+
 const syncRepositoryState = async (deps) => {
   const { store, projectService } = deps;
   store.setRepositoryState({
@@ -65,6 +78,7 @@ export const handleOnUpdate = (deps, changes) => {
 export const handleBackToActions = (deps, payload) => {
   payload?._event?.stopPropagation?.();
   const { store, render } = deps;
+  dispatchTemporaryPresentationStateChange(deps, {});
   store.setMode({ mode: "actions" });
   render();
 };
@@ -78,6 +92,14 @@ export const handleActionClicked = (deps, payload) => {
   });
 
   render();
+};
+
+export const handleTemporaryPresentationStateChange = (deps, payload) => {
+  payload?._event?.stopPropagation?.();
+  const presentationState = toPlainObject(
+    payload?._event?.detail?.presentationState,
+  );
+  dispatchTemporaryPresentationStateChange(deps, presentationState);
 };
 
 export const handleCommandLineSubmit = (deps, payload) => {
@@ -107,6 +129,7 @@ export const handleAddActionButtonClicked = (deps) => {
 
 export const handleEmbeddedCloseClick = (deps, payload) => {
   payload?._event?.stopPropagation?.();
+  dispatchTemporaryPresentationStateChange(deps, {});
   deps.dispatchEvent(new CustomEvent("close"));
 };
 
@@ -120,6 +143,7 @@ export const handleHelpFloatingButtonClick = (deps, payload) => {
 
 export const handleActionsDialogClose = (deps) => {
   const { store, render, dispatchEvent } = deps;
+  dispatchTemporaryPresentationStateChange(deps, {});
   store.hideActionsDialog();
   render();
   dispatchEvent(new CustomEvent("close"));

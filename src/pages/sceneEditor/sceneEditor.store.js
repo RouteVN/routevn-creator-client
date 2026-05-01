@@ -52,6 +52,16 @@ const toPlainObject = (value) => {
     : {};
 };
 
+const mergePresentationStates = (
+  presentationState,
+  temporaryPresentationState,
+) => {
+  return {
+    ...toPlainObject(presentationState),
+    ...toPlainObject(temporaryPresentationState),
+  };
+};
+
 const collectActionTargetSectionIds = (actions) => {
   const sectionIds = new Set();
 
@@ -320,6 +330,7 @@ export const createInitialState = () => ({
   previewSectionId: undefined,
   previewLineId: undefined,
   presentationState: {},
+  temporaryPresentationState: {},
   sectionLineChanges: {},
   isMuted: false,
   isScenePageLoading: true,
@@ -404,6 +415,28 @@ export const hidePreviewScene = ({ state }, _payload = {}) => {
 
 export const setPresentationState = ({ state }, { presentationState } = {}) => {
   state.presentationState = presentationState;
+};
+
+export const setTemporaryPresentationState = (
+  { state },
+  { presentationState } = {},
+) => {
+  state.temporaryPresentationState = toPlainObject(presentationState);
+};
+
+export const clearTemporaryPresentationState = ({ state }, _payload = {}) => {
+  state.temporaryPresentationState = {};
+};
+
+export const selectTemporaryPresentationState = ({ state }) => {
+  return toPlainObject(state.temporaryPresentationState);
+};
+
+export const selectEffectivePresentationState = ({ state }) => {
+  return mergePresentationStates(
+    state.presentationState,
+    state.temporaryPresentationState,
+  );
 };
 
 export const setSectionLineChanges = ({ state }, { changes } = {}) => {
@@ -859,7 +892,7 @@ export const selectViewData = ({ state }) => {
       currentLines: [],
       currentLine: null,
       actionsData: [],
-      presentationState: null,
+      presentationState: selectEffectivePresentationState({ state }),
       dropdownMenu: state.dropdownMenu,
       popover: state.popover,
       selectedLineId: state.selectedLineId,
@@ -1097,7 +1130,7 @@ export const selectViewData = ({ state }) => {
     previewSectionId: state.previewSectionId,
     previewLineId: state.previewLineId,
     canvasAspectRatio: selectCanvasAspectRatio({ state }),
-    presentationState: state.presentationState,
+    presentationState: selectEffectivePresentationState({ state }),
     sectionLineChanges: state.sectionLineChanges,
     sectionCreateDialog: state.sectionCreateDialog,
     sectionCreateForm,

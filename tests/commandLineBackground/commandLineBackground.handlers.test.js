@@ -2,11 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleBeforeMount,
   handleFormInputChange,
+  handleResourceItemClick,
   handleSubmitClick,
 } from "../../src/components/commandLineBackground/commandLineBackground.handlers.js";
 import {
   createInitialState,
   selectBackgroundLoop,
+  selectMode,
   selectPendingResourceId,
   selectSelectedAnimation,
   selectSelectedAnimationPlaybackContinuity,
@@ -14,7 +16,9 @@ import {
   selectSelectedResource,
   selectSelectedTransform,
   selectTab,
+  selectTempSelectedResource,
   setBackgroundLoop,
+  setMode,
   setRepositoryState,
   setSearchQuery,
   setSelectedAnimation,
@@ -23,6 +27,7 @@ import {
   setSelectedResource,
   setSelectedTransform,
   setTab,
+  setTempSelectedResource,
 } from "../../src/components/commandLineBackground/commandLineBackground.store.js";
 
 const createEmptyCollection = () => ({
@@ -32,6 +37,7 @@ const createEmptyCollection = () => ({
 
 const createStoreApi = (state) => ({
   selectBackgroundLoop: () => selectBackgroundLoop({ state }),
+  selectMode: () => selectMode({ state }),
   selectPendingResourceId: () => selectPendingResourceId({ state }),
   selectSelectedAnimation: () => selectSelectedAnimation({ state }),
   selectSelectedAnimationPlaybackContinuity: () =>
@@ -40,7 +46,9 @@ const createStoreApi = (state) => ({
   selectSelectedResource: () => selectSelectedResource({ state }),
   selectSelectedTransform: () => selectSelectedTransform({ state }),
   selectTab: () => selectTab({ state }),
+  selectTempSelectedResource: () => selectTempSelectedResource({ state }),
   setBackgroundLoop: (payload) => setBackgroundLoop({ state }, payload),
+  setMode: (payload) => setMode({ state }, payload),
   setPendingResourceId: ({ resourceId }) => {
     state.pendingResourceId = resourceId;
   },
@@ -53,6 +61,8 @@ const createStoreApi = (state) => ({
   setSelectedResource: (payload) => setSelectedResource({ state }, payload),
   setSelectedTransform: (payload) => setSelectedTransform({ state }, payload),
   setTab: (payload) => setTab({ state }, payload),
+  setTempSelectedResource: (payload) =>
+    setTempSelectedResource({ state }, payload),
 });
 
 const setRepositoryCollections = (state) => {
@@ -194,6 +204,85 @@ describe("commandLineBackground.handlers", () => {
       },
     });
     expect(render).toHaveBeenCalledTimes(2);
+  });
+
+  it("emits temporary presentation state when background form fields change", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+
+    setRepositoryCollections(state);
+    setSelectedResource(
+      { state },
+      {
+        resourceId: "bg-school",
+        resourceType: "image",
+      },
+    );
+
+    handleFormInputChange(
+      {
+        store: createStoreApi(state),
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            name: "transformId",
+            value: "bg-center",
+          },
+        },
+      },
+    );
+
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].type).toBe(
+      "temporary-presentation-state-change",
+    );
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        background: {
+          resourceId: "bg-school",
+          transformId: "bg-center",
+        },
+      },
+    });
+  });
+
+  it("emits temporary presentation state from gallery resource selection", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+
+    setRepositoryCollections(state);
+    setMode({ state }, { mode: "gallery" });
+
+    handleResourceItemClick(
+      {
+        store: createStoreApi(state),
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              resourceId: "bg-school",
+            },
+          },
+        },
+      },
+    );
+
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        background: {
+          resourceId: "bg-school",
+        },
+      },
+    });
   });
 
   it("submits playback continuity inside background animations", () => {
