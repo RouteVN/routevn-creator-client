@@ -1754,6 +1754,22 @@ const collectResourceSelectionFromValue = (projectData, value) => {
   };
 
   scanValue(value);
+  traverseScene(value, (key, entry) => {
+    if (
+      key !== "character" ||
+      !entry ||
+      typeof entry !== "object" ||
+      !Array.isArray(entry.items)
+    ) {
+      return;
+    }
+
+    entry.items.forEach((item) => {
+      if (typeof item?.id === "string" && resources.characters?.[item.id]) {
+        selection.characters.add(item.id);
+      }
+    });
+  });
 
   while (pendingLayoutIds.length > 0) {
     const layoutId = pendingLayoutIds.shift();

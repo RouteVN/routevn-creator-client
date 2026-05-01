@@ -77,6 +77,11 @@ const requestTemporaryPresentationCanvasRender = (subject) => {
   });
 };
 
+const clearTemporaryPresentationPreview = ({ store, subject }) => {
+  store.clearTemporaryPresentationState?.();
+  requestTemporaryPresentationCanvasRender(subject);
+};
+
 const getLinesEditorRef = (refs) => {
   return refs?.linesEditor;
 };
@@ -724,46 +729,51 @@ export const handleCommandLineSubmit = async (deps, payload) => {
       ? ["dialogue.content"]
       : undefined;
 
-  await runSceneEditorPersistence(
-    deps,
-    async () => {
-      if (dialogue) {
-        assertSceneEditorCommandResult(
-          await projectService.updateLineDialogueAction({
-            lineId,
-            dialogue,
-            preserve: preserveDialogueContent,
-          }),
-          {
-            appService,
-            fallbackMessage: "Failed to save dialogue action",
-          },
-        );
-      }
+  try {
+    await runSceneEditorPersistence(
+      deps,
+      async () => {
+        if (dialogue) {
+          assertSceneEditorCommandResult(
+            await projectService.updateLineDialogueAction({
+              lineId,
+              dialogue,
+              preserve: preserveDialogueContent,
+            }),
+            {
+              appService,
+              fallbackMessage: "Failed to save dialogue action",
+            },
+          );
+        }
 
-      if (Object.keys(otherActions).length > 0) {
-        assertSceneEditorCommandResult(
-          await projectService.updateLineActions({
-            lineId,
-            data: otherActions,
-            replace: false,
-          }),
-          {
-            appService,
-            fallbackMessage: "Failed to save line actions",
-          },
-        );
-      }
-    },
-    {
-      label: "command-line-submit",
-      meta: {
-        lineId,
-        hasDialogue: Boolean(dialogue),
-        otherActionCount: Object.keys(otherActions).length,
+        if (Object.keys(otherActions).length > 0) {
+          assertSceneEditorCommandResult(
+            await projectService.updateLineActions({
+              lineId,
+              data: otherActions,
+              replace: false,
+            }),
+            {
+              appService,
+              fallbackMessage: "Failed to save line actions",
+            },
+          );
+        }
       },
-    },
-  );
+      {
+        label: "command-line-submit",
+        meta: {
+          lineId,
+          hasDialogue: Boolean(dialogue),
+          otherActionCount: Object.keys(otherActions).length,
+        },
+      },
+    );
+  } catch (error) {
+    clearTemporaryPresentationPreview(deps);
+    throw error;
+  }
 
   store.clearTemporaryPresentationState?.();
   syncStoreProjectState(store, projectService);
@@ -1170,9 +1180,8 @@ export const handleSectionTabRightClick = (deps, payload) => {
 
 export const handleActionsDialogClose = (deps) => {
   const { render, store, subject } = deps;
-  store.clearTemporaryPresentationState?.();
+  clearTemporaryPresentationPreview({ store, subject });
   render();
-  requestTemporaryPresentationCanvasRender(subject);
 };
 
 export const handleTemporaryPresentationStateChange = (deps, payload) => {
