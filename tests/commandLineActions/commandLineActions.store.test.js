@@ -90,18 +90,16 @@ describe("commandLineActions.store", () => {
   });
 
   it("shows the variables section and update variable action", () => {
-    const items = selectItems({
-      props: {
-        actionsType: "system",
-      },
-    });
+    for (const actionsType of ["system", "presentation"]) {
+      const items = selectItems({
+        props: {
+          actionsType,
+        },
+      });
 
-    expect(
-      items.some(
-        (item) => item.type === "section" && item.label === "Variables",
-      ),
-    ).toBe(true);
-    expect(items.some((item) => item.mode === "updateVariable")).toBe(true);
+      expect(getSectionModes(items, "Variables")).toEqual(["updateVariable"]);
+      expect(items.some((item) => item.mode === "updateVariable")).toBe(true);
+    }
   });
 
   it("shows conditional actions in the logic section", () => {

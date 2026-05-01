@@ -9,6 +9,13 @@ const getRuntimeActionItem = (mode) => {
   return RUNTIME_ACTION_ITEMS.find((item) => item.mode === mode);
 };
 
+const UPDATE_VARIABLE_ACTION = {
+  id: "17",
+  label: "Update Variable",
+  icon: "variable",
+  mode: "updateVariable",
+};
+
 const SYSTEM_ACTION_SECTIONS = [
   createSection("Story", [
     {
@@ -83,14 +90,7 @@ const SYSTEM_ACTION_SECTIONS = [
       mode: "popOverlay",
     },
   ]),
-  createSection("Variables", [
-    {
-      id: "17",
-      label: "Update Variable",
-      icon: "variable",
-      mode: "updateVariable",
-    },
-  ]),
+  createSection("Variables", [UPDATE_VARIABLE_ACTION]),
   createSection("Logic", [
     {
       id: "27",
@@ -220,6 +220,7 @@ const PRESENTATION_ACTION_SECTIONS = [
       mode: "control",
     },
   ]),
+  createSection("Variables", [UPDATE_VARIABLE_ACTION]),
   createSection("Logic", [
     {
       id: "27",
