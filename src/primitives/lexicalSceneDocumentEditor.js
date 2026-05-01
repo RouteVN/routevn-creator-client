@@ -177,6 +177,10 @@ const STYLES = `
     caret-color: var(--primary);
   }
 
+  .editor[data-rvn-reference-selection-active="true"] {
+    caret-color: transparent;
+  }
+
   .editor:focus {
     border: 0;
     box-shadow: none;
@@ -1988,6 +1992,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     if (selectedKey && !this.hasReferenceNodeKey(selectedKey)) {
       selectedKey = undefined;
       this.selectedReferenceNodeKey = undefined;
+    }
+
+    if (selectedKey) {
+      this.refs.editor.dataset.rvnReferenceSelectionActive = "true";
+    } else {
+      delete this.refs.editor.dataset.rvnReferenceSelectionActive;
     }
 
     for (const element of this.refs.editor.querySelectorAll(
