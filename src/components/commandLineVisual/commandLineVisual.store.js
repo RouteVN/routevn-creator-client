@@ -202,12 +202,16 @@ const generateVisualId = () => {
   return generatePrefixedId("visual-");
 };
 
-export const addVisual = ({ state }, { resourceId } = {}) => {
+const getDefaultTransformId = (state) => {
   const transformItems = toFlatItems(state.transforms).filter(
     (item) => item.type === "transform",
   );
-  const defaultTransform =
-    transformItems.length > 0 ? transformItems[0].id : undefined;
+
+  return transformItems.length > 0 ? transformItems[0].id : undefined;
+};
+
+export const addVisual = ({ state }, { resourceId } = {}) => {
+  const defaultTransform = getDefaultTransformId(state);
 
   state.selectedVisuals.push({
     id: generateVisualId(),
@@ -345,6 +349,10 @@ export const selectMode = ({ state }) => {
 
 export const selectSelectedVisualIndex = ({ state }) => {
   return state.selectedVisualIndex;
+};
+
+export const selectDefaultTransformId = ({ state }) => {
+  return getDefaultTransformId(state);
 };
 
 export const selectResourceExplorerTarget = (_deps, { itemId } = {}) => {

@@ -39,6 +39,9 @@ const getHiddenModes = (attrs = {}) => {
     : [];
 };
 
+const getDialogVariant = (attrs = {}) =>
+  attrs.dialogVariant === "scene-editor-left" ? "scene-editor-left" : "default";
+
 export const selectViewData = ({ state, props, props: attrs }) => {
   const displayActions = selectDisplayActions({ state });
   const actionProps = { ...props };
@@ -117,8 +120,12 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     selectedLine: props.selectedLine,
     actionsType: attrs.actionType,
     showSelected: !!attrs.showSelected,
+    dialogVariant: getDialogVariant(attrs),
     actionsDialogWidth: state.isTouchMode ? "100vw" : "800",
     actionsDialogHeight: state.isTouchMode ? "100vh" : "80vh",
+    actionsDialogPanelWidth: state.isTouchMode
+      ? "100vw"
+      : (attrs.dialogPanelWidth ?? "50vw"),
     hiddenModes,
     isRuntimeActionMode: isRuntimeActionMode(state.mode),
   };

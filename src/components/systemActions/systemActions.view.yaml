@@ -5,6 +5,8 @@ refs:
         handler: handleBackToActions
       actionClicked:
         handler: handleActionClicked
+      temporary-presentation-state-change:
+        handler: handleTemporaryPresentationStateChange
       submit:
         handler: handleCommandLineSubmit
   addActionButton:
@@ -189,9 +191,9 @@ template:
           - $if actionsType == 'system':
               - rtgl-view d=h av=c ah=e w=f g=lg:
                   - rtgl-button#embeddedCloseButton: Confirm
-  - rtgl-dialog#actionsDialog key=${mode} ?open=${isActionsDialogOpen}:
+  - rvn-system-actions-dialog-surface#actionsDialog key=${mode} :open=${isActionsDialogOpen} variant=${dialogVariant} :dialogWidth=${actionsDialogWidth} :dialogHeight=${actionsDialogHeight} :panelWidth=${actionsDialogPanelWidth}:
       - $if isActionsDialogOpen:
-          - rtgl-view slot=content w=${actionsDialogWidth} h=${actionsDialogHeight} pos=rel:
+          - 'rtgl-view slot=content w=f h=f pos=rel style="min-width: 0; min-height: 0;"':
               - 'rtgl-view#helpFloatingButton pos=abs z=10 w=28 h=28 ah=c av=c bgc=bg bw=xs bc=bo h-bc=ac br=f cur=pointer style="top: 10px; right: 10px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);"':
                   - rtgl-text s=xs c=mu-fg: '?'
               - $if mode == "actions":

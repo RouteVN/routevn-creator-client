@@ -88,6 +88,7 @@ export const createInitialState = () => ({
   selectedResourceId: undefined,
   selectedResourceType: undefined,
   tempSelectedResourceId: undefined,
+  tempSelectedResourceType: undefined,
   selectedTransformId: undefined,
   selectedAnimationMode: "none",
   selectedAnimationId: undefined,
@@ -103,8 +104,23 @@ export const selectTempSelectedResourceId = ({ state }) => {
   return state.tempSelectedResourceId;
 };
 
+export const selectTempSelectedResource = ({ state }) => {
+  const resourceId = state.tempSelectedResourceId;
+  const resourceType = state.tempSelectedResourceType ?? state.tab;
+
+  if (!resourceId || !resourceType) {
+    return null;
+  }
+
+  return selectResourceById({ state }, { resourceId, resourceType });
+};
+
 export const setMode = ({ state }, { mode } = {}) => {
   state.mode = mode;
+};
+
+export const selectMode = ({ state }) => {
+  return state.mode;
 };
 
 export const setRepositoryState = (
@@ -143,8 +159,12 @@ export const setSelectedResource = (
   }
 };
 
-export const setTempSelectedResource = ({ state }, { resourceId } = {}) => {
+export const setTempSelectedResource = (
+  { state },
+  { resourceId, resourceType } = {},
+) => {
   state.tempSelectedResourceId = resourceId;
+  state.tempSelectedResourceType = resourceType ?? state.tab;
 };
 
 export const setPendingResourceId = ({ state }, { resourceId } = {}) => {
@@ -283,15 +303,29 @@ export const selectSelectedResource = ({ state }) => {
     return null;
   }
 
+  return selectResourceById(
+    { state },
+    {
+      resourceId: state.selectedResourceId,
+      resourceType: state.selectedResourceType,
+    },
+  );
+};
+
+const selectResourceById = ({ state }, { resourceId, resourceType } = {}) => {
+  if (!resourceId || !resourceType) {
+    return null;
+  }
+
   const itemsMap = {
     image: state.imageItems,
     layout: state.layoutItems,
     video: state.videoItems,
   };
 
-  const itemsList = itemsMap[state.selectedResourceType] || [];
+  const itemsList = itemsMap[resourceType] || [];
   const flatItems = toFlatItems(itemsList);
-  const item = flatItems.find((item) => item.id === state.selectedResourceId);
+  const item = flatItems.find((item) => item.id === resourceId);
 
   if (!item) {
     return null;
@@ -310,8 +344,8 @@ export const selectSelectedResource = ({ state }) => {
   const typeInfo = layoutTypeLabels[item.layoutType] ?? item.layoutType;
 
   return {
-    resourceId: state.selectedResourceId,
-    resourceType: state.selectedResourceType,
+    resourceId,
+    resourceType,
     fileId: item.thumbnailFileId || item.fileId,
     name: item.name,
     itemBorderColor: "bo",
@@ -322,7 +356,7 @@ export const selectSelectedResource = ({ state }) => {
       ? layoutTypeLabels[item.layoutType] || item.layoutType
       : "Layout",
     item: item,
-    tab: state.selectedResourceType,
+    tab: resourceType,
   };
 };
 

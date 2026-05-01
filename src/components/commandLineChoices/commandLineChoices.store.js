@@ -123,6 +123,27 @@ export const updateEditForm = ({ state }, { field, value } = {}) => {
   state.editForm[field] = value;
 };
 
+const buildChoiceDataFromEditForm = (editForm = {}) => {
+  const actions = {};
+  if (editForm.actionType === "nextLine") {
+    actions.nextLine = {};
+  } else if (editForm.actionType === "sectionTransition") {
+    actions.sectionTransition = {
+      sceneId: editForm.sceneId,
+      sectionId: editForm.sectionId,
+    };
+  }
+
+  return {
+    content: editForm.content,
+    events: {
+      click: {
+        actions,
+      },
+    },
+  };
+};
+
 export const addChoice = ({ state }, _payload = {}) => {
   state.items.push({
     content: `Choice ${state.items.length + 1}`,
@@ -142,25 +163,7 @@ export const setScenes = ({ state }, { scenes } = {}) => {
 
 export const saveChoice = ({ state }, _payload = {}) => {
   const { editingIndex, editForm } = state;
-
-  const actions = {};
-  if (editForm.actionType === "nextLine") {
-    actions.nextLine = {};
-  } else if (editForm.actionType === "sectionTransition") {
-    actions.sectionTransition = {
-      sceneId: editForm.sceneId,
-      sectionId: editForm.sectionId,
-    };
-  }
-
-  const choiceData = {
-    content: editForm.content,
-    events: {
-      click: {
-        actions: actions,
-      },
-    },
-  };
+  const choiceData = buildChoiceDataFromEditForm(editForm);
 
   if (editingIndex >= 0) {
     // Update existing choice
@@ -217,6 +220,24 @@ export const selectEditForm = ({ state }) =>
     sectionId: "",
   };
 export const selectItems = ({ state }) => state?.items || [];
+export const selectItemsWithEditingDraft = ({ state }) => {
+  const items = [...(state?.items || [])];
+
+  if (state?.mode !== "editChoice") {
+    return items;
+  }
+
+  const choiceData = buildChoiceDataFromEditForm(state.editForm);
+  const editingIndex = state?.editingIndex ?? -1;
+
+  if (editingIndex >= 0 && items[editingIndex]) {
+    items[editingIndex] = choiceData;
+  } else {
+    items.push(choiceData);
+  }
+
+  return items;
+};
 export const selectSelectedResourceId = ({ state }) =>
   state?.selectedResourceId || "";
 

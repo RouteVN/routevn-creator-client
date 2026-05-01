@@ -1754,6 +1754,22 @@ const collectResourceSelectionFromValue = (projectData, value) => {
   };
 
   scanValue(value);
+  traverseScene(value, (key, entry) => {
+    if (
+      key !== "character" ||
+      !entry ||
+      typeof entry !== "object" ||
+      !Array.isArray(entry.items)
+    ) {
+      return;
+    }
+
+    entry.items.forEach((item) => {
+      if (typeof item?.id === "string" && resources.characters?.[item.id]) {
+        selection.characters.add(item.id);
+      }
+    });
+  });
 
   while (pendingLayoutIds.length > 0) {
     const layoutId = pendingLayoutIds.shift();
@@ -1985,6 +2001,31 @@ export const extractFileIdsForScene = (projectData, sceneId) => {
     colors: pickByIds(resources.colors, selection.colors),
     textStyles: pickByIds(resources.textStyles, selection.textStyles),
     layouts: scopedLayouts,
+    characters: pickByIds(resources.characters, selection.characters),
+    transforms: pickByIds(resources.transforms, selection.transforms),
+    animations: pickByIds(resources.animations, selection.animations),
+  };
+
+  return dedupeFileReferences(extractFileIdsFromRenderState(scopedResources));
+};
+
+export const extractFileIdsForValue = (projectData, value) => {
+  const resources = projectData?.resources;
+  if (!resources || !value || typeof value !== "object") {
+    return [];
+  }
+
+  const selection = collectResourceSelectionFromValue(projectData, value);
+  const scopedResources = {
+    images: pickByIds(resources.images, selection.images),
+    spritesheets: pickByIds(resources.spritesheets, selection.spritesheets),
+    videos: pickByIds(resources.videos, selection.videos),
+    sounds: pickByIds(resources.sounds, selection.sounds),
+    particles: pickByIds(resources.particles, selection.particles),
+    fonts: pickByIds(resources.fonts, selection.fonts),
+    colors: pickByIds(resources.colors, selection.colors),
+    textStyles: pickByIds(resources.textStyles, selection.textStyles),
+    layouts: pickByIds(resources.layouts, selection.layouts),
     characters: pickByIds(resources.characters, selection.characters),
     transforms: pickByIds(resources.transforms, selection.transforms),
     animations: pickByIds(resources.animations, selection.animations),

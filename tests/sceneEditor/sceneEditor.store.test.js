@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  clearTemporaryPresentationState,
+  selectEffectivePresentationState,
   selectViewData,
   selectSectionTransitionsDAG,
   setRepositoryState,
   setSceneId,
+  setPresentationState,
+  setTemporaryPresentationState,
 } from "../../src/pages/sceneEditor/sceneEditor.store.js";
 
 describe("sceneEditor.store", () => {
@@ -114,5 +118,51 @@ describe("sceneEditor.store", () => {
     const viewData = selectViewData({ state });
     expect(viewData.sections[0].isDeadEnd).toBe(false);
     expect(viewData.sectionsOverviewItems[0].isDeadEnd).toBe(false);
+  });
+
+  it("overlays temporary presentation state over committed presentation state", () => {
+    const state = createInitialState();
+
+    setPresentationState(
+      { state },
+      {
+        presentationState: {
+          dialogue: {
+            mode: "adv",
+          },
+          background: {
+            resourceId: "background-1",
+          },
+        },
+      },
+    );
+    setTemporaryPresentationState(
+      { state },
+      {
+        presentationState: {
+          dialogue: {
+            mode: "nvl",
+          },
+        },
+      },
+    );
+
+    expect(selectEffectivePresentationState({ state })).toEqual({
+      dialogue: {
+        mode: "nvl",
+      },
+      background: {
+        resourceId: "background-1",
+      },
+    });
+    expect(selectViewData({ state }).presentationState.dialogue).toEqual({
+      mode: "nvl",
+    });
+
+    clearTemporaryPresentationState({ state });
+
+    expect(selectEffectivePresentationState({ state }).dialogue).toEqual({
+      mode: "adv",
+    });
   });
 });

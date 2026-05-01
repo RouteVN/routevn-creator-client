@@ -13,6 +13,54 @@ const resolveSelectedResourceId = ({ layouts, resourceId } = {}) => {
   return availableLayouts[0]?.id ?? "";
 };
 
+const buildChoicesDataFromState = (
+  deps,
+  { includeEditingDraft = false } = {},
+) => {
+  const { store, props } = deps;
+  const selectedResourceId = resolveSelectedResourceId({
+    layouts: props?.layouts,
+    resourceId: store.selectSelectedResourceId(),
+  });
+
+  if (!selectedResourceId) {
+    return undefined;
+  }
+
+  const items = includeEditingDraft
+    ? store.selectItemsWithEditingDraft()
+    : store.selectItems();
+  const choicesData = {
+    items,
+  };
+
+  if (selectedResourceId !== "") {
+    choicesData.resourceId = selectedResourceId;
+  }
+
+  return choicesData;
+};
+
+const dispatchTemporaryPresentationStateChange = (deps) => {
+  const { dispatchEvent } = deps;
+
+  if (typeof dispatchEvent !== "function") {
+    return;
+  }
+
+  const choice = buildChoicesDataFromState(deps, {
+    includeEditingDraft: true,
+  });
+
+  dispatchEvent(
+    new CustomEvent("temporary-presentation-state-change", {
+      detail: {
+        presentationState: choice ? { choice } : {},
+      },
+    }),
+  );
+};
+
 export const handleBeforeMount = (deps) => {
   const { store, props } = deps;
   store.setItems({ items: props.choice?.items || [] });
@@ -81,6 +129,7 @@ export const handleCancelEditClick = (deps) => {
   const mode = store.selectMode();
   if (mode === "list") {
     render();
+    dispatchTemporaryPresentationStateChange(deps);
   }
 };
 
@@ -124,6 +173,7 @@ export const handleSaveChoiceClick = (deps) => {
 
   store.saveChoice();
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleChoiceFormInput = (deps, payload) => {
@@ -145,6 +195,7 @@ export const handleChoiceFormInput = (deps, payload) => {
 
   store.updateEditForm({ field, value });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleChoiceFormChange = (deps, payload) => {
@@ -153,6 +204,7 @@ export const handleChoiceFormChange = (deps, payload) => {
 
   store.updateEditForm({ field: name, value: fieldValue });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleChoiceItemClick = (deps) => {
@@ -162,26 +214,15 @@ export const handleChoiceItemClick = (deps) => {
 };
 
 export const handleSubmitClick = (deps) => {
-  const { dispatchEvent, store, appService, props } = deps;
-  const items = store.selectItems();
-  const selectedResourceId = resolveSelectedResourceId({
-    layouts: props.layouts,
-    resourceId: store.selectSelectedResourceId(),
-  });
+  const { dispatchEvent, appService } = deps;
+  const choicesData = buildChoicesDataFromState(deps);
 
-  if (!selectedResourceId) {
+  if (!choicesData) {
     appService.showAlert({
       message: "Please select a choice layout",
       title: "Warning",
     });
     return;
-  }
-  // Create choices object with new structure
-  const choicesData = {
-    items,
-  };
-  if (selectedResourceId && selectedResourceId !== "") {
-    choicesData.resourceId = selectedResourceId;
   }
 
   dispatchEvent(
@@ -201,6 +242,7 @@ export const handleRemoveChoiceClick = (deps, payload) => {
 
   store.removeChoice({ index: index });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleLayoutSelectChange = (deps, payload) => {
@@ -209,6 +251,7 @@ export const handleLayoutSelectChange = (deps, payload) => {
 
   store.setSelectedResourceId({ resourceId });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleFormExtra = (_deps) => {
@@ -222,6 +265,7 @@ export const handleFormChange = (deps, payload) => {
   if (name === "resourceId") {
     store.setSelectedResourceId({ resourceId: fieldValue });
     render();
+    dispatchTemporaryPresentationStateChange(deps);
   }
 };
 
@@ -242,6 +286,7 @@ export const handleDropdownMenuClickItem = (deps, payload) => {
 
   store.hideDropdownMenu();
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleBreadcumbClick = (deps, payload) => {
@@ -261,6 +306,7 @@ export const handleBreadcumbClick = (deps, payload) => {
     const mode = store.selectMode();
     if (mode === "list") {
       render();
+      dispatchTemporaryPresentationStateChange(deps);
     }
   }
 };

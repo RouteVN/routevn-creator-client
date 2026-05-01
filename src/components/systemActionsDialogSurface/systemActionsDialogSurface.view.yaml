@@ -1,0 +1,25 @@
+refs:
+  overlay:
+    eventListeners:
+      click:
+        handler: handleSurfaceClose
+      contextmenu:
+        handler: handleSurfaceClose
+  dialog:
+    eventListeners:
+      close:
+        handler: handleSurfaceClose
+  document:
+    eventListeners:
+      keydown:
+        handler: handleDocumentKeyDown
+template:
+  - $if isSceneEditorLeft:
+      - $if open:
+          - 'rtgl-view#overlay pos=fix edge=f style="z-index: 2000; background: transparent;"': null
+          - 'rtgl-view pos=fix bgc=bg bw=xs bc=bo br=md style="left: ${panelHorizontalInset}; top: ${panelVerticalInset}; bottom: ${panelVerticalInset}; width: calc(${panelWidth} - ${panelWidthReduction}); max-width: calc(100vw - ${panelHorizontalInset}); min-width: 0; min-height: 0; box-sizing: border-box; overflow: hidden; z-index: 2001; box-shadow: 8px 0 24px rgba(15, 23, 42, 0.10);"':
+              - slot name=content: null
+    $else:
+      - rtgl-dialog#dialog ?open=${open}:
+          - rtgl-view slot=content w=${dialogWidth} h=${dialogHeight} pos=rel:
+              - slot name=content: null

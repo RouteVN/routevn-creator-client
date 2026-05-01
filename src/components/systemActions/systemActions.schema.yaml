@@ -17,6 +17,13 @@ propsSchema:
       enum:
         - presentation
         - system
+    dialogVariant:
+      type: string
+      enum:
+        - default
+        - scene-editor-left
+    dialogPanelWidth:
+      type: string
     hiddenModes:
       type: array
       items:

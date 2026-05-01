@@ -7,6 +7,7 @@ import {
   handleCharacterContextMenu,
   handleCharacterSpriteGroupBoxClick,
   handleDropdownMenuClickItem,
+  handleSpriteItemClick,
   handleSpriteGroupTabClick,
 } from "../../src/components/commandLineCharacters/commandLineCharacters.handlers.js";
 import {
@@ -126,7 +127,17 @@ describe("commandLineCharacters.handlers", () => {
     expect(selectSelectedCharacterIndex({ state })).toBeUndefined();
     expect(selectTempSelectedSpriteId({ state })).toBeUndefined();
     expect(selectMode({ state })).toBe("current");
-    expect(dispatchEvent).not.toHaveBeenCalled();
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].type).toBe(
+      "temporary-presentation-state-change",
+    );
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        character: {
+          items: [],
+        },
+      },
+    });
   });
 
   it("keeps existing characters when returning from sprite selection", () => {
@@ -202,7 +213,29 @@ describe("commandLineCharacters.handlers", () => {
     expect(selectMode({ state })).toBe("current");
     expect(selectTempSelectedSpriteId({ state })).toBeUndefined();
     expect(selectSelectedSpriteGroupId({ state })).toBeUndefined();
-    expect(dispatchEvent).not.toHaveBeenCalled();
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].type).toBe(
+      "temporary-presentation-state-change",
+    );
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        character: {
+          items: [
+            {
+              id: "character-1",
+              transformId: undefined,
+              sprites: [
+                {
+                  id: "base",
+                  resourceId: "sprite-1",
+                },
+              ],
+              spriteName: "",
+            },
+          ],
+        },
+      },
+    });
   });
 
   it("selects sprite parts per sprite group and keeps tab state", () => {
@@ -309,6 +342,114 @@ describe("commandLineCharacters.handlers", () => {
 
     expect(selectSelectedSpriteGroupId({ state })).toBe("face");
     expect(selectTempSelectedSpriteId({ state })).toBeUndefined();
+  });
+
+  it("emits temporary presentation state while picking character sprites", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const store = createStoreApi(state);
+
+    setItems(
+      { state },
+      {
+        items: {
+          items: {
+            "character-hero": {
+              id: "character-hero",
+              type: "character",
+              name: "Hero",
+              spriteGroups: [
+                {
+                  id: "body",
+                  name: "Body",
+                  tags: [],
+                },
+              ],
+              sprites: {
+                items: {
+                  "sprite-body": {
+                    id: "sprite-body",
+                    type: "image",
+                    name: "Body A",
+                    fileId: "file-body",
+                  },
+                },
+                tree: [{ id: "sprite-body" }],
+              },
+            },
+          },
+          tree: [{ id: "character-hero" }],
+        },
+      },
+    );
+    setExistingCharacters(
+      { state },
+      {
+        characters: [
+          {
+            id: "character-hero",
+            sprites: [],
+          },
+        ],
+      },
+    );
+
+    handleCharacterClick(
+      {
+        store,
+        render,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              index: "0",
+            },
+          },
+        },
+      },
+    );
+    handleSpriteItemClick(
+      {
+        store,
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              spriteId: "sprite-body",
+            },
+          },
+        },
+      },
+    );
+
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].type).toBe(
+      "temporary-presentation-state-change",
+    );
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        character: {
+          items: [
+            {
+              id: "character-hero",
+              transformId: undefined,
+              sprites: [
+                {
+                  id: "body",
+                  resourceId: "sprite-body",
+                },
+              ],
+              spriteName: "",
+            },
+          ],
+        },
+      },
+    });
   });
 
   it("opens sprite selection at the clicked sprite group box", () => {

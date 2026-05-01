@@ -253,6 +253,45 @@ describe("renderSceneEditorState", () => {
     );
   });
 
+  it("applies temporary presentation state to the engine without replacing base store state", async () => {
+    const projectData = createProjectData();
+    const graphicsService = createGraphicsService();
+    const temporaryPresentationState = {
+      dialogue: {
+        mode: "adv",
+        ui: {
+          resourceId: "adv",
+        },
+        content: [{ text: "temporary" }],
+      },
+    };
+    const store = {
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => "section-1",
+      selectSelectedLineId: () => "line-2",
+      selectProjectData: () => projectData,
+      selectTemporaryPresentationState: () => temporaryPresentationState,
+      selectIsMuted: () => false,
+      setPresentationState: ({ presentationState }) => {
+        store.presentationState = presentationState;
+      },
+      presentationState: undefined,
+    };
+
+    await renderSceneEditorState({
+      store,
+      graphicsService,
+    });
+
+    expect(store.presentationState?.dialogue?.content?.[0]?.text).toBe(
+      "second",
+    );
+    expect(
+      graphicsService.engineSelectPresentationState()?.dialogue?.content?.[0]
+        ?.text,
+    ).toBe("temporary");
+  });
+
   it("can warm route-engine state without drawing the canvas", async () => {
     const projectData = createProjectData();
     const graphicsService = createGraphicsService();

@@ -108,6 +108,69 @@ const getDomainStateFromRepository = (repository) => {
   return repository.getState();
 };
 
+const buildBackgroundDataFromState = (
+  store,
+  { includeTemporaryResource = false } = {},
+) => {
+  const selectedResource =
+    includeTemporaryResource && store.selectMode?.() === "gallery"
+      ? (store.selectTempSelectedResource?.() ?? store.selectSelectedResource())
+      : store.selectSelectedResource();
+  const selectedTransformId = store.selectSelectedTransform();
+  const selectedAnimationMode = store.selectSelectedAnimationMode();
+  const selectedAnimationId = store.selectSelectedAnimation();
+  const selectedAnimationPlaybackContinuity =
+    store.selectSelectedAnimationPlaybackContinuity();
+  const backgroundLoop = store.selectBackgroundLoop();
+
+  const backgroundData = {
+    resourceId: selectedResource?.resourceId,
+  };
+
+  if (selectedResource?.resourceType === "video") {
+    backgroundData.loop = backgroundLoop ?? false;
+  }
+
+  if (selectedResource?.resourceId && selectedTransformId) {
+    backgroundData.transformId = selectedTransformId;
+  }
+
+  if (
+    selectedResource?.resourceId &&
+    selectedAnimationMode !== "none" &&
+    selectedAnimationId
+  ) {
+    backgroundData.animations = {
+      resourceId: selectedAnimationId,
+      playback: {
+        continuity: selectedAnimationPlaybackContinuity,
+      },
+    };
+  }
+
+  return backgroundData;
+};
+
+const dispatchTemporaryPresentationStateChange = (deps) => {
+  const { dispatchEvent, store } = deps;
+
+  if (typeof dispatchEvent !== "function") {
+    return;
+  }
+
+  dispatchEvent(
+    new CustomEvent("temporary-presentation-state-change", {
+      detail: {
+        presentationState: {
+          background: buildBackgroundDataFromState(store, {
+            includeTemporaryResource: true,
+          }),
+        },
+      },
+    }),
+  );
+};
+
 export const handleBeforeMount = (deps) => {
   const { store, props } = deps;
 
@@ -243,6 +306,7 @@ export const handleBackgroundImageRightClick = async (deps, payload) => {
     });
 
     render();
+    dispatchTemporaryPresentationStateChange(deps);
   }
 };
 
@@ -260,6 +324,7 @@ export const handleImageSelected = async (deps, payload) => {
   });
 
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 
   const flatImageItems = toFlatItems(images);
   const existingImage = flatImageItems.find((item) => item.id === imageId);
@@ -279,6 +344,7 @@ export const handleImageDoubleClick = (deps, payload) => {
   });
   store.showFullImagePreview({ imageId });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleFormExtra = (deps) => {
@@ -299,6 +365,7 @@ export const handleFormInputChange = (deps, payload) => {
       mode: fieldValue,
     });
     render();
+    dispatchTemporaryPresentationStateChange(deps);
     return;
   }
 
@@ -307,6 +374,7 @@ export const handleFormInputChange = (deps, payload) => {
       animationId: fieldValue,
     });
     render();
+    dispatchTemporaryPresentationStateChange(deps);
     return;
   }
 
@@ -315,6 +383,7 @@ export const handleFormInputChange = (deps, payload) => {
       transformId: fieldValue,
     });
     render();
+    dispatchTemporaryPresentationStateChange(deps);
     return;
   }
 
@@ -323,6 +392,7 @@ export const handleFormInputChange = (deps, payload) => {
       continuity: fieldValue,
     });
     render();
+    dispatchTemporaryPresentationStateChange(deps);
     return;
   }
 
@@ -331,6 +401,7 @@ export const handleFormInputChange = (deps, payload) => {
       loop: fieldValue,
     });
     render();
+    dispatchTemporaryPresentationStateChange(deps);
   }
 };
 
@@ -348,6 +419,7 @@ export const handleResourceItemClick = (deps, payload) => {
     resourceType,
   });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleTabClick = (deps, payload) => {
@@ -369,38 +441,7 @@ export const handleSearchInput = (deps, payload) => {
 export const handleSubmitClick = (deps, payload) => {
   payload?._event?.stopPropagation?.();
   const { dispatchEvent, store } = deps;
-  const selectedResource = store.selectSelectedResource();
-  const selectedTransformId = store.selectSelectedTransform();
-  const selectedAnimationMode = store.selectSelectedAnimationMode();
-  const selectedAnimationId = store.selectSelectedAnimation();
-  const selectedAnimationPlaybackContinuity =
-    store.selectSelectedAnimationPlaybackContinuity();
-  const backgroundLoop = store.selectBackgroundLoop();
-
-  const backgroundData = {
-    resourceId: selectedResource?.resourceId,
-  };
-
-  if (selectedResource?.resourceType === "video") {
-    backgroundData.loop = backgroundLoop ?? false;
-  }
-
-  if (selectedResource?.resourceId && selectedTransformId) {
-    backgroundData.transformId = selectedTransformId;
-  }
-
-  if (
-    selectedResource?.resourceId &&
-    selectedAnimationMode !== "none" &&
-    selectedAnimationId
-  ) {
-    backgroundData.animations = {
-      resourceId: selectedAnimationId,
-      playback: {
-        continuity: selectedAnimationPlaybackContinuity,
-      },
-    };
-  }
+  const backgroundData = buildBackgroundDataFromState(store);
 
   dispatchEvent(
     new CustomEvent("submit", {
@@ -460,6 +501,7 @@ export const handleBreadcumbActionsClick = (deps, payload) => {
       mode: payload._event.detail.id,
     });
     render();
+    dispatchTemporaryPresentationStateChange(deps);
   }
 };
 
@@ -504,4 +546,5 @@ export const handleButtonSelectClick = async (deps) => {
     mode: "current",
   });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };

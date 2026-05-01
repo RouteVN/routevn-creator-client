@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  handleActionsDialogClose,
   handleCommandLineSubmit,
   handleDialogueCharacterShortcut,
   handleEditorDataChanged,
@@ -92,6 +93,75 @@ describe("sceneEditor.handlers line navigation", () => {
 });
 
 describe("sceneEditor.handlers dialogue persistence", () => {
+  it("clears temporary presentation state and refreshes the canvas when the actions dialog closes", () => {
+    const store = {
+      clearTemporaryPresentationState: vi.fn(),
+    };
+    const deps = {
+      store,
+      render: vi.fn(),
+      subject: {
+        dispatch: vi.fn(),
+      },
+    };
+
+    handleActionsDialogClose(deps);
+
+    expect(store.clearTemporaryPresentationState).toHaveBeenCalledTimes(1);
+    expect(deps.render).toHaveBeenCalledTimes(1);
+    expect(deps.subject.dispatch).toHaveBeenCalledWith(
+      "sceneEditor.renderCanvas",
+      {
+        skipRender: true,
+        skipAnimations: true,
+      },
+    );
+  });
+
+  it("clears temporary presentation state and refreshes the canvas when action save fails", async () => {
+    const saveError = new Error("save failed");
+    const store = {
+      selectSelectedLineId: vi.fn(() => "line-1"),
+      clearTemporaryPresentationState: vi.fn(),
+    };
+    const deps = {
+      store,
+      render: vi.fn(),
+      subject: {
+        dispatch: vi.fn(),
+      },
+      projectService: {
+        updateLineActions: vi.fn(async () => {
+          throw saveError;
+        }),
+      },
+      appService: {
+        showAlert: vi.fn(),
+      },
+    };
+
+    await expect(
+      handleCommandLineSubmit(deps, {
+        _event: {
+          detail: {
+            background: {
+              resourceId: "bg-school",
+            },
+          },
+        },
+      }),
+    ).rejects.toThrow("save failed");
+
+    expect(store.clearTemporaryPresentationState).toHaveBeenCalledTimes(1);
+    expect(deps.subject.dispatch).toHaveBeenCalledWith(
+      "sceneEditor.renderCanvas",
+      {
+        skipRender: true,
+        skipAnimations: true,
+      },
+    );
+  });
+
   it("preserves dialogue content when submitting dialogue metadata changes", async () => {
     const updateLineDialogueAction = vi.fn(async () => ({ valid: true }));
     const store = {

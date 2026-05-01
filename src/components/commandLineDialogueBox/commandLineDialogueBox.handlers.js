@@ -353,11 +353,163 @@ const buildDialogueCharacterSprite = ({
   return sprite;
 };
 
+const resolveEffectiveSelectedSpriteIds = ({
+  state,
+  props,
+  includeTemporarySpriteSelection = false,
+} = {}) => {
+  if (!includeTemporarySpriteSelection || state.mode !== "sprite-select") {
+    return state.selectedSpriteIds;
+  }
+
+  const spriteSelectionGroups = getSpriteSelectionGroupsForCharacterId({
+    characters: props?.characters,
+    characterId: state.spriteCharacterId,
+  });
+  const selectedSpriteIds = {};
+
+  for (const spriteSelectionGroup of spriteSelectionGroups) {
+    const resourceId =
+      state.tempSelectedSpriteIds?.[spriteSelectionGroup.id] ??
+      state.selectedSpriteIds?.[spriteSelectionGroup.id];
+
+    if (resourceId) {
+      selectedSpriteIds[spriteSelectionGroup.id] = resourceId;
+    }
+  }
+
+  return selectedSpriteIds;
+};
+
 const hasDialogueCharacter = ({
   selectedCharacterId,
   customCharacterName,
 } = {}) => {
   return !!selectedCharacterId || toBoolean(customCharacterName);
+};
+
+const buildDialogueFromState = (
+  deps,
+  { includeTemporarySpriteSelection = false, includeContent = false } = {},
+) => {
+  const { store, props } = deps;
+  const {
+    selectedMode,
+    selectedResourceId,
+    selectedCharacterId,
+    customCharacterName,
+    characterName,
+    characterSpriteEnabled,
+    spriteCharacterId,
+    spriteTransformId,
+    spriteAnimationMode,
+    spriteAnimationId,
+    appendDialogue,
+    persistCharacter,
+    clearPage,
+  } = store.getState();
+  const selectedSpriteIds = resolveEffectiveSelectedSpriteIds({
+    state: store.getState(),
+    props,
+    includeTemporarySpriteSelection,
+  });
+  const effectiveMode = resolveDialogueMode({
+    layouts: props?.layouts,
+    dialogue: {
+      mode: selectedMode,
+      ui: {
+        resourceId: selectedResourceId,
+      },
+    },
+  });
+  const effectiveResourceId = resolveSelectedResourceId({
+    layouts: props?.layouts,
+    mode: effectiveMode,
+    resourceId: selectedResourceId,
+  });
+
+  if (!effectiveResourceId) {
+    return undefined;
+  }
+
+  const dialogue = {
+    mode: effectiveMode,
+  };
+
+  dialogue.ui = {
+    resourceId: effectiveResourceId,
+  };
+  if (selectedCharacterId) {
+    dialogue.characterId = selectedCharacterId;
+  }
+  const character = {};
+  if (toBoolean(customCharacterName)) {
+    character.name = characterName ?? "";
+  }
+  const characterSprite = buildDialogueCharacterSprite({
+    characters: props?.characters,
+    transforms: props?.transforms,
+    spriteCharacterId,
+    characterSpriteEnabled:
+      characterSpriteEnabled || Object.keys(selectedSpriteIds).length > 0,
+    spriteTransformId,
+    selectedSpriteIds,
+    spriteAnimationMode,
+    spriteAnimationId,
+  });
+  if (characterSprite) {
+    character.sprite = characterSprite;
+  }
+  if (Object.keys(character).length > 0) {
+    dialogue.character = character;
+  }
+  const persistCharacterEnabled =
+    hasDialogueCharacter({
+      selectedCharacterId,
+      customCharacterName,
+    }) && toBoolean(persistCharacter);
+  const appendDialogueEnabled = toBoolean(appendDialogue);
+  const appendDialoguePreviouslyEnabled = props?.dialogue?.append === true;
+  if (
+    effectiveMode === "adv" &&
+    (appendDialogueEnabled || appendDialoguePreviouslyEnabled)
+  ) {
+    dialogue.append = appendDialogueEnabled;
+  }
+  dialogue.persistCharacter = persistCharacterEnabled;
+  if (effectiveMode === "nvl" && toBoolean(clearPage)) {
+    dialogue.clearPage = true;
+  }
+  if (
+    includeContent &&
+    !Object.hasOwn(dialogue, "content") &&
+    props?.dialogue?.content !== undefined
+  ) {
+    dialogue.content = structuredClone(props.dialogue.content);
+  }
+
+  return dialogue;
+};
+
+const dispatchTemporaryPresentationStateChange = (deps) => {
+  const { dispatchEvent } = deps;
+
+  if (typeof dispatchEvent !== "function") {
+    return;
+  }
+
+  const dialogue = buildDialogueFromState(deps, {
+    includeTemporarySpriteSelection: true,
+    includeContent: true,
+  });
+
+  dispatchEvent(
+    new CustomEvent("temporary-presentation-state-change", {
+      detail: {
+        presentationState: dialogue ? { dialogue } : {},
+      },
+    }),
+  );
 };
 
 const syncDialogueStateFromProps = (deps, dialogue = {}) => {
@@ -561,6 +713,8 @@ export const handleFormChange = (deps, payload) => {
   if (modeChanged || persistCharacterVisibilityChanged) {
     syncDialogueFormValues(deps);
   }
+
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleCharacterSpriteBoxClick = (deps) => {
@@ -598,6 +752,7 @@ export const handleClearCharacterSpriteClick = (deps, payload) => {
   payload?._event?.stopPropagation?.();
   store.clearCharacterSprite();
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleFileExplorerItemClick = (deps, payload) => {
@@ -619,6 +774,7 @@ export const handleFileExplorerItemClick = (deps, payload) => {
       spriteId: itemId,
     });
     render();
+    dispatchTemporaryPresentationStateChange(deps);
     return;
   }
 
@@ -626,6 +782,7 @@ export const handleFileExplorerItemClick = (deps, payload) => {
     characterId: itemId,
   });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleSearchInput = (deps, payload) => {
@@ -642,6 +799,7 @@ export const handleCharacterItemClick = (deps, payload) => {
     characterId,
   });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleSpriteItemClick = (deps, payload) => {
@@ -654,6 +812,7 @@ export const handleSpriteItemClick = (deps, payload) => {
   });
 
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleSpriteItemDoubleClick = (deps, payload) => {
@@ -677,6 +836,7 @@ export const handleSpriteItemDoubleClick = (deps, payload) => {
   });
   store.showFullImagePreview({ fileId: sprite.fileId });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleSpriteGroupTabClick = (deps, payload) => {
@@ -699,6 +859,7 @@ export const handleTransformChange = (deps, payload) => {
   const value = payload._event.detail.value;
   store.setSpriteTransformId({ transformId: value });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleAnimationModeChange = (deps, payload) => {
@@ -706,6 +867,7 @@ export const handleAnimationModeChange = (deps, payload) => {
   const value = payload._event.detail.value;
   store.setSpriteAnimationMode({ mode: value });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleAnimationChange = (deps, payload) => {
@@ -713,6 +875,7 @@ export const handleAnimationChange = (deps, payload) => {
   const value = payload._event.detail.value;
   store.setSpriteAnimationId({ animationId: value });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleButtonSelectClick = (deps) => {
@@ -747,93 +910,15 @@ export const handleButtonSelectClick = (deps) => {
   }
 
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleSubmitClick = (deps) => {
-  const { store, dispatchEvent, props } = deps;
-  const {
-    selectedMode,
-    selectedResourceId,
-    selectedCharacterId,
-    customCharacterName,
-    characterName,
-    characterSpriteEnabled,
-    spriteCharacterId,
-    spriteTransformId,
-    spriteAnimationMode,
-    spriteAnimationId,
-    selectedSpriteIds,
-    appendDialogue,
-    persistCharacter,
-    clearPage,
-  } = store.getState();
-  const effectiveMode = resolveDialogueMode({
-    layouts: props?.layouts,
-    dialogue: {
-      mode: selectedMode,
-      ui: {
-        resourceId: selectedResourceId,
-      },
-    },
-  });
-  const effectiveResourceId = resolveSelectedResourceId({
-    layouts: props?.layouts,
-    mode: effectiveMode,
-    resourceId: selectedResourceId,
-  });
+  const { dispatchEvent } = deps;
+  const dialogue = buildDialogueFromState(deps);
 
-  if (!effectiveResourceId) {
+  if (!dialogue) {
     return;
-  }
-
-  const dialogue = {
-    mode: effectiveMode,
-  };
-
-  if (effectiveResourceId) {
-    dialogue.ui = {
-      resourceId: effectiveResourceId,
-    };
-  }
-  if (selectedCharacterId) {
-    dialogue.characterId = selectedCharacterId;
-  }
-  const character = {};
-  if (toBoolean(customCharacterName)) {
-    character.name = characterName ?? "";
-  }
-  const characterSprite = buildDialogueCharacterSprite({
-    characters: props?.characters,
-    transforms: props?.transforms,
-    spriteCharacterId,
-    characterSpriteEnabled,
-    spriteTransformId,
-    selectedSpriteIds,
-    spriteAnimationMode,
-    spriteAnimationId,
-  });
-  if (characterSprite) {
-    character.sprite = characterSprite;
-  }
-  if (Object.keys(character).length > 0) {
-    dialogue.character = character;
-  }
-  const persistCharacterEnabled =
-    hasDialogueCharacter({
-      selectedCharacterId,
-      customCharacterName,
-    }) && toBoolean(persistCharacter);
-  const appendDialogueEnabled = toBoolean(appendDialogue);
-  const appendDialoguePreviouslyEnabled = props?.dialogue?.append === true;
-  if (
-    effectiveMode === "adv" &&
-    (appendDialogueEnabled || appendDialoguePreviouslyEnabled)
-  ) {
-    dialogue.append = appendDialogueEnabled;
-  }
-  dialogue.persistCharacter = persistCharacterEnabled;
-  if (effectiveMode === "nvl" && toBoolean(clearPage)) {
-    dialogue.clearPage = true;
   }
 
   dispatchEvent(
@@ -866,6 +951,7 @@ export const handleBreadcumbClick = (deps, payload) => {
       mode: "current",
     });
     render();
+    dispatchTemporaryPresentationStateChange(deps);
     return;
   }
 
