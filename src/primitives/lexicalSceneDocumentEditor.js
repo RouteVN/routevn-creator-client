@@ -458,9 +458,9 @@ const STYLES = `
   }
 
   .mention-chip[data-rvn-reference-selected="true"] {
-    border-color: var(--primary);
-    background: var(--primary);
-    color: var(--primary-foreground);
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--accent-foreground);
   }
 
   .placeholder {
