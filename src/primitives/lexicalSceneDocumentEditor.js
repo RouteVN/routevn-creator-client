@@ -648,6 +648,8 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.rightGutterRowsByLineId = new Map();
     this.pendingSoftLineBreakBeforeInput = false;
     this.pendingParagraphSplitBeforeInput = false;
+    this.isPointerDownInsideEditor = false;
+    this.pointerDownInsideEditorTimerId = undefined;
 
     this.editor = createEditor({
       namespace: "routevn-lexical-scene-document-editor",
@@ -925,6 +927,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.editor.setRootElement(null);
     this.awaitingCharacterShortcut = false;
     this.clearDeleteShortcutState();
+    this.clearPointerDownInsideEditor();
 
     if (this.didPatchActiveElement) {
       unpatchDocumentActiveElement(document);
@@ -1242,6 +1245,23 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }, DELETE_SHORTCUT_TIMEOUT_MS);
   }
 
+  markPointerDownInsideEditor() {
+    this.clearPointerDownInsideEditor();
+    this.isPointerDownInsideEditor = true;
+    this.pointerDownInsideEditorTimerId = setTimeout(() => {
+      this.clearPointerDownInsideEditor();
+    }, 1000);
+  }
+
+  clearPointerDownInsideEditor() {
+    this.isPointerDownInsideEditor = false;
+
+    if (this.pointerDownInsideEditorTimerId !== undefined) {
+      clearTimeout(this.pointerDownInsideEditorTimerId);
+      this.pointerDownInsideEditorTimerId = undefined;
+    }
+  }
+
   handleBlockModeCharacterShortcut(event, lineId) {
     if (this.awaitingCharacterShortcut) {
       this.awaitingCharacterShortcut = false;
@@ -1312,6 +1332,27 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   handleNativeBlur(event) {
+    if (this.isPointerDownInsideEditor) {
+      setTimeout(() => {
+        this.clearPointerDownInsideEditor();
+        if (!this.isConnected) {
+          return;
+        }
+
+        this.isEditorFocused = true;
+        this.setMode("text-editor");
+        this.focus({ preventScroll: true });
+
+        const range = getSelectionRange(this.refs.editor);
+        const lineId = this.getLineIdFromRange(range);
+        if (lineId) {
+          this.state.selectedLineId = lineId;
+          this.scheduleRender();
+        }
+      }, 0);
+      return;
+    }
+
     if (this.selectionMenuIsOpen || this.furiganaDialogIsPending) {
       return;
     }
@@ -1402,6 +1443,8 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
+    this.markPointerDownInsideEditor();
+
     const referenceSnapshot = this.getReferenceSnapshotFromContextEvent(event);
     if (!referenceSnapshot) {
       this.clearSelectedReferenceNodeKey();
@@ -1425,10 +1468,18 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     });
   }
 
-  handleNativeMouseUp() {
+  handleNativeMouseUp(event) {
+    setTimeout(() => {
+      this.clearPointerDownInsideEditor();
+    }, 0);
+
     const range = getSelectionRange(this.refs.editor);
     const lineId = this.getLineIdFromRange(range);
     if (!lineId) {
+      if (this.refs.editor?.contains(event?.target)) {
+        this.setMode("text-editor");
+        this.focus({ preventScroll: true });
+      }
       this.scheduleRender();
       return;
     }
@@ -4026,18 +4077,50 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     return slot;
   }
 
+  getLineElementFromRangePoint(container, offset) {
+    const element =
+      container?.nodeType === Node.TEXT_NODE
+        ? container.parentElement
+        : container;
+    const directLineElement = element?.closest?.(".editor-paragraph");
+    if (directLineElement) {
+      return directLineElement;
+    }
+
+    if (container !== this.refs.editor) {
+      return undefined;
+    }
+
+    const childNodes = Array.from(container.childNodes);
+    const candidates = [
+      childNodes[offset],
+      childNodes[offset - 1],
+      childNodes[offset + 1],
+    ];
+
+    for (const candidate of candidates) {
+      const candidateElement =
+        candidate?.nodeType === Node.TEXT_NODE
+          ? candidate.parentElement
+          : candidate;
+      const lineElement = candidateElement?.closest?.(".editor-paragraph");
+      if (lineElement) {
+        return lineElement;
+      }
+    }
+
+    return undefined;
+  }
+
   getLineIdFromRange(range) {
     if (!range?.startContainer) {
       return undefined;
     }
 
-    let lineElement;
-    if (range.startContainer.nodeType === Node.TEXT_NODE) {
-      lineElement =
-        range.startContainer.parentElement?.closest?.(".editor-paragraph");
-    } else {
-      lineElement = range.startContainer.closest?.(".editor-paragraph");
-    }
+    const lineElement = this.getLineElementFromRangePoint(
+      range.startContainer,
+      range.startOffset,
+    );
 
     if (!lineElement) {
       return undefined;
