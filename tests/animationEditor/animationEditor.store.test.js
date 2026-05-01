@@ -339,4 +339,19 @@ describe("animationEditor.store", () => {
       height: 768,
     });
   });
+
+  it("uses black as the default incoming transition preview image", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "transition" });
+
+    const renderState = selectAnimationRenderStateWithAnimations({ state });
+    const renderTransitionElement = renderState.elements.find(
+      (element) => element.id === PREVIEW_TRANSITION_ELEMENT_ID,
+    );
+
+    expect(renderTransitionElement).toMatchObject({
+      type: "rect",
+      fill: "#000000",
+    });
+  });
 });
