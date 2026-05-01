@@ -2462,6 +2462,51 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     });
   }
 
+  getFuriganaForSelectionSnapshot(snapshot) {
+    if (!snapshot?.lineId || snapshot.start === snapshot.end) {
+      return undefined;
+    }
+
+    return this.editor.getEditorState().read(() => {
+      const lineKey = this.lineKeyById.get(snapshot.lineId);
+      const lineNode = lineKey ? $getNodeByKey(lineKey) : undefined;
+      if (!lineNode) {
+        return undefined;
+      }
+
+      let offset = 0;
+      const findFurigana = (node) => {
+        if ($isElementNode(node)) {
+          for (const childNode of node.getChildren()) {
+            const furigana = findFurigana(childNode);
+            if (furigana) {
+              return furigana;
+            }
+          }
+
+          return undefined;
+        }
+
+        const length = getLexicalTextLength(node);
+        const start = offset;
+        const end = offset + length;
+        offset = end;
+
+        if (end <= snapshot.start || start >= snapshot.end) {
+          return undefined;
+        }
+
+        if (!$isTextNode(node) || $isMentionNode(node)) {
+          return undefined;
+        }
+
+        return getFuriganaFromNode(node);
+      };
+
+      return findFurigana(lineNode);
+    });
+  }
+
   getTextStyleMenuItems() {
     if (this.state.textStyles.length === 0) {
       return [
@@ -2641,7 +2686,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       this.refs.selectionMenu.render?.();
     }
 
-    const furigana = this.getSelectionFurigana() ?? {};
+    const furigana =
+      this.getFuriganaForSelectionSnapshot(snapshot) ??
+      this.getSelectionFurigana() ??
+      {};
     this.dispatchEvent(
       new CustomEvent("furigana-dialog-request", {
         detail: {
