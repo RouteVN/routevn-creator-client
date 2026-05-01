@@ -1,4 +1,0 @@
-componentName: rvn-segmented-text-poc
-propsSchema:
-  type: object
-  properties: {}

@@ -1,4 +1,0 @@
-componentName: rvn-lexical-mentions-poc
-propsSchema:
-  type: object
-  properties: {}
