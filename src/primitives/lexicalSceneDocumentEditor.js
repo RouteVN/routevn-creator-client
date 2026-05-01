@@ -1448,7 +1448,28 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
 
     if (event.key === "Backspace" && !event.isComposing) {
-      const didMerge = this.mergeCurrentLineBackward();
+      const context = this.getLineSelectionContext();
+      const nativeSelection = this.getNativeCollapsedLineSelectionContext();
+
+      if (event.defaultPrevented) {
+        return;
+      }
+
+      if (
+        context &&
+        context.selection.start === 0 &&
+        context.selection.end === 0 &&
+        this.isNativeSelectionAfterLineStart(context, nativeSelection)
+      ) {
+        event.preventDefault();
+        this.deleteCharacterBackward({ nativeSelection });
+        return;
+      }
+
+      const didMerge = this.mergeCurrentLineBackward({
+        context,
+        nativeSelection,
+      });
       if (didMerge) {
         event.preventDefault();
       }
@@ -2265,10 +2286,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
 
     if (inputType === "deleteContentBackward") {
+      const nativeSelection = this.getNativeCollapsedLineSelectionContext();
       event.preventDefault();
       event.stopPropagation?.();
       event.stopImmediatePropagation?.();
-      this.deleteCharacterBackward();
+      this.deleteCharacterBackward({ nativeSelection });
       return;
     }
 
@@ -3238,12 +3260,28 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     });
   }
 
-  mergeCurrentLineBackward() {
-    const context = this.getLineSelectionContext();
+  mergeCurrentLineBackward({ context, nativeSelection } = {}) {
+    context = context ?? this.getLineSelectionContext();
     if (
       !context ||
       context.selection.start !== 0 ||
       context.selection.end !== 0
+    ) {
+      return false;
+    }
+
+    if (this.isNativeSelectionAfterLineStart(context, nativeSelection)) {
+      return false;
+    }
+
+    const lineElement = this.editor.getElementByKey(context.lineKey);
+    const lineElementText = String(lineElement?.textContent ?? "").replaceAll(
+      EDITOR_CARET_TEXT,
+      "",
+    );
+    if (
+      getContentLength(context.lineContent) > 0 ||
+      lineElementText.length > 0
     ) {
       return false;
     }
@@ -3468,7 +3506,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     );
   }
 
-  deleteCharacterBackward() {
+  deleteCharacterBackward({
+    nativeSelection = this.getNativeCollapsedLineSelectionContext(),
+  } = {}) {
     this.editor.update(
       () => {
         const selection = $getSelection();
@@ -3477,6 +3517,70 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         }
 
         if (selection.isCollapsed()) {
+          const selectionLineNode = this.getLineNodeFromSelection(selection);
+          const nativeLineKey = nativeSelection?.lineId
+            ? this.lineKeyById?.get(nativeSelection.lineId)
+            : undefined;
+          const nativeLineNode = nativeLineKey
+            ? $getNodeByKey(nativeLineKey)
+            : undefined;
+          const lineNode = nativeLineNode ?? selectionLineNode;
+          const lineMeta = lineNode
+            ? this.lineMetaByKey.get(lineNode.getKey())
+            : undefined;
+          const lineSelection =
+            lineNode && lineNode === selectionLineNode
+              ? getSelectionOffsets(lineNode, selection)
+              : nativeSelection?.lineId === lineMeta?.id
+                ? {
+                    start: nativeSelection.offset,
+                    end: nativeSelection.offset,
+                  }
+                : undefined;
+          const lineContent = lineNode
+            ? this.serializeLineContent(lineNode)
+            : undefined;
+          const lineText =
+            getPlainTextFromContent(lineContent) ||
+            lineNode?.getTextContent() ||
+            "";
+
+          if (
+            lineNode &&
+            lineMeta &&
+            lineSelection?.start === lineSelection?.end &&
+            lineSelection.start <= 1 &&
+            /^\s/.test(lineText)
+          ) {
+            this.deleteLineContentRange(lineNode, lineMeta, 0, 1);
+            return;
+          }
+
+          if (
+            lineNode &&
+            lineMeta &&
+            lineSelection?.start === 0 &&
+            lineSelection.end === 0 &&
+            nativeSelection?.lineId === lineMeta.id &&
+            nativeSelection.offset > 0
+          ) {
+            this.deleteLineContentBackwardAtOffset(
+              lineNode,
+              lineMeta,
+              nativeSelection.offset,
+            );
+            return;
+          }
+
+          if (
+            lineNode &&
+            lineMeta &&
+            lineSelection?.start === 0 &&
+            lineSelection.end === 0
+          ) {
+            return;
+          }
+
           selection.deleteCharacter(true);
           return;
         }
@@ -3485,6 +3589,30 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       },
       { discrete: true },
     );
+  }
+
+  deleteLineContentBackwardAtOffset(lineNode, lineMeta, offset) {
+    const deleteEnd = Math.max(0, Number(offset) || 0);
+    const deleteStart = Math.max(0, deleteEnd - 1);
+    this.deleteLineContentRange(lineNode, lineMeta, deleteStart, deleteEnd);
+  }
+
+  deleteLineContentRange(lineNode, lineMeta, start, end) {
+    const deleteStart = Math.max(0, Number(start) || 0);
+    const deleteEnd = Math.max(deleteStart, Number(end) || 0);
+    const { before, after } = splitContentRange(
+      this.serializeLineContent(lineNode),
+      deleteStart,
+      deleteEnd,
+    );
+
+    lineNode.clear();
+    this.appendParagraphContent(lineNode, appendContentArrays(before, after));
+    applySelectionToLineNode(lineNode, {
+      lineId: lineMeta.id,
+      start: deleteStart,
+      end: deleteStart,
+    });
   }
 
   deleteCharacterForward() {
@@ -4217,6 +4345,35 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
 
     return -1;
+  }
+
+  getNativeCollapsedLineSelectionContext() {
+    const range = getSelectionRange(this.refs.editor);
+    if (!range?.collapsed) {
+      return undefined;
+    }
+
+    const lineElement = this.getLineElementFromRangePoint(
+      range.startContainer,
+      range.startOffset,
+    );
+    const lineId = this.getLineIdFromLineElement(lineElement);
+    const offset = this.getLineOffsetFromRange(lineElement, range);
+
+    if (!lineId || typeof offset !== "number") {
+      return undefined;
+    }
+
+    return {
+      lineId,
+      offset,
+    };
+  }
+
+  isNativeSelectionAfterLineStart(context, nativeSelection) {
+    return (
+      nativeSelection?.lineId === context?.lineId && nativeSelection.offset > 0
+    );
   }
 
   createPointerFallbackSelection(event) {
