@@ -68,4 +68,43 @@ describe("lexical scene document editor line previews", () => {
       restoreDomGlobals();
     }
   });
+
+  it("renders deleted dialogue previews as dialogue icons with a centered x mark", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorPrototype = LexicalSceneDocumentEditorElement.prototype;
+      const previewItems = editorPrototype.createPreviewItems.call(
+        editorPrototype,
+        {
+          hasDialogueLayout: true,
+          dialogueChangeType: "delete",
+          dialogueModeLabel: "ADV",
+        },
+      );
+
+      expect(previewItems.querySelector(".preview-delete-overlay")).toBeNull();
+      expect(
+        previewItems.querySelector(".preview-icon-delete-mark"),
+      ).not.toBeNull();
+      expect(
+        previewItems.querySelector(".preview-dialogue-item"),
+      ).not.toBeNull();
+      expect(
+        Array.from(previewItems.querySelectorAll("rtgl-svg")).map((icon) =>
+          icon.getAttribute("svg"),
+        ),
+      ).toEqual(["dialogue", "x"]);
+      expect(
+        Array.from(previewItems.querySelectorAll("rtgl-svg")).map((icon) =>
+          icon.getAttribute("wh"),
+        ),
+      ).toEqual(["24", "20"]);
+    } finally {
+      restoreDomGlobals();
+    }
+  });
 });

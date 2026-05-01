@@ -192,11 +192,10 @@ export {
 };
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
-  const previousItemId = deps.store.selectSelectedItemId();
   handleCatalogFileExplorerSelectionChanged(deps, payload);
 
   const { itemId, isFolder } = payload._event.detail;
-  if (isFolder || !itemId || previousItemId === itemId) {
+  if (isFolder || !itemId) {
     return;
   }
 
@@ -204,10 +203,9 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
 };
 
 export const handleLayoutItemClick = (deps, payload) => {
-  const previousItemId = deps.store.selectSelectedItemId();
   handleCatalogLayoutItemClick(deps, payload);
   const { itemId } = payload._event.detail;
-  if (!itemId || previousItemId === itemId) {
+  if (!itemId) {
     return;
   }
 

@@ -177,6 +177,52 @@ describe("createLayoutTemplate", () => {
     }
   });
 
+  it("prints layout data when the selected layout is clicked again", () => {
+    const layoutData = {
+      id: "layout-1",
+      type: "layout",
+      name: "Layout One",
+      layoutType: "general",
+    };
+    const consoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
+    const deps = {
+      store: {
+        selectSelectedItemId: vi.fn(() => "layout-1"),
+        setSelectedItemId: vi.fn(),
+        selectLayoutItemById: vi.fn(({ itemId } = {}) =>
+          itemId === "layout-1" ? layoutData : undefined,
+        ),
+      },
+      refs: {
+        fileExplorer: {
+          selectItem: vi.fn(),
+        },
+      },
+      render: vi.fn(),
+    };
+
+    try {
+      handleLayoutItemClick(deps, {
+        _event: {
+          detail: {
+            itemId: "layout-1",
+          },
+        },
+      });
+
+      expect(deps.store.setSelectedItemId).not.toHaveBeenCalled();
+      expect(consoleLog).toHaveBeenCalledWith(
+        "[layouts] selected layout data",
+        {
+          selectedItemId: "layout-1",
+          layoutData,
+        },
+      );
+    } finally {
+      consoleLog.mockRestore();
+    }
+  });
+
   it("duplicates a layout and selects the duplicate", async () => {
     const duplicateLayoutItem = vi.fn(async () => "layout-copy");
     const deps = {

@@ -17,7 +17,8 @@ template:
   - $if isSceneEditorLeft:
       - $if open:
           - 'rtgl-view#overlay pos=fix edge=f style="z-index: 2000; background: transparent;"': null
-          - 'rtgl-view pos=fix bgc=bg bw=xs bc=bo br=md style="left: ${panelHorizontalInset}; top: ${panelVerticalInset}; bottom: ${panelVerticalInset}; width: calc(${panelWidth} - ${panelWidthReduction}); max-width: calc(100vw - ${panelHorizontalInset}); min-width: 0; min-height: 0; box-sizing: border-box; overflow: hidden; z-index: 2001; box-shadow: 8px 0 24px rgba(15, 23, 42, 0.10);"':
+          - 'rtgl-view pos=fix style="left: ${overlayHorizontalInset}; top: 0; bottom: 0; width: ${panelWidth}; z-index: 2001; background: ${overlayBackground}; pointer-events: none;"': null
+          - 'rtgl-view pos=fix bgc=bg bw=xs bc=bo br=md style="left: ${panelHorizontalInset}; top: ${panelVerticalInset}; bottom: ${panelVerticalInset}; width: calc(${panelWidth} - ${panelWidthReduction}); max-width: calc(100vw - ${panelHorizontalInset}); min-width: 0; min-height: 0; box-sizing: border-box; overflow: hidden; z-index: 2002; box-shadow: 8px 0 24px rgba(15, 23, 42, 0.10);"':
               - slot name=content: null
     $else:
       - rtgl-dialog#dialog ?open=${open}:

@@ -205,6 +205,7 @@ const STYLES = `
     position: absolute;
     top: 0;
     bottom: 0;
+    z-index: 1;
     pointer-events: none;
   }
 
@@ -382,6 +383,20 @@ const STYLES = `
     justify-content: center;
     background: #dc2626;
     color: #ffffff;
+  }
+
+  .preview-dialogue-item {
+    align-items: center;
+  }
+
+  .preview-icon-delete-mark {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--foreground);
+    pointer-events: none;
   }
 
   .preview-dialogue-label {
@@ -4416,11 +4431,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     if (lineDecoration.hasDialogueLayout) {
       const item = document.createElement("div");
-      item.className = "preview-item";
+      item.className = "preview-item preview-dialogue-item";
       item.append(
         this.createIconPreview({
           icon: "dialogue",
           isDelete: lineDecoration.dialogueChangeType === "delete",
+          deleteDisplay: "mark",
         }),
       );
       const label = document.createElement("div");
@@ -4539,7 +4555,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     return thumb;
   }
 
-  createIconPreview({ icon, isDelete = false } = {}) {
+  createIconPreview({
+    icon,
+    isDelete = false,
+    deleteDisplay = "overlay",
+  } = {}) {
     const item = document.createElement("div");
     item.className = "preview-item";
     const thumb = document.createElement("div");
@@ -4548,11 +4568,22 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     thumb.append(this.createSvgIcon(icon, 24));
 
     if (isDelete) {
-      thumb.append(this.createDeleteOverlay());
+      thumb.append(
+        deleteDisplay === "mark"
+          ? this.createIconDeleteMark()
+          : this.createDeleteOverlay(),
+      );
     }
 
     item.append(thumb);
     return item;
+  }
+
+  createIconDeleteMark() {
+    const mark = document.createElement("div");
+    mark.className = "preview-icon-delete-mark";
+    mark.append(this.createSvgIcon("x", 20));
+    return mark;
   }
 
   createDeleteOverlay() {
