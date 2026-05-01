@@ -198,7 +198,12 @@ const resolveDetailItemId = (detail = {}) => {
   return detail.itemId || detail.id || detail.item?.id || "";
 };
 
-const navigateToSceneEditor = ({ appService, sceneId, sectionId }) => {
+const navigateToSceneEditor = ({
+  appService,
+  sceneId,
+  sectionId,
+  route = "/project/scene-editor",
+}) => {
   const currentPayload = appService.getPayload();
   const nextPayload = {
     ...currentPayload,
@@ -208,7 +213,7 @@ const navigateToSceneEditor = ({ appService, sceneId, sectionId }) => {
   if (sectionId) {
     nextPayload.sectionId = sectionId;
   }
-  appService.navigate("/project/scene-editor", nextPayload);
+  appService.navigate(route, nextPayload);
 };
 
 const getCurrentProjectId = (appService) => {
