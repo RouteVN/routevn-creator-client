@@ -153,12 +153,15 @@ const {
   createInitialState: createCatalogInitialState,
   setItems,
   setSelectedItemId,
+  setSelectedFolderId,
   setUiConfig,
   openMobileFileExplorer,
   closeMobileFileExplorer,
   selectSelectedItem,
   selectItemById,
+  selectFolderById,
   selectSelectedItemId,
+  selectSelectedFolderId,
   setSearchQuery,
   setTagsData,
   setActiveTagIds,
@@ -167,6 +170,8 @@ const {
   setDetailTagPopoverOpen,
   openCreateTagDialog,
   closeCreateTagDialog,
+  openFolderNameDialog,
+  closeFolderNameDialog,
   selectViewData: selectCatalogViewData,
 } = createCatalogPageStore({
   itemType: "color",
@@ -223,11 +228,14 @@ export const createInitialState = () => ({
 export {
   setItems,
   setSelectedItemId,
+  setSelectedFolderId,
   setUiConfig,
   openMobileFileExplorer,
   closeMobileFileExplorer,
   selectSelectedItem,
+  selectFolderById,
   selectSelectedItemId,
+  selectSelectedFolderId,
   setSearchQuery,
   setTagsData,
   setActiveTagIds,
@@ -236,6 +244,8 @@ export {
   setDetailTagPopoverOpen,
   openCreateTagDialog,
   closeCreateTagDialog,
+  openFolderNameDialog,
+  closeFolderNameDialog,
 };
 
 export const selectColorItemById = selectItemById;

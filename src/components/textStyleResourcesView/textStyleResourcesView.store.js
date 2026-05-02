@@ -12,6 +12,10 @@ const DEFAULT_ITEMS_PER_ROW = 6;
 const MIN_ITEMS_PER_ROW = 1;
 const MAX_ITEMS_PER_ROW = 12;
 const DEFAULT_CARD_WIDTH = 360;
+const DEFAULT_ZOOM_POPOVER_POSITION = Object.freeze({
+  x: 0,
+  y: 0,
+});
 
 const clampItemsPerRow = (value) => {
   const numericValue = Number(value);
@@ -38,6 +42,10 @@ export const createInitialState = ({ props } = {}) => ({
   itemsPerRow: clampItemsPerRow(props?.defaultItemsPerRow),
   collapsedIds: [],
   ...createTagFilterPopoverState(),
+  zoomPopover: {
+    isOpen: false,
+    position: { ...DEFAULT_ZOOM_POPOVER_POSITION },
+  },
   dropdownMenu: {
     isOpen: false,
     x: 0,
@@ -52,6 +60,18 @@ export const setItemsPerRow = ({ state }, { itemsPerRow } = {}) => {
 };
 
 export const selectItemsPerRow = ({ state }) => state.itemsPerRow;
+
+export const openZoomPopover = ({ state }, { position } = {}) => {
+  state.zoomPopover.isOpen = true;
+  state.zoomPopover.position = {
+    x: position?.x ?? DEFAULT_ZOOM_POPOVER_POSITION.x,
+    y: position?.y ?? DEFAULT_ZOOM_POPOVER_POSITION.y,
+  };
+};
+
+export const closeZoomPopover = ({ state }, _payload = {}) => {
+  state.zoomPopover.isOpen = false;
+};
 
 export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   const index = state.collapsedIds.indexOf(groupId);
@@ -123,6 +143,15 @@ export const selectViewData = ({ state, props }) => {
     ? `${itemsPerRow}`
     : buildAutoFillGridColumns(DEFAULT_CARD_WIDTH);
   const hasActiveTagFilter = (props.selectedTagFilterValues?.length ?? 0) > 0;
+  const searchQuery = props.searchQuery ?? "";
+  const searchInFilterPopover = parseBooleanProp(props.searchInFilterPopover);
+  const hasActiveSearch = searchQuery.trim().length > 0;
+  const hasActiveFilter =
+    hasActiveTagFilter || (searchInFilterPopover && hasActiveSearch);
+  const tagFilterPopoverViewData = buildTagFilterPopoverViewData({
+    state,
+    props,
+  });
   const groups = (props.groups ?? []).map((group) => {
     const isCollapsed = state.collapsedIds.includes(group.id);
     const children = isCollapsed ? [] : (group.children ?? []);
@@ -130,6 +159,7 @@ export const selectViewData = ({ state, props }) => {
     return {
       ...group,
       isCollapsed,
+      headerBackgroundColor: group.id === props.selectedFolderId ? "mu" : "bg",
       children: children.map((item) => {
         const isSelected = item.id === props.selectedItemId;
 
@@ -155,20 +185,22 @@ export const selectViewData = ({ state, props }) => {
     navTitle: props.navTitle,
     groups,
     selectedItemId: props.selectedItemId,
-    searchQuery: props.searchQuery ?? "",
+    searchQuery,
     searchPlaceholder: props.searchPlaceholder ?? "Search...",
     tagFilterOptions: props.tagFilterOptions ?? [],
     selectedTagFilterValues: props.selectedTagFilterValues ?? [],
     tagFilterPlaceholder: props.tagFilterPlaceholder ?? "Filter tags",
-    ...buildTagFilterPopoverViewData({
-      state,
-      props,
-    }),
+    tagFilterPopover: {
+      ...tagFilterPopoverViewData.tagFilterPopover,
+      clearDisabled:
+        tagFilterPopoverViewData.tagFilterPopover.clearDisabled &&
+        !(searchInFilterPopover && hasActiveSearch),
+    },
     showTagFilter: parseBooleanProp(props.showTagFilter),
     hasActiveTagFilter,
-    tagFilterButtonBackgroundColor: hasActiveTagFilter ? "ac" : "bg",
-    tagFilterButtonBorderColor: hasActiveTagFilter ? "ac" : "bo",
-    tagFilterButtonIconColor: hasActiveTagFilter ? "white" : "mu-fg",
+    tagFilterButtonBackgroundColor: hasActiveFilter ? "ac" : "bg",
+    tagFilterButtonBorderColor: hasActiveFilter ? "ac" : "bo",
+    tagFilterButtonIconColor: hasActiveFilter ? "white" : "mu-fg",
     itemsPerRow,
     cardGridColumns,
     zoomControlValue: toColumnZoomControlValue(itemsPerRow),
@@ -177,13 +209,18 @@ export const selectViewData = ({ state, props }) => {
     zoomControlStep: 1,
     showZoomControls:
       useColumnZoomControl && parseBooleanProp(props.showZoomControls),
-    showSearch: parseBooleanProp(props.showSearch, true),
+    zoomPopover: state.zoomPopover,
+    showSearch:
+      parseBooleanProp(props.showSearch, true) && !searchInFilterPopover,
+    showFilterPopoverSearch: searchInFilterPopover,
     showMenuButton: parseBooleanProp(props.showMenuButton),
     emptyMessage:
       props.emptyMessage ??
-      (hasActiveTagFilter
-        ? "No text styles found for the selected tags"
-        : `No text styles found matching "${props.searchQuery ?? ""}"`),
+      (hasActiveSearch
+        ? `No text styles found matching "${searchQuery}"`
+        : hasActiveTagFilter
+          ? "No text styles found for the selected tags"
+          : `No text styles found matching "${searchQuery}"`),
     addText: props.addText ?? "Add Text Style",
     dropdownMenu: state.dropdownMenu,
     mobileLayout,

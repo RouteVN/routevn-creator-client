@@ -148,13 +148,18 @@ const {
   createInitialState: createCatalogInitialState,
   setItems: setBaseItems,
   setSelectedItemId: setBaseSelectedItemId,
+  setSelectedFolderId: setBaseSelectedFolderId,
   setUiConfig,
   openMobileFileExplorer,
   closeMobileFileExplorer,
   selectSelectedItem,
   selectItemById,
+  selectFolderById,
   selectSelectedItemId,
+  selectSelectedFolderId,
   setSearchQuery,
+  openFolderNameDialog,
+  closeFolderNameDialog,
   selectViewData: selectCatalogViewData,
 } = createCatalogPageStore({
   itemType: "particle",
@@ -191,10 +196,12 @@ const {
     return {
       ...baseViewData,
       catalogGroups: filteredCatalogGroups,
-      detailFields: buildParticleDetailFields({
-        item: selectedItem,
-        imagesData: state.imagesData,
-      }),
+      detailFields: selectedItem
+        ? buildParticleDetailFields({
+            item: selectedItem,
+            imagesData: state.imagesData,
+          })
+        : baseViewData.detailFields,
       tagFilterOptions: buildTagFilterOptions({
         tagsCollection: state.tagsData,
       }),
@@ -298,6 +305,12 @@ export const setSelectedItemId = (context, payload = {}) => {
   syncDetailTagIds(context.state);
 };
 
+export const setSelectedFolderId = (context, payload = {}) => {
+  setBaseSelectedFolderId(context, payload);
+  context.state.isDetailTagSelectOpen = false;
+  syncDetailTagIds(context.state);
+};
+
 export const setTagsData = ({ state }, { tagsData } = {}) => {
   state.tagsData = tagsData ?? createEmptyTagCollection();
   const validTagIds = new Set(Object.keys(state.tagsData.items ?? {}));
@@ -375,9 +388,13 @@ export const closeCreateTagDialog = ({ state }, _payload = {}) => {
 };
 
 export {
+  closeFolderNameDialog,
   closeMobileFileExplorer,
+  openFolderNameDialog,
   openMobileFileExplorer,
+  selectFolderById,
   selectSelectedItem,
+  selectSelectedFolderId,
   selectSelectedItemId,
   setSearchQuery,
   setUiConfig,

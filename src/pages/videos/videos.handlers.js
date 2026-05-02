@@ -203,6 +203,7 @@ const syncVideoPageData = ({ store, repositoryState } = {}) => {
 
 const {
   openEditDialogWithValues,
+  openFolderNameDialogWithValues,
   openCreateTagDialogForMode,
   handleBeforeMount,
   handleAfterMount,
@@ -218,6 +219,8 @@ const {
   handleMobileFileExplorerOpen,
   handleMobileFileExplorerClose,
   handleMobileDetailSheetClose,
+  handleFolderNameDialogClose,
+  handleFolderNameFormAction,
   handleCreateTagDialogClose,
   handleTagFilterChange,
   handleTagFilterAddOptionClick,
@@ -274,6 +277,8 @@ export {
   handleMobileFileExplorerOpen,
   handleMobileFileExplorerClose,
   handleMobileDetailSheetClose,
+  handleFolderNameDialogClose,
+  handleFolderNameFormAction,
   handleCreateTagDialogClose,
   handleTagFilterChange,
   handleTagFilterAddOptionClick,
@@ -307,7 +312,13 @@ export const handleVideoItemDoubleClick = async (deps, payload) => {
 
 export const handleDetailHeaderClick = (deps) => {
   const selectedItemId = deps.store.selectSelectedItemId();
-  openEditDialogWithValues({ deps, itemId: selectedItemId });
+  if (selectedItemId) {
+    openEditDialogWithValues({ deps, itemId: selectedItemId });
+    return;
+  }
+
+  const selectedFolderId = deps.store.selectSelectedFolderId();
+  openFolderNameDialogWithValues({ deps, folderId: selectedFolderId });
 };
 
 export const handleEditFormAddOptionClick = (deps) => {

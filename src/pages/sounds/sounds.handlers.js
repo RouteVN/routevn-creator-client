@@ -177,6 +177,7 @@ const syncSoundPageData = ({ store, repositoryState } = {}) => {
 
 const {
   openEditDialogWithValues,
+  openFolderNameDialogWithValues,
   openCreateTagDialogForMode,
   handleBeforeMount: handleMediaBeforeMount,
   handleAfterMount,
@@ -192,6 +193,8 @@ const {
   handleMobileFileExplorerOpen,
   handleMobileFileExplorerClose,
   handleMobileDetailSheetClose,
+  handleFolderNameDialogClose,
+  handleFolderNameFormAction,
   handleCreateTagDialogClose,
   handleTagFilterChange,
   handleTagFilterAddOptionClick,
@@ -275,6 +278,8 @@ export {
   handleMobileFileExplorerOpen,
   handleMobileFileExplorerClose,
   handleMobileDetailSheetClose,
+  handleFolderNameDialogClose,
+  handleFolderNameFormAction,
   handleCreateTagDialogClose,
   handleTagFilterChange,
   handleTagFilterAddOptionClick,
@@ -283,6 +288,32 @@ export {
   handleDetailTagOpenChange,
   handleDetailTagValueChange,
   handleCreateTagFormAction,
+};
+
+export const handleFileExplorerFolderCollapseChange = (deps, payload) => {
+  const { refs } = deps;
+  const { folderId, collapsed } = payload._event.detail ?? {};
+  if (!folderId) {
+    return;
+  }
+
+  refs.groupview?.setGroupCollapsed?.({
+    groupId: folderId,
+    collapsed,
+  });
+};
+
+export const handleCenterGroupCollapseChange = (deps, payload) => {
+  const { refs } = deps;
+  const { groupId, collapsed } = payload._event.detail ?? {};
+  if (!groupId) {
+    return;
+  }
+
+  refs.fileExplorer?.setFolderCollapsed?.({
+    folderId: groupId,
+    collapsed,
+  });
 };
 
 const openSoundPreviewById = ({ deps, itemId, syncExplorer = false } = {}) => {
@@ -325,7 +356,13 @@ export const handleSoundItemDoubleClick = (deps, payload) => {
 
 export const handleDetailHeaderClick = (deps) => {
   const selectedItemId = deps.store.selectSelectedItemId();
-  openEditDialogWithValues({ deps, itemId: selectedItemId });
+  if (selectedItemId) {
+    openEditDialogWithValues({ deps, itemId: selectedItemId });
+    return;
+  }
+
+  const selectedFolderId = deps.store.selectSelectedFolderId();
+  openFolderNameDialogWithValues({ deps, folderId: selectedFolderId });
 };
 
 export const handleEditFormAddOptionClick = (deps) => {

@@ -75,3 +75,7 @@ methods:
       description: Expands or collapses the selected folder item when possible.
       params: []
       returns: object
+    setFolderCollapsed:
+      description: Expands or collapses a specific folder item.
+      params: []
+      returns: void

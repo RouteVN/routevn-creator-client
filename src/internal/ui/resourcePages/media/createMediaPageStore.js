@@ -101,6 +101,31 @@ export const createMediaPageStore = ({
     name: "",
     description: "",
   });
+  const createEmptyFolderNameDefaultValues = () => ({
+    name: "",
+  });
+  const folderNameForm = {
+    title: "Edit Folder",
+    fields: [
+      {
+        name: "name",
+        type: "input-text",
+        label: "Name",
+        required: true,
+      },
+    ],
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          label: "Save",
+          validate: true,
+        },
+      ],
+    },
+  };
   const resolvedCenterItemContextMenuItems =
     centerItemContextMenuItems ??
     createCenterItemContextMenuItems(previewMenuLabel);
@@ -108,17 +133,38 @@ export const createMediaPageStore = ({
     const item = state.data?.items?.[itemId];
     return item?.type === itemType ? item : undefined;
   };
+  const selectDataFolder = (state, folderId) => {
+    const item = state.data?.items?.[folderId];
+    return item?.type === "folder" ? item : undefined;
+  };
+  const buildFolderDetailFields = (folder) => {
+    if (!folder) {
+      return [];
+    }
+
+    return [
+      {
+        type: "text",
+        label: "Type",
+        value: "folder",
+      },
+    ];
+  };
 
   const createInitialState = () => ({
     data: EMPTY_TREE,
     pendingUploads: [],
     selectedItemId: undefined,
+    selectedFolderId: undefined,
     searchQuery: "",
     isEditDialogOpen: false,
     editItemId: undefined,
     editDefaultValues: createEmptyEditDefaultValues(),
     editPreviewFileId: undefined,
     editUploadResult: undefined,
+    isFolderNameDialogOpen: false,
+    folderNameDialogItemId: undefined,
+    folderNameDialogDefaultValues: createEmptyFolderNameDefaultValues(),
     ...createMobileResourcePageState(),
     ...(taggingEnabled
       ? createTagState({
@@ -129,6 +175,12 @@ export const createMediaPageStore = ({
 
   const setItems = ({ state }, { data } = {}) => {
     state.data = data ?? EMPTY_TREE;
+    if (
+      state.selectedFolderId &&
+      state.data?.items?.[state.selectedFolderId]?.type !== "folder"
+    ) {
+      state.selectedFolderId = undefined;
+    }
     if (taggingEnabled) {
       syncDetailTagIds({
         state,
@@ -176,11 +228,26 @@ export const createMediaPageStore = ({
 
   const setSelectedItemId = ({ state }, { itemId } = {}) => {
     state.selectedItemId = itemId;
+    if (itemId) {
+      state.selectedFolderId = undefined;
+    }
     if (taggingEnabled) {
       state.isDetailTagSelectOpen = false;
       syncDetailTagIds({
         state,
         item: selectDataItem(state, itemId),
+      });
+    }
+  };
+
+  const setSelectedFolderId = ({ state }, { folderId } = {}) => {
+    state.selectedFolderId = folderId;
+    state.selectedItemId = undefined;
+    if (taggingEnabled) {
+      state.isDetailTagSelectOpen = false;
+      syncDetailTagIds({
+        state,
+        item: undefined,
       });
     }
   };
@@ -211,6 +278,27 @@ export const createMediaPageStore = ({
     state.editUploadResult = undefined;
   };
 
+  const openFolderNameDialog = (
+    { state },
+    { folderId, defaultValues } = {},
+  ) => {
+    state.isFolderNameDialogOpen = true;
+    state.folderNameDialogItemId = folderId;
+    state.folderNameDialogDefaultValues = {
+      ...createEmptyFolderNameDefaultValues(),
+    };
+
+    if (defaultValues) {
+      Object.assign(state.folderNameDialogDefaultValues, defaultValues);
+    }
+  };
+
+  const closeFolderNameDialog = ({ state }, _payload = {}) => {
+    state.isFolderNameDialogOpen = false;
+    state.folderNameDialogItemId = undefined;
+    state.folderNameDialogDefaultValues = createEmptyFolderNameDefaultValues();
+  };
+
   const setEditUpload = ({ state }, { uploadResult, previewFileId } = {}) => {
     state.editUploadResult = uploadResult;
     state.editPreviewFileId = previewFileId;
@@ -225,6 +313,12 @@ export const createMediaPageStore = ({
   };
 
   const selectSelectedItemId = ({ state }) => state.selectedItemId;
+
+  const selectFolderById = ({ state }, { folderId } = {}) => {
+    return selectDataFolder(state, folderId);
+  };
+
+  const selectSelectedFolderId = ({ state }) => state.selectedFolderId;
 
   const setSearchQuery = ({ state }, { value } = {}) => {
     state.searchQuery = value ?? "";
@@ -356,6 +450,9 @@ export const createMediaPageStore = ({
       .filter((group) => group.shouldDisplay);
 
     const selectedItem = selectDataItem(state, state.selectedItemId);
+    const selectedFolder = selectDataFolder(state, state.selectedFolderId);
+    const selectedDetailId = selectedItem?.id ?? selectedFolder?.id;
+    const selectedDetailName = selectedItem?.name ?? selectedFolder?.name ?? "";
     const mediaGroups = taggingEnabled
       ? filterGroupsByActiveTags({
           groups: unfilteredMediaGroups,
@@ -363,7 +460,9 @@ export const createMediaPageStore = ({
           activeTagIds: state.activeTagIds,
         })
       : unfilteredMediaGroups;
-    const detailFields = buildDetailFields(selectedItem);
+    const detailFields = selectedItem
+      ? buildDetailFields(selectedItem)
+      : buildFolderDetailFields(selectedFolder);
     const mobileViewData = buildMobileResourcePageViewData({
       state,
       detailFields,
@@ -376,7 +475,10 @@ export const createMediaPageStore = ({
       resourceCategory,
       selectedResourceId,
       selectedItemId: state.selectedItemId,
-      selectedItemName: selectedItem?.name ?? "",
+      selectedFolderId: state.selectedFolderId,
+      selectedDetailId,
+      selectedDetailName,
+      selectedItemName: selectedDetailName,
       searchQuery: state.searchQuery,
       searchPlaceholder,
       resourceType,
@@ -397,6 +499,10 @@ export const createMediaPageStore = ({
       editForm,
       editDefaultValues: state.editDefaultValues,
       editPreviewFileId: state.editPreviewFileId,
+      isFolderNameDialogOpen: state.isFolderNameDialogOpen,
+      folderNameDialogItemId: state.folderNameDialogItemId,
+      folderNameForm,
+      folderNameDialogDefaultValues: state.folderNameDialogDefaultValues,
       ...(taggingEnabled
         ? buildTagViewData({
             state,
@@ -442,8 +548,11 @@ export const createMediaPageStore = ({
     removePendingUploads,
     updatePendingUpload,
     setSelectedItemId,
+    setSelectedFolderId,
     openEditDialog,
     closeEditDialog,
+    openFolderNameDialog,
+    closeFolderNameDialog,
     setEditUpload,
     setUiConfig,
     openMobileFileExplorer,
@@ -451,6 +560,8 @@ export const createMediaPageStore = ({
     selectSelectedItem,
     selectItemById,
     selectSelectedItemId,
+    selectFolderById,
+    selectSelectedFolderId,
     setSearchQuery,
     setTagsData,
     setActiveTagIds,

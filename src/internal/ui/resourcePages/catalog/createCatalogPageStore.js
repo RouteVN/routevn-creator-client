@@ -76,15 +76,61 @@ export const createCatalogPageStore = ({
   const createEmptyTagsCollection = tagging?.createEmptyTagsCollection;
   const createTagFormDefinition =
     tagging?.createTagForm ?? createDefaultTagForm();
+  const createEmptyFolderNameDefaultValues = () => ({
+    name: "",
+  });
+  const folderNameForm = {
+    title: "Edit Folder",
+    fields: [
+      {
+        name: "name",
+        type: "input-text",
+        label: "Name",
+        required: true,
+      },
+    ],
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          label: "Save",
+          validate: true,
+        },
+      ],
+    },
+  };
   const selectDataItem = (state, itemId) => {
     const item = state.data?.items?.[itemId];
     return item?.type === itemType ? item : undefined;
+  };
+  const selectDataFolder = (state, folderId) => {
+    const item = state.data?.items?.[folderId];
+    return item?.type === "folder" ? item : undefined;
+  };
+  const buildFolderDetailFields = (folder) => {
+    if (!folder) {
+      return [];
+    }
+
+    return [
+      {
+        type: "text",
+        label: "Type",
+        value: "folder",
+      },
+    ];
   };
 
   const createInitialState = () => ({
     data: EMPTY_TREE,
     selectedItemId: undefined,
+    selectedFolderId: undefined,
     searchQuery: "",
+    isFolderNameDialogOpen: false,
+    folderNameDialogItemId: undefined,
+    folderNameDialogDefaultValues: createEmptyFolderNameDefaultValues(),
     ...createMobileResourcePageState(),
     ...(taggingEnabled
       ? createTagState({
@@ -95,6 +141,12 @@ export const createCatalogPageStore = ({
 
   const setItems = ({ state }, { data } = {}) => {
     state.data = data ?? EMPTY_TREE;
+    if (
+      state.selectedFolderId &&
+      state.data?.items?.[state.selectedFolderId]?.type !== "folder"
+    ) {
+      state.selectedFolderId = undefined;
+    }
     if (taggingEnabled) {
       syncDetailTagIds({
         state,
@@ -106,6 +158,9 @@ export const createCatalogPageStore = ({
 
   const setSelectedItemId = ({ state }, { itemId } = {}) => {
     state.selectedItemId = itemId;
+    if (itemId !== undefined) {
+      state.selectedFolderId = undefined;
+    }
     if (taggingEnabled) {
       state.isDetailTagSelectOpen = false;
       syncDetailTagIds({
@@ -123,7 +178,27 @@ export const createCatalogPageStore = ({
     return selectDataItem(state, itemId);
   };
 
+  const selectFolderById = ({ state }, { folderId } = {}) => {
+    return selectDataFolder(state, folderId);
+  };
+
+  const setSelectedFolderId = ({ state }, { folderId } = {}) => {
+    state.selectedFolderId = folderId;
+    if (folderId !== undefined) {
+      state.selectedItemId = undefined;
+      if (taggingEnabled) {
+        state.isDetailTagSelectOpen = false;
+        syncDetailTagIds({
+          state,
+          item: undefined,
+        });
+      }
+    }
+  };
+
   const selectSelectedItemId = ({ state }) => state.selectedItemId;
+
+  const selectSelectedFolderId = ({ state }) => state.selectedFolderId;
 
   const setSearchQuery = ({ state }, { value } = {}) => {
     state.searchQuery = value ?? "";
@@ -198,6 +273,25 @@ export const createCatalogPageStore = ({
     });
   };
 
+  const openFolderNameDialog = (
+    { state },
+    { folderId, defaultValues } = {},
+  ) => {
+    state.isFolderNameDialogOpen = true;
+    state.folderNameDialogItemId = folderId;
+    state.folderNameDialogDefaultValues = createEmptyFolderNameDefaultValues();
+
+    if (defaultValues) {
+      Object.assign(state.folderNameDialogDefaultValues, defaultValues);
+    }
+  };
+
+  const closeFolderNameDialog = ({ state }, _payload = {}) => {
+    state.isFolderNameDialogOpen = false;
+    state.folderNameDialogItemId = undefined;
+    state.folderNameDialogDefaultValues = createEmptyFolderNameDefaultValues();
+  };
+
   const selectViewData = ({ state }) => {
     const flatItems = toFlatItems(state.data);
     const rawFlatGroups = prependRootItemsGroup({
@@ -228,6 +322,9 @@ export const createCatalogPageStore = ({
       .filter((group) => group.shouldDisplay);
 
     const selectedItem = selectDataItem(state, state.selectedItemId);
+    const selectedFolder = selectDataFolder(state, state.selectedFolderId);
+    const selectedDetailId = selectedItem?.id ?? selectedFolder?.id;
+    const selectedDetailName = selectedItem?.name ?? selectedFolder?.name ?? "";
     const catalogGroups = taggingEnabled
       ? filterGroupsByActiveTags({
           groups: unfilteredCatalogGroups,
@@ -235,7 +332,9 @@ export const createCatalogPageStore = ({
           activeTagIds: state.activeTagIds,
         })
       : unfilteredCatalogGroups;
-    const detailFields = buildDetailFields(selectedItem);
+    const detailFields = selectedItem
+      ? buildDetailFields(selectedItem)
+      : buildFolderDetailFields(selectedFolder);
     const mobileViewData = buildMobileResourcePageViewData({
       state,
       detailFields,
@@ -257,7 +356,10 @@ export const createCatalogPageStore = ({
       resourceCategory,
       selectedResourceId,
       selectedItemId: state.selectedItemId,
-      selectedItemName: selectedItem?.name ?? "",
+      selectedFolderId: state.selectedFolderId,
+      selectedDetailId,
+      selectedDetailName,
+      selectedItemName: selectedDetailName,
       detailFields,
       searchQuery: state.searchQuery,
       searchPlaceholder,
@@ -268,6 +370,10 @@ export const createCatalogPageStore = ({
       itemContextMenuItems,
       emptyContextMenuItems,
       centerItemContextMenuItems,
+      isFolderNameDialogOpen: state.isFolderNameDialogOpen,
+      folderNameDialogItemId: state.folderNameDialogItemId,
+      folderNameForm,
+      folderNameDialogDefaultValues: state.folderNameDialogDefaultValues,
     };
     Object.assign(baseViewData, mobileViewData);
     if (tagViewData) {
@@ -304,12 +410,15 @@ export const createCatalogPageStore = ({
     createInitialState,
     setItems,
     setSelectedItemId,
+    setSelectedFolderId,
     setUiConfig,
     openMobileFileExplorer,
     closeMobileFileExplorer,
     selectSelectedItem,
     selectItemById,
+    selectFolderById,
     selectSelectedItemId,
+    selectSelectedFolderId,
     setSearchQuery,
     setTagsData,
     setActiveTagIds,
@@ -318,6 +427,8 @@ export const createCatalogPageStore = ({
     setDetailTagPopoverOpen,
     openCreateTagDialog,
     closeCreateTagDialog,
+    openFolderNameDialog,
+    closeFolderNameDialog,
     selectViewData,
   };
 };

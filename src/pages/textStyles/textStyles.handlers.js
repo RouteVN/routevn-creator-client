@@ -7,6 +7,7 @@ import { buildFontResourceDataFromUploadResult } from "../../deps/services/share
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
+import { handleResourceZoomShortcutKeyDown } from "../../internal/ui/resourcePages/zoomShortcuts.js";
 import {
   runResourcePageMutation,
   showResourcePageError,
@@ -79,7 +80,13 @@ const refreshTextStylesData = async (deps, { selectedItemId } = {}) => {
   const { store, render, projectService, refs } = deps;
   syncRepositoryToStore({ store, projectService });
   if (selectedItemId !== undefined) {
-    store.setSelectedItemId({ itemId: selectedItemId });
+    const item = store.getState().textStylesData?.items?.[selectedItemId];
+    if (item?.type === "folder") {
+      store.setSelectedFolderId({ folderId: selectedItemId });
+    } else {
+      store.setSelectedFolderId({ folderId: undefined });
+      store.setSelectedItemId({ itemId: item ? selectedItemId : undefined });
+    }
   }
   render();
 
@@ -96,7 +103,7 @@ const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
 const {
   focusKeyboardScope: focusFileExplorerKeyboardScope,
   handleKeyboardScopeClick: handleFileExplorerKeyboardScopeClick,
-  handleKeyboardScopeKeyDown: handleFileExplorerKeyboardScopeKeyDown,
+  handleKeyboardScopeKeyDown: handleBaseFileExplorerKeyboardScopeKeyDown,
 } = createFileExplorerKeyboardScopeHandlers();
 
 const {
@@ -138,7 +145,6 @@ export {
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
-  handleFileExplorerKeyboardScopeKeyDown,
   handleMobileResourceFileExplorerOpen as handleMobileFileExplorerOpen,
   handleMobileResourceFileExplorerClose as handleMobileFileExplorerClose,
   handleMobileResourceDetailSheetClose as handleMobileDetailSheetClose,
@@ -154,17 +160,30 @@ export {
 
 export const handleDataChanged = refreshTextStylesData;
 
+export const handleFileExplorerKeyboardScopeKeyDown = (deps, payload) => {
+  if (
+    handleResourceZoomShortcutKeyDown(deps, payload, {
+      refName: "typographyView",
+    })
+  ) {
+    return;
+  }
+
+  handleBaseFileExplorerKeyboardScopeKeyDown(deps, payload);
+};
+
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { store, render } = deps;
   const { itemId, isFolder } = payload._event.detail;
 
   if (isFolder) {
-    store.setSelectedItemId({ itemId: undefined });
+    store.setSelectedFolderId({ folderId: itemId });
     render();
     focusFileExplorerKeyboardScope(deps);
     return;
   }
 
+  store.setSelectedFolderId({ folderId: undefined });
   store.setSelectedItemId({ itemId });
   closeMobileResourceFileExplorerAfterSelection(deps);
   render();
@@ -174,6 +193,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
 export const handleTextStyleItemClick = (deps, payload) => {
   const { store, render, refs } = deps;
   const { itemId } = payload._event.detail;
+  store.setSelectedFolderId({ folderId: undefined });
   store.setSelectedItemId({ itemId: itemId });
   const { fileExplorer } = refs;
   fileExplorer?.selectItem?.({ itemId });
@@ -200,6 +220,32 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
     store.toggleDialog();
   }
   render();
+};
+
+const openFolderNameDialogWithValues = ({ deps, folderId } = {}) => {
+  const { store, render, refs } = deps;
+  if (!folderId) {
+    return;
+  }
+
+  const folder = store.selectFolderById({ folderId });
+  if (!folder) {
+    return;
+  }
+
+  const values = {
+    name: folder.name ?? "",
+  };
+
+  store.setSelectedFolderId({ folderId });
+  refs.fileExplorer?.selectItem?.({ itemId: folderId });
+  store.openFolderNameDialog({
+    folderId,
+    defaultValues: values,
+  });
+  render();
+  refs.folderNameForm?.reset?.();
+  refs.folderNameForm?.setValues?.({ values });
 };
 
 const buildTextStyleData = ({
@@ -366,8 +412,59 @@ export const handleTextStyleItemDoubleClick = (deps, payload) => {
 };
 
 export const handleDetailHeaderClick = (deps) => {
-  const selectedItemId = deps.store.selectSelectedItemId();
+  const { store } = deps;
+  const selectedItemId = store.selectSelectedItemId();
+  if (!selectedItemId) {
+    openFolderNameDialogWithValues({
+      deps,
+      folderId: store.selectSelectedFolderId(),
+    });
+    return;
+  }
+
   openEditDialogWithValues({ deps, itemId: selectedItemId });
+};
+
+export const handleFolderNameDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.closeFolderNameDialog();
+  render();
+};
+
+export const handleFolderNameFormAction = async (deps, payload) => {
+  const { appService, store, render } = deps;
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
+    return;
+  }
+
+  const name = values?.name?.trim();
+  if (!name) {
+    appService.showAlert({
+      message: "Folder name is required.",
+      title: "Warning",
+    });
+    return;
+  }
+
+  const folderId = store.getState().folderNameDialogItemId;
+  if (!folderId) {
+    store.closeFolderNameDialog();
+    render();
+    return;
+  }
+
+  await handleFileExplorerAction(deps, {
+    _event: {
+      detail: {
+        value: "rename-item-confirmed",
+        itemId: folderId,
+        newName: name,
+      },
+    },
+  });
+  store.closeFolderNameDialog();
+  render();
 };
 
 export const handleTextStyleFormAddOptionClick = (deps, payload) => {

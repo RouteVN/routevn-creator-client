@@ -23,6 +23,22 @@ const getDataAttribute = (event, name) => {
   return event?.currentTarget?.getAttribute?.(name) ?? undefined;
 };
 
+const resolvePopoverButtonPosition = (element) => {
+  if (!element?.getBoundingClientRect) {
+    return {
+      x: 0,
+      y: 0,
+    };
+  }
+
+  const rect = element.getBoundingClientRect();
+
+  return {
+    x: Math.round(rect.left),
+    y: Math.round(rect.bottom),
+  };
+};
+
 const isColumnZoomControlMode = (props) => props?.zoomControlMode === "columns";
 
 const toItemsPerRowFromColumnZoomControlValue = (value) => {
@@ -62,8 +78,42 @@ const persistItemsPerRow = ({ appService, props, store } = {}) => {
 export const handleTagFilterButtonClick = openTagFilterPopoverFromButton;
 export const handleTagFilterPopoverClose = closeTagFilterPopoverFromOverlay;
 export const handleTagFilterOptionClick = toggleTagFilterPopoverOption;
-export const handleTagFilterClearClick = clearTagFilterPopoverSelection;
+export const handleTagFilterClearClick = (deps, payload) => {
+  const { dispatchEvent, props } = deps;
+  clearTagFilterPopoverSelection(deps, payload);
+
+  if (
+    !parseBooleanProp(props.searchInFilterPopover) ||
+    !props.searchQuery?.trim()
+  ) {
+    return;
+  }
+
+  dispatchEvent(
+    new CustomEvent("search-input", {
+      detail: { value: "" },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
 export const handleTagFilterApplyClick = applyTagFilterPopoverSelection;
+
+export const handleZoomButtonClick = (deps, payload) => {
+  const { refs, store, render } = deps;
+  payload?._event?.stopPropagation?.();
+
+  store.openZoomPopover({
+    position: resolvePopoverButtonPosition(refs.zoomButton),
+  });
+  render();
+};
+
+export const handleZoomPopoverClose = (deps) => {
+  const { store, render } = deps;
+  store.closeZoomPopover();
+  render();
+};
 
 const parseBooleanProp = (value, fallback = false) => {
   if (value === undefined || value === null) {
@@ -542,13 +592,34 @@ export const handleDrop = (deps, payload) => {
 };
 
 export const handleGroupClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { dispatchEvent, store, render } = deps;
   const groupId = getDataAttribute(payload._event, "data-group-id");
   if (!groupId) {
     return;
   }
 
   store.toggleGroupCollapse({ groupId });
+  render();
+  dispatchEvent(
+    new CustomEvent("group-collapse-change", {
+      detail: {
+        groupId,
+        collapsed: store.selectCollapsedIds().includes(groupId),
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+export const handleSetGroupCollapsed = (deps, payload = {}) => {
+  const { store, render } = deps;
+  const { groupId, collapsed } = payload;
+  if (!groupId) {
+    return;
+  }
+
+  store.setGroupCollapsed({ groupId, collapsed });
   render();
 };
 
@@ -649,6 +720,10 @@ export const handleUploadButtonClick = (deps, payload) => {
 
 export const handleZoomChange = (deps, payload) => {
   const { store, render, props } = deps;
+  if (!parseBooleanProp(props.showZoomControls)) {
+    return false;
+  }
+
   const nextValue = parseFloat(
     payload._event.detail?.value ?? payload._event.target?.value ?? 1,
   );
@@ -659,7 +734,7 @@ export const handleZoomChange = (deps, payload) => {
     });
     persistItemsPerRow(deps);
     render();
-    return;
+    return true;
   }
 
   const zoomLevel = Math.min(
@@ -668,15 +743,20 @@ export const handleZoomChange = (deps, payload) => {
   );
   store.setZoomLevel({ zoomLevel });
   render();
+  return true;
 };
 
 export const handleZoomIn = (deps) => {
   const { store, render, props } = deps;
+  if (!parseBooleanProp(props.showZoomControls)) {
+    return false;
+  }
+
   if (isColumnZoomControlMode(props)) {
     store.setItemsPerRow({ itemsPerRow: store.selectItemsPerRow() - 1 });
     persistItemsPerRow(deps);
     render();
-    return;
+    return true;
   }
 
   const zoomLevel = Math.min(
@@ -685,15 +765,20 @@ export const handleZoomIn = (deps) => {
   );
   store.setZoomLevel({ zoomLevel });
   render();
+  return true;
 };
 
 export const handleZoomOut = (deps) => {
   const { store, render, props } = deps;
+  if (!parseBooleanProp(props.showZoomControls)) {
+    return false;
+  }
+
   if (isColumnZoomControlMode(props)) {
     store.setItemsPerRow({ itemsPerRow: store.selectItemsPerRow() + 1 });
     persistItemsPerRow(deps);
     render();
-    return;
+    return true;
   }
 
   const zoomLevel = Math.max(
@@ -702,6 +787,7 @@ export const handleZoomOut = (deps) => {
   );
   store.setZoomLevel({ zoomLevel });
   render();
+  return true;
 };
 
 export const handleItemContextMenu = (deps, payload) => {

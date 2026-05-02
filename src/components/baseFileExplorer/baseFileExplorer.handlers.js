@@ -103,6 +103,27 @@ const emitItemClick = ({ dispatchEvent, item } = {}) => {
   );
 };
 
+const emitFolderCollapseChange = ({
+  dispatchEvent,
+  folderId,
+  collapsed,
+} = {}) => {
+  if (!folderId) {
+    return;
+  }
+
+  dispatchEvent(
+    new CustomEvent("folder-collapse-change", {
+      detail: {
+        folderId,
+        collapsed: collapsed === true,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 const getItemElement = ({ deps, itemId } = {}) => {
   if (!itemId) {
     return undefined;
@@ -880,7 +901,7 @@ export const handleNavigateSelection = (deps, payload) => {
 };
 
 export const handleSetSelectedFolderExpanded = (deps, payload) => {
-  const { render, store, props } = deps;
+  const { dispatchEvent, render, store, props } = deps;
   const { expanded } = payload._event.detail ?? {};
   const selectedItemId = store.selectSelectedItemId();
   if (!selectedItemId) {
@@ -914,23 +935,45 @@ export const handleSetSelectedFolderExpanded = (deps, payload) => {
   store.toggleFolderExpand({ folderId: item.id });
   render();
   scrollItemIntoView({ deps, itemId: item.id });
+  const nextIsCollapsed = store.selectCollapsedIds().includes(item.id);
+  emitFolderCollapseChange({
+    dispatchEvent,
+    folderId: item.id,
+    collapsed: nextIsCollapsed,
+  });
 
   return {
     itemId: item.id,
     item,
     isFolder: true,
-    isCollapsed: store.selectCollapsedIds().includes(item.id),
+    isCollapsed: nextIsCollapsed,
   };
 };
 
 export const handleArrowClick = (deps, payload) => {
-  const { store, render } = deps;
+  const { dispatchEvent, store, render } = deps;
   payload._event.stopPropagation(); // Prevent triggering item click
   const folderId = getItemIdFromEvent(payload._event);
   if (!folderId) {
     return;
   }
   store.toggleFolderExpand({ folderId: folderId });
+  render();
+  emitFolderCollapseChange({
+    dispatchEvent,
+    folderId,
+    collapsed: store.selectCollapsedIds().includes(folderId),
+  });
+};
+
+export const handleSetFolderCollapsed = (deps, payload) => {
+  const { store, render } = deps;
+  const { folderId, collapsed } = payload._event.detail ?? {};
+  if (!folderId) {
+    return;
+  }
+
+  store.setFolderCollapsed({ folderId, collapsed });
   render();
 };
 

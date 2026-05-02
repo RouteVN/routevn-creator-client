@@ -109,6 +109,13 @@ const getCharacterItemById = ({ store, itemId } = {}) => {
   return item;
 };
 
+const getCharacterFolderById = ({ store, folderId } = {}) => {
+  if (!folderId) return undefined;
+  const item = store.getState().charactersData?.items?.[folderId];
+  if (!item || item.type !== "folder") return undefined;
+  return item;
+};
+
 const openEditDialogWithValues = ({ deps, itemId } = {}) => {
   if (!itemId) return;
 
@@ -134,6 +141,29 @@ const openEditDialogWithValues = ({ deps, itemId } = {}) => {
       tagIds: characterItem.tagIds ?? [],
     },
   });
+};
+
+const openFolderNameDialogWithValues = ({ deps, folderId } = {}) => {
+  const { refs, render, store } = deps;
+  const { fileExplorer, folderNameForm } = refs;
+  const folder = getCharacterFolderById({ store, folderId });
+  if (!folder) {
+    return;
+  }
+
+  const values = {
+    name: folder.name ?? "",
+  };
+
+  store.setSelectedFolderId({ folderId });
+  fileExplorer?.selectItem?.({ itemId: folderId });
+  store.openFolderNameDialog({
+    folderId,
+    defaultValues: values,
+  });
+  render();
+  folderNameForm?.reset?.();
+  folderNameForm?.setValues?.({ values });
 };
 
 const openAvatarCropDialog = ({ deps, target, file } = {}) => {
@@ -211,10 +241,23 @@ export const handleAfterMount = (deps) => {
   focusFileExplorerKeyboardScope(deps);
 };
 
-const refreshCharactersData = async (deps) => {
-  const { store, render, projectService } = deps;
+const refreshCharactersData = async (deps, { selectedItemId } = {}) => {
+  const { store, render, projectService, refs } = deps;
   syncCharactersData({ store, projectService });
+  if (selectedItemId !== undefined) {
+    const item = store.getState().charactersData?.items?.[selectedItemId];
+    if (item?.type === "folder") {
+      store.setSelectedFolderId({ folderId: selectedItemId });
+    } else {
+      store.setSelectedFolderId({ folderId: undefined });
+      store.setSelectedItemId({ itemId: item ? selectedItemId : undefined });
+    }
+  }
   render();
+
+  if (selectedItemId) {
+    refs?.fileExplorer?.selectItem?.({ itemId: selectedItemId });
+  }
 };
 
 const readSpriteGroupTarget = (payload) =>
@@ -251,7 +294,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   const { itemId, isFolder } = payload._event.detail;
 
   if (isFolder) {
-    store.setSelectedItemId({ itemId: undefined });
+    store.setSelectedFolderId({ folderId: itemId });
     render();
     focusFileExplorerKeyboardScope(deps);
     return;
@@ -295,10 +338,56 @@ export const handleDetailHeaderClick = (deps) => {
   const { store } = deps;
   const itemId = store.selectSelectedItemId();
   if (!itemId) {
+    openFolderNameDialogWithValues({
+      deps,
+      folderId: store.selectSelectedFolderId(),
+    });
     return;
   }
 
   openEditDialogWithValues({ deps, itemId });
+};
+
+export const handleFolderNameDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.closeFolderNameDialog();
+  render();
+};
+
+export const handleFolderNameFormAction = async (deps, payload) => {
+  const { appService, store, render } = deps;
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
+    return;
+  }
+
+  const name = values?.name?.trim();
+  if (!name) {
+    appService.showAlert({
+      message: "Folder name is required.",
+      title: "Warning",
+    });
+    return;
+  }
+
+  const folderId = store.getState().folderNameDialogItemId;
+  if (!folderId) {
+    store.closeFolderNameDialog();
+    render();
+    return;
+  }
+
+  await handleFileExplorerAction(deps, {
+    _event: {
+      detail: {
+        value: "rename-item-confirmed",
+        itemId: folderId,
+        newName: name,
+      },
+    },
+  });
+  store.closeFolderNameDialog();
+  render();
 };
 
 export const handleCharacterCreated = async (deps, payload) => {

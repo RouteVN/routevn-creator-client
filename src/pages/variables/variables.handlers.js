@@ -110,13 +110,26 @@ export const handleAfterMount = (deps) => {
   focusFileExplorerKeyboardScope(deps);
 };
 
-const refreshVariablesData = async (deps) => {
-  const { store, render, projectService } = deps;
+const refreshVariablesData = async (deps, { selectedItemId } = {}) => {
+  const { store, render, projectService, refs } = deps;
   syncVariablesData({
     store,
     repositoryState: projectService.getState(),
   });
+  if (selectedItemId !== undefined) {
+    const item = store.getState().variablesData?.items?.[selectedItemId];
+    if (item?.type === "folder") {
+      store.setSelectedFolderId({ folderId: selectedItemId });
+    } else {
+      store.setSelectedFolderId({ folderId: undefined });
+      store.setSelectedItemId({ itemId: item ? selectedItemId : undefined });
+    }
+  }
   render();
+
+  if (selectedItemId) {
+    refs?.fileexplorer?.selectItem?.({ itemId: selectedItemId });
+  }
 };
 
 const {
@@ -176,6 +189,32 @@ const openVariableEditDialog = ({ deps, itemId } = {}) => {
   refs.groupview?.openEditDialog?.({ itemId });
 };
 
+const openFolderNameDialogWithValues = ({ deps, folderId } = {}) => {
+  const { refs, render, store } = deps;
+  if (!folderId) {
+    return;
+  }
+
+  const folder = store.selectFolderById({ folderId });
+  if (!folder) {
+    return;
+  }
+
+  const values = {
+    name: folder.name ?? "",
+  };
+
+  store.setSelectedFolderId({ folderId });
+  refs.fileexplorer?.selectItem?.({ itemId: folderId });
+  store.openFolderNameDialog({
+    folderId,
+    defaultValues: values,
+  });
+  render();
+  refs.folderNameForm?.reset?.();
+  refs.folderNameForm?.setValues?.({ values });
+};
+
 export const handleFileExplorerAction = async (deps, payload) => {
   const detail = payload?._event?.detail ?? {};
   const action = (detail.item || detail)?.value;
@@ -219,7 +258,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
     detail.itemType === "folder";
 
   if (isFolder) {
-    store.setSelectedItemId({ itemId: undefined });
+    store.setSelectedFolderId({ folderId: itemId });
     render();
     focusFileExplorerKeyboardScope(deps);
     return;
@@ -229,6 +268,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
     return;
   }
 
+  store.setSelectedFolderId({ folderId: undefined });
   store.setSelectedItemId({ itemId });
   closeMobileResourceFileExplorerAfterSelection(deps);
   render();
@@ -262,6 +302,7 @@ export const handleVariableItemClick = (deps, payload) => {
 
   const { fileexplorer } = refs;
   fileexplorer?.selectItem?.({ itemId });
+  store.setSelectedFolderId({ folderId: undefined });
   store.setSelectedItemId({ itemId });
   render();
 };
@@ -270,10 +311,56 @@ export const handleDetailHeaderClick = (deps) => {
   const { store } = deps;
   const itemId = store.selectSelectedItemId();
   if (!itemId) {
+    openFolderNameDialogWithValues({
+      deps,
+      folderId: store.selectSelectedFolderId(),
+    });
     return;
   }
 
   openVariableEditDialog({ deps, itemId });
+};
+
+export const handleFolderNameDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.closeFolderNameDialog();
+  render();
+};
+
+export const handleFolderNameFormAction = async (deps, payload) => {
+  const { appService, store, render } = deps;
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
+    return;
+  }
+
+  const name = values?.name?.trim();
+  if (!name) {
+    appService.showAlert({
+      message: "Folder name is required.",
+      title: "Warning",
+    });
+    return;
+  }
+
+  const folderId = store.getState().folderNameDialogItemId;
+  if (!folderId) {
+    store.closeFolderNameDialog();
+    render();
+    return;
+  }
+
+  await handleFileExplorerAction(deps, {
+    _event: {
+      detail: {
+        value: "rename-item-confirmed",
+        itemId: folderId,
+        newName: name,
+      },
+    },
+  });
+  store.closeFolderNameDialog();
+  render();
 };
 
 export const handleVariableFormAddOptionClick = (deps, payload) => {

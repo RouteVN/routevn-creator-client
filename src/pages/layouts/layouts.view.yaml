@@ -73,6 +73,14 @@ refs:
     eventListeners:
       click:
         handler: handleDetailHeaderClick
+  folderNameDialog:
+    eventListeners:
+      close:
+        handler: handleFolderNameDialogClose
+  folderNameForm:
+    eventListeners:
+      form-action:
+        handler: handleFolderNameFormAction
   openLayoutEditorButton:
     eventListeners:
       click:
@@ -107,21 +115,22 @@ template:
               - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
                   - $if showMobileTopTabs:
                       - 'rtgl-view d=v w=f h=f style="min-width: 0; min-height: 0;"':
-                          - 'rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} show-menu-button show-search=false show-tag-filter :mobileLayout=${mobileLayout} :groups=${catalogGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}': null
+                          - 'rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} show-menu-button show-search=false search-in-filter-popover show-tag-filter :mobileLayout=${mobileLayout} :groups=${catalogGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}': null
                     $else:
-                      - 'rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} show-zoom-controls zoom-control-mode=columns default-items-per-row=6 items-per-row-config-key="groupLayoutsView.itemsPerRow" show-tag-filter :groups=${catalogGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}': null
+                      - 'rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} show-zoom-controls zoom-control-mode=columns default-items-per-row=6 items-per-row-config-key="groupLayoutsView.itemsPerRow" search-in-filter-popover show-tag-filter :groups=${catalogGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}': null
           - $if showDetailPanel:
               - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
                   - rtgl-view wh=f slot="content":
                       - 'div#fileExplorerDetailKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
-                          - $if selectedItemId:
+                          - $if selectedDetailId:
                               - rtgl-view d=v w=f h=f:
                                   - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
-                                      - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                                      - rtgl-text w=1fg ellipsis=true: ${selectedDetailName}
                                       - rtgl-svg svg=edit wh=16: null
-                                  - rvn-detail-view#detailView w=f h=1fg :fields=${detailFields}:
-                                      - rtgl-button#openLayoutEditorButton slot="actions" data-layout-id="${selectedItemId}" w=f: Open Layout Editor
-                                      - rtgl-tag-select#detailTagSelect slot="layout-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+                                  - rvn-detail-view#detailView key=${selectedDetailId} w=f h=1fg :fields=${detailFields}:
+                                      - $if selectedItemId:
+                                          - rtgl-button#openLayoutEditorButton slot="actions" data-layout-id="${selectedItemId}" w=f: Open Layout Editor
+                                          - rtgl-tag-select#detailTagSelect slot="layout-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
                             $else:
                               - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                                   - rtgl-text s=md c=mu-fg: No selection
@@ -142,6 +151,8 @@ template:
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
                       - rtgl-tag-select#detailTagSelect slot="layout-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+  - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
+      - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
   - rtgl-dialog#addLayoutDialog ?open=${isAddDialogOpen} s=md:
       - rtgl-form#layoutForm slot=content :defaultValues=${layoutFormDefaults} :form=${layoutForm} w=f: null
   - rtgl-dialog#editDialog ?open=${isEditDialogOpen} s=md:

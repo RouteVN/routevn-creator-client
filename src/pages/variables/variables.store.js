@@ -44,6 +44,29 @@ export const VARIABLE_TAG_SCOPE_KEY = "variables";
 
 const createTagFormDefinition = createTagForm();
 
+const folderNameForm = {
+  title: "Edit Folder",
+  fields: [
+    {
+      name: "name",
+      type: "input-text",
+      label: "Name",
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        label: "Save",
+        validate: true,
+      },
+    ],
+  },
+};
+
 const selectVariableItem = (state, itemId) => {
   const item = state.variablesData?.items?.[itemId];
   return item?.type === "variable" ? item : undefined;
@@ -52,7 +75,13 @@ const selectVariableItem = (state, itemId) => {
 export const createInitialState = () => ({
   variablesData: { tree: [], items: {} },
   selectedItemId: undefined,
+  selectedFolderId: undefined,
   searchQuery: "",
+  isFolderNameDialogOpen: false,
+  folderNameDialogItemId: undefined,
+  folderNameDialogDefaultValues: {
+    name: "",
+  },
   ...createTagState(),
   ...createMobileResourcePageState(),
   folderContextMenuItems,
@@ -62,6 +91,12 @@ export const createInitialState = () => ({
 
 export const setItems = ({ state }, { variablesData } = {}) => {
   state.variablesData = variablesData;
+  if (
+    state.selectedFolderId &&
+    state.variablesData?.items?.[state.selectedFolderId]?.type !== "folder"
+  ) {
+    state.selectedFolderId = undefined;
+  }
   syncDetailTagIds({
     state,
     item: selectVariableItem(state, state.selectedItemId),
@@ -71,11 +106,45 @@ export const setItems = ({ state }, { variablesData } = {}) => {
 
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
+  if (itemId !== undefined) {
+    state.selectedFolderId = undefined;
+  }
   state.isDetailTagSelectOpen = false;
   syncDetailTagIds({
     state,
     item: selectVariableItem(state, itemId),
   });
+};
+
+export const setSelectedFolderId = ({ state }, { folderId } = {}) => {
+  state.selectedFolderId = folderId;
+  if (folderId !== undefined) {
+    state.selectedItemId = undefined;
+    state.isDetailTagSelectOpen = false;
+    syncDetailTagIds({
+      state,
+      item: undefined,
+    });
+  }
+};
+
+export const openFolderNameDialog = (
+  { state },
+  { folderId, defaultValues } = {},
+) => {
+  state.isFolderNameDialogOpen = true;
+  state.folderNameDialogItemId = folderId;
+  state.folderNameDialogDefaultValues = {
+    name: defaultValues?.name ?? "",
+  };
+};
+
+export const closeFolderNameDialog = ({ state }, _payload = {}) => {
+  state.isFolderNameDialogOpen = false;
+  state.folderNameDialogItemId = undefined;
+  state.folderNameDialogDefaultValues = {
+    name: "",
+  };
 };
 
 export const setUiConfig = ({ state }, { uiConfig } = {}) => {
@@ -148,9 +217,16 @@ export const closeCreateTagDialog = ({ state }, _payload = {}) => {
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
+export const selectSelectedFolderId = ({ state }) => state.selectedFolderId;
+
 export const selectSelectedItem = ({ state }) => {
   if (!state.selectedItemId) return undefined;
   return selectVariableItem(state, state.selectedItemId);
+};
+
+export const selectFolderById = ({ state }, { folderId } = {}) => {
+  const item = state.variablesData?.items?.[folderId];
+  return item?.type === "folder" ? item : undefined;
 };
 
 export const selectViewData = ({ state }) => {
@@ -161,6 +237,11 @@ export const selectViewData = ({ state }) => {
   const selectedItem = state.selectedItemId
     ? flatItems.find((item) => item.id === state.selectedItemId)
     : undefined;
+  const selectedFolder = state.selectedFolderId
+    ? state.variablesData?.items?.[state.selectedFolderId]
+    : undefined;
+  const selectedDetailId = selectedItem?.id ?? selectedFolder?.id;
+  const selectedDetailName = selectedItem?.name ?? selectedFolder?.name ?? "";
 
   let selectedVariableDefault = "";
   if (typeof selectedItem?.default === "boolean") {
@@ -218,6 +299,12 @@ export const selectViewData = ({ state }) => {
       label: "Default",
       value: selectedVariableDefault,
     });
+  } else if (selectedFolder?.type === "folder") {
+    detailFields.push({
+      type: "text",
+      label: "Type",
+      value: "folder",
+    });
   }
 
   return {
@@ -227,7 +314,10 @@ export const selectViewData = ({ state }) => {
     resourceCategory: "systemConfig",
     selectedResourceId: "variables",
     selectedItemId: state.selectedItemId,
-    selectedItemName: selectedItem?.name ?? "",
+    selectedFolderId: state.selectedFolderId,
+    selectedDetailId,
+    selectedDetailName,
+    selectedItemName: selectedDetailName,
     detailFields,
     ...buildMobileResourcePageViewData({
       state,
@@ -242,5 +332,9 @@ export const selectViewData = ({ state }) => {
     folderContextMenuItems: state.folderContextMenuItems,
     itemContextMenuItems: state.itemContextMenuItems,
     emptyContextMenuItems: state.emptyContextMenuItems,
+    isFolderNameDialogOpen: state.isFolderNameDialogOpen,
+    folderNameDialogItemId: state.folderNameDialogItemId,
+    folderNameForm,
+    folderNameDialogDefaultValues: state.folderNameDialogDefaultValues,
   };
 };

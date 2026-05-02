@@ -97,6 +97,20 @@ const buildDetailFields = (item) => {
   ];
 };
 
+const buildFolderDetailFields = (folder) => {
+  if (!folder) {
+    return [];
+  }
+
+  return [
+    {
+      type: "text",
+      label: "Type",
+      value: "folder",
+    },
+  ];
+};
+
 const getPreviewFileId = (item) => item?.thumbnailFileId ?? item?.fileId;
 
 const createEditForm = () => ({
@@ -133,6 +147,29 @@ const createEditForm = () => ({
   },
 });
 
+const folderNameForm = {
+  title: "Edit Folder",
+  fields: [
+    {
+      name: "name",
+      type: "input-text",
+      label: "Name",
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        label: "Save",
+        validate: true,
+      },
+    ],
+  },
+};
+
 const matchesSearch = (item, searchQuery) => {
   if (!searchQuery) {
     return true;
@@ -162,6 +199,7 @@ export const createInitialState = () => ({
   ...createTagState(),
   pendingUploads: [],
   selectedItemId: undefined,
+  selectedFolderId: undefined,
   characterId: undefined,
   characterName: undefined,
   searchQuery: "",
@@ -177,10 +215,21 @@ export const createInitialState = () => ({
   },
   editPreviewFileId: undefined,
   editUploadResult: undefined,
+  isFolderNameDialogOpen: false,
+  folderNameDialogItemId: undefined,
+  folderNameDialogDefaultValues: {
+    name: "",
+  },
 });
 
 export const setItems = ({ state }, { spritesData } = {}) => {
   state.spritesData = spritesData ?? EMPTY_TREE;
+  if (
+    state.selectedFolderId &&
+    state.spritesData.items?.[state.selectedFolderId]?.type !== "folder"
+  ) {
+    state.selectedFolderId = undefined;
+  }
   syncDetailTagIds({
     state,
     item: state.spritesData.items?.[state.selectedItemId],
@@ -261,6 +310,7 @@ export const clearCharacterSpritesView = ({ state }) => {
   state.isDetailTagSelectOpen = false;
   state.pendingUploads = [];
   state.selectedItemId = undefined;
+  state.selectedFolderId = undefined;
   state.isEditDialogOpen = false;
   state.editItemId = undefined;
   state.editDefaultValues = {
@@ -270,6 +320,11 @@ export const clearCharacterSpritesView = ({ state }) => {
   };
   state.editPreviewFileId = undefined;
   state.editUploadResult = undefined;
+  state.isFolderNameDialogOpen = false;
+  state.folderNameDialogItemId = undefined;
+  state.folderNameDialogDefaultValues = {
+    name: "",
+  };
   state.isCreateTagDialogOpen = false;
   state.createTagDefaultValues = {
     name: "",
@@ -283,10 +338,23 @@ export const clearCharacterSpritesView = ({ state }) => {
 
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
+  if (itemId) {
+    state.selectedFolderId = undefined;
+  }
   state.isDetailTagSelectOpen = false;
   syncDetailTagIds({
     state,
     item: state.spritesData.items?.[itemId],
+  });
+};
+
+export const setSelectedFolderId = ({ state }, { folderId } = {}) => {
+  state.selectedFolderId = folderId;
+  state.selectedItemId = undefined;
+  state.isDetailTagSelectOpen = false;
+  syncDetailTagIds({
+    state,
+    item: undefined,
   });
 };
 
@@ -366,6 +434,25 @@ export const closeEditDialog = ({ state }, _payload = {}) => {
   state.editUploadResult = undefined;
 };
 
+export const openFolderNameDialog = (
+  { state },
+  { folderId, defaultValues } = {},
+) => {
+  state.isFolderNameDialogOpen = true;
+  state.folderNameDialogItemId = folderId;
+  state.folderNameDialogDefaultValues = {
+    name: defaultValues?.name ?? "",
+  };
+};
+
+export const closeFolderNameDialog = ({ state }, _payload = {}) => {
+  state.isFolderNameDialogOpen = false;
+  state.folderNameDialogItemId = undefined;
+  state.folderNameDialogDefaultValues = {
+    name: "",
+  };
+};
+
 export const setEditUpload = (
   { state },
   { uploadResult, previewFileId } = {},
@@ -384,8 +471,17 @@ export const selectSpriteItemById = ({ state }, { itemId } = {}) => {
   return item?.type === "image" ? item : undefined;
 };
 
+export const selectFolderById = ({ state }, { folderId } = {}) => {
+  const item = state.spritesData.items?.[folderId];
+  return item?.type === "folder" ? item : undefined;
+};
+
 export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
+};
+
+export const selectSelectedFolderId = ({ state }) => {
+  return state.selectedFolderId;
 };
 
 export const selectCharacterId = ({ state }) => {
@@ -497,8 +593,17 @@ export const selectViewData = ({ state }) => {
     .filter((group) => group.shouldDisplay);
 
   const selectedItem = state.spritesData.items?.[state.selectedItemId];
+  const selectedFolder = state.spritesData.items?.[state.selectedFolderId];
+  const selectedDetailId =
+    selectedItem?.type === "image" ? selectedItem.id : selectedFolder?.id;
+  const selectedDetailName =
+    selectedItem?.type === "image"
+      ? (selectedItem.name ?? "")
+      : (selectedFolder?.name ?? "");
   const detailFields =
-    selectedItem?.type === "image" ? buildDetailFields(selectedItem) : [];
+    selectedItem?.type === "image"
+      ? buildDetailFields(selectedItem)
+      : buildFolderDetailFields(selectedFolder);
 
   return {
     flatItems,
@@ -506,7 +611,10 @@ export const selectViewData = ({ state }) => {
     resourceCategory: "assets",
     selectedResourceId: "characters",
     selectedItemId: state.selectedItemId,
-    selectedItemName: selectedItem?.name ?? "",
+    selectedFolderId: state.selectedFolderId,
+    selectedDetailId,
+    selectedDetailName,
+    selectedItemName: selectedDetailName,
     ...buildTagViewData({
       state,
       selectedItem,
@@ -538,6 +646,10 @@ export const selectViewData = ({ state }) => {
     editForm: createEditForm(),
     editDefaultValues: state.editDefaultValues,
     editPreviewFileId: state.editPreviewFileId,
+    isFolderNameDialogOpen: state.isFolderNameDialogOpen,
+    folderNameDialogItemId: state.folderNameDialogItemId,
+    folderNameForm,
+    folderNameDialogDefaultValues: state.folderNameDialogDefaultValues,
     startCollapsedFileExplorer: shouldStartCollapsedFileExplorer({
       flatItems,
       threshold: AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD,

@@ -261,6 +261,7 @@ const {
   handleBeforeMount,
   handleAfterMount,
   openEditDialogWithValues,
+  openFolderNameDialogWithValues,
   refreshData: handleDataChanged,
   handleFileExplorerSelectionChanged: handleBaseFileExplorerSelectionChanged,
   handleFileExplorerAction,
@@ -273,6 +274,8 @@ const {
   handleMobileFileExplorerOpen,
   handleMobileFileExplorerClose,
   handleMobileDetailSheetClose,
+  handleFolderNameDialogClose,
+  handleFolderNameFormAction,
   openCreateTagDialogForMode,
   handleCreateTagDialogClose,
   handleTagFilterChange,
@@ -331,6 +334,8 @@ export {
   handleMobileFileExplorerOpen,
   handleMobileFileExplorerClose,
   handleMobileDetailSheetClose,
+  handleFolderNameDialogClose,
+  handleFolderNameFormAction,
   handleCreateTagDialogClose,
   handleTagFilterChange,
   handleTagFilterAddOptionClick,
@@ -407,7 +412,13 @@ export const handleFilesDropped = async (deps, payload) => {
 
 export const handleDetailHeaderClick = (deps) => {
   const selectedItemId = deps.store.selectSelectedItemId();
-  openEditDialogWithValues({ deps, itemId: selectedItemId });
+  if (selectedItemId) {
+    openEditDialogWithValues({ deps, itemId: selectedItemId });
+    return;
+  }
+
+  const selectedFolderId = deps.store.selectSelectedFolderId();
+  openFolderNameDialogWithValues({ deps, folderId: selectedFolderId });
 };
 
 export const handleEditFormAddOptionClick = (deps) => {

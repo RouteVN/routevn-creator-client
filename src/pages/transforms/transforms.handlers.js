@@ -172,6 +172,9 @@ const {
   handleMobileFileExplorerOpen,
   handleMobileFileExplorerClose,
   handleMobileDetailSheetClose,
+  openFolderNameDialogWithValues,
+  handleFolderNameDialogClose,
+  handleFolderNameFormAction,
   openCreateTagDialogForMode,
   handleCreateTagDialogClose,
   handleTagFilterChange,
@@ -238,6 +241,8 @@ export {
   handleMobileFileExplorerOpen,
   handleMobileFileExplorerClose,
   handleMobileDetailSheetClose,
+  handleFolderNameDialogClose,
+  handleFolderNameFormAction,
   handleCreateTagDialogClose,
   handleTagFilterChange,
   handleTagFilterAddOptionClick,
@@ -298,6 +303,10 @@ export const handleDetailHeaderClick = async (deps) => {
   const { store } = deps;
   const itemId = store.selectSelectedItemId();
   if (!itemId) {
+    openFolderNameDialogWithValues({
+      deps,
+      folderId: store.selectSelectedFolderId(),
+    });
     return;
   }
 

@@ -49,6 +49,14 @@ refs:
     eventListeners:
       click:
         handler: handleDetailHeaderClick
+  folderNameDialog:
+    eventListeners:
+      close:
+        handler: handleFolderNameDialogClose
+  folderNameForm:
+    eventListeners:
+      form-action:
+        handler: handleFolderNameFormAction
   detailTagSelect:
     eventListeners:
       value-change:
@@ -78,20 +86,21 @@ template:
           - 'rtgl-view d=v w=1fg h=f pl=${contentLeftPadding} style="min-width: 0; min-height: 0;"':
               - 'div#fileExplorerKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
                   - $if showMobileTopTabs:
-                      - rvn-group-variables-view#groupview w=f h=1fg navTitle=${title} show-menu-button show-search=false show-tag-filter :mobileLayout=${mobileLayout} :flatGroups=${flatGroups} :selectedItemId=${selectedItemId} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder}: null
+                      - rvn-group-variables-view#groupview w=f h=1fg navTitle=${title} show-menu-button show-search=false search-in-filter-popover show-tag-filter :mobileLayout=${mobileLayout} :flatGroups=${flatGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder}: null
                     $else:
-                      - rvn-group-variables-view#groupview w=f h=1fg navTitle=${title} show-tag-filter :flatGroups=${flatGroups} :selectedItemId=${selectedItemId} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder}: null
+                      - rvn-group-variables-view#groupview w=f h=1fg navTitle=${title} search-in-filter-popover show-tag-filter :flatGroups=${flatGroups} :selectedItemId=${selectedItemId} :selectedFolderId=${selectedFolderId} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder}: null
           - $if showDetailPanel:
               - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
                   - rtgl-view wh=f slot="content":
                       - 'div#fileExplorerDetailKeyboardScope tabindex=-1 style="width: 100%; height: 100%; min-width: 0; min-height: 0; outline: none;"':
-                          - $if selectedItemId:
+                          - $if selectedDetailId:
                               - rtgl-view d=v w=f h=f:
                                   - rtgl-view#detailHeader h=48 w=f d=h bgc=bg bwb=xs ph=md av=c g=sm cur=pointer:
-                                      - rtgl-text w=1fg ellipsis=true: ${selectedItemName}
+                                      - rtgl-text w=1fg ellipsis=true: ${selectedDetailName}
                                       - rtgl-svg svg=edit wh=16: null
-                                  - rvn-detail-view#detailView key=${selectedItemId} w=f h=1fg :fields=${detailFields}:
-                                      - rtgl-tag-select#detailTagSelect slot="variable-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+                                  - rvn-detail-view#detailView key=${selectedDetailId} w=f h=1fg :fields=${detailFields}:
+                                      - $if selectedItemId:
+                                          - rtgl-tag-select#detailTagSelect slot="variable-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
                             $else:
                               - rtgl-view wh=f av=c ah=c bgc=mu-fg:
                                   - rtgl-text s=md c=mu-fg: No selection
@@ -112,5 +121,7 @@ template:
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rvn-detail-view#mobileDetailView key=${selectedItemId} w=f :fields=${mobileDetailFields} :fillHeight=${mobileDetailFillHeight}:
                       - rtgl-tag-select#detailTagSelect slot="variable-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
+  - rtgl-dialog#folderNameDialog ?open=${isFolderNameDialogOpen} s=sm:
+      - rtgl-form#folderNameForm key=${folderNameDialogItemId} slot=content :defaultValues=${folderNameDialogDefaultValues} :form=${folderNameForm} w=f: null
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null

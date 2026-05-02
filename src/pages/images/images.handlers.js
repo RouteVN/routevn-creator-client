@@ -3,6 +3,10 @@ import { createMediaPageHandlers } from "../../internal/ui/resourcePages/media/c
 import { processPendingUploads } from "../../internal/ui/resourcePages/media/processPendingUploads.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
 import {
+  handleResourceZoomShortcutKeyDown,
+  isResourceZoomShortcutKeyEvent,
+} from "../../internal/ui/resourcePages/zoomShortcuts.js";
+import {
   createFileExplorerKeyboardScopeHandlers,
   isTextEntryKeyEvent,
 } from "../../internal/ui/fileExplorerKeyboardScope.js";
@@ -100,6 +104,7 @@ const syncImagePageData = ({ store, repositoryState } = {}) => {
 
 const {
   openEditDialogWithValues,
+  openFolderNameDialogWithValues,
   openCreateTagDialogForMode,
   refreshData: handleDataChanged,
   handleBeforeMount: handleMediaBeforeMount,
@@ -112,6 +117,8 @@ const {
   handleItemClick: handleBaseImageItemClick,
   handleItemEdit: handleImageItemEdit,
   handleCreateTagDialogClose,
+  handleFolderNameDialogClose,
+  handleFolderNameFormAction,
   handleTagFilterChange,
   handleTagFilterAddOptionClick,
   handleDetailTagAddOptionClick,
@@ -179,6 +186,8 @@ export {
   handleSearchInput,
   handleImageItemEdit,
   handleCreateTagDialogClose,
+  handleFolderNameDialogClose,
+  handleFolderNameFormAction,
   handleTagFilterChange,
   handleTagFilterAddOptionClick,
   handleDetailTagAddOptionClick,
@@ -248,6 +257,46 @@ const {
 const focusPreviewOverlay = ({ refs } = {}) => {
   requestAnimationFrame(() => {
     refs.previewOverlay?.focus?.();
+  });
+};
+
+const handleZoomShortcutKeyDown = (deps, payload) => {
+  const event = payload?._event;
+  if (
+    deps.store.getState().fullImagePreviewVisible &&
+    isResourceZoomShortcutKeyEvent(event)
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+    return true;
+  }
+
+  return handleResourceZoomShortcutKeyDown(deps, payload);
+};
+
+export const handleFileExplorerFolderCollapseChange = (deps, payload) => {
+  const { refs } = deps;
+  const { folderId, collapsed } = payload._event.detail ?? {};
+  if (!folderId) {
+    return;
+  }
+
+  refs.groupview?.setGroupCollapsed?.({
+    groupId: folderId,
+    collapsed,
+  });
+};
+
+export const handleCenterGroupCollapseChange = (deps, payload) => {
+  const { refs } = deps;
+  const { groupId, collapsed } = payload._event.detail ?? {};
+  if (!groupId) {
+    return;
+  }
+
+  refs.fileExplorer?.setFolderCollapsed?.({
+    folderId: groupId,
+    collapsed,
   });
 };
 
@@ -329,7 +378,13 @@ export const handleImageItemClick = (deps, payload) => {
 
 export const handleDetailHeaderClick = (deps) => {
   const selectedItemId = deps.store.selectSelectedItemId();
-  openEditDialogWithValues({ deps, itemId: selectedItemId });
+  if (selectedItemId) {
+    openEditDialogWithValues({ deps, itemId: selectedItemId });
+    return;
+  }
+
+  const selectedFolderId = deps.store.selectSelectedFolderId();
+  openFolderNameDialogWithValues({ deps, folderId: selectedFolderId });
 };
 
 export const handleEditFormAddOptionClick = (deps) => {
@@ -577,8 +632,13 @@ export const handlePreviewOverlayKeyDown = (deps, payload) => {
   openImagePreviewById({ deps, itemId: nextItemId, syncExplorer: true });
 };
 
-export const handleFileExplorerKeyboardScopeKeyDown =
-  handleBaseFileExplorerKeyboardScopeKeyDown;
+export const handleFileExplorerKeyboardScopeKeyDown = (deps, payload) => {
+  if (handleZoomShortcutKeyDown(deps, payload)) {
+    return;
+  }
+
+  handleBaseFileExplorerKeyboardScopeKeyDown(deps, payload);
+};
 
 export const handleEditDialogClose = (deps) => {
   const { store, render } = deps;

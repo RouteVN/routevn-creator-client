@@ -10,10 +10,50 @@ const getDataAttribute = (event, name) => {
   return event?.currentTarget?.getAttribute?.(name) ?? undefined;
 };
 
+const parseBooleanProp = (value, fallback = false) => {
+  if (value === undefined || value === null) {
+    return fallback;
+  }
+
+  if (value === true || value === "") {
+    return true;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "1") {
+      return true;
+    }
+    if (normalized === "false" || normalized === "0") {
+      return false;
+    }
+  }
+
+  return Boolean(value);
+};
+
 export const handleTagFilterButtonClick = openTagFilterPopoverFromButton;
 export const handleTagFilterPopoverClose = closeTagFilterPopoverFromOverlay;
 export const handleTagFilterOptionClick = toggleTagFilterPopoverOption;
-export const handleTagFilterClearClick = clearTagFilterPopoverSelection;
+export const handleTagFilterClearClick = (deps, payload) => {
+  const { dispatchEvent, props } = deps;
+  clearTagFilterPopoverSelection(deps, payload);
+
+  if (
+    !parseBooleanProp(props.searchInFilterPopover) ||
+    !props.searchQuery?.trim()
+  ) {
+    return;
+  }
+
+  dispatchEvent(
+    new CustomEvent("search-input", {
+      detail: { value: "" },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
 export const handleTagFilterApplyClick = applyTagFilterPopoverSelection;
 
 export const handleMenuClick = (deps) => {

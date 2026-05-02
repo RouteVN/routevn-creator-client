@@ -579,6 +579,9 @@ const {
   handleMobileFileExplorerOpen,
   handleMobileFileExplorerClose,
   handleMobileDetailSheetClose,
+  openFolderNameDialogWithValues,
+  handleFolderNameDialogClose,
+  handleFolderNameFormAction,
 } = createCatalogPageHandlers({
   resourceType: "particles",
   selectData: (repositoryState) => {
@@ -643,6 +646,8 @@ export {
   handleMobileFileExplorerOpen,
   handleMobileFileExplorerClose,
   handleMobileDetailSheetClose,
+  handleFolderNameDialogClose,
+  handleFolderNameFormAction,
 };
 
 export const handleFileExplorerSelectionChanged = async (deps, payload) => {
@@ -680,6 +685,10 @@ export const handleDetailHeaderClick = async (deps) => {
   const { store } = deps;
   const itemId = store.selectSelectedItemId();
   if (!itemId) {
+    openFolderNameDialogWithValues({
+      deps,
+      folderId: store.selectSelectedFolderId(),
+    });
     return;
   }
 
