@@ -33,6 +33,20 @@ refs:
         handler: handleCloseContextMenu
       item-click:
         handler: handleContextMenuClickItem
+  zoomSlider:
+    eventListeners:
+      value-change:
+        handler: handleZoomChange
+      value-input:
+        handler: handleZoomChange
+  zoomOut:
+    eventListeners:
+      click:
+        handler: handleZoomOut
+  zoomIn:
+    eventListeners:
+      click:
+        handler: handleZoomIn
   addBtn*:
     eventListeners:
       click:
@@ -59,6 +73,11 @@ template:
                           - rtgl-svg svg=hamburger wh=22 c=mu-fg: null
                   - $if navTitle:
                       - rtgl-text: ${navTitle}
+              - $if showZoomControls:
+                  - rtgl-view d=h av=c g=sm:
+                      - rtgl-button#zoomOut sq v="gh" s=sm: '-'
+                      - rtgl-slider#zoomSlider w=120 min=${zoomControlMin} max=${zoomControlMax} step=${zoomControlStep} value=${zoomControlValue}: null
+                      - rtgl-button#zoomIn sq v="gh" s=sm: +
               - $if showSearch:
                   - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
               - $if showTagFilter:
@@ -80,18 +99,28 @@ template:
                           - $if canAdd:
                               - rtgl-button#addBtnHeaderRef${gIndex} data-group-id=${group.id} s=sm w=1fg pre=plus: ${addText}
                       - $if !group.isCollapsed:
-                          - 'rtgl-view w=f d=h ph=sm pt=md pb=sm mb=lg wrap g=md style="min-width: 0;"':
+                          - 'rtgl-grid w=f ph=sm pt=md pb=sm mb=lg g=md cols="${cardGridColumns}" style="min-width: 0;"':
                               - $if group.hasChildren:
                                   - $for item, itemIndex in group.children:
-                                      - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} w=${item.itemWidth} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md:
+                                      - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} w=${item.itemWidth} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md style="${item.itemContainerStyle}":
                                           - $if item.cardKind == 'color':
                                               - 'rtgl-view d=v w=f p=md g=md br=md style="overflow: hidden;"':
-                                                  - 'rtgl-view w=f h=120 br=sm style="background-color: ${item.swatchHex};"': null
+                                                  - $if item.useFullWidthCatalogPreview:
+                                                      - 'rtgl-view w=f br=sm style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden; background-color: ${item.swatchHex};"': null
+                                                    $else:
+                                                      - 'rtgl-view w=f h=120 br=sm style="background-color: ${item.swatchHex};"': null
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                             $elif item.cardKind == 'layout':
                                               - $if item.cardVariant == 'thumbnail':
                                                   - 'rtgl-view w=${item.layoutPreviewWidth} br=md style="overflow: hidden; max-width: 100%;"':
-                                                      - $if item.previewFileId:
+                                                      - $if item.useFullWidthCatalogPreview:
+                                                          - 'rtgl-view w=f br=md style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
+                                                              - $if item.previewFileId:
+                                                                  - rvn-file-image fileId=${item.previewFileId} w=f h=f: null
+                                                                $else:
+                                                                  - rtgl-view w=f h=f av=c ah=c bgc=mu-fg:
+                                                                      - rtgl-text s=sm c=mu-fg: No thumbnail
+                                                        $elif item.previewFileId:
                                                           - rvn-file-image fileId=${item.previewFileId} w=f h=120: null
                                                         $else:
                                                           - rtgl-view w=f h=120 av=c ah=c bgc=mu-fg:
@@ -106,13 +135,23 @@ template:
                                                                   - $if item.typeInfoSvg:
                                                                       - rtgl-svg svg=${item.typeInfoSvg} wh=14 c=mu-fg: null
                                                 $else:
-                                                  - rtgl-view w=225 h=152 d=v ah=c av=c br=md p=md g=sm:
-                                                      - rtgl-text s=md ellipsis w=f: ${item.name}
-                                                      - $if item.subtitle:
-                                                          - rtgl-text s=sm c=mu-fg ellipsis w=f: ${item.subtitle}
+                                                  - $if item.useFullWidthCatalogPreview:
+                                                      - 'rtgl-view w=f d=v ah=c av=c br=md p=md g=sm style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
+                                                          - rtgl-text s=md ellipsis w=f: ${item.name}
+                                                          - $if item.subtitle:
+                                                              - rtgl-text s=sm c=mu-fg ellipsis w=f: ${item.subtitle}
+                                                    $else:
+                                                      - rtgl-view w=225 h=152 d=v ah=c av=c br=md p=md g=sm:
+                                                          - rtgl-text s=md ellipsis w=f: ${item.name}
+                                                          - $if item.subtitle:
+                                                              - rtgl-text s=sm c=mu-fg ellipsis w=f: ${item.subtitle}
                                             $elif item.cardKind == 'transform':
                                               - rtgl-view w=f p=md g=md br=md:
-                                                  - rvn-transform-thumbnail :item=${item} canvas-aspect-ratio="16 / 9" w=${item.transformPreviewWidth} h=120: null
+                                                  - $if item.useFullWidthCatalogPreview:
+                                                      - 'rtgl-view w=f br=md style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
+                                                          - rvn-transform-thumbnail :item=${item} canvas-aspect-ratio="${item.previewAspectRatio}" w=f h=f: null
+                                                    $else:
+                                                      - rvn-transform-thumbnail :item=${item} canvas-aspect-ratio="${item.previewAspectRatio}" w=${item.transformPreviewWidth} h=120: null
                                                   - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                             $elif item.cardKind == 'animation':
                                               - rtgl-view w=f h=1fg bgc=bg br=md p=md:
@@ -136,7 +175,7 @@ template:
                                                       - rtgl-text s=sm c=mu-fg ellipsis w=f: ${item.subtitle}
                                 $else:
                                   - $if canAdd:
-                                      - rtgl-view#addBtnEmptyRef${gIndex} data-group-id=${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=pointer:
+                                      - 'rtgl-view#addBtnEmptyRef${gIndex} data-group-id=${group.id} w=f h=150 av=c ah=c g=md bw=xs bc=bo br=md cur=pointer style="grid-column: 1 / -1;"':
                                           - rtgl-svg svg=plus wh=24: null
                                           - rtgl-text: ${addText}
             $elif searchQuery || selectedTagFilterValues.length > 0:

@@ -10,9 +10,29 @@ import {
 
 const DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT = 8;
 const DEFAULT_EAGER_IMAGE_CARD_COUNT = 8;
+const DEFAULT_ITEMS_PER_ROW = 6;
+const MIN_ITEMS_PER_ROW = 1;
+const MAX_ITEMS_PER_ROW = 12;
 
-export const createInitialState = () => ({
+const clampItemsPerRow = (value) => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return DEFAULT_ITEMS_PER_ROW;
+  }
+
+  return Math.min(
+    MAX_ITEMS_PER_ROW,
+    Math.max(MIN_ITEMS_PER_ROW, Math.round(numericValue)),
+  );
+};
+
+const toColumnZoomControlValue = (itemsPerRow) => {
+  return MIN_ITEMS_PER_ROW + MAX_ITEMS_PER_ROW - clampItemsPerRow(itemsPerRow);
+};
+
+export const createInitialState = ({ props } = {}) => ({
   zoomLevel: 1,
+  itemsPerRow: clampItemsPerRow(props?.defaultItemsPerRow),
   collapsedIds: [],
   ...createTagFilterPopoverState(),
   hoveredItemId: undefined,
@@ -35,6 +55,12 @@ export const setZoomLevel = ({ state }, { zoomLevel } = {}) => {
 };
 
 export const selectZoomLevel = ({ state }) => state.zoomLevel;
+
+export const setItemsPerRow = ({ state }, { itemsPerRow } = {}) => {
+  state.itemsPerRow = clampItemsPerRow(itemsPerRow);
+};
+
+export const selectItemsPerRow = ({ state }) => state.itemsPerRow;
 
 export const setProgressiveRenderedItemCount = (
   { state },
@@ -154,6 +180,19 @@ const resolveDefaultBorderColor = () => {
   return "bo";
 };
 
+const isColumnZoomControlMode = (props) => props.zoomControlMode === "columns";
+
+const hasImageCards = (groups = []) => {
+  return groups.some((group) =>
+    (group?.children ?? []).some((item) => item?.cardKind === "image"),
+  );
+};
+
+const buildAutoFillGridColumns = (cardWidth) => {
+  const width = Math.max(1, Math.round(Number(cardWidth) || 1));
+  return `repeat(auto-fill, minmax(min(${width}px, 100%), ${width}px))`;
+};
+
 export const selectViewData = ({ state, props }) => {
   const baseHeight = props.imageHeight ?? 150;
   const baseWidth = props.maxWidth ?? 400;
@@ -161,11 +200,24 @@ export const selectViewData = ({ state, props }) => {
   const baseMediaHeight = 150;
   const fullWidthImageCards = parseBooleanProp(props.fullWidthImageCards);
   const mobileLayout = parseBooleanProp(props.mobileLayout);
-  const effectiveZoomLevel = mobileLayout ? 1 : state.zoomLevel;
+  const useColumnZoomControl = !mobileLayout && isColumnZoomControlMode(props);
+  const imageCardAspectRatio = props.imageCardAspectRatio ?? undefined;
+  const itemsPerRow = mobileLayout ? 1 : clampItemsPerRow(state.itemsPerRow);
+  const effectiveZoomLevel =
+    mobileLayout || useColumnZoomControl ? 1 : state.zoomLevel;
   const imageHeight = Math.round(baseHeight * effectiveZoomLevel);
   const maxWidth = Math.round(baseWidth * effectiveZoomLevel);
   const mediaWidth = Math.round(baseMediaWidth * effectiveZoomLevel);
   const mediaHeight = Math.round(baseMediaHeight * effectiveZoomLevel);
+  const sourceGroups = props.groups ?? [];
+  const cardGridColumns =
+    mobileLayout || fullWidthImageCards
+      ? "1"
+      : useColumnZoomControl
+        ? `${itemsPerRow}`
+        : buildAutoFillGridColumns(
+            hasImageCards(sourceGroups) ? maxWidth : mediaWidth,
+          );
   const scrollBottomPadding = props.scrollBottomPadding ?? "0px";
   const hasActiveTagFilter = (props.selectedTagFilterValues?.length ?? 0) > 0;
   const lazyImageCards = parseBooleanProp(props.lazyImageCards);
@@ -176,7 +228,7 @@ export const selectViewData = ({ state, props }) => {
     ? state.progressiveRenderedItemCount
     : Number.POSITIVE_INFINITY;
 
-  const groups = (props.groups ?? []).map((group) => {
+  const groups = sourceGroups.map((group) => {
     const isCollapsed = state.collapsedIds.includes(group.id);
     const children = isCollapsed ? [] : (group.children ?? []);
     const visibleChildren =
@@ -210,7 +262,9 @@ export const selectViewData = ({ state, props }) => {
           );
         }
         const useFullWidthCard =
-          mobileLayout || (fullWidthImageCards && item.cardKind === "image");
+          mobileLayout ||
+          useColumnZoomControl ||
+          (fullWidthImageCards && item.cardKind === "image");
 
         return {
           ...item,
@@ -229,7 +283,18 @@ export const selectViewData = ({ state, props }) => {
           mediaTextWidth: useFullWidthCard ? "f" : mediaWidth,
           fontPreviewWidth: useFullWidthCard ? 320 : mediaWidth,
           useFullWidthImageCard: useFullWidthCard && item.cardKind === "image",
-          previewAspectRatio: item.previewAspectRatio ?? "16 / 9",
+          useFullWidthMediaPreview:
+            useFullWidthCard &&
+            (item.cardKind === "video" || item.cardKind === "sound"),
+          useFullWidthFontPreview: useFullWidthCard && item.cardKind === "font",
+          previewAspectRatio:
+            item.cardKind === "video" ||
+            item.cardKind === "sound" ||
+            item.cardKind === "font"
+              ? "16 / 9"
+              : useFullWidthCard && item.cardKind === "image"
+                ? (imageCardAspectRatio ?? item.previewAspectRatio ?? "16 / 9")
+                : (item.previewAspectRatio ?? "16 / 9"),
           itemBorderColor: isSelected ? "pr" : defaultBorderColor,
           itemHoverBorderColor: isSelected
             ? "pr"
@@ -277,7 +342,15 @@ export const selectViewData = ({ state, props }) => {
     maxWidth,
     mediaWidth,
     mediaHeight,
+    itemsPerRow,
+    cardGridColumns,
     zoomLevel: state.zoomLevel,
+    zoomControlValue: useColumnZoomControl
+      ? toColumnZoomControlValue(itemsPerRow)
+      : state.zoomLevel,
+    zoomControlMin: useColumnZoomControl ? MIN_ITEMS_PER_ROW : 0.5,
+    zoomControlMax: useColumnZoomControl ? MAX_ITEMS_PER_ROW : 2,
+    zoomControlStep: useColumnZoomControl ? 1 : 0.1,
     showZoomControls: !mobileLayout && parseBooleanProp(props.showZoomControls),
     showSearch: parseBooleanProp(props.showSearch, true),
     showBackButton: parseBooleanProp(props.showBackButton),

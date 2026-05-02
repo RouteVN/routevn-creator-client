@@ -107,7 +107,7 @@ template:
                       - 'rtgl-view d=v w=f h=f style="min-width: 0; min-height: 0;"':
                           - 'rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} show-menu-button show-search=false show-tag-filter :mobileLayout=${mobileLayout} :groups=${catalogGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}': null
                     $else:
-                      - rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} show-tag-filter :groups=${catalogGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}: null
+                      - rvn-catalog-resources-view#groupview w=f h=f :navTitle=${title} show-tag-filter fixed-items-per-row=1 :groups=${catalogGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}: null
           - $if showDetailPanel:
               - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
                   - rtgl-view wh=f slot="content":

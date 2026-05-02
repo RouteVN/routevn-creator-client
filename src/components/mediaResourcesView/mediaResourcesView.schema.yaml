@@ -50,9 +50,24 @@ propsSchema:
     maxWidth:
       type: number
       description: Base width for image cards
+    imageCardAspectRatio:
+      type: string
+      description: Optional fixed aspect ratio for full-width image preview frames
     showZoomControls:
       type: boolean
       description: Whether to show zoom controls
+    zoomControlMode:
+      type: string
+      enum:
+        - scale
+        - columns
+      description: Whether zoom controls scale card size or control grid columns
+    defaultItemsPerRow:
+      type: number
+      description: Initial column count when zoom controls use column mode
+    itemsPerRowConfigKey:
+      type: string
+      description: Optional user config key for persisted column count
     showBackButton:
       type: boolean
       description: Whether to show a back button in the header

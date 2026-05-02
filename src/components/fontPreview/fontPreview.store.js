@@ -48,6 +48,7 @@ const getContrastBackground = (color) => {
 
 export const selectViewData = ({ props: attrs, state }) => {
   const height = attrs.height ? parseInt(attrs.height) : null;
+  const width = attrs.width === "f" ? undefined : parseInt(attrs.width);
   const padding = Number.parseFloat(attrs.padding);
   const textColor = attrs.color || "currentColor";
   const providedBackground = attrs.backgroundColor;
@@ -75,7 +76,9 @@ export const selectViewData = ({ props: attrs, state }) => {
     color: textColor,
     strokeColor,
     strokeWidth: resolvedStrokeWidth,
-    width: parseInt(attrs.width) || 200,
+    width: width || 200,
+    widthStyle:
+      attrs.width === "f" ? "width: 100%;" : `width: ${width || 200}px;`,
     height: height || 150,
     heightStyle: height ? `height: ${height}px;` : "height: 100%;",
     padding: Number.isFinite(padding) ? Math.max(0, padding) : 0,

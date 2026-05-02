@@ -6,8 +6,47 @@ import {
   toggleTagFilterPopoverOption,
 } from "../../internal/ui/tagFilterPopover.handlers.js";
 
+const MIN_ITEMS_PER_ROW = 1;
+const MAX_ITEMS_PER_ROW = 12;
+
 const getDataAttribute = (event, name) => {
   return event?.currentTarget?.getAttribute?.(name) ?? undefined;
+};
+
+const isColumnZoomControlMode = (props) => props?.zoomControlMode === "columns";
+
+const toItemsPerRowFromColumnZoomControlValue = (value) => {
+  return MIN_ITEMS_PER_ROW + MAX_ITEMS_PER_ROW - Math.round(value);
+};
+
+const getItemsPerRowConfigKey = (props) =>
+  props?.itemsPerRowConfigKey ?? undefined;
+
+const syncPersistedItemsPerRow = ({ appService, props, store } = {}) => {
+  if (!isColumnZoomControlMode(props)) {
+    return;
+  }
+
+  const configKey = getItemsPerRowConfigKey(props);
+  if (!configKey || typeof appService?.getUserConfig !== "function") {
+    return;
+  }
+
+  const itemsPerRow = appService.getUserConfig(configKey);
+  if (itemsPerRow === undefined) {
+    return;
+  }
+
+  store.setItemsPerRow({ itemsPerRow });
+};
+
+const persistItemsPerRow = ({ appService, props, store } = {}) => {
+  const configKey = getItemsPerRowConfigKey(props);
+  if (!configKey || typeof appService?.setUserConfig !== "function") {
+    return;
+  }
+
+  appService.setUserConfig(configKey, store.selectItemsPerRow());
 };
 
 export const handleTagFilterButtonClick = openTagFilterPopoverFromButton;
@@ -15,6 +54,10 @@ export const handleTagFilterPopoverClose = closeTagFilterPopoverFromOverlay;
 export const handleTagFilterOptionClick = toggleTagFilterPopoverOption;
 export const handleTagFilterClearClick = clearTagFilterPopoverSelection;
 export const handleTagFilterApplyClick = applyTagFilterPopoverSelection;
+
+export const handleBeforeMount = (deps) => {
+  syncPersistedItemsPerRow(deps);
+};
 
 export const handleMenuClick = (deps) => {
   const { dispatchEvent } = deps;
@@ -129,6 +172,45 @@ export const handleItemContextMenu = (deps, payload) => {
     x: payload._event.clientX,
     y: payload._event.clientY,
   });
+  render();
+};
+
+export const handleZoomChange = (deps, payload) => {
+  const { store, render, props } = deps;
+  if (!isColumnZoomControlMode(props)) {
+    return;
+  }
+
+  const nextValue = parseFloat(
+    payload._event.detail?.value ?? payload._event.target?.value ?? 1,
+  );
+
+  store.setItemsPerRow({
+    itemsPerRow: toItemsPerRowFromColumnZoomControlValue(nextValue),
+  });
+  persistItemsPerRow(deps);
+  render();
+};
+
+export const handleZoomIn = (deps) => {
+  const { store, render, props } = deps;
+  if (!isColumnZoomControlMode(props)) {
+    return;
+  }
+
+  store.setItemsPerRow({ itemsPerRow: store.selectItemsPerRow() - 1 });
+  persistItemsPerRow(deps);
+  render();
+};
+
+export const handleZoomOut = (deps) => {
+  const { store, render, props } = deps;
+  if (!isColumnZoomControlMode(props)) {
+    return;
+  }
+
+  store.setItemsPerRow({ itemsPerRow: store.selectItemsPerRow() + 1 });
+  persistItemsPerRow(deps);
   render();
 };
 
