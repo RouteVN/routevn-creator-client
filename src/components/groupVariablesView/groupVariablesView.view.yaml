@@ -55,6 +55,28 @@ refs:
         handler: handleDialogFormChange
       add-option-click:
         handler: handleFormAddOptionClick
+  enumAddValueButton:
+    eventListeners:
+      click:
+        handler: handleEnumAddValueClick
+  enumValuePopover:
+    eventListeners:
+      close:
+        handler: handleEnumValuePopoverClose
+  enumValueForm:
+    eventListeners:
+      form-action:
+        handler: handleEnumValueFormAction
+  enumValueItem*:
+    eventListeners:
+      contextmenu:
+        handler: handleEnumValueContextMenu
+  enumValueMenu:
+    eventListeners:
+      close:
+        handler: handleEnumValueMenuClose
+      item-click:
+        handler: handleEnumValueMenuClick
   row*:
     eventListeners:
       click:
@@ -86,16 +108,16 @@ template:
       - 'rtgl-view h=1fg w=f sv style="min-width: 0; min-height: 0;"':
           - $if flatGroups.length > 0:
               - $for group, i in flatGroups:
-                  - rtgl-view w=f ph=md:
-                      - 'rtgl-view#groupRef${i} data-group-id=${group.id} d=h w=f av=c bgc=${group.headerBackgroundColor} cur=pointer style="position: sticky; top: 0px;"':
-                          - rtgl-view w=f d=h av=c:
+                  - rtgl-view w=f ph=md pos=rel:
+                      - 'rtgl-view d=h w=f av=c bgc=${group.headerBackgroundColor} z=100 pv=sm style="position: sticky; top: 0px;"':
+                          - rtgl-view#groupRef${i} data-group-id=${group.id} d=h av=c g=md cur=pointer:
                               - $if group.isCollapsed:
                                   - rtgl-svg wh=16 svg=folderArrowRight: null
                                 $else:
                                   - rtgl-svg wh=16 svg=folderArrowDown: null
-                              - rtgl-view d=h av=c g=md:
-                                  - rtgl-svg wh=16 svg=folder: null
-                                  - rtgl-text: ${group.fullLabel}
+                              - rtgl-svg wh=16 svg=folder: null
+                              - rtgl-text: ${group.fullLabel}
+                          - rtgl-view w=1fg: null
                           - $if !readonly:
                               - rtgl-button#addVariableButtonRef${i} data-group-id=${group.id} s=sm w=1fg pre=plus: Add
                       - $if !group.isCollapsed:
@@ -156,8 +178,21 @@ template:
   - $if !readonly:
       - rtgl-dialog#addVariableDialog s=md ?open=${isDialogOpen}:
           - rtgl-view slot=content g=md:
-              - rtgl-form#variableForm key=${dialogKey} :defaultValues=${defaultValues} :form=${form} w=f :context=${context}: null
+              - rtgl-form#variableForm key=${dialogKey} :defaultValues=${defaultValues} :form=${form} w=f :context=${context}:
+                  - 'rtgl-view slot="enum-values" d=v w=f g=sm':
+                      - $if enumValues.length > 0:
+                          - rtgl-view d=h wrap g=sm w=f:
+                              - $for option, i in enumValues:
+                                  - rtgl-view#enumValueItemRef${i} data-index=${option.index} d=h av=c g=xs ph=md pv=xs bw=xs bc=bo br=md bgc=bg h-bgc=mu cur=context-menu:
+                                      - rtgl-text s=sm: ${option.label}
+                        $else:
+                          - rtgl-text s=sm c=mu-fg: No values yet
+                      - rtgl-view d=h w=f:
+                          - rtgl-button#enumAddValueButton s=sm v=se pre=plus: Add Value
       - rtgl-dropdown-menu#contextMenu :items=${dropdownMenu.items} ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}: null
+      - rtgl-popover#enumValuePopover ?open=${enumValuePopover.isOpen} x=${enumValuePopover.x} y=${enumValuePopover.y} place=bs content-w=260 content-g=sm content-ph=md content-pv=md:
+          - rtgl-form#enumValueForm key=${enumValuePopover.key} :defaultValues=${enumValueDefaultValues} :form=${enumValueForm} w=f: null
+      - rtgl-dropdown-menu#enumValueMenu :items=${enumValueMenu.items} ?open=${enumValueMenu.isOpen} x=${enumValueMenu.x} y=${enumValueMenu.y}: null
   - rtgl-popover#tagFilterPopover ?open=${tagFilterPopover.isOpen} x=${tagFilterPopover.position.x} y=${tagFilterPopover.position.y} place=bs content-w=320 content-g=sm content-sv=true content-ph=md content-pv=md:
       - $if showFilterPopoverSearch:
           - rtgl-text s=md: Filter

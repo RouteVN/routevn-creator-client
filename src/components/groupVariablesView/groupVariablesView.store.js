@@ -29,6 +29,32 @@ const DEFAULT_FORM_VALUES = {
   tagIds: [],
 };
 
+const DEFAULT_ENUM_VALUE_FORM_VALUES = {
+  value: "",
+};
+
+const createEnumValueForm = () => ({
+  title: "Add Value",
+  fields: [
+    {
+      name: "value",
+      type: "input-text",
+      label: "Value",
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        label: "Add Value",
+      },
+    ],
+  },
+});
+
 export const createInitialState = () => ({
   collapsedIds: [],
   ...createTagFilterPopoverState(),
@@ -48,6 +74,21 @@ export const createInitialState = () => ({
       { label: "Delete", type: "item", value: "delete-item" },
     ],
   },
+
+  enumValuePopover: {
+    isOpen: false,
+    x: 0,
+    y: 0,
+    key: 0,
+  },
+  enumValueMenu: {
+    isOpen: false,
+    x: 0,
+    y: 0,
+    targetIndex: undefined,
+    items: [{ label: "Remove", type: "item", value: "remove" }],
+  },
+  enumValueDefaultValues: structuredClone(DEFAULT_ENUM_VALUE_FORM_VALUES),
 
   defaultValues: structuredClone(DEFAULT_FORM_VALUES),
 
@@ -112,15 +153,9 @@ export const createInitialState = () => ({
       },
       {
         $when: "values.type == 'string' && values.isEnum == true",
-        name: "enumValues",
-        type: "tag-select",
+        type: "slot",
+        slot: "enum-values",
         label: "Values",
-        placeholder: "Add value",
-        addOption: {
-          label: "Add value",
-        },
-        options: "${enumValueOptions}",
-        required: false,
       },
       {
         $when: "values.type == 'boolean'",
@@ -200,6 +235,9 @@ export const openAddDialog = ({ state }, { groupId } = {}) => {
   state.dialogMode = "add";
   state.editingItemId = null;
   state.defaultValues = structuredClone(DEFAULT_FORM_VALUES);
+  state.enumValuePopover.isOpen = false;
+  state.enumValueMenu.isOpen = false;
+  state.enumValueMenu.targetIndex = undefined;
 };
 
 export const openEditDialog = (
@@ -214,6 +252,9 @@ export const openEditDialog = (
     ...structuredClone(DEFAULT_FORM_VALUES),
     ...defaultValues,
   };
+  state.enumValuePopover.isOpen = false;
+  state.enumValueMenu.isOpen = false;
+  state.enumValueMenu.targetIndex = undefined;
 };
 
 export const closeDialog = ({ state }, _payload = {}) => {
@@ -222,6 +263,9 @@ export const closeDialog = ({ state }, _payload = {}) => {
   state.dialogMode = "add";
   state.editingItemId = null;
   state.defaultValues = structuredClone(DEFAULT_FORM_VALUES);
+  state.enumValuePopover.isOpen = false;
+  state.enumValueMenu.isOpen = false;
+  state.enumValueMenu.targetIndex = undefined;
 };
 
 export const setSearchQuery = ({ state }, { query } = {}) => {
@@ -246,6 +290,39 @@ export const hideContextMenu = ({ state }, _payload = {}) => {
 
 export const selectTargetItemId = ({ state }) => {
   return state.dropdownMenu.targetItemId;
+};
+
+export const openEnumValuePopover = ({ state }, { x, y } = {}) => {
+  state.enumValuePopover.isOpen = true;
+  state.enumValuePopover.x = x ?? 0;
+  state.enumValuePopover.y = y ?? 0;
+  state.enumValuePopover.key += 1;
+  state.enumValueDefaultValues = structuredClone(
+    DEFAULT_ENUM_VALUE_FORM_VALUES,
+  );
+};
+
+export const closeEnumValuePopover = ({ state }) => {
+  state.enumValuePopover.isOpen = false;
+  state.enumValueDefaultValues = structuredClone(
+    DEFAULT_ENUM_VALUE_FORM_VALUES,
+  );
+};
+
+export const showEnumValueMenu = ({ state }, { index, x, y } = {}) => {
+  state.enumValueMenu.isOpen = true;
+  state.enumValueMenu.x = x ?? 0;
+  state.enumValueMenu.y = y ?? 0;
+  state.enumValueMenu.targetIndex = index;
+};
+
+export const hideEnumValueMenu = ({ state }) => {
+  state.enumValueMenu.isOpen = false;
+  state.enumValueMenu.targetIndex = undefined;
+};
+
+export const selectEnumValueMenuTargetIndex = ({ state }) => {
+  return state.enumValueMenu.targetIndex;
 };
 
 export {
@@ -397,6 +474,13 @@ export const selectViewData = ({ state, props }) => {
   }
 
   const enumValueOptions = buildVariableEnumOptions(defaultValues.enumValues);
+  const enumValues = normalizeVariableEnumValues(defaultValues.enumValues).map(
+    (value, index) => ({
+      value,
+      label: value,
+      index,
+    }),
+  );
   const dialogKey = [
     state.dialogMode,
     state.editingItemId || "new",
@@ -437,6 +521,11 @@ export const selectViewData = ({ state, props }) => {
     dialogKey,
     dialogMode: state.dialogMode,
     editingItemId: state.editingItemId,
+    enumValues,
+    enumValuePopover: state.enumValuePopover,
+    enumValueForm: createEnumValueForm(),
+    enumValueDefaultValues: state.enumValueDefaultValues,
+    enumValueMenu: state.enumValueMenu,
     context: {
       values: defaultValues,
       enumValueOptions,
