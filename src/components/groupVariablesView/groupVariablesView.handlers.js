@@ -106,26 +106,45 @@ const getDefaultValueByType = (type) => {
   return "";
 };
 
-const addEnumValueForm = {
-  title: "Add Enum Value",
-  fields: [
-    {
-      name: "value",
-      type: "input-text",
-      label: "Value",
-      required: true,
-    },
-  ],
-  actions: {
-    layout: "",
-    buttons: [
-      {
-        id: "submit",
-        variant: "pr",
-        label: "Add Value",
-      },
-    ],
-  },
+const mergeVariableFormValues = ({
+  storedValues = {},
+  formValues = {},
+} = {}) => {
+  const hasFormEnumValues = Object.prototype.hasOwnProperty.call(
+    formValues,
+    "enumValues",
+  );
+  const enumValues = hasFormEnumValues
+    ? formValues.enumValues
+    : (storedValues.enumValues ?? []);
+  const shouldPreserveEnum =
+    !hasFormEnumValues &&
+    storedValues.isEnum === true &&
+    normalizeVariableEnumValues(storedValues.enumValues).length > 0;
+
+  return {
+    ...storedValues,
+    ...formValues,
+    isEnum: shouldPreserveEnum
+      ? true
+      : (formValues.isEnum ?? storedValues.isEnum),
+    enumValues,
+  };
+};
+
+const getVariableFormValues = ({ refs, store } = {}) => {
+  return mergeVariableFormValues({
+    storedValues: store.selectDefaultValues(),
+    formValues: refs?.variableForm?.getValues?.(),
+  });
+};
+
+const setVariableFormValues = ({ refs, render, store }, values = {}) => {
+  refs?.variableForm?.setValues?.({
+    values,
+  });
+  store.updateFormValues(values);
+  render();
 };
 
 const getFormFieldNameFromEvent = (event) => {
@@ -315,60 +334,9 @@ export const handleCloseDialog = (deps) => {
   render();
 };
 
-export const handleFormAddOptionClick = async (deps, payload) => {
-  const { appService, dispatchEvent, refs, render, store } = deps;
+export const handleFormAddOptionClick = (deps, payload) => {
+  const { dispatchEvent } = deps;
   const fieldName = getFormFieldNameFromEvent(payload?._event);
-
-  if (fieldName === "enumValues") {
-    payload?._event?.stopPropagation?.();
-    const dialogResult = await appService.showFormDialog({
-      form: addEnumValueForm,
-      defaultValues: {
-        value: "",
-      },
-    });
-
-    if (!dialogResult || dialogResult.actionId !== "submit") {
-      return;
-    }
-
-    const value = String(dialogResult.values?.value ?? "").trim();
-    if (!value) {
-      appService.showAlert({
-        message: "Enum value is required.",
-        title: "Warning",
-      });
-      return;
-    }
-
-    const currentValues =
-      refs.variableForm?.getValues?.() ?? store.selectDefaultValues();
-    const enumValues = normalizeVariableEnumValues(currentValues.enumValues);
-    if (enumValues.includes(value)) {
-      appService.showAlert({
-        message: "Enum value must be unique.",
-        title: "Warning",
-      });
-      return;
-    }
-
-    const nextEnumValues = [...enumValues, value];
-    const nextValues = {
-      ...currentValues,
-      isEnum: true,
-      enumValues: nextEnumValues,
-      default: nextEnumValues.includes(currentValues.default)
-        ? currentValues.default
-        : value,
-    };
-
-    refs.variableForm?.setValues?.({
-      values: nextValues,
-    });
-    store.updateFormValues(nextValues);
-    render();
-    return;
-  }
 
   dispatchEvent(
     new CustomEvent("form-add-option-click", {
@@ -380,6 +348,115 @@ export const handleFormAddOptionClick = async (deps, payload) => {
       composed: true,
     }),
   );
+};
+
+export const handleEnumAddValueClick = (deps, payload) => {
+  const { store, render } = deps;
+  payload._event.stopPropagation();
+
+  const rect = payload._event.currentTarget.getBoundingClientRect();
+  store.openEnumValuePopover({
+    x: rect.left,
+    y: rect.bottom,
+  });
+  render();
+};
+
+export const handleEnumValuePopoverClose = (deps) => {
+  const { store, render } = deps;
+  store.closeEnumValuePopover();
+  render();
+};
+
+export const handleEnumValueFormAction = (deps, payload) => {
+  const { appService, store } = deps;
+  const actionId = payload._event.detail.actionId;
+  if (actionId !== "submit") {
+    return;
+  }
+
+  const currentValues = getVariableFormValues(deps);
+  const value = String(payload._event.detail.values?.value ?? "").trim();
+
+  if (!value) {
+    appService.showAlert({
+      message: "Enum value is required.",
+      title: "Warning",
+    });
+    return;
+  }
+
+  const enumValues = normalizeVariableEnumValues(currentValues.enumValues);
+  if (enumValues.includes(value)) {
+    appService.showAlert({
+      message: "Enum value must be unique.",
+      title: "Warning",
+    });
+    return;
+  }
+
+  const nextEnumValues = [...enumValues, value];
+  const nextValues = {
+    ...currentValues,
+    isEnum: true,
+    enumValues: nextEnumValues,
+    default: nextEnumValues.includes(currentValues.default)
+      ? currentValues.default
+      : value,
+  };
+
+  store.closeEnumValuePopover();
+  setVariableFormValues(deps, nextValues);
+};
+
+export const handleEnumValueContextMenu = (deps, payload) => {
+  const { store, render } = deps;
+  payload._event.preventDefault();
+  payload._event.stopPropagation();
+
+  const index = Number(payload._event.currentTarget.dataset.index);
+  if (Number.isNaN(index)) {
+    return;
+  }
+
+  store.showEnumValueMenu({
+    index,
+    x: payload._event.clientX,
+    y: payload._event.clientY,
+  });
+  render();
+};
+
+export const handleEnumValueMenuClose = (deps) => {
+  const { store, render } = deps;
+  store.hideEnumValueMenu();
+  render();
+};
+
+export const handleEnumValueMenuClick = (deps, payload) => {
+  const { render, store } = deps;
+  const item = payload._event.detail.item || payload._event.detail;
+  if (item?.value !== "remove") {
+    store.hideEnumValueMenu();
+    render();
+    return;
+  }
+
+  const targetIndex = store.selectEnumValueMenuTargetIndex();
+  const currentValues = getVariableFormValues(deps);
+  const enumValues = normalizeVariableEnumValues(currentValues.enumValues);
+  const nextEnumValues = enumValues.filter((_, index) => index !== targetIndex);
+  const nextDefault = nextEnumValues.includes(currentValues.default)
+    ? currentValues.default
+    : (nextEnumValues[0] ?? "");
+  const nextValues = {
+    ...currentValues,
+    enumValues: nextEnumValues,
+    default: nextDefault,
+  };
+
+  store.hideEnumValueMenu();
+  setVariableFormValues(deps, nextValues);
 };
 
 export const handleRowClick = (deps, payload) => {
@@ -477,8 +554,7 @@ export const handleAppendTagIdToForm = (deps, payload = {}) => {
     return;
   }
 
-  const currentValues =
-    refs.variableForm?.getValues?.() ?? store.selectDefaultValues();
+  const currentValues = getVariableFormValues(deps);
   const nextValues = {
     ...currentValues,
     tagIds: buildUniqueTagIds(currentValues?.tagIds ?? [], [tagId]),
@@ -497,13 +573,18 @@ export const handleFormActionClick = (deps, payload) => {
   }
 
   const { store, render, dispatchEvent, props, appService } = deps;
+  const storeState = store.getState
+    ? store.getState()
+    : store._state || store.state;
 
   // Check which button was clicked
   const actionId = payload._event.detail.actionId;
 
   if (actionId === "submit") {
-    // Get form values from the event detail - it's in formValues
-    const formData = payload._event.detail.values;
+    const formData = mergeVariableFormValues({
+      storedValues: storeState.defaultValues,
+      formValues: payload._event.detail.values,
+    });
     const name = formData.name?.trim();
 
     // Don't submit if name is not set
@@ -515,10 +596,6 @@ export const handleFormActionClick = (deps, payload) => {
       return;
     }
 
-    // Get current dialog state
-    const storeState = store.getState
-      ? store.getState()
-      : store._state || store.state;
     const targetGroupId = storeState.targetGroupId;
     const isEditMode = storeState.dialogMode === "edit";
     const editingItemId = storeState.editingItemId;
@@ -592,6 +669,7 @@ export const handleFormActionClick = (deps, payload) => {
             description: formData.description ?? "",
             tagIds: Array.isArray(formData.tagIds) ? formData.tagIds : [],
             scope,
+            type,
             isEnum,
             enumValues,
             default: defaultValue,

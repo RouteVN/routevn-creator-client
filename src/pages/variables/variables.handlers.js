@@ -426,6 +426,7 @@ export const handleVariableUpdated = async (deps, payload) => {
     description,
     tagIds,
     scope,
+    type,
     isEnum,
     enumValues,
     default: defaultValue,
@@ -442,9 +443,10 @@ export const handleVariableUpdated = async (deps, payload) => {
     value: defaultValue,
   };
   const selectedItem = store.selectSelectedItem();
+  const variableType = type ?? selectedItem?.type;
   const normalizedTagIds = normalizeOptionalTagIds(tagIds);
 
-  if (selectedItem?.type === "string") {
+  if (variableType === "string") {
     data.isEnum = isEnum === true;
     data.enumValues =
       isEnum === true ? normalizeVariableEnumValues(enumValues) : [];
