@@ -27,7 +27,7 @@ const DEFAULT_USER_CONFIG = {
     itemsPerRow: 6,
   },
   groupTextStylesView: {
-    itemsPerRow: 6,
+    itemsPerRow: 2,
   },
   groupLayoutsView: {
     itemsPerRow: 6,
