@@ -280,9 +280,18 @@ const parseBooleanProp = (value, fallback = false) => {
 
 export const selectViewData = ({ state, props }) => {
   const readonly = props.readonly === true;
-  const searchQuery = state.searchQuery.toLowerCase();
+  const rawSearchQuery = state.searchQuery ?? "";
+  const searchQuery = rawSearchQuery.toLowerCase();
   const activeTagIds = props.selectedTagFilterValues ?? [];
   const hasActiveTagFilter = activeTagIds.length > 0;
+  const searchInFilterPopover = parseBooleanProp(props.searchInFilterPopover);
+  const hasActiveSearch = rawSearchQuery.trim().length > 0;
+  const hasActiveFilter =
+    hasActiveTagFilter || (searchInFilterPopover && hasActiveSearch);
+  const tagFilterPopoverViewData = buildTagFilterPopoverViewData({
+    state,
+    props,
+  });
   const mobileLayout = parseBooleanProp(props.mobileLayout);
 
   // Helper function to check if an item matches the search query
@@ -346,6 +355,8 @@ export const selectViewData = ({ state, props }) => {
       return {
         ...group,
         isCollapsed,
+        headerBackgroundColor:
+          group.id === props.selectedFolderId ? "mu" : "bg",
         children,
         hasChildren: filteredChildren.length > 0,
         shouldDisplay: shouldShowGroup,
@@ -400,22 +411,26 @@ export const selectViewData = ({ state, props }) => {
     navTitle: props.navTitle ?? "",
     selectedItemId: props.selectedItemId,
     readonly,
-    searchQuery: state.searchQuery,
+    searchQuery: rawSearchQuery,
     tagFilterOptions: props.tagFilterOptions ?? [],
     selectedTagFilterValues: activeTagIds,
     tagFilterPlaceholder: props.tagFilterPlaceholder ?? "Filter tags",
-    ...buildTagFilterPopoverViewData({
-      state,
-      props,
-    }),
+    tagFilterPopover: {
+      ...tagFilterPopoverViewData.tagFilterPopover,
+      clearDisabled:
+        tagFilterPopoverViewData.tagFilterPopover.clearDisabled &&
+        !(searchInFilterPopover && hasActiveSearch),
+    },
     showTagFilter: parseBooleanProp(props.showTagFilter),
-    showSearch: parseBooleanProp(props.showSearch, true),
+    showSearch:
+      parseBooleanProp(props.showSearch, true) && !searchInFilterPopover,
+    showFilterPopoverSearch: searchInFilterPopover,
     showMenuButton: parseBooleanProp(props.showMenuButton),
     mobileLayout,
     hasActiveTagFilter,
-    tagFilterButtonBackgroundColor: hasActiveTagFilter ? "ac" : "bg",
-    tagFilterButtonBorderColor: hasActiveTagFilter ? "ac" : "bo",
-    tagFilterButtonIconColor: hasActiveTagFilter ? "white" : "mu-fg",
+    tagFilterButtonBackgroundColor: hasActiveFilter ? "ac" : "bg",
+    tagFilterButtonBorderColor: hasActiveFilter ? "ac" : "bo",
+    tagFilterButtonIconColor: hasActiveFilter ? "white" : "mu-fg",
     isDialogOpen: state.isDialogOpen,
     defaultValues: defaultValues,
     form,

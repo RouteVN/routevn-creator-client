@@ -4,6 +4,7 @@ import { createProjectStateStream } from "../../deps/services/shared/projectStat
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { resolveResourceParentId } from "../../internal/ui/resourcePages/media/mediaPageShared.js";
+import { handleResourceZoomShortcutKeyDown } from "../../internal/ui/resourcePages/zoomShortcuts.js";
 import {
   appendTagIdToForm,
   createResourcePageTagHandlers,
@@ -283,6 +284,28 @@ const openPreviewDialogForItem = ({
   render();
 };
 
+const openFolderNameDialogForFolder = ({ deps, folderId } = {}) => {
+  const { refs, render, store } = deps;
+  const folder = store.selectFolderById({ folderId });
+  if (!folderId || !folder) {
+    return;
+  }
+
+  const values = {
+    name: folder.name ?? "",
+  };
+
+  store.setSelectedFolderId({ folderId });
+  refs.fileExplorer?.selectItem?.({ itemId: folderId });
+  store.openFolderNameDialog({
+    folderId,
+    defaultValues: values,
+  });
+  render();
+  refs.folderNameForm?.reset?.();
+  refs.folderNameForm?.setValues?.({ values });
+};
+
 const pickSourceFile = async ({ appService, accept } = {}) => {
   return appService.pickFiles({
     accept,
@@ -447,17 +470,24 @@ const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
 const {
   focusKeyboardScope: focusFileExplorerKeyboardScope,
   handleKeyboardScopeClick: handleFileExplorerKeyboardScopeClick,
-  handleKeyboardScopeKeyDown: handleFileExplorerKeyboardScopeKeyDown,
+  handleKeyboardScopeKeyDown: handleBaseFileExplorerKeyboardScopeKeyDown,
 } = createFileExplorerKeyboardScopeHandlers();
 
 export {
   handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
-  handleFileExplorerKeyboardScopeKeyDown,
   handleMobileResourceFileExplorerOpen as handleMobileFileExplorerOpen,
   handleMobileResourceFileExplorerClose as handleMobileFileExplorerClose,
   handleMobileResourceDetailSheetClose as handleMobileDetailSheetClose,
+};
+
+export const handleFileExplorerKeyboardScopeKeyDown = (deps, payload) => {
+  if (handleResourceZoomShortcutKeyDown(deps, payload)) {
+    return;
+  }
+
+  handleBaseFileExplorerKeyboardScopeKeyDown(deps, payload);
 };
 
 export const handleBeforeMount = (deps) => {
@@ -493,7 +523,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const { isFolder, itemId } = payload._event.detail;
 
   if (isFolder) {
-    store.setSelectedItemId({ itemId: undefined });
+    store.setSelectedFolderId({ folderId: itemId });
     render();
     focusFileExplorerKeyboardScope(deps);
     return;
@@ -550,10 +580,59 @@ export const handleSpritesheetItemEdit = (deps, payload) => {
 };
 
 export const handleDetailHeaderClick = (deps) => {
-  openEditDialogForItem({
-    deps,
-    itemId: deps.store.selectSelectedItemId(),
+  const selectedItemId = deps.store.selectSelectedItemId();
+  if (selectedItemId) {
+    openEditDialogForItem({
+      deps,
+      itemId: selectedItemId,
+    });
+    return;
+  }
+
+  const selectedFolderId = deps.store.selectSelectedFolderId();
+  openFolderNameDialogForFolder({ deps, folderId: selectedFolderId });
+};
+
+export const handleFolderNameDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.closeFolderNameDialog();
+  render();
+};
+
+export const handleFolderNameFormAction = async (deps, payload) => {
+  const { appService, store, render } = deps;
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
+    return;
+  }
+
+  const name = values?.name?.trim();
+  if (!name) {
+    appService.showAlert({
+      message: "Folder name is required.",
+      title: "Warning",
+    });
+    return;
+  }
+
+  const folderId = store.getState().folderNameDialogItemId;
+  if (!folderId) {
+    store.closeFolderNameDialog();
+    render();
+    return;
+  }
+
+  await handleFileExplorerAction(deps, {
+    _event: {
+      detail: {
+        value: "rename-item-confirmed",
+        itemId: folderId,
+        newName: name,
+      },
+    },
   });
+  store.closeFolderNameDialog();
+  render();
 };
 
 export const handleSearchInput = (deps, payload) => {

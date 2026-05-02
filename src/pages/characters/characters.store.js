@@ -78,6 +78,29 @@ const createTagForm = {
     ],
   },
 };
+
+const folderNameForm = {
+  title: "Edit Folder",
+  fields: [
+    {
+      name: "name",
+      type: "input-text",
+      label: "Name",
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        label: "Save",
+        validate: true,
+      },
+    ],
+  },
+};
 const createCharacterTagField = ({ tagOptions } = {}) => ({
   name: "tagIds",
   type: "tag-select",
@@ -286,7 +309,13 @@ export const createInitialState = () => ({
   detailTagIdsDirty: false,
   isDetailTagSelectOpen: false,
   selectedItemId: null,
+  selectedFolderId: undefined,
   searchQuery: "",
+  isFolderNameDialogOpen: false,
+  folderNameDialogItemId: undefined,
+  folderNameDialogDefaultValues: {
+    name: "",
+  },
   ...createMobileResourcePageState(),
   isDialogOpen: false,
   isCreateTagDialogOpen: false,
@@ -336,6 +365,12 @@ export const createInitialState = () => ({
 
 export const setItems = ({ state }, { charactersData } = {}) => {
   state.charactersData = charactersData;
+  if (
+    state.selectedFolderId &&
+    state.charactersData?.items?.[state.selectedFolderId]?.type !== "folder"
+  ) {
+    state.selectedFolderId = undefined;
+  }
   if (state.detailTagIdsDirty) {
     return;
   }
@@ -377,10 +412,42 @@ export const setSpriteTagsByCharacterId = (
 
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
+  if (itemId !== undefined) {
+    state.selectedFolderId = undefined;
+  }
   state.isDetailTagSelectOpen = false;
   const item = itemId ? state.charactersData?.items?.[itemId] : undefined;
   state.detailTagIds = Array.isArray(item?.tagIds) ? [...item.tagIds] : [];
   state.detailTagIdsDirty = false;
+};
+
+export const setSelectedFolderId = ({ state }, { folderId } = {}) => {
+  state.selectedFolderId = folderId;
+  if (folderId !== undefined) {
+    state.selectedItemId = undefined;
+    state.isDetailTagSelectOpen = false;
+    state.detailTagIds = [];
+    state.detailTagIdsDirty = false;
+  }
+};
+
+export const openFolderNameDialog = (
+  { state },
+  { folderId, defaultValues } = {},
+) => {
+  state.isFolderNameDialogOpen = true;
+  state.folderNameDialogItemId = folderId;
+  state.folderNameDialogDefaultValues = {
+    name: defaultValues?.name ?? "",
+  };
+};
+
+export const closeFolderNameDialog = ({ state }, _payload = {}) => {
+  state.isFolderNameDialogOpen = false;
+  state.folderNameDialogItemId = undefined;
+  state.folderNameDialogDefaultValues = {
+    name: "",
+  };
 };
 
 export const setSearchQuery = ({ state }, { query } = {}) => {
@@ -729,6 +796,15 @@ export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
 };
 
+export const selectSelectedFolderId = ({ state }) => {
+  return state.selectedFolderId;
+};
+
+export const selectFolderById = ({ state }, { folderId } = {}) => {
+  const item = state.charactersData?.items?.[folderId];
+  return item?.type === "folder" ? item : undefined;
+};
+
 export const selectViewData = ({ state }) => {
   const flatItems = applyFolderRequiredRootDragOptions(
     toFlatItems(state.charactersData),
@@ -739,6 +815,11 @@ export const selectViewData = ({ state }) => {
   const selectedItem = state.selectedItemId
     ? flatItems.find((item) => item.id === state.selectedItemId)
     : null;
+  const selectedFolder = state.selectedFolderId
+    ? state.charactersData?.items?.[state.selectedFolderId]
+    : undefined;
+  const selectedDetailId = selectedItem?.id ?? selectedFolder?.id;
+  const selectedDetailName = selectedItem?.name ?? selectedFolder?.name ?? "";
   const tagFilterOptions = buildTagFilterOptions({
     tagsCollection: state.tagsData,
   });
@@ -753,34 +834,43 @@ export const selectViewData = ({ state }) => {
     tagsById: selectedItemSpriteTagsCollection.items ?? {},
   });
 
-  const detailFields = selectedItem
-    ? [
-        {
-          type: "slot",
-          slot: "avatar",
-          label: "",
-        },
-        {
-          type: "description",
-          value: selectedItem.description ?? "",
-        },
-        {
-          type: "text",
-          label: "Shortcut",
-          value: selectedItem.shortcut ?? "",
-        },
-        {
-          type: "slot",
-          slot: "character-tags",
-          label: "Tags",
-        },
-        {
-          type: "slot",
-          slot: "character-sprite-groups",
-          label: "Sprite Groups",
-        },
-      ]
-    : [];
+  let detailFields = [];
+  if (selectedItem) {
+    detailFields = [
+      {
+        type: "slot",
+        slot: "avatar",
+        label: "",
+      },
+      {
+        type: "description",
+        value: selectedItem.description ?? "",
+      },
+      {
+        type: "text",
+        label: "Shortcut",
+        value: selectedItem.shortcut ?? "",
+      },
+      {
+        type: "slot",
+        slot: "character-tags",
+        label: "Tags",
+      },
+      {
+        type: "slot",
+        slot: "character-sprite-groups",
+        label: "Sprite Groups",
+      },
+    ];
+  } else if (selectedFolder?.type === "folder") {
+    detailFields = [
+      {
+        type: "text",
+        label: "Type",
+        value: "folder",
+      },
+    ];
+  }
 
   // Apply search filter
   const searchQuery = (state.searchQuery || "").toLowerCase().trim();
@@ -865,7 +955,10 @@ export const selectViewData = ({ state }) => {
     resourceCategory: "assets",
     selectedResourceId: "characters",
     selectedItemId: state.selectedItemId,
-    selectedItemName: selectedItem?.name ?? "",
+    selectedFolderId: state.selectedFolderId,
+    selectedDetailId,
+    selectedDetailName,
+    selectedItemName: selectedDetailName,
     selectedAvatarFileId: selectedItem?.fileId,
     selectedItemTagIds: selectedItem?.tagIds ?? [],
     selectedItemSpriteGroups,
@@ -887,6 +980,10 @@ export const selectViewData = ({ state }) => {
     folderContextMenuItems,
     itemContextMenuItems,
     emptyContextMenuItems,
+    isFolderNameDialogOpen: state.isFolderNameDialogOpen,
+    folderNameDialogItemId: state.folderNameDialogItemId,
+    folderNameForm,
+    folderNameDialogDefaultValues: state.folderNameDialogDefaultValues,
     isDialogOpen: state.isDialogOpen,
     dialogDefaultValues: state.dialogDefaultValues,
     dialogSpriteGroups: buildDraftSpriteGroupViewData({

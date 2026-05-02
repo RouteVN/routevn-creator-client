@@ -38,6 +38,14 @@ refs:
         handler: handleCloseContextMenu
       item-click:
         handler: handleContextMenuClickItem
+  zoomButton:
+    eventListeners:
+      click:
+        handler: handleZoomButtonClick
+  zoomPopover:
+    eventListeners:
+      close:
+        handler: handleZoomPopoverClose
   zoomSlider:
     eventListeners:
       value-change:
@@ -99,11 +107,14 @@ template:
                   - $if navTitle:
                       - rtgl-text: ${navTitle}
               - rtgl-view d=h av=c g=md:
-                  - $if showZoomControls:
+                  - $if showInlineZoomControls:
                       - rtgl-view d=h av=c g=sm:
                           - rtgl-button#zoomOut sq v="gh" s=sm: '-'
                           - rtgl-slider#zoomSlider w=120 min=${zoomControlMin} max=${zoomControlMax} step=${zoomControlStep} value=${zoomControlValue}: null
                           - rtgl-button#zoomIn sq v="gh" s=sm: +
+                  - $if showZoomPopoverButton:
+                      - rtgl-view#zoomButton w=36 h=36 bw=xs br=md ah=c av=c cur=pointer bgc=bg bc=bo:
+                          - rtgl-svg svg=zoomIn wh=16 c=mu-fg: null
                   - $if showSearch:
                       - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
                   - $if showTagFilter:
@@ -113,7 +124,7 @@ template:
           - $if groups.length > 0:
               - $for group, gIndex in groups:
                   - rtgl-view#groupDropRef${gIndex} data-group-id=${group.id} w=f ph=md pos=rel:
-                      - 'rtgl-view d=h w=f av=c bgc=bg z=100 pv=sm style="position: sticky; top: 0px;"':
+                      - 'rtgl-view d=h w=f av=c bgc=${group.headerBackgroundColor} z=100 pv=sm style="position: sticky; top: 0px;"':
                           - rtgl-view#groupToggleRef${gIndex} data-group-id=${group.id} d=h av=c g=md cur=pointer:
                               - $if group.isCollapsed:
                                   - rtgl-svg wh=16 svg=folderArrowRight: null
@@ -131,7 +142,7 @@ template:
                                       - $for item, itemIndex in group.children:
                                           - rtgl-view#itemRef${gIndex}x${itemIndex} key=${item.id} data-item-id=${item.domItemId} cur=${item.cursor} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md style="${item.itemContainerStyle}":
                                               - $if item.cardKind == 'image':
-                                                  - 'rtgl-view p=md g=md br=md w=${item.imageCardWidth} pos=rel style="${item.imageCardStyle}"':
+                                                  - 'rtgl-view br=md w=${item.imageCardWidth} pos=rel overflow=hidden style="${item.imageCardStyle}"':
                                                       - $if showImageCardPreview:
                                                           - $if item.useFullWidthImageCard:
                                                               - 'rtgl-view w=f br=md style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
@@ -154,9 +165,10 @@ template:
                                                       - $if item.showPreviewIcon:
                                                           - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; right: 6px; background-color: #000;"':
                                                               - rtgl-svg svg=zoomIn wh=22 c=white: null
-                                                      - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
+                                                      - rtgl-view w=f p=md:
+                                                          - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                                 $elif item.cardKind == 'video':
-                                                  - 'rtgl-view p=md g=md br=md pos=rel w=${item.mediaCardWidth} style="max-width: 100%; box-sizing: border-box;"':
+                                                  - 'rtgl-view br=md pos=rel w=${item.mediaCardWidth} overflow=hidden style="${item.mediaCardStyle}"':
                                                       - $if item.useFullWidthMediaPreview:
                                                           - 'rtgl-view w=f br=md style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                                                               - $if item.isProcessing:
@@ -178,9 +190,10 @@ template:
                                                       - $if item.showPreviewIcon:
                                                           - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; right: 6px; background-color: #000;"':
                                                               - rtgl-svg svg=play wh=24 c=white: null
-                                                      - rtgl-text s=xs c=mu-fg ellipsis w=${item.mediaTextWidth}: ${item.name}
+                                                      - rtgl-view w=f p=md:
+                                                          - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                                 $elif item.cardKind == 'sound':
-                                                  - 'rtgl-view p=md g=md br=md pos=rel w=${item.mediaCardWidth} overflow=hidden style="max-width: 100%; box-sizing: border-box;"':
+                                                  - 'rtgl-view br=md pos=rel w=${item.mediaCardWidth} overflow=hidden style="${item.mediaCardStyle}"':
                                                       - $if item.useFullWidthMediaPreview:
                                                           - 'rtgl-view w=f br=md style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                                                               - $if item.isProcessing:
@@ -202,9 +215,10 @@ template:
                                                       - $if item.showPreviewIcon:
                                                           - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; right: 6px; background-color: #000;"':
                                                               - rtgl-svg svg=play wh=24 c=white: null
-                                                      - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
+                                                      - rtgl-view w=f p=md:
+                                                          - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                                 $elif item.cardKind == 'font':
-                                                  - rtgl-view p=md g=md w=${item.mediaCardWidth} d=v br=md:
+                                                  - 'rtgl-view w=${item.mediaCardWidth} d=v br=md overflow=hidden style="${item.mediaCardStyle}"':
                                                       - $if item.useFullWidthFontPreview:
                                                           - 'rtgl-view w=f br=md style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                                                               - $if item.isProcessing:
@@ -217,7 +231,8 @@ template:
                                                               - rtgl-text s=sm c=mu-fg: Processing...
                                                         $else:
                                                           - rvn-font-preview fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=60 width=${item.fontPreviewWidth} height=${mediaHeight} av=c ah=c: null
-                                                      - rtgl-text s=xs c=mu-fg ellipsis w=${item.mediaTextWidth}: ${item.name}
+                                                      - rtgl-view w=f p=md:
+                                                          - rtgl-text s=xs c=mu-fg ellipsis w=${item.mediaTextWidth}: ${item.name}
                                                 $else:
                                                   - rtgl-view p=md g=md w=${mediaWidth} d=v br=md:
                                                       - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
@@ -243,6 +258,9 @@ template:
                     $else:
                       - rtgl-text s=lg c=mu-fg: No data
   - rtgl-popover#tagFilterPopover ?open=${tagFilterPopover.isOpen} x=${tagFilterPopover.position.x} y=${tagFilterPopover.position.y} place=bs content-w=320 content-g=sm content-sv=true content-ph=md content-pv=md:
+      - $if showFilterPopoverSearch:
+          - rtgl-text s=md: Filter
+          - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} w=f: null
       - $if !tagFilterPopover.hasOptions:
           - rtgl-text s=sm c=mu-fg: No tags available
       - $if tagFilterPopover.hasOptions:
@@ -255,4 +273,11 @@ template:
           - rtgl-view w=1fg: null
           - rtgl-button#tagFilterClear v=se s=sm ?disabled=${tagFilterPopover.clearDisabled}: Clear
           - rtgl-button#tagFilterApply v=pr s=sm: Save
+  - $if showZoomPopoverButton:
+      - rtgl-popover#zoomPopover ?open=${zoomPopover.isOpen} x=${zoomPopover.position.x} y=${zoomPopover.position.y} place=bs content-w=260 content-g=sm content-ph=md content-pv=md:
+          - rtgl-text s=md: Zoom
+          - rtgl-view d=h av=c g=sm w=f:
+              - rtgl-button#zoomOut sq v="gh" s=sm: '-'
+              - rtgl-slider#zoomSlider w=160 min=${zoomControlMin} max=${zoomControlMax} step=${zoomControlStep} value=${zoomControlValue}: null
+              - rtgl-button#zoomIn sq v="gh" s=sm: +
   - rtgl-dropdown-menu#contextMenu :items=${dropdownMenu.items} ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}: null

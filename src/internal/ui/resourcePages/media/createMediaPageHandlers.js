@@ -4,6 +4,7 @@ import { createProjectStateStream } from "../../../../deps/services/shared/proje
 import { syncMediaPageData } from "./mediaPageShared.js";
 import { tap } from "rxjs";
 import { createResourcePageTagHandlers } from "../tags.js";
+import { handleResourceZoomShortcutKeyDown } from "../zoomShortcuts.js";
 
 export const createMediaPageHandlers = ({
   resourceType,
@@ -99,10 +100,14 @@ export const createMediaPageHandlers = ({
 
     if (selectedItemId !== undefined) {
       const nextItem = repositoryState?.[resourceType]?.items?.[selectedItemId];
-      store.setSelectedItemId({
-        itemId:
-          nextItem && nextItem.type !== "folder" ? selectedItemId : undefined,
-      });
+      if (nextItem?.type === "folder") {
+        store.setSelectedFolderId({ folderId: selectedItemId });
+      } else {
+        store.setSelectedFolderId({ folderId: undefined });
+        store.setSelectedItemId({
+          itemId: nextItem ? selectedItemId : undefined,
+        });
+      }
     }
 
     render();
@@ -137,6 +142,34 @@ export const createMediaPageHandlers = ({
     render();
     editForm.reset();
     editForm.setValues({ values: editValues });
+  };
+
+  const openFolderNameDialogWithValues = ({ deps, folderId } = {}) => {
+    const { store, refs, render } = deps;
+    const { fileExplorer, folderNameForm } = refs;
+
+    if (!folderId) {
+      return;
+    }
+
+    const folder = store.selectFolderById({ folderId });
+    if (!folder) {
+      return;
+    }
+
+    const values = {
+      name: folder.name ?? "",
+    };
+
+    store.setSelectedFolderId({ folderId });
+    fileExplorer?.selectItem?.({ itemId: folderId });
+    store.openFolderNameDialog({
+      folderId,
+      defaultValues: values,
+    });
+    render();
+    folderNameForm.reset();
+    folderNameForm.setValues({ values });
   };
 
   const mountSubscriptions = (deps) => {
@@ -178,6 +211,7 @@ export const createMediaPageHandlers = ({
     const { itemId, isFolder } = payload._event.detail;
 
     if (isFolder) {
+      store.setSelectedFolderId({ folderId: itemId });
       store.setSelectedItemId({ itemId: undefined });
       render();
       focusKeyboardScope(deps);
@@ -188,6 +222,7 @@ export const createMediaPageHandlers = ({
       return;
     }
 
+    store.setSelectedFolderId({ folderId: undefined });
     store.setSelectedItemId({ itemId });
     const state = store.getState();
     if (state.isTouchMode && state.isMobileFileExplorerOpen) {
@@ -215,8 +250,16 @@ export const createMediaPageHandlers = ({
   const {
     focusKeyboardScope,
     handleKeyboardScopeClick: handleFileExplorerKeyboardScopeClick,
-    handleKeyboardScopeKeyDown: handleFileExplorerKeyboardScopeKeyDown,
+    handleKeyboardScopeKeyDown: handleBaseFileExplorerKeyboardScopeKeyDown,
   } = createFileExplorerKeyboardScopeHandlers();
+
+  const handleFileExplorerKeyboardScopeKeyDown = (deps, payload) => {
+    if (handleResourceZoomShortcutKeyDown(deps, payload)) {
+      return;
+    }
+
+    handleBaseFileExplorerKeyboardScopeKeyDown(deps, payload);
+  };
 
   const handleItemClick = (deps, payload) => {
     const { store, render, refs } = deps;
@@ -274,6 +317,48 @@ export const createMediaPageHandlers = ({
     openEditDialogWithValues({ deps, itemId });
   };
 
+  const handleFolderNameDialogClose = (deps) => {
+    const { store, render } = deps;
+    store.closeFolderNameDialog();
+    render();
+  };
+
+  const handleFolderNameFormAction = async (deps, payload) => {
+    const { appService, store, render } = deps;
+    const { actionId, values } = payload._event.detail;
+    if (actionId !== "submit") {
+      return;
+    }
+
+    const name = values?.name?.trim();
+    if (!name) {
+      appService.showAlert({
+        message: "Folder name is required.",
+        title: "Warning",
+      });
+      return;
+    }
+
+    const folderId = store.getState().folderNameDialogItemId;
+    if (!folderId) {
+      store.closeFolderNameDialog();
+      render();
+      return;
+    }
+
+    await handleFileExplorerAction(deps, {
+      _event: {
+        detail: {
+          value: "rename-item-confirmed",
+          itemId: folderId,
+          newName: name,
+        },
+      },
+    });
+    store.closeFolderNameDialog();
+    render();
+  };
+
   const handleSearchInput = (deps, payload) => {
     const { store, render } = deps;
     store.setSearchQuery({ value: payload._event.detail.value ?? "" });
@@ -309,6 +394,7 @@ export const createMediaPageHandlers = ({
   return {
     refreshData,
     openEditDialogWithValues,
+    openFolderNameDialogWithValues,
     handleBeforeMount,
     handleAfterMount,
     handleFileExplorerSelectionChanged,
@@ -320,6 +406,8 @@ export const createMediaPageHandlers = ({
     handleItemClick,
     handleItemDoubleClick,
     handleItemEdit,
+    handleFolderNameDialogClose,
+    handleFolderNameFormAction,
     handleSearchInput,
     handleMobileFileExplorerOpen,
     handleMobileFileExplorerClose,

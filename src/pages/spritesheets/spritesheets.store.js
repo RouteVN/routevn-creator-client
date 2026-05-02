@@ -147,6 +147,29 @@ const buildDialogForm = (submitLabel) => ({
   },
 });
 
+const folderNameForm = {
+  title: "Edit Folder",
+  fields: [
+    {
+      name: "name",
+      type: "input-text",
+      label: "Name",
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        label: "Save",
+        validate: true,
+      },
+    ],
+  },
+};
+
 const clipFpsForm = {
   title: "Clip FPS",
   fields: [
@@ -301,9 +324,28 @@ const buildDetailFields = (item) => {
   ];
 };
 
+const buildFolderDetailFields = (folder) => {
+  if (!folder) {
+    return [];
+  }
+
+  return [
+    {
+      type: "text",
+      label: "Type",
+      value: "folder",
+    },
+  ];
+};
+
 const selectDataItem = (state, itemId) => {
   const item = state.data?.items?.[itemId];
   return item?.type === "spritesheet" ? item : undefined;
+};
+
+const selectDataFolder = (state, folderId) => {
+  const item = state.data?.items?.[folderId];
+  return item?.type === "folder" ? item : undefined;
 };
 
 const buildMediaGroups = (state) => {
@@ -352,6 +394,7 @@ export const createInitialState = () => ({
   detailTagIdsDirty: false,
   isDetailTagSelectOpen: false,
   selectedItemId: undefined,
+  selectedFolderId: undefined,
   searchQuery: "",
   ...createMobileResourcePageState(),
   detailSelectedClipName: undefined,
@@ -379,6 +422,11 @@ export const createInitialState = () => ({
   clipFpsDialogClipName: undefined,
   clipFpsDialogValues: createClipFpsDialogValues(),
   clipFpsDialogRevision: 0,
+  isFolderNameDialogOpen: false,
+  folderNameDialogItemId: undefined,
+  folderNameDialogDefaultValues: {
+    name: "",
+  },
 });
 
 const closeClipFpsDialogState = (state) => {
@@ -402,14 +450,33 @@ const syncDetailTagIds = (state, { preserveDirty = false } = {}) => {
 
 export const setItems = ({ state }, { data } = {}) => {
   state.data = data ?? EMPTY_TREE;
+  if (
+    state.selectedFolderId &&
+    state.data?.items?.[state.selectedFolderId]?.type !== "folder"
+  ) {
+    state.selectedFolderId = undefined;
+  }
   syncDetailTagIds(state, { preserveDirty: true });
 };
 
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
+  if (itemId !== undefined) {
+    state.selectedFolderId = undefined;
+  }
   state.detailSelectedClipName = undefined;
   state.isDetailTagSelectOpen = false;
   syncDetailTagIds(state);
+};
+
+export const setSelectedFolderId = ({ state }, { folderId } = {}) => {
+  state.selectedFolderId = folderId;
+  if (folderId !== undefined) {
+    state.selectedItemId = undefined;
+    state.detailSelectedClipName = undefined;
+    state.isDetailTagSelectOpen = false;
+    syncDetailTagIds(state);
+  }
 };
 
 export const setSearchQuery = ({ state }, { value } = {}) => {
@@ -566,6 +633,25 @@ export const closeDialog = ({ state }) => {
   state.dialogRevision += 1;
 };
 
+export const openFolderNameDialog = (
+  { state },
+  { folderId, defaultValues } = {},
+) => {
+  state.isFolderNameDialogOpen = true;
+  state.folderNameDialogItemId = folderId;
+  state.folderNameDialogDefaultValues = {
+    name: defaultValues?.name ?? "",
+  };
+};
+
+export const closeFolderNameDialog = ({ state }, _payload = {}) => {
+  state.isFolderNameDialogOpen = false;
+  state.folderNameDialogItemId = undefined;
+  state.folderNameDialogDefaultValues = {
+    name: "",
+  };
+};
+
 export const openCreateTagDialog = (
   { state },
   { mode, itemId, draftTagIds } = {},
@@ -679,6 +765,11 @@ export const selectItemById = ({ state }, { itemId } = {}) =>
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
+export const selectSelectedFolderId = ({ state }) => state.selectedFolderId;
+
+export const selectFolderById = ({ state }, { folderId } = {}) =>
+  selectDataFolder(state, folderId);
+
 export const selectDialogMode = ({ state }) => state.dialogMode;
 
 export const selectDialogItemId = ({ state }) => state.dialogItemId;
@@ -714,6 +805,9 @@ export const selectViewData = ({ state }) => {
     }))
     .filter((group) => group.children.length > 0 || activeTagIds.length === 0);
   const selectedItem = selectDataItem(state, state.selectedItemId);
+  const selectedFolder = selectDataFolder(state, state.selectedFolderId);
+  const selectedDetailId = selectedItem?.id ?? selectedFolder?.id;
+  const selectedDetailName = selectedItem?.name ?? selectedFolder?.name ?? "";
   const detailSelection = buildClipOptions(
     selectedItem?.animations,
     state.detailSelectedClipName,
@@ -758,7 +852,9 @@ export const selectViewData = ({ state }) => {
   );
   const dialogAtlasFieldValue = state.dialogSourceFiles?.atlasFile?.name ?? "";
   const isDialogPreviewMode = state.dialogMode === "preview";
-  const detailFields = buildDetailFields(selectedItem);
+  const detailFields = selectedItem
+    ? buildDetailFields(selectedItem)
+    : buildFolderDetailFields(selectedFolder);
   return {
     resourceCategory: "animatedAssets",
     selectedResourceId: "spritesheets",
@@ -774,7 +870,10 @@ export const selectViewData = ({ state }) => {
     selectedTagFilterValues: activeTagIds,
     tagFilterPlaceholder: "Filter tags",
     selectedItemId: state.selectedItemId,
-    selectedItemName: selectedItem?.name ?? "",
+    selectedFolderId: state.selectedFolderId,
+    selectedDetailId,
+    selectedDetailName,
+    selectedItemName: selectedDetailName,
     selectedItemTagIds: selectedItem?.tagIds ?? [],
     detailTagDraftValues: state.detailTagIds ?? [],
     isDetailTagSelectOpen: !!state.isDetailTagSelectOpen,
@@ -846,5 +945,9 @@ export const selectViewData = ({ state }) => {
     dialogAtlasFieldPlaceholder: dialogHasAtlasSource
       ? "Current spritesheet JSON"
       : "No JSON selected",
+    isFolderNameDialogOpen: state.isFolderNameDialogOpen,
+    folderNameDialogItemId: state.folderNameDialogItemId,
+    folderNameForm,
+    folderNameDialogDefaultValues: state.folderNameDialogDefaultValues,
   };
 };

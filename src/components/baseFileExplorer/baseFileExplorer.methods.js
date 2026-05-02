@@ -33,3 +33,11 @@ export function setSelectedFolderExpanded(payload = {}) {
     },
   });
 }
+
+export function setFolderCollapsed(payload = {}) {
+  return this.transformedHandlers.handleSetFolderCollapsed({
+    _event: {
+      detail: payload,
+    },
+  });
+}

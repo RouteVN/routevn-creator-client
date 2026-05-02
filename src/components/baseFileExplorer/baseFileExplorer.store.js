@@ -143,6 +143,22 @@ export const toggleFolderExpand = ({ state }, { folderId } = {}) => {
   }
 };
 
+export const setFolderCollapsed = ({ state }, { folderId, collapsed } = {}) => {
+  if (!folderId) {
+    return;
+  }
+
+  const index = state.collapsedIds.indexOf(folderId);
+  if (collapsed && index === -1) {
+    state.collapsedIds.push(folderId);
+    return;
+  }
+
+  if (!collapsed && index > -1) {
+    state.collapsedIds.splice(index, 1);
+  }
+};
+
 export const setCollapsedIds = ({ state }, { collapsedIds } = {}) => {
   state.collapsedIds = Array.isArray(collapsedIds) ? collapsedIds : [];
 };

@@ -28,6 +28,29 @@ export const TEXT_STYLE_TAG_SCOPE_KEY = "textStyles";
 
 const createTagDialogForm = createTagForm();
 
+const folderNameForm = {
+  title: "Edit Folder",
+  fields: [
+    {
+      name: "name",
+      type: "input-text",
+      label: "Name",
+      required: true,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        label: "Save",
+        validate: true,
+      },
+    ],
+  },
+};
+
 // Helper function to create add color form
 const createAddColorForm = (colorFolderOptions) => ({
   title: "Add New Color",
@@ -128,7 +151,13 @@ export const createInitialState = () => ({
   colorsData: { tree: [], items: {} },
   fontsData: { tree: [], items: {} },
   selectedItemId: undefined,
+  selectedFolderId: undefined,
   searchQuery: "",
+  isFolderNameDialogOpen: false,
+  folderNameDialogItemId: undefined,
+  folderNameDialogDefaultValues: {
+    name: "",
+  },
   ...createMobileResourcePageState(),
   ...createTagState(),
 
@@ -208,6 +237,12 @@ export const createInitialState = () => ({
 
 export const setItems = ({ state }, { textStylesData } = {}) => {
   state.textStylesData = textStylesData;
+  if (
+    state.selectedFolderId &&
+    state.textStylesData?.items?.[state.selectedFolderId]?.type !== "folder"
+  ) {
+    state.selectedFolderId = undefined;
+  }
   syncDetailTagIds({
     state,
     item: state.selectedItemId
@@ -227,11 +262,45 @@ export const setFontsData = ({ state }, { fontsData } = {}) => {
 
 export const setSelectedItemId = ({ state }, { itemId } = {}) => {
   state.selectedItemId = itemId;
+  if (itemId !== undefined) {
+    state.selectedFolderId = undefined;
+  }
   state.isDetailTagSelectOpen = false;
   syncDetailTagIds({
     state,
     item: itemId ? state.textStylesData?.items?.[itemId] : undefined,
   });
+};
+
+export const setSelectedFolderId = ({ state }, { folderId } = {}) => {
+  state.selectedFolderId = folderId;
+  if (folderId !== undefined) {
+    state.selectedItemId = undefined;
+    state.isDetailTagSelectOpen = false;
+    syncDetailTagIds({
+      state,
+      item: undefined,
+    });
+  }
+};
+
+export const openFolderNameDialog = (
+  { state },
+  { folderId, defaultValues } = {},
+) => {
+  state.isFolderNameDialogOpen = true;
+  state.folderNameDialogItemId = folderId;
+  state.folderNameDialogDefaultValues = {
+    name: defaultValues?.name ?? "",
+  };
+};
+
+export const closeFolderNameDialog = ({ state }, _payload = {}) => {
+  state.isFolderNameDialogOpen = false;
+  state.folderNameDialogItemId = undefined;
+  state.folderNameDialogDefaultValues = {
+    name: "",
+  };
 };
 
 export const setSearchQuery = ({ state }, { query } = {}) => {
@@ -432,9 +501,16 @@ export const selectSelectedItem = ({ state }) => {
 
 export const selectSelectedItemId = ({ state }) => state.selectedItemId;
 
+export const selectSelectedFolderId = ({ state }) => state.selectedFolderId;
+
 export const selectItemById = ({ state }, itemId) => {
   const flatItems = toFlatItems(state.textStylesData);
   return flatItems.find((item) => item.id === itemId);
+};
+
+export const selectFolderById = ({ state }, { folderId } = {}) => {
+  const item = state.textStylesData?.items?.[folderId];
+  return item?.type === "folder" ? item : undefined;
 };
 
 export const selectColorsData = ({ state }) => state.colorsData;
@@ -467,6 +543,11 @@ export const selectViewData = ({ state }) => {
   const selectedItem = state.selectedItemId
     ? flatItems.find((item) => item.id === state.selectedItemId)
     : undefined;
+  const selectedFolder = state.selectedFolderId
+    ? state.textStylesData?.items?.[state.selectedFolderId]
+    : undefined;
+  const selectedDetailId = selectedItem?.id ?? selectedFolder?.id;
+  const selectedDetailName = selectedItem?.name ?? selectedFolder?.name ?? "";
 
   // Apply search filter
   const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
@@ -569,68 +650,77 @@ export const selectViewData = ({ state }) => {
     ? getFontData(selectedItem.fontId)
     : { fontFamily: undefined, fileId: undefined };
 
-  const detailFields = selectedItem
-    ? [
-        {
-          type: "slot",
-          slot: "text-style-preview",
-          label: "",
-        },
-        {
-          type: "description",
-          value: selectedItem.description ?? "",
-        },
-        {
-          type: "slot",
-          slot: "text-style-tags",
-          label: "Tags",
-        },
-        {
-          type: "text",
-          label: "Font Size",
-          value: String(selectedItem.fontSize ?? ""),
-        },
-        {
-          type: "text",
-          label: "Line Height",
-          value: String(selectedItem.lineHeight ?? ""),
-        },
-        {
-          type: "text",
-          label: "Color",
-          value: selectedItem.colorId ? getColorName(selectedItem.colorId) : "",
-        },
-        {
-          type: "text",
-          label: "Outline Color",
-          value: selectedItem.strokeColorId
-            ? getColorName(selectedItem.strokeColorId)
-            : "",
-        },
-        {
-          type: "text",
-          label: "Font",
-          value: selectedItem.fontId ? getFontName(selectedItem.fontId) : "",
-        },
-        {
-          type: "text",
-          label: "Font Weight",
-          value: String(selectedItem.fontWeight ?? ""),
-        },
-        {
-          type: "text",
-          label: "Outline Thickness",
-          value: String(
-            selectedItem.strokeColorId ? (selectedItem.strokeWidth ?? 0) : 0,
-          ),
-        },
-        {
-          type: "text",
-          label: "Preview Text",
-          value: selectedItem.previewText ?? "",
-        },
-      ]
-    : [];
+  let detailFields = [];
+  if (selectedItem) {
+    detailFields = [
+      {
+        type: "slot",
+        slot: "text-style-preview",
+        label: "",
+      },
+      {
+        type: "description",
+        value: selectedItem.description ?? "",
+      },
+      {
+        type: "slot",
+        slot: "text-style-tags",
+        label: "Tags",
+      },
+      {
+        type: "text",
+        label: "Font Size",
+        value: String(selectedItem.fontSize ?? ""),
+      },
+      {
+        type: "text",
+        label: "Line Height",
+        value: String(selectedItem.lineHeight ?? ""),
+      },
+      {
+        type: "text",
+        label: "Color",
+        value: selectedItem.colorId ? getColorName(selectedItem.colorId) : "",
+      },
+      {
+        type: "text",
+        label: "Outline Color",
+        value: selectedItem.strokeColorId
+          ? getColorName(selectedItem.strokeColorId)
+          : "",
+      },
+      {
+        type: "text",
+        label: "Font",
+        value: selectedItem.fontId ? getFontName(selectedItem.fontId) : "",
+      },
+      {
+        type: "text",
+        label: "Font Weight",
+        value: String(selectedItem.fontWeight ?? ""),
+      },
+      {
+        type: "text",
+        label: "Outline Thickness",
+        value: String(
+          selectedItem.strokeColorId ? (selectedItem.strokeWidth ?? 0) : 0,
+        ),
+      },
+      {
+        type: "text",
+        label: "Preview Text",
+        value: selectedItem.previewText ?? "",
+      },
+    ];
+  } else if (selectedFolder?.type === "folder") {
+    detailFields = [
+      {
+        type: "text",
+        label: "Type",
+        value: "folder",
+      },
+    ];
+  }
 
   // Generate color options for dialog form
   const colorOptions = state.colorsData
@@ -856,7 +946,10 @@ export const selectViewData = ({ state }) => {
     resourceCategory: "userInterface",
     selectedResourceId: "textStyles",
     selectedItemId: state.selectedItemId,
-    selectedItemName: selectedItem?.name ?? "",
+    selectedFolderId: state.selectedFolderId,
+    selectedDetailId,
+    selectedDetailName,
+    selectedItemName: selectedDetailName,
     detailFields,
     detailPreviewText: getPreviewTextValue(selectedItem),
     detailPreviewFontSize: selectedItem?.fontSize ?? 16,
@@ -881,6 +974,10 @@ export const selectViewData = ({ state }) => {
     emptyContextMenuItems: state.emptyContextMenuItems,
     colorsData: state.colorsData,
     fontsData: state.fontsData,
+    isFolderNameDialogOpen: state.isFolderNameDialogOpen,
+    folderNameDialogItemId: state.folderNameDialogItemId,
+    folderNameForm,
+    folderNameDialogDefaultValues: state.folderNameDialogDefaultValues,
 
     // Dialog-related data
     isDialogOpen: state.isDialogOpen,

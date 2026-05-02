@@ -11,10 +11,42 @@ import {
   toggleTagFilterPopoverOption,
 } from "../../internal/ui/tagFilterPopover.handlers.js";
 
+const parseBooleanProp = (value, fallback = false) => {
+  if (value === undefined || value === null) {
+    return fallback;
+  }
+
+  if (value === true || value === "") {
+    return true;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "1") {
+      return true;
+    }
+    if (normalized === "false" || normalized === "0") {
+      return false;
+    }
+  }
+
+  return Boolean(value);
+};
+
 export const handleTagFilterButtonClick = openTagFilterPopoverFromButton;
 export const handleTagFilterPopoverClose = closeTagFilterPopoverFromOverlay;
 export const handleTagFilterOptionClick = toggleTagFilterPopoverOption;
-export const handleTagFilterClearClick = clearTagFilterPopoverSelection;
+export const handleTagFilterClearClick = (deps, payload) => {
+  const { props, store, render } = deps;
+  clearTagFilterPopoverSelection(deps, payload);
+
+  if (!parseBooleanProp(props.searchInFilterPopover)) {
+    return;
+  }
+
+  store.setSearchQuery({ query: "" });
+  render();
+};
 export const handleTagFilterApplyClick = applyTagFilterPopoverSelection;
 
 export const handleMenuClick = ({ dispatchEvent }) => {

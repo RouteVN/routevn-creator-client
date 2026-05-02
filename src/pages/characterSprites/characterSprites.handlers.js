@@ -18,6 +18,10 @@ import {
   showResourcePageError,
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
+import {
+  handleResourceZoomShortcutKeyDown,
+  isResourceZoomShortcutKeyEvent,
+} from "../../internal/ui/resourcePages/zoomShortcuts.js";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import {
   buildImageResourceDataFromUploadResult,
@@ -207,6 +211,29 @@ const openEditDialogForSprite = ({
     previewFileId: getPreviewFileId(item),
   });
   render();
+};
+
+const openFolderNameDialogForFolder = ({ deps, folderId } = {}) => {
+  const { refs, render, store } = deps;
+  const folder = store.selectFolderById({ folderId });
+
+  if (!folderId || !folder) {
+    return;
+  }
+
+  const values = {
+    name: folder.name ?? "",
+  };
+
+  store.setSelectedFolderId({ folderId });
+  refs.fileExplorer?.selectItem?.({ itemId: folderId });
+  store.openFolderNameDialog({
+    folderId,
+    defaultValues: values,
+  });
+  render();
+  refs.folderNameForm?.reset?.();
+  refs.folderNameForm?.setValues?.({ values });
 };
 
 const createSpritesFromFiles = async ({
@@ -422,7 +449,7 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   const { itemId, isFolder } = payload._event.detail;
 
   if (isFolder) {
-    store.setSelectedItemId({ itemId: undefined });
+    store.setSelectedFolderId({ folderId: itemId });
     render();
     focusGroupView(deps);
     return;
@@ -435,6 +462,32 @@ export const handleFileExplorerSelectionChanged = async (deps, payload) => {
   closeMobileResourceFileExplorerAfterSelection(deps);
   refs.groupview?.scrollItemIntoView?.({ itemId });
   focusGroupView(deps);
+};
+
+export const handleFileExplorerFolderCollapseChange = (deps, payload) => {
+  const { refs } = deps;
+  const { folderId, collapsed } = payload._event.detail ?? {};
+  if (!folderId) {
+    return;
+  }
+
+  refs.groupview?.setGroupCollapsed?.({
+    groupId: folderId,
+    collapsed,
+  });
+};
+
+export const handleCenterGroupCollapseChange = (deps, payload) => {
+  const { refs } = deps;
+  const { groupId, collapsed } = payload._event.detail ?? {};
+  if (!groupId) {
+    return;
+  }
+
+  refs.fileExplorer?.setFolderCollapsed?.({
+    folderId: groupId,
+    collapsed,
+  });
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {
@@ -532,8 +585,23 @@ export const handlePreviewOverlayKeyDown = (deps, payload) => {
   openSpritePreviewById({ deps, itemId: nextItemId, syncExplorer: true });
 };
 
-export const handleFileExplorerKeyboardScopeKeyDown =
-  handleBaseFileExplorerKeyboardScopeKeyDown;
+export const handleFileExplorerKeyboardScopeKeyDown = (deps, payload) => {
+  const event = payload?._event;
+  if (
+    deps.store.getState().fullImagePreviewVisible &&
+    isResourceZoomShortcutKeyEvent(event)
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+
+  if (handleResourceZoomShortcutKeyDown(deps, payload)) {
+    return;
+  }
+
+  handleBaseFileExplorerKeyboardScopeKeyDown(deps, payload);
+};
 
 export const handleSpriteItemEdit = (deps, payload) => {
   const { itemId } = payload._event.detail;
@@ -547,11 +615,58 @@ export const handleSpriteItemEdit = (deps, payload) => {
 
 export const handleDetailHeaderClick = (deps) => {
   const selectedItemId = deps.store.selectSelectedItemId();
+  if (selectedItemId) {
+    openEditDialogForSprite({
+      deps,
+      itemId: selectedItemId,
+    });
+    return;
+  }
 
-  openEditDialogForSprite({
-    deps,
-    itemId: selectedItemId,
+  const selectedFolderId = deps.store.selectSelectedFolderId();
+  openFolderNameDialogForFolder({ deps, folderId: selectedFolderId });
+};
+
+export const handleFolderNameDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.closeFolderNameDialog();
+  render();
+};
+
+export const handleFolderNameFormAction = async (deps, payload) => {
+  const { appService, store, render } = deps;
+  const { actionId, values } = payload._event.detail;
+  if (actionId !== "submit") {
+    return;
+  }
+
+  const name = values?.name?.trim();
+  if (!name) {
+    appService.showAlert({
+      message: "Folder name is required.",
+      title: "Warning",
+    });
+    return;
+  }
+
+  const folderId = store.getState().folderNameDialogItemId;
+  if (!folderId) {
+    store.closeFolderNameDialog();
+    render();
+    return;
+  }
+
+  await handleFileExplorerAction(deps, {
+    _event: {
+      detail: {
+        value: "rename-item-confirmed",
+        itemId: folderId,
+        newName: name,
+      },
+    },
   });
+  store.closeFolderNameDialog();
+  render();
 };
 
 export const handleUploadClick = async (deps, payload) => {

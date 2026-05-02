@@ -33,6 +33,14 @@ refs:
         handler: handleCloseContextMenu
       item-click:
         handler: handleContextMenuClickItem
+  zoomButton:
+    eventListeners:
+      click:
+        handler: handleZoomButtonClick
+  zoomPopover:
+    eventListeners:
+      close:
+        handler: handleZoomPopoverClose
   zoomSlider:
     eventListeners:
       value-change:
@@ -74,10 +82,8 @@ template:
                   - $if navTitle:
                       - rtgl-text: ${navTitle}
               - $if showZoomControls:
-                  - rtgl-view d=h av=c g=sm:
-                      - rtgl-button#zoomOut sq v="gh" s=sm: '-'
-                      - rtgl-slider#zoomSlider w=120 min=${zoomControlMin} max=${zoomControlMax} step=${zoomControlStep} value=${zoomControlValue}: null
-                      - rtgl-button#zoomIn sq v="gh" s=sm: +
+                  - rtgl-view#zoomButton w=36 h=36 bw=xs br=md ah=c av=c cur=pointer bgc=bg bc=bo:
+                      - rtgl-svg svg=zoomIn wh=16 c=mu-fg: null
               - $if showSearch:
                   - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
               - $if showTagFilter:
@@ -87,7 +93,7 @@ template:
           - $if groups.length > 0:
               - $for group, gIndex in groups:
                   - rtgl-view w=f ph=md pos=rel:
-                      - 'rtgl-view d=h w=f av=c bgc=bg z=100 pv=sm style="position: sticky; top: 0px;"':
+                      - 'rtgl-view d=h w=f av=c bgc=${group.headerBackgroundColor} z=100 pv=sm style="position: sticky; top: 0px;"':
                           - rtgl-view#groupToggleRef${gIndex} data-group-id=${group.id} d=h av=c g=md cur=pointer:
                               - $if group.isCollapsed:
                                   - rtgl-svg wh=16 svg=folderArrowRight: null
@@ -104,12 +110,13 @@ template:
                                   - $for item, itemIndex in group.children:
                                       - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} w=${item.itemWidth} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md style="${item.itemContainerStyle}":
                                           - $if item.cardKind == 'color':
-                                              - 'rtgl-view d=v w=f p=md g=md br=md style="overflow: hidden;"':
+                                              - 'rtgl-view d=v w=f br=md style="overflow: hidden;"':
                                                   - $if item.useFullWidthCatalogPreview:
                                                       - 'rtgl-view w=f br=sm style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden; background-color: ${item.swatchHex};"': null
                                                     $else:
                                                       - 'rtgl-view w=f h=120 br=sm style="background-color: ${item.swatchHex};"': null
-                                                  - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
+                                                  - rtgl-view w=f p=md:
+                                                      - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                             $elif item.cardKind == 'layout':
                                               - $if item.cardVariant == 'thumbnail':
                                                   - 'rtgl-view w=${item.layoutPreviewWidth} br=md style="overflow: hidden; max-width: 100%;"':
@@ -136,23 +143,26 @@ template:
                                                                       - rtgl-svg svg=${item.typeInfoSvg} wh=14 c=mu-fg: null
                                                 $else:
                                                   - $if item.useFullWidthCatalogPreview:
-                                                      - 'rtgl-view w=f d=v ah=c av=c br=md p=md g=sm style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
-                                                          - rtgl-text s=md ellipsis w=f: ${item.name}
-                                                          - $if item.subtitle:
-                                                              - rtgl-text s=sm c=mu-fg ellipsis w=f: ${item.subtitle}
+                                                      - 'rtgl-view w=f d=v ah=c av=c br=md style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
+                                                          - rtgl-view w=f p=md g=sm:
+                                                              - rtgl-text s=md ellipsis w=f: ${item.name}
+                                                              - $if item.subtitle:
+                                                                  - rtgl-text s=sm c=mu-fg ellipsis w=f: ${item.subtitle}
                                                     $else:
-                                                      - rtgl-view w=225 h=152 d=v ah=c av=c br=md p=md g=sm:
-                                                          - rtgl-text s=md ellipsis w=f: ${item.name}
-                                                          - $if item.subtitle:
-                                                              - rtgl-text s=sm c=mu-fg ellipsis w=f: ${item.subtitle}
+                                                      - rtgl-view w=225 h=152 d=v ah=c av=c br=md:
+                                                          - rtgl-view w=f p=md g=sm:
+                                                              - rtgl-text s=md ellipsis w=f: ${item.name}
+                                                              - $if item.subtitle:
+                                                                  - rtgl-text s=sm c=mu-fg ellipsis w=f: ${item.subtitle}
                                             $elif item.cardKind == 'transform':
-                                              - rtgl-view w=f p=md g=md br=md:
+                                              - 'rtgl-view w=f br=md style="overflow: hidden;"':
                                                   - $if item.useFullWidthCatalogPreview:
                                                       - 'rtgl-view w=f br=md style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
                                                           - rvn-transform-thumbnail :item=${item} canvas-aspect-ratio="${item.previewAspectRatio}" w=f h=f: null
                                                     $else:
                                                       - rvn-transform-thumbnail :item=${item} canvas-aspect-ratio="${item.previewAspectRatio}" w=${item.transformPreviewWidth} h=120: null
-                                                  - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
+                                                  - rtgl-view w=f p=md:
+                                                      - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                             $elif item.cardKind == 'animation':
                                               - rtgl-view w=f h=1fg bgc=bg br=md p=md:
                                                   - rtgl-text s=h4 mb=md: ${item.name}
@@ -185,6 +195,9 @@ template:
               - rtgl-view w=f h=f av=c ah=c:
                   - rtgl-text s=lg c=mu-fg: No data
   - rtgl-popover#tagFilterPopover ?open=${tagFilterPopover.isOpen} x=${tagFilterPopover.position.x} y=${tagFilterPopover.position.y} place=bs content-w=320 content-g=sm content-sv=true content-ph=md content-pv=md:
+      - $if showFilterPopoverSearch:
+          - rtgl-text s=md: Filter
+          - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} w=f: null
       - $if !tagFilterPopover.hasOptions:
           - rtgl-text s=sm c=mu-fg: No tags available
       - $if tagFilterPopover.hasOptions:
@@ -197,4 +210,11 @@ template:
           - rtgl-view w=1fg: null
           - rtgl-button#tagFilterClear v=se s=sm ?disabled=${tagFilterPopover.clearDisabled}: Clear
           - rtgl-button#tagFilterApply v=pr s=sm: Save
+  - $if showZoomControls:
+      - rtgl-popover#zoomPopover ?open=${zoomPopover.isOpen} x=${zoomPopover.position.x} y=${zoomPopover.position.y} place=bs content-w=260 content-g=sm content-ph=md content-pv=md:
+          - rtgl-text s=md: Zoom
+          - rtgl-view d=h av=c g=sm w=f:
+              - rtgl-button#zoomOut sq v="gh" s=sm: '-'
+              - rtgl-slider#zoomSlider w=160 min=${zoomControlMin} max=${zoomControlMax} step=${zoomControlStep} value=${zoomControlValue}: null
+              - rtgl-button#zoomIn sq v="gh" s=sm: +
   - rtgl-dropdown-menu#contextMenu :items=${dropdownMenu.items} ?open=${dropdownMenu.isOpen} x=${dropdownMenu.x} y=${dropdownMenu.y}: null

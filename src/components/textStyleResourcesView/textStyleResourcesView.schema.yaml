@@ -11,6 +11,9 @@ propsSchema:
     selectedItemId:
       type: string
       description: ID of the currently selected text style item
+    selectedFolderId:
+      type: string
+      description: ID of the currently selected folder
     searchQuery:
       type: string
       description: Current search query
@@ -35,6 +38,9 @@ propsSchema:
     showSearch:
       type: boolean
       description: Whether to render the search input
+    searchInFilterPopover:
+      type: boolean
+      description: Whether search should render inside the filter popover
     showZoomControls:
       type: boolean
       description: Whether to show zoom controls
@@ -61,3 +67,14 @@ propsSchema:
     itemContextMenuItems:
       type: array
       description: Context menu items for text style cards
+methods:
+  type: object
+  properties:
+    zoomIn:
+      description: Increases text style grid zoom by one step.
+      params: []
+      returns: void
+    zoomOut:
+      description: Decreases text style grid zoom by one step.
+      params: []
+      returns: void

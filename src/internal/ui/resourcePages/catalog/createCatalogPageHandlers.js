@@ -3,6 +3,7 @@ import { createFileExplorerKeyboardScopeHandlers } from "../../fileExplorerKeybo
 import { createProjectStateStream } from "../../../../deps/services/shared/projectStateStream.js";
 import { tap } from "rxjs";
 import { createResourcePageTagHandlers } from "../tags.js";
+import { handleResourceZoomShortcutKeyDown } from "../zoomShortcuts.js";
 
 const EMPTY_TREE = { tree: [], items: {} };
 
@@ -24,7 +25,15 @@ export const createCatalogPageHandlers = ({
     const data = selectData(repositoryState);
     store.setItems({ data });
     if (selectedItemId !== undefined) {
-      store.setSelectedItemId({ itemId: selectedItemId });
+      const nextItem = data?.items?.[selectedItemId];
+      if (nextItem?.type === "folder" && store.setSelectedFolderId) {
+        store.setSelectedFolderId({ folderId: selectedItemId });
+      } else {
+        store.setSelectedFolderId?.({ folderId: undefined });
+        store.setSelectedItemId({
+          itemId: nextItem ? selectedItemId : undefined,
+        });
+      }
     }
     onProjectStateChanged({ deps, repositoryState });
     render();
@@ -57,12 +66,43 @@ export const createCatalogPageHandlers = ({
     focusKeyboardScope(deps);
   };
 
+  const openFolderNameDialogWithValues = ({ deps, folderId } = {}) => {
+    const { store, refs, render } = deps;
+    const { fileExplorer, folderNameForm } = refs;
+
+    if (!folderId) {
+      return;
+    }
+
+    const folder = store.selectFolderById({ folderId });
+    if (!folder) {
+      return;
+    }
+
+    const values = {
+      name: folder.name ?? "",
+    };
+
+    store.setSelectedFolderId({ folderId });
+    fileExplorer?.selectItem?.({ itemId: folderId });
+    store.openFolderNameDialog({
+      folderId,
+      defaultValues: values,
+    });
+    render();
+    folderNameForm.reset();
+    folderNameForm.setValues({ values });
+  };
+
   const handleFileExplorerSelectionChanged = (deps, payload) => {
     const { store, render } = deps;
     const { itemId, isFolder } = payload._event.detail;
 
     if (isFolder) {
-      store.setSelectedItemId({ itemId: undefined });
+      store.setSelectedFolderId?.({ folderId: itemId });
+      if (!store.setSelectedFolderId) {
+        store.setSelectedItemId({ itemId: undefined });
+      }
       render();
       focusKeyboardScope(deps);
       return;
@@ -77,6 +117,7 @@ export const createCatalogPageHandlers = ({
       return;
     }
 
+    store.setSelectedFolderId?.({ folderId: undefined });
     store.setSelectedItemId({ itemId });
     const state = store.getState();
     if (state.isTouchMode && state.isMobileFileExplorerOpen) {
@@ -91,8 +132,16 @@ export const createCatalogPageHandlers = ({
   const {
     focusKeyboardScope,
     handleKeyboardScopeClick: handleFileExplorerKeyboardScopeClick,
-    handleKeyboardScopeKeyDown: handleFileExplorerKeyboardScopeKeyDown,
+    handleKeyboardScopeKeyDown: handleBaseFileExplorerKeyboardScopeKeyDown,
   } = createFileExplorerKeyboardScopeHandlers();
+
+  const handleFileExplorerKeyboardScopeKeyDown = (deps, payload) => {
+    if (handleResourceZoomShortcutKeyDown(deps, payload)) {
+      return;
+    }
+
+    handleBaseFileExplorerKeyboardScopeKeyDown(deps, payload);
+  };
 
   const handleItemClick = (deps, payload) => {
     const { store, render, refs } = deps;
@@ -105,6 +154,7 @@ export const createCatalogPageHandlers = ({
       return;
     }
 
+    store.setSelectedFolderId?.({ folderId: undefined });
     store.setSelectedItemId({ itemId });
     refs.fileExplorer?.selectItem?.({ itemId });
     render();
@@ -144,6 +194,48 @@ export const createCatalogPageHandlers = ({
     focusKeyboardScope(deps);
   };
 
+  const handleFolderNameDialogClose = (deps) => {
+    const { store, render } = deps;
+    store.closeFolderNameDialog();
+    render();
+  };
+
+  const handleFolderNameFormAction = async (deps, payload) => {
+    const { appService, store, render } = deps;
+    const { actionId, values } = payload._event.detail;
+    if (actionId !== "submit") {
+      return;
+    }
+
+    const name = values?.name?.trim();
+    if (!name) {
+      appService.showAlert({
+        message: "Folder name is required.",
+        title: "Warning",
+      });
+      return;
+    }
+
+    const folderId = store.getState().folderNameDialogItemId;
+    if (!folderId) {
+      store.closeFolderNameDialog();
+      render();
+      return;
+    }
+
+    await handleFileExplorerAction(deps, {
+      _event: {
+        detail: {
+          value: "rename-item-confirmed",
+          itemId: folderId,
+          newName: name,
+        },
+      },
+    });
+    store.closeFolderNameDialog();
+    render();
+  };
+
   const handleSearchInput = (deps, payload) => {
     const { store, render } = deps;
     store.setSearchQuery({ value: payload._event.detail.value ?? "" });
@@ -178,6 +270,7 @@ export const createCatalogPageHandlers = ({
 
   return {
     refreshData,
+    openFolderNameDialogWithValues,
     handleBeforeMount,
     handleAfterMount,
     handleFileExplorerSelectionChanged,
@@ -190,6 +283,8 @@ export const createCatalogPageHandlers = ({
     handleMobileFileExplorerOpen,
     handleMobileFileExplorerClose,
     handleMobileDetailSheetClose,
+    handleFolderNameDialogClose,
+    handleFolderNameFormAction,
     openCreateTagDialogForMode: tagHandlers.openCreateTagDialogForMode,
     handleCreateTagDialogClose: tagHandlers.handleCreateTagDialogClose,
     handleTagFilterChange: tagHandlers.handleTagFilterChange,

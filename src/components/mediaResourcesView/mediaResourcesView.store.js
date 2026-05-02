@@ -13,6 +13,10 @@ const DEFAULT_EAGER_IMAGE_CARD_COUNT = 8;
 const DEFAULT_ITEMS_PER_ROW = 6;
 const MIN_ITEMS_PER_ROW = 1;
 const MAX_ITEMS_PER_ROW = 12;
+const DEFAULT_ZOOM_POPOVER_POSITION = Object.freeze({
+  x: 0,
+  y: 0,
+});
 
 const clampItemsPerRow = (value) => {
   const numericValue = Number(value);
@@ -35,6 +39,10 @@ export const createInitialState = ({ props } = {}) => ({
   itemsPerRow: clampItemsPerRow(props?.defaultItemsPerRow),
   collapsedIds: [],
   ...createTagFilterPopoverState(),
+  zoomPopover: {
+    isOpen: false,
+    position: { ...DEFAULT_ZOOM_POPOVER_POSITION },
+  },
   hoveredItemId: undefined,
   progressiveRenderedItemCount: DEFAULT_PROGRESSIVE_INITIAL_ITEM_COUNT,
   progressiveRenderSignature: "",
@@ -61,6 +69,18 @@ export const setItemsPerRow = ({ state }, { itemsPerRow } = {}) => {
 };
 
 export const selectItemsPerRow = ({ state }) => state.itemsPerRow;
+
+export const openZoomPopover = ({ state }, { position } = {}) => {
+  state.zoomPopover.isOpen = true;
+  state.zoomPopover.position = {
+    x: position?.x ?? DEFAULT_ZOOM_POPOVER_POSITION.x,
+    y: position?.y ?? DEFAULT_ZOOM_POPOVER_POSITION.y,
+  };
+};
+
+export const closeZoomPopover = ({ state }, _payload = {}) => {
+  state.zoomPopover.isOpen = false;
+};
 
 export const setProgressiveRenderedItemCount = (
   { state },
@@ -124,6 +144,22 @@ export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   }
 
   state.collapsedIds.push(groupId);
+};
+
+export const setGroupCollapsed = ({ state }, { groupId, collapsed } = {}) => {
+  if (!groupId) {
+    return;
+  }
+
+  const index = state.collapsedIds.indexOf(groupId);
+  if (collapsed && index === -1) {
+    state.collapsedIds.push(groupId);
+    return;
+  }
+
+  if (!collapsed && index > -1) {
+    state.collapsedIds.splice(index, 1);
+  }
 };
 
 export const showContextMenu = ({ state, props }, { itemId, x, y } = {}) => {
@@ -220,6 +256,19 @@ export const selectViewData = ({ state, props }) => {
           );
   const scrollBottomPadding = props.scrollBottomPadding ?? "0px";
   const hasActiveTagFilter = (props.selectedTagFilterValues?.length ?? 0) > 0;
+  const searchQuery = props.searchQuery ?? "";
+  const searchInFilterPopover = parseBooleanProp(props.searchInFilterPopover);
+  const zoomInPopover =
+    props.zoomInPopover === undefined
+      ? true
+      : parseBooleanProp(props.zoomInPopover);
+  const hasActiveSearch = searchQuery.trim().length > 0;
+  const hasActiveFilter =
+    hasActiveTagFilter || (searchInFilterPopover && hasActiveSearch);
+  const tagFilterPopoverViewData = buildTagFilterPopoverViewData({
+    state,
+    props,
+  });
   const lazyImageCards = parseBooleanProp(props.lazyImageCards);
   let remainingEagerImageCardCount = lazyImageCards
     ? DEFAULT_EAGER_IMAGE_CARD_COUNT
@@ -246,6 +295,7 @@ export const selectViewData = ({ state, props }) => {
     return {
       ...group,
       isCollapsed,
+      headerBackgroundColor: group.id === props.selectedFolderId ? "mu" : "bg",
       children: visibleChildren.map((item) => {
         const isSelected = item.id === props.selectedItemId;
         const defaultBorderColor = resolveDefaultBorderColor();
@@ -265,6 +315,22 @@ export const selectViewData = ({ state, props }) => {
           mobileLayout ||
           useColumnZoomControl ||
           (fullWidthImageCards && item.cardKind === "image");
+        const selectedMediaInsetStyle =
+          isSelected &&
+          (item.cardKind === "image" ||
+            item.cardKind === "video" ||
+            item.cardKind === "sound")
+            ? " box-shadow: inset 0 0 0 1px var(--color-pr);"
+            : "";
+        const imageCardStyle = `${
+          useFullWidthCard && item.cardKind === "image"
+            ? "max-width: 100%; box-sizing: border-box;"
+            : "max-width: 100%;"
+        }${selectedMediaInsetStyle}`;
+        let mediaCardStyle = "max-width: 100%; box-sizing: border-box;";
+        if (item.cardKind === "video" || item.cardKind === "sound") {
+          mediaCardStyle += selectedMediaInsetStyle;
+        }
 
         return {
           ...item,
@@ -275,10 +341,8 @@ export const selectViewData = ({ state, props }) => {
             : "",
           imageCardWidth:
             useFullWidthCard && item.cardKind === "image" ? "f" : maxWidth,
-          imageCardStyle:
-            useFullWidthCard && item.cardKind === "image"
-              ? "max-width: 100%; box-sizing: border-box;"
-              : "max-width: 100%;",
+          imageCardStyle,
+          mediaCardStyle,
           mediaCardWidth: useFullWidthCard ? "f" : mediaWidth,
           mediaTextWidth: useFullWidthCard ? "f" : mediaWidth,
           fontPreviewWidth: useFullWidthCard ? 320 : mediaWidth,
@@ -314,26 +378,28 @@ export const selectViewData = ({ state, props }) => {
     navTitle: props.navTitle,
     groups,
     selectedItemId: props.selectedItemId,
-    searchQuery: props.searchQuery ?? "",
+    searchQuery,
     searchPlaceholder: props.searchPlaceholder ?? "Search...",
     tagFilterOptions: props.tagFilterOptions ?? [],
     selectedTagFilterValues: props.selectedTagFilterValues ?? [],
     tagFilterPlaceholder: props.tagFilterPlaceholder ?? "Filter tags",
-    ...buildTagFilterPopoverViewData({
-      state,
-      props,
-    }),
+    tagFilterPopover: {
+      ...tagFilterPopoverViewData.tagFilterPopover,
+      clearDisabled:
+        tagFilterPopoverViewData.tagFilterPopover.clearDisabled &&
+        !(searchInFilterPopover && hasActiveSearch),
+    },
     hasActiveTagFilter,
-    tagFilterButtonBackgroundColor: hasActiveTagFilter ? "ac" : "bg",
-    tagFilterButtonBorderColor: hasActiveTagFilter ? "ac" : "bo",
-    tagFilterButtonIconColor: hasActiveTagFilter ? "white" : "mu-fg",
+    tagFilterButtonBackgroundColor: hasActiveFilter ? "ac" : "bg",
+    tagFilterButtonBorderColor: hasActiveFilter ? "ac" : "bo",
+    tagFilterButtonIconColor: hasActiveFilter ? "white" : "mu-fg",
     showTagFilter: parseBooleanProp(props.showTagFilter),
     uploadText: props.uploadText ?? "Upload Files",
     uploadIcon: props.uploadIcon ?? "upload",
     emptyMessage:
       props.emptyMessage ??
-      ((props.searchQuery ?? "").trim().length > 0
-        ? `No items found matching "${props.searchQuery ?? ""}"`
+      (hasActiveSearch
+        ? `No items found matching "${searchQuery}"`
         : hasActiveTagFilter
           ? "No items found for the selected tags"
           : "No items found"),
@@ -352,7 +418,18 @@ export const selectViewData = ({ state, props }) => {
     zoomControlMax: useColumnZoomControl ? MAX_ITEMS_PER_ROW : 2,
     zoomControlStep: useColumnZoomControl ? 1 : 0.1,
     showZoomControls: !mobileLayout && parseBooleanProp(props.showZoomControls),
-    showSearch: parseBooleanProp(props.showSearch, true),
+    showInlineZoomControls:
+      !mobileLayout &&
+      parseBooleanProp(props.showZoomControls) &&
+      !zoomInPopover,
+    showZoomPopoverButton:
+      !mobileLayout &&
+      parseBooleanProp(props.showZoomControls) &&
+      zoomInPopover,
+    zoomPopover: state.zoomPopover,
+    showSearch:
+      parseBooleanProp(props.showSearch, true) && !searchInFilterPopover,
+    showFilterPopoverSearch: searchInFilterPopover,
     showBackButton: parseBooleanProp(props.showBackButton),
     showMenuButton: parseBooleanProp(props.showMenuButton),
     fullWidthImageCards,
