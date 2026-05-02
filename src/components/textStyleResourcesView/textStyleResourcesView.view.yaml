@@ -33,6 +33,20 @@ refs:
         handler: handleCloseContextMenu
       item-click:
         handler: handleContextMenuClickItem
+  zoomSlider:
+    eventListeners:
+      value-change:
+        handler: handleZoomChange
+      value-input:
+        handler: handleZoomChange
+  zoomOut:
+    eventListeners:
+      click:
+        handler: handleZoomOut
+  zoomIn:
+    eventListeners:
+      click:
+        handler: handleZoomIn
   addBtn*:
     eventListeners:
       click:
@@ -59,6 +73,11 @@ template:
                           - rtgl-svg svg=hamburger wh=22 c=mu-fg: null
                   - $if navTitle:
                       - rtgl-text c=mu-fg: ${navTitle}
+              - $if showZoomControls:
+                  - rtgl-view d=h av=c g=sm:
+                      - rtgl-button#zoomOut sq v="gh" s=sm: '-'
+                      - rtgl-slider#zoomSlider w=120 min=${zoomControlMin} max=${zoomControlMax} step=${zoomControlStep} value=${zoomControlValue}: null
+                      - rtgl-button#zoomIn sq v="gh" s=sm: +
               - $if showSearch:
                   - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
               - $if showTagFilter:
@@ -79,15 +98,19 @@ template:
                           - rtgl-view w=1fg: null
                           - rtgl-button#addBtnHeaderRef${gIndex} data-group-id=${group.id} s=sm w=1fg pre=plus: ${addText}
                       - $if !group.isCollapsed:
-                          - 'rtgl-view w=f d=h ph=sm pt=md pb=sm mb=lg wrap g=md style="min-width: 0;"':
+                          - 'rtgl-grid w=f ph=sm pt=md pb=sm mb=lg g=md cols="${cardGridColumns}" style="min-width: 0;"':
                               - $if group.hasChildren:
                                   - $for item, itemIndex in group.children:
-                                      - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} w=${item.itemWidth} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md:
+                                      - rtgl-view#itemRef${gIndex}x${itemIndex} data-item-id=${item.id} w=${item.itemWidth} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md style="${item.itemContainerStyle}":
                                           - rtgl-view p=md g=md w=f br=md:
-                                              - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} lineHeight=${item.lineHeight} color=${item.color} strokeColor=${item.strokeColor} strokeWidth=${item.strokeWidth} fontWeight=${item.fontWeight} width=${item.previewWidth} height=96 padding=8 showBorder=false: null
+                                              - $if item.useFullWidthPreview:
+                                                  - 'rtgl-view w=f br=md style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
+                                                      - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} lineHeight=${item.lineHeight} color=${item.color} strokeColor=${item.strokeColor} strokeWidth=${item.strokeWidth} fontWeight=${item.fontWeight} width=f height=f padding=8 showBorder=false: null
+                                                $else:
+                                                  - rvn-font-preview fontFamily=${item.fontStyle} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=${item.fontSize} lineHeight=${item.lineHeight} color=${item.color} strokeColor=${item.strokeColor} strokeWidth=${item.strokeWidth} fontWeight=${item.fontWeight} width=${item.previewWidth} height=96 padding=8 showBorder=false: null
                                               - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                 $else:
-                                  - rtgl-view#addBtnEmptyRef${gIndex} data-group-id=${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=pointer:
+                                  - 'rtgl-view#addBtnEmptyRef${gIndex} data-group-id=${group.id} w=f h=150 av=c ah=c g=md p=lg bw=xs bc=bo br=lg cur=pointer style="grid-column: 1 / -1;"':
                                       - rtgl-svg svg=plus wh=24 c=pr: null
                                       - rtgl-text s=md c=pr fw=500: ${addText}
             $elif searchQuery || selectedTagFilterValues.length > 0:

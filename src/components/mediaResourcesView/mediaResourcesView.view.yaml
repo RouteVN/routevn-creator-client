@@ -102,7 +102,7 @@ template:
                   - $if showZoomControls:
                       - rtgl-view d=h av=c g=sm:
                           - rtgl-button#zoomOut sq v="gh" s=sm: '-'
-                          - rtgl-slider#zoomSlider w=120 min="0.5" max="2.0" step="0.1" value="${zoomLevel}": null
+                          - rtgl-slider#zoomSlider w=120 min=${zoomControlMin} max=${zoomControlMax} step=${zoomControlStep} value=${zoomControlValue}: null
                           - rtgl-button#zoomIn sq v="gh" s=sm: +
                   - $if showSearch:
                       - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
@@ -126,7 +126,7 @@ template:
                               - rtgl-button#uploadBtnHeaderRef${gIndex} data-group-id=${group.id} s=sm w=1fg pre=${uploadIcon}: ${uploadText}
                       - rtgl-view w=f pos=rel:
                           - $if !group.isCollapsed:
-                              - 'rtgl-view w=f d=h ph=sm pt=md pb=sm mb=lg wrap g=md style="min-width: 0;"':
+                              - 'rtgl-grid w=f ph=sm pt=md pb=sm mb=lg g=md cols="${cardGridColumns}" style="min-width: 0;"':
                                   - $if group.hasChildren:
                                       - $for item, itemIndex in group.children:
                                           - rtgl-view#itemRef${gIndex}x${itemIndex} key=${item.id} data-item-id=${item.domItemId} cur=${item.cursor} bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=md style="${item.itemContainerStyle}":
@@ -157,7 +157,17 @@ template:
                                                       - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                                 $elif item.cardKind == 'video':
                                                   - 'rtgl-view p=md g=md br=md pos=rel w=${item.mediaCardWidth} style="max-width: 100%; box-sizing: border-box;"':
-                                                      - $if item.isProcessing:
+                                                      - $if item.useFullWidthMediaPreview:
+                                                          - 'rtgl-view w=f br=md style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
+                                                              - $if item.isProcessing:
+                                                                  - rtgl-view w=f h=f br=md bw=xs bc=bo av=c ah=c:
+                                                                      - rtgl-text s=sm c=mu-fg: Processing...
+                                                                $elif item.thumbnailFileId:
+                                                                  - rvn-file-image br=md w=f h=f fileId=${item.thumbnailFileId}: null
+                                                                $else:
+                                                                  - rtgl-view w=f h=f br=md bw=xs bc=bo av=c ah=c:
+                                                                      - rtgl-text s=xs c=mu-fg: No thumbnail
+                                                        $elif item.isProcessing:
                                                           - rtgl-view w=f h=${mediaHeight} br=md bw=xs bc=bo av=c ah=c:
                                                               - rtgl-text s=sm c=mu-fg: Processing...
                                                         $elif item.thumbnailFileId:
@@ -171,24 +181,38 @@ template:
                                                       - rtgl-text s=xs c=mu-fg ellipsis w=${item.mediaTextWidth}: ${item.name}
                                                 $elif item.cardKind == 'sound':
                                                   - 'rtgl-view p=md g=md br=md pos=rel w=${item.mediaCardWidth} overflow=hidden style="max-width: 100%; box-sizing: border-box;"':
-                                                      - $if item.isProcessing:
-                                                          - 'rtgl-view g=md w=f style="min-width: 0;"':
-                                                              - rtgl-view w=f h=${mediaHeight} br=md bw=xs bc=bo av=c ah=c:
-                                                                  - rtgl-text s=sm c=mu-fg: Processing...
-                                                              - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
+                                                      - $if item.useFullWidthMediaPreview:
+                                                          - 'rtgl-view w=f br=md style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
+                                                              - $if item.isProcessing:
+                                                                  - rtgl-view w=f h=f br=md bw=xs bc=bo av=c ah=c:
+                                                                      - rtgl-text s=sm c=mu-fg: Processing...
+                                                                $elif item.waveformDataFileId:
+                                                                  - rvn-waveform-visualizer key=${item.waveformDataFileId}-${item.mediaCardWidth}x16x9 waveformDataFileId=${item.waveformDataFileId} w=f h=f: null
+                                                                $else:
+                                                                  - rtgl-view w=f h=f br=md bw=xs bc=bo av=c ah=c:
+                                                                      - rtgl-text s=xs c=mu-fg: No waveform
+                                                        $elif item.isProcessing:
+                                                          - rtgl-view w=f h=${mediaHeight} br=md bw=xs bc=bo av=c ah=c:
+                                                              - rtgl-text s=sm c=mu-fg: Processing...
                                                         $elif item.waveformDataFileId:
-                                                          - 'rtgl-view g=md w=f style="min-width: 0;"':
-                                                              - rvn-waveform-visualizer key=${item.waveformDataFileId}-${item.mediaCardWidth}x${mediaHeight} waveformDataFileId=${item.waveformDataFileId} w=f h=${mediaHeight}: null
-                                                              - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
+                                                          - rvn-waveform-visualizer key=${item.waveformDataFileId}-${item.mediaCardWidth}x${mediaHeight} waveformDataFileId=${item.waveformDataFileId} w=f h=${mediaHeight}: null
                                                         $else:
                                                           - rtgl-view w=f h=${mediaHeight} br=md bw=xs bc=bo av=c ah=c:
                                                               - rtgl-text s=xs c=mu-fg: No waveform
                                                       - $if item.showPreviewIcon:
                                                           - 'rtgl-view#previewActionRef${gIndex}x${itemIndex} data-item-id=${item.id} br=f w=32 h=32 pos=abs z=2 ah=c av=c cur=pointer style="top: 6px; right: 6px; background-color: #000;"':
                                                               - rtgl-svg svg=play wh=24 c=white: null
+                                                      - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                                 $elif item.cardKind == 'font':
                                                   - rtgl-view p=md g=md w=${item.mediaCardWidth} d=v br=md:
-                                                      - $if item.isProcessing:
+                                                      - $if item.useFullWidthFontPreview:
+                                                          - 'rtgl-view w=f br=md style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
+                                                              - $if item.isProcessing:
+                                                                  - rtgl-view w=f h=f br=md bw=xs bc=bo av=c ah=c:
+                                                                      - rtgl-text s=sm c=mu-fg: Processing...
+                                                                $else:
+                                                                  - rvn-font-preview fontFamily=${item.fontFamily} previewText="${item.previewText}" fileId=${item.fontFileId} fontSize=60 width=f height=f padding=8 av=c ah=c: null
+                                                        $elif item.isProcessing:
                                                           - rtgl-view w=f h=${mediaHeight} br=md bw=xs bc=bo av=c ah=c:
                                                               - rtgl-text s=sm c=mu-fg: Processing...
                                                         $else:
@@ -199,7 +223,7 @@ template:
                                                       - rtgl-text s=xs c=mu-fg ellipsis w=${mediaWidth}: ${item.name}
                                     $else:
                                       - $if canUpload:
-                                          - rtgl-view#uploadBtnEmptyRef${gIndex} data-group-id=${group.id} w=f h=150 bw=xs br=md ah=c av=c g=sm cur=pointer:
+                                          - 'rtgl-view#uploadBtnEmptyRef${gIndex} data-group-id=${group.id} w=f h=150 bw=xs br=md ah=c av=c g=sm cur=pointer style="grid-column: 1 / -1;"':
                                               - rtgl-svg svg=${uploadIcon} wh=32: null
                                               - rtgl-text: ${uploadText}
                           - $if draggingGroupId == group.id:

@@ -3,7 +3,37 @@ const DEFAULT_USER_CONFIG = {
     theme: "dark",
   },
   groupImagesView: {
-    zoomLevel: 1.0,
+    itemsPerRow: 6,
+  },
+  groupSoundsView: {
+    itemsPerRow: 6,
+  },
+  groupVideosView: {
+    itemsPerRow: 6,
+  },
+  groupTransformsView: {
+    itemsPerRow: 6,
+  },
+  groupParticlesView: {
+    itemsPerRow: 6,
+  },
+  groupSpritesheetsView: {
+    itemsPerRow: 6,
+  },
+  groupColorsView: {
+    itemsPerRow: 6,
+  },
+  groupFontsView: {
+    itemsPerRow: 6,
+  },
+  groupTextStylesView: {
+    itemsPerRow: 6,
+  },
+  groupLayoutsView: {
+    itemsPerRow: 6,
+  },
+  groupControlsView: {
+    itemsPerRow: 6,
   },
 };
 

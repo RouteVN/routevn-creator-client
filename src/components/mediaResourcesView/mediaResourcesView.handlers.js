@@ -13,9 +13,50 @@ import {
 const PROGRESSIVE_INITIAL_ITEM_COUNT = 8;
 const PROGRESSIVE_BATCH_ITEM_COUNT = 24;
 const SCROLL_STICKY_TOP_GAP_PX = 12;
+const MIN_ZOOM_LEVEL = 0.5;
+const MAX_ZOOM_LEVEL = 2;
+const ZOOM_STEP = 0.1;
+const MIN_ITEMS_PER_ROW = 1;
+const MAX_ITEMS_PER_ROW = 12;
 
 const getDataAttribute = (event, name) => {
   return event?.currentTarget?.getAttribute?.(name) ?? undefined;
+};
+
+const isColumnZoomControlMode = (props) => props?.zoomControlMode === "columns";
+
+const toItemsPerRowFromColumnZoomControlValue = (value) => {
+  return MIN_ITEMS_PER_ROW + MAX_ITEMS_PER_ROW - Math.round(value);
+};
+
+const getItemsPerRowConfigKey = (props) =>
+  props?.itemsPerRowConfigKey ?? undefined;
+
+const syncPersistedItemsPerRow = ({ appService, props, store } = {}) => {
+  if (!isColumnZoomControlMode(props)) {
+    return;
+  }
+
+  const configKey = getItemsPerRowConfigKey(props);
+  if (!configKey || typeof appService?.getUserConfig !== "function") {
+    return;
+  }
+
+  const itemsPerRow = appService.getUserConfig(configKey);
+  if (itemsPerRow === undefined) {
+    return;
+  }
+
+  store.setItemsPerRow({ itemsPerRow });
+};
+
+const persistItemsPerRow = ({ appService, props, store } = {}) => {
+  const configKey = getItemsPerRowConfigKey(props);
+  if (!configKey || typeof appService?.setUserConfig !== "function") {
+    return;
+  }
+
+  appService.setUserConfig(configKey, store.selectItemsPerRow());
 };
 
 export const handleTagFilterButtonClick = openTagFilterPopoverFromButton;
@@ -305,6 +346,7 @@ const scrollRenderedItemIntoView = ({
 };
 
 export const handleBeforeMount = (deps) => {
+  syncPersistedItemsPerRow(deps);
   syncProgressiveRenderState(deps);
 
   return () => {
@@ -606,26 +648,58 @@ export const handleUploadButtonClick = (deps, payload) => {
 };
 
 export const handleZoomChange = (deps, payload) => {
-  const { store, render } = deps;
-  const nextZoomLevel = parseFloat(
+  const { store, render, props } = deps;
+  const nextValue = parseFloat(
     payload._event.detail?.value ?? payload._event.target?.value ?? 1,
   );
-  const zoomLevel = Math.min(2, Math.max(0.5, nextZoomLevel));
 
+  if (isColumnZoomControlMode(props)) {
+    store.setItemsPerRow({
+      itemsPerRow: toItemsPerRowFromColumnZoomControlValue(nextValue),
+    });
+    persistItemsPerRow(deps);
+    render();
+    return;
+  }
+
+  const zoomLevel = Math.min(
+    MAX_ZOOM_LEVEL,
+    Math.max(MIN_ZOOM_LEVEL, nextValue),
+  );
   store.setZoomLevel({ zoomLevel });
   render();
 };
 
 export const handleZoomIn = (deps) => {
-  const { store, render } = deps;
-  const zoomLevel = Math.min(2, store.selectZoomLevel() + 0.1);
+  const { store, render, props } = deps;
+  if (isColumnZoomControlMode(props)) {
+    store.setItemsPerRow({ itemsPerRow: store.selectItemsPerRow() - 1 });
+    persistItemsPerRow(deps);
+    render();
+    return;
+  }
+
+  const zoomLevel = Math.min(
+    MAX_ZOOM_LEVEL,
+    store.selectZoomLevel() + ZOOM_STEP,
+  );
   store.setZoomLevel({ zoomLevel });
   render();
 };
 
 export const handleZoomOut = (deps) => {
-  const { store, render } = deps;
-  const zoomLevel = Math.max(0.5, store.selectZoomLevel() - 0.1);
+  const { store, render, props } = deps;
+  if (isColumnZoomControlMode(props)) {
+    store.setItemsPerRow({ itemsPerRow: store.selectItemsPerRow() + 1 });
+    persistItemsPerRow(deps);
+    render();
+    return;
+  }
+
+  const zoomLevel = Math.max(
+    MIN_ZOOM_LEVEL,
+    store.selectZoomLevel() - ZOOM_STEP,
+  );
   store.setZoomLevel({ zoomLevel });
   render();
 };

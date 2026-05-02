@@ -35,6 +35,20 @@ propsSchema:
     showSearch:
       type: boolean
       description: Whether to render the search input
+    showZoomControls:
+      type: boolean
+      description: Whether to show zoom controls
+    zoomControlMode:
+      type: string
+      enum:
+        - columns
+      description: Whether zoom controls should control grid columns
+    defaultItemsPerRow:
+      type: number
+      description: Initial column count when zoom controls use column mode
+    itemsPerRowConfigKey:
+      type: string
+      description: Optional user config key for persisted column count
     showMenuButton:
       type: boolean
       description: Whether to show a menu icon in the header

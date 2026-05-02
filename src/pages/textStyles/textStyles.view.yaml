@@ -120,7 +120,7 @@ template:
                   - $if showMobileTopTabs:
                       - 'rvn-text-style-resources-view#typographyView w=f h=f :navTitle=${title} show-menu-button show-search=false show-tag-filter :mobileLayout=${mobileLayout} :groups=${flatGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}': null
                     $else:
-                      - rvn-text-style-resources-view#typographyView w=f h=f :navTitle=${title} show-tag-filter :groups=${flatGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}: null
+                      - 'rvn-text-style-resources-view#typographyView w=f h=f :navTitle=${title} show-zoom-controls zoom-control-mode=columns default-items-per-row=6 items-per-row-config-key="groupTextStylesView.itemsPerRow" show-tag-filter :groups=${flatGroups} :selectedItemId=${selectedItemId} :searchQuery=${searchQuery} :tagFilterOptions=${tagFilterOptions} :selectedTagFilterValues=${selectedTagFilterValues} :tagFilterPlaceholder=${tagFilterPlaceholder} :addText=${addText} :itemContextMenuItems=${centerItemContextMenuItems}': null
           - $if showDetailPanel:
               - rvn-resizable-panel panel-type=detail-panel w=270 min-w=200 max-w=500 resize-side="left":
                   - rtgl-view wh=f slot="content":

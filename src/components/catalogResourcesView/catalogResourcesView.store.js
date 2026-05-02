@@ -8,7 +8,34 @@ import {
   toggleTagFilterPopoverTagId,
 } from "../../internal/ui/tagFilterPopover.js";
 
-export const createInitialState = () => ({
+const DEFAULT_ITEMS_PER_ROW = 6;
+const MIN_ITEMS_PER_ROW = 1;
+const MAX_ITEMS_PER_ROW = 12;
+const DEFAULT_CARD_WIDTH = 225;
+
+const clampItemsPerRow = (value) => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return DEFAULT_ITEMS_PER_ROW;
+  }
+
+  return Math.min(
+    MAX_ITEMS_PER_ROW,
+    Math.max(MIN_ITEMS_PER_ROW, Math.round(numericValue)),
+  );
+};
+
+const toColumnZoomControlValue = (itemsPerRow) => {
+  return MIN_ITEMS_PER_ROW + MAX_ITEMS_PER_ROW - clampItemsPerRow(itemsPerRow);
+};
+
+const buildAutoFillGridColumns = (cardWidth) => {
+  const width = Math.max(1, Math.round(Number(cardWidth) || 1));
+  return `repeat(auto-fill, minmax(min(${width}px, 100%), ${width}px))`;
+};
+
+export const createInitialState = ({ props } = {}) => ({
+  itemsPerRow: clampItemsPerRow(props?.defaultItemsPerRow),
   collapsedIds: [],
   ...createTagFilterPopoverState(),
   dropdownMenu: {
@@ -19,6 +46,12 @@ export const createInitialState = () => ({
     items: [],
   },
 });
+
+export const setItemsPerRow = ({ state }, { itemsPerRow } = {}) => {
+  state.itemsPerRow = clampItemsPerRow(itemsPerRow);
+};
+
+export const selectItemsPerRow = ({ state }) => state.itemsPerRow;
 
 export const toggleGroupCollapse = ({ state }, { groupId } = {}) => {
   const index = state.collapsedIds.indexOf(groupId);
@@ -80,8 +113,23 @@ const parseBooleanProp = (value, fallback = false) => {
   return Boolean(value);
 };
 
+const isColumnZoomControlMode = (props) => props.zoomControlMode === "columns";
+
 export const selectViewData = ({ state, props }) => {
   const mobileLayout = parseBooleanProp(props.mobileLayout);
+  const useColumnZoomControl = !mobileLayout && isColumnZoomControlMode(props);
+  const fixedItemsPerRow = Number(props.fixedItemsPerRow);
+  const hasFixedItemsPerRow =
+    !mobileLayout && Number.isFinite(fixedItemsPerRow) && fixedItemsPerRow > 0;
+  const fixedColumnCount = hasFixedItemsPerRow
+    ? clampItemsPerRow(fixedItemsPerRow)
+    : undefined;
+  const itemsPerRow = mobileLayout ? 1 : clampItemsPerRow(state.itemsPerRow);
+  const cardGridColumns = useColumnZoomControl
+    ? `${itemsPerRow}`
+    : hasFixedItemsPerRow
+      ? `${fixedColumnCount}`
+      : buildAutoFillGridColumns(DEFAULT_CARD_WIDTH);
   const hasActiveTagFilter = (props.selectedTagFilterValues?.length ?? 0) > 0;
 
   const groups = (props.groups ?? []).map((group) => {
@@ -93,13 +141,28 @@ export const selectViewData = ({ state, props }) => {
       isCollapsed,
       children: children.map((item) => {
         const isSelected = item.id === props.selectedItemId;
+        const useFullWidthCard =
+          mobileLayout || useColumnZoomControl || hasFixedItemsPerRow;
 
         return {
           ...item,
-          itemWidth: mobileLayout ? "f" : (item.itemWidth ?? 225),
-          layoutPreviewWidth: mobileLayout ? "f" : 225,
-          transformPreviewWidth: mobileLayout ? "f" : 193,
-          catalogTextWidth: mobileLayout ? "f" : (item.itemWidth ?? 225),
+          itemWidth: useFullWidthCard
+            ? "f"
+            : (item.itemWidth ?? DEFAULT_CARD_WIDTH),
+          itemContainerStyle: useFullWidthCard
+            ? "width: 100%; box-sizing: border-box;"
+            : "",
+          layoutPreviewWidth: useFullWidthCard ? "f" : 225,
+          transformPreviewWidth: useFullWidthCard ? "f" : 193,
+          catalogTextWidth: useFullWidthCard
+            ? "f"
+            : (item.itemWidth ?? DEFAULT_CARD_WIDTH),
+          useFullWidthCatalogPreview:
+            (mobileLayout || useColumnZoomControl) &&
+            (item.cardKind === "color" ||
+              item.cardKind === "transform" ||
+              item.cardKind === "layout"),
+          previewAspectRatio: "16 / 9",
           itemBorderColor: isSelected ? "pr" : "bo",
           itemHoverBorderColor: isSelected ? "pr" : "ac",
         };
@@ -125,6 +188,14 @@ export const selectViewData = ({ state, props }) => {
     tagFilterButtonBackgroundColor: hasActiveTagFilter ? "ac" : "bg",
     tagFilterButtonBorderColor: hasActiveTagFilter ? "ac" : "bo",
     tagFilterButtonIconColor: hasActiveTagFilter ? "white" : "mu-fg",
+    itemsPerRow,
+    cardGridColumns,
+    zoomControlValue: toColumnZoomControlValue(itemsPerRow),
+    zoomControlMin: MIN_ITEMS_PER_ROW,
+    zoomControlMax: MAX_ITEMS_PER_ROW,
+    zoomControlStep: 1,
+    showZoomControls:
+      useColumnZoomControl && parseBooleanProp(props.showZoomControls),
     showSearch: parseBooleanProp(props.showSearch, true),
     showMenuButton: parseBooleanProp(props.showMenuButton),
     emptyMessage:
