@@ -421,6 +421,7 @@ const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
   if (hadPendingSessionChanges) {
     subject.dispatch("sceneEditor.renderCanvas", {
       skipRender: true,
+      syncPresentationState: true,
       skipAnimations: true,
     });
     return;
@@ -825,6 +826,7 @@ export const handleEditorDataChanged = async (deps, payload) => {
 
   subject.dispatch("sceneEditor.renderCanvas", {
     skipRender: true,
+    syncPresentationState: true,
     skipAnimations: true,
   });
 };

@@ -90,4 +90,124 @@ describe("scene editor selected line presentation state", () => {
       },
     });
   });
+
+  it("does not clear page editor presentation state when section changes are stale", () => {
+    const state = createSceneEditorState();
+
+    setSceneEditorPresentationState(
+      { state },
+      { presentationState: stalePresentationState },
+    );
+    setSceneEditorSectionLineChanges(
+      { state },
+      {
+        changes: {
+          lines: [
+            {
+              id: "line-other",
+              changes: {},
+              presentationState: {
+                dialogue: {
+                  ui: {
+                    resourceId: "dialogue-other",
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    );
+    setSceneEditorSelectedLineId({ state }, { selectedLineId: "line-next" });
+
+    expect(selectSceneEditorEffectivePresentationState({ state })).toEqual(
+      stalePresentationState,
+    );
+  });
+
+  it("syncs page editor presentation state when fresh section changes arrive", () => {
+    const state = createSceneEditorState();
+
+    setSceneEditorPresentationState(
+      { state },
+      { presentationState: stalePresentationState },
+    );
+    setSceneEditorSelectedLineId({ state }, { selectedLineId: "line-next" });
+    setSceneEditorSectionLineChanges(
+      { state },
+      { changes: selectedLineChanges },
+    );
+
+    expect(selectSceneEditorEffectivePresentationState({ state })).toEqual({
+      dialogue: {
+        ui: {
+          resourceId: "dialogue-next",
+        },
+      },
+    });
+  });
+
+  it("does not clear lexical editor presentation state when section changes are stale", () => {
+    const state = createLexicalSceneEditorState();
+
+    setLexicalSceneEditorPresentationState(
+      { state },
+      { presentationState: stalePresentationState },
+    );
+    setLexicalSceneEditorSectionLineChanges(
+      { state },
+      {
+        changes: {
+          lines: [
+            {
+              id: "line-other",
+              changes: {},
+              presentationState: {
+                dialogue: {
+                  ui: {
+                    resourceId: "dialogue-other",
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    );
+    setLexicalSceneEditorSelectedLineId(
+      { state },
+      { selectedLineId: "line-next" },
+    );
+
+    expect(
+      selectLexicalSceneEditorEffectivePresentationState({ state }),
+    ).toEqual(stalePresentationState);
+  });
+
+  it("syncs lexical editor presentation state when fresh section changes arrive", () => {
+    const state = createLexicalSceneEditorState();
+
+    setLexicalSceneEditorPresentationState(
+      { state },
+      { presentationState: stalePresentationState },
+    );
+    setLexicalSceneEditorSelectedLineId(
+      { state },
+      { selectedLineId: "line-next" },
+    );
+    setLexicalSceneEditorSectionLineChanges(
+      { state },
+      { changes: selectedLineChanges },
+    );
+
+    expect(
+      selectLexicalSceneEditorEffectivePresentationState({ state }),
+    ).toEqual({
+      dialogue: {
+        ui: {
+          resourceId: "dialogue-next",
+        },
+      },
+    });
+  });
 });

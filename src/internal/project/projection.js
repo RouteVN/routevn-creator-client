@@ -26,7 +26,7 @@ const createResourceCollection = () => ({
   tree: [],
 });
 
-const createEmptyTagScopes = () => ({
+export const createEmptyTagScopes = () => ({
   images: createResourceCollection(),
   sounds: createResourceCollection(),
   videos: createResourceCollection(),

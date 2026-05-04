@@ -94,23 +94,26 @@ template:
               - $if !isEditingDefault:
                   - rtgl-view g=md w=f:
                       - rtgl-text s=sm c=mu-fg: Condition
-                      - rtgl-text s=sm c=mu-fg mt=md: Variable
-                      - rtgl-select#variableSelect w=f :selectedValue=${tempBranch.variableId} :options=${variableOptions} placeholder="Choose a variable...": null
-                      - $if tempBranch.variableId:
-                          - rtgl-text s=sm c=mu-fg mt=md: Operator
-                          - rtgl-select#operatorSelect w=f :selectedValue=${tempBranch.op} :options=${operatorOptions}: null
-                      - $if showValueField && valueInputType == 'number':
-                          - rtgl-text s=sm c=mu-fg mt=md: Value
-                          - rtgl-input#valueInput type=number w=f placeholder="Enter number..." value=${tempBranch.value}: null
-                      - $if showValueField && valueInputType == 'boolean':
-                          - rtgl-text s=sm c=mu-fg mt=md: Value
-                          - rtgl-select#booleanSelect w=f :selectedValue=${tempBranch.booleanValue} :options=${booleanOptions}: null
-                      - $if showValueField && showEnumValueSelect:
-                          - rtgl-text s=sm c=mu-fg mt=md: Value
-                          - rtgl-select#enumValueSelect w=f :selectedValue=${tempBranch.value} :options=${enumValueOptions} placeholder="Choose a value...": null
-                      - $if showValueField && valueInputType == 'string' && !showEnumValueSelect:
-                          - rtgl-text s=sm c=mu-fg mt=md: Value
-                          - rtgl-input#valueInput w=f placeholder="Enter text..." value=${tempBranch.value}: null
+                      - $if isEditingUnsupportedCondition:
+                          - rtgl-text s=sm c=mu-fg mt=md: Unsupported condition
+                      - $if !isEditingUnsupportedCondition:
+                          - rtgl-text s=sm c=mu-fg mt=md: Variable
+                          - rtgl-select#variableSelect w=f :selectedValue=${tempBranch.variableId} :options=${variableOptions} placeholder="Choose a variable...": null
+                          - $if tempBranch.variableId:
+                              - rtgl-text s=sm c=mu-fg mt=md: Operator
+                              - rtgl-select#operatorSelect w=f :selectedValue=${tempBranch.op} :options=${operatorOptions}: null
+                          - $if showValueField && valueInputType == 'number':
+                              - rtgl-text s=sm c=mu-fg mt=md: Value
+                              - rtgl-input#valueInput type=number w=f placeholder="Enter number..." value=${tempBranch.value}: null
+                          - $if showValueField && valueInputType == 'boolean':
+                              - rtgl-text s=sm c=mu-fg mt=md: Value
+                              - rtgl-select#booleanSelect w=f :selectedValue=${tempBranch.booleanValue} :options=${booleanOptions}: null
+                          - $if showValueField && showEnumValueSelect:
+                              - rtgl-text s=sm c=mu-fg mt=md: Value
+                              - rtgl-select#enumValueSelect w=f :selectedValue=${tempBranch.value} :options=${enumValueOptions} placeholder="Choose a value...": null
+                          - $if showValueField && valueInputType == 'string' && !showEnumValueSelect:
+                              - rtgl-text s=sm c=mu-fg mt=md: Value
+                              - rtgl-input#valueInput w=f placeholder="Enter text..." value=${tempBranch.value}: null
                   - rtgl-view w=f h=1 bgc=mu mt=lg mb=sm: null
               - rtgl-view g=md w=f:
                   - rtgl-text s=sm c=mu-fg: Actions

@@ -14,6 +14,7 @@ import {
 } from "../../src/components/commandLineConditional/commandLineConditional.store.js";
 import {
   handleAddDefaultClick,
+  handleBranchClick,
   handleEnumValueSelectChange,
   handleSaveBranchClick,
   handleSubmitClick,
@@ -175,6 +176,103 @@ describe("commandLineConditional.handlers", () => {
           {
             actions: {
               nextLine: {},
+            },
+          },
+        ],
+      },
+    });
+  });
+
+  it("preserves unsupported branch conditions when editing branch actions", () => {
+    const state = createInitialState();
+    const dispatchedEvents = [];
+    const appService = {
+      showAlert: vi.fn(),
+    };
+    const store = createStore(state);
+    const unsupportedWhen = {
+      gt: [{ var: "variables.trust" }, 70],
+    };
+
+    setBranches(
+      { state },
+      {
+        branches: [
+          {
+            id: "branch-unsupported",
+            when: unsupportedWhen,
+            actions: {
+              nextLine: {},
+            },
+          },
+        ],
+      },
+    );
+
+    handleBranchClick(
+      {
+        store,
+        render: () => {},
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              branchId: "branch-unsupported",
+            },
+          },
+        },
+      },
+    );
+    setTempBranch(
+      { state },
+      {
+        actions: {
+          updateVariable: {
+            variableId: "trust",
+            value: 80,
+          },
+        },
+      },
+    );
+    handleSaveBranchClick(
+      {
+        appService,
+        store,
+        render: () => {},
+      },
+      {
+        _event: {
+          stopPropagation: () => {},
+        },
+      },
+    );
+    handleSubmitClick(
+      {
+        appService,
+        store,
+        dispatchEvent: (event) => {
+          dispatchedEvents.push(event);
+        },
+      },
+      {
+        _event: {
+          stopPropagation: () => {},
+        },
+      },
+    );
+
+    expect(appService.showAlert).not.toHaveBeenCalled();
+    expect(dispatchedEvents[0].detail).toEqual({
+      conditional: {
+        branches: [
+          {
+            when: unsupportedWhen,
+            actions: {
+              updateVariable: {
+                variableId: "trust",
+                value: 80,
+              },
             },
           },
         ],

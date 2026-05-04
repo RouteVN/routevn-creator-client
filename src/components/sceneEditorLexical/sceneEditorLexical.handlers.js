@@ -272,6 +272,7 @@ const dispatchLineNavigationRender = (
 
   subject.dispatch("sceneEditor.renderCanvas", {
     skipRender,
+    syncPresentationState: true,
     skipAnimations: !shouldAnimateLineNavigation(store, {
       previousLineId,
       nextLineId,
@@ -425,6 +426,7 @@ const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
   if (hadPendingSessionChanges) {
     subject.dispatch("sceneEditor.renderCanvas", {
       skipRender: true,
+      syncPresentationState: true,
       skipAnimations: true,
     });
     return;
@@ -836,6 +838,7 @@ export const handleEditorDataChanged = async (deps, payload) => {
 
   subject.dispatch("sceneEditor.renderCanvas", {
     skipRender: true,
+    syncPresentationState: true,
     skipAnimations: true,
   });
 };
@@ -1138,6 +1141,7 @@ export const handleNewLine = async (deps, payload) => {
   render();
   subject.dispatch("sceneEditor.renderCanvas", {
     skipRender: true,
+    syncPresentationState: true,
     skipAnimations: true,
   });
 
@@ -1300,6 +1304,7 @@ export const handleSwapLine = async (deps, payload) => {
   render();
   subject.dispatch("sceneEditor.renderCanvas", {
     skipRender: true,
+    syncPresentationState: true,
     skipAnimations: true,
   });
 
@@ -1790,6 +1795,7 @@ export const handleDeleteLineShortcut = async (deps, payload) => {
   render();
   subject.dispatch("sceneEditor.renderCanvas", {
     skipRender: true,
+    syncPresentationState: true,
     skipAnimations: true,
   });
 

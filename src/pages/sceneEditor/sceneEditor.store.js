@@ -62,11 +62,15 @@ const mergePresentationStates = (
   };
 };
 
-const selectSectionLinePresentationState = (state, lineId) => {
+const getSectionLinePresentationState = (state, lineId) => {
   const selectedLineEntry = (state.sectionLineChanges?.lines || []).find(
     (line) => line.id === lineId,
   );
-  return toPlainObject(selectedLineEntry?.presentationState);
+  if (!selectedLineEntry) {
+    return undefined;
+  }
+
+  return toPlainObject(selectedLineEntry.presentationState);
 };
 
 const collectActionTargetSectionIds = (actions) => {
@@ -448,6 +452,13 @@ export const selectEffectivePresentationState = ({ state }) => {
 
 export const setSectionLineChanges = ({ state }, { changes } = {}) => {
   state.sectionLineChanges = changes;
+  const syncedPresentationState = getSectionLinePresentationState(
+    state,
+    state.selectedLineId,
+  );
+  if (syncedPresentationState !== undefined) {
+    state.presentationState = syncedPresentationState;
+  }
 };
 
 export const setScenePageLoading = ({ state }, { isLoading } = {}) => {
@@ -692,12 +703,19 @@ export const selectSelectedLineId = ({ state }) => {
 };
 
 export const setSelectedLineId = ({ state }, { selectedLineId } = {}) => {
-  const syncedPresentationState = selectSectionLinePresentationState(
+  const syncedPresentationState = getSectionLinePresentationState(
     state,
     selectedLineId,
   );
   state.selectedLineId = selectedLineId;
-  state.presentationState = syncedPresentationState;
+  if (!selectedLineId) {
+    state.presentationState = {};
+    return;
+  }
+
+  if (syncedPresentationState !== undefined) {
+    state.presentationState = syncedPresentationState;
+  }
 };
 
 export const setSelectedSectionId = ({ state }, { selectedSectionId } = {}) => {

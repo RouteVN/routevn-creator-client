@@ -141,6 +141,33 @@ describe("commandLineConditional.store", () => {
     expect(viewData.canSaveBranch).toBe(true);
   });
 
+  it("allows unsupported condition drafts to save without variable controls", () => {
+    const state = createInitialState();
+
+    setTempBranch(
+      { state },
+      {
+        conditionKind: "unsupported",
+        when: {
+          all: [
+            {
+              eq: [{ var: "variables.route" }, "north"],
+            },
+          ],
+        },
+        actions: {
+          nextLine: {},
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state });
+
+    expect(viewData.isEditingUnsupportedCondition).toBe(true);
+    expect(viewData.showValueField).toBe(false);
+    expect(viewData.canSaveBranch).toBe(true);
+  });
+
   it("inserts new conditional branches before an existing default branch", () => {
     const state = createInitialState();
 

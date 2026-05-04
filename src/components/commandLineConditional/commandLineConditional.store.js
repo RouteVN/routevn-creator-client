@@ -294,6 +294,8 @@ export const selectViewData = ({ state, props }) => {
   const showValueField =
     state.tempBranch.conditionKind === "variable" &&
     Boolean(state.tempBranch.variableId);
+  const isEditingUnsupportedCondition =
+    state.tempBranch.conditionKind === "unsupported";
   const actionCount = countActions(state.tempBranch.actions);
 
   const booleanOptions = [
@@ -340,6 +342,8 @@ export const selectViewData = ({ state, props }) => {
 
   const canSaveBranch =
     state.tempBranch.conditionKind === "default" ||
+    (isEditingUnsupportedCondition &&
+      Object.hasOwn(toPlainObject(state.tempBranch), "when")) ||
     (state.tempBranch.conditionKind === "variable" &&
       state.tempBranch.variableId &&
       Object.hasOwn(CONDITION_OPERATOR_LABELS, state.tempBranch.op) &&
@@ -373,6 +377,7 @@ export const selectViewData = ({ state, props }) => {
     hasBranches: state.branches.length > 0,
     canSaveBranch,
     isEditingDefault: state.tempBranch.conditionKind === "default",
+    isEditingUnsupportedCondition,
     editBranchTitle:
       state.tempBranch.conditionKind === "default" ? "Default" : "Branch",
     hiddenModes: getHiddenModes(props),

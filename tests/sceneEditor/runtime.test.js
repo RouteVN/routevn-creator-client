@@ -125,6 +125,8 @@ const createGraphicsService = () => {
       engine?.handleActions(actions, eventContext, options);
     },
     engineSelectPresentationState: () => engine?.selectPresentationState(),
+    engineSelectSectionLineChanges: (options) =>
+      engine?.selectSectionLineChanges(options),
     setEngineAudioMuted,
   };
 };
@@ -337,6 +339,65 @@ describe("renderSceneEditorState", () => {
     });
 
     expect(engineRenderCurrentState).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders the UI after a skipped canvas render when presentation state changes", async () => {
+    const projectData = createProjectData();
+    const graphicsService = createGraphicsService();
+    const render = vi.fn();
+    const store = {
+      selectIsScenePageLoading: () => false,
+      selectPreviewScene: () => ({
+        previewVisible: false,
+      }),
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => "section-1",
+      selectSelectedLineId: () => "line-2",
+      selectProjectData: () => projectData,
+      selectPreviewRuntimeGlobal: () => ({
+        dialogueTextSpeed: 100,
+      }),
+      selectTemporaryPresentationState: () => ({}),
+      selectEffectivePresentationState: () => store.presentationState ?? {},
+      selectIsMuted: () => false,
+      setPresentationState: ({ presentationState }) => {
+        store.presentationState = presentationState;
+      },
+      setSectionLineChanges: ({ changes }) => {
+        store.sectionLineChanges = changes;
+      },
+      presentationState: {
+        dialogue: {
+          ui: {
+            resourceId: "stale",
+          },
+        },
+      },
+    };
+
+    await renderSceneEditorCanvas(
+      {
+        store,
+        render,
+        graphicsService,
+        refs: {
+          canvas: {
+            isConnected: true,
+          },
+        },
+      },
+      {
+        skipRender: true,
+        syncPresentationState: true,
+        skipAnimations: true,
+      },
+    );
+
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(store.presentationState?.dialogue?.ui?.resourceId).toBe("adv");
+    expect(store.presentationState?.dialogue?.content?.[0]?.text).toBe(
+      "second",
+    );
   });
 
   it("syncs the graphics engine audio mute state from scene editor settings", async () => {

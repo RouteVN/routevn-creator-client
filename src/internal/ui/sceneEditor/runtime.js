@@ -39,6 +39,14 @@ const waitForNextFrame = () =>
     globalThis.setTimeout(resolve, 0);
   });
 
+const getPresentationStateSnapshot = (store) => {
+  try {
+    return JSON.stringify(store.selectEffectivePresentationState?.() ?? {});
+  } catch {
+    return undefined;
+  }
+};
+
 const getCurrentCanvasRoot = (refs) => {
   const previewCanvasHost = refs?.previewCanvasHost;
   const canvasRoot =
@@ -1048,6 +1056,11 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
     },
   );
   const sceneIdsToLoad = extractInitialHybridSceneIds(projectData, sceneId);
+  const shouldSyncPresentationState =
+    payload?.skipRender === true && payload?.syncPresentationState === true;
+  const previousPresentationStateSnapshot = shouldSyncPresentationState
+    ? getPresentationStateSnapshot(store)
+    : undefined;
 
   const sceneAssetLoadStartedAt = perfEnabled ? getDebugNow() : 0;
   await loadAssetsForSceneIds(deps, projectData, sceneIdsToLoad, {
@@ -1070,7 +1083,12 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
     : undefined;
 
   let uiRenderDurationMs = 0;
-  if (!payload?.skipRender) {
+  const shouldRenderUi =
+    !payload?.skipRender ||
+    (shouldSyncPresentationState &&
+      previousPresentationStateSnapshot !==
+        getPresentationStateSnapshot(store));
+  if (shouldRenderUi) {
     const uiRenderStartedAt = perfEnabled ? getDebugNow() : 0;
     render();
     if (perfEnabled) {

@@ -109,8 +109,9 @@ const getSimpleCondition = (when = {}) => {
 
 const createTempBranchFromBranch = (branch = {}) => {
   const actions = toPlainObject(branch.actions);
+  const hasCondition = Object.hasOwn(toPlainObject(branch), "when");
 
-  if (!Object.hasOwn(toPlainObject(branch), "when")) {
+  if (!hasCondition) {
     return {
       conditionKind: "default",
       variableId: "",
@@ -122,7 +123,8 @@ const createTempBranchFromBranch = (branch = {}) => {
 
   if (typeof branch.when === "string") {
     return {
-      conditionKind: "variable",
+      conditionKind: "unsupported",
+      when: branch.when,
       variableId: "",
       op: "eq",
       value: "",
@@ -142,7 +144,8 @@ const createTempBranchFromBranch = (branch = {}) => {
   }
 
   return {
-    conditionKind: "variable",
+    conditionKind: "unsupported",
+    when: branch.when,
     variableId: "",
     op: "eq",
     value: "",
@@ -175,6 +178,19 @@ const createBranchFromTemp = ({
   };
 
   if (tempBranch.conditionKind === "default") {
+    return branch;
+  }
+
+  if (tempBranch.conditionKind === "unsupported") {
+    if (!Object.hasOwn(toPlainObject(tempBranch), "when")) {
+      appService.showAlert({
+        message: "Condition is unsupported.",
+        title: "Warning",
+      });
+      return undefined;
+    }
+
+    branch.when = tempBranch.when;
     return branch;
   }
 
