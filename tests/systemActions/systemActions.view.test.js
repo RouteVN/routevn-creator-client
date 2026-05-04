@@ -39,7 +39,7 @@ describe("systemActions view", () => {
     );
     const sceneEditorLexicalView = readFileSync(
       new URL(
-        "../../src/components/sceneEditorLexical/sceneEditorLexical.view.yaml",
+        "../../src/pages/sceneEditorLexical/sceneEditorLexical.view.yaml",
         import.meta.url,
       ),
       "utf8",

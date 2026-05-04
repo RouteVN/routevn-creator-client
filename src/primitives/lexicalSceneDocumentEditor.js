@@ -670,9 +670,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.editor = createEditor({
       namespace: "routevn-lexical-scene-document-editor",
       nodes: [MentionNode],
-      onError: (error) => {
-        console.error(error);
-      },
+      onError: () => undefined,
       theme: LEXICAL_EDITOR_THEME,
     });
 
@@ -1423,6 +1421,19 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   handleNativeKeyDown(event) {
     this.hideSelectionPopover();
+
+    const key = String(event.key ?? "").toLowerCase();
+    if (
+      (event.ctrlKey || event.metaKey) &&
+      !event.altKey &&
+      !event.isComposing &&
+      (key === "z" || key === "y")
+    ) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      return;
+    }
 
     if (this.handleReferenceArrowNavigation(event)) {
       return;
@@ -2251,6 +2262,13 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.clearSelectedReferenceNodeKey();
 
     const inputType = String(event.inputType ?? "");
+    if (inputType === "historyUndo" || inputType === "historyRedo") {
+      event.preventDefault();
+      event.stopPropagation?.();
+      event.stopImmediatePropagation?.();
+      return;
+    }
+
     if (inputType === "insertParagraph") {
       event.preventDefault();
       event.stopPropagation?.();

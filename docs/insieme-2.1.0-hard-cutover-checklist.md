@@ -333,8 +333,8 @@ the new one-store model.
 
 ### Files To Touch
 
-- [src/components/sceneEditorLexical/sceneEditorLexical.handlers.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/components/sceneEditorLexical/sceneEditorLexical.handlers.js)
-- [src/components/sceneEditorLexical/sceneEditorLexical.store.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/components/sceneEditorLexical/sceneEditorLexical.store.js)
+- [src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js)
+- [src/pages/sceneEditorLexical/sceneEditorLexical.store.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/pages/sceneEditorLexical/sceneEditorLexical.store.js)
 - [src/internal/ui/sceneEditorLexical/draftSection.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/internal/ui/sceneEditorLexical/draftSection.js)
 - [src/internal/ui/sceneEditor/persistenceQueue.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/internal/ui/sceneEditor/persistenceQueue.js)
 

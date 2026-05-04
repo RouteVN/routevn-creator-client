@@ -363,7 +363,7 @@ Preferred structure:
 ```text
 lexicalSceneDocumentEditor primitive
 -> sceneDocumentEditorLexical component
--> sceneEditorLexical component
+-> sceneEditorLexical page
 -> internal/ui scene editor helpers
 -> projectService / internal/project
 ```
@@ -777,7 +777,7 @@ Current scene-editing pattern:
   low-level Lexical document editing behavior
 - `src/components/sceneDocumentEditorLexical/`
   UI wrapper for the Lexical document editing surface
-- `src/components/sceneEditorLexical/`
+- `src/pages/sceneEditorLexical/`
   scene editor route surface, preview/canvas, dialogs, and asset loading
 - `src/internal/ui/sceneEditor/`
   scene-editing workflows and line view-model shaping
@@ -785,8 +785,8 @@ Current scene-editing pattern:
   draft document/session helpers for Lexical editing
 
 Keep Lexical editor-specific orchestration outside the primitive. The primitive
-owns browser/editor behavior; scene workflow logic belongs in the component or
-shared `src/internal/ui/sceneEditor*` helpers.
+owns browser/editor behavior; scene workflow logic belongs in the page or shared
+`src/internal/ui/sceneEditor*` helpers.
 
 The Lexical document editor must not own:
 

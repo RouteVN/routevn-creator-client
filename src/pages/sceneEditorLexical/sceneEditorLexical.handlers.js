@@ -501,7 +501,6 @@ export const handleCommandLineSubmit = async (deps, payload) => {
   // Handle section/scene transitions
   if (payload._event.detail.sectionTransition) {
     if (!lineId) {
-      console.warn("Section transition requires a selected line");
       return;
     }
 
@@ -556,7 +555,6 @@ export const handleCommandLineSubmit = async (deps, payload) => {
   // Handle pushOverlay
   if (payload._event.detail.pushOverlay) {
     if (!lineId) {
-      console.warn("Push overlay requires a selected line");
       return;
     }
 
@@ -605,7 +603,6 @@ export const handleCommandLineSubmit = async (deps, payload) => {
   // Handle popOverlay
   if (payload._event.detail.popOverlay) {
     if (!lineId) {
-      console.warn("Pop overlay requires a selected line");
       return;
     }
 
@@ -1619,9 +1616,8 @@ export const handlePreviewClick = (deps, payload) => {
       store.showPreviewSceneId({ sceneId, sectionId, lineId });
       store.setSkipNextEditorBlurDraftFlush({ value: false });
       render();
-    } catch (error) {
+    } catch {
       store.setSkipNextEditorBlurDraftFlush({ value: false });
-      console.error("[sceneEditor] Failed to open preview", { error });
       appService?.showAlert({
         message: didPersistDraft
           ? "Failed to open preview"
