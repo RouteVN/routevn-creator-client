@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleActionsDialogClose,
   handleCommandLineSubmit,
-} from "../../src/components/sceneEditorLexical/sceneEditorLexical.handlers.js";
+} from "../../src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js";
 
 describe("sceneEditorLexical.handlers actions dialog", () => {
   it("clears temporary presentation state and refreshes the canvas when the actions dialog closes", () => {

@@ -9,7 +9,7 @@ import {
   setSceneId,
   setPresentationState,
   setTemporaryPresentationState,
-} from "../../src/components/sceneEditorLexical/sceneEditorLexical.store.js";
+} from "../../src/pages/sceneEditorLexical/sceneEditorLexical.store.js";
 
 describe("sceneEditorLexical.store", () => {
   it("includes conditional branch section targets in the section graph", () => {

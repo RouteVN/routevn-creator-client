@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createInitialState,
   selectProjectData,
-} from "../../src/components/sceneEditorLexical/sceneEditorLexical.store.js";
+} from "../../src/pages/sceneEditorLexical/sceneEditorLexical.store.js";
 import { SKIP_MODE_CONDITION_TARGET } from "../../src/internal/layoutConditions.js";
 
 const createCollection = (items = {}) => ({

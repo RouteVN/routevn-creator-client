@@ -5,7 +5,7 @@ import {
   setPresentationState,
   setSectionLineChanges,
   setSelectedLineId,
-} from "../../src/components/sceneEditorLexical/sceneEditorLexical.store.js";
+} from "../../src/pages/sceneEditorLexical/sceneEditorLexical.store.js";
 
 const stalePresentationState = {
   background: {

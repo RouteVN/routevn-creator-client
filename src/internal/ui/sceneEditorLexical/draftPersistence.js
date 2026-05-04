@@ -160,13 +160,6 @@ export const createSceneEditorDraftPersistence = ({
 
           deps.render();
         } catch (error) {
-          console.error("[sceneEditor] Failed to save scene changes", {
-            error,
-            sceneId: draftSection?.sceneId,
-            sectionId: draftSection?.sectionId,
-            revision: store.selectRepositoryRevision(),
-            dirtyLineIds: snapshotLines.map((line) => line.id),
-          });
           if (showErrorAlert) {
             deps.appService?.showAlert({
               message: "Failed to save scene changes",
