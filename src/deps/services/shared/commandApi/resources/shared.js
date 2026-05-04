@@ -16,10 +16,6 @@ export const submitCreateResourceCommand = async ({
   fileRecords = [],
 }) => {
   const context = await shared.ensureCommandContext();
-  const fileCommands = shared.buildMissingFileCommands({
-    context,
-    fileRecords,
-  });
   const nextResourceId = idValue ?? shared.createId();
   const resolvedIndex = shared.resolveResourceIndex({
     state: context.state,
@@ -29,31 +25,33 @@ export const submitCreateResourceCommand = async ({
     positionTargetId,
     index,
   });
-
-  const submitResult = await shared.submitCommandsWithContext({
+  const ensureFilesResult = await shared.ensureFilesExist({
     context,
-    commands: [
-      ...fileCommands,
-      {
-        scope: "resources",
-        basePartition: createResourcePartition({
-          shared,
-          context,
-          resourceType,
-        }),
-        type,
-        payload: {
-          [idField]: nextResourceId,
-          data: structuredClone(data),
-          ...shared.buildPlacementPayload({
-            parentId,
-            index: resolvedIndex,
-            position,
-            positionTargetId,
-          }),
-        },
-      },
-    ],
+    fileRecords,
+  });
+  if (ensureFilesResult?.valid === false) {
+    return ensureFilesResult;
+  }
+
+  const submitResult = await shared.submitCommandWithContext({
+    context,
+    scope: "resources",
+    basePartition: createResourcePartition({
+      shared,
+      context,
+      resourceType,
+    }),
+    type,
+    payload: {
+      [idField]: nextResourceId,
+      data: structuredClone(data),
+      ...shared.buildPlacementPayload({
+        parentId,
+        index: resolvedIndex,
+        position,
+        positionTargetId,
+      }),
+    },
   });
 
   if (submitResult?.valid === false) {
@@ -73,29 +71,27 @@ export const submitUpdateResourceCommand = async ({
   fileRecords = [],
 }) => {
   const context = await shared.ensureCommandContext();
-  const fileCommands = shared.buildMissingFileCommands({
+  const ensureFilesResult = await shared.ensureFilesExist({
     context,
     fileRecords,
   });
+  if (ensureFilesResult?.valid === false) {
+    return ensureFilesResult;
+  }
 
-  return shared.submitCommandsWithContext({
+  return shared.submitCommandWithContext({
     context,
-    commands: [
-      ...fileCommands,
-      {
-        scope: "resources",
-        basePartition: createResourcePartition({
-          shared,
-          context,
-          resourceType,
-        }),
-        type,
-        payload: {
-          [idField]: idValue,
-          data: structuredClone(data),
-        },
-      },
-    ],
+    scope: "resources",
+    basePartition: createResourcePartition({
+      shared,
+      context,
+      resourceType,
+    }),
+    type,
+    payload: {
+      [idField]: idValue,
+      data: structuredClone(data),
+    },
   });
 };
 

@@ -25,32 +25,30 @@ export const createCharacterSpriteCommandApi = (shared) => ({
       context.projectId,
       "characters",
     );
-    const fileCommands = shared.buildMissingFileCommands({
+    const ensureFilesResult = await shared.ensureFilesExist({
       context,
       fileRecords,
     });
+    if (ensureFilesResult?.valid === false) {
+      return ensureFilesResult;
+    }
 
-    const submitResult = await shared.submitCommandsWithContext({
+    const submitResult = await shared.submitCommandWithContext({
       context,
-      commands: [
-        ...fileCommands,
-        {
-          scope: "resources",
-          basePartition: resourcePartition,
-          type: COMMAND_TYPES.CHARACTER_SPRITE_CREATE,
-          payload: {
-            characterId,
-            spriteId: nextSpriteId,
-            data: structuredClone(data || {}),
-            ...shared.buildPlacementPayload({
-              parentId,
-              index: resolvedIndex,
-              position,
-              positionTargetId,
-            }),
-          },
-        },
-      ],
+      scope: "resources",
+      basePartition: resourcePartition,
+      type: COMMAND_TYPES.CHARACTER_SPRITE_CREATE,
+      payload: {
+        characterId,
+        spriteId: nextSpriteId,
+        data: structuredClone(data || {}),
+        ...shared.buildPlacementPayload({
+          parentId,
+          index: resolvedIndex,
+          position,
+          positionTargetId,
+        }),
+      },
     });
 
     if (submitResult?.valid === false) {
@@ -71,26 +69,24 @@ export const createCharacterSpriteCommandApi = (shared) => ({
       context.projectId,
       "characters",
     );
-    const fileCommands = shared.buildMissingFileCommands({
+    const ensureFilesResult = await shared.ensureFilesExist({
       context,
       fileRecords,
     });
+    if (ensureFilesResult?.valid === false) {
+      return ensureFilesResult;
+    }
 
-    return shared.submitCommandsWithContext({
+    return shared.submitCommandWithContext({
       context,
-      commands: [
-        ...fileCommands,
-        {
-          scope: "resources",
-          basePartition: resourcePartition,
-          type: COMMAND_TYPES.CHARACTER_SPRITE_UPDATE,
-          payload: {
-            characterId,
-            spriteId,
-            data: structuredClone(data || {}),
-          },
-        },
-      ],
+      scope: "resources",
+      basePartition: resourcePartition,
+      type: COMMAND_TYPES.CHARACTER_SPRITE_UPDATE,
+      payload: {
+        characterId,
+        spriteId,
+        data: structuredClone(data || {}),
+      },
     });
   },
 
