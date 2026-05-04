@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  captureCanvasImage,
   captureCanvasThumbnailImage,
   preloadRuntimeSaveSlotImages,
   prepareRuntimeInteractionExecution,
@@ -96,6 +97,41 @@ describe("captureCanvasThumbnailImage", () => {
       225,
     );
     expect(result).toBe("data:image/jpeg;base64,thumb-fallback");
+  });
+});
+
+describe("captureCanvasImage", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("keeps RouteGraphics base64 captures at full size", async () => {
+    const graphicsService = {
+      extractBase64: vi.fn(async () => "data:image/png;base64,full"),
+    };
+
+    const result = await captureCanvasImage(graphicsService);
+
+    expect(graphicsService.extractBase64).toHaveBeenCalledWith("story");
+    expect(result).toBe("data:image/png;base64,full");
+  });
+
+  it("keeps DOM canvas fallback captures at full size", async () => {
+    const sourceCanvas = {
+      width: 1280,
+      height: 720,
+      toDataURL: vi.fn(() => "data:image/png;base64,full-fallback"),
+    };
+    const canvasRoot = {
+      querySelector: vi.fn(() => sourceCanvas),
+    };
+
+    const result = await captureCanvasImage(undefined, canvasRoot);
+
+    expect(canvasRoot.querySelector).toHaveBeenCalledWith("canvas");
+    expect(sourceCanvas.toDataURL).toHaveBeenCalledWith();
+    expect(result).toBe("data:image/png;base64,full-fallback");
   });
 });
 

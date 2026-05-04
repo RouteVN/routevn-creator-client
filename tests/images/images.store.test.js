@@ -7,6 +7,7 @@ import {
   setItems,
   setSelectedItemId,
   setTagsData,
+  showFullImagePreview,
 } from "../../src/pages/images/images.store.js";
 
 const createContext = () => ({
@@ -96,6 +97,32 @@ describe("images store detail tag draft", () => {
 });
 
 describe("images store preview navigation", () => {
+  it("uses the original file for the full preview overlay", () => {
+    const context = createContext();
+
+    setItems(context, {
+      data: {
+        tree: [{ id: "image-1" }],
+        items: {
+          "image-1": {
+            id: "image-1",
+            type: "image",
+            name: "Image 1",
+            fileId: "original-file",
+            thumbnailFileId: "thumbnail-file",
+          },
+        },
+      },
+    });
+
+    showFullImagePreview(context, {
+      itemId: "image-1",
+    });
+
+    expect(context.state.fullImagePreviewVisible).toBe(true);
+    expect(context.state.fullImagePreviewFileId).toBe("original-file");
+  });
+
   it("jumps adjacent image selection by distance and clamps to visible bounds", () => {
     const context = createContext();
 

@@ -174,23 +174,23 @@ const resolveVariableFormValues = ({
     ...prevValues,
     ...newValues,
   };
-  const type = nextValues.type ?? "string";
-  const typeChanged = type !== prevValues.type;
-  let isEnum = type === "string" && nextValues.isEnum === true;
+  const variableType = nextValues.variableType ?? "string";
+  const variableTypeChanged = variableType !== prevValues.variableType;
+  let isEnum = variableType === "string" && nextValues.isEnum === true;
   let enumValues = isEnum
     ? normalizeVariableEnumValues(nextValues.enumValues)
     : [];
   let defaultValue = nextValues.default;
 
-  if (!isEditMode && typeChanged) {
-    defaultValue = getDefaultValueByType(type);
-    if (type === "string") {
+  if (!isEditMode && variableTypeChanged) {
+    defaultValue = getDefaultValueByType(variableType);
+    if (variableType === "string") {
       isEnum = false;
       enumValues = [];
     }
   }
 
-  if (type !== "string") {
+  if (variableType !== "string") {
     isEnum = false;
     enumValues = [];
   }
@@ -201,7 +201,7 @@ const resolveVariableFormValues = ({
 
   return {
     ...nextValues,
-    type,
+    variableType,
     isEnum,
     enumValues,
     default: defaultValue,
@@ -231,9 +231,11 @@ const openEditDialogForItem = ({ deps, itemId } = {}) => {
   }
 
   const { group, item } = found;
-  const type = item.type || "string";
+  const variableType = item.variableType || "string";
   const defaultValue =
-    item.default === undefined ? getDefaultValueByType(type) : item.default;
+    item.default === undefined
+      ? getDefaultValueByType(variableType)
+      : item.default;
 
   dispatchEvent(
     new CustomEvent("variable-item-click", {
@@ -251,7 +253,7 @@ const openEditDialogForItem = ({ deps, itemId } = {}) => {
       description: item.description || "",
       tagIds: item.tagIds ?? [],
       scope: item.scope || "context",
-      type,
+      variableType,
       isEnum: isVariableEnumEnabled(item),
       enumValues: normalizeVariableEnumValues(item.enumValues),
       default: defaultValue,
@@ -601,8 +603,11 @@ export const handleFormActionClick = (deps, payload) => {
     const editingItemId = storeState.editingItemId;
     const scope =
       formData.scope ?? storeState.defaultValues?.scope ?? "context";
-    const type = formData.type ?? storeState.defaultValues?.type ?? "string";
-    const isEnum = type === "string" && formData.isEnum === true;
+    const variableType =
+      formData.variableType ??
+      storeState.defaultValues?.variableType ??
+      "string";
+    const isEnum = variableType === "string" && formData.isEnum === true;
     const enumValues = isEnum
       ? normalizeVariableEnumValues(formData.enumValues)
       : [];
@@ -654,7 +659,7 @@ export const handleFormActionClick = (deps, payload) => {
     // Set default value based on type if not provided
     let defaultValue = formData.default;
     if (defaultValue === undefined || defaultValue === "") {
-      defaultValue = getDefaultValueByType(type);
+      defaultValue = getDefaultValueByType(variableType);
     }
     if (isEnum) {
       defaultValue = formData.default;
@@ -669,7 +674,7 @@ export const handleFormActionClick = (deps, payload) => {
             description: formData.description ?? "",
             tagIds: Array.isArray(formData.tagIds) ? formData.tagIds : [],
             scope,
-            type,
+            variableType,
             isEnum,
             enumValues,
             default: defaultValue,
@@ -688,7 +693,7 @@ export const handleFormActionClick = (deps, payload) => {
             description: formData.description ?? "",
             tagIds: Array.isArray(formData.tagIds) ? formData.tagIds : [],
             scope,
-            type,
+            variableType,
             isEnum,
             enumValues,
             default: defaultValue,

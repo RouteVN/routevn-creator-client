@@ -33,24 +33,25 @@ const createVariableResourceData = ({
   name,
   description = "",
   scope = "device",
-  type = "string",
+  variableType = "string",
   defaultValue = "",
   isEnum = false,
   enumValues = [],
   tagIds,
 } = {}) => {
-  const enumEnabled = type === "string" && isEnum === true;
+  const enumEnabled = variableType === "string" && isEnum === true;
   const data = {
     name,
     description,
     scope,
-    type,
+    type: "variable",
+    variableType,
     default: defaultValue,
     value: defaultValue,
   };
   const normalizedTagIds = normalizeOptionalTagIds(tagIds);
 
-  if (type === "string") {
+  if (variableType === "string") {
     data.isEnum = enumEnabled;
     data.enumValues = enumEnabled
       ? normalizeVariableEnumValues(enumValues)
@@ -384,7 +385,7 @@ export const handleVariableCreated = async (deps, payload) => {
     description,
     tagIds,
     scope,
-    type,
+    variableType,
     isEnum,
     enumValues,
     default: defaultValue,
@@ -401,7 +402,7 @@ export const handleVariableCreated = async (deps, payload) => {
           description,
           tagIds,
           scope,
-          type,
+          variableType,
           isEnum,
           enumValues,
           defaultValue,
@@ -426,7 +427,7 @@ export const handleVariableUpdated = async (deps, payload) => {
     description,
     tagIds,
     scope,
-    type,
+    variableType,
     isEnum,
     enumValues,
     default: defaultValue,
@@ -443,10 +444,10 @@ export const handleVariableUpdated = async (deps, payload) => {
     value: defaultValue,
   };
   const selectedItem = store.selectSelectedItem();
-  const variableType = type ?? selectedItem?.type;
+  const nextVariableType = variableType ?? selectedItem?.variableType;
   const normalizedTagIds = normalizeOptionalTagIds(tagIds);
 
-  if (variableType === "string") {
+  if (nextVariableType === "string") {
     data.isEnum = isEnum === true;
     data.enumValues =
       isEnum === true ? normalizeVariableEnumValues(enumValues) : [];

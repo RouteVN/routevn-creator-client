@@ -87,6 +87,10 @@ export const normalizeFontFileType = ({ fileType, fileName } = {}) => {
     return FONT_MIME_ALIASES[normalizedType];
   }
 
+  if (normalizedType && FONT_EXTENSION_TO_MIME[normalizedType]) {
+    return FONT_EXTENSION_TO_MIME[normalizedType];
+  }
+
   return getFontMimeTypeFromExtension(fileName);
 };
 
@@ -96,7 +100,7 @@ export const formatFontFileTypeLabel = ({ fileType, fileName } = {}) => {
     return "Unknown";
   }
 
-  return normalizedType.replace("font/", "").toUpperCase();
+  return normalizedType;
 };
 
 /**

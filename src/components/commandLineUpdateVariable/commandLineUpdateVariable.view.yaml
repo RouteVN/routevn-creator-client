@@ -37,6 +37,10 @@ refs:
     eventListeners:
       value-change:
         handler: handleBooleanSelectChange
+  enumValueSelect:
+    eventListeners:
+      value-change:
+        handler: handleEnumValueSelectChange
   dropdownMenu:
     eventListeners:
       close:
@@ -74,7 +78,10 @@ template:
               - $if showValueField && valueInputType == 'boolean':
                   - rtgl-text s=sm c=mu-fg mt=lg mb=sm: Value
                   - rtgl-select#booleanSelect w=f :selectedValue=${tempOperation.booleanValue} :options=${booleanOptions}: null
-              - $if showValueField && valueInputType == 'string':
+              - $if showValueField && showEnumValueSelect:
+                  - rtgl-text s=sm c=mu-fg mt=lg mb=sm: Value
+                  - rtgl-select#enumValueSelect w=f :selectedValue=${tempOperation.value} :options=${enumValueOptions} placeholder="Choose a value...": null
+              - $if showValueField && valueInputType == 'string' && !showEnumValueSelect:
                   - rtgl-text s=sm c=mu-fg mt=lg mb=sm: Value
                   - rtgl-input#valueInput w=f placeholder="Enter text..." value=${tempOperation.value}: null
           - rtgl-view h=1fg: null

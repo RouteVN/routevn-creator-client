@@ -28,5 +28,11 @@ propsSchema:
       type: array
       items:
         type: string
+    allowedModes:
+      type: array
+      items:
+        type: string
     showSelected:
+      type: boolean
+    showEmbeddedClose:
       type: boolean

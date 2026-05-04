@@ -1,7 +1,7 @@
-import { generateId, generatePrefixedId } from "../../internal/id.js";
+import { generateId } from "../../internal/id.js";
 import { createFontInfoExtractor } from "./support/fontInfoExtractor.js";
 import { recursivelyCheckResource } from "../../internal/project/projection.js";
-import { processWithConcurrency } from "../../internal/processWithConcurrency.js";
+import { processPendingUploads } from "../../internal/ui/resourcePages/media/processPendingUploads.js";
 import {
   buildFontResourceDataFromUploadResult,
   buildFontResourcePatchFromUploadResult,
@@ -25,7 +25,6 @@ import { FONT_TAG_SCOPE_KEY } from "./fonts.store.js";
 const FONT_FILE_PATTERN = /\.(ttf|otf|woff|woff2|ttc|eot)$/i;
 const FONT_FILE_ACCEPT = ".ttf,.otf,.woff,.woff2,.ttc,.eot";
 const MAX_PARALLEL_UPLOADS = 1;
-const CREATE_FONT_ABORT_ERROR = "create-font-abort";
 
 const showInvalidFormatToast = (appService) => {
   appService.showAlert({
@@ -83,135 +82,72 @@ const pickAndUploadFont = async ({ appService, projectService } = {}) => {
   return { uploadResult };
 };
 
-const createPendingUploads = ({ files, parentId } = {}) => {
-  if (!parentId) {
-    return [];
-  }
-
-  return (Array.isArray(files) ? files : []).map((file) => ({
-    id: generatePrefixedId("pending-font-"),
-    file,
-    parentId,
-    name: file.name.replace(/\.[^.]+$/, ""),
-  }));
-};
-
-const createFontAbortError = () => {
-  const error = new Error(CREATE_FONT_ABORT_ERROR);
-  error.code = CREATE_FONT_ABORT_ERROR;
-  return error;
-};
-
 const createFontsFromFiles = async ({ deps, files, parentId } = {}) => {
-  const { appService, projectService, store, render } = deps;
+  const { appService, projectService, store } = deps;
   if (!validateFontFiles({ appService, files })) {
     return;
   }
 
-  const pendingUploads = createPendingUploads({ files, parentId });
-  const remainingPendingUploadIds = new Set(
-    pendingUploads.map((item) => item.id),
-  );
-  const pendingUploadIdByFile = new Map(
-    pendingUploads.map((item) => [item.file, item.id]),
-  );
-  const removePendingUploads = (itemIds) => {
-    const normalizedItemIds = (itemIds ?? []).filter((itemId) =>
-      remainingPendingUploadIds.has(itemId),
-    );
-    if (normalizedItemIds.length === 0) {
-      return;
-    }
+  await processPendingUploads({
+    deps,
+    files,
+    parentId,
+    pendingIdPrefix: "pending-font",
+    concurrency: MAX_PARALLEL_UPLOADS,
+    refresh: handleDataChanged,
+    processFile: async ({ file, pendingUploadId, removePendingUpload }) => {
+      const uploadResults = await projectService.uploadFiles([file]);
+      const uploadResult = uploadResults?.[0];
 
-    store.removePendingUploads({ itemIds: normalizedItemIds });
-    normalizedItemIds.forEach((itemId) =>
-      remainingPendingUploadIds.delete(itemId),
-    );
-    render();
-  };
+      if (!uploadResult) {
+        throw new Error("upload-failed");
+      }
 
-  if (pendingUploads.length > 0) {
-    store.addPendingUploads({
-      items: pendingUploads.map((item) => ({
-        id: item.id,
-        parentId: item.parentId,
-        name: item.name,
-      })),
-    });
-    render();
-  }
+      const fontId = generateId();
+      store.updatePendingUpload({
+        itemId: pendingUploadId,
+        updates: {
+          resolvedItemId: fontId,
+        },
+      });
 
-  let successfulUploadCount = 0;
-  let createdCount = 0;
-
-  try {
-    await processWithConcurrency(
-      Array.isArray(files) ? files : [],
-      async (file) => {
-        const pendingUploadId = pendingUploadIdByFile.get(file);
-        const uploadResults = await projectService.uploadFiles([file]);
-        const uploadResult = uploadResults?.[0];
-
-        if (!uploadResult) {
-          removePendingUploads([pendingUploadId]);
-          return { ok: false, reason: "upload-failed" };
-        }
-
-        successfulUploadCount += 1;
-
-        const createAttempt = await runResourcePageMutation({
-          appService,
-          fallbackMessage: "Failed to create font.",
-          action: () =>
-            projectService.createFont({
-              fontId: generateId(),
-              fileRecords: uploadResult.fileRecords,
-              data: buildFontResourceDataFromUploadResult({
-                uploadResult,
-                fontFamily: uploadResult.fontName,
-              }),
-              parentId,
-              position: "last",
+      const createAttempt = await runResourcePageMutation({
+        appService,
+        fallbackMessage: "Failed to create font.",
+        action: () =>
+          projectService.createFont({
+            fontId,
+            fileRecords: uploadResult.fileRecords,
+            data: buildFontResourceDataFromUploadResult({
+              uploadResult,
+              fontFamily: uploadResult.fontName,
             }),
-        });
+            parentId,
+            position: "last",
+          }),
+      });
 
-        removePendingUploads([pendingUploadId]);
-
-        if (!createAttempt.ok) {
-          throw createFontAbortError();
-        }
-
-        createdCount += 1;
+      if (createAttempt.ok) {
         await handleDataChanged(deps);
-        return { ok: true };
-      },
-      {
-        concurrency: MAX_PARALLEL_UPLOADS,
-        stopOnError: true,
-      },
-    );
-  } catch (error) {
-    removePendingUploads([...remainingPendingUploadIds]);
-    if (error?.code === CREATE_FONT_ABORT_ERROR) {
-      return;
-    }
+        removePendingUpload();
+      }
 
-    showResourcePageError({
-      appService,
-      errorOrResult: error,
-      fallbackMessage: "Failed to upload font.",
-    });
-    return;
-  }
-
-  if (successfulUploadCount === 0) {
-    appService.showAlert({ message: "Failed to upload font.", title: "Error" });
-    return;
-  }
-
-  if (createdCount > 0) {
-    await handleDataChanged(deps);
-  }
+      return createAttempt.ok;
+    },
+    onUploadError: ({ error }) => {
+      showResourcePageError({
+        appService,
+        errorOrResult: error,
+        fallbackMessage: "Failed to upload font.",
+      });
+    },
+    onNoSuccessfulUploads: () => {
+      appService.showAlert({
+        message: "Failed to upload font.",
+        title: "Error",
+      });
+    },
+  });
 };
 
 const loadFontInfo = async (deps, { itemId } = {}) => {

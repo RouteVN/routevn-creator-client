@@ -143,7 +143,7 @@ template:
                                                   - rtgl-view w=1fg:
                                                       - rtgl-text s=sm: ${item.scope}
                                                   - rtgl-view w=1fg:
-                                                      - rtgl-text s=sm: ${item.type}
+                                                      - rtgl-text s=sm: ${item.variableType}
                                                   - rtgl-view w=1fg:
                                                       - rtgl-text s=sm: ${item.default}
                                             $else:
@@ -155,7 +155,7 @@ template:
                                                   - rtgl-view w=1fg:
                                                       - rtgl-text s=sm: ${item.scope}
                                                   - rtgl-view w=1fg:
-                                                      - rtgl-text s=sm: ${item.type}
+                                                      - rtgl-text s=sm: ${item.variableType}
                                                   - rtgl-view w=1fg:
                                                       - rtgl-text s=sm: ${item.default}
                                 $else:

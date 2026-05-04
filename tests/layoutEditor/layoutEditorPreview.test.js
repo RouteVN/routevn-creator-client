@@ -16,8 +16,12 @@ describe("layoutEditorPreview", () => {
     const previewData = createLayoutEditorPreviewData({
       variablesData: {
         items: {
-          numberVar: { type: "number", value: "7" },
-          boolVar: { type: "boolean", value: "true" },
+          numberVar: { type: "variable", variableType: "number", value: "7" },
+          boolVar: {
+            type: "variable",
+            variableType: "boolean",
+            value: "true",
+          },
           folder: { type: "folder" },
         },
       },
@@ -419,8 +423,12 @@ describe("layoutEditorPreview", () => {
     const previewData = createLayoutEditorPreviewData({
       variablesData: {
         items: {
-          score: { type: "number", default: 1 },
-          enabled: { type: "boolean", default: false },
+          score: { type: "variable", variableType: "number", default: 1 },
+          enabled: {
+            type: "variable",
+            variableType: "boolean",
+            default: false,
+          },
         },
       },
       previewVariableValues: {

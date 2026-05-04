@@ -39,8 +39,45 @@ const getHiddenModes = (attrs = {}) => {
     : [];
 };
 
+const getAllowedModes = (attrs = {}) => {
+  return Array.isArray(attrs.allowedModes)
+    ? attrs.allowedModes.filter(
+        (mode) => typeof mode === "string" && mode.length > 0,
+      )
+    : [];
+};
+
 const getDialogVariant = (attrs = {}) =>
   attrs.dialogVariant === "scene-editor-left" ? "scene-editor-left" : "default";
+
+const parseBooleanProp = (value, fallback = false) => {
+  if (value === undefined || value === null) {
+    return fallback;
+  }
+
+  if (value === true || value === "") {
+    return true;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "1") {
+      return true;
+    }
+    if (normalized === "false" || normalized === "0") {
+      return false;
+    }
+  }
+
+  return Boolean(value);
+};
+
+const shouldShowEmbeddedClose = (attrs = {}) => {
+  return (
+    attrs.actionType === "system" &&
+    parseBooleanProp(attrs.showEmbeddedClose, true)
+  );
+};
 
 export const selectViewData = ({ state, props, props: attrs }) => {
   const displayActions = selectDisplayActions({ state });
@@ -51,6 +88,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     state,
   });
   const hiddenModes = getHiddenModes(attrs);
+  const allowedModes = getAllowedModes(attrs);
 
   const repositoryState = state.repositoryState;
   const choiceLayouts = Object.entries(repositoryState.layouts?.items || {})
@@ -120,6 +158,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     selectedLine: props.selectedLine,
     actionsType: attrs.actionType,
     showSelected: !!attrs.showSelected,
+    showEmbeddedClose: shouldShowEmbeddedClose(attrs),
     dialogVariant: getDialogVariant(attrs),
     actionsDialogWidth: state.isTouchMode ? "100vw" : "800",
     actionsDialogHeight: state.isTouchMode ? "100vh" : "80vh",
@@ -127,6 +166,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       ? "100vw"
       : (attrs.dialogPanelWidth ?? "50vw"),
     hiddenModes,
+    allowedModes,
     isRuntimeActionMode: isRuntimeActionMode(state.mode),
   };
 };

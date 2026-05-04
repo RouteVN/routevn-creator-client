@@ -1,35 +1,24 @@
 import { getVariableOptions } from "../../internal/project/projection.js";
+import {
+  buildVariableEnumOptions,
+  isVariableEnumEnabled,
+  normalizeVariableEnumValues,
+} from "../../internal/variableEnums.js";
 
-const CONDITION_KIND_OPTIONS = [
-  { value: "variable", label: "Variable" },
-  { value: "expression", label: "Expression" },
-  { value: "json", label: "Semantic JSON" },
+const CONDITION_OPERATOR_OPTIONS = [
+  { value: "eq", label: "Equals" },
+  { value: "neq", label: "Does Not Equal" },
 ];
 
-const CONDITION_OPERATOR_OPTIONS_BY_TYPE = {
-  number: [
-    { value: "eq", label: "Equals" },
-    { value: "neq", label: "Does Not Equal" },
-    { value: "gt", label: "Greater Than" },
-    { value: "gte", label: "Greater Or Equal" },
-    { value: "lt", label: "Less Than" },
-    { value: "lte", label: "Less Or Equal" },
-  ],
-  boolean: [
-    { value: "eq", label: "Equals" },
-    { value: "neq", label: "Does Not Equal" },
-  ],
-  string: [
-    { value: "eq", label: "Equals" },
-    { value: "neq", label: "Does Not Equal" },
-  ],
-};
-
 const CONDITION_OPERATOR_LABELS = Object.fromEntries(
-  Object.values(CONDITION_OPERATOR_OPTIONS_BY_TYPE)
-    .flat()
-    .map((option) => [option.value, option.label]),
+  CONDITION_OPERATOR_OPTIONS.map((option) => [option.value, option.label]),
 );
+
+const BRANCH_ACTION_ALLOWED_MODES = [
+  "sectionTransition",
+  "resetStoryAtSection",
+  "updateVariable",
+];
 
 const toPlainObject = (value) => {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -46,8 +35,6 @@ const createEmptyTempBranch = () => ({
   variableId: "",
   op: "eq",
   value: "",
-  expression: "",
-  json: "",
   actions: {},
 });
 
@@ -56,20 +43,15 @@ const createDefaultTempBranch = (actions = {}) => ({
   variableId: "",
   op: "eq",
   value: "",
-  expression: "",
-  json: "",
   actions: toPlainObject(actions),
 });
 
 const getVariableType = (variable) => {
-  return (variable?.type || "string").toLowerCase();
+  return (variable?.variableType || "string").toLowerCase();
 };
 
-const getConditionOperatorOptions = (variableType) => {
-  return (
-    CONDITION_OPERATOR_OPTIONS_BY_TYPE[variableType] ??
-    CONDITION_OPERATOR_OPTIONS_BY_TYPE.string
-  );
+const getConditionOperatorOptions = () => {
+  return CONDITION_OPERATOR_OPTIONS;
 };
 
 const getSimpleCondition = (when = {}) => {
@@ -77,10 +59,16 @@ const getSimpleCondition = (when = {}) => {
     return undefined;
   }
 
-  const operator = Object.keys(when).find((key) =>
-    Object.hasOwn(CONDITION_OPERATOR_LABELS, key),
-  );
-  const operands = operator ? when[operator] : undefined;
+  const entries = Object.entries(when);
+  if (entries.length !== 1) {
+    return undefined;
+  }
+
+  const [[operator, operands]] = entries;
+  if (!Object.hasOwn(CONDITION_OPERATOR_LABELS, operator)) {
+    return undefined;
+  }
+
   if (!Array.isArray(operands) || operands.length !== 2) {
     return undefined;
   }
@@ -122,7 +110,7 @@ const getBranchSummary = (branch, variablesData = {}) => {
   }
 
   if (typeof branch.when === "string") {
-    return branch.when;
+    return "Unsupported expression condition";
   }
 
   const simpleCondition = getSimpleCondition(branch.when);
@@ -134,7 +122,7 @@ const getBranchSummary = (branch, variablesData = {}) => {
     return `${variableName} ${operatorLabel} ${formatConditionValue(simpleCondition.value)}`;
   }
 
-  return "Semantic JSON condition";
+  return "Unsupported condition";
 };
 
 const hasBranchCondition = (branch) => {
@@ -283,13 +271,29 @@ export const selectDropdownMenuBranchId = ({ state }) => {
 
 export const selectViewData = ({ state, props }) => {
   const variableItems = state.variablesData?.items ?? {};
-  const variableOptions = getVariableOptions(state.variablesData, {
-    showType: true,
-  });
+  const variableOptions = getVariableOptions(state.variablesData).map(
+    (option) => {
+      const variable = variableItems[option.value];
+      const variableType = getVariableType(variable);
+      return {
+        ...option,
+        suffixText: variableType,
+      };
+    },
+  );
   const selectedVariable = variableItems[state.tempBranch.variableId];
   const selectedType = getVariableType(selectedVariable);
-  const operatorOptions = getConditionOperatorOptions(selectedType);
-  const showValueField = state.tempBranch.conditionKind === "variable";
+  const selectedEnumValues = isVariableEnumEnabled(selectedVariable)
+    ? normalizeVariableEnumValues(selectedVariable.enumValues)
+    : [];
+  const showEnumValueSelect =
+    selectedType === "string" &&
+    selectedEnumValues.length > 0 &&
+    state.tempBranch.conditionKind === "variable";
+  const operatorOptions = getConditionOperatorOptions();
+  const showValueField =
+    state.tempBranch.conditionKind === "variable" &&
+    Boolean(state.tempBranch.variableId);
   const actionCount = countActions(state.tempBranch.actions);
 
   const booleanOptions = [
@@ -331,25 +335,16 @@ export const selectViewData = ({ state, props }) => {
       label: "Conditional",
       click: state.mode !== "current",
     },
-    ...(state.mode === "editBranch"
-      ? [{ label: editBranchLabel }]
-      : state.mode === "branchActions"
-        ? [
-            { id: "editBranch", label: editBranchLabel, click: true },
-            { label: "Actions" },
-          ]
-        : []),
+    ...(state.mode === "editBranch" ? [{ label: editBranchLabel }] : []),
   ];
 
   const canSaveBranch =
     state.tempBranch.conditionKind === "default" ||
     (state.tempBranch.conditionKind === "variable" &&
       state.tempBranch.variableId &&
-      state.tempBranch.op) ||
-    (state.tempBranch.conditionKind === "expression" &&
-      state.tempBranch.expression.trim().length > 0) ||
-    (state.tempBranch.conditionKind === "json" &&
-      state.tempBranch.json.trim().length > 0);
+      Object.hasOwn(CONDITION_OPERATOR_LABELS, state.tempBranch.op) &&
+      (!showEnumValueSelect ||
+        selectedEnumValues.includes(state.tempBranch.value)));
 
   return {
     initiated: state.initiated,
@@ -362,10 +357,11 @@ export const selectViewData = ({ state, props }) => {
       ...state.tempBranch,
       booleanValue,
     },
-    conditionKindOptions: CONDITION_KIND_OPTIONS,
     variableOptions,
     operatorOptions,
     booleanOptions,
+    enumValueOptions: buildVariableEnumOptions(selectedEnumValues),
+    showEnumValueSelect,
     showValueField,
     valueInputType: selectedType,
     branchActions: state.tempBranch.actions,
@@ -373,6 +369,7 @@ export const selectViewData = ({ state, props }) => {
       actionCount > 0
         ? `${actionCount} action${actionCount === 1 ? "" : "s"}`
         : "No actions",
+    branchActionAllowedModes: BRANCH_ACTION_ALLOWED_MODES,
     hasBranches: state.branches.length > 0,
     canSaveBranch,
     isEditingDefault: state.tempBranch.conditionKind === "default",

@@ -63,6 +63,42 @@ refs:
         handler: handleTransformFormChange
       add-option-click:
         handler: handleTransformFormAddOptionClick
+  transformPreviewImageButton*:
+    eventListeners:
+      click:
+        handler: handleTransformPreviewImageClick
+  transformPreviewImageSelectorDialog:
+    eventListeners:
+      close:
+        handler: handleTransformPreviewImageSelectorCancel
+  transformPreviewImageSelectorKeyboardScope:
+    eventListeners:
+      click:
+        handler: handleTransformPreviewImageSelectorKeyboardScopeClick
+      keydown:
+        handler: handleTransformPreviewImageSelectorKeyboardScopeKeyDown
+  transformPreviewImageSelector:
+    eventListeners:
+      image-selected:
+        handler: handleTransformPreviewImageSelected
+      image-dblclick:
+        handler: handleTransformPreviewImageDoubleClick
+  transformPreviewImageSelectorFileExplorer:
+    eventListeners:
+      item-click:
+        handler: handleTransformPreviewImageSelectorFileExplorerClick
+  cancelTransformPreviewImageSelection:
+    eventListeners:
+      click:
+        handler: handleTransformPreviewImageSelectorCancel
+  confirmTransformPreviewImageSelection:
+    eventListeners:
+      click:
+        handler: handleTransformPreviewImageSelectorSubmit
+  previewOverlay:
+    eventListeners:
+      click:
+        handler: handleTransformPreviewImagePreviewOverlayClick
   detailHeader:
     eventListeners:
       click:
@@ -120,7 +156,14 @@ template:
                                       - rtgl-svg svg=edit wh=16: null
                                   - rvn-detail-view#detailView key=${selectedDetailId} w=f h=1fg :fields=${detailFields}:
                                       - $if selectedItem:
-                                          - rvn-transform-thumbnail slot="transform-preview" :item=${selectedItem} :resolution=${projectResolution} canvas-aspect-ratio="${canvasAspectRatio}" w=f h=180: null
+                                          - 'rtgl-view slot="transform-preview" w=f bw=xs bc=bo br=md style="aspect-ratio: 16 / 9; overflow: hidden;"':
+                                              - $if selectedItem.thumbnailFileId:
+                                                  - rvn-file-image fileId=${selectedItem.thumbnailFileId} w=f h=f br=md: null
+                                                $else:
+                                                  - rtgl-view w=f h=f av=c ah=c bgc=bg:
+                                                      - rtgl-view d=v av=c ah=c g=xs ph=sm:
+                                                          - rtgl-text s=xs c=mu-fg: No preview image
+                                                          - rtgl-text s=xs c=mu-fg: Update to set preview
                                       - $if selectedItemId:
                                           - rtgl-tag-select#detailTagSelect slot="transform-tags" w=f :options=${tagFilterOptions} :selectedValues=${selectedItemTagIds} :draftSelectedValues=${detailTagDraftValues} :open=${isDetailTagSelectOpen} :addOption=${detailTagAddOption} placeholder="Add tag": null
                             $else:
@@ -153,14 +196,53 @@ template:
                       - rtgl-form#transformForm :defaultValues=${dialogDefaultValues} :form=${transformForm} w=f: null
               - $if isPreviewOnlyDialog:
                   - rtgl-view w=f d=v g=md:
-                      - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: ${canvasAspectRatio};"':
-                          - rtgl-view pos=abs cor=full:
-                              - 'div#canvas style="width: 100%; height: 100%;display: flex; background-color: var(--muted);"': null
+                      - 'rtgl-view w=f style="aspect-ratio: 16 / 9; overflow: hidden;"':
+                          - $if dialogPreviewFileId:
+                              - rvn-file-image fileId=${dialogPreviewFileId} w=f h=f: null
+                            $else:
+                              - rtgl-view w=f h=f av=c ah=c bgc=bg:
+                                  - rtgl-view d=v av=c ah=c g=xs ph=sm:
+                                      - rtgl-text s=xs c=mu-fg: No preview image
+                                      - rtgl-text s=xs c=mu-fg: Update to set preview
                 $else:
                   - rtgl-view w=6fg lg-w=f d=v g=md:
                       - rtgl-text: Preview
                       - 'rtgl-view w=f bgc=fg pos=rel style="aspect-ratio: ${canvasAspectRatio};"':
                           - rtgl-view pos=abs cor=full:
-                              - 'div#canvas style="width: 100%; height: 100%;display: flex; background-color: var(--muted);"': null
+                              - 'div#canvas style="width: 100%; height: 100%; display: flex; background: #000;"': null
+                      - rtgl-view d=h lg-d=v wrap g=md w=f:
+                          - $for item, i in previewPanel.items:
+                              - rtgl-view d=v w=160 lg-w=f g=xs:
+                                  - rtgl-text s=sm c=mu-fg: ${item.label}
+                                  - $if item.image:
+                                      - 'rtgl-view#transformPreviewImageButton${i} data-target=${item.target} cur=pointer bw=xs bc=${item.image.itemBorderColor} h-bc=${item.image.itemHoverBorderColor} br=md w=160 style="max-width: 100%; box-sizing: border-box;"':
+                                          - 'rtgl-view p=md g=md br=md w=f style="max-width: 100%; box-sizing: border-box;"':
+                                              - $if item.image.previewFileId:
+                                                  - 'rtgl-view w=f br=md style="aspect-ratio: ${item.image.previewAspectRatio}; overflow: hidden;"':
+                                                      - rvn-file-image br=md w=f h=f fileId=${item.image.previewFileId}: null
+                                                $else:
+                                                  - rtgl-view w=f h=90 br=md bw=xs bc=bo av=c ah=c:
+                                                      - rtgl-text s=xs c=mu-fg: No preview
+                                              - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.image.name}
+                                    $else:
+                                      - 'rtgl-view#transformPreviewImageButton${i} data-target=${item.target} w=160 h=90 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer style="max-width: 100%; box-sizing: border-box;"':
+                                          - rtgl-text c=mu-fg s=sm: Select image
+  - rtgl-dialog#transformPreviewImageSelectorDialog ?open=${imageSelectorDialog.open} s=xl:
+      - $if imageSelectorDialog.open:
+          - rtgl-view slot=content d=v w=f g=md:
+              - 'rtgl-view d=h w=f h=70vh g=lg style="min-width: 0; min-height: 0;"':
+                  - 'rtgl-view w=300 h=f style="min-width: 0; min-height: 0;"':
+                      - rvn-base-file-explorer#transformPreviewImageSelectorFileExplorer :items=${imageFolderItems} shrinkable: null
+                  - 'rtgl-view#transformPreviewImageSelectorKeyboardScope tabindex=-1 w=1fg h=f style="min-width: 0; min-height: 0; outline: none;"':
+                      - rvn-image-selector#transformPreviewImageSelector selectedImageId=${imageSelectorDialog.selectedImageId}: null
+              - rtgl-view d=h g=sm w=f ah=e:
+                  - rtgl-button#cancelTransformPreviewImageSelection variant=se: Cancel
+                  - rtgl-button#confirmTransformPreviewImageSelection variant=pr: OK
+  - $when: fullImagePreviewVisible
+    'div#previewOverlay tabindex=0 style="position: fixed; inset: 0; z-index: 3000; cursor: pointer; outline: none;"':
+      - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
+      - $if fullImagePreviewFileId:
+          - rtgl-view pos=fix edge=f ah=c av=c z=3001:
+              - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=ac bw=xs br=md: null
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null

@@ -22,7 +22,7 @@ const DEFAULT_FORM_VALUES = {
   name: "",
   description: "",
   scope: "context",
-  type: "string",
+  variableType: "string",
   isEnum: false,
   enumValues: [],
   default: "",
@@ -94,7 +94,6 @@ export const createInitialState = () => ({
 
   form: {
     title: "Add Variable",
-    description: "Create a new variable",
     fields: [
       {
         name: "name",
@@ -135,7 +134,7 @@ export const createInitialState = () => ({
         ],
       },
       {
-        name: "type",
+        name: "variableType",
         type: "select",
         label: "Type",
         required: true,
@@ -146,19 +145,19 @@ export const createInitialState = () => ({
         ],
       },
       {
-        $when: "values.type == 'string'",
+        $when: "values.variableType == 'string'",
         name: "isEnum",
         type: "checkbox",
         content: "Enum",
       },
       {
-        $when: "values.type == 'string' && values.isEnum == true",
+        $when: "values.variableType == 'string' && values.isEnum == true",
         type: "slot",
         slot: "enum-values",
         label: "Values",
       },
       {
-        $when: "values.type == 'boolean'",
+        $when: "values.variableType == 'boolean'",
         name: "default",
         type: "select",
         label: "Default",
@@ -169,14 +168,14 @@ export const createInitialState = () => ({
         required: true,
       },
       {
-        $when: "values.type == 'string' && values.isEnum != true",
+        $when: "values.variableType == 'string' && values.isEnum != true",
         name: "default",
         type: "input-text",
         label: "Default",
         required: false,
       },
       {
-        $when: "values.type == 'string' && values.isEnum == true",
+        $when: "values.variableType == 'string' && values.isEnum == true",
         name: "default",
         type: "select",
         label: "Default",
@@ -185,7 +184,7 @@ export const createInitialState = () => ({
         required: false,
       },
       {
-        $when: "values.type == 'number'",
+        $when: "values.variableType == 'number'",
         name: "default",
         type: "input-number",
         label: "Default",
@@ -382,12 +381,12 @@ export const selectViewData = ({ state, props }) => {
     }
 
     const scope = (item.scope || "").toLowerCase();
-    const type = (item.type || "").toLowerCase();
+    const variableType = (item.variableType || "").toLowerCase();
     const defaultValue = String(item.default ?? "").toLowerCase();
 
     return (
       scope.includes(searchQuery) ||
-      type.includes(searchQuery) ||
+      variableType.includes(searchQuery) ||
       defaultValue.includes(searchQuery)
     );
   };
@@ -422,7 +421,7 @@ export const selectViewData = ({ state, props }) => {
               name: item.name,
               description: item.description ?? "",
               scope: item.scope || "context",
-              type: item.type || "string",
+              variableType: item.variableType || "string",
               default: defaultValue,
               isEnum: isVariableEnumEnabled(item),
               isSelected: item.id === props.selectedItemId,
@@ -449,9 +448,8 @@ export const selectViewData = ({ state, props }) => {
 
   if (state.dialogMode === "edit") {
     form.title = "Edit Variable";
-    form.description = "Update variable";
     form.fields = (form.fields || []).map((field) => {
-      if (field?.name !== "type") {
+      if (field?.name !== "variableType") {
         return field;
       }
       const { options: _options, ...restField } = field;
@@ -459,7 +457,7 @@ export const selectViewData = ({ state, props }) => {
         ...restField,
         type: "read-only-text",
         required: false,
-        content: "${values.type}",
+        content: "${values.variableType}",
       };
     });
     if (submitButton) {
@@ -467,7 +465,6 @@ export const selectViewData = ({ state, props }) => {
     }
   } else {
     form.title = "Add Variable";
-    form.description = "Create a new variable";
     if (submitButton) {
       submitButton.label = "Add Variable";
     }
@@ -484,7 +481,7 @@ export const selectViewData = ({ state, props }) => {
   const dialogKey = [
     state.dialogMode,
     state.editingItemId || "new",
-    defaultValues.type,
+    defaultValues.variableType,
     defaultValues.isEnum ? "enum" : "plain",
     normalizeVariableEnumValues(defaultValues.enumValues).join("|"),
     String(defaultValues.default),

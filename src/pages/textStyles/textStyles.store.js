@@ -669,16 +669,6 @@ export const selectViewData = ({ state }) => {
       },
       {
         type: "text",
-        label: "Font Size",
-        value: String(selectedItem.fontSize ?? ""),
-      },
-      {
-        type: "text",
-        label: "Line Height",
-        value: String(selectedItem.lineHeight ?? ""),
-      },
-      {
-        type: "text",
         label: "Color",
         value: selectedItem.colorId ? getColorName(selectedItem.colorId) : "",
       },
@@ -691,16 +681,6 @@ export const selectViewData = ({ state }) => {
       },
       {
         type: "text",
-        label: "Font",
-        value: selectedItem.fontId ? getFontName(selectedItem.fontId) : "",
-      },
-      {
-        type: "text",
-        label: "Font Weight",
-        value: String(selectedItem.fontWeight ?? ""),
-      },
-      {
-        type: "text",
         label: "Outline Thickness",
         value: String(
           selectedItem.strokeColorId ? (selectedItem.strokeWidth ?? 0) : 0,
@@ -708,8 +688,23 @@ export const selectViewData = ({ state }) => {
       },
       {
         type: "text",
-        label: "Preview Text",
-        value: selectedItem.previewText ?? "",
+        label: "Font",
+        value: selectedItem.fontId ? getFontName(selectedItem.fontId) : "",
+      },
+      {
+        type: "text",
+        label: "Font Size",
+        value: String(selectedItem.fontSize ?? ""),
+      },
+      {
+        type: "text",
+        label: "Line Height",
+        value: String(selectedItem.lineHeight ?? ""),
+      },
+      {
+        type: "text",
+        label: "Font Weight",
+        value: String(selectedItem.fontWeight ?? ""),
       },
     ];
   } else if (selectedFolder?.type === "folder") {
@@ -775,10 +770,7 @@ export const selectViewData = ({ state }) => {
 
   // Generate dynamic dialog form with dropdown options
   const dialogForm = {
-    title: state.editMode ? "Edit Typography" : "Add Typography",
-    description: state.editMode
-      ? "Update text style"
-      : "Create a new text style",
+    title: state.editMode ? "Edit Text Style" : "Add Text Style",
     fields: [
       {
         name: "name",
@@ -866,12 +858,6 @@ export const selectViewData = ({ state }) => {
           { label: "900 - Black", value: "900" },
         ],
         required: true,
-      },
-      {
-        name: "previewText",
-        type: "input-text",
-        label: "Preview Text",
-        required: false,
       },
     ],
     actions: {
@@ -1008,6 +994,7 @@ export const selectViewData = ({ state }) => {
 
     // Preview values for dialog
     previewText: getPreviewTextValue(state.currentFormValues),
+    previewTextInputValue: state.currentFormValues.previewText ?? "",
     previewFontSize: state.currentFormValues.fontSize,
     previewLineHeight: state.currentFormValues.lineHeight,
     previewFontWeight: state.currentFormValues.fontWeight,

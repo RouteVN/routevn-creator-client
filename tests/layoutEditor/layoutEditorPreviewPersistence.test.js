@@ -65,7 +65,8 @@ describe("layoutEditor preview persistence", () => {
             items: {
               score: {
                 id: "score",
-                type: "number",
+                type: "variable",
+                variableType: "number",
                 name: "Score",
                 value: 0,
               },

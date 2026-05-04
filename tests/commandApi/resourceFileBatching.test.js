@@ -294,6 +294,91 @@ describe("resource command file batching", () => {
     expect(shared.ensureFilesExist).not.toHaveBeenCalled();
   });
 
+  it("batches missing file records with transform thumbnail updates", async () => {
+    const submitResult = { valid: true, commandIds: ["cmd-1"] };
+    const fileRecords = [
+      { id: "preview-transform" },
+      { id: "thumb-transform" },
+    ];
+    const fileCommands = [
+      {
+        type: COMMAND_TYPES.FILE_CREATE,
+        payload: { fileId: "preview-transform" },
+      },
+      {
+        type: COMMAND_TYPES.FILE_CREATE,
+        payload: { fileId: "thumb-transform" },
+      },
+    ];
+    const { context, shared } = createShared({ submitResult, fileCommands });
+    const api = createCatalogResourceCommandApi(shared);
+
+    const result = await api.updateTransform({
+      transformId: "transform-1",
+      data: {
+        x: 0,
+        y: 0,
+        scaleX: 1,
+        scaleY: 1,
+        anchorX: 0,
+        anchorY: 0,
+        rotation: 0,
+        thumbnailFileId: "thumb-transform",
+        previewFileId: "preview-transform",
+        preview: {
+          background: {
+            imageId: "image-bg",
+          },
+          target: {
+            imageId: "image-target",
+          },
+        },
+      },
+      fileRecords,
+    });
+
+    expect(result).toBe(submitResult);
+    expect(shared.buildMissingFileCommands).toHaveBeenCalledWith({
+      context,
+      fileRecords,
+    });
+    expect(shared.submitCommandsWithContext).toHaveBeenCalledWith({
+      context,
+      commands: [
+        ...fileCommands,
+        {
+          scope: "resources",
+          basePartition: "main",
+          type: COMMAND_TYPES.TRANSFORM_UPDATE,
+          payload: {
+            transformId: "transform-1",
+            data: {
+              x: 0,
+              y: 0,
+              scaleX: 1,
+              scaleY: 1,
+              anchorX: 0,
+              anchorY: 0,
+              rotation: 0,
+              thumbnailFileId: "thumb-transform",
+              previewFileId: "preview-transform",
+              preview: {
+                background: {
+                  imageId: "image-bg",
+                },
+                target: {
+                  imageId: "image-target",
+                },
+              },
+            },
+          },
+        },
+      ],
+    });
+    expect(shared.submitCommandWithContext).not.toHaveBeenCalled();
+    expect(shared.ensureFilesExist).not.toHaveBeenCalled();
+  });
+
   it("submits resource create without file commands when there are no missing files", async () => {
     const { context, shared } = createShared();
 

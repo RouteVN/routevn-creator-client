@@ -21,8 +21,11 @@ describe("systemActions view", () => {
     expect(systemActionsView).toContain(
       "rvn-command-line-conditional#commandLineConditional :conditional=${actions.conditional} :hiddenModes=${hiddenModes}",
     );
+    expect(systemActionsView).toContain(
+      "rvn-command-line-actions#commandLineActions :actionsType=${actionsType} :hiddenModes=${hiddenModes} :allowedModes=${allowedModes}",
+    );
     expect(conditionalView).toContain(
-      "rvn-system-actions#branchActionsEditor :showSelected=${true} :actions=${branchActions} actionType=system :hiddenModes=${hiddenModes}",
+      "rvn-system-actions#branchActionsEditor :showSelected=${true} :actions=${branchActions} actionType=system :hiddenModes=${hiddenModes} :allowedModes=${branchActionAllowedModes}",
     );
   });
 

@@ -68,6 +68,13 @@ const mergePresentationStates = (
   };
 };
 
+const selectSectionLinePresentationState = (state, lineId) => {
+  const selectedLineEntry = (state.sectionLineChanges?.lines || []).find(
+    (line) => line.id === lineId,
+  );
+  return toPlainObject(selectedLineEntry?.presentationState);
+};
+
 const toFlatTree = (ids = []) => {
   return ids.map((id) => ({ id }));
 };
@@ -110,13 +117,13 @@ const buildMentionTargetOptions = (repositoryState = {}) => {
 
   return flatItems
     .filter((item) => {
-      const variableType = String(item?.type ?? "").toLowerCase();
+      const variableType = String(item?.variableType ?? "").toLowerCase();
       return MENTION_VARIABLE_TYPES.has(variableType);
     })
     .map((item) => ({
       id: item.id,
       label: item.name || item.id,
-      variableType: String(item.type).toLowerCase(),
+      variableType: String(item.variableType).toLowerCase(),
     }));
 };
 
@@ -828,7 +835,12 @@ export const selectSelectedLineId = ({ state }) => {
 };
 
 export const setSelectedLineId = ({ state }, { selectedLineId } = {}) => {
+  const syncedPresentationState = selectSectionLinePresentationState(
+    state,
+    selectedLineId,
+  );
   state.selectedLineId = selectedLineId;
+  state.presentationState = syncedPresentationState;
 };
 
 export const selectActionTargetLineId = ({ state }) => {

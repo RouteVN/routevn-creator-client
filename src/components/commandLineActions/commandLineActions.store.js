@@ -26,7 +26,7 @@ const SYSTEM_ACTION_SECTIONS = [
     },
     {
       id: "10",
-      label: "Transition",
+      label: "Section Transition",
       icon: "transition",
       mode: "sectionTransition",
     },
@@ -90,8 +90,8 @@ const SYSTEM_ACTION_SECTIONS = [
       mode: "popOverlay",
     },
   ]),
-  createSection("Variables", [UPDATE_VARIABLE_ACTION]),
   createSection("Logic", [
+    UPDATE_VARIABLE_ACTION,
     {
       id: "27",
       label: "Conditional",
@@ -203,7 +203,7 @@ const PRESENTATION_ACTION_SECTIONS = [
     },
     {
       id: "10",
-      label: "Transition",
+      label: "Section Transition",
       icon: "transition",
       mode: "sectionTransition",
     },
@@ -220,8 +220,8 @@ const PRESENTATION_ACTION_SECTIONS = [
       mode: "control",
     },
   ]),
-  createSection("Variables", [UPDATE_VARIABLE_ACTION]),
   createSection("Logic", [
+    UPDATE_VARIABLE_ACTION,
     {
       id: "27",
       label: "Conditional",
@@ -234,6 +234,14 @@ const PRESENTATION_ACTION_SECTIONS = [
 const getHiddenModes = (attrs = {}) => {
   return Array.isArray(attrs.hiddenModes)
     ? attrs.hiddenModes.filter(
+        (mode) => typeof mode === "string" && mode.length > 0,
+      )
+    : [];
+};
+
+const getAllowedModes = (attrs = {}) => {
+  return Array.isArray(attrs.allowedModes)
+    ? attrs.allowedModes.filter(
         (mode) => typeof mode === "string" && mode.length > 0,
       )
     : [];
@@ -252,6 +260,9 @@ const toActionItem = (item) => ({
 const getActionItems = (attrs = {}) => {
   const actionsType = attrs?.actionsType;
   const hiddenModes = new Set(getHiddenModes(attrs));
+  const allowedModes = getAllowedModes(attrs);
+  const allowedModeSet =
+    allowedModes.length > 0 ? new Set(allowedModes) : undefined;
   const sections =
     {
       system: SYSTEM_ACTION_SECTIONS,
@@ -262,7 +273,10 @@ const getActionItems = (attrs = {}) => {
     const visibleItems = section.items
       .filter(
         (item) =>
-          item && typeof item.mode === "string" && !hiddenModes.has(item.mode),
+          item &&
+          typeof item.mode === "string" &&
+          !hiddenModes.has(item.mode) &&
+          (!allowedModeSet || allowedModeSet.has(item.mode)),
       )
       .map(toActionItem);
 

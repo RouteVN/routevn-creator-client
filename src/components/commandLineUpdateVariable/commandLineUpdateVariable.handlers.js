@@ -1,7 +1,39 @@
 import { generateId } from "../../internal/id.js";
+import {
+  isVariableEnumEnabled,
+  normalizeVariableEnumValues,
+} from "../../internal/variableEnums.js";
 
 const getVariableItems = (variablesData = {}) => {
   return variablesData?.items ?? {};
+};
+
+const getDefaultValueForVariable = (variable = {}) => {
+  if (isVariableEnumEnabled(variable)) {
+    return normalizeVariableEnumValues(variable.enumValues)[0] ?? "";
+  }
+
+  const variableType = (variable?.variableType || "string").toLowerCase();
+  return variableType === "number"
+    ? 1
+    : variableType === "boolean"
+      ? false
+      : "";
+};
+
+const getOperationValue = ({ variable, operation, currentValue } = {}) => {
+  if (operation === "toggle") {
+    return "";
+  }
+
+  if (operation === "set" && isVariableEnumEnabled(variable)) {
+    const enumValues = normalizeVariableEnumValues(variable.enumValues);
+    return enumValues.includes(currentValue)
+      ? currentValue
+      : (enumValues[0] ?? "");
+  }
+
+  return currentValue;
 };
 
 export const handleAfterMount = async (deps) => {
@@ -92,17 +124,11 @@ export const handleVariableSelectChange = (deps, payload) => {
   const state = store.getState();
   const variableItems = getVariableItems(state.variablesData);
   const variable = variableItems[value];
-  const varType = (variable?.type || "string").toLowerCase();
-
-  // Set default value based on variable type
-  const defaultValue =
-    varType === "number" ? 1 : varType === "boolean" ? false : "";
-
   // When variable changes, reset operation and set default value
   store.setTempOperation({
     variableId: value,
     op: "",
-    value: defaultValue,
+    value: getDefaultValueForVariable(variable),
   });
   render();
 };
@@ -112,9 +138,17 @@ export const handleOperationSelectChange = (deps, payload) => {
   const value = payload._event.detail?.value || payload._event.target?.value;
 
   // When operation changes, reset value (especially for toggle)
+  const state = store.getState();
+  const variableItems = getVariableItems(state.variablesData);
+  const variable = variableItems[state.tempOperation.variableId];
+
   store.setTempOperation({
     op: value,
-    value: value === "toggle" ? "" : store.getState().tempOperation.value,
+    value: getOperationValue({
+      variable,
+      operation: value,
+      currentValue: state.tempOperation.value,
+    }),
   });
   render();
 };
@@ -131,6 +165,14 @@ export const handleBooleanSelectChange = (deps, payload) => {
   const { store, render } = deps;
   const rawValue = payload._event.detail?.value || payload._event.target?.value;
   const value = rawValue === "true" || rawValue === true;
+
+  store.setTempOperation({ value });
+  render();
+};
+
+export const handleEnumValueSelectChange = (deps, payload) => {
+  const { store, render } = deps;
+  const value = payload._event.detail?.value ?? payload._event.target?.value;
 
   store.setTempOperation({ value });
   render();
@@ -175,7 +217,7 @@ export const handleSubmitClick = (deps, payload) => {
       }
       // Get variable type to determine if we should include empty string
       const variable = variableItems[op.variableId];
-      const varType = (variable?.type || "string").toLowerCase();
+      const varType = (variable?.variableType || "string").toLowerCase();
       // Always include value for strings (empty string is valid), otherwise only if set
       if (varType === "string" || (op.value !== "" && op.value !== undefined)) {
         result.value = op.value;

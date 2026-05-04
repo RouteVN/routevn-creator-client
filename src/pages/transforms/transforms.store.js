@@ -7,8 +7,24 @@ import {
   requireProjectResolution,
 } from "../../internal/projectResolution.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
+import { toFlatItems } from "../../internal/project/tree.js";
 
 const TRANSFORM_TAG_SCOPE_KEY = "transforms";
+const TRANSFORM_PREVIEW_IMAGE_SLOT_CONFIGS = Object.freeze([
+  {
+    label: "BG Image",
+    target: "preview-background",
+  },
+  {
+    label: "Target Image",
+    target: "preview-target",
+  },
+]);
+
+const createEmptyImageCollection = () => ({
+  items: {},
+  tree: [],
+});
 
 const createTransformForm = ({
   editMode = false,
@@ -145,6 +161,87 @@ const createDialogDefaultValues = (item) => ({
   },
 });
 
+const createPreviewImageSelectorDialog = () => ({
+  open: false,
+  target: undefined,
+  selectedImageId: undefined,
+  originalImageId: undefined,
+});
+
+const resolvePreviewImageId = (preview, slotKey) => {
+  const imageId = preview?.[slotKey]?.imageId;
+  return typeof imageId === "string" && imageId.length > 0
+    ? imageId
+    : undefined;
+};
+
+const getPreviewSlotConfig = (target) => {
+  return TRANSFORM_PREVIEW_IMAGE_SLOT_CONFIGS.find(
+    (slot) => slot.target === target,
+  );
+};
+
+const getImageItemById = (imagesData, imageId) => {
+  if (!imageId) {
+    return undefined;
+  }
+
+  const item = imagesData?.items?.[imageId];
+  return item?.type === "image" ? item : undefined;
+};
+
+const buildPreviewImageCard = (state, imageId) => {
+  const item = getImageItemById(state.imagesData, imageId);
+  if (!item) {
+    return undefined;
+  }
+
+  return {
+    id: item.id,
+    name: item.name,
+    fileId: item.fileId,
+    thumbnailFileId: item.thumbnailFileId,
+    previewFileId: item.thumbnailFileId ?? item.fileId,
+    previewAspectRatio: "16 / 9",
+    itemBorderColor: "bo",
+    itemHoverBorderColor: "ac",
+  };
+};
+
+const selectPreviewImageIdFromState = (state, target) => {
+  if (target === "preview-background") {
+    return state.dialogPreviewBackgroundImageId;
+  }
+
+  if (target === "preview-target") {
+    return state.dialogPreviewTargetImageId;
+  }
+
+  return undefined;
+};
+
+const setPreviewImageIdInState = (state, target, imageId) => {
+  if (target === "preview-background") {
+    state.dialogPreviewBackgroundImageId = imageId;
+    return;
+  }
+
+  if (target === "preview-target") {
+    state.dialogPreviewTargetImageId = imageId;
+  }
+};
+
+const buildPreviewPanel = (state) => ({
+  items: TRANSFORM_PREVIEW_IMAGE_SLOT_CONFIGS.map((slot) => ({
+    label: slot.label,
+    target: slot.target,
+    image: buildPreviewImageCard(
+      state,
+      selectPreviewImageIdFromState(state, slot.target),
+    ),
+  })),
+});
+
 const buildDetailFields = (item) => {
   if (!item) {
     return [];
@@ -258,6 +355,19 @@ const {
       isPreviewOnlyDialog: state.dialogMode === "preview",
       transformForm: state.transformForm,
       dialogDefaultValues: state.dialogDefaultValues,
+      dialogPreviewItem: state.dialogItemData,
+      dialogPreviewThumbnailFileId: state.dialogItemData?.thumbnailFileId,
+      dialogPreviewFileId:
+        state.dialogItemData?.previewFileId ??
+        state.dialogItemData?.thumbnailFileId,
+      previewPanel: buildPreviewPanel(state),
+      imageSelectorDialog: {
+        ...state.imageSelectorDialog,
+        title:
+          state.imageSelectorDialog.target === "preview-background"
+            ? "Select Background"
+            : "Select Target Image",
+      },
       canvasAspectRatio: formatProjectResolutionAspectRatio(
         state.projectResolution,
       ),
@@ -274,8 +384,17 @@ export const createInitialState = () => ({
   targetGroupId: undefined,
   editMode: false,
   editItemId: undefined,
+  dialogItemData: undefined,
   projectResolution: DEFAULT_PROJECT_RESOLUTION,
+  imagesData: createEmptyImageCollection(),
   dialogDefaultValues: createDialogDefaultValues(),
+  dialogValues: createDialogDefaultValues(),
+  dialogPreviewBackgroundImageId: undefined,
+  dialogPreviewTargetImageId: undefined,
+  imageSelectorDialog: createPreviewImageSelectorDialog(),
+  fullImagePreviewVisible: false,
+  fullImagePreviewImageId: undefined,
+  fullImagePreviewFileId: undefined,
   transformForm: createTransformForm(),
 });
 
@@ -304,6 +423,24 @@ export {
 
 export const selectTransformItemById = selectItemById;
 
+export const setImagesData = ({ state }, { imagesData } = {}) => {
+  state.imagesData = imagesData ?? createEmptyImageCollection();
+
+  if (
+    state.dialogPreviewBackgroundImageId &&
+    !getImageItemById(state.imagesData, state.dialogPreviewBackgroundImageId)
+  ) {
+    state.dialogPreviewBackgroundImageId = undefined;
+  }
+
+  if (
+    state.dialogPreviewTargetImageId &&
+    !getImageItemById(state.imagesData, state.dialogPreviewTargetImageId)
+  ) {
+    state.dialogPreviewTargetImageId = undefined;
+  }
+};
+
 export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
   state.projectResolution = requireProjectResolution(
     projectResolution,
@@ -329,8 +466,22 @@ const setDialogState = (state, options = {}) => {
   state.dialogMode = dialogMode;
   state.editMode = editMode;
   state.editItemId = itemId;
+  state.dialogItemData = itemData;
   state.targetGroupId = targetGroupId === "_root" ? undefined : targetGroupId;
   state.dialogDefaultValues = createDialogDefaultValues(itemData);
+  state.dialogValues = createDialogDefaultValues(itemData);
+  state.dialogPreviewBackgroundImageId = resolvePreviewImageId(
+    itemData?.preview,
+    "background",
+  );
+  state.dialogPreviewTargetImageId = resolvePreviewImageId(
+    itemData?.preview,
+    "target",
+  );
+  state.imageSelectorDialog = createPreviewImageSelectorDialog();
+  state.fullImagePreviewVisible = false;
+  state.fullImagePreviewImageId = undefined;
+  state.fullImagePreviewFileId = undefined;
   state.transformForm = createTransformForm({
     editMode,
     projectResolution: state.projectResolution,
@@ -359,7 +510,15 @@ export const closeTransformFormDialog = ({ state }, _payload = {}) => {
   state.targetGroupId = undefined;
   state.editMode = false;
   state.editItemId = undefined;
+  state.dialogItemData = undefined;
   state.dialogDefaultValues = createDialogDefaultValues();
+  state.dialogValues = createDialogDefaultValues();
+  state.dialogPreviewBackgroundImageId = undefined;
+  state.dialogPreviewTargetImageId = undefined;
+  state.imageSelectorDialog = createPreviewImageSelectorDialog();
+  state.fullImagePreviewVisible = false;
+  state.fullImagePreviewImageId = undefined;
+  state.fullImagePreviewFileId = undefined;
   state.transformForm = createTransformForm({
     projectResolution: state.projectResolution,
   });
@@ -381,12 +540,113 @@ export const selectProjectResolution = ({ state }) => {
   return state.projectResolution;
 };
 
+export const setDialogValues = ({ state }, { values } = {}) => {
+  state.dialogValues = values ?? createDialogDefaultValues();
+};
+
+export const selectDialogValues = ({ state }) => {
+  return state.dialogValues;
+};
+
+export const selectDialogPreviewBackgroundImage = ({ state }) => {
+  return getImageItemById(
+    state.imagesData,
+    state.dialogPreviewBackgroundImageId,
+  );
+};
+
+export const selectDialogPreviewTargetImage = ({ state }) => {
+  return getImageItemById(state.imagesData, state.dialogPreviewTargetImageId);
+};
+
+export const selectDialogPreviewData = ({ state }) => {
+  const preview = {};
+
+  if (state.dialogPreviewBackgroundImageId) {
+    preview.background = {
+      imageId: state.dialogPreviewBackgroundImageId,
+    };
+  }
+
+  if (state.dialogPreviewTargetImageId) {
+    preview.target = {
+      imageId: state.dialogPreviewTargetImageId,
+    };
+  }
+
+  return Object.keys(preview).length > 0 ? preview : undefined;
+};
+
+export const openPreviewImageSelectorDialog = ({ state }, { target } = {}) => {
+  const slotConfig = getPreviewSlotConfig(target);
+  if (!slotConfig) {
+    return;
+  }
+
+  state.imageSelectorDialog.open = true;
+  state.imageSelectorDialog.target = target;
+  const imageId = selectPreviewImageIdFromState(state, target);
+  state.imageSelectorDialog.selectedImageId = imageId;
+  state.imageSelectorDialog.originalImageId = imageId;
+};
+
+export const closePreviewImageSelectorDialog = ({ state }, _payload = {}) => {
+  setPreviewImageIdInState(
+    state,
+    state.imageSelectorDialog.target,
+    state.imageSelectorDialog.originalImageId,
+  );
+  state.imageSelectorDialog = createPreviewImageSelectorDialog();
+  state.fullImagePreviewVisible = false;
+  state.fullImagePreviewImageId = undefined;
+  state.fullImagePreviewFileId = undefined;
+};
+
+export const applyPreviewImageSelectorSelection = (
+  { state },
+  { imageId } = {},
+) => {
+  state.imageSelectorDialog.selectedImageId = imageId;
+  setPreviewImageIdInState(state, state.imageSelectorDialog.target, imageId);
+};
+
+export const commitPreviewImageSelectorSelection = (
+  { state },
+  _payload = {},
+) => {
+  const imageId = state.imageSelectorDialog.selectedImageId;
+  setPreviewImageIdInState(state, state.imageSelectorDialog.target, imageId);
+  state.imageSelectorDialog = createPreviewImageSelectorDialog();
+};
+
+export const showFullImagePreview = ({ state }, { imageId } = {}) => {
+  const imageItem = getImageItemById(state.imagesData, imageId);
+  state.fullImagePreviewVisible = true;
+  state.fullImagePreviewImageId = imageId;
+  state.fullImagePreviewFileId =
+    imageItem?.thumbnailFileId ?? imageItem?.fileId ?? undefined;
+};
+
+export const hideFullImagePreview = ({ state }, _payload = {}) => {
+  state.fullImagePreviewVisible = false;
+  state.fullImagePreviewImageId = undefined;
+  state.fullImagePreviewFileId = undefined;
+};
+
+export const selectImageSelectorFileExplorerItems = ({ state }) => {
+  return toFlatItems(state.imagesData).filter((item) => item.type === "folder");
+};
+
 export const selectViewData = (context) => {
   const viewData = selectCatalogViewData(context);
 
   return {
     ...viewData,
     flatItems: applyFolderRequiredRootDragOptions(viewData.flatItems),
+    imageFolderItems: selectImageSelectorFileExplorerItems(context),
+    fullImagePreviewVisible: context.state.fullImagePreviewVisible,
+    fullImagePreviewImageId: context.state.fullImagePreviewImageId,
+    fullImagePreviewFileId: context.state.fullImagePreviewFileId,
   };
 };
 

@@ -1,4 +1,8 @@
 import { generateId } from "../../internal/id.js";
+import {
+  isVariableEnumEnabled,
+  normalizeVariableEnumValues,
+} from "../../internal/variableEnums.js";
 
 const toPlainObject = (value) => {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -38,7 +42,9 @@ const normalizeBranches = (branches = []) => {
 };
 
 const getVariableType = (variablesData = {}, variableId) => {
-  return (variablesData?.items?.[variableId]?.type || "string").toLowerCase();
+  return (
+    variablesData?.items?.[variableId]?.variableType || "string"
+  ).toLowerCase();
 };
 
 const getDefaultValueForVariableType = (variableType) => {
@@ -53,15 +59,31 @@ const getDefaultValueForVariableType = (variableType) => {
   return "";
 };
 
+const getDefaultValueForVariable = (variable = {}) => {
+  if (isVariableEnumEnabled(variable)) {
+    return normalizeVariableEnumValues(variable.enumValues)[0] ?? "";
+  }
+
+  return getDefaultValueForVariableType(
+    (variable?.variableType || "string").toLowerCase(),
+  );
+};
+
 const getSimpleCondition = (when = {}) => {
   if (!when || typeof when !== "object" || Array.isArray(when)) {
     return undefined;
   }
 
-  const operator = ["eq", "neq", "gt", "gte", "lt", "lte"].find((key) =>
-    Object.hasOwn(when, key),
-  );
-  const operands = operator ? when[operator] : undefined;
+  const entries = Object.entries(when);
+  if (entries.length !== 1) {
+    return undefined;
+  }
+
+  const [[operator, operands]] = entries;
+  if (!["eq", "neq"].includes(operator)) {
+    return undefined;
+  }
+
   if (!Array.isArray(operands) || operands.length !== 2) {
     return undefined;
   }
@@ -94,20 +116,16 @@ const createTempBranchFromBranch = (branch = {}) => {
       variableId: "",
       op: "eq",
       value: "",
-      expression: "",
-      json: "",
       actions,
     };
   }
 
   if (typeof branch.when === "string") {
     return {
-      conditionKind: "expression",
+      conditionKind: "variable",
       variableId: "",
       op: "eq",
       value: "",
-      expression: branch.when,
-      json: "",
       actions,
     };
   }
@@ -119,19 +137,15 @@ const createTempBranchFromBranch = (branch = {}) => {
       variableId: simpleCondition.variableId,
       op: simpleCondition.op,
       value: simpleCondition.value,
-      expression: "",
-      json: "",
       actions,
     };
   }
 
   return {
-    conditionKind: "json",
+    conditionKind: "variable",
     variableId: "",
     op: "eq",
     value: "",
-    expression: "",
-    json: JSON.stringify(branch.when),
     actions,
   };
 };
@@ -164,22 +178,32 @@ const createBranchFromTemp = ({
     return branch;
   }
 
-  if (tempBranch.conditionKind === "expression") {
-    branch.when = tempBranch.expression.trim();
-    return branch;
+  if (tempBranch.conditionKind !== "variable") {
+    appService.showAlert({
+      message: "Condition type is unsupported.",
+      title: "Warning",
+    });
+    return undefined;
   }
 
-  if (tempBranch.conditionKind === "json") {
-    try {
-      branch.when = JSON.parse(tempBranch.json);
-    } catch {
+  if (!["eq", "neq"].includes(tempBranch.op)) {
+    appService.showAlert({
+      message: "Condition operator is unsupported.",
+      title: "Warning",
+    });
+    return undefined;
+  }
+
+  const variable = variablesData?.items?.[tempBranch.variableId];
+  if (isVariableEnumEnabled(variable)) {
+    const enumValues = normalizeVariableEnumValues(variable.enumValues);
+    if (!enumValues.includes(tempBranch.value)) {
       appService.showAlert({
-        message: "Semantic JSON condition is invalid.",
+        message: "Condition enum value is invalid.",
         title: "Warning",
       });
       return undefined;
     }
-    return branch;
   }
 
   const variableType = getVariableType(variablesData, tempBranch.variableId);
@@ -276,26 +300,17 @@ export const handleBranchContextMenu = (deps, payload) => {
   render();
 };
 
-export const handleConditionKindChange = (deps, payload) => {
-  const { store, render } = deps;
-  const conditionKind =
-    payload._event.detail?.value ?? payload._event.target?.value;
-
-  store.setTempBranch({ conditionKind });
-  render();
-};
-
 export const handleVariableSelectChange = (deps, payload) => {
   const { store, render } = deps;
   const variableId =
     payload._event.detail?.value ?? payload._event.target?.value;
   const variablesData = store.getState().variablesData;
-  const variableType = getVariableType(variablesData, variableId);
+  const variable = variablesData?.items?.[variableId];
 
   store.setTempBranch({
     variableId,
     op: "eq",
-    value: getDefaultValueForVariableType(variableType),
+    value: getDefaultValueForVariable(variable),
   });
   render();
 };
@@ -326,27 +341,11 @@ export const handleBooleanSelectChange = (deps, payload) => {
   render();
 };
 
-export const handleExpressionInputChange = (deps, payload) => {
+export const handleEnumValueSelectChange = (deps, payload) => {
   const { store, render } = deps;
-  const expression =
-    payload._event.detail?.value ?? payload._event.target?.value ?? "";
+  const value = payload._event.detail?.value ?? payload._event.target?.value;
 
-  store.setTempBranch({ expression });
-  render();
-};
-
-export const handleJsonInputChange = (deps, payload) => {
-  const { store, render } = deps;
-  const json =
-    payload._event.detail?.value ?? payload._event.target?.value ?? "";
-
-  store.setTempBranch({ json });
-  render();
-};
-
-export const handleBranchActionsClick = (deps) => {
-  const { store, render } = deps;
-  store.setMode({ mode: "branchActions" });
+  store.setTempBranch({ value });
   render();
 };
 

@@ -4123,6 +4123,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       sfxChangeType: lineDecoration.sfxChangeType,
       hasChoices: Boolean(lineDecoration.hasChoices),
       hasConditional: Boolean(lineDecoration.hasConditional),
+      hasUpdateVariable: Boolean(lineDecoration.hasUpdateVariable),
       hasSetNextLineConfig: Boolean(lineDecoration.hasSetNextLineConfig),
       setNextLineConfigChangeType: lineDecoration.setNextLineConfigChangeType,
     });
@@ -4642,6 +4643,14 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       container.append(
         this.createIconPreview({
           icon: "settings",
+        }),
+      );
+    }
+
+    if (lineDecoration.hasUpdateVariable) {
+      container.append(
+        this.createIconPreview({
+          icon: "variable",
         }),
       );
     }

@@ -9,6 +9,7 @@ import {
   applyCommandToRepositoryStateWithCreatorModel,
   applyCommandsToRepositoryStateWithCreatorModel,
   toCreatorModelState,
+  validateClientModelStateExtensions,
 } from "../../../internal/creatorModelAdapter.js";
 import {
   commandToSyncEvent,
@@ -65,6 +66,13 @@ export const assertSupportedProjectState = (state) => {
   if (!result.valid) {
     throw new Error(
       result.error?.message || "Unsupported project repository state",
+    );
+  }
+
+  const extensionResult = validateClientModelStateExtensions(state);
+  if (!extensionResult.valid) {
+    throw new Error(
+      extensionResult.error?.message || "Unsupported project repository state",
     );
   }
 

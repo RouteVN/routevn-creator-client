@@ -209,6 +209,7 @@ describe("sceneEditor.lineViewModels", () => {
         {
           characterId: "character-1",
           characterName: "Aki",
+          fileId: "file-body",
           spriteFileIds: ["file-body", "file-face"],
         },
       ],
@@ -253,5 +254,40 @@ describe("sceneEditor.lineViewModels", () => {
 
     expect(viewModels[0].hasConditional).toBe(true);
     expect(viewModels[1].hasConditional).toBe(false);
+  });
+
+  it("marks update variable actions for inline action previews", () => {
+    const lines = [
+      {
+        id: "line-1",
+        actions: {
+          updateVariable: {
+            id: "update-variable-1",
+            operations: [
+              {
+                variableId: "trust",
+                op: "increment",
+                value: 1,
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: "line-2",
+        actions: {},
+      },
+    ];
+
+    const viewModels = buildSceneEditorLineViewModels({
+      lines,
+      repositoryState: createRepositoryState(),
+      sectionLineChanges: {
+        lines: [],
+      },
+    });
+
+    expect(viewModels[0].hasUpdateVariable).toBe(true);
+    expect(viewModels[1].hasUpdateVariable).toBe(false);
   });
 });

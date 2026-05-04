@@ -496,6 +496,13 @@ export const handleDialogFormChange = (deps, payload) => {
   render();
 };
 
+export const handlePreviewTextInput = (deps, payload) => {
+  const { store, render } = deps;
+  const { value } = payload._event.detail;
+  store.updateFormValues({ formData: { previewText: value ?? "" } });
+  render();
+};
+
 export const handleCloseDialog = (deps) => {
   const { store, render } = deps;
 
@@ -536,8 +543,11 @@ export const handleFormActionClick = async (deps, payload) => {
   }
 
   if (actionId === "submit") {
-    // Get form values from the event detail
-    const formData = payload._event.detail.values;
+    // Merge the left form values with the preview-column input.
+    const formData = {
+      ...payload._event.detail.values,
+      previewText: store.getState().currentFormValues.previewText ?? "",
+    };
 
     // Get the store state using selector
     const { targetGroupId, editMode, editingItemId } =

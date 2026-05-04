@@ -62,6 +62,13 @@ const mergePresentationStates = (
   };
 };
 
+const selectSectionLinePresentationState = (state, lineId) => {
+  const selectedLineEntry = (state.sectionLineChanges?.lines || []).find(
+    (line) => line.id === lineId,
+  );
+  return toPlainObject(selectedLineEntry?.presentationState);
+};
+
 const collectActionTargetSectionIds = (actions) => {
   const sectionIds = new Set();
 
@@ -685,7 +692,12 @@ export const selectSelectedLineId = ({ state }) => {
 };
 
 export const setSelectedLineId = ({ state }, { selectedLineId } = {}) => {
+  const syncedPresentationState = selectSectionLinePresentationState(
+    state,
+    selectedLineId,
+  );
   state.selectedLineId = selectedLineId;
+  state.presentationState = syncedPresentationState;
 };
 
 export const setSelectedSectionId = ({ state }, { selectedSectionId } = {}) => {

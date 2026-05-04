@@ -89,7 +89,7 @@ describe("commandLineActions.store", () => {
     ).toBe(true);
   });
 
-  it("shows the variables section and update variable action", () => {
+  it("shows update variable in the logic section", () => {
     for (const actionsType of ["system", "presentation"]) {
       const items = selectItems({
         props: {
@@ -97,7 +97,8 @@ describe("commandLineActions.store", () => {
         },
       });
 
-      expect(getSectionModes(items, "Variables")).toEqual(["updateVariable"]);
+      expect(getSectionModes(items, "Variables")).toEqual([]);
+      expect(getSectionModes(items, "Logic")).toContain("updateVariable");
       expect(items.some((item) => item.mode === "updateVariable")).toBe(true);
     }
   });
@@ -114,8 +115,12 @@ describe("commandLineActions.store", () => {
       },
     });
 
-    expect(getSectionModes(systemItems, "Logic")).toEqual(["conditional"]);
+    expect(getSectionModes(systemItems, "Logic")).toEqual([
+      "updateVariable",
+      "conditional",
+    ]);
     expect(getSectionModes(presentationItems, "Logic")).toEqual([
+      "updateVariable",
       "conditional",
     ]);
   });
@@ -223,6 +228,28 @@ describe("commandLineActions.store", () => {
     expect(
       items.some((item) => item.type === "section" && item.label === "Menu"),
     ).toBe(false);
+  });
+
+  it("filters actions to allowed modes when provided", () => {
+    const items = selectItems({
+      props: {
+        actionsType: "system",
+        allowedModes: [
+          "sectionTransition",
+          "resetStoryAtSection",
+          "updateVariable",
+        ],
+      },
+    });
+
+    expect(getSectionModes(items, "Story")).toEqual([
+      "sectionTransition",
+      "resetStoryAtSection",
+    ]);
+    expect(getSectionModes(items, "Logic")).toEqual(["updateVariable"]);
+    expect(
+      items.filter((item) => item.type === "item").map((item) => item.mode),
+    ).toEqual(["sectionTransition", "resetStoryAtSection", "updateVariable"]);
   });
 
   it("adds resetStoryAtSection to the navigation presentation section only", () => {

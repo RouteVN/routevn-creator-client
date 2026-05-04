@@ -158,9 +158,21 @@ template:
                                               - 'rtgl-view w=f br=md style="overflow: hidden;"':
                                                   - $if item.useFullWidthCatalogPreview:
                                                       - 'rtgl-view w=f br=md style="aspect-ratio: ${item.previewAspectRatio}; overflow: hidden;"':
-                                                          - rvn-transform-thumbnail :item=${item} canvas-aspect-ratio="${item.previewAspectRatio}" w=f h=f: null
+                                                          - $if item.thumbnailFileId:
+                                                              - rvn-file-image fileId=${item.thumbnailFileId} w=f h=f: null
+                                                            $else:
+                                                              - rtgl-view w=f h=f av=c ah=c bgc=bg:
+                                                                  - rtgl-view d=v av=c ah=c g=xs ph=sm:
+                                                                      - rtgl-text s=xs c=mu-fg: No preview image
+                                                                      - rtgl-text s=xs c=mu-fg: Update to set preview
                                                     $else:
-                                                      - rvn-transform-thumbnail :item=${item} canvas-aspect-ratio="${item.previewAspectRatio}" w=${item.transformPreviewWidth} h=120: null
+                                                      - $if item.thumbnailFileId:
+                                                          - rvn-file-image fileId=${item.thumbnailFileId} w=${item.transformPreviewWidth} h=120: null
+                                                        $else:
+                                                          - rtgl-view w=${item.transformPreviewWidth} h=120 av=c ah=c bgc=bg:
+                                                              - rtgl-view d=v av=c ah=c g=xs ph=sm:
+                                                                  - rtgl-text s=xs c=mu-fg: No preview image
+                                                                  - rtgl-text s=xs c=mu-fg: Update to set preview
                                                   - rtgl-view w=f p=md:
                                                       - rtgl-text s=xs c=mu-fg ellipsis w=f: ${item.name}
                                             $elif item.cardKind == 'animation':

@@ -34,6 +34,14 @@ const isVisibleVisibilityTarget = (target) => {
   return typeof target === "string" && !HIDDEN_VISIBILITY_TARGETS.has(target);
 };
 
+const getConditionTargetValueKind = (item = {}) => {
+  if (item.type === "variable") {
+    return String(item.variableType || "string").toLowerCase();
+  }
+
+  return String(item.valueKind || item.type || "string").toLowerCase();
+};
+
 export const getScalarConditionTargetItems = (
   variablesData = {},
   options = {},
@@ -41,9 +49,9 @@ export const getScalarConditionTargetItems = (
   const projectVariables = Object.entries(variablesData?.items || {})
     .filter(
       ([, item]) =>
-        item?.type !== "folder" &&
+        item?.type === "variable" &&
         SUPPORTED_VISIBILITY_VARIABLE_TYPES.has(
-          String(item?.type || "string").toLowerCase(),
+          getConditionTargetValueKind(item),
         ),
     )
     .map(([variableId, item]) => [toVariableConditionTarget(variableId), item])
@@ -51,9 +59,7 @@ export const getScalarConditionTargetItems = (
   const specialTargets = Object.entries(
     getSpecialLayoutConditionItems(options),
   ).filter(([, item]) =>
-    SUPPORTED_VISIBILITY_VARIABLE_TYPES.has(
-      String(item?.type || "string").toLowerCase(),
-    ),
+    SUPPORTED_VISIBILITY_VARIABLE_TYPES.has(getConditionTargetValueKind(item)),
   );
 
   return Object.fromEntries([...projectVariables, ...specialTargets]);
@@ -68,9 +74,7 @@ export const toVisibilityConditionTargetOptions = (
     .map(([target, variable]) => ({
       label: variable.name,
       value: target,
-      suffixText: String(
-        variable.valueKind || variable.type || "string",
-      ).toLowerCase(),
+      suffixText: getConditionTargetValueKind(variable),
     }))
     .sort((left, right) => left.label.localeCompare(right.label));
 };
@@ -81,10 +85,7 @@ export const toVisibilityConditionTargetTypeByTarget = (
 ) => {
   return Object.fromEntries(
     Object.entries(getScalarConditionTargetItems(variablesData, options)).map(
-      ([target, variable]) => [
-        target,
-        String(variable.type || "string").toLowerCase(),
-      ],
+      ([target, variable]) => [target, getConditionTargetValueKind(variable)],
     ),
   );
 };
@@ -95,10 +96,7 @@ export const toVisibilityConditionTargetValueKindByTarget = (
 ) => {
   return Object.fromEntries(
     Object.entries(getScalarConditionTargetItems(variablesData, options)).map(
-      ([target, variable]) => [
-        target,
-        String(variable?.valueKind || variable?.type || "string").toLowerCase(),
-      ],
+      ([target, variable]) => [target, getConditionTargetValueKind(variable)],
     ),
   );
 };

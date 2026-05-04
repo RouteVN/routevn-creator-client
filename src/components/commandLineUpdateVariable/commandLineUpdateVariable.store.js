@@ -1,4 +1,9 @@
 import { getVariableOptions } from "../../internal/project/projection.js";
+import {
+  buildVariableEnumOptions,
+  isVariableEnumEnabled,
+  normalizeVariableEnumValues,
+} from "../../internal/variableEnums.js";
 
 // Operations available per variable type
 const OPERATIONS_BY_TYPE = {
@@ -126,12 +131,28 @@ export const selectOperations = ({ state }) => {
 export const selectViewData = ({ state }) => {
   const variableItems = state.variablesData?.items ?? {};
 
-  const variableOptions = getVariableOptions(state.variablesData, {
-    showType: true,
-  });
+  const variableOptions = getVariableOptions(state.variablesData).map(
+    (option) => {
+      const variable = variableItems[option.value];
+      const variableType = (variable?.variableType || "string").toLowerCase();
+      return {
+        ...option,
+        suffixText: variableType,
+      };
+    },
+  );
 
   const selectedVariable = variableItems[state.tempOperation.variableId];
-  const selectedType = (selectedVariable?.type || "string").toLowerCase();
+  const selectedType = (
+    selectedVariable?.variableType || "string"
+  ).toLowerCase();
+  const selectedEnumValues = isVariableEnumEnabled(selectedVariable)
+    ? normalizeVariableEnumValues(selectedVariable.enumValues)
+    : [];
+  const showEnumValueSelect =
+    selectedType === "string" &&
+    selectedEnumValues.length > 0 &&
+    state.tempOperation.op === "set";
   const operationOptions =
     OPERATIONS_BY_TYPE[selectedType] || OPERATIONS_BY_TYPE.string;
 
@@ -146,7 +167,7 @@ export const selectViewData = ({ state }) => {
 
   const operationsWithData = state.operations.map((op) => {
     const variable = variableItems[op.variableId];
-    const varType = (variable?.type || "string").toLowerCase();
+    const varType = (variable?.variableType || "string").toLowerCase();
     const opDef = OPERATIONS_BY_TYPE[varType]?.find((o) => o.value === op.op);
 
     // Format display value
@@ -194,6 +215,8 @@ export const selectViewData = ({ state }) => {
     variableOptions,
     operationOptions,
     booleanOptions,
+    enumValueOptions: buildVariableEnumOptions(selectedEnumValues),
+    showEnumValueSelect,
     showValueField,
     valueInputType,
     tempOperation: {
@@ -202,6 +225,10 @@ export const selectViewData = ({ state }) => {
     },
     dropdownMenu: state.dropdownMenu,
     hasOperations: state.operations.length > 0,
-    canSaveOperation: state.tempOperation.variableId && state.tempOperation.op,
+    canSaveOperation:
+      state.tempOperation.variableId &&
+      state.tempOperation.op &&
+      (!showEnumValueSelect ||
+        selectedEnumValues.includes(state.tempOperation.value)),
   };
 };
