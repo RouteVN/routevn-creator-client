@@ -478,19 +478,16 @@ export const handleRowClick = (deps, payload) => {
 };
 
 export const handleRowDoubleClick = (deps, payload) => {
-  const { dispatchEvent } = deps;
+  if (deps.props.readonly === true) {
+    return;
+  }
+
   const itemId = getDataId(payload._event, "data-item-id", "row");
   if (!itemId) {
     return;
   }
 
-  dispatchEvent(
-    new CustomEvent("variable-item-click", {
-      detail: { itemId },
-      bubbles: true,
-      composed: true,
-    }),
-  );
+  openEditDialogForItem({ deps, itemId });
 };
 
 export const handleOpenEditDialog = (deps, payload) => {

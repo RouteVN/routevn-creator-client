@@ -202,7 +202,7 @@ const toStableDomRefSuffix = (value = "") => {
   }, "");
 };
 
-export const buildSceneEditorLineViewModels = ({
+const buildSceneDocumentLineViewModels = ({
   lines,
   repositoryState,
   sectionLineChanges,
@@ -261,7 +261,7 @@ export const buildSceneDocumentLineDecorations = ({
   repositoryState,
   sectionLineChanges,
 }) => {
-  return buildSceneEditorLineViewModels({
+  return buildSceneDocumentLineViewModels({
     lines,
     repositoryState,
     sectionLineChanges,

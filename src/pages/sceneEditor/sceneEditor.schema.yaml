@@ -1,4 +1,0 @@
-componentName: rvn-scene-editor
-propsSchema:
-  type: object
-  properties: {}

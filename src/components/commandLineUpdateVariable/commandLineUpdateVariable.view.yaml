@@ -33,6 +33,10 @@ refs:
     eventListeners:
       value-input:
         handler: handleValueInputChange
+  roundToInput:
+    eventListeners:
+      value-input:
+        handler: handleRoundToInputChange
   booleanSelect:
     eventListeners:
       value-change:
@@ -75,6 +79,9 @@ template:
               - $if showValueField && valueInputType == 'number':
                   - rtgl-text s=sm c=mu-fg mt=lg mb=sm: Value
                   - rtgl-input#valueInput type=number w=f placeholder="Enter number..." value=${tempOperation.value}: null
+              - $if showRoundToField:
+                  - rtgl-text s=sm c=mu-fg mt=lg mb=sm: Decimal Places
+                  - rtgl-input#roundToInput type=number min=0 max=12 step=1 w=f value=${tempOperation.roundToValue}: null
               - $if showValueField && valueInputType == 'boolean':
                   - rtgl-text s=sm c=mu-fg mt=lg mb=sm: Value
                   - rtgl-select#booleanSelect w=f :selectedValue=${tempOperation.booleanValue} :options=${booleanOptions}: null

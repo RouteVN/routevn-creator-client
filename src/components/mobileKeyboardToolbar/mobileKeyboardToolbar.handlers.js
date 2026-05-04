@@ -16,7 +16,6 @@ const isEditableElement = (element) => {
     tagName === "input" ||
     tagName === "textarea" ||
     tagName === "select" ||
-    tagName === "rvn-editable-text" ||
     element?.isContentEditable === true
   );
 };

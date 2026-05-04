@@ -9,9 +9,9 @@ import {
   setSceneId,
   setPresentationState,
   setTemporaryPresentationState,
-} from "../../src/pages/sceneEditor/sceneEditor.store.js";
+} from "../../src/components/sceneEditorLexical/sceneEditorLexical.store.js";
 
-describe("sceneEditor.store", () => {
+describe("sceneEditorLexical.store", () => {
   it("includes conditional branch section targets in the section graph", () => {
     const state = createInitialState();
 

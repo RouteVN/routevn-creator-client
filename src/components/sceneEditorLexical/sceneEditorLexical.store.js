@@ -79,6 +79,41 @@ const getSectionLinePresentationState = (state, lineId) => {
   return toPlainObject(selectedLineEntry.presentationState);
 };
 
+const collectActionTargetSectionIds = (actions) => {
+  const sectionIds = new Set();
+
+  const scanActionValue = (value, key) => {
+    if (key === "when") {
+      return;
+    }
+
+    if (!value || typeof value !== "object") {
+      return;
+    }
+
+    if (
+      (key === "sectionTransition" || key === "resetStoryAtSection") &&
+      typeof value.sectionId === "string" &&
+      value.sectionId.length > 0
+    ) {
+      sectionIds.add(value.sectionId);
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach((entry) => scanActionValue(entry));
+      return;
+    }
+
+    Object.entries(value).forEach(([entryKey, entryValue]) => {
+      scanActionValue(entryValue, entryKey);
+    });
+  };
+
+  scanActionValue(actions);
+
+  return [...sectionIds];
+};
+
 const toFlatTree = (ids = []) => {
   return ids.map((id) => ({ id }));
 };
@@ -1394,23 +1429,21 @@ export const selectSectionTransitionsDAG = ({ state }) => {
     // Check all lines in this section for section transitions within current scene
     if (section.lines) {
       section.lines.forEach((line) => {
-        const sectionTransition = line.actions?.sectionTransition;
-
-        if (sectionTransition && sectionTransition.sectionId) {
+        collectActionTargetSectionIds(line.actions).forEach((sectionId) => {
           // Only include transitions to other sections within the same scene
           const targetSection = currentScene.sections.find(
-            (s) => s.id === sectionTransition.sectionId,
+            (s) => s.id === sectionId,
           );
 
           if (targetSection) {
             edges.push({
               from: section.id,
-              to: sectionTransition.sectionId,
+              to: sectionId,
               type: "section",
               lineId: line.id,
             });
           }
-        }
+        });
       });
     }
   });

@@ -277,7 +277,6 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {
-  const { store, render } = deps;
   const detail = payload?._event?.detail ?? {};
   const itemId = resolveDetailItemId(detail);
   const isFolder =
@@ -289,8 +288,7 @@ export const handleFileExplorerDoubleClick = (deps, payload) => {
     return;
   }
 
-  store.setSelectedItemId({ itemId });
-  render();
+  openVariableEditDialog({ deps, itemId });
 };
 
 export const handleVariableItemClick = (deps, payload) => {

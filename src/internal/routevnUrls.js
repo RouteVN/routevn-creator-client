@@ -29,7 +29,6 @@ const creatorDocsPathByRoutePattern = {
   "/project/releases/versions": "/versions/",
   "/project/releases/web-server": "/web-server/",
   "/project/about": "/page-index/#settings",
-  "/project/appearance": "/page-index/#settings",
   "/project/user": "/page-index/#settings",
 };
 

@@ -8,6 +8,9 @@ const getVariableItems = (variablesData = {}) => {
   return variablesData?.items ?? {};
 };
 
+const DEFAULT_DIVIDE_ROUND_TO = 2;
+const MAX_DIVIDE_ROUND_TO = 12;
+
 const getDefaultValueForVariable = (variable = {}) => {
   if (isVariableEnumEnabled(variable)) {
     return normalizeVariableEnumValues(variable.enumValues)[0] ?? "";
@@ -36,6 +39,116 @@ const getOperationValue = ({ variable, operation, currentValue } = {}) => {
   return currentValue;
 };
 
+const normalizeOperationValue = ({ operation, variableType, value } = {}) => {
+  if (variableType !== "number") {
+    return {
+      includeValue: true,
+      valid: true,
+      value,
+    };
+  }
+
+  if (
+    (operation === "increment" || operation === "decrement") &&
+    (value === "" || value === undefined || value === null)
+  ) {
+    return {
+      includeValue: false,
+      valid: true,
+    };
+  }
+
+  if (value === "" || value === undefined || value === null) {
+    return {
+      valid: false,
+    };
+  }
+
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return {
+      valid: false,
+    };
+  }
+
+  return {
+    includeValue: true,
+    valid: true,
+    value: numericValue,
+  };
+};
+
+const normalizeRoundToValue = (value) => {
+  const roundTo = value ?? DEFAULT_DIVIDE_ROUND_TO;
+  const numericRoundTo = Number(roundTo);
+
+  if (
+    !Number.isInteger(numericRoundTo) ||
+    numericRoundTo < 0 ||
+    numericRoundTo > MAX_DIVIDE_ROUND_TO
+  ) {
+    return {
+      valid: false,
+    };
+  }
+
+  return {
+    valid: true,
+    value: numericRoundTo,
+  };
+};
+
+const normalizeOperationForSave = ({ operation, variableItems } = {}) => {
+  const variable = variableItems[operation.variableId];
+  const variableType = (variable?.variableType || "string").toLowerCase();
+  const normalized = normalizeOperationValue({
+    operation: operation.op,
+    variableType,
+    value: operation.value,
+  });
+
+  if (!normalized.valid) {
+    return {
+      valid: false,
+    };
+  }
+
+  const result = {
+    variableId: operation.variableId,
+    op: operation.op,
+  };
+
+  if (normalized.includeValue) {
+    result.value = normalized.value;
+  } else {
+    result.value = undefined;
+  }
+
+  if (operation.op === "divide") {
+    const normalizedRoundTo = normalizeRoundToValue(operation.roundTo);
+    if (!normalizedRoundTo.valid) {
+      return {
+        valid: false,
+      };
+    }
+    result.roundTo = normalizedRoundTo.value;
+  } else {
+    result.roundTo = undefined;
+  }
+
+  return {
+    operation: result,
+    valid: true,
+  };
+};
+
+const showInvalidOperationValueAlert = (appService) => {
+  appService.showAlert({
+    message: "Variable operation value is invalid.",
+    title: "Warning",
+  });
+};
+
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   const repository = await projectService.getRepository();
@@ -59,12 +172,18 @@ export const handleAfterMount = async (deps) => {
     id: updateVariable.id || generateId(),
   });
 
-  const operations = (updateVariable.operations || []).map((op) => ({
-    id: generateId(),
-    variableId: op.variableId,
-    op: op.op,
-    value: op.value ?? "",
-  }));
+  const operations = (updateVariable.operations || []).map((op) => {
+    const operation = {
+      id: generateId(),
+      variableId: op.variableId,
+      op: op.op,
+      value: op.value ?? "",
+    };
+    if (op.op === "divide") {
+      operation.roundTo = op.roundTo ?? DEFAULT_DIVIDE_ROUND_TO;
+    }
+    return operation;
+  });
 
   store.setOperations({ operations: operations });
   store.setInitiated();
@@ -96,6 +215,7 @@ export const handleOperationClick = (deps, payload) => {
       variableId: operation.variableId,
       op: operation.op,
       value: operation.value,
+      roundTo: operation.roundTo,
     });
     store.setMode({ mode: "edit" });
     render();
@@ -129,6 +249,7 @@ export const handleVariableSelectChange = (deps, payload) => {
     variableId: value,
     op: "",
     value: getDefaultValueForVariable(variable),
+    roundTo: undefined,
   });
   render();
 };
@@ -142,14 +263,20 @@ export const handleOperationSelectChange = (deps, payload) => {
   const variableItems = getVariableItems(state.variablesData);
   const variable = variableItems[state.tempOperation.variableId];
 
-  store.setTempOperation({
+  const tempOperation = {
     op: value,
     value: getOperationValue({
       variable,
       operation: value,
       currentValue: state.tempOperation.value,
     }),
-  });
+    roundTo:
+      value === "divide"
+        ? (state.tempOperation.roundTo ?? DEFAULT_DIVIDE_ROUND_TO)
+        : undefined,
+  };
+
+  store.setTempOperation(tempOperation);
   render();
 };
 
@@ -178,19 +305,39 @@ export const handleEnumValueSelectChange = (deps, payload) => {
   render();
 };
 
+export const handleRoundToInputChange = (deps, payload) => {
+  const { store, render } = deps;
+  const roundTo = payload._event.detail?.value ?? payload._event.target?.value;
+
+  store.setTempOperation({ roundTo });
+  render();
+};
+
 export const handleSaveOperationClick = (deps, payload) => {
   payload._event.stopPropagation();
-  const { store, render } = deps;
+  const { appService, store, render } = deps;
   const state = store.getState();
-  const { currentEditingId, tempOperation } = state;
+  const { currentEditingId, tempOperation, variablesData } = state;
 
   if (currentEditingId && tempOperation.variableId && tempOperation.op) {
-    store.updateOperation({
-      id: currentEditingId,
-      variableId: tempOperation.variableId,
-      op: tempOperation.op,
-      value: tempOperation.value,
+    const normalized = normalizeOperationForSave({
+      operation: tempOperation,
+      variableItems: getVariableItems(variablesData),
     });
+
+    if (!normalized.valid) {
+      showInvalidOperationValueAlert(appService);
+      return;
+    }
+
+    const operationUpdate = {
+      id: currentEditingId,
+      variableId: normalized.operation.variableId,
+      op: normalized.operation.op,
+      value: normalized.operation.value,
+      roundTo: normalized.operation.roundTo,
+    };
+    store.updateOperation(operationUpdate);
     store.setMode({ mode: "current" });
     store.setCurrentEditingId({ id: null });
     render();
@@ -203,6 +350,7 @@ export const handleSubmitClick = (deps, payload) => {
   const state = store.getState();
   const { actionId, operations, variablesData } = state;
   const variableItems = getVariableItems(variablesData);
+  let hasInvalidOperationValue = false;
 
   const validOperations = operations
     .filter((op) => op.variableId && op.op)
@@ -218,12 +366,48 @@ export const handleSubmitClick = (deps, payload) => {
       // Get variable type to determine if we should include empty string
       const variable = variableItems[op.variableId];
       const varType = (variable?.variableType || "string").toLowerCase();
-      // Always include value for strings (empty string is valid), otherwise only if set
-      if (varType === "string" || (op.value !== "" && op.value !== undefined)) {
+      if (varType === "string") {
+        result.value = op.value;
+        return result;
+      }
+
+      if (varType === "number") {
+        const normalized = normalizeOperationValue({
+          operation: op.op,
+          variableType: varType,
+          value: op.value,
+        });
+        if (!normalized.valid) {
+          hasInvalidOperationValue = true;
+          return undefined;
+        }
+
+        if (normalized.includeValue) {
+          result.value = normalized.value;
+        }
+
+        if (op.op === "divide") {
+          const normalizedRoundTo = normalizeRoundToValue(op.roundTo);
+          if (!normalizedRoundTo.valid) {
+            hasInvalidOperationValue = true;
+            return undefined;
+          }
+          result.roundTo = normalizedRoundTo.value;
+        }
+        return result;
+      }
+
+      if (op.value !== "" && op.value !== undefined) {
         result.value = op.value;
       }
       return result;
-    });
+    })
+    .filter(Boolean);
+
+  if (hasInvalidOperationValue) {
+    showInvalidOperationValueAlert(appService);
+    return;
+  }
 
   if (validOperations.length === 0) {
     appService.showAlert({
