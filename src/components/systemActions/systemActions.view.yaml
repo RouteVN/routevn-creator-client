@@ -188,7 +188,7 @@ template:
                           - rtgl-text s=sm: 'Conditional: ${preview.conditional.summary}'
                           - rtgl-text s=xs c=mu-fg: ${preview.conditional.actionsSummary}
           - rtgl-button#addActionButton v=ol w=f: +
-          - $if actionsType == 'system':
+          - $if showEmbeddedClose:
               - rtgl-view d=h av=c ah=e w=f g=lg:
                   - rtgl-button#embeddedCloseButton: Confirm
   - rvn-system-actions-dialog-surface#actionsDialog key=${mode} :open=${isActionsDialogOpen} variant=${dialogVariant} :dialogWidth=${actionsDialogWidth} :dialogHeight=${actionsDialogHeight} :panelWidth=${actionsDialogPanelWidth}:
@@ -197,7 +197,7 @@ template:
               - 'rtgl-view#helpFloatingButton pos=abs z=10 w=28 h=28 ah=c av=c bgc=bg bw=xs bc=bo h-bc=ac br=f cur=pointer style="top: 10px; right: 10px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);"':
                   - rtgl-text s=xs c=mu-fg: '?'
               - $if mode == "actions":
-                  - rvn-command-line-actions#commandLineActions :actionsType=${actionsType} :hiddenModes=${hiddenModes}: null
+                  - rvn-command-line-actions#commandLineActions :actionsType=${actionsType} :hiddenModes=${hiddenModes} :allowedModes=${allowedModes}: null
                 $elif mode == "dialogue":
                   - rvn-command-line-dialogue-box#commandLineDialogueBox :layouts=${dialogueLayouts} :characters=${allCharacters} :characterTree=${characterTree} :transforms=${transforms} :animations=${animations} :dialogue=${actions.dialogue}: null
                 $elif mode == "choice":

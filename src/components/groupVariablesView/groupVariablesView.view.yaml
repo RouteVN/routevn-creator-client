@@ -135,28 +135,28 @@ template:
                                               - rtgl-text c=mu-fg s=sm: Default
                                       - $for item, j in group.children:
                                           - $if item.isSelected:
-                                              - rtgl-view#rowRef${i}x${j} data-item-id=${item.id} d=h w=f pv=md bwb=xs cur=pointer g=md bgc=mu h-bgc=mu br=sm:
+                                              - rtgl-view#rowRef${i}x${j} data-item-id=${item.id} d=h w=f h=36 av=c bwb=xs cur=pointer g=md bgc=mu h-bgc=mu br=sm:
                                                   - rtgl-view w=2fg d=h av=c g=sm:
                                                       - rtgl-text s=sm: ${item.name}
                                                       - $if item.isEnum:
-                                                          - rtgl-tag v=mu: Enum
-                                                  - rtgl-view w=1fg:
+                                                          - rtgl-tag v=mu s=sm: Enum
+                                                  - rtgl-view w=1fg av=c:
                                                       - rtgl-text s=sm: ${item.scope}
-                                                  - rtgl-view w=1fg:
-                                                      - rtgl-text s=sm: ${item.type}
-                                                  - rtgl-view w=1fg:
+                                                  - rtgl-view w=1fg av=c:
+                                                      - rtgl-text s=sm: ${item.variableType}
+                                                  - rtgl-view w=1fg av=c:
                                                       - rtgl-text s=sm: ${item.default}
                                             $else:
-                                              - rtgl-view#rowRef${i}x${j} data-item-id=${item.id} d=h w=f pv=md bwb=xs cur=pointer g=md h-bgc=mu:
+                                              - rtgl-view#rowRef${i}x${j} data-item-id=${item.id} d=h w=f h=36 av=c bwb=xs cur=pointer g=md h-bgc=mu:
                                                   - rtgl-view w=2fg d=h av=c g=sm:
                                                       - rtgl-text s=sm: ${item.name}
                                                       - $if item.isEnum:
-                                                          - rtgl-tag v=mu: Enum
-                                                  - rtgl-view w=1fg:
+                                                          - rtgl-tag v=mu s=sm: Enum
+                                                  - rtgl-view w=1fg av=c:
                                                       - rtgl-text s=sm: ${item.scope}
-                                                  - rtgl-view w=1fg:
-                                                      - rtgl-text s=sm: ${item.type}
-                                                  - rtgl-view w=1fg:
+                                                  - rtgl-view w=1fg av=c:
+                                                      - rtgl-text s=sm: ${item.variableType}
+                                                  - rtgl-view w=1fg av=c:
                                                       - rtgl-text s=sm: ${item.default}
                                 $else:
                                   - $if readonly:

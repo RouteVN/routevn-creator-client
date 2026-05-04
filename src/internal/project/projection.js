@@ -26,7 +26,7 @@ const createResourceCollection = () => ({
   tree: [],
 });
 
-const createEmptyTagScopes = () => ({
+export const createEmptyTagScopes = () => ({
   images: createResourceCollection(),
   sounds: createResourceCollection(),
   videos: createResourceCollection(),
@@ -1052,9 +1052,13 @@ const constructProjectResources = (repositoryState = {}) => {
   const colors = repositoryState.colors || { items: {}, tree: [] };
   const fonts = repositoryState.fonts || { items: {}, tree: [] };
   const variables = Object.fromEntries(
-    Object.entries(repositoryState.variables?.items || {}).filter(
-      ([, item]) => item.type !== "folder",
-    ),
+    Object.entries(repositoryState.variables?.items || {})
+      .filter(([, item]) => item.type === "variable")
+      .map(([id, item]) => {
+        const { variableType, ...engineVariable } = item;
+        engineVariable.type = variableType;
+        return [id, engineVariable];
+      }),
   );
 
   const characterImages = extractCharacterImages(
@@ -1408,18 +1412,18 @@ export const getVariableOptions = (variablesData, options = {}) => {
 
   return variableEntries
     .filter(([_, item]) => {
-      if (item.type === "folder") {
+      if (item.type !== "variable") {
         return false;
       }
-      if (type && item.type !== type) {
+      if (type && item.variableType !== type) {
         return false;
       }
       return true;
     })
     .map(([id, variable]) => {
-      const varType = (variable.type || "string").toLowerCase();
+      const variableType = (variable.variableType || "string").toLowerCase();
       return {
-        label: showType ? `${variable.name} (${varType})` : variable.name,
+        label: showType ? `${variable.name} (${variableType})` : variable.name,
         value: id,
       };
     });
@@ -1578,7 +1582,7 @@ const createResourceIndex = (state) => {
       if (!item) continue;
 
       if (resourceType === "variables") {
-        if (item.type === "folder") continue;
+        if (item.type !== "variable") continue;
         byType.variables.add(id);
         addTypeIndex(byId, id, "variables");
         continue;

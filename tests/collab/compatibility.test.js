@@ -14,7 +14,8 @@ describe("evaluateRemoteCommandCompatibility", () => {
       payload: {
         variableId: "mood",
         data: {
-          type: "string",
+          type: "variable",
+          variableType: "string",
           name: "Mood",
           scope: "context",
           enumValues: [42],

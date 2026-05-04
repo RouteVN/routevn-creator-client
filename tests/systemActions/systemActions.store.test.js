@@ -552,4 +552,45 @@ describe("systemActions.store", () => {
       "calc((100vw - 64px) / 2)",
     );
   });
+
+  it("can hide the embedded close button for inline selected action lists", () => {
+    const defaultViewData = selectViewData({
+      state: createInitialState(),
+      props: {
+        actionType: "system",
+      },
+    });
+    const inlineViewData = selectViewData({
+      state: createInitialState(),
+      props: {
+        actionType: "system",
+        showEmbeddedClose: false,
+      },
+    });
+    const stringFalseViewData = selectViewData({
+      state: createInitialState(),
+      props: {
+        actionType: "system",
+        showEmbeddedClose: "false",
+      },
+    });
+
+    expect(defaultViewData.showEmbeddedClose).toBe(true);
+    expect(inlineViewData.showEmbeddedClose).toBe(false);
+    expect(stringFalseViewData.showEmbeddedClose).toBe(false);
+  });
+
+  it("exposes allowed modes for constrained action choosers", () => {
+    const viewData = selectViewData({
+      state: createInitialState(),
+      props: {
+        allowedModes: ["sectionTransition", "", 42, "updateVariable"],
+      },
+    });
+
+    expect(viewData.allowedModes).toEqual([
+      "sectionTransition",
+      "updateVariable",
+    ]);
+  });
 });

@@ -68,6 +68,17 @@ const mergePresentationStates = (
   };
 };
 
+const getSectionLinePresentationState = (state, lineId) => {
+  const selectedLineEntry = (state.sectionLineChanges?.lines || []).find(
+    (line) => line.id === lineId,
+  );
+  if (!selectedLineEntry) {
+    return undefined;
+  }
+
+  return toPlainObject(selectedLineEntry.presentationState);
+};
+
 const toFlatTree = (ids = []) => {
   return ids.map((id) => ({ id }));
 };
@@ -110,13 +121,13 @@ const buildMentionTargetOptions = (repositoryState = {}) => {
 
   return flatItems
     .filter((item) => {
-      const variableType = String(item?.type ?? "").toLowerCase();
+      const variableType = String(item?.variableType ?? "").toLowerCase();
       return MENTION_VARIABLE_TYPES.has(variableType);
     })
     .map((item) => ({
       id: item.id,
       label: item.name || item.id,
-      variableType: String(item.type).toLowerCase(),
+      variableType: String(item.variableType).toLowerCase(),
     }));
 };
 
@@ -589,6 +600,13 @@ export const selectEffectivePresentationState = ({ state }) => {
 
 export const setSectionLineChanges = ({ state }, { changes } = {}) => {
   state.sectionLineChanges = changes;
+  const syncedPresentationState = getSectionLinePresentationState(
+    state,
+    state.selectedLineId,
+  );
+  if (syncedPresentationState !== undefined) {
+    state.presentationState = syncedPresentationState;
+  }
 };
 
 export const setScenePageLoading = ({ state }, { isLoading } = {}) => {
@@ -828,7 +846,19 @@ export const selectSelectedLineId = ({ state }) => {
 };
 
 export const setSelectedLineId = ({ state }, { selectedLineId } = {}) => {
+  const syncedPresentationState = getSectionLinePresentationState(
+    state,
+    selectedLineId,
+  );
   state.selectedLineId = selectedLineId;
+  if (!selectedLineId) {
+    state.presentationState = {};
+    return;
+  }
+
+  if (syncedPresentationState !== undefined) {
+    state.presentationState = syncedPresentationState;
+  }
 };
 
 export const selectActionTargetLineId = ({ state }) => {

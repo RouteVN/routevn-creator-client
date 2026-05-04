@@ -16,7 +16,7 @@ export const normalizeVariableEnumValues = (values = []) => {
 };
 
 export const isVariableEnumEnabled = (variable = {}) =>
-  variable?.type === "string" && variable?.isEnum === true;
+  variable?.variableType === "string" && variable?.isEnum === true;
 
 export const buildVariableEnumOptions = (values = []) =>
   normalizeVariableEnumValues(values).map((value) => ({

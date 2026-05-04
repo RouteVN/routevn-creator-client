@@ -17,6 +17,14 @@ const PREVIEW_BOOLEAN_OPTIONS = [
   { label: "False", value: false },
 ];
 
+const getPreviewVariableType = (variable = {}) => {
+  if (variable?.type === "variable") {
+    return String(variable.variableType ?? "string").toLowerCase();
+  }
+
+  return String(variable?.type ?? "string").toLowerCase();
+};
+
 const setNestedValue = (object, path, value) => {
   const keys = String(path)
     .split(".")
@@ -45,13 +53,14 @@ const setNestedValue = (object, path, value) => {
 
 export const toPreviewVariableValue = (variable = {}) => {
   const value = variable.value ?? variable.default;
+  const variableType = getPreviewVariableType(variable);
 
-  if (variable.type === "number") {
+  if (variableType === "number") {
     const parsedValue = Number(value);
     return Number.isFinite(parsedValue) ? parsedValue : 0;
   }
 
-  if (variable.type === "boolean") {
+  if (variableType === "boolean") {
     if (typeof value === "boolean") {
       return value;
     }
@@ -63,7 +72,7 @@ export const toPreviewVariableValue = (variable = {}) => {
     return Boolean(value);
   }
 
-  if (variable.type === "object") {
+  if (variableType === "object") {
     return value && typeof value === "object" ? value : {};
   }
 
@@ -75,7 +84,7 @@ export const createPreviewVariables = (variablesData = {}) => {
 
   return Object.entries(variableItems).reduce(
     (variables, [variableId, variable]) => {
-      if (!variableId || variable?.type === "folder") {
+      if (!variableId || variable?.type !== "variable") {
         return variables;
       }
 
@@ -194,7 +203,7 @@ export const getLayoutPreviewVariableItems = ({
     if (!variable) {
       continue;
     }
-    const type = String(variable?.type ?? "string").toLowerCase();
+    const type = getPreviewVariableType(variable);
 
     if (!isSupportedPreviewVariableType(type)) {
       continue;

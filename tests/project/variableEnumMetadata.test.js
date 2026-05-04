@@ -15,7 +15,8 @@ const createCommand = (overrides = {}) => ({
   payload: {
     variableId: "mood",
     data: {
-      type: "string",
+      type: "variable",
+      variableType: "string",
       name: "Mood",
       description: "",
       scope: "context",
@@ -44,7 +45,8 @@ describe("variable enum metadata", () => {
 
     expect(createResult.valid).toBe(true);
     expect(createResult.repositoryState.variables.items.mood).toMatchObject({
-      type: "string",
+      type: "variable",
+      variableType: "string",
       isEnum: true,
       enumValues: ["happy", "sad"],
       default: "happy",
@@ -63,7 +65,8 @@ describe("variable enum metadata", () => {
         payload: {
           variableId: "mood",
           data: {
-            type: "string",
+            type: "variable",
+            variableType: "string",
             name: "Mood",
             description: "",
             scope: "context",

@@ -17,7 +17,9 @@ const getDetailFileTypeLabel = ({ item, selectedFontInfo } = {}) => {
     return configuredFileType;
   }
 
-  return selectedFontInfo?.format ?? "Unknown";
+  return formatFontFileTypeLabel({
+    fileType: selectedFontInfo?.format,
+  });
 };
 
 const buildDetailFields = ({ item, selectedFontInfo } = {}) => {
@@ -162,6 +164,7 @@ const {
   setItems,
   addPendingUploads,
   removePendingUploads,
+  updatePendingUpload,
   setSelectedItemId,
   setSelectedFolderId,
   openEditDialog,
@@ -251,6 +254,7 @@ export {
   setItems,
   addPendingUploads,
   removePendingUploads,
+  updatePendingUpload,
   setSelectedItemId,
   setSelectedFolderId,
   openEditDialog,

@@ -69,6 +69,46 @@ describe("lexical scene document editor line previews", () => {
     }
   });
 
+  it("renders update variable action markers in right-gutter preview items", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const previewHost = {
+        createIconPreview({ icon }) {
+          const item = document.createElement("div");
+          item.className = "preview-item";
+          const iconElement = document.createElement("rtgl-svg");
+          iconElement.setAttribute("svg", icon);
+          item.append(iconElement);
+          return item;
+        },
+      };
+
+      const signature = JSON.parse(
+        LexicalSceneDocumentEditorElement.prototype.buildRightGutterSignature({
+          hasUpdateVariable: true,
+        }),
+      );
+      const previewItems =
+        LexicalSceneDocumentEditorElement.prototype.createPreviewItems.call(
+          previewHost,
+          { hasUpdateVariable: true },
+        );
+
+      expect(signature.hasUpdateVariable).toBe(true);
+      expect(
+        Array.from(previewItems.querySelectorAll("rtgl-svg")).map((icon) =>
+          icon.getAttribute("svg"),
+        ),
+      ).toEqual(["variable"]);
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
   it("renders deleted dialogue previews as dialogue icons with a centered x mark", async () => {
     const restoreDomGlobals = installDomGlobals();
 

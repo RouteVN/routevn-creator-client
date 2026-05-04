@@ -221,6 +221,7 @@ export const createCatalogResourceCommandApi = (shared) => ({
   createTransform: async ({
     transformId,
     data,
+    fileRecords,
     parentId,
     position = "last",
     positionTargetId,
@@ -233,12 +234,13 @@ export const createCatalogResourceCommandApi = (shared) => ({
       idField: "transformId",
       idValue: transformId,
       data,
+      fileRecords,
       parentId,
       position,
       positionTargetId,
       index,
     }),
-  updateTransform: async ({ transformId, data }) =>
+  updateTransform: async ({ transformId, data, fileRecords }) =>
     submitUpdateResourceCommand({
       shared,
       resourceType: "transforms",
@@ -246,6 +248,7 @@ export const createCatalogResourceCommandApi = (shared) => ({
       idField: "transformId",
       idValue: transformId,
       data,
+      fileRecords,
     }),
   moveTransform: async ({
     transformId,

@@ -1,4 +1,9 @@
 import { generateId } from "../../internal/id.js";
+import {
+  captureCanvasImage,
+  captureCanvasThumbnailImage,
+} from "../../internal/runtime/graphicsEngineRuntime.js";
+import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
 import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
@@ -10,6 +15,91 @@ import { TRANSFORM_TAG_SCOPE_KEY } from "./transforms.store.js";
 
 const MARKER_SIZE = 30;
 const BG_COLOR = "#4a4a4a";
+const FALLBACK_TARGET_SIZE = 200;
+
+const createEmptyPreviewState = () => ({
+  elements: [],
+  animations: [],
+  audio: [],
+});
+
+const toPositiveNumber = (value, fallback) => {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) && numberValue > 0
+    ? numberValue
+    : fallback;
+};
+
+const dataUrlToBlob = async (value) => {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new Error("Thumbnail image is missing");
+  }
+
+  const commaIndex = value.indexOf(",");
+  if (commaIndex < 0) {
+    throw new Error("Thumbnail image is not a valid data URL");
+  }
+
+  const header = value.slice(0, commaIndex);
+  const body = value.slice(commaIndex + 1);
+  const mimeMatch = header.match(/^data:([^;,]+)?(?:;base64)?$/);
+  if (!mimeMatch) {
+    throw new Error("Thumbnail image is not a valid data URL");
+  }
+
+  const mimeType = mimeMatch[1] || "application/octet-stream";
+  const isBase64 = header.includes(";base64");
+
+  if (!isBase64) {
+    return new Blob([decodeURIComponent(body)], { type: mimeType });
+  }
+
+  const binary = atob(body);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return new Blob([bytes], { type: mimeType });
+};
+
+const waitForPreviewPaint = () =>
+  new Promise((resolve) => {
+    if (typeof globalThis.requestAnimationFrame !== "function") {
+      resolve();
+      return;
+    }
+
+    globalThis.requestAnimationFrame(() => {
+      if (typeof globalThis.requestAnimationFrame !== "function") {
+        resolve();
+        return;
+      }
+
+      globalThis.requestAnimationFrame(resolve);
+    });
+  });
+
+const {
+  focusKeyboardScope: focusImageSelectorKeyboardScope,
+  handleKeyboardScopeClick:
+    handleTransformPreviewImageSelectorKeyboardScopeClick,
+  handleKeyboardScopeKeyDown:
+    handleTransformPreviewImageSelectorKeyboardScopeKeyDown,
+} = createFileExplorerKeyboardScopeHandlers({
+  fileExplorerRefName: "transformPreviewImageSelectorFileExplorer",
+  keyboardScopeRefName: "transformPreviewImageSelectorKeyboardScope",
+});
+
+const attachTransformPreviewCanvas = async ({ graphicsService, refs } = {}) => {
+  if (!graphicsService || !refs?.canvas) {
+    return;
+  }
+
+  if (typeof graphicsService.attachCanvas === "function") {
+    await graphicsService.attachCanvas(refs.canvas);
+  }
+};
 
 const createRenderState = ({
   projectResolution,
@@ -20,12 +110,24 @@ const createRenderState = ({
   scaleY,
   anchorX,
   anchorY,
+  backgroundImage,
+  targetImage,
 }) => {
   const { width, height } = projectResolution;
-
-  return {
-    elements: [
-      {
+  const backgroundElement = backgroundImage?.fileId
+    ? {
+        id: "bg",
+        type: "sprite",
+        src: backgroundImage.fileId,
+        fileType: backgroundImage.fileType ?? "image/png",
+        x: Math.round(width / 2),
+        y: Math.round(height / 2),
+        width,
+        height,
+        anchorX: 0.5,
+        anchorY: 0.5,
+      }
+    : {
         id: "bg",
         type: "rect",
         x: 0,
@@ -33,21 +135,42 @@ const createRenderState = ({
         width,
         height,
         fill: BG_COLOR,
-      },
-      {
+      };
+  const targetElement = targetImage?.fileId
+    ? {
+        id: "id0",
+        type: "sprite",
+        src: targetImage.fileId,
+        fileType: targetImage.fileType ?? "image/png",
+        x,
+        y,
+        rotation,
+        width: toPositiveNumber(targetImage.width, FALLBACK_TARGET_SIZE),
+        height: toPositiveNumber(targetImage.height, FALLBACK_TARGET_SIZE),
+        scaleX,
+        scaleY,
+        anchorX,
+        anchorY,
+      }
+    : {
         id: "id0",
         type: "rect",
         x,
         y,
         rotation,
-        width: 200,
-        height: 200,
+        width: FALLBACK_TARGET_SIZE,
+        height: FALLBACK_TARGET_SIZE,
         scaleX,
         scaleY,
         anchorX,
         anchorY,
         fill: "white",
-      },
+      };
+
+  return {
+    elements: [
+      backgroundElement,
+      targetElement,
       {
         id: "id1",
         type: "rect",
@@ -82,17 +205,55 @@ const createTransformPayload = (values = {}) => {
   };
 };
 
-const renderTransformPreview = ({
+const loadTransformPreviewAssets = async ({
   graphicsService,
-  values,
-  projectResolution,
+  projectService,
+  images,
 } = {}) => {
+  if (!graphicsService || !projectService) {
+    return;
+  }
+
+  const assets = {};
+  for (const image of images ?? []) {
+    if (!image?.fileId) {
+      continue;
+    }
+
+    const fileResult = await projectService.getFileContent(image.fileId);
+    assets[image.fileId] = {
+      url: fileResult.url,
+      type: image.fileType ?? fileResult.type ?? "image/png",
+    };
+  }
+
+  if (Object.keys(assets).length > 0) {
+    await graphicsService.loadAssets(assets);
+  }
+};
+
+const renderTransformPreview = async ({ deps, values } = {}) => {
+  const { graphicsService, projectService, refs, store } = deps;
   if (!graphicsService) {
     return;
   }
 
+  await attachTransformPreviewCanvas({
+    graphicsService,
+    refs,
+  });
+
   const transformData = createTransformPayload(values);
-  graphicsService.render(
+  const projectResolution = store.selectProjectResolution();
+  const backgroundImage = store.selectDialogPreviewBackgroundImage();
+  const targetImage = store.selectDialogPreviewTargetImage();
+  await loadTransformPreviewAssets({
+    graphicsService,
+    projectService,
+    images: [backgroundImage, targetImage],
+  });
+  await graphicsService.render(createEmptyPreviewState());
+  await graphicsService.render(
     createRenderState({
       projectResolution,
       x: transformData.x,
@@ -102,8 +263,75 @@ const renderTransformPreview = ({
       scaleY: transformData.scaleY,
       anchorX: transformData.anchorX,
       anchorY: transformData.anchorY,
+      backgroundImage,
+      targetImage,
     }),
   );
+};
+
+const captureTransformPreviewFiles = async ({ deps, values } = {}) => {
+  const { appService, graphicsService, projectService, refs } = deps;
+
+  if (!graphicsService || !refs.canvas) {
+    appService.showAlert({
+      message: "Failed to capture transform thumbnail.",
+      title: "Error",
+    });
+    return;
+  }
+
+  try {
+    await renderTransformPreview({
+      deps,
+      values,
+    });
+    await waitForPreviewPaint();
+
+    const previewImage = await captureCanvasImage(graphicsService, refs.canvas);
+    if (!previewImage) {
+      appService.showAlert({
+        message: "Failed to capture transform preview.",
+        title: "Error",
+      });
+      return;
+    }
+
+    const thumbnailImage = await captureCanvasThumbnailImage(
+      graphicsService,
+      refs.canvas,
+    );
+    if (!thumbnailImage) {
+      appService.showAlert({
+        message: "Failed to capture transform thumbnail.",
+        title: "Error",
+      });
+      return;
+    }
+
+    const previewBlob = await dataUrlToBlob(previewImage);
+    const previewFile = await projectService.storeFile({
+      file: previewBlob,
+    });
+    const thumbnailBlob = await dataUrlToBlob(thumbnailImage);
+    const thumbnailFile = await projectService.storeFile({
+      file: thumbnailBlob,
+    });
+
+    return {
+      previewFileId: previewFile.fileId,
+      thumbnailFileId: thumbnailFile.fileId,
+      fileRecords: [
+        ...(previewFile.fileRecords ?? []),
+        ...(thumbnailFile.fileRecords ?? []),
+      ],
+    };
+  } catch (error) {
+    console.error("[transforms] Failed to capture transform preview", error);
+    appService.showAlert({
+      message: "Failed to save transform thumbnail.",
+      title: "Error",
+    });
+  }
 };
 
 const openTransformDialog = async ({
@@ -143,9 +371,8 @@ const openTransformDialog = async ({
     height: projectResolution.height,
   });
 
-  renderTransformPreview({
-    graphicsService,
-    projectResolution,
+  await renderTransformPreview({
+    deps,
     values: createTransformPayload(
       itemData ?? {
         x: 0,
@@ -202,6 +429,9 @@ const {
     deps.store.setTagsData({
       tagsData: getTagsCollection(repositoryState, TRANSFORM_TAG_SCOPE_KEY),
     });
+    deps.store.setImagesData({
+      imagesData: repositoryState?.images,
+    });
     deps.store.setProjectResolution({
       projectResolution: repositoryState?.project?.resolution,
     });
@@ -251,6 +481,11 @@ export {
   handleDetailTagOpenChange,
   handleDetailTagValueChange,
   handleCreateTagFormAction,
+};
+
+export {
+  handleTransformPreviewImageSelectorKeyboardScopeClick,
+  handleTransformPreviewImageSelectorKeyboardScopeKeyDown,
 };
 
 export const handleBeforeMount = (deps) => {
@@ -365,6 +600,21 @@ export const handleTransformFormActionClick = async (deps, payload) => {
   const editMode = store.selectEditMode();
   const editItemId = store.selectEditItemId();
   const targetGroupId = store.selectTargetGroupId();
+  store.setDialogValues({ values });
+
+  const previewFileResult = await captureTransformPreviewFiles({
+    deps,
+    values,
+  });
+  if (!previewFileResult) {
+    return;
+  }
+  transformData.thumbnailFileId = previewFileResult.thumbnailFileId;
+  transformData.previewFileId = previewFileResult.previewFileId;
+  const preview = store.selectDialogPreviewData();
+  if (preview) {
+    transformData.preview = preview;
+  }
 
   if (editMode && editItemId) {
     const updateAttempt = await runResourcePageMutation({
@@ -374,6 +624,7 @@ export const handleTransformFormActionClick = async (deps, payload) => {
         projectService.updateTransform({
           transformId: editItemId,
           data: transformData,
+          fileRecords: previewFileResult.fileRecords,
         }),
     });
 
@@ -391,6 +642,7 @@ export const handleTransformFormActionClick = async (deps, payload) => {
             type: "transform",
             ...transformData,
           },
+          fileRecords: previewFileResult.fileRecords,
           parentId: targetGroupId,
           position: "last",
         }),
@@ -405,15 +657,87 @@ export const handleTransformFormActionClick = async (deps, payload) => {
   await handleDataChanged(deps);
 };
 
-export const handleTransformFormChange = (deps, payload) => {
-  const { graphicsService, render, store } = deps;
+export const handleTransformFormChange = async (deps, payload) => {
+  const { store } = deps;
+  const values = payload._event.detail.values;
 
-  renderTransformPreview({
-    graphicsService,
-    projectResolution: store.selectProjectResolution(),
-    values: createTransformPayload(payload._event.detail.values),
+  store.setDialogValues({ values });
+
+  await renderTransformPreview({
+    deps,
+    values,
+  });
+};
+
+const renderDialogPreviewFromStore = async (deps) => {
+  await renderTransformPreview({
+    deps,
+    values: deps.store.selectDialogValues(),
+  });
+};
+
+export const handleTransformPreviewImageClick = (deps, payload) => {
+  const { render, store } = deps;
+  const target = payload._event.currentTarget?.dataset?.target;
+
+  store.openPreviewImageSelectorDialog({
+    target,
   });
   render();
+};
+
+export const handleTransformPreviewImageSelected = async (deps, payload) => {
+  const imageId = payload._event.detail?.imageId;
+  if (!imageId) {
+    return;
+  }
+
+  deps.store.applyPreviewImageSelectorSelection({ imageId });
+  deps.render();
+  await renderDialogPreviewFromStore(deps);
+};
+
+export const handleTransformPreviewImageSelectorCancel = (deps) => {
+  deps.store.closePreviewImageSelectorDialog();
+  deps.render();
+};
+
+export const handleTransformPreviewImageSelectorSubmit = async (deps) => {
+  deps.store.commitPreviewImageSelectorSelection();
+  deps.render();
+  await renderDialogPreviewFromStore(deps);
+};
+
+export const handleTransformPreviewImageDoubleClick = async (deps, payload) => {
+  const imageId = payload?._event?.detail?.imageId;
+  if (!imageId) {
+    return;
+  }
+
+  deps.store.showFullImagePreview({ imageId });
+  deps.render();
+};
+
+export const handleTransformPreviewImageSelectorFileExplorerClick = (
+  deps,
+  payload,
+) => {
+  const { itemId } = payload._event.detail;
+  if (!itemId) {
+    return;
+  }
+
+  deps.refs.transformPreviewImageSelector?.transformedHandlers?.handleScrollToItem?.(
+    {
+      itemId,
+    },
+  );
+  focusImageSelectorKeyboardScope(deps);
+};
+
+export const handleTransformPreviewImagePreviewOverlayClick = (deps) => {
+  deps.store.hideFullImagePreview();
+  deps.render();
 };
 
 export const handleItemDelete = async (deps, payload) => {
@@ -455,16 +779,27 @@ export const handleItemDuplicate = async (deps, payload) => {
   }
 
   const duplicateTransformId = generateId();
+  const duplicateData = {
+    type: "transform",
+    ...createTransformPayload(itemData),
+  };
+  if (itemData.thumbnailFileId) {
+    duplicateData.thumbnailFileId = itemData.thumbnailFileId;
+  }
+  if (itemData.previewFileId) {
+    duplicateData.previewFileId = itemData.previewFileId;
+  }
+  if (itemData.preview) {
+    duplicateData.preview = structuredClone(itemData.preview);
+  }
+
   const createAttempt = await runResourcePageMutation({
     appService,
     fallbackMessage: "Failed to duplicate transform.",
     action: () =>
       projectService.createTransform({
         transformId: duplicateTransformId,
-        data: {
-          type: "transform",
-          ...createTransformPayload(itemData),
-        },
+        data: duplicateData,
         parentId: itemData.parentId ?? null,
         position: "after",
         positionTargetId: itemId,

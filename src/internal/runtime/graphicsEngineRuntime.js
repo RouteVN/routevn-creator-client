@@ -218,16 +218,34 @@ export const captureCanvasThumbnailImage = async (
   canvasRoot,
 ) => {
   if (typeof graphicsService?.extractBase64 === "function") {
+    const fullSizeImage = await captureCanvasImage(graphicsService, canvasRoot);
+    return await createDataUrlThumbnailImage(fullSizeImage);
+  }
+
+  const canvasElement = getCanvasElement(canvasRoot);
+  if (!canvasElement || typeof canvasElement.toDataURL !== "function") {
+    return;
+  }
+
+  try {
+    return createCanvasThumbnailDataUrl(canvasElement);
+  } catch {
+    return;
+  }
+};
+
+export const captureCanvasImage = async (graphicsService, canvasRoot) => {
+  if (typeof graphicsService?.extractBase64 === "function") {
     try {
       const extracted = await graphicsService.extractBase64("story");
       if (typeof extracted === "string" && extracted.length > 0) {
-        return await createDataUrlThumbnailImage(extracted);
+        return extracted;
       }
     } catch {
       try {
         const extracted = await graphicsService.extractBase64();
         if (typeof extracted === "string" && extracted.length > 0) {
-          return await createDataUrlThumbnailImage(extracted);
+          return extracted;
         }
       } catch {
         // Fall back to DOM canvas capture below.
@@ -241,7 +259,7 @@ export const captureCanvasThumbnailImage = async (
   }
 
   try {
-    return createCanvasThumbnailDataUrl(canvasElement);
+    return canvasElement.toDataURL();
   } catch {
     return;
   }

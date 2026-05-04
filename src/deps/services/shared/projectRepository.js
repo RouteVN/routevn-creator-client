@@ -9,6 +9,7 @@ import {
   applyCommandToRepositoryStateWithCreatorModel,
   applyCommandsToRepositoryStateWithCreatorModel,
   toCreatorModelState,
+  validateClientModelStateExtensions,
 } from "../../../internal/creatorModelAdapter.js";
 import {
   commandToSyncEvent,
@@ -22,6 +23,7 @@ import {
   DEFAULT_PROJECT_RESOLUTION,
   requireProjectResolution,
 } from "../../../internal/projectResolution.js";
+import { createEmptyTagScopes } from "../../../internal/project/projection.js";
 
 export const createTreeCollection = () => {
   return {
@@ -56,6 +58,7 @@ export const initialProjectData = {
   layouts: createTreeCollection(),
   controls: createTreeCollection(),
   scenes: createTreeCollection(),
+  tags: createEmptyTagScopes(),
 };
 
 export const assertSupportedProjectState = (state) => {
@@ -65,6 +68,13 @@ export const assertSupportedProjectState = (state) => {
   if (!result.valid) {
     throw new Error(
       result.error?.message || "Unsupported project repository state",
+    );
+  }
+
+  const extensionResult = validateClientModelStateExtensions(state);
+  if (!extensionResult.valid) {
+    throw new Error(
+      extensionResult.error?.message || "Unsupported project repository state",
     );
   }
 

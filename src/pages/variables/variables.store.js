@@ -275,7 +275,7 @@ export const selectViewData = ({ state }) => {
       {
         type: "text",
         label: "Type",
-        value: selectedItem.type ?? "",
+        value: selectedItem.variableType ?? "",
       },
     );
 

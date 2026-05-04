@@ -200,13 +200,15 @@ describe("constructProjectData", () => {
         {
           playerName: {
             id: "playerName",
-            type: "string",
+            type: "variable",
+            variableType: "string",
             scope: "context",
             default: "Alice",
           },
           "score-total": {
             id: "score-total",
-            type: "number",
+            type: "variable",
+            variableType: "number",
             scope: "context",
             default: 7,
           },

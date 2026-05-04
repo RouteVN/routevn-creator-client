@@ -3,6 +3,7 @@ import {
   createInitialState,
   selectViewData,
   setBranches,
+  setTempBranch,
   setVariablesData,
   updateBranch,
 } from "../../src/components/commandLineConditional/commandLineConditional.store.js";
@@ -19,7 +20,8 @@ describe("commandLineConditional.store", () => {
             trust: {
               id: "trust",
               name: "Trust",
-              type: "number",
+              type: "variable",
+              variableType: "number",
             },
           },
           tree: [{ id: "trust" }],
@@ -33,7 +35,7 @@ describe("commandLineConditional.store", () => {
           {
             id: "branch-1",
             when: {
-              gte: [{ var: "variables.trust" }, 70],
+              eq: [{ var: "variables.trust" }, 70],
             },
             actions: {
               nextLine: {},
@@ -57,7 +59,7 @@ describe("commandLineConditional.store", () => {
     expect(viewData.branches).toMatchObject([
       {
         id: "branch-1",
-        summary: "Trust Greater Or Equal 70",
+        summary: "Trust Equals 70",
         actionsSummary: "1 action",
       },
     ]);
@@ -66,9 +68,17 @@ describe("commandLineConditional.store", () => {
       summary: "Default",
       actionsSummary: "1 action",
     });
-    expect(viewData.conditionKindOptions.map((option) => option.value)).toEqual(
-      ["variable", "expression", "json"],
-    );
+    expect(viewData.operatorOptions.map((option) => option.value)).toEqual([
+      "eq",
+      "neq",
+    ]);
+    expect(viewData.variableOptions).toEqual([
+      {
+        value: "trust",
+        label: "Trust",
+        suffixText: "number",
+      },
+    ]);
   });
 
   it("exposes inherited hidden modes for nested branch action editors", () => {
@@ -85,6 +95,77 @@ describe("commandLineConditional.store", () => {
       "showConfirmDialog",
       "hideConfirmDialog",
     ]);
+    expect(viewData.branchActionAllowedModes).toEqual([
+      "sectionTransition",
+      "resetStoryAtSection",
+      "updateVariable",
+    ]);
+  });
+
+  it("exposes enum values as conditional value options", () => {
+    const state = createInitialState();
+
+    setVariablesData(
+      { state },
+      {
+        variables: {
+          items: {
+            mood: {
+              id: "mood",
+              name: "Mood",
+              type: "variable",
+              variableType: "string",
+              isEnum: true,
+              enumValues: ["happy", "sad"],
+            },
+          },
+          tree: [{ id: "mood" }],
+        },
+      },
+    );
+    setTempBranch(
+      { state },
+      {
+        variableId: "mood",
+        value: "happy",
+      },
+    );
+
+    const viewData = selectViewData({ state });
+
+    expect(viewData.showEnumValueSelect).toBe(true);
+    expect(viewData.enumValueOptions).toEqual([
+      { value: "happy", label: "happy" },
+      { value: "sad", label: "sad" },
+    ]);
+    expect(viewData.canSaveBranch).toBe(true);
+  });
+
+  it("allows unsupported condition drafts to save without variable controls", () => {
+    const state = createInitialState();
+
+    setTempBranch(
+      { state },
+      {
+        conditionKind: "unsupported",
+        when: {
+          all: [
+            {
+              eq: [{ var: "variables.route" }, "north"],
+            },
+          ],
+        },
+        actions: {
+          nextLine: {},
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state });
+
+    expect(viewData.isEditingUnsupportedCondition).toBe(true);
+    expect(viewData.showValueField).toBe(false);
+    expect(viewData.canSaveBranch).toBe(true);
   });
 
   it("inserts new conditional branches before an existing default branch", () => {
@@ -109,7 +190,9 @@ describe("commandLineConditional.store", () => {
       {
         branch: {
           id: "branch-condition",
-          when: "variables.trust >= 70",
+          when: {
+            eq: [{ var: "variables.trust" }, 70],
+          },
           actions: {
             sectionTransition: {
               sceneId: "scene-2",
@@ -135,7 +218,9 @@ describe("commandLineConditional.store", () => {
         branches: [
           {
             id: "branch-condition",
-            when: "variables.trust >= 70",
+            when: {
+              eq: [{ var: "variables.trust" }, 70],
+            },
             actions: {
               nextLine: {},
             },
@@ -168,7 +253,9 @@ describe("commandLineConditional.store", () => {
     expect(state.branches).toEqual([
       {
         id: "branch-condition",
-        when: "variables.trust >= 70",
+        when: {
+          eq: [{ var: "variables.trust" }, 70],
+        },
         actions: {
           nextLine: {},
         },
