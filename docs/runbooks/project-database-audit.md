@@ -1,8 +1,8 @@
 # Project Database Audit
 
 Use this runbook to inspect a project-specific `project.db` without changing the
-original project. It is intended for desktop project folders such as
-`C:\Users\tk\Desktop\projects\Z87`.
+original project. It is intended for desktop project folders selected by the
+user, such as a project under a Windows `Desktop\projects` directory.
 
 ## Safety Rules
 
@@ -17,10 +17,11 @@ original project. It is intended for desktop project folders such as
 
 ## Prepare A Snapshot
 
-On WSL, convert the Windows project path to `/mnt/c/...`:
+On WSL, convert the Windows project path to `/mnt/c/...`, then set
+`PROJECT_DIR` to that converted project folder:
 
 ```sh
-PROJECT_DIR=/mnt/c/Users/tk/Desktop/projects/Z87
+PROJECT_DIR="${PROJECT_DIR:?set PROJECT_DIR to the WSL path of the project folder}"
 AUDIT_DIR=/tmp/routevn-project-db-audit-$(date +%Y%m%d%H%M%S)
 
 mkdir -p "$AUDIT_DIR"
