@@ -1,17 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  createInitialState as createSceneEditorState,
-  selectEffectivePresentationState as selectSceneEditorEffectivePresentationState,
-  setPresentationState as setSceneEditorPresentationState,
-  setSectionLineChanges as setSceneEditorSectionLineChanges,
-  setSelectedLineId as setSceneEditorSelectedLineId,
-} from "../../src/pages/sceneEditor/sceneEditor.store.js";
-import {
-  createInitialState as createLexicalSceneEditorState,
-  selectEffectivePresentationState as selectLexicalSceneEditorEffectivePresentationState,
-  setPresentationState as setLexicalSceneEditorPresentationState,
-  setSectionLineChanges as setLexicalSceneEditorSectionLineChanges,
-  setSelectedLineId as setLexicalSceneEditorSelectedLineId,
+  createInitialState,
+  selectEffectivePresentationState,
+  setPresentationState,
+  setSectionLineChanges,
+  setSelectedLineId,
 } from "../../src/components/sceneEditorLexical/sceneEditorLexical.store.js";
 
 const stalePresentationState = {
@@ -42,103 +35,17 @@ const selectedLineChanges = {
 };
 
 describe("scene editor selected line presentation state", () => {
-  it("syncs the page editor presentation state from section changes when selecting a line", () => {
-    const state = createSceneEditorState();
-
-    setSceneEditorPresentationState(
-      { state },
-      { presentationState: stalePresentationState },
-    );
-    setSceneEditorSectionLineChanges(
-      { state },
-      { changes: selectedLineChanges },
-    );
-    setSceneEditorSelectedLineId({ state }, { selectedLineId: "line-next" });
-
-    expect(selectSceneEditorEffectivePresentationState({ state })).toEqual({
-      dialogue: {
-        ui: {
-          resourceId: "dialogue-next",
-        },
-      },
-    });
-  });
-
   it("syncs the lexical editor presentation state from section changes when selecting a line", () => {
-    const state = createLexicalSceneEditorState();
+    const state = createInitialState();
 
-    setLexicalSceneEditorPresentationState(
-      { state },
-      { presentationState: stalePresentationState },
-    );
-    setLexicalSceneEditorSectionLineChanges(
+    setPresentationState({ state }, { presentationState: stalePresentationState });
+    setSectionLineChanges(
       { state },
       { changes: selectedLineChanges },
     );
-    setLexicalSceneEditorSelectedLineId(
-      { state },
-      { selectedLineId: "line-next" },
-    );
+    setSelectedLineId({ state }, { selectedLineId: "line-next" });
 
-    expect(
-      selectLexicalSceneEditorEffectivePresentationState({ state }),
-    ).toEqual({
-      dialogue: {
-        ui: {
-          resourceId: "dialogue-next",
-        },
-      },
-    });
-  });
-
-  it("does not clear page editor presentation state when section changes are stale", () => {
-    const state = createSceneEditorState();
-
-    setSceneEditorPresentationState(
-      { state },
-      { presentationState: stalePresentationState },
-    );
-    setSceneEditorSectionLineChanges(
-      { state },
-      {
-        changes: {
-          lines: [
-            {
-              id: "line-other",
-              changes: {},
-              presentationState: {
-                dialogue: {
-                  ui: {
-                    resourceId: "dialogue-other",
-                  },
-                },
-              },
-            },
-          ],
-        },
-      },
-    );
-    setSceneEditorSelectedLineId({ state }, { selectedLineId: "line-next" });
-
-    expect(selectSceneEditorEffectivePresentationState({ state })).toEqual(
-      stalePresentationState,
-    );
-  });
-
-  it("syncs page editor presentation state when fresh section changes arrive", () => {
-    const state = createSceneEditorState();
-
-    setSceneEditorPresentationState(
-      { state },
-      { presentationState: stalePresentationState },
-    );
-    setSceneEditorSelectedLineId({ state }, { selectedLineId: "line-next" });
-    setSceneEditorSectionLineChanges(
-      { state },
-      { changes: selectedLineChanges },
-    );
-
-    expect(selectSceneEditorEffectivePresentationState({ state })).toEqual({
+    expect(selectEffectivePresentationState({ state })).toEqual({
       dialogue: {
         ui: {
           resourceId: "dialogue-next",
@@ -148,13 +55,10 @@ describe("scene editor selected line presentation state", () => {
   });
 
   it("does not clear lexical editor presentation state when section changes are stale", () => {
-    const state = createLexicalSceneEditorState();
+    const state = createInitialState();
 
-    setLexicalSceneEditorPresentationState(
-      { state },
-      { presentationState: stalePresentationState },
-    );
-    setLexicalSceneEditorSectionLineChanges(
+    setPresentationState({ state }, { presentationState: stalePresentationState });
+    setSectionLineChanges(
       { state },
       {
         changes: {
@@ -174,35 +78,21 @@ describe("scene editor selected line presentation state", () => {
         },
       },
     );
-    setLexicalSceneEditorSelectedLineId(
-      { state },
-      { selectedLineId: "line-next" },
-    );
+    setSelectedLineId({ state }, { selectedLineId: "line-next" });
 
-    expect(
-      selectLexicalSceneEditorEffectivePresentationState({ state }),
-    ).toEqual(stalePresentationState);
+    expect(selectEffectivePresentationState({ state })).toEqual(
+      stalePresentationState,
+    );
   });
 
   it("syncs lexical editor presentation state when fresh section changes arrive", () => {
-    const state = createLexicalSceneEditorState();
+    const state = createInitialState();
 
-    setLexicalSceneEditorPresentationState(
-      { state },
-      { presentationState: stalePresentationState },
-    );
-    setLexicalSceneEditorSelectedLineId(
-      { state },
-      { selectedLineId: "line-next" },
-    );
-    setLexicalSceneEditorSectionLineChanges(
-      { state },
-      { changes: selectedLineChanges },
-    );
+    setPresentationState({ state }, { presentationState: stalePresentationState });
+    setSelectedLineId({ state }, { selectedLineId: "line-next" });
+    setSectionLineChanges({ state }, { changes: selectedLineChanges });
 
-    expect(
-      selectLexicalSceneEditorEffectivePresentationState({ state }),
-    ).toEqual({
+    expect(selectEffectivePresentationState({ state })).toEqual({
       dialogue: {
         ui: {
           resourceId: "dialogue-next",

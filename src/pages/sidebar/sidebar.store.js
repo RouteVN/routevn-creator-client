@@ -149,11 +149,7 @@ export const selectViewData = ({ state }) => {
     }
 
     // For settings
-    if (
-      currentPath === "/project/about" ||
-      currentPath === "/project/user" ||
-      currentPath === "/project/appearance"
-    ) {
+    if (currentPath === "/project/about" || currentPath === "/project/user") {
       const settingsItem = state.items.find(
         (item) => item.title === SIDEBAR_TITLE_SETTINGS,
       );

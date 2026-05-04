@@ -53,7 +53,7 @@ describe("commandLineActions.store", () => {
     expect(iconByMode.decrementSaveLoadPagination).toBe("settings");
     expect(iconByMode.setMenuPage).toBe("settings");
     expect(iconByMode.setMenuEntryPoint).toBe("settings");
-    expect(iconByMode.conditional).toBe("settings");
+    expect(iconByMode.conditional).toBeUndefined();
   });
 
   it("offers resetStoryAtSection in system actions and drops resetStorySession", () => {
@@ -103,7 +103,7 @@ describe("commandLineActions.store", () => {
     }
   });
 
-  it("shows conditional actions in the logic section", () => {
+  it("hides conditional actions from the logic section", () => {
     const systemItems = selectItems({
       props: {
         actionsType: "system",
@@ -115,14 +115,26 @@ describe("commandLineActions.store", () => {
       },
     });
 
-    expect(getSectionModes(systemItems, "Logic")).toEqual([
-      "updateVariable",
-      "conditional",
-    ]);
+    expect(getSectionModes(systemItems, "Logic")).toEqual(["updateVariable"]);
     expect(getSectionModes(presentationItems, "Logic")).toEqual([
       "updateVariable",
-      "conditional",
     ]);
+    expect(systemItems.some((item) => item.mode === "conditional")).toBe(false);
+    expect(presentationItems.some((item) => item.mode === "conditional")).toBe(
+      false,
+    );
+  });
+
+  it("keeps conditional hidden even when allowed modes include it", () => {
+    const items = selectItems({
+      props: {
+        actionsType: "system",
+        allowedModes: ["conditional", "updateVariable"],
+      },
+    });
+
+    expect(getSectionModes(items, "Logic")).toEqual(["updateVariable"]);
+    expect(items.some((item) => item.mode === "conditional")).toBe(false);
   });
 
   it("moves dialogue text speed into the dialogue section", () => {

@@ -21,6 +21,18 @@ const OPERATIONS_BY_TYPE = {
   string: [{ value: "set", label: "Set to" }],
 };
 
+const DEFAULT_DIVIDE_ROUND_TO = 2;
+const MAX_DIVIDE_ROUND_TO = 12;
+
+const isValidRoundToValue = (value) => {
+  const numericValue = Number(value);
+  return (
+    Number.isInteger(numericValue) &&
+    numericValue >= 0 &&
+    numericValue <= MAX_DIVIDE_ROUND_TO
+  );
+};
+
 export const createInitialState = () => ({
   mode: "current",
   initiated: false,
@@ -32,6 +44,7 @@ export const createInitialState = () => ({
     variableId: "",
     op: "",
     value: "",
+    roundTo: undefined,
   },
   dropdownMenu: {
     isOpen: false,
@@ -67,6 +80,7 @@ export const addOperation = ({ state }, { id } = {}) => {
     variableId: "",
     op: "",
     value: "",
+    roundTo: undefined,
   });
   state.currentEditingId = id;
   state.mode = "edit";
@@ -96,7 +110,12 @@ export const setTempOperation = ({ state }, params = {}) => {
 };
 
 export const resetTempOperation = ({ state }, _payload = {}) => {
-  state.tempOperation = { variableId: "", op: "", value: "" };
+  state.tempOperation = {
+    variableId: "",
+    op: "",
+    value: "",
+    roundTo: undefined,
+  };
 };
 
 export const showDropdownMenu = ({ state }, { position, operationId } = {}) => {
@@ -159,6 +178,9 @@ export const selectViewData = ({ state }) => {
   const showValueField =
     state.tempOperation.op !== "toggle" && state.tempOperation.op !== "";
   const valueInputType = selectedType;
+  const showRoundToField =
+    selectedType === "number" && state.tempOperation.op === "divide";
+  const roundToValue = state.tempOperation.roundTo ?? DEFAULT_DIVIDE_ROUND_TO;
 
   const booleanOptions = [
     { value: "true", label: "true" },
@@ -217,17 +239,20 @@ export const selectViewData = ({ state }) => {
     booleanOptions,
     enumValueOptions: buildVariableEnumOptions(selectedEnumValues),
     showEnumValueSelect,
+    showRoundToField,
     showValueField,
     valueInputType,
     tempOperation: {
       ...state.tempOperation,
       booleanValue,
+      roundToValue,
     },
     dropdownMenu: state.dropdownMenu,
     hasOperations: state.operations.length > 0,
     canSaveOperation:
       state.tempOperation.variableId &&
       state.tempOperation.op &&
+      (!showRoundToField || isValidRoundToValue(roundToValue)) &&
       (!showEnumValueSelect ||
         selectedEnumValues.includes(state.tempOperation.value)),
   };

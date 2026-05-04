@@ -1,4 +1,3 @@
-import { concatMap, filter, from } from "rxjs";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { generateId } from "../../internal/id.js";
 import {
@@ -13,9 +12,6 @@ import { createSceneEditorDraftPersistence } from "../../internal/ui/sceneEditor
 import { createEmptyContent } from "../../internal/ui/sceneEditorLexical/contentModel.js";
 import {
   findCharacterIdByShortcut,
-  handleMergeLinesOperation,
-  handlePasteLinesOperation,
-  handleSplitLineOperation,
   syncSceneEditorProjectState as syncStoreProjectState,
 } from "../../internal/ui/sceneEditor/lineOperations.js";
 import {
@@ -350,60 +346,6 @@ const refreshSceneEditorStateFromProject = async (deps) => {
   await updateSceneEditorSectionChanges(deps);
 };
 
-const processSplitLineRequest = async (deps, detail = {}) => {
-  if (isSectionsOverviewOpen(deps.store)) {
-    return;
-  }
-
-  cancelSceneEditorDraftFlush(deps);
-  await handleSplitLineOperation(deps, {
-    _event: {
-      detail,
-    },
-  });
-  scheduleSceneEditorDraftFlush(deps, {
-    reason: "structure",
-  });
-};
-
-const processMergeLinesRequest = async (deps, detail = {}) => {
-  if (isSectionsOverviewOpen(deps.store)) {
-    return;
-  }
-
-  cancelSceneEditorDraftFlush(deps);
-  await handleMergeLinesOperation(deps, {
-    _event: {
-      detail,
-    },
-  });
-  scheduleSceneEditorDraftFlush(deps, {
-    reason: "structure",
-  });
-};
-
-const mountSceneEditorShortcutSubscriptions = (deps) => {
-  const { subject } = deps;
-
-  const streams = [
-    subject.pipe(
-      filter(({ action }) => action === "sceneEditor.requestSplitLine"),
-      concatMap(({ payload }) =>
-        from(processSplitLineRequest(deps, payload).catch(() => {})),
-      ),
-    ),
-    subject.pipe(
-      filter(({ action }) => action === "sceneEditor.requestMergeLines"),
-      concatMap(({ payload }) =>
-        from(processMergeLinesRequest(deps, payload).catch(() => {})),
-      ),
-    ),
-  ];
-
-  const active = streams.map((stream) => stream.subscribe());
-  return () => active.forEach((subscription) => subscription?.unsubscribe?.());
-};
-
 const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
   const { store, render, subject } = deps;
   const hadPendingSessionChanges = hasPendingSceneEditorDraftChanges(
@@ -450,8 +392,6 @@ export const handleBeforeMount = (deps) => {
   });
 
   const cleanupRuntimeSubscriptions = mountSceneEditorSubscriptions(deps);
-  const cleanupShortcutSubscriptions =
-    mountSceneEditorShortcutSubscriptions(deps);
   const projectSubscription = createProjectStateStream({
     projectService,
     emitCurrent: false,
@@ -464,7 +404,6 @@ export const handleBeforeMount = (deps) => {
   return async () => {
     projectSubscription.unsubscribe();
     cleanupRuntimeSubscriptions();
-    cleanupShortcutSubscriptions();
     await flushSceneEditorDrafts(deps);
     await projectService.clearActiveSceneId().catch(() => {});
     await resetSceneEditorRuntime(deps);
@@ -1062,24 +1001,6 @@ export const handleSectionsOverviewRowClick = async (deps, payload) => {
   deps.render();
 };
 
-export const handleSplitLine = async (deps, payload) => {
-  deps.subject.dispatch(
-    "sceneEditor.requestSplitLine",
-    payload?._event?.detail || {},
-  );
-};
-
-export const handlePasteLines = async (deps, payload) => {
-  if (isSectionsOverviewOpen(deps.store)) {
-    return;
-  }
-  cancelSceneEditorDraftFlush(deps);
-  await handlePasteLinesOperation(deps, payload);
-  scheduleSceneEditorDraftFlush(deps, {
-    reason: "structure",
-  });
-};
-
 export const handleNewLine = async (deps, payload) => {
   if (isSectionsOverviewOpen(deps.store)) {
     return;
@@ -1316,13 +1237,6 @@ export const handleSwapLine = async (deps, payload) => {
   scheduleSceneEditorDraftFlush(deps, {
     reason: "structure",
   });
-};
-
-export const handleMergeLines = async (deps, payload) => {
-  deps.subject.dispatch(
-    "sceneEditor.requestMergeLines",
-    payload?._event?.detail || {},
-  );
 };
 
 export const handleSectionTabRightClick = (deps, payload) => {

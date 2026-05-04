@@ -9,11 +9,10 @@ const TEXT_ENTRY_TAGS = new Set([
   "rtgl-input",
   "rtgl-select",
   "rtgl-textarea",
-  "rvn-editable-text",
 ]);
 
 const TEXT_ENTRY_SELECTOR =
-  "input, textarea, select, rtgl-input, rtgl-select, rtgl-textarea, rvn-editable-text, [contenteditable=''], [contenteditable='true']";
+  "input, textarea, select, rtgl-input, rtgl-select, rtgl-textarea, [contenteditable=''], [contenteditable='true']";
 
 const isFocusableInteractiveTarget = (target) => {
   if (!target) {

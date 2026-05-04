@@ -361,15 +361,15 @@ Important boundary:
 Preferred structure:
 
 ```text
-editableText primitive
--> linesEditor component
+lexicalSceneDocumentEditor primitive
+-> sceneDocumentEditorLexical component
+-> sceneEditorLexical component
 -> internal/ui scene editor helpers
--> sceneEditor page
 -> projectService / internal/project
 ```
 
-This keeps low-level caret and contenteditable behavior separate from
-scene-specific workflows.
+This keeps low-level Lexical/editor behavior separate from scene-specific
+workflows.
 
 ## Code Placement
 
@@ -773,20 +773,22 @@ Resource center components must stay presentational.
 
 Current scene-editing pattern:
 
-- `src/primitives/editableText.js`
-  low-level contenteditable/caret behavior
-- `src/components/linesEditor/`
-  UI-only editing surface
+- `src/primitives/lexicalSceneDocumentEditor.js`
+  low-level Lexical document editing behavior
+- `src/components/sceneDocumentEditorLexical/`
+  UI wrapper for the Lexical document editing surface
+- `src/components/sceneEditorLexical/`
+  scene editor route surface, preview/canvas, dialogs, and asset loading
 - `src/internal/ui/sceneEditor/`
   scene-editing workflows and line view-model shaping
-- `src/pages/sceneEditor/`
-  page orchestration, preview/canvas, dialogs, and asset loading
+- `src/internal/ui/sceneEditorLexical/`
+  draft document/session helpers for Lexical editing
 
-Keep `linesEditor` in its fixed Rettangoli component files.
-Do not add ad hoc sibling helper files inside the component folder when the
-logic is really scene-editing orchestration.
+Keep Lexical editor-specific orchestration outside the primitive. The primitive
+owns browser/editor behavior; scene workflow logic belongs in the component or
+shared `src/internal/ui/sceneEditor*` helpers.
 
-`linesEditor` must not own:
+The Lexical document editor must not own:
 
 - repository or domain reads
 - project service orchestration

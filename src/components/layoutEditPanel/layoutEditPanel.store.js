@@ -52,7 +52,7 @@ import {
   toTextStyleOptions,
 } from "./support/layoutEditPanelViewData.js";
 
-const HIDDEN_LAYOUT_ACTION_MODES = new Set();
+const HIDDEN_LAYOUT_ACTION_MODES = new Set(["conditional"]);
 const POSITION_POPOVER_NAMES = new Set(["x", "y"]);
 const POSITION_POPOVER_PRESETS = [
   {

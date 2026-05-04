@@ -18,7 +18,6 @@ RouteVN Creator to a one-store-per-project model built directly on
 Related docs:
 
 - [Project Storage And Sync Redesign](./project-storage-and-sync-redesign.md)
-- [Scene Editor Text Sync Redesign](./scene-editor-text-sync-redesign.md)
 - [Platform README](./platform/README.md)
 
 ## Status
@@ -29,7 +28,7 @@ Last validation run:
 
 - `bun run lint`
 - `bun run build:web`
-- `bunx vitest run tests/services/projectAssetService.test.js tests/services/projectExportService.test.js tests/projectService/projectServiceCore.releaseRuntime.test.js tests/versions/versions.handlers.test.js tests/projectRepositoryRuntime/projectRepositoryRuntime.test.js tests/projectRepositoryService/projectRepositoryService.mainCheckpoint.test.js tests/projectRepositoryService/projectRepositoryService.compatibility.test.js tests/web/projectServiceAdapters.test.js tests/tauri/projectServiceAdapters.test.js tests/sceneEditor/editorSession.test.js tests/systemActions/systemActions.handlers.test.js`
+- `bunx vitest run tests/services/projectAssetService.test.js tests/services/projectExportService.test.js tests/projectService/projectServiceCore.releaseRuntime.test.js tests/versions/versions.handlers.test.js tests/projectRepositoryRuntime/projectRepositoryRuntime.test.js tests/projectRepositoryService/projectRepositoryService.mainCheckpoint.test.js tests/projectRepositoryService/projectRepositoryService.compatibility.test.js tests/web/projectServiceAdapters.test.js tests/tauri/projectServiceAdapters.test.js tests/sceneEditor/lexicalDraftPersistence.test.js tests/systemActions/systemActions.handlers.test.js`
 - `bunx vitest run tests/web/webRepositoryAdapter.test.js tests/collab/createProjectCollabService.test.js tests/services/projectCollabCore.deleteIfUnused.test.js`
 
 ## Hard Cutover Rules
@@ -334,9 +333,9 @@ the new one-store model.
 
 ### Files To Touch
 
-- [src/pages/sceneEditor/sceneEditor.handlers.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/pages/sceneEditor/sceneEditor.handlers.js)
-- [src/pages/sceneEditor/sceneEditor.store.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/pages/sceneEditor/sceneEditor.store.js)
-- [src/internal/ui/sceneEditor/editorSession.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/internal/ui/sceneEditor/editorSession.js)
+- [src/components/sceneEditorLexical/sceneEditorLexical.handlers.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/components/sceneEditorLexical/sceneEditorLexical.handlers.js)
+- [src/components/sceneEditorLexical/sceneEditorLexical.store.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/components/sceneEditorLexical/sceneEditorLexical.store.js)
+- [src/internal/ui/sceneEditorLexical/draftSection.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/internal/ui/sceneEditorLexical/draftSection.js)
 - [src/internal/ui/sceneEditor/persistenceQueue.js](/home/tk/Code/yuusoft-org/routevn-creator-client/src/internal/ui/sceneEditor/persistenceQueue.js)
 
 ### Specific Requirements

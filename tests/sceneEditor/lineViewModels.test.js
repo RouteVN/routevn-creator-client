@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSceneEditorLineViewModels } from "../../src/internal/ui/sceneEditor/lineViewModels.js";
+import { buildSceneDocumentLineDecorations } from "../../src/internal/ui/sceneEditor/lineViewModels.js";
 
 const createRepositoryState = () => ({
   characters: {
@@ -15,7 +15,7 @@ const createRepositoryState = () => ({
   },
 });
 
-describe("sceneEditor.lineViewModels", () => {
+describe("sceneEditor.lineDecorations", () => {
   it("uses per-line presentationState from section changes for dialogue avatars", () => {
     const lines = [
       {
@@ -36,7 +36,7 @@ describe("sceneEditor.lineViewModels", () => {
       },
     ];
 
-    const viewModels = buildSceneEditorLineViewModels({
+    const viewModels = buildSceneDocumentLineDecorations({
       lines,
       repositoryState: createRepositoryState(),
       sectionLineChanges: {
@@ -86,7 +86,7 @@ describe("sceneEditor.lineViewModels", () => {
       },
     ];
 
-    const viewModels = buildSceneEditorLineViewModels({
+    const viewModels = buildSceneDocumentLineDecorations({
       lines,
       repositoryState: createRepositoryState(),
       sectionLineChanges: {
@@ -114,7 +114,7 @@ describe("sceneEditor.lineViewModels", () => {
       },
     ];
 
-    const viewModels = buildSceneEditorLineViewModels({
+    const viewModels = buildSceneDocumentLineDecorations({
       lines,
       repositoryState: createRepositoryState(),
       sectionLineChanges: {
@@ -168,7 +168,7 @@ describe("sceneEditor.lineViewModels", () => {
       },
     };
 
-    const viewModels = buildSceneEditorLineViewModels({
+    const viewModels = buildSceneDocumentLineDecorations({
       lines,
       repositoryState,
       sectionLineChanges: {
@@ -244,7 +244,7 @@ describe("sceneEditor.lineViewModels", () => {
       },
     ];
 
-    const viewModels = buildSceneEditorLineViewModels({
+    const viewModels = buildSceneDocumentLineDecorations({
       lines,
       repositoryState: createRepositoryState(),
       sectionLineChanges: {
@@ -279,7 +279,7 @@ describe("sceneEditor.lineViewModels", () => {
       },
     ];
 
-    const viewModels = buildSceneEditorLineViewModels({
+    const viewModels = buildSceneDocumentLineDecorations({
       lines,
       repositoryState: createRepositoryState(),
       sectionLineChanges: {
