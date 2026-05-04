@@ -23,7 +23,9 @@ describe("commandApi submitCommandsWithContext", () => {
     });
 
     const session = {
-      submitCommands: vi.fn(async (commands) => commands.map((command) => command.id)),
+      submitCommands: vi.fn(async (commands) =>
+        commands.map((command) => command.id),
+      ),
     };
 
     const shared = createCommandApiShared({
@@ -180,8 +182,6 @@ describe("commandApi submitCommandsWithContext", () => {
               name: "Image One",
               fileId: "file-1",
               thumbnailFileId: "thumb-1",
-              fileType: "image/png",
-              fileSize: 123,
               width: 640,
               height: 360,
             },
