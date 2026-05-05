@@ -8,10 +8,13 @@ import {
   $isElementNode,
   $isRangeSelection,
   $isTextNode,
+  COMMAND_PRIORITY_CRITICAL,
   COMMAND_PRIORITY_HIGH,
   KEY_ENTER_COMMAND,
   KEY_ESCAPE_COMMAND,
   PASTE_COMMAND,
+  REDO_COMMAND,
+  UNDO_COMMAND,
   createEditor,
 } from "lexical";
 import {
@@ -742,6 +745,16 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       this.editor.registerUpdateListener(({ editorState }) => {
         this.syncFromEditorState(editorState);
       }),
+      this.editor.registerCommand(
+        UNDO_COMMAND,
+        () => true,
+        COMMAND_PRIORITY_CRITICAL,
+      ),
+      this.editor.registerCommand(
+        REDO_COMMAND,
+        () => true,
+        COMMAND_PRIORITY_CRITICAL,
+      ),
       this.editor.registerCommand(
         KEY_ENTER_COMMAND,
         (event) => {
