@@ -62,57 +62,12 @@ const getLinesEditorRef = (refs) => {
   return refs?.linesEditor;
 };
 
-const cloneControlAction = (action) => {
-  if (!action || typeof action !== "object") {
-    return undefined;
-  }
-
-  return structuredClone(action);
-};
-
-const findFirstControlAction = (repositoryState) => {
-  const controls = repositoryState?.controls?.items || {};
-
-  for (const [controlId, control] of Object.entries(controls)) {
-    if (control?.type === "control") {
-      return {
-        resourceId: controlId,
-        resourceType: "control",
-      };
-    }
-  }
-
-  return undefined;
-};
-
-const resolveDocumentLineControlAction = ({
-  repositoryState,
-  line,
-  fallbackLine,
-} = {}) => {
-  const primaryAction = cloneControlAction(line?.actions?.control);
-  if (primaryAction) {
-    return primaryAction;
-  }
-
-  const fallbackAction = cloneControlAction(fallbackLine?.actions?.control);
-  if (fallbackAction) {
-    return fallbackAction;
-  }
-
-  return findFirstControlAction(repositoryState);
-};
-
-const createDocumentDraftLine = ({ lineId, sectionId, controlAction } = {}) => {
+const createDocumentDraftLine = ({ lineId, sectionId } = {}) => {
   const actions = {
     dialogue: {
       content: createEmptyContent(),
     },
   };
-
-  if (controlAction) {
-    actions.control = controlAction;
-  }
 
   return {
     id: lineId || generateId(),
@@ -404,7 +359,7 @@ export const handleBeforeMount = (deps) => {
   return async () => {
     projectSubscription.unsubscribe();
     cleanupRuntimeSubscriptions();
-    await flushSceneEditorDrafts(deps);
+    await flushSceneEditorDrafts(deps, { force: true });
     await projectService.clearActiveSceneId().catch(() => {});
     await resetSceneEditorRuntime(deps);
   };
@@ -451,7 +406,7 @@ export const handleSectionTabClick = async (deps, payload) => {
     payload._event.currentTarget?.dataset?.sectionId ||
     payload._event.currentTarget?.id?.replace("sectionTab", "") ||
     "";
-  await flushSceneEditorDrafts(deps);
+  await flushSceneEditorDrafts(deps, { force: true });
   await selectSceneEditorSection(deps, sectionId);
   reconcileCurrentEditorSession(deps);
   deps.render();
@@ -809,9 +764,7 @@ export const handleEditorBlur = async (deps) => {
       return;
     }
 
-    Promise.resolve(
-      scheduleSceneEditorDraftFlush(deps, { immediate: true }),
-    ).catch(() => {});
+    scheduleSceneEditorDraftFlush(deps, { reason: "text" });
   }, 0);
 };
 
@@ -992,7 +945,7 @@ export const handleSectionsOverviewRowClick = async (deps, payload) => {
   }
 
   store.closeSectionsOverviewPanel();
-  await flushSceneEditorDrafts(deps);
+  await flushSceneEditorDrafts(deps, { force: true });
   await selectSceneEditorSection(deps, sectionId);
   reconcileCurrentEditorSession(deps);
   deps.render();
@@ -1004,7 +957,7 @@ export const handleNewLine = async (deps, payload) => {
   }
   cancelSceneEditorDraftFlush(deps);
 
-  const { store, render, subject, refs, projectService } = deps;
+  const { store, render, subject, refs } = deps;
   const detail = payload?._event?.detail || {};
   const draftSection =
     store.selectDraftSection() || reconcileCurrentEditorSession(deps);
@@ -1025,17 +978,8 @@ export const handleNewLine = async (deps, payload) => {
   const baseLine = baseLineId
     ? lines.find((line) => line.id === baseLineId)
     : undefined;
-  const fallbackLine = selectedLineId
-    ? lines.find((line) => line.id === selectedLineId)
-    : undefined;
-  const controlAction = resolveDocumentLineControlAction({
-    repositoryState: projectService.getRepositoryState(),
-    line: baseLine,
-    fallbackLine,
-  });
   const newLine = createDocumentDraftLine({
     sectionId: draftSection.sectionId || baseLine?.sectionId,
-    controlAction,
   });
   const baseIndex = baseLineId
     ? lines.findIndex((line) => line.id === baseLineId)
@@ -1290,7 +1234,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   if (typeof action === "string" && action.startsWith("go-to-section:")) {
     const nextSectionId = action.replace("go-to-section:", "");
     if (nextSectionId) {
-      await flushSceneEditorDrafts(deps);
+      await flushSceneEditorDrafts(deps, { force: true });
       await selectSceneEditorSection(deps, nextSectionId);
       reconcileCurrentEditorSession(deps);
       render();
@@ -1299,7 +1243,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   }
 
   if (action === "delete-section") {
-    await flushSceneEditorDrafts(deps);
+    await flushSceneEditorDrafts(deps, { force: true });
     await runSceneEditorPersistence(
       deps,
       async () => {
@@ -1608,6 +1552,7 @@ export const handlePreviewClick = (deps, payload) => {
       await flushSceneEditorDrafts(deps, {
         liveLines,
         showErrorAlert: false,
+        force: true,
       });
       syncStoreProjectState(store, projectService);
       didPersistDraft = true;
@@ -1772,7 +1717,7 @@ export const handleHidePreviewScene = async (deps) => {
 
 export const handleBackClick = async (deps) => {
   const { appService } = deps;
-  await flushSceneEditorDrafts(deps);
+  await flushSceneEditorDrafts(deps, { force: true });
   const { p } = appService.getPayload();
   appService.navigate("/project/scenes", { p });
 };

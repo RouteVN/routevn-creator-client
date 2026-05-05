@@ -364,4 +364,95 @@ describe("lexical scene document editor line editing", () => {
       restoreDomGlobals();
     }
   });
+
+  it("does not copy control actions when splitting a line", async () => {
+    const restoreDomGlobals = installDomGlobals();
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = vi.fn(() => 1);
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editor = createEditor({
+        namespace: "lexical-line-split-control-copy-test",
+        onError: (error) => {
+          throw error;
+        },
+      });
+      const rootElement = document.createElement("div");
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      let lineKey;
+
+      document.body.append(rootElement);
+      editor.setRootElement(rootElement);
+      editorElement.editor = editor;
+      editorElement.state = {
+        selectedLineId: "line-1",
+        lines: [],
+        mentionTargets: [],
+      };
+      editorElement.lineMetaByKey = new Map();
+      editorElement.lineKeyById = new Map();
+      editorElement.scrollLineIntoView = vi.fn();
+      editorElement.focusLine = vi.fn();
+
+      editor.update(
+        () => {
+          const root = $getRoot();
+          const line = $createParagraphNode();
+
+          line.append($createTextNode("Hello world"));
+          root.append(line);
+          lineKey = line.getKey();
+          editorElement.lineMetaByKey.set(lineKey, {
+            id: "line-1",
+            sectionId: "section-1",
+            actions: {
+              dialogue: {
+                content: [{ text: "Hello world" }],
+              },
+              control: {
+                resourceId: "control-1",
+                resourceType: "control",
+              },
+            },
+          });
+          editorElement.lineKeyById.set("line-1", lineKey);
+        },
+        { discrete: true },
+      );
+
+      editorElement.getLineSelectionContext = vi.fn(() => ({
+        lineKey,
+        lineId: "line-1",
+        selection: {
+          start: 5,
+          end: 5,
+        },
+        lineContent: [{ text: "Hello world" }],
+      }));
+
+      editorElement.splitCurrentLine();
+
+      const lines = editorElement.getLinesSnapshot();
+
+      expect(lines).toHaveLength(2);
+      expect(lines[0].actions.control).toEqual({
+        resourceId: "control-1",
+        resourceType: "control",
+      });
+      expect(lines[1].actions.control).toBeUndefined();
+      expect(lines[1].actions.dialogue.content).toEqual([{ text: " world" }]);
+    } finally {
+      if (previousRequestAnimationFrame === undefined) {
+        delete globalThis.requestAnimationFrame;
+      } else {
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+      }
+      restoreDomGlobals();
+    }
+  });
 });

@@ -266,4 +266,115 @@ describe("story command api", () => {
       },
     });
   });
+
+  it("logs the section line snapshot diff before submitting commands", async () => {
+    const context = {
+      projectId: "project-1",
+      state: {
+        scenes: {
+          items: {
+            "scene-1": {
+              id: "scene-1",
+              type: "scene",
+              sections: {
+                items: {
+                  "section-1": {
+                    id: "section-1",
+                    lines: {
+                      items: {
+                        "line-1": {
+                          id: "line-1",
+                          actions: {
+                            dialogue: {
+                              content: [{ text: "Old" }],
+                            },
+                          },
+                        },
+                        "line-2": {
+                          id: "line-2",
+                          actions: {},
+                        },
+                      },
+                      tree: [{ id: "line-1" }, { id: "line-2" }],
+                    },
+                  },
+                },
+                tree: [{ id: "section-1" }],
+              },
+            },
+          },
+          tree: [{ id: "scene-1" }],
+        },
+      },
+    };
+    const shared = {
+      ensureCommandContext: vi.fn(async () => context),
+      submitCommandsWithContext: vi.fn(async () => ({ valid: true })),
+      scenePartitionFor: vi.fn(() => "s:scene-1"),
+      storyBasePartitionFor: vi.fn(() => "m"),
+    };
+    const api = createStoryCommandApi(shared);
+
+    await api.syncSectionLinesSnapshot({
+      sectionId: "section-1",
+      lines: [
+        {
+          id: "line-3",
+          actions: {},
+        },
+        {
+          id: "line-1",
+          actions: {
+            dialogue: {
+              content: [{ text: "New" }],
+            },
+          },
+        },
+      ],
+    });
+
+    expect(shared.submitCommandsWithContext).toHaveBeenCalledWith({
+      context,
+      commands: [
+        {
+          scope: "story",
+          type: COMMAND_TYPES.LINE_DELETE,
+          payload: {
+            lineIds: ["line-2"],
+          },
+          partition: "s:scene-1",
+        },
+        {
+          scope: "story",
+          type: COMMAND_TYPES.LINE_CREATE,
+          payload: {
+            sectionId: "section-1",
+            lines: [
+              {
+                lineId: "line-3",
+                data: {
+                  actions: {},
+                },
+              },
+            ],
+            index: 0,
+          },
+          partition: "s:scene-1",
+        },
+        {
+          scope: "story",
+          type: COMMAND_TYPES.LINE_UPDATE_ACTIONS,
+          payload: {
+            lineId: "line-1",
+            data: {
+              dialogue: {
+                content: [{ text: "New" }],
+              },
+            },
+          },
+          partition: "s:scene-1",
+        },
+      ],
+    });
+  });
 });

@@ -522,6 +522,7 @@ export const createInitialState = () => ({
   draftSaveTimerId: undefined,
   lastDraftFlushStartedAt: 0,
   draftSavePendingSinceAt: 0,
+  draftFlushInFlight: false,
   previewVisible: false,
   previewSceneId: undefined,
   previewSectionId: undefined,
@@ -581,6 +582,10 @@ export const setLastDraftFlushStartedAt = ({ state }, { timestamp } = {}) => {
 
 export const setDraftSavePendingSinceAt = ({ state }, { timestamp } = {}) => {
   state.draftSavePendingSinceAt = Number.isFinite(timestamp) ? timestamp : 0;
+};
+
+export const setDraftFlushInFlight = ({ state }, { value } = {}) => {
+  state.draftFlushInFlight = value === true;
 };
 
 export const showPreviewSceneId = (
@@ -698,6 +703,10 @@ export const selectLastDraftFlushStartedAt = ({ state }) => {
 
 export const selectDraftSavePendingSinceAt = ({ state }) => {
   return state.draftSavePendingSinceAt;
+};
+
+export const selectDraftFlushInFlight = ({ state }) => {
+  return state.draftFlushInFlight === true;
 };
 
 export const selectCharacters = ({ state }) => {

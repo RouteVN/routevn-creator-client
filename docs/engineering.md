@@ -83,6 +83,10 @@ bun run vt:generate
 bun run vt:report
 ```
 
+Do not add unit tests for temporary diagnostic/debug logs. If debug logs are
+needed to inspect a local issue, keep tests focused on the underlying behavior
+instead of asserting log payloads.
+
 Run one Puty scenario directly:
 
 ```bash
@@ -794,6 +798,33 @@ The Lexical document editor must not own:
 - project service orchestration
 - split/merge/create/delete persistence workflows
 - scene-specific badge/preview shaping
+
+Scene editor draft persistence uses latest-wins coalescing for draft flushes:
+if a running flush already has a pending replacement, the newer pending flush
+replaces it. This coalesces scheduled draft tasks, not generated commands.
+
+If a running flush saves a stale snapshot and notices that the draft advanced
+during the write, the newer draft is kept dirty and rescheduled through the
+normal debounce/throttle path instead of being submitted immediately. This
+avoids inserting every intermediate text version into `local_drafts`.
+
+Editor blur uses the normal text debounce path; navigation, preview, and
+explicit persistence workflows remain responsible for immediate flushes when
+leaving the editing context. Scheduled autosaves defer while a previous draft
+flush is still writing, then reschedule through the normal debounce/throttle
+path instead of queueing another storage submit behind the in-flight write.
+
+Direct persistence for navigation, preview, and action workflows must call
+`flushSceneEditorDrafts` with `force: true`. The max-wait cap may shorten
+debounce for a long-running dirty draft, but it must not bypass the minimum
+interval after a flush. `flushSceneEditorDrafts()` also enforces that minimum
+interval for non-forced saves so stale timers or direct autosave calls cannot
+submit rows too soon after the previous scene-editor draft write. Draft flush
+timing is tracked per project service owner, not only in page store state, so
+repository-state reconciliation cannot accidentally clear the active throttle
+window. The same minimum-interval check runs inside the queued draft-flush task
+before `syncSectionLinesSnapshot()` is called, so a task already accepted by the
+latest-task queue still reschedules instead of writing too soon.
 
 ### Scene Asset Loading
 
