@@ -360,7 +360,7 @@ export const createStoryCommandApi = (shared) => {
       });
     },
 
-    async syncSectionLinesSnapshot({ sectionId, lines = [] }) {
+    async syncSectionLinesSnapshot({ sectionId, lines = [] } = {}) {
       const context = await shared.ensureCommandContext({
         sectionIds: [sectionId],
       });

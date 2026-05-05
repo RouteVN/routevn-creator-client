@@ -13,7 +13,7 @@ import {
 export const DEFAULT_SCENE_EDITOR_DRAFT_SAVE_TIMING = {
   text: {
     debounceMs: 2000,
-    minIntervalMs: 4000,
+    minIntervalMs: 5000,
     maxIntervalMs: 10000,
   },
   structure: {
@@ -34,6 +34,45 @@ const defaultNowMs = () => {
   return Date.now();
 };
 
+const draftFlushTimingByOwner = new WeakMap();
+
+const getDraftFlushTiming = (owner) => {
+  if (!owner || typeof owner !== "object") {
+    return {
+      lastFlushStartedAt: 0,
+    };
+  }
+
+  let timing = draftFlushTimingByOwner.get(owner);
+  if (!timing) {
+    timing = {
+      lastFlushStartedAt: 0,
+    };
+    draftFlushTimingByOwner.set(owner, timing);
+  }
+
+  return timing;
+};
+
+const getSceneEditorDraftReasonTiming = (reason, timing) => {
+  return (
+    (timing || DEFAULT_SCENE_EDITOR_DRAFT_SAVE_TIMING)[reason] ||
+    DEFAULT_SCENE_EDITOR_DRAFT_SAVE_TIMING.text
+  );
+};
+
+const getSceneEditorDraftReason = (draftSection, fallbackReason = "text") => {
+  if (draftSection?.lastSource === "structure") {
+    return "structure";
+  }
+
+  if (draftSection?.lastSource === "text") {
+    return "text";
+  }
+
+  return fallbackReason;
+};
+
 export const clearScheduledDraftFlush = (store) => {
   const timerId = store.selectDraftSaveTimerId();
   if (timerId !== undefined) {
@@ -46,9 +85,7 @@ export const getSceneEditorDraftSaveDelayMs = (
   store,
   { reason = "text", nowMs = defaultNowMs, timing } = {},
 ) => {
-  const reasonTiming =
-    (timing || DEFAULT_SCENE_EDITOR_DRAFT_SAVE_TIMING)[reason] ||
-    DEFAULT_SCENE_EDITOR_DRAFT_SAVE_TIMING.text;
+  const reasonTiming = getSceneEditorDraftReasonTiming(reason, timing);
   const lastFlushStartedAt = store.selectLastDraftFlushStartedAt();
   const pendingSinceAt = store.selectDraftSavePendingSinceAt();
   const now = nowMs();
@@ -61,9 +98,28 @@ export const getSceneEditorDraftSaveDelayMs = (
       ? Math.max(0, reasonTiming.maxIntervalMs - (now - pendingSinceAt))
       : Number.POSITIVE_INFINITY;
 
-  return Math.min(
-    Math.max(reasonTiming.debounceMs, remainingThrottleMs),
-    remainingMaxWaitMs,
+  const debounceDelayMs = Math.min(reasonTiming.debounceMs, remainingMaxWaitMs);
+
+  return Math.max(remainingThrottleMs, debounceDelayMs);
+};
+
+const getSceneEditorDraftFlushThrottleDelayMs = (
+  store,
+  { owner, reason = "text", nowMs = defaultNowMs, timing } = {},
+) => {
+  const reasonTiming = getSceneEditorDraftReasonTiming(reason, timing);
+  const ownerTiming = getDraftFlushTiming(owner);
+  const lastFlushStartedAt = Math.max(
+    store.selectLastDraftFlushStartedAt(),
+    ownerTiming.lastFlushStartedAt,
+  );
+  if (lastFlushStartedAt <= 0) {
+    return 0;
+  }
+
+  return Math.max(
+    0,
+    reasonTiming.minIntervalMs - (nowMs() - lastFlushStartedAt),
   );
 };
 
@@ -77,7 +133,14 @@ export const createSceneEditorDraftPersistence = ({
 } = {}) => {
   const flushSceneEditorDrafts = async (
     deps,
-    { liveLines, showErrorAlert = true } = {},
+    {
+      liveLines,
+      showErrorAlert = true,
+      rescheduleReason = "text",
+      force = false,
+      deferIfInFlight = !force,
+      enforceMinInterval = !force,
+    } = {},
   ) => {
     const { store } = deps;
     clearScheduledDraftFlush(store);
@@ -92,84 +155,144 @@ export const createSceneEditorDraftPersistence = ({
       return;
     }
 
-    return enqueueLatestSceneEditorPersistence({
-      owner: deps.projectService,
-      key: "draft-flush",
-      task: async () => {
-        const draftSection =
-          Array.isArray(liveLines) && liveLines.length > 0
-            ? syncDraftSectionFromLines(deps, liveLines) ||
-              store.selectDraftSection()
-            : syncDraftSectionFromLiveEditor(deps) ||
-              store.selectDraftSection();
-        const snapshotLines =
-          Array.isArray(liveLines) && liveLines.length > 0
-            ? cloneSceneEditorLines(liveLines)
-            : cloneSceneEditorLines(draftSection?.lines);
-        if (snapshotLines.length === 0) {
-          return;
-        }
+    const draftReason = getSceneEditorDraftReason(
+      store.selectDraftSection(),
+      rescheduleReason,
+    );
 
-        const flushStartedAt = nowMs();
-        store.setLastDraftFlushStartedAt({
-          timestamp: flushStartedAt,
-        });
-        store.setDraftSavePendingSinceAt({ timestamp: 0 });
+    if (
+      enforceMinInterval &&
+      getSceneEditorDraftFlushThrottleDelayMs(store, {
+        reason: draftReason,
+        nowMs,
+        owner: deps.projectService,
+        timing,
+      }) > 0
+    ) {
+      scheduleSceneEditorDraftFlush(deps, {
+        reason: draftReason,
+      });
+      return;
+    }
 
-        try {
-          await deps.projectService.syncSectionLinesSnapshot({
-            sectionId: draftSection?.sectionId,
-            lines: snapshotLines,
-          });
-          syncStoreProjectState(store, deps.projectService);
-          const currentDraftSection = store.selectDraftSection();
-          const revision = store.selectRepositoryRevision();
-          const isSameDraftTarget =
-            currentDraftSection?.sceneId === draftSection?.sceneId &&
-            currentDraftSection?.sectionId === draftSection?.sectionId;
-          const didDraftAdvance =
-            isSameDraftTarget &&
-            !areSceneEditorLinesEqual(
-              currentDraftSection?.lines,
-              snapshotLines,
-            );
+    if (deferIfInFlight && store.selectDraftFlushInFlight?.()) {
+      scheduleSceneEditorDraftFlush(deps, {
+        reason: draftReason,
+      });
+      return;
+    }
 
-          if (didDraftAdvance) {
-            store.setDraftSection({
-              draftSection: rebaseSceneEditorDraftSection(currentDraftSection, {
-                revision,
-              }),
+    store.setDraftFlushInFlight?.({ value: true });
+    try {
+      return await enqueueLatestSceneEditorPersistence({
+        owner: deps.projectService,
+        key: "draft-flush",
+        task: async () => {
+          const draftSection =
+            Array.isArray(liveLines) && liveLines.length > 0
+              ? syncDraftSectionFromLines(deps, liveLines) ||
+                store.selectDraftSection()
+              : syncDraftSectionFromLiveEditor(deps) ||
+                store.selectDraftSection();
+          const taskDraftReason = getSceneEditorDraftReason(
+            draftSection,
+            draftReason,
+          );
+          if (
+            enforceMinInterval &&
+            getSceneEditorDraftFlushThrottleDelayMs(store, {
+              reason: taskDraftReason,
+              nowMs,
+              owner: deps.projectService,
+              timing,
+            }) > 0
+          ) {
+            scheduleSceneEditorDraftFlush(deps, {
+              reason: taskDraftReason,
             });
-            setTimeout(() => {
-              void flushSceneEditorDrafts(deps).catch(() => {});
-            }, 0);
             return;
           }
 
-          if (isSameDraftTarget) {
-            store.setDraftSection({
-              draftSection: markSceneEditorDraftSectionClean(
-                currentDraftSection,
-                {
-                  revision,
-                },
-              ),
-            });
-            reconcileCurrentEditorSession(deps);
+          const snapshotLines =
+            Array.isArray(liveLines) && liveLines.length > 0
+              ? cloneSceneEditorLines(liveLines)
+              : cloneSceneEditorLines(draftSection?.lines);
+          if (snapshotLines.length === 0) {
+            return;
           }
 
-          deps.render();
-        } catch (error) {
-          if (showErrorAlert) {
-            deps.appService?.showAlert({
-              message: "Failed to save scene changes",
-              title: "Error",
+          const flushStartedAt = nowMs();
+          const ownerTiming = getDraftFlushTiming(deps.projectService);
+          ownerTiming.lastFlushStartedAt = flushStartedAt;
+          store.setLastDraftFlushStartedAt({
+            timestamp: flushStartedAt,
+          });
+          store.setDraftSavePendingSinceAt({ timestamp: 0 });
+
+          try {
+            await deps.projectService.syncSectionLinesSnapshot({
+              sectionId: draftSection?.sectionId,
+              lines: snapshotLines,
             });
+            syncStoreProjectState(store, deps.projectService);
+            const currentDraftSection = store.selectDraftSection();
+            const revision = store.selectRepositoryRevision();
+            const isSameDraftTarget =
+              currentDraftSection?.sceneId === draftSection?.sceneId &&
+              currentDraftSection?.sectionId === draftSection?.sectionId;
+            const didDraftAdvance =
+              isSameDraftTarget &&
+              !areSceneEditorLinesEqual(
+                currentDraftSection?.lines,
+                snapshotLines,
+              );
+
+            if (didDraftAdvance) {
+              const nextDraftReason = getSceneEditorDraftReason(
+                currentDraftSection,
+                rescheduleReason,
+              );
+              store.setDraftSection({
+                draftSection: rebaseSceneEditorDraftSection(
+                  currentDraftSection,
+                  {
+                    revision,
+                  },
+                ),
+              });
+              scheduleSceneEditorDraftFlush(deps, {
+                reason: nextDraftReason,
+              });
+              return;
+            }
+
+            if (isSameDraftTarget) {
+              store.setDraftSection({
+                draftSection: markSceneEditorDraftSectionClean(
+                  currentDraftSection,
+                  {
+                    revision,
+                  },
+                ),
+              });
+              reconcileCurrentEditorSession(deps);
+            }
+
+            deps.render();
+          } catch (error) {
+            if (showErrorAlert) {
+              deps.appService?.showAlert({
+                message: "Failed to save scene changes",
+                title: "Error",
+              });
+            }
+            throw error;
           }
-          throw error;
-        }
-      },
-    });
+        },
+      });
+    } finally {
+      store.setDraftFlushInFlight?.({ value: false });
+    }
   };
 
   const cancelSceneEditorDraftFlush = (deps) => {
@@ -196,7 +319,10 @@ export const createSceneEditorDraftPersistence = ({
     }
 
     if (immediate) {
-      return flushSceneEditorDrafts(deps);
+      return flushSceneEditorDrafts(deps, {
+        rescheduleReason: reason,
+        force: true,
+      });
     }
 
     const delayMs = getSceneEditorDraftSaveDelayMs(store, {
@@ -205,14 +331,20 @@ export const createSceneEditorDraftPersistence = ({
       timing,
     });
     const timerId = setTimeout(() => {
-      void flushSceneEditorDrafts(deps).catch(() => {});
+      void flushSceneEditorDrafts(deps, {
+        rescheduleReason: reason,
+      }).catch(() => {});
     }, delayMs);
     store.setDraftSaveTimerId({ timerId });
   };
 
   const runSceneEditorPersistence = async (deps, task, options = {}) => {
     if (hasPendingSceneEditorDraftChanges(deps.store.selectDraftSection())) {
-      await flushSceneEditorDrafts(deps).catch(() => {});
+      await flushSceneEditorDrafts(deps, {
+        deferIfInFlight: true,
+        enforceMinInterval: true,
+        force: true,
+      }).catch(() => {});
     }
 
     return enqueueSceneEditorPersistence({

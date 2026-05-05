@@ -522,27 +522,12 @@ const isPlainShortcutKey = (event, key) => {
   );
 };
 
-const cloneControlAction = (action) => {
-  if (!action || typeof action !== "object") {
-    return undefined;
-  }
-
-  return structuredClone(action);
-};
-
-const createNewLineActions = (templateActions = {}) => {
-  const nextActions = {
+const createNewLineActions = () => {
+  return {
     dialogue: {
       content: createEmptyContent(),
     },
   };
-  const controlAction = cloneControlAction(templateActions?.control);
-
-  if (controlAction) {
-    nextActions.control = controlAction;
-  }
-
-  return nextActions;
 };
 
 const toFiniteTimestamp = (value, fallback = 0) => {
@@ -589,7 +574,7 @@ const createNewLineMeta = (templateMeta = {}) => {
       templateMeta?.updatedAt,
       toFiniteTimestamp(templateMeta?.createdAt, 0),
     ),
-    actions: createNewLineActions(templateMeta?.actions),
+    actions: createNewLineActions(),
   };
 };
 
