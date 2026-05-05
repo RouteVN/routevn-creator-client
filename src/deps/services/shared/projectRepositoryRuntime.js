@@ -472,6 +472,7 @@ export const createProjectRepositoryRuntime = async ({
   createInitialState,
   reduceEventToState,
   reduceEventsToState,
+  normalizeState = (state) => state,
   assertState = () => {},
   onHydrationProgress = () => {},
 }) => {
@@ -614,6 +615,18 @@ export const createProjectRepositoryRuntime = async ({
     activeHydrationProgress = undefined;
   };
 
+  const loadCurrentMainState = async () => {
+    const loadedState = cloneState(
+      await materializedViewRuntime.loadMaterializedView({
+        viewName: MAIN_VIEW_NAME,
+        partition: MAIN_PARTITION,
+      }),
+      createMainProjectionState(createInitialState()),
+    );
+
+    return createMainProjectionState(normalizeState(loadedState));
+  };
+
   const materializedViewRuntime = createMaterializedViewRuntime({
     materializedViews: [
       createMainStateViewDefinition({
@@ -678,15 +691,7 @@ export const createProjectRepositoryRuntime = async ({
   let currentMainState;
 
   try {
-    currentMainState = createMainProjectionState(
-      cloneState(
-        await materializedViewRuntime.loadMaterializedView({
-          viewName: MAIN_VIEW_NAME,
-          partition: MAIN_PARTITION,
-        }),
-        createMainProjectionState(createInitialState()),
-      ),
-    );
+    currentMainState = await loadCurrentMainState();
   } finally {
     endInitialMainHydrationProgress({
       progress: initialMainHydrationProgress,
@@ -697,15 +702,7 @@ export const createProjectRepositoryRuntime = async ({
   assertState(currentMainState);
 
   const refreshMainState = async () => {
-    currentMainState = createMainProjectionState(
-      cloneState(
-        await materializedViewRuntime.loadMaterializedView({
-          viewName: MAIN_VIEW_NAME,
-          partition: MAIN_PARTITION,
-        }),
-        createMainProjectionState(createInitialState()),
-      ),
-    );
+    currentMainState = await loadCurrentMainState();
     assertState(currentMainState);
   };
 

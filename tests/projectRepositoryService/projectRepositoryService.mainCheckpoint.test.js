@@ -13,6 +13,58 @@ const noopCollabAdapter = {
   afterCreateRepository: async () => undefined,
 };
 
+const createProjectStateWithDirtyVariables = () => {
+  const state = structuredClone(initialProjectData);
+  state.variables = {
+    items: {
+      "system-variables-folder": {
+        id: "system-variables-folder",
+        type: "folder",
+        name: "System",
+      },
+      _textSpeed: {
+        id: "_textSpeed",
+        type: "number",
+        name: "_textSpeed",
+        scope: "device",
+        default: 50,
+        value: 50,
+      },
+      _muteAll: {
+        id: "_muteAll",
+        type: "boolean",
+        name: "_muteAll",
+        scope: "device",
+        default: false,
+        value: false,
+      },
+      defaultFolder: {
+        id: "defaultFolder",
+        type: "folder",
+        name: "Default",
+      },
+    },
+    tree: [
+      {
+        id: "defaultFolder",
+        children: [],
+      },
+      {
+        id: "system-variables-folder",
+        children: [
+          {
+            id: "_textSpeed",
+          },
+          {
+            id: "_muteAll",
+          },
+        ],
+      },
+    ],
+  };
+  return state;
+};
+
 describe("projectRepositoryService main checkpoint reuse", () => {
   it("skips full event loading when the persisted main checkpoint is current", async () => {
     const repositoryEvents = [
@@ -125,6 +177,131 @@ describe("projectRepositoryService main checkpoint reuse", () => {
 
     expect(listDraftsOrdered).toHaveBeenCalledTimes(1);
     expect(events).toHaveLength(1);
+  });
+
+  it("materializes creator-model normalized state from a reused main checkpoint", async () => {
+    const dirtyState = createProjectStateWithDirtyVariables();
+    const repositoryEvents = [
+      {
+        id: "project-create:project-1",
+        partition: "m",
+        projectId: "project-1",
+        type: "project.create",
+        schemaVersion: 1,
+        payload: {
+          state: dirtyState,
+        },
+        clientTs: 1,
+        meta: {
+          clientTs: 1,
+        },
+      },
+    ];
+    const listDraftsOrdered = vi.fn(async () =>
+      createDraftRowsFromRepositoryEvents(repositoryEvents),
+    );
+    const store = {
+      listCommittedAfter: vi.fn(async () => []),
+      listDraftsOrdered,
+      getCursor: vi.fn(async () => 0),
+      getRepositoryHistoryStats: async () => ({
+        committedCount: 0,
+        latestCommittedId: 0,
+        draftCount: 1,
+        latestDraftClock: 1,
+      }),
+      isRepositoryHistoryStatsEqual: (left, right) =>
+        JSON.stringify(left) === JSON.stringify(right),
+      loadMaterializedViewCheckpoint: async () => ({
+        viewName: "project_repository_main_state",
+        viewVersion: "1",
+        partition: "m",
+        lastCommittedId: 1,
+        value: dirtyState,
+        meta: {
+          historyStats: {
+            committedCount: 0,
+            latestCommittedId: 0,
+            draftCount: 1,
+            latestDraftClock: 1,
+          },
+        },
+        updatedAt: 1,
+      }),
+      saveMaterializedViewCheckpoint: vi.fn(async () => {}),
+      deleteMaterializedViewCheckpoint: async () => {},
+      app: {
+        get: async (key) => {
+          if (key === "creatorVersion") {
+            return 1;
+          }
+
+          if (key === "projectInfo") {
+            return {
+              id: "project-1",
+              namespace: "namespace-1",
+              name: "Project 1",
+              description: "",
+              iconFileId: null,
+            };
+          }
+
+          return undefined;
+        },
+        set: vi.fn(async () => {}),
+      },
+    };
+    const storageAdapter = {
+      readCreatorVersionByReference: vi.fn(async () => 1),
+      resolveProjectReferenceByProjectId: vi.fn(async ({ projectId }) => ({
+        projectPath: `/tmp/${projectId}`,
+        cacheKey: `/tmp/${projectId}`,
+        repositoryProjectId: projectId,
+      })),
+      createStore: vi.fn(async () => store),
+    };
+    const service = createProjectRepositoryService({
+      router: {
+        getPayload: () => ({
+          p: "project-1",
+        }),
+      },
+      db: {},
+      creatorVersion: 1,
+      storageAdapter,
+      collabAdapter: noopCollabAdapter,
+    });
+
+    const repository = await service.ensureRepository();
+    const variables = repository.getState().variables;
+
+    expect(listDraftsOrdered).not.toHaveBeenCalled();
+    expect(variables.items._textSpeed).toBeUndefined();
+    expect(variables.items._muteAll).toBeUndefined();
+    expect(variables).toEqual({
+      items: {
+        defaultFolder: {
+          id: "defaultFolder",
+          type: "folder",
+          name: "Default",
+        },
+        "system-variables-folder": {
+          id: "system-variables-folder",
+          type: "folder",
+          name: "System",
+        },
+      },
+      tree: [
+        {
+          id: "defaultFolder",
+          children: [],
+        },
+        {
+          id: "system-variables-folder",
+          children: [],
+        },
+      ],
+    });
   });
 
   it("backfills legacy checkpoint metadata and still skips full event loading", async () => {
