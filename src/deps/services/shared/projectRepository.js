@@ -8,6 +8,7 @@ import {
 import {
   applyCommandToRepositoryStateWithCreatorModel,
   applyCommandsToRepositoryStateWithCreatorModel,
+  normalizeRepositoryStateWithCreatorModel,
   toCreatorModelState,
   validateClientModelStateExtensions,
 } from "../../../internal/creatorModelAdapter.js";
@@ -673,6 +674,7 @@ export const createProjectRepository = async ({
 
       return applyResult.repositoryState;
     },
+    normalizeState: normalizeRepositoryStateWithCreatorModel,
     assertState: assertSupportedProjectState,
     onHydrationProgress,
   });

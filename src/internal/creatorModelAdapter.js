@@ -1,4 +1,5 @@
 import {
+  normalizeState as normalizeCreatorModelState,
   processCommand as processCreatorModelCommand,
   replayCommands as replayCreatorModelCommands,
 } from "@routevn/creator-model";
@@ -51,7 +52,13 @@ const cloneStateWithoutTransformThumbnails = (state) => {
 };
 
 export const toCreatorModelState = (state) => {
-  return cloneStateWithoutTransformThumbnails(state);
+  return cloneStateWithoutTransformThumbnails(
+    normalizeRepositoryStateWithCreatorModel(state),
+  );
+};
+
+export const normalizeRepositoryStateWithCreatorModel = (state) => {
+  return normalizeCreatorModelState({ state });
 };
 
 const toCreatorModelCommand = (command) => {
