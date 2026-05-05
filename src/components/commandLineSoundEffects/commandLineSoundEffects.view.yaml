@@ -57,25 +57,25 @@ template:
       - rtgl-view d=h g=md: null
       - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
       - $if mode == 'current':
-          - rtgl-view#soundEffectsContainer w=f g=md:
-              - $for sfx, i in defaultValues.sfx:
-                  - rtgl-view d=h w=f g=md av=t:
-                      - rtgl-view#soundEffectCard${i} data-sfx-id=${sfx.id} cur=pointer bw=xs bc=${sfx.itemBorderColor} h-bc=${sfx.itemHoverBorderColor} br=sm:
-                          - rtgl-view p=md g=md br=md:
-                              - $if sfx.waveformDataFileId:
-                                  - rvn-waveform-visualizer waveformDataFileId=${sfx.waveformDataFileId} w=200 h=120: null
-                                $else:
-                                  - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
-                                      - rtgl-text s=sm c=mu-fg: No waveform
-                              - rtgl-text s=xs c=mu-fg ellipsis w=200: ${sfx.name}
-                      - rtgl-view w=1fg g=sm:
-                          - rtgl-text s=sm c=mu-fg: Loop
-                          - rtgl-segmented-control#loopSelect${i} data-index=${i} w=f no-clear :selectedValue=${sfx.loop} :options=${loopOptions}: null
-                          - rtgl-text s=sm c=mu-fg: Volume
-                          - rtgl-slider-input#volumeInput${i} data-index=${i} key=${sfx.id} min=0 max=100 step=1 w=f value=${sfx.volume}: null
-              - rtgl-button#addNewButton v=ol w=f mt=md: + Add New Sound Effect
-          - rtgl-view h=1fg: null
-          - rtgl-view d=h av=c ah=e w=f g=lg:
+          - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
+              - rtgl-view#soundEffectsContainer w=f g=md:
+                  - $for sfx, i in defaultValues.sfx:
+                      - rtgl-view d=h w=f g=md av=t:
+                          - rtgl-view#soundEffectCard${i} data-sfx-id=${sfx.id} cur=pointer bw=xs bc=${sfx.itemBorderColor} h-bc=${sfx.itemHoverBorderColor} br=sm:
+                              - rtgl-view p=md g=md br=md:
+                                  - $if sfx.waveformDataFileId:
+                                      - rvn-waveform-visualizer waveformDataFileId=${sfx.waveformDataFileId} w=200 h=120: null
+                                    $else:
+                                      - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
+                                          - rtgl-text s=sm c=mu-fg: No waveform
+                                  - rtgl-text s=xs c=mu-fg ellipsis w=200: ${sfx.name}
+                          - rtgl-view w=1fg g=sm:
+                              - rtgl-text s=sm c=mu-fg: Loop
+                              - rtgl-segmented-control#loopSelect${i} data-index=${i} w=f no-clear :selectedValue=${sfx.loop} :options=${loopOptions}: null
+                              - rtgl-text s=sm c=mu-fg: Volume
+                              - rtgl-slider-input#volumeInput${i} data-index=${i} key=${sfx.id} min=0 max=100 step=1 w=f value=${sfx.volume}: null
+                  - rtgl-button#addNewButton v=ol w=f mt=md: + Add New Sound Effect
+          - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#submitButton: Submit
       - $if mode == 'gallery':
           - rtgl-view d=h w=f av=c g=md:
@@ -100,7 +100,7 @@ template:
                                               - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
                                                   - rtgl-text s=sm c=mu-fg: No waveform
                                           - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
-          - rtgl-view d=h av=c ah=e w=f g=lg:
+          - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#buttonSelect: Select
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
   - $if showAudioPlayer:

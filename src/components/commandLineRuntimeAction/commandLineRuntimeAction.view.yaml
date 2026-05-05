@@ -9,7 +9,14 @@ refs:
         handler: handleFormChange
       form-action:
         handler: handleSubmitClick
+  submitButton:
+    eventListeners:
+      click:
+        handler: handleSubmitClick
 template:
   - rtgl-view w=f h=f p=lg:
       - rtgl-breadcrumb#breadcrumb :items=${breadcrumb}: null
-      - rtgl-form#form key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${context} w=f: null
+      - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
+          - rtgl-form#form key=${formKey} :defaultValues=${defaultValues} :form=${form} :context=${context} w=f: null
+      - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
+          - rtgl-button#submitButton variant=pr: ${submitLabel}

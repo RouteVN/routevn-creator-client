@@ -91,7 +91,7 @@ template:
       - $if mode == 'current':
           - rtgl-view d=h g=md:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
-          - rtgl-view h=1fg sv w=f:
+          - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
               - rtgl-view g=md w=f:
                   - rtgl-form#form :form=${form} :defaultValues=${defaultValues}:
                       - rtgl-view#charactersContainer slot=characters g=md w=f:
@@ -121,7 +121,7 @@ template:
                                                   - 'rtgl-view.characterSpriteGroupBox data-index=${i} data-sprite-group-id=${spriteGroup.id} d=h av=c g=xs ph=md pv=xs cur=pointer bw=xs bc=bo h-bc=pr br=sm bgc=${spriteGroup.backgroundColor}':
                                                       - rtgl-text s=xs: ${spriteGroup.name}
                   - rtgl-button#addCharacterButton v=ol w=f mt=md: + Add Character
-          - rtgl-view d=h av=c ah=e w=f g=lg:
+          - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#submitButton: Submit
       - $if mode == 'character-select':
           - rtgl-view d=h g=md:
@@ -171,7 +171,7 @@ template:
                                       - rtgl-view p=md g=md br=md:
                                           - rvn-file-image fileId=${item.fileId} w=200 h=120: null
                                           - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
-          - rtgl-view d=h av=c ah=e w=f g=lg:
+          - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#buttonSelect: Select
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
   - $when: fullImagePreviewVisible

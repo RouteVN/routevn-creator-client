@@ -40,14 +40,23 @@ export const selectViewData = ({ state }) => {
       ? state.formValues
       : createRuntimeActionDefaultValues(state.mode, state.action);
   const valueSource = defaultValues.valueSource ?? "fixed";
+  const form = createRuntimeActionForm(state.mode);
+  const submitButton = form?.actions?.buttons?.find(
+    (button) => button.id === "submit",
+  );
+
+  if (form) {
+    form.actions = undefined;
+  }
 
   return {
     breadcrumb,
-    form: createRuntimeActionForm(state.mode),
+    form,
     defaultValues,
     context: {
       values: defaultValues,
     },
     formKey: `${state.mode}-${valueSource}`,
+    submitLabel: submitButton?.label ?? "Submit",
   };
 };

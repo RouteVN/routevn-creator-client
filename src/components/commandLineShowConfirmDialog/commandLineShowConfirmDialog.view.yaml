@@ -39,18 +39,18 @@ template:
   - rtgl-view w=f h=f p=lg:
       - rtgl-breadcrumb#breadcrumb :items=${breadcrumb}: null
       - $if mode == 'current':
-          - rtgl-form#form :form=${form} :defaultValues=${defaultValues} :context=${context} w=f: null
-          - rtgl-view g=md mt=md:
-              - rtgl-view#confirmActionsButton d=h av=c ah=s g=md p=md bgc=mu h-bgc=ac br=md w=f cur=pointer:
-                  - rtgl-view d=v:
-                      - rtgl-text s=sm: Confirm Actions
-                      - rtgl-text s=xs c=mu-fg: ${confirmActionsSummary}
-              - rtgl-view#cancelActionsButton d=h av=c ah=s g=md p=md bgc=mu h-bgc=ac br=md w=f cur=pointer:
-                  - rtgl-view d=v:
-                      - rtgl-text s=sm: Cancel Actions
-                      - rtgl-text s=xs c=mu-fg: ${cancelActionsSummary}
-          - rtgl-view h=1fg: null
-          - rtgl-view d=h av=c ah=e w=f g=lg:
+          - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
+              - rtgl-form#form :form=${form} :defaultValues=${defaultValues} :context=${context} w=f: null
+              - rtgl-view g=md mt=md:
+                  - rtgl-view#confirmActionsButton d=h av=c ah=s g=md p=md bgc=mu h-bgc=ac br=md w=f cur=pointer:
+                      - rtgl-view d=v:
+                          - rtgl-text s=sm: Confirm Actions
+                          - rtgl-text s=xs c=mu-fg: ${confirmActionsSummary}
+                  - rtgl-view#cancelActionsButton d=h av=c ah=s g=md p=md bgc=mu h-bgc=ac br=md w=f cur=pointer:
+                      - rtgl-view d=v:
+                          - rtgl-text s=sm: Cancel Actions
+                          - rtgl-text s=xs c=mu-fg: ${cancelActionsSummary}
+          - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#submitButton ?disabled=${submitDisabled}: Submit
         $elif mode == 'confirmActions':
           - rvn-system-actions#confirmActionsEditor w=f h=f :showSelected=${true} :actions=${confirmActions} actionType=system :hiddenModes=${nestedHiddenModes}: null

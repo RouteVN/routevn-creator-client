@@ -1,4 +1,7 @@
-import { createRuntimeActionSubmitDetail } from "../../internal/runtimeActions.js";
+import {
+  createRuntimeActionDefaultValues,
+  createRuntimeActionSubmitDetail,
+} from "../../internal/runtimeActions.js";
 
 export const handleBeforeMount = (deps) => {
   const { props, store } = deps;
@@ -35,8 +38,13 @@ export const handleSubmitClick = (deps, payload) => {
     return;
   }
 
-  const values = detail.values ?? store.getState().formValues ?? {};
-  const mode = store.getState().mode;
+  const state = store.getState();
+  const mode = state.mode;
+  const values =
+    detail.values ??
+    (Object.keys(state.formValues ?? {}).length > 0
+      ? state.formValues
+      : createRuntimeActionDefaultValues(mode, state.action));
   const submitDetail = createRuntimeActionSubmitDetail(mode, values);
 
   if (!submitDetail) {

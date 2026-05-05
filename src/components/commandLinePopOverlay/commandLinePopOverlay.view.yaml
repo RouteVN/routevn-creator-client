@@ -9,8 +9,9 @@ refs:
         handler: handleBreadcrumbClick
 template:
   - $if mode == 'current' && initiated:
-      - rtgl-view g=md w=f:
+      - rtgl-view g=md w=f h=f:
           - rtgl-breadcrumb#breadcrumb :items=${breadcrumb}: null
-          - rtgl-text s=sm: Pop the current overlay and return to the previous view.
-          - rtgl-view d=h g=md w=f ah=e mt=lg:
+          - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
+              - rtgl-text s=sm: Pop the current overlay and return to the previous view.
+          - 'rtgl-view d=h g=md w=f ah=e mt=lg style="flex: 0 0 auto;"':
               - rtgl-button#submitButton variant=pr: Submit

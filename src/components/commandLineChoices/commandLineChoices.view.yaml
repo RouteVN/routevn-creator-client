@@ -50,10 +50,10 @@ refs:
 template:
   - rtgl-view w=f h=f p=lg:
       - $if mode == "list":
-          - rtgl-view wh=f:
+          - 'rtgl-view wh=f style="min-height: 0;"':
               - rtgl-view d=h g=md:
                   - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
-              - rtgl-view h=1fg sv w=f:
+              - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
                   - rtgl-form#form :form=${form} :defaultValues=${defaultValues} :context=${context}:
                       - rtgl-view#choicesContainer slot=choices g=md w=f:
                           - $for item, index in defaultValues.items:
@@ -61,15 +61,15 @@ template:
                                   - rtgl-view w=1fg:
                                       - rtgl-text: ${item.content}
                           - rtgl-button#addChoiceButton v=ol w=f mt=md: + Add Choice
-              - rtgl-view d=h av=c ah=e w=f g=lg:
+              - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
                   - rtgl-button#submitButton: Submit
         $elif mode == "editChoice":
-          - rtgl-view wh=f:
+          - 'rtgl-view wh=f style="min-height: 0;"':
               - rtgl-view d=h g=md:
                   - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
-              - rtgl-form#choiceForm :form=${choiceFormTemplate} :context=${editFormContext} :defaultValues=${editForm}: null
-              - rtgl-view h=1fg: null
-              - rtgl-view d=h av=c ah=e w=f g=lg:
+              - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
+                  - rtgl-form#choiceForm :form=${choiceFormTemplate} :context=${editFormContext} :defaultValues=${editForm}: null
+              - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
                   - rtgl-button#cancelEditButton v=ol: Cancel
                   - rtgl-button#saveChoiceButton: Save Choice
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null

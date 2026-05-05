@@ -74,36 +74,36 @@ template:
   - rtgl-view w=f h=f p=lg:
       - $if mode == 'current':
           - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
-          - rtgl-form#dialogueForm :defaultValues=${defaultValues} :form=${form} :context=${context} w=f:
-              - rtgl-view slot=characterSprite g=md w=f:
-                  - rtgl-view d=h g=md av=t pv=md br=md w=f:
-                      - rtgl-view#characterSpriteBox cur=pointer bw=xs bc=bo h-bc=ac br=sm:
-                          - rtgl-view p=md g=md br=md:
-                              - $if selectedSpriteCharacter.hasSpritePreview:
-                                  - rvn-stacked-file-images :fileIds=${selectedSpriteCharacter.spritePreviewFileIds} w=200 h=120 br=sm lazy: null
-                                $else:
-                                  - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg: null
-                              - rtgl-text s=xs c=mu-fg ellipsis w=200: ${selectedSpriteCharacter.displayName}
-                      - $if hasSpriteCharacter:
-                          - rtgl-view w=1fg g=sm:
-                              - rtgl-view d=h w=f av=c g=sm:
-                                  - rtgl-text s=sm c=mu-fg w=1fg: Transform
-                                  - rtgl-button#clearCharacterSpriteButton v=ol s=sm: Clear
-                              - rtgl-select#transform key=${spriteTransformId} :options=${transformOptions} :selectedValue=${spriteTransformId} w=f no-clear: null
-                              - rtgl-text s=sm c=mu-fg: Animation
-                              - rtgl-segmented-control#animationMode key=${spriteAnimationMode} :options=${animationModeOptions} :selectedValue=${spriteAnimationMode} w=f no-clear: null
-                              - $if spriteAnimationMode == 'update':
-                                  - rtgl-select#updateAnimation key=${spriteAnimationId} :options=${updateAnimationOptions} :selectedValue=${spriteAnimationId} w=f no-clear: null
-                                $elif spriteAnimationMode == 'transition':
-                                  - rtgl-select#transitionAnimation key=${spriteAnimationId} :options=${transitionAnimationOptions} :selectedValue=${spriteAnimationId} w=f no-clear: null
-                              - $if selectedSpriteCharacter.showSpriteGroupBoxes:
-                                  - rtgl-text s=sm c=mu-fg: Sprite Groups
-                                  - rtgl-view d=h wrap g=xs w=f:
-                                      - $for spriteGroup, i in selectedSpriteCharacter.spriteGroupBoxes:
-                                          - 'rtgl-view.characterSpriteGroupBox data-sprite-group-id=${spriteGroup.id} d=h av=c g=xs ph=md pv=xs cur=pointer bw=xs bc=bo h-bc=pr br=sm bgc=${spriteGroup.backgroundColor}':
-                                              - rtgl-text s=xs: ${spriteGroup.name}
-          - rtgl-view h=1fg: null
-          - rtgl-view d=h av=c ah=e w=f g=lg:
+          - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
+              - rtgl-form#dialogueForm :defaultValues=${defaultValues} :form=${form} :context=${context} w=f:
+                  - rtgl-view slot=characterSprite g=md w=f:
+                      - rtgl-view d=h g=md av=t pv=md br=md w=f:
+                          - rtgl-view#characterSpriteBox cur=pointer bw=xs bc=bo h-bc=ac br=sm:
+                              - rtgl-view p=md g=md br=md:
+                                  - $if selectedSpriteCharacter.hasSpritePreview:
+                                      - rvn-stacked-file-images :fileIds=${selectedSpriteCharacter.spritePreviewFileIds} w=200 h=120 br=sm lazy: null
+                                    $else:
+                                      - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg: null
+                                  - rtgl-text s=xs c=mu-fg ellipsis w=200: ${selectedSpriteCharacter.displayName}
+                          - $if hasSpriteCharacter:
+                              - rtgl-view w=1fg g=sm:
+                                  - rtgl-view d=h w=f av=c g=sm:
+                                      - rtgl-text s=sm c=mu-fg w=1fg: Transform
+                                      - rtgl-button#clearCharacterSpriteButton v=ol s=sm: Clear
+                                  - rtgl-select#transform key=${spriteTransformId} :options=${transformOptions} :selectedValue=${spriteTransformId} w=f no-clear: null
+                                  - rtgl-text s=sm c=mu-fg: Animation
+                                  - rtgl-segmented-control#animationMode key=${spriteAnimationMode} :options=${animationModeOptions} :selectedValue=${spriteAnimationMode} w=f no-clear: null
+                                  - $if spriteAnimationMode == 'update':
+                                      - rtgl-select#updateAnimation key=${spriteAnimationId} :options=${updateAnimationOptions} :selectedValue=${spriteAnimationId} w=f no-clear: null
+                                    $elif spriteAnimationMode == 'transition':
+                                      - rtgl-select#transitionAnimation key=${spriteAnimationId} :options=${transitionAnimationOptions} :selectedValue=${spriteAnimationId} w=f no-clear: null
+                                  - $if selectedSpriteCharacter.showSpriteGroupBoxes:
+                                      - rtgl-text s=sm c=mu-fg: Sprite Groups
+                                      - rtgl-view d=h wrap g=xs w=f:
+                                          - $for spriteGroup, i in selectedSpriteCharacter.spriteGroupBoxes:
+                                              - 'rtgl-view.characterSpriteGroupBox data-sprite-group-id=${spriteGroup.id} d=h av=c g=xs ph=md pv=xs cur=pointer bw=xs bc=bo h-bc=pr br=sm bgc=${spriteGroup.backgroundColor}':
+                                                  - rtgl-text s=xs: ${spriteGroup.name}
+          - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#submitButton ?disabled=${submitDisabled}: Submit
       - $if mode == 'character-select':
           - rtgl-view d=h g=md:
@@ -153,7 +153,7 @@ template:
                                       - rtgl-view p=md g=md br=md:
                                           - rvn-file-image fileId=${item.fileId} w=200 h=120: null
                                           - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
-          - rtgl-view d=h av=c ah=e w=f g=lg:
+          - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#buttonSelect: Select
   - $when: fullImagePreviewVisible
     rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
