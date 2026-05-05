@@ -71,7 +71,7 @@ template:
       - $if mode == 'current':
           - rtgl-view d=h g=md:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
-          - rtgl-view h=1fg sv w=f:
+          - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
               - rtgl-view g=md w=f:
                   - $for visual, i in defaultValues.visuals:
                       - rtgl-view#visual${i} data-index=${i} data-visual-id=${visual.id} d=h g=md av=t p=md br=md w=f:
@@ -93,7 +93,7 @@ template:
                                 $elif visual.animationMode == 'transition':
                                   - rtgl-select#transitionAnimation${i} data-index=${i} key=${visual.animationId} :options=${defaultValues.transitionAnimationOptions} :selectedValue=${visual.animationId} w=f no-clear: null
                   - rtgl-button#addVisualButton v=ol w=f mt=md: + Add Visual
-          - rtgl-view d=h av=c ah=e w=f g=lg:
+          - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#submitButton: Submit
       - $if mode == 'resource-select':
           - rtgl-view d=h g=md:
@@ -120,7 +120,7 @@ template:
                                               - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
                                                   - rtgl-text s=sm c=mu-fg: ${item.resourceType}
                                           - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
-          - rtgl-view d=h av=c ah=e w=f g=lg:
+          - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#buttonSelect: Select
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
   - $when: fullImagePreviewVisible

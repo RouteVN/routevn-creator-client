@@ -14,7 +14,7 @@ refs:
 template:
   - rtgl-view w=f h=f p=lg:
       - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
-      - rtgl-form#toggleSkipModeForm :defaultValues=${defaultValues} :form=${form} w=f: null
-      - rtgl-view h=1fg: null
-      - rtgl-view d=h av=c ah=e w=f g=lg:
+      - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
+          - rtgl-form#toggleSkipModeForm :defaultValues=${defaultValues} :form=${form} w=f: null
+      - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
           - rtgl-button#submitButton: Submit
