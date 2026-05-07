@@ -229,6 +229,79 @@ describe("graphicsService", () => {
     expect(service.hasLoadedAsset("image-1")).toBe(false);
   });
 
+  it("waits for in-flight destroy before reinitializing the runtime", async () => {
+    let resolveUnload;
+    const bufferManager = {
+      has: vi.fn(() => false),
+      load: vi.fn(async () => {}),
+      getBufferMap: vi.fn(() => ({
+        "image-1": {
+          buffer: new ArrayBuffer(8),
+          type: "image/png",
+        },
+      })),
+      clear: vi.fn(),
+    };
+    createAssetBufferManagerMock.mockReturnValue(bufferManager);
+    assetsApi.unload.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveUnload = resolve;
+        }),
+    );
+    assetsCache.set("image-1", {
+      source: {},
+    });
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+
+    const initOptions = {
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    };
+
+    await service.init(initOptions);
+    await service.loadAssets({
+      "image-1": {
+        url: "blob:http://localhost/image-1",
+        type: "image/png",
+      },
+    });
+
+    const destroyPromise = service.destroy();
+    await vi.waitFor(() => {
+      expect(assetsApi.unload).toHaveBeenCalledWith("image-1");
+    });
+
+    const initPromise = service.init(initOptions);
+    await Promise.resolve();
+
+    expect(routeGraphicsInstance.init).toHaveBeenCalledTimes(1);
+
+    resolveUnload();
+    await destroyPromise;
+    await initPromise;
+
+    expect(routeGraphicsInstance.init).toHaveBeenCalledTimes(2);
+    expect(() => {
+      service.initRouteEngine({
+        screen: { width: 1920, height: 1080 },
+      });
+    }).not.toThrow();
+  });
+
   it("routes tauri Pixi media through the provided localhost origin", async () => {
     const filePath = "/Users/test/project/files/image-1";
     const localhostOrigin = "http://127.0.0.1:45123";

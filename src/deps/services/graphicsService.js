@@ -482,6 +482,7 @@ export const createGraphicsService = async ({
 } = {}) => {
   let routeGraphics;
   let routeGraphicsInitPromise;
+  let destroyRuntimePromise;
   let engine;
   let assetBufferManager;
   let loadedAssetTypes = new Map();
@@ -1021,6 +1022,16 @@ export const createGraphicsService = async ({
     ticker = undefined;
   };
 
+  const runDestroyRuntime = () => {
+    if (!destroyRuntimePromise) {
+      destroyRuntimePromise = destroyRuntime().finally(() => {
+        destroyRuntimePromise = undefined;
+      });
+    }
+
+    return destroyRuntimePromise;
+  };
+
   const loadBuffersWithRetry = async (
     bufferManager,
     assets,
@@ -1453,8 +1464,12 @@ export const createGraphicsService = async ({
         await routeGraphicsInitPromise;
       }
 
+      if (destroyRuntimePromise) {
+        await destroyRuntimePromise;
+      }
+
       if (routeGraphics) {
-        await destroyRuntime();
+        await runDestroyRuntime();
       }
 
       routeGraphicsInitPromise = (async () => {
@@ -1717,6 +1732,12 @@ export const createGraphicsService = async ({
       return routeGraphics?.render(payload);
     },
     parse: (payload) => routeGraphics?.parse(payload),
-    destroy: destroyRuntime,
+    destroy: async () => {
+      if (routeGraphicsInitPromise) {
+        await routeGraphicsInitPromise.catch(() => {});
+      }
+
+      await runDestroyRuntime();
+    },
   };
 };
