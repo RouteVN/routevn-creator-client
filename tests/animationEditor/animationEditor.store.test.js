@@ -14,6 +14,7 @@ import {
   setPopover,
   setPreviewImage,
   setProjectResolution,
+  setTransitionMaskChannel,
   setTransitionMaskImage,
   startPendingTransitionMask,
 } from "../../src/pages/animationEditor/animationEditor.store.js";
@@ -70,9 +71,37 @@ describe("animationEditor.store", () => {
 
     expect(viewData.transitionMaskPanel.enabled).toBe(false);
     expect(viewData.maskEditorPanel.enabled).toBe(true);
+    expect(viewData.maskEditorPanel.channelValue).toBe("red");
+    expect(viewData.maskEditorPanel.channelLabel).toBe("Greyscale");
     expect(viewData.popover.popoverIsOpen).toBe(false);
     expect(viewData.popover.maskDialogIsOpen).toBe(true);
     expect(viewData.popover.mode).toBe("addMask");
+    expect(viewData.maskChannelOptions).toEqual([
+      { label: "Greyscale", value: "red" },
+      { label: "Alpha", value: "alpha" },
+    ]);
+  });
+
+  it("uses greyscale red as the default mask channel", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "transition" });
+    enableTransitionMask({ state });
+
+    const viewData = selectViewData({ state });
+
+    expect(state.transitionMask.channel).toBe("red");
+    expect(viewData.transitionMaskPanel.channelValue).toBe("red");
+    expect(viewData.transitionMaskPanel.channelLabel).toBe("Greyscale");
+  });
+
+  it("normalizes removed mask channels to greyscale red", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "transition" });
+    enableTransitionMask({ state });
+
+    setTransitionMaskChannel({ state }, { channel: "green" });
+
+    expect(state.transitionMask.channel).toBe("red");
   });
 
   it("commits a pending mask inside Immer-backed store actions", () => {

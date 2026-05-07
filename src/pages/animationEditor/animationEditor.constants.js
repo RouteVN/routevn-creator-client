@@ -143,10 +143,8 @@ export const MASK_KIND_OPTIONS = Object.freeze([
 ]);
 
 export const MASK_CHANNEL_OPTIONS = Object.freeze([
+  { label: "Greyscale", value: "red" },
   { label: "Alpha", value: "alpha" },
-  { label: "Red", value: "red" },
-  { label: "Green", value: "green" },
-  { label: "Blue", value: "blue" },
 ]);
 
 export const MASK_SAMPLE_OPTIONS = Object.freeze([

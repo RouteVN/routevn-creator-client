@@ -1,5 +1,5 @@
 const DEFAULT_TRANSITION_MASK_KIND = "single";
-const DEFAULT_TRANSITION_MASK_CHANNEL = "alpha";
+const DEFAULT_TRANSITION_MASK_CHANNEL = "red";
 const DEFAULT_TRANSITION_MASK_COMBINE = "max";
 const DEFAULT_TRANSITION_MASK_SAMPLE = "step";
 const DEFAULT_TRANSITION_MASK_SOFTNESS = 0.08;
@@ -8,6 +8,13 @@ const DEFAULT_TRANSITION_MASK_PROGRESS_EASING = "linear";
 
 const TRANSITION_MASK_KINDS = new Set(["single", "sequence", "composite"]);
 const EDITABLE_TRANSITION_MASK_KINDS = new Set(["single"]);
+const TRANSITION_MASK_CHANNELS = new Set(["red", "alpha"]);
+
+const normalizeTransitionMaskChannel = (channel) => {
+  return TRANSITION_MASK_CHANNELS.has(channel)
+    ? channel
+    : DEFAULT_TRANSITION_MASK_CHANNEL;
+};
 
 const hasMaskImageReference = (value) => {
   return typeof value === "string" && value.length > 0;
@@ -16,7 +23,7 @@ const hasMaskImageReference = (value) => {
 const cloneCompositeItem = (item = {}) => {
   return {
     imageId: item.imageId,
-    channel: item.channel ?? DEFAULT_TRANSITION_MASK_CHANNEL,
+    channel: normalizeTransitionMaskChannel(item.channel),
     invert: item.invert ?? false,
   };
 };
@@ -126,7 +133,7 @@ export const normalizeTransitionMaskForEditor = (mask, imageItems = {}) => {
   nextMask.progressDuration = progress.duration;
   nextMask.progressEasing = progress.easing;
   nextMask.imageId = resolveEditorSingleMaskImageId(mask, imageItems);
-  nextMask.channel = mask.channel ?? nextMask.channel;
+  nextMask.channel = normalizeTransitionMaskChannel(mask.channel);
   nextMask.invert = mask.invert ?? nextMask.invert;
 
   return nextMask;
@@ -185,7 +192,7 @@ export const serializeTransitionMask = (mask) => {
   };
 
   if (mask.kind === "single") {
-    serializedMask.channel = mask.channel ?? DEFAULT_TRANSITION_MASK_CHANNEL;
+    serializedMask.channel = normalizeTransitionMaskChannel(mask.channel);
     serializedMask.invert = mask.invert ?? false;
     if (mask.imageId) {
       serializedMask.imageId = mask.imageId;
@@ -194,7 +201,7 @@ export const serializeTransitionMask = (mask) => {
   }
 
   if (mask.kind === "sequence") {
-    serializedMask.channel = mask.channel ?? DEFAULT_TRANSITION_MASK_CHANNEL;
+    serializedMask.channel = normalizeTransitionMaskChannel(mask.channel);
     serializedMask.invert = mask.invert ?? false;
     serializedMask.sample = mask.sample ?? DEFAULT_TRANSITION_MASK_SAMPLE;
     serializedMask.imageIds = (mask.imageIds ?? []).filter(Boolean);
@@ -248,7 +255,7 @@ export const compileTransitionMaskForRuntime = (mask, imageItems = {}) => {
     }
 
     runtimeMask.texture = texture;
-    runtimeMask.channel = mask.channel ?? DEFAULT_TRANSITION_MASK_CHANNEL;
+    runtimeMask.channel = normalizeTransitionMaskChannel(mask.channel);
     runtimeMask.invert = mask.invert ?? false;
     return runtimeMask;
   }
@@ -267,7 +274,7 @@ export const compileTransitionMaskForRuntime = (mask, imageItems = {}) => {
     }
 
     runtimeMask.textures = Array.from(new Set(textures));
-    runtimeMask.channel = mask.channel ?? DEFAULT_TRANSITION_MASK_CHANNEL;
+    runtimeMask.channel = normalizeTransitionMaskChannel(mask.channel);
     runtimeMask.invert = mask.invert ?? false;
     runtimeMask.sample = mask.sample ?? DEFAULT_TRANSITION_MASK_SAMPLE;
     return runtimeMask;
@@ -285,7 +292,7 @@ export const compileTransitionMaskForRuntime = (mask, imageItems = {}) => {
 
       return {
         texture,
-        channel: item.channel ?? DEFAULT_TRANSITION_MASK_CHANNEL,
+        channel: normalizeTransitionMaskChannel(item.channel),
         invert: item.invert ?? false,
       };
     })
