@@ -63,16 +63,18 @@ const createPropertyFieldConfig = (
       label: "Position X",
       defaultValue: width / 2,
       slider: {
-        min: 0,
+        min: -width,
         max: width,
+        step: 0.01,
       },
     },
     y: {
       label: "Position Y",
       defaultValue: height / 2,
       slider: {
-        min: 0,
+        min: -height,
         max: height,
+        step: 0.01,
       },
     },
     scaleX: {

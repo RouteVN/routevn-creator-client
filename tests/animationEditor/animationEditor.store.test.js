@@ -104,6 +104,56 @@ describe("animationEditor.store", () => {
     expect(state.transitionMask.channel).toBe("red");
   });
 
+  it("allows negative two-decimal position keyframe values", () => {
+    const state = createInitialState();
+    setProjectResolution(
+      { state },
+      {
+        projectResolution: {
+          width: 1920,
+          height: 1080,
+        },
+      },
+    );
+
+    setPopover(
+      { state },
+      {
+        mode: "addKeyframe",
+        payload: {
+          property: "x",
+        },
+      },
+    );
+    const xField = selectViewData({ state }).addKeyframeForm.fields.find(
+      (field) => field.name === "value",
+    );
+
+    setPopover(
+      { state },
+      {
+        mode: "addKeyframe",
+        payload: {
+          property: "y",
+        },
+      },
+    );
+    const yField = selectViewData({ state }).addKeyframeForm.fields.find(
+      (field) => field.name === "value",
+    );
+
+    expect(xField).toMatchObject({
+      min: -1920,
+      max: 1920,
+      step: 0.01,
+    });
+    expect(yField).toMatchObject({
+      min: -1080,
+      max: 1080,
+      step: 0.01,
+    });
+  });
+
   it("commits a pending mask inside Immer-backed store actions", () => {
     const state = createInitialState();
     openDialog({ state }, { dialogType: "transition" });
