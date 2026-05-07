@@ -362,8 +362,8 @@ const STYLES = `
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(220, 38, 38, 0.92);
-    color: #ffffff;
+    background: transparent;
+    color: var(--error);
   }
 
   .preview-thumb rvn-file-image {
@@ -384,8 +384,8 @@ const STYLES = `
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #dc2626;
-    color: #ffffff;
+    background: transparent;
+    color: var(--error);
   }
 
   .preview-dialogue-item {
@@ -4771,14 +4771,14 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   createDeleteOverlay() {
     const overlay = document.createElement("div");
     overlay.className = "preview-delete-overlay";
-    overlay.append(this.createSvgIcon("x", 16, "white"));
+    overlay.append(this.createSvgIcon("x", 16, "er"));
     return overlay;
   }
 
   createPreviewGroupDeleteOverlay() {
     const overlay = document.createElement("div");
     overlay.className = "preview-group-delete-overlay";
-    overlay.append(this.createSvgIcon("x", 16, "white"));
+    overlay.append(this.createSvgIcon("x", 16, "er"));
     return overlay;
   }
 

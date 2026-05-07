@@ -1,9 +1,6 @@
 import { generateId } from "../../internal/id.js";
 import { createLayoutEditorPayload } from "../../internal/layoutEditorRoute.js";
-import {
-  requireProjectResolution,
-  scaleLayoutElementsForProjectResolution,
-} from "../../internal/projectResolution.js";
+import { scaleLayoutElementsForProjectResolution } from "../../internal/projectResolution.js";
 import { isFragmentLayout } from "../../internal/project/layout.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
 import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
@@ -282,6 +279,11 @@ export const handleEditFormAddOptionClick = (deps) => {
 const createLayoutElement = (id, data) => ({
   id,
   ...data,
+});
+
+const createEmptyLayoutElements = () => ({
+  items: {},
+  tree: [],
 });
 
 export const createLayoutTemplate = (layoutType, projectResolution) => {
@@ -1049,11 +1051,6 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
   const isFragment = normalizeBooleanField(values?.isFragment);
   const description = values?.description ?? "";
 
-  const projectResolution = requireProjectResolution(
-    projectService.getRepositoryState().project?.resolution,
-    "Project resolution",
-  );
-
   const createAttempt = await runResourcePageMutation({
     appService,
     fallbackMessage: "Failed to create layout.",
@@ -1067,7 +1064,7 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
           tagIds: Array.isArray(values?.tagIds) ? values.tagIds : [],
           isFragment,
         },
-        elements: createLayoutTemplate(layoutType, projectResolution),
+        elements: createEmptyLayoutElements(),
         parentId: store.getState().targetGroupId,
         position: "last",
       }),
