@@ -260,13 +260,14 @@ const buildTextStyleData = ({
   previewText,
   strokeColor,
   strokeWidth,
+  includeEmptyTagIds = true,
   clearOutlineColor = false,
 } = {}) => {
   const hasStrokeColor = Boolean(strokeColor);
+  const normalizedTagIds = Array.isArray(tagIds) ? tagIds : [];
   const textStyleData = {
     name,
     description: description ?? "",
-    tagIds: Array.isArray(tagIds) ? tagIds : [],
     fontSize: Number(fontSize ?? 16),
     lineHeight: Number(lineHeight ?? 1.5),
     colorId: fontColor,
@@ -275,6 +276,10 @@ const buildTextStyleData = ({
     previewText: previewText ?? "",
     strokeWidth: hasStrokeColor ? Number(strokeWidth ?? 0) : 0,
   };
+
+  if (normalizedTagIds.length > 0 || includeEmptyTagIds) {
+    textStyleData.tagIds = normalizedTagIds;
+  }
 
   if (hasStrokeColor) {
     textStyleData.strokeColorId = strokeColor;
@@ -322,6 +327,7 @@ const handleTextStyleCreated = async (deps, payload) => {
             previewText,
             strokeColor,
             strokeWidth,
+            includeEmptyTagIds: false,
           }),
         },
         parentId: groupId,
