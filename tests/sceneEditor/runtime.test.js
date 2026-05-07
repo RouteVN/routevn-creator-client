@@ -341,6 +341,51 @@ describe("renderSceneEditorState", () => {
     expect(engineRenderCurrentState).toHaveBeenCalledTimes(1);
   });
 
+  it("skips preview animations by default unless explicitly enabled", async () => {
+    const projectData = createProjectData();
+    const graphicsService = createGraphicsService();
+    const engineRenderCurrentState = vi.fn();
+    graphicsService.engineRenderCurrentState = engineRenderCurrentState;
+    const store = {
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => "section-1",
+      selectSelectedLineId: () => "line-2",
+      selectProjectData: () => projectData,
+      selectPreviewRuntimeGlobal: () => ({
+        dialogueTextSpeed: 100,
+      }),
+      selectIsMuted: () => false,
+      setPresentationState: ({ presentationState }) => {
+        store.presentationState = presentationState;
+      },
+      presentationState: undefined,
+    };
+
+    await renderSceneEditorState({
+      store,
+      graphicsService,
+    });
+
+    await renderSceneEditorState(
+      {
+        store,
+        graphicsService,
+      },
+      {
+        skipAnimations: false,
+      },
+    );
+
+    expect(engineRenderCurrentState).toHaveBeenNthCalledWith(1, {
+      skipAudio: false,
+      skipAnimations: true,
+    });
+    expect(engineRenderCurrentState).toHaveBeenNthCalledWith(2, {
+      skipAudio: false,
+      skipAnimations: false,
+    });
+  });
+
   it("renders the UI after a skipped canvas render when presentation state changes", async () => {
     const projectData = createProjectData();
     const graphicsService = createGraphicsService();

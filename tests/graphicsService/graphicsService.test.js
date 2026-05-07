@@ -13,6 +13,7 @@ const routeGraphicsInstance = {
   destroy: vi.fn(),
   loadAssets: vi.fn(async () => {}),
   render: vi.fn(),
+  setAnimationPlaybackMode: vi.fn(),
   canvas: {
     style: {},
   },
@@ -80,6 +81,7 @@ describe("graphicsService", () => {
     routeGraphicsInstance.destroy.mockClear();
     routeGraphicsInstance.loadAssets.mockClear();
     routeGraphicsInstance.render.mockClear();
+    routeGraphicsInstance.setAnimationPlaybackMode.mockClear();
     createAssetBufferManagerMock.mockReset();
     createRouteGraphicsMock.mockReset();
     createRouteEngineMock.mockReset();
@@ -165,6 +167,66 @@ describe("graphicsService", () => {
 
     await expect(pendingLoad).resolves.toBeUndefined();
     expect(routeGraphicsInstance.loadAssets).not.toHaveBeenCalled();
+  });
+
+  it("ignores asset loads that finish after route graphics has been destroyed", async () => {
+    let resolveRenderAssetLoad;
+    const bufferManager = {
+      has: vi.fn(() => false),
+      load: vi.fn(async () => {}),
+      getBufferMap: vi.fn(() => ({
+        "image-1": {
+          buffer: new ArrayBuffer(8),
+          type: "image/png",
+        },
+      })),
+      clear: vi.fn(),
+    };
+    createAssetBufferManagerMock.mockReturnValue(bufferManager);
+    routeGraphicsInstance.loadAssets.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveRenderAssetLoad = resolve;
+        }),
+    );
+    assetsCache.set("image-1", {
+      source: {},
+    });
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+
+    const pendingLoad = service.loadAssets({
+      "image-1": {
+        url: "blob:http://localhost/image-1",
+        type: "image/png",
+      },
+    });
+
+    await vi.waitFor(() => {
+      expect(resolveRenderAssetLoad).toEqual(expect.any(Function));
+    });
+    await service.destroy();
+    resolveRenderAssetLoad();
+
+    await expect(pendingLoad).resolves.toBeUndefined();
+    expect(service.hasLoadedAsset("image-1")).toBe(false);
   });
 
   it("routes tauri Pixi media through the provided localhost origin", async () => {
@@ -667,6 +729,79 @@ describe("graphicsService", () => {
     expect(routeGraphicsInstance.render).toHaveBeenCalledWith(
       expect.objectContaining({
         audio: [],
+      }),
+    );
+  });
+
+  it("switches scene editor preview renders to manual playback when animations are skipped", async () => {
+    createRouteEngineMock.mockReturnValue({
+      init: vi.fn(),
+      selectRenderState: vi.fn(() => ({
+        id: "render-1",
+        elements: [
+          {
+            id: "dialogue",
+            type: "text-revealing",
+            revealEffect: "typing",
+          },
+        ],
+        audio: [],
+        animations: [
+          {
+            id: "animation-1",
+            targetId: "dialogue",
+            type: "update",
+          },
+        ],
+      })),
+      selectPresentationState: vi.fn(() => undefined),
+      selectPresentationChanges: vi.fn(() => undefined),
+      selectSectionLineChanges: vi.fn(() => []),
+      handleActions: vi.fn(),
+    });
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+
+    service.initRouteEngine({
+      screen: { width: 1920, height: 1080 },
+      story: { scenes: {} },
+      resources: {},
+    });
+    routeGraphicsInstance.render.mockClear();
+
+    service.engineRenderCurrentState({
+      skipAnimations: true,
+    });
+
+    expect(routeGraphicsInstance.setAnimationPlaybackMode).toHaveBeenCalledWith(
+      "manual",
+    );
+    expect(routeGraphicsInstance.render).toHaveBeenCalledWith(
+      expect.objectContaining({
+        animations: [],
+        elements: [
+          expect.objectContaining({
+            id: "dialogue",
+            revealEffect: "none",
+          }),
+        ],
       }),
     );
   });
