@@ -67,7 +67,7 @@ describe("createLayoutTemplate", () => {
     });
   });
 
-  it("creates layouts with description and fragment data", async () => {
+  it("creates layouts with empty elements and metadata", async () => {
     const createLayoutItem = vi.fn(async () => "layout-1");
     const deps = {
       store: {
@@ -101,9 +101,9 @@ describe("createLayoutTemplate", () => {
         detail: {
           actionId: "submit",
           values: {
-            name: "Save",
-            layoutType: "save-load",
-            description: "Reusable save fragment",
+            name: "Choices",
+            layoutType: "choice",
+            description: "Choice menu",
             isFragment: "true",
           },
         },
@@ -112,12 +112,16 @@ describe("createLayoutTemplate", () => {
 
     expect(createLayoutItem).toHaveBeenCalledWith(
       expect.objectContaining({
-        name: "Save",
-        layoutType: "save-load",
+        name: "Choices",
+        layoutType: "choice",
         parentId: "group-1",
         position: "last",
+        elements: {
+          items: {},
+          tree: [],
+        },
         data: expect.objectContaining({
-          description: "Reusable save fragment",
+          description: "Choice menu",
           isFragment: true,
           tagIds: [],
         }),
