@@ -234,9 +234,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       setSelectedLineId: vi.fn(({ selectedLineId }) => {
         state.selectedLineId = selectedLineId;
       }),
-      selectDraftSavePendingSinceAt: vi.fn(
-        () => state.draftSavePendingSinceAt,
-      ),
+      selectDraftSavePendingSinceAt: vi.fn(() => state.draftSavePendingSinceAt),
       setDraftSavePendingSinceAt: vi.fn(({ timestamp }) => {
         state.draftSavePendingSinceAt = timestamp;
       }),
@@ -280,6 +278,102 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       });
     } finally {
       vi.useRealTimers();
+      if (previousRequestAnimationFrame === undefined) {
+        delete globalThis.requestAnimationFrame;
+      } else {
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+      }
+    }
+  });
+
+  it("focuses text mode on the created line for new-line shortcuts", async () => {
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+    const state = {
+      draftSavePendingSinceAt: 0,
+      draftSaveTimerId: undefined,
+      selectedLineId: "line-1",
+      draftSection: {
+        sceneId: "scene-1",
+        sectionId: "section-1",
+        dirty: false,
+        lines: [
+          {
+            id: "line-1",
+            sectionId: "section-1",
+            actions: {
+              dialogue: {
+                content: [{ text: "Hello" }],
+              },
+            },
+          },
+        ],
+      },
+    };
+    const store = {
+      selectIsSectionsOverviewOpen: vi.fn(() => false),
+      selectDraftSaveTimerId: vi.fn(() => state.draftSaveTimerId),
+      clearDraftSaveTimer: vi.fn(() => {
+        state.draftSaveTimerId = undefined;
+      }),
+      selectDraftSection: vi.fn(() => state.draftSection),
+      setDraftSection: vi.fn(({ draftSection }) => {
+        state.draftSection = draftSection;
+      }),
+      selectSelectedLineId: vi.fn(() => state.selectedLineId),
+      setSelectedLineId: vi.fn(({ selectedLineId }) => {
+        state.selectedLineId = selectedLineId;
+      }),
+      selectDraftSavePendingSinceAt: vi.fn(() => state.draftSavePendingSinceAt),
+      setDraftSavePendingSinceAt: vi.fn(({ timestamp }) => {
+        state.draftSavePendingSinceAt = timestamp;
+      }),
+      selectLastDraftFlushStartedAt: vi.fn(() => 0),
+      setDraftSaveTimerId: vi.fn(({ timerId }) => {
+        state.draftSaveTimerId = timerId;
+      }),
+    };
+    const linesEditor = {
+      focusContainer: vi.fn(),
+      focusLine: vi.fn(),
+      scrollLineIntoView: vi.fn(),
+    };
+
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      callback();
+      return 1;
+    });
+
+    try {
+      await handleNewLine(
+        {
+          store,
+          render: vi.fn(),
+          subject: {
+            dispatch: vi.fn(),
+          },
+          refs: {
+            linesEditor,
+          },
+        },
+        {
+          _event: {
+            detail: {
+              lineId: "line-1",
+              position: "after",
+            },
+          },
+        },
+      );
+
+      const createdLine = state.draftSection.lines[1];
+      expect(state.selectedLineId).toBe(createdLine.id);
+      expect(linesEditor.focusLine).toHaveBeenCalledTimes(2);
+      expect(linesEditor.focusLine).toHaveBeenCalledWith({
+        lineId: createdLine.id,
+        cursorPosition: 0,
+      });
+      expect(linesEditor.focusContainer).not.toHaveBeenCalled();
+    } finally {
       if (previousRequestAnimationFrame === undefined) {
         delete globalThis.requestAnimationFrame;
       } else {

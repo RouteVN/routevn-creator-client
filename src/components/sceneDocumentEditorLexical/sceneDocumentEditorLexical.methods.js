@@ -2,6 +2,55 @@ const getEditor = (element) => {
   return element.shadowRoot?.querySelector("#editor");
 };
 
+const FOCUS_LINE_RETRY_FRAMES = 3;
+
+const scheduleFrame = (callback) => {
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(callback);
+    return;
+  }
+
+  queueMicrotask(callback);
+};
+
+const editorHasLine = (editor, lineId) => {
+  if (!lineId) {
+    return false;
+  }
+
+  if (typeof editor.hasLine === "function") {
+    return editor.hasLine(lineId);
+  }
+
+  const lines = editor.getLinesSnapshot?.() ?? editor.lines ?? [];
+  return lines.some((line) => line?.id === lineId);
+};
+
+const focusLineWhenReady = (element, payload, retriesRemaining) => {
+  const editor = getEditor(element);
+  const lineId = payload?.lineId;
+  if (!editor?.focusLine || !lineId) {
+    return false;
+  }
+
+  if (editorHasLine(editor, lineId)) {
+    return editor.focusLine(payload);
+  }
+
+  if (retriesRemaining <= 0) {
+    return false;
+  }
+
+  scheduleFrame(() => {
+    if (!element.isConnected) {
+      return;
+    }
+
+    focusLineWhenReady(element, payload, retriesRemaining - 1);
+  });
+  return false;
+};
+
 const dispatchSceneLinesSnapshot = (element) => {
   const editor = getEditor(element);
   if (!editor) {
@@ -29,7 +78,7 @@ export function hardRefresh() {
 }
 
 export function focusLine(payload = {}) {
-  return getEditor(this)?.focusLine?.(payload) ?? false;
+  return focusLineWhenReady(this, payload, FOCUS_LINE_RETRY_FRAMES);
 }
 
 export function focusContainer() {

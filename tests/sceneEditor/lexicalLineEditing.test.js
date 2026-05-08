@@ -248,6 +248,16 @@ describe("lexical scene document editor line editing", () => {
       );
       const calls = [];
 
+      Object.defineProperty(editorElement, "dataset", {
+        configurable: true,
+        value: {},
+      });
+      editorElement.state = {
+        mode: "block",
+        selectedLineId: "line-0",
+      };
+      editorElement.refs = {};
+      editorElement.lineKeyById = new Map([["line-1", "line-key-1"]]);
       editorElement.debugInputEvent = vi.fn();
       editorElement.markProgrammaticFocusRestore = vi.fn();
       editorElement.focus = vi.fn(() => {
@@ -265,8 +275,57 @@ describe("lexical scene document editor line editing", () => {
 
       expect(didFocus).toBe(true);
       expect(calls).toEqual(["focus", "restore"]);
+      expect(editorElement.state.mode).toBe("text-editor");
+      expect(editorElement.state.selectedLineId).toBe("line-1");
       expect(editorElement.markProgrammaticFocusRestore).toHaveBeenCalledTimes(
         2,
+      );
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("does not switch modes when focusLine targets a line that is not loaded", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+
+      Object.defineProperty(editorElement, "dataset", {
+        configurable: true,
+        value: {},
+      });
+      editorElement.state = {
+        mode: "block",
+        selectedLineId: "line-0",
+      };
+      editorElement.lineKeyById = new Map();
+      editorElement.debugInputEvent = vi.fn();
+      editorElement.focus = vi.fn();
+      editorElement.restoreLineSelection = vi.fn();
+
+      const didFocus = editorElement.focusLine({
+        lineId: "missing-line",
+        cursorPosition: 0,
+      });
+
+      expect(didFocus).toBe(false);
+      expect(editorElement.state.mode).toBe("block");
+      expect(editorElement.state.selectedLineId).toBe("line-0");
+      expect(editorElement.focus).not.toHaveBeenCalled();
+      expect(editorElement.restoreLineSelection).not.toHaveBeenCalled();
+      expect(editorElement.debugInputEvent).toHaveBeenCalledWith(
+        "focus-line-missing-key",
+        undefined,
+        {
+          lineId: "missing-line",
+          cursorPosition: 0,
+        },
       );
     } finally {
       restoreDomGlobals();
@@ -385,6 +444,100 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
+  it("routes block-mode o new-line shortcut after the current line", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+
+      editorElement.state = {
+        mode: "block",
+        selectedLineId: "line-1",
+        lines: [{ id: "line-1" }],
+      };
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.debugInputEvent = vi.fn();
+      editorElement.dispatchShortcutEvent = vi.fn();
+
+      const event = {
+        key: "o",
+        code: "KeyO",
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        shiftKey: false,
+        isComposing: false,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      };
+
+      editorElement.handleNativeKeyDown(event);
+
+      expect(editorElement.dispatchShortcutEvent).toHaveBeenCalledWith(
+        "newLine",
+        {
+          lineId: "line-1",
+          position: "after",
+        },
+      );
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("routes block-mode O new-line shortcut before the current line", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+
+      editorElement.state = {
+        mode: "block",
+        selectedLineId: "line-1",
+        lines: [{ id: "line-1" }],
+      };
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.debugInputEvent = vi.fn();
+      editorElement.dispatchShortcutEvent = vi.fn();
+
+      const event = {
+        key: "O",
+        code: "KeyO",
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        shiftKey: true,
+        isComposing: false,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+      };
+
+      editorElement.handleNativeKeyDown(event);
+
+      expect(editorElement.dispatchShortcutEvent).toHaveBeenCalledWith(
+        "newLine",
+        {
+          lineId: "line-1",
+          position: "before",
+        },
+      );
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
   it("suppresses native text insertion beforeinput while the editor is focused in block mode", async () => {
     const restoreDomGlobals = installDomGlobals();
 
@@ -420,6 +573,411 @@ describe("lexical scene document editor line editing", () => {
       expect(event.preventDefault).toHaveBeenCalledTimes(1);
       expect(event.stopImmediatePropagation).toHaveBeenCalledTimes(1);
       expect(editorElement.insertPlainText).not.toHaveBeenCalled();
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("collapses invisible line-boundary selection artifacts to the line end", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const lineElement = document.createElement("p");
+
+      editorElement.state = {
+        selectedLineId: "line-0",
+      };
+      editorElement.debugInputEvent = vi.fn();
+      editorElement.getLineElementFromRangePoint = vi.fn(() => lineElement);
+      editorElement.getLineIdFromLineElement = vi.fn(() => "line-1");
+      editorElement.restoreLineSelection = vi.fn(() => true);
+      editorElement.scheduleRender = vi.fn();
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      const didNormalize =
+        editorElement.normalizeInvisibleLineBoundarySelection({
+          collapsed: false,
+          startContainer: lineElement,
+          startOffset: 0,
+          endContainer: lineElement,
+          endOffset: 1,
+          toString: () => "\u200b\n",
+        });
+
+      expect(didNormalize).toBe(true);
+      expect(editorElement.restoreLineSelection).toHaveBeenCalledWith({
+        lineId: "line-1",
+        cursorPosition: -1,
+      });
+      expect(editorElement.dispatchSelectedLineChanged).toHaveBeenCalledWith(
+        "line-1",
+        {
+          cursorPosition: undefined,
+          isCollapsed: true,
+          mode: "text-editor",
+        },
+      );
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("collapses adjacent invisible line-boundary selection artifacts to the start line end", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const startLineElement = document.createElement("p");
+      const endLineElement = document.createElement("p");
+
+      editorElement.state = {
+        selectedLineId: "line-0",
+      };
+      editorElement.debugInputEvent = vi.fn();
+      editorElement.getLineElementFromRangePoint = vi.fn((container) => {
+        return container === startLineElement
+          ? startLineElement
+          : endLineElement;
+      });
+      editorElement.getLineIdFromLineElement = vi.fn((lineElement) => {
+        return lineElement === startLineElement ? "line-1" : "line-2";
+      });
+      editorElement.getEditorLineOrder = vi.fn(() => [
+        { lineId: "line-1" },
+        { lineId: "line-2" },
+      ]);
+      editorElement.restoreLineSelection = vi.fn(() => true);
+      editorElement.scheduleRender = vi.fn();
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      const didNormalize =
+        editorElement.normalizeInvisibleLineBoundarySelection({
+          collapsed: false,
+          startContainer: startLineElement,
+          startOffset: 1,
+          endContainer: endLineElement,
+          endOffset: 0,
+          toString: () => "\n",
+        });
+
+      expect(didNormalize).toBe(true);
+      expect(editorElement.restoreLineSelection).toHaveBeenCalledWith({
+        lineId: "line-1",
+        cursorPosition: -1,
+      });
+      expect(editorElement.dispatchSelectedLineChanged).toHaveBeenCalledWith(
+        "line-1",
+        {
+          cursorPosition: undefined,
+          isCollapsed: true,
+          mode: "text-editor",
+        },
+      );
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("selects the trailing word at a non-final line boundary before native double-click selection paints", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const lineElement = document.createElement("p");
+      lineElement.textContent = "hello\u200b";
+
+      editorElement.state = {
+        selectedLineId: "line-0",
+      };
+      editorElement.getLineElementFromEvent = vi.fn(() => lineElement);
+      editorElement.getLineIdFromLineElement = vi.fn(() => "line-1");
+      editorElement.getEditorLineOrder = vi.fn(() => [
+        { lineId: "line-1" },
+        { lineId: "line-2" },
+      ]);
+      editorElement.getLineOffsetFromPointerEvent = vi.fn(() => 5);
+      editorElement.clearSelectedReferenceNodeKey = vi.fn();
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.closeMentionMenu = vi.fn();
+      editorElement.setMode = vi.fn();
+      editorElement.focusLine = vi.fn();
+      editorElement.selectLineTextRange = vi.fn(() => true);
+      editorElement.scheduleRender = vi.fn();
+      editorElement.debugInputEvent = vi.fn();
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      const event = {
+        detail: 2,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+        stopImmediatePropagation: vi.fn(),
+      };
+
+      const didSuppress =
+        editorElement.suppressNativeLineBoundaryDoubleClick(event);
+
+      expect(didSuppress).toBe(true);
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(event.stopImmediatePropagation).toHaveBeenCalledTimes(1);
+      expect(editorElement.focusLine).not.toHaveBeenCalled();
+      expect(editorElement.selectLineTextRange).toHaveBeenCalledWith({
+        lineId: "line-1",
+        lineElement,
+        start: 0,
+        end: 5,
+      });
+      expect(editorElement.dispatchSelectedLineChanged).toHaveBeenCalledWith(
+        "line-1",
+        {
+          cursorPosition: undefined,
+          isCollapsed: false,
+          mode: "text-editor",
+        },
+      );
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("selects the full line on third click at a non-final line boundary", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const lineElement = document.createElement("p");
+      lineElement.textContent = "hello world\u200b";
+
+      editorElement.state = {
+        selectedLineId: "line-0",
+      };
+      editorElement.getLineElementFromEvent = vi.fn(() => lineElement);
+      editorElement.getLineIdFromLineElement = vi.fn(() => "line-1");
+      editorElement.getEditorLineOrder = vi.fn(() => [
+        { lineId: "line-1" },
+        { lineId: "line-2" },
+      ]);
+      editorElement.getLineOffsetFromPointerEvent = vi.fn(() => 11);
+      editorElement.clearSelectedReferenceNodeKey = vi.fn();
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.closeMentionMenu = vi.fn();
+      editorElement.setMode = vi.fn();
+      editorElement.focusLine = vi.fn();
+      editorElement.selectLineTextRange = vi.fn(() => true);
+      editorElement.scheduleRender = vi.fn();
+      editorElement.debugInputEvent = vi.fn();
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      const event = {
+        detail: 3,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+        stopImmediatePropagation: vi.fn(),
+      };
+
+      const didSuppress =
+        editorElement.suppressNativeLineBoundaryDoubleClick(event);
+
+      expect(didSuppress).toBe(true);
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(editorElement.selectLineTextRange).toHaveBeenCalledWith({
+        lineId: "line-1",
+        lineElement,
+        start: 0,
+        end: 11,
+      });
+      expect(editorElement.focusLine).not.toHaveBeenCalled();
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("enters text mode from block mode without preventing native caret placement", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const lineElement = document.createElement("p");
+
+      editorElement.state = {
+        mode: "block",
+      };
+      editorElement.getLineElementFromEvent = vi.fn(() => lineElement);
+      editorElement.getLineIdFromLineElement = vi.fn(() => "line-1");
+      editorElement.clearSelectedReferenceNodeKey = vi.fn();
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.closeMentionMenu = vi.fn();
+      editorElement.debugInputEvent = vi.fn();
+      editorElement.applyModeState = vi.fn((mode) => {
+        editorElement.state.mode = mode;
+      });
+      editorElement.clearDeleteShortcutState = vi.fn();
+      editorElement.scheduleRender = vi.fn();
+
+      const event = {
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+        stopImmediatePropagation: vi.fn(),
+      };
+
+      const didEnter = editorElement.enterTextModeFromBlockModePointer(event);
+
+      expect(didEnter).toBe(true);
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(event.stopImmediatePropagation).not.toHaveBeenCalled();
+      expect(editorElement.state.selectedLineId).toBe("line-1");
+      expect(editorElement.applyModeState).toHaveBeenCalledWith("text-editor");
+      expect(editorElement.scheduleRender).toHaveBeenCalledTimes(1);
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("keeps native double-click word selection inside non-final line text", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const lineElement = document.createElement("p");
+      lineElement.textContent = "hello\u200b";
+
+      editorElement.getLineElementFromEvent = vi.fn(() => lineElement);
+      editorElement.getLineIdFromLineElement = vi.fn(() => "line-1");
+      editorElement.getEditorLineOrder = vi.fn(() => [
+        { lineId: "line-1" },
+        { lineId: "line-2" },
+      ]);
+      editorElement.getLineOffsetFromPointerEvent = vi.fn(() => 2);
+      editorElement.focusLine = vi.fn();
+
+      const event = {
+        detail: 2,
+        preventDefault: vi.fn(),
+      };
+
+      const didSuppress =
+        editorElement.suppressNativeLineBoundaryDoubleClick(event);
+
+      expect(didSuppress).toBe(false);
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(editorElement.focusLine).not.toHaveBeenCalled();
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("keeps native double-click word selection on the final line", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const lineElement = document.createElement("p");
+      lineElement.textContent = "hello\u200b";
+
+      editorElement.getLineElementFromEvent = vi.fn(() => lineElement);
+      editorElement.getLineIdFromLineElement = vi.fn(() => "line-1");
+      editorElement.getEditorLineOrder = vi.fn(() => [{ lineId: "line-1" }]);
+      editorElement.getLineOffsetFromPointerEvent = vi.fn(() => 5);
+      editorElement.focusLine = vi.fn();
+
+      const event = {
+        detail: 2,
+        preventDefault: vi.fn(),
+      };
+
+      const didSuppress =
+        editorElement.suppressNativeLineBoundaryDoubleClick(event);
+
+      expect(didSuppress).toBe(false);
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(editorElement.focusLine).not.toHaveBeenCalled();
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("keeps multi-line invisible selections intact", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+
+      editorElement.restoreLineSelection = vi.fn();
+
+      const didNormalize =
+        editorElement.normalizeInvisibleLineBoundarySelection({
+          collapsed: false,
+          toString: () => "\n\n",
+        });
+
+      expect(didNormalize).toBe(false);
+      expect(editorElement.restoreLineSelection).not.toHaveBeenCalled();
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("keeps visible native text selections intact", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+
+      editorElement.restoreLineSelection = vi.fn();
+
+      const didNormalize =
+        editorElement.normalizeInvisibleLineBoundarySelection({
+          collapsed: false,
+          toString: () => "visible text",
+        });
+
+      expect(didNormalize).toBe(false);
+      expect(editorElement.restoreLineSelection).not.toHaveBeenCalled();
     } finally {
       restoreDomGlobals();
     }
@@ -527,6 +1085,7 @@ describe("lexical scene document editor line editing", () => {
       editorElement.selectionMenuIsOpen = false;
       editorElement.furiganaDialogIsPending = false;
       editorElement.lastProgrammaticFocusTarget = focusTarget;
+      editorElement.lineKeyById = new Map([["line-1", "line-key-1"]]);
       editorElement.debugInputEvent = vi.fn();
       editorElement.commitNativeBlur = vi.fn();
       editorElement.focusLine = vi.fn();
@@ -539,6 +1098,79 @@ describe("lexical scene document editor line editing", () => {
       expect(editorElement.commitNativeBlur).not.toHaveBeenCalled();
       expect(editorElement.state.mode).toBe("text-editor");
       expect(editorElement.focusLine).toHaveBeenCalledWith(focusTarget);
+    } finally {
+      if (previousRequestAnimationFrame === undefined) {
+        delete globalThis.requestAnimationFrame;
+      } else {
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+      }
+      restoreDomGlobals();
+    }
+  });
+
+  it("does not restore a stale programmatic caret target after active-editor blur", async () => {
+    const restoreDomGlobals = installDomGlobals();
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      callback();
+      return 1;
+    });
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const editorNode = document.createElement("div");
+      const focusTarget = {
+        lineId: "missing-line",
+        cursorPosition: -1,
+      };
+
+      Object.defineProperty(document, "activeElement", {
+        configurable: true,
+        get: () => editorNode,
+      });
+
+      editorElement.refs = {
+        editor: editorNode,
+        surface: {
+          dataset: {},
+        },
+      };
+      editorElement.state = {
+        mode: "text-editor",
+      };
+      Object.defineProperty(editorElement, "dataset", {
+        configurable: true,
+        value: {},
+      });
+      Object.defineProperty(editorElement, "isConnected", {
+        configurable: true,
+        value: true,
+      });
+      editorElement.isEditorFocused = true;
+      editorElement.isPointerDownInsideEditor = false;
+      editorElement.selectionMenuIsOpen = false;
+      editorElement.furiganaDialogIsPending = false;
+      editorElement.lastProgrammaticFocusTarget = focusTarget;
+      editorElement.programmaticFocusRestoreUntil = Number.POSITIVE_INFINITY;
+      editorElement.lineKeyById = new Map();
+      editorElement.debugInputEvent = vi.fn();
+      editorElement.commitNativeBlur = vi.fn();
+      editorElement.focusLine = vi.fn();
+
+      editorElement.handleNativeBlur({
+        target: editorNode,
+        currentTarget: editorNode,
+      });
+
+      expect(editorElement.commitNativeBlur).not.toHaveBeenCalled();
+      expect(editorElement.focusLine).not.toHaveBeenCalled();
+      expect(editorElement.lastProgrammaticFocusTarget).toBeUndefined();
+      expect(editorElement.programmaticFocusRestoreUntil).toBe(0);
     } finally {
       if (previousRequestAnimationFrame === undefined) {
         delete globalThis.requestAnimationFrame;
@@ -593,6 +1225,7 @@ describe("lexical scene document editor line editing", () => {
       editorElement.furiganaDialogIsPending = false;
       editorElement.programmaticFocusRestoreUntil = Number.POSITIVE_INFINITY;
       editorElement.lastProgrammaticFocusTarget = focusTarget;
+      editorElement.lineKeyById = new Map([["line-1", "line-key-1"]]);
       editorElement.debugInputEvent = vi.fn();
       editorElement.commitNativeBlur = vi.fn();
       editorElement.focusLine = vi.fn();
@@ -667,6 +1300,7 @@ describe("lexical scene document editor line editing", () => {
       editorElement.furiganaDialogIsPending = false;
       editorElement.programmaticFocusRestoreUntil = 0;
       editorElement.lastProgrammaticFocusTarget = focusTarget;
+      editorElement.lineKeyById = new Map([["line-1", "line-key-1"]]);
       editorElement.debugInputEvent = vi.fn();
       editorElement.commitNativeBlur = vi.fn();
       editorElement.focusLine = vi.fn();
