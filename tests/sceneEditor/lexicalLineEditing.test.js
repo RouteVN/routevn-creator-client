@@ -81,7 +81,6 @@ describe("lexical scene document editor line editing", () => {
         configurable: true,
         value: true,
       });
-      editorElement.debugInputEvent = vi.fn();
       editorElement.hideSelectionPopover = vi.fn();
       editorElement.scheduleRender = vi.fn();
       editorElement.dispatchSelectedLineChanged = vi.fn();
@@ -146,7 +145,6 @@ describe("lexical scene document editor line editing", () => {
         selectedLineId: "line-1",
         lines: [{ id: "line-1" }],
       };
-      editorElement.debugInputEvent = vi.fn();
       editorElement.enterTextMode = vi.fn();
       editorElement.getActiveElement = vi.fn(() => surfaceNode);
 
@@ -203,7 +201,6 @@ describe("lexical scene document editor line editing", () => {
         selectedLineId: "line-1",
         lines: [{ id: "line-1" }],
       };
-      editorElement.debugInputEvent = vi.fn();
       editorElement.enterTextMode = vi.fn();
       editorElement.getActiveElement = vi.fn(() => editorNode);
 
@@ -258,7 +255,6 @@ describe("lexical scene document editor line editing", () => {
       };
       editorElement.refs = {};
       editorElement.lineKeyById = new Map([["line-1", "line-key-1"]]);
-      editorElement.debugInputEvent = vi.fn();
       editorElement.markProgrammaticFocusRestore = vi.fn();
       editorElement.focus = vi.fn(() => {
         calls.push("focus");
@@ -305,7 +301,6 @@ describe("lexical scene document editor line editing", () => {
         selectedLineId: "line-0",
       };
       editorElement.lineKeyById = new Map();
-      editorElement.debugInputEvent = vi.fn();
       editorElement.focus = vi.fn();
       editorElement.restoreLineSelection = vi.fn();
 
@@ -319,14 +314,6 @@ describe("lexical scene document editor line editing", () => {
       expect(editorElement.state.selectedLineId).toBe("line-0");
       expect(editorElement.focus).not.toHaveBeenCalled();
       expect(editorElement.restoreLineSelection).not.toHaveBeenCalled();
-      expect(editorElement.debugInputEvent).toHaveBeenCalledWith(
-        "focus-line-missing-key",
-        undefined,
-        {
-          lineId: "missing-line",
-          cursorPosition: 0,
-        },
-      );
     } finally {
       restoreDomGlobals();
     }
@@ -367,7 +354,6 @@ describe("lexical scene document editor line editing", () => {
         configurable: true,
         value: true,
       });
-      editorElement.debugInputEvent = vi.fn();
       editorElement.clearPendingTextInputFallback = vi.fn();
       editorElement.clearSelectedReferenceNodeKey = vi.fn();
       editorElement.scrollLineIntoView = vi.fn();
@@ -414,7 +400,6 @@ describe("lexical scene document editor line editing", () => {
         lines: [{ id: "line-1" }],
       };
       editorElement.hideSelectionPopover = vi.fn();
-      editorElement.debugInputEvent = vi.fn();
       editorElement.moveBlockSelection = vi.fn();
       editorElement.updatePendingTextInputFallback = vi.fn();
 
@@ -461,7 +446,6 @@ describe("lexical scene document editor line editing", () => {
         lines: [{ id: "line-1" }],
       };
       editorElement.hideSelectionPopover = vi.fn();
-      editorElement.debugInputEvent = vi.fn();
       editorElement.dispatchShortcutEvent = vi.fn();
 
       const event = {
@@ -508,7 +492,6 @@ describe("lexical scene document editor line editing", () => {
         lines: [{ id: "line-1" }],
       };
       editorElement.hideSelectionPopover = vi.fn();
-      editorElement.debugInputEvent = vi.fn();
       editorElement.dispatchShortcutEvent = vi.fn();
 
       const event = {
@@ -553,7 +536,6 @@ describe("lexical scene document editor line editing", () => {
         mode: "block",
       };
       editorElement.hideSelectionPopover = vi.fn();
-      editorElement.debugInputEvent = vi.fn();
       editorElement.clearPendingTextInputFallback = vi.fn();
       editorElement.clearSelectedReferenceNodeKey = vi.fn();
       editorElement.insertPlainText = vi.fn();
@@ -593,7 +575,6 @@ describe("lexical scene document editor line editing", () => {
       editorElement.state = {
         selectedLineId: "line-0",
       };
-      editorElement.debugInputEvent = vi.fn();
       editorElement.getLineElementFromRangePoint = vi.fn(() => lineElement);
       editorElement.getLineIdFromLineElement = vi.fn(() => "line-1");
       editorElement.restoreLineSelection = vi.fn(() => true);
@@ -644,7 +625,6 @@ describe("lexical scene document editor line editing", () => {
       editorElement.state = {
         selectedLineId: "line-0",
       };
-      editorElement.debugInputEvent = vi.fn();
       editorElement.getLineElementFromRangePoint = vi.fn((container) => {
         return container === startLineElement
           ? startLineElement
@@ -719,7 +699,6 @@ describe("lexical scene document editor line editing", () => {
       editorElement.focusLine = vi.fn();
       editorElement.selectLineTextRange = vi.fn(() => true);
       editorElement.scheduleRender = vi.fn();
-      editorElement.debugInputEvent = vi.fn();
       editorElement.dispatchSelectedLineChanged = vi.fn();
 
       const event = {
@@ -785,7 +764,6 @@ describe("lexical scene document editor line editing", () => {
       editorElement.focusLine = vi.fn();
       editorElement.selectLineTextRange = vi.fn(() => true);
       editorElement.scheduleRender = vi.fn();
-      editorElement.debugInputEvent = vi.fn();
       editorElement.dispatchSelectedLineChanged = vi.fn();
 
       const event = {
@@ -832,7 +810,6 @@ describe("lexical scene document editor line editing", () => {
       editorElement.clearSelectedReferenceNodeKey = vi.fn();
       editorElement.hideSelectionPopover = vi.fn();
       editorElement.closeMentionMenu = vi.fn();
-      editorElement.debugInputEvent = vi.fn();
       editorElement.applyModeState = vi.fn((mode) => {
         editorElement.state.mode = mode;
       });
@@ -1017,7 +994,6 @@ describe("lexical scene document editor line editing", () => {
       editorElement.isPointerDownInsideEditor = false;
       editorElement.selectionMenuIsOpen = false;
       editorElement.furiganaDialogIsPending = false;
-      editorElement.debugInputEvent = vi.fn();
       editorElement.commitNativeBlur = vi.fn();
 
       editorElement.handleNativeBlur({
@@ -1028,10 +1004,6 @@ describe("lexical scene document editor line editing", () => {
       expect(editorElement.commitNativeBlur).not.toHaveBeenCalled();
       expect(editorElement.isEditorFocused).toBe(true);
       expect(editorElement.state.mode).toBe("text-editor");
-      expect(editorElement.debugInputEvent).toHaveBeenCalledWith(
-        "editor-blur-ignored-active-editor",
-        expect.any(Object),
-      );
     } finally {
       restoreDomGlobals();
     }
@@ -1086,7 +1058,6 @@ describe("lexical scene document editor line editing", () => {
       editorElement.furiganaDialogIsPending = false;
       editorElement.lastProgrammaticFocusTarget = focusTarget;
       editorElement.lineKeyById = new Map([["line-1", "line-key-1"]]);
-      editorElement.debugInputEvent = vi.fn();
       editorElement.commitNativeBlur = vi.fn();
       editorElement.focusLine = vi.fn();
 
@@ -1158,7 +1129,6 @@ describe("lexical scene document editor line editing", () => {
       editorElement.lastProgrammaticFocusTarget = focusTarget;
       editorElement.programmaticFocusRestoreUntil = Number.POSITIVE_INFINITY;
       editorElement.lineKeyById = new Map();
-      editorElement.debugInputEvent = vi.fn();
       editorElement.commitNativeBlur = vi.fn();
       editorElement.focusLine = vi.fn();
 
@@ -1226,7 +1196,6 @@ describe("lexical scene document editor line editing", () => {
       editorElement.programmaticFocusRestoreUntil = Number.POSITIVE_INFINITY;
       editorElement.lastProgrammaticFocusTarget = focusTarget;
       editorElement.lineKeyById = new Map([["line-1", "line-key-1"]]);
-      editorElement.debugInputEvent = vi.fn();
       editorElement.commitNativeBlur = vi.fn();
       editorElement.focusLine = vi.fn();
 
@@ -1239,13 +1208,6 @@ describe("lexical scene document editor line editing", () => {
       expect(editorElement.isEditorFocused).toBe(true);
       expect(editorElement.state.mode).toBe("text-editor");
       expect(editorElement.focusLine).toHaveBeenCalledWith(focusTarget);
-      expect(editorElement.debugInputEvent).toHaveBeenCalledWith(
-        "editor-blur-ignored-programmatic-focus",
-        expect.any(Object),
-        expect.objectContaining({
-          focusTarget,
-        }),
-      );
     } finally {
       if (previousRequestAnimationFrame === undefined) {
         delete globalThis.requestAnimationFrame;
@@ -1301,7 +1263,6 @@ describe("lexical scene document editor line editing", () => {
       editorElement.programmaticFocusRestoreUntil = 0;
       editorElement.lastProgrammaticFocusTarget = focusTarget;
       editorElement.lineKeyById = new Map([["line-1", "line-key-1"]]);
-      editorElement.debugInputEvent = vi.fn();
       editorElement.commitNativeBlur = vi.fn();
       editorElement.focusLine = vi.fn();
 
@@ -1313,13 +1274,6 @@ describe("lexical scene document editor line editing", () => {
       expect(editorElement.commitNativeBlur).not.toHaveBeenCalled();
       expect(editorElement.state.mode).toBe("text-editor");
       expect(editorElement.focusLine).toHaveBeenCalledWith(focusTarget);
-      expect(editorElement.debugInputEvent).toHaveBeenCalledWith(
-        "editor-blur-ignored-programmatic-body",
-        expect.any(Object),
-        expect.objectContaining({
-          focusTarget,
-        }),
-      );
     } finally {
       if (previousRequestAnimationFrame === undefined) {
         delete globalThis.requestAnimationFrame;
@@ -1493,7 +1447,6 @@ describe("lexical scene document editor line editing", () => {
         value: true,
       });
       editorElement.isEditorActiveElement = vi.fn(() => true);
-      editorElement.debugInputEvent = vi.fn();
       editorElement.insertPlainText = vi.fn();
 
       editorElement.updatePendingTextInputFallback({
@@ -1582,7 +1535,6 @@ describe("lexical scene document editor line editing", () => {
       };
       editorElement.lineMetaByKey = new Map();
       editorElement.lineKeyById = new Map();
-      editorElement.debugInputEvent = vi.fn();
 
       editor.update(
         () => {
@@ -1656,7 +1608,6 @@ describe("lexical scene document editor line editing", () => {
       };
       editorElement.lineMetaByKey = new Map();
       editorElement.lineKeyById = new Map();
-      editorElement.debugInputEvent = vi.fn();
       editorElement.hideSelectionPopover = vi.fn();
       editorElement.clearSelectedReferenceNodeKey = vi.fn();
 
@@ -1744,7 +1695,6 @@ describe("lexical scene document editor line editing", () => {
       };
       editorElement.lineMetaByKey = new Map();
       editorElement.lineKeyById = new Map();
-      editorElement.debugInputEvent = vi.fn();
       editorElement.hideSelectionPopover = vi.fn();
       editorElement.clearSelectedReferenceNodeKey = vi.fn();
       editorElement.handleReferenceArrowNavigation = vi.fn(() => false);
@@ -1855,7 +1805,6 @@ describe("lexical scene document editor line editing", () => {
       };
       editorElement.lineMetaByKey = new Map();
       editorElement.lineKeyById = new Map();
-      editorElement.debugInputEvent = vi.fn();
       editorElement.hideSelectionPopover = vi.fn();
       editorElement.clearSelectedReferenceNodeKey = vi.fn();
 
@@ -1944,7 +1893,6 @@ describe("lexical scene document editor line editing", () => {
       };
       editorElement.lineMetaByKey = new Map();
       editorElement.lineKeyById = new Map();
-      editorElement.debugInputEvent = vi.fn();
       editorElement.hideSelectionPopover = vi.fn();
       editorElement.clearSelectedReferenceNodeKey = vi.fn();
       editorElement.scheduleRender = vi.fn();
@@ -2065,7 +2013,6 @@ describe("lexical scene document editor line editing", () => {
       };
       editorElement.lineMetaByKey = new Map();
       editorElement.lineKeyById = new Map();
-      editorElement.debugInputEvent = vi.fn();
       editorElement.hideSelectionPopover = vi.fn();
       editorElement.clearSelectedReferenceNodeKey = vi.fn();
       editorElement.scheduleRender = vi.fn();
@@ -2178,7 +2125,6 @@ describe("lexical scene document editor line editing", () => {
       };
       editorElement.lineMetaByKey = new Map();
       editorElement.lineKeyById = new Map();
-      editorElement.debugInputEvent = vi.fn();
       editorElement.scrollLineIntoView = vi.fn();
       editorElement.focusLine = vi.fn();
       editorElement.scheduleRender = vi.fn();
@@ -2273,7 +2219,6 @@ describe("lexical scene document editor line editing", () => {
       };
       editorElement.lineMetaByKey = new Map();
       editorElement.lineKeyById = new Map();
-      editorElement.debugInputEvent = vi.fn();
       editorElement.scheduleRender = vi.fn();
       editorElement.focusLine = vi.fn();
 
@@ -2433,7 +2378,6 @@ describe("lexical scene document editor line editing", () => {
       };
       editorElement.lineMetaByKey = new Map();
       editorElement.lineKeyById = new Map();
-      editorElement.debugInputEvent = vi.fn();
       editorElement.scheduleRender = vi.fn();
       editorElement.focusLine = vi.fn();
 
@@ -2539,7 +2483,6 @@ describe("lexical scene document editor line editing", () => {
       };
       editorElement.lineMetaByKey = new Map();
       editorElement.lineKeyById = new Map();
-      editorElement.debugInputEvent = vi.fn();
       editorElement.scheduleRender = vi.fn();
       editorElement.focusLine = vi.fn();
       editorElement.restoreLineSelection = vi.fn(
@@ -2650,7 +2593,6 @@ describe("lexical scene document editor line editing", () => {
       };
       editorElement.lineMetaByKey = new Map();
       editorElement.lineKeyById = new Map();
-      editorElement.debugInputEvent = vi.fn();
       editorElement.scheduleRender = vi.fn();
       editorElement.focusLine = vi.fn();
 
@@ -2762,7 +2704,6 @@ describe("lexical scene document editor line editing", () => {
       editorElement.scrollLineIntoView = vi.fn();
       editorElement.focusLine = vi.fn();
       editorElement.scheduleRender = vi.fn();
-      editorElement.debugInputEvent = vi.fn();
       editorElement.dispatchEvent = vi.fn();
 
       editor.update(
