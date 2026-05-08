@@ -521,6 +521,82 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
+  it("syncs selected line from native selection after text-mode vertical arrow navigation", async () => {
+    const restoreDomGlobals = installDomGlobals();
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+    const animationFrameCallbacks = [];
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      animationFrameCallbacks.push(callback);
+      return animationFrameCallbacks.length;
+    });
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+
+      Object.defineProperty(editorElement, "isConnected", {
+        configurable: true,
+        value: true,
+      });
+      editorElement.state = {
+        mode: "text-editor",
+        selectedLineId: "line-1",
+        mentionMenu: {
+          isOpen: false,
+        },
+      };
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.updatePendingTextInputFallback = vi.fn();
+      editorElement.handleReferenceArrowNavigation = vi.fn(() => false);
+      editorElement.clearSelectedReferenceNodeKey = vi.fn();
+      editorElement.getNativeLineSelectionContext = vi.fn(() => ({
+        lineId: "line-2",
+        start: 4,
+        end: 4,
+      }));
+      editorElement.scheduleRender = vi.fn();
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      const event = {
+        key: "ArrowDown",
+        ctrlKey: false,
+        metaKey: false,
+        altKey: false,
+        isComposing: false,
+        preventDefault: vi.fn(),
+      };
+
+      editorElement.handleNativeKeyDown(event);
+
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(animationFrameCallbacks).toHaveLength(1);
+
+      animationFrameCallbacks[0]();
+
+      expect(editorElement.state.selectedLineId).toBe("line-2");
+      expect(editorElement.scheduleRender).toHaveBeenCalledTimes(1);
+      expect(editorElement.dispatchSelectedLineChanged).toHaveBeenCalledWith(
+        "line-2",
+        {
+          cursorPosition: 4,
+          isCollapsed: true,
+          mode: "text-editor",
+        },
+      );
+    } finally {
+      if (previousRequestAnimationFrame === undefined) {
+        delete globalThis.requestAnimationFrame;
+      } else {
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+      }
+      restoreDomGlobals();
+    }
+  });
+
   it("suppresses native text insertion beforeinput while the editor is focused in block mode", async () => {
     const restoreDomGlobals = installDomGlobals();
 
