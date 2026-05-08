@@ -61,6 +61,20 @@ const dispatchTemporaryPresentationStateChange = (deps) => {
   );
 };
 
+const readChoiceIndex = (payload = {}) => {
+  const currentTarget = payload._event.currentTarget;
+  const indexValue =
+    currentTarget.dataset?.index ?? currentTarget.getAttribute("data-index");
+
+  if (indexValue === undefined || indexValue === null || indexValue === "") {
+    return undefined;
+  }
+
+  const index = Number(indexValue);
+
+  return Number.isInteger(index) && index >= 0 ? index : undefined;
+};
+
 export const handleBeforeMount = (deps) => {
   const { store, props } = deps;
   store.setItems({ items: props.choice?.items || [] });
@@ -92,24 +106,26 @@ export const handleAddChoiceClick = (deps) => {
 
 export const handleChoiceClick = (deps, payload) => {
   const { store, render } = deps;
+  const index = readChoiceIndex(payload);
 
-  const index = parseInt(
-    payload._event.currentTarget.getAttribute("data-index"),
-  );
+  if (index === undefined) {
+    return;
+  }
 
   store.setMode({ mode: "editChoice" });
-  store.setEditingIndex({ index: index });
+  store.setEditingIndex({ index });
 
   render();
 };
 
 export const handleChoiceContextMenu = (deps, payload) => {
-  payload._event.preventDefault();
   const { store, render } = deps;
+  payload._event.preventDefault();
+  const index = readChoiceIndex(payload);
 
-  const index = parseInt(
-    payload._event.currentTarget.getAttribute("data-index"),
-  );
+  if (index === undefined) {
+    return;
+  }
 
   store.showDropdownMenu({
     position: { x: payload._event.clientX, y: payload._event.clientY },
@@ -236,11 +252,12 @@ export const handleSubmitClick = (deps) => {
 
 export const handleRemoveChoiceClick = (deps, payload) => {
   const { store, render } = deps;
-  const index = parseInt(
+  const index = Number.parseInt(
     payload._event.currentTarget.id.replace("removeChoice", ""),
+    10,
   );
 
-  store.removeChoice({ index: index });
+  store.removeChoice({ index });
   render();
   dispatchTemporaryPresentationStateChange(deps);
 };
@@ -280,7 +297,7 @@ export const handleDropdownMenuClickItem = (deps, payload) => {
   const { item } = payload._event.detail;
   const choiceIndex = store.selectDropdownMenuChoiceIndex();
 
-  if (item.value === "delete" && choiceIndex !== null) {
+  if (item.value === "delete" && Number.isInteger(choiceIndex)) {
     store.removeChoice({ index: choiceIndex });
   }
 

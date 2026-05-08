@@ -152,9 +152,16 @@ export const addChoice = ({ state }, _payload = {}) => {
 };
 
 export const removeChoice = ({ state }, { index } = {}) => {
-  if (state.items.length > 1) {
-    state.items.splice(index, 1);
+  if (
+    state.items.length <= 1 ||
+    !Number.isInteger(index) ||
+    index < 0 ||
+    index >= state.items.length
+  ) {
+    return;
   }
+
+  state.items.splice(index, 1);
 };
 
 export const setScenes = ({ state }, { scenes } = {}) => {

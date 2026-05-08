@@ -1,13 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   handleCancelEditClick,
+  handleChoiceContextMenu,
   handleChoiceFormChange,
+  handleDropdownMenuClickItem,
   handleSaveChoiceClick,
   handleSubmitClick,
 } from "../../src/components/commandLineChoices/commandLineChoices.handlers.js";
 import {
   createInitialState,
+  hideDropdownMenu,
+  removeChoice,
   saveChoice,
+  selectDropdownMenuChoiceIndex,
   selectEditForm,
   selectItems,
   selectItemsWithEditingDraft,
@@ -17,6 +22,7 @@ import {
   setItems,
   setMode,
   setSelectedResourceId,
+  showDropdownMenu,
   updateEditForm,
 } from "../../src/components/commandLineChoices/commandLineChoices.store.js";
 
@@ -29,7 +35,10 @@ const layouts = [
 ];
 
 const createStoreApi = (state) => ({
+  hideDropdownMenu: () => hideDropdownMenu({ state }),
+  removeChoice: (payload) => removeChoice({ state }, payload),
   saveChoice: () => saveChoice({ state }),
+  selectDropdownMenuChoiceIndex: () => selectDropdownMenuChoiceIndex({ state }),
   selectEditForm: () => selectEditForm({ state }),
   selectItems: () => selectItems({ state }),
   selectItemsWithEditingDraft: () => selectItemsWithEditingDraft({ state }),
@@ -38,6 +47,7 @@ const createStoreApi = (state) => ({
   setEditingIndex: (payload) => setEditingIndex({ state }, payload),
   setMode: (payload) => setMode({ state }, payload),
   setSelectedResourceId: (payload) => setSelectedResourceId({ state }, payload),
+  showDropdownMenu: (payload) => showDropdownMenu({ state }, payload),
   updateEditForm: (payload) => updateEditForm({ state }, payload),
 });
 
@@ -255,6 +265,89 @@ describe("commandLineChoices.handlers", () => {
             },
           },
         ],
+      },
+    });
+  });
+
+  it("deletes the right-clicked choice after a bubbled container context menu event", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const store = createStoreApi(state);
+
+    setItems(
+      { state },
+      {
+        items: [
+          { content: "Stay" },
+          { content: "Leave" },
+          { content: "Return" },
+        ],
+      },
+    );
+    setSelectedResourceId(
+      { state },
+      {
+        resourceId: "choice-layout",
+      },
+    );
+
+    const deps = {
+      store,
+      render,
+      dispatchEvent,
+      props: {
+        layouts,
+      },
+    };
+
+    handleChoiceContextMenu(deps, {
+      _event: {
+        preventDefault: vi.fn(),
+        currentTarget: {
+          dataset: {
+            index: "2",
+          },
+          getAttribute: vi.fn(),
+        },
+        clientX: 40,
+        clientY: 80,
+      },
+    });
+    handleChoiceContextMenu(deps, {
+      _event: {
+        preventDefault: vi.fn(),
+        currentTarget: {
+          dataset: {},
+          getAttribute: vi.fn(() => null),
+        },
+        clientX: 40,
+        clientY: 80,
+      },
+    });
+
+    expect(selectDropdownMenuChoiceIndex({ state })).toBe(2);
+
+    handleDropdownMenuClickItem(deps, {
+      _event: {
+        detail: {
+          item: {
+            value: "delete",
+          },
+        },
+      },
+    });
+
+    expect(selectItems({ state }).map((item) => item.content)).toEqual([
+      "Stay",
+      "Leave",
+    ]);
+    expect(dispatchEvent.mock.calls.at(-1)[0].detail).toEqual({
+      presentationState: {
+        choice: {
+          resourceId: "choice-layout",
+          items: [{ content: "Stay" }, { content: "Leave" }],
+        },
       },
     });
   });
