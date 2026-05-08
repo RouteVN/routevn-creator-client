@@ -1929,6 +1929,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
+    this.scheduleNativeSelectionLineSyncAfterVerticalNavigation(event);
     this.updatePendingTextInputFallback(event);
 
     if (this.handleReferenceArrowNavigation(event)) {
@@ -1989,6 +1990,40 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   handleNativeInput() {
     this.clearPendingTextInputFallback();
+  }
+
+  scheduleNativeSelectionLineSyncAfterVerticalNavigation(event) {
+    if (
+      this.state?.mode !== "text-editor" ||
+      event.isComposing ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      (event.key !== "ArrowUp" && event.key !== "ArrowDown") ||
+      typeof requestAnimationFrame !== "function"
+    ) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      if (!this.isConnected || this.state?.mode !== "text-editor") {
+        return;
+      }
+
+      const nativeSelection = this.getNativeLineSelectionContext();
+      const lineId = nativeSelection?.lineId;
+      if (!lineId || lineId === this.state.selectedLineId) {
+        return;
+      }
+
+      this.state.selectedLineId = lineId;
+      this.scheduleRender();
+      this.dispatchSelectedLineChanged(lineId, {
+        cursorPosition: nativeSelection.start,
+        isCollapsed: nativeSelection.start === nativeSelection.end,
+        mode: "text-editor",
+      });
+    });
   }
 
   handleWindowKeyDownCapture(event) {
