@@ -140,22 +140,48 @@ export const createSafeRange = (element, range) => {
 export const setSelectionFromRange = (element, range) => {
   const safeRange = createSafeRange(element, range);
   if (!safeRange) {
-    return;
+    return false;
   }
 
   const root = element.getRootNode();
-  let selection = window.getSelection();
+  const selections = [];
+  const windowSelection = window.getSelection();
+  if (windowSelection) {
+    selections.push(windowSelection);
+  }
 
   if (root instanceof ShadowRoot && typeof root.getSelection === "function") {
-    selection = root.getSelection() || selection;
+    const shadowSelection = root.getSelection();
+    if (shadowSelection && !selections.includes(shadowSelection)) {
+      selections.unshift(shadowSelection);
+    }
   }
 
-  if (!selection) {
-    return;
+  let didSetSelection = false;
+  for (const selection of selections) {
+    try {
+      selection.setBaseAndExtent(
+        safeRange.startContainer,
+        safeRange.startOffset,
+        safeRange.endContainer,
+        safeRange.endOffset,
+      );
+      didSetSelection = true;
+      continue;
+    } catch {
+      // Fall back to Range APIs below.
+    }
+
+    try {
+      selection.removeAllRanges();
+      selection.addRange(safeRange.cloneRange());
+      didSetSelection = true;
+    } catch {
+      // Some engines reject shadow-DOM ranges on the document selection.
+    }
   }
 
-  selection.removeAllRanges();
-  selection.addRange(safeRange);
+  return didSetSelection;
 };
 
 export const getLexicalTextLength = (node) => {
