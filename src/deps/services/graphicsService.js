@@ -482,6 +482,7 @@ export const createGraphicsService = async ({
 } = {}) => {
   let routeGraphics;
   let routeGraphicsInitPromise;
+  let destroyRuntimePromise;
   let engine;
   let assetBufferManager;
   let loadedAssetTypes = new Map();
@@ -938,12 +939,14 @@ export const createGraphicsService = async ({
 
     await Promise.all(
       pixiAssetKeys.map(async (key) => {
-        await Assets.unload(key).catch((error) => {
-          console.error(
-            `[graphicsService] Failed to unload asset ${key}`,
-            error,
-          );
-        });
+        if (!Assets.cache?.has || Assets.cache.has(key)) {
+          await Assets.unload(key).catch((error) => {
+            console.error(
+              `[graphicsService] Failed to unload asset ${key}`,
+              error,
+            );
+          });
+        }
         destroyCachedPixiAsset(key);
       }),
     );
@@ -988,34 +991,45 @@ export const createGraphicsService = async ({
 
   const destroyRuntime = async () => {
     assetLoadRuntimeVersion += 1;
+    ticker?.stop();
+    invalidateDeferredAudioRender();
+    clearAllPendingClickInteractions();
+
+    const activeRouteGraphics = routeGraphics;
+    routeGraphics = undefined;
+    engine = undefined;
+    routeEngineProjectData = undefined;
+    enableGlobalKeyboardBindings = true;
+    beforeHandleActions = undefined;
+    actionQueue = Promise.resolve();
+    assetLoadQueue = Promise.resolve();
+
     const trackedVideoEntries = getTrackedVideoEntries();
 
     releaseTrackedVideoResources(trackedVideoEntries);
-    await unloadTrackedPixiAssets();
-
-    if (routeGraphics) {
-      routeGraphics.destroy();
-      routeGraphics = undefined;
+    if (activeRouteGraphics) {
+      activeRouteGraphics.setAnimationPlaybackMode?.("manual");
+      activeRouteGraphics.destroy();
     }
 
+    await unloadTrackedPixiAssets();
     await unloadTrackedAudioAssets();
     clearLoadedFonts();
     loadedAssetTypes = new Map();
     assetBufferManager?.clear();
     assetBufferManager = undefined;
 
-    if (engine) {
-      engine = undefined;
-    }
-    routeEngineProjectData = undefined;
-    enableGlobalKeyboardBindings = true;
-    beforeHandleActions = undefined;
-    actionQueue = Promise.resolve();
-    assetLoadQueue = Promise.resolve();
-    invalidateDeferredAudioRender();
-    clearAllPendingClickInteractions();
-    ticker?.stop();
     ticker = undefined;
+  };
+
+  const runDestroyRuntime = () => {
+    if (!destroyRuntimePromise) {
+      destroyRuntimePromise = destroyRuntime().finally(() => {
+        destroyRuntimePromise = undefined;
+      });
+    }
+
+    return destroyRuntimePromise;
   };
 
   const loadBuffersWithRetry = async (
@@ -1120,10 +1134,18 @@ export const createGraphicsService = async ({
     const renderAssetBufferMap = Object.fromEntries(renderAssetEntries);
 
     if (Object.keys(renderAssetBufferMap).length > 0) {
-      if (!routeGraphics) {
+      const activeRouteGraphics = routeGraphics;
+      if (!activeRouteGraphics) {
         return;
       }
-      await routeGraphics.loadAssets(renderAssetBufferMap);
+      await activeRouteGraphics.loadAssets(renderAssetBufferMap);
+
+      if (
+        runtimeVersion !== assetLoadRuntimeVersion ||
+        routeGraphics !== activeRouteGraphics
+      ) {
+        return;
+      }
     }
 
     newAssetEntries.forEach(([key, asset]) => {
@@ -1242,6 +1264,10 @@ export const createGraphicsService = async ({
       ...nextRenderState,
       animations: nextRenderState?.animations || [],
     };
+    if (!routeGraphics) {
+      return;
+    }
+
     routeGraphics.render(nextRenderState);
     applyInteractiveContainerHitAreas(nextRenderState.elements);
     void pruneDecodedAudioCache(retainedAudioKeys);
@@ -1438,8 +1464,12 @@ export const createGraphicsService = async ({
         await routeGraphicsInitPromise;
       }
 
+      if (destroyRuntimePromise) {
+        await destroyRuntimePromise;
+      }
+
       if (routeGraphics) {
-        await destroyRuntime();
+        await runDestroyRuntime();
       }
 
       routeGraphicsInitPromise = (async () => {
@@ -1659,6 +1689,9 @@ export const createGraphicsService = async ({
         return;
       }
       const { skipAudio = false, skipAnimations = false } = options;
+      routeGraphics.setAnimationPlaybackMode?.(
+        skipAnimations ? "manual" : "auto",
+      );
       const effectiveSkipAudio = skipAudio || isEngineAudioMuted;
       let renderState = engine.selectRenderState();
       if (skipAnimations) {
@@ -1696,9 +1729,15 @@ export const createGraphicsService = async ({
     waitUntilReady,
     attachCanvas,
     render: (payload) => {
-      return routeGraphics.render(payload);
+      return routeGraphics?.render(payload);
     },
-    parse: (payload) => routeGraphics.parse(payload),
-    destroy: destroyRuntime,
+    parse: (payload) => routeGraphics?.parse(payload),
+    destroy: async () => {
+      if (routeGraphicsInitPromise) {
+        await routeGraphicsInitPromise.catch(() => {});
+      }
+
+      await runDestroyRuntime();
+    },
   };
 };

@@ -3,7 +3,7 @@ refs:
     eventListeners:
       click:
         handler: handleAddChoiceClick
-  choice*:
+  choiceItem*:
     eventListeners:
       click:
         handler: handleChoiceClick
@@ -57,7 +57,7 @@ template:
                   - rtgl-form#form :form=${form} :defaultValues=${defaultValues} :context=${context}:
                       - rtgl-view#choicesContainer slot=choices g=md w=f:
                           - $for item, index in defaultValues.items:
-                              - rtgl-view#choice${index} data-index=${index} d=h av=c w=f g=md p=sm bgc=mu br=sm cur=pointer:
+                              - rtgl-view#choiceItem${index} data-index=${index} d=h av=c w=f g=md p=sm bgc=mu br=sm cur=pointer:
                                   - rtgl-view w=1fg:
                                       - rtgl-text: ${item.content}
                           - rtgl-button#addChoiceButton v=ol w=f mt=md: + Add Choice

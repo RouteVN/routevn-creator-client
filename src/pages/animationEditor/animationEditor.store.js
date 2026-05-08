@@ -63,16 +63,18 @@ const createPropertyFieldConfig = (
       label: "Position X",
       defaultValue: width / 2,
       slider: {
-        min: 0,
+        min: -width,
         max: width,
+        step: 0.01,
       },
     },
     y: {
       label: "Position Y",
       defaultValue: height / 2,
       slider: {
-        min: 0,
+        min: -height,
         max: height,
+        step: 0.01,
       },
     },
     scaleX: {
@@ -759,14 +761,22 @@ const createEmptyImagesData = () => ({
   tree: [],
 });
 
+const DEFAULT_MASK_CHANNEL_OPTION = MASK_CHANNEL_OPTIONS[0];
+
+const normalizeEditorMaskChannel = (channel) => {
+  return MASK_CHANNEL_OPTIONS.some((option) => option.value === channel)
+    ? channel
+    : DEFAULT_MASK_CHANNEL_OPTION.value;
+};
+
 const createEmptyMaskPanelData = () => ({
   enabled: false,
   unsupported: false,
   unsupportedKind: undefined,
   kind: "single",
   kindLabel: "Single",
-  channelValue: "alpha",
-  channelLabel: "Alpha",
+  channelValue: DEFAULT_MASK_CHANNEL_OPTION.value,
+  channelLabel: DEFAULT_MASK_CHANNEL_OPTION.label,
   sampleValue: "step",
   combineValue: "max",
   invertValue: "off",
@@ -1609,10 +1619,10 @@ export const setTransitionMaskKind = ({ state }, { kind } = {}) => {
     currentMask.imageId ??
     currentMask.imageIds?.find(Boolean) ??
     currentMask.items?.find((item) => item?.imageId)?.imageId;
-  nextMask.channel =
+  nextMask.channel = normalizeEditorMaskChannel(
     currentMask.channel ??
-    currentMask.items?.find((item) => item?.channel)?.channel ??
-    nextMask.channel;
+      currentMask.items?.find((item) => item?.channel)?.channel,
+  );
   nextMask.invert =
     currentMask.invert ??
     currentMask.items?.find((item) => item?.invert !== undefined)?.invert ??
@@ -1636,7 +1646,7 @@ export const setTransitionMaskChannel = ({ state }, { channel } = {}) => {
     return;
   }
 
-  transitionMask.channel = channel;
+  transitionMask.channel = normalizeEditorMaskChannel(channel);
 };
 
 export const setTransitionMaskSample = ({ state }, { sample } = {}) => {
@@ -2103,7 +2113,7 @@ const buildTransitionMaskPanelDataForMask = (
   }
 
   const kind = transitionMask.kind;
-  const channelValue = transitionMask.channel ?? "alpha";
+  const channelValue = normalizeEditorMaskChannel(transitionMask.channel);
   const invertValue = transitionMask.invert ? "on" : "off";
   const progressDuration = transitionMask.progressDuration ?? 900;
   const progressEasing = transitionMask.progressEasing ?? "linear";
@@ -2119,7 +2129,7 @@ const buildTransitionMaskPanelDataForMask = (
   const compositeItems = (transitionMask.items ?? []).map((item, index) => ({
     ...buildMaskImageItem(state, item.imageId),
     index,
-    channelValue: item.channel ?? "alpha",
+    channelValue: normalizeEditorMaskChannel(item.channel),
     invertValue: item.invert ? "on" : "off",
     canMoveUp: index > 0,
     canMoveDown: index < transitionMask.items.length - 1,
