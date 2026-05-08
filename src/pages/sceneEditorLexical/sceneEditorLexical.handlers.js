@@ -684,7 +684,7 @@ export const handleCommandLineSubmit = async (deps, payload) => {
 };
 
 export const handleEditorDataChanged = async (deps, payload) => {
-  const { subject, store } = deps;
+  const { refs, render, subject, store } = deps;
   if (isSectionsOverviewOpen(store)) {
     return;
   }
@@ -716,11 +716,18 @@ export const handleEditorDataChanged = async (deps, payload) => {
       selectedLineId,
     });
   }
-  deps.render();
+  render();
   const focusTarget = payload?._event?.detail?.focusTarget;
-  if (focusTarget?.lineId) {
+  if (
+    focusTarget?.lineId &&
+    changeReason === "structure" &&
+    focusTarget.skipPageRestore !== true
+  ) {
     requestAnimationFrame(() => {
-      focusLinesEditorLine(deps.refs, focusTarget);
+      focusLinesEditorLine(refs, focusTarget);
+      requestAnimationFrame(() => {
+        focusLinesEditorLine(refs, focusTarget);
+      });
     });
   }
   scheduleSceneEditorDraftFlush(deps, {
