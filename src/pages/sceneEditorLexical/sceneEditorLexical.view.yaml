@@ -121,6 +121,8 @@ refs:
     eventListeners:
       close:
         handler: handleHidePreviewScene
+      current-line-changed:
+        handler: handlePreviewCurrentLineChanged
   previewCanvasHost: {}
   canvas: {}
 template:

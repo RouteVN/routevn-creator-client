@@ -250,18 +250,18 @@ const hydratePreviewTargets = async (
   }
 };
 
-const selectCurrentSectionId = (systemState = {}) => {
+const selectCurrentPointer = (systemState = {}) => {
   const contexts = Array.isArray(systemState?.contexts)
     ? systemState.contexts
     : [];
   const currentContext = contexts[contexts.length - 1];
-  const currentPointerMode = currentContext?.currentPointerMode;
+  const currentPointerMode = currentContext?.currentPointerMode ?? "read";
 
-  if (!currentPointerMode) {
+  if (!currentContext || !currentPointerMode) {
     return undefined;
   }
 
-  return currentContext?.pointers?.[currentPointerMode]?.sectionId;
+  return currentContext?.pointers?.[currentPointerMode];
 };
 
 const createSceneTargetPrefetcher = (
@@ -412,7 +412,14 @@ export const handleBeforeMount = (deps) => {
 };
 
 export const handleAfterMount = async (deps) => {
-  const { projectService, graphicsService, refs, props: attrs, store } = deps;
+  const {
+    dispatchEvent,
+    projectService,
+    graphicsService,
+    refs,
+    props: attrs,
+    store,
+  } = deps;
   const repository = await projectService.ensureRepository();
   const { canvas } = refs;
   graphicsService.setEngineAudioMuted?.(false);
@@ -482,6 +489,7 @@ export const handleAfterMount = async (deps) => {
     initialLineId: lineId,
   });
   let lastRenderedSceneId;
+  let lastDispatchedLineKey;
   const previewWidth = projectDataWithInitial?.screen?.width;
   const previewHeight = projectDataWithInitial?.screen?.height;
   store.setProjectResolution({
@@ -511,7 +519,28 @@ export const handleAfterMount = async (deps) => {
   await graphicsService.initRouteEngine(runtime.projectData, {
     handleEffects: true,
     onRenderState: ({ systemState }) => {
-      const currentSectionId = selectCurrentSectionId(systemState);
+      const currentPointer = selectCurrentPointer(systemState);
+      const currentSectionId = currentPointer?.sectionId;
+      const currentLineId = currentPointer?.lineId;
+      const currentLineKey =
+        currentSectionId && currentLineId
+          ? `${currentSectionId}:${currentLineId}`
+          : undefined;
+
+      if (currentLineKey && currentLineKey !== lastDispatchedLineKey) {
+        lastDispatchedLineKey = currentLineKey;
+        dispatchEvent(
+          new CustomEvent("current-line-changed", {
+            detail: {
+              sectionId: currentSectionId,
+              lineId: currentLineId,
+            },
+            bubbles: true,
+            composed: true,
+          }),
+        );
+      }
+
       const currentSceneId = resolveSceneIdForSectionId(
         runtime.projectData,
         currentSectionId,
