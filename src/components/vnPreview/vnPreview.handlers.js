@@ -19,6 +19,13 @@ import {
   withPreviewEntryPoint,
 } from "./support/vnPreviewProjectData.js";
 
+const logPreviewCurrentLine = (event, data = {}) => {
+  console.log("[vnPreview:current-line]", {
+    event,
+    ...data,
+  });
+};
+
 const waitForBrowserPaint = async () => {
   if (typeof requestAnimationFrame !== "function") {
     await new Promise((resolve) => setTimeout(resolve, 32));
@@ -250,18 +257,29 @@ const hydratePreviewTargets = async (
   }
 };
 
-const selectCurrentPointer = (systemState = {}) => {
+const selectCurrentPointerSnapshot = (systemState = {}) => {
   const contexts = Array.isArray(systemState?.contexts)
     ? systemState.contexts
     : [];
   const currentContext = contexts[contexts.length - 1];
   const currentPointerMode = currentContext?.currentPointerMode ?? "read";
+  const pointers = currentContext?.pointers ?? {};
 
   if (!currentContext || !currentPointerMode) {
-    return undefined;
+    return {
+      contextCount: contexts.length,
+      currentPointer: undefined,
+      currentPointerMode,
+      pointerModes: Object.keys(pointers),
+    };
   }
 
-  return currentContext?.pointers?.[currentPointerMode];
+  return {
+    contextCount: contexts.length,
+    currentPointer: pointers[currentPointerMode],
+    currentPointerMode,
+    pointerModes: Object.keys(pointers),
+  };
 };
 
 const createSceneTargetPrefetcher = (
@@ -518,8 +536,9 @@ export const handleAfterMount = async (deps) => {
   );
   await graphicsService.initRouteEngine(runtime.projectData, {
     handleEffects: true,
-    onRenderState: ({ systemState }) => {
-      const currentPointer = selectCurrentPointer(systemState);
+    onRenderState: ({ renderState, systemState }) => {
+      const { contextCount, currentPointer, currentPointerMode, pointerModes } =
+        selectCurrentPointerSnapshot(systemState);
       const currentSectionId = currentPointer?.sectionId;
       const currentLineId = currentPointer?.lineId;
       const currentLineKey =
@@ -527,8 +546,33 @@ export const handleAfterMount = async (deps) => {
           ? `${currentSectionId}:${currentLineId}`
           : undefined;
 
+      if (!currentLineKey) {
+        logPreviewCurrentLine("onRenderState.skipNoLine", {
+          contextCount,
+          currentPointer,
+          currentPointerMode,
+          pointerModes,
+          renderStateId: renderState?.id,
+        });
+      } else if (currentLineKey === lastDispatchedLineKey) {
+        logPreviewCurrentLine("onRenderState.skipSameLine", {
+          currentPointerMode,
+          lineId: currentLineId,
+          pointerModes,
+          renderStateId: renderState?.id,
+          sectionId: currentSectionId,
+        });
+      }
+
       if (currentLineKey && currentLineKey !== lastDispatchedLineKey) {
         lastDispatchedLineKey = currentLineKey;
+        logPreviewCurrentLine("onRenderState.dispatchEvent", {
+          currentPointerMode,
+          lineId: currentLineId,
+          pointerModes,
+          renderStateId: renderState?.id,
+          sectionId: currentSectionId,
+        });
         dispatchEvent(
           new CustomEvent("current-line-changed", {
             detail: {

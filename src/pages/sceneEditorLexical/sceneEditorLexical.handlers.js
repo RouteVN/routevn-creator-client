@@ -1727,9 +1727,18 @@ export const handlePreviewCurrentLineChanged = (deps, payload) => {
   const detail = payload?._event?.detail ?? {};
   const { sectionId, lineId } = detail;
   if (!lineId) {
+    console.log("[sceneEditorLexical:preview-current-line]", {
+      event: "skipNoLine",
+      detail,
+    });
     return;
   }
 
+  console.log("[sceneEditorLexical:preview-current-line]", {
+    event: "dispatchRuntimeCurrentLineChanged",
+    lineId,
+    sectionId,
+  });
   subject.dispatch("sceneEditor.runtimeCurrentLineChanged", {
     sectionId,
     lineId,

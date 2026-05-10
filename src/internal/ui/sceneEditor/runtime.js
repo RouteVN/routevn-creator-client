@@ -33,6 +33,13 @@ import {
 const NO_PENDING_CANVAS_RENDER = Symbol("no-pending-canvas-render");
 const SCENE_EDITOR_PERF_SCOPE = "scene-editor-perf";
 
+const logRuntimeLineSync = (event, data = {}) => {
+  console.log("[scene-editor:runtime-line-sync]", {
+    event,
+    ...data,
+  });
+};
+
 const isSceneEditorPreviewVisible = (store) => {
   return store?.selectPreviewScene?.()?.previewVisible === true;
 };
@@ -55,35 +62,72 @@ const getPresentationStateSnapshot = (store) => {
   }
 };
 
-const selectCurrentRouteEnginePointer = (systemState = {}) => {
+const selectCurrentRouteEnginePointerSnapshot = (systemState = {}) => {
   const contexts = Array.isArray(systemState?.contexts)
     ? systemState.contexts
     : [];
   const currentContext = contexts[contexts.length - 1];
   const currentPointerMode = currentContext?.currentPointerMode ?? "read";
+  const pointers = currentContext?.pointers ?? {};
 
   if (!currentContext || !currentPointerMode) {
-    return undefined;
+    return {
+      contextCount: contexts.length,
+      currentPointer: undefined,
+      currentPointerMode,
+      pointerModes: Object.keys(pointers),
+    };
   }
 
-  return currentContext?.pointers?.[currentPointerMode];
+  return {
+    contextCount: contexts.length,
+    currentPointer: pointers[currentPointerMode],
+    currentPointerMode,
+    pointerModes: Object.keys(pointers),
+  };
 };
 
 const createRuntimeCurrentLineRenderStateHandler = (deps) => {
   const { subject } = deps;
   let lastDispatchedLineKey;
 
-  return ({ systemState }) => {
-    const currentPointer = selectCurrentRouteEnginePointer(systemState);
+  return ({ renderState, systemState }) => {
+    const { contextCount, currentPointer, currentPointerMode, pointerModes } =
+      selectCurrentRouteEnginePointerSnapshot(systemState);
     const sectionId = currentPointer?.sectionId;
     const lineId = currentPointer?.lineId;
     const lineKey = sectionId && lineId ? `${sectionId}:${lineId}` : undefined;
 
-    if (!lineKey || lineKey === lastDispatchedLineKey) {
+    if (!lineKey) {
+      logRuntimeLineSync("onRenderState.skipNoLine", {
+        contextCount,
+        currentPointer,
+        currentPointerMode,
+        pointerModes,
+        renderStateId: renderState?.id,
+      });
+      return;
+    }
+
+    if (lineKey === lastDispatchedLineKey) {
+      logRuntimeLineSync("onRenderState.skipSameLine", {
+        currentPointerMode,
+        lineId,
+        pointerModes,
+        renderStateId: renderState?.id,
+        sectionId,
+      });
       return;
     }
 
     lastDispatchedLineKey = lineKey;
+    logRuntimeLineSync("onRenderState.dispatch", {
+      currentPointerMode,
+      lineId,
+      pointerModes,
+      renderStateId: renderState?.id,
+      sectionId,
+    });
     subject.dispatch("sceneEditor.runtimeCurrentLineChanged", {
       sectionId,
       lineId,
@@ -1174,11 +1218,32 @@ const syncRuntimeCurrentLineSelection = (deps, payload = {}) => {
   const { sectionId, lineId } = payload;
   const selectedSectionId = store.selectSelectedSectionId();
   const selectedLineId = store.selectSelectedLineId();
-  if (!lineId || (sectionId && sectionId !== selectedSectionId)) {
+
+  if (!lineId) {
+    logRuntimeLineSync("selection.skipNoLine", {
+      payload,
+      selectedLineId,
+      selectedSectionId,
+    });
+    return;
+  }
+
+  if (sectionId && sectionId !== selectedSectionId) {
+    logRuntimeLineSync("selection.skipSectionMismatch", {
+      lineId,
+      sectionId,
+      selectedLineId,
+      selectedSectionId,
+    });
     return;
   }
 
   if (lineId === selectedLineId) {
+    logRuntimeLineSync("selection.skipSameLine", {
+      lineId,
+      sectionId,
+      selectedSectionId,
+    });
     return;
   }
 
@@ -1187,19 +1252,36 @@ const syncRuntimeCurrentLineSelection = (deps, payload = {}) => {
     ?.sections?.find((section) => section.id === selectedSectionId);
   const hasLine = selectedSection?.lines?.some((line) => line.id === lineId);
   if (!hasLine) {
+    logRuntimeLineSync("selection.skipLineMissingInSelectedSection", {
+      lineId,
+      sectionId,
+      selectedLineIds: selectedSection?.lines?.map((line) => line.id),
+      selectedSectionId,
+    });
     return;
   }
 
+  logRuntimeLineSync("selection.apply", {
+    lineId,
+    previousLineId: selectedLineId,
+    selectedSectionId,
+  });
   store.setSelectedLineId({ selectedLineId: lineId });
   render();
   refs.linesEditor?.scrollLineIntoView?.({ lineId });
 };
 
 const handleCanvasWheelFocusBlur = (deps) => {
-  if (!deps.appService?.isInputFocused?.()) {
+  const inputFocused = deps.appService?.isInputFocused?.() === true;
+  logRuntimeLineSync("canvas.wheel", {
+    inputFocused,
+  });
+
+  if (!inputFocused) {
     return;
   }
 
+  logRuntimeLineSync("canvas.wheel.blurActiveElement");
   deps.appService.blurActiveElement?.();
 };
 
@@ -1221,11 +1303,15 @@ export const mountSceneEditorSubscriptions = (deps) => {
       filter(
         ({ action }) => action === "sceneEditor.runtimeCurrentLineChanged",
       ),
+      tap(({ payload }) => {
+        logRuntimeLineSync("subject.received", payload);
+      }),
       throttleTime(50, undefined, {
         leading: true,
         trailing: true,
       }),
       tap(({ payload }) => {
+        logRuntimeLineSync("subject.afterThrottle", payload);
         syncRuntimeCurrentLineSelection(deps, payload);
       }),
     ),
