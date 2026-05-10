@@ -1,6 +1,10 @@
 import { createTreeCollection } from "../projectRepository.js";
 import { COMMAND_TYPES } from "../../../../internal/project/commands.js";
-import { cloneLayoutElementsWithFreshIds } from "../../../../internal/project/layout.js";
+import {
+  CURRENT_LAYOUT_SCHEMA_VERSION,
+  cloneLayoutElementsWithFreshIds,
+  normalizeLayoutSchemaVersion,
+} from "../../../../internal/project/layout.js";
 import { toFlatItems } from "../../../../internal/project/tree.js";
 
 const getLayoutsResourcePartition = ({ shared, context }) => {
@@ -35,6 +39,9 @@ const submitCreateLayoutItem = async ({
   nextData.name = name;
 
   if (itemType === "layout") {
+    if (nextData.layoutSchemaVersion === undefined) {
+      nextData.layoutSchemaVersion = CURRENT_LAYOUT_SCHEMA_VERSION;
+    }
     nextData.layoutType = layoutType;
     nextData.elements = structuredClone(elements || createTreeCollection());
   }
@@ -68,6 +75,26 @@ const resolveLayoutParentId = (layouts, layoutId) => {
   return flatItems.find((item) => item.id === layoutId)?.parentId ?? null;
 };
 
+const selectLayoutIdsBelowSchemaVersion = ({
+  state,
+  layoutIds,
+  targetSchemaVersion = CURRENT_LAYOUT_SCHEMA_VERSION,
+} = {}) => {
+  const items = state?.layouts?.items || {};
+  const candidateIds = Array.isArray(layoutIds)
+    ? layoutIds
+    : Object.keys(items);
+
+  return candidateIds.filter((layoutId) => {
+    const layout = items[layoutId];
+    return (
+      layout?.type === "layout" &&
+      normalizeLayoutSchemaVersion(layout.layoutSchemaVersion) <
+        targetSchemaVersion
+    );
+  });
+};
+
 export const createLayoutCommandApi = (shared) => ({
   async createLayoutItem({
     layoutId,
@@ -92,6 +119,49 @@ export const createLayoutCommandApi = (shared) => ({
       positionTargetId,
       data,
     });
+  },
+
+  async upgradeLayoutSchemaVersion({
+    layoutIds,
+    targetSchemaVersion = CURRENT_LAYOUT_SCHEMA_VERSION,
+  } = {}) {
+    const context = await shared.ensureCommandContext();
+    const outdatedLayoutIds = selectLayoutIdsBelowSchemaVersion({
+      state: context.state,
+      layoutIds,
+      targetSchemaVersion,
+    });
+
+    if (outdatedLayoutIds.length === 0) {
+      return {
+        valid: true,
+        migratedCount: 0,
+      };
+    }
+
+    const resourcePartition = getLayoutsResourcePartition({
+      shared,
+      context,
+    });
+    const submitResult = await shared.submitCommandWithContext({
+      context,
+      scope: "layouts",
+      basePartition: resourcePartition,
+      type: COMMAND_TYPES.LAYOUT_SCHEMA_UPGRADE,
+      payload: {
+        layoutIds: outdatedLayoutIds,
+        targetSchemaVersion,
+      },
+    });
+
+    if (submitResult?.valid === false) {
+      return submitResult;
+    }
+
+    return {
+      ...submitResult,
+      migratedCount: outdatedLayoutIds.length,
+    };
   },
 
   async duplicateLayoutItem({ layoutId }) {

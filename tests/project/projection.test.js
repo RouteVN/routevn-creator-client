@@ -121,6 +121,61 @@ describe("constructProjectData", () => {
     expect(presentation.isDeadEnd).toBe(false);
   });
 
+  it("counts layout scroll interaction targets when determining section presentation", () => {
+    const presentation = getSectionPresentation({
+      section: {
+        id: "section-1",
+        lines: createTreeCollection(
+          {
+            "line-1": {
+              id: "line-1",
+              actions: {
+                background: {
+                  resourceId: "layout-scroll",
+                  resourceType: "layout",
+                },
+              },
+            },
+          },
+          [{ id: "line-1" }],
+        ),
+      },
+      initialSectionId: "section-1",
+      layouts: createTreeCollection(
+        {
+          "layout-scroll": {
+            id: "layout-scroll",
+            type: "layout",
+            elements: {
+              items: {
+                button: {
+                  id: "button",
+                  type: "button",
+                  scrollDown: {
+                    payload: {
+                      actions: {
+                        sectionTransition: {
+                          sectionId: "section-2",
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              tree: [{ id: "button" }],
+            },
+          },
+        },
+        [{ id: "layout-scroll" }],
+      ),
+      controls: createTreeCollection(),
+      menuSceneId: "menu-scene",
+    });
+
+    expect(presentation.outgoingCount).toBe(1);
+    expect(presentation.isDeadEnd).toBe(false);
+  });
+
   it("aligns dialogue mode to nvl when the selected ui layout is dialogue-nvl", () => {
     const projectData = constructProjectData({
       project: {

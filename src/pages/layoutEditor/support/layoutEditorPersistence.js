@@ -96,7 +96,13 @@ const normalizeLayoutElementInteractions = (item = {}) => {
 
   const nextItem = structuredClone(item);
 
-  for (const key of ["click", "rightClick", "change"]) {
+  for (const key of [
+    "click",
+    "rightClick",
+    "scrollUp",
+    "scrollDown",
+    "change",
+  ]) {
     if (nextItem[key] !== undefined) {
       nextItem[key] = normalizeInteractionValue(nextItem[key]);
     }

@@ -75,4 +75,32 @@ describe("default template id format", () => {
       [...defaultTemplateFileNames].sort(),
     );
   });
+
+  it("wires default control scroll interactions", () => {
+    const defaultControl = Object.values(
+      defaultRepositoryTemplate.controls.items,
+    ).find(
+      (item) => item.type === "control" && item.name === "Default Control",
+    );
+    const mainElement = Object.values(defaultControl.elements.items).find(
+      (item) => item.name === "main",
+    );
+
+    expect(mainElement.scrollUp).toEqual({
+      payload: {
+        actions: {
+          rollbackByOffset: {
+            offset: -1,
+          },
+        },
+      },
+    });
+    expect(mainElement.scrollDown).toEqual({
+      payload: {
+        actions: {
+          nextLine: {},
+        },
+      },
+    });
+  });
 });

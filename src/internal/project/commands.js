@@ -71,6 +71,7 @@ const STORY_COMMAND_TYPES = Object.freeze([
 ]);
 
 const LAYOUT_COMMAND_TYPES = Object.freeze([
+  "layout.schema.upgrade",
   "layout.element.create",
   "layout.element.update",
   "layout.element.move",

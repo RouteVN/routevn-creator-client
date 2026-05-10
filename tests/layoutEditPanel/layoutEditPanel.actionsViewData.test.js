@@ -58,4 +58,42 @@ describe("layoutEditPanel action view data", () => {
       svg: "settings",
     });
   });
+
+  it("labels scroll interaction actions", () => {
+    const values = toInspectorValues({
+      values: {
+        scrollUp: {
+          payload: {
+            actions: {
+              sectionTransition: {
+                sectionId: "section-2",
+              },
+            },
+          },
+        },
+        scrollDown: {
+          payload: {
+            actions: {
+              toggleDialogueUI: {},
+            },
+          },
+        },
+      },
+      firstTextStyleId: "",
+      hiddenActionModes: new Set(),
+    });
+
+    expect(values.actions).toContainEqual({
+      id: "sectionTransition",
+      interactionType: "scrollUp",
+      label: "Scroll Up: Section Transition",
+      svg: "action-sectionTransition",
+    });
+    expect(values.actions).toContainEqual({
+      id: "toggleDialogueUI",
+      interactionType: "scrollDown",
+      label: "Scroll Down: Toggle Dialogue Box Visibility",
+      svg: "settings",
+    });
+  });
 });

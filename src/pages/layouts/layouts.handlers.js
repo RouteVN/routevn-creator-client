@@ -1,7 +1,10 @@
 import { generateId } from "../../internal/id.js";
 import { createLayoutEditorPayload } from "../../internal/layoutEditorRoute.js";
 import { scaleLayoutElementsForProjectResolution } from "../../internal/projectResolution.js";
-import { isFragmentLayout } from "../../internal/project/layout.js";
+import {
+  CURRENT_LAYOUT_SCHEMA_VERSION,
+  isFragmentLayout,
+} from "../../internal/project/layout.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
 import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
@@ -1063,6 +1066,7 @@ export const handleLayoutFormActionClick = async (deps, payload) => {
           description,
           tagIds: Array.isArray(values?.tagIds) ? values.tagIds : [],
           isFragment,
+          layoutSchemaVersion: CURRENT_LAYOUT_SCHEMA_VERSION,
         },
         elements: createEmptyLayoutElements(),
         parentId: store.getState().targetGroupId,

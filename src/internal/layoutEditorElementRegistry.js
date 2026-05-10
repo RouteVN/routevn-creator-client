@@ -728,6 +728,10 @@ const DEFAULT_IMMEDIATE_PERSIST_FIELDS = [
   "click.",
   "rightClick",
   "rightClick.",
+  "scrollUp",
+  "scrollUp.",
+  "scrollDown",
+  "scrollDown.",
   "change",
   "change.",
 ];

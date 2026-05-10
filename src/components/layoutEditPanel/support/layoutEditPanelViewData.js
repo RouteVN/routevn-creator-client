@@ -8,6 +8,8 @@ import { normalizeConditionalOverrideRules } from "./layoutEditPanelFeatures.js"
 const ACTION_INTERACTION_LABELS = {
   click: "Click",
   rightClick: "Right Click",
+  scrollUp: "Scroll Up",
+  scrollDown: "Scroll Down",
   change: "Change",
 };
 const SETTINGS_ACTION_MODES = new Set([
@@ -50,7 +52,13 @@ const ACTION_LABELS = {
   ...RUNTIME_ACTION_LABELS,
 };
 
-export const ACTION_INTERACTION_TYPES = ["click", "rightClick", "change"];
+export const ACTION_INTERACTION_TYPES = [
+  "click",
+  "rightClick",
+  "scrollUp",
+  "scrollDown",
+  "change",
+];
 
 export const REVEAL_EFFECT_OPTIONS = [
   { label: "Typewriter", value: "typewriter" },

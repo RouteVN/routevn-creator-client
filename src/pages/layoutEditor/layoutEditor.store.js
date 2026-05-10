@@ -416,6 +416,7 @@ export const selectViewData = ({ state, constants }) => {
     layoutState = {
       id: layout.id,
       layoutType: layout.layoutType,
+      layoutSchemaVersion: layout.layoutSchemaVersion,
       elements: state.layoutData,
     };
   }

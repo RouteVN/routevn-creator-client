@@ -21,6 +21,12 @@ import { requireProjectResolution } from "../projectResolution.js";
 import { withResolvedResourceFileMetadata } from "../resourceFileMetadata.js";
 
 const DEFAULT_TIMESTAMP = 0;
+const LAYOUT_ACTION_INTERACTION_KEYS = [
+  "click",
+  "rightClick",
+  "scrollUp",
+  "scrollDown",
+];
 const createResourceCollection = () => ({
   items: {},
   tree: [],
@@ -972,6 +978,7 @@ const constructLayoutResources = (
       {
         layoutId,
         layoutType: layout.layoutType,
+        layoutSchemaVersion: layout.layoutSchemaVersion,
         filesData,
         soundsData,
         particlesData,
@@ -1302,10 +1309,12 @@ const getTransitionsFromLayout = (layout) => {
   }
 
   return Object.values(layout.elements.items)
-    .flatMap((element) => [
-      getInteractionActions(element?.click).sectionTransition,
-      getInteractionActions(element?.rightClick).sectionTransition,
-    ])
+    .flatMap((element) =>
+      LAYOUT_ACTION_INTERACTION_KEYS.map(
+        (interactionKey) =>
+          getInteractionActions(element?.[interactionKey]).sectionTransition,
+      ),
+    )
     .filter(Boolean);
 };
 

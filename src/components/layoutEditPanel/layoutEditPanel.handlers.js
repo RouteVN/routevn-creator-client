@@ -20,7 +20,13 @@ import {
 import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
 import { parseSpritesheetAnimationSelectionValue } from "../../internal/spritesheets.js";
 
-const ACTION_INTERACTION_TYPES = ["click", "rightClick", "change"];
+const ACTION_INTERACTION_TYPES = [
+  "click",
+  "rightClick",
+  "scrollUp",
+  "scrollDown",
+  "change",
+];
 const DEFAULT_TEXT_FIXED_WIDTH = 300;
 const EMPTY_TREE = { items: {}, tree: [] };
 const INTEGER_ONLY_FIELDS = new Set([
@@ -87,6 +93,8 @@ const getAvailableActionInteractionItems = (itemType) => {
   return [
     { type: "item", label: "Click", key: "click" },
     { type: "item", label: "Right Click", key: "rightClick" },
+    { type: "item", label: "Scroll Up", key: "scrollUp" },
+    { type: "item", label: "Scroll Down", key: "scrollDown" },
   ];
 };
 
@@ -1164,6 +1172,14 @@ export const handleChildInteractionFormAction = (deps, payload) => {
   applyPanelValueUpdate(deps, {
     name: "rightClick.inheritToChildren",
     value: values.rightClick?.inheritToChildren === true ? true : undefined,
+  });
+  applyPanelValueUpdate(deps, {
+    name: "scrollUp.inheritToChildren",
+    value: values.scrollUp?.inheritToChildren === true ? true : undefined,
+  });
+  applyPanelValueUpdate(deps, {
+    name: "scrollDown.inheritToChildren",
+    value: values.scrollDown?.inheritToChildren === true ? true : undefined,
   });
 
   store.closeChildInteractionDialog();

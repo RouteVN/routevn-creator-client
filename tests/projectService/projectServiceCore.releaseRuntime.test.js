@@ -27,7 +27,9 @@ const mocked = vi.hoisted(() => ({
   },
   collabService: {
     stopCollabSession: vi.fn(),
-    commandApi: {},
+    commandApi: {
+      upgradeLayoutSchemaVersion: vi.fn(),
+    },
     addVersionToProject: vi.fn(),
     updateVersionInProject: vi.fn(),
     deleteVersionFromProject: vi.fn(),
@@ -96,6 +98,7 @@ describe("projectServiceCore releaseProjectRuntime", () => {
     mocked.repositoryService.releaseCurrentRepository.mockReset();
     mocked.repositoryService.releaseRepositoryByProjectId.mockReset();
     mocked.collabService.stopCollabSession.mockReset();
+    mocked.collabService.commandApi.upgradeLayoutSchemaVersion.mockReset();
   });
 
   it("stops the ensured collab session before releasing that project runtime", async () => {
@@ -200,6 +203,62 @@ describe("projectServiceCore releaseProjectRuntime", () => {
 
     expect(mocked.repositoryService.ensureRepository).toHaveBeenCalledTimes(1);
     expect(repository.setActiveSceneId).toHaveBeenCalledWith("scene-1");
+  });
+
+  it("upgrades old layout schema versions when ensuring the repository", async () => {
+    const repository = {
+      getState: vi.fn(() => ({
+        layouts: {
+          items: {
+            "layout-old": {
+              id: "layout-old",
+              type: "layout",
+            },
+            "layout-current": {
+              id: "layout-current",
+              type: "layout",
+              layoutSchemaVersion: 2,
+            },
+            "folder-1": {
+              id: "folder-1",
+              type: "folder",
+            },
+          },
+        },
+      })),
+    };
+    mocked.repositoryService.ensureRepository.mockResolvedValue(repository);
+    mocked.collabService.commandApi.upgradeLayoutSchemaVersion.mockResolvedValue(
+      {
+        valid: true,
+      },
+    );
+
+    const projectService = createProjectServiceCore({
+      router: {
+        getPayload: () => ({ p: "project-1" }),
+      },
+      db: {},
+      filePicker: {},
+      idGenerator: () => "generated-id",
+      now: () => 0,
+      collabLog: () => {},
+      creatorVersion: 1,
+      storageAdapter: {
+        initializeProject: vi.fn(),
+      },
+      fileAdapter: {},
+      collabAdapter: {},
+    });
+
+    await expect(projectService.ensureRepository()).resolves.toBe(repository);
+
+    expect(
+      mocked.collabService.commandApi.upgradeLayoutSchemaVersion,
+    ).toHaveBeenCalledWith({
+      layoutIds: ["layout-old"],
+      targetSchemaVersion: 2,
+    });
   });
 
   it("loads historical repository state through the ensured repository contract", async () => {

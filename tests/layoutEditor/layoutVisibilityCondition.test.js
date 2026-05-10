@@ -809,6 +809,12 @@ describe("layout visibility conditions", () => {
           rightClick: {
             inheritToChildren: true,
           },
+          scrollUp: {
+            inheritToChildren: true,
+          },
+          scrollDown: {
+            inheritToChildren: true,
+          },
         },
       ],
       {},
@@ -825,6 +831,12 @@ describe("layout visibility conditions", () => {
       inheritToChildren: true,
     });
     expect(elements[0].rightClick).toEqual({
+      inheritToChildren: true,
+    });
+    expect(elements[0].scrollUp).toEqual({
+      inheritToChildren: true,
+    });
+    expect(elements[0].scrollDown).toEqual({
       inheritToChildren: true,
     });
   });
@@ -854,6 +866,40 @@ describe("layout visibility conditions", () => {
     );
 
     expect(elements[0].click).toEqual({
+      inheritToChildren: true,
+      payload: {
+        actions: {
+          toggleDialogueUI: {},
+        },
+      },
+    });
+  });
+
+  it("projects scroll interaction actions for containers", () => {
+    const { elements } = buildLayoutElements(
+      [
+        {
+          id: "container-1",
+          type: "container",
+          name: "Container",
+          scrollUp: {
+            inheritToChildren: true,
+            payload: {
+              actions: {
+                toggleDialogueUI: {},
+              },
+            },
+          },
+        },
+      ],
+      {},
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      { items: {}, tree: [] },
+      { layoutId: "layout-1" },
+    );
+
+    expect(elements[0].scrollUp).toEqual({
       inheritToChildren: true,
       payload: {
         actions: {
