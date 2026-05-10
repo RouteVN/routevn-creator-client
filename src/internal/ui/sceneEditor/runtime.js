@@ -1283,12 +1283,44 @@ const describeWheelTarget = (event) => {
   };
 };
 
+const primeCanvasPointerHoverForWheel = (event) => {
+  const target = event?.target;
+  if (!target || typeof target.dispatchEvent !== "function") {
+    return false;
+  }
+
+  if (typeof PointerEvent !== "function" && typeof MouseEvent !== "function") {
+    return false;
+  }
+
+  const PointerMoveEvent =
+    typeof PointerEvent === "function" ? PointerEvent : MouseEvent;
+  const pointerMoveEvent = new PointerMoveEvent("pointermove", {
+    bubbles: true,
+    button: 0,
+    buttons: 0,
+    cancelable: true,
+    clientX: event.clientX,
+    clientY: event.clientY,
+    composed: true,
+    pointerId: 1,
+    pointerType: "mouse",
+    screenX: event.screenX,
+    screenY: event.screenY,
+  });
+
+  target.dispatchEvent(pointerMoveEvent);
+  return true;
+};
+
 const handleCanvasWheelFocusBlur = (deps, event) => {
   const inputFocused = deps.appService?.isInputFocused?.() === true;
+  const hoverPrimed = primeCanvasPointerHoverForWheel(event);
   logRuntimeLineSync("canvas.wheel", {
     defaultPrevented: event?.defaultPrevented === true,
     deltaMode: event?.deltaMode,
     deltaY: event?.deltaY,
+    hoverPrimed,
     inputFocused,
     ...describeWheelTarget(event),
   });
