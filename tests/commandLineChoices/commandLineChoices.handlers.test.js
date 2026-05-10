@@ -232,6 +232,92 @@ describe("commandLineChoices.handlers", () => {
     });
   });
 
+  it("saves a choice section transition with an optional screen animation", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const store = createStoreApi(state);
+
+    setItems({ state }, { items: [] });
+    setSelectedResourceId(
+      { state },
+      {
+        resourceId: "choice-layout",
+      },
+    );
+    setMode({ state }, { mode: "editChoice" });
+    setEditingIndex({ state }, { index: -1 });
+    updateEditForm(
+      { state },
+      {
+        field: "content",
+        value: "Leave",
+      },
+    );
+    updateEditForm(
+      { state },
+      {
+        field: "actionType",
+        value: "sectionTransition",
+      },
+    );
+    updateEditForm(
+      { state },
+      {
+        field: "sceneId",
+        value: "scene-1",
+      },
+    );
+    updateEditForm(
+      { state },
+      {
+        field: "sectionId",
+        value: "section-2",
+      },
+    );
+    updateEditForm(
+      { state },
+      {
+        field: "transitionAnimationId",
+        value: "screen-crossfade",
+      },
+    );
+
+    handleSaveChoiceClick({
+      store,
+      render,
+      dispatchEvent,
+      appService: {
+        showAlert: vi.fn(),
+      },
+      props: {
+        layouts,
+      },
+    });
+
+    expect(selectItems({ state })[0]).toEqual({
+      content: "Leave",
+      events: {
+        click: {
+          actions: {
+            sectionTransition: {
+              sceneId: "scene-1",
+              sectionId: "section-2",
+              screen: {
+                animations: {
+                  resourceId: "screen-crossfade",
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(
+      dispatchEvent.mock.calls[0][0].detail.presentationState.choice.items[0],
+    ).toEqual(selectItems({ state })[0]);
+  });
+
   it("submits the saved choice state with the selected layout", () => {
     const state = createInitialState();
     const dispatchEvent = vi.fn();

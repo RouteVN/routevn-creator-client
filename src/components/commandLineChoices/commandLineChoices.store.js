@@ -1,4 +1,5 @@
 import { toFlatItems } from "../../internal/project/tree.js";
+import { getTransitionAnimationOptions } from "../../internal/animationOptions.js";
 
 const CHOICE_FORM_TEMPLATE = Object.freeze({
   title: "Edit Choice",
@@ -33,6 +34,16 @@ const CHOICE_FORM_TEMPLATE = Object.freeze({
       type: "select",
       label: "Section",
       options: "${sections}",
+    },
+    {
+      $when: `values.actionType == 'sectionTransition'`,
+      name: "transitionAnimationId",
+      type: "select",
+      label: "Screen",
+      required: false,
+      clearable: true,
+      placeholder: "Animation",
+      options: "${transitionAnimationOptions}",
     },
   ],
 });
@@ -86,6 +97,10 @@ export const createInitialState = () => ({
     items: {},
     tree: [],
   },
+  animations: {
+    items: {},
+    tree: [],
+  },
 });
 
 export const setMode = ({ state }, { mode } = {}) => {
@@ -106,8 +121,18 @@ export const setEditingIndex = ({ state }, { index } = {}) => {
         choice.events?.click?.actions?.sectionTransition?.sceneId;
       state.editForm.sectionId =
         choice.events?.click?.actions?.sectionTransition?.sectionId;
+      state.editForm.transitionAnimationId =
+        choice.events?.click?.actions?.sectionTransition?.screen?.animations?.resourceId;
     } else if (choice.events?.click?.actions?.nextLine) {
       state.editForm.actionType = "nextLine";
+      state.editForm.sceneId = "";
+      state.editForm.sectionId = "";
+      state.editForm.transitionAnimationId = "";
+    } else {
+      state.editForm.actionType = "nextLine";
+      state.editForm.sceneId = "";
+      state.editForm.sectionId = "";
+      state.editForm.transitionAnimationId = "";
     }
   } else {
     // New choice or reset
@@ -116,6 +141,7 @@ export const setEditingIndex = ({ state }, { index } = {}) => {
     state.editForm.actionType = "nextLine";
     state.editForm.sceneId = "";
     state.editForm.sectionId = "";
+    state.editForm.transitionAnimationId = "";
   }
 };
 
@@ -128,10 +154,20 @@ const buildChoiceDataFromEditForm = (editForm = {}) => {
   if (editForm.actionType === "nextLine") {
     actions.nextLine = {};
   } else if (editForm.actionType === "sectionTransition") {
-    actions.sectionTransition = {
+    const sectionTransition = {
       sceneId: editForm.sceneId,
       sectionId: editForm.sectionId,
     };
+
+    if (editForm.transitionAnimationId) {
+      sectionTransition.screen = {
+        animations: {
+          resourceId: editForm.transitionAnimationId,
+        },
+      };
+    }
+
+    actions.sectionTransition = sectionTransition;
   }
 
   return {
@@ -166,6 +202,10 @@ export const removeChoice = ({ state }, { index } = {}) => {
 
 export const setScenes = ({ state }, { scenes } = {}) => {
   state.scenes = scenes;
+};
+
+export const setAnimations = ({ state }, { animations } = {}) => {
+  state.animations = animations ?? { items: {}, tree: [] };
 };
 
 export const saveChoice = ({ state }, _payload = {}) => {
@@ -350,6 +390,10 @@ export const selectViewData = ({ state, props }) => {
     values: state.editForm,
     scenes,
     sections,
+    transitionAnimationOptions: getTransitionAnimationOptions(
+      state.animations,
+      state.editForm.transitionAnimationId,
+    ),
   };
 
   // Create defaultValues with items data
@@ -360,6 +404,7 @@ export const selectViewData = ({ state, props }) => {
     actionType: state?.editForm?.actionType,
     sceneId: state?.editForm?.sceneId,
     sectionId: state?.editForm?.sectionId,
+    transitionAnimationId: state?.editForm?.transitionAnimationId,
   };
 
   const viewData = {

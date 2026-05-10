@@ -28,7 +28,7 @@ const form = {
       description: "",
       required: false,
       clearable: true,
-      placeholder: "Choose a transition animation",
+      placeholder: "Animation",
       options: "${transitionAnimationOptions}",
     },
   ],

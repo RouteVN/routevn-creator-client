@@ -10,11 +10,11 @@ const form = {
     {
       name: "transitionAnimationId",
       type: "select",
-      label: "Transition Animation",
+      label: "Animation",
       description: "",
       required: true,
       clearable: false,
-      placeholder: "Choose a transition animation",
+      placeholder: "Animation",
       options: "${transitionAnimationOptions}",
     },
   ],
@@ -38,9 +38,9 @@ export const setFormValues = ({ state }, { values } = {}) => {
 };
 
 export const selectViewData = ({ state, props }) => {
+  const propsAnimationId = props?.screen?.animations?.resourceId;
   const selectedAnimationId =
-    state.formValues?.transitionAnimationId ??
-    props?.screen?.animations?.resourceId;
+    state.formValues?.transitionAnimationId ?? propsAnimationId;
 
   return {
     breadcrumb: [
@@ -54,7 +54,11 @@ export const selectViewData = ({ state, props }) => {
       },
     ],
     form,
-    defaultValues: state.formValues,
+    formKey: propsAnimationId ?? "new-screen",
+    defaultValues: {
+      ...state.formValues,
+      transitionAnimationId: selectedAnimationId,
+    },
     context: {
       transitionAnimationOptions: getTransitionAnimationOptions(
         state.animations,

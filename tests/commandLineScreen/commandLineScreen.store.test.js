@@ -7,6 +7,32 @@ import {
 } from "../../src/components/commandLineScreen/commandLineScreen.store.js";
 
 describe("commandLineScreen.store", () => {
+  it("uses the current screen animation as the initial form value", () => {
+    const state = createInitialState();
+
+    const viewData = selectViewData({
+      state,
+      props: {
+        screen: {
+          animations: {
+            resourceId: "screen-crossfade",
+          },
+        },
+      },
+    });
+
+    expect(viewData.formKey).toBe("screen-crossfade");
+    expect(viewData.defaultValues.transitionAnimationId).toBe(
+      "screen-crossfade",
+    );
+    expect(viewData.form.fields[0]).toEqual(
+      expect.objectContaining({
+        label: "Animation",
+        placeholder: "Animation",
+      }),
+    );
+  });
+
   it("offers transition animations for the screen transition picker", () => {
     const state = createInitialState();
 
