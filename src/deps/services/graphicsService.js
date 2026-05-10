@@ -1362,6 +1362,44 @@ export const createGraphicsService = async ({
     await routeGraphicsInitPromise;
   };
 
+  const runWithNonPassiveWheelListeners = async (callback) => {
+    const addEventListener =
+      typeof EventTarget === "undefined"
+        ? undefined
+        : EventTarget.prototype?.addEventListener;
+
+    if (!addEventListener) {
+      return await callback();
+    }
+
+    EventTarget.prototype.addEventListener = function (
+      type,
+      listener,
+      options,
+    ) {
+      if (
+        type === "wheel" &&
+        options &&
+        typeof options === "object" &&
+        options.passive === true &&
+        options.capture === true
+      ) {
+        return addEventListener.call(this, type, listener, {
+          ...options,
+          passive: false,
+        });
+      }
+
+      return addEventListener.call(this, type, listener, options);
+    };
+
+    try {
+      return await callback();
+    } finally {
+      EventTarget.prototype.addEventListener = addEventListener;
+    }
+  };
+
   const attachCanvas = async (canvas) => {
     if (!routeGraphics?.canvas || !canvas) {
       return;
@@ -1426,73 +1464,75 @@ export const createGraphicsService = async ({
 
         const plugins = await loadGraphicsEnginePlugins();
 
-        await routeGraphics.init({
-          width: renderWidth,
-          height: renderHeight,
-          plugins,
-          eventHandler: (eventName, payload) => {
-            const eventId = payload?._event?.id;
-            const layoutEditorDragTarget =
-              eventId === "selected-border" ||
-              eventId?.startsWith("selected-border-resize-");
-            if (eventName === "dragMove") {
-              if (layoutEditorDragTarget) {
-                subject.dispatch("border-drag-move", {
-                  x: Math.round(payload._event.x),
-                  y: Math.round(payload._event.y),
-                  targetId: eventId,
-                });
+        await runWithNonPassiveWheelListeners(() =>
+          routeGraphics.init({
+            width: renderWidth,
+            height: renderHeight,
+            plugins,
+            eventHandler: (eventName, payload) => {
+              const eventId = payload?._event?.id;
+              const layoutEditorDragTarget =
+                eventId === "selected-border" ||
+                eventId?.startsWith("selected-border-resize-");
+              if (eventName === "dragMove") {
+                if (layoutEditorDragTarget) {
+                  subject.dispatch("border-drag-move", {
+                    x: Math.round(payload._event.x),
+                    y: Math.round(payload._event.y),
+                    targetId: eventId,
+                  });
+                }
+              } else if (eventName === "dragStart") {
+                if (layoutEditorDragTarget) {
+                  subject.dispatch("border-drag-start", {
+                    targetId: eventId,
+                  });
+                }
+              } else if (eventName === "dragEnd") {
+                if (layoutEditorDragTarget) {
+                  subject.dispatch("border-drag-end", {
+                    targetId: eventId,
+                  });
+                }
               }
-            } else if (eventName === "dragStart") {
-              if (layoutEditorDragTarget) {
-                subject.dispatch("border-drag-start", {
-                  targetId: eventId,
-                });
-              }
-            } else if (eventName === "dragEnd") {
-              if (layoutEditorDragTarget) {
-                subject.dispatch("border-drag-end", {
-                  targetId: eventId,
-                });
-              }
-            }
 
-            if (!engine) {
-              return;
-            }
-
-            if (eventName === "renderComplete") {
-              if (payload?.aborted === true) {
+              if (!engine) {
                 return;
               }
-              engine.handleActions({
-                markLineCompleted: {},
-              });
-              return;
-            }
 
-            const actions = getRuntimeEventActions(payload);
+              if (eventName === "renderComplete") {
+                if (payload?.aborted === true) {
+                  return;
+                }
+                engine.handleActions({
+                  markLineCompleted: {},
+                });
+                return;
+              }
 
-            if (actions && engine) {
-              const eventContext = createRuntimeEventContext(payload);
+              const actions = getRuntimeEventActions(payload);
 
-              const interactionId = eventContext?._event?.id ?? "__unknown__";
+              if (actions && engine) {
+                const eventContext = createRuntimeEventContext(payload);
 
-              if (isRuntimeRightClickEvent(eventName)) {
-                clearPendingClickInteraction(interactionId);
+                const interactionId = eventContext?._event?.id ?? "__unknown__";
+
+                if (isRuntimeRightClickEvent(eventName)) {
+                  clearPendingClickInteraction(interactionId);
+                  enqueueInteractionActions(actions, eventContext);
+                  return;
+                }
+
+                if (eventName === "click") {
+                  scheduleClickInteraction(actions, eventContext);
+                  return;
+                }
+
                 enqueueInteractionActions(actions, eventContext);
-                return;
               }
-
-              if (eventName === "click") {
-                scheduleClickInteraction(actions, eventContext);
-                return;
-              }
-
-              enqueueInteractionActions(actions, eventContext);
-            }
-          },
-        });
+            },
+          }),
+        );
 
         if (canvas) {
           await attachCanvas(canvas);
