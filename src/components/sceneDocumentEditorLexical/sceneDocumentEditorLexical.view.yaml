@@ -19,6 +19,10 @@ refs:
         handler: handleForwardEditorEvent
       delete-line-shortcut:
         handler: handleForwardEditorEvent
+      line-context-menu-request:
+        handler: handleForwardEditorEvent
+      line-context-menu-dismiss:
+        handler: handleForwardEditorEvent
       furigana-dialog-request:
         handler: handleFuriganaDialogRequest
 template:

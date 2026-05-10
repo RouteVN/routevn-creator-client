@@ -486,6 +486,7 @@ export const createInitialState = () => ({
     items: [],
     sectionId: null,
     actionsType: null,
+    lineId: undefined,
   },
   popover: {
     isOpen: false,
@@ -969,6 +970,7 @@ export const showSectionDropdownMenu = (
     items,
     sectionId,
     actionsType: null,
+    lineId: undefined,
   };
 };
 
@@ -989,6 +991,7 @@ export const showSectionsOverviewDropdownMenu = (
     items,
     sectionId: null,
     actionsType: null,
+    lineId: undefined,
   };
 };
 
@@ -1002,6 +1005,18 @@ export const showActionsDropdownMenu = (
     items: [{ label: "Delete", type: "item", value: "delete-actions" }],
     sectionId: null,
     actionsType,
+    lineId: undefined,
+  };
+};
+
+export const showLineDropdownMenu = ({ state }, { position, lineId } = {}) => {
+  state.dropdownMenu = {
+    isOpen: true,
+    position,
+    items: [{ label: "Delete", type: "item", value: "delete-line" }],
+    sectionId: null,
+    actionsType: null,
+    lineId,
   };
 };
 
@@ -1012,6 +1027,7 @@ export const hideDropdownMenu = ({ state }, _payload = {}) => {
     items: [],
     sectionId: null,
     actionsType: null,
+    lineId: undefined,
   };
 };
 

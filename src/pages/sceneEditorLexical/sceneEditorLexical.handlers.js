@@ -1234,6 +1234,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   const dropdownState = store.getState().dropdownMenu;
   const sectionId = dropdownState.sectionId;
   const actionsType = dropdownState.actionsType;
+  const lineId = dropdownState.lineId;
   const sceneId = store.selectSceneId();
 
   store.hideDropdownMenu();
@@ -1284,6 +1285,8 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     store.showSectionEditDialog({
       sectionId,
     });
+  } else if (action === "delete-line") {
+    await deleteSceneEditorLine(deps, lineId);
   } else if (action === "delete-actions") {
     const selectedLineId = store.selectSelectedLineId();
     const selectedSectionId = store.selectSelectedSectionId();
@@ -1603,23 +1606,17 @@ export const handlePreviewShortcut = (deps, payload) => {
   handlePreviewClick(deps, payload);
 };
 
-export const handleDeleteLineShortcut = async (deps, payload) => {
-  const { store, render } = deps;
-  const { subject } = deps;
+const deleteSceneEditorLine = async (deps, lineId) => {
+  const { store, render, subject } = deps;
   if (isSectionsOverviewOpen(store)) {
-    return;
+    return false;
   }
   cancelSceneEditorDraftFlush(deps);
 
-  const detail = payload?._event?.detail || {};
-  const lineId =
-    typeof detail.lineId === "string" && detail.lineId
-      ? detail.lineId
-      : store.selectSelectedLineId();
   const sectionId = store.selectSelectedSectionId();
 
   if (!lineId || !sectionId) {
-    return;
+    return false;
   }
 
   const scene = store.selectScene();
@@ -1627,20 +1624,20 @@ export const handleDeleteLineShortcut = async (deps, payload) => {
   const lines = Array.isArray(section?.lines) ? section.lines : [];
   const currentIndex = lines.findIndex((line) => line.id === lineId);
   if (currentIndex < 0) {
-    return;
+    return false;
   }
 
   const nextSelectedLineId =
     lines[currentIndex + 1]?.id || lines[currentIndex - 1]?.id;
 
   if (lines.length <= 1) {
-    return;
+    return false;
   }
 
   const draftSection =
     store.selectDraftSection() || reconcileCurrentEditorSession(deps);
   if (!draftSection) {
-    return;
+    return false;
   }
 
   const nextLines = cloneSceneEditorLines(draftSection.lines).filter(
@@ -1673,6 +1670,49 @@ export const handleDeleteLineShortcut = async (deps, payload) => {
   scheduleSceneEditorDraftFlush(deps, {
     reason: "structure",
   });
+  return true;
+};
+
+export const handleDeleteLineShortcut = async (deps, payload) => {
+  const { store } = deps;
+  const detail = payload?._event?.detail || {};
+  const lineId =
+    typeof detail.lineId === "string" && detail.lineId
+      ? detail.lineId
+      : store.selectSelectedLineId();
+
+  await deleteSceneEditorLine(deps, lineId);
+};
+
+export const handleLineContextMenuRequest = (deps, payload) => {
+  const { store, render } = deps;
+  if (isSectionsOverviewOpen(store)) {
+    return;
+  }
+
+  const detail = payload?._event?.detail || {};
+  const lineId = detail.lineId;
+  if (!lineId) {
+    return;
+  }
+
+  store.setSelectedLineId({ selectedLineId: lineId });
+  store.showLineDropdownMenu({
+    position: detail.position || { x: 0, y: 0 },
+    lineId,
+  });
+  render();
+};
+
+export const handleLineContextMenuDismiss = (deps) => {
+  const { store, render } = deps;
+  const dropdownState = store.getState().dropdownMenu;
+  if (!dropdownState.lineId) {
+    return;
+  }
+
+  store.hideDropdownMenu();
+  render();
 };
 
 export const handleLineDeleteActionItem = async (deps, payload) => {
