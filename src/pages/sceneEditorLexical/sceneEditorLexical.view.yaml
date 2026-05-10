@@ -19,6 +19,10 @@ refs:
         handler: handleDialogueCharacterShortcut
       delete-line-shortcut:
         handler: handleDeleteLineShortcut
+      line-context-menu-request:
+        handler: handleLineContextMenuRequest
+      line-context-menu-dismiss:
+        handler: handleLineContextMenuDismiss
   sectionTab*:
     eventListeners:
       click:

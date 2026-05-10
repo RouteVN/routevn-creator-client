@@ -217,6 +217,7 @@ const STYLES = `
   .gutter-left {
     left: 0;
     width: var(--left-gutter-width);
+    pointer-events: auto;
   }
 
   .gutter-right {
@@ -237,6 +238,10 @@ const STYLES = `
     width: 100%;
     gap: 0;
     justify-content: flex-start;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    pointer-events: auto;
   }
 
   .gutter-right .gutter-row {
@@ -280,6 +285,10 @@ const STYLES = `
     overflow: hidden;
     margin-right: 2px;
     background: transparent;
+    cursor: pointer;
+    pointer-events: auto;
+    user-select: none;
+    -webkit-user-select: none;
   }
 
   .speaker-slot rvn-file-image {
@@ -613,6 +622,22 @@ const isBlockModeNativeEditorKey = (event) => {
   );
 };
 
+const containsDomNode = (container, node) => {
+  if (!container?.contains || !node) {
+    return false;
+  }
+
+  const nodeConstructor = globalThis.Node;
+  if (
+    typeof nodeConstructor === "function" &&
+    !(node instanceof nodeConstructor)
+  ) {
+    return false;
+  }
+
+  return container.contains(node);
+};
+
 const isEditorOrSurfaceEventTarget = ({
   activeElement,
   event,
@@ -620,11 +645,16 @@ const isEditorOrSurfaceEventTarget = ({
   surfaceElement,
 }) => {
   const eventPath = event?.composedPath?.() ?? [];
+  const target = event?.target;
   return (
     activeElement === editorElement ||
     activeElement === surfaceElement ||
-    event?.target === editorElement ||
-    event?.target === surfaceElement ||
+    containsDomNode(editorElement, activeElement) ||
+    containsDomNode(surfaceElement, activeElement) ||
+    target === editorElement ||
+    target === surfaceElement ||
+    containsDomNode(editorElement, target) ||
+    containsDomNode(surfaceElement, target) ||
     eventPath.includes(editorElement) ||
     eventPath.includes(surfaceElement)
   );
@@ -792,6 +822,8 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.isPointerDownInsideEditor = false;
     this.pointerDownInsideEditorTimerId = undefined;
     this.pendingPointerFallbackSelection = undefined;
+    this.pendingBlockContextMenuSelectedLineId = undefined;
+    this.pendingDefaultContextMenuLineId = undefined;
 
     this.editor = createEditor({
       namespace: "routevn-lexical-scene-document-editor",
@@ -816,6 +848,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.handleNativeDragEvent = this.handleNativeDragEvent.bind(this);
     this.handleNativeMouseDown = this.handleNativeMouseDown.bind(this);
     this.handleNativeMouseUp = this.handleNativeMouseUp.bind(this);
+    this.handleLeftGutterMouseDown = this.handleLeftGutterMouseDown.bind(this);
     this.handleNativeContextMenu = this.handleNativeContextMenu.bind(this);
     this.handleCompositionStart = this.handleCompositionStart.bind(this);
     this.handleCompositionEnd = this.handleCompositionEnd.bind(this);
@@ -945,6 +978,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       true,
     );
     this.refs.editor.addEventListener("mouseup", this.handleNativeMouseUp);
+    this.refs.leftGutter.addEventListener(
+      "mousedown",
+      this.handleLeftGutterMouseDown,
+      true,
+    );
     this.refs.editor.addEventListener("dragstart", this.handleNativeDragEvent);
     this.refs.editor.addEventListener("dragenter", this.handleNativeDragEvent);
     this.refs.editor.addEventListener("dragover", this.handleNativeDragEvent);
@@ -1028,6 +1066,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       true,
     );
     this.refs.editor?.removeEventListener("mouseup", this.handleNativeMouseUp);
+    this.refs.leftGutter?.removeEventListener(
+      "mousedown",
+      this.handleLeftGutterMouseDown,
+      true,
+    );
     this.refs.editor?.removeEventListener(
       "dragstart",
       this.handleNativeDragEvent,
@@ -1949,7 +1992,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       event.stopPropagation();
       this.enterBlockMode({
         focusSurface: true,
-        lineId: this.getSelectedLineIdSnapshot(),
+        lineId: this.state.selectedLineId || this.getSelectedLineIdSnapshot(),
         emitSelectionChange: true,
       });
       return;
@@ -2027,11 +2070,55 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   handleWindowKeyDownCapture(event) {
+    if (this.handleBlockModeWindowShortcut(event)) {
+      return;
+    }
+
     if (this.handleBlockModeWindowArrowNavigation(event)) {
       return;
     }
 
     this.handleBlockModeWindowEnter(event);
+  }
+
+  handleBlockModeWindowShortcut(event) {
+    if (
+      event.defaultPrevented ||
+      event.isComposing ||
+      this.state.mode !== "block"
+    ) {
+      return false;
+    }
+
+    const activeElement = this.getActiveElement();
+    const target = event.target;
+    const isDocumentKeyTarget =
+      (activeElement === document.body ||
+        activeElement === document.documentElement ||
+        activeElement === this) &&
+      (target === document.body ||
+        target === document.documentElement ||
+        target === document ||
+        target === window ||
+        target === this);
+    const isEditorKeyTarget = isEditorOrSurfaceEventTarget({
+      activeElement,
+      event,
+      editorElement: this.refs.editor,
+      surfaceElement: this.refs.surface,
+    });
+
+    if (!isDocumentKeyTarget && !isEditorKeyTarget) {
+      return false;
+    }
+
+    const didHandle = this.handleSurfaceKeyDown(event);
+    if (!didHandle) {
+      return false;
+    }
+
+    event.stopImmediatePropagation?.();
+    return true;
   }
 
   handleBlockModeWindowArrowNavigation(event) {
@@ -2236,6 +2323,26 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   handleNativeMouseDown(event) {
     if (event.button !== 0) {
+      if (event.button === 2 && this.state.mode === "block") {
+        this.pendingBlockContextMenuSelectedLineId = this.state.selectedLineId;
+        const lineElement = this.getLineElementFromEvent(event);
+        const lineId = this.getLineIdFromLineElement(lineElement);
+        if (lineId && lineId !== this.state.selectedLineId) {
+          this.pendingDefaultContextMenuLineId = lineId;
+          this.hideSelectionPopover();
+          this.closeMentionMenu();
+          this.enterTextMode({
+            lineId,
+            cursorPosition: this.getLineOffsetFromPointerEvent(
+              event,
+              lineElement,
+            ),
+          });
+          return;
+        }
+
+        event.preventDefault?.();
+      }
       return;
     }
 
@@ -2279,6 +2386,55 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
       this.selectReferenceByNodeKey(referenceSnapshot.nodeKey);
     });
+  }
+
+  handleLeftGutterMouseDown(event) {
+    if (event.button !== 0) {
+      return;
+    }
+
+    const row = this.getLeftGutterRowFromEvent(event);
+    const lineId = row?.dataset?.lineId;
+    if (!lineId || !this.hasLine(lineId)) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    this.clearPointerDownInsideEditor();
+    this.pendingPointerFallbackSelection = undefined;
+    this.awaitingCharacterShortcut = false;
+    this.clearDeleteShortcutState();
+    this.hideSelectionPopover();
+    this.closeMentionMenu();
+    this.enterBlockMode({
+      focusSurface: true,
+      lineId,
+      emitSelectionChange: true,
+    });
+  }
+
+  getLeftGutterRowFromEvent(event) {
+    const path =
+      typeof event.composedPath === "function" ? event.composedPath() : [];
+    const candidates = path.length > 0 ? path : [event.target];
+
+    for (const candidate of candidates) {
+      const element =
+        candidate?.nodeType === Node.TEXT_NODE
+          ? candidate.parentElement
+          : candidate;
+      const row = element?.classList?.contains("gutter-row")
+        ? element
+        : element?.closest?.(".gutter-row");
+
+      if (row && this.refs.leftGutter?.contains(row)) {
+        return row;
+      }
+    }
+
+    return undefined;
   }
 
   enterTextModeFromBlockModePointer(event) {
@@ -2427,6 +2583,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   handleNativeMouseUp(event) {
+    if (typeof event?.button === "number" && event.button !== 0) {
+      return;
+    }
+
     setTimeout(() => {
       this.clearPointerDownInsideEditor();
     }, 0);
@@ -2554,6 +2714,17 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   handleNativeContextMenu(event) {
+    if (this.pendingDefaultContextMenuLineId) {
+      this.pendingDefaultContextMenuLineId = undefined;
+      this.dispatchShortcutEvent("line-context-menu-dismiss", {});
+      return;
+    }
+
+    if (this.state.mode === "block") {
+      this.handleBlockModeContextMenu(event);
+      return;
+    }
+
     const referenceSnapshot = this.getReferenceSnapshotFromContextEvent(event);
     if (referenceSnapshot) {
       event.preventDefault();
@@ -2594,6 +2765,44 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
     this.showSelectionPopover(event);
+  }
+
+  handleBlockModeContextMenu(event) {
+    if (this.state.mode !== "block") {
+      return false;
+    }
+
+    const selectedLineId =
+      this.pendingBlockContextMenuSelectedLineId ?? this.state.selectedLineId;
+    this.pendingBlockContextMenuSelectedLineId = undefined;
+
+    const lineElement = this.getLineElementFromEvent(event);
+    const lineId = this.getLineIdFromLineElement(lineElement);
+    if (!lineId || lineId !== selectedLineId) {
+      this.hideSelectionPopover();
+      this.closeMentionMenu();
+      this.dispatchShortcutEvent("line-context-menu-dismiss", {});
+      return false;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    this.hideSelectionPopover();
+    this.closeMentionMenu();
+    this.enterBlockMode({
+      focusSurface: true,
+      lineId,
+      emitSelectionChange: true,
+    });
+    this.dispatchShortcutEvent("line-context-menu-request", {
+      lineId,
+      position: {
+        x: event.clientX ?? 0,
+        y: event.clientY ?? 0,
+      },
+    });
+    return true;
   }
 
   isContextMenuEventInsideRange(event, range) {
@@ -3166,6 +3375,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           cursorPosition: -1,
         });
         return true;
+      case "i":
       case "Shift+I":
         event.preventDefault();
         event.stopPropagation();
@@ -5332,7 +5542,10 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     const previousLines = this.state.lines;
     const previousSelectedLineId = this.state.selectedLineId;
     this.state.lines = cloneSceneEditorLines(snapshot.lines);
-    this.state.selectedLineId = snapshot.selectedLineId;
+    this.state.selectedLineId =
+      this.state.mode === "block"
+        ? previousSelectedLineId
+        : snapshot.selectedLineId;
     this.state.activeFormats = snapshot.activeFormats;
     this.state.plainText = snapshot.lines
       .map((line) => getPlainTextFromContent(getLineDialogueContent(line)))
