@@ -105,6 +105,7 @@ const areCanvasLayoutStatesEquivalent = (left = {}, right = {}) => {
   return (
     left?.id === right?.id &&
     left?.layoutType === right?.layoutType &&
+    left?.layoutSchemaVersion === right?.layoutSchemaVersion &&
     left?.elements === right?.elements
   );
 };
@@ -330,6 +331,7 @@ const prefetchLayoutEditorAssets = async (
     const layoutState = {
       id: props.layoutState?.id,
       layoutType: props.layoutState?.layoutType,
+      layoutSchemaVersion: props.layoutState?.layoutSchemaVersion,
       elements: props.layoutState?.elements,
     };
     const { fileReferences } = createLayoutEditorAssetReferences({
@@ -389,6 +391,7 @@ const renderLayoutEditorCanvas = async (
     const layoutState = {
       id: props.layoutState?.id,
       layoutType: props.layoutState?.layoutType,
+      layoutSchemaVersion: props.layoutState?.layoutSchemaVersion,
       elements: layoutData,
     };
     const { elements, fileReferences, selectedElementMetrics } =

@@ -28,6 +28,16 @@ const TEXT_NODE_TYPES = new Set([
   "text-ref-history-line-content",
 ]);
 
+const BASE_INTERACTION_KEYS = [
+  "click",
+  "rightClick",
+  "scrollUp",
+  "scrollDown",
+  "hover",
+];
+
+export const CURRENT_LAYOUT_SCHEMA_VERSION = 2;
+
 import {
   buildVisibilityConditionExpression,
   mergeWhenExpressions,
@@ -159,6 +169,46 @@ export const BASE_LAYOUT_KEYBOARD_LABELS = Object.fromEntries(
 const isLayoutResource = (item) => item?.type === "layout";
 
 export const isFragmentLayout = (layout) => layout?.isFragment === true;
+
+export const normalizeLayoutSchemaVersion = (value) =>
+  Number.isInteger(value) && value >= 1 ? value : 1;
+
+const usesStackingContextRenderOrder = (layoutSchemaVersion) =>
+  normalizeLayoutSchemaVersion(layoutSchemaVersion) >=
+  CURRENT_LAYOUT_SCHEMA_VERSION;
+
+const isDirectedLayoutContainer = (node) =>
+  node?.direction === "horizontal" || node?.direction === "vertical";
+
+const applyLayoutRenderOrder = ({
+  nodes,
+  layoutSchemaVersion,
+  parentNode,
+} = {}) => {
+  const sourceNodes = Array.isArray(nodes) ? nodes : [];
+  if (!usesStackingContextRenderOrder(layoutSchemaVersion)) {
+    return sourceNodes;
+  }
+
+  const orderedNodes = isDirectedLayoutContainer(parentNode)
+    ? sourceNodes
+    : [...sourceNodes].reverse();
+
+  return orderedNodes.map((node) => {
+    if (!Array.isArray(node?.children) || node.children.length === 0) {
+      return node;
+    }
+
+    return {
+      ...node,
+      children: applyLayoutRenderOrder({
+        nodes: node.children,
+        layoutSchemaVersion,
+        parentNode: node,
+      }),
+    };
+  });
+};
 
 export const filterLayoutsByType = (layoutsData, layoutTypes = []) => {
   const allowedLayoutTypes = new Set(layoutTypes);
@@ -668,14 +718,21 @@ const resolveFragmentChildren = ({ node, imageItems, context }) => {
   }
 
   const fragmentNodes = toHierarchyStructure(fragmentLayout.elements);
+  const orderedFragmentNodes = applyLayoutRenderOrder({
+    nodes: fragmentNodes,
+    layoutSchemaVersion: fragmentLayout.layoutSchemaVersion,
+  });
   const fragmentContext = {
     ...context,
     layoutId: fragmentLayoutId,
+    layoutSchemaVersion: normalizeLayoutSchemaVersion(
+      fragmentLayout.layoutSchemaVersion,
+    ),
     fragmentStack: [...fragmentStack, fragmentLayoutId],
   };
 
   return prefixElementIds(
-    fragmentNodes.map((child) =>
+    orderedFragmentNodes.map((child) =>
       mapLayoutNode({
         node: child,
         imageItems,
@@ -811,23 +868,15 @@ const buildBaseElement = (node, context = {}) => {
     element.alpha = node.opacity;
   }
 
-  const click = withInteractionEventData(node.click, context.slotEventData);
-  if (click) {
-    element.click = click;
-  }
-
-  const rightClick = withInteractionEventData(
-    node.rightClick,
-    context.slotEventData,
-  );
-  if (rightClick) {
-    element.rightClick = rightClick;
-  }
-
-  const hover = withInteractionEventData(node.hover, context.slotEventData);
-  if (hover) {
-    element.hover = hover;
-  }
+  BASE_INTERACTION_KEYS.forEach((key) => {
+    const interaction = withInteractionEventData(
+      node[key],
+      context.slotEventData,
+    );
+    if (interaction) {
+      element[key] = interaction;
+    }
+  });
 
   const parsedWhen = splitVisibilityConditionFromWhen(node["$when"]);
   const normalizedBaseWhen = parsedWhen.baseWhen;
@@ -1412,9 +1461,13 @@ export const buildLayoutElements = (
   const textStyles = {
     ...resources.textStyles,
   };
+  const layoutSchemaVersion = normalizeLayoutSchemaVersion(
+    options.layoutSchemaVersion,
+  );
   const context = {
     layoutId: options.layoutId ?? "preview",
     layoutType: options.layoutType,
+    layoutSchemaVersion,
     imageItems,
     soundItems: options.soundsData?.items || {},
     textStylesData,
@@ -1425,7 +1478,12 @@ export const buildLayoutElements = (
     fragmentStack: options.fragmentStack ?? [],
   };
 
-  const elements = (layout || []).map((node) =>
+  const orderedLayout = applyLayoutRenderOrder({
+    nodes: layout,
+    layoutSchemaVersion,
+  });
+
+  const elements = orderedLayout.map((node) =>
     mapLayoutNode({
       node,
       imageItems,

@@ -8,6 +8,10 @@ import {
   checkSceneDeleteUsage,
 } from "./resourceUsage.js";
 import { projectRepositoryStateToDomainState } from "../../../internal/project/projection.js";
+import {
+  CURRENT_LAYOUT_SCHEMA_VERSION,
+  normalizeLayoutSchemaVersion,
+} from "../../../internal/project/layout.js";
 
 export const createProjectServiceCore = ({
   router,
@@ -83,28 +87,67 @@ export const createProjectServiceCore = ({
     return repository.getRevision();
   };
 
+  const selectLayoutsRequiringSchemaUpgrade = (state) =>
+    Object.entries(state?.layouts?.items || {})
+      .filter(
+        ([, layout]) =>
+          layout?.type === "layout" &&
+          normalizeLayoutSchemaVersion(layout.layoutSchemaVersion) <
+            CURRENT_LAYOUT_SCHEMA_VERSION,
+      )
+      .map(([layoutId]) => layoutId);
+
+  const ensureLayoutSchemaVersion = async (repository) => {
+    if (typeof repository?.getState !== "function") {
+      return;
+    }
+
+    const layoutIds = selectLayoutsRequiringSchemaUpgrade(
+      repository.getState(),
+    );
+    if (layoutIds.length === 0) {
+      return;
+    }
+
+    const result = await collabService.commandApi.upgradeLayoutSchemaVersion({
+      layoutIds,
+      targetSchemaVersion: CURRENT_LAYOUT_SCHEMA_VERSION,
+    });
+    if (result?.valid === false) {
+      throw new Error(
+        result.error?.message || "Failed to upgrade layout schema version.",
+      );
+    }
+  };
+
+  const ensureRepository = async (options = {}) => {
+    const repository = await repositoryService.ensureRepository(options);
+    await ensureLayoutSchemaVersion(repository);
+    return repository;
+  };
+
   const loadRepositoryState = async (untilEventIndex) => {
-    const repository = await repositoryService.ensureRepository();
+    const repository = await ensureRepository();
     return repository.loadState(untilEventIndex);
   };
 
   const clearActiveSceneId = async () => {
-    const repository = await repositoryService.ensureRepository();
+    const repository = await ensureRepository();
     await repository.clearActiveSceneId();
   };
 
   const setActiveSceneId = async (sceneId) => {
-    const repository = await repositoryService.ensureRepository();
+    const repository = await ensureRepository();
     await repository.setActiveSceneId(sceneId);
   };
 
   const loadSceneOverviews = async ({ sceneIds = [] } = {}) => {
-    const repository = await repositoryService.ensureRepository();
+    const repository = await ensureRepository();
     return repository.loadSceneOverviews({ sceneIds });
   };
 
   const getSceneOverview = async (sceneId) => {
-    const repository = await repositoryService.ensureRepository();
+    const repository = await ensureRepository();
     return repository.getSceneOverview(sceneId);
   };
 
@@ -118,7 +161,7 @@ export const createProjectServiceCore = ({
   };
 
   const checkResourceUsage = async ({ itemId, checkTargets = [] } = {}) => {
-    const repository = await repositoryService.ensureRepository();
+    const repository = await ensureRepository();
     const store = repositoryService.getCachedStore();
     const projectId = getCurrentProjectId() || "unknown-project";
 
@@ -132,7 +175,7 @@ export const createProjectServiceCore = ({
   };
 
   const checkSceneDeletionUsage = async ({ sceneId } = {}) => {
-    await repositoryService.ensureRepository();
+    await ensureRepository();
 
     const state = getDomainState();
     const sceneIds = Object.keys(state?.scenes ?? {}).filter(
@@ -192,7 +235,7 @@ export const createProjectServiceCore = ({
     getEnsuredProjectId: repositoryService.getEnsuredProjectId,
     releaseCurrentRepository: repositoryService.releaseCurrentRepository,
     releaseProjectRuntime,
-    ensureRepository: repositoryService.ensureRepository,
+    ensureRepository,
     ensureProjectCompatibleById:
       repositoryService.ensureProjectCompatibleByProjectId,
     subscribeProjectState(listener, options) {

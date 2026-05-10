@@ -770,6 +770,7 @@ export const selectLayouts = ({ state }) => {
           {
             layoutId,
             layoutType: layout.layoutType,
+            layoutSchemaVersion: layout.layoutSchemaVersion,
             filesData: files,
             layoutsData: layouts,
           },

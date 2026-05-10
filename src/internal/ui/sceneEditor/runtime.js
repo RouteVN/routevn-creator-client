@@ -1,4 +1,13 @@
-import { debounceTime, filter, tap } from "rxjs";
+import {
+  debounceTime,
+  EMPTY,
+  filter,
+  fromEvent,
+  map,
+  switchMap,
+  tap,
+  throttleTime,
+} from "rxjs";
 import {
   extractFileIdsForLayouts,
   extractFileIdsForScenes,
@@ -10,6 +19,7 @@ import {
   extractTransitionTargetSceneIdsFromActions,
   resolveEventBindings,
 } from "../../project/layout.js";
+import { normalizeLineActions } from "../../project/engineActions.js";
 import {
   sanitizeProjectDataForRouteEngine,
   summarizeProjectDataForRouteEngine,
@@ -24,6 +34,7 @@ import {
 
 const NO_PENDING_CANVAS_RENDER = Symbol("no-pending-canvas-render");
 const SCENE_EDITOR_PERF_SCOPE = "scene-editor-perf";
+const CANVAS_RUNTIME_LINE_SYNC_WINDOW_MS = 1200;
 
 const isSceneEditorPreviewVisible = (store) => {
   return store?.selectPreviewScene?.()?.previewVisible === true;
@@ -45,6 +56,58 @@ const getPresentationStateSnapshot = (store) => {
   } catch {
     return undefined;
   }
+};
+
+const selectCurrentRouteEnginePointerSnapshot = (systemState = {}) => {
+  const contexts = Array.isArray(systemState?.contexts)
+    ? systemState.contexts
+    : [];
+  const currentContext = contexts[contexts.length - 1];
+  const currentPointerMode = currentContext?.currentPointerMode ?? "read";
+  const pointers = currentContext?.pointers ?? {};
+
+  if (!currentContext || !currentPointerMode) {
+    return {
+      contextCount: contexts.length,
+      currentPointer: undefined,
+      currentPointerMode,
+      pointerModes: Object.keys(pointers),
+    };
+  }
+
+  return {
+    contextCount: contexts.length,
+    currentPointer: pointers[currentPointerMode],
+    currentPointerMode,
+    pointerModes: Object.keys(pointers),
+  };
+};
+
+const createRuntimeCurrentLineRenderStateHandler = (deps) => {
+  const { subject } = deps;
+  let lastDispatchedLineKey;
+
+  return ({ systemState }) => {
+    const { currentPointer } =
+      selectCurrentRouteEnginePointerSnapshot(systemState);
+    const sectionId = currentPointer?.sectionId;
+    const lineId = currentPointer?.lineId;
+    const lineKey = sectionId && lineId ? `${sectionId}:${lineId}` : undefined;
+
+    if (!lineKey) {
+      return;
+    }
+
+    if (lineKey === lastDispatchedLineKey) {
+      return;
+    }
+
+    lastDispatchedLineKey = lineKey;
+    subject.dispatch("sceneEditor.runtimeCurrentLineChanged", {
+      sectionId,
+      lineId,
+    });
+  };
 };
 
 const getCurrentCanvasRoot = (refs) => {
@@ -744,10 +807,12 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
   const isMuted = store.selectIsMuted();
   graphicsService.setEngineAudioMuted?.(isMuted);
 
+  const onRenderState = createRuntimeCurrentLineRenderStateHandler(deps);
   const engineInitStartedAt = perfEnabled ? getDebugNow() : 0;
   initRouteEngineWithDiagnostics(graphicsService, projectData, {
     enableGlobalKeyboardBindings: false,
     suppressRenderEffects: true,
+    onRenderState,
   });
   const engineInitDurationMs = perfEnabled
     ? getDebugDurationMs(engineInitStartedAt)
@@ -772,6 +837,7 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     initRouteEngineWithDiagnostics(graphicsService, renderProjectData, {
       enableGlobalKeyboardBindings: false,
       suppressRenderEffects: true,
+      onRenderState,
     });
   }
   const temporaryPresentationStateDurationMs = perfEnabled
@@ -953,6 +1019,9 @@ export const initializeSceneEditorPage = async (deps) => {
   if (!mountedCanvasRoot?.isConnected) {
     throw new Error("Scene editor canvas failed to mount");
   }
+  subject.dispatch("sceneEditor.canvasMounted", {
+    canvasRoot: mountedCanvasRoot,
+  });
 
   await graphicsService.init({
     canvas: mountedCanvasRoot,
@@ -999,6 +1068,9 @@ export const restoreSceneEditorFromPreview = async (deps) => {
   if (!mountedCanvasRoot?.isConnected) {
     throw new Error("Scene editor canvas failed to mount");
   }
+  deps.subject.dispatch("sceneEditor.canvasMounted", {
+    canvasRoot: mountedCanvasRoot,
+  });
   await graphicsService.init({
     canvas: mountedCanvasRoot,
     beforeHandleActions: createBeforeHandleActionsHook(deps),
@@ -1020,8 +1092,10 @@ export const restoreSceneEditorFromPreview = async (deps) => {
     showLoading: false,
   });
   void preloadDirectTransitionScenes(deps, projectData, initialSceneIds);
+  const onRenderState = createRuntimeCurrentLineRenderStateHandler(deps);
   initRouteEngineWithDiagnostics(graphicsService, initialProjectData, {
     enableGlobalKeyboardBindings: false,
+    onRenderState,
   });
 
   await renderSceneEditorState(deps);
@@ -1114,8 +1188,227 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
   }
 };
 
+const syncRuntimeCurrentLineSelection = (deps, payload = {}) => {
+  const { refs, store, render } = deps;
+  const { sectionId, lineId } = payload;
+  const selectedSectionId = store.selectSelectedSectionId();
+  const selectedLineId = store.selectSelectedLineId();
+
+  if (!lineId) {
+    return false;
+  }
+
+  if (sectionId && sectionId !== selectedSectionId) {
+    return false;
+  }
+
+  if (lineId === selectedLineId) {
+    return false;
+  }
+
+  const selectedSection = store
+    .selectScene()
+    ?.sections?.find((section) => section.id === selectedSectionId);
+  const hasLine = selectedSection?.lines?.some((line) => line.id === lineId);
+  if (!hasLine) {
+    return false;
+  }
+
+  store.setSelectedLineId({ selectedLineId: lineId });
+  render();
+  refs.linesEditor?.scrollLineIntoView?.({ lineId });
+  return true;
+};
+
+const createCanvasRuntimeLineSyncGate = (store) => {
+  let intent;
+
+  const getExpectedLineId = ({ direction, lineId }) => {
+    if (direction === "previous") {
+      return store.selectPreviousLineId({ lineId });
+    }
+
+    return store.selectNextLineId({ lineId });
+  };
+
+  return {
+    mark: ({ direction } = {}) => {
+      if (direction !== "next" && direction !== "previous") {
+        intent = undefined;
+        return;
+      }
+
+      const lineIdAtInput = store.selectSelectedLineId();
+      const sectionIdAtInput = store.selectSelectedSectionId();
+      const expectedLineId = getExpectedLineId({
+        direction,
+        lineId: lineIdAtInput,
+      });
+
+      if (
+        !lineIdAtInput ||
+        !expectedLineId ||
+        expectedLineId === lineIdAtInput
+      ) {
+        intent = undefined;
+        return;
+      }
+
+      intent = {
+        expectedLineId,
+        expiresAt: Date.now() + CANVAS_RUNTIME_LINE_SYNC_WINDOW_MS,
+        lineIdAtInput,
+        sectionIdAtInput,
+      };
+    },
+    shouldAllow: (payload = {}) => {
+      if (!intent) {
+        return false;
+      }
+
+      if (Date.now() > intent.expiresAt) {
+        intent = undefined;
+        return false;
+      }
+
+      const selectedLineId = store.selectSelectedLineId();
+      const selectedSectionId = store.selectSelectedSectionId();
+      if (
+        selectedLineId !== intent.lineIdAtInput ||
+        selectedSectionId !== intent.sectionIdAtInput
+      ) {
+        intent = undefined;
+        return false;
+      }
+
+      if (payload.sectionId && payload.sectionId !== intent.sectionIdAtInput) {
+        return false;
+      }
+
+      return payload.lineId === intent.expectedLineId;
+    },
+    consume: () => {
+      intent = undefined;
+    },
+  };
+};
+
+const getCanvasRuntimeLineSyncDirection = (event) => {
+  if (event?.deltaY < 0) {
+    return "previous";
+  }
+
+  if (event?.deltaY > 0) {
+    return "next";
+  }
+
+  return undefined;
+};
+
+const primeCanvasPointerHoverForWheel = (event) => {
+  const target = event?.target;
+  if (!target || typeof target.dispatchEvent !== "function") {
+    return false;
+  }
+
+  if (typeof PointerEvent !== "function" && typeof MouseEvent !== "function") {
+    return false;
+  }
+
+  const PointerMoveEvent =
+    typeof PointerEvent === "function" ? PointerEvent : MouseEvent;
+  const pointerMoveEvent = new PointerMoveEvent("pointermove", {
+    bubbles: true,
+    button: 0,
+    buttons: 0,
+    cancelable: true,
+    clientX: event.clientX,
+    clientY: event.clientY,
+    composed: true,
+    pointerId: 1,
+    pointerType: "mouse",
+    screenX: event.screenX,
+    screenY: event.screenY,
+  });
+
+  target.dispatchEvent(pointerMoveEvent);
+  return true;
+};
+
+const handleCanvasWheelFocusBlur = (deps, event) => {
+  const inputFocused = deps.appService?.isInputFocused?.() === true;
+  primeCanvasPointerHoverForWheel(event);
+
+  if (!inputFocused) {
+    return;
+  }
+
+  setTimeout(() => {
+    deps.appService.blurActiveElement?.();
+  }, 0);
+};
+
+const handleCanvasRollbackWheelFallback = async (deps, payload = {}) => {
+  const { refs, store, render } = deps;
+  const { lineIdAtWheel } = payload;
+  const currentLineId = store.selectSelectedLineId();
+
+  if (!lineIdAtWheel || currentLineId !== lineIdAtWheel) {
+    return;
+  }
+
+  const previousLineId = store.selectPreviousLineId({
+    lineId: currentLineId,
+  });
+  if (!previousLineId) {
+    return;
+  }
+
+  store.setSelectedLineId({ selectedLineId: previousLineId });
+  render();
+  refs.linesEditor?.scrollLineIntoView?.({ lineId: previousLineId });
+  await renderSceneEditorState(deps, {
+    skipAnimations: true,
+  });
+};
+
+const hasSelectedLineScreenTransition = (store) => {
+  const selectedLine = store.selectSelectedLine?.();
+  const lineActions = normalizeLineActions(selectedLine?.actions ?? {});
+  return !!lineActions?.screen?.animations?.resourceId;
+};
+
+const handleCanvasForwardNavigationFallback = async (deps, payload = {}) => {
+  const { refs, store, render } = deps;
+  const { lineIdAtInput } = payload;
+  const currentLineId = store.selectSelectedLineId();
+
+  if (!lineIdAtInput || currentLineId !== lineIdAtInput) {
+    return;
+  }
+
+  if (!hasSelectedLineScreenTransition(store)) {
+    return;
+  }
+
+  const nextLineId = store.selectNextLineId({
+    lineId: currentLineId,
+  });
+  if (!nextLineId || nextLineId === currentLineId) {
+    return;
+  }
+
+  store.setSelectedLineId({ selectedLineId: nextLineId });
+  render();
+  refs.linesEditor?.scrollLineIntoView?.({ lineId: nextLineId });
+  await renderSceneEditorState(deps, {
+    skipAnimations: true,
+  });
+};
+
 export const mountSceneEditorSubscriptions = (deps) => {
   const { subject } = deps;
+  const canvasRuntimeLineSyncGate = createCanvasRuntimeLineSyncGate(deps.store);
   const queueRenderCanvas = createSceneEditorRenderQueue((payload) =>
     renderSceneEditorCanvas(deps, payload),
   );
@@ -1126,6 +1419,115 @@ export const mountSceneEditorSubscriptions = (deps) => {
       debounceTime(50),
       tap(async ({ payload }) => {
         await queueRenderCanvas(payload);
+      }),
+    ),
+    subject.pipe(
+      filter(
+        ({ action }) => action === "sceneEditor.runtimeCurrentLineChanged",
+      ),
+      throttleTime(50, undefined, {
+        leading: true,
+        trailing: true,
+      }),
+      tap(({ payload }) => {
+        if (!canvasRuntimeLineSyncGate.shouldAllow(payload)) {
+          return;
+        }
+
+        if (syncRuntimeCurrentLineSelection(deps, payload)) {
+          canvasRuntimeLineSyncGate.consume();
+        }
+      }),
+    ),
+    subject.pipe(
+      filter(({ action }) => action === "sceneEditor.canvasMounted"),
+      switchMap(({ payload }) => {
+        const canvasRoot = payload?.canvasRoot;
+        if (!canvasRoot) {
+          return EMPTY;
+        }
+
+        return fromEvent(canvasRoot, "wheel", {
+          capture: true,
+          passive: true,
+        }).pipe(
+          tap((event) => {
+            canvasRuntimeLineSyncGate.mark({
+              direction: getCanvasRuntimeLineSyncDirection(event),
+            });
+            handleCanvasWheelFocusBlur(deps, event);
+          }),
+        );
+      }),
+    ),
+    subject.pipe(
+      filter(({ action }) => action === "sceneEditor.canvasMounted"),
+      switchMap(({ payload }) => {
+        const canvasRoot = payload?.canvasRoot;
+        if (!canvasRoot) {
+          return EMPTY;
+        }
+
+        return fromEvent(canvasRoot, "click", {
+          capture: true,
+        }).pipe(
+          tap(() => {
+            canvasRuntimeLineSyncGate.mark({ direction: "next" });
+          }),
+          map(() => ({
+            lineIdAtInput: deps.store.selectSelectedLineId(),
+          })),
+          debounceTime(140),
+          tap(async (payload) => {
+            await handleCanvasForwardNavigationFallback(deps, payload);
+          }),
+        );
+      }),
+    ),
+    subject.pipe(
+      filter(({ action }) => action === "sceneEditor.canvasMounted"),
+      switchMap(({ payload }) => {
+        const canvasRoot = payload?.canvasRoot;
+        if (!canvasRoot) {
+          return EMPTY;
+        }
+
+        return fromEvent(canvasRoot, "wheel", {
+          capture: true,
+          passive: true,
+        }).pipe(
+          filter((event) => event?.deltaY > 0),
+          map(() => ({
+            lineIdAtInput: deps.store.selectSelectedLineId(),
+          })),
+          debounceTime(140),
+          tap(async (payload) => {
+            await handleCanvasForwardNavigationFallback(deps, payload);
+          }),
+        );
+      }),
+    ),
+    subject.pipe(
+      filter(({ action }) => action === "sceneEditor.canvasMounted"),
+      switchMap(({ payload }) => {
+        const canvasRoot = payload?.canvasRoot;
+        if (!canvasRoot) {
+          return EMPTY;
+        }
+
+        return fromEvent(canvasRoot, "wheel", {
+          capture: true,
+          passive: true,
+        }).pipe(
+          filter((event) => event?.deltaY < 0),
+          map(() => ({
+            lineIdAtWheel: deps.store.selectSelectedLineId(),
+          })),
+          debounceTime(120),
+          tap(async (payload) => {
+            await handleCanvasRollbackWheelFallback(deps, payload);
+          }),
+        );
       }),
     ),
   ];

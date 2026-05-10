@@ -10,6 +10,12 @@ const CHILD_INTERACTION_ITEMS = [
     key: "rightClick",
     name: "rightClick.inheritToChildren",
   },
+  { label: "Scroll Up", key: "scrollUp", name: "scrollUp.inheritToChildren" },
+  {
+    label: "Scroll Down",
+    key: "scrollDown",
+    name: "scrollDown.inheritToChildren",
+  },
 ];
 
 const isChildInteractionEnabled = (values = {}, key) => {
@@ -19,17 +25,11 @@ const isChildInteractionEnabled = (values = {}, key) => {
 export const getChildInteractionSummary = (values = {}) => {
   const labels = [];
 
-  if (values?.hover?.inheritToChildren === true) {
-    labels.push("Hover");
-  }
-
-  if (values?.click?.inheritToChildren === true) {
-    labels.push("Click");
-  }
-
-  if (values?.rightClick?.inheritToChildren === true) {
-    labels.push("Right Click");
-  }
+  CHILD_INTERACTION_ITEMS.forEach((item) => {
+    if (isChildInteractionEnabled(values, item.key)) {
+      labels.push(item.label);
+    }
+  });
 
   if (labels.length === 0) {
     return "None";
@@ -67,6 +67,12 @@ export const createChildInteractionDialogDefaults = (values = {}) => {
     rightClick: {
       inheritToChildren: values?.rightClick?.inheritToChildren === true,
     },
+    scrollUp: {
+      inheritToChildren: values?.scrollUp?.inheritToChildren === true,
+    },
+    scrollDown: {
+      inheritToChildren: values?.scrollDown?.inheritToChildren === true,
+    },
   };
 };
 
@@ -94,6 +100,22 @@ export const createChildInteractionForm = () => {
         name: "rightClick.inheritToChildren",
         type: "segmented-control",
         label: "Right Click",
+        required: true,
+        clearable: false,
+        options: INHERIT_TO_CHILDREN_OPTIONS,
+      },
+      {
+        name: "scrollUp.inheritToChildren",
+        type: "segmented-control",
+        label: "Scroll Up",
+        required: true,
+        clearable: false,
+        options: INHERIT_TO_CHILDREN_OPTIONS,
+      },
+      {
+        name: "scrollDown.inheritToChildren",
+        type: "segmented-control",
+        label: "Scroll Down",
         required: true,
         clearable: false,
         options: INHERIT_TO_CHILDREN_OPTIONS,

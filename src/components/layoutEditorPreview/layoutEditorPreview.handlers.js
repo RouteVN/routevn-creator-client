@@ -62,7 +62,9 @@ const renderAndEmitPreviewDataChange = (deps) => {
 const didLayoutIdentityChange = (oldProps = {}, newProps = {}) => {
   return (
     oldProps.layoutState?.id !== newProps.layoutState?.id ||
-    oldProps.layoutState?.layoutType !== newProps.layoutState?.layoutType
+    oldProps.layoutState?.layoutType !== newProps.layoutState?.layoutType ||
+    oldProps.layoutState?.layoutSchemaVersion !==
+      newProps.layoutState?.layoutSchemaVersion
   );
 };
 

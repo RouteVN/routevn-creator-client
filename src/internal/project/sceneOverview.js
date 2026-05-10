@@ -2,6 +2,13 @@ import { normalizeLineActions } from "./engineActions.js";
 import { getInteractionActions } from "./interactionPayload.js";
 import { toFlatItems } from "./tree.js";
 
+const LAYOUT_ACTION_INTERACTION_KEYS = [
+  "click",
+  "rightClick",
+  "scrollUp",
+  "scrollDown",
+];
+
 const isNonEmptyString = (value) =>
   typeof value === "string" && value.length > 0;
 
@@ -77,16 +84,12 @@ const getTransitionsFromLayout = (layout, menuSceneId, repositoryState) => {
   }
 
   for (const element of Object.values(layout.elements.items)) {
-    const sceneIds = [
-      ...getActionTargetSceneIds(
-        getInteractionActions(element?.click),
+    const sceneIds = LAYOUT_ACTION_INTERACTION_KEYS.flatMap((interactionKey) =>
+      getActionTargetSceneIds(
+        getInteractionActions(element?.[interactionKey]),
         repositoryState,
       ),
-      ...getActionTargetSceneIds(
-        getInteractionActions(element?.rightClick),
-        repositoryState,
-      ),
-    ];
+    );
 
     for (const sceneId of sceneIds) {
       if (!isNonEmptyString(sceneId)) {

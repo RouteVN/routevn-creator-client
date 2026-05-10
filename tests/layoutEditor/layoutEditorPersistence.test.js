@@ -21,6 +21,18 @@ describe("layoutEditorPersistence", () => {
     ).toBe(true);
     expect(
       shouldPersistLayoutEditorFieldImmediately({
+        name: "scrollUp.payload.actions",
+        itemType: "container",
+      }),
+    ).toBe(true);
+    expect(
+      shouldPersistLayoutEditorFieldImmediately({
+        name: "scrollDown.payload.actions",
+        itemType: "container",
+      }),
+    ).toBe(true);
+    expect(
+      shouldPersistLayoutEditorFieldImmediately({
         name: "conditionalOverrides",
         itemType: "text",
       }),

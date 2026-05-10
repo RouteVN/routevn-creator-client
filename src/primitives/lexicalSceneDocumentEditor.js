@@ -2027,7 +2027,53 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   handleWindowKeyDownCapture(event) {
+    if (this.handleBlockModeWindowArrowNavigation(event)) {
+      return;
+    }
+
     this.handleBlockModeWindowEnter(event);
+  }
+
+  handleBlockModeWindowArrowNavigation(event) {
+    const navigationDelta = (() => {
+      if (event.key === "ArrowUp" || event.key === "k" || event.key === "K") {
+        return -1;
+      }
+
+      if (event.key === "ArrowDown" || event.key === "j" || event.key === "J") {
+        return 1;
+      }
+
+      return undefined;
+    })();
+
+    if (
+      event.defaultPrevented ||
+      navigationDelta === undefined ||
+      event.isComposing ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      this.state.mode !== "block"
+    ) {
+      return false;
+    }
+
+    const activeElement = this.getActiveElement();
+    const target = event.target;
+    const isBodyKeyTarget =
+      (activeElement === document.body ||
+        activeElement === document.documentElement) &&
+      (target === document.body || target === document.documentElement);
+    if (!isBodyKeyTarget) {
+      return false;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    this.moveBlockSelection(navigationDelta);
+    return true;
   }
 
   handleBlockModeWindowEnter(event) {

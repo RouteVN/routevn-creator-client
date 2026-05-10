@@ -1722,6 +1722,20 @@ export const handleHidePreviewScene = async (deps) => {
   await restoreSceneEditorFromPreview(deps);
 };
 
+export const handlePreviewCurrentLineChanged = (deps, payload) => {
+  const { subject } = deps;
+  const detail = payload?._event?.detail ?? {};
+  const { sectionId, lineId } = detail;
+  if (!lineId) {
+    return;
+  }
+
+  subject.dispatch("sceneEditor.runtimeCurrentLineChanged", {
+    sectionId,
+    lineId,
+  });
+};
+
 export const handleBackClick = async (deps) => {
   const { appService } = deps;
   await flushSceneEditorDrafts(deps, { force: true });

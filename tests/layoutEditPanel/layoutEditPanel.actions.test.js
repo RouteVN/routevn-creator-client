@@ -167,4 +167,71 @@ describe("layoutEditPanel actions", () => {
       toggleAutoMode: {},
     });
   });
+
+  it("keeps existing scroll actions when adding another action", () => {
+    const state = createInitialState();
+
+    setValues(
+      { state },
+      {
+        values: {
+          scrollDown: {
+            payload: {
+              actions: {
+                sectionTransition: {
+                  sectionId: "section-2",
+                },
+              },
+            },
+          },
+        },
+      },
+    );
+    setActiveInteractionType(
+      { state },
+      {
+        interactionType: "scrollDown",
+      },
+    );
+    syncActionsEditorActions(
+      { state },
+      {
+        interactionType: "scrollDown",
+      },
+    );
+
+    const deps = {
+      store: {
+        updateValueProperty: (payload) =>
+          updateValueProperty({ state }, payload),
+        selectActiveInteractionType: () => state.activeInteractionType,
+        selectValues: () => state.values,
+        setActionsEditorActions: (payload) =>
+          setActionsEditorActions({ state }, payload),
+      },
+      render: () => {},
+      dispatchEvent: () => {},
+    };
+
+    handleActionsChange(deps, {
+      _event: {
+        detail: {
+          toggleDialogueUI: {},
+        },
+      },
+    });
+
+    expect(state.values.scrollDown.payload.actions).toEqual({
+      sectionTransition: {
+        sectionId: "section-2",
+      },
+      toggleDialogueUI: {},
+    });
+    expect(state.actionsEditorActions).toEqual({
+      sectionTransition: {
+        sectionId: "section-2",
+      },
+      toggleDialogueUI: {},
+    });
+  });
 });
