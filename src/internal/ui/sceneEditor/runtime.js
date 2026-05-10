@@ -34,6 +34,7 @@ import {
 
 const NO_PENDING_CANVAS_RENDER = Symbol("no-pending-canvas-render");
 const SCENE_EDITOR_PERF_SCOPE = "scene-editor-perf";
+const CANVAS_RUNTIME_LINE_SYNC_WINDOW_MS = 1200;
 
 const isSceneEditorPreviewVisible = (store) => {
   return store?.selectPreviewScene?.()?.previewVisible === true;
@@ -1194,15 +1195,15 @@ const syncRuntimeCurrentLineSelection = (deps, payload = {}) => {
   const selectedLineId = store.selectSelectedLineId();
 
   if (!lineId) {
-    return;
+    return false;
   }
 
   if (sectionId && sectionId !== selectedSectionId) {
-    return;
+    return false;
   }
 
   if (lineId === selectedLineId) {
-    return;
+    return false;
   }
 
   const selectedSection = store
@@ -1210,12 +1211,98 @@ const syncRuntimeCurrentLineSelection = (deps, payload = {}) => {
     ?.sections?.find((section) => section.id === selectedSectionId);
   const hasLine = selectedSection?.lines?.some((line) => line.id === lineId);
   if (!hasLine) {
-    return;
+    return false;
   }
 
   store.setSelectedLineId({ selectedLineId: lineId });
   render();
   refs.linesEditor?.scrollLineIntoView?.({ lineId });
+  return true;
+};
+
+const createCanvasRuntimeLineSyncGate = (store) => {
+  let intent;
+
+  const getExpectedLineId = ({ direction, lineId }) => {
+    if (direction === "previous") {
+      return store.selectPreviousLineId({ lineId });
+    }
+
+    return store.selectNextLineId({ lineId });
+  };
+
+  return {
+    mark: ({ direction } = {}) => {
+      if (direction !== "next" && direction !== "previous") {
+        intent = undefined;
+        return;
+      }
+
+      const lineIdAtInput = store.selectSelectedLineId();
+      const sectionIdAtInput = store.selectSelectedSectionId();
+      const expectedLineId = getExpectedLineId({
+        direction,
+        lineId: lineIdAtInput,
+      });
+
+      if (
+        !lineIdAtInput ||
+        !expectedLineId ||
+        expectedLineId === lineIdAtInput
+      ) {
+        intent = undefined;
+        return;
+      }
+
+      intent = {
+        expectedLineId,
+        expiresAt: Date.now() + CANVAS_RUNTIME_LINE_SYNC_WINDOW_MS,
+        lineIdAtInput,
+        sectionIdAtInput,
+      };
+    },
+    shouldAllow: (payload = {}) => {
+      if (!intent) {
+        return false;
+      }
+
+      if (Date.now() > intent.expiresAt) {
+        intent = undefined;
+        return false;
+      }
+
+      const selectedLineId = store.selectSelectedLineId();
+      const selectedSectionId = store.selectSelectedSectionId();
+      if (
+        selectedLineId !== intent.lineIdAtInput ||
+        selectedSectionId !== intent.sectionIdAtInput
+      ) {
+        intent = undefined;
+        return false;
+      }
+
+      if (payload.sectionId && payload.sectionId !== intent.sectionIdAtInput) {
+        return false;
+      }
+
+      return payload.lineId === intent.expectedLineId;
+    },
+    consume: () => {
+      intent = undefined;
+    },
+  };
+};
+
+const getCanvasRuntimeLineSyncDirection = (event) => {
+  if (event?.deltaY < 0) {
+    return "previous";
+  }
+
+  if (event?.deltaY > 0) {
+    return "next";
+  }
+
+  return undefined;
 };
 
 const primeCanvasPointerHoverForWheel = (event) => {
@@ -1321,6 +1408,7 @@ const handleCanvasForwardNavigationFallback = async (deps, payload = {}) => {
 
 export const mountSceneEditorSubscriptions = (deps) => {
   const { subject } = deps;
+  const canvasRuntimeLineSyncGate = createCanvasRuntimeLineSyncGate(deps.store);
   const queueRenderCanvas = createSceneEditorRenderQueue((payload) =>
     renderSceneEditorCanvas(deps, payload),
   );
@@ -1342,7 +1430,13 @@ export const mountSceneEditorSubscriptions = (deps) => {
         trailing: true,
       }),
       tap(({ payload }) => {
-        syncRuntimeCurrentLineSelection(deps, payload);
+        if (!canvasRuntimeLineSyncGate.shouldAllow(payload)) {
+          return;
+        }
+
+        if (syncRuntimeCurrentLineSelection(deps, payload)) {
+          canvasRuntimeLineSyncGate.consume();
+        }
       }),
     ),
     subject.pipe(
@@ -1358,6 +1452,9 @@ export const mountSceneEditorSubscriptions = (deps) => {
           passive: true,
         }).pipe(
           tap((event) => {
+            canvasRuntimeLineSyncGate.mark({
+              direction: getCanvasRuntimeLineSyncDirection(event),
+            });
             handleCanvasWheelFocusBlur(deps, event);
           }),
         );
@@ -1374,6 +1471,9 @@ export const mountSceneEditorSubscriptions = (deps) => {
         return fromEvent(canvasRoot, "click", {
           capture: true,
         }).pipe(
+          tap(() => {
+            canvasRuntimeLineSyncGate.mark({ direction: "next" });
+          }),
           map(() => ({
             lineIdAtInput: deps.store.selectSelectedLineId(),
           })),
