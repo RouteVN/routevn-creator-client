@@ -19,6 +19,7 @@ import {
   extractTransitionTargetSceneIdsFromActions,
   resolveEventBindings,
 } from "../../project/layout.js";
+import { normalizeLineActions } from "../../project/engineActions.js";
 import {
   sanitizeProjectDataForRouteEngine,
   summarizeProjectDataForRouteEngine,
@@ -1372,6 +1373,59 @@ const handleCanvasRollbackWheelFallback = async (deps, payload = {}) => {
   });
 };
 
+const hasSelectedLineScreenTransition = (store) => {
+  const selectedLine = store.selectSelectedLine?.();
+  const lineActions = normalizeLineActions(selectedLine?.actions ?? {});
+  return !!lineActions?.screen?.animations?.resourceId;
+};
+
+const handleCanvasForwardNavigationFallback = async (deps, payload = {}) => {
+  const { refs, store, render } = deps;
+  const { lineIdAtInput, source } = payload;
+  const currentLineId = store.selectSelectedLineId();
+
+  if (!lineIdAtInput || currentLineId !== lineIdAtInput) {
+    logRuntimeLineSync("canvas.forwardFallback.skipLineChanged", {
+      currentLineId,
+      lineIdAtInput,
+      source,
+    });
+    return;
+  }
+
+  if (!hasSelectedLineScreenTransition(store)) {
+    logRuntimeLineSync("canvas.forwardFallback.skipNoScreenTransition", {
+      currentLineId,
+      source,
+    });
+    return;
+  }
+
+  const nextLineId = store.selectNextLineId({
+    lineId: currentLineId,
+  });
+  if (!nextLineId || nextLineId === currentLineId) {
+    logRuntimeLineSync("canvas.forwardFallback.skipNoNextLine", {
+      currentLineId,
+      nextLineId,
+      source,
+    });
+    return;
+  }
+
+  logRuntimeLineSync("canvas.forwardFallback.apply", {
+    currentLineId,
+    nextLineId,
+    source,
+  });
+  store.setSelectedLineId({ selectedLineId: nextLineId });
+  render();
+  refs.linesEditor?.scrollLineIntoView?.({ lineId: nextLineId });
+  await renderSceneEditorState(deps, {
+    skipAnimations: true,
+  });
+};
+
 export const mountSceneEditorSubscriptions = (deps) => {
   const { subject } = deps;
   const queueRenderCanvas = createSceneEditorRenderQueue((payload) =>
@@ -1416,6 +1470,52 @@ export const mountSceneEditorSubscriptions = (deps) => {
         }).pipe(
           tap((event) => {
             handleCanvasWheelFocusBlur(deps, event);
+          }),
+        );
+      }),
+    ),
+    subject.pipe(
+      filter(({ action }) => action === "sceneEditor.canvasMounted"),
+      switchMap(({ payload }) => {
+        const canvasRoot = payload?.canvasRoot;
+        if (!canvasRoot) {
+          return EMPTY;
+        }
+
+        return fromEvent(canvasRoot, "click", {
+          capture: true,
+        }).pipe(
+          map(() => ({
+            lineIdAtInput: deps.store.selectSelectedLineId(),
+            source: "click",
+          })),
+          debounceTime(140),
+          tap(async (payload) => {
+            await handleCanvasForwardNavigationFallback(deps, payload);
+          }),
+        );
+      }),
+    ),
+    subject.pipe(
+      filter(({ action }) => action === "sceneEditor.canvasMounted"),
+      switchMap(({ payload }) => {
+        const canvasRoot = payload?.canvasRoot;
+        if (!canvasRoot) {
+          return EMPTY;
+        }
+
+        return fromEvent(canvasRoot, "wheel", {
+          capture: true,
+          passive: true,
+        }).pipe(
+          filter((event) => event?.deltaY > 0),
+          map(() => ({
+            lineIdAtInput: deps.store.selectSelectedLineId(),
+            source: "wheelDown",
+          })),
+          debounceTime(140),
+          tap(async (payload) => {
+            await handleCanvasForwardNavigationFallback(deps, payload);
           }),
         );
       }),
