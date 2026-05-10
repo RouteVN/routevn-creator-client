@@ -29,6 +29,7 @@ const creatorDocsPathByRoutePattern = {
   "/project/releases/versions": "/versions/",
   "/project/releases/web-server": "/web-server/",
   "/project/about": "/page-index/#settings",
+  "/project/appearance": "/page-index/#settings",
   "/project/user": "/page-index/#settings",
 };
 
@@ -37,6 +38,7 @@ const creatorDocsPathBySystemActionMode = {
   hidden: "/page-index/",
   dialogue: "/line-actions/dialogue/",
   choice: "/line-actions/choices/",
+  screen: "/line-actions/visual/",
   background: "/line-actions/background/",
   bgm: "/line-actions/bgm/",
   sfx: "/line-actions/sfx/",

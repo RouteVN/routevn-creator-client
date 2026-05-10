@@ -1,0 +1,12 @@
+componentName: rvn-command-line-screen
+propsSchema:
+  type: object
+  properties:
+    screen:
+      type: object
+      properties:
+        animations:
+          type: object
+          properties:
+            resourceId:
+              type: string

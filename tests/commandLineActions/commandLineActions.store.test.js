@@ -272,6 +272,9 @@ describe("commandLineActions.store", () => {
     });
 
     expect(getSectionModes(items, "Dialogue")).toEqual(["dialogue"]);
+    expect(getSectionModes(items, "Visual")).toEqual(
+      expect.arrayContaining(["screen", "background", "character", "visual"]),
+    );
     expect(getSectionModes(items, "Audio")).toEqual(["bgm", "sfx"]);
     expect(getSectionModes(items, "Navigation")).toEqual(
       expect.arrayContaining([

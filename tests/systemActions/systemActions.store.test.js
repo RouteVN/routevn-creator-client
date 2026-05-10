@@ -169,6 +169,50 @@ describe("systemActions.store", () => {
     });
   });
 
+  it("preserves and previews screen transition actions", () => {
+    const state = createInitialState();
+
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          animations: {
+            items: {
+              "screen-crossfade": {
+                id: "screen-crossfade",
+                type: "animation",
+                name: "Screen Crossfade",
+              },
+            },
+            tree: [{ id: "screen-crossfade" }],
+          },
+        },
+      },
+    );
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          screen: {
+            animations: {
+              resourceId: "screen-crossfade",
+            },
+          },
+        },
+      },
+    });
+
+    expect(actions.screen).toEqual({
+      animations: {
+        resourceId: "screen-crossfade",
+      },
+    });
+    expect(preview.screen).toMatchObject({
+      label: "Screen Crossfade",
+    });
+  });
+
   it("includes custom character name and persist character labels in dialogue preview when a character is selected", () => {
     const state = createInitialState();
 

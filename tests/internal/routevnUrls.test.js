@@ -72,6 +72,9 @@ describe("routevnUrls", () => {
     expect(getRoutevnCreatorSystemActionDocsUrl("background")).toBe(
       "https://routevn.com/creator/docs/line-actions/background/",
     );
+    expect(getRoutevnCreatorSystemActionDocsUrl("screen")).toBe(
+      "https://routevn.com/creator/docs/line-actions/visual/",
+    );
     expect(getRoutevnCreatorSystemActionDocsUrl("setNextLineConfig")).toBe(
       "https://routevn.com/creator/docs/line-actions/next-line-config/",
     );

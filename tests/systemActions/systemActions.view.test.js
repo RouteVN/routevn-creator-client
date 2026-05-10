@@ -24,6 +24,10 @@ describe("systemActions view", () => {
     expect(systemActionsView).toContain(
       "rvn-command-line-actions#commandLineActions :actionsType=${actionsType} :hiddenModes=${hiddenModes} :allowedModes=${allowedModes}",
     );
+    expect(systemActionsView).toContain(
+      "rvn-command-line-screen#commandLineScreen :screen=${actions.screen}",
+    );
+    expect(systemActionsView).toContain("rtgl-svg svg=screen wh=24");
     expect(conditionalView).toContain(
       "rvn-system-actions#branchActionsEditor :showSelected=${true} :actions=${branchActions} actionType=system :hiddenModes=${hiddenModes} :allowedModes=${branchActionAllowedModes}",
     );

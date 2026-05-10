@@ -5597,6 +5597,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       background: lineDecoration.background,
       characterSprites: lineDecoration.characterSprites,
       visual: lineDecoration.visual,
+      screenTransition: Boolean(lineDecoration.screenTransition),
       sectionTransition: Boolean(lineDecoration.sectionTransition),
       hasDialogueLayout: Boolean(lineDecoration.hasDialogueLayout),
       dialogueModeLabel: lineDecoration.dialogueModeLabel || "",
@@ -6204,6 +6205,14 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         item.append(this.createPreviewGroupDeleteOverlay());
       }
       container.append(item);
+    }
+
+    if (lineDecoration.screenTransition) {
+      container.append(
+        this.createIconPreview({
+          icon: "screen",
+        }),
+      );
     }
 
     if (lineDecoration.sectionTransition) {

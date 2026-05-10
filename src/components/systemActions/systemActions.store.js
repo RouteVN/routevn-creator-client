@@ -358,6 +358,7 @@ export const selectActionsData = ({ props, state }) => {
   const images = repositoryStateData.images?.items || {};
   const videos = repositoryStateData.videos?.items || {};
   const sounds = repositoryStateData.sounds?.items || {};
+  const animations = repositoryStateData.animations?.items || {};
   const scenes = repositoryStateData.scenes || {};
   // Layouts: need full tree structure for toFlatItems() to search through nested folders
   const layoutsHierarchy = repositoryStateData.layouts || {};
@@ -385,6 +386,15 @@ export const selectActionsData = ({ props, state }) => {
     } else if (backgroundLayout) {
       preview.background = { ...backgroundLayout, type: "layout" };
     }
+  }
+
+  if (actions.screen?.animations?.resourceId) {
+    const animation = animations[actions.screen.animations.resourceId];
+    actionsObject.screen = actions.screen;
+    preview.screen = {
+      animation,
+      label: animation?.name || actions.screen.animations.resourceId,
+    };
   }
 
   if (presentationState.layout) {

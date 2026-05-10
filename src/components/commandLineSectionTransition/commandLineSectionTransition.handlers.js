@@ -1,13 +1,16 @@
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
-  const { scenes } = projectService.getRepositoryState();
+  const { animations, scenes } = projectService.getRepositoryState();
 
   // Safe access to nested properties
   const sectionTransition = props?.sectionTransition;
 
   store.setScenes({
     scenes,
+  });
+  store.setAnimations({
+    animations,
   });
 
   if (!sectionTransition) {
@@ -23,7 +26,7 @@ export const handleAfterMount = async (deps) => {
   // Initialize form values from existing line data
   const transition = sectionTransition;
   const formValues = {
-    animation: transition.animation,
+    transitionAnimationId: transition.screen?.animations?.resourceId,
   };
 
   if (transition.sceneId) {
@@ -76,14 +79,23 @@ export const handleSubmitClick = (deps) => {
     return;
   }
 
+  const sectionTransition = {
+    sceneId: formValues.sceneId,
+    sectionId: formValues.sectionId,
+  };
+
+  if (formValues.transitionAnimationId) {
+    sectionTransition.screen = {
+      animations: {
+        resourceId: formValues.transitionAnimationId,
+      },
+    };
+  }
+
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
-        sectionTransition: {
-          sceneId: formValues.sceneId,
-          sectionId: formValues.sectionId,
-          animation: formValues.animation || "fade",
-        },
+        sectionTransition,
       },
       bubbles: true,
       composed: true,
