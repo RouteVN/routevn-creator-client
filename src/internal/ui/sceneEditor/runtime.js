@@ -35,13 +35,6 @@ import {
 const NO_PENDING_CANVAS_RENDER = Symbol("no-pending-canvas-render");
 const SCENE_EDITOR_PERF_SCOPE = "scene-editor-perf";
 
-const logRuntimeLineSync = (event, data = {}) => {
-  console.log("[scene-editor:runtime-line-sync]", {
-    event,
-    ...data,
-  });
-};
-
 const isSceneEditorPreviewVisible = (store) => {
   return store?.selectPreviewScene?.()?.previewVisible === true;
 };
@@ -93,43 +86,22 @@ const createRuntimeCurrentLineRenderStateHandler = (deps) => {
   const { subject } = deps;
   let lastDispatchedLineKey;
 
-  return ({ renderState, systemState }) => {
-    const { contextCount, currentPointer, currentPointerMode, pointerModes } =
+  return ({ systemState }) => {
+    const { currentPointer } =
       selectCurrentRouteEnginePointerSnapshot(systemState);
     const sectionId = currentPointer?.sectionId;
     const lineId = currentPointer?.lineId;
     const lineKey = sectionId && lineId ? `${sectionId}:${lineId}` : undefined;
 
     if (!lineKey) {
-      logRuntimeLineSync("onRenderState.skipNoLine", {
-        contextCount,
-        currentPointer,
-        currentPointerMode,
-        pointerModes,
-        renderStateId: renderState?.id,
-      });
       return;
     }
 
     if (lineKey === lastDispatchedLineKey) {
-      logRuntimeLineSync("onRenderState.skipSameLine", {
-        currentPointerMode,
-        lineId,
-        pointerModes,
-        renderStateId: renderState?.id,
-        sectionId,
-      });
       return;
     }
 
     lastDispatchedLineKey = lineKey;
-    logRuntimeLineSync("onRenderState.dispatch", {
-      currentPointerMode,
-      lineId,
-      pointerModes,
-      renderStateId: renderState?.id,
-      sectionId,
-    });
     subject.dispatch("sceneEditor.runtimeCurrentLineChanged", {
       sectionId,
       lineId,
@@ -1222,30 +1194,14 @@ const syncRuntimeCurrentLineSelection = (deps, payload = {}) => {
   const selectedLineId = store.selectSelectedLineId();
 
   if (!lineId) {
-    logRuntimeLineSync("selection.skipNoLine", {
-      payload,
-      selectedLineId,
-      selectedSectionId,
-    });
     return;
   }
 
   if (sectionId && sectionId !== selectedSectionId) {
-    logRuntimeLineSync("selection.skipSectionMismatch", {
-      lineId,
-      sectionId,
-      selectedLineId,
-      selectedSectionId,
-    });
     return;
   }
 
   if (lineId === selectedLineId) {
-    logRuntimeLineSync("selection.skipSameLine", {
-      lineId,
-      sectionId,
-      selectedSectionId,
-    });
     return;
   }
 
@@ -1254,35 +1210,12 @@ const syncRuntimeCurrentLineSelection = (deps, payload = {}) => {
     ?.sections?.find((section) => section.id === selectedSectionId);
   const hasLine = selectedSection?.lines?.some((line) => line.id === lineId);
   if (!hasLine) {
-    logRuntimeLineSync("selection.skipLineMissingInSelectedSection", {
-      lineId,
-      sectionId,
-      selectedLineIds: selectedSection?.lines?.map((line) => line.id),
-      selectedSectionId,
-    });
     return;
   }
 
-  logRuntimeLineSync("selection.apply", {
-    lineId,
-    previousLineId: selectedLineId,
-    selectedSectionId,
-  });
   store.setSelectedLineId({ selectedLineId: lineId });
   render();
   refs.linesEditor?.scrollLineIntoView?.({ lineId });
-};
-
-const describeWheelTarget = (event) => {
-  const target = event?.target;
-  if (!target || typeof target !== "object") {
-    return {};
-  }
-
-  return {
-    targetId: target.id,
-    targetTagName: target.tagName,
-  };
 };
 
 const primeCanvasPointerHoverForWheel = (event) => {
@@ -1317,23 +1250,13 @@ const primeCanvasPointerHoverForWheel = (event) => {
 
 const handleCanvasWheelFocusBlur = (deps, event) => {
   const inputFocused = deps.appService?.isInputFocused?.() === true;
-  const hoverPrimed = primeCanvasPointerHoverForWheel(event);
-  logRuntimeLineSync("canvas.wheel", {
-    defaultPrevented: event?.defaultPrevented === true,
-    deltaMode: event?.deltaMode,
-    deltaY: event?.deltaY,
-    hoverPrimed,
-    inputFocused,
-    ...describeWheelTarget(event),
-  });
+  primeCanvasPointerHoverForWheel(event);
 
   if (!inputFocused) {
     return;
   }
 
-  logRuntimeLineSync("canvas.wheel.deferBlurActiveElement");
   setTimeout(() => {
-    logRuntimeLineSync("canvas.wheel.blurActiveElement");
     deps.appService.blurActiveElement?.();
   }, 0);
 };
@@ -1344,10 +1267,6 @@ const handleCanvasRollbackWheelFallback = async (deps, payload = {}) => {
   const currentLineId = store.selectSelectedLineId();
 
   if (!lineIdAtWheel || currentLineId !== lineIdAtWheel) {
-    logRuntimeLineSync("canvas.scrollUpFallback.skipLineChanged", {
-      currentLineId,
-      lineIdAtWheel,
-    });
     return;
   }
 
@@ -1355,16 +1274,9 @@ const handleCanvasRollbackWheelFallback = async (deps, payload = {}) => {
     lineId: currentLineId,
   });
   if (!previousLineId) {
-    logRuntimeLineSync("canvas.scrollUpFallback.skipNoPreviousLine", {
-      currentLineId,
-    });
     return;
   }
 
-  logRuntimeLineSync("canvas.scrollUpFallback.apply", {
-    currentLineId,
-    previousLineId,
-  });
   store.setSelectedLineId({ selectedLineId: previousLineId });
   render();
   refs.linesEditor?.scrollLineIntoView?.({ lineId: previousLineId });
@@ -1381,23 +1293,14 @@ const hasSelectedLineScreenTransition = (store) => {
 
 const handleCanvasForwardNavigationFallback = async (deps, payload = {}) => {
   const { refs, store, render } = deps;
-  const { lineIdAtInput, source } = payload;
+  const { lineIdAtInput } = payload;
   const currentLineId = store.selectSelectedLineId();
 
   if (!lineIdAtInput || currentLineId !== lineIdAtInput) {
-    logRuntimeLineSync("canvas.forwardFallback.skipLineChanged", {
-      currentLineId,
-      lineIdAtInput,
-      source,
-    });
     return;
   }
 
   if (!hasSelectedLineScreenTransition(store)) {
-    logRuntimeLineSync("canvas.forwardFallback.skipNoScreenTransition", {
-      currentLineId,
-      source,
-    });
     return;
   }
 
@@ -1405,19 +1308,9 @@ const handleCanvasForwardNavigationFallback = async (deps, payload = {}) => {
     lineId: currentLineId,
   });
   if (!nextLineId || nextLineId === currentLineId) {
-    logRuntimeLineSync("canvas.forwardFallback.skipNoNextLine", {
-      currentLineId,
-      nextLineId,
-      source,
-    });
     return;
   }
 
-  logRuntimeLineSync("canvas.forwardFallback.apply", {
-    currentLineId,
-    nextLineId,
-    source,
-  });
   store.setSelectedLineId({ selectedLineId: nextLineId });
   render();
   refs.linesEditor?.scrollLineIntoView?.({ lineId: nextLineId });
@@ -1444,15 +1337,11 @@ export const mountSceneEditorSubscriptions = (deps) => {
       filter(
         ({ action }) => action === "sceneEditor.runtimeCurrentLineChanged",
       ),
-      tap(({ payload }) => {
-        logRuntimeLineSync("subject.received", payload);
-      }),
       throttleTime(50, undefined, {
         leading: true,
         trailing: true,
       }),
       tap(({ payload }) => {
-        logRuntimeLineSync("subject.afterThrottle", payload);
         syncRuntimeCurrentLineSelection(deps, payload);
       }),
     ),
@@ -1487,7 +1376,6 @@ export const mountSceneEditorSubscriptions = (deps) => {
         }).pipe(
           map(() => ({
             lineIdAtInput: deps.store.selectSelectedLineId(),
-            source: "click",
           })),
           debounceTime(140),
           tap(async (payload) => {
@@ -1511,7 +1399,6 @@ export const mountSceneEditorSubscriptions = (deps) => {
           filter((event) => event?.deltaY > 0),
           map(() => ({
             lineIdAtInput: deps.store.selectSelectedLineId(),
-            source: "wheelDown",
           })),
           debounceTime(140),
           tap(async (payload) => {

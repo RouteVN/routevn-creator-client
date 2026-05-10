@@ -55,18 +55,6 @@ const createNoopRouteEnginePersistence = () => ({
 
 const DIALOGUE_CHARACTER_SPRITE_CONTAINER_ID = "dialogue-character-sprite";
 
-const logRouteGraphicsRuntimeEvent = (eventName, payload = {}, actions) => {
-  const eventPayload = payload?._event;
-  console.log("[route-graphics:runtime-event]", {
-    eventName,
-    targetId: eventPayload?.id,
-    actionKeys: actions ? Object.keys(actions) : [],
-    hasActions: Boolean(actions),
-    payloadKeys:
-      payload && typeof payload === "object" ? Object.keys(payload) : [],
-  });
-};
-
 const findRenderElementById = (nodes, elementId) => {
   if (!Array.isArray(nodes)) {
     return undefined;
@@ -1484,7 +1472,6 @@ export const createGraphicsService = async ({
             eventHandler: (eventName, payload) => {
               const eventId = payload?._event?.id;
               const actions = getRuntimeEventActions(payload);
-              logRouteGraphicsRuntimeEvent(eventName, payload, actions);
               const layoutEditorDragTarget =
                 eventId === "selected-border" ||
                 eventId?.startsWith("selected-border-resize-");

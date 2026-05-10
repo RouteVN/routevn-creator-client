@@ -19,13 +19,6 @@ import {
   withPreviewEntryPoint,
 } from "./support/vnPreviewProjectData.js";
 
-const logPreviewCurrentLine = (event, data = {}) => {
-  console.log("[vnPreview:current-line]", {
-    event,
-    ...data,
-  });
-};
-
 const waitForBrowserPaint = async () => {
   if (typeof requestAnimationFrame !== "function") {
     await new Promise((resolve) => setTimeout(resolve, 32));
@@ -536,9 +529,8 @@ export const handleAfterMount = async (deps) => {
   );
   await graphicsService.initRouteEngine(runtime.projectData, {
     handleEffects: true,
-    onRenderState: ({ renderState, systemState }) => {
-      const { contextCount, currentPointer, currentPointerMode, pointerModes } =
-        selectCurrentPointerSnapshot(systemState);
+    onRenderState: ({ systemState }) => {
+      const { currentPointer } = selectCurrentPointerSnapshot(systemState);
       const currentSectionId = currentPointer?.sectionId;
       const currentLineId = currentPointer?.lineId;
       const currentLineKey =
@@ -546,33 +538,8 @@ export const handleAfterMount = async (deps) => {
           ? `${currentSectionId}:${currentLineId}`
           : undefined;
 
-      if (!currentLineKey) {
-        logPreviewCurrentLine("onRenderState.skipNoLine", {
-          contextCount,
-          currentPointer,
-          currentPointerMode,
-          pointerModes,
-          renderStateId: renderState?.id,
-        });
-      } else if (currentLineKey === lastDispatchedLineKey) {
-        logPreviewCurrentLine("onRenderState.skipSameLine", {
-          currentPointerMode,
-          lineId: currentLineId,
-          pointerModes,
-          renderStateId: renderState?.id,
-          sectionId: currentSectionId,
-        });
-      }
-
       if (currentLineKey && currentLineKey !== lastDispatchedLineKey) {
         lastDispatchedLineKey = currentLineKey;
-        logPreviewCurrentLine("onRenderState.dispatchEvent", {
-          currentPointerMode,
-          lineId: currentLineId,
-          pointerModes,
-          renderStateId: renderState?.id,
-          sectionId: currentSectionId,
-        });
         dispatchEvent(
           new CustomEvent("current-line-changed", {
             detail: {
