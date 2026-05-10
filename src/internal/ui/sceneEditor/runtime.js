@@ -1271,10 +1271,26 @@ const syncRuntimeCurrentLineSelection = (deps, payload = {}) => {
   refs.linesEditor?.scrollLineIntoView?.({ lineId });
 };
 
-const handleCanvasWheelFocusBlur = (deps) => {
+const describeWheelTarget = (event) => {
+  const target = event?.target;
+  if (!target || typeof target !== "object") {
+    return {};
+  }
+
+  return {
+    targetId: target.id,
+    targetTagName: target.tagName,
+  };
+};
+
+const handleCanvasWheelFocusBlur = (deps, event) => {
   const inputFocused = deps.appService?.isInputFocused?.() === true;
   logRuntimeLineSync("canvas.wheel", {
+    defaultPrevented: event?.defaultPrevented === true,
+    deltaMode: event?.deltaMode,
+    deltaY: event?.deltaY,
     inputFocused,
+    ...describeWheelTarget(event),
   });
 
   if (!inputFocused) {
@@ -1327,8 +1343,8 @@ export const mountSceneEditorSubscriptions = (deps) => {
           capture: true,
           passive: true,
         }).pipe(
-          tap(() => {
-            handleCanvasWheelFocusBlur(deps);
+          tap((event) => {
+            handleCanvasWheelFocusBlur(deps, event);
           }),
         );
       }),
