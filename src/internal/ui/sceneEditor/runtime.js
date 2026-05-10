@@ -3,6 +3,7 @@ import {
   EMPTY,
   filter,
   fromEvent,
+  map,
   switchMap,
   tap,
   throttleTime,
@@ -1333,6 +1334,41 @@ const handleCanvasWheelFocusBlur = (deps, event) => {
   deps.appService.blurActiveElement?.();
 };
 
+const handleCanvasRollbackWheelFallback = async (deps, payload = {}) => {
+  const { refs, store, render } = deps;
+  const { lineIdAtWheel } = payload;
+  const currentLineId = store.selectSelectedLineId();
+
+  if (!lineIdAtWheel || currentLineId !== lineIdAtWheel) {
+    logRuntimeLineSync("canvas.scrollUpFallback.skipLineChanged", {
+      currentLineId,
+      lineIdAtWheel,
+    });
+    return;
+  }
+
+  const previousLineId = store.selectPreviousLineId({
+    lineId: currentLineId,
+  });
+  if (!previousLineId) {
+    logRuntimeLineSync("canvas.scrollUpFallback.skipNoPreviousLine", {
+      currentLineId,
+    });
+    return;
+  }
+
+  logRuntimeLineSync("canvas.scrollUpFallback.apply", {
+    currentLineId,
+    previousLineId,
+  });
+  store.setSelectedLineId({ selectedLineId: previousLineId });
+  render();
+  refs.linesEditor?.scrollLineIntoView?.({ lineId: previousLineId });
+  await renderSceneEditorState(deps, {
+    skipAnimations: true,
+  });
+};
+
 export const mountSceneEditorSubscriptions = (deps) => {
   const { subject } = deps;
   const queueRenderCanvas = createSceneEditorRenderQueue((payload) =>
@@ -1377,6 +1413,29 @@ export const mountSceneEditorSubscriptions = (deps) => {
         }).pipe(
           tap((event) => {
             handleCanvasWheelFocusBlur(deps, event);
+          }),
+        );
+      }),
+    ),
+    subject.pipe(
+      filter(({ action }) => action === "sceneEditor.canvasMounted"),
+      switchMap(({ payload }) => {
+        const canvasRoot = payload?.canvasRoot;
+        if (!canvasRoot) {
+          return EMPTY;
+        }
+
+        return fromEvent(canvasRoot, "wheel", {
+          capture: true,
+          passive: true,
+        }).pipe(
+          filter((event) => event?.deltaY < 0),
+          map(() => ({
+            lineIdAtWheel: deps.store.selectSelectedLineId(),
+          })),
+          debounceTime(120),
+          tap(async (payload) => {
+            await handleCanvasRollbackWheelFallback(deps, payload);
           }),
         );
       }),
