@@ -1837,7 +1837,15 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   logArrowKeyDown(event, phase, data = {}) {
-    if (event?.key !== "ArrowUp" && event?.key !== "ArrowDown") {
+    const key = String(event?.key ?? "");
+    if (
+      key !== "ArrowUp" &&
+      key !== "ArrowDown" &&
+      key !== "j" &&
+      key !== "J" &&
+      key !== "k" &&
+      key !== "K"
+    ) {
       return;
     }
 
@@ -1845,7 +1853,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     const target = event?.target;
     console.log("[lines-editor:arrow-keydown]", {
       phase,
-      key: event.key,
+      key,
       code: event.code,
       defaultPrevented: event.defaultPrevented === true,
       mode: this.state.mode,
@@ -2096,14 +2104,25 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   handleBlockModeWindowArrowNavigation(event) {
+    const navigationDelta = (() => {
+      if (event.key === "ArrowUp" || event.key === "k" || event.key === "K") {
+        return -1;
+      }
+
+      if (event.key === "ArrowDown" || event.key === "j" || event.key === "J") {
+        return 1;
+      }
+
+      return undefined;
+    })();
+
     if (
       event.defaultPrevented ||
-      (event.key !== "ArrowUp" && event.key !== "ArrowDown") ||
+      navigationDelta === undefined ||
       event.isComposing ||
       event.ctrlKey ||
       event.metaKey ||
       event.altKey ||
-      event.shiftKey ||
       this.state.mode !== "block"
     ) {
       return false;
@@ -2129,9 +2148,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     event.stopPropagation();
     event.stopImmediatePropagation?.();
     this.logArrowKeyDown(event, "window.arrow.moveBlockSelection", {
-      delta: event.key === "ArrowUp" ? -1 : 1,
+      delta: navigationDelta,
     });
-    this.moveBlockSelection(event.key === "ArrowUp" ? -1 : 1);
+    this.moveBlockSelection(navigationDelta);
     return true;
   }
 
