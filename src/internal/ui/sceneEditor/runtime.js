@@ -1314,10 +1314,35 @@ const primeCanvasPointerHoverForWheel = (event) => {
   return true;
 };
 
+const focusLinesEditorBlockModeAfterCanvasWheel = (deps) => {
+  const linesEditor = deps.refs?.linesEditor;
+  if (typeof linesEditor?.focusContainer !== "function") {
+    return false;
+  }
+
+  const focusBlockMode = () => {
+    if (!linesEditor.isConnected) {
+      return;
+    }
+
+    linesEditor.focusContainer();
+  };
+
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(focusBlockMode);
+  } else {
+    setTimeout(focusBlockMode, 0);
+  }
+
+  return true;
+};
+
 const handleCanvasWheelFocusBlur = (deps, event) => {
   const inputFocused = deps.appService?.isInputFocused?.() === true;
   const hoverPrimed = primeCanvasPointerHoverForWheel(event);
+  const blockFocusScheduled = focusLinesEditorBlockModeAfterCanvasWheel(deps);
   logRuntimeLineSync("canvas.wheel", {
+    blockFocusScheduled,
     defaultPrevented: event?.defaultPrevented === true,
     deltaMode: event?.deltaMode,
     deltaY: event?.deltaY,
