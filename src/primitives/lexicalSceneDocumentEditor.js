@@ -2088,7 +2088,51 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   handleWindowKeyDownCapture(event) {
     this.logArrowKeyDown(event, "window.capture");
+    if (this.handleBlockModeWindowArrowNavigation(event)) {
+      return;
+    }
+
     this.handleBlockModeWindowEnter(event);
+  }
+
+  handleBlockModeWindowArrowNavigation(event) {
+    if (
+      event.defaultPrevented ||
+      (event.key !== "ArrowUp" && event.key !== "ArrowDown") ||
+      event.isComposing ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      event.shiftKey ||
+      this.state.mode !== "block"
+    ) {
+      return false;
+    }
+
+    const activeElement = this.getActiveElement();
+    const target = event.target;
+    const isBodyKeyTarget =
+      (activeElement === document.body ||
+        activeElement === document.documentElement) &&
+      (target === document.body || target === document.documentElement);
+    if (!isBodyKeyTarget) {
+      this.logArrowKeyDown(event, "window.arrow.skipTarget", {
+        activeId: activeElement?.id,
+        activeTagName: activeElement?.tagName,
+        targetId: target?.id,
+        targetTagName: target?.tagName,
+      });
+      return false;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    this.logArrowKeyDown(event, "window.arrow.moveBlockSelection", {
+      delta: event.key === "ArrowUp" ? -1 : 1,
+    });
+    this.moveBlockSelection(event.key === "ArrowUp" ? -1 : 1);
+    return true;
   }
 
   handleBlockModeWindowEnter(event) {
