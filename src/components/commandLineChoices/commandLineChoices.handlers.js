@@ -89,9 +89,12 @@ export const handleBeforeMount = (deps) => {
 export const handleAfterMount = async (deps) => {
   const { projectService, store, render } = deps;
   await projectService.ensureRepository();
-  const { scenes } = projectService.getRepositoryState();
+  const { animations, scenes } = projectService.getRepositoryState();
   store.setScenes({
     scenes,
+  });
+  store.setAnimations({
+    animations,
   });
   render();
 };
