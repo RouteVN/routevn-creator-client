@@ -1,4 +1,5 @@
 import { toFlatItems } from "../../internal/project/tree.js";
+import { getTransitionAnimationOptions } from "../../internal/animationOptions.js";
 
 const form = {
   fields: [
@@ -20,21 +21,16 @@ const form = {
       placeholder: "Choose a section",
       options: "${sectionOptions}",
     },
-    // {
-    //   name: "animation",
-    //   type: "select",
-    //   label: "Transition Animation",
-    //   description: "",
-    //   required: false,
-    //   placeholder: "Choose animation...",
-    //   options: [
-    //     { value: "fade", label: "Fade" },
-    //     { value: "slide", label: "Slide" },
-    //     { value: "dissolve", label: "Dissolve" },
-    //     { value: "wipe", label: "Wipe" },
-    //     { value: "none", label: "None" },
-    //   ],
-    // },
+    {
+      name: "transitionAnimationId",
+      type: "select",
+      label: "Screen",
+      description: "",
+      required: false,
+      clearable: true,
+      placeholder: "Choose a transition animation",
+      options: "${transitionAnimationOptions}",
+    },
   ],
   actions: {
     layout: "",
@@ -46,6 +42,7 @@ export const createInitialState = () => ({
   mode: "current",
   initiated: false,
   scenes: { items: {}, tree: [] },
+  animations: { items: {}, tree: [] },
   formValues: {},
 });
 
@@ -61,6 +58,10 @@ export const setScenes = ({ state }, { scenes } = {}) => {
   state.scenes = scenes;
 };
 
+export const setAnimations = ({ state }, { animations } = {}) => {
+  state.animations = animations ?? { items: {}, tree: [] };
+};
+
 export const setFormValues = ({ state }, values = {}) => {
   state.formValues = values;
 };
@@ -69,6 +70,9 @@ export const selectViewData = ({ state, props }) => {
   const scenes = toFlatItems(state.scenes);
   const allScenes = scenes.filter((item) => item.type === "scene");
   const selectedSceneId = state.formValues?.sceneId || props?.currentSceneId;
+  const selectedAnimationId =
+    state.formValues?.transitionAnimationId ??
+    props?.sectionTransition?.screen?.animations?.resourceId;
 
   const currentScene = allScenes.find((item) => item.id === selectedSceneId);
   const currentSceneSections = currentScene?.sections
@@ -116,6 +120,10 @@ export const selectViewData = ({ state, props }) => {
   const context = {
     sceneOptions,
     sectionOptions,
+    transitionAnimationOptions: getTransitionAnimationOptions(
+      state.animations,
+      selectedAnimationId,
+    ),
   };
 
   return {

@@ -290,4 +290,50 @@ describe("sceneEditor.lineDecorations", () => {
     expect(viewModels[0].hasUpdateVariable).toBe(true);
     expect(viewModels[1].hasUpdateVariable).toBe(false);
   });
+
+  it("marks screen actions for inline action previews without duplicating section transitions", () => {
+    const lines = [
+      {
+        id: "line-1",
+        actions: {
+          screen: {
+            animations: {
+              resourceId: "screen-crossfade",
+            },
+          },
+        },
+      },
+      {
+        id: "line-2",
+        actions: {
+          sectionTransition: {
+            sceneId: "scene-1",
+            sectionId: "section-2",
+            screen: {
+              animations: {
+                resourceId: "screen-mask-reveal",
+              },
+            },
+          },
+        },
+      },
+      {
+        id: "line-3",
+        actions: {},
+      },
+    ];
+
+    const viewModels = buildSceneDocumentLineDecorations({
+      lines,
+      repositoryState: createRepositoryState(),
+      sectionLineChanges: {
+        lines: [],
+      },
+    });
+
+    expect(viewModels[0].screenTransition).toBe(true);
+    expect(viewModels[1].screenTransition).toBe(false);
+    expect(viewModels[1].sectionTransition).toBe(true);
+    expect(viewModels[2].screenTransition).toBe(false);
+  });
 });

@@ -322,6 +322,93 @@ describe("constructProjectData", () => {
     ]);
   });
 
+  it("projects line screen transitions for route-engine rendering", () => {
+    const projectData = constructProjectData(
+      createExportRepositoryState({
+        animations: createTreeCollection(
+          {
+            "screen-crossfade": {
+              id: "screen-crossfade",
+              type: "animation",
+              name: "Screen Crossfade",
+              animation: {
+                type: "transition",
+                next: {
+                  tween: {
+                    alpha: {
+                      initialValue: 0,
+                      keyframes: [
+                        {
+                          duration: 300,
+                          value: 1,
+                          easing: "linear",
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+          },
+          [{ id: "screen-crossfade" }],
+        ),
+        scenes: createTreeCollection(
+          {
+            "scene-1": {
+              id: "scene-1",
+              type: "scene",
+              name: "Scene 1",
+              sections: createTreeCollection(
+                {
+                  "section-1": {
+                    id: "section-1",
+                    name: "Section 1",
+                    lines: createTreeCollection(
+                      {
+                        "line-1": {
+                          id: "line-1",
+                          actions: {
+                            screen: {
+                              animations: {
+                                resourceId: "screen-crossfade",
+                              },
+                            },
+                          },
+                        },
+                      },
+                      [{ id: "line-1" }],
+                    ),
+                  },
+                },
+                [{ id: "section-1" }],
+              ),
+            },
+          },
+          [{ id: "scene-1" }],
+        ),
+      }),
+    );
+
+    expect(
+      projectData.story.scenes["scene-1"].sections["section-1"].lines[0].actions
+        .screen,
+    ).toEqual({
+      animations: {
+        resourceId: "screen-crossfade",
+      },
+    });
+
+    const renderState = selectRouteEngineRenderState(projectData);
+
+    expect(renderState.animations).toEqual([
+      expect.objectContaining({
+        id: "screen-animation-in",
+        targetId: "story",
+        type: "transition",
+      }),
+    ]);
+  });
+
   it("projects dialogue character sprites with the route-engine 1.9.0 render contract", () => {
     const projectData = constructProjectData(
       createExportRepositoryState({

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createInitialState,
   selectViewData,
+  setAnimations,
   setFormValues,
   setScenes,
 } from "../../src/components/commandLineResetStoryAtSection/commandLineResetStoryAtSection.store.js";
@@ -67,6 +68,54 @@ describe("commandLineResetStoryAtSection.store", () => {
     ]);
     expect(viewData.context.sectionOptions).toEqual([
       { value: "section-2", label: "Credits" },
+    ]);
+  });
+
+  it("shows transition animation options", () => {
+    const state = createInitialState();
+
+    setAnimations(
+      { state },
+      {
+        animations: {
+          items: {
+            "screen-mask-reveal": {
+              id: "screen-mask-reveal",
+              type: "animation",
+              name: "Screen Mask Reveal",
+              animation: {
+                type: "transition",
+              },
+            },
+            "pulse-update": {
+              id: "pulse-update",
+              type: "animation",
+              name: "Pulse",
+              animation: {
+                type: "update",
+              },
+            },
+          },
+          tree: [{ id: "screen-mask-reveal" }, { id: "pulse-update" }],
+        },
+      },
+    );
+    setFormValues(
+      { state },
+      {
+        values: {
+          transitionAnimationId: "screen-mask-reveal",
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state, props: {} });
+
+    expect(viewData.context.transitionAnimationOptions).toEqual([
+      {
+        value: "screen-mask-reveal",
+        label: "Screen Mask Reveal",
+      },
     ]);
   });
 });

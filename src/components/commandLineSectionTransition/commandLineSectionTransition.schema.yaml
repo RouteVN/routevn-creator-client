@@ -9,7 +9,13 @@ propsSchema:
           type: string
         sectionId:
           type: string
-        animation:
-          type: string
+        screen:
+          type: object
+          properties:
+            animations:
+              type: object
+              properties:
+                resourceId:
+                  type: string
     currentSceneId:
       type: string

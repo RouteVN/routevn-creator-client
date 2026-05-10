@@ -4,5 +4,16 @@ propsSchema:
   properties:
     resetStoryAtSection:
       type: object
+      properties:
+        sectionId:
+          type: string
+        screen:
+          type: object
+          properties:
+            animations:
+              type: object
+              properties:
+                resourceId:
+                  type: string
     currentSceneId:
       type: string

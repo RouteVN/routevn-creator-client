@@ -1,4 +1,5 @@
 import { toFlatItems } from "../../internal/project/tree.js";
+import { getTransitionAnimationOptions } from "../../internal/animationOptions.js";
 
 const form = {
   fields: [
@@ -20,6 +21,16 @@ const form = {
       placeholder: "Choose a section",
       options: "${sectionOptions}",
     },
+    {
+      name: "transitionAnimationId",
+      type: "select",
+      label: "Screen",
+      description: "",
+      required: false,
+      clearable: true,
+      placeholder: "Choose a transition animation",
+      options: "${transitionAnimationOptions}",
+    },
   ],
   actions: {
     layout: "",
@@ -29,11 +40,16 @@ const form = {
 
 export const createInitialState = () => ({
   scenes: { items: {}, tree: [] },
+  animations: { items: {}, tree: [] },
   formValues: {},
 });
 
 export const setScenes = ({ state }, { scenes } = {}) => {
   state.scenes = scenes ?? { items: {}, tree: [] };
+};
+
+export const setAnimations = ({ state }, { animations } = {}) => {
+  state.animations = animations ?? { items: {}, tree: [] };
 };
 
 export const setFormValues = ({ state }, { values } = {}) => {
@@ -46,6 +62,9 @@ export const selectViewData = ({ state, props }) => {
   const selectedSceneId = state.formValues?.sceneId || props?.currentSceneId;
   const selectedScene = allScenes.find((scene) => scene.id === selectedSceneId);
   const selectedSectionId = state.formValues?.sectionId;
+  const selectedAnimationId =
+    state.formValues?.transitionAnimationId ??
+    props?.resetStoryAtSection?.screen?.animations?.resourceId;
 
   const sceneOptions = allScenes.map((scene) => ({
     value: scene.id,
@@ -88,6 +107,10 @@ export const selectViewData = ({ state, props }) => {
     context: {
       sceneOptions,
       sectionOptions,
+      transitionAnimationOptions: getTransitionAnimationOptions(
+        state.animations,
+        selectedAnimationId,
+      ),
     },
   };
 };

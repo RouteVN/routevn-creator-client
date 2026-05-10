@@ -40,7 +40,7 @@ const resolveInitialSceneId = (scenes = {}, currentSceneId, sectionId) => {
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
-  const { scenes } = projectService.getRepositoryState();
+  const { animations, scenes } = projectService.getRepositoryState();
   const sectionId = props?.resetStoryAtSection?.sectionId;
   const sceneId = resolveInitialSceneId(
     scenes,
@@ -51,10 +51,15 @@ export const handleAfterMount = async (deps) => {
   store.setScenes({
     scenes,
   });
+  store.setAnimations({
+    animations,
+  });
   store.setFormValues({
     values: {
       sceneId,
       sectionId,
+      transitionAnimationId:
+        props?.resetStoryAtSection?.screen?.animations?.resourceId,
     },
   });
   render();
@@ -104,12 +109,22 @@ export const handleSubmitClick = (deps) => {
     return;
   }
 
+  const resetStoryAtSection = {
+    sectionId,
+  };
+
+  if (formValues.transitionAnimationId) {
+    resetStoryAtSection.screen = {
+      animations: {
+        resourceId: formValues.transitionAnimationId,
+      },
+    };
+  }
+
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
-        resetStoryAtSection: {
-          sectionId,
-        },
+        resetStoryAtSection,
       },
     }),
   );

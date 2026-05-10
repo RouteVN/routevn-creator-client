@@ -40,7 +40,7 @@ refs:
 template:
   - $if showSelected:
       - rtgl-view g=md w=f:
-          - $if preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.resetStoryAtSection || preview.dialogue || preview.choice || preview.control || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.startSkipMode || preview.stopSkipMode || preview.toggleDialogueUI || preview.runtimeActions || preview.setNextLineConfig || preview.updateVariable || preview.conditional || preview.pushOverlay || preview.popOverlay || preview.rollbackByOffset || preview.showConfirmDialog || preview.hideConfirmDialog || preview.saveSlot || preview.loadSlot:
+          - $if preview.screen || preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.resetStoryAtSection || preview.dialogue || preview.choice || preview.control || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.startSkipMode || preview.stopSkipMode || preview.toggleDialogueUI || preview.runtimeActions || preview.setNextLineConfig || preview.updateVariable || preview.conditional || preview.pushOverlay || preview.popOverlay || preview.rollbackByOffset || preview.showConfirmDialog || preview.hideConfirmDialog || preview.saveSlot || preview.loadSlot:
               - $if preview.control:
                   - rtgl-view#actionItemControl data-mode=control g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=control wh=24: null
@@ -58,6 +58,10 @@ template:
                         $elif preview.background.type == 'layout':
                           - rtgl-svg svg=layout wh=24: null
                           - rtgl-text s=sm: ${preview.background.name}
+              - $if preview.screen:
+                  - rtgl-view#actionItemScreen data-mode=screen g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
+                      - rtgl-svg svg=screen wh=24: null
+                      - rtgl-text s=sm: ${preview.screen.label}
               - $if preview.bgm:
                   - rtgl-view#actionItemBgm data-mode=bgm g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=music wh=24: null
@@ -204,6 +208,8 @@ template:
                   - rvn-command-line-choices#commandLineChoices :layouts=${choiceLayouts} :choice=${actions.choice}: null
                 $elif mode == "background":
                   - rvn-command-line-background#commandLineBackground data-mode="background" :background=${actions.background}: null
+                $elif mode == "screen":
+                  - rvn-command-line-screen#commandLineScreen :screen=${actions.screen}: null
                 $elif mode == "bgm":
                   - rvn-command-line-bgm#commandLineBgm :bgm=${actions.bgm}: null
                 $elif mode == "sfx":

@@ -138,6 +138,10 @@ const buildSectionTransitionPreview = (line) => {
   return !!transitionData.sectionId || !!transitionData.sceneId;
 };
 
+const buildScreenTransitionPreview = (lineActions) => {
+  return !!lineActions?.screen?.animations?.resourceId;
+};
+
 const buildChoicesPreview = (line) => {
   const lineActions = normalizeLineActions(line.actions || {});
   const choicesData = lineActions?.choice;
@@ -236,6 +240,7 @@ const buildSceneDocumentLineViewModels = ({
         characterLookups.characterItems,
       ),
       visual: buildVisualPreview(repositoryState, changes),
+      screenTransition: buildScreenTransitionPreview(lineActions),
       sectionTransition: buildSectionTransitionPreview(line),
       hasChoices: choicesPreview.hasChoices,
       hasConditional: buildConditionalPreview(lineActions),

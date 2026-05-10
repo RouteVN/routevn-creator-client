@@ -158,6 +158,12 @@ const PRESENTATION_ACTION_SECTIONS = [
   ]),
   createSection("Visual", [
     {
+      id: "28",
+      label: "Screen",
+      icon: "screen",
+      mode: "screen",
+    },
+    {
       id: "4",
       label: "Background",
       icon: "image",
