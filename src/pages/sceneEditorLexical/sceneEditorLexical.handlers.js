@@ -779,12 +779,30 @@ export const handleSelectedLineChanged = (deps, payload) => {
   const { store, render, subject } = deps;
   const detail = payload?._event?.detail || {};
   const lineId = detail.lineId;
+  console.log("[sceneEditorLexical:selected-line-changed]", {
+    event: "received",
+    currentSelectedLineId: store.selectSelectedLineId(),
+    lineId,
+    mode: detail.mode,
+  });
   if (!lineId || lineId === store.selectSelectedLineId()) {
+    console.log("[sceneEditorLexical:selected-line-changed]", {
+      event: "skip",
+      currentSelectedLineId: store.selectSelectedLineId(),
+      lineId,
+      mode: detail.mode,
+    });
     return;
   }
 
   const previousLineId = store.selectSelectedLineId();
   store.setSelectedLineId({ selectedLineId: lineId });
+  console.log("[sceneEditorLexical:selected-line-changed]", {
+    event: "apply",
+    lineId,
+    mode: detail.mode,
+    previousLineId,
+  });
 
   render();
 

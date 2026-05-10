@@ -1478,6 +1478,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   moveBlockSelection(delta = 0) {
     const lines = this.state.lines;
     if (lines.length === 0) {
+      console.log("[lines-editor:arrow-keydown]", {
+        phase: "moveBlockSelection.skipNoLines",
+        delta,
+        selectedLineId: this.state.selectedLineId,
+      });
       return;
     }
 
@@ -1492,9 +1497,26 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     const nextLineId = lines[nextIndex]?.id;
 
     if (!nextLineId) {
+      console.log("[lines-editor:arrow-keydown]", {
+        phase: "moveBlockSelection.skipNoNextLine",
+        currentIndex,
+        delta,
+        lineCount: lines.length,
+        nextIndex,
+        selectedLineId: this.state.selectedLineId,
+      });
       return;
     }
 
+    console.log("[lines-editor:arrow-keydown]", {
+      phase: "moveBlockSelection.apply",
+      currentIndex,
+      delta,
+      lineCount: lines.length,
+      nextIndex,
+      nextLineId,
+      selectedLineId: this.state.selectedLineId,
+    });
     this.state.selectedLineId = nextLineId;
     this.scheduleRender();
     this.scrollLineIntoView({ lineId: nextLineId });
@@ -1814,6 +1836,40 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     return root?.activeElement || document.activeElement;
   }
 
+  logArrowKeyDown(event, phase, data = {}) {
+    if (event?.key !== "ArrowUp" && event?.key !== "ArrowDown") {
+      return;
+    }
+
+    const activeElement = this.getActiveElement();
+    const target = event?.target;
+    console.log("[lines-editor:arrow-keydown]", {
+      phase,
+      key: event.key,
+      code: event.code,
+      defaultPrevented: event.defaultPrevented === true,
+      mode: this.state.mode,
+      selectedLineId: this.state.selectedLineId,
+      lineCount: this.state.lines.length,
+      activeId: activeElement?.id,
+      activeTagName: activeElement?.tagName,
+      activeClassName:
+        typeof activeElement?.className === "string"
+          ? activeElement.className
+          : undefined,
+      targetId: target?.id,
+      targetTagName: target?.tagName,
+      targetClassName:
+        typeof target?.className === "string" ? target.className : undefined,
+      isEditorActiveElement: this.isEditorActiveElement(),
+      isSurfaceActiveElement: activeElement === this.refs.surface,
+      isEditorTarget:
+        target === this.refs.editor || this.refs.editor?.contains?.(target),
+      isSurfaceTarget: target === this.refs.surface,
+      ...data,
+    });
+  }
+
   isEditorActiveElement() {
     const editorElement = this.refs?.editor;
     const activeElement = this.getActiveElement();
@@ -1908,6 +1964,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   handleNativeKeyDown(event) {
     this.hideSelectionPopover();
     const key = String(event.key ?? "").toLowerCase();
+    this.logArrowKeyDown(event, "native.enter");
 
     if (
       (event.ctrlKey || event.metaKey) &&
@@ -1923,6 +1980,9 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     if (this.state?.mode === "block") {
       const didHandleBlockKey = this.handleSurfaceKeyDown(event);
+      this.logArrowKeyDown(event, "native.block.afterSurface", {
+        didHandleBlockKey,
+      });
       if (!didHandleBlockKey) {
         this.suppressBlockModeNativeEditorKey(event);
       }
@@ -2027,6 +2087,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   handleWindowKeyDownCapture(event) {
+    this.logArrowKeyDown(event, "window.capture");
     this.handleBlockModeWindowEnter(event);
   }
 
@@ -3059,13 +3120,16 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   handleSurfaceKeyDown(event) {
     this.hideSelectionPopover();
+    this.logArrowKeyDown(event, "surface.enter");
 
     if (this.state.mode !== "block") {
+      this.logArrowKeyDown(event, "surface.skipNotBlock");
       return false;
     }
 
     const currentLineId = this.state.selectedLineId || this.state.lines[0]?.id;
     if (!currentLineId && this.state.lines.length === 0) {
+      this.logArrowKeyDown(event, "surface.skipNoLines");
       return false;
     }
 
@@ -3101,15 +3165,26 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       }
     }
 
+    this.logArrowKeyDown(event, "surface.resolvedKey", {
+      currentLineId,
+      resolvedKey: key,
+    });
+
     switch (key) {
       case "ArrowUp":
         event.preventDefault();
         event.stopPropagation();
+        this.logArrowKeyDown(event, "surface.moveBlockSelection", {
+          delta: -1,
+        });
         this.moveBlockSelection(-1);
         return true;
       case "ArrowDown":
         event.preventDefault();
         event.stopPropagation();
+        this.logArrowKeyDown(event, "surface.moveBlockSelection", {
+          delta: 1,
+        });
         this.moveBlockSelection(1);
         return true;
       case "Enter":
