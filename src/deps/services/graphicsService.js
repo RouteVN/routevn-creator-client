@@ -341,7 +341,6 @@ const estimateAudioBufferBytes = (audioBuffer) => {
 let managedAudioDecodeContext;
 let managedAudioCache = new Map();
 let managedAudioPendingLoads = new Map();
-let managedAudioDecodeFailures = new Map();
 let managedAudioResetToken = 0;
 
 const createManagedAudioDecodeContext = () => {
@@ -402,22 +401,15 @@ const installManagedAudioAsset = () => {
 
     const decodeContext = getManagedAudioDecodeContext();
     if (!decodeContext) {
-      managedAudioDecodeFailures.set(key, {
-        message: "AudioContext is not available",
-      });
       return undefined;
     }
 
     const decodeSource = cloneBufferForAudioDecode(arrayBuffer);
     if (decodeSource.byteLength === 0) {
-      managedAudioDecodeFailures.set(key, {
-        message: "Audio buffer is empty",
-      });
       return undefined;
     }
 
     const currentResetToken = managedAudioResetToken;
-    managedAudioDecodeFailures.delete(key);
     const nextPendingLoad = decodeContext
       .decodeAudioData(decodeSource)
       .then((audioBuffer) => {
@@ -426,14 +418,9 @@ const installManagedAudioAsset = () => {
         }
 
         managedAudioCache.set(key, audioBuffer);
-        managedAudioDecodeFailures.delete(key);
         return audioBuffer;
       })
       .catch((error) => {
-        managedAudioDecodeFailures.set(key, {
-          name: error?.name,
-          message: error?.message,
-        });
         console.error(`AudioAsset.load: Failed to decode ${key}:`, error);
         return undefined;
       })
@@ -452,7 +439,6 @@ const installManagedAudioAsset = () => {
   const unload = async (key) => {
     managedAudioCache.delete(key);
     managedAudioPendingLoads.delete(key);
-    managedAudioDecodeFailures.delete(key);
 
     if (managedAudioCache.size === 0 && managedAudioPendingLoads.size === 0) {
       await closeManagedAudioDecodeContext();
@@ -463,7 +449,6 @@ const installManagedAudioAsset = () => {
     managedAudioResetToken += 1;
     managedAudioCache = new Map();
     managedAudioPendingLoads = new Map();
-    managedAudioDecodeFailures = new Map();
     await closeManagedAudioDecodeContext();
   };
 
@@ -1264,80 +1249,6 @@ export const createGraphicsService = async ({
     }
   };
 
-  const summarizeAudioElementForDebug = (audioElement, index) => {
-    const summary = {
-      index,
-      id: audioElement?.id,
-      type: audioElement?.type,
-      src: audioElement?.src,
-      volume: audioElement?.volume,
-      muted: audioElement?.muted,
-      loop: audioElement?.loop,
-      startDelayMs: audioElement?.startDelayMs,
-      channelId: audioElement?.channelId,
-    };
-
-    if (Array.isArray(audioElement?.children)) {
-      summary.children = audioElement.children.map((child, childIndex) =>
-        summarizeAudioElementForDebug(child, childIndex),
-      );
-    }
-
-    return summary;
-  };
-
-  const summarizeAudioForDebug = (audioElements = []) => {
-    return audioElements.map((audioElement, index) =>
-      summarizeAudioElementForDebug(audioElement, index),
-    );
-  };
-
-  const collectAudioIdsForDebug = (audioElements = [], ids = []) => {
-    for (const audioElement of audioElements) {
-      if (typeof audioElement?.id === "string" && audioElement.id) {
-        ids.push(audioElement.id);
-      }
-
-      if (Array.isArray(audioElement?.children)) {
-        collectAudioIdsForDebug(audioElement.children, ids);
-      }
-    }
-
-    return ids;
-  };
-
-  const getDuplicateAudioIdsForDebug = (audioElements = []) => {
-    const counts = new Map();
-
-    for (const id of collectAudioIdsForDebug(audioElements)) {
-      counts.set(id, (counts.get(id) ?? 0) + 1);
-    }
-
-    return Array.from(counts.entries())
-      .filter(([, count]) => count > 1)
-      .map(([id]) => id);
-  };
-
-  const getAudioKeyDetailsForDebug = (audioKeys = []) => {
-    const bufferMap = assetBufferManager?.getBufferMap?.() ?? {};
-
-    return audioKeys.map((key) => {
-      const bufferEntry = bufferMap[key];
-      const buffer = bufferEntry?.buffer;
-
-      return {
-        key,
-        assetType: loadedAssetTypes.get(key),
-        hasBuffer: !!bufferEntry,
-        bufferType: bufferEntry?.type,
-        bufferByteLength: buffer?.byteLength,
-        decoded: !!AudioAsset.getAsset?.(key),
-        pendingDecode: managedAudioPendingLoads.has(key),
-        decodeFailure: managedAudioDecodeFailures.get(key),
-      };
-    });
-  };
-
   const renderEngineState = (renderState, options = {}) => {
     const { allowDeferredAudio = true, skipAudio = false } = options;
     let nextRenderState = prepareRenderStateKeyboardForGraphics({
@@ -1345,7 +1256,6 @@ export const createGraphicsService = async ({
       enableGlobalKeyboardBindings,
     });
     const effectiveSkipAudio = skipAudio || isEngineAudioMuted;
-    const requestedAudio = nextRenderState?.audio ?? [];
 
     if (
       effectiveSkipAudio &&
@@ -1386,22 +1296,6 @@ export const createGraphicsService = async ({
       return;
     }
 
-    const renderedAudio = nextRenderState?.audio ?? [];
-    console.log("[graphicsService.audio.render]", {
-      renderId: nextRenderState?.id,
-      allowDeferredAudio,
-      skipAudio,
-      isEngineAudioMuted,
-      effectiveSkipAudio,
-      requestedAudioKeys,
-      retainedAudioKeys,
-      missingAudioKeys,
-      missingAudioKeyDetails: getAudioKeyDetailsForDebug(missingAudioKeys),
-      duplicateRequestedAudioIds: getDuplicateAudioIdsForDebug(requestedAudio),
-      duplicateRenderedAudioIds: getDuplicateAudioIdsForDebug(renderedAudio),
-      requestedAudio: summarizeAudioForDebug(requestedAudio),
-      renderedAudio: summarizeAudioForDebug(renderedAudio),
-    });
     routeGraphics.render(nextRenderState);
     void pruneDecodedAudioCache(retainedAudioKeys);
   };
