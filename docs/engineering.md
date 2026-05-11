@@ -258,20 +258,27 @@ Do not solve schema gaps with UI-only reinterpretation such as:
 - storing one product resource type inside another resource collection
 - renaming a concept only in the UI while keeping a different underlying
   repository type
+- stripping fields before calling `@routevn/creator-model` and merging them
+  back into repository state afterward
+- validating repository command/state fields only in the client when those
+  fields belong to the creator model contract
 - adding projection/export-time translation layers to compensate for missing
   repository support
-- stripping fields before `routevn-creator-model` validation and then
-  reattaching them to client repository state
 - persisting command payload fields that `routevn-creator-model` does not
   accept as first-class schema
 
 Projection is allowed to adapt repository data to downstream runtime contracts,
 but it must not be used to hide missing first-class repository concepts.
 
+Client-side model adapters must not hide missing creator-model support. If a
+repository field belongs in persisted project state or in command payloads, add
+support for it in `../routevn-creator-model` and then consume that model support
+directly from this client. Local compatibility shims for unsupported model
+fields are prohibited unless they are part of an explicitly documented migration
+or compatibility boundary.
+
 Client adapters may normalize or migrate already-supported schema versions, but
-they must not make unsupported new repository fields appear to work. If a new
-field needs to be saved in project data, update `routevn-creator-model` first
-and only then wire the client to write that field.
+they must not make unsupported new repository fields appear to work.
 
 If RouteVN Creator introduces a user-visible resource such as `controls`, the
 expected implementation path is:
