@@ -99,6 +99,7 @@ const BLOCK_ROW_BACKGROUND = "var(--muted)";
 const DELETE_SHORTCUT_TIMEOUT_MS = 1200;
 const TEXT_INPUT_FALLBACK_MAX_AGE_MS = 1000;
 const PROGRAMMATIC_FOCUS_BLUR_SUPPRESS_MS = 750;
+const VERTICAL_NAVIGATION_SELECTION_SYNC_FRAMES = 4;
 
 const normalizeMentionTarget = (target = {}) => {
   const label = String(target.label ?? "")
@@ -824,6 +825,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.pendingPointerFallbackSelection = undefined;
     this.pendingBlockContextMenuSelectedLineId = undefined;
     this.pendingDefaultContextMenuLineId = undefined;
+    this.verticalNavigationSelectionSyncId = 0;
 
     this.editor = createEditor({
       namespace: "routevn-lexical-scene-document-editor",
@@ -2048,25 +2050,39 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
-    requestAnimationFrame(() => {
-      if (!this.isConnected || this.state?.mode !== "text-editor") {
-        return;
-      }
+    const syncNativeSelectionLine = (framesRemaining) => {
+      const syncId = (this.verticalNavigationSelectionSyncId ?? 0) + 1;
+      this.verticalNavigationSelectionSyncId = syncId;
 
-      const nativeSelection = this.getNativeLineSelectionContext();
-      const lineId = nativeSelection?.lineId;
-      if (!lineId || lineId === this.state.selectedLineId) {
-        return;
-      }
+      requestAnimationFrame(() => {
+        if (this.verticalNavigationSelectionSyncId !== syncId) {
+          return;
+        }
 
-      this.state.selectedLineId = lineId;
-      this.scheduleRender();
-      this.dispatchSelectedLineChanged(lineId, {
-        cursorPosition: nativeSelection.start,
-        isCollapsed: nativeSelection.start === nativeSelection.end,
-        mode: "text-editor",
+        if (!this.isConnected || this.state?.mode !== "text-editor") {
+          return;
+        }
+
+        const nativeSelection = this.getNativeLineSelectionContext();
+        const lineId = nativeSelection?.lineId;
+        if (!lineId || lineId === this.state.selectedLineId) {
+          if (framesRemaining > 1) {
+            syncNativeSelectionLine(framesRemaining - 1);
+          }
+          return;
+        }
+
+        this.state.selectedLineId = lineId;
+        this.scheduleRender();
+        this.dispatchSelectedLineChanged(lineId, {
+          cursorPosition: nativeSelection.start,
+          isCollapsed: nativeSelection.start === nativeSelection.end,
+          mode: "text-editor",
+        });
       });
-    });
+    };
+
+    syncNativeSelectionLine(VERTICAL_NAVIGATION_SELECTION_SYNC_FRAMES);
   }
 
   handleWindowKeyDownCapture(event) {
