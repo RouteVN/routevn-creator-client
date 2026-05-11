@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleFormChange,
   handleAudioWaveformClick,
   handleAudioWaveformRightClick,
 } from "../../src/components/commandLineBgm/commandLineBgm.handlers.js";
 import {
   clearBgmAudio,
   createInitialState,
+  selectBgm,
   selectSelectedResource,
   selectTempSelectedResourceId,
   setBgm,
@@ -39,6 +41,8 @@ const sounds = {
 };
 
 const createStoreDeps = (state) => ({
+  selectBgm: () => selectBgm({ state }),
+  setBgm: (payload) => setBgm({ state }, payload),
   selectSelectedResource: () => selectSelectedResource({ state }),
   selectTempSelectedResourceId: () => selectTempSelectedResourceId({ state }),
   setTempSelectedResource: (payload) =>
@@ -48,6 +52,48 @@ const createStoreDeps = (state) => ({
 });
 
 describe("commandLineBgm.handlers", () => {
+  it("updates form values without dropping the BGM start delay", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+
+    setBgm(
+      { state },
+      {
+        bgm: {
+          resourceId: "sound-calm-theme",
+          loop: true,
+          volume: 40,
+          startDelayMs: 250,
+        },
+      },
+    );
+
+    handleFormChange(
+      {
+        store: createStoreDeps(state),
+        render,
+      },
+      {
+        _event: {
+          detail: {
+            values: {
+              loop: false,
+              volume: 70,
+            },
+          },
+        },
+      },
+    );
+
+    expect(selectBgm({ state })).toEqual({
+      resourceId: "sound-calm-theme",
+      loop: false,
+      volume: 70,
+      startDelayMs: 250,
+    });
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+
   it("opens the gallery when the current BGM is clicked", () => {
     const state = createInitialState();
     const render = vi.fn();

@@ -1,6 +1,8 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 
-const normalizeVolume = (volume, fallback = 50) => {
+const DEFAULT_AUDIO_VOLUME = 75;
+
+const normalizeVolume = (volume, fallback = DEFAULT_AUDIO_VOLUME) => {
   const parsedVolume = Number(volume);
   if (!Number.isFinite(parsedVolume)) {
     return fallback;

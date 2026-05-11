@@ -7,7 +7,7 @@ import {
 } from "../../src/components/commandLineBgm/commandLineBgm.store.js";
 
 describe("commandLineBgm.store", () => {
-  it("uses a 0 to 100 volume range with a default of 50", () => {
+  it("uses a 0 to 100 volume range with a default of 75", () => {
     const state = createInitialState();
 
     const viewData = selectViewData({ state });
@@ -20,7 +20,7 @@ describe("commandLineBgm.store", () => {
       max: 100,
       step: 1,
     });
-    expect(viewData.defaultValues.volume).toBe(50);
+    expect(viewData.defaultValues.volume).toBe(75);
   });
 
   it("normalizes legacy 0 to 1000 BGM volume values into the 0 to 100 UI range", () => {

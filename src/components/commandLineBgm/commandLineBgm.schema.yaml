@@ -7,3 +7,9 @@ propsSchema:
       properties:
         resourceId:
           type: string
+        loop:
+          type: boolean
+        volume:
+          type: number
+        startDelayMs:
+          type: number

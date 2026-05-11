@@ -103,6 +103,9 @@ describe("vnPreview.handlers", () => {
       },
       refs: {
         canvas: {},
+        previewSurface: {
+          focus: vi.fn(),
+        },
       },
       props: {},
       store: {
@@ -123,6 +126,9 @@ describe("vnPreview.handlers", () => {
     expect(deps.graphicsService.setEngineAudioMuted).toHaveBeenCalledWith(
       false,
     );
+    expect(deps.refs.previewSurface.focus).toHaveBeenCalledWith({
+      preventScroll: true,
+    });
   });
 
   it("prefetches direct transition targets after preview renders a different scene", async () => {
@@ -212,17 +218,28 @@ describe("vnPreview.handlers", () => {
     );
   });
 
-  it("destroys the preview graphics runtime during unmount cleanup", async () => {
+  it("lets preview gameplay keys pass through and closes only on Escape", async () => {
     const { handleBeforeMount } = await import(
       "../../src/components/vnPreview/vnPreview.handlers.js"
     );
 
+    const listeners = {};
     const removeEventListener = vi.fn();
-    const addEventListener = vi.fn();
+    const addEventListener = vi.fn((eventName, listener) => {
+      listeners[eventName] = listener;
+    });
     vi.stubGlobal("window", {
       addEventListener,
       removeEventListener,
     });
+    vi.stubGlobal(
+      "CustomEvent",
+      class CustomEvent {
+        constructor(type) {
+          this.type = type;
+        }
+      },
+    );
 
     const deps = {
       dispatchEvent: vi.fn(),
@@ -237,16 +254,51 @@ describe("vnPreview.handlers", () => {
     };
 
     const cleanup = handleBeforeMount(deps);
+
+    const enterEvent = {
+      key: "Enter",
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      stopImmediatePropagation: vi.fn(),
+    };
+    listeners.keydown(enterEvent);
+
+    expect(enterEvent.preventDefault).not.toHaveBeenCalled();
+    expect(enterEvent.stopPropagation).not.toHaveBeenCalled();
+    expect(enterEvent.stopImmediatePropagation).not.toHaveBeenCalled();
+    expect(deps.dispatchEvent).not.toHaveBeenCalled();
+
+    const escapeEvent = {
+      key: "Escape",
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      stopImmediatePropagation: vi.fn(),
+    };
+    listeners.keydown(escapeEvent);
+
+    expect(escapeEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(escapeEvent.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(escapeEvent.stopImmediatePropagation).toHaveBeenCalledTimes(1);
+    expect(deps.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "close",
+      }),
+    );
+
     cleanup();
 
     expect(addEventListener).toHaveBeenCalledWith(
       "keydown",
       expect.any(Function),
+      true,
     );
     expect(deps.graphicsService.destroy).toHaveBeenCalledTimes(1);
     expect(removeEventListener).toHaveBeenCalledWith(
       "keydown",
       expect.any(Function),
+      true,
     );
+    expect(addEventListener).toHaveBeenCalledTimes(1);
+    expect(removeEventListener).toHaveBeenCalledTimes(1);
   });
 });

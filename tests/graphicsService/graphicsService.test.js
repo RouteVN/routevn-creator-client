@@ -406,6 +406,60 @@ describe("graphicsService", () => {
     });
   });
 
+  it("decodes buffered audio assets during loadAssets", async () => {
+    const audioBuffer = new ArrayBuffer(8);
+    const decodedAudioKeys = new Set();
+    const bufferManager = {
+      has: vi.fn(() => true),
+      load: vi.fn(async () => {}),
+      getBufferMap: vi.fn(() => ({
+        "sound-1": {
+          buffer: audioBuffer,
+          type: "audio/mpeg",
+        },
+      })),
+      clear: vi.fn(),
+    };
+    createAssetBufferManagerMock.mockReturnValue(bufferManager);
+    audioAssetApi.getAsset = vi.fn((key) =>
+      decodedAudioKeys.has(key) ? { key } : undefined,
+    );
+    audioAssetApi.load = vi.fn(async (key) => {
+      decodedAudioKeys.add(key);
+      return { key };
+    });
+
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+
+    await service.loadAssets({
+      "sound-1": {
+        url: "blob:http://localhost/sound-1",
+        type: "audio/mpeg",
+      },
+    });
+
+    expect(bufferManager.load).not.toHaveBeenCalled();
+    expect(audioAssetApi.load).toHaveBeenCalledWith("sound-1", audioBuffer);
+    expect(routeGraphicsInstance.loadAssets).not.toHaveBeenCalled();
+  });
+
   it("uses actions returned from beforeHandleActions without mutating the original interaction payload", async () => {
     const handleActions = vi.fn();
     createRouteEngineMock.mockReturnValue({

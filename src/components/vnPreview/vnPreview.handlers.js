@@ -19,6 +19,32 @@ import {
   withPreviewEntryPoint,
 } from "./support/vnPreviewProjectData.js";
 
+const focusPreviewSurface = (refs) => {
+  const previewSurface = refs?.previewSurface;
+  if (!previewSurface?.focus) {
+    return;
+  }
+
+  previewSurface.focus({ preventScroll: true });
+  if (typeof requestAnimationFrame !== "function") {
+    return;
+  }
+
+  requestAnimationFrame(() => {
+    if (previewSurface.isConnected === false) {
+      return;
+    }
+
+    previewSurface.focus({ preventScroll: true });
+  });
+};
+
+const suppressPreviewEscapeEvent = (event) => {
+  event.preventDefault?.();
+  event.stopPropagation?.();
+  event.stopImmediatePropagation?.();
+};
+
 const waitForBrowserPaint = async () => {
   if (typeof requestAnimationFrame !== "function") {
     await new Promise((resolve) => setTimeout(resolve, 32));
@@ -407,18 +433,22 @@ const createBeforeHandleActionsHook = (
 export const handleBeforeMount = (deps) => {
   const { dispatchEvent, store, graphicsService } = deps;
   function handleKeyDown(event) {
-    if (event.key === "Escape") {
-      dispatchEvent(new CustomEvent("close"));
+    if (event.key !== "Escape") {
+      return;
     }
+
+    suppressPreviewEscapeEvent(event);
+    dispatchEvent(new CustomEvent("close"));
   }
 
-  window.addEventListener("keydown", handleKeyDown);
+  window.addEventListener("keydown", handleKeyDown, true);
+
   return () => {
     store.setAssetLoading({ isLoading: false });
     store.setPreviewReady({ isPreviewReady: false });
     resetAssetLoadCache(store);
     void graphicsService.destroy?.();
-    window.removeEventListener("keydown", handleKeyDown);
+    window.removeEventListener("keydown", handleKeyDown, true);
   };
 };
 
@@ -431,6 +461,8 @@ export const handleAfterMount = async (deps) => {
     props: attrs,
     store,
   } = deps;
+  focusPreviewSurface(refs);
+
   const repository = await projectService.ensureRepository();
   const { canvas } = refs;
   graphicsService.setEngineAudioMuted?.(false);

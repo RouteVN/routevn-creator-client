@@ -534,34 +534,36 @@ export const createGraphicsService = async ({
     return value?.replace(/^["']|["']$/g, "");
   };
 
+  const getAudioAssetLoadPromise = (key, bufferEntry) => {
+    if (!bufferEntry || AudioAsset.getAsset?.(key)) {
+      return undefined;
+    }
+
+    return (
+      managedAudioPendingLoads.get(key) ??
+      AudioAsset.load(key, bufferEntry.buffer)
+    );
+  };
+
+  const decodeAudioAssetEntries = async (audioEntries = []) => {
+    const loadPromises = audioEntries
+      .map(([key, bufferEntry]) => getAudioAssetLoadPromise(key, bufferEntry))
+      .filter(Boolean);
+
+    if (loadPromises.length === 0) {
+      return;
+    }
+
+    await Promise.all(loadPromises);
+  };
+
   const ensureAudioAssetsLoaded = async (assetKeys = []) => {
     const uniqueAudioKeys = Array.from(
       new Set(assetKeys.filter((key) => typeof key === "string" && key)),
     );
-
-    if (uniqueAudioKeys.length === 0) {
-      return;
-    }
-
     const bufferMap = assetBufferManager?.getBufferMap?.() ?? {};
-    const keysToDecode = uniqueAudioKeys.filter((key) => {
-      if (!bufferMap[key]) {
-        return false;
-      }
-
-      if (managedAudioPendingLoads.has(key)) {
-        return false;
-      }
-
-      return !AudioAsset.getAsset?.(key);
-    });
-
-    if (keysToDecode.length === 0) {
-      return;
-    }
-
-    await Promise.all(
-      keysToDecode.map((key) => AudioAsset.load(key, bufferMap[key].buffer)),
+    await decodeAudioAssetEntries(
+      uniqueAudioKeys.map((key) => [key, bufferMap[key]]),
     );
   };
 
@@ -583,14 +585,23 @@ export const createGraphicsService = async ({
     }
   };
 
+  const collectAudioKeys = (audioElements = [], keys = []) => {
+    for (const audioElement of audioElements) {
+      const key = audioElement?.src;
+      if (typeof key === "string" && key) {
+        keys.push(key);
+      }
+
+      if (Array.isArray(audioElement?.children)) {
+        collectAudioKeys(audioElement.children, keys);
+      }
+    }
+
+    return keys;
+  };
+
   const getRenderStateAudioKeys = (renderState) => {
-    return Array.from(
-      new Set(
-        (renderState?.audio ?? [])
-          .map((audioElement) => audioElement?.src)
-          .filter((key) => typeof key === "string" && key),
-      ),
-    );
+    return Array.from(new Set(collectAudioKeys(renderState?.audio ?? [])));
   };
 
   const getMissingDecodedAudioKeys = (assetKeys = []) => {
@@ -765,7 +776,7 @@ export const createGraphicsService = async ({
     }
 
     if (assetType === "audio") {
-      return assetBufferManager?.has?.(key) === true;
+      return !!AudioAsset.getAsset?.(key);
     }
 
     return false;
@@ -1063,7 +1074,7 @@ export const createGraphicsService = async ({
         normalizeGraphicsAssetForLoad(asset, { projectMediaOrigin }),
       ],
     );
-    const newAssetEntries = normalizedAssetEntries.filter(([key, asset]) => {
+    const assetEntriesToLoad = normalizedAssetEntries.filter(([key, asset]) => {
       if (isDataUrl(asset?.url)) {
         return !hasLoadedAsset(key);
       }
@@ -1071,15 +1082,18 @@ export const createGraphicsService = async ({
       return !activeBufferManager.has(key) || !hasLoadedAsset(key);
     });
 
-    if (newAssetEntries.length === 0) {
+    if (assetEntriesToLoad.length === 0) {
       return;
     }
 
-    const dataUrlAssetEntries = newAssetEntries.filter(([, asset]) =>
+    const dataUrlAssetEntries = assetEntriesToLoad.filter(([, asset]) =>
       isDataUrl(asset?.url),
     );
-    const bufferedAssetEntries = newAssetEntries.filter(
+    const bufferedAssetEntries = assetEntriesToLoad.filter(
       ([, asset]) => !isDataUrl(asset?.url),
+    );
+    const bufferedAssetEntriesToFetch = bufferedAssetEntries.filter(
+      ([key]) => !activeBufferManager.has(key),
     );
 
     const directBufferMap = Object.fromEntries(
@@ -1091,13 +1105,13 @@ export const createGraphicsService = async ({
         },
       ]),
     );
-    const bufferedAssets = Object.fromEntries(bufferedAssetEntries);
-    const blobUrlsToRevoke = bufferedAssetEntries
+    const bufferedAssets = Object.fromEntries(bufferedAssetEntriesToFetch);
+    const blobUrlsToRevoke = bufferedAssetEntriesToFetch
       .map(([, asset]) => asset?.url)
       .filter(isBlobUrl);
 
     try {
-      if (bufferedAssetEntries.length > 0) {
+      if (bufferedAssetEntriesToFetch.length > 0) {
         await loadBuffersWithRetry(activeBufferManager, bufferedAssets);
       }
     } finally {
@@ -1128,6 +1142,20 @@ export const createGraphicsService = async ({
       return;
     }
 
+    const audioAssetEntries = Object.entries(deltaBufferMap).filter(
+      ([, value]) => classifyAsset(value?.type) === "audio",
+    );
+    if (audioAssetEntries.length > 0) {
+      await decodeAudioAssetEntries(audioAssetEntries);
+
+      if (
+        runtimeVersion !== assetLoadRuntimeVersion ||
+        assetBufferManager !== activeBufferManager
+      ) {
+        return;
+      }
+    }
+
     const renderAssetEntries = Object.entries(deltaBufferMap).filter(
       ([, value]) => classifyAsset(value?.type) !== "audio",
     );
@@ -1148,7 +1176,7 @@ export const createGraphicsService = async ({
       }
     }
 
-    newAssetEntries.forEach(([key, asset]) => {
+    assetEntriesToLoad.forEach(([key, asset]) => {
       loadedAssetTypes.set(key, classifyAsset(asset?.type));
     });
   };
