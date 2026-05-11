@@ -76,10 +76,12 @@ export const handleFormExtra = (deps, _payload) => {
 export const handleFormChange = (deps, payload) => {
   const { render, store } = deps;
   const { _event: event } = payload;
+  const currentBgm = store.selectBgm();
   store.setBgm({
     bgm: {
-      resourceId: store.selectBgm().resourceId,
+      ...currentBgm,
       ...event.detail.values,
+      resourceId: currentBgm.resourceId,
     },
   });
   render();

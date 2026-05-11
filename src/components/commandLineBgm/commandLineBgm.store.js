@@ -1,6 +1,8 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 
-const normalizeVolume = (volume, fallback = 50) => {
+const DEFAULT_AUDIO_VOLUME = 75;
+
+const normalizeVolume = (volume, fallback = DEFAULT_AUDIO_VOLUME) => {
   const parsedVolume = Number(volume);
   if (!Number.isFinite(parsedVolume)) {
     return fallback;
@@ -14,7 +16,7 @@ const normalizeBgm = (bgm = {}) => ({
   resourceId: bgm?.resourceId,
   loop: bgm?.loop ?? true,
   volume: normalizeVolume(bgm?.volume),
-  delay: bgm?.delay,
+  startDelayMs: bgm?.startDelayMs,
 });
 
 const form = {
@@ -210,7 +212,7 @@ export const selectViewData = ({ state }) => {
   const defaultValues = {
     loop: state.bgm?.loop ?? true,
     volume: normalizeVolume(state.bgm?.volume),
-    delay: state.bgm?.delay,
+    startDelayMs: state.bgm?.startDelayMs,
     audioWaveformDataFileId: selectedResource?.item?.waveformDataFileId || "",
   };
 
