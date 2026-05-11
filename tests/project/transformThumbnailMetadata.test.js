@@ -191,7 +191,7 @@ describe("transform preview metadata", () => {
 
     expect(result.valid).toBe(false);
     expect(result.error.message).toBe(
-      "transform.thumbnailFileId must reference an existing non-folder file",
+      "payload.data.thumbnailFileId must reference an existing non-folder file",
     );
   });
 
@@ -222,7 +222,7 @@ describe("transform preview metadata", () => {
 
     expect(result.valid).toBe(false);
     expect(result.error.message).toBe(
-      "transform.previewFileId must reference an existing non-folder file",
+      "payload.data.previewFileId must reference an existing non-folder file",
     );
   });
 
@@ -257,7 +257,7 @@ describe("transform preview metadata", () => {
 
     expect(result.valid).toBe(false);
     expect(result.error.message).toBe(
-      "transform.preview.background.imageId must reference an existing image",
+      "payload.data.preview.background.imageId must reference an existing non-folder image",
     );
   });
 });
