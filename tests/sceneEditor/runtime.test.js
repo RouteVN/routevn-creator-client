@@ -426,8 +426,10 @@ describe("renderSceneEditorState", () => {
         render,
         graphicsService,
         refs: {
-          canvas: {
-            isConnected: true,
+          previewCanvasHost: {
+            getCanvasRoot: () => ({
+              isConnected: true,
+            }),
           },
         },
       },
