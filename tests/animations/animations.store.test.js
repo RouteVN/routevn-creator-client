@@ -2,12 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   createInitialState,
   selectViewData,
+  setAnimationPreviewVisible,
   setItems,
   setSelectedItemId,
 } from "../../src/pages/animations/animations.store.js";
 
 describe("animations.store", () => {
-  it("exposes the selected animation thumbnail for the detail panel", () => {
+  it("exposes the selected animation preview metadata for the detail panel", () => {
     const state = createInitialState();
     setItems(
       { state },
@@ -37,6 +38,17 @@ describe("animations.store", () => {
 
     const viewData = selectViewData({ state });
 
-    expect(viewData.selectedAnimationPreviewFileId).toBe("file-preview");
+    expect(viewData).not.toHaveProperty("selectedAnimationPreviewFileId");
+    expect(viewData.selectedAnimationPreviewAspectRatio).toBe("1920 / 1080");
+    expect(viewData.animationPreviewOpacity).toBe(0);
+
+    setAnimationPreviewVisible(
+      { state },
+      {
+        visible: true,
+      },
+    );
+
+    expect(selectViewData({ state }).animationPreviewOpacity).toBe(1);
   });
 });

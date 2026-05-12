@@ -954,6 +954,7 @@ export const createInitialState = () => ({
   previewPlaybackFrameId: undefined,
   previewPlaybackStartedAtMs: undefined,
   previewPlaybackDurationMs: undefined,
+  previewPlaybackRequestId: undefined,
   previewImages: createInitialPreviewImages(),
   popover: {
     mode: "none",
@@ -2057,6 +2058,10 @@ export const startPreviewPlayback = (
   state.previewPlaybackFrameId = undefined;
 };
 
+export const setPreviewPlaybackRequestId = ({ state }, { requestId } = {}) => {
+  state.previewPlaybackRequestId = requestId;
+};
+
 export const setPreviewPlayhead = ({ state }, { timeMs, visible } = {}) => {
   state.previewPlayheadTimeMs = timeMs;
   state.previewPlayheadVisible = visible ?? state.previewPlayheadVisible;
@@ -2092,6 +2097,10 @@ export const selectPreviewPlaybackStartedAtMs = ({ state }) => {
 
 export const selectPreviewPlaybackDurationMs = ({ state }) => {
   return state.previewPlaybackDurationMs;
+};
+
+export const selectPreviewPlaybackRequestId = ({ state }) => {
+  return state.previewPlaybackRequestId;
 };
 
 const buildTransitionMaskPanelDataForMask = (
