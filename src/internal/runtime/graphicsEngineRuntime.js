@@ -22,6 +22,7 @@ export const loadGraphicsEnginePlugins = async () => {
     : undefined;
   const {
     containerPlugin,
+    inputPlugin,
     rectPlugin,
     sliderPlugin,
     soundPlugin,
@@ -35,6 +36,7 @@ export const loadGraphicsEnginePlugins = async () => {
   return {
     elements: [
       textPlugin,
+      inputPlugin,
       rectPlugin,
       spritePlugin,
       sliderPlugin,

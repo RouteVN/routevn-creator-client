@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { handleDialogueFormChange } from "../../src/components/layoutEditorPreview/layoutEditorPreview.handlers.js";
+import {
+  handleDialogueFormChange,
+  handleInputFieldsFormChange,
+} from "../../src/components/layoutEditorPreview/layoutEditorPreview.handlers.js";
 import {
   createInitialState,
   setLayoutState,
@@ -61,6 +64,9 @@ const createDeps = () => {
         selectRepositoryState: () => state.repositoryState,
         setDialogueDefaultValue: ({ name, fieldValue }) => {
           state.dialogueDefaultValues[name] = fieldValue;
+        },
+        setPreviewInputFieldValue: ({ name, fieldValue }) => {
+          state.previewInputFieldValues[name] = fieldValue;
         },
         selectPreviewData: () => ({}),
       },
@@ -149,5 +155,17 @@ describe("layoutEditorPreview.handlers", () => {
       "dialogue-character-name": "Aki",
       "dialogue-custom-character-name": false,
     });
+  });
+
+  it("writes input field preview edits into preview state", () => {
+    const { state, deps } = createDeps();
+
+    handleInputFieldsFormChange(deps, createPayload("name", "Ada"));
+
+    expect(state.previewInputFieldValues).toEqual({
+      name: "Ada",
+    });
+    expect(deps.render).toHaveBeenCalled();
+    expect(deps.dispatchEvent).toHaveBeenCalledWith(expect.any(CustomEvent));
   });
 });

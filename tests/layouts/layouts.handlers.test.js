@@ -28,6 +28,15 @@ describe("createLayoutTemplate", () => {
     expect(Object.keys(template.items).length).toBeGreaterThan(0);
   });
 
+  it("creates an empty input layout template", () => {
+    const template = createLayoutTemplate("input", projectResolution);
+
+    expect(template).toEqual({
+      items: {},
+      tree: [],
+    });
+  });
+
   it("creates a confirm dialog layout template without throwing", () => {
     const template = createLayoutTemplate("confirmDialog", projectResolution);
 

@@ -25,6 +25,12 @@ describe("layoutEditor preview persistence", () => {
       variables: {
         score: 7,
       },
+      form: {
+        values: {
+          name: "Ada",
+          code: "B42",
+        },
+      },
       runtime: {
         dialogueTextSpeed: 25,
         autoMode: true,
@@ -92,6 +98,10 @@ describe("layoutEditor preview persistence", () => {
     });
     expect(state.previewVariableValues).toMatchObject({
       "variables.score": 7,
+    });
+    expect(state.previewInputFieldValues).toEqual({
+      name: "Ada",
+      code: "B42",
     });
     expect(selectPreviewData({ state })).toMatchObject({
       backgroundImageId: "image-preview",

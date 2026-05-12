@@ -279,6 +279,7 @@ describe("commandLineActions.store", () => {
     expect(getSectionModes(items, "Navigation")).toEqual(
       expect.arrayContaining([
         "choice",
+        "input",
         "setNextLineConfig",
         "sectionTransition",
         "resetStoryAtSection",

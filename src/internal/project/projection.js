@@ -1277,7 +1277,7 @@ const collectActionPresentationData = (actions = {}) => {
     }
 
     if (
-      (key === "background" || key === "control") &&
+      (key === "background" || key === "control" || key === "form") &&
       typeof value.resourceId === "string" &&
       value.resourceId.length > 0
     ) {

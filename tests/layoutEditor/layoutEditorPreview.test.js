@@ -120,6 +120,43 @@ describe("layoutEditorPreview", () => {
     });
   });
 
+  it("builds form preview values from input layout fields", () => {
+    const previewData = createLayoutEditorPreviewData({
+      layoutType: "input",
+      currentLayoutId: "layout-input",
+      currentLayoutData: {
+        items: {
+          "name-input": {
+            id: "name-input",
+            type: "input",
+            field: "name",
+            value: "Ada",
+          },
+          "code-input": {
+            id: "code-input",
+            type: "input",
+            field: "code",
+            value: "B42",
+          },
+        },
+        tree: [{ id: "name-input" }, { id: "code-input" }],
+      },
+      layoutsData: {
+        items: {},
+        tree: [],
+      },
+      previewInputFieldValues: {
+        name: "Mina",
+      },
+    });
+
+    expect(previewData.form.values).toEqual({
+      name: "Mina",
+      code: "B42",
+    });
+    expect(previewData).not.toHaveProperty("runtime");
+  });
+
   it("renders save/load layout elements before preview data is initialized", () => {
     const rendered = createLayoutEditorRenderedElements({
       layoutState: {
@@ -159,6 +196,59 @@ describe("layoutEditorPreview", () => {
 
     expect(rendered.elements).toEqual([]);
     expect(rendered.fileReferences).toEqual([]);
+  });
+
+  it("applies form preview values to input elements on the canvas", () => {
+    const rendered = createLayoutEditorRenderedElements({
+      layoutState: {
+        id: "layout-input",
+        layoutType: "input",
+        elements: {
+          items: {
+            "name-input": {
+              id: "name-input",
+              type: "input",
+              name: "Name Input",
+              field: "name",
+              x: 0,
+              y: 0,
+              width: 200,
+              height: 40,
+              anchorX: 0,
+              anchorY: 0,
+              scaleX: 1,
+              scaleY: 1,
+              rotation: 0,
+              value: "Ada",
+            },
+          },
+          tree: [{ id: "name-input", children: [] }],
+        },
+      },
+      repositoryState: {
+        layouts: { items: {} },
+        images: { items: {} },
+        textStyles: { items: {} },
+        colors: { items: {} },
+        fonts: { items: {} },
+      },
+      previewData: {
+        form: {
+          values: {
+            name: "Mina",
+          },
+        },
+      },
+      graphicsService: {
+        parse: ({ elements }) => ({ elements }),
+      },
+    });
+
+    expect(rendered.elements[0]).toMatchObject({
+      type: "input",
+      field: "name",
+      value: "Mina",
+    });
   });
 
   it("renders history preview lines from characterName/text items", () => {

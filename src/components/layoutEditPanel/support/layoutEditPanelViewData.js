@@ -187,6 +187,7 @@ export const toInspectorValues = ({
     direction,
     gapX: values?.gapX ?? 0,
     gapY: values?.gapY ?? 0,
+    field: values?.field ?? "",
     sliderRuntimeValueId,
     sliderManualInitialValue,
     particleId: values?.particleId ?? "",

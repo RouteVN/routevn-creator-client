@@ -82,6 +82,14 @@ const CREATE_TEMPLATES = {
       align: "left",
     },
   }),
+  input: () => ({
+    type: "input",
+    name: "Input",
+    ...BASE_TRANSFORM,
+    field: "field",
+    width: 330,
+    height: 52,
+  }),
   slider: () => ({
     type: "slider",
     name: "Slider",
@@ -469,6 +477,7 @@ const TYPE_FAMILIES = {
   "text-ref-dialogue-line-content": "text",
   "text-ref-history-line-character-name": "text",
   "text-ref-history-line-content": "text",
+  input: "input",
   slider: "slider",
   rect: "rect",
 };
@@ -482,6 +491,7 @@ const DEFAULT_CAPABILITIES = {
   supportsChildInteractionInheritance: false,
   supportsTextEditing: false,
   supportsTextRevealEffect: false,
+  supportsInputField: false,
   supportsTextStyles: false,
   supportsSoundSelection: false,
   supportsTextAlignment: false,
@@ -528,6 +538,13 @@ const FAMILY_CAPABILITIES = {
     supportsTextStyles: true,
     supportsSoundSelection: true,
     supportsTextAlignment: true,
+  },
+  input: {
+    supportsAnchor: true,
+    supportsInputField: true,
+    supportsTextStyles: true,
+    supportsTextAlignment: true,
+    supportsActions: true,
   },
   slider: {
     supportsSliderImages: true,
@@ -608,6 +625,18 @@ const TYPE_RULES = {
     },
   },
   text: {},
+  input: {
+    normalizeFieldValue: ({ name, value }) => {
+      if (
+        (name === "field" || name === "textStyleId") &&
+        (value === null || value === "")
+      ) {
+        return undefined;
+      }
+
+      return value;
+    },
+  },
   slider: {
     normalizeFieldValue: ({ name, value }) => {
       if (name === "direction" && (value === null || value === "")) {
@@ -698,6 +727,7 @@ const PANEL_FEATURES_BY_TYPE = {
     "textStyles",
   ],
   "text-ref-history-line-content": [...DEFAULT_PANEL_FEATURES, "textStyles"],
+  input: [...DEFAULT_PANEL_FEATURES, "input", "textStyles", "actions"],
   slider: [...DEFAULT_PANEL_FEATURES, "slider", "actions"],
   rect: [...DEFAULT_PANEL_FEATURES, "actions"],
   "fragment-ref": [...DEFAULT_PANEL_FEATURES, "fragmentRef"],
@@ -779,6 +809,7 @@ const IMMEDIATE_PERSIST_FIELDS_BY_TYPE = {
     ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
     "conditionalOverrides",
   ],
+  input: [...DEFAULT_IMMEDIATE_PERSIST_FIELDS, "conditionalOverrides"],
   "container-ref-save-load-slot": [
     ...DEFAULT_IMMEDIATE_PERSIST_FIELDS,
     "paginationMode",

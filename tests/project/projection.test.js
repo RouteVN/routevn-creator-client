@@ -176,6 +176,234 @@ describe("constructProjectData", () => {
     expect(presentation.isDeadEnd).toBe(false);
   });
 
+  it("counts form layout interaction targets when determining section presentation", () => {
+    const presentation = getSectionPresentation({
+      section: {
+        id: "section-1",
+        lines: createTreeCollection(
+          {
+            "line-1": {
+              id: "line-1",
+              actions: {
+                form: {
+                  resourceId: "layout-input",
+                  fields: {
+                    name: {
+                      variableId: "playerName",
+                    },
+                  },
+                  submitActions: {
+                    nextLine: {},
+                  },
+                },
+              },
+            },
+          },
+          [{ id: "line-1" }],
+        ),
+      },
+      initialSectionId: "section-1",
+      layouts: createTreeCollection(
+        {
+          "layout-input": {
+            id: "layout-input",
+            type: "layout",
+            layoutType: "input",
+            elements: {
+              items: {
+                submitButton: {
+                  id: "submitButton",
+                  type: "button",
+                  click: {
+                    payload: {
+                      actions: {
+                        sectionTransition: {
+                          sectionId: "section-2",
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              tree: [{ id: "submitButton" }],
+            },
+          },
+        },
+        [{ id: "layout-input" }],
+      ),
+      controls: createTreeCollection(),
+      menuSceneId: "menu-scene",
+    });
+
+    expect(presentation.outgoingCount).toBe(1);
+    expect(presentation.isDeadEnd).toBe(false);
+  });
+
+  it("projects input layouts so route-engine can bind form fields", () => {
+    const projectData = constructProjectData(
+      createExportRepositoryState({
+        story: {
+          initialSceneId: "scene-1",
+        },
+        variables: createTreeCollection(
+          {
+            playerName: {
+              id: "playerName",
+              type: "variable",
+              variableType: "string",
+              scope: "context",
+              default: "",
+            },
+          },
+          [{ id: "playerName" }],
+        ),
+        layouts: createTreeCollection(
+          {
+            "profile-form": {
+              id: "profile-form",
+              type: "layout",
+              name: "Profile Form",
+              layoutType: "input",
+              elements: createTreeCollection(
+                {
+                  "name-input": {
+                    id: "name-input",
+                    type: "input",
+                    name: "Name Input",
+                    field: "name",
+                    x: 510,
+                    y: 230,
+                    width: 330,
+                    height: 52,
+                    textStyleId: "inputText",
+                  },
+                },
+                [{ id: "name-input" }],
+              ),
+            },
+          },
+          [{ id: "profile-form" }],
+        ),
+        textStyles: createTreeCollection(
+          {
+            inputText: {
+              id: "inputText",
+              type: "textStyle",
+              name: "Input Text",
+              fontId: "font-1",
+              colorId: "color-1",
+            },
+          },
+          [{ id: "inputText" }],
+        ),
+        fonts: createTreeCollection(
+          {
+            "font-1": {
+              id: "font-1",
+              type: "font",
+              fileId: "font-file-1",
+            },
+          },
+          [{ id: "font-1" }],
+        ),
+        colors: createTreeCollection(
+          {
+            "color-1": {
+              id: "color-1",
+              type: "color",
+              hex: "#ffffff",
+            },
+          },
+          [{ id: "color-1" }],
+        ),
+        scenes: createTreeCollection(
+          {
+            "scene-1": {
+              id: "scene-1",
+              type: "scene",
+              name: "Scene 1",
+              sections: createTreeCollection(
+                {
+                  "section-1": {
+                    id: "section-1",
+                    name: "Section 1",
+                    lines: createTreeCollection(
+                      {
+                        "line-1": {
+                          id: "line-1",
+                          actions: {
+                            form: {
+                              resourceId: "profile-form",
+                              fields: {
+                                name: {
+                                  variableId: "playerName",
+                                  required: true,
+                                  trim: true,
+                                  placeholder: "Name",
+                                },
+                              },
+                              submitActions: {
+                                nextLine: {},
+                              },
+                            },
+                          },
+                        },
+                      },
+                      [{ id: "line-1" }],
+                    ),
+                  },
+                },
+                [{ id: "section-1" }],
+              ),
+            },
+          },
+          [{ id: "scene-1" }],
+        ),
+      }),
+    );
+
+    expect(
+      projectData.resources.layouts["profile-form"].elements[0],
+    ).toMatchObject({
+      type: "input",
+      field: "name",
+      textStyleId: "inputText",
+    });
+
+    const renderState = selectRouteEngineRenderState(projectData);
+    const input = findRenderElementById(renderState.elements, "name-input");
+
+    expect(input).toMatchObject({
+      type: "input",
+      field: "name",
+      placeholder: "Name",
+      change: {
+        payload: {
+          _interactionSource: "form",
+          actions: {
+            updateFormField: {
+              field: "name",
+              value: "_event.value",
+              _interactionSource: "form",
+            },
+          },
+        },
+      },
+      submit: {
+        payload: {
+          _interactionSource: "form",
+          actions: {
+            submitForm: {
+              actions: {
+                nextLine: {},
+              },
+            },
+          },
+        },
+      },
+    });
+  });
+
   it("aligns dialogue mode to nvl when the selected ui layout is dialogue-nvl", () => {
     const projectData = constructProjectData({
       project: {

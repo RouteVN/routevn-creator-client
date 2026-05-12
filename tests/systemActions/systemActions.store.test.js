@@ -213,6 +213,109 @@ describe("systemActions.store", () => {
     });
   });
 
+  it("preserves and previews input form actions", () => {
+    const state = createInitialState();
+    const inputElements = {
+      items: {
+        nameInput: {
+          id: "nameInput",
+          type: "input",
+          field: "name",
+        },
+      },
+      tree: [{ id: "nameInput" }],
+    };
+
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          layouts: {
+            items: {
+              "profile-form-layout": {
+                id: "profile-form-layout",
+                type: "layout",
+                name: "Profile Form",
+                layoutType: "input",
+                elements: inputElements,
+              },
+            },
+            tree: [{ id: "profile-form-layout" }],
+          },
+          variables: {
+            items: {
+              playerName: {
+                id: "playerName",
+                type: "variable",
+                name: "Player Name",
+                variableType: "string",
+              },
+            },
+            tree: [{ id: "playerName" }],
+          },
+        },
+      },
+    );
+
+    const form = {
+      resourceId: "profile-form-layout",
+      fields: {
+        name: {
+          variableId: "playerName",
+          required: true,
+          trim: true,
+          placeholder: "Name",
+        },
+      },
+      submitActions: {
+        nextLine: {},
+      },
+    };
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          form,
+        },
+      },
+    });
+    const viewData = selectViewData({
+      state,
+      props: {
+        actions: {
+          form,
+        },
+      },
+    });
+
+    expect(actions.form).toEqual(form);
+    expect(preview.form).toEqual({
+      layout: expect.objectContaining({
+        id: "profile-form-layout",
+        name: "Profile Form",
+      }),
+      layoutName: "Profile Form",
+      fields: [
+        {
+          field: "name",
+          variableId: "playerName",
+          variableName: "Player Name",
+        },
+      ],
+      fieldCount: 1,
+      submitActionCount: 1,
+    });
+    expect(viewData.inputLayouts).toEqual([
+      {
+        id: "profile-form-layout",
+        name: "Profile Form",
+        layoutType: "input",
+        elements: inputElements,
+      },
+    ]);
+  });
+
   it("includes custom character name and persist character labels in dialogue preview when a character is selected", () => {
     const state = createInitialState();
 

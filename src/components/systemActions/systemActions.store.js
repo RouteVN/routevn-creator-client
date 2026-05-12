@@ -108,6 +108,15 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       layoutType: layout.layoutType,
     }));
 
+  const inputLayouts = Object.entries(repositoryState.layouts?.items || {})
+    .filter(([_, layout]) => layout.layoutType === "input")
+    .map(([id, layout]) => ({
+      id,
+      name: layout.name,
+      layoutType: layout.layoutType,
+      elements: layout.elements,
+    }));
+
   const controlLayouts = Object.entries(repositoryState.controls?.items || {})
     .filter(([_, control]) => control.type === "control")
     .map(([id, control]) => ({
@@ -157,6 +166,7 @@ export const selectViewData = ({ state, props, props: attrs }) => {
     selectedLineId: props.selectedLineId,
     layouts: choiceLayouts, // Default to choice layouts for backward compatibility
     choiceLayouts,
+    inputLayouts,
     controlLayouts,
     dialogueLayouts,
     confirmDialogLayouts,
@@ -672,6 +682,38 @@ export const selectActionsData = ({ props, state }) => {
             content: truncatePreviewText(item.content),
           }))
         : [],
+    };
+  }
+
+  if (actions.form) {
+    actionsObject.form = actions.form;
+    const variableItems = repositoryStateData.variables?.items || {};
+    const fields =
+      actions.form.fields &&
+      typeof actions.form.fields === "object" &&
+      !Array.isArray(actions.form.fields)
+        ? actions.form.fields
+        : {};
+    const fieldItems = Object.entries(fields).map(([fieldId, field]) => {
+      const variableId = field?.variableId;
+      const variable = variableItems[variableId];
+
+      return {
+        field: fieldId,
+        variableId,
+        variableName: variable?.name ?? variableId ?? "No variable",
+      };
+    });
+
+    preview.form = {
+      layout: layoutsItems[actions.form.resourceId],
+      layoutName:
+        layoutsItems[actions.form.resourceId]?.name ??
+        actions.form.resourceId ??
+        "No layout",
+      fields: fieldItems,
+      fieldCount: fieldItems.length,
+      submitActionCount: countActions(actions.form.submitActions),
     };
   }
 
