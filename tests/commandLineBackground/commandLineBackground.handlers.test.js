@@ -82,7 +82,19 @@ const setRepositoryCollections = (state) => {
       },
       layouts: createEmptyCollection(),
       videos: createEmptyCollection(),
-      animations: createEmptyCollection(),
+      animations: {
+        items: {
+          "bg-fade": {
+            id: "bg-fade",
+            type: "animation",
+            name: "Fade",
+            animation: {
+              type: "transition",
+            },
+          },
+        },
+        tree: [{ id: "bg-fade" }],
+      },
       transforms: {
         items: {
           "bg-center": {
@@ -248,6 +260,136 @@ describe("commandLineBackground.handlers", () => {
         },
       },
     });
+  });
+
+  it("selects animation from the single animation field", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+
+    setRepositoryCollections(state);
+    setSelectedResource(
+      { state },
+      {
+        resourceId: "bg-school",
+        resourceType: "image",
+      },
+    );
+
+    handleFormInputChange(
+      {
+        store: createStoreApi(state),
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            name: "animationId",
+            value: "bg-fade",
+          },
+        },
+      },
+    );
+
+    handleSubmitClick(
+      {
+        dispatchEvent,
+        store: createStoreApi(state),
+      },
+      {},
+    );
+
+    expect(selectSelectedAnimation({ state })).toBe("bg-fade");
+    expect(selectSelectedAnimationMode({ state })).toBe("transition");
+    expect(dispatchEvent).toHaveBeenCalledTimes(2);
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        background: {
+          resourceId: "bg-school",
+          animations: {
+            resourceId: "bg-fade",
+            playback: {
+              continuity: "render",
+            },
+          },
+        },
+      },
+    });
+    expect(dispatchEvent.mock.calls[1][0].detail).toEqual({
+      background: {
+        resourceId: "bg-school",
+        animations: {
+          resourceId: "bg-fade",
+          playback: {
+            continuity: "render",
+          },
+        },
+      },
+    });
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears animation from the clearable animation field", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+
+    setRepositoryCollections(state);
+    setSelectedResource(
+      { state },
+      {
+        resourceId: "bg-school",
+        resourceType: "image",
+      },
+    );
+    setSelectedAnimation(
+      { state },
+      {
+        animationId: "bg-fade",
+      },
+    );
+
+    handleFormInputChange(
+      {
+        store: createStoreApi(state),
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            name: "animationId",
+            value: undefined,
+          },
+        },
+      },
+    );
+
+    handleSubmitClick(
+      {
+        dispatchEvent,
+        store: createStoreApi(state),
+      },
+      {},
+    );
+
+    expect(selectSelectedAnimation({ state })).toBeUndefined();
+    expect(selectSelectedAnimationMode({ state })).toBe("none");
+    expect(dispatchEvent).toHaveBeenCalledTimes(2);
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        background: {
+          resourceId: "bg-school",
+        },
+      },
+    });
+    expect(dispatchEvent.mock.calls[1][0].detail).toEqual({
+      background: {
+        resourceId: "bg-school",
+      },
+    });
+    expect(render).toHaveBeenCalledTimes(1);
   });
 
   it("emits temporary presentation state from gallery resource selection", () => {

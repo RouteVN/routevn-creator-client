@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   createInitialState,
   selectViewData,
+  setAnimations,
   setExistingCharacters,
   setItems,
   setMode,
   setSelectedCharacterIndex,
   setSelectedSpriteGroupId,
+  setTransforms,
 } from "../../src/components/commandLineCharacters/commandLineCharacters.store.js";
 
 const createSpriteSelectState = () => {
@@ -93,6 +95,100 @@ const createSpriteSelectState = () => {
 };
 
 describe("commandLineCharacters.store sprite group filtering", () => {
+  it("exposes a single clearable animation option list with type suffix text", () => {
+    const state = createInitialState();
+
+    setItems(
+      { state },
+      {
+        items: {
+          items: {
+            "character-hero": {
+              id: "character-hero",
+              type: "character",
+              name: "Hero",
+            },
+          },
+          tree: [{ id: "character-hero" }],
+        },
+      },
+    );
+    setTransforms(
+      { state },
+      {
+        transforms: {
+          items: {
+            "character-center": {
+              id: "character-center",
+              type: "transform",
+              name: "Center",
+            },
+          },
+          tree: [{ id: "character-center" }],
+        },
+      },
+    );
+    setAnimations(
+      { state },
+      {
+        animations: {
+          items: {
+            "character-idle": {
+              id: "character-idle",
+              type: "animation",
+              name: "Idle",
+              animation: {
+                type: "update",
+              },
+            },
+            "character-enter": {
+              id: "character-enter",
+              type: "animation",
+              name: "Enter",
+              animation: {
+                type: "transition",
+              },
+            },
+          },
+          tree: [{ id: "character-idle" }, { id: "character-enter" }],
+        },
+      },
+    );
+    setExistingCharacters(
+      { state },
+      {
+        characters: [
+          {
+            id: "character-hero",
+            animations: {
+              resourceId: "character-enter",
+            },
+          },
+        ],
+      },
+    );
+
+    const viewData = selectViewData({ state });
+
+    expect(viewData.defaultValues.characters[0]).toMatchObject({
+      id: "character-hero",
+      animationMode: "transition",
+      animationId: "character-enter",
+    });
+    expect(viewData.defaultValues.animationOptions).toEqual([
+      {
+        value: "character-idle",
+        label: "Idle",
+        suffixText: "Update",
+      },
+      {
+        value: "character-enter",
+        label: "Enter",
+        suffixText: "Transition",
+      },
+    ]);
+  });
+
   it("exposes current-mode sprite group boxes for multipart characters", () => {
     const state = createSpriteSelectState();
 

@@ -54,15 +54,7 @@ refs:
     eventListeners:
       value-change:
         handler: handleTransformChange
-  animationMode*:
-    eventListeners:
-      value-change:
-        handler: handleAnimationModeChange
-  updateAnimation*:
-    eventListeners:
-      value-change:
-        handler: handleAnimationChange
-  transitionAnimation*:
+  animation*:
     eventListeners:
       value-change:
         handler: handleAnimationChange
@@ -87,11 +79,7 @@ template:
                               - rtgl-text s=sm c=mu-fg: Transform
                               - rtgl-select#transform${i} data-index=${i} key=${visual.transformId} :options=${defaultValues.transformOptions} :selectedValue=${visual.transformId} w=f no-clear: null
                               - rtgl-text s=sm c=mu-fg: Animation
-                              - rtgl-segmented-control#animationMode${i} data-index=${i} key=${visual.animationMode} :options=${defaultValues.animationModeOptions} :selectedValue=${visual.animationMode} w=f no-clear: null
-                              - $if visual.animationMode == 'update':
-                                  - rtgl-select#updateAnimation${i} data-index=${i} key=${visual.animationId} :options=${defaultValues.updateAnimationOptions} :selectedValue=${visual.animationId} w=f no-clear: null
-                                $elif visual.animationMode == 'transition':
-                                  - rtgl-select#transitionAnimation${i} data-index=${i} key=${visual.animationId} :options=${defaultValues.transitionAnimationOptions} :selectedValue=${visual.animationId} w=f no-clear: null
+                              - rtgl-select#animation${i} data-index=${i} key=${visual.animationId} :options=${defaultValues.animationOptions} :selectedValue=${visual.animationId} w=f placeholder="Select animation": null
                   - rtgl-button#addVisualButton v=ol w=f mt=md: + Add Visual
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#submitButton: Submit

@@ -8,7 +8,6 @@ import {
   setImages,
   setTransforms,
   updateVisualAnimation,
-  updateVisualAnimationMode,
 } from "../../src/components/commandLineVisual/commandLineVisual.store.js";
 
 const createEmptyCollection = () => ({
@@ -105,26 +104,21 @@ describe("commandLineVisual.store animation controls", () => {
       animationMode: "transition",
       animationId: "visual-wipe",
     });
-    expect(viewData.defaultValues.animationModeOptions).toEqual([
-      { label: "None", value: "none" },
-      { label: "Update", value: "update" },
-      { label: "Transition", value: "transition" },
-    ]);
-    expect(viewData.defaultValues.updateAnimationOptions).toEqual([
+    expect(viewData.defaultValues.animationOptions).toEqual([
       {
         value: "visual-fade",
         label: "Fade",
+        suffixText: "Update",
       },
-    ]);
-    expect(viewData.defaultValues.transitionAnimationOptions).toEqual([
       {
         value: "visual-wipe",
         label: "Wipe",
+        suffixText: "Transition",
       },
     ]);
   });
 
-  it("clears mismatched visual animation selections when mode changes", () => {
+  it("updates and clears visual animation selections", () => {
     const state = createInitialState();
     setRepositoryCollections(state);
     setExistingVisuals(
@@ -143,39 +137,26 @@ describe("commandLineVisual.store animation controls", () => {
       },
     );
 
-    updateVisualAnimationMode(
+    updateVisualAnimation(
       { state },
       {
         index: 0,
-        animationMode: "update",
+        animationId: "visual-wipe",
       },
     );
 
     expect(selectSelectedVisuals({ state })[0]).toMatchObject({
-      animationMode: "update",
+      animationMode: "transition",
+      animations: {
+        resourceId: "visual-wipe",
+      },
     });
-    expect(selectSelectedVisuals({ state })[0].animations).toBeUndefined();
 
     updateVisualAnimation(
       { state },
       {
         index: 0,
-        animationId: "visual-fade",
-      },
-    );
-
-    expect(selectSelectedVisuals({ state })[0]).toMatchObject({
-      animationMode: "update",
-      animations: {
-        resourceId: "visual-fade",
-      },
-    });
-
-    updateVisualAnimationMode(
-      { state },
-      {
-        index: 0,
-        animationMode: "none",
+        animationId: undefined,
       },
     );
 
@@ -191,7 +172,6 @@ describe("commandLineVisual.store animation controls", () => {
 
     const viewData = selectViewData({ state });
 
-    expect(viewData.defaultValues.updateAnimationOptions).toEqual([]);
-    expect(viewData.defaultValues.transitionAnimationOptions).toEqual([]);
+    expect(viewData.defaultValues.animationOptions).toEqual([]);
   });
 });

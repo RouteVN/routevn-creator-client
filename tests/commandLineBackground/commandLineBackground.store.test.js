@@ -3,7 +3,7 @@ import {
   createInitialState,
   selectViewData,
   setRepositoryState,
-  setSelectedAnimationMode,
+  setSelectedAnimation,
   setSelectedResource,
   setSelectedTransform,
 } from "../../src/components/commandLineBackground/commandLineBackground.store.js";
@@ -14,7 +14,7 @@ const createEmptyCollection = () => ({
 });
 
 describe("commandLineBackground.store", () => {
-  it("hides playback continuity when animation mode is none", () => {
+  it("uses a clearable animation select with type suffix text", () => {
     const state = createInitialState();
 
     setRepositoryState(
@@ -33,7 +33,27 @@ describe("commandLineBackground.store", () => {
         },
         layouts: createEmptyCollection(),
         videos: createEmptyCollection(),
-        animations: createEmptyCollection(),
+        animations: {
+          items: {
+            "bg-pan": {
+              id: "bg-pan",
+              type: "animation",
+              name: "Pan",
+              animation: {
+                type: "update",
+              },
+            },
+            "bg-fade": {
+              id: "bg-fade",
+              type: "animation",
+              name: "Fade",
+              animation: {
+                type: "transition",
+              },
+            },
+          },
+          tree: [{ id: "bg-pan" }, { id: "bg-fade" }],
+        },
         transforms: {
           items: {
             "bg-center": {
@@ -63,6 +83,9 @@ describe("commandLineBackground.store", () => {
     const transformField = viewData.dialogueForm.form.fields.find(
       (field) => field.name === "transformId",
     );
+    const animationField = viewData.dialogueForm.form.fields.find(
+      (field) => field.name === "animationId",
+    );
     const continuityField = viewData.dialogueForm.form.fields.find(
       (field) => field.name === "playbackContinuity",
     );
@@ -79,14 +102,33 @@ describe("commandLineBackground.store", () => {
         },
       ],
     });
+    expect(animationField).toMatchObject({
+      label: "Animation",
+      type: "select",
+      clearable: true,
+      placeholder: "Select animation",
+      options: [
+        {
+          value: "bg-pan",
+          label: "Pan",
+          suffixText: "Update",
+        },
+        {
+          value: "bg-fade",
+          label: "Fade",
+          suffixText: "Transition",
+        },
+      ],
+    });
     expect(continuityField).toBeUndefined();
     expect(viewData.dialogueForm.defaultValues.transformId).toBe("bg-center");
+    expect(viewData.dialogueForm.defaultValues.animationId).toBeUndefined();
     expect(viewData.dialogueForm.defaultValues.playbackContinuity).toBe(
       "render",
     );
   });
 
-  it("hides playback continuity when animation mode is active", () => {
+  it("shows playback continuity when an animation is selected", () => {
     const state = createInitialState();
 
     setRepositoryState(
@@ -105,7 +147,19 @@ describe("commandLineBackground.store", () => {
         },
         layouts: createEmptyCollection(),
         videos: createEmptyCollection(),
-        animations: createEmptyCollection(),
+        animations: {
+          items: {
+            "bg-pan": {
+              id: "bg-pan",
+              type: "animation",
+              name: "Pan",
+              animation: {
+                type: "update",
+              },
+            },
+          },
+          tree: [{ id: "bg-pan" }],
+        },
         transforms: {
           items: {
             "bg-center": {
@@ -131,20 +185,49 @@ describe("commandLineBackground.store", () => {
         transformId: "bg-center",
       },
     );
-    setSelectedAnimationMode(
+    setSelectedAnimation(
       { state },
       {
-        mode: "update",
+        animationId: "bg-pan",
       },
     );
 
     const viewData = selectViewData({ state });
+    const animationField = viewData.dialogueForm.form.fields.find(
+      (field) => field.name === "animationId",
+    );
     const continuityField = viewData.dialogueForm.form.fields.find(
       (field) => field.name === "playbackContinuity",
     );
 
-    expect(continuityField).toBeUndefined();
+    expect(animationField).toMatchObject({
+      type: "select",
+      clearable: true,
+      options: [
+        {
+          value: "bg-pan",
+          label: "Pan",
+          suffixText: "Update",
+        },
+      ],
+    });
+    expect(continuityField).toMatchObject({
+      name: "playbackContinuity",
+      label: "Playback",
+      type: "segmented-control",
+      options: [
+        {
+          label: "Single Line",
+          value: "render",
+        },
+        {
+          label: "Persistent",
+          value: "persistent",
+        },
+      ],
+    });
     expect(viewData.dialogueForm.defaultValues.transformId).toBe("bg-center");
+    expect(viewData.dialogueForm.defaultValues.animationId).toBe("bg-pan");
     expect(viewData.dialogueForm.defaultValues.playbackContinuity).toBe(
       "render",
     );

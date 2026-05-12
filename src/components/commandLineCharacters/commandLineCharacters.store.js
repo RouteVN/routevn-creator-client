@@ -6,21 +6,6 @@ const createEmptyCollection = () => ({
   tree: [],
 });
 
-const ANIMATION_MODE_OPTIONS = [
-  {
-    label: "None",
-    value: "none",
-  },
-  {
-    label: "Update",
-    value: "update",
-  },
-  {
-    label: "Transition",
-    value: "transition",
-  },
-];
-
 const UNGROUPED_CHARACTER_GROUP_ID = "__ungrouped_characters__";
 const UNGROUPED_SPRITE_GROUP_ID = "__ungrouped_sprites__";
 const UNGROUPED_GROUP_LABEL = "Ungrouped";
@@ -335,6 +320,7 @@ export const updateCharacterAnimation = (
 
   if (!animationId || animationId === "none") {
     state.selectedCharacters[index].animations = undefined;
+    state.selectedCharacters[index].animationMode = "none";
     return;
   }
 
@@ -348,33 +334,6 @@ export const updateCharacterAnimation = (
   );
   if (selectedAnimationMode) {
     state.selectedCharacters[index].animationMode = selectedAnimationMode;
-  }
-};
-
-export const updateCharacterAnimationMode = (
-  { state },
-  { index, animationMode } = {},
-) => {
-  if (!state.selectedCharacters[index]) {
-    return;
-  }
-
-  if (animationMode !== "update" && animationMode !== "transition") {
-    state.selectedCharacters[index].animationMode = "none";
-    state.selectedCharacters[index].animations = undefined;
-    return;
-  }
-
-  state.selectedCharacters[index].animationMode = animationMode;
-
-  const selectedAnimationId =
-    state.selectedCharacters[index]?.animations?.resourceId;
-  const selectedAnimationMode = getAnimationModeById(
-    state.animations,
-    selectedAnimationId,
-  );
-  if (selectedAnimationMode && selectedAnimationMode !== animationMode) {
-    state.selectedCharacters[index].animations = undefined;
   }
 };
 
@@ -791,18 +750,12 @@ export const selectViewData = ({ state }) => {
   const animationItems = toFlatItems(state.animations).filter(
     (item) => item.type === "animation",
   );
-  const updateAnimationOptions = animationItems
-    .filter((item) => getAnimationType(item) === "update")
-    .map((item) => ({
-      value: item.id,
-      label: item.name,
-    }));
-  const transitionAnimationOptions = animationItems
-    .filter((item) => getAnimationType(item) === "transition")
-    .map((item) => ({
-      value: item.id,
-      label: item.name,
-    }));
+  const animationOptions = animationItems.map((item) => ({
+    value: item.id,
+    label: item.name,
+    suffixText:
+      getAnimationType(item) === "transition" ? "Transition" : "Update",
+  }));
 
   // Get enriched character data
   const enrichedCharacters = selectCharactersWithRepositoryData({ state });
@@ -921,9 +874,7 @@ export const selectViewData = ({ state }) => {
       animationId: char.animations?.resourceId,
     })),
     transformOptions,
-    animationModeOptions: ANIMATION_MODE_OPTIONS,
-    updateAnimationOptions,
-    transitionAnimationOptions,
+    animationOptions,
   };
 
   return {
@@ -932,9 +883,7 @@ export const selectViewData = ({ state }) => {
     groups: characterTreeData.groups,
     selectedCharacters: processedSelectedCharacters,
     transformOptions,
-    animationModeOptions: ANIMATION_MODE_OPTIONS,
-    updateAnimationOptions,
-    transitionAnimationOptions,
+    animationOptions,
     spriteItems,
     spriteGroups,
     showSpriteGroupTabs: spriteSelectionTabs.length > 1,
