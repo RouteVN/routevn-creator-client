@@ -93,6 +93,7 @@ refs:
         handler: handleDetailTagOpenChange
       add-option-click:
         handler: handleDetailTagAddOptionClick
+  detailCanvas: {}
   createTagDialog:
     eventListeners:
       close:
@@ -127,8 +128,9 @@ template:
                                       - rtgl-svg svg=edit wh=16: null
                                   - $if selectedItemId:
                                       - rtgl-view d=v w=f h=1fg p=md g=md:
-                                          - $if selectedAnimationPreviewFileId:
-                                              - rvn-file-image fileId=${selectedAnimationPreviewFileId} w=f h=160 bw=xs bc=bo br=md: null
+                                          - 'rtgl-view w=f pos=rel br=md bw=xs bc=bo style="aspect-ratio: ${selectedAnimationPreviewAspectRatio}; overflow: hidden; background: #000;"':
+                                              - rtgl-view pos=abs cor=full:
+                                                  - 'div#detailCanvas style="width: 100%; height: 100%; display: flex; overflow: hidden; opacity: ${animationPreviewOpacity};"': null
                                           - $if selectedItemDescription:
                                               - rtgl-view d=v w=f g=xs:
                                                   - rtgl-text c=mu-fg: Description
@@ -163,8 +165,6 @@ template:
                   - rtgl-svg svg=edit wh=16: null
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
                   - rtgl-view d=v w=f p=md g=md:
-                      - $if selectedAnimationPreviewFileId:
-                          - rvn-file-image fileId=${selectedAnimationPreviewFileId} w=f h=180 bw=xs bc=bo br=md: null
                       - $if selectedItemDescription:
                           - rtgl-view d=v w=f g=xs:
                               - rtgl-text c=mu-fg: Description

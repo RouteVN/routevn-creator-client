@@ -5,6 +5,7 @@ import {
   handleEditMaskClick,
   handleOpenAddMaskClick,
   handlePreviewImageClick,
+  handleReplayAnimation,
   handleRulerTimeHover,
   handleRulerTimeLeave,
   handleSavePreviewClick,
@@ -193,6 +194,235 @@ describe("animationEditor.handlers", () => {
     expect(graphicsService.setAnimationTime).toHaveBeenCalledWith(0);
   });
 
+  it("resets animation time before replaying from the preview render state", async () => {
+    let requestAnimationFrameCallCount = 0;
+    vi.stubGlobal("requestAnimationFrame", (callback) => {
+      requestAnimationFrameCallCount += 1;
+      if (requestAnimationFrameCallCount === 1) {
+        callback(0);
+      }
+      return requestAnimationFrameCallCount;
+    });
+
+    const resetState = {
+      elements: [{ id: "reset" }],
+      animations: [],
+    };
+    const renderState = {
+      elements: [{ id: "preview" }],
+      animations: [
+        {
+          id: "preview-animation-alpha",
+          targetId: "preview",
+          type: "update",
+          tween: {
+            alpha: {
+              keyframes: [
+                {
+                  duration: 1000,
+                  value: 0,
+                  easing: "linear",
+                },
+              ],
+            },
+          },
+        },
+      ],
+    };
+    let activePlaybackRequestId;
+    const store = {
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      stopPreviewPlayback: vi.fn(),
+      selectAnimationResetState: vi.fn(() => resetState),
+      selectAnimationRenderStateWithAnimations: vi.fn(() => renderState),
+      setPreviewPlaybackMode: vi.fn(),
+      markPreviewPrepared: vi.fn(),
+      selectPreviewDurationMs: vi.fn(() => 1000),
+      startPreviewPlayback: vi.fn(),
+      setPreviewPlaybackFrameId: vi.fn(),
+      selectPreviewPlaybackStartedAtMs: vi.fn(() => 0),
+      selectPreviewPlaybackDurationMs: vi.fn(() => 1000),
+      setPreviewPlaybackRequestId: vi.fn(({ requestId }) => {
+        activePlaybackRequestId = requestId;
+      }),
+      selectPreviewPlaybackRequestId: vi.fn(() => activePlaybackRequestId),
+    };
+    const graphicsService = {
+      loadAssets: vi.fn(),
+      render: vi.fn(),
+      setAnimationPlaybackMode: vi.fn(),
+      setAnimationTime: vi.fn(),
+    };
+    const render = vi.fn();
+
+    try {
+      await handleReplayAnimation({
+        graphicsService,
+        projectService: {},
+        render,
+        store,
+      });
+
+      expect(graphicsService.setAnimationPlaybackMode).toHaveBeenNthCalledWith(
+        1,
+        "manual",
+      );
+      expect(graphicsService.setAnimationTime).toHaveBeenNthCalledWith(1, 0);
+      expect(
+        graphicsService.setAnimationTime.mock.invocationCallOrder[0],
+      ).toBeLessThan(graphicsService.render.mock.invocationCallOrder[0]);
+      expect(graphicsService.render).toHaveBeenNthCalledWith(1, resetState);
+      expect(graphicsService.render).toHaveBeenNthCalledWith(2, renderState);
+      expect(graphicsService.setAnimationPlaybackMode).toHaveBeenNthCalledWith(
+        2,
+        "auto",
+      );
+      expect(store.startPreviewPlayback).toHaveBeenCalledWith({
+        startedAtMs: expect.any(Number),
+        durationMs: 1000,
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("ignores stale replay continuations when Play is clicked again before finishing", async () => {
+    const flushAsyncWork = async () => {
+      for (let index = 0; index < 8; index += 1) {
+        await Promise.resolve();
+      }
+    };
+    const rafCallbacks = [];
+    const timeoutCallbacks = [];
+    vi.stubGlobal("requestAnimationFrame", (callback) => {
+      rafCallbacks.push(callback);
+      return rafCallbacks.length;
+    });
+    vi.stubGlobal("setTimeout", (callback) => {
+      timeoutCallbacks.push(callback);
+      return timeoutCallbacks.length;
+    });
+
+    const resetState = {
+      elements: [{ id: "reset" }],
+      animations: [],
+    };
+    const renderState = {
+      elements: [{ id: "preview" }],
+      animations: [
+        {
+          id: "preview-animation-alpha",
+          targetId: "preview",
+          type: "update",
+          tween: {
+            alpha: {
+              keyframes: [
+                {
+                  duration: 1000,
+                  value: 0,
+                  easing: "linear",
+                },
+              ],
+            },
+          },
+        },
+      ],
+    };
+    let activePlaybackRequestId;
+    let playbackStartedAtMs;
+    let playbackDurationMs;
+    const store = {
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      stopPreviewPlayback: vi.fn(),
+      selectAnimationResetState: vi.fn(() => resetState),
+      selectAnimationRenderStateWithAnimations: vi.fn(() => renderState),
+      setPreviewPlaybackMode: vi.fn(),
+      markPreviewPrepared: vi.fn(),
+      selectPreviewDurationMs: vi.fn(() => 1000),
+      startPreviewPlayback: vi.fn(({ startedAtMs, durationMs }) => {
+        playbackStartedAtMs = startedAtMs;
+        playbackDurationMs = durationMs;
+      }),
+      setPreviewPlaybackFrameId: vi.fn(),
+      selectPreviewPlaybackStartedAtMs: vi.fn(() => playbackStartedAtMs),
+      selectPreviewPlaybackDurationMs: vi.fn(() => playbackDurationMs),
+      setPreviewPlaybackRequestId: vi.fn(({ requestId }) => {
+        activePlaybackRequestId = requestId;
+      }),
+      selectPreviewPlaybackRequestId: vi.fn(() => activePlaybackRequestId),
+      setPreviewPlayhead: vi.fn(),
+    };
+    const graphicsService = {
+      loadAssets: vi.fn(),
+      render: vi.fn(),
+      setAnimationPlaybackMode: vi.fn(),
+      setAnimationTime: vi.fn(),
+    };
+    const render = vi.fn();
+    const deps = {
+      graphicsService,
+      projectService: {},
+      render,
+      store,
+    };
+
+    try {
+      let firstReplayDone = false;
+      let firstReplayError;
+      const firstReplay = handleReplayAnimation(deps)
+        .catch((error) => {
+          firstReplayError = error;
+        })
+        .finally(() => {
+          firstReplayDone = true;
+        });
+      await flushAsyncWork();
+      expect(rafCallbacks).toHaveLength(1);
+
+      let secondReplayDone = false;
+      let secondReplayError;
+      const secondReplay = handleReplayAnimation(deps)
+        .catch((error) => {
+          secondReplayError = error;
+        })
+        .finally(() => {
+          secondReplayDone = true;
+        });
+      await flushAsyncWork();
+      expect(rafCallbacks).toHaveLength(2);
+
+      rafCallbacks[0]?.(0);
+      timeoutCallbacks[0]?.();
+      await flushAsyncWork();
+      expect(firstReplayDone).toBe(true);
+      expect(firstReplayError).toBeUndefined();
+
+      const autoCallsBeforeSecondCompletes =
+        graphicsService.setAnimationPlaybackMode.mock.calls.filter(
+          ([mode]) => mode === "auto",
+        );
+      expect(autoCallsBeforeSecondCompletes).toHaveLength(0);
+      expect(store.startPreviewPlayback).not.toHaveBeenCalled();
+
+      rafCallbacks[1]?.(16);
+      timeoutCallbacks[1]?.();
+      await flushAsyncWork();
+      expect(secondReplayDone).toBe(true);
+      expect(secondReplayError).toBeUndefined();
+
+      const autoCallsAfterSecondCompletes =
+        graphicsService.setAnimationPlaybackMode.mock.calls.filter(
+          ([mode]) => mode === "auto",
+        );
+      expect(autoCallsAfterSecondCompletes).toHaveLength(1);
+      expect(store.startPreviewPlayback).toHaveBeenCalledTimes(1);
+      await firstReplay;
+      await secondReplay;
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("tracks the current timeline hover time for later preview updates", async () => {
     const store = {
       setPreviewPlayhead: vi.fn(),
@@ -254,7 +484,7 @@ describe("animationEditor.handlers", () => {
     expect(render).not.toHaveBeenCalled();
   });
 
-  it("saves preview data and a captured thumbnail", async () => {
+  it("saves preview data without capturing a thumbnail", async () => {
     const previewData = {
       background: {
         imageId: "image-bg",
@@ -292,10 +522,7 @@ describe("animationEditor.handlers", () => {
       setItems: vi.fn(),
     };
     const projectService = {
-      storeFile: vi.fn(async () => ({
-        fileId: "file-thumb",
-        fileRecords: [{ id: "file-thumb" }],
-      })),
+      storeFile: vi.fn(),
       updateAnimation: vi.fn(async () => ({ valid: true })),
       getRepositoryState: vi.fn(() => ({
         animations: {
@@ -318,27 +545,21 @@ describe("animationEditor.handlers", () => {
 
     await handleSavePreviewClick({
       appService,
-      graphicsService,
       projectService,
-      refs: {
-        canvas: {},
-      },
       render,
       store,
     });
 
-    expect(projectService.storeFile).toHaveBeenCalledTimes(1);
-    expect(graphicsService.setAnimationPlaybackMode).toHaveBeenCalledWith(
-      "manual",
-    );
-    expect(graphicsService.setAnimationTime).toHaveBeenCalledWith(0);
+    expect(projectService.storeFile).not.toHaveBeenCalled();
+    expect(graphicsService.render).not.toHaveBeenCalled();
+    expect(graphicsService.extractBase64).not.toHaveBeenCalled();
+    expect(graphicsService.setAnimationPlaybackMode).not.toHaveBeenCalled();
+    expect(graphicsService.setAnimationTime).not.toHaveBeenCalled();
     expect(projectService.updateAnimation).toHaveBeenCalledWith({
       animationId: "animation-1",
       data: {
-        thumbnailFileId: "file-thumb",
         preview: previewData,
       },
-      fileRecords: [{ id: "file-thumb" }],
     });
     expect(appService.showToast).toHaveBeenCalledWith({
       message: "Animation preview saved.",

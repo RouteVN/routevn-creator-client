@@ -6,7 +6,6 @@ import {
 } from "../../internal/animationEditorRoute.js";
 import { serializeTransitionMask } from "../../internal/animationMasks.js";
 import { resolveResourceFileType } from "../../internal/resourceFileMetadata.js";
-import { captureCanvasThumbnailImage } from "../../internal/runtime/graphicsEngineRuntime.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import {
@@ -53,39 +52,6 @@ const getEditorPayload = (appService) => {
 };
 
 const DEFAULT_NEW_ANIMATION_NAME = "New Animation";
-
-const dataUrlToBlob = async (value) => {
-  if (typeof value !== "string" || value.length === 0) {
-    throw new Error("Thumbnail image is missing");
-  }
-
-  const commaIndex = value.indexOf(",");
-  if (commaIndex < 0) {
-    throw new Error("Thumbnail image is not a valid data URL");
-  }
-
-  const header = value.slice(0, commaIndex);
-  const body = value.slice(commaIndex + 1);
-  const mimeMatch = header.match(/^data:([^;,]+)?(?:;base64)?$/);
-  if (!mimeMatch) {
-    throw new Error("Thumbnail image is not a valid data URL");
-  }
-
-  const mimeType = mimeMatch[1] || "application/octet-stream";
-  const isBase64 = header.includes(";base64");
-
-  if (!isBase64) {
-    return new Blob([decodeURIComponent(body)], { type: mimeType });
-  }
-
-  const binary = atob(body);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-
-  return new Blob([bytes], { type: mimeType });
-};
 
 const stopPreviewPlaybackIndicator = ({ store } = {}) => {
   const frameId = store.selectPreviewPlaybackFrameId();
@@ -229,9 +195,10 @@ const renderPreviewAnimationState = async ({
   graphicsService,
   projectService,
   store,
+  shouldContinue,
 } = {}) => {
   if (!graphicsService) {
-    return;
+    return false;
   }
 
   const resetState = store.selectAnimationResetState();
@@ -242,8 +209,18 @@ const renderPreviewAnimationState = async ({
     renderState: [resetState, renderState],
   });
 
+  if (shouldContinue?.() === false) {
+    return false;
+  }
+
   await graphicsService.render(resetState);
+
+  if (shouldContinue?.() === false) {
+    return false;
+  }
+
   await graphicsService.render(renderState);
+  return true;
 };
 
 const waitForPreviewPaint = async () => {
@@ -272,25 +249,37 @@ const preparePreviewPlaybackAtStart = async ({
   graphicsService,
   projectService,
   store,
+  shouldContinue,
 } = {}) => {
   if (!graphicsService) {
-    return;
+    return false;
   }
 
   stopPreviewPlaybackIndicator({
     store,
   });
   graphicsService.setAnimationPlaybackMode("manual");
-  await renderPreviewAnimationState({
+  graphicsService.setAnimationTime(0);
+  const rendered = await renderPreviewAnimationState({
     graphicsService,
     projectService,
     store,
+    shouldContinue,
   });
+  if (!rendered) {
+    return false;
+  }
+
+  if (shouldContinue?.() === false) {
+    return false;
+  }
+
   graphicsService.setAnimationTime(0);
   store.setPreviewPlaybackMode({
     mode: "manual",
   });
   store.markPreviewPrepared({});
+  return true;
 };
 
 const ensureManualPreviewAtTime = async ({
@@ -312,6 +301,7 @@ const ensureManualPreviewAtTime = async ({
       store,
     });
     graphicsService.setAnimationPlaybackMode("manual");
+    graphicsService.setAnimationTime(timeMs);
     await renderPreviewAnimationState({
       graphicsService,
       projectService,
@@ -679,8 +669,7 @@ export const handleBackClick = async (deps) => {
 };
 
 export const handleSavePreviewClick = async (deps) => {
-  const { appService, graphicsService, projectService, refs, render, store } =
-    deps;
+  const { appService, projectService, render, store } = deps;
   const autosaveAttempt = await flushQueuedAutosave({
     deps,
   });
@@ -699,29 +688,6 @@ export const handleSavePreviewClick = async (deps) => {
   }
 
   try {
-    await renderPreviewForThumbnailCapture({
-      graphicsService,
-      projectService,
-      store,
-    });
-    await waitForPreviewPaint();
-
-    const thumbnailImage = await captureCanvasThumbnailImage(
-      graphicsService,
-      refs.canvas,
-    );
-    if (!thumbnailImage) {
-      appService.showAlert({
-        message: "Failed to capture animation thumbnail.",
-        title: "Error",
-      });
-      return;
-    }
-
-    const thumbnailBlob = await dataUrlToBlob(thumbnailImage);
-    const storedFile = await projectService.storeFile({
-      file: thumbnailBlob,
-    });
     const previewData = store.selectPreviewData();
     const updateAttempt = await runResourcePageMutation({
       appService,
@@ -730,10 +696,8 @@ export const handleSavePreviewClick = async (deps) => {
         projectService.updateAnimation({
           animationId,
           data: {
-            thumbnailFileId: storedFile.fileId,
             preview: previewData,
           },
-          fileRecords: storedFile.fileRecords,
         }),
     });
 
@@ -1606,11 +1570,23 @@ export const handleReplayAnimation = async (deps) => {
     return;
   }
 
-  await preparePreviewPlaybackAtStart({
+  const playbackRequestId = generateId();
+  store.setPreviewPlaybackRequestId({
+    requestId: playbackRequestId,
+  });
+  const isCurrentPlaybackRequest = () =>
+    store.selectPreviewPlaybackRequestId() === playbackRequestId;
+
+  const prepared = await preparePreviewPlaybackAtStart({
     graphicsService,
     projectService,
     store,
+    shouldContinue: isCurrentPlaybackRequest,
   });
+  if (!prepared || !isCurrentPlaybackRequest()) {
+    return;
+  }
+
   render();
 
   const durationMs = store.selectPreviewDurationMs();
@@ -1620,15 +1596,24 @@ export const handleReplayAnimation = async (deps) => {
   }
 
   await waitForPreviewPaint();
+  if (!isCurrentPlaybackRequest()) {
+    return;
+  }
+
   graphicsService.setAnimationPlaybackMode("auto");
   store.setPreviewPlaybackMode({
     mode: "auto",
   });
-  await renderPreviewAnimationState({
+  const rendered = await renderPreviewAnimationState({
     graphicsService,
     projectService,
     store,
+    shouldContinue: isCurrentPlaybackRequest,
   });
+  if (!rendered || !isCurrentPlaybackRequest()) {
+    return;
+  }
+
   store.startPreviewPlayback({
     startedAtMs: performance.now(),
     durationMs,

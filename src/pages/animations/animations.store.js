@@ -3,12 +3,22 @@ import { applyFolderRequiredRootDragOptions } from "../../internal/fileExplorerD
 import { createCatalogPageStore } from "../../internal/ui/resourcePages/catalog/createCatalogPageStore.js";
 import { createTagField } from "../../internal/ui/resourcePages/tags.js";
 import {
+  DEFAULT_PROJECT_RESOLUTION,
+  formatProjectResolutionAspectRatio,
+  requireProjectResolution,
+} from "../../internal/projectResolution.js";
+import {
   formatAnimationDurationLabel,
   toAnimationDisplayItem,
 } from "../../internal/animationDisplay.js";
 import { matchesTagAwareSearch } from "../../internal/resourceTags.js";
 
 export const ANIMATION_TAG_SCOPE_KEY = "animations";
+
+const EMPTY_TREE = {
+  items: {},
+  tree: [],
+};
 
 const editForm = {
   title: "Edit Animation",
@@ -162,7 +172,10 @@ const {
       itemContextMenuItems: animationExplorerItemContextMenuItems,
       selectedAnimationTypeLabel:
         selectedAnimationItem?.animationTypeLabel ?? "",
-      selectedAnimationPreviewFileId: selectedAnimationItem?.previewFileId,
+      selectedAnimationPreviewAspectRatio: formatProjectResolutionAspectRatio(
+        state.projectResolution,
+      ),
+      animationPreviewOpacity: state.animationPreviewVisible ? 1 : 0,
       selectedItemDescription: selectedAnimationItem?.description ?? "",
       selectedItemDuration: formatAnimationDurationLabel(
         selectedAnimationItem?.duration,
@@ -177,6 +190,15 @@ export const createInitialState = () => ({
   targetGroupId: undefined,
   isEditDialogOpen: false,
   editItemId: undefined,
+  projectResolution: DEFAULT_PROJECT_RESOLUTION,
+  imagesData: EMPTY_TREE,
+  previewRuntimeTarget: undefined,
+  previewRuntimeWidth: undefined,
+  previewRuntimeHeight: undefined,
+  animationPreviewFrameId: undefined,
+  animationPreviewStartedAtMs: undefined,
+  animationPreviewRequestId: undefined,
+  animationPreviewVisible: false,
   editDefaultValues: {
     name: "",
     description: "",
@@ -207,6 +229,71 @@ export {
 };
 
 export const selectAnimationItemById = selectItemById;
+export const selectSelectedAnimation = selectSelectedItem;
+
+export const setProjectResolution = ({ state }, { projectResolution } = {}) => {
+  state.projectResolution = requireProjectResolution(
+    projectResolution,
+    "Project resolution",
+  );
+};
+
+export const setImagesData = ({ state }, { imagesData } = {}) => {
+  state.imagesData = imagesData ?? EMPTY_TREE;
+};
+
+export const setPreviewRuntime = (
+  { state },
+  { target, width, height } = {},
+) => {
+  state.previewRuntimeTarget = target;
+  state.previewRuntimeWidth = width;
+  state.previewRuntimeHeight = height;
+};
+
+export const clearPreviewRuntime = ({ state }, _payload = {}) => {
+  state.previewRuntimeTarget = undefined;
+  state.previewRuntimeWidth = undefined;
+  state.previewRuntimeHeight = undefined;
+};
+
+export const setAnimationPreviewFrameId = ({ state }, { frameId } = {}) => {
+  state.animationPreviewFrameId = frameId;
+};
+
+export const clearAnimationPreviewPlayback = ({ state }, _payload = {}) => {
+  state.animationPreviewFrameId = undefined;
+  state.animationPreviewStartedAtMs = undefined;
+};
+
+export const setAnimationPreviewStartedAtMs = (
+  { state },
+  { startedAtMs } = {},
+) => {
+  state.animationPreviewStartedAtMs = startedAtMs;
+};
+
+export const setAnimationPreviewRequestId = ({ state }, { requestId } = {}) => {
+  state.animationPreviewRequestId = requestId;
+};
+
+export const setAnimationPreviewVisible = ({ state }, { visible } = {}) => {
+  state.animationPreviewVisible = visible === true;
+};
+
+export const selectProjectResolution = ({ state }) => state.projectResolution;
+export const selectImagesData = ({ state }) => state.imagesData;
+export const selectPreviewRuntime = ({ state }) => ({
+  target: state.previewRuntimeTarget,
+  width: state.previewRuntimeWidth,
+  height: state.previewRuntimeHeight,
+});
+export const selectAnimationPreviewFrameId = ({ state }) =>
+  state.animationPreviewFrameId;
+export const selectAnimationPreviewStartedAtMs = ({ state }) =>
+  state.animationPreviewStartedAtMs;
+export const selectAnimationPreviewRequestId = ({ state }) =>
+  state.animationPreviewRequestId;
 
 export const selectAnimationDisplayItemById = ({ state }, { itemId } = {}) => {
   const rawItem = toFlatItems(state.data).find(

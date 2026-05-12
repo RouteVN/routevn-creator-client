@@ -1,5 +1,6 @@
 import { generateId } from "../../internal/id.js";
 import { createAnimationEditorPayload } from "../../internal/animationEditorRoute.js";
+import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
 import { appendTagIdToForm } from "../../internal/ui/resourcePages/tags.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
@@ -8,6 +9,10 @@ import {
   resolveCollectionWithTags,
 } from "../../internal/resourceTags.js";
 import { ANIMATION_TAG_SCOPE_KEY } from "./animations.store.js";
+import {
+  renderSelectedAnimationPreview,
+  stopAnimationPreviewPlayback,
+} from "./support/animationPreviewRuntime.js";
 
 const navigateToAnimationEditor = ({
   appService,
@@ -30,10 +35,30 @@ const navigateToAnimationEditor = ({
   });
 };
 
+const normalizeSelectedAnimation = (deps) => {
+  const { render, store } = deps;
+  const selectedItemId = store.selectSelectedItemId();
+  if (!selectedItemId) {
+    return;
+  }
+
+  const selectedAnimation = store.selectAnimationItemById({
+    itemId: selectedItemId,
+  });
+  if (selectedAnimation) {
+    return;
+  }
+
+  store.setSelectedItemId({
+    itemId: undefined,
+  });
+  render();
+};
+
 const {
   handleBeforeMount: handleBeforeMountBase,
   handleAfterMount: handleAfterMountBase,
-  refreshData: handleDataChanged,
+  refreshData: refreshDataBase,
   handleFileExplorerSelectionChanged: handleFileExplorerSelectionChangedBase,
   handleFileExplorerAction: handleFileExplorerActionBase,
   handleFileExplorerTargetChanged,
@@ -74,7 +99,25 @@ const {
     deps.store.setTagsData({
       tagsData: getTagsCollection(repositoryState, ANIMATION_TAG_SCOPE_KEY),
     });
+    deps.store.setProjectResolution({
+      projectResolution: repositoryState?.project?.resolution,
+    });
+    deps.store.setImagesData({
+      imagesData: repositoryState?.images,
+    });
   },
+  createExplorerHandlers: ({ refresh }) =>
+    createResourceFileExplorerHandlers({
+      resourceType: "animations",
+      refresh: async (deps, options) => {
+        await refresh(deps, options);
+        normalizeSelectedAnimation(deps);
+        deps.store.clearPreviewRuntime();
+        await renderSelectedAnimationPreview(deps, {
+          forceInit: true,
+        });
+      },
+    }),
   tagging: {
     scopeKey: ANIMATION_TAG_SCOPE_KEY,
     updateItemTagIds: ({ deps, itemId, tagIds }) =>
@@ -106,8 +149,19 @@ const {
   },
 });
 
+const refreshAnimationData = async (deps, options = {}) => {
+  deps.store.setAnimationPreviewVisible?.({
+    visible: false,
+  });
+  await refreshDataBase(deps, options);
+  normalizeSelectedAnimation(deps);
+  deps.store.clearPreviewRuntime();
+  await renderSelectedAnimationPreview(deps, {
+    forceInit: true,
+  });
+};
+
 export {
-  handleDataChanged,
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
@@ -127,25 +181,51 @@ export {
   handleCreateTagFormAction,
 };
 
+export const handleDataChanged = refreshAnimationData;
+
 export const handleBeforeMount = (deps) => {
-  return handleBeforeMountBase(deps);
+  const cleanupBase = handleBeforeMountBase(deps);
+
+  return () => {
+    cleanupBase?.();
+    stopAnimationPreviewPlayback({
+      store: deps.store,
+    });
+    deps.store.setAnimationPreviewRequestId?.({
+      requestId: undefined,
+    });
+    deps.store.clearPreviewRuntime();
+    void deps.graphicsService?.destroy?.();
+  };
 };
 
 export const handleAfterMount = (deps) => {
   handleAfterMountBase(deps);
+  void renderSelectedAnimationPreview(deps, {
+    forceInit: true,
+  });
 };
 
-export const handleFileExplorerSelectionChanged = (deps, payload) => {
+export const handleFileExplorerSelectionChanged = async (deps, payload) => {
+  deps.store.setAnimationPreviewVisible?.({
+    visible: false,
+  });
   handleFileExplorerSelectionChangedBase(deps, payload);
-
-  const { itemId, isFolder } = payload?._event?.detail ?? {};
-  if (isFolder || !itemId) {
-    return;
-  }
+  deps.store.clearPreviewRuntime();
+  await renderSelectedAnimationPreview(deps, {
+    forceInit: true,
+  });
 };
 
-export const handleAnimationItemClick = (deps, payload) => {
+export const handleAnimationItemClick = async (deps, payload) => {
+  deps.store.setAnimationPreviewVisible?.({
+    visible: false,
+  });
   handleAnimationItemClickBase(deps, payload);
+  deps.store.clearPreviewRuntime();
+  await renderSelectedAnimationPreview(deps, {
+    forceInit: true,
+  });
 };
 
 const openEditDialogWithValues = ({ deps, itemId } = {}) => {
