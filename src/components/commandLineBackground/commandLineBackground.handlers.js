@@ -360,16 +360,7 @@ export const handleFormInputChange = (deps, payload) => {
   const { store, render } = deps;
   const { name, value: fieldValue } = payload._event.detail;
 
-  if (name === "animationType") {
-    store.setSelectedAnimationMode({
-      mode: fieldValue,
-    });
-    render();
-    dispatchTemporaryPresentationStateChange(deps);
-    return;
-  }
-
-  if (name === "updateAnimation" || name === "transitionAnimation") {
+  if (name === "animationId") {
     store.setSelectedAnimation({
       animationId: fieldValue,
     });

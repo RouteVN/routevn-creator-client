@@ -66,15 +66,7 @@ refs:
     eventListeners:
       value-change:
         handler: handleTransformChange
-  animationMode*:
-    eventListeners:
-      value-change:
-        handler: handleAnimationModeChange
-  updateAnimation*:
-    eventListeners:
-      value-change:
-        handler: handleAnimationChange
-  transitionAnimation*:
+  animation*:
     eventListeners:
       value-change:
         handler: handleAnimationChange
@@ -109,11 +101,7 @@ template:
                                       - rtgl-text s=sm c=mu-fg: Transform
                                       - rtgl-select#transform${i} data-index=${i} key=${character.transformId} :options=${defaultValues.transformOptions} :selectedValue=${character.transformId} w=f no-clear: null
                                       - rtgl-text s=sm c=mu-fg: Animation
-                                      - rtgl-segmented-control#animationMode${i} data-index=${i} key=${character.animationMode} :options=${defaultValues.animationModeOptions} :selectedValue=${character.animationMode} w=f no-clear: null
-                                      - $if character.animationMode == 'update':
-                                          - rtgl-select#updateAnimation${i} data-index=${i} key=${character.animationId} :options=${defaultValues.updateAnimationOptions} :selectedValue=${character.animationId} w=f no-clear: null
-                                        $elif character.animationMode == 'transition':
-                                          - rtgl-select#transitionAnimation${i} data-index=${i} key=${character.animationId} :options=${defaultValues.transitionAnimationOptions} :selectedValue=${character.animationId} w=f no-clear: null
+                                      - rtgl-select#animation${i} data-index=${i} key=${character.animationId} :options=${defaultValues.animationOptions} :selectedValue=${character.animationId} w=f placeholder="Select animation": null
                                       - $if character.showSpriteGroupBoxes:
                                           - rtgl-text s=sm c=mu-fg: Sprite Groups
                                           - rtgl-view d=h wrap g=xs w=f:

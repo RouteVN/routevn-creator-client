@@ -7,21 +7,6 @@ const RESOURCE_TYPES = [
   { type: "layout", label: "Layouts" },
 ];
 
-const ANIMATION_MODE_OPTIONS = [
-  {
-    label: "None",
-    value: "none",
-  },
-  {
-    label: "Update",
-    value: "update",
-  },
-  {
-    label: "Transition",
-    value: "transition",
-  },
-];
-
 const createEmptyCollection = () => ({
   items: {},
   tree: [],
@@ -241,6 +226,7 @@ export const updateVisualAnimation = (
 
   if (!animationId || animationId === "none") {
     state.selectedVisuals[index].animations = undefined;
+    state.selectedVisuals[index].animationMode = "none";
     return;
   }
 
@@ -254,33 +240,6 @@ export const updateVisualAnimation = (
   );
   if (selectedAnimationMode) {
     state.selectedVisuals[index].animationMode = selectedAnimationMode;
-  }
-};
-
-export const updateVisualAnimationMode = (
-  { state },
-  { index, animationMode } = {},
-) => {
-  if (!state.selectedVisuals[index]) {
-    return;
-  }
-
-  if (animationMode !== "update" && animationMode !== "transition") {
-    state.selectedVisuals[index].animationMode = "none";
-    state.selectedVisuals[index].animations = undefined;
-    return;
-  }
-
-  state.selectedVisuals[index].animationMode = animationMode;
-
-  const selectedAnimationId =
-    state.selectedVisuals[index]?.animations?.resourceId;
-  const selectedAnimationMode = getAnimationModeById(
-    state.animations,
-    selectedAnimationId,
-  );
-  if (selectedAnimationMode && selectedAnimationMode !== animationMode) {
-    state.selectedVisuals[index].animations = undefined;
   }
 };
 
@@ -515,18 +474,12 @@ export const selectViewData = ({ state }) => {
   const animationItems = toFlatItems(state.animations).filter(
     (item) => item.type === "animation",
   );
-  const updateAnimationOptions = animationItems
-    .filter((item) => getAnimationType(item) === "update")
-    .map((item) => ({
-      value: item.id,
-      label: item.name,
-    }));
-  const transitionAnimationOptions = animationItems
-    .filter((item) => getAnimationType(item) === "transition")
-    .map((item) => ({
-      value: item.id,
-      label: item.name,
-    }));
+  const animationOptions = animationItems.map((item) => ({
+    value: item.id,
+    label: item.name,
+    suffixText:
+      getAnimationType(item) === "transition" ? "Transition" : "Update",
+  }));
 
   // Get enriched visual data
   const enrichedVisuals = selectVisualsWithRepositoryData({ state });
@@ -571,9 +524,7 @@ export const selectViewData = ({ state }) => {
       animationId: visual.animations?.resourceId,
     })),
     transformOptions,
-    animationModeOptions: ANIMATION_MODE_OPTIONS,
-    updateAnimationOptions,
-    transitionAnimationOptions,
+    animationOptions,
   };
 
   return {
@@ -582,9 +533,7 @@ export const selectViewData = ({ state }) => {
     resourceGroups,
     selectedVisuals: processedSelectedVisuals,
     transformOptions,
-    animationModeOptions: ANIMATION_MODE_OPTIONS,
-    updateAnimationOptions,
-    transitionAnimationOptions,
+    animationOptions,
     searchQuery: state.searchQuery,
     searchPlaceholder: "Search...",
     fullImagePreviewVisible: state.fullImagePreviewVisible,

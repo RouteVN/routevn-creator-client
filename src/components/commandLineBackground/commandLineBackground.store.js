@@ -15,24 +15,9 @@ const tabs = [
   },
 ];
 
-const ANIMATION_MODE_OPTIONS = [
-  {
-    label: "None",
-    value: "none",
-  },
-  {
-    label: "Update",
-    value: "update",
-  },
-  {
-    label: "Transition",
-    value: "transition",
-  },
-];
-
 const ANIMATION_PLAYBACK_CONTINUITY_OPTIONS = [
   {
-    label: "Render",
+    label: "Single Line",
     value: "render",
   },
   {
@@ -229,6 +214,8 @@ export const setSelectedAnimation = ({ state }, { animationId } = {}) => {
   );
   if (selectedAnimationMode) {
     state.selectedAnimationMode = selectedAnimationMode;
+  } else if (!state.selectedAnimationId) {
+    state.selectedAnimationMode = "none";
   }
 };
 
@@ -425,18 +412,12 @@ export const selectViewData = ({ state }) => {
   const allAnimationItems = toFlatItems(state.animationItems).filter(
     (item) => item.type === "animation",
   );
-  const updateAnimationOptions = allAnimationItems
-    .filter((item) => getAnimationType(item) === "update")
-    .map((item) => ({
-      value: item.id,
-      label: item.name,
-    }));
-  const transitionAnimationOptions = allAnimationItems
-    .filter((item) => getAnimationType(item) === "transition")
-    .map((item) => ({
-      value: item.id,
-      label: item.name,
-    }));
+  const animationOptions = allAnimationItems.map((item) => ({
+    value: item.id,
+    label: item.name,
+    suffixText:
+      getAnimationType(item) === "transition" ? "Transition" : "Update",
+  }));
   const transformOptions = toFlatItems(state.transformItems)
     .filter((item) => item.type === "transform")
     .map((item) => ({
@@ -459,33 +440,14 @@ export const selectViewData = ({ state }) => {
       options: transformOptions,
     },
     {
-      name: "animationType",
+      name: "animationId",
       label: "Animation",
-      type: "segmented-control",
-      clearable: false,
-      options: ANIMATION_MODE_OPTIONS,
+      type: "select",
+      clearable: true,
+      placeholder: "Select animation",
+      options: animationOptions,
     },
   ];
-
-  if (selectedAnimationMode === "update") {
-    formFields.push({
-      name: "updateAnimation",
-      label: "Update Animation",
-      type: "select",
-      clearable: false,
-      placeholder: "Select update animation",
-      options: updateAnimationOptions,
-    });
-  } else if (selectedAnimationMode === "transition") {
-    formFields.push({
-      name: "transitionAnimation",
-      label: "Transition Animation",
-      type: "select",
-      clearable: false,
-      placeholder: "Select transition animation",
-      options: transitionAnimationOptions,
-    });
-  }
 
   if (selectedAnimationMode !== "none") {
     formFields.push({
@@ -517,15 +479,7 @@ export const selectViewData = ({ state }) => {
     background: selectedResource?.fileId || "",
     transformId: state.selectedTransformId,
     playbackContinuity: state.selectedAnimationPlaybackContinuity,
-    animationType: selectedAnimationMode,
-    updateAnimation:
-      selectedAnimationMode === "update"
-        ? state.selectedAnimationId
-        : undefined,
-    transitionAnimation:
-      selectedAnimationMode === "transition"
-        ? state.selectedAnimationId
-        : undefined,
+    animationId: state.selectedAnimationId,
     loop: state.backgroundLoop ?? false,
   };
 

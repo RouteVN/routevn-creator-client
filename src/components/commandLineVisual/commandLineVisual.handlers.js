@@ -157,15 +157,6 @@ export const handleTransformChange = (deps, payload) => {
   dispatchTemporaryPresentationStateChange(deps);
 };
 
-export const handleAnimationModeChange = (deps, payload) => {
-  const { store, render } = deps;
-  const index = Number.parseInt(payload._event.currentTarget.dataset.index, 10);
-  const value = payload._event.detail.value;
-  store.updateVisualAnimationMode({ index, animationMode: value });
-  render();
-  dispatchTemporaryPresentationStateChange(deps);
-};
-
 export const handleAnimationChange = (deps, payload) => {
   const { store, render } = deps;
   const index = Number.parseInt(payload._event.currentTarget.dataset.index, 10);

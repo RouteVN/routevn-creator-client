@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  addChoice,
   createInitialState,
   selectEditForm,
+  selectItems,
   selectViewData,
   setAnimations,
   setEditingIndex,
@@ -10,6 +12,46 @@ import {
 } from "../../src/components/commandLineChoices/commandLineChoices.store.js";
 
 describe("commandLineChoices.store", () => {
+  it("uses nextLine events for default and added choices", () => {
+    const state = createInitialState();
+
+    expect(selectItems({ state })).toEqual([
+      {
+        content: "Choice 1",
+        events: {
+          click: {
+            actions: {
+              nextLine: {},
+            },
+          },
+        },
+      },
+      {
+        content: "Choice 2",
+        events: {
+          click: {
+            actions: {
+              nextLine: {},
+            },
+          },
+        },
+      },
+    ]);
+
+    addChoice({ state });
+
+    expect(selectItems({ state })[2]).toEqual({
+      content: "Choice 3",
+      events: {
+        click: {
+          actions: {
+            nextLine: {},
+          },
+        },
+      },
+    });
+  });
+
   it("prefills and offers screen animations for choice section transitions", () => {
     const state = createInitialState();
 

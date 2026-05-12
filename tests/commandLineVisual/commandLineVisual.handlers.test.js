@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleAddVisualClick,
   handleAnimationChange,
-  handleAnimationModeChange,
   handleResourceItemClick,
   handleSubmitClick,
 } from "../../src/components/commandLineVisual/commandLineVisual.handlers.js";
@@ -22,7 +21,6 @@ import {
   setTransforms,
   updateVisualResource,
   updateVisualAnimation,
-  updateVisualAnimationMode,
 } from "../../src/components/commandLineVisual/commandLineVisual.store.js";
 
 const createStoreApi = (state) => ({
@@ -38,8 +36,6 @@ const createStoreApi = (state) => ({
   setTempSelectedResourceId: (payload) =>
     setTempSelectedResourceId({ state }, payload),
   updateVisualAnimation: (payload) => updateVisualAnimation({ state }, payload),
-  updateVisualAnimationMode: (payload) =>
-    updateVisualAnimationMode({ state }, payload),
   updateVisualResource: (payload) => updateVisualResource({ state }, payload),
 });
 
@@ -65,7 +61,7 @@ const setAnimationCollection = (state) => {
 };
 
 describe("commandLineVisual.handlers animation controls", () => {
-  it("updates per-visual animation mode and animation selection", () => {
+  it("updates and clears per-visual animation selection", () => {
     const state = createInitialState();
     const render = vi.fn();
 
@@ -83,24 +79,6 @@ describe("commandLineVisual.handlers animation controls", () => {
       },
     );
 
-    handleAnimationModeChange(
-      {
-        store: createStoreApi(state),
-        render,
-      },
-      {
-        _event: {
-          currentTarget: {
-            dataset: {
-              index: "0",
-            },
-          },
-          detail: {
-            value: "update",
-          },
-        },
-      },
-    );
     handleAnimationChange(
       {
         store: createStoreApi(state),
@@ -126,6 +104,30 @@ describe("commandLineVisual.handlers animation controls", () => {
         resourceId: "visual-fade",
       },
     });
+
+    handleAnimationChange(
+      {
+        store: createStoreApi(state),
+        render,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              index: "0",
+            },
+          },
+          detail: {
+            value: undefined,
+          },
+        },
+      },
+    );
+
+    expect(selectSelectedVisuals({ state })[0]).toMatchObject({
+      animationMode: "none",
+    });
+    expect(selectSelectedVisuals({ state })[0].animations).toBeUndefined();
     expect(render).toHaveBeenCalledTimes(2);
   });
 

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleButtonSelectClick,
   handleBreadcumbClick,
+  handleAnimationChange,
   handleCharacterClick,
   handleCharacterItemClick,
   handleCharacterContextMenu,
@@ -27,6 +28,7 @@ import {
   selectTempSelectedSpriteIds,
   selectTempSelectedSpriteId,
   setMode,
+  setAnimations,
   setPendingCharacterIndex,
   setSearchQuery,
   setSelectedCharacterIndex,
@@ -36,6 +38,7 @@ import {
   setExistingCharacters,
   setItems,
   setTransforms,
+  updateCharacterAnimation,
   showDropdownMenu,
   updateCharacterSprites,
 } from "../../src/components/commandLineCharacters/commandLineCharacters.store.js";
@@ -74,11 +77,120 @@ const createStoreApi = (state) => ({
   setTempSelectedSpriteId: (payload) =>
     setTempSelectedSpriteId({ state }, payload),
   showDropdownMenu: (payload) => showDropdownMenu({ state }, payload),
+  updateCharacterAnimation: (payload) =>
+    updateCharacterAnimation({ state }, payload),
   updateCharacterSprites: (payload) =>
     updateCharacterSprites({ state }, payload),
 });
 
 describe("commandLineCharacters.handlers", () => {
+  it("updates and clears per-character animation selection", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+
+    setAnimations(
+      { state },
+      {
+        animations: {
+          items: {
+            "character-enter": {
+              id: "character-enter",
+              type: "animation",
+              name: "Enter",
+              animation: {
+                type: "transition",
+              },
+            },
+          },
+          tree: [{ id: "character-enter" }],
+        },
+      },
+    );
+    setExistingCharacters(
+      { state },
+      {
+        characters: [
+          {
+            id: "character-hero",
+            sprites: [],
+          },
+        ],
+      },
+    );
+
+    handleAnimationChange(
+      {
+        store: createStoreApi(state),
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              index: "0",
+            },
+          },
+          detail: {
+            value: "character-enter",
+          },
+        },
+      },
+    );
+
+    expect(selectSelectedCharacters({ state })[0]).toMatchObject({
+      animationMode: "transition",
+      animations: {
+        resourceId: "character-enter",
+      },
+    });
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        character: {
+          items: [
+            {
+              id: "character-hero",
+              transformId: undefined,
+              sprites: [],
+              spriteName: "",
+              animations: {
+                resourceId: "character-enter",
+              },
+            },
+          ],
+        },
+      },
+    });
+
+    handleAnimationChange(
+      {
+        store: createStoreApi(state),
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              index: "0",
+            },
+          },
+          detail: {
+            value: undefined,
+          },
+        },
+      },
+    );
+
+    expect(selectSelectedCharacters({ state })[0]).toMatchObject({
+      animationMode: "none",
+    });
+    expect(selectSelectedCharacters({ state })[0].animations).toBeUndefined();
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
   it("drops a newly added character when sprite selection is cancelled from the breadcrumb", () => {
     const state = createInitialState();
     const render = vi.fn();

@@ -27,6 +27,7 @@ describe("commandLineScreen.store", () => {
     );
     expect(viewData.form.fields[0]).toEqual(
       expect.objectContaining({
+        clearable: true,
         label: "Animation",
         placeholder: "Animation",
       }),
@@ -77,8 +78,35 @@ describe("commandLineScreen.store", () => {
       {
         value: "fade-in",
         label: "Fade In",
+        suffixText: "Transition",
       },
     ]);
     expect(viewData.defaultValues.transitionAnimationId).toBe("fade-in");
+  });
+
+  it("keeps a cleared screen animation empty instead of falling back to props", () => {
+    const state = createInitialState();
+
+    setFormValues(
+      { state },
+      {
+        values: {
+          transitionAnimationId: undefined,
+        },
+      },
+    );
+
+    const viewData = selectViewData({
+      state,
+      props: {
+        screen: {
+          animations: {
+            resourceId: "screen-crossfade",
+          },
+        },
+      },
+    });
+
+    expect(viewData.defaultValues.transitionAnimationId).toBeUndefined();
   });
 });

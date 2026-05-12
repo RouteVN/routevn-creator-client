@@ -72,12 +72,20 @@ const resolveSelectedResourceId = ({ layouts, resourceId } = {}) => {
   return resourceOptions[0]?.value ?? "";
 };
 
+const createNextLineChoice = (content) => ({
+  content,
+  events: {
+    click: {
+      actions: {
+        nextLine: {},
+      },
+    },
+  },
+});
+
 export const createInitialState = () => ({
   mode: "list", // "list" or "editChoice"
-  items: [
-    { content: "Choice 1", action: { type: "continue" } },
-    { content: "Choice 2", action: { type: "continue" } },
-  ],
+  items: [createNextLineChoice("Choice 1"), createNextLineChoice("Choice 2")],
   selectedResourceId: "",
   editingIndex: -1,
   editForm: {
@@ -181,10 +189,7 @@ const buildChoiceDataFromEditForm = (editForm = {}) => {
 };
 
 export const addChoice = ({ state }, _payload = {}) => {
-  state.items.push({
-    content: `Choice ${state.items.length + 1}`,
-    action: { type: "continue" },
-  });
+  state.items.push(createNextLineChoice(`Choice ${state.items.length + 1}`));
 };
 
 export const removeChoice = ({ state }, { index } = {}) => {
@@ -248,7 +253,7 @@ export const hideDropdownMenu = ({ state }, _payload = {}) => {
 };
 
 export const setItems = ({ state }, { items } = {}) => {
-  state.items = items;
+  state.items = Array.isArray(items) ? items : [];
 };
 
 export const selectDropdownMenuChoiceIndex = ({ state }) => {
@@ -262,7 +267,7 @@ export const selectEditForm = ({ state }) =>
   state?.editForm || {
     content: "",
     variables: "",
-    actionType: "continue",
+    actionType: "nextLine",
     sceneId: "",
     sectionId: "",
   };
@@ -338,21 +343,9 @@ export const selectViewData = ({ state, props }) => {
     resourceId: state.selectedResourceId,
   });
 
-  const actionTypeOptions = [
-    { value: "continue", label: "Continue (Do Nothing)" },
-    { value: "moveToScene", label: "Move to Scene" },
-    { value: "moveToSection", label: "Move to Section" },
-  ];
-
   // Pre-compute complex expressions for template
   const processedItems = (state?.items || []).map((item) => ({
     ...item,
-    actionLabel:
-      item.action?.type === "continue"
-        ? "Continue"
-        : item.action?.type === "moveToScene"
-          ? "Move to Scene"
-          : "Move to Section",
   }));
 
   const editModeTitle =
@@ -416,7 +409,6 @@ export const selectViewData = ({ state, props }) => {
     editForm: state?.editForm,
     editFormContext,
     defaultValues,
-    actionTypeOptions,
     editModeTitle,
     breadcrumb,
     choiceFormTemplate: CHOICE_FORM_TEMPLATE,

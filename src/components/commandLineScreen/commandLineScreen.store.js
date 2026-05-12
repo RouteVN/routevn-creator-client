@@ -13,7 +13,7 @@ const form = {
       label: "Animation",
       description: "",
       required: true,
-      clearable: false,
+      clearable: true,
       placeholder: "Animation",
       options: "${transitionAnimationOptions}",
     },
@@ -39,8 +39,13 @@ export const setFormValues = ({ state }, { values } = {}) => {
 
 export const selectViewData = ({ state, props }) => {
   const propsAnimationId = props?.screen?.animations?.resourceId;
-  const selectedAnimationId =
-    state.formValues?.transitionAnimationId ?? propsAnimationId;
+  const hasFormAnimationId = Object.prototype.hasOwnProperty.call(
+    state.formValues ?? {},
+    "transitionAnimationId",
+  );
+  const selectedAnimationId = hasFormAnimationId
+    ? state.formValues.transitionAnimationId
+    : propsAnimationId;
 
   return {
     breadcrumb: [
@@ -63,7 +68,10 @@ export const selectViewData = ({ state, props }) => {
       transitionAnimationOptions: getTransitionAnimationOptions(
         state.animations,
         selectedAnimationId,
-      ),
+      ).map((option) => ({
+        ...option,
+        suffixText: "Transition",
+      })),
     },
   };
 };
