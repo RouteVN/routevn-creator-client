@@ -165,9 +165,46 @@ const ensureAnimationPreviewRuntime = async ({
   return true;
 };
 
+const hasTransitionPreviewAnimation = (renderState = {}) => {
+  return (renderState.animations ?? []).some(
+    (animation) => animation?.type === "transition",
+  );
+};
+
+const primeTransitionPreviewFrame = async ({
+  deps,
+  renderState,
+  resetState,
+  shouldContinue,
+} = {}) => {
+  const { graphicsService } = deps;
+
+  if (!hasTransitionPreviewAnimation(renderState)) {
+    return true;
+  }
+
+  await graphicsService.render(resetState);
+  await waitForAnimationPreviewPaint({
+    canvas: deps.refs.detailCanvas,
+  });
+
+  if (!shouldContinue()) {
+    return false;
+  }
+
+  await graphicsService.render(renderState);
+  graphicsService.setAnimationTime(0);
+  await waitForAnimationPreviewPaint({
+    canvas: deps.refs.detailCanvas,
+  });
+
+  return shouldContinue();
+};
+
 const renderAnimationPreviewAtStart = async ({
   deps,
   itemId,
+  primeTransition = false,
   renderState,
   requestId,
   resetState,
@@ -183,6 +220,19 @@ const renderAnimationPreviewAtStart = async ({
 
   graphicsService.setAnimationPlaybackMode("manual");
   graphicsService.setAnimationTime(0);
+
+  if (primeTransition) {
+    const primed = await primeTransitionPreviewFrame({
+      deps,
+      renderState,
+      resetState,
+      shouldContinue,
+    });
+
+    if (!primed) {
+      return false;
+    }
+  }
 
   await graphicsService.render(resetState);
   await waitForAnimationPreviewPaint({
@@ -390,6 +440,7 @@ export const renderSelectedAnimationPreview = async (
     const rendered = await renderAnimationPreviewAtStart({
       deps,
       itemId,
+      primeTransition: true,
       renderState,
       requestId,
       resetState,

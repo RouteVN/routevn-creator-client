@@ -218,4 +218,118 @@ describe("animations.handlers", () => {
 
     vi.unstubAllGlobals();
   });
+
+  it("primes transition previews before revealing the first live frame", async () => {
+    vi.stubGlobal(
+      "requestAnimationFrame",
+      vi.fn(() => 7),
+    );
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+
+    const selectedAnimation = {
+      id: "transition-1",
+      type: "animation",
+      name: "Swipe",
+      animation: {
+        type: "transition",
+        prev: {
+          tween: {
+            alpha: {
+              keyframes: [
+                {
+                  duration: 1000,
+                  value: 0,
+                  easing: "linear",
+                },
+              ],
+            },
+          },
+        },
+      },
+    };
+    let previewRequestId;
+    const deps = {
+      appService: {
+        showToast: vi.fn(),
+      },
+      graphicsService: {
+        init: vi.fn(async () => {}),
+        loadAssets: vi.fn(async () => {}),
+        render: vi.fn(),
+        setAnimationPlaybackMode: vi.fn(),
+        setAnimationTime: vi.fn(),
+      },
+      projectService: {
+        getRepositoryState: vi.fn(() => ({
+          images: {
+            items: {},
+          },
+          files: {},
+        })),
+      },
+      refs: {
+        detailCanvas: {},
+        fileExplorer: {
+          selectItem: vi.fn(),
+        },
+      },
+      store: {
+        selectSelectedItemId: vi
+          .fn()
+          .mockReturnValueOnce(undefined)
+          .mockReturnValue("transition-1"),
+        setSelectedItemId: vi.fn(),
+        clearPreviewRuntime: vi.fn(),
+        getState: vi.fn(() => ({
+          isTouchMode: false,
+          isMobileFileExplorerOpen: false,
+        })),
+        selectSelectedAnimation: vi.fn(() => selectedAnimation),
+        selectProjectResolution: vi.fn(() => ({
+          width: 800,
+          height: 600,
+        })),
+        selectPreviewRuntime: vi.fn(() => ({})),
+        setPreviewRuntime: vi.fn(),
+        selectImagesData: vi.fn(() => ({
+          items: {},
+          tree: [],
+        })),
+        selectAnimationPreviewFrameId: vi.fn(() => undefined),
+        clearAnimationPreviewPlayback: vi.fn(),
+        selectAnimationPreviewStartedAtMs: vi.fn(() => undefined),
+        setAnimationPreviewFrameId: vi.fn(),
+        setAnimationPreviewStartedAtMs: vi.fn(),
+        setAnimationPreviewRequestId: vi.fn(({ requestId } = {}) => {
+          previewRequestId = requestId;
+        }),
+        selectAnimationPreviewRequestId: vi.fn(() => previewRequestId),
+        setAnimationPreviewVisible: vi.fn(),
+      },
+      render: vi.fn(),
+    };
+
+    await handleAnimationItemClick(deps, {
+      _event: {
+        detail: {
+          itemId: "transition-1",
+        },
+      },
+    });
+
+    expect(deps.graphicsService.render).toHaveBeenCalledTimes(4);
+    expect(deps.graphicsService.render.mock.calls[0][0].animations).toEqual([]);
+    expect(
+      deps.graphicsService.render.mock.calls[1][0].animations[0].type,
+    ).toBe("transition");
+    expect(deps.graphicsService.render.mock.calls[2][0].animations).toEqual([]);
+    expect(
+      deps.graphicsService.render.mock.calls[3][0].animations[0].type,
+    ).toBe("transition");
+    expect(deps.store.setAnimationPreviewVisible).toHaveBeenLastCalledWith({
+      visible: true,
+    });
+
+    vi.unstubAllGlobals();
+  });
 });
