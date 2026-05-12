@@ -320,15 +320,15 @@
         "id": "Wt2LWBPXdux2",
         "type": "image",
         "mimeType": "image/png",
-        "size": 1198657,
-        "sha256": "2aa654a4fdcbe337ab50f5b5680ffdc83548b8f0870db511fd8322a6d87a220d"
+        "size": 227435,
+        "sha256": "5f0fb0fadb5f99e92d4ae5902574465f1ebf4d2fd6915f106200483f73b767c6"
       },
       "oVd6cHn2uKUk": {
         "id": "oVd6cHn2uKUk",
         "type": "image",
         "mimeType": "image/png",
-        "size": 33100,
-        "sha256": "cdc97c661af638180f0b8e695189f26f207cd5dd96de95e08189446c571b19ff"
+        "size": 17628,
+        "sha256": "5dbdcf2313c58e74cbbb80ac6ffa4fb7e1aa3bea210d877bcacece769cdb9c6b"
       },
       "zoHtXFvnrjzi": {
         "id": "zoHtXFvnrjzi",
@@ -668,7 +668,7 @@
       "ZvJUEaaujuQj": {
         "id": "ZvJUEaaujuQj",
         "type": "image",
-        "name": "mask_slider",
+        "name": "swipe",
         "width": 1908,
         "height": 1080,
         "fileId": "Wt2LWBPXdux2",
