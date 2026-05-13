@@ -9,6 +9,7 @@ import { resolveResourceFileType } from "../../internal/resourceFileMetadata.js"
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import {
+  addKeyframeDefaultValues,
   AUTO_TWEEN_DEFAULT_DURATION,
   AUTO_TWEEN_DEFAULT_EASING,
 } from "./animationEditor.constants.js";
@@ -223,6 +224,19 @@ const renderPreviewAnimationState = async ({
   return true;
 };
 
+const clearPreviewCanvas = async ({ graphicsService } = {}) => {
+  if (!graphicsService) {
+    return;
+  }
+
+  graphicsService.setAnimationPlaybackMode("manual");
+  graphicsService.setAnimationTime(0);
+  await graphicsService.render({
+    elements: [],
+    animations: [],
+  });
+};
+
 const waitForPreviewPaint = async () => {
   await new Promise((resolve) => {
     if (typeof globalThis.requestAnimationFrame === "function") {
@@ -320,6 +334,7 @@ const ensureManualPreviewAtTime = async ({
 const renderPreviewForThumbnailCapture = async ({
   graphicsService,
   projectService,
+  resetCanvas = false,
   store,
 } = {}) => {
   if (!graphicsService) {
@@ -329,6 +344,12 @@ const renderPreviewForThumbnailCapture = async ({
   const captureTimeMs = store.selectPreviewPlayheadVisible()
     ? (store.selectPreviewPlayheadTimeMs() ?? 0)
     : 0;
+
+  if (resetCanvas) {
+    await clearPreviewCanvas({
+      graphicsService,
+    });
+  }
 
   await ensureManualPreviewAtTime({
     graphicsService,
@@ -772,25 +793,28 @@ export const handleAddPropertySideMenuItemClick = (deps, payload) => {
 
 export const handleAddPropertyFormSubmit = (deps, payload) => {
   const { render, store } = deps;
+  const popover = store.selectPopover();
   const {
     payload: { side },
-  } = store.selectPopover();
-  const {
-    property,
-    initialValue,
-    useInitialValue,
-    tweenMode,
-    duration,
-    easing,
-  } = payload._event.detail.values;
+  } = popover;
+  const trackedValues = popover.formValues ?? {};
+  const mergedValues = mergeSubmittedFormValues({
+    popover,
+    payload,
+  });
+  const { property, useInitialValue, tweenMode, duration, easing } =
+    mergedValues;
   const defaultInitialValue = store.selectDefaultInitialValue({ property });
   const useAutoTween = side === "update" && tweenMode === "auto";
+  const submittedInitialValue = hasOwnFormValue(trackedValues, "initialValue")
+    ? trackedValues.initialValue
+    : defaultInitialValue;
 
   const finalInitialValue = useAutoTween
     ? undefined
     : useInitialValue
-      ? initialValue !== undefined && initialValue !== ""
-        ? initialValue
+      ? submittedInitialValue !== undefined && submittedInitialValue !== ""
+        ? submittedInitialValue
         : defaultInitialValue
       : undefined;
 
@@ -833,13 +857,21 @@ export const handleAddKeyframeInDialog = (deps, payload) => {
 
 export const handleAddKeyframeFormSubmit = (deps, payload) => {
   const { render, store } = deps;
+  const popover = store.selectPopover();
   const {
     payload: { side, property, index },
-  } = store.selectPopover();
+  } = popover;
+  const trackedValues = popover.formValues ?? {};
 
   const formValues = {
-    ...payload._event.detail.values,
+    ...mergeSubmittedFormValues({
+      popover,
+      payload,
+    }),
   };
+  if (!hasOwnFormValue(trackedValues, "value")) {
+    formValues.value = addKeyframeDefaultValues.value;
+  }
 
   if (formValues.duration < 1) {
     formValues.duration = 1;
@@ -1098,6 +1130,18 @@ const updatePopoverFieldValue = ({ store, detail } = {}) => {
   });
 };
 
+const mergeSubmittedFormValues = ({ popover, payload } = {}) => {
+  return Object.assign(
+    {},
+    payload?._event?.detail?.values,
+    popover?.formValues,
+  );
+};
+
+const hasOwnFormValue = (values, name) => {
+  return Object.prototype.hasOwnProperty.call(values ?? {}, name);
+};
+
 const resolveValueChange = (payload) => {
   return (
     payload._event.detail?.value ??
@@ -1148,6 +1192,7 @@ const PREVIEW_IMAGE_SELECTOR_TARGETS = new Set([
   "preview-background",
   "preview-outgoing",
   "preview-incoming",
+  "preview-target",
 ]);
 
 const isPreviewImageSelectorTarget = (target) => {
@@ -1156,12 +1201,29 @@ const isPreviewImageSelectorTarget = (target) => {
 
 export const handleAddPropertyFormChange = (deps, payload) => {
   const { render, store } = deps;
+  const { name, value } = payload._event.detail ?? {};
+  if (name === "property") {
+    const currentFormValues = store.selectPopover().formValues ?? {};
+    const initialValue = store.selectDefaultInitialValue({
+      property: value,
+    });
+    const nextFormValues = {
+      ...currentFormValues,
+      property: value,
+      initialValue,
+    };
+    store.updatePopoverFormValues({
+      formValues: nextFormValues,
+    });
+    render();
+    return;
+  }
+
   updatePopoverFieldValue({
     store,
     detail: payload._event.detail,
   });
 
-  const { name, value } = payload._event.detail ?? {};
   if (name === "tweenMode" && value === "auto") {
     const currentFormValues = store.selectPopover().formValues ?? {};
     store.updatePopoverFormValues({
@@ -1173,6 +1235,15 @@ export const handleAddPropertyFormChange = (deps, payload) => {
     });
   }
 
+  render();
+};
+
+export const handleAddKeyframeFormChange = (deps, payload) => {
+  const { render, store } = deps;
+  updatePopoverFieldValue({
+    store,
+    detail: payload._event.detail,
+  });
   render();
 };
 
@@ -1530,6 +1601,7 @@ export const handleConfirmMaskImageSelection = async (deps) => {
       await renderPreviewForThumbnailCapture({
         graphicsService,
         projectService,
+        resetCanvas: true,
         store,
       });
     } catch {
@@ -1627,11 +1699,15 @@ export const handleReplayAnimation = async (deps) => {
 
 export const handleEditInitialValueFormSubmit = (deps, payload) => {
   const { render, store } = deps;
+  const popover = store.selectPopover();
   const {
     payload: { side, property },
-  } = store.selectPopover();
+  } = popover;
 
-  const { initialValue, valueSource } = payload._event.detail.values;
+  const { initialValue, valueSource } = mergeSubmittedFormValues({
+    popover,
+    payload,
+  });
   const defaultInitialValue = store.selectDefaultInitialValue({ property });
   const finalInitialValue =
     valueSource === "default"

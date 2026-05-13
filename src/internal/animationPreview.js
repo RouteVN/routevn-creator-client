@@ -158,12 +158,19 @@ export const PREVIEW_IMAGE_SLOT_CONFIGS = Object.freeze([
     field: "incoming",
     supportsTransform: true,
   },
+  {
+    label: "Target Image",
+    target: "preview-target",
+    field: "target",
+    supportsTransform: true,
+  },
 ]);
 
 export const createInitialAnimationPreviewImages = () => ({
   background: {},
   outgoing: {},
   incoming: {},
+  target: {},
 });
 
 export const getPreviewSlotConfig = (target) => {
@@ -216,6 +223,10 @@ export const normalizeAnimationPreviewData = (previewData) => {
     incoming: normalizePreviewSlot(source.incoming ?? source.incomingImageId, {
       supportsTransform: true,
     }),
+    target: normalizePreviewSlot(
+      source.target ?? source.targetImageId ?? source.incoming,
+      { supportsTransform: true },
+    ),
   };
 };
 
@@ -230,6 +241,12 @@ const getPreviewSlot = (previewImages, target) => {
 
 export const getPreviewSlotImageId = (previewImages, target) => {
   return getPreviewSlot(previewImages, target).imageId;
+};
+
+const getUpdatePreviewSlot = (previewImages = {}) => {
+  return previewImages.target?.imageId
+    ? previewImages.target
+    : (previewImages.incoming ?? {});
 };
 
 const createPreviewBackgroundElement = ({
@@ -340,7 +357,7 @@ export const createAnimationPreviewResetState = ({
     elements.push(
       createPreviewContentElement({
         id: ANIMATION_PREVIEW_UPDATE_ELEMENT_ID,
-        previewSlot: getPreviewSlot(previewImages, "preview-incoming"),
+        previewSlot: getUpdatePreviewSlot(previewImages),
         imagesData,
         projectResolution,
         fallbackFill: "white",

@@ -81,6 +81,8 @@ refs:
     eventListeners:
       form-action:
         handler: handleAddKeyframeFormSubmit
+      form-change:
+        handler: handleAddKeyframeFormChange
   editKeyframeForm:
     eventListeners:
       form-action:
@@ -372,7 +374,7 @@ template:
   - rtgl-popover#addPropertyPopover ?open=${popover.popoverIsOpen} x=${popover.x} y=${popover.y}:
       - $if popover.mode == 'addProperty':
           - rtgl-view slot=content:
-              - rtgl-form#addPropertyForm :form=${addPropertyForm} :context=${addPropertyContext} :defaultValues=${addPropertyFormDefaultValues}: null
+              - rtgl-form#addPropertyForm key=${addPropertyFormKey} :form=${addPropertyForm} :context=${addPropertyContext} :defaultValues=${addPropertyFormDefaultValues}: null
       - $if popover.mode == 'addKeyframe':
           - rtgl-view slot=content:
               - rtgl-form#addKeyframeForm :form=${addKeyframeForm} :defaultValues=${addKeyframeDefaultValues}: null
