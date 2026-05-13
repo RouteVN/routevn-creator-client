@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { produce } from "immer";
-import { PREVIEW_TRANSITION_ELEMENT_ID } from "../../src/pages/animationEditor/animationEditor.constants.js";
+import {
+  PREVIEW_TRANSITION_ELEMENT_ID,
+  PREVIEW_UPDATE_ELEMENT_ID,
+} from "../../src/pages/animationEditor/animationEditor.constants.js";
 import {
   commitPendingTransitionMask,
   createInitialState,
@@ -17,6 +20,7 @@ import {
   setTransitionMaskChannel,
   setTransitionMaskImage,
   startPendingTransitionMask,
+  updatePopoverFormValues,
 } from "../../src/pages/animationEditor/animationEditor.store.js";
 
 describe("animationEditor.store", () => {
@@ -154,6 +158,92 @@ describe("animationEditor.store", () => {
     });
   });
 
+  it("creates a single add-property initial value field for the selected property", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "update" });
+    setProjectResolution(
+      { state },
+      {
+        projectResolution: {
+          width: 1920,
+          height: 1080,
+        },
+      },
+    );
+    setPopover(
+      { state },
+      {
+        mode: "addProperty",
+        payload: {
+          side: "update",
+        },
+      },
+    );
+    updatePopoverFormValues(
+      { state },
+      {
+        formValues: {
+          property: "x",
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state });
+    const addPropertyForm = viewData.addPropertyForm;
+    const initialValueFields = addPropertyForm.fields.filter(
+      (field) => field.name === "initialValue",
+    );
+
+    expect(viewData.addPropertyFormKey).toBe("open:update:x:keyframes:current");
+    expect(viewData.addPropertyFormDefaultValues).toMatchObject({
+      property: "x",
+      initialValue: 960,
+    });
+    expect(initialValueFields).toHaveLength(1);
+    expect(initialValueFields[0]).toMatchObject({
+      defaultValue: 960,
+      $when: 'tweenMode != "auto" && useInitialValue == true',
+    });
+  });
+
+  it("uses zero as the add-property initial value default when the property default is zero", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "update" });
+    setPopover(
+      { state },
+      {
+        mode: "addProperty",
+        payload: {
+          side: "update",
+        },
+      },
+    );
+    updatePopoverFormValues(
+      { state },
+      {
+        formValues: {
+          property: "translateX",
+        },
+      },
+    );
+
+    const viewData = selectViewData({
+      state,
+    });
+    const initialValueFields = viewData.addPropertyForm.fields.filter(
+      (field) => field.name === "initialValue",
+    );
+
+    expect(viewData.addPropertyFormDefaultValues).toMatchObject({
+      property: "translateX",
+      initialValue: 0,
+    });
+    expect(initialValueFields).toHaveLength(1);
+    expect(initialValueFields[0]).toMatchObject({
+      defaultValue: 0,
+    });
+  });
+
   it("commits a pending mask inside Immer-backed store actions", () => {
     const state = createInitialState();
     openDialog({ state }, { dialogType: "transition" });
@@ -227,10 +317,10 @@ describe("animationEditor.store", () => {
               fileId: "file-bg",
               thumbnailFileId: "thumb-bg",
             },
-            incoming: {
+            target: {
               type: "image",
-              name: "Incoming",
-              fileId: "file-incoming",
+              name: "Target",
+              fileId: "file-target",
               width: 1024,
               height: 768,
             },
@@ -248,8 +338,8 @@ describe("animationEditor.store", () => {
     setPreviewImage(
       { state },
       {
-        target: "preview-incoming",
-        imageId: "incoming",
+        target: "preview-target",
+        imageId: "target",
       },
     );
 
@@ -265,16 +355,11 @@ describe("animationEditor.store", () => {
         }),
       }),
       expect.objectContaining({
-        label: "Outgoing Image",
-        target: "preview-outgoing",
-        imageLabel: "Select image",
-      }),
-      expect.objectContaining({
-        label: "Incoming Image",
-        target: "preview-incoming",
-        imageLabel: "Incoming",
+        label: "Target Image",
+        target: "preview-target",
+        imageLabel: "Target",
         image: expect.objectContaining({
-          previewFileId: "file-incoming",
+          previewFileId: "file-target",
           previewAspectRatio: "1024 / 768",
         }),
       }),
@@ -323,6 +408,100 @@ describe("animationEditor.store", () => {
         imageId: "incoming",
         transformId: "transform-in",
       },
+    });
+  });
+
+  it("stores update preview data in the target slot", () => {
+    const state = createInitialState();
+    openDialog(
+      { state },
+      {
+        editMode: true,
+        itemId: "animation-1",
+        itemData: {
+          name: "Fade",
+          description: "",
+          animation: {
+            type: "update",
+            tween: {},
+          },
+          preview: {
+            background: {
+              imageId: "bg",
+            },
+            incoming: {
+              imageId: "legacy-incoming",
+            },
+          },
+        },
+      },
+    );
+
+    expect(selectPreviewData({ state })).toEqual({
+      background: {
+        imageId: "bg",
+      },
+      target: {
+        imageId: "legacy-incoming",
+      },
+    });
+
+    setPreviewImage(
+      { state },
+      {
+        target: "preview-target",
+        imageId: "target",
+      },
+    );
+
+    expect(selectPreviewData({ state })).toEqual({
+      background: {
+        imageId: "bg",
+      },
+      target: {
+        imageId: "target",
+      },
+    });
+  });
+
+  it("uses the target image in update render states", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "update" });
+    setImages(
+      { state },
+      {
+        images: {
+          tree: [],
+          items: {
+            target: {
+              type: "image",
+              name: "Target",
+              fileId: "file-target",
+              width: 1024,
+              height: 768,
+            },
+          },
+        },
+      },
+    );
+    setPreviewImage(
+      { state },
+      {
+        target: "preview-target",
+        imageId: "target",
+      },
+    );
+
+    const renderState = selectAnimationRenderStateWithAnimations({ state });
+    const updateElement = renderState.elements.find(
+      (element) => element.id === PREVIEW_UPDATE_ELEMENT_ID,
+    );
+
+    expect(updateElement).toMatchObject({
+      type: "sprite",
+      src: "file-target",
+      width: 1024,
+      height: 768,
     });
   });
 

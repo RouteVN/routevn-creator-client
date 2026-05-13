@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   handleAddMaskClick,
+  handleAddKeyframeFormSubmit,
+  handleAddPropertyFormChange,
+  handleAddPropertyFormSubmit,
   handleConfirmMaskImageSelection,
   handleEditMaskClick,
   handleOpenAddMaskClick,
@@ -12,6 +15,12 @@ import {
 } from "../../src/pages/animationEditor/animationEditor.handlers.js";
 
 describe("animationEditor.handlers", () => {
+  const createIdleAutosaveMocks = () => ({
+    selectAutosaveInFlight: vi.fn(() => false),
+    selectAutosavePersistedVersion: vi.fn(() => 1),
+    selectAutosaveVersion: vi.fn(() => 1),
+  });
+
   it("opens a pending transition mask from the right panel", () => {
     const store = {
       startPendingTransitionMask: vi.fn(),
@@ -115,7 +124,7 @@ describe("animationEditor.handlers", () => {
         _event: {
           currentTarget: {
             dataset: {
-              target: "preview-incoming",
+              target: "preview-target",
             },
           },
         },
@@ -123,14 +132,265 @@ describe("animationEditor.handlers", () => {
     );
 
     expect(store.selectPreviewImageId).toHaveBeenCalledWith({
-      target: "preview-incoming",
+      target: "preview-target",
     });
     expect(store.showImageSelectorDialog).toHaveBeenCalledWith({
-      target: "preview-incoming",
+      target: "preview-target",
       index: undefined,
       selectedImageId: "image-current",
     });
     expect(render).toHaveBeenCalled();
+  });
+
+  it("preserves zero initial values when adding a property", () => {
+    const store = {
+      selectPopover: vi.fn(() => ({
+        payload: {
+          side: "update",
+        },
+        formValues: {
+          property: "alpha",
+          useInitialValue: true,
+          initialValue: 0,
+          tweenMode: "keyframes",
+        },
+      })),
+      selectDefaultInitialValue: vi.fn(() => 1),
+      addProperty: vi.fn(),
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      stopPreviewPlayback: vi.fn(),
+      bumpPreviewRenderVersion: vi.fn(),
+      closePopover: vi.fn(),
+      queueAutosave: vi.fn(),
+      ...createIdleAutosaveMocks(),
+    };
+    const render = vi.fn();
+
+    handleAddPropertyFormSubmit(
+      {
+        store,
+        render,
+      },
+      {
+        _event: {
+          detail: {
+            values: {
+              property: "alpha",
+              useInitialValue: true,
+              initialValue: 1,
+              tweenMode: "keyframes",
+            },
+          },
+        },
+      },
+    );
+
+    expect(store.addProperty).toHaveBeenCalledWith({
+      side: "update",
+      property: "alpha",
+      initialValue: 0,
+      tweenMode: "keyframes",
+      autoDuration: undefined,
+      autoEasing: undefined,
+    });
+  });
+
+  it("uses the selected property default when the add-property initial value is not edited", () => {
+    const store = {
+      selectPopover: vi.fn(() => ({
+        payload: {
+          side: "update",
+        },
+        formValues: {
+          property: "alpha",
+          useInitialValue: true,
+          tweenMode: "keyframes",
+        },
+      })),
+      selectDefaultInitialValue: vi.fn(() => 1),
+      addProperty: vi.fn(),
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      stopPreviewPlayback: vi.fn(),
+      bumpPreviewRenderVersion: vi.fn(),
+      closePopover: vi.fn(),
+      queueAutosave: vi.fn(),
+      ...createIdleAutosaveMocks(),
+    };
+    const render = vi.fn();
+
+    handleAddPropertyFormSubmit(
+      {
+        store,
+        render,
+      },
+      {
+        _event: {
+          detail: {
+            values: {
+              property: "alpha",
+              useInitialValue: true,
+              tweenMode: "keyframes",
+            },
+          },
+        },
+      },
+    );
+
+    expect(store.addProperty).toHaveBeenCalledWith({
+      side: "update",
+      property: "alpha",
+      initialValue: 1,
+      tweenMode: "keyframes",
+      autoDuration: undefined,
+      autoEasing: undefined,
+    });
+  });
+
+  it("resets stale initial values when the add-property property changes", () => {
+    const store = {
+      selectPopover: vi.fn(() => ({
+        formValues: {
+          property: "alpha",
+          useInitialValue: true,
+          initialValue: 0,
+        },
+      })),
+      selectDefaultInitialValue: vi.fn(() => 1),
+      updatePopoverFormValues: vi.fn(),
+    };
+    const render = vi.fn();
+
+    handleAddPropertyFormChange(
+      {
+        store,
+        render,
+      },
+      {
+        _event: {
+          detail: {
+            name: "property",
+            value: "scaleX",
+          },
+        },
+      },
+    );
+
+    expect(store.updatePopoverFormValues).toHaveBeenCalledWith({
+      formValues: {
+        initialValue: 1,
+        property: "scaleX",
+        useInitialValue: true,
+      },
+    });
+    expect(render).toHaveBeenCalled();
+  });
+
+  it("preserves zero values when adding a keyframe", () => {
+    const store = {
+      selectPopover: vi.fn(() => ({
+        payload: {
+          side: "update",
+          property: "alpha",
+          index: 0,
+        },
+        formValues: {
+          duration: 1000,
+          value: 0,
+          easing: "linear",
+          relative: false,
+        },
+      })),
+      addKeyframe: vi.fn(),
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      stopPreviewPlayback: vi.fn(),
+      bumpPreviewRenderVersion: vi.fn(),
+      closePopover: vi.fn(),
+      queueAutosave: vi.fn(),
+      ...createIdleAutosaveMocks(),
+    };
+    const render = vi.fn();
+
+    handleAddKeyframeFormSubmit(
+      {
+        store,
+        render,
+      },
+      {
+        _event: {
+          detail: {
+            values: {
+              duration: 1000,
+              easing: "linear",
+              relative: false,
+            },
+          },
+        },
+      },
+    );
+
+    expect(store.addKeyframe).toHaveBeenCalledWith({
+      side: "update",
+      property: "alpha",
+      index: 0,
+      duration: 1000,
+      value: 0,
+      easing: "linear",
+      relative: false,
+    });
+  });
+
+  it("uses the keyframe value default when the value field is not edited", () => {
+    const store = {
+      selectPopover: vi.fn(() => ({
+        payload: {
+          side: "update",
+          property: "translateX",
+          index: 0,
+        },
+        formValues: {
+          duration: 1000,
+          easing: "linear",
+          relative: false,
+        },
+      })),
+      addKeyframe: vi.fn(),
+      selectPreviewPlaybackFrameId: vi.fn(() => undefined),
+      stopPreviewPlayback: vi.fn(),
+      bumpPreviewRenderVersion: vi.fn(),
+      closePopover: vi.fn(),
+      queueAutosave: vi.fn(),
+      ...createIdleAutosaveMocks(),
+    };
+    const render = vi.fn();
+
+    handleAddKeyframeFormSubmit(
+      {
+        store,
+        render,
+      },
+      {
+        _event: {
+          detail: {
+            values: {
+              duration: 1000,
+              value: 1,
+              easing: "linear",
+              relative: false,
+            },
+          },
+        },
+      },
+    );
+
+    expect(store.addKeyframe).toHaveBeenCalledWith({
+      side: "update",
+      property: "translateX",
+      index: 0,
+      duration: 1000,
+      value: 0,
+      easing: "linear",
+      relative: false,
+    });
   });
 
   it("commits preview image selections and updates the preview canvas", async () => {
@@ -189,8 +449,12 @@ describe("animationEditor.handlers", () => {
     expect(graphicsService.setAnimationPlaybackMode).toHaveBeenCalledWith(
       "manual",
     );
-    expect(graphicsService.render).toHaveBeenNthCalledWith(1, resetState);
-    expect(graphicsService.render).toHaveBeenNthCalledWith(2, renderState);
+    expect(graphicsService.render).toHaveBeenNthCalledWith(1, {
+      elements: [],
+      animations: [],
+    });
+    expect(graphicsService.render).toHaveBeenNthCalledWith(2, resetState);
+    expect(graphicsService.render).toHaveBeenNthCalledWith(3, renderState);
     expect(graphicsService.setAnimationTime).toHaveBeenCalledWith(0);
   });
 

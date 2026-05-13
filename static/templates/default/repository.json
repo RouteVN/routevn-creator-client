@@ -844,7 +844,7 @@
           "mask": {
             "kind": "single",
             "imageId": "ZvJUEaaujuQj",
-            "channel": "alpha",
+            "channel": "red",
             "invert": false,
             "softness": 0.08,
             "progressDuration": 1000,
