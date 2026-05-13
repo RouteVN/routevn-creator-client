@@ -1,20 +1,4 @@
-const SCENE_EDITOR_SELECTION_LOG_PREFIX = "[sceneEditor.selection]";
-
-const logSceneEditorSelection = (event, data = {}) => {
-  console.warn(SCENE_EDITOR_SELECTION_LOG_PREFIX, {
-    event,
-    ...data,
-  });
-};
-
 const forwardEvent = (dispatchEvent, eventName, detail) => {
-  logSceneEditorSelection("wrapper.forward-event", {
-    eventName,
-    lineId: detail?.lineId,
-    selectedLineId: detail?.selectedLineId,
-    reason: detail?.reason,
-    mode: detail?.mode,
-  });
   dispatchEvent(
     new CustomEvent(eventName, {
       detail,
