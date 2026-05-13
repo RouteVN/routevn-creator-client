@@ -2464,6 +2464,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return false;
     }
 
+    const previousSelectedLineId = this.state.selectedLineId;
+    const cursorPosition = this.getLineOffsetFromPointerEvent(
+      event,
+      lineElement,
+    );
     this.pendingPointerFallbackSelection = undefined;
     this.clearSelectedReferenceNodeKey();
     this.hideSelectionPopover();
@@ -2474,6 +2479,13 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.awaitingCharacterShortcut = false;
     this.clearDeleteShortcutState();
     this.scheduleRender();
+    if (previousSelectedLineId !== lineId) {
+      this.dispatchSelectedLineChanged(lineId, {
+        cursorPosition: cursorPosition >= 0 ? cursorPosition : undefined,
+        isCollapsed: true,
+        mode: "text-editor",
+      });
+    }
     return true;
   }
 
