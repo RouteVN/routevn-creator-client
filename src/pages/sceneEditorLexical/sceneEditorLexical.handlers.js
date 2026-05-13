@@ -35,6 +35,14 @@ const MISSING_PROJECT_RESOLUTION_MESSAGE =
   "Project is missing required resolution settings.";
 const SHOW_LINE_NUMBERS_CONFIG_KEY = "sceneEditor.showLineNumbers";
 const IS_MUTED_CONFIG_KEY = "sceneEditor.isMuted";
+const SCENE_EDITOR_SELECTION_LOG_PREFIX = "[sceneEditor.selection]";
+
+const logSceneEditorSelection = (event, data = {}) => {
+  console.warn(SCENE_EDITOR_SELECTION_LOG_PREFIX, {
+    event,
+    ...data,
+  });
+};
 
 const toPlainObject = (value) => {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -113,10 +121,6 @@ const getLiveLinesFromElement = (element) => {
   return (
     element?.getLines?.() || element?.getLinesSnapshot?.() || element?.lines
   );
-};
-
-const resolveActionTargetLineId = (store) => {
-  return store.selectActionTargetLineId?.() || store.selectSelectedLineId();
 };
 
 const finalizeActionTargetLine = (store, lineId) => {
@@ -448,7 +452,15 @@ const openSectionTabDropdown = (deps, event) => {
 
 export const handleCommandLineSubmit = async (deps, payload) => {
   const { store, render, projectService, subject, appService } = deps;
-  const lineId = resolveActionTargetLineId(store);
+  const actionTargetLineId = store.selectActionTargetLineId?.();
+  const selectedLineId = store.selectSelectedLineId();
+  const lineId = actionTargetLineId || selectedLineId;
+  logSceneEditorSelection("page.command-line-submit-target", {
+    lineId,
+    actionTargetLineId,
+    selectedLineId,
+    actionKeys: Object.keys(payload?._event?.detail || {}),
+  });
   if (lineId) {
     store.setSelectedLineId({ selectedLineId: lineId });
   }
@@ -779,11 +791,19 @@ export const handleSelectedLineChanged = (deps, payload) => {
   const { store, render, subject } = deps;
   const detail = payload?._event?.detail || {};
   const lineId = detail.lineId;
-  if (!lineId || lineId === store.selectSelectedLineId()) {
+  const previousLineId = store.selectSelectedLineId();
+  logSceneEditorSelection("page.selected-line-changed", {
+    lineId,
+    previousLineId,
+    cursorPosition: detail.cursorPosition,
+    isCollapsed: detail.isCollapsed === true,
+    mode: detail.mode,
+    willUpdate: Boolean(lineId && lineId !== previousLineId),
+  });
+  if (!lineId || lineId === previousLineId) {
     return;
   }
 
-  const previousLineId = store.selectSelectedLineId();
   store.setSelectedLineId({ selectedLineId: lineId });
 
   render();

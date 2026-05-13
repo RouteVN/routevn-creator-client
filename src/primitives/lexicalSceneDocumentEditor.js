@@ -100,6 +100,14 @@ const DELETE_SHORTCUT_TIMEOUT_MS = 1200;
 const TEXT_INPUT_FALLBACK_MAX_AGE_MS = 1000;
 const PROGRAMMATIC_FOCUS_BLUR_SUPPRESS_MS = 750;
 const VERTICAL_NAVIGATION_SELECTION_SYNC_FRAMES = 4;
+const SCENE_EDITOR_SELECTION_LOG_PREFIX = "[sceneEditor.selection]";
+
+const logSceneEditorSelection = (event, data = {}) => {
+  console.warn(SCENE_EDITOR_SELECTION_LOG_PREFIX, {
+    event,
+    ...data,
+  });
+};
 
 const normalizeMentionTarget = (target = {}) => {
   const label = String(target.label ?? "")
@@ -1735,6 +1743,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   handleNativeFocus() {
+    logSceneEditorSelection("primitive.focus", {
+      mode: this.state.mode,
+      selectedLineId: this.state.selectedLineId,
+      isPointerDownInsideEditor: this.isPointerDownInsideEditor,
+    });
     this.isEditorFocused = true;
 
     if (this.state.mode === "block" && !this.isPointerDownInsideEditor) {
@@ -2338,6 +2351,16 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   handleNativeMouseDown(event) {
+    const pointerLineElement = this.getLineElementFromEvent(event);
+    const pointerLineId = this.getLineIdFromLineElement(pointerLineElement);
+    logSceneEditorSelection("primitive.mousedown", {
+      button: event.button,
+      mode: this.state.mode,
+      selectedLineId: this.state.selectedLineId,
+      pointerLineId,
+      targetTagName: event.target?.tagName,
+    });
+
     if (event.button !== 0) {
       if (event.button === 2 && this.state.mode === "block") {
         this.pendingBlockContextMenuSelectedLineId = this.state.selectedLineId;
@@ -2464,6 +2487,11 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return false;
     }
 
+    const previousSelectedLineId = this.state.selectedLineId;
+    const cursorPosition = this.getLineOffsetFromPointerEvent(
+      event,
+      lineElement,
+    );
     this.pendingPointerFallbackSelection = undefined;
     this.clearSelectedReferenceNodeKey();
     this.hideSelectionPopover();
@@ -2474,6 +2502,19 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     this.awaitingCharacterShortcut = false;
     this.clearDeleteShortcutState();
     this.scheduleRender();
+    logSceneEditorSelection("primitive.block-pointer-enter-text", {
+      previousSelectedLineId,
+      lineId,
+      cursorPosition,
+      didLineChange: previousSelectedLineId !== lineId,
+    });
+    if (previousSelectedLineId !== lineId) {
+      this.dispatchSelectedLineChanged(lineId, {
+        cursorPosition: cursorPosition >= 0 ? cursorPosition : undefined,
+        isCollapsed: true,
+        mode: "text-editor",
+      });
+    }
     return true;
   }
 
@@ -2599,6 +2640,16 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   handleNativeMouseUp(event) {
+    const pointerLineElement = this.getLineElementFromEvent(event);
+    const pointerLineId = this.getLineIdFromLineElement(pointerLineElement);
+    logSceneEditorSelection("primitive.mouseup", {
+      button: event.button,
+      mode: this.state.mode,
+      selectedLineId: this.state.selectedLineId,
+      pointerLineId,
+      targetTagName: event.target?.tagName,
+    });
+
     if (typeof event?.button === "number" && event.button !== 0) {
       return;
     }
@@ -2637,10 +2688,17 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       return;
     }
 
-    const didLineChange = this.state.selectedLineId !== lineId;
+    const previousSelectedLineId = this.state.selectedLineId;
+    const didLineChange = previousSelectedLineId !== lineId;
     this.state.selectedLineId = lineId;
     this.scheduleRender();
     this.schedulePointerFallbackSelectionValidation(fallbackSelection);
+    logSceneEditorSelection("primitive.mouseup-line", {
+      previousSelectedLineId,
+      lineId,
+      didLineChange,
+      mode: this.state.mode,
+    });
 
     if (didLineChange) {
       this.dispatchSelectedLineChanged(lineId, {
@@ -5675,6 +5733,15 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
           mode: "text-editor",
         };
       });
+
+    logSceneEditorSelection("primitive.dispatch", {
+      lineId,
+      cursorPosition: selectionDetail?.cursorPosition,
+      isCollapsed: selectionDetail?.isCollapsed === true,
+      mode: selectionDetail?.mode || this.state.mode,
+      stateSelectedLineId: this.state.selectedLineId,
+      hasDetailOverride: detailOverride !== undefined,
+    });
 
     this.dispatchEvent(
       new CustomEvent("selected-line-changed", {
