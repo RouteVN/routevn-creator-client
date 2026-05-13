@@ -27,6 +27,8 @@ describe("layoutEditor preview persistence", () => {
       },
       runtime: {
         dialogueTextSpeed: 25,
+        soundVolume: 500,
+        musicVolume: 500,
         autoMode: true,
         skipMode: false,
         isLineCompleted: true,
@@ -97,6 +99,8 @@ describe("layoutEditor preview persistence", () => {
       backgroundImageId: "image-preview",
       runtime: {
         dialogueTextSpeed: 25,
+        soundVolume: 100,
+        musicVolume: 100,
         autoMode: true,
         skipMode: false,
         isLineCompleted: true,

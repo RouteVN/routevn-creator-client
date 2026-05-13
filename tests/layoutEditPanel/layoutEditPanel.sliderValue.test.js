@@ -47,7 +47,7 @@ describe("layoutEditPanel slider values", () => {
         type: "slider",
         initialValue: 0,
         min: 0,
-        max: 100,
+        max: 500,
       },
     });
 
@@ -66,14 +66,14 @@ describe("layoutEditPanel slider values", () => {
 
     expect(deps.state.values.sliderRuntimeValueId).toBe("musicVolume");
     expect(deps.state.values.min).toBe(0);
-    expect(deps.state.values.max).toBe(500);
+    expect(deps.state.values.max).toBe(100);
     expect(deps.state.values.initialValue).toBe("${runtime.musicVolume}");
     expect(
       deps.dispatchEvent.mock.calls.map(([event]) => event.detail),
     ).toEqual([
       expect.objectContaining({
         name: "max",
-        value: 500,
+        value: 100,
       }),
       expect.objectContaining({
         name: "initialValue",

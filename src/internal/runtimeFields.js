@@ -1,3 +1,5 @@
+export const DEFAULT_CLIENT_AUDIO_VOLUME = 75;
+
 const RUNTIME_FIELD_GROUPS = Object.freeze([
   {
     id: "routeEngine",
@@ -42,7 +44,9 @@ const RUNTIME_FIELD_GROUPS = Object.freeze([
         name: "Sound Volume",
         type: "number",
         scope: "device",
-        default: 500,
+        default: DEFAULT_CLIENT_AUDIO_VOLUME,
+        min: 0,
+        max: 100,
         description: "Controls the effective sound effects volume.",
       },
       {
@@ -50,7 +54,9 @@ const RUNTIME_FIELD_GROUPS = Object.freeze([
         name: "Music Volume",
         type: "number",
         scope: "device",
-        default: 500,
+        default: DEFAULT_CLIENT_AUDIO_VOLUME,
+        min: 0,
+        max: 100,
         description: "Controls the effective music volume.",
       },
       {
@@ -130,9 +136,11 @@ const createRuntimeFieldItem = ({
   scope,
   type,
   default: defaultValue,
+  min,
+  max,
   description,
 } = {}) => {
-  return {
+  const item = {
     id,
     name,
     scope,
@@ -143,6 +151,16 @@ const createRuntimeFieldItem = ({
     source: "runtime",
     readOnly: true,
   };
+
+  if (Number.isFinite(min)) {
+    item.min = min;
+  }
+
+  if (Number.isFinite(max)) {
+    item.max = max;
+  }
+
+  return item;
 };
 
 const RUNTIME_FIELD_ITEMS = Object.freeze(
@@ -215,6 +233,48 @@ export const getRuntimeFieldItems = () => {
 
 export const getRuntimeFieldItem = (runtimeId) => {
   return RUNTIME_FIELD_ITEMS[runtimeId];
+};
+
+export const normalizeRuntimeFieldValue = (runtimeId, value) => {
+  const field = getRuntimeFieldItem(runtimeId);
+  if (!field) {
+    return value;
+  }
+
+  if (field.type === "number") {
+    const parsedValue = Number(value);
+    let nextValue = Number.isFinite(parsedValue)
+      ? parsedValue
+      : Number(field.default ?? 0);
+
+    if (!Number.isFinite(nextValue)) {
+      nextValue = 0;
+    }
+
+    if (Number.isFinite(field.min)) {
+      nextValue = Math.max(field.min, nextValue);
+    }
+
+    if (Number.isFinite(field.max)) {
+      nextValue = Math.min(field.max, nextValue);
+    }
+
+    return nextValue;
+  }
+
+  if (field.type === "boolean") {
+    if (typeof value === "boolean") {
+      return value;
+    }
+
+    if (typeof value === "string") {
+      return value === "true";
+    }
+
+    return Boolean(value ?? field.default);
+  }
+
+  return value ?? field.default ?? "";
 };
 
 export const getRuntimeNumberFieldOptions = () => {

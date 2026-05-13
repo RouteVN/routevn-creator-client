@@ -19,11 +19,14 @@ const createValueActionDefinition = ({
   runtimeId,
   inputType,
   min,
+  max,
   step,
   description,
   placeholder,
 } = {}) => {
   const field = getRuntimeFieldItem(runtimeId);
+  const resolvedMin = min ?? field?.min;
+  const resolvedMax = max ?? field?.max;
 
   return {
     mode,
@@ -35,7 +38,8 @@ const createValueActionDefinition = ({
     defaultValue: field?.default,
     valueLabel: "Value",
     placeholder,
-    min,
+    min: resolvedMin,
+    max: resolvedMax,
     step,
   };
 };
@@ -234,6 +238,7 @@ const createFixedValueField = (definition) => {
     type: definition.inputType === "number" ? "input-number" : "input-text",
     description: definition.description,
     min: definition.min,
+    max: definition.max,
     step: definition.step,
     placeholder: definition.placeholder,
   };

@@ -5,30 +5,12 @@ import {
 } from "../../../internal/layoutConditions.js";
 import {
   getRuntimeFieldItems,
+  normalizeRuntimeFieldValue,
   toRuntimeConditionTarget,
 } from "../../../internal/runtimeFields.js";
 
 const toPreviewRuntimeValue = (field = {}, value) => {
-  if (field.type === "number") {
-    const parsedValue = Number(value);
-    return Number.isFinite(parsedValue)
-      ? parsedValue
-      : Number(field.default ?? 0);
-  }
-
-  if (field.type === "boolean") {
-    if (typeof value === "boolean") {
-      return value;
-    }
-
-    if (typeof value === "string") {
-      return value === "true";
-    }
-
-    return Boolean(value ?? field.default);
-  }
-
-  return value ?? field.default ?? "";
+  return normalizeRuntimeFieldValue(field.id, value);
 };
 
 const getPreviewRuntimeOverrideValue = (

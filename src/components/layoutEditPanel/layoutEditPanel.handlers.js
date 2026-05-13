@@ -288,6 +288,8 @@ const applyPanelValueUpdate = (
     const runtimeDefaultValue = Number(runtimeField?.default);
     const nextMin = Number(currentValues.min);
     const nextMax = Number(currentValues.max);
+    const runtimeMin = Number(runtimeField?.min);
+    const runtimeMax = Number(runtimeField?.max);
     const pendingUpdates = [];
     const nextInitialValue = runtimeId
       ? toRuntimeTemplateValue(runtimeId)
@@ -298,28 +300,32 @@ const applyPanelValueUpdate = (
     if (runtimeId && Number.isFinite(runtimeDefaultValue)) {
       const normalizedMin = Number.isFinite(nextMin) ? nextMin : 0;
       const normalizedMax = Number.isFinite(nextMax) ? nextMax : 100;
-      const widenedMin = Math.min(normalizedMin, runtimeDefaultValue);
-      const widenedMax = Math.max(normalizedMax, runtimeDefaultValue);
+      const targetMin = Number.isFinite(runtimeMin)
+        ? runtimeMin
+        : Math.min(normalizedMin, runtimeDefaultValue);
+      const targetMax = Number.isFinite(runtimeMax)
+        ? runtimeMax
+        : Math.max(normalizedMax, runtimeDefaultValue);
 
-      if (widenedMin !== normalizedMin) {
+      if (targetMin !== normalizedMin) {
         store.updateValueProperty({
           name: "min",
-          value: widenedMin,
+          value: targetMin,
         });
         pendingUpdates.push({
           name: "min",
-          value: widenedMin,
+          value: targetMin,
         });
       }
 
-      if (widenedMax !== normalizedMax) {
+      if (targetMax !== normalizedMax) {
         store.updateValueProperty({
           name: "max",
-          value: widenedMax,
+          value: targetMax,
         });
         pendingUpdates.push({
           name: "max",
-          value: widenedMax,
+          value: targetMax,
         });
       }
     }

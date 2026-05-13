@@ -71,8 +71,16 @@ describe("commandLineRuntimeAction.store", () => {
 
     expect(eventViewData.defaultValues).toEqual({
       valueSource: "event",
-      value: 500,
+      value: 75,
     });
+    expect(eventViewData.form.fields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "value",
+          max: 100,
+        }),
+      ]),
+    );
     expect(eventViewData.context).toEqual({
       values: eventViewData.defaultValues,
     });

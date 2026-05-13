@@ -4,6 +4,7 @@ import {
   buildLayoutElements,
   extractFileIdsFromRenderState,
 } from "../../../internal/project/layout.js";
+import { normalizeRuntimeFieldValue } from "../../../internal/runtimeFields.js";
 import { getLayoutEditorItemResizeEdges } from "../../../internal/layoutEditorElementRegistry.js";
 import { toHierarchyStructure } from "../../../internal/project/tree.js";
 
@@ -165,8 +166,14 @@ const normalizeLayoutEditorPreviewData = (previewData = {}) => {
       skipUnseenText: nextRuntime.skipUnseenText ?? false,
       skipTransitionsAndAnimations:
         nextRuntime.skipTransitionsAndAnimations ?? false,
-      soundVolume: nextRuntime.soundVolume ?? 500,
-      musicVolume: nextRuntime.musicVolume ?? 500,
+      soundVolume: normalizeRuntimeFieldValue(
+        "soundVolume",
+        nextRuntime.soundVolume,
+      ),
+      musicVolume: normalizeRuntimeFieldValue(
+        "musicVolume",
+        nextRuntime.musicVolume,
+      ),
       muteAll: nextRuntime.muteAll ?? false,
     },
     dialogue: {
