@@ -54,24 +54,13 @@ if [ -z "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
   exit 1
 fi
 
-if [ -z "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD:-}" ]; then
-  if [ ! -t 0 ]; then
-    echo "Error: TAURI_SIGNING_PRIVATE_KEY_PASSWORD is not set and no interactive terminal is available."
-    echo "Add it to .env or run this script from a terminal to enter it manually."
-    exit 1
-  fi
-
-  printf "TAURI_SIGNING_PRIVATE_KEY_PASSWORD: "
+if [ -z "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD+x}" ] && [ -t 0 ]; then
+  printf "TAURI_SIGNING_PRIVATE_KEY_PASSWORD (press Enter for none): "
   IFS= read -r -s TAURI_SIGNING_PRIVATE_KEY_PASSWORD
   printf "\n"
-
-  if [ -z "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD}" ]; then
-    echo "Error: TAURI_SIGNING_PRIVATE_KEY_PASSWORD cannot be empty."
-    exit 1
-  fi
-
-  export TAURI_SIGNING_PRIVATE_KEY_PASSWORD
 fi
+
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="${TAURI_SIGNING_PRIVATE_KEY_PASSWORD:-}"
 
 bun run build:tauri
 prepare_gdk_pixbuf_pkg_config
