@@ -2,6 +2,15 @@
 
 set -euo pipefail
 
+load_env() {
+  if [ -f ".env" ]; then
+    set -a
+    # shellcheck disable=SC1091
+    . ./.env
+    set +a
+  fi
+}
+
 prepare_gdk_pixbuf_pkg_config() {
   if ! command -v pkg-config >/dev/null 2>&1; then
     return
@@ -38,14 +47,21 @@ prepare_gdk_pixbuf_pkg_config() {
   export PKG_CONFIG_PATH="${override_dir}${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
 }
 
+load_env
+
+if [ -z "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
+  echo "Error: TAURI_SIGNING_PRIVATE_KEY is not set. Add it to .env before building the AppImage."
+  exit 1
+fi
+
+if [ -z "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD:-}" ]; then
+  echo "Error: TAURI_SIGNING_PRIVATE_KEY_PASSWORD is not set. Add it to .env before building the AppImage."
+  exit 1
+fi
+
 bun run build:tauri
 prepare_gdk_pixbuf_pkg_config
 
 export NO_STRIP="${NO_STRIP:-1}"
 
-sign_args=()
-if [ -z "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
-  sign_args+=(--no-sign)
-fi
-
-tauri build --config src-tauri/tauri.prod.conf.json --bundles appimage "${sign_args[@]}"
+tauri build --config src-tauri/tauri.prod.conf.json --bundles appimage
