@@ -84,6 +84,12 @@ write_appimage_checksum() {
 
 load_env
 
+if ! command -v patchelf >/dev/null 2>&1; then
+  echo "Error: patchelf is required for AppImage media framework bundling."
+  echo "Install it before building the AppImage. On Arch: sudo pacman -S patchelf"
+  exit 1
+fi
+
 if [ -z "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
   echo "Error: TAURI_SIGNING_PRIVATE_KEY is not set. Add it to .env before building the AppImage."
   exit 1
