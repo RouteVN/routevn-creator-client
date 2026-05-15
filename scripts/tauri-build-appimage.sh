@@ -55,8 +55,22 @@ if [ -z "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
 fi
 
 if [ -z "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD:-}" ]; then
-  echo "Error: TAURI_SIGNING_PRIVATE_KEY_PASSWORD is not set. Add it to .env before building the AppImage."
-  exit 1
+  if [ ! -t 0 ]; then
+    echo "Error: TAURI_SIGNING_PRIVATE_KEY_PASSWORD is not set and no interactive terminal is available."
+    echo "Add it to .env or run this script from a terminal to enter it manually."
+    exit 1
+  fi
+
+  printf "TAURI_SIGNING_PRIVATE_KEY_PASSWORD: "
+  IFS= read -r -s TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+  printf "\n"
+
+  if [ -z "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD}" ]; then
+    echo "Error: TAURI_SIGNING_PRIVATE_KEY_PASSWORD cannot be empty."
+    exit 1
+  fi
+
+  export TAURI_SIGNING_PRIVATE_KEY_PASSWORD
 fi
 
 bun run build:tauri
