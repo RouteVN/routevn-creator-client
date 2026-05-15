@@ -47,6 +47,41 @@ prepare_gdk_pixbuf_pkg_config() {
   export PKG_CONFIG_PATH="${override_dir}${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
 }
 
+write_appimage_checksum() {
+  local bundle_dir="src-tauri/target/release/bundle/appimage"
+  local appimage
+  local appimage_path
+  local appimage_file
+  local checksum_file
+  local appimages=()
+
+  while IFS= read -r -d '' appimage; do
+    appimages+=("${appimage}")
+  done < <(find "${bundle_dir}" -maxdepth 1 -type f -name "*.AppImage" -print0)
+
+  if [ "${#appimages[@]}" -eq 0 ]; then
+    echo "Error: no AppImage found in ${bundle_dir}."
+    exit 1
+  fi
+
+  appimage_path="${appimages[0]}"
+  for appimage in "${appimages[@]}"; do
+    if [ "${appimage}" -nt "${appimage_path}" ]; then
+      appimage_path="${appimage}"
+    fi
+  done
+
+  appimage_file=$(basename "${appimage_path}")
+  checksum_file="${appimage_file}.sha256"
+
+  (
+    cd "${bundle_dir}"
+    sha256sum "${appimage_file}" > "${checksum_file}"
+  )
+
+  echo "SHA256 checksum: ${bundle_dir}/${checksum_file}"
+}
+
 load_env
 
 if [ -z "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
@@ -68,3 +103,4 @@ prepare_gdk_pixbuf_pkg_config
 export NO_STRIP="${NO_STRIP:-1}"
 
 tauri build --config src-tauri/tauri.prod.conf.json --bundles appimage
+write_appimage_checksum
