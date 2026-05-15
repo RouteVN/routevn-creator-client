@@ -75,7 +75,7 @@
     "tauri:dev:mac": "tauri dev --target aarch64-apple-darwin",
     "tauri:dev:win": "tauri dev --target x86_64-pc-windows-gnu",
     "tauri:build": "bun run build:tauri && tauri build --config src-tauri/tauri.prod.conf.json",
-    "tauri:build:appimage": "bun run build:tauri && tauri build --config src-tauri/tauri.prod.conf.json --bundles appimage",
+    "tauri:build:appimage": "./scripts/tauri-build-appimage.sh",
     "tauri:build:win": "bun run build:tauri && tauri build --config src-tauri/tauri.prod.conf.json --runner cargo-xwin --target x86_64-pc-windows-msvc",
     "tauri:build:mac": "./scripts/tauri-build-mac.sh"
   },
