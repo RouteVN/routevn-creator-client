@@ -1,4 +1,4 @@
-#[cfg(debug_assertions)]
+#[cfg(all(debug_assertions, feature = "devtools"))]
 use tauri::Manager;
 
 mod export_zip;
@@ -15,15 +15,19 @@ pub fn run() {
         std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
     }
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .manage(project_media_server::ProjectMediaServerState::new())
         .manage(static_web_server::StaticWebServerState::new())
         .register_uri_scheme_protocol("project-file", project_file_protocol::handle)
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_sql::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_devtools::init())
+        .plugin(tauri_plugin_dialog::init());
+
+    #[cfg(feature = "devtools")]
+    let builder = builder.plugin(tauri_plugin_devtools::init());
+
+    builder
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_persisted_scope::init())
@@ -35,7 +39,7 @@ pub fn run() {
             static_web_server::list_static_web_servers
         ])
         .setup(|_app| {
-            #[cfg(debug_assertions)]
+            #[cfg(all(debug_assertions, feature = "devtools"))]
             if let Some(window) = _app.get_webview_window("main") {
                 window.open_devtools();
             }
