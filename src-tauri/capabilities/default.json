@@ -39,6 +39,7 @@
     "updater:allow-download",
     "updater:allow-install",
     "updater:allow-download-and-install",
+    "process:allow-restart",
     {
       "identifier": "opener:allow-open-url",
       "allow": [
