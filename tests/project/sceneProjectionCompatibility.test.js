@@ -14,6 +14,7 @@ import {
   createSceneProjectionState,
 } from "../../src/deps/services/shared/projectRepositoryViews/shared.js";
 import {
+  mainPartitionFor,
   mainScenePartitionFor,
   scenePartitionFor,
 } from "../../src/deps/services/shared/collab/partitions.js";
@@ -179,6 +180,122 @@ describe("scene projection compatibility", () => {
         sectionId: targetSectionId,
       },
     });
+  });
+
+  it("preserves moved section lines through target scene partition replay", async () => {
+    const targetSceneId = "scene-2";
+    const initialState = createRepositoryState();
+    initialState.scenes.items[targetSceneId] = {
+      id: targetSceneId,
+      type: "scene",
+      name: "Scene 2",
+      sections: {
+        items: {},
+        tree: [],
+      },
+    };
+    initialState.scenes.tree.push({ id: targetSceneId });
+
+    const events = [
+      createProjectCreateRepositoryEvent({
+        projectId,
+        state: initialState,
+      }),
+      createCommandEvent({
+        id: "line-create-source",
+        partition: scenePartitionFor(sceneId),
+        type: COMMAND_TYPES.LINE_CREATE,
+        payload: {
+          sectionId,
+          lines: [
+            {
+              lineId,
+              data: {
+                actions: {
+                  say: "kept",
+                },
+              },
+            },
+          ],
+          index: 0,
+        },
+        clientTs: 1,
+      }),
+      createCommandEvent({
+        id: "section-move-target",
+        partition: mainPartitionFor(),
+        type: COMMAND_TYPES.SECTION_MOVE,
+        payload: {
+          sectionId,
+          sceneId: targetSceneId,
+          position: "last",
+        },
+        clientTs: 2,
+      }),
+      createCommandEvent({
+        id: "line-create-target",
+        partition: scenePartitionFor(targetSceneId),
+        type: COMMAND_TYPES.LINE_CREATE,
+        payload: {
+          sectionId,
+          lines: [
+            {
+              lineId,
+              data: {
+                actions: {
+                  say: "kept",
+                },
+              },
+            },
+          ],
+          position: "last",
+        },
+        clientTs: 3,
+      }),
+    ];
+
+    const mainEvents = events.filter(
+      (event) =>
+        event.partition === mainPartitionFor() ||
+        event.partition === mainScenePartitionFor(sceneId) ||
+        event.partition === mainScenePartitionFor(targetSceneId),
+    );
+    const appliedResult = applyRepositoryEventsToRepositoryState({
+      repositoryState: structuredClone(initialProjectData),
+      events: mainEvents,
+      projectId,
+    });
+    expect(appliedResult.valid).toBe(true);
+
+    const mainState = createMainProjectionState(appliedResult.repositoryState);
+    const targetProjection = await loadSceneProjectionState({
+      store: createCheckpointStore(),
+      mainState,
+      events,
+      createInitialState: () => structuredClone(initialProjectData),
+      reduceEventToState,
+      reduceEventsToState,
+      sceneId: targetSceneId,
+    });
+    const sourceProjection = await loadSceneProjectionState({
+      store: createCheckpointStore(),
+      mainState,
+      events,
+      createInitialState: () => structuredClone(initialProjectData),
+      reduceEventToState,
+      reduceEventsToState,
+      sceneId,
+    });
+
+    expect(
+      targetProjection.scenes.items[targetSceneId].sections.items[sectionId]
+        .lines.items[lineId].actions,
+    ).toEqual({
+      say: "kept",
+    });
+    expect(
+      sourceProjection.scenes.items[sceneId].sections.items[sectionId],
+    ).toBeUndefined();
   });
 
   it("falls back to a stale scene checkpoint when project.create seed is missing", async () => {

@@ -69,6 +69,10 @@ refs:
     eventListeners:
       close:
         handler: handleSectionCreateDialogClose
+  sectionMoveSceneDialog:
+    eventListeners:
+      close:
+        handler: handleSectionMoveSceneDialogClose
   sectionsOverviewDialog:
     eventListeners:
       close:
@@ -77,6 +81,10 @@ refs:
     eventListeners:
       form-action:
         handler: handleSectionCreateFormActionClick
+  sectionMoveSceneForm:
+    eventListeners:
+      form-action:
+        handler: handleSectionMoveSceneFormActionClick
   addActionsButton:
     eventListeners:
       click:
@@ -181,6 +189,9 @@ template:
       - rtgl-dialog#sectionCreateDialog ?open=${sectionCreateDialog.isOpen} s=md:
           - rtgl-view slot=content g=md:
               - rtgl-form#sectionCreateForm key=${sectionCreateDialog.formKey} :form=${sectionCreateForm} :defaultValues=${sectionCreateDialog.defaultValues} w=f: null
+      - rtgl-dialog#sectionMoveSceneDialog ?open=${sectionMoveSceneDialog.isOpen} s=md:
+          - rtgl-view slot=content g=md:
+              - rtgl-form#sectionMoveSceneForm key=${sectionMoveSceneDialog.formKey} :form=${sectionMoveSceneForm} :defaultValues=${sectionMoveSceneDialog.defaultValues} w=f: null
       - rtgl-dialog#sceneSettingsDialog ?open=${sceneSettingsDialog.isOpen} s=md:
           - rtgl-view slot=content g=md:
               - rtgl-form#sceneSettingsForm key=${sceneSettingsDialog.formKey} :form=${sceneSettingsForm} :defaultValues=${sceneSettingsDialog.defaultValues} w=f: null

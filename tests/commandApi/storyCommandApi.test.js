@@ -377,4 +377,243 @@ describe("story command api", () => {
       ],
     });
   });
+
+  it("moves a section to another scene with its line snapshot", async () => {
+    const context = {
+      projectId: "project-1",
+      state: {
+        scenes: {
+          items: {
+            "scene-1": {
+              id: "scene-1",
+              type: "scene",
+              sections: {
+                items: {
+                  "section-1": {
+                    id: "section-1",
+                    lines: {
+                      items: {
+                        "line-1": {
+                          id: "line-1",
+                          actions: {
+                            dialogue: {
+                              content: [{ text: "Keep me" }],
+                            },
+                          },
+                        },
+                      },
+                      tree: [{ id: "line-1" }],
+                    },
+                  },
+                },
+                tree: [{ id: "section-1" }],
+              },
+            },
+            "scene-2": {
+              id: "scene-2",
+              type: "scene",
+              sections: {
+                items: {},
+                tree: [],
+              },
+            },
+          },
+          tree: [{ id: "scene-1" }, { id: "scene-2" }],
+        },
+      },
+    };
+    const shared = {
+      ensureCommandContext: vi.fn(async () => context),
+      resolveSectionIndex: vi.fn(() => 0),
+      buildPlacementPayload: vi.fn(
+        ({ parentId = null, index, position, positionTargetId } = {}) => {
+          const payload = {
+            parentId,
+          };
+          if (index !== undefined) {
+            payload.index = index;
+            return payload;
+          }
+          payload.position = position;
+          if (positionTargetId !== undefined) {
+            payload.positionTargetId = positionTargetId;
+          }
+          return payload;
+        },
+      ),
+      submitCommandsWithContext: vi.fn(async () => ({ valid: true })),
+      scenePartitionFor: vi.fn((_projectId, sceneId) => `s:${sceneId}`),
+      storyBasePartitionFor: vi.fn(() => "m"),
+    };
+    const api = createStoryCommandApi(shared);
+
+    await api.moveSectionItem({
+      sectionId: "section-1",
+      sceneId: "scene-2",
+      position: "last",
+    });
+
+    expect(shared.ensureCommandContext).toHaveBeenCalledWith({
+      sceneIds: ["scene-2"],
+      sectionIds: ["section-1"],
+    });
+    expect(
+      shared.submitCommandsWithContext.mock.calls[0][0].context.state.scenes
+        .items["scene-1"].sections.items["section-1"].lines.items["line-1"],
+    ).toBeUndefined();
+    expect(shared.submitCommandsWithContext).toHaveBeenCalledWith({
+      context,
+      commands: [
+        {
+          scope: "story",
+          partition: "m",
+          type: COMMAND_TYPES.SECTION_MOVE,
+          payload: {
+            sectionId: "section-1",
+            parentId: null,
+            index: 0,
+            sceneId: "scene-2",
+          },
+        },
+        {
+          scope: "story",
+          partition: "s:scene-2",
+          type: COMMAND_TYPES.LINE_CREATE,
+          payload: {
+            sectionId: "section-1",
+            lines: [
+              {
+                lineId: "line-1",
+                data: {
+                  actions: {
+                    dialogue: {
+                      content: [{ text: "Keep me" }],
+                    },
+                  },
+                },
+              },
+            ],
+            position: "last",
+          },
+        },
+      ],
+    });
+  });
+
+  it("duplicates a section after the source section with cloned lines", async () => {
+    const context = {
+      projectId: "project-1",
+      state: {
+        scenes: {
+          items: {
+            "scene-1": {
+              id: "scene-1",
+              type: "scene",
+              sections: {
+                items: {
+                  "section-1": {
+                    id: "section-1",
+                    name: "Intro",
+                    lines: {
+                      items: {
+                        "line-1": {
+                          id: "line-1",
+                          actions: {
+                            dialogue: {
+                              content: [{ text: "Hello" }],
+                            },
+                          },
+                        },
+                      },
+                      tree: [{ id: "line-1" }],
+                    },
+                  },
+                },
+                tree: [{ id: "section-1" }],
+              },
+            },
+          },
+          tree: [{ id: "scene-1" }],
+        },
+      },
+    };
+    const createId = vi
+      .fn()
+      .mockReturnValueOnce("section-copy")
+      .mockReturnValueOnce("line-copy");
+    const shared = {
+      ensureCommandContext: vi.fn(async () => context),
+      createId,
+      buildPlacementPayload: vi.fn(
+        ({ parentId = null, index, position, positionTargetId } = {}) => {
+          const payload = {
+            parentId,
+          };
+          if (index !== undefined) {
+            payload.index = index;
+            return payload;
+          }
+          payload.position = position;
+          if (positionTargetId !== undefined) {
+            payload.positionTargetId = positionTargetId;
+          }
+          return payload;
+        },
+      ),
+      submitCommandsWithContext: vi.fn(async () => ({ valid: true })),
+      storyScenePartitionFor: vi.fn((_projectId, sceneId) => `m:s:${sceneId}`),
+      scenePartitionFor: vi.fn((_projectId, sceneId) => `s:${sceneId}`),
+    };
+    const api = createStoryCommandApi(shared);
+
+    const result = await api.duplicateSectionItem({
+      sectionId: "section-1",
+    });
+
+    expect(result).toBe("section-copy");
+    expect(shared.ensureCommandContext).toHaveBeenCalledWith({
+      sectionIds: ["section-1"],
+    });
+    expect(shared.submitCommandsWithContext).toHaveBeenCalledWith({
+      context,
+      commands: [
+        {
+          scope: "story",
+          partition: "m:s:scene-1",
+          type: COMMAND_TYPES.SECTION_CREATE,
+          payload: {
+            sceneId: "scene-1",
+            sectionId: "section-copy",
+            parentId: null,
+            position: "after",
+            positionTargetId: "section-1",
+            data: {
+              name: "Intro",
+            },
+          },
+        },
+        {
+          scope: "story",
+          partition: "s:scene-1",
+          type: COMMAND_TYPES.LINE_CREATE,
+          payload: {
+            sectionId: "section-copy",
+            lines: [
+              {
+                lineId: "line-copy",
+                data: {
+                  actions: {
+                    dialogue: {
+                      content: [{ text: "Hello" }],
+                    },
+                  },
+                },
+              },
+            ],
+            position: "last",
+          },
+        },
+      ],
+    });
+  });
 });

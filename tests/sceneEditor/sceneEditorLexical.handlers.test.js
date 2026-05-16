@@ -4,6 +4,7 @@ import {
   handleCommandLineSubmit,
   handleEditorBlur,
   handleNewLine,
+  handleSectionMoveSceneFormActionClick,
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js";
 
 describe("sceneEditorLexical.handlers actions dialog", () => {
@@ -380,5 +381,53 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
         globalThis.requestAnimationFrame = previousRequestAnimationFrame;
       }
     }
+  });
+
+  it("does not move the last section out of a scene", async () => {
+    const store = {
+      getState: vi.fn(() => ({
+        sectionMoveSceneDialog: {
+          sectionId: "section-1",
+        },
+      })),
+      selectSceneId: vi.fn(() => "scene-1"),
+      selectCommittedScene: vi.fn(() => ({
+        id: "scene-1",
+        sections: [{ id: "section-1" }],
+      })),
+      hideSectionMoveSceneDialog: vi.fn(),
+    };
+    const moveSectionItem = vi.fn();
+    const deps = {
+      store,
+      render: vi.fn(),
+      subject: {
+        dispatch: vi.fn(),
+      },
+      projectService: {
+        moveSectionItem,
+      },
+      appService: {
+        showAlert: vi.fn(),
+      },
+    };
+
+    await handleSectionMoveSceneFormActionClick(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            sceneId: "scene-2",
+          },
+        },
+      },
+    });
+
+    expect(deps.appService.showAlert).toHaveBeenCalledWith({
+      message: "This scene must keep at least one section.",
+      title: "Error",
+    });
+    expect(moveSectionItem).not.toHaveBeenCalled();
+    expect(store.hideSectionMoveSceneDialog).not.toHaveBeenCalled();
   });
 });

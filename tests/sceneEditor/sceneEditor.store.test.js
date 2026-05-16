@@ -9,6 +9,7 @@ import {
   setSceneId,
   setPresentationState,
   setTemporaryPresentationState,
+  showSectionDropdownMenu,
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.store.js";
 
 describe("sceneEditorLexical.store", () => {
@@ -164,5 +165,63 @@ describe("sceneEditorLexical.store", () => {
     expect(selectEffectivePresentationState({ state }).dialogue).toEqual({
       mode: "adv",
     });
+  });
+
+  it("hides move scene for the last section in the current scene", () => {
+    const state = createInitialState();
+
+    setSceneId({ state }, { sceneId: "scene-1" });
+    setRepositoryState(
+      { state },
+      {
+        repository: {
+          scenes: {
+            items: {
+              "scene-1": {
+                id: "scene-1",
+                type: "scene",
+                name: "Scene 1",
+                sections: {
+                  items: {
+                    "section-1": {
+                      id: "section-1",
+                      type: "section",
+                      name: "Section 1",
+                      lines: {
+                        items: {},
+                        tree: [],
+                      },
+                    },
+                  },
+                  tree: [{ id: "section-1" }],
+                },
+              },
+              "scene-2": {
+                id: "scene-2",
+                type: "scene",
+                name: "Scene 2",
+                sections: {
+                  items: {},
+                  tree: [],
+                },
+              },
+            },
+            tree: [{ id: "scene-1" }, { id: "scene-2" }],
+          },
+        },
+      },
+    );
+
+    showSectionDropdownMenu(
+      { state },
+      {
+        sectionId: "section-1",
+        position: { x: 0, y: 0 },
+      },
+    );
+
+    const itemValues = state.dropdownMenu.items.map((item) => item.value);
+    expect(itemValues).toContain("duplicate-section");
+    expect(itemValues).not.toContain("move-section-scene");
   });
 });
