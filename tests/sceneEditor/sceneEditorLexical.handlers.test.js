@@ -385,10 +385,8 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
 
   it("does not move the last section out of a scene", async () => {
     const store = {
-      getState: vi.fn(() => ({
-        sectionMoveSceneDialog: {
-          sectionId: "section-1",
-        },
+      selectSectionMoveSceneDialog: vi.fn(() => ({
+        sectionId: "section-1",
       })),
       selectSceneId: vi.fn(() => "scene-1"),
       selectCommittedScene: vi.fn(() => ({

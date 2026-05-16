@@ -1231,7 +1231,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
   const { store, render, projectService, subject, appService } = deps;
   const item = payload._event.detail.item || payload._event.detail;
   const action = item?.value;
-  const dropdownState = store.getState().dropdownMenu;
+  const dropdownState = store.selectDropdownMenu();
   const sectionId = dropdownState.sectionId;
   const actionsType = dropdownState.actionsType;
   const lineId = dropdownState.lineId;
@@ -1466,7 +1466,7 @@ export const handleSectionMoveSceneFormActionClick = async (deps, payload) => {
     return;
   }
 
-  const dialog = store.getState().sectionMoveSceneDialog || {};
+  const dialog = store.selectSectionMoveSceneDialog();
   const sectionId = dialog.sectionId;
   const sceneId = store.selectSceneId();
   const targetSceneId = values.sceneId;
@@ -1542,7 +1542,7 @@ export const handleSectionCreateFormActionClick = async (deps, payload) => {
   }
 
   if (action === "submit") {
-    const sectionCreateDialog = store.getState().sectionCreateDialog || {};
+    const sectionCreateDialog = store.selectSectionCreateDialog();
     const isEditMode = sectionCreateDialog.mode === "edit";
     const sectionId = sectionCreateDialog.sectionId;
     const sceneId = store.selectSceneId();
@@ -1609,7 +1609,7 @@ export const handleFormActionClick = async (deps, payload) => {
   }
 
   if (action === "submit") {
-    const popoverState = store.getState().popover || {};
+    const popoverState = store.selectPopover();
     const sectionId = popoverState.sectionId;
     const popoverMode = popoverState.mode;
     const sceneId = store.selectSceneId();
@@ -1826,7 +1826,7 @@ export const handleLineContextMenuRequest = (deps, payload) => {
 
 export const handleLineContextMenuDismiss = (deps) => {
   const { store, render } = deps;
-  const dropdownState = store.getState().dropdownMenu;
+  const dropdownState = store.selectDropdownMenu();
   if (!dropdownState.lineId) {
     return;
   }

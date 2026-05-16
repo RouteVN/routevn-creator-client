@@ -217,7 +217,9 @@ export const createSceneEditorSectionWithName = async (
   }
 
   const inheritedActions = inheritPresentationFromSelectedLine
-    ? createInheritedPresentationActions(store.getState()?.presentationState)
+    ? createInheritedPresentationActions(
+        store.selectEffectivePresentationState(),
+      )
     : {};
   const actions =
     Object.keys(inheritedActions).length > 0

@@ -970,6 +970,22 @@ export const selectLockingLineId = ({ state }) => {
   return state.lockingLineId;
 };
 
+export const selectDropdownMenu = ({ state }) => {
+  return state.dropdownMenu;
+};
+
+export const selectPopover = ({ state }) => {
+  return state.popover;
+};
+
+export const selectSectionCreateDialog = ({ state }) => {
+  return state.sectionCreateDialog;
+};
+
+export const selectSectionMoveSceneDialog = ({ state }) => {
+  return state.sectionMoveSceneDialog;
+};
+
 export const showSectionDropdownMenu = (
   { state },
   { position, sectionId } = {},
