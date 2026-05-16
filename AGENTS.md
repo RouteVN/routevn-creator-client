@@ -111,6 +111,8 @@ If you need deeper or broader Rettangoli framework reference material, use
   (`const { store, refs, appService, projectService } = deps`) instead of
   repeatedly calling `deps.store`, `deps.refs`, and similar dotted access
   throughout the function body.
+- Do not call `store.getState()` from page/component handlers. Add a named
+  selector to the store and call that selector instead.
 - Do not add dynamic form method wrappers (for example, `callFormMethod`) or retry loops to wait for refs.
 - Call known methods directly (`formRef.reset()`, `formRef.setValues(...)`).
 - Avoid defensive guard noise when data contract is already stable.

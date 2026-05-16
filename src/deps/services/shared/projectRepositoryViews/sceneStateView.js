@@ -265,10 +265,13 @@ const isMissingSectionReplayError = (error) =>
     "payload.sectionId must reference an existing section",
   );
 
-const isMissingLineReplayError = (error) =>
-  String(error?.message || "").includes(
-    "payload.lineId must reference an existing line",
+const isMissingLineReplayError = (error) => {
+  const message = String(error?.message || "");
+  return (
+    message.includes("payload.lineId must reference an existing line") ||
+    message.includes("payload.lineIds must reference existing lines")
   );
+};
 
 const isDuplicateSectionReplayError = (error) =>
   String(error?.message || "").includes(
@@ -815,24 +818,54 @@ export const applySceneEventsToLoadedProjection = ({
     if (nextState !== undefined) {
       workingState = nextState;
     }
-  } catch (error) {
-    const failedRelevantIndex = Number(error?.details?.commandIndex);
-    const failedEvent =
-      Number.isInteger(failedRelevantIndex) &&
-      failedRelevantIndex >= 0 &&
-      failedRelevantIndex < relevantEvents.length
-        ? relevantEvents[failedRelevantIndex]
-        : relevantEvents[0];
+  } catch {
+    let recoveredState = workingState;
 
-    logSceneProjectionReplayFailure({
-      sceneId,
-      event: failedEvent,
-      index: Math.max(0, committedEvents.indexOf(failedEvent)),
-      events: committedEvents,
-      repositoryState: workingState,
-      error,
-    });
-    throw error;
+    for (const relevantEvent of relevantEvents) {
+      try {
+        const nextState = reduceEventsToState({
+          repositoryState: recoveredState,
+          events: [relevantEvent],
+        });
+        if (nextState !== undefined) {
+          recoveredState = nextState;
+        }
+      } catch (sequentialError) {
+        if (
+          shouldSkipObsoleteSceneReplayEvent({
+            event: relevantEvent,
+            repositoryState: recoveredState,
+            error: sequentialError,
+          })
+        ) {
+          console.warn("[sceneProjection] skipped obsolete replay event", {
+            sceneId,
+            eventId: relevantEvent?.id,
+            partition: relevantEvent?.partition,
+            error: sequentialError?.message || "unknown",
+          });
+          continue;
+        }
+
+        const failedSequentialIndex = Math.max(
+          0,
+          committedEvents.indexOf(relevantEvent),
+        );
+        logSceneProjectionReplayFailure({
+          sceneId,
+          event: relevantEvent,
+          index: failedSequentialIndex,
+          events: committedEvents,
+          mainState,
+          initialWorkingState: workingState,
+          repositoryState: recoveredState,
+          error: sequentialError,
+        });
+        throw sequentialError;
+      }
+    }
+
+    workingState = recoveredState;
   }
 
   return createSceneProjectionState(workingState, scenePartition);

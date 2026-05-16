@@ -47,6 +47,8 @@ Local-first collaboration:
   function (`const { store, refs, appService, projectService } = deps`)
   instead of repeatedly using `deps.store`, `deps.refs`, and similar dotted
   access throughout the body.
+- Do not read handler state with `store.getState()`. Create and use named store
+  selectors for every state slice a handler needs.
 
 ## ID Generation
 
