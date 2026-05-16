@@ -54,6 +54,15 @@ if ! command -v patchelf >/dev/null 2>&1; then
   exit 1
 fi
 
+if [ ! -x "/usr/bin/xdg-open" ]; then
+  echo "Error: /usr/bin/xdg-open is required for AppImage bundling because tauri-plugin-opener is enabled."
+  echo "Install xdg-utils before building the AppImage."
+  echo "Ubuntu/Debian: sudo apt install xdg-utils"
+  echo "Fedora: sudo dnf install xdg-utils"
+  echo "Arch: sudo pacman -S xdg-utils"
+  exit 1
+fi
+
 if [ -z "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
   echo "Error: TAURI_SIGNING_PRIVATE_KEY is not set. Add it to .env before building the AppImage."
   exit 1
