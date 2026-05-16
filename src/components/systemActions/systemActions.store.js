@@ -88,6 +88,50 @@ const shouldShowEmbeddedClose = (attrs = {}) => {
   );
 };
 
+const buildColorPreview = (colors, colorId) => {
+  if (!colorId) {
+    return undefined;
+  }
+
+  const color = colors[colorId];
+  if (!color) {
+    return {
+      colorId,
+      colorName: colorId,
+      colorHex: undefined,
+    };
+  }
+
+  return {
+    colorId,
+    colorName: color.name ?? colorId,
+    colorHex: color.hex,
+  };
+};
+
+const resolveBackgroundPreviewAction = ({ actions, presentationState }) => {
+  const actionBackground = isPlainObject(actions.background)
+    ? actions.background
+    : undefined;
+  const effectiveBackground = isPlainObject(presentationState.background)
+    ? presentationState.background
+    : undefined;
+
+  if (!actionBackground) {
+    return effectiveBackground;
+  }
+
+  const previewBackground = { ...actionBackground };
+  if (!previewBackground.resourceId && actionBackground.colorId) {
+    previewBackground.resourceId = effectiveBackground?.resourceId;
+  }
+  if (!previewBackground.colorId && actionBackground.resourceId) {
+    previewBackground.colorId = effectiveBackground?.colorId;
+  }
+
+  return previewBackground;
+};
+
 export const selectViewData = ({ state, props, props: attrs }) => {
   const displayActions = selectDisplayActions({ state });
   const actionProps = { ...props };
@@ -359,6 +403,7 @@ export const selectActionsData = ({ props, state }) => {
   const videos = repositoryStateData.videos?.items || {};
   const sounds = repositoryStateData.sounds?.items || {};
   const animations = repositoryStateData.animations?.items || {};
+  const colors = repositoryStateData.colors?.items || {};
   const scenes = repositoryStateData.scenes || {};
   // Layouts: need full tree structure for toFlatItems() to search through nested folders
   const layoutsHierarchy = repositoryStateData.layouts || {};
@@ -369,22 +414,41 @@ export const selectActionsData = ({ props, state }) => {
   const actionsObject = {};
   const preview = {};
 
-  const backgroundAction =
-    actions.background && typeof actions.background === "object"
-      ? actions.background
-      : presentationState.background;
+  const backgroundAction = resolveBackgroundPreviewAction({
+    actions,
+    presentationState,
+  });
 
-  if (backgroundAction?.resourceId) {
+  if (backgroundAction?.resourceId || backgroundAction?.colorId) {
     const backgroundImage = images[backgroundAction.resourceId];
     const backgroundVideo = videos[backgroundAction.resourceId];
     const backgroundLayout = layoutsItems[backgroundAction.resourceId];
+    const colorPreview = buildColorPreview(colors, backgroundAction.colorId);
     actionsObject.background = backgroundAction;
     if (backgroundImage) {
-      preview.background = { ...backgroundImage, type: "image" };
+      preview.background = {
+        ...backgroundImage,
+        ...colorPreview,
+        type: "image",
+      };
     } else if (backgroundVideo) {
-      preview.background = { ...backgroundVideo, type: "video" };
+      preview.background = {
+        ...backgroundVideo,
+        ...colorPreview,
+        type: "video",
+      };
     } else if (backgroundLayout) {
-      preview.background = { ...backgroundLayout, type: "layout" };
+      preview.background = {
+        ...backgroundLayout,
+        ...colorPreview,
+        type: "layout",
+      };
+    } else if (colorPreview) {
+      preview.background = {
+        ...colorPreview,
+        name: colorPreview.colorName,
+        type: "color",
+      };
     }
   }
 

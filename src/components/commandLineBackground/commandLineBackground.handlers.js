@@ -92,6 +92,7 @@ const getResourceCollectionsFromDomainState = (domainState) => ({
   videos: domainState?.videos || createEmptyCollection(),
   animations: domainState?.animations || createEmptyCollection(),
   transforms: domainState?.transforms || createEmptyCollection(),
+  colors: domainState?.colors || createEmptyCollection(),
 });
 
 const getDomainStateFromProjectService = (projectService) => {
@@ -117,26 +118,33 @@ const buildBackgroundDataFromState = (
       ? (store.selectTempSelectedResource?.() ?? store.selectSelectedResource())
       : store.selectSelectedResource();
   const selectedTransformId = store.selectSelectedTransform();
+  const selectedColorId = store.selectSelectedColor();
   const selectedAnimationMode = store.selectSelectedAnimationMode();
   const selectedAnimationId = store.selectSelectedAnimation();
   const selectedAnimationPlaybackContinuity =
     store.selectSelectedAnimationPlaybackContinuity();
   const backgroundLoop = store.selectBackgroundLoop();
+  const hasBackgroundTarget =
+    !!selectedResource?.resourceId || !!selectedColorId;
 
   const backgroundData = {
     resourceId: selectedResource?.resourceId,
   };
 
+  if (selectedColorId) {
+    backgroundData.colorId = selectedColorId;
+  }
+
   if (selectedResource?.resourceType === "video") {
     backgroundData.loop = backgroundLoop ?? false;
   }
 
-  if (selectedResource?.resourceId && selectedTransformId) {
+  if (hasBackgroundTarget && selectedTransformId) {
     backgroundData.transformId = selectedTransformId;
   }
 
   if (
-    selectedResource?.resourceId &&
+    hasBackgroundTarget &&
     selectedAnimationMode !== "none" &&
     selectedAnimationId
   ) {
@@ -180,16 +188,21 @@ export const handleBeforeMount = (deps) => {
 
   const {
     resourceId,
+    colorId,
     transformId,
     animations: backgroundAnimations,
     loop: backgroundLoop,
   } = props.background;
 
-  if (!resourceId) {
-    return;
+  if (colorId) {
+    store.setSelectedColor({
+      colorId,
+    });
   }
 
-  store.setPendingResourceId({ resourceId: resourceId });
+  if (resourceId) {
+    store.setPendingResourceId({ resourceId: resourceId });
+  }
 
   if (backgroundLoop !== undefined) {
     store.setBackgroundLoop({
@@ -224,7 +237,7 @@ export const handleAfterMount = async (deps) => {
 
   await projectService.ensureRepository();
   const domainState = getDomainStateFromProjectService(projectService);
-  const { images, layouts, videos, animations, transforms } =
+  const { images, layouts, videos, animations, transforms, colors } =
     getResourceCollectionsFromDomainState(domainState);
 
   store.setRepositoryState({
@@ -233,6 +246,7 @@ export const handleAfterMount = async (deps) => {
     videos,
     animations,
     transforms,
+    colors,
   });
 
   const pendingResourceId = store.selectPendingResourceId();
@@ -285,29 +299,36 @@ export const handleAfterMount = async (deps) => {
 };
 
 export const handleBackgroundImageRightClick = async (deps, payload) => {
-  const { store, render, globalUI } = deps;
+  const { store, render, appService } = deps;
   const { _event: event } = payload;
   event.preventDefault();
+  event.stopPropagation();
 
-  const result = await globalUI.showDropdownMenu({
+  const result = await appService.showDropdownMenu({
     items: [{ type: "item", label: "Remove", key: "remove" }],
     x: event.clientX,
     y: event.clientY,
     place: "bs",
   });
 
-  if (result.item.key === "remove") {
-    store.setSelectedResource({
-      resourceId: undefined,
-      resourceType: undefined,
-    });
-    store.setBackgroundLoop({
-      loop: false,
-    });
-
-    render();
-    dispatchTemporaryPresentationStateChange(deps);
+  if (result?.item?.key !== "remove") {
+    return;
   }
+
+  store.setSelectedResource({
+    resourceId: undefined,
+    resourceType: undefined,
+  });
+  store.setTempSelectedResource({
+    resourceId: undefined,
+    resourceType: undefined,
+  });
+  store.setBackgroundLoop({
+    loop: false,
+  });
+
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleImageSelected = async (deps, payload) => {
@@ -372,6 +393,15 @@ export const handleFormInputChange = (deps, payload) => {
   if (name === "transformId") {
     store.setSelectedTransform({
       transformId: fieldValue,
+    });
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+
+  if (name === "colorId") {
+    store.setSelectedColor({
+      colorId: fieldValue,
     });
     render();
     dispatchTemporaryPresentationStateChange(deps);
