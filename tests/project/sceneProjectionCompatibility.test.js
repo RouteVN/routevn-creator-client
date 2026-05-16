@@ -7,7 +7,10 @@ import {
   repositoryEventToCommand,
   createRepositoryCommandEvent,
 } from "../../src/deps/services/shared/projectRepository.js";
-import { loadSceneProjectionState } from "../../src/deps/services/shared/projectRepositoryViews/sceneStateView.js";
+import {
+  applySceneEventsToLoadedProjection,
+  loadSceneProjectionState,
+} from "../../src/deps/services/shared/projectRepositoryViews/sceneStateView.js";
 import {
   SCENE_VIEW_VERSION,
   createMainProjectionState,
@@ -222,6 +225,15 @@ describe("scene projection compatibility", () => {
         clientTs: 1,
       }),
       createCommandEvent({
+        id: "line-delete-source",
+        partition: scenePartitionFor(sceneId),
+        type: COMMAND_TYPES.LINE_DELETE,
+        payload: {
+          lineIds: [lineId],
+        },
+        clientTs: 2,
+      }),
+      createCommandEvent({
         id: "section-move-target",
         partition: mainPartitionFor(),
         type: COMMAND_TYPES.SECTION_MOVE,
@@ -230,7 +242,7 @@ describe("scene projection compatibility", () => {
           sceneId: targetSceneId,
           position: "last",
         },
-        clientTs: 2,
+        clientTs: 3,
       }),
       createCommandEvent({
         id: "line-create-target",
@@ -250,9 +262,22 @@ describe("scene projection compatibility", () => {
           ],
           position: "last",
         },
-        clientTs: 3,
+        clientTs: 4,
       }),
     ];
+
+    const fullReplayResult = applyRepositoryEventsToRepositoryState({
+      repositoryState: structuredClone(initialProjectData),
+      events,
+      projectId,
+    });
+    expect(fullReplayResult.valid).toBe(true);
+    expect(
+      fullReplayResult.repositoryState.scenes.items[targetSceneId].sections
+        .items[sectionId].lines.items[lineId].actions,
+    ).toEqual({
+      say: "kept",
+    });
 
     const mainEvents = events.filter(
       (event) =>
@@ -296,6 +321,87 @@ describe("scene projection compatibility", () => {
     expect(
       sourceProjection.scenes.items[sceneId].sections.items[sectionId],
     ).toBeUndefined();
+  });
+
+  it("skips obsolete source line deletes during active scene projection refresh", () => {
+    const targetSceneId = "scene-2";
+    const initialState = createRepositoryState();
+    initialState.scenes.items[sceneId].sections.items[sectionId].lines.items[
+      lineId
+    ] = {
+      id: lineId,
+      actions: {
+        say: "kept",
+      },
+    };
+    initialState.scenes.items[sceneId].sections.items[sectionId].lines.tree = [
+      { id: lineId },
+    ];
+    initialState.scenes.items[targetSceneId] = {
+      id: targetSceneId,
+      type: "scene",
+      name: "Scene 2",
+      sections: {
+        items: {},
+        tree: [],
+      },
+    };
+    initialState.scenes.tree.push({ id: targetSceneId });
+
+    const lineDeleteEvent = createCommandEvent({
+      id: "line-delete-source",
+      partition: scenePartitionFor(sceneId),
+      type: COMMAND_TYPES.LINE_DELETE,
+      payload: {
+        lineIds: [lineId],
+      },
+      clientTs: 1,
+    });
+    const sectionMoveEvent = createCommandEvent({
+      id: "section-move-target",
+      partition: mainPartitionFor(),
+      type: COMMAND_TYPES.SECTION_MOVE,
+      payload: {
+        sectionId,
+        sceneId: targetSceneId,
+        position: "last",
+      },
+      clientTs: 2,
+    });
+    const mainReplayResult = applyRepositoryEventsToRepositoryState({
+      repositoryState: structuredClone(initialState),
+      events: [sectionMoveEvent],
+      projectId,
+    });
+    expect(mainReplayResult.valid).toBe(true);
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const projection = applySceneEventsToLoadedProjection({
+        mainState: createMainProjectionState(mainReplayResult.repositoryState),
+        sceneState: createSceneProjectionState(
+          initialState,
+          scenePartitionFor(sceneId),
+        ),
+        sceneId,
+        sourceEvents: [lineDeleteEvent],
+        reduceEventsToState,
+      });
+
+      expect(
+        projection.scenes.items[sceneId].sections.items[sectionId],
+      ).toBeUndefined();
+      expect(warnSpy).toHaveBeenCalledWith(
+        "[sceneProjection] skipped obsolete replay event",
+        expect.objectContaining({
+          sceneId,
+          eventId: "line-delete-source",
+          partition: scenePartitionFor(sceneId),
+        }),
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it("falls back to a stale scene checkpoint when project.create seed is missing", async () => {

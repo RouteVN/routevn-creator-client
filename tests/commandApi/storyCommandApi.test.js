@@ -457,13 +457,17 @@ describe("story command api", () => {
       sceneIds: ["scene-2"],
       sectionIds: ["section-1"],
     });
-    expect(
-      shared.submitCommandsWithContext.mock.calls[0][0].context.state.scenes
-        .items["scene-1"].sections.items["section-1"].lines.items["line-1"],
-    ).toBeUndefined();
     expect(shared.submitCommandsWithContext).toHaveBeenCalledWith({
       context,
       commands: [
+        {
+          scope: "story",
+          partition: "s:scene-1",
+          type: COMMAND_TYPES.LINE_DELETE,
+          payload: {
+            lineIds: ["line-1"],
+          },
+        },
         {
           scope: "story",
           partition: "m",

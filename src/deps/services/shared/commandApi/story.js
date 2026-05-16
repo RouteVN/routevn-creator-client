@@ -84,22 +84,6 @@ export const createStoryCommandApi = (shared) => {
     return ids;
   };
 
-  const removeTreeNodeById = (nodes = [], nodeId) => {
-    const index = nodes.findIndex((node) => node?.id === nodeId);
-    if (index >= 0) {
-      nodes.splice(index, 1);
-      return true;
-    }
-
-    for (const node of nodes || []) {
-      if (removeTreeNodeById(node?.children, nodeId)) {
-        return true;
-      }
-    }
-
-    return false;
-  };
-
   const findTreeNodeParentId = (nodes = [], nodeId, parentId = null) => {
     for (const node of nodes || []) {
       if (!node || typeof node !== "object") {
@@ -172,34 +156,6 @@ export const createStoryCommandApi = (shared) => {
         lines: buildSectionLineCreateItems(sectionItems[sectionId]),
       }))
       .filter((entry) => entry.lines.length > 0);
-  };
-
-  const removeMovedSectionLinesFromContextState = ({
-    context,
-    sectionLineSets = [],
-  } = {}) => {
-    if (!context?.state || sectionLineSets.length === 0) {
-      return;
-    }
-
-    const nextState = structuredClone(context.state);
-    for (const sectionLineSet of sectionLineSets) {
-      const sectionLocation = findSectionLocation(
-        nextState,
-        sectionLineSet.sectionId,
-      );
-      const lines = sectionLocation?.section?.lines;
-      if (!lines) {
-        continue;
-      }
-
-      for (const line of sectionLineSet.lines) {
-        delete lines.items?.[line.lineId];
-        removeTreeNodeById(lines.tree, line.lineId);
-      }
-    }
-
-    context.state = nextState;
   };
 
   const getUniqueSceneIds = (sceneIds = []) => {
@@ -1186,12 +1142,15 @@ export const createStoryCommandApi = (shared) => {
       }
 
       if (isCrossSceneMove && movedLineIds.length > 0) {
-        removeMovedSectionLinesFromContextState({
-          context,
-          sectionLineSets: movedSectionLineSets,
-        });
-
         const commands = [
+          {
+            scope: "story",
+            partition: getSceneOnlyPartition(context, [sourceSceneId]),
+            type: COMMAND_TYPES.LINE_DELETE,
+            payload: {
+              lineIds: movedLineIds,
+            },
+          },
           {
             scope: "story",
             partition: getMainScenePartition(context, [
