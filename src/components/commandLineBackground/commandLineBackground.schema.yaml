@@ -7,6 +7,8 @@ propsSchema:
       properties:
         resourceId:
           type: string
+        colorId:
+          type: string
         transformId:
           type: string
         animations:

@@ -20,17 +20,86 @@ const buildCharacterLookups = (repositoryState) => {
   };
 };
 
-const buildBackgroundPreview = (repositoryState, changes) => {
-  if (!changes.background) {
+const isPlainObject = (value) => {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+};
+
+const resolveBackgroundChangeParts = (backgroundChange) => {
+  if (!isPlainObject(backgroundChange)) {
+    return {};
+  }
+
+  if (
+    isPlainObject(backgroundChange.resource) ||
+    isPlainObject(backgroundChange.color)
+  ) {
+    return {
+      resourceChange: backgroundChange.resource,
+      colorChange: backgroundChange.color,
+      isSplitChange: true,
+    };
+  }
+
+  return {
+    resourceChange:
+      backgroundChange.data?.resourceId !== undefined
+        ? backgroundChange
+        : undefined,
+    colorChange:
+      backgroundChange.data?.colorId !== undefined
+        ? backgroundChange
+        : undefined,
+    isSplitChange: false,
+  };
+};
+
+const buildBackgroundPreview = (
+  repositoryState,
+  changes,
+  { previousPresentationState } = {},
+) => {
+  const backgroundChange = changes.background;
+  if (!backgroundChange) {
     return undefined;
   }
 
-  const backgroundData = changes.background.data || {};
-  return {
-    changeType: changes.background.changeType,
-    resourceId: backgroundData.resourceId,
-    fileId: repositoryState?.images?.items?.[backgroundData.resourceId]?.fileId,
+  const { resourceChange, colorChange, isSplitChange } =
+    resolveBackgroundChangeParts(backgroundChange);
+
+  if (!resourceChange && !colorChange) {
+    return undefined;
+  }
+
+  const resourceData = resourceChange?.data || {};
+  const colorData = colorChange?.data || {};
+  const previousColorId = isSplitChange
+    ? undefined
+    : previousPresentationState?.background?.colorId;
+  const hasColorChange =
+    !!colorData.colorId &&
+    (isSplitChange ||
+      colorChange?.changeType === "delete" ||
+      colorData.colorId !== previousColorId);
+  const colorId = hasColorChange ? colorData.colorId : undefined;
+  const color = colorId ? repositoryState?.colors?.items?.[colorId] : undefined;
+  const preview = {
+    changeType: resourceChange?.changeType ?? colorChange?.changeType,
+    resourceChangeType: resourceChange?.changeType,
+    colorChangeType: colorChange?.changeType,
+    resourceId: resourceData.resourceId,
+    fileId: resolvePreviewResourceFileId({
+      repositoryState,
+      resourceId: resourceData.resourceId,
+    }),
   };
+
+  if (colorId) {
+    preview.colorId = colorId;
+    preview.colorHex = color?.hex;
+    preview.colorName = color?.name ?? colorId;
+  }
+
+  return preview;
 };
 
 const resolvePreviewResourceFileId = ({ repositoryState, resourceId }) => {
@@ -216,6 +285,10 @@ const buildSceneDocumentLineViewModels = ({
   const viewModels = (lines || []).map((line, index) => {
     const lineActions = normalizeLineActions(line.actions || {});
     const sectionLineEntry = getSectionLineEntry(sectionLineChanges, line.id);
+    const previousLine = index > 0 ? lines[index - 1] : undefined;
+    const previousSectionLineEntry = previousLine
+      ? getSectionLineEntry(sectionLineChanges, previousLine.id)
+      : undefined;
     const changes = sectionLineEntry?.changes || {};
     const choicesPreview = buildChoicesPreview(line);
     const linePresentationState = sectionLineEntry?.presentationState;
@@ -224,7 +297,9 @@ const buildSceneDocumentLineViewModels = ({
       ...line,
       domRefSuffix: toStableDomRefSuffix(line.id),
       lineNumber: index + 1,
-      background: buildBackgroundPreview(repositoryState, changes),
+      background: buildBackgroundPreview(repositoryState, changes, {
+        previousPresentationState: previousSectionLineEntry?.presentationState,
+      }),
       bgm: changes.bgm
         ? {
             changeType: changes.bgm.changeType,

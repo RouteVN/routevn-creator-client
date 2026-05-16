@@ -70,11 +70,13 @@ export const createInitialState = () => ({
   videoItems: createEmptyCollection(),
   animationItems: createEmptyCollection(),
   transformItems: createEmptyCollection(),
+  colorItems: createEmptyCollection(),
   selectedResourceId: undefined,
   selectedResourceType: undefined,
   tempSelectedResourceId: undefined,
   tempSelectedResourceType: undefined,
   selectedTransformId: undefined,
+  selectedColorId: undefined,
   selectedAnimationMode: "none",
   selectedAnimationId: undefined,
   selectedAnimationPlaybackContinuity: "render",
@@ -110,13 +112,14 @@ export const selectMode = ({ state }) => {
 
 export const setRepositoryState = (
   { state },
-  { images, layouts, videos, animations, transforms } = {},
+  { images, layouts, videos, animations, transforms, colors } = {},
 ) => {
   state.imageItems = normalizeResourceCollection(images);
   state.layoutItems = normalizeResourceCollection(layouts);
   state.videoItems = normalizeResourceCollection(videos);
   state.animationItems = normalizeResourceCollection(animations);
   state.transformItems = normalizeResourceCollection(transforms);
+  state.colorItems = normalizeResourceCollection(colors);
 
   const selectedAnimationMode = getAnimationModeById(
     state.animationItems,
@@ -232,6 +235,15 @@ export const setSelectedTransform = ({ state }, { transformId } = {}) => {
 
 export const selectSelectedTransform = ({ state }) => {
   return state.selectedTransformId;
+};
+
+export const setSelectedColor = ({ state }, { colorId } = {}) => {
+  state.selectedColorId =
+    typeof colorId === "string" && colorId.length > 0 ? colorId : undefined;
+};
+
+export const selectSelectedColor = ({ state }) => {
+  return state.selectedColorId;
 };
 
 export const setSelectedAnimationPlaybackContinuity = (
@@ -424,12 +436,26 @@ export const selectViewData = ({ state }) => {
       value: item.id,
       label: item.name,
     }));
+  const colorOptions = toFlatItems(state.colorItems)
+    .filter((item) => item.type === "color")
+    .map((item) => ({
+      value: item.id,
+      label: item.name ?? item.id,
+    }));
 
   const formFields = [
     {
       type: "slot",
       slot: "background",
       description: "Background",
+    },
+    {
+      name: "colorId",
+      label: "Background Color",
+      type: "select",
+      clearable: true,
+      placeholder: "Select color",
+      options: colorOptions,
     },
     {
       name: "transformId",
@@ -477,6 +503,7 @@ export const selectViewData = ({ state }) => {
 
   const defaultValues = {
     background: selectedResource?.fileId || "",
+    colorId: state.selectedColorId,
     transformId: state.selectedTransformId,
     playbackContinuity: state.selectedAnimationPlaybackContinuity,
     animationId: state.selectedAnimationId,
@@ -500,6 +527,7 @@ export const selectViewData = ({ state }) => {
       key: [
         selectedResource?.resourceType ?? "none",
         selectedResource?.resourceId ?? "none",
+        state.selectedColorId ?? "none",
         state.selectedTransformId ?? "none",
         state.selectedAnimationPlaybackContinuity ?? "render",
         selectedAnimationMode,

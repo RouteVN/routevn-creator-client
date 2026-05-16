@@ -359,6 +359,18 @@ const STYLES = `
     height: 24px;
   }
 
+  .preview-color-swatch {
+    position: relative;
+    display: inline-flex;
+    width: 28px;
+    height: 18px;
+    align-self: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: transparent;
+  }
+
   .preview-image-stack {
     display: flex;
     flex-wrap: wrap;
@@ -6410,15 +6422,40 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     container.className = "preview-items";
 
     if (lineDecoration.background) {
-      container.append(
-        this.createMediaPreview({
-          type: "background",
-          fileId: lineDecoration.background.fileId,
-          placeholderIcon: "image",
-          size: "bg",
-          isDelete: lineDecoration.background.changeType === "delete",
-        }),
-      );
+      const item = document.createElement("div");
+      item.className = "preview-item";
+      const resourceIsDelete =
+        (lineDecoration.background.resourceChangeType ??
+          lineDecoration.background.changeType) === "delete";
+      const colorIsDelete =
+        (lineDecoration.background.colorChangeType ??
+          lineDecoration.background.changeType) === "delete";
+
+      if (lineDecoration.background.colorHex) {
+        item.append(
+          this.createColorSwatch({
+            colorHex: lineDecoration.background.colorHex,
+            colorName: lineDecoration.background.colorName,
+            isDelete: colorIsDelete,
+          }),
+        );
+      }
+
+      if (
+        lineDecoration.background.fileId ||
+        !lineDecoration.background.colorHex
+      ) {
+        item.append(
+          this.createMediaThumb({
+            fileId: lineDecoration.background.fileId,
+            placeholderIcon: "image",
+            size: "bg",
+            isDelete: resourceIsDelete,
+          }),
+        );
+      }
+
+      container.append(item);
     }
 
     if (lineDecoration.characterSprites) {
@@ -6642,6 +6679,19 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     }
 
     return thumb;
+  }
+
+  createColorSwatch({ colorHex, colorName, isDelete = false } = {}) {
+    const swatch = document.createElement("div");
+    swatch.className = "preview-color-swatch";
+    swatch.style.backgroundColor = colorHex;
+    if (colorName) {
+      swatch.title = colorName;
+    }
+    if (isDelete) {
+      swatch.append(this.createDeleteOverlay());
+    }
+    return swatch;
   }
 
   createIconPreview({
