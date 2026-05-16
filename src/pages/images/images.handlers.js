@@ -319,6 +319,41 @@ const openImagePreviewById = ({ deps, itemId, syncExplorer = false } = {}) => {
   focusPreviewOverlay(deps);
 };
 
+const closeImagePreview = (deps) => {
+  const { store, render } = deps;
+
+  store.hideFullImagePreview();
+  render();
+  focusGroupView(deps);
+};
+
+const navigateImagePreview = (deps, { direction, distance, clamp } = {}) => {
+  const { store } = deps;
+  const selectedItemId = store.selectSelectedItemId();
+  if (!selectedItemId || !direction) {
+    return false;
+  }
+
+  const adjacentPayload = {
+    itemId: selectedItemId,
+    direction,
+  };
+  if (distance !== undefined) {
+    adjacentPayload.distance = distance;
+  }
+  if (clamp !== undefined) {
+    adjacentPayload.clamp = clamp;
+  }
+
+  const nextItemId = store.selectAdjacentImageItemId(adjacentPayload);
+  if (!nextItemId) {
+    return false;
+  }
+
+  openImagePreviewById({ deps, itemId: nextItemId, syncExplorer: true });
+  return true;
+};
+
 const resolvePreviewNavigationDirection = (event) => {
   if (event.key === "ArrowDown" || event.key === "ArrowRight") {
     return { direction: "next" };
@@ -573,10 +608,23 @@ export const handleImageItemPreview = (deps, payload) => {
 };
 
 export const handlePreviewOverlayClick = (deps) => {
-  const { store, render } = deps;
-  store.hideFullImagePreview();
-  render();
-  focusGroupView(deps);
+  closeImagePreview(deps);
+};
+
+export const handlePreviewImageFrameClick = (_deps, payload) => {
+  payload?._event?.stopPropagation?.();
+};
+
+export const handlePreviewPreviousClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+  navigateImagePreview(deps, { direction: "previous" });
+};
+
+export const handlePreviewNextClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+  navigateImagePreview(deps, { direction: "next" });
 };
 
 export const handlePreviewOverlayKeyDown = (deps, payload) => {
@@ -594,14 +642,7 @@ export const handlePreviewOverlayKeyDown = (deps, payload) => {
   if (event.key === "Escape" || event.key === "Enter") {
     event.preventDefault();
     event.stopPropagation();
-    store.hideFullImagePreview();
-    deps.render();
-    focusGroupView(deps);
-    return;
-  }
-
-  const selectedItemId = store.selectSelectedItemId();
-  if (!selectedItemId) {
+    closeImagePreview(deps);
     return;
   }
 
@@ -613,23 +654,7 @@ export const handlePreviewOverlayKeyDown = (deps, payload) => {
   event.preventDefault();
   event.stopPropagation();
 
-  const adjacentPayload = {
-    itemId: selectedItemId,
-    direction: navigation.direction,
-  };
-  if (navigation.distance !== undefined) {
-    adjacentPayload.distance = navigation.distance;
-  }
-  if (navigation.clamp !== undefined) {
-    adjacentPayload.clamp = navigation.clamp;
-  }
-
-  const nextItemId = store.selectAdjacentImageItemId(adjacentPayload);
-  if (!nextItemId) {
-    return;
-  }
-
-  openImagePreviewById({ deps, itemId: nextItemId, syncExplorer: true });
+  navigateImagePreview(deps, navigation);
 };
 
 export const handleFileExplorerKeyboardScopeKeyDown = (deps, payload) => {
