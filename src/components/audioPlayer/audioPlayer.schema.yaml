@@ -13,3 +13,7 @@ propsSchema:
       type: boolean
       description: Whether to start playing automatically
       default: false
+    closeIconSize:
+      type: number
+      description: Size of the close icon in pixels
+      default: 24

@@ -221,7 +221,7 @@ template:
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null
   - $when: fullImagePreviewVisible
-    'div#previewOverlay tabindex=0 style="position: fixed; inset: 0; z-index: 3000; cursor: pointer; outline: none;"':
+    'div#previewOverlay tabindex=0 style="position: fixed; inset: 0; z-index: 3000; cursor: default; outline: none;"':
       - 'rtgl-view w=f h=f pos=fix edge=f style="background-color: rgba(0, 0, 0, 0.9);"': null
       - $if fullImagePreviewFileId:
           - rtgl-view pos=fix edge=f ah=c av=c z=3001:

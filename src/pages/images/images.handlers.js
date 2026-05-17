@@ -611,8 +611,9 @@ export const handlePreviewOverlayClick = (deps) => {
   closeImagePreview(deps);
 };
 
-export const handlePreviewImageFrameClick = (_deps, payload) => {
+export const handlePreviewImageFrameClick = (deps, payload) => {
   payload?._event?.stopPropagation?.();
+  closeImagePreview(deps);
 };
 
 export const handlePreviewPreviousClick = (deps, payload) => {

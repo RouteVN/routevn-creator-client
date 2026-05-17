@@ -19,7 +19,7 @@ template:
         $else:
           - rtgl-view w=f g=md bgc=mu:
               - rtgl-view w=f:
-                  - 'rtgl-view#progressBar w=f h=6 br=full cur=pointer pos=rel style="overflow: hidden;"':
+                  - 'rtgl-view#progressBar w=f h=6 br=full cur=pointer pos=rel bgc=su style="overflow: hidden;"':
                       - 'rtgl-view h=f bgc=ac br=full style="width: ${progressPercentage}%; transition: width 0.1s ease;"': null
               - rtgl-view ph=md d=h av=c w=f h=f p=md:
                   - rtgl-text w=250 ellipsis=true: ${title}
@@ -33,4 +33,5 @@ template:
                           - rtgl-text s=sm c=mu-fg: ${currentTimeFormatted}
                           - rtgl-text s=sm c=mu-fg: /
                           - rtgl-text s=sm c=mu-fg: ${durationFormatted}
-                  - rtgl-svg#playerCloser svg=cross w=24 h=24 cur=pointer: null
+                  - rtgl-view#playerCloser w=24 h=24 av=c ah=c cur=pointer:
+                      - rtgl-svg svg=cross w=${closeIconSize} h=${closeIconSize}: null

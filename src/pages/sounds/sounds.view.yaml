@@ -187,4 +187,4 @@ template:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null
   - $if showAudioPlayer:
       - 'rtgl-view h=72 pos=fix edge=b z=1001 style="left: ${audioPlayerLeft}px; right: ${audioPlayerRight}px;"':
-          - rvn-audio-player#rvnAudioPlayer fileId=${playingSound.fileId} autoPlay=true :title=${playingSound.title}: null
+          - rvn-audio-player#rvnAudioPlayer fileId=${playingSound.fileId} autoPlay=true :title=${playingSound.title} closeIconSize=16: null
