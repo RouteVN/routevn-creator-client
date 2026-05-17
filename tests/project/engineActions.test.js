@@ -42,4 +42,32 @@ describe("normalizeLineActions", () => {
       },
     });
   });
+
+  it("normalizes background blur kernel size to a supported route-graphics value", () => {
+    expect(
+      normalizeLineActions({
+        background: {
+          resourceId: "bg-school",
+          blur: {
+            x: 12,
+            y: 12,
+            quality: 5,
+            kernelSize: 12,
+            repeatEdgePixels: true,
+          },
+        },
+      }),
+    ).toEqual({
+      background: {
+        resourceId: "bg-school",
+        blur: {
+          x: 12,
+          y: 12,
+          quality: 5,
+          kernelSize: 11,
+          repeatEdgePixels: true,
+        },
+      },
+    });
+  });
 });

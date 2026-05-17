@@ -26,6 +26,16 @@ const ANIMATION_PLAYBACK_CONTINUITY_OPTIONS = [
   },
 ];
 
+const DEFAULT_BACKGROUND_OPACITY = 1;
+const DEFAULT_BACKGROUND_BLUR = {
+  x: 6,
+  y: 9,
+  quality: 3,
+  kernelSize: 9,
+  repeatEdgePixels: true,
+};
+const BACKGROUND_BLUR_KERNEL_SIZE_OPTIONS = [5, 7, 9, 11, 13, 15];
+
 // Form structure will be created dynamically in selectViewData
 const createEmptyCollection = () => ({
   items: {},
@@ -62,6 +72,67 @@ const getAnimationModeById = (collection = {}, animationId) => {
   return item ? getAnimationType(item) : undefined;
 };
 
+const normalizeBackgroundOpacity = (opacity) => {
+  if (opacity === undefined || opacity === null || opacity === "") {
+    return undefined;
+  }
+
+  const parsedOpacity = Number(opacity);
+  if (!Number.isFinite(parsedOpacity)) {
+    return undefined;
+  }
+
+  return Math.max(0, Math.min(1, parsedOpacity));
+};
+
+const normalizeBackgroundBlurNumber = (value, fallback) => {
+  if (value === undefined || value === null || value === "") {
+    return fallback;
+  }
+
+  const parsedValue = Number(value);
+  return Number.isFinite(parsedValue) ? parsedValue : fallback;
+};
+
+const normalizeBackgroundBlurBoolean = (value, fallback) => {
+  if (value === undefined || value === null || value === "") {
+    return fallback;
+  }
+
+  return value === true || value === "true";
+};
+
+const normalizeBackgroundBlurKernelSize = (value) => {
+  const parsedValue = normalizeBackgroundBlurNumber(
+    value,
+    DEFAULT_BACKGROUND_BLUR.kernelSize,
+  );
+
+  if (BACKGROUND_BLUR_KERNEL_SIZE_OPTIONS.includes(parsedValue)) {
+    return parsedValue;
+  }
+
+  return BACKGROUND_BLUR_KERNEL_SIZE_OPTIONS.reduce((closest, option) => {
+    const currentDistance = Math.abs(option - parsedValue);
+    const closestDistance = Math.abs(closest - parsedValue);
+    return currentDistance < closestDistance ? option : closest;
+  }, DEFAULT_BACKGROUND_BLUR.kernelSize);
+};
+
+const normalizeBackgroundBlur = (blur = {}) => ({
+  x: normalizeBackgroundBlurNumber(blur.x, DEFAULT_BACKGROUND_BLUR.x),
+  y: normalizeBackgroundBlurNumber(blur.y, DEFAULT_BACKGROUND_BLUR.y),
+  quality: normalizeBackgroundBlurNumber(
+    blur.quality,
+    DEFAULT_BACKGROUND_BLUR.quality,
+  ),
+  kernelSize: normalizeBackgroundBlurKernelSize(blur.kernelSize),
+  repeatEdgePixels: normalizeBackgroundBlurBoolean(
+    blur.repeatEdgePixels,
+    DEFAULT_BACKGROUND_BLUR.repeatEdgePixels,
+  ),
+});
+
 export const createInitialState = () => ({
   mode: "current",
   tab: "image",
@@ -77,6 +148,9 @@ export const createInitialState = () => ({
   tempSelectedResourceType: undefined,
   selectedTransformId: undefined,
   selectedColorId: undefined,
+  selectedOpacity: undefined,
+  selectedBlurEnabled: false,
+  selectedBlur: { ...DEFAULT_BACKGROUND_BLUR },
   selectedAnimationMode: "none",
   selectedAnimationId: undefined,
   selectedAnimationPlaybackContinuity: "render",
@@ -244,6 +318,36 @@ export const setSelectedColor = ({ state }, { colorId } = {}) => {
 
 export const selectSelectedColor = ({ state }) => {
   return state.selectedColorId;
+};
+
+export const setSelectedOpacity = ({ state }, { opacity } = {}) => {
+  state.selectedOpacity = normalizeBackgroundOpacity(opacity);
+};
+
+export const selectSelectedOpacity = ({ state }) => {
+  return state.selectedOpacity;
+};
+
+export const setSelectedBlurEnabled = ({ state }, { enabled } = {}) => {
+  state.selectedBlurEnabled = enabled === true || enabled === "true";
+};
+
+export const setSelectedBlur = ({ state }, { blur } = {}) => {
+  state.selectedBlurEnabled = true;
+  state.selectedBlur = normalizeBackgroundBlur(blur);
+};
+
+export const setSelectedBlurField = ({ state }, { fieldName, value } = {}) => {
+  state.selectedBlur = normalizeBackgroundBlur({
+    ...state.selectedBlur,
+    [fieldName]: value,
+  });
+};
+
+export const selectSelectedBlur = ({ state }) => {
+  return state.selectedBlurEnabled
+    ? normalizeBackgroundBlur(state.selectedBlur)
+    : undefined;
 };
 
 export const setSelectedAnimationPlaybackContinuity = (
@@ -466,6 +570,63 @@ export const selectViewData = ({ state }) => {
       options: transformOptions,
     },
     {
+      name: "opacity",
+      label: "Opacity",
+      type: "slider-with-input",
+      min: 0,
+      max: 1,
+      step: 0.01,
+    },
+    {
+      name: "blur",
+      label: "Blur",
+      type: "segmented-control",
+      clearable: false,
+      options: [
+        { value: false, label: "No Blur" },
+        { value: true, label: "Blur" },
+      ],
+    },
+    {
+      $when: "blur == true",
+      name: "blurX",
+      label: "Blur X",
+      type: "input-number",
+    },
+    {
+      $when: "blur == true",
+      name: "blurY",
+      label: "Blur Y",
+      type: "input-number",
+    },
+    {
+      $when: "blur == true",
+      name: "blurQuality",
+      label: "Quality",
+      type: "input-number",
+    },
+    {
+      $when: "blur == true",
+      name: "blurKernelSize",
+      label: "Kernel Size",
+      type: "select",
+      options: BACKGROUND_BLUR_KERNEL_SIZE_OPTIONS.map((value) => ({
+        value,
+        label: String(value),
+      })),
+    },
+    {
+      $when: "blur == true",
+      name: "blurRepeatEdgePixels",
+      label: "Repeat Edge Pixels",
+      type: "segmented-control",
+      clearable: false,
+      options: [
+        { value: false, label: "No" },
+        { value: true, label: "Yes" },
+      ],
+    },
+    {
       name: "animationId",
       label: "Animation",
       type: "select",
@@ -505,6 +666,13 @@ export const selectViewData = ({ state }) => {
     background: selectedResource?.fileId || "",
     colorId: state.selectedColorId,
     transformId: state.selectedTransformId,
+    opacity: state.selectedOpacity ?? DEFAULT_BACKGROUND_OPACITY,
+    blur: state.selectedBlurEnabled,
+    blurX: state.selectedBlur.x,
+    blurY: state.selectedBlur.y,
+    blurQuality: state.selectedBlur.quality,
+    blurKernelSize: state.selectedBlur.kernelSize,
+    blurRepeatEdgePixels: state.selectedBlur.repeatEdgePixels,
     playbackContinuity: state.selectedAnimationPlaybackContinuity,
     animationId: state.selectedAnimationId,
     loop: state.backgroundLoop ?? false,
@@ -529,6 +697,13 @@ export const selectViewData = ({ state }) => {
         selectedResource?.resourceId ?? "none",
         state.selectedColorId ?? "none",
         state.selectedTransformId ?? "none",
+        state.selectedOpacity ?? DEFAULT_BACKGROUND_OPACITY,
+        state.selectedBlurEnabled ? "blur" : "no-blur",
+        state.selectedBlur.x,
+        state.selectedBlur.y,
+        state.selectedBlur.quality,
+        state.selectedBlur.kernelSize,
+        state.selectedBlur.repeatEdgePixels ? "repeat-edge" : "no-repeat-edge",
         state.selectedAnimationPlaybackContinuity ?? "render",
         selectedAnimationMode,
         state.selectedAnimationId ?? "none",
