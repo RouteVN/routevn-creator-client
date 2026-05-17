@@ -13,6 +13,9 @@ import {
   selectSelectedAnimation,
   selectSelectedAnimationPlaybackContinuity,
   selectSelectedAnimationMode,
+  selectSelectedBlur,
+  selectSelectedColor,
+  selectSelectedOpacity,
   selectSelectedResource,
   selectSelectedTransform,
   selectTab,
@@ -24,6 +27,11 @@ import {
   setSelectedAnimation,
   setSelectedAnimationPlaybackContinuity,
   setSelectedAnimationMode,
+  setSelectedBlur,
+  setSelectedBlurEnabled,
+  setSelectedBlurField,
+  setSelectedColor,
+  setSelectedOpacity,
   setSelectedResource,
   setSelectedTransform,
   setTab,
@@ -43,6 +51,9 @@ const createStoreApi = (state) => ({
   selectSelectedAnimationPlaybackContinuity: () =>
     selectSelectedAnimationPlaybackContinuity({ state }),
   selectSelectedAnimationMode: () => selectSelectedAnimationMode({ state }),
+  selectSelectedBlur: () => selectSelectedBlur({ state }),
+  selectSelectedColor: () => selectSelectedColor({ state }),
+  selectSelectedOpacity: () => selectSelectedOpacity({ state }),
   selectSelectedResource: () => selectSelectedResource({ state }),
   selectSelectedTransform: () => selectSelectedTransform({ state }),
   selectTab: () => selectTab({ state }),
@@ -58,6 +69,12 @@ const createStoreApi = (state) => ({
     setSelectedAnimationPlaybackContinuity({ state }, payload),
   setSelectedAnimationMode: (payload) =>
     setSelectedAnimationMode({ state }, payload),
+  setSelectedBlur: (payload) => setSelectedBlur({ state }, payload),
+  setSelectedBlurEnabled: (payload) =>
+    setSelectedBlurEnabled({ state }, payload),
+  setSelectedBlurField: (payload) => setSelectedBlurField({ state }, payload),
+  setSelectedColor: (payload) => setSelectedColor({ state }, payload),
+  setSelectedOpacity: (payload) => setSelectedOpacity({ state }, payload),
   setSelectedResource: (payload) => setSelectedResource({ state }, payload),
   setSelectedTransform: (payload) => setSelectedTransform({ state }, payload),
   setTab: (payload) => setTab({ state }, payload),
@@ -119,6 +136,14 @@ describe("commandLineBackground.handlers", () => {
         background: {
           resourceId: "bg-school",
           transformId: "bg-center",
+          opacity: 0.5,
+          blur: {
+            x: 6,
+            y: 9,
+            quality: 3,
+            kernelSize: 9,
+            repeatEdgePixels: true,
+          },
           animations: {
             resourceId: "bg-fade",
             playback: {
@@ -132,6 +157,14 @@ describe("commandLineBackground.handlers", () => {
 
     expect(selectPendingResourceId({ state })).toBe("bg-school");
     expect(selectSelectedTransform({ state })).toBe("bg-center");
+    expect(selectSelectedOpacity({ state })).toBe(0.5);
+    expect(selectSelectedBlur({ state })).toEqual({
+      x: 6,
+      y: 9,
+      quality: 3,
+      kernelSize: 9,
+      repeatEdgePixels: true,
+    });
     expect(selectSelectedAnimation({ state })).toBe("bg-fade");
     expect(selectSelectedAnimationPlaybackContinuity({ state })).toBe("render");
     expect(selectBackgroundLoop({ state })).toBe(true);
@@ -260,6 +293,231 @@ describe("commandLineBackground.handlers", () => {
         },
       },
     });
+  });
+
+  it("submits opacity when selected and omits it when cleared", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+
+    setRepositoryCollections(state);
+    setSelectedResource(
+      { state },
+      {
+        resourceId: "bg-school",
+        resourceType: "image",
+      },
+    );
+
+    handleFormInputChange(
+      {
+        store: createStoreApi(state),
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            name: "opacity",
+            value: "0.5",
+          },
+        },
+      },
+    );
+
+    handleSubmitClick(
+      {
+        dispatchEvent,
+        store: createStoreApi(state),
+      },
+      {},
+    );
+
+    expect(selectSelectedOpacity({ state })).toBe(0.5);
+    expect(dispatchEvent).toHaveBeenCalledTimes(2);
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        background: {
+          resourceId: "bg-school",
+          opacity: 0.5,
+        },
+      },
+    });
+    expect(dispatchEvent.mock.calls[1][0].detail).toEqual({
+      background: {
+        resourceId: "bg-school",
+        opacity: 0.5,
+      },
+    });
+
+    dispatchEvent.mockClear();
+
+    handleFormInputChange(
+      {
+        store: createStoreApi(state),
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            name: "opacity",
+            value: "",
+          },
+        },
+      },
+    );
+
+    handleSubmitClick(
+      {
+        dispatchEvent,
+        store: createStoreApi(state),
+      },
+      {},
+    );
+
+    expect(selectSelectedOpacity({ state })).toBeUndefined();
+    expect(dispatchEvent).toHaveBeenCalledTimes(2);
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        background: {
+          resourceId: "bg-school",
+        },
+      },
+    });
+    expect(dispatchEvent.mock.calls[1][0].detail).toEqual({
+      background: {
+        resourceId: "bg-school",
+      },
+    });
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
+  it("submits blur when enabled and omits it when disabled", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+
+    setRepositoryCollections(state);
+    setSelectedResource(
+      { state },
+      {
+        resourceId: "bg-school",
+        resourceType: "image",
+      },
+    );
+
+    handleFormInputChange(
+      {
+        store: createStoreApi(state),
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            name: "blur",
+            value: true,
+          },
+        },
+      },
+    );
+
+    handleFormInputChange(
+      {
+        store: createStoreApi(state),
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            name: "blurX",
+            value: "8",
+          },
+        },
+      },
+    );
+
+    handleFormInputChange(
+      {
+        store: createStoreApi(state),
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            name: "blurRepeatEdgePixels",
+            value: false,
+          },
+        },
+      },
+    );
+
+    handleSubmitClick(
+      {
+        dispatchEvent,
+        store: createStoreApi(state),
+      },
+      {},
+    );
+
+    expect(selectSelectedBlur({ state })).toEqual({
+      x: 8,
+      y: 9,
+      quality: 3,
+      kernelSize: 9,
+      repeatEdgePixels: false,
+    });
+    expect(dispatchEvent).toHaveBeenCalledTimes(4);
+    expect(dispatchEvent.mock.calls[3][0].detail).toEqual({
+      background: {
+        resourceId: "bg-school",
+        blur: {
+          x: 8,
+          y: 9,
+          quality: 3,
+          kernelSize: 9,
+          repeatEdgePixels: false,
+        },
+      },
+    });
+
+    dispatchEvent.mockClear();
+
+    handleFormInputChange(
+      {
+        store: createStoreApi(state),
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            name: "blur",
+            value: false,
+          },
+        },
+      },
+    );
+
+    handleSubmitClick(
+      {
+        dispatchEvent,
+        store: createStoreApi(state),
+      },
+      {},
+    );
+
+    expect(selectSelectedBlur({ state })).toBeUndefined();
+    expect(dispatchEvent).toHaveBeenCalledTimes(2);
+    expect(dispatchEvent.mock.calls[1][0].detail).toEqual({
+      background: {
+        resourceId: "bg-school",
+      },
+    });
+    expect(render).toHaveBeenCalledTimes(4);
   });
 
   it("selects animation from the single animation field", () => {

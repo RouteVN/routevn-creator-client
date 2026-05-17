@@ -119,6 +119,8 @@ const buildBackgroundDataFromState = (
       : store.selectSelectedResource();
   const selectedTransformId = store.selectSelectedTransform();
   const selectedColorId = store.selectSelectedColor();
+  const selectedOpacity = store.selectSelectedOpacity();
+  const selectedBlur = store.selectSelectedBlur();
   const selectedAnimationMode = store.selectSelectedAnimationMode();
   const selectedAnimationId = store.selectSelectedAnimation();
   const selectedAnimationPlaybackContinuity =
@@ -137,6 +139,14 @@ const buildBackgroundDataFromState = (
 
   if (selectedResource?.resourceType === "video") {
     backgroundData.loop = backgroundLoop ?? false;
+  }
+
+  if (hasBackgroundTarget && selectedOpacity !== undefined) {
+    backgroundData.opacity = selectedOpacity;
+  }
+
+  if (hasBackgroundTarget && selectedBlur) {
+    backgroundData.blur = selectedBlur;
   }
 
   if (hasBackgroundTarget && selectedTransformId) {
@@ -166,13 +176,15 @@ const dispatchTemporaryPresentationStateChange = (deps) => {
     return;
   }
 
+  const background = buildBackgroundDataFromState(store, {
+    includeTemporaryResource: true,
+  });
+
   dispatchEvent(
     new CustomEvent("temporary-presentation-state-change", {
       detail: {
         presentationState: {
-          background: buildBackgroundDataFromState(store, {
-            includeTemporaryResource: true,
-          }),
+          background,
         },
       },
     }),
@@ -189,6 +201,8 @@ export const handleBeforeMount = (deps) => {
   const {
     resourceId,
     colorId,
+    opacity,
+    blur,
     transformId,
     animations: backgroundAnimations,
     loop: backgroundLoop,
@@ -202,6 +216,18 @@ export const handleBeforeMount = (deps) => {
 
   if (resourceId) {
     store.setPendingResourceId({ resourceId: resourceId });
+  }
+
+  if (opacity !== undefined) {
+    store.setSelectedOpacity({
+      opacity,
+    });
+  }
+
+  if (blur !== undefined) {
+    store.setSelectedBlur({
+      blur,
+    });
   }
 
   if (backgroundLoop !== undefined) {
@@ -402,6 +428,42 @@ export const handleFormInputChange = (deps, payload) => {
   if (name === "colorId") {
     store.setSelectedColor({
       colorId: fieldValue,
+    });
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+
+  if (name === "opacity") {
+    store.setSelectedOpacity({
+      opacity: fieldValue,
+    });
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+
+  if (name === "blur") {
+    store.setSelectedBlurEnabled({
+      enabled: fieldValue,
+    });
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+
+  const blurFieldMap = {
+    blurX: "x",
+    blurY: "y",
+    blurQuality: "quality",
+    blurKernelSize: "kernelSize",
+    blurRepeatEdgePixels: "repeatEdgePixels",
+  };
+  const blurFieldName = blurFieldMap[name];
+  if (blurFieldName) {
+    store.setSelectedBlurField({
+      fieldName: blurFieldName,
+      value: fieldValue,
     });
     render();
     dispatchTemporaryPresentationStateChange(deps);

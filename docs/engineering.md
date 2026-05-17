@@ -49,6 +49,10 @@ Local-first collaboration:
   access throughout the body.
 - Do not read handler state with `store.getState()`. Create and use named store
   selectors for every state slice a handler needs.
+- Do not add browser-global debug toggles such as
+  `window.__RVN_DEBUG_BACKGROUND_ACTION__ = true` or other
+  `window.__RVN_DEBUG_*` flags. Temporary diagnostic logs should be explicit,
+  easy to find, and removed when the issue is resolved.
 
 ## ID Generation
 

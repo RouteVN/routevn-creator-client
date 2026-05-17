@@ -9,6 +9,30 @@ propsSchema:
           type: string
         colorId:
           type: string
+        opacity:
+          type: number
+          minimum: 0
+          maximum: 1
+        blur:
+          type: object
+          properties:
+            x:
+              type: number
+            y:
+              type: number
+            quality:
+              type: number
+            kernelSize:
+              type: number
+              enum:
+                - 5
+                - 7
+                - 9
+                - 11
+                - 13
+                - 15
+            repeatEdgePixels:
+              type: boolean
         transformId:
           type: string
         animations:
