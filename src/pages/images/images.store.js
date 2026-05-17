@@ -25,17 +25,12 @@ const resolveImageAspectRatio = (item) => {
   return `${Math.max(1, Math.round(width))} / ${Math.max(1, Math.round(height))}`;
 };
 
-const buildPreviewFrameStyle = (item) => {
-  const aspectRatio = resolveImageAspectRatio(item);
-
-  return [
-    `aspect-ratio: ${aspectRatio}`,
-    `width: min(92vw, calc(92vh * (${aspectRatio})))`,
-    `height: min(92vh, calc(92vw / (${aspectRatio})))`,
-    "max-width: 92vw",
-    "max-height: 92vh",
-  ].join("; ");
-};
+const PREVIEW_FRAME_STYLE = [
+  "width: 92vw",
+  "height: 92vh",
+  "max-width: 92vw",
+  "max-height: 92vh",
+].join("; ");
 
 const buildDetailFields = (item) => {
   if (!item) {
@@ -222,7 +217,7 @@ const {
     tagFilterPlaceholder: "Filter tags",
   },
   hiddenMobileDetailSlots: ["image-file-id"],
-  extendViewData: ({ state, baseViewData, selectedItem }) => {
+  extendViewData: ({ state, baseViewData }) => {
     const selectedItemId = state.selectedItemId;
     const visibleImageIds = selectVisibleImageIds({
       mediaGroups: baseViewData.mediaGroups,
@@ -246,7 +241,7 @@ const {
 
     viewData.fullImagePreviewVisible = state.fullImagePreviewVisible;
     viewData.fullImagePreviewFileId = state.fullImagePreviewFileId;
-    viewData.fullImagePreviewFrameStyle = buildPreviewFrameStyle(selectedItem);
+    viewData.fullImagePreviewFrameStyle = PREVIEW_FRAME_STYLE;
     viewData.fullImagePreviewPreviousVisible = Boolean(previousItemId);
     viewData.fullImagePreviewNextVisible = Boolean(nextItemId);
 

@@ -4,6 +4,8 @@ import {
   handleAnimationChange,
   handleResourceItemClick,
   handleSubmitClick,
+  handleTabClick,
+  handleVisualClick,
 } from "../../src/components/commandLineVisual/commandLineVisual.handlers.js";
 import {
   addVisual,
@@ -12,11 +14,14 @@ import {
   selectMode,
   selectSelectedVisuals,
   selectSelectedVisualIndex,
+  selectTab,
   selectTempSelectedResourceId,
+  selectTempSelectedResourceType,
   setAnimations,
   setExistingVisuals,
   setMode,
   setSelectedVisualIndex,
+  setTab,
   setTempSelectedResourceId,
   setTransforms,
   updateVisualResource,
@@ -29,10 +34,14 @@ const createStoreApi = (state) => ({
   selectMode: () => selectMode({ state }),
   selectSelectedVisualIndex: () => selectSelectedVisualIndex({ state }),
   selectSelectedVisuals: () => selectSelectedVisuals({ state }),
+  selectTab: () => selectTab({ state }),
   selectTempSelectedResourceId: () => selectTempSelectedResourceId({ state }),
+  selectTempSelectedResourceType: () =>
+    selectTempSelectedResourceType({ state }),
   setMode: (payload) => setMode({ state }, payload),
   setSelectedVisualIndex: (payload) =>
     setSelectedVisualIndex({ state }, payload),
+  setTab: (payload) => setTab({ state }, payload),
   setTempSelectedResourceId: (payload) =>
     setTempSelectedResourceId({ state }, payload),
   updateVisualAnimation: (payload) => updateVisualAnimation({ state }, payload),
@@ -167,7 +176,8 @@ describe("commandLineVisual.handlers animation controls", () => {
         _event: {
           currentTarget: {
             dataset: {
-              resourceId: "visual-image",
+              resourceId: "visual-video",
+              resourceType: "video",
             },
           },
         },
@@ -183,8 +193,79 @@ describe("commandLineVisual.handlers animation controls", () => {
         visual: {
           items: [
             {
-              id: "temporary-visual-preview",
-              resourceId: "visual-image",
+              id: "temporary-visual-preview-video",
+              resourceId: "visual-video",
+              resourceType: "video",
+              transformId: "visual-center",
+            },
+          ],
+        },
+      },
+    });
+  });
+
+  it("uses a temporary id when an existing visual changes resource type", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+
+    setTransforms(
+      { state },
+      {
+        transforms: {
+          items: {
+            "visual-center": {
+              id: "visual-center",
+              type: "transform",
+              name: "Center",
+            },
+          },
+          tree: [{ id: "visual-center" }],
+        },
+      },
+    );
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          {
+            id: "visual-1",
+            resourceId: "visual-image",
+            resourceType: "image",
+            transformId: "visual-center",
+          },
+        ],
+      },
+    );
+    setMode({ state }, { mode: "resource-select" });
+    setSelectedVisualIndex({ state }, { index: 0 });
+
+    handleResourceItemClick(
+      {
+        store: createStoreApi(state),
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              resourceId: "visual-layout",
+              resourceType: "layout",
+            },
+          },
+        },
+      },
+    );
+
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        visual: {
+          items: [
+            {
+              id: "visual-1-layout-preview",
+              resourceId: "visual-layout",
+              resourceType: "layout",
               transformId: "visual-center",
             },
           ],
@@ -205,6 +286,7 @@ describe("commandLineVisual.handlers animation controls", () => {
           {
             id: "visual-1",
             resourceId: "visual-image",
+            resourceType: "image",
             transformId: "visual-center",
             animations: {
               resourceId: "visual-fade",
@@ -226,6 +308,7 @@ describe("commandLineVisual.handlers animation controls", () => {
           {
             id: "visual-1",
             resourceId: "visual-image",
+            resourceType: "image",
             transformId: "visual-center",
             animations: {
               resourceId: "visual-fade",
@@ -234,5 +317,80 @@ describe("commandLineVisual.handlers animation controls", () => {
         ],
       },
     });
+  });
+
+  it("switches resource tabs and clears hidden temporary selection", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const store = createStoreApi(state);
+
+    setTempSelectedResourceId(
+      { state },
+      {
+        resourceId: "visual-video",
+        resourceType: "video",
+      },
+    );
+
+    handleTabClick(
+      {
+        store,
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            id: "layout",
+          },
+        },
+      },
+    );
+
+    expect(selectTab({ state })).toBe("layout");
+    expect(selectTempSelectedResourceId({ state })).toBeUndefined();
+    expect(selectTempSelectedResourceType({ state })).toBeUndefined();
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens existing visual selection on the visual resource tab", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          {
+            id: "visual-1",
+            resourceId: "visual-video",
+            resourceType: "video",
+          },
+        ],
+      },
+    );
+
+    handleVisualClick(
+      {
+        store: createStoreApi(state),
+        render,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              index: "0",
+            },
+          },
+        },
+      },
+    );
+
+    expect(selectSelectedVisualIndex({ state })).toBe(0);
+    expect(selectMode({ state })).toBe("resource-select");
+    expect(selectTab({ state })).toBe("video");
+    expect(render).toHaveBeenCalledTimes(1);
   });
 });
