@@ -1,11 +1,23 @@
 const TEMPORARY_VISUAL_PREVIEW_ID = "temporary-visual-preview";
 
+const getTemporaryVisualPreviewId = ({ visualId, resourceType } = {}) => {
+  if (visualId) {
+    return `${visualId}-${resourceType}-preview`;
+  }
+
+  return `${TEMPORARY_VISUAL_PREVIEW_ID}-${resourceType}`;
+};
+
 const buildVisualItem = (visual = {}) => {
   const item = {
     id: visual.id,
     resourceId: visual.resourceId,
     transformId: visual.transformId,
   };
+
+  if (visual.resourceType) {
+    item.resourceType = visual.resourceType;
+  }
 
   if (visual.animations?.resourceId) {
     item.animations = {
@@ -27,15 +39,19 @@ const buildVisualItemsFromState = (
   }
 
   const tempSelectedResourceId = store.selectTempSelectedResourceId?.();
-  if (!tempSelectedResourceId) {
+  const tempSelectedResourceType = store.selectTempSelectedResourceType?.();
+  if (!tempSelectedResourceId || !tempSelectedResourceType) {
     return visualItems;
   }
 
   const selectedVisualIndex = store.selectSelectedVisualIndex?.();
   if (selectedVisualIndex === -1) {
     visualItems.push({
-      id: TEMPORARY_VISUAL_PREVIEW_ID,
+      id: getTemporaryVisualPreviewId({
+        resourceType: tempSelectedResourceType,
+      }),
       resourceId: tempSelectedResourceId,
+      resourceType: tempSelectedResourceType,
       transformId: store.selectDefaultTransformId?.(),
     });
     return visualItems;
@@ -45,9 +61,21 @@ const buildVisualItemsFromState = (
     Number.isInteger(selectedVisualIndex) &&
     visualItems[selectedVisualIndex]
   ) {
-    visualItems[selectedVisualIndex] = {
-      ...visualItems[selectedVisualIndex],
+    const currentVisualItem = visualItems[selectedVisualIndex];
+    const nextVisualItem = {
+      ...currentVisualItem,
       resourceId: tempSelectedResourceId,
+      resourceType: tempSelectedResourceType,
+    };
+    if (currentVisualItem.resourceType !== tempSelectedResourceType) {
+      nextVisualItem.id = getTemporaryVisualPreviewId({
+        visualId: currentVisualItem.id,
+        resourceType: tempSelectedResourceType,
+      });
+    }
+
+    visualItems[selectedVisualIndex] = {
+      ...nextVisualItem,
     };
   }
 
@@ -126,8 +154,12 @@ export const handleAfterMount = async (deps) => {
 export const handleVisualClick = (deps, payload) => {
   const { store, render } = deps;
   const index = parseInt(payload._event.currentTarget.dataset.index);
+  const visual = store.selectSelectedVisuals()?.[index];
 
   store.setSelectedVisualIndex({ index });
+  if (visual?.resourceType) {
+    store.setTab({ tab: visual.resourceType });
+  }
   store.setMode({
     mode: "resource-select",
   });
@@ -169,7 +201,9 @@ export const handleAnimationChange = (deps, payload) => {
 export const handleFileExplorerItemClick = (deps, payload) => {
   const { refs, store, render } = deps;
   const { itemId, isFolder } = payload._event.detail;
-  const { resourceId } = store.selectResourceExplorerTarget({ itemId });
+  const { resourceId, resourceType } = store.selectResourceExplorerTarget({
+    itemId,
+  });
 
   if (isFolder) {
     const groupElement = refs.galleryScroll?.querySelector(
@@ -179,7 +213,7 @@ export const handleFileExplorerItemClick = (deps, payload) => {
     return;
   }
 
-  store.setTempSelectedResourceId({ resourceId });
+  store.setTempSelectedResourceId({ resourceId, resourceType });
   render();
   dispatchTemporaryPresentationStateChange(deps);
 };
@@ -190,11 +224,25 @@ export const handleSearchInput = (deps, payload) => {
   render();
 };
 
+export const handleTabClick = (deps, payload) => {
+  const { store, render } = deps;
+  store.setTab({
+    tab: payload._event.detail.id,
+  });
+  store.setTempSelectedResourceId({
+    resourceId: undefined,
+    resourceType: undefined,
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
 export const handleResourceItemClick = (deps, payload) => {
   const { store, render } = deps;
   const resourceId = payload._event.currentTarget.dataset.resourceId;
+  const resourceType = payload._event.currentTarget.dataset.resourceType;
 
-  store.setTempSelectedResourceId({ resourceId });
+  store.setTempSelectedResourceId({ resourceId, resourceType });
   render();
   dispatchTemporaryPresentationStateChange(deps);
 };
@@ -202,13 +250,14 @@ export const handleResourceItemClick = (deps, payload) => {
 export const handleResourceItemDoubleClick = (deps, payload) => {
   const { store, render } = deps;
   const resourceId = payload._event.currentTarget.dataset.resourceId;
-  const item = store.selectResourceItemById({ resourceId });
+  const resourceType = payload._event.currentTarget.dataset.resourceType;
+  const item = store.selectResourceItemById({ resourceId, resourceType });
 
   if (!item?.previewFileId) {
     return;
   }
 
-  store.setTempSelectedResourceId({ resourceId });
+  store.setTempSelectedResourceId({ resourceId, resourceType });
   store.showFullImagePreview({ fileId: item.previewFileId });
   render();
   dispatchTemporaryPresentationStateChange(deps);
@@ -272,9 +321,10 @@ export const handleButtonSelectClick = (deps) => {
   const mode = store.selectMode();
   const selectedVisualIndex = store.selectSelectedVisualIndex();
   const tempSelectedResourceId = store.selectTempSelectedResourceId();
+  const tempSelectedResourceType = store.selectTempSelectedResourceType();
 
   if (mode === "resource-select") {
-    if (!tempSelectedResourceId) {
+    if (!tempSelectedResourceId || !tempSelectedResourceType) {
       appService.showAlert({
         message: "A resource is required.",
         title: "Warning",
@@ -284,16 +334,23 @@ export const handleButtonSelectClick = (deps) => {
 
     if (selectedVisualIndex === -1) {
       // Adding new visual
-      store.addVisual({ resourceId: tempSelectedResourceId });
+      store.addVisual({
+        resourceId: tempSelectedResourceId,
+        resourceType: tempSelectedResourceType,
+      });
     } else {
       // Updating existing visual
       store.updateVisualResource({
         index: selectedVisualIndex,
         resourceId: tempSelectedResourceId,
+        resourceType: tempSelectedResourceType,
       });
     }
 
-    store.setTempSelectedResourceId({ resourceId: undefined });
+    store.setTempSelectedResourceId({
+      resourceId: undefined,
+      resourceType: undefined,
+    });
     store.setMode({
       mode: "current",
     });

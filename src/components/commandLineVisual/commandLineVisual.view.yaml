@@ -28,6 +28,10 @@ refs:
     eventListeners:
       value-input:
         handler: handleSearchInput
+  tabs:
+    eventListeners:
+      item-click:
+        handler: handleTabClick
   previewOverlay:
     eventListeners:
       click:
@@ -69,7 +73,22 @@ template:
                       - rtgl-view#visual${i} data-index=${i} data-visual-id=${visual.id} d=h g=md av=t p=md br=md w=f:
                           - rtgl-view cur=pointer bw=xs bc=bo h-bc=ac br=sm:
                               - rtgl-view p=md g=md br=md:
-                                  - $if visual.fileId:
+                                  - $if visual.resourceType == 'video':
+                                      - rtgl-view pos=rel w=200 h=120:
+                                          - $if visual.fileId:
+                                              - rvn-file-image fileId=${visual.fileId} w=200 h=120: null
+                                            $else:
+                                              - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
+                                                  - rtgl-text s=sm c=mu-fg: No thumbnail
+                                          - rtgl-view pos=abs w=f h=f av=c ah=c bgc=bg-60:
+                                              - rtgl-icon icon=play s=xl c=fg: null
+                                    $elif visual.resourceType == 'layout':
+                                      - $if visual.fileId:
+                                          - rvn-file-image fileId=${visual.fileId} w=200 h=120: null
+                                        $else:
+                                          - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
+                                              - rtgl-text s=sm c=mu-fg: No thumbnail
+                                    $elif visual.fileId:
                                       - rvn-file-image fileId=${visual.fileId} w=200 h=120: null
                                     $else:
                                       - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
@@ -87,6 +106,7 @@ template:
           - rtgl-view d=h g=md:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
           - rtgl-view d=h w=f av=c g=md:
+              - rtgl-tabs#tabs selected-tab=${tab} :items=${tabs}: null
               - rtgl-view w=1fg: null
               - rtgl-input#searchInput s=sm placeholder=${searchPlaceholder} value=${searchQuery} h=1fg: null
           - 'rtgl-view d=h w=f g=lg mt=sm h=1fg style="min-height: 0;"':
@@ -102,7 +122,22 @@ template:
                               - $for item, j in group.children:
                                   - rtgl-view#resourceItem${i}x${j} data-resource-id=${item.id} data-resource-type=${item.resourceType} cur=pointer bw=xs bc=${item.itemBorderColor} h-bc=${item.itemHoverBorderColor} br=sm:
                                       - rtgl-view p=md g=md br=md:
-                                          - $if item.previewFileId:
+                                          - $if item.resourceType == 'video':
+                                              - rtgl-view pos=rel w=200 h=120:
+                                                  - $if item.previewFileId:
+                                                      - rvn-file-image fileId=${item.previewFileId} w=200 h=120: null
+                                                    $else:
+                                                      - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
+                                                          - rtgl-text s=sm c=mu-fg: No thumbnail
+                                                  - rtgl-view pos=abs w=f h=f av=c ah=c bgc=bg-60:
+                                                      - rtgl-icon icon=play s=xl c=fg: null
+                                            $elif item.resourceType == 'layout':
+                                              - $if item.previewFileId:
+                                                  - rvn-file-image fileId=${item.previewFileId} w=200 h=120: null
+                                                $else:
+                                                  - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
+                                                      - rtgl-text s=sm c=mu-fg: No thumbnail
+                                            $elif item.previewFileId:
                                               - rvn-file-image fileId=${item.previewFileId} w=200 h=120: null
                                             $else:
                                               - rtgl-view w=200 h=120 av=c ah=c bgc=mu-fg:
