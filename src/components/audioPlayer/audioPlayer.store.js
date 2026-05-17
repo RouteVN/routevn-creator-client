@@ -52,7 +52,6 @@ export const selectDuration = ({ state }) => state.duration;
 export const selectViewData = ({ state, props }) => ({
   isPlaying: state.isPlaying,
   title: props.title,
-  closeIconSize: props.closeIconSize ?? 24,
   isLoading: state.isLoading,
   currentTime: state.currentTime,
   duration: state.duration,
