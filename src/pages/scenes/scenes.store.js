@@ -335,20 +335,15 @@ export const selectViewData = ({ state }) => {
   }
 
   const sceneFormFields = {
-    title: "Create New Scene",
+    title: "Create Scene",
     fields: sceneFormFieldsList,
     actions: {
       layout: "",
       buttons: [
         {
-          id: "cancel",
-          variant: "se",
-          label: "Cancel",
-        },
-        {
           id: "submit",
           variant: "pr",
-          label: "Create Scene",
+          label: "Create",
         },
       ],
     },

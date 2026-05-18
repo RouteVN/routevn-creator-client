@@ -13,14 +13,29 @@ export const PREVIEW_TRANSITION_NEXT_FILL = "#000000";
 export const AUTO_TWEEN_DEFAULT_DURATION = 1000;
 export const AUTO_TWEEN_DEFAULT_EASING = "linear";
 
-export const UPDATE_PROPERTY_KEYS = ["alpha", "x", "y", "scaleX", "scaleY"];
+export const UPDATE_PROPERTY_KEYS = [
+  "alpha",
+  "x",
+  "y",
+  "translateX",
+  "translateY",
+  "scaleX",
+  "scaleY",
+  "rotation",
+  "blurX",
+  "blurY",
+  "uProgress",
+];
 
 export const TRANSITION_PROPERTY_KEYS = [
+  "x",
+  "y",
   "translateX",
   "translateY",
   "alpha",
   "scaleX",
   "scaleY",
+  "rotation",
 ];
 
 export const SUPPORTED_EASING_NAMES = Object.freeze([

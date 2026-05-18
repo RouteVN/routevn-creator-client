@@ -5,6 +5,7 @@ import {
   PREVIEW_UPDATE_ELEMENT_ID,
 } from "../../src/pages/animationEditor/animationEditor.constants.js";
 import {
+  addProperty,
   commitPendingTransitionMask,
   createInitialState,
   enableTransitionMask,
@@ -156,6 +157,193 @@ describe("animationEditor.store", () => {
       max: 1080,
       step: 0.01,
     });
+  });
+
+  it("exposes supported update properties with tuned value ranges", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "update" });
+    setPopover(
+      { state },
+      {
+        mode: "addProperty",
+        payload: {
+          side: "update",
+        },
+      },
+    );
+
+    let viewData = selectViewData({ state });
+    const propertyField = viewData.addPropertyForm.fields.find(
+      (field) => field.name === "property",
+    );
+
+    expect(propertyField.options.map((option) => option.value)).toEqual([
+      "alpha",
+      "x",
+      "y",
+      "translateX",
+      "translateY",
+      "scaleX",
+      "scaleY",
+      "rotation",
+      "blurX",
+      "blurY",
+      "uProgress",
+    ]);
+
+    updatePopoverFormValues(
+      { state },
+      {
+        formValues: {
+          property: "rotation",
+        },
+      },
+    );
+    viewData = selectViewData({ state });
+    expect(
+      viewData.addPropertyForm.fields.find(
+        (field) => field.name === "initialValue",
+      ),
+    ).toMatchObject({
+      defaultValue: 0,
+      min: -360,
+      max: 360,
+      step: 1,
+    });
+
+    updatePopoverFormValues(
+      { state },
+      {
+        formValues: {
+          property: "blurX",
+        },
+      },
+    );
+    viewData = selectViewData({ state });
+    expect(
+      viewData.addPropertyForm.fields.find(
+        (field) => field.name === "initialValue",
+      ),
+    ).toMatchObject({
+      defaultValue: 0,
+      min: 0,
+      max: 64,
+      step: 0.5,
+    });
+
+    updatePopoverFormValues(
+      { state },
+      {
+        formValues: {
+          property: "uProgress",
+        },
+      },
+    );
+    viewData = selectViewData({ state });
+    expect(
+      viewData.addPropertyForm.fields.find(
+        (field) => field.name === "initialValue",
+      ),
+    ).toMatchObject({
+      defaultValue: 0,
+      min: 0,
+      max: 1,
+      step: 0.01,
+    });
+  });
+
+  it("exposes supported transition properties", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "transition" });
+    setPopover(
+      { state },
+      {
+        mode: "addProperty",
+        payload: {
+          side: "prev",
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state });
+    const propertyField = viewData.addPropertyForm.fields.find(
+      (field) => field.name === "property",
+    );
+
+    expect(propertyField.options.map((option) => option.value)).toEqual([
+      "x",
+      "y",
+      "translateX",
+      "translateY",
+      "alpha",
+      "scaleX",
+      "scaleY",
+      "rotation",
+    ]);
+  });
+
+  it("prevents absolute and viewport translation properties from sharing a tween axis", () => {
+    const state = createInitialState();
+    openDialog({ state }, { dialogType: "update" });
+
+    addProperty(
+      { state },
+      {
+        side: "update",
+        property: "x",
+        tweenMode: "keyframes",
+      },
+    );
+    addProperty(
+      { state },
+      {
+        side: "update",
+        property: "translateX",
+        tweenMode: "keyframes",
+      },
+    );
+    addProperty(
+      { state },
+      {
+        side: "update",
+        property: "translateY",
+        tweenMode: "keyframes",
+      },
+    );
+    addProperty(
+      { state },
+      {
+        side: "update",
+        property: "y",
+        tweenMode: "keyframes",
+      },
+    );
+
+    expect(Object.keys(state.tweenBySection.update)).toEqual([
+      "x",
+      "translateY",
+    ]);
+
+    setPopover(
+      { state },
+      {
+        mode: "addProperty",
+        payload: {
+          side: "update",
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state });
+    const propertyField = viewData.addPropertyForm.fields.find(
+      (field) => field.name === "property",
+    );
+    const availableValues = propertyField.options.map((option) => option.value);
+
+    expect(availableValues).not.toContain("x");
+    expect(availableValues).not.toContain("translateX");
+    expect(availableValues).not.toContain("y");
+    expect(availableValues).not.toContain("translateY");
   });
 
   it("creates a single add-property initial value field for the selected property", () => {
