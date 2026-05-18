@@ -1,3 +1,45 @@
+const buildScreenDataFromState = (store) => {
+  const transitionAnimationId = store.selectTransitionAnimationId();
+  const opacity = store.selectScreenOpacity();
+  const blur = store.selectScreenBlur();
+
+  const screen = {};
+
+  if (transitionAnimationId) {
+    screen.animations = {
+      resourceId: transitionAnimationId,
+    };
+  }
+
+  if (opacity !== undefined) {
+    screen.opacity = opacity;
+  }
+
+  if (blur) {
+    screen.blur = blur;
+  }
+
+  return screen;
+};
+
+const dispatchTemporaryPresentationStateChange = (deps) => {
+  const { dispatchEvent, store } = deps;
+
+  if (typeof dispatchEvent !== "function") {
+    return;
+  }
+
+  dispatchEvent(
+    new CustomEvent("temporary-presentation-state-change", {
+      detail: {
+        presentationState: {
+          screen: buildScreenDataFromState(store),
+        },
+      },
+    }),
+  );
+};
+
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
@@ -30,29 +72,12 @@ export const handleFormChange = (deps, payload) => {
 
   store.setFormValues({ values });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleSubmitClick = (deps) => {
   const { dispatchEvent, store } = deps;
-  const transitionAnimationId = store.selectTransitionAnimationId();
-  const opacity = store.selectScreenOpacity();
-  const blur = store.selectScreenBlur();
-
-  const screen = {};
-
-  if (transitionAnimationId) {
-    screen.animations = {
-      resourceId: transitionAnimationId,
-    };
-  }
-
-  if (opacity !== undefined) {
-    screen.opacity = opacity;
-  }
-
-  if (blur) {
-    screen.blur = blur;
-  }
+  const screen = buildScreenDataFromState(store);
 
   dispatchEvent(
     new CustomEvent("submit", {

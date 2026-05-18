@@ -77,6 +77,12 @@ This repo currently uses three main test styles:
 - YAML-driven Puty tests in `tests/puty/`
 - Rettangoli VT workflow specs in `vt/specs/`
 
+During active development, the user usually has a watch-mode session running
+(`bun run watch:web` or `bun run watch:tauri`). Do not run `bun run build:web`
+for routine validation of ordinary code or view edits. Prefer targeted tests,
+format checks, lint checks, and the active watch output. Reserve `build:web` for
+explicit user requests, release/VT output, or a specific build-only failure.
+
 Common commands:
 
 ```bash

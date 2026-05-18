@@ -28,7 +28,11 @@ This command:
 Notes:
 
 - `bun run build` may not exist in this repo; use `build:web` for validation.
-- Do not run `bun run build:web` after each change. The user is expected to be running a watch-mode session during active development.
+- Do not run `bun run build:web` for routine validation during active
+  development. The user usually has a watch-mode session running
+  (`bun run watch:web` or `bun run watch:tauri`). Only run `build:web` when the
+  user asks for it, when preparing release/VT output, or when there is a
+  specific build-only issue to verify.
 - Before pushing, run lint/format checks (the push hook also enforces this).
 
 Run tests:

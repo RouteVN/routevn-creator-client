@@ -63,6 +63,23 @@ refs:
         handler: handlePreviewOverlayClick
       keydown:
         handler: handlePreviewOverlayKeyDown
+  previewImageFrame:
+    eventListeners:
+      click:
+        handler: handlePreviewImageFrameClick
+        stopPropagation: true
+  previewPrevious:
+    eventListeners:
+      click:
+        handler: handlePreviewPreviousClick
+        preventDefault: true
+        stopPropagation: true
+  previewNext:
+    eventListeners:
+      click:
+        handler: handlePreviewNextClick
+        preventDefault: true
+        stopPropagation: true
   editDialog:
     eventListeners:
       close:
@@ -115,6 +132,29 @@ refs:
     eventListeners:
       form-action:
         handler: handleCreateTagFormAction
+styles:
+  ".imagePreviewEdge":
+    position: absolute
+    top: "0"
+    bottom: "0"
+    width: 28%
+    min-width: 72px
+    z-index: "1"
+    opacity: "0"
+    transition: opacity 140ms ease
+    cursor: pointer
+  ".imagePreviewEdge:hover":
+    opacity: "1"
+  ".imagePreviewEdgePrevious":
+    left: "0"
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0))
+  ".imagePreviewEdgeNext":
+    right: "0"
+    background: linear-gradient(to left, rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0))
+  ".imagePreviewFrame":
+    position: relative
+    overflow: hidden
+    cursor: default
 template:
   - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h h=f w=f style="min-width: 0; min-height: 0;"':
@@ -178,8 +218,13 @@ template:
   - rtgl-dialog#createTagDialog ?open=${isCreateTagDialogOpen} s=sm:
       - rtgl-form#createTagForm key=${isCreateTagDialogOpen} slot=content :defaultValues=${createTagDefaultValues} :form=${createTagForm} w=f: null
   - $when: fullImagePreviewVisible
-    'div#previewOverlay tabindex=0 style="position: fixed; inset: 0; z-index: 3000; cursor: pointer; outline: none;"':
-      - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
+    'div#previewOverlay tabindex=0 style="position: fixed; inset: 0; z-index: 3000; cursor: default; outline: none;"':
+      - 'rtgl-view w=f h=f pos=fix edge=f style="background-color: rgba(0, 0, 0, 0.9);"': null
       - $if fullImagePreviewFileId:
           - rtgl-view pos=fix edge=f ah=c av=c z=3001:
-              - rvn-file-image fileId=${fullImagePreviewFileId} w=80% h=80% bc=ac bw=xs br=md: null
+              - 'div#previewImageFrame.imagePreviewFrame style="${fullImagePreviewFrameStyle}"':
+                  - rvn-file-image fileId=${fullImagePreviewFileId} w=f h=f: null
+                  - $if fullImagePreviewPreviousVisible:
+                      - div#previewPrevious.imagePreviewEdge.imagePreviewEdgePrevious role=button aria-label="Previous sprite": null
+                  - $if fullImagePreviewNextVisible:
+                      - div#previewNext.imagePreviewEdge.imagePreviewEdgeNext role=button aria-label="Next sprite": null
