@@ -1,42 +1,56 @@
-const BACKGROUND_BLUR_KERNEL_SIZE_OPTIONS = [5, 7, 9, 11, 13, 15];
-const DEFAULT_BACKGROUND_BLUR_KERNEL_SIZE = 9;
+const BLUR_KERNEL_SIZE_OPTIONS = [5, 7, 9, 11, 13, 15];
+const DEFAULT_BLUR_KERNEL_SIZE = 9;
 
-const normalizeBackgroundBlurKernelSize = (value) => {
+const normalizeBlurKernelSize = (value) => {
   const parsedValue = Number(value);
   if (!Number.isFinite(parsedValue)) {
-    return DEFAULT_BACKGROUND_BLUR_KERNEL_SIZE;
+    return DEFAULT_BLUR_KERNEL_SIZE;
   }
 
-  if (BACKGROUND_BLUR_KERNEL_SIZE_OPTIONS.includes(parsedValue)) {
+  if (BLUR_KERNEL_SIZE_OPTIONS.includes(parsedValue)) {
     return parsedValue;
   }
 
-  return BACKGROUND_BLUR_KERNEL_SIZE_OPTIONS.reduce((closest, option) => {
+  return BLUR_KERNEL_SIZE_OPTIONS.reduce((closest, option) => {
     const currentDistance = Math.abs(option - parsedValue);
     const closestDistance = Math.abs(closest - parsedValue);
     return currentDistance < closestDistance ? option : closest;
-  }, DEFAULT_BACKGROUND_BLUR_KERNEL_SIZE);
+  }, DEFAULT_BLUR_KERNEL_SIZE);
 };
 
-const normalizeBackgroundAction = (background = {}) => {
-  const normalizedBackground = {
-    ...background,
+const normalizeActionWithBlur = (action = {}) => {
+  const normalizedAction = {
+    ...action,
   };
 
   if (
-    normalizedBackground.blur &&
-    typeof normalizedBackground.blur === "object" &&
-    !Array.isArray(normalizedBackground.blur)
+    normalizedAction.blur &&
+    typeof normalizedAction.blur === "object" &&
+    !Array.isArray(normalizedAction.blur)
   ) {
-    normalizedBackground.blur = {
-      ...normalizedBackground.blur,
-      kernelSize: normalizeBackgroundBlurKernelSize(
-        normalizedBackground.blur.kernelSize,
-      ),
+    normalizedAction.blur = {
+      ...normalizedAction.blur,
+      kernelSize: normalizeBlurKernelSize(normalizedAction.blur.kernelSize),
     };
   }
 
-  return normalizedBackground;
+  return normalizedAction;
+};
+
+const normalizeActionItemsWithBlur = (action = {}) => {
+  const normalizedAction = {
+    ...action,
+  };
+
+  if (Array.isArray(normalizedAction.items)) {
+    normalizedAction.items = normalizedAction.items.map((item) =>
+      item && typeof item === "object" && !Array.isArray(item)
+        ? normalizeActionWithBlur(item)
+        : item,
+    );
+  }
+
+  return normalizedAction;
 };
 
 const normalizeDialogueAction = (dialogue = {}) => {
@@ -94,8 +108,36 @@ export const normalizeEngineActions = (value) => {
     typeof normalizedValue.background === "object" &&
     !Array.isArray(normalizedValue.background)
   ) {
-    normalizedValue.background = normalizeBackgroundAction(
+    normalizedValue.background = normalizeActionWithBlur(
       normalizedValue.background,
+    );
+  }
+
+  if (
+    normalizedValue.screen &&
+    typeof normalizedValue.screen === "object" &&
+    !Array.isArray(normalizedValue.screen)
+  ) {
+    normalizedValue.screen = normalizeActionWithBlur(normalizedValue.screen);
+  }
+
+  if (
+    normalizedValue.visual &&
+    typeof normalizedValue.visual === "object" &&
+    !Array.isArray(normalizedValue.visual)
+  ) {
+    normalizedValue.visual = normalizeActionItemsWithBlur(
+      normalizedValue.visual,
+    );
+  }
+
+  if (
+    normalizedValue.character &&
+    typeof normalizedValue.character === "object" &&
+    !Array.isArray(normalizedValue.character)
+  ) {
+    normalizedValue.character = normalizeActionItemsWithBlur(
+      normalizedValue.character,
     );
   }
 

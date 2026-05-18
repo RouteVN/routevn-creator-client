@@ -7,5 +7,52 @@ propsSchema:
       properties:
         items:
           type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              transformId:
+                type: string
+              opacity:
+                type: number
+                minimum: 0
+                maximum: 1
+              blur:
+                type: object
+                properties:
+                  x:
+                    type: number
+                  y:
+                    type: number
+                  quality:
+                    type: number
+                  kernelSize:
+                    type: number
+                    enum:
+                      - 5
+                      - 7
+                      - 9
+                      - 11
+                      - 13
+                      - 15
+                  repeatEdgePixels:
+                    type: boolean
+              animations:
+                type: object
+                properties:
+                  resourceId:
+                    type: string
+              sprites:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    resourceId:
+                      type: string
+              spriteName:
+                type: string
     presentationState:
       type: object

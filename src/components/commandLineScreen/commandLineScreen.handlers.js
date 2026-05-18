@@ -9,6 +9,13 @@ export const handleAfterMount = async (deps) => {
   store.setFormValues({
     values: {
       transitionAnimationId: props?.screen?.animations?.resourceId,
+      opacity: props?.screen?.opacity,
+      blur: Boolean(props?.screen?.blur),
+      blurX: props?.screen?.blur?.x,
+      blurY: props?.screen?.blur?.y,
+      blurQuality: props?.screen?.blur?.quality,
+      blurKernelSize: props?.screen?.blur?.kernelSize,
+      blurRepeatEdgePixels: props?.screen?.blur?.repeatEdgePixels,
     },
   });
   render();
@@ -26,26 +33,31 @@ export const handleFormChange = (deps, payload) => {
 };
 
 export const handleSubmitClick = (deps) => {
-  const { appService, dispatchEvent, store } = deps;
-  const { formValues } = store.getState();
-  const transitionAnimationId = formValues?.transitionAnimationId;
+  const { dispatchEvent, store } = deps;
+  const transitionAnimationId = store.selectTransitionAnimationId();
+  const opacity = store.selectScreenOpacity();
+  const blur = store.selectScreenBlur();
 
-  if (!transitionAnimationId) {
-    appService.showAlert({
-      message: "Please select a transition animation",
-      title: "Warning",
-    });
-    return;
+  const screen = {};
+
+  if (transitionAnimationId) {
+    screen.animations = {
+      resourceId: transitionAnimationId,
+    };
+  }
+
+  if (opacity !== undefined) {
+    screen.opacity = opacity;
+  }
+
+  if (blur) {
+    screen.blur = blur;
   }
 
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
-        screen: {
-          animations: {
-            resourceId: transitionAnimationId,
-          },
-        },
+        screen,
       },
       bubbles: true,
       composed: true,

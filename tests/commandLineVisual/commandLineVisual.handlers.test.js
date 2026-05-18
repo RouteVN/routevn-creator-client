@@ -2,6 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleAddVisualClick,
   handleAnimationChange,
+  handleBlurFieldChange,
+  handleBlurFieldInput,
+  handleBlurToggleChange,
+  handleButtonSelectClick,
+  handleDropdownMenuClickItem,
+  handleLayerChange,
+  handleOpacityInput,
   handleResourceItemClick,
   handleSubmitClick,
   handleTabClick,
@@ -9,9 +16,17 @@ import {
 } from "../../src/components/commandLineVisual/commandLineVisual.handlers.js";
 import {
   addVisual,
+  clearPendingVisualLayer,
   createInitialState,
+  hideDropdownMenu,
+  moveVisual,
+  removeVisual,
   selectDefaultTransformId,
+  selectDefaultVisualLayer,
+  selectDropdownMenuType,
+  selectDropdownMenuVisualIndex,
   selectMode,
+  selectPendingVisualLayer,
   selectSelectedVisuals,
   selectSelectedVisualIndex,
   selectTab,
@@ -20,18 +35,34 @@ import {
   setAnimations,
   setExistingVisuals,
   setMode,
+  setPendingVisualLayer,
   setSelectedVisualIndex,
   setTab,
   setTempSelectedResourceId,
   setTransforms,
+  showAddVisualLayerDropdownMenu,
+  showDropdownMenu,
   updateVisualResource,
   updateVisualAnimation,
+  updateVisualBlurEnabled,
+  updateVisualBlurField,
+  updateVisualLayer,
+  updateVisualOpacity,
 } from "../../src/components/commandLineVisual/commandLineVisual.store.js";
 
 const createStoreApi = (state) => ({
   addVisual: (payload) => addVisual({ state }, payload),
+  clearPendingVisualLayer: (payload) =>
+    clearPendingVisualLayer({ state }, payload),
+  hideDropdownMenu: (payload) => hideDropdownMenu({ state }, payload),
+  moveVisual: (payload) => moveVisual({ state }, payload),
+  removeVisual: (payload) => removeVisual({ state }, payload),
   selectDefaultTransformId: () => selectDefaultTransformId({ state }),
+  selectDefaultVisualLayer: () => selectDefaultVisualLayer({ state }),
+  selectDropdownMenuType: () => selectDropdownMenuType({ state }),
+  selectDropdownMenuVisualIndex: () => selectDropdownMenuVisualIndex({ state }),
   selectMode: () => selectMode({ state }),
+  selectPendingVisualLayer: () => selectPendingVisualLayer({ state }),
   selectSelectedVisualIndex: () => selectSelectedVisualIndex({ state }),
   selectSelectedVisuals: () => selectSelectedVisuals({ state }),
   selectTab: () => selectTab({ state }),
@@ -39,12 +70,21 @@ const createStoreApi = (state) => ({
   selectTempSelectedResourceType: () =>
     selectTempSelectedResourceType({ state }),
   setMode: (payload) => setMode({ state }, payload),
+  setPendingVisualLayer: (payload) => setPendingVisualLayer({ state }, payload),
   setSelectedVisualIndex: (payload) =>
     setSelectedVisualIndex({ state }, payload),
   setTab: (payload) => setTab({ state }, payload),
   setTempSelectedResourceId: (payload) =>
     setTempSelectedResourceId({ state }, payload),
+  showAddVisualLayerDropdownMenu: (payload) =>
+    showAddVisualLayerDropdownMenu({ state }, payload),
+  showDropdownMenu: (payload) => showDropdownMenu({ state }, payload),
   updateVisualAnimation: (payload) => updateVisualAnimation({ state }, payload),
+  updateVisualBlurEnabled: (payload) =>
+    updateVisualBlurEnabled({ state }, payload),
+  updateVisualBlurField: (payload) => updateVisualBlurField({ state }, payload),
+  updateVisualLayer: (payload) => updateVisualLayer({ state }, payload),
+  updateVisualOpacity: (payload) => updateVisualOpacity({ state }, payload),
   updateVisualResource: (payload) => updateVisualResource({ state }, payload),
 });
 
@@ -166,6 +206,28 @@ describe("commandLineVisual.handlers animation controls", () => {
       store,
       render,
     });
+    expect(selectDropdownMenuType({ state })).toBe("add-visual-layer");
+
+    handleDropdownMenuClickItem(
+      {
+        store,
+        render,
+      },
+      {
+        _event: {
+          detail: {
+            item: {
+              layer: 70,
+              value: "add-layer:70",
+            },
+          },
+        },
+      },
+    );
+    expect(selectMode({ state })).toBe("resource-select");
+    expect(selectSelectedVisualIndex({ state })).toBe(-1);
+    expect(selectPendingVisualLayer({ state })).toBe(70);
+
     handleResourceItemClick(
       {
         store,
@@ -197,6 +259,7 @@ describe("commandLineVisual.handlers animation controls", () => {
               resourceId: "visual-video",
               resourceType: "video",
               transformId: "visual-center",
+              layer: 70,
             },
           ],
         },
@@ -267,10 +330,369 @@ describe("commandLineVisual.handlers animation controls", () => {
               resourceId: "visual-layout",
               resourceType: "layout",
               transformId: "visual-center",
+              layer: 50,
             },
           ],
         },
       },
+    });
+  });
+
+  it("updates visual layer selection and emits temporary presentation state", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          {
+            id: "visual-1",
+            resourceId: "visual-image",
+            resourceType: "image",
+            transformId: "visual-center",
+          },
+        ],
+      },
+    );
+
+    handleLayerChange(
+      {
+        store: createStoreApi(state),
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              index: "0",
+            },
+          },
+          detail: {
+            value: 30,
+          },
+        },
+      },
+    );
+
+    expect(selectSelectedVisuals({ state })[0].layer).toBe(30);
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        visual: {
+          items: [
+            {
+              id: "visual-1",
+              resourceId: "visual-image",
+              resourceType: "image",
+              transformId: "visual-center",
+              layer: 30,
+            },
+          ],
+        },
+      },
+    });
+  });
+
+  it("updates visual opacity and blur in temporary presentation state", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const store = createStoreApi(state);
+
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          {
+            id: "visual-1",
+            resourceId: "visual-image",
+            resourceType: "image",
+            transformId: "visual-center",
+            layer: 50,
+          },
+        ],
+      },
+    );
+
+    handleOpacityInput(
+      {
+        store,
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              index: "0",
+            },
+          },
+          detail: {
+            value: "0.42",
+          },
+        },
+      },
+    );
+
+    expect(selectSelectedVisuals({ state })[0].opacity).toBe(0.42);
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        visual: {
+          items: [
+            {
+              id: "visual-1",
+              resourceId: "visual-image",
+              resourceType: "image",
+              transformId: "visual-center",
+              layer: 50,
+              opacity: 0.42,
+            },
+          ],
+        },
+      },
+    });
+
+    handleBlurToggleChange(
+      {
+        store,
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              index: "0",
+            },
+          },
+          detail: {
+            value: true,
+          },
+        },
+      },
+    );
+    handleBlurFieldInput(
+      {
+        store,
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              index: "0",
+              blurField: "x",
+            },
+          },
+          detail: {
+            value: "12",
+          },
+        },
+      },
+    );
+    handleBlurFieldChange(
+      {
+        store,
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              index: "0",
+              blurField: "kernelSize",
+            },
+          },
+          detail: {
+            value: 14,
+          },
+        },
+      },
+    );
+
+    expect(selectSelectedVisuals({ state })[0].blur).toEqual({
+      x: 12,
+      y: 9,
+      quality: 3,
+      kernelSize: 13,
+      repeatEdgePixels: true,
+    });
+    expect(dispatchEvent.mock.calls[3][0].detail).toEqual({
+      presentationState: {
+        visual: {
+          items: [
+            {
+              id: "visual-1",
+              resourceId: "visual-image",
+              resourceType: "image",
+              transformId: "visual-center",
+              layer: 50,
+              opacity: 0.42,
+              blur: {
+                x: 12,
+                y: 9,
+                quality: 3,
+                kernelSize: 13,
+                repeatEdgePixels: true,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(render).toHaveBeenCalledTimes(4);
+  });
+
+  it("moves visuals from the context menu and emits reordered preview data", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const store = createStoreApi(state);
+
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          {
+            id: "visual-1",
+            resourceId: "visual-image",
+            resourceType: "image",
+            transformId: "visual-center",
+            layer: 50,
+          },
+          {
+            id: "visual-2",
+            resourceId: "visual-video",
+            resourceType: "video",
+            transformId: "visual-center",
+            layer: 50,
+          },
+          {
+            id: "visual-3",
+            resourceId: "visual-layout",
+            resourceType: "layout",
+            transformId: "visual-center",
+            layer: 70,
+          },
+        ],
+      },
+    );
+    showDropdownMenu(
+      { state },
+      {
+        position: { x: 12, y: 24 },
+        visualIndex: 1,
+      },
+    );
+
+    handleDropdownMenuClickItem(
+      {
+        store,
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          detail: {
+            item: {
+              value: "move-up",
+            },
+          },
+        },
+      },
+    );
+
+    expect(selectSelectedVisuals({ state }).map((visual) => visual.id)).toEqual(
+      ["visual-3", "visual-2", "visual-1"],
+    );
+    expect(selectDropdownMenuVisualIndex({ state })).toBeNull();
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        visual: {
+          items: [
+            {
+              id: "visual-3",
+              resourceId: "visual-layout",
+              resourceType: "layout",
+              transformId: "visual-center",
+              layer: 70,
+            },
+            {
+              id: "visual-2",
+              resourceId: "visual-video",
+              resourceType: "video",
+              transformId: "visual-center",
+              layer: 50,
+            },
+            {
+              id: "visual-1",
+              resourceId: "visual-image",
+              resourceType: "image",
+              transformId: "visual-center",
+              layer: 50,
+            },
+          ],
+        },
+      },
+    });
+  });
+
+  it("adds a new visual with the selected add-menu layer", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const appService = {
+      showAlert: vi.fn(),
+    };
+    const store = createStoreApi(state);
+
+    setPendingVisualLayer(
+      { state },
+      {
+        layer: 10,
+      },
+    );
+    setMode({ state }, { mode: "resource-select" });
+    setSelectedVisualIndex({ state }, { index: -1 });
+    setTempSelectedResourceId(
+      { state },
+      {
+        resourceId: "visual-image",
+        resourceType: "image",
+      },
+    );
+
+    handleButtonSelectClick({
+      appService,
+      store,
+      render,
+      dispatchEvent,
+    });
+
+    expect(appService.showAlert).not.toHaveBeenCalled();
+    expect(selectSelectedVisuals({ state })[0]).toMatchObject({
+      resourceId: "visual-image",
+      resourceType: "image",
+      layer: 10,
+    });
+    expect(selectMode({ state })).toBe("current");
+    expect(selectTempSelectedResourceId({ state })).toBeUndefined();
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(
+      dispatchEvent.mock.calls[0][0].detail.presentationState.visual.items[0],
+    ).toMatchObject({
+      resourceId: "visual-image",
+      resourceType: "image",
+      layer: 10,
     });
   });
 
@@ -288,6 +710,15 @@ describe("commandLineVisual.handlers animation controls", () => {
             resourceId: "visual-image",
             resourceType: "image",
             transformId: "visual-center",
+            layer: 30,
+            opacity: 0.5,
+            blur: {
+              x: 6,
+              y: 9,
+              quality: 3,
+              kernelSize: 9,
+              repeatEdgePixels: true,
+            },
             animations: {
               resourceId: "visual-fade",
             },
@@ -310,6 +741,15 @@ describe("commandLineVisual.handlers animation controls", () => {
             resourceId: "visual-image",
             resourceType: "image",
             transformId: "visual-center",
+            layer: 30,
+            opacity: 0.5,
+            blur: {
+              x: 6,
+              y: 9,
+              quality: 3,
+              kernelSize: 9,
+              repeatEdgePixels: true,
+            },
             animations: {
               resourceId: "visual-fade",
             },

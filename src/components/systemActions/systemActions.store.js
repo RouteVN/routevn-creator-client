@@ -389,6 +389,14 @@ const formatConditionalSummary = (branches = []) => {
   return hasDefault ? "default" : "0 branches";
 };
 
+const isDisplayableScreenAction = (screenAction) => {
+  return Boolean(
+    screenAction?.animations?.resourceId ||
+      screenAction?.opacity !== undefined ||
+      screenAction?.blur,
+  );
+};
+
 // Moved from sceneEditor.store.js - now returns object instead of array
 export const selectActionsData = ({ props, state }) => {
   const actions = normalizeLineActions(props.actions || {});
@@ -452,12 +460,13 @@ export const selectActionsData = ({ props, state }) => {
     }
   }
 
-  if (actions.screen?.animations?.resourceId) {
-    const animation = animations[actions.screen.animations.resourceId];
+  if (isDisplayableScreenAction(actions.screen)) {
+    const animationResourceId = actions.screen?.animations?.resourceId;
+    const animation = animations[animationResourceId];
     actionsObject.screen = actions.screen;
     preview.screen = {
       animation,
-      label: animation?.name || actions.screen.animations.resourceId,
+      label: animation?.name || animationResourceId || "Screen",
     };
   }
 
