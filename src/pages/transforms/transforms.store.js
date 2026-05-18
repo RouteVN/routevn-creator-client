@@ -168,6 +168,14 @@ const createPreviewImageSelectorDialog = () => ({
   originalImageId: undefined,
 });
 
+const createPreviewImageMenu = () => ({
+  isOpen: false,
+  x: 0,
+  y: 0,
+  target: undefined,
+  items: [],
+});
+
 const resolvePreviewImageId = (preview, slotKey) => {
   const imageId = preview?.[slotKey]?.imageId;
   return typeof imageId === "string" && imageId.length > 0
@@ -392,6 +400,7 @@ export const createInitialState = () => ({
   dialogPreviewBackgroundImageId: undefined,
   dialogPreviewTargetImageId: undefined,
   imageSelectorDialog: createPreviewImageSelectorDialog(),
+  previewImageMenu: createPreviewImageMenu(),
   fullImagePreviewVisible: false,
   fullImagePreviewImageId: undefined,
   fullImagePreviewFileId: undefined,
@@ -479,6 +488,7 @@ const setDialogState = (state, options = {}) => {
     "target",
   );
   state.imageSelectorDialog = createPreviewImageSelectorDialog();
+  state.previewImageMenu = createPreviewImageMenu();
   state.fullImagePreviewVisible = false;
   state.fullImagePreviewImageId = undefined;
   state.fullImagePreviewFileId = undefined;
@@ -516,6 +526,7 @@ export const closeTransformFormDialog = ({ state }, _payload = {}) => {
   state.dialogPreviewBackgroundImageId = undefined;
   state.dialogPreviewTargetImageId = undefined;
   state.imageSelectorDialog = createPreviewImageSelectorDialog();
+  state.previewImageMenu = createPreviewImageMenu();
   state.fullImagePreviewVisible = false;
   state.fullImagePreviewImageId = undefined;
   state.fullImagePreviewFileId = undefined;
@@ -577,6 +588,10 @@ export const selectDialogPreviewData = ({ state }) => {
   return Object.keys(preview).length > 0 ? preview : undefined;
 };
 
+export const selectPreviewImageMenuTarget = ({ state }) => {
+  return state.previewImageMenu.target;
+};
+
 export const openPreviewImageSelectorDialog = ({ state }, { target } = {}) => {
   const slotConfig = getPreviewSlotConfig(target);
   if (!slotConfig) {
@@ -588,6 +603,37 @@ export const openPreviewImageSelectorDialog = ({ state }, { target } = {}) => {
   const imageId = selectPreviewImageIdFromState(state, target);
   state.imageSelectorDialog.selectedImageId = imageId;
   state.imageSelectorDialog.originalImageId = imageId;
+};
+
+export const openPreviewImageMenu = ({ state }, { target, x, y } = {}) => {
+  const slotConfig = getPreviewSlotConfig(target);
+  const imageId = selectPreviewImageIdFromState(state, target);
+  state.previewImageMenu = createPreviewImageMenu();
+
+  if (!slotConfig || !imageId) {
+    return;
+  }
+
+  state.previewImageMenu.isOpen = true;
+  state.previewImageMenu.x = x;
+  state.previewImageMenu.y = y;
+  state.previewImageMenu.target = target;
+  state.previewImageMenu.items = [
+    { label: "Remove", type: "item", value: "remove" },
+  ];
+};
+
+export const closePreviewImageMenu = ({ state }, _payload = {}) => {
+  state.previewImageMenu = createPreviewImageMenu();
+};
+
+export const clearPreviewImage = ({ state }, { target } = {}) => {
+  const slotConfig = getPreviewSlotConfig(target);
+  if (!slotConfig) {
+    return;
+  }
+
+  setPreviewImageIdInState(state, target, undefined);
 };
 
 export const closePreviewImageSelectorDialog = ({ state }, _payload = {}) => {
@@ -647,6 +693,7 @@ export const selectViewData = (context) => {
     fullImagePreviewVisible: context.state.fullImagePreviewVisible,
     fullImagePreviewImageId: context.state.fullImagePreviewImageId,
     fullImagePreviewFileId: context.state.fullImagePreviewFileId,
+    previewImageMenu: context.state.previewImageMenu,
   };
 };
 

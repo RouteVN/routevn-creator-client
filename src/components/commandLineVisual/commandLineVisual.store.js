@@ -110,13 +110,41 @@ const createVisualDropdownItems = (visualIndex, visuals = []) => {
   return items;
 };
 
-const createAddVisualLayerDropdownItems = () =>
-  VISUAL_LAYER_OPTIONS.map((option) => ({
-    label: option.label,
-    layer: option.value,
-    type: "item",
-    value: `add-layer:${option.value}`,
-  }));
+const createAddVisualPopover = () => ({
+  isOpen: false,
+  position: { x: 0, y: 0 },
+});
+
+const createAddVisualForm = ({ transformOptions, layerOptions } = {}) => ({
+  title: "Add Visual",
+  fields: [
+    {
+      name: "transformId",
+      type: "select",
+      label: "Transform",
+      options: transformOptions,
+      clearable: false,
+      placeholder: "Select transform",
+    },
+    {
+      name: "layer",
+      type: "select",
+      label: "Layer",
+      options: layerOptions,
+      clearable: false,
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "submit",
+        variant: "pr",
+        label: "Select Resource",
+      },
+    ],
+  },
+});
 
 const isHierarchyCollection = (value) =>
   !!value &&
@@ -422,6 +450,7 @@ export const createInitialState = () => ({
   selectedVisuals: [],
   tempSelectedResourceId: undefined,
   tempSelectedResourceType: undefined,
+  pendingVisualTransformId: undefined,
   pendingVisualLayer: undefined,
   selectedVisualIndex: undefined,
   searchQuery: "",
@@ -434,6 +463,7 @@ export const createInitialState = () => ({
     visualIndex: null,
     items: [{ label: "Delete", type: "item", value: "delete" }],
   },
+  addVisualPopover: createAddVisualPopover(),
 });
 
 export const setMode = ({ state }, { mode } = {}) => {
@@ -483,13 +513,13 @@ const getDefaultTransformId = (state) => {
 
 export const addVisual = (
   { state },
-  { resourceId, resourceType, layer } = {},
+  { resourceId, resourceType, transformId, layer } = {},
 ) => {
   const defaultTransform = getDefaultTransformId(state);
   const visual = {
     id: generateVisualId(),
     resourceId: resourceId,
-    transformId: defaultTransform,
+    transformId: transformId ?? defaultTransform,
     layer: normalizeVisualLayer(layer),
     animationMode: "none",
   };
@@ -673,6 +703,22 @@ export const clearPendingVisualLayer = ({ state }, _payload = {}) => {
   state.pendingVisualLayer = undefined;
 };
 
+export const setPendingVisualTransformId = (
+  { state },
+  { transformId } = {},
+) => {
+  state.pendingVisualTransformId = transformId;
+};
+
+export const clearPendingVisualTransformId = ({ state }, _payload = {}) => {
+  state.pendingVisualTransformId = undefined;
+};
+
+export const clearPendingVisualConfig = ({ state }, _payload = {}) => {
+  state.pendingVisualLayer = undefined;
+  state.pendingVisualTransformId = undefined;
+};
+
 export const setSearchQuery = ({ state }, { value } = {}) => {
   state.searchQuery = value ?? "";
 };
@@ -707,6 +753,10 @@ export const selectPendingVisualLayer = ({ state }) => {
   return state.pendingVisualLayer ?? DEFAULT_VISUAL_LAYER;
 };
 
+export const selectPendingVisualTransformId = ({ state }) => {
+  return state.pendingVisualTransformId ?? getDefaultTransformId(state);
+};
+
 export const showDropdownMenu = ({ state }, { position, visualIndex } = {}) => {
   state.dropdownMenu.isOpen = true;
   state.dropdownMenu.position = position ?? { x: 0, y: 0 };
@@ -718,15 +768,16 @@ export const showDropdownMenu = ({ state }, { position, visualIndex } = {}) => {
   );
 };
 
-export const showAddVisualLayerDropdownMenu = (
-  { state },
-  { position } = {},
-) => {
-  state.dropdownMenu.isOpen = true;
-  state.dropdownMenu.position = position ?? { x: 0, y: 0 };
-  state.dropdownMenu.type = "add-visual-layer";
-  state.dropdownMenu.visualIndex = null;
-  state.dropdownMenu.items = createAddVisualLayerDropdownItems();
+export const openAddVisualPopover = ({ state }, { position } = {}) => {
+  state.addVisualPopover.isOpen = true;
+  state.addVisualPopover.position = position ?? { x: 0, y: 0 };
+  state.pendingVisualTransformId =
+    state.pendingVisualTransformId ?? getDefaultTransformId(state);
+  state.pendingVisualLayer = state.pendingVisualLayer ?? DEFAULT_VISUAL_LAYER;
+};
+
+export const hideAddVisualPopover = ({ state }, _payload = {}) => {
+  state.addVisualPopover = createAddVisualPopover();
 };
 
 export const hideDropdownMenu = ({ state }, _payload = {}) => {
@@ -998,6 +1049,10 @@ export const selectViewData = ({ state }) => {
     blurKernelSizeOptions: COMMAND_LINE_ITEM_BLUR_KERNEL_SIZE_SELECT_OPTIONS,
     blurRepeatEdgeOptions: COMMAND_LINE_ITEM_BLUR_REPEAT_EDGE_OPTIONS,
   };
+  const addVisualDefaultValues = {
+    transformId: state.pendingVisualTransformId ?? getDefaultTransformId(state),
+    layer: state.pendingVisualLayer ?? DEFAULT_VISUAL_LAYER,
+  };
 
   return {
     mode: state.mode,
@@ -1016,5 +1071,16 @@ export const selectViewData = ({ state }) => {
     breadcrumb,
     defaultValues,
     dropdownMenu: state.dropdownMenu,
+    addVisualPopover: {
+      ...state.addVisualPopover,
+      key: state.addVisualPopover.isOpen
+        ? `${addVisualDefaultValues.transformId ?? ""}-${addVisualDefaultValues.layer}`
+        : "closed",
+    },
+    addVisualForm: createAddVisualForm({
+      transformOptions,
+      layerOptions: VISUAL_LAYER_OPTIONS,
+    }),
+    addVisualDefaultValues,
   };
 };

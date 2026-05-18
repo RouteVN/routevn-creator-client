@@ -680,10 +680,53 @@ export const handleTransformPreviewImageClick = (deps, payload) => {
   const { render, store } = deps;
   const target = payload._event.currentTarget?.dataset?.target;
 
+  store.closePreviewImageMenu();
   store.openPreviewImageSelectorDialog({
     target,
   });
   render();
+};
+
+export const handleTransformPreviewImageContextMenu = (deps, payload) => {
+  const { render, store } = deps;
+  const event = payload._event;
+  const target = event.currentTarget?.dataset?.target;
+
+  event.preventDefault();
+  event.stopPropagation();
+  store.openPreviewImageMenu({
+    target,
+    x: event.clientX,
+    y: event.clientY,
+  });
+  render();
+};
+
+export const handleTransformPreviewImageMenuClose = (deps) => {
+  const { render, store } = deps;
+  store.closePreviewImageMenu();
+  render();
+};
+
+export const handleTransformPreviewImageMenuItemClick = async (
+  deps,
+  payload,
+) => {
+  const { render, store } = deps;
+  const detail = payload._event.detail;
+  const item = detail?.item || detail;
+  const target = store.selectPreviewImageMenuTarget();
+
+  store.closePreviewImageMenu();
+
+  if (item?.value !== "remove" || !target) {
+    render();
+    return;
+  }
+
+  store.clearPreviewImage({ target });
+  render();
+  await renderDialogPreviewFromStore(deps);
 };
 
 export const handleTransformPreviewImageSelected = async (deps, payload) => {

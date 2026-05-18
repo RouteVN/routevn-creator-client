@@ -23,6 +23,7 @@ import {
   clearTempSelectedSpriteIds,
   clearPendingCharacterIndex,
   createInitialState,
+  moveCharacter,
   removeCharacter,
   selectCurrentSpriteSelectionGroups,
   selectAddCharacterTransformDropdownItems,
@@ -68,6 +69,7 @@ const createStoreApi = (state) => ({
     state.dropdownMenu.isOpen = false;
     state.dropdownMenu.characterIndex = null;
   },
+  moveCharacter: (payload) => moveCharacter({ state }, payload),
   removeCharacter: (payload) => removeCharacter({ state }, payload),
   selectAddCharacterTransformDropdownItems: () =>
     selectAddCharacterTransformDropdownItems({ state }),
@@ -1225,6 +1227,86 @@ describe("commandLineCharacters.handlers", () => {
     expect(state.dropdownMenu.isOpen).toBe(false);
     expect(state.dropdownMenu.characterIndex).toBeNull();
     expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  it("moves the character referenced by the dropdown menu", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+
+    setExistingCharacters(
+      { state },
+      {
+        characters: [
+          { id: "character-1" },
+          { id: "character-2" },
+          { id: "character-3" },
+        ],
+      },
+    );
+    showDropdownMenu(
+      { state },
+      {
+        position: { x: 10, y: 20 },
+        characterIndex: 0,
+      },
+    );
+
+    handleDropdownMenuClickItem(
+      {
+        dispatchEvent,
+        store: createStoreApi(state),
+        render,
+      },
+      {
+        _event: {
+          detail: {
+            item: {
+              value: "move-up",
+            },
+          },
+        },
+      },
+    );
+
+    expect(state.selectedCharacters.map((character) => character.id)).toEqual([
+      "character-2",
+      "character-1",
+      "character-3",
+    ]);
+    expect(state.dropdownMenu.isOpen).toBe(false);
+    expect(state.dropdownMenu.characterIndex).toBeNull();
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: {
+          presentationState: {
+            character: {
+              items: [
+                {
+                  id: "character-2",
+                  transformId: undefined,
+                  sprites: [],
+                  spriteName: "",
+                },
+                {
+                  id: "character-1",
+                  transformId: undefined,
+                  sprites: [],
+                  spriteName: "",
+                },
+                {
+                  id: "character-3",
+                  transformId: undefined,
+                  sprites: [],
+                  spriteName: "",
+                },
+              ],
+            },
+          },
+        },
+      }),
+    );
   });
 
   it("allows sprite groups to be left empty when confirming", () => {

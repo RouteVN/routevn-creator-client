@@ -621,6 +621,7 @@ export const handleDropdownMenuClickItem = (deps, payload) => {
   const { item } = payload._event.detail;
   const dropdownMenuType = store.selectDropdownMenuType?.();
   const characterIndex = store.selectDropdownMenuCharacterIndex();
+  const hasCharacterIndex = Number.isInteger(characterIndex);
   let shouldDispatchTemporaryPresentationStateChange = false;
 
   if (dropdownMenuType === "add-character-transform") {
@@ -628,8 +629,14 @@ export const handleDropdownMenuClickItem = (deps, payload) => {
       transformId: item.transformId ?? item.value,
     });
     beginAddCharacterSelection(store);
-  } else if (item.value === "delete" && characterIndex !== null) {
+  } else if (item.value === "delete" && hasCharacterIndex) {
     store.removeCharacter({ index: characterIndex });
+    shouldDispatchTemporaryPresentationStateChange = true;
+  } else if (item.value === "move-up" && hasCharacterIndex) {
+    store.moveCharacter({ index: characterIndex, offset: 1 });
+    shouldDispatchTemporaryPresentationStateChange = true;
+  } else if (item.value === "move-down" && hasCharacterIndex) {
+    store.moveCharacter({ index: characterIndex, offset: -1 });
     shouldDispatchTemporaryPresentationStateChange = true;
   }
 
