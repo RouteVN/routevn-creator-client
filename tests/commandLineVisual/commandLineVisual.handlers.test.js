@@ -615,7 +615,7 @@ describe("commandLineVisual.handlers animation controls", () => {
             resourceId: "visual-layout",
             resourceType: "layout",
             transformId: "visual-center",
-            layer: 70,
+            layer: 90,
           },
         ],
       },
@@ -660,7 +660,7 @@ describe("commandLineVisual.handlers animation controls", () => {
               resourceId: "visual-layout",
               resourceType: "layout",
               transformId: "visual-center",
-              layer: 70,
+              layer: 90,
             },
             {
               id: "visual-2",

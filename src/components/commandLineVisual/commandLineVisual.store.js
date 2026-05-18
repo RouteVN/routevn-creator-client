@@ -40,6 +40,10 @@ const VISUAL_LAYER_OPTIONS = [
   },
   {
     value: 70,
+    label: "Behind Choice",
+  },
+  {
+    value: 90,
     label: "Foreground",
   },
 ];

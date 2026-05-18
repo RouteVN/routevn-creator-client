@@ -183,6 +183,10 @@ describe("commandLineVisual.store animation controls", () => {
       },
       {
         value: 70,
+        label: "Behind Choice",
+      },
+      {
+        value: 90,
         label: "Foreground",
       },
     ]);
@@ -443,6 +447,10 @@ describe("commandLineVisual.store animation controls", () => {
           },
           {
             value: 70,
+            label: "Behind Choice",
+          },
+          {
+            value: 90,
             label: "Foreground",
           },
         ],
@@ -480,7 +488,7 @@ describe("commandLineVisual.store animation controls", () => {
     setPendingVisualLayer(
       { state },
       {
-        layer: 70,
+        layer: 90,
       },
     );
     clearPendingVisualConfig({ state });
@@ -573,6 +581,12 @@ describe("commandLineVisual.store animation controls", () => {
             id: "visual-2",
             resourceId: "visual-video",
             resourceType: "video",
+            layer: 90,
+          },
+          {
+            id: "visual-5",
+            resourceId: "visual-video",
+            resourceType: "video",
             layer: 70,
           },
           {
@@ -585,7 +599,7 @@ describe("commandLineVisual.store animation controls", () => {
             id: "visual-4",
             resourceId: "visual-image",
             resourceType: "image",
-            layer: 70,
+            layer: 90,
           },
         ],
       },
@@ -594,7 +608,7 @@ describe("commandLineVisual.store animation controls", () => {
     let viewData = selectViewData({ state });
 
     expect(selectSelectedVisuals({ state }).map((visual) => visual.id)).toEqual(
-      ["visual-2", "visual-4", "visual-1", "visual-3"],
+      ["visual-2", "visual-4", "visual-5", "visual-1", "visual-3"],
     );
     expect(
       viewData.defaultValues.visualGroups.map((group) => ({
@@ -605,6 +619,10 @@ describe("commandLineVisual.store animation controls", () => {
       {
         label: "Foreground",
         visualIds: ["visual-4", "visual-2"],
+      },
+      {
+        label: "Behind Choice",
+        visualIds: ["visual-5"],
       },
       {
         label: "Behind Dialogue",
@@ -619,18 +637,18 @@ describe("commandLineVisual.store animation controls", () => {
     updateVisualLayer(
       { state },
       {
-        index: 3,
-        layer: 70,
+        index: 4,
+        layer: 90,
       },
     );
     viewData = selectViewData({ state });
 
     expect(selectSelectedVisuals({ state }).map((visual) => visual.id)).toEqual(
-      ["visual-2", "visual-4", "visual-3", "visual-1"],
+      ["visual-2", "visual-4", "visual-3", "visual-5", "visual-1"],
     );
     expect(viewData.defaultValues.visualGroups[0]).toMatchObject({
       label: "Foreground",
-      layer: 70,
+      layer: 90,
     });
     expect(
       viewData.defaultValues.visualGroups[0].visuals.map((visual) => visual.id),
@@ -695,7 +713,7 @@ describe("commandLineVisual.store animation controls", () => {
       {
         visuals: [
           { id: "visual-1", resourceId: "visual-image", layer: 50 },
-          { id: "visual-2", resourceId: "visual-video", layer: 70 },
+          { id: "visual-2", resourceId: "visual-video", layer: 90 },
           { id: "visual-3", resourceId: "visual-layout", layer: 50 },
         ],
       },

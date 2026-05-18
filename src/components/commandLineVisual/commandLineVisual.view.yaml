@@ -15,10 +15,12 @@ refs:
     eventListeners:
       click:
         handler: handleRemoveVisualClick
-  visual*:
+  visualImage*:
     eventListeners:
       click:
         handler: handleVisualClick
+  visualItem*:
+    eventListeners:
       contextmenu:
         handler: handleVisualContextMenu
   resourceItem*:
@@ -114,8 +116,8 @@ template:
                           - rtgl-text s=sm c=fg: ${visualGroup.label}
                           - rtgl-view g=md w=f:
                               - $for visual, i in visualGroup.visuals:
-                                  - rtgl-view#visual${groupIndex}x${i} data-index=${visual.visualIndex} data-visual-id=${visual.id} d=h g=md av=t p=md br=md w=f:
-                                      - 'rtgl-view cur=pointer bw=xs bc=bo h-bc=ac br=sm style="align-self: flex-start; flex: 0 0 auto;"':
+                                  - rtgl-view#visualItem${groupIndex}x${i} data-index=${visual.visualIndex} data-visual-id=${visual.id} d=h g=md av=t p=md br=md w=f:
+                                      - 'rtgl-view#visualImage${groupIndex}x${i} data-index=${visual.visualIndex} cur=pointer bw=xs bc=bo h-bc=ac br=sm style="align-self: flex-start; flex: 0 0 auto;"':
                                           - rtgl-view p=md g=md br=md:
                                               - $if visual.resourceType == 'video':
                                                   - rtgl-view pos=rel w=200 h=120:
