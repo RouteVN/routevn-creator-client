@@ -37,6 +37,12 @@ const AUTO_COLLAPSE_FILE_EXPLORER_ITEM_THRESHOLD =
   DEFAULT_FILE_EXPLORER_AUTO_COLLAPSE_THRESHOLD;
 const IMAGE_CARD_MAX_WIDTH = 400;
 const IMAGE_CARD_HEIGHT = 225;
+const PREVIEW_FRAME_STYLE = [
+  "width: 92vw",
+  "height: 92vh",
+  "max-width: 92vw",
+  "max-height: 92vh",
+].join("; ");
 
 const folderContextMenuItems = [
   { label: "New Folder", type: "item", value: "new-child-folder" },
@@ -194,6 +200,51 @@ const buildPendingMediaItem = (item) => ({
   canPreview: false,
 });
 
+const selectVisibleSpriteIds = ({ mediaGroups, items } = {}) => {
+  return (mediaGroups ?? []).flatMap((group) =>
+    (group.children ?? [])
+      .map((child) => child.id)
+      .filter((childItemId) => items?.[childItemId]?.type === "image"),
+  );
+};
+
+const resolveAdjacentSpriteItemId = ({
+  visibleSpriteIds,
+  itemId,
+  direction,
+  distance = 1,
+  clamp = false,
+} = {}) => {
+  const step =
+    direction === "next" ? 1 : direction === "previous" ? -1 : undefined;
+  if (!step) {
+    return undefined;
+  }
+
+  const numericDistance = Number(distance);
+  const itemDistance =
+    Number.isFinite(numericDistance) && numericDistance > 0
+      ? Math.floor(numericDistance)
+      : 1;
+  const spriteIds = visibleSpriteIds ?? [];
+
+  if (spriteIds.length === 0) {
+    return undefined;
+  }
+
+  const currentIndex = spriteIds.indexOf(itemId);
+  if (currentIndex === -1) {
+    return step > 0 ? spriteIds[0] : spriteIds[spriteIds.length - 1];
+  }
+
+  let nextIndex = currentIndex + step * itemDistance;
+  if (clamp) {
+    nextIndex = Math.max(0, Math.min(nextIndex, spriteIds.length - 1));
+  }
+
+  return spriteIds[nextIndex];
+};
+
 export const createInitialState = () => ({
   spritesData: EMPTY_TREE,
   ...createTagState(),
@@ -311,6 +362,8 @@ export const clearCharacterSpritesView = ({ state }) => {
   state.pendingUploads = [];
   state.selectedItemId = undefined;
   state.selectedFolderId = undefined;
+  state.fullImagePreviewVisible = false;
+  state.fullImagePreviewFileId = undefined;
   state.isEditDialogOpen = false;
   state.editItemId = undefined;
   state.editDefaultValues = {
@@ -490,43 +543,25 @@ export const selectCharacterId = ({ state }) => {
 
 export const selectAdjacentSpriteItemId = (
   { state },
-  { itemId, direction } = {},
+  { itemId, direction, distance = 1, clamp = false } = {},
 ) => {
-  const step =
-    direction === "next" ? 1 : direction === "previous" ? -1 : undefined;
-  if (!step) {
-    return undefined;
-  }
-
-  const visibleSpriteIds = (
-    selectViewData({ state }).mediaGroups ?? []
-  ).flatMap((group) =>
-    (group.children ?? [])
-      .map((child) => child.id)
-      .filter(
-        (childItemId) =>
-          state.spritesData.items?.[childItemId]?.type === "image",
-      ),
-  );
-
-  if (visibleSpriteIds.length === 0) {
-    return undefined;
-  }
-
-  const currentIndex = visibleSpriteIds.indexOf(itemId);
-  if (currentIndex === -1) {
-    return step > 0
-      ? visibleSpriteIds[0]
-      : visibleSpriteIds[visibleSpriteIds.length - 1];
-  }
-
-  return visibleSpriteIds[currentIndex + step];
+  const viewData = selectViewData({ state });
+  return resolveAdjacentSpriteItemId({
+    visibleSpriteIds: selectVisibleSpriteIds({
+      mediaGroups: viewData.mediaGroups,
+      items: state.spritesData?.items,
+    }),
+    itemId,
+    direction,
+    distance,
+    clamp,
+  });
 };
 
 export const showFullImagePreview = ({ state }, { itemId } = {}) => {
   const item = state.spritesData.items?.[itemId];
 
-  if (item?.fileId) {
+  if (item?.type === "image" && item.fileId) {
     state.fullImagePreviewVisible = true;
     state.fullImagePreviewFileId = item.fileId;
   }
@@ -604,6 +639,24 @@ export const selectViewData = ({ state }) => {
     selectedItem?.type === "image"
       ? buildDetailFields(selectedItem)
       : buildFolderDetailFields(selectedFolder);
+  const visibleSpriteIds = selectVisibleSpriteIds({
+    mediaGroups,
+    items: state.spritesData?.items,
+  });
+  const previousItemId = state.selectedItemId
+    ? resolveAdjacentSpriteItemId({
+        visibleSpriteIds,
+        itemId: state.selectedItemId,
+        direction: "previous",
+      })
+    : undefined;
+  const nextItemId = state.selectedItemId
+    ? resolveAdjacentSpriteItemId({
+        visibleSpriteIds,
+        itemId: state.selectedItemId,
+        direction: "next",
+      })
+    : undefined;
 
   return {
     flatItems,
@@ -637,6 +690,9 @@ export const selectViewData = ({ state }) => {
     maxWidth: IMAGE_CARD_MAX_WIDTH,
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
+    fullImagePreviewFrameStyle: PREVIEW_FRAME_STYLE,
+    fullImagePreviewPreviousVisible: Boolean(previousItemId),
+    fullImagePreviewNextVisible: Boolean(nextItemId),
     folderContextMenuItems,
     itemContextMenuItems,
     emptyContextMenuItems,

@@ -117,6 +117,7 @@ describe("images handlers", () => {
         setTagsData: vi.fn(),
         setItems: vi.fn(),
         setSelectedItemId: vi.fn(),
+        setSelectedFolderId: vi.fn(),
       },
       render: vi.fn(),
       refs: {
@@ -394,6 +395,7 @@ describe("images handlers", () => {
         setTagsData: vi.fn(),
         setItems: vi.fn(),
         setSelectedItemId: vi.fn(),
+        setSelectedFolderId: vi.fn(),
       },
       refs: {
         fileExplorer: {

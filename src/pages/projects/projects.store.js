@@ -1,6 +1,5 @@
 export const createInitialState = () => ({
   isTouchMode: false,
-  mobileAppName: "Creator",
   localTitle: "Projects",
   cloudTitle: "Cloud Projects",
   showCloudProjects: false,
@@ -548,8 +547,10 @@ export const selectViewData = ({ state }) => {
     ...state,
     profileDisplayName,
     avatarImageSrc,
-    showMobileTopNav: Boolean(state.isTouchMode),
-    showDesktopTopActions: !state.isTouchMode,
+    showMobileProjectActions: Boolean(state.isTouchMode),
+    showProjectAccountActions: Boolean(
+      state.showCloudProjects && !state.isTouchMode,
+    ),
     deleteDialogTitle: "Remove Project",
     deleteDialogMessage: `Are you sure you want to remove ${deleteDialogProjectName} from the list? The project folder will still remain on disk. Delete the folder yourself if you want to permanently remove the project files.`,
     deleteDialogConfirmLabel: "Remove",

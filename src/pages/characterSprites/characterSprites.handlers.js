@@ -17,7 +17,10 @@ import {
   runResourcePageMutation,
   showResourcePageError,
 } from "../../internal/ui/resourcePages/resourcePageErrors.js";
-import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
+import {
+  createFileExplorerKeyboardScopeHandlers,
+  isTextEntryKeyEvent,
+} from "../../internal/ui/fileExplorerKeyboardScope.js";
 import {
   handleResourceZoomShortcutKeyDown,
   isResourceZoomShortcutKeyEvent,
@@ -182,6 +185,79 @@ const openSpritePreviewById = ({ deps, itemId, syncExplorer = false } = {}) => {
   render();
   refs.groupview?.scrollItemIntoView?.({ itemId });
   focusPreviewOverlay(deps);
+};
+
+const closeSpritePreview = (deps) => {
+  const { store, render } = deps;
+
+  store.hideFullImagePreview();
+  render();
+  focusGroupView(deps);
+};
+
+const navigateSpritePreview = (deps, { direction, distance, clamp } = {}) => {
+  const { store } = deps;
+  const selectedItemId = store.selectSelectedItemId();
+  if (!selectedItemId || !direction) {
+    return false;
+  }
+
+  const adjacentPayload = {
+    itemId: selectedItemId,
+    direction,
+  };
+  if (distance !== undefined) {
+    adjacentPayload.distance = distance;
+  }
+  if (clamp !== undefined) {
+    adjacentPayload.clamp = clamp;
+  }
+
+  const nextItemId = store.selectAdjacentSpriteItemId(adjacentPayload);
+  if (!nextItemId) {
+    return false;
+  }
+
+  openSpritePreviewById({ deps, itemId: nextItemId, syncExplorer: true });
+  return true;
+};
+
+const resolvePreviewNavigationDirection = (event) => {
+  if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+    return { direction: "next" };
+  }
+
+  if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+    return { direction: "previous" };
+  }
+
+  if (event.altKey || event.metaKey) {
+    return undefined;
+  }
+
+  if (event.ctrlKey) {
+    const key = String(event.key ?? "").toLowerCase();
+    if (key === "d") {
+      return { direction: "next", distance: 10, clamp: true };
+    }
+
+    if (key === "u") {
+      return { direction: "previous", distance: 10, clamp: true };
+    }
+
+    return undefined;
+  }
+
+  const key = String(event.key ?? "").toLowerCase();
+  if (key === "j" || key === "l") {
+    return { direction: "next" };
+  }
+
+  if (key === "k" || key === "h") {
+    return { direction: "previous" };
+  }
+
+  return undefined;
 };
 
 const openEditDialogForSprite = ({
@@ -532,10 +608,24 @@ export const handleSpriteItemPreview = (deps, payload) => {
 };
 
 export const handlePreviewOverlayClick = (deps) => {
-  const { store, render } = deps;
-  store.hideFullImagePreview();
-  render();
-  focusGroupView(deps);
+  closeSpritePreview(deps);
+};
+
+export const handlePreviewImageFrameClick = (deps, payload) => {
+  payload?._event?.stopPropagation?.();
+  closeSpritePreview(deps);
+};
+
+export const handlePreviewPreviousClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+  navigateSpritePreview(deps, { direction: "previous" });
+};
+
+export const handlePreviewNextClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+  navigateSpritePreview(deps, { direction: "next" });
 };
 
 export const handlePreviewOverlayKeyDown = (deps, payload) => {
@@ -546,43 +636,26 @@ export const handlePreviewOverlayKeyDown = (deps, payload) => {
     return;
   }
 
+  if (isTextEntryKeyEvent(event)) {
+    return;
+  }
+
   if (event.key === "Escape" || event.key === "Enter") {
     event.preventDefault();
     event.stopPropagation();
-    store.hideFullImagePreview();
-    deps.render();
-    focusGroupView(deps);
+    closeSpritePreview(deps);
     return;
   }
 
-  let direction;
-  if (event.key === "ArrowDown") {
-    direction = "next";
-  } else if (event.key === "ArrowUp") {
-    direction = "previous";
-  }
-
-  if (!direction) {
-    return;
-  }
-
-  const selectedItemId = store.selectSelectedItemId();
-  if (!selectedItemId) {
+  const navigation = resolvePreviewNavigationDirection(event);
+  if (!navigation?.direction) {
     return;
   }
 
   event.preventDefault();
   event.stopPropagation();
 
-  const nextItemId = store.selectAdjacentSpriteItemId({
-    itemId: selectedItemId,
-    direction,
-  });
-  if (!nextItemId) {
-    return;
-  }
-
-  openSpritePreviewById({ deps, itemId: nextItemId, syncExplorer: true });
+  navigateSpritePreview(deps, navigation);
 };
 
 export const handleFileExplorerKeyboardScopeKeyDown = (deps, payload) => {

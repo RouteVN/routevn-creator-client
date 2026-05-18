@@ -6,7 +6,10 @@ import {
   selectTransitionAnimationId,
   setFormValues,
 } from "../../src/components/commandLineScreen/commandLineScreen.store.js";
-import { handleSubmitClick } from "../../src/components/commandLineScreen/commandLineScreen.handlers.js";
+import {
+  handleFormChange,
+  handleSubmitClick,
+} from "../../src/components/commandLineScreen/commandLineScreen.handlers.js";
 
 const createStoreApi = (state) => ({
   selectScreenBlur: () => selectScreenBlur({ state }),
@@ -16,6 +19,59 @@ const createStoreApi = (state) => ({
 });
 
 describe("commandLineScreen.handlers", () => {
+  it("emits temporary presentation state when opacity and blur change", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+
+    handleFormChange(
+      {
+        dispatchEvent,
+        render,
+        store: createStoreApi(state),
+      },
+      {
+        _event: {
+          detail: {
+            values: {
+              transitionAnimationId: "screen-crossfade",
+              opacity: "0.5",
+              blur: true,
+              blurX: "8",
+              blurY: 10,
+              blurQuality: 4,
+              blurKernelSize: 11,
+              blurRepeatEdgePixels: false,
+            },
+          },
+        },
+      },
+    );
+
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].type).toBe(
+      "temporary-presentation-state-change",
+    );
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        screen: {
+          animations: {
+            resourceId: "screen-crossfade",
+          },
+          opacity: 0.5,
+          blur: {
+            x: 8,
+            y: 10,
+            quality: 4,
+            kernelSize: 11,
+            repeatEdgePixels: false,
+          },
+        },
+      },
+    });
+  });
+
   it("submits a screen animation payload", () => {
     const state = createInitialState();
     const dispatchEvent = vi.fn();
