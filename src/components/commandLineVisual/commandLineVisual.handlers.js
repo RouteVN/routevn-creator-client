@@ -1,6 +1,6 @@
 const TEMPORARY_VISUAL_PREVIEW_ID = "temporary-visual-preview";
 const DEFAULT_VISUAL_LAYER = 50;
-const VALID_VISUAL_LAYERS = [10, 30, 50, 70];
+const VALID_VISUAL_LAYERS = [10, 30, 50, 70, 90];
 
 const getTemporaryVisualPreviewId = ({ visualId, resourceType } = {}) => {
   if (visualId) {
@@ -49,7 +49,7 @@ const buildVisualItem = (visual = {}) => {
     id: visual.id,
     resourceId: visual.resourceId,
     transformId: visual.transformId,
-    layer: visual.layer,
+    layer: normalizeVisualLayer(visual.layer),
   };
 
   if (visual.resourceType) {

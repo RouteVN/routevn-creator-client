@@ -25,6 +25,7 @@ propsSchema:
                   - 30
                   - 50
                   - 70
+                  - 90
               opacity:
                 type: number
                 minimum: 0
