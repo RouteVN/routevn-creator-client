@@ -4,10 +4,14 @@ import {
   closePreviewImageSelectorDialog,
   commitPreviewImageSelectorSelection,
   createInitialState,
+  clearPreviewImage,
+  closePreviewImageMenu,
   openPreviewImageSelectorDialog,
+  openPreviewImageMenu,
   openTransformFormDialog,
   openTransformPreviewDialog,
   selectDialogPreviewData,
+  selectPreviewImageMenuTarget,
   selectViewData,
   setImagesData,
   showFullImagePreview,
@@ -84,6 +88,60 @@ describe("transforms.store", () => {
       image: expect.objectContaining({
         previewFileId: "thumb-bg",
       }),
+    });
+  });
+
+  it("opens a remove menu for selected preview images and clears the slot", () => {
+    const state = createInitialState();
+    setImagesData({ state }, { imagesData });
+    openTransformFormDialog({ state });
+    openPreviewImageSelectorDialog(
+      { state },
+      {
+        target: "preview-background",
+      },
+    );
+    applyPreviewImageSelectorSelection(
+      { state },
+      {
+        imageId: "image-bg",
+      },
+    );
+    commitPreviewImageSelectorSelection({ state });
+
+    openPreviewImageMenu(
+      { state },
+      {
+        target: "preview-background",
+        x: 120,
+        y: 240,
+      },
+    );
+
+    expect(selectPreviewImageMenuTarget({ state })).toBe("preview-background");
+    expect(selectViewData({ state }).previewImageMenu).toMatchObject({
+      isOpen: true,
+      x: 120,
+      y: 240,
+      items: [{ label: "Remove", type: "item", value: "remove" }],
+    });
+
+    clearPreviewImage(
+      { state },
+      {
+        target: "preview-background",
+      },
+    );
+    closePreviewImageMenu({ state });
+
+    expect(selectDialogPreviewData({ state })).toBeUndefined();
+    expect(selectViewData({ state }).previewPanel.items[0]).toMatchObject({
+      target: "preview-background",
+      image: undefined,
+    });
+    expect(selectViewData({ state }).previewImageMenu).toMatchObject({
+      isOpen: false,
+      items: [],
     });
   });
 

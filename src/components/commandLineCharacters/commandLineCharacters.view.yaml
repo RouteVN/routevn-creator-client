@@ -116,8 +116,8 @@ template:
                   - rtgl-form#form :form=${form} :defaultValues=${defaultValues}:
                       - rtgl-view#charactersContainer slot=characters g=md w=f:
                           - $for character, i in defaultValues.characters:
-                              - rtgl-view#character${i}.characterRow data-index=${i} data-character-id=${character.id} d=h g=md av=t pv=md br=md w=f:
-                                  - rtgl-view#characterSpriteBox${i} data-index=${i} cur=pointer bw=xs bc=bo h-bc=ac br=sm:
+                              - rtgl-view#character${i}.characterRow data-index=${character.characterIndex} data-character-id=${character.id} d=h g=md av=t pv=md br=md w=f:
+                                  - 'rtgl-view#characterSpriteBox${i} data-index=${character.characterIndex} cur=pointer bw=xs bc=bo h-bc=ac br=sm style="align-self: flex-start; flex: 0 0 auto;"':
                                       - rtgl-view p=md g=md br=md:
                                           - $if character.hasSpritePreview:
                                               - rvn-stacked-file-images :fileIds=${character.spritePreviewFileIds} w=200 h=120 br=sm lazy: null
@@ -127,35 +127,35 @@ template:
                                           - rtgl-text s=xs c=mu-fg ellipsis w=200: ${character.displayName}
                                   - rtgl-view w=1fg g=sm:
                                       - rtgl-text s=sm c=mu-fg: Transform
-                                      - rtgl-select#transform${i} data-index=${i} key=${character.transformId} :options=${defaultValues.transformOptions} :selectedValue=${character.transformId} w=f no-clear: null
+                                      - rtgl-select#transform${i} data-index=${character.characterIndex} key=${character.transformId} :options=${defaultValues.transformOptions} :selectedValue=${character.transformId} w=f no-clear: null
                                       - rtgl-text s=sm c=mu-fg: Opacity
-                                      - rtgl-slider-input#opacity${i} data-index=${i} key=${character.id} min=0 max=1 step=0.01 w=f value=${character.opacity}: null
+                                      - rtgl-slider-input#opacity${i} data-index=${character.characterIndex} key=${character.id} min=0 max=1 step=0.01 w=f value=${character.opacity}: null
                                       - rtgl-text s=sm c=mu-fg: Blur
-                                      - rtgl-segmented-control#blurToggle${i} data-index=${i} w=f no-clear :selectedValue=${character.blurEnabled} :options=${defaultValues.blurToggleOptions}: null
+                                      - rtgl-segmented-control#blurToggle${i} data-index=${character.characterIndex} w=f no-clear :selectedValue=${character.blurEnabled} :options=${defaultValues.blurToggleOptions}: null
                                       - $if character.blurEnabled:
                                           - rtgl-view d=h wrap g=sm w=f:
                                               - rtgl-view w=90 g=xs:
                                                   - rtgl-text s=xs c=mu-fg: X
-                                                  - rtgl-input#blurX${i} data-index=${i} data-blur-field=x type=number w=f value=${character.blur.x}: null
+                                                  - rtgl-input#blurX${i} data-index=${character.characterIndex} data-blur-field=x type=number w=f value=${character.blur.x}: null
                                               - rtgl-view w=90 g=xs:
                                                   - rtgl-text s=xs c=mu-fg: Y
-                                                  - rtgl-input#blurY${i} data-index=${i} data-blur-field=y type=number w=f value=${character.blur.y}: null
+                                                  - rtgl-input#blurY${i} data-index=${character.characterIndex} data-blur-field=y type=number w=f value=${character.blur.y}: null
                                               - rtgl-view w=90 g=xs:
                                                   - rtgl-text s=xs c=mu-fg: Quality
-                                                  - rtgl-input#blurQuality${i} data-index=${i} data-blur-field=quality type=number min=1 step=1 w=f value=${character.blur.quality}: null
+                                                  - rtgl-input#blurQuality${i} data-index=${character.characterIndex} data-blur-field=quality type=number min=1 step=1 w=f value=${character.blur.quality}: null
                                               - rtgl-view w=120 g=xs:
                                                   - rtgl-text s=xs c=mu-fg: Kernel
-                                                  - rtgl-select#blurKernelSize${i} data-index=${i} data-blur-field=kernelSize w=f no-clear :selectedValue=${character.blur.kernelSize} :options=${defaultValues.blurKernelSizeOptions}: null
+                                                  - rtgl-select#blurKernelSize${i} data-index=${character.characterIndex} data-blur-field=kernelSize w=f no-clear :selectedValue=${character.blur.kernelSize} :options=${defaultValues.blurKernelSizeOptions}: null
                                               - rtgl-view w=160 g=xs:
                                                   - rtgl-text s=xs c=mu-fg: Repeat Edge
-                                                  - rtgl-segmented-control#blurRepeatEdgePixels${i} data-index=${i} data-blur-field=repeatEdgePixels w=f no-clear :selectedValue=${character.blur.repeatEdgePixels} :options=${defaultValues.blurRepeatEdgeOptions}: null
+                                                  - rtgl-segmented-control#blurRepeatEdgePixels${i} data-index=${character.characterIndex} data-blur-field=repeatEdgePixels w=f no-clear :selectedValue=${character.blur.repeatEdgePixels} :options=${defaultValues.blurRepeatEdgeOptions}: null
                                       - rtgl-text s=sm c=mu-fg: Animation
-                                      - rtgl-select#animation${i} data-index=${i} key=${character.animationId} :options=${defaultValues.animationOptions} :selectedValue=${character.animationId} w=f placeholder="Select animation": null
+                                      - rtgl-select#animation${i} data-index=${character.characterIndex} key=${character.animationId} :options=${defaultValues.animationOptions} :selectedValue=${character.animationId} w=f placeholder="Select animation": null
                                       - $if character.showSpriteGroupBoxes:
                                           - rtgl-text s=sm c=mu-fg: Sprite Groups
                                           - rtgl-view d=h wrap g=xs w=f:
                                               - $for spriteGroup, j in character.spriteGroupBoxes:
-                                                  - 'rtgl-view.characterSpriteGroupBox data-index=${i} data-sprite-group-id=${spriteGroup.id} d=h av=c g=xs ph=md pv=xs cur=pointer bw=xs bc=bo h-bc=pr br=sm bgc=${spriteGroup.backgroundColor}':
+                                                  - 'rtgl-view.characterSpriteGroupBox data-index=${character.characterIndex} data-sprite-group-id=${spriteGroup.id} d=h av=c g=xs ph=md pv=xs cur=pointer bw=xs bc=bo h-bc=pr br=sm bgc=${spriteGroup.backgroundColor}':
                                                       - rtgl-text s=xs: ${spriteGroup.name}
                   - rtgl-button#addCharacterButton v=ol w=f mt=md: + Add Character
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':

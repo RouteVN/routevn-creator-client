@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleAddVisualFormAction,
   handleAddVisualClick,
   handleAnimationChange,
   handleBlurFieldChange,
@@ -16,10 +17,14 @@ import {
 } from "../../src/components/commandLineVisual/commandLineVisual.handlers.js";
 import {
   addVisual,
+  clearPendingVisualConfig,
   clearPendingVisualLayer,
+  clearPendingVisualTransformId,
   createInitialState,
+  hideAddVisualPopover,
   hideDropdownMenu,
   moveVisual,
+  openAddVisualPopover,
   removeVisual,
   selectDefaultTransformId,
   selectDefaultVisualLayer,
@@ -27,6 +32,7 @@ import {
   selectDropdownMenuVisualIndex,
   selectMode,
   selectPendingVisualLayer,
+  selectPendingVisualTransformId,
   selectSelectedVisuals,
   selectSelectedVisualIndex,
   selectTab,
@@ -36,11 +42,11 @@ import {
   setExistingVisuals,
   setMode,
   setPendingVisualLayer,
+  setPendingVisualTransformId,
   setSelectedVisualIndex,
   setTab,
   setTempSelectedResourceId,
   setTransforms,
-  showAddVisualLayerDropdownMenu,
   showDropdownMenu,
   updateVisualResource,
   updateVisualAnimation,
@@ -52,10 +58,16 @@ import {
 
 const createStoreApi = (state) => ({
   addVisual: (payload) => addVisual({ state }, payload),
+  clearPendingVisualConfig: (payload) =>
+    clearPendingVisualConfig({ state }, payload),
   clearPendingVisualLayer: (payload) =>
     clearPendingVisualLayer({ state }, payload),
+  clearPendingVisualTransformId: (payload) =>
+    clearPendingVisualTransformId({ state }, payload),
+  hideAddVisualPopover: (payload) => hideAddVisualPopover({ state }, payload),
   hideDropdownMenu: (payload) => hideDropdownMenu({ state }, payload),
   moveVisual: (payload) => moveVisual({ state }, payload),
+  openAddVisualPopover: (payload) => openAddVisualPopover({ state }, payload),
   removeVisual: (payload) => removeVisual({ state }, payload),
   selectDefaultTransformId: () => selectDefaultTransformId({ state }),
   selectDefaultVisualLayer: () => selectDefaultVisualLayer({ state }),
@@ -63,6 +75,8 @@ const createStoreApi = (state) => ({
   selectDropdownMenuVisualIndex: () => selectDropdownMenuVisualIndex({ state }),
   selectMode: () => selectMode({ state }),
   selectPendingVisualLayer: () => selectPendingVisualLayer({ state }),
+  selectPendingVisualTransformId: () =>
+    selectPendingVisualTransformId({ state }),
   selectSelectedVisualIndex: () => selectSelectedVisualIndex({ state }),
   selectSelectedVisuals: () => selectSelectedVisuals({ state }),
   selectTab: () => selectTab({ state }),
@@ -71,13 +85,13 @@ const createStoreApi = (state) => ({
     selectTempSelectedResourceType({ state }),
   setMode: (payload) => setMode({ state }, payload),
   setPendingVisualLayer: (payload) => setPendingVisualLayer({ state }, payload),
+  setPendingVisualTransformId: (payload) =>
+    setPendingVisualTransformId({ state }, payload),
   setSelectedVisualIndex: (payload) =>
     setSelectedVisualIndex({ state }, payload),
   setTab: (payload) => setTab({ state }, payload),
   setTempSelectedResourceId: (payload) =>
     setTempSelectedResourceId({ state }, payload),
-  showAddVisualLayerDropdownMenu: (payload) =>
-    showAddVisualLayerDropdownMenu({ state }, payload),
   showDropdownMenu: (payload) => showDropdownMenu({ state }, payload),
   updateVisualAnimation: (payload) => updateVisualAnimation({ state }, payload),
   updateVisualBlurEnabled: (payload) =>
@@ -196,19 +210,39 @@ describe("commandLineVisual.handlers animation controls", () => {
               type: "transform",
               name: "Center",
             },
+            "visual-left": {
+              id: "visual-left",
+              type: "transform",
+              name: "Left",
+            },
           },
-          tree: [{ id: "visual-center" }],
+          tree: [{ id: "visual-center" }, { id: "visual-left" }],
         },
       },
     );
 
-    handleAddVisualClick({
-      store,
-      render,
+    handleAddVisualClick(
+      {
+        store,
+        render,
+      },
+      {
+        _event: {
+          currentTarget: {
+            getBoundingClientRect: () => ({
+              left: 24,
+              bottom: 64,
+            }),
+          },
+        },
+      },
+    );
+    expect(state.addVisualPopover).toMatchObject({
+      isOpen: true,
+      position: { x: 24, y: 64 },
     });
-    expect(selectDropdownMenuType({ state })).toBe("add-visual-layer");
 
-    handleDropdownMenuClickItem(
+    handleAddVisualFormAction(
       {
         store,
         render,
@@ -216,9 +250,10 @@ describe("commandLineVisual.handlers animation controls", () => {
       {
         _event: {
           detail: {
-            item: {
+            actionId: "submit",
+            values: {
+              transformId: "visual-left",
               layer: 70,
-              value: "add-layer:70",
             },
           },
         },
@@ -226,7 +261,9 @@ describe("commandLineVisual.handlers animation controls", () => {
     );
     expect(selectMode({ state })).toBe("resource-select");
     expect(selectSelectedVisualIndex({ state })).toBe(-1);
+    expect(selectPendingVisualTransformId({ state })).toBe("visual-left");
     expect(selectPendingVisualLayer({ state })).toBe(70);
+    expect(state.addVisualPopover.isOpen).toBe(false);
 
     handleResourceItemClick(
       {
@@ -258,7 +295,7 @@ describe("commandLineVisual.handlers animation controls", () => {
               id: "temporary-visual-preview-video",
               resourceId: "visual-video",
               resourceType: "video",
-              transformId: "visual-center",
+              transformId: "visual-left",
               layer: 70,
             },
           ],
@@ -645,7 +682,7 @@ describe("commandLineVisual.handlers animation controls", () => {
     });
   });
 
-  it("adds a new visual with the selected add-menu layer", () => {
+  it("adds a new visual with the selected add-form transform and layer", () => {
     const state = createInitialState();
     const render = vi.fn();
     const dispatchEvent = vi.fn();
@@ -658,6 +695,12 @@ describe("commandLineVisual.handlers animation controls", () => {
       { state },
       {
         layer: 10,
+      },
+    );
+    setPendingVisualTransformId(
+      { state },
+      {
+        transformId: "visual-left",
       },
     );
     setMode({ state }, { mode: "resource-select" });
@@ -681,6 +724,7 @@ describe("commandLineVisual.handlers animation controls", () => {
     expect(selectSelectedVisuals({ state })[0]).toMatchObject({
       resourceId: "visual-image",
       resourceType: "image",
+      transformId: "visual-left",
       layer: 10,
     });
     expect(selectMode({ state })).toBe("current");
@@ -692,6 +736,7 @@ describe("commandLineVisual.handlers animation controls", () => {
     ).toMatchObject({
       resourceId: "visual-image",
       resourceType: "image",
+      transformId: "visual-left",
       layer: 10,
     });
   });

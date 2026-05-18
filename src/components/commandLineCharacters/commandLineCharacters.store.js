@@ -23,9 +23,23 @@ const UNGROUPED_SPRITE_GROUP_ID = "__ungrouped_sprites__";
 const UNGROUPED_GROUP_LABEL = "Ungrouped";
 const DEFAULT_SPRITE_GROUP_ID = "base";
 const DEFAULT_SPRITE_GROUP_NAME = "Sprite";
-const createCharacterContextDropdownItems = () => [
-  { label: "Delete", type: "item", value: "delete" },
-];
+const createCharacterContextDropdownItems = (
+  characterIndex,
+  characters = [],
+) => {
+  const items = [];
+
+  if (characterIndex < characters.length - 1) {
+    items.push({ label: "Move Up", type: "item", value: "move-up" });
+  }
+
+  if (characterIndex > 0) {
+    items.push({ label: "Move Down", type: "item", value: "move-down" });
+  }
+
+  items.push({ label: "Delete", type: "item", value: "delete" });
+  return items;
+};
 
 const createAddCharacterTransformDropdownItems = (transforms = {}) =>
   toFlatItems(transforms)
@@ -331,6 +345,45 @@ export const removeCharacter = ({ state }, { index } = {}) => {
   }
 };
 
+const retargetAdjacentMoveIndex = (currentIndex, sourceIndex, targetIndex) => {
+  if (currentIndex === sourceIndex) {
+    return targetIndex;
+  }
+
+  if (currentIndex === targetIndex) {
+    return sourceIndex;
+  }
+
+  return currentIndex;
+};
+
+export const moveCharacter = ({ state }, { index, offset } = {}) => {
+  const targetIndex = index + Math.sign(offset);
+  if (
+    !Number.isInteger(index) ||
+    !Number.isInteger(targetIndex) ||
+    index < 0 ||
+    index >= state.selectedCharacters.length ||
+    targetIndex < 0 ||
+    targetIndex >= state.selectedCharacters.length
+  ) {
+    return;
+  }
+
+  const [character] = state.selectedCharacters.splice(index, 1);
+  state.selectedCharacters.splice(targetIndex, 0, character);
+  state.selectedCharacterIndex = retargetAdjacentMoveIndex(
+    state.selectedCharacterIndex,
+    index,
+    targetIndex,
+  );
+  state.pendingCharacterIndex = retargetAdjacentMoveIndex(
+    state.pendingCharacterIndex,
+    index,
+    targetIndex,
+  );
+};
+
 export const updateCharacterTransform = (
   { state },
   { index, transform } = {},
@@ -566,7 +619,10 @@ export const showDropdownMenu = (
   state.dropdownMenu.position = position;
   state.dropdownMenu.type = "character-context";
   state.dropdownMenu.characterIndex = characterIndex;
-  state.dropdownMenu.items = createCharacterContextDropdownItems();
+  state.dropdownMenu.items = createCharacterContextDropdownItems(
+    characterIndex,
+    state.selectedCharacters,
+  );
 };
 
 export const showAddCharacterTransformDropdownMenu = (
@@ -986,10 +1042,10 @@ export const selectViewData = ({ state }) => {
     });
   }
 
-  // Create default values with character data and options
-  const defaultValues = {
-    characters: processedSelectedCharacters.map((char) => ({
+  const characterControls = processedSelectedCharacters.map(
+    (char, characterIndex) => ({
       ...char,
+      characterIndex,
       // Ensure transformId is set, use first transform as fallback if needed
       transformId:
         char.transformId ||
@@ -1000,7 +1056,12 @@ export const selectViewData = ({ state }) => {
       blur: normalizeCommandLineItemBlur(
         char.blur ?? DEFAULT_COMMAND_LINE_ITEM_BLUR,
       ),
-    })),
+    }),
+  );
+
+  // Create default values with character data and options
+  const defaultValues = {
+    characters: characterControls.slice().reverse(),
     transformOptions,
     animationOptions,
     blurToggleOptions: COMMAND_LINE_ITEM_BLUR_TOGGLE_OPTIONS,

@@ -3,6 +3,14 @@ refs:
     eventListeners:
       click:
         handler: handleAddVisualClick
+  addVisualPopover:
+    eventListeners:
+      close:
+        handler: handleAddVisualPopoverClose
+  addVisualForm:
+    eventListeners:
+      form-action:
+        handler: handleAddVisualFormAction
   removeVisual*:
     eventListeners:
       click:
@@ -204,6 +212,8 @@ template:
                                           - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#buttonSelect: Select
+  - rtgl-popover#addVisualPopover ?open=${addVisualPopover.isOpen} x=${addVisualPopover.position.x} y=${addVisualPopover.position.y} place=bs:
+      - rtgl-form#addVisualForm key=${addVisualPopover.key} slot=content :defaultValues=${addVisualDefaultValues} :form=${addVisualForm} w=320: null
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
   - $when: fullImagePreviewVisible
     rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:

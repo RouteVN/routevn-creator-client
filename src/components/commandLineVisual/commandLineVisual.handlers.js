@@ -97,7 +97,9 @@ const buildVisualItemsFromState = (
       }),
       resourceId: tempSelectedResourceId,
       resourceType: tempSelectedResourceType,
-      transformId: store.selectDefaultTransformId?.(),
+      transformId:
+        store.selectPendingVisualTransformId?.() ??
+        store.selectDefaultTransformId?.(),
       layer: store.selectPendingVisualLayer?.(),
     });
     return orderVisualItemsForSave(visualItems);
@@ -202,7 +204,8 @@ export const handleVisualClick = (deps, payload) => {
   const index = parseInt(payload._event.currentTarget.dataset.index);
   const visual = store.selectSelectedVisuals()?.[index];
 
-  store.clearPendingVisualLayer?.();
+  store.clearPendingVisualConfig?.();
+  store.hideAddVisualPopover?.();
   store.setSelectedVisualIndex({ index });
   if (visual?.resourceType) {
     store.setTab({ tab: visual.resourceType });
@@ -387,11 +390,43 @@ export const handleSubmitClick = (deps) => {
 export const handleAddVisualClick = (deps, payload = {}) => {
   const { store, render } = deps;
 
-  store.clearPendingVisualLayer?.();
-  store.showAddVisualLayerDropdownMenu({
+  store.clearPendingVisualConfig?.();
+  store.hideDropdownMenu?.();
+  store.openAddVisualPopover({
     position: getDropdownPositionFromEvent(payload._event),
   });
 
+  render();
+};
+
+export const handleAddVisualPopoverClose = (deps) => {
+  const { store, render } = deps;
+  store.hideAddVisualPopover();
+  store.clearPendingVisualConfig?.();
+  render();
+};
+
+export const handleAddVisualFormAction = (deps, payload) => {
+  const { store, render } = deps;
+  const detail = payload._event.detail;
+  if (detail.actionId !== "submit") {
+    return;
+  }
+
+  const values = detail.values ?? {};
+  store.setPendingVisualTransformId({
+    transformId: values.transformId,
+  });
+  store.setPendingVisualLayer({
+    layer: values.layer,
+  });
+  store.hideAddVisualPopover();
+  store.setSelectedVisualIndex({ index: -1 });
+  store.setTempSelectedResourceId({
+    resourceId: undefined,
+    resourceType: undefined,
+  });
+  store.setMode({ mode: "resource-select" });
   render();
 };
 
@@ -399,7 +434,8 @@ export const handleBreadcumbClick = (deps, payload) => {
   const { dispatchEvent, store, render } = deps;
 
   if (payload._event.detail.id === "actions") {
-    store.clearPendingVisualLayer?.();
+    store.hideAddVisualPopover?.();
+    store.clearPendingVisualConfig?.();
     dispatchEvent(
       new CustomEvent("back-to-actions", {
         detail: {},
@@ -409,7 +445,8 @@ export const handleBreadcumbClick = (deps, payload) => {
     store.setMode({
       mode: "current",
     });
-    store.clearPendingVisualLayer?.();
+    store.hideAddVisualPopover?.();
+    store.clearPendingVisualConfig?.();
     render();
     dispatchTemporaryPresentationStateChange(deps);
   }
@@ -447,9 +484,12 @@ export const handleButtonSelectClick = (deps) => {
       store.addVisual({
         resourceId: tempSelectedResourceId,
         resourceType: tempSelectedResourceType,
+        transformId:
+          store.selectPendingVisualTransformId?.() ??
+          store.selectDefaultTransformId?.(),
         layer: store.selectPendingVisualLayer?.(),
       });
-      store.clearPendingVisualLayer?.();
+      store.clearPendingVisualConfig?.();
     } else {
       // Updating existing visual
       store.updateVisualResource({
@@ -481,14 +521,9 @@ export const handleDropdownMenuClose = (deps) => {
 export const handleDropdownMenuClickItem = (deps, payload) => {
   const { store, render } = deps;
   const { item } = payload._event.detail;
-  const dropdownMenuType = store.selectDropdownMenuType?.();
   const visualIndex = store.selectDropdownMenuVisualIndex();
 
-  if (dropdownMenuType === "add-visual-layer") {
-    store.setPendingVisualLayer({ layer: item.layer });
-    store.setSelectedVisualIndex({ index: -1 }); // -1 indicates new visual
-    store.setMode({ mode: "resource-select" });
-  } else if (item.value === "delete" && visualIndex !== null) {
+  if (item.value === "delete" && visualIndex !== null) {
     store.removeVisual({ index: visualIndex });
   } else if (item.value === "move-up" && visualIndex !== null) {
     store.moveVisual({ index: visualIndex, offset: 1 });

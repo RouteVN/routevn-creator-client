@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  moveCharacter,
   selectViewData,
   setAnimations,
   setExistingCharacters,
@@ -9,6 +10,7 @@ import {
   setSelectedCharacterIndex,
   setSelectedSpriteGroupId,
   setTransforms,
+  showDropdownMenu,
   updateCharacterBlurEnabled,
   updateCharacterBlurField,
   updateCharacterOpacity,
@@ -218,6 +220,98 @@ describe("commandLineCharacters.store sprite group filtering", () => {
         selectedSpriteName: "No sprite",
         hasSelection: false,
         backgroundColor: "bg",
+      },
+    ]);
+  });
+
+  it("displays selected characters in reverse order while preserving source indices", () => {
+    const state = createInitialState();
+
+    setItems(
+      { state },
+      {
+        items: {
+          items: {
+            "character-hero": {
+              id: "character-hero",
+              type: "character",
+              name: "Hero",
+            },
+            "character-rival": {
+              id: "character-rival",
+              type: "character",
+              name: "Rival",
+            },
+          },
+          tree: [{ id: "character-hero" }, { id: "character-rival" }],
+        },
+      },
+    );
+    setExistingCharacters(
+      { state },
+      {
+        characters: [
+          {
+            id: "character-hero",
+          },
+          {
+            id: "character-rival",
+          },
+        ],
+      },
+    );
+
+    const viewData = selectViewData({ state });
+
+    expect(
+      viewData.selectedCharacters.map((character) => character.id),
+    ).toEqual(["character-hero", "character-rival"]);
+    expect(
+      viewData.defaultValues.characters.map((character) => ({
+        id: character.id,
+        characterIndex: character.characterIndex,
+      })),
+    ).toEqual([
+      {
+        id: "character-rival",
+        characterIndex: 1,
+      },
+      {
+        id: "character-hero",
+        characterIndex: 0,
+      },
+    ]);
+
+    showDropdownMenu(
+      { state },
+      {
+        position: { x: 10, y: 20 },
+        characterIndex: 0,
+      },
+    );
+    expect(state.dropdownMenu.items).toEqual([
+      { label: "Move Up", type: "item", value: "move-up" },
+      { label: "Delete", type: "item", value: "delete" },
+    ]);
+
+    moveCharacter({ state }, { index: 0, offset: 1 });
+    expect(state.selectedCharacters.map((character) => character.id)).toEqual([
+      "character-rival",
+      "character-hero",
+    ]);
+    expect(
+      selectViewData({ state }).defaultValues.characters.map((character) => ({
+        id: character.id,
+        characterIndex: character.characterIndex,
+      })),
+    ).toEqual([
+      {
+        id: "character-hero",
+        characterIndex: 1,
+      },
+      {
+        id: "character-rival",
+        characterIndex: 0,
       },
     ]);
   });

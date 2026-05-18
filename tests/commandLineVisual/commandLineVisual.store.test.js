@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   addVisual,
+  clearPendingVisualConfig,
   clearPendingVisualLayer,
+  clearPendingVisualTransformId,
   createInitialState,
+  hideAddVisualPopover,
   moveVisual,
+  openAddVisualPopover,
   selectDefaultVisualLayer,
   selectPendingVisualLayer,
+  selectPendingVisualTransformId,
   selectSelectedVisuals,
   selectViewData,
   setAnimations,
@@ -13,10 +18,10 @@ import {
   setImages,
   setLayouts,
   setPendingVisualLayer,
+  setPendingVisualTransformId,
   setTab,
   setTransforms,
   setVideos,
-  showAddVisualLayerDropdownMenu,
   showDropdownMenu,
   updateVisualAnimation,
   updateVisualBlurEnabled,
@@ -384,48 +389,93 @@ describe("commandLineVisual.store animation controls", () => {
     });
   });
 
-  it("builds add visual layer menu options and tracks the selected pending layer", () => {
+  it("builds add visual popover form options and tracks pending values", () => {
     const state = createInitialState();
+    setRepositoryCollections(state);
 
-    showAddVisualLayerDropdownMenu(
+    openAddVisualPopover(
       { state },
       {
         position: { x: 24, y: 48 },
       },
     );
 
-    expect(selectViewData({ state }).dropdownMenu).toMatchObject({
+    let viewData = selectViewData({ state });
+
+    expect(viewData.addVisualPopover).toMatchObject({
       isOpen: true,
       position: { x: 24, y: 48 },
-      type: "add-visual-layer",
-      visualIndex: null,
-      items: [
-        {
-          label: "Behind Background",
-          layer: 10,
-          type: "item",
-          value: "add-layer:10",
-        },
-        {
-          label: "Behind Character",
-          layer: 30,
-          type: "item",
-          value: "add-layer:30",
-        },
-        {
-          label: "Behind Dialogue",
-          layer: 50,
-          type: "item",
-          value: "add-layer:50",
-        },
-        {
-          label: "Foreground",
-          layer: 70,
-          type: "item",
-          value: "add-layer:70",
-        },
-      ],
     });
+    expect(viewData.addVisualDefaultValues).toEqual({
+      transformId: "visual-center",
+      layer: 50,
+    });
+    expect(viewData.addVisualForm.fields).toEqual([
+      {
+        name: "transformId",
+        type: "select",
+        label: "Transform",
+        options: [
+          {
+            label: "Center",
+            value: "visual-center",
+          },
+        ],
+        clearable: false,
+        placeholder: "Select transform",
+      },
+      {
+        name: "layer",
+        type: "select",
+        label: "Layer",
+        options: [
+          {
+            value: 10,
+            label: "Behind Background",
+          },
+          {
+            value: 30,
+            label: "Behind Character",
+          },
+          {
+            value: 50,
+            label: "Behind Dialogue",
+          },
+          {
+            value: 70,
+            label: "Foreground",
+          },
+        ],
+        clearable: false,
+      },
+    ]);
+
+    setPendingVisualTransformId(
+      { state },
+      {
+        transformId: "visual-center",
+      },
+    );
+    setPendingVisualLayer(
+      { state },
+      {
+        layer: 70,
+      },
+    );
+    expect(selectPendingVisualTransformId({ state })).toBe("visual-center");
+    expect(selectPendingVisualLayer({ state })).toBe(70);
+
+    viewData = selectViewData({ state });
+    expect(viewData.addVisualDefaultValues).toEqual({
+      transformId: "visual-center",
+      layer: 70,
+    });
+
+    clearPendingVisualLayer({ state });
+    expect(selectPendingVisualLayer({ state })).toBe(50);
+
+    clearPendingVisualTransformId({ state });
+    expect(selectPendingVisualTransformId({ state })).toBe("visual-center");
 
     setPendingVisualLayer(
       { state },
@@ -433,10 +483,15 @@ describe("commandLineVisual.store animation controls", () => {
         layer: 70,
       },
     );
-    expect(selectPendingVisualLayer({ state })).toBe(70);
+    clearPendingVisualConfig({ state });
+    expect(state.pendingVisualLayer).toBeUndefined();
+    expect(state.pendingVisualTransformId).toBeUndefined();
 
-    clearPendingVisualLayer({ state });
-    expect(selectPendingVisualLayer({ state })).toBe(50);
+    hideAddVisualPopover({ state });
+    expect(selectViewData({ state }).addVisualPopover).toMatchObject({
+      isOpen: false,
+      position: { x: 0, y: 0 },
+    });
   });
 
   it("adds visuals with the provided layer", () => {
@@ -455,6 +510,48 @@ describe("commandLineVisual.store animation controls", () => {
     expect(selectSelectedVisuals({ state })[0]).toMatchObject({
       resourceId: "visual-image",
       resourceType: "image",
+      layer: 10,
+    });
+  });
+
+  it("adds visuals with the provided transform", () => {
+    const state = createInitialState();
+    setRepositoryCollections(state);
+    setTransforms(
+      { state },
+      {
+        transforms: {
+          items: {
+            "visual-center": {
+              id: "visual-center",
+              type: "transform",
+              name: "Center",
+            },
+            "visual-left": {
+              id: "visual-left",
+              type: "transform",
+              name: "Left",
+            },
+          },
+          tree: [{ id: "visual-center" }, { id: "visual-left" }],
+        },
+      },
+    );
+
+    addVisual(
+      { state },
+      {
+        resourceId: "visual-image",
+        resourceType: "image",
+        transformId: "visual-left",
+        layer: 10,
+      },
+    );
+
+    expect(selectSelectedVisuals({ state })[0]).toMatchObject({
+      resourceId: "visual-image",
+      resourceType: "image",
+      transformId: "visual-left",
       layer: 10,
     });
   });
