@@ -58,18 +58,30 @@ export const createPropertyFieldConfig = (
       label: "Scale X",
       defaultValue: 1,
       slider: {
-        min: 0.1,
+        min: 0,
         max: 5,
-        step: 0.1,
+        step: 0.01,
       },
     },
     scaleY: {
       label: "Scale Y",
       defaultValue: 1,
       slider: {
-        min: 0.1,
+        min: 0,
         max: 5,
-        step: 0.1,
+        step: 0.01,
+      },
+    },
+    rotation: {
+      label: "Rotation",
+      defaultValue: 0,
+      slider: {
+        min: -360,
+        max: 360,
+        step: 1,
+      },
+      tooltip: {
+        content: "Rotation is measured in degrees.",
       },
     },
     translateX: {
@@ -98,6 +110,36 @@ export const createPropertyFieldConfig = (
           "Uses viewport-height units. 1 moves by one full screen height, -1 moves by one full screen height upward.",
       },
     },
+    blurX: {
+      label: "Blur X",
+      defaultValue: 0,
+      slider: {
+        min: 0,
+        max: 64,
+        step: 0.5,
+      },
+    },
+    blurY: {
+      label: "Blur Y",
+      defaultValue: 0,
+      slider: {
+        min: 0,
+        max: 64,
+        step: 0.5,
+      },
+    },
+    // uProgress: {
+    //   label: "Progress",
+    //   defaultValue: 0,
+    //   slider: {
+    //     min: 0,
+    //     max: 1,
+    //     step: 0.01,
+    //   },
+    //   tooltip: {
+    //     content: "Progress uniforms use a normalized value from 0 to 1.",
+    //   },
+    // },
   };
 };
 

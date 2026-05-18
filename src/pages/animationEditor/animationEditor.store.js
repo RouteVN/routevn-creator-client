@@ -81,18 +81,30 @@ const createPropertyFieldConfig = (
       label: "Scale X",
       defaultValue: 1,
       slider: {
-        min: 0.1,
+        min: 0,
         max: 5,
-        step: 0.1,
+        step: 0.01,
       },
     },
     scaleY: {
       label: "Scale Y",
       defaultValue: 1,
       slider: {
-        min: 0.1,
+        min: 0,
         max: 5,
-        step: 0.1,
+        step: 0.01,
+      },
+    },
+    rotation: {
+      label: "Rotation",
+      defaultValue: 0,
+      slider: {
+        min: -360,
+        max: 360,
+        step: 1,
+      },
+      tooltip: {
+        content: "Rotation is measured in degrees.",
       },
     },
     translateX: {
@@ -121,6 +133,36 @@ const createPropertyFieldConfig = (
           "Uses viewport-height units. 1 moves by one full screen height, -1 moves by one full screen height upward.",
       },
     },
+    blurX: {
+      label: "Blur X",
+      defaultValue: 0,
+      slider: {
+        min: 0,
+        max: 64,
+        step: 0.5,
+      },
+    },
+    blurY: {
+      label: "Blur Y",
+      defaultValue: 0,
+      slider: {
+        min: 0,
+        max: 64,
+        step: 0.5,
+      },
+    },
+    // uProgress: {
+    //   label: "Progress",
+    //   defaultValue: 0,
+    //   slider: {
+    //     min: 0,
+    //     max: 1,
+    //     step: 0.01,
+    //   },
+    //   tooltip: {
+    //     content: "Progress uniforms use a normalized value from 0 to 1.",
+    //   },
+    // },
   };
 };
 
@@ -957,11 +999,27 @@ const getPropertyOptionsForSide = (side, propertyFieldConfig) => {
   );
 };
 
+const PROPERTY_CONFLICTS = Object.freeze({
+  x: ["translateX"],
+  translateX: ["x"],
+  y: ["translateY"],
+  translateY: ["y"],
+});
+
+const hasPropertyConflict = (properties = {}, property) => {
+  return (PROPERTY_CONFLICTS[property] ?? []).some((conflictingProperty) =>
+    Object.prototype.hasOwnProperty.call(properties, conflictingProperty),
+  );
+};
+
 const getAvailableProperties = (state, side, propertyFieldConfig) => {
   const currentProperties = getSectionProperties(state, side);
 
   return getPropertyOptionsForSide(side, propertyFieldConfig).filter((item) => {
-    return !Object.keys(currentProperties).includes(item.value);
+    return (
+      !Object.prototype.hasOwnProperty.call(currentProperties, item.value) &&
+      !hasPropertyConflict(currentProperties, item.value)
+    );
   });
 };
 
@@ -1461,7 +1519,12 @@ export const addProperty = (
 ) => {
   const properties = getMutableSectionProperties(state, side);
 
-  if (!property || !properties || properties[property]) {
+  if (
+    !property ||
+    !properties ||
+    properties[property] ||
+    hasPropertyConflict(properties, property)
+  ) {
     return;
   }
 

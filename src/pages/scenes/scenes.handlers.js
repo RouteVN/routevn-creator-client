@@ -720,10 +720,7 @@ export const handleSceneFormAction = async (deps, payload) => {
   const { store, render, projectService, appService } = deps;
   const actionId = payload._event.detail.actionId;
 
-  if (actionId === "cancel") {
-    store.resetSceneForm();
-    render();
-  } else if (actionId === "submit") {
+  if (actionId === "submit") {
     if (!store.getState().showSceneForm) {
       return;
     }
