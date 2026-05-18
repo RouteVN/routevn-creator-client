@@ -128,18 +128,18 @@ export const createPropertyFieldConfig = (
         step: 0.5,
       },
     },
-    uProgress: {
-      label: "Progress",
-      defaultValue: 0,
-      slider: {
-        min: 0,
-        max: 1,
-        step: 0.01,
-      },
-      tooltip: {
-        content: "Progress uniforms use a normalized value from 0 to 1.",
-      },
-    },
+    // uProgress: {
+    //   label: "Progress",
+    //   defaultValue: 0,
+    //   slider: {
+    //     min: 0,
+    //     max: 1,
+    //     step: 0.01,
+    //   },
+    //   tooltip: {
+    //     content: "Progress uniforms use a normalized value from 0 to 1.",
+    //   },
+    // },
   };
 };
 

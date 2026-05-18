@@ -24,7 +24,7 @@ export const UPDATE_PROPERTY_KEYS = [
   "rotation",
   "blurX",
   "blurY",
-  "uProgress",
+  // "uProgress",
 ];
 
 export const TRANSITION_PROPERTY_KEYS = [

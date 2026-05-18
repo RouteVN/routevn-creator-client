@@ -188,7 +188,6 @@ describe("animationEditor.store", () => {
       "rotation",
       "blurX",
       "blurY",
-      "uProgress",
     ]);
 
     updatePopoverFormValues(
@@ -229,26 +228,6 @@ describe("animationEditor.store", () => {
       min: 0,
       max: 64,
       step: 0.5,
-    });
-
-    updatePopoverFormValues(
-      { state },
-      {
-        formValues: {
-          property: "uProgress",
-        },
-      },
-    );
-    viewData = selectViewData({ state });
-    expect(
-      viewData.addPropertyForm.fields.find(
-        (field) => field.name === "initialValue",
-      ),
-    ).toMatchObject({
-      defaultValue: 0,
-      min: 0,
-      max: 1,
-      step: 0.01,
     });
   });
 
