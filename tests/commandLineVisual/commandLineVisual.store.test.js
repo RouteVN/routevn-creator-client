@@ -1,16 +1,28 @@
 import { describe, expect, it } from "vitest";
 import {
+  addVisual,
+  clearPendingVisualLayer,
   createInitialState,
+  moveVisual,
+  selectDefaultVisualLayer,
+  selectPendingVisualLayer,
   selectSelectedVisuals,
   selectViewData,
   setAnimations,
   setExistingVisuals,
   setImages,
   setLayouts,
+  setPendingVisualLayer,
   setTab,
   setTransforms,
   setVideos,
+  showAddVisualLayerDropdownMenu,
+  showDropdownMenu,
   updateVisualAnimation,
+  updateVisualBlurEnabled,
+  updateVisualBlurField,
+  updateVisualLayer,
+  updateVisualOpacity,
 } from "../../src/components/commandLineVisual/commandLineVisual.store.js";
 
 const createEmptyCollection = () => ({
@@ -147,9 +159,28 @@ describe("commandLineVisual.store animation controls", () => {
       resourceId: "visual-image",
       resourceType: "image",
       transformId: "visual-center",
+      layer: 50,
       animationMode: "transition",
       animationId: "visual-wipe",
     });
+    expect(viewData.defaultValues.layerOptions).toEqual([
+      {
+        value: 10,
+        label: "Behind Background",
+      },
+      {
+        value: 30,
+        label: "Behind Character",
+      },
+      {
+        value: 50,
+        label: "Behind Dialogue",
+      },
+      {
+        value: 70,
+        label: "Foreground",
+      },
+    ]);
     expect(viewData.defaultValues.animationOptions).toEqual([
       {
         value: "visual-fade",
@@ -222,6 +253,421 @@ describe("commandLineVisual.store animation controls", () => {
     expect(viewData.defaultValues.animationOptions).toEqual([]);
   });
 
+  it("adds visuals with a required default layer and updates selected layers", () => {
+    const state = createInitialState();
+    setRepositoryCollections(state);
+
+    addVisual(
+      { state },
+      {
+        resourceId: "visual-image",
+        resourceType: "image",
+      },
+    );
+
+    expect(selectDefaultVisualLayer()).toBe(50);
+    expect(selectSelectedVisuals({ state })[0]).toMatchObject({
+      resourceId: "visual-image",
+      resourceType: "image",
+      layer: 50,
+    });
+
+    updateVisualLayer(
+      { state },
+      {
+        index: 0,
+        layer: 30,
+      },
+    );
+
+    expect(selectSelectedVisuals({ state })[0].layer).toBe(30);
+
+    updateVisualLayer(
+      { state },
+      {
+        index: 0,
+        layer: 20,
+      },
+    );
+
+    expect(selectSelectedVisuals({ state })[0].layer).toBe(50);
+  });
+
+  it("normalizes visual opacity and blur controls", () => {
+    const state = createInitialState();
+    setRepositoryCollections(state);
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          {
+            id: "visual-1",
+            resourceId: "visual-image",
+            resourceType: "image",
+            opacity: "0.75",
+            blur: {
+              x: "8",
+              y: "10",
+              quality: "4",
+              kernelSize: 12,
+              repeatEdgePixels: "false",
+            },
+          },
+        ],
+      },
+    );
+
+    let selectedVisual = selectSelectedVisuals({ state })[0];
+    expect(selectedVisual.opacity).toBe(0.75);
+    expect(selectedVisual.blur).toEqual({
+      x: 8,
+      y: 10,
+      quality: 4,
+      kernelSize: 11,
+      repeatEdgePixels: false,
+    });
+
+    let viewData = selectViewData({ state });
+    expect(viewData.defaultValues.visuals[0]).toMatchObject({
+      opacity: 0.75,
+      blurEnabled: true,
+      blur: {
+        x: 8,
+        y: 10,
+        quality: 4,
+        kernelSize: 11,
+        repeatEdgePixels: false,
+      },
+    });
+    expect(viewData.defaultValues.blurToggleOptions).toEqual([
+      { value: false, label: "No Blur" },
+      { value: true, label: "Blur" },
+    ]);
+    expect(viewData.defaultValues.blurKernelSizeOptions).toEqual([
+      { value: 5, label: "5" },
+      { value: 7, label: "7" },
+      { value: 9, label: "9" },
+      { value: 11, label: "11" },
+      { value: 13, label: "13" },
+      { value: 15, label: "15" },
+    ]);
+
+    updateVisualOpacity({ state }, { index: 0, opacity: "1.2" });
+    expect(selectSelectedVisuals({ state })[0].opacity).toBe(1);
+
+    updateVisualBlurEnabled({ state }, { index: 0, enabled: false });
+    expect(selectSelectedVisuals({ state })[0].blur).toBeUndefined();
+
+    updateVisualBlurEnabled({ state }, { index: 0, enabled: true });
+    updateVisualBlurField(
+      { state },
+      {
+        index: 0,
+        fieldName: "kernelSize",
+        value: 14,
+      },
+    );
+    selectedVisual = selectSelectedVisuals({ state })[0];
+    expect(selectedVisual.blur).toMatchObject({
+      x: 6,
+      y: 9,
+      quality: 3,
+      kernelSize: 13,
+      repeatEdgePixels: true,
+    });
+
+    viewData = selectViewData({ state });
+    expect(viewData.defaultValues.visuals[0]).toMatchObject({
+      opacity: 1,
+      blurEnabled: true,
+      blur: selectedVisual.blur,
+    });
+  });
+
+  it("builds add visual layer menu options and tracks the selected pending layer", () => {
+    const state = createInitialState();
+
+    showAddVisualLayerDropdownMenu(
+      { state },
+      {
+        position: { x: 24, y: 48 },
+      },
+    );
+
+    expect(selectViewData({ state }).dropdownMenu).toMatchObject({
+      isOpen: true,
+      position: { x: 24, y: 48 },
+      type: "add-visual-layer",
+      visualIndex: null,
+      items: [
+        {
+          label: "Behind Background",
+          layer: 10,
+          type: "item",
+          value: "add-layer:10",
+        },
+        {
+          label: "Behind Character",
+          layer: 30,
+          type: "item",
+          value: "add-layer:30",
+        },
+        {
+          label: "Behind Dialogue",
+          layer: 50,
+          type: "item",
+          value: "add-layer:50",
+        },
+        {
+          label: "Foreground",
+          layer: 70,
+          type: "item",
+          value: "add-layer:70",
+        },
+      ],
+    });
+
+    setPendingVisualLayer(
+      { state },
+      {
+        layer: 70,
+      },
+    );
+    expect(selectPendingVisualLayer({ state })).toBe(70);
+
+    clearPendingVisualLayer({ state });
+    expect(selectPendingVisualLayer({ state })).toBe(50);
+  });
+
+  it("adds visuals with the provided layer", () => {
+    const state = createInitialState();
+    setRepositoryCollections(state);
+
+    addVisual(
+      { state },
+      {
+        resourceId: "visual-image",
+        resourceType: "image",
+        layer: 10,
+      },
+    );
+
+    expect(selectSelectedVisuals({ state })[0]).toMatchObject({
+      resourceId: "visual-image",
+      resourceType: "image",
+      layer: 10,
+    });
+  });
+
+  it("groups visible visuals by layer with higher layers first", () => {
+    const state = createInitialState();
+    setRepositoryCollections(state);
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          {
+            id: "visual-1",
+            resourceId: "visual-image",
+            resourceType: "image",
+            layer: 50,
+          },
+          {
+            id: "visual-2",
+            resourceId: "visual-video",
+            resourceType: "video",
+            layer: 70,
+          },
+          {
+            id: "visual-3",
+            resourceId: "visual-layout",
+            resourceType: "layout",
+            layer: 30,
+          },
+          {
+            id: "visual-4",
+            resourceId: "visual-image",
+            resourceType: "image",
+            layer: 70,
+          },
+        ],
+      },
+    );
+
+    let viewData = selectViewData({ state });
+
+    expect(selectSelectedVisuals({ state }).map((visual) => visual.id)).toEqual(
+      ["visual-2", "visual-4", "visual-1", "visual-3"],
+    );
+    expect(
+      viewData.defaultValues.visualGroups.map((group) => ({
+        label: group.label,
+        visualIds: group.visuals.map((visual) => visual.id),
+      })),
+    ).toEqual([
+      {
+        label: "Foreground",
+        visualIds: ["visual-4", "visual-2"],
+      },
+      {
+        label: "Behind Dialogue",
+        visualIds: ["visual-1"],
+      },
+      {
+        label: "Behind Character",
+        visualIds: ["visual-3"],
+      },
+    ]);
+
+    updateVisualLayer(
+      { state },
+      {
+        index: 3,
+        layer: 70,
+      },
+    );
+    viewData = selectViewData({ state });
+
+    expect(selectSelectedVisuals({ state }).map((visual) => visual.id)).toEqual(
+      ["visual-2", "visual-4", "visual-3", "visual-1"],
+    );
+    expect(viewData.defaultValues.visualGroups[0]).toMatchObject({
+      label: "Foreground",
+      layer: 70,
+    });
+    expect(
+      viewData.defaultValues.visualGroups[0].visuals.map((visual) => visual.id),
+    ).toEqual(["visual-3", "visual-4", "visual-2"]);
+  });
+
+  it("builds visual context menu move actions only when available", () => {
+    const state = createInitialState();
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          { id: "visual-1", resourceId: "visual-image" },
+          { id: "visual-2", resourceId: "visual-video" },
+          { id: "visual-3", resourceId: "visual-layout" },
+        ],
+      },
+    );
+
+    showDropdownMenu(
+      { state },
+      {
+        position: { x: 10, y: 20 },
+        visualIndex: 0,
+      },
+    );
+    expect(selectViewData({ state }).dropdownMenu.items).toEqual([
+      { label: "Move Up", type: "item", value: "move-up" },
+      { label: "Delete", type: "item", value: "delete" },
+    ]);
+
+    showDropdownMenu(
+      { state },
+      {
+        position: { x: 10, y: 20 },
+        visualIndex: 1,
+      },
+    );
+    expect(selectViewData({ state }).dropdownMenu.items).toEqual([
+      { label: "Move Up", type: "item", value: "move-up" },
+      { label: "Move Down", type: "item", value: "move-down" },
+      { label: "Delete", type: "item", value: "delete" },
+    ]);
+
+    showDropdownMenu(
+      { state },
+      {
+        position: { x: 10, y: 20 },
+        visualIndex: 2,
+      },
+    );
+    expect(selectViewData({ state }).dropdownMenu.items).toEqual([
+      { label: "Move Down", type: "item", value: "move-down" },
+      { label: "Delete", type: "item", value: "delete" },
+    ]);
+  });
+
+  it("limits context menu move actions to the current layer group", () => {
+    const state = createInitialState();
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          { id: "visual-1", resourceId: "visual-image", layer: 50 },
+          { id: "visual-2", resourceId: "visual-video", layer: 70 },
+          { id: "visual-3", resourceId: "visual-layout", layer: 50 },
+        ],
+      },
+    );
+
+    expect(selectSelectedVisuals({ state }).map((visual) => visual.id)).toEqual(
+      ["visual-2", "visual-1", "visual-3"],
+    );
+
+    showDropdownMenu(
+      { state },
+      {
+        position: { x: 10, y: 20 },
+        visualIndex: 0,
+      },
+    );
+    expect(selectViewData({ state }).dropdownMenu.items).toEqual([
+      { label: "Delete", type: "item", value: "delete" },
+    ]);
+
+    showDropdownMenu(
+      { state },
+      {
+        position: { x: 10, y: 20 },
+        visualIndex: 1,
+      },
+    );
+    expect(selectViewData({ state }).dropdownMenu.items).toEqual([
+      { label: "Move Up", type: "item", value: "move-up" },
+      { label: "Delete", type: "item", value: "delete" },
+    ]);
+
+    showDropdownMenu(
+      { state },
+      {
+        position: { x: 10, y: 20 },
+        visualIndex: 2,
+      },
+    );
+    expect(selectViewData({ state }).dropdownMenu.items).toEqual([
+      { label: "Move Down", type: "item", value: "move-down" },
+      { label: "Delete", type: "item", value: "delete" },
+    ]);
+  });
+
+  it("moves selected visuals up and down", () => {
+    const state = createInitialState();
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          { id: "visual-1", resourceId: "visual-image" },
+          { id: "visual-2", resourceId: "visual-video" },
+          { id: "visual-3", resourceId: "visual-layout" },
+        ],
+      },
+    );
+
+    moveVisual({ state }, { index: 0, offset: 1 });
+    expect(selectSelectedVisuals({ state }).map((visual) => visual.id)).toEqual(
+      ["visual-2", "visual-1", "visual-3"],
+    );
+
+    moveVisual({ state }, { index: 1, offset: -1 });
+    expect(selectSelectedVisuals({ state }).map((visual) => visual.id)).toEqual(
+      ["visual-1", "visual-2", "visual-3"],
+    );
+  });
+
   it("resolves selected visual previews for videos and layouts", () => {
     const state = createInitialState();
     setRepositoryCollections(state);
@@ -246,18 +692,20 @@ describe("commandLineVisual.store animation controls", () => {
     const viewData = selectViewData({ state });
 
     expect(viewData.defaultValues.visuals[0]).toMatchObject({
-      id: "visual-video-item",
-      resourceId: "visual-video",
-      resourceType: "video",
-      displayName: "Intro Video",
-      fileId: "file-intro-thumbnail",
-    });
-    expect(viewData.defaultValues.visuals[1]).toMatchObject({
       id: "visual-layout-item",
       resourceId: "visual-layout",
       resourceType: "layout",
       displayName: "Poster Layout",
       fileId: "file-poster-layout",
+      visualIndex: 1,
+    });
+    expect(viewData.defaultValues.visuals[1]).toMatchObject({
+      id: "visual-video-item",
+      resourceId: "visual-video",
+      resourceType: "video",
+      displayName: "Intro Video",
+      fileId: "file-intro-thumbnail",
+      visualIndex: 0,
     });
   });
 

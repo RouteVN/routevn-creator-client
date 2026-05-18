@@ -17,6 +17,7 @@ import {
   getAvailableChildInteractionItems,
   getConditionalOverrideAttributeOptions,
 } from "./support/layoutEditPanelFeatures.js";
+import { createSpriteBlurFromDialogValues } from "./support/layoutEditPanelBlur.js";
 import { getLayoutEditorElementDefinition } from "../../internal/layoutEditorElementRegistry.js";
 import { parseSpritesheetAnimationSelectionValue } from "../../internal/spritesheets.js";
 
@@ -641,6 +642,34 @@ export const handleChildInteractionContextMenu = (deps, payload) => {
   render();
 };
 
+export const handleBlurItemClick = (deps) => {
+  const { render, store } = deps;
+  store.openSpriteBlurDialog();
+  render();
+};
+
+export const handleBlurItemRightClick = async (deps, payload) => {
+  const { appService } = deps;
+  const { _event: event } = payload;
+  event.preventDefault();
+
+  const result = await appService.showDropdownMenu({
+    items: [{ type: "item", label: "Remove", key: "remove" }],
+    x: event.clientX,
+    y: event.clientY,
+    place: "bs",
+  });
+
+  if (result?.item?.key !== "remove") {
+    return;
+  }
+
+  applyPanelValueUpdate(deps, {
+    name: "blur",
+    value: undefined,
+  });
+};
+
 export const handlePopverFormClose = (deps) => {
   const { render, store } = deps;
   store.closePopoverForm();
@@ -662,6 +691,12 @@ export const handleSaveLoadPaginationDialogClose = (deps) => {
 export const handleChildInteractionDialogClose = (deps) => {
   const { render, store } = deps;
   store.closeChildInteractionDialog();
+  render();
+};
+
+export const handleSpriteBlurDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeSpriteBlurDialog();
   render();
 };
 
@@ -1026,6 +1061,9 @@ export const handleSectionActionClick = async (deps, payload) => {
       name: result.item.key,
       value: true,
     });
+  } else if (id === "blur") {
+    store.openSpriteBlurDialog();
+    render();
   }
 };
 
@@ -1184,6 +1222,28 @@ export const handleChildInteractionFormAction = (deps, payload) => {
 
   store.closeChildInteractionDialog();
   render();
+};
+
+export const handleSpriteBlurFormAction = (deps, payload) => {
+  const { store, render } = deps;
+  const detail = payload._event.detail || {};
+  const { actionId, values = {} } = detail;
+
+  if (actionId === "cancel") {
+    store.closeSpriteBlurDialog();
+    render();
+    return;
+  }
+
+  if (actionId !== "submit") {
+    return;
+  }
+
+  store.closeSpriteBlurDialog();
+  applyPanelValueUpdate(deps, {
+    name: "blur",
+    value: createSpriteBlurFromDialogValues(values),
+  });
 };
 
 const getConditionalOverrideRules = (store) => {

@@ -1,5 +1,17 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import { generatePrefixedId } from "../../internal/id.js";
+import {
+  COMMAND_LINE_ITEM_BLUR_KERNEL_SIZE_SELECT_OPTIONS,
+  COMMAND_LINE_ITEM_BLUR_REPEAT_EDGE_OPTIONS,
+  COMMAND_LINE_ITEM_BLUR_TOGGLE_OPTIONS,
+  DEFAULT_COMMAND_LINE_ITEM_BLUR,
+  DEFAULT_COMMAND_LINE_ITEM_OPACITY,
+  normalizeCommandLineItemBlur,
+  normalizeCommandLineItemBlurEnabled,
+  normalizeCommandLineItemBlurWithField,
+  normalizeCommandLineItemEffects,
+  normalizeCommandLineItemOpacity,
+} from "../../internal/commandLineItemEffects.js";
 
 const RESOURCE_TYPES = [
   { type: "image", label: "Images" },
@@ -12,10 +24,99 @@ const tabs = RESOURCE_TYPES.map(({ type, label }) => ({
   label,
 }));
 
+const DEFAULT_VISUAL_LAYER = 50;
+const VISUAL_LAYER_OPTIONS = [
+  {
+    value: 10,
+    label: "Behind Background",
+  },
+  {
+    value: 30,
+    label: "Behind Character",
+  },
+  {
+    value: DEFAULT_VISUAL_LAYER,
+    label: "Behind Dialogue",
+  },
+  {
+    value: 70,
+    label: "Foreground",
+  },
+];
+const VISUAL_LAYER_VALUES = VISUAL_LAYER_OPTIONS.map((option) => option.value);
+const VISUAL_LAYER_DISPLAY_OPTIONS = VISUAL_LAYER_OPTIONS.slice().sort(
+  (a, b) => b.value - a.value,
+);
+
 const createEmptyCollection = () => ({
   items: {},
   tree: [],
 });
+
+const getVisualLayer = (visual = {}) => normalizeVisualLayer(visual.layer);
+
+const orderVisualsByLayer = (visuals = []) => {
+  const orderedVisuals = [];
+
+  for (const option of VISUAL_LAYER_DISPLAY_OPTIONS) {
+    orderedVisuals.push(
+      ...visuals.filter((visual) => getVisualLayer(visual) === option.value),
+    );
+  }
+
+  return orderedVisuals;
+};
+
+const syncSelectedVisualIndex = (state, selectedVisual) => {
+  if (!selectedVisual) {
+    return;
+  }
+
+  const nextSelectedIndex = state.selectedVisuals.findIndex(
+    (visual) => visual.id === selectedVisual.id,
+  );
+  state.selectedVisualIndex =
+    nextSelectedIndex >= 0 ? nextSelectedIndex : undefined;
+};
+
+const normalizeSelectedVisualOrder = (state) => {
+  const selectedVisual = state.selectedVisuals[state.selectedVisualIndex];
+  state.selectedVisuals = orderVisualsByLayer(state.selectedVisuals);
+  syncSelectedVisualIndex(state, selectedVisual);
+};
+
+const createVisualDropdownItems = (visualIndex, visuals = []) => {
+  const items = [];
+  const visual = visuals[visualIndex];
+  const groupIndices = visual
+    ? visuals.reduce((indices, item, index) => {
+        if (getVisualLayer(item) === getVisualLayer(visual)) {
+          indices.push(index);
+        }
+        return indices;
+      }, [])
+    : [];
+  const groupIndex = groupIndices.indexOf(visualIndex);
+
+  if (groupIndex >= 0 && groupIndex < groupIndices.length - 1) {
+    items.push({ label: "Move Up", type: "item", value: "move-up" });
+  }
+
+  if (groupIndex > 0) {
+    items.push({ label: "Move Down", type: "item", value: "move-down" });
+  }
+
+  items.push({ label: "Delete", type: "item", value: "delete" });
+  return items;
+};
+
+const createAddVisualLayerDropdownItems = () =>
+  VISUAL_LAYER_OPTIONS.map((option) => ({
+    label: option.label,
+    layer: option.value,
+    type: "item",
+    value: `add-layer:${option.value}`,
+  }));
 
 const isHierarchyCollection = (value) =>
   !!value &&
@@ -131,8 +232,17 @@ const getAnimationModeById = (collection = {}, animationId) => {
   return item ? getAnimationType(item) : undefined;
 };
 
+const normalizeVisualLayer = (layer) => {
+  const parsedLayer = Number(layer);
+  return VISUAL_LAYER_VALUES.includes(parsedLayer)
+    ? parsedLayer
+    : DEFAULT_VISUAL_LAYER;
+};
+
 const normalizeSelectedVisual = (visual = {}, animations = {}) => {
-  const nextVisual = structuredClone(visual ?? {});
+  const nextVisual = normalizeCommandLineItemEffects(
+    structuredClone(visual ?? {}),
+  );
   const selectedAnimationId = nextVisual?.animations?.resourceId;
   const selectedAnimationMode = getAnimationModeById(
     animations,
@@ -143,6 +253,7 @@ const normalizeSelectedVisual = (visual = {}, animations = {}) => {
     nextVisual.animationMode ??
     selectedAnimationMode ??
     (selectedAnimationId ? "update" : "none");
+  nextVisual.layer = normalizeVisualLayer(nextVisual.layer);
 
   return nextVisual;
 };
@@ -304,12 +415,14 @@ export const createInitialState = () => ({
    *   resourceId: string,      // Image/video/layout resource ID
    *   resourceType: string,    // image/video/layout
    *   transformId: string,     // Transform ID
+   *   layer: number,           // Required visual render layer
    *   animations: object,      // Optional animation selection with resourceId
    * }
    */
   selectedVisuals: [],
   tempSelectedResourceId: undefined,
   tempSelectedResourceType: undefined,
+  pendingVisualLayer: undefined,
   selectedVisualIndex: undefined,
   searchQuery: "",
   fullImagePreviewVisible: false,
@@ -317,6 +430,7 @@ export const createInitialState = () => ({
   dropdownMenu: {
     isOpen: false,
     position: { x: 0, y: 0 },
+    type: "visual-context",
     visualIndex: null,
     items: [{ label: "Delete", type: "item", value: "delete" }],
   },
@@ -367,12 +481,16 @@ const getDefaultTransformId = (state) => {
   return transformItems.length > 0 ? transformItems[0].id : undefined;
 };
 
-export const addVisual = ({ state }, { resourceId, resourceType } = {}) => {
+export const addVisual = (
+  { state },
+  { resourceId, resourceType, layer } = {},
+) => {
   const defaultTransform = getDefaultTransformId(state);
   const visual = {
     id: generateVisualId(),
     resourceId: resourceId,
     transformId: defaultTransform,
+    layer: normalizeVisualLayer(layer),
     animationMode: "none",
   };
 
@@ -381,10 +499,61 @@ export const addVisual = ({ state }, { resourceId, resourceType } = {}) => {
   }
 
   state.selectedVisuals.push(visual);
+  normalizeSelectedVisualOrder(state);
 };
 
 export const removeVisual = ({ state }, { index } = {}) => {
   state.selectedVisuals.splice(index, 1);
+};
+
+export const moveVisual = ({ state }, { index, offset } = {}) => {
+  const visual = state.selectedVisuals[index];
+  const selectedVisual = state.selectedVisuals[state.selectedVisualIndex];
+  const normalizedOffset = Math.sign(offset);
+
+  if (!visual || normalizedOffset === 0) {
+    return;
+  }
+
+  const visualLayer = getVisualLayer(visual);
+  const layerVisuals = state.selectedVisuals.filter(
+    (item) => getVisualLayer(item) === visualLayer,
+  );
+  const currentLayerIndex = layerVisuals.findIndex(
+    (item) => item.id === visual.id,
+  );
+  const targetLayerIndex = currentLayerIndex + normalizedOffset;
+
+  if (
+    currentLayerIndex < 0 ||
+    targetLayerIndex < 0 ||
+    targetLayerIndex >= layerVisuals.length
+  ) {
+    return;
+  }
+
+  layerVisuals.splice(currentLayerIndex, 1);
+  layerVisuals.splice(targetLayerIndex, 0, visual);
+
+  const visualsByLayer = new Map();
+  for (const item of state.selectedVisuals) {
+    const layer = getVisualLayer(item);
+    if (!visualsByLayer.has(layer)) {
+      visualsByLayer.set(layer, []);
+    }
+
+    if (layer === visualLayer) {
+      continue;
+    }
+
+    visualsByLayer.get(layer).push(item);
+  }
+
+  visualsByLayer.set(visualLayer, layerVisuals);
+  state.selectedVisuals = VISUAL_LAYER_DISPLAY_OPTIONS.flatMap(
+    (option) => visualsByLayer.get(option.value) ?? [],
+  );
+  syncSelectedVisualIndex(state, selectedVisual);
 };
 
 export const updateVisualTransform = ({ state }, { index, transform } = {}) => {
@@ -420,6 +589,60 @@ export const updateVisualAnimation = (
   }
 };
 
+export const updateVisualLayer = ({ state }, { index, layer } = {}) => {
+  if (state.selectedVisuals[index]) {
+    state.selectedVisuals[index].layer = normalizeVisualLayer(layer);
+    normalizeSelectedVisualOrder(state);
+  }
+};
+
+export const updateVisualOpacity = ({ state }, { index, opacity } = {}) => {
+  const visual = state.selectedVisuals[index];
+  if (!visual) {
+    return;
+  }
+
+  const normalizedOpacity = normalizeCommandLineItemOpacity(opacity);
+  if (normalizedOpacity === undefined) {
+    delete visual.opacity;
+    return;
+  }
+
+  visual.opacity = normalizedOpacity;
+};
+
+export const updateVisualBlurEnabled = ({ state }, { index, enabled } = {}) => {
+  const visual = state.selectedVisuals[index];
+  if (!visual) {
+    return;
+  }
+
+  if (!normalizeCommandLineItemBlurEnabled(enabled)) {
+    delete visual.blur;
+    return;
+  }
+
+  visual.blur = normalizeCommandLineItemBlur(
+    visual.blur ?? DEFAULT_COMMAND_LINE_ITEM_BLUR,
+  );
+};
+
+export const updateVisualBlurField = (
+  { state },
+  { index, fieldName, value } = {},
+) => {
+  const visual = state.selectedVisuals[index];
+  if (!visual) {
+    return;
+  }
+
+  visual.blur = normalizeCommandLineItemBlurWithField({
+    blur: visual.blur,
+    fieldName,
+    value,
+  });
+};
+
 export const updateVisualResource = (
   { state },
   { index, resourceId, resourceType } = {},
@@ -440,6 +663,14 @@ export const setTempSelectedResourceId = (
 ) => {
   state.tempSelectedResourceId = resourceId;
   state.tempSelectedResourceType = resourceId ? resourceType : undefined;
+};
+
+export const setPendingVisualLayer = ({ state }, { layer } = {}) => {
+  state.pendingVisualLayer = normalizeVisualLayer(layer);
+};
+
+export const clearPendingVisualLayer = ({ state }, _payload = {}) => {
+  state.pendingVisualLayer = undefined;
 };
 
 export const setSearchQuery = ({ state }, { value } = {}) => {
@@ -472,15 +703,39 @@ export const selectTempSelectedResourceType = ({ state }) => {
   return state.tempSelectedResourceType;
 };
 
+export const selectPendingVisualLayer = ({ state }) => {
+  return state.pendingVisualLayer ?? DEFAULT_VISUAL_LAYER;
+};
+
 export const showDropdownMenu = ({ state }, { position, visualIndex } = {}) => {
   state.dropdownMenu.isOpen = true;
-  state.dropdownMenu.position = position;
+  state.dropdownMenu.position = position ?? { x: 0, y: 0 };
+  state.dropdownMenu.type = "visual-context";
   state.dropdownMenu.visualIndex = visualIndex;
+  state.dropdownMenu.items = createVisualDropdownItems(
+    visualIndex,
+    state.selectedVisuals,
+  );
+};
+
+export const showAddVisualLayerDropdownMenu = (
+  { state },
+  { position } = {},
+) => {
+  state.dropdownMenu.isOpen = true;
+  state.dropdownMenu.position = position ?? { x: 0, y: 0 };
+  state.dropdownMenu.type = "add-visual-layer";
+  state.dropdownMenu.visualIndex = null;
+  state.dropdownMenu.items = createAddVisualLayerDropdownItems();
 };
 
 export const hideDropdownMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu.isOpen = false;
   state.dropdownMenu.visualIndex = null;
+};
+
+export const selectDropdownMenuType = ({ state }) => {
+  return state.dropdownMenu.type;
 };
 
 export const selectDropdownMenuVisualIndex = ({ state }) => {
@@ -507,6 +762,10 @@ export const selectDefaultTransformId = ({ state }) => {
   return getDefaultTransformId(state);
 };
 
+export const selectDefaultVisualLayer = () => {
+  return DEFAULT_VISUAL_LAYER;
+};
+
 export const selectResourceExplorerTarget = (_deps, { itemId } = {}) => {
   return parseResourceExplorerId(itemId);
 };
@@ -524,6 +783,7 @@ export const setExistingVisuals = ({ state }, { visuals } = {}) => {
       return nextVisual;
     },
   );
+  normalizeSelectedVisualOrder(state);
 };
 
 export const selectResourceItemById = (
@@ -698,16 +958,45 @@ export const selectViewData = ({ state }) => {
     });
   }
 
-  const defaultValues = {
-    visuals: processedSelectedVisuals.map((visual) => ({
+  const visualControls = processedSelectedVisuals.map(
+    (visual, visualIndex) => ({
       ...visual,
+      visualIndex,
       transformId:
         visual.transformId ||
         (transformOptions.length > 0 ? transformOptions[0].value : undefined),
       animationId: visual.animations?.resourceId,
-    })),
+      layer: normalizeVisualLayer(visual.layer),
+      opacity: visual.opacity ?? DEFAULT_COMMAND_LINE_ITEM_OPACITY,
+      blurEnabled: Boolean(visual.blur),
+      blur: normalizeCommandLineItemBlur(
+        visual.blur ?? DEFAULT_COMMAND_LINE_ITEM_BLUR,
+      ),
+    }),
+  );
+  const visualGroups = VISUAL_LAYER_DISPLAY_OPTIONS.map((option) => {
+    const visuals = visualControls
+      .filter((visual) => visual.layer === option.value)
+      .slice()
+      .reverse();
+
+    return {
+      id: `layer-${option.value}`,
+      label: option.label,
+      layer: option.value,
+      visuals,
+    };
+  }).filter((group) => group.visuals.length > 0);
+
+  const defaultValues = {
+    visualGroups,
+    visuals: visualGroups.flatMap((group) => group.visuals),
     transformOptions,
     animationOptions,
+    layerOptions: VISUAL_LAYER_OPTIONS,
+    blurToggleOptions: COMMAND_LINE_ITEM_BLUR_TOGGLE_OPTIONS,
+    blurKernelSizeOptions: COMMAND_LINE_ITEM_BLUR_KERNEL_SIZE_SELECT_OPTIONS,
+    blurRepeatEdgeOptions: COMMAND_LINE_ITEM_BLUR_REPEAT_EDGE_OPTIONS,
   };
 
   return {
@@ -719,6 +1008,7 @@ export const selectViewData = ({ state }) => {
     selectedVisuals: processedSelectedVisuals,
     transformOptions,
     animationOptions,
+    layerOptions: VISUAL_LAYER_OPTIONS,
     searchQuery: state.searchQuery,
     searchPlaceholder: "Search...",
     fullImagePreviewVisible: state.fullImagePreviewVisible,

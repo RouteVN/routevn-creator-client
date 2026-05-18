@@ -213,6 +213,42 @@ describe("systemActions.store", () => {
     });
   });
 
+  it("previews screen actions that only set opacity or blur", () => {
+    const state = createInitialState();
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          screen: {
+            opacity: 0.5,
+            blur: {
+              x: 6,
+              y: 9,
+              quality: 3,
+              kernelSize: 9,
+              repeatEdgePixels: true,
+            },
+          },
+        },
+      },
+    });
+
+    expect(actions.screen).toEqual({
+      opacity: 0.5,
+      blur: {
+        x: 6,
+        y: 9,
+        quality: 3,
+        kernelSize: 9,
+        repeatEdgePixels: true,
+      },
+    });
+    expect(preview.screen).toMatchObject({
+      label: "Screen",
+    });
+  });
+
   it("includes custom character name and persist character labels in dialogue preview when a character is selected", () => {
     const state = createInitialState();
 

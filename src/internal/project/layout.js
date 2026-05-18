@@ -1016,6 +1016,9 @@ const applySpriteNode = ({ element, node }) => {
     ...(node.src ? { src: node.src } : {}),
     ...(node.hoverImageId ? { hoverImageId: node.hoverImageId } : {}),
     ...(node.clickImageId ? { clickImageId: node.clickImageId } : {}),
+    ...(node.blur && typeof node.blur === "object" && !Array.isArray(node.blur)
+      ? { blur: structuredClone(node.blur) }
+      : {}),
   };
 };
 
