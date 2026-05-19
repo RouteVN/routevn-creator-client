@@ -144,6 +144,33 @@ describe("layoutEditor.store", () => {
     }
   });
 
+  it("keeps choice content text out of the empty choice layout menu", () => {
+    const state = createInitialState();
+
+    setLayout(
+      { state },
+      {
+        id: "layout-choice",
+        layout: {
+          id: "layout-choice",
+          layoutType: "choice",
+        },
+      },
+    );
+
+    const viewData = selectViewData({
+      state,
+      constants: LAYOUT_EDITOR_CONSTANTS,
+    });
+    const emptyMenuLabels = viewData.emptyContextMenuItems.map(
+      (item) => item.label,
+    );
+
+    expect(emptyMenuLabels).toContain("Container (Repeated Choice Item)");
+    expect(emptyMenuLabels).toContain("Container (Single Choice Item)");
+    expect(emptyMenuLabels).not.toContain("Text (Choice Content)");
+  });
+
   it("adds the component badge to special layout editor items", () => {
     const state = createInitialState();
 

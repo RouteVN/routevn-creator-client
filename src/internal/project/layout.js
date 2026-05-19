@@ -75,6 +75,25 @@ const SPRITE_RENDER_TYPE_BY_TYPE = {
   "sprite-ref-save-load-slot-image": "sprite",
 };
 
+const CHOICE_SINGLE_ITEM_CONTAINER_TYPE = "container-ref-choice-single-item";
+const MAX_CHOICE_SINGLE_ITEM_INDEX = 19;
+
+const normalizeChoiceSingleItemIndex = (value) => {
+  const index = Number(value);
+
+  if (!Number.isInteger(index) || index < 0) {
+    return 0;
+  }
+
+  return Math.min(index, MAX_CHOICE_SINGLE_ITEM_INDEX);
+};
+
+const createChoiceSingleItemClickInteraction = (choiceItemIndex) => ({
+  payload: {
+    actions: `\${choice.items[${choiceItemIndex}].events.click.actions}`,
+  },
+});
+
 const REPEATING_CONTAINER_CONFIG = {
   "container-ref-choice-item": {
     each: "item, i in choice.items",
@@ -899,9 +918,16 @@ const buildBaseElement = (node, context = {}) => {
   return element;
 };
 
-const getTextNodeContent = (node) => {
+const getTextNodeContent = (node, context = {}) => {
   if (node.content !== undefined) {
     return node.content;
+  }
+
+  if (
+    node.type === "text-ref-choice-item-content" &&
+    Number.isInteger(context.choiceItemIndex)
+  ) {
+    return `\${choice.items[${context.choiceItemIndex}].content}`;
   }
 
   return TEXT_CONTENT_BY_TYPE[node.type] ?? node.text ?? "";
@@ -921,7 +947,7 @@ const applyTextNode = ({ element, node, context }) => {
   }
 
   const renderType = TEXT_RENDER_TYPE_BY_TYPE[node.type] ?? element.type;
-  const content = getTextNodeContent(node);
+  const content = getTextNodeContent(node, context);
   const nextElement = {
     ...element,
     type: renderType,
@@ -1191,6 +1217,7 @@ const applyContainerNode = ({ element, node }) => {
   if (
     node.type !== "container" &&
     node.type !== "fragment-ref" &&
+    node.type !== CHOICE_SINGLE_ITEM_CONTAINER_TYPE &&
     !REPEATING_CONTAINER_CONFIG[node.type] &&
     !SPECIAL_CONTAINER_INTERACTIONS[node.type]
   ) {
@@ -1217,6 +1244,25 @@ const applyContainerNode = ({ element, node }) => {
 
   const repeatingConfig = REPEATING_CONTAINER_CONFIG[node.type];
   if (!repeatingConfig) {
+    if (node.type === CHOICE_SINGLE_ITEM_CONTAINER_TYPE) {
+      const choiceItemIndex = normalizeChoiceSingleItemIndex(
+        node.choiceItemIndex,
+      );
+
+      return {
+        ...nextElement,
+        type: "container",
+        $when: mergeWhenExpressions(
+          nextElement["$when"],
+          `choice.items[${choiceItemIndex}]`,
+        ),
+        click: mergeInteractionPayloadActions(
+          nextElement.click,
+          createChoiceSingleItemClickInteraction(choiceItemIndex),
+        ),
+      };
+    }
+
     const specialContainerInteraction =
       SPECIAL_CONTAINER_INTERACTIONS[node.type];
 
@@ -1264,7 +1310,14 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
             slotId: "${item.slotId}",
           },
         }
-      : context;
+      : effectiveNode.type === CHOICE_SINGLE_ITEM_CONTAINER_TYPE
+        ? {
+            ...context,
+            choiceItemIndex: normalizeChoiceSingleItemIndex(
+              effectiveNode.choiceItemIndex,
+            ),
+          }
+        : context;
   let element = buildBaseElement(node, nodeContext);
 
   element = applyTextNode({

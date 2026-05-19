@@ -5,6 +5,11 @@ import {
 } from "../../../internal/layoutEditorElementRegistry.js";
 import { DEFAULT_PROJECT_RESOLUTION } from "../../../internal/projectResolution.js";
 
+const CHOICE_CONTENT_PARENT_TYPES = new Set([
+  "container-ref-choice-item",
+  "container-ref-choice-single-item",
+]);
+
 export const toLayoutEditorContextMenuItems = (
   items = [],
   projectResolution = DEFAULT_PROJECT_RESOLUTION,
@@ -96,6 +101,25 @@ const toLeafItemContextMenuItems = (items = []) => {
   );
 };
 
+const isChoiceContentCreateMenuItem = (item = {}) => {
+  return (
+    item?.value?.action === "new-child-item" &&
+    item.value.type === "text-ref-choice-item-content"
+  );
+};
+
+const toContainerContextMenuItems = (items = [], parentItem = {}) => {
+  return compactContextMenuItems(
+    (items ?? []).filter((item) => {
+      if (!isChoiceContentCreateMenuItem(item)) {
+        return true;
+      }
+
+      return CHOICE_CONTENT_PARENT_TYPES.has(parentItem.type);
+    }),
+  );
+};
+
 export const toLayoutEditorExplorerItems = (
   items = [],
   { contextMenuItems } = {},
@@ -104,6 +128,8 @@ export const toLayoutEditorExplorerItems = (
 
   return (items ?? []).map((item) => {
     const definition = getLayoutEditorElementDefinition(item.type);
+    const canReceiveChildren =
+      item.type === "folder" || definition.isContainer === true;
     const hasPreviewDependencies =
       Object.keys(definition.previewDependencies).length > 0;
     const svg =
@@ -113,13 +139,13 @@ export const toLayoutEditorExplorerItems = (
       ...item,
       svg,
       contextMenuItems:
-        definition.isContainer === true
-          ? contextMenuItems
+        canReceiveChildren === true
+          ? toContainerContextMenuItems(contextMenuItems, item)
           : leafItemContextMenuItems,
       trailingSvg: hasPreviewDependencies ? "component" : undefined,
       dragOptions: {
         ...item.dragOptions,
-        canReceiveChildren: definition.isContainer,
+        canReceiveChildren,
       },
     };
   });

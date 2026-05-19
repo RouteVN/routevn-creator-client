@@ -184,6 +184,7 @@ export const toInspectorValues = ({
     paginationMode: values?.paginationMode ?? "continuous",
     paginationSize: values?.paginationSize ?? 3,
     scroll: values?.scroll ?? false,
+    choiceItemIndex: values?.choiceItemIndex ?? 0,
     direction,
     gapX: values?.gapX ?? 0,
     gapY: values?.gapY ?? 0,

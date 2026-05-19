@@ -63,9 +63,13 @@ contextMenuItems:
     type: item
     createType: text-history-line-content
   - "$when": 'layoutType == "choice"'
-    label: Container (Choice Item)
+    label: Container (Repeated Choice Item)
     type: item
     createType: container-choice-item
+  - "$when": 'layoutType == "choice"'
+    label: Container (Single Choice Item)
+    type: item
+    createType: container-choice-single-item
   - "$when": 'layoutType == "save-load"'
     label: Container (Save/Load Slot)
     type: item
@@ -79,7 +83,7 @@ contextMenuItems:
     type: item
     createType: text-save-load-slot-date
   - "$when": 'layoutType == "choice"'
-    label: Text (Choice Item)
+    label: Text (Choice Content)
     type: item
     createType: text-choice-item-content
   - type: separator
@@ -168,6 +172,14 @@ emptyContextMenuItems:
     label: Text (History Line Content)
     type: item
     createType: text-history-line-content
+  - "$when": 'layoutType == "choice"'
+    label: Container (Repeated Choice Item)
+    type: item
+    createType: container-choice-item
+  - "$when": 'layoutType == "choice"'
+    label: Container (Single Choice Item)
+    type: item
+    createType: container-choice-single-item
 
 controlContextMenuItems:
   - label: Edit
