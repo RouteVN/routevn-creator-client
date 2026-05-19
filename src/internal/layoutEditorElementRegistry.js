@@ -29,6 +29,7 @@ const TEXT_TYPE_SET = new Set([
 const CONTAINER_TYPE_SET = new Set([
   "container",
   "container-ref-choice-item",
+  "container-ref-choice-single-item",
   "container-ref-save-load-slot",
   "container-ref-dialogue-line",
   "container-ref-history-line",
@@ -41,6 +42,17 @@ const supportsLayoutEditorWidthMode = (itemType) => {
 };
 
 const ABSOLUTE_DIRECTION = "absolute";
+const MAX_CHOICE_SINGLE_ITEM_INDEX = 19;
+
+const normalizeChoiceSingleItemIndex = (value) => {
+  const index = Number(value);
+
+  if (!Number.isInteger(index) || index < 0) {
+    return 0;
+  }
+
+  return Math.min(index, MAX_CHOICE_SINGLE_ITEM_INDEX);
+};
 
 const CREATE_TEMPLATES = {
   container: () => ({
@@ -239,9 +251,25 @@ const CREATE_TEMPLATES = {
     ),
   "container-choice-item": () => ({
     type: "container-ref-choice-item",
-    name: "Container (Choice Item)",
+    name: "Container (Repeated Choice Item)",
     ...BASE_TRANSFORM,
     direction: ABSOLUTE_DIRECTION,
+  }),
+  "container-choice-single-item": () => ({
+    type: "container-ref-choice-single-item",
+    name: "Container (Single Choice Item)",
+    ...BASE_TRANSFORM,
+    direction: ABSOLUTE_DIRECTION,
+    choiceItemIndex: 0,
+    hover: {
+      inheritToChildren: true,
+    },
+    click: {
+      inheritToChildren: true,
+    },
+    rightClick: {
+      inheritToChildren: true,
+    },
   }),
   "container-save-load-slot": () => ({
     type: "container-ref-save-load-slot",
@@ -298,7 +326,7 @@ const CREATE_TEMPLATES = {
     scaleLayoutElementItemForProjectResolution(
       {
         type: "text-ref-choice-item-content",
-        name: "Text (Choice Item Content)",
+        name: "Text (Choice Content)",
         ...BASE_TRANSFORM,
         x: 960,
         y: 24,
@@ -449,6 +477,7 @@ const applySpriteAutoSize = ({ nextItem, imagesData }) => {
 const TYPE_FAMILIES = {
   container: "container",
   "container-ref-choice-item": "container",
+  "container-ref-choice-single-item": "container",
   "container-ref-save-load-slot": "container",
   "container-ref-dialogue-line": "container",
   "container-ref-history-line": "container",
@@ -541,6 +570,9 @@ const FAMILY_CAPABILITIES = {
 };
 
 const ITEM_TYPE_CAPABILITY_OVERRIDES = {
+  "container-ref-choice-single-item": {
+    supportsActions: false,
+  },
   sprite: {
     supportsSpriteBlur: true,
   },
@@ -568,6 +600,10 @@ const TYPE_RULES = {
 
       if (name === "paginationMode" && (value === null || value === "")) {
         return "continuous";
+      }
+
+      if (name === "choiceItemIndex") {
+        return normalizeChoiceSingleItemIndex(value);
       }
 
       return value;
@@ -649,6 +685,11 @@ const PANEL_FEATURES_BY_TYPE = {
     "actions",
     "childInteraction",
   ],
+  "container-ref-choice-single-item": [
+    ...DEFAULT_PANEL_FEATURES,
+    "childInteraction",
+    "scroll",
+  ],
   "container-ref-save-load-slot": [
     ...DEFAULT_PANEL_FEATURES,
     "actions",
@@ -710,6 +751,7 @@ const PANEL_FEATURES_BY_TYPE = {
 const PREVIEW_DEPENDENCIES_BY_TYPE = {
   "fragment-ref": { fragments: true },
   "container-ref-choice-item": { choice: true },
+  "container-ref-choice-single-item": { choice: true },
   "text-ref-choice-item-content": { choice: true },
   "container-ref-save-load-slot": { saveLoad: true },
   "sprite-ref-save-load-slot-image": { saveLoad: true },

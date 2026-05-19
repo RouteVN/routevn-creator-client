@@ -185,6 +185,14 @@ layoutSections:
             value: false
           - label: Enabled
             value: true
+  - "$when": 'itemType == "container-ref-choice-single-item"'
+    label: Choice
+    items:
+      - type: select
+        label: Choice
+        name: choiceItemIndex
+        value: "${values.choiceItemIndex}"
+        options: "${choiceItemOptions}"
   - "$when": "supportsChildInteractionInheritance"
     id: childInteraction
     label: Child Interaction

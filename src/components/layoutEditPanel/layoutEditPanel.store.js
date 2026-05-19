@@ -60,6 +60,10 @@ import {
 
 const HIDDEN_LAYOUT_ACTION_MODES = new Set(["conditional"]);
 const POSITION_POPOVER_NAMES = new Set(["x", "y"]);
+const CHOICE_ITEM_OPTIONS = Array.from({ length: 20 }, (_item, index) => ({
+  label: `Choice ${index + 1}`,
+  value: index,
+}));
 const POSITION_POPOVER_PRESETS = [
   {
     label: "0",
@@ -1040,6 +1044,7 @@ export const selectViewData = ({ state, props, constants }) => {
         }),
         childInteractionSummary: getChildInteractionSummary(values),
         childInteractionItems: getChildInteractionItems(values),
+        choiceItemOptions: CHOICE_ITEM_OPTIONS,
         hasChildInteractionInheritance: hasChildInteractionInheritance(values),
         canAddChildInteractionInheritance:
           getAvailableChildInteractionItems(values).length > 0,

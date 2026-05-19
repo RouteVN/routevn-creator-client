@@ -711,7 +711,7 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
           }),
           [choiceItemContainerId]: createLayoutElement(choiceItemContainerId, {
             type: "container-ref-choice-item",
-            name: "Container (Choice Item)",
+            name: "Container (Repeated Choice Item)",
             x: 0,
             y: 0,
             anchorX: 0,
@@ -731,7 +731,7 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
           }),
           [choiceTextId]: createLayoutElement(choiceTextId, {
             type: "text-ref-choice-item-content",
-            name: "Text (Choice Item Content)",
+            name: "Text (Choice Content)",
             x: 960,
             y: 10,
             anchorX: 0.5,
