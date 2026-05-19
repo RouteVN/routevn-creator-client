@@ -166,6 +166,16 @@ const buildMentionTargetOptions = (repositoryState = {}) => {
     }));
 };
 
+const buildMoveSectionSceneOptions = (repositoryState = {}, currentSceneId) => {
+  const scenesData = repositoryState.scenes || { items: {}, tree: [] };
+  return toFlatItems(scenesData)
+    .filter((item) => item?.type === "scene" && item.id !== currentSceneId)
+    .map((item) => ({
+      value: item.id,
+      label: item.name ?? item.id,
+    }));
+};
+
 const isPlainObject = (value) => {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return false;
@@ -503,6 +513,14 @@ export const createInitialState = () => ({
     defaultValues: {
       name: "",
       inheritPresentationFromSelectedLine: true,
+    },
+  },
+  sectionMoveSceneDialog: {
+    isOpen: false,
+    formKey: 0,
+    sectionId: undefined,
+    defaultValues: {
+      sceneId: undefined,
     },
   },
   sceneSettings: {
@@ -952,12 +970,48 @@ export const selectLockingLineId = ({ state }) => {
   return state.lockingLineId;
 };
 
+export const selectDropdownMenu = ({ state }) => {
+  return state.dropdownMenu;
+};
+
+export const selectPopover = ({ state }) => {
+  return state.popover;
+};
+
+export const selectSectionCreateDialog = ({ state }) => {
+  return state.sectionCreateDialog;
+};
+
+export const selectSectionMoveSceneDialog = ({ state }) => {
+  return state.sectionMoveSceneDialog;
+};
+
 export const showSectionDropdownMenu = (
   { state },
   { position, sectionId } = {},
 ) => {
   const scene = selectCommittedScene({ state });
-  const items = [{ label: "Edit", type: "item", value: "edit-section" }];
+  const sceneOptions = buildMoveSectionSceneOptions(
+    state.repositoryState,
+    state.sceneId,
+  );
+  const items = [
+    { label: "Edit", type: "item", value: "edit-section" },
+    { label: "Duplicate", type: "item", value: "duplicate-section" },
+  ];
+
+  if (
+    sceneOptions.length > 0 &&
+    scene &&
+    scene.sections &&
+    scene.sections.length > 1
+  ) {
+    items.push({
+      label: "Move Scene",
+      type: "item",
+      value: "move-section-scene",
+    });
+  }
 
   // Only show delete option if there's more than 1 section
   if (scene && scene.sections && scene.sections.length > 1) {
@@ -1090,6 +1144,22 @@ export const hideSectionCreateDialog = ({ state }, _payload = {}) => {
   };
 };
 
+export const showSectionMoveSceneDialog = ({ state }, { sectionId } = {}) => {
+  state.sectionMoveSceneDialog = {
+    isOpen: true,
+    formKey: (state.sectionMoveSceneDialog?.formKey || 0) + 1,
+    sectionId,
+    defaultValues: {
+      sceneId: undefined,
+    },
+  };
+};
+
+export const hideSectionMoveSceneDialog = ({ state }, _payload = {}) => {
+  state.sectionMoveSceneDialog.isOpen = false;
+  state.sectionMoveSceneDialog.sectionId = undefined;
+};
+
 export const showSceneSettingsDialog = ({ state }, _payload = {}) => {
   state.sceneSettingsDialog.isOpen = true;
   state.sceneSettingsDialog.formKey += 1;
@@ -1138,6 +1208,7 @@ export const selectViewData = ({ state }) => {
       sectionsOverviewOpen: false,
       sectionsOverviewItems: [],
       documentEditorLines: [],
+      documentLineDecorations: [],
       textStyles: [],
       mentionTargets: [],
       currentLine: null,
@@ -1149,12 +1220,28 @@ export const selectViewData = ({ state }) => {
       sectionsGraphView: state.sectionsGraphView,
       layouts: [],
       allCharacters: [],
+      form: { fields: [], actions: { buttons: [] } },
+      selectedLine: null,
+      selectedLineActions: {},
       sectionsGraph: JSON.stringify(
         { nodes: [], edges: [], adjacencyList: {} },
         null,
         2,
       ),
+      previewVisible: state.previewVisible,
+      previewSceneId: state.previewSceneId,
+      previewSectionId: state.previewSectionId,
+      previewLineId: state.previewLineId,
       canvasAspectRatio: selectCanvasAspectRatio({ state }),
+      sectionLineChanges: state.sectionLineChanges,
+      sectionCreateDialog: state.sectionCreateDialog,
+      sectionCreateForm: { fields: [], actions: { buttons: [] } },
+      sectionMoveSceneDialog: state.sectionMoveSceneDialog,
+      sectionMoveSceneForm: { fields: [], actions: { buttons: [] } },
+      sceneSettings: state.sceneSettings,
+      linesEditorKey: `document-${state.sceneSettings.showLineNumbers ? "line-numbers-show" : "line-numbers-hide"}`,
+      sceneSettingsDialog: state.sceneSettingsDialog,
+      sceneSettingsForm: { fields: [], actions: { buttons: [] } },
       isScenePageLoading: state.isScenePageLoading,
       isSceneAssetLoading: state.isSceneAssetLoading,
       deadEndTooltip: state.deadEndTooltip,
@@ -1235,7 +1322,7 @@ export const selectViewData = ({ state }) => {
             ],
           },
         }
-      : null;
+      : { fields: [], actions: { buttons: [] } };
 
   // Get current section for lines/actions panel
   const currentSection = scene.sections.find(
@@ -1255,6 +1342,10 @@ export const selectViewData = ({ state }) => {
   });
 
   const isEditingSection = state.sectionCreateDialog.mode === "edit";
+  const moveSectionSceneOptions = buildMoveSectionSceneOptions(
+    repositoryState,
+    state.sceneId,
+  );
   const sectionCreateFields = [
     {
       name: "name",
@@ -1288,6 +1379,30 @@ export const selectViewData = ({ state }) => {
           id: "submit",
           variant: "pr",
           label: isEditingSection ? "Save" : "Create",
+        },
+      ],
+    },
+  };
+
+  const sectionMoveSceneForm = {
+    title: "Move Section",
+    fields: [
+      {
+        name: "sceneId",
+        type: "select",
+        label: "Scene",
+        required: true,
+        options: moveSectionSceneOptions,
+      },
+    ],
+    actions: {
+      buttons: [
+        {
+          id: "submit",
+          variant: "pr",
+          label: "Move",
+          type: "submit",
+          validate: true,
         },
       ],
     },
@@ -1373,6 +1488,8 @@ export const selectViewData = ({ state }) => {
     sectionLineChanges: state.sectionLineChanges,
     sectionCreateDialog: state.sectionCreateDialog,
     sectionCreateForm,
+    sectionMoveSceneDialog: state.sectionMoveSceneDialog,
+    sectionMoveSceneForm,
     sceneSettings: state.sceneSettings,
     linesEditorKey: `document-${state.sceneSettings.showLineNumbers ? "line-numbers-show" : "line-numbers-hide"}`,
     sceneSettingsDialog: state.sceneSettingsDialog,

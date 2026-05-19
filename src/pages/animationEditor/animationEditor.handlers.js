@@ -6,10 +6,10 @@ import {
 } from "../../internal/animationEditorRoute.js";
 import { serializeTransitionMask } from "../../internal/animationMasks.js";
 import { resolveResourceFileType } from "../../internal/resourceFileMetadata.js";
-import { captureCanvasThumbnailImage } from "../../internal/runtime/graphicsEngineRuntime.js";
 import { createFileExplorerKeyboardScopeHandlers } from "../../internal/ui/fileExplorerKeyboardScope.js";
 import { runResourcePageMutation } from "../../internal/ui/resourcePages/resourcePageErrors.js";
 import {
+  addKeyframeDefaultValues,
   AUTO_TWEEN_DEFAULT_DURATION,
   AUTO_TWEEN_DEFAULT_EASING,
 } from "./animationEditor.constants.js";
@@ -53,39 +53,6 @@ const getEditorPayload = (appService) => {
 };
 
 const DEFAULT_NEW_ANIMATION_NAME = "New Animation";
-
-const dataUrlToBlob = async (value) => {
-  if (typeof value !== "string" || value.length === 0) {
-    throw new Error("Thumbnail image is missing");
-  }
-
-  const commaIndex = value.indexOf(",");
-  if (commaIndex < 0) {
-    throw new Error("Thumbnail image is not a valid data URL");
-  }
-
-  const header = value.slice(0, commaIndex);
-  const body = value.slice(commaIndex + 1);
-  const mimeMatch = header.match(/^data:([^;,]+)?(?:;base64)?$/);
-  if (!mimeMatch) {
-    throw new Error("Thumbnail image is not a valid data URL");
-  }
-
-  const mimeType = mimeMatch[1] || "application/octet-stream";
-  const isBase64 = header.includes(";base64");
-
-  if (!isBase64) {
-    return new Blob([decodeURIComponent(body)], { type: mimeType });
-  }
-
-  const binary = atob(body);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-
-  return new Blob([bytes], { type: mimeType });
-};
 
 const stopPreviewPlaybackIndicator = ({ store } = {}) => {
   const frameId = store.selectPreviewPlaybackFrameId();
@@ -229,9 +196,10 @@ const renderPreviewAnimationState = async ({
   graphicsService,
   projectService,
   store,
+  shouldContinue,
 } = {}) => {
   if (!graphicsService) {
-    return;
+    return false;
   }
 
   const resetState = store.selectAnimationResetState();
@@ -242,8 +210,31 @@ const renderPreviewAnimationState = async ({
     renderState: [resetState, renderState],
   });
 
+  if (shouldContinue?.() === false) {
+    return false;
+  }
+
   await graphicsService.render(resetState);
+
+  if (shouldContinue?.() === false) {
+    return false;
+  }
+
   await graphicsService.render(renderState);
+  return true;
+};
+
+const clearPreviewCanvas = async ({ graphicsService } = {}) => {
+  if (!graphicsService) {
+    return;
+  }
+
+  graphicsService.setAnimationPlaybackMode("manual");
+  graphicsService.setAnimationTime(0);
+  await graphicsService.render({
+    elements: [],
+    animations: [],
+  });
 };
 
 const waitForPreviewPaint = async () => {
@@ -272,25 +263,37 @@ const preparePreviewPlaybackAtStart = async ({
   graphicsService,
   projectService,
   store,
+  shouldContinue,
 } = {}) => {
   if (!graphicsService) {
-    return;
+    return false;
   }
 
   stopPreviewPlaybackIndicator({
     store,
   });
   graphicsService.setAnimationPlaybackMode("manual");
-  await renderPreviewAnimationState({
+  graphicsService.setAnimationTime(0);
+  const rendered = await renderPreviewAnimationState({
     graphicsService,
     projectService,
     store,
+    shouldContinue,
   });
+  if (!rendered) {
+    return false;
+  }
+
+  if (shouldContinue?.() === false) {
+    return false;
+  }
+
   graphicsService.setAnimationTime(0);
   store.setPreviewPlaybackMode({
     mode: "manual",
   });
   store.markPreviewPrepared({});
+  return true;
 };
 
 const ensureManualPreviewAtTime = async ({
@@ -312,6 +315,7 @@ const ensureManualPreviewAtTime = async ({
       store,
     });
     graphicsService.setAnimationPlaybackMode("manual");
+    graphicsService.setAnimationTime(timeMs);
     await renderPreviewAnimationState({
       graphicsService,
       projectService,
@@ -330,6 +334,7 @@ const ensureManualPreviewAtTime = async ({
 const renderPreviewForThumbnailCapture = async ({
   graphicsService,
   projectService,
+  resetCanvas = false,
   store,
 } = {}) => {
   if (!graphicsService) {
@@ -339,6 +344,12 @@ const renderPreviewForThumbnailCapture = async ({
   const captureTimeMs = store.selectPreviewPlayheadVisible()
     ? (store.selectPreviewPlayheadTimeMs() ?? 0)
     : 0;
+
+  if (resetCanvas) {
+    await clearPreviewCanvas({
+      graphicsService,
+    });
+  }
 
   await ensureManualPreviewAtTime({
     graphicsService,
@@ -679,8 +690,7 @@ export const handleBackClick = async (deps) => {
 };
 
 export const handleSavePreviewClick = async (deps) => {
-  const { appService, graphicsService, projectService, refs, render, store } =
-    deps;
+  const { appService, projectService, render, store } = deps;
   const autosaveAttempt = await flushQueuedAutosave({
     deps,
   });
@@ -699,29 +709,6 @@ export const handleSavePreviewClick = async (deps) => {
   }
 
   try {
-    await renderPreviewForThumbnailCapture({
-      graphicsService,
-      projectService,
-      store,
-    });
-    await waitForPreviewPaint();
-
-    const thumbnailImage = await captureCanvasThumbnailImage(
-      graphicsService,
-      refs.canvas,
-    );
-    if (!thumbnailImage) {
-      appService.showAlert({
-        message: "Failed to capture animation thumbnail.",
-        title: "Error",
-      });
-      return;
-    }
-
-    const thumbnailBlob = await dataUrlToBlob(thumbnailImage);
-    const storedFile = await projectService.storeFile({
-      file: thumbnailBlob,
-    });
     const previewData = store.selectPreviewData();
     const updateAttempt = await runResourcePageMutation({
       appService,
@@ -730,10 +717,8 @@ export const handleSavePreviewClick = async (deps) => {
         projectService.updateAnimation({
           animationId,
           data: {
-            thumbnailFileId: storedFile.fileId,
             preview: previewData,
           },
-          fileRecords: storedFile.fileRecords,
         }),
     });
 
@@ -808,25 +793,28 @@ export const handleAddPropertySideMenuItemClick = (deps, payload) => {
 
 export const handleAddPropertyFormSubmit = (deps, payload) => {
   const { render, store } = deps;
+  const popover = store.selectPopover();
   const {
     payload: { side },
-  } = store.selectPopover();
-  const {
-    property,
-    initialValue,
-    useInitialValue,
-    tweenMode,
-    duration,
-    easing,
-  } = payload._event.detail.values;
+  } = popover;
+  const trackedValues = popover.formValues ?? {};
+  const mergedValues = mergeSubmittedFormValues({
+    popover,
+    payload,
+  });
+  const { property, useInitialValue, tweenMode, duration, easing } =
+    mergedValues;
   const defaultInitialValue = store.selectDefaultInitialValue({ property });
   const useAutoTween = side === "update" && tweenMode === "auto";
+  const submittedInitialValue = hasOwnFormValue(trackedValues, "initialValue")
+    ? trackedValues.initialValue
+    : defaultInitialValue;
 
   const finalInitialValue = useAutoTween
     ? undefined
     : useInitialValue
-      ? initialValue !== undefined && initialValue !== ""
-        ? initialValue
+      ? submittedInitialValue !== undefined && submittedInitialValue !== ""
+        ? submittedInitialValue
         : defaultInitialValue
       : undefined;
 
@@ -869,13 +857,21 @@ export const handleAddKeyframeInDialog = (deps, payload) => {
 
 export const handleAddKeyframeFormSubmit = (deps, payload) => {
   const { render, store } = deps;
+  const popover = store.selectPopover();
   const {
     payload: { side, property, index },
-  } = store.selectPopover();
+  } = popover;
+  const trackedValues = popover.formValues ?? {};
 
   const formValues = {
-    ...payload._event.detail.values,
+    ...mergeSubmittedFormValues({
+      popover,
+      payload,
+    }),
   };
+  if (!hasOwnFormValue(trackedValues, "value")) {
+    formValues.value = addKeyframeDefaultValues.value;
+  }
 
   if (formValues.duration < 1) {
     formValues.duration = 1;
@@ -1134,6 +1130,18 @@ const updatePopoverFieldValue = ({ store, detail } = {}) => {
   });
 };
 
+const mergeSubmittedFormValues = ({ popover, payload } = {}) => {
+  return Object.assign(
+    {},
+    payload?._event?.detail?.values,
+    popover?.formValues,
+  );
+};
+
+const hasOwnFormValue = (values, name) => {
+  return Object.prototype.hasOwnProperty.call(values ?? {}, name);
+};
+
 const resolveValueChange = (payload) => {
   return (
     payload._event.detail?.value ??
@@ -1184,6 +1192,7 @@ const PREVIEW_IMAGE_SELECTOR_TARGETS = new Set([
   "preview-background",
   "preview-outgoing",
   "preview-incoming",
+  "preview-target",
 ]);
 
 const isPreviewImageSelectorTarget = (target) => {
@@ -1192,12 +1201,29 @@ const isPreviewImageSelectorTarget = (target) => {
 
 export const handleAddPropertyFormChange = (deps, payload) => {
   const { render, store } = deps;
+  const { name, value } = payload._event.detail ?? {};
+  if (name === "property") {
+    const currentFormValues = store.selectPopover().formValues ?? {};
+    const initialValue = store.selectDefaultInitialValue({
+      property: value,
+    });
+    const nextFormValues = {
+      ...currentFormValues,
+      property: value,
+      initialValue,
+    };
+    store.updatePopoverFormValues({
+      formValues: nextFormValues,
+    });
+    render();
+    return;
+  }
+
   updatePopoverFieldValue({
     store,
     detail: payload._event.detail,
   });
 
-  const { name, value } = payload._event.detail ?? {};
   if (name === "tweenMode" && value === "auto") {
     const currentFormValues = store.selectPopover().formValues ?? {};
     store.updatePopoverFormValues({
@@ -1209,6 +1235,15 @@ export const handleAddPropertyFormChange = (deps, payload) => {
     });
   }
 
+  render();
+};
+
+export const handleAddKeyframeFormChange = (deps, payload) => {
+  const { render, store } = deps;
+  updatePopoverFieldValue({
+    store,
+    detail: payload._event.detail,
+  });
   render();
 };
 
@@ -1566,6 +1601,7 @@ export const handleConfirmMaskImageSelection = async (deps) => {
       await renderPreviewForThumbnailCapture({
         graphicsService,
         projectService,
+        resetCanvas: true,
         store,
       });
     } catch {
@@ -1606,11 +1642,23 @@ export const handleReplayAnimation = async (deps) => {
     return;
   }
 
-  await preparePreviewPlaybackAtStart({
+  const playbackRequestId = generateId();
+  store.setPreviewPlaybackRequestId({
+    requestId: playbackRequestId,
+  });
+  const isCurrentPlaybackRequest = () =>
+    store.selectPreviewPlaybackRequestId() === playbackRequestId;
+
+  const prepared = await preparePreviewPlaybackAtStart({
     graphicsService,
     projectService,
     store,
+    shouldContinue: isCurrentPlaybackRequest,
   });
+  if (!prepared || !isCurrentPlaybackRequest()) {
+    return;
+  }
+
   render();
 
   const durationMs = store.selectPreviewDurationMs();
@@ -1620,15 +1668,24 @@ export const handleReplayAnimation = async (deps) => {
   }
 
   await waitForPreviewPaint();
+  if (!isCurrentPlaybackRequest()) {
+    return;
+  }
+
   graphicsService.setAnimationPlaybackMode("auto");
   store.setPreviewPlaybackMode({
     mode: "auto",
   });
-  await renderPreviewAnimationState({
+  const rendered = await renderPreviewAnimationState({
     graphicsService,
     projectService,
     store,
+    shouldContinue: isCurrentPlaybackRequest,
   });
+  if (!rendered || !isCurrentPlaybackRequest()) {
+    return;
+  }
+
   store.startPreviewPlayback({
     startedAtMs: performance.now(),
     durationMs,
@@ -1642,11 +1699,15 @@ export const handleReplayAnimation = async (deps) => {
 
 export const handleEditInitialValueFormSubmit = (deps, payload) => {
   const { render, store } = deps;
+  const popover = store.selectPopover();
   const {
     payload: { side, property },
-  } = store.selectPopover();
+  } = popover;
 
-  const { initialValue, valueSource } = payload._event.detail.values;
+  const { initialValue, valueSource } = mergeSubmittedFormValues({
+    popover,
+    payload,
+  });
   const defaultInitialValue = store.selectDefaultInitialValue({ property });
   const finalInitialValue =
     valueSource === "default"

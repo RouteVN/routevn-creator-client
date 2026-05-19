@@ -316,6 +316,113 @@ describe("systemActions.store", () => {
     ]);
   });
 
+  it("previews screen actions that only set opacity or blur", () => {
+    const state = createInitialState();
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          screen: {
+            opacity: 0.5,
+            blur: {
+              x: 6,
+              y: 9,
+              quality: 3,
+              kernelSize: 9,
+              repeatEdgePixels: true,
+            },
+          },
+        },
+      },
+    });
+
+    expect(actions.screen).toEqual({
+      opacity: 0.5,
+      blur: {
+        x: 6,
+        y: 9,
+        quality: 3,
+        kernelSize: 9,
+        repeatEdgePixels: true,
+      },
+    });
+    expect(preview.screen).toMatchObject({
+      label: "Screen",
+    });
+  });
+
+  it("previews screen blur clear actions", () => {
+    const state = createInitialState();
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          screen: {
+            blur: null,
+          },
+        },
+      },
+    });
+
+    expect(actions.screen).toEqual({
+      blur: null,
+    });
+    expect(preview.screen).toMatchObject({
+      label: "Screen",
+    });
+  });
+
+  it("previews background appearance-only actions against current background", () => {
+    const state = createInitialState();
+
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          images: {
+            items: {
+              "bg-school": {
+                id: "bg-school",
+                type: "image",
+                name: "School",
+                fileId: "file-school",
+              },
+            },
+            tree: [{ id: "bg-school" }],
+          },
+        },
+      },
+    );
+
+    const { actions, preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          background: {
+            blur: null,
+          },
+        },
+        presentationState: {
+          background: {
+            resourceId: "bg-school",
+          },
+        },
+      },
+    });
+
+    expect(actions.background).toEqual({
+      resourceId: "bg-school",
+      blur: null,
+    });
+    expect(preview.background).toMatchObject({
+      id: "bg-school",
+      name: "School",
+      type: "image",
+    });
+  });
+
   it("includes custom character name and persist character labels in dialogue preview when a character is selected", () => {
     const state = createInitialState();
 

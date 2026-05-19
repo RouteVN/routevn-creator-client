@@ -1,15 +1,69 @@
+const buildScreenDataFromState = (store) => {
+  const transitionAnimationId = store.selectTransitionAnimationId();
+  const opacity = store.selectScreenOpacity();
+  const blur = store.selectScreenBlurActionValue();
+
+  const screen = {};
+
+  if (transitionAnimationId) {
+    screen.animations = {
+      resourceId: transitionAnimationId,
+    };
+  }
+
+  if (opacity !== undefined) {
+    screen.opacity = opacity;
+  }
+
+  if (blur !== undefined) {
+    screen.blur = blur;
+  }
+
+  return screen;
+};
+
+const dispatchTemporaryPresentationStateChange = (deps) => {
+  const { dispatchEvent, store } = deps;
+
+  if (typeof dispatchEvent !== "function") {
+    return;
+  }
+
+  dispatchEvent(
+    new CustomEvent("temporary-presentation-state-change", {
+      detail: {
+        presentationState: {
+          screen: buildScreenDataFromState(store),
+        },
+      },
+    }),
+  );
+};
+
 export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
   const { animations } = projectService.getRepositoryState();
+  const screen = props?.screen ?? {};
+  const formValues = {
+    transitionAnimationId: screen?.animations?.resourceId,
+    opacity: screen?.opacity,
+  };
+
+  if (Object.hasOwn(screen, "blur")) {
+    formValues.blur = Boolean(screen.blur);
+    formValues.blurX = screen.blur?.x;
+    formValues.blurY = screen.blur?.y;
+    formValues.blurQuality = screen.blur?.quality;
+    formValues.blurKernelSize = screen.blur?.kernelSize;
+    formValues.blurRepeatEdgePixels = screen.blur?.repeatEdgePixels;
+  }
 
   store.setAnimations({
     animations,
   });
   store.setFormValues({
-    values: {
-      transitionAnimationId: props?.screen?.animations?.resourceId,
-    },
+    values: formValues,
   });
   render();
 };
@@ -23,29 +77,17 @@ export const handleFormChange = (deps, payload) => {
 
   store.setFormValues({ values });
   render();
+  dispatchTemporaryPresentationStateChange(deps);
 };
 
 export const handleSubmitClick = (deps) => {
-  const { appService, dispatchEvent, store } = deps;
-  const { formValues } = store.getState();
-  const transitionAnimationId = formValues?.transitionAnimationId;
-
-  if (!transitionAnimationId) {
-    appService.showAlert({
-      message: "Please select a transition animation",
-      title: "Warning",
-    });
-    return;
-  }
+  const { dispatchEvent, store } = deps;
+  const screen = buildScreenDataFromState(store);
 
   dispatchEvent(
     new CustomEvent("submit", {
       detail: {
-        screen: {
-          animations: {
-            resourceId: transitionAnimationId,
-          },
-        },
+        screen,
       },
       bubbles: true,
       composed: true,

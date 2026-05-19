@@ -33,7 +33,7 @@ else
 fi
 
 bun run build:tauri
-tauri build --config src-tauri/tauri.prod.conf.json --target universal-apple-darwin --bundles dmg
+tauri build --config src-tauri/tauri.prod.conf.json --target universal-apple-darwin --bundles app,dmg
 
 DMG_DIR="src-tauri/target/universal-apple-darwin/release/bundle/dmg"
 DMG_PATH=$(find "${DMG_DIR}" -maxdepth 1 -type f -name "*.dmg" -print | sort | tail -n 1)

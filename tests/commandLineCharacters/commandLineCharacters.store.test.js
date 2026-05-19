@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  moveCharacter,
   selectViewData,
   setAnimations,
   setExistingCharacters,
@@ -9,6 +10,10 @@ import {
   setSelectedCharacterIndex,
   setSelectedSpriteGroupId,
   setTransforms,
+  showDropdownMenu,
+  updateCharacterBlurEnabled,
+  updateCharacterBlurField,
+  updateCharacterOpacity,
 } from "../../src/components/commandLineCharacters/commandLineCharacters.store.js";
 
 const createSpriteSelectState = () => {
@@ -217,6 +222,195 @@ describe("commandLineCharacters.store sprite group filtering", () => {
         backgroundColor: "bg",
       },
     ]);
+  });
+
+  it("displays selected characters in reverse order while preserving source indices", () => {
+    const state = createInitialState();
+
+    setItems(
+      { state },
+      {
+        items: {
+          items: {
+            "character-hero": {
+              id: "character-hero",
+              type: "character",
+              name: "Hero",
+            },
+            "character-rival": {
+              id: "character-rival",
+              type: "character",
+              name: "Rival",
+            },
+          },
+          tree: [{ id: "character-hero" }, { id: "character-rival" }],
+        },
+      },
+    );
+    setExistingCharacters(
+      { state },
+      {
+        characters: [
+          {
+            id: "character-hero",
+          },
+          {
+            id: "character-rival",
+          },
+        ],
+      },
+    );
+
+    const viewData = selectViewData({ state });
+
+    expect(
+      viewData.selectedCharacters.map((character) => character.id),
+    ).toEqual(["character-hero", "character-rival"]);
+    expect(
+      viewData.defaultValues.characters.map((character) => ({
+        id: character.id,
+        characterIndex: character.characterIndex,
+      })),
+    ).toEqual([
+      {
+        id: "character-rival",
+        characterIndex: 1,
+      },
+      {
+        id: "character-hero",
+        characterIndex: 0,
+      },
+    ]);
+
+    showDropdownMenu(
+      { state },
+      {
+        position: { x: 10, y: 20 },
+        characterIndex: 0,
+      },
+    );
+    expect(state.dropdownMenu.items).toEqual([
+      { label: "Move Up", type: "item", value: "move-up" },
+      { label: "Delete", type: "item", value: "delete" },
+    ]);
+
+    moveCharacter({ state }, { index: 0, offset: 1 });
+    expect(state.selectedCharacters.map((character) => character.id)).toEqual([
+      "character-rival",
+      "character-hero",
+    ]);
+    expect(
+      selectViewData({ state }).defaultValues.characters.map((character) => ({
+        id: character.id,
+        characterIndex: character.characterIndex,
+      })),
+    ).toEqual([
+      {
+        id: "character-hero",
+        characterIndex: 1,
+      },
+      {
+        id: "character-rival",
+        characterIndex: 0,
+      },
+    ]);
+  });
+
+  it("normalizes character opacity and blur controls", () => {
+    const state = createInitialState();
+
+    setItems(
+      { state },
+      {
+        items: {
+          items: {
+            "character-hero": {
+              id: "character-hero",
+              type: "character",
+              name: "Hero",
+            },
+          },
+          tree: [{ id: "character-hero" }],
+        },
+      },
+    );
+    setExistingCharacters(
+      { state },
+      {
+        characters: [
+          {
+            id: "character-hero",
+            opacity: "0.6",
+            blur: {
+              x: "7",
+              y: "8",
+              quality: "4",
+              kernelSize: 12,
+              repeatEdgePixels: "false",
+            },
+          },
+        ],
+      },
+    );
+
+    let selectedCharacter = state.selectedCharacters[0];
+    expect(selectedCharacter.opacity).toBe(0.6);
+    expect(selectedCharacter.blur).toEqual({
+      x: 7,
+      y: 8,
+      quality: 4,
+      kernelSize: 11,
+      repeatEdgePixels: false,
+    });
+
+    let viewData = selectViewData({ state });
+    expect(viewData.defaultValues.characters[0]).toMatchObject({
+      opacity: 0.6,
+      blurEnabled: true,
+      blur: {
+        x: 7,
+        y: 8,
+        quality: 4,
+        kernelSize: 11,
+        repeatEdgePixels: false,
+      },
+    });
+    expect(viewData.defaultValues.blurRepeatEdgeOptions).toEqual([
+      { value: false, label: "No" },
+      { value: true, label: "Yes" },
+    ]);
+
+    updateCharacterOpacity({ state }, { index: 0, opacity: "-1" });
+    expect(state.selectedCharacters[0].opacity).toBe(0);
+
+    updateCharacterBlurEnabled({ state }, { index: 0, enabled: false });
+    expect(state.selectedCharacters[0].blur).toBeNull();
+
+    updateCharacterBlurEnabled({ state }, { index: 0, enabled: true });
+    updateCharacterBlurField(
+      { state },
+      {
+        index: 0,
+        fieldName: "repeatEdgePixels",
+        value: false,
+      },
+    );
+
+    selectedCharacter = state.selectedCharacters[0];
+    expect(selectedCharacter.blur).toEqual({
+      x: 6,
+      y: 9,
+      quality: 3,
+      kernelSize: 9,
+      repeatEdgePixels: false,
+    });
+
+    viewData = selectViewData({ state });
+    expect(viewData.defaultValues.characters[0]).toMatchObject({
+      opacity: 0,
+      blurEnabled: true,
+      blur: selectedCharacter.blur,
+    });
   });
 
   it("builds stacked preview file ids for multipart characters in group order", () => {

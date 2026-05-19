@@ -102,7 +102,8 @@ export const toAnimationDisplayItem = (item) => {
     duration,
     cardKind: "animation",
     itemWidth: "f",
-    previewFileId: item?.thumbnailFileId,
+    thumbnailFileId: undefined,
+    previewFileId: undefined,
   };
 };
 

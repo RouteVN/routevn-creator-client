@@ -15,7 +15,7 @@ priority: high
 End User License Agreement
 Last Updated: [DATE]
 
-This software (“Software”) is licensed under the MIT License.
+This software ("Software") is licensed under the MIT License.
 By installing or using the Software, you agree to the terms of the MIT License included below
 
 You can find the full source code of this Software at:
@@ -23,7 +23,7 @@ You can find the full source code of this Software at:
 
 MIT License
 
-Copyright (c) 2025 Yuusoft
+Copyright (c) 2026 Yuusoft
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -42,4 +42,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-

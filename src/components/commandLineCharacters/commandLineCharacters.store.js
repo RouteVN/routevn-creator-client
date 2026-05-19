@@ -1,5 +1,17 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
 import { buildCharacterSpritePreviewFileIds } from "../../internal/characterSpritePreview.js";
+import {
+  COMMAND_LINE_ITEM_BLUR_KERNEL_SIZE_SELECT_OPTIONS,
+  COMMAND_LINE_ITEM_BLUR_REPEAT_EDGE_OPTIONS,
+  COMMAND_LINE_ITEM_BLUR_TOGGLE_OPTIONS,
+  DEFAULT_COMMAND_LINE_ITEM_BLUR,
+  DEFAULT_COMMAND_LINE_ITEM_OPACITY,
+  normalizeCommandLineItemBlur,
+  normalizeCommandLineItemBlurEnabled,
+  normalizeCommandLineItemBlurWithField,
+  normalizeCommandLineItemEffects,
+  normalizeCommandLineItemOpacity,
+} from "../../internal/commandLineItemEffects.js";
 
 const createEmptyCollection = () => ({
   items: {},
@@ -11,6 +23,33 @@ const UNGROUPED_SPRITE_GROUP_ID = "__ungrouped_sprites__";
 const UNGROUPED_GROUP_LABEL = "Ungrouped";
 const DEFAULT_SPRITE_GROUP_ID = "base";
 const DEFAULT_SPRITE_GROUP_NAME = "Sprite";
+const createCharacterContextDropdownItems = (
+  characterIndex,
+  characters = [],
+) => {
+  const items = [];
+
+  if (characterIndex < characters.length - 1) {
+    items.push({ label: "Move Up", type: "item", value: "move-up" });
+  }
+
+  if (characterIndex > 0) {
+    items.push({ label: "Move Down", type: "item", value: "move-down" });
+  }
+
+  items.push({ label: "Delete", type: "item", value: "delete" });
+  return items;
+};
+
+const createAddCharacterTransformDropdownItems = (transforms = {}) =>
+  toFlatItems(transforms)
+    .filter((item) => item.type === "transform")
+    .map((transform) => ({
+      label: transform.name ?? "Unnamed Transform",
+      transformId: transform.id,
+      type: "item",
+      value: transform.id,
+    }));
 
 const getAnimationType = (item = {}) => {
   return item?.animation?.type === "transition" ? "transition" : "update";
@@ -144,7 +183,9 @@ const matchesSpriteGroupTags = ({ item, tagIds } = {}) => {
 };
 
 const normalizeSelectedCharacter = (character = {}, animations = {}) => {
-  const nextCharacter = structuredClone(character ?? {});
+  const nextCharacter = normalizeCommandLineItemEffects(
+    structuredClone(character ?? {}),
+  );
   const selectedAnimationId = nextCharacter?.animations?.resourceId;
   const selectedAnimationMode = getAnimationModeById(
     animations,
@@ -180,14 +221,16 @@ export const createInitialState = () => ({
   selectedSpriteGroupId: undefined,
   selectedCharacterIndex: undefined, // For sprite selection
   pendingCharacterIndex: undefined,
+  pendingCharacterTransformId: undefined,
   searchQuery: "",
   fullImagePreviewVisible: false,
   fullImagePreviewFileId: undefined,
   dropdownMenu: {
     isOpen: false,
     position: { x: 0, y: 0 },
+    type: "character-context",
     characterIndex: null,
-    items: [{ label: "Delete", type: "item", value: "delete" }],
+    items: createCharacterContextDropdownItems(),
   },
 });
 
@@ -248,13 +291,14 @@ const resolveSelectedSpriteGroupId = ({
   return spriteSelectionGroups?.[0]?.id;
 };
 
-export const addCharacter = ({ state }, { id } = {}) => {
+export const addCharacter = ({ state }, { id, transformId } = {}) => {
   // Get the first available transform as default
   const transformItems = toFlatItems(state.transforms).filter(
     (item) => item.type === "transform",
   );
   const defaultTransform =
-    transformItems.length > 0 ? transformItems[0].id : undefined;
+    transformId ??
+    (transformItems.length > 0 ? transformItems[0].id : undefined);
 
   // Store raw character data (same structure as from props)
   state.selectedCharacters.push({
@@ -301,6 +345,45 @@ export const removeCharacter = ({ state }, { index } = {}) => {
   }
 };
 
+const retargetAdjacentMoveIndex = (currentIndex, sourceIndex, targetIndex) => {
+  if (currentIndex === sourceIndex) {
+    return targetIndex;
+  }
+
+  if (currentIndex === targetIndex) {
+    return sourceIndex;
+  }
+
+  return currentIndex;
+};
+
+export const moveCharacter = ({ state }, { index, offset } = {}) => {
+  const targetIndex = index + Math.sign(offset);
+  if (
+    !Number.isInteger(index) ||
+    !Number.isInteger(targetIndex) ||
+    index < 0 ||
+    index >= state.selectedCharacters.length ||
+    targetIndex < 0 ||
+    targetIndex >= state.selectedCharacters.length
+  ) {
+    return;
+  }
+
+  const [character] = state.selectedCharacters.splice(index, 1);
+  state.selectedCharacters.splice(targetIndex, 0, character);
+  state.selectedCharacterIndex = retargetAdjacentMoveIndex(
+    state.selectedCharacterIndex,
+    index,
+    targetIndex,
+  );
+  state.pendingCharacterIndex = retargetAdjacentMoveIndex(
+    state.pendingCharacterIndex,
+    index,
+    targetIndex,
+  );
+};
+
 export const updateCharacterTransform = (
   { state },
   { index, transform } = {},
@@ -337,6 +420,56 @@ export const updateCharacterAnimation = (
   }
 };
 
+export const updateCharacterOpacity = ({ state }, { index, opacity } = {}) => {
+  const character = state.selectedCharacters[index];
+  if (!character) {
+    return;
+  }
+
+  const normalizedOpacity = normalizeCommandLineItemOpacity(opacity);
+  if (normalizedOpacity === undefined) {
+    delete character.opacity;
+    return;
+  }
+
+  character.opacity = normalizedOpacity;
+};
+
+export const updateCharacterBlurEnabled = (
+  { state },
+  { index, enabled } = {},
+) => {
+  const character = state.selectedCharacters[index];
+  if (!character) {
+    return;
+  }
+
+  if (!normalizeCommandLineItemBlurEnabled(enabled)) {
+    character.blur = null;
+    return;
+  }
+
+  character.blur = normalizeCommandLineItemBlur(
+    character.blur ?? DEFAULT_COMMAND_LINE_ITEM_BLUR,
+  );
+};
+
+export const updateCharacterBlurField = (
+  { state },
+  { index, fieldName, value } = {},
+) => {
+  const character = state.selectedCharacters[index];
+  if (!character) {
+    return;
+  }
+
+  character.blur = normalizeCommandLineItemBlurWithField({
+    blur: character.blur,
+    fieldName,
+    value,
+  });
+};
+
 export const updateCharacterSprite = ({ state }, { index, spriteId } = {}) => {
   if (state.selectedCharacters[index]) {
     state.selectedCharacters[index].sprites = [
@@ -370,6 +503,7 @@ export const updateCharacterSpriteName = (
 export const clearCharacters = ({ state }, _payload = {}) => {
   state.selectedCharacters = [];
   state.pendingCharacterIndex = undefined;
+  state.pendingCharacterTransformId = undefined;
   state.selectedCharacterIndex = undefined;
   state.tempSelectedSpriteIds = {};
   state.selectedSpriteGroupId = undefined;
@@ -443,6 +577,17 @@ export const clearPendingCharacterIndex = ({ state }) => {
   state.pendingCharacterIndex = undefined;
 };
 
+export const setPendingCharacterTransformId = (
+  { state },
+  { transformId } = {},
+) => {
+  state.pendingCharacterTransformId = transformId;
+};
+
+export const clearPendingCharacterTransformId = ({ state }) => {
+  state.pendingCharacterTransformId = undefined;
+};
+
 export const selectTempSelectedCharacterId = ({ state }) => {
   return state.tempSelectedCharacterId;
 };
@@ -472,12 +617,38 @@ export const showDropdownMenu = (
 ) => {
   state.dropdownMenu.isOpen = true;
   state.dropdownMenu.position = position;
+  state.dropdownMenu.type = "character-context";
   state.dropdownMenu.characterIndex = characterIndex;
+  state.dropdownMenu.items = createCharacterContextDropdownItems(
+    characterIndex,
+    state.selectedCharacters,
+  );
+};
+
+export const showAddCharacterTransformDropdownMenu = (
+  { state },
+  { position } = {},
+) => {
+  state.dropdownMenu.isOpen = true;
+  state.dropdownMenu.position = position;
+  state.dropdownMenu.type = "add-character-transform";
+  state.dropdownMenu.characterIndex = null;
+  state.dropdownMenu.items = createAddCharacterTransformDropdownItems(
+    state.transforms,
+  );
 };
 
 export const hideDropdownMenu = ({ state }, _payload = {}) => {
   state.dropdownMenu.isOpen = false;
   state.dropdownMenu.characterIndex = null;
+};
+
+export const selectAddCharacterTransformDropdownItems = ({ state }) => {
+  return createAddCharacterTransformDropdownItems(state.transforms);
+};
+
+export const selectDropdownMenuType = ({ state }) => {
+  return state.dropdownMenu.type;
 };
 
 export const selectDropdownMenuCharacterIndex = ({ state }) => {
@@ -498,6 +669,10 @@ export const selectSelectedCharacterIndex = ({ state }) => {
 
 export const selectPendingCharacterIndex = ({ state }) => {
   return state.pendingCharacterIndex;
+};
+
+export const selectPendingCharacterTransformId = ({ state }) => {
+  return state.pendingCharacterTransformId;
 };
 
 export const selectSelectedSpriteGroupId = ({ state }) => {
@@ -578,6 +753,8 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
         transformId: char.transformId,
         animations: char.animations,
         animationMode: char.animationMode,
+        opacity: char.opacity,
+        blur: char.blur,
         spriteGroups: spriteSelectionGroups,
         spriteGroupBoxes,
         showSpriteGroupBoxes: spriteSelectionGroups.length > 1,
@@ -604,6 +781,8 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
       transformId: char.transformId,
       animations: char.animations,
       animationMode: char.animationMode,
+      opacity: char.opacity,
+      blur: char.blur,
       spriteGroups: spriteSelectionGroups,
       spriteGroupBoxes,
       showSpriteGroupBoxes: spriteSelectionGroups.length > 1,
@@ -863,18 +1042,31 @@ export const selectViewData = ({ state }) => {
     });
   }
 
-  // Create default values with character data and options
-  const defaultValues = {
-    characters: processedSelectedCharacters.map((char) => ({
+  const characterControls = processedSelectedCharacters.map(
+    (char, characterIndex) => ({
       ...char,
+      characterIndex,
       // Ensure transformId is set, use first transform as fallback if needed
       transformId:
         char.transformId ||
         (transformOptions.length > 0 ? transformOptions[0].value : undefined),
       animationId: char.animations?.resourceId,
-    })),
+      opacity: char.opacity ?? DEFAULT_COMMAND_LINE_ITEM_OPACITY,
+      blurEnabled: Boolean(char.blur),
+      blur: normalizeCommandLineItemBlur(
+        char.blur ?? DEFAULT_COMMAND_LINE_ITEM_BLUR,
+      ),
+    }),
+  );
+
+  // Create default values with character data and options
+  const defaultValues = {
+    characters: characterControls.slice().reverse(),
     transformOptions,
     animationOptions,
+    blurToggleOptions: COMMAND_LINE_ITEM_BLUR_TOGGLE_OPTIONS,
+    blurKernelSizeOptions: COMMAND_LINE_ITEM_BLUR_KERNEL_SIZE_SELECT_OPTIONS,
+    blurRepeatEdgeOptions: COMMAND_LINE_ITEM_BLUR_REPEAT_EDGE_OPTIONS,
   };
 
   return {

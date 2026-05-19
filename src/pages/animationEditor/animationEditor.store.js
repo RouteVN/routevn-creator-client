@@ -81,18 +81,30 @@ const createPropertyFieldConfig = (
       label: "Scale X",
       defaultValue: 1,
       slider: {
-        min: 0.1,
+        min: 0,
         max: 5,
-        step: 0.1,
+        step: 0.01,
       },
     },
     scaleY: {
       label: "Scale Y",
       defaultValue: 1,
       slider: {
-        min: 0.1,
+        min: 0,
         max: 5,
-        step: 0.1,
+        step: 0.01,
+      },
+    },
+    rotation: {
+      label: "Rotation",
+      defaultValue: 0,
+      slider: {
+        min: -360,
+        max: 360,
+        step: 1,
+      },
+      tooltip: {
+        content: "Rotation is measured in degrees.",
       },
     },
     translateX: {
@@ -121,6 +133,36 @@ const createPropertyFieldConfig = (
           "Uses viewport-height units. 1 moves by one full screen height, -1 moves by one full screen height upward.",
       },
     },
+    blurX: {
+      label: "Blur X",
+      defaultValue: 0,
+      slider: {
+        min: 0,
+        max: 64,
+        step: 0.5,
+      },
+    },
+    blurY: {
+      label: "Blur Y",
+      defaultValue: 0,
+      slider: {
+        min: 0,
+        max: 64,
+        step: 0.5,
+      },
+    },
+    // uProgress: {
+    //   label: "Progress",
+    //   defaultValue: 0,
+    //   slider: {
+    //     min: 0,
+    //     max: 1,
+    //     step: 0.01,
+    //   },
+    //   tooltip: {
+    //     content: "Progress uniforms use a normalized value from 0 to 1.",
+    //   },
+    // },
   };
 };
 
@@ -172,7 +214,22 @@ const getPreviewImageResource = (imagesData, imageId) => {
   return imageItem;
 };
 
-const PREVIEW_IMAGE_SLOT_CONFIGS = Object.freeze([
+const UPDATE_PREVIEW_IMAGE_SLOT_CONFIGS = Object.freeze([
+  {
+    label: "BG Image",
+    target: "preview-background",
+    field: "background",
+    supportsTransform: false,
+  },
+  {
+    label: "Target Image",
+    target: "preview-target",
+    field: "target",
+    supportsTransform: true,
+  },
+]);
+
+const TRANSITION_PREVIEW_IMAGE_SLOT_CONFIGS = Object.freeze([
   {
     label: "BG Image",
     target: "preview-background",
@@ -197,10 +254,19 @@ const createInitialPreviewImages = () => ({
   background: {},
   outgoing: {},
   incoming: {},
+  target: {},
 });
 
+const getPreviewImageSlotConfigs = (dialogType) =>
+  dialogType === "transition"
+    ? TRANSITION_PREVIEW_IMAGE_SLOT_CONFIGS
+    : UPDATE_PREVIEW_IMAGE_SLOT_CONFIGS;
+
 const getPreviewSlotConfig = (target) => {
-  return PREVIEW_IMAGE_SLOT_CONFIGS.find((slot) => slot.target === target);
+  return [
+    ...TRANSITION_PREVIEW_IMAGE_SLOT_CONFIGS,
+    ...UPDATE_PREVIEW_IMAGE_SLOT_CONFIGS,
+  ].find((slot) => slot.target === target);
 };
 
 const normalizePreviewSlot = (value, { supportsTransform = false } = {}) => {
@@ -249,6 +315,10 @@ const normalizeAnimationPreviewData = (previewData) => {
     incoming: normalizePreviewSlot(source.incoming ?? source.incomingImageId, {
       supportsTransform: true,
     }),
+    target: normalizePreviewSlot(
+      source.target ?? source.targetImageId ?? source.incoming,
+      { supportsTransform: true },
+    ),
   };
 };
 
@@ -263,6 +333,12 @@ const getPreviewSlot = (previewImages, target) => {
 
 const getPreviewSlotImageId = (previewImages, target) => {
   return getPreviewSlot(previewImages, target).imageId;
+};
+
+const getUpdatePreviewSlot = (previewImages = {}) => {
+  return previewImages.target?.imageId
+    ? previewImages.target
+    : (previewImages.incoming ?? {});
 };
 
 const createPreviewBackgroundElement = ({
@@ -373,7 +449,7 @@ const createAnimationResetState = ({
     elements.push(
       createPreviewContentElement({
         id: PREVIEW_UPDATE_ELEMENT_ID,
-        previewSlot: getPreviewSlot(previewImages, "preview-incoming"),
+        previewSlot: getUpdatePreviewSlot(previewImages),
         imagesData,
         projectResolution,
         fallbackFill: "white",
@@ -614,23 +690,24 @@ const createUpdateKeyframeForm = (
 const createAddPropertyForm = (
   availableProperties,
   propertyFieldConfig,
-  { side } = {},
+  { side, property } = {},
 ) => {
   const isUpdateSide = side === "update";
-  const initialValueFields = Object.keys(propertyFieldConfig).map(
-    (property) => {
-      const field = createSliderField({
+  const initialValueField = property
+    ? createSliderField({
         property,
         propertyFieldConfig,
         name: "initialValue",
         label: "Initial value",
-      });
-      field.$when = isUpdateSide
-        ? `tweenMode != "auto" && useInitialValue == true && property == "${property}"`
-        : `useInitialValue == true && property == "${property}"`;
-      return field;
-    },
-  );
+      })
+    : undefined;
+  if (initialValueField) {
+    initialValueField.defaultValue =
+      propertyFieldConfig[property]?.defaultValue ?? 0;
+    initialValueField.$when = isUpdateSide
+      ? 'tweenMode != "auto" && useInitialValue == true'
+      : "useInitialValue == true";
+  }
   const fields = [
     {
       name: "property",
@@ -675,31 +752,34 @@ const createAddPropertyForm = (
       ...field,
       $when: 'tweenMode == "auto"',
     }));
-    fields.push(...initialValueFields, ...autoFields);
+    if (initialValueField) {
+      fields.push(initialValueField);
+    }
+    fields.push(...autoFields);
   } else {
-    fields.push(
-      {
-        name: "useInitialValue",
-        type: "segmented-control",
-        label: "Use initial value",
-        noClear: true,
-        tooltip: {
-          content:
-            "The initial value of the property at the start of the animation. If not set, it will use the element's current value at start of animation",
-        },
-        options: [
-          {
-            label: "No",
-            value: false,
-          },
-          {
-            label: "Yes",
-            value: true,
-          },
-        ],
+    fields.push({
+      name: "useInitialValue",
+      type: "segmented-control",
+      label: "Use initial value",
+      noClear: true,
+      tooltip: {
+        content:
+          "The initial value of the property at the start of the animation. If not set, it will use the element's current value at start of animation",
       },
-      ...initialValueFields,
-    );
+      options: [
+        {
+          label: "No",
+          value: false,
+        },
+        {
+          label: "Yes",
+          value: true,
+        },
+      ],
+    });
+    if (initialValueField) {
+      fields.push(initialValueField);
+    }
   }
 
   return {
@@ -919,11 +999,27 @@ const getPropertyOptionsForSide = (side, propertyFieldConfig) => {
   );
 };
 
+const PROPERTY_CONFLICTS = Object.freeze({
+  x: ["translateX"],
+  translateX: ["x"],
+  y: ["translateY"],
+  translateY: ["y"],
+});
+
+const hasPropertyConflict = (properties = {}, property) => {
+  return (PROPERTY_CONFLICTS[property] ?? []).some((conflictingProperty) =>
+    Object.prototype.hasOwnProperty.call(properties, conflictingProperty),
+  );
+};
+
 const getAvailableProperties = (state, side, propertyFieldConfig) => {
   const currentProperties = getSectionProperties(state, side);
 
   return getPropertyOptionsForSide(side, propertyFieldConfig).filter((item) => {
-    return !Object.keys(currentProperties).includes(item.value);
+    return (
+      !Object.prototype.hasOwnProperty.call(currentProperties, item.value) &&
+      !hasPropertyConflict(currentProperties, item.value)
+    );
   });
 };
 
@@ -954,6 +1050,7 @@ export const createInitialState = () => ({
   previewPlaybackFrameId: undefined,
   previewPlaybackStartedAtMs: undefined,
   previewPlaybackDurationMs: undefined,
+  previewPlaybackRequestId: undefined,
   previewImages: createInitialPreviewImages(),
   popover: {
     mode: "none",
@@ -1422,7 +1519,12 @@ export const addProperty = (
 ) => {
   const properties = getMutableSectionProperties(state, side);
 
-  if (!property || !properties || properties[property]) {
+  if (
+    !property ||
+    !properties ||
+    properties[property] ||
+    hasPropertyConflict(properties, property)
+  ) {
     return;
   }
 
@@ -1967,11 +2069,28 @@ export const setPreviewImage = ({ state }, { target, imageId } = {}) => {
 };
 
 export const selectPreviewImageId = ({ state }, { target } = {}) => {
+  if (target === "preview-target") {
+    return getUpdatePreviewSlot(state.previewImages).imageId;
+  }
+
   return getPreviewSlotImageId(state.previewImages, target);
 };
 
 export const selectPreviewData = ({ state }) => {
-  return structuredClone(state.previewImages);
+  const background = structuredClone(state.previewImages.background ?? {});
+
+  if (state.dialogType === "transition") {
+    return {
+      background,
+      outgoing: structuredClone(state.previewImages.outgoing ?? {}),
+      incoming: structuredClone(state.previewImages.incoming ?? {}),
+    };
+  }
+
+  return {
+    background,
+    target: structuredClone(getUpdatePreviewSlot(state.previewImages)),
+  };
 };
 
 export const showFullImagePreview = ({ state }, { imageId } = {}) => {
@@ -2057,6 +2176,10 @@ export const startPreviewPlayback = (
   state.previewPlaybackFrameId = undefined;
 };
 
+export const setPreviewPlaybackRequestId = ({ state }, { requestId } = {}) => {
+  state.previewPlaybackRequestId = requestId;
+};
+
 export const setPreviewPlayhead = ({ state }, { timeMs, visible } = {}) => {
   state.previewPlayheadTimeMs = timeMs;
   state.previewPlayheadVisible = visible ?? state.previewPlayheadVisible;
@@ -2092,6 +2215,10 @@ export const selectPreviewPlaybackStartedAtMs = ({ state }) => {
 
 export const selectPreviewPlaybackDurationMs = ({ state }) => {
   return state.previewPlaybackDurationMs;
+};
+
+export const selectPreviewPlaybackRequestId = ({ state }) => {
+  return state.previewPlaybackRequestId;
 };
 
 const buildTransitionMaskPanelDataForMask = (
@@ -2178,8 +2305,11 @@ const buildTransitionMaskPanelData = (state) => {
 
 const buildPreviewPanelData = (state) => {
   return {
-    items: PREVIEW_IMAGE_SLOT_CONFIGS.map((slot) => {
-      const imageId = state.previewImages[slot.field]?.imageId;
+    items: getPreviewImageSlotConfigs(state.dialogType).map((slot) => {
+      const imageId =
+        slot.target === "preview-target"
+          ? getUpdatePreviewSlot(state.previewImages).imageId
+          : state.previewImages[slot.field]?.imageId;
       const image = buildMaskImageItem(state, imageId);
 
       return {
@@ -2279,20 +2409,55 @@ export const selectViewData = ({ state }) => {
   })();
 
   let addPropertyContext = {};
+  let addPropertyFormDefaultValues = {
+    useInitialValue: false,
+    tweenMode: "keyframes",
+    duration: AUTO_TWEEN_DEFAULT_DURATION,
+    easing: AUTO_TWEEN_DEFAULT_EASING,
+  };
   let editKeyframeDefaultValues = {};
   let editAutoDefaultValues = {};
   let editInitialValueDefaultValues = {};
   let editInitialValueContext = {};
+  let addPropertySelectedProperty = addPropertyOptions[0]?.value;
 
   if (state.popover.mode === "addProperty") {
-    addPropertyContext = {
-      useInitialValue: false,
-      tweenMode: "keyframes",
-      duration: AUTO_TWEEN_DEFAULT_DURATION,
-      easing: AUTO_TWEEN_DEFAULT_EASING,
+    addPropertySelectedProperty =
+      state.popover.formValues.property ?? addPropertySelectedProperty;
+  }
+
+  if (addPropertySelectedProperty) {
+    addPropertyFormDefaultValues.property = addPropertySelectedProperty;
+    addPropertyFormDefaultValues.initialValue =
+      defaultInitialValuesByProperty[addPropertySelectedProperty] ?? 0;
+  }
+
+  if (state.popover.mode === "addProperty") {
+    addPropertyFormDefaultValues = {
+      ...addPropertyFormDefaultValues,
       ...state.popover.formValues,
     };
+
+    if (
+      addPropertySelectedProperty &&
+      (addPropertyFormDefaultValues.initialValue === undefined ||
+        addPropertyFormDefaultValues.initialValue === "")
+    ) {
+      addPropertyFormDefaultValues.initialValue =
+        defaultInitialValuesByProperty[addPropertySelectedProperty] ?? 0;
+    }
+
+    addPropertyContext = {
+      ...addPropertyFormDefaultValues,
+    };
   }
+  const addPropertyFormKey = [
+    state.popover.mode === "addProperty" ? "open" : "closed",
+    addPropertySide,
+    addPropertySelectedProperty ?? "",
+    addPropertyFormDefaultValues.tweenMode ?? "",
+    addPropertyFormDefaultValues.useInitialValue ? "initial" : "current",
+  ].join(":");
 
   if (state.popover.mode === "editKeyframe") {
     const { side, property, index } = state.popover.payload;
@@ -2363,8 +2528,10 @@ export const selectViewData = ({ state }) => {
       propertyFieldConfig,
       {
         side: addPropertySide,
+        property: addPropertySelectedProperty,
       },
     ),
+    addPropertyFormKey,
     addPropertyContext,
     addKeyframeForm: createAddKeyframeForm(
       state.popover.payload?.property,
@@ -2414,12 +2581,7 @@ export const selectViewData = ({ state }) => {
       ),
       addPropertySideMenuIsOpen: state.popover.mode === "addPropertySideMenu",
     },
-    addPropertyFormDefaultValues: {
-      useInitialValue: false,
-      tweenMode: "keyframes",
-      duration: AUTO_TWEEN_DEFAULT_DURATION,
-      easing: AUTO_TWEEN_DEFAULT_EASING,
-    },
+    addPropertyFormDefaultValues,
     imageSelectorDialog: state.imageSelectorDialog,
     imageFolderItems,
     fullImagePreviewVisible: state.fullImagePreviewVisible,

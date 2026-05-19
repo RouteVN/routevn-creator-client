@@ -3,6 +3,32 @@ const getCharacterIndexFromEvent = (event) => {
   return Number.isInteger(index) ? index : undefined;
 };
 
+const getEventValue = (event) =>
+  event?.detail?.value ?? event?.currentTarget?.value ?? event?.target?.value;
+
+const getDropdownPositionFromEvent = (event) => {
+  const rect = event?.currentTarget?.getBoundingClientRect?.();
+  if (rect) {
+    return { x: rect.left, y: rect.bottom };
+  }
+
+  return {
+    x: event?.clientX ?? 0,
+    y: event?.clientY ?? 0,
+  };
+};
+
+const beginAddCharacterSelection = (store) => {
+  store.clearPendingCharacterIndex();
+  store.setSelectedCharacterIndex({ index: undefined });
+  store.clearTempSelectedSpriteIds();
+  store.setSelectedSpriteGroupId({ spriteGroupId: undefined });
+  store.setSearchQuery({ value: "" });
+  store.setMode({
+    mode: "character-select",
+  });
+};
+
 const buildTempSelectedSpriteIdsByGroup = ({
   character,
   spriteSelectionGroups,
@@ -87,7 +113,10 @@ const beginExistingCharacterSpriteSelectionAtGroup = (
 };
 
 const beginNewCharacterSpriteSelection = (store, characterId) => {
-  store.addCharacter({ id: characterId });
+  store.addCharacter({
+    id: characterId,
+    transformId: store.selectPendingCharacterTransformId?.(),
+  });
 
   const currentCharacters = store.selectSelectedCharacters();
   const newCharacterIndex = currentCharacters.length - 1;
@@ -146,6 +175,14 @@ const buildCharacterItemsFromState = (
       sprites: char.sprites || [],
       spriteName: char.spriteName || "",
     };
+
+    if (char.opacity !== undefined) {
+      item.opacity = char.opacity;
+    }
+
+    if (char.blur !== undefined) {
+      item.blur = char.blur === null ? null : { ...char.blur };
+    }
 
     if (shouldUseTemporarySprites && index === selectedCharacterIndex) {
       item.sprites = spriteSelectionGroups
@@ -295,6 +332,58 @@ export const handleAnimationChange = (deps, payload) => {
   dispatchTemporaryPresentationStateChange(deps);
 };
 
+export const handleOpacityInput = (deps, payload) => {
+  const { store, render } = deps;
+  const index = getCharacterIndexFromEvent(payload._event);
+
+  if (index === undefined) {
+    return;
+  }
+
+  store.updateCharacterOpacity({
+    index,
+    opacity: getEventValue(payload._event),
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleBlurToggleChange = (deps, payload) => {
+  const { store, render } = deps;
+  const index = getCharacterIndexFromEvent(payload._event);
+
+  if (index === undefined) {
+    return;
+  }
+
+  store.updateCharacterBlurEnabled({
+    index,
+    enabled: getEventValue(payload._event),
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleBlurFieldInput = (deps, payload) => {
+  const { store, render } = deps;
+  const index = getCharacterIndexFromEvent(payload._event);
+  const fieldName = payload._event.currentTarget?.dataset?.blurField;
+
+  if (index === undefined) {
+    return;
+  }
+
+  store.updateCharacterBlurField({
+    index,
+    fieldName,
+    value: getEventValue(payload._event),
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleBlurFieldChange = handleBlurFieldInput;
+
 export const handleFileExplorerItemClick = (deps, payload) => {
   const { refs, store, render } = deps;
   const { itemId, isFolder } = payload._event.detail;
@@ -377,19 +466,15 @@ export const handleSubmitClick = (deps) => {
 export const handleCharacterSelectorClick = (deps) => {
   const { store, render } = deps;
 
-  store.clearTempSelectedSpriteIds();
-  store.setSelectedSpriteGroupId({ spriteGroupId: undefined });
-  store.setSearchQuery({ value: "" });
-  store.setMode({
-    mode: "character-select",
-  });
-
+  store.clearPendingCharacterTransformId?.();
+  beginAddCharacterSelection(store);
   render();
 };
 
 export const handleBreadcumbClick = (deps, payload) => {
   const { dispatchEvent, store, render } = deps;
   const mode = store.selectMode();
+  const targetId = payload._event.detail.id;
 
   if (mode === "sprite-select") {
     discardPendingCharacterSelection(store);
@@ -398,19 +483,21 @@ export const handleBreadcumbClick = (deps, payload) => {
     store.setSelectedSpriteGroupId({ spriteGroupId: undefined });
   }
 
-  if (payload._event.detail.id === "actions") {
+  if (targetId === "actions") {
+    store.clearPendingCharacterTransformId?.();
     dispatchEvent(
       new CustomEvent("back-to-actions", {
         detail: {},
       }),
     );
-  } else if (payload._event.detail.id === "current") {
+  } else if (targetId === "current") {
+    store.clearPendingCharacterTransformId?.();
     store.setMode({
       mode: "current",
     });
     render();
     dispatchTemporaryPresentationStateChange(deps);
-  } else if (payload._event.detail.id === "character-select") {
+  } else if (targetId === "character-select") {
     store.setSearchQuery({ value: "" });
     store.setMode({
       mode: "character-select",
@@ -431,18 +518,22 @@ export const handleRemoveCharacterClick = (deps, payload) => {
   dispatchTemporaryPresentationStateChange(deps);
 };
 
-export const handleAddCharacterClick = (deps) => {
+export const handleAddCharacterClick = (deps, payload = {}) => {
   const { store, render } = deps;
+  const transformItems =
+    store.selectAddCharacterTransformDropdownItems?.() ?? [];
 
-  store.clearPendingCharacterIndex();
-  store.setSelectedCharacterIndex({ index: undefined });
-  store.clearTempSelectedSpriteIds();
-  store.setSelectedSpriteGroupId({ spriteGroupId: undefined });
-  store.setSearchQuery({ value: "" });
-  store.setMode({
-    mode: "character-select",
+  store.clearPendingCharacterTransformId?.();
+
+  if (transformItems.length === 0) {
+    beginAddCharacterSelection(store);
+    render();
+    return;
+  }
+
+  store.showAddCharacterTransformDropdownMenu({
+    position: getDropdownPositionFromEvent(payload._event),
   });
-
   render();
 };
 
@@ -506,6 +597,7 @@ export const handleButtonSelectClick = (deps) => {
     });
 
     store.clearPendingCharacterIndex();
+    store.clearPendingCharacterTransformId?.();
     store.setSelectedCharacterIndex({ index: undefined });
     store.clearTempSelectedSpriteIds();
     store.setSelectedSpriteGroupId({ spriteGroupId: undefined });
@@ -527,13 +619,30 @@ export const handleDropdownMenuClose = (deps) => {
 export const handleDropdownMenuClickItem = (deps, payload) => {
   const { store, render } = deps;
   const { item } = payload._event.detail;
+  const dropdownMenuType = store.selectDropdownMenuType?.();
   const characterIndex = store.selectDropdownMenuCharacterIndex();
+  const hasCharacterIndex = Number.isInteger(characterIndex);
+  let shouldDispatchTemporaryPresentationStateChange = false;
 
-  if (item.value === "delete" && characterIndex !== null) {
+  if (dropdownMenuType === "add-character-transform") {
+    store.setPendingCharacterTransformId({
+      transformId: item.transformId ?? item.value,
+    });
+    beginAddCharacterSelection(store);
+  } else if (item.value === "delete" && hasCharacterIndex) {
     store.removeCharacter({ index: characterIndex });
+    shouldDispatchTemporaryPresentationStateChange = true;
+  } else if (item.value === "move-up" && hasCharacterIndex) {
+    store.moveCharacter({ index: characterIndex, offset: 1 });
+    shouldDispatchTemporaryPresentationStateChange = true;
+  } else if (item.value === "move-down" && hasCharacterIndex) {
+    store.moveCharacter({ index: characterIndex, offset: -1 });
+    shouldDispatchTemporaryPresentationStateChange = true;
   }
 
   store.hideDropdownMenu();
   render();
-  dispatchTemporaryPresentationStateChange(deps);
+  if (shouldDispatchTemporaryPresentationStateChange) {
+    dispatchTemporaryPresentationStateChange(deps);
+  }
 };

@@ -238,6 +238,16 @@ layoutSections:
             name: clickImageId
             label: Click
             imageId: "${values.clickImageId}"
+  - "$when": "supportsSpriteBlur"
+    id: blur
+    label: Blur
+    "$if canAddSpriteBlur":
+      labelAction: plus
+    items:
+      - "$when": "values.blur"
+        type: blur-summary
+        name: blur
+        value: "${blurSummary}"
   - "$when": "supportsSliderImages"
     id: slider-images
     label: Slider Bar

@@ -41,6 +41,12 @@ import {
   toVisibilityConditionTargetOptions,
 } from "./support/layoutEditPanelFeatures.js";
 import {
+  createSpriteBlurDialogDefaults,
+  createSpriteBlurForm,
+  getSpriteBlurSummary,
+  isSpriteBlurValue,
+} from "./support/layoutEditPanelBlur.js";
+import {
   ACTION_INTERACTION_TYPES,
   REVEAL_EFFECT_OPTIONS,
   getLayoutEditPanelSections,
@@ -429,6 +435,10 @@ const resetSelectionUiState = (state) => {
     open: false,
     key: 0,
   };
+  state.spriteBlurDialog = {
+    open: false,
+    key: 0,
+  };
   state.conditionalOverrideConditionDialog = {
     open: false,
     key: 0,
@@ -614,12 +624,21 @@ export const openChildInteractionDialog = ({ state }, _payload = {}) => {
   state.childInteractionDialog.key += 1;
 };
 
+export const openSpriteBlurDialog = ({ state }, _payload = {}) => {
+  state.spriteBlurDialog.open = true;
+  state.spriteBlurDialog.key += 1;
+};
+
 export const closeSaveLoadPaginationDialog = ({ state }, _payload = {}) => {
   state.saveLoadPaginationDialog.open = false;
 };
 
 export const closeChildInteractionDialog = ({ state }, _payload = {}) => {
   state.childInteractionDialog.open = false;
+};
+
+export const closeSpriteBlurDialog = ({ state }, _payload = {}) => {
+  state.spriteBlurDialog.open = false;
 };
 
 export const openConditionalOverrideConditionDialog = (
@@ -833,6 +852,10 @@ export const selectChildInteractionDialog = ({ state }) => {
   return state.childInteractionDialog;
 };
 
+export const selectSpriteBlurDialog = ({ state }) => {
+  return state.spriteBlurDialog;
+};
+
 export const selectConditionalOverrideConditionDialog = ({ state }) => {
   return state.conditionalOverrideConditionDialog;
 };
@@ -975,6 +998,7 @@ export const selectViewData = ({ state, props, constants }) => {
     capabilities.supportsSize === true || showsDirectedContainerSizeMode;
   const showAspectRatioMode =
     capabilities.supportsHeight === true && !showsDirectedContainerSizeMode;
+  const hasSpriteBlur = isSpriteBlurValue(values.blur);
   const sections = annotatePanelSections(
     parseAndRender(
       getLayoutEditPanelSections({
@@ -1019,6 +1043,8 @@ export const selectViewData = ({ state, props, constants }) => {
         hasChildInteractionInheritance: hasChildInteractionInheritance(values),
         canAddChildInteractionInheritance:
           getAvailableChildInteractionItems(values).length > 0,
+        blurSummary: getSpriteBlurSummary(values.blur),
+        canAddSpriteBlur: !hasSpriteBlur,
         canAddTextStyleVariant:
           !values.hoverTextStyleId || !values.clickTextStyleId,
         canAddSoundVariant: !values.hoverSoundId || !values.clickSoundId,
@@ -1128,6 +1154,11 @@ export const selectViewData = ({ state, props, constants }) => {
     childInteractionDialogDefaults:
       createChildInteractionDialogDefaults(values),
     childInteractionDialogForm: createChildInteractionForm(),
+    spriteBlurDialog: state.spriteBlurDialog,
+    spriteBlurDialogDefaults: createSpriteBlurDialogDefaults(values.blur),
+    spriteBlurDialogForm: createSpriteBlurForm({
+      submitLabel: hasSpriteBlur ? "Save Blur" : "Add Blur",
+    }),
     conditionalOverrideConditionDialog:
       state.conditionalOverrideConditionDialog,
     conditionalOverrideItems,

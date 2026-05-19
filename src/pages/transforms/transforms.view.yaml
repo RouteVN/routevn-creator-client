@@ -67,6 +67,14 @@ refs:
     eventListeners:
       click:
         handler: handleTransformPreviewImageClick
+      contextmenu:
+        handler: handleTransformPreviewImageContextMenu
+  transformPreviewImageMenu:
+    eventListeners:
+      close:
+        handler: handleTransformPreviewImageMenuClose
+      item-click:
+        handler: handleTransformPreviewImageMenuItemClick
   transformPreviewImageSelectorDialog:
     eventListeners:
       close:
@@ -227,6 +235,7 @@ template:
                                     $else:
                                       - 'rtgl-view#transformPreviewImageButton${i} data-target=${item.target} w=160 h=90 av=c ah=c bgc=bg bc=bo bw=xs br=md cur=pointer style="max-width: 100%; box-sizing: border-box;"':
                                           - rtgl-text c=mu-fg s=sm: Select image
+  - rtgl-dropdown-menu#transformPreviewImageMenu :items=${previewImageMenu.items} ?open=${previewImageMenu.isOpen} x=${previewImageMenu.x} y=${previewImageMenu.y}: null
   - rtgl-dialog#transformPreviewImageSelectorDialog ?open=${imageSelectorDialog.open} s=xl:
       - $if imageSelectorDialog.open:
           - rtgl-view slot=content d=v w=f g=md:

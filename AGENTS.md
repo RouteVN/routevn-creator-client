@@ -28,7 +28,11 @@ This command:
 Notes:
 
 - `bun run build` may not exist in this repo; use `build:web` for validation.
-- Do not run `bun run build:web` after each change. The user is expected to be running a watch-mode session during active development.
+- Do not run `bun run build:web` for routine validation during active
+  development. The user usually has a watch-mode session running
+  (`bun run watch:web` or `bun run watch:tauri`). Only run `build:web` when the
+  user asks for it, when preparing release/VT output, or when there is a
+  specific build-only issue to verify.
 - Before pushing, run lint/format checks (the push hook also enforces this).
 
 Run tests:
@@ -111,6 +115,8 @@ If you need deeper or broader Rettangoli framework reference material, use
   (`const { store, refs, appService, projectService } = deps`) instead of
   repeatedly calling `deps.store`, `deps.refs`, and similar dotted access
   throughout the function body.
+- Do not call `store.getState()` from page/component handlers. Add a named
+  selector to the store and call that selector instead.
 - Do not add dynamic form method wrappers (for example, `callFormMethod`) or retry loops to wait for refs.
 - Call known methods directly (`formRef.reset()`, `formRef.setValues(...)`).
 - Avoid defensive guard noise when data contract is already stable.

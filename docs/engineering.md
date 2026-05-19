@@ -47,6 +47,12 @@ Local-first collaboration:
   function (`const { store, refs, appService, projectService } = deps`)
   instead of repeatedly using `deps.store`, `deps.refs`, and similar dotted
   access throughout the body.
+- Do not read handler state with `store.getState()`. Create and use named store
+  selectors for every state slice a handler needs.
+- Do not add browser-global debug toggles such as
+  `window.__RVN_DEBUG_BACKGROUND_ACTION__ = true` or other
+  `window.__RVN_DEBUG_*` flags. Temporary diagnostic logs should be explicit,
+  easy to find, and removed when the issue is resolved.
 
 ## ID Generation
 
@@ -70,6 +76,12 @@ This repo currently uses three main test styles:
 - script-driven Node tests in `scripts/test-*.js`
 - YAML-driven Puty tests in `tests/puty/`
 - Rettangoli VT workflow specs in `vt/specs/`
+
+During active development, the user usually has a watch-mode session running
+(`bun run watch:web` or `bun run watch:tauri`). Do not run `bun run build:web`
+for routine validation of ordinary code or view edits. Prefer targeted tests,
+format checks, lint checks, and the active watch output. Reserve `build:web` for
+explicit user requests, release/VT output, or a specific build-only failure.
 
 Common commands:
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createLayoutEditorRenderedElements,
+  createLayoutEditorRenderState,
   createLayoutEditorSelectionOverlay,
 } from "../../src/components/layoutEditorCanvas/support/layoutEditorCanvasRender.js";
 import { createLayoutEditorPreviewData } from "../../src/components/layoutEditorPreview/support/layoutEditorPreviewData.js";
@@ -430,6 +431,58 @@ describe("layoutEditorPreview", () => {
     expect(previewData).not.toHaveProperty("saveSlots");
     expect(previewData).not.toHaveProperty("runtime");
     expect(previewData).not.toHaveProperty("variables");
+  });
+
+  it("passes sprite blur through to the layout render state", () => {
+    const blur = {
+      x: 8,
+      y: 10,
+      quality: 4,
+      kernelSize: 11,
+      repeatEdgePixels: false,
+    };
+    const { renderStateElements } = createLayoutEditorRenderState({
+      layoutState: {
+        id: "layout-title",
+        layoutType: "general",
+        elements: {
+          items: {
+            background: {
+              id: "background",
+              type: "sprite",
+              imageId: "image-1",
+              x: 0,
+              y: 0,
+              width: 320,
+              height: 180,
+              blur,
+            },
+          },
+          tree: [{ id: "background" }],
+        },
+      },
+      repositoryState: {
+        layouts: { items: {} },
+        images: {
+          items: {
+            "image-1": {
+              type: "image",
+              fileId: "file-image-1",
+            },
+          },
+        },
+        textStyles: { items: {} },
+        colors: { items: {} },
+        fonts: { items: {} },
+      },
+    });
+
+    expect(renderStateElements[0]).toMatchObject({
+      id: "background",
+      type: "sprite",
+      imageId: "image-1",
+      blur,
+    });
   });
 
   it("keeps runtime but omits variables for dialogue layouts with runtime-only conditions", () => {

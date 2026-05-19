@@ -25,6 +25,13 @@ const resolveImageAspectRatio = (item) => {
   return `${Math.max(1, Math.round(width))} / ${Math.max(1, Math.round(height))}`;
 };
 
+const PREVIEW_FRAME_STYLE = [
+  "width: 92vw",
+  "height: 92vh",
+  "max-width: 92vw",
+  "max-height: 92vh",
+].join("; ");
+
 const buildDetailFields = (item) => {
   if (!item) {
     return [];
@@ -80,6 +87,51 @@ const buildPendingMediaItem = (item) => ({
   isInteractive: false,
   canPreview: false,
 });
+
+const selectVisibleImageIds = ({ mediaGroups, items } = {}) => {
+  return (mediaGroups ?? []).flatMap((group) =>
+    (group.children ?? [])
+      .map((child) => child.id)
+      .filter((childItemId) => items?.[childItemId]?.type === "image"),
+  );
+};
+
+const resolveAdjacentImageItemId = ({
+  visibleImageIds,
+  itemId,
+  direction,
+  distance = 1,
+  clamp = false,
+} = {}) => {
+  const step =
+    direction === "next" ? 1 : direction === "previous" ? -1 : undefined;
+  if (!step) {
+    return undefined;
+  }
+
+  const numericDistance = Number(distance);
+  const itemDistance =
+    Number.isFinite(numericDistance) && numericDistance > 0
+      ? Math.floor(numericDistance)
+      : 1;
+  const imageIds = visibleImageIds ?? [];
+
+  if (imageIds.length === 0) {
+    return undefined;
+  }
+
+  const currentIndex = imageIds.indexOf(itemId);
+  if (currentIndex === -1) {
+    return step > 0 ? imageIds[0] : imageIds[imageIds.length - 1];
+  }
+
+  let nextIndex = currentIndex + step * itemDistance;
+  if (clamp) {
+    nextIndex = Math.max(0, Math.min(nextIndex, imageIds.length - 1));
+  }
+
+  return imageIds[nextIndex];
+};
 
 const createEditForm = () => ({
   title: "Edit Image",
@@ -166,11 +218,34 @@ const {
   },
   hiddenMobileDetailSlots: ["image-file-id"],
   extendViewData: ({ state, baseViewData }) => {
-    return {
-      ...baseViewData,
-      fullImagePreviewVisible: state.fullImagePreviewVisible,
-      fullImagePreviewFileId: state.fullImagePreviewFileId,
-    };
+    const selectedItemId = state.selectedItemId;
+    const visibleImageIds = selectVisibleImageIds({
+      mediaGroups: baseViewData.mediaGroups,
+      items: state.data?.items,
+    });
+    const previousItemId = selectedItemId
+      ? resolveAdjacentImageItemId({
+          visibleImageIds,
+          itemId: selectedItemId,
+          direction: "previous",
+        })
+      : undefined;
+    const nextItemId = selectedItemId
+      ? resolveAdjacentImageItemId({
+          visibleImageIds,
+          itemId: selectedItemId,
+          direction: "next",
+        })
+      : undefined;
+    const viewData = { ...baseViewData };
+
+    viewData.fullImagePreviewVisible = state.fullImagePreviewVisible;
+    viewData.fullImagePreviewFileId = state.fullImagePreviewFileId;
+    viewData.fullImagePreviewFrameStyle = PREVIEW_FRAME_STYLE;
+    viewData.fullImagePreviewPreviousVisible = Boolean(previousItemId);
+    viewData.fullImagePreviewNextVisible = Boolean(nextItemId);
+
+    return viewData;
   },
 });
 
@@ -215,42 +290,17 @@ export const selectAdjacentImageItemId = (
   context,
   { itemId, direction, distance = 1, clamp = false } = {},
 ) => {
-  const step =
-    direction === "next" ? 1 : direction === "previous" ? -1 : undefined;
-  if (!step) {
-    return undefined;
-  }
-  const numericDistance = Number(distance);
-  const itemDistance =
-    Number.isFinite(numericDistance) && numericDistance > 0
-      ? Math.floor(numericDistance)
-      : 1;
-
   const viewData = selectMediaViewData(context);
-  const items = context.state.data?.items ?? {};
-  const visibleImageIds = (viewData.mediaGroups ?? []).flatMap((group) =>
-    (group.children ?? [])
-      .map((child) => child.id)
-      .filter((childItemId) => items[childItemId]?.type === "image"),
-  );
-
-  if (visibleImageIds.length === 0) {
-    return undefined;
-  }
-
-  const currentIndex = visibleImageIds.indexOf(itemId);
-  if (currentIndex === -1) {
-    return step > 0
-      ? visibleImageIds[0]
-      : visibleImageIds[visibleImageIds.length - 1];
-  }
-
-  let nextIndex = currentIndex + step * itemDistance;
-  if (clamp) {
-    nextIndex = Math.max(0, Math.min(nextIndex, visibleImageIds.length - 1));
-  }
-
-  return visibleImageIds[nextIndex];
+  return resolveAdjacentImageItemId({
+    visibleImageIds: selectVisibleImageIds({
+      mediaGroups: viewData.mediaGroups,
+      items: context.state.data?.items,
+    }),
+    itemId,
+    direction,
+    distance,
+    clamp,
+  });
 };
 
 export const showFullImagePreview = ({ state }, { itemId } = {}) => {

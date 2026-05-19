@@ -19,6 +19,12 @@ refs:
     eventListeners:
       contextmenu:
         handler: handleChildInteractionContextMenu
+  blurItem*:
+    eventListeners:
+      click:
+        handler: handleBlurItemClick
+      contextmenu:
+        handler: handleBlurItemRightClick
   groupItem*:
     eventListeners:
       click:
@@ -61,6 +67,10 @@ refs:
     eventListeners:
       close:
         handler: handleChildInteractionDialogClose
+  spriteBlurDialog:
+    eventListeners:
+      close:
+        handler: handleSpriteBlurDialogClose
   conditionalOverrideConditionDialog:
     eventListeners:
       close:
@@ -77,6 +87,10 @@ refs:
     eventListeners:
       form-action:
         handler: handleChildInteractionFormAction
+  spriteBlurForm:
+    eventListeners:
+      form-action:
+        handler: handleSpriteBlurFormAction
   conditionalOverrideConditionForm:
     eventListeners:
       form-action:
@@ -243,6 +257,9 @@ template:
                           - $for childItem, k in item.items:
                               - rtgl-view#childInteractionItem${i}x${j}x${k} key=${childItem.viewKey} data-name=${childItem.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=context-menu bw=xs bc=bg h-bc=ac h=32:
                                   - rtgl-text s=sm: ${childItem.label}
+                    $elif item.type == 'blur-summary':
+                      - rtgl-view#blurItem${i}x${j} data-name=${item.name} d=h pv=sm ph=md bgc=mu br=md av=c g=md cur=pointer bw=xs bc=bg h-bc=ac h=32 w=1fg:
+                          - rtgl-text s=sm: ${item.value}
   - rtgl-view h=1 w=f bgc=mu mv=lg: null
   - rvn-system-actions#systemActions :actions=${actionsData} actionType=system :hiddenModes=${hiddenSystemActionModes}: null
   - rtgl-popover#popoverForm ?open=${popover.open} place=b x=${popover.x} y=${popover.y}:
@@ -268,6 +285,10 @@ template:
       - $if childInteractionDialog.open:
           - rtgl-view slot=content g=md:
               - rtgl-form#childInteractionForm key=${childInteractionDialog.key} :form=${childInteractionDialogForm} :defaultValues=${childInteractionDialogDefaults} w=f: null
+  - rtgl-dialog#spriteBlurDialog ?open=${spriteBlurDialog.open} s=md:
+      - $if spriteBlurDialog.open:
+          - rtgl-view slot=content g=md:
+              - rtgl-form#spriteBlurForm key=${spriteBlurDialog.key} :form=${spriteBlurDialogForm} :defaultValues=${spriteBlurDialogDefaults} w=f: null
   - rtgl-dialog#conditionalOverrideConditionDialog ?open=${conditionalOverrideConditionDialog.open} s=md:
       - $if conditionalOverrideConditionDialog.open:
           - rtgl-view slot=content g=md:

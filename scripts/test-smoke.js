@@ -48,11 +48,25 @@ const createRepositoryStoreStub = () => {
     async loadMaterializedViewCheckpoint({ viewName, partition }) {
       return checkpoints.get(`${viewName}:${partition}`);
     },
+    async loadMaterializedViewCheckpoints({ viewName, partitions = [] }) {
+      return partitions.flatMap((partition) => {
+        const checkpoint = checkpoints.get(`${viewName}:${partition}`);
+        return checkpoint ? [structuredClone(checkpoint)] : [];
+      });
+    },
     async saveMaterializedViewCheckpoint(checkpoint) {
       checkpoints.set(
         `${checkpoint.viewName}:${checkpoint.partition}`,
         structuredClone(checkpoint),
       );
+    },
+    async saveMaterializedViewCheckpoints({ checkpoints: nextCheckpoints }) {
+      for (const checkpoint of nextCheckpoints) {
+        checkpoints.set(
+          `${checkpoint.viewName}:${checkpoint.partition}`,
+          structuredClone(checkpoint),
+        );
+      }
     },
     async deleteMaterializedViewCheckpoint({ viewName, partition }) {
       checkpoints.delete(`${viewName}:${partition}`);
@@ -652,9 +666,11 @@ const graphicsKeyboardRenderState = prepareRenderStateKeyboardForGraphics({
 
 assert.deepEqual(graphicsKeyboardRenderState.global.keyboard, {
   enter: {
-    payload: {
-      actions: {
-        nextLine: {},
+    keydown: {
+      payload: {
+        actions: {
+          nextLine: {},
+        },
       },
     },
   },
@@ -695,23 +711,29 @@ const extraKeyboardRenderState = prepareRenderStateKeyboardForGraphics({
 
 assert.deepEqual(extraKeyboardRenderState.global.keyboard, {
   enter: {
-    payload: {
-      actions: {
-        nextLine: {},
+    keydown: {
+      payload: {
+        actions: {
+          nextLine: {},
+        },
       },
     },
   },
   escape: {
-    payload: {
-      actions: {
-        toggleDialogueUI: {},
+    keydown: {
+      payload: {
+        actions: {
+          toggleDialogueUI: {},
+        },
       },
     },
   },
   space: {
-    payload: {
-      actions: {
-        toggleAutoMode: {},
+    keydown: {
+      payload: {
+        actions: {
+          toggleAutoMode: {},
+        },
       },
     },
   },
@@ -739,6 +761,6 @@ const disabledKeyboardRenderState = prepareRenderStateKeyboardForGraphics({
 
 assert.equal(disabledKeyboardRenderState.global.keyboard, undefined);
 
-assert.equal(store._debug.getEvents().length, 15);
+assert.equal((await repository.loadEvents()).length, 15);
 
 console.log("Smoke tests: PASS");

@@ -497,6 +497,7 @@ const DEFAULT_CAPABILITIES = {
   supportsTextAlignment: false,
   supportsActions: false,
   supportsSpriteImages: false,
+  supportsSpriteBlur: false,
   supportsSpritesheetAnimation: false,
   supportsParticleSelection: false,
   supportsSliderImages: false,
@@ -557,6 +558,9 @@ const FAMILY_CAPABILITIES = {
 };
 
 const ITEM_TYPE_CAPABILITY_OVERRIDES = {
+  sprite: {
+    supportsSpriteBlur: true,
+  },
   text: {
     supportsTextEditing: true,
     supportsActions: true,

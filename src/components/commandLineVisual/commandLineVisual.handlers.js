@@ -1,11 +1,68 @@
 const TEMPORARY_VISUAL_PREVIEW_ID = "temporary-visual-preview";
+const DEFAULT_VISUAL_LAYER = 50;
+const VALID_VISUAL_LAYERS = [10, 30, 50, 70, 90];
+
+const getTemporaryVisualPreviewId = ({ visualId, resourceType } = {}) => {
+  if (visualId) {
+    return `${visualId}-${resourceType}-preview`;
+  }
+
+  return `${TEMPORARY_VISUAL_PREVIEW_ID}-${resourceType}`;
+};
+
+const getDropdownPositionFromEvent = (event) => {
+  const rect = event?.currentTarget?.getBoundingClientRect?.();
+  if (rect) {
+    return { x: rect.left, y: rect.bottom };
+  }
+
+  return { x: event?.clientX ?? 0, y: event?.clientY ?? 0 };
+};
+
+const getIndexFromEvent = (event) => {
+  const index = Number.parseInt(event?.currentTarget?.dataset?.index ?? "", 10);
+  return Number.isInteger(index) ? index : undefined;
+};
+
+const getEventValue = (event) =>
+  event?.detail?.value ?? event?.currentTarget?.value ?? event?.target?.value;
+
+const normalizeVisualLayer = (layer) => {
+  const parsedLayer = Number(layer);
+  return VALID_VISUAL_LAYERS.includes(parsedLayer)
+    ? parsedLayer
+    : DEFAULT_VISUAL_LAYER;
+};
+
+const orderVisualItemsForSave = (items = []) =>
+  items
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => {
+      const layerDelta =
+        normalizeVisualLayer(b.item.layer) - normalizeVisualLayer(a.item.layer);
+      return layerDelta || a.index - b.index;
+    })
+    .map(({ item }) => item);
 
 const buildVisualItem = (visual = {}) => {
   const item = {
     id: visual.id,
     resourceId: visual.resourceId,
     transformId: visual.transformId,
+    layer: normalizeVisualLayer(visual.layer),
   };
+
+  if (visual.resourceType) {
+    item.resourceType = visual.resourceType;
+  }
+
+  if (visual.opacity !== undefined) {
+    item.opacity = visual.opacity;
+  }
+
+  if (visual.blur !== undefined) {
+    item.blur = visual.blur === null ? null : { ...visual.blur };
+  }
 
   if (visual.animations?.resourceId) {
     item.animations = {
@@ -23,35 +80,54 @@ const buildVisualItemsFromState = (
   const visualItems = store.selectSelectedVisuals().map(buildVisualItem);
 
   if (!includeTemporaryResource || store.selectMode?.() !== "resource-select") {
-    return visualItems;
+    return orderVisualItemsForSave(visualItems);
   }
 
   const tempSelectedResourceId = store.selectTempSelectedResourceId?.();
-  if (!tempSelectedResourceId) {
-    return visualItems;
+  const tempSelectedResourceType = store.selectTempSelectedResourceType?.();
+  if (!tempSelectedResourceId || !tempSelectedResourceType) {
+    return orderVisualItemsForSave(visualItems);
   }
 
   const selectedVisualIndex = store.selectSelectedVisualIndex?.();
   if (selectedVisualIndex === -1) {
     visualItems.push({
-      id: TEMPORARY_VISUAL_PREVIEW_ID,
+      id: getTemporaryVisualPreviewId({
+        resourceType: tempSelectedResourceType,
+      }),
       resourceId: tempSelectedResourceId,
-      transformId: store.selectDefaultTransformId?.(),
+      resourceType: tempSelectedResourceType,
+      transformId:
+        store.selectPendingVisualTransformId?.() ??
+        store.selectDefaultTransformId?.(),
+      layer: store.selectPendingVisualLayer?.(),
     });
-    return visualItems;
+    return orderVisualItemsForSave(visualItems);
   }
 
   if (
     Number.isInteger(selectedVisualIndex) &&
     visualItems[selectedVisualIndex]
   ) {
-    visualItems[selectedVisualIndex] = {
-      ...visualItems[selectedVisualIndex],
+    const currentVisualItem = visualItems[selectedVisualIndex];
+    const nextVisualItem = {
+      ...currentVisualItem,
       resourceId: tempSelectedResourceId,
+      resourceType: tempSelectedResourceType,
+    };
+    if (currentVisualItem.resourceType !== tempSelectedResourceType) {
+      nextVisualItem.id = getTemporaryVisualPreviewId({
+        visualId: currentVisualItem.id,
+        resourceType: tempSelectedResourceType,
+      });
+    }
+
+    visualItems[selectedVisualIndex] = {
+      ...nextVisualItem,
     };
   }
 
-  return visualItems;
+  return orderVisualItemsForSave(visualItems);
 };
 
 const buildVisualDataFromState = (
@@ -126,8 +202,14 @@ export const handleAfterMount = async (deps) => {
 export const handleVisualClick = (deps, payload) => {
   const { store, render } = deps;
   const index = parseInt(payload._event.currentTarget.dataset.index);
+  const visual = store.selectSelectedVisuals()?.[index];
 
+  store.clearPendingVisualConfig?.();
+  store.hideAddVisualPopover?.();
   store.setSelectedVisualIndex({ index });
+  if (visual?.resourceType) {
+    store.setTab({ tab: visual.resourceType });
+  }
   store.setMode({
     mode: "resource-select",
   });
@@ -166,10 +248,73 @@ export const handleAnimationChange = (deps, payload) => {
   dispatchTemporaryPresentationStateChange(deps);
 };
 
+export const handleLayerChange = (deps, payload) => {
+  const { store, render } = deps;
+  const index = Number.parseInt(payload._event.currentTarget.dataset.index, 10);
+  const value = payload._event.detail.value;
+  store.updateVisualLayer({ index, layer: value });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleOpacityInput = (deps, payload) => {
+  const { store, render } = deps;
+  const index = getIndexFromEvent(payload._event);
+
+  if (index === undefined) {
+    return;
+  }
+
+  store.updateVisualOpacity({
+    index,
+    opacity: getEventValue(payload._event),
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleBlurToggleChange = (deps, payload) => {
+  const { store, render } = deps;
+  const index = getIndexFromEvent(payload._event);
+
+  if (index === undefined) {
+    return;
+  }
+
+  store.updateVisualBlurEnabled({
+    index,
+    enabled: getEventValue(payload._event),
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleBlurFieldInput = (deps, payload) => {
+  const { store, render } = deps;
+  const index = getIndexFromEvent(payload._event);
+  const fieldName = payload._event.currentTarget?.dataset?.blurField;
+
+  if (index === undefined) {
+    return;
+  }
+
+  store.updateVisualBlurField({
+    index,
+    fieldName,
+    value: getEventValue(payload._event),
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleBlurFieldChange = handleBlurFieldInput;
+
 export const handleFileExplorerItemClick = (deps, payload) => {
   const { refs, store, render } = deps;
   const { itemId, isFolder } = payload._event.detail;
-  const { resourceId } = store.selectResourceExplorerTarget({ itemId });
+  const { resourceId, resourceType } = store.selectResourceExplorerTarget({
+    itemId,
+  });
 
   if (isFolder) {
     const groupElement = refs.galleryScroll?.querySelector(
@@ -179,7 +324,7 @@ export const handleFileExplorerItemClick = (deps, payload) => {
     return;
   }
 
-  store.setTempSelectedResourceId({ resourceId });
+  store.setTempSelectedResourceId({ resourceId, resourceType });
   render();
   dispatchTemporaryPresentationStateChange(deps);
 };
@@ -190,11 +335,25 @@ export const handleSearchInput = (deps, payload) => {
   render();
 };
 
+export const handleTabClick = (deps, payload) => {
+  const { store, render } = deps;
+  store.setTab({
+    tab: payload._event.detail.id,
+  });
+  store.setTempSelectedResourceId({
+    resourceId: undefined,
+    resourceType: undefined,
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
 export const handleResourceItemClick = (deps, payload) => {
   const { store, render } = deps;
   const resourceId = payload._event.currentTarget.dataset.resourceId;
+  const resourceType = payload._event.currentTarget.dataset.resourceType;
 
-  store.setTempSelectedResourceId({ resourceId });
+  store.setTempSelectedResourceId({ resourceId, resourceType });
   render();
   dispatchTemporaryPresentationStateChange(deps);
 };
@@ -202,13 +361,14 @@ export const handleResourceItemClick = (deps, payload) => {
 export const handleResourceItemDoubleClick = (deps, payload) => {
   const { store, render } = deps;
   const resourceId = payload._event.currentTarget.dataset.resourceId;
-  const item = store.selectResourceItemById({ resourceId });
+  const resourceType = payload._event.currentTarget.dataset.resourceType;
+  const item = store.selectResourceItemById({ resourceId, resourceType });
 
   if (!item?.previewFileId) {
     return;
   }
 
-  store.setTempSelectedResourceId({ resourceId });
+  store.setTempSelectedResourceId({ resourceId, resourceType });
   store.showFullImagePreview({ fileId: item.previewFileId });
   render();
   dispatchTemporaryPresentationStateChange(deps);
@@ -227,14 +387,46 @@ export const handleSubmitClick = (deps) => {
   );
 };
 
-export const handleAddVisualClick = (deps) => {
+export const handleAddVisualClick = (deps, payload = {}) => {
   const { store, render } = deps;
 
-  store.setMode({
-    mode: "resource-select",
+  store.clearPendingVisualConfig?.();
+  store.hideDropdownMenu?.();
+  store.openAddVisualPopover({
+    position: getDropdownPositionFromEvent(payload._event),
   });
-  store.setSelectedVisualIndex({ index: -1 }); // -1 indicates new visual
 
+  render();
+};
+
+export const handleAddVisualPopoverClose = (deps) => {
+  const { store, render } = deps;
+  store.hideAddVisualPopover();
+  store.clearPendingVisualConfig?.();
+  render();
+};
+
+export const handleAddVisualFormAction = (deps, payload) => {
+  const { store, render } = deps;
+  const detail = payload._event.detail;
+  if (detail.actionId !== "submit") {
+    return;
+  }
+
+  const values = detail.values ?? {};
+  store.setPendingVisualTransformId({
+    transformId: values.transformId,
+  });
+  store.setPendingVisualLayer({
+    layer: values.layer,
+  });
+  store.hideAddVisualPopover();
+  store.setSelectedVisualIndex({ index: -1 });
+  store.setTempSelectedResourceId({
+    resourceId: undefined,
+    resourceType: undefined,
+  });
+  store.setMode({ mode: "resource-select" });
   render();
 };
 
@@ -242,6 +434,8 @@ export const handleBreadcumbClick = (deps, payload) => {
   const { dispatchEvent, store, render } = deps;
 
   if (payload._event.detail.id === "actions") {
+    store.hideAddVisualPopover?.();
+    store.clearPendingVisualConfig?.();
     dispatchEvent(
       new CustomEvent("back-to-actions", {
         detail: {},
@@ -251,6 +445,8 @@ export const handleBreadcumbClick = (deps, payload) => {
     store.setMode({
       mode: "current",
     });
+    store.hideAddVisualPopover?.();
+    store.clearPendingVisualConfig?.();
     render();
     dispatchTemporaryPresentationStateChange(deps);
   }
@@ -272,9 +468,10 @@ export const handleButtonSelectClick = (deps) => {
   const mode = store.selectMode();
   const selectedVisualIndex = store.selectSelectedVisualIndex();
   const tempSelectedResourceId = store.selectTempSelectedResourceId();
+  const tempSelectedResourceType = store.selectTempSelectedResourceType();
 
   if (mode === "resource-select") {
-    if (!tempSelectedResourceId) {
+    if (!tempSelectedResourceId || !tempSelectedResourceType) {
       appService.showAlert({
         message: "A resource is required.",
         title: "Warning",
@@ -284,16 +481,28 @@ export const handleButtonSelectClick = (deps) => {
 
     if (selectedVisualIndex === -1) {
       // Adding new visual
-      store.addVisual({ resourceId: tempSelectedResourceId });
+      store.addVisual({
+        resourceId: tempSelectedResourceId,
+        resourceType: tempSelectedResourceType,
+        transformId:
+          store.selectPendingVisualTransformId?.() ??
+          store.selectDefaultTransformId?.(),
+        layer: store.selectPendingVisualLayer?.(),
+      });
+      store.clearPendingVisualConfig?.();
     } else {
       // Updating existing visual
       store.updateVisualResource({
         index: selectedVisualIndex,
         resourceId: tempSelectedResourceId,
+        resourceType: tempSelectedResourceType,
       });
     }
 
-    store.setTempSelectedResourceId({ resourceId: undefined });
+    store.setTempSelectedResourceId({
+      resourceId: undefined,
+      resourceType: undefined,
+    });
     store.setMode({
       mode: "current",
     });
@@ -316,6 +525,10 @@ export const handleDropdownMenuClickItem = (deps, payload) => {
 
   if (item.value === "delete" && visualIndex !== null) {
     store.removeVisual({ index: visualIndex });
+  } else if (item.value === "move-up" && visualIndex !== null) {
+    store.moveVisual({ index: visualIndex, offset: 1 });
+  } else if (item.value === "move-down" && visualIndex !== null) {
+    store.moveVisual({ index: visualIndex, offset: -1 });
   }
 
   store.hideDropdownMenu();

@@ -1012,7 +1012,7 @@ export const initializeSceneEditorPage = async (deps) => {
   );
   const initialSceneIds = extractInitialHybridSceneIds(projectData, sceneId);
 
-  store.setScenePageLoading({ isLoading: false });
+  // Keep the loading overlay visible while mounting the real editor/canvas DOM.
   render();
   const mountedCanvasRoot = await waitForMountedCanvasRoot(refs);
   if (!mountedCanvasRoot?.isConnected) {
@@ -1039,6 +1039,7 @@ export const initializeSceneEditorPage = async (deps) => {
     skipAnimations: true,
   });
   await updateSceneEditorSectionChanges(deps);
+  store.setScenePageLoading({ isLoading: false });
   render();
 
   setTimeout(() => {

@@ -49,14 +49,24 @@ template:
                   - rtgl-view#actionItemBackground data-mode=background g=md d=h av=c ph=md bgc=mu br=md h-bgc=ac h=36 w=f cur=pointer:
                       - $if preview.background.type == 'image':
                           - rtgl-svg svg=image wh=24: null
+                          - $if preview.background.colorHex:
+                              - 'rtgl-view w=36 h=24 bw=xs bc=bo style="background-color: ${preview.background.colorHex}; flex-shrink: 0;"': null
                           - rvn-file-image fileId=${preview.background.fileId} w=50 h=35: null
                           - rtgl-text s=sm: ${preview.background.name}
                         $elif preview.background.type == 'video':
                           - rtgl-svg svg=video wh=24: null
+                          - $if preview.background.colorHex:
+                              - 'rtgl-view w=36 h=24 bw=xs bc=bo style="background-color: ${preview.background.colorHex}; flex-shrink: 0;"': null
                           - rvn-file-image fileId=${preview.background.thumbnailFileId} w=50 h=35: null
                           - rtgl-text s=sm: ${preview.background.name}
                         $elif preview.background.type == 'layout':
                           - rtgl-svg svg=layout wh=24: null
+                          - $if preview.background.colorHex:
+                              - 'rtgl-view w=36 h=24 bw=xs bc=bo style="background-color: ${preview.background.colorHex}; flex-shrink: 0;"': null
+                          - rtgl-text s=sm: ${preview.background.name}
+                        $elif preview.background.type == 'color':
+                          - rtgl-svg svg=image wh=24: null
+                          - 'rtgl-view w=36 h=24 bw=xs bc=bo style="background-color: ${preview.background.colorHex}; flex-shrink: 0;"': null
                           - rtgl-text s=sm: ${preview.background.name}
               - $if preview.screen:
                   - rtgl-view#actionItemScreen data-mode=screen g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:

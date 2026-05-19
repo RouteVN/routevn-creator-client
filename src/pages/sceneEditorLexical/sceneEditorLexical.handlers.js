@@ -1228,10 +1228,10 @@ export const handleDropdownMenuClickOverlay = (deps) => {
 };
 
 export const handleDropdownMenuClickItem = async (deps, payload) => {
-  const { store, render, projectService, subject } = deps;
+  const { store, render, projectService, subject, appService } = deps;
   const item = payload._event.detail.item || payload._event.detail;
   const action = item?.value;
-  const dropdownState = store.getState().dropdownMenu;
+  const dropdownState = store.selectDropdownMenu();
   const sectionId = dropdownState.sectionId;
   const actionsType = dropdownState.actionsType;
   const lineId = dropdownState.lineId;
@@ -1281,6 +1281,42 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
       });
     }
     reconcileCurrentEditorSession(deps);
+  } else if (action === "duplicate-section") {
+    await flushSceneEditorDrafts(deps, { force: true });
+    let duplicateSectionId;
+    await runSceneEditorPersistence(
+      deps,
+      async () => {
+        duplicateSectionId = assertSceneEditorCommandResult(
+          await projectService.duplicateSectionItem({
+            sectionId,
+          }),
+          {
+            appService,
+            fallbackMessage: "Failed to duplicate section",
+          },
+        );
+      },
+      {
+        label: "duplicate-section",
+        meta: {
+          sceneId,
+          sectionId,
+        },
+      },
+    );
+
+    await refreshSceneEditorStateFromProject(deps);
+
+    if (typeof duplicateSectionId === "string") {
+      await selectSceneEditorSection(deps, duplicateSectionId);
+    } else {
+      subject.dispatch("sceneEditor.renderCanvas", {});
+    }
+  } else if (action === "move-section-scene") {
+    store.showSectionMoveSceneDialog({
+      sectionId,
+    });
   } else if (action === "edit-section") {
     store.showSectionEditDialog({
       sectionId,
@@ -1360,6 +1396,12 @@ export const handleSectionCreateDialogClose = (deps) => {
   render();
 };
 
+export const handleSectionMoveSceneDialogClose = (deps) => {
+  const { store, render } = deps;
+  store.hideSectionMoveSceneDialog();
+  render();
+};
+
 export const handleSceneSettingsClick = (deps) => {
   const { store, render } = deps;
   store.showSceneSettingsDialog();
@@ -1408,6 +1450,84 @@ export const handleSceneSettingsFormAction = (deps, payload) => {
   }
 };
 
+export const handleSectionMoveSceneFormActionClick = async (deps, payload) => {
+  const { store, render, projectService, appService, subject } = deps;
+  const detail = payload._event.detail || {};
+  const action = detail.actionId;
+  const values = detail.values || {};
+
+  if (action === "cancel") {
+    store.hideSectionMoveSceneDialog();
+    render();
+    return;
+  }
+
+  if (action !== "submit") {
+    return;
+  }
+
+  const dialog = store.selectSectionMoveSceneDialog();
+  const sectionId = dialog.sectionId;
+  const sceneId = store.selectSceneId();
+  const targetSceneId = values.sceneId;
+
+  if (!sectionId || !sceneId || !targetSceneId) {
+    appService?.showAlert({
+      message: "Select a scene to move this section.",
+      title: "Error",
+    });
+    return;
+  }
+
+  if (targetSceneId === sceneId) {
+    appService?.showAlert({
+      message: "Select a different scene.",
+      title: "Error",
+    });
+    return;
+  }
+
+  const sourceScene = store.selectCommittedScene();
+  if ((sourceScene?.sections?.length ?? 0) <= 1) {
+    appService?.showAlert({
+      message: "This scene must keep at least one section.",
+      title: "Error",
+    });
+    return;
+  }
+
+  store.hideSectionMoveSceneDialog();
+
+  await runSceneEditorPersistence(
+    deps,
+    async () => {
+      assertSceneEditorCommandResult(
+        await projectService.moveSectionItem({
+          sectionId,
+          sceneId: targetSceneId,
+          position: "last",
+        }),
+        {
+          appService,
+          fallbackMessage: "Failed to move section",
+        },
+      );
+    },
+    {
+      label: "move-section-scene",
+      meta: {
+        sceneId,
+        targetSceneId,
+        sectionId,
+      },
+    },
+  );
+
+  await refreshSceneEditorStateFromProject(deps);
+  subject.dispatch("sceneEditor.renderCanvas", {});
+  render();
+};
+
 export const handleSectionCreateFormActionClick = async (deps, payload) => {
   const { store, render, projectService } = deps;
   const detail = payload._event.detail || {};
@@ -1422,7 +1542,7 @@ export const handleSectionCreateFormActionClick = async (deps, payload) => {
   }
 
   if (action === "submit") {
-    const sectionCreateDialog = store.getState().sectionCreateDialog || {};
+    const sectionCreateDialog = store.selectSectionCreateDialog();
     const isEditMode = sectionCreateDialog.mode === "edit";
     const sectionId = sectionCreateDialog.sectionId;
     const sceneId = store.selectSceneId();
@@ -1489,7 +1609,7 @@ export const handleFormActionClick = async (deps, payload) => {
   }
 
   if (action === "submit") {
-    const popoverState = store.getState().popover || {};
+    const popoverState = store.selectPopover();
     const sectionId = popoverState.sectionId;
     const popoverMode = popoverState.mode;
     const sceneId = store.selectSceneId();
@@ -1706,7 +1826,7 @@ export const handleLineContextMenuRequest = (deps, payload) => {
 
 export const handleLineContextMenuDismiss = (deps) => {
   const { store, render } = deps;
-  const dropdownState = store.getState().dropdownMenu;
+  const dropdownState = store.selectDropdownMenu();
   if (!dropdownState.lineId) {
     return;
   }

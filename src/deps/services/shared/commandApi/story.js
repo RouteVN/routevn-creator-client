@@ -41,6 +41,123 @@ export const createStoryCommandApi = (shared) => {
     return appendMissingIds(orderedFromTree, fallbackIds);
   };
 
+  const findTreeNodeById = (nodes = [], nodeId) => {
+    for (const node of nodes || []) {
+      if (!node || typeof node !== "object") {
+        continue;
+      }
+
+      if (node.id === nodeId) {
+        return node;
+      }
+
+      const childNode = findTreeNodeById(node.children, nodeId);
+      if (childNode) {
+        return childNode;
+      }
+    }
+
+    return undefined;
+  };
+
+  const collectTreeNodeIds = (node) => {
+    if (!node || typeof node !== "object") {
+      return [];
+    }
+
+    const ids = [];
+    const visit = (entry) => {
+      if (!entry || typeof entry !== "object") {
+        return;
+      }
+
+      if (typeof entry.id === "string" && entry.id.length > 0) {
+        ids.push(entry.id);
+      }
+
+      for (const child of entry.children || []) {
+        visit(child);
+      }
+    };
+
+    visit(node);
+    return ids;
+  };
+
+  const findTreeNodeParentId = (nodes = [], nodeId, parentId = null) => {
+    for (const node of nodes || []) {
+      if (!node || typeof node !== "object") {
+        continue;
+      }
+
+      if (node.id === nodeId) {
+        return parentId;
+      }
+
+      const childParentId = findTreeNodeParentId(
+        node.children,
+        nodeId,
+        node.id,
+      );
+      if (childParentId !== undefined) {
+        return childParentId;
+      }
+    }
+
+    return undefined;
+  };
+
+  const buildSectionLineCreateItems = (section) => {
+    const lineItems = section?.lines?.items || {};
+    return getOrderedLineIds(section)
+      .map((lineId) => {
+        const line = lineItems[lineId];
+        if (!line) {
+          return undefined;
+        }
+
+        return {
+          lineId,
+          data: {
+            actions: structuredClone(line.actions || {}),
+          },
+        };
+      })
+      .filter(Boolean);
+  };
+
+  const buildDuplicatedSectionLineCreateItems = (section, createId) => {
+    return buildSectionLineCreateItems(section).map((line) => ({
+      lineId: createId(),
+      data: structuredClone(line.data),
+    }));
+  };
+
+  const getSectionName = (section) => {
+    return typeof section?.name === "string" && section.name.length > 0
+      ? section.name
+      : "Section";
+  };
+
+  const buildMovedSectionLineSets = (sectionLocation) => {
+    const rootNode = findTreeNodeById(
+      sectionLocation?.sectionCollection?.tree,
+      sectionLocation?.section?.id,
+    );
+    const sectionIds =
+      rootNode !== undefined
+        ? collectTreeNodeIds(rootNode)
+        : [sectionLocation?.section?.id].filter(Boolean);
+    const sectionItems = sectionLocation?.sectionCollection?.items || {};
+
+    return sectionIds
+      .map((sectionId) => ({
+        sectionId,
+        lines: buildSectionLineCreateItems(sectionItems[sectionId]),
+      }))
+      .filter((entry) => entry.lines.length > 0);
+  };
+
   const getUniqueSceneIds = (sceneIds = []) => {
     const uniqueSceneIds = [];
     const seen = new Set();
@@ -857,6 +974,75 @@ export const createStoryCommandApi = (shared) => {
       });
     },
 
+    async duplicateSectionItem({ sectionId }) {
+      const context = await shared.ensureCommandContext({
+        sectionIds: [sectionId],
+      });
+      const sectionLocation = findSectionLocation(context.state, sectionId);
+      if (!sectionLocation) {
+        return {
+          valid: false,
+          error: {
+            message: "Section not found.",
+          },
+        };
+      }
+
+      const duplicateSectionId = shared.createId();
+      const duplicateLines = buildDuplicatedSectionLineCreateItems(
+        sectionLocation.section,
+        shared.createId,
+      );
+      const parentId =
+        findTreeNodeParentId(
+          sectionLocation.sectionCollection?.tree,
+          sectionId,
+        ) ?? null;
+      const commands = [
+        {
+          scope: "story",
+          partition: getMainScenePartition(context, [sectionLocation.sceneId]),
+          type: COMMAND_TYPES.SECTION_CREATE,
+          payload: {
+            sceneId: sectionLocation.sceneId,
+            sectionId: duplicateSectionId,
+            ...shared.buildPlacementPayload({
+              parentId,
+              position: "after",
+              positionTargetId: sectionId,
+            }),
+            data: {
+              name: getSectionName(sectionLocation.section),
+            },
+          },
+        },
+      ];
+
+      if (duplicateLines.length > 0) {
+        commands.push({
+          scope: "story",
+          partition: getSceneOnlyPartition(context, [sectionLocation.sceneId]),
+          type: COMMAND_TYPES.LINE_CREATE,
+          payload: buildLineCreatePayload({
+            sectionId: duplicateSectionId,
+            normalizedLines: duplicateLines,
+            position: "last",
+          }),
+        });
+      }
+
+      const submitResult = await shared.submitCommandsWithContext({
+        context,
+        commands,
+      });
+
+      if (submitResult?.valid === false) {
+        return submitResult;
+      }
+
+      return duplicateSectionId;
+    },
+
     async reorderSectionItem({
       sectionId,
       parentId = null,
@@ -888,6 +1074,122 @@ export const createStoryCommandApi = (shared) => {
             positionTargetId,
           }),
         },
+      });
+    },
+
+    async moveSectionItem({
+      sectionId,
+      sceneId,
+      parentId = null,
+      position = "last",
+      positionTargetId,
+      index,
+    }) {
+      const sectionIds = [sectionId, parentId, positionTargetId].filter(
+        Boolean,
+      );
+      const context = await shared.ensureCommandContext({
+        sceneIds: typeof sceneId === "string" ? [sceneId] : [],
+        sectionIds,
+      });
+      const sectionLocation = findSectionLocation(context.state, sectionId);
+      const targetSceneId = sceneId ?? sectionLocation?.sceneId;
+      const targetScene = context.state?.scenes?.items?.[targetSceneId];
+      const sourceSceneId = sectionLocation?.sceneId;
+      const isCrossSceneMove =
+        typeof sceneId === "string" &&
+        typeof sourceSceneId === "string" &&
+        sceneId !== sourceSceneId;
+      const movedSectionLineSets = isCrossSceneMove
+        ? buildMovedSectionLineSets(sectionLocation)
+        : [];
+      const movedLineIds = movedSectionLineSets.flatMap((entry) =>
+        entry.lines.map((line) => line.lineId),
+      );
+      const resolvedIndex = shared.resolveSectionIndex({
+        scene: targetScene,
+        parentId,
+        position,
+        positionTargetId,
+        index,
+        movingId: sectionId,
+      });
+      const placementPayload = shared.buildPlacementPayload({
+        parentId,
+        index: resolvedIndex,
+        position,
+        positionTargetId,
+      });
+      const payload = {
+        sectionId,
+      };
+
+      if (placementPayload.parentId !== undefined) {
+        payload.parentId = placementPayload.parentId;
+      }
+      if (placementPayload.index !== undefined) {
+        payload.index = placementPayload.index;
+      }
+      if (placementPayload.position !== undefined) {
+        payload.position = placementPayload.position;
+      }
+      if (placementPayload.positionTargetId !== undefined) {
+        payload.positionTargetId = placementPayload.positionTargetId;
+      }
+
+      if (sceneId !== undefined) {
+        payload.sceneId = sceneId;
+      }
+
+      if (isCrossSceneMove && movedLineIds.length > 0) {
+        const commands = [
+          {
+            scope: "story",
+            partition: getSceneOnlyPartition(context, [sourceSceneId]),
+            type: COMMAND_TYPES.LINE_DELETE,
+            payload: {
+              lineIds: movedLineIds,
+            },
+          },
+          {
+            scope: "story",
+            partition: getMainScenePartition(context, [
+              sourceSceneId,
+              targetSceneId,
+            ]),
+            type: COMMAND_TYPES.SECTION_MOVE,
+            payload,
+          },
+        ];
+
+        for (const sectionLineSet of movedSectionLineSets) {
+          commands.push({
+            scope: "story",
+            partition: getSceneOnlyPartition(context, [targetSceneId]),
+            type: COMMAND_TYPES.LINE_CREATE,
+            payload: buildLineCreatePayload({
+              sectionId: sectionLineSet.sectionId,
+              normalizedLines: sectionLineSet.lines,
+              position: "last",
+            }),
+          });
+        }
+
+        return shared.submitCommandsWithContext({
+          context,
+          commands,
+        });
+      }
+
+      return shared.submitCommandWithContext({
+        context,
+        scope: "story",
+        partition: getMainScenePartition(context, [
+          sectionLocation?.sceneId,
+          targetSceneId,
+        ]),
+        type: COMMAND_TYPES.SECTION_MOVE,
+        payload,
       });
     },
 

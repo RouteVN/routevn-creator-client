@@ -69,6 +69,10 @@ refs:
     eventListeners:
       close:
         handler: handleSectionCreateDialogClose
+  sectionMoveSceneDialog:
+    eventListeners:
+      close:
+        handler: handleSectionMoveSceneDialogClose
   sectionsOverviewDialog:
     eventListeners:
       close:
@@ -77,6 +81,10 @@ refs:
     eventListeners:
       form-action:
         handler: handleSectionCreateFormActionClick
+  sectionMoveSceneForm:
+    eventListeners:
+      form-action:
+        handler: handleSectionMoveSceneFormActionClick
   addActionsButton:
     eventListeners:
       click:
@@ -129,10 +137,7 @@ refs:
         handler: handlePreviewCurrentLineChanged
   previewCanvasHost: {}
 template:
-  - $if isScenePageLoading:
-      - rtgl-view d=v w=f h=f av=c ah=c g=sm:
-          - rtgl-text s=sm c=mu-fg: Loading scene...
-    $else:
+  - 'rtgl-view pos=rel w=f h=f style="min-width: 0; min-height: 0;"':
       - 'rtgl-view d=h w=f h=f style="min-width: 0; min-height: 0;"':
           - 'rtgl-view w="calc((100vw - 64px) / 2)" d=v h=f style="min-width: 0; min-height: 0;"':
               - rtgl-view bwb=xs w=f h=48 av=c ph=sm d=h:
@@ -184,6 +189,9 @@ template:
       - rtgl-dialog#sectionCreateDialog ?open=${sectionCreateDialog.isOpen} s=md:
           - rtgl-view slot=content g=md:
               - rtgl-form#sectionCreateForm key=${sectionCreateDialog.formKey} :form=${sectionCreateForm} :defaultValues=${sectionCreateDialog.defaultValues} w=f: null
+      - rtgl-dialog#sectionMoveSceneDialog ?open=${sectionMoveSceneDialog.isOpen} s=md:
+          - rtgl-view slot=content g=md:
+              - rtgl-form#sectionMoveSceneForm key=${sectionMoveSceneDialog.formKey} :form=${sectionMoveSceneForm} :defaultValues=${sectionMoveSceneDialog.defaultValues} w=f: null
       - rtgl-dialog#sceneSettingsDialog ?open=${sceneSettingsDialog.isOpen} s=md:
           - rtgl-view slot=content g=md:
               - rtgl-form#sceneSettingsForm key=${sceneSettingsDialog.formKey} :form=${sceneSettingsForm} :defaultValues=${sceneSettingsDialog.defaultValues} w=f: null
@@ -199,3 +207,6 @@ template:
       - rtgl-tooltip ?open=${deadEndTooltip.open} x=${deadEndTooltip.x} y=${deadEndTooltip.y} place="t" content="${deadEndTooltip.content}": null
       - $if previewVisible:
           - rvn-vn-preview#vnPreview scene-id="${previewSceneId}" section-id="${previewSectionId}" line-id="${previewLineId}": null
+      - $if isScenePageLoading:
+          - 'rtgl-view pos=abs edge=f z=1000 bgc=bg av=c ah=c style="pointer-events: auto;"':
+              - rtgl-text s=sm c=mu-fg: Loading scene...

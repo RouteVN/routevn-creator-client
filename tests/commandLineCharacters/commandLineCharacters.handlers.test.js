@@ -1,26 +1,37 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleAddCharacterClick,
   handleButtonSelectClick,
   handleBreadcumbClick,
   handleAnimationChange,
+  handleBlurFieldChange,
+  handleBlurFieldInput,
+  handleBlurToggleChange,
   handleCharacterClick,
   handleCharacterItemClick,
   handleCharacterContextMenu,
   handleCharacterSpriteGroupBoxClick,
   handleDropdownMenuClickItem,
+  handleOpacityInput,
   handleSpriteItemClick,
   handleSpriteGroupTabClick,
+  handleSubmitClick,
 } from "../../src/components/commandLineCharacters/commandLineCharacters.handlers.js";
 import {
   addCharacter,
+  clearPendingCharacterTransformId,
   clearTempSelectedSpriteIds,
   clearPendingCharacterIndex,
   createInitialState,
+  moveCharacter,
   removeCharacter,
   selectCurrentSpriteSelectionGroups,
+  selectAddCharacterTransformDropdownItems,
   selectDropdownMenuCharacterIndex,
+  selectDropdownMenuType,
   selectMode,
   selectPendingCharacterIndex,
+  selectPendingCharacterTransformId,
   selectSelectedCharacterIndex,
   selectSelectedCharacters,
   selectSelectedSpriteGroupId,
@@ -29,6 +40,7 @@ import {
   selectTempSelectedSpriteId,
   setMode,
   setAnimations,
+  setPendingCharacterTransformId,
   setPendingCharacterIndex,
   setSearchQuery,
   setSelectedCharacterIndex,
@@ -39,7 +51,11 @@ import {
   setItems,
   setTransforms,
   updateCharacterAnimation,
+  updateCharacterBlurEnabled,
+  updateCharacterBlurField,
+  updateCharacterOpacity,
   showDropdownMenu,
+  showAddCharacterTransformDropdownMenu,
   updateCharacterSprites,
 } from "../../src/components/commandLineCharacters/commandLineCharacters.store.js";
 
@@ -47,17 +63,25 @@ const createStoreApi = (state) => ({
   addCharacter: (payload) => addCharacter({ state }, payload),
   clearTempSelectedSpriteIds: () => clearTempSelectedSpriteIds({ state }),
   clearPendingCharacterIndex: () => clearPendingCharacterIndex({ state }),
+  clearPendingCharacterTransformId: () =>
+    clearPendingCharacterTransformId({ state }),
   hideDropdownMenu: () => {
     state.dropdownMenu.isOpen = false;
     state.dropdownMenu.characterIndex = null;
   },
+  moveCharacter: (payload) => moveCharacter({ state }, payload),
   removeCharacter: (payload) => removeCharacter({ state }, payload),
+  selectAddCharacterTransformDropdownItems: () =>
+    selectAddCharacterTransformDropdownItems({ state }),
   selectCurrentSpriteSelectionGroups: () =>
     selectCurrentSpriteSelectionGroups({ state }),
   selectDropdownMenuCharacterIndex: () =>
     selectDropdownMenuCharacterIndex({ state }),
+  selectDropdownMenuType: () => selectDropdownMenuType({ state }),
   selectMode: () => selectMode({ state }),
   selectPendingCharacterIndex: () => selectPendingCharacterIndex({ state }),
+  selectPendingCharacterTransformId: () =>
+    selectPendingCharacterTransformId({ state }),
   selectSelectedCharacterIndex: () => selectSelectedCharacterIndex({ state }),
   selectSelectedCharacters: () => selectSelectedCharacters({ state }),
   selectSelectedSpriteGroupId: () => selectSelectedSpriteGroupId({ state }),
@@ -67,6 +91,8 @@ const createStoreApi = (state) => ({
   setMode: (payload) => setMode({ state }, payload),
   setPendingCharacterIndex: (payload) =>
     setPendingCharacterIndex({ state }, payload),
+  setPendingCharacterTransformId: (payload) =>
+    setPendingCharacterTransformId({ state }, payload),
   setSearchQuery: (payload) => setSearchQuery({ state }, payload),
   setSelectedCharacterIndex: (payload) =>
     setSelectedCharacterIndex({ state }, payload),
@@ -76,14 +102,247 @@ const createStoreApi = (state) => ({
     setTempSelectedSpriteIds({ state }, payload),
   setTempSelectedSpriteId: (payload) =>
     setTempSelectedSpriteId({ state }, payload),
+  showAddCharacterTransformDropdownMenu: (payload) =>
+    showAddCharacterTransformDropdownMenu({ state }, payload),
   showDropdownMenu: (payload) => showDropdownMenu({ state }, payload),
   updateCharacterAnimation: (payload) =>
     updateCharacterAnimation({ state }, payload),
+  updateCharacterBlurEnabled: (payload) =>
+    updateCharacterBlurEnabled({ state }, payload),
+  updateCharacterBlurField: (payload) =>
+    updateCharacterBlurField({ state }, payload),
+  updateCharacterOpacity: (payload) =>
+    updateCharacterOpacity({ state }, payload),
   updateCharacterSprites: (payload) =>
     updateCharacterSprites({ state }, payload),
 });
 
 describe("commandLineCharacters.handlers", () => {
+  it("opens a transform dropdown before character selection", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const store = createStoreApi(state);
+
+    setTransforms(
+      { state },
+      {
+        transforms: {
+          items: {
+            "transform-left": {
+              id: "transform-left",
+              type: "transform",
+              name: "Left",
+            },
+            "transform-right": {
+              id: "transform-right",
+              type: "transform",
+              name: "Right",
+            },
+          },
+          tree: [{ id: "transform-left" }, { id: "transform-right" }],
+        },
+      },
+    );
+
+    handleAddCharacterClick(
+      {
+        store,
+        render,
+      },
+      {
+        _event: {
+          currentTarget: {
+            getBoundingClientRect: () => ({
+              left: 24,
+              bottom: 64,
+            }),
+          },
+        },
+      },
+    );
+
+    expect(selectMode({ state })).toBe("current");
+    expect(selectDropdownMenuType({ state })).toBe("add-character-transform");
+    expect(state.dropdownMenu).toMatchObject({
+      isOpen: true,
+      position: { x: 24, y: 64 },
+      characterIndex: null,
+    });
+    expect(state.dropdownMenu.items).toEqual([
+      {
+        label: "Left",
+        transformId: "transform-left",
+        type: "item",
+        value: "transform-left",
+      },
+      {
+        label: "Right",
+        transformId: "transform-right",
+        type: "item",
+        value: "transform-right",
+      },
+    ]);
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses the selected add-character transform through sprite selection", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const store = createStoreApi(state);
+
+    setTransforms(
+      { state },
+      {
+        transforms: {
+          items: {
+            "transform-left": {
+              id: "transform-left",
+              type: "transform",
+              name: "Left",
+            },
+            "transform-right": {
+              id: "transform-right",
+              type: "transform",
+              name: "Right",
+            },
+          },
+          tree: [{ id: "transform-left" }, { id: "transform-right" }],
+        },
+      },
+    );
+    setItems(
+      { state },
+      {
+        items: {
+          items: {
+            "character-hero": {
+              id: "character-hero",
+              type: "character",
+              name: "Hero",
+              sprites: {
+                items: {
+                  "sprite-base": {
+                    id: "sprite-base",
+                    type: "image",
+                    name: "Smile",
+                    fileId: "file-smile",
+                  },
+                },
+                tree: [{ id: "sprite-base" }],
+              },
+            },
+          },
+          tree: [{ id: "character-hero" }],
+        },
+      },
+    );
+
+    handleAddCharacterClick(
+      {
+        store,
+        render,
+      },
+      {
+        _event: {
+          currentTarget: {
+            getBoundingClientRect: () => ({
+              left: 24,
+              bottom: 64,
+            }),
+          },
+        },
+      },
+    );
+    handleDropdownMenuClickItem(
+      {
+        store,
+        render,
+      },
+      {
+        _event: {
+          detail: {
+            item: state.dropdownMenu.items[1],
+          },
+        },
+      },
+    );
+
+    expect(selectMode({ state })).toBe("character-select");
+    expect(selectPendingCharacterTransformId({ state })).toBe(
+      "transform-right",
+    );
+    expect(state.dropdownMenu.isOpen).toBe(false);
+
+    handleCharacterItemClick(
+      {
+        store,
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              characterId: "character-hero",
+            },
+          },
+        },
+      },
+    );
+
+    expect(selectMode({ state })).toBe("sprite-select");
+    expect(selectSelectedCharacters({ state })[0].transformId).toBe(
+      "transform-right",
+    );
+
+    handleSpriteItemClick(
+      {
+        store,
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              spriteId: "sprite-base",
+            },
+          },
+        },
+      },
+    );
+
+    expect(dispatchEvent.mock.calls[1][0].detail).toEqual({
+      presentationState: {
+        character: {
+          items: [
+            {
+              id: "character-hero",
+              transformId: "transform-right",
+              sprites: [
+                {
+                  id: "base",
+                  resourceId: "sprite-base",
+                },
+              ],
+              spriteName: "",
+            },
+          ],
+        },
+      },
+    });
+
+    handleButtonSelectClick({
+      store,
+      render,
+      dispatchEvent,
+    });
+
+    expect(selectMode({ state })).toBe("current");
+    expect(selectPendingCharacterTransformId({ state })).toBeUndefined();
+  });
+
   it("updates and clears per-character animation selection", () => {
     const state = createInitialState();
     const render = vi.fn();
@@ -189,6 +448,268 @@ describe("commandLineCharacters.handlers", () => {
     });
     expect(selectSelectedCharacters({ state })[0].animations).toBeUndefined();
     expect(render).toHaveBeenCalledTimes(2);
+  });
+
+  it("updates character opacity and blur in emitted presentation state", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const store = createStoreApi(state);
+
+    setExistingCharacters(
+      { state },
+      {
+        characters: [
+          {
+            id: "character-hero",
+            transformId: "character-center",
+            sprites: [],
+          },
+        ],
+      },
+    );
+
+    handleOpacityInput(
+      {
+        store,
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              index: "0",
+            },
+          },
+          detail: {
+            value: "0.35",
+          },
+        },
+      },
+    );
+
+    expect(selectSelectedCharacters({ state })[0].opacity).toBe(0.35);
+
+    handleBlurToggleChange(
+      {
+        store,
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              index: "0",
+            },
+          },
+          detail: {
+            value: true,
+          },
+        },
+      },
+    );
+    handleBlurFieldInput(
+      {
+        store,
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              index: "0",
+              blurField: "quality",
+            },
+          },
+          detail: {
+            value: "5",
+          },
+        },
+      },
+    );
+    handleBlurFieldChange(
+      {
+        store,
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              index: "0",
+              blurField: "repeatEdgePixels",
+            },
+          },
+          detail: {
+            value: false,
+          },
+        },
+      },
+    );
+
+    expect(selectSelectedCharacters({ state })[0].blur).toEqual({
+      x: 6,
+      y: 9,
+      quality: 5,
+      kernelSize: 9,
+      repeatEdgePixels: false,
+    });
+    expect(dispatchEvent.mock.calls[3][0].detail).toEqual({
+      presentationState: {
+        character: {
+          items: [
+            {
+              id: "character-hero",
+              transformId: "character-center",
+              sprites: [],
+              spriteName: "",
+              opacity: 0.35,
+              blur: {
+                x: 6,
+                y: 9,
+                quality: 5,
+                kernelSize: 9,
+                repeatEdgePixels: false,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(render).toHaveBeenCalledTimes(4);
+  });
+
+  it("emits null when character blur is disabled", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const store = createStoreApi(state);
+
+    setExistingCharacters(
+      { state },
+      {
+        characters: [
+          {
+            id: "character-hero",
+            transformId: "character-center",
+            sprites: [],
+            blur: {
+              x: 6,
+              y: 9,
+              quality: 3,
+              kernelSize: 9,
+              repeatEdgePixels: true,
+            },
+          },
+        ],
+      },
+    );
+
+    handleBlurToggleChange(
+      {
+        store,
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              index: "0",
+            },
+          },
+          detail: {
+            value: false,
+          },
+        },
+      },
+    );
+
+    expect(selectSelectedCharacters({ state })[0].blur).toBeNull();
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        character: {
+          items: [
+            {
+              id: "character-hero",
+              transformId: "character-center",
+              sprites: [],
+              spriteName: "",
+              blur: null,
+            },
+          ],
+        },
+      },
+    });
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  it("submits opacity and blur for selected characters", () => {
+    const state = createInitialState();
+    const dispatchEvent = vi.fn();
+
+    setExistingCharacters(
+      { state },
+      {
+        characters: [
+          {
+            id: "character-hero",
+            transformId: "character-center",
+            sprites: [
+              {
+                id: "base",
+                resourceId: "sprite-base",
+              },
+            ],
+            spriteName: "Smile",
+            opacity: 0.8,
+            blur: {
+              x: 6,
+              y: 9,
+              quality: 3,
+              kernelSize: 9,
+              repeatEdgePixels: true,
+            },
+          },
+        ],
+      },
+    );
+
+    handleSubmitClick({
+      dispatchEvent,
+      store: createStoreApi(state),
+    });
+
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      character: {
+        items: [
+          {
+            id: "character-hero",
+            transformId: "character-center",
+            sprites: [
+              {
+                id: "base",
+                resourceId: "sprite-base",
+              },
+            ],
+            spriteName: "Smile",
+            opacity: 0.8,
+            blur: {
+              x: 6,
+              y: 9,
+              quality: 3,
+              kernelSize: 9,
+              repeatEdgePixels: true,
+            },
+          },
+        ],
+      },
+    });
   });
 
   it("drops a newly added character when sprite selection is cancelled from the breadcrumb", () => {
@@ -771,6 +1292,86 @@ describe("commandLineCharacters.handlers", () => {
     expect(state.dropdownMenu.isOpen).toBe(false);
     expect(state.dropdownMenu.characterIndex).toBeNull();
     expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  it("moves the character referenced by the dropdown menu", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+
+    setExistingCharacters(
+      { state },
+      {
+        characters: [
+          { id: "character-1" },
+          { id: "character-2" },
+          { id: "character-3" },
+        ],
+      },
+    );
+    showDropdownMenu(
+      { state },
+      {
+        position: { x: 10, y: 20 },
+        characterIndex: 0,
+      },
+    );
+
+    handleDropdownMenuClickItem(
+      {
+        dispatchEvent,
+        store: createStoreApi(state),
+        render,
+      },
+      {
+        _event: {
+          detail: {
+            item: {
+              value: "move-up",
+            },
+          },
+        },
+      },
+    );
+
+    expect(state.selectedCharacters.map((character) => character.id)).toEqual([
+      "character-2",
+      "character-1",
+      "character-3",
+    ]);
+    expect(state.dropdownMenu.isOpen).toBe(false);
+    expect(state.dropdownMenu.characterIndex).toBeNull();
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: {
+          presentationState: {
+            character: {
+              items: [
+                {
+                  id: "character-2",
+                  transformId: undefined,
+                  sprites: [],
+                  spriteName: "",
+                },
+                {
+                  id: "character-1",
+                  transformId: undefined,
+                  sprites: [],
+                  spriteName: "",
+                },
+                {
+                  id: "character-3",
+                  transformId: undefined,
+                  sprites: [],
+                  spriteName: "",
+                },
+              ],
+            },
+          },
+        },
+      }),
+    );
   });
 
   it("allows sprite groups to be left empty when confirming", () => {
