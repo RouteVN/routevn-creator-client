@@ -60,8 +60,8 @@ const buildVisualItem = (visual = {}) => {
     item.opacity = visual.opacity;
   }
 
-  if (visual.blur) {
-    item.blur = { ...visual.blur };
+  if (visual.blur !== undefined) {
+    item.blur = visual.blur === null ? null : { ...visual.blur };
   }
 
   if (visual.animations?.resourceId) {

@@ -170,4 +170,56 @@ describe("normalizeLineActions", () => {
       },
     });
   });
+
+  it("preserves blur null clear actions", () => {
+    expect(
+      normalizeLineActions({
+        background: {
+          blur: null,
+        },
+        screen: {
+          blur: null,
+        },
+        visual: {
+          items: [
+            {
+              id: "visual-1",
+              blur: null,
+            },
+          ],
+        },
+        character: {
+          items: [
+            {
+              id: "character-1",
+              blur: null,
+            },
+          ],
+        },
+      }),
+    ).toEqual({
+      background: {
+        blur: null,
+      },
+      screen: {
+        blur: null,
+      },
+      visual: {
+        items: [
+          {
+            id: "visual-1",
+            blur: null,
+          },
+        ],
+      },
+      character: {
+        items: [
+          {
+            id: "character-1",
+            blur: null,
+          },
+        ],
+      },
+    });
+  });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  selectSelectedBlurActionValue,
   selectViewData,
   setRepositoryState,
   setSelectedAnimation,
@@ -335,6 +336,22 @@ describe("commandLineBackground.store", () => {
     expect(viewData.dialogueForm.defaultValues.blurRepeatEdgePixels).toBe(
       false,
     );
+  });
+
+  it("keeps background blur null as an explicit clear value", () => {
+    const state = createInitialState();
+
+    setSelectedBlur(
+      { state },
+      {
+        blur: null,
+      },
+    );
+
+    const viewData = selectViewData({ state });
+
+    expect(viewData.dialogueForm.defaultValues.blur).toBe(false);
+    expect(selectSelectedBlurActionValue({ state })).toBeNull();
   });
 
   it("normalizes invalid background blur kernel size to a supported option", () => {

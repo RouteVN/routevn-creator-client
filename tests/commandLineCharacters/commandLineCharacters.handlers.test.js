@@ -583,6 +583,71 @@ describe("commandLineCharacters.handlers", () => {
     expect(render).toHaveBeenCalledTimes(4);
   });
 
+  it("emits null when character blur is disabled", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const store = createStoreApi(state);
+
+    setExistingCharacters(
+      { state },
+      {
+        characters: [
+          {
+            id: "character-hero",
+            transformId: "character-center",
+            sprites: [],
+            blur: {
+              x: 6,
+              y: 9,
+              quality: 3,
+              kernelSize: 9,
+              repeatEdgePixels: true,
+            },
+          },
+        ],
+      },
+    );
+
+    handleBlurToggleChange(
+      {
+        store,
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              index: "0",
+            },
+          },
+          detail: {
+            value: false,
+          },
+        },
+      },
+    );
+
+    expect(selectSelectedCharacters({ state })[0].blur).toBeNull();
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        character: {
+          items: [
+            {
+              id: "character-hero",
+              transformId: "character-center",
+              sprites: [],
+              spriteName: "",
+              blur: null,
+            },
+          ],
+        },
+      },
+    });
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+
   it("submits opacity and blur for selected characters", () => {
     const state = createInitialState();
     const dispatchEvent = vi.fn();

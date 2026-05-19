@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createInitialState,
   selectScreenBlur,
+  selectScreenBlurActionValue,
   selectScreenOpacity,
   selectTransitionAnimationId,
   setFormValues,
@@ -13,6 +14,7 @@ import {
 
 const createStoreApi = (state) => ({
   selectScreenBlur: () => selectScreenBlur({ state }),
+  selectScreenBlurActionValue: () => selectScreenBlurActionValue({ state }),
   selectScreenOpacity: () => selectScreenOpacity({ state }),
   selectTransitionAnimationId: () => selectTransitionAnimationId({ state }),
   setFormValues: (payload) => setFormValues({ state }, payload),
@@ -145,7 +147,7 @@ describe("commandLineScreen.handlers", () => {
     });
   });
 
-  it("omits screen opacity and blur when cleared", () => {
+  it("omits screen opacity and clears blur when disabled", () => {
     const state = createInitialState();
     const dispatchEvent = vi.fn();
 
@@ -174,6 +176,7 @@ describe("commandLineScreen.handlers", () => {
         animations: {
           resourceId: "screen-crossfade",
         },
+        blur: null,
       },
     });
   });

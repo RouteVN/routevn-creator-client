@@ -14,6 +14,7 @@ import {
   selectSelectedAnimationPlaybackContinuity,
   selectSelectedAnimationMode,
   selectSelectedBlur,
+  selectSelectedBlurActionValue,
   selectSelectedColor,
   selectSelectedOpacity,
   selectSelectedResource,
@@ -52,6 +53,7 @@ const createStoreApi = (state) => ({
     selectSelectedAnimationPlaybackContinuity({ state }),
   selectSelectedAnimationMode: () => selectSelectedAnimationMode({ state }),
   selectSelectedBlur: () => selectSelectedBlur({ state }),
+  selectSelectedBlurActionValue: () => selectSelectedBlurActionValue({ state }),
   selectSelectedColor: () => selectSelectedColor({ state }),
   selectSelectedOpacity: () => selectSelectedOpacity({ state }),
   selectSelectedResource: () => selectSelectedResource({ state }),
@@ -393,7 +395,7 @@ describe("commandLineBackground.handlers", () => {
     expect(render).toHaveBeenCalledTimes(2);
   });
 
-  it("submits blur when enabled and omits it when disabled", () => {
+  it("submits blur when enabled and clears it when disabled", () => {
     const state = createInitialState();
     const render = vi.fn();
     const dispatchEvent = vi.fn();
@@ -515,6 +517,7 @@ describe("commandLineBackground.handlers", () => {
     expect(dispatchEvent.mock.calls[1][0].detail).toEqual({
       background: {
         resourceId: "bg-school",
+        blur: null,
       },
     });
     expect(render).toHaveBeenCalledTimes(4);

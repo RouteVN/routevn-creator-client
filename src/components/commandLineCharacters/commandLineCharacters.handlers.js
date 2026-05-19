@@ -180,8 +180,8 @@ const buildCharacterItemsFromState = (
       item.opacity = char.opacity;
     }
 
-    if (char.blur) {
-      item.blur = { ...char.blur };
+    if (char.blur !== undefined) {
+      item.blur = char.blur === null ? null : { ...char.blur };
     }
 
     if (shouldUseTemporarySprites && index === selectedCharacterIndex) {

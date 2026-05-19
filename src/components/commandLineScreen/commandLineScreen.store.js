@@ -62,22 +62,48 @@ const normalizeScreenBlurKernelSize = (value) => {
   }, DEFAULT_SCREEN_BLUR.kernelSize);
 };
 
-const normalizeScreenBlur = (blur = {}) => ({
-  x: normalizeScreenBlurNumber(blur.x, DEFAULT_SCREEN_BLUR.x),
-  y: normalizeScreenBlurNumber(blur.y, DEFAULT_SCREEN_BLUR.y),
-  quality: normalizeScreenBlurNumber(blur.quality, DEFAULT_SCREEN_BLUR.quality),
-  kernelSize: normalizeScreenBlurKernelSize(blur.kernelSize),
-  repeatEdgePixels: normalizeScreenBlurBoolean(
-    blur.repeatEdgePixels,
-    DEFAULT_SCREEN_BLUR.repeatEdgePixels,
-  ),
-});
+const normalizeScreenBlur = (blur = {}) => {
+  const source =
+    blur && typeof blur === "object" && !Array.isArray(blur) ? blur : {};
+
+  return {
+    x: normalizeScreenBlurNumber(source.x, DEFAULT_SCREEN_BLUR.x),
+    y: normalizeScreenBlurNumber(source.y, DEFAULT_SCREEN_BLUR.y),
+    quality: normalizeScreenBlurNumber(
+      source.quality,
+      DEFAULT_SCREEN_BLUR.quality,
+    ),
+    kernelSize: normalizeScreenBlurKernelSize(source.kernelSize),
+    repeatEdgePixels: normalizeScreenBlurBoolean(
+      source.repeatEdgePixels,
+      DEFAULT_SCREEN_BLUR.repeatEdgePixels,
+    ),
+  };
+};
 
 const normalizeScreenBlurEnabled = (value) => {
   return value === true || value === "true";
 };
 
+const hasFormValue = (formValues, fieldName) => {
+  return Object.prototype.hasOwnProperty.call(formValues ?? {}, fieldName);
+};
+
 const normalizeScreenFormValues = (values = {}) => {
+  const nextValues = {
+    ...values,
+    opacity: normalizeScreenOpacity(values.opacity),
+  };
+
+  if (!hasFormValue(values, "blur")) {
+    delete nextValues.blurX;
+    delete nextValues.blurY;
+    delete nextValues.blurQuality;
+    delete nextValues.blurKernelSize;
+    delete nextValues.blurRepeatEdgePixels;
+    return nextValues;
+  }
+
   const blur = normalizeScreenBlur({
     x: values.blurX,
     y: values.blurY,
@@ -86,16 +112,14 @@ const normalizeScreenFormValues = (values = {}) => {
     repeatEdgePixels: values.blurRepeatEdgePixels,
   });
 
-  return {
-    ...values,
-    opacity: normalizeScreenOpacity(values.opacity),
-    blur: normalizeScreenBlurEnabled(values.blur),
-    blurX: blur.x,
-    blurY: blur.y,
-    blurQuality: blur.quality,
-    blurKernelSize: blur.kernelSize,
-    blurRepeatEdgePixels: blur.repeatEdgePixels,
-  };
+  nextValues.blur = normalizeScreenBlurEnabled(values.blur);
+  nextValues.blurX = blur.x;
+  nextValues.blurY = blur.y;
+  nextValues.blurQuality = blur.quality;
+  nextValues.blurKernelSize = blur.kernelSize;
+  nextValues.blurRepeatEdgePixels = blur.repeatEdgePixels;
+
+  return nextValues;
 };
 
 const getScreenFormValuesFromAction = (screen = {}) => {
@@ -111,10 +135,6 @@ const getScreenFormValuesFromAction = (screen = {}) => {
     blurKernelSize: blur.kernelSize,
     blurRepeatEdgePixels: blur.repeatEdgePixels,
   };
-};
-
-const hasFormValue = (formValues, fieldName) => {
-  return Object.prototype.hasOwnProperty.call(formValues ?? {}, fieldName);
 };
 
 const getSelectedFormValue = (formValues, fallbackValues, fieldName) => {
@@ -231,6 +251,18 @@ export const selectScreenBlur = ({ state }) => {
     kernelSize: state.formValues?.blurKernelSize,
     repeatEdgePixels: state.formValues?.blurRepeatEdgePixels,
   });
+};
+
+export const selectScreenBlurActionValue = ({ state }) => {
+  if (normalizeScreenBlurEnabled(state.formValues?.blur)) {
+    return selectScreenBlur({ state });
+  }
+
+  if (hasFormValue(state.formValues, "blur")) {
+    return null;
+  }
+
+  return undefined;
 };
 
 export const selectViewData = ({ state, props }) => {

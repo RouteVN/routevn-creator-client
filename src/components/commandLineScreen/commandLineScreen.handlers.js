@@ -1,7 +1,7 @@
 const buildScreenDataFromState = (store) => {
   const transitionAnimationId = store.selectTransitionAnimationId();
   const opacity = store.selectScreenOpacity();
-  const blur = store.selectScreenBlur();
+  const blur = store.selectScreenBlurActionValue();
 
   const screen = {};
 
@@ -15,7 +15,7 @@ const buildScreenDataFromState = (store) => {
     screen.opacity = opacity;
   }
 
-  if (blur) {
+  if (blur !== undefined) {
     screen.blur = blur;
   }
 
@@ -44,21 +44,26 @@ export const handleAfterMount = async (deps) => {
   const { projectService, store, props, render } = deps;
   await projectService.ensureRepository();
   const { animations } = projectService.getRepositoryState();
+  const screen = props?.screen ?? {};
+  const formValues = {
+    transitionAnimationId: screen?.animations?.resourceId,
+    opacity: screen?.opacity,
+  };
+
+  if (Object.hasOwn(screen, "blur")) {
+    formValues.blur = Boolean(screen.blur);
+    formValues.blurX = screen.blur?.x;
+    formValues.blurY = screen.blur?.y;
+    formValues.blurQuality = screen.blur?.quality;
+    formValues.blurKernelSize = screen.blur?.kernelSize;
+    formValues.blurRepeatEdgePixels = screen.blur?.repeatEdgePixels;
+  }
 
   store.setAnimations({
     animations,
   });
   store.setFormValues({
-    values: {
-      transitionAnimationId: props?.screen?.animations?.resourceId,
-      opacity: props?.screen?.opacity,
-      blur: Boolean(props?.screen?.blur),
-      blurX: props?.screen?.blur?.x,
-      blurY: props?.screen?.blur?.y,
-      blurQuality: props?.screen?.blur?.quality,
-      blurKernelSize: props?.screen?.blur?.kernelSize,
-      blurRepeatEdgePixels: props?.screen?.blur?.repeatEdgePixels,
-    },
+    values: formValues,
   });
   render();
 };

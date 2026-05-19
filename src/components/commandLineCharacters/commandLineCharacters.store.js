@@ -445,7 +445,7 @@ export const updateCharacterBlurEnabled = (
   }
 
   if (!normalizeCommandLineItemBlurEnabled(enabled)) {
-    delete character.blur;
+    character.blur = null;
     return;
   }
 

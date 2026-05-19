@@ -586,6 +586,74 @@ describe("commandLineVisual.handlers animation controls", () => {
     expect(render).toHaveBeenCalledTimes(4);
   });
 
+  it("emits null when visual blur is disabled", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const store = createStoreApi(state);
+
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          {
+            id: "visual-1",
+            resourceId: "visual-image",
+            resourceType: "image",
+            transformId: "visual-center",
+            layer: 50,
+            blur: {
+              x: 6,
+              y: 9,
+              quality: 3,
+              kernelSize: 9,
+              repeatEdgePixels: true,
+            },
+          },
+        ],
+      },
+    );
+
+    handleBlurToggleChange(
+      {
+        store,
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              index: "0",
+            },
+          },
+          detail: {
+            value: false,
+          },
+        },
+      },
+    );
+
+    expect(selectSelectedVisuals({ state })[0].blur).toBeNull();
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        visual: {
+          items: [
+            {
+              id: "visual-1",
+              resourceId: "visual-image",
+              resourceType: "image",
+              transformId: "visual-center",
+              layer: 50,
+              blur: null,
+            },
+          ],
+        },
+      },
+    });
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+
   it("moves visuals from the context menu and emits reordered preview data", () => {
     const state = createInitialState();
     const render = vi.fn();

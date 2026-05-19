@@ -365,7 +365,7 @@ describe("commandLineVisual.store animation controls", () => {
     expect(selectSelectedVisuals({ state })[0].opacity).toBe(1);
 
     updateVisualBlurEnabled({ state }, { index: 0, enabled: false });
-    expect(selectSelectedVisuals({ state })[0].blur).toBeUndefined();
+    expect(selectSelectedVisuals({ state })[0].blur).toBeNull();
 
     updateVisualBlurEnabled({ state }, { index: 0, enabled: true });
     updateVisualBlurField(

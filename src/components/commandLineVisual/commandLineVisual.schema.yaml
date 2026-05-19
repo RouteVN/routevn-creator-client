@@ -31,7 +31,9 @@ propsSchema:
                 minimum: 0
                 maximum: 1
               blur:
-                type: object
+                type:
+                  - object
+                  - "null"
                 properties:
                   x:
                     type: number

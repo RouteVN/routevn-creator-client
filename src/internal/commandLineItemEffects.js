@@ -84,25 +84,30 @@ const normalizeCommandLineItemBlurKernelSize = (value) => {
   );
 };
 
-export const normalizeCommandLineItemBlur = (blur = {}) => ({
-  x: normalizeCommandLineItemBlurNumber(
-    blur.x,
-    DEFAULT_COMMAND_LINE_ITEM_BLUR.x,
-  ),
-  y: normalizeCommandLineItemBlurNumber(
-    blur.y,
-    DEFAULT_COMMAND_LINE_ITEM_BLUR.y,
-  ),
-  quality: normalizeCommandLineItemBlurNumber(
-    blur.quality,
-    DEFAULT_COMMAND_LINE_ITEM_BLUR.quality,
-  ),
-  kernelSize: normalizeCommandLineItemBlurKernelSize(blur.kernelSize),
-  repeatEdgePixels: normalizeCommandLineItemBlurBoolean(
-    blur.repeatEdgePixels,
-    DEFAULT_COMMAND_LINE_ITEM_BLUR.repeatEdgePixels,
-  ),
-});
+export const normalizeCommandLineItemBlur = (blur = {}) => {
+  const source =
+    blur && typeof blur === "object" && !Array.isArray(blur) ? blur : {};
+
+  return {
+    x: normalizeCommandLineItemBlurNumber(
+      source.x,
+      DEFAULT_COMMAND_LINE_ITEM_BLUR.x,
+    ),
+    y: normalizeCommandLineItemBlurNumber(
+      source.y,
+      DEFAULT_COMMAND_LINE_ITEM_BLUR.y,
+    ),
+    quality: normalizeCommandLineItemBlurNumber(
+      source.quality,
+      DEFAULT_COMMAND_LINE_ITEM_BLUR.quality,
+    ),
+    kernelSize: normalizeCommandLineItemBlurKernelSize(source.kernelSize),
+    repeatEdgePixels: normalizeCommandLineItemBlurBoolean(
+      source.repeatEdgePixels,
+      DEFAULT_COMMAND_LINE_ITEM_BLUR.repeatEdgePixels,
+    ),
+  };
+};
 
 export const normalizeCommandLineItemBlurEnabled = (value) => {
   return value === true || value === "true";
@@ -137,7 +142,9 @@ export const normalizeCommandLineItemEffects = (item = {}) => {
     nextItem.opacity = opacity;
   }
 
-  if (
+  if (nextItem.blur === null) {
+    nextItem.blur = null;
+  } else if (
     nextItem.blur &&
     typeof nextItem.blur === "object" &&
     !Array.isArray(nextItem.blur)
