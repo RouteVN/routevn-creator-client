@@ -39,6 +39,7 @@ const layoutForm = {
       required: true,
       options: [
         { value: "general", label: "General" },
+        { value: "input", label: "Input" },
         { value: "save-load", label: "Save / Load" },
         { value: "confirmDialog", label: "Confirm Dialog" },
         { value: "history", label: "History" },
@@ -48,7 +49,7 @@ const layoutForm = {
       ],
       tooltip: {
         content:
-          "General is the flexible layout type for backgrounds, menus, and other all-purpose screens. Save / Load is used for save-slot based save and load screens. Confirm Dialog is used for compact confirmation prompts with OK and Cancel areas. History is used for dialogue history overlays. Dialogue ADV is used for ADV mode text dialogue layout. Dialogue NVL is used for novel mode accumulated dialogue layout. Choice is used for the choices.",
+          "General is the flexible layout type for backgrounds, menus, and other all-purpose screens. Input is used for form input layouts. Save / Load is used for save-slot based save and load screens. Confirm Dialog is used for compact confirmation prompts with OK and Cancel areas. History is used for dialogue history overlays. Dialogue ADV is used for ADV mode text dialogue layout. Dialogue NVL is used for novel mode accumulated dialogue layout. Choice is used for the choices.",
       },
     },
     layoutDescriptionField,
@@ -105,6 +106,7 @@ const layoutCenterItemContextMenuItems = [
 
 const layoutTypeLabels = {
   general: "General",
+  input: "Input",
   "save-load": "Save / Load",
   confirmDialog: "Confirm Dialog",
   history: "History",

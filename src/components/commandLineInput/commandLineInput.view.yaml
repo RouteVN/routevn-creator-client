@@ -1,0 +1,59 @@
+refs:
+  breadcumb:
+    eventListeners:
+      item-click:
+        handler: handleBreadcumbClick
+  form:
+    eventListeners:
+      form-input:
+        handler: handleFormChange
+      form-change:
+        handler: handleFormChange
+  fieldConfig*:
+    eventListeners:
+      value-change:
+        handler: handleFieldConfigChange
+      value-input:
+        handler: handleFieldConfigChange
+  submitButton:
+    eventListeners:
+      click:
+        handler: handleSubmitClick
+template:
+  - rtgl-view w=f h=f p=lg:
+      - rtgl-view d=h g=md:
+          - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
+      - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
+          - rtgl-form#form key=${formKey} :form=${form} :defaultValues=${defaultValues} :context=${context} w=f:
+              - rtgl-view slot=${inputFieldsSlot} g=md w=f:
+                  - $if hasFields:
+                      - $for fieldRow, index in fieldRows:
+                          - rtgl-view d=v g=md p=md bgc=mu br=md w=f:
+                              - rtgl-view d=h av=c w=f g=sm:
+                                  - rtgl-text s=sm w=1fg: ${fieldRow.label}
+                                  - rtgl-text s=xs c=mu-fg: ${fieldRow.field}
+                              - rtgl-view d=v g=sm w=f:
+                                  - rtgl-text s=sm c=mu-fg: Variable
+                                  - rtgl-select#fieldConfigVariable${index} data-field="${fieldRow.field}" data-name=variableId w=f :selectedValue=${fieldRow.variableId} :options=${fieldVariableOptions} placeholder="Choose a string variable...": null
+                              - rtgl-view d=h g=md w=f wrap:
+                                  - rtgl-view d=v g=xs w=150:
+                                      - rtgl-text s=sm c=mu-fg: Required
+                                      - rtgl-segmented-control#fieldConfigRequired${index} data-field="${fieldRow.field}" data-name=required w=f no-clear :selectedValue=${fieldRow.required} :options=${booleanOptions}: null
+                                  - rtgl-view d=v g=xs w=150:
+                                      - rtgl-text s=sm c=mu-fg: Trim
+                                      - rtgl-segmented-control#fieldConfigTrim${index} data-field="${fieldRow.field}" data-name=trim w=f no-clear :selectedValue=${fieldRow.trim} :options=${booleanOptions}: null
+                                  - rtgl-view d=v g=xs w=150:
+                                      - rtgl-text s=sm c=mu-fg: Multiline
+                                      - rtgl-segmented-control#fieldConfigMultiline${index} data-field="${fieldRow.field}" data-name=multiline w=f no-clear :selectedValue=${fieldRow.multiline} :options=${booleanOptions}: null
+                              - rtgl-view d=h g=md w=f wrap:
+                                  - rtgl-view d=v g=xs w=1fg:
+                                      - rtgl-text s=sm c=mu-fg: Placeholder
+                                      - rtgl-input#fieldConfigPlaceholder${index} data-field="${fieldRow.field}" data-name=placeholder w=f value=${fieldRow.placeholder}: null
+                                  - rtgl-view d=v g=xs w=150:
+                                      - rtgl-text s=sm c=mu-fg: Max Length
+                                      - rtgl-input#fieldConfigMaxLength${index} data-field="${fieldRow.field}" data-name=maxLength type=number min=0 step=1 w=f value=${fieldRow.maxLength}: null
+                    $else:
+                      - rtgl-view p=md bgc=mu br=md w=f:
+                          - rtgl-text s=sm c=mu-fg: No input fields found.
+      - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
+          - rtgl-button#submitButton ?disabled=${submitDisabled}: Submit

@@ -50,6 +50,15 @@ export const createPersistedPreviewState = (previewData) => {
     ? normalizedPreviewData.saveSlots
     : [];
   const previewVariableValues = {};
+  const previewInputFieldValues = {};
+
+  for (const [field, value] of Object.entries(
+    isPlainObject(normalizedPreviewData.form?.values)
+      ? normalizedPreviewData.form.values
+      : {},
+  )) {
+    previewInputFieldValues[field] = value;
+  }
 
   for (const [variableId, value] of Object.entries(
     normalizedPreviewData.variables ?? {},
@@ -158,6 +167,7 @@ export const createPersistedPreviewState = (previewData) => {
           }
         : undefined,
     previewVariableValues,
+    previewInputFieldValues,
     previewBackgroundImageId:
       typeof normalizedPreviewData.backgroundImageId === "string" &&
       normalizedPreviewData.backgroundImageId.length > 0

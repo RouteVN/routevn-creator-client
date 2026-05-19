@@ -21,6 +21,24 @@ describe("layoutEditorViewData", () => {
     });
   });
 
+  it("builds input create actions with the form field binding", () => {
+    const [inputItem] = toLayoutEditorContextMenuItems([
+      {
+        label: "Input",
+        type: "item",
+        createType: "input",
+      },
+    ]);
+
+    expect(inputItem.value).toMatchObject({
+      action: "new-child-item",
+      type: "input",
+      field: "field",
+      width: 330,
+      height: 52,
+    });
+  });
+
   it("keeps grouped edit actions for leaf items without an empty add section", () => {
     const contextMenuItems = toLayoutEditorContextMenuItems([
       {

@@ -40,7 +40,7 @@ refs:
 template:
   - $if showSelected:
       - rtgl-view g=md w=f:
-          - $if preview.screen || preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.resetStoryAtSection || preview.dialogue || preview.choice || preview.control || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.startSkipMode || preview.stopSkipMode || preview.toggleDialogueUI || preview.runtimeActions || preview.setNextLineConfig || preview.updateVariable || preview.conditional || preview.pushOverlay || preview.popOverlay || preview.rollbackByOffset || preview.showConfirmDialog || preview.hideConfirmDialog || preview.saveSlot || preview.loadSlot:
+          - $if preview.screen || preview.background || preview.bgm || preview.sfx || preview.character || preview.visual || preview.sectionTransition || preview.resetStoryAtSection || preview.dialogue || preview.choice || preview.form || preview.control || preview.nextLine || preview.toggleAutoMode || preview.toggleSkipMode || preview.startSkipMode || preview.stopSkipMode || preview.toggleDialogueUI || preview.runtimeActions || preview.setNextLineConfig || preview.updateVariable || preview.conditional || preview.pushOverlay || preview.popOverlay || preview.rollbackByOffset || preview.showConfirmDialog || preview.hideConfirmDialog || preview.saveSlot || preview.loadSlot:
               - $if preview.control:
                   - rtgl-view#actionItemControl data-mode=control g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg=control wh=24: null
@@ -128,6 +128,15 @@ template:
                               - $for choice in preview.choice.items:
                                   - rtgl-view bw=xs bc=bo br=sm ph=md pv=sm:
                                       - rtgl-text s=sm: ${choice.content}
+              - $if preview.form:
+                  - rtgl-view#actionItemInput data-mode=input g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer pv=md:
+                      - rtgl-svg svg=settings wh=24: null
+                      - rtgl-view d=v g=sm:
+                          - rtgl-text s=sm: ${preview.form.layoutName}
+                          - rtgl-view d=h g=sm wrap:
+                              - $for field in preview.form.fields:
+                                  - rtgl-view bw=xs bc=bo br=sm ph=md pv=sm:
+                                      - rtgl-text s=sm: '${field.field}: ${field.variableName}'
               - $if preview.nextLine:
                   - rtgl-view#actionItemNextLine data-mode=nextLine g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md h=36 w=f cur=pointer:
                       - rtgl-svg svg="settings" wh=24: null
@@ -216,6 +225,8 @@ template:
                   - rvn-command-line-dialogue-box#commandLineDialogueBox :layouts=${dialogueLayouts} :characters=${allCharacters} :characterTree=${characterTree} :transforms=${transforms} :animations=${animations} :dialogue=${actions.dialogue}: null
                 $elif mode == "choice":
                   - rvn-command-line-choices#commandLineChoices :layouts=${choiceLayouts} :choice=${actions.choice}: null
+                $elif mode == "input":
+                  - rvn-command-line-input#commandLineInput :layouts=${inputLayouts} :layoutsData=${repositoryState.layouts} :form=${actions.form}: null
                 $elif mode == "background":
                   - rvn-command-line-background#commandLineBackground data-mode="background" :background=${actions.background}: null
                 $elif mode == "screen":

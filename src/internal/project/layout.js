@@ -36,6 +36,17 @@ const BASE_INTERACTION_KEYS = [
   "hover",
 ];
 
+const INPUT_INTERACTION_KEYS = [
+  "change",
+  "submit",
+  "focusEvent",
+  "blurEvent",
+  "selectionChange",
+  "compositionStart",
+  "compositionUpdate",
+  "compositionEnd",
+];
+
 export const CURRENT_LAYOUT_SCHEMA_VERSION = 2;
 
 import {
@@ -235,6 +246,117 @@ export const filterLayoutsExcludingTypes = (
 
     return !blockedLayoutTypes.has(item.layoutType);
   });
+};
+
+const getLayoutsItemsMap = (layoutsData = {}) => {
+  const data = layoutsData ?? {};
+  return data.items ?? data;
+};
+
+const getLayoutTraversalItem = ({ layout, layoutId, layoutsData } = {}) => {
+  if (layout?.id === layoutId) {
+    return layout;
+  }
+
+  return getLayoutsItemsMap(layoutsData)[layoutId];
+};
+
+export const visitLayoutItemsWithFragments = (
+  { layout, layoutId, layoutsData, visited = new Set() } = {},
+  visitor,
+) => {
+  if (!layoutId || visited.has(layoutId) || typeof visitor !== "function") {
+    return false;
+  }
+
+  const layoutItem = getLayoutTraversalItem({
+    layout,
+    layoutId,
+    layoutsData,
+  });
+  if (!layoutItem?.elements?.items) {
+    return false;
+  }
+
+  visited.add(layoutId);
+
+  for (const item of Object.values(layoutItem.elements.items)) {
+    if (
+      visitor({
+        item,
+        layout: layoutItem,
+        layoutId,
+      }) === true
+    ) {
+      return true;
+    }
+
+    if (item?.type !== "fragment-ref" || !item.fragmentLayoutId) {
+      continue;
+    }
+
+    const fragmentLayout =
+      getLayoutsItemsMap(layoutsData)[item.fragmentLayoutId];
+    if (!isFragmentLayout(fragmentLayout)) {
+      continue;
+    }
+
+    if (
+      visitLayoutItemsWithFragments(
+        {
+          layoutId: item.fragmentLayoutId,
+          layoutsData,
+          visited,
+        },
+        visitor,
+      )
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+export const getLayoutInputFieldItems = ({
+  layout,
+  layoutId,
+  layoutsData,
+} = {}) => {
+  const inputFields = [];
+  const addedFields = new Set();
+
+  visitLayoutItemsWithFragments(
+    {
+      layout,
+      layoutId,
+      layoutsData,
+    },
+    ({ item }) => {
+      if (
+        item?.type !== "input" ||
+        typeof item.field !== "string" ||
+        item.field.length === 0 ||
+        addedFields.has(item.field)
+      ) {
+        return false;
+      }
+
+      addedFields.add(item.field);
+      inputFields.push({
+        field: item.field,
+        label: item.name ?? item.field,
+        defaultValue: item.value ?? "",
+        placeholder: item.placeholder,
+        multiline: item.multiline,
+        maxLength: item.maxLength,
+      });
+
+      return false;
+    },
+  );
+
+  return inputFields;
 };
 
 const createLayoutDuplicateId = () => {
@@ -1127,6 +1249,60 @@ const applyRectNode = ({ element, node }) => {
   };
 };
 
+const applyInputNode = ({ element, node, context }) => {
+  if (node.type !== "input") {
+    return element;
+  }
+
+  const nextElement = {
+    ...element,
+    field: node.field,
+  };
+
+  if (node.value !== undefined) {
+    nextElement.value = node.value;
+  }
+  if (node.placeholder !== undefined) {
+    nextElement.placeholder = node.placeholder;
+  }
+  if (typeof node.multiline === "boolean") {
+    nextElement.multiline = node.multiline;
+  }
+  if (typeof node.disabled === "boolean") {
+    nextElement.disabled = node.disabled;
+  }
+  if (Number.isFinite(node.maxLength)) {
+    nextElement.maxLength = node.maxLength;
+  }
+  if (node.padding !== undefined) {
+    nextElement.padding = structuredClone(node.padding);
+  }
+
+  const textStyleId = ensureNodeTextStyleId({
+    textStyles: context.textStyles,
+    textStylesData: context.textStylesData,
+    layoutId: context.layoutId,
+    node,
+    textStyleId: node.textStyleId,
+    variant: "base",
+  });
+  if (textStyleId) {
+    nextElement.textStyleId = textStyleId;
+  }
+
+  INPUT_INTERACTION_KEYS.forEach((key) => {
+    const interaction = withInteractionEventData(
+      node[key],
+      context.slotEventData,
+    );
+    if (interaction) {
+      nextElement[key] = interaction;
+    }
+  });
+
+  return nextElement;
+};
+
 const applySliderNode = ({ element, node, imageItems }) => {
   if (node.type !== "slider") {
     return element;
@@ -1284,6 +1460,11 @@ const mapLayoutNode = ({ node, imageItems, context }) => {
     context: nodeContext,
   });
   element = applyRectNode({ element, node: effectiveNode });
+  element = applyInputNode({
+    element,
+    node: effectiveNode,
+    context: nodeContext,
+  });
   element = applySliderNode({ element, node: effectiveNode, imageItems });
   element = applyContainerNode({ element, node: effectiveNode });
   element = applyInteractionSoundVariants({

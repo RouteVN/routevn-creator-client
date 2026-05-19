@@ -944,6 +944,10 @@ export const createLayoutTemplate = (layoutType, projectResolution) => {
     );
   }
 
+  if (layoutType === "input") {
+    return createEmptyLayoutElements();
+  }
+
   if (layoutType === "general" || layoutType === "save-load") {
     const rootId = generateId();
     const textId = generateId();
