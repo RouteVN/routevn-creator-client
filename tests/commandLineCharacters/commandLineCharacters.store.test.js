@@ -384,7 +384,7 @@ describe("commandLineCharacters.store sprite group filtering", () => {
     expect(state.selectedCharacters[0].opacity).toBe(0);
 
     updateCharacterBlurEnabled({ state }, { index: 0, enabled: false });
-    expect(state.selectedCharacters[0].blur).toBeUndefined();
+    expect(state.selectedCharacters[0].blur).toBeNull();
 
     updateCharacterBlurEnabled({ state }, { index: 0, enabled: true });
     updateCharacterBlurField(

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createInitialState,
   selectScreenBlur,
+  selectScreenBlurActionValue,
   selectScreenOpacity,
   selectViewData,
   setAnimations,
@@ -232,6 +233,31 @@ describe("commandLineScreen.store", () => {
     expect(viewData.defaultValues.blurQuality).toBe(2);
     expect(viewData.defaultValues.blurKernelSize).toBe(13);
     expect(viewData.defaultValues.blurRepeatEdgePixels).toBe(false);
+  });
+
+  it("uses screen blur null props as an explicit clear value", () => {
+    const state = createInitialState();
+
+    setFormValues(
+      { state },
+      {
+        values: {
+          blur: false,
+        },
+      },
+    );
+
+    const viewData = selectViewData({
+      state,
+      props: {
+        screen: {
+          blur: null,
+        },
+      },
+    });
+
+    expect(viewData.defaultValues.blur).toBe(false);
+    expect(selectScreenBlurActionValue({ state })).toBeNull();
   });
 
   it("normalizes invalid screen blur kernel size to a supported option", () => {

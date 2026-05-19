@@ -119,19 +119,24 @@ const normalizeBackgroundBlurKernelSize = (value) => {
   }, DEFAULT_BACKGROUND_BLUR.kernelSize);
 };
 
-const normalizeBackgroundBlur = (blur = {}) => ({
-  x: normalizeBackgroundBlurNumber(blur.x, DEFAULT_BACKGROUND_BLUR.x),
-  y: normalizeBackgroundBlurNumber(blur.y, DEFAULT_BACKGROUND_BLUR.y),
-  quality: normalizeBackgroundBlurNumber(
-    blur.quality,
-    DEFAULT_BACKGROUND_BLUR.quality,
-  ),
-  kernelSize: normalizeBackgroundBlurKernelSize(blur.kernelSize),
-  repeatEdgePixels: normalizeBackgroundBlurBoolean(
-    blur.repeatEdgePixels,
-    DEFAULT_BACKGROUND_BLUR.repeatEdgePixels,
-  ),
-});
+const normalizeBackgroundBlur = (blur = {}) => {
+  const source =
+    blur && typeof blur === "object" && !Array.isArray(blur) ? blur : {};
+
+  return {
+    x: normalizeBackgroundBlurNumber(source.x, DEFAULT_BACKGROUND_BLUR.x),
+    y: normalizeBackgroundBlurNumber(source.y, DEFAULT_BACKGROUND_BLUR.y),
+    quality: normalizeBackgroundBlurNumber(
+      source.quality,
+      DEFAULT_BACKGROUND_BLUR.quality,
+    ),
+    kernelSize: normalizeBackgroundBlurKernelSize(source.kernelSize),
+    repeatEdgePixels: normalizeBackgroundBlurBoolean(
+      source.repeatEdgePixels,
+      DEFAULT_BACKGROUND_BLUR.repeatEdgePixels,
+    ),
+  };
+};
 
 export const createInitialState = () => ({
   mode: "current",
@@ -150,6 +155,7 @@ export const createInitialState = () => ({
   selectedColorId: undefined,
   selectedOpacity: undefined,
   selectedBlurEnabled: false,
+  selectedBlurExplicit: false,
   selectedBlur: { ...DEFAULT_BACKGROUND_BLUR },
   selectedAnimationMode: "none",
   selectedAnimationId: undefined,
@@ -330,14 +336,22 @@ export const selectSelectedOpacity = ({ state }) => {
 
 export const setSelectedBlurEnabled = ({ state }, { enabled } = {}) => {
   state.selectedBlurEnabled = enabled === true || enabled === "true";
+  state.selectedBlurExplicit = true;
 };
 
 export const setSelectedBlur = ({ state }, { blur } = {}) => {
+  state.selectedBlurExplicit = true;
+  if (blur === null) {
+    state.selectedBlurEnabled = false;
+    return;
+  }
+
   state.selectedBlurEnabled = true;
   state.selectedBlur = normalizeBackgroundBlur(blur);
 };
 
 export const setSelectedBlurField = ({ state }, { fieldName, value } = {}) => {
+  state.selectedBlurExplicit = true;
   state.selectedBlur = normalizeBackgroundBlur({
     ...state.selectedBlur,
     [fieldName]: value,
@@ -348,6 +362,18 @@ export const selectSelectedBlur = ({ state }) => {
   return state.selectedBlurEnabled
     ? normalizeBackgroundBlur(state.selectedBlur)
     : undefined;
+};
+
+export const selectSelectedBlurActionValue = ({ state }) => {
+  if (state.selectedBlurEnabled) {
+    return normalizeBackgroundBlur(state.selectedBlur);
+  }
+
+  if (state.selectedBlurExplicit) {
+    return null;
+  }
+
+  return undefined;
 };
 
 export const setSelectedAnimationPlaybackContinuity = (

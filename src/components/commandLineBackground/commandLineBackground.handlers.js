@@ -120,7 +120,7 @@ const buildBackgroundDataFromState = (
   const selectedTransformId = store.selectSelectedTransform();
   const selectedColorId = store.selectSelectedColor();
   const selectedOpacity = store.selectSelectedOpacity();
-  const selectedBlur = store.selectSelectedBlur();
+  const selectedBlur = store.selectSelectedBlurActionValue();
   const selectedAnimationMode = store.selectSelectedAnimationMode();
   const selectedAnimationId = store.selectSelectedAnimation();
   const selectedAnimationPlaybackContinuity =
@@ -145,7 +145,7 @@ const buildBackgroundDataFromState = (
     backgroundData.opacity = selectedOpacity;
   }
 
-  if (hasBackgroundTarget && selectedBlur) {
+  if (hasBackgroundTarget && selectedBlur !== undefined) {
     backgroundData.blur = selectedBlur;
   }
 

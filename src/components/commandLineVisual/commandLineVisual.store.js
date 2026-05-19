@@ -652,7 +652,7 @@ export const updateVisualBlurEnabled = ({ state }, { index, enabled } = {}) => {
   }
 
   if (!normalizeCommandLineItemBlurEnabled(enabled)) {
-    delete visual.blur;
+    visual.blur = null;
     return;
   }
 

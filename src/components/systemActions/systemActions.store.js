@@ -122,6 +122,23 @@ const resolveBackgroundPreviewAction = ({ actions, presentationState }) => {
   }
 
   const previewBackground = { ...actionBackground };
+  const hasAppearanceOnlyChange =
+    Object.hasOwn(actionBackground, "opacity") ||
+    Object.hasOwn(actionBackground, "blur");
+  if (
+    hasAppearanceOnlyChange &&
+    !previewBackground.resourceId &&
+    effectiveBackground?.resourceId
+  ) {
+    previewBackground.resourceId = effectiveBackground.resourceId;
+  }
+  if (
+    hasAppearanceOnlyChange &&
+    !previewBackground.colorId &&
+    effectiveBackground?.colorId
+  ) {
+    previewBackground.colorId = effectiveBackground.colorId;
+  }
   if (!previewBackground.resourceId && actionBackground.colorId) {
     previewBackground.resourceId = effectiveBackground?.resourceId;
   }
@@ -393,7 +410,7 @@ const isDisplayableScreenAction = (screenAction) => {
   return Boolean(
     screenAction?.animations?.resourceId ||
       screenAction?.opacity !== undefined ||
-      screenAction?.blur,
+      Object.hasOwn(screenAction ?? {}, "blur"),
   );
 };
 
