@@ -53,7 +53,7 @@ describe("commandLineActions.store", () => {
     expect(iconByMode.decrementSaveLoadPagination).toBe("settings");
     expect(iconByMode.setMenuPage).toBe("settings");
     expect(iconByMode.setMenuEntryPoint).toBe("settings");
-    expect(iconByMode.conditional).toBeUndefined();
+    expect(iconByMode.conditional).toBe("settings");
   });
 
   it("offers resetStoryAtSection in system actions and drops resetStorySession", () => {
@@ -103,7 +103,7 @@ describe("commandLineActions.store", () => {
     }
   });
 
-  it("hides conditional actions from the logic section", () => {
+  it("shows conditional actions in the logic section", () => {
     const systemItems = selectItems({
       props: {
         actionsType: "system",
@@ -115,20 +115,25 @@ describe("commandLineActions.store", () => {
       },
     });
 
-    expect(getSectionModes(systemItems, "Logic")).toEqual(["updateVariable"]);
+    expect(getSectionModes(systemItems, "Logic")).toEqual([
+      "updateVariable",
+      "conditional",
+    ]);
     expect(getSectionModes(presentationItems, "Logic")).toEqual([
       "updateVariable",
+      "conditional",
     ]);
-    expect(systemItems.some((item) => item.mode === "conditional")).toBe(false);
+    expect(systemItems.some((item) => item.mode === "conditional")).toBe(true);
     expect(presentationItems.some((item) => item.mode === "conditional")).toBe(
-      false,
+      true,
     );
   });
 
-  it("keeps conditional hidden even when allowed modes include it", () => {
+  it("honors explicit hidden modes for conditional actions", () => {
     const items = selectItems({
       props: {
         actionsType: "system",
+        hiddenModes: ["conditional"],
         allowedModes: ["conditional", "updateVariable"],
       },
     });
