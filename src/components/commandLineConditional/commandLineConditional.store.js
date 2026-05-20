@@ -14,6 +14,8 @@ const CONDITION_OPERATOR_LABELS = Object.fromEntries(
   CONDITION_OPERATOR_OPTIONS.map((option) => [option.value, option.label]),
 );
 
+const DEFAULT_BRANCH_LABEL = "Default branch";
+
 const BRANCH_ACTION_ALLOWED_MODES = [
   "sectionTransition",
   "resetStoryAtSection",
@@ -106,7 +108,7 @@ const formatConditionValue = (value) => {
 
 const getBranchSummary = (branch, variablesData = {}) => {
   if (!Object.hasOwn(toPlainObject(branch), "when")) {
-    return "Default";
+    return DEFAULT_BRANCH_LABEL;
   }
 
   if (typeof branch.when === "string") {
@@ -328,7 +330,9 @@ export const selectViewData = ({ state, props }) => {
     .filter((branch) => !hasBranchCondition(branch))
     .map(createBranchViewData)[0];
   const editBranchLabel =
-    state.tempBranch.conditionKind === "default" ? "Default" : "Branch";
+    state.tempBranch.conditionKind === "default"
+      ? DEFAULT_BRANCH_LABEL
+      : "Branch";
 
   const breadcrumb = [
     { id: "actions", label: "Actions", click: true },
@@ -379,7 +383,9 @@ export const selectViewData = ({ state, props }) => {
     isEditingDefault: state.tempBranch.conditionKind === "default",
     isEditingUnsupportedCondition,
     editBranchTitle:
-      state.tempBranch.conditionKind === "default" ? "Default" : "Branch",
+      state.tempBranch.conditionKind === "default"
+        ? DEFAULT_BRANCH_LABEL
+        : "Branch",
     hiddenModes: getHiddenModes(props),
     dropdownMenu: state.dropdownMenu,
   };

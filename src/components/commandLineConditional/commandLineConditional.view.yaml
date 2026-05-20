@@ -78,7 +78,7 @@ template:
                               - rtgl-text s=sm: ${branch.summary}
                               - rtgl-text s=xs c=mu-fg: ${branch.actionsSummary}
                   - rtgl-button#addBranchButton v=ol w=f mt=md: + Add Branch
-                  - rtgl-text s=sm c=mu-fg mt=md: Default
+                  - rtgl-text s=sm c=mu-fg mt=md: Default branch
                   - $if hasDefaultBranch:
                       - rtgl-view#defaultBranch data-branch-id=${defaultBranch.id} cur=pointer d=h av=c ah=s g=md p=md bgc=mu h-bgc=ac br=md w=f:
                           - rtgl-view d=v w=1fg:
