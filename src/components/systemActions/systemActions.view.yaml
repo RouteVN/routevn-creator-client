@@ -130,7 +130,7 @@ template:
                                       - rtgl-text s=sm: ${choice.content}
               - $if preview.form:
                   - rtgl-view#actionItemInput data-mode=input g=md d=h av=c ph=md bgc=mu h-bgc=ac br=md w=f cur=pointer pv=md:
-                      - rtgl-svg svg=settings wh=24: null
+                      - rtgl-svg svg=input wh=24: null
                       - rtgl-view d=v g=sm:
                           - rtgl-text s=sm: ${preview.form.layoutName}
                           - rtgl-view d=h g=sm wrap:

@@ -5909,6 +5909,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       hasChoices: Boolean(lineDecoration.hasChoices),
       hasConditional: Boolean(lineDecoration.hasConditional),
       hasUpdateVariable: Boolean(lineDecoration.hasUpdateVariable),
+      hasInput: Boolean(lineDecoration.hasInput),
       hasSetNextLineConfig: Boolean(lineDecoration.hasSetNextLineConfig),
       setNextLineConfigChangeType: lineDecoration.setNextLineConfigChangeType,
     });
@@ -6611,6 +6612,14 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       container.append(
         this.createIconPreview({
           icon: "variable",
+        }),
+      );
+    }
+
+    if (lineDecoration.hasInput) {
+      container.append(
+        this.createIconPreview({
+          icon: "input",
         }),
       );
     }

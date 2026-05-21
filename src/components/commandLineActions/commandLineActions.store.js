@@ -206,7 +206,7 @@ const PRESENTATION_ACTION_SECTIONS = [
     {
       id: "29",
       label: "Input",
-      icon: "settings",
+      icon: "input",
       mode: "input",
     },
     {

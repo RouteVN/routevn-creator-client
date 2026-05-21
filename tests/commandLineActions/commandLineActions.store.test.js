@@ -286,6 +286,7 @@ describe("commandLineActions.store", () => {
         "control",
       ]),
     );
+    expect(items.find((item) => item.mode === "input")?.icon).toBe("input");
     expect(
       items.some(
         (item) => item.type === "section" && item.label === "Save / Load",
