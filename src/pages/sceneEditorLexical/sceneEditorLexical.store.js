@@ -12,6 +12,10 @@ import {
   overlaySceneWithDraftSection,
 } from "../../internal/ui/sceneEditorLexical/draftSection.js";
 import {
+  getLineDialogueContent,
+  getPlainTextFromContent,
+} from "../../internal/ui/sceneEditorLexical/contentModel.js";
+import {
   constructProjectData,
   getSectionPresentation,
 } from "../../internal/project/projection.js";
@@ -56,6 +60,73 @@ const toPlainObject = (value) => {
   return value !== null && typeof value === "object" && !Array.isArray(value)
     ? value
     : {};
+};
+
+const createSegmenter = (granularity) => {
+  const Segmenter = globalThis.Intl?.Segmenter;
+  return typeof Segmenter === "function"
+    ? new Segmenter(undefined, { granularity })
+    : undefined;
+};
+
+const wordSegmenter = createSegmenter("word");
+const characterSegmenter = createSegmenter("grapheme");
+
+const countWords = (text) => {
+  const value = String(text ?? "").trim();
+  if (value.length === 0) {
+    return 0;
+  }
+
+  if (wordSegmenter) {
+    let count = 0;
+    for (const segment of wordSegmenter.segment(value)) {
+      if (segment.isWordLike) {
+        count += 1;
+      }
+    }
+    return count;
+  }
+
+  return value.split(/\s+/).filter(Boolean).length;
+};
+
+const countCharacters = (text) => {
+  const value = String(text ?? "");
+  if (value.length === 0) {
+    return 0;
+  }
+
+  if (characterSegmenter) {
+    let count = 0;
+    for (const _segment of characterSegmenter.segment(value)) {
+      count += 1;
+    }
+    return count;
+  }
+
+  return Array.from(value).length;
+};
+
+const formatCount = (value, singular, plural) => {
+  return `${value.toLocaleString()} ${value === 1 ? singular : plural}`;
+};
+
+const buildSectionTextMetrics = (section) => {
+  const lineTexts = (Array.isArray(section?.lines) ? section.lines : []).map(
+    (line) => getPlainTextFromContent(getLineDialogueContent(line)),
+  );
+  const wordCount = countWords(lineTexts.join("\n"));
+  const characterCount = lineTexts.reduce(
+    (total, text) => total + countCharacters(text),
+    0,
+  );
+
+  return {
+    wordCount,
+    characterCount,
+    label: `${formatCount(wordCount, "word", "words")} · ${formatCount(characterCount, "char", "chars")}`,
+  };
 };
 
 const mergePresentationStates = (
@@ -1207,6 +1278,7 @@ export const selectViewData = ({ state }) => {
       sections: [],
       sectionsOverviewOpen: false,
       sectionsOverviewItems: [],
+      sectionTextMetrics: buildSectionTextMetrics(),
       documentEditorLines: [],
       documentLineDecorations: [],
       textStyles: [],
@@ -1335,6 +1407,7 @@ export const selectViewData = ({ state }) => {
   const documentEditorLines = Array.isArray(currentSection?.lines)
     ? currentSection.lines
     : [];
+  const sectionTextMetrics = buildSectionTextMetrics(currentSection);
   const documentLineDecorations = buildSceneDocumentLineDecorations({
     lines: documentEditorLines,
     repositoryState,
@@ -1457,6 +1530,7 @@ export const selectViewData = ({ state }) => {
     sections,
     sectionsOverviewOpen: state.sectionsOverviewPanel.isOpen,
     sectionsOverviewItems,
+    sectionTextMetrics,
     documentEditorLines,
     textStyles,
     mentionTargets,
