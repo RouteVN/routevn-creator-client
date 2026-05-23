@@ -61,6 +61,26 @@ describe("layoutEditorViewData", () => {
     });
   });
 
+  it("builds choice single item container create actions", () => {
+    const [choiceSingleItem] = toLayoutEditorContextMenuItems([
+      {
+        label: "Container (Single Choice Item)",
+        type: "item",
+        createType: "container-choice-single-item",
+      },
+    ]);
+
+    expect(choiceSingleItem.value).toMatchObject({
+      action: "new-child-item",
+      type: "container-ref-choice-single-item",
+      direction: "absolute",
+      choiceItemIndex: 0,
+      click: {
+        inheritToChildren: true,
+      },
+    });
+  });
+
   it("keeps grouped edit actions for leaf items without an empty add section", () => {
     const contextMenuItems = toLayoutEditorContextMenuItems([
       {
@@ -125,6 +145,140 @@ describe("layoutEditorViewData", () => {
         value: "delete-item",
       },
     ]);
+  });
+
+  it("keeps add actions available for folders", () => {
+    const contextMenuItems = toLayoutEditorContextMenuItems([
+      {
+        label: "Add Element",
+        type: "label",
+      },
+      {
+        label: "Container (Single Choice Item)",
+        type: "item",
+        createType: "container-choice-single-item",
+      },
+      {
+        label: "Text (Choice Content)",
+        type: "item",
+        createType: "text-choice-item-content",
+      },
+      {
+        type: "separator",
+      },
+      {
+        label: "Edit",
+        type: "label",
+      },
+      {
+        label: "Rename",
+        type: "item",
+        value: "rename-item",
+      },
+    ]);
+
+    const [folderItem] = toLayoutEditorExplorerItems(
+      [
+        {
+          id: "folder-1",
+          type: "folder",
+          name: "Group",
+        },
+      ],
+      {
+        contextMenuItems,
+      },
+    );
+
+    expect(folderItem.dragOptions.canReceiveChildren).toBe(true);
+    expect(folderItem.contextMenuItems).toContainEqual(
+      expect.objectContaining({
+        label: "Container (Single Choice Item)",
+        value: expect.objectContaining({
+          action: "new-child-item",
+          type: "container-ref-choice-single-item",
+        }),
+      }),
+    );
+    expect(folderItem.contextMenuItems).not.toContainEqual(
+      expect.objectContaining({
+        label: "Text (Choice Content)",
+      }),
+    );
+  });
+
+  it("only allows choice content text inside choice item containers", () => {
+    const contextMenuItems = toLayoutEditorContextMenuItems([
+      {
+        label: "Add Element",
+        type: "label",
+      },
+      {
+        label: "Text (Choice Content)",
+        type: "item",
+        createType: "text-choice-item-content",
+      },
+      {
+        type: "separator",
+      },
+      {
+        label: "Edit",
+        type: "label",
+      },
+      {
+        label: "Rename",
+        type: "item",
+        value: "rename-item",
+      },
+    ]);
+
+    const [normalContainer, repeatedChoiceItem, singleChoiceItem] =
+      toLayoutEditorExplorerItems(
+        [
+          {
+            id: "container-1",
+            type: "container",
+            name: "Container",
+          },
+          {
+            id: "choice-item-1",
+            type: "container-ref-choice-item",
+            name: "Repeated",
+          },
+          {
+            id: "choice-single-item-1",
+            type: "container-ref-choice-single-item",
+            name: "Single",
+          },
+        ],
+        {
+          contextMenuItems,
+        },
+      );
+
+    expect(normalContainer.contextMenuItems).not.toContainEqual(
+      expect.objectContaining({
+        label: "Text (Choice Content)",
+      }),
+    );
+    expect(repeatedChoiceItem.contextMenuItems).toContainEqual(
+      expect.objectContaining({
+        label: "Text (Choice Content)",
+        value: expect.objectContaining({
+          action: "new-child-item",
+          type: "text-ref-choice-item-content",
+        }),
+      }),
+    );
+    expect(singleChoiceItem.contextMenuItems).toContainEqual(
+      expect.objectContaining({
+        label: "Text (Choice Content)",
+        value: expect.objectContaining({
+          action: "new-child-item",
+          type: "text-ref-choice-item-content",
+        }),
+      }),
+    );
   });
 
   it("uses the spritesheets icon for spritesheet animation elements", () => {

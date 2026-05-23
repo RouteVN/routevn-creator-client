@@ -6,8 +6,6 @@ import {
 import { buildCharacterSpritePreviewFileIds } from "../../internal/characterSpritePreview.js";
 import { normalizeLineActions } from "../../internal/project/engineActions.js";
 
-const DEFAULT_HIDDEN_MODES = ["conditional"];
-
 export const createInitialState = () => ({
   mode: "actions",
   actions: {},
@@ -34,11 +32,11 @@ export const setUiConfig = ({ state }, { uiConfig } = {}) => {
 };
 
 const getHiddenModes = (attrs = {}) => {
-  const hiddenModes = new Set(DEFAULT_HIDDEN_MODES);
   if (!Array.isArray(attrs.hiddenModes)) {
-    return [...hiddenModes];
+    return [];
   }
 
+  const hiddenModes = new Set();
   for (const mode of attrs.hiddenModes) {
     if (typeof mode === "string" && mode.length > 0) {
       hiddenModes.add(mode);

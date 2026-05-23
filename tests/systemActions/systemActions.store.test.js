@@ -8,7 +8,7 @@ import {
 } from "../../src/components/systemActions/systemActions.store.js";
 
 describe("systemActions.store", () => {
-  it("hides conditional mode by default for nested action pickers", () => {
+  it("preserves explicit hidden modes for nested action pickers", () => {
     const state = createInitialState();
 
     const viewData = selectViewData({
@@ -18,7 +18,7 @@ describe("systemActions.store", () => {
       },
     });
 
-    expect(viewData.hiddenModes).toEqual(["conditional", "rollbackByOffset"]);
+    expect(viewData.hiddenModes).toEqual(["rollbackByOffset"]);
   });
 
   it("preserves and previews update variable actions", () => {

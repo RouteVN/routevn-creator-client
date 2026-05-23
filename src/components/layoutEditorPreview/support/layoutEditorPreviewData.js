@@ -28,6 +28,7 @@ const DIALOGUE_NVL_ITEM_TYPES = new Set([
 ]);
 const CHOICE_ITEM_TYPES = new Set([
   "container-ref-choice-item",
+  "container-ref-choice-single-item",
   "text-ref-choice-item-content",
 ]);
 const HISTORY_ITEM_TYPES = new Set([

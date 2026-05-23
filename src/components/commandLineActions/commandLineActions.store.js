@@ -1,7 +1,5 @@
 import { RUNTIME_ACTION_ITEMS } from "../../internal/runtimeActions.js";
 
-const DEFAULT_HIDDEN_MODES = ["conditional"];
-
 const createSection = (label, items) => ({
   label,
   items,
@@ -246,11 +244,11 @@ const PRESENTATION_ACTION_SECTIONS = [
 ];
 
 const getHiddenModes = (attrs = {}) => {
-  const hiddenModes = new Set(DEFAULT_HIDDEN_MODES);
   if (!Array.isArray(attrs.hiddenModes)) {
-    return [...hiddenModes];
+    return [];
   }
 
+  const hiddenModes = new Set();
   for (const mode of attrs.hiddenModes) {
     if (typeof mode === "string" && mode.length > 0) {
       hiddenModes.add(mode);

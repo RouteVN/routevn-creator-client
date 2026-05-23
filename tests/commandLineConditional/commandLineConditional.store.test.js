@@ -65,7 +65,7 @@ describe("commandLineConditional.store", () => {
     ]);
     expect(viewData.defaultBranch).toMatchObject({
       id: "branch-2",
-      summary: "Default",
+      summary: "Default branch",
       actionsSummary: "1 action",
     });
     expect(viewData.operatorOptions.map((option) => option.value)).toEqual([
