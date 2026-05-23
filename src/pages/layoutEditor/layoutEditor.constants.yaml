@@ -23,6 +23,10 @@ contextMenuItems:
     label: Input
     type: item
     createType: input
+  - "$when": 'layoutType == "input"'
+    label: Submit Button
+    type: item
+    createType: form-submit-button
   - label: Fragment
     type: item
     createType: fragment-ref
@@ -121,6 +125,10 @@ emptyContextMenuItems:
     label: Input
     type: item
     createType: input
+  - "$when": 'layoutType == "input"'
+    label: Submit Button
+    type: item
+    createType: form-submit-button
   - label: Fragment
     type: item
     createType: fragment-ref

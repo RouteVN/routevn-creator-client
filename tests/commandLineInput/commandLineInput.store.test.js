@@ -144,12 +144,8 @@ describe("commandLineInput.store", () => {
     ]);
     expect(viewData.submitDisabled).toBe(false);
     expect(selectFormData({ state })).toEqual({
+      id: expect.any(String),
       resourceId: inputLayout.id,
-      cancelActions: {
-        nextLine: {
-          bypassChoice: true,
-        },
-      },
       fields: {
         name: {
           variableId: "playerName",

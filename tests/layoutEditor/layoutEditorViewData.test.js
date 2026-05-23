@@ -39,6 +39,28 @@ describe("layoutEditorViewData", () => {
     });
   });
 
+  it("builds form submit button create actions as containers with a static form role", () => {
+    const [submitItem] = toLayoutEditorContextMenuItems([
+      {
+        label: "Submit Button",
+        type: "item",
+        createType: "form-submit-button",
+      },
+    ]);
+
+    expect(submitItem.value).toMatchObject({
+      action: "new-child-item",
+      type: "container",
+      name: "Submit Button",
+      direction: "absolute",
+      gapX: 0,
+      gapY: 0,
+      formRole: "submit",
+      width: 160,
+      height: 52,
+    });
+  });
+
   it("keeps grouped edit actions for leaf items without an empty add section", () => {
     const contextMenuItems = toLayoutEditorContextMenuItems([
       {

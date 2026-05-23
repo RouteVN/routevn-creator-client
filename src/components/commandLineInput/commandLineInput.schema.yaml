@@ -20,11 +20,11 @@ propsSchema:
     form:
       type: object
       properties:
+        id:
+          type: string
         resourceId:
           type: string
         fields:
           type: object
         submitActions:
-          type: object
-        cancelActions:
           type: object

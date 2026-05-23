@@ -90,6 +90,17 @@ const CREATE_TEMPLATES = {
     width: 330,
     height: 52,
   }),
+  "form-submit-button": () => ({
+    type: "container",
+    name: "Submit Button",
+    ...BASE_TRANSFORM,
+    direction: ABSOLUTE_DIRECTION,
+    gapX: 0,
+    gapY: 0,
+    formRole: "submit",
+    width: 160,
+    height: 52,
+  }),
   slider: () => ({
     type: "slider",
     name: "Slider",

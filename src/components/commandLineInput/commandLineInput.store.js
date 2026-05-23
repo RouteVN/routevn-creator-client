@@ -1,4 +1,5 @@
 import { getTransitionAnimationOptions } from "../../internal/animationOptions.js";
+import { generateId } from "../../internal/id.js";
 import { getLayoutInputFieldItems } from "../../internal/project/layout.js";
 import { getVariableOptions } from "../../internal/project/projection.js";
 import { toFlatItems } from "../../internal/project/tree.js";
@@ -72,6 +73,8 @@ const createDefaultSettingsForm = () => ({
   submitSectionId: "",
   submitTransitionAnimationId: "",
 });
+
+const createFormId = () => generateId();
 
 const getInputLayoutOptions = (layouts = []) =>
   layouts
@@ -217,6 +220,7 @@ const createFormExtras = (form = {}) => {
     resourceId: _resourceId,
     fields: _fields,
     submitActions: _submitActions,
+    cancelActions: _cancelActions,
     ...extras
   } = form;
 
@@ -284,8 +288,13 @@ export const createFormData = ({
     return undefined;
   }
 
+  const formData = structuredClone(formExtras);
+  if (!formData.id) {
+    formData.id = createFormId();
+  }
+
   return {
-    ...structuredClone(formExtras),
+    ...formData,
     resourceId,
     fields: createFormFieldsObject(fieldRows),
     submitActions: buildSubmitActions(settingsForm),
@@ -297,7 +306,9 @@ export const createInitialState = () => ({
   fields: {},
   fieldOrder: [],
   settingsForm: createDefaultSettingsForm(),
-  formExtras: {},
+  formExtras: {
+    id: createFormId(),
+  },
   scenes: EMPTY_COLLECTION,
   animations: EMPTY_COLLECTION,
   variables: EMPTY_COLLECTION,
@@ -327,9 +338,14 @@ export const hydrateForm = ({ state }, { form, layouts, layoutsData } = {}) => {
     existingFields: form?.fields ?? {},
   });
 
+  const previousFormId = state.formExtras?.id;
+
   state.selectedResourceId = resourceId;
   state.settingsForm = createSettingsFormFromSubmitActions(form?.submitActions);
   state.formExtras = createFormExtras(form);
+  if (!state.formExtras.id) {
+    state.formExtras.id = previousFormId ?? createFormId();
+  }
   applyFieldConfigs(state, fieldConfigs);
 };
 

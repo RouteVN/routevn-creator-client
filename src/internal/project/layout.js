@@ -1018,6 +1018,10 @@ const buildBaseElement = (node, context = {}) => {
     element["$each"] = node["$each"];
   }
 
+  if (node.formRole === "submit") {
+    element.formRole = "submit";
+  }
+
   return element;
 };
 

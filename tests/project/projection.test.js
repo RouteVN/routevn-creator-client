@@ -186,6 +186,7 @@ describe("constructProjectData", () => {
               id: "line-1",
               actions: {
                 form: {
+                  id: "form-profile",
                   resourceId: "layout-input",
                   fields: {
                     name: {
@@ -193,7 +194,9 @@ describe("constructProjectData", () => {
                     },
                   },
                   submitActions: {
-                    nextLine: {},
+                    sectionTransition: {
+                      sectionId: "section-2",
+                    },
                   },
                 },
               },
@@ -213,16 +216,8 @@ describe("constructProjectData", () => {
               items: {
                 submitButton: {
                   id: "submitButton",
-                  type: "button",
-                  click: {
-                    payload: {
-                      actions: {
-                        sectionTransition: {
-                          sectionId: "section-2",
-                        },
-                      },
-                    },
-                  },
+                  type: "container",
+                  formRole: "submit",
                 },
               },
               tree: [{ id: "submitButton" }],
@@ -277,8 +272,21 @@ describe("constructProjectData", () => {
                     height: 52,
                     textStyleId: "inputText",
                   },
+                  "submit-button": {
+                    id: "submit-button",
+                    type: "container",
+                    name: "Submit Button",
+                    direction: "absolute",
+                    gapX: 0,
+                    gapY: 0,
+                    formRole: "submit",
+                    x: 510,
+                    y: 300,
+                    width: 160,
+                    height: 52,
+                  },
                 },
-                [{ id: "name-input" }],
+                [{ id: "name-input" }, { id: "submit-button" }],
               ),
             },
           },
@@ -333,6 +341,7 @@ describe("constructProjectData", () => {
                           id: "line-1",
                           actions: {
                             form: {
+                              id: "form-profile",
                               resourceId: "profile-form",
                               fields: {
                                 name: {
@@ -370,8 +379,20 @@ describe("constructProjectData", () => {
       textStyleId: "inputText",
     });
 
+    const submitButton = projectData.resources.layouts[
+      "profile-form"
+    ].elements.find((element) => element.id === "submit-button");
+    expect(submitButton).toMatchObject({
+      type: "container",
+      formRole: "submit",
+    });
+
     const renderState = selectRouteEngineRenderState(projectData);
     const input = findRenderElementById(renderState.elements, "name-input");
+    const renderedSubmitButton = findRenderElementById(
+      renderState.elements,
+      "submit-button",
+    );
 
     expect(input).toMatchObject({
       type: "input",
@@ -384,7 +405,6 @@ describe("constructProjectData", () => {
             updateFormField: {
               field: "name",
               value: "_event.value",
-              _interactionSource: "form",
             },
           },
         },
@@ -394,6 +414,7 @@ describe("constructProjectData", () => {
           _interactionSource: "form",
           actions: {
             submitForm: {
+              formKey: "section-1:line-1:form-profile",
               actions: {
                 nextLine: {},
               },
@@ -402,6 +423,21 @@ describe("constructProjectData", () => {
         },
       },
     });
+    expect(renderedSubmitButton.click.payload).toMatchObject({
+      _interactionSource: "form",
+      actions: {
+        submitForm: {
+          formKey: "section-1:line-1:form-profile",
+          actions: {
+            nextLine: {},
+          },
+        },
+      },
+    });
+    expect(renderedSubmitButton.click.payload).not.toHaveProperty("_formKey");
+    expect(renderedSubmitButton.click.payload.actions.submitForm).not.toHaveProperty(
+      "formId",
+    );
   });
 
   it("aligns dialogue mode to nvl when the selected ui layout is dialogue-nvl", () => {

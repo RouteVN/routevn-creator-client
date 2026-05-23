@@ -44,6 +44,7 @@ vi.mock("route-graphics", () => ({
   AudioAsset: audioAssetApi,
   createAssetBufferManager: createAssetBufferManagerMock,
   textPlugin: {},
+  inputPlugin: {},
   rectPlugin: {},
   spritePlugin: {},
   sliderPlugin: {},

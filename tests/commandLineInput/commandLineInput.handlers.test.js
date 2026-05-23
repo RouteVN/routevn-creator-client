@@ -50,6 +50,7 @@ const props = {
     tree: [{ id: inputLayout.id }],
   },
   form: {
+    id: "profile-contact-form",
     resourceId: inputLayout.id,
     fields: {
       name: {
@@ -122,6 +123,7 @@ describe("commandLineInput.handlers", () => {
     expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
       presentationState: {
         form: {
+          id: "profile-contact-form",
           resourceId: inputLayout.id,
           fields: {
             name: {
@@ -173,6 +175,7 @@ describe("commandLineInput.handlers", () => {
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
     expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
       form: {
+        id: "profile-contact-form",
         resourceId: inputLayout.id,
         fields: {
           name: {
