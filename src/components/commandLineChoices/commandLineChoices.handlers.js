@@ -226,6 +226,44 @@ export const handleChoiceFormChange = (deps, payload) => {
   dispatchTemporaryPresentationStateChange(deps);
 };
 
+export const handleChoiceUpdateVariablesChange = (deps, payload = {}) => {
+  payload._event?.stopPropagation?.();
+  const { store, render } = deps;
+  const detail = payload._event?.detail || {};
+
+  if (!Object.hasOwn(detail, "updateVariable")) {
+    return;
+  }
+
+  store.updateEditForm({
+    field: "updateVariable",
+    value: detail.updateVariable,
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleChoiceUpdateVariablesDelete = (deps, payload = {}) => {
+  payload._event?.stopPropagation?.();
+  const { store, render } = deps;
+  const actionType = payload._event?.detail?.actionType;
+
+  if (actionType !== "updateVariable") {
+    return;
+  }
+
+  store.updateEditForm({
+    field: "updateVariable",
+    value: undefined,
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleChoiceUpdateVariablesClose = (_deps, payload = {}) => {
+  payload._event?.stopPropagation?.();
+};
+
 export const handleChoiceItemClick = (deps) => {
   const { render } = deps;
   // Placeholder for choice item interaction

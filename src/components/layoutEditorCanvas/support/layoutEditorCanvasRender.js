@@ -140,6 +140,7 @@ const normalizeLayoutEditorPreviewData = (previewData = {}) => {
   const nextDialogueCharacter = toPlainObject(nextDialogue.character);
   const nextChoice = toPlainObject(nextPreviewData.choice);
   const nextConfirmDialog = toPlainObject(nextPreviewData.confirmDialog);
+  const nextForm = toPlainObject(nextPreviewData.form);
   const dialogueContent = toArray(nextDialogue.content);
   const historyDialogue = toArray(nextPreviewData.historyDialogue);
 
@@ -151,6 +152,10 @@ const normalizeLayoutEditorPreviewData = (previewData = {}) => {
         ? nextPreviewData.backgroundImageId
         : undefined,
     variables: toPlainObject(nextPreviewData.variables),
+    form: {
+      ...nextForm,
+      values: toPlainObject(nextForm.values),
+    },
     runtime: {
       ...nextRuntime,
       dialogueTextSpeed: nextRuntime.dialogueTextSpeed ?? 50,
@@ -213,6 +218,31 @@ const normalizeLayoutEditorPreviewData = (previewData = {}) => {
           ],
     saveSlots: toArray(nextPreviewData.saveSlots),
   };
+};
+
+const applyInputPreviewValues = (elements, formValues = {}) => {
+  return toElementList(elements).map((element) => {
+    const nextElement = {
+      ...element,
+    };
+
+    if (
+      nextElement.type === "input" &&
+      typeof nextElement.field === "string" &&
+      Object.hasOwn(formValues, nextElement.field)
+    ) {
+      nextElement.value = formValues[nextElement.field];
+    }
+
+    if (Array.isArray(nextElement.children)) {
+      nextElement.children = applyInputPreviewValues(
+        nextElement.children,
+        formValues,
+      );
+    }
+
+    return nextElement;
+  });
 };
 
 const toPositiveNumber = (value, fallback) => {
@@ -544,14 +574,16 @@ const toSelectedElementMetrics = (path) => {
 };
 
 const resolveLayoutPreviewElements = ({ elements, previewData } = {}) => {
-  return toElementList(
-    parseAndRender(
-      toElementList(elements),
-      normalizeLayoutEditorPreviewData(previewData),
-      {
-        functions: jemplFunctions,
-      },
-    ),
+  const normalizedPreviewData = normalizeLayoutEditorPreviewData(previewData);
+  const renderedElements = toElementList(
+    parseAndRender(toElementList(elements), normalizedPreviewData, {
+      functions: jemplFunctions,
+    }),
+  );
+
+  return applyInputPreviewValues(
+    renderedElements,
+    normalizedPreviewData.form.values,
   );
 };
 

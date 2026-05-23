@@ -1,6 +1,8 @@
 import { toFlatItems } from "../../internal/project/tree.js";
 import { getTransitionAnimationOptions } from "../../internal/animationOptions.js";
 
+const CHOICE_UPDATE_VARIABLE_ALLOWED_MODES = Object.freeze(["updateVariable"]);
+
 const CHOICE_FORM_TEMPLATE = Object.freeze({
   title: "Edit Choice",
   fields: [
@@ -45,8 +47,19 @@ const CHOICE_FORM_TEMPLATE = Object.freeze({
       placeholder: "Animation",
       options: "${transitionAnimationOptions}",
     },
+    {
+      type: "slot",
+      slot: "updateVariables",
+      label: "Update Variables",
+    },
   ],
 });
+
+const toPlainObject = (value) => {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : {};
+};
 
 const getChoiceLayoutOptions = (layouts = []) => {
   return layouts
@@ -83,6 +96,20 @@ const createNextLineChoice = (content) => ({
   },
 });
 
+const getChoiceClickActions = (choice = {}) => {
+  return toPlainObject(choice.events?.click?.actions);
+};
+
+const createChoiceUpdateVariableActions = (updateVariable) => {
+  const actions = {};
+
+  if (updateVariable !== undefined) {
+    actions.updateVariable = updateVariable;
+  }
+
+  return actions;
+};
+
 export const createInitialState = () => ({
   mode: "list", // "list" or "editChoice"
   items: [createNextLineChoice("Choice 1"), createNextLineChoice("Choice 2")],
@@ -91,6 +118,7 @@ export const createInitialState = () => ({
   editForm: {
     // content: "",
     actionType: "nextLine",
+    updateVariable: undefined,
     // sceneId,
     // sectionId,
   },
@@ -120,18 +148,17 @@ export const setEditingIndex = ({ state }, { index } = {}) => {
 
   if (index >= 0 && state.items && state.items[index]) {
     const choice = state.items[index];
+    const clickActions = getChoiceClickActions(choice);
 
-    // Ensure all values are strings and properly escaped
     state.editForm.content = choice.content || "";
-    if (choice.events?.click?.actions?.sectionTransition) {
+    state.editForm.updateVariable = clickActions.updateVariable;
+    if (clickActions.sectionTransition) {
       state.editForm.actionType = "sectionTransition";
-      state.editForm.sceneId =
-        choice.events?.click?.actions?.sectionTransition?.sceneId;
-      state.editForm.sectionId =
-        choice.events?.click?.actions?.sectionTransition?.sectionId;
+      state.editForm.sceneId = clickActions.sectionTransition?.sceneId;
+      state.editForm.sectionId = clickActions.sectionTransition?.sectionId;
       state.editForm.transitionAnimationId =
-        choice.events?.click?.actions?.sectionTransition?.screen?.animations?.resourceId;
-    } else if (choice.events?.click?.actions?.nextLine) {
+        clickActions.sectionTransition?.screen?.animations?.resourceId;
+    } else if (clickActions.nextLine) {
       state.editForm.actionType = "nextLine";
       state.editForm.sceneId = "";
       state.editForm.sectionId = "";
@@ -147,6 +174,7 @@ export const setEditingIndex = ({ state }, { index } = {}) => {
 
     state.editForm.content = "";
     state.editForm.actionType = "nextLine";
+    state.editForm.updateVariable = undefined;
     state.editForm.sceneId = "";
     state.editForm.sectionId = "";
     state.editForm.transitionAnimationId = "";
@@ -159,6 +187,11 @@ export const updateEditForm = ({ state }, { field, value } = {}) => {
 
 const buildChoiceDataFromEditForm = (editForm = {}) => {
   const actions = {};
+
+  if (editForm.updateVariable !== undefined) {
+    actions.updateVariable = editForm.updateVariable;
+  }
+
   if (editForm.actionType === "nextLine") {
     actions.nextLine = {};
   } else if (editForm.actionType === "sectionTransition") {
@@ -270,6 +303,7 @@ export const selectEditForm = ({ state }) =>
     actionType: "nextLine",
     sceneId: "",
     sectionId: "",
+    updateVariable: undefined,
   };
 export const selectItems = ({ state }) => state?.items || [];
 export const selectItemsWithEditingDraft = ({ state }) => {
@@ -388,6 +422,9 @@ export const selectViewData = ({ state, props }) => {
       state.editForm.transitionAnimationId,
     ),
   };
+  const choiceUpdateVariableActions = createChoiceUpdateVariableActions(
+    state.editForm.updateVariable,
+  );
 
   // Create defaultValues with items data
   const defaultValues = {
@@ -412,6 +449,8 @@ export const selectViewData = ({ state, props }) => {
     editModeTitle,
     breadcrumb,
     choiceFormTemplate: CHOICE_FORM_TEMPLATE,
+    choiceUpdateVariableActions,
+    choiceUpdateVariableAllowedModes: CHOICE_UPDATE_VARIABLE_ALLOWED_MODES,
     form,
     context,
     dropdownMenu: state.dropdownMenu,

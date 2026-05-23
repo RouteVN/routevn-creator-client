@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   createInitialState,
+  selectPreviewData,
   selectViewData,
   setDialogueDefaultValue,
   setLayoutState,
+  setPreviewInputFieldValue,
   setRepositoryState,
 } from "../../src/components/layoutEditorPreview/layoutEditorPreview.store.js";
 
@@ -182,5 +184,100 @@ describe("layoutEditorPreview.store", () => {
       "dialogue-character-name",
       "dialogue-content",
     ]);
+  });
+
+  it("shows preview controls for every input field in the layout", () => {
+    const state = createInitialState();
+
+    setLayoutState(
+      { state },
+      {
+        layoutState: {
+          id: "layout-input",
+          layoutType: "input",
+          elements: {
+            items: {
+              "name-input": {
+                id: "name-input",
+                type: "input",
+                name: "Name Input",
+                field: "name",
+                value: "Ada",
+                placeholder: "Name",
+              },
+              "code-input": {
+                id: "code-input",
+                type: "input",
+                name: "Code Input",
+                field: "code",
+                value: "B42",
+                placeholder: "Code",
+              },
+              "name-confirm": {
+                id: "name-confirm",
+                type: "input",
+                name: "Confirm Name",
+                field: "name",
+                value: "Other",
+              },
+            },
+            tree: [
+              { id: "name-input" },
+              { id: "code-input" },
+              { id: "name-confirm" },
+            ],
+          },
+        },
+      },
+    );
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          layouts: EMPTY_COLLECTION,
+          images: EMPTY_COLLECTION,
+          variables: EMPTY_COLLECTION,
+        },
+      },
+    );
+    setPreviewInputFieldValue(
+      { state },
+      {
+        name: "name",
+        fieldValue: "Mina",
+      },
+    );
+
+    const viewData = selectViewData({
+      state,
+      constants: TEST_CONSTANTS,
+    });
+
+    expect(viewData.showInputFieldsForm).toBe(true);
+    expect(viewData.showPreviewVariablesForm).toBe(false);
+    expect(viewData.inputFieldsDefaultValues).toEqual({
+      name: "Mina",
+      code: "B42",
+    });
+    expect(getNamedFieldNames(viewData.inputFieldsForm)).toEqual([
+      "name",
+      "code",
+    ]);
+    expect(viewData.inputFieldsForm.fields.slice(1)).toMatchObject([
+      {
+        name: "name",
+        label: "Name Input",
+        placeholder: "Name",
+      },
+      {
+        name: "code",
+        label: "Code Input",
+        placeholder: "Code",
+      },
+    ]);
+    expect(selectPreviewData({ state }).form.values).toEqual({
+      name: "Mina",
+      code: "B42",
+    });
   });
 });

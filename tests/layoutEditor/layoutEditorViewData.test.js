@@ -21,6 +21,46 @@ describe("layoutEditorViewData", () => {
     });
   });
 
+  it("builds input create actions with the form field binding", () => {
+    const [inputItem] = toLayoutEditorContextMenuItems([
+      {
+        label: "Input",
+        type: "item",
+        createType: "input",
+      },
+    ]);
+
+    expect(inputItem.value).toMatchObject({
+      action: "new-child-item",
+      type: "input",
+      field: "field",
+      width: 330,
+      height: 52,
+    });
+  });
+
+  it("builds form submit button create actions as containers with a static form role", () => {
+    const [submitItem] = toLayoutEditorContextMenuItems([
+      {
+        label: "Submit Button",
+        type: "item",
+        createType: "form-submit-button",
+      },
+    ]);
+
+    expect(submitItem.value).toMatchObject({
+      action: "new-child-item",
+      type: "container",
+      name: "Submit Button",
+      direction: "absolute",
+      gapX: 0,
+      gapY: 0,
+      formRole: "submit",
+      width: 160,
+      height: 52,
+    });
+  });
+
   it("builds choice single item container create actions", () => {
     const [choiceSingleItem] = toLayoutEditorContextMenuItems([
       {

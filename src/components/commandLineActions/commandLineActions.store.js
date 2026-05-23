@@ -202,6 +202,12 @@ const PRESENTATION_ACTION_SECTIONS = [
       mode: "choice",
     },
     {
+      id: "29",
+      label: "Input",
+      icon: "input",
+      mode: "input",
+    },
+    {
       id: "9",
       label: "Next Line Config",
       icon: "settings",

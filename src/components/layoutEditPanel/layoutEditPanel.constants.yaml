@@ -315,6 +315,16 @@ layoutSections:
             name: step
             value: "${values.step}"
             popoverForm: *numberPopoverForm
+  - "$when": "supportsInputField"
+    label: Input
+    items:
+      - type: group
+        fields:
+          - type: clickable-value
+            label: Field
+            name: field
+            value: "${values.field}"
+            popoverForm: *textPopoverForm
   - "$when": "supportsTextEditing"
     label: Text
     items:

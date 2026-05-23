@@ -45,6 +45,12 @@ refs:
         handler: handlePreviewVariablesFormChange
       form-change:
         handler: handlePreviewVariablesFormChange
+  inputFieldsForm:
+    eventListeners:
+      form-input:
+        handler: handleInputFieldsFormChange
+      form-change:
+        handler: handleInputFieldsFormChange
   baseFileExplorer:
     eventListeners:
       item-click:
@@ -121,6 +127,14 @@ template:
                       - rtgl-text c=mu-fg ta=c: Select image
   - $if showHistoryForm:
       - rtgl-form#historyForm key=${historyFormKey} w=f :form=${historyForm} :defaultValues=${historyDefaultValues} :context=${historyContext}:
+          - rtgl-view slot=${previewBackgroundSlot} g=xs:
+              - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c:
+                  - $if previewBackgroundImageId:
+                      - rvn-file-image imageId=${previewBackgroundImageId} source="thumbnail" w=220 h=160 br=md: null
+                    $else:
+                      - rtgl-text c=mu-fg ta=c: Select image
+  - $if showInputFieldsForm:
+      - rtgl-form#inputFieldsForm key=${inputFieldsFormKey} w=f :form=${inputFieldsForm} :defaultValues=${inputFieldsDefaultValues}:
           - rtgl-view slot=${previewBackgroundSlot} g=xs:
               - rtgl-view#previewBackgroundField w=220 h=160 bw=xs bc=bo br=md cur=pointer av=c ah=c:
                   - $if previewBackgroundImageId:

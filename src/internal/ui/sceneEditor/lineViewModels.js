@@ -233,6 +233,10 @@ const buildUpdateVariablePreview = (lineActions) => {
   return !!lineActions?.updateVariable;
 };
 
+const buildInputPreview = (lineActions) => {
+  return !!lineActions?.form;
+};
+
 const buildDialogueSpeakerPreview = (characterId, characterLookups) => {
   if (!characterId) {
     return undefined;
@@ -320,6 +324,7 @@ const buildSceneDocumentLineViewModels = ({
       hasChoices: choicesPreview.hasChoices,
       hasConditional: buildConditionalPreview(lineActions),
       hasUpdateVariable: buildUpdateVariablePreview(lineActions),
+      hasInput: buildInputPreview(lineActions),
       hasSfx: !!changes.sfx,
       sfxChangeType: changes.sfx?.changeType,
       hasSetNextLineConfig:

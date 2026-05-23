@@ -3,6 +3,8 @@ import {
   handleCancelEditClick,
   handleChoiceContextMenu,
   handleChoiceFormChange,
+  handleChoiceUpdateVariablesChange,
+  handleChoiceUpdateVariablesDelete,
   handleDropdownMenuClickItem,
   handleSaveChoiceClick,
   handleSubmitClick,
@@ -131,6 +133,99 @@ describe("commandLineChoices.handlers", () => {
       },
     });
     expect(render).toHaveBeenCalledTimes(1);
+  });
+
+  it("updates the editing choice from nested update-variable actions", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const store = createStoreApi(state);
+    const stopPropagation = vi.fn();
+    const updateVariable = {
+      id: "update-choice-vars",
+      operations: [
+        {
+          variableId: "affection",
+          op: "increment",
+          value: 1,
+        },
+      ],
+    };
+
+    setExistingChoice(state);
+    setMode({ state }, { mode: "editChoice" });
+    setEditingIndex({ state }, { index: 0 });
+
+    const deps = {
+      store,
+      render,
+      dispatchEvent,
+      props: {
+        layouts,
+      },
+    };
+
+    handleChoiceUpdateVariablesChange(deps, {
+      _event: {
+        stopPropagation,
+        detail: {
+          updateVariable,
+        },
+      },
+    });
+
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
+    expect(selectEditForm({ state }).updateVariable).toEqual(updateVariable);
+    expect(dispatchEvent.mock.calls[0][0].detail).toEqual({
+      presentationState: {
+        choice: {
+          resourceId: "choice-layout",
+          items: [
+            {
+              content: "Stay",
+              events: {
+                click: {
+                  actions: {
+                    updateVariable,
+                    nextLine: {},
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+
+    dispatchEvent.mockClear();
+
+    handleChoiceUpdateVariablesDelete(deps, {
+      _event: {
+        stopPropagation,
+        detail: {
+          actionType: "updateVariable",
+        },
+      },
+    });
+
+    expect(selectEditForm({ state }).updateVariable).toBeUndefined();
+    expect(
+      dispatchEvent.mock.calls[0][0].detail.presentationState.choice,
+    ).toEqual({
+      resourceId: "choice-layout",
+      items: [
+        {
+          content: "Stay",
+          events: {
+            click: {
+              actions: {
+                nextLine: {},
+              },
+            },
+          },
+        },
+      ],
+    });
   });
 
   it("emits saved choice state after cancelling an edit draft", () => {

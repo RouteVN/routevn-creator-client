@@ -4,11 +4,13 @@ import {
   createInitialState,
   selectEditForm,
   selectItems,
+  saveChoice,
   selectViewData,
   setAnimations,
   setEditingIndex,
   setItems,
   setScenes,
+  updateEditForm,
 } from "../../src/components/commandLineChoices/commandLineChoices.store.js";
 
 describe("commandLineChoices.store", () => {
@@ -145,5 +147,66 @@ describe("commandLineChoices.store", () => {
         label: "Screen Crossfade",
       },
     ]);
+  });
+
+  it("prefills and saves update-variable actions for a choice", () => {
+    const state = createInitialState();
+    const updateVariable = {
+      id: "update-choice-vars",
+      operations: [
+        {
+          variableId: "affection",
+          op: "increment",
+          value: 1,
+        },
+      ],
+    };
+
+    setItems(
+      { state },
+      {
+        items: [
+          {
+            content: "Stay",
+            events: {
+              click: {
+                actions: {
+                  updateVariable,
+                  nextLine: {},
+                },
+              },
+            },
+          },
+        ],
+      },
+    );
+
+    setEditingIndex({ state }, { index: 0 });
+
+    const viewData = selectViewData({ state, props: { layouts: [] } });
+
+    expect(selectEditForm({ state }).updateVariable).toEqual(updateVariable);
+    expect(viewData.choiceUpdateVariableActions).toEqual({ updateVariable });
+
+    updateEditForm(
+      { state },
+      {
+        field: "content",
+        value: "Leave",
+      },
+    );
+    saveChoice({ state });
+
+    expect(selectItems({ state })[0]).toEqual({
+      content: "Leave",
+      events: {
+        click: {
+          actions: {
+            updateVariable,
+            nextLine: {},
+          },
+        },
+      },
+    });
   });
 });

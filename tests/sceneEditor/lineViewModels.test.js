@@ -291,6 +291,39 @@ describe("sceneEditor.lineDecorations", () => {
     expect(viewModels[1].hasUpdateVariable).toBe(false);
   });
 
+  it("marks input form actions for inline action previews", () => {
+    const lines = [
+      {
+        id: "line-1",
+        actions: {
+          form: {
+            resourceId: "profile-form-layout",
+            fields: {
+              name: {
+                variableId: "playerName",
+              },
+            },
+          },
+        },
+      },
+      {
+        id: "line-2",
+        actions: {},
+      },
+    ];
+
+    const viewModels = buildSceneDocumentLineDecorations({
+      lines,
+      repositoryState: createRepositoryState(),
+      sectionLineChanges: {
+        lines: [],
+      },
+    });
+
+    expect(viewModels[0].hasInput).toBe(true);
+    expect(viewModels[1].hasInput).toBe(false);
+  });
+
   it("marks screen actions for inline action previews without duplicating section transitions", () => {
     const lines = [
       {

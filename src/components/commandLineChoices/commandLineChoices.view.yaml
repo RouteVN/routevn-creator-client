@@ -27,6 +27,14 @@ refs:
         handler: handleChoiceFormInput
       form-change:
         handler: handleChoiceFormChange
+  choiceUpdateVariableEditor:
+    eventListeners:
+      actions-change:
+        handler: handleChoiceUpdateVariablesChange
+      action-delete:
+        handler: handleChoiceUpdateVariablesDelete
+      close:
+        handler: handleChoiceUpdateVariablesClose
   submitButton:
     eventListeners:
       click:
@@ -68,7 +76,9 @@ template:
               - rtgl-view d=h g=md:
                   - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
               - 'rtgl-view h=1fg sv w=f style="min-height: 0;"':
-                  - rtgl-form#choiceForm :form=${choiceFormTemplate} :context=${editFormContext} :defaultValues=${editForm}: null
+                  - rtgl-form#choiceForm :form=${choiceFormTemplate} :context=${editFormContext} :defaultValues=${editForm}:
+                      - rtgl-view slot=updateVariables w=f:
+                          - rvn-system-actions#choiceUpdateVariableEditor :showSelected=${true} :actions=${choiceUpdateVariableActions} actionType=system :allowedModes=${choiceUpdateVariableAllowedModes} :showEmbeddedClose=${false}: null
               - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
                   - rtgl-button#cancelEditButton v=ol: Cancel
                   - rtgl-button#saveChoiceButton: Save Choice

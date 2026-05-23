@@ -1,0 +1,30 @@
+componentName: rvn-command-line-input
+propsSchema:
+  type: object
+  properties:
+    layouts:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+          layoutType:
+            type: string
+          elements:
+            type: object
+    layoutsData:
+      type: object
+    form:
+      type: object
+      properties:
+        id:
+          type: string
+        resourceId:
+          type: string
+        fields:
+          type: object
+        submitActions:
+          type: object

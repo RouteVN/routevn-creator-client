@@ -5,9 +5,11 @@ import {
   createConfirmDialogPreviewData,
   createDialoguePreviewData,
   createHistoryLines,
+  createPreviewInputFieldValues,
   createPreviewRuntimeValues,
   createPreviewVariables,
   createRuntimeSaveSlots,
+  getLayoutPreviewInputFieldItems,
   getLayoutPreviewVariableItems,
   usesSaveLoadPreviewInLayout,
   visitLayoutItemsWithFragments,
@@ -100,6 +102,12 @@ export const getLayoutPreviewSections = ({
     layoutsData,
     variablesData,
   });
+  const inputFieldItems = getLayoutPreviewInputFieldItems({
+    currentLayoutId,
+    currentLayoutData,
+    currentLayoutType: layoutType,
+    layoutsData,
+  });
   const includePreviewVariables = previewVariableItems.some(
     (item) => item?.source !== "runtime",
   );
@@ -124,6 +132,7 @@ export const getLayoutPreviewSections = ({
   });
   const sections = {
     includePreviewVariables,
+    includeInputFields: inputFieldItems.length > 0,
     includeRuntime: false,
     includeDialogue: false,
     dialoguePreviewMode: getDialoguePreviewModeForLayoutType(layoutType),
@@ -212,6 +221,7 @@ export const createLayoutEditorPreviewData = ({
   hasSaveLoadPreview,
   variablesData,
   previewVariableValues,
+  previewInputFieldValues,
   dialogueDefaultValues,
   nvlDefaultValues,
   historyDefaultValues,
@@ -238,6 +248,16 @@ export const createLayoutEditorPreviewData = ({
       previewVariableValues,
     ),
   };
+  const inputFieldItems = getLayoutPreviewInputFieldItems({
+    currentLayoutId,
+    currentLayoutData,
+    currentLayoutType: layoutType,
+    layoutsData,
+  });
+  const formValues = createPreviewInputFieldValues(
+    inputFieldItems,
+    previewInputFieldValues,
+  );
   const runtime = {
     ...createPreviewRuntimeValues(previewVariableValues, dialogueDefaultValues),
     dialogueTextSpeed: dialogueRevealingSpeed,
@@ -261,7 +281,7 @@ export const createLayoutEditorPreviewData = ({
       hasSaveLoadPreview,
     })
   ) {
-    return {
+    const previewData = {
       backgroundImageId: backgroundPreviewImageId,
       variables: previewVariables,
       runtime,
@@ -272,6 +292,14 @@ export const createLayoutEditorPreviewData = ({
       confirmDialog,
       saveSlots,
     };
+
+    if (inputFieldItems.length > 0) {
+      previewData.form = {
+        values: formValues,
+      };
+    }
+
+    return previewData;
   }
 
   const sections = getLayoutPreviewSections({
@@ -290,6 +318,12 @@ export const createLayoutEditorPreviewData = ({
 
   if (sections.includePreviewVariables) {
     previewData.variables = previewVariables;
+  }
+
+  if (sections.includeInputFields) {
+    previewData.form = {
+      values: formValues,
+    };
   }
 
   if (sections.includeRuntime) {

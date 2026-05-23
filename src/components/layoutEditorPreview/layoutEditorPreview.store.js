@@ -6,6 +6,7 @@ import {
   createChoiceFormDefaultValues,
   createHistoryFormDefaultValues,
   createNvlFormDefaultValues,
+  createPreviewInputFieldsViewData,
   createPreviewVariablesViewData,
   createSaveLoadPreviewViewData,
   findSaveLoadPreviewSettings,
@@ -84,6 +85,7 @@ const resetPreviewStateValues = (state) => {
   state.historyDefaultValues = createHistoryDefaultValues();
   state.saveLoadDefaultValues = createSaveLoadDefaultValues();
   state.previewVariableValues = {};
+  state.previewInputFieldValues = {};
   state.previewBackgroundImageId = undefined;
   state.imageSelectorDialog = {
     open: false,
@@ -172,6 +174,7 @@ const createPreviewBackgroundOnlyForm = () => {
 const resolvePreviewBackgroundFormTarget = ({
   layoutType,
   dialoguePreviewMode,
+  hasInputFields,
   hasPreviewVariables,
   hasSaveLoadPreview,
 } = {}) => {
@@ -189,6 +192,10 @@ const resolvePreviewBackgroundFormTarget = ({
 
   if (layoutType === "history") {
     return "history";
+  }
+
+  if (hasInputFields) {
+    return "inputFields";
   }
 
   if (hasPreviewVariables) {
@@ -223,6 +230,7 @@ export const createInitialState = () => ({
   historyDefaultValues: createHistoryDefaultValues(),
   saveLoadDefaultValues: createSaveLoadDefaultValues(),
   previewVariableValues: {},
+  previewInputFieldValues: {},
   previewBackgroundImageId: undefined,
   imageSelectorDialog: {
     open: false,
@@ -279,7 +287,10 @@ export const hydratePreviewState = ({ state }, { previewData } = {}) => {
     state.saveLoadDefaultValues = persistedPreviewState.saveLoadDefaultValues;
   }
 
-  state.previewVariableValues = persistedPreviewState.previewVariableValues;
+  state.previewVariableValues =
+    persistedPreviewState.previewVariableValues ?? {};
+  state.previewInputFieldValues =
+    persistedPreviewState.previewInputFieldValues ?? {};
   state.previewBackgroundImageId =
     persistedPreviewState.previewBackgroundImageId;
   state.previewHydrationVersion += 1;
@@ -450,6 +461,17 @@ export const setPreviewVariableValue = (
   state.previewVariableValues[name] = fieldValue;
 };
 
+export const setPreviewInputFieldValue = (
+  { state },
+  { name, fieldValue } = {},
+) => {
+  if (!name) {
+    return;
+  }
+
+  state.previewInputFieldValues[name] = fieldValue;
+};
+
 export const setPreviewBackgroundImageId = ({ state }, { imageId } = {}) => {
   state.previewBackgroundImageId = imageId ?? undefined;
 };
@@ -571,6 +593,7 @@ export const selectPreviewData = ({ state }) => {
     layoutsData: state.repositoryState.layouts,
     variablesData: state.repositoryState.variables,
     previewVariableValues: state.previewVariableValues,
+    previewInputFieldValues: state.previewInputFieldValues,
     dialogueDefaultValues: state.dialogueDefaultValues,
     nvlDefaultValues: state.nvlDefaultValues,
     historyDefaultValues: state.historyDefaultValues,
@@ -595,6 +618,13 @@ export const selectViewData = ({ state, constants, props = {} }) => {
     layoutsData: state.repositoryState.layouts,
     variablesData: state.repositoryState.variables,
     previewVariableValues: state.previewVariableValues,
+  });
+  const inputFieldsViewData = createPreviewInputFieldsViewData({
+    currentLayoutId: layoutState.id,
+    currentLayoutData: layoutState.elements,
+    currentLayoutType: layoutType,
+    layoutsData: state.repositoryState.layouts,
+    previewInputFieldValues: state.previewInputFieldValues,
   });
   const saveLoadPreviewViewData = createSaveLoadPreviewViewData({
     currentLayoutId: layoutState.id,
@@ -621,6 +651,7 @@ export const selectViewData = ({ state, constants, props = {} }) => {
   const previewBackgroundFormTarget = resolvePreviewBackgroundFormTarget({
     layoutType,
     dialoguePreviewMode: previewSections.dialoguePreviewMode,
+    hasInputFields: inputFieldsViewData.hasInputFields,
     hasPreviewVariables: previewVariablesViewData.hasPreviewVariables,
     hasSaveLoadPreview: saveLoadPreviewViewData.hasSaveLoadPreview,
   });
@@ -654,6 +685,7 @@ export const selectViewData = ({ state, constants, props = {} }) => {
     showNvlForm: previewBackgroundFormTarget === "nvl",
     showChoiceForm: previewBackgroundFormTarget === "choice",
     showHistoryForm: previewBackgroundFormTarget === "history",
+    showInputFieldsForm: previewBackgroundFormTarget === "inputFields",
     showPreviewVariablesForm:
       previewBackgroundFormTarget === "previewVariables",
     showSaveLoadForm: previewBackgroundFormTarget === "saveLoad",
@@ -715,6 +747,13 @@ export const selectViewData = ({ state, constants, props = {} }) => {
     saveLoadContext: saveLoadPreviewViewData.saveLoadContext,
     saveLoadFormKey: saveLoadPreviewViewData.saveLoadFormKey,
     hasSaveLoadPreview: saveLoadPreviewViewData.hasSaveLoadPreview,
+    inputFieldsForm:
+      previewBackgroundFormTarget === "inputFields"
+        ? withPreviewBackgroundSlot(inputFieldsViewData.inputFieldsForm)
+        : inputFieldsViewData.inputFieldsForm,
+    inputFieldsDefaultValues: inputFieldsViewData.inputFieldsDefaultValues,
+    inputFieldsFormKey: inputFieldsViewData.inputFieldsFormKey,
+    hasInputFields: inputFieldsViewData.hasInputFields,
     previewVariablesForm:
       previewBackgroundFormTarget === "previewVariables"
         ? withPreviewBackgroundSlot(

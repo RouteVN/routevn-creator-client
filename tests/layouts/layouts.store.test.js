@@ -15,6 +15,10 @@ describe("layouts.store", () => {
     );
 
     expect(layoutTypeField.type).toBe("select");
+    expect(layoutTypeField.options).toContainEqual({
+      value: "input",
+      label: "Input",
+    });
   });
 
   it("uses segmented controls for fragment selection in create and edit forms", () => {

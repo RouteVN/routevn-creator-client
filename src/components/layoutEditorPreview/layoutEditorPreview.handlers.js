@@ -210,6 +210,13 @@ export const handlePreviewVariablesFormChange = (deps, payload) => {
   renderAndEmitPreviewDataChange(deps);
 };
 
+export const handleInputFieldsFormChange = (deps, payload) => {
+  const { name, value: fieldValue } = payload._event.detail;
+
+  deps.store.setPreviewInputFieldValue({ name, fieldValue });
+  renderAndEmitPreviewDataChange(deps);
+};
+
 export const handlePreviewRevealingSpeedInput = (deps, payload) => {
   const rawValue =
     payload._event.detail?.value ??

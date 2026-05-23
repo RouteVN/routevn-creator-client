@@ -284,12 +284,14 @@ describe("commandLineActions.store", () => {
     expect(getSectionModes(items, "Navigation")).toEqual(
       expect.arrayContaining([
         "choice",
+        "input",
         "setNextLineConfig",
         "sectionTransition",
         "resetStoryAtSection",
         "control",
       ]),
     );
+    expect(items.find((item) => item.mode === "input")?.icon).toBe("input");
     expect(
       items.some(
         (item) => item.type === "section" && item.label === "Save / Load",

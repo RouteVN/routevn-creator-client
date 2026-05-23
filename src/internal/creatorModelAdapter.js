@@ -34,17 +34,9 @@ const toCreatorModelCommand = (command) => {
 export const validateClientModelStateExtensions = () => VALID_RESULT;
 
 const mergeClientModelExtensions = ({ targetState } = {}) => {
-  const repositoryState = structuredClone(targetState);
-
-  const extensionValidation =
-    validateClientModelStateExtensions(repositoryState);
-  if (extensionValidation.valid === false) {
-    return extensionValidation;
-  }
-
   return {
     valid: true,
-    repositoryState,
+    repositoryState: structuredClone(targetState),
   };
 };
 
