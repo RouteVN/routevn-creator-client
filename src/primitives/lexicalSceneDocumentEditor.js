@@ -138,6 +138,34 @@ const normalizeMentionTargets = (targets = []) => {
   return result;
 };
 
+const areMentionTargetsEqual = (leftTargets = [], rightTargets = []) => {
+  if (leftTargets.length !== rightTargets.length) {
+    return false;
+  }
+
+  for (let index = 0; index < leftTargets.length; index += 1) {
+    const left = leftTargets[index];
+    const right = rightTargets[index];
+    if (
+      left?.id !== right?.id ||
+      left?.label !== right?.label ||
+      left?.variableType !== right?.variableType
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+const hasReferenceContent = (lines = []) => {
+  return cloneSceneEditorLines(lines).some((line) => {
+    return getLineDialogueContent(line).some((item) => {
+      return item?.reference || item?.mention;
+    });
+  });
+};
+
 const STYLES = `
   rvn-lexical-scene-document-editor {
     display: block;
@@ -1220,7 +1248,13 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   set mentionTargets(value) {
-    this.state.mentionTargets = normalizeMentionTargets(value);
+    const nextMentionTargets = normalizeMentionTargets(value);
+    if (areMentionTargetsEqual(this.state.mentionTargets, nextMentionTargets)) {
+      return;
+    }
+
+    this.state.mentionTargets = nextMentionTargets;
+    this.refreshReferenceLabels();
   }
 
   get mentionTargets() {
@@ -4443,6 +4477,22 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       (item) => item.id === resourceId,
     );
     return target?.label ?? resourceId;
+  }
+
+  refreshReferenceLabels() {
+    if (!this.isConnected || !this.refs.editor || this.isComposing) {
+      return;
+    }
+
+    const lines = this.readEditorSnapshot().lines;
+    if (!hasReferenceContent(lines)) {
+      return;
+    }
+
+    this.loadLines(lines, {
+      emitChange: false,
+      restoreSelection: this.getCurrentSelectionSnapshot(),
+    });
   }
 
   createNodesFromContent(content) {

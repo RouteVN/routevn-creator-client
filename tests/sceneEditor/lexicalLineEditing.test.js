@@ -1120,6 +1120,7 @@ describe("lexical scene document editor line editing", () => {
       });
       editorElement.clearDeleteShortcutState = vi.fn();
       editorElement.scheduleRender = vi.fn();
+      editorElement.dispatchSelectedLineChanged = vi.fn();
 
       const event = {
         preventDefault: vi.fn(),
@@ -3538,6 +3539,107 @@ describe("lexical scene document editor line editing", () => {
         cursorPosition: 0,
       });
       expect(editorElement.pendingFocusTarget).toBeUndefined();
+    } finally {
+      if (previousRequestAnimationFrame === undefined) {
+        delete globalThis.requestAnimationFrame;
+      } else {
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+      }
+      restoreDomGlobals();
+    }
+  });
+
+  it("refreshes persisted reference chip labels when mention targets load after lines", async () => {
+    const restoreDomGlobals = installDomGlobals();
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      callback();
+      return 1;
+    });
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const { MentionNode } = await import(
+        "../../src/primitives/lexicalRichTextShared.js"
+      );
+      const editor = createEditor({
+        namespace: "reference-label-refresh-test",
+        nodes: [MentionNode],
+        onError: (error) => {
+          throw error;
+        },
+      });
+      const rootElement = document.createElement("div");
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+
+      editor.setRootElement(rootElement);
+      Object.defineProperty(editorElement, "isConnected", {
+        configurable: true,
+        value: true,
+      });
+      editorElement.editor = editor;
+      editorElement.refs = { editor: rootElement };
+      editorElement.state = {
+        lines: [],
+        mentionTargets: [],
+        selectedLineId: "line-1",
+        mode: "block",
+        mentionMenu: { isOpen: false },
+        activeFormats: {},
+        plainText: "",
+      };
+      editorElement.lineMetaByKey = new Map();
+      editorElement.lineKeyById = new Map();
+      editorElement.isComposing = false;
+      editorElement.scheduleRender = vi.fn();
+
+      editorElement.loadLines(
+        [
+          {
+            id: "line-1",
+            actions: {
+              dialogue: {
+                content: [
+                  {
+                    reference: {
+                      resourceId: "playerName",
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        ],
+        { emitChange: false },
+      );
+
+      const textBeforeTargets = editor
+        .getEditorState()
+        .read(() => $getRoot().getTextContent());
+
+      editorElement.mentionTargets = [
+        { id: "playerName", label: "Player Name", variableType: "string" },
+      ];
+
+      const textAfterTargets = editor
+        .getEditorState()
+        .read(() => $getRoot().getTextContent());
+
+      expect(textBeforeTargets).toBe("playerName");
+      expect(textAfterTargets).toBe("Player Name");
+      expect(
+        editorElement.getLinesSnapshot()[0].actions.dialogue.content,
+      ).toEqual([
+        {
+          reference: {
+            resourceId: "playerName",
+          },
+        },
+      ]);
     } finally {
       if (previousRequestAnimationFrame === undefined) {
         delete globalThis.requestAnimationFrame;
