@@ -186,12 +186,10 @@ const STYLES = `
     width: 100%;
     min-width: 0;
     max-width: 100%;
-    min-height: 280px;
     outline: none;
   }
 
   .editor {
-    min-height: 280px;
     min-width: 0;
     width: 100%;
     max-width: 100%;
