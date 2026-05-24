@@ -8,6 +8,7 @@ import {
   setRepositoryState,
   setSceneId,
   setPresentationState,
+  setSectionLineChangesBySectionId,
   setTemporaryPresentationState,
   showSectionDropdownMenu,
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.store.js";
@@ -290,6 +291,121 @@ describe("sceneEditorLexical.store", () => {
     expect(viewData.sectionEditorItems[1].documentLineDecorations[0]).toEqual(
       expect.objectContaining({ id: "line-3", lineNumber: 1 }),
     );
+  });
+
+  it("uses per-section line changes for inactive section decorations", () => {
+    const state = createInitialState();
+    state.selectedSectionId = "section-1";
+    state.selectedLineId = "line-1";
+
+    setSceneId({ state }, { sceneId: "scene-1" });
+    setRepositoryState(
+      { state },
+      {
+        repository: {
+          characters: {
+            items: {
+              "character-1": {
+                id: "character-1",
+                type: "character",
+                name: "Aki",
+                fileId: "file-character-1",
+              },
+              "character-2": {
+                id: "character-2",
+                type: "character",
+                name: "Bea",
+                fileId: "file-character-2",
+              },
+            },
+            tree: [{ id: "character-1" }, { id: "character-2" }],
+          },
+          scenes: {
+            items: {
+              "scene-1": {
+                id: "scene-1",
+                type: "scene",
+                name: "Scene 1",
+                sections: {
+                  items: {
+                    "section-1": {
+                      id: "section-1",
+                      type: "section",
+                      name: "Section 1",
+                      lines: {
+                        items: {
+                          "line-1": { id: "line-1", actions: {} },
+                        },
+                        tree: [{ id: "line-1" }],
+                      },
+                    },
+                    "section-2": {
+                      id: "section-2",
+                      type: "section",
+                      name: "Section 2",
+                      lines: {
+                        items: {
+                          "line-2": { id: "line-2", actions: {} },
+                        },
+                        tree: [{ id: "line-2" }],
+                      },
+                    },
+                  },
+                  tree: [{ id: "section-1" }, { id: "section-2" }],
+                },
+              },
+            },
+            tree: [{ id: "scene-1" }],
+          },
+        },
+      },
+    );
+    setSectionLineChangesBySectionId(
+      { state },
+      {
+        changesBySectionId: {
+          "section-1": {
+            lines: [
+              {
+                id: "line-1",
+                changes: {},
+                presentationState: {
+                  dialogue: { characterId: "character-1" },
+                },
+              },
+            ],
+          },
+          "section-2": {
+            lines: [
+              {
+                id: "line-2",
+                changes: {
+                  visual: {
+                    changeType: "set",
+                    data: { items: [] },
+                  },
+                },
+                presentationState: {
+                  dialogue: { characterId: "character-2" },
+                },
+              },
+            ],
+          },
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state });
+
+    expect(
+      viewData.sectionEditorItems[0].documentLineDecorations[0].characterFileId,
+    ).toBe("file-character-1");
+    expect(
+      viewData.sectionEditorItems[1].documentLineDecorations[0].characterFileId,
+    ).toBe("file-character-2");
+    expect(
+      viewData.sectionEditorItems[1].documentLineDecorations[0].visual,
+    ).toEqual({ changeType: "set", items: [] });
   });
 
   it("builds section menu actions for add, reorder, and moving to another scene", () => {

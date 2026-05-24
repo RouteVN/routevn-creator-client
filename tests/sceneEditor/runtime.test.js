@@ -156,6 +156,43 @@ describe("renderSceneEditorState", () => {
     });
   });
 
+  it("requests per-line changes for every visible section", async () => {
+    const changesBySectionId = {
+      "section-1": { lines: [{ id: "line-1" }] },
+      "section-2": { lines: [{ id: "line-2" }] },
+    };
+    const engineSelectSectionLineChanges = vi.fn(
+      ({ sectionId }) => changesBySectionId[sectionId],
+    );
+    const setSectionLineChangesBySectionId = vi.fn();
+
+    await updateSceneEditorSectionChanges({
+      store: {
+        selectSelectedSectionId: () => "section-1",
+        selectScene: () => ({
+          sections: [{ id: "section-1" }, { id: "section-2" }],
+        }),
+        setSectionLineChangesBySectionId,
+      },
+      graphicsService: {
+        engineSelectSectionLineChanges,
+      },
+    });
+
+    expect(engineSelectSectionLineChanges).toHaveBeenCalledTimes(2);
+    expect(engineSelectSectionLineChanges).toHaveBeenNthCalledWith(1, {
+      sectionId: "section-1",
+      includePresentationState: true,
+    });
+    expect(engineSelectSectionLineChanges).toHaveBeenNthCalledWith(2, {
+      sectionId: "section-2",
+      includePresentationState: true,
+    });
+    expect(setSectionLineChangesBySectionId).toHaveBeenCalledWith({
+      changesBySectionId,
+    });
+  });
+
   it("coalesces overlapping canvas renders to the latest pending payload", async () => {
     const resolvers = [];
     const renderCanvas = vi.fn(
