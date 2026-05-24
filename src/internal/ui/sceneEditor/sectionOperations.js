@@ -264,10 +264,7 @@ export const createSceneEditorSectionWithName = async (
   });
 
   syncProjectState(store, projectService);
-  store.setSelectedSectionId({ selectedSectionId: newSectionId });
-  store.setSelectedLineId({ selectedLineId: newLineId });
   render();
-  scrollSceneEditorSectionTabIntoView(deps, newSectionId);
 
   setTimeout(async () => {
     await renderSceneEditorState(deps);
