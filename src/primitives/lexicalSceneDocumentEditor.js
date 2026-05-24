@@ -186,12 +186,10 @@ const STYLES = `
     width: 100%;
     min-width: 0;
     max-width: 100%;
-    min-height: 280px;
     outline: none;
   }
 
   .editor {
-    min-height: 280px;
     min-width: 0;
     width: 100%;
     max-width: 100%;
@@ -571,6 +569,16 @@ const isPlainShortcutKey = (event, key) => {
     !event?.metaKey &&
     !event?.altKey &&
     !event?.shiftKey
+  );
+};
+
+const isPlainSpaceKey = (event) => {
+  return (
+    !event?.ctrlKey &&
+    !event?.metaKey &&
+    !event?.altKey &&
+    !event?.isComposing &&
+    (event?.key === " " || event?.key === "Spacebar" || event?.code === "Space")
   );
 };
 
@@ -1262,10 +1270,28 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   set selectedLineId(value) {
-    this.state.selectedLineId = value;
+    const nextSelectedLineId =
+      typeof value === "string" && value.length > 0 ? value : undefined;
+    this.state.selectedLineId = nextSelectedLineId;
+
+    if (!nextSelectedLineId) {
+      this.isEditorFocused = false;
+      this.lastProgrammaticFocusTarget = undefined;
+      this.pendingFocusTarget = undefined;
+      this.programmaticFocusRestoreUntil = 0;
+      this.pendingSelectionSnapshot = undefined;
+      this.hideSelectionPopover();
+      this.closeMentionMenu();
+    }
+
     if (!this.isConnected || !this.refs.editor) {
       return;
     }
+
+    if (!nextSelectedLineId) {
+      this.applyModeState("block");
+    }
+
     this.scheduleRender();
   }
 
@@ -1581,19 +1607,30 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       Math.max(0, currentIndex + delta),
     );
     const nextLineId = lines[nextIndex]?.id;
+    const navigationDirection =
+      delta > 0 ? "down" : delta < 0 ? "up" : undefined;
+    const isBoundaryNavigation = delta !== 0 && nextIndex === currentIndex;
 
     if (!nextLineId) {
       return;
     }
 
-    this.state.selectedLineId = nextLineId;
-    this.scheduleRender();
-    this.scrollLineIntoView({ lineId: nextLineId });
-    this.dispatchSelectedLineChanged(nextLineId, {
+    const selectionDetail = {
       cursorPosition: undefined,
       isCollapsed: false,
       mode: "block",
-    });
+    };
+    if (navigationDirection) {
+      selectionDetail.navigationDirection = navigationDirection;
+    }
+    if (isBoundaryNavigation) {
+      selectionDetail.isBoundaryNavigation = true;
+    }
+
+    this.state.selectedLineId = nextLineId;
+    this.scheduleRender();
+    this.scrollLineIntoView({ lineId: nextLineId });
+    this.dispatchSelectedLineChanged(nextLineId, selectionDetail);
   }
 
   dispatchShortcutEvent(eventName, detail = {}) {
@@ -3391,6 +3428,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     if (this.state.mode !== "block") {
       return false;
+    }
+
+    if (isPlainSpaceKey(event)) {
+      event.preventDefault();
+      event.stopPropagation();
+      return true;
     }
 
     const currentLineId = this.state.selectedLineId || this.state.lines[0]?.id;
@@ -5629,11 +5672,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   syncFromEditorState(editorState) {
     const snapshot = this.readEditorSnapshot(editorState);
 
+    const ownsFocus = this.isEditorFocused === true;
     const previousLines = this.state.lines;
     const previousSelectedLineId = this.state.selectedLineId;
     this.state.lines = cloneSceneEditorLines(snapshot.lines);
     this.state.selectedLineId =
-      this.state.mode === "block"
+      this.state.mode === "block" || !ownsFocus
         ? previousSelectedLineId
         : snapshot.selectedLineId;
     this.state.activeFormats = snapshot.activeFormats;
@@ -5690,7 +5734,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       });
 
     const focusTarget = this.pendingFocusTarget;
-    if (didLinesChange && !this.isApplyingExternalLines) {
+    if (didLinesChange && !this.isApplyingExternalLines && ownsFocus) {
       const detail = {
         lines: cloneSceneEditorLines(this.state.lines),
         selectedLineId: this.state.selectedLineId,
@@ -5750,14 +5794,22 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         };
       });
 
+    const detail = {
+      lineId,
+      cursorPosition: selectionDetail?.cursorPosition,
+      isCollapsed: selectionDetail?.isCollapsed === true,
+      mode: selectionDetail?.mode || this.state.mode,
+    };
+    if (selectionDetail?.navigationDirection) {
+      detail.navigationDirection = selectionDetail.navigationDirection;
+    }
+    if (selectionDetail?.isBoundaryNavigation === true) {
+      detail.isBoundaryNavigation = true;
+    }
+
     this.dispatchEvent(
       new CustomEvent("selected-line-changed", {
-        detail: {
-          lineId,
-          cursorPosition: selectionDetail?.cursorPosition,
-          isCollapsed: selectionDetail?.isCollapsed === true,
-          mode: selectionDetail?.mode || this.state.mode,
-        },
+        detail,
         bubbles: true,
       }),
     );

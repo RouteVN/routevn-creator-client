@@ -12,7 +12,7 @@ const updateSceneEditorSelectionPayload = (
   appService,
   { sectionId, lineId } = {},
 ) => {
-  if (!appService) {
+  if (!appService?.getPayload || !appService?.setPayload) {
     return;
   }
 
@@ -30,34 +30,49 @@ const updateSceneEditorSelectionPayload = (
   appService.setPayload(nextPayload);
 };
 
+const flattenRefs = (value) => {
+  if (!value) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => flattenRefs(item));
+  }
+
+  if (typeof value === "object") {
+    return [value];
+  }
+
+  return [];
+};
+
 export const scrollSceneEditorSectionTabIntoView = (deps, sectionId) => {
   const { refs } = deps;
+  const scheduleFrame =
+    typeof requestAnimationFrame === "function"
+      ? requestAnimationFrame
+      : (callback) => setTimeout(callback, 0);
 
-  requestAnimationFrame(() => {
-    const refElements = Object.values(refs || {}).flatMap((entry) => {
-      if (!entry) {
-        return [];
-      }
-      if (Array.isArray(entry)) {
-        return entry;
-      }
-      if (typeof entry === "object") {
-        return [entry, ...Object.values(entry)];
-      }
-      return [entry];
-    });
-    const tabRef = refElements.find(
-      (element) => element?.dataset?.sectionId === sectionId,
+  scheduleFrame(() => {
+    const refElements = Object.values(refs || {}).flatMap((entry) =>
+      flattenRefs(entry),
     );
-    const tabElement =
-      tabRef ||
-      Array.from(document.querySelectorAll("[data-section-id]")).find(
+    const sectionRef = refElements.find(
+      (element) =>
+        element?.dataset?.sectionBlockId === sectionId ||
+        element?.dataset?.sectionId === sectionId,
+    );
+    const doc = typeof document !== "undefined" ? document : undefined;
+    const sectionElement =
+      sectionRef ||
+      doc?.querySelector?.('[data-section-block-id="' + sectionId + '"]') ||
+      Array.from(doc?.querySelectorAll?.("[data-section-id]") || []).find(
         (element) => element.getAttribute("data-section-id") === sectionId,
       );
 
-    tabElement?.scrollIntoView({
+    sectionElement?.scrollIntoView({
       behavior: "smooth",
-      block: "nearest",
+      block: "start",
       inline: "nearest",
     });
   });
@@ -163,7 +178,11 @@ export const createSceneEditorSectionWithName = async (
   options = {},
 ) => {
   const { store, projectService, render } = deps;
-  const { inheritPresentationFromSelectedLine = true } = options;
+  const {
+    inheritPresentationFromSelectedLine = true,
+    position = "last",
+    positionTargetId,
+  } = options;
   const sceneId = store.selectSceneId();
   const newSectionId = generateId();
   const newLineId = generateId();
@@ -229,7 +248,8 @@ export const createSceneEditorSectionWithName = async (
   await projectService.createSectionItem({
     sceneId,
     sectionId: newSectionId,
-    position: "last",
+    position,
+    positionTargetId,
     data: {
       name: sectionName,
     },
@@ -244,10 +264,7 @@ export const createSceneEditorSectionWithName = async (
   });
 
   syncProjectState(store, projectService);
-  store.setSelectedSectionId({ selectedSectionId: newSectionId });
-  store.setSelectedLineId({ selectedLineId: newLineId });
   render();
-  scrollSceneEditorSectionTabIntoView(deps, newSectionId);
 
   setTimeout(async () => {
     await renderSceneEditorState(deps);

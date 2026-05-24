@@ -9,7 +9,7 @@ import {
 import { buildSceneDocumentLineDecorations } from "../../internal/ui/sceneEditor/lineViewModels.js";
 import {
   cloneSceneEditorLines,
-  overlaySceneWithDraftSection,
+  overlaySceneWithDraftSections,
 } from "../../internal/ui/sceneEditorLexical/draftSection.js";
 import {
   constructProjectData,
@@ -315,24 +315,53 @@ const prepareProjectDataSourceStateForPreview = (repositoryState = {}) => {
   return sanitizeSceneDialogueContentInlineTextStyleMetadata(repositoryState);
 };
 
-const getDraftSectionForSelection = (state, sceneId, sectionId) => {
-  const draftSection = state.draftSection;
-  if (!draftSection) {
+const getDraftSectionKey = (sceneId, sectionId) => {
+  if (!sceneId || !sectionId) {
     return undefined;
   }
 
-  if (
-    draftSection.sceneId !== sceneId ||
-    draftSection.sectionId !== sectionId
-  ) {
-    return undefined;
-  }
-
-  return draftSection;
+  return String(sceneId) + ":" + String(sectionId);
 };
 
-const overlayDraftSectionOnRepositoryState = (repositoryState, state) => {
-  const draftSection = state.draftSection;
+const getDraftSections = (state) => {
+  const draftSections = Object.values(state.draftSections || {}).filter(
+    (draftSection) => draftSection?.sceneId && draftSection?.sectionId,
+  );
+  const legacyDraftSection = state.draftSection;
+  if (!legacyDraftSection?.sceneId || !legacyDraftSection?.sectionId) {
+    return draftSections;
+  }
+
+  const legacyKey = getDraftSectionKey(
+    legacyDraftSection.sceneId,
+    legacyDraftSection.sectionId,
+  );
+  const hasLegacyDraftSection = draftSections.some(
+    (draftSection) =>
+      getDraftSectionKey(draftSection.sceneId, draftSection.sectionId) ===
+      legacyKey,
+  );
+
+  if (!hasLegacyDraftSection) {
+    draftSections.push(legacyDraftSection);
+  }
+
+  return draftSections;
+};
+
+const getDraftSectionForSelection = (state, sceneId, sectionId) => {
+  const draftSectionKey = getDraftSectionKey(sceneId, sectionId);
+  if (!draftSectionKey) {
+    return undefined;
+  }
+
+  return state.draftSections?.[draftSectionKey];
+};
+
+const overlayDraftSectionOnRepositoryState = (
+  repositoryState,
+  draftSection,
+) => {
   if (!draftSection?.sceneId || !draftSection?.sectionId) {
     return repositoryState;
   }
@@ -391,6 +420,14 @@ const overlayDraftSectionOnRepositoryState = (repositoryState, state) => {
   };
 };
 
+const overlayDraftSectionsOnRepositoryState = (repositoryState, state) => {
+  return getDraftSections(state).reduce(
+    (nextRepositoryState, draftSection) =>
+      overlayDraftSectionOnRepositoryState(nextRepositoryState, draftSection),
+    repositoryState,
+  );
+};
+
 const buildProjectDataSourceState = (state) => {
   const repositoryState = state.repositoryState || {};
   const domainState = state.domainState || {};
@@ -399,7 +436,7 @@ const buildProjectDataSourceState = (state) => {
   const domainLines = domainState.lines || {};
 
   if (Object.keys(domainScenes).length === 0) {
-    return overlayDraftSectionOnRepositoryState(repositoryState, state);
+    return overlayDraftSectionsOnRepositoryState(repositoryState, state);
   }
 
   const sceneIds = Object.keys(domainScenes);
@@ -510,6 +547,8 @@ export const createInitialState = () => ({
     formKey: 0,
     mode: "create",
     sectionId: undefined,
+    placementPosition: undefined,
+    placementTargetSectionId: undefined,
     defaultValues: {
       name: "",
       inheritPresentationFromSelectedLine: true,
@@ -538,6 +577,7 @@ export const createInitialState = () => ({
   repositoryRevision: 0,
   domainState: {},
   draftSection: undefined,
+  draftSections: {},
   draftSaveTimerId: undefined,
   lastDraftFlushStartedAt: 0,
   draftSavePendingSinceAt: 0,
@@ -580,10 +620,37 @@ export const setDomainState = ({ state }, { domainState } = {}) => {
 };
 
 export const setDraftSection = ({ state }, { draftSection } = {}) => {
-  state.draftSection = draftSection;
+  if (!draftSection?.sceneId || !draftSection?.sectionId) {
+    state.draftSection = draftSection;
+    return;
+  }
+
+  if (!state.draftSections) {
+    state.draftSections = {};
+  }
+
+  const draftSectionKey = getDraftSectionKey(
+    draftSection.sceneId,
+    draftSection.sectionId,
+  );
+  state.draftSections[draftSectionKey] = draftSection;
+
+  if (
+    draftSection.sceneId === state.sceneId &&
+    draftSection.sectionId === state.selectedSectionId
+  ) {
+    state.draftSection = draftSection;
+  }
 };
 
 export const clearDraftSection = ({ state }, _payload = {}) => {
+  const draftSectionKey = getDraftSectionKey(
+    state.sceneId,
+    state.selectedSectionId,
+  );
+  if (draftSectionKey && state.draftSections) {
+    delete state.draftSections[draftSectionKey];
+  }
   state.draftSection = undefined;
 };
 
@@ -709,7 +776,27 @@ export const selectDomainState = ({ state }) => {
 };
 
 export const selectDraftSection = ({ state }) => {
-  return state.draftSection;
+  const draftSectionKey = getDraftSectionKey(
+    state.sceneId,
+    state.selectedSectionId,
+  );
+  return state.draftSections?.[draftSectionKey] ?? state.draftSection;
+};
+
+export const selectDraftSectionBySectionId = (
+  { state },
+  { sectionId } = {},
+) => {
+  const draftSectionKey = getDraftSectionKey(state.sceneId, sectionId);
+  if (!draftSectionKey) {
+    return undefined;
+  }
+
+  return state.draftSections?.[draftSectionKey];
+};
+
+export const selectPendingDraftSections = ({ state }) => {
+  return getDraftSections(state).filter((draftSection) => draftSection?.dirty);
 };
 
 export const selectDraftSaveTimerId = ({ state }) => {
@@ -894,7 +981,7 @@ export const selectCommittedScene = ({ state }) => {
 
 export const selectScene = ({ state }) => {
   const baseScene = selectCommittedScene({ state });
-  return overlaySceneWithDraftSection(baseScene, state.draftSection);
+  return overlaySceneWithDraftSections(baseScene, getDraftSections(state));
 };
 
 export const selectSceneId = ({ state }) => {
@@ -995,10 +1082,34 @@ export const showSectionDropdownMenu = (
     state.repositoryState,
     state.sceneId,
   );
+  const sections = Array.isArray(scene?.sections) ? scene.sections : [];
+  const sectionIndex = sections.findIndex(
+    (section) => section.id === sectionId,
+  );
+  const hasPreviousSection = sectionIndex > 0;
+  const hasNextSection =
+    sectionIndex >= 0 && sectionIndex < sections.length - 1;
   const items = [
+    { label: "Add section above", type: "item", value: "add-section-above" },
+    { label: "Add section below", type: "item", value: "add-section-below" },
+  ];
+
+  if (hasPreviousSection) {
+    items.push({ label: "Move up", type: "item", value: "move-section-up" });
+  }
+
+  if (hasNextSection) {
+    items.push({
+      label: "Move down",
+      type: "item",
+      value: "move-section-down",
+    });
+  }
+
+  items.push(
     { label: "Edit", type: "item", value: "edit-section" },
     { label: "Duplicate", type: "item", value: "duplicate-section" },
-  ];
+  );
 
   if (
     sceneOptions.length > 0 &&
@@ -1007,7 +1118,7 @@ export const showSectionDropdownMenu = (
     scene.sections.length > 1
   ) {
     items.push({
-      label: "Move Scene",
+      label: "Move to scene",
       type: "item",
       value: "move-section-scene",
     });
@@ -1108,12 +1219,17 @@ export const hidePopover = ({ state }, _payload = {}) => {
   };
 };
 
-export const showSectionCreateDialog = ({ state }, { defaultName } = {}) => {
+export const showSectionCreateDialog = (
+  { state },
+  { defaultName, placementPosition, placementTargetSectionId } = {},
+) => {
   state.sectionCreateDialog = {
     isOpen: true,
     formKey: (state.sectionCreateDialog?.formKey || 0) + 1,
     mode: "create",
     sectionId: undefined,
+    placementPosition,
+    placementTargetSectionId,
     defaultValues: {
       name: defaultName || "",
       inheritPresentationFromSelectedLine: true,
@@ -1130,6 +1246,8 @@ export const showSectionEditDialog = ({ state }, { sectionId } = {}) => {
     formKey: (state.sectionCreateDialog?.formKey || 0) + 1,
     mode: "edit",
     sectionId,
+    placementPosition: undefined,
+    placementTargetSectionId: undefined,
     defaultValues: {
       name: section?.name || "",
     },
@@ -1141,6 +1259,8 @@ export const hideSectionCreateDialog = ({ state }, _payload = {}) => {
     ...state.sectionCreateDialog,
     isOpen: false,
     sectionId: undefined,
+    placementPosition: undefined,
+    placementTargetSectionId: undefined,
   };
 };
 
@@ -1209,6 +1329,7 @@ export const selectViewData = ({ state }) => {
       sectionsOverviewItems: [],
       documentEditorLines: [],
       documentLineDecorations: [],
+      sectionEditorItems: [],
       textStyles: [],
       mentionTargets: [],
       currentLine: null,
@@ -1340,6 +1461,29 @@ export const selectViewData = ({ state }) => {
     repositoryState,
     sectionLineChanges: state.sectionLineChanges,
   });
+  const sectionEditorItems = sections.map((section, index) => {
+    const sectionLines = Array.isArray(section.lines) ? section.lines : [];
+    const sectionLineChanges =
+      section.id === state.selectedSectionId ? state.sectionLineChanges : {};
+
+    return {
+      ...section,
+      index,
+      name: section.name || `Section ${index + 1}`,
+      isSelected: section.id === state.selectedSectionId,
+      selectedLineId:
+        section.id === state.selectedSectionId
+          ? state.selectedLineId
+          : undefined,
+      editorKey: `document-${section.id}-${state.sceneSettings.showLineNumbers ? "line-numbers-show" : "line-numbers-hide"}`,
+      documentEditorLines: sectionLines,
+      documentLineDecorations: buildSceneDocumentLineDecorations({
+        lines: sectionLines,
+        repositoryState,
+        sectionLineChanges,
+      }),
+    };
+  });
 
   const isEditingSection = state.sectionCreateDialog.mode === "edit";
   const moveSectionSceneOptions = buildMoveSectionSceneOptions(
@@ -1458,6 +1602,7 @@ export const selectViewData = ({ state }) => {
     sectionsOverviewOpen: state.sectionsOverviewPanel.isOpen,
     sectionsOverviewItems,
     documentEditorLines,
+    sectionEditorItems,
     textStyles,
     mentionTargets,
     documentLineDecorations,

@@ -1188,6 +1188,77 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
   }
 };
 
+const flattenRefs = (value) => {
+  if (!value) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => flattenRefs(item));
+  }
+
+  if (typeof value === "object") {
+    return [value];
+  }
+
+  return [];
+};
+
+const getRefElements = (refs) => {
+  return Object.values(refs || {}).flatMap((entry) => flattenRefs(entry));
+};
+
+const findRuntimeSectionIdForLine = (store, lineId) => {
+  if (!lineId) {
+    return undefined;
+  }
+
+  return store
+    .selectScene()
+    ?.sections?.find((section) =>
+      section.lines?.some((line) => line.id === lineId),
+    )?.id;
+};
+
+const getRuntimeLinesEditorRef = (refs, { sectionId, lineId } = {}) => {
+  const refElements = getRefElements(refs).filter(
+    (element) => element?.scrollLineIntoView || element?.getLines,
+  );
+
+  if (sectionId) {
+    const sectionEditor = refElements.find(
+      (element) => element?.dataset?.sectionId === sectionId,
+    );
+    if (sectionEditor) {
+      return sectionEditor;
+    }
+  }
+
+  if (lineId) {
+    const lineEditor = refElements.find((element) => {
+      const lines = element?.getLines?.() || element?.lines;
+      return Array.isArray(lines)
+        ? lines.some((line) => line?.id === lineId)
+        : false;
+    });
+    if (lineEditor) {
+      return lineEditor;
+    }
+  }
+
+  return refs?.linesEditor || refElements[0];
+};
+
+const scrollRuntimeLineIntoView = (refs, { sectionId, lineId } = {}) => {
+  if (!lineId) {
+    return;
+  }
+
+  getRuntimeLinesEditorRef(refs, { sectionId, lineId })?.scrollLineIntoView?.({
+    lineId,
+  });
+};
+
 const syncRuntimeCurrentLineSelection = (deps, payload = {}) => {
   const { refs, store, render } = deps;
   const { sectionId, lineId } = payload;
@@ -1198,25 +1269,29 @@ const syncRuntimeCurrentLineSelection = (deps, payload = {}) => {
     return false;
   }
 
-  if (sectionId && sectionId !== selectedSectionId) {
+  const nextSectionId = sectionId || findRuntimeSectionIdForLine(store, lineId);
+  if (!nextSectionId) {
     return false;
   }
 
-  if (lineId === selectedLineId) {
+  if (lineId === selectedLineId && nextSectionId === selectedSectionId) {
     return false;
   }
 
-  const selectedSection = store
+  const nextSection = store
     .selectScene()
-    ?.sections?.find((section) => section.id === selectedSectionId);
-  const hasLine = selectedSection?.lines?.some((line) => line.id === lineId);
+    ?.sections?.find((section) => section.id === nextSectionId);
+  const hasLine = nextSection?.lines?.some((line) => line.id === lineId);
   if (!hasLine) {
     return false;
   }
 
+  if (nextSectionId !== selectedSectionId) {
+    store.setSelectedSectionId({ selectedSectionId: nextSectionId });
+  }
   store.setSelectedLineId({ selectedLineId: lineId });
   render();
-  refs.linesEditor?.scrollLineIntoView?.({ lineId });
+  scrollRuntimeLineIntoView(refs, { sectionId: nextSectionId, lineId });
   return true;
 };
 
@@ -1366,7 +1441,10 @@ const handleCanvasRollbackWheelFallback = async (deps, payload = {}) => {
 
   store.setSelectedLineId({ selectedLineId: previousLineId });
   render();
-  refs.linesEditor?.scrollLineIntoView?.({ lineId: previousLineId });
+  scrollRuntimeLineIntoView(refs, {
+    sectionId: store.selectSelectedSectionId(),
+    lineId: previousLineId,
+  });
   await renderSceneEditorState(deps, {
     skipAnimations: true,
   });
@@ -1400,7 +1478,10 @@ const handleCanvasForwardNavigationFallback = async (deps, payload = {}) => {
 
   store.setSelectedLineId({ selectedLineId: nextLineId });
   render();
-  refs.linesEditor?.scrollLineIntoView?.({ lineId: nextLineId });
+  scrollRuntimeLineIntoView(refs, {
+    sectionId: store.selectSelectedSectionId(),
+    lineId: nextLineId,
+  });
   await renderSceneEditorState(deps, {
     skipAnimations: true,
   });

@@ -1,5 +1,5 @@
 refs:
-  linesEditor:
+  sectionEditor*:
     eventListeners:
       scene-lines-changed:
         handler: handleEditorDataChanged
@@ -23,20 +23,14 @@ refs:
         handler: handleLineContextMenuRequest
       line-context-menu-dismiss:
         handler: handleLineContextMenuDismiss
-  sectionTab*:
+  sectionHeader*:
     eventListeners:
-      click:
-        handler: handleSectionTabClick
       contextmenu:
         handler: handleSectionTabRightClick
-  sectionsTabsScroll:
-    eventListeners:
-      wheel:
-        handler: handleSectionsTabsWheel
-  sectionAdd:
+  sectionMenu*:
     eventListeners:
       click:
-        handler: handleSectionAddClick
+        handler: handleSectionMenuClick
   sectionsOverview:
     eventListeners:
       click:
@@ -144,7 +138,8 @@ template:
                   - rtgl-button#backButton sq pre="chevronLeft" v="gh" mr=sm: null
                   - rtgl-view w=1fg d=h av=c:
                       - rtgl-text w=1fg ellipsis=true: ${scene.name}
-                      - rtgl-button#sceneSettingsButton sq pre=settings v="gh" ml=sm: null
+                      - rtgl-button#sectionsOverview sq pre=hamburger v="gh" ml=sm: null
+                      - rtgl-button#sceneSettingsButton sq pre=settings v="gh": null
               - $if sectionsGraphView:
                   - rtgl-view w=f h=1fg:
                       - rtgl-view d=h w=f:
@@ -153,18 +148,13 @@ template:
                           - rtgl-text: ${sectionsGraph}
                 $else:
                   - 'rtgl-view#sceneEditorLeftEditor d=v w=f h=1fg style="min-width: 0; min-height: 0;"':
-                      - rtgl-view d=h g=xs w=f:
-                          - rtgl-view#sectionsTabsScroll d=h sh g=xs:
-                              - $for section, sectionIndex in sections:
-                                      - rtgl-view#sectionTab${sectionIndex} data-section-id=${section.id} w=120 h=32 av=c ah=c bgc=${section.bgc} cur=pointer:
-                                          - rtgl-text s=sm w=80 ta=c ellipsis=true: ${section.name}
-                          - rtgl-view#sectionAdd h=32 av=c ph=lg ah=c cur=pointer bgc=mu:
-                              - rtgl-text s=sm: +
-                          - rtgl-view#sectionsOverview h=32 av=c ph=lg ah=c cur=pointer bgc=mu:
-                              - rtgl-text s=sm: ...
-                          - rtgl-view w=1fg: null
-                      - rtgl-view w=f ph=sm pv=md sv h=1fg:
-                          - rvn-scene-document-editor-lexical#linesEditor key=${linesEditorKey} :lines=${documentEditorLines} :lineDecorations=${documentLineDecorations} :selectedLineId=${selectedLineId} :showLineNumbers=${sceneSettings.showLineNumbers} :textStyles=${textStyles} :mentionTargets=${mentionTargets}: null
+                      - 'rtgl-view w=f ph=sm pv=md sv h=1fg style="min-width: 0; scroll-behavior: smooth;"':
+                          - $for section, sectionIndex in sectionEditorItems:
+                              - 'rtgl-view#sectionBlock${sectionIndex} data-section-block-id=${section.id} data-section-id=${section.id} w=f mb=xl style="min-width: 0; scroll-margin-top: 0;"':
+                                  - 'rtgl-view#sectionHeader${sectionIndex} data-section-id=${section.id} d=h av=c w=f h=40 ph=sm bgc=bg bwb=xs style="position: sticky; top: -16px; z-index: 5; min-width: 0;"':
+                                      - rtgl-text s=sm w=1fg ellipsis=true: ${section.name}
+                                      - rtgl-button#sectionMenu${sectionIndex} data-section-id=${section.id} sq v=gh s=sm: ...
+                                  - rvn-scene-document-editor-lexical#sectionEditor${sectionIndex} key=${section.editorKey} data-section-id=${section.id} :lines=${section.documentEditorLines} :lineDecorations=${section.documentLineDecorations} :selectedLineId=${section.selectedLineId} :showLineNumbers=${sceneSettings.showLineNumbers} :textStyles=${textStyles} :mentionTargets=${mentionTargets}: null
                           - rtgl-view h=30vh: null
           - rtgl-view w=1 h=f bgc=mu: null
           - 'rtgl-view w=1fg d=v h=f style="min-width: 0; min-height: 0;"':

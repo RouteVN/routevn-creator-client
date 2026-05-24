@@ -224,4 +224,152 @@ describe("sceneEditorLexical.store", () => {
     expect(itemValues).toContain("duplicate-section");
     expect(itemValues).not.toContain("move-section-scene");
   });
+
+  it("builds one document editor item per section with local line numbers", () => {
+    const state = createInitialState();
+    state.selectedSectionId = "section-1";
+    state.selectedLineId = "line-1";
+
+    setSceneId({ state }, { sceneId: "scene-1" });
+    setRepositoryState(
+      { state },
+      {
+        repository: {
+          scenes: {
+            items: {
+              "scene-1": {
+                id: "scene-1",
+                type: "scene",
+                name: "Scene 1",
+                sections: {
+                  items: {
+                    "section-1": {
+                      id: "section-1",
+                      type: "section",
+                      name: "Section 1",
+                      lines: {
+                        items: {
+                          "line-1": { id: "line-1", actions: {} },
+                          "line-2": { id: "line-2", actions: {} },
+                        },
+                        tree: [{ id: "line-1" }, { id: "line-2" }],
+                      },
+                    },
+                    "section-2": {
+                      id: "section-2",
+                      type: "section",
+                      name: "Section 2",
+                      lines: {
+                        items: {
+                          "line-3": { id: "line-3", actions: {} },
+                        },
+                        tree: [{ id: "line-3" }],
+                      },
+                    },
+                  },
+                  tree: [{ id: "section-1" }, { id: "section-2" }],
+                },
+              },
+            },
+            tree: [{ id: "scene-1" }],
+          },
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state });
+
+    expect(viewData.sectionEditorItems).toHaveLength(2);
+    expect(viewData.sectionEditorItems[0].selectedLineId).toBe("line-1");
+    expect(viewData.sectionEditorItems[0].documentEditorLines).toHaveLength(2);
+    expect(viewData.sectionEditorItems[0].documentLineDecorations[0]).toEqual(
+      expect.objectContaining({ id: "line-1", lineNumber: 1 }),
+    );
+    expect(viewData.sectionEditorItems[1].selectedLineId).toBeUndefined();
+    expect(viewData.sectionEditorItems[1].documentEditorLines).toHaveLength(1);
+    expect(viewData.sectionEditorItems[1].documentLineDecorations[0]).toEqual(
+      expect.objectContaining({ id: "line-3", lineNumber: 1 }),
+    );
+  });
+
+  it("builds section menu actions for add, reorder, and moving to another scene", () => {
+    const state = createInitialState();
+
+    setSceneId({ state }, { sceneId: "scene-1" });
+    setRepositoryState(
+      { state },
+      {
+        repository: {
+          scenes: {
+            items: {
+              "scene-1": {
+                id: "scene-1",
+                type: "scene",
+                name: "Scene 1",
+                sections: {
+                  items: {
+                    "section-1": {
+                      id: "section-1",
+                      type: "section",
+                      name: "Section 1",
+                      lines: { items: {}, tree: [] },
+                    },
+                    "section-2": {
+                      id: "section-2",
+                      type: "section",
+                      name: "Section 2",
+                      lines: { items: {}, tree: [] },
+                    },
+                  },
+                  tree: [{ id: "section-1" }, { id: "section-2" }],
+                },
+              },
+              "scene-2": {
+                id: "scene-2",
+                type: "scene",
+                name: "Scene 2",
+                sections: { items: {}, tree: [] },
+              },
+            },
+            tree: [{ id: "scene-1" }, { id: "scene-2" }],
+          },
+        },
+      },
+    );
+
+    showSectionDropdownMenu(
+      { state },
+      {
+        sectionId: "section-1",
+        position: { x: 0, y: 0 },
+      },
+    );
+
+    expect(state.dropdownMenu.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: "Add section above",
+          value: "add-section-above",
+        }),
+        expect.objectContaining({
+          label: "Add section below",
+          value: "add-section-below",
+        }),
+        expect.objectContaining({
+          label: "Move down",
+          value: "move-section-down",
+        }),
+        expect.objectContaining({
+          label: "Move to scene",
+          value: "move-section-scene",
+        }),
+      ]),
+    );
+    expect(state.dropdownMenu.items).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ value: "move-section-up" }),
+      ]),
+    );
+    expect(state.dropdownMenu.items.some((item) => item.disabled)).toBe(false);
+  });
 });
