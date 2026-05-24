@@ -68,8 +68,31 @@ const mergePresentationStates = (
   };
 };
 
+const getSectionLineChangesForSection = (state, sectionId) => {
+  if (sectionId) {
+    if (
+      Object.prototype.hasOwnProperty.call(
+        state.sectionLineChangesBySectionId ?? {},
+        sectionId,
+      )
+    ) {
+      return state.sectionLineChangesBySectionId[sectionId] ?? {};
+    }
+
+    return sectionId === state.selectedSectionId
+      ? (state.sectionLineChanges ?? {})
+      : {};
+  }
+
+  return state.sectionLineChanges ?? {};
+};
+
 const getSectionLinePresentationState = (state, lineId) => {
-  const selectedLineEntry = (state.sectionLineChanges?.lines || []).find(
+  const sectionLineChanges = getSectionLineChangesForSection(
+    state,
+    state.selectedSectionId,
+  );
+  const selectedLineEntry = (sectionLineChanges?.lines || []).find(
     (line) => line.id === lineId,
   );
   if (!selectedLineEntry) {
@@ -590,6 +613,7 @@ export const createInitialState = () => ({
   presentationState: {},
   temporaryPresentationState: {},
   sectionLineChanges: {},
+  sectionLineChangesBySectionId: {},
   isMuted: false,
   isScenePageLoading: true,
   isSceneAssetLoading: false,
@@ -724,8 +748,7 @@ export const selectEffectivePresentationState = ({ state }) => {
   );
 };
 
-export const setSectionLineChanges = ({ state }, { changes } = {}) => {
-  state.sectionLineChanges = changes;
+const syncPresentationStateFromSelectedLineChanges = (state) => {
   const syncedPresentationState = getSectionLinePresentationState(
     state,
     state.selectedLineId,
@@ -733,6 +756,26 @@ export const setSectionLineChanges = ({ state }, { changes } = {}) => {
   if (syncedPresentationState !== undefined) {
     state.presentationState = syncedPresentationState;
   }
+};
+
+export const setSectionLineChanges = ({ state }, { changes } = {}) => {
+  state.sectionLineChanges = changes ?? {};
+  if (state.selectedSectionId) {
+    state.sectionLineChangesBySectionId[state.selectedSectionId] =
+      state.sectionLineChanges;
+  }
+  syncPresentationStateFromSelectedLineChanges(state);
+};
+
+export const setSectionLineChangesBySectionId = (
+  { state },
+  { changesBySectionId } = {},
+) => {
+  state.sectionLineChangesBySectionId = toPlainObject(changesBySectionId);
+  state.sectionLineChanges = state.selectedSectionId
+    ? (state.sectionLineChangesBySectionId[state.selectedSectionId] ?? {})
+    : {};
+  syncPresentationStateFromSelectedLineChanges(state);
 };
 
 export const setScenePageLoading = ({ state }, { isLoading } = {}) => {
@@ -1459,12 +1502,17 @@ export const selectViewData = ({ state }) => {
   const documentLineDecorations = buildSceneDocumentLineDecorations({
     lines: documentEditorLines,
     repositoryState,
-    sectionLineChanges: state.sectionLineChanges,
+    sectionLineChanges: getSectionLineChangesForSection(
+      state,
+      currentSection?.id,
+    ),
   });
   const sectionEditorItems = sections.map((section, index) => {
     const sectionLines = Array.isArray(section.lines) ? section.lines : [];
-    const sectionLineChanges =
-      section.id === state.selectedSectionId ? state.sectionLineChanges : {};
+    const sectionLineChanges = getSectionLineChangesForSection(
+      state,
+      section.id,
+    );
 
     return {
       ...section,

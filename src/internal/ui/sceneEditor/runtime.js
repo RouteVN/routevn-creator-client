@@ -938,18 +938,50 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
   }
 };
 
+const getSceneSectionIds = (scene) => {
+  const sectionIds = [];
+  const seen = new Set();
+
+  for (const section of scene?.sections || []) {
+    if (!section?.id || seen.has(section.id)) {
+      continue;
+    }
+
+    seen.add(section.id);
+    sectionIds.push(section.id);
+  }
+
+  return sectionIds;
+};
+
 export const updateSceneEditorSectionChanges = async (deps) => {
   const { store, graphicsService } = deps;
-  const sectionId = store.selectSelectedSectionId();
-  if (!sectionId) {
+  const selectedSectionId = store.selectSelectedSectionId();
+  const sectionIds = getSceneSectionIds(store.selectScene?.());
+  if (sectionIds.length === 0 && selectedSectionId) {
+    sectionIds.push(selectedSectionId);
+  }
+  if (sectionIds.length === 0) {
     return;
   }
 
-  const changes = graphicsService.engineSelectSectionLineChanges({
-    sectionId,
-    includePresentationState: true,
+  const changesBySectionId = {};
+  for (const sectionId of sectionIds) {
+    changesBySectionId[sectionId] =
+      graphicsService.engineSelectSectionLineChanges({
+        sectionId,
+        includePresentationState: true,
+      });
+  }
+
+  if (store.setSectionLineChangesBySectionId) {
+    store.setSectionLineChangesBySectionId({ changesBySectionId });
+    return;
+  }
+
+  store.setSectionLineChanges({
+    changes: selectedSectionId ? changesBySectionId[selectedSectionId] : {},
   });
-  store.setSectionLineChanges({ changes });
 };
 
 export const initializeSceneEditorPage = async (deps) => {
