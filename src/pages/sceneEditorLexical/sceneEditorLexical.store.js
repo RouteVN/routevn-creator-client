@@ -1476,7 +1476,6 @@ export const selectViewData = ({ state }) => {
           ? state.selectedLineId
           : undefined,
       editorKey: `document-${section.id}-${state.sceneSettings.showLineNumbers ? "line-numbers-show" : "line-numbers-hide"}`,
-      editorMinHeight: 48,
       documentEditorLines: sectionLines,
       documentLineDecorations: buildSceneDocumentLineDecorations({
         lines: sectionLines,

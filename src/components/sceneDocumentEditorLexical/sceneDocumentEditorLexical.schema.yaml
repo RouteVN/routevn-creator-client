@@ -36,8 +36,6 @@ propsSchema:
             type: string
           variableType:
             type: string
-    minHeight:
-      type: number
 methods:
   type: object
   properties:

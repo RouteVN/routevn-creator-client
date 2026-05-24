@@ -174,7 +174,6 @@ const STYLES = `
     --right-gutter-width: ${DEFAULT_RIGHT_GUTTER_WIDTH}px;
     --editor-inline-padding: 0px;
     --editor-top-padding: 0px;
-    --editor-min-height: 280px;
   }
 
   rvn-lexical-scene-document-editor * {
@@ -187,12 +186,12 @@ const STYLES = `
     width: 100%;
     min-width: 0;
     max-width: 100%;
-    min-height: var(--editor-min-height, 280px);
+    min-height: 280px;
     outline: none;
   }
 
   .editor {
-    min-height: var(--editor-min-height, 280px);
+    min-height: 280px;
     min-width: 0;
     width: 100%;
     max-width: 100%;
@@ -819,7 +818,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       textStyles: [],
       selectedLineId: undefined,
       showLineNumbers: true,
-      minHeight: 280,
       mode: "block",
       plainText: "",
       mentionTargets: [],
@@ -1303,21 +1301,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
   get showLineNumbers() {
     return this.state.showLineNumbers;
-  }
-
-  set minHeight(value) {
-    const nextMinHeight = Number(value);
-    this.state.minHeight = Number.isFinite(nextMinHeight)
-      ? Math.max(24, nextMinHeight)
-      : 280;
-    if (!this.isConnected || !this.refs.editor) {
-      return;
-    }
-    this.scheduleRender();
-  }
-
-  get minHeight() {
-    return this.state.minHeight;
   }
 
   setMode(mode) {
@@ -5844,7 +5827,6 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       "--right-gutter-width",
       `${this.rightGutterWidth}px`,
     );
-    this.style.setProperty("--editor-min-height", `${this.state.minHeight}px`);
     this.refs.placeholder.hidden = this.state.plainText.length > 0;
     this.refs.placeholder.textContent = this.state.placeholder;
     this.renderGutters();
