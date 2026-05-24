@@ -204,6 +204,14 @@ export const overlaySceneWithDraftSection = (scene, draftSection) => {
   };
 };
 
+export const overlaySceneWithDraftSections = (scene, draftSections = []) => {
+  return (Array.isArray(draftSections) ? draftSections : []).reduce(
+    (nextScene, draftSection) =>
+      overlaySceneWithDraftSection(nextScene, draftSection),
+    scene,
+  );
+};
+
 export const areSceneEditorLinesEqual = (leftLines = [], rightLines = []) => {
   if (leftLines.length !== rightLines.length) {
     return false;

@@ -2,9 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleActionsDialogClose,
   handleCommandLineSubmit,
+  handleDropdownMenuClickItem,
   handleEditorBlur,
   handleNewLine,
   handleSectionMoveSceneFormActionClick,
+  handleSelectedLineChanged,
 } from "../../src/pages/sceneEditorLexical/sceneEditorLexical.handlers.js";
 
 describe("sceneEditorLexical.handlers actions dialog", () => {
@@ -370,6 +372,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
       expect(state.selectedLineId).toBe(createdLine.id);
       expect(linesEditor.focusLine).toHaveBeenCalledTimes(2);
       expect(linesEditor.focusLine).toHaveBeenCalledWith({
+        sectionId: "section-1",
         lineId: createdLine.id,
         cursorPosition: 0,
       });
@@ -427,5 +430,323 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     });
     expect(moveSectionItem).not.toHaveBeenCalled();
     expect(store.hideSectionMoveSceneDialog).not.toHaveBeenCalled();
+  });
+
+  it("selects the originating section when a line is clicked in another editor", () => {
+    const state = {
+      selectedSectionId: "section-1",
+      selectedLineId: "line-1",
+      payload: {
+        sceneId: "scene-1",
+        sectionId: "section-1",
+        lineId: "line-1",
+      },
+    };
+    const store = {
+      selectSelectedSectionId: vi.fn(() => state.selectedSectionId),
+      setSelectedSectionId: vi.fn(({ selectedSectionId }) => {
+        state.selectedSectionId = selectedSectionId;
+      }),
+      selectSelectedLineId: vi.fn(() => state.selectedLineId),
+      setSelectedLineId: vi.fn(({ selectedLineId }) => {
+        state.selectedLineId = selectedLineId;
+      }),
+      selectScene: vi.fn(() => ({ sections: [] })),
+    };
+    const deps = {
+      store,
+      render: vi.fn(),
+      subject: {
+        dispatch: vi.fn(),
+      },
+      appService: {
+        getPayload: vi.fn(() => state.payload),
+        setPayload: vi.fn((payload) => {
+          state.payload = payload;
+        }),
+      },
+    };
+
+    handleSelectedLineChanged(deps, {
+      _event: {
+        currentTarget: {
+          dataset: {
+            sectionId: "section-2",
+          },
+        },
+        detail: {
+          lineId: "line-3",
+        },
+      },
+    });
+
+    expect(state.selectedSectionId).toBe("section-2");
+    expect(state.selectedLineId).toBe("line-3");
+    expect(state.payload).toMatchObject({
+      sectionId: "section-2",
+      lineId: "line-3",
+    });
+    expect(deps.render).toHaveBeenCalledOnce();
+    expect(deps.subject.dispatch).toHaveBeenCalledWith(
+      "sceneEditor.renderCanvas",
+      expect.objectContaining({ skipRender: true }),
+    );
+  });
+
+  it("moves block selection from the last line to the next section first line", () => {
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      callback();
+      return 1;
+    });
+
+    try {
+      const state = {
+        selectedSectionId: "section-1",
+        selectedLineId: "line-2",
+        payload: {
+          sceneId: "scene-1",
+          sectionId: "section-1",
+          lineId: "line-2",
+        },
+      };
+      const nextSectionEditor = {
+        dataset: { sectionId: "section-2" },
+        focusContainer: vi.fn(),
+        scrollLineIntoView: vi.fn(),
+      };
+      const store = {
+        selectSelectedSectionId: vi.fn(() => state.selectedSectionId),
+        setSelectedSectionId: vi.fn(({ selectedSectionId }) => {
+          state.selectedSectionId = selectedSectionId;
+        }),
+        selectSelectedLineId: vi.fn(() => state.selectedLineId),
+        setSelectedLineId: vi.fn(({ selectedLineId }) => {
+          state.selectedLineId = selectedLineId;
+        }),
+        selectScene: vi.fn(() => ({
+          sections: [
+            {
+              id: "section-1",
+              lines: [{ id: "line-1" }, { id: "line-2" }],
+            },
+            {
+              id: "section-2",
+              lines: [{ id: "line-3" }, { id: "line-4" }],
+            },
+          ],
+        })),
+      };
+      const deps = {
+        store,
+        refs: {
+          sectionEditor0: {
+            dataset: { sectionId: "section-1" },
+            focusContainer: vi.fn(),
+            scrollLineIntoView: vi.fn(),
+          },
+          sectionEditor1: nextSectionEditor,
+        },
+        render: vi.fn(),
+        subject: {
+          dispatch: vi.fn(),
+        },
+        appService: {
+          getPayload: vi.fn(() => state.payload),
+          setPayload: vi.fn((payload) => {
+            state.payload = payload;
+          }),
+        },
+      };
+
+      handleSelectedLineChanged(deps, {
+        _event: {
+          currentTarget: {
+            dataset: {
+              sectionId: "section-1",
+            },
+          },
+          detail: {
+            lineId: "line-2",
+            mode: "block",
+            navigationDirection: "down",
+          },
+        },
+      });
+
+      expect(state.selectedSectionId).toBe("section-2");
+      expect(state.selectedLineId).toBe("line-3");
+      expect(state.payload).toMatchObject({
+        sectionId: "section-2",
+        lineId: "line-3",
+      });
+      expect(deps.render).toHaveBeenCalledOnce();
+      expect(nextSectionEditor.scrollLineIntoView).toHaveBeenCalledWith({
+        lineId: "line-3",
+      });
+      expect(nextSectionEditor.focusContainer).toHaveBeenCalled();
+      expect(deps.subject.dispatch).toHaveBeenCalledWith(
+        "sceneEditor.renderCanvas",
+        expect.objectContaining({
+          skipRender: true,
+          syncPresentationState: true,
+        }),
+      );
+    } finally {
+      if (previousRequestAnimationFrame === undefined) {
+        delete globalThis.requestAnimationFrame;
+      } else {
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+      }
+    }
+  });
+
+  it("moves block selection from the first line to the previous section last line", () => {
+    const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      callback();
+      return 1;
+    });
+
+    try {
+      const state = {
+        selectedSectionId: "section-2",
+        selectedLineId: "line-3",
+        payload: {
+          sceneId: "scene-1",
+          sectionId: "section-2",
+          lineId: "line-3",
+        },
+      };
+      const previousSectionEditor = {
+        dataset: { sectionId: "section-1" },
+        focusContainer: vi.fn(),
+        scrollLineIntoView: vi.fn(),
+      };
+      const store = {
+        selectSelectedSectionId: vi.fn(() => state.selectedSectionId),
+        setSelectedSectionId: vi.fn(({ selectedSectionId }) => {
+          state.selectedSectionId = selectedSectionId;
+        }),
+        selectSelectedLineId: vi.fn(() => state.selectedLineId),
+        setSelectedLineId: vi.fn(({ selectedLineId }) => {
+          state.selectedLineId = selectedLineId;
+        }),
+        selectScene: vi.fn(() => ({
+          sections: [
+            {
+              id: "section-1",
+              lines: [{ id: "line-1" }, { id: "line-2" }],
+            },
+            {
+              id: "section-2",
+              lines: [{ id: "line-3" }, { id: "line-4" }],
+            },
+          ],
+        })),
+      };
+      const deps = {
+        store,
+        refs: {
+          sectionEditor0: previousSectionEditor,
+          sectionEditor1: {
+            dataset: { sectionId: "section-2" },
+            focusContainer: vi.fn(),
+            scrollLineIntoView: vi.fn(),
+          },
+        },
+        render: vi.fn(),
+        subject: {
+          dispatch: vi.fn(),
+        },
+        appService: {
+          getPayload: vi.fn(() => state.payload),
+          setPayload: vi.fn((payload) => {
+            state.payload = payload;
+          }),
+        },
+      };
+
+      handleSelectedLineChanged(deps, {
+        _event: {
+          currentTarget: {
+            dataset: {
+              sectionId: "section-2",
+            },
+          },
+          detail: {
+            lineId: "line-3",
+            mode: "block",
+            navigationDirection: "up",
+          },
+        },
+      });
+
+      expect(state.selectedSectionId).toBe("section-1");
+      expect(state.selectedLineId).toBe("line-2");
+      expect(state.payload).toMatchObject({
+        sectionId: "section-1",
+        lineId: "line-2",
+      });
+      expect(deps.render).toHaveBeenCalledOnce();
+      expect(previousSectionEditor.scrollLineIntoView).toHaveBeenCalledWith({
+        lineId: "line-2",
+      });
+      expect(previousSectionEditor.focusContainer).toHaveBeenCalled();
+      expect(deps.subject.dispatch).toHaveBeenCalledWith(
+        "sceneEditor.renderCanvas",
+        expect.objectContaining({
+          skipRender: true,
+          syncPresentationState: true,
+        }),
+      );
+    } finally {
+      if (previousRequestAnimationFrame === undefined) {
+        delete globalThis.requestAnimationFrame;
+      } else {
+        globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+      }
+    }
+  });
+
+  it("opens section create dialog with below placement from the section menu", async () => {
+    const store = {
+      selectDropdownMenu: vi.fn(() => ({
+        sectionId: "section-1",
+      })),
+      hideDropdownMenu: vi.fn(),
+      selectScene: vi.fn(() => ({
+        sections: [{ id: "section-1" }, { id: "section-2" }],
+      })),
+      showSectionCreateDialog: vi.fn(),
+      selectSceneId: vi.fn(() => "scene-1"),
+    };
+    const deps = {
+      store,
+      render: vi.fn(),
+      projectService: {},
+      subject: {
+        dispatch: vi.fn(),
+      },
+      appService: {},
+    };
+
+    await handleDropdownMenuClickItem(deps, {
+      _event: {
+        detail: {
+          item: {
+            value: "add-section-below",
+          },
+        },
+      },
+    });
+
+    expect(store.hideDropdownMenu).toHaveBeenCalledOnce();
+    expect(store.showSectionCreateDialog).toHaveBeenCalledWith({
+      defaultName: "Section 3",
+      placementPosition: "after",
+      placementTargetSectionId: "section-1",
+    });
+    expect(deps.render).toHaveBeenCalledOnce();
   });
 });

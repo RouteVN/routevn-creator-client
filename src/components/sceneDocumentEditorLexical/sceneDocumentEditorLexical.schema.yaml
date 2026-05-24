@@ -36,6 +36,8 @@ propsSchema:
             type: string
           variableType:
             type: string
+    minHeight:
+      type: number
 methods:
   type: object
   properties:
@@ -59,3 +61,11 @@ methods:
       description: Applies a format to the current selection.
       params: []
       returns: void
+    getLines:
+      description: Returns the current editor lines snapshot.
+      params: []
+      returns: array
+    getSelectedLineId:
+      description: Returns the current selected line id.
+      params: []
+      returns: string

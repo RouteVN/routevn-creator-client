@@ -537,6 +537,88 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
+  it("emits block navigation direction when moving down at the last line", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+
+      editorElement.state = {
+        mode: "block",
+        selectedLineId: "line-2",
+        lines: [{ id: "line-1" }, { id: "line-2" }],
+      };
+      editorElement.scheduleRender = vi.fn();
+      editorElement.scrollLineIntoView = vi.fn();
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      editorElement.moveBlockSelection(1);
+
+      expect(editorElement.state.selectedLineId).toBe("line-2");
+      expect(editorElement.scrollLineIntoView).toHaveBeenCalledWith({
+        lineId: "line-2",
+      });
+      expect(editorElement.dispatchSelectedLineChanged).toHaveBeenCalledWith(
+        "line-2",
+        {
+          cursorPosition: undefined,
+          isBoundaryNavigation: true,
+          isCollapsed: false,
+          mode: "block",
+          navigationDirection: "down",
+        },
+      );
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("emits block navigation direction when moving up at the first line", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+
+      editorElement.state = {
+        mode: "block",
+        selectedLineId: "line-1",
+        lines: [{ id: "line-1" }, { id: "line-2" }],
+      };
+      editorElement.scheduleRender = vi.fn();
+      editorElement.scrollLineIntoView = vi.fn();
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      editorElement.moveBlockSelection(-1);
+
+      expect(editorElement.state.selectedLineId).toBe("line-1");
+      expect(editorElement.scrollLineIntoView).toHaveBeenCalledWith({
+        lineId: "line-1",
+      });
+      expect(editorElement.dispatchSelectedLineChanged).toHaveBeenCalledWith(
+        "line-1",
+        {
+          cursorPosition: undefined,
+          isBoundaryNavigation: true,
+          isCollapsed: false,
+          mode: "block",
+          navigationDirection: "up",
+        },
+      );
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
   it("routes block-mode editor keydown through block shortcuts without arming text fallback", async () => {
     const restoreDomGlobals = installDomGlobals();
 

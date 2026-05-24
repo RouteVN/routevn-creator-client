@@ -58,8 +58,201 @@ const clearTemporaryPresentationPreview = ({ store, subject }) => {
   requestTemporaryPresentationCanvasRender(subject);
 };
 
-const getLinesEditorRef = (refs) => {
-  return refs?.linesEditor;
+const flattenRefs = (value) => {
+  if (!value) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => flattenRefs(item));
+  }
+
+  if (typeof value === "object") {
+    return [value];
+  }
+
+  return [];
+};
+
+const getRefElements = (refs) => {
+  return Object.values(refs || {}).flatMap((value) => flattenRefs(value));
+};
+
+const isLinesEditorRef = (element) => {
+  return !!(
+    element?.focusLine ||
+    element?.scrollLineIntoView ||
+    element?.focusContainer ||
+    element?.getLines ||
+    element?.getLinesSnapshot
+  );
+};
+
+const getLinesEditorRef = (refs, { sectionId, lineId } = {}) => {
+  const refElements = getRefElements(refs).filter(isLinesEditorRef);
+
+  if (sectionId) {
+    const sectionEditor = refElements.find(
+      (element) => element?.dataset?.sectionId === sectionId,
+    );
+    if (sectionEditor) {
+      return sectionEditor;
+    }
+  }
+
+  if (lineId) {
+    const lineEditor = refElements.find((element) => {
+      const editorLines =
+        element?.getLines?.() ||
+        element?.getLinesSnapshot?.() ||
+        element?.lines;
+      return Array.isArray(editorLines)
+        ? editorLines.some((line) => line?.id === lineId)
+        : false;
+    });
+    if (lineEditor) {
+      return lineEditor;
+    }
+  }
+
+  return refs?.linesEditor || refElements[0];
+};
+
+const forEachLinesEditorRef = (refs, callback) => {
+  getRefElements(refs).filter(isLinesEditorRef).forEach(callback);
+};
+
+const getSectionIdFromPayload = (payload) => {
+  const event = payload?._event;
+  return (
+    event?.currentTarget?.dataset?.sectionId ||
+    event?.target?.closest?.("[data-section-id]")?.dataset?.sectionId ||
+    undefined
+  );
+};
+
+const findSectionIdForLine = (store, lineId) => {
+  if (!lineId) {
+    return undefined;
+  }
+
+  const scene = store.selectScene?.();
+  return scene?.sections?.find((section) =>
+    section.lines?.some((line) => line.id === lineId),
+  )?.id;
+};
+
+const findNextSectionFirstLineTarget = (store, { sectionId, lineId } = {}) => {
+  if (!sectionId || !lineId) {
+    return undefined;
+  }
+
+  const scene = store.selectScene?.();
+  const sections = Array.isArray(scene?.sections) ? scene.sections : [];
+  const sectionIndex = sections.findIndex(
+    (section) => section.id === sectionId,
+  );
+  if (sectionIndex < 0) {
+    return undefined;
+  }
+
+  const currentLines = Array.isArray(sections[sectionIndex]?.lines)
+    ? sections[sectionIndex].lines
+    : [];
+  const lineIndex = currentLines.findIndex((line) => line.id === lineId);
+  if (lineIndex < 0 || lineIndex < currentLines.length - 1) {
+    return undefined;
+  }
+
+  for (const nextSection of sections.slice(sectionIndex + 1)) {
+    const firstLine = Array.isArray(nextSection?.lines)
+      ? nextSection.lines[0]
+      : undefined;
+    if (nextSection?.id && firstLine?.id) {
+      return {
+        sectionId: nextSection.id,
+        lineId: firstLine.id,
+      };
+    }
+  }
+
+  return undefined;
+};
+
+const findPreviousSectionLastLineTarget = (
+  store,
+  { sectionId, lineId } = {},
+) => {
+  if (!sectionId || !lineId) {
+    return undefined;
+  }
+
+  const scene = store.selectScene?.();
+  const sections = Array.isArray(scene?.sections) ? scene.sections : [];
+  const sectionIndex = sections.findIndex(
+    (section) => section.id === sectionId,
+  );
+  if (sectionIndex < 0) {
+    return undefined;
+  }
+
+  const currentLines = Array.isArray(sections[sectionIndex]?.lines)
+    ? sections[sectionIndex].lines
+    : [];
+  const lineIndex = currentLines.findIndex((line) => line.id === lineId);
+  if (lineIndex !== 0) {
+    return undefined;
+  }
+
+  for (let index = sectionIndex - 1; index >= 0; index -= 1) {
+    const previousSection = sections[index];
+    const previousLines = Array.isArray(previousSection?.lines)
+      ? previousSection.lines
+      : [];
+    const lastLine = previousLines[previousLines.length - 1];
+    if (previousSection?.id && lastLine?.id) {
+      return {
+        sectionId: previousSection.id,
+        lineId: lastLine.id,
+      };
+    }
+  }
+
+  return undefined;
+};
+
+const selectEditorTarget = (deps, { sectionId, lineId } = {}) => {
+  const { appService, store } = deps;
+  const nextSectionId = sectionId || findSectionIdForLine(store, lineId);
+
+  if (nextSectionId && nextSectionId !== store.selectSelectedSectionId?.()) {
+    store.setSelectedSectionId?.({ selectedSectionId: nextSectionId });
+  }
+
+  if (lineId) {
+    store.setSelectedLineId?.({ selectedLineId: lineId });
+  }
+
+  if (
+    appService?.getPayload &&
+    appService?.setPayload &&
+    (nextSectionId || lineId)
+  ) {
+    const nextPayload = {
+      ...appService.getPayload(),
+      sectionId: nextSectionId || store.selectSelectedSectionId?.(),
+    };
+
+    if (lineId) {
+      nextPayload.lineId = lineId;
+    } else {
+      delete nextPayload.lineId;
+    }
+
+    appService.setPayload(nextPayload);
+  }
+
+  return nextSectionId;
 };
 
 const createDocumentDraftLine = ({ lineId, sectionId } = {}) => {
@@ -78,11 +271,17 @@ const createDocumentDraftLine = ({ lineId, sectionId } = {}) => {
 
 const getLiveLinesEditorElementFromPayload = (payload) => {
   const findEditorElement = (node) => {
-    if (!node || typeof node.querySelector !== "function") {
+    if (!node) {
       return undefined;
     }
 
-    const wrapper = node.querySelector("rvn-scene-document-editor-lexical");
+    if (node.matches?.("rvn-lexical-scene-document-editor")) {
+      return node;
+    }
+
+    const wrapper = node.matches?.("rvn-scene-document-editor-lexical")
+      ? node
+      : node.querySelector?.("rvn-scene-document-editor-lexical");
     const primitive = wrapper?.shadowRoot?.querySelector?.(
       "rvn-lexical-scene-document-editor",
     );
@@ -109,9 +308,23 @@ const getLiveLinesEditorElementFromPayload = (payload) => {
   return undefined;
 };
 
-const getLiveLinesFromElement = (element) => {
+const getNestedPrimitiveEditor = (element) => {
+  if (!element || typeof element.querySelector !== "function") {
+    return undefined;
+  }
+
   return (
-    element?.getLines?.() || element?.getLinesSnapshot?.() || element?.lines
+    element.shadowRoot?.querySelector?.("rvn-lexical-scene-document-editor") ||
+    element.querySelector?.("rvn-lexical-scene-document-editor")
+  );
+};
+
+const getLiveLinesFromElement = (element) => {
+  const editorElement = getNestedPrimitiveEditor(element) || element;
+  return (
+    editorElement?.getLines?.() ||
+    editorElement?.getLinesSnapshot?.() ||
+    editorElement?.lines
   );
 };
 
@@ -126,9 +339,49 @@ const finalizeActionTargetLine = (store, lineId) => {
   store.clearActionTargetLineId?.();
 };
 
-const syncDraftSectionFromLines = (deps, liveLines) => {
+const reconcileDraftSectionForSection = (deps, sectionId) => {
   const { store } = deps;
-  const draftSection = store.selectDraftSection();
+  const selectedDraftSection = store.selectDraftSection?.();
+  const targetSectionId =
+    sectionId ||
+    store.selectSelectedSectionId?.() ||
+    selectedDraftSection?.sectionId;
+  const existingDraftSection =
+    store.selectDraftSectionBySectionId?.({ sectionId: targetSectionId }) ||
+    (selectedDraftSection?.sectionId === targetSectionId
+      ? selectedDraftSection
+      : undefined);
+  const sceneId = store.selectSceneId?.() || existingDraftSection?.sceneId;
+
+  if (!sceneId || !targetSectionId) {
+    store.clearDraftSection?.();
+    return undefined;
+  }
+
+  const committedScene = store.selectCommittedScene?.();
+  const committedSection = committedScene?.sections?.find(
+    (section) => section.id === targetSectionId,
+  );
+  const draftSourceSection =
+    committedSection ||
+    (existingDraftSection ? { lines: existingDraftSection.lines } : undefined);
+  const nextDraftSection = ensureSceneEditorDraftSection({
+    draftSection: existingDraftSection,
+    sceneId,
+    sectionId: targetSectionId,
+    section: draftSourceSection,
+    revision: store.selectRepositoryRevision?.(),
+  });
+  store.setDraftSection({ draftSection: nextDraftSection });
+  return nextDraftSection;
+};
+
+const syncDraftSectionFromLines = (deps, liveLines, { sectionId } = {}) => {
+  const { store } = deps;
+  const targetSectionId = sectionId || store.selectSelectedSectionId?.();
+  const draftSection =
+    store.selectDraftSectionBySectionId?.({ sectionId: targetSectionId }) ||
+    reconcileDraftSectionForSection(deps, targetSectionId);
 
   if (!draftSection || !Array.isArray(liveLines) || liveLines.length === 0) {
     return draftSection;
@@ -147,14 +400,15 @@ const syncDraftSectionFromLines = (deps, liveLines) => {
   return nextDraftSection;
 };
 
-const syncDraftSectionFromLiveEditor = (deps) => {
+const syncDraftSectionFromLiveEditor = (deps, { sectionId } = {}) => {
   const { refs } = deps;
-  const liveLines = getLinesEditorRef(refs)?.getLines?.();
-  return syncDraftSectionFromLines(deps, liveLines);
+  const linesEditorRef = getLinesEditorRef(refs, { sectionId });
+  const liveLines = getLiveLinesFromElement(linesEditorRef);
+  return syncDraftSectionFromLines(deps, liveLines, { sectionId });
 };
 
 const focusLinesEditorLine = (refs, payload = {}) => {
-  const linesEditorRef = getLinesEditorRef(refs);
+  const linesEditorRef = getLinesEditorRef(refs, payload);
   if (!linesEditorRef) {
     return;
   }
@@ -162,8 +416,8 @@ const focusLinesEditorLine = (refs, payload = {}) => {
   linesEditorRef.focusLine(payload);
 };
 
-const scrollLinesEditorLineIntoView = (refs, lineId) => {
-  const linesEditorRef = getLinesEditorRef(refs);
+const scrollLinesEditorLineIntoView = (refs, lineId, sectionId) => {
+  const linesEditorRef = getLinesEditorRef(refs, { lineId, sectionId });
   if (!linesEditorRef || !lineId) {
     return;
   }
@@ -171,8 +425,8 @@ const scrollLinesEditorLineIntoView = (refs, lineId) => {
   linesEditorRef.scrollLineIntoView({ lineId });
 };
 
-const focusLinesEditorContainer = (refs) => {
-  const linesEditorRef = getLinesEditorRef(refs);
+const focusLinesEditorContainer = (refs, sectionId) => {
+  const linesEditorRef = getLinesEditorRef(refs, { sectionId });
   if (!linesEditorRef?.focusContainer) {
     return;
   }
@@ -193,7 +447,7 @@ const shouldAnimateLineNavigation = (
 
   const scene = store.selectScene();
   const currentSection = scene?.sections?.find(
-    (section) => section.id === store.selectSelectedSectionId(),
+    (section) => section.id === store.selectSelectedSectionId?.(),
   );
   const currentLines = Array.isArray(currentSection?.lines)
     ? currentSection.lines
@@ -258,28 +512,10 @@ const isMissingProjectResolutionError = (error) => {
 };
 
 const reconcileCurrentEditorSession = (deps) => {
-  const { store } = deps;
-  const sceneId = store.selectSceneId();
-  const selectedSectionId = store.selectSelectedSectionId();
-
-  if (!sceneId || !selectedSectionId) {
-    store.clearDraftSection();
-    return undefined;
-  }
-
-  const committedScene = store.selectCommittedScene();
-  const committedSection = committedScene?.sections?.find(
-    (section) => section.id === selectedSectionId,
+  return reconcileDraftSectionForSection(
+    deps,
+    deps.store.selectSelectedSectionId?.(),
   );
-  const nextDraftSection = ensureSceneEditorDraftSection({
-    draftSection: store.selectDraftSection(),
-    sceneId,
-    sectionId: selectedSectionId,
-    section: committedSection,
-    revision: store.selectRepositoryRevision(),
-  });
-  store.setDraftSection({ draftSection: nextDraftSection });
-  return nextDraftSection;
 };
 
 const {
@@ -303,9 +539,10 @@ const refreshSceneEditorStateFromProject = async (deps) => {
 
 const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
   const { store, render, subject } = deps;
-  const hadPendingSessionChanges = hasPendingSceneEditorDraftChanges(
-    store.selectDraftSection(),
-  );
+  const pendingDraftSections = store.selectPendingDraftSections?.() || [];
+  const hadPendingSessionChanges =
+    pendingDraftSections.length > 0 ||
+    hasPendingSceneEditorDraftChanges(store.selectDraftSection());
   const { repositoryState, domainState, revision } = payload;
 
   store.setRepositoryState({ repository: repositoryState });
@@ -402,15 +639,22 @@ export const handleSectionTabClick = async (deps, payload) => {
     return;
   }
 
+  const event = payload?._event;
   const sectionId =
-    payload._event.currentTarget?.dataset?.sectionId ||
-    payload._event.currentTarget?.id?.replace("sectionTab", "") ||
+    event?.currentTarget?.dataset?.sectionId ||
+    event?.currentTarget?.id?.replace("sectionTab", "") ||
     "";
+  if (!sectionId) {
+    return;
+  }
+
   await flushSceneEditorDrafts(deps, { force: true });
   await selectSceneEditorSection(deps, sectionId);
   reconcileCurrentEditorSession(deps);
   deps.render();
 };
+
+export const handleSectionHeaderClick = handleSectionTabClick;
 
 export const handleSectionsTabsWheel = (deps, payload) => {
   const event = payload._event;
@@ -694,9 +938,12 @@ export const handleEditorDataChanged = async (deps, payload) => {
     return;
   }
   const changeReason = payload?._event?.detail?.reason || "text";
+  const sectionId =
+    getSectionIdFromPayload(payload) ||
+    nextLines.find((line) => line?.sectionId)?.sectionId ||
+    store.selectSelectedSectionId?.();
 
-  const draftSection =
-    store.selectDraftSection() || reconcileCurrentEditorSession(deps);
+  const draftSection = reconcileDraftSectionForSection(deps, sectionId);
   if (!draftSection) {
     return;
   }
@@ -707,15 +954,17 @@ export const handleEditorDataChanged = async (deps, payload) => {
     dirty: true,
   });
   store.setDraftSection({ draftSection: nextDraftSection });
+  const detailSelectedLineId = payload?._event?.detail?.selectedLineId;
   const selectedLineId =
-    payload?._event?.detail?.selectedLineId ||
-    store.selectSelectedLineId() ||
+    detailSelectedLineId ||
+    (sectionId === store.selectSelectedSectionId?.()
+      ? store.selectSelectedLineId()
+      : undefined) ||
     nextLines[0]?.id;
-  if (selectedLineId) {
-    store.setSelectedLineId({
-      selectedLineId,
-    });
-  }
+  selectEditorTarget(deps, {
+    sectionId,
+    lineId: selectedLineId,
+  });
   render();
   const focusTarget = payload?._event?.detail?.focusTarget;
   if (
@@ -723,10 +972,14 @@ export const handleEditorDataChanged = async (deps, payload) => {
     changeReason === "structure" &&
     focusTarget.skipPageRestore !== true
   ) {
+    const focusPayload = {
+      ...focusTarget,
+      sectionId,
+    };
     requestAnimationFrame(() => {
-      focusLinesEditorLine(refs, focusTarget);
+      focusLinesEditorLine(refs, focusPayload);
       requestAnimationFrame(() => {
-        focusLinesEditorLine(refs, focusTarget);
+        focusLinesEditorLine(refs, focusPayload);
       });
     });
   }
@@ -743,7 +996,10 @@ export const handleEditorDataChanged = async (deps, payload) => {
 
 export const handleEditorCompositionStateChanged = (deps, payload) => {
   const { store } = deps;
-  const draftSection = store.selectDraftSection();
+  const sectionId = getSectionIdFromPayload(payload);
+  const draftSection =
+    store.selectDraftSectionBySectionId?.({ sectionId }) ||
+    reconcileDraftSectionForSection(deps, sectionId);
   if (!draftSection) {
     return;
   }
@@ -776,21 +1032,53 @@ export const handleEditorBlur = async (deps) => {
 };
 
 export const handleSelectedLineChanged = (deps, payload) => {
-  const { store, render, subject } = deps;
+  const { store, refs, render, subject } = deps;
   const detail = payload?._event?.detail || {};
   const lineId = detail.lineId;
-  if (!lineId || lineId === store.selectSelectedLineId()) {
+  const sectionId =
+    getSectionIdFromPayload(payload) || findSectionIdForLine(store, lineId);
+  const previousLineId = store.selectSelectedLineId();
+  const isSameSelection =
+    lineId === previousLineId &&
+    sectionId === store.selectSelectedSectionId?.();
+  let adjacentSectionTarget;
+  if (isSameSelection && detail.mode === "block") {
+    if (detail.navigationDirection === "down") {
+      adjacentSectionTarget = findNextSectionFirstLineTarget(store, {
+        sectionId,
+        lineId,
+      });
+    } else if (detail.navigationDirection === "up") {
+      adjacentSectionTarget = findPreviousSectionLastLineTarget(store, {
+        sectionId,
+        lineId,
+      });
+    }
+  }
+
+  if (!lineId || (isSameSelection && !adjacentSectionTarget)) {
     return;
   }
 
-  const previousLineId = store.selectSelectedLineId();
-  store.setSelectedLineId({ selectedLineId: lineId });
+  const target = adjacentSectionTarget || { sectionId, lineId };
+  selectEditorTarget(deps, target);
 
   render();
 
+  if (adjacentSectionTarget) {
+    requestAnimationFrame(() => {
+      scrollLinesEditorLineIntoView(
+        refs,
+        adjacentSectionTarget.lineId,
+        adjacentSectionTarget.sectionId,
+      );
+      focusLinesEditorContainer(refs, adjacentSectionTarget.sectionId);
+    });
+  }
+
   dispatchLineNavigationRender(subject, store, {
     previousLineId,
-    nextLineId: lineId,
+    nextLineId: target.lineId,
     skipRender: true,
   });
 };
@@ -817,11 +1105,14 @@ export const handleDialogueCharacterShortcut = async (deps, payload) => {
     return;
   }
 
+  const sectionId =
+    getSectionIdFromPayload(payload) ||
+    findSectionIdForLine(store, lineId) ||
+    store.selectSelectedSectionId?.();
+  selectEditorTarget(deps, { sectionId, lineId });
   const currentSection = store
     .selectScene()
-    ?.sections?.find(
-      (section) => section.id === store.selectSelectedSectionId(),
-    );
+    ?.sections?.find((section) => section.id === sectionId);
   const currentLine =
     currentSection?.lines?.find((line) => line.id === lineId) ||
     store.selectSelectedLine();
@@ -889,8 +1180,10 @@ export const handleAddActionsButtonClick = (deps) => {
   render();
 };
 
-export const handleSectionAddClick = (deps) => {
+export const handleSectionAddClick = (deps, payload) => {
   const { store, render } = deps;
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
   if (isSectionsOverviewOpen(store)) {
     return;
   }
@@ -900,6 +1193,17 @@ export const handleSectionAddClick = (deps) => {
   const defaultName = `Section ${sectionCount + 1}`;
   store.showSectionCreateDialog({ defaultName });
   render();
+};
+
+export const handleSectionMenuClick = (deps, payload) => {
+  const { store } = deps;
+  if (isSectionsOverviewOpen(store)) {
+    return;
+  }
+
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+  openSectionTabDropdown(deps, payload._event);
 };
 
 export const handleSectionsOverviewClick = (deps, payload) => {
@@ -966,8 +1270,9 @@ export const handleNewLine = async (deps, payload) => {
 
   const { store, render, subject, refs } = deps;
   const detail = payload?._event?.detail || {};
-  const draftSection =
-    store.selectDraftSection() || reconcileCurrentEditorSession(deps);
+  const sectionId =
+    getSectionIdFromPayload(payload) || store.selectSelectedSectionId?.();
+  const draftSection = reconcileDraftSectionForSection(deps, sectionId);
   if (!draftSection) {
     return;
   }
@@ -1006,7 +1311,10 @@ export const handleNewLine = async (deps, payload) => {
     dirty: true,
   });
   store.setDraftSection({ draftSection: nextDraftSection });
-  store.setSelectedLineId({ selectedLineId: newLine.id });
+  selectEditorTarget(deps, {
+    sectionId: draftSection.sectionId,
+    lineId: newLine.id,
+  });
   render();
   subject.dispatch("sceneEditor.renderCanvas", {
     skipRender: true,
@@ -1015,6 +1323,7 @@ export const handleNewLine = async (deps, payload) => {
   });
 
   const focusTarget = {
+    sectionId: draftSection.sectionId,
     lineId: newLine.id,
     cursorPosition: 0,
   };
@@ -1038,11 +1347,13 @@ export const handleLineNavigation = (deps, payload) => {
 
   const { targetLineId, mode, direction, targetCursorPosition } =
     payload._event.detail;
+  const sectionId =
+    getSectionIdFromPayload(payload) ||
+    findSectionIdForLine(store, targetLineId) ||
+    store.selectSelectedSectionId?.();
   const currentLineId = store.selectSelectedLineId();
 
-  // For block mode, just update the selection and handle scrolling
   if (mode === "block") {
-    // Check if we're trying to move up from the first line
     if (direction === "up" && currentLineId === targetLineId) {
       dispatchLineNavigationRender(subject, store, {
         previousLineId: currentLineId,
@@ -1051,16 +1362,15 @@ export const handleLineNavigation = (deps, payload) => {
       return;
     }
 
-    store.setSelectedLineId({ selectedLineId: targetLineId });
+    selectEditorTarget(deps, { sectionId, lineId: targetLineId });
     render();
 
     if (targetLineId) {
       requestAnimationFrame(() => {
-        scrollLinesEditorLineIntoView(refs, targetLineId);
+        scrollLinesEditorLineIntoView(refs, targetLineId, sectionId);
       });
     }
 
-    // Trigger debounced canvas render
     dispatchLineNavigationRender(subject, store, {
       previousLineId: currentLineId,
       nextLineId: targetLineId,
@@ -1068,7 +1378,6 @@ export const handleLineNavigation = (deps, payload) => {
     return;
   }
 
-  // For text-editor mode, handle cursor navigation
   const resolvedCurrentLineId = currentLineId || targetLineId;
   let nextLineId = targetLineId;
 
@@ -1081,7 +1390,6 @@ export const handleLineNavigation = (deps, payload) => {
     nextLineId = resolvedCurrentLineId;
   }
 
-  // Determine next line based on direction if targetLineId is current line
   if (nextLineId === resolvedCurrentLineId) {
     if (direction === "up" || direction === "end") {
       nextLineId = store.selectPreviousLineId({
@@ -1092,18 +1400,21 @@ export const handleLineNavigation = (deps, payload) => {
     }
   }
 
-  // Handle navigation to different line
   if (nextLineId && nextLineId !== currentLineId) {
-    const linesEditorRef = getLinesEditorRef(refs);
+    const nextSectionId = findSectionIdForLine(store, nextLineId) || sectionId;
+    const linesEditorRef = getLinesEditorRef(refs, {
+      sectionId: nextSectionId,
+      lineId: nextLineId,
+    });
 
-    // Update selectedLineId through the store
-    store.setSelectedLineId({ selectedLineId: nextLineId });
+    selectEditorTarget(deps, { sectionId: nextSectionId, lineId: nextLineId });
     render();
 
     requestAnimationFrame(() => {
       if (linesEditorRef) {
         const isEndNavigation = targetCursorPosition === -1;
         focusLinesEditorLine(refs, {
+          sectionId: nextSectionId,
           lineId: nextLineId,
           cursorPosition: isEndNavigation
             ? Number.MAX_SAFE_INTEGER
@@ -1115,7 +1426,6 @@ export const handleLineNavigation = (deps, payload) => {
         });
       }
 
-      // Trigger debounced canvas render
       dispatchLineNavigationRender(subject, store, {
         previousLineId: currentLineId,
         nextLineId,
@@ -1141,12 +1451,13 @@ export const handleSwapLine = async (deps, payload) => {
     detail.direction === "up" || detail.direction === "down"
       ? detail.direction
       : undefined;
+  const sectionId =
+    getSectionIdFromPayload(payload) || store.selectSelectedSectionId?.();
   const lineId =
     typeof detail.lineId === "string" && detail.lineId
       ? detail.lineId
       : store.selectSelectedLineId();
-  const draftSection =
-    store.selectDraftSection() || reconcileCurrentEditorSession(deps);
+  const draftSection = reconcileDraftSectionForSection(deps, sectionId);
 
   if (!direction || !lineId || !draftSection) {
     return;
@@ -1169,7 +1480,10 @@ export const handleSwapLine = async (deps, payload) => {
     dirty: true,
   });
   store.setDraftSection({ draftSection: nextDraftSection });
-  store.setSelectedLineId({ selectedLineId: lineId });
+  selectEditorTarget(deps, {
+    sectionId: draftSection.sectionId,
+    lineId,
+  });
   render();
   subject.dispatch("sceneEditor.renderCanvas", {
     skipRender: true,
@@ -1178,8 +1492,8 @@ export const handleSwapLine = async (deps, payload) => {
   });
 
   requestAnimationFrame(() => {
-    scrollLinesEditorLineIntoView(refs, lineId);
-    focusLinesEditorContainer(refs);
+    scrollLinesEditorLineIntoView(refs, lineId, draftSection.sectionId);
+    focusLinesEditorContainer(refs, draftSection.sectionId);
   });
 
   scheduleSceneEditorDraftFlush(deps, {
@@ -1227,12 +1541,70 @@ export const handleDropdownMenuClickOverlay = (deps) => {
   render();
 };
 
+const getDefaultSectionName = (store) => {
+  const scene = store.selectScene();
+  const sectionCount = scene?.sections?.length || 0;
+  return `Section ${sectionCount + 1}`;
+};
+
+const moveSceneEditorSectionWithinScene = async (
+  deps,
+  { sectionId, direction } = {},
+) => {
+  const { store, projectService, appService } = deps;
+  const scene = store.selectScene();
+  const sections = Array.isArray(scene?.sections) ? scene.sections : [];
+  const sectionIndex = sections.findIndex(
+    (section) => section.id === sectionId,
+  );
+  const targetSection =
+    direction === "up"
+      ? sections[sectionIndex - 1]
+      : sections[sectionIndex + 1];
+
+  if (!sectionId || !targetSection?.id) {
+    return;
+  }
+
+  await flushSceneEditorDrafts(deps, { force: true });
+  await runSceneEditorPersistence(
+    deps,
+    async () => {
+      assertSceneEditorCommandResult(
+        await projectService.moveSectionItem({
+          sectionId,
+          position: direction === "up" ? "before" : "after",
+          positionTargetId: targetSection.id,
+        }),
+        {
+          appService,
+          fallbackMessage: "Failed to move section",
+        },
+      );
+    },
+    {
+      label: direction === "up" ? "move-section-up" : "move-section-down",
+      meta: {
+        sectionId,
+        targetSectionId: targetSection.id,
+      },
+    },
+  );
+
+  await refreshSceneEditorStateFromProject(deps);
+  await selectSceneEditorSection(deps, sectionId);
+};
+
 export const handleDropdownMenuClickItem = async (deps, payload) => {
   const { store, render, projectService, subject, appService } = deps;
   const item = payload._event.detail.item || payload._event.detail;
   const action = item?.value;
   const dropdownState = store.selectDropdownMenu();
   const sectionId = dropdownState.sectionId;
+  if (item?.disabled === true) {
+    render();
+    return;
+  }
   const actionsType = dropdownState.actionsType;
   const lineId = dropdownState.lineId;
   const sceneId = store.selectSceneId();
@@ -1248,6 +1620,25 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
       render();
       return;
     }
+  }
+
+  if (action === "add-section-above" || action === "add-section-below") {
+    store.showSectionCreateDialog({
+      defaultName: getDefaultSectionName(store),
+      placementPosition: action === "add-section-above" ? "before" : "after",
+      placementTargetSectionId: sectionId,
+    });
+    render();
+    return;
+  }
+
+  if (action === "move-section-up" || action === "move-section-down") {
+    await moveSceneEditorSectionWithinScene(deps, {
+      sectionId,
+      direction: action === "move-section-up" ? "up" : "down",
+    });
+    render();
+    return;
   }
 
   if (action === "delete-section") {
@@ -1325,7 +1716,7 @@ export const handleDropdownMenuClickItem = async (deps, payload) => {
     await deleteSceneEditorLine(deps, lineId);
   } else if (action === "delete-actions") {
     const selectedLineId = store.selectSelectedLineId();
-    const selectedSectionId = store.selectSelectedSectionId();
+    const selectedSectionId = store.selectSelectedSectionId?.();
     const selectedLine = store.selectSelectedLine();
 
     if (actionsType && selectedLineId && selectedSectionId) {
@@ -1442,7 +1833,9 @@ export const handleSceneSettingsFormAction = (deps, payload) => {
   render();
 
   requestAnimationFrame(() => {
-    refs.linesEditor?.hardRefresh?.();
+    forEachLinesEditorRef(refs, (linesEditorRef) => {
+      linesEditorRef?.hardRefresh?.();
+    });
   });
 
   if (previousIsMuted !== isMuted) {
@@ -1584,6 +1977,8 @@ export const handleSectionCreateFormActionClick = async (deps, payload) => {
         {
           inheritPresentationFromSelectedLine:
             values.inheritPresentationFromSelectedLine ?? true,
+          position: sectionCreateDialog.placementPosition || "last",
+          positionTargetId: sectionCreateDialog.placementTargetSectionId,
         },
       );
       reconcileCurrentEditorSession(deps);
@@ -1670,16 +2065,17 @@ export const handlePreviewClick = (deps, payload) => {
 
     try {
       const sceneId = store.selectSceneId();
-      const sectionId = store.selectSelectedSectionId();
+      const sectionId = store.selectSelectedSectionId?.();
       const lineId = store.selectSelectedLineId();
       const liveLinesEditorElement =
         getLiveLinesEditorElementFromPayload(payload) ||
-        getLinesEditorRef(deps.refs);
+        getLinesEditorRef(deps.refs, { sectionId });
       const liveLines = cloneSceneEditorLines(
         getLiveLinesFromElement(liveLinesEditorElement),
       );
 
       await flushSceneEditorDrafts(deps, {
+        sectionId,
         liveLines,
         showErrorAlert: false,
         force: true,
@@ -1712,12 +2108,17 @@ export const handleFormatButtonClick = (deps, payload) => {
   }
 
   cancelSceneEditorDraftFlush(deps);
-  deps.refs.linesEditor?.applyTextFormat?.({ format });
-  const liveLinesEditorElement = getLiveLinesEditorElementFromPayload(payload);
+  const sectionId =
+    getSectionIdFromPayload(payload) || deps.store.selectSelectedSectionId?.();
+  const linesEditorRef = getLinesEditorRef(deps.refs, { sectionId });
+  linesEditorRef?.applyTextFormat?.({ format });
+  const liveLinesEditorElement =
+    getLiveLinesEditorElementFromPayload(payload) || linesEditorRef;
   queueMicrotask(() => {
     syncDraftSectionFromLines(
       deps,
       getLiveLinesFromElement(liveLinesEditorElement),
+      { sectionId },
     );
   });
 };
@@ -1733,7 +2134,8 @@ const deleteSceneEditorLine = async (deps, lineId) => {
   }
   cancelSceneEditorDraftFlush(deps);
 
-  const sectionId = store.selectSelectedSectionId();
+  const sectionId =
+    findSectionIdForLine(store, lineId) || store.selectSelectedSectionId?.();
 
   if (!lineId || !sectionId) {
     return false;
@@ -1755,7 +2157,8 @@ const deleteSceneEditorLine = async (deps, lineId) => {
   }
 
   const draftSection =
-    store.selectDraftSection() || reconcileCurrentEditorSession(deps);
+    store.selectDraftSectionBySectionId?.({ sectionId }) ||
+    reconcileDraftSectionForSection(deps, sectionId);
   if (!draftSection) {
     return false;
   }
@@ -1770,7 +2173,10 @@ const deleteSceneEditorLine = async (deps, lineId) => {
   });
 
   store.setDraftSection({ draftSection: nextDraftSection });
-  store.setSelectedLineId({ selectedLineId: nextSelectedLineId });
+  selectEditorTarget(deps, {
+    sectionId,
+    lineId: nextSelectedLineId,
+  });
   render();
   subject.dispatch("sceneEditor.renderCanvas", {
     skipRender: true,
@@ -1779,13 +2185,13 @@ const deleteSceneEditorLine = async (deps, lineId) => {
   });
 
   if (nextSelectedLineId) {
-    focusLinesEditorContainer(deps.refs);
+    focusLinesEditorContainer(deps.refs, sectionId);
     requestAnimationFrame(() => {
-      scrollLinesEditorLineIntoView(deps.refs, nextSelectedLineId);
-      focusLinesEditorContainer(deps.refs);
+      scrollLinesEditorLineIntoView(deps.refs, nextSelectedLineId, sectionId);
+      focusLinesEditorContainer(deps.refs, sectionId);
     });
   } else {
-    focusLinesEditorContainer(deps.refs);
+    focusLinesEditorContainer(deps.refs, sectionId);
   }
   scheduleSceneEditorDraftFlush(deps, {
     reason: "structure",
@@ -1816,7 +2222,11 @@ export const handleLineContextMenuRequest = (deps, payload) => {
     return;
   }
 
-  store.setSelectedLineId({ selectedLineId: lineId });
+  selectEditorTarget(deps, {
+    sectionId:
+      getSectionIdFromPayload(payload) || findSectionIdForLine(store, lineId),
+    lineId,
+  });
   store.showLineDropdownMenu({
     position: detail.position || { x: 0, y: 0 },
     lineId,

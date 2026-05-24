@@ -123,6 +123,31 @@ const getSceneEditorDraftFlushThrottleDelayMs = (
   );
 };
 
+const selectPendingSceneEditorDraftSections = (store) => {
+  const draftSections = store.selectPendingDraftSections?.();
+  if (Array.isArray(draftSections)) {
+    return draftSections.filter(hasPendingSceneEditorDraftChanges);
+  }
+
+  const draftSection = store.selectDraftSection?.();
+  return hasPendingSceneEditorDraftChanges(draftSection) ? [draftSection] : [];
+};
+
+const selectSceneEditorDraftSectionByTarget = (store, draftSection) => {
+  if (!draftSection?.sectionId) {
+    return undefined;
+  }
+
+  return (
+    store.selectDraftSectionBySectionId?.({
+      sectionId: draftSection.sectionId,
+    }) ||
+    (store.selectDraftSection?.()?.sectionId === draftSection.sectionId
+      ? store.selectDraftSection()
+      : undefined)
+  );
+};
+
 export const createSceneEditorDraftPersistence = ({
   syncDraftSectionFromLines = (deps) => deps.store.selectDraftSection(),
   syncDraftSectionFromLiveEditor = (deps) => deps.store.selectDraftSection(),
@@ -131,10 +156,19 @@ export const createSceneEditorDraftPersistence = ({
   nowMs = defaultNowMs,
   timing = DEFAULT_SCENE_EDITOR_DRAFT_SAVE_TIMING,
 } = {}) => {
+  const syncDraftInput = (deps, { liveLines, sectionId } = {}) => {
+    if (Array.isArray(liveLines) && liveLines.length > 0) {
+      return syncDraftSectionFromLines(deps, liveLines, { sectionId });
+    }
+
+    return syncDraftSectionFromLiveEditor(deps, { sectionId });
+  };
+
   const flushSceneEditorDrafts = async (
     deps,
     {
       liveLines,
+      sectionId,
       showErrorAlert = true,
       rescheduleReason = "text",
       force = false,
@@ -143,20 +177,18 @@ export const createSceneEditorDraftPersistence = ({
     } = {},
   ) => {
     const { store } = deps;
+    const targetSectionId = sectionId || store.selectSelectedSectionId?.();
     clearScheduledDraftFlush(store);
-    if (Array.isArray(liveLines) && liveLines.length > 0) {
-      syncDraftSectionFromLines(deps, liveLines);
-    } else {
-      syncDraftSectionFromLiveEditor(deps);
-    }
+    syncDraftInput(deps, { liveLines, sectionId: targetSectionId });
 
-    if (!hasPendingSceneEditorDraftChanges(store.selectDraftSection())) {
+    const pendingDraftSections = selectPendingSceneEditorDraftSections(store);
+    if (pendingDraftSections.length === 0) {
       store.setDraftSavePendingSinceAt({ timestamp: 0 });
       return;
     }
 
     const draftReason = getSceneEditorDraftReason(
-      store.selectDraftSection(),
+      pendingDraftSections[0],
       rescheduleReason,
     );
 
@@ -188,14 +220,16 @@ export const createSceneEditorDraftPersistence = ({
         owner: deps.projectService,
         key: "draft-flush",
         task: async () => {
-          const draftSection =
-            Array.isArray(liveLines) && liveLines.length > 0
-              ? syncDraftSectionFromLines(deps, liveLines) ||
-                store.selectDraftSection()
-              : syncDraftSectionFromLiveEditor(deps) ||
-                store.selectDraftSection();
+          syncDraftInput(deps, { liveLines, sectionId: targetSectionId });
+          const taskDraftSections =
+            selectPendingSceneEditorDraftSections(store);
+          if (taskDraftSections.length === 0) {
+            store.setDraftSavePendingSinceAt({ timestamp: 0 });
+            return;
+          }
+
           const taskDraftReason = getSceneEditorDraftReason(
-            draftSection,
+            taskDraftSections[0],
             draftReason,
           );
           if (
@@ -213,14 +247,6 @@ export const createSceneEditorDraftPersistence = ({
             return;
           }
 
-          const snapshotLines =
-            Array.isArray(liveLines) && liveLines.length > 0
-              ? cloneSceneEditorLines(liveLines)
-              : cloneSceneEditorLines(draftSection?.lines);
-          if (snapshotLines.length === 0) {
-            return;
-          }
-
           const flushStartedAt = nowMs();
           const ownerTiming = getDraftFlushTiming(deps.projectService);
           ownerTiming.lastFlushStartedAt = flushStartedAt;
@@ -230,52 +256,77 @@ export const createSceneEditorDraftPersistence = ({
           store.setDraftSavePendingSinceAt({ timestamp: 0 });
 
           try {
-            await deps.projectService.syncSectionLinesSnapshot({
-              sectionId: draftSection?.sectionId,
-              lines: snapshotLines,
-            });
-            syncStoreProjectState(store, deps.projectService);
-            const currentDraftSection = store.selectDraftSection();
-            const revision = store.selectRepositoryRevision();
-            const isSameDraftTarget =
-              currentDraftSection?.sceneId === draftSection?.sceneId &&
-              currentDraftSection?.sectionId === draftSection?.sectionId;
-            const didDraftAdvance =
-              isSameDraftTarget &&
-              !areSceneEditorLinesEqual(
-                currentDraftSection?.lines,
-                snapshotLines,
-              );
+            let shouldReschedule = false;
+            let nextRescheduleReason = taskDraftReason;
 
-            if (didDraftAdvance) {
-              const nextDraftReason = getSceneEditorDraftReason(
-                currentDraftSection,
-                rescheduleReason,
+            for (const draftSection of taskDraftSections) {
+              const snapshotLines = cloneSceneEditorLines(draftSection?.lines);
+              if (snapshotLines.length === 0) {
+                continue;
+              }
+
+              await deps.projectService.syncSectionLinesSnapshot({
+                sectionId: draftSection?.sectionId,
+                lines: snapshotLines,
+              });
+              syncStoreProjectState(store, deps.projectService);
+              const currentDraftSection = selectSceneEditorDraftSectionByTarget(
+                store,
+                draftSection,
               );
-              store.setDraftSection({
-                draftSection: rebaseSceneEditorDraftSection(
+              const revision = store.selectRepositoryRevision();
+              const isSameDraftTarget =
+                currentDraftSection?.sceneId === draftSection?.sceneId &&
+                currentDraftSection?.sectionId === draftSection?.sectionId;
+              const didDraftAdvance =
+                isSameDraftTarget &&
+                !areSceneEditorLinesEqual(
+                  currentDraftSection?.lines,
+                  snapshotLines,
+                );
+
+              if (didDraftAdvance) {
+                nextRescheduleReason = getSceneEditorDraftReason(
                   currentDraftSection,
-                  {
-                    revision,
-                  },
-                ),
-              });
-              scheduleSceneEditorDraftFlush(deps, {
-                reason: nextDraftReason,
-              });
-              return;
+                  rescheduleReason,
+                );
+                store.setDraftSection({
+                  draftSection: rebaseSceneEditorDraftSection(
+                    currentDraftSection,
+                    {
+                      revision,
+                    },
+                  ),
+                });
+                shouldReschedule = true;
+                continue;
+              }
+
+              if (isSameDraftTarget) {
+                store.setDraftSection({
+                  draftSection: markSceneEditorDraftSectionClean(
+                    currentDraftSection,
+                    {
+                      revision,
+                    },
+                  ),
+                });
+
+                if (
+                  !store.selectSelectedSectionId ||
+                  currentDraftSection?.sectionId ===
+                    store.selectSelectedSectionId?.()
+                ) {
+                  reconcileCurrentEditorSession(deps);
+                }
+              }
             }
 
-            if (isSameDraftTarget) {
-              store.setDraftSection({
-                draftSection: markSceneEditorDraftSectionClean(
-                  currentDraftSection,
-                  {
-                    revision,
-                  },
-                ),
+            if (shouldReschedule) {
+              scheduleSceneEditorDraftFlush(deps, {
+                reason: nextRescheduleReason,
               });
-              reconcileCurrentEditorSession(deps);
+              return;
             }
 
             deps.render();
@@ -306,11 +357,16 @@ export const createSceneEditorDraftPersistence = ({
     const { store } = deps;
     clearScheduledDraftFlush(store);
 
-    const draftSection = store.selectDraftSection();
-    if (!hasPendingSceneEditorDraftChanges(draftSection)) {
+    const pendingDraftSections = selectPendingSceneEditorDraftSections(store);
+    if (pendingDraftSections.length === 0) {
       store.setDraftSavePendingSinceAt({ timestamp: 0 });
       return;
     }
+
+    const draftReason = getSceneEditorDraftReason(
+      pendingDraftSections[0],
+      reason,
+    );
 
     if (store.selectDraftSavePendingSinceAt() <= 0) {
       store.setDraftSavePendingSinceAt({
@@ -320,26 +376,26 @@ export const createSceneEditorDraftPersistence = ({
 
     if (immediate) {
       return flushSceneEditorDrafts(deps, {
-        rescheduleReason: reason,
+        rescheduleReason: draftReason,
         force: true,
       });
     }
 
     const delayMs = getSceneEditorDraftSaveDelayMs(store, {
-      reason,
+      reason: draftReason,
       nowMs,
       timing,
     });
     const timerId = setTimeout(() => {
       void flushSceneEditorDrafts(deps, {
-        rescheduleReason: reason,
+        rescheduleReason: draftReason,
       }).catch(() => {});
     }, delayMs);
     store.setDraftSaveTimerId({ timerId });
   };
 
   const runSceneEditorPersistence = async (deps, task, options = {}) => {
-    if (hasPendingSceneEditorDraftChanges(deps.store.selectDraftSection())) {
+    if (selectPendingSceneEditorDraftSections(deps.store).length > 0) {
       await flushSceneEditorDrafts(deps, {
         deferIfInFlight: true,
         enforceMinInterval: true,

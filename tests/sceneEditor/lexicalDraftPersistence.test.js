@@ -559,4 +559,111 @@ describe("scene editor lexical draft persistence", () => {
       vi.useRealTimers();
     }
   });
+
+  it("flushes all dirty draft sections in one pass", async () => {
+    const sectionOneDraft = createDirtyDraftSection([
+      createLine("line-1", "One"),
+    ]);
+    const sectionTwoLine = {
+      ...createLine("line-2", "Two"),
+      sectionId: "section-2",
+    };
+    const sectionTwoDraft = {
+      ...createDirtyDraftSection([sectionTwoLine]),
+      sectionId: "section-2",
+    };
+    const state = {
+      draftSections: {
+        "scene-1:section-1": sectionOneDraft,
+        "scene-1:section-2": sectionTwoDraft,
+      },
+      draftSection: sectionOneDraft,
+      revision: 3,
+      lastDraftFlushStartedAt: 0,
+      draftSavePendingSinceAt: 0,
+      draftSaveTimerId: undefined,
+      draftFlushInFlight: false,
+      selectedSectionId: "section-1",
+    };
+    const store = {
+      selectPendingDraftSections: () =>
+        Object.values(state.draftSections).filter(
+          (draftSection) => draftSection.dirty,
+        ),
+      selectDraftSection: () => state.draftSection,
+      selectDraftSectionBySectionId: ({ sectionId }) =>
+        state.draftSections["scene-1:" + sectionId],
+      setDraftSection: ({ draftSection }) => {
+        state.draftSections["scene-1:" + draftSection.sectionId] = draftSection;
+        if (draftSection.sectionId === state.selectedSectionId) {
+          state.draftSection = draftSection;
+        }
+      },
+      selectSelectedSectionId: () => state.selectedSectionId,
+      selectRepositoryRevision: () => state.revision,
+      selectLastDraftFlushStartedAt: () => state.lastDraftFlushStartedAt,
+      setLastDraftFlushStartedAt: ({ timestamp }) => {
+        state.lastDraftFlushStartedAt = timestamp;
+      },
+      selectDraftSavePendingSinceAt: () => state.draftSavePendingSinceAt,
+      setDraftSavePendingSinceAt: ({ timestamp }) => {
+        state.draftSavePendingSinceAt = timestamp;
+      },
+      selectDraftFlushInFlight: () => state.draftFlushInFlight,
+      setDraftFlushInFlight: ({ value }) => {
+        state.draftFlushInFlight = value === true;
+      },
+      selectDraftSaveTimerId: () => state.draftSaveTimerId,
+      setDraftSaveTimerId: ({ timerId }) => {
+        state.draftSaveTimerId = timerId;
+      },
+      clearDraftSaveTimer: () => {
+        state.draftSaveTimerId = undefined;
+      },
+    };
+    const syncSectionLinesSnapshot = vi.fn(async () => {});
+    const reconcileCurrentEditorSession = vi.fn();
+    const controller = createSceneEditorDraftPersistence({
+      syncDraftSectionFromLiveEditor: () => undefined,
+      syncStoreProjectState: () => {},
+      reconcileCurrentEditorSession,
+      nowMs: () => 2345,
+    });
+
+    await controller.flushSceneEditorDrafts({
+      store,
+      projectService: {
+        syncSectionLinesSnapshot,
+      },
+      render: vi.fn(),
+      appService: {
+        showAlert: vi.fn(),
+      },
+    });
+
+    expect(syncSectionLinesSnapshot).toHaveBeenCalledTimes(2);
+    expect(syncSectionLinesSnapshot).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        sectionId: "section-1",
+        lines: [createLine("line-1", "One")],
+      }),
+    );
+    expect(syncSectionLinesSnapshot).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        sectionId: "section-2",
+        lines: [sectionTwoLine],
+      }),
+    );
+    expect(state.draftSections["scene-1:section-1"]).toMatchObject({
+      dirty: false,
+      baseRevision: 3,
+    });
+    expect(state.draftSections["scene-1:section-2"]).toMatchObject({
+      dirty: false,
+      baseRevision: 3,
+    });
+    expect(reconcileCurrentEditorSession).toHaveBeenCalledOnce();
+  });
 });

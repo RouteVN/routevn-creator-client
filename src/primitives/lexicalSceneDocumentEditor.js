@@ -174,6 +174,7 @@ const STYLES = `
     --right-gutter-width: ${DEFAULT_RIGHT_GUTTER_WIDTH}px;
     --editor-inline-padding: 0px;
     --editor-top-padding: 0px;
+    --editor-min-height: 280px;
   }
 
   rvn-lexical-scene-document-editor * {
@@ -186,12 +187,12 @@ const STYLES = `
     width: 100%;
     min-width: 0;
     max-width: 100%;
-    min-height: 280px;
+    min-height: var(--editor-min-height, 280px);
     outline: none;
   }
 
   .editor {
-    min-height: 280px;
+    min-height: var(--editor-min-height, 280px);
     min-width: 0;
     width: 100%;
     max-width: 100%;
@@ -818,6 +819,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       textStyles: [],
       selectedLineId: undefined,
       showLineNumbers: true,
+      minHeight: 280,
       mode: "block",
       plainText: "",
       mentionTargets: [],
@@ -1285,6 +1287,21 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
     return this.state.showLineNumbers;
   }
 
+  set minHeight(value) {
+    const nextMinHeight = Number(value);
+    this.state.minHeight = Number.isFinite(nextMinHeight)
+      ? Math.max(24, nextMinHeight)
+      : 280;
+    if (!this.isConnected || !this.refs.editor) {
+      return;
+    }
+    this.scheduleRender();
+  }
+
+  get minHeight() {
+    return this.state.minHeight;
+  }
+
   setMode(mode) {
     const nextMode = mode === "text-editor" ? "text-editor" : "block";
     this.applyModeState(nextMode);
@@ -1581,19 +1598,30 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       Math.max(0, currentIndex + delta),
     );
     const nextLineId = lines[nextIndex]?.id;
+    const navigationDirection =
+      delta > 0 ? "down" : delta < 0 ? "up" : undefined;
+    const isBoundaryNavigation = delta !== 0 && nextIndex === currentIndex;
 
     if (!nextLineId) {
       return;
     }
 
-    this.state.selectedLineId = nextLineId;
-    this.scheduleRender();
-    this.scrollLineIntoView({ lineId: nextLineId });
-    this.dispatchSelectedLineChanged(nextLineId, {
+    const selectionDetail = {
       cursorPosition: undefined,
       isCollapsed: false,
       mode: "block",
-    });
+    };
+    if (navigationDirection) {
+      selectionDetail.navigationDirection = navigationDirection;
+    }
+    if (isBoundaryNavigation) {
+      selectionDetail.isBoundaryNavigation = true;
+    }
+
+    this.state.selectedLineId = nextLineId;
+    this.scheduleRender();
+    this.scrollLineIntoView({ lineId: nextLineId });
+    this.dispatchSelectedLineChanged(nextLineId, selectionDetail);
   }
 
   dispatchShortcutEvent(eventName, detail = {}) {
@@ -5750,14 +5778,22 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
         };
       });
 
+    const detail = {
+      lineId,
+      cursorPosition: selectionDetail?.cursorPosition,
+      isCollapsed: selectionDetail?.isCollapsed === true,
+      mode: selectionDetail?.mode || this.state.mode,
+    };
+    if (selectionDetail?.navigationDirection) {
+      detail.navigationDirection = selectionDetail.navigationDirection;
+    }
+    if (selectionDetail?.isBoundaryNavigation === true) {
+      detail.isBoundaryNavigation = true;
+    }
+
     this.dispatchEvent(
       new CustomEvent("selected-line-changed", {
-        detail: {
-          lineId,
-          cursorPosition: selectionDetail?.cursorPosition,
-          isCollapsed: selectionDetail?.isCollapsed === true,
-          mode: selectionDetail?.mode || this.state.mode,
-        },
+        detail,
         bubbles: true,
       }),
     );
@@ -5789,6 +5825,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       "--right-gutter-width",
       `${this.rightGutterWidth}px`,
     );
+    this.style.setProperty("--editor-min-height", `${this.state.minHeight}px`);
     this.refs.placeholder.hidden = this.state.plainText.length > 0;
     this.refs.placeholder.textContent = this.state.placeholder;
     this.renderGutters();
