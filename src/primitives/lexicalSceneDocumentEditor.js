@@ -572,6 +572,16 @@ const isPlainShortcutKey = (event, key) => {
   );
 };
 
+const isPlainSpaceKey = (event) => {
+  return (
+    !event?.ctrlKey &&
+    !event?.metaKey &&
+    !event?.altKey &&
+    !event?.isComposing &&
+    (event?.key === " " || event?.key === "Spacebar" || event?.code === "Space")
+  );
+};
+
 const getEventTimestamp = (event) => {
   const timestamp = Number(event?.timeStamp);
   return Number.isFinite(timestamp) ? timestamp : undefined;
@@ -3418,6 +3428,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
 
     if (this.state.mode !== "block") {
       return false;
+    }
+
+    if (isPlainSpaceKey(event)) {
+      event.preventDefault();
+      event.stopPropagation();
+      return true;
     }
 
     const currentLineId = this.state.selectedLineId || this.state.lines[0]?.id;
