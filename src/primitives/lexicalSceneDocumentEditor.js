@@ -1264,10 +1264,28 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   }
 
   set selectedLineId(value) {
-    this.state.selectedLineId = value;
+    const nextSelectedLineId =
+      typeof value === "string" && value.length > 0 ? value : undefined;
+    this.state.selectedLineId = nextSelectedLineId;
+
+    if (!nextSelectedLineId) {
+      this.isEditorFocused = false;
+      this.lastProgrammaticFocusTarget = undefined;
+      this.pendingFocusTarget = undefined;
+      this.programmaticFocusRestoreUntil = 0;
+      this.pendingSelectionSnapshot = undefined;
+      this.hideSelectionPopover();
+      this.closeMentionMenu();
+    }
+
     if (!this.isConnected || !this.refs.editor) {
       return;
     }
+
+    if (!nextSelectedLineId) {
+      this.applyModeState("block");
+    }
+
     this.scheduleRender();
   }
 
@@ -5657,11 +5675,12 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
   syncFromEditorState(editorState) {
     const snapshot = this.readEditorSnapshot(editorState);
 
+    const ownsFocus = this.isEditorFocused === true;
     const previousLines = this.state.lines;
     const previousSelectedLineId = this.state.selectedLineId;
     this.state.lines = cloneSceneEditorLines(snapshot.lines);
     this.state.selectedLineId =
-      this.state.mode === "block"
+      this.state.mode === "block" || !ownsFocus
         ? previousSelectedLineId
         : snapshot.selectedLineId;
     this.state.activeFormats = snapshot.activeFormats;
@@ -5718,7 +5737,7 @@ export class LexicalSceneDocumentEditorElement extends HTMLElement {
       });
 
     const focusTarget = this.pendingFocusTarget;
-    if (didLinesChange && !this.isApplyingExternalLines) {
+    if (didLinesChange && !this.isApplyingExternalLines && ownsFocus) {
       const detail = {
         lines: cloneSceneEditorLines(this.state.lines),
         selectedLineId: this.state.selectedLineId,

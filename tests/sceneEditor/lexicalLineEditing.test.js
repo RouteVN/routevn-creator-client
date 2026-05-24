@@ -1634,6 +1634,122 @@ describe("lexical scene document editor line editing", () => {
     }
   });
 
+  it("clears stale focus restore state when selected line is cleared", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+
+      Object.defineProperty(editorElement, "isConnected", {
+        configurable: true,
+        value: true,
+      });
+      editorElement.state = {
+        mode: "text-editor",
+        selectedLineId: "line-1",
+      };
+      editorElement.refs = {
+        editor: document.createElement("div"),
+      };
+      editorElement.isEditorFocused = true;
+      editorElement.lastProgrammaticFocusTarget = {
+        lineId: "line-1",
+        cursorPosition: 2,
+      };
+      editorElement.pendingFocusTarget = {
+        lineId: "line-1",
+        cursorPosition: 2,
+      };
+      editorElement.programmaticFocusRestoreUntil = Number.POSITIVE_INFINITY;
+      editorElement.pendingSelectionSnapshot = {
+        lineId: "line-1",
+      };
+      editorElement.hideSelectionPopover = vi.fn();
+      editorElement.closeMentionMenu = vi.fn();
+      editorElement.applyModeState = vi.fn((mode) => {
+        editorElement.state.mode = mode;
+      });
+      editorElement.scheduleRender = vi.fn();
+
+      editorElement.selectedLineId = undefined;
+
+      expect(editorElement.state.selectedLineId).toBeUndefined();
+      expect(editorElement.isEditorFocused).toBe(false);
+      expect(editorElement.lastProgrammaticFocusTarget).toBeUndefined();
+      expect(editorElement.pendingFocusTarget).toBeUndefined();
+      expect(editorElement.programmaticFocusRestoreUntil).toBe(0);
+      expect(editorElement.pendingSelectionSnapshot).toBeUndefined();
+      expect(editorElement.hideSelectionPopover).toHaveBeenCalledOnce();
+      expect(editorElement.closeMentionMenu).toHaveBeenCalledOnce();
+      expect(editorElement.applyModeState).toHaveBeenCalledWith("block");
+      expect(editorElement.scheduleRender).toHaveBeenCalledOnce();
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
+  it("ignores text selection sync from an unfocused editor", async () => {
+    const restoreDomGlobals = installDomGlobals();
+
+    try {
+      const { LexicalSceneDocumentEditorElement } = await import(
+        "../../src/primitives/lexicalSceneDocumentEditor.js"
+      );
+      const editorElement = Object.create(
+        LexicalSceneDocumentEditorElement.prototype,
+      );
+      const lines = [
+        {
+          id: "line-1",
+          actions: {
+            dialogue: {
+              content: [{ text: "first" }],
+            },
+          },
+        },
+        {
+          id: "line-2",
+          actions: {
+            dialogue: {
+              content: [{ text: "second" }],
+            },
+          },
+        },
+      ];
+
+      editorElement.state = {
+        mode: "text-editor",
+        lines,
+        selectedLineId: "line-1",
+        mentionTargets: [],
+      };
+      editorElement.isEditorFocused = false;
+      editorElement.readEditorSnapshot = vi.fn(() => ({
+        lines,
+        selectedLineId: "line-2",
+        activeFormats: {},
+      }));
+      editorElement.shouldPreserveMentionMenuAfterSelectionLoss = vi.fn(
+        () => false,
+      );
+      editorElement.closeMentionMenu = vi.fn();
+      editorElement.scheduleRender = vi.fn();
+      editorElement.dispatchSelectedLineChanged = vi.fn();
+
+      editorElement.syncFromEditorState({});
+
+      expect(editorElement.state.selectedLineId).toBe("line-1");
+      expect(editorElement.dispatchSelectedLineChanged).not.toHaveBeenCalled();
+    } finally {
+      restoreDomGlobals();
+    }
+  });
+
   it("preserves block selection when editor state sync has stale native selection", async () => {
     const restoreDomGlobals = installDomGlobals();
 
