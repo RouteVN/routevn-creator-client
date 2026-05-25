@@ -1,4 +1,8 @@
 import { toFlatItems } from "../../internal/project/tree.js";
+import {
+  BACKGROUND_TRANSFORM_FIELDS,
+  createBackgroundWithInlineTransform,
+} from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
 
 const createEmptyCollection = () => ({
   items: {},
@@ -109,6 +113,12 @@ const getDomainStateFromRepository = (repository) => {
   return repository.getState();
 };
 
+const hasBackgroundInlineTransform = (background = {}) => {
+  return BACKGROUND_TRANSFORM_FIELDS.some(
+    (field) => background?.[field] !== undefined,
+  );
+};
+
 const buildBackgroundDataFromState = (
   store,
   { includeTemporaryResource = false } = {},
@@ -118,6 +128,8 @@ const buildBackgroundDataFromState = (
       ? (store.selectTempSelectedResource?.() ?? store.selectSelectedResource())
       : store.selectSelectedResource();
   const selectedTransformId = store.selectSelectedTransform();
+  const customTransformEnabled = store.selectCustomTransformEnabled();
+  const selectedCustomTransform = store.selectCustomTransform?.();
   const selectedColorId = store.selectSelectedColor();
   const selectedOpacity = store.selectSelectedOpacity();
   const selectedBlur = store.selectSelectedBlurActionValue();
@@ -149,7 +161,18 @@ const buildBackgroundDataFromState = (
     backgroundData.blur = selectedBlur;
   }
 
-  if (hasBackgroundTarget && selectedTransformId) {
+  if (
+    hasBackgroundTarget &&
+    customTransformEnabled &&
+    selectedCustomTransform
+  ) {
+    Object.assign(
+      backgroundData,
+      createBackgroundWithInlineTransform({}, selectedCustomTransform),
+    );
+  }
+
+  if (hasBackgroundTarget && !customTransformEnabled && selectedTransformId) {
     backgroundData.transformId = selectedTransformId;
   }
 
@@ -188,6 +211,72 @@ const dispatchTemporaryPresentationStateChange = (deps) => {
         },
       },
     }),
+  );
+};
+
+export const handleCustomTransformButtonClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+  payload?._event?.stopImmediatePropagation?.();
+  const { dispatchEvent, store, render } = deps;
+
+  store.openCustomTransformEditor?.();
+  render?.();
+
+  if (typeof dispatchEvent !== "function") {
+    return;
+  }
+
+  const background = buildBackgroundDataFromState(store, {
+    includeTemporaryResource: true,
+  });
+
+  dispatchEvent(
+    new CustomEvent("background-transform-customize", {
+      detail: {
+        background,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+export const handleSetCustomTransform = (deps, { transform } = {}) => {
+  const { store, render } = deps;
+  store.setCustomTransformEnabled?.({
+    enabled: true,
+  });
+  store.setCustomTransform?.({
+    transform,
+  });
+  render?.();
+};
+
+export const handleCustomTransformDoneButtonClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+  payload?._event?.stopImmediatePropagation?.();
+  const { dispatchEvent, store, render } = deps;
+
+  store.closeCustomTransformEditor?.();
+  render?.();
+
+  dispatchEvent?.(
+    new CustomEvent("background-transform-editor-done", {
+      detail: {},
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+export const handleGetBackgroundTransformPreviewCanvasRoot = ({ refs }) => {
+  const canvasHost = refs?.backgroundTransformPreviewCanvasHost;
+  return (
+    canvasHost?.getCanvasRoot?.() ||
+    canvasHost?.shadowRoot?.querySelector?.("#canvas") ||
+    canvasHost?.querySelector?.("#canvas")
   );
 };
 
@@ -251,7 +340,14 @@ export const handleBeforeMount = (deps) => {
     });
   }
 
-  if (transformId) {
+  if (hasBackgroundInlineTransform(props.background)) {
+    store.setCustomTransformEnabled({
+      enabled: true,
+    });
+    store.setCustomTransform({
+      transform: props.background,
+    });
+  } else if (transformId) {
     store.setSelectedTransform({
       transformId,
     });
@@ -411,6 +507,28 @@ export const handleFormInputChange = (deps, payload) => {
     store.setSelectedAnimation({
       animationId: fieldValue,
     });
+    render();
+    dispatchTemporaryPresentationStateChange(deps);
+    return;
+  }
+
+  if (name === "customTransform") {
+    const customTransformWasEnabled = store.selectCustomTransformEnabled();
+    const customTransformEnabled = fieldValue === true || fieldValue === "true";
+
+    store.setCustomTransformEnabled({
+      enabled: fieldValue,
+    });
+
+    if (!customTransformWasEnabled && customTransformEnabled) {
+      const selectedTransform = store.selectSelectedTransformResource?.();
+      if (selectedTransform) {
+        store.setCustomTransform?.({
+          transform: selectedTransform,
+        });
+      }
+    }
+
     render();
     dispatchTemporaryPresentationStateChange(deps);
     return;

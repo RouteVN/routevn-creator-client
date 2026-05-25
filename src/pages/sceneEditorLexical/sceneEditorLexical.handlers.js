@@ -1,3 +1,4 @@
+import { filter, tap } from "rxjs";
 import { createProjectStateStream } from "../../deps/services/shared/projectStateStream.js";
 import { generateId } from "../../internal/id.js";
 import {
@@ -24,6 +25,11 @@ import {
   updateSceneEditorSectionChanges,
 } from "../../internal/ui/sceneEditor/runtime.js";
 import {
+  createActionItemWithInlineTransform,
+  createBackgroundWithInlineTransform,
+  normalizeBackgroundTransformEditorTransform,
+} from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
+import {
   createSceneEditorSectionWithName,
   isSectionsOverviewOpen,
   reconcileSceneEditorSelection,
@@ -35,6 +41,8 @@ const MISSING_PROJECT_RESOLUTION_MESSAGE =
   "Project is missing required resolution settings.";
 const SHOW_LINE_NUMBERS_CONFIG_KEY = "sceneEditor.showLineNumbers";
 const IS_MUTED_CONFIG_KEY = "sceneEditor.isMuted";
+const BACKGROUND_TRANSFORM_RESIZE_TARGET_PREFIX = "selected-border-resize-";
+const MIN_BACKGROUND_TRANSFORM_SCALE = 0.01;
 
 const toPlainObject = (value) => {
   return value !== null && typeof value === "object" && !Array.isArray(value)
@@ -572,6 +580,624 @@ const syncSceneEditorProjectPayload = async (deps, payload = {}) => {
   });
 };
 
+const BACKGROUND_TRANSFORM_EDITOR_RENDER_PAYLOAD = {
+  skipRender: true,
+  skipAnimations: true,
+  skipAudio: true,
+};
+
+const requestBackgroundTransformEditorCanvasRender = (subject) => {
+  subject?.dispatch?.(
+    "sceneEditor.renderCanvas",
+    BACKGROUND_TRANSFORM_EDITOR_RENDER_PAYLOAD,
+  );
+};
+
+const renderBackgroundTransformEditorCanvasNow = (deps) => {
+  void renderSceneEditorState(
+    deps,
+    BACKGROUND_TRANSFORM_EDITOR_RENDER_PAYLOAD,
+  ).catch((error) => {
+    console.error(
+      "[sceneEditor] Background transform preview render failed",
+      error,
+    );
+  });
+};
+
+const getRepositoryItemById = (collection, itemId) => {
+  if (!itemId) {
+    return undefined;
+  }
+
+  return collection?.items?.[itemId] ?? collection?.[itemId];
+};
+
+const getBackgroundResourceDimensions = (repositoryState = {}, resourceId) => {
+  const resource =
+    getRepositoryItemById(repositoryState.images, resourceId) ??
+    getRepositoryItemById(repositoryState.videos, resourceId);
+  const width = Number(resource?.width);
+  const height = Number(resource?.height);
+
+  return {
+    width: Number.isFinite(width) && width > 0 ? width : undefined,
+    height: Number.isFinite(height) && height > 0 ? height : undefined,
+  };
+};
+
+const getDefaultBackgroundTransform = (store, background = {}) => {
+  const repositoryState = store.selectRepositoryState?.() ?? {};
+  const resolution = repositoryState.project?.resolution;
+  const resourceId = background.resourceId;
+  const isLayoutBackground =
+    !!resourceId &&
+    !!getRepositoryItemById(repositoryState.layouts, resourceId);
+  const width = Number(resolution?.width);
+  const height = Number(resolution?.height);
+  const dimensions = getBackgroundResourceDimensions(
+    repositoryState,
+    resourceId,
+  );
+  const defaultOriginX = isLayoutBackground
+    ? 0
+    : (dimensions.width ?? (Number.isFinite(width) ? width : 0)) / 2;
+  const defaultOriginY = isLayoutBackground
+    ? 0
+    : (dimensions.height ?? (Number.isFinite(height) ? height : 0)) / 2;
+
+  return normalizeBackgroundTransformEditorTransform({
+    x: isLayoutBackground ? 0 : Number.isFinite(width) ? width / 2 : 0,
+    y: isLayoutBackground ? 0 : Number.isFinite(height) ? height / 2 : 0,
+    anchorX: isLayoutBackground ? 0 : 0.5,
+    anchorY: isLayoutBackground ? 0 : 0.5,
+    scaleX: 1,
+    scaleY: 1,
+    rotation: 0,
+    originX: defaultOriginX,
+    originY: defaultOriginY,
+  });
+};
+
+const selectTransformResourceById = (store, transformId) => {
+  if (!transformId) {
+    return undefined;
+  }
+
+  const transforms = store.selectRepositoryState?.()?.transforms;
+  return transforms?.items?.[transformId] ?? transforms?.[transformId];
+};
+
+const reopenBackgroundCommandLine = ({ refs, store, background } = {}) => {
+  const selectedLine = store.selectSelectedLine?.();
+  const actions = {
+    ...toPlainObject(selectedLine?.actions),
+    background: toPlainObject(background),
+  };
+
+  refs?.systemActions?.transformedHandlers?.open?.({
+    mode: "background",
+    actions,
+  });
+};
+
+const getDuplicateActionItemIds = (items = []) => {
+  const counts = new Map();
+  for (const item of items) {
+    if (item?.id) {
+      counts.set(item.id, (counts.get(item.id) ?? 0) + 1);
+    }
+  }
+
+  return new Set(
+    Array.from(counts.entries())
+      .filter(([, count]) => count > 1)
+      .map(([id]) => id),
+  );
+};
+
+const getCharacterTransformEditorTargetId = (
+  item = {},
+  index = 0,
+  items = [],
+) => {
+  const duplicateIds = getDuplicateActionItemIds(items);
+  if (!duplicateIds.has(item.id)) {
+    return `character-container-${item.id}`;
+  }
+
+  const spritePartIds = item.sprites?.map(({ resourceId }) => resourceId) || [];
+  return spritePartIds.length > 0
+    ? `character-container-${item.id}-${index}-${spritePartIds.join("-")}`
+    : `character-container-${item.id}`;
+};
+
+const getActionTransformEditorTargetId = ({
+  targetType,
+  item,
+  itemIndex,
+  action,
+} = {}) => {
+  if (targetType === "visual") {
+    return item?.id ? `visual-${item.id}` : undefined;
+  }
+
+  if (targetType === "character") {
+    return getCharacterTransformEditorTargetId(
+      item,
+      itemIndex,
+      action?.items ?? [],
+    );
+  }
+
+  return undefined;
+};
+
+const replaceActionItem = ({ action, itemIndex, item } = {}) => {
+  const items = Array.isArray(action?.items) ? [...action.items] : [];
+  if (!Number.isInteger(itemIndex) || !items[itemIndex]) {
+    return toPlainObject(action);
+  }
+
+  items[itemIndex] = item;
+  return {
+    ...toPlainObject(action),
+    items,
+  };
+};
+
+const reopenActionTransformCommandLine = ({
+  refs,
+  store,
+  actionKey,
+  itemIndex,
+  item,
+  action,
+} = {}) => {
+  const selectedLine = store.selectSelectedLine?.();
+  const actions = {
+    ...toPlainObject(selectedLine?.actions),
+  };
+  actions[actionKey] = action
+    ? toPlainObject(action)
+    : replaceActionItem({
+        action: actions[actionKey],
+        itemIndex,
+        item,
+      });
+
+  refs?.systemActions?.transformedHandlers?.open?.({
+    mode: actionKey,
+    actions,
+  });
+};
+
+const selectInitialBackgroundTransformEditorTransform = (
+  store,
+  background = {},
+) => {
+  const selectedLine = store.selectSelectedLine?.();
+  const transformId =
+    background.transformId ?? selectedLine?.actions?.background?.transformId;
+  const transform = selectTransformResourceById(store, transformId);
+
+  return normalizeBackgroundTransformEditorTransform({
+    ...getDefaultBackgroundTransform(store, background),
+    ...toPlainObject(transform),
+    ...toPlainObject(background),
+  });
+};
+
+const selectInitialActionTransformEditorTransform = (store, item = {}) => {
+  const transform = selectTransformResourceById(store, item.transformId);
+
+  return normalizeBackgroundTransformEditorTransform({
+    ...toPlainObject(transform),
+    ...toPlainObject(item),
+  });
+};
+
+const getBackgroundTransformDragModeFromTargetId = (targetId) => {
+  if (targetId === "selected-border") {
+    return "move";
+  }
+
+  if (targetId?.startsWith(BACKGROUND_TRANSFORM_RESIZE_TARGET_PREFIX)) {
+    return targetId.slice(BACKGROUND_TRANSFORM_RESIZE_TARGET_PREFIX.length);
+  }
+
+  return undefined;
+};
+
+const isBackgroundTransformResizeMode = (dragMode) => {
+  return (
+    dragMode === "left" ||
+    dragMode === "right" ||
+    dragMode === "top" ||
+    dragMode === "bottom"
+  );
+};
+
+const getPositiveNumber = (value, fallback) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const getBackgroundTransformUniformScale = (transform = {}) => {
+  return Math.max(
+    Math.abs(getPositiveNumber(transform.scaleX, 1)),
+    Math.abs(getPositiveNumber(transform.scaleY, 1)),
+    MIN_BACKGROUND_TRANSFORM_SCALE,
+  );
+};
+
+const getPositiveScale = (value) => {
+  return getPositiveNumber(Math.abs(Number(value)), 1);
+};
+
+const getResizeScaleDenominator = (
+  resizeEdge,
+  metrics = {},
+  { scaleX = 1, scaleY = 1 } = {},
+) => {
+  const width = getPositiveNumber(metrics.width, 1) / getPositiveScale(scaleX);
+  const height =
+    getPositiveNumber(metrics.height, 1) / getPositiveScale(scaleY);
+  const anchorX = Number.isFinite(metrics.anchorX) ? metrics.anchorX : 0.5;
+  const anchorY = Number.isFinite(metrics.anchorY) ? metrics.anchorY : 0.5;
+  let distance = 1;
+
+  if (resizeEdge === "left") {
+    distance = width * anchorX;
+  } else if (resizeEdge === "right") {
+    distance = width * (1 - anchorX);
+  } else if (resizeEdge === "top") {
+    distance = height * anchorY;
+  } else if (resizeEdge === "bottom") {
+    distance = height * (1 - anchorY);
+  }
+
+  return distance > 0 ? distance : undefined;
+};
+
+const getResizePointerDelta = (resizeEdge, dragStartPosition, x, y) => {
+  if (resizeEdge === "left") {
+    return dragStartPosition.x - x;
+  }
+
+  if (resizeEdge === "right") {
+    return x - dragStartPosition.x;
+  }
+
+  if (resizeEdge === "top") {
+    return dragStartPosition.y - y;
+  }
+
+  if (resizeEdge === "bottom") {
+    return y - dragStartPosition.y;
+  }
+
+  return 0;
+};
+
+export const applyBackgroundTransformResizeChange = ({
+  transform,
+  dragStartPosition,
+  x,
+  y,
+} = {}) => {
+  const resizeEdge = dragStartPosition?.resizeEdge;
+  if (
+    !isBackgroundTransformResizeMode(resizeEdge) ||
+    typeof x !== "number" ||
+    typeof y !== "number"
+  ) {
+    return transform;
+  }
+
+  const startScale = getBackgroundTransformUniformScale({
+    scaleX: dragStartPosition.transformStartScaleX,
+    scaleY: dragStartPosition.transformStartScaleY,
+  });
+  const denominator = getResizeScaleDenominator(
+    resizeEdge,
+    dragStartPosition.selectedElementMetrics,
+    {
+      scaleX: dragStartPosition.transformStartScaleX,
+      scaleY: dragStartPosition.transformStartScaleY,
+    },
+  );
+  if (!denominator) {
+    return transform;
+  }
+
+  const scaleDelta =
+    getResizePointerDelta(resizeEdge, dragStartPosition, x, y) / denominator;
+  const nextScale = Math.max(
+    MIN_BACKGROUND_TRANSFORM_SCALE,
+    startScale + scaleDelta,
+  );
+
+  return normalizeBackgroundTransformEditorTransform({
+    ...transform,
+    scaleX: nextScale,
+    scaleY: nextScale,
+  });
+};
+
+const applyBackgroundTransformDragChange = ({
+  transform,
+  dragStartPosition,
+  x,
+  y,
+} = {}) => {
+  if (!dragStartPosition || typeof x !== "number" || typeof y !== "number") {
+    return transform;
+  }
+
+  return normalizeBackgroundTransformEditorTransform({
+    ...transform,
+    x: dragStartPosition.transformStartX + x - dragStartPosition.x,
+    y: dragStartPosition.transformStartY + y - dragStartPosition.y,
+  });
+};
+
+const handleBackgroundTransformBorderDragStart = (deps, payload = {}) => {
+  if (!deps.store.selectIsBackgroundTransformEditorOpen?.()) {
+    return;
+  }
+
+  if (!getBackgroundTransformDragModeFromTargetId(payload.targetId)) {
+    return;
+  }
+
+  deps.store.clearBackgroundTransformEditorDragStartPosition?.();
+};
+
+const handleBackgroundTransformBorderDragMove = (deps, payload = {}) => {
+  const { store, render } = deps;
+  if (!store.selectIsBackgroundTransformEditorOpen?.()) {
+    return;
+  }
+
+  if (typeof payload.x !== "number" || typeof payload.y !== "number") {
+    return;
+  }
+
+  const dragMode = getBackgroundTransformDragModeFromTargetId(payload.targetId);
+  if (!dragMode) {
+    return;
+  }
+
+  const editor = store.selectBackgroundTransformEditor?.();
+  const transform = normalizeBackgroundTransformEditorTransform(
+    editor?.transform,
+  );
+  if (!editor?.dragStartPosition) {
+    if (
+      isBackgroundTransformResizeMode(dragMode) &&
+      !editor?.selectedElementMetrics
+    ) {
+      return;
+    }
+
+    store.setBackgroundTransformEditorDragStartPosition?.({
+      dragStartPosition: {
+        x: payload.x,
+        y: payload.y,
+        resizeEdge: isBackgroundTransformResizeMode(dragMode)
+          ? dragMode
+          : undefined,
+        selectedElementMetrics: editor?.selectedElementMetrics,
+        transformStartX: transform.x,
+        transformStartY: transform.y,
+        transformStartScaleX: transform.scaleX,
+        transformStartScaleY: transform.scaleY,
+      },
+    });
+    return;
+  }
+
+  const updatedTransform = editor.dragStartPosition.resizeEdge
+    ? applyBackgroundTransformResizeChange({
+        transform,
+        dragStartPosition: editor.dragStartPosition,
+        x: payload.x,
+        y: payload.y,
+      })
+    : applyBackgroundTransformDragChange({
+        transform,
+        dragStartPosition: editor.dragStartPosition,
+        x: payload.x,
+        y: payload.y,
+      });
+
+  store.setBackgroundTransformEditorTransform?.({
+    transform: updatedTransform,
+  });
+  render();
+  renderBackgroundTransformEditorCanvasNow(deps);
+};
+
+const handleBackgroundTransformBorderDragEnd = (deps) => {
+  if (!deps.store.selectIsBackgroundTransformEditorOpen?.()) {
+    return;
+  }
+
+  deps.store.clearBackgroundTransformEditorDragStartPosition?.();
+  requestBackgroundTransformEditorCanvasRender(deps.subject);
+};
+
+const mountBackgroundTransformEditorSubscriptions = (deps) => {
+  const { subject } = deps;
+  const streams = [
+    subject.pipe(
+      filter(({ action }) => action === "border-drag-start"),
+      tap(({ payload }) =>
+        handleBackgroundTransformBorderDragStart(deps, payload),
+      ),
+    ),
+    subject.pipe(
+      filter(({ action }) => action === "border-drag-move"),
+      tap(({ payload }) =>
+        handleBackgroundTransformBorderDragMove(deps, payload),
+      ),
+    ),
+    subject.pipe(
+      filter(({ action }) => action === "border-drag-end"),
+      tap(() => handleBackgroundTransformBorderDragEnd(deps)),
+    ),
+  ];
+  const active = streams.map((stream) => stream.subscribe());
+  return () => active.forEach((subscription) => subscription?.unsubscribe?.());
+};
+
+export const handleBackgroundTransformCustomize = (deps, payload) => {
+  payload?._event?.stopPropagation?.();
+  const { refs, store, render, subject } = deps;
+  const background = toPlainObject(payload?._event?.detail?.background);
+  const transform = selectInitialBackgroundTransformEditorTransform(
+    store,
+    background,
+  );
+
+  store.setTemporaryPresentationState?.({
+    presentationState: {
+      background,
+    },
+  });
+  store.openBackgroundTransformEditor?.({
+    background,
+    transform,
+  });
+  render();
+  reopenBackgroundCommandLine({ refs, store, background });
+  requestBackgroundTransformEditorCanvasRender(subject);
+};
+
+const closeActionTransformEditor = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+  payload?._event?.stopImmediatePropagation?.();
+  const { refs, store, render, subject } = deps;
+  store.suppressNextActionsDialogClose?.();
+  const editor = store.selectBackgroundTransformEditor?.();
+  const actionKey = editor?.actionKey === "character" ? "character" : "visual";
+  const nextItem = createActionItemWithInlineTransform(
+    editor?.item,
+    editor?.transform,
+    { preserveTransformId: true },
+  );
+
+  refs?.systemActions?.transformedHandlers?.handleSetActionCustomTransform?.({
+    targetType: editor?.targetType,
+    itemIndex: editor?.itemIndex,
+    item: editor?.item,
+    transform: editor?.transform,
+  });
+  store.closeBackgroundTransformEditor?.();
+  render();
+  reopenActionTransformCommandLine({
+    refs,
+    store,
+    actionKey,
+    itemIndex: editor?.itemIndex,
+    item: nextItem,
+  });
+  requestBackgroundTransformEditorCanvasRender(subject);
+  globalThis.setTimeout?.(() => {
+    store.clearSuppressNextActionsDialogClose?.();
+    render();
+  }, 50);
+};
+
+export const handleBackgroundTransformEditorCloseClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+  payload?._event?.stopImmediatePropagation?.();
+  const { refs, store, render, subject } = deps;
+  const editor = store.selectBackgroundTransformEditor?.();
+  if (editor?.targetType && editor.targetType !== "background") {
+    closeActionTransformEditor(deps, payload);
+    return;
+  }
+
+  store.suppressNextActionsDialogClose?.();
+  const nextBackground = createBackgroundWithInlineTransform(
+    editor?.background,
+    editor?.transform,
+  );
+  refs?.systemActions?.transformedHandlers?.handleSetBackgroundCustomTransform?.(
+    {
+      background: editor?.background,
+      transform: editor?.transform,
+    },
+  );
+  store.closeBackgroundTransformEditor?.();
+  render();
+  reopenBackgroundCommandLine({
+    refs,
+    store,
+    background: nextBackground,
+  });
+  requestBackgroundTransformEditorCanvasRender(subject);
+  globalThis.setTimeout?.(() => {
+    store.clearSuppressNextActionsDialogClose?.();
+    render();
+  }, 50);
+};
+
+export const handleBackgroundTransformEditorDone = (deps, payload) => {
+  handleBackgroundTransformEditorCloseClick(deps, payload);
+};
+
+export const handleActionTransformCustomize = (deps, payload) => {
+  payload?._event?.stopPropagation?.();
+  const { refs, store, render, subject } = deps;
+  const detail = toPlainObject(payload?._event?.detail);
+  const targetType = detail.targetType === "character" ? "character" : "visual";
+  const actionKey = detail.actionKey === "character" ? "character" : "visual";
+  const selectedLine = store.selectSelectedLine?.();
+  const action = toPlainObject(
+    detail.action ?? selectedLine?.actions?.[actionKey],
+  );
+  const itemIndex = detail.itemIndex;
+  const item = toPlainObject(detail.item ?? action.items?.[itemIndex]);
+  const transform = selectInitialActionTransformEditorTransform(store, item);
+  const targetId = getActionTransformEditorTargetId({
+    targetType,
+    item,
+    itemIndex,
+    action,
+  });
+
+  store.setTemporaryPresentationState?.({
+    presentationState: {
+      [actionKey]: action,
+    },
+  });
+  store.openBackgroundTransformEditor?.({
+    targetType,
+    actionKey,
+    itemIndex,
+    item,
+    targetId,
+    transform,
+  });
+  render();
+  reopenActionTransformCommandLine({
+    refs,
+    store,
+    actionKey,
+    action,
+  });
+  requestBackgroundTransformEditorCanvasRender(subject);
+};
+
+export const handleActionTransformEditorDone = (deps, payload) => {
+  closeActionTransformEditor(deps, payload);
+};
+
 export const handleBeforeMount = (deps) => {
   const { projectService, appService, store } = deps;
   store.setScenePageLoading({ isLoading: true });
@@ -584,6 +1210,8 @@ export const handleBeforeMount = (deps) => {
   });
 
   const cleanupRuntimeSubscriptions = mountSceneEditorSubscriptions(deps);
+  const cleanupBackgroundTransformEditorSubscriptions =
+    mountBackgroundTransformEditorSubscriptions(deps);
   const projectSubscription = createProjectStateStream({
     projectService,
     emitCurrent: false,
@@ -596,6 +1224,7 @@ export const handleBeforeMount = (deps) => {
   return async () => {
     projectSubscription.unsubscribe();
     cleanupRuntimeSubscriptions();
+    cleanupBackgroundTransformEditorSubscriptions();
     await flushSceneEditorDrafts(deps, { force: true });
     await projectService.clearActiveSceneId().catch(() => {});
     await resetSceneEditorRuntime(deps);
@@ -1515,11 +2144,21 @@ export const handleSectionTabRightClick = (deps, payload) => {
 
 export const handleActionsDialogClose = (deps) => {
   const { render, store, subject } = deps;
+  if (store.selectSuppressNextActionsDialogClose?.()) {
+    store.clearSuppressNextActionsDialogClose?.();
+    return;
+  }
+
+  if (store.selectIsBackgroundTransformEditorOpen?.()) {
+    return;
+  }
+
   const lineId = store.selectActionTargetLineId?.();
   if (lineId) {
     store.setSelectedLineId({ selectedLineId: lineId });
   }
   store.clearActionTargetLineId?.();
+  store.closeBackgroundTransformEditor?.();
   clearTemporaryPresentationPreview({ store, subject });
   render();
 };

@@ -12,6 +12,14 @@ import {
   normalizeCommandLineItemEffects,
   normalizeCommandLineItemOpacity,
 } from "../../internal/commandLineItemEffects.js";
+import {
+  BACKGROUND_TRANSFORM_FIELDS,
+  createActionItemWithInlineTransform,
+  formatBackgroundTransformEditorMetric,
+  hasInlineTransform,
+  normalizeBackgroundTransformEditorTransform,
+  removeInlineTransformFields,
+} from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
 
 const RESOURCE_TYPES = [
   { type: "image", label: "Images" },
@@ -51,6 +59,10 @@ const VISUAL_LAYER_VALUES = VISUAL_LAYER_OPTIONS.map((option) => option.value);
 const VISUAL_LAYER_DISPLAY_OPTIONS = VISUAL_LAYER_OPTIONS.slice().sort(
   (a, b) => b.value - a.value,
 );
+const TRANSFORM_MODE_OPTIONS = [
+  { value: false, label: "Predefined" },
+  { value: true, label: "Custom" },
+];
 
 const createEmptyCollection = () => ({
   items: {},
@@ -460,6 +472,7 @@ export const createInitialState = () => ({
   searchQuery: "",
   fullImagePreviewVisible: false,
   fullImagePreviewFileId: undefined,
+  customTransformEditorOpen: false,
   dropdownMenu: {
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -507,12 +520,98 @@ const generateVisualId = () => {
   return generatePrefixedId("visual-");
 };
 
+const getTransformItems = (state) =>
+  toFlatItems(state.transforms).filter((item) => item.type === "transform");
+
 const getDefaultTransformId = (state) => {
-  const transformItems = toFlatItems(state.transforms).filter(
-    (item) => item.type === "transform",
-  );
+  const transformItems = getTransformItems(state);
 
   return transformItems.length > 0 ? transformItems[0].id : undefined;
+};
+
+const getTransformResourceById = (state, transformId) => {
+  if (!transformId) {
+    return undefined;
+  }
+
+  return getTransformItems(state).find((item) => item.id === transformId);
+};
+
+const getSelectedTransformResource = (state, visual = {}) => {
+  return getTransformResourceById(
+    state,
+    visual.transformId ?? getDefaultTransformId(state),
+  );
+};
+
+const createCustomTransformDetails = (visual = {}) => {
+  const transform = normalizeBackgroundTransformEditorTransform(visual);
+
+  return [
+    {
+      label: "Position",
+      value: `${formatBackgroundTransformEditorMetric(transform.x)}, ${formatBackgroundTransformEditorMetric(transform.y)}`,
+    },
+    {
+      label: "Scale",
+      value: `${formatBackgroundTransformEditorMetric(transform.scaleX)} x ${formatBackgroundTransformEditorMetric(transform.scaleY)}`,
+    },
+    {
+      label: "Rotation",
+      value: formatBackgroundTransformEditorMetric(transform.rotation),
+    },
+    {
+      label: "Anchor",
+      value: `${formatBackgroundTransformEditorMetric(transform.anchorX)}, ${formatBackgroundTransformEditorMetric(transform.anchorY)}`,
+    },
+    {
+      label: "Origin",
+      value: `${formatBackgroundTransformEditorMetric(transform.originX)}, ${formatBackgroundTransformEditorMetric(transform.originY)}`,
+    },
+  ];
+};
+
+const applyVisualInlineTransform = (visual, transform) => {
+  const nextVisual = createActionItemWithInlineTransform(visual, transform, {
+    preserveTransformId: true,
+  });
+
+  for (const field of BACKGROUND_TRANSFORM_FIELDS) {
+    visual[field] = nextVisual[field];
+  }
+};
+
+const clearVisualInlineTransform = (visual) => {
+  const nextVisual = removeInlineTransformFields(visual);
+  for (const field of BACKGROUND_TRANSFORM_FIELDS) {
+    delete visual[field];
+  }
+  if (!visual.transformId) {
+    visual.transformId = nextVisual.transformId;
+  }
+};
+
+const createBackgroundTransformEditorViewData = ({ state, props = {} }) => {
+  const editor = props.backgroundTransformEditor ?? {};
+  const transform = normalizeBackgroundTransformEditorTransform(
+    editor.transform,
+  );
+  const metrics = editor.metrics ?? {
+    x: formatBackgroundTransformEditorMetric(transform.x),
+    y: formatBackgroundTransformEditorMetric(transform.y),
+    scaleX: formatBackgroundTransformEditorMetric(transform.scaleX),
+    scaleY: formatBackgroundTransformEditorMetric(transform.scaleY),
+    rotation: formatBackgroundTransformEditorMetric(transform.rotation),
+  };
+
+  return {
+    isOpen: state.customTransformEditorOpen === true || editor.isOpen === true,
+    canvasAspectRatio: editor.canvasAspectRatio ?? "16 / 9",
+    previewMaxWidth:
+      editor.previewMaxWidth ??
+      "min(calc(100vw - 48px), calc((100vh - 170px) * 1.7777777778))",
+    metrics,
+  };
 };
 
 export const addVisual = (
@@ -591,9 +690,61 @@ export const moveVisual = ({ state }, { index, offset } = {}) => {
 };
 
 export const updateVisualTransform = ({ state }, { index, transform } = {}) => {
-  if (state.selectedVisuals[index]) {
-    state.selectedVisuals[index].transformId = transform;
+  const visual = state.selectedVisuals[index];
+  if (!visual) {
+    return;
   }
+
+  visual.transformId = transform;
+  clearVisualInlineTransform(visual);
+};
+
+export const updateVisualCustomTransformEnabled = (
+  { state },
+  { index, enabled } = {},
+) => {
+  const visual = state.selectedVisuals[index];
+  if (!visual) {
+    return;
+  }
+
+  const customEnabled = enabled === true || enabled === "true";
+  if (!customEnabled) {
+    clearVisualInlineTransform(visual);
+    visual.transformId = visual.transformId ?? getDefaultTransformId(state);
+    return;
+  }
+
+  const selectedTransform = getSelectedTransformResource(state, visual);
+  applyVisualInlineTransform(visual, {
+    ...normalizeBackgroundTransformEditorTransform(selectedTransform),
+    ...visual,
+  });
+};
+
+export const updateVisualCustomTransform = (
+  { state },
+  { index, transform } = {},
+) => {
+  const visual = state.selectedVisuals[index];
+  if (!visual) {
+    return;
+  }
+
+  visual.transformId = visual.transformId ?? getDefaultTransformId(state);
+  applyVisualInlineTransform(visual, transform);
+};
+
+export const openCustomTransformEditor = ({ state }, _payload = {}) => {
+  state.customTransformEditorOpen = true;
+};
+
+export const closeCustomTransformEditor = ({ state }, _payload = {}) => {
+  state.customTransformEditorOpen = false;
+};
+
+export const selectCustomTransformEditorOpen = ({ state }) => {
+  return state.customTransformEditorOpen === true;
 };
 
 export const updateVisualAnimation = (
@@ -869,7 +1020,7 @@ export const selectVisualsWithRepositoryData = ({ state }) => {
   });
 };
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, props = {} }) => {
   const activeResourceType = getActiveResourceType(state);
   const activeResourceCollection =
     selectResourceCollection(state, activeResourceType) ??
@@ -962,9 +1113,7 @@ export const selectViewData = ({ state }) => {
   ).filter((item) => item.type === "folder");
 
   // Get transform options
-  const transformItems = toFlatItems(state.transforms).filter(
-    (item) => item.type === "transform",
-  );
+  const transformItems = getTransformItems(state);
   const transformOptions = transformItems.map((transform) => ({
     label: transform.name,
     value: transform.id,
@@ -1020,6 +1169,8 @@ export const selectViewData = ({ state }) => {
       transformId:
         visual.transformId ||
         (transformOptions.length > 0 ? transformOptions[0].value : undefined),
+      customTransform: hasInlineTransform(visual),
+      customTransformDetails: createCustomTransformDetails(visual),
       animationId: visual.animations?.resourceId,
       layer: normalizeVisualLayer(visual.layer),
       opacity: visual.opacity ?? DEFAULT_COMMAND_LINE_ITEM_OPACITY,
@@ -1049,6 +1200,7 @@ export const selectViewData = ({ state }) => {
     transformOptions,
     animationOptions,
     layerOptions: VISUAL_LAYER_OPTIONS,
+    transformModeOptions: TRANSFORM_MODE_OPTIONS,
     blurToggleOptions: COMMAND_LINE_ITEM_BLUR_TOGGLE_OPTIONS,
     blurKernelSizeOptions: COMMAND_LINE_ITEM_BLUR_KERNEL_SIZE_SELECT_OPTIONS,
     blurRepeatEdgeOptions: COMMAND_LINE_ITEM_BLUR_REPEAT_EDGE_OPTIONS,
@@ -1072,6 +1224,10 @@ export const selectViewData = ({ state }) => {
     searchPlaceholder: "Search...",
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
+    backgroundTransformEditor: createBackgroundTransformEditorViewData({
+      state,
+      props,
+    }),
     breadcrumb,
     defaultValues,
     dropdownMenu: state.dropdownMenu,

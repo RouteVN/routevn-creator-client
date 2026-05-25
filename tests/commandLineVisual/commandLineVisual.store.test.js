@@ -26,6 +26,8 @@ import {
   updateVisualAnimation,
   updateVisualBlurEnabled,
   updateVisualBlurField,
+  updateVisualCustomTransform,
+  updateVisualCustomTransformEnabled,
   updateVisualLayer,
   updateVisualOpacity,
 } from "../../src/components/commandLineVisual/commandLineVisual.store.js";
@@ -858,5 +860,90 @@ describe("commandLineVisual.store animation controls", () => {
         group.children.map((child) => child.id),
       ),
     ).toEqual(["visual-layout"]);
+  });
+});
+
+describe("commandLineVisual.store custom transforms", () => {
+  it("copies the selected predefined transform into visual custom transform fields", () => {
+    const state = createInitialState();
+    setRepositoryCollections(state);
+    setTransforms(
+      { state },
+      {
+        transforms: {
+          items: {
+            "visual-center": {
+              id: "visual-center",
+              type: "transform",
+              name: "Center",
+              x: 960,
+              y: 540,
+              scaleX: 1,
+              scaleY: 1,
+              rotation: 0,
+              anchorX: 0.5,
+              anchorY: 0.5,
+              originX: 100,
+              originY: 80,
+            },
+          },
+          tree: [{ id: "visual-center" }],
+        },
+      },
+    );
+    setExistingVisuals(
+      { state },
+      {
+        visuals: [
+          {
+            id: "visual-1",
+            resourceId: "visual-image",
+            resourceType: "image",
+            transformId: "visual-center",
+          },
+        ],
+      },
+    );
+
+    updateVisualCustomTransformEnabled(
+      { state },
+      {
+        index: 0,
+        enabled: true,
+      },
+    );
+    updateVisualCustomTransform(
+      { state },
+      {
+        index: 0,
+        transform: {
+          x: 1000,
+          y: 600,
+          scaleX: 1.5,
+          scaleY: 1.5,
+          rotation: 10,
+          anchorX: 0.5,
+          anchorY: 0.5,
+          originX: 100,
+          originY: 80,
+        },
+      },
+    );
+
+    expect(selectSelectedVisuals({ state })[0]).toMatchObject({
+      transformId: "visual-center",
+      x: 1000,
+      y: 600,
+      scaleX: 1.5,
+      scaleY: 1.5,
+      rotation: 10,
+    });
+    expect(selectViewData({ state }).defaultValues.visuals[0]).toMatchObject({
+      customTransform: true,
+      customTransformDetails: expect.arrayContaining([
+        { label: "Position", value: "1000, 600" },
+        { label: "Scale", value: "1.5 x 1.5" },
+      ]),
+    });
   });
 });

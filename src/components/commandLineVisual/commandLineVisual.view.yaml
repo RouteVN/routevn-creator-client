@@ -68,6 +68,23 @@ refs:
     eventListeners:
       value-change:
         handler: handleTransformChange
+  customTransformMode*:
+    eventListeners:
+      value-change:
+        handler: handleTransformModeChange
+  customTransformButton*:
+    eventListeners:
+      click:
+        handler: handleCustomTransformButtonClick
+  customTransformChip*:
+    eventListeners:
+      click:
+        handler: handleCustomTransformButtonClick
+  backgroundTransformPreviewCanvasHost: {}
+  backgroundTransformEditorDoneButton:
+    eventListeners:
+      click:
+        handler: handleCustomTransformDoneButtonClick
   animation*:
     eventListeners:
       value-change:
@@ -105,7 +122,7 @@ refs:
       value-change:
         handler: handleBlurFieldChange
 template:
-  - rtgl-view w=f h=f p=lg:
+  - 'rtgl-view w=f h=f p=lg pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
       - $if mode == 'current':
           - rtgl-view d=h g=md:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
@@ -165,7 +182,18 @@ template:
                                                       - rtgl-text s=xs c=mu-fg: Repeat Edge
                                                       - rtgl-segmented-control#blurRepeatEdgePixels${groupIndex}x${i} data-index=${visual.visualIndex} data-blur-field=repeatEdgePixels w=f no-clear :selectedValue=${visual.blur.repeatEdgePixels} :options=${defaultValues.blurRepeatEdgeOptions}: null
                                           - rtgl-text s=sm c=mu-fg: Transform
-                                          - rtgl-select#transform${groupIndex}x${i} data-index=${visual.visualIndex} key=${visual.transformId} :options=${defaultValues.transformOptions} :selectedValue=${visual.transformId} w=f no-clear: null
+                                          - rtgl-segmented-control#customTransformMode${groupIndex}x${i} data-index=${visual.visualIndex} w=f no-clear :selectedValue=${visual.customTransform} :options=${defaultValues.transformModeOptions}: null
+                                          - $if visual.customTransform:
+                                              - rtgl-view d=h av=c w=f g=md:
+                                                  - rtgl-view d=h av=c w=1fg g=sm wrap:
+                                                      - $for item, j in visual.customTransformDetails:
+                                                          - 'rtgl-view#customTransformChip${groupIndex}x${i}x${j} data-index=${visual.visualIndex} d=h av=c g=sm bw=xs bc=bo h-bc=pr br=full bgc=mu ph=md pv=sm cur=pointer style="max-width: 220px; box-sizing: border-box;"':
+                                                              - rtgl-text s=xs c=mu-fg ellipsis: ${item.label}
+                                                              - 'rtgl-text s=sm style="font-variant-numeric: tabular-nums; white-space: nowrap;"': ${item.value}
+                                                  - rtgl-button#customTransformButton${groupIndex}x${i} data-index=${visual.visualIndex} v=se: Edit
+                                            $else:
+                                              - rtgl-text s=sm c=mu-fg: Predefined Transform
+                                              - rtgl-select#transform${groupIndex}x${i} data-index=${visual.visualIndex} key=${visual.transformId} :options=${defaultValues.transformOptions} :selectedValue=${visual.transformId} w=f no-clear: null
                                           - rtgl-text s=sm c=mu-fg: Animation
                                           - rtgl-select#animation${groupIndex}x${i} data-index=${visual.visualIndex} key=${visual.animationId} :options=${defaultValues.animationOptions} :selectedValue=${visual.animationId} w=f placeholder="Select animation": null
                   - rtgl-button#addVisualButton v=ol w=f mt=md: + Add Visual
@@ -217,6 +245,30 @@ template:
   - rtgl-popover#addVisualPopover ?open=${addVisualPopover.isOpen} x=${addVisualPopover.position.x} y=${addVisualPopover.position.y} place=bs:
       - rtgl-form#addVisualForm key=${addVisualPopover.key} slot=content :defaultValues=${addVisualDefaultValues} :form=${addVisualForm} w=320: null
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
+  - $if backgroundTransformEditor.isOpen:
+      - 'rtgl-view pos=abs edge=f z=20 bgc=bg d=v style="pointer-events: auto; min-width: 0; min-height: 0;"':
+          - rtgl-view h=48 bwb=xs w=f d=h av=c ph=md g=md:
+              - rtgl-text s=sm w=1fg: Transform
+              - rtgl-button#backgroundTransformEditorDoneButton v=pr: Done
+          - 'rtgl-view w=f h=1fg p=lg ah=c av=c style="min-width: 0; min-height: 0;"':
+              - 'rtgl-view h=f style="width: ${backgroundTransformEditor.previewMaxWidth}; max-width: 100%; min-width: 0; min-height: 0;"':
+                  - rvn-scene-editor-preview-canvas#backgroundTransformPreviewCanvasHost canvas-aspect-ratio="${backgroundTransformEditor.canvasAspectRatio}": null
+          - rtgl-view w=f bwt=xs d=h av=c ph=md pv=sm g=lg bgc=bg wrap:
+              - rtgl-view d=h av=c g=xs:
+                  - rtgl-text s=xs c=mu-fg: x
+                  - rtgl-text s=sm: ${backgroundTransformEditor.metrics.x}
+              - rtgl-view d=h av=c g=xs:
+                  - rtgl-text s=xs c=mu-fg: y
+                  - rtgl-text s=sm: ${backgroundTransformEditor.metrics.y}
+              - rtgl-view d=h av=c g=xs:
+                  - rtgl-text s=xs c=mu-fg: scaleX
+                  - rtgl-text s=sm: ${backgroundTransformEditor.metrics.scaleX}
+              - rtgl-view d=h av=c g=xs:
+                  - rtgl-text s=xs c=mu-fg: scaleY
+                  - rtgl-text s=sm: ${backgroundTransformEditor.metrics.scaleY}
+              - rtgl-view d=h av=c g=xs:
+                  - rtgl-text s=xs c=mu-fg: rotation
+                  - rtgl-text s=sm: ${backgroundTransformEditor.metrics.rotation}
   - $when: fullImagePreviewVisible
     rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
       - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null

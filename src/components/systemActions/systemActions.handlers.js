@@ -1,4 +1,8 @@
 import { normalizeLineActions } from "../../internal/project/engineActions.js";
+import {
+  createActionItemWithInlineTransform,
+  createBackgroundWithInlineTransform,
+} from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
 import { getRoutevnCreatorSystemActionDocsUrl } from "../../internal/routevnUrls.js";
 
 const toPlainObject = (value) => {
@@ -72,6 +76,14 @@ export const handleOnUpdate = (deps, changes) => {
   const { render, store } = deps;
   const { newProps } = changes;
   store.updateActions(normalizeActionsObject(newProps.actions));
+
+  if (
+    !isBooleanPropEnabled(newProps?.suppressDialogClose) &&
+    newProps?.backgroundTransformEditor?.suppressActionsDialogClose !== true
+  ) {
+    store.setSuppressDialogClose?.({ suppressDialogClose: false });
+  }
+
   render();
 };
 
@@ -100,6 +112,132 @@ export const handleTemporaryPresentationStateChange = (deps, payload) => {
     payload?._event?.detail?.presentationState,
   );
   dispatchTemporaryPresentationStateChange(deps, presentationState);
+};
+
+export const handleBackgroundTransformCustomize = (deps, payload) => {
+  payload?._event?.stopPropagation?.();
+  const { refs, store } = deps;
+
+  store?.setSuppressDialogClose?.({ suppressDialogClose: true });
+  refs?.actionsDialog?.transformedHandlers?.handleSuppressClose?.();
+
+  deps.dispatchEvent(
+    new CustomEvent("background-transform-customize", {
+      detail: toPlainObject(payload?._event?.detail),
+    }),
+  );
+};
+
+export const handleBackgroundTransformEditorDone = (deps, payload) => {
+  payload?._event?.stopPropagation?.();
+  deps.dispatchEvent(
+    new CustomEvent("background-transform-editor-done", {
+      detail: toPlainObject(payload?._event?.detail),
+    }),
+  );
+};
+
+export const handleActionTransformCustomize = (deps, payload) => {
+  payload?._event?.stopPropagation?.();
+  const { refs, store } = deps;
+
+  store?.setSuppressDialogClose?.({ suppressDialogClose: true });
+  refs?.actionsDialog?.transformedHandlers?.handleSuppressClose?.();
+
+  deps.dispatchEvent(
+    new CustomEvent("action-transform-customize", {
+      detail: toPlainObject(payload?._event?.detail),
+    }),
+  );
+};
+
+export const handleActionTransformEditorDone = (deps, payload) => {
+  payload?._event?.stopPropagation?.();
+  deps.dispatchEvent(
+    new CustomEvent("action-transform-editor-done", {
+      detail: toPlainObject(payload?._event?.detail),
+    }),
+  );
+};
+
+export const handleGetBackgroundTransformPreviewCanvasRoot = ({ refs }) => {
+  return (
+    refs?.commandLineBackground?.transformedHandlers?.handleGetBackgroundTransformPreviewCanvasRoot?.() ||
+    refs?.commandLineVisual?.transformedHandlers?.handleGetBackgroundTransformPreviewCanvasRoot?.() ||
+    refs?.commandLineCharacters?.transformedHandlers?.handleGetBackgroundTransformPreviewCanvasRoot?.()
+  );
+};
+
+export const handleSetBackgroundCustomTransform = (
+  deps,
+  { background, transform } = {},
+) => {
+  const { refs, store } = deps;
+  const nextBackground = createBackgroundWithInlineTransform(
+    background ?? store.selectAction().background,
+    transform,
+  );
+
+  refs?.commandLineBackground?.transformedHandlers?.handleSetCustomTransform?.({
+    transform: nextBackground,
+  });
+  dispatchTemporaryPresentationStateChange(deps, {
+    background: nextBackground,
+  });
+};
+
+const resolveActionTransformIndex = (items = [], { itemIndex, item } = {}) => {
+  if (Number.isInteger(itemIndex)) {
+    return itemIndex;
+  }
+
+  if (item?.id) {
+    return items.findIndex((candidate) => candidate?.id === item.id);
+  }
+
+  return -1;
+};
+
+export const handleSetActionCustomTransform = (
+  deps,
+  { targetType, itemIndex, item, transform } = {},
+) => {
+  const { refs, store } = deps;
+  const actionKey = targetType === "character" ? "character" : "visual";
+  const action = toPlainObject(store.selectAction()?.[actionKey]);
+  const items = Array.isArray(action.items) ? [...action.items] : [];
+  const resolvedIndex = resolveActionTransformIndex(items, { itemIndex, item });
+  const sourceItem = item ?? items[resolvedIndex];
+
+  if (!sourceItem || resolvedIndex < 0) {
+    return;
+  }
+
+  const nextItem = createActionItemWithInlineTransform(sourceItem, transform, {
+    preserveTransformId: true,
+  });
+  items[resolvedIndex] = nextItem;
+
+  if (actionKey === "character") {
+    refs?.commandLineCharacters?.transformedHandlers?.handleSetCustomTransform?.(
+      {
+        index: resolvedIndex,
+        transform,
+      },
+    );
+  } else {
+    refs?.commandLineVisual?.transformedHandlers?.handleSetCustomTransform?.({
+      index: resolvedIndex,
+      transform,
+    });
+  }
+
+  dispatchTemporaryPresentationStateChange(deps, {
+    [actionKey]: {
+      ...action,
+      items,
+    },
+  });
 };
 
 export const handleCommandLineSubmit = (deps, payload) => {
@@ -141,8 +279,20 @@ export const handleHelpFloatingButtonClick = (deps, payload) => {
   appService.openUrl(getRoutevnCreatorSystemActionDocsUrl(mode));
 };
 
-export const handleActionsDialogClose = (deps) => {
-  const { store, render, dispatchEvent } = deps;
+const isBooleanPropEnabled = (value) => {
+  return value === true || value === "true";
+};
+
+export const handleActionsDialogClose = (deps, payload) => {
+  const { props, store, render, dispatchEvent } = deps;
+  if (
+    isBooleanPropEnabled(props?.suppressDialogClose) ||
+    store.selectSuppressDialogClose?.() === true
+  ) {
+    payload?._event?.preventDefault?.();
+    payload?._event?.stopPropagation?.();
+    return;
+  }
   dispatchTemporaryPresentationStateChange(deps, {});
   store.hideActionsDialog();
   render();

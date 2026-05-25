@@ -499,6 +499,7 @@ export const createGraphicsService = async ({
   let deferredAudioRenderKeySignature = "";
   let suppressedEngineRenderEffects = 0;
   let isEngineAudioMuted = false;
+  let runtimeInteractionsEnabled = true;
 
   const isBlobUrl = (url) => typeof url === "string" && url.startsWith("blob:");
 
@@ -555,6 +556,28 @@ export const createGraphicsService = async ({
     }
 
     await Promise.all(loadPromises);
+  };
+
+  const setRuntimeInteractionsEnabled = (value) => {
+    const nextRuntimeInteractionsEnabled = value !== false;
+
+    if (runtimeInteractionsEnabled === nextRuntimeInteractionsEnabled) {
+      return;
+    }
+
+    runtimeInteractionsEnabled = nextRuntimeInteractionsEnabled;
+    if (!nextRuntimeInteractionsEnabled) {
+      clearAllPendingClickInteractions();
+    }
+  };
+
+  const ensureTicker = () => {
+    if (!ticker) {
+      ticker = new Ticker();
+    }
+
+    ticker.start();
+    return ticker;
   };
 
   const ensureAudioAssetsLoaded = async (assetKeys = []) => {
@@ -1486,6 +1509,7 @@ export const createGraphicsService = async ({
         assetLoadRuntimeVersion += 1;
         invalidateDeferredAudioRender();
         clearAllPendingClickInteractions();
+        runtimeInteractionsEnabled = true;
         loadedAssetTypes = new Map();
         assetBufferManager = createAssetBufferManager();
         routeGraphics = createRouteGraphics();
@@ -1523,6 +1547,10 @@ export const createGraphicsService = async ({
                     targetId: eventId,
                   });
                 }
+              }
+
+              if (!runtimeInteractionsEnabled) {
+                return;
               }
 
               if (!engine) {
@@ -1590,7 +1618,7 @@ export const createGraphicsService = async ({
     },
     hasLoadedAsset,
     initRouteEngine: (projectData, options = {}) => {
-      ticker.start();
+      const routeEngineTicker = ensureTicker();
       routeEngineProjectData = projectData;
       enableGlobalKeyboardBindings =
         options.enableGlobalKeyboardBindings ?? true;
@@ -1626,7 +1654,7 @@ export const createGraphicsService = async ({
         },
         namespace,
         persistence,
-        ticker,
+        ticker: routeEngineTicker,
       });
       engine = createRouteEngine({ handlePendingEffects });
       const initEngine = () => {
@@ -1716,6 +1744,7 @@ export const createGraphicsService = async ({
       engine.handleActions(actions, eventContext);
     },
     setEngineAudioMuted,
+    setRuntimeInteractionsEnabled,
 
     setAnimationPlaybackMode: (mode) => {
       routeGraphics?.setAnimationPlaybackMode?.(mode);

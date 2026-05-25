@@ -4,6 +4,8 @@ import {
   selectSelectedBlurActionValue,
   selectViewData,
   setRepositoryState,
+  setCustomTransform,
+  setCustomTransformEnabled,
   setSelectedAnimation,
   setSelectedBlur,
   setSelectedOpacity,
@@ -106,7 +108,7 @@ describe("commandLineBackground.store", () => {
     );
 
     expect(transformField).toMatchObject({
-      label: "Transform",
+      label: "Predefined Transform",
       type: "select",
       clearable: true,
       placeholder: "Select transform",
@@ -295,6 +297,64 @@ describe("commandLineBackground.store", () => {
     );
   });
 
+  it("shows the custom transform slot when custom transform is enabled", () => {
+    const state = createInitialState();
+
+    setSelectedResource(
+      { state },
+      {
+        resourceId: "bg-school",
+        resourceType: "image",
+      },
+    );
+    setCustomTransformEnabled(
+      { state },
+      {
+        enabled: true,
+      },
+    );
+    setCustomTransform(
+      { state },
+      {
+        transform: {
+          x: 100,
+          y: 120,
+          anchorX: 0.5,
+          anchorY: 0.5,
+          scaleX: 1.2,
+          scaleY: 1.2,
+          rotation: 0,
+          originX: 320,
+          originY: 180,
+        },
+      },
+    );
+
+    const viewData = selectViewData({ state });
+    const transformField = viewData.dialogueForm.form.fields.find(
+      (field) => field.name === "transformId",
+    );
+    const customTransformSlot = viewData.dialogueForm.form.fields.find(
+      (field) => field.slot === "custom-transform",
+    );
+
+    expect(viewData.dialogueForm.defaultValues.customTransform).toBe(true);
+    expect(transformField).toMatchObject({
+      $when: "customTransform == false",
+    });
+    expect(customTransformSlot).toMatchObject({
+      $when: "customTransform == true",
+      type: "slot",
+    });
+    expect(viewData.customTransformDetails).toEqual([
+      { label: "Position", value: "100, 120" },
+      { label: "Scale", value: "1.2 x 1.2" },
+      { label: "Rotation", value: "0" },
+      { label: "Anchor", value: "0.5, 0.5" },
+      { label: "Origin", value: "320, 180" },
+    ]);
+  });
+
   it("uses a selected background opacity when provided", () => {
     const state = createInitialState();
 
@@ -369,5 +429,40 @@ describe("commandLineBackground.store", () => {
     const viewData = selectViewData({ state });
 
     expect(viewData.dialogueForm.defaultValues.blurKernelSize).toBe(11);
+  });
+
+  it("passes background transform editor view data through to the nested preview", () => {
+    const state = createInitialState();
+
+    const viewData = selectViewData({
+      state,
+      props: {
+        backgroundTransformEditor: {
+          isOpen: true,
+          canvasAspectRatio: "4 / 3",
+          previewMaxWidth: "640px",
+          metrics: {
+            x: "10.00",
+            y: "20.00",
+            scaleX: "1.20",
+            scaleY: "1.20",
+            rotation: "8.00",
+          },
+        },
+      },
+    });
+
+    expect(viewData.backgroundTransformEditor).toEqual({
+      isOpen: true,
+      canvasAspectRatio: "4 / 3",
+      previewMaxWidth: "640px",
+      metrics: {
+        x: "10.00",
+        y: "20.00",
+        scaleX: "1.20",
+        scaleY: "1.20",
+        rotation: "8.00",
+      },
+    });
   });
 });

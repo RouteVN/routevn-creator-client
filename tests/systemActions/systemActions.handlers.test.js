@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   createInitialState,
   selectAction,
@@ -6,9 +6,13 @@ import {
 } from "../../src/components/systemActions/systemActions.store.js";
 import {
   handleActionsDialogClose,
+  handleBackgroundTransformCustomize,
+  handleBackgroundTransformEditorDone,
+  handleGetBackgroundTransformPreviewCanvasRoot,
   handleEmbeddedCloseClick,
   handleCommandLineSubmit,
   handleTemporaryPresentationStateChange,
+  handleSetBackgroundCustomTransform,
   open,
 } from "../../src/components/systemActions/systemActions.handlers.js";
 
@@ -241,6 +245,92 @@ describe("systemActions.handlers", () => {
     });
   });
 
+  it("keeps the background command editor open when applying a custom transform", () => {
+    const state = createInitialState();
+    const dispatchedEvents = [];
+    const setChildCustomTransform = vi.fn();
+    const updateActionsSpy = vi.fn();
+    const render = vi.fn();
+
+    updateActions(
+      { state },
+      {
+        background: {
+          resourceId: "bg-school",
+          transformId: "bg-center",
+        },
+      },
+    );
+
+    handleSetBackgroundCustomTransform(
+      {
+        refs: {
+          commandLineBackground: {
+            transformedHandlers: {
+              handleSetCustomTransform: setChildCustomTransform,
+            },
+          },
+        },
+        store: {
+          selectAction: () => selectAction({ state }),
+          updateActions: updateActionsSpy,
+        },
+        dispatchEvent: (event) => {
+          dispatchedEvents.push(event);
+        },
+      },
+      {
+        background: {
+          resourceId: "bg-school",
+          transformId: "bg-center",
+        },
+        transform: {
+          x: 100,
+          y: 120,
+          anchorX: 0,
+          anchorY: 1,
+          scaleX: 1.2,
+          scaleY: 1.2,
+          rotation: -8,
+          originX: 64,
+          originY: 128,
+        },
+      },
+    );
+
+    const nextBackground = {
+      resourceId: "bg-school",
+      x: 100,
+      y: 120,
+      anchorX: 0,
+      anchorY: 1,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      rotation: -8,
+      originX: 64,
+      originY: 128,
+    };
+
+    expect(selectAction({ state }).background).toEqual({
+      resourceId: "bg-school",
+      transformId: "bg-center",
+    });
+    expect(updateActionsSpy).not.toHaveBeenCalled();
+    expect(render).not.toHaveBeenCalled();
+    expect(setChildCustomTransform).toHaveBeenCalledWith({
+      transform: nextBackground,
+    });
+    expect(dispatchedEvents).toHaveLength(1);
+    expect(dispatchedEvents[0].type).toBe(
+      "temporary-presentation-state-change",
+    );
+    expect(dispatchedEvents[0].detail).toEqual({
+      presentationState: {
+        background: nextBackground,
+      },
+    });
+  });
+
   it("emits close from embedded system action editors", () => {
     const dispatchedEvents = [];
     let stopPropagationCalled = false;
@@ -269,6 +359,141 @@ describe("systemActions.handlers", () => {
       presentationState: {},
     });
     expect(dispatchedEvents[1].type).toBe("close");
+  });
+
+  it("ignores dialog close while close is suppressed by a transform editor", () => {
+    const dispatchedEvents = [];
+    const state = createInitialState();
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+
+    const deps = {
+      props: {
+        suppressDialogClose: true,
+      },
+      store: {
+        hideActionsDialog: vi.fn(() => {
+          state.isActionsDialogOpen = false;
+        }),
+        setMode: vi.fn(({ mode }) => {
+          state.mode = mode;
+        }),
+      },
+      render: vi.fn(),
+      dispatchEvent: (event) => {
+        dispatchedEvents.push(event);
+      },
+    };
+
+    state.isActionsDialogOpen = true;
+    state.mode = "background";
+
+    handleActionsDialogClose(deps, {
+      _event: {
+        preventDefault,
+        stopPropagation,
+      },
+    });
+
+    expect(state.isActionsDialogOpen).toBe(true);
+    expect(state.mode).toBe("background");
+    expect(deps.store.hideActionsDialog).not.toHaveBeenCalled();
+    expect(deps.store.setMode).not.toHaveBeenCalled();
+    expect(deps.render).not.toHaveBeenCalled();
+    expect(dispatchedEvents).toHaveLength(0);
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
+  });
+
+  it("arms local close suppression before forwarding background transform Customize", () => {
+    const dispatchedEvents = [];
+    const setSuppressDialogClose = vi.fn();
+    const handleSuppressClose = vi.fn();
+    const stopPropagation = vi.fn();
+
+    handleBackgroundTransformCustomize(
+      {
+        refs: {
+          actionsDialog: {
+            transformedHandlers: {
+              handleSuppressClose,
+            },
+          },
+        },
+        store: {
+          setSuppressDialogClose,
+        },
+        dispatchEvent: (event) => {
+          dispatchedEvents.push(event);
+        },
+      },
+      {
+        _event: {
+          stopPropagation,
+          detail: {
+            background: {
+              resourceId: "bg-title",
+            },
+          },
+        },
+      },
+    );
+
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
+    expect(setSuppressDialogClose).toHaveBeenCalledWith({
+      suppressDialogClose: true,
+    });
+    expect(handleSuppressClose).toHaveBeenCalledTimes(1);
+    expect(dispatchedEvents).toHaveLength(1);
+    expect(dispatchedEvents[0].type).toBe("background-transform-customize");
+    expect(dispatchedEvents[0].detail).toEqual({
+      background: {
+        resourceId: "bg-title",
+      },
+    });
+  });
+
+  it("ignores dialog close while local close suppression is active", () => {
+    const dispatchedEvents = [];
+    const state = createInitialState();
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+
+    const deps = {
+      props: {},
+      store: {
+        selectSuppressDialogClose: vi.fn(() => true),
+        hideActionsDialog: vi.fn(() => {
+          state.isActionsDialogOpen = false;
+        }),
+        setMode: vi.fn(({ mode }) => {
+          state.mode = mode;
+        }),
+      },
+      render: vi.fn(),
+      dispatchEvent: (event) => {
+        dispatchedEvents.push(event);
+      },
+    };
+
+    state.isActionsDialogOpen = true;
+    state.mode = "background";
+
+    handleActionsDialogClose(deps, {
+      _event: {
+        preventDefault,
+        stopPropagation,
+      },
+    });
+
+    expect(state.isActionsDialogOpen).toBe(true);
+    expect(state.mode).toBe("background");
+    expect(deps.store.hideActionsDialog).not.toHaveBeenCalled();
+    expect(deps.store.setMode).not.toHaveBeenCalled();
+    expect(deps.render).not.toHaveBeenCalled();
+    expect(dispatchedEvents).toHaveLength(0);
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
   });
 
   it("clears temporary presentation state when the actions dialog closes", () => {
@@ -384,5 +609,51 @@ describe("systemActions.handlers", () => {
         operations: [],
       },
     });
+  });
+
+  it("forwards background transform editor Done from the nested background command line", () => {
+    const dispatchedEvents = [];
+    const stopPropagation = vi.fn();
+
+    handleBackgroundTransformEditorDone(
+      {
+        dispatchEvent: (event) => {
+          dispatchedEvents.push(event);
+        },
+      },
+      {
+        _event: {
+          stopPropagation,
+          detail: {
+            done: true,
+          },
+        },
+      },
+    );
+
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
+    expect(dispatchedEvents).toHaveLength(1);
+    expect(dispatchedEvents[0].type).toBe("background-transform-editor-done");
+    expect(dispatchedEvents[0].detail).toEqual({
+      done: true,
+    });
+  });
+
+  it("exposes the nested background command line transform preview canvas root", () => {
+    const canvasRoot = {};
+    const getCanvasRoot = vi.fn(() => canvasRoot);
+
+    expect(
+      handleGetBackgroundTransformPreviewCanvasRoot({
+        refs: {
+          commandLineBackground: {
+            transformedHandlers: {
+              handleGetBackgroundTransformPreviewCanvasRoot: getCanvasRoot,
+            },
+          },
+        },
+      }),
+    ).toBe(canvasRoot);
+    expect(getCanvasRoot).toHaveBeenCalledTimes(1);
   });
 });

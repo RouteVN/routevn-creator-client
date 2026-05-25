@@ -2,6 +2,8 @@ componentName: rvn-command-line-background
 propsSchema:
   type: object
   properties:
+    backgroundTransformEditor:
+      type: object
     background:
       type: object
       properties:
@@ -37,6 +39,24 @@ propsSchema:
               type: boolean
         transformId:
           type: string
+        x:
+          type: number
+        y:
+          type: number
+        anchorX:
+          type: number
+        anchorY:
+          type: number
+        scaleX:
+          type: number
+        scaleY:
+          type: number
+        rotation:
+          type: number
+        originX:
+          type: number
+        originY:
+          type: number
         animations:
           type: object
           properties:

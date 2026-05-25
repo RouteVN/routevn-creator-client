@@ -6,6 +6,33 @@ const getCharacterIndexFromEvent = (event) => {
 const getEventValue = (event) =>
   event?.detail?.value ?? event?.currentTarget?.value ?? event?.target?.value;
 
+const TRANSFORM_FIELDS = [
+  "x",
+  "y",
+  "anchorX",
+  "anchorY",
+  "scaleX",
+  "scaleY",
+  "rotation",
+  "originX",
+  "originY",
+];
+
+const hasInlineTransform = (item = {}) =>
+  TRANSFORM_FIELDS.some((field) => item?.[field] !== undefined);
+
+const assignInlineTransformFields = (target, source = {}) => {
+  if (!hasInlineTransform(source)) {
+    return;
+  }
+
+  for (const field of TRANSFORM_FIELDS) {
+    if (source[field] !== undefined) {
+      target[field] = source[field];
+    }
+  }
+};
+
 const getDropdownPositionFromEvent = (event) => {
   const rect = event?.currentTarget?.getBoundingClientRect?.();
   if (rect) {
@@ -176,6 +203,8 @@ const buildCharacterItemsFromState = (
       spriteName: char.spriteName || "",
     };
 
+    assignInlineTransformFields(item, char);
+
     if (char.opacity !== undefined) {
       item.opacity = char.opacity;
     }
@@ -321,6 +350,85 @@ export const handleTransformChange = (deps, payload) => {
   store.updateCharacterTransform({ index, transform: value });
   render();
   dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleTransformModeChange = (deps, payload) => {
+  const { store, render } = deps;
+  const index = getCharacterIndexFromEvent(payload._event);
+  if (index === undefined) {
+    return;
+  }
+
+  store.updateCharacterCustomTransformEnabled({
+    index,
+    enabled: getEventValue(payload._event),
+  });
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleCustomTransformButtonClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+  payload?._event?.stopImmediatePropagation?.();
+  const { dispatchEvent, store, render } = deps;
+  const index = getCharacterIndexFromEvent(payload._event);
+  const character = store.selectSelectedCharacters()?.[index];
+  if (index === undefined || !character) {
+    return;
+  }
+
+  const item = buildCharacterItemsFromState(store)[index];
+  store.openCustomTransformEditor?.();
+  render();
+  dispatchEvent(
+    new CustomEvent("action-transform-customize", {
+      detail: {
+        targetType: "character",
+        actionKey: "character",
+        itemIndex: index,
+        item,
+        action: buildCharacterDataFromState(store, {
+          includeTemporarySprites: true,
+        }).character,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+export const handleSetCustomTransform = (deps, { index, transform } = {}) => {
+  const { store, render } = deps;
+  store.updateCharacterCustomTransform({ index, transform });
+  store.closeCustomTransformEditor?.();
+  render();
+  dispatchTemporaryPresentationStateChange(deps);
+};
+
+export const handleCustomTransformDoneButtonClick = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+  payload?._event?.stopImmediatePropagation?.();
+  const { dispatchEvent, store, render } = deps;
+  store.closeCustomTransformEditor?.();
+  render();
+  dispatchEvent(
+    new CustomEvent("action-transform-editor-done", {
+      detail: {},
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
+export const handleGetBackgroundTransformPreviewCanvasRoot = ({ refs }) => {
+  const canvasHost = refs?.backgroundTransformPreviewCanvasHost;
+  return (
+    canvasHost?.getCanvasRoot?.() ||
+    canvasHost?.shadowRoot?.querySelector?.("#canvas") ||
+    canvasHost?.querySelector?.("#canvas")
+  );
 };
 
 export const handleAnimationChange = (deps, payload) => {

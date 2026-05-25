@@ -1,4 +1,8 @@
 import { toFlatGroups, toFlatItems } from "../../internal/project/tree.js";
+import {
+  formatBackgroundTransformEditorMetric,
+  normalizeBackgroundTransformEditorTransform,
+} from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
 
 const tabs = [
   {
@@ -147,6 +151,9 @@ export const createInitialState = () => ({
   animationItems: createEmptyCollection(),
   transformItems: createEmptyCollection(),
   colorItems: createEmptyCollection(),
+  customTransformEnabled: false,
+  selectedCustomTransform: undefined,
+  customTransformEditorOpen: false,
   selectedResourceId: undefined,
   selectedResourceType: undefined,
   tempSelectedResourceId: undefined,
@@ -315,6 +322,46 @@ export const setSelectedTransform = ({ state }, { transformId } = {}) => {
 
 export const selectSelectedTransform = ({ state }) => {
   return state.selectedTransformId;
+};
+
+export const selectSelectedTransformResource = ({ state }) => {
+  if (!state.selectedTransformId) {
+    return undefined;
+  }
+
+  return toFlatItems(state.transformItems).find(
+    (item) => item.id === state.selectedTransformId,
+  );
+};
+
+export const setCustomTransformEnabled = ({ state }, { enabled } = {}) => {
+  state.customTransformEnabled = enabled === true || enabled === "true";
+};
+
+export const selectCustomTransformEnabled = ({ state }) => {
+  return state.customTransformEnabled;
+};
+
+export const setCustomTransform = ({ state }, { transform } = {}) => {
+  state.selectedCustomTransform = transform
+    ? normalizeBackgroundTransformEditorTransform(transform)
+    : undefined;
+};
+
+export const selectCustomTransform = ({ state }) => {
+  return state.selectedCustomTransform;
+};
+
+export const openCustomTransformEditor = ({ state }, _payload = {}) => {
+  state.customTransformEditorOpen = true;
+};
+
+export const closeCustomTransformEditor = ({ state }, _payload = {}) => {
+  state.customTransformEditorOpen = false;
+};
+
+export const selectCustomTransformEditorOpen = ({ state }) => {
+  return state.customTransformEditorOpen === true;
 };
 
 export const setSelectedColor = ({ state }, { colorId } = {}) => {
@@ -489,7 +536,59 @@ const selectResourceById = ({ state }, { resourceId, resourceType } = {}) => {
   };
 };
 
-export const selectViewData = ({ state }) => {
+const createBackgroundTransformEditorViewData = ({ state, props = {} }) => {
+  const editor = props.backgroundTransformEditor ?? {};
+  const transform = normalizeBackgroundTransformEditorTransform(
+    editor.transform ?? state.selectedCustomTransform,
+  );
+  const metrics = editor.metrics ?? {
+    x: formatBackgroundTransformEditorMetric(transform.x),
+    y: formatBackgroundTransformEditorMetric(transform.y),
+    scaleX: formatBackgroundTransformEditorMetric(transform.scaleX),
+    scaleY: formatBackgroundTransformEditorMetric(transform.scaleY),
+    rotation: formatBackgroundTransformEditorMetric(transform.rotation),
+  };
+
+  return {
+    isOpen: state.customTransformEditorOpen === true || editor.isOpen === true,
+    canvasAspectRatio: editor.canvasAspectRatio ?? "16 / 9",
+    previewMaxWidth:
+      editor.previewMaxWidth ??
+      "min(calc(100vw - 48px), calc((100vh - 170px) * 1.7777777778))",
+    metrics,
+  };
+};
+
+const createCustomTransformDetails = ({ state }) => {
+  const transform = normalizeBackgroundTransformEditorTransform(
+    state.selectedCustomTransform,
+  );
+
+  return [
+    {
+      label: "Position",
+      value: `${formatBackgroundTransformEditorMetric(transform.x)}, ${formatBackgroundTransformEditorMetric(transform.y)}`,
+    },
+    {
+      label: "Scale",
+      value: `${formatBackgroundTransformEditorMetric(transform.scaleX)} x ${formatBackgroundTransformEditorMetric(transform.scaleY)}`,
+    },
+    {
+      label: "Rotation",
+      value: formatBackgroundTransformEditorMetric(transform.rotation),
+    },
+    {
+      label: "Anchor",
+      value: `${formatBackgroundTransformEditorMetric(transform.anchorX)}, ${formatBackgroundTransformEditorMetric(transform.anchorY)}`,
+    },
+    {
+      label: "Origin",
+      value: `${formatBackgroundTransformEditorMetric(transform.originX)}, ${formatBackgroundTransformEditorMetric(transform.originY)}`,
+    },
+  ];
+};
+
+export const selectViewData = ({ state, props = {} }) => {
   const itemsMap = {
     image: state.imageItems,
     layout: state.layoutItems,
@@ -588,12 +687,28 @@ export const selectViewData = ({ state }) => {
       options: colorOptions,
     },
     {
-      name: "transformId",
+      name: "customTransform",
       label: "Transform",
+      type: "segmented-control",
+      clearable: false,
+      options: [
+        { value: false, label: "Predefined" },
+        { value: true, label: "Custom" },
+      ],
+    },
+    {
+      $when: "customTransform == false",
+      name: "transformId",
+      label: "Predefined Transform",
       type: "select",
       clearable: true,
       placeholder: "Select transform",
       options: transformOptions,
+    },
+    {
+      $when: "customTransform == true",
+      type: "slot",
+      slot: "custom-transform",
     },
     {
       name: "opacity",
@@ -691,6 +806,7 @@ export const selectViewData = ({ state }) => {
   const defaultValues = {
     background: selectedResource?.fileId || "",
     colorId: state.selectedColorId,
+    customTransform: state.customTransformEnabled,
     transformId: state.selectedTransformId,
     opacity: state.selectedOpacity ?? DEFAULT_BACKGROUND_OPACITY,
     blur: state.selectedBlurEnabled,
@@ -713,8 +829,13 @@ export const selectViewData = ({ state }) => {
     groups: flatGroups,
     tempSelectedResourceId: state.tempSelectedResourceId,
     selectedResource,
+    customTransformDetails: createCustomTransformDetails({ state }),
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
+    backgroundTransformEditor: createBackgroundTransformEditorViewData({
+      state,
+      props,
+    }),
     searchQuery: state.searchQuery,
     searchPlaceholder: "Search...",
     dialogueForm: {
@@ -722,7 +843,12 @@ export const selectViewData = ({ state }) => {
         selectedResource?.resourceType ?? "none",
         selectedResource?.resourceId ?? "none",
         state.selectedColorId ?? "none",
+        state.customTransformEnabled ? "custom-transform" : "preset-transform",
         state.selectedTransformId ?? "none",
+        JSON.stringify(state.selectedCustomTransform ?? {}),
+        state.customTransformEditorOpen
+          ? "custom-transform-editor-open"
+          : "custom-transform-editor-closed",
         state.selectedOpacity ?? DEFAULT_BACKGROUND_OPACITY,
         state.selectedBlurEnabled ? "blur" : "no-blur",
         state.selectedBlur.x,

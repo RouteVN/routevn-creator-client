@@ -303,6 +303,44 @@ describe("graphicsService", () => {
     }).not.toThrow();
   });
 
+  it("recreates a missing ticker before route engine init", async () => {
+    const { createGraphicsService } = await import(
+      "../../src/deps/services/graphicsService.js"
+    );
+    const service = await createGraphicsService({
+      subject: {
+        dispatch: vi.fn(),
+      },
+    });
+
+    await service.init({
+      canvas: {
+        children: [],
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+      width: 1920,
+      height: 1080,
+    });
+    await service.destroy();
+
+    expect(() => {
+      service.initRouteEngine({
+        screen: { width: 1920, height: 1080 },
+      });
+    }).not.toThrow();
+    expect(createRouteEngineMock).toHaveBeenCalled();
+    expect(createEffectsHandlerMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ticker: expect.objectContaining({
+          start: expect.any(Function),
+        }),
+      }),
+    );
+
+    await service.destroy();
+  });
+
   it("routes tauri Pixi media through the provided localhost origin", async () => {
     const filePath = "/Users/test/project/files/image-1";
     const localhostOrigin = "http://127.0.0.1:45123";

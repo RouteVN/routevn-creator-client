@@ -35,6 +35,19 @@ refs:
         handler: handleFormExtra
       form-change:
         handler: handleFormInputChange
+  customTransformButton:
+    eventListeners:
+      click:
+        handler: handleCustomTransformButtonClick
+  customTransformChip*:
+    eventListeners:
+      click:
+        handler: handleCustomTransformButtonClick
+  backgroundTransformPreviewCanvasHost: {}
+  backgroundTransformEditorDoneButton:
+    eventListeners:
+      click:
+        handler: handleCustomTransformDoneButtonClick
   backgroundImage:
     eventListeners:
       click:
@@ -50,7 +63,7 @@ refs:
       click:
         action: hideFullImagePreview
 template:
-  - rtgl-view w=f h=f p=lg:
+  - 'rtgl-view w=f h=f p=lg pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
       - rtgl-view d=h g=md: null
       - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
       - $if mode == 'current':
@@ -88,8 +101,39 @@ template:
                     $else:
                       - rtgl-view#backgroundImage w=355 h=200 bgc=mu av=c ah=c cur=pointer slot=background:
                           - rtgl-text s=md c=mu-fg: Select Background
+                  - rtgl-view slot=custom-transform d=h av=c w=f g=md:
+                      - rtgl-view d=h av=c w=1fg g=sm wrap:
+                          - $for item, i in customTransformDetails:
+                              - 'rtgl-view#customTransformChip${i} d=h av=c g=sm bw=xs bc=bo h-bc=pr br=full bgc=mu ph=md pv=sm cur=pointer style="max-width: 220px; box-sizing: border-box;"':
+                                  - rtgl-text s=xs c=mu-fg ellipsis: ${item.label}
+                                  - 'rtgl-text s=sm style="font-variant-numeric: tabular-nums; white-space: nowrap;"': ${item.value}
+                      - rtgl-button#customTransformButton v=se: Edit
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#submitButton: Submit
+      - $if backgroundTransformEditor.isOpen:
+          - 'rtgl-view pos=abs edge=f z=20 bgc=bg d=v style="pointer-events: auto; min-width: 0; min-height: 0;"':
+              - rtgl-view h=48 bwb=xs w=f d=h av=c ph=md g=md:
+                  - rtgl-text s=sm w=1fg: Transform
+                  - rtgl-button#backgroundTransformEditorDoneButton v=pr: Done
+              - 'rtgl-view w=f h=1fg p=lg ah=c av=c style="min-width: 0; min-height: 0;"':
+                  - 'rtgl-view h=f style="width: ${backgroundTransformEditor.previewMaxWidth}; max-width: 100%; min-width: 0; min-height: 0;"':
+                      - rvn-scene-editor-preview-canvas#backgroundTransformPreviewCanvasHost canvas-aspect-ratio="${backgroundTransformEditor.canvasAspectRatio}": null
+              - rtgl-view w=f bwt=xs d=h av=c ph=md pv=sm g=lg bgc=bg wrap:
+                  - rtgl-view d=h av=c g=xs:
+                      - rtgl-text s=xs c=mu-fg: x
+                      - rtgl-text s=sm: ${backgroundTransformEditor.metrics.x}
+                  - rtgl-view d=h av=c g=xs:
+                      - rtgl-text s=xs c=mu-fg: y
+                      - rtgl-text s=sm: ${backgroundTransformEditor.metrics.y}
+                  - rtgl-view d=h av=c g=xs:
+                      - rtgl-text s=xs c=mu-fg: scaleX
+                      - rtgl-text s=sm: ${backgroundTransformEditor.metrics.scaleX}
+                  - rtgl-view d=h av=c g=xs:
+                      - rtgl-text s=xs c=mu-fg: scaleY
+                      - rtgl-text s=sm: ${backgroundTransformEditor.metrics.scaleY}
+                  - rtgl-view d=h av=c g=xs:
+                      - rtgl-text s=xs c=mu-fg: rotation
+                      - rtgl-text s=sm: ${backgroundTransformEditor.metrics.rotation}
       - $if mode == 'gallery':
           - rtgl-view d=h w=f av=c g=md:
               - rtgl-tabs#tabs selected-tab=${tab} :items=${tabs}: null
@@ -134,6 +178,7 @@ template:
                                               - rtgl-text s=xs c=mu-fg ellipsis w=200: ${item.name}
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#buttonSelect: Select
+
   - $when: fullImagePreviewVisible
     rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
       - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null

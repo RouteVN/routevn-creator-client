@@ -11,6 +11,7 @@ export const createInitialState = () => ({
   actions: {},
   isTouchMode: false,
   isActionsDialogOpen: false,
+  suppressDialogClose: false,
   dropdownMenu: {
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -245,6 +246,11 @@ export const selectViewData = ({ state, props, props: attrs }) => {
       : (attrs.dialogPanelWidth ?? "50vw"),
     hiddenModes,
     allowedModes,
+    suppressDialogClose:
+      state.suppressDialogClose === true ||
+      parseBooleanProp(attrs.suppressDialogClose, false) ||
+      attrs.backgroundTransformEditor?.suppressActionsDialogClose === true,
+    backgroundTransformEditor: attrs.backgroundTransformEditor ?? {},
     isRuntimeActionMode: isRuntimeActionMode(state.mode),
   };
 };
@@ -286,6 +292,7 @@ export const showActionsDialog = ({ state }, _payload = {}) => {
 
 export const hideActionsDialog = ({ state }, _payload = {}) => {
   state.isActionsDialogOpen = false;
+  state.suppressDialogClose = false;
   state.mode = "hidden";
 };
 
@@ -295,6 +302,17 @@ export const setMode = ({ state }, payload = {}) => {
     return;
   }
   state.mode = mode;
+};
+
+export const setSuppressDialogClose = (
+  { state },
+  { suppressDialogClose } = {},
+) => {
+  state.suppressDialogClose = suppressDialogClose === true;
+};
+
+export const selectSuppressDialogClose = ({ state }) => {
+  return state.suppressDialogClose === true;
 };
 
 const resolveDialogueModeLabel = (dialogue, layoutsItems) => {

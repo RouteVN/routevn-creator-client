@@ -66,6 +66,23 @@ refs:
     eventListeners:
       value-change:
         handler: handleTransformChange
+  customTransformMode*:
+    eventListeners:
+      value-change:
+        handler: handleTransformModeChange
+  customTransformButton*:
+    eventListeners:
+      click:
+        handler: handleCustomTransformButtonClick
+  customTransformChip*:
+    eventListeners:
+      click:
+        handler: handleCustomTransformButtonClick
+  backgroundTransformPreviewCanvasHost: {}
+  backgroundTransformEditorDoneButton:
+    eventListeners:
+      click:
+        handler: handleCustomTransformDoneButtonClick
   animation*:
     eventListeners:
       value-change:
@@ -107,7 +124,7 @@ refs:
       click:
         handler: handleCharacterItemClick
 template:
-  - rtgl-view w=f h=f p=lg:
+  - 'rtgl-view w=f h=f p=lg pos=rel style="min-width: 0; min-height: 0; overflow: hidden;"':
       - $if mode == 'current':
           - rtgl-view d=h g=md:
               - rtgl-breadcrumb#breadcumb :items=${breadcrumb}: null
@@ -127,7 +144,18 @@ template:
                                           - rtgl-text s=xs c=mu-fg ellipsis w=200: ${character.displayName}
                                   - rtgl-view w=1fg g=sm:
                                       - rtgl-text s=sm c=mu-fg: Transform
-                                      - rtgl-select#transform${i} data-index=${character.characterIndex} key=${character.transformId} :options=${defaultValues.transformOptions} :selectedValue=${character.transformId} w=f no-clear: null
+                                      - rtgl-segmented-control#customTransformMode${i} data-index=${character.characterIndex} w=f no-clear :selectedValue=${character.customTransform} :options=${defaultValues.transformModeOptions}: null
+                                      - $if character.customTransform:
+                                          - rtgl-view d=h av=c w=f g=md:
+                                              - rtgl-view d=h av=c w=1fg g=sm wrap:
+                                                  - $for item, j in character.customTransformDetails:
+                                                      - 'rtgl-view#customTransformChip${i}x${j} data-index=${character.characterIndex} d=h av=c g=sm bw=xs bc=bo h-bc=pr br=full bgc=mu ph=md pv=sm cur=pointer style="max-width: 220px; box-sizing: border-box;"':
+                                                          - rtgl-text s=xs c=mu-fg ellipsis: ${item.label}
+                                                          - 'rtgl-text s=sm style="font-variant-numeric: tabular-nums; white-space: nowrap;"': ${item.value}
+                                              - rtgl-button#customTransformButton${i} data-index=${character.characterIndex} v=se: Edit
+                                        $else:
+                                          - rtgl-text s=sm c=mu-fg: Predefined Transform
+                                          - rtgl-select#transform${i} data-index=${character.characterIndex} key=${character.transformId} :options=${defaultValues.transformOptions} :selectedValue=${character.transformId} w=f no-clear: null
                                       - rtgl-text s=sm c=mu-fg: Opacity
                                       - rtgl-slider-input#opacity${i} data-index=${character.characterIndex} key=${character.id} min=0 max=1 step=0.01 w=f value=${character.opacity}: null
                                       - rtgl-text s=sm c=mu-fg: Blur
@@ -211,6 +239,30 @@ template:
           - 'rtgl-view d=h av=c ah=e w=f g=lg style="flex: 0 0 auto;"':
               - rtgl-button#buttonSelect: Select
   - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
+  - $if backgroundTransformEditor.isOpen:
+      - 'rtgl-view pos=abs edge=f z=20 bgc=bg d=v style="pointer-events: auto; min-width: 0; min-height: 0;"':
+          - rtgl-view h=48 bwb=xs w=f d=h av=c ph=md g=md:
+              - rtgl-text s=sm w=1fg: Transform
+              - rtgl-button#backgroundTransformEditorDoneButton v=pr: Done
+          - 'rtgl-view w=f h=1fg p=lg ah=c av=c style="min-width: 0; min-height: 0;"':
+              - 'rtgl-view h=f style="width: ${backgroundTransformEditor.previewMaxWidth}; max-width: 100%; min-width: 0; min-height: 0;"':
+                  - rvn-scene-editor-preview-canvas#backgroundTransformPreviewCanvasHost canvas-aspect-ratio="${backgroundTransformEditor.canvasAspectRatio}": null
+          - rtgl-view w=f bwt=xs d=h av=c ph=md pv=sm g=lg bgc=bg wrap:
+              - rtgl-view d=h av=c g=xs:
+                  - rtgl-text s=xs c=mu-fg: x
+                  - rtgl-text s=sm: ${backgroundTransformEditor.metrics.x}
+              - rtgl-view d=h av=c g=xs:
+                  - rtgl-text s=xs c=mu-fg: y
+                  - rtgl-text s=sm: ${backgroundTransformEditor.metrics.y}
+              - rtgl-view d=h av=c g=xs:
+                  - rtgl-text s=xs c=mu-fg: scaleX
+                  - rtgl-text s=sm: ${backgroundTransformEditor.metrics.scaleX}
+              - rtgl-view d=h av=c g=xs:
+                  - rtgl-text s=xs c=mu-fg: scaleY
+                  - rtgl-text s=sm: ${backgroundTransformEditor.metrics.scaleY}
+              - rtgl-view d=h av=c g=xs:
+                  - rtgl-text s=xs c=mu-fg: rotation
+                  - rtgl-text s=sm: ${backgroundTransformEditor.metrics.rotation}
   - $when: fullImagePreviewVisible
     rtgl-view#previewOverlay pos=fix edge=f z=3000 cur=pointer:
       - rtgl-view w=f h=f pos=fix edge=f bgc=bg: null
