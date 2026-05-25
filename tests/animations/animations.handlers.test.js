@@ -1,10 +1,18 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   handleAnimationItemClick,
   handleFileExplorerSelectionChanged,
+  handleImportAnimationClick,
+  handleImportFormActionClick,
 } from "../../src/pages/animations/animations.handlers.js";
 
+const originalFetch = globalThis.fetch;
+
 describe("animations.handlers", () => {
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
   it("selects an animation from the catalog without logging", () => {
     const deps = {
       store: {
@@ -331,5 +339,414 @@ describe("animations.handlers", () => {
     });
 
     vi.unstubAllGlobals();
+  });
+
+  it("opens animation import as a global page action", () => {
+    const render = vi.fn();
+    const store = {
+      openImportDialog: vi.fn(),
+    };
+
+    handleImportAnimationClick({ render, store });
+
+    expect(store.openImportDialog).toHaveBeenCalledWith();
+    expect(render).toHaveBeenCalled();
+  });
+
+  it("shows an alert when the import URL is invalid", async () => {
+    const appService = {
+      showAlert: vi.fn(),
+      showToast: vi.fn(),
+    };
+    globalThis.fetch = vi.fn();
+
+    await handleImportFormActionClick(
+      {
+        appService,
+        projectService: {},
+        render: vi.fn(),
+        store: {},
+      },
+      {
+        _event: {
+          detail: {
+            actionId: "continue",
+            valid: true,
+            values: {
+              url: "/public/import-transform-sample.json",
+            },
+          },
+        },
+      },
+    );
+
+    expect(appService.showAlert).toHaveBeenCalledWith({
+      message: "Enter a valid http(s) URL.",
+      title: "Error",
+    });
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it("shows an alert when animation image dependencies are missing", async () => {
+    const appService = {
+      showAlert: vi.fn(),
+      showToast: vi.fn(),
+    };
+    const store = {
+      openImportDestinationStep: vi.fn(),
+    };
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      headers: {
+        get: vi.fn(() => "application/json"),
+      },
+      json: vi.fn(async () => ({
+        schema: "routevn.import-pack.v1",
+        repository: {
+          animations: {
+            items: {
+              "animation.mask": {
+                id: "animation.mask",
+                type: "animation",
+                name: "Mask Animation",
+                animation: {
+                  type: "transition",
+                  mask: {
+                    kind: "single",
+                    imageId: "image.missing",
+                  },
+                },
+              },
+            },
+            tree: [{ id: "animation.mask" }],
+          },
+          images: {
+            items: {},
+          },
+        },
+      })),
+    }));
+
+    await handleImportFormActionClick(
+      {
+        appService,
+        projectService: {},
+        render: vi.fn(),
+        store,
+      },
+      {
+        _event: {
+          detail: {
+            actionId: "continue",
+            valid: true,
+            values: {
+              url: "https://example.com/import-animation-mask-sample.json",
+            },
+          },
+        },
+      },
+    );
+
+    expect(appService.showAlert).toHaveBeenCalledWith({
+      message: 'Image dependency "image.missing" is missing from the package.',
+      title: "Error",
+    });
+    expect(store.openImportDestinationStep).not.toHaveBeenCalled();
+  });
+
+  it("continues to folder selection after parsing a valid animation package", async () => {
+    const appService = {
+      showAlert: vi.fn(),
+      showToast: vi.fn(),
+    };
+    const store = {
+      openImportDestinationStep: vi.fn(),
+    };
+    const importInput = {
+      schema: "routevn.import-pack.v1",
+      repository: {
+        animations: {
+          items: {
+            "animation.mask": {
+              id: "animation.mask",
+              type: "animation",
+              name: "Mask Animation",
+              animation: {
+                type: "transition",
+                mask: {
+                  kind: "single",
+                  imageId: "image.mask",
+                  channel: "alpha",
+                },
+              },
+            },
+          },
+          tree: [{ id: "animation.mask" }],
+        },
+        images: {
+          items: {
+            "image.mask": {
+              id: "image.mask",
+              type: "image",
+              name: "Mask",
+              fileId: "file.mask",
+            },
+          },
+        },
+      },
+      files: {
+        "file.mask": {
+          url: "https://example.com/mask.png",
+          mimeType: "image/png",
+        },
+      },
+    };
+    const values = {
+      url: "http://localhost:3001/public/import-transform-sample.json",
+    };
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      json: vi.fn(async () => importInput),
+    }));
+
+    await handleImportFormActionClick(
+      {
+        appService,
+        projectService: {},
+        render: vi.fn(),
+        store,
+      },
+      {
+        _event: {
+          detail: {
+            actionId: "continue",
+            valid: true,
+            values,
+          },
+        },
+      },
+    );
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "http://localhost:3001/public/import-transform-sample.json",
+      {
+        headers: {
+          Accept: "application/json",
+        },
+      },
+    );
+    expect(store.openImportDestinationStep).toHaveBeenCalledWith({
+      importInput,
+      sourceValues: values,
+      includeImages: true,
+    });
+  });
+
+  it("imports animations and rewrites mask image dependencies", async () => {
+    const importedAnimations = [];
+    const importInput = {
+      schema: "routevn.import-pack.v1",
+      repository: {
+        animations: {
+          items: {
+            "animation.shake": {
+              id: "animation.shake",
+              type: "animation",
+              name: "Shake",
+              animation: {
+                type: "update",
+                tween: {
+                  x: {
+                    keyframes: [
+                      {
+                        duration: 100,
+                        value: 12,
+                        easing: "linear",
+                        relative: true,
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            "animation.mask": {
+              id: "animation.mask",
+              type: "animation",
+              name: "Mask Animation",
+              animation: {
+                type: "transition",
+                mask: {
+                  kind: "single",
+                  imageId: "image.mask",
+                  channel: "alpha",
+                },
+              },
+            },
+          },
+          tree: [{ id: "animation.shake" }, { id: "animation.mask" }],
+        },
+        images: {
+          items: {
+            "image.mask": {
+              id: "image.mask",
+              type: "image",
+              name: "Mask",
+              fileId: "file.mask",
+            },
+          },
+        },
+      },
+      files: {
+        "file.mask": {
+          url: "https://example.com/mask.png",
+          name: "mask.png",
+          mimeType: "image/png",
+        },
+      },
+    };
+    const appService = {
+      showAlert: vi.fn(),
+      showToast: vi.fn(),
+    };
+    const render = vi.fn();
+    const store = {
+      closeImportDialog: vi.fn(),
+      selectImportDialogPendingInput: vi.fn(() => importInput),
+      selectImportDialogTargetGroupId: vi.fn(() => undefined),
+      selectImportDialogImageFolderId: vi.fn(() => undefined),
+      setImportDestinationValues: vi.fn(),
+      setSearchQuery: vi.fn(),
+      setActiveTagIds: vi.fn(),
+      setAnimationPreviewVisible: vi.fn(),
+      setItems: vi.fn(),
+      setSelectedFolderId: vi.fn(),
+      setSelectedItemId: vi.fn(),
+      setTagsData: vi.fn(),
+      setProjectResolution: vi.fn(),
+      setImagesData: vi.fn(),
+      selectSelectedItemId: vi.fn(() => importedAnimations[0]?.animationId),
+      selectAnimationItemById: vi.fn(({ itemId } = {}) => {
+        return importedAnimations.find(
+          (animation) => animation.animationId === itemId,
+        )?.data;
+      }),
+      clearPreviewRuntime: vi.fn(),
+    };
+    const projectService = {
+      importImageFile: vi.fn(async () => ({
+        imageId: "project-image-mask",
+      })),
+      createAnimation: vi.fn(async (input) => {
+        importedAnimations.push(input);
+        return input.animationId;
+      }),
+      getRepositoryState: vi.fn(() => ({
+        animations: {
+          items: Object.fromEntries(
+            importedAnimations.map((animation) => [
+              animation.animationId,
+              {
+                id: animation.animationId,
+                ...animation.data,
+              },
+            ]),
+          ),
+          tree: importedAnimations.map((animation) => ({
+            id: animation.animationId,
+          })),
+        },
+        images: {
+          items: {},
+          tree: [],
+        },
+        project: {},
+        tags: {},
+      })),
+    };
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      blob: vi.fn(async () => new Blob(["mask"], { type: "image/png" })),
+    }));
+
+    await handleImportFormActionClick(
+      {
+        appService,
+        projectService,
+        refs: {
+          fileExplorer: {
+            selectItem: vi.fn(),
+          },
+        },
+        render,
+        store,
+      },
+      {
+        _event: {
+          detail: {
+            actionId: "import",
+            valid: true,
+            values: {
+              animationFolderId: "folder-animation",
+              imageFolderId: "folder-image",
+            },
+          },
+        },
+      },
+    );
+
+    expect(projectService.importImageFile).toHaveBeenCalledWith({
+      file: expect.objectContaining({
+        name: "mask.png",
+      }),
+      imageId: expect.any(String),
+      parentId: "folder-image",
+    });
+    expect(projectService.createAnimation).toHaveBeenCalledTimes(2);
+    expect(
+      projectService.createAnimation.mock.calls[0][0].data,
+    ).not.toHaveProperty("_level");
+    expect(
+      projectService.createAnimation.mock.calls[0][0].data,
+    ).not.toHaveProperty("fullLabel");
+    expect(
+      projectService.createAnimation.mock.calls[0][0].data,
+    ).not.toHaveProperty("hasChildren");
+    expect(
+      projectService.createAnimation.mock.calls[1][0].data,
+    ).not.toHaveProperty("_level");
+    expect(
+      projectService.createAnimation.mock.calls[1][0].data,
+    ).not.toHaveProperty("fullLabel");
+    expect(
+      projectService.createAnimation.mock.calls[1][0].data,
+    ).not.toHaveProperty("hasChildren");
+    expect(projectService.createAnimation).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          name: "Shake",
+        }),
+        parentId: "folder-animation",
+      }),
+    );
+    expect(projectService.createAnimation).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          animation: expect.objectContaining({
+            mask: expect.objectContaining({
+              imageId: "project-image-mask",
+            }),
+          }),
+        }),
+        parentId: "folder-animation",
+      }),
+    );
+    expect(store.closeImportDialog).toHaveBeenCalled();
+    expect(store.setSearchQuery).toHaveBeenCalledWith({ value: "" });
+    expect(store.setActiveTagIds).toHaveBeenCalledWith({ tagIds: [] });
+    expect(appService.showToast).toHaveBeenCalledWith({
+      message: "Animations imported.",
+    });
   });
 });

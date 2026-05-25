@@ -1,11 +1,700 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  handleImportFormActionClick,
+  handleImportTransformClick,
   handleTransformPreviewImageContextMenu,
   handleTransformPreviewImageMenuItemClick,
   handleTransformPreviewImageSelected,
 } from "../../src/pages/transforms/transforms.handlers.js";
 
+const originalFetch = globalThis.fetch;
+
 describe("transforms.handlers", () => {
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("opens transform import as a global page action", () => {
+    const render = vi.fn();
+    const store = {
+      openImportDialog: vi.fn(),
+    };
+
+    handleImportTransformClick({ render, store });
+
+    expect(store.openImportDialog).toHaveBeenCalledWith();
+    expect(render).toHaveBeenCalled();
+  });
+
+  it("imports one transform into the selected destination folder", async () => {
+    let createdTransform;
+    const importInput = {
+      type: "transform",
+      name: "Imported Center",
+      x: 960,
+      y: 540,
+      scaleX: 1.2,
+      scaleY: 1.3,
+      anchorX: 0.5,
+      anchorY: 0.5,
+      rotation: 15,
+    };
+    const appService = {
+      showAlert: vi.fn(),
+      showToast: vi.fn(),
+    };
+    const render = vi.fn();
+    const store = {
+      closeImportDialog: vi.fn(),
+      selectImportDialogPendingInput: vi.fn(() => importInput),
+      selectImportDialogTargetGroupId: vi.fn(() => undefined),
+      selectImportDialogImageFolderId: vi.fn(() => undefined),
+      setImportDestinationValues: vi.fn(),
+      setSearchQuery: vi.fn(),
+      setActiveTagIds: vi.fn(),
+      setImagesData: vi.fn(),
+      setItems: vi.fn(),
+      setProjectResolution: vi.fn(),
+      setSelectedFolderId: vi.fn(),
+      setSelectedItemId: vi.fn(),
+      setTagsData: vi.fn(),
+    };
+    const projectService = {
+      createTransform: vi.fn(async (input) => {
+        createdTransform = input;
+        return input.transformId;
+      }),
+      importImageFile: vi.fn(),
+      getRepositoryState: vi.fn(() => ({
+        images: { items: {}, tree: [] },
+        project: {},
+        tags: {},
+        transforms: {
+          items: {
+            [createdTransform.transformId]: {
+              id: createdTransform.transformId,
+              ...createdTransform.data,
+            },
+          },
+          tree: [{ id: createdTransform.transformId }],
+        },
+      })),
+    };
+    const refs = {
+      fileExplorer: {
+        selectItem: vi.fn(),
+      },
+    };
+
+    await handleImportFormActionClick(
+      {
+        appService,
+        projectService,
+        refs,
+        render,
+        store,
+      },
+      {
+        _event: {
+          detail: {
+            actionId: "import",
+            valid: true,
+            values: {
+              transformFolderId: "folder-1",
+            },
+          },
+        },
+      },
+    );
+
+    expect(store.setImportDestinationValues).toHaveBeenCalledWith({
+      values: {
+        transformFolderId: "folder-1",
+      },
+    });
+    expect(projectService.createTransform).toHaveBeenCalledWith({
+      transformId: expect.any(String),
+      data: {
+        type: "transform",
+        name: "Imported Center",
+        description: "",
+        x: 960,
+        y: 540,
+        scaleX: 1.2,
+        scaleY: 1.3,
+        anchorX: 0.5,
+        anchorY: 0.5,
+        rotation: 15,
+      },
+      parentId: "folder-1",
+      position: "last",
+    });
+    expect(store.closeImportDialog).toHaveBeenCalled();
+    expect(appService.showToast).toHaveBeenCalledWith({
+      message: "Transform imported.",
+    });
+    expect(store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: createdTransform.transformId,
+    });
+    expect(refs.fileExplorer.selectItem).toHaveBeenCalledWith({
+      itemId: createdTransform.transformId,
+    });
+  });
+
+  it("shows an alert when the form reports validation errors", async () => {
+    const appService = {
+      showAlert: vi.fn(),
+      showToast: vi.fn(),
+    };
+    const projectService = {
+      createTransform: vi.fn(),
+    };
+
+    await handleImportFormActionClick(
+      {
+        appService,
+        projectService,
+        render: vi.fn(),
+        store: {},
+      },
+      {
+        _event: {
+          detail: {
+            actionId: "continue",
+            valid: false,
+            values: {},
+          },
+        },
+      },
+    );
+
+    expect(projectService.createTransform).not.toHaveBeenCalled();
+    expect(appService.showAlert).toHaveBeenCalledWith({
+      message: "Import URL is required.",
+      title: "Error",
+    });
+    expect(appService.showToast).not.toHaveBeenCalled();
+  });
+
+  it("shows an alert when the import URL is invalid", async () => {
+    const appService = {
+      showAlert: vi.fn(),
+      showToast: vi.fn(),
+    };
+    globalThis.fetch = vi.fn();
+
+    await handleImportFormActionClick(
+      {
+        appService,
+        projectService: {},
+        refs: {},
+        render: vi.fn(),
+        store: {},
+      },
+      {
+        _event: {
+          detail: {
+            actionId: "continue",
+            valid: true,
+            values: {
+              url: "/public/import-transform-sample.json",
+            },
+          },
+        },
+      },
+    );
+
+    expect(appService.showAlert).toHaveBeenCalledWith({
+      message: "Enter a valid http(s) URL.",
+      title: "Error",
+    });
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it("shows an alert when the import URL content is not JSON", async () => {
+    const appService = {
+      showAlert: vi.fn(),
+      showToast: vi.fn(),
+    };
+    const store = {
+      openImportDestinationStep: vi.fn(),
+    };
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      headers: {
+        get: vi.fn(() => "text/html"),
+      },
+      json: vi.fn(),
+    }));
+
+    await handleImportFormActionClick(
+      {
+        appService,
+        projectService: {},
+        refs: {},
+        render: vi.fn(),
+        store,
+      },
+      {
+        _event: {
+          detail: {
+            actionId: "continue",
+            valid: true,
+            values: {
+              url: "https://example.com/import-transform-sample.json",
+            },
+          },
+        },
+      },
+    );
+
+    expect(appService.showAlert).toHaveBeenCalledWith({
+      message: "Import URL must return JSON.",
+      title: "Error",
+    });
+    expect(store.openImportDestinationStep).not.toHaveBeenCalled();
+  });
+
+  it("shows an alert when transform image dependencies have invalid file URLs", async () => {
+    const appService = {
+      showAlert: vi.fn(),
+      showToast: vi.fn(),
+    };
+    const store = {
+      openImportDestinationStep: vi.fn(),
+    };
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      headers: {
+        get: vi.fn(() => "application/json"),
+      },
+      json: vi.fn(async () => ({
+        schema: "routevn.import-pack.v1",
+        primary: {
+          resourceType: "transforms",
+          id: "transform.primary",
+        },
+        repository: {
+          transforms: {
+            items: {
+              "transform.primary": {
+                id: "transform.primary",
+                type: "transform",
+                name: "Primary Transform",
+                preview: {
+                  target: {
+                    imageId: "image.primary",
+                  },
+                },
+              },
+            },
+          },
+          images: {
+            items: {
+              "image.primary": {
+                id: "image.primary",
+                type: "image",
+                name: "Primary Image",
+                fileId: "file.primary",
+              },
+            },
+          },
+        },
+        files: {
+          "file.primary": {
+            url: "/image.png",
+          },
+        },
+      })),
+    }));
+
+    await handleImportFormActionClick(
+      {
+        appService,
+        projectService: {},
+        refs: {},
+        render: vi.fn(),
+        store,
+      },
+      {
+        _event: {
+          detail: {
+            actionId: "continue",
+            valid: true,
+            values: {
+              url: "https://example.com/import-transform-sample.json",
+            },
+          },
+        },
+      },
+    );
+
+    expect(appService.showAlert).toHaveBeenCalledWith({
+      message: 'Image dependency "Primary Image" has an invalid file URL.',
+      title: "Error",
+    });
+    expect(store.openImportDestinationStep).not.toHaveBeenCalled();
+  });
+
+  it("continues to folder selection after parsing a valid package", async () => {
+    const appService = {
+      showAlert: vi.fn(),
+      showToast: vi.fn(),
+    };
+    const store = {
+      openImportDestinationStep: vi.fn(),
+    };
+    const importInput = {
+      schema: "routevn.import-pack.v1",
+      primary: {
+        resourceType: "transforms",
+        id: "transform.primary",
+      },
+      repository: {
+        transforms: {
+          items: {
+            "transform.primary": {
+              id: "transform.primary",
+              type: "transform",
+              name: "Primary Transform",
+            },
+          },
+        },
+        images: {
+          items: {
+            "image.primary": {
+              id: "image.primary",
+              type: "image",
+              name: "Primary Image",
+              fileId: "file.primary",
+            },
+          },
+        },
+      },
+      files: {
+        "file.primary": {
+          url: "https://example.com/image.png",
+          mimeType: "image/png",
+        },
+      },
+    };
+    const values = {
+      url: "http://localhost:3001/public/import-transform-sample.json",
+    };
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      json: vi.fn(async () => importInput),
+    }));
+
+    await handleImportFormActionClick(
+      {
+        appService,
+        projectService: {},
+        refs: {},
+        render: vi.fn(),
+        store,
+      },
+      {
+        _event: {
+          detail: {
+            actionId: "continue",
+            valid: true,
+            values,
+          },
+        },
+      },
+    );
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "http://localhost:3001/public/import-transform-sample.json",
+      {
+        headers: {
+          Accept: "application/json",
+        },
+      },
+    );
+    expect(store.openImportDestinationStep).toHaveBeenCalledWith({
+      importInput,
+      sourceValues: values,
+      includeImages: false,
+    });
+  });
+
+  it("imports the primary transform from a package", async () => {
+    let createdTransform;
+    const importInput = {
+      schema: "routevn.import-pack.v1",
+      primary: {
+        resourceType: "transforms",
+        id: "transform.primary",
+      },
+      repository: {
+        transforms: {
+          items: {
+            "transform.other": {
+              id: "transform.other",
+              type: "transform",
+              name: "Other Transform",
+            },
+            "transform.primary": {
+              id: "transform.primary",
+              type: "transform",
+              name: "Primary Transform",
+              x: 320,
+              y: 180,
+            },
+          },
+        },
+        images: {
+          items: {
+            "image.unused": {
+              id: "image.unused",
+              type: "image",
+              name: "Unused Image",
+              fileId: "file.unused",
+            },
+          },
+        },
+      },
+      files: {
+        "file.unused": {
+          url: "/unused.png",
+        },
+      },
+    };
+    const appService = {
+      showAlert: vi.fn(),
+      showToast: vi.fn(),
+    };
+    const store = {
+      closeImportDialog: vi.fn(),
+      selectImportDialogPendingInput: vi.fn(() => importInput),
+      selectImportDialogTargetGroupId: vi.fn(() => undefined),
+      selectImportDialogImageFolderId: vi.fn(() => undefined),
+      setImportDestinationValues: vi.fn(),
+      setSearchQuery: vi.fn(),
+      setActiveTagIds: vi.fn(),
+      setImagesData: vi.fn(),
+      setItems: vi.fn(),
+      setProjectResolution: vi.fn(),
+      setSelectedFolderId: vi.fn(),
+      setSelectedItemId: vi.fn(),
+      setTagsData: vi.fn(),
+    };
+    const projectService = {
+      createTransform: vi.fn(async (input) => {
+        createdTransform = input;
+        return input.transformId;
+      }),
+      importImageFile: vi.fn(),
+      getRepositoryState: vi.fn(() => ({
+        images: { items: {}, tree: [] },
+        project: {},
+        tags: {},
+        transforms: {
+          items: {
+            [createdTransform.transformId]: {
+              id: createdTransform.transformId,
+              ...createdTransform.data,
+            },
+          },
+          tree: [{ id: createdTransform.transformId }],
+        },
+      })),
+    };
+
+    await handleImportFormActionClick(
+      {
+        appService,
+        projectService,
+        refs: {},
+        render: vi.fn(),
+        store,
+      },
+      {
+        _event: {
+          detail: {
+            actionId: "import",
+            valid: true,
+            values: {
+              transformFolderId: "_root",
+            },
+          },
+        },
+      },
+    );
+
+    expect(projectService.createTransform).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          name: "Primary Transform",
+          x: 320,
+          y: 180,
+        }),
+        parentId: undefined,
+      }),
+    );
+    expect(projectService.importImageFile).not.toHaveBeenCalled();
+    expect(store.closeImportDialog).toHaveBeenCalled();
+    expect(store.setSearchQuery).toHaveBeenCalledWith({ value: "" });
+    expect(store.setActiveTagIds).toHaveBeenCalledWith({ tagIds: [] });
+  });
+
+  it("imports only preview-referenced transform image dependencies", async () => {
+    let createdTransform;
+    const importInput = {
+      schema: "routevn.import-pack.v1",
+      primary: {
+        resourceType: "transforms",
+        id: "transform.primary",
+      },
+      repository: {
+        transforms: {
+          items: {
+            "transform.primary": {
+              id: "transform.primary",
+              type: "transform",
+              name: "Primary Transform",
+              preview: {
+                target: {
+                  imageId: "image.primary",
+                  slot: "target",
+                },
+              },
+            },
+          },
+        },
+        images: {
+          items: {
+            "image.primary": {
+              id: "image.primary",
+              type: "image",
+              name: "Primary Image",
+              fileId: "file.primary",
+            },
+            "image.unused": {
+              id: "image.unused",
+              type: "image",
+              name: "Unused Image",
+              fileId: "file.unused",
+            },
+          },
+        },
+      },
+      files: {
+        "file.primary": {
+          url: "https://example.com/primary.png",
+          mimeType: "image/png",
+        },
+        "file.unused": {
+          url: "/unused.png",
+        },
+      },
+    };
+    const appService = {
+      showAlert: vi.fn(),
+      showToast: vi.fn(),
+    };
+    const store = {
+      closeImportDialog: vi.fn(),
+      selectImportDialogPendingInput: vi.fn(() => importInput),
+      selectImportDialogTargetGroupId: vi.fn(() => undefined),
+      selectImportDialogImageFolderId: vi.fn(() => undefined),
+      setImportDestinationValues: vi.fn(),
+      setSearchQuery: vi.fn(),
+      setActiveTagIds: vi.fn(),
+      setImagesData: vi.fn(),
+      setItems: vi.fn(),
+      setProjectResolution: vi.fn(),
+      setSelectedFolderId: vi.fn(),
+      setSelectedItemId: vi.fn(),
+      setTagsData: vi.fn(),
+    };
+    const projectService = {
+      createTransform: vi.fn(async (input) => {
+        createdTransform = input;
+        return input.transformId;
+      }),
+      importImageFile: vi.fn(async () => ({
+        imageId: "image.imported",
+      })),
+      getRepositoryState: vi.fn(() => ({
+        images: { items: {}, tree: [] },
+        project: {},
+        tags: {},
+        transforms: {
+          items: {
+            [createdTransform.transformId]: {
+              id: createdTransform.transformId,
+              ...createdTransform.data,
+            },
+          },
+          tree: [{ id: createdTransform.transformId }],
+        },
+      })),
+    };
+    globalThis.fetch = vi.fn(async (url) => {
+      if (url === "https://example.com/primary.png") {
+        return {
+          ok: true,
+          blob: vi.fn(async () => new Blob(["primary"], { type: "image/png" })),
+        };
+      }
+
+      return {
+        ok: false,
+        blob: vi.fn(),
+      };
+    });
+
+    await handleImportFormActionClick(
+      {
+        appService,
+        projectService,
+        refs: {},
+        render: vi.fn(),
+        store,
+      },
+      {
+        _event: {
+          detail: {
+            actionId: "import",
+            valid: true,
+            values: {
+              imageFolderId: "images-folder",
+              transformFolderId: "transforms-folder",
+            },
+          },
+        },
+      },
+    );
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "https://example.com/primary.png",
+    );
+    expect(projectService.importImageFile).toHaveBeenCalledTimes(1);
+    expect(projectService.importImageFile).toHaveBeenCalledWith({
+      file: expect.any(Blob),
+      imageId: expect.any(String),
+      parentId: "images-folder",
+    });
+    expect(projectService.createTransform).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          preview: {
+            target: {
+              imageId: "image.imported",
+              slot: "target",
+            },
+          },
+        }),
+        parentId: "transforms-folder",
+      }),
+    );
+    expect(appService.showAlert).not.toHaveBeenCalled();
+  });
+
   it("opens the preview image context menu from the target slot", () => {
     const preventDefault = vi.fn();
     const stopPropagation = vi.fn();

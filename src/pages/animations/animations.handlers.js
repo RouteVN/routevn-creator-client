@@ -1,4 +1,16 @@
 import { generateId } from "../../internal/id.js";
+import {
+  IMPORT_PACK_SCHEMA,
+  downloadImportFile,
+  fetchImportPackageJson,
+  isImportPackageValidationError,
+  isPlainObject,
+  isValidHttpUrl,
+  normalizeImportParentId,
+  validateImportFileDescriptor,
+  validateImportPackageObject,
+} from "../../internal/importPackages.js";
+import { toFlatItems } from "../../internal/project/tree.js";
 import { createAnimationEditorPayload } from "../../internal/animationEditorRoute.js";
 import { createResourceFileExplorerHandlers } from "../../internal/ui/fileExplorer.js";
 import { createCatalogPageHandlers } from "../../internal/ui/resourcePages/catalog/createCatalogPageHandlers.js";
@@ -13,6 +25,378 @@ import {
   renderSelectedAnimationPreview,
   stopAnimationPreviewPlayback,
 } from "./support/animationPreviewRuntime.js";
+
+const DEFAULT_IMPORTED_ANIMATION_NAME = "Imported Animation";
+
+const clonePlainData = (value) => {
+  return isPlainObject(value) ? structuredClone(value) : {};
+};
+
+const getAnimationItemsFromCollection = (collection) => {
+  if (!isPlainObject(collection)) {
+    return [];
+  }
+
+  const treeItems = Array.isArray(collection.tree)
+    ? toFlatItems(collection)
+    : [];
+  const sourceItems =
+    treeItems.length > 0 ? treeItems : Object.values(collection.items ?? {});
+
+  return sourceItems.filter((item) => item?.type === "animation");
+};
+
+const sortPrimaryAnimationFirst = (items, input) => {
+  const primary = input?.primary;
+  if (primary?.resourceType !== "animations" || !primary.id) {
+    return items;
+  }
+
+  const primaryIndex = items.findIndex((item) => item.id === primary.id);
+  if (primaryIndex <= 0) {
+    return items;
+  }
+
+  const nextItems = [...items];
+  const [primaryItem] = nextItems.splice(primaryIndex, 1);
+  nextItems.unshift(primaryItem);
+  return nextItems;
+};
+
+const resolveAnimationImportItems = (input) => {
+  if (!isPlainObject(input)) {
+    return [];
+  }
+
+  if (input.schema === IMPORT_PACK_SCHEMA && input.repository?.animations) {
+    return sortPrimaryAnimationFirst(
+      getAnimationItemsFromCollection(input.repository.animations),
+      input,
+    );
+  }
+
+  if (input.repository?.animations) {
+    return getAnimationItemsFromCollection(input.repository.animations);
+  }
+
+  if (input.items || input.tree) {
+    return getAnimationItemsFromCollection(input);
+  }
+
+  return input.type === "animation" ? [input] : [];
+};
+
+const collectMaskImageIds = (mask, imageIds) => {
+  if (!isPlainObject(mask)) {
+    return;
+  }
+
+  if (mask.imageId) {
+    imageIds.add(mask.imageId);
+  }
+
+  for (const imageId of mask.imageIds ?? []) {
+    if (imageId) {
+      imageIds.add(imageId);
+    }
+  }
+
+  for (const item of mask.items ?? []) {
+    if (item?.imageId) {
+      imageIds.add(item.imageId);
+    }
+  }
+};
+
+const collectAnimationImageIds = (animationItems = []) => {
+  const imageIds = new Set();
+  for (const item of animationItems) {
+    collectMaskImageIds(item?.animation?.mask, imageIds);
+  }
+  return imageIds;
+};
+
+const getImportImageItems = (importInput, imageIds) => {
+  const items = importInput?.repository?.images?.items;
+  if (!isPlainObject(items) || imageIds.size === 0) {
+    return [];
+  }
+
+  return Object.values(items).filter(
+    (item) => item?.type === "image" && imageIds.has(item.id),
+  );
+};
+
+const hasImportImageDependencies = (importInput, animationItems) => {
+  const imageIds = collectAnimationImageIds(animationItems);
+  return getImportImageItems(importInput, imageIds).length > 0;
+};
+
+const getImportImageItemsById = (importInput) => {
+  return isPlainObject(importInput?.repository?.images?.items)
+    ? importInput.repository.images.items
+    : {};
+};
+
+const getImportItemLabel = (item, fallback) => {
+  return item?.name ?? item?.id ?? fallback;
+};
+
+const getAnimationItemValidationMessage = (item) => {
+  if (!isPlainObject(item) || item.type !== "animation") {
+    return "No animation found to import.";
+  }
+
+  const label = getImportItemLabel(item, "Imported animation");
+  if (item.name !== undefined && typeof item.name !== "string") {
+    return `Animation "${label}" name must be text.`;
+  }
+
+  if (item.description !== undefined && typeof item.description !== "string") {
+    return `Animation "${label}" description must be text.`;
+  }
+
+  if (
+    item.tagIds !== undefined &&
+    (!Array.isArray(item.tagIds) ||
+      item.tagIds.some((tagId) => typeof tagId !== "string"))
+  ) {
+    return `Animation "${label}" tags must be text ids.`;
+  }
+
+  if (!isPlainObject(item.animation)) {
+    return `Animation "${label}" is missing animation data.`;
+  }
+
+  if (!["update", "transition"].includes(item.animation.type)) {
+    return `Animation "${label}" has an unsupported animation type.`;
+  }
+
+  return undefined;
+};
+
+const getAnimationImageDependencyValidationMessage = ({
+  importInput,
+  animationItems,
+} = {}) => {
+  const imageIds = collectAnimationImageIds(animationItems);
+  if (imageIds.size === 0) {
+    return undefined;
+  }
+
+  const imageItemsById = getImportImageItemsById(importInput);
+  for (const imageId of imageIds) {
+    const imageItem = imageItemsById[imageId];
+    if (!isPlainObject(imageItem) || imageItem.type !== "image") {
+      return `Image dependency "${imageId}" is missing from the package.`;
+    }
+
+    const label = `Image dependency "${getImportItemLabel(imageItem, imageId)}"`;
+    try {
+      validateImportFileDescriptor({
+        importInput,
+        fileId: imageItem.fileId,
+        label,
+      });
+    } catch (error) {
+      return getImportErrorMessage(
+        error,
+        `${label} has invalid file metadata.`,
+      );
+    }
+  }
+
+  return undefined;
+};
+
+const getAnimationImportValidationMessage = ({
+  importInput,
+  animationItems,
+} = {}) => {
+  try {
+    validateImportPackageObject(importInput);
+  } catch (error) {
+    return getImportErrorMessage(error, "Import package is invalid.");
+  }
+
+  if (animationItems.length === 0) {
+    return "No animation found to import.";
+  }
+
+  for (const item of animationItems) {
+    const itemMessage = getAnimationItemValidationMessage(item);
+    if (itemMessage) {
+      return itemMessage;
+    }
+  }
+
+  return getAnimationImageDependencyValidationMessage({
+    importInput,
+    animationItems,
+  });
+};
+
+const importImageDependencies = async ({
+  importInput,
+  projectService,
+  imageParentId,
+  animationItems,
+} = {}) => {
+  const imageIdMap = new Map();
+  const imageIds = collectAnimationImageIds(animationItems);
+  const imageItems = getImportImageItems(importInput, imageIds);
+
+  for (const imageItem of imageItems) {
+    const fileDescriptor = validateImportFileDescriptor({
+      importInput,
+      fileId: imageItem.fileId,
+      label: `Image dependency "${imageItem.name ?? imageItem.id}"`,
+    });
+
+    const file = await downloadImportFile(fileDescriptor);
+    const imageId = generateId();
+    const result = await projectService.importImageFile({
+      file,
+      imageId,
+      parentId: imageParentId,
+    });
+
+    if (result?.valid === false) {
+      throw result;
+    }
+
+    imageIdMap.set(imageItem.id, result?.imageId ?? imageId);
+  }
+
+  return imageIdMap;
+};
+
+const resolveImageId = (imageId, imageIdMap) => {
+  return imageIdMap.get(imageId) ?? imageId;
+};
+
+const rewriteMaskImageRefs = (mask, imageIdMap) => {
+  if (!isPlainObject(mask) || imageIdMap.size === 0) {
+    return mask;
+  }
+
+  const nextMask = { ...mask };
+  if (nextMask.imageId) {
+    nextMask.imageId = resolveImageId(nextMask.imageId, imageIdMap);
+  }
+
+  if (Array.isArray(nextMask.imageIds)) {
+    nextMask.imageIds = nextMask.imageIds.map((imageId) =>
+      resolveImageId(imageId, imageIdMap),
+    );
+  }
+
+  if (Array.isArray(nextMask.items)) {
+    nextMask.items = nextMask.items.map((item) => {
+      if (!item?.imageId) {
+        return item;
+      }
+
+      return {
+        ...item,
+        imageId: resolveImageId(item.imageId, imageIdMap),
+      };
+    });
+  }
+
+  return nextMask;
+};
+
+const removeImportedResourceMetadata = (data) => {
+  delete data.id;
+  delete data.parentId;
+  delete data._level;
+  delete data.fullLabel;
+  delete data.hasChildren;
+  delete data.children;
+};
+
+const normalizeImportedAnimationData = (item, { imageIdMap } = {}) => {
+  const data = clonePlainData(item);
+  removeImportedResourceMetadata(data);
+
+  data.type = "animation";
+  data.name = data.name ?? DEFAULT_IMPORTED_ANIMATION_NAME;
+  data.description = data.description ?? "";
+  data.tagIds = Array.isArray(data.tagIds) ? data.tagIds : [];
+
+  if (!isPlainObject(data.animation)) {
+    data.animation = {
+      type: "update",
+      tween: {},
+    };
+  }
+
+  if (data.animation.type === "transition" && data.animation.mask) {
+    data.animation = {
+      ...data.animation,
+      mask: rewriteMaskImageRefs(data.animation.mask, imageIdMap ?? new Map()),
+    };
+  }
+
+  return data;
+};
+
+const resolveAnimationImportInput = async ({ appService, values } = {}) => {
+  const url = `${values?.url ?? ""}`.trim();
+  if (!url) {
+    showImportError(appService, "Import URL is required.");
+    return;
+  }
+
+  if (!isValidHttpUrl(url)) {
+    showImportError(appService, "Enter a valid http(s) URL.");
+    return;
+  }
+
+  try {
+    return await fetchImportPackageJson({ url });
+  } catch (error) {
+    showImportError(
+      appService,
+      isImportPackageValidationError(error)
+        ? error.message
+        : "Package could not be loaded.",
+    );
+    return;
+  }
+};
+
+const showImportError = (appService, message) => {
+  if (typeof appService?.showAlert === "function") {
+    appService.showAlert({
+      message,
+      title: "Error",
+    });
+    return;
+  }
+
+  appService?.showToast?.({ message });
+};
+
+const showImportSuccess = (appService, count) => {
+  appService?.showToast?.({
+    message: count === 1 ? "Animation imported." : "Animations imported.",
+  });
+};
+
+const clearImportVisibilityFilters = (store) => {
+  store.setSearchQuery?.({ value: "" });
+  store.setActiveTagIds?.({ tagIds: [] });
+};
+
+const getImportErrorMessage = (error, fallback) => {
+  return error?.error?.message ?? error?.message ?? fallback;
+};
+
+const getImportValidationMessage = () => {
+  return "Import URL is required.";
+};
 
 const navigateToAnimationEditor = ({
   appService,
@@ -323,6 +707,152 @@ export const handleAddAnimationClick = async (deps, payload) => {
   const { groupId } = payload._event.detail;
   store.openAddDialog({ groupId });
   render();
+};
+
+export const handleImportAnimationClick = (deps) => {
+  const { render, store } = deps;
+
+  store.openImportDialog();
+  render();
+};
+
+export const handleImportDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeImportDialog();
+  render();
+};
+
+export const handleImportFormActionClick = async (deps, payload) => {
+  const { appService, projectService, store, render } = deps;
+  const { actionId, values, valid } = payload._event.detail;
+
+  if (actionId === "cancel") {
+    store.closeImportDialog();
+    render();
+    return;
+  }
+
+  if (actionId === "back") {
+    store.openImportSourceStep();
+    render();
+    return;
+  }
+
+  if (actionId === "continue") {
+    if (valid === false) {
+      showImportError(appService, getImportValidationMessage());
+      return;
+    }
+
+    const importInput = await resolveAnimationImportInput({
+      appService,
+      values,
+    });
+    if (!importInput) {
+      return;
+    }
+
+    const importItems = resolveAnimationImportItems(importInput);
+    const validationMessage = getAnimationImportValidationMessage({
+      importInput,
+      animationItems: importItems,
+    });
+    if (validationMessage) {
+      showImportError(appService, validationMessage);
+      return;
+    }
+
+    store.openImportDestinationStep({
+      importInput,
+      sourceValues: values,
+      includeImages: hasImportImageDependencies(importInput, importItems),
+    });
+    render();
+    return;
+  }
+
+  if (actionId !== "import") {
+    return;
+  }
+
+  if (valid === false) {
+    showImportError(appService, "Choose destination folders.");
+    return;
+  }
+
+  store.setImportDestinationValues?.({ values });
+  const importInput = store.selectImportDialogPendingInput?.();
+  if (!importInput) {
+    showImportError(
+      appService,
+      "Import package is missing. Click Back and continue again.",
+    );
+    return;
+  }
+
+  const importItems = resolveAnimationImportItems(importInput);
+  const validationMessage = getAnimationImportValidationMessage({
+    importInput,
+    animationItems: importItems,
+  });
+  if (validationMessage) {
+    showImportError(appService, validationMessage);
+    return;
+  }
+
+  const imageParentId = normalizeImportParentId(
+    values?.imageFolderId ?? store.selectImportDialogImageFolderId?.(),
+  );
+  let imageIdMap = new Map();
+  try {
+    imageIdMap = await importImageDependencies({
+      importInput,
+      projectService,
+      imageParentId,
+      animationItems: importItems,
+    });
+  } catch (error) {
+    showImportError(
+      appService,
+      getImportErrorMessage(error, "Image dependencies could not be imported."),
+    );
+    return;
+  }
+
+  const targetGroupId = normalizeImportParentId(
+    values?.animationFolderId ?? store.selectImportDialogTargetGroupId?.(),
+  );
+  const importedAnimationIds = [];
+
+  for (const item of importItems) {
+    const animationId = generateId();
+    const importAttempt = await runResourcePageMutation({
+      appService,
+      fallbackMessage: "Failed to import animation.",
+      action: () =>
+        projectService.createAnimation({
+          animationId,
+          data: normalizeImportedAnimationData(item, {
+            imageIdMap,
+          }),
+          parentId: targetGroupId,
+          position: "last",
+        }),
+    });
+
+    if (!importAttempt.ok) {
+      return;
+    }
+
+    importedAnimationIds.push(animationId);
+  }
+
+  store.closeImportDialog();
+  clearImportVisibilityFilters(store);
+  showImportSuccess(appService, importedAnimationIds.length);
+  await handleDataChanged(deps, {
+    selectedItemId: importedAnimationIds[0],
+  });
 };
 
 export const handleAnimationItemDoubleClick = (deps, payload) => {

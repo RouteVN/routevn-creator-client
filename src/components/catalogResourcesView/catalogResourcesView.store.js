@@ -162,8 +162,13 @@ export const selectViewData = ({ state, props }) => {
   });
 
   const groups = (props.groups ?? []).map((group) => {
-    const isCollapsed = state.collapsedIds.includes(group.id);
-    const children = isCollapsed ? [] : (group.children ?? []);
+    const groupChildren = group.children ?? [];
+    const hasSelectedItem = groupChildren.some(
+      (item) => item.id === props.selectedItemId,
+    );
+    const isCollapsed =
+      state.collapsedIds.includes(group.id) && !hasSelectedItem;
+    const children = isCollapsed ? [] : groupChildren;
 
     return {
       ...group,
@@ -242,6 +247,8 @@ export const selectViewData = ({ state, props }) => {
           : `No items found matching "${searchQuery}"`),
     addText: props.addText ?? "Add",
     canAdd: parseBooleanProp(props.canAdd, true),
+    importText: props.importText ?? "Import",
+    canImport: parseBooleanProp(props.canImport),
     mobileLayout,
     dropdownMenu: state.dropdownMenu,
   };

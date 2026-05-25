@@ -8,6 +8,8 @@ import {
   closePreviewImageMenu,
   openPreviewImageSelectorDialog,
   openPreviewImageMenu,
+  openImportDialog,
+  openImportDestinationStep,
   openTransformFormDialog,
   openTransformPreviewDialog,
   selectDialogPreviewData,
@@ -206,6 +208,101 @@ describe("transforms.store", () => {
       fullImagePreviewVisible: true,
       fullImagePreviewImageId: "image-bg",
       fullImagePreviewFileId: "thumb-bg",
+    });
+  });
+
+  it("configures the import form for URL packages", () => {
+    const state = createInitialState();
+    openImportDialog(
+      { state },
+      {
+        targetGroupId: "folder-1",
+      },
+    );
+
+    const viewData = selectViewData({ state });
+    const form = viewData.importForm;
+    const urlField = form.fields.find((field) => field.name === "url");
+    const sourceField = form.fields.find(
+      (field) => field.name === "sourceType",
+    );
+    const jsonField = form.fields.find((field) => field.name === "json");
+    const continueButton = form.actions.buttons.find(
+      (button) => button.id === "continue",
+    );
+
+    expect(sourceField).toBeUndefined();
+    expect(jsonField).toBeUndefined();
+    expect(urlField).toMatchObject({
+      required: {
+        message: "Import URL is required.",
+      },
+    });
+    expect(viewData.importDialogDefaultValues).toEqual({
+      url: "",
+    });
+    expect(continueButton).toMatchObject({
+      label: "Continue",
+      validate: true,
+    });
+  });
+
+  it("configures destination folder selectors for transform and image dependencies", () => {
+    const state = createInitialState();
+    state.data = {
+      items: {
+        "folder-transform": {
+          id: "folder-transform",
+          type: "folder",
+          name: "Transform Folder",
+        },
+      },
+      tree: [{ id: "folder-transform" }],
+    };
+    setImagesData(
+      { state },
+      {
+        imagesData: {
+          items: {
+            "folder-image": {
+              id: "folder-image",
+              type: "folder",
+              name: "Image Folder",
+            },
+          },
+          tree: [{ id: "folder-image" }],
+        },
+      },
+    );
+
+    openImportDestinationStep(
+      { state },
+      {
+        importInput: {},
+        includeImages: true,
+      },
+    );
+
+    const form = selectViewData({ state }).importForm;
+    const transformFolderField = form.fields.find(
+      (field) => field.name === "transformFolderId",
+    );
+    const imageFolderField = form.fields.find(
+      (field) => field.name === "imageFolderId",
+    );
+    const importButton = form.actions.buttons.find(
+      (button) => button.id === "import",
+    );
+
+    expect(transformFolderField.options).toEqual([
+      { value: "folder-transform", label: "Transform Folder" },
+    ]);
+    expect(imageFolderField.options).toEqual([
+      { value: "folder-image", label: "Image Folder" },
+    ]);
+    expect(importButton).toMatchObject({
+      label: "Import Transform",
+      validate: true,
     });
   });
 

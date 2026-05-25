@@ -233,6 +233,22 @@ export const handleAddButtonClick = (deps, payload) => {
   );
 };
 
+export const handleImportButtonClick = (deps, payload) => {
+  const { dispatchEvent } = deps;
+  payload._event.stopPropagation();
+
+  dispatchEvent(
+    new CustomEvent("import-click", {
+      detail: {
+        x: payload._event.clientX,
+        y: payload._event.clientY,
+      },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 export const handleItemContextMenu = (deps, payload) => {
   const { store, render } = deps;
   payload._event.preventDefault();

@@ -59,6 +59,10 @@ refs:
     eventListeners:
       click:
         handler: handleAddButtonClick
+  importBtn:
+    eventListeners:
+      click:
+        handler: handleImportButtonClick
   groupToggle*:
     eventListeners:
       click:
@@ -89,6 +93,8 @@ template:
               - $if showTagFilter:
                   - rtgl-view#tagFilterButton w=36 h=36 bw=xs br=md ah=c av=c cur=pointer bgc=${tagFilterButtonBackgroundColor} bc=${tagFilterButtonBorderColor}:
                       - rtgl-svg svg=filter wh=16 c=${tagFilterButtonIconColor}: null
+              - $if canImport:
+                  - rtgl-button#importBtn s=sm pre=upload v=se: ${importText}
       - 'rtgl-view h=1fg w=f sv style="min-width: 0;"':
           - $if groups.length > 0:
               - $for group, gIndex in groups:

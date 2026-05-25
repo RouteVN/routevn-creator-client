@@ -95,6 +95,115 @@ const addForm = {
   },
 };
 
+const IMPORT_FOLDER_ROOT_VALUE = "_root";
+const IMPORT_DIALOG_SOURCE_STEP = "source";
+const IMPORT_DIALOG_DESTINATION_STEP = "destination";
+
+const createImportFolderOptions = (collection) =>
+  toFlatItems(collection)
+    .filter((item) => item.type === "folder")
+    .map((folder) => ({
+      value: folder.id,
+      label: folder.fullLabel || folder.name || folder.id,
+    }));
+
+const createAnimationImportSourceForm = () => ({
+  title: "Import Animation",
+  fields: [
+    {
+      name: "url",
+      type: "input-text",
+      label: "URL",
+      required: {
+        message: "Import URL is required.",
+      },
+    },
+  ],
+  actions: {
+    layout: "",
+    buttons: [
+      {
+        id: "continue",
+        variant: "pr",
+        label: "Continue",
+        validate: true,
+      },
+    ],
+  },
+});
+
+const createAnimationImportDestinationForm = ({
+  animationFolderOptions = [],
+  imageFolderOptions = [],
+  includeImages = false,
+} = {}) => {
+  const fields = [
+    {
+      name: "animationFolderId",
+      type: "select",
+      label: "Animation Folder",
+      clearable: false,
+      required: true,
+      options: animationFolderOptions,
+    },
+  ];
+
+  if (includeImages) {
+    fields.push({
+      name: "imageFolderId",
+      type: "select",
+      label: "Image Folder",
+      clearable: false,
+      required: true,
+      options: imageFolderOptions,
+    });
+  }
+
+  return {
+    title: "Choose Folders",
+    fields,
+    actions: {
+      layout: "",
+      buttons: [
+        {
+          id: "back",
+          variant: "se",
+          label: "Back",
+        },
+        {
+          id: "import",
+          variant: "pr",
+          label: "Import Animation",
+          validate: true,
+        },
+      ],
+    },
+  };
+};
+
+const createImportSourceDefaultValues = () => ({
+  url: "",
+});
+
+const resolveImportFolderValue = (folderId) => {
+  return folderId ? folderId : undefined;
+};
+
+const createImportDestinationDefaultValues = ({
+  animationFolderId,
+  imageFolderId,
+} = {}) => ({
+  animationFolderId: resolveImportFolderValue(animationFolderId),
+  imageFolderId: resolveImportFolderValue(imageFolderId),
+});
+
+const createImportDestinationFormForState = (state) =>
+  createAnimationImportDestinationForm({
+    animationFolderOptions: createImportFolderOptions(state.data),
+    imageFolderOptions: createImportFolderOptions(state.imagesData),
+    includeImages: state.importDialogIncludeImages,
+  });
+
 const animationExplorerItemContextMenuItems = [
   { label: "Edit", type: "item", value: "edit-item" },
   { label: "Rename", type: "item", value: "rename-item" },
@@ -159,6 +268,10 @@ const {
     return {
       ...baseViewData,
       isAddDialogOpen: state.isAddDialogOpen,
+      isImportDialogOpen: state.isImportDialogOpen,
+      importForm: state.importForm,
+      importDialogDefaultValues: state.importDialogDefaultValues,
+      importDialogKey: `${state.isImportDialogOpen}-${state.importDialogStep}`,
       addForm,
       addFormDefaults: {
         name: "",
@@ -187,6 +300,15 @@ const {
 export const createInitialState = () => ({
   ...createCatalogInitialState(),
   isAddDialogOpen: false,
+  isImportDialogOpen: false,
+  importDialogStep: IMPORT_DIALOG_SOURCE_STEP,
+  importDialogTargetGroupId: undefined,
+  importDialogImageFolderId: undefined,
+  importDialogIncludeImages: false,
+  importDialogPendingInput: undefined,
+  importDialogSourceValues: createImportSourceDefaultValues(),
+  importForm: createAnimationImportSourceForm(),
+  importDialogDefaultValues: createImportSourceDefaultValues(),
   targetGroupId: undefined,
   isEditDialogOpen: false,
   editItemId: undefined,
@@ -300,6 +422,72 @@ export const selectAnimationDisplayItemById = ({ state }, { itemId } = {}) => {
     (item) => item.id === itemId && item.type === "animation",
   );
   return rawItem ? toAnimationDisplayItem(rawItem) : undefined;
+};
+
+export const openImportDialog = ({ state }, { targetGroupId } = {}) => {
+  state.isImportDialogOpen = true;
+  state.importDialogStep = IMPORT_DIALOG_SOURCE_STEP;
+  state.importDialogTargetGroupId =
+    targetGroupId === IMPORT_FOLDER_ROOT_VALUE ? undefined : targetGroupId;
+  state.importDialogImageFolderId = undefined;
+  state.importDialogIncludeImages = false;
+  state.importDialogPendingInput = undefined;
+  state.importDialogSourceValues = createImportSourceDefaultValues();
+  state.importDialogDefaultValues = createImportSourceDefaultValues();
+  state.importForm = createAnimationImportSourceForm();
+};
+
+export const openImportDestinationStep = (
+  { state },
+  { importInput, sourceValues, includeImages = false } = {},
+) => {
+  state.importDialogStep = IMPORT_DIALOG_DESTINATION_STEP;
+  state.importDialogPendingInput = importInput;
+  state.importDialogSourceValues =
+    sourceValues ?? createImportSourceDefaultValues();
+  state.importDialogIncludeImages = includeImages;
+  state.importDialogDefaultValues = createImportDestinationDefaultValues({
+    animationFolderId: state.importDialogTargetGroupId,
+    imageFolderId: state.importDialogImageFolderId,
+  });
+  state.importForm = createImportDestinationFormForState(state);
+};
+
+export const openImportSourceStep = ({ state }, _payload = {}) => {
+  state.importDialogStep = IMPORT_DIALOG_SOURCE_STEP;
+  state.importDialogPendingInput = undefined;
+  state.importDialogIncludeImages = false;
+  state.importDialogDefaultValues = state.importDialogSourceValues;
+  state.importForm = createAnimationImportSourceForm();
+};
+
+export const closeImportDialog = ({ state }, _payload = {}) => {
+  state.isImportDialogOpen = false;
+  state.importDialogStep = IMPORT_DIALOG_SOURCE_STEP;
+  state.importDialogTargetGroupId = undefined;
+  state.importDialogImageFolderId = undefined;
+  state.importDialogIncludeImages = false;
+  state.importDialogPendingInput = undefined;
+  state.importDialogSourceValues = createImportSourceDefaultValues();
+  state.importDialogDefaultValues = createImportSourceDefaultValues();
+  state.importForm = createAnimationImportSourceForm();
+};
+
+export const setImportDestinationValues = ({ state }, { values } = {}) => {
+  state.importDialogTargetGroupId = values?.animationFolderId;
+  state.importDialogImageFolderId = values?.imageFolderId;
+};
+
+export const selectImportDialogTargetGroupId = ({ state }) => {
+  return state.importDialogTargetGroupId;
+};
+
+export const selectImportDialogImageFolderId = ({ state }) => {
+  return state.importDialogImageFolderId;
+};
+
+export const selectImportDialogPendingInput = ({ state }) => {
+  return state.importDialogPendingInput;
 };
 
 export const openAddDialog = ({ state }, { groupId } = {}) => {
