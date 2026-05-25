@@ -12,6 +12,14 @@ import {
   normalizeCommandLineItemEffects,
   normalizeCommandLineItemOpacity,
 } from "../../internal/commandLineItemEffects.js";
+import {
+  BACKGROUND_TRANSFORM_FIELDS,
+  createActionItemWithInlineTransform,
+  formatBackgroundTransformEditorMetric,
+  hasInlineTransform,
+  normalizeBackgroundTransformEditorTransform,
+  removeInlineTransformFields,
+} from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
 
 const createEmptyCollection = () => ({
   items: {},
@@ -23,6 +31,10 @@ const UNGROUPED_SPRITE_GROUP_ID = "__ungrouped_sprites__";
 const UNGROUPED_GROUP_LABEL = "Ungrouped";
 const DEFAULT_SPRITE_GROUP_ID = "base";
 const DEFAULT_SPRITE_GROUP_NAME = "Sprite";
+const TRANSFORM_MODE_OPTIONS = [
+  { value: false, label: "Predefined" },
+  { value: true, label: "Custom" },
+];
 const createCharacterContextDropdownItems = (
   characterIndex,
   characters = [],
@@ -225,6 +237,7 @@ export const createInitialState = () => ({
   searchQuery: "",
   fullImagePreviewVisible: false,
   fullImagePreviewFileId: undefined,
+  customTransformEditorOpen: false,
   dropdownMenu: {
     isOpen: false,
     position: { x: 0, y: 0 },
@@ -251,6 +264,88 @@ export const setAnimations = ({ state }, { animations } = {}) => {
   state.selectedCharacters = state.selectedCharacters.map((character) =>
     normalizeSelectedCharacter(character, state.animations),
   );
+};
+
+const getTransformItems = (state) =>
+  toFlatItems(state.transforms).filter((item) => item.type === "transform");
+
+const getDefaultTransformId = (state) => {
+  const transformItems = getTransformItems(state);
+  return transformItems.length > 0 ? transformItems[0].id : undefined;
+};
+
+const getTransformResourceById = (state, transformId) => {
+  if (!transformId) {
+    return undefined;
+  }
+
+  return getTransformItems(state).find((item) => item.id === transformId);
+};
+
+const getSelectedTransformResource = (state, character = {}) => {
+  return getTransformResourceById(
+    state,
+    character.transformId ?? getDefaultTransformId(state),
+  );
+};
+
+const createCustomTransformDetails = (character = {}) => {
+  const transform = normalizeBackgroundTransformEditorTransform(character);
+
+  return [
+    {
+      label: "Position",
+      value: `${formatBackgroundTransformEditorMetric(transform.x)}, ${formatBackgroundTransformEditorMetric(transform.y)}`,
+    },
+    {
+      label: "Scale",
+      value: `${formatBackgroundTransformEditorMetric(transform.scaleX)} x ${formatBackgroundTransformEditorMetric(transform.scaleY)}`,
+    },
+    {
+      label: "Rotation",
+      value: formatBackgroundTransformEditorMetric(transform.rotation),
+    },
+    {
+      label: "Anchor",
+      value: `${formatBackgroundTransformEditorMetric(transform.anchorX)}, ${formatBackgroundTransformEditorMetric(transform.anchorY)}`,
+    },
+    {
+      label: "Origin",
+      value: `${formatBackgroundTransformEditorMetric(transform.originX)}, ${formatBackgroundTransformEditorMetric(transform.originY)}`,
+    },
+  ];
+};
+
+const applyCharacterInlineTransform = (character, transform) => {
+  const nextCharacter = createActionItemWithInlineTransform(
+    character,
+    transform,
+    { preserveTransformId: true },
+  );
+
+  for (const field of BACKGROUND_TRANSFORM_FIELDS) {
+    character[field] = nextCharacter[field];
+  }
+};
+
+const clearCharacterInlineTransform = (character) => {
+  const nextCharacter = removeInlineTransformFields(character);
+  for (const field of BACKGROUND_TRANSFORM_FIELDS) {
+    delete character[field];
+  }
+  if (!character.transformId) {
+    character.transformId = nextCharacter.transformId;
+  }
+};
+
+const getInlineTransformFields = (item = {}) => {
+  const fields = {};
+  for (const field of BACKGROUND_TRANSFORM_FIELDS) {
+    if (item[field] !== undefined) {
+      fields[field] = item[field];
+    }
+  }
+  return fields;
 };
 
 const getCharacterItemById = ({ state, characterId } = {}) => {
@@ -291,14 +386,31 @@ const resolveSelectedSpriteGroupId = ({
   return spriteSelectionGroups?.[0]?.id;
 };
 
-export const addCharacter = ({ state }, { id, transformId } = {}) => {
-  // Get the first available transform as default
-  const transformItems = toFlatItems(state.transforms).filter(
-    (item) => item.type === "transform",
+const createBackgroundTransformEditorViewData = ({ state, props = {} }) => {
+  const editor = props.backgroundTransformEditor ?? {};
+  const transform = normalizeBackgroundTransformEditorTransform(
+    editor.transform,
   );
-  const defaultTransform =
-    transformId ??
-    (transformItems.length > 0 ? transformItems[0].id : undefined);
+  const metrics = editor.metrics ?? {
+    x: formatBackgroundTransformEditorMetric(transform.x),
+    y: formatBackgroundTransformEditorMetric(transform.y),
+    scaleX: formatBackgroundTransformEditorMetric(transform.scaleX),
+    scaleY: formatBackgroundTransformEditorMetric(transform.scaleY),
+    rotation: formatBackgroundTransformEditorMetric(transform.rotation),
+  };
+
+  return {
+    isOpen: state.customTransformEditorOpen === true || editor.isOpen === true,
+    canvasAspectRatio: editor.canvasAspectRatio ?? "16 / 9",
+    previewMaxWidth:
+      editor.previewMaxWidth ??
+      "min(calc(100vw - 48px), calc((100vh - 170px) * 1.7777777778))",
+    metrics,
+  };
+};
+
+export const addCharacter = ({ state }, { id, transformId } = {}) => {
+  const defaultTransform = transformId ?? getDefaultTransformId(state);
 
   // Store raw character data (same structure as from props)
   state.selectedCharacters.push({
@@ -388,9 +500,62 @@ export const updateCharacterTransform = (
   { state },
   { index, transform } = {},
 ) => {
-  if (state.selectedCharacters[index]) {
-    state.selectedCharacters[index].transformId = transform;
+  const character = state.selectedCharacters[index];
+  if (!character) {
+    return;
   }
+
+  character.transformId = transform;
+  clearCharacterInlineTransform(character);
+};
+
+export const updateCharacterCustomTransformEnabled = (
+  { state },
+  { index, enabled } = {},
+) => {
+  const character = state.selectedCharacters[index];
+  if (!character) {
+    return;
+  }
+
+  const customEnabled = enabled === true || enabled === "true";
+  if (!customEnabled) {
+    clearCharacterInlineTransform(character);
+    character.transformId =
+      character.transformId ?? getDefaultTransformId(state);
+    return;
+  }
+
+  const selectedTransform = getSelectedTransformResource(state, character);
+  applyCharacterInlineTransform(character, {
+    ...normalizeBackgroundTransformEditorTransform(selectedTransform),
+    ...character,
+  });
+};
+
+export const updateCharacterCustomTransform = (
+  { state },
+  { index, transform } = {},
+) => {
+  const character = state.selectedCharacters[index];
+  if (!character) {
+    return;
+  }
+
+  character.transformId = character.transformId ?? getDefaultTransformId(state);
+  applyCharacterInlineTransform(character, transform);
+};
+
+export const openCustomTransformEditor = ({ state }, _payload = {}) => {
+  state.customTransformEditorOpen = true;
+};
+
+export const closeCustomTransformEditor = ({ state }, _payload = {}) => {
+  state.customTransformEditorOpen = false;
+};
+
+export const selectCustomTransformEditorOpen = ({ state }) => {
+  return state.customTransformEditorOpen === true;
 };
 
 export const updateCharacterAnimation = (
@@ -751,6 +916,7 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
         id: char.id,
         name: "Unknown Character",
         transformId: char.transformId,
+        ...getInlineTransformFields(char),
         animations: char.animations,
         animationMode: char.animationMode,
         opacity: char.opacity,
@@ -779,6 +945,7 @@ export const selectCharactersWithRepositoryData = ({ state }) => {
     return {
       ...characterData,
       transformId: char.transformId,
+      ...getInlineTransformFields(char),
       animations: char.animations,
       animationMode: char.animationMode,
       opacity: char.opacity,
@@ -805,7 +972,7 @@ const form = {
   ],
 };
 
-export const selectViewData = ({ state }) => {
+export const selectViewData = ({ state, props = {} }) => {
   const searchQuery = (state.searchQuery ?? "").toLowerCase().trim();
   const matchesSearch = (item) => {
     if (!searchQuery) {
@@ -919,9 +1086,7 @@ export const selectViewData = ({ state }) => {
   let selectedSpriteGroupName = "";
 
   // Get transform options from repository instead of hardcoded values
-  const transformItems = toFlatItems(state.transforms).filter(
-    (item) => item.type === "transform",
-  );
+  const transformItems = getTransformItems(state);
   const transformOptions = transformItems.map((transform) => ({
     label: transform.name,
     value: transform.id,
@@ -1050,6 +1215,8 @@ export const selectViewData = ({ state }) => {
       transformId:
         char.transformId ||
         (transformOptions.length > 0 ? transformOptions[0].value : undefined),
+      customTransform: hasInlineTransform(char),
+      customTransformDetails: createCustomTransformDetails(char),
       animationId: char.animations?.resourceId,
       opacity: char.opacity ?? DEFAULT_COMMAND_LINE_ITEM_OPACITY,
       blurEnabled: Boolean(char.blur),
@@ -1064,6 +1231,7 @@ export const selectViewData = ({ state }) => {
     characters: characterControls.slice().reverse(),
     transformOptions,
     animationOptions,
+    transformModeOptions: TRANSFORM_MODE_OPTIONS,
     blurToggleOptions: COMMAND_LINE_ITEM_BLUR_TOGGLE_OPTIONS,
     blurKernelSizeOptions: COMMAND_LINE_ITEM_BLUR_KERNEL_SIZE_SELECT_OPTIONS,
     blurRepeatEdgeOptions: COMMAND_LINE_ITEM_BLUR_REPEAT_EDGE_OPTIONS,
@@ -1087,6 +1255,10 @@ export const selectViewData = ({ state }) => {
     searchPlaceholder: "Search...",
     fullImagePreviewVisible: state.fullImagePreviewVisible,
     fullImagePreviewFileId: state.fullImagePreviewFileId,
+    backgroundTransformEditor: createBackgroundTransformEditorViewData({
+      state,
+      props,
+    }),
     breadcrumb,
     form,
     defaultValues,

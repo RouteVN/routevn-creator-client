@@ -2,6 +2,8 @@ componentName: rvn-command-line-visual
 propsSchema:
   type: object
   properties:
+    backgroundTransformEditor:
+      type: object
     visual:
       type: object
       properties:
@@ -18,6 +20,24 @@ propsSchema:
                 type: string
               transformId:
                 type: string
+              x:
+                type: number
+              y:
+                type: number
+              anchorX:
+                type: number
+              anchorY:
+                type: number
+              scaleX:
+                type: number
+              scaleY:
+                type: number
+              rotation:
+                type: number
+              originX:
+                type: number
+              originY:
+                type: number
               layer:
                 type: number
                 enum:

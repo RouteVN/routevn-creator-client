@@ -99,6 +99,14 @@ refs:
         handler: handleCommandLineSubmit
       temporary-presentation-state-change:
         handler: handleTemporaryPresentationStateChange
+      background-transform-customize:
+        handler: handleBackgroundTransformCustomize
+      background-transform-editor-done:
+        handler: handleBackgroundTransformEditorDone
+      action-transform-customize:
+        handler: handleActionTransformCustomize
+      action-transform-editor-done:
+        handler: handleActionTransformEditorDone
       close:
         handler: handleActionsDialogClose
   backButton:
@@ -161,18 +169,19 @@ template:
               - rtgl-view bwb=xs w=f h=48 av=c ph=sm d=h jc=e g=sm:
                   - rtgl-button#previewButton: Preview
               - 'rtgl-view w=f h=1fg sv style="min-height: 0;"':
-                  - 'rtgl-view w=f style="min-width: 0;"':
-                      - 'rtgl-view pos=rel w=f':
-                          - rvn-scene-editor-preview-canvas#previewCanvasHost canvas-aspect-ratio="${canvasAspectRatio}": null
-                          - $if isSceneAssetLoading:
-                              - rtgl-view pos=abs cor=full w=f h=f bgc=bg op=0.7 av=c ah=c:
-                                  - rtgl-text s=h3: Loading assets...
+                  - $if backgroundTransformEditor.isOpen == false:
+                      - 'rtgl-view w=f style="min-width: 0;"':
+                          - 'rtgl-view pos=rel w=f':
+                              - rvn-scene-editor-preview-canvas#previewCanvasHost canvas-aspect-ratio="${canvasAspectRatio}": null
+                              - $if isSceneAssetLoading:
+                                  - rtgl-view pos=abs cor=full w=f h=f bgc=bg op=0.7 av=c ah=c:
+                                      - rtgl-text s=h3: Loading assets...
                   - rtgl-view w=f h=1 bgc=mu: null
                   - rtgl-view w=f m=md:
                       - rtgl-view d=h av=c:
                           - rtgl-text s=sm c=mu-fg: State
                       - rtgl-view g=md w=f pv=md:
-                          - 'rvn-system-actions#systemActions :showSelected=${true} :actions=${selectedLineActions} :selectedLineId=${selectedLineId} :selectedLine=${selectedLine} :currentSceneId=${scene.id} actionType=presentation :presentationState=${presentationState} dialog-variant=scene-editor-left dialog-panel-width="calc((100vw - 64px) / 2)"': null
+                          - 'rvn-system-actions#systemActions :showSelected=${true} :actions=${selectedLineActions} :selectedLineId=${selectedLineId} :selectedLine=${selectedLine} :currentSceneId=${scene.id} actionType=presentation :presentationState=${presentationState} :backgroundTransformEditor=${backgroundTransformEditor} dialog-variant=scene-editor-left dialog-panel-width="${systemActionsDialogPanelWidth}" :suppressDialogClose=${backgroundTransformEditor.suppressActionsDialogClose}': null
       - rtgl-dropdown-menu#dropdownMenu :items=${dropdownMenu.items} x=${dropdownMenu.position.x} y=${dropdownMenu.position.y} ?open=${dropdownMenu.isOpen}: null
       - rtgl-popover#popover ?open=${popover.isOpen} x=${popover.position.x} y=${popover.position.y}:
           - rtgl-form#form slot=content :form=${form}: null

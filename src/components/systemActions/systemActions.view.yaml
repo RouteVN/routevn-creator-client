@@ -7,6 +7,14 @@ refs:
         handler: handleActionClicked
       temporary-presentation-state-change:
         handler: handleTemporaryPresentationStateChange
+      background-transform-customize:
+        handler: handleBackgroundTransformCustomize
+      background-transform-editor-done:
+        handler: handleBackgroundTransformEditorDone
+      action-transform-customize:
+        handler: handleActionTransformCustomize
+      action-transform-editor-done:
+        handler: handleActionTransformEditorDone
       submit:
         handler: handleCommandLineSubmit
   addActionButton:
@@ -214,7 +222,7 @@ template:
           - $if showEmbeddedClose:
               - rtgl-view d=h av=c ah=e w=f g=lg:
                   - rtgl-button#embeddedCloseButton: Confirm
-  - rvn-system-actions-dialog-surface#actionsDialog key=${mode} :open=${isActionsDialogOpen} variant=${dialogVariant} :dialogWidth=${actionsDialogWidth} :dialogHeight=${actionsDialogHeight} :panelWidth=${actionsDialogPanelWidth}:
+  - rvn-system-actions-dialog-surface#actionsDialog key=${mode} :open=${isActionsDialogOpen} variant=${dialogVariant} :dialogWidth=${actionsDialogWidth} :dialogHeight=${actionsDialogHeight} :panelWidth=${actionsDialogPanelWidth} :suppressClose=${suppressDialogClose}:
       - $if isActionsDialogOpen:
           - 'rtgl-view slot=content w=f h=f pos=rel style="min-width: 0; min-height: 0;"':
               - 'rtgl-view#helpFloatingButton pos=abs z=10 w=28 h=28 ah=c av=c bgc=bg bw=xs bc=bo h-bc=ac br=f cur=pointer style="top: 10px; right: 10px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);"':
@@ -228,7 +236,7 @@ template:
                 $elif mode == "input":
                   - rvn-command-line-input#commandLineInput :layouts=${inputLayouts} :layoutsData=${repositoryState.layouts} :form=${actions.form}: null
                 $elif mode == "background":
-                  - rvn-command-line-background#commandLineBackground data-mode="background" :background=${actions.background}: null
+                  - rvn-command-line-background#commandLineBackground data-mode="background" :background=${actions.background} :backgroundTransformEditor=${backgroundTransformEditor}: null
                 $elif mode == "screen":
                   - rvn-command-line-screen#commandLineScreen :screen=${actions.screen}: null
                 $elif mode == "bgm":
@@ -236,7 +244,7 @@ template:
                 $elif mode == "sfx":
                   - rvn-command-line-sound-effects#commandLineSoundEffects :sfx=${actions.sfx}: null
                 $elif mode == "character":
-                  - rvn-command-line-characters#commandLineCharacters :character=${actions.character} :presentationState=${presentationState}: null
+                  - rvn-command-line-characters#commandLineCharacters :character=${actions.character} :presentationState=${presentationState} :backgroundTransformEditor=${backgroundTransformEditor}: null
                 $elif mode == "sectionTransition":
                   - rvn-command-line-section-transition#commandLineSectionTransition :sectionTransition=${actions.sectionTransition} :currentSceneId=${currentSceneId}: null
                 $elif mode == "resetStoryAtSection":
@@ -270,7 +278,7 @@ template:
                 $elif mode == "loadSlot":
                   - rvn-command-line-load-slot#commandLineLoadSlot :loadSlot=${actions.loadSlot}: null
                 $elif mode == "visual":
-                  - rvn-command-line-visual#commandLineVisual :visual=${actions.visual} :presentationState=${presentationState}: null
+                  - rvn-command-line-visual#commandLineVisual :visual=${actions.visual} :presentationState=${presentationState} :backgroundTransformEditor=${backgroundTransformEditor}: null
                 $elif mode == "setNextLineConfig":
                   - rvn-command-line-set-next-line-config#commandLineSetNextLineConfig :setNextLineConfig=${actions.setNextLineConfig}: null
                 $elif mode == "updateVariable":

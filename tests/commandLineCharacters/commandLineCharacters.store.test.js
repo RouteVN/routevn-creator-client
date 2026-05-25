@@ -13,6 +13,8 @@ import {
   showDropdownMenu,
   updateCharacterBlurEnabled,
   updateCharacterBlurField,
+  updateCharacterCustomTransform,
+  updateCharacterCustomTransformEnabled,
   updateCharacterOpacity,
 } from "../../src/components/commandLineCharacters/commandLineCharacters.store.js";
 
@@ -481,5 +483,102 @@ describe("commandLineCharacters.store sprite group filtering", () => {
       "sprite-body",
     ]);
     expect(viewData.spriteItems).toHaveLength(2);
+  });
+});
+
+describe("commandLineCharacters.store custom transforms", () => {
+  it("copies the selected predefined transform into character custom transform fields", () => {
+    const state = createInitialState();
+    setItems(
+      { state },
+      {
+        items: {
+          items: {
+            "character-hero": {
+              id: "character-hero",
+              type: "character",
+              name: "Hero",
+            },
+          },
+          tree: [{ id: "character-hero" }],
+        },
+      },
+    );
+    setTransforms(
+      { state },
+      {
+        transforms: {
+          items: {
+            "character-center": {
+              id: "character-center",
+              type: "transform",
+              name: "Center",
+              x: 960,
+              y: 540,
+              scaleX: 1,
+              scaleY: 1,
+              rotation: 0,
+              anchorX: 0.5,
+              anchorY: 0.5,
+              originX: 100,
+              originY: 80,
+            },
+          },
+          tree: [{ id: "character-center" }],
+        },
+      },
+    );
+    setExistingCharacters(
+      { state },
+      {
+        characters: [
+          {
+            id: "character-hero",
+            transformId: "character-center",
+            sprites: [],
+          },
+        ],
+      },
+    );
+
+    updateCharacterCustomTransformEnabled(
+      { state },
+      {
+        index: 0,
+        enabled: true,
+      },
+    );
+    updateCharacterCustomTransform(
+      { state },
+      {
+        index: 0,
+        transform: {
+          x: 980,
+          y: 560,
+          scaleX: 1.25,
+          scaleY: 1.25,
+          rotation: 5,
+          anchorX: 0.5,
+          anchorY: 0.5,
+          originX: 100,
+          originY: 80,
+        },
+      },
+    );
+
+    expect(selectViewData({ state }).defaultValues.characters[0]).toMatchObject(
+      {
+        transformId: "character-center",
+        customTransform: true,
+        x: 980,
+        y: 560,
+        scaleX: 1.25,
+        scaleY: 1.25,
+        customTransformDetails: expect.arrayContaining([
+          { label: "Position", value: "980, 560" },
+          { label: "Scale", value: "1.25 x 1.25" },
+        ]),
+      },
+    );
   });
 });

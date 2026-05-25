@@ -26,6 +26,10 @@ import {
 } from "../../project/routeEngineProjectData.js";
 import { prepareRuntimeInteractionExecution } from "../../runtime/graphicsEngineRuntime.js";
 import {
+  createBackgroundTransformEditorCanvasState,
+  createProjectDataWithBackgroundTransformEditor,
+} from "./backgroundTransformEditor.js";
+import {
   debugLog,
   getDebugDurationMs,
   getDebugNow,
@@ -110,18 +114,37 @@ const createRuntimeCurrentLineRenderStateHandler = (deps) => {
   };
 };
 
-const getCurrentCanvasRoot = (refs) => {
-  const previewCanvasHost = refs?.previewCanvasHost;
+const getCanvasRootFromHost = (canvasHost) => {
   const canvasRoot =
-    previewCanvasHost?.getCanvasRoot?.() ||
-    previewCanvasHost?.shadowRoot?.querySelector?.("#canvas") ||
-    previewCanvasHost?.querySelector?.("#canvas");
+    canvasHost?.getCanvasRoot?.() ||
+    canvasHost?.shadowRoot?.querySelector?.("#canvas") ||
+    canvasHost?.querySelector?.("#canvas");
 
   if (canvasRoot?.isConnected) {
     return canvasRoot;
   }
 
   return canvasRoot;
+};
+
+const getBackgroundTransformEditorCanvasRoot = (refs) => {
+  const nestedCanvasRoot =
+    refs?.systemActions?.transformedHandlers?.handleGetBackgroundTransformPreviewCanvasRoot?.();
+  if (nestedCanvasRoot?.isConnected) {
+    return nestedCanvasRoot;
+  }
+
+  return getCanvasRootFromHost(refs?.backgroundTransformPreviewCanvasHost);
+};
+
+const getCurrentCanvasRoot = (refs) => {
+  const transformEditorCanvasRoot =
+    getBackgroundTransformEditorCanvasRoot(refs);
+  if (transformEditorCanvasRoot?.isConnected) {
+    return transformEditorCanvasRoot;
+  }
+
+  return getCanvasRootFromHost(refs?.previewCanvasHost);
 };
 
 const waitForMountedCanvasRoot = async (refs, maxFrames = 10) => {
@@ -804,7 +827,12 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     ? getDebugDurationMs(projectDataSelectionStartedAt)
     : undefined;
   const isMuted = store.selectIsMuted();
+  const backgroundTransformEditorOpen =
+    store.selectIsBackgroundTransformEditorOpen?.() === true;
   graphicsService.setEngineAudioMuted?.(isMuted);
+  graphicsService.setRuntimeInteractionsEnabled?.(
+    !backgroundTransformEditorOpen,
+  );
 
   const onRenderState = createRuntimeCurrentLineRenderStateHandler(deps);
   const engineInitStartedAt = perfEnabled ? getDebugNow() : 0;
@@ -826,11 +854,16 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
     : undefined;
   const temporaryPresentationState = selectTemporaryPresentationState(store);
   const temporaryPresentationStateStartedAt = perfEnabled ? getDebugNow() : 0;
-  const renderProjectData = await prepareTemporaryPresentationProjectData(
+  let renderProjectData = await prepareTemporaryPresentationProjectData(
     deps,
     projectData,
     selection,
     temporaryPresentationState,
+  );
+  renderProjectData = createProjectDataWithBackgroundTransformEditor(
+    renderProjectData,
+    selection,
+    store.selectBackgroundTransformEditor?.(),
   );
   if (renderProjectData !== projectData) {
     initRouteEngineWithDiagnostics(graphicsService, renderProjectData, {
@@ -886,10 +919,23 @@ export const renderSceneEditorState = async (deps, payload = {}) => {
   if (!skipCanvasPaint) {
     await attachGraphicsCanvasToMountedRoot(deps, 2);
     const canvasPaintStartedAt = perfEnabled ? getDebugNow() : 0;
-    graphicsService.engineRenderCurrentState({
-      skipAudio: isMuted,
-      skipAnimations,
-    });
+    if (backgroundTransformEditorOpen) {
+      const backgroundTransformCanvasState =
+        createBackgroundTransformEditorCanvasState({
+          renderState: currentRenderState,
+          graphicsService,
+          editorState: store.selectBackgroundTransformEditor?.(),
+        });
+      store.setBackgroundTransformEditorSelectedElementMetrics?.({
+        metrics: backgroundTransformCanvasState.selectedElementMetrics,
+      });
+      graphicsService.render(backgroundTransformCanvasState.renderState);
+    } else {
+      graphicsService.engineRenderCurrentState({
+        skipAudio: isMuted,
+        skipAnimations,
+      });
+    }
     if (perfEnabled) {
       canvasPaintDurationMs = getDebugDurationMs(canvasPaintStartedAt);
     }
@@ -1457,6 +1503,9 @@ const handleCanvasWheelFocusBlur = (deps, event) => {
 
 const handleCanvasRollbackWheelFallback = async (deps, payload = {}) => {
   const { refs, store, render } = deps;
+  if (store.selectIsBackgroundTransformEditorOpen?.()) {
+    return;
+  }
   const { lineIdAtWheel } = payload;
   const currentLineId = store.selectSelectedLineId();
 
@@ -1490,6 +1539,9 @@ const hasSelectedLineScreenTransition = (store) => {
 
 const handleCanvasForwardNavigationFallback = async (deps, payload = {}) => {
   const { refs, store, render } = deps;
+  if (store.selectIsBackgroundTransformEditorOpen?.()) {
+    return;
+  }
   const { lineIdAtInput } = payload;
   const currentLineId = store.selectSelectedLineId();
 

@@ -32,6 +32,35 @@ describe("systemActionsDialogSurface.handlers", () => {
     expect(dispatchedEvents[0].type).toBe("close");
   });
 
+  it("does not emit close while close is suppressed", () => {
+    const dispatchedEvents = [];
+    let stopPropagationCalled = false;
+    let preventDefaultCalled = false;
+
+    handleSurfaceClose(
+      {
+        props: {
+          suppressClose: true,
+        },
+        dispatchEvent: (event) => dispatchedEvents.push(event),
+      },
+      {
+        _event: {
+          stopPropagation: () => {
+            stopPropagationCalled = true;
+          },
+          preventDefault: () => {
+            preventDefaultCalled = true;
+          },
+        },
+      },
+    );
+
+    expect(stopPropagationCalled).toBe(true);
+    expect(preventDefaultCalled).toBe(true);
+    expect(dispatchedEvents).toHaveLength(0);
+  });
+
   it("closes on Escape only while open", () => {
     const dispatchedEvents = [];
     let preventDefaultCalled = false;
@@ -72,6 +101,25 @@ describe("systemActionsDialogSurface.handlers", () => {
       {
         _event: {
           key: "Escape",
+        },
+      },
+    );
+
+    expect(dispatchedEvents).toHaveLength(1);
+
+    handleDocumentKeyDown(
+      {
+        props: {
+          open: true,
+          suppressClose: true,
+        },
+        dispatchEvent: (event) => dispatchedEvents.push(event),
+      },
+      {
+        _event: {
+          key: "Escape",
+          preventDefault: () => {},
+          stopPropagation: () => {},
         },
       },
     );

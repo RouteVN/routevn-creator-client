@@ -18,6 +18,7 @@ describe("systemActionsDialogSurface.store", () => {
       dialogWidth: "800",
       dialogHeight: "80vh",
       panelWidth: "50vw",
+      suppressClose: false,
       overlayHorizontalInset: "64px",
       overlayBackground: "rgba(0, 0, 0, 0.42)",
       panelHorizontalInset: "96px",
@@ -35,6 +36,7 @@ describe("systemActionsDialogSurface.store", () => {
         dialogWidth: "100vw",
         dialogHeight: "100vh",
         panelWidth: "calc((100vw - 64px) / 2)",
+        suppressClose: true,
       },
     });
 
@@ -43,6 +45,7 @@ describe("systemActionsDialogSurface.store", () => {
       variant: "scene-editor-left",
       isSceneEditorLeft: true,
       panelWidth: "calc((100vw - 64px) / 2)",
+      suppressClose: true,
       overlayHorizontalInset: "64px",
       overlayBackground: "rgba(0, 0, 0, 0.42)",
       panelHorizontalInset: "96px",

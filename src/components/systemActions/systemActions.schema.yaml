@@ -12,6 +12,8 @@ propsSchema:
       type: string
     presentationState:
       type: object
+    backgroundTransformEditor:
+      type: object
     actionType:
       type: string
       enum:
@@ -35,4 +37,6 @@ propsSchema:
     showSelected:
       type: boolean
     showEmbeddedClose:
+      type: boolean
+    suppressDialogClose:
       type: boolean

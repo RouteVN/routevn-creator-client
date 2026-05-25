@@ -52,11 +52,20 @@ describe("systemActions view", () => {
     expect(systemActionsView).toContain(
       "rvn-system-actions-dialog-surface#actionsDialog",
     );
+    expect(systemActionsView).toContain(
+      ":suppressClose=${suppressDialogClose}",
+    );
     expect(sceneEditorLexicalView).toContain(
       "dialog-variant=scene-editor-left",
     );
+    expect(systemActionsView).toContain(
+      ":backgroundTransformEditor=${backgroundTransformEditor}",
+    );
     expect(sceneEditorLexicalView).toContain(
-      'dialog-panel-width="calc((100vw - 64px) / 2)"',
+      ":backgroundTransformEditor=${backgroundTransformEditor}",
+    );
+    expect(sceneEditorLexicalView).toContain(
+      'dialog-panel-width="${systemActionsDialogPanelWidth}"',
     );
   });
 });

@@ -16,6 +16,10 @@ import {
   getSectionPresentation,
 } from "../../internal/project/projection.js";
 import {
+  formatBackgroundTransformEditorMetric,
+  normalizeBackgroundTransformEditorTransform,
+} from "../../internal/ui/sceneEditor/backgroundTransformEditor.js";
+import {
   DEFAULT_PROJECT_RESOLUTION,
   formatProjectResolutionAspectRatio,
   requireProjectResolution,
@@ -612,6 +616,19 @@ export const createInitialState = () => ({
   skipNextEditorBlurDraftFlush: false,
   presentationState: {},
   temporaryPresentationState: {},
+  backgroundTransformEditor: {
+    isOpen: false,
+    transform: normalizeBackgroundTransformEditorTransform(),
+    dragStartPosition: undefined,
+    selectedElementMetrics: undefined,
+    background: {},
+    targetType: "background",
+    actionKey: "background",
+    itemIndex: undefined,
+    item: undefined,
+    targetId: undefined,
+    suppressNextActionsDialogClose: false,
+  },
   sectionLineChanges: {},
   sectionLineChangesBySectionId: {},
   isMuted: false,
@@ -746,6 +763,91 @@ export const selectEffectivePresentationState = ({ state }) => {
     state.presentationState,
     state.temporaryPresentationState,
   );
+};
+
+export const openBackgroundTransformEditor = (
+  { state },
+  {
+    background,
+    transform,
+    targetType = "background",
+    actionKey = "background",
+    itemIndex,
+    item,
+    targetId,
+  } = {},
+) => {
+  state.backgroundTransformEditor.isOpen = true;
+  state.backgroundTransformEditor.background = toPlainObject(background);
+  state.backgroundTransformEditor.targetType = targetType;
+  state.backgroundTransformEditor.actionKey = actionKey;
+  state.backgroundTransformEditor.itemIndex = itemIndex;
+  state.backgroundTransformEditor.item = item ? toPlainObject(item) : undefined;
+  state.backgroundTransformEditor.targetId = targetId;
+  state.backgroundTransformEditor.transform =
+    normalizeBackgroundTransformEditorTransform(transform);
+  state.backgroundTransformEditor.dragStartPosition = undefined;
+  state.backgroundTransformEditor.selectedElementMetrics = undefined;
+};
+
+export const closeBackgroundTransformEditor = ({ state }, _payload = {}) => {
+  state.backgroundTransformEditor.isOpen = false;
+  state.backgroundTransformEditor.dragStartPosition = undefined;
+  state.backgroundTransformEditor.selectedElementMetrics = undefined;
+};
+
+export const setBackgroundTransformEditorSelectedElementMetrics = (
+  { state },
+  { metrics } = {},
+) => {
+  state.backgroundTransformEditor.selectedElementMetrics = metrics;
+};
+
+export const setBackgroundTransformEditorTransform = (
+  { state },
+  { transform } = {},
+) => {
+  state.backgroundTransformEditor.transform =
+    normalizeBackgroundTransformEditorTransform(transform);
+};
+
+export const setBackgroundTransformEditorDragStartPosition = (
+  { state },
+  { dragStartPosition } = {},
+) => {
+  state.backgroundTransformEditor.dragStartPosition = dragStartPosition;
+};
+
+export const clearBackgroundTransformEditorDragStartPosition = (
+  { state },
+  _payload = {},
+) => {
+  state.backgroundTransformEditor.dragStartPosition = undefined;
+};
+
+export const suppressNextActionsDialogClose = ({ state }, _payload = {}) => {
+  state.backgroundTransformEditor.suppressNextActionsDialogClose = true;
+};
+
+export const clearSuppressNextActionsDialogClose = (
+  { state },
+  _payload = {},
+) => {
+  state.backgroundTransformEditor.suppressNextActionsDialogClose = false;
+};
+
+export const selectSuppressNextActionsDialogClose = ({ state }) => {
+  return (
+    state.backgroundTransformEditor.suppressNextActionsDialogClose === true
+  );
+};
+
+export const selectBackgroundTransformEditor = ({ state }) => {
+  return state.backgroundTransformEditor;
+};
+
+export const selectIsBackgroundTransformEditorOpen = ({ state }) => {
+  return state.backgroundTransformEditor.isOpen === true;
 };
 
 const syncPresentationStateFromSelectedLineChanges = (state) => {
@@ -1362,6 +1464,51 @@ const selectCanvasAspectRatio = ({ state }) => {
   return formatProjectResolutionAspectRatio(projectResolution);
 };
 
+const selectCanvasAspectRatioWidthMultiplier = ({ state }) => {
+  const projectResolution = state.repositoryState?.project?.resolution
+    ? requireProjectResolution(
+        state.repositoryState.project.resolution,
+        "Project resolution",
+      )
+    : DEFAULT_PROJECT_RESOLUTION;
+  const width = Number(projectResolution.width);
+  const height = Number(projectResolution.height);
+  const ratio = width / height;
+
+  return Number.isFinite(ratio) && ratio > 0 ? ratio : 16 / 9;
+};
+
+const selectSystemActionsDialogPanelWidth = ({ state }) => {
+  return state.backgroundTransformEditor.isOpen === true
+    ? "calc(100vw - 64px)"
+    : "calc((100vw - 64px) / 2)";
+};
+const selectBackgroundTransformEditorViewData = ({ state }) => {
+  const editor = state.backgroundTransformEditor;
+  const transform = normalizeBackgroundTransformEditorTransform(
+    editor.transform,
+  );
+  const widthMultiplier = selectCanvasAspectRatioWidthMultiplier({ state });
+
+  return {
+    isOpen: editor.isOpen === true,
+    transform,
+    previewMaxWidth: `min(calc(100vw - 48px), calc((100vh - 170px) * ${widthMultiplier}))`,
+    canvasAspectRatio: selectCanvasAspectRatio({ state }),
+    suppressNextActionsDialogClose:
+      editor.suppressNextActionsDialogClose === true,
+    suppressActionsDialogClose:
+      editor.isOpen === true || editor.suppressNextActionsDialogClose === true,
+    metrics: {
+      x: formatBackgroundTransformEditorMetric(transform.x),
+      y: formatBackgroundTransformEditorMetric(transform.y),
+      scaleX: formatBackgroundTransformEditorMetric(transform.scaleX),
+      scaleY: formatBackgroundTransformEditorMetric(transform.scaleY),
+      rotation: formatBackgroundTransformEditorMetric(transform.rotation),
+    },
+  };
+};
+
 export const selectViewData = ({ state }) => {
   const scene = selectScene({ state });
   if (!scene) {
@@ -1397,6 +1544,9 @@ export const selectViewData = ({ state }) => {
       previewSectionId: state.previewSectionId,
       previewLineId: state.previewLineId,
       canvasAspectRatio: selectCanvasAspectRatio({ state }),
+      systemActionsDialogPanelWidth: selectSystemActionsDialogPanelWidth({
+        state,
+      }),
       sectionLineChanges: state.sectionLineChanges,
       sectionCreateDialog: state.sectionCreateDialog,
       sectionCreateForm: { fields: [], actions: { buttons: [] } },
@@ -1409,6 +1559,9 @@ export const selectViewData = ({ state }) => {
       isScenePageLoading: state.isScenePageLoading,
       isSceneAssetLoading: state.isSceneAssetLoading,
       deadEndTooltip: state.deadEndTooltip,
+      backgroundTransformEditor: selectBackgroundTransformEditorViewData({
+        state,
+      }),
     };
   }
 
@@ -1677,6 +1830,9 @@ export const selectViewData = ({ state }) => {
     previewSectionId: state.previewSectionId,
     previewLineId: state.previewLineId,
     canvasAspectRatio: selectCanvasAspectRatio({ state }),
+    systemActionsDialogPanelWidth: selectSystemActionsDialogPanelWidth({
+      state,
+    }),
     presentationState: selectEffectivePresentationState({ state }),
     sectionLineChanges: state.sectionLineChanges,
     sectionCreateDialog: state.sectionCreateDialog,
@@ -1690,6 +1846,9 @@ export const selectViewData = ({ state }) => {
     isScenePageLoading: state.isScenePageLoading,
     isSceneAssetLoading: state.isSceneAssetLoading,
     deadEndTooltip: state.deadEndTooltip,
+    backgroundTransformEditor: selectBackgroundTransformEditorViewData({
+      state,
+    }),
   };
 };
 
