@@ -67,6 +67,12 @@ propsSchema:
     canAdd:
       type: boolean
       description: Whether add actions should be shown
+    importText:
+      type: string
+      description: Text to display in the top import action
+    canImport:
+      type: boolean
+      description: Whether the top import action should be shown
     mobileLayout:
       type: boolean
       description: Whether cards should use the touch/mobile full-width layout

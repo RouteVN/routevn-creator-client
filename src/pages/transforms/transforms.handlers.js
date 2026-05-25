@@ -1,5 +1,16 @@
 import { generateId } from "../../internal/id.js";
 import {
+  IMPORT_PACK_SCHEMA,
+  downloadImportFile,
+  fetchImportPackageJson,
+  isImportPackageValidationError,
+  isPlainObject,
+  isValidHttpUrl,
+  normalizeImportParentId,
+  validateImportFileDescriptor,
+  validateImportPackageObject,
+} from "../../internal/importPackages.js";
+import {
   captureCanvasImage,
   captureCanvasThumbnailImage,
 } from "../../internal/runtime/graphicsEngineRuntime.js";
@@ -16,6 +27,7 @@ import { TRANSFORM_TAG_SCOPE_KEY } from "./transforms.store.js";
 const MARKER_SIZE = 30;
 const BG_COLOR = "#4a4a4a";
 const FALLBACK_TARGET_SIZE = 200;
+const DEFAULT_IMPORTED_TRANSFORM_NAME = "Imported Transform";
 
 const createEmptyPreviewState = () => ({
   elements: [],
@@ -203,6 +215,355 @@ const createTransformPayload = (values = {}) => {
     anchorY: parseFloat(anchor.anchorY ?? 0),
     rotation: parseInt(values.rotation ?? 0, 10) || 0,
   };
+};
+
+const toFiniteNumber = (value, fallback) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : fallback;
+};
+
+const rewritePreviewImageRefs = (preview, imageIdMap = new Map()) => {
+  if (!isPlainObject(preview)) {
+    return undefined;
+  }
+
+  const nextPreview = {};
+  for (const [slotKey, slotValue] of Object.entries(preview)) {
+    if (!isPlainObject(slotValue) || !slotValue.imageId) {
+      continue;
+    }
+
+    const mappedImageId = imageIdMap.get(slotValue.imageId);
+    if (!mappedImageId) {
+      continue;
+    }
+
+    nextPreview[slotKey] = {
+      ...slotValue,
+      imageId: mappedImageId,
+    };
+  }
+
+  return Object.keys(nextPreview).length > 0 ? nextPreview : undefined;
+};
+
+const normalizeImportedTransformData = (item = {}, { imageIdMap } = {}) => {
+  const anchor = isPlainObject(item.anchor) ? item.anchor : {};
+  const transformData = {
+    name: `${item.name ?? ""}`.trim() || DEFAULT_IMPORTED_TRANSFORM_NAME,
+    description: item.description ?? "",
+    x: Math.round(toFiniteNumber(item.x, 0)),
+    y: Math.round(toFiniteNumber(item.y, 0)),
+    scaleX: toFiniteNumber(item.scaleX, 1),
+    scaleY: toFiniteNumber(item.scaleY, 1),
+    anchorX: toFiniteNumber(item.anchorX ?? anchor.anchorX, 0),
+    anchorY: toFiniteNumber(item.anchorY ?? anchor.anchorY, 0),
+    rotation: toFiniteNumber(item.rotation, 0),
+  };
+
+  const preview = rewritePreviewImageRefs(item.preview, imageIdMap);
+  if (preview) {
+    transformData.preview = preview;
+  }
+
+  const tagIds = Array.isArray(item.tagIds)
+    ? item.tagIds.filter((tagId) => typeof tagId === "string" && tagId)
+    : [];
+  if (tagIds.length > 0) {
+    transformData.tagIds = tagIds;
+  }
+
+  return transformData;
+};
+
+const findTransformItemInTree = (collection = {}) => {
+  const items = collection?.items ?? {};
+  const visit = (nodes = []) => {
+    for (const node of nodes) {
+      const item = items[node?.id];
+      if (item?.type === "transform") {
+        return item;
+      }
+
+      const childItem = visit(node?.children ?? []);
+      if (childItem) {
+        return childItem;
+      }
+    }
+
+    return undefined;
+  };
+
+  return (
+    visit(collection?.tree ?? []) ??
+    Object.values(items).find((item) => item?.type === "transform")
+  );
+};
+
+const resolvePrimaryTransformImportItem = (input) => {
+  const primary = input?.primary;
+  if (primary?.resourceType !== "transforms" || !primary.id) {
+    return undefined;
+  }
+
+  const item = input.repository?.transforms?.items?.[primary.id];
+  return item?.type === "transform" ? item : undefined;
+};
+
+const resolveTransformImportItem = (input) => {
+  if (!isPlainObject(input)) {
+    return undefined;
+  }
+
+  const primaryItem = resolvePrimaryTransformImportItem(input);
+  if (primaryItem) {
+    return primaryItem;
+  }
+
+  if (input.schema === IMPORT_PACK_SCHEMA) {
+    return findTransformItemInTree(input.repository?.transforms);
+  }
+
+  if (input.items || input.tree) {
+    return findTransformItemInTree(input);
+  }
+
+  if (input.repository?.transforms) {
+    return findTransformItemInTree(input.repository.transforms);
+  }
+
+  return input.type === "transform" ? input : undefined;
+};
+
+const getImportImageItemsById = (importInput) => {
+  return isPlainObject(importInput?.repository?.images?.items)
+    ? importInput.repository.images.items
+    : {};
+};
+
+const getImportImageItems = (importInput, imageIds) => {
+  const items = getImportImageItemsById(importInput);
+  if (imageIds.size === 0) {
+    return [];
+  }
+
+  return [...imageIds]
+    .map((imageId) => items[imageId])
+    .filter((item) => item?.type === "image");
+};
+
+const hasImportImageDependencies = (transformItem) => {
+  return collectTransformPreviewImageIds(transformItem?.preview).size > 0;
+};
+
+const collectTransformPreviewImageIds = (preview) => {
+  const imageIds = new Set();
+  if (!isPlainObject(preview)) {
+    return imageIds;
+  }
+
+  for (const slotValue of Object.values(preview)) {
+    if (slotValue?.imageId) {
+      imageIds.add(slotValue.imageId);
+    }
+  }
+
+  return imageIds;
+};
+
+const getImportItemLabel = (item, fallback) => {
+  return item?.name ?? item?.id ?? fallback;
+};
+
+const getTransformItemValidationMessage = (item) => {
+  if (!isPlainObject(item) || item.type !== "transform") {
+    return "No transform found to import.";
+  }
+
+  const label = getImportItemLabel(item, "Imported transform");
+  if (item.name !== undefined && typeof item.name !== "string") {
+    return `Transform "${label}" name must be text.`;
+  }
+
+  if (item.description !== undefined && typeof item.description !== "string") {
+    return `Transform "${label}" description must be text.`;
+  }
+
+  if (
+    item.tagIds !== undefined &&
+    (!Array.isArray(item.tagIds) ||
+      item.tagIds.some((tagId) => typeof tagId !== "string"))
+  ) {
+    return `Transform "${label}" tags must be text ids.`;
+  }
+
+  const numberFields = [
+    ["x", "x"],
+    ["y", "y"],
+    ["scaleX", "scale X"],
+    ["scaleY", "scale Y"],
+    ["anchorX", "anchor X"],
+    ["anchorY", "anchor Y"],
+    ["rotation", "rotation"],
+  ];
+  for (const [field, fieldLabel] of numberFields) {
+    if (item[field] !== undefined && !Number.isFinite(Number(item[field]))) {
+      return `Transform "${label}" ${fieldLabel} must be a number.`;
+    }
+  }
+
+  if (item.preview !== undefined && !isPlainObject(item.preview)) {
+    return `Transform "${label}" preview must be an object.`;
+  }
+
+  return undefined;
+};
+
+const getTransformImageDependencyValidationMessage = ({
+  importInput,
+  transformItem,
+} = {}) => {
+  const imageItemsById = getImportImageItemsById(importInput);
+  const previewImageIds = collectTransformPreviewImageIds(
+    transformItem?.preview,
+  );
+
+  for (const imageId of previewImageIds) {
+    const imageItem = imageItemsById[imageId];
+    if (!isPlainObject(imageItem) || imageItem.type !== "image") {
+      return `Image dependency "${imageId}" is missing from the package.`;
+    }
+
+    const label = `Image dependency "${getImportItemLabel(imageItem, imageItem.id)}"`;
+    try {
+      validateImportFileDescriptor({
+        importInput,
+        fileId: imageItem.fileId,
+        label,
+      });
+    } catch (error) {
+      return getImportErrorMessage(
+        error,
+        `${label} has invalid file metadata.`,
+      );
+    }
+  }
+
+  return undefined;
+};
+
+const getTransformImportValidationMessage = ({
+  importInput,
+  transformItem,
+}) => {
+  try {
+    validateImportPackageObject(importInput);
+  } catch (error) {
+    return getImportErrorMessage(error, "Import package is invalid.");
+  }
+
+  const itemMessage = getTransformItemValidationMessage(transformItem);
+  if (itemMessage) {
+    return itemMessage;
+  }
+
+  return getTransformImageDependencyValidationMessage({
+    importInput,
+    transformItem,
+  });
+};
+
+const importImageDependencies = async ({
+  importInput,
+  projectService,
+  imageParentId,
+  transformItem,
+} = {}) => {
+  const imageIdMap = new Map();
+  const imageItems = getImportImageItems(
+    importInput,
+    collectTransformPreviewImageIds(transformItem?.preview),
+  );
+
+  for (const imageItem of imageItems) {
+    const fileDescriptor = validateImportFileDescriptor({
+      importInput,
+      fileId: imageItem.fileId,
+      label: `Image dependency "${imageItem.name ?? imageItem.id}"`,
+    });
+
+    const file = await downloadImportFile(fileDescriptor);
+    const imageId = generateId();
+    const result = await projectService.importImageFile({
+      file,
+      imageId,
+      parentId: imageParentId,
+    });
+
+    if (result?.valid === false) {
+      throw result;
+    }
+
+    imageIdMap.set(imageItem.id, result?.imageId ?? imageId);
+  }
+
+  return imageIdMap;
+};
+
+const resolveTransformImportInput = async ({ appService, values } = {}) => {
+  const url = `${values?.url ?? ""}`.trim();
+  if (!url) {
+    showImportError(appService, "Import URL is required.");
+    return;
+  }
+
+  if (!isValidHttpUrl(url)) {
+    showImportError(appService, "Enter a valid http(s) URL.");
+    return;
+  }
+
+  try {
+    return await fetchImportPackageJson({ url });
+  } catch (error) {
+    showImportError(
+      appService,
+      isImportPackageValidationError(error)
+        ? error.message
+        : "Package could not be loaded.",
+    );
+    return;
+  }
+};
+
+const showImportError = (appService, message) => {
+  if (typeof appService?.showAlert === "function") {
+    appService.showAlert({
+      message,
+      title: "Error",
+    });
+    return;
+  }
+
+  appService?.showToast?.({ message });
+};
+
+const showImportSuccess = (appService) => {
+  appService?.showToast?.({
+    message: "Transform imported.",
+  });
+};
+
+const clearImportVisibilityFilters = (store) => {
+  store.setSearchQuery?.({ value: "" });
+  store.setActiveTagIds?.({ tagIds: [] });
+};
+
+const getImportErrorMessage = (error, fallback) => {
+  return error?.error?.message ?? error?.message ?? fallback;
+};
+
+const getImportValidationMessage = () => {
+  return "Import URL is required.";
 };
 
 const loadTransformPreviewAssets = async ({
@@ -564,6 +925,150 @@ export const handleAddTransformClick = async (deps, payload) => {
   await openTransformDialog({
     deps,
     targetGroupId: groupId,
+  });
+};
+
+export const handleImportTransformClick = (deps) => {
+  const { render, store } = deps;
+
+  store.openImportDialog();
+  render();
+};
+
+export const handleImportDialogClose = (deps) => {
+  const { render, store } = deps;
+  store.closeImportDialog();
+  render();
+};
+
+export const handleImportFormActionClick = async (deps, payload) => {
+  const { appService, projectService, render, store } = deps;
+  const { actionId, values, valid } = payload._event.detail;
+
+  if (actionId === "cancel") {
+    store.closeImportDialog();
+    render();
+    return;
+  }
+
+  if (actionId === "back") {
+    store.openImportSourceStep();
+    render();
+    return;
+  }
+
+  if (actionId === "continue") {
+    if (valid === false) {
+      showImportError(appService, getImportValidationMessage(values));
+      return;
+    }
+
+    const importInput = await resolveTransformImportInput({
+      appService,
+      values,
+    });
+    if (!importInput) {
+      return;
+    }
+
+    const importItem = resolveTransformImportItem(importInput);
+    const validationMessage = getTransformImportValidationMessage({
+      importInput,
+      transformItem: importItem,
+    });
+    if (validationMessage) {
+      showImportError(appService, validationMessage);
+      return;
+    }
+
+    store.openImportDestinationStep({
+      importInput,
+      sourceValues: values,
+      includeImages: hasImportImageDependencies(importItem),
+    });
+    render();
+    return;
+  }
+
+  if (actionId !== "import") {
+    return;
+  }
+
+  if (valid === false) {
+    showImportError(appService, "Choose destination folders.");
+    return;
+  }
+
+  store.setImportDestinationValues?.({ values });
+  const importInput = store.selectImportDialogPendingInput?.();
+  if (!importInput) {
+    showImportError(
+      appService,
+      "Import package is missing. Click Back and continue again.",
+    );
+    return;
+  }
+
+  const importItem = resolveTransformImportItem(importInput);
+  const validationMessage = getTransformImportValidationMessage({
+    importInput,
+    transformItem: importItem,
+  });
+  if (validationMessage) {
+    showImportError(appService, validationMessage);
+    return;
+  }
+
+  const imageParentId = normalizeImportParentId(
+    values?.imageFolderId ?? store.selectImportDialogImageFolderId?.(),
+  );
+  let imageIdMap = new Map();
+  try {
+    imageIdMap = await importImageDependencies({
+      importInput,
+      projectService,
+      imageParentId,
+      transformItem: importItem,
+    });
+  } catch (error) {
+    showImportError(
+      appService,
+      error?.message ?? "Image dependencies could not be imported.",
+    );
+    return;
+  }
+
+  const transformData = normalizeImportedTransformData(importItem, {
+    imageIdMap,
+  });
+  const transformId = generateId();
+  const targetGroupId = normalizeImportParentId(
+    values?.transformFolderId ?? store.selectImportDialogTargetGroupId?.(),
+  );
+  const importAttempt = await runResourcePageMutation({
+    appService,
+    fallbackMessage: "Failed to import transform.",
+    action: () =>
+      projectService.createTransform({
+        transformId,
+        data: {
+          type: "transform",
+          ...transformData,
+        },
+        parentId: targetGroupId,
+        position: "last",
+      }),
+  });
+
+  if (!importAttempt.ok) {
+    return;
+  }
+
+  store.closeImportDialog();
+  clearImportVisibilityFilters(store);
+  showImportSuccess(appService);
+  await handleDataChanged(deps, {
+    selectedItemId: transformId,
   });
 };
 
