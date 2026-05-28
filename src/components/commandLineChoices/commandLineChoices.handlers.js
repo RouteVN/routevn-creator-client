@@ -338,7 +338,11 @@ export const handleDropdownMenuClickItem = (deps, payload) => {
   const { item } = payload._event.detail;
   const choiceIndex = store.selectDropdownMenuChoiceIndex();
 
-  if (item.value === "delete" && Number.isInteger(choiceIndex)) {
+  if (item.value === "moveUp" && Number.isInteger(choiceIndex)) {
+    store.moveChoice({ index: choiceIndex, direction: "up" });
+  } else if (item.value === "moveDown" && Number.isInteger(choiceIndex)) {
+    store.moveChoice({ index: choiceIndex, direction: "down" });
+  } else if (item.value === "delete" && Number.isInteger(choiceIndex)) {
     store.removeChoice({ index: choiceIndex });
   }
 
