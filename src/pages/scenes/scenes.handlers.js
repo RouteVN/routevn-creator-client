@@ -608,10 +608,9 @@ const refreshScenesData = async (deps) => {
 const {
   handleFileExplorerAction: handleBaseFileExplorerAction,
   handleFileExplorerTargetChanged,
-} =
-  createScenesFileExplorerHandlers({
-    refresh: refreshScenesData,
-  });
+} = createScenesFileExplorerHandlers({
+  refresh: refreshScenesData,
+});
 const {
   focusKeyboardScope: focusFileExplorerKeyboardScope,
   handleKeyboardScopeClick: handleFileExplorerKeyboardScopeClick,
