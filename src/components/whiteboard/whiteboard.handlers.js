@@ -1020,6 +1020,7 @@ export const handleEnsureItemVisible = (deps, payload) => {
     return;
   }
 
+  cancelPanAnimation(deps);
   syncContainerSize(deps);
 
   const item = (props.items || []).find((candidate) => candidate.id === itemId);
@@ -1064,8 +1065,6 @@ export const handleEnsureItemVisible = (deps, payload) => {
       durationMs > 0 &&
       typeof globalThis.requestAnimationFrame === "function"
     ) {
-      cancelPanAnimation(deps);
-
       let startedAt;
       const step = (timestamp) => {
         const timestampMs = Number(timestamp);
@@ -1101,7 +1100,6 @@ export const handleEnsureItemVisible = (deps, payload) => {
     }
   }
 
-  cancelPanAnimation(deps);
   store.setPan({ panX: nextPanX, panY: nextPanY });
   syncPanPresentation(deps);
   dispatchPanChanged({ store, dispatchEvent });

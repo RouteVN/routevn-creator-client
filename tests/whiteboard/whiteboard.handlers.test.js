@@ -33,13 +33,18 @@ const createDeps = ({
   pan = { x: -120, y: -80 },
   zoomLevel = 1.5,
   items = [],
+  containerWidth = 100,
+  containerHeight = 80,
 } = {}) => {
   const minimapItemRefs = createMinimapItemRefs();
   let currentPan = pan;
   let panAnimationFrameId;
 
   const store = {
-    selectContainerSize: vi.fn(() => ({ width: 100, height: 80 })),
+    selectContainerSize: vi.fn(() => ({
+      width: containerWidth,
+      height: containerHeight,
+    })),
     selectIsDraggingMinimapViewport: vi.fn(() => isDraggingMinimapViewport),
     selectIsPanMode: vi.fn(() => false),
     selectIsPanning: vi.fn(() => false),
@@ -78,8 +83,8 @@ const createDeps = ({
       getBoundingClientRect: () => ({
         left: 0,
         top: 0,
-        width: 100,
-        height: 80,
+        width: containerWidth,
+        height: containerHeight,
       }),
       style: {},
     },
@@ -260,6 +265,68 @@ describe("whiteboard minimap drag handlers", () => {
         panX: targetPan.x,
         panY: targetPan.y,
       });
+    } finally {
+      globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+      globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+    }
+  });
+
+  it("cancels stale smooth pan when the next ensure-visible target is already visible", () => {
+    const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+    const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+    const animationFrames = [];
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      animationFrames.push(callback);
+      return animationFrames.length;
+    });
+    globalThis.cancelAnimationFrame = vi.fn();
+
+    try {
+      const deps = createDeps({
+        isDraggingMinimapViewport: false,
+        pan: { x: 0, y: 0 },
+        zoomLevel: 1,
+        containerWidth: 500,
+        containerHeight: 400,
+        items: [
+          {
+            id: "scene-1",
+            x: 900,
+            y: 400,
+          },
+          {
+            id: "scene-2",
+            x: 50,
+            y: 60,
+          },
+        ],
+      });
+
+      handleEnsureItemVisible(deps, {
+        _event: {
+          detail: {
+            itemId: "scene-1",
+            behavior: "smooth",
+            durationMs: 100,
+          },
+        },
+      });
+      expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(1);
+
+      handleEnsureItemVisible(deps, {
+        _event: {
+          detail: {
+            itemId: "scene-2",
+            behavior: "smooth",
+            durationMs: 100,
+          },
+        },
+      });
+
+      expect(globalThis.cancelAnimationFrame).toHaveBeenCalledWith(1);
+      expect(deps.store.clearPanAnimationFrameId).toHaveBeenCalled();
+      expect(deps.store.setPan).not.toHaveBeenCalled();
+      expect(deps.dispatchEvent).not.toHaveBeenCalled();
     } finally {
       globalThis.requestAnimationFrame = originalRequestAnimationFrame;
       globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
