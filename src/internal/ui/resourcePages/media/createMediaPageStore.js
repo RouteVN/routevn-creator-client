@@ -103,6 +103,7 @@ export const createMediaPageStore = ({
   });
   const createEmptyFolderNameDefaultValues = () => ({
     name: "",
+    description: "",
   });
   const folderNameForm = {
     title: "Edit Folder",
@@ -112,6 +113,12 @@ export const createMediaPageStore = ({
         type: "input-text",
         label: "Name",
         required: true,
+      },
+      {
+        name: "description",
+        type: "input-textarea",
+        label: "Description",
+        required: false,
       },
     ],
     actions: {
@@ -147,6 +154,10 @@ export const createMediaPageStore = ({
         type: "text",
         label: "Type",
         value: "folder",
+      },
+      {
+        type: "description",
+        value: folder.description ?? "",
       },
     ];
   };

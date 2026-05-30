@@ -235,6 +235,7 @@ const openFolderNameDialogWithValues = ({ deps, folderId } = {}) => {
 
   const values = {
     name: folder.name ?? "",
+    description: folder.description ?? "",
   };
 
   store.setSelectedFolderId({ folderId });
@@ -445,6 +446,7 @@ export const handleFolderNameFormAction = async (deps, payload) => {
   }
 
   const name = values?.name?.trim();
+  const description = values?.description?.trim() ?? "";
   if (!name) {
     appService.showAlert({
       message: "Folder name is required.",
@@ -466,6 +468,7 @@ export const handleFolderNameFormAction = async (deps, payload) => {
         value: "rename-item-confirmed",
         itemId: folderId,
         newName: name,
+        description,
       },
     },
   });

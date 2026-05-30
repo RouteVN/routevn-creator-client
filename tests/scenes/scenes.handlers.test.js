@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   handleAfterMount,
+  handleFileExplorerSelectionChanged,
   handleSceneFormAction,
   handleWhiteboardItemDelete,
   handleWhiteboardPanChanged,
@@ -97,6 +98,7 @@ const createDeps = ({ userConfig = {}, projectId = "project-1" } = {}) => {
     },
     refs: {
       whiteboard: {
+        ensureItemVisible: vi.fn(),
         transformedHandlers: {
           handleInitialZoomAndPanSetup: vi.fn(),
         },
@@ -225,6 +227,28 @@ describe("scenes.handlers config keys", () => {
 
     resolveOverviews({});
     await Promise.resolve();
+  });
+
+  it("animates scene map centering from file explorer scene selection", () => {
+    const deps = createDeps();
+
+    handleFileExplorerSelectionChanged(deps, {
+      _event: {
+        detail: {
+          itemId: "scene-1",
+        },
+      },
+    });
+
+    expect(deps.store.setSelectedItemId).toHaveBeenCalledWith({
+      itemId: "scene-1",
+    });
+    expect(deps.refs.whiteboard.ensureItemVisible).toHaveBeenCalledWith({
+      itemId: "scene-1",
+      behavior: "smooth",
+      durationMs: 160,
+    });
+    expect(deps.render).toHaveBeenCalled();
   });
 
   it("blocks whiteboard scene delete when another scene points to it", async () => {

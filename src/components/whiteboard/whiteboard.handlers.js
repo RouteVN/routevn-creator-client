@@ -4,6 +4,9 @@ import {
   SCENE_BOX_WIDTH,
 } from "../../internal/whiteboard/constants.js";
 
+const DEFAULT_ENSURE_VISIBLE_PAN_DURATION_MS = 160;
+const MAX_ENSURE_VISIBLE_PAN_DURATION_MS = 320;
+
 const syncContainerSize = ({ store, refs } = {}) => {
   const container = refs?.container;
   if (!container) {
@@ -219,6 +222,31 @@ const isPrimaryMouseButton = (event) => {
   return event?.button === 0 && !event?.ctrlKey;
 };
 
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const easeOutCubic = (progress) => 1 - (1 - progress) ** 3;
+
+const normalizePanDuration = (durationMs) => {
+  const numericDuration = Number(durationMs);
+  if (!Number.isFinite(numericDuration)) {
+    return DEFAULT_ENSURE_VISIBLE_PAN_DURATION_MS;
+  }
+
+  return clamp(numericDuration, 0, MAX_ENSURE_VISIBLE_PAN_DURATION_MS);
+};
+
+const cancelPanAnimation = ({ store } = {}) => {
+  const frameId = store?.selectPanAnimationFrameId?.();
+  if (
+    frameId !== undefined &&
+    typeof globalThis.cancelAnimationFrame === "function"
+  ) {
+    globalThis.cancelAnimationFrame(frameId);
+  }
+
+  store?.clearPanAnimationFrameId?.();
+};
+
 const dispatchPanChanged = ({ store, dispatchEvent } = {}) => {
   const pan = store.selectPan();
 
@@ -248,7 +276,11 @@ const mountSubscriptions = (deps) => {
 };
 
 export const handleBeforeMount = (deps) => {
-  return mountSubscriptions(deps);
+  const cleanupSubscriptions = mountSubscriptions(deps);
+  return () => {
+    cancelPanAnimation(deps);
+    cleanupSubscriptions();
+  };
 };
 
 export const handleAfterMount = (deps) => {
@@ -306,6 +338,8 @@ export const handleContainerMouseDown = (deps, payload) => {
     return;
   }
 
+  cancelPanAnimation(deps);
+
   if (store.selectIsPanMode()) {
     // Start panning
     store.startPanning({
@@ -349,6 +383,8 @@ export const handleContainerWheel = (deps, payload) => {
     return;
   }
 
+  cancelPanAnimation(deps);
+
   // Calculate mouse position relative to container
   const container = refs.container;
   const rect = container.getBoundingClientRect();
@@ -377,6 +413,7 @@ export const handleContainerTouchStart = (deps, payload) => {
     return;
   }
 
+  cancelPanAnimation(deps);
   syncContainerSize(deps);
 
   if (touchCount >= 2) {
@@ -502,6 +539,8 @@ export const handleZoomInClick = (deps) => {
     return;
   }
 
+  cancelPanAnimation(deps);
+
   const container = refs.container;
   const rect = container.getBoundingClientRect();
 
@@ -524,6 +563,8 @@ export const handleZoomOutClick = (deps) => {
   if (store.selectIsDraggingMinimapViewport()) {
     return;
   }
+
+  cancelPanAnimation(deps);
 
   const container = refs.container;
   const rect = container.getBoundingClientRect();
@@ -548,6 +589,8 @@ export const handleMinimapViewportMouseDown = (deps, payload) => {
   if (!isPrimaryMouseButton(event)) {
     return;
   }
+
+  cancelPanAnimation(deps);
 
   const minimapContainer = refs.minimapContainer;
   if (!minimapContainer) {
@@ -584,6 +627,8 @@ export const handleItemMouseDown = (deps, payload) => {
   if (!isPrimaryMouseButton(event)) {
     return;
   }
+
+  cancelPanAnimation(deps);
 
   if (store.selectIsPanMode()) {
     // Let the event bubble to the container so Space-pan can start viewport drag.
@@ -965,4 +1010,97 @@ export const handleWindowResize = (deps) => {
   if (syncContainerSize(deps)) {
     renderWithCursorSync(deps);
   }
+};
+
+export const handleEnsureItemVisible = (deps, payload) => {
+  const { store, refs, props, dispatchEvent } = deps;
+  const detail = payload?._event?.detail || {};
+  const itemId = detail.itemId;
+  if (!itemId || !refs.container) {
+    return;
+  }
+
+  cancelPanAnimation(deps);
+  syncContainerSize(deps);
+
+  const item = (props.items || []).find((candidate) => candidate.id === itemId);
+  if (!item) {
+    return;
+  }
+
+  const rect = refs.container.getBoundingClientRect();
+  const zoomLevel = store.selectZoomLevel();
+  const pan = store.selectPan();
+  const padding = 20;
+  const itemLeft = item.x * zoomLevel + pan.x;
+  const itemTop = item.y * zoomLevel + pan.y;
+  const itemRight = (item.x + SCENE_BOX_WIDTH) * zoomLevel + pan.x;
+  const itemBottom = (item.y + SCENE_BOX_HEIGHT) * zoomLevel + pan.y;
+  const minX = padding;
+  const minY = padding;
+  const maxX = rect.width - padding;
+  const maxY = rect.height - padding;
+
+  const isVisible =
+    itemLeft >= minX &&
+    itemRight <= maxX &&
+    itemTop >= minY &&
+    itemBottom <= maxY;
+  if (isVisible) {
+    return;
+  }
+
+  const nextPanX = rect.width / 2 - (item.x + SCENE_BOX_WIDTH / 2) * zoomLevel;
+  const nextPanY =
+    rect.height / 2 - (item.y + SCENE_BOX_HEIGHT / 2) * zoomLevel;
+
+  if (nextPanX === pan.x && nextPanY === pan.y) {
+    return;
+  }
+
+  if (detail.behavior === "smooth") {
+    const durationMs = normalizePanDuration(detail.durationMs);
+
+    if (
+      durationMs > 0 &&
+      typeof globalThis.requestAnimationFrame === "function"
+    ) {
+      let startedAt;
+      const step = (timestamp) => {
+        const timestampMs = Number(timestamp);
+        const currentTime = Number.isFinite(timestampMs)
+          ? timestampMs
+          : (globalThis.performance?.now?.() ?? Date.now());
+
+        if (startedAt === undefined) {
+          startedAt = currentTime;
+        }
+
+        const progress = clamp((currentTime - startedAt) / durationMs, 0, 1);
+        const easedProgress = easeOutCubic(progress);
+        const panX = pan.x + (nextPanX - pan.x) * easedProgress;
+        const panY = pan.y + (nextPanY - pan.y) * easedProgress;
+
+        store.setPan({ panX, panY });
+        syncPanPresentation(deps);
+
+        if (progress < 1) {
+          const frameId = globalThis.requestAnimationFrame(step);
+          store.setPanAnimationFrameId?.({ frameId });
+          return;
+        }
+
+        store.clearPanAnimationFrameId?.();
+        dispatchPanChanged({ store, dispatchEvent });
+      };
+
+      const frameId = globalThis.requestAnimationFrame(step);
+      store.setPanAnimationFrameId?.({ frameId });
+      return;
+    }
+  }
+
+  store.setPan({ panX: nextPanX, panY: nextPanY });
+  syncPanPresentation(deps);
+  dispatchPanChanged({ store, dispatchEvent });
 };

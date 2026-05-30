@@ -389,12 +389,20 @@ export const createResourceFileExplorerHandlers = ({
           return;
         }
 
+        const data = {
+          name: detail.newName,
+        };
+
+        if ("description" in detail) {
+          data.description = detail.description ?? "";
+        }
+
         await projectService[resourceApi.updateMethod]({
           [resourceApi.idField]: itemId,
-          data: {
-            name: detail.newName,
-          },
+          data,
         });
+        await refresh(deps, { selectedItemId: itemId });
+        return;
       } else if (action === "delete-item") {
         if (!currentItem) {
           return;
@@ -541,10 +549,20 @@ export const createLayoutsFileExplorerHandlers = ({
           return;
         }
 
-        await projectService.renameLayoutItem({
-          layoutId: itemId,
+        const data = {
           name: detail.newName,
+        };
+
+        if ("description" in detail) {
+          data.description = detail.description ?? "";
+        }
+
+        await projectService.updateLayoutItem({
+          layoutId: itemId,
+          data,
         });
+        await refresh(deps, { selectedItemId: itemId });
+        return;
       } else if (action === "delete-item") {
         if (!currentItem) {
           return;
@@ -659,10 +677,20 @@ export const createControlsFileExplorerHandlers = ({
           return;
         }
 
-        await projectService.renameControlItem({
-          controlId: itemId,
+        const data = {
           name: detail.newName,
+        };
+
+        if ("description" in detail) {
+          data.description = detail.description ?? "";
+        }
+
+        await projectService.updateControlItem({
+          controlId: itemId,
+          data,
         });
+        await refresh(deps, { selectedItemId: itemId });
+        return;
       } else if (action === "delete-item") {
         if (!currentItem) {
           return;
@@ -943,12 +971,20 @@ export const createScenesFileExplorerHandlers = ({ refresh = noopRefresh }) => {
           return;
         }
 
+        const data = {
+          name: detail.newName,
+        };
+
+        if ("description" in detail) {
+          data.description = detail.description ?? "";
+        }
+
         await projectService.updateSceneItem({
           sceneId: itemId,
-          data: {
-            name: detail.newName,
-          },
+          data,
         });
+        await refresh(deps, { selectedItemId: itemId });
+        return;
       } else if (action === "delete-item") {
         if (!itemId) {
           return;
@@ -1049,13 +1085,21 @@ export const createCharacterSpritesFileExplorerHandlers = ({
           return;
         }
 
+        const data = {
+          name: detail.newName,
+        };
+
+        if ("description" in detail) {
+          data.description = detail.description ?? "";
+        }
+
         await projectService.updateCharacterSpriteItem({
           characterId,
           spriteId: itemId,
-          data: {
-            name: detail.newName,
-          },
+          data,
         });
+        await refresh(deps, { selectedItemId: itemId });
+        return;
       } else if (action === "delete-item") {
         if (!itemId) {
           return;

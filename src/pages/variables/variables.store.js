@@ -53,6 +53,12 @@ const folderNameForm = {
       label: "Name",
       required: true,
     },
+    {
+      name: "description",
+      type: "input-textarea",
+      label: "Description",
+      required: false,
+    },
   ],
   actions: {
     layout: "",
@@ -81,6 +87,7 @@ export const createInitialState = () => ({
   folderNameDialogItemId: undefined,
   folderNameDialogDefaultValues: {
     name: "",
+    description: "",
   },
   ...createTagState(),
   ...createMobileResourcePageState(),
@@ -136,6 +143,7 @@ export const openFolderNameDialog = (
   state.folderNameDialogItemId = folderId;
   state.folderNameDialogDefaultValues = {
     name: defaultValues?.name ?? "",
+    description: defaultValues?.description ?? "",
   };
 };
 
@@ -144,6 +152,7 @@ export const closeFolderNameDialog = ({ state }, _payload = {}) => {
   state.folderNameDialogItemId = undefined;
   state.folderNameDialogDefaultValues = {
     name: "",
+    description: "",
   };
 };
 
@@ -300,11 +309,17 @@ export const selectViewData = ({ state }) => {
       value: selectedVariableDefault,
     });
   } else if (selectedFolder?.type === "folder") {
-    detailFields.push({
-      type: "text",
-      label: "Type",
-      value: "folder",
-    });
+    detailFields.push(
+      {
+        type: "text",
+        label: "Type",
+        value: "folder",
+      },
+      {
+        type: "description",
+        value: selectedFolder.description ?? "",
+      },
+    );
   }
 
   return {
