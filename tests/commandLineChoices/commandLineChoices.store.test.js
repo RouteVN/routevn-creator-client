@@ -10,6 +10,7 @@ import {
   setEditingIndex,
   setItems,
   setScenes,
+  showDropdownMenu,
   updateEditForm,
 } from "../../src/components/commandLineChoices/commandLineChoices.store.js";
 
@@ -146,6 +147,67 @@ describe("commandLineChoices.store", () => {
         value: "screen-crossfade",
         label: "Screen Crossfade",
       },
+    ]);
+  });
+
+  it("hides unavailable move actions in the choice context menu", () => {
+    const state = createInitialState();
+
+    setItems(
+      { state },
+      {
+        items: [
+          { content: "Stay" },
+          { content: "Leave" },
+          { content: "Return" },
+        ],
+      },
+    );
+
+    showDropdownMenu(
+      { state },
+      {
+        position: { x: 10, y: 20 },
+        choiceIndex: 0,
+      },
+    );
+
+    expect(
+      selectViewData({ state, props: { layouts: [] } }).dropdownMenu.items,
+    ).toEqual([
+      { label: "Move Down", type: "item", value: "moveDown" },
+      { label: "Delete", type: "item", value: "delete" },
+    ]);
+
+    showDropdownMenu(
+      { state },
+      {
+        position: { x: 10, y: 20 },
+        choiceIndex: 1,
+      },
+    );
+
+    expect(
+      selectViewData({ state, props: { layouts: [] } }).dropdownMenu.items,
+    ).toEqual([
+      { label: "Move Up", type: "item", value: "moveUp" },
+      { label: "Move Down", type: "item", value: "moveDown" },
+      { label: "Delete", type: "item", value: "delete" },
+    ]);
+
+    showDropdownMenu(
+      { state },
+      {
+        position: { x: 10, y: 20 },
+        choiceIndex: 2,
+      },
+    );
+
+    expect(
+      selectViewData({ state, props: { layouts: [] } }).dropdownMenu.items,
+    ).toEqual([
+      { label: "Move Up", type: "item", value: "moveUp" },
+      { label: "Delete", type: "item", value: "delete" },
     ]);
   });
 
