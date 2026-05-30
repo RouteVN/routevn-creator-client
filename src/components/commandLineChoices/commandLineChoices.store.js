@@ -85,6 +85,29 @@ const resolveSelectedResourceId = ({ layouts, resourceId } = {}) => {
   return resourceOptions[0]?.value ?? "";
 };
 
+const getDropdownMenuItems = (choiceIndex, itemCount) => {
+  const items = [];
+
+  if (
+    !Number.isInteger(choiceIndex) ||
+    choiceIndex < 0 ||
+    choiceIndex >= itemCount
+  ) {
+    return items;
+  }
+
+  if (choiceIndex > 0) {
+    items.push({ label: "Move Up", type: "item", value: "moveUp" });
+  }
+
+  if (choiceIndex < itemCount - 1) {
+    items.push({ label: "Move Down", type: "item", value: "moveDown" });
+  }
+
+  items.push({ label: "Delete", type: "item", value: "delete" });
+  return items;
+};
+
 const createNextLineChoice = (content) => ({
   content,
   events: {
@@ -127,7 +150,11 @@ export const createInitialState = () => ({
     isOpen: false,
     position: { x: 0, y: 0 },
     choiceIndex: null,
-    items: [{ label: "Delete", type: "item", value: "delete" }],
+    items: [
+      { label: "Move Up", type: "item", value: "moveUp" },
+      { label: "Move Down", type: "item", value: "moveDown" },
+      { label: "Delete", type: "item", value: "delete" },
+    ],
   },
   scenes: {
     items: {},
@@ -238,6 +265,22 @@ export const removeChoice = ({ state }, { index } = {}) => {
   state.items.splice(index, 1);
 };
 
+export const moveChoice = ({ state }, { index, direction } = {}) => {
+  const targetIndex = direction === "up" ? index - 1 : index + 1;
+  if (
+    !Number.isInteger(index) ||
+    targetIndex < 0 ||
+    targetIndex >= state.items.length
+  ) {
+    return;
+  }
+
+  const items = [...state.items];
+  const [item] = items.splice(index, 1);
+  items.splice(targetIndex, 0, item);
+  state.items = items;
+};
+
 export const setScenes = ({ state }, { scenes } = {}) => {
   state.scenes = scenes;
 };
@@ -278,6 +321,10 @@ export const showDropdownMenu = ({ state }, { position, choiceIndex } = {}) => {
   state.dropdownMenu.isOpen = true;
   state.dropdownMenu.position = position;
   state.dropdownMenu.choiceIndex = choiceIndex;
+  state.dropdownMenu.items = getDropdownMenuItems(
+    choiceIndex,
+    state.items.length,
+  );
 };
 
 export const hideDropdownMenu = ({ state }, _payload = {}) => {
@@ -437,6 +484,14 @@ export const selectViewData = ({ state, props }) => {
     transitionAnimationId: state?.editForm?.transitionAnimationId,
   };
 
+  const dropdownMenu = {
+    ...state.dropdownMenu,
+    items: getDropdownMenuItems(
+      state.dropdownMenu.choiceIndex,
+      state.items.length,
+    ),
+  };
+
   const viewData = {
     mode: state?.mode || "list",
     items: processedItems,
@@ -453,7 +508,7 @@ export const selectViewData = ({ state, props }) => {
     choiceUpdateVariableAllowedModes: CHOICE_UPDATE_VARIABLE_ALLOWED_MODES,
     form,
     context,
-    dropdownMenu: state.dropdownMenu,
+    dropdownMenu,
   };
 
   return viewData;
