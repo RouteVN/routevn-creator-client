@@ -563,6 +563,7 @@ export const projectRepositoryStateToDomainState = ({
         id: sceneId,
         type: "folder",
         name: scene.name || `Folder ${sceneId}`,
+        description: scene.description ?? "",
         sectionIds: [],
         initialSectionId: null,
         parentId,

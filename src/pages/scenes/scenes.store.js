@@ -29,6 +29,7 @@ export const createInitialState = () => ({
   layoutsData: { tree: [], items: {} },
   sceneOverviewsById: {},
   selectedItemId: null,
+  selectedFolderId: undefined,
   whiteboardItems: [],
   isWaitingForTransform: false,
   showSceneForm: false,
@@ -54,6 +55,7 @@ export const createInitialState = () => ({
   showMapAddHint: true,
   isEditDialogOpen: false,
   editItemId: undefined,
+  editItemType: undefined,
   editDefaultValues: {
     name: "",
     description: "",
@@ -114,6 +116,20 @@ export const setSelectedItemId = ({ state }, { itemId } = {}) => {
     state.deadEndTooltip.open = false;
   }
   state.selectedItemId = itemId;
+  if (itemId) {
+    state.selectedFolderId = undefined;
+  }
+};
+
+export const setSelectedFolderId = ({ state }, { folderId } = {}) => {
+  if (state.selectedFolderId !== folderId) {
+    state.sectionsListOpen = true;
+    state.deadEndTooltip.open = false;
+  }
+  state.selectedFolderId = folderId;
+  if (folderId) {
+    state.selectedItemId = undefined;
+  }
 };
 
 export const toggleSectionsList = ({ state }, _payload = {}) => {
@@ -142,10 +158,11 @@ export const hideMapAddHint = ({ state }, _payload = {}) => {
 
 export const openEditDialog = (
   { state },
-  { itemId, defaultValues = {} } = {},
+  { itemId, itemType, defaultValues = {} } = {},
 ) => {
   state.isEditDialogOpen = true;
   state.editItemId = itemId;
+  state.editItemType = itemType;
   state.editDefaultValues = {
     name: defaultValues?.name ?? "",
     description: defaultValues?.description ?? "",
@@ -155,6 +172,7 @@ export const openEditDialog = (
 export const closeEditDialog = ({ state }, _payload = {}) => {
   state.isEditDialogOpen = false;
   state.editItemId = undefined;
+  state.editItemType = undefined;
   state.editDefaultValues = {
     name: "",
     description: "",
@@ -189,6 +207,17 @@ export const setWhiteboardItems = ({ state }, { items } = {}) => {
 
 export const selectSelectedItemId = ({ state }) => {
   return state.selectedItemId;
+};
+
+export const selectSelectedFolderId = ({ state }) => {
+  return state.selectedFolderId;
+};
+
+export const selectEditItem = ({ state }) => {
+  return {
+    itemId: state.editItemId,
+    itemType: state.editItemType,
+  };
 };
 
 export const setWaitingForTransform = ({ state }, { isWaiting } = {}) => {
@@ -249,6 +278,10 @@ export const selectScenesData = ({ state }) => {
   return state.scenesData;
 };
 
+export const selectSceneItemById = ({ state }, { itemId } = {}) => {
+  return state.scenesData?.items?.[itemId];
+};
+
 export const selectIsWaitingForTransform = ({ state }) => {
   return state.isWaitingForTransform;
 };
@@ -263,18 +296,32 @@ export const selectViewData = ({ state }) => {
   );
   const flatGroups = toFlatGroups(state.scenesData);
 
-  // Get selected item details
-  const selectedItem = state.selectedItemId
+  const selectedScene = state.selectedItemId
     ? flatItems.find((item) => item.id === state.selectedItemId)
     : null;
+  const selectedFolderItem = state.selectedFolderId
+    ? flatItems.find((item) => item.id === state.selectedFolderId)
+    : null;
+  const selectedFolder = selectedFolderItem
+    ? {
+        ...selectedFolderItem,
+        type: "folder",
+        name: selectedFolderItem.name ?? selectedFolderItem.id,
+        description: selectedFolderItem.description ?? "",
+      }
+    : null;
+  const selectedDetailItem = selectedScene ?? selectedFolder;
+  const selectedDetailType = selectedDetailItem?.type;
+  const selectedDetailId = selectedDetailItem?.id;
 
-  let selectedSceneName = "";
+  let selectedItemName = "";
   let selectedItemDescription = "";
   let selectedSceneSections = [];
-  if (selectedItem?.type === "scene") {
-    const selectedSceneOverview = state.sceneOverviewsById?.[selectedItem.id];
-    selectedSceneName = selectedItem.name ?? "";
-    selectedItemDescription = selectedItem.description ?? "";
+  let detailFields = [];
+  if (selectedScene?.type === "scene") {
+    const selectedSceneOverview = state.sceneOverviewsById?.[selectedScene.id];
+    selectedItemName = selectedScene.name ?? "";
+    selectedItemDescription = selectedScene.description ?? "";
     selectedSceneSections = Array.isArray(selectedSceneOverview?.sections)
       ? selectedSceneOverview.sections.map((section, index) => ({
           id: section.sectionId || section.id,
@@ -282,7 +329,7 @@ export const selectViewData = ({ state }) => {
           isDeadEnd: section.isDeadEnd === true,
         }))
       : toFlatItems(
-          selectedItem.sections || {
+          selectedScene.sections || {
             tree: [],
             items: {},
           },
@@ -291,6 +338,20 @@ export const selectViewData = ({ state }) => {
           name: section.name || `Section ${index + 1}`,
           isDeadEnd: false,
         }));
+  } else if (selectedFolder) {
+    selectedItemName = selectedFolder.name ?? selectedFolder.id;
+    selectedItemDescription = selectedFolder.description ?? "";
+    detailFields = [
+      {
+        type: "text",
+        label: "Type",
+        value: "folder",
+      },
+      {
+        type: "description",
+        value: selectedFolder.description ?? "",
+      },
+    ];
   }
 
   // Get folder options for form
@@ -349,9 +410,13 @@ export const selectViewData = ({ state }) => {
     },
   };
 
+  const editItemType = state.editItemType ?? "scene";
   const editForm = {
-    title: "Edit Scene",
-    description: "Update scene details",
+    title: editItemType === "folder" ? "Edit Folder" : "Edit Scene",
+    description:
+      editItemType === "folder"
+        ? "Update folder details"
+        : "Update scene details",
     fields: [
       {
         name: "name",
@@ -388,9 +453,12 @@ export const selectViewData = ({ state }) => {
     resourceCategory: "project",
     selectedResourceId: "scenes",
     selectedItemId: state.selectedItemId,
+    selectedFolderId: state.selectedFolderId,
+    selectedDetailId,
+    selectedDetailType,
     addSceneButtonVariant: state.isWaitingForTransform ? "pr" : "se",
     whiteboardItems: state.whiteboardItems,
-    selectedSceneName,
+    selectedSceneName: selectedItemName,
     selectedItemDescription,
     isWaitingForTransform: state.isWaitingForTransform,
     showSceneForm: state.showSceneForm,
@@ -409,7 +477,8 @@ export const selectViewData = ({ state }) => {
     showMapAddHint: state.showMapAddHint,
     sectionsListOpen: state.sectionsListOpen,
     selectedSceneSections,
-    selectedItemName: selectedSceneName,
+    selectedItemName,
+    detailFields,
     deadEndTooltip: state.deadEndTooltip,
     folderContextMenuItems: fileExplorerFolderContextMenuItems,
     itemContextMenuItems: fileExplorerItemContextMenuItems,

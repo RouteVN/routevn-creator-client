@@ -295,6 +295,11 @@ const setSelectedScene = ({ store, appService, sceneId } = {}) => {
   persistSelectedSceneId({ appService, sceneId });
 };
 
+const setSelectedFolder = ({ store, appService, folderId } = {}) => {
+  store.setSelectedFolderId({ folderId });
+  persistSelectedSceneId({ appService, sceneId: undefined });
+};
+
 const dismissMapAddHint = ({ store, appService } = {}) => {
   store.hideMapAddHint();
   appService.setUserConfig("scenesMap.hideAddSceneHint", true);
@@ -311,6 +316,41 @@ const getSceneItemById = ({ store, sceneId } = {}) => {
     return undefined;
   }
   return sceneItem;
+};
+
+const hasTreeNode = ({ nodes, itemId } = {}) => {
+  if (!Array.isArray(nodes) || !itemId) {
+    return false;
+  }
+
+  return nodes.some((node) => {
+    if (node?.id === itemId) {
+      return true;
+    }
+    return hasTreeNode({ nodes: node?.children, itemId });
+  });
+};
+
+const getSceneFolderById = ({ store, folderId } = {}) => {
+  if (!folderId) {
+    return undefined;
+  }
+
+  const item = store.selectSceneItemById({ itemId: folderId });
+  if (item && item.type !== "folder") {
+    return undefined;
+  }
+  const scenesData = store.selectScenesData();
+  if (!item && !hasTreeNode({ nodes: scenesData?.tree, itemId: folderId })) {
+    return undefined;
+  }
+  return {
+    id: folderId,
+    ...item,
+    type: "folder",
+    name: item?.name ?? folderId,
+    description: item?.description ?? "",
+  };
 };
 
 const resolveSceneFormDefaultValues = ({ store } = {}) => {
@@ -434,11 +474,36 @@ const openEditDialogWithValues = ({ deps, sceneId } = {}) => {
   fileexplorer?.selectItem({ itemId: sceneId });
   store.openEditDialog({
     itemId: sceneId,
+    itemType: "scene",
     defaultValues: editValues,
   });
   render();
   editForm.reset();
   editForm.setValues({ values: editValues });
+};
+
+const openFolderEditDialogWithValues = ({ deps, folderId } = {}) => {
+  const { store, refs, render } = deps;
+  const folder = getSceneFolderById({ store, folderId });
+  if (!folder) {
+    return false;
+  }
+
+  const editValues = {
+    name: folder.name ?? "",
+    description: folder.description ?? "",
+  };
+
+  refs.fileexplorer?.selectItem?.({ itemId: folderId });
+  store.openEditDialog({
+    itemId: folderId,
+    itemType: "folder",
+    defaultValues: editValues,
+  });
+  render();
+  refs.editForm?.reset?.();
+  refs.editForm?.setValues?.({ values: editValues });
+  return true;
 };
 
 export const handleBeforeMount = (deps) => {
@@ -540,7 +605,10 @@ const refreshScenesData = async (deps) => {
   });
 };
 
-const { handleFileExplorerAction, handleFileExplorerTargetChanged } =
+const {
+  handleFileExplorerAction: handleBaseFileExplorerAction,
+  handleFileExplorerTargetChanged,
+} =
   createScenesFileExplorerHandlers({
     refresh: refreshScenesData,
   });
@@ -553,10 +621,27 @@ const {
 });
 
 export {
-  handleFileExplorerAction,
   handleFileExplorerTargetChanged,
   handleFileExplorerKeyboardScopeClick,
   handleFileExplorerKeyboardScopeKeyDown,
+};
+
+export const handleFileExplorerAction = async (deps, payload) => {
+  const detail = payload?._event?.detail ?? {};
+  const action = (detail.item || detail)?.value;
+  const itemId = resolveDetailItemId(detail);
+
+  if (
+    action === "rename-item" &&
+    openFolderEditDialogWithValues({
+      deps,
+      folderId: itemId,
+    })
+  ) {
+    return;
+  }
+
+  await handleBaseFileExplorerAction(deps, payload);
 };
 
 export const handleDataChanged = refreshScenesData;
@@ -568,7 +653,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
   const isFolder = detail.isFolder === true || detail.item?.type === "folder";
 
   if (isFolder) {
-    setSelectedScene({ store, appService, sceneId: undefined });
+    setSelectedFolder({ store, appService, folderId: itemId });
     render();
     focusFileExplorerKeyboardScope(deps);
     return;
@@ -892,6 +977,12 @@ export const handleMapAddHintClose = (deps) => {
 export const handleDetailHeaderClick = (deps) => {
   const { store } = deps;
   const selectedItemId = store.selectSelectedItemId();
+  const selectedFolderId = store.selectSelectedFolderId();
+  if (selectedFolderId) {
+    openFolderEditDialogWithValues({ deps, folderId: selectedFolderId });
+    return;
+  }
+
   openEditDialogWithValues({ deps, sceneId: selectedItemId });
 };
 
@@ -978,15 +1069,20 @@ export const handleEditFormAction = async (deps, payload) => {
   }
 
   const name = values?.name?.trim();
+  const editItem = store.selectEditItem();
+  const editItemType = editItem.itemType ?? "scene";
   if (!name) {
     appService.showAlert({
-      message: "Scene name is required.",
+      message:
+        editItemType === "folder"
+          ? "Folder name is required."
+          : "Scene name is required.",
       title: "Warning",
     });
     return;
   }
 
-  const editItemId = store.getState().editItemId;
+  const editItemId = editItem.itemId;
   if (!editItemId) {
     store.closeEditDialog();
     render();
@@ -1003,7 +1099,12 @@ export const handleEditFormAction = async (deps, payload) => {
 
   if (updateResult?.valid === false) {
     appService.showAlert({
-      message: getProjectErrorMessage(updateResult, "Failed to update scene."),
+      message: getProjectErrorMessage(
+        updateResult,
+        editItemType === "folder"
+          ? "Failed to update folder."
+          : "Failed to update scene.",
+      ),
       title: "Error",
     });
     return;

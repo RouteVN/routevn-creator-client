@@ -52,7 +52,9 @@ const defaultMatchesSearch = (item, searchQuery) => {
   }
 
   const name = (item.name ?? "").toLowerCase();
-  return name.includes(searchQuery);
+  const description = (item.description ?? "").toLowerCase();
+
+  return name.includes(searchQuery) || description.includes(searchQuery);
 };
 
 export const createCatalogPageStore = ({
@@ -78,6 +80,7 @@ export const createCatalogPageStore = ({
     tagging?.createTagForm ?? createDefaultTagForm();
   const createEmptyFolderNameDefaultValues = () => ({
     name: "",
+    description: "",
   });
   const folderNameForm = {
     title: "Edit Folder",
@@ -87,6 +90,12 @@ export const createCatalogPageStore = ({
         type: "input-text",
         label: "Name",
         required: true,
+      },
+      {
+        name: "description",
+        type: "input-textarea",
+        label: "Description",
+        required: false,
       },
     ],
     actions: {
@@ -119,6 +128,10 @@ export const createCatalogPageStore = ({
         type: "text",
         label: "Type",
         value: "folder",
+      },
+      {
+        type: "description",
+        value: folder.description ?? "",
       },
     ];
   };

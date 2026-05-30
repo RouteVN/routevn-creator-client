@@ -159,6 +159,7 @@ export const createMediaPageHandlers = ({
 
     const values = {
       name: folder.name ?? "",
+      description: folder.description ?? "",
     };
 
     store.setSelectedFolderId({ folderId });
@@ -331,6 +332,8 @@ export const createMediaPageHandlers = ({
     }
 
     const name = values?.name?.trim();
+    const description = values?.description?.trim() ?? "";
+
     if (!name) {
       appService.showAlert({
         message: "Folder name is required.",
@@ -352,6 +355,7 @@ export const createMediaPageHandlers = ({
           value: "rename-item-confirmed",
           itemId: folderId,
           newName: name,
+          description,
         },
       },
     });
