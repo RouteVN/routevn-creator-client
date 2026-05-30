@@ -57,6 +57,7 @@ export const createInitialState = () => ({
   isPinnedPanMode: false,
   isKeyboardPanMode: false,
   isPanning: false,
+  panAnimationFrameId: undefined,
   panX: 0,
   panY: 0,
   panStartX: 0,
@@ -353,6 +354,14 @@ export const selectIsPanMode = ({ state }) =>
 export const selectIsPinnedPanMode = ({ state }) => state.isPinnedPanMode;
 export const selectIsKeyboardPanMode = ({ state }) => state.isKeyboardPanMode;
 export const selectIsPanning = ({ state }) => state.isPanning;
+export const setPanAnimationFrameId = ({ state }, { frameId } = {}) => {
+  state.panAnimationFrameId = frameId;
+};
+export const clearPanAnimationFrameId = ({ state }, _payload = {}) => {
+  state.panAnimationFrameId = undefined;
+};
+export const selectPanAnimationFrameId = ({ state }) =>
+  state.panAnimationFrameId;
 export const selectIsDraggingMinimapViewport = ({ state }) =>
   state.isDraggingMinimapViewport;
 export const selectPan = ({ state }) => ({

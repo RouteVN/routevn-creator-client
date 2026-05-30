@@ -1,9 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   handleContainerWheel,
+  handleEnsureItemVisible,
   handleWindowMouseMove,
   handleWindowMouseUp,
 } from "../../src/components/whiteboard/whiteboard.handlers.js";
+import {
+  SCENE_BOX_HEIGHT,
+  SCENE_BOX_WIDTH,
+} from "../../src/internal/whiteboard/constants.js";
 
 const OriginalHTMLElement = globalThis.HTMLElement;
 const OriginalCustomEvent = globalThis.CustomEvent;
@@ -26,16 +31,20 @@ const createMinimapItemRefs = () => [
 const createDeps = ({
   isDraggingMinimapViewport = true,
   pan = { x: -120, y: -80 },
+  zoomLevel = 1.5,
+  items = [],
 } = {}) => {
   const minimapItemRefs = createMinimapItemRefs();
+  let currentPan = pan;
+  let panAnimationFrameId;
 
   const store = {
     selectContainerSize: vi.fn(() => ({ width: 100, height: 80 })),
     selectIsDraggingMinimapViewport: vi.fn(() => isDraggingMinimapViewport),
     selectIsPanMode: vi.fn(() => false),
     selectIsPanning: vi.fn(() => false),
-    selectPan: vi.fn(() => pan),
-    selectZoomLevel: vi.fn(() => 1.5),
+    selectPan: vi.fn(() => currentPan),
+    selectZoomLevel: vi.fn(() => zoomLevel),
     selectMinimapData: vi.fn(() => ({
       items: [
         { id: "scene-1", x: 12, y: 10 },
@@ -52,6 +61,16 @@ const createDeps = ({
     })),
     updatePanFromMinimapViewportDragging: vi.fn(),
     stopMinimapViewportDragging: vi.fn(),
+    setPan: vi.fn(({ panX, panY }) => {
+      currentPan = { x: panX, y: panY };
+    }),
+    selectPanAnimationFrameId: vi.fn(() => panAnimationFrameId),
+    setPanAnimationFrameId: vi.fn(({ frameId }) => {
+      panAnimationFrameId = frameId;
+    }),
+    clearPanAnimationFrameId: vi.fn(() => {
+      panAnimationFrameId = undefined;
+    }),
     zoomAt: vi.fn(),
   };
   const refs = {
@@ -85,10 +104,13 @@ const createDeps = ({
   return {
     store,
     refs,
-    props: {},
+    props: {
+      items,
+    },
     render: vi.fn(),
     dispatchEvent: vi.fn(),
     minimapItemRefs,
+    getPan: () => currentPan,
   };
 };
 
@@ -180,5 +202,67 @@ describe("whiteboard minimap drag handlers", () => {
     expect(event.preventDefault).toHaveBeenCalledTimes(1);
     expect(deps.store.zoomAt).not.toHaveBeenCalled();
     expect(deps.dispatchEvent).not.toHaveBeenCalled();
+  });
+
+  it("animates ensureItemVisible when smooth behavior is requested", () => {
+    const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+    const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+    const animationFrames = [];
+    globalThis.requestAnimationFrame = vi.fn((callback) => {
+      animationFrames.push(callback);
+      return animationFrames.length;
+    });
+    globalThis.cancelAnimationFrame = vi.fn();
+
+    try {
+      const targetItem = {
+        id: "scene-2",
+        x: 300,
+        y: 120,
+      };
+      const deps = createDeps({
+        isDraggingMinimapViewport: false,
+        pan: { x: 0, y: 0 },
+        zoomLevel: 1,
+        items: [targetItem],
+      });
+      const targetPan = {
+        x: 100 / 2 - (targetItem.x + SCENE_BOX_WIDTH / 2),
+        y: 80 / 2 - (targetItem.y + SCENE_BOX_HEIGHT / 2),
+      };
+
+      handleEnsureItemVisible(deps, {
+        _event: {
+          detail: {
+            itemId: "scene-2",
+            behavior: "smooth",
+            durationMs: 100,
+          },
+        },
+      });
+
+      expect(deps.store.setPan).not.toHaveBeenCalled();
+      expect(deps.dispatchEvent).not.toHaveBeenCalled();
+
+      animationFrames.shift()(0);
+      expect(deps.getPan()).toEqual({ x: 0, y: 0 });
+
+      animationFrames.shift()(50);
+      expect(deps.getPan().x).toBeGreaterThan(targetPan.x);
+      expect(deps.getPan().x).toBeLessThan(0);
+      expect(deps.dispatchEvent).not.toHaveBeenCalled();
+
+      animationFrames.shift()(100);
+      expect(deps.getPan()).toEqual(targetPan);
+      expect(deps.dispatchEvent).toHaveBeenCalledTimes(1);
+      expect(deps.dispatchEvent.mock.calls[0][0].type).toBe("pan-changed");
+      expect(deps.dispatchEvent.mock.calls[0][0].detail).toEqual({
+        panX: targetPan.x,
+        panY: targetPan.y,
+      });
+    } finally {
+      globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+      globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+    }
   });
 });

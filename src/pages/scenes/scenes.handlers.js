@@ -664,7 +664,11 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
 
   setSelectedScene({ store, appService, sceneId: itemId });
   render();
-  refs.whiteboard?.ensureItemVisible?.({ itemId });
+  refs.whiteboard?.ensureItemVisible?.({
+    itemId,
+    behavior: "smooth",
+    durationMs: 160,
+  });
   focusFileExplorerKeyboardScope(deps);
 };
 

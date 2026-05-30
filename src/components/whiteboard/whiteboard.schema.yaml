@@ -24,6 +24,6 @@ propsSchema:
 methods:
   properties:
     ensureItemVisible:
-      description: Pans the whiteboard just enough to bring an item fully into view.
+      description: Pans the whiteboard just enough to bring an item fully into view. Pass behavior smooth and durationMs for animated panning.
       params: []
       returns: void
