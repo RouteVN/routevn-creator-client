@@ -966,3 +966,52 @@ export const handleWindowResize = (deps) => {
     renderWithCursorSync(deps);
   }
 };
+
+export const handleEnsureItemVisible = (deps, payload) => {
+  const { store, refs, props, dispatchEvent } = deps;
+  const itemId = payload?._event?.detail?.itemId;
+  if (!itemId || !refs.container) {
+    return;
+  }
+
+  syncContainerSize(deps);
+
+  const item = (props.items || []).find((candidate) => candidate.id === itemId);
+  if (!item) {
+    return;
+  }
+
+  const rect = refs.container.getBoundingClientRect();
+  const zoomLevel = store.selectZoomLevel();
+  const pan = store.selectPan();
+  const padding = 20;
+  const itemLeft = item.x * zoomLevel + pan.x;
+  const itemTop = item.y * zoomLevel + pan.y;
+  const itemRight = (item.x + SCENE_BOX_WIDTH) * zoomLevel + pan.x;
+  const itemBottom = (item.y + SCENE_BOX_HEIGHT) * zoomLevel + pan.y;
+  const minX = padding;
+  const minY = padding;
+  const maxX = rect.width - padding;
+  const maxY = rect.height - padding;
+
+  const isVisible =
+    itemLeft >= minX &&
+    itemRight <= maxX &&
+    itemTop >= minY &&
+    itemBottom <= maxY;
+  if (isVisible) {
+    return;
+  }
+
+  const nextPanX = rect.width / 2 - (item.x + SCENE_BOX_WIDTH / 2) * zoomLevel;
+  const nextPanY =
+    rect.height / 2 - (item.y + SCENE_BOX_HEIGHT / 2) * zoomLevel;
+
+  if (nextPanX === pan.x && nextPanY === pan.y) {
+    return;
+  }
+
+  store.setPan({ panX: nextPanX, panY: nextPanY });
+  syncPanPresentation(deps);
+  dispatchPanChanged({ store, dispatchEvent });
+};

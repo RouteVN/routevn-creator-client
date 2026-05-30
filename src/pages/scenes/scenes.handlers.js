@@ -647,7 +647,7 @@ export const handleFileExplorerAction = async (deps, payload) => {
 export const handleDataChanged = refreshScenesData;
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
-  const { store, render, appService } = deps;
+  const { store, render, refs, appService } = deps;
   const detail = payload?._event?.detail || {};
   const itemId = resolveDetailItemId(detail);
   const isFolder = detail.isFolder === true || detail.item?.type === "folder";
@@ -665,6 +665,7 @@ export const handleFileExplorerSelectionChanged = (deps, payload) => {
 
   setSelectedScene({ store, appService, sceneId: itemId });
   render();
+  refs.whiteboard?.ensureItemVisible?.({ itemId });
   focusFileExplorerKeyboardScope(deps);
 };
 

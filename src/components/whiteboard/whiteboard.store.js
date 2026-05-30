@@ -361,6 +361,11 @@ export const selectPan = ({ state }) => ({
 });
 export const selectZoomLevel = ({ state }) => state.zoomLevel;
 
+export const setPan = ({ state }, { panX, panY } = {}) => {
+  state.panX = panX ?? state.panX;
+  state.panY = panY ?? state.panY;
+};
+
 export const setContainerSize = ({ state }, { width, height } = {}) => {
   state.containerSize = {
     width: width ?? 0,
