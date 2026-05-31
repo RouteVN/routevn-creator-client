@@ -31,6 +31,8 @@ refs:
         handler: handleHelpFloatingButtonClick
   actionsDialog:
     eventListeners:
+      close-request:
+        handler: handleActionsDialogCloseRequest
       close:
         handler: handleActionsDialogClose
   actionItem*:

@@ -70,8 +70,6 @@ export const createInitialState = () => ({
 });
 
 export const selectResourceRoute = ({ state }, id) => {
-  // console.log('payload', payload)
-  // const { resourceId, projectId } = payload;
   const resources = state.assets
     .concat(state.animatedAssets)
     .concat(state.ui)

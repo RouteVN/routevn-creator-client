@@ -624,6 +624,7 @@ export const createInitialState = () => ({
     background: {},
     targetType: "background",
     actionKey: "background",
+    action: undefined,
     itemIndex: undefined,
     item: undefined,
     targetId: undefined,
@@ -772,6 +773,7 @@ export const openBackgroundTransformEditor = (
     transform,
     targetType = "background",
     actionKey = "background",
+    action,
     itemIndex,
     item,
     targetId,
@@ -781,6 +783,9 @@ export const openBackgroundTransformEditor = (
   state.backgroundTransformEditor.background = toPlainObject(background);
   state.backgroundTransformEditor.targetType = targetType;
   state.backgroundTransformEditor.actionKey = actionKey;
+  state.backgroundTransformEditor.action = action
+    ? toPlainObject(action)
+    : undefined;
   state.backgroundTransformEditor.itemIndex = itemIndex;
   state.backgroundTransformEditor.item = item ? toPlainObject(item) : undefined;
   state.backgroundTransformEditor.targetId = targetId;
@@ -1142,11 +1147,15 @@ export const selectSelectedLineId = ({ state }) => {
 };
 
 export const setSelectedLineId = ({ state }, { selectedLineId } = {}) => {
+  const selectionChanged = state.selectedLineId !== selectedLineId;
   const syncedPresentationState = getSectionLinePresentationState(
     state,
     selectedLineId,
   );
   state.selectedLineId = selectedLineId;
+  if (selectionChanged) {
+    state.temporaryPresentationState = {};
+  }
   if (!selectedLineId) {
     state.presentationState = {};
     return;
@@ -1493,7 +1502,7 @@ const selectBackgroundTransformEditorViewData = ({ state }) => {
   return {
     isOpen: editor.isOpen === true,
     transform,
-    previewMaxWidth: `min(calc(100vw - 48px), calc((100vh - 170px) * ${widthMultiplier}))`,
+    previewMaxWidth: `min(100vw, calc((100vh - 122px) * ${widthMultiplier}))`,
     canvasAspectRatio: selectCanvasAspectRatio({ state }),
     suppressNextActionsDialogClose:
       editor.suppressNextActionsDialogClose === true,

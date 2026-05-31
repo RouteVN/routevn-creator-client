@@ -271,6 +271,16 @@ export const handleCustomTransformDoneButtonClick = (deps, payload) => {
   );
 };
 
+export const handleCancelCustomTransformEditor = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+  payload?._event?.stopImmediatePropagation?.();
+  const { store, render } = deps;
+
+  store.closeCustomTransformEditor?.();
+  render?.();
+};
+
 export const handleGetBackgroundTransformPreviewCanvasRoot = ({ refs }) => {
   const canvasHost = refs?.backgroundTransformPreviewCanvasHost;
   return (
@@ -340,14 +350,33 @@ export const handleBeforeMount = (deps) => {
     });
   }
 
-  if (hasBackgroundInlineTransform(props.background)) {
+  if (transformId) {
+    store.setCustomTransformEnabled({
+      enabled: false,
+    });
+    store.setCustomTransform({
+      transform: undefined,
+    });
+    store.setSelectedTransform({
+      transformId,
+    });
+  } else if (hasBackgroundInlineTransform(props.background)) {
+    store.setSelectedTransform({
+      transformId: undefined,
+    });
     store.setCustomTransformEnabled({
       enabled: true,
     });
     store.setCustomTransform({
       transform: props.background,
     });
-  } else if (transformId) {
+  } else {
+    store.setCustomTransformEnabled({
+      enabled: false,
+    });
+    store.setCustomTransform({
+      transform: undefined,
+    });
     store.setSelectedTransform({
       transformId,
     });
@@ -520,7 +549,11 @@ export const handleFormInputChange = (deps, payload) => {
       enabled: fieldValue,
     });
 
-    if (!customTransformWasEnabled && customTransformEnabled) {
+    if (!customTransformEnabled) {
+      store.setCustomTransform?.({
+        transform: undefined,
+      });
+    } else if (!customTransformWasEnabled) {
       const selectedTransform = store.selectSelectedTransformResource?.();
       if (selectedTransform) {
         store.setCustomTransform?.({
@@ -535,6 +568,12 @@ export const handleFormInputChange = (deps, payload) => {
   }
 
   if (name === "transformId") {
+    store.setCustomTransformEnabled?.({
+      enabled: false,
+    });
+    store.setCustomTransform?.({
+      transform: undefined,
+    });
     store.setSelectedTransform({
       transformId: fieldValue,
     });

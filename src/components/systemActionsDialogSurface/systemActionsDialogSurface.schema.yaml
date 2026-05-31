@@ -20,3 +20,5 @@ propsSchema:
 events:
   close:
     type: object
+  close-request:
+    type: object

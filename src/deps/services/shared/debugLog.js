@@ -50,7 +50,7 @@ const emitDebugLog = (scope, event, data = {}) => {
       ? Number(getDebugNow().toFixed(2))
       : Date.now();
 
-  console.log(`[rvn.debug.${scope}]`, {
+  console.debug(`[rvn.debug.${scope}]`, {
     seq: debugSequence,
     event,
     ts: timestamp,

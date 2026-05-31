@@ -6,6 +6,7 @@ import {
 } from "../../src/components/systemActions/systemActions.store.js";
 import {
   handleActionsDialogClose,
+  handleActionsDialogCloseRequest,
   handleBackgroundTransformCustomize,
   handleBackgroundTransformEditorDone,
   handleGetBackgroundTransformPreviewCanvasRoot,
@@ -494,6 +495,68 @@ describe("systemActions.handlers", () => {
     expect(dispatchedEvents).toHaveLength(0);
     expect(preventDefault).toHaveBeenCalledTimes(1);
     expect(stopPropagation).toHaveBeenCalledTimes(1);
+  });
+
+  it("turns suppressed dialog close requests into transform editor cancel", () => {
+    const dispatchedEvents = [];
+    const handleCancelBackground = vi.fn();
+    const handleCancelCharacters = vi.fn();
+    const handleCancelVisual = vi.fn();
+    const setSuppressDialogClose = vi.fn();
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+
+    handleActionsDialogCloseRequest(
+      {
+        props: {
+          backgroundTransformEditor: {
+            isOpen: true,
+          },
+        },
+        refs: {
+          commandLineBackground: {
+            transformedHandlers: {
+              handleCancelCustomTransformEditor: handleCancelBackground,
+            },
+          },
+          commandLineCharacters: {
+            transformedHandlers: {
+              handleCancelCustomTransformEditor: handleCancelCharacters,
+            },
+          },
+          commandLineVisual: {
+            transformedHandlers: {
+              handleCancelCustomTransformEditor: handleCancelVisual,
+            },
+          },
+        },
+        store: {
+          setSuppressDialogClose,
+        },
+        dispatchEvent: (event) => {
+          dispatchedEvents.push(event);
+        },
+      },
+      {
+        _event: {
+          preventDefault,
+          stopPropagation,
+        },
+      },
+    );
+
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+    expect(stopPropagation).toHaveBeenCalledTimes(1);
+    expect(handleCancelBackground).toHaveBeenCalledTimes(1);
+    expect(handleCancelCharacters).toHaveBeenCalledTimes(1);
+    expect(handleCancelVisual).toHaveBeenCalledTimes(1);
+    expect(setSuppressDialogClose).toHaveBeenCalledWith({
+      suppressDialogClose: true,
+    });
+    expect(dispatchedEvents).toHaveLength(1);
+    expect(dispatchedEvents[0].type).toBe(
+      "background-transform-editor-cancel",
+    );
   });
 
   it("clears temporary presentation state when the actions dialog closes", () => {

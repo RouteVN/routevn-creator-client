@@ -484,6 +484,94 @@ describe("renderSceneEditorState", () => {
     );
   });
 
+  it("paints the main preview canvas after the background transform editor closes", async () => {
+    const projectData = createProjectData();
+    projectData.resources.images["bg-school"] = {
+      id: "bg-school",
+      fileId: "bg-school.png",
+      width: 3840,
+      height: 2160,
+    };
+    projectData.story.scenes["scene-1"].sections[
+      "section-1"
+    ].lines[1].actions.background = {
+      resourceId: "bg-school",
+      x: 2051,
+      y: 1300,
+      anchorX: 0.5,
+      anchorY: 0.5,
+      scaleX: 1,
+      scaleY: 1,
+      rotation: 0,
+      originX: 0,
+      originY: 0,
+    };
+    const graphicsService = createGraphicsService();
+    graphicsService.attachCanvas = vi.fn(async () => {});
+    graphicsService.loadAssets = vi.fn(async () => {});
+    const mainCanvasRoot = {
+      isConnected: true,
+      id: "main-preview",
+    };
+    const transformEditorCanvasRoot = {
+      isConnected: true,
+      id: "transform-editor-preview",
+    };
+    const store = {
+      selectIsScenePageLoading: () => false,
+      selectPreviewScene: () => ({
+        previewVisible: false,
+      }),
+      selectSceneId: () => "scene-1",
+      selectSelectedSectionId: () => "section-1",
+      selectSelectedLineId: () => "line-2",
+      selectProjectData: () => projectData,
+      selectTemporaryPresentationState: () => ({}),
+      selectIsBackgroundTransformEditorOpen: () => false,
+      selectScene: () => ({
+        sections: [{ id: "section-1" }],
+      }),
+      selectIsMuted: () => false,
+      setPresentationState: ({ presentationState }) => {
+        store.presentationState = presentationState;
+      },
+      setSectionLineChanges: vi.fn(),
+    };
+
+    await renderSceneEditorCanvas(
+      {
+        store,
+        render: vi.fn(),
+        graphicsService,
+        projectService: {
+          getFileContent: vi.fn(async (fileId) => ({
+            url: fileId,
+          })),
+        },
+        refs: {
+          previewCanvasHost: {
+            getCanvasRoot: () => mainCanvasRoot,
+          },
+          systemActions: {
+            transformedHandlers: {
+              handleGetBackgroundTransformPreviewCanvasRoot: () =>
+                transformEditorCanvasRoot,
+            },
+          },
+        },
+      },
+      {
+        skipRender: true,
+        skipAnimations: true,
+      },
+    );
+
+    expect(graphicsService.attachCanvas).toHaveBeenCalledWith(mainCanvasRoot);
+    expect(graphicsService.attachCanvas).not.toHaveBeenCalledWith(
+      transformEditorCanvasRoot,
+    );
+  });
+
   it("syncs the graphics engine audio mute state from scene editor settings", async () => {
     const projectData = createProjectData();
     const graphicsService = createGraphicsService();

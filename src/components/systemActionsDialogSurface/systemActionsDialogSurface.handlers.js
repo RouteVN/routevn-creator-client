@@ -2,6 +2,12 @@ const dispatchClose = ({ dispatchEvent }) => {
   dispatchEvent(new CustomEvent("close", { detail: {}, bubbles: true }));
 };
 
+const dispatchCloseRequest = ({ dispatchEvent }) => {
+  dispatchEvent(
+    new CustomEvent("close-request", { detail: {}, bubbles: true }),
+  );
+};
+
 const isCloseSuppressed = ({ props = {}, store } = {}) => {
   return (
     props.suppressClose === true ||
@@ -15,6 +21,7 @@ export const handleSurfaceClose = (deps, payload = {}) => {
   payload._event?.preventDefault?.();
 
   if (isCloseSuppressed(deps)) {
+    dispatchCloseRequest(deps);
     return;
   }
 
@@ -44,6 +51,7 @@ export const handleDocumentKeyDown = (deps, payload = {}) => {
   event.stopPropagation?.();
 
   if (isCloseSuppressed(deps)) {
+    dispatchCloseRequest(deps);
     return;
   }
 

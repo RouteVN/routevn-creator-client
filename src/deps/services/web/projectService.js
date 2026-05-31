@@ -21,7 +21,7 @@ export const createProjectService = ({
         ? console.error.bind(console)
         : level === "warn"
           ? console.warn.bind(console)
-          : console.log.bind(console);
+          : console.debug.bind(console);
     fn(`[routevn.collab.web] ${message}`, meta);
   };
 

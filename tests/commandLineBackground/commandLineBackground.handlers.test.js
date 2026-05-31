@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  handleCancelCustomTransformEditor,
   handleBeforeMount,
   handleCustomTransformButtonClick,
   handleCustomTransformDoneButtonClick,
@@ -238,6 +239,49 @@ describe("commandLineBackground.handlers", () => {
       originX: 64,
       originY: 128,
     });
+  });
+
+  it("clears stale custom transform mode when hydrating a predefined transform", () => {
+    const state = createInitialState();
+
+    setCustomTransformEnabled(
+      { state },
+      {
+        enabled: true,
+      },
+    );
+    setCustomTransform(
+      { state },
+      {
+        transform: {
+          x: 1400,
+          y: 800,
+        },
+      },
+    );
+
+    handleBeforeMount({
+      store: createStoreApi(state),
+      props: {
+        background: {
+          resourceId: "bg-school",
+          transformId: "bg-center",
+          x: 1400,
+          y: 800,
+          anchorX: 0.5,
+          anchorY: 0.5,
+          scaleX: 1.2,
+          scaleY: 1.2,
+          rotation: 0,
+          originX: 960,
+          originY: 540,
+        },
+      },
+    });
+
+    expect(selectCustomTransformEnabled({ state })).toBe(false);
+    expect(selectCustomTransform({ state })).toBeUndefined();
+    expect(selectSelectedTransform({ state })).toBe("bg-center");
   });
 
   it("submits transformId when selected and omits it when cleared", () => {
@@ -1041,6 +1085,37 @@ describe("commandLineBackground.handlers", () => {
     );
     expect(dispatchEvent.mock.calls[0][0].bubbles).toBe(true);
     expect(dispatchEvent.mock.calls[0][0].composed).toBe(true);
+  });
+
+  it("cancels the local transform editor without saving", () => {
+    const state = createInitialState();
+    const render = vi.fn();
+    const dispatchEvent = vi.fn();
+    const event = {
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      stopImmediatePropagation: vi.fn(),
+    };
+
+    openCustomTransformEditor({ state });
+
+    handleCancelCustomTransformEditor(
+      {
+        store: createStoreApi(state),
+        render,
+        dispatchEvent,
+      },
+      {
+        _event: event,
+      },
+    );
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(event.stopImmediatePropagation).toHaveBeenCalledTimes(1);
+    expect(selectCustomTransformEditorOpen({ state })).toBe(false);
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent).not.toHaveBeenCalled();
   });
 
   it("exposes the nested background transform preview canvas root", () => {

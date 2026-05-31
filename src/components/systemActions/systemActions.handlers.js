@@ -160,6 +160,32 @@ export const handleActionTransformEditorDone = (deps, payload) => {
   );
 };
 
+const closeEmbeddedTransformEditors = (refs = {}) => {
+  refs?.commandLineBackground?.transformedHandlers?.handleCancelCustomTransformEditor?.();
+  refs?.commandLineCharacters?.transformedHandlers?.handleCancelCustomTransformEditor?.();
+  refs?.commandLineVisual?.transformedHandlers?.handleCancelCustomTransformEditor?.();
+};
+
+export const handleActionsDialogCloseRequest = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+
+  const { props, refs, store } = deps;
+  if (props?.backgroundTransformEditor?.isOpen !== true) {
+    return;
+  }
+
+  store?.setSuppressDialogClose?.({ suppressDialogClose: true });
+  closeEmbeddedTransformEditors(refs);
+  deps.dispatchEvent(
+    new CustomEvent("background-transform-editor-cancel", {
+      detail: {},
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 export const handleGetBackgroundTransformPreviewCanvasRoot = ({ refs }) => {
   return (
     refs?.commandLineBackground?.transformedHandlers?.handleGetBackgroundTransformPreviewCanvasRoot?.() ||
@@ -285,10 +311,9 @@ const isBooleanPropEnabled = (value) => {
 
 export const handleActionsDialogClose = (deps, payload) => {
   const { props, store, render, dispatchEvent } = deps;
-  if (
-    isBooleanPropEnabled(props?.suppressDialogClose) ||
-    store.selectSuppressDialogClose?.() === true
-  ) {
+  const suppressByProps = isBooleanPropEnabled(props?.suppressDialogClose);
+  const suppressByStore = store.selectSuppressDialogClose?.() === true;
+  if (suppressByProps || suppressByStore) {
     payload?._event?.preventDefault?.();
     payload?._event?.stopPropagation?.();
     return;

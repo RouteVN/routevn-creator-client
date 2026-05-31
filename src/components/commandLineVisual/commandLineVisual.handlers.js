@@ -335,6 +335,16 @@ export const handleCustomTransformDoneButtonClick = (deps, payload) => {
   );
 };
 
+export const handleCancelCustomTransformEditor = (deps, payload) => {
+  payload?._event?.preventDefault?.();
+  payload?._event?.stopPropagation?.();
+  payload?._event?.stopImmediatePropagation?.();
+  const { store, render } = deps;
+
+  store.closeCustomTransformEditor?.();
+  render?.();
+};
+
 export const handleGetBackgroundTransformPreviewCanvasRoot = ({ refs }) => {
   const canvasHost = refs?.backgroundTransformPreviewCanvasHost;
   return (

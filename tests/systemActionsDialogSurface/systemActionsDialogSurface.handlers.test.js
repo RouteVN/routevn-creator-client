@@ -32,7 +32,7 @@ describe("systemActionsDialogSurface.handlers", () => {
     expect(dispatchedEvents[0].type).toBe("close");
   });
 
-  it("does not emit close while close is suppressed", () => {
+  it("emits a close request while close is suppressed", () => {
     const dispatchedEvents = [];
     let stopPropagationCalled = false;
     let preventDefaultCalled = false;
@@ -58,7 +58,8 @@ describe("systemActionsDialogSurface.handlers", () => {
 
     expect(stopPropagationCalled).toBe(true);
     expect(preventDefaultCalled).toBe(true);
-    expect(dispatchedEvents).toHaveLength(0);
+    expect(dispatchedEvents).toHaveLength(1);
+    expect(dispatchedEvents[0].type).toBe("close-request");
   });
 
   it("closes on Escape only while open", () => {
@@ -124,6 +125,7 @@ describe("systemActionsDialogSurface.handlers", () => {
       },
     );
 
-    expect(dispatchedEvents).toHaveLength(1);
+    expect(dispatchedEvents).toHaveLength(2);
+    expect(dispatchedEvents[1].type).toBe("close-request");
   });
 });

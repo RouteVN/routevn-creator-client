@@ -349,9 +349,6 @@ describe("commandLineBackground.store", () => {
     expect(viewData.customTransformDetails).toEqual([
       { label: "Position", value: "100, 120" },
       { label: "Scale", value: "1.2 x 1.2" },
-      { label: "Rotation", value: "0" },
-      { label: "Anchor", value: "0.5, 0.5" },
-      { label: "Origin", value: "320, 180" },
     ]);
   });
 

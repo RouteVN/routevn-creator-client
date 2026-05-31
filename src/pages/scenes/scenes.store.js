@@ -442,11 +442,6 @@ export const selectViewData = ({ state }) => {
     },
   };
 
-  // console.log({
-  //   selectedItemId: state.selectedItemId,
-  //   defaultValues: defaultValues,
-  // });
-
   return {
     flatItems,
     flatGroups,

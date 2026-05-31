@@ -34,18 +34,6 @@ const navigateToLayoutEditor = ({ appService, layoutId } = {}) => {
 
 const normalizeBooleanField = (value) => value === true || value === "true";
 
-const printSelectedLayoutData = (store, { itemId } = {}) => {
-  const layoutData = store.selectLayoutItemById({ itemId });
-  if (!layoutData || layoutData.type !== "layout") {
-    return;
-  }
-
-  console.log("[layouts] selected layout data", {
-    selectedItemId: itemId,
-    layoutData,
-  });
-};
-
 const openLayoutEditorWithItem = ({ deps, itemId } = {}) => {
   if (!itemId) {
     return;
@@ -198,23 +186,10 @@ export {
 
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   handleCatalogFileExplorerSelectionChanged(deps, payload);
-
-  const { itemId, isFolder } = payload._event.detail;
-  if (isFolder || !itemId) {
-    return;
-  }
-
-  printSelectedLayoutData(deps.store, { itemId });
 };
 
 export const handleLayoutItemClick = (deps, payload) => {
   handleCatalogLayoutItemClick(deps, payload);
-  const { itemId } = payload._event.detail;
-  if (!itemId) {
-    return;
-  }
-
-  printSelectedLayoutData(deps.store, { itemId });
 };
 
 export const handleFileExplorerDoubleClick = (deps, payload) => {

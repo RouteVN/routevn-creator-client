@@ -83,6 +83,18 @@ for routine validation of ordinary code or view edits. Prefer targeted tests,
 format checks, lint checks, and the active watch output. Reserve `build:web` for
 explicit user requests, release/VT output, or a specific build-only failure.
 
+### Debugging Discipline
+
+Do not claim a UI bug is fixed from code inspection alone. For user-visible
+runtime behavior, reproduce the issue in the running app or with an equivalent
+browser/VT validation before presenting a fix as complete.
+
+Avoid blind hypothesis stacking. Diagnostic logs are useful only when they are
+placed at concrete boundaries, used to prove where data changes, and followed by
+direct validation of the affected workflow. If a first hypothesis is disproven,
+stop changing code and gather the next missing observation before making another
+behavioral change.
+
 Common commands:
 
 ```bash
