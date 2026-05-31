@@ -137,19 +137,24 @@ const getBackgroundTransformEditorCanvasRoot = (refs) => {
   return getCanvasRootFromHost(refs?.backgroundTransformPreviewCanvasHost);
 };
 
-const getCurrentCanvasRoot = (refs) => {
-  const transformEditorCanvasRoot =
-    getBackgroundTransformEditorCanvasRoot(refs);
-  if (transformEditorCanvasRoot?.isConnected) {
-    return transformEditorCanvasRoot;
+const getCurrentCanvasRoot = (
+  refs,
+  { preferTransformEditorCanvas = false } = {},
+) => {
+  if (preferTransformEditorCanvas) {
+    const transformEditorCanvasRoot =
+      getBackgroundTransformEditorCanvasRoot(refs);
+    if (transformEditorCanvasRoot?.isConnected) {
+      return transformEditorCanvasRoot;
+    }
   }
 
   return getCanvasRootFromHost(refs?.previewCanvasHost);
 };
 
-const waitForMountedCanvasRoot = async (refs, maxFrames = 10) => {
+const waitForMountedCanvasRoot = async (refs, maxFrames = 10, options = {}) => {
   for (let attempt = 0; attempt < maxFrames; attempt += 1) {
-    const canvasRoot = getCurrentCanvasRoot(refs);
+    const canvasRoot = getCurrentCanvasRoot(refs, options);
     if (canvasRoot?.isConnected) {
       return canvasRoot;
     }
@@ -157,13 +162,16 @@ const waitForMountedCanvasRoot = async (refs, maxFrames = 10) => {
     await waitForNextFrame();
   }
 
-  return getCurrentCanvasRoot(refs);
+  return getCurrentCanvasRoot(refs, options);
 };
 
 const attachGraphicsCanvasToMountedRoot = async (deps, maxFrames = 10) => {
+  const preferTransformEditorCanvas =
+    deps?.store?.selectIsBackgroundTransformEditorOpen?.() === true;
   const mountedCanvasRoot = await waitForMountedCanvasRoot(
     deps?.refs,
     maxFrames,
+    { preferTransformEditorCanvas },
   );
   if (!mountedCanvasRoot?.isConnected) {
     return mountedCanvasRoot;
@@ -1189,7 +1197,11 @@ export const renderSceneEditorCanvas = async (deps, payload) => {
     return;
   }
 
-  const mountedCanvasRoot = getCurrentCanvasRoot(deps.refs);
+  const backgroundTransformEditorOpen =
+    store.selectIsBackgroundTransformEditorOpen?.() === true;
+  const mountedCanvasRoot = getCurrentCanvasRoot(deps.refs, {
+    preferTransformEditorCanvas: backgroundTransformEditorOpen,
+  });
   if (!mountedCanvasRoot?.isConnected) {
     return;
   }

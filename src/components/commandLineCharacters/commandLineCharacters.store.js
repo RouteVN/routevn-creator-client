@@ -301,18 +301,6 @@ const createCustomTransformDetails = (character = {}) => {
       label: "Scale",
       value: `${formatBackgroundTransformEditorMetric(transform.scaleX)} x ${formatBackgroundTransformEditorMetric(transform.scaleY)}`,
     },
-    {
-      label: "Rotation",
-      value: formatBackgroundTransformEditorMetric(transform.rotation),
-    },
-    {
-      label: "Anchor",
-      value: `${formatBackgroundTransformEditorMetric(transform.anchorX)}, ${formatBackgroundTransformEditorMetric(transform.anchorY)}`,
-    },
-    {
-      label: "Origin",
-      value: `${formatBackgroundTransformEditorMetric(transform.originX)}, ${formatBackgroundTransformEditorMetric(transform.originY)}`,
-    },
   ];
 };
 
@@ -404,7 +392,7 @@ const createBackgroundTransformEditorViewData = ({ state, props = {} }) => {
     canvasAspectRatio: editor.canvasAspectRatio ?? "16 / 9",
     previewMaxWidth:
       editor.previewMaxWidth ??
-      "min(calc(100vw - 48px), calc((100vh - 170px) * 1.7777777778))",
+      "min(100vw, calc((100vh - 122px) * 1.7777777778))",
     metrics,
   };
 };

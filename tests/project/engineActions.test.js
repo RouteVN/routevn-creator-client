@@ -71,6 +71,31 @@ describe("normalizeLineActions", () => {
     });
   });
 
+  it("removes stale inline background transform fields when a transformId is selected", () => {
+    expect(
+      normalizeLineActions({
+        background: {
+          resourceId: "bg-school",
+          transformId: "bg-center",
+          x: 1400,
+          y: 800,
+          anchorX: 0.5,
+          anchorY: 0.5,
+          scaleX: 1.2,
+          scaleY: 1.2,
+          rotation: 0,
+          originX: 960,
+          originY: 540,
+        },
+      }),
+    ).toEqual({
+      background: {
+        resourceId: "bg-school",
+        transformId: "bg-center",
+      },
+    });
+  });
+
   it("normalizes screen blur kernel size to a supported route-graphics value", () => {
     expect(
       normalizeLineActions({

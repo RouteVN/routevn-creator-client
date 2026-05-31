@@ -115,7 +115,7 @@ template:
               - rtgl-view h=48 bwb=xs w=f d=h av=c ph=md g=md:
                   - rtgl-text s=sm w=1fg: Transform
                   - rtgl-button#backgroundTransformEditorDoneButton v=pr: Done
-              - 'rtgl-view w=f h=1fg p=lg ah=c av=c style="min-width: 0; min-height: 0;"':
+              - 'rtgl-view w=f h=1fg ah=c av=c style="min-width: 0; min-height: 0;"':
                   - 'rtgl-view h=f style="width: ${backgroundTransformEditor.previewMaxWidth}; max-width: 100%; min-width: 0; min-height: 0;"':
                       - rvn-scene-editor-preview-canvas#backgroundTransformPreviewCanvasHost canvas-aspect-ratio="${backgroundTransformEditor.canvasAspectRatio}": null
               - rtgl-view w=f bwt=xs d=h av=c ph=md pv=sm g=lg bgc=bg wrap:
@@ -131,9 +131,6 @@ template:
                   - rtgl-view d=h av=c g=xs:
                       - rtgl-text s=xs c=mu-fg: scaleY
                       - rtgl-text s=sm: ${backgroundTransformEditor.metrics.scaleY}
-                  - rtgl-view d=h av=c g=xs:
-                      - rtgl-text s=xs c=mu-fg: rotation
-                      - rtgl-text s=sm: ${backgroundTransformEditor.metrics.rotation}
       - $if mode == 'gallery':
           - rtgl-view d=h w=f av=c g=md:
               - rtgl-tabs#tabs selected-tab=${tab} :items=${tabs}: null

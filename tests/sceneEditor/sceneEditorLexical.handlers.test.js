@@ -1,8 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  applyBackgroundTransformKeyboardPositionChange,
   applyBackgroundTransformResizeChange,
   handleActionsDialogClose,
+  handleActionTransformCustomize,
+  handleBackgroundTransformCustomize,
+  handleBackgroundTransformEditorCancel,
   handleBackgroundTransformEditorCloseClick,
+  handleBackgroundTransformEditorKeyDown,
   handleCommandLineSubmit,
   handleDropdownMenuClickItem,
   handleEditorBlur,
@@ -50,9 +55,202 @@ describe("sceneEditorLexical.handlers transform editor resize", () => {
       scaleY: 3,
     });
   });
+
+  it("nudges transform position with arrow keys", () => {
+    const transform = {
+      x: 100,
+      y: 120,
+      anchorX: 0.5,
+      anchorY: 0.5,
+      scaleX: 1,
+      scaleY: 1,
+      rotation: 0,
+      originX: 960,
+      originY: 540,
+    };
+
+    expect(
+      applyBackgroundTransformKeyboardPositionChange({
+        transform,
+        key: "ArrowUp",
+      }),
+    ).toMatchObject({
+      x: 100,
+      y: 119,
+    });
+    expect(
+      applyBackgroundTransformKeyboardPositionChange({
+        transform,
+        key: "ArrowRight",
+        unit: 10,
+      }),
+    ).toMatchObject({
+      x: 110,
+      y: 120,
+    });
+  });
+
+  it("captures arrow keys while the transform editor is open", () => {
+    const event = {
+      key: "ArrowDown",
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      stopImmediatePropagation: vi.fn(),
+    };
+    const setBackgroundTransformEditorTransform = vi.fn();
+    const deps = {
+      store: {
+        selectIsBackgroundTransformEditorOpen: vi.fn(() => true),
+        selectBackgroundTransformEditor: vi.fn(() => ({
+          transform: {
+            x: 100,
+            y: 120,
+            anchorX: 0.5,
+            anchorY: 0.5,
+            scaleX: 1,
+            scaleY: 1,
+            rotation: 0,
+            originX: 960,
+            originY: 540,
+          },
+        })),
+        clearBackgroundTransformEditorDragStartPosition: vi.fn(),
+        setBackgroundTransformEditorTransform,
+      },
+      render: vi.fn(),
+      subject: {
+        dispatch: vi.fn(),
+      },
+    };
+
+    const didHandle = handleBackgroundTransformEditorKeyDown(deps, event);
+
+    expect(didHandle).toBe(true);
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(event.stopImmediatePropagation).toHaveBeenCalledTimes(1);
+    expect(setBackgroundTransformEditorTransform).toHaveBeenCalledWith({
+      transform: expect.objectContaining({
+        x: 100,
+        y: 121,
+      }),
+    });
+    expect(deps.render).toHaveBeenCalledTimes(1);
+    expect(deps.subject.dispatch).toHaveBeenCalledWith(
+      "sceneEditor.renderCanvas",
+      {
+        skipRender: true,
+        skipAnimations: true,
+        skipAudio: true,
+      },
+    );
+  });
 });
 
 describe("sceneEditorLexical.handlers actions dialog", () => {
+  it("opens the background transform editor from the predefined transform when stale inline fields are present", () => {
+    const openBackgroundTransformEditor = vi.fn();
+    const open = vi.fn();
+
+    handleBackgroundTransformCustomize(
+      {
+        store: {
+          selectRepositoryState: vi.fn(() => ({
+            project: {
+              resolution: {
+                width: 1920,
+                height: 1080,
+              },
+            },
+            images: {
+              items: {
+                "bg-school": {
+                  id: "bg-school",
+                  width: 1920,
+                  height: 1080,
+                },
+              },
+            },
+            transforms: {
+              items: {
+                "bg-center": {
+                  id: "bg-center",
+                  type: "transform",
+                  x: 100,
+                  y: 120,
+                  anchorX: 0.5,
+                  anchorY: 0.5,
+                  scaleX: 1,
+                  scaleY: 1,
+                  rotation: 0,
+                },
+              },
+            },
+          })),
+          selectSelectedLine: vi.fn(() => ({
+            actions: {},
+          })),
+          setTemporaryPresentationState: vi.fn(),
+          openBackgroundTransformEditor,
+        },
+        refs: {
+          systemActions: {
+            transformedHandlers: {
+              open,
+            },
+          },
+        },
+        render: vi.fn(),
+        subject: {
+          dispatch: vi.fn(),
+        },
+      },
+      {
+        _event: {
+          stopPropagation: vi.fn(),
+          detail: {
+            background: {
+              resourceId: "bg-school",
+              transformId: "bg-center",
+              x: 1400,
+              y: 800,
+              anchorX: 0.5,
+              anchorY: 0.5,
+              scaleX: 1.2,
+              scaleY: 1.2,
+              rotation: 0,
+            },
+          },
+        },
+      },
+    );
+
+    expect(openBackgroundTransformEditor).toHaveBeenCalledWith({
+      background: {
+        resourceId: "bg-school",
+        transformId: "bg-center",
+        x: 1400,
+        y: 800,
+        anchorX: 0.5,
+        anchorY: 0.5,
+        scaleX: 1.2,
+        scaleY: 1.2,
+        rotation: 0,
+      },
+      transform: expect.objectContaining({
+        x: 100,
+        y: 120,
+        scaleX: 1,
+        scaleY: 1,
+      }),
+    });
+    expect(open).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: "background",
+      }),
+    );
+  });
+
   it("closes only the background transform editor when Done is clicked", () => {
     const handleSetBackgroundCustomTransform = vi.fn();
     const open = vi.fn();
@@ -94,6 +292,7 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
             },
           },
         })),
+        setTemporaryPresentationState: vi.fn(),
         closeBackgroundTransformEditor: vi.fn(),
         suppressNextActionsDialogClose: vi.fn(),
         clearSuppressNextActionsDialogClose: vi.fn(),
@@ -126,6 +325,22 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     expect(handleSetBackgroundCustomTransform).toHaveBeenCalledWith({
       background: editor.background,
       transform: editor.transform,
+    });
+    expect(deps.store.setTemporaryPresentationState).toHaveBeenCalledWith({
+      presentationState: {
+        background: {
+          resourceId: "bg-school",
+          x: 100,
+          y: 120,
+          anchorX: 0.5,
+          anchorY: 0.5,
+          scaleX: 1,
+          scaleY: 1,
+          rotation: 0,
+          originX: 0,
+          originY: 0,
+        },
+      },
     });
     expect(open).toHaveBeenCalledWith({
       mode: "background",
@@ -203,6 +418,438 @@ describe("sceneEditorLexical.handlers actions dialog", () => {
     expect(store.clearActionTargetLineId).not.toHaveBeenCalled();
     expect(deps.render).not.toHaveBeenCalled();
     expect(deps.subject.dispatch).not.toHaveBeenCalled();
+  });
+
+  it("cancels the background transform editor back to the background command line", () => {
+    const callOrder = [];
+    const open = vi.fn(() => {
+      callOrder.push("open");
+    });
+    let suppressNextClose = false;
+    const setTimeoutCalls = [];
+    const setTimeoutSpy = vi
+      .spyOn(globalThis, "setTimeout")
+      .mockImplementation((callback, delay) => {
+        setTimeoutCalls.push({ callback, delay });
+        return 1;
+      });
+    const store = {
+      selectSelectedLine: vi.fn(() => ({
+        actions: {
+          dialogue: {
+            content: "line text",
+          },
+        },
+      })),
+      selectBackgroundTransformEditor: vi.fn(() => ({
+        targetType: "background",
+        background: {
+          resourceId: "bg-school",
+          transformId: "bg-center",
+        },
+        transform: {
+          x: 1400,
+          y: 800,
+        },
+      })),
+      closeBackgroundTransformEditor: vi.fn(),
+      suppressNextActionsDialogClose: vi.fn(() => {
+        suppressNextClose = true;
+      }),
+      selectSuppressNextActionsDialogClose: vi.fn(() => suppressNextClose),
+      clearSuppressNextActionsDialogClose: vi.fn(() => {
+        suppressNextClose = false;
+      }),
+      selectActionTargetLineId: vi.fn(),
+      clearActionTargetLineId: vi.fn(),
+      clearTemporaryPresentationState: vi.fn(),
+      setTemporaryPresentationState: vi.fn(),
+    };
+    const deps = {
+      store,
+      refs: {
+        systemActions: {
+          transformedHandlers: {
+            open,
+          },
+        },
+      },
+      render: vi.fn(() => {
+        callOrder.push("render");
+      }),
+      subject: {
+        dispatch: vi.fn(),
+      },
+    };
+    const event = {
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      stopImmediatePropagation: vi.fn(),
+    };
+
+    try {
+      handleBackgroundTransformEditorCancel(deps, {
+        _event: event,
+      });
+
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+      expect(event.stopImmediatePropagation).toHaveBeenCalledTimes(1);
+      expect(store.suppressNextActionsDialogClose).toHaveBeenCalledTimes(1);
+      expect(store.closeBackgroundTransformEditor).toHaveBeenCalledTimes(1);
+      expect(store.clearSuppressNextActionsDialogClose).not.toHaveBeenCalled();
+      expect(store.clearTemporaryPresentationState).not.toHaveBeenCalled();
+      expect(store.setTemporaryPresentationState).toHaveBeenCalledWith({
+        presentationState: {
+          background: {
+            resourceId: "bg-school",
+            transformId: "bg-center",
+          },
+        },
+      });
+      expect(open).toHaveBeenCalledWith({
+        mode: "background",
+        actions: {
+          dialogue: {
+            content: "line text",
+          },
+          background: {
+            resourceId: "bg-school",
+            transformId: "bg-center",
+          },
+        },
+      });
+      expect(deps.render).toHaveBeenCalledTimes(1);
+      expect(callOrder).toEqual(["render", "open"]);
+      expect(deps.subject.dispatch).toHaveBeenCalledWith(
+        "sceneEditor.renderCanvas",
+        {
+          skipRender: true,
+          skipAnimations: true,
+        },
+      );
+      expect(setTimeoutCalls).toHaveLength(1);
+      expect(setTimeoutCalls[0].delay).toBe(50);
+
+      handleActionsDialogClose(deps);
+
+      expect(store.clearSuppressNextActionsDialogClose).toHaveBeenCalledTimes(
+        1,
+      );
+      expect(store.clearTemporaryPresentationState).not.toHaveBeenCalled();
+      expect(deps.render).toHaveBeenCalledTimes(1);
+    } finally {
+      setTimeoutSpy.mockRestore();
+    }
+  });
+
+  it("cancels an action transform editor back to the owning command line", () => {
+    const callOrder = [];
+    const open = vi.fn(() => {
+      callOrder.push("open");
+    });
+    let suppressNextClose = false;
+    const setTimeoutSpy = vi
+      .spyOn(globalThis, "setTimeout")
+      .mockImplementation(() => 1);
+    const selectedLineVisualAction = {
+      items: [
+        {
+          id: "stale-visual",
+          resourceId: "old-image",
+          transformId: "old-preset",
+        },
+      ],
+    };
+    const editorVisualAction = {
+      items: [
+        {
+          id: "visual-1",
+          resourceId: "image-1",
+          transformId: "preset",
+        },
+        {
+          id: "visual-2",
+          resourceId: "image-2",
+          transformId: "preset",
+        },
+      ],
+    };
+    const store = {
+      selectSelectedLine: vi.fn(() => ({
+        actions: {
+          visual: selectedLineVisualAction,
+        },
+      })),
+      selectBackgroundTransformEditor: vi.fn(() => ({
+        targetType: "visual",
+        actionKey: "visual",
+        action: editorVisualAction,
+        itemIndex: 0,
+        item: editorVisualAction.items[0],
+        transform: {
+          x: 1400,
+          y: 800,
+        },
+      })),
+      closeBackgroundTransformEditor: vi.fn(),
+      suppressNextActionsDialogClose: vi.fn(() => {
+        suppressNextClose = true;
+      }),
+      selectSuppressNextActionsDialogClose: vi.fn(() => suppressNextClose),
+      clearSuppressNextActionsDialogClose: vi.fn(() => {
+        suppressNextClose = false;
+      }),
+      setTemporaryPresentationState: vi.fn(),
+    };
+    const deps = {
+      store,
+      refs: {
+        systemActions: {
+          transformedHandlers: {
+            open,
+          },
+        },
+      },
+      render: vi.fn(() => {
+        callOrder.push("render");
+      }),
+      subject: {
+        dispatch: vi.fn(),
+      },
+    };
+
+    try {
+      handleBackgroundTransformEditorCancel(deps);
+
+      expect(store.suppressNextActionsDialogClose).toHaveBeenCalledTimes(1);
+      expect(store.closeBackgroundTransformEditor).toHaveBeenCalledTimes(1);
+      expect(store.setTemporaryPresentationState).toHaveBeenCalledWith({
+        presentationState: {
+          visual: editorVisualAction,
+        },
+      });
+      expect(open).toHaveBeenCalledWith({
+        mode: "visual",
+        actions: {
+          visual: editorVisualAction,
+        },
+      });
+      expect(deps.subject.dispatch).toHaveBeenCalledWith(
+        "sceneEditor.renderCanvas",
+        {
+          skipRender: true,
+          skipAnimations: true,
+        },
+      );
+      expect(deps.render).toHaveBeenCalledTimes(1);
+      expect(callOrder).toEqual(["render", "open"]);
+    } finally {
+      setTimeoutSpy.mockRestore();
+    }
+  });
+
+  it("saves an action transform back into the owning command line snapshot", () => {
+    const handleSetActionCustomTransform = vi.fn();
+    const open = vi.fn();
+    const setTimeoutSpy = vi
+      .spyOn(globalThis, "setTimeout")
+      .mockImplementation((callback) => {
+        callback();
+        return 1;
+      });
+    const editorVisualAction = {
+      items: [
+        {
+          id: "visual-1",
+          resourceId: "image-1",
+          transformId: "preset",
+        },
+        {
+          id: "visual-2",
+          resourceId: "image-2",
+          transformId: "preset",
+        },
+      ],
+    };
+    const store = {
+      selectSelectedLine: vi.fn(() => ({
+        actions: {
+          visual: {
+            items: [
+              {
+                id: "stale-visual",
+                resourceId: "old-image",
+                transformId: "old-preset",
+              },
+            ],
+          },
+        },
+      })),
+      selectBackgroundTransformEditor: vi.fn(() => ({
+        targetType: "visual",
+        actionKey: "visual",
+        action: editorVisualAction,
+        itemIndex: 0,
+        item: editorVisualAction.items[0],
+        transform: {
+          x: 1400,
+          y: 800,
+        },
+      })),
+      closeBackgroundTransformEditor: vi.fn(),
+      suppressNextActionsDialogClose: vi.fn(),
+      clearSuppressNextActionsDialogClose: vi.fn(),
+    };
+    const deps = {
+      store,
+      refs: {
+        systemActions: {
+          transformedHandlers: {
+            handleSetActionCustomTransform,
+            open,
+          },
+        },
+      },
+      render: vi.fn(),
+      subject: {
+        dispatch: vi.fn(),
+      },
+    };
+
+    try {
+      handleBackgroundTransformEditorCloseClick(deps, {
+        _event: {
+          preventDefault: vi.fn(),
+          stopPropagation: vi.fn(),
+          stopImmediatePropagation: vi.fn(),
+        },
+      });
+
+      expect(handleSetActionCustomTransform).toHaveBeenCalledWith({
+        targetType: "visual",
+        itemIndex: 0,
+        item: editorVisualAction.items[0],
+        transform: {
+          x: 1400,
+          y: 800,
+        },
+      });
+      expect(open).toHaveBeenCalledWith({
+        mode: "visual",
+        actions: {
+          visual: {
+            items: [
+              {
+                id: "visual-1",
+                resourceId: "image-1",
+                transformId: "preset",
+                x: 1400,
+                y: 800,
+                anchorX: 0.5,
+                anchorY: 0.5,
+                scaleX: 1,
+                scaleY: 1,
+                rotation: 0,
+                originX: 0,
+                originY: 0,
+              },
+              editorVisualAction.items[1],
+            ],
+          },
+        },
+      });
+      expect(deps.store.closeBackgroundTransformEditor).toHaveBeenCalledTimes(
+        1,
+      );
+    } finally {
+      setTimeoutSpy.mockRestore();
+    }
+  });
+
+  it("stores the full action snapshot when opening an action transform editor", () => {
+    const action = {
+      items: [
+        {
+          id: "visual-1",
+          resourceId: "image-1",
+          transformId: "preset",
+        },
+      ],
+    };
+    const openBackgroundTransformEditor = vi.fn();
+    const open = vi.fn();
+    const store = {
+      setTemporaryPresentationState: vi.fn(),
+      openBackgroundTransformEditor,
+      selectRepositoryState: vi.fn(() => ({
+        project: {
+          resolution: {
+            width: 1920,
+            height: 1080,
+          },
+        },
+        images: {
+          items: {
+            "image-1": {
+              id: "image-1",
+              width: 1920,
+              height: 1080,
+            },
+          },
+        },
+      })),
+      selectSelectedLine: vi.fn(() => ({
+        actions: {
+          visual: {
+            items: [],
+          },
+        },
+      })),
+    };
+    const deps = {
+      store,
+      refs: {
+        systemActions: {
+          transformedHandlers: {
+            open,
+          },
+        },
+      },
+      render: vi.fn(),
+      subject: {
+        dispatch: vi.fn(),
+      },
+    };
+
+    handleActionTransformCustomize(deps, {
+      _event: {
+        stopPropagation: vi.fn(),
+        detail: {
+          targetType: "visual",
+          actionKey: "visual",
+          itemIndex: 0,
+          item: action.items[0],
+          action,
+        },
+      },
+    });
+
+    expect(openBackgroundTransformEditor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targetType: "visual",
+        actionKey: "visual",
+        action,
+        itemIndex: 0,
+        item: action.items[0],
+      }),
+    );
+    expect(open).toHaveBeenCalledWith({
+      mode: "visual",
+      actions: {
+        visual: action,
+      },
+    });
   });
 
   it("clears temporary presentation state and refreshes the canvas when the actions dialog closes", () => {

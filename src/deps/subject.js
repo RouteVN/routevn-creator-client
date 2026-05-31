@@ -8,7 +8,7 @@ import { Subject } from "rxjs";
  * const subject = new CustomSubject();
  *
  * const subscription = subject.subscribe(({ action, payload }) => {
- *   console.log(action, payload);
+ *   // Handle action and payload.
  * });
  *
  * subject.dispatch("action", { payload: "payload" });

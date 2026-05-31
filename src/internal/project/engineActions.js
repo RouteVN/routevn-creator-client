@@ -1,5 +1,16 @@
 const BLUR_KERNEL_SIZE_OPTIONS = [5, 7, 9, 11, 13, 15];
 const DEFAULT_BLUR_KERNEL_SIZE = 9;
+const BACKGROUND_INLINE_TRANSFORM_FIELDS = [
+  "x",
+  "y",
+  "anchorX",
+  "anchorY",
+  "scaleX",
+  "scaleY",
+  "rotation",
+  "originX",
+  "originY",
+];
 
 const normalizeBlurKernelSize = (value) => {
   const parsedValue = Number(value);
@@ -35,6 +46,18 @@ const normalizeActionWithBlur = (action = {}) => {
   }
 
   return normalizedAction;
+};
+
+const normalizeBackgroundAction = (background = {}) => {
+  const normalizedBackground = normalizeActionWithBlur(background);
+
+  if (typeof normalizedBackground.transformId === "string") {
+    for (const field of BACKGROUND_INLINE_TRANSFORM_FIELDS) {
+      delete normalizedBackground[field];
+    }
+  }
+
+  return normalizedBackground;
 };
 
 const normalizeActionItemsWithBlur = (action = {}) => {
@@ -108,7 +131,7 @@ export const normalizeEngineActions = (value) => {
     typeof normalizedValue.background === "object" &&
     !Array.isArray(normalizedValue.background)
   ) {
-    normalizedValue.background = normalizeActionWithBlur(
+    normalizedValue.background = normalizeBackgroundAction(
       normalizedValue.background,
     );
   }

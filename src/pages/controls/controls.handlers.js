@@ -88,40 +88,12 @@ const {
   },
 });
 
-const logSelectedControlItem = ({ store }, { itemId } = {}) => {
-  if (!itemId) {
-    return;
-  }
-
-  const item = store.selectControlItemById({ itemId });
-  if (!item) {
-    return;
-  }
-
-  console.log("Selected control item", item);
-};
-
-const getSelectedItemIdFromEvent = (payload) => {
-  return payload._event.detail.itemId;
-};
-
 export const handleFileExplorerSelectionChanged = (deps, payload) => {
   handleCatalogFileExplorerSelectionChanged(deps, payload);
-
-  if (payload._event.detail.isFolder) {
-    return;
-  }
-
-  logSelectedControlItem(deps, {
-    itemId: getSelectedItemIdFromEvent(payload),
-  });
 };
 
 export const handleControlItemClick = (deps, payload) => {
   handleCatalogControlItemClick(deps, payload);
-  logSelectedControlItem(deps, {
-    itemId: getSelectedItemIdFromEvent(payload),
-  });
 };
 
 export {

@@ -40,7 +40,7 @@
     "jszip": "3.10.1",
     "lexical": "0.22.0",
     "nanoid": "5.1.11",
-    "route-engine-js": "1.22.0",
+    "route-engine-js": "1.23.0",
     "route-graphics": "1.20.1",
     "rxjs": "7.8.2",
     "snabbdom": "3.6.3",
