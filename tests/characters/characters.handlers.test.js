@@ -58,6 +58,7 @@ describe("characters add dialog form reset", () => {
     expect(deps.refs.characterForm.setValues).toHaveBeenLastCalledWith({
       values: {
         name: "",
+        nameVariableId: "",
         description: "",
         shortcut: "",
         tagIds: [],
@@ -76,11 +77,128 @@ describe("characters add dialog form reset", () => {
     expect(deps.refs.characterForm.setValues).toHaveBeenCalledWith({
       values: {
         name: "",
+        nameVariableId: "",
         description: "",
         shortcut: "",
         tagIds: [],
       },
     });
+  });
+});
+
+describe("characters name variable", () => {
+  it("sends the selected name variable when editing a character", async () => {
+    const deps = {
+      appService: {
+        showAlert: vi.fn(),
+      },
+      store: {
+        getState: vi.fn(() => ({
+          editItemId: "character-hero",
+          editAvatarFileId: undefined,
+          editAvatarUploadResult: undefined,
+          editSpriteGroups: [],
+          spriteTagsByCharacterId: {},
+        })),
+        setTagsData: vi.fn(),
+        setSpriteTagsByCharacterId: vi.fn(),
+        setItems: vi.fn(),
+        closeEditDialog: vi.fn(),
+      },
+      projectService: {
+        updateCharacter: vi.fn(() => Promise.resolve({ valid: true })),
+        getRepositoryState: vi.fn(() => ({
+          tags: {},
+          characters: { items: {}, tree: [] },
+          variables: { items: {}, tree: [] },
+        })),
+      },
+      refs: {},
+      render: vi.fn(),
+    };
+
+    await handleEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            name: "Hero",
+            nameVariableId: "playerName",
+            description: "",
+            shortcut: "",
+            tagIds: [],
+          },
+        },
+      },
+    });
+
+    expect(deps.projectService.updateCharacter).toHaveBeenCalledWith({
+      characterId: "character-hero",
+      fileRecords: undefined,
+      data: {
+        name: "Hero",
+        nameVariableId: "playerName",
+        description: "",
+        shortcut: "",
+        tagIds: [],
+        spriteGroups: [],
+      },
+    });
+    expect(deps.store.closeEditDialog).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends an empty name variable to clear the character override", async () => {
+    const deps = {
+      appService: {
+        showAlert: vi.fn(),
+      },
+      store: {
+        getState: vi.fn(() => ({
+          editItemId: "character-hero",
+          editAvatarFileId: undefined,
+          editAvatarUploadResult: undefined,
+          editSpriteGroups: [],
+          spriteTagsByCharacterId: {},
+        })),
+        setTagsData: vi.fn(),
+        setSpriteTagsByCharacterId: vi.fn(),
+        setItems: vi.fn(),
+        closeEditDialog: vi.fn(),
+      },
+      projectService: {
+        updateCharacter: vi.fn(() => Promise.resolve({ valid: true })),
+        getRepositoryState: vi.fn(() => ({
+          tags: {},
+          characters: { items: {}, tree: [] },
+          variables: { items: {}, tree: [] },
+        })),
+      },
+      refs: {},
+      render: vi.fn(),
+    };
+
+    await handleEditFormAction(deps, {
+      _event: {
+        detail: {
+          actionId: "submit",
+          values: {
+            name: "Hero",
+            nameVariableId: "",
+            description: "",
+            shortcut: "",
+            tagIds: [],
+          },
+        },
+      },
+    });
+
+    expect(deps.projectService.updateCharacter).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          nameVariableId: "",
+        }),
+      }),
+    );
   });
 });
 

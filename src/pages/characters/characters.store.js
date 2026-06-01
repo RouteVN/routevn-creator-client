@@ -19,6 +19,7 @@ import {
   createEmptySpriteGroup,
   normalizeSpriteGroupsForDraft,
 } from "./support/spriteGroups.js";
+import { getVariableOptions } from "../../internal/project/projection.js";
 
 const folderContextMenuItems = [
   { label: "New Folder", type: "item", value: "new-child-folder" },
@@ -118,13 +119,35 @@ const createCharacterTagField = ({ tagOptions } = {}) => ({
   },
   required: false,
 });
+
+const createCharacterNameVariableOptions = (variablesData = {}) =>
+  getVariableOptions(variablesData, {
+    type: "string",
+  });
+
+const createCharacterNameVariableField = ({ nameVariableOptions } = {}) => ({
+  name: "nameVariableId",
+  type: "select",
+  label: "Name Variable",
+  description:
+    "Set this only if you want the speaker display to come from a variable instead of fixed name.",
+  clearable: true,
+  placeholder: "Name variable",
+  options:
+    nameVariableOptions ?? createCharacterNameVariableOptions({ items: {} }),
+  required: false,
+});
+
 const SPRITE_GROUP_FIELD = {
   type: "slot",
   slot: "sprite-groups-slot",
   label: "Sprite Groups",
 };
 
-const createCharacterDialogForm = ({ tagOptions } = {}) => ({
+const createCharacterDialogForm = ({
+  tagOptions,
+  nameVariableOptions,
+} = {}) => ({
   title: "Add Character",
   fields: [
     {
@@ -153,6 +176,7 @@ const createCharacterDialogForm = ({ tagOptions } = {}) => ({
       slot: "avatar-slot",
       label: "Avatar",
     },
+    createCharacterNameVariableField({ nameVariableOptions }),
   ],
   actions: {
     layout: "",
@@ -166,7 +190,10 @@ const createCharacterDialogForm = ({ tagOptions } = {}) => ({
   },
 });
 
-const createEditCharacterDialogForm = ({ tagOptions } = {}) => ({
+const createEditCharacterDialogForm = ({
+  tagOptions,
+  nameVariableOptions,
+} = {}) => ({
   title: "Edit Character",
   description: "Edit the character details",
   fields: [
@@ -198,6 +225,7 @@ const createEditCharacterDialogForm = ({ tagOptions } = {}) => ({
       label: "Avatar",
     },
     SPRITE_GROUP_FIELD,
+    createCharacterNameVariableField({ nameVariableOptions }),
   ],
   actions: {
     layout: "",
@@ -308,6 +336,7 @@ const buildSpriteGroupDropdownItems = ({ index, total } = {}) => {
 
 export const createInitialState = () => ({
   charactersData: { tree: [], items: {} },
+  variablesData: { tree: [], items: {} },
   tagsData: createEmptyTagCollection(),
   spriteTagsByCharacterId: {},
   activeTagIds: [],
@@ -342,6 +371,7 @@ export const createInitialState = () => ({
   avatarCropFile: undefined,
   dialogDefaultValues: {
     name: "",
+    nameVariableId: "",
     description: "",
     shortcut: "",
     tagIds: [],
@@ -370,8 +400,11 @@ export const createInitialState = () => ({
   editSpriteGroups: [],
 });
 
-export const setItems = ({ state }, { charactersData } = {}) => {
+export const setItems = ({ state }, { charactersData, variablesData } = {}) => {
   state.charactersData = charactersData;
+  if (variablesData !== undefined) {
+    state.variablesData = variablesData;
+  }
   if (
     state.selectedFolderId &&
     state.charactersData?.items?.[state.selectedFolderId]?.type !== "folder"
@@ -842,6 +875,21 @@ export const selectViewData = ({ state }) => {
     spriteGroups: selectedItem?.spriteGroups,
     tagsById: selectedItemSpriteTagsCollection.items ?? {},
   });
+  const nameVariableOptions = createCharacterNameVariableOptions(
+    state.variablesData,
+  );
+  const getNameVariableLabel = (variableId) => {
+    if (!variableId) {
+      return "";
+    }
+
+    const variable = state.variablesData?.items?.[variableId];
+    if (variable?.type === "variable") {
+      return variable.name ?? variableId;
+    }
+
+    return `Missing variable (${variableId})`;
+  };
 
   let detailFields = [];
   if (selectedItem) {
@@ -855,6 +903,15 @@ export const selectViewData = ({ state }) => {
         type: "description",
         value: selectedItem.description ?? "",
       },
+    ];
+    if (selectedItem.nameVariableId) {
+      detailFields.push({
+        type: "text",
+        label: "Name Variable",
+        value: getNameVariableLabel(selectedItem.nameVariableId),
+      });
+    }
+    detailFields.push(
       {
         type: "text",
         label: "Shortcut",
@@ -870,7 +927,7 @@ export const selectViewData = ({ state }) => {
         slot: "character-sprite-groups",
         label: "Sprite Groups",
       },
-    ];
+    );
   } else if (selectedFolder?.type === "folder") {
     detailFields = [
       {
@@ -945,11 +1002,13 @@ export const selectViewData = ({ state }) => {
   let editDefaultValues = {};
   const editForm = createEditCharacterDialogForm({
     tagOptions: tagFilterOptions,
+    nameVariableOptions,
   });
 
   if (editItem) {
     editDefaultValues = {
       name: editItem.name || "",
+      nameVariableId: editItem.nameVariableId || "",
       description: editItem.description || "",
       shortcut: editItem.shortcut || "",
       tagIds: editItem.tagIds || [],
@@ -1005,6 +1064,7 @@ export const selectViewData = ({ state }) => {
     }),
     dialogForm: createCharacterDialogForm({
       tagOptions: tagFilterOptions,
+      nameVariableOptions,
     }),
     spriteGroupDropdownMenu: state.spriteGroupDropdownMenu,
     isSpriteGroupDialogOpen: state.isSpriteGroupDialogOpen,

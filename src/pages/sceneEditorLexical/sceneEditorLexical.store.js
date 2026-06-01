@@ -979,6 +979,10 @@ export const selectCharacters = ({ state }) => {
         },
         sprites: {},
       };
+      if (character.nameVariableId) {
+        processedCharacters[characterId].nameVariableId =
+          character.nameVariableId;
+      }
 
       // Process sprite parts if they exist
       if (character.sprites && character.sprites.items) {

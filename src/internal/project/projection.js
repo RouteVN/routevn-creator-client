@@ -845,12 +845,18 @@ const constructCharacterResources = (repositoryCharacters = {}) => {
         return result;
       }
 
-      result[characterId] = {
+      const characterResource = {
         name: character.name,
         variables: {
           name: character.name || "Unnamed Character",
         },
       };
+
+      if (character.nameVariableId) {
+        characterResource.nameVariableId = character.nameVariableId;
+      }
+
+      result[characterId] = characterResource;
       return result;
     },
     {},
