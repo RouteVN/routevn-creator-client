@@ -104,14 +104,12 @@ const CREATE_TEMPLATES = {
   }),
   "form-submit-button": () => ({
     type: "container",
-    name: "Submit Button",
+    name: "Input Submit Container",
     ...BASE_TRANSFORM,
     direction: ABSOLUTE_DIRECTION,
     gapX: 0,
     gapY: 0,
     formRole: "submit",
-    width: 160,
-    height: 52,
   }),
   slider: () => ({
     type: "slider",

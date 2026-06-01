@@ -16,4 +16,17 @@ describe("commandLineInput view", () => {
     expect(view).not.toContain("$for field, index in fieldRows:");
     expect(view).not.toContain("data-field=${field.field}");
   });
+
+  it("does not show submit action choices", () => {
+    const view = readFileSync(
+      new URL(
+        "../../src/components/commandLineInput/commandLineInput.view.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+
+    expect(view).not.toContain("Submit Action");
+    expect(view).not.toContain("Move to Section");
+  });
 });

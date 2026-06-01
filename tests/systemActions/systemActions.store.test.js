@@ -299,8 +299,10 @@ describe("systemActions.store", () => {
       fields: [
         {
           field: "name",
+          fieldLabel: "name",
           variableId: "playerName",
           variableName: "Player Name",
+          summary: "name: Player Name",
         },
       ],
       fieldCount: 1,
@@ -313,6 +315,97 @@ describe("systemActions.store", () => {
         layoutType: "input",
         elements: inputElements,
       },
+    ]);
+  });
+
+  it("uses input layout field labels in the input action preview", () => {
+    const state = createInitialState();
+
+    setRepositoryState(
+      { state },
+      {
+        repositoryState: {
+          layouts: {
+            items: {
+              "profile-form-layout": {
+                id: "profile-form-layout",
+                type: "layout",
+                name: "Profile Form",
+                layoutType: "input",
+                elements: {
+                  items: {
+                    nameInput: {
+                      id: "nameInput",
+                      type: "input",
+                      field: "name",
+                      name: "Name",
+                    },
+                    ageInput: {
+                      id: "ageInput",
+                      type: "input",
+                      field: "age",
+                      name: "Age",
+                    },
+                  },
+                  tree: [{ id: "nameInput" }, { id: "ageInput" }],
+                },
+              },
+            },
+            tree: [{ id: "profile-form-layout" }],
+          },
+          variables: {
+            items: {
+              playerName: {
+                id: "playerName",
+                type: "variable",
+                name: "fe",
+                variableType: "string",
+              },
+              playerAge: {
+                id: "playerAge",
+                type: "variable",
+                name: "age2",
+                variableType: "string",
+              },
+            },
+            tree: [{ id: "playerName" }, { id: "playerAge" }],
+          },
+        },
+      },
+    );
+
+    const { preview } = selectActionsData({
+      state,
+      props: {
+        actions: {
+          form: {
+            resourceId: "profile-form-layout",
+            fields: {
+              name: {
+                variableId: "playerName",
+              },
+              age: {
+                variableId: "playerAge",
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect(preview.form.fields).toEqual([
+      expect.objectContaining({
+        field: "name",
+        fieldLabel: "Name",
+        variableName: "fe",
+        summary: "Name: fe",
+      }),
+      expect.objectContaining({
+        field: "age",
+        fieldLabel: "Age",
+        variableName: "age2",
+        summary: "Age: age2",
+      }),
     ]);
   });
 

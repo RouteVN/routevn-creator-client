@@ -1,20 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   handleBeforeMount,
-  handleFieldConfigChange,
+  handleFieldEditChange,
+  handleFieldRowClick,
+  handleSaveFieldEditClick,
   handleSubmitClick,
 } from "../../src/components/commandLineInput/commandLineInput.handlers.js";
 import {
   createInitialState,
   hydrateForm,
+  saveEditingField,
+  selectCanSaveEditField,
   selectFieldRows,
   selectFormData,
+  selectFormDataWithEditingDraft,
   selectSelectedResourceId,
-  selectSettingsForm,
-  setRepositoryData,
-  setSelectedResourceId,
-  updateFieldConfig,
-  updateSettingsForm,
+  startEditingField,
+  updateEditFieldConfig,
 } from "../../src/components/commandLineInput/commandLineInput.store.js";
 
 const inputLayout = {
@@ -72,14 +74,15 @@ const props = {
 
 const createStoreApi = (state) => ({
   hydrateForm: (payload) => hydrateForm({ state }, payload),
+  saveEditingField: (payload) => saveEditingField({ state }, payload),
+  selectCanSaveEditField: () => selectCanSaveEditField({ state }),
   selectFieldRows: () => selectFieldRows({ state }),
   selectFormData: () => selectFormData({ state }),
+  selectFormDataWithEditingDraft: () =>
+    selectFormDataWithEditingDraft({ state }),
   selectSelectedResourceId: () => selectSelectedResourceId({ state }),
-  selectSettingsForm: () => selectSettingsForm({ state }),
-  setRepositoryData: (payload) => setRepositoryData({ state }, payload),
-  setSelectedResourceId: (payload) => setSelectedResourceId({ state }, payload),
-  updateFieldConfig: (payload) => updateFieldConfig({ state }, payload),
-  updateSettingsForm: (payload) => updateSettingsForm({ state }, payload),
+  startEditingField: (payload) => startEditingField({ state }, payload),
+  updateEditFieldConfig: (payload) => updateEditFieldConfig({ state }, payload),
 });
 
 describe("commandLineInput.handlers", () => {
@@ -94,7 +97,23 @@ describe("commandLineInput.handlers", () => {
       store,
     });
 
-    handleFieldConfigChange(
+    handleFieldRowClick(
+      {
+        render,
+        store,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              field: "name",
+            },
+          },
+        },
+      },
+    );
+
+    handleFieldEditChange(
       {
         dispatchEvent,
         render,
@@ -107,7 +126,6 @@ describe("commandLineInput.handlers", () => {
           },
           currentTarget: {
             dataset: {
-              field: "name",
               name: "placeholder",
             },
           },
@@ -115,7 +133,7 @@ describe("commandLineInput.handlers", () => {
       },
     );
 
-    expect(render).toHaveBeenCalledTimes(1);
+    expect(render).toHaveBeenCalledTimes(2);
     expect(dispatchEvent).toHaveBeenCalledTimes(1);
     expect(dispatchEvent.mock.calls[0][0].type).toBe(
       "temporary-presentation-state-change",
@@ -131,12 +149,14 @@ describe("commandLineInput.handlers", () => {
               required: true,
               trim: true,
               placeholder: "Full name",
+              maxLength: 32,
             },
             code: {
               variableId: "playerCode",
               required: true,
               trim: true,
               placeholder: "",
+              maxLength: 32,
             },
           },
           submitActions: {
@@ -145,6 +165,23 @@ describe("commandLineInput.handlers", () => {
         },
       },
     });
+
+    expect(selectFormData({ state }).fields.name.placeholder).toBe("");
+
+    handleSaveFieldEditClick(
+      {
+        dispatchEvent,
+        render,
+        store,
+      },
+      {
+        _event: {
+          stopPropagation: vi.fn(),
+        },
+      },
+    );
+
+    expect(selectFormData({ state }).fields.name.placeholder).toBe("Full name");
   });
 
   it("submits the authored form payload", () => {
@@ -183,12 +220,14 @@ describe("commandLineInput.handlers", () => {
             required: true,
             trim: true,
             placeholder: "",
+            maxLength: 32,
           },
           code: {
             variableId: "playerCode",
             required: true,
             trim: true,
             placeholder: "",
+            maxLength: 32,
           },
         },
         submitActions: {
@@ -235,5 +274,63 @@ describe("commandLineInput.handlers", () => {
       message: "Map every input field to a string variable.",
       title: "Warning",
     });
+  });
+
+  it("requires a variable before saving a field edit", () => {
+    const state = createInitialState();
+    const store = createStoreApi(state);
+    const showAlert = vi.fn();
+    const dispatchEvent = vi.fn();
+    const render = vi.fn();
+
+    handleBeforeMount({
+      props: {
+        ...props,
+        form: {
+          resourceId: inputLayout.id,
+          fields: {},
+        },
+      },
+      store,
+    });
+
+    handleFieldRowClick(
+      {
+        render,
+        store,
+      },
+      {
+        _event: {
+          currentTarget: {
+            dataset: {
+              field: "name",
+            },
+          },
+        },
+      },
+    );
+
+    handleSaveFieldEditClick(
+      {
+        appService: {
+          showAlert,
+        },
+        dispatchEvent,
+        render,
+        store,
+      },
+      {
+        _event: {
+          stopPropagation: vi.fn(),
+        },
+      },
+    );
+
+    expect(showAlert).toHaveBeenCalledWith({
+      message: "Choose a string variable for this input field.",
+      title: "Warning",
+    });
+    expect(dispatchEvent).not.toHaveBeenCalled();
+    expect(render).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   handleBackClick,
+  handleFileExplorerAction,
   handleLayoutEditorCanvasDragUpdate,
   handleLayoutEditorCanvasMetricsChange,
   handleSaveButtonClick,
@@ -279,6 +280,66 @@ describe("layoutEditor.handleSaveButtonClick", () => {
     });
     expect(deps.appService.showToast).toHaveBeenCalledWith({
       message: "Layout preview saved.",
+    });
+  });
+});
+
+describe("layoutEditor.handleFileExplorerAction", () => {
+  it("creates image elements at the top of the selected parent", async () => {
+    const createLayoutElement = vi.fn(async () => ({ valid: true }));
+    const deps = createLayoutEditorDeps();
+    deps.appService.showComponentDialog = vi.fn(async () => ({
+      actionId: "create",
+      values: {
+        name: "Hero Image",
+        imageId: "image-1",
+      },
+    }));
+    deps.projectService.createLayoutElement = createLayoutElement;
+    deps.store.selectProjectResolution = vi.fn(() => ({
+      width: 1920,
+      height: 1080,
+    }));
+    deps.store.selectImages = vi.fn(() => ({
+      items: {
+        "image-1": {
+          id: "image-1",
+          width: 320,
+          height: 160,
+        },
+      },
+      tree: [{ id: "image-1" }],
+    }));
+    deps.store.setSelectedItemId = vi.fn();
+    deps.store.setDetailPanelSelectedItemId = vi.fn();
+    deps.refs.fileExplorer = {
+      selectItem: vi.fn(),
+    };
+
+    await handleFileExplorerAction(deps, {
+      _event: {
+        detail: {
+          itemId: "parent-1",
+          item: {
+            value: {
+              action: "new-child-item",
+              type: "sprite",
+            },
+          },
+        },
+      },
+    });
+
+    expect(createLayoutElement).toHaveBeenCalledWith({
+      layoutId: "layout-1",
+      elementId: expect.any(String),
+      data: expect.objectContaining({
+        type: "sprite",
+        name: "Hero Image",
+        imageId: "image-1",
+      }),
+      parentId: "parent-1",
+      position: "first",
     });
   });
 });

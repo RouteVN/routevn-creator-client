@@ -649,12 +649,12 @@ const showSliderCreateDialog = async (appService, sliderAction = {}) => {
 const showSpriteCreateDialog = async (appService, spriteAction = {}) => {
   return appService.showComponentDialog({
     component: SPRITE_CREATE_DIALOG_COMPONENT,
-    title: "Create Sprite",
-    description: "Choose the sprite image before inserting it into the layout",
+    title: "Create Image",
+    description: "Choose the image before inserting it into the layout",
     size: "md",
     props: {
       defaultValues: {
-        name: spriteAction.name ?? "Sprite",
+        name: spriteAction.name ?? "Image",
       },
     },
     actions: {
@@ -668,7 +668,7 @@ const showSpriteCreateDialog = async (appService, spriteAction = {}) => {
         },
         {
           id: "create",
-          label: "Create Sprite",
+          label: "Create Image",
           variant: "pr",
           role: "confirm",
           validate: true,
@@ -724,7 +724,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
       elementId: slotContainerId,
       data: slotContainer,
       parentId,
-      position: "last",
+      position: "first",
     });
 
     if (createContainerResult?.valid === false) {
@@ -851,7 +851,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
         fragmentLayoutId,
       },
       parentId,
-      position: "last",
+      position: "first",
     });
 
     if (createResult?.valid === false) {
@@ -973,7 +973,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
       elementId: nextElementId,
       data: nextElementData,
       parentId,
-      position: "last",
+      position: "first",
     });
 
     if (createResult?.valid === false) {
@@ -1087,7 +1087,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
       elementId: nextElementId,
       data: nextElementData,
       parentId,
-      position: "last",
+      position: "first",
     });
 
     if (createResult?.valid === false) {
@@ -1125,7 +1125,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
       );
     } catch {
       appService.showAlert({
-        message: "Failed to open sprite dialog.",
+        message: "Failed to open image dialog.",
         title: "Error",
       });
       return;
@@ -1139,7 +1139,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     const name = values.name?.trim();
     if (!name) {
       appService.showAlert({
-        message: "Sprite name is required.",
+        message: "Image name is required.",
         title: "Warning",
       });
       return;
@@ -1199,15 +1199,12 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
       elementId: nextElementId,
       data: nextElementData,
       parentId,
-      position: "last",
+      position: "first",
     });
 
     if (createResult?.valid === false) {
       appService.showAlert({
-        message: getResultErrorMessage(
-          createResult,
-          "Failed to create sprite.",
-        ),
+        message: getResultErrorMessage(createResult, "Failed to create image."),
         title: "Error",
       });
       return;
@@ -1307,7 +1304,7 @@ const handleFileExplorerActionUnsafe = async (deps, payload) => {
     elementId: nextElementId,
     data: nextElementData,
     parentId,
-    position: "last",
+    position: "first",
   });
 
   if (createResult?.valid === false) {

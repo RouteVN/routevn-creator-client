@@ -808,7 +808,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
             name: "New Folder",
           },
           parentId: null,
-          position: "last",
+          position: "first",
         });
       } else if (action === "new-child-folder") {
         if (!itemId) {
@@ -824,7 +824,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
             name: "New Folder",
           },
           parentId: itemId,
-          position: "last",
+          position: "first",
         });
       } else if (
         action &&
@@ -850,7 +850,7 @@ export const createLayoutElementsFileExplorerHandlers = ({
           elementId: nextElementId,
           data: nextElementData,
           parentId: itemId || null,
-          position: "last",
+          position: "first",
         });
         if (createResult?.valid === false) {
           appService.showAlert({

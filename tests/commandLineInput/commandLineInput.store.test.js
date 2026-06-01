@@ -2,9 +2,15 @@ import { describe, expect, it } from "vitest";
 import {
   createInitialState,
   hydrateForm,
+  saveEditingField,
+  selectCanSaveEditField,
   selectFormData,
+  selectFormDataWithEditingDraft,
+  selectMode,
   selectViewData,
   setRepositoryData,
+  startEditingField,
+  updateEditFieldConfig,
 } from "../../src/components/commandLineInput/commandLineInput.store.js";
 
 const inputLayout = {
@@ -67,6 +73,32 @@ const variables = {
 };
 
 describe("commandLineInput.store", () => {
+  it("leaves the input layout unselected for a new input action", () => {
+    const state = createInitialState();
+
+    hydrateForm(
+      { state },
+      {
+        layouts,
+        layoutsData,
+      },
+    );
+
+    const viewData = selectViewData({
+      state,
+      props: {
+        layouts,
+      },
+    });
+
+    expect(viewData.selectedResourceId).toBe("");
+    expect(viewData.defaultValues.resourceId).toBe("");
+    expect(viewData.fieldRows).toEqual([]);
+    expect(viewData.hasFields).toBe(false);
+    expect(viewData.submitDisabled).toBe(true);
+    expect(selectFormData({ state })).toBeUndefined();
+  });
+
   it("hydrates one form field mapping for every input element", () => {
     const state = createInitialState();
 
@@ -118,12 +150,17 @@ describe("commandLineInput.store", () => {
       "name",
       "code",
     ]);
+    expect(viewData.fieldRows.map((field) => field.summary)).toEqual([
+      "Player Name - Required - Trim - Single line - Placeholder: Full name - Max: 32",
+      "Player Code - Optional - Keep whitespace - Single line - Placeholder: Code - Max: 8",
+    ]);
     expect(viewData.fieldRows[0]).toMatchObject({
       label: "Name",
       variableId: "playerName",
       required: true,
       trim: true,
       placeholder: "Full name",
+      maxLength: 32,
     });
     expect(viewData.fieldRows[1]).toMatchObject({
       label: "Code",
@@ -134,14 +171,21 @@ describe("commandLineInput.store", () => {
     });
     expect(viewData.fieldVariableOptions).toEqual([
       {
-        label: "Player Name (string)",
+        label: "Player Name",
         value: "playerName",
+        suffixText: "string",
       },
       {
-        label: "Player Code (string)",
+        label: "Player Code",
         value: "playerCode",
+        suffixText: "string",
       },
     ]);
+    expect(
+      viewData.fieldVariableOptions.some((option) =>
+        option.label.includes("("),
+      ),
+    ).toBe(false);
     expect(viewData.submitDisabled).toBe(false);
     expect(selectFormData({ state })).toEqual({
       id: expect.any(String),
@@ -152,6 +196,7 @@ describe("commandLineInput.store", () => {
           required: true,
           trim: true,
           placeholder: "Full name",
+          maxLength: 32,
         },
         code: {
           variableId: "playerCode",
@@ -167,56 +212,9 @@ describe("commandLineInput.store", () => {
     });
   });
 
-  it("prefills section transition submit actions with animation options", () => {
+  it("normalizes existing section transition submit actions to next line", () => {
     const state = createInitialState();
 
-    setRepositoryData(
-      { state },
-      {
-        variables,
-        scenes: {
-          items: {
-            "scene-1": {
-              id: "scene-1",
-              type: "scene",
-              name: "Opening",
-              sections: {
-                items: {
-                  "section-2": {
-                    id: "section-2",
-                    type: "section",
-                    name: "Profile Submitted",
-                  },
-                },
-                tree: [{ id: "section-2" }],
-              },
-            },
-          },
-          tree: [{ id: "scene-1" }],
-        },
-        animations: {
-          items: {
-            "screen-crossfade": {
-              id: "screen-crossfade",
-              type: "animation",
-              name: "Crossfade",
-              animation: {
-                type: "transition",
-              },
-            },
-            "pulse-update": {
-              id: "pulse-update",
-              type: "animation",
-              name: "Pulse",
-              animation: {
-                type: "update",
-              },
-            },
-          },
-          tree: [{ id: "screen-crossfade" }, { id: "pulse-update" }],
-        },
-      },
-    );
     hydrateForm(
       { state },
       {
@@ -255,27 +253,147 @@ describe("commandLineInput.store", () => {
     });
 
     expect(viewData.defaultValues).toMatchObject({
-      submitActionType: "sectionTransition",
-      submitSceneId: "scene-1",
-      submitSectionId: "section-2",
-      submitTransitionAnimationId: "screen-crossfade",
+      resourceId: inputLayout.id,
     });
-    expect(viewData.context.transitionAnimationOptions).toEqual([
-      {
-        value: "screen-crossfade",
-        label: "Crossfade",
-      },
-    ]);
     expect(selectFormData({ state }).submitActions).toEqual({
-      sectionTransition: {
-        sceneId: "scene-1",
-        sectionId: "section-2",
-        screen: {
-          animations: {
-            resourceId: "screen-crossfade",
+      nextLine: {},
+    });
+  });
+
+  it("edits field configuration as a draft before saving", () => {
+    const state = createInitialState();
+
+    hydrateForm(
+      { state },
+      {
+        layouts,
+        layoutsData,
+        form: {
+          resourceId: inputLayout.id,
+          fields: {
+            name: {
+              variableId: "playerName",
+            },
+            code: {
+              variableId: "playerCode",
+            },
+          },
+          submitActions: {
+            nextLine: {},
           },
         },
       },
+    );
+
+    startEditingField({ state }, { field: "name" });
+    updateEditFieldConfig(
+      { state },
+      { name: "placeholder", value: "Full name" },
+    );
+
+    expect(selectMode({ state })).toBe("editField");
+    expect(selectFormData({ state }).fields.name.placeholder).toBe("Name");
+    expect(
+      selectFormDataWithEditingDraft({ state }).fields.name.placeholder,
+    ).toBe("Full name");
+    expect(selectCanSaveEditField({ state })).toBe(true);
+
+    saveEditingField({ state });
+
+    expect(selectMode({ state })).toBe("list");
+    expect(selectFormData({ state }).fields.name.placeholder).toBe("Full name");
+  });
+
+  it("requires a variable before saving a field edit", () => {
+    const state = createInitialState();
+
+    setRepositoryData(
+      { state },
+      {
+        variables,
+      },
+    );
+    hydrateForm(
+      { state },
+      {
+        layouts,
+        layoutsData,
+        form: {
+          resourceId: inputLayout.id,
+          fields: {},
+          submitActions: {
+            nextLine: {},
+          },
+        },
+      },
+    );
+
+    startEditingField({ state }, { field: "name" });
+
+    let viewData = selectViewData({
+      state,
+      props: {
+        layouts,
+      },
+    });
+
+    expect(selectCanSaveEditField({ state })).toBe(false);
+    expect(viewData.canSaveEditField).toBe(false);
+
+    updateEditFieldConfig(
+      { state },
+      { name: "variableId", value: "playerName" },
+    );
+
+    viewData = selectViewData({
+      state,
+      props: {
+        layouts,
+      },
+    });
+
+    expect(selectCanSaveEditField({ state })).toBe(true);
+    expect(viewData.canSaveEditField).toBe(true);
+  });
+
+  it("starts editing from a proxied field config", () => {
+    const state = createInitialState();
+
+    hydrateForm(
+      { state },
+      {
+        layouts,
+        layoutsData,
+        form: {
+          resourceId: inputLayout.id,
+          fields: {
+            name: {
+              variableId: "playerName",
+              required: true,
+              trim: false,
+              placeholder: "Full name",
+            },
+          },
+          submitActions: {
+            nextLine: {},
+          },
+        },
+      },
+    );
+
+    state.fields.name = new Proxy(state.fields.name, {});
+
+    expect(() => {
+      startEditingField({ state }, { field: "name" });
+    }).not.toThrow();
+    expect(selectMode({ state })).toBe("editField");
+    expect(state.editFieldForm).toMatchObject({
+      field: "name",
+      label: "Name",
+      variableId: "playerName",
+      required: true,
+      trim: false,
+      placeholder: "Full name",
     });
   });
 });
