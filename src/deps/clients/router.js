@@ -16,11 +16,16 @@ const normalizeThrottleMs = (value) => {
   return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : 0;
 };
 
+const getCurrentPathWithSearch = () => {
+  return `${window.location.pathname}${window.location.search}`;
+};
+
 export default class WebRouter {
   // _routes;
   routerType = "web";
   pendingPayload = undefined;
   pendingPayloadPath = undefined;
+  pendingPayloadSourcePath = undefined;
   pendingPayloadTimerId = undefined;
   lastPayloadReplaceAt = 0;
 
@@ -31,7 +36,7 @@ export default class WebRouter {
   getPayload = () => {
     if (
       this.pendingPayload &&
-      this.pendingPayloadPath === window.location.pathname
+      this.pendingPayloadSourcePath === getCurrentPathWithSearch()
     ) {
       return { ...this.pendingPayload };
     }
@@ -50,12 +55,13 @@ export default class WebRouter {
     }
     this.pendingPayload = undefined;
     this.pendingPayloadPath = undefined;
+    this.pendingPayloadSourcePath = undefined;
     this.pendingPayloadTimerId = undefined;
   };
 
   replacePayload = (payload, path = window.location.pathname) => {
     const finalPath = createPathWithPayload(path, payload);
-    const currentPath = `${window.location.pathname}${window.location.search}`;
+    const currentPath = getCurrentPathWithSearch();
     if (finalPath === currentPath) {
       return;
     }
@@ -67,14 +73,16 @@ export default class WebRouter {
   flushPendingPayload = () => {
     const payload = this.pendingPayload;
     const path = this.pendingPayloadPath;
+    const sourcePath = this.pendingPayloadSourcePath;
     if (this.pendingPayloadTimerId !== undefined) {
       clearTimeout(this.pendingPayloadTimerId);
     }
     this.pendingPayload = undefined;
     this.pendingPayloadPath = undefined;
+    this.pendingPayloadSourcePath = undefined;
     this.pendingPayloadTimerId = undefined;
 
-    if (payload && path === window.location.pathname) {
+    if (payload && sourcePath === getCurrentPathWithSearch()) {
       this.replacePayload(payload, path);
     }
   };
@@ -100,6 +108,7 @@ export default class WebRouter {
     const elapsedMs = Date.now() - this.lastPayloadReplaceAt;
     this.pendingPayload = { ...payload };
     this.pendingPayloadPath = window.location.pathname;
+    this.pendingPayloadSourcePath = getCurrentPathWithSearch();
     if (elapsedMs >= throttleMs) {
       this.flushPendingPayload();
       return;

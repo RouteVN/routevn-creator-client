@@ -143,4 +143,33 @@ describe("web router payload updates", () => {
     expect(windowMock.location.pathname).toBe("/projects");
     expect(windowMock.location.search).toBe("?p=project-1");
   });
+
+  it("drops pending payload writes when the same path query changes outside the router", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1000);
+
+    const windowMock = createWindowMock();
+    vi.stubGlobal("window", windowMock);
+    const router = new WebRouter();
+
+    router.setPayload(
+      { p: "project-1", sectionId: "section-1", lineId: "line-1" },
+      { throttleMs: 250 },
+    );
+    vi.setSystemTime(1050);
+    router.setPayload(
+      { p: "project-1", sectionId: "section-1", lineId: "line-2" },
+      { throttleMs: 250 },
+    );
+
+    setLocationFromPath(
+      windowMock.location,
+      "/project/scene-editor?p=project-2",
+    );
+    vi.advanceTimersByTime(250);
+
+    expect(windowMock.history.replaceState).toHaveBeenCalledTimes(1);
+    expect(windowMock.location.pathname).toBe("/project/scene-editor");
+    expect(windowMock.location.search).toBe("?p=project-2");
+  });
 });
